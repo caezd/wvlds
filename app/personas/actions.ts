@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
-export async function createPersona(prevState: any, formData: FormData) {
+export async function createPersona(prevState: unknown, formData: FormData) {
     const supabase = await createClient();
     const {
         data: { user },
@@ -44,8 +44,29 @@ export async function createPersona(prevState: any, formData: FormData) {
 
 export async function deletePersona(id: string) {
     const supabase = await createClient();
-    const { error } = await supabase.from("personas").delete().eq("id", id);
+    const {
+        data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+        return { ok: false, error: "Vous devez être connecté." };
+    }
+
+    const { data, error } = await supabase
+        .from("personas")
+        .delete()
+        .eq("id", id)
+        .eq("user_id", user.id)
+        .select("id")
+        .maybeSingle();
+
     if (error) return { ok: false, error: error.message };
+    if (!data) {
+        return {
+            ok: false,
+            error: "Persona introuvable ou accès non autorisé.",
+        };
+    }
     revalidatePath("/personas");
     return { ok: true };
 }
