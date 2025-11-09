@@ -1,7 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import PersonaCreateDialog from "@/components/personas/PersonaCreateDialog";
 import { Button } from "@/components/ui/button";
-import { Users } from "lucide-react";
+import { ChevronRight, Users } from "lucide-react";
+import Composer from "@/components/composer";
 
 export default async function PersonasPage() {
     const supabase = await createClient();
@@ -33,10 +34,11 @@ export default async function PersonasPage() {
                     <div className="flex items-center">
                         <a
                             href=""
-                            className="hover:bg-token-bg-tertiary focus-visible:outline-token-outline-primary text-token-text-secondary ms-2 inline-flex h-9 w-9 items-center justify-center rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                            className="hover:bg-hover-400 focus-visible:outline-token-outline-primary text-token-text-secondary ms-2 inline-flex h-9 w-9 items-center justify-center rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
                         >
-                            <Users size={20} />
+                            <Users size={20} className="icon" />
                         </a>
+                        <ChevronRight size={16} className="icon-sm" />
                     </div>
                 </div>
                 {/* <h1 className="text-2xl font-semibold">Mes personas</h1>
@@ -149,20 +151,7 @@ export default async function PersonasPage() {
                     <div className="[--thread-content-max-width:40rem] thread-lg:[--thread-content-max-width:48rem] mx-auto max-w-(--thread-content-max-width) flex-1">
                         <div className="flex justify-center empty:hidden"></div>
                         <div className="pointer-events-auto relative z-1 flex h-[var(--composer-container-height,100%)] max-w-full flex-[var(--composer-container-flex,1)] flex-col">
-                            <form action="" className="group/composer w-full">
-                                <div>
-                                    <div className="bg-token-bg-primary cursor-text overflow-clip bg-clip-padding p-2.5 contain-inline-size dark:bg-[#303030] grid grid-cols-[auto_1fr_auto] [grid-template-areas:'header_header_header'_'primary_primary_primary'_'leading_footer_trailing'] shadow rounded-[28px]">
-                                        <div className="-my-2.5 flex min-h-14 items-center overflow-x-hidden px-1.5 [grid-area:primary] group-data-expanded/composer:mb-0 group-data-expanded/composer:px-2.5">
-                                            <div className="text-token-text-primary max-h-[max(30svh,5rem)] max-h-52 flex-1 overflow-auto [scrollbar-width:thin] default-browser vertical-scroll-fade-mask">
-                                                <textarea className="h-10"></textarea>
-                                            </div>
-                                        </div>
-                                        <div className="[grid-area:leading]">
-                                            test
-                                        </div>
-                                    </div>
-                                </div>
-                            </form>
+                            <Composer />
                         </div>
                     </div>
                 </div>

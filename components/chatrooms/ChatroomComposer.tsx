@@ -1,0 +1,90 @@
+"use client";
+
+import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import type { Persona } from "@/types/db-chat";
+import { PersonaPickerDialog } from "@/components/personas/PersonaPickerDialog";
+import { Button } from "../ui/button";
+import { Plus, SendHorizontal } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+
+export function ChatroomComposer({
+    chatId,
+    presetPersona,
+}: {
+    chatId: string;
+    selectedPersona: Persona | null;
+}) {
+    const router = useRouter();
+    const [value, setValue] = useState("");
+    const [selectedPersona, setSelectedPersona] = useState<Persona | null>(
+        presetPersona
+    );
+    const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+    useEffect(() => {
+        const el = textareaRef.current;
+        if (!el) return;
+
+        const handler = (e: KeyboardEvent) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                void createChat();
+            }
+        };
+
+        el.addEventListener("keydown", handler);
+        return () => el.removeEventListener("keydown", handler);
+    }, [value, selectedPersona]);
+
+    async function createChat() {}
+
+    return (
+        <div className="group/composer w-full">
+            <div>
+                <div className="cursor-text overflow-clip p-2.5 contain-inline-size bg-hover-400 grid grid-cols-[auto_1fr_auto] [grid-template-areas:'header_header_header'_'primary_primary_primary'_'leading_footer_trailing'] shadow-short rounded-3xl mb-4">
+                    <div className="-my-2.5 flex min-h-14 items-center overflow-x-hidden px-1.5 [grid-area:primary] group-data-expanded/composer:mb-0 group-data-expanded/composer:px-2.5">
+                        <div className="_prosemirror-parent_1dsxi_2 text-token-text-primary max-h-[max(30svh,5rem)] max-h-52 flex-1 overflow-auto [scrollbar-width:thin] default-browser vertical-scroll-fade-mask">
+                            <textarea
+                                ref={textareaRef}
+                                value={value}
+                                onChange={(e) => setValue(e.target.value)}
+                                rows={1}
+                                className="outline-0 pb-4 mt-4 white-space-break-spaces -transform-y-[.5px] resize-none"
+                                placeholder={"Nouveau jeu..."}
+                            ></textarea>
+                        </div>
+                    </div>
+                    <div className="[grid-area:leading]">
+                        <span className="flex">
+                            <PersonaPickerDialog
+                                selected={selectedPersona}
+                                onSelect={setSelectedPersona}
+                            />
+                        </span>
+                    </div>
+                    <div className="[grid-area:trailing]">
+                        <div
+                            className={cn(
+                                "min-w-9 transition-transform",
+                                value.trim()
+                                    ? "visible scale-100"
+                                    : "invisible scale-80",
+                                selectedPersona ? "ml-2" : "ml-0"
+                            )}
+                        >
+                            <Button
+                                size={"icon"}
+                                className="hover:bg-card-400 bg-white text-background rounded-full"
+                            >
+                                <SendHorizontal />
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
