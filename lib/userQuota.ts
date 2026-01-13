@@ -19,8 +19,8 @@ type Quota = {
 
 // Règles par ressource (facile à étendre)
 const QUOTA_LIMITS: Record<Resource, Record<Plan, number>> = {
-    worlds: { free: 5, pro: Infinity, team: Infinity, lifetime: Infinity },
-    personas: { free: 5, pro: Infinity, team: Infinity, lifetime: Infinity },
+    worlds: { free: 1, pro: Infinity, team: Infinity, lifetime: Infinity },
+    personas: { free: 2, pro: Infinity, team: Infinity, lifetime: Infinity },
 };
 
 function limitFor(plan: Plan, kind: Resource): number {
@@ -66,7 +66,7 @@ export async function getUserQuotaWithClient(
     const { count } = await supabase
         .from(table)
         .select("id", { count: "exact", head: true })
-        .eq("owner_id", uid)
+        .eq("user_id", uid)
         .is("deleted_at", null);
 
     const owned = typeof count === "number" ? count : 0;

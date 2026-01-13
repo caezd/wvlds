@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { useNotifications } from "@/components/providers/NotificationsProvider";
 
 // On étend le type pour inclure le "summary" embarqué
 type Chatroom = {
@@ -26,6 +27,7 @@ export function WorldChatroomsList({
     initialChatrooms: Chatroom[];
 }) {
     const [rooms, setRooms] = useState<Chatroom[]>(initialChatrooms);
+    const { roomUnread, setActiveChat, markChatRead } = useNotifications();
 
     useEffect(() => {
         const supabase = createClient();
@@ -39,6 +41,7 @@ export function WorldChatroomsList({
                     id,
                     title,
                     updated_at,
+                    banner_url,
                     summary:chatroom_summaries(
                     last_message_at,
                     last_message_excerpt,
@@ -86,15 +89,37 @@ export function WorldChatroomsList({
     }
 
     return (
-        <ul className="divide-y rounded-xl border">
+        <ul className="divide-y border rounded-xl">
             {rooms.map((r) => (
-                <li key={r.id} className="p-3 hover:bg-muted/40">
-                    <Link href={`/c/${r.id}`} className="block">
+                <li
+                    key={r.id}
+                    className="p-3 relative overflow-hidden rounded-xl "
+                >
+                    <Link
+                        href={`/c/${r.id}`}
+                        className="block"
+                        onClick={() => {
+                            setActiveChat(r.id);
+                        }}
+                    >
+                        <div className="absolute inset-0">
+                            <img
+                                src={r.banner_url}
+                                alt=""
+                                className="opacity-50 object-fit-cover -z-10 mask-l-from-0% to-100% w-full"
+                            />
+                        </div>
                         {/* Ligne titre + date */}
                         <div className="flex items-center justify-between">
                             <span className="font-medium truncate">
                                 {r.title}
                             </span>
+                            {(roomUnread[r.id] ?? 0) > 0 && (
+                                <span
+                                    className="ml-2 inline-flex h-2 w-2 rounded-full bg-primary"
+                                    title={`${roomUnread[r.id]} non-lu(s)`}
+                                />
+                            )}
                             <time
                                 className="text-xs text-muted-foreground"
                                 dateTime={r.updated_at}

@@ -1,159 +1,153 @@
 "use client";
 
-import { useActionState, useState, useEffect } from "react";
-import { z } from "zod";
+import { useActionState, useEffect, useMemo, useState } from "react";
 import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { createPersona } from "@/app/personas/actions";
-import { getUserQuotaClient } from "@/lib/userQuota"; // <<— NEW
+import { createPersona } from "@/app/(protected)/p/actions";
 
-const Schema = z.object({
-    name: z.string().min(1, "Requis").max(40, "40 caractères max."),
-    bio: z.string().max(500, "500 caractères max.").optional(),
-    avatar_url: z.string().url("URL invalide").optional().or(z.literal("")),
-});
+import { PersonaAvatarPicker } from "@/components/personas/avatar/PersonaAvatarPicker";
+import {
+  AVATAR_SIZE,
+  avatarCategories,
+  avatarParts,
+} from "@/components/personas/avatar/avatarCatalog";
+import type { AvatarConfig } from "@/components/personas/avatar/AvatarBuilder";
+
+function hasAnyPick(cfg: AvatarConfig) {
+  for (const v of Object.values(cfg.picks ?? {})) {
+    if (Array.isArray(v) && v.length) return true;
+    if (typeof v === "string" && v) return true;
+  }
+  return false;
+}
 
 export default function PersonaCreateDialog({
-    disabled,
+  disabled,
 }: {
-    disabled?: boolean;
+  disabled?: boolean;
 }) {
-    const [open, setOpen] = useState(false);
-    const [state, formAction, pending] = useActionState(createPersona, {
-        ok: false as boolean,
-        error: undefined as string | undefined,
-    });
+  const [open, setOpen] = useState(false);
 
-    // Quota (plan, owned, quotaLimit, quotaReached)
-    const [quota, setQuota] = useState<{
-        plan: "free" | "pro" | "team" | "lifetime";
-        owned: number;
-        quotaLimit: number; // Infinity si illimité
-        quotaReached: boolean;
-    } | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string>("");
+  const [avatarConfig, setAvatarConfig] = useState<AvatarConfig>({
+    picks: {},
+    locks: {},
+    bg: { color: "#0b1220" },
+  });
 
-    // Récupérer/rafraîchir le quota (au montage et à chaque ouverture du dialog)
-    useEffect(() => {
-        let cancelled = false;
-        async function load() {
-            try {
-                const q = await getUserQuotaClient("personas");
-                if (!cancelled) setQuota(q);
-            } catch {
-                if (!cancelled) setQuota(null);
-            }
-        }
-        load();
-        // Re-check quand on ouvre le dialog (utile si l’utilisateur en crée un ailleurs)
-        if (open) load();
-        return () => {
-            cancelled = true;
-        };
-    }, [open]);
+  const [state, formAction, pending] = useActionState(createPersona, {
+    ok: false as boolean,
+    error: undefined as string | undefined,
+  });
 
-    // Fermer le dialog à la création réussie
-    useEffect(() => {
-        if (state?.ok) setOpen(false);
-    }, [state?.ok]);
+  useEffect(() => {
+    if (state?.ok) setOpen(false);
+  }, [state?.ok]);
 
-    // (optionnel) log des erreurs
-    useEffect(() => {
-        if (state?.error) console.info("Create persona error:", state.error);
-    }, [state?.error]);
+  // Si l’utilisateur a sélectionné un avatar (picks) mais n’a pas appliqué (url vide), on bloque “Créer”
+  const mustApplyAvatar = useMemo(
+    () => hasAnyPick(avatarConfig) && !avatarUrl,
+    [avatarConfig, avatarUrl],
+  );
 
-    const quotaReached = quota?.quotaReached ?? false;
-    const disableCreate = (disabled ?? false) || quotaReached;
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button disabled={disabled}>Nouveau persona</Button>
+      </DialogTrigger>
 
-    const hint =
-        quota == null
-            ? "—"
-            : quota.plan === "free"
-            ? `Gratuit : ${quota.owned}/${
-                  Number.isFinite(quota.quotaLimit) ? quota.quotaLimit : "∞"
-              }`
-            : `Plan ${quota.plan} : illimité`;
+      {/* plus large qu’avant (sm:max-w-md) pour laisser de la place au builder */}
+      <DialogContent className="w-full max-w-5xl">
+        <DialogHeader>
+          <DialogTitle>Créer un persona</DialogTitle>
+        </DialogHeader>
 
-    return (
-        <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-                <Button disabled={disableCreate} title={hint}>
-                    Nouveau persona
-                </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                    <DialogTitle>Créer un persona</DialogTitle>
-                </DialogHeader>
+        <form
+          action={formAction}
+          className="grid gap-6 lg:grid-cols-[360px_1fr]"
+        >
+          {/* Colonne gauche : infos de base */}
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Nom</Label>
+              <Input
+                name="name"
+                placeholder="Ex. Kaori"
+                required
+                maxLength={40}
+              />
+            </div>
 
-                {/* Bandeau d’info plan/quota */}
-                <div className="mb-2 text-xs text-muted-foreground">{hint}</div>
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Bio</Label>
+              <Textarea
+                name="bio"
+                placeholder="Quelques lignes sur le personnage"
+                maxLength={500}
+              />
+            </div>
 
-                {quotaReached ? (
-                    <div className="rounded-md bg-muted p-3 text-sm">
-                        Ton quota gratuit est atteint
-                        {typeof quota?.owned === "number" &&
-                        Number.isFinite(quota?.quotaLimit)
-                            ? ` (${quota.owned}/${quota.quotaLimit}).`
-                            : "."}{" "}
-                        Passe à un plan supérieur pour créer plus de personas.
-                    </div>
-                ) : (
-                    <form action={formAction} className="space-y-3">
-                        <div className="space-y-2">
-                            <Label className="text-sm font-medium">Nom</Label>
-                            <Input
-                                name="name"
-                                placeholder="Ex. Kaori"
-                                required
-                                maxLength={40}
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label className="text-sm font-medium">Bio</Label>
-                            <Textarea
-                                name="bio"
-                                placeholder="Quelques lignes sur le personnage"
-                                maxLength={500}
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label className="text-sm font-medium">
-                                Avatar URL (optionnel)
-                            </Label>
-                            <Input
-                                name="avatar_url"
-                                placeholder="https://..."
-                            />
-                        </div>
-                        <div className="pt-2 flex justify-end gap-2">
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                onClick={() => setOpen(false)}
-                            >
-                                Annuler
-                            </Button>
-                            <Button type="submit" disabled={pending}>
-                                {pending ? "Création..." : "Créer"}
-                            </Button>
-                        </div>
-                        {state?.error && (
-                            <p className="text-sm text-red-600">
-                                {state.error}
-                            </p>
-                        )}
-                    </form>
-                )}
-            </DialogContent>
-        </Dialog>
-    );
+            {/* Hidden fields: ton action actuelle utilise avatar_url :contentReference[oaicite:3]{index=3} */}
+            <input type="hidden" name="avatar_url" value={avatarUrl} />
+            <input
+              type="hidden"
+              name="avatar_config"
+              value={JSON.stringify(avatarConfig)}
+            />
+
+            {mustApplyAvatar ? (
+              <p className="text-xs text-amber-500">
+                Tu as modifié l’avatar, mais il n’est pas encore “appliqué”.
+                Clique “Utiliser cet avatar”.
+              </p>
+            ) : null}
+
+            <div className="pt-2 flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setOpen(false)}
+              >
+                Annuler
+              </Button>
+              <Button type="submit" disabled={pending || mustApplyAvatar}>
+                {pending ? "Création..." : "Créer"}
+              </Button>
+            </div>
+
+            {state?.error && (
+              <p className="text-sm text-red-600">{state.error}</p>
+            )}
+          </div>
+
+          {/* Colonne droite : avatar builder */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Avatar</Label>
+
+            <PersonaAvatarPicker
+              categories={avatarCategories}
+              parts={avatarParts}
+              size={AVATAR_SIZE} // 600
+              value={{ url: avatarUrl, config: avatarConfig }}
+              onChange={(next) => {
+                setAvatarUrl(next.url);
+                setAvatarConfig(next.config);
+              }}
+              avatarBucket="avatars"
+              avatarFolder="personas"
+            />
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
 }
