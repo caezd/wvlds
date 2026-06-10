@@ -7,18 +7,22 @@ import { ArrowDown } from "lucide-react";
 
 type Props = {
   className?: string;
-  thresholdPx?: number; // défaut: 80
-  startAtBottom?: boolean; // défaut: true
+  thresholdPx?: number;
+  startAtBottom?: boolean;
   children: React.ReactNode;
 };
 
-export function ScrollAreaWithJumpToBottom({
+export const ScrollAreaWithJumpToBottom = React.forwardRef<HTMLDivElement, Props>(
+function ScrollAreaWithJumpToBottom({
   className,
   thresholdPx = 160,
   startAtBottom = true,
   children,
-}: Props) {
+}, ref) {
   const rootRef = React.useRef<HTMLDivElement | null>(null);
+
+  // Expose rootRef via forwardRef
+  React.useImperativeHandle(ref, () => rootRef.current!);
   const [showDown, setShowDown] = React.useState(false);
 
   React.useEffect(() => {
@@ -125,4 +129,4 @@ export function ScrollAreaWithJumpToBottom({
       </div>
     </div>
   );
-}
+});

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
+import type { ReactionSummary } from "@/types/db";
 import { AvatarWithFrame } from "@/components/avatars/AvatarWithFrame";
 import { ChatroomMessageBubble } from "./ChatroomMessageBubble";
 import { cn } from "@/lib/utils";
@@ -13,9 +14,9 @@ import { Textarea } from "@/components/ui/textarea";
 
 import { XPProgress } from "@/components/gamification/xp-progress";
 import { createClient } from "@/lib/supabase/client";
+import { TABLE, RPC } from "@/lib/constants";
 import DateDisplay from "@/components/date-display";
 
-// (optionnel si tu as shadcn Button + lucide)
 import { Button } from "@/components/ui/button";
 import { Pencil, Check, X, Loader2, SmilePlus } from "lucide-react";
 
@@ -26,9 +27,21 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 
-const DEFAULT_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "👀", "🔥"];
+import { PersonaProfileSheetTrigger } from "@/components/personas/PersonaProfileSheetTrigger";
 
-type ReactionSummary = { emoji: string; count: number; me: boolean };
+/**
+ * IMPORTANT:
+ * - On garde ton schéma tel quel: `chat_message_reactions.emoji` existe déjà.
+ * - Ici, `emoji` devient simplement un "emote key" (ex: "thumbsup", "heart", etc.)
+ * - L’image affichée est résolue via ce catalogue local.
+ *
+ * Assets:
+ *   public/emotes/thumbsup.png
+ *   public/emotes/heart.png
+ *   ...
+ */
+const DEFAULT_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "👀", "🔥"] as const;
+
 
 function optimisticToggle(current: ReactionSummary[], emoji: string) {
   const arr = [...current];
@@ -51,45 +64,42 @@ function optimisticToggle(current: ReactionSummary[], emoji: string) {
   return arr;
 }
 
-// Cache mémoire par userId pour éviter de refetch à chaque message du même auteur
-const balanceCache = new Map<
-  string,
-  {
-    xp: number;
-    coins: number;
-    streak_current: number;
-    streak_longest: number;
+const BALANCE_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+type BalanceData = { xp: number; coins: number; streak_current: number; streak_longest: number };
+const balanceCache = new Map<string, { data: BalanceData; fetchedAt: number }>();
+
+function getCachedBalance(userId: string): BalanceData | null {
+  const entry = balanceCache.get(userId);
+  if (!entry) return null;
+  if (Date.now() - entry.fetchedAt > BALANCE_CACHE_TTL_MS) {
+    balanceCache.delete(userId);
+    return null;
   }
->();
+  return entry.data;
+}
 
 function useUserBalance(userId?: string | null) {
   const supabase = useMemo(() => createClient(), []);
-  const [data, setData] = useState<{
-    xp: number;
-    coins: number;
-    streak_current: number;
-    streak_longest: number;
-  } | null>(null);
-  const [loading, setLoading] = useState<boolean>(
-    !!userId && !balanceCache.has(userId!),
-  );
+  const [data, setData] = useState<BalanceData | null>(null);
+  const [loading, setLoading] = useState<boolean>(!!userId && !getCachedBalance(userId));
   const [error, setError] = useState<string | null>(null);
 
   const fetchOnce = async () => {
     if (!userId) return null;
-    const { data: d1, error: e1 } = await supabase.rpc("get_balance_summary", {
+    const { data: d1, error: e1 } = await supabase.rpc(RPC.GET_BALANCE_SUMMARY, {
       p_user_id: userId,
     });
     if (e1) throw e1;
     const row = Array.isArray(d1) ? d1?.[0] : d1;
     if (!row) return null;
-    const parsed = {
+    const parsed: BalanceData = {
       xp: Number(row.xp) || 0,
       coins: Number(row.coins) || 0,
       streak_current: Number(row.streak_current) || 0,
       streak_longest: Number(row.streak_longest) || 0,
     };
-    balanceCache.set(userId, parsed);
+    balanceCache.set(userId, { data: parsed, fetchedAt: Date.now() });
     return parsed;
   };
 
@@ -98,21 +108,21 @@ function useUserBalance(userId?: string | null) {
       async (force = true) => {
         if (!userId) return;
         try {
-          if (!force && balanceCache.has(userId)) return;
+          if (!force && getCachedBalance(userId)) return;
           const parsed = await fetchOnce();
           if (parsed) setData(parsed);
-        } catch (e: any) {
-          setError(e.message ?? "Erreur");
+        } catch (e: unknown) {
+          setError(e instanceof Error ? e.message : "Erreur");
         } finally {
           setLoading(false);
         }
       },
-    [userId, supabase],
+    [userId, supabase], // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   useEffect(() => {
     if (!userId) return;
-    const cached = balanceCache.get(userId);
+    const cached = getCachedBalance(userId);
     if (cached) {
       setData(cached);
       setLoading(false);
@@ -199,64 +209,59 @@ export default function ChatroomMessage({
   frameByUser,
   onReactionsUpdated,
 }: {
-  message: any;
-  online: Record<string, any>;
+  message: import("@/types/db").ChatMessageWithPersona;
+  online: Record<string, { avatar_url?: string | null; username?: string | null }>;
   selfId: string | null;
   onUpdated?: (id: number, content: string) => void;
-  frameByUser?: Record<string, string | null>; // ⬅️ nouveau
-  onReactionsUpdated?: (
-    id: number,
-    reactions: { emoji: string; count: number; me: boolean }[],
-  ) => void;
+  frameByUser?: Record<string, string | null>;
+  onReactionsUpdated?: (id: number, reactions: ReactionSummary[]) => void;
 }) {
   const supabase = useMemo(() => createClient(), []);
 
   const mine = isMyMessage(message, selfId);
   const isOnline = !!online[message.author_id];
-  const avatarSrc =
-    online[message.author_id]?.avatar_url ?? message.author?.avatar_url;
+  const avatarSrc = online[message.author_id]?.avatar_url ?? undefined;
 
   const date = message.created_at;
 
-  const userId = message?.author_id ?? message?.persona?.user_id ?? null;
+  const userId = message.author_id ?? message.persona?.user_id ?? null;
   const label =
-    message?.persona?.name ??
+    message.persona?.name ??
     online[message.author_id]?.username ??
-    message?.author?.full_name ??
     "Profil";
 
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState<string>(message?.content ?? "");
+  const [draft, setDraft] = useState<string>(message.content ?? "");
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
   // Si un UPDATE arrive via realtime pendant qu’on n’édite pas, on resync le draft
   useEffect(() => {
-    if (!editing) setDraft(message?.content ?? "");
-  }, [message?.content, editing]);
+    if (!editing) setDraft(message.content ?? "");
+  }, [message.content, editing]);
 
   const startEdit = useCallback(() => {
     if (!mine) return;
     setErr(null);
-    setDraft(message?.content ?? "");
+    setDraft(message.content ?? "");
     setEditing(true);
-  }, [mine, message?.content]);
+  }, [mine, message.content]);
 
   const cancelEdit = useCallback(() => {
     setErr(null);
-    setDraft(message?.content ?? "");
+    setDraft(message.content ?? "");
     setEditing(false);
-  }, [message?.content]);
+  }, [message.content]);
 
   const save = useCallback(async () => {
     if (!mine) return;
 
-    const next = draft; // volontairement: pas de trim agressif (markdown, retours, etc.)
+    const next = draft;
     if (!next || !next.trim()) {
       setErr("Le message ne peut pas être vide.");
       return;
     }
-    if (next === (message?.content ?? "")) {
+    if (next === (message.content ?? "")) {
       setEditing(false);
       return;
     }
@@ -265,7 +270,7 @@ export default function ChatroomMessage({
     setErr(null);
 
     const { error } = await supabase
-      .from("chat_messages")
+      .from(TABLE.CHAT_MESSAGES)
       .update({ content: next })
       .eq("id", message.id);
 
@@ -276,7 +281,6 @@ export default function ChatroomMessage({
       return;
     }
 
-    // Optimistic update local (le realtime UPDATE prendra le relais pour tout le monde)
     onUpdated?.(message.id, next);
     setEditing(false);
   }, [draft, mine, message?.content, message?.id, onUpdated, supabase]);
@@ -287,56 +291,47 @@ export default function ChatroomMessage({
       cancelEdit();
       return;
     }
-    // Ctrl/Cmd+Enter = enregistrer
     if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
       e.preventDefault();
       void save();
     }
   }
 
-  // cosmetics
-  const { data: eq } = supabase
-    .from("user_equipped_cosmetics")
-    .select(
-      "avatar_frame_id, cosmetic_items!user_equipped_cosmetics_avatar_frame_id_fkey(asset_url)",
-    )
-    .eq("user_id", userId)
-    .maybeSingle();
-
   const frameUrl = userId ? (frameByUser?.[userId] ?? null) : null;
 
   /* reactions */
   const reactions = (message.reactions ?? []) as ReactionSummary[];
 
-  async function toggleReaction(emoji: string) {
+  async function toggleReaction(emoteKey: string) {
     if (!selfId) {
       toast.error("Vous devez être connecté pour réagir.");
       return;
     }
 
+    // optimistic
     const prev = reactions;
-    const next = optimisticToggle(prev, emoji);
+    const next = optimisticToggle(prev, emoteKey);
     onReactionsUpdated?.(message.id, next);
 
-    const alreadyReacted = prev.some((r) => r.emoji === emoji && r.me);
+    const alreadyReacted = prev.some((r) => r.emoji === emoteKey && r.me);
 
+    // DB (colonne "emoji" conservée): on stocke le KEY dedans
     const q = alreadyReacted
-      ? supabase.from("chat_message_reactions").delete().match({
+      ? supabase.from(TABLE.CHAT_MESSAGE_REACTIONS).delete().match({
           chat_id: message.chat_id,
           message_id: message.id,
           user_id: selfId,
-          emoji,
+          emoji: emoteKey,
         })
-      : supabase.from("chat_message_reactions").insert({
+      : supabase.from(TABLE.CHAT_MESSAGE_REACTIONS).insert({
           chat_id: message.chat_id,
           message_id: message.id,
           user_id: selfId,
-          emoji,
+          emoji: emoteKey,
         });
 
     const { error } = await q;
     if (error) {
-      // rollback
       onReactionsUpdated?.(message.id, prev);
       toast.error(error.message ?? "Impossible de réagir.");
     }
@@ -349,7 +344,13 @@ export default function ChatroomMessage({
         <div className="flex flex-1 gap-4 justify-between">
           <div className="flex flex-1 gap-4">
             {message.persona?.name && (
-              <HoverProfile userId={userId} label={label}>
+              <PersonaProfileSheetTrigger
+                personaId={message.persona?.id ?? null}
+                userId={userId}
+                label={label}
+                hoverPreview
+                side="right"
+              >
                 <AvatarWithFrame
                   src={message.persona?.avatar_url ?? avatarSrc}
                   alt={label ?? "User"}
@@ -358,7 +359,7 @@ export default function ChatroomMessage({
                   size={48}
                   frameUrl={frameUrl}
                 />
-              </HoverProfile>
+              </PersonaProfileSheetTrigger>
             )}
             <div className="text-sm flex flex-col justify-between gap-2 w-full">
               <strong className="font-medium">{message.persona?.name}</strong>
@@ -368,30 +369,38 @@ export default function ChatroomMessage({
             </div>
           </div>
 
+          {/* chips reactions (images) */}
           <div className="flex">
             {!editing && reactions.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-1 items-center">
-                {reactions.map((r) => (
-                  <button
-                    key={r.emoji}
-                    type="button"
-                    onClick={() => void toggleReaction(r.emoji)}
-                    className={cn(
-                      "inline-flex items-center gap-1 rounded-full border border-border-soft px-2 py-1 text-xs",
-                      "bg-[#161b27] hover:bg-muted",
-                      r.me && "border-primary/40 bg-primary/10",
-                    )}
-                    aria-label={`Réaction ${r.emoji}`}
-                    title={r.me ? "Retirer ma réaction" : "Ajouter ma réaction"}
-                  >
-                    <span className="text-sm leading-none">{r.emoji}</span>
-                    <span className="tabular-nums">{r.count}</span>
-                  </button>
-                ))}
+                {!editing && reactions.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1 items-center">
+                    {reactions.map((r) => (
+                      <button
+                        key={r.emoji}
+                        type="button"
+                        onClick={() => void toggleReaction(r.emoji)}
+                        className={cn(
+                          "inline-flex items-center gap-1 rounded-full border border-border-soft px-2 py-1 text-xs",
+                          "bg-[#161b27] hover:bg-muted",
+                          r.me && "border-primary/40 bg-primary/10",
+                        )}
+                        aria-label={`Réaction ${r.emoji}`}
+                        title={
+                          r.me ? "Retirer ma réaction" : "Ajouter ma réaction"
+                        }
+                      >
+                        <span className="text-sm leading-none">{r.emoji}</span>
+                        <span className="tabular-nums">{r.count}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
         </div>
+
         <div className={cn("relative flex flex-col gap-2 grow ")}>
           <div className="">
             {editing ? (
@@ -424,6 +433,8 @@ export default function ChatroomMessage({
                   message={message}
                   isMine={mine}
                 />
+
+                {/* picker */}
                 {!editing && (
                   <Popover>
                     <PopoverTrigger asChild>
@@ -438,29 +449,36 @@ export default function ChatroomMessage({
                         <SmilePlus className="h-4 w-4" />
                       </Button>
                     </PopoverTrigger>
+
                     <PopoverContent align="end" className="w-auto p-2">
                       <div className="flex flex-wrap gap-1">
-                        {DEFAULT_EMOJIS.map((e) => (
-                          <button
-                            key={e}
-                            type="button"
-                            onClick={() => void toggleReaction(e)}
-                            className={cn(
-                              "h-8 w-8 rounded-md border text-base leading-none",
-                              "bg-background hover:bg-muted",
-                              reactions.some((r) => r.emoji === e && r.me) &&
-                                "border-primary/40 bg-primary/10",
-                            )}
-                            aria-label={`Réagir avec ${e}`}
-                            title={e}
-                          >
-                            {e}
-                          </button>
-                        ))}
+                        {DEFAULT_EMOJIS.map((e) => {
+                          const active = reactions.some(
+                            (r) => r.emoji === e && r.me,
+                          );
+
+                          return (
+                            <button
+                              key={e}
+                              type="button"
+                              onClick={() => void toggleReaction(e)}
+                              className={cn(
+                                "h-8 w-8 rounded-md border text-base leading-none",
+                                "bg-background hover:bg-muted",
+                                active && "border-primary/40 bg-primary/10",
+                              )}
+                              aria-label={`Réagir avec ${e}`}
+                              title={e}
+                            >
+                              {e}
+                            </button>
+                          );
+                        })}
                       </div>
                     </PopoverContent>
                   </Popover>
                 )}
+
                 {/* Hover actions */}
                 <footer className="z-0 flex justify-end">
                   <span className="touch:-me-2 touch:-ms-3.5 -ms-2.5 -me-1 flex flex-wrap items-center gap-1 p-1 select-none focus-within:transition-none hover:transition-none touch:pointer-events-auto touch:opacity-100 duration-300 group-hover/turn-messages:delay-300 pointer-events-none opacity-0 motion-safe:transition-opacity group-hover/turn-messages:pointer-events-auto group-hover/turn-messages:opacity-100 group-focus-within/turn-messages:pointer-events-auto group-focus-within/turn-messages:opacity-100 has-data-[state=open]:pointer-events-auto has-data-[state=open]:opacity-100 text-sm">

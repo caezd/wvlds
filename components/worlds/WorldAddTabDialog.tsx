@@ -29,6 +29,7 @@ type AddTabDialogProps = {
     nextIndex: number; // dernier index + 1
     onCreated?: (tab: {
         id: string;
+        world_id: string;
         slug: string;
         label: string;
         sort_index: number;

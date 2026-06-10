@@ -1,6 +1,7 @@
 // app/(protected)/personas/page.tsx
 import { createClient } from "@/lib/supabase/server";
-import { PersonaEditSheet } from "@/components/personas/PersonaEditSheet";
+import { PersonaCard } from "@/components/personas/PersonaCard";
+import { PersonaCreateSheet } from "@/components/personas/PersonaCreateSheet";
 import type {
   PersonaSection,
   PersonaSectionField,
@@ -16,13 +17,16 @@ type PersonaRow = {
 
 export default async function PersonasPage() {
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const userId = user?.id;
 
-  // 1) Personas (avec fallback si colonnes manquantes)
+  // 1) Personas de l'utilisateur connecté uniquement
   let personaList: PersonaRow[] = [];
   {
     const withAvatar = await supabase
       .from("personas")
       .select("id, name, avatar_url, avatar_config")
+      .eq("user_id", userId)
       .order("name", { ascending: true });
 
     if (!withAvatar.error) {
@@ -31,6 +35,7 @@ export default async function PersonasPage() {
       const basic = await supabase
         .from("personas")
         .select("id, name")
+        .eq("user_id", userId)
         .order("name", { ascending: true });
 
       if (basic.error) {
@@ -52,22 +57,32 @@ export default async function PersonasPage() {
       .in("persona_id", personaIds)
       .order("position", { ascending: true });
 
-    if (sectionsError)
-      console.error("PersonasPage sectionsError", sectionsError);
+    if (sectionsError) {
+      // PostgrestError properties are non-enumerable — log message explicitly
+      console.error(
+        "PersonasPage sectionsError:",
+        sectionsError.message ?? sectionsError.code ?? JSON.stringify(sectionsError),
+      );
+    }
 
     const sectionsList = (sections ?? []) as PersonaSection[];
     const sectionIds = sectionsList.map((s) => s.id);
 
-    // 3) Fields
+    // 3) Fields — skip entirely if sections table didn't exist
     let fieldsList: PersonaSectionField[] = [];
-    if (sectionIds.length > 0) {
+    if (!sectionsError && sectionIds.length > 0) {
       const { data: fields, error: fieldsError } = await supabase
         .from("persona_section_fields")
         .select("id, section_id, type, position, data")
         .in("section_id", sectionIds)
         .order("position", { ascending: true });
 
-      if (fieldsError) console.error("PersonasPage fieldsError", fieldsError);
+      if (fieldsError) {
+        console.error(
+          "PersonasPage fieldsError:",
+          fieldsError.message ?? fieldsError.code ?? JSON.stringify(fieldsError),
+        );
+      }
       fieldsList = (fields ?? []) as PersonaSectionField[];
     }
 
@@ -93,38 +108,34 @@ export default async function PersonasPage() {
   }
 
   return (
-    <div className="p-6 space-y-4">
+    <div className="p-6 space-y-6">
       <header className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Personnages</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Personnages</h1>
+        <div className="flex items-center gap-3">
+          <p className="text-sm text-muted-foreground">{personaList.length} personnage{personaList.length !== 1 ? "s" : ""}</p>
+          <PersonaCreateSheet />
+        </div>
       </header>
 
-      <div className="space-y-2">
-        {personaList.map((persona) => (
-          <div
-            key={persona.id}
-            className="flex items-center justify-between rounded-md border px-3 py-2"
-          >
-            <div>
-              <div className="font-medium">{persona.name || "Sans nom"}</div>
-              <div className="text-xs text-muted-foreground">{persona.id}</div>
-            </div>
-
-            <PersonaEditSheet
+      {personaList.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center gap-2">
+          <div className="text-4xl">🎭</div>
+          <p className="text-sm text-muted-foreground">Aucun personnage pour le moment.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          {personaList.map((persona) => (
+            <PersonaCard
+              key={persona.id}
               personaId={persona.id}
               personaName={persona.name ?? "Sans nom"}
+              avatarUrl={persona.avatar_url}
+              avatarConfig={(persona as any).avatar_config}
               initialSections={sectionsByPersona.get(persona.id) ?? []}
-              initialAvatarUrl={persona.avatar_url ?? null}
-              initialAvatarConfig={(persona as any).avatar_config ?? null}
             />
-          </div>
-        ))}
-
-        {personaList.length === 0 && (
-          <p className="text-sm text-muted-foreground">
-            Aucun personnage pour le moment.
-          </p>
-        )}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

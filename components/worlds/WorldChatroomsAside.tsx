@@ -1,12 +1,14 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/client";
+import { TABLE, channel as CH } from "@/lib/constants";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useNotifications } from "@/components/providers/NotificationsProvider";
 
 export type ChatroomNavItem = {
   id: string;
@@ -32,7 +34,7 @@ type Props = {
   selfId: string;
   currentChatId?: string | null;
   initialRooms: ChatroomNavItem[];
-  chatroomHref?: (chatId: string) => string;
+  chatroomBaseHref?: string;
   className?: string;
 };
 
@@ -45,6 +47,7 @@ export default function WorldChatroomsAside({
   className,
 }: Props) {
   const supabase = useMemo(() => createClient(), []);
+  const { roomUnread } = useNotifications();
   const [rooms, setRooms] = useState<ChatroomNavItem[]>(() =>
     [...(initialRooms ?? [])].sort(sortRooms),
   );
@@ -56,83 +59,28 @@ export default function WorldChatroomsAside({
   const base = (chatroomBaseHref ?? "/c").replace(/\/$/, "");
   const toChat = (id: string) => `${base}/${id}`;
 
-  // 1) Realtime: new message -> unread + last_message_at
+  // Realtime: new message -> update last_message_at for sorting
   useEffect(() => {
     if (!worldId) return;
 
-    // filter = chat_id in (all rooms ids) to avoid receiving everything
     const ids = rooms.map((r) => r.id).filter(Boolean);
     if (ids.length === 0) return;
 
     const filter = `chat_id=in.(${ids.join(",")})`;
 
     const ch = supabase
-      .channel(`nav-messages-${worldId}`)
+      .channel(CH.navMessages(worldId))
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "chat_messages", filter },
+        { event: "INSERT", schema: "public", table: TABLE.CHAT_MESSAGES, filter },
         (payload) => {
-          const m: any = payload.new;
-          const chatId = m.chat_id as string;
-          const createdAt = (m.created_at ??
-            new Date().toISOString()) as string;
-          const authorId = m.author_id as string | null;
-
-          setRooms((prev) => {
-            const next = prev.map((r) => {
-              if (r.id !== chatId) return r;
-
-              // Si l’utilisateur est dans cette chatroom, on considère “lu” (unread=0)
-              // Sinon, si le message vient d’un autre utilisateur, on incrémente.
-              const shouldUnread =
-                chatId !== currentChatId && authorId && authorId !== selfId;
-
-              return {
-                ...r,
-                last_message_at: createdAt,
-                unread_count: shouldUnread ? (r.unread_count ?? 0) + 1 : 0,
-              };
-            });
-
-            return next.sort(sortRooms);
-          });
-        },
-      )
-      .subscribe();
-
-    return () => {
-      void supabase.removeChannel(ch);
-    };
-    // rooms ids affect the filter, so we rebuild if list changes
-  }, [
-    supabase,
-    worldId,
-    selfId,
-    currentChatId,
-    rooms.map((r) => r.id).join(","),
-  ]);
-
-  // 2) Realtime: read cursor updates -> unread=0
-  useEffect(() => {
-    if (!selfId) return;
-
-    const ch = supabase
-      .channel(`nav-reads-${selfId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "chatroom_reads",
-          filter: `user_id=eq.${selfId}`,
-        },
-        (payload) => {
-          const row: any = payload.new ?? payload.old;
-          const chatId = (row.chat_id ?? null) as string | null;
-          if (!chatId) return;
+          const m = payload.new as { chat_id: string; created_at: string | null };
+          const createdAt = m.created_at ?? new Date().toISOString();
 
           setRooms((prev) =>
-            prev.map((r) => (r.id === chatId ? { ...r, unread_count: 0 } : r)),
+            prev
+              .map((r) => r.id === m.chat_id ? { ...r, last_message_at: createdAt } : r)
+              .sort(sortRooms),
           );
         },
       )
@@ -141,14 +89,48 @@ export default function WorldChatroomsAside({
     return () => {
       void supabase.removeChannel(ch);
     };
-  }, [supabase, selfId]);
+  }, [supabase, worldId, rooms.map((r) => r.id).join(",")]);
 
+  // 3) Realtime: new chatroom created in this world -> append to nav
   useEffect(() => {
-    if (!currentChatId) return;
-    setRooms((prev) =>
-      prev.map((r) => (r.id === currentChatId ? { ...r, unread_count: 0 } : r)),
-    );
-  }, [currentChatId]);
+    if (!worldId) return;
+
+    const ch = supabase
+      .channel(`nav-chatrooms-${worldId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: TABLE.CHATROOMS,
+          filter: `world_id=eq.${worldId}`,
+        },
+        (payload) => {
+          const r = payload.new as {
+            id: string;
+            title: string | null;
+            name: string | null;
+            icon_url: string | null;
+            updated_at: string | null;
+          };
+          setRooms((prev) => {
+            if (prev.some((x) => x.id === r.id)) return prev;
+            const next: ChatroomNavItem = {
+              id: r.id,
+              title: r.title ?? null,
+              name: r.name ?? null,
+              icon_url: r.icon_url ?? null,
+              last_message_at: r.updated_at ?? null,
+              unread_count: 0,
+            };
+            return [...prev, next].sort(sortRooms);
+          });
+        },
+      )
+      .subscribe();
+
+    return () => { void supabase.removeChannel(ch); };
+  }, [supabase, worldId]);
 
   return (
     <aside
@@ -159,7 +141,7 @@ export default function WorldChatroomsAside({
           {rooms.map((r) => {
             const label = (r.title ?? r.name ?? "Chatroom").trim();
             const isActive = r.id === currentChatId;
-            const unread = (r.unread_count ?? 0) > 0;
+            const unreadCount = roomUnread[r.id] ?? 0;
 
             return (
               <Link
@@ -171,13 +153,6 @@ export default function WorldChatroomsAside({
                   "hover:bg-muted",
                   isActive ? "bg-muted font-medium" : "",
                 ].join(" ")}
-                onClick={() => {
-                  setRooms((prev) =>
-                    prev.map((x) =>
-                      x.id === r.id ? { ...x, unread_count: 0 } : x,
-                    ),
-                  );
-                }}
               >
                 <Avatar className="h-6 w-6">
                   <AvatarImage src={r.icon_url ?? undefined} alt={label} />
@@ -186,20 +161,17 @@ export default function WorldChatroomsAside({
                   </AvatarFallback>
                 </Avatar>
 
-                <span className="truncate flex-1">{label}</span>
+                <span className={["truncate flex-1", unreadCount > 0 ? "font-semibold" : ""].join(" ")}>
+                  {label}
+                </span>
 
-                {unread && (
-                  <span className="inline-flex items-center gap-1">
-                    <span className="h-2 w-2 rounded-full bg-primary" />
-                    {r.unread_count > 1 && (
-                      <span className="text-xs text-muted-foreground">
-                        {r.unread_count}
-                      </span>
-                    )}
+                {unreadCount > 0 && (
+                  <span className="inline-flex min-w-5 h-5 items-center justify-center rounded-full bg-accent text-accent-foreground text-xs font-medium px-1">
+                    {unreadCount > 99 ? "99+" : unreadCount}
                   </span>
                 )}
 
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
               </Link>
             );
           })}
@@ -208,3 +180,4 @@ export default function WorldChatroomsAside({
     </aside>
   );
 }
+

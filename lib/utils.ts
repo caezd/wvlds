@@ -10,9 +10,9 @@ export const hasEnvVars =
   process.env.NEXT_PUBLIC_SUPABASE_URL &&
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
-export function formatDaysAgo(date) {
+export function formatDaysAgo(date: Date | string | number) {
   const now = new Date();
-  const diffInMs = date - now;
+  const diffInMs = new Date(date).getTime() - now.getTime();
   // Calculate difference in days (milliseconds per day: 1000 * 60 * 60 * 24)
   const diffInDays = Math.round(diffInMs / (1000 * 60 * 60 * 24));
 

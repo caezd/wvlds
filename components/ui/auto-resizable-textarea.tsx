@@ -3,7 +3,7 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
-type Props = React.ComponentProps<typeof Textarea> & {
+type Props = React.ComponentProps<"textarea"> & {
     minRows?: number;
     maxRows?: number; // hauteur max en lignes (scroll ensuite)
 };

@@ -33,7 +33,7 @@ import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { Loader2, Mail, Search, UserPlus } from "lucide-react";
 
-type Role = "admin" | "editor" | "player" | "viewer";
+type Role = "owner" | "admin" | "editor" | "player" | "viewer";
 
 const emailSchema = z.string().email("Courriel invalide");
 
@@ -119,7 +119,7 @@ export function WorldInviteDialog({
 
         const parsed = emailSchema.safeParse(target);
         if (!parsed.success) {
-            setError(parsed.error.errors[0].message);
+            setError(parsed.error.issues[0].message);
             return null;
         }
 
@@ -255,7 +255,7 @@ export function WorldInviteDialog({
                                                     </div>
                                                     <Button
                                                         type="button"
-                                                        size="xs"
+                                                        size="sm"
                                                         variant="outline"
                                                         onClick={(e) => {
                                                             e.preventDefault();

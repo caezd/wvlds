@@ -1,6 +1,8 @@
 import ChatRoomView from "./view";
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
+import { TABLE } from "@/lib/constants";
+import type { ChatMessageWithPersona, Persona } from "@/types/db";
 
 export default async function Page({ params }: { params: { id: string } }) {
   const { id } = await params;
@@ -82,7 +84,10 @@ export default async function Page({ params }: { params: { id: string } }) {
   const userIds = Array.from(
     new Set(
       (initialMessages ?? [])
-        .map((m) => (m.author_id ?? m.persona?.user_id) as string | null)
+        .map((m) => {
+          const p = m.persona as unknown as Persona[] | null;
+          return (m.author_id ?? p?.[0]?.user_id) as string | null;
+        })
         .filter(Boolean) as string[],
     ),
   );
@@ -90,12 +95,13 @@ export default async function Page({ params }: { params: { id: string } }) {
   let equippedFrames: Record<string, string | null> = {};
   if (userIds.length) {
     const { data: equips } = await supabase
-      .from("user_equipped_cosmetics")
+      .from(TABLE.USER_EQUIPPED_COSMETICS)
       .select("user_id, cosmetic_items:avatar_frame_id(asset_url)")
       .in("user_id", userIds);
 
     for (const row of equips ?? []) {
-      equippedFrames[row.user_id] = row.cosmetic_items?.asset_url ?? null;
+      const cosmetic = row.cosmetic_items as unknown as { asset_url?: string | null }[] | null;
+      equippedFrames[row.user_id] = cosmetic?.[0]?.asset_url ?? null;
     }
   }
 
@@ -114,7 +120,7 @@ export default async function Page({ params }: { params: { id: string } }) {
       .eq("chat_id", id)
       .eq("user_id", user.id)
       .maybeSingle();
-    initialPersona = pref?.persona ?? null;
+    initialPersona = (pref?.persona as unknown as Persona | null) ?? null;
 
     canEdit = chatroom.created_by === user.id;
     if (!canEdit && chatroom.world_id) {
@@ -131,15 +137,34 @@ export default async function Page({ params }: { params: { id: string } }) {
     }
   }
 
-  // 4) Chatrooms du même world (pour l'aside, rendu instantané)
-  const { data: initialRooms, error: navErr } = chatroom.world_id
-    ? await supabase.rpc("list_chatrooms_nav", {
-        p_world_id: chatroom.world_id,
-      })
-    : { data: [], error: null };
+  // 4) Chatrooms du même world (pour l'aside)
+  let initialRoomsSafe: { id: string; title: string | null; name: string | null; icon_url: string | null; last_message_at: string | null; unread_count: number }[] = [];
 
-  // fallback safe
-  const initialRoomsSafe = navErr ? [] : (initialRooms ?? []);
+  if (chatroom.world_id) {
+    const { data: navRooms, error: navErr } = await supabase.rpc("list_chatrooms_nav", {
+      p_world_id: chatroom.world_id,
+    });
+
+    if (!navErr && navRooms) {
+      initialRoomsSafe = navRooms as typeof initialRoomsSafe;
+    } else {
+      // Fallback : requête directe si le RPC n'existe pas encore
+      const { data: fallback } = await supabase
+        .from(TABLE.CHATROOMS)
+        .select("id, title, name, icon_url, updated_at")
+        .eq("world_id", chatroom.world_id)
+        .order("updated_at", { ascending: false });
+
+      initialRoomsSafe = (fallback ?? []).map((r) => ({
+        id: r.id,
+        title: r.title ?? null,
+        name: r.name ?? null,
+        icon_url: r.icon_url ?? null,
+        last_message_at: r.updated_at ?? null,
+        unread_count: 0,
+      }));
+    }
+  }
 
   return (
     <ChatRoomView
@@ -149,9 +174,9 @@ export default async function Page({ params }: { params: { id: string } }) {
         title: chatroom.title ?? "Nouvelle salle",
         banner_url: chatroom.banner_url ?? null,
         icon_url: chatroom.icon_url ?? null,
-        worlds: chatroom.worlds ?? null,
+        worlds: (chatroom.worlds as unknown as { id: string; name: string }[] | null)?.[0] ?? null,
       }}
-      initialMessages={initialMessagesWithReactions}
+      initialMessages={initialMessagesWithReactions as unknown as ChatMessageWithPersona[]}
       initialPersona={initialPersona}
       selfId={user?.id ?? null}
       canEdit={canEdit}

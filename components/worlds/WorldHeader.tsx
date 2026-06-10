@@ -23,13 +23,12 @@ export function WorldHeader({
   const router = useRouter();
   const [worldState, setWorld] = useState(world);
 
-  const { setActiveWorld, markWorldSeen, refreshWorld } = useNotifications();
+  const { markWorldSeen } = useNotifications();
 
   useEffect(() => {
-    setActiveWorld(worldState.id);
     void markWorldSeen(worldState.id);
-    void refreshWorld(worldState.id);
-  }, [worldState, setActiveWorld, markWorldSeen, refreshWorld]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [worldState.id]);
 
   return (
     <header className="draggable no-draggable-children sticky top-0 p-2 touch:p-2.5 flex items-center justify-between z-20 h-header-height bg-token-main-surface-primary pointer-events-none select-none [view-transition-name:var(--vt-page-header)] *:pointer-events-auto motion-safe:transition max-md:hidden [box-shadow:var(--sharp-edge-top-shadow-placeholder)] bg-background border-b border-border-soft">

@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import WorldsSidebarClient from "./WorldsSidebarClient";
 import { getUserQuotaServer } from "@/lib/userQuota";
 import { ThemeSwitcher } from "../theme-switcher";
-import { Button } from "../ui/button";
+import { UserMenuButton } from "./UserMenuButton";
 
 type WorldRow = {
   id: string;
@@ -19,9 +19,7 @@ type WorldRow = {
 export default async function Sidebar() {
   const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
     return (
@@ -33,25 +31,24 @@ export default async function Sidebar() {
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("*")
+    .select("username, plan, is_admin, avatar_url")
     .eq("id", user.id)
     .single();
+
+  if (profileError) console.error("Sidebar profile error:", profileError.message);
 
   const { data: worlds, error } = (await supabase
     .from("worlds")
     .select(
-      `
-            id, name, slug, is_archived, owner_id,
-            world_members ( user_id, role )
-            `,
+      `id, name, slug, is_archived, owner_id,
+       world_members ( user_id, role )`,
     )
     .order("name", { ascending: true })) as {
     data: WorldRow[] | null;
-    error: any;
+    error: unknown;
   };
 
   if (error) {
-    console.log(error);
     return (
       <div className="p-4 text-sm text-destructive">
         Erreur de chargement des mondes.
@@ -59,9 +56,10 @@ export default async function Sidebar() {
     );
   }
 
-  // Mon plan + nb de mondes possédés (pour l’indicateur quota)
   const { plan, owned, quotaLimit, quotaReached } =
     await getUserQuotaServer("worlds");
+
+  const adminFlag = profile?.is_admin === true;
 
   const mine = (worlds ?? []).filter((w) =>
     w.world_members?.some((m) => m.user_id === user.id && m.role === "owner"),
@@ -75,29 +73,35 @@ export default async function Sidebar() {
 
   return (
     <>
-      <WorldsSidebarClient
-        meId={user.id}
-        plan={plan}
-        ownedCount={owned}
-        quotaLimit={quotaLimit}
-        quotaReached={quotaReached}
-        mine={mine}
-        shared={shared}
-      />
-      <div className="grow"></div>
-      <div className="sticky bottom-0 z-30 empty:hidden py-1.5 border-t">
-        <div className="relative">
-          <Button className="hover:bg-hover-400 flex mx-1.5 max-w-[calc(100%-var(--spacing)*3)] min-h-10 px-2 py-1.5 w-full justify-start">
-            <div className="min-w-0">
-              <div className="flex min-w-0 grow items-center gap-2.5 group-data-no-contents-gap:gap-0 text-sm">
-                <div className="truncate">{profile.username || user.email}</div>
-              </div>
-              <div className="flex min-w-0 grow text-muted-foreground leading-dense mb-0.5 text-xs group-data-sheet-item:mt-0.5 group-data-sheet-item:mb-0">
-                <div className="truncate">{plan}</div>
-              </div>
-            </div>
-          </Button>
-          <ThemeSwitcher />
+      {/* WorldsSidebarClient gère déjà : nav (Personae, Boutique),
+          barre de recherche, séparateur, liste des mondes (flex-1)   */}
+      <div className="flex-1 min-h-0">
+        <WorldsSidebarClient
+          meId={user.id}
+          plan={plan}
+          ownedCount={owned}
+          quotaLimit={quotaLimit}
+          quotaReached={quotaReached}
+          mine={mine}
+          shared={shared}
+          isAdmin={adminFlag}
+        />
+      </div>
+
+      {/* Footer — user menu + theme switcher, sticky en bas */}
+      <div className="sticky bottom-0 z-30 px-1 py-1.5 border-t border-border-soft bg-token-bg-elevated-secondary">
+        <div className="flex items-center gap-1">
+          <div className="flex-1 min-w-0">
+            <UserMenuButton
+              username={profile?.username ?? null}
+              email={user.email ?? ""}
+              avatarUrl={profile?.avatar_url ?? null}
+              plan={plan}
+            />
+          </div>
+          <div className="shrink-0">
+            <ThemeSwitcher />
+          </div>
         </div>
       </div>
     </>

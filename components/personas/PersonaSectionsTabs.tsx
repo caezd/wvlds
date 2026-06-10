@@ -96,7 +96,7 @@ export function PersonaSectionsTabs({
         <Button
           type="button"
           variant="outline"
-          size="xs"
+          size="sm"
           onClick={handleAddSection}
         >
           + Ajouter une section
@@ -107,7 +107,8 @@ export function PersonaSectionsTabs({
         <TabsContent
           key={section.id}
           value={section.id}
-          className="p-4 space-y-3"
+          forceMount
+          className="p-4 space-y-3 data-[state=inactive]:hidden"
         >
           <SectionFieldsEditor
             sectionId={section.id}

@@ -63,10 +63,11 @@ export async function getUserQuotaWithClient(
 
     // Compte des entrées "possédées"
     const table = kind === "personas" ? "personas" : "worlds";
+    const ownerColumn = kind === "personas" ? "user_id" : "owner_id";
     const { count } = await supabase
         .from(table)
         .select("id", { count: "exact", head: true })
-        .eq("user_id", uid)
+        .eq(ownerColumn, uid)
         .is("deleted_at", null);
 
     const owned = typeof count === "number" ? count : 0;

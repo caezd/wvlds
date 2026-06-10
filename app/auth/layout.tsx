@@ -6,7 +6,7 @@ export default function AuthLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <div className="flex flex-col md:flex-row-reverse md:h-screen">
+    <div className="bg-background flex flex-col md:flex-row-reverse md:h-screen">
       <section className="flex items-start w-full px-4 mx-auto md:px-0 md:items-center md:w-1/3">
         <div className="w-full max-w-sm mx-auto md:mx-0 my-auto min-w-min relative md:-left-6 text-primary">
           <div className="bg-background pt-8 py-8 flex items-center gap-1 text-4xl">

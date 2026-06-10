@@ -10,6 +10,7 @@ type Chatroom = {
     id: string;
     title: string;
     updated_at: string;
+    banner_url?: string | null;
     summary?: {
         last_message_at: string | null;
         last_message_excerpt: string | null;
@@ -27,7 +28,7 @@ export function WorldChatroomsList({
     initialChatrooms: Chatroom[];
 }) {
     const [rooms, setRooms] = useState<Chatroom[]>(initialChatrooms);
-    const { roomUnread, setActiveChat, markChatRead } = useNotifications();
+    const { roomUnread, setActiveChat } = useNotifications();
 
     useEffect(() => {
         const supabase = createClient();
@@ -54,7 +55,7 @@ export function WorldChatroomsList({
                 .eq("world_id", worldId)
                 .order("updated_at", { ascending: false });
 
-            setRooms((data as Chatroom[]) ?? []);
+            setRooms((data as unknown as Chatroom[]) ?? []);
         };
 
         void load();
@@ -104,7 +105,7 @@ export function WorldChatroomsList({
                     >
                         <div className="absolute inset-0">
                             <img
-                                src={r.banner_url}
+                                src={r.banner_url ?? undefined}
                                 alt=""
                                 className="opacity-50 object-fit-cover -z-10 mask-l-from-0% to-100% w-full"
                             />

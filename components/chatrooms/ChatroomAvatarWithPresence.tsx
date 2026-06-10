@@ -29,7 +29,7 @@ export function ChatroomAvatarWithPresence({
         )}
         style={{ width: size, height: size }}
       >
-        <AvatarImage src={src} alt={alt ?? ""} />
+        <AvatarImage src={src ?? undefined} alt={alt ?? ""} />
 
         <AvatarFallback>
           {(fallback ?? "?").slice(0, 1).toUpperCase()}

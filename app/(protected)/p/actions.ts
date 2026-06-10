@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
-export async function createPersona(prevState: unknown, formData: FormData) {
+export async function createPersona(_prevState: unknown, formData: FormData) {
     const supabase = await createClient();
     const {
         data: { user },

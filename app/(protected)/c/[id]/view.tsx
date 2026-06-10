@@ -1,89 +1,25 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
-
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet";
 import { toast } from "sonner";
 
 import ChatroomSettingsSheet from "@/components/chatrooms/ChatroomSettingsSheet";
 import ChatroomStatsSheet from "@/components/chatrooms/ChatroomStatsSheet";
-
 import { ScrollAreaWithJumpToBottom } from "@/components/ScrollAreaWithJumpToBottom";
-
-export type Persona = {
-  id: string;
-  user_id: string;
-  name: string;
-  avatar_url: string | null;
-};
-
-export type ChatroomPersonaPref = {
-  chat_id: string;
-  user_id: string;
-  persona_id: string;
-  updated_at: string;
-};
-
-export type ReactionSummary = { emoji: string; count: number; me: boolean };
-
-export type ChatMessageWithPersona = ChatMessage & {
-  persona?: Persona | null;
-  reactions?: ReactionSummary[];
-};
-
-type ChatMessage = {
-  id: number;
-  chat_id: string;
-  author_id: string;
-  content: string;
-  created_at: string;
-};
-
-type PresenceMeta = {
-  user_id: string;
-  username?: string | null;
-  avatar_url?: string | null;
-  persona_name?: string | null;
-};
-
-type TypingEntry = {
-  username?: string | null;
-  personaName?: string | null;
-  ts: number;
-};
-
-type ChatroomNavItem = {
-  id: string;
-  title: string | null;
-  name: string | null;
-  icon_url: string | null;
-  updated_at: string | null;
-  world_id: string | null;
-};
-
-import { Globe, ChevronRight } from "lucide-react";
-import Link from "next/link";
 import { ChatroomComposer } from "@/components/chatrooms/ChatroomComposer";
 import ChatroomMessage from "@/components/chatrooms/ChatroomMessage";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import WorldChatroomsAside from "@/components/worlds/WorldChatroomsAside";
+import { PersonaProfileSheet } from "@/components/chatrooms/PersonaProfileSheet";
+import WorldChatroomsAside, { type ChatroomNavItem } from "@/components/worlds/WorldChatroomsAside";
 
-function sortChatrooms(a: ChatroomNavItem, b: ChatroomNavItem) {
-  const da = a.updated_at ? Date.parse(a.updated_at) : 0;
-  const db = b.updated_at ? Date.parse(b.updated_at) : 0;
-  if (da !== db) return db - da;
-  const la = (a.title ?? a.name ?? "").toString();
-  const lb = (b.title ?? b.name ?? "").toString();
-  return la.localeCompare(lb, "fr");
-}
+import { TABLE, DELAY, SCROLL_THRESHOLD_PX } from "@/lib/constants";
+import type { ChatMessageWithPersona, Persona, ReactionSummary } from "@/types/db";
+import { useRealtimeChatSync } from "@/hooks/useRealtimeChatSync";
+import { usePresenceChannel } from "@/hooks/usePresenceChannel";
+import { useNotifications } from "@/components/providers/NotificationsProvider";
+
+export type { Persona, ChatMessageWithPersona, ReactionSummary } from "@/types/db";
+export type { ChatroomNavItem } from "@/components/worlds/WorldChatroomsAside";
 
 function ChatroomHeader({
   chat,
@@ -165,6 +101,7 @@ export default function ChatRoomView({
   initialChatrooms: ChatroomNavItem[];
 }) {
   const supabase = useMemo(() => createClient(), []);
+  const { setActiveChat } = useNotifications();
 
   const [chat, setChat] = useState(initialChat);
   const [messages, setMessages] = useState(initialMessages);
@@ -176,13 +113,6 @@ export default function ChatRoomView({
   const [openPersona, setOpenPersona] = useState<Persona | null>(null);
 
   const [userId, setUserId] = useState<string | null>(selfId);
-  const [value, setValue] = useState("");
-  const [typing, setTyping] = useState<Record<string, TypingEntry>>({}); // keyed by user_id
-
-  const endRef = useRef<HTMLDivElement | null>(null);
-  const latestIdRef = useRef<number | null>(
-    messages.length ? messages[messages.length - 1].id : null,
-  );
 
   /* mark as read */
   const lastMarkReadRef = useRef<number>(0);
@@ -190,12 +120,12 @@ export default function ChatRoomView({
     if (!userId) return;
 
     const now = Date.now();
-    if (now - lastMarkReadRef.current < 800) return; // throttle
+    if (now - lastMarkReadRef.current < DELAY.MARK_READ_THROTTLE) return;
     lastMarkReadRef.current = now;
 
     const lastReadAt = ts ?? new Date().toISOString();
 
-    const { error } = await supabase.from("chatroom_reads").upsert(
+    const { error } = await supabase.from(TABLE.CHATROOM_READS).upsert(
       {
         chat_id: chatId,
         user_id: userId,
@@ -232,24 +162,16 @@ export default function ChatRoomView({
   /* reactions */
 
   useEffect(() => {
-    // reset du contenu quand on navigue vers une autre chatroom
     setChat(initialChat);
     setMessages(initialMessages);
     setSelectedPersona(initialPersona);
 
-    latestIdRef.current = initialMessages.length
-      ? initialMessages[initialMessages.length - 1].id
-      : null;
+    setActiveChat(chatId);
 
-    // marque comme lu dès l’entrée (utile pour navigation client)
-    const ts = initialMessages.length
-      ? initialMessages[initialMessages.length - 1].created_at
-      : undefined;
-
+    const ts = initialMessages.at(-1)?.created_at;
     void markChatRead(ts);
 
-    // optionnel: scroll au bas à l’arrivée
-    // scrollToBottom("auto");
+    return () => setActiveChat(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chatId]);
 
@@ -274,191 +196,41 @@ export default function ChatRoomView({
 
   /* scroll bottom behavior */
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const nearBottomRef = useRef(true);
+
+  function getViewport() {
+    return scrollRef.current?.querySelector(
+      "[data-radix-scroll-area-viewport]",
+    ) as HTMLElement | null;
+  }
   function scrollToBottom(behavior: ScrollBehavior = "auto") {
-    const el = scrollRef.current;
-    if (!el) return;
-    el.scrollTo({ top: el.scrollHeight, behavior });
+    const vp = getViewport();
+    if (!vp) return;
+    vp.scrollTo({ top: vp.scrollHeight, behavior });
   }
   function isNearBottom() {
-    const el = scrollRef.current;
-    if (!el) return true;
-    const threshold = 96; // px de tolérance
-    return el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
+    const vp = getViewport();
+    if (!vp) return true;
+    return vp.scrollHeight - vp.scrollTop - vp.clientHeight < SCROLL_THRESHOLD_PX;
   }
 
-  /* presence */
-  const [online, setOnline] = useState<Record<string, PresenceMeta>>({});
-
-  function parsePresence(
-    state: Record<string, any>,
-  ): Record<string, PresenceMeta> {
-    const res: Record<string, PresenceMeta> = {};
-    for (const [userId, entry] of Object.entries(state)) {
-      // Supabase renvoie { key: { metas: [...] } }
-      const metas = Array.isArray(entry) ? entry : (entry?.metas ?? []);
-      const latest = metas[metas.length - 1] ?? {};
-      res[userId] = {
-        user_id: userId,
-        username: latest.username ?? null,
-        avatar_url: latest.avatar_url ?? null,
-        persona_name: latest.persona_name ?? null,
-      };
-    }
-    return res;
-  }
-
-  /* typing presence */
-  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
-  const lastTypingSentRef = useRef<number>(0);
-  const meRef = useRef<{
-    id: string;
-    username: string | null;
-    avatar_url: string | null;
-  } | null>(null);
-
+  // Suivre en temps réel si l'utilisateur est près du bas
   useEffect(() => {
-    let mounted = true;
-
-    (async () => {
-      const { data: auth } = await supabase.auth.getUser();
-      const me = auth?.user;
-      if (!me) return;
-
-      // Profil pour username/avatar dans la présence
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("username, avatar_url")
-        .eq("id", me.id)
-        .maybeSingle();
-
-      meRef.current = {
-        id: me.id,
-        username: profile?.username ?? null,
-        avatar_url: (profile as any)?.avatar_url ?? null,
-      };
-
-      // 👉 canal par salle
-      const channel = supabase.channel(`chat:${chatId}`, {
-        config: {
-          presence: { key: me.id },
-          // En prod, garde self:false (tu ne reçois pas tes propres broadcasts)
-          broadcast: { self: false },
-        },
-      });
-
-      // ✅ SEULE source de vérité : recalcule tout à chaque "sync"
-      channel.on("presence", { event: "sync" }, () => {
-        setOnline(parsePresence(channel.presenceState()));
-      });
-
-      // Typing (inchangé)
-      channel.on("broadcast", { event: "typing" }, ({ payload }) => {
-        const { user_id, username, persona_name } = payload as {
-          user_id: string;
-          username?: string | null;
-          persona_name?: string | null;
-        };
-        // si tu veux ignorer tes propres signaux: if (meRef.current?.id === user_id) return;
-
-        setTyping((prev) => ({
-          ...prev,
-          [user_id]: {
-            username,
-            personaName: persona_name,
-            ts: Date.now(),
-          },
-        }));
-
-        window.setTimeout(() => {
-          setTyping((curr) => {
-            const t = curr[user_id];
-            if (!t || Date.now() - t.ts < 3800) return curr;
-            const copy = { ...curr };
-            delete copy[user_id];
-            return copy;
-          });
-        }, 4000);
-      });
-
-      // 🔒 Track APRÈS SUBSCRIBED (clé pour voir les joins correctement)
-      channel.subscribe(async (status) => {
-        if (status === "SUBSCRIBED") {
-          await channel.track({
-            user_id: me.id,
-            username: meRef.current?.username ?? null,
-            avatar_url: meRef.current?.avatar_url ?? null,
-            persona_name: selectedPersona?.name ?? null,
-          });
-          // maj immédiate (inclut toi-même)
-          setOnline(parsePresence(channel.presenceState()));
-        }
-      });
-
-      if (!mounted) {
-        supabase.removeChannel(channel);
-        return;
-      }
-      channelRef.current = channel;
-    })();
-
-    return () => {
-      mounted = false;
-      if (channelRef.current) {
-        channelRef.current.untrack();
-        supabase.removeChannel(channelRef.current);
-        channelRef.current = null;
-      }
+    const vp = getViewport();
+    if (!vp) return;
+    const onScroll = () => {
+      nearBottomRef.current =
+        vp.scrollHeight - vp.scrollTop - vp.clientHeight < SCROLL_THRESHOLD_PX;
     };
-  }, [chatId, supabase]);
+    vp.addEventListener("scroll", onScroll, { passive: true });
+    return () => vp.removeEventListener("scroll", onScroll);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // Quand la persona sélectionnée change, on met à jour notre présence (facultatif)
-  useEffect(() => {
-    const me = meRef.current;
-    const ch = channelRef.current;
-    if (!me || !ch) return;
-    ch.track({
-      user_id: me.id,
-      username: me.username,
-      avatar_url: me.avatar_url,
-      persona_name: selectedPersona?.name ?? null,
-    }).then(() => {
-      // force un recalcul local de la présence
-      setOnline(parsePresence(ch.presenceState()));
-    });
-  }, [selectedPersona]);
-
-  // Fonction transmise au composer -> broadcast "typing" (avec throttle)
-  const emitTyping = () => {
-    const now = Date.now();
-    if (!channelRef.current) return;
-    if (now - lastTypingSentRef.current < 1500) return; // throttle 1.5s
-    lastTypingSentRef.current = now;
-
-    const me = meRef.current;
-    channelRef.current.send({
-      type: "broadcast",
-      event: "typing",
-      payload: {
-        user_id: me?.id,
-        username: me?.username,
-        persona_name: selectedPersona?.name ?? null,
-      },
-    });
-  };
-
-  // Texte compact “qui tape ?”
-  const typingLine = useMemo(() => {
-    const entries = Object.values(typing);
-    if (!entries.length) return "";
-    const names = entries
-      .map((e) => (e.username ? `@${e.username}` : "Quelqu’un"))
-      .slice(0, 3);
-    const who = names.join(", ");
-    const persona = entries[0]?.personaName
-      ? ` · ${entries[0].personaName}`
-      : "";
-    return `${who} ${names.length > 1 ? "écrivent" : "écrit"}…${persona}`;
-  }, [typing]);
+  const { online, emitTyping, typingLine, clearTyping } = usePresenceChannel({
+    chatId,
+    persona: selectedPersona,
+  });
 
   // Si l'utilisateur n'était pas présent côté serveur, on le récupère ici
   useEffect(() => {
@@ -473,243 +245,65 @@ export default function ChatRoomView({
     scrollToBottom("auto");
   }, []);
 
-  // Auto-scroll quand messages changent
+  // Auto-scroll uniquement quand un nouveau message est ajouté (pas sur update/réactions)
+  const msgCountRef = useRef(messages.length);
   useEffect(() => {
-    if (!messages.length) return;
+    const prev = msgCountRef.current;
+    msgCountRef.current = messages.length;
+    if (messages.length <= prev) return; // update ou suppression, pas d'ajout
     const last = messages[messages.length - 1];
-    if (isNearBottom() || isMyMessage(last, userId)) {
+    if (nearBottomRef.current || isMyMessage(last, userId)) {
       scrollToBottom("smooth");
     }
   }, [messages, userId]);
 
-  // Realtime après bootstrap SSR
-  useEffect(() => {
-    const channel = supabase
-      .channel(`chat-${chatId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "chat_messages",
-          filter: `chat_id=eq.${chatId}`,
-        },
-        async (payload) => {
-          const id = (payload.new as any).id as number;
-          if (latestIdRef.current && id <= latestIdRef.current) return;
-
-          // Re-fetch 1 ligne avec join persona (pour garder la structure uniforme)
-          const { data } = await supabase
-            .from("chat_messages")
-            .select(
-              "id, chat_id, content, author_id, created_at, persona:personas(id, user_id, name, avatar_url)",
-            )
-            .eq("id", id)
-            .single();
-
-          if (!data) return;
-          setMessages((prev) =>
-            prev.some((m) => m.id === id)
-              ? prev
-              : [
-                  ...prev,
-                  { ...(data as ChatMessageWithPersona), reactions: [] },
-                ],
-          );
-
-          latestIdRef.current = id;
-
-          const uid = (data.author_id ?? data.persona?.user_id) as
-            | string
-            | undefined;
-          if (uid && framesByUser[uid] === undefined) {
-            const { data: eq } = await supabase
-              .from("user_equipped_cosmetics")
-              .select("cosmetic_items:avatar_frame_id(asset_url)")
-              .eq("user_id", uid)
-              .maybeSingle();
+  useRealtimeChatSync({
+    chatId,
+    selfId: userId,
+    initialLatestId: initialMessages.at(-1)?.id ?? null,
+    onMessageInserted: (msg, authorId) => {
+      setMessages((prev) =>
+        prev.some((m) => m.id === msg.id) ? prev : [...prev, { ...msg, reactions: [] }],
+      );
+      if (authorId) clearTyping(authorId);
+      if (authorId && framesByUser[authorId] === undefined) {
+        supabase
+          .from(TABLE.USER_EQUIPPED_COSMETICS)
+          .select("cosmetic_items:avatar_frame_id(asset_url)")
+          .eq("user_id", authorId)
+          .maybeSingle()
+          .then(({ data: eq }) => {
             setFramesByUser((prev) => ({
               ...prev,
-              [uid]: eq?.cosmetic_items?.asset_url ?? null,
+              [authorId]: (eq?.cosmetic_items as unknown as { asset_url?: string | null } | null)?.asset_url ?? null,
             }));
-          }
-        },
-      )
-      .subscribe();
-
-    return () => {
-      void supabase.removeChannel(channel);
-    };
-  }, [chatId, supabase]);
-
-  // Realtime: UPDATE messages (édition)
-  useEffect(() => {
-    const channel = supabase
-      .channel(`chat-messages-updates-${chatId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "chat_messages",
-          filter: `chat_id=eq.${chatId}`,
-        },
-        (payload) => {
-          const next = payload.new as any;
-          const id = next.id as number;
-          const content = next.content as string;
-
-          setMessages((prev) =>
-            prev.map((m) => (m.id === id ? { ...m, content } : m)),
-          );
-        },
-      )
-      .subscribe();
-
-    return () => {
-      void supabase.removeChannel(channel);
-    };
-  }, [chatId, supabase]);
-
-  // Realtime des mises à jour de la chatroom (title/banner/icon)
-  useEffect(() => {
-    const channel = supabase
-      .channel(`chatroom-updates-${chatId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "chatrooms",
-          filter: `id=eq.${chatId}`,
-        },
-        (payload) => {
-          const next = payload.new as {
-            title?: string | null;
-            name?: string | null;
-            banner_url?: string | null;
-            icon_url?: string | null;
-          };
-
-          setChat((prev) => {
-            if (!prev) return prev;
-            return {
-              ...prev,
-              // ta UI utilise "title" : on le met à jour en priorité
-              title: (next.title ?? next.name ?? prev.title) as string,
-              banner_url: next.banner_url ?? prev.banner_url,
-              icon_url: next.icon_url ?? prev.icon_url,
-            };
           });
-        },
-      )
-      .subscribe();
-
-    return () => {
-      void supabase.removeChannel(channel);
-    };
-  }, [chatId, supabase]);
-
-  useEffect(() => {
-    const channel = supabase
-      .channel(`chat-reactions-${chatId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "chat_message_reactions",
-          filter: `chat_id=eq.${chatId}`,
-        },
-        (payload) => {
-          const ev = payload.eventType; // INSERT | DELETE | UPDATE
-          if (ev !== "INSERT" && ev !== "DELETE") return;
-
-          const row: any = ev === "DELETE" ? payload.old : payload.new;
-          if (!row) return;
-
-          // Si tu fais un optimistic update côté client, ignore tes propres events
-          if (row.user_id && userId && row.user_id === userId) return;
-
-          const mid = Number(row.message_id);
-          const emoji = String(row.emoji);
-
-          setMessages((prev) =>
-            prev.map((m) => {
-              if (m.id !== mid) return m;
-              return {
-                ...m,
-                reactions: updateReactions(
-                  m.reactions,
-                  emoji,
-                  ev === "INSERT" ? +1 : -1,
-                ),
-              };
-            }),
-          );
-        },
-      )
-      .subscribe();
-
-    return () => {
-      void supabase.removeChannel(channel);
-    };
-  }, [chatId, supabase, userId]);
-
-  async function send() {
-    const text = value.trim();
-    if (!text) return;
-    if (!selectedPersona) {
-      toast.error("Sélectionnez un persona avant d'envoyer.");
-      return;
-    }
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const { data: inserted, error } = await supabase
-      .from("chat_messages")
-      .insert({
-        chat_id: chatId,
-        author_id: user.id,
-        content: text,
-        persona_id: selectedPersona.id,
-      })
-      // Récupère immédiatement la ligne insérée + le join persona
-      .select("*, persona:personas(id, user_id, name, avatar_url)")
-      .single();
-
-    if (error) {
-      // (optionnel) afficher un toast d’erreur ici
-      return;
-    }
-
-    // Écho immédiat dans la liste (au cas où Realtime tarde ou soit filtré)
-    if (inserted) {
+      }
+    },
+    onMessageUpdated: (id, content) => {
+      setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, content } : m)));
+    },
+    onChatroomPatched: (patch) => {
+      setChat((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          title: (patch.title ?? patch.name ?? prev.title) as string,
+          banner_url: patch.banner_url ?? prev.banner_url,
+          icon_url: patch.icon_url ?? prev.icon_url,
+        };
+      });
+    },
+    onReactionChange: (mid, emoji, delta) => {
       setMessages((prev) =>
-        prev.some((m) => m.id === inserted.id)
-          ? prev
-          : [
-              ...prev,
-              { ...(inserted as ChatMessageWithPersona), reactions: [] },
-            ],
+        prev.map((m) =>
+          m.id === mid
+            ? { ...m, reactions: updateReactions(m.reactions, emoji, delta) }
+            : m,
+        ),
       );
-    }
-
-    setValue("");
-
-    // Mémoriser/effacer la préférence de persona pour cette chatroom
-    await supabase.from("chatroom_persona_prefs").upsert(
-      {
-        chat_id: chatId,
-        user_id: user.id,
-        persona_id: selectedPersona.id,
-      },
-      { onConflict: "chat_id,user_id" },
-    );
-  }
+    },
+  });
 
   return (
     <div className="composer-parent flex flex-row focus-visible:outline-0 h-full">
@@ -782,82 +376,12 @@ export default function ChatRoomView({
             </div>
           </div>
         </div>
-        {/* Persona Profile Sheet */}
-        <Sheet
-          open={!!openPersona}
-          onOpenChange={(o) => !o && setOpenPersona(null)}
-        >
-          <SheetContent side="right" className="w-[380px] sm:w-[420px]">
-            <SheetHeader>
-              <SheetTitle>Profil du persona</SheetTitle>
-              <SheetDescription>Détails et actions rapides</SheetDescription>
-            </SheetHeader>
-
-            {openPersona && (
-              <div className="mt-4 space-y-6">
-                <div className="flex items-center gap-4">
-                  <Avatar className="h-16 w-16">
-                    <AvatarImage
-                      src={openPersona.avatar_url ?? undefined}
-                      alt={openPersona.name}
-                    />
-                    <AvatarFallback>
-                      {openPersona.name
-                        .split(" ")
-                        .map((p) => p[0])
-                        .slice(0, 2)
-                        .join("")
-                        .toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <div className="text-base font-semibold">
-                      {openPersona.name}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      Propriétaire :{" "}
-                      {openPersona.user_id === selfId
-                        ? "Vous"
-                        : openPersona.user_id}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div className="rounded-lg border p-3">
-                    <div className="text-xs text-muted-foreground">
-                      Messages ici
-                    </div>
-                  </div>
-                  <div className="rounded-lg border p-3">
-                    <div className="text-xs text-muted-foreground">
-                      Persona ID
-                    </div>
-                    <div className="truncate text-xs">{openPersona.id}</div>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <button
-                    className="w-full rounded-lg border px-3 py-2 text-sm hover:bg-muted"
-                    onClick={() => {
-                      setSelectedPersona(openPersona);
-                      setOpenPersona(null);
-                    }}
-                  >
-                    Utiliser ce persona
-                  </button>
-                  <button
-                    className="w-full rounded-lg border px-3 py-2 text-sm hover:bg-muted"
-                    onClick={() => setOpenPersona(null)}
-                  >
-                    Fermer
-                  </button>
-                </div>
-              </div>
-            )}
-          </SheetContent>
-        </Sheet>
+        <PersonaProfileSheet
+          persona={openPersona}
+          selfId={selfId}
+          onClose={() => setOpenPersona(null)}
+          onUsePersona={(p) => setSelectedPersona(p)}
+        />
       </div>
     </div>
   );

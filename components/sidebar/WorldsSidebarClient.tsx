@@ -1,14 +1,22 @@
-// components/worlds/WorldsSidebarClient.tsx
+﻿// components/worlds/WorldsSidebarClient.tsx
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, useTransition } from "react";
-import { useSelectedLayoutSegment, useRouter } from "next/navigation";
+import { useMemo, useEffect, useState, useTransition } from "react";
+import { usePathname, useRouter } from "next/navigation"; // ✅ usePathname
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Plus, Loader2, GlobeLock, Globe, Users } from "lucide-react";
+import {
+  Plus,
+  Loader2,
+  GlobeLock,
+  Globe,
+  Users,
+  ShoppingBasket,
+  ShieldCheck,
+} from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -34,58 +42,122 @@ type WorldRow = {
   world_members: { user_id: string; role: Role }[];
 };
 
+function isActivePrefix(pathname: string, base: string) {
+  return pathname === base || pathname.startsWith(base + "/");
+}
+
+function getFirstIdAfter(prefix: string, pathname: string) {
+  // prefix ex: "/w/" or "/c/"
+  if (!pathname.startsWith(prefix)) return null;
+  const rest = pathname.slice(prefix.length);
+  const id = rest.split("/")[0];
+  return id || null;
+}
+
 export default function WorldsSidebarClient(props: {
   meId: string;
   plan: "free" | "pro" | "team" | "lifetime";
   ownedCount: number;
   quotaLimit: number;
   quotaReached: boolean;
-  mine: WorldRow[];
-  shared: WorldRow[];
+  mine: any[];
+  shared: any[];
   unreadMap?: Record<string, number>;
+  isAdmin?: boolean;
 }) {
-  const {
-    meId,
-    plan,
-    ownedCount,
-    quotaLimit,
-    quotaReached,
-    mine,
-    shared,
-    unreadMap,
-  } = props;
+  const { meId, plan, ownedCount, quotaLimit, quotaReached, mine, shared, isAdmin } =
+    props;
 
   const [q, setQ] = useState("");
-  const segment = useSelectedLayoutSegment(); // Si /worlds/[id], segment === [id]
   const filteredMine = useFilter(mine, q);
   const filteredShared = useFilter(shared, q);
 
-  const { worldUnread, setActiveWorld } = useNotifications();
+  const pathname = usePathname() ?? "/";
+  const { worldUnread } = useNotifications();
+
+  // worldId actif selon la page courante (pour highlight visuel uniquement)
+  const [activeWorldId, setActiveWorldId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const wId = getFirstIdAfter("/w/", pathname);
+    if (wId) { setActiveWorldId(wId); return; }
+
+    const cId = getFirstIdAfter("/c/", pathname);
+    if (!cId) { setActiveWorldId(null); return; }
+
+    let cancelled = false;
+    (async () => {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("chatrooms")
+        .select("world_id")
+        .eq("id", cId)
+        .single();
+      if (cancelled) return;
+      setActiveWorldId(!error && data?.world_id ? data.world_id : null);
+    })();
+    return () => { cancelled = true; };
+  }, [pathname]);
+
+  const pActive = isActivePrefix(pathname, "/p");
+  const shopActive = isActivePrefix(pathname, "/shop");
 
   return (
     <div className="flex h-full flex-col">
       <div className="px-2 py-3">
         <div className="space-y-1">
           <Link
-            href={`/p/`}
-            className={cn("group flex items-center justify-between rounded-lg")}
+            href="/p"
+            className="group flex items-center justify-between rounded-lg"
           >
-            <Button size="sm" className="w-full justify-start">
+            <Button
+              variant={pActive ? "secondary" : "ghost"}
+              size="sm"
+              className="w-full justify-start"
+            >
               <Users className="h-4 w-4 opacity-80 mr-1" />
               <div className="truncate">Personae</div>
             </Button>
           </Link>
+
+          <Link
+            href="/shop"
+            className="group flex items-center justify-between rounded-lg"
+          >
+            <Button
+              variant={shopActive ? "secondary" : "ghost"}
+              size="sm"
+              className="w-full justify-start"
+            >
+              <ShoppingBasket className="h-4 w-4 opacity-80 mr-1" />
+              <div className="truncate">Boutique</div>
+            </Button>
+          </Link>
+
+          {isAdmin && (
+            <Link
+              href="/admin"
+              className="group flex items-center justify-between rounded-lg"
+            >
+              <Button
+                variant={isActivePrefix(pathname, "/admin") ? "secondary" : "ghost"}
+                size="sm"
+                className="w-full justify-start"
+              >
+                <ShieldCheck className="h-4 w-4 opacity-80 mr-1" />
+                <div className="truncate">Administration</div>
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
-      <div className="p-4">
-        <div className="relative">
-          <Input
-            placeholder="Rechercher…"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-          />
-        </div>
 
+      <div className="p-4">
+        <Input
+          placeholder="Rechercher…"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+        />
         <div className="mt-2 text-xs text-muted-foreground">
           {plan === "free"
             ? `Quota : ${ownedCount}/${quotaLimit}`
@@ -97,29 +169,16 @@ export default function WorldsSidebarClient(props: {
 
       <ScrollArea className="flex-1">
         <Section title="Mes mondes" empty="Aucun monde possédé.">
-          <CreateWorldDialog
-            disabled={quotaReached}
-            plan={plan}
-            hint={
-              plan === "free"
-                ? quotaReached
-                  ? `Quota atteint (${ownedCount}/${quotaLimit})`
-                  : `Gratuit : ${ownedCount}/${quotaLimit}`
-                : plan === "pro"
-                  ? "Pro : illimité"
-                  : plan === "team"
-                    ? "Team : illimité"
-                    : "Lifetime : illimité"
-            }
-          />
+          <CreateWorldDialog disabled={quotaReached} plan={plan} hint="..." />
           {filteredMine.map((w) => (
             <WorldItem
               key={w.id}
               meId={meId}
               world={w}
-              active={segment === w.id}
+              // ✅ actif si on est sur /w/:id/... OU sur /c/:chatroomId qui appartient à ce monde
+              active={activeWorldId === w.id}
               unread={worldUnread[w.id] ?? 0}
-              onActivate={() => setActiveWorld(w.id)}
+              onActivate={() => {}}
             />
           ))}
         </Section>
@@ -133,9 +192,9 @@ export default function WorldsSidebarClient(props: {
               key={w.id}
               meId={meId}
               world={w}
-              active={segment === w.id}
+              active={activeWorldId === w.id}
               unread={worldUnread[w.id] ?? 0}
-              onActivate={() => setActiveWorld(w.id)}
+              onActivate={() => {}}
             />
           ))}
         </Section>
@@ -196,10 +255,6 @@ function WorldItem({
   unread?: number;
   onActivate: () => void;
 }) {
-  const myMembership = world.world_members.find((m) => m.user_id === meId);
-  const role = myMembership?.role ?? "viewer";
-  const roleLabel = roleToLabel(role);
-  const isOwner = role === "owner";
   const members = world.world_members ?? [];
   const isShared = members.some((m) => m.user_id !== world.owner_id); // partagé si quelqu'un d'autre que l’owner est membre
 
@@ -207,12 +262,13 @@ function WorldItem({
     <Link
       href={`/w/${world.id}`}
       onClick={onActivate}
-      className={cn(
-        "group flex items-center justify-between rounded-lg",
-        active && "bg-zinc-100",
-      )}
+      className={cn("group flex items-center justify-between rounded-lg")}
     >
-      <Button variant="ghost" size="sm" className="w-full justify-start">
+      <Button
+        variant={active ? "secondary" : "ghost"}
+        size="sm"
+        className="w-full justify-start"
+      >
         <div className="relative">
           {isShared ? (
             <Globe className="h-4 w-4 opacity-80 mr-1" />
@@ -223,7 +279,7 @@ function WorldItem({
             <span
               title={`${unread} nouveauté(s)`}
               className={cn(
-                `inline-flex h-1.5 w-1.5 rounded-full bg-red-400 shadow-[0_0_0_2px_black] text-[.65rem] absolute -right-0.5 -top-0.5 items-center justify-center leading-none text-black/80 font-medium`,
+                `inline-flex h-1.5 w-1.5 rounded-full bg-accent shadow-[0_0_0_2px_black] text-[.65rem] absolute -right-0.5 -top-0.5 items-center justify-center leading-none text-black/80 font-medium`,
               )}
             >
               {/* {unread} */}
@@ -235,21 +291,6 @@ function WorldItem({
       </Button>
     </Link>
   );
-}
-
-function roleToLabel(r: Role) {
-  switch (r) {
-    case "owner":
-      return "Proprio";
-    case "admin":
-      return "Admin";
-    case "editor":
-      return "Éditeur";
-    case "player":
-      return "Joueur";
-    default:
-      return "Lecteur";
-  }
 }
 
 function CreateWorldDialog({
@@ -364,3 +405,4 @@ function CreateWorldDialog({
     </Dialog>
   );
 }
+

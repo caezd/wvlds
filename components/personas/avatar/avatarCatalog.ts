@@ -204,8 +204,8 @@ function makeSeriesWithVariants(opts: {
       variants: opts.variantsForId(id, i),
       defaultVariantKey: opts.defaultVariantKey,
 
-      variantGroup: opts.variantGroup ?? null,
-      drivesVariantGroup: opts.drivesVariantGroup ?? null,
+      variantGroup: opts.variantGroup ?? undefined,
+      drivesVariantGroup: opts.drivesVariantGroup ?? undefined,
 
       z: opts.z,
       alpha: opts.alpha,

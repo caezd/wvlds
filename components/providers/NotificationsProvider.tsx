@@ -1,8 +1,8 @@
-// components/notifications/NotificationsProvider.tsx
 "use client";
 
 import {
     createContext,
+    useCallback,
     useContext,
     useEffect,
     useMemo,
@@ -10,16 +10,18 @@ import {
     useState,
 } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { TABLE, RPC, channel, DELAY } from "@/lib/constants";
+import type { WorldUnreadRow } from "@/types/db";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+
+type AllChatroomUnreadRow = { chat_id: string; world_id: string; unread_messages: number };
 
 type Ctx = {
     worldUnread: Record<string, number>;
     roomUnread: Record<string, number>;
-    setActiveWorld: (id: string | null) => void;
     setActiveChat: (id: string | null) => void;
-    refreshAll: () => Promise<void>;
-    refreshWorld: (worldId?: string) => Promise<void>;
     markWorldSeen: (worldId: string) => Promise<void>;
-    markChatRead: (chatId: string) => Promise<void>;
+    refreshAll: () => Promise<void>;
 };
 
 const NotificationsCtx = createContext<Ctx | null>(null);
@@ -30,210 +32,147 @@ export function useNotifications() {
     return ctx;
 }
 
-export default function NotificationsProvider({
-    children,
-}: {
-    children: React.ReactNode;
-}) {
+export default function NotificationsProvider({ children }: { children: React.ReactNode }) {
     const supabase = useMemo(() => createClient(), []);
     const [worldUnread, setWorldUnread] = useState<Record<string, number>>({});
     const [roomUnread, setRoomUnread] = useState<Record<string, number>>({});
 
+    const { userId } = useCurrentUser();
     const userIdRef = useRef<string | null>(null);
-    const memberWorldsRef = useRef<string[]>([]);
-    const activeWorldRef = useRef<string | null>(null);
+    useEffect(() => { userIdRef.current = userId; }, [userId]);
+
     const activeChatRef = useRef<string | null>(null);
+    const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    async function refreshAll() {
-        const {
-            data: { user },
-        } = await supabase.auth.getUser();
-        if (!user) return;
-        const { data: worlds } = await supabase.rpc("get_world_unreads", {
-            u: user.id,
-        });
+    // Source de vérité unique : toujours la DB.
+    // Calcule world unreads depuis la somme des room unreads pour éviter la désynchronisation.
+    const refreshAll = useCallback(async () => {
+        const uid = userIdRef.current;
+        if (!uid) return;
 
+        const [{ data: worldRows }, { data: roomRows }] = await Promise.all([
+            supabase.rpc(RPC.GET_WORLD_UNREADS, { u: uid }),
+            supabase.rpc("get_all_chatroom_unreads", { u: uid }),
+        ]);
+
+        // World-level : unread_messages (msgs) + unread_rooms (nouvelles chatrooms)
         const wMap: Record<string, number> = {};
-        for (const r of worlds ?? []) {
-            const sum = (r.unread_messages ?? 0) + (r.unread_rooms ?? 0);
-            wMap[r.world_id] = sum;
+        for (const r of (worldRows ?? []) as WorldUnreadRow[]) {
+            wMap[r.world_id] = (r.unread_messages ?? 0) + (r.unread_rooms ?? 0);
         }
         setWorldUnread(wMap);
 
-        if (activeWorldRef.current) {
-            await refreshWorld(activeWorldRef.current);
-        }
-    }
-
-    async function refreshWorld(worldId?: string) {
-        const wid = worldId ?? activeWorldRef.current;
-        if (!wid) return;
-        const {
-            data: { user },
-        } = await supabase.auth.getUser();
-        if (!user) return;
-        const { data } = await supabase.rpc("get_chatroom_unreads", {
-            u: user.id,
-            wid,
-        });
+        // Room-level
         const rMap: Record<string, number> = {};
-        for (const r of data ?? []) rMap[r.chat_id] = r.unread_messages ?? 0;
-        setRoomUnread((prev) => ({ ...prev, ...rMap }));
-    }
-
-    async function markWorldSeen(worldId: string) {
-        const {
-            data: { user },
-        } = await supabase.auth.getUser();
-        if (!user) return;
-        await supabase.from("world_member_reads").upsert(
-            {
-                world_id: worldId,
-                user_id: user.id,
-                last_seen_at: new Date().toISOString(),
-            },
-            { onConflict: "world_id,user_id" }
-        );
-        setWorldUnread((m) => ({ ...m, [worldId]: 0 }));
-        // on laisse roomUnread tel quel (les salons conservent leur état)
-    }
-
-    async function markChatRead(chatId: string) {
-        const {
-            data: { user },
-        } = await supabase.auth.getUser();
-        if (!user) return;
-        await supabase.from("chatroom_reads").upsert(
-            {
-                chat_id: chatId,
-                user_id: user.id,
-                last_read_at: new Date().toISOString(),
-            },
-            { onConflict: "chat_id,user_id" }
-        );
-
-        setRoomUnread((m) => ({ ...m, [chatId]: 0 }));
-        // recalcul côté monde (somme)
-        const wid = activeWorldRef.current;
-        if (wid) await refreshAll();
-    }
-
-    function setActiveWorld(id: string | null) {
-        activeWorldRef.current = id;
-        if (id) {
-            void refreshWorld(id);
+        for (const r of (roomRows ?? []) as AllChatroomUnreadRow[]) {
+            rMap[r.chat_id] = r.unread_messages ?? 0;
         }
-    }
+        setRoomUnread(rMap);
+    }, [supabase]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    function setActiveChat(id: string | null) {
+    // Refresh debounced — déclenché par les événements realtime
+    const scheduleRefresh = useCallback(() => {
+        if (debounceTimer.current) clearTimeout(debounceTimer.current);
+        debounceTimer.current = setTimeout(() => void refreshAll(), DELAY.NOTIFICATIONS_DEBOUNCE);
+    }, [refreshAll]);
+
+    // Marque une chatroom comme lue, puis déclenche un refresh
+    const markChatRead = useCallback(async (chatId: string) => {
+        const uid = userIdRef.current;
+        if (!uid) return;
+        await supabase.from(TABLE.CHATROOM_READS).upsert(
+            { chat_id: chatId, user_id: uid, last_read_at: new Date().toISOString() },
+            { onConflict: "chat_id,user_id" },
+        );
+        scheduleRefresh();
+    }, [supabase, scheduleRefresh]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const setActiveChat = useCallback((id: string | null) => {
         activeChatRef.current = id;
-        if (id) {
-            void markChatRead(id);
-        }
-    }
+        if (id) void markChatRead(id);
+    }, [markChatRead]);
+
+    const markWorldSeen = useCallback(async (worldId: string) => {
+        const uid = userIdRef.current;
+        if (!uid) return;
+        await supabase.from(TABLE.WORLD_MEMBER_READS).upsert(
+            { world_id: worldId, user_id: uid, last_seen_at: new Date().toISOString() },
+            { onConflict: "world_id,user_id" },
+        );
+        scheduleRefresh();
+    }, [supabase, scheduleRefresh]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Bootstrap + realtime
     useEffect(() => {
-        let mounted = true;
-        (async () => {
-            const {
-                data: { user },
-            } = await supabase.auth.getUser();
-            if (!mounted || !user) return;
-            userIdRef.current = user.id;
+        if (!userId) return;
 
-            // Mondes où je suis membre
+        let mounted = true;
+        const openChannels: ReturnType<typeof supabase.channel>[] = [];
+
+        (async () => {
+            // Charge les worlds membres
             const { data: mw } = await supabase
-                .from("world_members")
+                .from(TABLE.WORLD_MEMBERS)
                 .select("world_id")
-                .eq("user_id", user.id);
-            const worldIds = (mw ?? []).map((x: any) => x.world_id);
-            memberWorldsRef.current = worldIds;
+                .eq("user_id", userId);
+            if (!mounted) return;
+
+            const worldIds = (mw ?? []).map((x: { world_id: string }) => x.world_id);
 
             await refreshAll();
+            if (!mounted) return;
 
-            // Realtime : un canal par monde pour messages + nouveaux salons
-            const channels = worldIds.flatMap((wid) => {
-                const ch1 = supabase
-                    .channel(`w:${wid}:messages`)
+            // Si une chatroom était déjà active avant que userId soit connu
+            if (activeChatRef.current) {
+                await markChatRead(activeChatRef.current);
+                if (!mounted) return;
+            }
+
+            // Abonnements realtime : un canal par monde (filtre world_id)
+            for (const wid of worldIds) {
+                const ch = supabase
+                    .channel(channel.worldMessages(wid))
                     .on(
                         "postgres_changes",
                         {
                             event: "INSERT",
                             schema: "public",
-                            table: "chat_messages",
-                            filter: `world_id=eq.${wid}`,
-                        },
-                        async (payload) => {
-                            const row: any = payload.new;
-                            if (row.author_id === userIdRef.current) return;
-
-                            // Si je suis dans ce salon -> le marquer lu directement
-                            if (activeChatRef.current === row.chat_id) {
-                                await markChatRead(row.chat_id);
-                                return;
-                            }
-
-                            // Incrémente salon
-                            setRoomUnread((m) => ({
-                                ...m,
-                                [row.chat_id]: (m[row.chat_id] ?? 0) + 1,
-                            }));
-                            // Incrémente monde
-                            setWorldUnread((m) => ({
-                                ...m,
-                                [wid]: (m[wid] ?? 0) + 1,
-                            }));
-                        }
-                    )
-                    .subscribe();
-
-                const ch2 = supabase
-                    .channel(`w:${wid}:rooms`)
-                    .on(
-                        "postgres_changes",
-                        {
-                            event: "INSERT",
-                            schema: "public",
-                            table: "chatrooms",
+                            table: TABLE.CHAT_MESSAGES,
                             filter: `world_id=eq.${wid}`,
                         },
                         (payload) => {
-                            const row: any = payload.new;
-                            if (row.created_by === userIdRef.current) return;
-                            // nouveau salon -> 1 notif sur ce salon (s’il est listé), + pastille monde
-                            setRoomUnread((m) => ({
-                                ...m,
-                                [row.id]: (m[row.id] ?? 0) + 1,
-                            }));
-                            setWorldUnread((m) => ({
-                                ...m,
-                                [wid]: (m[wid] ?? 0) + 1,
-                            }));
-                        }
+                            const row = payload.new as { chat_id: string; author_id: string | null };
+                            // Ignorer ses propres messages
+                            if (row.author_id === userIdRef.current) return;
+                            // Si l'user est dans cette chatroom : marquer comme lu
+                            if (activeChatRef.current === row.chat_id) {
+                                void markChatRead(row.chat_id);
+                                return;
+                            }
+                            // Sinon : refresh debounced pour mettre à jour les badges
+                            scheduleRefresh();
+                        },
                     )
                     .subscribe();
 
-                return [ch1, ch2];
-            });
-
-            return () => {
-                channels.forEach((ch) => supabase.removeChannel(ch));
-                mounted = false;
-            };
+                openChannels.push(ch);
+            }
         })();
-    }, []); // eslint-disable-line
 
-    const value: Ctx = {
+        return () => {
+            mounted = false;
+            if (debounceTimer.current) clearTimeout(debounceTimer.current);
+            openChannels.forEach((ch) => supabase.removeChannel(ch));
+        };
+    }, [userId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const value = useMemo<Ctx>(() => ({
         worldUnread,
         roomUnread,
-        setActiveWorld,
         setActiveChat,
-        refreshAll,
-        refreshWorld,
         markWorldSeen,
-        markChatRead,
-    };
+        refreshAll,
+    }), [worldUnread, roomUnread, setActiveChat, markWorldSeen, refreshAll]);
 
     return (
         <NotificationsCtx.Provider value={value}>

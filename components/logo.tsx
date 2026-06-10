@@ -1,4 +1,6 @@
-export default function Logo({ accent, ...props }) {
+import type { SVGProps } from "react";
+
+export default function Logo({ accent, ...props }: SVGProps<SVGSVGElement> & { accent?: string }) {
     return (
         <svg
             {...props}

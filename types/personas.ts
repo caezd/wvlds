@@ -1,4 +1,4 @@
-export type PersonaFieldType = "title" | "text";
+export type PersonaFieldType = "title" | "text" | "input" | "textarea";
 
 export interface PersonaSectionField {
   id: string;

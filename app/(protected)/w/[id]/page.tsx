@@ -60,7 +60,7 @@ export default async function WorldPage({
 
   const { data: world } = await supabase
     .from("worlds")
-    .select("id, name, description, owner_id, banner_url")
+    .select("id, name, description, owner_id, banner_url, world_members(user_id)")
     .eq("id", id)
     .single();
   const { data: me } = await supabase.auth.getUser();
@@ -72,13 +72,30 @@ export default async function WorldPage({
   }
 
   const selfId = me.user?.id ?? "";
-  const { data: navRooms, error: navErr } = await supabase.rpc(
-    "list_chatrooms_nav",
-    {
-      p_world_id: id,
-    },
-  );
-  const initialRooms = navErr ? [] : (navRooms ?? []);
+  type NavRoom = { id: string; title: string | null; name: string | null; icon_url: string | null; last_message_at: string | null; unread_count: number };
+
+  const { data: navRooms, error: navErr } = await supabase.rpc("list_chatrooms_nav", { p_world_id: id });
+
+  let initialRooms: NavRoom[];
+  if (!navErr && navRooms) {
+    initialRooms = navRooms as NavRoom[];
+  } else {
+    // Fallback : requête directe si le RPC n'existe pas encore
+    const { data: fallback } = await supabase
+      .from("chatrooms")
+      .select("id, title, name, icon_url, updated_at")
+      .eq("world_id", id)
+      .order("updated_at", { ascending: false });
+
+    initialRooms = (fallback ?? []).map((r) => ({
+      id: r.id,
+      title: r.title ?? null,
+      name: r.name ?? null,
+      icon_url: r.icon_url ?? null,
+      last_message_at: r.updated_at ?? null,
+      unread_count: 0,
+    }));
+  }
 
   const { data: canAdmin } = await supabase.rpc("is_world_admin", {
     wid: world.id,

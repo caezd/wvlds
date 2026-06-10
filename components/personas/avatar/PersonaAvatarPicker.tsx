@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -29,7 +30,7 @@ type SaveResult = { avatarUrl: string | null; config: AvatarConfigV1 | null };
 
 const imageCache = new Map<string, Promise<HTMLImageElement>>();
 
-const TEXTURE_REL_PATH = "fx/texture_paper.png";
+const TEXTURE_REL_PATH = "texture_paper.png";
 const TEXTURE_BLEND: GlobalCompositeOperation = "overlay";
 const TEXTURE_ALPHA = 0.8;
 
@@ -203,7 +204,7 @@ async function loadImage(url: string): Promise<HTMLImageElement> {
 }
 
 function isRequired(cat: AvatarCategory) {
-  return !!cat.required || cat.allowNone === false;
+  return cat.allowNone === false;
 }
 
 function defaultItemsForCategory(cat: AvatarCategory): LayerItem[] {
@@ -449,6 +450,7 @@ export function PersonaAvatarPicker({
   onSaved?: (result: SaveResult) => void;
 }) {
   const supabase = React.useMemo(() => createClient(), []);
+  const router = useRouter();
 
   const [config, setConfig] = React.useState<AvatarConfigV1>(() =>
     normalizeConfig(initialConfig ?? null),
@@ -759,40 +761,31 @@ export function PersonaAvatarPicker({
       const canvas = canvasRef.current;
       if (!canvas) throw new Error("Canvas introuvable.");
 
-      // On s’assure que les required/alwaysOn sont OK au moment de sauver
       const normalized = normalizeConfig(config);
 
-      const dataUrl = canvasToDataUrl(canvas);
-
-      const payload: Record<string, any> = {
-        avatar_url: dataUrl,
-        avatar_config: normalized,
-      };
-
-      let { error } = await supabase
+      // Upload vers Storage plutôt que stocker un data URL en base
+      const blob = await new Promise<Blob>((res, rej) =>
+        canvas.toBlob((b) => (b ? res(b) : rej(new Error("toBlob failed"))), "image/png"),
+      );
+      const path = `avatars/${personaId}.png`;
+      const { error: uploadError } = await supabase.storage
         .from("personas")
-        .update(payload)
+        .upload(path, blob, { upsert: true, contentType: "image/png" });
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage.from("personas").getPublicUrl(path);
+      const publicUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+
+      const { error } = await supabase
+        .from("personas")
+        .update({ avatar_url: publicUrl, avatar_config: normalized })
         .eq("id", personaId);
-
-      if (
-        error &&
-        String(error.message ?? "")
-          .toLowerCase()
-          .includes("avatar_config")
-      ) {
-        const { error: e2 } = await supabase
-          .from("personas")
-          .update({ avatar_url: dataUrl })
-          .eq("id", personaId);
-        if (e2) throw e2;
-        error = null;
-      }
-
       if (error) throw error;
 
       setConfig(normalized);
       setStatus("Avatar enregistré.");
-      onSaved?.({ avatarUrl: dataUrl, config: normalized });
+      onSaved?.({ avatarUrl: publicUrl, config: normalized });
+      router.refresh();
     } catch (e: any) {
       setStatus(e?.message ?? "Erreur lors de l’enregistrement.");
     } finally {
@@ -935,7 +928,7 @@ export function PersonaAvatarPicker({
                       }
 
                       const thumb = v.thumbPath ?? v.path;
-                      const thumbUrl = assetUrl(focusedPart.category, thumb);
+                      const thumbUrl = assetUrl(focusedPart!.category, thumb);
 
                       return (
                         <button
@@ -947,7 +940,7 @@ export function PersonaAvatarPicker({
                               ? "ring-2 ring-primary ring-offset-2 ring-offset-background"
                               : "opacity-90 hover:opacity-100",
                           )}
-                          onClick={() => setVariant(focusedPart.id, v.key)}
+                          onClick={() => setVariant(focusedPart!.id, v.key)}
                           title={v.label}
                           aria-label={v.label}
                         >
@@ -956,7 +949,7 @@ export function PersonaAvatarPicker({
                             src={thumbUrl}
                             alt=""
                             className="h-full w-full object-contain"
-                            loading={isSelected ? "eager" : "lazy"}
+                            loading={on ? "eager" : "lazy"}
                             draggable={false}
                           />
                         </button>

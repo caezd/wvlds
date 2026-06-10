@@ -19,14 +19,24 @@ type ShopItem = {
 export default async function ShopPage() {
   const supabase = await createClient();
 
-  const { data: items, error: itemsErr } =
-    await supabase.rpc("shop_list_items");
+  const { data: items, error: itemsErr } = await supabase.rpc("shop_list_items");
+
+  // La boutique nécessite des RPCs et tables non encore provisionnés
   if (itemsErr) {
-    // En production, log + UI d’erreur adaptée à ton design.
-    throw new Error(`shop_list_items failed: ${itemsErr.message}`);
+    console.warn("ShopPage: shop_list_items indisponible —", itemsErr.message);
+    return (
+      <div className="container mx-auto max-w-6xl py-8">
+        <header className="mb-6">
+          <h1 className="text-2xl font-semibold">Boutique</h1>
+        </header>
+        <p className="text-muted-foreground text-sm">
+          La boutique n&apos;est pas encore disponible. Revenez plus tard !
+        </p>
+      </div>
+    );
   }
 
-  const { data: bal, error: balErr } = await supabase
+  const { data: bal } = await supabase
     .from("gamification_balances")
     .select("coins")
     .single();

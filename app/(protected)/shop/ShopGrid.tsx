@@ -217,7 +217,7 @@ export default function ShopGrid({
       </div>
 
       {/* Grille */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+      <div className="grid grid-cols-3 gap-4 md:grid-cols-5 lg:grid-cols-6">
         {filtered.map((it) => {
           const busy = !!loadingById[it.id];
           return (
@@ -225,7 +225,7 @@ export default function ShopGrid({
               key={it.id}
               className={cn(
                 "overflow-hidden border",
-                it.equipped && "ring-2 ring-primary",
+                it.equipped && "ring-2 ring-accent",
               )}
             >
               <div className="relative aspect-square">
@@ -234,9 +234,7 @@ export default function ShopGrid({
                   alt={it.name}
                   className="h-full w-full object-cover"
                 />
-                {it.equipped && (
-                  <div className="absolute inset-0 border-2 border-primary/70 pointer-events-none" />
-                )}
+
                 {!it.owned && (
                   <div className="absolute right-2 top-2 rounded bg-background/80 px-2 py-0.5 text-xs shadow">
                     {it.price_coins} coins

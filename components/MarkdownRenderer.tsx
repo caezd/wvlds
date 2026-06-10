@@ -26,7 +26,7 @@ function extractText(node: React.ReactNode): string {
     return "";
   if (typeof node === "string" || typeof node === "number") return String(node);
   if (Array.isArray(node)) return node.map(extractText).join("");
-  if (React.isValidElement(node)) return extractText(node.props?.children);
+  if (React.isValidElement(node)) return extractText((node.props as { children?: React.ReactNode })?.children);
   return "";
 }
 
@@ -238,11 +238,11 @@ export default function MarkdownRenderer({
       );
     },
 
-    code({ inline, className, children, ...props }) {
+    code({ className, children, ...props }) {
       const [copied, setCopied] = useState(false);
-      const txt = extractText(children).replace(/\n$/, "");
+      const isBlock = /language-/.test(className ?? "");
 
-      if (inline) {
+      if (!isBlock) {
         return (
           <code className="rounded px-1 py-0.5 bg-muted" {...props}>
             {children}
@@ -250,7 +250,8 @@ export default function MarkdownRenderer({
         );
       }
 
-      const lang = (className || "").replace("language-", "").trim();
+      const lang = (className ?? "").replace("language-", "").trim();
+      const txt = extractText(children).replace(/\n$/, "");
 
       const doCopy = async () => {
         try {
@@ -261,17 +262,15 @@ export default function MarkdownRenderer({
       };
 
       return (
-        <div className="inline-flex relative group not-prose ">
-          {inline && (
-            <button
-              type="button"
-              onClick={doCopy}
-              className="opacity-0 group-hover:opacity-100 transition-opacity text-xs absolute right-2 top-2 rounded-md border bg-background/80 px-2 py-1"
-              aria-label="Copier le code"
-            >
-              {copied ? "Copié" : "Copier"}
-            </button>
-          )}
+        <div className="inline-flex relative group not-prose">
+          <button
+            type="button"
+            onClick={doCopy}
+            className="opacity-0 group-hover:opacity-100 transition-opacity text-xs absolute right-2 top-2 rounded-md border bg-background/80 px-2 py-1"
+            aria-label="Copier le code"
+          >
+            {copied ? "Copié" : "Copier"}
+          </button>
           <pre className="overflow-x-auto rounded-lg border bg-muted/60 p-3">
             <code className={className} {...props} data-lang={lang}>
               {children}

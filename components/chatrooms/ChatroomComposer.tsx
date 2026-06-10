@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useRef } from "react";
+import React, { useState, useRef, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
-import type { Persona } from "@/types/db-chat";
+import type { Persona } from "@/types/db";
+import { TABLE, RPC } from "@/lib/constants";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { PersonaPickerDialog } from "@/components/personas/PersonaPickerDialog";
 import { Button } from "../ui/button";
 import { SendHorizontal } from "lucide-react";
@@ -21,7 +23,8 @@ export function ChatroomComposer({
   onTyping?: () => void; // ✅ nouveau
   onPersonaChange?: (p: Persona | null) => void; // ✅ nouveau
 }) {
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
+  const { userId } = useCurrentUser();
 
   const [value, setValue] = useState("");
   const [selectedPersona, setSelectedPersona] = useState<Persona | null>(
@@ -31,23 +34,18 @@ export function ChatroomComposer({
 
   async function send() {
     const text = value.trim();
-    if (!text) return;
+    if (!text || !userId) return;
 
     if (!selectedPersona) {
       toast.error("Sélectionnez un persona avant d'envoyer.");
       return;
     }
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return;
-
     const { data: newMessage, error } = await supabase
-      .from("chat_messages")
+      .from(TABLE.CHAT_MESSAGES)
       .insert({
         chat_id: chatId,
-        author_id: user.id,
+        author_id: userId,
         content: text,
         persona_id: selectedPersona.id,
       })
@@ -59,17 +57,16 @@ export function ChatroomComposer({
       return;
     }
 
-    await supabase.from("chatroom_persona_prefs").upsert(
+    await supabase.from(TABLE.CHATROOM_PERSONA_PREFS).upsert(
       {
         chat_id: chatId,
-        user_id: user.id,
+        user_id: userId,
         persona_id: selectedPersona.id,
       },
       { onConflict: "chat_id,user_id" },
     );
 
-    // après avoir inséré le message:
-    await supabase.rpc("award_event", {
+    const { error: rpcErr } = await supabase.rpc(RPC.AWARD_EVENT, {
       p_event: "message_posted",
       p_ref: newMessage.id, // id du chat_message
       p_meta: {
@@ -78,6 +75,7 @@ export function ChatroomComposer({
         persona_id: selectedPersona.id,
       },
     });
+    if (rpcErr) console.error("award_event failed:", rpcErr);
 
     setValue("");
     // L’UI se mettra à jour via Realtime dans le parent
@@ -99,14 +97,14 @@ export function ChatroomComposer({
     <div className="group/composer w-full [--thread-content-max-width:40rem] lg:[--thread-content-max-width:48rem] mx-auto max-w-(--thread-content-max-width)">
       <div
         className="cursor-text overflow-clip p-2.5 contain-inline-size bg-[#161b27] grid grid-cols-[auto_1fr_auto] [grid-template-areas:'header_header_header'_'primary_primary_primary'_'leading_footer_trailing'] rounded-[28px] border-border-soft"
-        style={{ cornerShape: "superellipse(1.1)" }}
+        style={{ cornerShape: "superellipse(1.1)" } as React.CSSProperties}
       >
         {/* Zone de saisie */}
         <div className="-my-2.5 flex min-h-14 items-center overflow-x-hidden px-1.5 [grid-area:primary] group-data-expanded/composer:mb-0 group-data-expanded/composer:px-2.5">
           <div className="_prosemirror-parent_1dsxi_2 text-token-text-primary max-h-52 flex-1 overflow-auto [scrollbar-width:thin] default-browser vertical-scroll-fade-mask">
             <AutoResizeTextarea
               value={value}
-              onChange={(e) => {
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => {
                 setValue(e.target.value);
                 onTyping?.();
               }}
@@ -132,9 +130,15 @@ export function ChatroomComposer({
           <span className="flex">
             <PersonaPickerDialog
               selected={selectedPersona}
-              onSelect={(p) => {
+              onSelect={async (p) => {
                 setSelectedPersona(p);
-                onPersonaChange?.(p); // ✅ sync présence avec la persona courante
+                onPersonaChange?.(p);
+                if (p && userId) {
+                  await supabase.from(TABLE.CHATROOM_PERSONA_PREFS).upsert(
+                    { chat_id: chatId, user_id: userId, persona_id: p.id },
+                    { onConflict: "chat_id,user_id" },
+                  );
+                }
               }}
               required
             />
