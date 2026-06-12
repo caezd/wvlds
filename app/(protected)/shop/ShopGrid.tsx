@@ -108,7 +108,7 @@ export default function ShopGrid({
 
         const { data, error } = await supabase.rpc("shop_purchase", {
           p_item_key: it.key,
-          p_equip: true,
+          p_equip: false,
         });
         if (error) {
           /* toast erreur */
@@ -223,10 +223,7 @@ export default function ShopGrid({
           return (
             <Card
               key={it.id}
-              className={cn(
-                "overflow-hidden border",
-                it.equipped && "ring-2 ring-accent",
-              )}
+              className="overflow-hidden border"
             >
               <div className="relative aspect-square">
                 <img
@@ -253,32 +250,12 @@ export default function ShopGrid({
                     >
                       {busy ? "Traitement…" : `Acheter (${it.price_coins})`}
                     </Button>
-                  ) : it.equipped ? (
-                    <>
-                      <Button
-                        variant="secondary"
-                        className="flex-1"
-                        disabled={busy}
-                        onClick={() => handleUnequip(it.slot)}
-                      >
-                        {busy ? "…" : "Déséquiper"}
-                      </Button>
-                    </>
                   ) : (
-                    <Button
-                      className="flex-1"
-                      disabled={busy}
-                      onClick={() => handleEquip(it)}
-                    >
-                      {busy ? "…" : "Équiper"}
+                    <Button className="flex-1" variant="secondary" disabled>
+                      Possédé
                     </Button>
                   )}
                 </div>
-                {it.owned && !it.equipped && coins < it.price_coins && (
-                  <div className="text-xs text-muted-foreground">
-                    Acheté. Solde actuel: {coins}
-                  </div>
-                )}
               </CardContent>
             </Card>
           );

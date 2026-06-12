@@ -13,6 +13,7 @@ type PersonaRow = {
   name: string | null;
   avatar_url?: string | null;
   avatar_config?: any | null;
+  banner_url?: string | null;
 };
 
 export default async function PersonasPage() {
@@ -25,7 +26,7 @@ export default async function PersonasPage() {
   {
     const withAvatar = await supabase
       .from("personas")
-      .select("id, name, avatar_url, avatar_config")
+      .select("id, name, avatar_url, avatar_config, banner_url, avatar_frame_id")
       .eq("user_id", userId)
       .order("name", { ascending: true });
 
@@ -131,6 +132,8 @@ export default async function PersonasPage() {
               personaName={persona.name ?? "Sans nom"}
               avatarUrl={persona.avatar_url}
               avatarConfig={(persona as any).avatar_config}
+              bannerUrl={persona.banner_url}
+              initialFrameId={(persona as any).avatar_frame_id ?? null}
               initialSections={sectionsByPersona.get(persona.id) ?? []}
             />
           ))}

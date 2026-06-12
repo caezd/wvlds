@@ -35,7 +35,7 @@ type ActionFn = (
   formData: FormData,
 ) => Promise<{ ok: boolean; error?: string }>;
 
-// ── Image uploader ────────────────────────────────────────────
+// -- Image uploader --------------------------------------------
 
 function ImageUploader({
   label,
@@ -173,7 +173,7 @@ function ImageUploader({
   );
 }
 
-// ── Formulaire principal ──────────────────────────────────────
+// -- Formulaire principal --------------------------------------
 
 export function ShopItemForm({
   item,

@@ -1,0 +1,125 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Globe, GlobeLock, Pencil } from "lucide-react";
+
+import WorldEditDialog, { type World } from "@/components/worlds/WorldEditDialog";
+import { WorldInviteDialog } from "@/components/worlds/WorldInviteDialog";
+import { useNotifications } from "@/components/providers/NotificationsProvider";
+import { Button } from "@/components/ui/button";
+
+type HeroWorld = World & { owner_id: string };
+
+/**
+ * Carte hero du monde (kit "Constructor X") : bannière, icône, nom,
+ * description. Intègre le bouton d'invitation et, pour les admins,
+ * un crayon au survol qui ouvre le modal d'édition.
+ */
+export function WorldHeroCard({
+  world: initialWorld,
+  canAdmin = false,
+  isShared = false,
+}: {
+  world: HeroWorld;
+  canAdmin?: boolean;
+  isShared?: boolean;
+}) {
+  const router = useRouter();
+  const [world, setWorld] = useState(initialWorld);
+  const { markWorldSeen } = useNotifications();
+
+  useEffect(() => {
+    void markWorldSeen(world.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [world.id]);
+
+  return (
+    <section
+      className="group/hero relative isolate overflow-hidden rounded-3xl p-6 md:p-8"
+      style={{
+        // Pas de couleur de fond derrière une bannière image : elle dépasse
+        // dans les coins arrondis sous l'image.
+        backgroundColor: world.banner_url
+          ? undefined
+          : (world.color ?? undefined),
+      }}
+    >
+      {world.banner_url && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={world.banner_url}
+          alt=""
+          className="absolute inset-0 h-full w-full rounded-[inherit] object-cover"
+        />
+      )}
+      {/* Voile de lisibilité / fallback sans bannière */}
+      <div
+        className={
+          world.banner_url
+            ? "absolute inset-0 rounded-[inherit] bg-gradient-to-r from-black/70 via-black/40 to-transparent"
+            : world.color
+              ? "absolute inset-0 rounded-[inherit] bg-black/20"
+              : "absolute inset-0 rounded-[inherit] bg-gradient-to-br from-card-400 to-card"
+        }
+      />
+
+      {/* Actions — invitation + édition (crayon au survol) */}
+      <div className="absolute right-4 top-4 z-10 flex items-center gap-2">
+        {canAdmin && (
+          <WorldEditDialog
+            world={world}
+            onUpdated={(updated) => {
+              setWorld((prev) => ({ ...prev, ...updated }));
+              router.refresh();
+            }}
+            trigger={
+              <Button
+                size="icon-sm"
+                variant="secondary"
+                aria-label="Modifier le monde"
+                className="opacity-0 transition-opacity group-hover/hero:opacity-100 focus-visible:opacity-100"
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+            }
+          />
+        )}
+        <WorldInviteDialog
+          worldId={world.id}
+          ownerId={world.owner_id}
+          canManage={canAdmin}
+        />
+      </div>
+
+      <div className="relative flex min-h-40 flex-col justify-end gap-2 md:min-h-48">
+        <span
+          className={
+            world.icon_url
+              ? "mb-1 flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl"
+              : "mb-1 flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl bg-black/40 backdrop-blur"
+          }
+        >
+          {world.icon_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={world.icon_url}
+              alt=""
+              className="h-full w-full object-cover"
+            />
+          ) : isShared ? (
+            <Globe size={20} className="text-white/90" />
+          ) : (
+            <GlobeLock size={20} className="text-white/90" />
+          )}
+        </span>
+        <h1 className="text-2xl font-semibold text-white md:text-3xl">
+          {world.name}
+        </h1>
+        {world.description && (
+          <p className="max-w-xl text-sm text-white/75">{world.description}</p>
+        )}
+      </div>
+    </section>
+  );
+}

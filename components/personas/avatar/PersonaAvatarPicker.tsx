@@ -794,7 +794,7 @@ export function PersonaAvatarPicker({
   }
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[340px_1fr]">
+    <div className="grid gap-5 lg:grid-cols-[260px_1fr]">
       <div className="space-y-3">
         <div className="rounded-xl border p-4">
           <div className="mt-3 flex justify-center">
@@ -804,7 +804,7 @@ export function PersonaAvatarPicker({
                 "rounded-xl border bg-background",
                 busy ? "opacity-80" : "",
               )}
-              style={{ width: 280, height: 280 }}
+              style={{ width: 220, height: 220 }}
             />
           </div>
 
@@ -960,7 +960,7 @@ export function PersonaAvatarPicker({
               ) : null}
 
               <ScrollArea className="h-[560px] rounded-xl border">
-                <div className="p-3 grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2">
+                <div className="p-3 grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-2">
                   {partsInLayer.map((part) => {
                     const isSelected = selectedItems.some(
                       (x) => x.partId === part.id,

@@ -11,8 +11,11 @@ import {
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
+import { AvatarWithFrame } from "@/components/avatars/AvatarWithFrame";
 import { Coins, Flame, Zap } from "lucide-react";
 import type { PersonaSectionWithFields } from "@/types/personas";
+import { useGlobalPresence } from "@/components/providers/PresenceProvider";
+import { formatLastSeen } from "@/lib/utils";
 
 function levelInfo(xp: number) {
   const level = Math.floor(xp / 100) + 1;
@@ -61,34 +64,67 @@ export function PersonaProfileSheetTrigger({
   side?: "left" | "right" | "top" | "bottom";
 }) {
   const supabase = React.useMemo(() => createClient(), []);
+  const { onlineUsers } = useGlobalPresence();
   const [open, setOpen] = React.useState(false);
 
   const [name, setName] = React.useState<string | null>(label ?? null);
   const [avatarUrl, setAvatarUrl] = React.useState<string | null>(null);
+  const [bannerUrl, setBannerUrl] = React.useState<string | null>(null);
+  const [frameUrl, setFrameUrl] = React.useState<string | null>(null);
+  const [ownerPresence, setOwnerPresence] = React.useState<{
+    last_seen_at: string | null;
+    appear_offline: boolean;
+  } | null>(null);
   const [balance, setBalance] = React.useState<BalanceSummary | null>(null);
   const [sections, setSections] = React.useState<PersonaSectionWithFields[]>([]);
   const [activeTab, setActiveTab] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
 
-  React.useEffect(() => {
-    if (!open || !personaId) return;
+  // Évite les double-fetch : on ne charge qu'une fois par (personaId+userId)
+  const fetchedKeyRef = React.useRef<string | null>(null);
+
+  const prefetch = React.useCallback(() => {
+    if (!personaId) return;
+    const key = `${personaId}:${userId ?? ""}`;
+    if (fetchedKeyRef.current === key) return; // déjà chargé
+    fetchedKeyRef.current = key;
+
     let cancelled = false;
     setLoading(true);
 
     async function load() {
       const { data: persona, error } = await supabase
         .from("personas")
-        .select("id,user_id,name,avatar_url")
+        .select("id,user_id,name,avatar_url,banner_url,frame:avatar_frame_id(asset_url)")
         .eq("id", personaId!)
         .maybeSingle();
 
-      if (error) { toast.error(error.message ?? "Impossible de charger le profil."); return; }
+      if (error) { toast.error(error.message ?? "Impossible de charger le profil."); fetchedKeyRef.current = null; return; }
       if (!cancelled && persona) {
-        setName(persona.name ?? label ?? null);
-        setAvatarUrl(persona.avatar_url ?? null);
+        const row = persona as unknown as { name?: string | null; avatar_url?: string | null; banner_url?: string | null; frame?: { asset_url?: string | null } | null };
+        setName(row.name ?? label ?? null);
+        setAvatarUrl(row.avatar_url ?? null);
+        setBannerUrl(row.banner_url ?? null);
+        setFrameUrl(row.frame?.asset_url ?? null);
       }
 
       if (userId) {
+        const { data: ownerProfile } = await supabase
+          .from("profiles")
+          .select("last_seen_at, appear_offline")
+          .eq("id", userId)
+          .maybeSingle();
+        if (!cancelled && ownerProfile) {
+          const row = ownerProfile as unknown as {
+            last_seen_at?: string | null;
+            appear_offline?: boolean | null;
+          };
+          setOwnerPresence({
+            last_seen_at: row.last_seen_at ?? null,
+            appear_offline: !!row.appear_offline,
+          });
+        }
+
         const { data: bal } = await supabase.rpc("get_balance_summary", { p_user_id: userId });
         const row = Array.isArray(bal) ? bal?.[0] : bal;
         if (!cancelled && row) {
@@ -133,18 +169,26 @@ export function PersonaProfileSheetTrigger({
 
     load();
     return () => { cancelled = true; };
-  }, [open, personaId, userId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [personaId, userId, supabase, label]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Prefetch dès que la sheet s'ouvre (fallback si le hover n'a pas suffi)
   React.useEffect(() => {
-    if (!open) {
-      setBalance(null);
-      setSections([]);
-      setActiveTab(null);
-      setAvatarUrl(null);
-    }
-  }, [open]);
+    if (open) prefetch();
+  }, [open, prefetch]);
 
   const info = balance ? levelInfo(balance.xp) : null;
+
+  const isOnline = !!userId && !!onlineUsers[userId];
+  const presenceLine =
+    !ownerPresence && !isOnline
+      ? null // données pas encore chargées — on n'affiche rien
+      : isOnline
+        ? "En ligne"
+        : ownerPresence?.appear_offline
+          ? "Hors ligne"
+          : ownerPresence?.last_seen_at
+            ? `Vu ${formatLastSeen(ownerPresence.last_seen_at)}`
+            : "Hors ligne"; // last_seen_at null (compte ancien ou sans activité récente)
 
   const TriggerButton = (
     <button
@@ -152,6 +196,7 @@ export function PersonaProfileSheetTrigger({
       className="size-12 sticky top-4"
       title={label ?? "Voir le profil"}
       aria-label={label ?? "Voir le profil"}
+      onPointerEnter={prefetch}
       onClick={() => setOpen(true)}
     >
       {children}
@@ -187,34 +232,48 @@ export function PersonaProfileSheetTrigger({
           <SheetTitle>{name ?? label ?? "Profil persona"}</SheetTitle>
         </SheetHeader>
 
-        {/* ── Header : banner + avatar + nom + stats ── */}
+        {/* -- Header : banner + avatar + nom + stats -- */}
         <div>
           <div className="relative overflow-hidden">
             {/* Banner */}
-            <div className="h-28 bg-gradient-to-r from-muted/60 to-muted" />
+            {bannerUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={bannerUrl} alt="" className="h-28 w-full object-cover" draggable={false} />
+            ) : (
+              <div className="h-28 bg-gradient-to-r from-muted/60 to-muted" />
+            )}
 
-            <div className="px-4 pb-4">
-              <div className="relative -mt-10 flex items-end gap-4">
+            <div className="px-4 pb-4 -mt-16">
+              <div className="relative flex items-start gap-4">
                 {/* Avatar */}
-                <div className="h-20 w-20 rounded-full border-4 border-background bg-muted overflow-hidden shadow shrink-0">
-                  {avatarUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={avatarUrl} alt={name ?? ""} className="h-full w-full object-cover" draggable={false} />
-                  ) : (
-                    <div className="h-full w-full grid place-items-center text-lg font-semibold text-muted-foreground">
-                      {name ? initials(name) : "?"}
-                    </div>
-                  )}
+                <div className="shrink-0 mt-2">
+                  <AvatarWithFrame
+                    src={avatarUrl}
+                    alt={name ?? ""}
+                    fallback={name ? initials(name) : "?"}
+                    online={isOnline}
+                    size={128}
+                    frameUrl={frameUrl}
+                  />
                 </div>
 
                 {/* Nom + stats */}
                 <div className="pb-1 min-w-0 flex-1">
-                  <p className="text-lg font-semibold leading-tight truncate">
+                  <p className="h-16 pb-2 mb-2 flex items-end text-xl font-semibold leading-tight truncate">
                     {name ?? label ?? "—"}
                   </p>
+                  {presenceLine && (
+                    <p className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <span
+                        className={`h-2 w-2 rounded-full ${isOnline ? "bg-[#58F4A8]" : "bg-muted-foreground/40"
+                          }`}
+                      />
+                      {presenceLine}
+                    </p>
+                  )}
 
                   {info && balance ? (
-                    <div className="mt-1.5 space-y-1">
+                    <div className="space-y-1">
                       <div className="flex items-center justify-between text-xs text-muted-foreground">
                         <span className="font-medium text-foreground">Niveau {info.level}</span>
                         <span>{balance.xp} / {info.xpForNext} XP</span>
@@ -252,7 +311,7 @@ export function PersonaProfileSheetTrigger({
           </div>
         </div>
 
-        {/* ── Sections (read-only) ── */}
+        {/* -- Sections (read-only) -- */}
         <div className="space-y-4">
           {sections.length > 0 ? (
             <Tabs

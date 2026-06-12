@@ -1,6 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
 import { Users, ShoppingBasket, ShieldCheck } from "lucide-react";
-import { ThemeSwitcher } from "@/components/theme-switcher";
 import { RailIcon, WorldIcon, EmptyWorldsIcon } from "./SidebarRailIcons";
 
 export default async function SidebarRail() {
@@ -22,7 +21,7 @@ export default async function SidebarRail() {
   return (
     <div className="flex flex-col items-center h-full w-full gap-0.5">
 
-      {/* ── 1. Navigation ──────────────────────────────── */}
+      {/* -- 1. Navigation -------------------------------- */}
       <div className="flex flex-col items-center gap-0.5 w-full pt-1 pb-0.5 px-1.5">
         <RailIcon href="/p" label="Personae">
           <Users size={17} />
@@ -37,10 +36,10 @@ export default async function SidebarRail() {
         )}
       </div>
 
-      {/* ── 2. Séparateur ──────────────────────────────── */}
+      {/* -- 2. Séparateur -------------------------------- */}
       <div className="w-6 border-t border-border-soft my-1 shrink-0" />
 
-      {/* ── 3. Mondes (flex-1, scrollable) ─────────────── */}
+      {/* -- 3. Mondes (flex-1, scrollable) --------------- */}
       <div className="flex flex-col items-center gap-0.5 overflow-y-auto flex-1 w-full px-1.5 [scrollbar-width:none]">
         {worlds.map((w) => (
           <WorldIcon key={w.id} id={w.id} name={w.name} />
@@ -48,11 +47,8 @@ export default async function SidebarRail() {
         {worlds.length === 0 && <EmptyWorldsIcon />}
       </div>
 
-      {/* ── 4. Footer ──────────────────────────────────── */}
+      {/* -- 4. Footer ------------------------------------ */}
       <div className="w-6 border-t border-border-soft my-1 shrink-0" />
-      <div className="flex h-10 w-full items-center justify-center shrink-0 pb-1">
-        <ThemeSwitcher />
-      </div>
 
     </div>
   );

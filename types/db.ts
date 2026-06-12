@@ -3,12 +3,14 @@
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
-// ─── Core row types ─────────────────────────────────────────────────────────
+// --- Core row types ---------------------------------------------------------
 
 export type Profile = {
   id: string;
   username: string | null;
   avatar_url: string | null;
+  last_seen_at?: string | null;
+  appear_offline?: boolean;
 };
 
 export type World = {
@@ -51,6 +53,17 @@ export type ChatroomPersonaPref = {
   updated_at: string;
 };
 
+export type ChatMediaItem = {
+  url: string;
+  name: string;
+};
+
+export type ChatMessageMeta = {
+  bubbles?: boolean;
+  bubbleColor?: string;
+  media?: ChatMediaItem[];
+};
+
 export type ChatMessage = {
   id: number;
   chat_id: string;
@@ -59,6 +72,7 @@ export type ChatMessage = {
   created_at: string;
   persona_id?: string | null;
   world_id?: string | null;
+  metadata?: ChatMessageMeta | null;
 };
 
 export type ChatMessageReaction = {
@@ -75,6 +89,8 @@ export type Persona = {
   user_id: string;
   name: string;
   avatar_url: string | null;
+  avatar_frame_id?: string | null;
+  frame?: { asset_url: string | null } | null;
 };
 
 export type UserEquippedCosmetic = {
@@ -82,7 +98,7 @@ export type UserEquippedCosmetic = {
   avatar_frame_id: string | null;
 };
 
-// ─── Composite / query types ─────────────────────────────────────────────────
+// --- Composite / query types -------------------------------------------------
 
 export type ReactionSummary = {
   emoji: string;
@@ -95,7 +111,7 @@ export type ChatMessageWithPersona = ChatMessage & {
   reactions?: ReactionSummary[];
 };
 
-// ─── RPC return types ────────────────────────────────────────────────────────
+// --- RPC return types --------------------------------------------------------
 
 export type WorldUnreadRow = {
   world_id: string;

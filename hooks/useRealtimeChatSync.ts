@@ -19,6 +19,7 @@ type Props = {
   initialLatestId: number | null;
   onMessageInserted: (msg: ChatMessageWithPersona, authorId?: string) => void;
   onMessageUpdated: (id: number, content: string) => void;
+  onMessageDeleted: (id: number) => void;
   onChatroomPatched: (patch: ChatroomPatch) => void;
   onReactionChange: (messageId: number, emoji: string, delta: 1 | -1) => void;
 };
@@ -29,6 +30,7 @@ export function useRealtimeChatSync({
   initialLatestId,
   onMessageInserted,
   onMessageUpdated,
+  onMessageDeleted,
   onChatroomPatched,
   onReactionChange,
 }: Props) {
@@ -58,7 +60,7 @@ export function useRealtimeChatSync({
           const { data, error } = await supabase
             .from(TABLE.CHAT_MESSAGES)
             .select(
-              "id, chat_id, content, author_id, created_at, persona:personas(id, user_id, name, avatar_url)",
+              "id, chat_id, content, author_id, created_at, metadata, persona:personas(id, user_id, name, avatar_url)",
             )
             .eq("id", id)
             .single();
@@ -73,6 +75,28 @@ export function useRealtimeChatSync({
             data as unknown as ChatMessageWithPersona,
             data.author_id ?? undefined,
           );
+        },
+      )
+      .subscribe();
+
+    return () => { void supabase.removeChannel(ch); };
+  }, [chatId, supabase]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // DELETE — suppression de message
+  useEffect(() => {
+    const ch = supabase
+      .channel(`${CH.chatMessages(chatId)}-delete`)
+      .on(
+        "postgres_changes",
+        {
+          event: "DELETE",
+          schema: "public",
+          table: TABLE.CHAT_MESSAGES,
+          filter: `chat_id=eq.${chatId}`,
+        },
+        (payload) => {
+          const id = (payload.old as { id: number }).id;
+          if (id) onMessageDeleted(id);
         },
       )
       .subscribe();

@@ -7,7 +7,7 @@
 @custom-variant light (&:where(.light, .light *));
 
 :root {
-    --radius: 0.625rem;
+    --radius: 1rem;
     --card: oklch(1 0 0);
     --card-foreground: oklch(0.141 0.005 285.823);
     --popover: oklch(1 0 0);
@@ -29,7 +29,8 @@
     --chart-3: oklch(0.398 0.07 227.392);
     --chart-4: oklch(0.828 0.189 84.429);
     --chart-5: oklch(0.769 0.188 70.08);
-    --sidebar: oklch(0.985 0 0);
+    --sidebar: oklch(0.96 0 0);
+    /* ~#f2f2f2 : canvas clair du kit */
     --sidebar-foreground: oklch(0.141 0.005 285.823);
     --sidebar-primary: oklch(0.21 0.006 285.885);
     --sidebar-primary-foreground: oklch(0.985 0 0);
@@ -39,47 +40,70 @@
     --sidebar-ring: oklch(0.705 0.015 286.067);
     --background: oklch(1 0 0);
     --foreground: oklch(0.141 0.005 285.823);
+    /* Surfaces élevées custom (composer, hovers d'icônes) */
+    --hover-400: #e9e9e9;
+    --card-400: #ffffff;
 }
 
 .dark {
-    --background: #101117;
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.21 0.006 285.885);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.21 0.006 285.885);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.92 0.004 286.32);
-    --primary-foreground: oklch(0.21 0.006 285.885);
-    --secondary: oklch(0.274 0.006 286.033);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.274 0.006 286.033);
-    --muted-foreground: oklch(0.705 0.015 286.067);
-    --accent: oklch(0.274 0.006 286.033);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.552 0.016 285.938);
-    --chart-1: oklch(0.488 0.243 264.376);
-    --chart-2: oklch(0.696 0.17 162.48);
-    --chart-3: oklch(0.769 0.188 70.08);
-    --chart-4: oklch(0.627 0.265 303.9);
-    --chart-5: oklch(0.645 0.246 16.439);
-    --sidebar: oklch(0.21 0.006 285.885);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.488 0.243 264.376);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.274 0.006 286.033);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.552 0.016 285.938);
+    /* Palette "Constructor X" — gris neutres sans teinte, surfaces en couches.
+       Le canvas (body + sidebar) utilise --sidebar ; --background est le
+       panneau principal flottant, plus clair. */
+    --background: oklch(0.205 0 0);
+    /* ~#1c1c1c : panneau de contenu */
+    --foreground: oklch(0.93 0 0);
+    /* ~#ececec : texte principal */
+    --card: oklch(0.225 0 0);
+    /* ~#212121 : cartes sur le panneau */
+    --card-foreground: oklch(0.93 0 0);
+    --popover: oklch(0.235 0 0);
+    /* menus, modales */
+    --popover-foreground: oklch(0.93 0 0);
+    --primary: oklch(0.985 0 0);
+    /* bouton primaire blanc */
+    --primary-foreground: oklch(0.145 0 0);
+    --secondary: oklch(0.26 0 0);
+    /* ~#2a2a2a : pills, hover */
+    --secondary-foreground: oklch(0.93 0 0);
+    --muted: oklch(0.26 0 0);
+    --muted-foreground: oklch(0.65 0 0);
+    /* ~#9a9a9a : texte secondaire */
+    --accent: oklch(0.26 0 0);
+    --accent-foreground: oklch(0.93 0 0);
+    --destructive: oklch(0.637 0.237 25.331);
+    /* #ef4444 */
+    --border: oklch(1 0 0 / 8%);
+    --input: oklch(1 0 0 / 12%);
+    --ring: oklch(0.55 0 0);
+    --chart-1: oklch(0.723 0.219 149.579);
+    /* vert #22c55e */
+    --chart-2: oklch(0.623 0.214 259.815);
+    /* bleu #3b82f6 */
+    --chart-3: oklch(0.705 0.213 47.604);
+    /* orange #f97316 */
+    --chart-4: oklch(0.606 0.25 292.717);
+    /* violet #8b5cf6 */
+    --chart-5: oklch(0.637 0.237 25.331);
+    /* rouge #ef4444 */
+    --sidebar: oklch(0.19 0 0);
+    /* ~#171717 : canvas + sidebar (écart subtil avec le panneau, comme le kit) */
+    --sidebar-foreground: oklch(0.93 0 0);
+    --sidebar-primary: oklch(0.985 0 0);
+    --sidebar-primary-foreground: oklch(0.145 0 0);
+    --sidebar-accent: oklch(0.225 0 0);
+    --sidebar-accent-foreground: oklch(0.93 0 0);
+    --sidebar-border: oklch(1 0 0 / 8%);
+    --sidebar-ring: oklch(0.55 0 0);
+    /* Surfaces élevées custom (composer, hovers d'icônes) */
+    --hover-400: #2e2e2e;
+    --card-400: #242424;
 }
 
 @theme {
     --color-background: light-dark(#fff, #282632);
     --color-foreground: hsl(var(--foreground));
 
-    --color-hover-400: #121418;
+    --color-hover-400: #2e2e2e;
 
     --color-card-foreground: hsl(var(--card-foreground));
 
@@ -95,7 +119,7 @@
     --color-muted: hsl(var(--muted));
     --color-muted-foreground: #8e939d;
 
-    --color-card-400: #121418;
+    --color-card-400: #242424;
 
     --color-accent: #f94b5f;
     --color-accent-foreground: hsl(var(--accent-foreground));
@@ -135,7 +159,7 @@
     --color-sidebar-border: oklch(1 0 0 / 10%);
     --color-sidebar-ring: oklch(0.552 0.016 285.938);
 
-    --radius: 8px;
+    --radius: 1rem;
     --radius-lg: var(--radius);
     --radius-md: calc(var(--radius) - 2px);
     --radius-sm: calc(var(--radius) - 4px);
@@ -153,12 +177,13 @@
         --sidebar-rail-width: calc(var(--spacing) * 13);
         --header-height: calc(var(--spacing) * 13);
     }
+
     *,
     ::after,
     ::before,
     ::backdrop,
     ::file-selector-button {
-        border-color: light-dark(var(--color-border), #121418);
+        border-color: var(--color-border);
     }
 
     button:not(:disabled),
@@ -168,7 +193,8 @@
 
     html,
     body {
-        @apply h-full bg-background;
+        /* Le canvas derrière le panneau flottant = couleur sidebar */
+        @apply h-full bg-sidebar;
     }
 
     .h-header-height {
@@ -181,27 +207,29 @@
         height: calc(var(--spacing) * 5);
         width: calc(var(--spacing) * 5);
     }
+
     .icon,
     .icon-sm {
         flex-grow: 0;
         flex-shrink: 0;
     }
+
     .icon-lg {
         flex-grow: 0;
         flex-shrink: 0;
         height: var(--icon-lg-size, 1.5rem);
         width: var(--icon-lg-size, 1.5rem);
     }
+
     .composer-parent {
-        --composer-footer_height: var(
-            --composer-bar_footer-current-height,
-            32px
-        );
+        --composer-footer_height: var(--composer-bar_footer-current-height,
+                32px);
         --composer-bar_height: var(--composer-bar_current-height, 52px);
         --composer-bar_width: var(--composer-bar_current-width, 768px);
         --mask-fill: linear-gradient(180deg, #fff 0%, #fff);
         --mask-erase: linear-gradient(180deg, #000 0%, #000);
     }
+
     @media (min-width: 48rem) {
         .md\:text-page-header {
             --tw-leading: 34px;
@@ -213,30 +241,26 @@
             line-height: 34px;
         }
     }
+
     .offset-padding-top-4 {
         --offset-padding: calc(var(--spacing) * 4);
         margin-top: calc(var(--offset-padding) * -1);
         padding-top: var(--offset-padding);
     }
+
     .content-fade:after {
         background:
             linear-gradient(to bottom, transparent, var(--color-background)),
-            linear-gradient(
-                to bottom,
+            linear-gradient(to bottom,
                 transparent var(--content-fade-distance),
-                var(--color-background) var(--content-fade-distance)
-            );
+                var(--color-background) var(--content-fade-distance));
         background:
-            linear-gradient(
-                to bottom,
+            linear-gradient(to bottom,
                 var(--fade-start-color),
-                var(--fade-end-color)
-            ),
-            linear-gradient(
-                to bottom,
+                var(--fade-end-color)),
+            linear-gradient(to bottom,
                 transparent var(--content-fade-distance),
-                var(--color-background) var(--content-fade-distance)
-            );
+                var(--color-background) var(--content-fade-distance));
         background-position: top, bottom;
         background-repeat: no-repeat;
         background-size:
@@ -248,15 +272,14 @@
         position: absolute;
         z-index: -1;
     }
+
     .content-fade.single-line:after {
         --single-line-fade-height: var(--content-fade-height, 28px);
         background:
             linear-gradient(to bottom, transparent, var(--color-background)),
-            linear-gradient(
-                to bottom,
+            linear-gradient(to bottom,
                 transparent var(--single-line-fade-height),
-                var(--color-background) var(--single-line-fade-height)
-            );
+                var(--color-background) var(--single-line-fade-height));
 
         background-size:
             100% var(--single-line-fade-height),
@@ -264,18 +287,15 @@
     }
 
     .content-fade:after {
-        --fade-end-color: color-mix(
-            in lch longer hue,
-            var(--color-background),
-            transparent 0%
-        );
+        --fade-end-color: color-mix(in lch longer hue,
+                var(--color-background),
+                transparent 0%);
     }
+
     .content-fade:after {
-        --fade-start-color: color-mix(
-            in lch longer hue,
-            var(--color-background),
-            transparent 100%
-        );
+        --fade-start-color: color-mix(in lch longer hue,
+                var(--color-background),
+                transparent 100%);
     }
 }
 
@@ -315,13 +335,92 @@
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-ring: var(--sidebar-ring);
+
+    /* Tokens utilisés par le shell (sidebar, panneaux) — alignés sur le canvas */
+    --color-token-bg-elevated-secondary: var(--sidebar);
+    --color-border-soft: var(--border);
+    --color-hover-400: var(--hover-400);
+    --color-card-400: var(--card-400);
 }
 
 @layer base {
     * {
         @apply border-border outline-ring/50;
     }
+
     body {
         @apply bg-[#010109] text-foreground;
+    }
+}
+
+@layer components {
+
+    /* Layout des blocs — toujours présent pour éviter le saut au focus */
+    [data-block] {
+        position: relative;
+        padding-left: 10px;
+        padding-top: 5px;
+        padding-bottom: 5px;
+    }
+
+[data-block]:not(:last-child) {
+        margin-bottom: 2px;
+    }
+
+    /* react-color SketchPicker overrides */
+    .sketch-picker {
+        background: transparent !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+    }
+
+    .sketch-picker input {
+        background: var(--input) !important;
+        color: var(--foreground) !important;
+        border: 1px solid var(--border) !important;
+        border-radius: calc(var(--radius) - 6px) !important;
+        font-size: 11px !important;
+        box-shadow: none !important;
+        padding: 4px 6px !important;
+        width: 100% !important;
+    }
+
+    .sketch-picker input:focus {
+        outline: none !important;
+        border-color: var(--ring) !important;
+    }
+
+    .sketch-picker label {
+        color: var(--muted-foreground) !important;
+        font-size: 10px !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.05em !important;
+    }
+
+    /* Séparer la zone presets avec une ligne */
+    .sketch-picker .flexbox-fix:last-child {
+        border-top: 1px solid var(--border) !important;
+        padding-top: 8px !important;
+        margin-top: 4px !important;
+    }
+
+    /* Crochet de paragraphe — visible uniquement au focus */
+    .pb-editor [data-block]::before {
+        content: "";
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        border-left: 1px solid rgba(255, 255, 255, 0.1);
+        border-top-left-radius: 3px;
+        border-bottom-left-radius: 3px;
+        width: 5px;
+        min-height: 4px;
+        height: calc(100% - 10px);
+        position: absolute;
+        top: 5px;
+        left: 0;
+        transition: border-color 0.15s;
+        pointer-events: none;
     }
 }

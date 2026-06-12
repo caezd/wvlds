@@ -3,14 +3,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { AvatarWithFrame } from "@/components/avatars/AvatarWithFrame";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import type { Persona } from "@/types/db";
 import type { PersonaSectionWithFields } from "@/types/personas";
 import { Coins, Flame, Zap } from "lucide-react";
+import { useGlobalPresence } from "@/components/providers/PresenceProvider";
+import { formatLastSeen } from "@/lib/utils";
 
-// ── Level helpers ────────────────────────────────────────────
+// -- Level helpers --------------------------------------------
 // level = floor(sqrt(xp / 50)) + 1
 // xp needed for level N = (N-1)² × 50
 function levelFromXp(xp: number) {
@@ -29,7 +31,7 @@ type Balance = {
   streak_current: number;
 };
 
-// ── Read-only field renderer ─────────────────────────────────
+// -- Read-only field renderer ---------------------------------
 function FieldView({ type, data }: { type: string; data: any }) {
   if (type === "title") {
     return (
@@ -46,7 +48,7 @@ function FieldView({ type, data }: { type: string; data: any }) {
   return null;
 }
 
-// ── Main component ───────────────────────────────────────────
+// -- Main component -------------------------------------------
 type Props = {
   persona: Persona | null;
   selfId: string | null;
@@ -57,16 +59,27 @@ type Props = {
 export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: Props) {
   const supabase = useMemo(() => createClient(), []);
 
+  const { onlineUsers } = useGlobalPresence();
+
   const [balance, setBalance] = useState<Balance | null>(null);
   const [sections, setSections] = useState<PersonaSectionWithFields[]>([]);
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [bannerUrl, setBannerUrl] = useState<string | null>(null);
+  const [frameUrl, setFrameUrl] = useState<string | null>(null);
+  const [ownerPresence, setOwnerPresence] = useState<{
+    last_seen_at: string | null;
+    appear_offline: boolean;
+  } | null>(null);
 
   useEffect(() => {
     if (!persona) {
       setBalance(null);
       setSections([]);
       setActiveTab(null);
+      setOwnerPresence(null);
+      setBannerUrl(null);
+      setFrameUrl(null);
       return;
     }
 
@@ -74,11 +87,25 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
     setLoading(true);
 
     async function load() {
+      // bannière + cadre du persona
+      const { data: personaRow } = await supabase
+        .from("personas")
+        .select("banner_url, frame:avatar_frame_id(asset_url)")
+        .eq("id", persona!.id)
+        .maybeSingle();
+
       // gamification balance
       const { data: bal } = await supabase
         .from("gamification_balances")
         .select("xp, coins, streak_current")
         .eq("user_id", persona!.user_id)
+        .maybeSingle();
+
+      // présence persistée du propriétaire (pour "vu il y a X")
+      const { data: ownerProfile } = await supabase
+        .from("profiles")
+        .select("last_seen_at, appear_offline")
+        .eq("id", persona!.user_id)
         .maybeSingle();
 
       // sections + fields
@@ -104,7 +131,22 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
       }
 
       if (cancelled) return;
+      const row = personaRow as unknown as { banner_url?: string | null; frame?: { asset_url?: string | null } | null } | null;
+      setBannerUrl(row?.banner_url ?? null);
+      setFrameUrl(row?.frame?.asset_url ?? null);
       setBalance(bal ?? null);
+      setOwnerPresence(
+        ownerProfile
+          ? {
+              last_seen_at:
+                (ownerProfile as unknown as { last_seen_at?: string | null })
+                  .last_seen_at ?? null,
+              appear_offline: !!(
+                ownerProfile as unknown as { appear_offline?: boolean | null }
+              ).appear_offline,
+            }
+          : null,
+      );
       setSections(sectionsWithFields);
       setActiveTab(sectionsWithFields[0]?.id ?? null);
       setLoading(false);
@@ -115,6 +157,20 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
   }, [persona?.id, supabase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const xpInfo = balance ? levelFromXp(balance.xp) : null;
+
+  const isOnline = !!persona && !!onlineUsers[persona.user_id];
+  const presenceLine =
+    !persona
+      ? null
+      : !ownerPresence && !isOnline
+        ? null // données pas encore chargées
+        : isOnline
+          ? "En ligne"
+          : ownerPresence?.appear_offline
+            ? "Hors ligne"
+            : ownerPresence?.last_seen_at
+              ? `Vu ${formatLastSeen(ownerPresence.last_seen_at)}`
+              : "Hors ligne";
 
   function initials(name: string) {
     const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -129,7 +185,15 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
       >
         {persona && (
           <>
-            {/* ── Header stats ── */}
+            {/* -- Bannière -- */}
+            {bannerUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={bannerUrl} alt="" className="h-28 w-full object-cover shrink-0" draggable={false} />
+            ) : (
+              <div className="h-28 w-full shrink-0 bg-gradient-to-r from-muted/60 to-muted" />
+            )}
+
+            {/* -- Header stats -- */}
             <div className="px-5 pt-5 pb-4 border-b border-border space-y-3">
               {xpInfo && balance ? (
                 <>
@@ -171,16 +235,28 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
               )}
             </div>
 
-            {/* ── Avatar + nom ── */}
+            {/* -- Avatar + nom -- */}
             <div className="flex flex-col items-center gap-2 py-6 border-b border-border">
-              <Avatar className="h-20 w-20 ring-2 ring-border">
-                <AvatarImage src={persona.avatar_url ?? undefined} alt={persona.name} />
-                <AvatarFallback className="text-xl font-bold">
-                  {initials(persona.name)}
-                </AvatarFallback>
-              </Avatar>
+              <AvatarWithFrame
+                src={persona.avatar_url}
+                alt={persona.name}
+                fallback={initials(persona.name)}
+                online={isOnline}
+                size={80}
+                frameUrl={frameUrl}
+              />
               <div className="text-center">
                 <div className="text-lg font-semibold">{persona.name}</div>
+                {presenceLine && (
+                  <div className="mt-0.5 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+                    <span
+                      className={`h-2 w-2 rounded-full ${
+                        isOnline ? "bg-[#58F4A8]" : "bg-muted-foreground/40"
+                      }`}
+                    />
+                    {presenceLine}
+                  </div>
+                )}
                 {persona.user_id === selfId && (
                   <div className="text-xs text-muted-foreground">Votre persona</div>
                 )}
@@ -195,7 +271,7 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
               )}
             </div>
 
-            {/* ── Sections ── */}
+            {/* -- Sections -- */}
             {sections.length > 0 && (
               <div className="flex-1">
                 <Tabs

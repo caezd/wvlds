@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
-import { ThemeProvider } from "next-themes";
 
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
@@ -28,16 +27,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" suppressHydrationWarning>
+    <html lang="fr" className="dark" style={{ colorScheme: "dark" }} suppressHydrationWarning>
       <body className={`${geistSans.className} antialiased`} suppressHydrationWarning>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <AppProviders>{children}</AppProviders>
-        </ThemeProvider>
+        <AppProviders>{children}</AppProviders>
         <Toaster />
       </body>
     </html>

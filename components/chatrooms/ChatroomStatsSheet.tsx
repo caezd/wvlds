@@ -11,6 +11,7 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet";
 import { BarChart3, RefreshCw } from "lucide-react";
+import { toast } from "sonner";
 import { cn, formatDaysAgo } from "@/lib/utils";
 
 type StatsUser = {
@@ -73,20 +74,24 @@ export default function ChatroomStatsSheet({
       p_chat_id: chatId,
     });
 
-    if (!error) {
+    if (error) {
+      toast.error("Impossible de charger les statistiques.", {
+        description: error.message,
+      });
+    } else {
       setStats((data as any) ?? null);
     }
     setLoading(false);
   }
 
-  // Charge au moment d’ouvrir (ou si pas de cache)
+  // (Re)charge à chaque ouverture — le RPC calcule à la volée
   useEffect(() => {
     if (!open) return;
-    if (!stats) void fetchStats();
+    void fetchStats();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  // Realtime: écouter les tables d’agrégats, pas chat_messages
+  // Realtime : un nouveau message dans la chatroom => refetch (coalescé)
   useEffect(() => {
     if (!open) return;
 
@@ -95,19 +100,9 @@ export default function ChatroomStatsSheet({
       .on(
         "postgres_changes",
         {
-          event: "*",
+          event: "INSERT",
           schema: "public",
-          table: "chatroom_stats",
-          filter: `chat_id=eq.${chatId}`,
-        },
-        () => scheduleRefetch(),
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "chatroom_user_stats",
+          table: "chat_messages",
           filter: `chat_id=eq.${chatId}`,
         },
         () => scheduleRefetch(),

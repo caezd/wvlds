@@ -1,7 +1,8 @@
 import ChatRoomView from "./view";
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
-import { TABLE } from "@/lib/constants";
+import { TABLE, CHAT_MESSAGES_PAGE_SIZE } from "@/lib/constants";
+import { decryptMessage } from "@/lib/crypto";
 import type { ChatMessageWithPersona, Persona } from "@/types/db";
 
 export default async function Page({ params }: { params: { id: string } }) {
@@ -26,17 +27,19 @@ export default async function Page({ params }: { params: { id: string } }) {
 
   if (chatErr || !chatroom) return notFound();
 
-  // 2) 50 derniers messages (ordre croissant pour affichage direct)
+  // 2) Derniers messages (ordre croissant pour affichage direct) ; le reste est
+  // chargé à la demande côté client quand on remonte dans l'historique
   const { data: messages, error: msgErr } = await supabase
     .from("chat_messages")
     .select(
-      "id, chat_id, content, author_id, created_at, persona:personas(id, user_id, name, avatar_url)",
+      "id, chat_id, content, author_id, created_at, metadata, persona:personas(id, user_id, name, avatar_url, frame:avatar_frame_id(asset_url))",
     )
     .eq("chat_id", id)
     .order("created_at", { ascending: false })
-    .limit(50);
+    .limit(CHAT_MESSAGES_PAGE_SIZE);
 
   const initialMessages = (messages ?? []).slice().reverse(); // on remet en croissant
+  const initialHasMore = (messages ?? []).length === CHAT_MESSAGES_PAGE_SIZE;
 
   /* reactions */
   type ReactionSummary = { emoji: string; count: number; me: boolean };
@@ -70,40 +73,29 @@ export default async function Page({ params }: { params: { id: string } }) {
     }
   }
 
-  const initialMessagesWithReactions = initialMessages.map((m) => {
-    const emMap = byMessage.get(m.id);
-    const reactions: ReactionSummary[] = emMap
-      ? Array.from(emMap.entries())
-          .map(([emoji, v]) => ({ emoji, count: v.count, me: v.me }))
-          .sort((a, b) => b.count - a.count || a.emoji.localeCompare(b.emoji))
-      : [];
-    return { ...m, reactions };
-  });
-  /* reactions */
+  // Clé de chiffrement du chatroom (null = chatroom sans clé, messages en clair)
+  const { data: keyRow } = await supabase
+    .from(TABLE.CHATROOM_KEYS)
+    .select("key_b64")
+    .eq("chatroom_id", id)
+    .maybeSingle();
+  const chatroomKey = (keyRow as unknown as { key_b64?: string } | null)?.key_b64 ?? null;
 
-  const userIds = Array.from(
-    new Set(
-      (initialMessages ?? [])
-        .map((m) => {
-          const p = m.persona as unknown as Persona[] | null;
-          return (m.author_id ?? p?.[0]?.user_id) as string | null;
-        })
-        .filter(Boolean) as string[],
-    ),
+  const initialMessagesWithReactions = await Promise.all(
+    initialMessages.map(async (m) => {
+      const emMap = byMessage.get(m.id);
+      const reactions: ReactionSummary[] = emMap
+        ? Array.from(emMap.entries())
+            .map(([emoji, v]) => ({ emoji, count: v.count, me: v.me }))
+            .sort((a, b) => b.count - a.count || a.emoji.localeCompare(b.emoji))
+        : [];
+      const content = chatroomKey
+        ? await decryptMessage((m as any).content ?? "", chatroomKey)
+        : ((m as any).content ?? "");
+      return { ...m, content, reactions };
+    }),
   );
-
-  let equippedFrames: Record<string, string | null> = {};
-  if (userIds.length) {
-    const { data: equips } = await supabase
-      .from(TABLE.USER_EQUIPPED_COSMETICS)
-      .select("user_id, cosmetic_items:avatar_frame_id(asset_url)")
-      .in("user_id", userIds);
-
-    for (const row of equips ?? []) {
-      const cosmetic = row.cosmetic_items as unknown as { asset_url?: string | null }[] | null;
-      equippedFrames[row.user_id] = cosmetic?.[0]?.asset_url ?? null;
-    }
-  }
+  /* reactions */
 
   // 3) Persona par défaut pour cet utilisateur dans cette chatroom (facultatif)
   let initialPersona: {
@@ -177,11 +169,12 @@ export default async function Page({ params }: { params: { id: string } }) {
         worlds: (chatroom.worlds as unknown as { id: string; name: string }[] | null)?.[0] ?? null,
       }}
       initialMessages={initialMessagesWithReactions as unknown as ChatMessageWithPersona[]}
+      initialHasMore={initialHasMore}
       initialPersona={initialPersona}
       selfId={user?.id ?? null}
       canEdit={canEdit}
-      equippedFrames={equippedFrames}
-      initialChatrooms={initialRoomsSafe} // ✅ nouveau
+      initialChatrooms={initialRoomsSafe}
+      chatroomKey={chatroomKey}
     />
   );
 }

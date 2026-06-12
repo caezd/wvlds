@@ -111,7 +111,8 @@ function ScrollAreaWithJumpToBottom({
 
       <div
         className={[
-          "pointer-events-none absolute bottom-10 left-1/2 -translate-x-1/2 z-10",
+          // Offset surchargeable via --jump-btn-bottom (ex. si le footer chevauche la zone de scroll)
+          "pointer-events-none absolute bottom-[var(--jump-btn-bottom,2.5rem)] left-1/2 -translate-x-1/2 z-10",
           "transition-opacity duration-200",
           showDown ? "opacity-100" : "opacity-0",
         ].join(" ")}

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import Logo from "@/components/logo";
+import { cn } from "@/lib/utils";
 import {
   Tooltip,
   TooltipContent,
@@ -16,14 +17,18 @@ export default function SidebarLayout({
   rail,
   children,
   defaultOpen = true,
+  headerUserMenu = null,
 }: {
   sidebar: React.ReactNode;
   rail: React.ReactNode;
   children: React.ReactNode;
   defaultOpen?: boolean;
+  headerUserMenu?: React.ReactNode;
 }) {
   // Initialisé depuis le cookie lu côté serveur → SSR et client identiques, pas de flash
   const [open, setOpen] = useState(defaultOpen);
+  // Tiroir mobile/tablette (< lg) — la sidebar devient un header + drawer
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   function toggle() {
     setOpen((v) => {
@@ -37,9 +42,9 @@ export default function SidebarLayout({
   return (
     <div className="relative flex h-full w-full flex-row">
 
-      {/* ── Aside — largeur animée ───────────────────────────── */}
+      {/* -- Aside — largeur animée ----------------------------- */}
       <aside
-        className="relative z-20 h-full shrink-0 overflow-hidden transition-[width] duration-300 ease-in-out max-md:hidden"
+        className="relative z-20 h-full shrink-0 overflow-hidden transition-[width] duration-300 ease-in-out max-lg:hidden"
         style={{ width: open ? "var(--sidebar-width, 260px)" : `${RAIL_WIDTH}px` }}
       >
         {/*
@@ -48,7 +53,7 @@ export default function SidebarLayout({
           CSS opacity + pointerEvents contrôlent la visibilité.
         */}
 
-        {/* ── Mode étendu ───────────────────────────────────── */}
+        {/* -- Mode étendu ------------------------------------- */}
         <div
           aria-hidden={!open}
           className="absolute inset-0 flex flex-col transition-opacity duration-200"
@@ -58,9 +63,9 @@ export default function SidebarLayout({
             width: "var(--sidebar-width, 260px)",
           }}
         >
-          <div className="h-full overflow-x-clip overflow-y-auto bg-token-bg-elevated-secondary">
-            <nav className="relative flex h-full w-full flex-1 flex-col overflow-y-auto">
-              <header className="sticky top-0 z-30 bg-token-bg-elevated-secondary">
+          <div className="flex h-full flex-col overflow-hidden">
+            <nav className="relative flex h-full w-full flex-1 flex-col overflow-hidden py-4">
+              <header className="shrink-0">
                 <div className="px-2">
                   <div className="h-header-height flex items-center justify-between">
                     <a
@@ -92,10 +97,10 @@ export default function SidebarLayout({
           </div>
         </div>
 
-        {/* ── Mode réduit (rail) ────────────────────────────── */}
+        {/* -- Mode réduit (rail) ------------------------------ */}
         <div
           aria-hidden={open}
-          className="absolute inset-0 flex flex-col items-center bg-token-bg-elevated-secondary transition-opacity duration-200"
+          className="absolute inset-0 flex flex-col items-center transition-opacity duration-200 py-4"
           style={{
             opacity: open ? 0 : 1,
             pointerEvents: open ? "none" : "auto",
@@ -125,9 +130,67 @@ export default function SidebarLayout({
         </div>
       </aside>
 
-      {/* ── Contenu principal ───────────────────────────────── */}
-      <section className="relative flex h-full max-w-full flex-1 flex-col p-1.5 pl-0">
-        <main className="relative h-full w-full flex-1 overflow-auto rounded-[6px] bg-background border border-border-soft">
+      {/* -- Tiroir mobile/tablette (< lg) --------------------- */}
+      <div
+        className={cn(
+          "lg:hidden fixed inset-0 z-50",
+          !mobileOpen && "pointer-events-none",
+        )}
+        aria-hidden={!mobileOpen}
+      >
+        {/* Backdrop */}
+        <div
+          onClick={() => setMobileOpen(false)}
+          className={cn(
+            "absolute inset-0 bg-black/50 transition-opacity duration-300",
+            mobileOpen ? "opacity-100" : "opacity-0",
+          )}
+        />
+        {/* Panneau coulissant */}
+        <div
+          className={cn(
+            "absolute inset-y-0 left-0 flex w-[var(--sidebar-width,260px)] flex-col bg-sidebar transition-transform duration-300 ease-in-out",
+            mobileOpen ? "translate-x-0" : "-translate-x-full",
+          )}
+        >
+          <header className="shrink-0 px-2">
+            <div className="h-header-height flex items-center justify-between">
+              <a
+                href="/"
+                aria-label="Accueil"
+                className="hover:bg-hover-400 flex h-9 w-9 items-center justify-center rounded-lg"
+              >
+                <Logo width={20} height={20} accent={undefined} />
+              </a>
+              <button
+                onClick={() => setMobileOpen(false)}
+                aria-label="Fermer le menu"
+                className="hover:bg-muted flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors"
+              >
+                <PanelLeftClose size={18} />
+              </button>
+            </div>
+          </header>
+          <nav className="relative flex w-full flex-1 flex-col overflow-hidden">
+            {sidebar}
+          </nav>
+        </div>
+      </div>
+
+      {/* -- Contenu principal — panneau flottant arrondi ------ */}
+      <section className="relative flex h-full max-w-full flex-1 flex-col p-3 pl-0 max-lg:pl-3 max-lg:p-2 max-lg:pt-0">
+        {/* Header mobile/tablette — remplace la sidebar (< lg) */}
+        <header className="lg:hidden flex h-12 shrink-0 items-center justify-between px-1">
+          <button
+            onClick={() => setMobileOpen(true)}
+            aria-label="Ouvrir le menu"
+            className="bg-card-400 hover:bg-hover-400 flex h-9 w-9 items-center justify-center rounded-full text-foreground transition-colors"
+          >
+            <PanelLeftOpen size={18} />
+          </button>
+          {headerUserMenu}
+        </header>
+        <main className="relative h-full w-full flex-1 overflow-auto rounded-2xl bg-background border border-border-soft">
           <div id="thread" className="group/thread @container/thread h-full w-full">
             {children}
           </div>

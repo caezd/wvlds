@@ -51,8 +51,8 @@ export default function NotificationsProvider({ children }: { children: React.Re
         if (!uid) return;
 
         const [{ data: worldRows }, { data: roomRows }] = await Promise.all([
-            supabase.rpc(RPC.GET_WORLD_UNREADS, { u: uid }),
-            supabase.rpc("get_all_chatroom_unreads", { u: uid }),
+            supabase.rpc(RPC.GET_WORLD_UNREADS),
+            supabase.rpc("get_all_chatroom_unreads"),
         ]);
 
         // World-level : unread_messages (msgs) + unread_rooms (nouvelles chatrooms)

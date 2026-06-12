@@ -1,7 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import WorldsSidebarClient from "./WorldsSidebarClient";
 import { getUserQuotaServer } from "@/lib/userQuota";
-import { ThemeSwitcher } from "../theme-switcher";
 import { UserMenuButton } from "./UserMenuButton";
 
 type WorldRow = {
@@ -43,10 +42,11 @@ export default async function Sidebar() {
       `id, name, slug, is_archived, owner_id,
        world_members ( user_id, role )`,
     )
+    .is("deleted_at", null)
     .order("name", { ascending: true })) as {
-    data: WorldRow[] | null;
-    error: unknown;
-  };
+      data: WorldRow[] | null;
+      error: unknown;
+    };
 
   if (error) {
     return (
@@ -88,21 +88,14 @@ export default async function Sidebar() {
         />
       </div>
 
-      {/* Footer — user menu + theme switcher, sticky en bas */}
-      <div className="sticky bottom-0 z-30 px-1 py-1.5 border-t border-border-soft bg-token-bg-elevated-secondary">
-        <div className="flex items-center gap-1">
-          <div className="flex-1 min-w-0">
-            <UserMenuButton
-              username={profile?.username ?? null}
-              email={user.email ?? ""}
-              avatarUrl={profile?.avatar_url ?? null}
-              plan={plan}
-            />
-          </div>
-          <div className="shrink-0">
-            <ThemeSwitcher />
-          </div>
-        </div>
+      {/* Footer — user menu, fixé en bas du flex */}
+      <div className="shrink-0 px-1 py-1.5 border-t border-border-soft">
+        <UserMenuButton
+          username={profile?.username ?? null}
+          email={user.email ?? ""}
+          avatarUrl={profile?.avatar_url ?? null}
+          plan={plan}
+        />
       </div>
     </>
   );

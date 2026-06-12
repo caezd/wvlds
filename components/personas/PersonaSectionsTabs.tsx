@@ -61,7 +61,7 @@ export function PersonaSectionsTabs({
 
   if (!sections.length) {
     return (
-      <div className="border rounded-md p-4 space-y-3">
+      <div className="border rounded-md p-4 mx-4 mb-4 space-y-3">
         <p className="text-sm text-muted-foreground">
           Aucune section pour ce personnage.
         </p>

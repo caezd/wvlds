@@ -13,6 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { WorldAddTabDialog } from "./WorldAddTabDialog";
 import { createClient } from "@/lib/supabase/client";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
     MoreHorizontal,
@@ -30,6 +31,7 @@ type TabRow = {
     label: string;
     sort_index: number;
     is_system: boolean;
+    content?: string | null;
 };
 
 type WorldTabsProps = {
@@ -198,14 +200,18 @@ export function WorldTabs({
                             return (
                                 <div
                                     key={tab.id}
-                                    className="flex items-center mr-1"
+                                    className={cn(
+                                        "flex items-center mr-1 h-8 rounded-md border border-transparent",
+                                        current === tab.slug &&
+                                            "bg-background shadow-sm dark:border-input dark:bg-input/30",
+                                    )}
                                 >
                                     <TabsTrigger
                                         value={tab.slug}
-                                        className="px-3"
+                                        className="h-full px-3 border-0 shadow-none data-[state=active]:bg-transparent data-[state=active]:shadow-none dark:data-[state=active]:bg-transparent dark:data-[state=active]:border-transparent"
                                     >
                                         {isRenaming ? (
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex items-center gap-1.5">
                                                 <Input
                                                     value={renameValue}
                                                     onChange={(e) =>
@@ -213,14 +219,26 @@ export function WorldTabs({
                                                             e.target.value
                                                         )
                                                     }
-                                                    className="h-7 w-[140px]"
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === "Enter") {
+                                                            e.preventDefault();
+                                                            void confirmRename(
+                                                                tab
+                                                            );
+                                                        }
+                                                        if (e.key === "Escape")
+                                                            setRenamingId(null);
+                                                    }}
+                                                    autoFocus
+                                                    className="h-6 w-28 rounded-md border-0 bg-transparent px-1 py-0 text-sm shadow-none focus-visible:ring-0 md:text-sm"
                                                 />
                                                 <Button
                                                     size="icon"
-                                                    className="h-7 w-7"
+                                                    className="h-6 w-6"
                                                     onClick={() =>
                                                         confirmRename(tab)
                                                     }
+                                                    aria-label="Valider le nom"
                                                 >
                                                     ✓
                                                 </Button>
@@ -230,13 +248,16 @@ export function WorldTabs({
                                         )}
                                     </TabsTrigger>
 
-                                    {canEdit && !isRenaming && (
+                                    {canEdit &&
+                                        !isRenaming &&
+                                        current === tab.slug && (
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
-                                                    className="h-7 w-7 -ml-2"
+                                                    className="h-6 w-6 -ml-1.5 mr-1.5 text-muted-foreground hover:text-foreground"
+                                                    aria-label="Options de l'onglet"
                                                 >
                                                     <MoreHorizontal className="h-4 w-4" />
                                                 </Button>

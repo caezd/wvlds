@@ -5,23 +5,29 @@ export function AvatarWithFrame({
   alt,
   fallback,
   online,
+  presenceState,
   size = 48,
   frameUrl,
 }: {
   src?: string | null;
   alt?: string | null;
   fallback?: string;
+  /** @deprecated use presenceState */
   online?: boolean;
+  presenceState?: "online" | "offline" | "invisible";
   size?: number;
-  frameUrl?: string | null; // ← URL du PNG/SVG du cadre
+  frameUrl?: string | null;
 }) {
+  const resolved: "online" | "offline" | "invisible" =
+    presenceState ?? (online ? "online" : "offline");
+
   return (
     <div className="relative" style={{ width: size, height: size }}>
       <ChatroomAvatarWithPresence
         src={src ?? undefined}
         alt={alt ?? "User"}
         fallback={fallback ?? "?"}
-        online={!!online}
+        presenceState={resolved}
         size={size}
         rounded={frameUrl ? false : true}
       />
