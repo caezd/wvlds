@@ -11,30 +11,34 @@ export default function InvitePage() {
   useEffect(() => {
     const supabase = createClient();
 
-    // onAuthStateChange est déclenché automatiquement quand le client Supabase
-    // détecte et traite les tokens dans le fragment URL (#access_token=...&type=invite)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === "SIGNED_IN" && session) {
-        const meta = session.user.user_metadata;
-        const worldId = meta?.invited_world_id as string | undefined;
-        const role = (meta?.invited_role as string | undefined) ?? "player";
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        // INITIAL_SESSION : Supabase a détecté et traité le fragment URL au chargement
+        // SIGNED_IN : token échangé avec succès
+        if ((event === "INITIAL_SESSION" || event === "SIGNED_IN") && session) {
+          const meta = session.user.user_metadata;
+          const worldId = meta?.invited_world_id as string | undefined;
+          const role = (meta?.invited_role as string | undefined) ?? "player";
 
-        if (worldId) {
-          await supabase
-            .from("world_members")
-            .upsert(
-              { world_id: worldId, user_id: session.user.id, role },
-              { onConflict: "world_id,user_id" }
-            );
+          if (worldId) {
+            await supabase
+              .from("world_members")
+              .upsert(
+                { world_id: worldId, user_id: session.user.id, role },
+                { onConflict: "world_id,user_id" }
+              );
+          }
+
+          subscription.unsubscribe();
+          router.replace("/auth/update-password");
+          return;
         }
 
-        subscription.unsubscribe();
-        router.replace("/auth/update-password");
-      } else if (event === "INITIAL_SESSION" && !session) {
-        // Fragment traité mais pas de session valide
-        setError("Lien d'invitation invalide ou expiré.");
+        if (event === "INITIAL_SESSION" && !session) {
+          setError("Lien d'invitation invalide ou expiré.");
+        }
       }
-    });
+    );
 
     return () => subscription.unsubscribe();
   }, [router]);
