@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export function LoginForm({
     className,
@@ -25,6 +25,15 @@ export function LoginForm({
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const router = useRouter();
+
+    // Si Supabase a redirigé ici avec des tokens d'invitation dans le fragment,
+    // on transfère vers /auth/invite qui gère l'établissement de session
+    useEffect(() => {
+        const hash = window.location.hash;
+        if (hash.includes("type=invite")) {
+            router.replace("/auth/invite" + hash);
+        }
+    }, [router]);
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();

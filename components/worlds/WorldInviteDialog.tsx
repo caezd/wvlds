@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/client";
+import { inviteUserToWorld } from "@/app/actions/invite";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -332,7 +333,16 @@ export function WorldInviteDialog({
             p_limit: 1,
         });
         if (error || !data || data.length === 0) {
-            setError("Utilisateur introuvable pour ce courriel.");
+            // Utilisateur inexistant — envoyer une invitation par courriel
+            const result = await inviteUserToWorld(target, worldId, role as "admin" | "editor" | "player" | "viewer");
+            if (result.error) {
+                setError(result.error);
+            } else {
+                toast.success("Invitation envoyée", {
+                    description: `Un courriel d'invitation a été envoyé à ${target}.`,
+                });
+                setOpen(false);
+            }
             return null;
         }
         const u = data[0] as FoundUser;
