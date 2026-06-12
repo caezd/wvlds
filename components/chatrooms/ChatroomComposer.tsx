@@ -136,7 +136,7 @@ export function ChatroomComposer({
     setPendingMedia([]);
   }
 
-  function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+  function onKeyDown(e: React.KeyboardEvent<HTMLElement>) {
     // Pas d’envoi si l’utilisateur est en composition IME
     if ((e as any).isComposing) return;
 

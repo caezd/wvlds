@@ -5,7 +5,7 @@ import { encryptMessage } from "@/lib/crypto";
 import type { ReactionSummary } from "@/types/db";
 import { AvatarWithFrame } from "@/components/avatars/AvatarWithFrame";
 import { ChatroomMessageBubble } from "./ChatroomMessageBubble";
-import { parseChatBlock } from "@/lib/chat-blocks";
+import { parseChatBlock, type ChatBlock } from "@/lib/chat-blocks";
 import { DiceBlockView } from "./blocks/DiceBlock";
 import { EllipseBlockView } from "./blocks/EllipseBlock";
 import { cn } from "@/lib/utils";
@@ -229,7 +229,8 @@ export default function ChatroomMessage({
 }) {
   const supabase = useMemo(() => createClient(), []);
 
-  const block = parseChatBlock(message.content ?? "");
+  const block = parseChatBlock(message.content ?? "") as ChatBlock | null;
+  const blockRef: ChatBlock | null = block;
   const mine = isMyMessage(message, selfId);
   const isOnline = !!online[message.author_id];
   const presenceState: "online" | "offline" | "invisible" = isOnline
@@ -560,7 +561,7 @@ export default function ChatroomMessage({
                 <Pencil className="h-4 w-4" />
               </Button>
             )}
-            {mine && !editing && block?._type === "dice" && (
+            {mine && !editing && blockRef?._type === "dice" && (
               <DeleteConfirmDialog
                 trigger={
                   <Button

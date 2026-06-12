@@ -2,7 +2,6 @@ const OPENING_QUOTES = ['"', '«', '"'] as const; // " « "
 const CLOSING_QUOTE_MAP: Record<string, string> = {
   '"': '"',
   '«': '»',
-  '"': '"',
 };
 
 export type DialoguePart =
