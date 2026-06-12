@@ -52,7 +52,7 @@ export function LoginForm({
     return (
         <>
             <h2 className="text-xl font-semibold md:text-2xl">Connexion</h2>
-            <p className="text-secondary">
+            <p className="text-muted-foreground">
                 Nouveau ?{" "}
                 <Link href="/auth/sign-up" className="underline">
                     Inscrivez-vous ici
