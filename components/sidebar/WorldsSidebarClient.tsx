@@ -279,7 +279,7 @@ export default function WorldsSidebarClient(props: {
         </Section>
 
         {filteredShared.length > 0 && (
-          <Section title="Partagés avec moi">
+          <Section title="Partagés avec moi" empty="">
             {filteredShared.map((w) => (
               <WorldItem
                 key={w.id}
