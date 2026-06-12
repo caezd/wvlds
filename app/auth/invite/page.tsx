@@ -11,14 +11,26 @@ export default function InvitePage() {
   useEffect(() => {
     const supabase = createClient();
 
-    const handleInvite = async () => {
-      // Le client @supabase/ssr (flux PKCE) ne traite pas les tokens du
-      // fragment URL (#access_token=...) — on les extrait manuellement
-      // et on établit la session explicitement via setSession().
-      const params = new URLSearchParams(window.location.hash.slice(1));
-      const access_token = params.get("access_token");
-      const refresh_token = params.get("refresh_token");
-      const errorDescription = params.get("error_description");
+    const handle = async () => {
+      const searchParams = new URLSearchParams(window.location.search);
+      const code = searchParams.get("code");
+
+      // Flux PKCE : confirmation d'inscription ordinaire (?code=)
+      if (code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        if (error) {
+          setError(error.message);
+          return;
+        }
+        router.replace("/home");
+        return;
+      }
+
+      // Flux implicite : invitation par email (#access_token=...)
+      const hashParams = new URLSearchParams(window.location.hash.slice(1));
+      const access_token = hashParams.get("access_token");
+      const refresh_token = hashParams.get("refresh_token");
+      const errorDescription = hashParams.get("error_description");
 
       if (errorDescription) {
         setError(errorDescription.replace(/\+/g, " "));
@@ -30,17 +42,13 @@ export default function InvitePage() {
         return;
       }
 
-      const { data, error } = await supabase.auth.setSession({
-        access_token,
-        refresh_token,
-      });
+      const { data, error } = await supabase.auth.setSession({ access_token, refresh_token });
 
       if (error || !data.session) {
         setError(error?.message ?? "Impossible d'établir la session.");
         return;
       }
 
-      // Nettoyer les tokens de l'URL
       window.history.replaceState(null, "", window.location.pathname);
 
       const meta = data.session.user.user_metadata;
@@ -59,7 +67,7 @@ export default function InvitePage() {
       router.replace("/auth/update-password");
     };
 
-    void handleInvite();
+    void handle();
   }, [router]);
 
   if (error) {

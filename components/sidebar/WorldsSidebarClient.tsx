@@ -278,21 +278,20 @@ export default function WorldsSidebarClient(props: {
           ))}
         </Section>
 
-        <Section
-          title="Partagés avec moi"
-          empty="Rien de partagé pour le moment."
-        >
-          {filteredShared.map((w) => (
-            <WorldItem
-              key={w.id}
-              meId={meId}
-              world={w}
-              active={activeWorldId === w.id}
-              unread={worldUnread[w.id] ?? 0}
-              onActivate={() => { }}
-            />
-          ))}
-        </Section>
+        {filteredShared.length > 0 && (
+          <Section title="Partagés avec moi">
+            {filteredShared.map((w) => (
+              <WorldItem
+                key={w.id}
+                meId={meId}
+                world={w}
+                active={activeWorldId === w.id}
+                unread={worldUnread[w.id] ?? 0}
+                onActivate={() => { }}
+              />
+            ))}
+          </Section>
+        )}
       </ScrollArea>
     </div>
   );

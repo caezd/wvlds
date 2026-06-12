@@ -7,6 +7,21 @@ export type ChangelogEntry = {
 export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-06",
+    tag: "Comptes",
+    text: "Nouveau flux d'invitation par courriel : les utilisateurs invités reçoivent un courriel stylisé à la charte Wvlds et sont guidés vers un écran de création de mot de passe et de nom d'utilisateur.",
+  },
+  {
+    date: "2026-06",
+    tag: "Comptes",
+    text: "Un nom d'utilisateur est maintenant obligatoire. Un dialogue bloquant s'affiche lors de la première connexion tant qu'aucun pseudo n'est défini.",
+  },
+  {
+    date: "2026-06",
+    tag: "Correctif",
+    text: "La suppression d'un compte depuis l'administration ne bloque plus. Les personnages et mondes de l'utilisateur sont conservés (soft-delete) et l'historique des messages reste intact.",
+  },
+  {
+    date: "2026-06",
     tag: "Chatrooms",
     text: "Nouveaux composants de jeu dans le composer : lancé de dés avec formule personnalisable, préréglages, étiquette optionnelle et détection critique/fumble ; ellipse de temps avec séparateur stylisé, modifiable et supprimable.",
   },
@@ -44,6 +59,11 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-06",
     tag: "Interface",
     text: "Nouvelle page Changelog avec disposition timeline, badges par catégorie, filtre latéral par tag et composant Hint réutilisable pour les tooltips.",
+  },
+  {
+    date: "2026-06",
+    tag: "Mondes",
+    text: "Choix de la visibilité à la création d'un monde : Privé (invitation uniquement) ou Public (accessible par tous).",
   },
   {
     date: "2026-06",

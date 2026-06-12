@@ -45,7 +45,7 @@ export default async function HomePage() {
       : `${owned} / ${quotaLimit} monde${quotaLimit > 1 ? "s" : ""} utilisé${quotaLimit > 1 ? "s" : ""}`;
 
   return (
-    <div className="p-6 space-y-8">
+    <div className="p-6 space-y-8 max-w-6xl mx-auto w-full">
       {/* Header */}
       <header className="flex items-center justify-between gap-4">
         <div>
@@ -76,7 +76,7 @@ export default async function HomePage() {
         </h2>
         {mine.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center gap-3 rounded-2xl border border-dashed border-border">
-            <div className="text-3xl">🌍</div>
+            <Globe className="h-8 w-8 text-muted-foreground" />
             <p className="text-sm text-muted-foreground">Aucun monde créé pour le moment.</p>
             {!quotaReached && (
               <CreateWorldButton label="Créer mon premier monde" disabled={false} quotaReached={false} />
@@ -142,7 +142,7 @@ function WorldCardItem({
         className={
           world.banner_url
             ? "absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"
-            : "absolute inset-0 bg-black/20"
+            : "absolute inset-0 bg-gradient-to-tl from-white/5 to-transparent"
         }
       />
 
@@ -153,9 +153,9 @@ function WorldCardItem({
             // eslint-disable-next-line @next/next/no-img-element
             <img src={world.icon_url} alt="" className="h-14 w-14 rounded-xl object-cover shadow" />
           ) : (isShared || hasMembers) ? (
-            <Globe size={40} className="text-white/60" />
+            <Globe size={40} className="text-white" />
           ) : (
-            <GlobeLock size={40} className="text-white/60" />
+            <GlobeLock size={40} className="text-white" />
           )}
         </div>
       )}

@@ -27,7 +27,7 @@ export default function AuthLayout({
                 ></path>
               </svg>
             </div>
-            <div className="max-w-60 -mt-0.5 text-muted-foreground">
+            <div className="max-w-60 -mt-1 text-muted-foreground">
               Wvlds est en beta.
             </div>
           </div>

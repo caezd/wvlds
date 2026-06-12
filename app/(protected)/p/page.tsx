@@ -1,4 +1,5 @@
 // app/(protected)/personas/page.tsx
+import { Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { PersonaCard } from "@/components/personas/PersonaCard";
 import { PersonaCreateSheet } from "@/components/personas/PersonaCreateSheet";
@@ -109,7 +110,7 @@ export default async function PersonasPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6 max-w-6xl mx-auto w-full">
       <header className="flex items-center justify-between">
         <h1 className="text-2xl font-bold tracking-tight">Personnages</h1>
         <div className="flex items-center gap-3">
@@ -119,8 +120,8 @@ export default async function PersonasPage() {
       </header>
 
       {personaList.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center gap-2">
-          <div className="text-4xl">🎭</div>
+        <div className="flex flex-col items-center justify-center py-12 text-center gap-3 rounded-2xl border border-dashed border-border">
+          <Users className="h-8 w-8 text-muted-foreground" />
           <p className="text-sm text-muted-foreground">Aucun personnage pour le moment.</p>
         </div>
       ) : (

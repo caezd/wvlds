@@ -4,6 +4,7 @@ import Sidebar from "@/components/sidebar/Sidebar";
 import SidebarRail from "@/components/sidebar/SidebarRail";
 import SidebarLayout from "@/components/sidebar/SidebarLayout";
 import { UserMenuButton } from "@/components/sidebar/UserMenuButton";
+import { UsernameRequiredDialog } from "@/components/UsernameRequiredDialog";
 
 export default async function PageLayout({
   children,
@@ -20,6 +21,7 @@ export default async function PageLayout({
     data: { user },
   } = await supabase.auth.getUser();
   let headerUserMenu: React.ReactNode = null;
+  let usernameDialog: React.ReactNode = null;
   if (user) {
     const { data: profile } = await supabase
       .from("profiles")
@@ -35,6 +37,9 @@ export default async function PageLayout({
         plan={profile?.plan ?? null}
       />
     );
+    if (!profile?.username) {
+      usernameDialog = <UsernameRequiredDialog userId={user.id} />;
+    }
   }
 
   return (
@@ -48,6 +53,7 @@ export default async function PageLayout({
         >
           {children}
         </SidebarLayout>
+        {usernameDialog}
       </div>
     </div>
   );
