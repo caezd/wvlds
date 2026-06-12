@@ -11,34 +11,32 @@ export default function InvitePage() {
   useEffect(() => {
     const supabase = createClient();
 
-    const handleInvite = async () => {
-      // Supabase JS détecte automatiquement les tokens dans le fragment URL
-      // (#access_token=...&type=invite) et établit la session
-      const { data, error } = await supabase.auth.getSession();
+    // onAuthStateChange est déclenché automatiquement quand le client Supabase
+    // détecte et traite les tokens dans le fragment URL (#access_token=...&type=invite)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === "SIGNED_IN" && session) {
+        const meta = session.user.user_metadata;
+        const worldId = meta?.invited_world_id as string | undefined;
+        const role = (meta?.invited_role as string | undefined) ?? "player";
 
-      if (error || !data.session) {
+        if (worldId) {
+          await supabase
+            .from("world_members")
+            .upsert(
+              { world_id: worldId, user_id: session.user.id, role },
+              { onConflict: "world_id,user_id" }
+            );
+        }
+
+        subscription.unsubscribe();
+        router.replace("/auth/update-password");
+      } else if (event === "INITIAL_SESSION" && !session) {
+        // Fragment traité mais pas de session valide
         setError("Lien d'invitation invalide ou expiré.");
-        return;
       }
+    });
 
-      const meta = data.session.user.user_metadata;
-      const worldId = meta?.invited_world_id as string | undefined;
-      const role = (meta?.invited_role as string | undefined) ?? "player";
-
-      // Si l'invitation est liée à un monde, ajouter l'utilisateur comme membre
-      if (worldId) {
-        await supabase
-          .from("world_members")
-          .upsert(
-            { world_id: worldId, user_id: data.session.user.id, role },
-            { onConflict: "world_id,user_id" }
-          );
-      }
-
-      router.replace("/auth/update-password");
-    };
-
-    void handleInvite();
+    return () => subscription.unsubscribe();
   }, [router]);
 
   if (error) {
