@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import WorldsSidebarClient from "./WorldsSidebarClient";
 import { getUserQuotaServer } from "@/lib/userQuota";
@@ -21,11 +22,7 @@ export default async function Sidebar() {
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
-    return (
-      <div className="p-4 text-sm text-muted-foreground">
-        Connecte-toi pour voir tes mondes.
-      </div>
-    );
+    redirect("/auth/login");
   }
 
   const { data: profile, error: profileError } = await supabase
