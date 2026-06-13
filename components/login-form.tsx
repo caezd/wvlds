@@ -35,16 +35,20 @@ export function LoginForm({
         }
     }, [router]);
 
-    const handleLogin = async (e: React.FormEvent) => {
+    const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         const supabase = createClient();
         setIsLoading(true);
         setError(null);
 
+        // Lire les valeurs depuis le DOM : l'autofill du navigateur ne
+        // déclenche pas toujours onChange, laissant les states vides.
+        const formData = new FormData(e.currentTarget);
+
         try {
             const { error } = await supabase.auth.signInWithPassword({
-                email,
-                password,
+                email: String(formData.get("email") || email),
+                password: String(formData.get("password") || password),
             });
             if (error) throw error;
             // Update this route to redirect to an authenticated route. The user already has an active session.
@@ -74,6 +78,7 @@ export function LoginForm({
                         <Label htmlFor="email">Email</Label>
                         <Input
                             id="email"
+                            name="email"
                             type="email"
                             placeholder="m@example.com"
                             required
@@ -85,6 +90,7 @@ export function LoginForm({
                         <Label htmlFor="password">Password</Label>
                         <Input
                             id="password"
+                            name="password"
                             type="password"
                             required
                             value={password}
