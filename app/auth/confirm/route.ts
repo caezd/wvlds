@@ -12,11 +12,25 @@ export async function GET(request: NextRequest) {
   if (token_hash && type) {
     const supabase = await createClient();
 
-    const { error } = await supabase.auth.verifyOtp({
+    const { data, error } = await supabase.auth.verifyOtp({
       type,
       token_hash,
     });
     if (!error) {
+      // Invitation dans un monde : ajouter le membre avant de poursuivre
+      if (type === "invite" && data.user) {
+        const meta = data.user.user_metadata;
+        const worldId = meta?.invited_world_id as string | undefined;
+        const role = (meta?.invited_role as string | undefined) ?? "player";
+        if (worldId) {
+          await supabase
+            .from("world_members")
+            .upsert(
+              { world_id: worldId, user_id: data.user.id, role },
+              { onConflict: "world_id,user_id" }
+            );
+        }
+      }
       // redirect user to specified redirect URL or root of app
       redirect(next);
     } else {
