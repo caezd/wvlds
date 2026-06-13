@@ -99,6 +99,9 @@ export function LoginForm({
                             Mot de passe oublié ?
                         </Link>
                     </div>
+                    {error && (
+                        <p className="text-sm text-destructive mb-4">{error}</p>
+                    )}
                     <Button
                         type="submit"
                         className="w-full"

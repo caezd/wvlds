@@ -1,6 +1,8 @@
 "use client";
 import { useEffect } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import { toast } from "sonner";
+import { createClient } from "@/lib/supabase/client";
 import NotificationsProvider from "./NotificationsProvider";
 import PresenceProvider from "./PresenceProvider";
 
@@ -35,11 +37,29 @@ function NetworkStatusWatcher() {
   return null;
 }
 
+function AuthErrorWatcher() {
+  const router = useRouter();
+  const pathname = usePathname();
+
+  useEffect(() => {
+    const supabase = createClient();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_OUT" && !pathname.startsWith("/auth")) {
+        router.replace("/auth/login");
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [router, pathname]);
+
+  return null;
+}
+
 export default function AppProviders({ children }: { children: React.ReactNode }) {
   return (
     <PresenceProvider>
       <NotificationsProvider>
         <NetworkStatusWatcher />
+        <AuthErrorWatcher />
         {children}
       </NotificationsProvider>
     </PresenceProvider>
