@@ -773,12 +773,11 @@ export function PersonaAvatarPicker({
       if (uploadError) throw uploadError;
 
       const { data: urlData } = supabase.storage.from("personas").getPublicUrl(path);
-      const cleanUrl = urlData.publicUrl;
-      const displayUrl = `${cleanUrl}?t=${Date.now()}`;
+      const displayUrl = `${urlData.publicUrl}?t=${Date.now()}`;
 
       const { error } = await supabase
         .from("personas")
-        .update({ avatar_url: cleanUrl, avatar_config: normalized })
+        .update({ avatar_url: displayUrl, avatar_config: normalized })
         .eq("id", personaId);
       if (error) throw error;
 

@@ -113,10 +113,9 @@ function StorageUploadTab({
       .upload(path, file, { upsert: true, contentType: file.type });
     if (upErr) { setError(upErr.message); setUploading(false); return; }
     const { data } = supabase.storage.from("personas").getPublicUrl(path);
-    const cleanUrl = data.publicUrl;
-    const displayUrl = `${cleanUrl}?t=${Date.now()}`;
+    const displayUrl = `${data.publicUrl}?t=${Date.now()}`;
     const { error: dbErr } = await supabase.from("personas")
-      .update({ [dbColumn]: cleanUrl, ...extraUpdate })
+      .update({ [dbColumn]: displayUrl, ...extraUpdate })
       .eq("id", personaId);
     if (dbErr) { setError(dbErr.message); setUploading(false); return; }
     setUploading(false);

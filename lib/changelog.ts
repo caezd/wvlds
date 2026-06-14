@@ -7,6 +7,11 @@ export type ChangelogEntry = {
 export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-06",
+    tag: "Personnages",
+    text: "Correctif : l'avatar et la bannière d'un persona sont maintenant visibles immédiatement après modification, même sur Vercel — l'URL de stockage inclut un paramètre de cache-bust pour contourner le CDN.",
+  },
+  {
+    date: "2026-06",
     tag: "Technique",
     text: "Nettoyage complet de la base de code : zéro erreur ESLint et TypeScript, build de production fiabilisé. La page « Mot de passe oublié » affiche désormais une confirmation après l'envoi du lien de réinitialisation.",
   },
