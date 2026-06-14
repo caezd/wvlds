@@ -236,7 +236,7 @@ export function PersonaProfileSheetTrigger({
   const TriggerButton = (
     <button
       type="button"
-      className="size-12 sticky top-4"
+      className="size-12"
       title={label ?? "Voir le profil"}
       aria-label={label ?? "Voir le profil"}
       onPointerEnter={prefetch}
