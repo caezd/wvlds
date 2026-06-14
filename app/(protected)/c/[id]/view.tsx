@@ -533,6 +533,15 @@ export default function ChatRoomView({
         ),
       );
     },
+    onPersonaUpdated: (personaId, avatarUrl) => {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.persona?.id === personaId
+            ? { ...m, persona: { ...m.persona, avatar_url: avatarUrl } }
+            : m,
+        ),
+      );
+    },
   });
 
   return (

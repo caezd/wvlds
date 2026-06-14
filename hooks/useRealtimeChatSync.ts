@@ -22,6 +22,7 @@ type Props = {
   onMessageDeleted: (id: number) => void;
   onChatroomPatched: (patch: ChatroomPatch) => void;
   onReactionChange: (messageId: number, emoji: string, delta: 1 | -1) => void;
+  onPersonaUpdated?: (personaId: string, avatarUrl: string | null) => void;
 };
 
 export function useRealtimeChatSync({
@@ -33,6 +34,7 @@ export function useRealtimeChatSync({
   onMessageDeleted,
   onChatroomPatched,
   onReactionChange,
+  onPersonaUpdated,
 }: Props) {
   const supabase = useMemo(() => createClient(), []);
   const latestIdRef = useRef<number | null>(initialLatestId);
@@ -146,6 +148,23 @@ export function useRealtimeChatSync({
 
     return () => { void supabase.removeChannel(ch); };
   }, [chatId, supabase]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Personas UPDATE — avatar_url mis à jour
+  useEffect(() => {
+    if (!onPersonaUpdated) return;
+    const ch = supabase
+      .channel(`personas-avatar-${chatId}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "personas" },
+        (payload: { new: Record<string, unknown> }) => {
+          const row = payload.new as { id: string; avatar_url?: string | null };
+          if (row.id) onPersonaUpdated(row.id, row.avatar_url ?? null);
+        },
+      )
+      .subscribe();
+    return () => { void supabase.removeChannel(ch); };
+  }, [chatId, supabase, onPersonaUpdated]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Reactions INSERT / DELETE
   useEffect(() => {
