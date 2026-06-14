@@ -2,9 +2,11 @@
 
 import * as React from "react";
 import { createClient } from "@/lib/supabase/client";
+import { supabaseThumb } from "@/lib/storage";
 import { toast } from "sonner";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { TabBar } from "@/components/ui/tab-bar";
 import {
   HoverCard,
   HoverCardContent,
@@ -16,6 +18,7 @@ import { Coins, Flame, Zap } from "lucide-react";
 import type { PersonaSectionWithFields } from "@/types/personas";
 import { useGlobalPresence } from "@/components/providers/PresenceProvider";
 import { formatLastSeen } from "@/lib/utils";
+import { ImageGridView } from "@/components/personas/ImageGridView";
 
 function levelInfo(xp: number) {
   const level = Math.floor(xp / 100) + 1;
@@ -44,6 +47,44 @@ function FieldView({ type, data }: { type: string; data: any }) {
   if (type === "text") {
     const text = data?.text as string | undefined;
     return text ? <MarkdownRenderer content={text} className="text-sm prose-sm" /> : null;
+  }
+  if (type === "separator") {
+    return <div className="h-px w-full bg-border my-8" />;
+  }
+  if (type === "stats") {
+    const items: { id: string; label: string; value: string; unit?: string }[] =
+      data?.items ?? [];
+    const visible = items.filter((it) => it.label || it.value);
+    if (!visible.length) return null;
+    return (
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(7rem,1fr))] gap-2">
+        {visible.map((stat) => (
+          <div
+            key={stat.id}
+            className="flex flex-col justify-end gap-0.5 rounded-lg border border-border-soft bg-muted/30 px-3 py-2"
+          >
+            {stat.label ? (
+              <span className="text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">
+                {stat.label}
+              </span>
+            ) : null}
+            <div className="flex items-baseline justify-between gap-1">
+              <span className="text-lg font-semibold tabular-nums">
+                {stat.value}
+              </span>
+              {stat.unit ? (
+                <span className="text-xs font-normal text-muted-foreground">
+                  {stat.unit}
+                </span>
+              ) : null}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  if (type === "image-grid") {
+    return <ImageGridView images={data?.images ?? []} />;
   }
   return null;
 }
@@ -238,9 +279,9 @@ export function PersonaProfileSheetTrigger({
             {/* Banner */}
             {bannerUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={bannerUrl} alt="" className="h-28 w-full object-cover" draggable={false} />
+              <img src={supabaseThumb(bannerUrl, 880, 80, 272) ?? bannerUrl} onError={(e) => { e.currentTarget.src = bannerUrl!; e.currentTarget.onerror = null; }} alt="" className="h-34 w-full object-cover" draggable={false} />
             ) : (
-              <div className="h-28 bg-gradient-to-r from-muted/60 to-muted" />
+              <div className="h-34 bg-gradient-to-r from-muted/60 to-muted" />
             )}
 
             <div className="px-4 pb-4 -mt-16">
@@ -251,9 +292,10 @@ export function PersonaProfileSheetTrigger({
                     src={avatarUrl}
                     alt={name ?? ""}
                     fallback={name ? initials(name) : "?"}
-                    online={isOnline}
+                    presenceState="invisible"
                     size={128}
                     frameUrl={frameUrl}
+                    className="outline-4 outline-background rounded-2xl"
                   />
                 </div>
 
@@ -319,22 +361,20 @@ export function PersonaProfileSheetTrigger({
               onValueChange={setActiveTab}
               className="space-y-4"
             >
-              <div className="flex items-center border-y">
-                <TabsList className="rounded-none bg-transparent">
-                  {sections.map((s) => (
-                    <TabsTrigger key={s.id} value={s.id} className="px-3 rounded-xs">
-                      {s.name}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-              </div>
+              <TabBar>
+                {sections.map((s) => (
+                  <TabsTrigger key={s.id} value={s.id}>
+                    {s.name}
+                  </TabsTrigger>
+                ))}
+              </TabBar>
 
               {sections.map((s) => (
                 <TabsContent
                   key={s.id}
                   value={s.id}
                   forceMount
-                  className="px-4 space-y-3 data-[state=inactive]:hidden"
+                  className="px-4 space-y-4 data-[state=inactive]:hidden"
                 >
                   {s.fields.length === 0 ? (
                     <p className="text-sm text-muted-foreground italic">Aucun contenu.</p>

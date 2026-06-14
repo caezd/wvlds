@@ -30,16 +30,14 @@ function relativeTime(iso: string | null) {
   return new Date(iso).toLocaleDateString("fr-FR");
 }
 
-/**
- * Liste des chatrooms du monde, façon kit "Constructor X" :
- * carte arrondie, grille 2 colonnes, lignes icône + titre + activité + chevron.
- */
 export function WorldChatroomsGrid({
   worldId,
   initialRooms,
+  onRoomClick,
 }: {
   worldId: string;
   initialRooms: Room[];
+  onRoomClick?: (href: string) => void;
 }) {
   const [rooms, setRooms] = useState<Room[]>(initialRooms);
   const { roomUnread } = useNotifications();
@@ -85,6 +83,7 @@ export function WorldChatroomsGrid({
     <div className="rounded-3xl border border-border-soft p-3 md:p-4">
       <ul className="grid gap-x-6 md:grid-cols-2">
         {rooms.map((room) => {
+          const href = `/c/${room.id}`;
           const unread = roomUnread[room.id] ?? room.unread_count ?? 0;
           const label = room.title || room.name || "Sans titre";
           const excerpt = room.last_message_excerpt?.trim();
@@ -94,10 +93,18 @@ export function WorldChatroomsGrid({
           return (
             <li key={room.id}>
               <Link
-                href={`/c/${room.id}`}
+                href={href}
+                onClick={
+                  onRoomClick
+                    ? (e) => {
+                        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+                        e.preventDefault();
+                        onRoomClick(href);
+                      }
+                    : undefined
+                }
                 className="group flex items-center gap-3.5 rounded-2xl px-3 py-3 hover:bg-secondary transition-colors"
               >
-                {/* Icône ronde */}
                 <span className="relative shrink-0">
                   <span
                     className={cn(
@@ -121,7 +128,6 @@ export function WorldChatroomsGrid({
                   )}
                 </span>
 
-                {/* Titre + extrait du dernier message */}
                 <span className="min-w-0 flex-1">
                   <span
                     className={cn(

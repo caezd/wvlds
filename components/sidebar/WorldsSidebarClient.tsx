@@ -3,6 +3,7 @@
 
 import Link from "next/link";
 import { useMemo, useEffect, useRef, useState, useTransition } from "react";
+import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import { toast } from "sonner";
 import { usePathname, useRouter } from "next/navigation"; // ✅ usePathname
 import { Button } from "@/components/ui/button";
@@ -196,6 +197,7 @@ export default function WorldsSidebarClient(props: {
     return () => { cancelled = true; };
   }, [pathname]);
 
+  const { shop } = useFeatureFlags();
   const pActive = isActivePrefix(pathname, "/p");
   const shopActive = isActivePrefix(pathname, "/shop");
 
@@ -209,28 +211,36 @@ export default function WorldsSidebarClient(props: {
             className="group flex items-center justify-between rounded-lg"
           >
             <Button
-              variant={pActive ? "secondary" : "ghost"}
+              variant="ghost"
               size="sm"
-              className="w-full justify-start"
+              className={cn(
+                "w-full justify-start rounded-full border border-transparent hover:border-[#333333] hover:bg-transparent",
+                pActive && "border border-[#333333] bg-[#1a1a1a] font-semibold text-foreground shadow-[0_1px_2px_0_rgba(128,128,128,0.1)] hover:bg-[#1a1a1a]"
+              )}
             >
               <Users className="h-4 w-4 opacity-80 mr-1" />
-              <div className="truncate">Personae</div>
+              <div className="truncate">Personas</div>
             </Button>
           </Link>
 
+          {shop && (
           <Link
             href="/shop"
             className="group flex items-center justify-between rounded-lg"
           >
             <Button
-              variant={shopActive ? "secondary" : "ghost"}
+              variant="ghost"
               size="sm"
-              className="w-full justify-start"
+              className={cn(
+                "w-full justify-start rounded-full border border-transparent hover:border-[#333333] hover:bg-transparent",
+                shopActive && "border border-[#333333] bg-[#1a1a1a] font-semibold text-foreground shadow-[0_1px_2px_0_rgba(128,128,128,0.1)] hover:bg-[#1a1a1a]"
+              )}
             >
               <ShoppingBasket className="h-4 w-4 opacity-80 mr-1" />
               <div className="truncate">Boutique</div>
             </Button>
           </Link>
+          )}
 
           {isAdmin && (
             <Link
@@ -238,9 +248,12 @@ export default function WorldsSidebarClient(props: {
               className="group flex items-center justify-between rounded-lg"
             >
               <Button
-                variant={isActivePrefix(pathname, "/admin") ? "secondary" : "ghost"}
+                variant="ghost"
                 size="sm"
-                className="w-full justify-start"
+                className={cn(
+                  "w-full justify-start rounded-full border border-transparent hover:border-[#333333] hover:bg-transparent",
+                  isActivePrefix(pathname, "/admin") && "border border-[#333333] bg-[#1a1a1a] font-semibold text-foreground shadow-[0_1px_2px_0_rgba(128,128,128,0.1)] hover:bg-[#1a1a1a]"
+                )}
               >
                 <ShieldCheck className="h-4 w-4 opacity-80 mr-1" />
                 <div className="truncate">Administration</div>
@@ -250,36 +263,28 @@ export default function WorldsSidebarClient(props: {
         </div>
       </div>
 
-      {/* Recherche + quota — fixe */}
-      <div className="shrink-0 p-4">
-        <div className="mt-2 text-xs text-muted-foreground">
-          {plan === "free"
-            ? `Quota : ${ownedCount}/${quotaLimit}`
-            : `Plan : ${plan}`}
-        </div>
-      </div>
-
       <Separator className="shrink-0" />
 
       {/* Seule la liste des mondes scrolle */}
       <ScrollArea className="min-h-0 flex-1">
-        <Section title="Mes mondes" empty="Aucun monde possédé.">
-          <CreateWorldDialog disabled={quotaReached} plan={plan} hint="..." />
-          {filteredMine.map((w) => (
-            <WorldItem
-              key={w.id}
-              meId={meId}
-              world={w}
-              // ✅ actif si on est sur /w/:id/... OU sur /c/:chatroomId qui appartient à ce monde
-              active={activeWorldId === w.id}
-              unread={worldUnread[w.id] ?? 0}
-              onActivate={() => { }}
-            />
-          ))}
-        </Section>
+        {filteredMine.length > 0 && (
+          <Section title="Mes mondes" empty="">
+            {filteredMine.map((w) => (
+              <WorldItem
+                key={w.id}
+                meId={meId}
+                world={w}
+                // ✅ actif si on est sur /w/:id/... OU sur /c/:chatroomId qui appartient à ce monde
+                active={activeWorldId === w.id}
+                unread={worldUnread[w.id] ?? 0}
+                onActivate={() => { }}
+              />
+            ))}
+          </Section>
+        )}
 
         {filteredShared.length > 0 && (
-          <Section title="Partagés avec moi" empty="">
+          <Section title="Mondes partagés" empty="">
             {filteredShared.map((w) => (
               <WorldItem
                 key={w.id}
@@ -293,6 +298,17 @@ export default function WorldsSidebarClient(props: {
           </Section>
         )}
       </ScrollArea>
+
+      {/* Bouton de création — fixe, en bas juste au-dessus du footer */}
+      <div className="shrink-0 px-2 py-2">
+        <CreateWorldDialog
+          disabled={quotaReached}
+          plan={plan}
+          hint="..."
+          ownedCount={ownedCount}
+          quotaLimit={quotaLimit}
+        />
+      </div>
     </div>
   );
 }
@@ -324,7 +340,7 @@ function Section({
         type="button"
         onClick={() => setCollapsed((v) => !v)}
         aria-expanded={!collapsed}
-        className="w-full px-2 mb-2 flex items-center justify-between gap-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+        className="w-full px-2 mb-2 flex items-center justify-between gap-2 text-[0.65rem] uppercase tracking-wider font-medium text-muted-foreground hover:text-foreground transition-colors"
       >
         <span className="flex items-center gap-2">
           {icon && icon}
@@ -375,9 +391,12 @@ function WorldItem({
       className={cn("group flex items-center justify-between rounded-lg")}
     >
       <Button
-        variant={active ? "secondary" : "ghost"}
+        variant="ghost"
         size="sm"
-        className="w-full justify-start"
+        className={cn(
+          "w-full justify-start rounded-full border border-transparent hover:border-[#333333] hover:bg-transparent",
+          active && "border-[#333333] bg-[#1a1a1a] font-semibold text-foreground shadow-[0_1px_2px_0_rgba(128,128,128,0.1)] hover:bg-[#1a1a1a]"
+        )}
       >
         <div className="relative">
           {isShared ? (
@@ -403,14 +422,20 @@ function WorldItem({
   );
 }
 
-function CreateWorldDialog({
+export function CreateWorldDialog({
   disabled,
   plan,
   hint,
+  ownedCount,
+  quotaLimit,
+  trigger,
 }: {
   disabled?: boolean;
   plan: "free" | "pro" | "team" | "lifetime";
   hint: string;
+  ownedCount: number;
+  quotaLimit: number;
+  trigger?: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -447,15 +472,25 @@ function CreateWorldDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button
-          size="sm"
-          disabled={disabled}
-          title={hint}
-          className="w-full justify-start"
-        >
-          <Plus className="mr-1 h-4 w-4" />
-          Nouveau monde
-        </Button>
+        {trigger ?? (
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={disabled}
+            title={hint}
+            className="w-full justify-between rounded-full border border-[#333333] bg-[#1a1a1a] font-semibold text-foreground shadow-[0_1px_2px_0_rgba(128,128,128,0.1)] hover:bg-[#1a1a1a]"
+          >
+            <span className="flex items-center gap-1">
+              <Plus className="h-4 w-4" />
+              Nouveau monde
+            </span>
+            {quotaLimit !== Infinity && (
+              <span className="text-xs font-normal text-muted-foreground">
+                {ownedCount}/{quotaLimit}
+              </span>
+            )}
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>

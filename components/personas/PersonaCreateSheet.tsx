@@ -22,6 +22,7 @@ export function PersonaCreateSheet() {
   const [createdName, setCreatedName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [sections, setSections] = useState<PersonaSectionWithFields[]>([]);
   const nameRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
@@ -33,6 +34,7 @@ export function PersonaCreateSheet() {
       setCreatedId(null);
       setCreatedName("");
       setError(null);
+      setSections([]);
       if (createdId) router.refresh();
     }
   }
@@ -52,8 +54,6 @@ export function PersonaCreateSheet() {
     setCreatedName(name);
     setPhase("edit");
   }
-
-  const emptyInitialSections: PersonaSectionWithFields[] = [];
 
   return (
     <>
@@ -103,7 +103,8 @@ export function PersonaCreateSheet() {
             <PersonaEditorContent
               personaId={createdId}
               personaName={createdName}
-              initialSections={emptyInitialSections}
+              sections={sections}
+              onSectionsChange={setSections}
             />
           ) : null}
         </SheetContent>

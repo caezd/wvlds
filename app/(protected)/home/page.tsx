@@ -49,7 +49,7 @@ export default async function HomePage() {
       {/* Header */}
       <header className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Vos Mondes</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Mondes</h1>
           <div className="flex items-center gap-1 mt-0.5">
             <p className="text-xs text-muted-foreground">
               {quotaLabel}
@@ -61,8 +61,8 @@ export default async function HomePage() {
               {quotaReached
                 ? `Le plan gratuit est limité à ${quotaLimit} monde. Passe à un plan supérieur pour en créer davantage.`
                 : quotaLimit === Infinity
-                ? `Ton plan ${plan} te permet de créer un nombre illimité de mondes.`
-                : `Tu peux créer jusqu'à ${quotaLimit} monde${quotaLimit > 1 ? "s" : ""} avec le plan gratuit.`}
+                  ? `Ton plan ${plan} te permet de créer un nombre illimité de mondes.`
+                  : `Tu peux créer jusqu'à ${quotaLimit} monde${quotaLimit > 1 ? "s" : ""} avec le plan gratuit.`}
             </Hint>
           </div>
         </div>

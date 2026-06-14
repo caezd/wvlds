@@ -9,6 +9,7 @@ export function ChatroomAvatarWithPresence({
   presenceState = "offline",
   size = 24,
   rounded = true,
+  className,
 }: {
   src?: string | null;
   alt?: string;
@@ -16,6 +17,7 @@ export function ChatroomAvatarWithPresence({
   presenceState?: "online" | "offline" | "invisible";
   size?: number;
   rounded?: boolean;
+  className?: string;
 }) {
   return (
     <div
@@ -26,6 +28,7 @@ export function ChatroomAvatarWithPresence({
         className={cn(
           "outline outline-hover-400",
           rounded ? "rounded-[4px]" : "rounded-none",
+          className,
         )}
         style={{ width: size, height: size }}
       >

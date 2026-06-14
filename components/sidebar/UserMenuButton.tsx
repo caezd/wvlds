@@ -63,13 +63,15 @@ export function UserMenuButton({
         {variant === "compact" ? (
           <button
             aria-label="Menu du compte"
-            className="relative flex h-9 w-9 items-center justify-center outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-full"
+            className="flex h-9 w-9 items-center justify-center outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-full"
           >
-            <Avatar className="h-8 w-8 rounded-full shrink-0">
-              <AvatarImage src={avatarUrl ?? undefined} alt={displayName} />
-              <AvatarFallback className="rounded-full text-xs">{initials}</AvatarFallback>
-            </Avatar>
-            <StatusDot status={status} className="absolute -bottom-0.5 -right-0.5 ring-2 ring-background" />
+            <div className="relative shrink-0">
+              <Avatar className="h-8 w-8 rounded-full">
+                <AvatarImage src={avatarUrl ?? undefined} alt={displayName} />
+                <AvatarFallback className="rounded-full text-xs bg-muted text-muted-foreground">{initials}</AvatarFallback>
+              </Avatar>
+              <StatusDot status={status} className="absolute -bottom-0.5 -right-0.5 ring-2 ring-background rounded-full" />
+            </div>
           </button>
         ) : (
           <button className="flex w-full items-center gap-2 rounded-md p-2 text-left hover:bg-muted transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring">

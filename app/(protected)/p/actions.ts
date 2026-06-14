@@ -52,6 +52,52 @@ export async function deletePersona(id: string) {
         return { ok: false, error: "Vous devez être connecté." };
     }
 
+    const storagePaths: string[] = [];
+
+    // Avatar et bannière
+    const { data: persona } = await supabase
+        .from("personas")
+        .select("avatar_url, banner_url")
+        .eq("id", id)
+        .single();
+
+    function extractStoragePath(url: string | null | undefined) {
+        if (!url) return null;
+        const match = url.match(/\/object\/public\/personas\/([^?]+)/);
+        return match ? match[1] : null;
+    }
+
+    const avatarPath = extractStoragePath(persona?.avatar_url);
+    const bannerPath = extractStoragePath(persona?.banner_url);
+    if (avatarPath) storagePaths.push(avatarPath);
+    if (bannerPath) storagePaths.push(bannerPath);
+    // Anciens avatars générés (chemin sans préfixe user-)
+    storagePaths.push(`avatars/${id}.png`, `avatars/${id}.webp`);
+
+    // Images des champs image-grid
+    const { data: sections } = await supabase
+        .from("persona_sections")
+        .select("id")
+        .eq("persona_id", id);
+
+    if (sections?.length) {
+        const sectionIds = sections.map((s: { id: string }) => s.id);
+        const { data: imageFields } = await supabase
+            .from("persona_section_fields")
+            .select("data")
+            .in("section_id", sectionIds)
+            .eq("type", "image-grid");
+
+        const imagePaths = (imageFields ?? []).flatMap((f: any) =>
+            (f.data?.images ?? []).map((img: { id: string }) => img.id),
+        ).filter(Boolean);
+        storagePaths.push(...imagePaths);
+    }
+
+    if (storagePaths.length) {
+        await supabase.storage.from("personas").remove(storagePaths);
+    }
+
     const { data, error } = await supabase
         .from("personas")
         .delete()

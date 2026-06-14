@@ -58,14 +58,16 @@ export function PersonaCard({
           {/* Gradient overlay + infos */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
 
-          {/* Nom + bouton éditer */}
-          <div className="absolute bottom-0 left-0 right-0 flex items-end justify-between gap-2 p-3">
+          {/* Bouton éditer — coin supérieur droit au survol */}
+          <span className="absolute top-3 right-3 flex items-center gap-1 rounded-full bg-white/20 backdrop-blur-sm px-2.5 py-1 text-xs font-medium text-white opacity-0 group-hover:opacity-100 transition-opacity">
+            <Pencil className="h-3 w-3" />
+            Éditer
+          </span>
+
+          {/* Nom */}
+          <div className="absolute bottom-0 left-0 right-0 p-3">
             <span className="text-sm font-semibold text-white leading-tight line-clamp-2 text-left">
               {personaName}
-            </span>
-            <span className="shrink-0 flex items-center gap-1 rounded-full bg-white/20 backdrop-blur-sm px-2.5 py-1 text-xs font-medium text-white opacity-0 group-hover:opacity-100 transition-opacity">
-              <Pencil className="h-3 w-3" />
-              Éditer
             </span>
           </div>
         </button>

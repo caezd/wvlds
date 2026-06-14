@@ -57,12 +57,16 @@ export function ParagraphBlockEditor({
   onKeyDown,
   placeholder,
   className,
+  submitOnEnter = true,
 }: {
   value: string;
   onChange: (v: string) => void;
   onKeyDown?: (e: React.KeyboardEvent<HTMLDivElement>) => void;
   placeholder?: string;
   className?: string;
+  /** Si vrai (défaut), Entrée seule déclenche onKeyDown (envoi). Si faux,
+      Entrée crée des sauts de ligne / nouveaux blocs (mode document). */
+  submitOnEnter?: boolean;
 }) {
   const editorRef = useRef<HTMLDivElement>(null);
   const [focused, setFocused] = useState(false);
@@ -193,8 +197,8 @@ if (paragraphs.length <= 1) return; // un seul paragraphe → comportement natif
     const shift = e.shiftKey;
     const ctrl  = e.ctrlKey;
 
-    // Enter seul → envoi
-    if (!shift && !ctrl) {
+    // Enter seul → envoi (mode composer uniquement)
+    if (submitOnEnter && !shift && !ctrl) {
       e.preventDefault();
       onKeyDown?.(e);
       return;

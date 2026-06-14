@@ -26,10 +26,16 @@ type Ctx = {
 
 const NotificationsCtx = createContext<Ctx | null>(null);
 
+const DEFAULT_CTX: Ctx = {
+    worldUnread: {},
+    roomUnread: {},
+    setActiveChat: () => {},
+    markWorldSeen: async () => {},
+    refreshAll: async () => {},
+};
+
 export function useNotifications() {
-    const ctx = useContext(NotificationsCtx);
-    if (!ctx) throw new Error("NotificationsProvider not mounted");
-    return ctx;
+    return useContext(NotificationsCtx) ?? DEFAULT_CTX;
 }
 
 export default function NotificationsProvider({ children }: { children: React.ReactNode }) {

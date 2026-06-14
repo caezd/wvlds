@@ -50,27 +50,22 @@ export function ChatroomMessageBubble({
       )}
 
       {message.metadata?.bubbles ? (
-        <div className="flex flex-col w-full gap-2">
+        <>
           {mediaSection}
           <DialogueBubbleRenderer content={message.content} color={message.metadata?.bubbleColor} />
-        </div>
+        </>
       ) : (
-        <div className={cn("flex w-full")}>
-          <div className="flex flex-col gap-2">
-            {mediaSection}
-            {message.content && (
-              <MarkdownRenderer
-                content={message.content}
-                isMine
-                className={cn(
-                  "text-sm",
-                  "prose-a:underline prose-a:underline-offset-4",
-                  "prose-hr:my-3",
-                )}
-              />
-            )}
-          </div>
-        </div>
+        <>
+          {mediaSection}
+          {message.content && (
+            <MarkdownRenderer
+              content={message.content}
+              isMine
+              proseSize="base"
+              className="prose-a:underline prose-a:underline-offset-4 prose-hr:my-3"
+            />
+          )}
+        </>
       )}
     </>
   );

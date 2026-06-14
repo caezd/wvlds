@@ -4,13 +4,16 @@ import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { AvatarWithFrame } from "@/components/avatars/AvatarWithFrame";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { TabBar } from "@/components/ui/tab-bar";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import type { Persona } from "@/types/db";
 import type { PersonaSectionWithFields } from "@/types/personas";
 import { Coins, Flame, Zap } from "lucide-react";
 import { useGlobalPresence } from "@/components/providers/PresenceProvider";
 import { formatLastSeen } from "@/lib/utils";
+import { ImageGridView } from "@/components/personas/ImageGridView";
+import { supabaseThumb } from "@/lib/storage";
 
 // -- Level helpers --------------------------------------------
 // level = floor(sqrt(xp / 50)) + 1
@@ -42,8 +45,46 @@ function FieldView({ type, data }: { type: string; data: any }) {
   }
   if (type === "text") {
     return data?.text ? (
-      <MarkdownRenderer content={data.text} className="text-sm prose-sm" />
+      <MarkdownRenderer content={data.text} className="text-sm" />
     ) : null;
+  }
+  if (type === "separator") {
+    return <div className="h-px w-full bg-border my-8" />;
+  }
+  if (type === "stats") {
+    const items: { id: string; label: string; value: string; unit?: string }[] =
+      data?.items ?? [];
+    const visible = items.filter((it) => it.label || it.value);
+    if (!visible.length) return null;
+    return (
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(7rem,1fr))] gap-2">
+        {visible.map((stat) => (
+          <div
+            key={stat.id}
+            className="flex flex-col justify-end gap-0.5 rounded-lg border border-border-soft bg-muted/30 px-3 py-2"
+          >
+            {stat.label ? (
+              <span className="text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">
+                {stat.label}
+              </span>
+            ) : null}
+            <div className="flex items-baseline justify-between gap-1">
+              <span className="text-lg font-semibold tabular-nums">
+                {stat.value}
+              </span>
+              {stat.unit ? (
+                <span className="text-xs font-normal text-muted-foreground">
+                  {stat.unit}
+                </span>
+              ) : null}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  if (type === "image-grid") {
+    return <ImageGridView images={data?.images ?? []} />;
   }
   return null;
 }
@@ -188,13 +229,13 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
             {/* -- Bannière -- */}
             {bannerUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={bannerUrl} alt="" className="h-28 w-full object-cover shrink-0" draggable={false} />
+              <img src={supabaseThumb(bannerUrl, 880, 80, 272) ?? bannerUrl} onError={(e) => { e.currentTarget.src = bannerUrl!; e.currentTarget.onerror = null; }} alt="" className="h-34 w-full object-cover shrink-0" draggable={false} />
             ) : (
-              <div className="h-28 w-full shrink-0 bg-gradient-to-r from-muted/60 to-muted" />
+              <div className="h-34 w-full shrink-0 bg-gradient-to-r from-muted/60 to-muted" />
             )}
 
             {/* -- Header stats -- */}
-            <div className="px-5 pt-5 pb-4 border-b border-border space-y-3">
+            <div className="px-5 pt-5 pb-4 border-b border-border-soft space-y-3">
               {xpInfo && balance ? (
                 <>
                   <div className="flex items-center justify-between text-sm">
@@ -236,14 +277,15 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
             </div>
 
             {/* -- Avatar + nom -- */}
-            <div className="flex flex-col items-center gap-2 py-6 border-b border-border">
+            <div className="flex flex-col items-center gap-2 py-6 border-b border-border-soft">
               <AvatarWithFrame
                 src={persona.avatar_url}
                 alt={persona.name}
                 fallback={initials(persona.name)}
-                online={isOnline}
+                presenceState="invisible"
                 size={80}
                 frameUrl={frameUrl}
+                className="outline-4 outline-background rounded-2xl"
               />
               <div className="text-center">
                 <div className="text-lg font-semibold">{persona.name}</div>
@@ -278,25 +320,19 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
                   value={activeTab ?? sections[0].id}
                   onValueChange={setActiveTab}
                 >
-                  <div className="border-b border-border">
-                    <TabsList className="rounded-none bg-transparent h-auto px-5 py-0 gap-1">
+                  <TabBar className="px-5">
                       {sections.map((s) => (
-                        <TabsTrigger
-                          key={s.id}
-                          value={s.id}
-                          className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-3 py-2.5 text-sm"
-                        >
+                        <TabsTrigger key={s.id} value={s.id}>
                           {s.name}
                         </TabsTrigger>
                       ))}
-                    </TabsList>
-                  </div>
+                  </TabBar>
 
                   {sections.map((s) => (
                     <TabsContent
                       key={s.id}
                       value={s.id}
-                      className="px-5 py-4 space-y-3 data-[state=inactive]:hidden"
+                      className="px-5 py-4 space-y-4 data-[state=inactive]:hidden"
                       forceMount
                     >
                       {s.fields.length === 0 ? (

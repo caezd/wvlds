@@ -33,6 +33,9 @@ import {
 } from "@/components/ui/popover";
 
 import { PersonaProfileSheetTrigger } from "@/components/personas/PersonaProfileSheetTrigger";
+import { ChatReactionPicker } from "./ChatReactionPicker";
+import { ReactionEmoji } from "./ReactionEmoji";
+import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 
 /**
  * IMPORTANT:
@@ -45,8 +48,6 @@ import { PersonaProfileSheetTrigger } from "@/components/personas/PersonaProfile
  *   public/emotes/heart.png
  *   ...
  */
-const DEFAULT_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "👀", "🔥"] as const;
-
 
 function optimisticToggle(current: ReactionSummary[], emoji: string) {
   const arr = [...current];
@@ -212,6 +213,7 @@ export default function ChatroomMessage({
   invisibleUsers,
   selfId,
   onUpdated,
+  onDeleted,
   onReactionsUpdated,
   chatroomKey,
   forceEdit,
@@ -222,6 +224,7 @@ export default function ChatroomMessage({
   invisibleUsers?: Set<string>;
   selfId: string | null;
   onUpdated?: (id: number, content: string) => void;
+  onDeleted?: (id: number) => void;
   onReactionsUpdated?: (id: number, reactions: ReactionSummary[]) => void;
   chatroomKey?: string | null;
   forceEdit?: boolean;
@@ -253,6 +256,9 @@ export default function ChatroomMessage({
 
   const [editingDiceLabel, setEditingDiceLabel] = useState(false);
   const [diceLabelDraft, setDiceLabelDraft] = useState("");
+
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const { emoji_reactions } = useFeatureFlags();
 
   // Si un UPDATE arrive via realtime pendant qu’on n’édite pas, on resync le draft
   useEffect(() => {
@@ -347,17 +353,17 @@ export default function ChatroomMessage({
     // DB (colonne "emoji" conservée): on stocke le KEY dedans
     const q = alreadyReacted
       ? supabase.from(TABLE.CHAT_MESSAGE_REACTIONS).delete().match({
-          chat_id: message.chat_id,
-          message_id: message.id,
-          user_id: selfId,
-          emoji: emoteKey,
-        })
+        chat_id: message.chat_id,
+        message_id: message.id,
+        user_id: selfId,
+        emoji: emoteKey,
+      })
       : supabase.from(TABLE.CHAT_MESSAGE_REACTIONS).insert({
-          chat_id: message.chat_id,
-          message_id: message.id,
-          user_id: selfId,
-          emoji: emoteKey,
-        });
+        chat_id: message.chat_id,
+        message_id: message.id,
+        user_id: selfId,
+        emoji: emoteKey,
+      });
 
     const { error } = await q;
     if (error) {
@@ -456,200 +462,212 @@ export default function ChatroomMessage({
   return (
     <article className="w-full py-8 group/turn-messages">
       <div className="flex w-full flex-col justify-between gap-8">
-        <div className="flex flex-1 gap-4 justify-between">
-          <div className="flex flex-1 gap-4">
-            {message.persona?.name && (
-              <PersonaProfileSheetTrigger
-                personaId={message.persona?.id ?? null}
-                userId={userId}
-                label={label}
-                hoverPreview
-                side="right"
-              >
-                <AvatarWithFrame
-                  src={message.persona?.avatar_url ?? avatarSrc}
-                  alt={label ?? "User"}
-                  fallback={message.persona?.name ?? "?"}
-                  presenceState={presenceState}
-                  size={48}
-                  frameUrl={frameUrl}
-                />
-              </PersonaProfileSheetTrigger>
-            )}
-            <div className="text-sm flex flex-col justify-between gap-2 w-full">
+        <div className="flex flex-1 gap-4">
+          {message.persona?.name && (
+            <PersonaProfileSheetTrigger
+              personaId={message.persona?.id ?? null}
+              userId={userId}
+              label={label}
+              hoverPreview
+              side="right"
+            >
+              <AvatarWithFrame
+                src={message.persona?.avatar_url ?? avatarSrc}
+                alt={label ?? "User"}
+                fallback={message.persona?.name ?? "?"}
+                presenceState={presenceState}
+                size={56}
+                frameUrl={frameUrl}
+              />
+            </PersonaProfileSheetTrigger>
+          )}
+          <div className="text-sm flex flex-col w-full">
+            {/* Ligne 1 : nom + boutons (réagir / éditer / supprimer) */}
+            <div className="flex justify-between items-center gap-2 min-h-7">
               <strong className="font-medium">{message.persona?.name}</strong>
+              <div className="flex items-center gap-1">
+                {!editing && emoji_reactions && (
+                  <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 opacity-0 group-hover/turn-messages:opacity-100 transition-opacity"
+                        aria-label="Ajouter une réaction"
+                        title="Réagir"
+                      >
+                        <SmilePlus className="h-4 w-4" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      align="end"
+                      className="w-auto p-0 border-0 bg-transparent shadow-none"
+                    >
+                      <ChatReactionPicker
+                        onSelect={(emoji) => {
+                          void toggleReaction(emoji);
+                          setPickerOpen(false);
+                        }}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                )}
+
+                {mine && !editing && !block && (
+                  <>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 opacity-0 group-hover/turn-messages:opacity-100 transition-opacity"
+                      onClick={startEdit}
+                      aria-label="Modifier le message"
+                      title="Modifier"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <DeleteConfirmDialog
+                      trigger={
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 opacity-0 group-hover/turn-messages:opacity-100 transition-opacity text-destructive hover:text-destructive"
+                          aria-label="Supprimer le message"
+                          title="Supprimer"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      }
+                      description="Ce message sera supprimé définitivement."
+                      onConfirm={async () => {
+                        const { error } = await supabase.from(TABLE.CHAT_MESSAGES).delete().eq("id", message.id);
+                        if (error) toast.error("Impossible de supprimer le message : " + error.message);
+                        else onDeleted?.(message.id);
+                      }}
+                    />
+                  </>
+                )}
+                {mine && !editing && blockRef?._type === "dice" && (
+                  <DeleteConfirmDialog
+                    trigger={
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 opacity-0 group-hover/turn-messages:opacity-100 transition-opacity text-destructive hover:text-destructive"
+                        aria-label="Supprimer le lancé"
+                        title="Supprimer"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    }
+                    description="Le lancé de dé sera supprimé définitivement."
+                    onConfirm={async () => {
+                      const { error } = await supabase.from(TABLE.CHAT_MESSAGES).delete().eq("id", message.id);
+                      if (error) toast.error("Impossible de supprimer le lancé : " + error.message);
+                    }}
+                  />
+                )}
+
+                {mine && editing && (
+                  <div className="flex items-center gap-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={cancelEdit}
+                      disabled={saving}
+                      aria-label="Annuler"
+                      title="Annuler"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={() => void save()}
+                      disabled={saving}
+                      aria-label="Enregistrer"
+                      title="Enregistrer"
+                    >
+                      {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Ligne 2 : date + réactions, équilibrées sur la même ligne */}
+            <div className="flex justify-between items-center gap-2 min-h-7">
               <div className="dark:text-zinc- text-zinc-400">
                 <DateDisplay value={date} />
               </div>
+              {!editing && emoji_reactions && reactions.length > 0 && (
+                <div className="flex flex-wrap gap-1 items-center justify-end">
+                  {reactions.map((r) => (
+                    <button
+                      key={r.emoji}
+                      type="button"
+                      onClick={() => void toggleReaction(r.emoji)}
+                      className={cn(
+                        "inline-flex items-center gap-1 rounded-full border border-border-soft px-2 py-1 text-xs",
+                        "bg-secondary hover:bg-muted",
+                        r.me && "border-primary/30",
+                      )}
+                      aria-label={`Réaction ${r.emoji}`}
+                      title={r.me ? "Retirer ma réaction" : "Ajouter ma réaction"}
+                    >
+                      <ReactionEmoji value={r.emoji} size={16} />
+                      <span className="tabular-nums">{r.count}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
-          </div>
-
-          {/* Réactions + bouton éditer en bout de ligne header */}
-          <div className="flex items-center gap-1">
-            {!editing && reactions.length > 0 && (
-              <div className="flex flex-wrap gap-1 items-center">
-                {reactions.map((r) => (
-                  <button
-                    key={r.emoji}
-                    type="button"
-                    onClick={() => void toggleReaction(r.emoji)}
-                    className={cn(
-                      "inline-flex items-center gap-1 rounded-full border border-border-soft px-2 py-1 text-xs",
-                      "bg-card-400 hover:bg-muted",
-                      r.me && "border-primary/40 bg-primary/10",
-                    )}
-                    aria-label={`Réaction ${r.emoji}`}
-                    title={r.me ? "Retirer ma réaction" : "Ajouter ma réaction"}
-                  >
-                    <span className="text-sm leading-none">{r.emoji}</span>
-                    <span className="tabular-nums">{r.count}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {!editing && (
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 opacity-0 group-hover/turn-messages:opacity-100 transition-opacity"
-                    aria-label="Ajouter une réaction"
-                    title="Réagir"
-                  >
-                    <SmilePlus className="h-4 w-4" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent align="end" className="w-auto p-2">
-                  <div className="flex flex-wrap gap-1">
-                    {DEFAULT_EMOJIS.map((e) => {
-                      const active = reactions.some((r) => r.emoji === e && r.me);
-                      return (
-                        <button
-                          key={e}
-                          type="button"
-                          onClick={() => void toggleReaction(e)}
-                          className={cn(
-                            "h-8 w-8 rounded-md border text-base leading-none",
-                            "bg-background hover:bg-muted",
-                            active && "border-primary/40 bg-primary/10",
-                          )}
-                          aria-label={`Réagir avec ${e}`}
-                          title={e}
-                        >
-                          {e}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </PopoverContent>
-              </Popover>
-            )}
-
-            {mine && !editing && !block && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 opacity-0 group-hover/turn-messages:opacity-100 transition-opacity"
-                onClick={startEdit}
-                aria-label="Modifier le message"
-                title="Modifier"
-              >
-                <Pencil className="h-4 w-4" />
-              </Button>
-            )}
-            {mine && !editing && blockRef?._type === "dice" && (
-              <DeleteConfirmDialog
-                trigger={
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 opacity-0 group-hover/turn-messages:opacity-100 transition-opacity text-destructive hover:text-destructive"
-                    aria-label="Supprimer le lancé"
-                    title="Supprimer"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                }
-                description="Le lancé de dé sera supprimé définitivement."
-                onConfirm={async () => {
-                  const { error } = await supabase.from(TABLE.CHAT_MESSAGES).delete().eq("id", message.id);
-                  if (error) toast.error("Impossible de supprimer le lancé : " + error.message);
-                }}
-              />
-            )}
-
-            {mine && editing && (
-              <div className="flex items-center gap-1">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7"
-                  onClick={cancelEdit}
-                  disabled={saving}
-                  aria-label="Annuler"
-                  title="Annuler"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7"
-                  onClick={() => void save()}
-                  disabled={saving}
-                  aria-label="Enregistrer"
-                  title="Enregistrer"
-                >
-                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                </Button>
-              </div>
-            )}
           </div>
         </div>
 
         <div className={cn("relative flex flex-col gap-2 grow ")}>
           <div className="">
             {editing ? (
-                <div className="w-full">
-                  <div className="rounded-2xl border bg-background/60 p-2">
-                    <Textarea
-                      value={draft}
-                      onChange={(e) => setDraft(e.target.value)}
-                      onKeyDown={onKeyDownEdit}
-                      disabled={saving}
-                      autoFocus
-                      rows={Math.min(
-                        10,
-                        Math.max(2, (draft.match(/\n/g)?.length ?? 0) + 1),
-                      )}
-                      className="w-full resize-none border-0 bg-transparent px-2 py-3 shadow-none focus-visible:ring-0 text-sm leading-relaxed min-h-[44px]"
-                    />
-                    {err && (
-                      <div className="mt-1 text-xs text-destructive">{err}</div>
+              <div className="w-full">
+                <div className="rounded-2xl border bg-background/60 p-2">
+                  <Textarea
+                    value={draft}
+                    onChange={(e) => setDraft(e.target.value)}
+                    onKeyDown={onKeyDownEdit}
+                    disabled={saving}
+                    autoFocus
+                    rows={Math.min(
+                      10,
+                      Math.max(2, (draft.match(/\n/g)?.length ?? 0) + 1),
                     )}
-                    <div className="mt-2 text-xs text-muted-foreground">
-                      Esc = annuler • Entrée = enregistrer • Ctrl+Entrée = nouvelle ligne
-                    </div>
+                    className="w-full resize-none border-0 bg-transparent px-2 py-3 shadow-none focus-visible:ring-0 text-sm leading-relaxed min-h-[44px]"
+                  />
+                  {err && (
+                    <div className="mt-1 text-xs text-destructive">{err}</div>
+                  )}
+                  <div className="mt-2 text-xs text-muted-foreground">
+                    Esc = annuler • Entrée = enregistrer • Ctrl+Entrée = nouvelle ligne
                   </div>
                 </div>
-              ) : (
-                <div className="flex flex-col gap-2">
-                  <ChatroomMessageBubble
-                    persona={message.persona}
-                    message={message}
-                    isMine={mine}
-                  />
-                </div>
-              )}
-            </div>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2">
+                <ChatroomMessageBubble
+                  persona={message.persona}
+                  message={message}
+                  isMine={mine}
+                />
+              </div>
+            )}
           </div>
+        </div>
       </div>
     </article>
   );

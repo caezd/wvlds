@@ -6,14 +6,16 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { toWebP } from "@/lib/imageUtils";
 
 import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from "@/components/ui/dialog";
+    Sheet,
+    SheetContent,
+    SheetFooter,
+    SheetHeader,
+    SheetTitle,
+    SheetTrigger,
+} from "@/components/ui/sheet";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -34,12 +36,17 @@ import { Textarea } from "@/components/ui/textarea";
 import {
     ChevronDown,
     FileUp,
+    Globe,
+    GlobeLock,
     HelpCircle,
     Loader2,
     Image as ImageIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
+import { ImageCropPicker, getCroppedImg } from "@/components/ui/image-crop-picker";
+import type { Area } from "react-easy-crop";
 
 /**
  * Edit dialog pour un « monde » — layout "Project Settings" du kit
@@ -54,6 +61,7 @@ export type World = {
     icon_url?: string | null;
     banner_url?: string | null;
     color?: string | null; // hex (#RRGGBB)
+    visibility?: string | null;
 };
 
 const COLOR_PRESETS = [
@@ -82,6 +90,7 @@ const schema = z.object({
         )
         .optional()
         .or(z.literal("")),
+    visibility: z.enum(["private", "public"]),
 });
 
 export type WorldFormValues = z.infer<typeof schema>;
@@ -125,18 +134,16 @@ export default function WorldEditDialog({
     open,
     onOpenChange,
     world,
-    onSave,
     onUpdated,
     trigger,
 }: WorldEditDialogProps) {
     const supabase = createClient();
     const router = useRouter();
-    const [submitting, setSubmitting] = React.useState(false);
-    const [uploading, setUploading] = React.useState<
-        null | "icon" | "banner"
-    >(null);
+    const { public_worlds } = useFeatureFlags();
+    const [uploading, setUploading] = React.useState<null | "icon" | "banner">(null);
     const [confirmDelete, setConfirmDelete] = React.useState(false);
     const [deleting, setDeleting] = React.useState(false);
+    const [bannerCropSrc, setBannerCropSrc] = React.useState<string | null>(null);
 
     const iconInputRef = React.useRef<HTMLInputElement | null>(null);
     const bannerInputRef = React.useRef<HTMLInputElement | null>(null);
@@ -154,6 +161,7 @@ export default function WorldEditDialog({
             icon_url: world.icon_url ?? "",
             banner_url: world.banner_url ?? "",
             color: world.color ?? "",
+            visibility: (world.visibility === "public" ? "public" : "private") as "private" | "public",
         },
         mode: "onChange",
     });
@@ -168,6 +176,7 @@ export default function WorldEditDialog({
                 icon_url: world.icon_url ?? "",
                 banner_url: world.banner_url ?? "",
                 color: world.color ?? "",
+                visibility: (world.visibility === "public" ? "public" : "private") as "private" | "public",
             });
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -181,31 +190,32 @@ export default function WorldEditDialog({
         if (file.size > 5 * 1024 * 1024)
             throw new Error("Fichier trop volumineux (max 5 Mo).");
 
-        const ext = file.name.split(".").pop()?.toLowerCase() || "png";
-        const path = `user-${user.id}/world-${world.id}/${kind}-${Date.now()}.${ext}`;
+        const converted = await toWebP(file);
+        const path = `user-${user.id}/world-${world.id}/${kind}-${Date.now()}.webp`;
 
         const { error } = await supabase.storage
             .from("worlds")
-            .upload(path, file, { upsert: true });
+            .upload(path, converted, { upsert: true, contentType: converted.type });
         if (error) throw error;
 
         return supabase.storage.from("worlds").getPublicUrl(path).data
             .publicUrl;
     }
 
-    async function handleFile(file: File | undefined, kind: "icon" | "banner") {
-        if (!file) return;
-        if (!file.type.startsWith("image/")) {
-            toast.error("Seules les images sont acceptées.");
-            return;
-        }
+    async function uploadFile(file: File, kind: "icon" | "banner") {
         setUploading(kind);
         try {
             const url = await uploadToWorlds(file, kind);
-            form.setValue(kind === "icon" ? "icon_url" : "banner_url", url, {
-                shouldDirty: true,
-                shouldValidate: true,
-            });
+            const field = kind === "icon" ? "icon_url" : "banner_url";
+            form.setValue(field, url, { shouldDirty: true, shouldValidate: true });
+            // Sauvegarde immédiate en base (comme PersonaEditSheet)
+            const { error } = await supabase
+                .from("worlds")
+                .update({ [field]: url })
+                .eq("id", world.id);
+            if (error) throw error;
+            onUpdated?.({ ...world, [field]: url } as World);
+            toast.success("Image enregistrée.");
         } catch (e: any) {
             toast.error(e?.message ?? "Téléversement impossible.");
         } finally {
@@ -213,46 +223,51 @@ export default function WorldEditDialog({
         }
     }
 
-    async function handleSubmit(values: WorldFormValues) {
-        setSubmitting(true);
+    function handleFile(file: File | undefined, kind: "icon" | "banner") {
+        if (!file) return;
+        if (!file.type.startsWith("image/")) {
+            toast.error("Seules les images sont acceptées.");
+            return;
+        }
+        if (kind === "banner") {
+            setBannerCropSrc(URL.createObjectURL(file));
+        } else {
+            void uploadFile(file, "icon");
+        }
+    }
+
+    async function onBannerCropConfirm(pixels: Area) {
+        if (!bannerCropSrc) return;
         try {
-            const payload = {
-                name: values.name.trim(),
-                description: truthyOrNull(values.description),
-                icon_url: truthyOrNull(values.icon_url),
-                banner_url: truthyOrNull(values.banner_url),
-                color: truthyOrNull(values.color),
-            } as const;
-
-            let updated: World | null = null;
-
-            if (supabase) {
-                const { data, error } = await supabase
-                    .from("worlds")
-                    .update(payload)
-                    .eq("id", world.id)
-                    .select()
-                    .single();
-                if (error) throw error;
-                updated = (data as unknown as World) ?? null;
-            } else if (onSave) {
-                const maybe = await onSave(values);
-                updated = (maybe as World) ?? { ...world, ...payload };
-            } else {
-                updated = { ...world, ...payload };
-            }
-
-            if (updated) onUpdated?.(updated);
-
-            toast.success("Monde mis à jour", {
-                description: "Les modifications ont été enregistrées.",
-            });
-            setOpen(false);
+            const blob = await getCroppedImg(bannerCropSrc, pixels);
+            URL.revokeObjectURL(bannerCropSrc);
+            setBannerCropSrc(null);
+            await uploadFile(new File([blob], "banner.jpg", { type: "image/jpeg" }), "banner");
         } catch (e: any) {
-            console.error(e);
-            toast.error(e?.message ?? "Une erreur s’est produite.");
-        } finally {
-            setSubmitting(false);
+            toast.error(e?.message ?? "Erreur lors du recadrage.");
+        }
+    }
+
+    function cancelBannerCrop() {
+        if (bannerCropSrc) URL.revokeObjectURL(bannerCropSrc);
+        setBannerCropSrc(null);
+    }
+
+    // Persiste un champ immédiatement (sauvegarde temps réel, sans bouton).
+    async function persistField(
+        field: "name" | "description" | "icon_url" | "banner_url" | "color" | "visibility",
+        value: string | null,
+    ) {
+        const clean = truthyOrNull(value);
+        try {
+            const { error } = await supabase
+                .from("worlds")
+                .update({ [field]: clean })
+                .eq("id", world.id);
+            if (error) throw error;
+            onUpdated?.({ ...world, [field]: clean } as World);
+        } catch (e: any) {
+            toast.error(e?.message ?? "Enregistrement impossible.");
         }
     }
 
@@ -286,17 +301,17 @@ export default function WorldEditDialog({
     const colorPreset = COLOR_PRESETS.find((c) => c.value === color);
 
     return (
-        <Dialog open={mergedOpen} onOpenChange={setOpen}>
-            {trigger ? <DialogTrigger asChild>{trigger}</DialogTrigger> : null}
-            <DialogContent className="sm:max-w-xl max-h-[85svh] overflow-y-auto">
-                <DialogHeader>
-                    <DialogTitle>Paramètres du monde</DialogTitle>
-                </DialogHeader>
+        <Sheet open={mergedOpen} onOpenChange={setOpen}>
+            {trigger ? <SheetTrigger asChild>{trigger}</SheetTrigger> : null}
+            <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-xl">
+                <SheetHeader className="border-b border-border-soft px-6 py-4">
+                    <SheetTitle>Paramètres du monde</SheetTitle>
+                </SheetHeader>
 
                 <Form {...form}>
                     <form
-                        onSubmit={form.handleSubmit(handleSubmit)}
-                        className="space-y-6"
+                        onSubmit={(e) => e.preventDefault()}
+                        className="flex-1 space-y-6 overflow-y-auto p-6"
                     >
                         {/* -- Icône + couleur ------------------------ */}
                         <div className="flex items-center gap-3">
@@ -349,11 +364,12 @@ export default function WorldEditDialog({
                                     </DropdownMenuItem>
                                     <DropdownMenuItem
                                         disabled={!iconUrl}
-                                        onClick={() =>
+                                        onClick={() => {
                                             form.setValue("icon_url", "", {
                                                 shouldDirty: true,
-                                            })
-                                        }
+                                            });
+                                            void persistField("icon_url", "");
+                                        }}
                                     >
                                         Retirer l’icône
                                     </DropdownMenuItem>
@@ -382,12 +398,13 @@ export default function WorldEditDialog({
                                     {COLOR_PRESETS.map((c) => (
                                         <DropdownMenuItem
                                             key={c.value}
-                                            onClick={() =>
+                                            onClick={() => {
                                                 form.setValue("color", c.value, {
                                                     shouldDirty: true,
                                                     shouldValidate: true,
-                                                })
-                                            }
+                                                });
+                                                void persistField("color", c.value);
+                                            }}
                                         >
                                             <span
                                                 className="mr-2 h-2.5 w-2.5 rounded-full"
@@ -397,12 +414,13 @@ export default function WorldEditDialog({
                                         </DropdownMenuItem>
                                     ))}
                                     <DropdownMenuItem
-                                        onClick={() =>
+                                        onClick={() => {
                                             form.setValue("color", "", {
                                                 shouldDirty: true,
                                                 shouldValidate: true,
-                                            })
-                                        }
+                                            });
+                                            void persistField("color", "");
+                                        }}
                                     >
                                         <span className="mr-2 h-2.5 w-2.5 rounded-full border border-border" />
                                         Aucune
@@ -426,6 +444,11 @@ export default function WorldEditDialog({
                                         <Input
                                             placeholder="Ex. Monde de Veldis"
                                             {...field}
+                                            onBlur={(e) => {
+                                                field.onBlur();
+                                                const v = e.target.value.trim();
+                                                if (v.length >= 2) void persistField("name", v);
+                                            }}
                                         />
                                     </FormControl>
                                     <FormMessage />
@@ -450,6 +473,10 @@ export default function WorldEditDialog({
                                             placeholder="Brève description du monde…"
                                             className="rounded-2xl"
                                             {...field}
+                                            onBlur={(e) => {
+                                                field.onBlur();
+                                                void persistField("description", e.target.value);
+                                            }}
                                         />
                                     </FormControl>
                                     <FormMessage />
@@ -457,7 +484,61 @@ export default function WorldEditDialog({
                             )}
                         />
 
-                        {/* -- Bannière — drag & drop ----------------- */}
+                        {/* -- Visibilité ----------------------------- */}
+                        {public_worlds && (
+                            <FormField
+                                control={form.control}
+                                name="visibility"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>
+                                            <LabelWithHelp help="Un monde public est accessible à tous les membres de la plateforme">
+                                                Visibilité
+                                            </LabelWithHelp>
+                                        </FormLabel>
+                                        <FormControl>
+                                            <div className="flex gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        field.onChange("private");
+                                                        void persistField("visibility", "private");
+                                                    }}
+                                                    className={cn(
+                                                        "flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition-colors",
+                                                        field.value === "private"
+                                                            ? "border-primary bg-primary/10 text-primary"
+                                                            : "border-border bg-transparent text-muted-foreground hover:border-muted-foreground/40 hover:text-foreground"
+                                                    )}
+                                                >
+                                                    <GlobeLock className="h-4 w-4 shrink-0" />
+                                                    Privé
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        field.onChange("public");
+                                                        void persistField("visibility", "public");
+                                                    }}
+                                                    className={cn(
+                                                        "flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition-colors",
+                                                        field.value === "public"
+                                                            ? "border-primary bg-primary/10 text-primary"
+                                                            : "border-border bg-transparent text-muted-foreground hover:border-muted-foreground/40 hover:text-foreground"
+                                                    )}
+                                                >
+                                                    <Globe className="h-4 w-4 shrink-0" />
+                                                    Public
+                                                </button>
+                                            </div>
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        )}
+
+                        {/* -- Bannière -------------------------------- */}
                         <FormField
                             control={form.control}
                             name="banner_url"
@@ -473,134 +554,113 @@ export default function WorldEditDialog({
                                         type="file"
                                         accept="image/*"
                                         className="hidden"
-                                        onChange={(e) =>
-                                            void handleFile(
-                                                e.target.files?.[0],
-                                                "banner"
-                                            )
-                                        }
+                                        onChange={(e) => {
+                                            handleFile(e.target.files?.[0], "banner");
+                                            e.target.value = "";
+                                        }}
                                     />
-                                    <div
-                                        role="button"
-                                        tabIndex={0}
-                                        onClick={() =>
-                                            bannerInputRef.current?.click()
-                                        }
-                                        onKeyDown={(e) => {
-                                            if (e.key === "Enter" || e.key === " ")
-                                                bannerInputRef.current?.click();
-                                        }}
-                                        onDragOver={(e) => e.preventDefault()}
-                                        onDrop={(e) => {
-                                            e.preventDefault();
-                                            void handleFile(
-                                                e.dataTransfer.files?.[0],
-                                                "banner"
-                                            );
-                                        }}
-                                        className={cn(
-                                            "relative grid min-h-36 cursor-pointer place-items-center overflow-hidden rounded-2xl border border-dashed border-border transition-colors hover:border-muted-foreground/40",
-                                            bannerUrl && "border-solid"
-                                        )}
-                                    >
-                                        {bannerUrl ? (
-                                            <>
-                                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                                <img
-                                                    src={bannerUrl}
-                                                    alt="Bannière"
-                                                    className="absolute inset-0 h-full w-full object-cover"
-                                                />
-                                                <div className="absolute inset-0 grid place-items-center bg-black/50 opacity-0 transition-opacity hover:opacity-100">
-                                                    <span className="text-xs font-medium text-white">
-                                                        Cliquer ou déposer pour
-                                                        remplacer
-                                                    </span>
-                                                </div>
-                                            </>
-                                        ) : (
-                                            <div className="flex flex-col items-center gap-2 py-6 text-center">
-                                                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-card-400">
-                                                    {uploading === "banner" ? (
-                                                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                                                    ) : (
-                                                        <FileUp className="h-4 w-4 text-muted-foreground" />
-                                                    )}
-                                                </span>
-                                                <p className="text-xs font-medium">
-                                                    Glisser-déposer ou{" "}
-                                                    <span className="text-blue-400">
-                                                        parcourir
-                                                    </span>
-                                                </p>
-                                                <p className="text-[11px] text-muted-foreground">
-                                                    Taille max 5 Mo
-                                                </p>
+
+                                    {bannerCropSrc ? (
+                                        <ImageCropPicker
+                                            src={bannerCropSrc}
+                                            aspect={16 / 7}
+                                            uploading={uploading === "banner"}
+                                            onConfirm={onBannerCropConfirm}
+                                            onCancel={cancelBannerCrop}
+                                        />
+                                    ) : (
+                                        <>
+                                            <div
+                                                role="button"
+                                                tabIndex={0}
+                                                onClick={() => bannerInputRef.current?.click()}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === "Enter" || e.key === " ")
+                                                        bannerInputRef.current?.click();
+                                                }}
+                                                onDragOver={(e) => e.preventDefault()}
+                                                onDrop={(e) => {
+                                                    e.preventDefault();
+                                                    handleFile(e.dataTransfer.files?.[0], "banner");
+                                                }}
+                                                className={cn(
+                                                    "relative grid min-h-36 cursor-pointer place-items-center overflow-hidden rounded-2xl border border-dashed border-border transition-colors hover:border-muted-foreground/40",
+                                                    bannerUrl && "border-solid"
+                                                )}
+                                            >
+                                                {bannerUrl ? (
+                                                    <>
+                                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                        <img
+                                                            src={bannerUrl}
+                                                            alt="Bannière"
+                                                            className="absolute inset-0 h-full w-full object-cover"
+                                                        />
+                                                        <div className="absolute inset-0 grid place-items-center bg-black/50 opacity-0 transition-opacity hover:opacity-100">
+                                                            <span className="text-xs font-medium text-white">
+                                                                Cliquer ou déposer pour remplacer
+                                                            </span>
+                                                        </div>
+                                                    </>
+                                                ) : (
+                                                    <div className="flex flex-col items-center gap-2 py-6 text-center">
+                                                        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-card-400">
+                                                            {uploading === "banner" ? (
+                                                                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                                                            ) : (
+                                                                <FileUp className="h-4 w-4 text-muted-foreground" />
+                                                            )}
+                                                        </span>
+                                                        <p className="text-xs font-medium">
+                                                            Glisser-déposer ou{" "}
+                                                            <span className="text-blue-400">parcourir</span>
+                                                        </p>
+                                                        <p className="text-[11px] text-muted-foreground">
+                                                            Taille max 5 Mo
+                                                        </p>
+                                                    </div>
+                                                )}
                                             </div>
-                                        )}
-                                    </div>
-                                    {bannerUrl && (
-                                        <button
-                                            type="button"
-                                            onClick={() =>
-                                                form.setValue("banner_url", "", {
-                                                    shouldDirty: true,
-                                                })
-                                            }
-                                            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                                        >
-                                            Retirer la bannière
-                                        </button>
+                                            {bannerUrl && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        form.setValue("banner_url", "", { shouldDirty: true });
+                                                        void persistField("banner_url", "");
+                                                    }}
+                                                    className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                                                >
+                                                    Retirer la bannière
+                                                </button>
+                                            )}
+                                        </>
                                     )}
                                     <FormMessage />
                                 </FormItem>
                             )}
                         />
 
-                        {/* -- Footer : suppression + actions --------- */}
-                        <div className="flex items-center justify-between gap-2 pt-2">
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                onClick={() => void handleDelete()}
-                                disabled={deleting}
-                                className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                            >
-                                {deleting ? (
-                                    <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-                                ) : null}
-                                {confirmDelete
-                                    ? "Confirmer la suppression ?"
-                                    : "Supprimer le monde"}
-                            </Button>
-
-                            <div className="flex items-center gap-2">
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    onClick={() => setOpen(false)}
-                                    disabled={submitting}
-                                >
-                                    Annuler
-                                </Button>
-                                <Button
-                                    type="submit"
-                                    disabled={submitting || uploading !== null}
-                                >
-                                    {submitting ? (
-                                        <>
-                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                            Enregistrement…
-                                        </>
-                                    ) : (
-                                        "Enregistrer"
-                                    )}
-                                </Button>
-                            </div>
-                        </div>
                     </form>
                 </Form>
-            </DialogContent>
-        </Dialog>
+
+                <SheetFooter className="border-t border-border-soft px-6 py-3 flex-row justify-start">
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => void handleDelete()}
+                        disabled={deleting}
+                        className="inline-flex text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    >
+                        {deleting ? (
+                            <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                        ) : null}
+                        {confirmDelete
+                            ? "Confirmer la suppression ?"
+                            : "Supprimer le monde"}
+                    </Button>
+                </SheetFooter>
+            </SheetContent>
+        </Sheet>
     );
 }

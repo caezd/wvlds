@@ -191,29 +191,32 @@ export default function ShopGrid({
 
   return (
     <div className="space-y-4">
+      {/* Header */}
+      <header className="mb-6 flex items-center justify-between">
+        <h1 className="text-2xl font-semibold">Boutique</h1>
+        <div className="flex items-center gap-1 text-sm">
+          <span className="font-medium text-foreground">{coins}</span>
+          <span aria-hidden>🪙</span>
+        </div>
+      </header>
+
       {/* Filtres */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2">
-          <Select value={slotFilter} onValueChange={setSlotFilter}>
-            <SelectTrigger className="w-44">
-              <SelectValue placeholder="Filtrer par type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tous les types</SelectItem>
-              <SelectItem value="avatar_frame">Cadres d’avatar</SelectItem>
-            </SelectContent>
-          </Select>
-          <Input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Recherche"
-            className="w-56"
-          />
-        </div>
-        <div className="text-sm text-muted-foreground">
-          Solde: <span className="font-medium text-foreground">{coins}</span>{" "}
-          coins
-        </div>
+      <div className="flex items-center justify-between gap-2">
+        <Select value={slotFilter} onValueChange={setSlotFilter}>
+          <SelectTrigger className="w-44">
+            <SelectValue placeholder="Filtrer par type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tous les types</SelectItem>
+            <SelectItem value="avatar_frame">Cadres d’avatar</SelectItem>
+          </SelectContent>
+        </Select>
+        <Input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Recherche"
+          className="w-56"
+        />
       </div>
 
       {/* Grille */}
@@ -233,8 +236,9 @@ export default function ShopGrid({
                 />
 
                 {!it.owned && (
-                  <div className="absolute right-2 top-2 rounded bg-background/80 px-2 py-0.5 text-xs shadow">
-                    {it.price_coins} coins
+                  <div className="absolute right-2 top-2 flex items-center gap-1 rounded bg-background/80 px-2 py-0.5 text-xs shadow">
+                    {it.price_coins}
+                    <span aria-hidden>🪙</span>
                   </div>
                 )}
               </div>
@@ -248,7 +252,7 @@ export default function ShopGrid({
                       disabled={busy || coins < it.price_coins}
                       onClick={() => handlePurchase(it)}
                     >
-                      {busy ? "Traitement…" : `Acheter (${it.price_coins})`}
+                      {busy ? "Traitement…" : "Acheter"}
                     </Button>
                   ) : (
                     <Button className="flex-1" variant="secondary" disabled>
@@ -260,13 +264,6 @@ export default function ShopGrid({
             </Card>
           );
         })}
-      </div>
-
-      {/* Recharger manuellement si besoin */}
-      <div className="flex justify-end">
-        <Button variant="ghost" size="sm" onClick={refetchShop}>
-          Rafraîchir
-        </Button>
       </div>
     </div>
   );

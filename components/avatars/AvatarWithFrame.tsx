@@ -1,4 +1,5 @@
 import { ChatroomAvatarWithPresence } from "../chatrooms/ChatroomAvatarWithPresence";
+import { supabaseThumb } from "@/lib/storage";
 
 export function AvatarWithFrame({
   src,
@@ -8,6 +9,7 @@ export function AvatarWithFrame({
   presenceState,
   size = 48,
   frameUrl,
+  className,
 }: {
   src?: string | null;
   alt?: string | null;
@@ -17,6 +19,7 @@ export function AvatarWithFrame({
   presenceState?: "online" | "offline" | "invisible";
   size?: number;
   frameUrl?: string | null;
+  className?: string;
 }) {
   const resolved: "online" | "offline" | "invisible" =
     presenceState ?? (online ? "online" : "offline");
@@ -24,12 +27,13 @@ export function AvatarWithFrame({
   return (
     <div className="relative" style={{ width: size, height: size }}>
       <ChatroomAvatarWithPresence
-        src={src ?? undefined}
+        src={supabaseThumb(src, size * 2) ?? src ?? undefined}
         alt={alt ?? "User"}
         fallback={fallback ?? "?"}
         presenceState={resolved}
         size={size}
         rounded={frameUrl ? false : true}
+        className={className}
       />
       {frameUrl && (
         <img

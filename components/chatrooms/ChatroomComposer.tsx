@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useMemo, useEffect } from "react";
+import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import { createClient } from "@/lib/supabase/client";
 import type { Persona } from "@/types/db";
 import { TABLE, RPC } from "@/lib/constants";
@@ -13,6 +14,7 @@ import { SketchPicker } from "react-color";
 import { Hint } from "@/components/ui/hint";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { toWebP } from "@/lib/imageUtils";
 import { ParagraphBlockEditor } from "./ParagraphBlockEditor";
 import { DiceDialog } from "./blocks/DiceDialog";
 import { EllipseDialog } from "./blocks/EllipseDialog";
@@ -38,25 +40,44 @@ export function ChatroomComposer({
   onPersonaChange,
   chatroomKey,
   onEditLastMessage,
+  placeholder = "Écris ton message en Markdown…",
+  onResolveChat,
+  onAfterSend,
+  typingLine,
 }: {
-  chatId: string;
+  /** Chatroom existante. Laisser vide pour le mode « création » (voir onResolveChat). */
+  chatId?: string;
   presetPersona: Persona | null;
   onTyping?: () => void;
   onPersonaChange?: (p: Persona | null) => void;
   chatroomKey?: string | null;
   onEditLastMessage?: () => void;
+  placeholder?: string;
+  /** Libellé « … est en train d'écrire ». Affiché dans une languette qui se
+   *  déplie depuis l'arrière du composer. */
+  typingLine?: string | null;
+  /**
+   * Mode « création » : si fourni et qu'aucun chatId n'est passé, appelé au
+   * premier envoi pour créer/obtenir la chatroom cible avant d'y insérer le
+   * message. Retourner null pour annuler l'envoi.
+   */
+  onResolveChat?: () => Promise<{ chatId: string; chatroomKey?: string | null } | null>;
+  /** Appelé après un envoi réussi avec l'id de la chatroom (ex: navigation). */
+  onAfterSend?: (chatId: string) => void;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const { userId } = useCurrentUser();
+  const inFlightRef = useRef(false);
 
   const [value, setValue] = useState("");
+  const { chatroom_media } = useFeatureFlags();
   const [pendingMedia, setPendingMedia] = useState<File[]>([]);
   const pendingMediaPreviews = pendingMedia.map((f) => URL.createObjectURL(f));
   const [selectedPersona, setSelectedPersona] = useState<Persona | null>(
     presetPersona,
   );
-  const BUBBLE_KEY = `bubbleMode:${chatId}`;
-  const BUBBLE_COLOR_KEY = `bubbleColor:${chatId}`;
+  const BUBBLE_KEY = `bubbleMode:${chatId ?? "new"}`;
+  const BUBBLE_COLOR_KEY = `bubbleColor:${chatId ?? "new"}`;
   const [bubbleMode, setBubbleModeRaw] = useState(false);
   const [bubbleColor, setBubbleColorRaw] = useState<string | null>(null);
   useEffect(() => {
@@ -74,6 +95,7 @@ export function ChatroomComposer({
 
 
   function handleOuterPaste(e: React.ClipboardEvent<HTMLDivElement>) {
+    if (!chatroom_media) return;
     const images = Array.from(e.clipboardData.items)
       .filter((item) => item.type.startsWith("image/"))
       .map((item) => item.getAsFile())
@@ -83,12 +105,13 @@ export function ChatroomComposer({
     setPendingMedia((prev) => [...prev, ...images]);
   }
 
-  async function uploadMedia(files: File[]): Promise<{ url: string; name: string }[]> {
+  async function uploadMedia(files: File[], targetChatId: string): Promise<{ url: string; name: string }[]> {
     const results: { url: string; name: string }[] = [];
-    for (const file of files) {
-      const ext = file.name.split(".").pop() ?? "png";
-      const path = `${chatId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-      const { error } = await supabase.storage.from("chat-media").upload(path, file);
+    for (const rawFile of files) {
+      const file = await toWebP(rawFile);
+      const ext = file.name.split(".").pop() ?? "webp";
+      const path = `${targetChatId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error } = await supabase.storage.from("chat-media").upload(path, file, { contentType: file.type });
       if (error) { toast.error("Erreur upload image.", { description: error.message }); continue; }
       const { data } = supabase.storage.from("chat-media").getPublicUrl(path);
       results.push({ url: data.publicUrl, name: file.name });
@@ -96,44 +119,74 @@ export function ChatroomComposer({
     return results;
   }
 
-  async function sendRaw(text: string) {
-    if (!text && pendingMedia.length === 0) return;
-    if (!userId) return;
+  async function sendRaw(text: string): Promise<boolean> {
+    if (!text && pendingMedia.length === 0) return false;
+    if (!userId) return false;
     if (!selectedPersona) {
       toast.error("Sélectionnez un persona avant d’envoyer.");
-      return;
+      return false;
     }
-    const content = chatroomKey ? await encryptMessage(text, chatroomKey) : text;
-    const uploadedMedia = pendingMedia.length > 0 ? await uploadMedia(pendingMedia) : [];
-    const metadata = {
-      ...(bubbleMode ? { bubbles: true, ...(bubbleColor ? { bubbleColor } : {}) } : {}),
-      ...(uploadedMedia.length > 0 ? { media: uploadedMedia } : {}),
-    };
-    const finalMetadata = Object.keys(metadata).length > 0 ? metadata : null;
-    const { data: newMessage, error } = await supabase
-      .from(TABLE.CHAT_MESSAGES)
-      .insert({ chat_id: chatId, author_id: userId, content, persona_id: selectedPersona.id, metadata: finalMetadata })
-      .select("id, world_id")
-      .single();
-    if (error) { toast.error("Envoi impossible.", { description: error.message }); return; }
-    await supabase.from(TABLE.CHATROOM_PERSONA_PREFS).upsert(
-      { chat_id: chatId, user_id: userId, persona_id: selectedPersona.id },
-      { onConflict: "chat_id,user_id" },
-    );
-    const { error: rpcErr } = await supabase.rpc(RPC.AWARD_EVENT, {
-      p_event: "message_posted",
-      p_ref: newMessage.id,
-      p_meta: { chat_id: chatId, world_id: newMessage.world_id, persona_id: selectedPersona.id },
-    });
-    if (rpcErr) console.error("award_event failed:", rpcErr);
+    // Verrou anti-double-création (mode « création » uniquement) : évite de
+    // créer deux chatrooms si l'envoi est déclenché deux fois rapidement.
+    const guarded = !chatId && !!onResolveChat;
+    if (guarded) {
+      if (inFlightRef.current) return false;
+      inFlightRef.current = true;
+    }
+    try {
+      // Résolution de la chatroom cible : existante (chatId) ou créée à la volée
+      // (mode « création » via onResolveChat).
+      let targetChatId = chatId ?? null;
+      let targetKey = chatroomKey ?? null;
+      if (!targetChatId && onResolveChat) {
+        const resolved = await onResolveChat();
+        if (!resolved) return false;
+        targetChatId = resolved.chatId;
+        targetKey = resolved.chatroomKey ?? null;
+      }
+      if (!targetChatId) return false;
+
+      const content = targetKey ? await encryptMessage(text, targetKey) : text;
+      const uploadedMedia = pendingMedia.length > 0 ? await uploadMedia(pendingMedia, targetChatId) : [];
+      const metadata = {
+        ...(bubbleMode ? { bubbles: true, ...(bubbleColor ? { bubbleColor } : {}) } : {}),
+        ...(uploadedMedia.length > 0 ? { media: uploadedMedia } : {}),
+      };
+      const finalMetadata = Object.keys(metadata).length > 0 ? metadata : null;
+      const { data: newMessage, error } = await supabase
+        .from(TABLE.CHAT_MESSAGES)
+        .insert({ chat_id: targetChatId, author_id: userId, content, persona_id: selectedPersona.id, metadata: finalMetadata })
+        .select("id, world_id")
+        .single();
+      if (error) { toast.error("Envoi impossible.", { description: error.message }); return false; }
+      await supabase.from(TABLE.CHATROOM_PERSONA_PREFS).upsert(
+        { chat_id: targetChatId, user_id: userId, persona_id: selectedPersona.id },
+        { onConflict: "chat_id,user_id" },
+      );
+      const { error: rpcErr } = await supabase.rpc(RPC.AWARD_EVENT, {
+        p_event: "message_posted",
+        p_ref: newMessage.id,
+        p_meta: { chat_id: targetChatId, world_id: newMessage.world_id, persona_id: selectedPersona.id },
+      });
+      if (rpcErr) console.error("award_event failed:", rpcErr);
+      onAfterSend?.(targetChatId);
+      return true;
+    } finally {
+      if (guarded) inFlightRef.current = false;
+    }
   }
 
   async function send() {
     const text = value.trim();
     if (!text && pendingMedia.length === 0) return;
-    await sendRaw(text);
-    setValue("");
-    setPendingMedia([]);
+    const sent = await sendRaw(text);
+    // Ne clear que si l'envoi a vraiment eu lieu (pas d'erreur, pas d'annulation,
+    // pas de persona manquant) et qu'on n'est pas en mode création (navigation
+    // imminente, inutile de vider).
+    if (sent && !onResolveChat) {
+      setValue("");
+      setPendingMedia([]);
+    }
   }
 
   function onKeyDown(e: React.KeyboardEvent<HTMLElement>) {
@@ -155,9 +208,24 @@ export function ChatroomComposer({
   const canSend = (value.trim().length > 0 || pendingMedia.length > 0) && !!selectedPersona;
 
   return (
-    <div className="group/composer w-full [--thread-content-max-width:40rem] lg:[--thread-content-max-width:48rem] mx-auto max-w-(--thread-content-max-width)">
+    <div className="group/composer relative w-full [--thread-content-max-width:40rem] lg:[--thread-content-max-width:48rem] mx-auto max-w-(--thread-content-max-width)">
+      {/* Languette « en train d'écrire » : cachée derrière le composer (fond
+          opaque qui la masque), elle glisse vers le haut pour dépasser au-dessus
+          quand quelqu'un écrit. */}
       <div
-        className="cursor-text overflow-clip p-2.5 contain-inline-size bg-background border border-border-soft grid grid-cols-[auto_1fr_auto] [grid-template-areas:'header_header_header'_'primary_primary_primary'_'leading_footer_trailing'] rounded-3xl"
+        aria-live="polite"
+        className={cn(
+          "pointer-events-none absolute inset-x-0 bottom-full z-0 transition-all duration-300 ease-out",
+          typingLine ? "translate-y-8 opacity-100" : "translate-y-full opacity-0",
+        )}
+      >
+        <div className="w-full rounded-t-2xl border border-b-0 border-border-soft bg-card px-5 pt-2 pb-10 text-xs italic text-muted-foreground">
+          {typingLine}
+        </div>
+      </div>
+
+      <div
+        className="relative z-10 cursor-text overflow-clip p-2.5 contain-inline-size bg-background border border-border-soft grid grid-cols-[auto_1fr_auto] [grid-template-areas:'header_header_header'_'primary_primary_primary'_'leading_footer_trailing'] rounded-3xl"
         style={{ cornerShape: "superellipse(1.1)" } as React.CSSProperties}
         onPaste={handleOuterPaste}
       >
@@ -190,7 +258,7 @@ export function ChatroomComposer({
               value={value}
               onChange={(v) => { setValue(v); onTyping?.(); }}
               onKeyDown={onKeyDown}
-              placeholder="Écris ton message en Markdown…"
+              placeholder={placeholder}
               className="text-sm w-full"
             />
           </div>
@@ -204,7 +272,7 @@ export function ChatroomComposer({
               onSelect={async (p) => {
                 setSelectedPersona(p);
                 onPersonaChange?.(p);
-                if (p && userId) {
+                if (p && userId && chatId) {
                   await supabase.from(TABLE.CHATROOM_PERSONA_PREFS).upsert(
                     { chat_id: chatId, user_id: userId, persona_id: p.id },
                     { onConflict: "chat_id,user_id" },

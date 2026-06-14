@@ -29,7 +29,11 @@ export default function RootLayout({
   return (
     <html lang="fr" className="dark" style={{ colorScheme: "dark" }} suppressHydrationWarning>
       <body className={`${geistSans.className} antialiased`} suppressHydrationWarning>
-        <AppProviders>{children}</AppProviders>
+        <AppProviders>
+          <div id="app-shell" className="h-full">
+            {children}
+          </div>
+        </AppProviders>
         <Toaster />
       </body>
     </html>

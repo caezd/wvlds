@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Globe, GlobeLock, Pencil } from "lucide-react";
 
 import WorldEditDialog, { type World } from "@/components/worlds/WorldEditDialog";
-import { WorldInviteDialog } from "@/components/worlds/WorldInviteDialog";
+import { supabaseThumb } from "@/lib/storage";
 import { useNotifications } from "@/components/providers/NotificationsProvider";
 import { Button } from "@/components/ui/button";
 
@@ -20,10 +20,13 @@ export function WorldHeroCard({
   world: initialWorld,
   canAdmin = false,
   isShared = false,
+  footer,
 }: {
   world: HeroWorld;
   canAdmin?: boolean;
   isShared?: boolean;
+  /** Contenu rendu tout en bas de la bannière (ex: barre d'onglets). */
+  footer?: ReactNode;
 }) {
   const router = useRouter();
   const [world, setWorld] = useState(initialWorld);
@@ -48,7 +51,8 @@ export function WorldHeroCard({
       {world.banner_url && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={world.banner_url}
+          src={supabaseThumb(world.banner_url, 1200) ?? world.banner_url}
+          onError={(e) => { e.currentTarget.src = world.banner_url!; e.currentTarget.onerror = null; }}
           alt=""
           className="absolute inset-0 h-full w-full rounded-[inherit] object-cover"
         />
@@ -85,19 +89,14 @@ export function WorldHeroCard({
             }
           />
         )}
-        <WorldInviteDialog
-          worldId={world.id}
-          ownerId={world.owner_id}
-          canManage={canAdmin}
-        />
       </div>
 
       <div className="relative flex min-h-40 flex-col justify-end gap-2 md:min-h-48">
         <span
           className={
             world.icon_url
-              ? "mb-1 flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl"
-              : "mb-1 flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl bg-black/40 backdrop-blur"
+              ? "mb-1 flex h-11 w-11 items-center justify-center overflow-hidden rounded-full"
+              : "mb-1 flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-black/40 backdrop-blur"
           }
         >
           {world.icon_url ? (
@@ -107,7 +106,7 @@ export function WorldHeroCard({
               alt=""
               className="h-full w-full object-cover"
             />
-          ) : isShared ? (
+          ) : world.visibility === "public" ? (
             <Globe size={20} className="text-white/90" />
           ) : (
             <GlobeLock size={20} className="text-white/90" />
@@ -120,6 +119,8 @@ export function WorldHeroCard({
           <p className="max-w-xl text-sm text-white/75">{world.description}</p>
         )}
       </div>
+
+      {footer && <div className="relative mt-6">{footer}</div>}
     </section>
   );
 }

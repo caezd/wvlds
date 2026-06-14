@@ -5,8 +5,6 @@ import ReactMarkdown from "react-markdown";
 import type { Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
-import rehypeSlug from "rehype-slug";
-import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import rehypeExternalLinks from "rehype-external-links";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import rehypeHighlight from "rehype-highlight";
@@ -16,6 +14,8 @@ import { cn } from "@/lib/utils";
 type Props = {
   content: string;
   className?: string;
+  /** Taille prose Tailwind. Défaut: "sm". Passer "base" ou "lg" pour agrandir. */
+  proseSize?: "sm" | "base" | "lg" | "xl";
   /** autoriser les images inline ![alt](url) ? par défaut: false */
   allowImages?: boolean;
   isMine?: boolean;
@@ -201,6 +201,7 @@ function transformAngleCallouts(input: string): string {
 export default function MarkdownRenderer({
   content,
   className,
+  proseSize = "sm",
   allowImages = false,
   isMine = false,
 }: Props) {
@@ -320,7 +321,10 @@ export default function MarkdownRenderer({
   return (
     <div
       className={cn(
-        "prose prose-sm dark:prose-invert max-w-none grid gap-4",
+        "prose dark:prose-invert max-w-none grid gap-4",
+        proseSize === "sm" && "prose-sm",
+        proseSize === "lg" && "prose-lg",
+        proseSize === "xl" && "prose-xl",
         "[&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
         className,
       )}
@@ -329,8 +333,6 @@ export default function MarkdownRenderer({
         skipHtml
         remarkPlugins={[remarkGfm, remarkBreaks]}
         rehypePlugins={[
-          rehypeSlug,
-          [rehypeAutolinkHeadings, { behavior: "wrap" }],
           [
             rehypeExternalLinks,
             { target: "_blank", rel: ["nofollow", "noopener", "noreferrer"] },

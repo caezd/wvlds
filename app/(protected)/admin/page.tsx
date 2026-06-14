@@ -1,6 +1,6 @@
 import { requireAdmin } from "@/lib/admin";
 import Link from "next/link";
-import { ShoppingBag, Users } from "lucide-react";
+import { ShoppingBag, Users, ToggleLeft } from "lucide-react";
 
 export default async function AdminDashboard() {
   await requireAdmin();
@@ -32,6 +32,19 @@ export default async function AdminDashboard() {
             <div className="font-semibold">Utilisateurs</div>
             <div className="text-sm text-muted-foreground">
               Gérer les rôles et plans
+            </div>
+          </div>
+        </Link>
+
+        <Link
+          href="/admin/features"
+          className="flex items-center gap-4 rounded-xl border border-border-soft p-5 hover:bg-muted transition-colors"
+        >
+          <ToggleLeft className="h-8 w-8 text-muted-foreground" />
+          <div>
+            <div className="font-semibold">Fonctionnalités</div>
+            <div className="text-sm text-muted-foreground">
+              Activer ou désactiver des fonctionnalités
             </div>
           </div>
         </Link>

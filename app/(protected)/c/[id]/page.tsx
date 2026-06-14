@@ -20,7 +20,7 @@ export default async function Page({ params }: { params: { id: string } }) {
   const { data: chatroom, error: chatErr } = await supabase
     .from("chatrooms")
     .select(
-      "id, name, title, banner_url, icon_url, world_id, created_by, worlds(id, name)",
+      "id, name, title, banner_url, icon_url, world_id, created_by, worlds(id, name, owner_id, world_members(user_id))",
     )
     .eq("id", id)
     .single();
@@ -97,6 +97,10 @@ export default async function Page({ params }: { params: { id: string } }) {
   );
   /* reactions */
 
+  // Données du monde associé (extracted pour usage multiple)
+  const rawWorld = chatroom.worlds as unknown;
+  const worldData = (Array.isArray(rawWorld) ? rawWorld[0] : rawWorld) as { id: string; name: string; owner_id?: string; world_members?: { user_id: string }[] } | null | undefined;
+
   // 3) Persona par défaut pour cet utilisateur dans cette chatroom (facultatif)
   let initialPersona: {
     id: string;
@@ -105,6 +109,7 @@ export default async function Page({ params }: { params: { id: string } }) {
     avatar_url: string | null;
   } | null = null;
   let canEdit = false;
+  let canWorldAdmin = false;
   if (user) {
     const { data: pref } = await supabase
       .from("chatroom_persona_prefs")
@@ -115,16 +120,22 @@ export default async function Page({ params }: { params: { id: string } }) {
     initialPersona = (pref?.persona as unknown as Persona | null) ?? null;
 
     canEdit = chatroom.created_by === user.id;
-    if (!canEdit && chatroom.world_id) {
-      const { data: membership } = await supabase
-        .from("world_members")
-        .select("role")
-        .eq("world_id", chatroom.world_id)
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (membership && ["owner", "admin"].includes(membership.role)) {
+    if (chatroom.world_id) {
+      if (worldData?.owner_id && user.id === worldData.owner_id) {
+        canWorldAdmin = true;
         canEdit = true;
+      } else {
+        const { data: membership } = await supabase
+          .from("world_members")
+          .select("role")
+          .eq("world_id", chatroom.world_id)
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (membership && ["owner", "admin"].includes(membership.role)) {
+          canWorldAdmin = true;
+          canEdit = true;
+        }
       }
     }
   }
@@ -166,13 +177,19 @@ export default async function Page({ params }: { params: { id: string } }) {
         title: chatroom.title ?? "Nouvelle salle",
         banner_url: chatroom.banner_url ?? null,
         icon_url: chatroom.icon_url ?? null,
-        worlds: (chatroom.worlds as unknown as { id: string; name: string }[] | null)?.[0] ?? null,
+        worlds: (() => {
+        const w = worldData;
+        if (!w?.id) return null;
+        const isShared = (w.world_members ?? []).some((m: { user_id: string }) => m.user_id !== w.owner_id);
+        return { id: w.id, name: w.name, isShared, owner_id: w.owner_id ?? null };
+      })(),
       }}
       initialMessages={initialMessagesWithReactions as unknown as ChatMessageWithPersona[]}
       initialHasMore={initialHasMore}
       initialPersona={initialPersona}
       selfId={user?.id ?? null}
       canEdit={canEdit}
+      canWorldAdmin={canWorldAdmin}
       initialChatrooms={initialRoomsSafe}
       chatroomKey={chatroomKey}
     />

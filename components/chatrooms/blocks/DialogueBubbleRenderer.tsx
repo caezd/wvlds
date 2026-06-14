@@ -24,7 +24,8 @@ export function DialogueBubbleRenderer({
             <MarkdownRenderer
               key={i}
               content={part.text}
-              className="text-sm prose-a:underline prose-a:underline-offset-4"
+              proseSize="base"
+              className="prose-a:underline prose-a:underline-offset-4"
             />
           );
         }

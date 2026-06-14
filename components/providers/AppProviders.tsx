@@ -1,6 +1,6 @@
 "use client";
 import { useEffect } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import NotificationsProvider from "./NotificationsProvider";
@@ -37,19 +37,34 @@ function NetworkStatusWatcher() {
   return null;
 }
 
+const SESSION_TOAST_ID = "session-expired";
+
 function AuthErrorWatcher() {
-  const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
     const supabase = createClient();
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "TOKEN_REFRESHED" && session?.access_token) {
+        // Pousse le nouveau JWT à toutes les connexions Realtime (singleton)
+        supabase.realtime.setAuth(session.access_token);
+        toast.dismiss(SESSION_TOAST_ID);
+      }
+
       if (event === "SIGNED_OUT" && !pathname.startsWith("/auth")) {
-        router.replace("/auth/login");
+        toast.error("Session expirée", {
+          id: SESSION_TOAST_ID,
+          description: "Rechargez la page pour continuer.",
+          duration: Infinity,
+          action: {
+            label: "Recharger",
+            onClick: () => window.location.reload(),
+          },
+        });
       }
     });
     return () => subscription.unsubscribe();
-  }, [router, pathname]);
+  }, [pathname]);
 
   return null;
 }

@@ -112,9 +112,9 @@ export default async function PersonasPage() {
   return (
     <div className="p-6 space-y-6 max-w-6xl mx-auto w-full">
       <header className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">Personnages</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Personas</h1>
         <div className="flex items-center gap-3">
-          <p className="text-sm text-muted-foreground">{personaList.length} personnage{personaList.length !== 1 ? "s" : ""}</p>
+          <p className="text-sm text-muted-foreground">{personaList.length} persona{personaList.length !== 1 ? "s" : ""}</p>
           <PersonaCreateSheet />
         </div>
       </header>
@@ -122,7 +122,7 @@ export default async function PersonasPage() {
       {personaList.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-center gap-3 rounded-2xl border border-dashed border-border">
           <Users className="h-8 w-8 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Aucun personnage pour le moment.</p>
+          <p className="text-sm text-muted-foreground">Aucun persona pour le moment.</p>
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">

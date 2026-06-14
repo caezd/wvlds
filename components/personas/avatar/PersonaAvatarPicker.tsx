@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { blobToWebP } from "@/lib/imageUtils";
 import { cn } from "@/lib/utils";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -767,24 +768,26 @@ export function PersonaAvatarPicker({
       const blob = await new Promise<Blob>((res, rej) =>
         canvas.toBlob((b) => (b ? res(b) : rej(new Error("toBlob failed"))), "image/png"),
       );
-      const path = `avatars/${personaId}.png`;
+      const file = await blobToWebP(blob, `avatar-${personaId}`);
+      const path = `avatars/${personaId}.webp`;
       const { error: uploadError } = await supabase.storage
         .from("personas")
-        .upload(path, blob, { upsert: true, contentType: "image/png" });
+        .upload(path, file, { upsert: true, contentType: "image/webp" });
       if (uploadError) throw uploadError;
 
       const { data: urlData } = supabase.storage.from("personas").getPublicUrl(path);
-      const publicUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+      const cleanUrl = urlData.publicUrl;
+      const displayUrl = `${cleanUrl}?t=${Date.now()}`;
 
       const { error } = await supabase
         .from("personas")
-        .update({ avatar_url: publicUrl, avatar_config: normalized })
+        .update({ avatar_url: cleanUrl, avatar_config: normalized })
         .eq("id", personaId);
       if (error) throw error;
 
       setConfig(normalized);
       setStatus("Avatar enregistré.");
-      onSaved?.({ avatarUrl: publicUrl, config: normalized });
+      onSaved?.({ avatarUrl: displayUrl, config: normalized });
       router.refresh();
     } catch (e: any) {
       setStatus(e?.message ?? "Erreur lors de l’enregistrement.");

@@ -1,12 +1,8 @@
 // app/(protected)/w/[id]/page.tsx
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
-import { Suspense } from "react";
 
-import { WorldChatComposer } from "@/components/worlds/WorldChatComposer";
-import { WorldHeroCard } from "@/components/worlds/WorldHeroCard";
-import { WorldAboutTabs } from "@/components/worlds/WorldAboutTabs";
-import { WorldChatroomsGrid } from "@/components/worlds/WorldChatroomsGrid";
+import { WorldHome } from "@/components/worlds/WorldHome";
 import { WorldMembershipGuard } from "@/components/worlds/WorldMembershipGuard";
 
 export default async function WorldPage({
@@ -20,7 +16,7 @@ export default async function WorldPage({
   const { data: world } = await supabase
     .from("worlds")
     .select(
-      "id, name, description, owner_id, banner_url, icon_url, color, world_members(user_id, role)",
+      "id, name, description, owner_id, banner_url, icon_url, color, visibility, world_members(user_id, role)",
     )
     .eq("id", id)
     .single();
@@ -67,24 +63,16 @@ export default async function WorldPage({
         worldId={world.id}
         selfId={me.user?.id ?? null}
       />
-      <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-8 px-4 pb-12 pt-6 md:px-8">
-        {/* -- Hero — bannière, invitation, édition au survol ----- */}
-        <WorldHeroCard
+      <div className="flex min-h-0 w-full flex-1 flex-row gap-3">
+        <WorldHome
           world={world}
+          worldId={id}
           canAdmin={!!canAdmin}
           isShared={isShared}
+          canEditTabs={canEditTabs}
+          canPost={canPost}
+          initialRooms={initialRooms}
         />
-
-        {/* -- Onglets descriptifs créés par les membres ---------- */}
-        <Suspense>
-          <WorldAboutTabs worldId={id} canEdit={canEditTabs} />
-        </Suspense>
-
-        {/* -- Parties (chatrooms) -------------------------------- */}
-        <section id="parties" className="flex flex-col gap-4">
-          {canPost && <WorldChatComposer worldId={id} />}
-          <WorldChatroomsGrid worldId={id} initialRooms={initialRooms} />
-        </section>
       </div>
     </main>
   );

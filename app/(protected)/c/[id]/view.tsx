@@ -4,11 +4,12 @@ import { createClient } from "@/lib/supabase/client";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { decryptMessage, generateRoomKey } from "@/lib/crypto";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { Globe, GlobeLock } from "lucide-react";
 import { toast } from "sonner";
 
 import ChatroomSettingsSheet from "@/components/chatrooms/ChatroomSettingsSheet";
 import ChatroomStatsSheet from "@/components/chatrooms/ChatroomStatsSheet";
+import { WorldMembersSheet } from "@/components/worlds/WorldMembersSheet";
 import { ScrollAreaWithJumpToBottom } from "@/components/ScrollAreaWithJumpToBottom";
 import { ChatroomComposer } from "@/components/chatrooms/ChatroomComposer";
 import ChatroomMessage from "@/components/chatrooms/ChatroomMessage";
@@ -29,6 +30,7 @@ import { useRealtimeChatSync } from "@/hooks/useRealtimeChatSync";
 import { usePresenceChannel } from "@/hooks/usePresenceChannel";
 import { useNotifications } from "@/components/providers/NotificationsProvider";
 import { useGlobalPresence } from "@/components/providers/PresenceProvider";
+import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 
 export type { Persona, ChatMessageWithPersona, ReactionSummary } from "@/types/db";
 export type { ChatroomNavItem } from "@/components/worlds/WorldChatroomsAside";
@@ -36,14 +38,10 @@ export type { ChatroomNavItem } from "@/components/worlds/WorldChatroomsAside";
 function ChatroomHeader({
   chat,
   chatId,
-  messagesCount,
-  canEdit,
   rooms,
 }: {
   chat: any | null; // tolère le chargement
   chatId: string;
-  messagesCount: number;
-  canEdit: boolean;
   rooms: ChatroomNavItem[];
 }) {
   const world = chat?.worlds ?? null;
@@ -58,11 +56,13 @@ function ChatroomHeader({
               {world && (
                 <Link
                   href={`/w/${world.id}`}
-                  className="flex min-w-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
                   title={`Revenir à ${world.name}`}
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
                 >
-                  <ArrowLeft className="h-4 w-4 shrink-0" />
-                  <span className="truncate">{world.name}</span>
+                  {world.isShared
+                    ? <Globe className="h-4 w-4" />
+                    : <GlobeLock className="h-4 w-4" />
+                  }
                 </Link>
               )}
               <span className="px-0.5 text-muted-foreground/50">/</span>
@@ -74,19 +74,6 @@ function ChatroomHeader({
               />
             </div>
 
-            <div className="flex items-center gap-4">
-              <ChatroomSettingsSheet
-                canEdit={canEdit}
-                chatroom={{
-                  id: chat.id,
-                  title: chat.title,
-                  banner_url: chat.banner_url ?? null,
-                  icon_url: chat.icon_url ?? null,
-                  messages_count: messagesCount,
-                }}
-              />
-              <ChatroomStatsSheet chatId={chatId} />
-            </div>
           </>
         )}
       </div>
@@ -114,6 +101,7 @@ export default function ChatRoomView({
   initialPersona,
   selfId,
   canEdit,
+  canWorldAdmin,
   initialChatrooms,
   chatroomKey: initialChatroomKey,
 }: {
@@ -123,18 +111,20 @@ export default function ChatRoomView({
     title: string;
     banner_url: string | null;
     icon_url: string | null;
-    worlds: { id: string; name: string } | null;
+    worlds: { id: string; name: string; isShared: boolean; owner_id: string | null } | null;
   };
   initialMessages: ChatMessageWithPersona[];
   initialHasMore: boolean;
   initialPersona: Persona | null;
   selfId: string | null;
   canEdit: boolean;
+  canWorldAdmin: boolean;
   initialChatrooms: ChatroomNavItem[];
   chatroomKey: string | null;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const { setActiveChat } = useNotifications();
+  const { post_message } = useFeatureFlags();
 
   // Clé de chiffrement AES-256-GCM pour ce chatroom
   const [roomKey, setRoomKey] = useState<string | null>(initialChatroomKey);
@@ -380,10 +370,10 @@ export default function ChatRoomView({
           const emMap = byMessage.get(m.id);
           const reactions: ReactionSummary[] = emMap
             ? Array.from(emMap.entries())
-                .map(([emoji, v]) => ({ emoji, count: v.count, me: v.me }))
-                .sort(
-                  (a, b) => b.count - a.count || a.emoji.localeCompare(b.emoji),
-                )
+              .map(([emoji, v]) => ({ emoji, count: v.count, me: v.me }))
+              .sort(
+                (a, b) => b.count - a.count || a.emoji.localeCompare(b.emoji),
+              )
             : [];
           const content = key
             ? await decryptMessage((m as any).content ?? "", key)
@@ -474,7 +464,7 @@ export default function ChatRoomView({
         if (!data) return;
         setInvisibleUsers(new Set(data.filter((p) => p.appear_offline).map((p) => p.id)));
       });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages.length]);
 
   // Si l'utilisateur n'était pas présent côté serveur, on le récupère ici
@@ -553,17 +543,15 @@ export default function ChatRoomView({
   });
 
   return (
-    <div className="composer-parent flex flex-row focus-visible:outline-0 h-full">
+    <div className="composer-parent flex flex-row focus-visible:outline-0 h-full gap-3">
       <WorldMembershipGuard
         worldId={chat?.worlds?.id ?? null}
         selfId={userId ?? selfId}
       />
-      <div className="flex flex-col focus-visible:outline-0 flex-1 h-full">
+      <div className="flex flex-col focus-visible:outline-0 flex-1 h-full min-w-0 rounded-2xl border border-border-soft bg-background overflow-hidden">
         <ChatroomHeader
           chat={chat}
           chatId={chatId}
-          messagesCount={messages.length}
-          canEdit={canEdit}
           rooms={initialChatrooms}
         />
         <section className="relative basis-auto flex-col -mb-(--composer-overlap-px) [--composer-overlap-px:64px] [--jump-btn-bottom:calc(var(--composer-overlap-px)+24px)] grow flex overflow-hidden">
@@ -603,6 +591,9 @@ export default function ChatRoomView({
                           ),
                         );
                       }}
+                      onDeleted={(id) => {
+                        setMessages((prev) => prev.filter((x) => x.id !== id));
+                      }}
                     />
                   );
                 })}
@@ -614,22 +605,18 @@ export default function ChatRoomView({
           <div className="text-base mx-auto [--thread-content-margin:--spacing(4)] thread-sm:[--thread-content-margin:--spacing(6)] thread-lg:[--thread-content-margin:--spacing(16)]">
             <div className="thread-lg:[--thread-content-max-width:48rem] mx-auto flex-1 p-10 pt-0">
               <div className="pointer-events-auto relative z-1 flex h-[var(--composer-container-height,100%)] max-w-full flex-[var(--composer-container-flex,1)] flex-col">
-                {typingLine && (
-                  <div className="px-4 py-2 text-sm text-muted-foreground italic absolute bottom-full">
-                    {typingLine}
-                  </div>
-                )}
-                <ChatroomComposer
+                {post_message && <ChatroomComposer
                   chatId={chatId}
                   presetPersona={selectedPersona}
                   onTyping={emitTyping}
                   onPersonaChange={setSelectedPersona}
                   chatroomKey={roomKey}
+                  typingLine={typingLine}
                   onEditLastMessage={() => {
                     const last = [...messages].reverse().find((m) => isMyMessage(m, userId));
                     if (last) setEditMessageId(last.id);
                   }}
-                />
+                />}
               </div>
             </div>
           </div>
@@ -641,6 +628,30 @@ export default function ChatRoomView({
           onUsePersona={(p) => setSelectedPersona(p)}
         />
       </div>
+
+      {/* Rail d'icônes droit — hors de la carte */}
+      {chat && (
+        <div className="flex shrink-0 flex-col items-center gap-2 pt-3">
+          <ChatroomSettingsSheet
+            canEdit={canEdit}
+            chatroom={{
+              id: chat.id,
+              title: chat.title,
+              banner_url: chat.banner_url ?? null,
+              icon_url: chat.icon_url ?? null,
+              messages_count: messages.length,
+            }}
+          />
+          <ChatroomStatsSheet chatId={chatId} />
+          {chat.worlds?.id && (
+            <WorldMembersSheet
+              worldId={chat.worlds.id}
+              ownerId={chat.worlds.owner_id ?? ""}
+              canManage={canWorldAdmin}
+            />
+          )}
+        </div>
+      )}
     </div>
   );
 }

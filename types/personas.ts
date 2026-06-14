@@ -1,4 +1,12 @@
-export type PersonaFieldType = "title" | "text" | "input" | "textarea";
+export type PersonaFieldType = "title" | "text" | "stats" | "separator" | "input" | "textarea" | "image-grid";
+
+/** Une stat individuelle dans un champ de type "stats". */
+export interface PersonaStat {
+  id: string;
+  label: string;
+  value: string;
+  unit?: string;
+}
 
 export interface PersonaSectionField {
   id: string;

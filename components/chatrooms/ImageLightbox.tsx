@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { X, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ChatMediaItem } from "@/types/db";
@@ -26,10 +27,10 @@ export function ImageLightbox({
 
   const item = items[current];
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex bg-black/40 backdrop-blur-sm"
-      onClick={onClose}
+      className="fixed inset-0 z-[200] flex bg-black/40 backdrop-blur-sm pointer-events-auto"
+      onClick={(e) => { e.stopPropagation(); onClose(); }}
     >
       {/* Actions haut droite */}
       <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
@@ -81,6 +82,7 @@ export function ImageLightbox({
           ))}
         </div>
       )}
-    </div>
+    </div>,
+    document.body,
   );
 }

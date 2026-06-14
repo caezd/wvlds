@@ -1,5 +1,7 @@
 // app/(protected)/shop/page.tsx
 import { createClient } from "@/lib/supabase/server";
+import { notFound } from "next/navigation";
+import { getFeatureFlags } from "@/lib/featureFlags";
 import ShopGrid from "./ShopGrid";
 
 type ShopItem = {
@@ -18,6 +20,8 @@ type ShopItem = {
 
 export default async function ShopPage() {
   const supabase = await createClient();
+  const flags = await getFeatureFlags(supabase);
+  if (!flags.shop) notFound();
 
   const { data: items, error: itemsErr } = await supabase.rpc("shop_list_items");
 
@@ -25,7 +29,7 @@ export default async function ShopPage() {
   if (itemsErr) {
     console.warn("ShopPage: shop_list_items indisponible —", itemsErr.message);
     return (
-      <div className="container mx-auto max-w-6xl py-8">
+      <div className="mx-auto w-full max-w-6xl p-6">
         <header className="mb-6">
           <h1 className="text-2xl font-semibold">Boutique</h1>
         </header>
@@ -45,16 +49,7 @@ export default async function ShopPage() {
   const initialItems: ShopItem[] = (items ?? []) as ShopItem[];
 
   return (
-    <div className="container mx-auto max-w-6xl py-8">
-      <header className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Boutique</h1>
-        <div className="text-sm text-muted-foreground">
-          Solde:{" "}
-          <span className="font-medium text-foreground">{initialCoins}</span>{" "}
-          coins
-        </div>
-      </header>
-
+    <div className="mx-auto w-full max-w-6xl p-6">
       <ShopGrid initialItems={initialItems} initialCoins={initialCoins} />
     </div>
   );

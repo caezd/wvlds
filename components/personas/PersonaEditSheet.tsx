@@ -1,21 +1,27 @@
 // components/personas/PersonaEditSheet.tsx
 "use client";
 
-import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { supabaseThumb } from "@/lib/storage";
+import { toWebP } from "@/lib/imageUtils";
+import { cn } from "@/lib/utils";
 import {
   Sheet,
   SheetContent,
   SheetHeader,
+  SheetFooter,
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { TabBar } from "@/components/ui/tab-bar";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Check, Coins, Flame, ImagePlus, Loader2, Pencil, RotateCcw, X, Zap, ZoomIn, ZoomOut } from "lucide-react";
-import Cropper from "react-easy-crop";
+import { Check, Coins, Flame, ImagePlus, Loader2, Pencil, Trash2, X, Zap } from "lucide-react";
 import type { Area } from "react-easy-crop";
+import { ImageCropPicker, getCroppedImg } from "@/components/ui/image-crop-picker";
 
 import { PersonaSectionsTabs } from "./PersonaSectionsTabs";
 import type { PersonaSectionWithFields } from "@/types/personas";
@@ -24,6 +30,10 @@ import {
   PersonaAvatarPicker,
   type AvatarConfigV1,
 } from "./avatar/PersonaAvatarPicker";
+import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
+import { deletePersona } from "@/app/(protected)/p/actions";
+import { toast } from "sonner";
+import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 
 function initials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -32,44 +42,18 @@ function initials(name: string) {
   return (a + b).toUpperCase();
 }
 
-async function getCroppedImg(imageSrc: string, pixelCrop: Area): Promise<Blob> {
-  return new Promise((resolve, reject) => {
-    const image = new Image();
-    image.addEventListener("load", () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = pixelCrop.width;
-      canvas.height = pixelCrop.height;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) { reject(new Error("Canvas context unavailable")); return; }
-      ctx.drawImage(
-        image,
-        pixelCrop.x, pixelCrop.y, pixelCrop.width, pixelCrop.height,
-        0, 0, pixelCrop.width, pixelCrop.height,
-      );
-      canvas.toBlob(
-        (blob) => { if (blob) resolve(blob); else reject(new Error("toBlob failed")); },
-        "image/jpeg", 0.92,
-      );
-    });
-    image.src = imageSrc;
-  });
-}
-
 // ---------------------------------------------------------------------------
 // Onglet URL externe (partagé avatar + bannière)
 // ---------------------------------------------------------------------------
 
 function ExternalUrlTab({
-  current,
   onSaved,
-  aspect = "square",
 }: {
   current?: string | null;
   onSaved: (url: string) => void;
   aspect?: "square" | "wide";
 }) {
-  const [url, setUrl] = useState(current ?? "");
-  const [error, setError] = useState<string | null>(null);
+  const [url, setUrl] = useState("");
 
   return (
     <div className="space-y-4 max-w-md">
@@ -79,26 +63,9 @@ function ExternalUrlTab({
       <Input
         placeholder="https://example.com/image.jpg"
         value={url}
-        onChange={(e) => { setUrl(e.target.value); setError(null); }}
+        onChange={(e) => setUrl(e.target.value)}
         onKeyDown={(e) => e.key === "Enter" && url.trim() && onSaved(url.trim())}
       />
-      {url && (
-        <div
-          className={`overflow-hidden rounded-xl border bg-muted ${
-            aspect === "wide" ? "h-28 w-full" : "h-32 w-32"
-          }`}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={url}
-            alt="Aperçu"
-            className="h-full w-full object-cover"
-            onError={() => setError("Impossible de charger cette image.")}
-            onLoad={() => setError(null)}
-          />
-        </div>
-      )}
-      {error && <p className="text-xs text-destructive">{error}</p>}
       <Button onClick={() => url.trim() && onSaved(url.trim())} disabled={!url.trim()}>
         Utiliser cette image
       </Button>
@@ -133,53 +100,49 @@ function StorageUploadTab({
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cropSrc, setCropSrc] = useState<string | null>(null);
-  const [crop, setCrop] = useState({ x: 0, y: 0 });
-  const [zoom, setZoom] = useState(1);
-  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleFile = useCallback(async (file: File) => {
+  const handleFile = useCallback(async (rawFile: File) => {
     if (!userId) { setError("Non connecté."); return; }
     setUploading(true);
     setError(null);
-    const path = `user-${userId}/${subfolder}/${personaId}`;
+    const file = await toWebP(rawFile);
+    const path = `user-${userId}/${subfolder}/${personaId}.webp`;
     const { error: upErr } = await supabase.storage
       .from("personas")
       .upload(path, file, { upsert: true, contentType: file.type });
     if (upErr) { setError(upErr.message); setUploading(false); return; }
     const { data } = supabase.storage.from("personas").getPublicUrl(path);
-    const publicUrl = `${data.publicUrl}?t=${Date.now()}`;
+    const cleanUrl = data.publicUrl;
+    const displayUrl = `${cleanUrl}?t=${Date.now()}`;
     const { error: dbErr } = await supabase.from("personas")
-      .update({ [dbColumn]: publicUrl, ...extraUpdate })
+      .update({ [dbColumn]: cleanUrl, ...extraUpdate })
       .eq("id", personaId);
     if (dbErr) { setError(dbErr.message); setUploading(false); return; }
     setUploading(false);
-    onSaved(publicUrl);
+    onSaved(displayUrl);
   }, [userId, subfolder, personaId, supabase, dbColumn, extraUpdate, onSaved]);
 
   function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
     if (!f) return;
     if (cropAspect !== undefined) {
-      const objectUrl = URL.createObjectURL(f);
-      setCropSrc(objectUrl);
-      setCrop({ x: 0, y: 0 });
-      setZoom(1);
+      setCropSrc(URL.createObjectURL(f));
     } else {
       void handleFile(f);
     }
     e.target.value = "";
   }
 
-  async function onCropConfirm() {
-    if (!cropSrc || !croppedAreaPixels) return;
+  async function onCropConfirm(pixels: Area) {
+    if (!cropSrc) return;
     setUploading(true);
     setError(null);
     try {
-      const blob = await getCroppedImg(cropSrc, croppedAreaPixels);
+      const blob = await getCroppedImg(cropSrc, pixels);
       URL.revokeObjectURL(cropSrc);
       setCropSrc(null);
-      await handleFile(new File([blob], "avatar.jpg", { type: "image/jpeg" }));
+      await handleFile(new File([blob], "image.jpg", { type: "image/jpeg" }));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur lors du recadrage.");
       setUploading(false);
@@ -193,47 +156,16 @@ function StorageUploadTab({
 
   if (cropSrc) {
     return (
-      <div className="space-y-4">
-        <p className="text-sm text-muted-foreground">
-          Déplacez et zoomez pour recadrer l'image au format carré.
-        </p>
-        {/* Zone de crop — hauteur fixe obligatoire pour react-easy-crop */}
-        <div className="relative h-64 rounded-lg overflow-hidden bg-black">
-          <Cropper
-            image={cropSrc}
-            crop={crop}
-            zoom={zoom}
-            aspect={cropAspect}
-            onCropChange={setCrop}
-            onZoomChange={setZoom}
-            onCropComplete={(_, pixels) => setCroppedAreaPixels(pixels)}
-          />
-        </div>
-        {/* Slider zoom */}
-        <div className="flex items-center gap-2">
-          <ZoomOut className="h-4 w-4 shrink-0 text-muted-foreground" />
-          <input
-            type="range"
-            min={1} max={3} step={0.01}
-            value={zoom}
-            onChange={(e) => setZoom(Number(e.target.value))}
-            className="flex-1 accent-primary"
-          />
-          <ZoomIn className="h-4 w-4 shrink-0 text-muted-foreground" />
-        </div>
-        {error && <p className="text-xs text-destructive">{error}</p>}
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={cancelCrop} disabled={uploading}>
-            <RotateCcw className="h-4 w-4 mr-1.5" />
-            Autre image
-          </Button>
-          <Button size="sm" onClick={onCropConfirm} disabled={uploading}>
-            {uploading
-              ? <><Loader2 className="h-4 w-4 animate-spin mr-1.5" /> Upload…</>
-              : "Recadrer & enregistrer"}
-          </Button>
-        </div>
-      </div>
+      <>
+        <ImageCropPicker
+          src={cropSrc}
+          aspect={cropAspect}
+          uploading={uploading}
+          onConfirm={onCropConfirm}
+          onCancel={cancelCrop}
+        />
+        {error && <p className="text-xs text-destructive mt-2">{error}</p>}
+      </>
     );
   }
 
@@ -291,16 +223,16 @@ function BannerSheet({
 }) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
+      <SheetContent side="right" className="w-full sm:max-w-[calc(48rem-24px)] lg:shadow-2xl flex flex-col">
         <SheetHeader>
           <SheetTitle>Bannière du personnage</SheetTitle>
         </SheetHeader>
-        <div className="mt-4 space-y-4">
+        <div className="flex-1 overflow-y-auto space-y-4 p-6">
           <Tabs defaultValue="upload">
-            <TabsList>
+            <TabBar className="-mx-6">
               <TabsTrigger value="upload">Depuis l'appareil</TabsTrigger>
               <TabsTrigger value="url">URL externe</TabsTrigger>
-            </TabsList>
+            </TabBar>
             <TabsContent value="upload" className="mt-4">
               <StorageUploadTab
                 personaId={personaId}
@@ -308,6 +240,7 @@ function BannerSheet({
                 userId={userId}
                 subfolder="banners"
                 dbColumn="banner_url"
+                cropAspect={744 / 136}
                 onSaved={(url) => { onSaved(url); onOpenChange(false); }}
               />
             </TabsContent>
@@ -323,24 +256,27 @@ function BannerSheet({
               />
             </TabsContent>
           </Tabs>
-          {currentBannerUrl && (
-            <div className="border-t pt-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-destructive hover:text-destructive"
-                onClick={async () => {
-                  await supabase.from("personas").update({ banner_url: null }).eq("id", personaId);
-                  onRemove();
-                  onOpenChange(false);
-                }}
-              >
-                <X className="h-4 w-4 mr-1.5" />
-                Supprimer la bannière
-              </Button>
-            </div>
-          )}
         </div>
+        {currentBannerUrl && (
+          <SheetFooter className="border-t border-border-soft px-6 py-3 shrink-0 flex-row justify-start">
+            <DeleteConfirmDialog
+              trigger={
+                <Button variant="ghost" size="sm" className="inline-flex text-muted-foreground hover:text-destructive hover:bg-destructive/10">
+                  <Trash2 className="h-4 w-4 mr-1.5" />
+                  Supprimer la bannière
+                </Button>
+              }
+              description="La bannière de ce personnage sera supprimée définitivement du stockage."
+              onConfirm={async () => {
+                const path = currentBannerUrl?.match(/\/object\/public\/personas\/([^?]+)/)?.[1];
+                await supabase.from("personas").update({ banner_url: null }).eq("id", personaId);
+                if (path) await supabase.storage.from("personas").remove([path]);
+                onRemove();
+                onOpenChange(false);
+              }}
+            />
+          </SheetFooter>
+        )}
       </SheetContent>
     </Sheet>
   );
@@ -383,7 +319,7 @@ function FramePicker({
         setFrames(items);
         setLoaded(true);
       });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
   async function selectFrame(frameId: string | null) {
@@ -405,9 +341,8 @@ function FramePicker({
         type="button"
         disabled={saving}
         onClick={() => void selectFrame(null)}
-        className={`relative h-14 w-14 rounded-xl border-2 bg-muted text-xs text-muted-foreground transition-colors ${
-          selected === null ? "border-primary" : "border-transparent hover:border-border"
-        }`}
+        className={`relative h-14 w-14 rounded-xl border-2 bg-muted text-xs text-muted-foreground transition-colors ${selected === null ? "border-primary" : "border-transparent hover:border-border"
+          }`}
         title="Aucun cadre"
       >
         <X className="m-auto h-5 w-5" />
@@ -420,9 +355,8 @@ function FramePicker({
           type="button"
           disabled={saving}
           onClick={() => void selectFrame(f.id)}
-          className={`relative h-14 w-14 rounded-xl border-2 overflow-hidden transition-colors ${
-            selected === f.id ? "border-primary" : "border-transparent hover:border-border"
-          }`}
+          className={`relative h-14 w-14 rounded-xl border-2 overflow-hidden transition-colors ${selected === f.id ? "border-primary" : "border-transparent hover:border-border"
+            }`}
           title={f.name}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -450,11 +384,16 @@ type PersonaEditSheetProps = {
 type PersonaEditorContentProps = {
   personaId: string;
   personaName: string;
-  initialSections: PersonaSectionWithFields[];
+  sections: PersonaSectionWithFields[];
+  onSectionsChange: (sections: PersonaSectionWithFields[]) => void;
   initialAvatarUrl?: string | null;
   initialAvatarConfig?: AvatarConfigV1 | null;
   initialBannerUrl?: string | null;
   initialFrameId?: string | null;
+  /** Notifie le parent quand la sheet Avatar s'ouvre/ferme (effet pile de cartes). */
+  onAvatarOpenChange?: (open: boolean) => void;
+  /** Notifie le parent quand la sheet Bannière s'ouvre/ferme (effet pile de cartes). */
+  onBannerOpenChange?: (open: boolean) => void;
 };
 
 // ---------------------------------------------------------------------------
@@ -464,11 +403,14 @@ type PersonaEditorContentProps = {
 export function PersonaEditorContent({
   personaId,
   personaName,
-  initialSections,
+  sections,
+  onSectionsChange,
   initialAvatarUrl,
   initialAvatarConfig,
   initialBannerUrl,
   initialFrameId,
+  onAvatarOpenChange,
+  onBannerOpenChange,
 }: PersonaEditorContentProps) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
@@ -478,6 +420,9 @@ export function PersonaEditorContent({
   const [avatarUrl, setAvatarUrl] = useState<string | null>(initialAvatarUrl ?? null);
   const [bannerUrl, setBannerUrl] = useState<string | null>(initialBannerUrl ?? null);
   const [avatarConfig, setAvatarConfig] = useState<AvatarConfigV1 | null>(initialAvatarConfig ?? null);
+  const { avatar_builder } = useFeatureFlags();
+  const [appearanceTab, setAppearanceTab] = useState<"avatar" | "cosmetics">("avatar");
+  const [avatarSubTab, setAvatarSubTab] = useState<"builder" | "upload" | "url">(avatar_builder ? "builder" : "upload");
   const [userId, setUserId] = useState<string | null>(null);
   const [balance, setBalance] = useState<{ xp: number; coins: number; streak_current: number } | null>(null);
   const [balanceLoading, setBalanceLoading] = useState(true);
@@ -497,7 +442,7 @@ export function PersonaEditorContent({
       setBalance(bal ?? null);
       setBalanceLoading(false);
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function levelInfo(xp: number) {
@@ -508,21 +453,29 @@ export function PersonaEditorContent({
   }
   const xpInfo = balance ? levelInfo(balance.xp) : null;
 
+  useEffect(() => {
+    onAvatarOpenChange?.(avatarDialogOpen);
+  }, [avatarDialogOpen, onAvatarOpenChange]);
+
+  useEffect(() => {
+    onBannerOpenChange?.(bannerDialogOpen);
+  }, [bannerDialogOpen, onBannerOpenChange]);
+
   return (
     <>
       {/* Header — même structure que le profil en lecture */}
-      <div className="relative overflow-hidden">
+      <div className="relative">
         {/* Bannière cliquable */}
         <button
           type="button"
           onClick={() => setBannerDialogOpen(true)}
-          className="group relative h-28 w-full block overflow-hidden focus-visible:outline-none"
+          className="group relative h-34 w-full block overflow-hidden focus-visible:outline-none"
           aria-label="Modifier la bannière"
           title="Modifier la bannière"
         >
           {bannerUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={bannerUrl} alt="" className="h-full w-full object-cover" draggable={false} />
+            <img src={supabaseThumb(bannerUrl, 880, 80, 272) ?? bannerUrl} onError={(e) => { e.currentTarget.src = bannerUrl!; e.currentTarget.onerror = null; }} alt="" className="h-full w-full object-cover" draggable={false} />
           ) : (
             <div className="h-full w-full bg-gradient-to-r from-muted/60 to-muted" />
           )}
@@ -534,7 +487,7 @@ export function PersonaEditorContent({
           </div>
         </button>
 
-        <div className="px-4 pb-4 -mt-16">
+        <div className="px-6 pb-4 -mt-16">
           <div className="relative flex items-start gap-4">
             {/* Avatar cliquable */}
             <button
@@ -629,30 +582,51 @@ export function PersonaEditorContent({
 
       {/* Sheet apparence (avatar + cosmétiques) */}
       <Sheet open={avatarDialogOpen} onOpenChange={setAvatarDialogOpen}>
-        <SheetContent side="right" className="w-full sm:max-w-5xl flex flex-col p-0 gap-0 overflow-hidden">
+        <SheetContent side="right" className="w-full sm:max-w-5xl lg:shadow-2xl flex flex-col p-0 gap-0 overflow-hidden">
           <SheetHeader className="px-6 pt-6 pb-0 shrink-0">
-            <SheetTitle>Apparence</SheetTitle>
+            <div className="flex items-center gap-3">
+              <div className="h-14 w-14 shrink-0 rounded-xl border bg-muted overflow-hidden lg:hidden">
+                {avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={avatarUrl} alt="" className="h-full w-full object-cover" draggable={false} />
+                ) : (
+                  <div className="h-full w-full grid place-items-center text-sm font-semibold text-muted-foreground">
+                    {avatarFallback}
+                  </div>
+                )}
+              </div>
+              <SheetTitle>Avatar</SheetTitle>
+            </div>
           </SheetHeader>
 
-          <Tabs defaultValue="avatar" className="flex flex-col flex-1 overflow-hidden mt-4">
-            <div className="px-6 shrink-0">
-              <TabsList>
-                <TabsTrigger value="avatar">Avatar</TabsTrigger>
-                <TabsTrigger value="cosmetics">Cosmétiques</TabsTrigger>
-              </TabsList>
+          <div className="flex flex-col flex-1 overflow-hidden mt-4">
+            {/* Menus alignés côte à côte (sous-menu) */}
+            <div className="px-6 pb-3 border-b border-border-soft shrink-0 flex items-center gap-3 flex-wrap">
+              <Tabs value={appearanceTab} onValueChange={(v) => setAppearanceTab(v as "avatar" | "cosmetics")}>
+                <TabsList>
+                  <TabsTrigger value="avatar">Avatar</TabsTrigger>
+                  <TabsTrigger value="cosmetics">Cosmétiques</TabsTrigger>
+                </TabsList>
+              </Tabs>
+
+              {appearanceTab === "avatar" && (
+                <>
+                  <div className="h-6 w-px bg-border" />
+                  <Tabs value={avatarSubTab} onValueChange={(v) => setAvatarSubTab(v as "builder" | "upload" | "url")}>
+                    <TabsList>
+                      {avatar_builder && <TabsTrigger value="builder">Générateur</TabsTrigger>}
+                      <TabsTrigger value="upload">Depuis l'appareil</TabsTrigger>
+                      <TabsTrigger value="url">URL externe</TabsTrigger>
+                    </TabsList>
+                  </Tabs>
+                </>
+              )}
             </div>
 
-            {/* ── Avatar ── */}
-            <TabsContent value="avatar" className="flex-1 flex flex-col overflow-hidden mt-0">
-              <Tabs defaultValue="builder" className="flex flex-col flex-1 overflow-hidden">
-                <div className="px-6 pt-3 shrink-0">
-                  <TabsList>
-                    <TabsTrigger value="builder">Générateur</TabsTrigger>
-                    <TabsTrigger value="upload">Depuis l'appareil</TabsTrigger>
-                    <TabsTrigger value="url">URL externe</TabsTrigger>
-                  </TabsList>
-                </div>
-                <TabsContent value="builder" className="flex-1 overflow-auto p-6 mt-0">
+            {/* Contenu */}
+            {appearanceTab === "avatar" ? (
+              avatarSubTab === "builder" ? (
+                <div className="flex-1 overflow-auto p-6">
                   <PersonaAvatarPicker
                     personaId={personaId}
                     initialConfig={avatarConfig}
@@ -662,8 +636,9 @@ export function PersonaEditorContent({
                       setAvatarDialogOpen(false);
                     }}
                   />
-                </TabsContent>
-                <TabsContent value="upload" className="p-6 mt-0">
+                </div>
+              ) : avatarSubTab === "upload" ? (
+                <div className="flex-1 overflow-auto p-6">
                   <StorageUploadTab
                     personaId={personaId}
                     supabase={supabase}
@@ -679,8 +654,9 @@ export function PersonaEditorContent({
                       router.refresh();
                     }}
                   />
-                </TabsContent>
-                <TabsContent value="url" className="p-6 mt-0">
+                </div>
+              ) : (
+                <div className="flex-1 overflow-auto p-6">
                   <ExternalUrlTab
                     current={null}
                     onSaved={async (url) => {
@@ -691,31 +667,102 @@ export function PersonaEditorContent({
                       router.refresh();
                     }}
                   />
-                </TabsContent>
-              </Tabs>
-            </TabsContent>
-
-            {/* ── Cosmétiques ── */}
-            <TabsContent value="cosmetics" className="flex-1 overflow-auto p-6 mt-0">
-              <div className="space-y-6">
-                <div>
-                  <p className="text-sm font-medium mb-3">Cadre d'avatar</p>
-                  <FramePicker
-                    personaId={personaId}
-                    supabase={supabase}
-                    userId={userId}
-                    initialFrameId={initialFrameId ?? null}
-                  />
+                </div>
+              )
+            ) : (
+              <div className="flex-1 overflow-auto p-6">
+                <div className="space-y-6">
+                  <div>
+                    <p className="text-sm font-medium mb-3">Cadre d'avatar</p>
+                    <FramePicker
+                      personaId={personaId}
+                      supabase={supabase}
+                      userId={userId}
+                      initialFrameId={initialFrameId ?? null}
+                    />
+                  </div>
                 </div>
               </div>
-            </TabsContent>
-          </Tabs>
+            )}
+          </div>
+
+          {(avatarUrl || avatarConfig) && (
+            <SheetFooter className="border-t border-border-soft px-6 py-3 shrink-0 flex-row justify-start">
+              <DeleteConfirmDialog
+                trigger={
+                  <Button variant="ghost" size="sm" className="inline-flex text-muted-foreground hover:text-destructive hover:bg-destructive/10">
+                    <Trash2 className="h-4 w-4 mr-1.5" />
+                    Supprimer l'avatar
+                  </Button>
+                }
+                description="L'avatar de ce personnage sera supprimé définitivement du stockage."
+                onConfirm={async () => {
+                  const path = avatarUrl?.match(/\/object\/public\/personas\/([^?]+)/)?.[1];
+                  await supabase.from("personas").update({ avatar_url: null, avatar_config: null }).eq("id", personaId);
+                  if (path) await supabase.storage.from("personas").remove([path]);
+                  setAvatarUrl(null);
+                  setAvatarConfig(null);
+                  setAvatarDialogOpen(false);
+                  router.refresh();
+                }}
+              />
+            </SheetFooter>
+          )}
         </SheetContent>
       </Sheet>
 
+      {/* Aperçu de l'avatar actuel dans l'espace libre à gauche (desktop only).
+          Porté vers document.body pour passer au-dessus de l'obfuscateur Radix. */}
+      {avatarDialogOpen && typeof document !== "undefined" &&
+        createPortal(
+          <div className="hidden lg:flex fixed inset-y-0 left-0 right-[64rem] z-[51] items-center justify-center p-10 pointer-events-none">
+            <div className="flex flex-col items-center gap-4">
+              <div className="h-64 w-64 overflow-hidden rounded-3xl border bg-muted shadow-2xl">
+                {avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={avatarUrl} alt="" className="h-full w-full object-cover" draggable={false} />
+                ) : (
+                  <div className="h-full w-full grid place-items-center text-4xl font-semibold text-muted-foreground">
+                    {avatarFallback}
+                  </div>
+                )}
+              </div>
+              <p className="text-sm font-medium text-white/80">Avatar actuel</p>
+            </div>
+          </div>,
+          document.body,
+        )}
+
+      {/* Aperçu de la bannière actuelle dans l'espace libre à gauche (desktop only).
+          Porté vers document.body pour passer au-dessus de l'obfuscateur Radix. */}
+      {bannerDialogOpen && typeof document !== "undefined" &&
+        createPortal(
+          <div className="hidden lg:flex fixed inset-y-0 left-0 right-[calc(48rem-24px)] z-[51] items-center justify-center p-10 pointer-events-none">
+            <div className="flex w-full max-w-[520px] flex-col items-center gap-4">
+              <div className="aspect-[744/136] w-full overflow-hidden rounded-xl bg-muted shadow-2xl">
+                {bannerUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={supabaseThumb(bannerUrl, 1040, 80, 190) ?? bannerUrl} onError={(e) => { e.currentTarget.src = bannerUrl!; e.currentTarget.onerror = null; }} alt="" className="h-full w-full object-cover" draggable={false} />
+                ) : (
+                  <div className="h-full w-full bg-gradient-to-r from-muted/60 to-muted grid place-items-center text-sm font-medium text-muted-foreground">
+                    Aucune bannière
+                  </div>
+                )}
+              </div>
+              <p className="text-sm font-medium text-white/80">Bannière actuelle</p>
+            </div>
+          </div>,
+          document.body,
+        )}
+
       {/* Sections */}
       <div className="space-y-4">
-        <PersonaSectionsTabs personaId={personaId} initialSections={initialSections} />
+        <PersonaSectionsTabs
+          personaId={personaId}
+          userId={userId}
+          sections={sections}
+          onSectionsChange={onSectionsChange}
+        />
       </div>
     </>
   );
@@ -735,7 +782,25 @@ export function PersonaEditSheet({
   initialFrameId,
   trigger,
 }: PersonaEditSheetProps) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [avatarOpen, setAvatarOpen] = useState(false);
+  const [bannerOpen, setBannerOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [sections, setSections] = useState(initialSections);
+
+  async function handleDelete() {
+    setDeleting(true);
+    const result = await deletePersona(personaId);
+    if (!result.ok) {
+      toast.error("Erreur lors de la suppression", { description: result.error });
+      setDeleting(false);
+      return;
+    }
+    setOpen(false);
+    toast.success(`${personaName} a été supprimé.`);
+    router.refresh();
+  }
 
   return (
     <>
@@ -744,19 +809,52 @@ export function PersonaEditSheet({
         : <button className="text-sm underline" onClick={() => setOpen(true)}>Éditer</button>
       }
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent side="right" className="w-full sm:max-w-3xl overflow-y-auto">
+        <SheetContent
+          side="right"
+          className={cn(
+            "w-full sm:max-w-3xl flex flex-col p-0",
+            avatarOpen && "lg:-translate-x-[280px] lg:blur-[2px]",
+            bannerOpen && "lg:blur-[2px]",
+          )}
+        >
           <SheetHeader className="sr-only">
             <SheetTitle>Éditer — {personaName}</SheetTitle>
           </SheetHeader>
-          <PersonaEditorContent
-            personaId={personaId}
-            personaName={personaName}
-            initialSections={initialSections}
-            initialAvatarUrl={initialAvatarUrl}
-            initialAvatarConfig={initialAvatarConfig}
-            initialBannerUrl={initialBannerUrl}
-            initialFrameId={initialFrameId}
-          />
+
+          {/* Zone scrollable */}
+          <div className="flex-1 overflow-y-auto">
+            <PersonaEditorContent
+              personaId={personaId}
+              personaName={personaName}
+              sections={sections}
+              onSectionsChange={setSections}
+              initialAvatarUrl={initialAvatarUrl}
+              initialAvatarConfig={initialAvatarConfig}
+              initialBannerUrl={initialBannerUrl}
+              initialFrameId={initialFrameId}
+              onAvatarOpenChange={setAvatarOpen}
+              onBannerOpenChange={setBannerOpen}
+            />
+          </div>
+
+          {/* Footer fixe en bas */}
+          <SheetFooter className="border-t border-border-soft px-6 py-3 flex-row justify-start bg-background">
+            <DeleteConfirmDialog
+              trigger={
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                  disabled={deleting}
+                >
+                  {deleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                  Supprimer ce personnage
+                </Button>
+              }
+              description={`"${personaName}" sera supprimé définitivement, ainsi que son avatar, sa bannière et toutes ses images de section.`}
+              onConfirm={handleDelete}
+            />
+          </SheetFooter>
         </SheetContent>
       </Sheet>
     </>

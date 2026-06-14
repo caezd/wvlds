@@ -5,6 +5,8 @@ import SidebarRail from "@/components/sidebar/SidebarRail";
 import SidebarLayout from "@/components/sidebar/SidebarLayout";
 import { UserMenuButton } from "@/components/sidebar/UserMenuButton";
 import { UsernameRequiredDialog } from "@/components/UsernameRequiredDialog";
+import { FeatureFlagsProvider } from "@/components/providers/FeatureFlagsProvider";
+import { getFeatureFlags } from "@/lib/featureFlags";
 
 export default async function PageLayout({
   children,
@@ -20,6 +22,9 @@ export default async function PageLayout({
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  const featureFlags = await getFeatureFlags(supabase);
+
   let headerUserMenu: React.ReactNode = null;
   let usernameDialog: React.ReactNode = null;
   if (user) {
@@ -43,18 +48,20 @@ export default async function PageLayout({
   }
 
   return (
-    <div className="flex h-full w-full flex-col">
-      <div className="relative flex h-full w-full flex-1 transition-colors z-0">
-        <SidebarLayout
-          sidebar={<Sidebar />}
-          rail={<SidebarRail />}
-          defaultOpen={defaultOpen}
-          headerUserMenu={headerUserMenu}
-        >
-          {children}
-        </SidebarLayout>
-        {usernameDialog}
+    <FeatureFlagsProvider flags={featureFlags}>
+      <div className="flex h-full w-full flex-col">
+        <div className="relative flex h-full w-full flex-1 transition-colors z-0">
+          <SidebarLayout
+            sidebar={<Sidebar />}
+            rail={<SidebarRail />}
+            defaultOpen={defaultOpen}
+            headerUserMenu={headerUserMenu}
+          >
+            {children}
+          </SidebarLayout>
+          {usernameDialog}
+        </div>
       </div>
-    </div>
+    </FeatureFlagsProvider>
   );
 }

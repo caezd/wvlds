@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { usePathname } from "next/navigation";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import Logo from "@/components/logo";
 import { cn } from "@/lib/utils";
@@ -27,6 +28,11 @@ export default function SidebarLayout({
 }) {
   // Initialisé depuis le cookie lu côté serveur → SSR et client identiques, pas de flash
   const [open, setOpen] = useState(defaultOpen);
+  // Page monde (/w/[id]) : main devient transparent pour laisser les panneaux
+  // centre/droite occuper tout l'espace comme des cartes plein écran.
+  const pathname = usePathname();
+  const isWorld = pathname?.startsWith("/w/") ?? false;
+  const isChat = pathname?.startsWith("/c/") ?? false;
   // Tiroir mobile/tablette (< lg) — la sidebar devient un header + drawer
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -71,16 +77,16 @@ export default function SidebarLayout({
                     <a
                       href="/"
                       aria-label="Accueil"
-                      className="hover:bg-hover-400 flex h-9 w-9 items-center justify-center rounded-lg"
+                      className="hover:bg-hover-400 flex h-9 w-9 items-center justify-center rounded-full"
                     >
-                      <Logo width={20} height={20} accent={undefined} />
+                      <Logo width={20} height={20} accent="var(--color-accent)" />
                     </a>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <button
                           onClick={toggle}
                           aria-label="Réduire la barre latérale"
-                          className="hover:bg-muted flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors"
+                          className="hover:bg-muted flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-colors"
                         >
                           <PanelLeftClose size={18} />
                         </button>
@@ -107,13 +113,20 @@ export default function SidebarLayout({
             width: `${RAIL_WIDTH}px`,
           }}
         >
-          <div className="sticky top-0 z-10 pt-1.5 w-full flex justify-center">
+          <div className="sticky top-0 z-10 pt-1.5 w-full flex flex-col items-center gap-1">
+            <a
+              href="/"
+              aria-label="Accueil"
+              className="hover:bg-hover-400 flex h-9 w-9 items-center justify-center rounded-full"
+            >
+              <Logo width={20} height={20} accent="var(--color-accent)" />
+            </a>
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
                   onClick={toggle}
                   aria-label="Ouvrir la barre latérale"
-                  className="hover:bg-muted flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors"
+                  className="hover:bg-muted flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-colors"
                 >
                   <PanelLeftOpen size={18} />
                 </button>
@@ -158,14 +171,14 @@ export default function SidebarLayout({
               <a
                 href="/"
                 aria-label="Accueil"
-                className="hover:bg-hover-400 flex h-9 w-9 items-center justify-center rounded-lg"
+                className="hover:bg-hover-400 flex h-9 w-9 items-center justify-center rounded-full"
               >
-                <Logo width={20} height={20} accent={undefined} />
+                <Logo width={20} height={20} accent="var(--color-accent)" />
               </a>
               <button
                 onClick={() => setMobileOpen(false)}
                 aria-label="Fermer le menu"
-                className="hover:bg-muted flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors"
+                className="hover:bg-muted flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-colors"
               >
                 <PanelLeftClose size={18} />
               </button>
@@ -178,9 +191,9 @@ export default function SidebarLayout({
       </div>
 
       {/* -- Contenu principal — panneau flottant arrondi ------ */}
-      <section className="relative flex h-full max-w-full flex-1 flex-col p-3 pl-0 max-lg:pl-3 max-lg:p-2 max-lg:pt-0">
+      <section className="relative flex h-full max-w-full flex-1 flex-col py-3 pr-3 pl-0 max-lg:p-2 max-lg:pt-0">
         {/* Header mobile/tablette — remplace la sidebar (< lg) */}
-        <header className="lg:hidden flex h-12 shrink-0 items-center justify-between px-1">
+        <header className="lg:hidden flex h-12 shrink-0 items-center justify-between">
           <button
             onClick={() => setMobileOpen(true)}
             aria-label="Ouvrir le menu"
@@ -190,7 +203,14 @@ export default function SidebarLayout({
           </button>
           {headerUserMenu}
         </header>
-        <main className="relative h-full w-full flex-1 overflow-auto rounded-2xl bg-background border border-border-soft">
+        <main
+          className={cn(
+            "relative h-full w-full flex-1",
+            isWorld || isChat
+              ? "overflow-hidden"
+              : "overflow-auto rounded-2xl bg-background border border-border-soft",
+          )}
+        >
           <div id="thread" className="group/thread @container/thread h-full w-full">
             {children}
           </div>
