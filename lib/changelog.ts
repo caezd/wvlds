@@ -7,6 +7,11 @@ export type ChangelogEntry = {
 export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-06",
+    tag: "Mobile",
+    text: "Correctif mobile : la carte principale a désormais 8 px d'espace sur tous les côtés (haut compris). Le composeur de message s'ajuste à la largeur du conteneur au lieu d'utiliser un padding fixe de 40 px.",
+  },
+  {
+    date: "2026-06",
     tag: "Personnages",
     text: "Correctif : l'avatar d'un persona se met à jour en temps réel dans les messages du chatroom dès qu'il est modifié, sans recharger la page. Le sélecteur de persona dans le composeur recharge aussi la liste à chaque ouverture.",
   },

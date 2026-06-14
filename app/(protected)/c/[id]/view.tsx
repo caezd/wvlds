@@ -605,7 +605,7 @@ export default function ChatRoomView({
         </section>
         <div className="group/thread-bottom-container relative isolate z-10 w-full basis-auto has-data-has-thread-error:pt-2 md:pt-0 print:hidden before:pointer-events-none before:absolute before:inset-x-0 before:bottom-1/2 before:-top-10 before:-z-10 before:bg-linear-to-t before:from-background before:from-50% before:to-transparent">
           <div className="text-base mx-auto [--thread-content-margin:--spacing(4)] thread-sm:[--thread-content-margin:--spacing(6)] thread-lg:[--thread-content-margin:--spacing(16)]">
-            <div className="thread-lg:[--thread-content-max-width:48rem] mx-auto flex-1 p-10 pt-0">
+            <div className="thread-lg:[--thread-content-max-width:48rem] mx-auto flex-1 p-3 pt-0 lg:p-10 lg:pt-0">
               <div className="pointer-events-auto relative z-1 flex h-[var(--composer-container-height,100%)] max-w-full flex-[var(--composer-container-flex,1)] flex-col">
                 {post_message && <ChatroomComposer
                   chatId={chatId}
