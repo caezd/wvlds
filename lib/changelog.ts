@@ -8,7 +8,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-06",
     tag: "Personnages",
-    text: "Correctif : l'avatar et la bannière d'un persona sont maintenant visibles immédiatement après modification, même sur Vercel — l'URL de stockage inclut un paramètre de cache-bust pour contourner le CDN.",
+    text: "Correctif : l'avatar et la bannière d'un persona sont maintenant visibles immédiatement après modification, même sur Vercel — l'URL de stockage inclut un paramètre de cache-bust pour contourner le CDN. Le sélecteur de persona dans le composeur recharge aussi la liste à chaque ouverture.",
   },
   {
     date: "2026-06",

@@ -15,14 +15,18 @@ export function supabaseThumb(
   resize: "contain" | "cover" | "fill" = "contain",
 ): string | undefined {
   if (!url) return undefined;
-  const clean = url.split("?")[0];
+  const qIdx = url.indexOf("?");
+  const clean = qIdx >= 0 ? url.slice(0, qIdx) : url;
+  const qs = qIdx >= 0 ? url.slice(qIdx + 1) : "";
+  const t = qs ? new URLSearchParams(qs).get("t") : null;
   if (!clean.includes("/storage/v1/object/public/")) return url;
   // imgproxy (used by Supabase) fails on certain PNG variants (16-bit, ICC profiles, CMYK)
   if (/\.png$/i.test(clean)) return url;
   const h = height ? `&height=${height}` : "";
+  const bust = t ? `&t=${t}` : "";
   return (
     clean.replace("/storage/v1/object/public/", "/storage/v1/render/image/public/") +
-    `?width=${width}${h}&quality=${quality}&resize=${resize}`
+    `?width=${width}${h}&quality=${quality}&resize=${resize}${bust}`
   );
 }
 

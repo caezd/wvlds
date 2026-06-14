@@ -93,8 +93,10 @@ export function PersonaPickerDialog({
 
   useEffect(() => setValue(selected?.id ?? ""), [selected?.id, open]);
 
-  // Préchargement au montage — dialog s'ouvre sans délai
+  // Recharge à chaque ouverture pour avoir les avatars à jour
   useEffect(() => {
+    if (!open) return;
+    setLoading(true);
     async function load() {
       let uid = userId ?? null;
       if (!uid) {
@@ -112,7 +114,7 @@ export function PersonaPickerDialog({
     }
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId]);
+  }, [userId, open]);
 
   const canConfirm = !!value && (!required || !!value);
 
