@@ -460,7 +460,7 @@ export default function ChatRoomView({
       .from("profiles")
       .select("id, appear_offline")
       .in("id", ids)
-      .then(({ data }) => {
+      .then(({ data }: { data: { id: string; appear_offline: boolean }[] | null }) => {
         if (!data) return;
         setInvisibleUsers(new Set(data.filter((p) => p.appear_offline).map((p) => p.id)));
       });
@@ -472,7 +472,7 @@ export default function ChatRoomView({
     if (userId) return;
     supabase.auth
       .getUser()
-      .then(({ data }) => setUserId(data.user?.id ?? null));
+      .then(({ data: authData }) => setUserId(authData.user?.id ?? null));
   }, [supabase, userId]);
 
   // Scroll initial
