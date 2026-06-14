@@ -29,7 +29,7 @@ export default async function Page({ params }: { params: { id: string } }) {
 
   // 2) Derniers messages (ordre croissant pour affichage direct) ; le reste est
   // chargé à la demande côté client quand on remonte dans l'historique
-  const { data: messages, error: msgErr } = await supabase
+  const { data: messages } = await supabase
     .from("chat_messages")
     .select(
       "id, chat_id, content, author_id, created_at, metadata, persona:personas(id, user_id, name, avatar_url, frame:avatar_frame_id(asset_url))",
@@ -57,10 +57,10 @@ export default async function Page({ params }: { params: { id: string } }) {
       .eq("chat_id", id)
       .in("message_id", messageIds);
 
-    for (const r of rows ?? []) {
-      const mid = Number((r as any).message_id);
-      const emoji = String((r as any).emoji);
-      const uid = String((r as any).user_id);
+    for (const r of (rows ?? []) as Array<{ message_id: number; emoji: string; user_id: string }>) {
+      const mid = Number(r.message_id);
+      const emoji = String(r.emoji);
+      const uid = String(r.user_id);
 
       if (!byMessage.has(mid)) byMessage.set(mid, new Map());
       const emMap = byMessage.get(mid)!;
@@ -90,8 +90,8 @@ export default async function Page({ params }: { params: { id: string } }) {
             .sort((a, b) => b.count - a.count || a.emoji.localeCompare(b.emoji))
         : [];
       const content = chatroomKey
-        ? await decryptMessage((m as any).content ?? "", chatroomKey)
-        : ((m as any).content ?? "");
+        ? await decryptMessage((m as { content?: string }).content ?? "", chatroomKey)
+        : ((m as { content?: string }).content ?? "");
       return { ...m, content, reactions };
     }),
   );

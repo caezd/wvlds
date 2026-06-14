@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Loader2, Lock, Globe } from "lucide-react";
+import { Plus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -14,25 +14,9 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 
 type Visibility = "private" | "public";
-
-const VISIBILITY_OPTIONS: { value: Visibility; icon: React.ElementType; label: string; description: string }[] = [
-  {
-    value: "private",
-    icon: Lock,
-    label: "Privé",
-    description: "Accessible sur invitation uniquement.",
-  },
-  // {
-  //   value: "public",
-  //   icon: Globe,
-  //   label: "Public",
-  //   description: "Visible et accessible par tous.",
-  // },
-];
 
 export function CreateWorldButton({
   label,

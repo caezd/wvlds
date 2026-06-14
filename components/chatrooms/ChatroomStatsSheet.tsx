@@ -63,7 +63,7 @@ export default function ChatroomStatsSheet({
 }) {
   const supabase = createClient();
   const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [_loading, setLoading] = useState(false);
   const [stats, setStats] = useState<ChatroomStatsPayload | null>(
     initialStats ?? null,
   );
@@ -80,7 +80,7 @@ export default function ChatroomStatsSheet({
       p_chat_id: chatId,
     });
     if (error) toast.error("Impossible de charger les statistiques.", { description: error.message });
-    else setStats((data as any) ?? null);
+    else setStats((data as ChatroomStatsPayload) ?? null);
     setLoading(false);
   }
 

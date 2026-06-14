@@ -88,7 +88,7 @@ export function ImageCropPicker({
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        Déplacez et zoomez pour recadrer l'image.
+        Déplacez et zoomez pour recadrer l&apos;image.
       </p>
 
       <div

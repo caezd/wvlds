@@ -32,7 +32,7 @@ export function WorldMembershipGuard({
       .on(
         "postgres_changes",
         { event: "DELETE", schema: "public", table: "world_members" },
-        (payload) => {
+        (payload: { new: Record<string, unknown>; old: Record<string, unknown> }) => {
           const old = payload.old as {
             world_id?: string;
             user_id?: string;

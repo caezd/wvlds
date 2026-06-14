@@ -284,7 +284,7 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
   async function handleAddField(type: PersonaFieldType, insertAt: number) {
     setErrorMessage(null);
 
-    const defaultData: Record<string, any> =
+    const defaultData: Record<string, unknown> =
       type === "title"
         ? { text: "" }
         : type === "stats"
@@ -447,7 +447,7 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
           )}
           {persona_field_image_grid && (
             <DropdownMenuItem onClick={() => handleAddField("image-grid", insertAt)}>
-              <ImageIcon className="mr-2 h-4 w-4" /> Grille d'images
+              <ImageIcon className="mr-2 h-4 w-4" /> Grille d&apos;images
             </DropdownMenuItem>
           )}
         </DropdownMenuContent>
@@ -491,7 +491,7 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
               )}
               {persona_field_image_grid && (
                 <DropdownMenuItem onClick={() => handleAddField("image-grid", 0)}>
-                  <ImageIcon className="mr-2 h-4 w-4" /> Grille d'images
+                  <ImageIcon className="mr-2 h-4 w-4" /> Grille d&apos;images
                 </DropdownMenuItem>
               )}
             </DropdownMenuContent>

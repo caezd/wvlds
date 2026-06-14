@@ -51,7 +51,7 @@ export function WorldHome({
   canPost: boolean;
   initialRooms: Room[];
 }) {
-  const { create_chatroom, post_message } = useFeatureFlags();
+  const { create_chatroom } = useFeatureFlags();
   const tabsPanel = (
     <WorldTabs
       worldId={worldId}
@@ -73,7 +73,7 @@ export function WorldHome({
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto rounded-2xl border border-border-soft bg-background">
         {/* Corps centré avec max-w */}
         <div className="mx-auto flex w-full flex-col gap-6 p-4 [--world-content-max-width:40rem] lg:[--world-content-max-width:48rem] max-w-(--world-content-max-width)">
-          <WorldHeroCard world={world} canAdmin={canAdmin} isShared={isShared} />
+          <WorldHeroCard world={world} canAdmin={canAdmin} />
           {canPost && create_chatroom && <WorldChatComposer worldId={worldId} />}
           <WorldChatroomsGrid worldId={worldId} initialRooms={initialRooms} />
         </div>

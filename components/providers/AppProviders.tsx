@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
+import type { Session } from "@supabase/supabase-js";
 import NotificationsProvider from "./NotificationsProvider";
 import PresenceProvider from "./PresenceProvider";
 
@@ -44,7 +45,7 @@ function AuthErrorWatcher() {
 
   useEffect(() => {
     const supabase = createClient();
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: string, session: Session | null) => {
       if (event === "TOKEN_REFRESHED" && session?.access_token) {
         // Pousse le nouveau JWT à toutes les connexions Realtime (singleton)
         supabase.realtime.setAuth(session.access_token);

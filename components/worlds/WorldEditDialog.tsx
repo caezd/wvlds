@@ -216,8 +216,8 @@ export default function WorldEditDialog({
             if (error) throw error;
             onUpdated?.({ ...world, [field]: url } as World);
             toast.success("Image enregistrée.");
-        } catch (e: any) {
-            toast.error(e?.message ?? "Téléversement impossible.");
+        } catch (e: unknown) {
+            toast.error(e instanceof Error ? e.message : "Téléversement impossible.");
         } finally {
             setUploading(null);
         }
@@ -243,8 +243,8 @@ export default function WorldEditDialog({
             URL.revokeObjectURL(bannerCropSrc);
             setBannerCropSrc(null);
             await uploadFile(new File([blob], "banner.jpg", { type: "image/jpeg" }), "banner");
-        } catch (e: any) {
-            toast.error(e?.message ?? "Erreur lors du recadrage.");
+        } catch (e: unknown) {
+            toast.error(e instanceof Error ? e.message : "Erreur lors du recadrage.");
         }
     }
 
@@ -266,8 +266,8 @@ export default function WorldEditDialog({
                 .eq("id", world.id);
             if (error) throw error;
             onUpdated?.({ ...world, [field]: clean } as World);
-        } catch (e: any) {
-            toast.error(e?.message ?? "Enregistrement impossible.");
+        } catch (e: unknown) {
+            toast.error(e instanceof Error ? e.message : "Enregistrement impossible.");
         }
     }
 
@@ -288,8 +288,8 @@ export default function WorldEditDialog({
             setOpen(false);
             router.push("/");
             router.refresh();
-        } catch (e: any) {
-            toast.error(e?.message ?? "Suppression impossible.");
+        } catch (e: unknown) {
+            toast.error(e instanceof Error ? e.message : "Suppression impossible.");
         } finally {
             setDeleting(false);
         }

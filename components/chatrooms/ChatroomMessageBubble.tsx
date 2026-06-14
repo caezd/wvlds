@@ -4,13 +4,12 @@ import { useState } from "react";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import { DialogueBubbleRenderer } from "./blocks/DialogueBubbleRenderer";
 import { ImageLightbox } from "./ImageLightbox";
-import { cn } from "@/lib/utils";
 import type { ChatMessageMeta, ChatMediaItem } from "@/types/db";
 
 export function ChatroomMessageBubble({
-  persona,
+  persona: _persona,
   message,
-  isMine,
+  isMine: _isMine,
 }: {
   persona?: { user_id?: string | null; name?: string | null } | null;
   message: { content: string; metadata?: ChatMessageMeta | null };

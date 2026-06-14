@@ -191,7 +191,7 @@ export function ChatroomComposer({
 
   function onKeyDown(e: React.KeyboardEvent<HTMLElement>) {
     // Pas d’envoi si l’utilisateur est en composition IME
-    if ((e as any).isComposing) return;
+    if ((e.nativeEvent as { isComposing?: boolean }).isComposing) return;
 
     if (e.key === "ArrowUp" && !value.trim()) {
       e.preventDefault();
@@ -383,7 +383,7 @@ function BlocksDropdown({
             <span className="flex items-center gap-1.5">
               Dialogues en bulles
               <Hint side="right">
-                Les paragraphes commençant par <span className="font-mono">"…"</span> ou des guillemets français seront affichés en bulle de dialogue. Si le paragraphe est suivi d'une incise (ex. <span className="italic">dit-il</span>), elle apparaît en bout de bulle.
+                Les paragraphes commençant par <span className="font-mono">&quot;…&quot;</span> ou des guillemets français seront affichés en bulle de dialogue. Si le paragraphe est suivi d&apos;une incise (ex. <span className="italic">dit-il</span>), elle apparaît en bout de bulle.
               </Hint>
             </span>
           </DropdownMenuCheckboxItem>

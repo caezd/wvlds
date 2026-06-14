@@ -73,7 +73,7 @@ export function PersonaSectionsTabs({
       .single();
     setSaving(false);
     if (error) { console.error(error); return; }
-    const newSection: PersonaSectionWithFields = { ...(data as any), fields: [] };
+    const newSection: PersonaSectionWithFields = { ...(data as PersonaSectionWithFields), fields: [] };
     onSectionsChange([...sections, newSection]);
     setActiveSectionId(newSection.id);
     setName("");

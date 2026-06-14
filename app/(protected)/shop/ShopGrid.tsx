@@ -13,7 +13,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
 import { toast } from "sonner"; // ou ton système de toasts shadcn
 
 type ShopItem = {
@@ -106,7 +105,7 @@ export default function ShopGrid({
           ),
         );
 
-        const { data, error } = await supabase.rpc("shop_purchase", {
+        const { error } = await supabase.rpc("shop_purchase", {
           p_item_key: it.key,
           p_equip: false,
         });
@@ -119,74 +118,16 @@ export default function ShopGrid({
         // Vérité serveur
         await refetchShop();
         toast.success(it.owned ? "Équipement mis à jour" : "Achat réussi");
-      } catch (e: any) {
+      } catch (e: unknown) {
         // Rollback
         setCoins(rollback.coins);
         setItems(rollback.items);
-        toast.error(e?.message ?? "Erreur lors de l’achat");
+        toast.error(e instanceof Error ? e.message : "Erreur lors de l’achat");
       } finally {
         markLoading(it.id, false);
       }
     },
     [coins, items, loadingById, supabase, refetchShop],
-  );
-
-  const handleEquip = useCallback(
-    async (it: ShopItem) => {
-      if (loadingById[it.id] || !it.owned) return;
-      markLoading(it.id, true);
-      const rollback = { items: [...items] };
-      // Optimisme: marquer l’unique item du slot comme équipé
-      setItems((prev) =>
-        prev.map((x) =>
-          x.slot === it.slot ? { ...x, equipped: x.id === it.id } : x,
-        ),
-      );
-      try {
-        const { error } = await supabase.rpc("shop_equip", {
-          p_item_key: it.key,
-        });
-        if (error) throw error;
-        await refetchShop();
-        toast.success("Équipé");
-      } catch (e: any) {
-        setItems(rollback.items);
-        toast.error(e?.message ?? "Erreur lors de l’équipement");
-      } finally {
-        markLoading(it.id, false);
-      }
-    },
-    [items, loadingById, supabase, refetchShop],
-  );
-
-  const handleUnequip = useCallback(
-    async (slot: string) => {
-      // On cherche l’item actuellement équipé pour avoir un id pour le spinner
-      const current = items.find((x) => x.slot === slot && x.equipped);
-      if (!current) return;
-      if (loadingById[current.id]) return;
-
-      markLoading(current.id, true);
-      const rollback = { items: [...items] };
-
-      // Optimisme: déséquiper
-      setItems((prev) =>
-        prev.map((x) => (x.slot === slot ? { ...x, equipped: false } : x)),
-      );
-
-      try {
-        const { error } = await supabase.rpc("shop_unequip", { p_slot: slot });
-        if (error) throw error;
-        await refetchShop();
-        toast.success("Déséquipé");
-      } catch (e: any) {
-        setItems(rollback.items);
-        toast.error(e?.message ?? "Erreur lors du déséquipement");
-      } finally {
-        markLoading(current.id, false);
-      }
-    },
-    [items, loadingById, supabase, refetchShop],
   );
 
   return (

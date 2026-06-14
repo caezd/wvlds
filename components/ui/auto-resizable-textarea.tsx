@@ -66,7 +66,7 @@ export const AutoResizeTextarea = React.forwardRef<HTMLTextAreaElement, Props>(
             <textarea
                 ref={innerRef}
                 rows={rows}
-                value={value as any}
+                value={value as string | undefined}
                 onChange={(e) => {
                     onChange?.(e);
                     resize();

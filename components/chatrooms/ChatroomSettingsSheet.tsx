@@ -127,8 +127,8 @@ export default function ChatroomSettingsSheet({ canEdit, chatroom }: Props) {
       form.setValue(field, url, { shouldDirty: true, shouldValidate: true });
       await persistField(field, url);
       toast.success("Image enregistrée.");
-    } catch (e: any) {
-      toast.error(e?.message ?? "Téléversement impossible.");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Téléversement impossible.");
     } finally {
       setUploading(null);
     }
@@ -151,8 +151,8 @@ export default function ChatroomSettingsSheet({ canEdit, chatroom }: Props) {
       URL.revokeObjectURL(bannerCropSrc);
       setBannerCropSrc(null);
       await uploadFile(new File([blob], "banner.jpg", { type: "image/jpeg" }), "banner");
-    } catch (e: any) {
-      toast.error(e?.message ?? "Erreur lors du recadrage.");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Erreur lors du recadrage.");
     }
   }
 
@@ -191,8 +191,8 @@ export default function ChatroomSettingsSheet({ canEdit, chatroom }: Props) {
       setOpen(false);
       router.back();
       router.refresh();
-    } catch (e: any) {
-      toast.error(e?.message ?? "Suppression impossible.");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Suppression impossible.");
     } finally {
       setDeleting(false);
     }
@@ -252,7 +252,7 @@ export default function ChatroomSettingsSheet({ canEdit, chatroom }: Props) {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button type="button" variant="secondary" size="sm">
-                      Changer l'icône <ChevronDown className="ml-1 h-3.5 w-3.5 text-muted-foreground" />
+                      Changer l&apos;icône <ChevronDown className="ml-1 h-3.5 w-3.5 text-muted-foreground" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start">
@@ -266,7 +266,7 @@ export default function ChatroomSettingsSheet({ canEdit, chatroom }: Props) {
                         void persistField("icon_url", "");
                       }}
                     >
-                      Retirer l'icône
+                      Retirer l&apos;icône
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>

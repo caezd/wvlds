@@ -87,7 +87,7 @@ export function usePresenceChannel({
         setOnline(parsePresenceState(channel.presenceState()));
       });
 
-      channel.on("broadcast", { event: "typing" }, ({ payload }) => {
+      channel.on("broadcast", { event: "typing" }, ({ payload }: { payload: Record<string, unknown> }) => {
         const { user_id, username, persona_name } = payload as {
           user_id: string;
           username?: string | null;
@@ -110,7 +110,7 @@ export function usePresenceChannel({
         }, DELAY.TYPING_TIMEOUT);
       });
 
-      channel.subscribe(async (status) => {
+      channel.subscribe(async (status: string) => {
         if (status !== "SUBSCRIBED") return;
         await channel.track({
           user_id: me.id,

@@ -88,8 +88,8 @@ export async function deletePersona(id: string) {
             .in("section_id", sectionIds)
             .eq("type", "image-grid");
 
-        const imagePaths = (imageFields ?? []).flatMap((f: any) =>
-            (f.data?.images ?? []).map((img: { id: string }) => img.id),
+        const imagePaths = (imageFields ?? []).flatMap((f: { data?: { images?: { id: string }[] } | null }) =>
+            (f.data?.images ?? []).map((img) => img.id),
         ).filter(Boolean);
         storagePaths.push(...imagePaths);
     }

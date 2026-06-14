@@ -98,7 +98,7 @@ export function WorldTabs({
         // sélection par défaut (sauf si l'onglet Home tient lieu de défaut)
         if (!current && !homeNode) {
             const preferred =
-                data.find((t) => t.slug === "contexte") ?? data[0];
+                (data as TabRow[]).find((t) => t.slug === "contexte") ?? (data as TabRow[])[0];
             setCurrent(preferred?.slug);
             onChange?.(preferred?.slug ?? "");
         }
@@ -351,9 +351,9 @@ export function WorldTabs({
         >
             <AlertDialogContent>
                 <AlertDialogHeader>
-                    <AlertDialogTitle>Supprimer l'onglet ?</AlertDialogTitle>
+                    <AlertDialogTitle>Supprimer l&apos;onglet ?</AlertDialogTitle>
                     <AlertDialogDescription>
-                        L'onglet <strong>{confirmDeleteTab?.label}</strong> et tout son contenu seront supprimés définitivement. Cette action est irréversible.
+                        L&apos;onglet <strong>{confirmDeleteTab?.label}</strong> et tout son contenu seront supprimés définitivement. Cette action est irréversible.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -386,7 +386,7 @@ export function WorldTabs({
             {/* État vide : onglets chargés mais aucun (et droit d'en créer) */}
             {!homeNode && tabs !== null && tabs.length === 0 && (
                 <p className="flex-1 p-6 text-sm text-muted-foreground">
-                    Aucun onglet pour l'instant.
+                    Aucun onglet pour l&apos;instant.
                 </p>
             )}
 

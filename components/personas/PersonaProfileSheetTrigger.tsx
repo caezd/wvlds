@@ -15,7 +15,7 @@ import {
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import { AvatarWithFrame } from "@/components/avatars/AvatarWithFrame";
 import { Coins, Flame, Zap } from "lucide-react";
-import type { PersonaSectionWithFields } from "@/types/personas";
+import type { PersonaSection, PersonaSectionField, PersonaSectionWithFields, PersonaFieldData } from "@/types/personas";
 import { useGlobalPresence } from "@/components/providers/PresenceProvider";
 import { formatLastSeen } from "@/lib/utils";
 import { ImageGridView } from "@/components/personas/ImageGridView";
@@ -39,7 +39,9 @@ type BalanceSummary = {
   streak_longest: number;
 };
 
-function FieldView({ type, data }: { type: string; data: any }) {
+type FieldData = PersonaFieldData | null | undefined;
+
+function FieldView({ type, data }: { type: string; data: FieldData }) {
   if (type === "title") {
     const text = data?.text as string | undefined;
     return text ? <h3 className="text-sm font-semibold text-foreground">{text}</h3> : null;
@@ -185,16 +187,16 @@ export function PersonaProfileSheetTrigger({
         .order("position", { ascending: true });
 
       if (secs?.length) {
-        const ids = secs.map((s) => s.id);
+        const ids = (secs as PersonaSection[]).map((s) => s.id);
         const { data: fields } = await supabase
           .from("persona_section_fields")
           .select("id,section_id,type,position,data")
           .in("section_id", ids)
           .order("position", { ascending: true });
 
-        const withFields: PersonaSectionWithFields[] = secs.map((s) => ({
+        const withFields: PersonaSectionWithFields[] = (secs as PersonaSection[]).map((s) => ({
           ...s,
-          fields: (fields ?? []).filter((f) => f.section_id === s.id),
+          fields: ((fields ?? []) as PersonaSectionField[]).filter((f) => f.section_id === s.id),
         }));
 
         if (!cancelled) {
@@ -210,7 +212,7 @@ export function PersonaProfileSheetTrigger({
 
     load();
     return () => { cancelled = true; };
-  }, [personaId, userId, supabase, label]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [personaId, userId, supabase, label]);  
 
   // Prefetch dès que la sheet s'ouvre (fallback si le hover n'a pas suffi)
   React.useEffect(() => {

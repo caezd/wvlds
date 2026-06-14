@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Upload, X, Loader2, ImageIcon } from "lucide-react";
+import { X, Loader2, ImageIcon } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
@@ -233,7 +233,7 @@ export function ShopItemForm({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="avatar_frame">Cadre d'avatar</SelectItem>
+            <SelectItem value="avatar_frame">Cadre d&apos;avatar</SelectItem>
           </SelectContent>
         </Select>
       </div>

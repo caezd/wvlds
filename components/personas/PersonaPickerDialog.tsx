@@ -16,8 +16,6 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-import { cn } from "@/lib/utils";
-
 function initials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "?";
@@ -163,7 +161,7 @@ export function PersonaPickerDialog({
           </div>
         ) : personas.length === 0 ? (
           <p className="py-6 text-center text-sm text-muted-foreground">
-            Aucun persona. Crée-en un d'abord.
+            Aucun persona. Crée-en un d&apos;abord.
           </p>
         ) : (
           <ScrollArea className="max-h-[60vh]">

@@ -7,6 +7,11 @@ export type ChangelogEntry = {
 export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-06",
+    tag: "Technique",
+    text: "Nettoyage complet de la base de code : zéro erreur ESLint et TypeScript, build de production fiabilisé. La page « Mot de passe oublié » affiche désormais une confirmation après l'envoi du lien de réinitialisation.",
+  },
+  {
+    date: "2026-06",
     tag: "Admin",
     text: "Nouveaux flags dans la section Fonctionnalités : « Créer une partie » masque le composeur de création dans les mondes, « Poster un message » masque le composeur dans les salles.",
   },

@@ -40,7 +40,7 @@ type Props = {
 
 export default function WorldChatroomsAside({
   worldId,
-  selfId,
+  selfId: _selfId,
   currentChatId = null,
   initialRooms,
   chatroomBaseHref,
@@ -73,7 +73,7 @@ export default function WorldChatroomsAside({
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: TABLE.CHAT_MESSAGES, filter },
-        (payload) => {
+        (payload: { new: Record<string, unknown>; old: Record<string, unknown> }) => {
           const m = payload.new as { chat_id: string; created_at: string | null };
           const createdAt = m.created_at ?? new Date().toISOString();
 
@@ -105,7 +105,7 @@ export default function WorldChatroomsAside({
           table: TABLE.CHATROOMS,
           filter: `world_id=eq.${worldId}`,
         },
-        (payload) => {
+        (payload: { new: Record<string, unknown>; old: Record<string, unknown> }) => {
           const r = payload.new as {
             id: string;
             title: string | null;

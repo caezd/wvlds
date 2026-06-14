@@ -212,7 +212,7 @@ export function WorldMembersSheet({
     // 2. Construire la liste brute (owner toujours présent même s'il n'est pas dans world_members)
     type RawMember = { user_id: string; role: string };
     const memberMap = new Map<string, RawMember>(
-      (memberRows ?? []).map((m) => [m.user_id, { user_id: m.user_id, role: m.role }])
+      ((memberRows ?? []) as Array<{ user_id: string; role: string }>).map((m) => [m.user_id, { user_id: m.user_id, role: m.role }])
     );
     if (fetchedOwnerId && !memberMap.has(fetchedOwnerId)) {
       memberMap.set(fetchedOwnerId, { user_id: fetchedOwnerId, role: "owner" });
@@ -226,8 +226,9 @@ export function WorldMembersSheet({
       .select("id, username, avatar_url")
       .in("id", allUserIds);
 
-    const profileByUserId = new Map(
-      (profileRows ?? []).map((p) => [p.id, p as { id: string; username: string | null; avatar_url: string | null }])
+    type ProfileRow = { id: string; username: string | null; avatar_url: string | null };
+    const profileByUserId = new Map<string, ProfileRow>(
+      ((profileRows ?? []) as ProfileRow[]).map((p) => [p.id, p])
     );
 
     // 4. Salles du monde
@@ -236,7 +237,7 @@ export function WorldMembersSheet({
       .select("id")
       .eq("world_id", worldId);
 
-    const chatroomIds = (chatrooms ?? []).map((c) => c.id);
+    const chatroomIds = ((chatrooms ?? []) as Array<{ id: string }>).map((c) => c.id);
 
     // 5. Personas distincts par auteur dans les salles du monde
     const personasByUser = new Map<string, PersonaInfo[]>();

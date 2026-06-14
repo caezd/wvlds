@@ -24,7 +24,7 @@ export default async function EditShopItemPage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-bold">Modifier l'article</h1>
+        <h1 className="text-xl font-bold">Modifier l&apos;article</h1>
         <p className="text-sm text-muted-foreground mt-0.5 font-mono">{item.key}</p>
       </div>
 

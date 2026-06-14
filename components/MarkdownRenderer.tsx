@@ -30,6 +30,48 @@ function extractText(node: React.ReactNode): string {
   return "";
 }
 
+function CodeBlock({ className, children, ...props }: React.ComponentProps<"code">) {
+  const [copied, setCopied] = useState(false);
+  const isBlock = /language-/.test(className ?? "");
+
+  if (!isBlock) {
+    return (
+      <code className="rounded px-1 py-0.5 bg-muted" {...props}>
+        {children}
+      </code>
+    );
+  }
+
+  const lang = (className ?? "").replace("language-", "").trim();
+  const txt = extractText(children).replace(/\n$/, "");
+
+  const doCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(txt);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1200);
+    } catch {}
+  };
+
+  return (
+    <div className="inline-flex relative group not-prose">
+      <button
+        type="button"
+        onClick={doCopy}
+        className="opacity-0 group-hover:opacity-100 transition-opacity text-xs absolute right-2 top-2 rounded-md border bg-background/80 px-2 py-1"
+        aria-label="Copier le code"
+      >
+        {copied ? "Copié" : "Copier"}
+      </button>
+      <pre className="overflow-x-auto rounded-lg border bg-muted/60 p-3">
+        <code className={className} {...props} data-lang={lang}>
+          {children}
+        </code>
+      </pre>
+    </div>
+  );
+}
+
 function isFenceLine(line: string) {
   // ex: ```ts, ~~~, ``` etc.
   const m = line.match(/^(\s*)(`{3,}|~{3,})(.*)$/);
@@ -78,15 +120,6 @@ function transformAngleCallouts(input: string): string {
   const processTextLine = (line: string) => {
     let i = 0;
     let acc = "";
-
-    const flushAcc = () => {
-      if (acc.length) {
-        out.push(acc);
-        acc = "";
-      } else {
-        out.push("");
-      }
-    };
 
     while (i < line.length) {
       const ch = line[i];
@@ -167,7 +200,7 @@ function transformAngleCallouts(input: string): string {
 
     if (!inFence && fence) {
       inFence = true;
-      fenceChar = fence.char as any;
+      fenceChar = fence.char as "`" | "~";
       fenceLen = fence.len;
       out.push(line);
       continue;
@@ -239,47 +272,7 @@ export default function MarkdownRenderer({
       );
     },
 
-    code({ className, children, ...props }) {
-      const [copied, setCopied] = useState(false);
-      const isBlock = /language-/.test(className ?? "");
-
-      if (!isBlock) {
-        return (
-          <code className="rounded px-1 py-0.5 bg-muted" {...props}>
-            {children}
-          </code>
-        );
-      }
-
-      const lang = (className ?? "").replace("language-", "").trim();
-      const txt = extractText(children).replace(/\n$/, "");
-
-      const doCopy = async () => {
-        try {
-          await navigator.clipboard.writeText(txt);
-          setCopied(true);
-          setTimeout(() => setCopied(false), 1200);
-        } catch {}
-      };
-
-      return (
-        <div className="inline-flex relative group not-prose">
-          <button
-            type="button"
-            onClick={doCopy}
-            className="opacity-0 group-hover:opacity-100 transition-opacity text-xs absolute right-2 top-2 rounded-md border bg-background/80 px-2 py-1"
-            aria-label="Copier le code"
-          >
-            {copied ? "Copié" : "Copier"}
-          </button>
-          <pre className="overflow-x-auto rounded-lg border bg-muted/60 p-3">
-            <code className={className} {...props} data-lang={lang}>
-              {children}
-            </code>
-          </pre>
-        </div>
-      );
-    },
+    code: CodeBlock,
 
     img({ src, alt }) {
       if (allowImages) {

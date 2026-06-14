@@ -74,7 +74,7 @@ export default function NotificationsProvider({ children }: { children: React.Re
             rMap[r.chat_id] = r.unread_messages ?? 0;
         }
         setRoomUnread(rMap);
-    }, [supabase]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [supabase]);  
 
     // Refresh debounced — déclenché par les événements realtime
     const scheduleRefresh = useCallback(() => {
@@ -91,7 +91,7 @@ export default function NotificationsProvider({ children }: { children: React.Re
             { onConflict: "chat_id,user_id" },
         );
         scheduleRefresh();
-    }, [supabase, scheduleRefresh]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [supabase, scheduleRefresh]);  
 
     const setActiveChat = useCallback((id: string | null) => {
         activeChatRef.current = id;
@@ -106,7 +106,7 @@ export default function NotificationsProvider({ children }: { children: React.Re
             { onConflict: "world_id,user_id" },
         );
         scheduleRefresh();
-    }, [supabase, scheduleRefresh]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [supabase, scheduleRefresh]);  
 
     // Bootstrap + realtime
     useEffect(() => {
@@ -146,7 +146,7 @@ export default function NotificationsProvider({ children }: { children: React.Re
                             table: TABLE.CHAT_MESSAGES,
                             filter: `world_id=eq.${wid}`,
                         },
-                        (payload) => {
+                        (payload: { new: Record<string, unknown>; old: Record<string, unknown> }) => {
                             const row = payload.new as { chat_id: string; author_id: string | null };
                             // Ignorer ses propres messages
                             if (row.author_id === userIdRef.current) return;

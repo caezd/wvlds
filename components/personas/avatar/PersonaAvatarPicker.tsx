@@ -389,9 +389,6 @@ function partSupportsVariantKey(part: AvatarPartRef, key: string) {
   return !!part.variants?.some((v) => v.key === key);
 }
 
-function canvasToDataUrl(canvas: HTMLCanvasElement) {
-  return canvas.toDataURL("image/png");
-}
 
 function normalizeHexLike(s: string) {
   return s.trim().replace(/^#/, "").toUpperCase();
@@ -640,7 +637,7 @@ export function PersonaAvatarPicker({
             ? [...activeItems, { partId, variantKey }]
             : [{ partId, variantKey }];
 
-      let next: AvatarConfigV1 = {
+      const next: AvatarConfigV1 = {
         ...prev,
         layers: {
           ...prev.layers,
@@ -789,8 +786,8 @@ export function PersonaAvatarPicker({
       setStatus("Avatar enregistré.");
       onSaved?.({ avatarUrl: displayUrl, config: normalized });
       router.refresh();
-    } catch (e: any) {
-      setStatus(e?.message ?? "Erreur lors de l’enregistrement.");
+    } catch (e: unknown) {
+      setStatus(e instanceof Error ? e.message : "Erreur lors de l’enregistrement.");
     } finally {
       setBusy(false);
     }

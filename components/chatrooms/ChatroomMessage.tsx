@@ -9,16 +9,10 @@ import { parseChatBlock, type ChatBlock } from "@/lib/chat-blocks";
 import { DiceBlockView } from "./blocks/DiceBlock";
 import { EllipseBlockView } from "./blocks/EllipseBlock";
 import { cn } from "@/lib/utils";
-import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardTrigger,
-} from "@/components/ui/hover-card";
 import { Textarea } from "@/components/ui/textarea";
 
-import { XPProgress } from "@/components/gamification/xp-progress";
 import { createClient } from "@/lib/supabase/client";
-import { TABLE, RPC } from "@/lib/constants";
+import { TABLE } from "@/lib/constants";
 import DateDisplay from "@/components/date-display";
 
 import { Button } from "@/components/ui/button";
@@ -70,77 +64,7 @@ function optimisticToggle(current: ReactionSummary[], emoji: string) {
   return arr;
 }
 
-const BALANCE_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
-type BalanceData = { xp: number; coins: number; streak_current: number; streak_longest: number };
-const balanceCache = new Map<string, { data: BalanceData; fetchedAt: number }>();
-
-function getCachedBalance(userId: string): BalanceData | null {
-  const entry = balanceCache.get(userId);
-  if (!entry) return null;
-  if (Date.now() - entry.fetchedAt > BALANCE_CACHE_TTL_MS) {
-    balanceCache.delete(userId);
-    return null;
-  }
-  return entry.data;
-}
-
-function useUserBalance(userId?: string | null) {
-  const supabase = useMemo(() => createClient(), []);
-  const [data, setData] = useState<BalanceData | null>(null);
-  const [loading, setLoading] = useState<boolean>(!!userId && !getCachedBalance(userId));
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchOnce = async () => {
-    if (!userId) return null;
-    const { data: d1, error: e1 } = await supabase.rpc(RPC.GET_BALANCE_SUMMARY, {
-      p_user_id: userId,
-    });
-    if (e1) throw e1;
-    const row = Array.isArray(d1) ? d1?.[0] : d1;
-    if (!row) return null;
-    const parsed: BalanceData = {
-      xp: Number(row.xp) || 0,
-      coins: Number(row.coins) || 0,
-      streak_current: Number(row.streak_current) || 0,
-      streak_longest: Number(row.streak_longest) || 0,
-    };
-    balanceCache.set(userId, { data: parsed, fetchedAt: Date.now() });
-    return parsed;
-  };
-
-  const refresh = useMemo(
-    () =>
-      async (force = true) => {
-        if (!userId) return;
-        try {
-          if (!force && getCachedBalance(userId)) return;
-          const parsed = await fetchOnce();
-          if (parsed) setData(parsed);
-        } catch (e: unknown) {
-          setError(e instanceof Error ? e.message : "Erreur");
-        } finally {
-          setLoading(false);
-        }
-      },
-    [userId, supabase], // eslint-disable-line react-hooks/exhaustive-deps
-  );
-
-  useEffect(() => {
-    if (!userId) return;
-    const cached = getCachedBalance(userId);
-    if (cached) {
-      setData(cached);
-      setLoading(false);
-      refresh(false);
-    } else {
-      setLoading(true);
-      refresh(true);
-    }
-  }, [userId, refresh]);
-
-  return { data, loading, error, refresh };
-}
 
 function isMyMessage(
   m: {
@@ -153,59 +77,6 @@ function isMyMessage(
   return (m.author_id ?? m.persona?.user_id ?? null) === myId;
 }
 
-function HoverProfile({
-  children,
-  userId,
-  label,
-}: {
-  children: React.ReactNode;
-  userId?: string | null;
-  label?: string | null;
-}) {
-  const [open, setOpen] = useState(false);
-  const { data, loading, refresh } = useUserBalance(userId);
-
-  return (
-    <HoverCard
-      open={open}
-      onOpenChange={(o) => {
-        setOpen(o);
-        if (o) refresh(true);
-      }}
-      openDelay={120}
-      closeDelay={120}
-    >
-      <HoverCardTrigger
-        asChild
-        onPointerEnter={() => refresh(true)}
-        onFocus={() => refresh(true)}
-      >
-        <button
-          className="size-12 sticky top-4"
-          title={label ?? "Voir le profil"}
-          aria-label="Voir le profil"
-        >
-          {children}
-        </button>
-      </HoverCardTrigger>
-      <HoverCardContent className="w-72 p-3">
-        <div className="space-y-2">
-          <div className="text-sm font-medium truncate">
-            {label ?? "Profil"}
-          </div>
-          {!loading && data && (
-            <XPProgress
-              xp={data.xp}
-              coins={data.coins}
-              streak={data.streak_current}
-              className="mt-1"
-            />
-          )}
-        </div>
-      </HoverCardContent>
-    </HoverCard>
-  );
-}
 
 export default function ChatroomMessage({
   message,

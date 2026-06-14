@@ -153,21 +153,22 @@ export function WorldInviteDialog({
             return;
         }
 
-        const ids = rows.map((r) => r.user_id);
+        const ids = (rows as Array<{ user_id: string; role: string }>).map((r) => r.user_id);
         const { data: profiles } = await supabase
             .from("profiles")
             .select("id, username, avatar_url")
             .in("id", ids);
 
-        const byId = new Map(
-            (profiles ?? []).map((p) => [
+        type ProfileRow = { id: string; username: string | null; avatar_url: string | null };
+        const byId = new Map<string, { username: string | null; avatar_url: string | null }>(
+            ((profiles ?? []) as ProfileRow[]).map((p) => [
                 p.id,
                 { username: p.username, avatar_url: p.avatar_url },
             ])
         );
 
         setMembers(
-            rows
+            (rows as Array<{ user_id: string; role: string }>)
                 .map((r) => ({
                     user_id: r.user_id,
                     role: r.role as Role,
@@ -195,7 +196,7 @@ export function WorldInviteDialog({
             const ch = supabase.channel(`user-events:${userId}`);
             await new Promise<void>((resolve) => {
                 const t = setTimeout(resolve, 2000); // garde-fou
-                ch.subscribe((status) => {
+                ch.subscribe((status: string) => {
                     if (status === "SUBSCRIBED") {
                         clearTimeout(t);
                         resolve();

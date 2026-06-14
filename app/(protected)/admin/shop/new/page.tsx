@@ -10,7 +10,7 @@ export default async function NewShopItemPage() {
       <div>
         <h1 className="text-xl font-bold">Nouvel article</h1>
         <p className="text-sm text-muted-foreground mt-0.5">
-          L'article sera immédiatement visible en boutique si "Actif" est coché.
+          L&apos;article sera immédiatement visible en boutique si &quot;Actif&quot; est coché.
         </p>
       </div>
 

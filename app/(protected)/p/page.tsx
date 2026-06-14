@@ -8,12 +8,14 @@ import type {
   PersonaSectionField,
   PersonaSectionWithFields,
 } from "@/types/personas";
+import type { AvatarConfigV1 } from "@/components/personas/avatar/PersonaAvatarPicker";
 
 type PersonaRow = {
   id: string;
   name: string | null;
   avatar_url?: string | null;
-  avatar_config?: any | null;
+  avatar_config?: unknown;
+  avatar_frame_id?: string | null;
   banner_url?: string | null;
 };
 
@@ -132,9 +134,9 @@ export default async function PersonasPage() {
               personaId={persona.id}
               personaName={persona.name ?? "Sans nom"}
               avatarUrl={persona.avatar_url}
-              avatarConfig={(persona as any).avatar_config}
+              avatarConfig={persona.avatar_config as AvatarConfigV1 | null}
               bannerUrl={persona.banner_url}
-              initialFrameId={(persona as any).avatar_frame_id ?? null}
+              initialFrameId={persona.avatar_frame_id ?? null}
               initialSections={sectionsByPersona.get(persona.id) ?? []}
             />
           ))}

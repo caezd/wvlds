@@ -1,6 +1,5 @@
 import { requireAdmin } from "@/lib/admin";
 import { revalidatePath } from "next/cache";
-import { Button } from "@/components/ui/button";
 import { Shield, ShieldOff } from "lucide-react";
 
 async function toggleAdmin(userId: string, isAdmin: boolean) {
@@ -91,7 +90,7 @@ export default async function AdminUsersPage() {
                       <select
                         name="plan"
                         defaultValue={p.plan ?? "free"}
-                        onChange={async (e) => {
+                        onChange={async (_e) => {
                           // handled via form action below
                         }}
                         className="text-sm bg-transparent border border-border-soft rounded px-2 py-1 cursor-pointer"

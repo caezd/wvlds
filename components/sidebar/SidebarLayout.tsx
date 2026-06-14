@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import Link from "next/link";
 import Logo from "@/components/logo";
 import { cn } from "@/lib/utils";
 import {
@@ -74,13 +75,13 @@ export default function SidebarLayout({
               <header className="shrink-0">
                 <div className="px-2">
                   <div className="h-header-height flex items-center justify-between">
-                    <a
+                    <Link
                       href="/"
                       aria-label="Accueil"
                       className="hover:bg-hover-400 flex h-9 w-9 items-center justify-center rounded-full"
                     >
                       <Logo width={20} height={20} accent="var(--color-accent)" />
-                    </a>
+                    </Link>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <button
@@ -114,13 +115,13 @@ export default function SidebarLayout({
           }}
         >
           <div className="sticky top-0 z-10 pt-1.5 w-full flex flex-col items-center gap-1">
-            <a
+            <Link
               href="/"
               aria-label="Accueil"
               className="hover:bg-hover-400 flex h-9 w-9 items-center justify-center rounded-full"
             >
               <Logo width={20} height={20} accent="var(--color-accent)" />
-            </a>
+            </Link>
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
@@ -168,13 +169,13 @@ export default function SidebarLayout({
         >
           <header className="shrink-0 px-2">
             <div className="h-header-height flex items-center justify-between">
-              <a
+              <Link
                 href="/"
                 aria-label="Accueil"
                 className="hover:bg-hover-400 flex h-9 w-9 items-center justify-center rounded-full"
               >
                 <Logo width={20} height={20} accent="var(--color-accent)" />
-              </a>
+              </Link>
               <button
                 onClick={() => setMobileOpen(false)}
                 aria-label="Fermer le menu"

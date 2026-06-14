@@ -55,5 +55,3 @@ export default async function ShopPage() {
   );
 }
 
-/** Remplace Database par tes types si tu utilises des types générés Supabase. */
-type Database = any;

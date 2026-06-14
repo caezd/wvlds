@@ -1,7 +1,7 @@
 import type { DiceBlock } from "@/lib/chat-blocks";
 import { cn } from "@/lib/utils";
 
-export function DiceBlockView({ block, mine }: { block: DiceBlock; mine: boolean }) {
+export function DiceBlockView({ block, mine: _mine }: { block: DiceBlock; mine: boolean }) {
   const isCrit = block.results.length === 1 && block.results[0] === parseInt(block.formula.split(/[dD]/)[1], 10);
   const isFumble = block.results.length === 1 && block.results[0] === 1;
 

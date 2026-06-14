@@ -5,7 +5,6 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { decryptMessage, generateRoomKey } from "@/lib/crypto";
 import Link from "next/link";
 import { Globe, GlobeLock } from "lucide-react";
-import { toast } from "sonner";
 
 import ChatroomSettingsSheet from "@/components/chatrooms/ChatroomSettingsSheet";
 import ChatroomStatsSheet from "@/components/chatrooms/ChatroomStatsSheet";
@@ -40,7 +39,7 @@ function ChatroomHeader({
   chatId,
   rooms,
 }: {
-  chat: any | null; // tolère le chargement
+  chat: { title: string; worlds: { id: string; name: string; isShared: boolean; owner_id: string | null } | null } | null;
   chatId: string;
   rooms: ChatroomNavItem[];
 }) {
@@ -301,12 +300,6 @@ export default function ChatRoomView({
     if (!vp) return;
     vp.scrollTo({ top: vp.scrollHeight, behavior });
   }
-  function isNearBottom() {
-    const vp = getViewport();
-    if (!vp) return true;
-    return vp.scrollHeight - vp.scrollTop - vp.clientHeight < SCROLL_THRESHOLD_PX;
-  }
-
   /* chargement des messages plus anciens (scroll vers le haut) */
   async function loadOlderMessages() {
     if (loadingOlderRef.current || !hasMoreRef.current) return;
@@ -351,10 +344,10 @@ export default function ChatRoomView({
         number,
         Map<string, { count: number; me: boolean }>
       >();
-      for (const r of rows ?? []) {
-        const mid = Number((r as any).message_id);
-        const emoji = String((r as any).emoji);
-        const uid = String((r as any).user_id);
+      for (const r of (rows ?? []) as Array<{ message_id: number; emoji: string; user_id: string }>) {
+        const mid = Number(r.message_id);
+        const emoji = String(r.emoji);
+        const uid = String(r.user_id);
         if (!byMessage.has(mid)) byMessage.set(mid, new Map());
         const emMap = byMessage.get(mid)!;
         const prev = emMap.get(emoji) ?? { count: 0, me: false };
@@ -376,8 +369,8 @@ export default function ChatRoomView({
               )
             : [];
           const content = key
-            ? await decryptMessage((m as any).content ?? "", key)
-            : ((m as any).content ?? "");
+            ? await decryptMessage(m.content ?? "", key)
+            : (m.content ?? "");
           return { ...m, content, reactions };
         }),
       );
@@ -439,7 +432,7 @@ export default function ChatRoomView({
     };
     vp.addEventListener("scroll", onScroll, { passive: true });
     return () => vp.removeEventListener("scroll", onScroll);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, []);
 
   // Canal par chatroom : typing + partage de persona
@@ -472,7 +465,7 @@ export default function ChatRoomView({
     if (userId) return;
     supabase.auth
       .getUser()
-      .then(({ data: authData }) => setUserId(authData.user?.id ?? null));
+      .then((res: { data: { user: { id: string } | null } }) => setUserId(res.data.user?.id ?? null));
   }, [supabase, userId]);
 
   // Scroll initial
@@ -501,8 +494,8 @@ export default function ChatRoomView({
       void (async () => {
         const key = roomKeyRef.current;
         const content = key
-          ? await decryptMessage((msg as any).content ?? "", key)
-          : ((msg as any).content ?? "");
+          ? await decryptMessage(msg.content ?? "", key)
+          : (msg.content ?? "");
         const decrypted = { ...msg, content };
         setMessages((prev) =>
           prev.some((m) => m.id === decrypted.id) ? prev : [...prev, { ...decrypted, reactions: [] }],

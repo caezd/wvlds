@@ -195,7 +195,7 @@ export default function PresenceProvider({ children }: { children: React.ReactNo
                 recompute();
             });
 
-            ch.subscribe(async (status) => {
+            ch.subscribe(async (status: string) => {
                 if (status !== "SUBSCRIBED") return;
                 await track(true);
             });

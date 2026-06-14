@@ -38,7 +38,7 @@ function parseParagraph(para: string): DialoguePart[] {
     }
 
     const speech = t.slice(i + 1, closeIdx).trim();
-    let after = t.slice(closeIdx + 1);
+    const after = t.slice(closeIdx + 1);
 
     // Cherche si une incise précède le prochain dialogue (ou la fin)
     let incise: string | null = null;

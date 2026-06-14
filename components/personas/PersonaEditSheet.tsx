@@ -58,7 +58,7 @@ function ExternalUrlTab({
   return (
     <div className="space-y-4 max-w-md">
       <p className="text-sm text-muted-foreground">
-        Colle l'URL d'une image hébergée (jpg, png, webp…).
+        Colle l&apos;URL d&apos;une image hébergée (jpg, png, webp…).
       </p>
       <Input
         placeholder="https://example.com/image.jpg"
@@ -230,7 +230,7 @@ function BannerSheet({
         <div className="flex-1 overflow-y-auto space-y-4 p-6">
           <Tabs defaultValue="upload">
             <TabBar className="-mx-6">
-              <TabsTrigger value="upload">Depuis l'appareil</TabsTrigger>
+              <TabsTrigger value="upload">Depuis l&apos;appareil</TabsTrigger>
               <TabsTrigger value="url">URL externe</TabsTrigger>
             </TabBar>
             <TabsContent value="upload" className="mt-4">
@@ -312,8 +312,8 @@ function FramePicker({
       .from("user_owned_cosmetics")
       .select("item:item_id(id, name, asset_url, preview_url)")
       .eq("user_id", userId)
-      .then(({ data }) => {
-        const items = (data ?? [])
+      .then((res: { data: Array<{ item: unknown }> | null }) => {
+        const items = ((res.data ?? []) as Array<{ item: unknown }>)
           .map((r) => r.item as unknown as OwnedFrame | null)
           .filter((f): f is OwnedFrame => !!f && !!f.asset_url);
         setFrames(items);
@@ -430,8 +430,8 @@ export function PersonaEditorContent({
 
   // Récupère l'userId pour l'upload fichier + balance gamification
   useMemo(() => {
-    supabase.auth.getUser().then(async ({ data }) => {
-      const uid = data.user?.id ?? null;
+    supabase.auth.getUser().then(async (res: { data: { user: { id: string } | null } }) => {
+      const uid = res.data.user?.id ?? null;
       setUserId(uid);
       if (!uid) { setBalanceLoading(false); return; }
       const { data: bal } = await supabase
@@ -615,7 +615,7 @@ export function PersonaEditorContent({
                   <Tabs value={avatarSubTab} onValueChange={(v) => setAvatarSubTab(v as "builder" | "upload" | "url")}>
                     <TabsList>
                       {avatar_builder && <TabsTrigger value="builder">Générateur</TabsTrigger>}
-                      <TabsTrigger value="upload">Depuis l'appareil</TabsTrigger>
+                      <TabsTrigger value="upload">Depuis l&apos;appareil</TabsTrigger>
                       <TabsTrigger value="url">URL externe</TabsTrigger>
                     </TabsList>
                   </Tabs>
@@ -673,7 +673,7 @@ export function PersonaEditorContent({
               <div className="flex-1 overflow-auto p-6">
                 <div className="space-y-6">
                   <div>
-                    <p className="text-sm font-medium mb-3">Cadre d'avatar</p>
+                    <p className="text-sm font-medium mb-3">Cadre d&apos;avatar</p>
                     <FramePicker
                       personaId={personaId}
                       supabase={supabase}
@@ -692,7 +692,7 @@ export function PersonaEditorContent({
                 trigger={
                   <Button variant="ghost" size="sm" className="inline-flex text-muted-foreground hover:text-destructive hover:bg-destructive/10">
                     <Trash2 className="h-4 w-4 mr-1.5" />
-                    Supprimer l'avatar
+                    Supprimer l&apos;avatar
                   </Button>
                 }
                 description="L'avatar de ce personnage sera supprimé définitivement du stockage."

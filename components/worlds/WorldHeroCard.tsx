@@ -19,12 +19,10 @@ type HeroWorld = World & { owner_id: string };
 export function WorldHeroCard({
   world: initialWorld,
   canAdmin = false,
-  isShared = false,
   footer,
 }: {
   world: HeroWorld;
   canAdmin?: boolean;
-  isShared?: boolean;
   /** Contenu rendu tout en bas de la bannière (ex: barre d'onglets). */
   footer?: ReactNode;
 }) {

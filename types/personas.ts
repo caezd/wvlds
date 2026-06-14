@@ -8,12 +8,29 @@ export interface PersonaStat {
   unit?: string;
 }
 
+/** Une image dans un champ de type "image-grid". */
+export interface PersonaGridImage {
+  id: string;
+  url: string;
+  caption?: string;
+}
+
+/** Contenu JSON d'un champ de persona. La forme dépend du `type` du champ. */
+export interface PersonaFieldData {
+  text?: string;
+  format?: string;
+  value?: string;
+  items?: PersonaStat[];
+  images?: PersonaGridImage[];
+  [key: string]: unknown;
+}
+
 export interface PersonaSectionField {
   id: string;
   section_id: string;
   type: PersonaFieldType;
   position: number;
-  data: any; // { text: string, format?: "markdown" } etc.
+  data: PersonaFieldData;
 }
 
 export interface PersonaSection {

@@ -8,7 +8,7 @@ import { Tabs, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { TabBar } from "@/components/ui/tab-bar";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import type { Persona } from "@/types/db";
-import type { PersonaSectionWithFields } from "@/types/personas";
+import type { PersonaSection, PersonaSectionField, PersonaSectionWithFields, PersonaFieldData } from "@/types/personas";
 import { Coins, Flame, Zap } from "lucide-react";
 import { useGlobalPresence } from "@/components/providers/PresenceProvider";
 import { formatLastSeen } from "@/lib/utils";
@@ -35,7 +35,9 @@ type Balance = {
 };
 
 // -- Read-only field renderer ---------------------------------
-function FieldView({ type, data }: { type: string; data: any }) {
+type FieldData = PersonaFieldData | null | undefined;
+
+function FieldView({ type, data }: { type: string; data: FieldData }) {
   if (type === "title") {
     return (
       <h3 className="text-base font-semibold text-foreground">
@@ -158,16 +160,16 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
 
       let sectionsWithFields: PersonaSectionWithFields[] = [];
       if (secs?.length) {
-        const sectionIds = secs.map((s) => s.id);
+        const sectionIds = (secs as PersonaSection[]).map((s) => s.id);
         const { data: fields } = await supabase
           .from("persona_section_fields")
           .select("id, section_id, type, position, data")
           .in("section_id", sectionIds)
           .order("position", { ascending: true });
 
-        sectionsWithFields = secs.map((s) => ({
+        sectionsWithFields = (secs as PersonaSection[]).map((s) => ({
           ...s,
-          fields: (fields ?? []).filter((f) => f.section_id === s.id),
+          fields: ((fields ?? []) as PersonaSectionField[]).filter((f) => f.section_id === s.id),
         }));
       }
 

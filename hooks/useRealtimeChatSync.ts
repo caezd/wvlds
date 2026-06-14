@@ -53,7 +53,7 @@ export function useRealtimeChatSync({
           table: TABLE.CHAT_MESSAGES,
           filter: `chat_id=eq.${chatId}`,
         },
-        async (payload) => {
+        async (payload: { new: Record<string, unknown>; old: Record<string, unknown> }) => {
           const id = (payload.new as { id: number }).id;
           if (latestIdRef.current !== null && id <= latestIdRef.current) return;
 
@@ -94,7 +94,7 @@ export function useRealtimeChatSync({
           table: TABLE.CHAT_MESSAGES,
           filter: `chat_id=eq.${chatId}`,
         },
-        (payload) => {
+        (payload: { new: Record<string, unknown>; old: Record<string, unknown> }) => {
           const id = (payload.old as { id: number }).id;
           if (id) onMessageDeleted(id);
         },
@@ -116,7 +116,7 @@ export function useRealtimeChatSync({
           table: TABLE.CHAT_MESSAGES,
           filter: `chat_id=eq.${chatId}`,
         },
-        (payload) => {
+        (payload: { new: Record<string, unknown>; old: Record<string, unknown> }) => {
           const next = payload.new as { id: number; content: string };
           onMessageUpdated(next.id, next.content);
         },
@@ -138,7 +138,7 @@ export function useRealtimeChatSync({
           table: TABLE.CHATROOMS,
           filter: `id=eq.${chatId}`,
         },
-        (payload) => {
+        (payload: { new: Record<string, unknown>; old: Record<string, unknown> }) => {
           onChatroomPatched(payload.new as ChatroomPatch);
         },
       )
@@ -159,7 +159,7 @@ export function useRealtimeChatSync({
           table: TABLE.CHAT_MESSAGE_REACTIONS,
           filter: `chat_id=eq.${chatId}`,
         },
-        (payload) => {
+        (payload: { eventType: string; new: Record<string, unknown>; old: Record<string, unknown> }) => {
           const ev = payload.eventType;
           if (ev !== "INSERT" && ev !== "DELETE") return;
 

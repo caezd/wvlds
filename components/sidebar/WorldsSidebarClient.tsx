@@ -63,15 +63,15 @@ export default function WorldsSidebarClient(props: {
   ownedCount: number;
   quotaLimit: number;
   quotaReached: boolean;
-  mine: any[];
-  shared: any[];
+  mine: WorldRow[];
+  shared: WorldRow[];
   unreadMap?: Record<string, number>;
   isAdmin?: boolean;
 }) {
   const { meId, plan, ownedCount, quotaLimit, quotaReached, mine, shared, isAdmin } =
     props;
 
-  const [q, setQ] = useState("");
+  const [q] = useState("");
   const filteredMine = useFilter(mine, q);
   const filteredShared = useFilter(shared, q);
 
@@ -95,12 +95,12 @@ export default function WorldsSidebarClient(props: {
     // Canal Broadcast dédié — indépendant des postgres_changes : si l'un
     // échoue, l'autre continue de fonctionner.
     const broadcastTopic = `user-events:${meId}`;
-    const existingBroadcast = supabase.getChannels().find(ch => ch.topic === `realtime:${broadcastTopic}`);
+    const existingBroadcast = supabase.getChannels().find((ch: { topic: string }) => ch.topic === `realtime:${broadcastTopic}`);
     if (existingBroadcast) void supabase.removeChannel(existingBroadcast);
 
     broadcastCh = supabase
       .channel(broadcastTopic)
-      .on("broadcast", { event: "world_membership" }, (msg) => {
+      .on("broadcast", { event: "world_membership" }, (msg: { payload: Record<string, unknown> }) => {
         const p = msg.payload as {
           action?: "added" | "removed";
           world_id?: string;
@@ -115,7 +115,7 @@ export default function WorldsSidebarClient(props: {
           router.replace("/home");
         }
       })
-      .subscribe((status, err) => {
+      .subscribe((status: string, err?: Error) => {
         if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
           console.warn("[user-events] realtime broadcast:", status, err);
         }
@@ -130,7 +130,7 @@ export default function WorldsSidebarClient(props: {
       // Retirer tout canal existant avec le même topic avant de re-souscrire
       // (React Strict Mode déclenche deux setup successifs rapides).
       const topic = `sidebar-membership-db:${meId}`;
-      const existing = supabase.getChannels().find(ch => ch.topic === `realtime:${topic}`);
+      const existing = supabase.getChannels().find((ch: { topic: string }) => ch.topic === `realtime:${topic}`);
       if (existing) await supabase.removeChannel(existing);
       if (cancelled) return;
 
@@ -150,12 +150,12 @@ export default function WorldsSidebarClient(props: {
           "postgres_changes",
           // DELETE : seul le PK est transmis, pas de filtre possible -> check client
           { event: "DELETE", schema: "public", table: "world_members" },
-          (payload) => {
+          (payload: { new: Record<string, unknown>; old: Record<string, unknown> }) => {
             const old = payload.old as { user_id?: string } | null;
             if (old?.user_id === meId) router.refresh();
           },
         )
-        .subscribe((status, err) => {
+        .subscribe((status: string, err?: Error) => {
           if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
             console.warn("[sidebar-membership] postgres_changes:", status, err);
           }
@@ -333,7 +333,7 @@ function Section({
   children: React.ReactNode;
 }) {
   const [collapsed, setCollapsed] = useState(false);
-  const has = Array.isArray(children) ? (children as any[]).length > 0 : true;
+  const has = Array.isArray(children) ? (children as unknown[]).length > 0 : true;
   return (
     <div className="px-2 py-3">
       <button
@@ -370,7 +370,7 @@ function Empty({ text }: { text: string }) {
 
 function WorldItem({
   world,
-  meId,
+  meId: _meId,
   active,
   unread = 0,
   onActivate,

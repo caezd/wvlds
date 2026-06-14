@@ -216,25 +216,6 @@ function makeSeriesWithVariants(opts: {
   return out;
 }
 
-type NamedColor = {
-  key: string;
-  label: string;
-  hex: string;
-};
-
-function makeNamedColorVariants(
-  items: readonly NamedColor[],
-  pathForKey: (key: string) => string,
-): AvatarVariant[] {
-  return items.map((it) => ({
-    key: it.key,
-    label: it.label,
-    type: "color",
-    hex: it.hex,
-    path: pathForKey(it.key),
-  }));
-}
-
 function makeVariants(
   partId: string,
   keys: readonly string[],

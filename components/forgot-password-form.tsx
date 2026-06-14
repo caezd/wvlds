@@ -1,28 +1,16 @@
 "use client";
 
-import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import Link from "next/link";
 import { useState } from "react";
 
-export function ForgotPasswordForm({
-    className,
-    ...props
-}: React.ComponentPropsWithoutRef<"div">) {
+export function ForgotPasswordForm() {
     const [email, setEmail] = useState("");
     const [error, setError] = useState<string | null>(null);
-    const [success, setSuccess] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [success, setSuccess] = useState(false);
 
     const handleForgotPassword = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -52,27 +40,34 @@ export function ForgotPasswordForm({
                 Mot de passe oublié
             </h2>
             <div className="my-8">
-                <form onSubmit={handleForgotPassword}>
-                    <div className="mb-6 flex gap-3 flex-col">
-                        <Label htmlFor="email">Email</Label>
-                        <Input
-                            id="email"
-                            type="email"
-                            placeholder="m@example.com"
-                            required
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                        />
-                    </div>
-                    {error && <p className="text-sm text-red-500">{error}</p>}
-                    <Button
-                        type="submit"
-                        variant="destructive"
-                        disabled={isLoading}
-                    >
-                        {isLoading ? "Sending..." : "Send reset email"}
-                    </Button>
-                </form>
+                {success ? (
+                    <p className="text-sm text-muted-foreground">
+                        Si un compte existe pour cette adresse, vous recevrez un
+                        email avec un lien pour réinitialiser votre mot de passe.
+                    </p>
+                ) : (
+                    <form onSubmit={handleForgotPassword}>
+                        <div className="mb-6 flex gap-3 flex-col">
+                            <Label htmlFor="email">Email</Label>
+                            <Input
+                                id="email"
+                                type="email"
+                                placeholder="m@example.com"
+                                required
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                            />
+                        </div>
+                        {error && <p className="text-sm text-red-500">{error}</p>}
+                        <Button
+                            type="submit"
+                            variant="destructive"
+                            disabled={isLoading}
+                        >
+                            {isLoading ? "Sending..." : "Send reset email"}
+                        </Button>
+                    </form>
+                )}
             </div>
             {/* <div className={cn("flex flex-col gap-6", className)} {...props}>
       {success ? (
