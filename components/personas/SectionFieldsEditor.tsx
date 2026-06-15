@@ -4,7 +4,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { supabaseThumb } from "@/lib/storage";
 import { toWebP } from "@/lib/imageUtils";
-import type { PersonaSectionField, PersonaFieldType, PersonaStat } from "@/types/personas";
+import type { PersonaSectionField, PersonaFieldType, PersonaStat, InventoryItem, SkillItem, GaugeItem, TraitItem, TimelineItem } from "@/types/personas";
+import { RpgIconPicker } from "./RpgIconPicker";
+import { DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 
 import { Button } from "@/components/ui/button";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
@@ -16,7 +18,7 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 
-import { ArrowUp, ArrowDown, Plus, Trash2, Type, AlignLeft, BarChart3, Minus, X, ImageIcon, Loader2, Expand } from "lucide-react";
+import { ArrowUp, ArrowDown, Plus, Trash2, Type, AlignLeft, BarChart3, Minus, X, ImageIcon, Loader2, Expand, Backpack, Swords, Gauge, Quote, Tag, CalendarDays } from "lucide-react";
 import { ImageLightbox } from "@/components/chatrooms/ImageLightbox";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 
@@ -232,6 +234,422 @@ function ImageGridField({
   );
 }
 
+function makeItemId() {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function IconButton({
+  icon,
+  onChangeIcon,
+}: {
+  icon: string | undefined;
+  onChangeIcon: (v: string | undefined) => void;
+}) {
+  return (
+    <RpgIconPicker
+      value={icon}
+      onChange={onChangeIcon}
+      trigger={
+        <button
+          type="button"
+          title={icon ? icon.replace(".svg", "") : "Choisir une icône"}
+          className="h-10 w-10 shrink-0 flex items-center justify-center rounded-lg border border-border-soft bg-muted/40 hover:bg-muted transition-colors"
+        >
+          {icon ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={`/rpg_icons/${icon}`} alt="" className="h-6 w-6 object-contain dark:invert" />
+          ) : (
+            <ImageIcon className="h-4 w-4 text-muted-foreground/50" />
+          )}
+        </button>
+      }
+    />
+  );
+}
+
+function InventoryField({
+  initialItems,
+  onSave,
+}: {
+  initialItems: InventoryItem[];
+  onSave: (items: InventoryItem[]) => void;
+}) {
+  const [items, setItems] = useState<InventoryItem[]>(initialItems);
+
+  function update(next: InventoryItem[]) {
+    setItems(next);
+    onSave(next);
+  }
+
+  function patch(id: string, key: keyof InventoryItem, val: string | number | undefined) {
+    update(items.map((it) => (it.id === id ? { ...it, [key]: val } : it)));
+  }
+
+  function addItem() {
+    update([...items, { id: makeItemId(), name: "", quantity: 1, description: "", icon: undefined }]);
+  }
+
+  function removeItem(id: string) {
+    update(items.filter((it) => it.id !== id));
+  }
+
+  return (
+    <div className="space-y-2 pr-24">
+      {items.map((item) => (
+        <div key={item.id} className="flex items-start gap-2 group/item">
+          <IconButton icon={item.icon} onChangeIcon={(v) => patch(item.id, "icon", v)} />
+          <div className="flex-1 space-y-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <input
+                value={item.name}
+                onChange={(e) => patch(item.id, "name", e.target.value)}
+                placeholder="Nom de l'objet"
+                className="flex-1 min-w-0 bg-transparent text-sm font-medium outline-none placeholder:text-muted-foreground/40"
+              />
+              <div className="flex items-center gap-1 shrink-0">
+                <span className="text-xs text-muted-foreground">×</span>
+                <input
+                  type="number"
+                  min={0}
+                  value={item.quantity}
+                  onChange={(e) => patch(item.id, "quantity", Number(e.target.value))}
+                  className="w-12 bg-transparent text-sm text-right outline-none placeholder:text-muted-foreground/40 tabular-nums"
+                />
+              </div>
+            </div>
+            <input
+              value={item.description ?? ""}
+              onChange={(e) => patch(item.id, "description", e.target.value)}
+              placeholder="Description (optionnel)"
+              className="w-full bg-transparent text-xs text-muted-foreground outline-none placeholder:text-muted-foreground/40"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => removeItem(item.id)}
+            className="shrink-0 mt-2.5 h-5 w-5 flex items-center justify-center rounded-full text-muted-foreground opacity-0 group-hover/item:opacity-100 hover:text-destructive transition-opacity"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={addItem}
+        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mt-1"
+      >
+        <Plus className="h-3.5 w-3.5" /> Ajouter un objet
+      </button>
+    </div>
+  );
+}
+
+function SkillsField({
+  initialItems,
+  onSave,
+}: {
+  initialItems: SkillItem[];
+  onSave: (items: SkillItem[]) => void;
+}) {
+  const [items, setItems] = useState<SkillItem[]>(initialItems);
+
+  function update(next: SkillItem[]) {
+    setItems(next);
+    onSave(next);
+  }
+
+  function patch(id: string, key: keyof SkillItem, val: string | undefined) {
+    update(items.map((it) => (it.id === id ? { ...it, [key]: val } : it)));
+  }
+
+  function addItem() {
+    update([...items, { id: makeItemId(), name: "", level: "", description: "", icon: undefined }]);
+  }
+
+  function removeItem(id: string) {
+    update(items.filter((it) => it.id !== id));
+  }
+
+  return (
+    <div className="space-y-2 pr-24">
+      {items.map((item) => (
+        <div key={item.id} className="flex items-start gap-2 group/skill">
+          <IconButton icon={item.icon} onChangeIcon={(v) => patch(item.id, "icon", v)} />
+          <div className="flex-1 space-y-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <input
+                value={item.name}
+                onChange={(e) => patch(item.id, "name", e.target.value)}
+                placeholder="Nom de la compétence"
+                className="flex-1 min-w-0 bg-transparent text-sm font-medium outline-none placeholder:text-muted-foreground/40"
+              />
+              <input
+                value={item.level}
+                onChange={(e) => patch(item.id, "level", e.target.value)}
+                placeholder="Niveau"
+                className="w-20 shrink-0 bg-transparent text-xs text-right text-muted-foreground outline-none placeholder:text-muted-foreground/40"
+              />
+            </div>
+            <input
+              value={item.description ?? ""}
+              onChange={(e) => patch(item.id, "description", e.target.value)}
+              placeholder="Description (optionnel)"
+              className="w-full bg-transparent text-xs text-muted-foreground outline-none placeholder:text-muted-foreground/40"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => removeItem(item.id)}
+            className="shrink-0 mt-2.5 h-5 w-5 flex items-center justify-center rounded-full text-muted-foreground opacity-0 group-hover/skill:opacity-100 hover:text-destructive transition-opacity"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={addItem}
+        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mt-1"
+      >
+        <Plus className="h-3.5 w-3.5" /> Ajouter une compétence
+      </button>
+    </div>
+  );
+}
+
+function GaugesField({
+  initialItems,
+  onSave,
+}: {
+  initialItems: GaugeItem[];
+  onSave: (items: GaugeItem[]) => void;
+}) {
+  const [items, setItems] = useState<GaugeItem[]>(initialItems);
+
+  function update(next: GaugeItem[]) { setItems(next); onSave(next); }
+  function patch(id: string, key: keyof GaugeItem, val: string | number) {
+    update(items.map((it) => (it.id === id ? { ...it, [key]: val } : it)));
+  }
+  function addItem() {
+    update([...items, { id: makeItemId(), name: "", value: 0, max: 100, color: "#6366f1" }]);
+  }
+  function removeItem(id: string) { update(items.filter((it) => it.id !== id)); }
+
+  return (
+    <div className="space-y-3 pr-24">
+      {items.map((item) => {
+        const pct = Math.min(100, ((item.value ?? 0) / (item.max || 1)) * 100);
+        return (
+          <div key={item.id} className="group/gauge space-y-1.5">
+            <div className="flex items-center gap-2">
+              <input
+                value={item.name}
+                onChange={(e) => patch(item.id, "name", e.target.value)}
+                placeholder="Nom de la jauge"
+                className="flex-1 min-w-0 bg-transparent text-sm font-medium outline-none placeholder:text-muted-foreground/40"
+              />
+              <div className="flex items-center gap-1.5 shrink-0 text-sm tabular-nums text-muted-foreground">
+                <input
+                  type="number"
+                  min={0}
+                  value={item.value}
+                  onChange={(e) => patch(item.id, "value", Number(e.target.value))}
+                  className="w-12 bg-transparent text-right outline-none"
+                />
+                <span>/</span>
+                <input
+                  type="number"
+                  min={1}
+                  value={item.max}
+                  onChange={(e) => patch(item.id, "max", Math.max(1, Number(e.target.value)))}
+                  className="w-12 bg-transparent outline-none"
+                />
+                <input
+                  type="color"
+                  value={item.color}
+                  onChange={(e) => patch(item.id, "color", e.target.value)}
+                  className="h-6 w-6 shrink-0 cursor-pointer rounded border-none bg-transparent p-0"
+                  title="Couleur"
+                />
+                <button
+                  type="button"
+                  onClick={() => removeItem(item.id)}
+                  className="h-5 w-5 flex items-center justify-center rounded-full text-muted-foreground opacity-0 group-hover/gauge:opacity-100 hover:text-destructive transition-opacity"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+            <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all"
+                style={{ width: `${pct}%`, backgroundColor: item.color }}
+              />
+            </div>
+          </div>
+        );
+      })}
+      <button
+        type="button"
+        onClick={addItem}
+        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mt-1"
+      >
+        <Plus className="h-3.5 w-3.5" /> Ajouter une jauge
+      </button>
+    </div>
+  );
+}
+
+function QuoteField({
+  initialText,
+  initialSource,
+  onSave,
+}: {
+  initialText: string;
+  initialSource: string;
+  onSave: (text: string, source: string) => void;
+}) {
+  const [text, setText] = useState(initialText);
+  const [source, setSource] = useState(initialSource);
+
+  return (
+    <div className="space-y-2 pr-24">
+      <ParagraphBlockEditor
+        value={text}
+        onChange={(v) => { setText(v); onSave(v, source); }}
+        submitOnEnter={false}
+        placeholder="Citation…"
+        className="text-sm italic leading-relaxed font-mono"
+      />
+      <input
+        value={source}
+        onChange={(e) => { setSource(e.target.value); onSave(text, e.target.value); }}
+        placeholder="— Source (optionnel)"
+        className="w-full bg-transparent text-xs text-muted-foreground outline-none placeholder:text-muted-foreground/40"
+      />
+    </div>
+  );
+}
+
+function TraitsField({
+  initialItems,
+  onSave,
+}: {
+  initialItems: TraitItem[];
+  onSave: (items: TraitItem[]) => void;
+}) {
+  const [items, setItems] = useState<TraitItem[]>(initialItems);
+
+  function update(next: TraitItem[]) { setItems(next); onSave(next); }
+  function patchLabel(id: string, label: string) {
+    update(items.map((it) => (it.id === id ? { ...it, label } : it)));
+  }
+  function removeItem(id: string) { update(items.filter((it) => it.id !== id)); }
+  function addItem() { update([...items, { id: makeItemId(), label: "" }]); }
+
+  return (
+    <div className="flex flex-wrap gap-2 pr-24">
+      {items.map((item) => (
+        <div
+          key={item.id}
+          className="group/trait flex items-center gap-1 rounded-full border border-border-soft bg-muted/40 px-2.5 py-1"
+        >
+          <input
+            value={item.label}
+            onChange={(e) => patchLabel(item.id, e.target.value)}
+            placeholder="Trait…"
+            size={Math.max(4, item.label.length + 1)}
+            className="bg-transparent text-xs font-medium outline-none placeholder:text-muted-foreground/40 min-w-[4rem]"
+          />
+          <button
+            type="button"
+            onClick={() => removeItem(item.id)}
+            className="shrink-0 text-muted-foreground opacity-0 group-hover/trait:opacity-100 hover:text-destructive transition-opacity"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={addItem}
+        className="flex items-center gap-1 rounded-full border border-dashed border-border-soft px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <Plus className="h-3 w-3" /> Trait
+      </button>
+    </div>
+  );
+}
+
+function TimelineField({
+  initialItems,
+  onSave,
+}: {
+  initialItems: TimelineItem[];
+  onSave: (items: TimelineItem[]) => void;
+}) {
+  const [items, setItems] = useState<TimelineItem[]>(initialItems);
+
+  function update(next: TimelineItem[]) { setItems(next); onSave(next); }
+  function patch(id: string, key: keyof TimelineItem, val: string) {
+    update(items.map((it) => (it.id === id ? { ...it, [key]: val } : it)));
+  }
+  function addItem() {
+    update([...items, { id: makeItemId(), date: "", title: "", description: "" }]);
+  }
+  function removeItem(id: string) { update(items.filter((it) => it.id !== id)); }
+
+  return (
+    <div className="space-y-0 pr-24">
+      {items.map((item, i) => (
+        <div key={item.id} className="flex gap-3 group/event">
+          <div className="flex flex-col items-center">
+            <div className="mt-2 h-2 w-2 shrink-0 rounded-full bg-border" />
+            {i < items.length - 1 && <div className="flex-1 w-px bg-border mt-1" />}
+          </div>
+          <div className="flex-1 space-y-1 pb-4 min-w-0">
+            <div className="flex items-center gap-2">
+              <input
+                value={item.date ?? ""}
+                onChange={(e) => patch(item.id, "date", e.target.value)}
+                placeholder="Époque…"
+                className="w-24 shrink-0 bg-transparent text-[0.65rem] text-muted-foreground outline-none placeholder:text-muted-foreground/40"
+              />
+              <input
+                value={item.title}
+                onChange={(e) => patch(item.id, "title", e.target.value)}
+                placeholder="Titre de l'événement"
+                className="flex-1 min-w-0 bg-transparent text-sm font-medium outline-none placeholder:text-muted-foreground/40"
+              />
+              <button
+                type="button"
+                onClick={() => removeItem(item.id)}
+                className="shrink-0 h-5 w-5 flex items-center justify-center rounded-full text-muted-foreground opacity-0 group-hover/event:opacity-100 hover:text-destructive transition-opacity"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+            <textarea
+              value={item.description ?? ""}
+              onChange={(e) => patch(item.id, "description", e.target.value)}
+              placeholder="Description (optionnel)"
+              rows={2}
+              className="w-full bg-transparent text-xs text-muted-foreground outline-none resize-none placeholder:text-muted-foreground/40 leading-relaxed"
+            />
+          </div>
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={addItem}
+        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mt-1"
+      >
+        <Plus className="h-3.5 w-3.5" /> Ajouter un événement
+      </button>
+    </div>
+  );
+}
+
 type SectionFieldsEditorProps = {
   sectionId: string;
   personaId: string;
@@ -250,6 +668,12 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
   const persona_field_stats     = fieldsEnabled && flags.persona_field_stats;
   const persona_field_separator = fieldsEnabled && flags.persona_field_separator;
   const persona_field_image_grid = fieldsEnabled && flags.persona_field_image_grid;
+  const persona_field_inventory  = fieldsEnabled && flags.persona_field_inventory;
+  const persona_field_skills     = fieldsEnabled && flags.persona_field_skills;
+  const persona_field_gauges     = fieldsEnabled && flags.persona_field_gauges;
+  const persona_field_quote      = fieldsEnabled && flags.persona_field_quote;
+  const persona_field_traits     = fieldsEnabled && flags.persona_field_traits;
+  const persona_field_timeline   = fieldsEnabled && flags.persona_field_timeline;
   const [fields, setFields] = useState<PersonaSectionField[]>(initialFields);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -293,7 +717,19 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
             ? {}
             : type === "image-grid"
               ? { images: [] }
-              : { text: "", format: "markdown" };
+              : type === "inventory"
+                ? { inventoryItems: [] }
+                : type === "skills"
+                  ? { skillItems: [] }
+                  : type === "gauges"
+                    ? { gaugeItems: [] }
+                    : type === "quote"
+                      ? { quoteText: "", quoteSource: "" }
+                      : type === "traits"
+                        ? { traitItems: [] }
+                        : type === "timeline"
+                          ? { timelineItems: [] }
+                          : { text: "", format: "markdown" };
 
     const { data, error } = await supabase
       .from("persona_section_fields")
@@ -381,6 +817,114 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
     [fields],
   );
 
+  const inventoryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const saveInventoryItems = useCallback(
+    (fieldId: string, inventoryItems: InventoryItem[]) => {
+      setFields((prev) =>
+        prev.map((f) =>
+          f.id === fieldId ? { ...f, data: { ...f.data, inventoryItems } } : f,
+        ),
+      );
+      if (inventoryTimer.current) clearTimeout(inventoryTimer.current);
+      inventoryTimer.current = setTimeout(async () => {
+        const { error } = await supabase
+          .from("persona_section_fields")
+          .update({ data: { inventoryItems } })
+          .eq("id", fieldId);
+        if (error) setErrorMessage(error.message ?? "Erreur sauvegarde inventaire.");
+      }, 800);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
+  const skillsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const saveSkillItems = useCallback(
+    (fieldId: string, skillItems: SkillItem[]) => {
+      setFields((prev) =>
+        prev.map((f) =>
+          f.id === fieldId ? { ...f, data: { ...f.data, skillItems } } : f,
+        ),
+      );
+      if (skillsTimer.current) clearTimeout(skillsTimer.current);
+      skillsTimer.current = setTimeout(async () => {
+        const { error } = await supabase
+          .from("persona_section_fields")
+          .update({ data: { skillItems } })
+          .eq("id", fieldId);
+        if (error) setErrorMessage(error.message ?? "Erreur sauvegarde compétences.");
+      }, 800);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
+  const gaugesTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveGaugeItems = useCallback(
+    (fieldId: string, gaugeItems: GaugeItem[]) => {
+      setFields((prev) =>
+        prev.map((f) => f.id === fieldId ? { ...f, data: { ...f.data, gaugeItems } } : f),
+      );
+      if (gaugesTimer.current) clearTimeout(gaugesTimer.current);
+      gaugesTimer.current = setTimeout(async () => {
+        const { error } = await supabase.from("persona_section_fields").update({ data: { gaugeItems } }).eq("id", fieldId);
+        if (error) setErrorMessage(error.message ?? "Erreur sauvegarde jauges.");
+      }, 800);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
+  const quoteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveQuote = useCallback(
+    (fieldId: string, quoteText: string, quoteSource: string) => {
+      setFields((prev) =>
+        prev.map((f) => f.id === fieldId ? { ...f, data: { ...f.data, quoteText, quoteSource } } : f),
+      );
+      if (quoteTimer.current) clearTimeout(quoteTimer.current);
+      quoteTimer.current = setTimeout(async () => {
+        const { error } = await supabase.from("persona_section_fields").update({ data: { quoteText, quoteSource } }).eq("id", fieldId);
+        if (error) setErrorMessage(error.message ?? "Erreur sauvegarde citation.");
+      }, 800);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
+  const traitsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveTraitItems = useCallback(
+    (fieldId: string, traitItems: TraitItem[]) => {
+      setFields((prev) =>
+        prev.map((f) => f.id === fieldId ? { ...f, data: { ...f.data, traitItems } } : f),
+      );
+      if (traitsTimer.current) clearTimeout(traitsTimer.current);
+      traitsTimer.current = setTimeout(async () => {
+        const { error } = await supabase.from("persona_section_fields").update({ data: { traitItems } }).eq("id", fieldId);
+        if (error) setErrorMessage(error.message ?? "Erreur sauvegarde traits.");
+      }, 800);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
+  const timelineTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveTimelineItems = useCallback(
+    (fieldId: string, timelineItems: TimelineItem[]) => {
+      setFields((prev) =>
+        prev.map((f) => f.id === fieldId ? { ...f, data: { ...f.data, timelineItems } } : f),
+      );
+      if (timelineTimer.current) clearTimeout(timelineTimer.current);
+      timelineTimer.current = setTimeout(async () => {
+        const { error } = await supabase.from("persona_section_fields").update({ data: { timelineItems } }).eq("id", fieldId);
+        if (error) setErrorMessage(error.message ?? "Erreur sauvegarde timeline.");
+      }, 800);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
   async function handleMoveField(fieldId: string, direction: "up" | "down") {
     const index = fields.findIndex((f) => f.id === fieldId);
     if (index === -1) return;
@@ -424,7 +968,7 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
             </button>
           </div>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="center" className="w-44">
+        <DropdownMenuContent align="center" className="w-48">
           {persona_field_title && (
             <DropdownMenuItem onClick={() => handleAddField("title", insertAt)}>
               <Type className="mr-2 h-4 w-4" /> Titre
@@ -435,11 +979,44 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
               <AlignLeft className="mr-2 h-4 w-4" /> Bloc de texte
             </DropdownMenuItem>
           )}
+          {persona_field_quote && (
+            <DropdownMenuItem onClick={() => handleAddField("quote", insertAt)}>
+              <Quote className="mr-2 h-4 w-4" /> Citation
+            </DropdownMenuItem>
+          )}
+          {(persona_field_stats || persona_field_gauges || persona_field_inventory || persona_field_skills) && <DropdownMenuSeparator />}
           {persona_field_stats && (
             <DropdownMenuItem onClick={() => handleAddField("stats", insertAt)}>
               <BarChart3 className="mr-2 h-4 w-4" /> Stats
             </DropdownMenuItem>
           )}
+          {persona_field_gauges && (
+            <DropdownMenuItem onClick={() => handleAddField("gauges", insertAt)}>
+              <Gauge className="mr-2 h-4 w-4" /> Jauges
+            </DropdownMenuItem>
+          )}
+          {persona_field_inventory && (
+            <DropdownMenuItem onClick={() => handleAddField("inventory", insertAt)}>
+              <Backpack className="mr-2 h-4 w-4" /> Inventaire
+            </DropdownMenuItem>
+          )}
+          {persona_field_skills && (
+            <DropdownMenuItem onClick={() => handleAddField("skills", insertAt)}>
+              <Swords className="mr-2 h-4 w-4" /> Compétences
+            </DropdownMenuItem>
+          )}
+          {(persona_field_traits || persona_field_timeline) && <DropdownMenuSeparator />}
+          {persona_field_traits && (
+            <DropdownMenuItem onClick={() => handleAddField("traits", insertAt)}>
+              <Tag className="mr-2 h-4 w-4" /> Traits
+            </DropdownMenuItem>
+          )}
+          {persona_field_timeline && (
+            <DropdownMenuItem onClick={() => handleAddField("timeline", insertAt)}>
+              <CalendarDays className="mr-2 h-4 w-4" /> Timeline
+            </DropdownMenuItem>
+          )}
+          {(persona_field_separator || persona_field_image_grid) && <DropdownMenuSeparator />}
           {persona_field_separator && (
             <DropdownMenuItem onClick={() => handleAddField("separator", insertAt)}>
               <Minus className="mr-2 h-4 w-4" /> Séparateur
@@ -468,7 +1045,7 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
                 <Plus className="mr-2 h-4 w-4" /> Ajouter un champ
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="center" className="w-44">
+            <DropdownMenuContent align="center" className="w-48">
               {persona_field_title && (
                 <DropdownMenuItem onClick={() => handleAddField("title", 0)}>
                   <Type className="mr-2 h-4 w-4" /> Titre
@@ -479,11 +1056,23 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
                   <AlignLeft className="mr-2 h-4 w-4" /> Bloc de texte
                 </DropdownMenuItem>
               )}
+              {(persona_field_stats || persona_field_inventory || persona_field_skills) && <DropdownMenuSeparator />}
               {persona_field_stats && (
                 <DropdownMenuItem onClick={() => handleAddField("stats", 0)}>
                   <BarChart3 className="mr-2 h-4 w-4" /> Stats
                 </DropdownMenuItem>
               )}
+              {persona_field_inventory && (
+                <DropdownMenuItem onClick={() => handleAddField("inventory", 0)}>
+                  <Backpack className="mr-2 h-4 w-4" /> Inventaire
+                </DropdownMenuItem>
+              )}
+              {persona_field_skills && (
+                <DropdownMenuItem onClick={() => handleAddField("skills", 0)}>
+                  <Swords className="mr-2 h-4 w-4" /> Compétences
+                </DropdownMenuItem>
+              )}
+              {(persona_field_separator || persona_field_image_grid) && <DropdownMenuSeparator />}
               {persona_field_separator && (
                 <DropdownMenuItem onClick={() => handleAddField("separator", 0)}>
                   <Minus className="mr-2 h-4 w-4" /> Séparateur
@@ -572,6 +1161,49 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
                       personaId={personaId}
                       userId={userId}
                       onSave={(images) => saveImageGrid(field.id, images)}
+                    />
+                  )}
+
+                  {field.type === "inventory" && (
+                    <InventoryField
+                      initialItems={field.data?.inventoryItems ?? []}
+                      onSave={(items) => saveInventoryItems(field.id, items)}
+                    />
+                  )}
+
+                  {field.type === "skills" && (
+                    <SkillsField
+                      initialItems={field.data?.skillItems ?? []}
+                      onSave={(items) => saveSkillItems(field.id, items)}
+                    />
+                  )}
+
+                  {field.type === "gauges" && (
+                    <GaugesField
+                      initialItems={field.data?.gaugeItems ?? []}
+                      onSave={(items) => saveGaugeItems(field.id, items)}
+                    />
+                  )}
+
+                  {field.type === "quote" && (
+                    <QuoteField
+                      initialText={field.data?.quoteText ?? ""}
+                      initialSource={field.data?.quoteSource ?? ""}
+                      onSave={(text, source) => saveQuote(field.id, text, source)}
+                    />
+                  )}
+
+                  {field.type === "traits" && (
+                    <TraitsField
+                      initialItems={field.data?.traitItems ?? []}
+                      onSave={(items) => saveTraitItems(field.id, items)}
+                    />
+                  )}
+
+                  {field.type === "timeline" && (
+                    <TimelineField
+                      initialItems={field.data?.timelineItems ?? []}
+                      onSave={(items) => saveTimelineItems(field.id, items)}
                     />
                   )}
 

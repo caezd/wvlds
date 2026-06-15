@@ -17,13 +17,41 @@ const FIELD_KEYS: FlagKey[] = [
   "persona_field_stats",
   "persona_field_separator",
   "persona_field_image_grid",
+  "persona_field_inventory",
+  "persona_field_skills",
+  "persona_field_gauges",
+  "persona_field_quote",
+  "persona_field_traits",
+  "persona_field_timeline",
 ];
 
-const GROUPS: { title: string; keys: FlagKey[] }[] = [
-  { title: "Personas",  keys: ["avatar_builder", "persona_fields"] },
-  { title: "Boutique",  keys: ["shop"] },
-  { title: "Mondes",    keys: ["public_worlds"] },
-  { title: "Chatrooms", keys: ["create_chatroom", "post_message", "emoji_reactions", "chatroom_media"] },
+const BLOCK_KEYS: FlagKey[] = [
+  "block_npc",
+  "block_hp",
+  "block_alert",
+  "block_weather",
+  "block_whisper",
+];
+
+type GroupDef = {
+  title: string;
+  keys: FlagKey[];
+  subgroups?: { masterKey: FlagKey; childKeys: FlagKey[] }[];
+};
+
+const GROUPS: GroupDef[] = [
+  {
+    title: "Personas",
+    keys: ["avatar_builder", "persona_fields"],
+    subgroups: [{ masterKey: "persona_fields", childKeys: FIELD_KEYS }],
+  },
+  { title: "Boutique", keys: ["shop"] },
+  { title: "Mondes",   keys: ["public_worlds"] },
+  {
+    title: "Chatrooms",
+    keys: ["create_chatroom", "post_message", "emoji_reactions", "chatroom_media", "chatroom_blocks"],
+    subgroups: [{ masterKey: "chatroom_blocks", childKeys: BLOCK_KEYS }],
+  },
 ];
 
 async function toggleFlag(key: FlagKey, enabled: boolean) {
@@ -133,10 +161,12 @@ export default async function AdminFeaturesPage() {
 
       <div className="space-y-4">
         {GROUPS.map((group) => {
-          const masterSubGroupKey = group.keys.find((k) => k === "persona_fields");
-          const topLevelKeys = group.keys.filter((k) => k !== "persona_fields");
+          const subgroupMasterKeys = new Set(group.subgroups?.map((s) => s.masterKey) ?? []);
+          const topLevelKeys = group.keys.filter((k) => !subgroupMasterKeys.has(k));
           const topLevelFlags = topLevelKeys.map((k) => byKey[k]).filter(Boolean);
-          const hasContent = topLevelFlags.length > 0 || (masterSubGroupKey && byKey[masterSubGroupKey]);
+          const hasContent =
+            topLevelFlags.length > 0 ||
+            group.subgroups?.some((s) => byKey[s.masterKey]);
           if (!hasContent) return null;
 
           return (
@@ -148,20 +178,21 @@ export default async function AdminFeaturesPage() {
                 {topLevelFlags.map((flag) => (
                   <FlagRow key={flag.key} flag={flag} />
                 ))}
-
-                {masterSubGroupKey && byKey[masterSubGroupKey] && (() => {
-                  const master = byKey[masterSubGroupKey];
+                {group.subgroups?.map(({ masterKey, childKeys }) => {
+                  const master = byKey[masterKey];
+                  if (!master) return null;
                   return (
                     <FeatureSubGroup
+                      key={masterKey}
                       flag={master}
                       onToggle={toggleFlag.bind(null, master.key, !master.enabled)}
                     >
-                      {FIELD_KEYS.map((k) =>
+                      {childKeys.map((k) =>
                         byKey[k] ? <CompactFlagRow key={k} flag={byKey[k]} /> : null
                       )}
                     </FeatureSubGroup>
                   );
-                })()}
+                })}
               </div>
             </div>
           );

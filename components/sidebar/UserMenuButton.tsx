@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -14,11 +15,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ChevronsUpDown, KeyRound, LogOut, Scale, ScrollText } from "lucide-react";
+import { ChevronsUpDown, KeyRound, LogOut, Scale, ScrollText, UserRound } from "lucide-react";
 import { useGlobalPresence, type PresenceStatus } from "@/components/providers/PresenceProvider";
 import { cn } from "@/lib/utils";
+import { UserProfileSheet } from "./UserProfileSheet";
 
 type UserMenuButtonProps = {
+  userId: string;
   username: string | null;
   email: string;
   avatarUrl?: string | null;
@@ -38,6 +41,7 @@ function StatusDot({ status, className }: { status: PresenceStatus; className?: 
 }
 
 export function UserMenuButton({
+  userId,
   username,
   email,
   avatarUrl,
@@ -47,6 +51,7 @@ export function UserMenuButton({
   const router = useRouter();
   const supabase = createClient();
   const { status, setStatus } = useGlobalPresence();
+  const [profileOpen, setProfileOpen] = useState(false);
 
   const displayName = username || email;
   const initials = (username || email).slice(0, 2).toUpperCase();
@@ -58,6 +63,15 @@ export function UserMenuButton({
   }
 
   return (
+    <>
+    <UserProfileSheet
+      open={profileOpen}
+      onOpenChange={setProfileOpen}
+      userId={userId}
+      initialUsername={username}
+      initialAvatarUrl={avatarUrl ?? null}
+      email={email}
+    />
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         {variant === "compact" ? (
@@ -132,6 +146,10 @@ export function UserMenuButton({
 
         <DropdownMenuSeparator />
 
+        <DropdownMenuItem onClick={() => setProfileOpen(true)}>
+          <UserRound className="mr-2 size-4" />
+          Mon profil
+        </DropdownMenuItem>
         <DropdownMenuItem onClick={() => router.push("/auth/update-password")}>
           <KeyRound className="mr-2 size-4" />
           Changer le mot de passe
@@ -153,5 +171,6 @@ export function UserMenuButton({
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+    </>
   );
 }

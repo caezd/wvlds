@@ -1,6 +1,8 @@
 "use client";
 
-import { BookOpenText } from "lucide-react";
+import { useState } from "react";
+import { BookOpenText, Settings } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 import { WorldHeroCard } from "./WorldHeroCard";
 import { WorldTabs } from "./WorldTabs";
@@ -8,6 +10,7 @@ import { WorldTabContent } from "./WorldTabContent";
 import { WorldChatComposer } from "./WorldChatComposer";
 import { WorldChatroomsGrid } from "./WorldChatroomsGrid";
 import { WorldMembersSheet } from "./WorldMembersSheet";
+import WorldEditDialog, { type World } from "./WorldEditDialog";
 import {
   Sheet,
   SheetContent,
@@ -19,7 +22,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import type { World } from "./WorldEditDialog";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 
 type HeroWorld = World & { owner_id: string };
@@ -52,6 +54,8 @@ export function WorldHome({
   initialRooms: Room[];
 }) {
   const { create_chatroom } = useFeatureFlags();
+  const router = useRouter();
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const tabsPanel = (
     <WorldTabs
       worldId={worldId}
@@ -81,6 +85,32 @@ export function WorldHome({
 
       {/* Rail d'icônes droit — hors de la carte */}
       <div className="flex shrink-0 flex-col items-center gap-2 pt-3">
+        {canAdmin && (
+          <>
+            <WorldEditDialog
+              world={world}
+              open={settingsOpen}
+              onOpenChange={setSettingsOpen}
+              onUpdated={(updated) => {
+                Object.assign(world, updated);
+                router.refresh();
+              }}
+            />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  aria-label="Paramètres du monde"
+                  onClick={() => setSettingsOpen(true)}
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-border-soft bg-background text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                >
+                  <Settings className="h-4 w-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="left" sideOffset={8}>Paramètres</TooltipContent>
+            </Tooltip>
+          </>
+        )}
         <Sheet>
           <Tooltip>
             <TooltipTrigger asChild>

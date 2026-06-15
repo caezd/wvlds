@@ -305,7 +305,7 @@ export default function WorldEditDialog({
             {trigger ? <SheetTrigger asChild>{trigger}</SheetTrigger> : null}
             <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-xl">
                 <SheetHeader className="border-b border-border-soft px-6 py-4">
-                    <SheetTitle>Paramètres du monde</SheetTitle>
+                    <SheetTitle>Paramètres</SheetTitle>
                 </SheetHeader>
 
                 <Form {...form}>

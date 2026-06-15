@@ -40,7 +40,7 @@ export function AvatarWithFrame({
           src={frameUrl}
           alt=""
           className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 max-w-none"
-          style={{ width: size * 1.3, height: size * 1.3 }}
+          style={{ width: "120%" }}
         />
       )}
     </div>

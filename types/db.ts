@@ -62,6 +62,8 @@ export type ChatMessageMeta = {
   bubbles?: boolean;
   bubbleColor?: string;
   media?: ChatMediaItem[];
+  word_count?: number;
+  visible_to_labels?: string[];
 };
 
 export type ChatMessage = {
@@ -73,6 +75,7 @@ export type ChatMessage = {
   persona_id?: string | null;
   world_id?: string | null;
   metadata?: ChatMessageMeta | null;
+  visible_to?: string[] | null;
 };
 
 export type ChatMessageReaction = {

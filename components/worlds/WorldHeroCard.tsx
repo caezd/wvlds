@@ -1,13 +1,11 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
-import { Globe, GlobeLock, Pencil } from "lucide-react";
+import { Globe, GlobeLock } from "lucide-react";
 
-import WorldEditDialog, { type World } from "@/components/worlds/WorldEditDialog";
+import { type World } from "@/components/worlds/WorldEditDialog";
 import { supabaseThumb } from "@/lib/storage";
 import { useNotifications } from "@/components/providers/NotificationsProvider";
-import { Button } from "@/components/ui/button";
 
 type HeroWorld = World & { owner_id: string };
 
@@ -26,7 +24,6 @@ export function WorldHeroCard({
   /** Contenu rendu tout en bas de la bannière (ex: barre d'onglets). */
   footer?: ReactNode;
 }) {
-  const router = useRouter();
   const [world, setWorld] = useState(initialWorld);
   const { markWorldSeen } = useNotifications();
 
@@ -66,30 +63,7 @@ export function WorldHeroCard({
         }
       />
 
-      {/* Actions — invitation + édition (crayon au survol) */}
-      <div className="absolute right-4 top-4 z-10 flex items-center gap-2">
-        {canAdmin && (
-          <WorldEditDialog
-            world={world}
-            onUpdated={(updated) => {
-              setWorld((prev) => ({ ...prev, ...updated }));
-              router.refresh();
-            }}
-            trigger={
-              <Button
-                size="icon-sm"
-                variant="secondary"
-                aria-label="Modifier le monde"
-                className="opacity-0 transition-opacity group-hover/hero:opacity-100 focus-visible:opacity-100"
-              >
-                <Pencil className="h-4 w-4" />
-              </Button>
-            }
-          />
-        )}
-      </div>
-
-      <div className="relative flex min-h-40 flex-col justify-end gap-2 md:min-h-48">
+<div className="relative flex min-h-40 flex-col justify-end gap-2 md:min-h-48">
         <span
           className={
             world.icon_url

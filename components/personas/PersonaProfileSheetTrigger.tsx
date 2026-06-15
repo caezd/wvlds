@@ -15,7 +15,8 @@ import {
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import { AvatarWithFrame } from "@/components/avatars/AvatarWithFrame";
 import { Coins, Flame, Zap } from "lucide-react";
-import type { PersonaSection, PersonaSectionField, PersonaSectionWithFields, PersonaFieldData } from "@/types/personas";
+import type { PersonaSection, PersonaSectionField, PersonaSectionWithFields, PersonaFieldData, InventoryItem, SkillItem, GaugeItem, TraitItem, TimelineItem } from "@/types/personas";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useGlobalPresence } from "@/components/providers/PresenceProvider";
 import { formatLastSeen } from "@/lib/utils";
 import { ImageGridView } from "@/components/personas/ImageGridView";
@@ -88,7 +89,169 @@ function FieldView({ type, data }: { type: string; data: FieldData }) {
   if (type === "image-grid") {
     return <ImageGridView images={data?.images ?? []} />;
   }
+  if (type === "inventory") {
+    const items: InventoryItem[] = data?.inventoryItems ?? [];
+    const visible = items.filter((it) => it.name);
+    if (!visible.length) return null;
+    return (
+      <div className="rounded-lg border border-border-soft bg-muted/30 p-3">
+        <div className="flex flex-wrap gap-2">
+          {visible.map((item) => (
+            <Tooltip key={item.id}>
+              <TooltipTrigger asChild>
+                <div className="flex items-center gap-1.5 rounded-md border border-border-soft bg-background px-2 py-1.5 cursor-default select-none">
+                  {item.icon && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={`/rpg_icons/${item.icon}`} alt="" className="h-7 w-7 object-contain dark:invert shrink-0" />
+                  )}
+                  <span className="text-sm font-medium leading-none">{item.name}</span>
+                  <span className="text-xs text-muted-foreground tabular-nums">x {item.quantity ?? 1}</span>
+                </div>
+              </TooltipTrigger>
+              {item.description && (
+                <TooltipContent side="top" className="max-w-[200px] text-center">
+                  {item.description}
+                </TooltipContent>
+              )}
+            </Tooltip>
+          ))}
+        </div>
+      </div>
+    );
+  }
+  if (type === "skills") {
+    const items: SkillItem[] = data?.skillItems ?? [];
+    const visible = items.filter((it) => it.name);
+    if (!visible.length) return null;
+    return (
+      <div className="space-y-2">
+        {visible.map((item) => (
+          <div key={item.id} className="flex items-start gap-2.5 rounded-lg border border-border-soft bg-muted/30 px-3 py-2">
+            {item.icon && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={`/rpg_icons/${item.icon}`} alt="" className="h-5 w-5 object-contain dark:invert shrink-0 mt-0.5" />
+            )}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium leading-tight">{item.name}</span>
+                {item.level && (
+                  <span className="shrink-0 rounded-full border border-border-soft bg-muted/50 px-2 py-0.5 text-[0.65rem] font-medium text-muted-foreground">
+                    {item.level}
+                  </span>
+                )}
+              </div>
+              {item.description && (
+                <p className="text-xs text-muted-foreground mt-0.5 leading-snug">{item.description}</p>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  if (type === "gauges") {
+    const items: GaugeItem[] = data?.gaugeItems ?? [];
+    const visible = items.filter((it) => it.name);
+    if (!visible.length) return null;
+    return (
+      <div className="space-y-3">
+        {visible.map((item) => (
+          <div key={item.id} className="space-y-1">
+            <div className="flex items-center justify-between text-sm">
+              <span className="font-medium">{item.name}</span>
+              <span className="tabular-nums text-muted-foreground text-xs">{item.value} / {item.max}</span>
+            </div>
+            <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all"
+                style={{
+                  width: `${Math.min(100, ((item.value ?? 0) / (item.max || 1)) * 100)}%`,
+                  backgroundColor: item.color ?? "#6366f1",
+                }}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  if (type === "quote") {
+    if (!data?.quoteText) return null;
+    return (
+      <blockquote className="border-l-2 border-primary/40 pl-4 space-y-1">
+        <MarkdownRenderer content={data.quoteText as string} className="text-sm italic" />
+        {data.quoteSource && (
+          <p className="text-xs text-muted-foreground">— {data.quoteSource as string}</p>
+        )}
+      </blockquote>
+    );
+  }
+  if (type === "traits") {
+    const items: TraitItem[] = data?.traitItems ?? [];
+    const visible = items.filter((it) => it.label);
+    if (!visible.length) return null;
+    return (
+      <div className="flex flex-wrap gap-2">
+        {visible.map((item) => (
+          <span
+            key={item.id}
+            className="rounded-full border border-border-soft bg-muted/40 px-3 py-1 text-xs font-medium"
+          >
+            {item.label}
+          </span>
+        ))}
+      </div>
+    );
+  }
+  if (type === "timeline") {
+    const items: TimelineItem[] = data?.timelineItems ?? [];
+    const visible = items.filter((it) => it.title);
+    if (!visible.length) return null;
+    return <TriggerTimelineView items={visible} />;
+  }
   return null;
+}
+
+function TriggerTimelineItemRow({ item, isLast }: { item: TimelineItem; isLast: boolean }) {
+  const [expanded, setExpanded] = React.useState(false);
+  return (
+    <div className="flex gap-3">
+      <div className="flex flex-col items-center">
+        <div className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary/50" />
+        {!isLast && <div className="flex-1 w-px bg-border mt-1" />}
+      </div>
+      <div className="flex-1 pb-3 min-w-0">
+        <div className="flex items-baseline gap-2">
+          {item.date && (
+            <span className="text-[0.65rem] text-muted-foreground shrink-0">{item.date}</span>
+          )}
+          <span className="text-sm font-medium leading-tight">{item.title}</span>
+          {item.description && (
+            <button
+              type="button"
+              onClick={() => setExpanded((v) => !v)}
+              className="ml-auto shrink-0 text-[0.65rem] text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {expanded ? "Réduire" : "Voir"}
+            </button>
+          )}
+        </div>
+        {expanded && item.description && (
+          <p className="mt-1 text-xs text-muted-foreground leading-relaxed">{item.description}</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TriggerTimelineView({ items }: { items: TimelineItem[] }) {
+  return (
+    <div>
+      {items.map((item, i) => (
+        <TriggerTimelineItemRow key={item.id} item={item} isLast={i === items.length - 1} />
+      ))}
+    </div>
+  );
 }
 
 export function PersonaProfileSheetTrigger({
@@ -296,7 +459,6 @@ export function PersonaProfileSheetTrigger({
                     fallback={name ? initials(name) : "?"}
                     presenceState="invisible"
                     size={128}
-                    frameUrl={frameUrl}
                     className="outline-4 outline-background rounded-2xl"
                   />
                 </div>

@@ -74,6 +74,7 @@ export default async function SidebarRail() {
           />
           <UserMenuButton
             variant="compact"
+            userId={user.id}
             username={profileData?.username ?? null}
             email={user.email ?? ""}
             avatarUrl={profileData?.avatar_url ?? null}

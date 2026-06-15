@@ -12,6 +12,7 @@ type PersonaCardProps = {
   avatarConfig?: AvatarConfigV1 | null;
   bannerUrl?: string | null;
   initialFrameId?: string | null;
+  initialFrameUrl?: string | null;
   initialSections: PersonaSectionWithFields[];
 };
 
@@ -27,6 +28,7 @@ export function PersonaCard({
   avatarConfig,
   bannerUrl,
   initialFrameId,
+  initialFrameUrl,
   initialSections,
 }: PersonaCardProps) {
   return (
@@ -38,6 +40,7 @@ export function PersonaCard({
       initialAvatarConfig={avatarConfig ?? null}
       initialBannerUrl={bannerUrl ?? null}
       initialFrameId={initialFrameId ?? null}
+      initialFrameUrl={initialFrameUrl ?? null}
       trigger={
         <button className="group relative w-full aspect-square rounded-2xl overflow-hidden bg-muted shadow-sm hover:shadow-lg transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
           {/* Image / fallback */}

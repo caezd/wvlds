@@ -206,7 +206,7 @@ export default function SidebarLayout({
         </header>
         <main
           className={cn(
-            "relative h-full w-full flex-1 max-lg:mt-2",
+            "relative h-full w-full flex-1",
             isWorld || isChat
               ? "overflow-hidden"
               : "overflow-auto rounded-2xl bg-background border border-border-soft",

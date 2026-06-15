@@ -88,6 +88,7 @@ export default async function Sidebar() {
       {/* Footer — user menu, fixé en bas du flex */}
       <div className="shrink-0 px-1 py-1.5 border-t border-border-soft">
         <UserMenuButton
+          userId={user.id}
           username={profile?.username ?? null}
           email={user.email ?? ""}
           avatarUrl={profile?.avatar_url ?? null}

@@ -1,4 +1,4 @@
-export type PersonaFieldType = "title" | "text" | "stats" | "separator" | "input" | "textarea" | "image-grid";
+export type PersonaFieldType = "title" | "text" | "stats" | "separator" | "input" | "textarea" | "image-grid" | "inventory" | "skills" | "gauges" | "quote" | "traits" | "timeline";
 
 /** Une stat individuelle dans un champ de type "stats". */
 export interface PersonaStat {
@@ -15,6 +15,47 @@ export interface PersonaGridImage {
   caption?: string;
 }
 
+/** Un item dans un champ de type "inventory". */
+export interface InventoryItem {
+  id: string;
+  name: string;
+  quantity: number;
+  description?: string;
+  icon?: string; // chemin relatif depuis /rpg_icons/, ex: "sword.svg"
+}
+
+/** Une compétence dans un champ de type "skills". */
+export interface SkillItem {
+  id: string;
+  name: string;
+  level: string; // texte libre ou nombre
+  description?: string;
+  icon?: string; // chemin relatif depuis /rpg_icons/, ex: "magic.svg"
+}
+
+/** Une jauge dans un champ de type "gauges". */
+export interface GaugeItem {
+  id: string;
+  name: string;
+  value: number;
+  max: number;
+  color: string; // couleur hex, ex: "#6366f1"
+}
+
+/** Un trait de personnalité dans un champ de type "traits". */
+export interface TraitItem {
+  id: string;
+  label: string;
+}
+
+/** Un événement dans un champ de type "timeline". */
+export interface TimelineItem {
+  id: string;
+  date?: string; // texte libre, ex: "Printemps 1347"
+  title: string;
+  description?: string;
+}
+
 /** Contenu JSON d'un champ de persona. La forme dépend du `type` du champ. */
 export interface PersonaFieldData {
   text?: string;
@@ -22,6 +63,13 @@ export interface PersonaFieldData {
   value?: string;
   items?: PersonaStat[];
   images?: PersonaGridImage[];
+  inventoryItems?: InventoryItem[];
+  skillItems?: SkillItem[];
+  gaugeItems?: GaugeItem[];
+  quoteText?: string;
+  quoteSource?: string;
+  traitItems?: TraitItem[];
+  timelineItems?: TimelineItem[];
   [key: string]: unknown;
 }
 

@@ -33,6 +33,7 @@ import {
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { deletePersona } from "@/app/(protected)/p/actions";
 import { toast } from "sonner";
+import { AvatarWithFrame } from "@/components/avatars/AvatarWithFrame";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 
 function initials(name: string) {
@@ -294,12 +295,15 @@ function FramePicker({
   supabase,
   userId,
   initialFrameId,
+  onFrameChange,
 }: {
   personaId: string;
   supabase: ReturnType<typeof createClient>;
   userId: string | null;
   initialFrameId: string | null;
+  onFrameChange?: (frameId: string | null, assetUrl: string | null) => void;
 }) {
+  const router = useRouter();
   const [frames, setFrames] = useState<OwnedFrame[]>([]);
   const [selected, setSelected] = useState<string | null>(initialFrameId);
   const [saving, setSaving] = useState(false);
@@ -325,7 +329,10 @@ function FramePicker({
     setSaving(true);
     await supabase.from("personas").update({ avatar_frame_id: frameId }).eq("id", personaId);
     setSelected(frameId);
+    const assetUrl = frameId ? (frames.find((f) => f.id === frameId)?.asset_url ?? null) : null;
+    onFrameChange?.(frameId, assetUrl);
     setSaving(false);
+    router.refresh();
   }
 
   if (!loaded) return <div className="h-4 w-32 animate-pulse rounded bg-muted" />;
@@ -377,6 +384,7 @@ type PersonaEditSheetProps = {
   initialAvatarConfig?: AvatarConfigV1 | null;
   initialBannerUrl?: string | null;
   initialFrameId?: string | null;
+  initialFrameUrl?: string | null;
   trigger?: ReactNode;
 };
 
@@ -389,6 +397,7 @@ type PersonaEditorContentProps = {
   initialAvatarConfig?: AvatarConfigV1 | null;
   initialBannerUrl?: string | null;
   initialFrameId?: string | null;
+  initialFrameUrl?: string | null;
   /** Notifie le parent quand la sheet Avatar s'ouvre/ferme (effet pile de cartes). */
   onAvatarOpenChange?: (open: boolean) => void;
   /** Notifie le parent quand la sheet Bannière s'ouvre/ferme (effet pile de cartes). */
@@ -408,6 +417,7 @@ export function PersonaEditorContent({
   initialAvatarConfig,
   initialBannerUrl,
   initialFrameId,
+  initialFrameUrl,
   onAvatarOpenChange,
   onBannerOpenChange,
 }: PersonaEditorContentProps) {
@@ -419,6 +429,7 @@ export function PersonaEditorContent({
   const [avatarUrl, setAvatarUrl] = useState<string | null>(initialAvatarUrl ?? null);
   const [bannerUrl, setBannerUrl] = useState<string | null>(initialBannerUrl ?? null);
   const [avatarConfig, setAvatarConfig] = useState<AvatarConfigV1 | null>(initialAvatarConfig ?? null);
+  const [frameUrl, setFrameUrl] = useState<string | null>(initialFrameUrl ?? null);
   const { avatar_builder } = useFeatureFlags();
   const [appearanceTab, setAppearanceTab] = useState<"avatar" | "cosmetics">("avatar");
   const [avatarSubTab, setAvatarSubTab] = useState<"builder" | "upload" | "url">(avatar_builder ? "builder" : "upload");
@@ -678,6 +689,7 @@ export function PersonaEditorContent({
                       supabase={supabase}
                       userId={userId}
                       initialFrameId={initialFrameId ?? null}
+                      onFrameChange={(_, assetUrl) => setFrameUrl(assetUrl)}
                     />
                   </div>
                 </div>
@@ -779,6 +791,7 @@ export function PersonaEditSheet({
   initialAvatarConfig,
   initialBannerUrl,
   initialFrameId,
+  initialFrameUrl,
   trigger,
 }: PersonaEditSheetProps) {
   const router = useRouter();
@@ -831,6 +844,7 @@ export function PersonaEditSheet({
               initialAvatarConfig={initialAvatarConfig}
               initialBannerUrl={initialBannerUrl}
               initialFrameId={initialFrameId}
+              initialFrameUrl={initialFrameUrl}
               onAvatarOpenChange={setAvatarOpen}
               onBannerOpenChange={setBannerOpen}
             />

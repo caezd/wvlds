@@ -313,7 +313,7 @@ export default function ChatRoomView({
       const { data: older, error } = await supabase
         .from(TABLE.CHAT_MESSAGES)
         .select(
-          "id, chat_id, content, author_id, created_at, persona:personas(id, user_id, name, avatar_url, frame:avatar_frame_id(asset_url))",
+          "id, chat_id, content, author_id, created_at, metadata, visible_to, persona:personas(id, user_id, name, avatar_url, frame:avatar_frame_id(asset_url))",
         )
         .eq("chat_id", chatId)
         .lt("created_at", oldest.created_at)

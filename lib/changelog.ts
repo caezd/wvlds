@@ -7,6 +7,51 @@ export type ChangelogEntry = {
 export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-06",
+    tag: "Profil",
+    text: "Quatre nouveaux blocs dans l'éditeur de profil persona : Jauges (barres de progression nommées avec valeur, max et couleur libre), Citation (texte markdown stylisé en blockquote avec source optionnelle), Traits (pills de personnalité), et Timeline (chronologie verticale avec date libre, titre et description repliable).",
+  },
+  {
+    date: "2026-06",
+    tag: "Persona",
+    text: "Correctif : le cadre cosmétique s'affiche désormais correctement dans l'éditeur de persona (bouton avatar + prévisualisation), sur la carte de la page Personas, et est persisté localement dès la sélection sans nécessiter un rechargement.",
+  },
+  {
+    date: "2026-06",
+    tag: "Profil",
+    text: "Deux nouveaux blocs dans l'éditeur de profil persona : Inventaire (grille d'objets avec icône RPG, nom, quantité et description) et Compétences (liste avec icône RPG, nom, niveau libre et description). Plus de 4100 icônes SVG issues du projet game-icons.net disponibles via un picker avec recherche.",
+  },
+  {
+    date: "2026-06",
+    tag: "Chatroom",
+    text: "Cinq nouveaux blocs dans le composer : Mini-fiche PNJ (nom, rôle, icône, stats), Jauge de vie (barre colorée selon le seuil restant, éditable), Alerte narrative (danger / attention / succès avec bordure colorée), Météo et ambiance (icône emoji + libellé + note de jeu), et Aparté (note hors-personnage en italique).",
+  },
+  {
+    date: "2026-06",
+    tag: "Chatroom",
+    text: "Nouveaux blocs de jeu dans le composer : Bannière (image pleine largeur), Bloc scène, Flashback et Révélation (contenu masqué jusqu'au clic). Chaque bloc est éditable et supprimable.",
+  },
+  {
+    date: "2026-06",
+    tag: "Chatroom",
+    text: "Note privée : envoyez un message visible uniquement par les destinataires que vous choisissez parmi les participants du salon.",
+  },
+  {
+    date: "2026-06",
+    tag: "Chatroom",
+    text: "Le sélecteur de couleur des dialogues affiche désormais des courbes iso-contraste WCAG directement dans le dégradé de teinte : une ligne pointillée pour le seuil AA (4,5:1) et une ligne pleine pour AAA (7:1), recalculées en temps réel selon la teinte sélectionnée.",
+  },
+  {
+    date: "2026-06",
+    tag: "Chatroom",
+    text: "Lors de l'édition d'un message, les options du composer (ex. Dialogues en bulles) sont désormais visibles et modifiables individuellement par message.",
+  },
+  {
+    date: "2026-06",
+    tag: "Comptes",
+    text: "Nouveau panneau de profil accessible depuis le menu utilisateur : modifiez votre avatar (avec recadrage carré intégré) et votre pseudo directement depuis la sidebar, sans quitter la page en cours.",
+  },
+  {
+    date: "2026-06",
     tag: "Mobile",
     text: "Correctif mobile : la carte principale a désormais 8 px d'espace sur tous les côtés (haut compris). Le composeur de message s'ajuste à la largeur du conteneur au lieu d'utiliser un padding fixe de 40 px.",
   },

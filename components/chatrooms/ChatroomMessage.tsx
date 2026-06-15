@@ -8,6 +8,15 @@ import { ChatroomMessageBubble } from "./ChatroomMessageBubble";
 import { parseChatBlock, type ChatBlock } from "@/lib/chat-blocks";
 import { DiceBlockView } from "./blocks/DiceBlock";
 import { EllipseBlockView } from "./blocks/EllipseBlock";
+import { BannerBlockView } from "./blocks/BannerBlock";
+import { SceneBlockView } from "./blocks/SceneBlock";
+import { FlashbackBlockView } from "./blocks/FlashbackBlock";
+import { RevealBlockView } from "./blocks/RevealBlock";
+import { NpcBlockView } from "./blocks/NpcBlock";
+import { AlertBlockView } from "./blocks/AlertBlock";
+import { WeatherBlockView } from "./blocks/WeatherBlock";
+import { HpBlockView } from "./blocks/HpBlock";
+import { WhisperBlockView } from "./blocks/WhisperBlock";
 import { cn } from "@/lib/utils";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -16,7 +25,7 @@ import { TABLE } from "@/lib/constants";
 import DateDisplay from "@/components/date-display";
 
 import { Button } from "@/components/ui/button";
-import { Pencil, Check, X, Loader2, SmilePlus, Trash2 } from "lucide-react";
+import { Pencil, Check, X, Loader2, SmilePlus, Trash2, MessageCircle, Lock } from "lucide-react";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 
 import { toast } from "sonner";
@@ -124,6 +133,8 @@ export default function ChatroomMessage({
   const [draft, setDraft] = useState<string>(message.content ?? "");
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [editBubbles, setEditBubbles] = useState(false);
+  const [editBubbleColor, setEditBubbleColor] = useState<string | null>(null);
 
   const [editingDiceLabel, setEditingDiceLabel] = useState(false);
   const [diceLabelDraft, setDiceLabelDraft] = useState("");
@@ -135,6 +146,14 @@ export default function ChatroomMessage({
   useEffect(() => {
     if (!editing) setDraft(message.content ?? "");
   }, [message.content, editing]);
+
+  // Initialise les options depuis les métadonnées quand l’édition s’ouvre
+  useEffect(() => {
+    if (editing) {
+      setEditBubbles(message.metadata?.bubbles ?? false);
+      setEditBubbleColor(message.metadata?.bubbleColor ?? null);
+    }
+  }, [editing]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const startEdit = useCallback(() => {
     if (!mine) return;
@@ -164,7 +183,11 @@ export default function ChatroomMessage({
       setErr("Le message ne peut pas être vide.");
       return;
     }
-    if (next === (message.content ?? "")) {
+    const contentUnchanged = next === (message.content ?? "");
+    const bubblesUnchanged =
+      editBubbles === (message.metadata?.bubbles ?? false) &&
+      editBubbleColor === (message.metadata?.bubbleColor ?? null);
+    if (contentUnchanged && bubblesUnchanged) {
       setEditing(false);
       return;
     }
@@ -174,9 +197,22 @@ export default function ChatroomMessage({
 
     const encrypted = chatroomKey ? await encryptMessage(next, chatroomKey) : next;
 
+    const wordCount = parseChatBlock(next) !== null
+      ? 0
+      : next.trim().split(/\s+/).filter(Boolean).length;
+
+    const { bubbles: _b, bubbleColor: _bc, ...restMeta } = message.metadata ?? {};
+    const updatedMetadata = {
+      ...restMeta,
+      word_count: wordCount,
+      ...(editBubbles
+        ? { bubbles: true as const, ...(editBubbleColor ? { bubbleColor: editBubbleColor } : {}) }
+        : {}),
+    };
+
     const { error } = await supabase
       .from(TABLE.CHAT_MESSAGES)
-      .update({ content: encrypted })
+      .update({ content: encrypted, metadata: updatedMetadata })
       .eq("id", message.id);
 
     setSaving(false);
@@ -189,7 +225,7 @@ export default function ChatroomMessage({
     // Mise à jour optimiste avec le texte en clair (déjà déchiffré dans l'état)
     onUpdated?.(message.id, next);
     setEditing(false);
-  }, [draft, mine, message?.content, message?.id, onUpdated, supabase]);
+  }, [draft, mine, message?.content, message?.id, message?.metadata, editBubbles, editBubbleColor, onUpdated, supabase, chatroomKey]);
 
   function onKeyDownEdit(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Escape") {
@@ -256,7 +292,7 @@ export default function ChatroomMessage({
     };
 
     return (
-      <div className="w-full py-6 group/turn-messages flex items-center justify-between gap-4">
+      <div className="w-full py-8 group/turn-messages flex items-center justify-between gap-4">
         <span className="text-sm text-muted-foreground italic">
           <strong className="font-medium not-italic text-foreground">{label}</strong>{" "}
           <DiceBlockView block={block} mine={mine} />
@@ -327,6 +363,185 @@ export default function ChatroomMessage({
           if (error) toast.error("Impossible de supprimer l'ellipse : " + error.message);
         }}
       />
+    );
+  }
+
+  if (block?._type === "banner") {
+    return (
+      <div className="py-8">
+        <BannerBlockView
+          block={block}
+          mine={mine}
+          onDelete={async () => {
+            try {
+              const pathMatch = block.url.match(/\/chat-banners\/(.+)$/);
+              if (pathMatch?.[1]) {
+                await supabase.storage.from("chat-banners").remove([pathMatch[1]]);
+              }
+            } catch { /* non-bloquant */ }
+            const { error } = await supabase.from(TABLE.CHAT_MESSAGES).delete().eq("id", message.id);
+            if (error) toast.error("Impossible de supprimer la bannière : " + error.message);
+          }}
+        />
+      </div>
+    );
+  }
+
+  if (block?._type === "scene") {
+    return (
+      <SceneBlockView
+        block={block}
+        mine={mine}
+        onEdit={async (content) => {
+          const encrypted = chatroomKey ? await encryptMessage(content, chatroomKey) : content;
+          await supabase.from(TABLE.CHAT_MESSAGES).update({ content: encrypted }).eq("id", message.id);
+          onUpdated?.(message.id, content);
+        }}
+        onDelete={async () => {
+          const { error } = await supabase.from(TABLE.CHAT_MESSAGES).delete().eq("id", message.id);
+          if (error) toast.error("Impossible de supprimer la scène : " + error.message);
+        }}
+      />
+    );
+  }
+
+  if (block?._type === "flashback") {
+    return (
+      <div className="py-8">
+        <FlashbackBlockView
+          block={block}
+          mine={mine}
+          onEdit={async (content) => {
+            const encrypted = chatroomKey ? await encryptMessage(content, chatroomKey) : content;
+            await supabase.from(TABLE.CHAT_MESSAGES).update({ content: encrypted }).eq("id", message.id);
+            onUpdated?.(message.id, content);
+          }}
+          onDelete={async () => {
+            const { error } = await supabase.from(TABLE.CHAT_MESSAGES).delete().eq("id", message.id);
+            if (error) toast.error("Impossible de supprimer le flashback : " + error.message);
+          }}
+        />
+      </div>
+    );
+  }
+
+  if (block?._type === "reveal") {
+    return (
+      <div className="py-8">
+        <RevealBlockView
+          block={block}
+          mine={mine}
+          onEdit={async (content) => {
+            const encrypted = chatroomKey ? await encryptMessage(content, chatroomKey) : content;
+            await supabase.from(TABLE.CHAT_MESSAGES).update({ content: encrypted }).eq("id", message.id);
+            onUpdated?.(message.id, content);
+          }}
+          onDelete={async () => {
+            const { error } = await supabase.from(TABLE.CHAT_MESSAGES).delete().eq("id", message.id);
+            if (error) toast.error("Impossible de supprimer la révélation : " + error.message);
+          }}
+        />
+      </div>
+    );
+  }
+
+  if (block?._type === "npc") {
+    return (
+      <div className="py-4">
+        <NpcBlockView
+          block={block}
+          mine={mine}
+          onEdit={async (content) => {
+            const encrypted = chatroomKey ? await encryptMessage(content, chatroomKey) : content;
+            await supabase.from(TABLE.CHAT_MESSAGES).update({ content: encrypted }).eq("id", message.id);
+            onUpdated?.(message.id, content);
+          }}
+          onDelete={async () => {
+            const { error } = await supabase.from(TABLE.CHAT_MESSAGES).delete().eq("id", message.id);
+            if (error) toast.error("Impossible de supprimer la fiche PNJ : " + error.message);
+          }}
+        />
+      </div>
+    );
+  }
+
+  if (block?._type === "alert") {
+    return (
+      <div className="py-4">
+        <AlertBlockView
+          block={block}
+          mine={mine}
+          onEdit={async (content) => {
+            const encrypted = chatroomKey ? await encryptMessage(content, chatroomKey) : content;
+            await supabase.from(TABLE.CHAT_MESSAGES).update({ content: encrypted }).eq("id", message.id);
+            onUpdated?.(message.id, content);
+          }}
+          onDelete={async () => {
+            const { error } = await supabase.from(TABLE.CHAT_MESSAGES).delete().eq("id", message.id);
+            if (error) toast.error("Impossible de supprimer l'alerte : " + error.message);
+          }}
+        />
+      </div>
+    );
+  }
+
+  if (block?._type === "weather") {
+    return (
+      <div className="py-4">
+        <WeatherBlockView
+          block={block}
+          mine={mine}
+          onEdit={async (content) => {
+            const encrypted = chatroomKey ? await encryptMessage(content, chatroomKey) : content;
+            await supabase.from(TABLE.CHAT_MESSAGES).update({ content: encrypted }).eq("id", message.id);
+            onUpdated?.(message.id, content);
+          }}
+          onDelete={async () => {
+            const { error } = await supabase.from(TABLE.CHAT_MESSAGES).delete().eq("id", message.id);
+            if (error) toast.error("Impossible de supprimer le bloc météo : " + error.message);
+          }}
+        />
+      </div>
+    );
+  }
+
+  if (block?._type === "hp") {
+    return (
+      <div className="py-4">
+        <HpBlockView
+          block={block}
+          mine={mine}
+          onEdit={async (content) => {
+            const encrypted = chatroomKey ? await encryptMessage(content, chatroomKey) : content;
+            await supabase.from(TABLE.CHAT_MESSAGES).update({ content: encrypted }).eq("id", message.id);
+            onUpdated?.(message.id, content);
+          }}
+          onDelete={async () => {
+            const { error } = await supabase.from(TABLE.CHAT_MESSAGES).delete().eq("id", message.id);
+            if (error) toast.error("Impossible de supprimer la jauge de vie : " + error.message);
+          }}
+        />
+      </div>
+    );
+  }
+
+  if (block?._type === "whisper") {
+    return (
+      <div className="py-4">
+        <WhisperBlockView
+          block={block}
+          mine={mine}
+          onEdit={async (content) => {
+            const encrypted = chatroomKey ? await encryptMessage(content, chatroomKey) : content;
+            await supabase.from(TABLE.CHAT_MESSAGES).update({ content: encrypted }).eq("id", message.id);
+            onUpdated?.(message.id, content);
+          }}
+          onDelete={async () => {
+            const { error } = await supabase.from(TABLE.CHAT_MESSAGES).delete().eq("id", message.id);
+            if (error) toast.error("Impossible de supprimer l'aparté : " + error.message);
+          }}
+        />
+      </div>
     );
   }
 
@@ -473,7 +688,7 @@ export default function ChatroomMessage({
               </div>
             </div>
 
-            {/* Ligne 2 : date + réactions, équilibrées sur la même ligne */}
+            {/* Ligne 2 : date + note privée + réactions */}
             <div className="flex justify-between items-center gap-2 min-h-7">
               <div className="dark:text-zinc- text-zinc-400">
                 <DateDisplay value={date} />
@@ -523,13 +738,39 @@ export default function ChatroomMessage({
                   {err && (
                     <div className="mt-1 text-xs text-destructive">{err}</div>
                   )}
-                  <div className="mt-2 text-xs text-muted-foreground">
+                  <div className="mt-2 flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setEditBubbles((v) => !v)}
+                      className={cn(
+                        "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors",
+                        editBubbles
+                          ? "border-primary/40 bg-primary/10 text-primary"
+                          : "border-border-soft text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      <MessageCircle className="h-3 w-3" />
+                      Dialogues en bulles
+                    </button>
+                  </div>
+                  <div className="mt-1.5 text-xs text-muted-foreground">
                     Esc = annuler • Entrée = enregistrer • Ctrl+Entrée = nouvelle ligne
                   </div>
                 </div>
               </div>
             ) : (
               <div className="flex flex-col gap-2">
+                {message.visible_to && (
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <Lock className="h-3 w-3 shrink-0" />
+                    <span>
+                      Note privée
+                      {message.metadata?.visible_to_labels?.length
+                        ? ` pour ${message.metadata.visible_to_labels.join(", ")}`
+                        : ""}
+                    </span>
+                  </div>
+                )}
                 <ChatroomMessageBubble
                   persona={message.persona}
                   message={message}

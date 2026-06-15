@@ -36,6 +36,7 @@ export default async function PageLayout({
     headerUserMenu = (
       <UserMenuButton
         variant="compact"
+        userId={user.id}
         username={profile?.username ?? null}
         email={user.email ?? ""}
         avatarUrl={profile?.avatar_url ?? null}

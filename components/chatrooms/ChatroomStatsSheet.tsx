@@ -8,13 +8,28 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { BarChart3 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { formatDaysAgo } from "@/lib/utils";
+import { supabaseThumb } from "@/lib/storage";
 
 type StatsUser = {
   profile_id: string;
+  username: string | null;
+  avatar_url: string | null;
+  message_count: number;
+  word_count: number;
+  avg_words_per_message: number;
+  first_message_at: string | null;
+  last_message_at: string | null;
+};
+
+type StatsPersona = {
+  persona_id: string;
+  name: string | null;
+  avatar_url: string | null;
   username: string | null;
   message_count: number;
   word_count: number;
@@ -45,11 +60,58 @@ function fmtGap(sec: number | null) {
   return `${r}s`;
 }
 
-function Initials({ name }: { name: string }) {
-  const letter = (name.replace(/^@/, "")[0] ?? "?").toUpperCase();
+function ParticipantRow({ label, sublabel, avatarUrl, badge, children }: {
+  label: string;
+  sublabel?: string;
+  avatarUrl: string | null | undefined;
+  badge: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  const initials = label.replace(/^@/, "").slice(0, 2).toUpperCase() || "?";
   return (
-    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-card-400 text-xs font-semibold text-foreground">
-      {letter}
+    <div className="flex items-start gap-3 rounded-xl border border-border-soft bg-card p-4">
+      <Avatar className="h-8 w-8 shrink-0 rounded-full">
+        <AvatarImage src={supabaseThumb(avatarUrl, 64) ?? undefined} />
+        <AvatarFallback className="text-xs font-semibold">{initials}</AvatarFallback>
+      </Avatar>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex min-w-0 items-baseline gap-1.5">
+            <span className="truncate text-sm font-medium">{label}</span>
+            {sublabel && (
+              <span className="shrink-0 text-xs text-muted-foreground">{sublabel}</span>
+            )}
+          </div>
+          {badge}
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function StatGrid({ wordCount, avg, lastAt }: {
+  wordCount: number;
+  avg: number;
+  lastAt: string | null;
+}) {
+  return (
+    <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-foreground">
+      <div>Mots <span className="font-medium text-foreground">{wordCount}</span></div>
+      <div>Moy. <span className="font-medium text-foreground">{Number(avg ?? 0).toFixed(1)} mots/msg</span></div>
+      {lastAt && (
+        <div className="col-span-2">
+          Dernier message <span className="font-medium text-foreground">{formatDaysAgo(new Date(lastAt))}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MsgBadge({ count }: { count: number }) {
+  return (
+    <span className="shrink-0 rounded-full bg-card-400 px-2 py-0.5 text-[11px] font-medium tabular-nums text-muted-foreground">
+      {count} msg
     </span>
   );
 }
@@ -64,29 +126,31 @@ export default function ChatroomStatsSheet({
   const supabase = createClient();
   const [open, setOpen] = useState(false);
   const [_loading, setLoading] = useState(false);
-  const [stats, setStats] = useState<ChatroomStatsPayload | null>(
-    initialStats ?? null,
-  );
+  const [stats, setStats] = useState<ChatroomStatsPayload | null>(initialStats ?? null);
+  const [personas, setPersonas] = useState<StatsPersona[]>([]);
+  const [tab, setTab] = useState<"users" | "personas">("users");
 
   const refetchTimer = useRef<number | null>(null);
   function scheduleRefetch() {
     if (refetchTimer.current) window.clearTimeout(refetchTimer.current);
-    refetchTimer.current = window.setTimeout(() => void fetchStats(), 150);
+    refetchTimer.current = window.setTimeout(() => void fetchAll(), 150);
   }
 
-  async function fetchStats() {
+  async function fetchAll() {
     setLoading(true);
-    const { data, error } = await supabase.rpc("get_chatroom_stats", {
-      p_chat_id: chatId,
-    });
-    if (error) toast.error("Impossible de charger les statistiques.", { description: error.message });
-    else setStats((data as ChatroomStatsPayload) ?? null);
+    const [statsRes, personasRes] = await Promise.all([
+      supabase.rpc("get_chatroom_stats", { p_chat_id: chatId }),
+      supabase.rpc("get_chatroom_persona_stats", { p_chat_id: chatId }),
+    ]);
+    if (statsRes.error) toast.error("Impossible de charger les statistiques.", { description: statsRes.error.message });
+    else setStats((statsRes.data as ChatroomStatsPayload) ?? null);
+    if (!personasRes.error) setPersonas((personasRes.data as StatsPersona[] | null) ?? []);
     setLoading(false);
   }
 
   useEffect(() => {
     if (!open) return;
-    void fetchStats();
+    void fetchAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
@@ -104,7 +168,7 @@ export default function ChatroomStatsSheet({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, chatId]);
 
-  const rows = useMemo(() => stats?.users ?? [], [stats]);
+  const userRows = useMemo(() => stats?.users ?? [], [stats]);
 
   return (
     <>
@@ -151,53 +215,67 @@ export default function ChatroomStatsSheet({
               </div>
             )}
 
-            {/* Par utilisateur */}
+            {/* Onglets par participant / par persona */}
             <div>
-              <p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Par participant
-              </p>
+              <div className="mb-4 flex gap-1 rounded-lg bg-muted p-1">
+                {(["users", "personas"] as const).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setTab(t)}
+                    className={[
+                      "flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                      tab === t
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground",
+                    ].join(" ")}
+                  >
+                    {t === "users" ? "Par participant" : "Par persona"}
+                  </button>
+                ))}
+              </div>
 
-              {!rows.length ? (
-                <p className="text-sm text-muted-foreground">Aucune donnée.</p>
+              {tab === "users" ? (
+                !userRows.length ? (
+                  <p className="text-sm text-muted-foreground">Aucune donnée.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {userRows.map((u) => {
+                      const displayName = u.username ? `@${u.username}` : u.profile_id.slice(0, 8);
+                      return (
+                        <ParticipantRow
+                          key={u.profile_id}
+                          label={displayName}
+                          avatarUrl={u.avatar_url}
+                          badge={<MsgBadge count={u.message_count} />}
+                        >
+                          <StatGrid wordCount={u.word_count} avg={u.avg_words_per_message} lastAt={u.last_message_at} />
+                        </ParticipantRow>
+                      );
+                    })}
+                  </div>
+                )
               ) : (
-                <div className="space-y-2">
-                  {rows.map((u) => {
-                    const displayName = u.username ? `@${u.username}` : u.profile_id.slice(0, 8);
-                    return (
-                      <div key={u.profile_id} className="flex items-start gap-3 rounded-xl border border-border-soft bg-card p-4">
-                        <Initials name={displayName} />
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="truncate text-sm font-medium">{displayName}</span>
-                            <span className="shrink-0 rounded-full bg-card-400 px-2 py-0.5 text-[11px] font-medium tabular-nums text-muted-foreground">
-                              {u.message_count} msg
-                            </span>
-                          </div>
-                          <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                            <div>
-                              Mots{" "}
-                              <span className="font-medium text-foreground">{u.word_count}</span>
-                            </div>
-                            <div>
-                              Moy.{" "}
-                              <span className="font-medium text-foreground">
-                                {Number(u.avg_words_per_message ?? 0).toFixed(1)} mots/msg
-                              </span>
-                            </div>
-                            {u.last_message_at && (
-                              <div className="col-span-2">
-                                Dernier message{" "}
-                                <span className="font-medium text-foreground">
-                                  {formatDaysAgo(new Date(u.last_message_at))}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                !personas.length ? (
+                  <p className="text-sm text-muted-foreground">Aucune donnée.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {personas.map((pe) => {
+                      const displayName = pe.name ?? pe.persona_id.slice(0, 8);
+                      return (
+                        <ParticipantRow
+                          key={pe.persona_id}
+                          label={displayName}
+                          sublabel={pe.username ? `@${pe.username}` : undefined}
+                          avatarUrl={pe.avatar_url}
+                          badge={<MsgBadge count={pe.message_count} />}
+                        >
+                          <StatGrid wordCount={pe.word_count} avg={pe.avg_words_per_message} lastAt={pe.last_message_at} />
+                        </ParticipantRow>
+                      );
+                    })}
+                  </div>
+                )
               )}
             </div>
 

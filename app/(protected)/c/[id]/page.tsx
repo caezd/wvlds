@@ -32,7 +32,7 @@ export default async function Page({ params }: { params: { id: string } }) {
   const { data: messages } = await supabase
     .from("chat_messages")
     .select(
-      "id, chat_id, content, author_id, created_at, metadata, persona:personas(id, user_id, name, avatar_url, frame:avatar_frame_id(asset_url))",
+      "id, chat_id, content, author_id, created_at, metadata, visible_to, persona:personas(id, user_id, name, avatar_url, frame:avatar_frame_id(asset_url))",
     )
     .eq("chat_id", id)
     .order("created_at", { ascending: false })
