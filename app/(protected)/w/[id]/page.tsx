@@ -46,12 +46,15 @@ export default async function WorldPage({
     uid: me.user?.id ?? null,
   });
   const members = world.world_members ?? [];
-  const isShared = members.some((m) => m.user_id !== world.owner_id);
 
   // Permissions selon le rôle du membre courant
   const myRole =
     members.find((m) => m.user_id === me.user?.id)?.role ??
     (world.owner_id === me.user?.id ? "owner" : null);
+
+  // Panneau membres visible dès qu'on a un rôle dans le monde (owner inclus
+  // même si absent de world_members) ou que d'autres membres existent.
+  const isShared = myRole !== null;
   const canEditTabs = ["owner", "admin", "editor"].includes(myRole ?? "");
   const canPost = ["owner", "admin", "editor", "player"].includes(
     myRole ?? "",
