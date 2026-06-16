@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Sword, Pencil, Trash2 } from "lucide-react";
+import { Sword } from "lucide-react";
 import type { NpcBlock } from "@/lib/chat-blocks";
-import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -16,6 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { EmojiPickerButton } from "@/components/chatrooms/EmojiPickerButton";
+import { GameBlockSurface, GameBlockToolbar, GameBlockEditButton } from "./GameBlockShell";
 
 export function NpcDialog({
   onSend,
@@ -136,7 +136,7 @@ export function NpcBlockView({
     : [];
 
   return (
-    <div className="group/npc w-full rounded-xl border border-teal-600/20 bg-teal-500/5 px-4 py-3">
+    <GameBlockSurface className="border-teal-600/20 bg-teal-500/5">
       <div className="flex items-center gap-3">
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-teal-500/15 text-base select-none">
           {block.emoji || initials}
@@ -147,32 +147,17 @@ export function NpcBlockView({
             <p className="text-xs text-muted-foreground mt-0.5 truncate">{block.role}</p>
           )}
         </div>
-        {mine && (
-          <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover/npc:opacity-100 transition-opacity">
-            {onEdit && (
-              <NpcDialog
-                initialBlock={block}
-                onSend={onEdit}
-                trigger={
-                  <Button variant="ghost" size="icon-sm" className="h-6 w-6">
-                    <Pencil className="h-3 w-3" />
-                  </Button>
-                }
-              />
-            )}
-            {onDelete && (
-              <DeleteConfirmDialog
-                trigger={
-                  <Button variant="ghost" size="icon-sm" className="h-6 w-6 text-destructive hover:text-destructive">
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                }
-                description="La fiche PNJ sera supprimée définitivement."
-                onConfirm={onDelete}
-              />
-            )}
-          </div>
-        )}
+        <GameBlockToolbar
+          mine={mine}
+          className="shrink-0"
+          editDialog={
+            onEdit && (
+              <NpcDialog initialBlock={block} onSend={onEdit} trigger={<GameBlockEditButton />} />
+            )
+          }
+          onDelete={onDelete}
+          deleteDescription="La fiche PNJ sera supprimée définitivement."
+        />
       </div>
       {statChips.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1.5 pl-12">
@@ -186,6 +171,6 @@ export function NpcBlockView({
           ))}
         </div>
       )}
-    </div>
+    </GameBlockSurface>
   );
 }

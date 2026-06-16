@@ -9,7 +9,7 @@ import { encryptMessage } from "@/lib/crypto";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { PersonaPickerDialog } from "@/components/personas/PersonaPickerDialog";
 import { Button } from "../ui/button";
-import { SendHorizontal, Component, Dices, Timer, Pipette, X, ImagePlus, Clapperboard, Clock, Eye, Lock, Sword, Megaphone, Cloud, Heart, Quote } from "lucide-react";
+import { SendHorizontal, Component, Dices, Pipette, X, ImagePlus, Eye, Lock, Sword, Megaphone, Heart, Square } from "lucide-react";
 import { Hint } from "@/components/ui/hint";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -17,12 +17,10 @@ import { toWebP } from "@/lib/imageUtils";
 import { ParagraphBlockEditor } from "./ParagraphBlockEditor";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { DiceDialog } from "./blocks/DiceDialog";
-import { EllipseDialog } from "./blocks/EllipseDialog";
 import { NarrativeBlockDialog } from "./blocks/NarrativeBlockDialog";
 import { NpcDialog } from "./blocks/NpcBlock";
-import { AlertDialog } from "./blocks/AlertBlock";
-import { WeatherDialog } from "./blocks/WeatherBlock";
 import { HpDialog } from "./blocks/HpBlock";
+import { CalloutDialog } from "./blocks/CalloutBlock";
 import { parseChatBlock } from "@/lib/chat-blocks";
 import {
   DropdownMenu,
@@ -38,6 +36,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { HsvColorPicker } from "@/components/ui/hsv-color-picker";
 
 export function ChatroomComposer({
   chatId,
@@ -74,6 +73,7 @@ export function ChatroomComposer({
   const supabase = useMemo(() => createClient(), []);
   const { userId } = useCurrentUser();
   const inFlightRef = useRef(false);
+  const pendingBlockMediaRef = useRef<{ url: string; name: string }[]>([]);
 
   const [value, setValue] = useState("");
   const { chatroom_media } = useFeatureFlags();
@@ -161,6 +161,22 @@ export function ChatroomComposer({
     return results;
   }
 
+  async function uploadIconImageForBlock(file: File): Promise<string | null> {
+    if (!chatId) {
+      toast.error("Sélectionnez d'abord une chatroom pour uploader une image.");
+      return null;
+    }
+    const converted = await toWebP(file);
+    const path = `${chatId}/${Date.now()}-${Math.random().toString(36).slice(2)}.webp`;
+    const { error } = await supabase.storage
+      .from("chat-media")
+      .upload(path, converted, { contentType: "image/webp" });
+    if (error) { toast.error("Erreur upload image.", { description: error.message }); return null; }
+    const { data } = supabase.storage.from("chat-media").getPublicUrl(path);
+    pendingBlockMediaRef.current = [...pendingBlockMediaRef.current, { url: data.publicUrl, name: file.name }];
+    return data.publicUrl;
+  }
+
   async function sendRaw(text: string): Promise<boolean> {
     if (!text && pendingMedia.length === 0) return false;
     if (!userId) return false;
@@ -194,6 +210,9 @@ export function ChatroomComposer({
 
       const content = targetKey ? await encryptMessage(text, targetKey) : text;
       const uploadedMedia = pendingMedia.length > 0 ? await uploadMedia(pendingMedia, targetChatId) : [];
+      const blockMedia = pendingBlockMediaRef.current;
+      pendingBlockMediaRef.current = [];
+      const allMedia = [...uploadedMedia, ...blockMedia];
 
       const wordCount = parseChatBlock(text) !== null
         ? 0
@@ -208,7 +227,7 @@ export function ChatroomComposer({
       const metadata = {
         ...(wordCount > 0 ? { word_count: wordCount } : {}),
         ...(bubbleMode ? { bubbles: true, ...(bubbleColor ? { bubbleColor } : {}) } : {}),
-        ...(uploadedMedia.length > 0 ? { media: uploadedMedia } : {}),
+        ...(allMedia.length > 0 ? { media: allMedia } : {}),
         ...(visibleToLabels?.length ? { visible_to_labels: visibleToLabels } : {}),
       };
       const finalMetadata = Object.keys(metadata).length > 0 ? metadata : null;
@@ -411,6 +430,8 @@ export function ChatroomComposer({
               onBannerSelect={chatId ? () => bannerInputRef.current?.click() : undefined}
               visibleTo={visibleTo}
               onPrivateNoteToggle={() => void togglePrivateNote()}
+              onUploadIconImage={uploadIconImageForBlock}
+              onCalloutClose={() => { pendingBlockMediaRef.current = []; }}
             />
           </span>
         </div>
@@ -440,18 +461,6 @@ export function ChatroomComposer({
   );
 }
 
-const BUBBLE_COLORS = [
-  { label: "Bleu",    value: "#1d4ed8" },
-  { label: "Indigo",  value: "#4338ca" },
-  { label: "Violet",  value: "#7c3aed" },
-  { label: "Rose",    value: "#be185d" },
-  { label: "Rouge",   value: "#b91c1c" },
-  { label: "Ambre",   value: "#b45309" },
-  { label: "Vert",    value: "#047857" },
-  { label: "Cyan",    value: "#0e7490" },
-  { label: "Ardoise", value: "#475569" },
-  { label: "Zinc",    value: "#3f3f46" },
-];
 
 function BlocksDropdown({
   onSend,
@@ -463,6 +472,8 @@ function BlocksDropdown({
   onBannerSelect,
   visibleTo,
   onPrivateNoteToggle,
+  onUploadIconImage,
+  onCalloutClose,
 }: {
   onSend: (content: string) => void;
   bubbleMode: boolean;
@@ -473,11 +484,13 @@ function BlocksDropdown({
   onBannerSelect?: () => void;
   visibleTo: string[] | null;
   onPrivateNoteToggle: () => void;
+  onUploadIconImage?: (file: File) => Promise<string | null>;
+  onCalloutClose?: () => void;
 }) {
-  const { chatroom_blocks, block_npc, block_hp, block_alert, block_weather, block_whisper } = useFeatureFlags();
+  const { chatroom_blocks, block_npc, block_hp } = useFeatureFlags();
   const [open, setOpen] = useState(false);
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
-  const [activeTool, setActiveTool] = useState<"dice" | "ellipse" | "scene" | "flashback" | "reveal" | "npc" | "alert" | "weather" | "hp" | "whisper" | null>(null);
+  const [activeTool, setActiveTool] = useState<"dice" | "reveal" | "npc" | "hp" | "callout" | null>(null);
   const activeOptionsCount = [bubbleMode, visibleTo !== null].filter(Boolean).length;
 
   return (
@@ -504,10 +517,6 @@ function BlocksDropdown({
                 <Dices className="mr-2 h-4 w-4" />
                 Lancer un dé
               </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => { setOpen(false); setActiveTool("ellipse"); }}>
-                <Timer className="mr-2 h-4 w-4" />
-                Ellipse de temps
-              </DropdownMenuItem>
               {onBannerSelect && (
                 <DropdownMenuItem onSelect={() => { setOpen(false); onBannerSelect(); }}>
                   <ImagePlus className="mr-2 h-4 w-4" />
@@ -515,19 +524,15 @@ function BlocksDropdown({
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={() => { setOpen(false); setActiveTool("scene"); }}>
-                <Clapperboard className="mr-2 h-4 w-4" />
-                Bloc scène
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => { setOpen(false); setActiveTool("flashback"); }}>
-                <Clock className="mr-2 h-4 w-4" />
-                Flashback
+              <DropdownMenuItem onSelect={() => { setOpen(false); setActiveTool("callout"); }}>
+                <Square className="mr-2 h-4 w-4" />
+                Encadré
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => { setOpen(false); setActiveTool("reveal"); }}>
                 <Eye className="mr-2 h-4 w-4" />
                 Révélation
               </DropdownMenuItem>
-              {chatroom_blocks && (block_npc || block_hp || block_alert || block_weather || block_whisper) && (
+              {chatroom_blocks && (block_npc || block_hp) && (
                 <DropdownMenuSeparator />
               )}
               {chatroom_blocks && block_npc && (
@@ -540,24 +545,6 @@ function BlocksDropdown({
                 <DropdownMenuItem onSelect={() => { setOpen(false); setActiveTool("hp"); }}>
                   <Heart className="mr-2 h-4 w-4" />
                   Jauge de vie
-                </DropdownMenuItem>
-              )}
-              {chatroom_blocks && block_alert && (
-                <DropdownMenuItem onSelect={() => { setOpen(false); setActiveTool("alert"); }}>
-                  <Megaphone className="mr-2 h-4 w-4" />
-                  Alerte narrative
-                </DropdownMenuItem>
-              )}
-              {chatroom_blocks && block_weather && (
-                <DropdownMenuItem onSelect={() => { setOpen(false); setActiveTool("weather"); }}>
-                  <Cloud className="mr-2 h-4 w-4" />
-                  Météo et ambiance
-                </DropdownMenuItem>
-              )}
-              {chatroom_blocks && block_whisper && (
-                <DropdownMenuItem onSelect={() => { setOpen(false); setActiveTool("whisper"); }}>
-                  <Quote className="mr-2 h-4 w-4" />
-                  Aparté
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
@@ -659,32 +646,15 @@ function BlocksDropdown({
         onOpenChange={(v) => !v && setActiveTool(null)}
         onSend={(content) => { onSend(content); setActiveTool(null); }}
       />
-      <EllipseDialog
-        open={activeTool === "ellipse"}
-        onOpenChange={(v) => !v && setActiveTool(null)}
+      <CalloutDialog
+        open={activeTool === "callout"}
+        onOpenChange={(v) => { if (!v) { setActiveTool(null); onCalloutClose?.(); } }}
         onSend={(content) => { onSend(content); setActiveTool(null); }}
-      />
-      <NarrativeBlockDialog
-        blockType="scene"
-        open={activeTool === "scene"}
-        onOpenChange={(v) => !v && setActiveTool(null)}
-        onSend={(content) => { onSend(content); setActiveTool(null); }}
-      />
-      <NarrativeBlockDialog
-        blockType="flashback"
-        open={activeTool === "flashback"}
-        onOpenChange={(v) => !v && setActiveTool(null)}
-        onSend={(content) => { onSend(content); setActiveTool(null); }}
+        onUploadIconImage={onUploadIconImage}
       />
       <NarrativeBlockDialog
         blockType="reveal"
         open={activeTool === "reveal"}
-        onOpenChange={(v) => !v && setActiveTool(null)}
-        onSend={(content) => { onSend(content); setActiveTool(null); }}
-      />
-      <NarrativeBlockDialog
-        blockType="whisper"
-        open={activeTool === "whisper"}
         onOpenChange={(v) => !v && setActiveTool(null)}
         onSend={(content) => { onSend(content); setActiveTool(null); }}
       />
@@ -698,136 +668,7 @@ function BlocksDropdown({
         onOpenChange={(v) => !v && setActiveTool(null)}
         onSend={(content) => { onSend(content); setActiveTool(null); }}
       />
-      <AlertDialog
-        open={activeTool === "alert"}
-        onOpenChange={(v) => !v && setActiveTool(null)}
-        onSend={(content) => { onSend(content); setActiveTool(null); }}
-      />
-      <WeatherDialog
-        open={activeTool === "weather"}
-        onOpenChange={(v) => !v && setActiveTool(null)}
-        onSend={(content) => { onSend(content); setActiveTool(null); }}
-      />
     </>
   );
 }
 
-// ─── Helpers couleur HSV ───────────────────────────────────────────────────
-function hexToHsv(hex: string): { h: number; s: number; v: number } | null {
-  const h = hex.replace("#", "");
-  if (h.length !== 6) return null;
-  const r = parseInt(h.slice(0, 2), 16) / 255;
-  const g = parseInt(h.slice(2, 4), 16) / 255;
-  const b = parseInt(h.slice(4, 6), 16) / 255;
-  const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
-  const v = max, s = max === 0 ? 0 : d / max;
-  let hh = 0;
-  if (d !== 0) {
-    if (max === r) hh = ((g - b) / d + (g < b ? 6 : 0)) / 6;
-    else if (max === g) hh = ((b - r) / d + 2) / 6;
-    else hh = ((r - g) / d + 4) / 6;
-  }
-  return { h: Math.round(hh * 360), s, v };
-}
-
-function hsvToHex(h: number, s: number, v: number): string {
-  const c = v * s, hp = h / 60, x = c * (1 - Math.abs(hp % 2 - 1)), m = v - c;
-  let r = 0, g = 0, b = 0;
-  if (hp < 1) { r = c; g = x; } else if (hp < 2) { r = x; g = c; }
-  else if (hp < 3) { g = c; b = x; } else if (hp < 4) { g = x; b = c; }
-  else if (hp < 5) { r = x; b = c; } else { r = c; b = x; }
-  return "#" + [r + m, g + m, b + m].map((n) => Math.round(n * 255).toString(16).padStart(2, "0")).join("");
-}
-
-function HsvColorPicker({ color, onChange }: { color: string; onChange: (hex: string) => void }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const hsv = hexToHsv(color) ?? { h: 220, s: 0.85, v: 0.85 };
-  const hsvRef = useRef(hsv);
-  hsvRef.current = hsv;
-  const onChangeRef = useRef(onChange);
-  onChangeRef.current = onChange;
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const dpr = window.devicePixelRatio || 1;
-    const W = canvas.offsetWidth || 220;
-    const H = canvas.offsetHeight || 150;
-    canvas.width = W * dpr;
-    canvas.height = H * dpr;
-    const ctx = canvas.getContext("2d")!;
-    ctx.scale(dpr, dpr);
-
-    ctx.fillStyle = `hsl(${hsv.h},100%,50%)`;
-    ctx.fillRect(0, 0, W, H);
-    const wg = ctx.createLinearGradient(0, 0, W, 0);
-    wg.addColorStop(0, "rgba(255,255,255,1)");
-    wg.addColorStop(1, "rgba(255,255,255,0)");
-    ctx.fillStyle = wg;
-    ctx.fillRect(0, 0, W, H);
-    const bg = ctx.createLinearGradient(0, 0, 0, H);
-    bg.addColorStop(0, "rgba(0,0,0,0)");
-    bg.addColorStop(1, "rgba(0,0,0,1)");
-    ctx.fillStyle = bg;
-    ctx.fillRect(0, 0, W, H);
-
-    const px = hsv.s * W, py = (1 - hsv.v) * H;
-    ctx.beginPath();
-    ctx.arc(px, py, 6, 0, Math.PI * 2);
-    ctx.strokeStyle = "white";
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(px, py, 6, 0, Math.PI * 2);
-    ctx.strokeStyle = "rgba(0,0,0,0.25)";
-    ctx.lineWidth = 1;
-    ctx.stroke();
-  }, [hsv.h, hsv.s, hsv.v]);
-
-  function pickSV(e: React.PointerEvent<HTMLCanvasElement>) {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const s = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    const v = Math.max(0, Math.min(1, 1 - (e.clientY - rect.top) / rect.height));
-    onChangeRef.current(hsvToHex(hsvRef.current.h, s, v));
-  }
-
-  return (
-    <div className="space-y-2">
-      <canvas
-        ref={canvasRef}
-        className="w-full block rounded-[6px] cursor-crosshair"
-        style={{ height: 150 }}
-        onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); pickSV(e); }}
-        onPointerMove={(e) => { if (e.buttons > 0) pickSV(e); }}
-      />
-
-      {/* Slider teinte */}
-      <div
-        className="relative h-3 rounded-full overflow-hidden"
-        style={{ background: "linear-gradient(to right,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00)" }}
-      >
-        <input
-          type="range" min="0" max="360" value={hsv.h}
-          onChange={(e) => onChangeRef.current(hsvToHex(parseInt(e.target.value), hsvRef.current.s, hsvRef.current.v))}
-          className="absolute inset-0 w-full opacity-0 cursor-pointer h-full"
-        />
-        <div
-          className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 border-white shadow pointer-events-none"
-          style={{ left: `calc(${(hsv.h / 360) * 100}% - 6px)`, backgroundColor: `hsl(${hsv.h},100%,50%)` }}
-        />
-      </div>
-
-      {/* Couleurs prédéfinies */}
-      <div className="flex flex-wrap gap-1.5 pt-0.5">
-        {BUBBLE_COLORS.map((c) => (
-          <button
-            key={c.value} type="button" title={c.label}
-            onClick={() => onChangeRef.current(c.value)}
-            className="h-4 w-4 rounded-sm border border-border/40 hover:ring-2 hover:ring-ring transition-shadow"
-            style={{ backgroundColor: c.value }}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}

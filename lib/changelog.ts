@@ -5,266 +5,78 @@ export type ChangelogEntry = {
 };
 
 export const CHANGELOG: ChangelogEntry[] = [
+  // ── 2026-06 ──────────────────────────────────────────────────────────────
   {
     date: "2026-06",
-    tag: "Profil",
-    text: "Quatre nouveaux blocs dans l'éditeur de profil persona : Jauges (barres de progression nommées avec valeur, max et couleur libre), Citation (texte markdown stylisé en blockquote avec source optionnelle), Traits (pills de personnalité), et Timeline (chronologie verticale avec date libre, titre et description repliable).",
-  },
-  {
-    date: "2026-06",
-    tag: "Persona",
-    text: "Correctif : le cadre cosmétique s'affiche désormais correctement dans l'éditeur de persona (bouton avatar + prévisualisation), sur la carte de la page Personas, et est persisté localement dès la sélection sans nécessiter un rechargement.",
+    tag: "Chatrooms",
+    text: "Nouvelles options pour les encadrés :\n- **Jauges** — jusqu'à N barres nommées avec valeur actuelle / max et couleur personnalisable parmi 8 presets ; remplacent les anciens blocs « Jauge de vie »\n- **Image comme icône** — uploader une image depuis le bucket du chatroom pour l'utiliser à la place d'un emoji ou d'une icône ; l'image est liée aux médias du message et nettoyée à la suppression",
   },
   {
     date: "2026-06",
     tag: "Profil",
-    text: "Deux nouveaux blocs dans l'éditeur de profil persona : Inventaire (grille d'objets avec icône RPG, nom, quantité et description) et Compétences (liste avec icône RPG, nom, niveau libre et description). Plus de 4100 icônes SVG issues du projet game-icons.net disponibles via un picker avec recherche.",
-  },
-  {
-    date: "2026-06",
-    tag: "Chatroom",
-    text: "Cinq nouveaux blocs dans le composer : Mini-fiche PNJ (nom, rôle, icône, stats), Jauge de vie (barre colorée selon le seuil restant, éditable), Alerte narrative (danger / attention / succès avec bordure colorée), Météo et ambiance (icône emoji + libellé + note de jeu), et Aparté (note hors-personnage en italique).",
-  },
-  {
-    date: "2026-06",
-    tag: "Chatroom",
-    text: "Nouveaux blocs de jeu dans le composer : Bannière (image pleine largeur), Bloc scène, Flashback et Révélation (contenu masqué jusqu'au clic). Chaque bloc est éditable et supprimable.",
-  },
-  {
-    date: "2026-06",
-    tag: "Chatroom",
-    text: "Note privée : envoyez un message visible uniquement par les destinataires que vous choisissez parmi les participants du salon.",
-  },
-  {
-    date: "2026-06",
-    tag: "Chatroom",
-    text: "Le sélecteur de couleur des dialogues affiche désormais des courbes iso-contraste WCAG directement dans le dégradé de teinte : une ligne pointillée pour le seuil AA (4,5:1) et une ligne pleine pour AAA (7:1), recalculées en temps réel selon la teinte sélectionnée.",
-  },
-  {
-    date: "2026-06",
-    tag: "Chatroom",
-    text: "Lors de l'édition d'un message, les options du composer (ex. Dialogues en bulles) sont désormais visibles et modifiables individuellement par message.",
-  },
-  {
-    date: "2026-06",
-    tag: "Comptes",
-    text: "Nouveau panneau de profil accessible depuis le menu utilisateur : modifiez votre avatar (avec recadrage carré intégré) et votre pseudo directement depuis la sidebar, sans quitter la page en cours.",
-  },
-  {
-    date: "2026-06",
-    tag: "Mobile",
-    text: "Correctif mobile : la carte principale a désormais 8 px d'espace sur tous les côtés (haut compris). Le composeur de message s'ajuste à la largeur du conteneur au lieu d'utiliser un padding fixe de 40 px.",
+    text: "Dix blocs disponibles dans l'éditeur de profil des personnages :\n- **Titre** et **Bloc de texte** (markdown)\n- **Stats** — valeurs chiffrées avec unité, en grille adaptative\n- **Inventaire** — objets avec icône RPG, quantité et description au survol\n- **Compétences** — icône RPG, nom, niveau libre et description\n- **Jauges** — barres de progression avec valeur, max et couleur personnalisable\n- **Citation** — blockquote markdown avec source optionnelle\n- **Traits** — pills de personnalité\n- **Timeline** — chronologie avec date libre et description repliable\n- **Séparateur** et **Grille d'images**\n\nPlus de 4 100 icônes SVG issues de game-icons.net, sélectionnables via un picker avec recherche.",
   },
   {
     date: "2026-06",
     tag: "Personnages",
-    text: "Correctif : l'avatar d'un persona se met à jour en temps réel dans les messages du chatroom dès qu'il est modifié, sans recharger la page. Le sélecteur de persona dans le composeur recharge aussi la liste à chaque ouverture.",
+    text: "Améliorations de l'éditeur de personnage :\n- Édition d'apparence repensée : onglets Avatar / Cosmétiques et Générateur / Upload / URL alignés en sous-menus, aperçu grand format sur desktop\n- Cadre cosmétique persisté localement dès la sélection, sans rechargement\n- Gestion des sections : renommer, réordonner (gauche/droite) et supprimer via le bouton « … » de l'onglet actif\n- L'avatar se met à jour en temps réel dans les messages dès qu'il est modifié\n- Bouton d'édition au survol dans la grille, état vide harmonisé",
   },
   {
     date: "2026-06",
-    tag: "Technique",
-    text: "Nettoyage complet de la base de code : zéro erreur ESLint et TypeScript, build de production fiabilisé. La page « Mot de passe oublié » affiche désormais une confirmation après l'envoi du lien de réinitialisation.",
+    tag: "Chatrooms",
+    text: "Blocs de jeu dans le composer (éditables et supprimables) :\n- **Lancé de dés** — formule personnalisable, préréglages, label optionnel, détection critique / fumble\n- **Encadré** — bloc narratif universel : icône (emoji Twitter, librairie Lucide 1800+ ou image uploadée), couleur d'accent, style de bordure (complète / gauche / séparateur / aucune), alignement, jauges nommées ; modèles prêts à l'emploi (Aparté, Souvenir, Scène, Ellipse, Ambiance)\n- **Révélation** — contenu masqué jusqu'au clic\n- **PNJ** — mini-fiche avec nom, rôle, icône et stats\n- **Jauge de vie** — barre colorée selon le seuil restant\n- **Bannière** — image pleine largeur\n- **Note privée** — visible uniquement par les destinataires choisis",
   },
   {
     date: "2026-06",
-    tag: "Admin",
-    text: "Nouveaux flags dans la section Fonctionnalités : « Créer une partie » masque le composeur de création dans les mondes, « Poster un message » masque le composeur dans les salles.",
-  },
-  {
-    date: "2026-06",
-    tag: "Admin",
-    text: "Nouvelle section Fonctionnalités dans le panneau d'administration : activer ou désactiver le constructeur d'avatar, la boutique, les réactions emoji, les médias dans les salles et la création de mondes publics — sans déploiement. Les modifications sont effectives immédiatement pour tous les utilisateurs dès le prochain chargement de page.",
+    tag: "Chatrooms",
+    text: "Composer et interface des salons :\n- Éditeur de blocs (contenteditable) avec indicateurs de paragraphes visuels et détection automatique des blocs au collage\n- **Dialogues en bulles** : les guillemets deviennent des bulles avec incise inline ; couleur personnalisable via un color picker avec courbes iso-contraste WCAG (AA / AAA) en temps réel\n- Images : coller ou uploader affiche un aperçu inline, puis une miniature cliquable dans le message\n- Indicateur de frappe intégré en languette animée sous le composer\n- Réactions avec picker emoji complet (thème sombre, en français, teinte de peau)\n- Suppression de ses propres messages avec confirmation\n- Options du composer visibles et modifiables lors de l'édition d'un message\n- Paramètres de salle repensés : bannière avec recadrage, icône modifiable, sauvegarde automatique",
   },
   {
     date: "2026-06",
     tag: "Mondes",
-    text: "Le bouton Inviter a été déplacé dans l'entête du panneau Membres : owners et admins peuvent désormais gérer les invitations directement depuis la liste des membres, sans quitter la vue.",
-  },
-  {
-    date: "2026-06",
-    tag: "Mondes",
-    text: "Nouveau panneau Membres dans le rail latéral des mondes et des salles : liste les membres triés par rôle, avec leur avatar de profil et un stack des personas qu'ils ont utilisés pour écrire dans le monde.",
-  },
-  {
-    date: "2026-06",
-    tag: "Chatrooms",
-    text: "Paramètres d'une salle repensés : zone de bannière avec glisser-déposer (recadrage intégré), icône modifiable via dropdown, sauvegarde automatique au changement, et footer avec bouton de suppression ghost aligné sur le style des paramètres de monde.",
-  },
-  {
-    date: "2026-06",
-    tag: "Chatrooms",
-    text: "L'indicateur « … est en train d'écrire » a été déplacé dans une languette intégrée au composer : elle se déplie depuis l'arrière du champ de saisie avec une animation de translation quand quelqu'un écrit, puis se replie derrière lorsqu'il s'arrête.",
-  },
-  {
-    date: "2026-06",
-    tag: "Chatrooms",
-    text: "Le sélecteur de réaction d'un message utilise désormais un véritable picker d'emojis complet (en français, style Twitter, thème sombre, aperçu + choix de teinte de peau) habillé aux couleurs des dropdowns de l'app. Les réactions ajoutées s'affichent avec le rendu Twitter pour rester cohérentes avec le picker.",
-  },
-  {
-    date: "2026-06",
-    tag: "Chatrooms",
-    text: "Les réactions d'un message s'affichent désormais juste en dessous des boutons réagir/éditer/supprimer, alignées avec la date et l'heure du message, au lieu d'être collées à gauche de ces boutons.",
-  },
-  {
-    date: "2026-06",
-    tag: "Performance",
-    text: "Toutes les images uploadées (avatars, bannières, icônes de monde, images de section, médias de chatroom) sont automatiquement converties en WebP avant l'envoi — réduction de 40 à 60 % du poids par rapport aux PNG/JPEG originaux.",
-  },
-  {
-    date: "2026-06",
-    tag: "Performance",
-    text: "Les images sont désormais servies en version redimensionnée via la transformation d'images Supabase, réduisant le poids des pages et accélérant le chargement.",
-  },
-  {
-    date: "2026-06",
-    tag: "Personnages",
-    text: "Ajout de la gestion des sections dans la sheet d'édition : renommer, réordonner (gauche/droite) et supprimer une section via le bouton « … » en bout d'onglet actif.",
-  },
-  {
-    date: "2026-06",
-    tag: "Personnages",
-    text: "Nouveau type de champ « Grille d'images » dans les sections d'un personnage : permet d'uploader plusieurs images affichées en grille, aussi bien en édition qu'en lecture.",
-  },
-  {
-    date: "2026-06",
-    tag: "Chatrooms",
-    text: "Il est maintenant possible de supprimer ses propres messages dans un chatroom : une icône corbeille apparaît au survol, avec un dialog de confirmation avant suppression définitive.",
-  },
-  {
-    date: "2026-06",
-    tag: "Mondes",
-    text: "Page d'un monde réorganisée : la barre d'onglets est désormais intégrée en bas de la bannière, avec un onglet « Home » (icône) qui affiche les conversations (composer + parties). Les autres onglets affichent leur contenu sous la bannière.",
-  },
-  {
-    date: "2026-06",
-    tag: "Mondes",
-    text: "Le composer pour démarrer une nouvelle partie depuis la page d'un monde réutilise désormais le composer complet des chatrooms (sélecteur de persona, blocs dé/ellipse, dialogues en bulles, images collées, Markdown). Toute amélioration du composer profite aux deux endroits.",
-  },
-  {
-    date: "2026-06",
-    tag: "Personnages",
-    text: "Nouveau type de champ « Séparateur » dans les sections d'un personnage : insère un fin trait horizontal pour aérer et structurer le contenu.",
-  },
-  {
-    date: "2026-06",
-    tag: "Personnages",
-    text: "Les onglets de sections d'un personnage adoptent le style segmenté standard de l'application (comme les onglets Avatar/Cosmétiques), aussi bien à l'édition que dans la fiche de visualisation.",
-  },
-  {
-    date: "2026-06",
-    tag: "Personnages",
-    text: "Nouveau type de champ « Stats » dans les sections d'un personnage : ajoutez des valeurs chiffrées avec une unité (AGI, INT, ANS, cm, kg…), affichées ensemble en petites cartes dans une grille qui s'adapte à la largeur.",
+    text: "Refonte de la page d'un monde :\n- Barre d'onglets intégrée sous la bannière, onglet Home avec conversations (composer + parties)\n- Le composer de démarrage de partie réutilise le composer complet des chatrooms (persona, dés, dialogues, médias…)\n- Nouveau panneau Membres : liste triée par rôle, stack des personas utilisés, bouton Inviter intégré\n- Choix de visibilité Privé / Public dans les paramètres\n- Page d'accueil avec grille « Mes mondes » / « Partagés avec moi », quota et zoom au survol",
   },
   {
     date: "2026-06",
     tag: "Interface",
-    text: "Ouvrir un panneau latéral fait désormais reculer et flouter légèrement le reste de l'application pour mettre le contenu en avant. Les panneaux empilés (ex. l'avatar par-dessus l'édition d'un personnage) laissent dépasser celui du dessous pour montrer la profondeur.",
-  },
-  {
-    date: "2026-06",
-    tag: "Personnages",
-    text: "Édition d'apparence repensée : les menus (Avatar/Cosmétiques et Générateur/Upload/URL) sont alignés en sous-menu, l'avatar actuel reste visible en tout temps dans l'en-tête et, sur grand écran, un grand aperçu s'affiche à côté du panneau.",
-  },
-  {
-    date: "2026-06",
-    tag: "Personnages",
-    text: "Sur la grille des personnages, le bouton d'édition apparaît désormais dans le coin supérieur droit au survol, et l'état vide reprend le style des autres pages.",
+    text: "Refonte de l'interface générale :\n- Sidebar : navigation en pilule avec bordure, icônes de monde dans le rail (repli sur initiale colorée), avatar avec pastille de présence en bas du rail, section « Partagés avec moi » masquée si vide\n- Panneaux latéraux empilés : recul et flou du fond, dépassement du panneau inférieur pour montrer la profondeur\n- Menu utilisateur : statut de présence tristate (en ligne / hors ligne / invisible), lien mot de passe, accès au Changelog\n- Nouvelle page Changelog : disposition timeline, badges par catégorie, filtre latéral par tag\n- **Pastille de présence** sur les avatars dans les salons : verte (actif < 5 min), orange (absent 5–10 min), grise (hors ligne) — le timer reflète l'activité réelle et n'est pas remis à zéro par les reconnexions réseau",
   },
   {
     date: "2026-06",
     tag: "Boutique",
-    text: "Boutique remaniée : le solde s'affiche dans l'en-tête avec l'emoji 🪙, le prix figure sur chaque article, et la mise en page est alignée sur le reste de l'application.",
+    text: "Boutique remaniée : solde affiché dans l'en-tête (🪙), prix sur chaque article, mise en page harmonisée.",
   },
   {
     date: "2026-06",
-    tag: "Interface",
-    text: "Sidebar repensée : boutons en pilule avec bordure au survol, bouton « Nouveau monde » ancré en bas avec le quota en bout de ligne, et largeur de contenu uniformisée entre les pages.",
-  },
-  {
-    date: "2026-06",
-    tag: "Interface",
-    text: "Sidebar réduite enrichie : l'icône personnalisée d'un monde s'affiche dans le rail (avec repli sur l'initiale colorée), et l'avatar du profil avec sa pastille de présence est désormais ancré tout en bas du rail.",
-  },
-  {
-    date: "2026-06",
-    tag: "Interface",
-    text: "La section « Partagés avec moi » de la sidebar est masquée lorsqu'aucun monde n'est partagé.",
-  },
-  {
-    date: "2026-06",
-    tag: "Correctif",
-    text: "Connexion plus fiable : les identifiants remplis automatiquement par le navigateur sont désormais pris en compte dès la première tentative, et un message d'erreur explicite s'affiche en cas d'échec.",
-  },
-  {
-    date: "2026-06",
-    tag: "Correctif",
-    text: "Confirmation d'inscription et invitations validées côté serveur : le lien du courriel fonctionne maintenant depuis n'importe quel appareil ou navigateur. Les sessions expirées redirigent automatiquement vers la page de connexion.",
+    tag: "Performance",
+    text: "Optimisation des images :\n- Conversion automatique en WebP avant upload (−40 à −60 % de poids)\n- Servies en taille adaptée via la transformation d'images Supabase",
   },
   {
     date: "2026-06",
     tag: "Comptes",
-    text: "Nouveau flux d'invitation par courriel : les utilisateurs invités reçoivent un courriel stylisé à la charte Wvlds et sont guidés vers un écran de création de mot de passe et de nom d'utilisateur.",
+    text: "Gestion des comptes :\n- Nouveau panneau de profil dans la sidebar : modifier son avatar (avec recadrage) et son pseudo sans quitter la page\n- Invitation par courriel stylisé avec création guidée de mot de passe et de pseudo\n- Pseudo obligatoire : dialogue bloquant à la première connexion jusqu'à définition d'un pseudo",
   },
   {
     date: "2026-06",
-    tag: "Comptes",
-    text: "Un nom d'utilisateur est maintenant obligatoire. Un dialogue bloquant s'affiche lors de la première connexion tant qu'aucun pseudo n'est défini.",
-  },
-  {
-    date: "2026-06",
-    tag: "Correctif",
-    text: "La suppression d'un compte depuis l'administration ne bloque plus. Les personnages et mondes de l'utilisateur sont conservés (soft-delete) et l'historique des messages reste intact.",
-  },
-  {
-    date: "2026-06",
-    tag: "Chatrooms",
-    text: "Nouveaux composants de jeu dans le composer : lancé de dés avec formule personnalisable, préréglages, étiquette optionnelle et détection critique/fumble ; ellipse de temps avec séparateur stylisé, modifiable et supprimable.",
-  },
-  {
-    date: "2026-06",
-    tag: "Chatrooms",
-    text: "Mode Dialogues en bulles : les paragraphes entre guillemets sont rendus en bulles de dialogue avec incise inline. Couleur personnalisable via un color picker avec aperçu en temps réel.",
-  },
-  {
-    date: "2026-06",
-    tag: "Chatrooms",
-    text: "Zone de saisie remplacée par un éditeur de blocs (contenteditable) : indicateurs de paragraphes visuels à gauche, détection automatique des blocs au collage depuis un message rendu.",
-  },
-  {
-    date: "2026-06",
-    tag: "Chatrooms",
-    text: "Dropdown de navigation entre salons amélioré. Pastille de présence tristate sur les avatars.",
-  },
-  {
-    date: "2026-06",
-    tag: "Chatrooms",
-    text: "Images dans le composer : coller une image affiche un aperçu avec bouton de suppression. Les images sont uploadées dans un bucket Supabase dédié et s'affichent en miniature cliquable dans le message.",
+    tag: "Admin",
+    text: "Panneau Fonctionnalités dans l'administration :\n- Activer / désactiver le constructeur d'avatar, la boutique, les réactions, les médias, les mondes publics et chaque type de bloc de profil individuellement\n- Flags « Créer une partie » et « Poster un message » pour masquer les composeurs\n- Modifications effectives immédiatement pour tous les utilisateurs, sans déploiement",
   },
   {
     date: "2026-06",
     tag: "Correctif",
-    text: "Plusieurs dialogues dans un même paragraphe (ex. \"Hey !\" dit-il. \"Et toi ?\") sont maintenant chacun rendus en bulle distincte dans le mode Dialogues en bulles.",
+    text: "Authentification et comptes :\n- Identifiants auto-remplis par le navigateur pris en compte dès la première tentative\n- Liens d'invitation et de confirmation fonctionnels depuis n'importe quel appareil ou navigateur\n- Sessions expirées redirigées automatiquement vers la page de connexion\n- Suppression de compte sans blocage (personnages et messages conservés)\n- Plusieurs dialogues dans un même paragraphe correctement rendus en bulles distinctes",
   },
   {
     date: "2026-06",
-    tag: "Interface",
-    text: "Menu profil revu : sous-menu de statut de présence (en ligne, hors ligne, invisible) avec pastille colorée sur l'avatar, lien vers le changement de mot de passe et vers le Changelog.",
+    tag: "Technique",
+    text: "Zéro erreur ESLint et TypeScript, build de production fiabilisé. La page « Mot de passe oublié » affiche une confirmation après l'envoi du lien.\n- Blocs de jeu des messages refondus autour d'un wrapper universel (carte + barre d'outils éditer/supprimer) et d'un aiguilleur unique : ajouter ou restyler un bloc se fait désormais en un seul endroit.",
   },
   {
     date: "2026-06",
-    tag: "Interface",
-    text: "Nouvelle page Changelog avec disposition timeline, badges par catégorie, filtre latéral par tag et composant Hint réutilisable pour les tooltips.",
+    tag: "Mobile",
+    text: "8 px d'espace sur tous les côtés de la carte principale. Le composeur s'ajuste à la largeur du conteneur au lieu d'un padding fixe.",
   },
-  {
-    date: "2026-06",
-    tag: "Mondes",
-    text: "Choix de la visibilité dans les paramètres d'un monde (flag Mondes publics activé) : basculer entre Privé (invitation uniquement) et Public (accessible par tous) depuis un sélecteur visuel dans les paramètres du monde.",
-  },
-  {
-    date: "2026-06",
-    tag: "Mondes",
-    text: "Nouvelle page d'accueil avec grille des mondes (séparés en \"Mes mondes\" et \"Partagés avec moi\"), gestion du quota, et zoom au survol sur les bannières.",
-  },
+  // ── 2026-05 ──────────────────────────────────────────────────────────────
   {
     date: "2026-05",
     tag: "Chatrooms",
@@ -280,20 +92,22 @@ export const CHANGELOG: ChangelogEntry[] = [
     tag: "Interface",
     text: "Refonte de la sidebar avec navigation par mondes, quota visible et menu utilisateur amélioré.",
   },
+  // ── 2026-04 ──────────────────────────────────────────────────────────────
   {
     date: "2026-04",
     tag: "Boutique",
-    text: "Lancement de la boutique : achetez des cadres et objets cosmétiques avec vos coins.",
+    text: "Lancement de la boutique : achetez des cadres et objets cosmétiques avec vos coins.",
   },
   {
     date: "2026-04",
     tag: "Personnages",
-    text: "Sections personnalisables sur les fiches de personnages : ajoutez, réorganisez et supprimez des blocs.",
+    text: "Sections personnalisables sur les fiches de personnages : ajoutez, réorganisez et supprimez des blocs.",
   },
+  // ── 2026-03 ──────────────────────────────────────────────────────────────
   {
     date: "2026-03",
     tag: "Mondes",
-    text: "Système d'invitation : invitez d'autres utilisateurs dans vos mondes avec des rôles distincts (admin, éditeur, joueur, observateur).",
+    text: "Système d'invitation : invitez d'autres utilisateurs dans vos mondes avec des rôles distincts (admin, éditeur, joueur, observateur).",
   },
   {
     date: "2026-03",

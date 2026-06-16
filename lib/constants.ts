@@ -48,8 +48,10 @@ export const DELAY = {
 
 // --- Présence globale (indicateur "en ligne") ----------------------------------
 export const PRESENCE = {
-  // Un utilisateur est "en ligne" s'il a interagi avec l'app dans cette fenêtre
-  ACTIVE_WINDOW_MS: 3 * 60_000,
+  // Inactif depuis moins de 5 min → "en ligne" (puce verte)
+  AWAY_WINDOW_MS: 5 * 60_000,
+  // Inactif entre 5 et 10 min → "absent" (puce orange)
+  OFFLINE_WINDOW_MS: 10 * 60_000,
   // Fréquence max de mise à jour de last_active_at sur le canal de présence
   HEARTBEAT_MS: 60_000,
   // Fréquence de recalcul local de la liste des utilisateurs en ligne

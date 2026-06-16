@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Heart, Pencil, Trash2 } from "lucide-react";
+import { Heart } from "lucide-react";
 import type { HpBlock } from "@/lib/chat-blocks";
-import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -16,6 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { GameBlockSurface, GameBlockToolbar, GameBlockEditButton } from "./GameBlockShell";
 
 export function HpDialog({
   onSend,
@@ -142,7 +142,7 @@ export function HpBlockView({
   const valueColor = pct <= 30 ? "text-red-500" : "text-foreground";
 
   return (
-    <div className="group/hp w-full rounded-xl border border-border-soft bg-card px-4 py-3">
+    <GameBlockSurface>
       <div className="flex items-center justify-between gap-2 mb-2">
         <div className="flex items-center gap-1.5 min-w-0">
           <Heart className="h-3.5 w-3.5 text-red-500/70 shrink-0" />
@@ -153,32 +153,16 @@ export function HpBlockView({
             <span className={cn("font-semibold", valueColor)}>{block.current}</span>
             {" / "}{block.max} PV
           </span>
-          {mine && (
-            <div className="flex items-center gap-0.5 opacity-0 group-hover/hp:opacity-100 transition-opacity">
-              {onEdit && (
-                <HpDialog
-                  initialBlock={block}
-                  onSend={onEdit}
-                  trigger={
-                    <Button variant="ghost" size="icon-sm" className="h-6 w-6">
-                      <Pencil className="h-3 w-3" />
-                    </Button>
-                  }
-                />
-              )}
-              {onDelete && (
-                <DeleteConfirmDialog
-                  trigger={
-                    <Button variant="ghost" size="icon-sm" className="h-6 w-6 text-destructive hover:text-destructive">
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  }
-                  description="La jauge de vie sera supprimée définitivement."
-                  onConfirm={onDelete}
-                />
-              )}
-            </div>
-          )}
+          <GameBlockToolbar
+            mine={mine}
+            editDialog={
+              onEdit && (
+                <HpDialog initialBlock={block} onSend={onEdit} trigger={<GameBlockEditButton />} />
+              )
+            }
+            onDelete={onDelete}
+            deleteDescription="La jauge de vie sera supprimée définitivement."
+          />
         </div>
       </div>
       <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
@@ -187,6 +171,6 @@ export function HpBlockView({
           style={{ width: `${pct}%` }}
         />
       </div>
-    </div>
+    </GameBlockSurface>
   );
 }

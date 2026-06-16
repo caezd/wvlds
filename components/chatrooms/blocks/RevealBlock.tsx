@@ -1,11 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Eye, EyeOff, Pencil, Trash2 } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import type { RevealBlock } from "@/lib/chat-blocks";
-import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
-import { Button } from "@/components/ui/button";
 import { NarrativeBlockDialog } from "./NarrativeBlockDialog";
+import { GameBlockToolbar, GameBlockEditButton } from "./GameBlockShell";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 
 export function RevealBlockView({
@@ -22,7 +21,7 @@ export function RevealBlockView({
   const [revealed, setRevealed] = useState(false);
 
   return (
-    <div className="group/reveal w-full rounded-xl border border-border-soft bg-card overflow-hidden">
+    <div className="group/gblock w-full rounded-xl border border-border-soft bg-card overflow-hidden">
       {/* Ligne toggle + boutons edit/delete alignés à droite */}
       <div className="flex items-center">
         <button
@@ -42,38 +41,23 @@ export function RevealBlockView({
             </>
           )}
         </button>
-        {mine && (
-          <div className="flex items-center gap-0.5 pr-2 opacity-0 group-hover/reveal:opacity-100 transition-opacity">
-            {onEdit && (
+        <GameBlockToolbar
+          mine={mine}
+          className="pr-2"
+          editDialog={
+            onEdit && (
               <NarrativeBlockDialog
                 blockType="reveal"
                 initialText={block.text}
                 initialExtra={block.hint}
                 onSend={onEdit}
-                trigger={
-                  <Button variant="ghost" size="icon-sm" className="h-6 w-6">
-                    <Pencil className="h-3 w-3" />
-                  </Button>
-                }
+                trigger={<GameBlockEditButton />}
               />
-            )}
-            {onDelete && (
-              <DeleteConfirmDialog
-                trigger={
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    className="h-6 w-6 text-destructive hover:text-destructive"
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                }
-                description="La révélation sera supprimée définitivement."
-                onConfirm={onDelete}
-              />
-            )}
-          </div>
-        )}
+            )
+          }
+          onDelete={onDelete}
+          deleteDescription="La révélation sera supprimée définitivement."
+        />
       </div>
 
       {revealed && (

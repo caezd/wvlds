@@ -28,9 +28,6 @@ const FIELD_KEYS: FlagKey[] = [
 const BLOCK_KEYS: FlagKey[] = [
   "block_npc",
   "block_hp",
-  "block_alert",
-  "block_weather",
-  "block_whisper",
 ];
 
 type GroupDef = {

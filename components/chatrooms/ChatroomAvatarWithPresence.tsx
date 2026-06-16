@@ -14,7 +14,7 @@ export function ChatroomAvatarWithPresence({
   src?: string | null;
   alt?: string;
   fallback?: string;
-  presenceState?: "online" | "offline" | "invisible";
+  presenceState?: "online" | "away" | "offline" | "invisible";
   size?: number;
   rounded?: boolean;
   className?: string;
@@ -40,6 +40,9 @@ export function ChatroomAvatarWithPresence({
 
       {presenceState === "online" && (
         <span className="absolute -bottom-1 -right-1 h-2 w-2 z-10 rounded-full ring-2 ring-background bg-[#58F4A8]" />
+      )}
+      {presenceState === "away" && (
+        <span className="absolute -bottom-1 -right-1 h-2 w-2 z-10 rounded-full ring-2 ring-background bg-orange-400" />
       )}
       {presenceState === "offline" && (
         <span className="absolute -bottom-1 -right-1 h-2 w-2 z-10 rounded-full ring-2 ring-background bg-red-500" />

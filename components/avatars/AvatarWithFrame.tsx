@@ -16,12 +16,12 @@ export function AvatarWithFrame({
   fallback?: string;
   /** @deprecated use presenceState */
   online?: boolean;
-  presenceState?: "online" | "offline" | "invisible";
+  presenceState?: "online" | "away" | "offline" | "invisible";
   size?: number;
   frameUrl?: string | null;
   className?: string;
 }) {
-  const resolved: "online" | "offline" | "invisible" =
+  const resolved: "online" | "away" | "offline" | "invisible" =
     presenceState ?? (online ? "online" : "offline");
 
   return (

@@ -6,17 +6,7 @@ import type { ReactionSummary } from "@/types/db";
 import { AvatarWithFrame } from "@/components/avatars/AvatarWithFrame";
 import { ChatroomMessageBubble } from "./ChatroomMessageBubble";
 import { parseChatBlock, type ChatBlock } from "@/lib/chat-blocks";
-import { DiceBlockView } from "./blocks/DiceBlock";
-import { EllipseBlockView } from "./blocks/EllipseBlock";
-import { BannerBlockView } from "./blocks/BannerBlock";
-import { SceneBlockView } from "./blocks/SceneBlock";
-import { FlashbackBlockView } from "./blocks/FlashbackBlock";
-import { RevealBlockView } from "./blocks/RevealBlock";
-import { NpcBlockView } from "./blocks/NpcBlock";
-import { AlertBlockView } from "./blocks/AlertBlock";
-import { WeatherBlockView } from "./blocks/WeatherBlock";
-import { HpBlockView } from "./blocks/HpBlock";
-import { WhisperBlockView } from "./blocks/WhisperBlock";
+import { GameBlockRenderer } from "./blocks/GameBlockRenderer";
 import { cn } from "@/lib/utils";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -36,6 +26,7 @@ import {
 } from "@/components/ui/popover";
 
 import { PersonaProfileSheetTrigger } from "@/components/personas/PersonaProfileSheetTrigger";
+import { useGlobalPresence } from "@/components/providers/PresenceProvider";
 import { ChatReactionPicker } from "./ChatReactionPicker";
 import { ReactionEmoji } from "./ReactionEmoji";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
@@ -111,15 +102,14 @@ export default function ChatroomMessage({
   onForceEditConsumed?: () => void;
 }) {
   const supabase = useMemo(() => createClient(), []);
+  const { getUserPresence } = useGlobalPresence();
 
   const block = parseChatBlock(message.content ?? "") as ChatBlock | null;
-  const blockRef: ChatBlock | null = block;
   const mine = isMyMessage(message, selfId);
-  const isOnline = !!online[message.author_id];
-  const presenceState: "online" | "offline" | "invisible" = isOnline
-    ? "online"
-    : (invisibleUsers?.has(message.author_id) ? "invisible" : "offline");
   const avatarSrc = online[message.author_id]?.avatar_url ?? undefined;
+  const presenceState: "online" | "away" | "offline" | "invisible" = invisibleUsers?.has(message.author_id)
+    ? "invisible"
+    : getUserPresence(message.author_id);
 
   const date = message.created_at;
 
@@ -135,9 +125,6 @@ export default function ChatroomMessage({
   const [err, setErr] = useState<string | null>(null);
   const [editBubbles, setEditBubbles] = useState(false);
   const [editBubbleColor, setEditBubbleColor] = useState<string | null>(null);
-
-  const [editingDiceLabel, setEditingDiceLabel] = useState(false);
-  const [diceLabelDraft, setDiceLabelDraft] = useState("");
 
   const [pickerOpen, setPickerOpen] = useState(false);
   const { emoji_reactions } = useFeatureFlags();
@@ -280,273 +267,34 @@ export default function ChatroomMessage({
   }
   /* reactions */
 
-  // Rendu spécial : lancé de dé (ligne unique sans avatar)
-  if (block?._type === "dice") {
-    const saveDiceLabel = async () => {
-      const updated = { ...block, label: diceLabelDraft.trim() || undefined };
-      const newContent = JSON.stringify(updated);
-      const encrypted = chatroomKey ? await encryptMessage(newContent, chatroomKey) : newContent;
-      const { error } = await supabase.from(TABLE.CHAT_MESSAGES).update({ content: encrypted }).eq("id", message.id);
-      if (error) toast.error("Impossible de modifier : " + error.message);
-      else { setEditingDiceLabel(false); onUpdated?.(message.id, newContent); }
-    };
-
+  // Blocs de jeu (dé, ellipse, bannière, scène, PNJ, alerte, météo, PV, etc.) :
+  // un aiguilleur unique gère le rendu, l'édition et la suppression.
+  if (block) {
     return (
-      <div className="w-full py-8 group/turn-messages flex items-center justify-between gap-4">
-        <span className="text-sm text-muted-foreground italic">
-          <strong className="font-medium not-italic text-foreground">{label}</strong>{" "}
-          <DiceBlockView block={block} mine={mine} />
-          {editingDiceLabel && (
-            <input
-              autoFocus
-              value={diceLabelDraft}
-              onChange={(e) => setDiceLabelDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") void saveDiceLabel();
-                if (e.key === "Escape") setEditingDiceLabel(false);
-              }}
-              placeholder="Description…"
-              className="ml-2 not-italic bg-transparent border-b border-border focus:border-primary outline-none text-sm text-foreground w-36"
-            />
-          )}
-        </span>
-        {mine && (
-          <div className="flex items-center gap-1 opacity-0 group-hover/turn-messages:opacity-100 transition-opacity shrink-0">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7"
-              title="Modifier la description"
-              onClick={() => { setDiceLabelDraft(block.label ?? ""); setEditingDiceLabel(true); }}
-            >
-              <Pencil className="h-4 w-4" />
-            </Button>
-            <DeleteConfirmDialog
-              trigger={
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 text-destructive hover:text-destructive"
-                  aria-label="Supprimer le lancé"
-                  title="Supprimer"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              }
-              description="Le lancé de dé sera supprimé définitivement."
-              onConfirm={async () => {
-                const { error } = await supabase.from(TABLE.CHAT_MESSAGES).delete().eq("id", message.id);
-                if (error) toast.error("Impossible de supprimer le lancé : " + error.message);
-              }}
-            />
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  // Rendu spécial : ellipse de temps (séparateur pleine largeur)
-  if (block?._type === "ellipse") {
-    return (
-      <EllipseBlockView
-        block={block}
-        canEdit={mine}
-        onEdit={async (content) => {
-          const encrypted = chatroomKey ? await encryptMessage(content, chatroomKey) : content;
-          await supabase.from(TABLE.CHAT_MESSAGES).update({ content: encrypted }).eq("id", message.id);
-          onUpdated?.(message.id, content);
-        }}
-        onDelete={async () => {
-          const { error } = await supabase.from(TABLE.CHAT_MESSAGES).delete().eq("id", message.id);
-          if (error) toast.error("Impossible de supprimer l'ellipse : " + error.message);
-        }}
-      />
-    );
-  }
-
-  if (block?._type === "banner") {
-    return (
-      <div className="py-8">
-        <BannerBlockView
-          block={block}
-          mine={mine}
-          onDelete={async () => {
-            try {
-              const pathMatch = block.url.match(/\/chat-banners\/(.+)$/);
-              if (pathMatch?.[1]) {
-                await supabase.storage.from("chat-banners").remove([pathMatch[1]]);
-              }
-            } catch { /* non-bloquant */ }
-            const { error } = await supabase.from(TABLE.CHAT_MESSAGES).delete().eq("id", message.id);
-            if (error) toast.error("Impossible de supprimer la bannière : " + error.message);
-          }}
-        />
-      </div>
-    );
-  }
-
-  if (block?._type === "scene") {
-    return (
-      <SceneBlockView
+      <GameBlockRenderer
         block={block}
         mine={mine}
-        onEdit={async (content) => {
-          const encrypted = chatroomKey ? await encryptMessage(content, chatroomKey) : content;
-          await supabase.from(TABLE.CHAT_MESSAGES).update({ content: encrypted }).eq("id", message.id);
-          onUpdated?.(message.id, content);
-        }}
-        onDelete={async () => {
-          const { error } = await supabase.from(TABLE.CHAT_MESSAGES).delete().eq("id", message.id);
-          if (error) toast.error("Impossible de supprimer la scène : " + error.message);
-        }}
+        label={label}
+        message={message}
+        chatroomKey={chatroomKey}
+        onUpdated={onUpdated}
       />
-    );
-  }
-
-  if (block?._type === "flashback") {
-    return (
-      <div className="py-8">
-        <FlashbackBlockView
-          block={block}
-          mine={mine}
-          onEdit={async (content) => {
-            const encrypted = chatroomKey ? await encryptMessage(content, chatroomKey) : content;
-            await supabase.from(TABLE.CHAT_MESSAGES).update({ content: encrypted }).eq("id", message.id);
-            onUpdated?.(message.id, content);
-          }}
-          onDelete={async () => {
-            const { error } = await supabase.from(TABLE.CHAT_MESSAGES).delete().eq("id", message.id);
-            if (error) toast.error("Impossible de supprimer le flashback : " + error.message);
-          }}
-        />
-      </div>
-    );
-  }
-
-  if (block?._type === "reveal") {
-    return (
-      <div className="py-8">
-        <RevealBlockView
-          block={block}
-          mine={mine}
-          onEdit={async (content) => {
-            const encrypted = chatroomKey ? await encryptMessage(content, chatroomKey) : content;
-            await supabase.from(TABLE.CHAT_MESSAGES).update({ content: encrypted }).eq("id", message.id);
-            onUpdated?.(message.id, content);
-          }}
-          onDelete={async () => {
-            const { error } = await supabase.from(TABLE.CHAT_MESSAGES).delete().eq("id", message.id);
-            if (error) toast.error("Impossible de supprimer la révélation : " + error.message);
-          }}
-        />
-      </div>
-    );
-  }
-
-  if (block?._type === "npc") {
-    return (
-      <div className="py-4">
-        <NpcBlockView
-          block={block}
-          mine={mine}
-          onEdit={async (content) => {
-            const encrypted = chatroomKey ? await encryptMessage(content, chatroomKey) : content;
-            await supabase.from(TABLE.CHAT_MESSAGES).update({ content: encrypted }).eq("id", message.id);
-            onUpdated?.(message.id, content);
-          }}
-          onDelete={async () => {
-            const { error } = await supabase.from(TABLE.CHAT_MESSAGES).delete().eq("id", message.id);
-            if (error) toast.error("Impossible de supprimer la fiche PNJ : " + error.message);
-          }}
-        />
-      </div>
-    );
-  }
-
-  if (block?._type === "alert") {
-    return (
-      <div className="py-4">
-        <AlertBlockView
-          block={block}
-          mine={mine}
-          onEdit={async (content) => {
-            const encrypted = chatroomKey ? await encryptMessage(content, chatroomKey) : content;
-            await supabase.from(TABLE.CHAT_MESSAGES).update({ content: encrypted }).eq("id", message.id);
-            onUpdated?.(message.id, content);
-          }}
-          onDelete={async () => {
-            const { error } = await supabase.from(TABLE.CHAT_MESSAGES).delete().eq("id", message.id);
-            if (error) toast.error("Impossible de supprimer l'alerte : " + error.message);
-          }}
-        />
-      </div>
-    );
-  }
-
-  if (block?._type === "weather") {
-    return (
-      <div className="py-4">
-        <WeatherBlockView
-          block={block}
-          mine={mine}
-          onEdit={async (content) => {
-            const encrypted = chatroomKey ? await encryptMessage(content, chatroomKey) : content;
-            await supabase.from(TABLE.CHAT_MESSAGES).update({ content: encrypted }).eq("id", message.id);
-            onUpdated?.(message.id, content);
-          }}
-          onDelete={async () => {
-            const { error } = await supabase.from(TABLE.CHAT_MESSAGES).delete().eq("id", message.id);
-            if (error) toast.error("Impossible de supprimer le bloc météo : " + error.message);
-          }}
-        />
-      </div>
-    );
-  }
-
-  if (block?._type === "hp") {
-    return (
-      <div className="py-4">
-        <HpBlockView
-          block={block}
-          mine={mine}
-          onEdit={async (content) => {
-            const encrypted = chatroomKey ? await encryptMessage(content, chatroomKey) : content;
-            await supabase.from(TABLE.CHAT_MESSAGES).update({ content: encrypted }).eq("id", message.id);
-            onUpdated?.(message.id, content);
-          }}
-          onDelete={async () => {
-            const { error } = await supabase.from(TABLE.CHAT_MESSAGES).delete().eq("id", message.id);
-            if (error) toast.error("Impossible de supprimer la jauge de vie : " + error.message);
-          }}
-        />
-      </div>
-    );
-  }
-
-  if (block?._type === "whisper") {
-    return (
-      <div className="py-4">
-        <WhisperBlockView
-          block={block}
-          mine={mine}
-          onEdit={async (content) => {
-            const encrypted = chatroomKey ? await encryptMessage(content, chatroomKey) : content;
-            await supabase.from(TABLE.CHAT_MESSAGES).update({ content: encrypted }).eq("id", message.id);
-            onUpdated?.(message.id, content);
-          }}
-          onDelete={async () => {
-            const { error } = await supabase.from(TABLE.CHAT_MESSAGES).delete().eq("id", message.id);
-            if (error) toast.error("Impossible de supprimer l'aparté : " + error.message);
-          }}
-        />
-      </div>
     );
   }
 
   return (
-    <article className="w-full py-8 group/turn-messages">
+    <article className={cn("w-full py-8 group/turn-messages", message.visible_to && "bg-card/40 px-4")}>
+      {message.visible_to && (
+        <div className="flex items-center gap-1 text-xs text-muted-foreground mb-3">
+          <Lock className="h-3 w-3 shrink-0" />
+          <span>
+            Note privée
+            {message.metadata?.visible_to_labels?.length
+              ? ` pour ${message.metadata.visible_to_labels.join(", ")}`
+              : ""}
+          </span>
+        </div>
+      )}
       <div className="flex w-full flex-col justify-between gap-8">
         <div className="flex flex-1 gap-4">
           {message.persona?.name && (
@@ -600,7 +348,7 @@ export default function ChatroomMessage({
                   </Popover>
                 )}
 
-                {mine && !editing && !block && (
+                {mine && !editing && (
                   <>
                     <Button
                       type="button"
@@ -634,27 +382,6 @@ export default function ChatroomMessage({
                       }}
                     />
                   </>
-                )}
-                {mine && !editing && blockRef?._type === "dice" && (
-                  <DeleteConfirmDialog
-                    trigger={
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 opacity-0 group-hover/turn-messages:opacity-100 transition-opacity text-destructive hover:text-destructive"
-                        aria-label="Supprimer le lancé"
-                        title="Supprimer"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    }
-                    description="Le lancé de dé sera supprimé définitivement."
-                    onConfirm={async () => {
-                      const { error } = await supabase.from(TABLE.CHAT_MESSAGES).delete().eq("id", message.id);
-                      if (error) toast.error("Impossible de supprimer le lancé : " + error.message);
-                    }}
-                  />
                 )}
 
                 {mine && editing && (
@@ -760,17 +487,6 @@ export default function ChatroomMessage({
               </div>
             ) : (
               <div className="flex flex-col gap-2">
-                {message.visible_to && (
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <Lock className="h-3 w-3 shrink-0" />
-                    <span>
-                      Note privée
-                      {message.metadata?.visible_to_labels?.length
-                        ? ` pour ${message.metadata.visible_to_labels.join(", ")}`
-                        : ""}
-                    </span>
-                  </div>
-                )}
                 <ChatroomMessageBubble
                   persona={message.persona}
                   message={message}

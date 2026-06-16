@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Clapperboard, Clock, Eye, Quote } from "lucide-react";
+import { Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -15,7 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export type NarrativeBlockType = "scene" | "flashback" | "reveal" | "whisper";
+export type NarrativeBlockType = "reveal";
 
 type Config = {
   title: string;
@@ -28,24 +28,6 @@ type Config = {
 };
 
 const CONFIG: Record<NarrativeBlockType, Config> = {
-  scene: {
-    title: "Bloc scène",
-    Icon: Clapperboard,
-    textLabel: "Description de la scène",
-    textPlaceholder: "Décrivez l'ambiance, le lieu, l'atmosphère…",
-    extraLabel: "Libellé (optionnel)",
-    extraKey: "label",
-    extraPlaceholder: "ex. Scène, Narrateur, Introduction…",
-  },
-  flashback: {
-    title: "Flashback",
-    Icon: Clock,
-    textLabel: "Contenu du souvenir",
-    textPlaceholder: "Ce qui s'est passé…",
-    extraLabel: "Époque (optionnel)",
-    extraKey: "when",
-    extraPlaceholder: "ex. Trois ans plus tôt…",
-  },
   reveal: {
     title: "Révélation",
     Icon: Eye,
@@ -54,12 +36,6 @@ const CONFIG: Record<NarrativeBlockType, Config> = {
     extraLabel: "Indice (optionnel)",
     extraKey: "hint",
     extraPlaceholder: "ex. Un secret s'apprête à être révélé…",
-  },
-  whisper: {
-    title: "Aparté",
-    Icon: Quote,
-    textLabel: "Note hors-personnage",
-    textPlaceholder: "Visible par tous les joueurs — hors-jeu uniquement…",
   },
 };
 

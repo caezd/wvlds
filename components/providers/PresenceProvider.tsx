@@ -23,9 +23,11 @@ export type GlobalPresenceMeta = {
 };
 
 type Ctx = {
-    /** Utilisateurs ayant interagi avec l'app dans la fenêtre PRESENCE.ACTIVE_WINDOW_MS */
+    /** Utilisateurs visibles : "en ligne" ou "absent" (dans la fenêtre PRESENCE.OFFLINE_WINDOW_MS) */
     onlineUsers: Record<string, GlobalPresenceMeta>;
     isUserOnline: (userId?: string | null) => boolean;
+    /** Retourne le statut fin-grain d'un utilisateur : "online" | "away" | "offline" */
+    getUserPresence: (userId?: string | null) => "online" | "away" | "offline";
     status: PresenceStatus;
     /** Mode invisible : ne publie ni présence realtime ni last_seen_at */
     appearOffline: boolean;
@@ -38,6 +40,7 @@ const PresenceCtx = createContext<Ctx | null>(null);
 const DEFAULT_CTX: Ctx = {
     onlineUsers: {},
     isUserOnline: () => false,
+    getUserPresence: () => "offline",
     status: "online",
     appearOffline: false,
     setAppearOffline: async () => {},
@@ -48,10 +51,17 @@ export function useGlobalPresence() {
     return useContext(PresenceCtx) ?? DEFAULT_CTX;
 }
 
-function isActive(meta: GlobalPresenceMeta) {
-    if (!meta.last_active_at) return false;
-    const ts = Date.parse(meta.last_active_at);
-    return Number.isFinite(ts) && Date.now() - ts < PRESENCE.ACTIVE_WINDOW_MS;
+function getPresenceStatus(meta: GlobalPresenceMeta): "online" | "away" | "offline" {
+    if (!meta.last_active_at) return "offline";
+    const elapsed = Date.now() - Date.parse(meta.last_active_at);
+    if (!Number.isFinite(elapsed)) return "offline";
+    if (elapsed < PRESENCE.AWAY_WINDOW_MS) return "online";
+    if (elapsed < PRESENCE.OFFLINE_WINDOW_MS) return "away";
+    return "offline";
+}
+
+function isVisible(meta: GlobalPresenceMeta) {
+    return getPresenceStatus(meta) !== "offline";
 }
 
 function parsePresenceState(
@@ -98,15 +108,19 @@ export default function PresenceProvider({ children }: { children: React.ReactNo
 
     const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
     const trackRef = useRef<(force?: boolean) => Promise<void>>(async () => {});
+    // Horodatage de la dernière vraie interaction utilisateur (distinct de lastTrack).
+    // track() utilise cette valeur pour last_active_at même lors des reconnexions,
+    // évitant de remettre le timer à zéro à chaque reconnexion WebSocket.
+    const lastActivityAtRef = useRef<number>(Date.now());
 
     const recompute = useCallback(() => {
         for (const [uid, meta] of Object.entries(lingeringRef.current)) {
-            if (!isActive(meta)) delete lingeringRef.current[uid];
+            if (!isVisible(meta)) delete lingeringRef.current[uid];
         }
         const next: Record<string, GlobalPresenceMeta> = {};
         for (const source of [lingeringRef.current, rawRef.current]) {
             for (const [uid, meta] of Object.entries(source)) {
-                if (isActive(meta)) next[uid] = meta;
+                if (isVisible(meta)) next[uid] = meta;
             }
         }
         setOnlineUsers((prev) => {
@@ -138,7 +152,10 @@ export default function PresenceProvider({ children }: { children: React.ReactNo
             const now = Date.now();
             if (!force && now - lastTrack < PRESENCE.HEARTBEAT_MS) return;
             lastTrack = now;
-            const iso = new Date(now).toISOString();
+            // On utilise la dernière vraie activité utilisateur, pas now().
+            // Ainsi, une reconnexion WebSocket (subscribe → force=true) ne remet
+            // pas le timer à zéro si l'utilisateur est inactif depuis longtemps.
+            const iso = new Date(lastActivityAtRef.current).toISOString();
             await ch.track({
                 user_id: userId,
                 username: profile.username,
@@ -184,7 +201,7 @@ export default function PresenceProvider({ children }: { children: React.ReactNo
                 // expiration de leur fenêtre d'activité (sauf soi-même en mode invisible)
                 for (const [uid, meta] of Object.entries(rawRef.current)) {
                     const hiddenSelf = uid === userId && appearOfflineRef.current;
-                    if (!nextRaw[uid] && isActive(meta) && !hiddenSelf) {
+                    if (!nextRaw[uid] && isVisible(meta) && !hiddenSelf) {
                         lingeringRef.current[uid] = meta;
                     }
                 }
@@ -202,7 +219,10 @@ export default function PresenceProvider({ children }: { children: React.ReactNo
         })();
 
         // Toute interaction rafraîchit last_active_at (throttlé par HEARTBEAT_MS)
-        const onActivity = () => void track();
+        const onActivity = () => {
+            lastActivityAtRef.current = Date.now();
+            void track();
+        };
         const events: (keyof WindowEventMap)[] = [
             "pointerdown",
             "keydown",
@@ -214,7 +234,10 @@ export default function PresenceProvider({ children }: { children: React.ReactNo
             window.addEventListener(e, onActivity, { passive: true }),
         );
         const onVis = () => {
-            if (document.visibilityState === "visible") void track();
+            if (document.visibilityState === "visible") {
+                lastActivityAtRef.current = Date.now();
+                void track();
+            }
         };
         document.addEventListener("visibilitychange", onVis);
 
@@ -275,9 +298,19 @@ export default function PresenceProvider({ children }: { children: React.ReactNo
         [onlineUsers],
     );
 
+    const getUserPresence = useCallback(
+        (uid?: string | null): "online" | "away" | "offline" => {
+            if (!uid) return "offline";
+            const meta = onlineUsers[uid];
+            if (!meta) return "offline";
+            return getPresenceStatus(meta);
+        },
+        [onlineUsers],
+    );
+
     const value = useMemo<Ctx>(
-        () => ({ onlineUsers, isUserOnline, status, appearOffline, setAppearOffline, setStatus }),
-        [onlineUsers, isUserOnline, status, appearOffline, setAppearOffline, setStatus],
+        () => ({ onlineUsers, isUserOnline, getUserPresence, status, appearOffline, setAppearOffline, setStatus }),
+        [onlineUsers, isUserOnline, getUserPresence, status, appearOffline, setAppearOffline, setStatus],
     );
 
     return <PresenceCtx.Provider value={value}>{children}</PresenceCtx.Provider>;

@@ -23,9 +23,6 @@ export const FLAG_KEYS = [
   "chatroom_blocks",
   "block_npc",
   "block_hp",
-  "block_alert",
-  "block_weather",
-  "block_whisper",
 ] as const;
 
 export type FlagKey = (typeof FLAG_KEYS)[number];
@@ -55,9 +52,6 @@ export const DEFAULT_FLAGS: FeatureFlags = {
   chatroom_blocks: true,
   block_npc: true,
   block_hp: true,
-  block_alert: true,
-  block_weather: true,
-  block_whisper: true,
 };
 
 export async function getFeatureFlags(supabase: SupabaseClient): Promise<FeatureFlags> {

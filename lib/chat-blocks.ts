@@ -10,27 +10,10 @@ export type DiceBlock = {
   label?: string;       // étiquette optionnelle (ex. "Attaque")
 };
 
-export type EllipseBlock = {
-  _type: "ellipse";
-  label: string;        // ex. "3 jours plus tard…"
-};
-
 export type BannerBlock = {
   _type: "banner";
   url: string;
   alt?: string;
-};
-
-export type SceneBlock = {
-  _type: "scene";
-  text: string;
-  label?: string;       // ex. "Scène", "Narrateur", "Introduction"
-};
-
-export type FlashbackBlock = {
-  _type: "flashback";
-  text: string;
-  when?: string;        // ex. "Trois ans plus tôt…"
 };
 
 export type RevealBlock = {
@@ -47,20 +30,6 @@ export type NpcBlock = {
   stats?: string;       // ex. "PV 40 · ATQ 12 · DEF 8"
 };
 
-export type AlertBlock = {
-  _type: "alert";
-  severity: "danger" | "warning" | "success";
-  tag: string;          // ex. "Mort d'un personnage"
-  text?: string;
-};
-
-export type WeatherBlock = {
-  _type: "weather";
-  icon: string;         // emoji
-  label: string;        // ex. "Pluie battante"
-  note?: string;        // ex. "−1 aux jets de Perception"
-};
-
 export type HpBlock = {
   _type: "hp";
   name: string;
@@ -68,14 +37,32 @@ export type HpBlock = {
   max: number;
 };
 
-export type WhisperBlock = {
-  _type: "whisper";
-  text: string;
+// Bloc « Encadré » universel : fusionne les anciens blocs narratifs
+// (scène, flashback, ellipse, météo/ambiance, aparté) en un seul bloc
+// entièrement personnalisable (icône, couleur d'accent, bordure, alignement).
+export type CalloutBorder = "full" | "left" | "separator" | "none";
+export type CalloutAlign = "left" | "center";
+export type CalloutIconKind = "emoji" | "lucide" | "image";
+
+export type Gauge = { name: string; current: number; max: number; color: string };
+
+export type CalloutBlock = {
+  _type: "callout";
+  title?: string;            // titre/libellé court optionnel
+  text?: string;             // corps optionnel
+  icon?: string;             // emoji OU nom d'icône lucide
+  iconKind?: CalloutIconKind;
+  iconImage?: string;        // URL image quand iconKind === "image"
+  accent?: string;           // couleur d'accent (hex), ex. "#f59e0b"
+  border?: CalloutBorder;    // défaut "full"
+  align?: CalloutAlign;      // défaut "left"
+  rounded?: boolean;         // défaut true
+  gauges?: Gauge[];          // jauges nommées (nom, actuel, max, couleur)
 };
 
-export type ChatBlock = DiceBlock | EllipseBlock | BannerBlock | SceneBlock | FlashbackBlock | RevealBlock | NpcBlock | AlertBlock | WeatherBlock | HpBlock | WhisperBlock;
+export type ChatBlock = DiceBlock | BannerBlock | RevealBlock | NpcBlock | HpBlock | CalloutBlock;
 
-const BLOCK_TYPES = new Set(["dice", "ellipse", "banner", "scene", "flashback", "reveal", "npc", "alert", "weather", "hp", "whisper"]);
+const BLOCK_TYPES = new Set(["dice", "banner", "reveal", "npc", "hp", "callout"]);
 
 export function parseChatBlock(content: string): ChatBlock | null {
   if (!content.startsWith("{")) return null;

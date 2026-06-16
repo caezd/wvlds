@@ -270,7 +270,7 @@ export function PersonaProfileSheetTrigger({
   side?: "left" | "right" | "top" | "bottom";
 }) {
   const supabase = React.useMemo(() => createClient(), []);
-  const { onlineUsers } = useGlobalPresence();
+  const { getUserPresence } = useGlobalPresence();
   const [open, setOpen] = React.useState(false);
 
   const [name, setName] = React.useState<string | null>(label ?? null);
@@ -384,17 +384,20 @@ export function PersonaProfileSheetTrigger({
 
   const info = balance ? levelInfo(balance.xp) : null;
 
-  const isOnline = !!userId && !!onlineUsers[userId];
+  const userPresence = userId ? getUserPresence(userId) : "offline";
+  const isOnline = userPresence === "online";
   const presenceLine =
-    !ownerPresence && !isOnline
+    !ownerPresence && userPresence === "offline"
       ? null // données pas encore chargées — on n'affiche rien
-      : isOnline
+      : userPresence === "online"
         ? "En ligne"
-        : ownerPresence?.appear_offline
-          ? "Hors ligne"
-          : ownerPresence?.last_seen_at
-            ? `Vu ${formatLastSeen(ownerPresence.last_seen_at)}`
-            : "Hors ligne"; // last_seen_at null (compte ancien ou sans activité récente)
+        : userPresence === "away"
+          ? "Absent"
+          : ownerPresence?.appear_offline
+            ? "Hors ligne"
+            : ownerPresence?.last_seen_at
+              ? `Vu ${formatLastSeen(ownerPresence.last_seen_at)}`
+              : "Hors ligne"; // last_seen_at null (compte ancien ou sans activité récente)
 
   const TriggerButton = (
     <button
@@ -471,8 +474,11 @@ export function PersonaProfileSheetTrigger({
                   {presenceLine && (
                     <p className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
                       <span
-                        className={`h-2 w-2 rounded-full ${isOnline ? "bg-[#58F4A8]" : "bg-muted-foreground/40"
-                          }`}
+                        className={`h-2 w-2 rounded-full ${
+                          userPresence === "online" ? "bg-[#58F4A8]"
+                          : userPresence === "away" ? "bg-orange-400"
+                          : "bg-muted-foreground/40"
+                        }`}
                       />
                       {presenceLine}
                     </p>
