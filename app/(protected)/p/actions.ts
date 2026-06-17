@@ -11,11 +11,9 @@ export async function createPersona(_prevState: unknown, formData: FormData) {
     if (!user) return { ok: false, error: "Vous devez être connecté." };
 
     const name = String(formData.get("name") || "").trim();
-    const bio = (String(formData.get("bio") || "").trim() || null) as
-        | string
-        | null;
-    const avatar_url = (String(formData.get("avatar_url") || "").trim() ||
-        null) as string | null;
+    const bio = (String(formData.get("bio") || "").trim() || null) as string | null;
+    const avatar_url = (String(formData.get("avatar_url") || "").trim() || null) as string | null;
+    const world_id = (String(formData.get("world_id") || "").trim() || null) as string | null;
 
     if (name.length < 1 || name.length > 40) {
         return {
@@ -26,19 +24,20 @@ export async function createPersona(_prevState: unknown, formData: FormData) {
 
     const { data, error } = await supabase
         .from("personas")
-        .insert({ user_id: user.id, name, bio, avatar_url })
+        .insert({ user_id: user.id, name, bio, avatar_url, world_id })
         .select("id")
         .single();
 
     if (error) {
         const msg =
             error.code === "P0001"
-                ? "Limite atteinte : 5 personas pour un compte gratuit."
+                ? "Limite atteinte : 5 personas par monde (compte gratuit)."
                 : error.message;
         return { ok: false, error: msg };
     }
 
-    revalidatePath("/personas");
+    revalidatePath("/p");
+    if (world_id) revalidatePath(`/w/${world_id}`);
     return { ok: true, id: data.id };
 }
 
@@ -54,10 +53,9 @@ export async function deletePersona(id: string) {
 
     const storagePaths: string[] = [];
 
-    // Avatar et bannière
     const { data: persona } = await supabase
         .from("personas")
-        .select("avatar_url, banner_url")
+        .select("avatar_url, banner_url, world_id")
         .eq("id", id)
         .single();
 
@@ -71,10 +69,8 @@ export async function deletePersona(id: string) {
     const bannerPath = extractStoragePath(persona?.banner_url);
     if (avatarPath) storagePaths.push(avatarPath);
     if (bannerPath) storagePaths.push(bannerPath);
-    // Anciens avatars générés (chemin sans préfixe user-)
     storagePaths.push(`avatars/${id}.png`, `avatars/${id}.webp`);
 
-    // Images des champs image-grid
     const { data: sections } = await supabase
         .from("persona_sections")
         .select("id")
@@ -113,6 +109,8 @@ export async function deletePersona(id: string) {
             error: "Persona introuvable ou accès non autorisé.",
         };
     }
-    revalidatePath("/personas");
+
+    revalidatePath("/p");
+    if (persona?.world_id) revalidatePath(`/w/${persona.world_id}`);
     return { ok: true };
 }

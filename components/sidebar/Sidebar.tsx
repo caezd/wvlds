@@ -10,11 +10,24 @@ type WorldRow = {
   slug: string | null;
   is_archived: boolean;
   owner_id: string;
+  icon_url: string | null;
+  banner_url: string | null;
   world_members: {
     user_id: string;
     role: "owner" | "admin" | "editor" | "player" | "viewer";
   }[];
 };
+
+type FavoriteRoom = {
+  id: string;
+  name: string | null;
+  title: string | null;
+  icon_url: string | null;
+  last_message_at: string | null;
+  has_unread: boolean;
+};
+
+type FavoriteWorldRow = WorldRow & { chatrooms: FavoriteRoom[] };
 
 export default async function Sidebar() {
   const supabase = await createClient();
@@ -36,7 +49,7 @@ export default async function Sidebar() {
   const { data: worlds, error } = (await supabase
     .from("worlds")
     .select(
-      `id, name, slug, is_archived, owner_id,
+      `id, name, slug, is_archived, owner_id, icon_url, banner_url,
        world_members ( user_id, role )`,
     )
     .is("deleted_at", null)
@@ -68,6 +81,31 @@ export default async function Sidebar() {
       ),
   );
 
+  // ── Mondes favoris + dernières chatrooms ─────────────────────
+  const { data: favoritePrefs } = await supabase
+    .from("world_user_preferences")
+    .select("world_id")
+    .eq("user_id", user.id)
+    .eq("is_favorite", true);
+
+  const favoriteWorldIds = (favoritePrefs ?? []).map((p) => p.world_id as string);
+  const favoriteBaseWorlds = (worlds ?? []).filter((w) =>
+    favoriteWorldIds.includes(w.id),
+  );
+
+  const favorites: FavoriteWorldRow[] = await Promise.all(
+    favoriteBaseWorlds.map(async (w) => {
+      const { data: rooms } = await supabase.rpc("list_participated_chatrooms", {
+        p_world_id: w.id,
+        p_limit: 3,
+      });
+      return {
+        ...w,
+        chatrooms: (rooms as FavoriteRoom[] | null) ?? [],
+      };
+    }),
+  );
+
   return (
     <>
       {/* WorldsSidebarClient gère déjà : nav (Personae, Boutique),
@@ -81,6 +119,7 @@ export default async function Sidebar() {
           quotaReached={quotaReached}
           mine={mine}
           shared={shared}
+          favorites={favorites}
           isAdmin={adminFlag}
         />
       </div>

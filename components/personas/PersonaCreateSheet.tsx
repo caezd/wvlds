@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import {
   Sheet,
@@ -15,7 +15,13 @@ import { PersonaEditorContent } from "./PersonaEditSheet";
 import { createPersona } from "@/app/(protected)/p/actions";
 import type { PersonaSectionWithFields } from "@/types/personas";
 
-export function PersonaCreateSheet() {
+export function PersonaCreateSheet({
+  worldId,
+  trigger,
+}: {
+  worldId?: string | null;
+  trigger?: ReactNode;
+}) {
   const [open, setOpen] = useState(false);
   const [phase, setPhase] = useState<"name" | "edit">("name");
   const [createdId, setCreatedId] = useState<string | null>(null);
@@ -47,6 +53,7 @@ export function PersonaCreateSheet() {
     setError(null);
     const fd = new FormData();
     fd.set("name", name);
+    if (worldId) fd.set("world_id", worldId);
     const result = await createPersona(undefined, fd);
     setPending(false);
     if (!result.ok) { setError(result.error ?? "Erreur."); return; }
@@ -57,7 +64,13 @@ export function PersonaCreateSheet() {
 
   return (
     <>
-      <Button onClick={() => setOpen(true)}>Nouveau persona</Button>
+      {trigger ? (
+        <span onClick={() => setOpen(true)} style={{ display: "contents" }}>
+          {trigger}
+        </span>
+      ) : (
+        <Button onClick={() => setOpen(true)}>Nouveau persona</Button>
+      )}
 
       <Sheet open={open} onOpenChange={handleOpen}>
         <SheetContent side="right" className="w-full sm:max-w-3xl overflow-y-auto">

@@ -1,5 +1,6 @@
 // app/(protected)/personas/page.tsx
 import { Users } from "lucide-react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { PersonaCard } from "@/components/personas/PersonaCard";
 import { PersonaCreateSheet } from "@/components/personas/PersonaCreateSheet";
@@ -18,76 +19,65 @@ type PersonaRow = {
   avatar_frame_id?: string | null;
   frame?: { asset_url?: string | null } | null;
   banner_url?: string | null;
+  world_id?: string | null;
+};
+
+type WorldGroup = {
+  worldId: string | null;
+  worldName: string | null;
+  personas: (PersonaRow & { sections: PersonaSectionWithFields[] })[];
 };
 
 export default async function PersonasPage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   const userId = user?.id;
 
-  // 1) Personas de l'utilisateur connecté uniquement
+  // 1) Personas avec world_id
   let personaList: PersonaRow[] = [];
   {
-    const withAvatar = await supabase
+    const { data, error } = await supabase
       .from("personas")
-      .select("id, name, avatar_url, avatar_config, banner_url, avatar_frame_id, frame:avatar_frame_id(asset_url)")
+      .select(
+        "id, name, avatar_url, avatar_config, banner_url, avatar_frame_id, world_id, frame:avatar_frame_id(asset_url)",
+      )
       .eq("user_id", userId)
       .order("name", { ascending: true });
 
-    if (!withAvatar.error) {
-      personaList = (withAvatar.data ?? []) as PersonaRow[];
+    if (!error) {
+      personaList = (data ?? []) as PersonaRow[];
     } else {
-      const basic = await supabase
+      const { data: basic } = await supabase
         .from("personas")
-        .select("id, name")
+        .select("id, name, world_id")
         .eq("user_id", userId)
         .order("name", { ascending: true });
-
-      if (basic.error) {
-        console.error("PersonasPage personasError", basic.error);
-      }
-      personaList = (basic.data ?? []) as PersonaRow[];
+      personaList = (basic ?? []) as PersonaRow[];
     }
   }
 
   const personaIds = personaList.map((p) => p.id);
-
   const sectionsByPersona = new Map<string, PersonaSectionWithFields[]>();
 
   if (personaIds.length > 0) {
-    // 2) Sections
-    const { data: sections, error: sectionsError } = await supabase
+    const { data: sections } = await supabase
       .from("persona_sections")
       .select("id, persona_id, name, position")
       .in("persona_id", personaIds)
       .order("position", { ascending: true });
 
-    if (sectionsError) {
-      // PostgrestError properties are non-enumerable — log message explicitly
-      console.error(
-        "PersonasPage sectionsError:",
-        sectionsError.message ?? sectionsError.code ?? JSON.stringify(sectionsError),
-      );
-    }
-
     const sectionsList = (sections ?? []) as PersonaSection[];
     const sectionIds = sectionsList.map((s) => s.id);
-
-    // 3) Fields — skip entirely if sections table didn't exist
     let fieldsList: PersonaSectionField[] = [];
-    if (!sectionsError && sectionIds.length > 0) {
-      const { data: fields, error: fieldsError } = await supabase
+
+    if (sectionIds.length > 0) {
+      const { data: fields } = await supabase
         .from("persona_section_fields")
         .select("id, section_id, type, position, data")
         .in("section_id", sectionIds)
         .order("position", { ascending: true });
-
-      if (fieldsError) {
-        console.error(
-          "PersonasPage fieldsError:",
-          fieldsError.message ?? fieldsError.code ?? JSON.stringify(fieldsError),
-        );
-      }
       fieldsList = (fields ?? []) as PersonaSectionField[];
     }
 
@@ -99,48 +89,119 @@ export default async function PersonasPage() {
     }
 
     for (const pid of personaIds) sectionsByPersona.set(pid, []);
-
     for (const s of sectionsList) {
-      const sectionWithFields: PersonaSectionWithFields = {
+      const entry: PersonaSectionWithFields = {
         ...s,
         fields: fieldsBySection.get(s.id) ?? [],
       };
-
-      const arr = sectionsByPersona.get(s.persona_id);
-      if (arr) arr.push(sectionWithFields);
-      else sectionsByPersona.set(s.persona_id, [sectionWithFields]);
+      sectionsByPersona.get(s.persona_id)?.push(entry);
     }
   }
 
+  // 2) Noms des mondes impliqués
+  const worldIds = [
+    ...new Set(
+      personaList.map((p) => p.world_id).filter((w): w is string => !!w),
+    ),
+  ];
+
+  const worldNames = new Map<string, string>();
+  if (worldIds.length > 0) {
+    const { data: worlds } = await supabase
+      .from("worlds")
+      .select("id, name")
+      .in("id", worldIds);
+    for (const w of worlds ?? []) worldNames.set(w.id, w.name ?? w.id);
+  }
+
+  // 3) Groupement
+  const groupMap = new Map<string | null, WorldGroup>();
+
+  for (const p of personaList) {
+    const key = p.world_id ?? null;
+    if (!groupMap.has(key)) {
+      groupMap.set(key, {
+        worldId: key,
+        worldName: key ? (worldNames.get(key) ?? key) : null,
+        personas: [],
+      });
+    }
+    groupMap.get(key)!.personas.push({
+      ...p,
+      sections: sectionsByPersona.get(p.id) ?? [],
+    });
+  }
+
+  // Mondes en premier, "Sans monde" à la fin
+  const groups: WorldGroup[] = [
+    ...[...groupMap.entries()]
+      .filter(([k]) => k !== null)
+      .map(([, g]) => g)
+      .sort((a, b) => (a.worldName ?? "").localeCompare(b.worldName ?? "")),
+    ...(groupMap.has(null) ? [groupMap.get(null)!] : []),
+  ];
+
   return (
-    <div className="p-6 space-y-6 max-w-6xl mx-auto w-full">
+    <div className="p-6 space-y-8 max-w-6xl mx-auto w-full">
       <header className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">Personas</h1>
-        <div className="flex items-center gap-3">
-          <p className="text-sm text-muted-foreground">{personaList.length} persona{personaList.length !== 1 ? "s" : ""}</p>
-          <PersonaCreateSheet />
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Personas</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {personaList.length} persona{personaList.length !== 1 ? "s" : ""}
+            {groups.length > 1 && ` · ${groups.length} groupe${groups.length > 1 ? "s" : ""}`}
+          </p>
         </div>
+        <PersonaCreateSheet />
       </header>
 
       {personaList.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-center gap-3 rounded-2xl border border-dashed border-border">
           <Users className="h-8 w-8 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Aucun persona pour le moment.</p>
+          <p className="text-sm text-muted-foreground">
+            Aucun persona. Crée-en un depuis un monde.
+          </p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-          {personaList.map((persona) => (
-            <PersonaCard
-              key={persona.id}
-              personaId={persona.id}
-              personaName={persona.name ?? "Sans nom"}
-              avatarUrl={persona.avatar_url}
-              avatarConfig={persona.avatar_config as AvatarConfigV1 | null}
-              bannerUrl={persona.banner_url}
-              initialFrameId={persona.avatar_frame_id ?? null}
-              initialFrameUrl={(persona.frame as { asset_url?: string | null } | null)?.asset_url ?? null}
-              initialSections={sectionsByPersona.get(persona.id) ?? []}
-            />
+        <div className="space-y-8">
+          {groups.map((group) => (
+            <section key={group.worldId ?? "__none__"}>
+              <div className="flex items-center gap-2 mb-4">
+                {group.worldId ? (
+                  <Link
+                    href={`/w/${group.worldId}`}
+                    className="text-base font-semibold hover:underline underline-offset-2"
+                  >
+                    {group.worldName}
+                  </Link>
+                ) : (
+                  <h2 className="text-base font-semibold text-muted-foreground">
+                    Sans monde
+                  </h2>
+                )}
+                <span className="text-xs text-muted-foreground">
+                  {group.personas.length} / 5
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                {group.personas.map((persona) => (
+                  <PersonaCard
+                    key={persona.id}
+                    personaId={persona.id}
+                    personaName={persona.name ?? "Sans nom"}
+                    avatarUrl={persona.avatar_url}
+                    avatarConfig={persona.avatar_config as AvatarConfigV1 | null}
+                    bannerUrl={persona.banner_url}
+                    initialFrameId={persona.avatar_frame_id ?? null}
+                    initialFrameUrl={
+                      (persona.frame as { asset_url?: string | null } | null)
+                        ?.asset_url ?? null
+                    }
+                    initialSections={persona.sections}
+                  />
+                ))}
+              </div>
+            </section>
           ))}
         </div>
       )}

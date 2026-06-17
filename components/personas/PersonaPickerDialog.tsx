@@ -78,12 +78,14 @@ export function PersonaPickerDialog({
   trigger,
   required = true,
   userId,
+  worldId,
 }: {
   selected: Persona | null;
   onSelect: (persona: Persona | null) => void;
   trigger?: React.ReactNode;
   required?: boolean;
   userId?: string | null;
+  worldId?: string | null;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const [open, setOpen] = useState(false);
@@ -104,17 +106,19 @@ export function PersonaPickerDialog({
         uid = session?.user?.id ?? null;
       }
       if (!uid) { setLoading(false); return; }
-      const { data } = await supabase
+      let query = supabase
         .from("personas")
         .select("id, user_id, name, avatar_url")
         .eq("user_id", uid)
         .order("name", { ascending: true });
+      if (worldId) query = query.eq("world_id", worldId);
+      const { data } = await query;
       setPersonas(data ?? []);
       setLoading(false);
     }
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, open]);
+  }, [userId, worldId, open]);
 
   const canConfirm = !!value && (!required || !!value);
 

@@ -1,11 +1,17 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { Globe, GlobeLock } from "lucide-react";
+import { Globe, GlobeLock, Maximize2, Minimize2, Star } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 import { type World } from "@/components/worlds/WorldEditDialog";
 import { supabaseThumb } from "@/lib/storage";
 import { useNotifications } from "@/components/providers/NotificationsProvider";
+import { cn } from "@/lib/utils";
 
 type HeroWorld = World & { owner_id: string };
 
@@ -18,11 +24,19 @@ export function WorldHeroCard({
   world: initialWorld,
   canAdmin = false,
   footer,
+  isExpanded = false,
+  onToggleExpand,
+  isFavorite = false,
+  onToggleFavorite,
 }: {
   world: HeroWorld;
   canAdmin?: boolean;
   /** Contenu rendu tout en bas de la bannière (ex: barre d'onglets). */
   footer?: ReactNode;
+  isExpanded?: boolean;
+  onToggleExpand?: () => void;
+  isFavorite?: boolean;
+  onToggleFavorite?: () => void;
 }) {
   const [world, setWorld] = useState(initialWorld);
   const { markWorldSeen } = useNotifications();
@@ -34,7 +48,10 @@ export function WorldHeroCard({
 
   return (
     <section
-      className="group/hero relative isolate overflow-hidden rounded-3xl p-6 md:p-8"
+      className={[
+        "group/hero relative isolate overflow-hidden p-6 md:p-8",
+        isExpanded ? "" : "rounded-3xl",
+      ].join(" ")}
       style={{
         // Pas de couleur de fond derrière une bannière image : elle dépasse
         // dans les coins arrondis sous l'image.
@@ -62,6 +79,46 @@ export function WorldHeroCard({
               : "absolute inset-0 rounded-[inherit] bg-gradient-to-br from-card-400 to-card"
         }
       />
+
+      {/* Boutons superposés : favoris + plein écran */}
+      {(onToggleFavorite || onToggleExpand) && (
+        <div className="absolute right-3 top-3 flex items-center gap-1.5">
+          {onToggleFavorite && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={onToggleFavorite}
+                  aria-label={isFavorite ? "Retirer des favoris" : "Ajouter aux favoris"}
+                  className="flex h-7 w-7 items-center justify-center rounded-full bg-black/30 backdrop-blur-sm transition-all hover:bg-black/50"
+                >
+                  <Star className={cn("h-3.5 w-3.5 transition-colors", isFavorite ? "fill-yellow-400 text-yellow-400" : "text-white/80")} />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="left" sideOffset={6}>
+                {isFavorite ? "Retirer des favoris" : "Ajouter aux favoris"}
+              </TooltipContent>
+            </Tooltip>
+          )}
+          {onToggleExpand && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={onToggleExpand}
+                  aria-label={isExpanded ? "Réduire" : "Plein écran"}
+                  className="flex h-7 w-7 items-center justify-center rounded-full bg-black/30 text-white/80 backdrop-blur-sm transition-all hover:bg-black/50 hover:text-white"
+                >
+                  {isExpanded ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="left" sideOffset={6}>
+                {isExpanded ? "Réduire" : "Plein écran"}
+              </TooltipContent>
+            </Tooltip>
+          )}
+        </div>
+      )}
 
 <div className="relative flex min-h-40 flex-col justify-end gap-2 md:min-h-48">
         <span

@@ -13,12 +13,12 @@ import { Separator } from "@/components/ui/separator";
 import {
   Plus,
   Loader2,
-  GlobeLock,
-  Globe,
   Users,
   ShoppingBasket,
   ShieldCheck,
   ChevronUp,
+  Star,
+  MessageSquare,
 } from "lucide-react";
 import {
   Dialog,
@@ -42,8 +42,31 @@ type WorldRow = {
   slug: string | null;
   is_archived: boolean;
   owner_id: string;
+  icon_url?: string | null;
+  banner_url?: string | null;
   world_members: { user_id: string; role: Role }[];
 };
+
+type FavoriteRoom = {
+  id: string;
+  name: string | null;
+  title: string | null;
+  icon_url: string | null;
+  last_message_at: string | null;
+  has_unread: boolean;
+};
+
+type FavoriteWorldRow = WorldRow & { chatrooms: FavoriteRoom[] };
+
+function compactTime(iso: string | null): string {
+  if (!iso) return "";
+  const min = Math.floor((Date.now() - new Date(iso).getTime()) / 60_000);
+  if (min < 1) return "< 1min";
+  if (min < 60) return `${min}min`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `${h}h`;
+  return `${Math.floor(h / 24)}j`;
+}
 
 function isActivePrefix(pathname: string, base: string) {
   return pathname === base || pathname.startsWith(base + "/");
@@ -65,10 +88,11 @@ export default function WorldsSidebarClient(props: {
   quotaReached: boolean;
   mine: WorldRow[];
   shared: WorldRow[];
+  favorites?: FavoriteWorldRow[];
   unreadMap?: Record<string, number>;
   isAdmin?: boolean;
 }) {
-  const { meId, plan, ownedCount, quotaLimit, quotaReached, mine, shared, isAdmin } =
+  const { meId, plan, ownedCount, quotaLimit, quotaReached, mine, shared, favorites = [], isAdmin } =
     props;
 
   const [q] = useState("");
@@ -267,6 +291,19 @@ export default function WorldsSidebarClient(props: {
 
       {/* Seule la liste des mondes scrolle */}
       <ScrollArea className="min-h-0 flex-1">
+        {favorites.length > 0 && (
+          <Section title="Mondes favoris" empty="">
+            {favorites.map((w) => (
+              <FavoriteWorldItem
+                key={w.id}
+                world={w}
+                active={activeWorldId === w.id}
+                unread={worldUnread[w.id] ?? 0}
+              />
+            ))}
+          </Section>
+        )}
+
         {filteredMine.length > 0 && (
           <Section title="Mes mondes" empty="">
             {filteredMine.map((w) => (
@@ -368,6 +405,27 @@ function Empty({ text }: { text: string }) {
   );
 }
 
+function WorldIcon({ world, size = 4 }: { world: WorldRow; size?: number }) {
+  const thumb = world.icon_url ?? world.banner_url ?? null;
+  const cls = `h-${size} w-${size} shrink-0`;
+  if (thumb) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={thumb} alt="" className={cn(cls, "rounded-md object-cover")} />
+    );
+  }
+  return (
+    <span
+      className={cn(
+        cls,
+        "inline-flex items-center justify-center rounded-md bg-muted text-[9px] font-bold uppercase text-muted-foreground",
+      )}
+    >
+      {world.name.charAt(0)}
+    </span>
+  );
+}
+
 function WorldItem({
   world,
   meId: _meId,
@@ -381,44 +439,85 @@ function WorldItem({
   unread?: number;
   onActivate: () => void;
 }) {
-  const members = world.world_members ?? [];
-  const isShared = members.some((m) => m.user_id !== world.owner_id); // partagé si quelqu'un d'autre que l’owner est membre
-
   return (
     <Link
       href={`/w/${world.id}`}
       onClick={onActivate}
-      className={cn("group flex items-center justify-between rounded-lg")}
+      className="group flex items-center justify-between rounded-lg"
     >
       <Button
         variant="ghost"
         size="sm"
         className={cn(
-          "w-full justify-start rounded-full border border-transparent hover:border-[#333333] hover:bg-transparent",
+          "w-full justify-start rounded-lg border border-transparent hover:border-[#333333] hover:bg-transparent",
           active && "border-[#333333] bg-[#1a1a1a] font-semibold text-foreground shadow-[0_1px_2px_0_rgba(128,128,128,0.1)] hover:bg-[#1a1a1a]"
         )}
       >
-        <div className="relative">
-          {isShared ? (
-            <Globe className="h-4 w-4 opacity-80 mr-1" />
-          ) : (
-            <GlobeLock className="h-4 w-4 opacity-80 mr-1" />
-          )}
+        <div className="relative mr-1.5">
+          <WorldIcon world={world} size={4} />
           {unread > 0 && (
-            <span
-              title={`${unread} nouveauté(s)`}
-              className={cn(
-                `inline-flex h-1.5 w-1.5 rounded-full bg-accent shadow-[0_0_0_2px_black] text-[.65rem] absolute -right-0.5 -top-0.5 items-center justify-center leading-none text-black/80 font-medium`,
-              )}
-            >
-              {/* {unread} */}
-            </span>
+            <span className="absolute -right-0.5 -top-0.5 inline-flex h-1.5 w-1.5 rounded-full bg-accent shadow-[0_0_0_2px_black]" />
           )}
         </div>
-
         <div className="truncate">{world.name}</div>
       </Button>
     </Link>
+  );
+}
+
+function FavoriteWorldItem({
+  world,
+  active,
+  unread = 0,
+}: {
+  world: FavoriteWorldRow;
+  active?: boolean;
+  unread?: number;
+}) {
+  return (
+    <div className="space-y-0.5">
+      <Link href={`/w/${world.id}`}>
+        <div
+          className={cn(
+            "flex items-center gap-2 rounded-lg border border-transparent px-3 py-1.5 text-sm transition-colors hover:border-[#333333] hover:bg-transparent",
+            active &&
+              "border-[#333333] bg-[#1a1a1a] font-semibold text-foreground shadow-[0_1px_2px_0_rgba(128,128,128,0.1)]",
+          )}
+        >
+          <div className="relative">
+            <WorldIcon world={world} size={4} />
+            {unread > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 inline-flex h-1.5 w-1.5 rounded-full bg-accent shadow-[0_0_0_2px_black]" />
+            )}
+          </div>
+          <span className="truncate">{world.name}</span>
+        </div>
+      </Link>
+
+      {world.chatrooms.length > 0 && (
+        <div className="ml-5 space-y-0.5 border-l border-border-soft pl-2">
+          {world.chatrooms.map((room) => (
+            <Link key={room.id} href={`/c/${room.id}`}>
+              <div className="flex items-center gap-2 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-[#1a1a1a] hover:text-foreground">
+                {room.has_unread ? (
+                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
+                ) : (
+                  <MessageSquare className="h-3 w-3 shrink-0 opacity-40" />
+                )}
+                <span className="min-w-0 flex-1 truncate">
+                  {room.title ?? room.name ?? "Sans titre"}
+                </span>
+                {room.last_message_at && (
+                  <span className="shrink-0 text-[10px] text-muted-foreground/50">
+                    {compactTime(room.last_message_at)}
+                  </span>
+                )}
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 

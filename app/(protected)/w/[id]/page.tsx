@@ -4,6 +4,12 @@ import { notFound } from "next/navigation";
 
 import { WorldHome } from "@/components/worlds/WorldHome";
 import { WorldMembershipGuard } from "@/components/worlds/WorldMembershipGuard";
+import type { AsidePersona } from "@/components/personas/WorldPersonaAsideClient";
+import type {
+  PersonaSection,
+  PersonaSectionField,
+  PersonaSectionWithFields,
+} from "@/types/personas";
 
 export default async function WorldPage({
   params,
@@ -23,7 +29,6 @@ export default async function WorldPage({
   const { data: me } = await supabase.auth.getUser();
 
   if (!world) {
-    // Monde inexistant ou accès perdu (ex. membre retiré)
     notFound();
   }
 
@@ -47,18 +52,91 @@ export default async function WorldPage({
   });
   const members = world.world_members ?? [];
 
-  // Permissions selon le rôle du membre courant
   const myRole =
     members.find((m) => m.user_id === me.user?.id)?.role ??
     (world.owner_id === me.user?.id ? "owner" : null);
 
-  // Panneau membres visible dès qu'on a un rôle dans le monde (owner inclus
-  // même si absent de world_members) ou que d'autres membres existent.
   const isShared = myRole !== null;
   const canEditTabs = ["owner", "admin", "editor"].includes(myRole ?? "");
   const canPost = ["owner", "admin", "editor", "player"].includes(
     myRole ?? "",
   );
+
+  const userId = me.user?.id;
+
+  // ── Préférences UI de l'utilisateur pour ce monde ───────────
+  let worldPrefs: { aside_width: number; main_expanded: boolean; is_favorite: boolean } | null = null;
+  if (userId) {
+    const { data } = await supabase
+      .from("world_user_preferences")
+      .select("aside_width, main_expanded, is_favorite")
+      .eq("world_id", id)
+      .eq("user_id", userId)
+      .maybeSingle();
+    worldPrefs = data as typeof worldPrefs;
+  }
+
+  // ── Personas de l'utilisateur pour ce monde ──────────────────
+  let initialPersonas: AsidePersona[] = [];
+
+  if (userId) {
+    const { data: personaRows } = await supabase
+      .from("personas")
+      .select(
+        "id, name, avatar_url, avatar_config, banner_url, avatar_frame_id, frame:avatar_frame_id(asset_url)",
+      )
+      .eq("user_id", userId)
+      .eq("world_id", id)
+      .order("name", { ascending: true });
+
+    const rows = (personaRows ?? []) as Omit<AsidePersona, "sections">[];
+
+    if (rows.length > 0) {
+      const personaIds = rows.map((p) => p.id);
+
+      const { data: sections } = await supabase
+        .from("persona_sections")
+        .select("id, persona_id, name, position")
+        .in("persona_id", personaIds)
+        .order("position", { ascending: true });
+
+      const sectionsList = (sections ?? []) as PersonaSection[];
+      const sectionIds = sectionsList.map((s) => s.id);
+      let fieldsList: PersonaSectionField[] = [];
+
+      if (sectionIds.length > 0) {
+        const { data: fields } = await supabase
+          .from("persona_section_fields")
+          .select("id, section_id, type, position, data")
+          .in("section_id", sectionIds)
+          .order("position", { ascending: true });
+
+        fieldsList = (fields ?? []) as PersonaSectionField[];
+      }
+
+      const fieldsBySection = new Map<string, PersonaSectionField[]>();
+      for (const f of fieldsList) {
+        const arr = fieldsBySection.get(f.section_id);
+        if (arr) arr.push(f);
+        else fieldsBySection.set(f.section_id, [f]);
+      }
+
+      const sectionsByPersona = new Map<string, PersonaSectionWithFields[]>();
+      for (const pid of personaIds) sectionsByPersona.set(pid, []);
+      for (const s of sectionsList) {
+        const entry: PersonaSectionWithFields = {
+          ...s,
+          fields: fieldsBySection.get(s.id) ?? [],
+        };
+        sectionsByPersona.get(s.persona_id)?.push(entry);
+      }
+
+      initialPersonas = rows.map((p) => ({
+        ...p,
+        sections: sectionsByPersona.get(p.id) ?? [],
+      }));
+    }
+  }
 
   return (
     <main className="composer-parent flex h-full flex-col focus-visible:outline-0">
@@ -70,11 +148,14 @@ export default async function WorldPage({
         <WorldHome
           world={world}
           worldId={id}
+          userId={userId ?? null}
           canAdmin={!!canAdmin}
           isShared={isShared}
           canEditTabs={canEditTabs}
           canPost={canPost}
           initialRooms={initialRooms}
+          initialPersonas={initialPersonas}
+          initialPrefs={worldPrefs}
         />
       </div>
     </main>
