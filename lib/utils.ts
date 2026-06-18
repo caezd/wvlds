@@ -22,6 +22,17 @@ export function formatLastSeen(date: Date | string | number) {
   return formatDaysAgo(date);
 }
 
+/** Accepte uniquement les URLs http(s) — bloque javascript:, data:, etc. */
+export function isSafeUrl(url: string | null | undefined): boolean {
+  if (!url) return false;
+  try {
+    const { protocol } = new URL(url);
+    return protocol === "https:" || protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
 export function formatDaysAgo(date: Date | string | number) {
   const now = new Date();
   const diffInMs = new Date(date).getTime() - now.getTime();

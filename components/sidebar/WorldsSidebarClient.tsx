@@ -19,7 +19,17 @@ import {
   ChevronUp,
   Star,
   MessageSquare,
+  MoreVertical,
+  Settings,
+  LogOut,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -248,22 +258,22 @@ export default function WorldsSidebarClient(props: {
           </Link>
 
           {shop && (
-          <Link
-            href="/shop"
-            className="group flex items-center justify-between rounded-lg"
-          >
-            <Button
-              variant="ghost"
-              size="sm"
-              className={cn(
-                "w-full justify-start rounded-full border border-transparent hover:border-[#333333] hover:bg-transparent",
-                shopActive && "border border-[#333333] bg-[#1a1a1a] font-semibold text-foreground shadow-[0_1px_2px_0_rgba(128,128,128,0.1)] hover:bg-[#1a1a1a]"
-              )}
+            <Link
+              href="/shop"
+              className="group flex items-center justify-between rounded-lg"
             >
-              <ShoppingBasket className="h-4 w-4 opacity-80 mr-1" />
-              <div className="truncate">Boutique</div>
-            </Button>
-          </Link>
+              <Button
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  "w-full justify-start rounded-full border border-transparent hover:border-[#333333] hover:bg-transparent",
+                  shopActive && "border border-[#333333] bg-[#1a1a1a] font-semibold text-foreground shadow-[0_1px_2px_0_rgba(128,128,128,0.1)] hover:bg-[#1a1a1a]"
+                )}
+              >
+                <ShoppingBasket className="h-4 w-4 opacity-80 mr-1" />
+                <div className="truncate">Boutique</div>
+              </Button>
+            </Link>
           )}
 
           {isAdmin && (
@@ -296,6 +306,7 @@ export default function WorldsSidebarClient(props: {
             {favorites.map((w) => (
               <FavoriteWorldItem
                 key={w.id}
+                meId={meId}
                 world={w}
                 active={activeWorldId === w.id}
                 unread={worldUnread[w.id] ?? 0}
@@ -304,36 +315,43 @@ export default function WorldsSidebarClient(props: {
           </Section>
         )}
 
-        {filteredMine.length > 0 && (
-          <Section title="Mes mondes" empty="">
-            {filteredMine.map((w) => (
-              <WorldItem
-                key={w.id}
-                meId={meId}
-                world={w}
-                // ✅ actif si on est sur /w/:id/... OU sur /c/:chatroomId qui appartient à ce monde
-                active={activeWorldId === w.id}
-                unread={worldUnread[w.id] ?? 0}
-                onActivate={() => { }}
-              />
-            ))}
-          </Section>
-        )}
-
-        {filteredShared.length > 0 && (
-          <Section title="Mondes partagés" empty="">
-            {filteredShared.map((w) => (
-              <WorldItem
-                key={w.id}
-                meId={meId}
-                world={w}
-                active={activeWorldId === w.id}
-                unread={worldUnread[w.id] ?? 0}
-                onActivate={() => { }}
-              />
-            ))}
-          </Section>
-        )}
+        {(() => {
+          const favoriteIds = new Set(favorites.map((f) => f.id));
+          const mineNonFav = filteredMine.filter((w) => !favoriteIds.has(w.id));
+          const sharedNonFav = filteredShared.filter((w) => !favoriteIds.has(w.id));
+          return (
+            <>
+              {mineNonFav.length > 0 && (
+                <Section title="Mes mondes" empty="">
+                  {mineNonFav.map((w) => (
+                    <WorldItem
+                      key={w.id}
+                      meId={meId}
+                      world={w}
+                      active={activeWorldId === w.id}
+                      unread={worldUnread[w.id] ?? 0}
+                      onActivate={() => { }}
+                    />
+                  ))}
+                </Section>
+              )}
+              {sharedNonFav.length > 0 && (
+                <Section title="Mondes partagés" empty="">
+                  {sharedNonFav.map((w) => (
+                    <WorldItem
+                      key={w.id}
+                      meId={meId}
+                      world={w}
+                      active={activeWorldId === w.id}
+                      unread={worldUnread[w.id] ?? 0}
+                      onActivate={() => { }}
+                    />
+                  ))}
+                </Section>
+              )}
+            </>
+          );
+        })()}
       </ScrollArea>
 
       {/* Bouton de création — fixe, en bas juste au-dessus du footer */}
@@ -405,7 +423,7 @@ function Empty({ text }: { text: string }) {
   );
 }
 
-function WorldIcon({ world, size = 4 }: { world: WorldRow; size?: number }) {
+function WorldIcon({ world, size = 6 }: { world: WorldRow; size?: number }) {
   const thumb = world.icon_url ?? world.banner_url ?? null;
   const cls = `h-${size} w-${size} shrink-0`;
   if (thumb) {
@@ -418,7 +436,7 @@ function WorldIcon({ world, size = 4 }: { world: WorldRow; size?: number }) {
     <span
       className={cn(
         cls,
-        "inline-flex items-center justify-center rounded-md bg-muted text-[9px] font-bold uppercase text-muted-foreground",
+        "inline-flex items-center justify-center rounded-md bg-muted text-[11px] font-bold uppercase text-muted-foreground",
       )}
     >
       {world.name.charAt(0)}
@@ -428,7 +446,7 @@ function WorldIcon({ world, size = 4 }: { world: WorldRow; size?: number }) {
 
 function WorldItem({
   world,
-  meId: _meId,
+  meId,
   active,
   unread = 0,
   onActivate,
@@ -439,82 +457,190 @@ function WorldItem({
   unread?: number;
   onActivate: () => void;
 }) {
+  const router = useRouter();
+  const isAdmin =
+    world.owner_id === meId ||
+    world.world_members?.some(
+      (m) => m.user_id === meId && ["owner", "admin"].includes(m.role),
+    );
+  const isSharedMember = world.world_members?.some(
+    (m) => m.user_id === meId && m.role !== "owner",
+  );
+
   return (
-    <Link
-      href={`/w/${world.id}`}
-      onClick={onActivate}
-      className="group flex items-center justify-between rounded-lg"
+    <div
+      className={cn(
+        "group flex items-center gap-0.5 rounded-xl border border-transparent pr-1 transition-colors hover:border-[#333333]",
+        active &&
+        "border-[#333333] bg-[#1a1a1a] font-semibold text-foreground shadow-[0_1px_2px_0_rgba(128,128,128,0.1)]",
+      )}
     >
-      <Button
-        variant="ghost"
-        size="sm"
-        className={cn(
-          "w-full justify-start rounded-lg border border-transparent hover:border-[#333333] hover:bg-transparent",
-          active && "border-[#333333] bg-[#1a1a1a] font-semibold text-foreground shadow-[0_1px_2px_0_rgba(128,128,128,0.1)] hover:bg-[#1a1a1a]"
-        )}
+      <Link
+        href={`/w/${world.id}`}
+        onClick={onActivate}
+        className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-sm"
       >
-        <div className="relative mr-1.5">
-          <WorldIcon world={world} size={4} />
+        <div className="relative shrink-0">
+          <WorldIcon world={world} />
           {unread > 0 && (
-            <span className="absolute -right-0.5 -top-0.5 inline-flex h-1.5 w-1.5 rounded-full bg-accent shadow-[0_0_0_2px_black]" />
+            <span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-accent shadow-[0_0_0_2px_black]" />
           )}
         </div>
-        <div className="truncate">{world.name}</div>
-      </Button>
-    </Link>
+        <span className="truncate">{world.name}</span>
+      </Link>
+
+      {/* Actions au survol */}
+      <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+        <button
+          type="button"
+          title="Nouveau salon"
+          onClick={() => router.push(`/w/${world.id}`)}
+          className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-[#2a2a2a] hover:text-foreground"
+        >
+          <Plus className="h-3 w-3" />
+        </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-[#2a2a2a] hover:text-foreground"
+            >
+              <MoreVertical className="h-3 w-3" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent side="bottom" align="end" className="z-[200] min-w-40">
+            {isAdmin && (
+              <DropdownMenuItem
+                onClick={() => router.push(`/w/${world.id}`)}
+                className="gap-2"
+              >
+                <Settings className="h-3.5 w-3.5" />
+                Paramètres
+              </DropdownMenuItem>
+            )}
+            {isAdmin && isSharedMember && <DropdownMenuSeparator />}
+            {isSharedMember && (
+              <DropdownMenuItem className="gap-2 text-destructive focus:text-destructive">
+                <LogOut className="h-3.5 w-3.5" />
+                Quitter le monde
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </div>
   );
 }
 
 function FavoriteWorldItem({
   world,
+  meId,
   active,
   unread = 0,
 }: {
   world: FavoriteWorldRow;
+  meId: string;
   active?: boolean;
   unread?: number;
 }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const isAdmin =
+    world.owner_id === meId ||
+    world.world_members?.some(
+      (m) => m.user_id === meId && ["owner", "admin"].includes(m.role),
+    );
+  const isSharedMember = world.world_members?.some(
+    (m) => m.user_id === meId && m.role !== "owner",
+  );
+
   return (
     <div className="space-y-0.5">
-      <Link href={`/w/${world.id}`}>
-        <div
-          className={cn(
-            "flex items-center gap-2 rounded-lg border border-transparent px-3 py-1.5 text-sm transition-colors hover:border-[#333333] hover:bg-transparent",
-            active &&
-              "border-[#333333] bg-[#1a1a1a] font-semibold text-foreground shadow-[0_1px_2px_0_rgba(128,128,128,0.1)]",
-          )}
+      <div
+        className={cn(
+          "group flex items-center gap-0.5 rounded-xl border border-transparent pr-1 transition-colors hover:border-[#333333]",
+          active &&
+          "border-[#333333] bg-[#1a1a1a] font-semibold text-foreground shadow-[0_1px_2px_0_rgba(128,128,128,0.1)]",
+        )}
+      >
+        <Link
+          href={`/w/${world.id}`}
+          className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-sm"
         >
-          <div className="relative">
-            <WorldIcon world={world} size={4} />
+          <div className="relative shrink-0">
+            <WorldIcon world={world} size={6} />
             {unread > 0 && (
-              <span className="absolute -right-0.5 -top-0.5 inline-flex h-1.5 w-1.5 rounded-full bg-accent shadow-[0_0_0_2px_black]" />
+              <span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-accent shadow-[0_0_0_2px_black]" />
             )}
           </div>
           <span className="truncate">{world.name}</span>
+        </Link>
+
+        <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+          <button
+            type="button"
+            title="Nouveau salon"
+            onClick={() => router.push(`/w/${world.id}`)}
+            className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-[#2a2a2a] hover:text-foreground"
+          >
+            <Plus className="h-3 w-3" />
+          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-[#2a2a2a] hover:text-foreground"
+              >
+                <MoreVertical className="h-3 w-3" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent side="bottom" align="end" className="z-[200] min-w-40">
+              {isAdmin && (
+                <DropdownMenuItem
+                  onClick={() => router.push(`/w/${world.id}`)}
+                  className="gap-2"
+                >
+                  <Settings className="h-3.5 w-3.5" />
+                  Paramètres
+                </DropdownMenuItem>
+              )}
+              {isAdmin && isSharedMember && <DropdownMenuSeparator />}
+              {isSharedMember && (
+                <DropdownMenuItem className="gap-2 text-destructive focus:text-destructive">
+                  <LogOut className="h-3.5 w-3.5" />
+                  Quitter le monde
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
-      </Link>
+      </div>
 
       {world.chatrooms.length > 0 && (
         <div className="ml-5 space-y-0.5 border-l border-border-soft pl-2">
-          {world.chatrooms.map((room) => (
-            <Link key={room.id} href={`/c/${room.id}`}>
-              <div className="flex items-center gap-2 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-[#1a1a1a] hover:text-foreground">
-                {room.has_unread ? (
-                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
-                ) : (
-                  <MessageSquare className="h-3 w-3 shrink-0 opacity-40" />
-                )}
-                <span className="min-w-0 flex-1 truncate">
-                  {room.title ?? room.name ?? "Sans titre"}
-                </span>
-                {room.last_message_at && (
-                  <span className="shrink-0 text-[10px] text-muted-foreground/50">
-                    {compactTime(room.last_message_at)}
+          {world.chatrooms.map((room) => {
+            const isActiveRoom = pathname?.startsWith(`/c/${room.id}`);
+            return (
+              <Link key={room.id} href={`/c/${room.id}`}>
+                <div className="relative flex items-center gap-2 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground">
+                  {isActiveRoom && (
+                    <span className="absolute -left-[11px] top-1/2 h-[5px] w-[5px] -translate-y-1/2 rounded-full bg-border-soft" />
+                  )}
+                  {room.has_unread && (
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
+                  )}
+                  <span className="min-w-0 flex-1 truncate">
+                    {room.title ?? room.name ?? "Sans titre"}
                   </span>
-                )}
-              </div>
-            </Link>
-          ))}
+                  {room.last_message_at && (
+                    <span className="shrink-0 text-[10px] text-muted-foreground/50">
+                      {compactTime(room.last_message_at)}
+                    </span>
+                  )}
+                </div>
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>

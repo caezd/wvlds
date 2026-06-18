@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { X, Download } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, isSafeUrl } from "@/lib/utils";
 import type { ChatMediaItem } from "@/types/db";
 
 export function ImageLightbox({
@@ -35,7 +35,7 @@ export function ImageLightbox({
       {/* Actions haut droite */}
       <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
         <a
-          href={item.url}
+          href={isSafeUrl(item.url) ? item.url : "#"}
           download={item.name}
           onClick={(e) => e.stopPropagation()}
           className="flex items-center justify-center size-9 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"

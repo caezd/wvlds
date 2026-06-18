@@ -136,11 +136,6 @@
     --color-sidebar-accent-foreground: oklch(0.985 0 0);
     --color-sidebar-border: oklch(1 0 0 / 10%);
     --color-sidebar-ring: oklch(0.552 0.016 285.938);
-
-    --radius: 1rem;
-    --radius-lg: var(--radius);
-    --radius-md: calc(var(--radius) - 2px);
-    --radius-sm: calc(var(--radius) - 4px);
 }
 
 @layer base {
@@ -181,6 +176,7 @@
             transform 500ms cubic-bezier(0.05, 0.7, 0.1, 1),
             filter 500ms cubic-bezier(0.05, 0.7, 0.1, 1);
     }
+
     body:has([data-slot="sheet-overlay"][data-state="open"]) #app-shell {
         transform: translateX(-24px);
         filter: blur(6px);
@@ -289,10 +285,6 @@
 }
 
 @theme inline {
-    --radius-sm: calc(var(--radius) - 4px);
-    --radius-md: calc(var(--radius) - 2px);
-    --radius-lg: var(--radius);
-    --radius-xl: calc(var(--radius) + 4px);
     --color-background: var(--background);
     --color-foreground: var(--foreground);
     --color-card: var(--card);
@@ -332,24 +324,24 @@
     --color-card-400: var(--card-400);
 
     /* ── Palette marque ────────────────────────────── */
-    --color-brand-green:  #8AE06C;
+    --color-brand-green: #8AE06C;
     --color-brand-purple: #A77DFF;
-    --color-brand-red:    #F56868;
+    --color-brand-red: #F56868;
     --color-brand-yellow: #F1DF38;
 
     /* ── Chaîne de teintes (compléments RPG) ───────── */
-    --color-chain-pink:   #FF6B9D;
+    --color-chain-pink: #FF6B9D;
     --color-chain-orange: #FF8C42;
-    --color-chain-gold:   #FFDD57;
-    --color-chain-mint:   #70F4B6;
-    --color-chain-cyan:   #22D3EE;
-    --color-chain-blue:   #60A5FA;
+    --color-chain-gold: #FFDD57;
+    --color-chain-mint: #70F4B6;
+    --color-chain-cyan: #22D3EE;
+    --color-chain-blue: #60A5FA;
     --color-chain-violet: #C084FC;
-    --color-chain-amber:  #FBBF24;
+    --color-chain-amber: #FBBF24;
     --color-chain-indigo: #818CF8;
-    --color-chain-rose:   #FB7185;
-    --color-chain-teal:   #2DD4BF;
-    --color-chain-lime:   #A3E635;
+    --color-chain-rose: #FB7185;
+    --color-chain-teal: #2DD4BF;
+    --color-chain-lime: #A3E635;
 }
 
 @layer base {
@@ -372,7 +364,7 @@
         padding-bottom: 5px;
     }
 
-[data-block]:not(:last-child) {
+    [data-block]:not(:last-child) {
         margin-bottom: 2px;
     }
 

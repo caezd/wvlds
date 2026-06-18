@@ -89,6 +89,7 @@ export default function ChatroomMessage({
   chatroomKey,
   forceEdit,
   onForceEditConsumed,
+  personaGroupColor,
 }: {
   message: import("@/types/db").ChatMessageWithPersona;
   online: Record<string, { avatar_url?: string | null; username?: string | null }>;
@@ -100,6 +101,7 @@ export default function ChatroomMessage({
   chatroomKey?: string | null;
   forceEdit?: boolean;
   onForceEditConsumed?: () => void;
+  personaGroupColor?: string | null;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const { getUserPresence } = useGlobalPresence();
@@ -318,7 +320,12 @@ export default function ChatroomMessage({
           <div className="text-sm flex flex-col w-full">
             {/* Ligne 1 : nom + boutons (réagir / éditer / supprimer) */}
             <div className="flex justify-between items-center gap-2 min-h-7">
-              <strong className="font-medium">{message.persona?.name}</strong>
+              <strong
+                className="font-medium"
+                style={personaGroupColor ? { color: personaGroupColor } : undefined}
+              >
+                {message.persona?.name}
+              </strong>
               <div className="flex items-center gap-1">
                 {!editing && emoji_reactions && (
                   <Popover open={pickerOpen} onOpenChange={setPickerOpen}>

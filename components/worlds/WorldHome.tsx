@@ -1,7 +1,9 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { BookOpenText, Settings, Users as UsersIcon } from "lucide-react";
+import { BookOpenText, Network, Settings, Users as UsersIcon } from "lucide-react";
+import { RelationsCanvas } from "./RelationsCanvas";
+import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 
 import { WorldHeroCard } from "./WorldHeroCard";
@@ -75,6 +77,7 @@ export function WorldHome({
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [personaSheetOpen, setPersonaSheetOpen] = useState(false);
+  const [showCanvas, setShowCanvas] = useState(false);
   const [asideWidth, setAsideWidth] = useState(
     initialPrefs?.aside_width ?? ASIDE_DEFAULT,
   );
@@ -168,52 +171,63 @@ export function WorldHome({
       {/* Carte centrale */}
       <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden rounded-2xl border border-border-soft bg-background">
 
-        {/* Contenu principal scrollable */}
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-          <div className="flex w-full flex-col gap-6">
-            {/* Hero — plein écran ou contraint selon mainExpanded */}
+        {showCanvas ? (
+          <RelationsCanvas
+            worldId={worldId}
+            userId={userId ?? ""}
+            canAdmin={canAdmin}
+            onClose={() => setShowCanvas(false)}
+          />
+        ) : (
+          <>
+            {/* Contenu principal scrollable */}
+            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+              <div className="flex w-full flex-col gap-6">
+                {/* Hero — plein écran ou contraint selon mainExpanded */}
+                <div
+                  className={
+                    mainExpanded
+                      ? ""
+                      : "mx-auto w-full px-4 pt-4 [--world-content-max-width:36rem] lg:[--world-content-max-width:44rem] max-w-(--world-content-max-width)"
+                  }
+                >
+                  <WorldHeroCard
+                    world={world}
+                    canAdmin={canAdmin}
+                    isExpanded={mainExpanded}
+                    onToggleExpand={handleToggleExpand}
+                    isFavorite={isFavorite}
+                    onToggleFavorite={handleToggleFavorite}
+                  />
+                </div>
+                {/* Contenu — toujours contraint */}
+                <div className="mx-auto flex w-full flex-col gap-6 px-4 pb-4 [--world-content-max-width:36rem] lg:[--world-content-max-width:44rem] max-w-(--world-content-max-width)">
+                  {canPost && create_chatroom && <WorldChatComposer worldId={worldId} />}
+                  <WorldChatroomsGrid worldId={worldId} initialRooms={initialRooms} />
+                </div>
+              </div>
+            </div>
+
+            {/* Handle de redimensionnement — desktop uniquement */}
             <div
-              className={
-                mainExpanded
-                  ? ""
-                  : "mx-auto w-full px-4 pt-4 [--world-content-max-width:36rem] lg:[--world-content-max-width:44rem] max-w-(--world-content-max-width)"
-              }
+              className="group relative hidden w-2 shrink-0 cursor-col-resize select-none md:block"
+              onPointerDown={onResizePointerDown}
+              onPointerMove={onResizePointerMove}
+              onPointerUp={onResizePointerUp}
+              onPointerCancel={onResizePointerUp}
             >
-              <WorldHeroCard
-                world={world}
-                canAdmin={canAdmin}
-                isExpanded={mainExpanded}
-                onToggleExpand={handleToggleExpand}
-                isFavorite={isFavorite}
-                onToggleFavorite={handleToggleFavorite}
-              />
+              <div className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-border-soft transition-colors group-hover:bg-border" />
             </div>
-            {/* Contenu — toujours contraint */}
-            <div className="mx-auto flex w-full flex-col gap-6 px-4 pb-4 [--world-content-max-width:36rem] lg:[--world-content-max-width:44rem] max-w-(--world-content-max-width)">
-              {canPost && create_chatroom && <WorldChatComposer worldId={worldId} />}
-              <WorldChatroomsGrid worldId={worldId} initialRooms={initialRooms} />
-            </div>
-          </div>
-        </div>
 
-        {/* Handle de redimensionnement — desktop uniquement */}
-        <div
-          className="group relative hidden w-2 shrink-0 cursor-col-resize select-none md:block"
-          onPointerDown={onResizePointerDown}
-          onPointerMove={onResizePointerMove}
-          onPointerUp={onResizePointerUp}
-          onPointerCancel={onResizePointerUp}
-        >
-          <div className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-border-soft transition-colors group-hover:bg-border" />
-        </div>
-
-        {/* Sidebar personas — visible à partir de md */}
-        <aside
-          className="hidden md:flex md:flex-col shrink-0 border-l border-border-soft"
-          style={{ width: asideWidth }}
-        >
-          {personaAside}
-        </aside>
+            {/* Sidebar personas — visible à partir de md */}
+            <aside
+              className="hidden md:flex md:flex-col shrink-0 border-l border-border-soft"
+              style={{ width: asideWidth }}
+            >
+              {personaAside}
+            </aside>
+          </>
+        )}
       </div>
 
       {/* Rail d'icônes droit — hors de la carte */}
@@ -299,6 +313,23 @@ export function WorldHome({
             canManage={canAdmin}
           />
         )}
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              aria-label="Toile des relations"
+              onClick={() => setShowCanvas((v) => !v)}
+              className={cn(
+                "flex h-9 w-9 items-center justify-center rounded-full border border-border-soft bg-background text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground",
+                showCanvas && "bg-secondary text-foreground border-border",
+              )}
+            >
+              <Network className="h-4 w-4" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="left" sideOffset={8}>Relations</TooltipContent>
+        </Tooltip>
       </div>
     </>
   );

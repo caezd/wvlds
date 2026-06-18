@@ -5,6 +5,7 @@ import MarkdownRenderer from "@/components/MarkdownRenderer";
 import { DialogueBubbleRenderer } from "./blocks/DialogueBubbleRenderer";
 import { ImageLightbox } from "./ImageLightbox";
 import type { ChatMessageMeta, ChatMediaItem } from "@/types/db";
+import { isSafeUrl } from "@/lib/utils";
 
 export function ChatroomMessageBubble({
   persona: _persona,
@@ -17,7 +18,7 @@ export function ChatroomMessageBubble({
 }) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
-  const media: ChatMediaItem[] = message.metadata?.media ?? [];
+  const media: ChatMediaItem[] = (message.metadata?.media ?? []).filter((m) => isSafeUrl(m.url));
 
   const mediaSection = media.length > 0 && (
     <div className="flex flex-wrap gap-2">

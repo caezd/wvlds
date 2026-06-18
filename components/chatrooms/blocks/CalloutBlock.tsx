@@ -130,6 +130,7 @@ function CalloutMarkdown({ children, className }: { children: string; className?
   return (
     <div className={cn("text-sm leading-relaxed text-foreground/80 [&>*:last-child]:mb-0", className)}>
       <ReactMarkdown
+        skipHtml
         remarkPlugins={[remarkGfm, remarkBreaks]}
         components={{
           p:          ({ children }) => <p className="mb-1">{children}</p>,
@@ -140,7 +141,10 @@ function CalloutMarkdown({ children, className }: { children: string; className?
           li:         ({ children }) => <li>{children}</li>,
           code:       ({ children }) => <code className="font-mono text-xs bg-muted px-1 py-0.5 rounded">{children}</code>,
           blockquote: ({ children }) => <blockquote className="border-l-2 border-border pl-3 italic opacity-70 mb-1">{children}</blockquote>,
-          a:          ({ href, children }) => <a href={href} className="underline underline-offset-2 hover:opacity-80" target="_blank" rel="noopener noreferrer">{children}</a>,
+          a:          ({ href, children }) => {
+            const safe = href && /^https?:\/\//i.test(href) ? href : href?.startsWith("/") ? href : "#";
+            return <a href={safe} className="underline underline-offset-2 hover:opacity-80" target="_blank" rel="noopener noreferrer">{children}</a>;
+          },
           h1:         ({ children }) => <p className="font-bold mb-1">{children}</p>,
           h2:         ({ children }) => <p className="font-bold mb-1">{children}</p>,
           h3:         ({ children }) => <p className="font-semibold mb-1">{children}</p>,

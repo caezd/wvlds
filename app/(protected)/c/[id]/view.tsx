@@ -140,6 +140,27 @@ export default function ChatRoomView({
 
   const [userId, setUserId] = useState<string | null>(selfId);
 
+  // Couleur de groupe par persona_id (monde du chatroom)
+  const [personaGroupColors, setPersonaGroupColors] = useState<Map<string, string>>(new Map());
+
+  useEffect(() => {
+    const worldId = chat.worlds?.id;
+    if (!worldId) return;
+    void (async () => {
+      type AssignRow = { persona_id: string; group: { color: string } | null };
+      const { data } = await supabase
+        .from("persona_group_assignments")
+        .select("persona_id, group:group_id(color)")
+        .eq("world_id", worldId);
+      if (!data) return;
+      const map = new Map<string, string>();
+      for (const row of data as AssignRow[]) {
+        if (row.group?.color) map.set(row.persona_id, row.group.color);
+      }
+      setPersonaGroupColors(map);
+    })();
+  }, [chat.worlds?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
   /* pagination : historique chargé à la demande en remontant */
   const [hasMore, setHasMore] = useState(initialHasMore);
   const [loadingOlder, setLoadingOlder] = useState(false);
@@ -577,6 +598,7 @@ export default function ChatRoomView({
                       invisibleUsers={invisibleUsers}
                       selfId={userId}
                       chatroomKey={roomKey}
+                      personaGroupColor={personaGroupColors.get(m.persona?.id ?? "") ?? null}
                       forceEdit={editMessageId === m.id}
                       onForceEditConsumed={() => setEditMessageId(null)}
                       onReactionsUpdated={(mid, reactions) => {
