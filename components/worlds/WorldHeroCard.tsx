@@ -22,7 +22,7 @@ type HeroWorld = World & { owner_id: string };
  */
 export function WorldHeroCard({
   world: initialWorld,
-  canAdmin = false,
+  canAdmin: _canAdmin = false,
   footer,
   isExpanded = false,
   onToggleExpand,
@@ -38,7 +38,7 @@ export function WorldHeroCard({
   isFavorite?: boolean;
   onToggleFavorite?: () => void;
 }) {
-  const [world, setWorld] = useState(initialWorld);
+  const [world, _setWorld] = useState(initialWorld);
   const { markWorldSeen } = useNotifications();
 
   useEffect(() => {

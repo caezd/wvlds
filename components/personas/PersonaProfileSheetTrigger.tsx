@@ -276,7 +276,7 @@ export function PersonaProfileSheetTrigger({
   const [name, setName] = React.useState<string | null>(label ?? null);
   const [avatarUrl, setAvatarUrl] = React.useState<string | null>(null);
   const [bannerUrl, setBannerUrl] = React.useState<string | null>(null);
-  const [frameUrl, setFrameUrl] = React.useState<string | null>(null);
+  const [_frameUrl, setFrameUrl] = React.useState<string | null>(null);
   const [ownerPresence, setOwnerPresence] = React.useState<{
     last_seen_at: string | null;
     appear_offline: boolean;
@@ -385,7 +385,7 @@ export function PersonaProfileSheetTrigger({
   const info = balance ? levelInfo(balance.xp) : null;
 
   const userPresence = userId ? getUserPresence(userId) : "offline";
-  const isOnline = userPresence === "online";
+  const _isOnline = userPresence === "online";
   const presenceLine =
     !ownerPresence && userPresence === "offline"
       ? null // données pas encore chargées — on n'affiche rien

@@ -9,7 +9,7 @@ import { encryptMessage } from "@/lib/crypto";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { PersonaPickerDialog } from "@/components/personas/PersonaPickerDialog";
 import { Button } from "../ui/button";
-import { SendHorizontal, Component, Dices, Pipette, X, ImagePlus, Eye, Lock, Sword, Megaphone, Heart, Square } from "lucide-react";
+import { SendHorizontal, Component, Dices, Pipette, X, ImagePlus, Eye, Lock, Sword, Heart, Square } from "lucide-react";
 import { Hint } from "@/components/ui/hint";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";

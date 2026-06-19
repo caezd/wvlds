@@ -47,6 +47,18 @@ import { cn } from "@/lib/utils";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import { ImageCropPicker, getCroppedImg } from "@/components/ui/image-crop-picker";
 import type { Area } from "react-easy-crop";
+import { Switch } from "@/components/ui/switch";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { setWorldFeature, setWorldRestriction } from "@/app/actions/worldCatalog";
 
 /**
  * Edit dialog pour un « monde » — layout "Project Settings" du kit
@@ -62,6 +74,10 @@ export type World = {
     banner_url?: string | null;
     color?: string | null; // hex (#RRGGBB)
     visibility?: string | null;
+    enable_inventory?: boolean | null;
+    enable_skills?: boolean | null;
+    restrict_inventory?: boolean | null;
+    restrict_skills?: boolean | null;
 };
 
 const COLOR_PRESETS = [
@@ -145,6 +161,14 @@ export default function WorldEditDialog({
     const [deleting, setDeleting] = React.useState(false);
     const [bannerCropSrc, setBannerCropSrc] = React.useState<string | null>(null);
 
+    const [enableInventory, setEnableInventory] = React.useState(world.enable_inventory !== false);
+    const [enableSkills, setEnableSkills] = React.useState(world.enable_skills !== false);
+    const [restrictInventory, setRestrictInventory] = React.useState(!!world.restrict_inventory);
+    const [restrictSkills, setRestrictSkills] = React.useState(!!world.restrict_skills);
+    const [pendingRestriction, setPendingRestriction] = React.useState<"inventory" | "skills" | null>(null);
+    const [togglingRestriction, setTogglingRestriction] = React.useState(false);
+    const [togglingEnable, setTogglingEnable] = React.useState(false);
+
     const iconInputRef = React.useRef<HTMLInputElement | null>(null);
     const bannerInputRef = React.useRef<HTMLInputElement | null>(null);
 
@@ -166,10 +190,60 @@ export default function WorldEditDialog({
         mode: "onChange",
     });
 
+    async function handleEnableToggle(field: "inventory" | "skills", enabled: boolean) {
+        setTogglingEnable(true);
+        const res = await setWorldFeature(world.id, `enable_${field}`, enabled);
+        setTogglingEnable(false);
+        if (!res.ok) { toast.error(res.error); return; }
+        if (field === "inventory") {
+            setEnableInventory(enabled);
+            if (!enabled) setRestrictInventory(false);
+        } else {
+            setEnableSkills(enabled);
+            if (!enabled) setRestrictSkills(false);
+        }
+        onUpdated?.({
+            ...world,
+            [`enable_${field}`]: enabled,
+            ...(!enabled ? { [`restrict_${field}`]: false } : {}),
+        } as World);
+    }
+
+    async function handleRestrictionToggle(field: "inventory" | "skills", enabled: boolean) {
+        if (enabled) {
+            setPendingRestriction(field);
+            return;
+        }
+        setTogglingRestriction(true);
+        const res = await setWorldRestriction(world.id, `restrict_${field}`, false);
+        setTogglingRestriction(false);
+        if (!res.ok) { toast.error(res.error); return; }
+        if (field === "inventory") setRestrictInventory(false);
+        else setRestrictSkills(false);
+        onUpdated?.({ ...world, [`restrict_${field}`]: false } as World);
+    }
+
+    async function confirmRestriction() {
+        if (!pendingRestriction) return;
+        setTogglingRestriction(true);
+        const field = pendingRestriction;
+        setPendingRestriction(null);
+        const res = await setWorldRestriction(world.id, `restrict_${field}`, true);
+        setTogglingRestriction(false);
+        if (!res.ok) { toast.error(res.error); return; }
+        if (field === "inventory") setRestrictInventory(true);
+        else setRestrictSkills(true);
+        onUpdated?.({ ...world, [`restrict_${field}`]: true } as World);
+    }
+
     // Réinjecte les valeurs quand le dialog (re)s’ouvre sur ce monde
     React.useEffect(() => {
         if (mergedOpen) {
             setConfirmDelete(false);
+            setEnableInventory(world.enable_inventory !== false);
+            setEnableSkills(world.enable_skills !== false);
+            setRestrictInventory(!!world.restrict_inventory);
+            setRestrictSkills(!!world.restrict_skills);
             form.reset({
                 name: world.name ?? "",
                 description: world.description ?? "",
@@ -640,8 +714,99 @@ export default function WorldEditDialog({
                             )}
                         />
 
+                        {/* -- Catalogue -------------------------------- */}
+                        <div className="space-y-5 pt-2">
+                            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Catalogue</p>
+
+                            {/* Objets */}
+                            <div className="space-y-2">
+                                <div className="flex items-start justify-between gap-4">
+                                    <div className="space-y-0.5">
+                                        <p className="text-sm font-medium">Objets d&apos;inventaire</p>
+                                        <p className="text-xs text-muted-foreground leading-snug">
+                                            Les personas peuvent gérer un inventaire d&apos;objets.
+                                        </p>
+                                    </div>
+                                    <Switch
+                                        checked={enableInventory}
+                                        disabled={togglingEnable}
+                                        onCheckedChange={v => void handleEnableToggle("inventory", v)}
+                                        className="shrink-0 mt-0.5"
+                                    />
+                                </div>
+                                {enableInventory && (
+                                    <div className="ml-4 flex items-start justify-between gap-4 rounded-xl border border-border-soft bg-muted/20 p-3">
+                                        <div className="space-y-0.5">
+                                            <p className="text-sm font-medium">Restreindre au catalogue du monde</p>
+                                            <p className="text-xs text-muted-foreground leading-snug">
+                                                Les personas ne peuvent posséder que des objets définis dans le catalogue — la saisie libre est désactivée.
+                                            </p>
+                                        </div>
+                                        <Switch
+                                            checked={restrictInventory}
+                                            disabled={togglingRestriction}
+                                            onCheckedChange={v => void handleRestrictionToggle("inventory", v)}
+                                            className="shrink-0 mt-0.5"
+                                        />
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Compétences */}
+                            <div className="space-y-2">
+                                <div className="flex items-start justify-between gap-4">
+                                    <div className="space-y-0.5">
+                                        <p className="text-sm font-medium">Compétences</p>
+                                        <p className="text-xs text-muted-foreground leading-snug">
+                                            Les personas peuvent lister leurs compétences.
+                                        </p>
+                                    </div>
+                                    <Switch
+                                        checked={enableSkills}
+                                        disabled={togglingEnable}
+                                        onCheckedChange={v => void handleEnableToggle("skills", v)}
+                                        className="shrink-0 mt-0.5"
+                                    />
+                                </div>
+                                {enableSkills && (
+                                    <div className="ml-4 flex items-start justify-between gap-4 rounded-xl border border-border-soft bg-muted/20 p-3">
+                                        <div className="space-y-0.5">
+                                            <p className="text-sm font-medium">Restreindre au catalogue du monde</p>
+                                            <p className="text-xs text-muted-foreground leading-snug">
+                                                Les personas ne peuvent avoir que des compétences définies dans le catalogue — la saisie libre est désactivée.
+                                            </p>
+                                        </div>
+                                        <Switch
+                                            checked={restrictSkills}
+                                            disabled={togglingRestriction}
+                                            onCheckedChange={v => void handleRestrictionToggle("skills", v)}
+                                            className="shrink-0 mt-0.5"
+                                        />
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
                     </form>
                 </Form>
+
+                {/* Confirmation purge */}
+                <AlertDialog open={!!pendingRestriction} onOpenChange={open => { if (!open) setPendingRestriction(null); }}>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Activer la restriction ?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                Cette action effacera immédiatement tous les {pendingRestriction === "inventory" ? "objets d'inventaire" : "compétences"} des personas de ce monde. Cette opération est irréversible.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Annuler</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => void confirmRestriction()}>
+                                Activer et purger
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
 
                 <SheetFooter className="border-t border-border-soft px-6 py-3 flex-row justify-start">
                     <Button

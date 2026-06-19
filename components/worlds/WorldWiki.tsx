@@ -36,7 +36,6 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import { ParagraphBlockEditor } from "@/components/chatrooms/ParagraphBlockEditor";
 import { toast } from "sonner";
@@ -386,7 +385,7 @@ export function WorldWiki({
   function toggleFolder(id: string) {
     setExpandedFolders(prev => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) { next.delete(id); } else { next.add(id); }
       return next;
     });
   }

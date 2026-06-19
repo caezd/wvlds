@@ -17,8 +17,6 @@ import {
   ShoppingBasket,
   ShieldCheck,
   ChevronUp,
-  Star,
-  MessageSquare,
   MoreVertical,
   Settings,
   LogOut,

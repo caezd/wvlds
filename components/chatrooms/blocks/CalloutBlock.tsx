@@ -10,8 +10,6 @@ import type { CalloutBlock, CalloutBorder, CalloutAlign, CalloutIconKind, Gauge 
 import {
   LucideIconPicker,
   VALID_LUCIDE_ICONS as VALID_ICON_SET,
-  prettyIconName,
-  CATEGORY_LABELS_FR,
 } from "@/components/ui/LucideIconPicker";
 import { Button } from "@/components/ui/button";
 import {

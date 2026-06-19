@@ -21,7 +21,7 @@ export default async function SidebarRail() {
   let worlds: { id: string; name: string; icon_url: string | null }[] = [];
   let adminFlag = false;
   let profileData: { username: string | null; plan: string | null; avatar_url: string | null } | null = null;
-  let chatroomsMap: Record<string, FavoriteRoom[]> = {};
+  const chatroomsMap: Record<string, FavoriteRoom[]> = {};
 
   let quota: Awaited<ReturnType<typeof getUserQuotaServer>> = { plan: "free", owned: 0, quotaLimit: 1, quotaReached: false };
 

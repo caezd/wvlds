@@ -273,7 +273,7 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [bannerUrl, setBannerUrl] = useState<string | null>(null);
-  const [frameUrl, setFrameUrl] = useState<string | null>(null);
+  const [_frameUrl, setFrameUrl] = useState<string | null>(null);
   const [ownerPresence, setOwnerPresence] = useState<{
     last_seen_at: string | null;
     appear_offline: boolean;
@@ -366,7 +366,7 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
   const xpInfo = balance ? levelFromXp(balance.xp) : null;
 
   const userPresence = persona ? getUserPresence(persona.user_id) : "offline";
-  const isOnline = userPresence === "online";
+  const _isOnline = userPresence === "online";
   const presenceLine =
     !persona
       ? null

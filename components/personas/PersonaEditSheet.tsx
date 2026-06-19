@@ -33,7 +33,6 @@ import {
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { deletePersona } from "@/app/(protected)/p/actions";
 import { toast } from "sonner";
-import { AvatarWithFrame } from "@/components/avatars/AvatarWithFrame";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 
 function initials(name: string) {
@@ -386,6 +385,9 @@ type PersonaEditSheetProps = {
   initialFrameId?: string | null;
   initialFrameUrl?: string | null;
   trigger?: ReactNode;
+  worldId?: string;
+  restrictInventory?: boolean;
+  restrictSkills?: boolean;
 };
 
 type PersonaEditorContentProps = {
@@ -402,6 +404,9 @@ type PersonaEditorContentProps = {
   onAvatarOpenChange?: (open: boolean) => void;
   /** Notifie le parent quand la sheet Bannière s'ouvre/ferme (effet pile de cartes). */
   onBannerOpenChange?: (open: boolean) => void;
+  worldId?: string;
+  restrictInventory?: boolean;
+  restrictSkills?: boolean;
 };
 
 // ---------------------------------------------------------------------------
@@ -420,6 +425,9 @@ export function PersonaEditorContent({
   initialFrameUrl,
   onAvatarOpenChange,
   onBannerOpenChange,
+  worldId,
+  restrictInventory,
+  restrictSkills,
 }: PersonaEditorContentProps) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
@@ -429,7 +437,7 @@ export function PersonaEditorContent({
   const [avatarUrl, setAvatarUrl] = useState<string | null>(initialAvatarUrl ?? null);
   const [bannerUrl, setBannerUrl] = useState<string | null>(initialBannerUrl ?? null);
   const [avatarConfig, setAvatarConfig] = useState<AvatarConfigV1 | null>(initialAvatarConfig ?? null);
-  const [frameUrl, setFrameUrl] = useState<string | null>(initialFrameUrl ?? null);
+  const [_frameUrl, setFrameUrl] = useState<string | null>(initialFrameUrl ?? null);
   const { avatar_builder } = useFeatureFlags();
   const [appearanceTab, setAppearanceTab] = useState<"avatar" | "cosmetics">("avatar");
   const [avatarSubTab, setAvatarSubTab] = useState<"builder" | "upload" | "url">(avatar_builder ? "builder" : "upload");
@@ -773,6 +781,9 @@ export function PersonaEditorContent({
           userId={userId}
           sections={sections}
           onSectionsChange={onSectionsChange}
+          worldId={worldId}
+          restrictInventory={restrictInventory}
+          restrictSkills={restrictSkills}
         />
       </div>
     </>
@@ -793,6 +804,9 @@ export function PersonaEditSheet({
   initialFrameId,
   initialFrameUrl,
   trigger,
+  worldId,
+  restrictInventory,
+  restrictSkills,
 }: PersonaEditSheetProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -843,6 +857,9 @@ export function PersonaEditSheet({
               initialAvatarUrl={initialAvatarUrl}
               initialAvatarConfig={initialAvatarConfig}
               initialBannerUrl={initialBannerUrl}
+              worldId={worldId}
+              restrictInventory={restrictInventory}
+              restrictSkills={restrictSkills}
               initialFrameId={initialFrameId}
               initialFrameUrl={initialFrameUrl}
               onAvatarOpenChange={setAvatarOpen}
