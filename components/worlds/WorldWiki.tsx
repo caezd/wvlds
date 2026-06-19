@@ -3,10 +3,6 @@
 import * as React from "react";
 import { createClient } from "@/lib/supabase/client";
 import { saveWorldPrefs } from "@/app/(protected)/w/actions";
-
-const WIKI_NAV_MIN = 120;
-const WIKI_NAV_MAX = 360;
-const WIKI_NAV_DEFAULT = 208;
 import {
   BookOpenText,
   Check,
@@ -62,6 +58,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+
+const WIKI_NAV_MIN = 120;
+const WIKI_NAV_MAX = 360;
+const WIKI_NAV_DEFAULT = 208;
 
 type WikiPage = {
   id: string;
