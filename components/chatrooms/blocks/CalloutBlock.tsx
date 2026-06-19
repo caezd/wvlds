@@ -1,15 +1,18 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
-import { Square, PanelLeft, Minus, Ban, AlignLeft, AlignCenter, Search, Palette, ImagePlus, X, Plus, Loader2 } from "lucide-react";
+import { useRef, useState } from "react";
+import { Square, PanelLeft, Minus, Ban, AlignLeft, AlignCenter, Palette, ImagePlus, X, Plus, Loader2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
-import { DynamicIcon, type IconName, iconNames } from "lucide-react/dynamic";
-
-const VALID_ICON_SET = new Set<string>(iconNames);
+import { DynamicIcon, type IconName } from "lucide-react/dynamic";
 import type { CalloutBlock, CalloutBorder, CalloutAlign, CalloutIconKind, Gauge } from "@/lib/chat-blocks";
-import { LUCIDE_CATEGORIES, LUCIDE_ALL_ICONS } from "@/lib/lucideCategories";
+import {
+  LucideIconPicker,
+  VALID_LUCIDE_ICONS as VALID_ICON_SET,
+  prettyIconName,
+  CATEGORY_LABELS_FR,
+} from "@/components/ui/LucideIconPicker";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -29,12 +32,6 @@ import { cn } from "@/lib/utils";
 import { EmojiPickerButton } from "@/components/chatrooms/EmojiPickerButton";
 import { ReactionEmoji } from "@/components/chatrooms/ReactionEmoji";
 import { GameBlockSurface, GameBlockToolbar, GameBlockEditButton } from "./GameBlockShell";
-
-/* Joli libellé à partir d'un nom kebab d'icône lucide (ex. "map-pin" → "Map pin"). */
-function prettyIconName(name: string) {
-  const s = name.replace(/-/g, " ");
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
 
 /* ─── Presets : reproduisent l'esprit des anciens blocs ──────────────────── */
 
@@ -281,197 +278,6 @@ export function CalloutBlockView({
         )}
       </div>
     </GameBlockSurface>
-  );
-}
-
-/* ─── Sélecteur d'icône lucide : toute la librairie, par catégories + recherche ─ */
-
-const CATEGORY_LABELS_FR: Record<string, string> = {
-  "Accessibility": "Accessibilité",
-  "Accounts & access": "Comptes & accès",
-  "Animals": "Animaux",
-  "Arrows": "Flèches",
-  "Buildings": "Bâtiments",
-  "Charts": "Graphiques",
-  "Communication": "Communication",
-  "Connectivity": "Connectivité",
-  "Cursors": "Curseurs",
-  "Design": "Design",
-  "Coding & development": "Code & développement",
-  "Devices": "Appareils",
-  "Emoji": "Emoji",
-  "File icons": "Fichiers & dossiers",
-  "Finance": "Finance",
-  "Food & beverage": "Alimentation & boissons",
-  "Gaming": "Jeux",
-  "Home": "Maison",
-  "Layout": "Mise en page",
-  "Mail": "Courrier",
-  "Mathematics": "Mathématiques",
-  "Medical": "Médecine",
-  "Multimedia": "Multimédia",
-  "Nature": "Nature",
-  "Navigation, Maps, and POIs": "Navigation & cartes",
-  "Notification": "Notifications",
-  "People": "Personnes",
-  "Photography": "Photographie",
-  "Science": "Sciences",
-  "Seasons": "Saisons",
-  "Security": "Sécurité",
-  "Shapes": "Formes",
-  "Shopping": "Shopping",
-  "Social": "Réseaux sociaux",
-  "Sports": "Sports",
-  "Sustainability": "Durabilité",
-  "Text formatting": "Mise en forme",
-  "Time & calendar": "Temps & calendrier",
-  "Tools": "Outils",
-  "Transportation": "Transport",
-  "Travel": "Voyage",
-  "Weather": "Météo",
-  "Autres": "Autres",
-};
-
-// Plafond d'icônes affichées en mode recherche (chaque icône = un import dynamique).
-const ICON_RENDER_CAP = 180;
-
-function LucideIconButton({
-  name,
-  active,
-  accent,
-  onClick,
-}: {
-  name: string;
-  active: boolean;
-  accent?: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      title={prettyIconName(name)}
-      className={cn(
-        "flex aspect-square items-center justify-center rounded-md border transition-colors",
-        active ? "border-primary bg-primary/10" : "border-transparent hover:bg-muted",
-      )}
-    >
-      <DynamicIcon
-        name={name as IconName}
-        className="h-4 w-4"
-        style={active && accent ? { color: accent } : undefined}
-      />
-    </button>
-  );
-}
-
-function LucideIconPicker({
-  value,
-  onChange,
-  accent,
-}: {
-  value: string;
-  onChange: (name: string) => void;
-  accent?: string;
-}) {
-  const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
-
-  const q = query.trim().toLowerCase().replace(/\s+/g, "-");
-
-  const searchResults = useMemo(
-    () => (q ? LUCIDE_ALL_ICONS.filter((n) => n.includes(q)) : null),
-    [q],
-  );
-  const shownSearch = searchResults?.slice(0, ICON_RENDER_CAP) ?? null;
-  const searchOverflow = searchResults ? searchResults.length - (shownSearch?.length ?? 0) : 0;
-
-  return (
-    <Popover open={open} onOpenChange={(v) => { setOpen(v); if (v) setQuery(""); }}>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          className="flex h-9 w-full items-center gap-2 rounded-md border border-input bg-transparent px-3 text-sm shadow-xs transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-        >
-          {value ? (
-            <DynamicIcon
-              name={value as IconName}
-              className="h-4 w-4 shrink-0"
-              style={accent ? { color: accent } : undefined}
-            />
-          ) : (
-            <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
-          )}
-          <span className={cn("flex-1 truncate text-left", !value && "text-muted-foreground")}>
-            {value ? prettyIconName(value) : "Choisir une icône…"}
-          </span>
-        </button>
-      </PopoverTrigger>
-      <PopoverContent className="w-[280px] p-0 z-[200]" align="start">
-        {/* Recherche */}
-        <div className="flex items-center gap-2 border-b border-border-soft px-3">
-          <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Rechercher dans 1800+ icônes…"
-            autoFocus
-            className="h-9 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-          />
-        </div>
-
-        <div
-          className="h-64 overflow-y-auto overscroll-contain"
-          onWheel={(e) => e.stopPropagation()}
-          onTouchMove={(e) => e.stopPropagation()}
-        >
-          {q ? (
-            /* Résultats de recherche : grille plate */
-            <div className="grid grid-cols-7 gap-1 p-2">
-              {shownSearch!.map((name) => (
-                <LucideIconButton
-                  key={name}
-                  name={name}
-                  active={value === name}
-                  accent={accent}
-                  onClick={() => { onChange(name); setOpen(false); }}
-                />
-              ))}
-              {shownSearch!.length === 0 && (
-                <p className="col-span-7 py-6 text-center text-xs text-muted-foreground">
-                  Aucune icône
-                </p>
-              )}
-              {searchOverflow > 0 && (
-                <p className="col-span-7 pb-1 text-center text-[11px] text-muted-foreground">
-                  +{searchOverflow} de plus — affinez la recherche
-                </p>
-              )}
-            </div>
-          ) : (
-            /* Vue par catégories : toutes les catégories dans un seul scroll */
-            LUCIDE_CATEGORIES.map((cat) => (
-              <div key={cat.title}>
-                <div className="sticky top-0 z-10 border-b border-border-soft/50 bg-popover px-2 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70">
-                  {CATEGORY_LABELS_FR[cat.title] ?? cat.title}
-                </div>
-                <div className="grid grid-cols-7 gap-1 p-2">
-                  {cat.icons.filter((n) => VALID_ICON_SET.has(n)).map((name) => (
-                    <LucideIconButton
-                      key={name}
-                      name={name}
-                      active={value === name}
-                      accent={accent}
-                      onClick={() => { onChange(name); setOpen(false); }}
-                    />
-                  ))}
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </PopoverContent>
-    </Popover>
   );
 }
 

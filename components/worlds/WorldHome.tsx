@@ -1,14 +1,14 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { BookOpenText, Network, Settings, Users as UsersIcon } from "lucide-react";
+import { BookOpenText, Library, Network, Settings, Users as UsersIcon } from "lucide-react";
 import { RelationsCanvas } from "./RelationsCanvas";
+import { WorldCatalogue } from "./WorldCatalogue";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 
 import { WorldHeroCard } from "./WorldHeroCard";
-import { WorldTabs } from "./WorldTabs";
-import { WorldTabContent } from "./WorldTabContent";
+import { WorldWiki } from "./WorldWiki";
 import { WorldChatComposer } from "./WorldChatComposer";
 import { WorldChatroomsGrid } from "./WorldChatroomsGrid";
 import { WorldMembersSheet } from "./WorldMembersSheet";
@@ -35,7 +35,7 @@ export const ASIDE_MIN = 150;
 export const ASIDE_MAX = 380;
 const ASIDE_DEFAULT = 192;
 
-type WorldPrefs = { aside_width: number; main_expanded: boolean; is_favorite: boolean };
+type WorldPrefs = { aside_width: number; main_expanded: boolean; is_favorite: boolean; wiki_sidebar_width?: number };
 
 type HeroWorld = World & { owner_id: string };
 
@@ -78,6 +78,10 @@ export function WorldHome({
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [personaSheetOpen, setPersonaSheetOpen] = useState(false);
   const [showCanvas, setShowCanvas] = useState(false);
+  const [showCatalogue, setShowCatalogue] = useState(false);
+  const [showWiki, setShowWiki] = useState(false);
+
+  const hasCatalogue = !!(world.restrict_inventory || world.restrict_skills) || canEditTabs;
   const [asideWidth, setAsideWidth] = useState(
     initialPrefs?.aside_width ?? ASIDE_DEFAULT,
   );
@@ -143,26 +147,13 @@ export function WorldHome({
     void saveWorldPrefs(worldId, { main_expanded: next });
   }
 
-  const tabsPanel = (
-    <WorldTabs
-      worldId={worldId}
-      canEdit={canEditTabs}
-      renderTab={(tab) => (
-        <WorldTabContent
-          key={tab.id}
-          tabId={tab.id}
-          initialContent={tab.content ?? null}
-          canEdit={canEditTabs}
-        />
-      )}
-    />
-  );
-
   const personaAside = (
     <WorldPersonaAsideClient
       worldId={worldId}
       personas={initialPersonas}
       asideWidth={asideWidth}
+      restrictInventory={!!world.restrict_inventory}
+      restrictSkills={!!world.restrict_skills}
     />
   );
 
@@ -177,6 +168,23 @@ export function WorldHome({
             userId={userId ?? ""}
             canAdmin={canAdmin}
             onClose={() => setShowCanvas(false)}
+          />
+        ) : showCatalogue ? (
+          <WorldCatalogue
+            worldId={worldId}
+            canEdit={canEditTabs}
+            inventoryEnabled={world.enable_inventory !== false}
+            inventoryRestricted={!!world.restrict_inventory}
+            skillsEnabled={world.enable_skills !== false}
+            skillsRestricted={!!world.restrict_skills}
+            onClose={() => setShowCatalogue(false)}
+          />
+        ) : showWiki ? (
+          <WorldWiki
+            worldId={worldId}
+            canEdit={canEditTabs}
+            initialSidebarWidth={initialPrefs?.wiki_sidebar_width}
+            onClose={() => setShowWiki(false)}
           />
         ) : (
           <>
@@ -283,28 +291,22 @@ export function WorldHome({
           </SheetContent>
         </Sheet>
 
-        <Sheet>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <SheetTrigger asChild>
-                <button
-                  type="button"
-                  aria-label="Onglets du monde"
-                  className="flex h-9 w-9 items-center justify-center rounded-full border border-border-soft bg-background text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-                >
-                  <BookOpenText className="h-4 w-4" />
-                </button>
-              </SheetTrigger>
-            </TooltipTrigger>
-            <TooltipContent side="left" sideOffset={8}>Onglets</TooltipContent>
-          </Tooltip>
-          <SheetContent side="right" className="w-[88%] gap-0 p-0 sm:max-w-3xl">
-            <SheetTitle className="sr-only">Onglets du monde</SheetTitle>
-            <div className="flex h-full min-h-0 flex-col pt-10">
-              {tabsPanel}
-            </div>
-          </SheetContent>
-        </Sheet>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              aria-label="Wiki du monde"
+              onClick={() => { setShowCanvas(false); setShowCatalogue(false); setShowWiki((v) => !v); }}
+              className={cn(
+                "flex h-9 w-9 items-center justify-center rounded-full border border-border-soft bg-background text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground",
+                showWiki && "border-border bg-secondary text-foreground",
+              )}
+            >
+              <BookOpenText className="h-4 w-4" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="left" sideOffset={8}>Wiki</TooltipContent>
+        </Tooltip>
 
         {isShared && (
           <WorldMembersSheet
@@ -319,7 +321,7 @@ export function WorldHome({
             <button
               type="button"
               aria-label="Toile des relations"
-              onClick={() => setShowCanvas((v) => !v)}
+              onClick={() => { setShowCatalogue(false); setShowWiki(false); setShowCanvas((v) => !v); }}
               className={cn(
                 "flex h-9 w-9 items-center justify-center rounded-full border border-border-soft bg-background text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground",
                 showCanvas && "bg-secondary text-foreground border-border",
@@ -330,6 +332,25 @@ export function WorldHome({
           </TooltipTrigger>
           <TooltipContent side="left" sideOffset={8}>Relations</TooltipContent>
         </Tooltip>
+
+        {hasCatalogue && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                aria-label="Catalogue"
+                onClick={() => { setShowCanvas(false); setShowWiki(false); setShowCatalogue((v) => !v); }}
+                className={cn(
+                  "flex h-9 w-9 items-center justify-center rounded-full border border-border-soft bg-background text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground",
+                  showCatalogue && "bg-secondary text-foreground border-border",
+                )}
+              >
+                <Library className="h-4 w-4" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="left" sideOffset={8}>Catalogue</TooltipContent>
+          </Tooltip>
+        )}
       </div>
     </>
   );

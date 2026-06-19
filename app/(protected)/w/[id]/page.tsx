@@ -22,7 +22,7 @@ export default async function WorldPage({
   const { data: world } = await supabase
     .from("worlds")
     .select(
-      "id, name, description, owner_id, banner_url, icon_url, color, visibility, world_members(user_id, role)",
+      "id, name, description, owner_id, banner_url, icon_url, color, visibility, restrict_inventory, restrict_skills, world_members(user_id, role)",
     )
     .eq("id", id)
     .single();
@@ -65,11 +65,11 @@ export default async function WorldPage({
   const userId = me.user?.id;
 
   // ── Préférences UI de l'utilisateur pour ce monde ───────────
-  let worldPrefs: { aside_width: number; main_expanded: boolean; is_favorite: boolean } | null = null;
+  let worldPrefs: { aside_width: number; main_expanded: boolean; is_favorite: boolean; wiki_sidebar_width: number } | null = null;
   if (userId) {
     const { data } = await supabase
       .from("world_user_preferences")
-      .select("aside_width, main_expanded, is_favorite")
+      .select("aside_width, main_expanded, is_favorite, wiki_sidebar_width")
       .eq("world_id", id)
       .eq("user_id", userId)
       .maybeSingle();

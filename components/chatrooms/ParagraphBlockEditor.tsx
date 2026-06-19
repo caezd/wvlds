@@ -57,6 +57,7 @@ export function ParagraphBlockEditor({
   onKeyDown,
   placeholder,
   className,
+  wrapperClassName,
   submitOnEnter = true,
 }: {
   value: string;
@@ -64,6 +65,8 @@ export function ParagraphBlockEditor({
   onKeyDown?: (e: React.KeyboardEvent<HTMLDivElement>) => void;
   placeholder?: string;
   className?: string;
+  /** Classes CSS supplémentaires appliquées au div wrapper (remplace max-h-40 si besoin). */
+  wrapperClassName?: string;
   /** Si vrai (défaut), Entrée seule déclenche onKeyDown (envoi). Si faux,
       Entrée crée des sauts de ligne / nouveaux blocs (mode document). */
   submitOnEnter?: boolean;
@@ -254,7 +257,7 @@ if (paragraphs.length <= 1) return; // un seul paragraphe → comportement natif
   }
 
   return (
-    <div className={cn("relative max-h-40 overflow-y-auto [scrollbar-width:thin]", focused && "pb-editor")}>
+    <div className={cn("relative max-h-40 overflow-y-auto [scrollbar-width:thin]", focused && "pb-editor", wrapperClassName)}>
       {!value.trim() && !focused && placeholder && (
         <span className="absolute top-[5px] left-[10px] pointer-events-none select-none text-muted-foreground/50 text-sm">
           {placeholder}
