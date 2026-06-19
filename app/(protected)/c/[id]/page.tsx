@@ -20,7 +20,7 @@ export default async function Page({ params }: { params: { id: string } }) {
   const { data: chatroom, error: chatErr } = await supabase
     .from("chatrooms")
     .select(
-      "id, name, title, banner_url, icon_url, world_id, created_by, worlds(id, name, owner_id, world_members(user_id))",
+      "id, name, title, banner_url, icon_url, world_id, created_by, worlds(id, name, owner_id, restrict_inventory, restrict_skills, world_members(user_id))",
     )
     .eq("id", id)
     .single();
@@ -99,7 +99,7 @@ export default async function Page({ params }: { params: { id: string } }) {
 
   // Données du monde associé (extracted pour usage multiple)
   const rawWorld = chatroom.worlds as unknown;
-  const worldData = (Array.isArray(rawWorld) ? rawWorld[0] : rawWorld) as { id: string; name: string; owner_id?: string; world_members?: { user_id: string }[] } | null | undefined;
+  const worldData = (Array.isArray(rawWorld) ? rawWorld[0] : rawWorld) as { id: string; name: string; owner_id?: string; restrict_inventory?: boolean | null; restrict_skills?: boolean | null; world_members?: { user_id: string }[] } | null | undefined;
 
   // 3) Persona par défaut pour cet utilisateur dans cette chatroom (facultatif)
   let initialPersona: {
@@ -181,7 +181,7 @@ export default async function Page({ params }: { params: { id: string } }) {
         const w = worldData;
         if (!w?.id) return null;
         const isShared = (w.world_members ?? []).some((m: { user_id: string }) => m.user_id !== w.owner_id);
-        return { id: w.id, name: w.name, isShared, owner_id: w.owner_id ?? null };
+        return { id: w.id, name: w.name, isShared, owner_id: w.owner_id ?? null, restrict_inventory: !!w.restrict_inventory, restrict_skills: !!w.restrict_skills };
       })(),
       }}
       initialMessages={initialMessagesWithReactions as unknown as ChatMessageWithPersona[]}

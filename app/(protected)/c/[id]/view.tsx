@@ -4,7 +4,8 @@ import { createClient } from "@/lib/supabase/client";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { decryptMessage, generateRoomKey } from "@/lib/crypto";
 import Link from "next/link";
-import { Globe, GlobeLock } from "lucide-react";
+import { Globe, GlobeLock, Network, Library } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 import ChatroomSettingsSheet from "@/components/chatrooms/ChatroomSettingsSheet";
 import ChatroomStatsSheet from "@/components/chatrooms/ChatroomStatsSheet";
@@ -15,6 +16,8 @@ import ChatroomMessage from "@/components/chatrooms/ChatroomMessage";
 import { PersonaProfileSheet } from "@/components/chatrooms/PersonaProfileSheet";
 import { ChatroomsNavDropdown } from "@/components/chatrooms/ChatroomsNavDropdown";
 import { WorldMembershipGuard } from "@/components/worlds/WorldMembershipGuard";
+import { RelationsCanvas } from "@/components/worlds/RelationsCanvas";
+import { WorldCatalogue } from "@/components/worlds/WorldCatalogue";
 import { type ChatroomNavItem } from "@/components/worlds/WorldChatroomsAside";
 
 import {
@@ -39,7 +42,7 @@ function ChatroomHeader({
   chatId,
   rooms,
 }: {
-  chat: { title: string; worlds: { id: string; name: string; isShared: boolean; owner_id: string | null } | null } | null;
+  chat: { title: string; worlds: { id: string; name: string; isShared: boolean; owner_id: string | null; restrict_inventory: boolean; restrict_skills: boolean } | null } | null;
   chatId: string;
   rooms: ChatroomNavItem[];
 }) {
@@ -110,7 +113,7 @@ export default function ChatRoomView({
     title: string;
     banner_url: string | null;
     icon_url: string | null;
-    worlds: { id: string; name: string; isShared: boolean; owner_id: string | null } | null;
+    worlds: { id: string; name: string; isShared: boolean; owner_id: string | null; restrict_inventory: boolean; restrict_skills: boolean } | null;
   };
   initialMessages: ChatMessageWithPersona[];
   initialHasMore: boolean;
@@ -137,6 +140,8 @@ export default function ChatRoomView({
   );
   const [openPersona, setOpenPersona] = useState<Persona | null>(null);
   const [editMessageId, setEditMessageId] = useState<number | null>(null);
+  const [showCanvas, setShowCanvas] = useState(false);
+  const [showCatalogue, setShowCatalogue] = useState(false);
 
   const [userId, setUserId] = useState<string | null>(selfId);
 
@@ -572,85 +577,106 @@ export default function ChatRoomView({
         selfId={userId ?? selfId}
       />
       <div className="flex flex-col focus-visible:outline-0 flex-1 h-full min-w-0 rounded-2xl border border-border-soft bg-background overflow-hidden">
-        <ChatroomHeader
-          chat={chat}
-          chatId={chatId}
-          rooms={initialChatrooms}
-        />
-        <section className="relative basis-auto flex-col -mb-(--composer-overlap-px) [--composer-overlap-px:64px] [--jump-btn-bottom:calc(var(--composer-overlap-px)+24px)] grow flex overflow-hidden">
-          <div className="relative h-full">
-            <ScrollAreaWithJumpToBottom
-              ref={scrollRef}
-              className="flex h-full flex-col overflow-y-auto thread-xl:pt-(--header-height)"
-            >
-              <div className="flex flex-col text-sm thread-xl:pt-header-height pb-25 divide-y divide-border-soft [--thread-content-max-width:40rem] lg:[--thread-content-max-width:48rem] mx-auto max-w-(--thread-content-max-width) flex-1 px-2 lg:px-0">
-                {loadingOlder && (
-                  <div className="py-3 text-center text-xs text-muted-foreground">
-                    Chargement de l’historique…
+        {showCanvas && chat?.worlds?.id ? (
+          <RelationsCanvas
+            worldId={chat.worlds.id}
+            userId={userId ?? ""}
+            canAdmin={canWorldAdmin}
+            onClose={() => setShowCanvas(false)}
+          />
+        ) : showCatalogue && chat?.worlds?.id ? (
+          <WorldCatalogue
+            worldId={chat.worlds.id}
+            canEdit={canWorldAdmin}
+            inventoryEnabled={true}
+            inventoryRestricted={chat.worlds.restrict_inventory}
+            skillsEnabled={true}
+            skillsRestricted={chat.worlds.restrict_skills}
+            onClose={() => setShowCatalogue(false)}
+          />
+        ) : (
+          <>
+            <ChatroomHeader
+              chat={chat}
+              chatId={chatId}
+              rooms={initialChatrooms}
+            />
+            <section className="relative basis-auto flex-col -mb-(--composer-overlap-px) [--composer-overlap-px:64px] [--jump-btn-bottom:calc(var(--composer-overlap-px)+24px)] grow flex overflow-hidden">
+              <div className="relative h-full">
+                <ScrollAreaWithJumpToBottom
+                  ref={scrollRef}
+                  className="flex h-full flex-col overflow-y-auto thread-xl:pt-(--header-height)"
+                >
+                  <div className="flex flex-col text-sm thread-xl:pt-header-height pb-25 divide-y divide-border-soft [--thread-content-max-width:40rem] lg:[--thread-content-max-width:48rem] mx-auto max-w-(--thread-content-max-width) flex-1 px-2 lg:px-0">
+                    {loadingOlder && (
+                      <div className="py-3 text-center text-xs text-muted-foreground">
+                        Chargement de l’historique…
+                      </div>
+                    )}
+                    {messages.map((m) => {
+                      return (
+                        <ChatroomMessage
+                          key={m.id}
+                          message={m}
+                          online={onlineUsers}
+                          invisibleUsers={invisibleUsers}
+                          selfId={userId}
+                          chatroomKey={roomKey}
+                          personaGroupColor={personaGroupColors.get(m.persona?.id ?? "") ?? null}
+                          forceEdit={editMessageId === m.id}
+                          onForceEditConsumed={() => setEditMessageId(null)}
+                          onReactionsUpdated={(mid, reactions) => {
+                            setMessages((prev) =>
+                              prev.map((m) =>
+                                m.id === mid ? { ...m, reactions } : m,
+                              ),
+                            );
+                          }}
+                          onUpdated={(id, content) => {
+                            setMessages((prev) =>
+                              prev.map((x) =>
+                                x.id === id ? { ...x, content } : x,
+                              ),
+                            );
+                          }}
+                          onDeleted={(id) => {
+                            setMessages((prev) => prev.filter((x) => x.id !== id));
+                          }}
+                        />
+                      );
+                    })}
                   </div>
-                )}
-                {messages.map((m) => {
-                  return (
-                    <ChatroomMessage
-                      key={m.id}
-                      message={m}
-                      online={onlineUsers}
-                      invisibleUsers={invisibleUsers}
-                      selfId={userId}
-                      chatroomKey={roomKey}
-                      personaGroupColor={personaGroupColors.get(m.persona?.id ?? "") ?? null}
-                      forceEdit={editMessageId === m.id}
-                      onForceEditConsumed={() => setEditMessageId(null)}
-                      onReactionsUpdated={(mid, reactions) => {
-                        setMessages((prev) =>
-                          prev.map((m) =>
-                            m.id === mid ? { ...m, reactions } : m,
-                          ),
-                        );
-                      }}
-                      onUpdated={(id, content) => {
-                        setMessages((prev) =>
-                          prev.map((x) =>
-                            x.id === id ? { ...x, content } : x,
-                          ),
-                        );
-                      }}
-                      onDeleted={(id) => {
-                        setMessages((prev) => prev.filter((x) => x.id !== id));
-                      }}
-                    />
-                  );
-                })}
+                </ScrollAreaWithJumpToBottom>
               </div>
-            </ScrollAreaWithJumpToBottom>
-          </div>
-        </section>
-        <div className="group/thread-bottom-container relative isolate z-10 w-full basis-auto has-data-has-thread-error:pt-2 md:pt-0 print:hidden before:pointer-events-none before:absolute before:inset-x-0 before:bottom-1/2 max-lg:before:bottom-0 before:-top-10 before:-z-10 before:bg-linear-to-t before:from-background before:from-50% before:to-transparent">
-          <div className="text-base mx-auto [--thread-content-margin:--spacing(4)] thread-sm:[--thread-content-margin:--spacing(6)] thread-lg:[--thread-content-margin:--spacing(16)]">
-            <div className="thread-lg:[--thread-content-max-width:48rem] mx-auto flex-1 p-3 pt-0 lg:p-10 lg:pt-0">
-              <div className="pointer-events-auto relative z-1 flex h-[var(--composer-container-height,100%)] max-w-full flex-[var(--composer-container-flex,1)] flex-col">
-                {post_message && <ChatroomComposer
-                  chatId={chatId}
-                  presetPersona={selectedPersona}
-                  onTyping={emitTyping}
-                  onPersonaChange={setSelectedPersona}
-                  chatroomKey={roomKey}
-                  typingLine={typingLine}
-                  onEditLastMessage={() => {
-                    const last = [...messages].reverse().find((m) => isMyMessage(m, userId));
-                    if (last) setEditMessageId(last.id);
-                  }}
-                />}
+            </section>
+            <div className="group/thread-bottom-container relative isolate z-10 w-full basis-auto has-data-has-thread-error:pt-2 md:pt-0 print:hidden before:pointer-events-none before:absolute before:inset-x-0 before:bottom-1/2 max-lg:before:bottom-0 before:-top-10 before:-z-10 before:bg-linear-to-t before:from-background before:from-50% before:to-transparent">
+              <div className="text-base mx-auto [--thread-content-margin:--spacing(4)] thread-sm:[--thread-content-margin:--spacing(6)] thread-lg:[--thread-content-margin:--spacing(16)]">
+                <div className="thread-lg:[--thread-content-max-width:48rem] mx-auto flex-1 p-3 pt-0 lg:p-10 lg:pt-0">
+                  <div className="pointer-events-auto relative z-1 flex h-[var(--composer-container-height,100%)] max-w-full flex-[var(--composer-container-flex,1)] flex-col">
+                    {post_message && <ChatroomComposer
+                      chatId={chatId}
+                      presetPersona={selectedPersona}
+                      onTyping={emitTyping}
+                      onPersonaChange={setSelectedPersona}
+                      chatroomKey={roomKey}
+                      typingLine={typingLine}
+                      onEditLastMessage={() => {
+                        const last = [...messages].reverse().find((m) => isMyMessage(m, userId));
+                        if (last) setEditMessageId(last.id);
+                      }}
+                    />}
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
-        <PersonaProfileSheet
-          persona={openPersona}
-          selfId={selfId}
-          onClose={() => setOpenPersona(null)}
-          onUsePersona={(p) => setSelectedPersona(p)}
-        />
+            <PersonaProfileSheet
+              persona={openPersona}
+              selfId={selfId}
+              onClose={() => setOpenPersona(null)}
+              onUsePersona={(p) => setSelectedPersona(p)}
+            />
+          </>
+        )}
       </div>
 
       {/* Rail d'icônes droit — hors de la carte */}
@@ -673,6 +699,32 @@ export default function ChatRoomView({
               ownerId={chat.worlds.owner_id ?? ""}
               canManage={canWorldAdmin}
             />
+          )}
+          {chat.worlds?.id && (
+            <>
+              <button
+                type="button"
+                aria-label="Toile des relations"
+                onClick={() => { setShowCatalogue(false); setShowCanvas((v) => !v); }}
+                className={cn(
+                  "flex h-9 w-9 items-center justify-center rounded-full border border-border-soft bg-background text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground",
+                  showCanvas && "bg-secondary text-foreground border-border",
+                )}
+              >
+                <Network className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                aria-label="Catalogue"
+                onClick={() => { setShowCanvas(false); setShowCatalogue((v) => !v); }}
+                className={cn(
+                  "flex h-9 w-9 items-center justify-center rounded-full border border-border-soft bg-background text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground",
+                  showCatalogue && "bg-secondary text-foreground border-border",
+                )}
+              >
+                <Library className="h-4 w-4" />
+              </button>
+            </>
           )}
         </div>
       )}

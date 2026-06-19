@@ -18,6 +18,7 @@ export interface PersonaGridImage {
 /** Un item dans un champ de type "inventory". */
 export interface InventoryItem {
   id: string;
+  catalog_id?: string; // défini quand le monde a restrict_inventory
   name: string;
   quantity: number;
   description?: string;
@@ -27,6 +28,7 @@ export interface InventoryItem {
 /** Une compétence dans un champ de type "skills". */
 export interface SkillItem {
   id: string;
+  catalog_id?: string; // défini quand le monde a restrict_skills
   name: string;
   level: string; // texte libre ou nombre
   description?: string;

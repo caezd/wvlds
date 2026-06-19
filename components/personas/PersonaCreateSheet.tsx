@@ -18,9 +18,13 @@ import type { PersonaSectionWithFields } from "@/types/personas";
 export function PersonaCreateSheet({
   worldId,
   trigger,
+  restrictInventory,
+  restrictSkills,
 }: {
   worldId?: string | null;
   trigger?: ReactNode;
+  restrictInventory?: boolean;
+  restrictSkills?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [phase, setPhase] = useState<"name" | "edit">("name");
@@ -117,6 +121,9 @@ export function PersonaCreateSheet({
               personaId={createdId}
               personaName={createdName}
               sections={sections}
+              worldId={worldId ?? undefined}
+              restrictInventory={restrictInventory}
+              restrictSkills={restrictSkills}
               onSectionsChange={setSections}
             />
           ) : null}

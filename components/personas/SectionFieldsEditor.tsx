@@ -18,7 +18,9 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 
-import { ArrowUp, ArrowDown, Plus, Trash2, Type, AlignLeft, BarChart3, Minus, X, ImageIcon, Loader2, Expand, Backpack, Swords, Gauge, Quote, Tag, CalendarDays } from "lucide-react";
+import { ArrowUp, ArrowDown, Plus, Trash2, Type, AlignLeft, BarChart3, Minus, X, ImageIcon, Loader2, Expand, Backpack, Swords, Gauge, Quote, Tag, CalendarDays, Lock } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import type { WorldInventoryItem, WorldSkill } from "@/types/worlds";
 import { ImageLightbox } from "@/components/chatrooms/ImageLightbox";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 
@@ -267,12 +269,70 @@ function IconButton({
   );
 }
 
+function CatalogPicker<T extends WorldInventoryItem | WorldSkill>({
+  available,
+  label,
+  onSelect,
+}: {
+  available: T[];
+  label: string;
+  onSelect: (item: T) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        disabled={available.length === 0}
+        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mt-1 disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        <Plus className="h-3.5 w-3.5" /> {available.length === 0 ? `Tous les ${label}s du catalogue sont ajoutés` : `Ajouter depuis le catalogue`}
+      </button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Choisir {available.length === 1 ? "un " + label : "un " + label}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-1 max-h-80 overflow-y-auto -mx-1 px-1">
+            {available.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => { onSelect(item); setOpen(false); }}
+                className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left hover:bg-muted transition-colors"
+              >
+                <div className="h-9 w-9 shrink-0 flex items-center justify-center rounded-lg border border-border-soft bg-muted/40">
+                  {item.icon ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={`/rpg_icons/${item.icon}`} alt="" className="h-5 w-5 object-contain dark:invert" />
+                  ) : (
+                    <ImageIcon className="h-4 w-4 text-muted-foreground/30" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium">{item.name}</p>
+                  {item.description && (
+                    <p className="text-xs text-muted-foreground truncate">{item.description}</p>
+                  )}
+                </div>
+              </button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
 function InventoryField({
   initialItems,
   onSave,
+  catalogItems,
 }: {
   initialItems: InventoryItem[];
   onSave: (items: InventoryItem[]) => void;
+  catalogItems?: WorldInventoryItem[];
 }) {
   const [items, setItems] = useState<InventoryItem[]>(initialItems);
 
@@ -293,6 +353,63 @@ function InventoryField({
     update(items.filter((it) => it.id !== id));
   }
 
+  // ── Mode restreint (catalogue du monde) ────────────────────────────────────
+  if (catalogItems !== undefined) {
+    const usedIds = new Set(items.map((i) => i.catalog_id).filter(Boolean));
+    const available = catalogItems.filter((c) => !usedIds.has(c.id));
+
+    function addFromCatalog(cat: WorldInventoryItem) {
+      update([...items, {
+        id: makeItemId(),
+        catalog_id: cat.id,
+        name: cat.name,
+        description: cat.description ?? undefined,
+        icon: cat.icon ?? undefined,
+        quantity: 1,
+      }]);
+    }
+
+    return (
+      <div className="space-y-2 pr-24">
+        <div className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/60 mb-1">
+          <Lock className="h-3 w-3" /> Inventaire du catalogue
+        </div>
+        {items.map((item) => (
+          <div key={item.id} className="flex items-center gap-2 group/item">
+            <div className="h-10 w-10 shrink-0 flex items-center justify-center rounded-lg border border-border-soft bg-muted/40">
+              {item.icon ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={`/rpg_icons/${item.icon}`} alt="" className="h-6 w-6 object-contain dark:invert" />
+              ) : (
+                <ImageIcon className="h-4 w-4 text-muted-foreground/30" />
+              )}
+            </div>
+            <span className="flex-1 min-w-0 text-sm font-medium truncate">{item.name}</span>
+            <div className="flex items-center gap-1 shrink-0">
+              <span className="text-xs text-muted-foreground">×</span>
+              <input
+                type="number"
+                min={0}
+                value={item.quantity}
+                onChange={(e) => patch(item.id, "quantity", Number(e.target.value))}
+                className="w-12 bg-transparent text-sm text-right outline-none tabular-nums"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => removeItem(item.id)}
+              className="shrink-0 h-5 w-5 flex items-center justify-center rounded-full text-muted-foreground opacity-0 group-hover/item:opacity-100 hover:text-destructive transition-opacity"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        ))}
+        <CatalogPicker available={available} label="objet" onSelect={addFromCatalog} />
+      </div>
+    );
+  }
+
+  // ── Mode libre ─────────────────────────────────────────────────────────────
   return (
     <div className="space-y-2 pr-24">
       {items.map((item) => (
@@ -347,9 +464,11 @@ function InventoryField({
 function SkillsField({
   initialItems,
   onSave,
+  catalogItems,
 }: {
   initialItems: SkillItem[];
   onSave: (items: SkillItem[]) => void;
+  catalogItems?: WorldSkill[];
 }) {
   const [items, setItems] = useState<SkillItem[]>(initialItems);
 
@@ -370,6 +489,59 @@ function SkillsField({
     update(items.filter((it) => it.id !== id));
   }
 
+  // ── Mode restreint (catalogue du monde) ────────────────────────────────────
+  if (catalogItems !== undefined) {
+    const usedIds = new Set(items.map((i) => i.catalog_id).filter(Boolean));
+    const available = catalogItems.filter((c) => !usedIds.has(c.id));
+
+    function addFromCatalog(cat: WorldSkill) {
+      update([...items, {
+        id: makeItemId(),
+        catalog_id: cat.id,
+        name: cat.name,
+        description: cat.description ?? undefined,
+        icon: cat.icon ?? undefined,
+        level: "",
+      }]);
+    }
+
+    return (
+      <div className="space-y-2 pr-24">
+        <div className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/60 mb-1">
+          <Lock className="h-3 w-3" /> Compétences du catalogue
+        </div>
+        {items.map((item) => (
+          <div key={item.id} className="flex items-center gap-2 group/skill">
+            <div className="h-10 w-10 shrink-0 flex items-center justify-center rounded-lg border border-border-soft bg-muted/40">
+              {item.icon ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={`/rpg_icons/${item.icon}`} alt="" className="h-6 w-6 object-contain dark:invert" />
+              ) : (
+                <ImageIcon className="h-4 w-4 text-muted-foreground/30" />
+              )}
+            </div>
+            <span className="flex-1 min-w-0 text-sm font-medium truncate">{item.name}</span>
+            <input
+              value={item.level}
+              onChange={(e) => patch(item.id, "level", e.target.value)}
+              placeholder="Niveau"
+              className="w-20 shrink-0 bg-transparent text-xs text-right text-muted-foreground outline-none placeholder:text-muted-foreground/40"
+            />
+            <button
+              type="button"
+              onClick={() => removeItem(item.id)}
+              className="shrink-0 h-5 w-5 flex items-center justify-center rounded-full text-muted-foreground opacity-0 group-hover/skill:opacity-100 hover:text-destructive transition-opacity"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        ))}
+        <CatalogPicker available={available} label="compétence" onSelect={addFromCatalog} />
+      </div>
+    );
+  }
+
+  // ── Mode libre ─────────────────────────────────────────────────────────────
   return (
     <div className="space-y-2 pr-24">
       {items.map((item) => (
@@ -657,9 +829,12 @@ type SectionFieldsEditorProps = {
   initialFields: PersonaSectionField[];
   /** Remonte l'état courant des champs au parent (source de vérité locale). */
   onFieldsChange?: (fields: PersonaSectionField[]) => void;
+  worldId?: string;
+  restrictInventory?: boolean;
+  restrictSkills?: boolean;
 };
 
-export function SectionFieldsEditor({ sectionId, personaId, userId, initialFields, onFieldsChange }: SectionFieldsEditorProps) {
+export function SectionFieldsEditor({ sectionId, personaId, userId, initialFields, onFieldsChange, worldId, restrictInventory, restrictSkills }: SectionFieldsEditorProps) {
   const supabase = createClient();
   const flags = useFeatureFlags();
   const fieldsEnabled = flags.persona_fields;
@@ -676,6 +851,34 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
   const persona_field_timeline   = fieldsEnabled && flags.persona_field_timeline;
   const [fields, setFields] = useState<PersonaSectionField[]>(initialFields);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [inventoryCatalog, setInventoryCatalog] = useState<WorldInventoryItem[] | undefined>(undefined);
+  const [skillsCatalog, setSkillsCatalog] = useState<WorldSkill[] | undefined>(undefined);
+
+  useEffect(() => {
+    if (!worldId) return;
+    async function fetchCatalog() {
+      if (restrictInventory) {
+        const { data } = await (supabase as ReturnType<typeof createClient>)
+          .from("world_inventory_items")
+          .select("id, world_id, name, description, icon, sort_index")
+          .eq("world_id", worldId!)
+          .order("sort_index", { ascending: true })
+          .order("created_at", { ascending: true });
+        setInventoryCatalog((data as WorldInventoryItem[] | null) ?? []);
+      }
+      if (restrictSkills) {
+        const { data } = await (supabase as ReturnType<typeof createClient>)
+          .from("world_skills")
+          .select("id, world_id, name, description, icon, sort_index")
+          .eq("world_id", worldId!)
+          .order("sort_index", { ascending: true })
+          .order("created_at", { ascending: true });
+        setSkillsCatalog((data as WorldSkill[] | null) ?? []);
+      }
+    }
+    void fetchCatalog();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [worldId, restrictInventory, restrictSkills]);
 
   // Synchronise l'état local vers le parent à chaque changement (sauf au montage
   // initial, où les données sont déjà identiques à celles du parent).
@@ -1168,6 +1371,7 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
                     <InventoryField
                       initialItems={field.data?.inventoryItems ?? []}
                       onSave={(items) => saveInventoryItems(field.id, items)}
+                      catalogItems={inventoryCatalog}
                     />
                   )}
 
@@ -1175,6 +1379,7 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
                     <SkillsField
                       initialItems={field.data?.skillItems ?? []}
                       onSave={(items) => saveSkillItems(field.id, items)}
+                      catalogItems={skillsCatalog}
                     />
                   )}
 

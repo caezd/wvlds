@@ -32,6 +32,9 @@ type PersonaSectionsTabsProps = {
   userId: string | null;
   sections: PersonaSectionWithFields[];
   onSectionsChange: (sections: PersonaSectionWithFields[]) => void;
+  worldId?: string;
+  restrictInventory?: boolean;
+  restrictSkills?: boolean;
 };
 
 export function PersonaSectionsTabs({
@@ -39,6 +42,9 @@ export function PersonaSectionsTabs({
   userId,
   sections,
   onSectionsChange,
+  worldId,
+  restrictInventory,
+  restrictSkills,
 }: PersonaSectionsTabsProps) {
   const supabase = createClient();
 
@@ -197,6 +203,9 @@ export function PersonaSectionsTabs({
                 userId={userId}
                 initialFields={section.fields ?? []}
                 onFieldsChange={(fields) => handleFieldsChange(section.id, fields)}
+                worldId={worldId}
+                restrictInventory={restrictInventory}
+                restrictSkills={restrictSkills}
               />
             </TabsContent>
           ))}

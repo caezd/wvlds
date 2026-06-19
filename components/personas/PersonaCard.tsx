@@ -14,6 +14,9 @@ type PersonaCardProps = {
   initialFrameId?: string | null;
   initialFrameUrl?: string | null;
   initialSections: PersonaSectionWithFields[];
+  worldId?: string;
+  restrictInventory?: boolean;
+  restrictSkills?: boolean;
 };
 
 function initials(name: string) {
@@ -30,6 +33,9 @@ export function PersonaCard({
   initialFrameId,
   initialFrameUrl,
   initialSections,
+  worldId,
+  restrictInventory,
+  restrictSkills,
 }: PersonaCardProps) {
   return (
     <PersonaEditSheet
@@ -41,6 +47,9 @@ export function PersonaCard({
       initialBannerUrl={bannerUrl ?? null}
       initialFrameId={initialFrameId ?? null}
       initialFrameUrl={initialFrameUrl ?? null}
+      worldId={worldId}
+      restrictInventory={restrictInventory}
+      restrictSkills={restrictSkills}
       trigger={
         <button className="group relative w-full aspect-square rounded-2xl overflow-hidden bg-muted shadow-sm hover:shadow-lg transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
           {/* Image / fallback */}

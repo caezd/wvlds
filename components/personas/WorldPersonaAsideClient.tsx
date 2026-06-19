@@ -33,10 +33,14 @@ export function WorldPersonaAsideClient({
   worldId,
   personas,
   asideWidth = 192,
+  restrictInventory = false,
+  restrictSkills = false,
 }: {
   worldId: string;
   personas: AsidePersona[];
   asideWidth?: number;
+  restrictInventory?: boolean;
+  restrictSkills?: boolean;
 }) {
   const cols = getGridCols(asideWidth);
   const sorted = [...personas].sort((a, b) =>
@@ -57,6 +61,8 @@ export function WorldPersonaAsideClient({
           <TooltipTrigger asChild>
             <PersonaCreateSheet
               worldId={worldId}
+              restrictInventory={restrictInventory}
+              restrictSkills={restrictSkills}
               trigger={
                 <button
                   type="button"
@@ -100,6 +106,9 @@ export function WorldPersonaAsideClient({
                     ?.asset_url ?? null
                 }
                 initialSections={p.sections}
+                worldId={worldId}
+                restrictInventory={restrictInventory}
+                restrictSkills={restrictSkills}
               />
             ))}
           </div>
