@@ -1,9 +1,10 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { BookOpenText, Library, Network, Settings, Users as UsersIcon } from "lucide-react";
+import { BookOpenText, Library, Map, Network, Settings, Users as UsersIcon } from "lucide-react";
 import { RelationsCanvas } from "./RelationsCanvas";
 import { WorldCatalogue } from "./WorldCatalogue";
+import { WorldMap } from "./WorldMap";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 
@@ -80,6 +81,7 @@ export function WorldHome({
   const [showCanvas, setShowCanvas] = useState(false);
   const [showCatalogue, setShowCatalogue] = useState(false);
   const [showWiki, setShowWiki] = useState(false);
+  const [showMap, setShowMap] = useState(false);
 
   const hasCatalogue = !!(world.restrict_inventory || world.restrict_skills) || canEditTabs;
   const [asideWidth, setAsideWidth] = useState(
@@ -185,6 +187,13 @@ export function WorldHome({
             canEdit={canEditTabs}
             initialSidebarWidth={initialPrefs?.wiki_sidebar_width}
             onClose={() => setShowWiki(false)}
+          />
+        ) : showMap ? (
+          <WorldMap
+            worldId={worldId}
+            userId={userId ?? ""}
+            canEdit={canEditTabs}
+            onClose={() => setShowMap(false)}
           />
         ) : (
           <>
@@ -296,7 +305,7 @@ export function WorldHome({
             <button
               type="button"
               aria-label="Wiki du monde"
-              onClick={() => { setShowCanvas(false); setShowCatalogue(false); setShowWiki((v) => !v); }}
+              onClick={() => { setShowCanvas(false); setShowCatalogue(false); setShowMap(false); setShowWiki((v) => !v); }}
               className={cn(
                 "flex h-9 w-9 items-center justify-center rounded-full border border-border-soft bg-background text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground",
                 showWiki && "border-border bg-secondary text-foreground",
@@ -306,6 +315,23 @@ export function WorldHome({
             </button>
           </TooltipTrigger>
           <TooltipContent side="left" sideOffset={8}>Wiki</TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              aria-label="Carte du monde"
+              onClick={() => { setShowCanvas(false); setShowCatalogue(false); setShowWiki(false); setShowMap((v) => !v); }}
+              className={cn(
+                "flex h-9 w-9 items-center justify-center rounded-full border border-border-soft bg-background text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground",
+                showMap && "border-border bg-secondary text-foreground",
+              )}
+            >
+              <Map className="h-4 w-4" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="left" sideOffset={8}>Carte</TooltipContent>
         </Tooltip>
 
         {isShared && (
@@ -321,7 +347,7 @@ export function WorldHome({
             <button
               type="button"
               aria-label="Toile des relations"
-              onClick={() => { setShowCatalogue(false); setShowWiki(false); setShowCanvas((v) => !v); }}
+              onClick={() => { setShowCatalogue(false); setShowWiki(false); setShowMap(false); setShowCanvas((v) => !v); }}
               className={cn(
                 "flex h-9 w-9 items-center justify-center rounded-full border border-border-soft bg-background text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground",
                 showCanvas && "bg-secondary text-foreground border-border",
@@ -339,7 +365,7 @@ export function WorldHome({
               <button
                 type="button"
                 aria-label="Catalogue"
-                onClick={() => { setShowCanvas(false); setShowWiki(false); setShowCatalogue((v) => !v); }}
+                onClick={() => { setShowCanvas(false); setShowWiki(false); setShowMap(false); setShowCatalogue((v) => !v); }}
                 className={cn(
                   "flex h-9 w-9 items-center justify-center rounded-full border border-border-soft bg-background text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground",
                   showCatalogue && "bg-secondary text-foreground border-border",
