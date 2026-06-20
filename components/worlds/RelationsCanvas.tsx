@@ -494,7 +494,23 @@ export function RelationsCanvas({ worldId, userId, canAdmin, onClose }: Relation
 
   // Group picker
   const [openGroupPicker, setOpenGroupPicker] = React.useState<{ personaId: string; x: number; y: number } | null>(null);
-  const canvasRef = React.useRef<HTMLDivElement>(null);
+
+  // Canvas pan / zoom
+  const [pan, setPan]     = React.useState({ x: 0, y: 0 });
+  const [scale, setScale] = React.useState(1);
+  const panRef   = React.useRef({ x: 0, y: 0 });
+  const scaleRef = React.useRef(1);
+  panRef.current   = pan;
+  scaleRef.current = scale;
+
+  const outerRef  = React.useRef<HTMLDivElement>(null); // viewport fixe
+  const canvasRef = React.useRef<HTMLDivElement>(null); // div transformée
+
+  // drag pan souris
+  const panDrag = React.useRef<{ startX: number; startY: number; panX0: number; panY0: number } | null>(null);
+  // pinch touch
+  const pinchRef = React.useRef<{ dist0: number; scale0: number; panX0: number; panY0: number; midX0: number; midY0: number } | null>(null);
+  const touchRef = React.useRef<{ startX: number; startY: number; panX0: number; panY0: number } | null>(null);
 
   // ── Load ──────────────────────────────────────────────────────────────────
 
@@ -591,6 +607,90 @@ export function RelationsCanvas({ worldId, userId, canAdmin, onClose }: Relation
 
   React.useEffect(() => { setAsideTab("out"); }, [selectedPersonaId]);
 
+  // ── Canvas pan / zoom ─────────────────────────────────────────────────────
+
+  // Molette : zoom vers le curseur (listener non-passif obligatoire)
+  React.useEffect(() => {
+    const el = outerRef.current;
+    if (!el) return;
+    function onWheel(e: WheelEvent) {
+      e.preventDefault();
+      const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
+      const next = Math.max(0.15, Math.min(4, scaleRef.current * factor));
+      const rect = el!.getBoundingClientRect();
+      const cx = e.clientX - rect.left;
+      const cy = e.clientY - rect.top;
+      const ratio = next / scaleRef.current;
+      setScale(next);
+      setPan((p) => ({ x: cx - (cx - p.x) * ratio, y: cy - (cy - p.y) * ratio }));
+    }
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, []);
+
+  // Pan souris : pointerdown sur le fond du canvas (blocs stoppent la propagation)
+  function onCanvasDown(e: React.PointerEvent) {
+    if (e.button !== 0 || drag.current) return;
+    panDrag.current = { startX: e.clientX, startY: e.clientY, panX0: panRef.current.x, panY0: panRef.current.y };
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    (e.currentTarget as HTMLElement).style.cursor = "grabbing";
+  }
+  function onCanvasMove(e: React.PointerEvent) {
+    if (!panDrag.current) return;
+    setPan({ x: panDrag.current.panX0 + e.clientX - panDrag.current.startX, y: panDrag.current.panY0 + e.clientY - panDrag.current.startY });
+  }
+  function onCanvasUp(e: React.PointerEvent) {
+    panDrag.current = null;
+    (e.currentTarget as HTMLElement).style.cursor = "grab";
+  }
+
+  // Touch : 1 doigt = pan, 2 doigts = pinch
+  function onTouchStart(e: React.TouchEvent) {
+    if (e.touches.length === 1) {
+      touchRef.current = { startX: e.touches[0].clientX, startY: e.touches[0].clientY, panX0: panRef.current.x, panY0: panRef.current.y };
+      pinchRef.current = null;
+    } else if (e.touches.length === 2) {
+      const dx = e.touches[1].clientX - e.touches[0].clientX;
+      const dy = e.touches[1].clientY - e.touches[0].clientY;
+      pinchRef.current = {
+        dist0: Math.sqrt(dx * dx + dy * dy),
+        scale0: scaleRef.current,
+        panX0: panRef.current.x, panY0: panRef.current.y,
+        midX0: (e.touches[0].clientX + e.touches[1].clientX) / 2,
+        midY0: (e.touches[0].clientY + e.touches[1].clientY) / 2,
+      };
+      touchRef.current = null;
+    }
+  }
+  function onTouchMove(e: React.TouchEvent) {
+    e.preventDefault();
+    if (e.touches.length === 1 && touchRef.current) {
+      const dx = e.touches[0].clientX - touchRef.current.startX;
+      const dy = e.touches[0].clientY - touchRef.current.startY;
+      setPan({ x: touchRef.current.panX0 + dx, y: touchRef.current.panY0 + dy });
+    } else if (e.touches.length === 2 && pinchRef.current) {
+      const dx = e.touches[1].clientX - e.touches[0].clientX;
+      const dy = e.touches[1].clientY - e.touches[0].clientY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const next = Math.max(0.15, Math.min(4, pinchRef.current.scale0 * (dist / pinchRef.current.dist0)));
+      const rect = outerRef.current!.getBoundingClientRect();
+      const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
+      const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
+      const mid0X = pinchRef.current.midX0 - rect.left;
+      const mid0Y = pinchRef.current.midY0 - rect.top;
+      const ratio = next / pinchRef.current.scale0;
+      setScale(next);
+      setPan({ x: midX - (mid0X - pinchRef.current.panX0) * ratio, y: midY - (mid0Y - pinchRef.current.panY0) * ratio });
+    }
+  }
+  function onTouchEnd(e: React.TouchEvent) {
+    if (e.touches.length === 0) { touchRef.current = null; pinchRef.current = null; }
+    else if (e.touches.length === 1) {
+      pinchRef.current = null;
+      touchRef.current = { startX: e.touches[0].clientX, startY: e.touches[0].clientY, panX0: panRef.current.x, panY0: panRef.current.y };
+    }
+  }
+
   // ── Save block pos ────────────────────────────────────────────────────────
 
   async function savePos(uid: string, x: number, y: number) {
@@ -615,15 +715,17 @@ export function RelationsCanvas({ worldId, userId, canAdmin, onClose }: Relation
 
   function onHdrMove(e: React.PointerEvent, uid: string) {
     if (!drag.current || drag.current.uid !== uid) return;
-    const nx = Math.max(0, drag.current.x0 + e.clientX - drag.current.mx0);
-    const ny = Math.max(0, drag.current.y0 + e.clientY - drag.current.my0);
+    const s = scaleRef.current;
+    const nx = Math.max(0, drag.current.x0 + (e.clientX - drag.current.mx0) / s);
+    const ny = Math.max(0, drag.current.y0 + (e.clientY - drag.current.my0) / s);
     setBlockPos((prev) => new Map(prev).set(uid, { x: nx, y: ny }));
   }
 
   function onHdrUp(e: React.PointerEvent, uid: string) {
     if (!drag.current || drag.current.uid !== uid) return;
-    const nx = Math.max(0, drag.current.x0 + e.clientX - drag.current.mx0);
-    const ny = Math.max(0, drag.current.y0 + e.clientY - drag.current.my0);
+    const s = scaleRef.current;
+    const nx = Math.max(0, drag.current.x0 + (e.clientX - drag.current.mx0) / s);
+    const ny = Math.max(0, drag.current.y0 + (e.clientY - drag.current.my0) / s);
     drag.current = null;
     setBlockPos((prev) => new Map(prev).set(uid, { x: nx, y: ny }));
     void savePos(uid, nx, ny);
@@ -950,11 +1052,22 @@ export function RelationsCanvas({ worldId, userId, canAdmin, onClose }: Relation
         )}
 
         {/* ── Canvas ── */}
-        <div ref={canvasRef} className="relative flex-1 overflow-auto">
+        <div
+          ref={outerRef}
+          className="relative flex-1 overflow-hidden"
+          style={{ cursor: "grab", touchAction: "none" }}
+          onPointerDown={onCanvasDown}
+          onPointerMove={onCanvasMove}
+          onPointerUp={onCanvasUp}
+          onPointerCancel={onCanvasUp}
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+        >
           {loading ? (
             <div className="flex h-full items-center justify-center text-sm text-muted-foreground">Chargement…</div>
           ) : (
-            <div className="relative" style={{ width: maxW, height: maxH, minWidth: "100%", minHeight: "100%" }}>
+            <div ref={canvasRef} className="absolute origin-top-left" style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`, width: maxW, height: maxH }}>
 
               {/* Dot grid */}
               <svg aria-hidden="true" className="pointer-events-none absolute inset-0" width="100%" height="100%">
@@ -975,7 +1088,8 @@ export function RelationsCanvas({ worldId, userId, canAdmin, onClose }: Relation
                 const letter = dName.replace(/^@/, "")[0]?.toUpperCase() ?? "?";
 
                 return (
-                  <div key={uid} className="absolute" style={{ left: pos.x, top: pos.y, width: BLOCK_W }}>
+                  <div key={uid} className="absolute" style={{ left: pos.x, top: pos.y, width: BLOCK_W }}
+                    onPointerDown={(e) => e.stopPropagation()}>
                     <div className="rounded-2xl border-2 border-dashed border-border bg-card/60 backdrop-blur-sm" style={{ height: bh }}>
                       {/* Header — drag handle */}
                       <div
@@ -1063,13 +1177,13 @@ export function RelationsCanvas({ worldId, userId, canAdmin, onClose }: Relation
                                       e.stopPropagation();
                                       if (openGroupPicker?.personaId === p.id) { setOpenGroupPicker(null); return; }
                                       const dotRect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                                      const canvasEl = canvasRef.current;
-                                      if (!canvasEl) return;
-                                      const cr = canvasEl.getBoundingClientRect();
+                                      const outerEl = outerRef.current;
+                                      if (!outerEl) return;
+                                      const cr = outerEl.getBoundingClientRect();
                                       setOpenGroupPicker({
                                         personaId: p.id,
-                                        x: dotRect.left - cr.left + canvasEl.scrollLeft + dotRect.width + 4,
-                                        y: dotRect.top - cr.top + canvasEl.scrollTop,
+                                        x: dotRect.left - cr.left + dotRect.width + 4,
+                                        y: dotRect.top - cr.top,
                                       });
                                     }}
                                     className="h-2.5 w-2.5 rounded-full border border-background/60 shadow-sm"
@@ -1085,30 +1199,6 @@ export function RelationsCanvas({ worldId, userId, canAdmin, onClose }: Relation
                   </div>
                 );
               })}
-
-              {/* Group picker */}
-              {openGroupPicker && (
-                <>
-                  <div className="absolute inset-0" style={{ zIndex: 40 }} onClick={() => setOpenGroupPicker(null)} />
-                  <div
-                    className="absolute flex min-w-[128px] flex-col gap-0.5 rounded-xl border border-border bg-background p-1.5 shadow-xl"
-                    style={{ left: openGroupPicker.x, top: openGroupPicker.y, zIndex: 50 }}
-                  >
-                    {groups.map((g) => (
-                      <button key={g.id}
-                        onClick={() => void assignGroup(openGroupPicker.personaId, g.id)}
-                        className="flex items-center gap-2 rounded-lg px-2 py-1 text-[10px] hover:bg-muted text-left">
-                        <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: g.color }} />
-                        {g.name}
-                      </button>
-                    ))}
-                    <button onClick={() => void assignGroup(openGroupPicker.personaId, null)}
-                      className="rounded-lg px-2 py-1 text-[10px] text-left text-muted-foreground hover:bg-muted">
-                      Aucun groupe
-                    </button>
-                  </div>
-                </>
-              )}
 
               {/* SVG arrows */}
               <svg className="pointer-events-none absolute inset-0" style={{ zIndex: 10 }} width={maxW} height={maxH}>
@@ -1253,6 +1343,7 @@ export function RelationsCanvas({ worldId, userId, canAdmin, onClose }: Relation
                 <div
                   className="absolute z-40 flex flex-col gap-2 rounded-2xl border border-border bg-background p-3 shadow-2xl"
                   style={{ left: connectTarget.cx + 8, top: connectTarget.cy - 90 }}
+                  onPointerDown={(e) => e.stopPropagation()}
                 >
                   <p className="px-0.5 text-[10px] font-semibold text-muted-foreground">Type de relation</p>
                   {relTypes.length === 0 ? (
@@ -1289,6 +1380,53 @@ export function RelationsCanvas({ worldId, userId, canAdmin, onClose }: Relation
               )}
             </div>
           )}
+
+          {/* Group picker — outside transform, positioned in outer viewport coords */}
+          {openGroupPicker && (
+            <>
+              <div className="absolute inset-0" style={{ zIndex: 40 }} onClick={() => setOpenGroupPicker(null)} />
+              <div
+                className="absolute flex min-w-[128px] flex-col gap-0.5 rounded-xl border border-border bg-background p-1.5 shadow-xl"
+                style={{ left: openGroupPicker.x, top: openGroupPicker.y, zIndex: 50 }}
+              >
+                {groups.map((g) => (
+                  <button key={g.id}
+                    onClick={() => void assignGroup(openGroupPicker.personaId, g.id)}
+                    className="flex items-center gap-2 rounded-lg px-2 py-1 text-[10px] hover:bg-muted text-left">
+                    <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: g.color }} />
+                    {g.name}
+                  </button>
+                ))}
+                <button onClick={() => void assignGroup(openGroupPicker.personaId, null)}
+                  className="rounded-lg px-2 py-1 text-[10px] text-left text-muted-foreground hover:bg-muted">
+                  Aucun groupe
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* Zoom controls */}
+          <div className="absolute bottom-3 right-3 z-50 flex flex-col gap-1">
+            <button
+              type="button"
+              onClick={() => setScale((s) => Math.min(4, s * 1.25))}
+              onPointerDown={(e) => e.stopPropagation()}
+              className="flex h-7 w-7 items-center justify-center rounded-lg border border-border bg-background text-sm shadow hover:bg-muted"
+            >+</button>
+            <button
+              type="button"
+              onClick={() => setScale((s) => Math.max(0.15, s / 1.25))}
+              onPointerDown={(e) => e.stopPropagation()}
+              className="flex h-7 w-7 items-center justify-center rounded-lg border border-border bg-background text-sm shadow hover:bg-muted"
+            >−</button>
+            <button
+              type="button"
+              onClick={() => { setScale(1); setPan({ x: 0, y: 0 }); }}
+              onPointerDown={(e) => e.stopPropagation()}
+              className="flex h-7 w-7 items-center justify-center rounded-lg border border-border bg-background text-xs shadow hover:bg-muted text-muted-foreground"
+              title="Réinitialiser la vue"
+            >↺</button>
+          </div>
         </div>
       </div>
 
