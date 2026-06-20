@@ -73,7 +73,7 @@ export function WorldHome({
   initialPersonas: AsidePersona[];
   initialPrefs: WorldPrefs | null;
 }) {
-  const { create_chatroom } = useFeatureFlags();
+  const { create_chatroom, world_map, world_catalogue } = useFeatureFlags();
   const router = useRouter();
 
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -83,7 +83,7 @@ export function WorldHome({
   const [showWiki, setShowWiki] = useState(false);
   const [showMap, setShowMap] = useState(false);
 
-  const hasCatalogue = !!(world.restrict_inventory || world.restrict_skills) || canEditTabs;
+  const hasCatalogue = world_catalogue && (!!(world.restrict_inventory || world.restrict_skills) || canEditTabs);
   const [asideWidth, setAsideWidth] = useState(
     initialPrefs?.aside_width ?? ASIDE_DEFAULT,
   );
@@ -188,7 +188,7 @@ export function WorldHome({
             initialSidebarWidth={initialPrefs?.wiki_sidebar_width}
             onClose={() => setShowWiki(false)}
           />
-        ) : showMap ? (
+        ) : showMap && world_map ? (
           <WorldMap
             worldId={worldId}
             userId={userId ?? ""}
@@ -317,22 +317,24 @@ export function WorldHome({
           <TooltipContent side="left" sideOffset={8}>Wiki</TooltipContent>
         </Tooltip>
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              type="button"
-              aria-label="Carte du monde"
-              onClick={() => { setShowCanvas(false); setShowCatalogue(false); setShowWiki(false); setShowMap((v) => !v); }}
-              className={cn(
-                "flex h-9 w-9 items-center justify-center rounded-full border border-border-soft bg-background text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground",
-                showMap && "border-border bg-secondary text-foreground",
-              )}
-            >
-              <Map className="h-4 w-4" />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="left" sideOffset={8}>Carte</TooltipContent>
-        </Tooltip>
+        {world_map && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                aria-label="Carte du monde"
+                onClick={() => { setShowCanvas(false); setShowCatalogue(false); setShowWiki(false); setShowMap((v) => !v); }}
+                className={cn(
+                  "flex h-9 w-9 items-center justify-center rounded-full border border-border-soft bg-background text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground",
+                  showMap && "border-border bg-secondary text-foreground",
+                )}
+              >
+                <Map className="h-4 w-4" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="left" sideOffset={8}>Carte</TooltipContent>
+          </Tooltip>
+        )}
 
         {isShared && (
           <WorldMembersSheet
