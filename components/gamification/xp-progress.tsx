@@ -1,11 +1,10 @@
 // XPProgress.tsx (exemple React)
 import { Flame } from "lucide-react";
+import { levelInfo } from "@/lib/xp";
 type Props = { xp: number; coins: number; streak: number; className?: string };
 
 export function XPProgress({ xp, coins, streak, className }: Props) {
-    const level = Math.floor(xp / 100) + 1;
-    const nextBase = (level - 1) * 100;
-    const progress = Math.min(100, Math.round(((xp - nextBase) / 100) * 100));
+    const { level, progress } = levelInfo(xp);
 
     return (
         <div className={className}>

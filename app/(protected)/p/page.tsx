@@ -111,7 +111,7 @@ export default async function PersonasPage() {
       .from("worlds")
       .select("id, name")
       .in("id", worldIds);
-    for (const w of worlds ?? []) worldNames.set(w.id, w.name ?? w.id);
+    for (const w of worlds ?? []) worldNames.set(w.id, w.name ?? "Monde inconnu");
   }
 
   // 3) Groupement
@@ -122,7 +122,7 @@ export default async function PersonasPage() {
     if (!groupMap.has(key)) {
       groupMap.set(key, {
         worldId: key,
-        worldName: key ? (worldNames.get(key) ?? key) : null,
+        worldName: key ? (worldNames.get(key) ?? "Monde inconnu") : null,
         personas: [],
       });
     }

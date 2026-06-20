@@ -27,7 +27,7 @@ export default function NotFound() {
       {/* -- Colonne principale ------------------------------------ */}
       <div className="relative flex min-h-full flex-1 flex-col items-center rounded-2xl bg-background">
         <div className="pt-10">
-          <Logo width={26} height={26} accent={undefined} />
+          <Logo width={26} height={26} accent="var(--color-accent)" />
         </div>
 
         <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
@@ -70,31 +70,8 @@ export default function NotFound() {
         style={STARRY_SKY}
       >
         <p className="max-w-md text-sm leading-relaxed text-white/90">
-          Chaque monde commence par une page blanche. Celui que tu cherchais
-          s&apos;est peut-être évaporé — mais rien ne t&apos;empêche d&apos;en
-          écrire un nouveau.
+          Chaque monde commence par une page blanche. Celui que tu cherchais semble s'être évaporé, mais rien ne t'empêche d'en créer un nouveau.
         </p>
-        <div className="mt-5 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="grid h-9 w-9 place-items-center rounded-full bg-white/10 backdrop-blur">
-              <Logo width={16} height={16} accent={undefined} />
-            </span>
-            <div>
-              <div className="text-sm font-medium text-white">WVLDS</div>
-              <div className="text-xs text-white/60">
-                Des mondes à raconter
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="grid h-8 w-8 place-items-center rounded-full bg-white/10 text-white/70">
-              <ArrowLeft className="h-3.5 w-3.5" />
-            </span>
-            <span className="grid h-8 w-8 place-items-center rounded-full bg-white text-black">
-              <ArrowRight className="h-3.5 w-3.5" />
-            </span>
-          </div>
-        </div>
       </aside>
     </div>
   );

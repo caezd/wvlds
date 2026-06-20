@@ -21,7 +21,12 @@ import { NarrativeBlockDialog } from "./blocks/NarrativeBlockDialog";
 import { NpcDialog } from "./blocks/NpcBlock";
 import { HpDialog } from "./blocks/HpBlock";
 import { CalloutDialog } from "./blocks/CalloutBlock";
-import { parseChatBlock } from "@/lib/chat-blocks";
+import {
+  computeWordCount,
+  extractMentions,
+  buildVisibleToLabels,
+  buildMessageMetadata,
+} from "@/lib/composerMessage";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -71,7 +76,7 @@ export function ChatroomComposer({
   onAfterSend?: (chatId: string) => void;
 }) {
   const supabase = useMemo(() => createClient(), []);
-  const { userId } = useCurrentUser();
+  const { userId, username } = useCurrentUser();
   const inFlightRef = useRef(false);
   const pendingBlockMediaRef = useRef<{ url: string; name: string }[]>([]);
 
@@ -214,23 +219,13 @@ export function ChatroomComposer({
       pendingBlockMediaRef.current = [];
       const allMedia = [...uploadedMedia, ...blockMedia];
 
-      const wordCount = parseChatBlock(text) !== null
-        ? 0
-        : text.trim().split(/\s+/).filter(Boolean).length;
-
-      const visibleToLabels = visibleTo !== null
-        ? visibleTo
-            .map((id) => { const p = participants.find((pp) => pp.id === id); return p?.username ? `@${p.username}` : null; })
-            .filter((l): l is string => l !== null)
-        : null;
-
-      const metadata = {
-        ...(wordCount > 0 ? { word_count: wordCount } : {}),
-        ...(bubbleMode ? { bubbles: true, ...(bubbleColor ? { bubbleColor } : {}) } : {}),
-        ...(allMedia.length > 0 ? { media: allMedia } : {}),
-        ...(visibleToLabels?.length ? { visible_to_labels: visibleToLabels } : {}),
-      };
-      const finalMetadata = Object.keys(metadata).length > 0 ? metadata : null;
+      const finalMetadata = buildMessageMetadata({
+        wordCount: computeWordCount(text),
+        bubbleMode,
+        bubbleColor,
+        media: allMedia,
+        visibleToLabels: buildVisibleToLabels(visibleTo, participants),
+      });
       const { data: newMessage, error } = await supabase
         .from(TABLE.CHAT_MESSAGES)
         .insert({
@@ -254,6 +249,44 @@ export function ChatroomComposer({
         p_meta: { chat_id: targetChatId, world_id: newMessage.world_id, persona_id: selectedPersona.id },
       });
       if (rpcErr) console.error("award_event failed:", rpcErr);
+
+      // Mentions : côté client car le contenu peut être chiffré côté serveur
+      if (newMessage.world_id && text) {
+        const mentioned = extractMentions(text);
+        if (mentioned.length > 0) {
+          const [{ data: mentionedProfiles }, { data: chatroomData }] = await Promise.all([
+            supabase.from("profiles").select("id").in("username", mentioned),
+            supabase.from("chatrooms").select("title, name").eq("id", targetChatId).single(),
+          ]);
+          const chatroomTitle = (chatroomData as { title?: string | null; name?: string | null } | null)?.title
+            ?? (chatroomData as { title?: string | null; name?: string | null } | null)?.name
+            ?? null;
+          const recipientIds = (mentionedProfiles ?? [])
+            .map((p: { id: string }) => p.id)
+            .filter((id: string) => id !== userId);
+          if (recipientIds.length > 0) {
+            const { data: members } = await supabase
+              .from(TABLE.WORLD_MEMBERS).select("user_id")
+              .eq("world_id", newMessage.world_id).in("user_id", recipientIds);
+            const validIds = (members ?? []).map((m: { user_id: string }) => m.user_id);
+            if (validIds.length > 0) {
+              await supabase.from(TABLE.NOTIFICATIONS).insert(
+                validIds.map((rid: string) => ({
+                  recipient_id: rid,
+                  type: "mention",
+                  world_id: newMessage.world_id,
+                  chat_id: targetChatId,
+                  message_id: newMessage.id,
+                  actor_id: userId,
+                  actor_name: username,
+                  content: chatroomTitle,
+                })),
+              );
+            }
+          }
+        }
+      }
+
       onAfterSend?.(targetChatId);
       return true;
     } finally {

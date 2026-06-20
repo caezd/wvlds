@@ -41,6 +41,7 @@ import { createClient } from "@/lib/supabase/client"; // ajuste ce chemin
 import { cn } from "@/lib/utils"; // si tu as déjà ce helper shadcn
 
 import { useNotifications } from "@/components/providers/NotificationsProvider";
+import { NotificationSidebarButton } from "@/components/notifications/NotificationPanel";
 
 type Role = "owner" | "admin" | "editor" | "player" | "viewer";
 
@@ -229,7 +230,7 @@ export default function WorldsSidebarClient(props: {
     return () => { cancelled = true; };
   }, [pathname]);
 
-  const { shop } = useFeatureFlags();
+  const { shop, notifications: notificationsEnabled } = useFeatureFlags();
   const pActive = isActivePrefix(pathname, "/p");
   const shopActive = isActivePrefix(pathname, "/shop");
 
@@ -238,6 +239,7 @@ export default function WorldsSidebarClient(props: {
       {/* Navigation principale — fixe */}
       <div className="shrink-0 px-2 py-3">
         <div className="space-y-1">
+          {notificationsEnabled && <NotificationSidebarButton />}
           <Link
             href="/p"
             className="group flex items-center justify-between rounded-lg"
@@ -465,6 +467,18 @@ function WorldItem({
     (m) => m.user_id === meId && m.role !== "owner",
   );
 
+  async function leaveWorld() {
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("world_members")
+      .delete()
+      .eq("world_id", world.id)
+      .eq("user_id", meId);
+    if (error) {
+      toast.error("Impossible de quitter ce monde.", { description: error.message });
+    }
+  }
+
   return (
     <div
       className={cn(
@@ -518,7 +532,10 @@ function WorldItem({
             )}
             {isAdmin && isSharedMember && <DropdownMenuSeparator />}
             {isSharedMember && (
-              <DropdownMenuItem className="gap-2 text-destructive focus:text-destructive">
+              <DropdownMenuItem
+                onClick={() => void leaveWorld()}
+                className="gap-2 text-destructive focus:text-destructive"
+              >
                 <LogOut className="h-3.5 w-3.5" />
                 Quitter le monde
               </DropdownMenuItem>
@@ -551,6 +568,18 @@ function FavoriteWorldItem({
   const isSharedMember = world.world_members?.some(
     (m) => m.user_id === meId && m.role !== "owner",
   );
+
+  async function leaveWorld() {
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("world_members")
+      .delete()
+      .eq("world_id", world.id)
+      .eq("user_id", meId);
+    if (error) {
+      toast.error("Impossible de quitter ce monde.", { description: error.message });
+    }
+  }
 
   return (
     <div className="space-y-0.5">
@@ -604,7 +633,10 @@ function FavoriteWorldItem({
               )}
               {isAdmin && isSharedMember && <DropdownMenuSeparator />}
               {isSharedMember && (
-                <DropdownMenuItem className="gap-2 text-destructive focus:text-destructive">
+                <DropdownMenuItem
+                  onClick={() => void leaveWorld()}
+                  className="gap-2 text-destructive focus:text-destructive"
+                >
                   <LogOut className="h-3.5 w-3.5" />
                   Quitter le monde
                 </DropdownMenuItem>

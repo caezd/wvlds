@@ -35,8 +35,8 @@ export default async function HomePage() {
   const mine = allWorlds.filter((w) =>
     w.world_members.some((m) => m.user_id === user.id && m.role === "owner")
   );
-  const shared = allWorlds.filter(
-    (w) => !w.world_members.some((m) => m.user_id === user.id && m.role === "owner")
+  const shared = allWorlds.filter((w) =>
+    w.world_members.some((m) => m.user_id === user.id && m.role !== "owner")
   );
 
   const quotaLabel =

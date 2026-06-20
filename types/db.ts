@@ -126,3 +126,47 @@ export type ChatroomUnreadRow = {
   chat_id: string;
   unread_messages: number;
 };
+
+// --- Notifications -----------------------------------------------------------
+
+export type NotificationType = 'mention' | 'reaction' | 'new_member' | 'new_chatroom' | 'world_invite' | 'chatroom_reply';
+
+export type WorldInvitation = {
+  id: string;
+  world_id: string;
+  invitee_id: string;
+  inviter_id: string | null;
+  role: string;
+  status: 'pending' | 'accepted' | 'declined';
+  created_at: string;
+};
+
+export type NotificationMeta = {
+  icon_url?: string | null;
+  banner_url?: string | null;
+  description?: string | null;
+  count?: number;
+};
+
+export type AppNotification = {
+  id: string;
+  recipient_id: string;
+  type: NotificationType;
+  world_id: string | null;
+  chat_id: string | null;
+  message_id: number | null;
+  actor_id: string | null;
+  actor_name: string | null;
+  content: string | null;
+  metadata?: NotificationMeta | null;
+  read_at: string | null;
+  archived_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type NotificationPreference = {
+  user_id: string;
+  type: NotificationType;
+  enabled: boolean;
+};

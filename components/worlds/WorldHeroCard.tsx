@@ -49,7 +49,7 @@ export function WorldHeroCard({
   return (
     <section
       className={[
-        "group/hero relative isolate overflow-hidden p-6 md:p-8",
+        "group/hero relative overflow-hidden p-6 md:p-8",
         isExpanded ? "" : "rounded-3xl",
       ].join(" ")}
       style={{
@@ -90,7 +90,7 @@ export function WorldHeroCard({
                   type="button"
                   onClick={onToggleFavorite}
                   aria-label={isFavorite ? "Retirer des favoris" : "Ajouter aux favoris"}
-                  className="flex h-7 w-7 items-center justify-center rounded-full bg-black/30 backdrop-blur-sm transition-all hover:bg-black/50"
+                  className="flex h-7 w-7 items-center justify-center rounded-full bg-black/40 transition-all hover:bg-black/60"
                 >
                   <Star className={cn("h-3.5 w-3.5 transition-colors", isFavorite ? "fill-yellow-400 text-yellow-400" : "text-white/80")} />
                 </button>
@@ -107,7 +107,7 @@ export function WorldHeroCard({
                   type="button"
                   onClick={onToggleExpand}
                   aria-label={isExpanded ? "Réduire" : "Plein écran"}
-                  className="flex h-7 w-7 items-center justify-center rounded-full bg-black/30 text-white/80 backdrop-blur-sm transition-all hover:bg-black/50 hover:text-white"
+                  className="flex h-7 w-7 items-center justify-center rounded-full bg-black/40 text-white/80 transition-all hover:bg-black/60 hover:text-white"
                 >
                   {isExpanded ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
                 </button>
@@ -120,12 +120,12 @@ export function WorldHeroCard({
         </div>
       )}
 
-<div className="relative flex min-h-40 flex-col justify-end gap-2 md:min-h-48">
+<div className="relative z-10 flex min-h-40 flex-col justify-end gap-2 md:min-h-48">
         <span
           className={
             world.icon_url
               ? "mb-1 flex h-11 w-11 items-center justify-center overflow-hidden rounded-full"
-              : "mb-1 flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-black/40 backdrop-blur"
+              : "mb-1 flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-black/50"
           }
         >
           {world.icon_url ? (

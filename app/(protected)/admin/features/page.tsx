@@ -37,6 +37,7 @@ type GroupDef = {
 };
 
 const GROUPS: GroupDef[] = [
+  { title: "Compte",   keys: ["notifications"] },
   {
     title: "Personas",
     keys: ["avatar_builder", "persona_fields"],

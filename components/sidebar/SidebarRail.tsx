@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { Users, ShoppingBasket, ShieldCheck } from "lucide-react";
 import { RailIcon, WorldIcon, EmptyWorldsIcon, CreateWorldRailButton } from "./SidebarRailIcons";
+import { NotificationBellButton } from "@/components/notifications/NotificationPanel";
 import { UserMenuButton } from "./UserMenuButton";
 import { getUserQuotaServer } from "@/lib/userQuota";
 import { getFeatureFlags } from "@/lib/featureFlags";
@@ -97,6 +98,7 @@ export default async function SidebarRail() {
       <div className="w-6 border-t border-border-soft my-1 shrink-0" />
       {user && (
         <div className="flex flex-col items-center gap-0.5 w-full pb-2 pt-0.5 px-1.5">
+          {featureFlags.notifications && <NotificationBellButton />}
           <CreateWorldRailButton
             disabled={quota.quotaReached}
             plan={quota.plan}

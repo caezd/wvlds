@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/client";
 import { inviteUserToWorld } from "@/app/actions/invite";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { TABLE } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -66,6 +68,15 @@ type FoundUser = {
 type Member = {
     user_id: string;
     role: Role;
+    username: string | null;
+    avatar_url: string | null;
+};
+
+type PendingInvitation = {
+    id: string;
+    invitee_id: string;
+    role: Role;
+    created_at: string;
     username: string | null;
     avatar_url: string | null;
 };
@@ -137,38 +148,51 @@ export function WorldInviteDialog({
     const [members, setMembers] = useState<Member[]>([]);
     const [membersLoading, setMembersLoading] = useState(false);
     const [pendingRemoval, setPendingRemoval] = useState<Member | null>(null);
+    const [pendingInvites, setPendingInvites] = useState<PendingInvitation[]>([]);
+    const [pendingCancelInvite, setPendingCancelInvite] = useState<PendingInvitation | null>(null);
     const supabase = useMemo(() => createClient(), []);
     const router = useRouter();
+    const { userId: currentUserId, username: currentUsername } = useCurrentUser();
 
     async function loadMembers() {
         setMembersLoading(true);
-        const { data: rows, error } = await supabase
+
+        type MemberRow = { user_id: string; role: string };
+        type InvRow = { id: string; invitee_id: string; role: string; created_at: string };
+        type ProfileRow = { id: string; username: string | null; avatar_url: string | null };
+
+        const { data: memberData } = await supabase
             .from("world_members")
             .select("user_id, role")
             .eq("world_id", worldId);
+        const memberRows = (memberData ?? []) as MemberRow[];
 
-        if (error || !rows) {
-            setMembers([]);
-            setMembersLoading(false);
-            return;
+        let invRows: InvRow[] = [];
+        if (canManage) {
+            const { data: invData } = await supabase
+                .from(TABLE.WORLD_INVITATIONS)
+                .select("id, invitee_id, role, created_at")
+                .eq("world_id", worldId)
+                .eq("status", "pending");
+            invRows = (invData ?? []) as InvRow[];
         }
 
-        const ids = (rows as Array<{ user_id: string; role: string }>).map((r) => r.user_id);
-        const { data: profiles } = await supabase
-            .from("profiles")
-            .select("id, username, avatar_url")
-            .in("id", ids);
+        const allIds = [...new Set([
+            ...memberRows.map((r) => r.user_id),
+            ...invRows.map((r) => r.invitee_id),
+        ])];
 
-        type ProfileRow = { id: string; username: string | null; avatar_url: string | null };
+        const { data: profileData } = allIds.length > 0
+            ? await supabase.from("profiles").select("id, username, avatar_url").in("id", allIds)
+            : { data: [] as ProfileRow[] };
+        const profiles = (profileData ?? []) as ProfileRow[];
+
         const byId = new Map<string, { username: string | null; avatar_url: string | null }>(
-            ((profiles ?? []) as ProfileRow[]).map((p) => [
-                p.id,
-                { username: p.username, avatar_url: p.avatar_url },
-            ])
+            profiles.map((p) => [p.id, { username: p.username, avatar_url: p.avatar_url }])
         );
 
         setMembers(
-            (rows as Array<{ user_id: string; role: string }>)
+            memberRows
                 .map((r) => ({
                     user_id: r.user_id,
                     role: r.role as Role,
@@ -181,6 +205,18 @@ export function WorldInviteDialog({
                         (a.username ?? "").localeCompare(b.username ?? "")
                 )
         );
+
+        setPendingInvites(
+            invRows.map((r) => ({
+                id: r.id,
+                invitee_id: r.invitee_id,
+                role: r.role as Role,
+                created_at: r.created_at,
+                username: byId.get(r.invitee_id)?.username ?? null,
+                avatar_url: byId.get(r.invitee_id)?.avatar_url ?? null,
+            }))
+        );
+
         setMembersLoading(false);
     }
 
@@ -267,6 +303,23 @@ export function WorldInviteDialog({
         );
         void broadcastMembership(m.user_id, "removed");
         router.refresh();
+    }
+
+    async function cancelInvitation(inv: PendingInvitation) {
+        const { error } = await supabase
+            .from(TABLE.WORLD_INVITATIONS)
+            .delete()
+            .eq("id", inv.id);
+
+        if (error) {
+            toast.error("Impossible d’annuler l’invitation.", { description: error.message });
+            return;
+        }
+
+        setPendingInvites((prev) => prev.filter((x) => x.id !== inv.id));
+        toast.success(
+            `Invitation annulée pour ${inv.username ? `@${inv.username}` : "l’utilisateur"}.`
+        );
     }
 
     // reset à l’ouverture + chargement des membres actuels
@@ -362,36 +415,76 @@ export function WorldInviteDialog({
                 return;
             }
 
-            // Ajout direct dans world_members (ou MAJ de rôle si déjà membre)
-            const { error } = await supabase
-                .from("world_members")
-                .upsert(
-                    { world_id: worldId, user_id: userId, role },
-                    { onConflict: "world_id,user_id" }
-                );
+            // Membres existants → changement de rôle direct
+            const isExistingMember = members.some((m) => m.user_id === userId);
 
-            if (error) {
-                // Unique owner ?
-                if (
-                    /uniq_world_owner|owner/i.test(error.message) &&
-                    role === "owner"
-                ) {
-                    setError("Ce monde a déjà un propriétaire.");
-                } else {
-                    setError("Échec de l’ajout du membre.");
+            if (isExistingMember) {
+                const { error } = await supabase
+                    .from(TABLE.WORLD_MEMBERS)
+                    .upsert(
+                        { world_id: worldId, user_id: userId, role },
+                        { onConflict: "world_id,user_id" }
+                    );
+                if (error) {
+                    setError("Échec de la modification du rôle.");
                     console.error(error);
+                    return;
                 }
+                toast.success("Rôle modifié", {
+                    description: selected?.username
+                        ? `@${selected.username} est maintenant ${role}.`
+                        : "Le rôle a été mis à jour.",
+                });
+                void broadcastMembership(userId, "added");
+                setOpen(false);
+                router.refresh();
                 return;
             }
 
-            toast.success("Membre ajouté", {
-                description: selected?.username
-                    ? `@${selected.username} a rejoint le monde.`
-                    : "L'utilisateur a été ajouté au monde.",
+            // Nouveau membre → invitation à accepter
+            const { data: worldData } = await supabase
+                .from(TABLE.WORLDS)
+                .select("name, icon_url, banner_url, description")
+                .eq("id", worldId)
+                .single();
+            type WorldRow = { name: string; icon_url: string | null; banner_url: string | null; description: string | null };
+            const wd = worldData as WorldRow | null;
+            const worldName = wd?.name ?? null;
+            const worldMeta = wd ? { icon_url: wd.icon_url, banner_url: wd.banner_url, description: wd.description } : null;
+
+            // Supprime toute invitation existante (declined ou pending) avant d’en créer une nouvelle.
+            // Évite le problème de UPSERT → UPDATE bloqué par la policy RLS invitee-only.
+            await supabase
+                .from(TABLE.WORLD_INVITATIONS)
+                .delete()
+                .eq("world_id", worldId)
+                .eq("invitee_id", userId);
+
+            const { error: invErr } = await supabase
+                .from(TABLE.WORLD_INVITATIONS)
+                .insert({ world_id: worldId, invitee_id: userId, inviter_id: currentUserId, role });
+            if (invErr) {
+                setError("Échec de l’envoi de l’invitation.");
+                console.error(invErr);
+                return;
+            }
+
+            await supabase.from(TABLE.NOTIFICATIONS).insert({
+                recipient_id: userId,
+                type: "world_invite",
+                world_id: worldId,
+                actor_id: currentUserId,
+                actor_name: currentUsername,
+                content: worldName,
+                metadata: worldMeta,
             });
-            void broadcastMembership(userId, "added");
+
+            toast.success("Invitation envoyée", {
+                description: selected?.username
+                    ? `Une invitation a été envoyée à @${selected.username}.`
+                    : "L’invitation a été envoyée.",
+            });
             setOpen(false);
-            router.refresh();
         } finally {
             setSubmitting(false);
         }
@@ -676,6 +769,85 @@ export function WorldInviteDialog({
                                 ))}
                         </div>
                     </div>
+
+                    {/* Invitations en attente */}
+                    {canManage && pendingInvites.length > 0 && (
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <Label>Invitations en attente</Label>
+                                <span className="text-xs text-muted-foreground">
+                                    {pendingInvites.length}
+                                </span>
+                            </div>
+                            <div className="max-h-32 space-y-0.5 overflow-y-auto [scrollbar-width:thin]">
+                                {pendingInvites.map((inv) => (
+                                    <div
+                                        key={inv.id}
+                                        className="flex items-center gap-2.5 rounded-xl px-2 py-1.5"
+                                    >
+                                        <Avatar className="h-7 w-7 shrink-0">
+                                            <AvatarImage
+                                                src={inv.avatar_url ?? undefined}
+                                                alt={inv.username ?? ""}
+                                            />
+                                            <AvatarFallback className="text-[10px] uppercase">
+                                                {(inv.username ?? "?").slice(0, 2)}
+                                            </AvatarFallback>
+                                        </Avatar>
+                                        <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                                            {inv.username ? `@${inv.username}` : inv.invitee_id.slice(0, 8)}
+                                        </span>
+                                        <span className="shrink-0 rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-600 dark:text-amber-400">
+                                            {ROLE_LABELS[inv.role]} · En attente
+                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={() => setPendingCancelInvite(inv)}
+                                            aria-label={`Annuler l'invitation de ${inv.username ?? "cet utilisateur"}`}
+                                            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-muted-foreground/60 transition-colors hover:bg-destructive/10 hover:text-destructive"
+                                        >
+                                            <X className="h-3.5 w-3.5" />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Confirmation d'annulation d'invitation */}
+                    <AlertDialog
+                        open={!!pendingCancelInvite}
+                        onOpenChange={(o) => { if (!o) setPendingCancelInvite(null); }}
+                    >
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>
+                                    Annuler l'invitation de{" "}
+                                    {pendingCancelInvite?.username
+                                        ? `@${pendingCancelInvite.username}`
+                                        : "cet utilisateur"}{" "}
+                                    ?
+                                </AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    L&apos;utilisateur ne pourra plus accepter cette invitation.
+                                    Tu pourras le ré-inviter plus tard.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Annuler</AlertDialogCancel>
+                                <AlertDialogAction
+                                    className="bg-destructive text-white hover:bg-destructive/90"
+                                    onClick={() => {
+                                        if (pendingCancelInvite)
+                                            void cancelInvitation(pendingCancelInvite);
+                                        setPendingCancelInvite(null);
+                                    }}
+                                >
+                                    Révoquer
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
 
                     {/* Confirmation de retrait */}
                     <AlertDialog

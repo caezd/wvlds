@@ -7,6 +7,8 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { supabaseThumb } from "@/lib/storage";
 import { toWebP } from "@/lib/imageUtils";
+import { levelInfo } from "@/lib/xp";
+import { initials } from "@/lib/persona-display";
 import { cn } from "@/lib/utils";
 import {
   Sheet,
@@ -34,13 +36,6 @@ import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { deletePersona } from "@/app/(protected)/p/actions";
 import { toast } from "sonner";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
-
-function initials(name: string) {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  const a = parts[0]?.[0] ?? "P";
-  const b = parts[1]?.[0] ?? "";
-  return (a + b).toUpperCase();
-}
 
 // ---------------------------------------------------------------------------
 // Onglet URL externe (partagé avatar + bannière)
@@ -463,12 +458,6 @@ export function PersonaEditorContent({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function levelInfo(xp: number) {
-    const level = Math.floor(xp / 100) + 1;
-    const base = (level - 1) * 100;
-    const progress = Math.min(100, Math.round(((xp - base) / 100) * 100));
-    return { level, xpForNext: level * 100, progress };
-  }
   const xpInfo = balance ? levelInfo(balance.xp) : null;
 
   useEffect(() => {

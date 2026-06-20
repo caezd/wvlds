@@ -90,8 +90,19 @@ export function ParagraphBlockEditor({
     const current = extractValue(el);
     if (value === current) return;
     el.innerHTML = buildHTML(value);
-    // Remet le curseur en fin si le champ vient d'être vidé
-    if (!value) return;
+    if (!value) {
+      // Réinitialise la sélection pour éviter les références dangling vers les
+      // anciens nœuds supprimés (texte qui s'insère en dehors du composer).
+      if (document.activeElement === el) {
+        const firstBlock = el.querySelector("[data-block]");
+        const range = document.createRange();
+        range.setStart(firstBlock ?? el, 0);
+        range.collapse(true);
+        window.getSelection()?.removeAllRanges();
+        window.getSelection()?.addRange(range);
+      }
+      return;
+    }
     const range = document.createRange();
     range.selectNodeContents(el);
     range.collapse(false);

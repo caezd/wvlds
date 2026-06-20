@@ -58,6 +58,7 @@ export function useRealtimeChatSync({
         async (payload: { new: Record<string, unknown>; old: Record<string, unknown> }) => {
           const id = (payload.new as { id: number }).id;
           if (latestIdRef.current !== null && id <= latestIdRef.current) return;
+          latestIdRef.current = id; // avant l'await : bloque tout doublon concurrent (ex: Strict Mode double-mount)
 
           const { data, error } = await supabase
             .from(TABLE.CHAT_MESSAGES)
@@ -72,7 +73,6 @@ export function useRealtimeChatSync({
             return;
           }
 
-          latestIdRef.current = id;
           onMessageInserted(
             data as unknown as ChatMessageWithPersona,
             data.author_id ?? undefined,

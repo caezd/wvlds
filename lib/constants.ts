@@ -14,6 +14,9 @@ export const TABLE = {
   USER_EQUIPPED_COSMETICS: "user_equipped_cosmetics",
   USER_OWNED_COSMETICS: "user_owned_cosmetics",
   COSMETIC_ITEMS: "cosmetic_items",
+  NOTIFICATIONS: "notifications",
+  NOTIFICATION_PREFERENCES: "notification_preferences",
+  WORLD_INVITATIONS: "world_invitations",
 } as const;
 
 // --- Supabase RPC names -------------------------------------------------------
@@ -22,6 +25,7 @@ export const RPC = {
   GET_CHATROOM_UNREADS: "get_chatroom_unreads",
   AWARD_EVENT: "award_event",
   GET_BALANCE_SUMMARY: "get_balance_summary",
+  ACCEPT_WORLD_INVITATION: "accept_world_invitation",
 } as const;
 
 // --- Realtime channel name factories -----------------------------------------
@@ -36,6 +40,7 @@ export const channel = {
   navMessages: (worldId: string) => `nav-messages-${worldId}`,
   navReads: (selfId: string) => `nav-reads-${selfId}`,
   appPresence: () => "presence:app",
+  userNotifs: (userId: string) => `notifs:${userId}`,
 } as const;
 
 // --- Throttle / debounce delays (ms) -----------------------------------------

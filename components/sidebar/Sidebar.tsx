@@ -53,6 +53,7 @@ export default async function Sidebar() {
        world_members ( user_id, role )`,
     )
     .is("deleted_at", null)
+    .eq("is_archived", false)
     .order("name", { ascending: true })) as {
       data: WorldRow[] | null;
       error: unknown;
@@ -74,11 +75,8 @@ export default async function Sidebar() {
   const mine = (worlds ?? []).filter((w) =>
     w.world_members?.some((m) => m.user_id === user.id && m.role === "owner"),
   );
-  const shared = (worlds ?? []).filter(
-    (w) =>
-      !w.world_members?.some(
-        (m) => m.user_id === user.id && m.role === "owner",
-      ),
+  const shared = (worlds ?? []).filter((w) =>
+    w.world_members?.some((m) => m.user_id === user.id && m.role !== "owner"),
   );
 
   // ── Mondes favoris + dernières chatrooms ─────────────────────

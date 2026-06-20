@@ -25,10 +25,21 @@ export default async function WorldPage({
       "id, name, description, owner_id, banner_url, icon_url, color, visibility, restrict_inventory, restrict_skills, world_members(user_id, role)",
     )
     .eq("id", id)
-    .single();
+    .maybeSingle();
   const { data: me } = await supabase.auth.getUser();
 
   if (!world) {
+    notFound();
+  }
+
+  // Only members (or the owner) can access the world page.
+  // Invitees can read the world record (via RLS policy) but cannot enter.
+  const members = world.world_members ?? [];
+  const myRole =
+    members.find((m) => m.user_id === me.user?.id)?.role ??
+    (world.owner_id === me.user?.id ? "owner" : null);
+
+  if (!myRole) {
     notFound();
   }
 
@@ -50,17 +61,10 @@ export default async function WorldPage({
     wid: world.id,
     uid: me.user?.id ?? null,
   });
-  const members = world.world_members ?? [];
 
-  const myRole =
-    members.find((m) => m.user_id === me.user?.id)?.role ??
-    (world.owner_id === me.user?.id ? "owner" : null);
-
-  const isShared = myRole !== null;
-  const canEditTabs = ["owner", "admin", "editor"].includes(myRole ?? "");
-  const canPost = ["owner", "admin", "editor", "player"].includes(
-    myRole ?? "",
-  );
+  const isShared = true; // guaranteed by the myRole guard above
+  const canEditTabs = ["owner", "admin", "editor"].includes(myRole);
+  const canPost = ["owner", "admin", "editor", "player"].includes(myRole);
 
   const userId = me.user?.id;
 

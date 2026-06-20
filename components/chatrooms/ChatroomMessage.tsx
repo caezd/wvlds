@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 
 import { createClient } from "@/lib/supabase/client";
 import { TABLE } from "@/lib/constants";
+import { extractMentions } from "@/lib/composerMessage";
 import DateDisplay from "@/components/date-display";
 
 import { Button } from "@/components/ui/button";
@@ -24,12 +25,29 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 
 import { PersonaProfileSheetTrigger } from "@/components/personas/PersonaProfileSheetTrigger";
 import { useGlobalPresence } from "@/components/providers/PresenceProvider";
 import { ChatReactionPicker } from "./ChatReactionPicker";
 import { ReactionEmoji } from "./ReactionEmoji";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
+import { useLongPress } from "@/hooks/useLongPress";
 
 /**
  * IMPORTANT:
@@ -129,7 +147,20 @@ export default function ChatroomMessage({
   const [editBubbleColor, setEditBubbleColor] = useState<string | null>(null);
 
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const { emoji_reactions } = useFeatureFlags();
+
+  useEffect(() => {
+    setIsMobile(window.matchMedia("(pointer: coarse)").matches);
+  }, []);
+
+  const hasActions = mine || !!emoji_reactions;
+  const longPressHandlers = useLongPress(useCallback(() => {
+    try { navigator.vibrate?.(50); } catch { /* noop */ }
+    setDrawerOpen(true);
+  }, []));
 
   // Si un UPDATE arrive via realtime pendant qu’on n’édite pas, on resync le draft
   useEffect(() => {
@@ -211,6 +242,42 @@ export default function ChatroomMessage({
       return;
     }
 
+    // Mentions ajoutées lors de l'édition — doublons ignorés silencieusement par le trigger DB
+    const mentioned = extractMentions(next);
+    if (mentioned.length > 0 && message.world_id && selfId) {
+      const [{ data: mentionedProfiles }, { data: chatroomData }] = await Promise.all([
+        supabase.from("profiles").select("id").in("username", mentioned),
+        supabase.from("chatrooms").select("title, name").eq("id", message.chat_id).single(),
+      ]);
+      const chatroomTitle =
+        (chatroomData as { title?: string | null; name?: string | null } | null)?.title ??
+        (chatroomData as { title?: string | null; name?: string | null } | null)?.name ??
+        null;
+      const recipientIds = (mentionedProfiles ?? [])
+        .map((p: { id: string }) => p.id)
+        .filter((id: string) => id !== selfId);
+      if (recipientIds.length > 0) {
+        const { data: members } = await supabase
+          .from(TABLE.WORLD_MEMBERS).select("user_id")
+          .eq("world_id", message.world_id).in("user_id", recipientIds);
+        const validIds = (members ?? []).map((m: { user_id: string }) => m.user_id);
+        if (validIds.length > 0) {
+          await supabase.from(TABLE.NOTIFICATIONS).insert(
+            validIds.map((rid: string) => ({
+              recipient_id: rid,
+              type: "mention",
+              world_id: message.world_id,
+              chat_id: message.chat_id,
+              message_id: message.id,
+              actor_id: selfId,
+              actor_name: online[selfId]?.username ?? null,
+              content: chatroomTitle,
+            })),
+          );
+        }
+      }
+    }
+
     // Mise à jour optimiste avec le texte en clair (déjà déchiffré dans l'état)
     onUpdated?.(message.id, next);
     setEditing(false);
@@ -285,7 +352,11 @@ export default function ChatroomMessage({
   }
 
   return (
-    <article className={cn("w-full py-8 group/turn-messages", message.visible_to && "bg-card/40 px-4")}>
+    <>
+    <article
+      className={cn("w-full py-8 group/turn-messages", message.visible_to && "bg-card/40 px-4")}
+      {...(isMobile && hasActions ? longPressHandlers : {})}
+    >
       {message.visible_to && (
         <div className="flex items-center gap-1 text-xs text-muted-foreground mb-3">
           <Lock className="h-3 w-3 shrink-0" />
@@ -327,7 +398,7 @@ export default function ChatroomMessage({
                 {message.persona?.name}
               </strong>
               <div className="flex items-center gap-1">
-                {!editing && emoji_reactions && (
+                {!editing && !isMobile && emoji_reactions && (
                   <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
                     <PopoverTrigger asChild>
                       <Button
@@ -355,7 +426,7 @@ export default function ChatroomMessage({
                   </Popover>
                 )}
 
-                {mine && !editing && (
+                {mine && !editing && !isMobile && (
                   <>
                     <Button
                       type="button"
@@ -505,5 +576,84 @@ export default function ChatroomMessage({
         </div>
       </div>
     </article>
+
+    {/* Drawer mobile — long-press sur un message */}
+    <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
+      <DrawerContent>
+        <DrawerHeader>
+          <DrawerTitle className="text-center">
+            {message.persona?.name ?? "Options"}
+          </DrawerTitle>
+        </DrawerHeader>
+        <div className="flex flex-col gap-1 px-4 pb-6">
+          {emoji_reactions && (
+            <div className="mb-2">
+              <p className="text-xs text-muted-foreground mb-2 text-center">Réagir</p>
+              <ChatReactionPicker
+                onSelect={(emoji) => {
+                  void toggleReaction(emoji);
+                  setDrawerOpen(false);
+                }}
+              />
+            </div>
+          )}
+          {mine && (
+            <>
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-3 h-12 text-base"
+                onClick={() => {
+                  setDrawerOpen(false);
+                  startEdit();
+                }}
+              >
+                <Pencil className="h-5 w-5" />
+                Modifier
+              </Button>
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-3 h-12 text-base text-destructive hover:text-destructive"
+                onClick={() => {
+                  setDrawerOpen(false);
+                  setDeleteDialogOpen(true);
+                }}
+              >
+                <Trash2 className="h-5 w-5" />
+                Supprimer
+              </Button>
+            </>
+          )}
+        </div>
+      </DrawerContent>
+    </Drawer>
+
+    {/* Dialog de confirmation de suppression (déclenché depuis le drawer mobile) */}
+    <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
+          <AlertDialogDescription>
+            Ce message sera supprimé définitivement.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Annuler</AlertDialogCancel>
+          <AlertDialogAction
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            onClick={async () => {
+              const { error } = await supabase
+                .from(TABLE.CHAT_MESSAGES)
+                .delete()
+                .eq("id", message.id);
+              if (error) toast.error("Impossible de supprimer le message : " + error.message);
+              else onDeleted?.(message.id);
+            }}
+          >
+            Supprimer
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }

@@ -61,18 +61,21 @@ export async function updateSession(request: NextRequest) {
     }
 
     // 1) Quand on visite un monde: /w/<id>
+    // IMPORTANT : on pose le cookie sur `supabaseResponse` et on le retourne tel
+    // quel. Créer un NextResponse.next() neuf jetterait les cookies de session
+    // rafraîchis par getClaims() ci-dessus → la page serveur verrait une session
+    // expirée (auth.uid() null) → RLS ne renvoie pas le monde → 404 sur des
+    // mondes pourtant accessibles (cf. avertissement plus bas).
     if (url.pathname.startsWith("/w/") && url.pathname !== "/w") {
-        const segments = url.pathname.split("/");
-        const worldId = segments[2]; // /w/<id> => index 2
+        const worldId = url.pathname.split("/")[2]; // /w/<id> => index 2
 
         if (worldId) {
-            const res = NextResponse.next();
             // Cookie valable 30 jours, à adapter
-            res.cookies.set("last_world_id", worldId, {
+            supabaseResponse.cookies.set("last_world_id", worldId, {
                 path: "/",
                 maxAge: 60 * 60 * 24 * 30,
             });
-            return res;
+            return supabaseResponse;
         }
     }
 
@@ -83,7 +86,12 @@ export async function updateSession(request: NextRequest) {
         if (lastWorldId) {
             const redirectUrl = url.clone();
             redirectUrl.pathname = `/w/${lastWorldId}`;
-            return NextResponse.redirect(redirectUrl);
+            const redirectResponse = NextResponse.redirect(redirectUrl);
+            // Recopier les cookies de session pour ne pas casser l'auth.
+            supabaseResponse.cookies.getAll().forEach((cookie) =>
+                redirectResponse.cookies.set(cookie.name, cookie.value, cookie),
+            );
+            return redirectResponse;
         }
     }
 
