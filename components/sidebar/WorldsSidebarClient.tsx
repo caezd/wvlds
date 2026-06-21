@@ -482,9 +482,9 @@ function WorldItem({
   return (
     <div
       className={cn(
-        "group flex items-center gap-0.5 rounded-xl border border-transparent pr-1 transition-colors hover:border-[#333333]",
+        "group flex items-center gap-0.5 rounded-xl border border-transparent pr-1 transition-colors hover:border-border",
         active &&
-        "border-[#333333] bg-[#1a1a1a] font-semibold text-foreground shadow-[0_1px_2px_0_rgba(128,128,128,0.1)]",
+        "bg-background font-semibold text-foreground shadow-[0_1px_2px_0_rgba(128,128,128,0.1)]",
       )}
     >
       <Link

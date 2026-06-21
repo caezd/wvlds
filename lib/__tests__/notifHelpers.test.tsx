@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
+import { render } from "@testing-library/react";
 import { emojiFromContent, notifText, notifHref, compactTime } from "@/lib/notifHelpers";
 import type { AppNotification } from "@/types/db";
+import type { ReactNode } from "react";
 
 function makeNotif(overrides: Partial<AppNotification> = {}): AppNotification {
     return {
@@ -20,6 +22,12 @@ function makeNotif(overrides: Partial<AppNotification> = {}): AppNotification {
         updated_at: new Date().toISOString(),
         ...overrides,
     };
+}
+
+/** Rendu d'un ReactNode → textContent combiné (ignore les balises HTML). */
+function textOf(node: ReactNode): string {
+    const { container } = render(<>{node}</>);
+    return container.textContent ?? "";
 }
 
 // ── emojiFromContent ──────────────────────────────────────────────────────────
@@ -61,78 +69,78 @@ describe("emojiFromContent", () => {
 
 describe("notifText", () => {
     it("mention avec acteur et chatroom", () => {
-        expect(notifText(makeNotif({ type: "mention", actor_name: "alice", content: "général" })))
-            .toBe("@alice vous a mentionné dans #général");
+        expect(textOf(notifText(makeNotif({ type: "mention", actor_name: "alice", content: "général" }))))
+            .toBe("alice vous a mentionné dans général");
     });
 
     it("mention sans contenu (pas de chatroom)", () => {
-        expect(notifText(makeNotif({ type: "mention", actor_name: "alice", content: null })))
-            .toBe("@alice vous a mentionné");
+        expect(textOf(notifText(makeNotif({ type: "mention", actor_name: "alice", content: null }))))
+            .toBe("alice vous a mentionné");
     });
 
     it("mention sans acteur → Quelqu'un", () => {
-        expect(notifText(makeNotif({ type: "mention", actor_name: null, content: "lobby" })))
-            .toBe("Quelqu'un vous a mentionné dans #lobby");
+        expect(textOf(notifText(makeNotif({ type: "mention", actor_name: null, content: "lobby" }))))
+            .toBe("Quelqu'un vous a mentionné dans lobby");
     });
 
     it("réaction avec emoji codepoint", () => {
-        expect(notifText(makeNotif({ type: "reaction", actor_name: "bob", content: "1F44D" })))
-            .toBe("@bob a réagi 👍 à votre message");
+        expect(textOf(notifText(makeNotif({ type: "reaction", actor_name: "bob", content: "1F44D" }))))
+            .toBe("bob a réagi 👍 à votre message");
     });
 
     it("réaction avec emoji unicode direct", () => {
-        expect(notifText(makeNotif({ type: "reaction", actor_name: "bob", content: "🔥" })))
-            .toBe("@bob a réagi 🔥 à votre message");
+        expect(textOf(notifText(makeNotif({ type: "reaction", actor_name: "bob", content: "🔥" }))))
+            .toBe("bob a réagi 🔥 à votre message");
     });
 
     it("nouveau membre avec nom du monde", () => {
-        expect(notifText(makeNotif({ type: "new_member", actor_name: "carol", content: "Hextech" })))
-            .toBe("@carol a rejoint Hextech");
+        expect(textOf(notifText(makeNotif({ type: "new_member", actor_name: "carol", content: "Hextech" }))))
+            .toBe("carol a rejoint Hextech");
     });
 
     it("nouveau membre sans contenu → 'un monde'", () => {
-        expect(notifText(makeNotif({ type: "new_member", actor_name: null, content: null })))
+        expect(textOf(notifText(makeNotif({ type: "new_member", actor_name: null, content: null }))))
             .toBe("Quelqu'un a rejoint un monde");
     });
 
     it("nouvelle chatroom avec nom", () => {
-        expect(notifText(makeNotif({ type: "new_chatroom", actor_name: "dave", content: "annonces" })))
-            .toBe("@dave a créé annonces");
+        expect(textOf(notifText(makeNotif({ type: "new_chatroom", actor_name: "dave", content: "annonces" }))))
+            .toBe("dave a créé annonces");
     });
 
     it("nouvelle chatroom sans contenu → 'une chatroom'", () => {
-        expect(notifText(makeNotif({ type: "new_chatroom", actor_name: "dave", content: null })))
-            .toBe("@dave a créé une chatroom");
+        expect(textOf(notifText(makeNotif({ type: "new_chatroom", actor_name: "dave", content: null }))))
+            .toBe("dave a créé une chatroom");
     });
 
     it("invitation de monde", () => {
-        expect(notifText(makeNotif({ type: "world_invite", actor_name: "eve" })))
-            .toBe("@eve vous a invité à rejoindre un monde");
+        expect(textOf(notifText(makeNotif({ type: "world_invite", actor_name: "eve" }))))
+            .toBe("eve vous a invité à rejoindre un monde");
     });
 
     it("invitation de monde sans acteur", () => {
-        expect(notifText(makeNotif({ type: "world_invite", actor_name: null })))
+        expect(textOf(notifText(makeNotif({ type: "world_invite", actor_name: null }))))
             .toBe("Quelqu'un vous a invité à rejoindre un monde");
     });
 
     it("chatroom_reply count=1 → texte avec acteur", () => {
-        expect(notifText(makeNotif({ type: "chatroom_reply", actor_name: "alice", content: "général", metadata: { count: 1 } })))
-            .toBe("@alice a répondu dans #général");
+        expect(textOf(notifText(makeNotif({ type: "chatroom_reply", actor_name: "alice", content: "général", metadata: { count: 1 } }))))
+            .toBe("alice a répondu dans général");
     });
 
     it("chatroom_reply count=1 sans chatroom", () => {
-        expect(notifText(makeNotif({ type: "chatroom_reply", actor_name: "alice", content: null, metadata: { count: 1 } })))
-            .toBe("@alice a répondu dans une chatroom");
+        expect(textOf(notifText(makeNotif({ type: "chatroom_reply", actor_name: "alice", content: null, metadata: { count: 1 } }))))
+            .toBe("alice a répondu dans une chatroom");
     });
 
     it("chatroom_reply count=5 → texte agrégé", () => {
-        expect(notifText(makeNotif({ type: "chatroom_reply", actor_name: "alice", content: "lobby", metadata: { count: 5 } })))
-            .toBe("5 nouveaux messages dans #lobby");
+        expect(textOf(notifText(makeNotif({ type: "chatroom_reply", actor_name: "alice", content: "lobby", metadata: { count: 5 } }))))
+            .toBe("5 nouveaux messages dans lobby");
     });
 
     it("chatroom_reply sans metadata → count implicite à 1", () => {
-        expect(notifText(makeNotif({ type: "chatroom_reply", actor_name: "bob", content: "annonces", metadata: null })))
-            .toBe("@bob a répondu dans #annonces");
+        expect(textOf(notifText(makeNotif({ type: "chatroom_reply", actor_name: "bob", content: "annonces", metadata: null }))))
+            .toBe("bob a répondu dans annonces");
     });
 });
 

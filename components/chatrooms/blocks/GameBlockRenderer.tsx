@@ -14,6 +14,7 @@ import { RevealBlockView } from "./RevealBlock";
 import { NpcBlockView } from "./NpcBlock";
 import { HpBlockView } from "./HpBlock";
 import { CalloutBlockView } from "./CalloutBlock";
+import { AnchorBlockView } from "./AnchorBlockView";
 
 /**
  * Aiguilleur unique des blocs de jeu d'un message. Centralise la plomberie
@@ -28,6 +29,7 @@ export function GameBlockRenderer({
   message,
   chatroomKey,
   onUpdated,
+  onAnchorEdited,
 }: {
   block: ChatBlock;
   mine: boolean;
@@ -35,6 +37,7 @@ export function GameBlockRenderer({
   message: { id: number; content?: string | null; chat_id?: string };
   chatroomKey?: string | null;
   onUpdated?: (id: number, content: string) => void;
+  onAnchorEdited?: (messageId: number, label: string) => void;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const pendingIconMediaRef = useRef<{ url: string; name: string }[]>([]);
@@ -202,6 +205,19 @@ export function GameBlockRenderer({
             onUploadIconImage={uploadIconImage}
           />
         </div>
+      );
+
+    case "anchor":
+      return (
+        <AnchorBlockView
+          block={block}
+          mine={mine}
+          onEdit={async (newLabel) => {
+            await editBlock(JSON.stringify({ ...block, label: newLabel }));
+            onAnchorEdited?.(message.id, newLabel);
+          }}
+          onDelete={deleteBlock("l'ancre")}
+        />
       );
 
     default:

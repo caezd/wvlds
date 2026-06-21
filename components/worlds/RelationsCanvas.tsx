@@ -24,19 +24,19 @@ import { HsvColorPicker } from "@/components/ui/hsv-color-picker";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type CRelType  = { id: string; name: string; color: string; dash: string; sort_index: number };
-type CPersona  = { id: string; name: string; avatar_url: string | null; user_id: string };
-type CMember   = { user_id: string; username: string | null; avatar_url: string | null };
-type CGroup    = { id: string; name: string; color: string; sort_index: number };
+type CRelType = { id: string; name: string; color: string; dash: string; sort_index: number };
+type CPersona = { id: string; name: string; avatar_url: string | null; user_id: string };
+type CMember = { user_id: string; username: string | null; avatar_url: string | null };
+type CGroup = { id: string; name: string; color: string; sort_index: number };
 type CRelation = { id: string; from_persona_id: string; to_persona_id: string; type: string; label: string | null; description: string | null };
-type BlockPos  = { x: number; y: number };
+type BlockPos = { x: number; y: number };
 
 const DASH_OPTIONS = [
-  { label: "Continu",    value: ""        },
-  { label: "Tirets",     value: "5 3"     },
-  { label: "Pointillés", value: "2 3"     },
-  { label: "Long",       value: "8 4"     },
-  { label: "Mixte",      value: "8 3 2 3" },
+  { label: "Continu", value: "" },
+  { label: "Tirets", value: "5 3" },
+  { label: "Pointillés", value: "2 3" },
+  { label: "Long", value: "8 4" },
+  { label: "Mixte", value: "8 3 2 3" },
 ];
 
 const REL_W = 1.5;
@@ -104,17 +104,17 @@ function bezierMidPt(ax: number, ay: number, bx: number, by: number) {
 
 // Découpe un bezier cubique en deux demi-chemins à t=0.5 (De Casteljau)
 function splitBezierHalves(ax: number, ay: number, bx: number, by: number) {
-  const A  = edgePoint(ax, ay, CW, CH, bx, by);
-  const B  = edgePoint(bx, by, CW, CH, ax, ay);
+  const A = edgePoint(ax, ay, CW, CH, bx, by);
+  const B = edgePoint(bx, by, CW, CH, ax, ay);
   const ofs = Math.max(40, Math.hypot(B.x - A.x, B.y - A.y) * 0.38);
   const cx1 = A.x + A.nx * ofs, cy1 = A.y + A.ny * ofs;
   const cx2 = B.x + B.nx * ofs, cy2 = B.y + B.ny * ofs;
-  const m1x = (A.x + cx1) / 2,  m1y = (A.y + cy1) / 2;
-  const m2x = (cx1 + cx2) / 2,  m2y = (cy1 + cy2) / 2;
-  const m3x = (cx2 + B.x) / 2,  m3y = (cy2 + B.y) / 2;
-  const m4x = (m1x + m2x) / 2,  m4y = (m1y + m2y) / 2;
-  const m5x = (m2x + m3x) / 2,  m5y = (m2y + m3y) / 2;
-  const mx  = (m4x + m5x) / 2,  my  = (m4y + m5y) / 2;
+  const m1x = (A.x + cx1) / 2, m1y = (A.y + cy1) / 2;
+  const m2x = (cx1 + cx2) / 2, m2y = (cy1 + cy2) / 2;
+  const m3x = (cx2 + B.x) / 2, m3y = (cy2 + B.y) / 2;
+  const m4x = (m1x + m2x) / 2, m4y = (m1y + m2y) / 2;
+  const m5x = (m2x + m3x) / 2, m5y = (m2y + m3y) / 2;
+  const mx = (m4x + m5x) / 2, my = (m4y + m5y) / 2;
   return {
     dMidToA: `M ${mx} ${my} C ${m4x} ${m4y} ${m1x} ${m1y} ${A.x} ${A.y}`,
     dMidToB: `M ${mx} ${my} C ${m5x} ${m5y} ${m3x} ${m3y} ${B.x} ${B.y}`,
@@ -242,24 +242,24 @@ function CanvasSettingsDialog({
   const supabase = React.useMemo(() => createClient(), []);
 
   // Groups form
-  const [gName, setGName]   = React.useState("");
+  const [gName, setGName] = React.useState("");
   const [gColor, setGColor] = React.useState("#6366f1");
 
   // Editing group
-  const [editGId, setEditGId]       = React.useState<string | null>(null);
-  const [editGName, setEditGName]   = React.useState("");
+  const [editGId, setEditGId] = React.useState<string | null>(null);
+  const [editGName, setEditGName] = React.useState("");
   const [editGColor, setEditGColor] = React.useState("");
 
   // Relation type form
-  const [rtName, setRtName]   = React.useState("");
+  const [rtName, setRtName] = React.useState("");
   const [rtColor, setRtColor] = React.useState("#22c55e");
-  const [rtDash, setRtDash]   = React.useState("");
+  const [rtDash, setRtDash] = React.useState("");
 
   // Editing relation type
-  const [editRtId, setEditRtId]       = React.useState<string | null>(null);
-  const [editRtName, setEditRtName]   = React.useState("");
+  const [editRtId, setEditRtId] = React.useState<string | null>(null);
+  const [editRtName, setEditRtName] = React.useState("");
   const [editRtColor, setEditRtColor] = React.useState("");
-  const [editRtDash, setEditRtDash]   = React.useState("");
+  const [editRtDash, setEditRtDash] = React.useState("");
 
   // ── Groups ──────────────────────────────────────────────────────────────────
 
@@ -472,38 +472,38 @@ export function RelationsCanvas({ worldId, userId, canAdmin, onClose }: Relation
   const [loading, setLoading] = React.useState(false);
 
   // Data
-  const [personas, setPersonas]             = React.useState<CPersona[]>([]);
-  const [members, setMembers]               = React.useState<CMember[]>([]);
-  const [groups, setGroups]                 = React.useState<CGroup[]>([]);
-  const [relTypes, setRelTypes]             = React.useState<CRelType[]>([]);
+  const [personas, setPersonas] = React.useState<CPersona[]>([]);
+  const [members, setMembers] = React.useState<CMember[]>([]);
+  const [groups, setGroups] = React.useState<CGroup[]>([]);
+  const [relTypes, setRelTypes] = React.useState<CRelType[]>([]);
   const [groupByPersona, setGroupByPersona] = React.useState<Map<string, string>>(new Map());
-  const [relations, setRelations]           = React.useState<CRelation[]>([]);
-  const [blockPos, setBlockPos]             = React.useState<Map<string, BlockPos>>(new Map());
-  const [ownerId, setOwnerId]               = React.useState<string | null>(null);
+  const [relations, setRelations] = React.useState<CRelation[]>([]);
+  const [blockPos, setBlockPos] = React.useState<Map<string, BlockPos>>(new Map());
+  const [ownerId, setOwnerId] = React.useState<string | null>(null);
 
   // Connect flow
-  const [connectMode, setConnectMode]       = React.useState(false);
-  const [connecting, setConnecting]         = React.useState<string | null>(null);
-  const [connectTarget, setConnectTarget]   = React.useState<{ personaId: string; cx: number; cy: number } | null>(null);
-  const [pendingDesc, setPendingDesc]       = React.useState("");
+  const [connectMode, setConnectMode] = React.useState(false);
+  const [connecting, setConnecting] = React.useState<string | null>(null);
+  const [connectTarget, setConnectTarget] = React.useState<{ personaId: string; cx: number; cy: number } | null>(null);
+  const [pendingDesc, setPendingDesc] = React.useState("");
 
   // Hover / aside
-  const [hovRelId, setHovRelId]             = React.useState<string | null>(null);
+  const [hovRelId, setHovRelId] = React.useState<string | null>(null);
   const [selectedPersonaId, setSelectedPersonaId] = React.useState<string | null>(null);
-  const [asideTab, setAsideTab]             = React.useState<"out" | "in">("out");
+  const [asideTab, setAsideTab] = React.useState<"out" | "in">("out");
 
   // Group picker
   const [openGroupPicker, setOpenGroupPicker] = React.useState<{ personaId: string; x: number; y: number } | null>(null);
 
   // Canvas pan / zoom
-  const [pan, setPan]     = React.useState({ x: 0, y: 0 });
+  const [pan, setPan] = React.useState({ x: 0, y: 0 });
   const [scale, setScale] = React.useState(1);
-  const panRef   = React.useRef({ x: 0, y: 0 });
+  const panRef = React.useRef({ x: 0, y: 0 });
   const scaleRef = React.useRef(1);
-  panRef.current   = pan;
+  panRef.current = pan;
   scaleRef.current = scale;
 
-  const outerRef  = React.useRef<HTMLDivElement>(null); // viewport fixe
+  const outerRef = React.useRef<HTMLDivElement>(null); // viewport fixe
   const canvasRef = React.useRef<HTMLDivElement>(null); // div transformée
 
   // drag pan souris
@@ -546,8 +546,8 @@ export function RelationsCanvas({ worldId, userId, canAdmin, onClose }: Relation
       let loadedTypes = (rtRows ?? []) as CRelType[];
       if (loadedTypes.length === 0 && canAdmin) {
         const defaults = [
-          { world_id: worldId, name: "Allié",  color: "#22c55e", dash: "",    sort_index: 0 },
-          { world_id: worldId, name: "Ennemi", color: "#ef4444", dash: "",    sort_index: 1 },
+          { world_id: worldId, name: "Allié", color: "#22c55e", dash: "", sort_index: 0 },
+          { world_id: worldId, name: "Ennemi", color: "#ef4444", dash: "", sort_index: 1 },
         ];
         const { data: seeded } = await supabase
           .from("world_relation_types")
@@ -559,8 +559,8 @@ export function RelationsCanvas({ worldId, userId, canAdmin, onClose }: Relation
 
       type AssignRow = { persona_id: string; group_id: string };
       type MemberRow = { user_id: string };
-      type ProfRow   = { id: string; username: string | null; avatar_url: string | null };
-      type PosRow    = { user_id: string; x: number; y: number };
+      type ProfRow = { id: string; username: string | null; avatar_url: string | null };
+      type PosRow = { user_id: string; x: number; y: number };
 
       const gbp = new Map<string, string>();
       for (const a of (aRows ?? []) as AssignRow[]) gbp.set(a.persona_id, a.group_id);
@@ -742,9 +742,9 @@ export function RelationsCanvas({ worldId, userId, canAdmin, onClose }: Relation
     return m;
   }, [personas]);
 
-  const personaMap    = React.useMemo(() => new Map(personas.map((p) => [p.id, p])), [personas]);
-  const myPersonaIds  = React.useMemo(() => new Set(personas.filter((p) => p.user_id === userId).map((p) => p.id)), [personas, userId]);
-  const relTypeMap    = React.useMemo(() => new Map(relTypes.map((t) => [t.id, t])), [relTypes]);
+  const personaMap = React.useMemo(() => new Map(personas.map((p) => [p.id, p])), [personas]);
+  const myPersonaIds = React.useMemo(() => new Set(personas.filter((p) => p.user_id === userId).map((p) => p.id)), [personas, userId]);
+  const relTypeMap = React.useMemo(() => new Map(relTypes.map((t) => [t.id, t])), [relTypes]);
 
   const personaCenters = React.useMemo(() => {
     const m = new Map<string, { x: number; y: number }>();
@@ -880,7 +880,7 @@ export function RelationsCanvas({ worldId, userId, canAdmin, onClose }: Relation
     > = [];
 
     for (const rel of relations) {
-      const key    = `${rel.from_persona_id}__${rel.to_persona_id}`;
+      const key = `${rel.from_persona_id}__${rel.to_persona_id}`;
       const revKey = `${rel.to_persona_id}__${rel.from_persona_id}`;
       if (rendered.has(key)) continue;
 
@@ -1064,27 +1064,27 @@ export function RelationsCanvas({ worldId, userId, canAdmin, onClose }: Relation
           onTouchMove={onTouchMove}
           onTouchEnd={onTouchEnd}
         >
+          {/* Dot grid — fixed in viewport, unaffected by zoom/pan */}
+          <svg aria-hidden="true" className="pointer-events-none absolute inset-0" width="100%" height="100%" style={{ zIndex: 0 }}>
+            <defs>
+              <pattern id="canvas-dot-grid" x={pan.x % 28} y={pan.y % 28} width="28" height="28" patternUnits="userSpaceOnUse">
+                <circle cx="14" cy="14" r="1" style={{ fill: "var(--border)" }} />
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#canvas-dot-grid)" />
+          </svg>
+
           {loading ? (
             <div className="flex h-full items-center justify-center text-sm text-muted-foreground">Chargement…</div>
           ) : (
             <div ref={canvasRef} className="absolute origin-top-left" style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`, width: maxW, height: maxH }}>
 
-              {/* Dot grid */}
-              <svg aria-hidden="true" className="pointer-events-none absolute inset-0" width="100%" height="100%">
-                <defs>
-                  <pattern id="canvas-dot-grid" x="0" y="0" width="28" height="28" patternUnits="userSpaceOnUse">
-                    <circle cx="14" cy="14" r="1" style={{ fill: "var(--card)" }} />
-                  </pattern>
-                </defs>
-                <rect width="100%" height="100%" fill="url(#canvas-dot-grid)" />
-              </svg>
-
               {/* User blocks */}
               {userList.map(({ member, ps }) => {
-                const uid  = member.user_id;
-                const pos  = blockPos.get(uid) ?? { x: 0, y: 0 };
-                const bh   = blockH(ps.length);
-                const dName  = member.username ? `@${member.username}` : uid.slice(0, 8);
+                const uid = member.user_id;
+                const pos = blockPos.get(uid) ?? { x: 0, y: 0 };
+                const bh = blockH(ps.length);
+                const dName = member.username ? `@${member.username}` : uid.slice(0, 8);
                 const letter = dName.replace(/^@/, "")[0]?.toUpperCase() ?? "?";
 
                 return (
@@ -1117,7 +1117,7 @@ export function RelationsCanvas({ worldId, userId, canAdmin, onClose }: Relation
                         style={{ gridTemplateColumns: `repeat(${NC}, ${CW}px)`, padding: `${BP}px`, paddingTop: 0, paddingBottom: BP }}
                       >
                         {ps.map((p, i) => {
-                          const gc    = groupColor.get(p.id);
+                          const gc = groupColor.get(p.id);
                           const isSrc = connecting === p.id;
                           const isSel = selectedPersonaId === p.id;
                           return (
@@ -1131,10 +1131,10 @@ export function RelationsCanvas({ worldId, userId, canAdmin, onClose }: Relation
                                 isSrc
                                   ? "scale-[1.04] ring-2 ring-indigo-500/40"
                                   : isSel
-                                  ? "ring-1 ring-primary/30"
-                                  : connectMode
-                                  ? "hover:border-indigo-400 hover:ring-1 hover:ring-indigo-400/30"
-                                  : "hover:opacity-90",
+                                    ? "ring-1 ring-primary/30"
+                                    : connectMode
+                                      ? "hover:border-indigo-400 hover:ring-1 hover:ring-indigo-400/30"
+                                      : "hover:opacity-90",
                               )}
                               onClick={() => {
                                 const tl = cardTL(i);
@@ -1217,8 +1217,8 @@ export function RelationsCanvas({ worldId, userId, canAdmin, onClose }: Relation
                     const b = personaCenters.get(rel.to_persona_id);
                     if (!a || !b) return null;
                     const meta = relTypeMap.get(rel.type) ?? FALLBACK;
-                    const d   = bezierD(a.x, a.y, b.x, b.y);
-                    const mp  = bezierMidPt(a.x, a.y, b.x, b.y);
+                    const d = bezierD(a.x, a.y, b.x, b.y);
+                    const mp = bezierMidPt(a.x, a.y, b.x, b.y);
                     const hov = hovRelId === rel.id;
                     return (
                       <g key={rel.id}>
@@ -1253,8 +1253,8 @@ export function RelationsCanvas({ worldId, userId, canAdmin, onClose }: Relation
                     const b = personaCenters.get(rel.to_persona_id);
                     if (!a || !b) return null;
                     const meta = relTypeMap.get(rel.type) ?? FALLBACK;
-                    const d   = bezierD(a.x, a.y, b.x, b.y);
-                    const mp  = bezierMidPt(a.x, a.y, b.x, b.y);
+                    const d = bezierD(a.x, a.y, b.x, b.y);
+                    const mp = bezierMidPt(a.x, a.y, b.x, b.y);
                     const hov = hovRelId === rel.id;
                     return (
                       <g key={`bidir-${rel.id}`}>
@@ -1292,10 +1292,10 @@ export function RelationsCanvas({ worldId, userId, canAdmin, onClose }: Relation
                     const metaAB = relTypeMap.get(relAB.type) ?? FALLBACK;
                     const metaBA = relTypeMap.get(relBA.type) ?? FALLBACK;
                     const { dMidToA, dMidToB, mid: mp } = splitBezierHalves(a.x, a.y, b.x, b.y);
-                    const fullD  = bezierD(a.x, a.y, b.x, b.y);
-                    const hovAB  = hovRelId === relAB.id;
-                    const hovBA  = hovRelId === relBA.id;
-                    const hov    = hovAB || hovBA;
+                    const fullD = bezierD(a.x, a.y, b.x, b.y);
+                    const hovAB = hovRelId === relAB.id;
+                    const hovBA = hovRelId === relBA.id;
+                    const hov = hovAB || hovBA;
                     return (
                       <g key={`split-${relAB.id}`}>
                         <path d={fullD} fill="none" stroke="transparent" strokeWidth="18"

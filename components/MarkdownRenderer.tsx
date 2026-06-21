@@ -50,7 +50,7 @@ function CodeBlock({ className, children, ...props }: React.ComponentProps<"code
       await navigator.clipboard.writeText(txt);
       setCopied(true);
       setTimeout(() => setCopied(false), 1200);
-    } catch {}
+    } catch { }
   };
 
   return (
@@ -318,6 +318,7 @@ export default function MarkdownRenderer({
         proseSize === "sm" && "prose-sm",
         proseSize === "lg" && "prose-lg",
         proseSize === "xl" && "prose-xl",
+        "prose-sm sm:prose-base",
         "[&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
         className,
       )}

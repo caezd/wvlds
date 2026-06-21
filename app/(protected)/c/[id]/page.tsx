@@ -1,5 +1,6 @@
 import ChatRoomView from "./view";
 import { createClient } from "@/lib/supabase/server";
+import { getUserId } from "@/lib/auth";
 import { notFound } from "next/navigation";
 import { TABLE, CHAT_MESSAGES_PAGE_SIZE } from "@/lib/constants";
 import { decryptMessage } from "@/lib/crypto";
@@ -9,77 +10,146 @@ export default async function Page({ params }: { params: { id: string } }) {
   const { id } = await params;
   const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const userId = await getUserId(supabase);
 
-  if (!user) {
+  if (!userId) {
     notFound();
   }
 
-  const { data: chatroom, error: chatErr } = await supabase
-    .from("chatrooms")
-    .select(
-      "id, name, title, banner_url, icon_url, world_id, created_by, worlds(id, name, owner_id, restrict_inventory, restrict_skills, world_members(user_id))",
-    )
-    .eq("id", id)
-    .single();
+  // Phase 1 — requêtes ne dépendant que de `id`/`userId`, indépendantes entre
+  // elles → chargées en parallèle (chatroom, messages, clé de chiffrement,
+  // persona préférée de l'utilisateur).
+  const [
+    { data: chatroom, error: chatErr },
+    { data: messages },
+    { data: keyRow },
+    { data: pref },
+  ] = await Promise.all([
+    supabase
+      .from("chatrooms")
+      .select(
+        "id, name, title, banner_url, icon_url, world_id, created_by, worlds(id, name, owner_id, restrict_inventory, restrict_skills, world_members(user_id))",
+      )
+      .eq("id", id)
+      .single(),
+    // Derniers messages (ordre décroissant ; on remet en croissant ensuite) ;
+    // le reste est chargé à la demande côté client quand on remonte l'historique
+    supabase
+      .from("chat_messages")
+      .select(
+        "id, chat_id, content, author_id, created_at, metadata, visible_to, persona:personas(id, user_id, name, avatar_url, frame:avatar_frame_id(asset_url))",
+      )
+      .eq("chat_id", id)
+      .order("created_at", { ascending: false })
+      .limit(CHAT_MESSAGES_PAGE_SIZE),
+    // Clé de chiffrement (null = chatroom sans clé, messages en clair)
+    supabase
+      .from(TABLE.CHATROOM_KEYS)
+      .select("key_b64")
+      .eq("chatroom_id", id)
+      .maybeSingle(),
+    // Persona par défaut pour cet utilisateur dans cette chatroom (facultatif)
+    supabase
+      .from("chatroom_persona_prefs")
+      .select("persona:personas(id, user_id, name, avatar_url)")
+      .eq("chat_id", id)
+      .eq("user_id", userId)
+      .maybeSingle(),
+  ]);
 
   if (chatErr || !chatroom) return notFound();
 
-  // 2) Derniers messages (ordre croissant pour affichage direct) ; le reste est
-  // chargé à la demande côté client quand on remonte dans l'historique
-  const { data: messages } = await supabase
-    .from("chat_messages")
-    .select(
-      "id, chat_id, content, author_id, created_at, metadata, visible_to, persona:personas(id, user_id, name, avatar_url, frame:avatar_frame_id(asset_url))",
-    )
-    .eq("chat_id", id)
-    .order("created_at", { ascending: false })
-    .limit(CHAT_MESSAGES_PAGE_SIZE);
-
   const initialMessages = (messages ?? []).slice().reverse(); // on remet en croissant
   const initialHasMore = (messages ?? []).length === CHAT_MESSAGES_PAGE_SIZE;
+  const chatroomKey = (keyRow as unknown as { key_b64?: string } | null)?.key_b64 ?? null;
+  const initialPersona = (pref?.persona as unknown as Persona | null) ?? null;
 
   /* reactions */
   type ReactionSummary = { emoji: string; count: number; me: boolean };
 
   const messageIds = initialMessages.map((m) => m.id);
+
+  // Données du monde associé (extracted pour usage multiple)
+  const rawWorld = chatroom.worlds as unknown;
+  const worldData = (Array.isArray(rawWorld) ? rawWorld[0] : rawWorld) as { id: string; name: string; owner_id?: string; restrict_inventory?: boolean | null; restrict_skills?: boolean | null; world_members?: { user_id: string }[] } | null | undefined;
+
+  // Est-on déjà certain d'être owner du monde ? Si oui, inutile d'interroger
+  // `world_members` pour connaître son rôle.
+  const isWorldOwner = !!worldData?.owner_id && userId === worldData.owner_id;
+  const needMembership = !!chatroom.world_id && !isWorldOwner;
+
+  // Phase 2 — requêtes dépendant de la phase 1 (messageIds, world_id) mais
+  // indépendantes entre elles → en parallèle : réactions, nav des salons du
+  // monde, et rôle de l'utilisateur dans le monde (si nécessaire).
+  type ReactionRow = { message_id: number; emoji: string; user_id: string };
+  type NavRoom = { id: string; title: string | null; name: string | null; icon_url: string | null; last_message_at: string | null; unread_count: number };
+
+  const [reactionRows, navResult, membership] = await Promise.all([
+    (async (): Promise<ReactionRow[]> => {
+      if (!messageIds.length) return [];
+      const { data: rows } = await supabase
+        .from("chat_message_reactions")
+        .select("message_id, emoji, user_id")
+        .eq("chat_id", id)
+        .in("message_id", messageIds);
+      return (rows ?? []) as ReactionRow[];
+    })(),
+    (async (): Promise<{ rooms: NavRoom[]; rpcFailed: boolean }> => {
+      if (!chatroom.world_id) return { rooms: [], rpcFailed: false };
+      const { data: navRooms, error: navErr } = await supabase.rpc(
+        "list_chatrooms_nav",
+        { p_world_id: chatroom.world_id },
+      );
+      if (!navErr && navRooms) return { rooms: navRooms as NavRoom[], rpcFailed: false };
+      // Fallback : requête directe si le RPC n'existe pas encore
+      const { data: fallback } = await supabase
+        .from(TABLE.CHATROOMS)
+        .select("id, title, name, icon_url, updated_at")
+        .eq("world_id", chatroom.world_id)
+        .order("updated_at", { ascending: false });
+      return {
+        rooms: (fallback ?? []).map((r) => ({
+          id: r.id,
+          title: r.title ?? null,
+          name: r.name ?? null,
+          icon_url: r.icon_url ?? null,
+          last_message_at: r.updated_at ?? null,
+          unread_count: 0,
+        })),
+        rpcFailed: true,
+      };
+    })(),
+    (async (): Promise<{ role: string } | null> => {
+      if (!needMembership) return null;
+      const { data } = await supabase
+        .from("world_members")
+        .select("role")
+        .eq("world_id", chatroom.world_id!)
+        .eq("user_id", userId)
+        .maybeSingle();
+      return data as { role: string } | null;
+    })(),
+  ]);
+
   const byMessage = new Map<
     number,
     Map<string, { count: number; me: boolean }>
   >();
 
-  if (messageIds.length) {
-    const { data: rows } = await supabase
-      .from("chat_message_reactions")
-      .select("message_id, emoji, user_id")
-      .eq("chat_id", id)
-      .in("message_id", messageIds);
+  for (const r of reactionRows) {
+    const mid = Number(r.message_id);
+    const emoji = String(r.emoji);
+    const uid = String(r.user_id);
 
-    for (const r of (rows ?? []) as Array<{ message_id: number; emoji: string; user_id: string }>) {
-      const mid = Number(r.message_id);
-      const emoji = String(r.emoji);
-      const uid = String(r.user_id);
+    if (!byMessage.has(mid)) byMessage.set(mid, new Map());
+    const emMap = byMessage.get(mid)!;
 
-      if (!byMessage.has(mid)) byMessage.set(mid, new Map());
-      const emMap = byMessage.get(mid)!;
-
-      const prev = emMap.get(emoji) ?? { count: 0, me: false };
-      emMap.set(emoji, {
-        count: prev.count + 1,
-        me: prev.me || (!!user && uid === user.id),
-      });
-    }
+    const prev = emMap.get(emoji) ?? { count: 0, me: false };
+    emMap.set(emoji, {
+      count: prev.count + 1,
+      me: prev.me || uid === userId,
+    });
   }
-
-  // Clé de chiffrement du chatroom (null = chatroom sans clé, messages en clair)
-  const { data: keyRow } = await supabase
-    .from(TABLE.CHATROOM_KEYS)
-    .select("key_b64")
-    .eq("chatroom_id", id)
-    .maybeSingle();
-  const chatroomKey = (keyRow as unknown as { key_b64?: string } | null)?.key_b64 ?? null;
 
   const initialMessagesWithReactions = await Promise.all(
     initialMessages.map(async (m) => {
@@ -97,77 +167,21 @@ export default async function Page({ params }: { params: { id: string } }) {
   );
   /* reactions */
 
-  // Données du monde associé (extracted pour usage multiple)
-  const rawWorld = chatroom.worlds as unknown;
-  const worldData = (Array.isArray(rawWorld) ? rawWorld[0] : rawWorld) as { id: string; name: string; owner_id?: string; restrict_inventory?: boolean | null; restrict_skills?: boolean | null; world_members?: { user_id: string }[] } | null | undefined;
-
-  // 3) Persona par défaut pour cet utilisateur dans cette chatroom (facultatif)
-  let initialPersona: {
-    id: string;
-    user_id: string;
-    name: string;
-    avatar_url: string | null;
-  } | null = null;
-  let canEdit = false;
+  // Droits d'édition / d'admin monde, dérivés des données déjà chargées.
+  let canEdit = chatroom.created_by === userId;
   let canWorldAdmin = false;
-  if (user) {
-    const { data: pref } = await supabase
-      .from("chatroom_persona_prefs")
-      .select("persona:personas(id, user_id, name, avatar_url)")
-      .eq("chat_id", id)
-      .eq("user_id", user.id)
-      .maybeSingle();
-    initialPersona = (pref?.persona as unknown as Persona | null) ?? null;
-
-    canEdit = chatroom.created_by === user.id;
-    if (chatroom.world_id) {
-      if (worldData?.owner_id && user.id === worldData.owner_id) {
-        canWorldAdmin = true;
-        canEdit = true;
-      } else {
-        const { data: membership } = await supabase
-          .from("world_members")
-          .select("role")
-          .eq("world_id", chatroom.world_id)
-          .eq("user_id", user.id)
-          .maybeSingle();
-
-        if (membership && ["owner", "admin"].includes(membership.role)) {
-          canWorldAdmin = true;
-          canEdit = true;
-        }
-      }
-    }
-  }
-
-  // 4) Chatrooms du même world (pour l'aside)
-  let initialRoomsSafe: { id: string; title: string | null; name: string | null; icon_url: string | null; last_message_at: string | null; unread_count: number }[] = [];
-
   if (chatroom.world_id) {
-    const { data: navRooms, error: navErr } = await supabase.rpc("list_chatrooms_nav", {
-      p_world_id: chatroom.world_id,
-    });
-
-    if (!navErr && navRooms) {
-      initialRoomsSafe = navRooms as typeof initialRoomsSafe;
-    } else {
-      // Fallback : requête directe si le RPC n'existe pas encore
-      const { data: fallback } = await supabase
-        .from(TABLE.CHATROOMS)
-        .select("id, title, name, icon_url, updated_at")
-        .eq("world_id", chatroom.world_id)
-        .order("updated_at", { ascending: false });
-
-      initialRoomsSafe = (fallback ?? []).map((r) => ({
-        id: r.id,
-        title: r.title ?? null,
-        name: r.name ?? null,
-        icon_url: r.icon_url ?? null,
-        last_message_at: r.updated_at ?? null,
-        unread_count: 0,
-      }));
+    if (isWorldOwner) {
+      canWorldAdmin = true;
+      canEdit = true;
+    } else if (membership && ["owner", "admin"].includes(membership.role)) {
+      canWorldAdmin = true;
+      canEdit = true;
     }
   }
+
+  // Chatrooms du même world (pour l'aside), déjà chargés en phase 2.
+  const initialRoomsSafe = navResult.rooms;
 
   return (
     <ChatRoomView
@@ -187,7 +201,7 @@ export default async function Page({ params }: { params: { id: string } }) {
       initialMessages={initialMessagesWithReactions as unknown as ChatMessageWithPersona[]}
       initialHasMore={initialHasMore}
       initialPersona={initialPersona}
-      selfId={user?.id ?? null}
+      selfId={userId}
       canEdit={canEdit}
       canWorldAdmin={canWorldAdmin}
       initialChatrooms={initialRoomsSafe}

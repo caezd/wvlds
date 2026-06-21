@@ -9,7 +9,7 @@ import { encryptMessage } from "@/lib/crypto";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { PersonaPickerDialog } from "@/components/personas/PersonaPickerDialog";
 import { Button } from "../ui/button";
-import { SendHorizontal, Component, Dices, Pipette, X, ImagePlus, Eye, Lock, Sword, Heart, Square } from "lucide-react";
+import { SendHorizontal, Component, Dices, Pipette, X, ImagePlus, Eye, Lock, Sword, Heart, Square, Anchor } from "lucide-react";
 import { Hint } from "@/components/ui/hint";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -21,6 +21,7 @@ import { NarrativeBlockDialog } from "./blocks/NarrativeBlockDialog";
 import { NpcDialog } from "./blocks/NpcBlock";
 import { HpDialog } from "./blocks/HpBlock";
 import { CalloutDialog } from "./blocks/CalloutBlock";
+import { AnchorDialog } from "./blocks/AnchorDialog";
 import {
   computeWordCount,
   extractMentions,
@@ -54,6 +55,7 @@ export function ChatroomComposer({
   onResolveChat,
   onAfterSend,
   typingLine,
+  onAnchorSent,
 }: {
   /** Chatroom existante. Laisser vide pour le mode « création » (voir onResolveChat). */
   chatId?: string;
@@ -74,13 +76,37 @@ export function ChatroomComposer({
   onResolveChat?: () => Promise<{ chatId: string; chatroomKey?: string | null } | null>;
   /** Appelé après un envoi réussi avec l'id de la chatroom (ex: navigation). */
   onAfterSend?: (chatId: string) => void;
+  /** Appelé après l'envoi d'un bloc anchor avec le message_id et le label. */
+  onAnchorSent?: (messageId: number, label: string) => void;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const { userId, username } = useCurrentUser();
   const inFlightRef = useRef(false);
   const pendingBlockMediaRef = useRef<{ url: string; name: string }[]>([]);
 
+  const DRAFT_KEY = `draft:${chatId ?? "new"}`;
+  const draftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Initialiser à "" pour que le rendu SSR corresponde au premier rendu client
+  // (localStorage n'est pas disponible côté serveur → hydration mismatch sinon).
   const [value, setValue] = useState("");
+  useEffect(() => {
+    // Charge le brouillon uniquement après hydration, côté client.
+    try {
+      const draft = localStorage.getItem(DRAFT_KEY);
+      if (draft) setValue(draft);
+    } catch { }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [DRAFT_KEY]);
+  useEffect(() => {
+    if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
+    draftTimerRef.current = setTimeout(() => {
+      try {
+        if (value) localStorage.setItem(DRAFT_KEY, value);
+        else localStorage.removeItem(DRAFT_KEY);
+      } catch { }
+    }, 500);
+    return () => { if (draftTimerRef.current) clearTimeout(draftTimerRef.current); };
+  }, [value, DRAFT_KEY]);
   const { chatroom_media } = useFeatureFlags();
   const [pendingMedia, setPendingMedia] = useState<File[]>([]);
   const pendingMediaPreviews = pendingMedia.map((f) => URL.createObjectURL(f));
@@ -287,6 +313,16 @@ export function ChatroomComposer({
         }
       }
 
+      // Si c'est un bloc anchor, notifier le parent pour qu'il insère un chat_pin
+      if (onAnchorSent && text.startsWith('{"_type":"anchor"')) {
+        try {
+          const parsed = JSON.parse(text) as { _type: string; label?: string };
+          if (parsed._type === "anchor" && parsed.label && newMessage?.id) {
+            onAnchorSent(newMessage.id, parsed.label);
+          }
+        } catch { /* non-bloquant */ }
+      }
+
       onAfterSend?.(targetChatId);
       return true;
     } finally {
@@ -301,11 +337,14 @@ export function ChatroomComposer({
     // Ne clear que si l'envoi a vraiment eu lieu (pas d'erreur, pas d'annulation,
     // pas de persona manquant) et qu'on n'est pas en mode création (navigation
     // imminente, inutile de vider).
-    if (sent && !onResolveChat) {
-      setValue("");
-      setPendingMedia([]);
-      setVisibleTo(null);
-      setParticipants([]);
+    if (sent) {
+      try { localStorage.removeItem(DRAFT_KEY); } catch { }
+      if (!onResolveChat) {
+        setValue("");
+        setPendingMedia([]);
+        setVisibleTo(null);
+        setParticipants([]);
+      }
     }
   }
 
@@ -339,7 +378,7 @@ export function ChatroomComposer({
           typingLine ? "translate-y-8 opacity-100" : "translate-y-full opacity-0",
         )}
       >
-        <div className="w-full rounded-t-2xl border border-b-0 border-border-soft bg-card px-5 pt-2 pb-10 text-xs italic text-muted-foreground">
+        <div className="w-full rounded-t-2xl border border-b-0 border-border bg-body px-5 pt-2 pb-10 text-xs italic text-muted-foreground">
           {typingLine}
         </div>
       </div>
@@ -523,7 +562,7 @@ function BlocksDropdown({
   const { chatroom_blocks, block_npc, block_hp } = useFeatureFlags();
   const [open, setOpen] = useState(false);
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
-  const [activeTool, setActiveTool] = useState<"dice" | "reveal" | "npc" | "hp" | "callout" | null>(null);
+  const [activeTool, setActiveTool] = useState<"dice" | "reveal" | "npc" | "hp" | "callout" | "anchor" | null>(null);
   const activeOptionsCount = [bubbleMode, visibleTo !== null].filter(Boolean).length;
 
   return (
@@ -533,11 +572,12 @@ function BlocksDropdown({
           <button
             type="button"
             title="Insérer un bloc"
-            className="relative size-9 rounded-full shrink-0 flex items-center justify-center hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className={cn("relative size-9 rounded-full shrink-0 flex items-center justify-center hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring border border-border-soft"
+            )}
           >
             <Component className="h-4 w-4" />
             {activeOptionsCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5 items-center justify-center rounded-full bg-primary text-[8px] font-semibold text-primary-foreground leading-none">
+              <span className="absolute top-0.5 right-0.5 flex h-3 w-3 items-center justify-center rounded-full bg-primary text-[9px] font-semibold text-primary-foreground leading-none">
                 {activeOptionsCount}
               </span>
             )}
@@ -560,6 +600,10 @@ function BlocksDropdown({
               <DropdownMenuItem onSelect={() => { setOpen(false); setActiveTool("callout"); }}>
                 <Square className="mr-2 h-4 w-4" />
                 Encadré
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => { setOpen(false); setActiveTool("anchor"); }}>
+                <Anchor className="mr-2 h-4 w-4" />
+                Ancre
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => { setOpen(false); setActiveTool("reveal"); }}>
                 <Eye className="mr-2 h-4 w-4" />
@@ -698,6 +742,11 @@ function BlocksDropdown({
       />
       <HpDialog
         open={activeTool === "hp"}
+        onOpenChange={(v) => !v && setActiveTool(null)}
+        onSend={(content) => { onSend(content); setActiveTool(null); }}
+      />
+      <AnchorDialog
+        open={activeTool === "anchor"}
         onOpenChange={(v) => !v && setActiveTool(null)}
         onSend={(content) => { onSend(content); setActiveTool(null); }}
       />

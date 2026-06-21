@@ -55,6 +55,12 @@ function makeNotif(overrides: Partial<AppNotification> = {}): AppNotification {
     };
 }
 
+/** Matcher pour les textes de notification splittés entre <span> et nœud texte. */
+function byNotifText(text: string) {
+    return (_: string, el: Element | null) =>
+        el?.tagName === "P" && (el.textContent ?? "").replace(/\s+/g, " ").trim() === text;
+}
+
 function mockNotifications(overrides: Partial<ReturnType<typeof useNotifications>> = {}) {
     vi.mocked(useNotifications).mockReturnValue({
         notifications: [],
@@ -114,7 +120,8 @@ describe("NotificationInlinePanelContent — liste", () => {
             notifications: [makeNotif({ actor_name: "alice", content: "général" })],
         });
         render(<NotificationInlinePanelContent onClose={vi.fn()} />);
-        expect(screen.getByText(/@alice vous a mentionné dans #général/i)).toBeInTheDocument();
+        // Le nom est dans un <span> et le reste dans un nœud texte — byNotifText combine le textContent du <p>
+        expect(screen.getByText(byNotifText("alice vous a mentionné dans général"))).toBeInTheDocument();
     });
 
     it("affiche plusieurs notifications", () => {
@@ -125,8 +132,8 @@ describe("NotificationInlinePanelContent — liste", () => {
             ],
         });
         render(<NotificationInlinePanelContent onClose={vi.fn()} />);
-        expect(screen.getByText(/@alice vous a mentionné dans #lobby/i)).toBeInTheDocument();
-        expect(screen.getByText(/@bob a rejoint Hextech/i)).toBeInTheDocument();
+        expect(screen.getByText(byNotifText("alice vous a mentionné dans lobby"))).toBeInTheDocument();
+        expect(screen.getByText(byNotifText("bob a rejoint Hextech"))).toBeInTheDocument();
     });
 });
 

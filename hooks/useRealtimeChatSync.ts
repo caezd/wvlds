@@ -45,6 +45,10 @@ export function useRealtimeChatSync({
 
   // INSERT — re-fetch avec join persona pour garder la structure uniforme
   useEffect(() => {
+    // isMounted guards against Strict Mode: cleanup sets it to false so that
+    // a channel lingering after removeChannel() ignores any late-arriving events.
+    let isMounted = true;
+
     const ch = supabase
       .channel(CH.chatMessages(chatId))
       .on(
@@ -56,9 +60,11 @@ export function useRealtimeChatSync({
           filter: `chat_id=eq.${chatId}`,
         },
         async (payload: { new: Record<string, unknown>; old: Record<string, unknown> }) => {
+          if (!isMounted) return;
+
           const id = (payload.new as { id: number }).id;
           if (latestIdRef.current !== null && id <= latestIdRef.current) return;
-          latestIdRef.current = id; // avant l'await : bloque tout doublon concurrent (ex: Strict Mode double-mount)
+          latestIdRef.current = id;
 
           const { data, error } = await supabase
             .from(TABLE.CHAT_MESSAGES)
@@ -67,6 +73,8 @@ export function useRealtimeChatSync({
             )
             .eq("id", id)
             .single();
+
+          if (!isMounted) return;
 
           if (error || !data) {
             toast.error("Impossible de charger le nouveau message.");
@@ -81,11 +89,16 @@ export function useRealtimeChatSync({
       )
       .subscribe();
 
-    return () => { void supabase.removeChannel(ch); };
+    return () => {
+      isMounted = false;
+      void supabase.removeChannel(ch);
+    };
   }, [chatId, supabase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // DELETE — suppression de message
   useEffect(() => {
+    let isMounted = true;
+
     const ch = supabase
       .channel(`${CH.chatMessages(chatId)}-delete`)
       .on(
@@ -97,17 +110,23 @@ export function useRealtimeChatSync({
           filter: `chat_id=eq.${chatId}`,
         },
         (payload: { new: Record<string, unknown>; old: Record<string, unknown> }) => {
+          if (!isMounted) return;
           const id = (payload.old as { id: number }).id;
           if (id) onMessageDeleted(id);
         },
       )
       .subscribe();
 
-    return () => { void supabase.removeChannel(ch); };
+    return () => {
+      isMounted = false;
+      void supabase.removeChannel(ch);
+    };
   }, [chatId, supabase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // UPDATE — édition de contenu
   useEffect(() => {
+    let isMounted = true;
+
     const ch = supabase
       .channel(CH.chatMessageUpdates(chatId))
       .on(
@@ -119,17 +138,23 @@ export function useRealtimeChatSync({
           filter: `chat_id=eq.${chatId}`,
         },
         (payload: { new: Record<string, unknown>; old: Record<string, unknown> }) => {
+          if (!isMounted) return;
           const next = payload.new as { id: number; content: string };
           onMessageUpdated(next.id, next.content);
         },
       )
       .subscribe();
 
-    return () => { void supabase.removeChannel(ch); };
+    return () => {
+      isMounted = false;
+      void supabase.removeChannel(ch);
+    };
   }, [chatId, supabase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // UPDATE chatroom — titre / bannière / icône
   useEffect(() => {
+    let isMounted = true;
+
     const ch = supabase
       .channel(CH.chatroomUpdates(chatId))
       .on(
@@ -141,33 +166,46 @@ export function useRealtimeChatSync({
           filter: `id=eq.${chatId}`,
         },
         (payload: { new: Record<string, unknown>; old: Record<string, unknown> }) => {
+          if (!isMounted) return;
           onChatroomPatched(payload.new as ChatroomPatch);
         },
       )
       .subscribe();
 
-    return () => { void supabase.removeChannel(ch); };
+    return () => {
+      isMounted = false;
+      void supabase.removeChannel(ch);
+    };
   }, [chatId, supabase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Personas UPDATE — avatar_url mis à jour
   useEffect(() => {
     if (!onPersonaUpdated) return;
+    let isMounted = true;
+
     const ch = supabase
       .channel(`personas-avatar-${chatId}`)
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "personas" },
         (payload: { new: Record<string, unknown> }) => {
+          if (!isMounted) return;
           const row = payload.new as { id: string; avatar_url?: string | null };
           if (row.id) onPersonaUpdated(row.id, row.avatar_url ?? null);
         },
       )
       .subscribe();
-    return () => { void supabase.removeChannel(ch); };
+
+    return () => {
+      isMounted = false;
+      void supabase.removeChannel(ch);
+    };
   }, [chatId, supabase, onPersonaUpdated]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Reactions INSERT / DELETE
   useEffect(() => {
+    let isMounted = true;
+
     const ch = supabase
       .channel(CH.chatReactions(chatId))
       .on(
@@ -179,6 +217,7 @@ export function useRealtimeChatSync({
           filter: `chat_id=eq.${chatId}`,
         },
         (payload: { eventType: string; new: Record<string, unknown>; old: Record<string, unknown> }) => {
+          if (!isMounted) return;
           const ev = payload.eventType;
           if (ev !== "INSERT" && ev !== "DELETE") return;
 
@@ -193,6 +232,9 @@ export function useRealtimeChatSync({
       )
       .subscribe();
 
-    return () => { void supabase.removeChannel(ch); };
+    return () => {
+      isMounted = false;
+      void supabase.removeChannel(ch);
+    };
   }, [chatId, supabase, selfId]); // eslint-disable-line react-hooks/exhaustive-deps
 }

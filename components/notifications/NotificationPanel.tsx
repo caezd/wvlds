@@ -176,21 +176,21 @@ function NotifAvatar({
             <img
                 src={thumb}
                 alt={actorName ?? ""}
-                className="h-6 w-6 shrink-0 rounded-full object-cover"
+                className="h-7 w-7 shrink-0 rounded-full object-cover"
             />
         );
     }
     const letter = actorName ? actorName[0].toUpperCase() : null;
     if (letter) {
         return (
-            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-[11px] font-semibold text-muted-foreground">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-[11px] font-semibold text-muted-foreground">
                 {letter}
             </span>
         );
     }
     return (
         <span className={cn(
-            "flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[13px]",
+            "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[13px]",
         )}>
             {NOTIF_ICONS[type]}
         </span>
@@ -244,8 +244,7 @@ function NotificationItem({
                 />
                 <div className="flex-1 min-w-0 pr-4">
                     {showWorldHeader && (
-                        <div className="mt-1 mb-0.5 flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/50">
-                            <Globe size={12} />
+                        <div className="mb-0.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/50">
                             <span className="truncate">{worldInfo.name}</span>
                         </div>
                     )}
@@ -259,11 +258,6 @@ function NotificationItem({
                         <p className="text-[11px] text-muted-foreground/50">
                             {compactTime(notif.updated_at ?? notif.created_at)}
                         </p>
-                        {notif.type === "chatroom_reply" && (notif.metadata?.count ?? 0) > 1 && (
-                            <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold text-accent-foreground">
-                                {notif.metadata!.count}
-                            </span>
-                        )}
                     </div>
                 </div>
             </div>
@@ -371,7 +365,7 @@ export function NotificationInlinePanelContent({ onClose }: { onClose: () => voi
     return (
         <div className="flex h-full flex-col overflow-hidden py-4">
             {/* Header */}
-            <div className="shrink-0 border-b border-border-soft px-4  h-header-height flex items-center">
+            <div className="shrink-0 px-4 h-header-height flex items-center">
                 {view === "prefs" ? (
                     <div className="flex items-center gap-2">
                         <button onClick={() => setView("list")} className={iconBtn} aria-label="Retour">

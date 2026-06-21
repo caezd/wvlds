@@ -33,6 +33,8 @@ import { usePresenceChannel } from "@/hooks/usePresenceChannel";
 import { useNotifications } from "@/components/providers/NotificationsProvider";
 import { useGlobalPresence } from "@/components/providers/PresenceProvider";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
+import { useChatPins } from "@/hooks/useChatPins";
+import { PinBar } from "@/components/chatrooms/PinBar";
 
 export type { Persona, ChatMessageWithPersona, ReactionSummary } from "@/types/db";
 export type { ChatroomNavItem } from "@/components/worlds/WorldChatroomsAside";
@@ -512,6 +514,38 @@ export default function ChatRoomView({
     }
   }, [messages, userId]);
 
+  const { pins, pin, pinAnchor, unpin, updatePinLabel, pinByMessageId } = useChatPins(chatId);
+
+  // Scroll vers un message — charge les pages précédentes si le message n'est pas encore dans le DOM
+  const pendingScrollMessageIdRef = useRef<number | null>(null);
+
+  function scrollToMessage(messageId: number) {
+    const el = document.querySelector(`[data-message-id="${messageId}"]`);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+    // Message absent du DOM : on charge les pages précédentes
+    pendingScrollMessageIdRef.current = messageId;
+    void loadOlderMessagesRef.current();
+  }
+
+  // Après chaque chargement de page, on réessaie si une cible est en attente
+  useEffect(() => {
+    const target = pendingScrollMessageIdRef.current;
+    if (!target) return;
+    const el = document.querySelector(`[data-message-id="${target}"]`);
+    if (el) {
+      pendingScrollMessageIdRef.current = null;
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    } else if (hasMoreRef.current) {
+      void loadOlderMessagesRef.current();
+    } else {
+      pendingScrollMessageIdRef.current = null;
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages]);
+
   useRealtimeChatSync({
     chatId,
     selfId: userId,
@@ -603,6 +637,7 @@ export default function ChatRoomView({
             />
             <section className="relative basis-auto flex-col -mb-(--composer-overlap-px) [--composer-overlap-px:64px] [--jump-btn-bottom:calc(var(--composer-overlap-px)+24px)] grow flex overflow-hidden">
               <div className="relative h-full">
+                <PinBar pins={pins} messages={messages} onScrollToMessage={scrollToMessage} />
                 <ScrollAreaWithJumpToBottom
                   ref={scrollRef}
                   className="flex h-full flex-col overflow-y-auto thread-xl:pt-(--header-height)"
@@ -625,6 +660,9 @@ export default function ChatRoomView({
                           personaGroupColor={personaGroupColors.get(m.persona?.id ?? "") ?? null}
                           forceEdit={editMessageId === m.id}
                           onForceEditConsumed={() => setEditMessageId(null)}
+                          pinId={pinByMessageId(m.id)?.id ?? null}
+                          onPin={userId ? (id) => pin(id, userId) : undefined}
+                          onUnpin={unpin}
                           onReactionsUpdated={(mid, reactions) => {
                             setMessages((prev) =>
                               prev.map((m) =>
@@ -641,6 +679,12 @@ export default function ChatRoomView({
                           }}
                           onDeleted={(id) => {
                             setMessages((prev) => prev.filter((x) => x.id !== id));
+                            const pinEntry = pinByMessageId(id);
+                            if (pinEntry) void unpin(pinEntry.id);
+                          }}
+                          onAnchorEdited={(messageId, label) => {
+                            const pinEntry = pinByMessageId(messageId);
+                            if (pinEntry) void updatePinLabel(pinEntry.id, label);
                           }}
                         />
                       );
@@ -663,6 +707,9 @@ export default function ChatRoomView({
                       onEditLastMessage={() => {
                         const last = [...messages].reverse().find((m) => isMyMessage(m, userId));
                         if (last) setEditMessageId(last.id);
+                      }}
+                      onAnchorSent={(messageId, label) => {
+                        if (userId) void pinAnchor(messageId, label, userId);
                       }}
                     />}
                   </div>

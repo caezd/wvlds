@@ -8,6 +8,21 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-06 ──────────────────────────────────────────────────────────────
   {
     date: "2026-06",
+    tag: "Performance",
+    text: "Consolidation des politiques de sécurité (RLS) et nettoyage d'index :\n- **9 groupes de politiques** qui se recoupaient sur le même rôle et la même action ont été fusionnés en une seule politique équivalente (moins d'évaluations par requête, à accès strictement identiques) — touche notamment la lecture des mondes, des chatrooms, des personas et des invitations\n- Suppression de **3 index redondants** (doublons exacts) sur `chatroom_persona_prefs`, `profiles` et `world_content_tabs` — moins de travail d'écriture en base, aucune perte de garantie d'unicité\n- Les chevauchements entre rôles différents ont volontairement été laissés intacts pour ne prendre aucun risque sur les droits d'accès\n- Migration `039_rls_consolidate_policies_and_dup_indexes.sql` (atomique, rollback complet documenté)",
+  },
+  {
+    date: "2026-06",
+    tag: "Performance",
+    text: "Optimisation des politiques de sécurité (RLS) de la base :\n- Les **105 politiques** qui évaluaient `auth.uid()` **à chaque ligne** lue le font désormais **une seule fois par requête** (enveloppe `(select auth.uid())`), correction recommandée par l'analyseur de performance de Supabase\n- Aucun changement de comportement ni de sécurité : seules les *quelles lignes sont visibles* restent identiques, seul le moment d'évaluation change\n- Bénéficie à toutes les pages qui lisent des données protégées (mondes, chatrooms, personas, inventaire, wiki…), avec un gain qui croît avec le volume de données\n- Migration `038_rls_initplan_optimization.sql` (idempotente, avec rollback documenté)",
+  },
+  {
+    date: "2026-06",
+    tag: "Performance",
+    text: "Chargement plus rapide des pages **Personas** (/p), **Monde** (/w) et **Chatroom** (/c) :\n- L'identité de l'utilisateur est désormais lue depuis le JWT déjà validé par le middleware (`getClaims`) au lieu de revalider la session via un appel réseau (`getUser`) à chaque page — un aller-retour réseau économisé partout (nouveau helper `lib/auth.ts`)\n- Les requêtes indépendantes sont **exécutées en parallèle** au lieu d'être enchaînées : la page Monde charge en une fois la navigation des salons, les droits admin, les préférences et les personas ; la page Chatroom charge en deux vagues parallèles (salon + messages + clé + persona, puis réactions + navigation + rôle) ; la page Personas charge les sections et les noms de mondes simultanément\n- Aucun changement fonctionnel visible : uniquement une réduction de la latence de rendu serveur",
+  },
+  {
+    date: "2026-06",
     tag: "Notifications",
     text: "Notification agrégée de réponses dans une chatroom :\n- Nouveau type **Réponse dans une chatroom** : lorsque quelqu'un répond dans un salon où vous avez déjà participé, une notification groupée apparaît — un seul message, pas un par réponse\n- Un **compteur** s'incrémente et la notification remonte en tête de liste à chaque nouveau message\n- La notification est **réinitialisée après lecture** : une fois lue, elle devient désuète ; le prochain message crée une nouvelle notification fraîche (count = 1) plutôt que d'incrémenter silencieusement celle déjà lue\n- Archiver la notification fonctionne de la même manière que les autres types",
   },

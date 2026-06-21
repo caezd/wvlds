@@ -33,16 +33,11 @@ export function DialogueBubbleRenderer({
         return (
           <div key={i} className="inline-flex items-end gap-2 flex-wrap">
             <div
-              className={cn("relative rounded-xl rounded-tl-[3px] px-3 py-1.5 text-sm leading-snug max-w-prose", !color && "bg-muted")}
+              className={cn("relative rounded-xl rounded-tl-[3px] px-3 py-1.5 text-sm sm:text-base leading-snug max-w-prose", !color && "bg-muted")}
               style={color ? { backgroundColor: color + "33" } : undefined}
             >
               {part.speech}
             </div>
-            {part.incise && (
-              <span className="text-xs text-muted-foreground italic pb-1">
-                {part.incise}
-              </span>
-            )}
           </div>
         );
       })}

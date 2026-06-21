@@ -60,9 +60,14 @@ export type CalloutBlock = {
   gauges?: Gauge[];          // jauges nommées (nom, actuel, max, couleur)
 };
 
-export type ChatBlock = DiceBlock | BannerBlock | RevealBlock | NpcBlock | HpBlock | CalloutBlock;
+export type AnchorBlock = {
+  _type: "anchor";
+  label: string;
+};
 
-const BLOCK_TYPES = new Set(["dice", "banner", "reveal", "npc", "hp", "callout"]);
+export type ChatBlock = DiceBlock | BannerBlock | RevealBlock | NpcBlock | HpBlock | CalloutBlock | AnchorBlock;
+
+const BLOCK_TYPES = new Set(["dice", "banner", "reveal", "npc", "hp", "callout", "anchor"]);
 
 export function parseChatBlock(content: string): ChatBlock | null {
   if (!content.startsWith("{")) return null;

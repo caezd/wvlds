@@ -101,6 +101,15 @@ export type UserEquippedCosmetic = {
   avatar_frame_id: string | null;
 };
 
+export type ChatPin = {
+  id: string;
+  chat_id: string;
+  message_id: number | null;
+  label: string | null;
+  pinned_by: string;
+  created_at: string;
+};
+
 // --- Composite / query types -------------------------------------------------
 
 export type ReactionSummary = {

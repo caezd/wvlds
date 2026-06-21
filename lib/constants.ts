@@ -17,6 +17,7 @@ export const TABLE = {
   NOTIFICATIONS: "notifications",
   NOTIFICATION_PREFERENCES: "notification_preferences",
   WORLD_INVITATIONS: "world_invitations",
+  CHAT_PINS: "chat_pins",
 } as const;
 
 // --- Supabase RPC names -------------------------------------------------------
@@ -36,6 +37,7 @@ export const channel = {
   chatMessages: (chatId: string) => `chat-${chatId}`,
   chatMessageUpdates: (chatId: string) => `chat-messages-updates-${chatId}`,
   chatReactions: (chatId: string) => `chat-reactions-${chatId}`,
+  chatPins: (chatId: string) => `chat-pins-${chatId}`,
   chatroomUpdates: (chatId: string) => `chatroom-updates-${chatId}`,
   navMessages: (worldId: string) => `nav-messages-${worldId}`,
   navReads: (selfId: string) => `nav-reads-${selfId}`,

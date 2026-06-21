@@ -2,6 +2,7 @@
 import { Users } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { getUserId } from "@/lib/auth";
 import { PersonaCard } from "@/components/personas/PersonaCard";
 import { PersonaCreateSheet } from "@/components/personas/PersonaCreateSheet";
 import type {
@@ -30,10 +31,7 @@ type WorldGroup = {
 
 export default async function PersonasPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const userId = user?.id;
+  const userId = await getUserId(supabase);
 
   // 1) Personas avec world_id
   let personaList: PersonaRow[] = [];
@@ -59,44 +57,6 @@ export default async function PersonasPage() {
   }
 
   const personaIds = personaList.map((p) => p.id);
-  const sectionsByPersona = new Map<string, PersonaSectionWithFields[]>();
-
-  if (personaIds.length > 0) {
-    const { data: sections } = await supabase
-      .from("persona_sections")
-      .select("id, persona_id, name, position")
-      .in("persona_id", personaIds)
-      .order("position", { ascending: true });
-
-    const sectionsList = (sections ?? []) as PersonaSection[];
-    const sectionIds = sectionsList.map((s) => s.id);
-    let fieldsList: PersonaSectionField[] = [];
-
-    if (sectionIds.length > 0) {
-      const { data: fields } = await supabase
-        .from("persona_section_fields")
-        .select("id, section_id, type, position, data")
-        .in("section_id", sectionIds)
-        .order("position", { ascending: true });
-      fieldsList = (fields ?? []) as PersonaSectionField[];
-    }
-
-    const fieldsBySection = new Map<string, PersonaSectionField[]>();
-    for (const f of fieldsList) {
-      const arr = fieldsBySection.get(f.section_id);
-      if (arr) arr.push(f);
-      else fieldsBySection.set(f.section_id, [f]);
-    }
-
-    for (const pid of personaIds) sectionsByPersona.set(pid, []);
-    for (const s of sectionsList) {
-      const entry: PersonaSectionWithFields = {
-        ...s,
-        fields: fieldsBySection.get(s.id) ?? [],
-      };
-      sectionsByPersona.get(s.persona_id)?.push(entry);
-    }
-  }
 
   // 2) Noms des mondes impliqués
   const worldIds = [
@@ -105,14 +65,63 @@ export default async function PersonasPage() {
     ),
   ];
 
-  const worldNames = new Map<string, string>();
-  if (worldIds.length > 0) {
-    const { data: worlds } = await supabase
-      .from("worlds")
-      .select("id, name")
-      .in("id", worldIds);
-    for (const w of worlds ?? []) worldNames.set(w.id, w.name ?? "Monde inconnu");
-  }
+  // Les sections/champs (dérivés de personaIds) et les noms de mondes (dérivés
+  // de worldIds) sont indépendants → on les charge en parallèle au lieu de les
+  // enchaîner séquentiellement.
+  const [sectionsByPersona, worldNames] = await Promise.all([
+    (async (): Promise<Map<string, PersonaSectionWithFields[]>> => {
+      const sectionsByPersona = new Map<string, PersonaSectionWithFields[]>();
+      if (personaIds.length === 0) return sectionsByPersona;
+
+      const { data: sections } = await supabase
+        .from("persona_sections")
+        .select("id, persona_id, name, position")
+        .in("persona_id", personaIds)
+        .order("position", { ascending: true });
+
+      const sectionsList = (sections ?? []) as PersonaSection[];
+      const sectionIds = sectionsList.map((s) => s.id);
+      let fieldsList: PersonaSectionField[] = [];
+
+      if (sectionIds.length > 0) {
+        const { data: fields } = await supabase
+          .from("persona_section_fields")
+          .select("id, section_id, type, position, data")
+          .in("section_id", sectionIds)
+          .order("position", { ascending: true });
+        fieldsList = (fields ?? []) as PersonaSectionField[];
+      }
+
+      const fieldsBySection = new Map<string, PersonaSectionField[]>();
+      for (const f of fieldsList) {
+        const arr = fieldsBySection.get(f.section_id);
+        if (arr) arr.push(f);
+        else fieldsBySection.set(f.section_id, [f]);
+      }
+
+      for (const pid of personaIds) sectionsByPersona.set(pid, []);
+      for (const s of sectionsList) {
+        const entry: PersonaSectionWithFields = {
+          ...s,
+          fields: fieldsBySection.get(s.id) ?? [],
+        };
+        sectionsByPersona.get(s.persona_id)?.push(entry);
+      }
+      return sectionsByPersona;
+    })(),
+    (async (): Promise<Map<string, string>> => {
+      const worldNames = new Map<string, string>();
+      if (worldIds.length === 0) return worldNames;
+
+      const { data: worlds } = await supabase
+        .from("worlds")
+        .select("id, name")
+        .in("id", worldIds);
+      for (const w of worlds ?? [])
+        worldNames.set(w.id, w.name ?? "Monde inconnu");
+      return worldNames;
+    })(),
+  ]);
 
   // 3) Groupement
   const groupMap = new Map<string | null, WorldGroup>();

@@ -16,8 +16,15 @@ import { extractMentions } from "@/lib/composerMessage";
 import DateDisplay from "@/components/date-display";
 
 import { Button } from "@/components/ui/button";
-import { Pencil, Check, X, Loader2, SmilePlus, Trash2, MessageCircle, Lock } from "lucide-react";
+import { Pencil, Check, X, Loader2, SmilePlus, Trash2, MessageCircle, Lock, MoreHorizontal, Pin, PinOff } from "lucide-react";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 import { toast } from "sonner";
 import {
@@ -108,6 +115,10 @@ export default function ChatroomMessage({
   forceEdit,
   onForceEditConsumed,
   personaGroupColor,
+  pinId,
+  onPin,
+  onUnpin,
+  onAnchorEdited,
 }: {
   message: import("@/types/db").ChatMessageWithPersona;
   online: Record<string, { avatar_url?: string | null; username?: string | null }>;
@@ -120,6 +131,11 @@ export default function ChatroomMessage({
   forceEdit?: boolean;
   onForceEditConsumed?: () => void;
   personaGroupColor?: string | null;
+  /** ID de l'épingle si ce message est épinglé, null sinon. */
+  pinId?: string | null;
+  onPin?: (messageId: number) => void;
+  onUnpin?: (pinId: string) => void;
+  onAnchorEdited?: (messageId: number, label: string) => void;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const { getUserPresence } = useGlobalPresence();
@@ -148,6 +164,7 @@ export default function ChatroomMessage({
 
   const [pickerOpen, setPickerOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const { emoji_reactions } = useFeatureFlags();
@@ -340,23 +357,33 @@ export default function ChatroomMessage({
   // un aiguilleur unique gère le rendu, l'édition et la suppression.
   if (block) {
     return (
-      <GameBlockRenderer
-        block={block}
-        mine={mine}
-        label={label}
-        message={message}
-        chatroomKey={chatroomKey}
-        onUpdated={onUpdated}
-      />
+      <div data-message-id={message.id}>
+        <GameBlockRenderer
+          block={block}
+          mine={mine}
+          label={label}
+          message={message}
+          chatroomKey={chatroomKey}
+          onUpdated={onUpdated}
+          onAnchorEdited={onAnchorEdited}
+        />
+      </div>
     );
   }
 
   return (
     <>
     <article
+      data-message-id={message.id}
       className={cn("w-full py-8 group/turn-messages", message.visible_to && "bg-card/40 px-4")}
       {...(isMobile && hasActions ? longPressHandlers : {})}
     >
+      {pinId && (
+        <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
+          <Pin className="h-3 w-3 shrink-0" />
+          <span>Épinglé</span>
+        </div>
+      )}
       {message.visible_to && (
         <div className="flex items-center gap-1 text-xs text-muted-foreground mb-3">
           <Lock className="h-3 w-3 shrink-0" />
@@ -426,40 +453,19 @@ export default function ChatroomMessage({
                   </Popover>
                 )}
 
-                {mine && !editing && !isMobile && (
-                  <>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 opacity-0 group-hover/turn-messages:opacity-100 transition-opacity"
-                      onClick={startEdit}
-                      aria-label="Modifier le message"
-                      title="Modifier"
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <DeleteConfirmDialog
-                      trigger={
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 opacity-0 group-hover/turn-messages:opacity-100 transition-opacity text-destructive hover:text-destructive"
-                          aria-label="Supprimer le message"
-                          title="Supprimer"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      }
-                      description="Ce message sera supprimé définitivement."
-                      onConfirm={async () => {
-                        const { error } = await supabase.from(TABLE.CHAT_MESSAGES).delete().eq("id", message.id);
-                        if (error) toast.error("Impossible de supprimer le message : " + error.message);
-                        else onDeleted?.(message.id);
-                      }}
-                    />
-                  </>
+                {!editing && !isMobile && (mine || onPin) && (
+                  <MessageActionsDropdown
+                    mine={mine}
+                    isPinned={!!pinId}
+                    onEdit={startEdit}
+                    onPin={onPin ? () => onPin(message.id) : undefined}
+                    onUnpin={pinId && onUnpin ? () => onUnpin(pinId) : undefined}
+                    onDelete={async () => {
+                      const { error } = await supabase.from(TABLE.CHAT_MESSAGES).delete().eq("id", message.id);
+                      if (error) toast.error("Impossible de supprimer le message : " + error.message);
+                      else onDeleted?.(message.id);
+                    }}
+                  />
                 )}
 
                 {mine && editing && (
@@ -577,52 +583,73 @@ export default function ChatroomMessage({
       </div>
     </article>
 
-    {/* Drawer mobile — long-press sur un message */}
+    {/* Drawer mobile — liste d'options (long-press) */}
     <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
       <DrawerContent>
         <DrawerHeader>
-          <DrawerTitle className="text-center">
+          <DrawerTitle className="text-center text-sm font-medium text-muted-foreground">
             {message.persona?.name ?? "Options"}
           </DrawerTitle>
         </DrawerHeader>
-        <div className="flex flex-col gap-1 px-4 pb-6">
+        <div className="flex flex-col pb-6">
           {emoji_reactions && (
-            <div className="mb-2">
-              <p className="text-xs text-muted-foreground mb-2 text-center">Réagir</p>
-              <ChatReactionPicker
-                onSelect={(emoji) => {
-                  void toggleReaction(emoji);
-                  setDrawerOpen(false);
-                }}
-              />
-            </div>
+            <button
+              type="button"
+              className="flex items-center gap-4 px-6 py-4 text-left text-base hover:bg-muted/50 transition-colors"
+              onClick={() => {
+                setDrawerOpen(false);
+                setTimeout(() => setEmojiPickerOpen(true), 200);
+              }}
+            >
+              <SmilePlus className="h-5 w-5 shrink-0 text-muted-foreground" />
+              Réagir
+            </button>
           )}
           {mine && (
             <>
-              <Button
-                variant="ghost"
-                className="w-full justify-start gap-3 h-12 text-base"
+              <button
+                type="button"
+                className="flex items-center gap-4 px-6 py-4 text-left text-base hover:bg-muted/50 transition-colors"
                 onClick={() => {
                   setDrawerOpen(false);
                   startEdit();
                 }}
               >
-                <Pencil className="h-5 w-5" />
+                <Pencil className="h-5 w-5 shrink-0 text-muted-foreground" />
                 Modifier
-              </Button>
-              <Button
-                variant="ghost"
-                className="w-full justify-start gap-3 h-12 text-base text-destructive hover:text-destructive"
+              </button>
+              <button
+                type="button"
+                className="flex items-center gap-4 px-6 py-4 text-left text-base text-destructive hover:bg-muted/50 transition-colors"
                 onClick={() => {
                   setDrawerOpen(false);
                   setDeleteDialogOpen(true);
                 }}
               >
-                <Trash2 className="h-5 w-5" />
+                <Trash2 className="h-5 w-5 shrink-0" />
                 Supprimer
-              </Button>
+              </button>
             </>
           )}
+        </div>
+      </DrawerContent>
+    </Drawer>
+
+    {/* Drawer mobile — picker d'emoji (séparé du drawer options) */}
+    <Drawer open={emojiPickerOpen} onOpenChange={setEmojiPickerOpen}>
+      <DrawerContent>
+        <DrawerHeader>
+          <DrawerTitle className="text-center text-sm font-medium text-muted-foreground">
+            Réagir
+          </DrawerTitle>
+        </DrawerHeader>
+        <div className="px-4 pb-6">
+          <ChatReactionPicker
+            onSelect={(emoji) => {
+              void toggleReaction(emoji);
+              setEmojiPickerOpen(false);
+            }}
+          />
         </div>
       </DrawerContent>
     </Drawer>
@@ -654,6 +681,83 @@ export default function ChatroomMessage({
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+    </>
+  );
+}
+
+// ── Dropdown "…" des actions sur un message ───────────────────────────────────
+
+function MessageActionsDropdown({
+  mine,
+  isPinned,
+  onEdit,
+  onPin,
+  onUnpin,
+  onDelete,
+}: {
+  mine: boolean;
+  isPinned: boolean;
+  onEdit: () => void;
+  onPin?: () => void;
+  onUnpin?: () => void;
+  onDelete: () => Promise<void>;
+}) {
+  const [deleteOpen, setDeleteOpen] = useState(false);
+
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 opacity-0 group-hover/turn-messages:opacity-100 transition-opacity"
+            aria-label="Actions"
+            title="Actions"
+          >
+            <MoreHorizontal className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-44">
+          {mine && (
+            <DropdownMenuItem onClick={onEdit}>
+              <Pencil className="mr-2 h-3.5 w-3.5" />
+              Modifier
+            </DropdownMenuItem>
+          )}
+          {isPinned ? (
+            <DropdownMenuItem onClick={onUnpin}>
+              <PinOff className="mr-2 h-3.5 w-3.5" />
+              Désépingler
+            </DropdownMenuItem>
+          ) : (
+            <DropdownMenuItem onClick={onPin}>
+              <Pin className="mr-2 h-3.5 w-3.5" />
+              Épingler
+            </DropdownMenuItem>
+          )}
+          {mine && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onClick={() => setDeleteOpen(true)}
+              >
+                <Trash2 className="mr-2 h-3.5 w-3.5" />
+                Supprimer
+              </DropdownMenuItem>
+            </>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <DeleteConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        description="Ce message sera supprimé définitivement."
+        onConfirm={onDelete}
+      />
     </>
   );
 }

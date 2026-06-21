@@ -16,14 +16,19 @@ export function DeleteConfirmDialog({
   trigger,
   description = "Cette action est irréversible.",
   onConfirm,
+  open,
+  onOpenChange,
 }: {
-  trigger: React.ReactNode;
+  trigger?: React.ReactNode;
   description?: string;
   onConfirm: () => void;
+  /** Mode contrôlé : passe open + onOpenChange sans trigger. */
+  open?: boolean;
+  onOpenChange?: (v: boolean) => void;
 }) {
   return (
-    <AlertDialog>
-      <AlertDialogTrigger asChild>{trigger}</AlertDialogTrigger>
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      {trigger && <AlertDialogTrigger asChild>{trigger}</AlertDialogTrigger>}
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
