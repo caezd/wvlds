@@ -44,7 +44,7 @@ const GROUPS: GroupDef[] = [
     subgroups: [{ masterKey: "persona_fields", childKeys: FIELD_KEYS }],
   },
   { title: "Boutique", keys: ["shop"] },
-  { title: "Mondes",   keys: ["public_worlds", "world_map", "world_catalogue"] },
+  { title: "Mondes",   keys: ["public_worlds", "world_map", "world_catalogue", "world_timeline"] },
   {
     title: "Chatrooms",
     keys: ["create_chatroom", "post_message", "emoji_reactions", "chatroom_media", "chatroom_blocks"],

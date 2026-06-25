@@ -39,6 +39,11 @@ import { ImageCropPicker, getCroppedImg } from "@/components/ui/image-crop-picke
 import { Loader2, Settings, ChevronDown, Image as ImageIcon, FileUp } from "lucide-react";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Switch } from "@/components/ui/switch";
+import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
+import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
+
+type MapPinOption = { id: string; title: string; color: string };
 
 const schema = z.object({
   title: z.string().trim().min(1, "Nom requis").max(80),
@@ -61,10 +66,14 @@ type Props = {
     banner_url: string | null;
     icon_url: string | null;
     messages_count?: number;
+    timeline_date?: WorldTimelineDate | null;
+    map_pin_id?: string | null;
   };
+  worldTimelineConfig?: WorldTimelineConfig | null;
+  worldId?: string | null;
 };
 
-export default function ChatroomSettingsSheet({ canEdit, chatroom }: Props) {
+export default function ChatroomSettingsSheet({ canEdit, chatroom, worldTimelineConfig, worldId }: Props) {
   const router = useRouter();
   const supabase = React.useMemo(() => createClient(), []);
 
@@ -72,6 +81,12 @@ export default function ChatroomSettingsSheet({ canEdit, chatroom }: Props) {
   const [uploading, setUploading] = React.useState<"icon" | "banner" | null>(null);
   const [bannerCropSrc, setBannerCropSrc] = React.useState<string | null>(null);
   const [deleting, setDeleting] = React.useState(false);
+  const [timelineDate, setTimelineDate] = React.useState<WorldTimelineDate | null>(chatroom.timeline_date ?? null);
+  const [savingTimeline, setSavingTimeline] = React.useState(false);
+  const { world_map } = useFeatureFlags();
+  const [mapPins, setMapPins] = React.useState<MapPinOption[]>([]);
+  const [mapPinId, setMapPinId] = React.useState<string | null>(chatroom.map_pin_id ?? null);
+  const [savingPin, setSavingPin] = React.useState(false);
 
   const iconInputRef = React.useRef<HTMLInputElement | null>(null);
   const bannerInputRef = React.useRef<HTMLInputElement | null>(null);
@@ -92,6 +107,16 @@ export default function ChatroomSettingsSheet({ canEdit, chatroom }: Props) {
         icon_url: chatroom.icon_url ?? "",
         banner_url: chatroom.banner_url ?? "",
       });
+      setTimelineDate(chatroom.timeline_date ?? null);
+      setMapPinId(chatroom.map_pin_id ?? null);
+      if (world_map && worldId) {
+        void supabase
+          .from("world_map_pins")
+          .select("id, title, color")
+          .eq("world_id", worldId)
+          .order("sort_index")
+          .then(({ data }) => setMapPins((data ?? []) as MapPinOption[]));
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, chatroom.id]);
@@ -174,6 +199,34 @@ export default function ChatroomSettingsSheet({ canEdit, chatroom }: Props) {
       .eq("id", chatroom.id);
     if (error) toast.error(error.message);
     else router.refresh();
+  }
+
+  // ---------- lieu ----------
+
+  async function persistMapPin(pinId: string | null) {
+    setSavingPin(true);
+    const { error } = await supabase
+      .from("chatrooms")
+      .update({ map_pin_id: pinId })
+      .eq("id", chatroom.id);
+    setSavingPin(false);
+    if (error) { toast.error(error.message); return; }
+    setMapPinId(pinId);
+    router.refresh();
+  }
+
+  // ---------- timeline ----------
+
+  async function persistTimeline(date: WorldTimelineDate | null) {
+    setSavingTimeline(true);
+    const { error } = await supabase
+      .from("chatrooms")
+      .update({ timeline_date: date })
+      .eq("id", chatroom.id);
+    setSavingTimeline(false);
+    if (error) { toast.error(error.message); return; }
+    setTimelineDate(date);
+    router.refresh();
   }
 
   // ---------- delete ----------
@@ -294,6 +347,145 @@ export default function ChatroomSettingsSheet({ canEdit, chatroom }: Props) {
                   </FormItem>
                 )}
               />
+
+              {/* Chronologie */}
+              {worldTimelineConfig && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-medium">Situer dans la chronologie</p>
+                      <p className="text-xs text-muted-foreground leading-snug">
+                        Associe cette conversation à une date fictive.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={timelineDate !== null}
+                      disabled={savingTimeline}
+                      onCheckedChange={(v) => {
+                        if (v) {
+                          void persistTimeline({ year: worldTimelineConfig.current_year, month: worldTimelineConfig.current_month });
+                        } else {
+                          void persistTimeline(null);
+                        }
+                      }}
+                    />
+                  </div>
+
+                  {timelineDate !== null && (
+                    <div className="ml-1 space-y-3 rounded-xl border border-border-soft bg-muted/20 p-3">
+                      {/* Année */}
+                      <div className="flex items-center gap-3">
+                        <label className="w-20 shrink-0 text-xs text-muted-foreground">
+                          {worldTimelineConfig.year_label || "Année"}
+                          {worldTimelineConfig.era_name && (
+                            <span className="ml-1 text-muted-foreground/60">{worldTimelineConfig.era_name}</span>
+                          )}
+                        </label>
+                        <Input
+                          type="number"
+                          className="h-8 w-28 text-sm"
+                          value={timelineDate.year}
+                          onChange={(e) => setTimelineDate({ ...timelineDate, year: Number(e.target.value) })}
+                          onBlur={(e) => {
+                            const y = parseInt(e.target.value, 10);
+                            if (!isNaN(y)) void persistTimeline({ ...timelineDate, year: y });
+                          }}
+                        />
+                      </div>
+
+                      {/* Mois */}
+                      {worldTimelineConfig.month_names.length > 0 && (
+                        <div className="flex items-center gap-3">
+                          <label className="w-20 shrink-0 text-xs text-muted-foreground">Mois</label>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button type="button" variant="outline" size="sm" className="h-8 min-w-28 justify-between text-sm" disabled={savingTimeline}>
+                                {timelineDate.month !== null && worldTimelineConfig.month_names[timelineDate.month]
+                                  ? worldTimelineConfig.month_names[timelineDate.month]
+                                  : <span className="text-muted-foreground">—</span>}
+                                <ChevronDown className="ml-1 h-3.5 w-3.5 text-muted-foreground" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start">
+                              <DropdownMenuItem onClick={() => void persistTimeline({ ...timelineDate, month: null, day: null })}>
+                                <span className="text-muted-foreground">Aucun mois</span>
+                              </DropdownMenuItem>
+                              {worldTimelineConfig.month_names.map((name, idx) => (
+                                <DropdownMenuItem key={idx} onClick={() => void persistTimeline({ ...timelineDate, month: idx })}>
+                                  {name}
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      )}
+
+                      {/* Jour */}
+                      {timelineDate.month !== null && (
+                        <div className="flex items-center gap-3">
+                          <label className="w-20 shrink-0 text-xs text-muted-foreground">Jour</label>
+                          <Input
+                            type="number"
+                            min={1}
+                            max={31}
+                            placeholder="—"
+                            className="h-8 w-28 text-sm"
+                            value={timelineDate.day ?? ""}
+                            onChange={(e) => setTimelineDate({ ...timelineDate, day: e.target.value ? Number(e.target.value) : null })}
+                            onBlur={(e) => {
+                              const raw = parseInt(e.target.value, 10);
+                              const day = isNaN(raw) ? null : Math.min(31, Math.max(1, raw));
+                              void persistTimeline({ ...timelineDate, day });
+                            }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Lieu */}
+              {world_map && mapPins.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-medium">Lieu</p>
+                      <p className="text-xs text-muted-foreground leading-snug">
+                        Associe cette conversation à un lieu de la carte.
+                      </p>
+                    </div>
+                    {mapPinId && (
+                      <button
+                        type="button"
+                        disabled={savingPin}
+                        onClick={() => void persistMapPin(null)}
+                        className="text-xs text-muted-foreground hover:text-destructive transition-colors"
+                      >
+                        Retirer
+                      </button>
+                    )}
+                  </div>
+                  <div className="grid gap-1">
+                    {mapPins.map(pin => (
+                      <button
+                        key={pin.id}
+                        type="button"
+                        disabled={savingPin}
+                        onClick={() => void persistMapPin(pin.id === mapPinId ? null : pin.id)}
+                        className={`flex w-full items-center gap-3 rounded-xl border px-3 py-2 text-sm transition-colors ${
+                          mapPinId === pin.id
+                            ? "border-primary/40 bg-primary/10 text-primary"
+                            : "border-border-soft bg-background text-foreground hover:bg-secondary"
+                        }`}
+                      >
+                        <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: pin.color }} />
+                        {pin.title}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Bannière */}
               <FormField

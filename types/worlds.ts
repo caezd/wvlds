@@ -1,3 +1,17 @@
+export interface WorldTimelineConfig {
+  year_label: string;
+  era_name: string | null;
+  month_names: string[];
+  current_year: number;
+  current_month: number | null;
+}
+
+export interface WorldTimelineDate {
+  year: number;
+  month: number | null;
+  day: number | null;
+}
+
 export interface WorldCatalogCategory {
   id: string;
   world_id: string;

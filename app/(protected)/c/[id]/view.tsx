@@ -44,7 +44,7 @@ function ChatroomHeader({
   chatId,
   rooms,
 }: {
-  chat: { title: string; worlds: { id: string; name: string; isShared: boolean; owner_id: string | null; restrict_inventory: boolean; restrict_skills: boolean } | null } | null;
+  chat: { title: string; worlds: { id: string; name: string; isShared: boolean; owner_id: string | null; restrict_inventory: boolean; restrict_skills: boolean; timeline_config: import("@/types/worlds").WorldTimelineConfig | null } | null } | null;
   chatId: string;
   rooms: ChatroomNavItem[];
 }) {
@@ -115,7 +115,9 @@ export default function ChatRoomView({
     title: string;
     banner_url: string | null;
     icon_url: string | null;
-    worlds: { id: string; name: string; isShared: boolean; owner_id: string | null; restrict_inventory: boolean; restrict_skills: boolean } | null;
+    timeline_date: import("@/types/worlds").WorldTimelineDate | null;
+    map_pin_id: string | null;
+    worlds: { id: string; name: string; isShared: boolean; owner_id: string | null; restrict_inventory: boolean; restrict_skills: boolean; timeline_config: import("@/types/worlds").WorldTimelineConfig | null } | null;
   };
   initialMessages: ChatMessageWithPersona[];
   initialHasMore: boolean;
@@ -737,7 +739,11 @@ export default function ChatRoomView({
               banner_url: chat.banner_url ?? null,
               icon_url: chat.icon_url ?? null,
               messages_count: messages.length,
+              timeline_date: chat.timeline_date ?? null,
+              map_pin_id: chat.map_pin_id ?? null,
             }}
+            worldTimelineConfig={chat.worlds?.timeline_config ?? null}
+            worldId={chat.worlds?.id ?? null}
           />
           <ChatroomStatsSheet chatId={chatId} />
           {chat.worlds?.id && (
