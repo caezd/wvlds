@@ -9,7 +9,7 @@ import { encryptMessage } from "@/lib/crypto";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { PersonaPickerDialog } from "@/components/personas/PersonaPickerDialog";
 import { Button } from "../ui/button";
-import { SendHorizontal, Component, Dices, Pipette, X, ImagePlus, Eye, Lock, Sword, Heart, Square, Anchor } from "lucide-react";
+import { SendHorizontal, Component, Dices, Pipette, X, ImagePlus, Eye, Lock, Sword, Heart, Square, Anchor, CalendarDays, MapPin } from "lucide-react";
 import { Hint } from "@/components/ui/hint";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -39,9 +39,13 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
+
+type MapPinOption = { id: string; title: string; color: string };
 import { HsvColorPicker } from "@/components/ui/hsv-color-picker";
 
 export function ChatroomComposer({
@@ -56,6 +60,12 @@ export function ChatroomComposer({
   onAfterSend,
   typingLine,
   onAnchorSent,
+  worldTimelineConfig,
+  timelineDate,
+  onTimelineDateChange,
+  mapPins,
+  mapPinId,
+  onMapPinChange,
 }: {
   /** Chatroom existante. Laisser vide pour le mode « création » (voir onResolveChat). */
   chatId?: string;
@@ -78,6 +88,12 @@ export function ChatroomComposer({
   onAfterSend?: (chatId: string) => void;
   /** Appelé après l'envoi d'un bloc anchor avec le message_id et le label. */
   onAnchorSent?: (messageId: number, label: string) => void;
+  worldTimelineConfig?: WorldTimelineConfig | null;
+  timelineDate?: WorldTimelineDate | null;
+  onTimelineDateChange?: (d: WorldTimelineDate | null) => void;
+  mapPins?: MapPinOption[];
+  mapPinId?: string | null;
+  onMapPinChange?: (id: string | null) => void;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const { userId, username } = useCurrentUser();
@@ -504,6 +520,12 @@ export function ChatroomComposer({
               onPrivateNoteToggle={() => void togglePrivateNote()}
               onUploadIconImage={uploadIconImageForBlock}
               onCalloutClose={() => { pendingBlockMediaRef.current = []; }}
+              worldTimelineConfig={worldTimelineConfig ?? null}
+              timelineDate={timelineDate ?? null}
+              onTimelineDateChange={onTimelineDateChange}
+              mapPins={mapPins}
+              mapPinId={mapPinId ?? null}
+              onMapPinChange={onMapPinChange}
             />
           </span>
         </div>
@@ -546,6 +568,12 @@ function BlocksDropdown({
   onPrivateNoteToggle,
   onUploadIconImage,
   onCalloutClose,
+  worldTimelineConfig,
+  timelineDate,
+  onTimelineDateChange,
+  mapPins,
+  mapPinId,
+  onMapPinChange,
 }: {
   onSend: (content: string) => void;
   bubbleMode: boolean;
@@ -558,12 +586,20 @@ function BlocksDropdown({
   onPrivateNoteToggle: () => void;
   onUploadIconImage?: (file: File) => Promise<string | null>;
   onCalloutClose?: () => void;
+  worldTimelineConfig?: WorldTimelineConfig | null;
+  timelineDate?: WorldTimelineDate | null;
+  onTimelineDateChange?: (d: WorldTimelineDate | null) => void;
+  mapPins?: MapPinOption[];
+  mapPinId?: string | null;
+  onMapPinChange?: (id: string | null) => void;
 }) {
   const { chatroom_blocks, block_npc, block_hp } = useFeatureFlags();
   const [open, setOpen] = useState(false);
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
-  const [activeTool, setActiveTool] = useState<"dice" | "reveal" | "npc" | "hp" | "callout" | "anchor" | null>(null);
-  const activeOptionsCount = [bubbleMode, visibleTo !== null].filter(Boolean).length;
+  const [activeTool, setActiveTool] = useState<"dice" | "reveal" | "npc" | "hp" | "callout" | "anchor" | "timeline" | "location" | null>(null);
+  const [draftDate, setDraftDate] = useState<WorldTimelineDate>({ year: 1, month: null, day: null });
+  const [draftPinId, setDraftPinId] = useState<string | null>(null);
+  const activeOptionsCount = [bubbleMode, visibleTo !== null, !!(worldTimelineConfig && timelineDate), !!(mapPins?.length && mapPinId)].filter(Boolean).length;
 
   return (
     <>
@@ -625,6 +661,47 @@ function BlocksDropdown({
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
+              {worldTimelineConfig && (
+                <DropdownMenuCheckboxItem
+                  checked={!!(timelineDate)}
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    setOpen(false);
+                    setDraftDate(timelineDate ?? { year: worldTimelineConfig.current_year, month: worldTimelineConfig.current_month ?? null, day: null });
+                    setActiveTool("timeline");
+                  }}
+                >
+                  <span className="flex items-center gap-1.5">
+                    <CalendarDays className="h-3.5 w-3.5 shrink-0" />
+                    {timelineDate
+                      ? (() => {
+                          const y = `${worldTimelineConfig.year_label} ${timelineDate.year}${worldTimelineConfig.era_name ? ` ${worldTimelineConfig.era_name}` : ""}`;
+                          const m = timelineDate.month !== null ? worldTimelineConfig.month_names[timelineDate.month] : null;
+                          const d = timelineDate.day !== null ? `${timelineDate.day} ` : "";
+                          return m ? `${d}${m}, ${y}` : y;
+                        })()
+                      : "Chronologie"}
+                  </span>
+                </DropdownMenuCheckboxItem>
+              )}
+              {mapPins && mapPins.length > 0 && (
+                <DropdownMenuCheckboxItem
+                  checked={!!mapPinId}
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    setOpen(false);
+                    setDraftPinId(mapPinId ?? null);
+                    setActiveTool("location");
+                  }}
+                >
+                  <span className="flex items-center gap-1.5">
+                    <MapPin className="h-3.5 w-3.5 shrink-0" />
+                    {mapPinId
+                      ? (mapPins.find(p => p.id === mapPinId)?.title ?? "Lieu")
+                      : "Lieu"}
+                  </span>
+                </DropdownMenuCheckboxItem>
+              )}
               <DropdownMenuCheckboxItem
                 checked={bubbleMode}
                 onCheckedChange={onBubbleModeChange}
@@ -717,6 +794,108 @@ function BlocksDropdown({
           </div>
         </DialogContent>
       </Dialog>
+
+      {worldTimelineConfig && (
+        <Dialog open={activeTool === "timeline"} onOpenChange={(v) => !v && setActiveTool(null)}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Situer dans la chronologie</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div className="flex items-center gap-3">
+                <label className="w-24 shrink-0 text-sm text-muted-foreground">
+                  {worldTimelineConfig.year_label}
+                  {worldTimelineConfig.era_name && <span className="ml-1 text-muted-foreground/60">{worldTimelineConfig.era_name}</span>}
+                </label>
+                <input
+                  type="number"
+                  className="h-8 w-28 rounded-md border border-input bg-background px-2 text-sm"
+                  value={draftDate.year}
+                  onChange={(e) => setDraftDate((d) => ({ ...d, year: parseInt(e.target.value, 10) || 1 }))}
+                />
+              </div>
+              {worldTimelineConfig.month_names.length > 0 && (
+                <div className="flex items-center gap-3">
+                  <label className="w-24 shrink-0 text-sm text-muted-foreground">Mois</label>
+                  <select
+                    className="h-8 flex-1 rounded-md border border-input bg-background px-2 text-sm"
+                    value={draftDate.month ?? ""}
+                    onChange={(e) => setDraftDate((d) => ({ ...d, month: e.target.value === "" ? null : Number(e.target.value), day: null }))}
+                  >
+                    <option value="">—</option>
+                    {worldTimelineConfig.month_names.map((m, i) => (
+                      <option key={i} value={i}>{m}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {draftDate.month !== null && (
+                <div className="flex items-center gap-3">
+                  <label className="w-24 shrink-0 text-sm text-muted-foreground">Jour</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={31}
+                    placeholder="—"
+                    className="h-8 w-28 rounded-md border border-input bg-background px-2 text-sm"
+                    value={draftDate.day ?? ""}
+                    onChange={(e) => setDraftDate((d) => ({ ...d, day: e.target.value ? Math.min(31, Math.max(1, parseInt(e.target.value, 10))) : null }))}
+                  />
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              {timelineDate && (
+                <Button variant="ghost" size="sm" className="mr-auto text-muted-foreground" onClick={() => { onTimelineDateChange?.(null); setActiveTool(null); }}>
+                  Retirer la date
+                </Button>
+              )}
+              <Button size="sm" onClick={() => { onTimelineDateChange?.(draftDate); setActiveTool(null); }}>
+                Confirmer
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {mapPins && mapPins.length > 0 && (
+        <Dialog open={activeTool === "location"} onOpenChange={(v) => !v && setActiveTool(null)}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Choisir un lieu</DialogTitle>
+            </DialogHeader>
+            <ScrollArea className="max-h-64">
+              <div className="space-y-1 py-1">
+                {mapPins.map(pin => (
+                  <button
+                    key={pin.id}
+                    type="button"
+                    onClick={() => setDraftPinId(pin.id === draftPinId ? null : pin.id)}
+                    className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
+                      draftPinId === pin.id
+                        ? "bg-primary/10 text-primary"
+                        : "hover:bg-muted"
+                    }`}
+                  >
+                    <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: pin.color }} />
+                    {pin.title}
+                  </button>
+                ))}
+              </div>
+            </ScrollArea>
+            <DialogFooter>
+              {mapPinId && (
+                <Button variant="ghost" size="sm" className="mr-auto text-muted-foreground" onClick={() => { onMapPinChange?.(null); setActiveTool(null); }}>
+                  Retirer le lieu
+                </Button>
+              )}
+              <Button size="sm" onClick={() => { onMapPinChange?.(draftPinId); setActiveTool(null); }}>
+                Confirmer
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
       <DiceDialog
         open={activeTool === "dice"}

@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import type { WorldInventoryItem, WorldSkill, WorldCatalogCategory } from "@/types/worlds";
+import type { WorldInventoryItem, WorldSkill, WorldCatalogCategory, WorldTimelineConfig } from "@/types/worlds";
 
 export async function setWorldFeature(
   worldId: string,
@@ -214,5 +214,18 @@ export async function batchUpdateCatalogItemOrder(
       supabase.from(table).update({ sort_index, category_id }).eq("id", id),
     ),
   );
+  return { ok: true as const };
+}
+
+export async function setWorldTimeline(
+  worldId: string,
+  enabled: boolean,
+  config?: WorldTimelineConfig | null,
+) {
+  const supabase = await createClient();
+  const updates: Record<string, unknown> = { timeline_enabled: enabled };
+  if (config !== undefined) updates.timeline_config = config;
+  const { error } = await supabase.from("worlds").update(updates).eq("id", worldId);
+  if (error) return { ok: false as const, error: error.message };
   return { ok: true as const };
 }

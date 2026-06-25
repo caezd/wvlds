@@ -26,6 +26,7 @@ export const FLAG_KEYS = [
   "block_npc",
   "block_hp",
   "notifications",
+  "world_timeline",
 ] as const;
 
 export type FlagKey = (typeof FLAG_KEYS)[number];
@@ -58,6 +59,7 @@ export const DEFAULT_FLAGS: FeatureFlags = {
   block_npc: true,
   block_hp: true,
   notifications: true,
+  world_timeline: false,
 };
 
 export async function getFeatureFlags(supabase: SupabaseClient): Promise<FeatureFlags> {

@@ -26,7 +26,7 @@ export default async function WorldPage({
     supabase
       .from("worlds")
       .select(
-        "id, name, description, owner_id, banner_url, icon_url, color, visibility, restrict_inventory, restrict_skills, world_members(user_id, role)",
+        "id, name, description, owner_id, banner_url, icon_url, color, visibility, restrict_inventory, restrict_skills, timeline_enabled, timeline_config, world_members(user_id, role)",
       )
       .eq("id", id)
       .maybeSingle(),
@@ -55,6 +55,7 @@ export default async function WorldPage({
     icon_url: string | null;
     last_message_at: string | null;
     unread_count: number;
+    timeline_date?: { year: number; month: number | null; day?: number | null } | null;
   };
 
   const isShared = true; // guaranteed by the myRole guard above
@@ -70,7 +71,16 @@ export default async function WorldPage({
         const { data: navRooms } = await supabase.rpc("list_chatrooms_nav", {
           p_world_id: id,
         });
-        return (navRooms as NavRoom[] | null) ?? [];
+        const rooms = (navRooms as NavRoom[] | null) ?? [];
+        if (!world?.timeline_enabled || rooms.length === 0) return rooms;
+        const roomIds = rooms.map((r) => r.id);
+        const { data: timelineDates } = await supabase
+          .from("chatrooms")
+          .select("id, timeline_date")
+          .in("id", roomIds);
+        if (!timelineDates) return rooms;
+        const dateMap = new Map(timelineDates.map((r) => [r.id, r.timeline_date as NavRoom["timeline_date"]]));
+        return rooms.map((r) => ({ ...r, timeline_date: dateMap.get(r.id) ?? null }));
       })(),
       (async (): Promise<boolean> => {
         const { data } = await supabase.rpc("is_world_admin", {

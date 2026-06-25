@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { BookOpenText, Library, Map, Network, Settings, Users as UsersIcon } from "lucide-react";
+import { BookOpenText, CalendarDays, Library, Map, Network, Settings, Users as UsersIcon } from "lucide-react";
 import { RelationsCanvas } from "./RelationsCanvas";
 import { WorldCatalogue } from "./WorldCatalogue";
 import { WorldMap } from "./WorldMap";
@@ -12,8 +12,10 @@ import { WorldHeroCard } from "./WorldHeroCard";
 import { WorldWiki } from "./WorldWiki";
 import { WorldChatComposer } from "./WorldChatComposer";
 import { WorldChatroomsGrid } from "./WorldChatroomsGrid";
+import { WorldTimeline } from "./WorldTimeline";
 import { WorldMembersSheet } from "./WorldMembersSheet";
 import WorldEditDialog, { type World } from "./WorldEditDialog";
+import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
 import {
   Sheet,
   SheetContent,
@@ -48,6 +50,7 @@ type Room = {
   last_message_at: string | null;
   last_message_excerpt?: string | null;
   unread_count: number;
+  timeline_date?: WorldTimelineDate | null;
 };
 
 export function WorldHome({
@@ -73,7 +76,7 @@ export function WorldHome({
   initialPersonas: AsidePersona[];
   initialPrefs: WorldPrefs | null;
 }) {
-  const { create_chatroom, world_map, world_catalogue } = useFeatureFlags();
+  const { create_chatroom, world_map, world_catalogue, world_timeline } = useFeatureFlags();
   const router = useRouter();
 
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -82,6 +85,9 @@ export function WorldHome({
   const [showCatalogue, setShowCatalogue] = useState(false);
   const [showWiki, setShowWiki] = useState(false);
   const [showMap, setShowMap] = useState(false);
+  const [showTimeline, setShowTimeline] = useState(false);
+
+  const hasTimeline = world_timeline && !!world.timeline_enabled && !!world.timeline_config;
 
   const hasCatalogue = world_catalogue && (!!(world.restrict_inventory || world.restrict_skills) || canEditTabs);
   const [asideWidth, setAsideWidth] = useState(
@@ -195,6 +201,13 @@ export function WorldHome({
             canEdit={canEditTabs}
             onClose={() => setShowMap(false)}
           />
+        ) : showTimeline && hasTimeline ? (
+          <WorldTimeline
+            worldId={worldId}
+            rooms={initialRooms.map(r => ({ ...r, timeline_date: r.timeline_date ?? null }))}
+            config={world.timeline_config as WorldTimelineConfig}
+            onClose={() => setShowTimeline(false)}
+          />
         ) : (
           <>
             {/* Contenu principal scrollable */}
@@ -219,7 +232,12 @@ export function WorldHome({
                 </div>
                 {/* Contenu — toujours contraint */}
                 <div className="mx-auto flex w-full flex-col gap-6 px-4 pb-4 [--world-content-max-width:36rem] lg:[--world-content-max-width:44rem] max-w-(--world-content-max-width)">
-                  {canPost && create_chatroom && <WorldChatComposer worldId={worldId} />}
+                  {canPost && create_chatroom && (
+                    <WorldChatComposer
+                      worldId={worldId}
+                      timelineConfig={hasTimeline ? (world.timeline_config as WorldTimelineConfig) : undefined}
+                    />
+                  )}
                   <WorldChatroomsGrid worldId={worldId} initialRooms={initialRooms} />
                 </div>
               </div>
@@ -305,7 +323,7 @@ export function WorldHome({
             <button
               type="button"
               aria-label="Wiki du monde"
-              onClick={() => { setShowCanvas(false); setShowCatalogue(false); setShowMap(false); setShowWiki((v) => !v); }}
+              onClick={() => { setShowCanvas(false); setShowCatalogue(false); setShowMap(false); setShowTimeline(false); setShowWiki((v) => !v); }}
               className={cn(
                 "flex h-9 w-9 items-center justify-center rounded-full border border-border-soft bg-background text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground",
                 showWiki && "border-border bg-secondary text-foreground",
@@ -323,7 +341,7 @@ export function WorldHome({
               <button
                 type="button"
                 aria-label="Carte du monde"
-                onClick={() => { setShowCanvas(false); setShowCatalogue(false); setShowWiki(false); setShowMap((v) => !v); }}
+                onClick={() => { setShowCanvas(false); setShowCatalogue(false); setShowWiki(false); setShowTimeline(false); setShowMap((v) => !v); }}
                 className={cn(
                   "flex h-9 w-9 items-center justify-center rounded-full border border-border-soft bg-background text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground",
                   showMap && "border-border bg-secondary text-foreground",
@@ -349,7 +367,7 @@ export function WorldHome({
             <button
               type="button"
               aria-label="Toile des relations"
-              onClick={() => { setShowCatalogue(false); setShowWiki(false); setShowMap(false); setShowCanvas((v) => !v); }}
+              onClick={() => { setShowCatalogue(false); setShowWiki(false); setShowMap(false); setShowTimeline(false); setShowCanvas((v) => !v); }}
               className={cn(
                 "flex h-9 w-9 items-center justify-center rounded-full border border-border-soft bg-background text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground",
                 showCanvas && "bg-secondary text-foreground border-border",
@@ -367,7 +385,7 @@ export function WorldHome({
               <button
                 type="button"
                 aria-label="Catalogue"
-                onClick={() => { setShowCanvas(false); setShowWiki(false); setShowMap(false); setShowCatalogue((v) => !v); }}
+                onClick={() => { setShowCanvas(false); setShowWiki(false); setShowMap(false); setShowTimeline(false); setShowCatalogue((v) => !v); }}
                 className={cn(
                   "flex h-9 w-9 items-center justify-center rounded-full border border-border-soft bg-background text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground",
                   showCatalogue && "bg-secondary text-foreground border-border",
@@ -377,6 +395,25 @@ export function WorldHome({
               </button>
             </TooltipTrigger>
             <TooltipContent side="left" sideOffset={8}>Catalogue</TooltipContent>
+          </Tooltip>
+        )}
+
+        {hasTimeline && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                aria-label="Chronologie"
+                onClick={() => { setShowCanvas(false); setShowWiki(false); setShowMap(false); setShowCatalogue(false); setShowTimeline((v) => !v); }}
+                className={cn(
+                  "flex h-9 w-9 items-center justify-center rounded-full border border-border-soft bg-background text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground",
+                  showTimeline && "bg-secondary text-foreground border-border",
+                )}
+              >
+                <CalendarDays className="h-4 w-4" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="left" sideOffset={8}>Chronologie</TooltipContent>
           </Tooltip>
         )}
       </div>

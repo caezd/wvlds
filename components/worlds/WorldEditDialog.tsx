@@ -41,6 +41,8 @@ import {
     HelpCircle,
     Loader2,
     Image as ImageIcon,
+    Plus,
+    Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -58,7 +60,8 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { setWorldFeature, setWorldRestriction } from "@/app/actions/worldCatalog";
+import { setWorldFeature, setWorldRestriction, setWorldTimeline } from "@/app/actions/worldCatalog";
+import type { WorldTimelineConfig } from "@/types/worlds";
 
 /**
  * Edit dialog pour un « monde » — layout "Project Settings" du kit
@@ -78,6 +81,8 @@ export type World = {
     enable_skills?: boolean | null;
     restrict_inventory?: boolean | null;
     restrict_skills?: boolean | null;
+    timeline_enabled?: boolean | null;
+    timeline_config?: WorldTimelineConfig | null;
 };
 
 const COLOR_PRESETS = [
@@ -155,7 +160,7 @@ export default function WorldEditDialog({
 }: WorldEditDialogProps) {
     const supabase = createClient();
     const router = useRouter();
-    const { public_worlds } = useFeatureFlags();
+    const { public_worlds, world_timeline } = useFeatureFlags();
     const [uploading, setUploading] = React.useState<null | "icon" | "banner">(null);
     const [confirmDelete, setConfirmDelete] = React.useState(false);
     const [deleting, setDeleting] = React.useState(false);
@@ -168,6 +173,20 @@ export default function WorldEditDialog({
     const [pendingRestriction, setPendingRestriction] = React.useState<"inventory" | "skills" | null>(null);
     const [togglingRestriction, setTogglingRestriction] = React.useState(false);
     const [togglingEnable, setTogglingEnable] = React.useState(false);
+
+    const defaultConfig: WorldTimelineConfig = {
+        year_label: "an",
+        era_name: null,
+        month_names: [],
+        current_year: 1,
+        current_month: null,
+    };
+    const [timelineEnabled, setTimelineEnabled] = React.useState(!!world.timeline_enabled);
+    const [timelineConfig, setTimelineConfig] = React.useState<WorldTimelineConfig>(
+        world.timeline_config ?? defaultConfig,
+    );
+    const [togglingTimeline, setTogglingTimeline] = React.useState(false);
+    const [newMonthName, setNewMonthName] = React.useState("");
 
     const iconInputRef = React.useRef<HTMLInputElement | null>(null);
     const bannerInputRef = React.useRef<HTMLInputElement | null>(null);
@@ -236,6 +255,24 @@ export default function WorldEditDialog({
         onUpdated?.({ ...world, [`restrict_${field}`]: true } as World);
     }
 
+    async function handleTimelineToggle(enabled: boolean) {
+        setTogglingTimeline(true);
+        const res = await setWorldTimeline(world.id, enabled, enabled ? timelineConfig : null);
+        setTogglingTimeline(false);
+        if (!res.ok) { toast.error(res.error); return; }
+        setTimelineEnabled(enabled);
+        if (!enabled) setTimelineConfig(defaultConfig);
+        onUpdated?.({ ...world, timeline_enabled: enabled, timeline_config: enabled ? timelineConfig : null } as World);
+    }
+
+    async function persistTimelineConfig(patch: Partial<WorldTimelineConfig>) {
+        const next = { ...timelineConfig, ...patch };
+        setTimelineConfig(next);
+        const res = await setWorldTimeline(world.id, timelineEnabled, next);
+        if (!res.ok) toast.error(res.error);
+        else onUpdated?.({ ...world, timeline_config: next } as World);
+    }
+
     // Réinjecte les valeurs quand le dialog (re)s’ouvre sur ce monde
     React.useEffect(() => {
         if (mergedOpen) {
@@ -244,6 +281,8 @@ export default function WorldEditDialog({
             setEnableSkills(world.enable_skills !== false);
             setRestrictInventory(!!world.restrict_inventory);
             setRestrictSkills(!!world.restrict_skills);
+            setTimelineEnabled(!!world.timeline_enabled);
+            setTimelineConfig(world.timeline_config ?? defaultConfig);
             form.reset({
                 name: world.name ?? "",
                 description: world.description ?? "",
@@ -786,6 +825,172 @@ export default function WorldEditDialog({
                                 )}
                             </div>
                         </div>
+
+                        {/* -- Timeline -------------------------------- */}
+                        {world_timeline && (
+                            <div className="space-y-5 pt-2">
+                                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Chronologie</p>
+
+                                <div className="flex items-start justify-between gap-4">
+                                    <div className="space-y-0.5">
+                                        <p className="text-sm font-medium">Activer la timeline</p>
+                                        <p className="text-xs text-muted-foreground leading-snug">
+                                            Permet de situer chaque conversation dans un calendrier fictif.
+                                        </p>
+                                    </div>
+                                    <Switch
+                                        checked={timelineEnabled}
+                                        disabled={togglingTimeline}
+                                        onCheckedChange={v => void handleTimelineToggle(v)}
+                                        className="shrink-0 mt-0.5"
+                                    />
+                                </div>
+
+                                {timelineEnabled && (
+                                    <div className="space-y-4 rounded-xl border border-border-soft bg-muted/20 p-4">
+                                        {/* Année courante */}
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div className="space-y-1.5">
+                                                <p className="text-xs font-medium text-muted-foreground">Libellé d&apos;année</p>
+                                                <Input
+                                                    value={timelineConfig.year_label}
+                                                    placeholder="an"
+                                                    className="h-8 text-sm"
+                                                    onChange={e => setTimelineConfig(c => ({ ...c, year_label: e.target.value }))}
+                                                    onBlur={e => void persistTimelineConfig({ year_label: e.target.value || "an" })}
+                                                />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <p className="text-xs font-medium text-muted-foreground">Ère / suffixe</p>
+                                                <Input
+                                                    value={timelineConfig.era_name ?? ""}
+                                                    placeholder="des Cendres"
+                                                    className="h-8 text-sm"
+                                                    onChange={e => setTimelineConfig(c => ({ ...c, era_name: e.target.value || null }))}
+                                                    onBlur={e => void persistTimelineConfig({ era_name: e.target.value || null })}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Année / mois courant */}
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div className="space-y-1.5">
+                                                <p className="text-xs font-medium text-muted-foreground">Année actuelle</p>
+                                                <Input
+                                                    type="number"
+                                                    value={timelineConfig.current_year}
+                                                    min={-99999}
+                                                    max={99999}
+                                                    className="h-8 text-sm"
+                                                    onChange={e => setTimelineConfig(c => ({ ...c, current_year: Number(e.target.value) || 1 }))}
+                                                    onBlur={e => void persistTimelineConfig({ current_year: Number(e.target.value) || 1 })}
+                                                />
+                                            </div>
+                                            {timelineConfig.month_names.length > 0 && (
+                                                <div className="space-y-1.5">
+                                                    <p className="text-xs font-medium text-muted-foreground">Mois actuel</p>
+                                                    <select
+                                                        value={timelineConfig.current_month ?? ""}
+                                                        className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm"
+                                                        onChange={e => {
+                                                            const v = e.target.value === "" ? null : Number(e.target.value);
+                                                            void persistTimelineConfig({ current_month: v });
+                                                        }}
+                                                    >
+                                                        <option value="">—</option>
+                                                        {timelineConfig.month_names.map((m, i) => (
+                                                            <option key={i} value={i}>{m}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Liste des mois */}
+                                        <div className="space-y-2">
+                                            <div className="flex items-center justify-between">
+                                                <p className="text-xs font-medium text-muted-foreground">Mois du calendrier</p>
+                                                {timelineConfig.month_names.length === 0 && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => void persistTimelineConfig({ month_names: ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"] })}
+                                                        className="text-[11px] text-primary hover:underline"
+                                                    >
+                                                        Utiliser les mois réels
+                                                    </button>
+                                                )}
+                                            </div>
+                                            {timelineConfig.month_names.length > 0 && (
+                                                <div className="space-y-1">
+                                                    {timelineConfig.month_names.map((m, i) => (
+                                                        <div key={i} className="flex items-center gap-2">
+                                                            <span className="w-4 shrink-0 text-right text-xs text-muted-foreground">{i + 1}.</span>
+                                                            <Input
+                                                                value={m}
+                                                                className="h-7 flex-1 text-sm"
+                                                                onChange={e => {
+                                                                    const next = [...timelineConfig.month_names];
+                                                                    next[i] = e.target.value;
+                                                                    setTimelineConfig(c => ({ ...c, month_names: next }));
+                                                                }}
+                                                                onBlur={e => {
+                                                                    const next = [...timelineConfig.month_names];
+                                                                    next[i] = e.target.value;
+                                                                    void persistTimelineConfig({ month_names: next });
+                                                                }}
+                                                            />
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    const next = timelineConfig.month_names.filter((_, j) => j !== i);
+                                                                    const currentMonth = timelineConfig.current_month;
+                                                                    void persistTimelineConfig({
+                                                                        month_names: next,
+                                                                        current_month: currentMonth !== null && currentMonth >= next.length ? null : currentMonth,
+                                                                    });
+                                                                }}
+                                                                className="shrink-0 text-muted-foreground hover:text-destructive transition-colors"
+                                                            >
+                                                                <Trash2 className="h-3.5 w-3.5" />
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                            <div className="flex gap-2">
+                                                <Input
+                                                    value={newMonthName}
+                                                    placeholder="Nom du mois…"
+                                                    className="h-8 text-sm"
+                                                    onChange={e => setNewMonthName(e.target.value)}
+                                                    onKeyDown={e => {
+                                                        if (e.key === "Enter" && newMonthName.trim()) {
+                                                            e.preventDefault();
+                                                            const next = [...timelineConfig.month_names, newMonthName.trim()];
+                                                            void persistTimelineConfig({ month_names: next });
+                                                            setNewMonthName("");
+                                                        }
+                                                    }}
+                                                />
+                                                <Button
+                                                    type="button"
+                                                    variant="secondary"
+                                                    size="sm"
+                                                    disabled={!newMonthName.trim()}
+                                                    onClick={() => {
+                                                        const next = [...timelineConfig.month_names, newMonthName.trim()];
+                                                        void persistTimelineConfig({ month_names: next });
+                                                        setNewMonthName("");
+                                                    }}
+                                                >
+                                                    <Plus className="h-3.5 w-3.5" />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
 
                     </form>
                 </Form>
