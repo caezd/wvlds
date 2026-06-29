@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { encryptMessage } from "@/lib/crypto";
 import type { ReactionSummary } from "@/types/db";
 import { AvatarWithFrame } from "@/components/avatars/AvatarWithFrame";
@@ -14,9 +15,12 @@ import { createClient } from "@/lib/supabase/client";
 import { TABLE } from "@/lib/constants";
 import { extractMentions } from "@/lib/composerMessage";
 import DateDisplay from "@/components/date-display";
+import MarkdownRenderer from "@/components/MarkdownRenderer";
 
 import { Button } from "@/components/ui/button";
-import { Pencil, Check, X, Loader2, SmilePlus, Trash2, MessageCircle, Lock, MoreHorizontal, Pin, PinOff } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Pencil, Check, X, Loader2, SmilePlus, Trash2, MessageCircle, Lock, MoreHorizontal, Pin, PinOff, Dices } from "lucide-react";
+import type { ChallengeBadge } from "@/types/db";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import {
   DropdownMenu,
@@ -119,6 +123,7 @@ export default function ChatroomMessage({
   onPin,
   onUnpin,
   onAnchorEdited,
+  challengeWon,
 }: {
   message: import("@/types/db").ChatMessageWithPersona;
   online: Record<string, { avatar_url?: string | null; username?: string | null }>;
@@ -136,7 +141,9 @@ export default function ChatroomMessage({
   onPin?: (messageId: number) => void;
   onUnpin?: (pinId: string) => void;
   onAnchorEdited?: (messageId: number, label: string) => void;
+  challengeWon?: ChallengeBadge | null;
 }) {
+  const t = useTranslations("chatrooms");
   const supabase = useMemo(() => createClient(), []);
   const { getUserPresence } = useGlobalPresence();
 
@@ -381,7 +388,7 @@ export default function ChatroomMessage({
       {pinId && (
         <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
           <Pin className="h-3 w-3 shrink-0" />
-          <span>Épinglé</span>
+          <span>{t("pinned")}</span>
         </div>
       )}
       {message.visible_to && (
@@ -433,8 +440,8 @@ export default function ChatroomMessage({
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7 opacity-0 group-hover/turn-messages:opacity-100 transition-opacity"
-                        aria-label="Ajouter une réaction"
-                        title="Réagir"
+                        aria-label={t("addReaction")}
+                        title={t("addReaction")}
                       >
                         <SmilePlus className="h-4 w-4" />
                       </Button>
@@ -477,8 +484,8 @@ export default function ChatroomMessage({
                       className="h-7 w-7"
                       onClick={cancelEdit}
                       disabled={saving}
-                      aria-label="Annuler"
-                      title="Annuler"
+                      aria-label={t("cancelEdit")}
+                      title={t("cancelEdit")}
                     >
                       <X className="h-4 w-4" />
                     </Button>
@@ -489,8 +496,8 @@ export default function ChatroomMessage({
                       className="h-7 w-7"
                       onClick={() => void save()}
                       disabled={saving}
-                      aria-label="Enregistrer"
-                      title="Enregistrer"
+                      aria-label={t("saveEdit")}
+                      title={t("saveEdit")}
                     >
                       {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
                     </Button>
@@ -499,10 +506,30 @@ export default function ChatroomMessage({
               </div>
             </div>
 
-            {/* Ligne 2 : date + note privée + réactions */}
+            {/* Ligne 2 : date + badge défi + réactions */}
             <div className="flex justify-between items-center gap-2 min-h-7">
-              <div className="dark:text-zinc- text-zinc-400">
+              <div className="flex items-center gap-2 text-zinc-400">
                 <DateDisplay value={date} />
+                {challengeWon && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="inline-flex items-center gap-1 text-[0.65rem] text-amber-500 cursor-default select-none">
+                        <Dices className="h-3 w-3 shrink-0" />
+                        a remporté un défi
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-64">
+                      <p className="font-medium mb-0.5">{challengeWon.title}</p>
+                      {challengeWon.description && (
+                        <MarkdownRenderer
+                          content={challengeWon.description}
+                          proseSize="sm"
+                          className="text-popover-foreground/70 leading-snug"
+                        />
+                      )}
+                    </TooltipContent>
+                  </Tooltip>
+                )}
               </div>
               {!editing && emoji_reactions && reactions.length > 0 && (
                 <div className="flex flex-wrap gap-1 items-center justify-end">
@@ -658,7 +685,7 @@ export default function ChatroomMessage({
     <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
+          <AlertDialogTitle>{t("deleteConfirm")}</AlertDialogTitle>
           <AlertDialogDescription>
             Ce message sera supprimé définitivement.
           </AlertDialogDescription>
@@ -702,6 +729,7 @@ function MessageActionsDropdown({
   onUnpin?: () => void;
   onDelete: () => Promise<void>;
 }) {
+  const t = useTranslations("chatrooms");
   const [deleteOpen, setDeleteOpen] = useState(false);
 
   return (
@@ -713,8 +741,8 @@ function MessageActionsDropdown({
             variant="ghost"
             size="icon"
             className="h-7 w-7 opacity-0 group-hover/turn-messages:opacity-100 transition-opacity"
-            aria-label="Actions"
-            title="Actions"
+            aria-label={t("actions")}
+            title={t("actions")}
           >
             <MoreHorizontal className="h-4 w-4" />
           </Button>

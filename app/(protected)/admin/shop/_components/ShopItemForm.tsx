@@ -16,6 +16,7 @@ import { Switch } from "@/components/ui/switch";
 import { X, Loader2, ImageIcon } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 
 const BUCKET = "cosmetics";
 
@@ -48,6 +49,7 @@ function ImageUploader({
   initialUrl?: string | null;
   hint?: string;
 }) {
+  const t = useTranslations("admin");
   const supabase = createClient();
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -58,11 +60,11 @@ function ImageUploader({
   async function handleFile(file: File) {
     setError(null);
     if (!file.type.startsWith("image/")) {
-      setError("Fichier image requis (PNG, JPEG, WEBP, GIF, SVG).");
+      setError(t("shopForm.errorImageRequired"));
       return;
     }
     if (file.size > 2 * 1024 * 1024) {
-      setError("Taille max : 2 Mo.");
+      setError(t("shopForm.errorImageSize"));
       return;
     }
 
@@ -81,7 +83,7 @@ function ImageUploader({
       const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
       setUrl(data.publicUrl);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Erreur d'upload.");
+      setError(e instanceof Error ? e.message : t("shopForm.errorImageUpload"));
     } finally {
       setUploading(false);
     }
@@ -184,6 +186,7 @@ export function ShopItemForm({
   action: ActionFn;
   submitLabel: string;
 }) {
+  const t = useTranslations("admin");
   const [state, formAction, pending] = useActionState(action, null);
   const [active, setActive] = useState(item?.active ?? true);
   const [slot, setSlot] = useState(item?.slot ?? "avatar_frame");
@@ -198,49 +201,49 @@ export function ShopItemForm({
 
       {/* Clé */}
       <div className="space-y-1">
-        <Label htmlFor="key">Clé unique</Label>
+        <Label htmlFor="key">{t("shopForm.key")}</Label>
         <Input
           id="key"
           name="key"
           defaultValue={item?.key}
-          placeholder="ex: frame_gold_v1"
+          placeholder={t("shopForm.keyPlaceholder")}
           required
           pattern="[a-z0-9_\-]+"
-          title="Minuscules, chiffres, tirets ou underscores"
+          title={t("shopForm.keyTitle")}
         />
         <p className="text-xs text-muted-foreground">
-          Identifiant stable — ne pas modifier après création.
+          {t("shopForm.keyHint")}
         </p>
       </div>
 
       {/* Nom */}
       <div className="space-y-1">
-        <Label htmlFor="name">Nom affiché</Label>
+        <Label htmlFor="name">{t("shopForm.name")}</Label>
         <Input
           id="name"
           name="name"
           defaultValue={item?.name}
-          placeholder="Cadre doré"
+          placeholder={t("shopForm.namePlaceholder")}
           required
         />
       </div>
 
       {/* Slot */}
       <div className="space-y-1">
-        <Label>Type (slot)</Label>
+        <Label>{t("shopForm.typeLabel")}</Label>
         <Select name="slot" value={slot} onValueChange={setSlot}>
           <SelectTrigger>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="avatar_frame">Cadre d&apos;avatar</SelectItem>
+            <SelectItem value="avatar_frame">{t("shopForm.avatarFrame")}</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
       {/* Prix */}
       <div className="space-y-1">
-        <Label htmlFor="price_coins">Prix (coins)</Label>
+        <Label htmlFor="price_coins">{t("shopForm.price")}</Label>
         <Input
           id="price_coins"
           name="price_coins"
@@ -253,18 +256,18 @@ export function ShopItemForm({
 
       {/* Asset — upload vers bucket cosmetics */}
       <ImageUploader
-        label="Image de l'article (asset)"
+        label={t("shopForm.assetLabel")}
         name="asset_url"
         initialUrl={item?.asset_url}
-        hint="Utilisée en jeu autour de l'avatar. Recommandé : PNG 256×256 sur fond transparent."
+        hint={t("shopForm.assetHint")}
       />
 
       {/* Preview — optionnel */}
       <ImageUploader
-        label="Image de prévisualisation (optionnel)"
+        label={t("shopForm.previewLabel")}
         name="preview_url"
         initialUrl={item?.preview_url}
-        hint="Affichée dans la boutique. Si absente, l'asset est utilisé."
+        hint={t("shopForm.previewHint")}
       />
 
       {/* Actif */}
@@ -274,7 +277,7 @@ export function ShopItemForm({
           checked={active}
           onCheckedChange={setActive}
         />
-        <Label htmlFor="active">Visible en boutique</Label>
+        <Label htmlFor="active">{t("shopForm.visible")}</Label>
       </div>
       <input type="hidden" name="active" value={active ? "true" : "false"} />
 
@@ -283,14 +286,14 @@ export function ShopItemForm({
           {pending ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              Enregistrement…
+              {t("shopForm.saving")}
             </>
           ) : (
             submitLabel
           )}
         </Button>
         <Button variant="ghost" asChild>
-          <Link href="/admin/shop">Annuler</Link>
+          <Link href="/admin/shop">{t("shopForm.cancel")}</Link>
         </Button>
       </div>
     </form>

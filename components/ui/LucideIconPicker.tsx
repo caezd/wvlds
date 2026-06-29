@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslations, useLocale } from "next-intl";
 import { Search } from "lucide-react";
 import { DynamicIcon, type IconName, iconNames } from "lucide-react/dynamic";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -16,7 +17,7 @@ export function prettyIconName(name: string) {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-export const CATEGORY_LABELS_FR: Record<string, string> = {
+const CATEGORY_LABELS_FR: Record<string, string> = {
   "Accessibility": "Accessibilité",
   "Accounts & access": "Comptes & accès",
   "Animals": "Animaux",
@@ -61,6 +62,58 @@ export const CATEGORY_LABELS_FR: Record<string, string> = {
   "Weather": "Météo",
   "Autres": "Autres",
 };
+
+const CATEGORY_LABELS_ES: Record<string, string> = {
+  "Accessibility": "Accesibilidad",
+  "Accounts & access": "Cuentas & acceso",
+  "Animals": "Animales",
+  "Arrows": "Flechas",
+  "Buildings": "Edificios",
+  "Charts": "Gráficos",
+  "Communication": "Comunicación",
+  "Connectivity": "Conectividad",
+  "Cursors": "Cursores",
+  "Design": "Diseño",
+  "Coding & development": "Código & desarrollo",
+  "Devices": "Dispositivos",
+  "Emoji": "Emoji",
+  "File icons": "Archivos & carpetas",
+  "Finance": "Finanzas",
+  "Food & beverage": "Alimentación & bebidas",
+  "Gaming": "Juegos",
+  "Home": "Hogar",
+  "Layout": "Diseño de página",
+  "Mail": "Correo",
+  "Mathematics": "Matemáticas",
+  "Medical": "Medicina",
+  "Multimedia": "Multimedia",
+  "Nature": "Naturaleza",
+  "Navigation, Maps, and POIs": "Navegación & mapas",
+  "Notification": "Notificaciones",
+  "People": "Personas",
+  "Photography": "Fotografía",
+  "Science": "Ciencias",
+  "Seasons": "Estaciones",
+  "Security": "Seguridad",
+  "Shapes": "Formas",
+  "Shopping": "Compras",
+  "Social": "Redes sociales",
+  "Sports": "Deportes",
+  "Sustainability": "Sostenibilidad",
+  "Text formatting": "Formato de texto",
+  "Time & calendar": "Tiempo & calendario",
+  "Tools": "Herramientas",
+  "Transportation": "Transporte",
+  "Travel": "Viaje",
+  "Weather": "Clima",
+  "Autres": "Otros",
+};
+
+function getCategoryLabel(title: string, locale: string): string {
+  if (locale === "fr") return CATEGORY_LABELS_FR[title] ?? title;
+  if (locale === "es") return CATEGORY_LABELS_ES[title] ?? title;
+  return title;
+}
 
 function LucideIconButton({
   name,
@@ -110,6 +163,8 @@ export function LucideIconPicker({
   accent?: string;
   trigger?: React.ReactNode;
 }) {
+  const t = useTranslations("iconPicker");
+  const locale = useLocale();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
 
@@ -139,7 +194,7 @@ export function LucideIconPicker({
         <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
       )}
       <span className={cn("flex-1 truncate text-left", !value && "text-muted-foreground")}>
-        {value ? prettyIconName(value) : "Choisir une icône…"}
+        {value ? prettyIconName(value) : t("chooseIconPlaceholder")}
       </span>
     </button>
   );
@@ -156,7 +211,7 @@ export function LucideIconPicker({
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Rechercher dans 1800+ icônes…"
+            placeholder={t("search")}
             autoFocus
             className="h-9 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
           />
@@ -180,12 +235,12 @@ export function LucideIconPicker({
               ))}
               {shownSearch!.length === 0 && (
                 <p className="col-span-7 py-6 text-center text-xs text-muted-foreground">
-                  Aucune icône
+                  {t("noIcons")}
                 </p>
               )}
               {searchOverflow > 0 && (
                 <p className="col-span-7 pb-1 text-center text-[11px] text-muted-foreground">
-                  +{searchOverflow} de plus — affinez la recherche
+                  {t("moreResults", { count: searchOverflow })}
                 </p>
               )}
             </div>
@@ -193,7 +248,7 @@ export function LucideIconPicker({
             LUCIDE_CATEGORIES.map((cat) => (
               <div key={cat.title}>
                 <div className="sticky top-0 z-10 border-b border-border-soft/50 bg-popover px-2 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70">
-                  {CATEGORY_LABELS_FR[cat.title] ?? cat.title}
+                  {getCategoryLabel(cat.title, locale)}
                 </div>
                 <div className="grid grid-cols-7 gap-1 p-2">
                   {cat.icons

@@ -5,8 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 
 export function ForgotPasswordForm() {
+    const t = useTranslations("auth");
     const [email, setEmail] = useState("");
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
@@ -42,17 +44,16 @@ export function ForgotPasswordForm() {
             <div className="my-8">
                 {success ? (
                     <p className="text-sm text-muted-foreground">
-                        Si un compte existe pour cette adresse, vous recevrez un
-                        email avec un lien pour réinitialiser votre mot de passe.
+                        {t("resetSuccess")}
                     </p>
                 ) : (
                     <form onSubmit={handleForgotPassword}>
                         <div className="mb-6 flex gap-3 flex-col">
-                            <Label htmlFor="email">Email</Label>
+                            <Label htmlFor="email">{t("email")}</Label>
                             <Input
                                 id="email"
                                 type="email"
-                                placeholder="m@example.com"
+                                placeholder={t("emailPlaceholder")}
                                 required
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
@@ -64,7 +65,7 @@ export function ForgotPasswordForm() {
                             variant="destructive"
                             disabled={isLoading}
                         >
-                            {isLoading ? "Sending..." : "Send reset email"}
+                            {isLoading ? t("sending") : t("sendResetEmail")}
                         </Button>
                     </form>
                 )}

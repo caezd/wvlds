@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Dices } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,6 +18,7 @@ export function DiceDialog({ onSend, open: controlledOpen, onOpenChange }: {
   open?: boolean;
   onOpenChange?: (v: boolean) => void;
 }) {
+  const t = useTranslations("chatrooms");
   const [internalOpen, setInternalOpen] = useState(false);
   const open = controlledOpen ?? internalOpen;
   const setOpen = onOpenChange ?? setInternalOpen;
@@ -38,7 +40,7 @@ export function DiceDialog({ onSend, open: controlledOpen, onOpenChange }: {
       setLabel("");
       setFormula("1d20");
     } catch {
-      setError("Formule invalide. Exemples : 1d20, 2d6+3, 1d8-1");
+      setError(t("diceError"));
     }
   }
 
@@ -46,22 +48,22 @@ export function DiceDialog({ onSend, open: controlledOpen, onOpenChange }: {
     <Dialog open={open} onOpenChange={setOpen}>
       {!onOpenChange && (
         <DialogTrigger asChild>
-          <Button variant="ghost" size="icon-sm" title="Lancer un dé">
+          <Button variant="ghost" size="icon-sm" title={t("diceTitle")}>
             <Dices className="h-4 w-4" />
           </Button>
         </DialogTrigger>
       )}
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>Lancer un dé</DialogTitle>
+          <DialogTitle>{t("diceTitle")}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <Label>Formule</Label>
+            <Label>{t("formula")}</Label>
             <Input
               value={formula}
               onChange={(e) => { setFormula(e.target.value); setError(null); }}
-              placeholder="ex. 2d6+3"
+              placeholder={t("formulaPlaceholder")}
               onKeyDown={(e) => e.key === "Enter" && handleSend()}
             />
             {error && <p className="text-xs text-destructive">{error}</p>}
@@ -79,20 +81,20 @@ export function DiceDialog({ onSend, open: controlledOpen, onOpenChange }: {
             </div>
           </div>
           <div className="space-y-1.5">
-            <Label>Étiquette <span className="text-muted-foreground">(optionnel)</span></Label>
+            <Label>{t("diceLabel")}</Label>
             <Input
               value={label}
               onChange={(e) => setLabel(e.target.value)}
-              placeholder="ex. Attaque, Sauvegarde…"
+              placeholder={t("diceLabelPlaceholder")}
               onKeyDown={(e) => e.key === "Enter" && handleSend()}
             />
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>Annuler</Button>
+          <Button variant="outline" onClick={() => setOpen(false)}>{t("cancelEdit")}</Button>
           <Button onClick={handleSend}>
             <Dices className="h-4 w-4 mr-1.5" />
-            Lancer
+            {t("diceRoll")}
           </Button>
         </DialogFooter>
       </DialogContent>

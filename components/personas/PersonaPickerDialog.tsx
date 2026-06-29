@@ -16,6 +16,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
+import { useTranslations } from "next-intl";
 function initials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "?";
@@ -87,6 +88,8 @@ export function PersonaPickerDialog({
   userId?: string | null;
   worldId?: string | null;
 }) {
+  const t = useTranslations("personas");
+  const tCommon = useTranslations("common");
   const supabase = useMemo(() => createClient(), []);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -156,7 +159,7 @@ export function PersonaPickerDialog({
 
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>Choisir un persona</DialogTitle>
+          <DialogTitle>{t("pick")}</DialogTitle>
         </DialogHeader>
 
         {loading ? (
@@ -167,7 +170,7 @@ export function PersonaPickerDialog({
           </div>
         ) : personas.length === 0 ? (
           <p className="py-6 text-center text-sm text-muted-foreground">
-            Aucun persona. Crée-en un d&apos;abord.
+            {t("pickerEmpty")}
           </p>
         ) : (
           <ScrollArea className="max-h-[60vh]">
@@ -186,10 +189,10 @@ export function PersonaPickerDialog({
 
         <DialogFooter className="gap-2">
           <DialogClose asChild>
-            <Button variant="ghost">Annuler</Button>
+            <Button variant="ghost">{tCommon("cancel")}</Button>
           </DialogClose>
           <Button disabled={!canConfirm} onClick={confirm}>
-            Confirmer
+            {tCommon("confirm")}
           </Button>
         </DialogFooter>
       </DialogContent>

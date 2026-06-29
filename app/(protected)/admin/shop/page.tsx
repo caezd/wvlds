@@ -3,9 +3,11 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Plus, Pencil, Eye, EyeOff, Trash2 } from "lucide-react";
 import { toggleItem, deleteItem } from "./actions";
+import { getTranslations } from "next-intl/server";
 
 export default async function AdminShopPage() {
   const { supabase } = await requireAdmin();
+  const t = await getTranslations("admin");
 
   const { data: items, error } = await supabase
     .from("cosmetic_items")
@@ -25,15 +27,15 @@ export default async function AdminShopPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold">Articles boutique</h1>
+          <h1 className="text-xl font-bold">{t("shopItems.title")}</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {items?.length ?? 0} article(s) au total
+            {t("shopItems.count", { count: items?.length ?? 0 })}
           </p>
         </div>
         <Button asChild>
           <Link href="/admin/shop/new">
             <Plus className="h-4 w-4 mr-1" />
-            Nouvel article
+            {t("shopItems.new")}
           </Link>
         </Button>
       </div>
@@ -42,12 +44,12 @@ export default async function AdminShopPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border-soft bg-muted/40 text-muted-foreground text-xs uppercase tracking-wide">
-              <th className="px-4 py-3 text-left">Aperçu</th>
-              <th className="px-4 py-3 text-left">Nom / Clé</th>
-              <th className="px-4 py-3 text-left">Type</th>
-              <th className="px-4 py-3 text-right">Prix</th>
-              <th className="px-4 py-3 text-center">Actif</th>
-              <th className="px-4 py-3 text-right">Actions</th>
+              <th className="px-4 py-3 text-left">{t("shopItems.preview")}</th>
+              <th className="px-4 py-3 text-left">{t("shopItems.nameKey")}</th>
+              <th className="px-4 py-3 text-left">{t("shopItems.type")}</th>
+              <th className="px-4 py-3 text-right">{t("shopItems.price")}</th>
+              <th className="px-4 py-3 text-center">{t("shopItems.active")}</th>
+              <th className="px-4 py-3 text-right">{t("shopItems.actions")}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border-soft">
@@ -77,7 +79,7 @@ export default async function AdminShopPage() {
                   }}>
                     <button
                       type="submit"
-                      title={item.active ? "Masquer" : "Afficher"}
+                      title={item.active ? t("shopItems.hide") : t("shopItems.show")}
                       className="inline-flex items-center justify-center rounded p-1 hover:bg-muted"
                     >
                       {item.active
@@ -114,7 +116,7 @@ export default async function AdminShopPage() {
             {(items ?? []).length === 0 && (
               <tr>
                 <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground text-sm">
-                  Aucun article. Créez votre premier article ci-dessus.
+                  {t("shopItems.empty")}
                 </td>
               </tr>
             )}

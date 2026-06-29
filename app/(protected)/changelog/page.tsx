@@ -1,12 +1,14 @@
 import { ChangelogFilters } from "./ChangelogFilters";
+import { getTranslations } from "next-intl/server";
 
-export default function ChangelogPage() {
+export default async function ChangelogPage() {
+  const t = await getTranslations("changelog");
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-8">
       <header className="space-y-1 pb-2 border-b border-border">
-        <h1 className="text-2xl font-bold tracking-tight">Changelog</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
         <p className="text-sm text-muted-foreground">
-          Nouveautés et mises à jour de la plateforme.
+          {t("subtitle")}
         </p>
       </header>
       <ChangelogFilters />

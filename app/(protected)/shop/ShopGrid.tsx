@@ -2,6 +2,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,7 @@ export default function ShopGrid({
   initialItems: ShopItem[];
   initialCoins: number;
 }) {
+  const t = useTranslations("shop");
   const supabase = createClient();
   const [coins, setCoins] = useState<number>(initialCoins);
   const [items, setItems] = useState<ShopItem[]>(initialItems);
@@ -49,10 +51,10 @@ export default function ShopGrid({
     let res = items;
     if (slotFilter !== "all") res = res.filter((i) => i.slot === slotFilter);
     if (q.trim()) {
-      const t = q.trim().toLowerCase();
+      const term = q.trim().toLowerCase();
       res = res.filter(
         (i) =>
-          i.name.toLowerCase().includes(t) || i.key.toLowerCase().includes(t),
+          i.name.toLowerCase().includes(term) || i.key.toLowerCase().includes(term),
       );
     }
     return res;
@@ -134,7 +136,7 @@ export default function ShopGrid({
     <div className="space-y-4">
       {/* Header */}
       <header className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Boutique</h1>
+        <h1 className="text-2xl font-semibold">{t("title")}</h1>
         <div className="flex items-center gap-1 text-sm">
           <span className="font-medium text-foreground">{coins}</span>
           <span aria-hidden>🪙</span>
@@ -145,17 +147,17 @@ export default function ShopGrid({
       <div className="flex items-center justify-between gap-2">
         <Select value={slotFilter} onValueChange={setSlotFilter}>
           <SelectTrigger className="w-44">
-            <SelectValue placeholder="Filtrer par type" />
+            <SelectValue placeholder={t("filterType")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Tous les types</SelectItem>
-            <SelectItem value="avatar_frame">Cadres d’avatar</SelectItem>
+            <SelectItem value="all">{t("allTypes")}</SelectItem>
+            <SelectItem value="avatar_frame">{t("avatarFrame")}</SelectItem>
           </SelectContent>
         </Select>
         <Input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Recherche"
+          placeholder={t("searchPlaceholder")}
           className="w-56"
         />
       </div>
@@ -193,11 +195,11 @@ export default function ShopGrid({
                       disabled={busy || coins < it.price_coins}
                       onClick={() => handlePurchase(it)}
                     >
-                      {busy ? "Traitement…" : "Acheter"}
+                      {busy ? t("processing") : t("buy")}
                     </Button>
                   ) : (
                     <Button className="flex-1" variant="secondary" disabled>
-                      Possédé
+                      {t("owned")}
                     </Button>
                   )}
                 </div>

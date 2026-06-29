@@ -4,6 +4,7 @@ import { Geist } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import AppProviders from "@/components/providers/AppProviders";
+import { getLocale } from "next-intl/server";
 
 const defaultUrl = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
@@ -21,13 +22,14 @@ const geistSans = Geist({
   subsets: ["latin"],
 });
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const locale = await getLocale();
   return (
-    <html lang="fr" className="dark" style={{ colorScheme: "dark" }} suppressHydrationWarning>
+    <html lang={locale} className="dark" style={{ colorScheme: "dark" }} suppressHydrationWarning>
       <body className={`${geistSans.className} antialiased`} suppressHydrationWarning>
         <AppProviders>
           <div id="app-shell" className="h-full">

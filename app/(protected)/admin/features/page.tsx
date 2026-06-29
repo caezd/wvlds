@@ -2,6 +2,7 @@ import { requireAdmin } from "@/lib/admin";
 import { revalidatePath } from "next/cache";
 import { FLAG_KEYS, type FlagKey } from "@/lib/featureFlags";
 import { FeatureSubGroup } from "../_components/FeatureSubGroup";
+import { getTranslations } from "next-intl/server";
 
 type FlagRow = {
   key: FlagKey;
@@ -10,6 +11,8 @@ type FlagRow = {
   description: string;
   updated_at: string;
 };
+
+type TFn = Awaited<ReturnType<typeof getTranslations<"admin">>>;
 
 const FIELD_KEYS: FlagKey[] = [
   "persona_field_title",
@@ -30,23 +33,26 @@ const BLOCK_KEYS: FlagKey[] = [
   "block_hp",
 ];
 
+type GroupKey = "account" | "game" | "personas" | "shop" | "worlds" | "chatrooms";
+
 type GroupDef = {
-  title: string;
+  titleKey: GroupKey;
   keys: FlagKey[];
   subgroups?: { masterKey: FlagKey; childKeys: FlagKey[] }[];
 };
 
 const GROUPS: GroupDef[] = [
-  { title: "Compte",   keys: ["notifications"] },
+  { titleKey: "account",   keys: ["notifications", "direct_messages"] },
+  { titleKey: "game",      keys: ["quests"] },
   {
-    title: "Personas",
+    titleKey: "personas",
     keys: ["avatar_builder", "persona_fields"],
     subgroups: [{ masterKey: "persona_fields", childKeys: FIELD_KEYS }],
   },
-  { title: "Boutique", keys: ["shop"] },
-  { title: "Mondes",   keys: ["public_worlds", "world_map", "world_catalogue", "world_timeline"] },
+  { titleKey: "shop",      keys: ["shop"] },
+  { titleKey: "worlds",    keys: ["public_worlds", "world_map", "world_catalogue", "world_timeline"] },
   {
-    title: "Chatrooms",
+    titleKey: "chatrooms",
     keys: ["create_chatroom", "post_message", "emoji_reactions", "chatroom_media", "chatroom_blocks"],
     subgroups: [{ masterKey: "chatroom_blocks", childKeys: BLOCK_KEYS }],
   },
@@ -63,7 +69,7 @@ async function toggleFlag(key: FlagKey, enabled: boolean) {
   revalidatePath("/", "layout");
 }
 
-function FlagRow({ flag }: { flag: FlagRow }) {
+function FlagRow({ flag, t }: { flag: FlagRow; t: TFn }) {
   const toggle = toggleFlag.bind(null, flag.key, !flag.enabled);
   const date = new Date(flag.updated_at).toLocaleDateString("fr-FR", {
     day: "numeric", month: "short", year: "numeric",
@@ -81,12 +87,14 @@ function FlagRow({ flag }: { flag: FlagRow }) {
         {flag.description && (
           <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{flag.description}</p>
         )}
-        <p className="text-[0.65rem] text-muted-foreground/60 mt-1">Modifié le {date}</p>
+        <p className="text-[0.65rem] text-muted-foreground/60 mt-1">
+          {t("features.editedAt", { date })}
+        </p>
       </div>
       <form action={toggle}>
         <button
           type="submit"
-          aria-label={flag.enabled ? "Désactiver" : "Activer"}
+          aria-label={flag.enabled ? t("features.disable") : t("features.enable")}
           className={[
             "relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent",
             "transition-colors duration-200",
@@ -106,7 +114,7 @@ function FlagRow({ flag }: { flag: FlagRow }) {
   );
 }
 
-function CompactFlagRow({ flag }: { flag: FlagRow }) {
+function CompactFlagRow({ flag, t }: { flag: FlagRow; t: TFn }) {
   const toggle = toggleFlag.bind(null, flag.key, !flag.enabled);
   const label = flag.label.replace(/^Champ : /, "");
   return (
@@ -115,7 +123,7 @@ function CompactFlagRow({ flag }: { flag: FlagRow }) {
       <form action={toggle}>
         <button
           type="submit"
-          aria-label={flag.enabled ? "Désactiver" : "Activer"}
+          aria-label={flag.enabled ? t("features.disable") : t("features.enable")}
           className={[
             "relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200",
             flag.enabled ? "bg-primary" : "bg-muted",
@@ -136,6 +144,7 @@ function CompactFlagRow({ flag }: { flag: FlagRow }) {
 
 export default async function AdminFeaturesPage() {
   const { supabase } = await requireAdmin();
+  const t = await getTranslations("admin");
 
   const { data: flags, error } = await supabase
     .from("feature_flags")
@@ -151,9 +160,9 @@ export default async function AdminFeaturesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-bold">Fonctionnalités</h1>
+        <h1 className="text-xl font-bold">{t("features.title")}</h1>
         <p className="text-sm text-muted-foreground mt-0.5">
-          Activer ou désactiver des fonctionnalités sans déploiement.
+          {t("features.subtitle")}
         </p>
       </div>
 
@@ -168,13 +177,13 @@ export default async function AdminFeaturesPage() {
           if (!hasContent) return null;
 
           return (
-            <div key={group.title}>
+            <div key={group.titleKey}>
               <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground px-1 mb-2">
-                {group.title}
+                {t(`features.groups.${group.titleKey}`)}
               </h2>
               <div className="rounded-xl border border-border-soft overflow-hidden divide-y divide-border-soft">
                 {topLevelFlags.map((flag) => (
-                  <FlagRow key={flag.key} flag={flag} />
+                  <FlagRow key={flag.key} flag={flag} t={t} />
                 ))}
                 {group.subgroups?.map(({ masterKey, childKeys }) => {
                   const master = byKey[masterKey];
@@ -186,7 +195,7 @@ export default async function AdminFeaturesPage() {
                       onToggle={toggleFlag.bind(null, master.key, !master.enabled)}
                     >
                       {childKeys.map((k) =>
-                        byKey[k] ? <CompactFlagRow key={k} flag={byKey[k]} /> : null
+                        byKey[k] ? <CompactFlagRow key={k} flag={byKey[k]} t={t} /> : null
                       )}
                     </FeatureSubGroup>
                   );

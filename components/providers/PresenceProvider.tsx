@@ -212,6 +212,19 @@ export default function PresenceProvider({ children }: { children: React.ReactNo
                 recompute();
             });
 
+            // "join" s'assure qu'un utilisateur apparaissant en ligne est
+            // immédiatement reflété même si "sync" est retardé (reconnexion WS, etc.)
+            ch.on("presence", { event: "join" }, ({ key, newPresences }: { key: string; newPresences: GlobalPresenceMeta[] }) => {
+                if (!newPresences.length) return;
+                let latest = newPresences[0];
+                for (const p of newPresences.slice(1)) {
+                    if ((p.last_active_at ?? "") > (latest.last_active_at ?? "")) latest = p;
+                }
+                delete lingeringRef.current[key];
+                rawRef.current[key] = latest;
+                recompute();
+            });
+
             ch.subscribe(async (status: string) => {
                 if (status !== "SUBSCRIBED") return;
                 await track(true);

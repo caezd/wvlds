@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
 type WorldPrefsInput = {
-  aside_width?: number;
   main_expanded?: boolean;
   is_favorite?: boolean;
   wiki_sidebar_width?: number;
@@ -32,6 +31,30 @@ export async function saveWorldPrefs(
 
   if (error) {
     console.error("[saveWorldPrefs]", error.message);
+  }
+}
+
+export async function toggleFollowChatroom(
+  chatroomId: string,
+  follow: boolean,
+): Promise<void> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  if (follow) {
+    await supabase.from("chatroom_follows").upsert(
+      { user_id: user.id, chatroom_id: chatroomId },
+      { onConflict: "user_id,chatroom_id" },
+    );
+  } else {
+    await supabase
+      .from("chatroom_follows")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("chatroom_id", chatroomId);
   }
 }
 

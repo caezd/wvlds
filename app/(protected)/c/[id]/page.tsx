@@ -5,8 +5,11 @@ import { notFound } from "next/navigation";
 import { TABLE, CHAT_MESSAGES_PAGE_SIZE } from "@/lib/constants";
 import { decryptMessage } from "@/lib/crypto";
 import type { ChatMessageWithPersona, Persona } from "@/types/db";
+import WorldSidebar from "@/components/worlds/WorldSidebar";
+import { getTranslations } from "next-intl/server";
 
 export default async function Page({ params }: { params: { id: string } }) {
+  const t = await getTranslations("chatrooms");
   const { id } = await params;
   const supabase = await createClient();
 
@@ -84,7 +87,7 @@ export default async function Page({ params }: { params: { id: string } }) {
   type ReactionRow = { message_id: number; emoji: string; user_id: string };
   type NavRoom = { id: string; title: string | null; name: string | null; icon_url: string | null; last_message_at: string | null; unread_count: number };
 
-  const [reactionRows, navResult, membership] = await Promise.all([
+  const [reactionRows, navResult, membership, followRow] = await Promise.all([
     (async (): Promise<ReactionRow[]> => {
       if (!messageIds.length) return [];
       const { data: rows } = await supabase
@@ -129,6 +132,12 @@ export default async function Page({ params }: { params: { id: string } }) {
         .maybeSingle();
       return data as { role: string } | null;
     })(),
+    supabase
+      .from("chatroom_follows")
+      .select("chatroom_id")
+      .eq("user_id", userId)
+      .eq("chatroom_id", id)
+      .maybeSingle(),
   ]);
 
   const byMessage = new Map<
@@ -184,11 +193,13 @@ export default async function Page({ params }: { params: { id: string } }) {
   const initialRoomsSafe = navResult.rooms;
 
   return (
-    <ChatRoomView
-      chatId={id}
+    <div className="flex h-full w-full min-h-0">
+      {chatroom.world_id && <WorldSidebar worldId={chatroom.world_id} />}
+      <ChatRoomView
+        chatId={id}
       initialChat={{
         id: chatroom.id,
-        title: chatroom.title ?? "Nouvelle salle",
+        title: chatroom.title ?? t("newRoom"),
         banner_url: chatroom.banner_url ?? null,
         icon_url: chatroom.icon_url ?? null,
         timeline_date: (chatroom.timeline_date as { year: number; month: number | null; day?: number | null } | null) ?? null,
@@ -214,6 +225,8 @@ export default async function Page({ params }: { params: { id: string } }) {
       canWorldAdmin={canWorldAdmin}
       initialChatrooms={initialRoomsSafe}
       chatroomKey={chatroomKey}
+      initialIsFollowed={!!followRow.data}
     />
+    </div>
   );
 }

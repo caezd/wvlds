@@ -19,13 +19,21 @@ type NotifPrefs = Partial<Record<NotificationType, boolean>>;
 
 const NOTIF_INIT = 20;
 const NOTIF_MORE = 10;
+const NOTIF_SELECT = "*, world:worlds!world_id(name, icon_url)";
 
 type Ctx = {
+    // Panel open/close
+    panelOpen: boolean;
+    openPanel: () => void;
+    closePanel: () => void;
+    togglePanel: () => void;
+    // Unread counts
     worldUnread: Record<string, number>;
     roomUnread: Record<string, number>;
     setActiveChat: (id: string | null) => void;
     markWorldSeen: (worldId: string) => Promise<void>;
     refreshAll: () => Promise<void>;
+    // Notifications feed
     notifications: AppNotification[];
     unreadNotifCount: number;
     markNotifRead: (id: string) => Promise<void>;
@@ -40,6 +48,10 @@ type Ctx = {
 const NotificationsCtx = createContext<Ctx | null>(null);
 
 const DEFAULT_CTX: Ctx = {
+    panelOpen: false,
+    openPanel: () => {},
+    closePanel: () => {},
+    togglePanel: () => {},
     worldUnread: {},
     roomUnread: {},
     setActiveChat: () => {},
@@ -62,6 +74,12 @@ export function useNotifications() {
 
 export default function NotificationsProvider({ children }: { children: React.ReactNode }) {
     const supabase = useMemo(() => createClient(), []);
+
+    const [panelOpen, setPanelOpen] = useState(false);
+    const openPanel  = useCallback(() => setPanelOpen(true),  []);
+    const closePanel = useCallback(() => setPanelOpen(false), []);
+    const togglePanel = useCallback(() => setPanelOpen(v => !v), []);
+
     const [worldUnread, setWorldUnread] = useState<Record<string, number>>({});
     const [roomUnread, setRoomUnread] = useState<Record<string, number>>({});
     const [notifications, setNotifications] = useState<AppNotification[]>([]);
@@ -136,20 +154,23 @@ export default function NotificationsProvider({ children }: { children: React.Re
 
     const markNotifRead = useCallback(async (id: string) => {
         const now = new Date().toISOString();
-        setNotifications(prev => prev.map(n => n.id === id ? { ...n, read_at: now } : n));
+        setNotifications(prev => prev.filter(n => n.id !== id));
+        notifOffsetRef.current = Math.max(0, notifOffsetRef.current - 1);
         await supabase
             .from(TABLE.NOTIFICATIONS)
-            .update({ read_at: now })
+            .update({ read_at: now, archived_at: now })
             .eq("id", id);
     }, [supabase]);
 
     const markAllNotifsRead = useCallback(async () => {
         const now = new Date().toISOString();
-        setNotifications(prev => prev.map(n => n.read_at ? n : { ...n, read_at: now }));
+        setNotifications([]);
+        notifOffsetRef.current = 0;
+        setHasMoreNotifs(false);
         await supabase
             .from(TABLE.NOTIFICATIONS)
-            .update({ read_at: now })
-            .is("read_at", null);
+            .update({ read_at: now, archived_at: now })
+            .is("archived_at", null);
     }, [supabase]);
 
     const archiveNotif = useCallback(async (id: string) => {
@@ -168,7 +189,7 @@ export default function NotificationsProvider({ children }: { children: React.Re
         const offset = notifOffsetRef.current;
         const { data } = await supabase
             .from(TABLE.NOTIFICATIONS)
-            .select("*")
+            .select(NOTIF_SELECT)
             .is("archived_at", null)
             .order("updated_at", { ascending: false })
             .range(offset, offset + NOTIF_MORE - 1);
@@ -203,7 +224,7 @@ export default function NotificationsProvider({ children }: { children: React.Re
                 supabase.from(TABLE.WORLD_MEMBERS).select("world_id").eq("user_id", userId),
                 supabase
                     .from(TABLE.NOTIFICATIONS)
-                    .select("*")
+                    .select(NOTIF_SELECT)
                     .is("archived_at", null)
                     .order("updated_at", { ascending: false })
                     .limit(NOTIF_INIT),
@@ -272,9 +293,15 @@ export default function NotificationsProvider({ children }: { children: React.Re
                         table: TABLE.NOTIFICATIONS,
                         filter: `recipient_id=eq.${userId}`,
                     },
-                    (payload: { new: Record<string, unknown> }) => {
-                        const notif = payload.new as AppNotification;
-                        setNotifications(prev => [notif, ...prev]);
+                    async (payload: { new: Record<string, unknown> }) => {
+                        const id = payload.new.id as string;
+                        const { data } = await supabase
+                            .from(TABLE.NOTIFICATIONS)
+                            .select(NOTIF_SELECT)
+                            .eq("id", id)
+                            .single();
+                        if (!data) return;
+                        setNotifications(prev => [data as AppNotification, ...prev]);
                         notifOffsetRef.current += 1;
                     },
                 )
@@ -286,12 +313,18 @@ export default function NotificationsProvider({ children }: { children: React.Re
                         table: TABLE.NOTIFICATIONS,
                         filter: `recipient_id=eq.${userId}`,
                     },
-                    (payload: { new: Record<string, unknown> }) => {
+                    async (payload: { new: Record<string, unknown> }) => {
                         const updated = payload.new as AppNotification;
-                        // Ignorer les notifications archivées (ex: suppression via bouton ×)
                         if (updated.archived_at) return;
+                        const id = updated.id;
+                        const { data } = await supabase
+                            .from(TABLE.NOTIFICATIONS)
+                            .select(NOTIF_SELECT)
+                            .eq("id", id)
+                            .single();
+                        if (!data) return;
                         setNotifications(prev =>
-                            [updated, ...prev.filter(n => n.id !== updated.id)],
+                            [data as AppNotification, ...prev.filter(n => n.id !== id)],
                         );
                     },
                 )
@@ -307,6 +340,7 @@ export default function NotificationsProvider({ children }: { children: React.Re
     }, [userId]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const value = useMemo<Ctx>(() => ({
+        panelOpen, openPanel, closePanel, togglePanel,
         worldUnread,
         roomUnread,
         setActiveChat,
@@ -321,7 +355,8 @@ export default function NotificationsProvider({ children }: { children: React.Re
         loadMoreNotifs,
         notifPrefs,
         setNotifPref,
-    }), [worldUnread, roomUnread, setActiveChat, markWorldSeen, refreshAll,
+    }), [panelOpen, openPanel, closePanel, togglePanel,
+        worldUnread, roomUnread, setActiveChat, markWorldSeen, refreshAll,
         notifications, markNotifRead, markAllNotifsRead, archiveNotif,
         hasMoreNotifs, loadMoreNotifs, notifPrefs, setNotifPref]);
 

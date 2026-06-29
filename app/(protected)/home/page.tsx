@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Globe, GlobeLock } from "lucide-react";
 import { CreateWorldButton } from "./CreateWorldButton";
 import { Hint } from "@/components/ui/hint";
+import { getTranslations } from "next-intl/server";
 
 type WorldCard = {
   id: string;
@@ -17,6 +18,7 @@ type WorldCard = {
 };
 
 export default async function HomePage() {
+  const t = await getTranslations("home");
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
@@ -41,28 +43,24 @@ export default async function HomePage() {
 
   const quotaLabel =
     quotaLimit === Infinity
-      ? `Plan ${plan} — mondes illimités`
-      : `${owned} / ${quotaLimit} monde${quotaLimit > 1 ? "s" : ""} utilisé${quotaLimit > 1 ? "s" : ""}`;
+      ? t("planUnlimited", { plan })
+      : t("planUsage", { owned, limit: quotaLimit });
 
   return (
-    <div className="p-6 space-y-8 max-w-6xl mx-auto w-full">
+    <div className="p-6 space-y-8">
       {/* Header */}
       <header className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Mondes</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
           <div className="flex items-center gap-1 mt-0.5">
             <p className="text-xs text-muted-foreground">
               {quotaLabel}
               {quotaReached && (
-                <span className="text-destructive"> — quota atteint</span>
+                <span className="text-destructive"> — {t("quotaReached")}</span>
               )}
             </p>
             <Hint>
-              {quotaReached
-                ? `Le plan gratuit est limité à ${quotaLimit} monde. Passe à un plan supérieur pour en créer davantage.`
-                : quotaLimit === Infinity
-                  ? `Ton plan ${plan} te permet de créer un nombre illimité de mondes.`
-                  : `Tu peux créer jusqu'à ${quotaLimit} monde${quotaLimit > 1 ? "s" : ""} avec le plan gratuit.`}
+              {t("quotaTooltip")}
             </Hint>
           </div>
         </div>
@@ -72,12 +70,12 @@ export default async function HomePage() {
       {/* Mes mondes */}
       <section className="space-y-3">
         <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-          Mes mondes
+          {t("myWorlds")}
         </h2>
         {mine.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center gap-3 rounded-2xl border border-dashed border-border">
             <Globe className="h-8 w-8 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">Aucun monde créé pour le moment.</p>
+            <p className="text-sm text-muted-foreground">{t("empty")}</p>
             {!quotaReached && (
               <CreateWorldButton label="Créer mon premier monde" disabled={false} quotaReached={false} />
             )}
@@ -97,7 +95,7 @@ export default async function HomePage() {
       {shared.length > 0 && (
         <section className="space-y-3">
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-            Partagés avec moi
+            {t("sharedWithMe")}
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {shared.map((world) => (

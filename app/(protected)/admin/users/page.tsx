@@ -1,6 +1,7 @@
 import { requireAdmin } from "@/lib/admin";
 import { revalidatePath } from "next/cache";
 import { Shield, ShieldOff } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 
 async function toggleAdmin(userId: string, isAdmin: boolean) {
   "use server";
@@ -23,6 +24,7 @@ const PLANS = ["free", "pro", "team", "lifetime"] as const;
 
 export default async function AdminUsersPage() {
   const { supabase, user: adminUser } = await requireAdmin();
+  const t = await getTranslations("admin");
 
   const { data: profiles, error } = await supabase
     .from("profiles")
@@ -40,9 +42,9 @@ export default async function AdminUsersPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-bold">Utilisateurs</h1>
+        <h1 className="text-xl font-bold">{t("users.title")}</h1>
         <p className="text-sm text-muted-foreground mt-0.5">
-          {profiles?.length ?? 0} profil(s)
+          {t("users.count", { count: profiles?.length ?? 0 })}
         </p>
       </div>
 
@@ -50,9 +52,9 @@ export default async function AdminUsersPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border-soft bg-muted/40 text-muted-foreground text-xs uppercase tracking-wide">
-              <th className="px-4 py-3 text-left">Utilisateur</th>
-              <th className="px-4 py-3 text-left">Plan</th>
-              <th className="px-4 py-3 text-center">Admin</th>
+              <th className="px-4 py-3 text-left">{t("users.colUser")}</th>
+              <th className="px-4 py-3 text-left">{t("users.colPlan")}</th>
+              <th className="px-4 py-3 text-center">{t("users.colAdmin")}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border-soft">
@@ -75,7 +77,7 @@ export default async function AdminUsersPage() {
                       )}
                       <div>
                         <div className="font-medium">
-                          {p.username ?? <span className="text-muted-foreground italic">Sans nom</span>}
+                          {p.username ?? <span className="text-muted-foreground italic">{t("users.noName")}</span>}
                         </div>
                         <div className="text-xs text-muted-foreground font-mono truncate max-w-[200px]">
                           {p.id}
@@ -116,8 +118,8 @@ export default async function AdminUsersPage() {
                         disabled={isSelf}
                         title={
                           isSelf
-                            ? "Vous ne pouvez pas modifier votre propre rôle"
-                            : p.is_admin ? "Retirer le rôle admin" : "Accorder le rôle admin"
+                            ? t("users.cantEditSelf")
+                            : p.is_admin ? t("users.removeAdmin") : t("users.grantAdmin")
                         }
                         className="inline-flex items-center justify-center rounded p-1.5 hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
                       >
@@ -135,8 +137,7 @@ export default async function AdminUsersPage() {
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Pour modifier le plan via le formulaire ci-dessus, changez la valeur puis soumettez.
-        La modification du plan est immédiate côté serveur.
+        {t("users.planInfo")}
       </p>
     </div>
   );

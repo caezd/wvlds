@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Anchor } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,6 +23,7 @@ export function AnchorDialog({
   onOpenChange: (v: boolean) => void;
   onSend: (content: string) => void;
 }) {
+  const t = useTranslations("chatrooms");
   const [label, setLabel] = useState("");
 
   function handleSend() {
@@ -38,14 +40,14 @@ export function AnchorDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Anchor className="h-4 w-4" />
-            Ancre de navigation
+            {t("anchorTitle")}
           </DialogTitle>
         </DialogHeader>
         <div className="flex flex-col gap-3 py-2">
-          <Label htmlFor="anchor-label">Texte de l'ancre</Label>
+          <Label htmlFor="anchor-label">{t("anchorLabel")}</Label>
           <Input
             id="anchor-label"
-            placeholder="ex. Prologue, Acte II, Flashback…"
+            placeholder={t("anchorPlaceholder")}
             value={label}
             onChange={(e) => setLabel(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") handleSend(); }}
@@ -54,10 +56,10 @@ export function AnchorDialog({
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => { setLabel(""); onOpenChange(false); }}>
-            Annuler
+            {t("cancelEdit")}
           </Button>
           <Button onClick={handleSend} disabled={!label.trim()}>
-            Insérer
+            {t("callout.insert")}
           </Button>
         </DialogFooter>
       </DialogContent>

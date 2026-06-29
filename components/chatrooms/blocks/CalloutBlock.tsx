@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Square, PanelLeft, Minus, Ban, AlignLeft, AlignCenter, Palette, ImagePlus, X, Plus, Loader2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -39,13 +40,16 @@ type Preset = {
   block: Omit<CalloutBlock, "_type" | "text">;
 };
 
-const PRESETS: Preset[] = [
-  { key: "aparte",   label: "Aparté",   block: { icon: "quote",     iconKind: "lucide", title: "Aparté",      accent: "#9aa0a6", border: "full",      align: "left" } },
-  { key: "souvenir", label: "Souvenir", block: { icon: "clock",     iconKind: "lucide", title: "Souvenir",    accent: "#f59e0b", border: "left",      align: "left" } },
-  { key: "scene",    label: "Scène",    block: { icon: "",          iconKind: "lucide", title: "Scène",       accent: "#9aa0a6", border: "separator", align: "center" } },
-  { key: "ellipse",  label: "Ellipse",  block: { icon: "hourglass", iconKind: "lucide", title: "Plus tard…",  accent: "#9aa0a6", border: "separator", align: "center" } },
-  { key: "ambiance", label: "Ambiance", block: { icon: "☀️",         iconKind: "emoji",  title: "Beau temps",  accent: "#60A5FA", border: "full",      align: "left" } },
-];
+const PRESET_KEYS = ["aside", "memory", "scene", "ellipsis", "atmosphere"] as const;
+type PresetKey = typeof PRESET_KEYS[number];
+
+const PRESET_BLOCKS: Record<PresetKey, Omit<CalloutBlock, "_type" | "text">> = {
+  aside:      { icon: "quote",     iconKind: "lucide", title: "",          accent: "#9aa0a6", border: "full",      align: "left" },
+  memory:     { icon: "clock",     iconKind: "lucide", title: "",          accent: "#f59e0b", border: "left",      align: "left" },
+  scene:      { icon: "",          iconKind: "lucide", title: "",          accent: "#9aa0a6", border: "separator", align: "center" },
+  ellipsis:   { icon: "hourglass", iconKind: "lucide", title: "",          accent: "#9aa0a6", border: "separator", align: "center" },
+  atmosphere: { icon: "☀️",         iconKind: "emoji",  title: "",          accent: "#60A5FA", border: "full",      align: "left" },
+};
 
 const DEFAULT_ACCENT = "#9aa0a6";
 
@@ -93,7 +97,7 @@ function renderIcon(
   );
 }
 
-function renderGauges(gauges: Gauge[]) {
+function renderGauges(gauges: Gauge[], gaugeDefault: string) {
   return (
     <>
       {gauges.map((gauge, i) => {
@@ -103,7 +107,7 @@ function renderGauges(gauges: Gauge[]) {
         return (
           <div key={i} className="space-y-0.5">
             <div className="flex items-center justify-between text-xs">
-              <span className="text-muted-foreground">{gauge.name || "Jauge"}</span>
+              <span className="text-muted-foreground">{gauge.name || gaugeDefault}</span>
               <span className="font-mono text-muted-foreground">{gauge.current}/{gauge.max}</span>
             </div>
             <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
@@ -166,6 +170,7 @@ export function CalloutBlockView({
   onDelete?: () => void;
   onUploadIconImage?: (file: File) => Promise<string | null>;
 }) {
+  const t = useTranslations("chatrooms");
   const accent = block.accent;
   const hasAccent = !!accent;
   const border: CalloutBorder = block.border ?? "full";
@@ -218,7 +223,7 @@ export function CalloutBlockView({
         )}
         {hasGauges && (
           <div className={cn("space-y-2", (block.text) && "mt-3")}>
-            {renderGauges(block.gauges!)}
+            {renderGauges(block.gauges!, t("callout.gaugeDefault"))}
           </div>
         )}
       </div>
@@ -271,7 +276,7 @@ export function CalloutBlockView({
         )}
         {hasGauges && (
           <div className={cn("w-full space-y-2", (hasHeader || block.text) && "mt-3")}>
-            {renderGauges(block.gauges!)}
+            {renderGauges(block.gauges!, t("callout.gaugeDefault"))}
           </div>
         )}
       </div>
@@ -281,11 +286,12 @@ export function CalloutBlockView({
 
 /* ─── Dialog (création + édition) ────────────────────────────────────────── */
 
-const BORDER_OPTIONS: { value: CalloutBorder; label: string; Icon: React.ComponentType<{ className?: string }> }[] = [
-  { value: "full",      label: "Complète",   Icon: Square },
-  { value: "left",      label: "Gauche",     Icon: PanelLeft },
-  { value: "separator", label: "Séparateur", Icon: Minus },
-  { value: "none",      label: "Aucune",     Icon: Ban },
+type BorderOption = { value: CalloutBorder; labelKey: string; Icon: React.ComponentType<{ className?: string }> };
+const BORDER_OPTION_DEFS: BorderOption[] = [
+  { value: "full",      labelKey: "callout.borderFull",      Icon: Square },
+  { value: "left",      labelKey: "callout.borderLeft",      Icon: PanelLeft },
+  { value: "separator", labelKey: "callout.borderSeparator", Icon: Minus },
+  { value: "none",      labelKey: "callout.borderTop",       Icon: Ban },
 ];
 
 export function CalloutDialog({
@@ -303,6 +309,17 @@ export function CalloutDialog({
   onOpenChange?: (v: boolean) => void;
   onUploadIconImage?: (file: File) => Promise<string | null>;
 }) {
+  const t = useTranslations("chatrooms");
+
+  const PRESETS: Preset[] = PRESET_KEYS.map((key) => ({
+    key,
+    label: t(`callout.presets.${key}`),
+    block: {
+      ...PRESET_BLOCKS[key],
+      title: t(`callout.presetTitles.${key}`),
+    },
+  }));
+
   const [internalOpen, setInternalOpen] = useState(false);
   const open = controlledOpen ?? internalOpen;
   const setOpen = onOpenChange ?? setInternalOpen;
@@ -404,7 +421,7 @@ export function CalloutDialog({
         <DialogHeader className="px-6 pt-6 pb-3">
           <DialogTitle className="flex items-center gap-2">
             <Square className="h-4 w-4" />
-            Encadré
+            {t("callout.title")}
           </DialogTitle>
         </DialogHeader>
 
@@ -412,7 +429,7 @@ export function CalloutDialog({
           {/* Aperçu live — fixe à gauche */}
           <div className="flex flex-col gap-2 border-b border-border-soft bg-background/40 p-5 sm:border-b-0 sm:border-r">
             <Label className="text-[10px] uppercase tracking-widest text-muted-foreground/70">
-              Aperçu
+              {t("callout.preview")}
             </Label>
             <div className="flex flex-1 items-center">
               <CalloutBlockView block={previewBlock} mine={false} />
@@ -424,7 +441,7 @@ export function CalloutDialog({
           <div className="space-y-4 p-5">
             {/* Presets */}
             <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Modèles</Label>
+              <Label className="text-xs text-muted-foreground">{t("callout.templates")}</Label>
               <div className="flex flex-wrap gap-1.5">
                 {PRESETS.map((p) => (
                   <button
@@ -441,21 +458,21 @@ export function CalloutDialog({
 
             {/* Titre */}
             <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Titre (optionnel)</Label>
+              <Label className="text-xs text-muted-foreground">{t("callout.titleLabel")}</Label>
               <Input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="ex. Souvenir, Aparté, Plus tard…"
+                placeholder={t("callout.titlePlaceholder")}
               />
             </div>
 
             {/* Texte */}
             <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Contenu (optionnel)</Label>
+              <Label className="text-xs text-muted-foreground">{t("callout.contentLabel")}</Label>
               <Textarea
                 value={text}
                 onChange={(e) => setText(e.target.value)}
-                placeholder="Le corps de l'encadré…"
+                placeholder={t("callout.contentPlaceholder")}
                 rows={3}
                 className="resize-none"
                 onKeyDown={(e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) handleSend(); }}
@@ -465,14 +482,14 @@ export function CalloutDialog({
             {/* Icône */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <Label className="text-xs text-muted-foreground">Icône</Label>
+                <Label className="text-xs text-muted-foreground">{t("callout.iconLabel")}</Label>
                 {(icon || hasIconImage) && (
                   <button
                     type="button"
                     onClick={() => { setIcon(""); setIconKind("lucide"); setIconImageUrl(""); }}
                     className="rounded-md px-2 py-0.5 text-xs text-muted-foreground hover:text-foreground"
                   >
-                    Aucune
+                    {t("callout.iconNone")}
                   </button>
                 )}
               </div>
@@ -494,7 +511,7 @@ export function CalloutDialog({
                   type="button"
                   disabled={iconImageUploading || !onUploadIconImage}
                   onClick={() => onUploadIconImage && iconFileInputRef.current?.click()}
-                  title={!onUploadIconImage ? "Disponible dans une chatroom existante" : undefined}
+                  title={!onUploadIconImage ? t("callout.imageDisabled") : undefined}
                   className={cn(
                     "flex h-9 w-full items-center gap-2 rounded-md border border-input bg-transparent px-3 text-sm shadow-xs transition-colors",
                     onUploadIconImage && !iconImageUploading ? "hover:bg-muted" : "cursor-not-allowed opacity-40",
@@ -509,7 +526,7 @@ export function CalloutDialog({
                     <ImagePlus className="h-4 w-4 shrink-0 text-muted-foreground" />
                   )}
                   <span className={cn("flex-1 truncate text-left text-sm", !hasIconImage && "text-muted-foreground")}>
-                    {hasIconImage ? "Changer" : "Image"}
+                    {hasIconImage ? t("callout.imageChange") : t("callout.imageLabel")}
                   </span>
                 </button>
                 <input
@@ -532,14 +549,14 @@ export function CalloutDialog({
 
             {/* Couleur d'accent */}
             <div className="flex items-center gap-1.5">
-              <Label className="text-xs text-muted-foreground shrink-0">{"Accent"}</Label>
+              <Label className="text-xs text-muted-foreground shrink-0">{t("callout.accentLabel")}</Label>
 
               {/* Bouton palette → picker dans un Popover */}
               <Popover>
                 <PopoverTrigger asChild>
                   <button
                     type="button"
-                    title="Choisir une couleur"
+                    title={t("callout.accentChoose")}
                     className="flex items-center gap-1 shrink-0 rounded-md border border-border/60 px-1.5 py-0.5 hover:border-foreground/40 transition-colors"
                   >
                     <Palette className="h-3.5 w-3.5 text-muted-foreground" />
@@ -584,14 +601,14 @@ export function CalloutDialog({
                     : "border-border text-muted-foreground hover:text-foreground",
                 )}
               >
-                Aucune
+                {t("callout.accentNone")}
               </button>
             </div>
 
             {/* Bordure */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <Label className="text-xs text-muted-foreground">Bordure</Label>
+                <Label className="text-xs text-muted-foreground">{t("callout.borderLabel")}</Label>
                 {border !== "separator" && (
                   <button
                     type="button"
@@ -603,12 +620,12 @@ export function CalloutDialog({
                         : "border-border text-muted-foreground hover:text-foreground",
                     )}
                   >
-                    Arrondi
+                    {t("callout.borderRound")}
                   </button>
                 )}
               </div>
               <div className="grid grid-cols-4 gap-2">
-                {BORDER_OPTIONS.map(({ value, label, Icon }) => (
+                {BORDER_OPTION_DEFS.map(({ value, labelKey, Icon }) => (
                   <button
                     key={value}
                     type="button"
@@ -621,7 +638,7 @@ export function CalloutDialog({
                     )}
                   >
                     <Icon className="h-4 w-4" />
-                    {label}
+                    {t(labelKey)}
                   </button>
                 ))}
               </div>
@@ -629,12 +646,12 @@ export function CalloutDialog({
 
             {/* Alignement */}
             <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground">Alignement</Label>
+                <Label className="text-xs text-muted-foreground">{t("callout.alignLabel")}</Label>
                 <div className="grid grid-cols-2 gap-2">
                   {([
-                    { value: "left" as const, label: "Gauche", Icon: AlignLeft },
-                    { value: "center" as const, label: "Centré", Icon: AlignCenter },
-                  ]).map(({ value, label, Icon }) => (
+                    { value: "left" as const, labelKey: "callout.alignLeft", Icon: AlignLeft },
+                    { value: "center" as const, labelKey: "callout.alignCenter", Icon: AlignCenter },
+                  ]).map(({ value, labelKey, Icon }) => (
                     <button
                       key={value}
                       type="button"
@@ -647,7 +664,7 @@ export function CalloutDialog({
                       )}
                     >
                       <Icon className="h-3.5 w-3.5" />
-                      {label}
+                      {t(labelKey)}
                     </button>
                   ))}
                 </div>
@@ -656,14 +673,14 @@ export function CalloutDialog({
             {/* Jauges */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <Label className="text-xs text-muted-foreground">Jauges</Label>
+                <Label className="text-xs text-muted-foreground">{t("callout.gaugesLabel")}</Label>
                 <button
                   type="button"
                   onClick={addGauge}
                   className="flex items-center gap-0.5 rounded-md border border-border px-2 py-0.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <Plus className="h-3 w-3" />
-                  Ajouter
+                  {t("callout.gaugesAdd")}
                 </button>
               </div>
               {gauges.length > 0 && (
@@ -673,7 +690,7 @@ export function CalloutDialog({
                       <Input
                         value={gauge.name}
                         onChange={(e) => updateGauge(i, { name: e.target.value })}
-                        placeholder="Nom…"
+                        placeholder={t("callout.gaugePlaceholder")}
                         className="h-7 text-xs flex-1 min-w-0"
                       />
                       <input
@@ -733,9 +750,9 @@ export function CalloutDialog({
         </div>
 
         <DialogFooter className="border-t border-border-soft px-6 py-4">
-          <Button variant="outline" onClick={() => setOpen(false)}>Annuler</Button>
+          <Button variant="outline" onClick={() => setOpen(false)}>{t("callout.cancel")}</Button>
           <Button onClick={handleSend} disabled={!isValid}>
-            {initialBlock ? "Enregistrer" : "Insérer"}
+            {initialBlock ? t("callout.save") : t("callout.insert")}
           </Button>
         </DialogFooter>
       </DialogContent>

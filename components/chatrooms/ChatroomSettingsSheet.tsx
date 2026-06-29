@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -74,6 +75,7 @@ type Props = {
 };
 
 export default function ChatroomSettingsSheet({ canEdit, chatroom, worldTimelineConfig, worldId }: Props) {
+  const t = useTranslations("chatrooms");
   const router = useRouter();
   const supabase = React.useMemo(() => createClient(), []);
 
@@ -130,8 +132,8 @@ export default function ChatroomSettingsSheet({ canEdit, chatroom, worldTimeline
 
   async function uploadToChatrooms(file: File, kind: "icon" | "banner") {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("Non connecté.");
-    if (file.size > 5 * 1024 * 1024) throw new Error("Fichier trop volumineux (max 5 Mo).");
+    if (!user) throw new Error(t("settingsErrorNotConnected"));
+    if (file.size > 5 * 1024 * 1024) throw new Error(t("settingsErrorTooLarge"));
 
     const converted = await toWebP(file);
     const path = `chatroom-${chatroom.id}/${kind}.webp`;
@@ -272,7 +274,7 @@ export default function ChatroomSettingsSheet({ canEdit, chatroom, worldTimeline
 
       <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-lg">
         <SheetHeader className="border-b border-border-soft px-6 py-4">
-          <SheetTitle>Paramètres de la salle</SheetTitle>
+          <SheetTitle>{t("settingsTitle")}</SheetTitle>
         </SheetHeader>
 
         <Form {...form}>
@@ -331,10 +333,10 @@ export default function ChatroomSettingsSheet({ canEdit, chatroom, worldTimeline
                 name="title"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Nom de la salle</FormLabel>
+                    <FormLabel>{t("settingsName")}</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="Nom de la salle…"
+                        placeholder={t("settingsNamePlaceholder")}
                         {...field}
                         onBlur={(e) => {
                           field.onBlur();
@@ -353,7 +355,7 @@ export default function ChatroomSettingsSheet({ canEdit, chatroom, worldTimeline
                 <div className="space-y-3">
                   <div className="flex items-center justify-between gap-4">
                     <div>
-                      <p className="text-sm font-medium">Situer dans la chronologie</p>
+                      <p className="text-sm font-medium">{t("settingsTimeline")}</p>
                       <p className="text-xs text-muted-foreground leading-snug">
                         Associe cette conversation à une date fictive.
                       </p>
@@ -396,7 +398,7 @@ export default function ChatroomSettingsSheet({ canEdit, chatroom, worldTimeline
                       {/* Mois */}
                       {worldTimelineConfig.month_names.length > 0 && (
                         <div className="flex items-center gap-3">
-                          <label className="w-20 shrink-0 text-xs text-muted-foreground">Mois</label>
+                          <label className="w-20 shrink-0 text-xs text-muted-foreground">{t("settingsMonth")}</label>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button type="button" variant="outline" size="sm" className="h-8 min-w-28 justify-between text-sm" disabled={savingTimeline}>
@@ -408,7 +410,7 @@ export default function ChatroomSettingsSheet({ canEdit, chatroom, worldTimeline
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="start">
                               <DropdownMenuItem onClick={() => void persistTimeline({ ...timelineDate, month: null, day: null })}>
-                                <span className="text-muted-foreground">Aucun mois</span>
+                                <span className="text-muted-foreground">{t("settingsNoMonth")}</span>
                               </DropdownMenuItem>
                               {worldTimelineConfig.month_names.map((name, idx) => (
                                 <DropdownMenuItem key={idx} onClick={() => void persistTimeline({ ...timelineDate, month: idx })}>
@@ -423,7 +425,7 @@ export default function ChatroomSettingsSheet({ canEdit, chatroom, worldTimeline
                       {/* Jour */}
                       {timelineDate.month !== null && (
                         <div className="flex items-center gap-3">
-                          <label className="w-20 shrink-0 text-xs text-muted-foreground">Jour</label>
+                          <label className="w-20 shrink-0 text-xs text-muted-foreground">{t("settingsDay")}</label>
                           <Input
                             type="number"
                             min={1}
@@ -450,7 +452,7 @@ export default function ChatroomSettingsSheet({ canEdit, chatroom, worldTimeline
                 <div className="space-y-3">
                   <div className="flex items-center justify-between gap-4">
                     <div>
-                      <p className="text-sm font-medium">Lieu</p>
+                      <p className="text-sm font-medium">{t("settingsLocation")}</p>
                       <p className="text-xs text-muted-foreground leading-snug">
                         Associe cette conversation à un lieu de la carte.
                       </p>
@@ -493,7 +495,7 @@ export default function ChatroomSettingsSheet({ canEdit, chatroom, worldTimeline
                 name="banner_url"
                 render={() => (
                   <FormItem>
-                    <FormLabel>Bannière</FormLabel>
+                    <FormLabel>{t("settingsBanner")}</FormLabel>
                     <input
                       ref={bannerInputRef}
                       type="file"
@@ -529,7 +531,7 @@ export default function ChatroomSettingsSheet({ canEdit, chatroom, worldTimeline
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img src={bannerUrl} alt="Bannière" className="absolute inset-0 h-full w-full object-cover" />
                               <div className="absolute inset-0 grid place-items-center bg-black/50 opacity-0 transition-opacity hover:opacity-100">
-                                <span className="text-xs font-medium text-white">Cliquer ou déposer pour remplacer</span>
+                                <span className="text-xs font-medium text-white">{t("settingsBannerHint")}</span>
                               </div>
                             </>
                           ) : (
@@ -542,7 +544,7 @@ export default function ChatroomSettingsSheet({ canEdit, chatroom, worldTimeline
                               </span>
                               <p className="text-xs font-medium">
                                 Glisser-déposer ou{" "}
-                                <span className="text-blue-400">parcourir</span>
+                                <span className="text-blue-400">{t("settingsBrowse")}</span>
                               </p>
                               <p className="text-[11px] text-muted-foreground">Taille max 5 Mo</p>
                             </div>

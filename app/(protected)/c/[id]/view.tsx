@@ -1,33 +1,36 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { decryptMessage, generateRoomKey } from "@/lib/crypto";
 import Link from "next/link";
-import { Globe, GlobeLock, Network, Library } from "lucide-react";
+import { Globe, GlobeLock, Star } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { toggleFollowChatroom } from "@/app/(protected)/w/actions";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 import ChatroomSettingsSheet from "@/components/chatrooms/ChatroomSettingsSheet";
 import ChatroomStatsSheet from "@/components/chatrooms/ChatroomStatsSheet";
-import { WorldMembersSheet } from "@/components/worlds/WorldMembersSheet";
 import { ScrollAreaWithJumpToBottom } from "@/components/ScrollAreaWithJumpToBottom";
 import { ChatroomComposer } from "@/components/chatrooms/ChatroomComposer";
 import ChatroomMessage from "@/components/chatrooms/ChatroomMessage";
 import { PersonaProfileSheet } from "@/components/chatrooms/PersonaProfileSheet";
 import { ChatroomsNavDropdown } from "@/components/chatrooms/ChatroomsNavDropdown";
 import { WorldMembershipGuard } from "@/components/worlds/WorldMembershipGuard";
-import { RelationsCanvas } from "@/components/worlds/RelationsCanvas";
-import { WorldCatalogue } from "@/components/worlds/WorldCatalogue";
 import { type ChatroomNavItem } from "@/components/worlds/WorldChatroomsAside";
 
 import {
   TABLE,
+  RPC,
   DELAY,
   SCROLL_THRESHOLD_PX,
   CHAT_MESSAGES_PAGE_SIZE,
   LOAD_OLDER_THRESHOLD_PX,
 } from "@/lib/constants";
-import type { ChatMessageWithPersona, Persona, ReactionSummary } from "@/types/db";
+import type { ChatMessageWithPersona, Persona, ReactionSummary, ChallengeBadge, ActiveDailyChallenge } from "@/types/db";
+import { validateChallenge } from "@/lib/validateChallenge";
 import { useRealtimeChatSync } from "@/hooks/useRealtimeChatSync";
 import { usePresenceChannel } from "@/hooks/usePresenceChannel";
 import { useNotifications } from "@/components/providers/NotificationsProvider";
@@ -43,16 +46,19 @@ function ChatroomHeader({
   chat,
   chatId,
   rooms,
+  rightSlot,
 }: {
   chat: { title: string; worlds: { id: string; name: string; isShared: boolean; owner_id: string | null; restrict_inventory: boolean; restrict_skills: boolean; timeline_config: import("@/types/worlds").WorldTimelineConfig | null } | null } | null;
   chatId: string;
   rooms: ChatroomNavItem[];
+  rightSlot?: React.ReactNode;
 }) {
+  const t = useTranslations("chatrooms");
   const world = chat?.worlds ?? null;
 
   return (
     <header className="draggable no-draggable-children sticky top-0 p-2 touch:p-2.5 flex items-center justify-between z-20 h-header-height bg-background pointer-events-none select-none [view-transition-name:var(--vt-page-header)] *:pointer-events-auto motion-safe:transition max-md:hidden [box-shadow:var(--sharp-edge-top-shadow-placeholder)] border-b border-border-soft">
-      <div className="flex flex-1 items-center justify-between">
+      <div className="flex flex-1 items-center justify-between gap-2">
         {chat && (
           <>
             {/* Breadcrumbs : retour au monde / conversations */}
@@ -60,7 +66,7 @@ function ChatroomHeader({
               {world && (
                 <Link
                   href={`/w/${world.id}`}
-                  title={`Revenir à ${world.name}`}
+                  title={t("backTo", { name: world.name })}
                   className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
                 >
                   {world.isShared
@@ -79,6 +85,11 @@ function ChatroomHeader({
             </div>
 
           </>
+        )}
+        {rightSlot && (
+          <div className="flex shrink-0 items-center gap-1 pr-1">
+            {rightSlot}
+          </div>
         )}
       </div>
     </header>
@@ -108,6 +119,7 @@ export default function ChatRoomView({
   canWorldAdmin,
   initialChatrooms,
   chatroomKey: initialChatroomKey,
+  initialIsFollowed,
 }: {
   chatId: string;
   initialChat: {
@@ -127,10 +139,21 @@ export default function ChatRoomView({
   canWorldAdmin: boolean;
   initialChatrooms: ChatroomNavItem[];
   chatroomKey: string | null;
+  initialIsFollowed: boolean;
 }) {
   const supabase = useMemo(() => createClient(), []);
+  const router = useRouter();
   const { setActiveChat } = useNotifications();
-  const { post_message } = useFeatureFlags();
+  const { post_message, quests } = useFeatureFlags();
+
+  const [isFollowed, setIsFollowed] = useState(initialIsFollowed);
+
+  async function handleToggleFollow() {
+    const next = !isFollowed;
+    setIsFollowed(next);
+    await toggleFollowChatroom(chatId, next);
+    router.refresh();
+  }
 
   // Clé de chiffrement AES-256-GCM pour ce chatroom
   const [roomKey, setRoomKey] = useState<string | null>(initialChatroomKey);
@@ -138,15 +161,15 @@ export default function ChatRoomView({
 
   const [chat, setChat] = useState(initialChat);
   const [messages, setMessages] = useState(initialMessages);
+  const [challengeBadges, setChallengeBadges] = useState<Map<number, ChallengeBadge>>(new Map());
+  const [activeChallenges, setActiveChallenges] = useState<ActiveDailyChallenge[]>([]);
+  const wonChallengeIdsRef = useRef(new Set<string>());
 
   const [selectedPersona, setSelectedPersona] = useState<Persona | null>(
     initialPersona,
   );
   const [openPersona, setOpenPersona] = useState<Persona | null>(null);
   const [editMessageId, setEditMessageId] = useState<number | null>(null);
-  const [showCanvas, setShowCanvas] = useState(false);
-  const [showCatalogue, setShowCatalogue] = useState(false);
-
   const [userId, setUserId] = useState<string | null>(selfId);
 
   // Couleur de groupe par persona_id (monde du chatroom)
@@ -169,6 +192,122 @@ export default function ChatRoomView({
       setPersonaGroupColors(map);
     })();
   }, [chat.worlds?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* challenge badges — charge + met à jour en Realtime */
+  const loadChallengeBadges = useCallback(async (ids: number[]) => {
+    if (!ids.length) return;
+    type Row = { message_id: number; challenge: { title: string; description: string | null } | null };
+    const { data } = await supabase
+      .from(TABLE.CHALLENGE_ATTEMPTS)
+      .select("message_id, challenge:challenge_id(title, description)")
+      .in("message_id", ids)
+      .eq("status", "won");
+    if (!data) return;
+    setChallengeBadges((prev) => {
+      const next = new Map(prev);
+      for (const row of data as Row[]) {
+        if (row.challenge) next.set(Number(row.message_id), row.challenge);
+      }
+      return next;
+    });
+  }, [supabase]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    void loadChallengeBadges(initialMessages.map((m) => m.id));
+
+    const sub = supabase
+      .channel(`challenge-badges-${chatId}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: TABLE.CHALLENGE_ATTEMPTS, filter: `chat_id=eq.${chatId}` },
+        (payload) => {
+          const row = payload.new as { message_id: number; challenge_id: string; status: string };
+          if (row.status !== "won") return;
+          void (async () => {
+            const { data } = await supabase
+              .from(TABLE.CHALLENGES)
+              .select("title, description")
+              .eq("id", row.challenge_id)
+              .single();
+            if (data) setChallengeBadges((prev) => new Map(prev).set(Number(row.message_id), data));
+          })();
+        },
+      )
+      .subscribe();
+
+    return () => { void supabase.removeChannel(sub); };
+  }, [chatId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* défis actifs du jour — chargés une fois à l'ouverture du chatroom */
+  useEffect(() => {
+    if (!quests || !userId) return;
+    const today = new Date().toISOString().split("T")[0];
+    void (async () => {
+      const { data: rows } = await supabase
+        .from(TABLE.CHALLENGES)
+        .select("id, title, description, validation, reward_coins, reward_xp, min_word_count, source, active_date")
+        .eq("active_date", today)
+        .eq("user_id", userId)
+        .is("world_id", null);
+      if (!rows?.length) return;
+
+      const ids = rows.map((c) => c.id as string);
+      const { data: won } = await supabase
+        .from(TABLE.CHALLENGE_ATTEMPTS)
+        .select("challenge_id")
+        .in("challenge_id", ids)
+        .eq("status", "won");
+
+      const wonIds = new Set((won ?? []).map((a) => a.challenge_id as string));
+      wonChallengeIdsRef.current = wonIds;
+
+      setActiveChallenges(
+        rows.map((c) => ({
+          id: c.id as string,
+          title: c.title as string,
+          description: c.description as string | null,
+          validation: c.validation as ActiveDailyChallenge["validation"],
+          reward_coins: c.reward_coins as number,
+          reward_xp: c.reward_xp as number,
+          min_word_count: c.min_word_count as number,
+          active_date: c.active_date as string,
+          source: c.source as ActiveDailyChallenge["source"],
+          already_won: wonIds.has(c.id as string),
+        })),
+      );
+    })();
+  }, [quests, userId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleMessageSent = useCallback(
+    async (messageId: number, chatId: string, plainText: string) => {
+      const pending = activeChallenges.filter((c) => !wonChallengeIdsRef.current.has(c.id));
+      if (!pending.length) return;
+      for (const challenge of pending) {
+        if (validateChallenge(plainText, challenge.validation, challenge.min_word_count)) {
+          type ClaimResult = { ok: boolean; coins?: number; xp?: number; error?: string };
+          const { data } = await supabase.rpc(RPC.CLAIM_CHALLENGE_ATTEMPT, {
+            p_challenge_id: challenge.id,
+            p_message_id: messageId,
+            p_chat_id: chatId,
+          });
+          const result = data as ClaimResult | null;
+          if (result?.ok) {
+            wonChallengeIdsRef.current = new Set([...wonChallengeIdsRef.current, challenge.id]);
+            setActiveChallenges((prev) =>
+              prev.map((c) => (c.id === challenge.id ? { ...c, already_won: true } : c)),
+            );
+            setChallengeBadges((prev) =>
+              new Map(prev).set(messageId, { title: challenge.title, description: challenge.description ?? null }),
+            );
+            toast.success(`Défi relevé ! +${result.coins ?? 0} coins`, {
+              description: challenge.title,
+            });
+          }
+        }
+      }
+    },
+    [activeChallenges, supabase], // eslint-disable-line react-hooks/exhaustive-deps
+  );
 
   /* pagination : historique chargé à la demande en remontant */
   const [hasMore, setHasMore] = useState(initialHasMore);
@@ -415,6 +554,7 @@ export default function ChatRoomView({
       setMessages((prev) => {
         const existing = new Set(prev.map((m) => m.id));
         const fresh = pageWithReactions.filter((m) => !existing.has(m.id));
+        if (fresh.length) void loadChallengeBadges(fresh.map((m) => m.id));
         return fresh.length ? [...fresh, ...prev] : prev;
       });
     } finally {
@@ -607,35 +747,50 @@ export default function ChatRoomView({
   });
 
   return (
-    <div className="composer-parent flex flex-row focus-visible:outline-0 h-full gap-3">
+    <div className="composer-parent flex flex-row focus-visible:outline-0 h-full min-w-0 flex-1 gap-3">
       <WorldMembershipGuard
         worldId={chat?.worlds?.id ?? null}
         selfId={userId ?? selfId}
       />
       <div className="flex flex-col focus-visible:outline-0 flex-1 h-full min-w-0 rounded-2xl border border-border-soft bg-background overflow-hidden">
-        {showCanvas && chat?.worlds?.id ? (
-          <RelationsCanvas
-            worldId={chat.worlds.id}
-            userId={userId ?? ""}
-            canAdmin={canWorldAdmin}
-            onClose={() => setShowCanvas(false)}
-          />
-        ) : showCatalogue && chat?.worlds?.id ? (
-          <WorldCatalogue
-            worldId={chat.worlds.id}
-            canEdit={canWorldAdmin}
-            inventoryEnabled={true}
-            inventoryRestricted={chat.worlds.restrict_inventory}
-            skillsEnabled={true}
-            skillsRestricted={chat.worlds.restrict_skills}
-            onClose={() => setShowCatalogue(false)}
-          />
-        ) : (
-          <>
             <ChatroomHeader
               chat={chat}
               chatId={chatId}
               rooms={initialChatrooms}
+              rightSlot={
+                <>
+                  {selfId && (
+                    <button
+                      onClick={() => void handleToggleFollow()}
+                      title={isFollowed ? "Ne plus suivre" : "Suivre cette chatroom"}
+                      className={cn(
+                        "flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-muted",
+                        isFollowed ? "text-yellow-500" : "text-muted-foreground",
+                      )}
+                    >
+                      <Star
+                        size={15}
+                        className={isFollowed ? "fill-current" : ""}
+                      />
+                    </button>
+                  )}
+                  <ChatroomSettingsSheet
+                    canEdit={canEdit}
+                    chatroom={{
+                      id: chat.id,
+                      title: chat.title,
+                      banner_url: chat.banner_url ?? null,
+                      icon_url: chat.icon_url ?? null,
+                      messages_count: messages.length,
+                      timeline_date: chat.timeline_date ?? null,
+                      map_pin_id: chat.map_pin_id ?? null,
+                    }}
+                    worldTimelineConfig={chat.worlds?.timeline_config ?? null}
+                    worldId={chat.worlds?.id ?? null}
+                  />
+                  <ChatroomStatsSheet chatId={chatId} />
+                </>
+              }
             />
             <section className="relative basis-auto flex-col -mb-(--composer-overlap-px) [--composer-overlap-px:64px] [--jump-btn-bottom:calc(var(--composer-overlap-px)+24px)] grow flex overflow-hidden">
               <div className="relative h-full">
@@ -665,6 +820,7 @@ export default function ChatRoomView({
                           pinId={pinByMessageId(m.id)?.id ?? null}
                           onPin={userId ? (id) => pin(id, userId) : undefined}
                           onUnpin={unpin}
+                          challengeWon={challengeBadges.get(m.id) ?? null}
                           onReactionsUpdated={(mid, reactions) => {
                             setMessages((prev) =>
                               prev.map((m) =>
@@ -713,6 +869,7 @@ export default function ChatRoomView({
                       onAnchorSent={(messageId, label) => {
                         if (userId) void pinAnchor(messageId, label, userId);
                       }}
+                      onMessageSent={quests ? (mid, cid, text) => void handleMessageSent(mid, cid, text) : undefined}
                     />}
                   </div>
                 </div>
@@ -724,63 +881,8 @@ export default function ChatRoomView({
               onClose={() => setOpenPersona(null)}
               onUsePersona={(p) => setSelectedPersona(p)}
             />
-          </>
-        )}
       </div>
 
-      {/* Rail d'icônes droit — hors de la carte */}
-      {chat && (
-        <div className="flex shrink-0 flex-col items-center gap-2 pt-3">
-          <ChatroomSettingsSheet
-            canEdit={canEdit}
-            chatroom={{
-              id: chat.id,
-              title: chat.title,
-              banner_url: chat.banner_url ?? null,
-              icon_url: chat.icon_url ?? null,
-              messages_count: messages.length,
-              timeline_date: chat.timeline_date ?? null,
-              map_pin_id: chat.map_pin_id ?? null,
-            }}
-            worldTimelineConfig={chat.worlds?.timeline_config ?? null}
-            worldId={chat.worlds?.id ?? null}
-          />
-          <ChatroomStatsSheet chatId={chatId} />
-          {chat.worlds?.id && (
-            <WorldMembersSheet
-              worldId={chat.worlds.id}
-              ownerId={chat.worlds.owner_id ?? ""}
-              canManage={canWorldAdmin}
-            />
-          )}
-          {chat.worlds?.id && (
-            <>
-              <button
-                type="button"
-                aria-label="Toile des relations"
-                onClick={() => { setShowCatalogue(false); setShowCanvas((v) => !v); }}
-                className={cn(
-                  "flex h-9 w-9 items-center justify-center rounded-full border border-border-soft bg-background text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground",
-                  showCanvas && "bg-secondary text-foreground border-border",
-                )}
-              >
-                <Network className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                aria-label="Catalogue"
-                onClick={() => { setShowCanvas(false); setShowCatalogue((v) => !v); }}
-                className={cn(
-                  "flex h-9 w-9 items-center justify-center rounded-full border border-border-soft bg-background text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground",
-                  showCatalogue && "bg-secondary text-foreground border-border",
-                )}
-              >
-                <Library className="h-4 w-4" />
-              </button>
-            </>
-          )}
-        </div>
-      )}
     </div>
   );
 }

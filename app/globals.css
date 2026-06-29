@@ -70,11 +70,11 @@
     --muted: oklch(0.26 0 0);
     --muted-foreground: oklch(0.65 0 0);
     /* ~#9a9a9a : texte secondaire */
-    --accent: oklch(0.26 0 0);
+    --accent: #f94b5f;
     --accent-foreground: oklch(0.93 0 0);
     --destructive: oklch(0.637 0.237 25.331);
     /* #ef4444 */
-    --border: oklch(1 0 0 / 8%);
+    --border: #232327;
     --input: oklch(1 0 0 / 12%);
     --ring: oklch(0.55 0 0);
     --chart-1: oklch(0.723 0.219 149.579);
@@ -99,13 +99,22 @@
     /* Surfaces élevées custom (composer, hovers d'icônes) */
     --hover-400: #2e2e2e;
     --card-400: #242424;
+
+    --mist-50: #E5E5EF;
+    --mist-100: #CCCCD5;
+    --mist-200: #8E8E98;
+    --mist-300: #575761;
+
+    --carbon-700: #232327;
+    --carbon-800: #1B1B1D;
 }
 
 @theme {
     /* Tokens custom */
     --color-body: #151517;
-    --color-background: oklch(0.141 0.005 285.823);
-    --color-foreground: oklch(0.985 0 0);
+    --color-background: var(--background);
+    --color-foreground: #E5E5EF;
+    --color-hoverCard: #232327;
     --color-card: oklch(0.21 0.006 285.885);
     --color-card-foreground: oklch(0.985 0 0);
     --color-popover: oklch(0.21 0.006 285.885);
@@ -116,10 +125,10 @@
     --color-secondary-foreground: oklch(0.985 0 0);
     --color-muted: oklch(0.274 0.006 286.033);
     --color-muted-foreground: oklch(0.705 0.015 286.067);
-    --color-accent: oklch(0.274 0.006 286.033);
+    --color-accent: var(--accent);
     --color-accent-foreground: oklch(0.985 0 0);
     --color-destructive: oklch(0.704 0.191 22.216);
-    --color-border: oklch(1 0 0 / 10%);
+    --color-border: var(--border);
     --color-input: oklch(1 0 0 / 15%);
     --color-ring: oklch(0.552 0.016 285.938);
     --color-chart-1: oklch(0.488 0.243 264.376);
@@ -135,6 +144,39 @@
     --color-sidebar-accent-foreground: oklch(0.985 0 0);
     --color-sidebar-border: oklch(1 0 0 / 10%);
     --color-sidebar-ring: oklch(0.552 0.016 285.938);
+
+    --color-mist-50: var(--mist-50);
+    --color-mist-100: var(--mist-100);
+    --color-mist-200: var(--mist-200);
+
+    --color-carbon-700: var(--carbon-700);
+    --color-carbon-800: var(--carbon-800);
+
+    /* Tokens utilisés par le shell (sidebar, panneaux) — alignés sur le canvas */
+    --color-token-bg-elevated-secondary: var(--sidebar);
+    --color-border-soft: var(--border);
+    --color-hover-400: var(--hover-400);
+    --color-card-400: var(--card-400);
+
+    /* ── Palette marque ────────────────────────────── */
+    --color-brand-green: #8AE06C;
+    --color-brand-purple: #A77DFF;
+    --color-brand-red: #F56868;
+    --color-brand-yellow: #F1DF38;
+
+    /* ── Chaîne de teintes (compléments RPG) ───────── */
+    --color-chain-pink: #FF6B9D;
+    --color-chain-orange: #FF8C42;
+    --color-chain-gold: #FFDD57;
+    --color-chain-mint: #70F4B6;
+    --color-chain-cyan: #22D3EE;
+    --color-chain-blue: #60A5FA;
+    --color-chain-violet: #C084FC;
+    --color-chain-amber: #FBBF24;
+    --color-chain-indigo: #818CF8;
+    --color-chain-rose: #FB7185;
+    --color-chain-teal: #2DD4BF;
+    --color-chain-lime: #A3E635;
 }
 
 @layer base {
@@ -282,66 +324,6 @@
                 var(--color-background),
                 transparent 100%);
     }
-}
-
-@theme inline {
-    --color-background: var(--background);
-    --color-foreground: var(--foreground);
-    --color-card: var(--card);
-    --color-card-foreground: var(--card-foreground);
-    --color-popover: var(--popover);
-    --color-popover-foreground: var(--popover-foreground);
-    --color-primary: var(--primary);
-    --color-primary-foreground: var(--primary-foreground);
-    --color-secondary: var(--secondary);
-    --color-secondary-foreground: var(--secondary-foreground);
-    --color-muted: var(--muted);
-    --color-muted-foreground: var(--muted-foreground);
-    --color-accent: #f94b5f;
-    --color-accent-foreground: var(--accent-foreground);
-    --color-destructive: var(--destructive);
-    --color-border: var(--border);
-    --color-input: var(--input);
-    --color-ring: var(--ring);
-    --color-chart-1: var(--chart-1);
-    --color-chart-2: var(--chart-2);
-    --color-chart-3: var(--chart-3);
-    --color-chart-4: var(--chart-4);
-    --color-chart-5: var(--chart-5);
-    --color-sidebar: var(--sidebar);
-    --color-sidebar-foreground: var(--sidebar-foreground);
-    --color-sidebar-primary: var(--sidebar-primary);
-    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-    --color-sidebar-accent: var(--sidebar-accent);
-    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-    --color-sidebar-border: var(--sidebar-border);
-    --color-sidebar-ring: var(--sidebar-ring);
-
-    /* Tokens utilisés par le shell (sidebar, panneaux) — alignés sur le canvas */
-    --color-token-bg-elevated-secondary: var(--sidebar);
-    --color-border-soft: var(--border);
-    --color-hover-400: var(--hover-400);
-    --color-card-400: var(--card-400);
-
-    /* ── Palette marque ────────────────────────────── */
-    --color-brand-green: #8AE06C;
-    --color-brand-purple: #A77DFF;
-    --color-brand-red: #F56868;
-    --color-brand-yellow: #F1DF38;
-
-    /* ── Chaîne de teintes (compléments RPG) ───────── */
-    --color-chain-pink: #FF6B9D;
-    --color-chain-orange: #FF8C42;
-    --color-chain-gold: #FFDD57;
-    --color-chain-mint: #70F4B6;
-    --color-chain-cyan: #22D3EE;
-    --color-chain-blue: #60A5FA;
-    --color-chain-violet: #C084FC;
-    --color-chain-amber: #FBBF24;
-    --color-chain-indigo: #818CF8;
-    --color-chain-rose: #FB7185;
-    --color-chain-teal: #2DD4BF;
-    --color-chain-lime: #A3E635;
 }
 
 @layer base {

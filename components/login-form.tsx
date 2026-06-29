@@ -7,8 +7,10 @@ import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 
 export function LoginForm() {
+    const t = useTranslations("auth");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState<string | null>(null);
@@ -55,28 +57,26 @@ export function LoginForm() {
         <>
             <h2 className="text-xl font-semibold md:text-2xl">Connexion</h2>
             <p className="text-muted-foreground">
-                Nouveau ?{" "}
                 <Link href="/auth/sign-up" className="underline">
-                    Inscrivez-vous ici
+                    {t("newUser")}
                 </Link>
-                .
             </p>
             <div className="my-4">
                 <form onSubmit={handleLogin}>
                     <div className="mb-6 flex gap-3 flex-col">
-                        <Label htmlFor="email">Email</Label>
+                        <Label htmlFor="email">{t("email")}</Label>
                         <Input
                             id="email"
                             name="email"
                             type="email"
-                            placeholder="m@example.com"
+                            placeholder={t("emailPlaceholder")}
                             required
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                         />
                     </div>
                     <div className="mb-6 flex gap-3 flex-col relative">
-                        <Label htmlFor="password">Password</Label>
+                        <Label htmlFor="password">{t("password")}</Label>
                         <Input
                             id="password"
                             name="password"
@@ -91,7 +91,7 @@ export function LoginForm() {
                             href="/auth/forgot-password"
                             className="ml-auto inline-block text-sm underline-offset-4 hover:underline"
                         >
-                            Mot de passe oublié ?
+                            {t("forgotPassword")}
                         </Link>
                     </div>
                     {error && (
@@ -103,7 +103,7 @@ export function LoginForm() {
                         variant="default"
                         disabled={isLoading}
                     >
-                        {isLoading ? "Connexion en cours..." : "Connexion"}
+                        {t("signin")}
                     </Button>
                 </form>
             </div>

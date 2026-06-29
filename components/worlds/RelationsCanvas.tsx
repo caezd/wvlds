@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { Link2, Network, Plus, Settings, Trash2, X } from "lucide-react";
@@ -31,16 +32,19 @@ type CGroup = { id: string; name: string; color: string; sort_index: number };
 type CRelation = { id: string; from_persona_id: string; to_persona_id: string; type: string; label: string | null; description: string | null };
 type BlockPos = { x: number; y: number };
 
-const DASH_OPTIONS = [
-  { label: "Continu", value: "" },
-  { label: "Tirets", value: "5 3" },
-  { label: "Pointillés", value: "2 3" },
-  { label: "Long", value: "8 4" },
-  { label: "Mixte", value: "8 3 2 3" },
-];
+type DashOption = { label: string; value: string };
+function getDashOptions(t: ReturnType<typeof useTranslations<"relations">>): DashOption[] {
+  return [
+    { label: t("dash.solid"), value: "" },
+    { label: t("dash.dashed"), value: "5 3" },
+    { label: t("dash.dotted"), value: "2 3" },
+    { label: t("dash.long"), value: "8 4" },
+    { label: t("dash.mixed"), value: "8 3 2 3" },
+  ];
+}
 
 const REL_W = 1.5;
-const FALLBACK: CRelType = { id: "__fallback__", name: "Inconnu", color: "#94a3b8", dash: "3 4", sort_index: 999 };
+const FALLBACK_BASE = { id: "__fallback__", color: "#94a3b8", dash: "3 4", sort_index: 999 };
 
 // SVG marker id — uuid peut contenir des tirets, on les retire
 function mid(id: string) { return `arr-${id.replaceAll("-", "")}`; }
@@ -135,6 +139,7 @@ function RelationRow({
   onUpdateDesc: (id: string, desc: string) => void;
   onHoverChange?: (id: string | null) => void;
 }) {
+  const t = useTranslations("relations");
   const [editing, setEditing] = React.useState(false);
   const [draft, setDraft] = React.useState(rel.description ?? "");
 
@@ -183,7 +188,7 @@ function RelationRow({
             !rel.description && "italic opacity-50",
           )}
         >
-          {rel.description || (canEdit ? "Ajouter une description…" : "")}
+          {rel.description || (canEdit ? t("addDescription") : "")}
         </div>
       )}
     </div>
@@ -239,6 +244,9 @@ function CanvasSettingsDialog({
   onGroupsChange: (gs: CGroup[]) => void;
   onRelTypesChange: (ts: CRelType[]) => void;
 }) {
+  const t = useTranslations("relations");
+  const tCommon = useTranslations("common");
+  const dashOptions = getDashOptions(t);
   const supabase = React.useMemo(() => createClient(), []);
 
   // Groups form
@@ -347,24 +355,24 @@ function CanvasSettingsDialog({
       <DialogTrigger asChild>
         <Button size="sm" variant="outline" className="h-7 gap-1.5 text-xs">
           <Settings className="h-3 w-3" />
-          Paramètres
+          {tCommon("settings")}
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Paramètres de la toile</DialogTitle>
+          <DialogTitle>{t("settingsTitle")}</DialogTitle>
         </DialogHeader>
         <Tabs defaultValue="groups">
           <TabsList className="w-full">
-            <TabsTrigger value="groups" className="flex-1">Groupes</TabsTrigger>
-            <TabsTrigger value="reltypes" className="flex-1">Types de relation</TabsTrigger>
+            <TabsTrigger value="groups" className="flex-1">{t("groups")}</TabsTrigger>
+            <TabsTrigger value="reltypes" className="flex-1">{t("relTypes")}</TabsTrigger>
           </TabsList>
 
           {/* ── Groupes ── */}
           <TabsContent value="groups" className="mt-4 space-y-3">
             <div className="space-y-1.5">
               {groups.length === 0 && (
-                <p className="text-center text-[12px] text-muted-foreground py-4">Aucun groupe défini</p>
+                <p className="text-center text-[12px] text-muted-foreground py-4">{t("noGroupsDefined")}</p>
               )}
               {groups.map((g) =>
                 editGId === g.id ? (
@@ -380,7 +388,7 @@ function CanvasSettingsDialog({
                   <div key={g.id} className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2">
                     <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: g.color }} />
                     <span className="flex-1 text-[13px] font-medium">{g.name}</span>
-                    <button onClick={() => startEditG(g)} className="text-[11px] text-muted-foreground hover:text-foreground">Éditer</button>
+                    <button onClick={() => startEditG(g)} className="text-[11px] text-muted-foreground hover:text-foreground">{tCommon("edit")}</button>
                     <button onClick={() => void deleteGroup(g.id)} className="text-muted-foreground hover:text-destructive">
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
@@ -392,7 +400,7 @@ function CanvasSettingsDialog({
               <ColorPickerButton color={gColor} onChange={setGColor} />
               <Input value={gName} onChange={(e) => setGName(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") void addGroup(); }}
-                placeholder="Nom du groupe…" className="h-8 flex-1 text-sm" />
+                placeholder={t("groupNamePlaceholder")} className="h-8 flex-1 text-sm" />
               <Button size="icon" className="h-8 w-8 shrink-0" onClick={() => void addGroup()}>
                 <Plus className="h-3.5 w-3.5" />
               </Button>
@@ -403,18 +411,18 @@ function CanvasSettingsDialog({
           <TabsContent value="reltypes" className="mt-4 space-y-3">
             <div className="space-y-1.5">
               {relTypes.length === 0 && (
-                <p className="text-center text-[12px] text-muted-foreground py-4">Aucun type défini</p>
+                <p className="text-center text-[12px] text-muted-foreground py-4">{t("noTypesDefined")}</p>
               )}
-              {relTypes.map((t) =>
-                editRtId === t.id ? (
-                  <div key={t.id} className="flex items-center gap-2 rounded-lg border border-primary/30 bg-card px-3 py-2">
+              {relTypes.map((rt) =>
+                editRtId === rt.id ? (
+                  <div key={rt.id} className="flex items-center gap-2 rounded-lg border border-primary/30 bg-card px-3 py-2">
                     <ColorPickerButton color={editRtColor} onChange={setEditRtColor} />
                     <Input value={editRtName} onChange={(e) => setEditRtName(e.target.value)}
                       onKeyDown={(e) => { if (e.key === "Enter") void saveEditRt(); }}
                       className="h-7 flex-1 text-[12px]" />
                     <select value={editRtDash} onChange={(e) => setEditRtDash(e.target.value)}
                       className="h-7 rounded-md border border-border bg-background px-2 text-[11px] outline-none focus:ring-1 focus:ring-ring">
-                      {DASH_OPTIONS.map((o) => (
+                      {dashOptions.map((o) => (
                         <option key={o.value} value={o.value}>{o.label}</option>
                       ))}
                     </select>
@@ -422,13 +430,13 @@ function CanvasSettingsDialog({
                     <button onClick={() => setEditRtId(null)} className="text-muted-foreground hover:text-foreground"><X className="h-3 w-3" /></button>
                   </div>
                 ) : (
-                  <div key={t.id} className="flex items-center gap-2.5 rounded-lg border border-border bg-card px-3 py-2">
+                  <div key={rt.id} className="flex items-center gap-2.5 rounded-lg border border-border bg-card px-3 py-2">
                     <svg width="24" height="8" className="shrink-0">
-                      <line x1="0" y1="4" x2="24" y2="4" stroke={t.color} strokeWidth={REL_W} strokeDasharray={t.dash || undefined} />
+                      <line x1="0" y1="4" x2="24" y2="4" stroke={rt.color} strokeWidth={REL_W} strokeDasharray={rt.dash || undefined} />
                     </svg>
-                    <span className="flex-1 text-[13px] font-medium">{t.name}</span>
-                    <button onClick={() => startEditRt(t)} className="text-[11px] text-muted-foreground hover:text-foreground">Éditer</button>
-                    <button onClick={() => void deleteRelType(t.id)} className="text-muted-foreground hover:text-destructive">
+                    <span className="flex-1 text-[13px] font-medium">{rt.name}</span>
+                    <button onClick={() => startEditRt(rt)} className="text-[11px] text-muted-foreground hover:text-foreground">{tCommon("edit")}</button>
+                    <button onClick={() => void deleteRelType(rt.id)} className="text-muted-foreground hover:text-destructive">
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
                   </div>
@@ -439,10 +447,10 @@ function CanvasSettingsDialog({
               <ColorPickerButton color={rtColor} onChange={setRtColor} />
               <Input value={rtName} onChange={(e) => setRtName(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") void addRelType(); }}
-                placeholder="Nom du type…" className="h-8 flex-1 text-sm" />
+                placeholder={t("typeNamePlaceholder")} className="h-8 flex-1 text-sm" />
               <select value={rtDash} onChange={(e) => setRtDash(e.target.value)}
                 className="h-8 rounded-md border border-border bg-background px-2 text-[11px] outline-none focus:ring-1 focus:ring-ring">
-                {DASH_OPTIONS.map((o) => (
+                {dashOptions.map((o) => (
                   <option key={o.value} value={o.value}>{o.label}</option>
                 ))}
               </select>
@@ -467,6 +475,9 @@ export type RelationsCanvasProps = {
 };
 
 export function RelationsCanvas({ worldId, userId, canAdmin, onClose }: RelationsCanvasProps) {
+  const t = useTranslations("relations");
+  const tCommon = useTranslations("common");
+  const fallback: CRelType = React.useMemo(() => ({ ...FALLBACK_BASE, name: t("unknown") }), [t]);
   const supabase = React.useMemo(() => createClient(), []);
 
   const [loading, setLoading] = React.useState(false);
@@ -546,8 +557,8 @@ export function RelationsCanvas({ worldId, userId, canAdmin, onClose }: Relation
       let loadedTypes = (rtRows ?? []) as CRelType[];
       if (loadedTypes.length === 0 && canAdmin) {
         const defaults = [
-          { world_id: worldId, name: "Allié", color: "#22c55e", dash: "", sort_index: 0 },
-          { world_id: worldId, name: "Ennemi", color: "#ef4444", dash: "", sort_index: 1 },
+          { world_id: worldId, name: t("defaultAlly"), color: "#22c55e", dash: "", sort_index: 0 },
+          { world_id: worldId, name: t("defaultEnemy"), color: "#ef4444", dash: "", sort_index: 1 },
         ];
         const { data: seeded } = await supabase
           .from("world_relation_types")
@@ -697,7 +708,7 @@ export function RelationsCanvas({ worldId, userId, canAdmin, onClose }: Relation
     const { error } = await supabase
       .from("user_canvas_positions")
       .upsert({ user_id: uid, world_id: worldId, x, y }, { onConflict: "user_id,world_id" });
-    if (error) toast.error(`Erreur de sauvegarde de position : ${error.message}`);
+    if (error) toast.error(t("savePositionError"), { description: error.message });
   }
 
   // ── Drag blocks ───────────────────────────────────────────────────────────
@@ -820,7 +831,7 @@ export function RelationsCanvas({ worldId, userId, canAdmin, onClose }: Relation
       if (error) toast.error(error.message);
       else {
         setRelations((p) => p.map((r) => r.id === existing.id ? { ...r, type: typeId } : r));
-        toast.success(`Type changé en « ${typeName} ».`);
+        toast.success(t("typeChanged", { name: typeName }));
       }
     } else {
       const { data, error } = await supabase
@@ -836,7 +847,7 @@ export function RelationsCanvas({ worldId, userId, canAdmin, onClose }: Relation
         .select("id, from_persona_id, to_persona_id, type, label, description")
         .single();
       if (error) toast.error(error.message);
-      else { setRelations((p) => [...p, data as CRelation]); toast.success(`Relation « ${typeName} » créée.`); }
+      else { setRelations((p) => [...p, data as CRelation]); toast.success(t("relCreated", { name: typeName })); }
     }
     cancelConnect();
   }
@@ -910,7 +921,7 @@ export function RelationsCanvas({ worldId, userId, canAdmin, onClose }: Relation
       {/* ── Toolbar ── */}
       <div className="flex shrink-0 items-center gap-3 border-b border-border-soft px-4 py-3">
         <Network className="h-4 w-4 shrink-0 text-muted-foreground" />
-        <span className="text-sm font-semibold">Toile des relations</span>
+        <span className="text-sm font-semibold">{t("title")}</span>
 
         <button
           type="button"
@@ -923,12 +934,12 @@ export function RelationsCanvas({ worldId, userId, canAdmin, onClose }: Relation
           )}
         >
           <Link2 className="h-3 w-3" />
-          {connectMode ? "Mode lien actif" : "Créer un lien"}
+          {connectMode ? t("linkModeActive") : t("createLink")}
         </button>
 
         {connecting && connectMode && (
           <span className="flex items-center gap-1.5 rounded-full bg-indigo-500/10 px-3 py-1 text-xs font-medium text-indigo-600 dark:text-indigo-400">
-            Cliquez une autre carte pour créer un lien
+            {t("clickAnotherCard")}
             <button onClick={cancelConnect}><X className="h-3 w-3" /></button>
           </span>
         )}
@@ -943,7 +954,7 @@ export function RelationsCanvas({ worldId, userId, canAdmin, onClose }: Relation
               onRelTypesChange={setRelTypes}
             />
           )}
-          <Button size="icon" variant="ghost" onClick={onClose} aria-label="Fermer">
+          <Button size="icon" variant="ghost" onClick={onClose} aria-label={tCommon("close")}>
             <X className="h-5 w-5" />
           </Button>
         </div>
@@ -986,7 +997,7 @@ export function RelationsCanvas({ worldId, userId, canAdmin, onClose }: Relation
                       : "text-muted-foreground hover:text-foreground",
                   )}
                 >
-                  {tab === "out" ? "Vers →" : "← De"}
+                  {tab === "out" ? t("tabOut") : t("tabIn")}
                 </button>
               ))}
             </div>
@@ -1009,7 +1020,7 @@ export function RelationsCanvas({ worldId, userId, canAdmin, onClose }: Relation
                 const items = asideTab === "out" ? outItems : inItems;
 
                 if (items.length === 0) return (
-                  <p className="py-8 text-center text-[12px] text-muted-foreground">Aucune relation</p>
+                  <p className="py-8 text-center text-[12px] text-muted-foreground">{t("noRelations")}</p>
                 );
 
                 // Grouper par type, dans l'ordre de relTypes
@@ -1028,7 +1039,7 @@ export function RelationsCanvas({ worldId, userId, canAdmin, onClose }: Relation
                 return (
                   <>
                     {sortedTypes.map((tid) => {
-                      const meta = relTypeMap.get(tid) ?? FALLBACK;
+                      const meta = relTypeMap.get(tid) ?? fallback;
                       return (
                         <section key={tid} className="space-y-2">
                           <h3 className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest" style={{ color: meta.color }}>
@@ -1075,7 +1086,7 @@ export function RelationsCanvas({ worldId, userId, canAdmin, onClose }: Relation
           </svg>
 
           {loading ? (
-            <div className="flex h-full items-center justify-center text-sm text-muted-foreground">Chargement…</div>
+            <div className="flex h-full items-center justify-center text-sm text-muted-foreground">{tCommon("loading")}</div>
           ) : (
             <div ref={canvasRef} className="absolute origin-top-left" style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`, width: maxW, height: maxH }}>
 
@@ -1216,7 +1227,7 @@ export function RelationsCanvas({ worldId, userId, canAdmin, onClose }: Relation
                     const a = personaCenters.get(rel.from_persona_id);
                     const b = personaCenters.get(rel.to_persona_id);
                     if (!a || !b) return null;
-                    const meta = relTypeMap.get(rel.type) ?? FALLBACK;
+                    const meta = relTypeMap.get(rel.type) ?? fallback;
                     const d = bezierD(a.x, a.y, b.x, b.y);
                     const mp = bezierMidPt(a.x, a.y, b.x, b.y);
                     const hov = hovRelId === rel.id;
@@ -1252,7 +1263,7 @@ export function RelationsCanvas({ worldId, userId, canAdmin, onClose }: Relation
                     const a = personaCenters.get(rel.from_persona_id);
                     const b = personaCenters.get(rel.to_persona_id);
                     if (!a || !b) return null;
-                    const meta = relTypeMap.get(rel.type) ?? FALLBACK;
+                    const meta = relTypeMap.get(rel.type) ?? fallback;
                     const d = bezierD(a.x, a.y, b.x, b.y);
                     const mp = bezierMidPt(a.x, a.y, b.x, b.y);
                     const hov = hovRelId === rel.id;
@@ -1289,8 +1300,8 @@ export function RelationsCanvas({ worldId, userId, canAdmin, onClose }: Relation
                     const a = personaCenters.get(relAB.from_persona_id);
                     const b = personaCenters.get(relAB.to_persona_id);
                     if (!a || !b) return null;
-                    const metaAB = relTypeMap.get(relAB.type) ?? FALLBACK;
-                    const metaBA = relTypeMap.get(relBA.type) ?? FALLBACK;
+                    const metaAB = relTypeMap.get(relAB.type) ?? fallback;
+                    const metaBA = relTypeMap.get(relBA.type) ?? fallback;
                     const { dMidToA, dMidToB, mid: mp } = splitBezierHalves(a.x, a.y, b.x, b.y);
                     const fullD = bezierD(a.x, a.y, b.x, b.y);
                     const hovAB = hovRelId === relAB.id;
@@ -1345,10 +1356,10 @@ export function RelationsCanvas({ worldId, userId, canAdmin, onClose }: Relation
                   style={{ left: connectTarget.cx + 8, top: connectTarget.cy - 90 }}
                   onPointerDown={(e) => e.stopPropagation()}
                 >
-                  <p className="px-0.5 text-[10px] font-semibold text-muted-foreground">Type de relation</p>
+                  <p className="px-0.5 text-[10px] font-semibold text-muted-foreground">{t("relTypeLabel")}</p>
                   {relTypes.length === 0 ? (
                     <p className="text-[11px] text-muted-foreground px-1">
-                      Aucun type défini. Ouvre les paramètres pour en créer.
+                      {t("noTypesHint")}
                     </p>
                   ) : (
                     <div className="grid grid-cols-3 gap-1">
@@ -1368,13 +1379,13 @@ export function RelationsCanvas({ worldId, userId, canAdmin, onClose }: Relation
                   <textarea
                     value={pendingDesc}
                     onChange={(e) => setPendingDesc(e.target.value)}
-                    placeholder="Description (optionnelle, markdown)…"
+                    placeholder={t("descPlaceholder")}
                     rows={2}
                     className="resize-none rounded-lg border border-border bg-muted/40 px-2 py-1.5 text-[11px] outline-none focus:ring-1 focus:ring-ring"
                   />
                   <button onClick={cancelConnect}
                     className="rounded-lg px-2 py-1 text-center text-[10px] text-muted-foreground hover:bg-muted">
-                    Annuler
+                    {tCommon("cancel")}
                   </button>
                 </div>
               )}
@@ -1384,10 +1395,13 @@ export function RelationsCanvas({ worldId, userId, canAdmin, onClose }: Relation
           {/* Group picker — outside transform, positioned in outer viewport coords */}
           {openGroupPicker && (
             <>
-              <div className="absolute inset-0" style={{ zIndex: 40 }} onClick={() => setOpenGroupPicker(null)} />
+              <div className="absolute inset-0" style={{ zIndex: 40 }}
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={() => setOpenGroupPicker(null)} />
               <div
                 className="absolute flex min-w-[128px] flex-col gap-0.5 rounded-xl border border-border bg-background p-1.5 shadow-xl"
                 style={{ left: openGroupPicker.x, top: openGroupPicker.y, zIndex: 50 }}
+                onPointerDown={(e) => e.stopPropagation()}
               >
                 {groups.map((g) => (
                   <button key={g.id}
@@ -1399,7 +1413,7 @@ export function RelationsCanvas({ worldId, userId, canAdmin, onClose }: Relation
                 ))}
                 <button onClick={() => void assignGroup(openGroupPicker.personaId, null)}
                   className="rounded-lg px-2 py-1 text-[10px] text-left text-muted-foreground hover:bg-muted">
-                  Aucun groupe
+                  {t("noGroup")}
                 </button>
               </div>
             </>
@@ -1424,7 +1438,7 @@ export function RelationsCanvas({ worldId, userId, canAdmin, onClose }: Relation
               onClick={() => { setScale(1); setPan({ x: 0, y: 0 }); }}
               onPointerDown={(e) => e.stopPropagation()}
               className="flex h-7 w-7 items-center justify-center rounded-lg border border-border bg-background text-xs shadow hover:bg-muted text-muted-foreground"
-              title="Réinitialiser la vue"
+              title={t("resetView")}
             >↺</button>
           </div>
         </div>
@@ -1441,7 +1455,7 @@ export function RelationsCanvas({ worldId, userId, canAdmin, onClose }: Relation
           </span>
         ))}
         <span className="ml-auto text-[11px] text-muted-foreground/60">
-          {connectMode ? "Cliquez une carte → cliquez une autre pour créer un lien" : "Cliquez une carte pour voir ses relations"}
+          {connectMode ? t("footerHintConnect") : t("footerHintView")}
         </span>
       </div>
     </div>

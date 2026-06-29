@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import {
   Sheet,
@@ -95,13 +96,14 @@ function StatGrid({ wordCount, avg, lastAt }: {
   avg: number;
   lastAt: string | null;
 }) {
+  const t = useTranslations("chatrooms");
   return (
     <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-foreground">
-      <div>Mots <span className="font-medium text-foreground">{wordCount}</span></div>
-      <div>Moy. <span className="font-medium text-foreground">{Number(avg ?? 0).toFixed(1)} mots/msg</span></div>
+      <div>{t("statsWords")} <span className="font-medium text-foreground">{wordCount}</span></div>
+      <div>{t("statsAvg")} <span className="font-medium text-foreground">{Number(avg ?? 0).toFixed(1)} {t("statsWordsPerMsg")}</span></div>
       {lastAt && (
         <div className="col-span-2">
-          Dernier message <span className="font-medium text-foreground">{formatDaysAgo(new Date(lastAt))}</span>
+          {t("statsLastMessage")} <span className="font-medium text-foreground">{formatDaysAgo(new Date(lastAt))}</span>
         </div>
       )}
     </div>
@@ -109,9 +111,10 @@ function StatGrid({ wordCount, avg, lastAt }: {
 }
 
 function MsgBadge({ count }: { count: number }) {
+  const t = useTranslations("chatrooms");
   return (
     <span className="shrink-0 rounded-full bg-card-400 px-2 py-0.5 text-[11px] font-medium tabular-nums text-muted-foreground">
-      {count} msg
+      {t("statsCount", { count })}
     </span>
   );
 }
@@ -123,6 +126,7 @@ export default function ChatroomStatsSheet({
   chatId: string;
   initialStats?: ChatroomStatsPayload | null;
 }) {
+  const t = useTranslations("chatrooms");
   const supabase = createClient();
   const [open, setOpen] = useState(false);
   const [_loading, setLoading] = useState(false);
@@ -177,19 +181,19 @@ export default function ChatroomStatsSheet({
           <button
             type="button"
             onClick={() => setOpen(true)}
-            aria-label="Statistiques"
+            aria-label={t("statsTitle")}
             className="flex h-9 w-9 items-center justify-center rounded-full border border-border-soft bg-background text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
           >
             <BarChart3 className="h-4 w-4" />
           </button>
         </TooltipTrigger>
-        <TooltipContent side="left" sideOffset={8}>Statistiques</TooltipContent>
+        <TooltipContent side="left" sideOffset={8}>{t("statsTitle")}</TooltipContent>
       </Tooltip>
 
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-lg">
           <SheetHeader className="border-b border-border-soft px-6 py-4">
-            <SheetTitle>Statistiques</SheetTitle>
+            <SheetTitle>{t("statsTitle")}</SheetTitle>
           </SheetHeader>
 
           <div className="flex-1 space-y-6 overflow-y-auto p-6">

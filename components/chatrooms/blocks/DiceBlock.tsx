@@ -1,7 +1,11 @@
+"use client";
+
+import { useTranslations } from "next-intl";
 import type { DiceBlock } from "@/lib/chat-blocks";
 import { cn } from "@/lib/utils";
 
 export function DiceBlockView({ block, mine: _mine }: { block: DiceBlock; mine: boolean }) {
+  const t = useTranslations("chatrooms");
   const isCrit = block.results.length === 1 && block.results[0] === parseInt(block.formula.split(/[dD]/)[1], 10);
   const isFumble = block.results.length === 1 && block.results[0] === 1;
 
@@ -11,9 +15,9 @@ export function DiceBlockView({ block, mine: _mine }: { block: DiceBlock; mine: 
 
   return (
     <span className="text-sm text-muted-foreground">
-      a lancé{" "}
+      {t("diceRolled")}{" "}
       <span className="font-mono text-foreground/70">{block.formula}</span>
-      {" "}et obtenu{" "}
+      {" "}{t("diceGot")}{" "}
       <span className={cn(
         "font-semibold text-foreground",
         isCrit && "text-green-500",
@@ -22,8 +26,8 @@ export function DiceBlockView({ block, mine: _mine }: { block: DiceBlock; mine: 
         {block.total}
       </span>
       {detail && <span className="text-xs text-muted-foreground/60">{detail}</span>}
-      {isCrit && <span className="text-green-500"> — Critique !</span>}
-      {isFumble && <span className="text-red-500"> — Fumble…</span>}
+      {isCrit && <span className="text-green-500"> — {t("diceCritical")}</span>}
+      {isFumble && <span className="text-red-500"> — {t("diceFumble")}</span>}
       {block.label && !isCrit && !isFumble && (
         <span> : {block.label}</span>
       )}

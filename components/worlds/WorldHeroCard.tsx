@@ -12,6 +12,7 @@ import { type World } from "@/components/worlds/WorldEditDialog";
 import { supabaseThumb } from "@/lib/storage";
 import { useNotifications } from "@/components/providers/NotificationsProvider";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 
 type HeroWorld = World & { owner_id: string };
 
@@ -38,6 +39,7 @@ export function WorldHeroCard({
   isFavorite?: boolean;
   onToggleFavorite?: () => void;
 }) {
+  const t = useTranslations("worlds");
   const [world, _setWorld] = useState(initialWorld);
   const { markWorldSeen } = useNotifications();
 
@@ -89,14 +91,14 @@ export function WorldHeroCard({
                 <button
                   type="button"
                   onClick={onToggleFavorite}
-                  aria-label={isFavorite ? "Retirer des favoris" : "Ajouter aux favoris"}
+                  aria-label={isFavorite ? t("hero.removeFavorite") : t("hero.addFavorite")}
                   className="flex h-7 w-7 items-center justify-center rounded-full bg-black/40 transition-all hover:bg-black/60"
                 >
                   <Star className={cn("h-3.5 w-3.5 transition-colors", isFavorite ? "fill-yellow-400 text-yellow-400" : "text-white/80")} />
                 </button>
               </TooltipTrigger>
               <TooltipContent side="left" sideOffset={6}>
-                {isFavorite ? "Retirer des favoris" : "Ajouter aux favoris"}
+                {isFavorite ? t("hero.removeFavorite") : t("hero.addFavorite")}
               </TooltipContent>
             </Tooltip>
           )}
@@ -106,14 +108,14 @@ export function WorldHeroCard({
                 <button
                   type="button"
                   onClick={onToggleExpand}
-                  aria-label={isExpanded ? "Réduire" : "Plein écran"}
+                  aria-label={isExpanded ? t("hero.collapse") : t("hero.expand")}
                   className="flex h-7 w-7 items-center justify-center rounded-full bg-black/40 text-white/80 transition-all hover:bg-black/60 hover:text-white"
                 >
                   {isExpanded ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
                 </button>
               </TooltipTrigger>
               <TooltipContent side="left" sideOffset={6}>
-                {isExpanded ? "Réduire" : "Plein écran"}
+                {isExpanded ? t("hero.collapse") : t("hero.expand")}
               </TooltipContent>
             </Tooltip>
           )}

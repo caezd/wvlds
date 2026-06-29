@@ -11,6 +11,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import { ChatroomComposer } from "@/components/chatrooms/ChatroomComposer";
 import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
+import { useTranslations } from "next-intl";
 
 type MapPinOption = { id: string; title: string; color: string };
 
@@ -38,6 +39,7 @@ function TimelineDatePicker({
   value: WorldTimelineDate | null;
   onChange: (d: WorldTimelineDate | null) => void;
 }) {
+  const t = useTranslations("worlds");
   const hasMonths = config.month_names.length > 0;
   const enabled = value !== null;
 
@@ -52,7 +54,7 @@ function TimelineDatePicker({
             : "border-border bg-transparent hover:border-muted-foreground/40 hover:text-foreground"
         }`}
       >
-        {enabled && value ? formatTimelineDate(value, config) : "Situer dans la chronologie"}
+        {enabled && value ? formatTimelineDate(value, config) : t("composer.timelinePlaceholder")}
       </button>
 
       {enabled && value && (
@@ -71,7 +73,7 @@ function TimelineDatePicker({
               className="h-6 rounded-md border border-input bg-background px-1 text-xs"
               onChange={e => onChange({ ...value, month: e.target.value === "" ? null : Number(e.target.value) })}
             >
-              <option value="">Mois —</option>
+              <option value="">{t("composer.monthPlaceholder")}</option>
               {config.month_names.map((m, i) => (
                 <option key={i} value={i}>{m}</option>
               ))}
@@ -90,6 +92,7 @@ export function WorldChatComposer({
   worldId: string;
   timelineConfig?: WorldTimelineConfig | null;
 }) {
+  const t = useTranslations("worlds");
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const { userId } = useCurrentUser();
@@ -111,7 +114,7 @@ export function WorldChatComposer({
 
   async function resolveChat(): Promise<{ chatId: string } | null> {
     if (!userId) {
-      toast.error("Vous devez être connecté.");
+      toast.error(t("composer.errorNotConnected"));
       return null;
     }
     const title = (() => {
@@ -130,7 +133,7 @@ export function WorldChatComposer({
       .single();
 
     if (error || !room) {
-      toast.error(error?.message ?? "Impossible de créer la chatroom.");
+      toast.error(error?.message ?? t("composer.errorCreateFailed"));
       return null;
     }
     return { chatId: room.id };
@@ -140,7 +143,7 @@ export function WorldChatComposer({
     <ChatroomComposer
       presetPersona={persona}
       onPersonaChange={setPersona}
-      placeholder="Nouveau jeu…"
+      placeholder={t("composer.placeholder")}
       onResolveChat={resolveChat}
       onAfterSend={(chatId) => router.push(`/c/${chatId}`)}
       worldTimelineConfig={timelineConfig ?? null}

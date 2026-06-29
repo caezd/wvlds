@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { Plus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ export function CreateWorldButton({
   disabled?: boolean;
   quotaReached?: boolean;
 }) {
+  const t = useTranslations("home");
   const [open, setOpen] = useState(false);
   const [visibility, setVisibility] = useState<Visibility>("private");
   const [pending, startTransition] = useTransition();
@@ -60,18 +62,18 @@ export function CreateWorldButton({
   return (
     <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setVisibility("private"); }}>
       <DialogTrigger asChild>
-        <Button size="sm" disabled={disabled} title={quotaReached ? "Quota atteint — passe à un plan supérieur" : undefined}>
+        <Button size="sm" disabled={disabled} title={quotaReached ? t("quotaTooltip") : undefined}>
           <Plus className="h-4 w-4 mr-1" />
-          {label ?? "Nouveau monde"}
+          {label ?? t("new")}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Nouveau monde</DialogTitle>
+          <DialogTitle>{t("new")}</DialogTitle>
         </DialogHeader>
         {quotaReached ? (
           <div className="rounded-md bg-muted p-3 text-sm">
-            Ton quota gratuit est atteint. Passe à un plan supérieur pour créer plus de mondes.
+            {t("newQuotaMessage")}
           </div>
         ) : (
           <form
@@ -82,20 +84,20 @@ export function CreateWorldButton({
             }}
           >
             <div className="grid gap-1.5">
-              <Label htmlFor="name">Nom du monde</Label>
-              <Input id="name" name="name" placeholder="Ex. Avalonia" required />
+              <Label htmlFor="name">{t("newNameLabel")}</Label>
+              <Input id="name" name="name" placeholder={t("newNamePlaceholder")} required />
             </div>
             <div className="grid gap-1.5">
-              <Label htmlFor="description">Description</Label>
-              <Input id="description" name="description" placeholder="Optionnel" />
+              <Label htmlFor="description">{t("newDescLabel")}</Label>
+              <Input id="description" name="description" placeholder={t("newDescPlaceholder")} />
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-                Annuler
+                {t("newCancel")}
               </Button>
               <Button type="submit" disabled={pending}>
                 {pending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Créer
+                {t("newCreate")}
               </Button>
             </DialogFooter>
           </form>

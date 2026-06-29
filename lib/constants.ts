@@ -18,6 +18,11 @@ export const TABLE = {
   NOTIFICATION_PREFERENCES: "notification_preferences",
   WORLD_INVITATIONS: "world_invitations",
   CHAT_PINS: "chat_pins",
+  DM_CONVERSATIONS: "dm_conversations",
+  DM_MESSAGES: "dm_messages",
+  DM_READS: "dm_reads",
+  CHALLENGES: "challenges",
+  CHALLENGE_ATTEMPTS: "challenge_attempts",
 } as const;
 
 // --- Supabase RPC names -------------------------------------------------------
@@ -27,6 +32,13 @@ export const RPC = {
   AWARD_EVENT: "award_event",
   GET_BALANCE_SUMMARY: "get_balance_summary",
   ACCEPT_WORLD_INVITATION: "accept_world_invitation",
+  FIND_OR_CREATE_DM: "find_or_create_dm",
+  GET_DM_CONVERSATIONS: "get_dm_conversations",
+  COUNT_COMMON_WORLDS: "count_common_worlds",
+  GET_ACTIVE_DAILY_CHALLENGES: "get_active_daily_challenges",
+  CLAIM_CHALLENGE_ATTEMPT: "claim_challenge_attempt",
+  EXPIRE_DAILY_CHALLENGES: "expire_daily_challenges",
+  GET_DAILY_CHALLENGE_JOURNAL: "get_daily_challenge_journal",
 } as const;
 
 // --- Realtime channel name factories -----------------------------------------
@@ -43,6 +55,8 @@ export const channel = {
   navReads: (selfId: string) => `nav-reads-${selfId}`,
   appPresence: () => "presence:app",
   userNotifs: (userId: string) => `notifs:${userId}`,
+  dmMessages: (convId: string) => `dm:${convId}:messages`,
+  dmConversations: (userId: string) => `dm:${userId}:conversations`,
 } as const;
 
 // --- Throttle / debounce delays (ms) -----------------------------------------

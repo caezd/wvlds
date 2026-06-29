@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   DndContext,
   DragOverlay,
@@ -117,6 +118,7 @@ function AddForm({
   onAdd: (data: { name: string; description: string; icon: string | undefined; category_id: string | null }) => Promise<void>;
   onCancel: () => void;
 }) {
+  const t = useTranslations("catalogue");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [icon, setIcon] = useState<string | undefined>(undefined);
@@ -136,7 +138,7 @@ function AddForm({
         value={icon}
         onChange={setIcon}
         trigger={
-          <button type="button" title="Choisir une icône" className="h-10 w-10 shrink-0 flex items-center justify-center rounded-lg border border-border-soft bg-muted/40 hover:bg-muted transition-colors">
+          <button type="button" title={t("chooseIcon")} className="h-10 w-10 shrink-0 flex items-center justify-center rounded-lg border border-border-soft bg-muted/40 hover:bg-muted transition-colors">
             {icon ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={`/rpg_icons/${icon}`} alt="" className="h-6 w-6 object-contain dark:invert" />
@@ -151,14 +153,14 @@ function AddForm({
           autoFocus
           value={name}
           onChange={e => setName(e.target.value)}
-          placeholder={type === "inventory" ? "Nom de l'objet" : "Nom de la compétence"}
+          placeholder={type === "inventory" ? t("itemNamePlaceholder") : t("skillNamePlaceholder")}
           className="w-full bg-transparent text-sm font-medium outline-none placeholder:text-muted-foreground/40"
           maxLength={80}
         />
         <input
           value={description}
           onChange={e => setDescription(e.target.value)}
-          placeholder="Description (optionnel)"
+          placeholder={t("descPlaceholder")}
           className="w-full bg-transparent text-xs text-muted-foreground outline-none placeholder:text-muted-foreground/40"
           maxLength={200}
         />
@@ -170,7 +172,7 @@ function AddForm({
           className="flex h-7 items-center gap-1 rounded-lg bg-primary px-2.5 text-xs font-medium text-primary-foreground disabled:opacity-40 transition-opacity"
         >
           {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
-          Ajouter
+          {t("add")}
         </button>
         <button
           type="button"
@@ -195,6 +197,8 @@ function EditRow({
   onSave: (data: { name: string; description: string | null; icon: string | null }) => Promise<void>;
   onCancel: () => void;
 }) {
+  const t = useTranslations("catalogue");
+  const tCommon = useTranslations("common");
   const [name, setName] = useState(item.name);
   const [description, setDescription] = useState(item.description ?? "");
   const [icon, setIcon] = useState<string | undefined>(item.icon ?? undefined);
@@ -214,7 +218,7 @@ function EditRow({
         value={icon}
         onChange={setIcon}
         trigger={
-          <button type="button" title="Choisir une icône" className="h-10 w-10 shrink-0 flex items-center justify-center rounded-lg border border-border-soft bg-muted/40 hover:bg-muted transition-colors">
+          <button type="button" title={t("chooseIcon")} className="h-10 w-10 shrink-0 flex items-center justify-center rounded-lg border border-border-soft bg-muted/40 hover:bg-muted transition-colors">
             {icon ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={`/rpg_icons/${icon}`} alt="" className="h-6 w-6 object-contain dark:invert" />
@@ -235,7 +239,7 @@ function EditRow({
         <input
           value={description}
           onChange={e => setDescription(e.target.value)}
-          placeholder="Description (optionnel)"
+          placeholder={t("descPlaceholder")}
           className="w-full bg-transparent text-xs text-muted-foreground outline-none placeholder:text-muted-foreground/40"
           maxLength={200}
         />
@@ -247,7 +251,7 @@ function EditRow({
           className="flex h-7 items-center gap-1 rounded-lg bg-primary px-2.5 text-xs font-medium text-primary-foreground disabled:opacity-40 transition-opacity"
         >
           {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
-          Sauver
+          {tCommon("save")}
         </button>
         <button
           type="button"
@@ -409,9 +413,9 @@ function SortableCategoryContainer({
     opacity: isDragging ? 0.35 : 1,
   };
 
+  const t = useTranslations("catalogue");
   const [renameValue, setRenameValue] = useState(category.name);
   const [renameSaving, setRenameSaving] = useState(false);
-  const label = type === "inventory" ? "objet" : "compétence";
   const isRenaming = renamingId === category.id;
 
   return (
@@ -510,13 +514,13 @@ function SortableCategoryContainer({
                 className="flex flex-1 items-center gap-2 rounded-lg px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
               >
                 <Plus className="h-3.5 w-3.5" />
-                Ajouter un {label}
+                {type === "inventory" ? t("addItemBtn") : t("addSkillBtn")}
               </button>
               {items.length > 1 && (
                 <button
                   type="button"
                   onClick={() => onSortAlpha(category.id)}
-                  title="Trier par ordre alphabétique"
+                  title={t("sortAlpha")}
                   className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted/40 hover:text-foreground transition-colors"
                 >
                   <ArrowUpAZ className="h-3.5 w-3.5" />
@@ -559,15 +563,15 @@ function UncategorizedSection({
   onAddItem: (categoryId: string | null, data: { name: string; description: string; icon: string | undefined; category_id: string | null }) => Promise<void>;
   onSortAlpha: (categoryId: string | null) => void;
 }) {
+  const t = useTranslations("catalogue");
   const { setNodeRef, isOver } = useDroppable({ id: UNCAT });
-  const label = type === "inventory" ? "objet" : "compétence";
 
   return (
     <div className="space-y-0.5">
       {showHeader && (
         <div className="px-4 pb-1 pt-3">
           <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground/60">
-            Sans catégorie
+            {t("uncategorized")}
           </span>
         </div>
       )}
@@ -595,7 +599,7 @@ function UncategorizedSection({
 
         {!showHeader && items.length === 0 && !addingHere && !canEdit && (
           <div className="py-10 text-center text-sm text-muted-foreground/60">
-            Aucun {label} dans le catalogue.
+            {type === "inventory" ? t("emptyInventory") : t("emptySkills")}
           </div>
         )}
 
@@ -616,14 +620,16 @@ function UncategorizedSection({
               className="flex flex-1 items-center gap-2 rounded-xl px-3 py-2.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
             >
               <Plus className="h-4 w-4" />
-              Ajouter un {label}
-              {showHeader ? " sans catégorie" : ""}
+              {showHeader
+                ? (type === "inventory" ? t("addItemUncategorized") : t("addSkillUncategorized"))
+                : (type === "inventory" ? t("addItemBtn") : t("addSkillBtn"))
+              }
             </button>
             {items.length > 1 && (
               <button
                 type="button"
                 onClick={() => onSortAlpha(null)}
-                title="Trier par ordre alphabétique"
+                title={t("sortAlpha")}
                 className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted/40 hover:text-foreground transition-colors"
               >
                 <ArrowUpAZ className="h-4 w-4" />
@@ -639,6 +645,7 @@ function UncategorizedSection({
 // ── Add category form ─────────────────────────────────────────────────────────
 
 function AddCategoryForm({ onAdd, onCancel }: { onAdd: (name: string) => Promise<void>; onCancel: () => void }) {
+  const t = useTranslations("catalogue");
   const [name, setName] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -659,7 +666,7 @@ function AddCategoryForm({ onAdd, onCancel }: { onAdd: (name: string) => Promise
         autoFocus
         value={name}
         onChange={e => setName(e.target.value)}
-        placeholder="Nom de la catégorie"
+        placeholder={t("categoryNamePlaceholder")}
         className="flex-1 bg-transparent text-sm font-semibold outline-none placeholder:text-muted-foreground/40"
         maxLength={60}
       />
@@ -729,6 +736,7 @@ function CatalogueList({
   worldId: string;
   canEdit: boolean;
 }) {
+  const t = useTranslations("catalogue");
   const supabase = createClient();
   const [categories, setCategories] = useState<WorldCatalogCategory[]>([]);
   const [items, setItems] = useState<CatalogItem[]>([]);
@@ -1149,7 +1157,7 @@ function CatalogueList({
                         className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
                       >
                         <FolderPlus className="h-3.5 w-3.5" />
-                        Créer une catégorie
+                        {t("createCategory")}
                       </button>
                     )}
                   </div>
@@ -1222,14 +1230,16 @@ export type WorldCatalogueProps = {
 };
 
 export function WorldCatalogue({ worldId, canEdit, inventoryEnabled, inventoryRestricted, skillsEnabled, skillsRestricted, onClose }: WorldCatalogueProps) {
+  const t = useTranslations("catalogue");
+  const tCommon = useTranslations("common");
   const [editMode, setEditMode] = useState(false);
   const defaultTab = inventoryEnabled ? "inventory" : "skills";
 
   const inactiveLines: string[] = [];
-  if (!inventoryEnabled) inactiveLines.push("Objets désactivés dans ce monde");
-  else if (!inventoryRestricted) inactiveLines.push("Objets : saisie libre (catalogue non restreint)");
-  if (!skillsEnabled) inactiveLines.push("Compétences désactivées dans ce monde");
-  else if (!skillsRestricted) inactiveLines.push("Compétences : saisie libre (catalogue non restreint)");
+  if (!inventoryEnabled) inactiveLines.push(t("itemsDisabled"));
+  else if (!inventoryRestricted) inactiveLines.push(t("itemsUnrestricted"));
+  if (!skillsEnabled) inactiveLines.push(t("skillsDisabled"));
+  else if (!skillsRestricted) inactiveLines.push(t("skillsUnrestricted"));
   const inactiveNote = inactiveLines.length > 0 ? inactiveLines.join(" · ") : null;
 
   return (
@@ -1237,7 +1247,7 @@ export function WorldCatalogue({ worldId, canEdit, inventoryEnabled, inventoryRe
       {/* Toolbar */}
       <div className="flex shrink-0 items-center gap-3 border-b border-border-soft px-4 py-3">
         <Library className="h-4 w-4 shrink-0 text-muted-foreground" />
-        <span className="text-sm font-semibold">Catalogue</span>
+        <span className="text-sm font-semibold">{t("title")}</span>
         {canEdit && (
           <button
             type="button"
@@ -1250,11 +1260,11 @@ export function WorldCatalogue({ worldId, canEdit, inventoryEnabled, inventoryRe
             )}
           >
             <Pencil className="h-3 w-3" />
-            {editMode ? "Modification active" : "Modifier"}
+            {editMode ? t("editingActive") : tCommon("edit")}
           </button>
         )}
         <div className="ml-auto">
-          <Button size="icon" variant="ghost" onClick={onClose} aria-label="Fermer">
+          <Button size="icon" variant="ghost" onClick={onClose} aria-label={tCommon("close")}>
             <X className="h-5 w-5" />
           </Button>
         </div>
@@ -1264,8 +1274,8 @@ export function WorldCatalogue({ worldId, canEdit, inventoryEnabled, inventoryRe
       <Tabs defaultValue={defaultTab} className="flex min-h-0 flex-1 flex-col">
         <div className="shrink-0 border-b border-border-soft px-4 pt-3">
           <TabsList className="h-8 rounded-lg p-0.5">
-            <TabsTrigger value="inventory" className="h-7 px-3 text-xs">Objets</TabsTrigger>
-            <TabsTrigger value="skills" className="h-7 px-3 text-xs">Compétences</TabsTrigger>
+            <TabsTrigger value="inventory" className="h-7 px-3 text-xs">{t("items")}</TabsTrigger>
+            <TabsTrigger value="skills" className="h-7 px-3 text-xs">{t("skills")}</TabsTrigger>
           </TabsList>
         </div>
         <div className="flex-1 overflow-y-auto p-4">

@@ -8,6 +8,46 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-06 ──────────────────────────────────────────────────────────────
   {
     date: "2026-06",
+    tag: "i18n",
+    text: "Traduction de l'interface :\n- Support de **3 langues** : Français, English, Español\n- Détection automatique via la langue du navigateur (`Accept-Language`)\n- Préférence sauvegardée dans le profil (synchronisation entre appareils)\n- Sélecteur de langue dans **Paramètres** (`/settings`)\n- Nouveau lien « Paramètres » dans le menu utilisateur\n- Page admin `/admin/translations` : tableau de couverture par namespace, alerte sur les clés manquantes\n- Architecture `next-intl` sans routing — les URLs restent inchangées",
+  },
+  {
+    date: "2026-06",
+    tag: "Social",
+    text: "Catalogue des mondes publics :\n- Nouvelle page `/explore` : grille paginée (16 par page) de tous les mondes dont la visibilité est **publique**\n- **Recherche** par nom et description avec debounce 300 ms\n- Bouton **Rejoindre** directement depuis la carte (role `player` attribué automatiquement) ; bouton **Entrer** si déjà membre\n- Icône Boussole dans le rail de navigation (visible uniquement si le flag `public_worlds` est actif)\n- Les owners peuvent basculer leur monde en public/privé depuis les paramètres du monde (section Visibilité)\n- Activable via le flag admin `public_worlds`",
+  },
+  {
+    date: "2026-06",
+    tag: "Jeu",
+    text: "Défis quotidiens :\n- Chaque joueur reçoit **son propre défi aléatoire** chaque jour — personne n'a le même\n- 7 types de défis : mot imposé, mot interdit, longueur précise (100–350 mots), incipit imposé, question finale, sans adverbe en -ment, motif regex\n- Un badge apparaît sur le message gagnant dans le chatroom, avec tooltip markdown affichant les détails du défi\n- Journal des victoires anonymisé sur la page `/quests` (aucun pseudo ni chatroom révélé)\n- Défis générés au chargement de `/quests` s'ils n'existent pas encore pour la journée\n- Le « Mot du jour » reste une option parmi les 17 défis possibles (même probabilité que les autres)\n- Désactivable via le flag admin `quests`",
+  },
+  {
+    date: "2026-06",
+    tag: "Social",
+    text: "Amélioration de la messagerie privée :\n- **Pagination automatique** : les anciens messages se chargent en faisant défiler vers le haut (30 par batch), sans déplacer la position de lecture\n- **Scroll instantané en bas** à l'ouverture d'une conversation (plus d'animation de défilement)\n- Correction d'un bug de **conversations en doublon** dans le rail (race condition dans `find_or_create_dm`, maintenant atomique via `INSERT … ON CONFLICT DO NOTHING`)",
+  },
+  {
+    date: "2026-06",
+    tag: "Technique",
+    text: "Consolidation UI notifications et messages privés :\n- Tout le code UI des **notifications** (`NotificationPanel`, boutons cloche/sidebar, contexte panel) est désormais dans un seul fichier `components/notifications/index.tsx`\n- Tout le code UI des **messages privés** (panel, rail épinglés, bouton toggle) est dans `components/dms/index.tsx`\n- `NotificationsProvider` gère directement l'état ouvert/fermé du panel (plus de contexte séparé)\n- Exclusivité mutuelle notifs ↔ DMs assurée par `AppShell` via deux `useEffect`",
+  },
+  {
+    date: "2026-06",
+    tag: "Social",
+    text: "Messages privés entre joueurs :\n- **Rail de conversations** : avatars scrollables (drag) en haut du panel, badge non-lus, pastille de présence\n- **Conversation** : bulles de messages, statut en ligne/absent, nombre de mondes en commun affiché sous le pseudo\n- **Nouvelle conversation** : cliquez sur + dans le rail, ou sur l'icône message dans la fiche Membres d'un monde\n- Désactivable via le flag admin `direct_messages`",
+  },
+  {
+    date: "2026-06",
+    tag: "Chatrooms",
+    text: "Sidebar monde — sections chatrooms redessinées :\n- **ACTIF** : les 5 chatrooms les plus récentes dans lesquelles vous avez participé, avec nom de catégorie affiché sous le titre\n- **SUIVIS** : nouvelle fonctionnalité de suivi — cliquez sur l'étoile ★ dans l'entête d'un chatroom pour l'épingler ici\n- **TOUS** : chatrooms groupées par catégorie (Général pour celles sans catégorie)",
+  },
+  {
+    date: "2026-06",
+    tag: "Interface",
+    text: "Refonte du layout global :\n- **Rail permanent 48px** toujours visible a gauche : avatar/menu utilisateur, cloche (notifs), icone Messages prives (placeholder), separateur, icones des mondes avec popover chatrooms au survol, bouton creer un monde\n- **Panneau global** (notifs ou DMs) qui s'ouvre en poussant le contenu principal -- une seule vue a la fois\n- **Sidebar interne aux mondes** : navigation (Membres, Annexes, Persona, Relations, Carte, Chronologie, Catalogue) + liste des chatrooms groupee en ACTIF / TOUS avec badge de non-lus -- visible sur `/w/[id]` et `/c/[id]`\n- **Sidebar accueil** : liste des mondes avec liens rapides (Membres, Wiki, Relations) et chatrooms recentes participees, visible sur la page d'accueil `/home`\n- Les vues plein ecran du monde (Wiki, Carte, Relations, Catalogue, Chronologie, Paramètres, Membres) sont desormais pilotees par le paramètre URL `?view=X` -- la sidebar les ouvre directement via des liens\n- Suppression de l'ancien rail d'icones droit dans les pages monde",
+  },
+  {
+    date: "2026-06",
     tag: "Performance",
     text: "Consolidation des politiques de sécurité (RLS) et nettoyage d'index :\n- **9 groupes de politiques** qui se recoupaient sur le même rôle et la même action ont été fusionnés en une seule politique équivalente (moins d'évaluations par requête, à accès strictement identiques) — touche notamment la lecture des mondes, des chatrooms, des personas et des invitations\n- Suppression de **3 index redondants** (doublons exacts) sur `chatroom_persona_prefs`, `profiles` et `world_content_tabs` — moins de travail d'écriture en base, aucune perte de garantie d'unicité\n- Les chevauchements entre rôles différents ont volontairement été laissés intacts pour ne prendre aucun risque sur les droits d'accès\n- Migration `039_rls_consolidate_policies_and_dup_indexes.sql` (atomique, rollback complet documenté)",
   },

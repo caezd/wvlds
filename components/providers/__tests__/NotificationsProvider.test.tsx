@@ -45,6 +45,22 @@ function Consumer() {
     );
 }
 
+// Consommateur avec accès aux actions pour les tests d'interaction
+function ConsumerWithActions() {
+    const { notifications, markNotifRead, markAllNotifsRead } = useNotifications();
+    return (
+        <>
+            <ul>
+                {notifications.map((n) => (
+                    <li key={n.id} data-testid={`notif-${n.id}`}>{n.id}</li>
+                ))}
+            </ul>
+            <button onClick={() => void markNotifRead("n1")} data-testid="read-n1">lire n1</button>
+            <button onClick={() => void markAllNotifsRead()} data-testid="read-all">tout lire</button>
+        </>
+    );
+}
+
 function setup(initialNotifs: AppNotification[] = [BASE_NOTIF]) {
     const mock = createSupabaseMock({
         user: { id: "u1" },
@@ -68,6 +84,88 @@ function setup(initialNotifs: AppNotification[] = [BASE_NOTIF]) {
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 beforeEach(() => vi.clearAllMocks());
+
+function setupWithActions(initialNotifs: AppNotification[] = [BASE_NOTIF]) {
+    const mock = createSupabaseMock({
+        user: { id: "u1" },
+        results: [
+            { data: [] },
+            { data: initialNotifs },
+            { data: [] },
+        ],
+    });
+    vi.mocked(createClient).mockReturnValue(mock.client as never);
+
+    render(
+        <NotificationsProvider>
+            <ConsumerWithActions />
+        </NotificationsProvider>
+    );
+
+    return mock;
+}
+
+// ── markNotifRead ─────────────────────────────────────────────────────────────
+
+describe("NotificationsProvider — markNotifRead", () => {
+    it("retire la notification du state immédiatement", async () => {
+        setupWithActions();
+
+        await waitFor(() => expect(screen.getByTestId("notif-n1")).toBeInTheDocument());
+
+        await act(async () => {
+            screen.getByTestId("read-n1").click();
+        });
+
+        await waitFor(() => expect(screen.queryByTestId("notif-n1")).not.toBeInTheDocument());
+    });
+
+    it("appelle le DB update avec read_at et archived_at", async () => {
+        const mock = setupWithActions();
+
+        await waitFor(() => expect(screen.getByTestId("notif-n1")).toBeInTheDocument());
+
+        await act(async () => {
+            screen.getByTestId("read-n1").click();
+        });
+
+        await waitFor(() => expect(screen.queryByTestId("notif-n1")).not.toBeInTheDocument());
+
+        const notifBuilders = mock.buildersFor("notifications");
+        const updateBuilder = notifBuilders.find(b => b.update.mock.calls.length > 0);
+        expect(updateBuilder?.update).toHaveBeenCalledWith(
+            expect.objectContaining({ archived_at: expect.any(String), read_at: expect.any(String) })
+        );
+    });
+});
+
+// ── markAllNotifsRead ─────────────────────────────────────────────────────────
+
+describe("NotificationsProvider — markAllNotifsRead", () => {
+    it("vide la liste de notifications", async () => {
+        const notifs = [
+            BASE_NOTIF,
+            { ...BASE_NOTIF, id: "n2", actor_name: "bob" },
+        ];
+        setupWithActions(notifs);
+
+        await waitFor(() => {
+            expect(screen.getByTestId("notif-n1")).toBeInTheDocument();
+            expect(screen.getByTestId("notif-n2")).toBeInTheDocument();
+        });
+
+        await act(async () => {
+            screen.getByTestId("read-all").click();
+        });
+
+        await waitFor(() => {
+            expect(screen.queryByTestId("notif-n1")).not.toBeInTheDocument();
+            expect(screen.queryByTestId("notif-n2")).not.toBeInTheDocument();
+        });
+    });
+});
+
+// ── Realtime UPDATE ───────────────────────────────────────────────────────────
 
 describe("NotificationsProvider — realtime UPDATE", () => {
     it("ignore un UPDATE avec archived_at → ne réinsère pas la notification", async () => {

@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 
 import { WorldHome } from "@/components/worlds/WorldHome";
 import { WorldMembershipGuard } from "@/components/worlds/WorldMembershipGuard";
+import WorldSidebar from "@/components/worlds/WorldSidebar";
 import type { AsidePersona } from "@/components/personas/WorldPersonaAsideClient";
 import type {
   PersonaSection,
@@ -14,8 +15,10 @@ import type {
 
 export default async function WorldPage({
   params,
+  searchParams,
 }: {
   params: { id: string };
+  searchParams?: { view?: string };
 }) {
   const { id } = await params;
   const supabase = await createClient();
@@ -90,7 +93,6 @@ export default async function WorldPage({
         return !!data;
       })(),
       (async (): Promise<{
-        aside_width: number;
         main_expanded: boolean;
         is_favorite: boolean;
         wiki_sidebar_width: number;
@@ -98,14 +100,11 @@ export default async function WorldPage({
         if (!userId) return null;
         const { data } = await supabase
           .from("world_user_preferences")
-          .select(
-            "aside_width, main_expanded, is_favorite, wiki_sidebar_width",
-          )
+          .select("main_expanded, is_favorite, wiki_sidebar_width")
           .eq("world_id", id)
           .eq("user_id", userId)
           .maybeSingle();
         return data as {
-          aside_width: number;
           main_expanded: boolean;
           is_favorite: boolean;
           wiki_sidebar_width: number;
@@ -174,13 +173,13 @@ export default async function WorldPage({
       })(),
     ]);
 
+  const view = (await searchParams)?.view;
+
   return (
     <main className="composer-parent flex h-full flex-col focus-visible:outline-0">
-      <WorldMembershipGuard
-        worldId={world.id}
-        selfId={userId ?? null}
-      />
-      <div className="flex min-h-0 w-full flex-1 flex-row gap-3">
+      <WorldMembershipGuard worldId={world.id} selfId={userId ?? null} />
+      <div className="flex min-h-0 w-full flex-1 flex-row">
+        <WorldSidebar worldId={id} />
         <WorldHome
           world={world}
           worldId={id}
@@ -192,6 +191,7 @@ export default async function WorldPage({
           initialRooms={initialRooms}
           initialPersonas={initialPersonas}
           initialPrefs={worldPrefs}
+          view={view}
         />
       </div>
     </main>

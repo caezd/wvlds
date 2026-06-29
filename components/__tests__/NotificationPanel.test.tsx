@@ -12,14 +12,10 @@ const mockLoadMoreNotifs = vi.fn().mockResolvedValue(undefined);
 const mockMarkNotifRead = vi.fn().mockResolvedValue(undefined);
 const mockMarkAllNotifsRead = vi.fn().mockResolvedValue(undefined);
 const mockSetNotifPref = vi.fn().mockResolvedValue(undefined);
-const mockClose = vi.fn();
+const mockClosePanel = vi.fn();
 
 vi.mock("@/components/providers/NotificationsProvider", () => ({
     useNotifications: vi.fn(),
-}));
-
-vi.mock("@/components/notifications/notif-panel-context", () => ({
-    useNotifPanel: () => ({ open: true, toggle: vi.fn(), close: mockClose }),
 }));
 
 vi.mock("@/lib/supabase/client", () => ({ createClient: vi.fn() }));
@@ -30,7 +26,7 @@ vi.mock("@/components/worlds/WorldPreviewDialog", () => ({
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
-import { NotificationInlinePanelContent } from "@/components/notifications/NotificationPanel";
+import { NotificationInlinePanelContent } from "@/components/notifications";
 import { useNotifications } from "@/components/providers/NotificationsProvider";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -77,6 +73,10 @@ function mockNotifications(overrides: Partial<ReturnType<typeof useNotifications
         setActiveChat: vi.fn(),
         markWorldSeen: vi.fn().mockResolvedValue(undefined),
         refreshAll: vi.fn().mockResolvedValue(undefined),
+        panelOpen: false,
+        openPanel: vi.fn(),
+        closePanel: mockClosePanel,
+        togglePanel: vi.fn(),
         ...overrides,
     });
 }
@@ -84,7 +84,6 @@ function mockNotifications(overrides: Partial<ReturnType<typeof useNotifications
 beforeEach(() => {
     vi.clearAllMocks();
     mockNotifications();
-    // Mock Supabase avec le builder chaînable complet (inclut .in(), .maybeSingle(), etc.)
     vi.mocked(createClient).mockReturnValue(createSupabaseMock().client as never);
 });
 
@@ -92,13 +91,13 @@ beforeEach(() => {
 
 describe("NotificationInlinePanelContent — état vide", () => {
     it("affiche l'icône cloche et 'Aucune notification' quand la liste est vide", () => {
-        render(<NotificationInlinePanelContent onClose={vi.fn()} />);
+        render(<NotificationInlinePanelContent />);
         expect(screen.getByText(/aucune notification/i)).toBeInTheDocument();
     });
 
     it("n'affiche pas le bouton 'tout lire' quand aucune notification non lue", () => {
         mockNotifications({ unreadNotifCount: 0 });
-        render(<NotificationInlinePanelContent onClose={vi.fn()} />);
+        render(<NotificationInlinePanelContent />);
         expect(screen.queryByTitle(/tout marquer comme lu/i)).not.toBeInTheDocument();
     });
 
@@ -107,7 +106,7 @@ describe("NotificationInlinePanelContent — état vide", () => {
             notifications: [makeNotif()],
             unreadNotifCount: 1,
         });
-        render(<NotificationInlinePanelContent onClose={vi.fn()} />);
+        render(<NotificationInlinePanelContent />);
         expect(screen.getByTitle(/tout marquer comme lu/i)).toBeInTheDocument();
     });
 });
@@ -119,8 +118,7 @@ describe("NotificationInlinePanelContent — liste", () => {
         mockNotifications({
             notifications: [makeNotif({ actor_name: "alice", content: "général" })],
         });
-        render(<NotificationInlinePanelContent onClose={vi.fn()} />);
-        // Le nom est dans un <span> et le reste dans un nœud texte — byNotifText combine le textContent du <p>
+        render(<NotificationInlinePanelContent />);
         expect(screen.getByText(byNotifText("alice vous a mentionné dans général"))).toBeInTheDocument();
     });
 
@@ -131,7 +129,7 @@ describe("NotificationInlinePanelContent — liste", () => {
                 makeNotif({ id: "n2", type: "new_member", actor_name: "bob", content: "Hextech" }),
             ],
         });
-        render(<NotificationInlinePanelContent onClose={vi.fn()} />);
+        render(<NotificationInlinePanelContent />);
         expect(screen.getByText(byNotifText("alice vous a mentionné dans lobby"))).toBeInTheDocument();
         expect(screen.getByText(byNotifText("bob a rejoint Hextech"))).toBeInTheDocument();
     });
@@ -144,7 +142,7 @@ describe("NotificationInlinePanelContent — archivage", () => {
         mockNotifications({
             notifications: [makeNotif({ id: "n1" }), makeNotif({ id: "n2", actor_name: "bob" })],
         });
-        render(<NotificationInlinePanelContent onClose={vi.fn()} />);
+        render(<NotificationInlinePanelContent />);
         const btns = screen.getAllByRole("button", { name: /supprimer la notification/i });
         expect(btns).toHaveLength(2);
     });
@@ -152,7 +150,7 @@ describe("NotificationInlinePanelContent — archivage", () => {
     it("cliquer × appelle archiveNotif avec le bon id", async () => {
         const user = userEvent.setup();
         mockNotifications({ notifications: [makeNotif({ id: "notif-abc" })] });
-        render(<NotificationInlinePanelContent onClose={vi.fn()} />);
+        render(<NotificationInlinePanelContent />);
 
         await user.click(screen.getByRole("button", { name: /supprimer la notification/i }));
         expect(mockArchiveNotif).toHaveBeenCalledOnce();
@@ -167,7 +165,7 @@ describe("NotificationInlinePanelContent — archivage", () => {
                 makeNotif({ id: "n2", actor_name: "bob" }),
             ],
         });
-        render(<NotificationInlinePanelContent onClose={vi.fn()} />);
+        render(<NotificationInlinePanelContent />);
 
         const btns = screen.getAllByRole("button", { name: /supprimer la notification/i });
         await user.click(btns[1]);
@@ -175,15 +173,14 @@ describe("NotificationInlinePanelContent — archivage", () => {
         expect(mockArchiveNotif).not.toHaveBeenCalledWith("n1");
     });
 
-    it("cliquer × n'appelle pas markNotifRead ni onClose", async () => {
+    it("cliquer × n'appelle pas markNotifRead ni closePanel", async () => {
         const user = userEvent.setup();
-        const onClose = vi.fn();
         mockNotifications({ notifications: [makeNotif()] });
-        render(<NotificationInlinePanelContent onClose={onClose} />);
+        render(<NotificationInlinePanelContent />);
 
         await user.click(screen.getByRole("button", { name: /supprimer la notification/i }));
         expect(mockMarkNotifRead).not.toHaveBeenCalled();
-        expect(onClose).not.toHaveBeenCalled();
+        expect(mockClosePanel).not.toHaveBeenCalled();
     });
 });
 
@@ -195,7 +192,7 @@ describe("NotificationInlinePanelContent — pagination", () => {
             notifications: [makeNotif()],
             hasMoreNotifs: false,
         });
-        render(<NotificationInlinePanelContent onClose={vi.fn()} />);
+        render(<NotificationInlinePanelContent />);
         expect(screen.getByText(/toutes les notifications/i)).toBeInTheDocument();
     });
 
@@ -204,13 +201,13 @@ describe("NotificationInlinePanelContent — pagination", () => {
             notifications: [makeNotif()],
             hasMoreNotifs: true,
         });
-        render(<NotificationInlinePanelContent onClose={vi.fn()} />);
+        render(<NotificationInlinePanelContent />);
         expect(screen.queryByText(/toutes les notifications/i)).not.toBeInTheDocument();
     });
 
     it("n'affiche pas 'Toutes les notifications' quand la liste est vide", () => {
         mockNotifications({ notifications: [], hasMoreNotifs: false });
-        render(<NotificationInlinePanelContent onClose={vi.fn()} />);
+        render(<NotificationInlinePanelContent />);
         expect(screen.queryByText(/toutes les notifications/i)).not.toBeInTheDocument();
     });
 });
@@ -220,14 +217,14 @@ describe("NotificationInlinePanelContent — pagination", () => {
 describe("NotificationInlinePanelContent — préférences", () => {
     it("cliquer l'engrenage affiche la vue préférences", async () => {
         const user = userEvent.setup();
-        render(<NotificationInlinePanelContent onClose={vi.fn()} />);
+        render(<NotificationInlinePanelContent />);
         await user.click(screen.getByLabelText(/préférences/i));
         expect(screen.getByText(/^préférences$/i)).toBeInTheDocument();
     });
 
     it("cliquer Retour depuis les préférences revient à la liste", async () => {
         const user = userEvent.setup();
-        render(<NotificationInlinePanelContent onClose={vi.fn()} />);
+        render(<NotificationInlinePanelContent />);
         await user.click(screen.getByLabelText(/préférences/i));
         await user.click(screen.getByLabelText(/retour/i));
         expect(screen.getByText(/aucune notification/i)).toBeInTheDocument();
@@ -235,7 +232,7 @@ describe("NotificationInlinePanelContent — préférences", () => {
 
     it("chaque type de notification a un switch dans les préférences", async () => {
         const user = userEvent.setup();
-        render(<NotificationInlinePanelContent onClose={vi.fn()} />);
+        render(<NotificationInlinePanelContent />);
         await user.click(screen.getByLabelText(/préférences/i));
         expect(screen.getByText(/mentions/i)).toBeInTheDocument();
         expect(screen.getByText(/réactions/i)).toBeInTheDocument();
@@ -246,7 +243,7 @@ describe("NotificationInlinePanelContent — préférences", () => {
     it("toggler un switch appelle setNotifPref", async () => {
         const user = userEvent.setup();
         mockNotifications({ notifPrefs: { mention: true } });
-        render(<NotificationInlinePanelContent onClose={vi.fn()} />);
+        render(<NotificationInlinePanelContent />);
         await user.click(screen.getByLabelText(/préférences/i));
         const switches = screen.getAllByRole("switch");
         await user.click(switches[0]);

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Anchor, Pencil, Trash2 } from "lucide-react";
 import type { AnchorBlock } from "@/lib/chat-blocks";
 
@@ -15,6 +16,7 @@ export function AnchorBlockView({
   onEdit?: (newLabel: string) => void;
   onDelete?: () => void;
 }) {
+  const t = useTranslations("chatrooms");
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(block.label);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -69,8 +71,8 @@ export function AnchorBlockView({
           {onEdit && (
             <button
               type="button"
-              aria-label="Modifier l'ancre"
-              title="Modifier"
+              aria-label={t("anchorEditAriaLabel")}
+              title={t("anchorEditAriaLabel")}
               onClick={() => setEditing(true)}
               className="p-1 rounded text-muted-foreground hover:text-foreground transition-colors"
             >
@@ -80,8 +82,8 @@ export function AnchorBlockView({
           {onDelete && (
             <button
               type="button"
-              aria-label="Supprimer l'ancre"
-              title="Supprimer"
+              aria-label={t("anchorDeleteAriaLabel")}
+              title={t("anchorDeleteAriaLabel")}
               onClick={onDelete}
               className="p-1 rounded text-muted-foreground hover:text-destructive transition-colors"
             >

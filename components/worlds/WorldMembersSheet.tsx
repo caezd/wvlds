@@ -2,7 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Users } from "lucide-react";
+import { MessageSquare, Users } from "lucide-react";
+import { useDms } from "@/components/providers/DmsProvider";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import {
   Sheet,
   SheetContent,
@@ -89,9 +92,16 @@ function MemberRow({ member }: { member: Member }) {
   const letter = (displayName.replace(/^@/, "")[0] ?? "?").toUpperCase();
   const shown = member.personas.slice(0, 4);
   const rest = member.personas.length - shown.length;
+  const { userId: currentUserId } = useCurrentUser();
+  const { openConversation } = useDms();
+  const { direct_messages: dmsEnabled } = useFeatureFlags();
+
+  async function handleDm() {
+    await openConversation(member.user_id);
+  }
 
   return (
-    <div className="flex items-center gap-3 rounded-xl px-3 py-2 transition-colors hover:bg-muted/40">
+    <div className="group/member flex items-center gap-3 rounded-xl px-3 py-2 transition-colors hover:bg-muted/40">
       <div className="flex flex-1 shrink-0 flex-col gap-1 min-w-0">
 
         {/* Avatar avec personas en superposition */}
@@ -107,7 +117,22 @@ function MemberRow({ member }: { member: Member }) {
             <span className="flex-1 text-xs font-medium leading-none truncate">
               {displayName}
             </span>
-            <div className="ml-auto">{shown.length > 0 && (
+            <div className="ml-auto flex items-center gap-1">
+              {dmsEnabled && member.user_id !== currentUserId && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={handleDm}
+                      aria-label="Envoyer un message privé"
+                      className="flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground opacity-0 group-hover/member:opacity-100 hover:bg-muted hover:text-foreground transition-all"
+                    >
+                      <MessageSquare size={13} />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="left" sideOffset={4}>Message privé</TooltipContent>
+                </Tooltip>
+              )}
+            {shown.length > 0 && (
               <div className="flex -space-x-1">
                 {shown.map((p) => (
                   <Tooltip key={p.id}>
@@ -131,7 +156,8 @@ function MemberRow({ member }: { member: Member }) {
                   </span>
                 )}
               </div>
-            )}</div>
+            )}
+            </div>
           </div>
 
         </div>
@@ -171,13 +197,24 @@ export function WorldMembersSheet({
   worldId,
   ownerId,
   canManage = false,
+  open: controlledOpen,
+  onOpenChange,
+  hideTrigger = false,
 }: {
   worldId: string;
   ownerId: string;
   canManage?: boolean;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  hideTrigger?: boolean;
 }) {
   const supabase = useMemo(() => createClient(), []);
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen ?? internalOpen;
+  function setOpen(v: boolean) {
+    setInternalOpen(v);
+    onOpenChange?.(v);
+  }
   const [loading, setLoading] = useState(false);
   const [members, setMembers] = useState<Member[]>([]);
 
@@ -281,19 +318,21 @@ export function WorldMembersSheet({
 
   return (
     <>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <button
-            type="button"
-            onClick={() => setOpen(true)}
-            aria-label="Membres du monde"
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-border-soft bg-background text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-          >
-            <Users className="h-4 w-4" />
-          </button>
-        </TooltipTrigger>
-        <TooltipContent side="left" sideOffset={8}>Membres</TooltipContent>
-      </Tooltip>
+      {!hideTrigger && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              onClick={() => setOpen(true)}
+              aria-label="Membres du monde"
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-border-soft bg-background text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            >
+              <Users className="h-4 w-4" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="left" sideOffset={8}>Membres</TooltipContent>
+        </Tooltip>
+      )}
 
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent side="right" className="flex flex-col gap-0 p-0 sm:max-w-[320px]">

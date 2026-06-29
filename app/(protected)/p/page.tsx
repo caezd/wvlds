@@ -3,6 +3,7 @@ import { Users } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getUserId } from "@/lib/auth";
+import { getTranslations } from "next-intl/server";
 import { PersonaCard } from "@/components/personas/PersonaCard";
 import { PersonaCreateSheet } from "@/components/personas/PersonaCreateSheet";
 import type {
@@ -30,6 +31,7 @@ type WorldGroup = {
 };
 
 export default async function PersonasPage() {
+  const t = await getTranslations("personas");
   const supabase = await createClient();
   const userId = await getUserId(supabase);
 
@@ -154,10 +156,10 @@ export default async function PersonasPage() {
     <div className="p-6 space-y-8 max-w-6xl mx-auto w-full">
       <header className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Personas</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {personaList.length} persona{personaList.length !== 1 ? "s" : ""}
-            {groups.length > 1 && ` · ${groups.length} groupe${groups.length > 1 ? "s" : ""}`}
+            {t("count", { count: personaList.length })}
+            {groups.length > 1 && ` · ${t("groups", { count: groups.length })}`}
           </p>
         </div>
         <PersonaCreateSheet />
@@ -167,7 +169,7 @@ export default async function PersonasPage() {
         <div className="flex flex-col items-center justify-center py-12 text-center gap-3 rounded-2xl border border-dashed border-border">
           <Users className="h-8 w-8 text-muted-foreground" />
           <p className="text-sm text-muted-foreground">
-            Aucun persona. Crée-en un depuis un monde.
+            {t("empty")}
           </p>
         </div>
       ) : (
@@ -184,7 +186,7 @@ export default async function PersonasPage() {
                   </Link>
                 ) : (
                   <h2 className="text-base font-semibold text-muted-foreground">
-                    Sans monde
+                    {t("noWorld")}
                   </h2>
                 )}
                 <span className="text-xs text-muted-foreground">

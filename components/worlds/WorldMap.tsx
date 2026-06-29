@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import {
   Check,
@@ -93,6 +94,7 @@ function PinMarker({
   onDelete: () => void;
   onMoved: (x: number, y: number) => void;
 }) {
+  const t = useTranslations("map");
   const [localX, setLocalX] = React.useState(pin.x);
   const [localY, setLocalY] = React.useState(pin.y);
   const [isDragging, setIsDragging] = React.useState(false);
@@ -126,7 +128,7 @@ function PinMarker({
     if (!img) return;
     // getBoundingClientRect tient compte du scale CSS appliqué au parent
     const r = img.getBoundingClientRect();
-    setLocalX(Math.max(0, Math.min(100, dragStart.current.startX + (dx / r.width)  * 100)));
+    setLocalX(Math.max(0, Math.min(100, dragStart.current.startX + (dx / r.width) * 100)));
     setLocalY(Math.max(0, Math.min(100, dragStart.current.startY + (dy / r.height) * 100)));
   }
 
@@ -205,7 +207,7 @@ function PinMarker({
       {isEditMode && !isDragging && (
         <button
           type="button"
-          aria-label="Supprimer ce pin"
+          aria-label={t("deletePin")}
           onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => { e.stopPropagation(); onDelete(); }}
           className="absolute -right-2 -top-2 hidden h-5 w-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow group-hover:flex"
@@ -259,11 +261,13 @@ function ColorInput({
 
 // ── Dialog de personnalisation visuelle d'un pin ──────────────────
 
-const BORDER_STYLES = [
-  { value: "solid",  label: "Plein" },
-  { value: "dashed", label: "Tirets" },
-  { value: "dotted", label: "Pointillés" },
-] as const;
+function getBorderStyles(t: ReturnType<typeof useTranslations<"map">>) {
+  return [
+    { value: "solid" as const, label: t("borderStyles.solid") },
+    { value: "dashed" as const, label: t("borderStyles.dashed") },
+    { value: "dotted" as const, label: t("borderStyles.dotted") },
+  ];
+}
 
 function PinVisualDialog({
   pin,
@@ -276,13 +280,16 @@ function PinVisualDialog({
   onOpenChange: (open: boolean) => void;
   onUpdated: (updated: MapPinType) => void;
 }) {
+  const t = useTranslations("map");
+  const tCommon = useTranslations("common");
+  const borderStyles = getBorderStyles(t);
   const isTransparent = (c: string) => !c || c === "transparent";
 
-  const [bgColor,     setBgColor]     = React.useState(isTransparent(pin.color) ? "#6366f1" : pin.color);
-  const [noBg,        setNoBg]        = React.useState(isTransparent(pin.color));
-  const [iconName,    setIconName]    = React.useState(pin.icon);
-  const [iconColor,   setIconColor]   = React.useState(pin.icon_color || "#ffffff");
-  const [hasBorder,   setHasBorder]   = React.useState(!!pin.border_color);
+  const [bgColor, setBgColor] = React.useState(isTransparent(pin.color) ? "#6366f1" : pin.color);
+  const [noBg, setNoBg] = React.useState(isTransparent(pin.color));
+  const [iconName, setIconName] = React.useState(pin.icon);
+  const [iconColor, setIconColor] = React.useState(pin.icon_color || "#ffffff");
+  const [hasBorder, setHasBorder] = React.useState(!!pin.border_color);
   const [borderColor, setBorderColor] = React.useState(pin.border_color || "#ffffff");
   const [borderStyle, setBorderStyle] = React.useState<"solid" | "dashed" | "dotted">(
     (pin.border_style as "solid" | "dashed" | "dotted") || "solid",
@@ -306,18 +313,18 @@ function PinVisualDialog({
     setSaving(true);
     try {
       const patch = {
-        color:        noBg ? "transparent" : bgColor,
-        icon:         iconName,
-        icon_color:   iconColor,
+        color: noBg ? "transparent" : bgColor,
+        icon: iconName,
+        icon_color: iconColor,
         border_color: hasBorder ? borderColor : null,
         border_style: hasBorder ? borderStyle : "solid",
       };
       await updateMapPin(pin.id, patch);
       onUpdated({ ...pin, ...patch });
       onOpenChange(false);
-      toast.success("Visuel mis à jour.");
+      toast.success(t("visualUpdated"));
     } catch {
-      toast.error("Erreur lors de la sauvegarde.");
+      toast.error(t("saveError"));
     } finally {
       setSaving(false);
     }
@@ -345,10 +352,10 @@ function PinVisualDialog({
       >
         {/* En-tête */}
         <div className="flex items-center justify-between border-b border-border-soft px-4 py-3">
-          <h2 className="text-sm font-semibold">Visuel du pin</h2>
+          <h2 className="text-sm font-semibold">{t("pinVisual")}</h2>
           <button
             type="button"
-            aria-label="Fermer"
+            aria-label={tCommon("close")}
             onClick={() => onOpenChange(false)}
             className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground"
           >
@@ -380,14 +387,14 @@ function PinVisualDialog({
           {/* Icône */}
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-muted-foreground">Icône</span>
+              <span className="text-xs font-medium text-muted-foreground">{t("icon")}</span>
               {iconName && (
                 <button
                   type="button"
                   onClick={() => setIconName("")}
                   className="text-xs text-muted-foreground transition-colors hover:text-foreground"
                 >
-                  Retirer l'icône
+                  {t("removeIcon")}
                 </button>
               )}
             </div>
@@ -397,9 +404,9 @@ function PinVisualDialog({
           {/* Fond */}
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-muted-foreground">Fond</span>
+              <span className="text-xs font-medium text-muted-foreground">{t("background")}</span>
               <label className="flex cursor-pointer items-center gap-1.5">
-                <span className="text-xs text-muted-foreground">Transparent</span>
+                <span className="text-xs text-muted-foreground">{t("transparent")}</span>
                 <button
                   type="button"
                   role="switch"
@@ -425,7 +432,7 @@ function PinVisualDialog({
           {/* Couleur de l'icône */}
           {iconName && (
             <div className="flex flex-col gap-1.5">
-              <span className="text-xs font-medium text-muted-foreground">Couleur de l'icône</span>
+              <span className="text-xs font-medium text-muted-foreground">{t("iconColor")}</span>
               <ColorInput color={iconColor} onChange={setIconColor} presets={ACCENT_COLOR_PRESETS} />
             </div>
           )}
@@ -433,7 +440,7 @@ function PinVisualDialog({
           {/* Bordure */}
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-muted-foreground">Bordure</span>
+              <span className="text-xs font-medium text-muted-foreground">{t("border")}</span>
               <button
                 type="button"
                 role="switch"
@@ -456,7 +463,7 @@ function PinVisualDialog({
             {hasBorder && (
               <div className="flex flex-col gap-2">
                 <div className="flex gap-1">
-                  {BORDER_STYLES.map(({ value, label }) => (
+                  {borderStyles.map(({ value, label }) => (
                     <button
                       key={value}
                       type="button"
@@ -481,11 +488,11 @@ function PinVisualDialog({
         {/* Pied */}
         <div className="flex justify-end gap-2 border-t border-border-soft px-4 py-3">
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
-            Annuler
+            {tCommon("cancel")}
           </Button>
           <Button onClick={handleSave} disabled={saving}>
             {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-            Enregistrer
+            {tCommon("save")}
           </Button>
         </div>
       </div>
@@ -515,6 +522,8 @@ function PinPopover({
   onUpdated: (updated: MapPinType) => void;
   onDelete: () => void;
 }) {
+  const t = useTranslations("map");
+  const tCommon = useTranslations("common");
   const supabase = createClient();
 
   const [editing, setEditing] = React.useState(false);
@@ -544,9 +553,9 @@ function PinPopover({
       });
       onUpdated({ ...pin, title: title.trim(), description: description || null });
       setEditing(false);
-      toast.success("Pin mis à jour.");
+      toast.success(t("pinUpdated"));
     } catch {
-      toast.error("Erreur lors de la sauvegarde.");
+      toast.error(t("saveError"));
     } finally {
       setSaving(false);
     }
@@ -554,11 +563,11 @@ function PinPopover({
 
   async function handleBannerUpload(file: File) {
     if (!file.type.startsWith("image/")) {
-      toast.error("Seules les images sont acceptées.");
+      toast.error(t("imagesOnly"));
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      toast.error("Fichier trop volumineux (max 5 Mo).");
+      toast.error(t("fileTooLarge5"));
       return;
     }
     setUploadingBanner(true);
@@ -580,9 +589,9 @@ function PinPopover({
 
       await updateMapPin(pin.id, { banner_url });
       onUpdated({ ...pin, banner_url });
-      toast.success("Bannière mise à jour.");
+      toast.success(t("bannerUpdated"));
     } catch {
-      toast.error("Téléversement impossible.");
+      toast.error(t("uploadError"));
     } finally {
       setUploadingBanner(false);
     }
@@ -595,13 +604,13 @@ function PinPopover({
       <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Supprimer « {pin.title} » ?</AlertDialogTitle>
+            <AlertDialogTitle>{t("deleteTitle", { title: pin.title })}</AlertDialogTitle>
             <AlertDialogDescription>
-              Ce pin et sa description seront supprimés définitivement.
+              {t("deleteDesc")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogCancel>{tCommon("cancel")}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => {
@@ -609,7 +618,7 @@ function PinPopover({
                 onDelete();
               }}
             >
-              Supprimer
+              {tCommon("delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -653,7 +662,7 @@ function PinPopover({
               ) : (
                 <>
                   <ImagePlus className="h-6 w-6" />
-                  <span className="text-xs">Ajouter une bannière</span>
+                  <span className="text-xs">{t("addBanner")}</span>
                 </>
               )}
             </button>
@@ -678,7 +687,7 @@ function PinPopover({
           {isEditMode ? (
             <button
               type="button"
-              title="Modifier le visuel du pin"
+              title={t("editPinVisual")}
               onClick={() => setVisualDialogOpen(true)}
               className="absolute bottom-2 left-3 flex h-6 w-6 items-center justify-center rounded-full shadow transition-transform hover:scale-110"
               style={{
@@ -719,7 +728,7 @@ function PinPopover({
           {/* Bouton fermer */}
           <button
             type="button"
-            aria-label="Fermer"
+            aria-label={tCommon("close")}
             onClick={onClose}
             className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
           >
@@ -748,7 +757,7 @@ function PinPopover({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               className="w-full rounded-md border border-border bg-background px-3 py-1.5 text-base font-semibold outline-none focus:ring-2 focus:ring-primary"
-              placeholder="Nom du lieu"
+              placeholder={t("locationName")}
             />
           ) : (
             <h3 className="text-base font-semibold leading-snug">{pin.title}</h3>
@@ -760,7 +769,7 @@ function PinPopover({
               <ParagraphBlockEditor
                 value={description}
                 onChange={setDescription}
-                placeholder="Description du lieu…"
+                placeholder={t("descPlaceholder")}
                 submitOnEnter={false}
                 wrapperClassName="max-h-32"
               />
@@ -770,7 +779,7 @@ function PinPopover({
               </div>
             ) : (
               <p className="text-xs italic text-muted-foreground">
-                {isEditMode ? "Cliquer « Modifier » pour ajouter une description." : "Aucune description."}
+                {isEditMode ? t("addDescriptionHint") : t("noDescription")}
               </p>
             )}
           </div>
@@ -782,7 +791,7 @@ function PinPopover({
                 <>
                   <Button size="sm" onClick={handleSave} disabled={saving || !title.trim()}>
                     {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
-                    Enregistrer
+                    {tCommon("save")}
                   </Button>
                   <Button
                     size="sm"
@@ -793,14 +802,14 @@ function PinPopover({
                       setEditing(false);
                     }}
                   >
-                    Annuler
+                    {tCommon("cancel")}
                   </Button>
                 </>
               ) : (
                 <>
                   <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
                     <Pencil className="h-3.5 w-3.5" />
-                    Modifier
+                    {tCommon("edit")}
                   </Button>
                   <Button
                     size="sm"
@@ -809,7 +818,7 @@ function PinPopover({
                     onClick={() => setConfirmDelete(true)}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
-                    Supprimer
+                    {tCommon("delete")}
                   </Button>
                 </>
               )}
@@ -834,6 +843,8 @@ export function WorldMap({
   canEdit: boolean;
   onClose: () => void;
 }) {
+  const t = useTranslations("map");
+  const tCommon = useTranslations("common");
   const supabase = createClient();
 
   const [mapData, setMapData] = React.useState<WorldMapData | null>(null);
@@ -928,17 +939,17 @@ export function WorldMap({
       cancelled = true;
       void supabase.removeChannel(channel);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [worldId]);
 
   // ── Upload de l'image de carte ────────────────────────────────
   async function handleMapImageUpload(file: File) {
     if (!file.type.startsWith("image/")) {
-      toast.error("Seules les images sont acceptées.");
+      toast.error(t("imagesOnly"));
       return;
     }
     if (file.size > 20 * 1024 * 1024) {
-      toast.error("Fichier trop volumineux (max 20 Mo).");
+      toast.error(t("fileTooLarge20"));
       return;
     }
     setUploadingMap(true);
@@ -959,9 +970,9 @@ export function WorldMap({
       const image_url = supabase.storage.from("worlds").getPublicUrl(path).data.publicUrl;
       const updated = await upsertWorldMap(worldId, { image_url });
       setMapData(updated);
-      toast.success("Carte mise à jour.");
+      toast.success(t("mapUpdated"));
     } catch {
-      toast.error("Téléversement impossible.");
+      toast.error(t("uploadError"));
     } finally {
       setUploadingMap(false);
     }
@@ -972,7 +983,7 @@ export function WorldMap({
     const container = containerRef.current;
     const img = imageRef.current;
     if (!container || !img) return [x, y];
-    const minX = Math.min(0, container.clientWidth  - img.offsetWidth  * s);
+    const minX = Math.min(0, container.clientWidth - img.offsetWidth * s);
     const minY = Math.min(0, container.clientHeight - img.offsetHeight * s);
     return [
       Math.max(minX, Math.min(0, x)),
@@ -994,7 +1005,7 @@ export function WorldMap({
 
     function onWheel(e: WheelEvent) {
       e.preventDefault();
-      const curS  = scaleRef.current;
+      const curS = scaleRef.current;
       const curOX = offsetXRef.current;
       const curOY = offsetYRef.current;
 
@@ -1013,7 +1024,7 @@ export function WorldMap({
 
       const img = imageRef.current;
       if (img) {
-        const minX = Math.min(0, node.clientWidth  - img.offsetWidth  * newS);
+        const minX = Math.min(0, node.clientWidth - img.offsetWidth * newS);
         const minY = Math.min(0, node.clientHeight - img.offsetHeight * newS);
         newOX = Math.max(minX, Math.min(0, newOX));
         newOY = Math.max(minY, Math.min(0, newOY));
@@ -1026,7 +1037,7 @@ export function WorldMap({
 
     node.addEventListener("wheel", onWheel, { passive: false });
     wheelCleanupRef.current = () => node.removeEventListener("wheel", onWheel);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── Pan handlers ─────────────────────────────────────────────
@@ -1078,8 +1089,8 @@ export function WorldMap({
     const rect = container.getBoundingClientRect();
     // Coordonnées dans l'espace image (avant scale)
     const pxX = (e.clientX - rect.left - offsetX) / scale;
-    const pxY = (e.clientY - rect.top  - offsetY) / scale;
-    const x = (pxX / img.offsetWidth)  * 100;
+    const pxY = (e.clientY - rect.top - offsetY) / scale;
+    const x = (pxX / img.offsetWidth) * 100;
     const y = (pxY / img.offsetHeight) * 100;
     if (x < 0 || x > 100 || y < 0 || y > 100) return;
     setPendingPin({ x, y, title: "" });
@@ -1096,7 +1107,7 @@ export function WorldMap({
       setSelectedPin(pin);
       setPopoverPos(calcPopoverPos(window.innerWidth / 2, window.innerHeight / 2));
     } catch {
-      toast.error("Impossible de créer le pin.");
+      toast.error(t("createPinError"));
     } finally {
       setCreatingPin(false);
     }
@@ -1121,7 +1132,7 @@ export function WorldMap({
     try {
       await updateMapPin(pin.id, { x, y });
     } catch {
-      toast.error("Impossible de déplacer le pin.");
+      toast.error(t("movePinError"));
       // Rollback
       setPins((prev) => prev.map((p) => (p.id === pin.id ? pin : p)));
     }
@@ -1135,9 +1146,9 @@ export function WorldMap({
         setSelectedPin(null);
         setPopoverPos(null);
       }
-      toast.success("Pin supprimé.");
+      toast.success(t("pinDeleted"));
     } catch {
-      toast.error("Impossible de supprimer le pin.");
+      toast.error(t("deletePinError"));
     }
   }
 
@@ -1161,7 +1172,7 @@ export function WorldMap({
       {/* ── Header ─────────────────────────────────────────────── */}
       <div className="flex shrink-0 items-center gap-3 border-b border-border-soft px-4 py-3">
         <Map className="h-4 w-4 shrink-0 text-muted-foreground" />
-        <span className="text-sm font-semibold">{mapData?.label ?? "Carte"}</span>
+        <span className="text-sm font-semibold">{t("title")}</span>
 
         {canEdit && (
           <>
@@ -1176,7 +1187,7 @@ export function WorldMap({
               )}
             >
               <Pencil className="h-3 w-3" />
-              {isEditMode ? "Modification active" : "Modifier"}
+              {isEditMode ? t("editingActive") : tCommon("edit")}
             </button>
 
             {isEditMode && mapData?.image_url && (
@@ -1190,14 +1201,14 @@ export function WorldMap({
                 ) : (
                   <Upload className="h-3.5 w-3.5" />
                 )}
-                Changer la carte
+                {t("changeMap")}
               </button>
             )}
           </>
         )}
 
         <div className="ml-auto">
-          <Button size="icon" variant="ghost" onClick={onClose} aria-label="Fermer la carte">
+          <Button size="icon" variant="ghost" onClick={onClose} aria-label={t("closeMap")}>
             <X className="h-5 w-5" />
           </Button>
         </div>
@@ -1210,7 +1221,7 @@ export function WorldMap({
           /* ── État vide ───────────────────────────────────────── */
           <div className="flex flex-1 flex-col items-center justify-center gap-4 text-muted-foreground">
             <Map className="h-12 w-12 opacity-20" />
-            <p className="text-sm">Aucune carte configurée pour ce monde.</p>
+            <p className="text-sm">{t("noMapConfigured")}</p>
             {isEditMode && (
               <button
                 type="button"
@@ -1222,7 +1233,7 @@ export function WorldMap({
                 ) : (
                   <Plus className="h-4 w-4" />
                 )}
-                Importer une image de carte
+                {t("importMapImage")}
               </button>
             )}
           </div>
@@ -1251,7 +1262,7 @@ export function WorldMap({
               <img
                 ref={imageRef}
                 src={mapData.image_url}
-                alt="Carte du monde"
+                alt={t("mapAlt")}
                 draggable={false}
                 className="block w-full select-none"
                 style={{ userSelect: "none" }}
@@ -1302,7 +1313,7 @@ export function WorldMap({
                         if (e.key === "Enter") void handleCreatePin();
                         if (e.key === "Escape") setPendingPin(null);
                       }}
-                      placeholder="Nom du lieu"
+                      placeholder={t("locationName")}
                       className="w-36 bg-transparent text-xs outline-none placeholder:text-muted-foreground"
                     />
                     <button
@@ -1332,7 +1343,7 @@ export function WorldMap({
             {/* Indice d'aide en mode édition (sticky sur le container) */}
             {isEditMode && !pendingPin && (
               <div className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-4 py-1.5 text-xs text-white opacity-70">
-                Cliquer sur la carte pour ajouter un pin
+                {t("clickToAddPin")}
               </div>
             )}
           </div>

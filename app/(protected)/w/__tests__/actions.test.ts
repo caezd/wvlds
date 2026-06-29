@@ -17,16 +17,16 @@ describe("saveWorldPrefs", () => {
   it("ne fait rien si l'utilisateur n'est pas connecté", async () => {
     const mock = createSupabaseMock({ user: null });
     use(mock);
-    await saveWorldPrefs("w1", { aside_width: 300 });
+    await saveWorldPrefs("w1", { main_expanded: true });
     expect(mock.from).not.toHaveBeenCalled();
   });
 
   it("upsert les préférences avec world_id + user_id", async () => {
     const mock = createSupabaseMock({ user: { id: "u1" }, results: [{ error: null }] });
     use(mock);
-    await saveWorldPrefs("w1", { aside_width: 300, is_favorite: true });
+    await saveWorldPrefs("w1", { main_expanded: true, is_favorite: true });
     expect(mock.buildersFor("world_user_preferences")[0].upsert).toHaveBeenCalledWith(
-      expect.objectContaining({ world_id: "w1", user_id: "u1", aside_width: 300 }),
+      expect.objectContaining({ world_id: "w1", user_id: "u1", main_expanded: true }),
       { onConflict: "world_id,user_id" },
     );
   });

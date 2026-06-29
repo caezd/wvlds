@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { saveWorldPrefs } from "@/app/(protected)/w/actions";
 import {
@@ -116,6 +117,8 @@ function SortableTreeNode({
   onRenameChange, onRenameIconChange, onConfirmRename, onCancelRename,
   onDelete, onCreateInFolder,
 }: SortableTreeNodeProps) {
+  const t = useTranslations("wiki");
+  const tCommon = useTranslations("common");
   const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver } =
     useSortable({ id: page.id, disabled: !editMode });
 
@@ -162,7 +165,7 @@ function SortableTreeNode({
                 type="button"
                 onClick={e => e.stopPropagation()}
                 className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-secondary hover:text-foreground"
-                title="Changer l'icône"
+                title={t("changeIcon")}
               >
                 {renameIcon && VALID_LUCIDE_ICONS.has(renameIcon) ? (
                   <DynamicIcon name={renameIcon as IconName} className="h-3.5 w-3.5" />
@@ -201,7 +204,7 @@ function SortableTreeNode({
               type="button"
               onClick={e => { e.stopPropagation(); onConfirmRename(); }}
               className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-secondary hover:text-foreground"
-              aria-label="Valider"
+              aria-label={tCommon("confirm")}
             >
               <Check className="h-3.5 w-3.5" />
             </button>
@@ -219,7 +222,7 @@ function SortableTreeNode({
                 type="button"
                 onClick={e => e.stopPropagation()}
                 className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-secondary hover:text-foreground"
-                aria-label="Options"
+                aria-label={t("options")}
               >
                 <MoreHorizontal className="h-3.5 w-3.5" />
               </button>
@@ -228,20 +231,20 @@ function SortableTreeNode({
               {page.is_folder && (
                 <>
                   <DropdownMenuItem onClick={e => { e.stopPropagation(); onCreateInFolder(); }}>
-                    <FilePlus className="mr-2 h-4 w-4" /> Ajouter une page
+                    <FilePlus className="mr-2 h-4 w-4" /> {t("addPage")}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                 </>
               )}
               <DropdownMenuItem onClick={e => { e.stopPropagation(); onStartRename(); }}>
-                <Pencil className="mr-2 h-4 w-4" /> Renommer
+                <Pencil className="mr-2 h-4 w-4" /> {t("rename")}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={e => { e.stopPropagation(); onDelete(); }}
                 className="text-destructive focus:text-destructive"
               >
-                <Trash2 className="mr-2 h-4 w-4" /> Supprimer
+                <Trash2 className="mr-2 h-4 w-4" /> {tCommon("delete")}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -271,6 +274,8 @@ export function WorldWiki({
   initialSidebarWidth?: number;
   onClose: () => void;
 }) {
+  const t = useTranslations("wiki");
+  const tCommon = useTranslations("common");
   const supabase = React.useMemo(() => createClient(), []);
   const [pages, setPages] = React.useState<WikiPage[] | null>(null);
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
@@ -448,7 +453,7 @@ export function WorldWiki({
 
     setPages(prev => prev?.filter(p => !toDelete.has(p.id)) ?? null);
     if (selectedId && toDelete.has(selectedId)) setSelectedId(null);
-    toast.success("Supprimé.");
+    toast.success(t("deleted"));
   }
 
   async function saveContent() {
@@ -459,7 +464,7 @@ export function WorldWiki({
       .update({ content: draft, updated_at: new Date().toISOString() })
       .eq("id", selectedPage.id);
     setSaving(false);
-    if (error) { toast.error("Sauvegarde impossible.", { description: error.message }); return; }
+    if (error) { toast.error(t("saveError"), { description: error.message }); return; }
     setPages(prev =>
       prev?.map(p => p.id === selectedPage.id ? { ...p, content: draft } : p) ?? null
     );
@@ -530,7 +535,7 @@ export function WorldWiki({
             <button
               type="button"
               className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-secondary hover:text-foreground"
-              title="Choisir une icône"
+              title={t("chooseIcon")}
             >
               {createIcon && VALID_LUCIDE_ICONS.has(createIcon) ? (
                 <DynamicIcon name={createIcon as IconName} className="h-3.5 w-3.5" />
@@ -553,14 +558,14 @@ export function WorldWiki({
             }
             if (e.key === "Escape") setCreating(null);
           }}
-          placeholder={isFolder ? "Nom du dossier…" : "Titre de la page…"}
+          placeholder={isFolder ? t("folderNamePlaceholder") : t("pageTitlePlaceholder")}
           className="flex-1 border-b border-border bg-transparent py-0 text-sm outline-none placeholder:text-muted-foreground/60"
         />
         <button
           type="button"
           onClick={() => setCreating(null)}
           className="shrink-0 text-muted-foreground hover:text-foreground"
-          aria-label="Annuler"
+          aria-label={tCommon("cancel")}
         >
           <X className="h-3 w-3" />
         </button>
@@ -616,9 +621,9 @@ export function WorldWiki({
           <p className="text-sm text-muted-foreground">
             {!pages?.length
               ? isEditMode
-                ? "Ce wiki est vide. Crée une première page avec le bouton « Page » en haut."
-                : "Ce wiki est vide pour le moment."
-              : "Sélectionne une page dans la navigation."}
+                ? t("emptyEdit")
+                : t("emptyRead")
+              : t("selectPage")}
           </p>
         </div>
       );
@@ -644,7 +649,7 @@ export function WorldWiki({
                   : "border-border-soft text-muted-foreground hover:bg-secondary hover:text-foreground",
               )}
             >
-              <Eye className="h-3 w-3" /> Aperçu
+              <Eye className="h-3 w-3" /> {t("preview")}
             </button>
           </div>
 
@@ -656,7 +661,7 @@ export function WorldWiki({
               <ParagraphBlockEditor
                 value={draft}
                 onChange={setDraft}
-                placeholder="Contenu en Markdown…"
+                placeholder={t("contentPlaceholder")}
                 submitOnEnter={false}
                 wrapperClassName="max-h-none flex-1 overflow-y-auto"
                 className="text-sm"
@@ -666,7 +671,7 @@ export function WorldWiki({
               <div className="flex-1 overflow-y-auto rounded-2xl border border-border-soft p-4">
                 {draft.trim()
                   ? <MarkdownRenderer content={draft} />
-                  : <p className="text-sm italic text-muted-foreground">Rien à prévisualiser.</p>
+                  : <p className="text-sm italic text-muted-foreground">{t("nothingToPreview")}</p>
                 }
               </div>
             )}
@@ -679,11 +684,11 @@ export function WorldWiki({
               onClick={() => { setDraft(selectedPage.content ?? ""); setEditing(false); setShowPreview(false); }}
               disabled={saving}
             >
-              Annuler
+              {tCommon("cancel")}
             </Button>
             <Button size="sm" onClick={() => void saveContent()} disabled={saving}>
               {saving && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
-              Enregistrer
+              {tCommon("save")}
             </Button>
           </div>
         </div>
@@ -707,7 +712,7 @@ export function WorldWiki({
                 className="shrink-0"
                 onClick={() => { setDraft(selectedPage.content ?? ""); setEditing(true); }}
               >
-                <Pencil className="mr-1.5 h-3.5 w-3.5" /> Éditer
+                <Pencil className="mr-1.5 h-3.5 w-3.5" /> {tCommon("edit")}
               </Button>
             )}
           </div>
@@ -715,7 +720,7 @@ export function WorldWiki({
             <MarkdownRenderer content={selectedPage.content} />
           ) : (
             <p className="text-sm text-muted-foreground">
-              {isEditMode ? "Page vide. Clique sur Éditer pour ajouter du contenu." : "Page vide."}
+              {isEditMode ? t("pageEmptyEdit") : t("pageEmpty")}
             </p>
           )}
         </div>
@@ -732,16 +737,16 @@ export function WorldWiki({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Supprimer « {confirmDelete?.title} » ?</AlertDialogTitle>
+            <AlertDialogTitle>{t("deleteTitle", { title: confirmDelete?.title ?? "" })}</AlertDialogTitle>
             <AlertDialogDescription>
               {confirmDelete?.is_folder
-                ? "Ce dossier et toutes ses pages seront supprimés définitivement."
-                : "Cette page et son contenu seront supprimés définitivement."}{" "}
-              Cette action est irréversible.
+                ? t("deleteFolderDesc")
+                : t("deletePageDesc")}{" "}
+              {t("deleteIrreversible")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogCancel>{tCommon("cancel")}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => {
@@ -749,7 +754,7 @@ export function WorldWiki({
                 setConfirmDelete(null);
               }}
             >
-              Supprimer
+              {tCommon("delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -773,7 +778,7 @@ export function WorldWiki({
               )}
             >
               <Pencil className="h-3 w-3" />
-              {editMode ? "Modification active" : "Modifier"}
+              {editMode ? t("editingActive") : tCommon("edit")}
             </button>
           )}
 
@@ -784,20 +789,20 @@ export function WorldWiki({
                 onClick={() => setCreating({ parentId: null, isFolder: false })}
                 className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
               >
-                <FilePlus className="h-3.5 w-3.5" /> Page
+                <FilePlus className="h-3.5 w-3.5" /> {t("newPage")}
               </button>
               <button
                 type="button"
                 onClick={() => setCreating({ parentId: null, isFolder: true })}
                 className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
               >
-                <FolderPlus className="h-3.5 w-3.5" /> Dossier
+                <FolderPlus className="h-3.5 w-3.5" /> {t("newFolder")}
               </button>
             </div>
           )}
 
           <div className="ml-auto">
-            <Button size="icon" variant="ghost" onClick={onClose} aria-label="Fermer le wiki">
+            <Button size="icon" variant="ghost" onClick={onClose} aria-label={t("closeWiki")}>
               <X className="h-5 w-5" />
             </Button>
           </div>
@@ -820,7 +825,7 @@ export function WorldWiki({
                   {renderTree(null)}
                 </DndContext>
                 {pages.length === 0 && !creating && (
-                  <p className="px-2 py-1 text-xs italic text-muted-foreground">Aucune page.</p>
+                  <p className="px-2 py-1 text-xs italic text-muted-foreground">{t("noPages")}</p>
                 )}
               </nav>
             )}

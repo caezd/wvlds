@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useMemo, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import { createClient } from "@/lib/supabase/client";
 import type { Persona } from "@/types/db";
@@ -58,6 +59,7 @@ export function ChatroomComposer({
   placeholder = "Écris ton message en Markdown…",
   onResolveChat,
   onAfterSend,
+  onMessageSent,
   typingLine,
   onAnchorSent,
   worldTimelineConfig,
@@ -86,6 +88,8 @@ export function ChatroomComposer({
   onResolveChat?: () => Promise<{ chatId: string; chatroomKey?: string | null } | null>;
   /** Appelé après un envoi réussi avec l'id de la chatroom (ex: navigation). */
   onAfterSend?: (chatId: string) => void;
+  /** Appelé après un envoi réussi avec le texte brut (avant chiffrement) — utilisé pour valider les défis. */
+  onMessageSent?: (messageId: number, chatId: string, plainText: string) => void;
   /** Appelé après l'envoi d'un bloc anchor avec le message_id et le label. */
   onAnchorSent?: (messageId: number, label: string) => void;
   worldTimelineConfig?: WorldTimelineConfig | null;
@@ -95,6 +99,9 @@ export function ChatroomComposer({
   mapPinId?: string | null;
   onMapPinChange?: (id: string | null) => void;
 }) {
+  const tChatrooms = useTranslations("chatrooms");
+  const tPersonas = useTranslations("personas");
+  const tDms = useTranslations("dms");
   const supabase = useMemo(() => createClient(), []);
   const { userId, username } = useCurrentUser();
   const inFlightRef = useRef(false);
@@ -228,7 +235,7 @@ export function ChatroomComposer({
     if (!text && pendingMedia.length === 0) return false;
     if (!userId) return false;
     if (!selectedPersona) {
-      toast.error("Sélectionnez un persona avant d’envoyer.");
+      toast.error(tChatrooms("selectPersonaFirst"));
       return false;
     }
     if (visibleTo !== null && visibleTo.length === 0) {
@@ -281,6 +288,7 @@ export function ChatroomComposer({
         .select("id, world_id")
         .single();
       if (error) { toast.error("Envoi impossible.", { description: error.message }); return false; }
+      onMessageSent?.(newMessage.id, targetChatId, text);
       await supabase.from(TABLE.CHATROOM_PERSONA_PREFS).upsert(
         { chat_id: targetChatId, user_id: userId, persona_id: selectedPersona.id },
         { onConflict: "chat_id,user_id" },
@@ -544,7 +552,7 @@ export function ChatroomComposer({
               onClick={() => void send()}
               disabled={!canSend}
               aria-disabled={!canSend}
-              title={selectedPersona ? "Envoyer" : "Choisissez un persona"}
+              title={selectedPersona ? tDms("send") : tPersonas("pick")}
             >
               <SendHorizontal />
             </Button>
@@ -593,6 +601,7 @@ function BlocksDropdown({
   mapPinId?: string | null;
   onMapPinChange?: (id: string | null) => void;
 }) {
+  const t = useTranslations("chatrooms");
   const { chatroom_blocks, block_npc, block_hp } = useFeatureFlags();
   const [open, setOpen] = useState(false);
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
@@ -607,7 +616,7 @@ function BlocksDropdown({
         <DropdownMenuTrigger asChild>
           <button
             type="button"
-            title="Insérer un bloc"
+            title={t("insertBlock")}
             className={cn("relative size-9 rounded-full shrink-0 flex items-center justify-center hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring border border-border-soft"
             )}
           >
@@ -624,26 +633,26 @@ function BlocksDropdown({
             <div className="p-1">
               <DropdownMenuItem onSelect={() => { setOpen(false); setActiveTool("dice"); }}>
                 <Dices className="mr-2 h-4 w-4" />
-                Lancer un dé
+                {t("dice")}
               </DropdownMenuItem>
               {onBannerSelect && (
                 <DropdownMenuItem onSelect={() => { setOpen(false); onBannerSelect(); }}>
                   <ImagePlus className="mr-2 h-4 w-4" />
-                  Bannière
+                  {t("banner")}
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
               <DropdownMenuItem onSelect={() => { setOpen(false); setActiveTool("callout"); }}>
                 <Square className="mr-2 h-4 w-4" />
-                Encadré
+                {t("calloutBtn")}
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => { setOpen(false); setActiveTool("anchor"); }}>
                 <Anchor className="mr-2 h-4 w-4" />
-                Ancre
+                {t("anchor")}
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => { setOpen(false); setActiveTool("reveal"); }}>
                 <Eye className="mr-2 h-4 w-4" />
-                Révélation
+                {t("reveal")}
               </DropdownMenuItem>
               {chatroom_blocks && (block_npc || block_hp) && (
                 <DropdownMenuSeparator />
@@ -651,13 +660,13 @@ function BlocksDropdown({
               {chatroom_blocks && block_npc && (
                 <DropdownMenuItem onSelect={() => { setOpen(false); setActiveTool("npc"); }}>
                   <Sword className="mr-2 h-4 w-4" />
-                  Mini-fiche PNJ
+                  {t("npcCard")}
                 </DropdownMenuItem>
               )}
               {chatroom_blocks && block_hp && (
                 <DropdownMenuItem onSelect={() => { setOpen(false); setActiveTool("hp"); }}>
                   <Heart className="mr-2 h-4 w-4" />
-                  Jauge de vie
+                  {t("healthBar")}
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
@@ -680,7 +689,7 @@ function BlocksDropdown({
                           const d = timelineDate.day !== null ? `${timelineDate.day} ` : "";
                           return m ? `${d}${m}, ${y}` : y;
                         })()
-                      : "Chronologie"}
+                      : t("timeline")}
                   </span>
                 </DropdownMenuCheckboxItem>
               )}
@@ -697,8 +706,8 @@ function BlocksDropdown({
                   <span className="flex items-center gap-1.5">
                     <MapPin className="h-3.5 w-3.5 shrink-0" />
                     {mapPinId
-                      ? (mapPins.find(p => p.id === mapPinId)?.title ?? "Lieu")
-                      : "Lieu"}
+                      ? (mapPins.find(p => p.id === mapPinId)?.title ?? t("locationBtn"))
+                      : t("locationBtn")}
                   </span>
                 </DropdownMenuCheckboxItem>
               )}
@@ -708,9 +717,9 @@ function BlocksDropdown({
                 onSelect={(e) => e.preventDefault()}
               >
                 <span className="flex items-center gap-1.5">
-                  Dialogues en bulles
+                  {t("bubblesMode")}
                   <Hint side="right">
-                    Les paragraphes commençant par <span className="font-mono">&quot;…&quot;</span> ou des guillemets français seront affichés en bulle de dialogue. Si le paragraphe est suivi d&apos;une incise (ex. <span className="italic">dit-il</span>), elle apparaît en bout de bulle.
+                    {t("bubblesHint")}
                   </Hint>
                 </span>
               </DropdownMenuCheckboxItem>
@@ -719,10 +728,10 @@ function BlocksDropdown({
                   className="flex items-center gap-2 px-8 py-1 text-xs text-muted-foreground"
                   onPointerDown={(e) => e.stopPropagation()}
                 >
-                  <span>Couleur</span>
+                  <span>{t("colorLabel")}</span>
                   <button
                     type="button"
-                    title="Choisir une couleur"
+                    title={t("colorChoose")}
                     onClick={(e) => { e.stopPropagation(); setOpen(false); setColorPickerOpen(true); }}
                     className="size-3.5 rounded-full border border-border/60 transition-shadow hover:ring-2 hover:ring-ring flex-shrink-0"
                     style={bubbleColor ? { backgroundColor: bubbleColor } : undefined}
@@ -740,7 +749,7 @@ function BlocksDropdown({
               >
                 <span className="flex items-center gap-1.5">
                   <Lock className="h-3.5 w-3.5" />
-                  Note privée
+                  {t("privateNote")}
                 </span>
               </DropdownMenuCheckboxItem>
             </div>
@@ -771,7 +780,7 @@ function BlocksDropdown({
             {/* Contrôles */}
             <div className="flex-1 flex flex-col gap-4 p-4 border-l border-border">
               <DialogHeader>
-                <DialogTitle className="text-sm">Couleur des dialogues</DialogTitle>
+                <DialogTitle className="text-sm">{t("dialogColorTitle")}</DialogTitle>
               </DialogHeader>
 
               <HsvColorPicker
@@ -784,10 +793,10 @@ function BlocksDropdown({
                   onClick={() => onBubbleColorChange(null)}
                   className="flex-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  Réinitialiser
+                  {t("colorReset")}
                 </button>
                 <Button size="sm" onClick={() => setColorPickerOpen(false)}>
-                  Confirmer
+                  {t("colorConfirm")}
                 </Button>
               </div>
             </div>
@@ -799,7 +808,7 @@ function BlocksDropdown({
         <Dialog open={activeTool === "timeline"} onOpenChange={(v) => !v && setActiveTool(null)}>
           <DialogContent className="max-w-sm">
             <DialogHeader>
-              <DialogTitle>Situer dans la chronologie</DialogTitle>
+              <DialogTitle>{t("timelineTitle")}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-2">
               <div className="flex items-center gap-3">
@@ -816,7 +825,7 @@ function BlocksDropdown({
               </div>
               {worldTimelineConfig.month_names.length > 0 && (
                 <div className="flex items-center gap-3">
-                  <label className="w-24 shrink-0 text-sm text-muted-foreground">Mois</label>
+                  <label className="w-24 shrink-0 text-sm text-muted-foreground">{t("month")}</label>
                   <select
                     className="h-8 flex-1 rounded-md border border-input bg-background px-2 text-sm"
                     value={draftDate.month ?? ""}
@@ -831,7 +840,7 @@ function BlocksDropdown({
               )}
               {draftDate.month !== null && (
                 <div className="flex items-center gap-3">
-                  <label className="w-24 shrink-0 text-sm text-muted-foreground">Jour</label>
+                  <label className="w-24 shrink-0 text-sm text-muted-foreground">{t("day")}</label>
                   <input
                     type="number"
                     min={1}
@@ -847,11 +856,11 @@ function BlocksDropdown({
             <DialogFooter>
               {timelineDate && (
                 <Button variant="ghost" size="sm" className="mr-auto text-muted-foreground" onClick={() => { onTimelineDateChange?.(null); setActiveTool(null); }}>
-                  Retirer la date
+                  {t("removeDate")}
                 </Button>
               )}
               <Button size="sm" onClick={() => { onTimelineDateChange?.(draftDate); setActiveTool(null); }}>
-                Confirmer
+                {t("colorConfirm")}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -862,7 +871,7 @@ function BlocksDropdown({
         <Dialog open={activeTool === "location"} onOpenChange={(v) => !v && setActiveTool(null)}>
           <DialogContent className="max-w-sm">
             <DialogHeader>
-              <DialogTitle>Choisir un lieu</DialogTitle>
+              <DialogTitle>{t("locationTitle")}</DialogTitle>
             </DialogHeader>
             <ScrollArea className="max-h-64">
               <div className="space-y-1 py-1">
@@ -886,11 +895,11 @@ function BlocksDropdown({
             <DialogFooter>
               {mapPinId && (
                 <Button variant="ghost" size="sm" className="mr-auto text-muted-foreground" onClick={() => { onMapPinChange?.(null); setActiveTool(null); }}>
-                  Retirer le lieu
+                  {t("removeLocation")}
                 </Button>
               )}
               <Button size="sm" onClick={() => { onMapPinChange?.(draftPinId); setActiveTool(null); }}>
-                Confirmer
+                {t("colorConfirm")}
               </Button>
             </DialogFooter>
           </DialogContent>

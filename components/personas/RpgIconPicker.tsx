@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   Dialog,
   DialogContent,
@@ -19,6 +20,8 @@ type Props = {
 };
 
 export function RpgIconPicker({ value, onChange, trigger }: Props) {
+  const t = useTranslations("iconPicker");
+  const tCommon = useTranslations("common");
   const [open, setOpen] = useState(false);
   const [allIcons, setAllIcons] = useState<string[]>([]);
   const [search, setSearch] = useState("");
@@ -67,13 +70,13 @@ export function RpgIconPicker({ value, onChange, trigger }: Props) {
           onOpenAutoFocus={(e) => { e.preventDefault(); searchRef.current?.focus(); }}
         >
           <DialogTitle className="text-sm font-medium leading-none">
-            Choisir une icône
+            {t("chooseIcon")}
           </DialogTitle>
 
           <div className="flex items-center gap-2">
             <Input
               ref={searchRef}
-              placeholder="Rechercher une icône…"
+              placeholder={t("searchRpg")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="h-8 text-sm"
@@ -83,7 +86,7 @@ export function RpgIconPicker({ value, onChange, trigger }: Props) {
                 type="button"
                 onClick={handleClear}
                 className="shrink-0 text-muted-foreground hover:text-destructive transition-colors"
-                title="Retirer l'icône"
+                title={t("removeIcon")}
               >
                 <X className="h-4 w-4" />
               </button>
@@ -91,9 +94,9 @@ export function RpgIconPicker({ value, onChange, trigger }: Props) {
           </div>
 
           {allIcons.length === 0 ? (
-            <p className="text-xs text-muted-foreground text-center py-6">Chargement…</p>
+            <p className="text-xs text-muted-foreground text-center py-6">{tCommon("loading")}</p>
           ) : filtered.length === 0 ? (
-            <p className="text-xs text-muted-foreground text-center py-6">Aucun résultat.</p>
+            <p className="text-xs text-muted-foreground text-center py-6">{t("noResults")}</p>
           ) : (
             <>
               <div className="grid grid-cols-8 gap-1 max-h-[280px] overflow-y-auto">
@@ -129,7 +132,7 @@ export function RpgIconPicker({ value, onChange, trigger }: Props) {
                     onClick={() => setPage((p) => p - 1)}
                     className="px-2 py-1 rounded hover:bg-muted disabled:opacity-30 transition-colors"
                   >
-                    ← Préc.
+                    {t("prev")}
                   </button>
                   <span>{page + 1} / {totalPages}</span>
                   <button
@@ -138,7 +141,7 @@ export function RpgIconPicker({ value, onChange, trigger }: Props) {
                     onClick={() => setPage((p) => p + 1)}
                     className="px-2 py-1 rounded hover:bg-muted disabled:opacity-30 transition-colors"
                   >
-                    Suiv. →
+                    {t("next")}
                   </button>
                 </div>
               )}

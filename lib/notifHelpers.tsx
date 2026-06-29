@@ -1,5 +1,8 @@
 import type { ReactNode } from "react";
+import type { useTranslations } from "next-intl";
 import type { AppNotification } from "@/types/db";
+
+export type NotifT = ReturnType<typeof useTranslations<"notifications">>;
 
 const UNIFIED_RE = /^[0-9a-fA-F]+(-[0-9a-fA-F]+)*$/;
 
@@ -13,31 +16,38 @@ export function emojiFromContent(raw: string | null): string {
     }
 }
 
-function b(text: string) {
-    return <span className="font-semibold">{text}</span>;
-}
+const b = (chunks: ReactNode) => <span className="font-semibold">{chunks}</span>;
 
-export function notifText(n: AppNotification): ReactNode {
-    const actor = n.actor_name ? b(`${n.actor_name}`) : "Quelqu'un";
+export function notifText(n: AppNotification, t: NotifT): ReactNode {
+    const actor = n.actor_name ?? t("text.someone");
+    const r = { b };
+
     switch (n.type) {
         case "mention":
             return n.content
-                ? <>{actor} vous a mentionné dans {b(`${n.content}`)}</>
-                : <>{actor} vous a mentionné</>;
+                ? t.rich("text.mention", { actor, chatroom: n.content, ...r })
+                : t.rich("text.mentionSimple", { actor, ...r });
         case "reaction":
-            return <>{actor} a réagi {emojiFromContent(n.content)} à votre message</>;
+            return t.rich("text.reaction", { actor, emoji: emojiFromContent(n.content), ...r });
         case "new_member":
-            return <>{actor} a rejoint {n.content ? b(`${n.content}`) : "un monde"}</>;
+            return n.content
+                ? t.rich("text.newMember", { actor, world: n.content, ...r })
+                : t.rich("text.newMemberNoWorld", { actor, ...r });
         case "new_chatroom":
-            return <>{actor} a créé {n.content ? b(`${n.content}`) : "une chatroom"}</>;
+            return n.content
+                ? t.rich("text.newChatroom", { actor, chatroom: n.content, ...r })
+                : t.rich("text.newChatroomNoName", { actor, ...r });
         case "world_invite":
-            return <>{actor} vous a invité à rejoindre un monde</>;
+            return t.rich("text.worldInvite", { actor, ...r });
         case "chatroom_reply": {
             const count = n.metadata?.count ?? 1;
-            const place = n.content ? <>dans {b(`${n.content}`)}</> : <>dans une chatroom</>;
             return count > 1
-                ? <>{b(String(count))} nouveaux messages {place}</>
-                : <>{actor} a répondu {place}</>;
+                ? n.content
+                    ? t.rich("text.chatroomReplyMany", { count, chatroom: n.content, ...r })
+                    : t.rich("text.chatroomReplyManyNoContent", { count, ...r })
+                : n.content
+                    ? t.rich("text.chatroomReplySingle", { actor, chatroom: n.content, ...r })
+                    : t.rich("text.chatroomReplySingleNoContent", { actor, ...r });
         }
     }
 }
@@ -48,11 +58,11 @@ export function notifHref(n: AppNotification): string | null {
     return null;
 }
 
-export function compactTime(iso: string): string {
+export function compactTime(iso: string, dayAbbr = "j"): string {
     const min = Math.floor((Date.now() - new Date(iso).getTime()) / 60_000);
     if (min < 1) return "< 1min";
     if (min < 60) return `${min}min`;
     const h = Math.floor(min / 60);
     if (h < 24) return `${h}h`;
-    return `${Math.floor(h / 24)}j`;
+    return `${Math.floor(h / 24)}${dayAbbr}`;
 }
