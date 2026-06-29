@@ -111,6 +111,8 @@ export function ParagraphBlockEditor({
   }, [value]);
 
   function handlePaste(e: React.ClipboardEvent<HTMLDivElement>) {
+    // Toujours intercepter : empêche le browser de coller du HTML riche (spans, styles…)
+    e.preventDefault();
     const text = e.clipboardData.getData("text/plain");
     if (!text) return;
 
@@ -141,12 +143,21 @@ export function ParagraphBlockEditor({
       paragraphs = text.split(/\n\n+/);
     }
 
-if (paragraphs.length <= 1) return; // un seul paragraphe → comportement natif
+    function paraToHTML(para: string): string {
+      return para.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>") || "<br>";
+    }
 
-    e.preventDefault();
     const el = editorRef.current;
     if (!el) return;
 
+    // Un seul paragraphe : insertion inline au curseur, sans HTML riche
+    if (paragraphs.length <= 1) {
+      document.execCommand("insertHTML", false, paraToHTML(paragraphs[0] ?? text));
+      handleInput();
+      return;
+    }
+
+    // Plusieurs paragraphes : insertion bloc par bloc
     const sel = window.getSelection();
     if (!sel || !sel.rangeCount) return;
     const range = sel.getRangeAt(0);
@@ -164,11 +175,6 @@ if (paragraphs.length <= 1) return; // un seul paragraphe → comportement natif
     // Supprime la sélection existante
     range.deleteContents();
 
-    function paraToHTML(para: string): string {
-      return para.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>") || "<br>";
-    }
-
-    // Insère le premier paragraphe dans le bloc courant
     const [first, ...rest] = paragraphs;
     if (currentBlock) {
       // Vide le bloc courant et y place le premier paragraphe

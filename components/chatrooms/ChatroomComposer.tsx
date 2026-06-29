@@ -242,13 +242,9 @@ export function ChatroomComposer({
       toast.warning("Choisissez au moins un destinataire pour la note privée.");
       return false;
     }
-    // Verrou anti-double-création (mode « création » uniquement) : évite de
-    // créer deux chatrooms si l'envoi est déclenché deux fois rapidement.
-    const guarded = !chatId && !!onResolveChat;
-    if (guarded) {
-      if (inFlightRef.current) return false;
-      inFlightRef.current = true;
-    }
+    // Verrou global : empêche tout double-envoi (touche maintenue, double-clic, etc.)
+    if (inFlightRef.current) return false;
+    inFlightRef.current = true;
     try {
       // Résolution de la chatroom cible : existante (chatId) ou créée à la volée
       // (mode « création » via onResolveChat).
@@ -350,7 +346,7 @@ export function ChatroomComposer({
       onAfterSend?.(targetChatId);
       return true;
     } finally {
-      if (guarded) inFlightRef.current = false;
+      inFlightRef.current = false;
     }
   }
 
@@ -384,7 +380,7 @@ export function ChatroomComposer({
 
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      void send();
+      if (!e.repeat) void send();
     }
   }
 

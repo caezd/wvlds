@@ -147,7 +147,15 @@
       "errorNotConnected": "Vous devez être connecté.",
       "errorCreateFailed": "Impossible de créer la chatroom.",
       "timelinePlaceholder": "Situer dans la chronologie",
-      "monthPlaceholder": "Mois —"
+      "monthPlaceholder": "Mois —",
+      "dialogTitle": "Nouvelle conversation",
+      "titlePlaceholder": "Titre de la conversation",
+      "titleClear": "Effacer le titre",
+      "titleRandomize": "Générer un titre aléatoire",
+      "discardTitle": "Abandonner la conversation ?",
+      "discardDescription": "Du texte a été saisi. Fermer le dialog supprimera votre brouillon.",
+      "discardConfirm": "Fermer quand même",
+      "discardCancel": "Continuer à écrire"
     }
   },
   "auth": {

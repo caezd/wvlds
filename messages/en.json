@@ -147,7 +147,15 @@
       "errorNotConnected": "You must be logged in.",
       "errorCreateFailed": "Unable to create the chatroom.",
       "timelinePlaceholder": "Place on timeline",
-      "monthPlaceholder": "Month —"
+      "monthPlaceholder": "Month —",
+      "dialogTitle": "New conversation",
+      "titlePlaceholder": "Conversation title",
+      "titleClear": "Clear title",
+      "titleRandomize": "Generate a random title",
+      "discardTitle": "Discard conversation?",
+      "discardDescription": "Text has been entered. Closing will discard your draft.",
+      "discardConfirm": "Close anyway",
+      "discardCancel": "Continue writing"
     }
   },
   "auth": {
