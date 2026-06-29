@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { DELAY } from "@/lib/constants";
 import type { Persona } from "@/types/db";
 
@@ -44,6 +45,7 @@ export function usePresenceChannel({
   persona: Persona | null;
 }) {
   const supabase = useMemo(() => createClient(), []);
+  const { userId, username, avatarUrl } = useCurrentUser();
   const [online, setOnline] = useState<Record<string, PresenceMeta>>({});
   const [typing, setTyping] = useState<Record<string, TypingEntry>>({});
 
@@ -55,88 +57,80 @@ export function usePresenceChannel({
     avatar_url: string | null;
   } | null>(null);
 
+  // Identité courante issue du contexte, via ref pour le payload de présence
+  // sans relancer l'abonnement quand le pseudo/avatar change.
+  const selfRef = useRef({ username, avatarUrl });
+  useEffect(() => {
+    selfRef.current = { username, avatarUrl };
+  }, [username, avatarUrl]);
+
   // Présence + broadcast typing
   useEffect(() => {
-    let mounted = true;
+    if (!userId) return;
 
-    (async () => {
-      const { data: auth } = await supabase.auth.getUser();
-      const me = auth?.user;
-      if (!me || !mounted) return;
+    // Identité résolue par le contexte (une seule fois) — plus de getUser() ni
+    // de select profiles à chaque ouverture de chatroom.
+    meRef.current = {
+      id: userId,
+      username: selfRef.current.username,
+      avatar_url: selfRef.current.avatarUrl,
+    };
 
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("username, avatar_url")
-        .eq("id", me.id)
-        .maybeSingle();
+    const channel = supabase.channel(`chat:${chatId}`, {
+      config: {
+        presence: { key: userId },
+        broadcast: { self: false },
+      },
+    });
 
-      meRef.current = {
-        id: me.id,
-        username: profile?.username ?? null,
-        avatar_url: (profile as unknown as { avatar_url?: string | null } | null)?.avatar_url ?? null,
+    channel.on("presence", { event: "sync" }, () => {
+      setOnline(parsePresenceState(channel.presenceState()));
+    });
+
+    channel.on("broadcast", { event: "typing" }, ({ payload }: { payload: Record<string, unknown> }) => {
+      const { user_id, username: typedUsername, persona_name } = payload as {
+        user_id: string;
+        username?: string | null;
+        persona_name?: string | null;
       };
 
-      const channel = supabase.channel(`chat:${chatId}`, {
-        config: {
-          presence: { key: me.id },
-          broadcast: { self: false },
-        },
-      });
+      setTyping((prev) => ({
+        ...prev,
+        [user_id]: { username: typedUsername, personaName: persona_name, ts: Date.now() },
+      }));
 
-      channel.on("presence", { event: "sync" }, () => {
-        setOnline(parsePresenceState(channel.presenceState()));
-      });
-
-      channel.on("broadcast", { event: "typing" }, ({ payload }: { payload: Record<string, unknown> }) => {
-        const { user_id, username, persona_name } = payload as {
-          user_id: string;
-          username?: string | null;
-          persona_name?: string | null;
-        };
-
-        setTyping((prev) => ({
-          ...prev,
-          [user_id]: { username, personaName: persona_name, ts: Date.now() },
-        }));
-
-        window.setTimeout(() => {
-          setTyping((curr) => {
-            const t = curr[user_id];
-            if (!t || Date.now() - t.ts < DELAY.TYPING_TIMEOUT - 200) return curr;
-            const copy = { ...curr };
-            delete copy[user_id];
-            return copy;
-          });
-        }, DELAY.TYPING_TIMEOUT);
-      });
-
-      channel.subscribe(async (status: string) => {
-        if (status !== "SUBSCRIBED") return;
-        await channel.track({
-          user_id: me.id,
-          username: meRef.current?.username ?? null,
-          avatar_url: meRef.current?.avatar_url ?? null,
-          persona_name: persona?.name ?? null,
+      window.setTimeout(() => {
+        setTyping((curr) => {
+          const t = curr[user_id];
+          if (!t || Date.now() - t.ts < DELAY.TYPING_TIMEOUT - 200) return curr;
+          const copy = { ...curr };
+          delete copy[user_id];
+          return copy;
         });
-        setOnline(parsePresenceState(channel.presenceState()));
-      });
+      }, DELAY.TYPING_TIMEOUT);
+    });
 
-      if (!mounted) {
-        supabase.removeChannel(channel);
-        return;
-      }
-      channelRef.current = channel;
-    })();
+    channel.subscribe(async (status: string) => {
+      if (status !== "SUBSCRIBED") return;
+      await channel.track({
+        user_id: userId,
+        username: meRef.current?.username ?? null,
+        avatar_url: meRef.current?.avatar_url ?? null,
+        persona_name: persona?.name ?? null,
+      });
+      setOnline(parsePresenceState(channel.presenceState()));
+    });
+
+    channelRef.current = channel;
 
     return () => {
-      mounted = false;
       if (channelRef.current) {
         channelRef.current.untrack();
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
       }
     };
-  }, [chatId, supabase]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [chatId, supabase, userId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Mettre à jour le track quand la persona change
   useEffect(() => {

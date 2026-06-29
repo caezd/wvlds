@@ -3,6 +3,18 @@ import { renderHook, act, waitFor } from "@testing-library/react";
 import { createSupabaseMock } from "@/test/supabaseMock";
 
 vi.mock("@/lib/supabase/client", () => ({ createClient: vi.fn() }));
+// L'identité vient désormais du contexte CurrentUser (plus de getUser/select ici).
+vi.mock("@/hooks/useCurrentUser", () => ({
+  useCurrentUser: () => ({
+    userId: "me",
+    username: "moi",
+    avatarUrl: null,
+    appearOffline: false,
+    plan: null,
+    user: null,
+    loading: false,
+  }),
+}));
 
 import { usePresenceChannel } from "@/hooks/usePresenceChannel";
 import { createClient } from "@/lib/supabase/client";

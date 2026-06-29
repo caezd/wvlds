@@ -93,12 +93,20 @@ function parsePresenceState(
 
 export default function PresenceProvider({ children }: { children: React.ReactNode }) {
     const supabase = useMemo(() => createClient(), []);
-    const { userId } = useCurrentUser();
+    const { userId, username, avatarUrl, appearOffline: ctxAppearOffline } = useCurrentUser();
 
     const [onlineUsers, setOnlineUsers] = useState<Record<string, GlobalPresenceMeta>>({});
     const [status, setStatusState] = useState<PresenceStatus>("online");
     const [appearOffline, setAppearOfflineState] = useState(false);
     const appearOfflineRef = useRef(false);
+
+    // Profil courant issu du contexte (résolu une seule fois, idéalement côté
+    // serveur). Via un ref pour alimenter le payload de présence sans relancer
+    // l'abonnement realtime (le canal reste keyé sur userId).
+    const selfRef = useRef({ username, avatarUrl, appearOffline: ctxAppearOffline });
+    useEffect(() => {
+        selfRef.current = { username, avatarUrl, appearOffline: ctxAppearOffline };
+    }, [username, avatarUrl, ctxAppearOffline]);
 
     // État brut du canal de présence (connectés en ce moment)
     const rawRef = useRef<Record<string, GlobalPresenceMeta>>({});
@@ -140,9 +148,9 @@ export default function PresenceProvider({ children }: { children: React.ReactNo
 
         let mounted = true;
         let lastTrack = 0;
-        let profile: { username: string | null; avatar_url: string | null } = {
-            username: null,
-            avatar_url: null,
+        const profile: { username: string | null; avatar_url: string | null } = {
+            username: selfRef.current.username,
+            avatar_url: selfRef.current.avatarUrl,
         };
 
         const track = async (force = false) => {
@@ -171,22 +179,8 @@ export default function PresenceProvider({ children }: { children: React.ReactNo
         trackRef.current = track;
 
         (async () => {
-            const { data } = await supabase
-                .from(TABLE.PROFILES)
-                .select("username, avatar_url, appear_offline")
-                .eq("id", userId)
-                .maybeSingle();
-            if (!mounted) return;
-            const row = data as unknown as {
-                username?: string | null;
-                avatar_url?: string | null;
-                appear_offline?: boolean | null;
-            } | null;
-            profile = {
-                username: row?.username ?? null,
-                avatar_url: row?.avatar_url ?? null,
-            };
-            appearOfflineRef.current = !!row?.appear_offline;
+            // Profil déjà résolu par le contexte → plus de select profiles ici.
+            appearOfflineRef.current = selfRef.current.appearOffline;
             setAppearOfflineState(appearOfflineRef.current);
             setStatusState(appearOfflineRef.current ? "offline" : "online");
 

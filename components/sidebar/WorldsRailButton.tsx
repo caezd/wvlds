@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Globe, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { supabaseThumb } from "@/lib/storage";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -22,6 +23,7 @@ type FavoriteWorld = { id: string; name: string; icon_url: string | null };
 
 export function WorldsRailButton() {
   const supabase = useMemo(() => createClient(), []);
+  const { userId, plan: ctxPlan } = useCurrentUser();
   const pathname = usePathname();
   const isWorldPage = pathname?.startsWith("/w/") ?? false;
   const [open, setOpen] = useState(false);
@@ -31,35 +33,33 @@ export function WorldsRailButton() {
   const leaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    if (!userId) return;
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const [{ data: favData }, { data: profile }, { count: ownedCount }] = await Promise.all([
+      // `plan` vient du contexte (résolu une seule fois) — plus de select dédié.
+      const [{ data: favData }, { count: ownedCount }] = await Promise.all([
         supabase
           .from("world_user_preferences")
           .select("worlds!inner(id, name, icon_url)")
-          .eq("user_id", user.id)
+          .eq("user_id", userId)
           .eq("is_favorite", true),
-        supabase.from("profiles").select("plan").eq("id", user.id).single(),
         supabase
           .from("worlds")
           .select("id", { count: "exact", head: true })
-          .eq("owner_id", user.id)
+          .eq("owner_id", userId)
           .is("deleted_at", null)
           .eq("is_archived", false),
       ]);
 
       setWorlds((favData ?? []).map((r: { worlds: unknown }) => r.worlds as FavoriteWorld));
 
-      const plan = ((profile as { plan?: string | null } | null)?.plan ?? "free") as "free" | "pro" | "team" | "lifetime";
+      const plan = (ctxPlan ?? "free") as "free" | "pro" | "team" | "lifetime";
       const limit = plan === "free" ? 1 : Infinity;
       const owned = ownedCount ?? 0;
       setQuotaReached(limit !== Infinity && owned >= limit);
       setQuotaInfo({ plan, ownedCount: owned, quotaLimit: limit === Infinity ? 999 : limit });
     }
     void load();
-  }, [supabase]);
+  }, [supabase, userId, ctxPlan]);
 
   function onEnter() {
     if (leaveTimer.current) clearTimeout(leaveTimer.current);
@@ -69,7 +69,6 @@ export function WorldsRailButton() {
     leaveTimer.current = setTimeout(() => setOpen(false), 120);
   }
 
-  const showCreate = !quotaReached;
 
   return (
     <div className="relative w-full px-1.5" onMouseEnter={onEnter} onMouseLeave={onLeave}>
@@ -101,7 +100,7 @@ export function WorldsRailButton() {
         {/* Section extensible */}
         <div
           className={cn(
-            "flex w-full flex-col items-center overflow-hidden transition-[max-height,opacity] duration-200 ease-in-out",
+            "flex w-full flex-col items-center overflow-hidden transition-[opacity] duration-200 ease-in-out ",
             open ? "max-h-96 opacity-100" : "max-h-0 opacity-0",
           )}
         >
@@ -137,29 +136,29 @@ export function WorldsRailButton() {
                   </Tooltip>
                 ))}
               </div>
-              {showCreate && <div className="my-1 h-px w-6 shrink-0 bg-mist-50/10" />}
+              <div className="my-1 h-px w-6 shrink-0 bg-mist-50/10" />
             </>
           )}
 
           {/* Bouton créer un monde */}
-          {showCreate && (
-            <div className="w-full px-1.5 pb-1.5">
-              <CreateWorldDialog
-                plan={quotaInfo.plan}
-                ownedCount={quotaInfo.ownedCount}
-                quotaLimit={quotaInfo.quotaLimit}
-                trigger={
-                  <button
-                    type="button"
-                    className="flex h-6 w-full items-center justify-center rounded-md bg-accent text-accent-foreground transition-colors hover:bg-accent/90"
-                    aria-label="Nouveau monde"
-                  >
-                    <Plus size={14} />
-                  </button>
-                }
-              />
-            </div>
-          )}
+          <div className="w-full px-1.5 pb-1.5">
+            <CreateWorldDialog
+              disabled={quotaReached}
+              plan={quotaInfo.plan}
+              ownedCount={quotaInfo.ownedCount}
+              quotaLimit={quotaInfo.quotaLimit}
+              trigger={
+                <button
+                  type="button"
+                  disabled={quotaReached}
+                  className="flex h-6 w-full items-center justify-center rounded-md bg-accent text-accent-foreground transition-colors hover:bg-accent/90 disabled:opacity-40 disabled:cursor-not-allowed"
+                  aria-label="Nouveau monde"
+                >
+                  <Plus size={14} />
+                </button>
+              }
+            />
+          </div>
         </div>
       </div>
     </div>

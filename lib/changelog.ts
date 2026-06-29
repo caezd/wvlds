@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-06 ──────────────────────────────────────────────────────────────
   {
     date: "2026-06",
+    tag: "Performance",
+    text: "Réduction des requêtes réseau au chargement :\n- **Profil courant partagé par contexte** : id, pseudo, avatar, plan et statut « hors-ligne » sont résolus **une seule fois côté serveur** et diffusés via un `CurrentUserProvider`. Avant, chaque composant refaisait son propre `auth.getUser()` + `select` sur `profiles` — soit ~6 requêtes `/auth/v1/user` et plusieurs `profiles?select=…` identiques par page\n- Plus aucun `getUser()` réseau au démarrage : la session est lue depuis le stockage local (`INITIAL_SESSION`)\n- Les variantes de `select` sur le profil (pseudo, avatar, plan, appear_offline) sont **mutualisées** : la barre latérale, la présence et le canal de chatroom lisent le contexte au lieu de re-fetcher\n- **Marquage « lu » dédoublonné** : l'ouverture d'une chatroom ne déclenche plus deux écritures `chatroom_reads` ni deux recalculs de compteurs non-lus\n- Aucun changement d'API pour les composants : le hook `useCurrentUser()` est inchangé",
+  },
+  {
+    date: "2026-06",
     tag: "i18n",
     text: "Traduction de l'interface :\n- Support de **3 langues** : Français, English, Español\n- Détection automatique via la langue du navigateur (`Accept-Language`)\n- Préférence sauvegardée dans le profil (synchronisation entre appareils)\n- Sélecteur de langue dans **Paramètres** (`/settings`)\n- Nouveau lien « Paramètres » dans le menu utilisateur\n- Page admin `/admin/translations` : tableau de couverture par namespace, alerte sur les clés manquantes\n- Architecture `next-intl` sans routing — les URLs restent inchangées",
   },

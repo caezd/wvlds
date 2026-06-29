@@ -105,6 +105,42 @@ function setupWithActions(initialNotifs: AppNotification[] = [BASE_NOTIF]) {
     return mock;
 }
 
+// ── setActiveChat ─────────────────────────────────────────────────────────────
+
+function ConsumerActiveChat() {
+    const { setActiveChat } = useNotifications();
+    return (
+        <button data-testid="activate" onClick={() => setActiveChat("chat-1")}>
+            activer
+        </button>
+    );
+}
+
+describe("NotificationsProvider — setActiveChat", () => {
+    it("ne marque PAS le chat lu (pas de POST chatroom_reads redondant)", async () => {
+        const mock = createSupabaseMock({
+            user: { id: "u1" },
+            results: [{ data: [] }, { data: [] }, { data: [] }],
+        });
+        vi.mocked(createClient).mockReturnValue(mock.client as never);
+
+        render(
+            <NotificationsProvider>
+                <ConsumerActiveChat />
+            </NotificationsProvider>,
+        );
+
+        await waitFor(() => expect(screen.getByTestId("activate")).toBeInTheDocument());
+
+        act(() => {
+            screen.getByTestId("activate").click();
+        });
+
+        // La vue chatroom est la seule à marquer lu : setActiveChat n'écrit rien.
+        expect(mock.buildersFor("chatroom_reads")).toHaveLength(0);
+    });
+});
+
 // ── markNotifRead ─────────────────────────────────────────────────────────────
 
 describe("NotificationsProvider — markNotifRead", () => {
