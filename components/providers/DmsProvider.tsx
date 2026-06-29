@@ -291,11 +291,16 @@ export default function DmsProvider({ children }: { children: React.ReactNode })
     };
     setMessages(prev => [...prev, optimistic]);
 
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from(TABLE.DM_MESSAGES)
       .insert({ conversation_id: convId, author_id: uid, content: content.trim() })
       .select()
       .single();
+
+    if (error || !data) {
+      setMessages(prev => prev.filter(m => m.id !== optimistic.id));
+      return;
+    }
 
     if (data) {
       setMessages(prev => prev.map(m => m.id === optimistic.id ? data as DmMessage : m));

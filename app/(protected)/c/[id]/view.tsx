@@ -247,7 +247,6 @@ export default function ChatRoomView({
         .from(TABLE.CHALLENGES)
         .select("id, title, description, validation, reward_coins, reward_xp, min_word_count, source, active_date")
         .eq("active_date", today)
-        .eq("user_id", userId)
         .is("world_id", null);
       if (!rows?.length) return;
 

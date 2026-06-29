@@ -202,7 +202,7 @@ export default async function Page({ params }: { params: { id: string } }) {
         title: chatroom.title ?? t("newRoom"),
         banner_url: chatroom.banner_url ?? null,
         icon_url: chatroom.icon_url ?? null,
-        timeline_date: (chatroom.timeline_date as { year: number; month: number | null; day?: number | null } | null) ?? null,
+        timeline_date: (chatroom.timeline_date as { year: number; month: number | null; day: number | null } | null) ?? null,
         map_pin_id: (chatroom.map_pin_id as string | null) ?? null,
         worlds: (() => {
           const w = worldData;

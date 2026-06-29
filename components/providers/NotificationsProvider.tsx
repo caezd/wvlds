@@ -154,12 +154,13 @@ export default function NotificationsProvider({ children }: { children: React.Re
 
     const markNotifRead = useCallback(async (id: string) => {
         const now = new Date().toISOString();
-        setNotifications(prev => prev.filter(n => n.id !== id));
-        notifOffsetRef.current = Math.max(0, notifOffsetRef.current - 1);
-        await supabase
+        const { error } = await supabase
             .from(TABLE.NOTIFICATIONS)
             .update({ read_at: now, archived_at: now })
             .eq("id", id);
+        if (error) return;
+        setNotifications(prev => prev.filter(n => n.id !== id));
+        notifOffsetRef.current = Math.max(0, notifOffsetRef.current - 1);
     }, [supabase]);
 
     const markAllNotifsRead = useCallback(async () => {
@@ -174,13 +175,13 @@ export default function NotificationsProvider({ children }: { children: React.Re
     }, [supabase]);
 
     const archiveNotif = useCallback(async (id: string) => {
-        setNotifications(prev => prev.filter(n => n.id !== id));
-        // Décrémenter l'offset pour que le prochain loadMore reste cohérent
-        notifOffsetRef.current = Math.max(0, notifOffsetRef.current - 1);
-        await supabase
+        const { error } = await supabase
             .from(TABLE.NOTIFICATIONS)
             .update({ archived_at: new Date().toISOString() })
             .eq("id", id);
+        if (error) return;
+        setNotifications(prev => prev.filter(n => n.id !== id));
+        notifOffsetRef.current = Math.max(0, notifOffsetRef.current - 1);
     }, [supabase]);
 
     const loadMoreNotifs = useCallback(async () => {
@@ -301,8 +302,11 @@ export default function NotificationsProvider({ children }: { children: React.Re
                             .eq("id", id)
                             .single();
                         if (!data) return;
-                        setNotifications(prev => [data as AppNotification, ...prev]);
-                        notifOffsetRef.current += 1;
+                        setNotifications(prev => {
+                            if (prev.some(n => n.id === data.id)) return prev;
+                            notifOffsetRef.current += 1;
+                            return [data as AppNotification, ...prev];
+                        });
                     },
                 )
                 .on(

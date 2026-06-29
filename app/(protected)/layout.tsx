@@ -8,6 +8,7 @@ import { getFeatureFlags } from "@/lib/featureFlags";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { LocaleSync } from "@/components/i18n/LocaleSync";
 
 export default async function PageLayout({
@@ -21,6 +22,8 @@ export default async function PageLayout({
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  if (!user) redirect("/auth/login");
 
   let usernameDialog: React.ReactNode = null;
   let localeSync: React.ReactNode = null;

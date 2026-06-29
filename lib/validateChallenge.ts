@@ -45,7 +45,8 @@ export function validateChallenge(
     case "no_adverb_ly":
       // -ement (rapidement), -amment (élégamment), -emment (apparemment)
       // Faux positifs possibles : appartement, gouvernement, fondement — acceptés
-      return !/\b\w+(ement|amment|emment)\b/i.test(content);
+      // \p{L} couvre les lettres Unicode (é, è, â…) que \w ignore en JS
+      return !/[\p{L}]+(ement|amment|emment)(?![\p{L}])/u.test(content);
 
     case "contains_regex":
       try {
