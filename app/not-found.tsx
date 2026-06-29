@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import Logo from "@/components/logo";
 
 /** Étoiles en pur CSS : une poignée de points blancs en radial-gradient */
@@ -70,7 +70,7 @@ export default function NotFound() {
         style={STARRY_SKY}
       >
         <p className="max-w-md text-sm leading-relaxed text-white/90">
-          Chaque monde commence par une page blanche. Celui que tu cherchais semble s'être évaporé, mais rien ne t'empêche d'en créer un nouveau.
+          Chaque monde commence par une page blanche. Celui que tu cherchais semble s&apos;être évaporé, mais rien ne t&apos;empêche d&apos;en créer un nouveau.
         </p>
       </aside>
     </div>

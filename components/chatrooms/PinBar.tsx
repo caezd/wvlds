@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Anchor, Pin } from "lucide-react";
+import { Anchor } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AvatarWithFrame } from "@/components/avatars/AvatarWithFrame";
 import type { ChatPin, ChatMessageWithPersona } from "@/types/db";

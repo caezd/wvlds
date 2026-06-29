@@ -116,7 +116,7 @@ export default function ChatRoomView({
   initialPersona,
   selfId,
   canEdit,
-  canWorldAdmin,
+  canWorldAdmin: _canWorldAdmin,
   initialChatrooms,
   chatroomKey: initialChatroomKey,
   initialIsFollowed,
@@ -220,7 +220,7 @@ export default function ChatRoomView({
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: TABLE.CHALLENGE_ATTEMPTS, filter: `chat_id=eq.${chatId}` },
-        (payload) => {
+        (payload: { new: Record<string, unknown> }) => {
           const row = payload.new as { message_id: number; challenge_id: string; status: string };
           if (row.status !== "won") return;
           void (async () => {
@@ -250,18 +250,18 @@ export default function ChatRoomView({
         .is("world_id", null);
       if (!rows?.length) return;
 
-      const ids = rows.map((c) => c.id as string);
+      const ids = rows.map((c: Record<string, unknown>) => c.id as string);
       const { data: won } = await supabase
         .from(TABLE.CHALLENGE_ATTEMPTS)
         .select("challenge_id")
         .in("challenge_id", ids)
         .eq("status", "won");
 
-      const wonIds = new Set((won ?? []).map((a) => a.challenge_id as string));
+      const wonIds = new Set<string>((won ?? []).map((a: Record<string, unknown>) => a.challenge_id as string));
       wonChallengeIdsRef.current = wonIds;
 
       setActiveChallenges(
-        rows.map((c) => ({
+        rows.map((c: Record<string, unknown>) => ({
           id: c.id as string,
           title: c.title as string,
           description: c.description as string | null,

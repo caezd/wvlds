@@ -117,7 +117,7 @@ export default function ChatroomSettingsSheet({ canEdit, chatroom, worldTimeline
           .select("id, title, color")
           .eq("world_id", worldId)
           .order("sort_index")
-          .then(({ data }) => setMapPins((data ?? []) as MapPinOption[]));
+          .then(({ data }: { data: MapPinOption[] | null }) => setMapPins(data ?? []));
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -365,7 +365,7 @@ export default function ChatroomSettingsSheet({ canEdit, chatroom, worldTimeline
                       disabled={savingTimeline}
                       onCheckedChange={(v) => {
                         if (v) {
-                          void persistTimeline({ year: worldTimelineConfig.current_year, month: worldTimelineConfig.current_month });
+                          void persistTimeline({ year: worldTimelineConfig.current_year, month: worldTimelineConfig.current_month, day: null });
                         } else {
                           void persistTimeline(null);
                         }

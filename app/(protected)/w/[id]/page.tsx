@@ -58,7 +58,7 @@ export default async function WorldPage({
     icon_url: string | null;
     last_message_at: string | null;
     unread_count: number;
-    timeline_date?: { year: number; month: number | null; day?: number | null } | null;
+    timeline_date?: { year: number; month: number | null; day: number | null } | null;
   };
 
   const isShared = true; // guaranteed by the myRole guard above

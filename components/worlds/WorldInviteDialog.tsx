@@ -822,7 +822,7 @@ export function WorldInviteDialog({
                         <AlertDialogContent>
                             <AlertDialogHeader>
                                 <AlertDialogTitle>
-                                    Annuler l'invitation de{" "}
+                                    Annuler l&apos;invitation de{" "}
                                     {pendingCancelInvite?.username
                                         ? `@${pendingCancelInvite.username}`
                                         : "cet utilisateur"}{" "}

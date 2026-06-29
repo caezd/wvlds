@@ -14,21 +14,10 @@ type TimelineRoom = {
   timeline_date: WorldTimelineDate | null;
 };
 
-function formatDate(date: WorldTimelineDate, config: WorldTimelineConfig): string {
-  const yearStr = `${config.year_label} ${date.year}${config.era_name ? ` ${config.era_name}` : ""}`;
-  if (date.month !== null && config.month_names[date.month]) {
-    const monthStr = config.month_names[date.month];
-    if (date.day !== null) return `${date.day} ${monthStr}, ${yearStr}`;
-    return `${monthStr}, ${yearStr}`;
-  }
-  return yearStr;
-}
-
-type GroupKey = string;
 type Grouped = Map<number, Map<number | null, TimelineRoom[]>>;
 
 export function WorldTimeline({
-  worldId,
+  worldId: _worldId,
   rooms,
   config,
   onClose,
@@ -40,7 +29,7 @@ export function WorldTimeline({
 }) {
   const router = useRouter();
 
-  const { dated, undated } = useMemo(() => {
+  const { dated } = useMemo(() => {
     const d: TimelineRoom[] = [];
     const u: TimelineRoom[] = [];
     for (const r of rooms) {

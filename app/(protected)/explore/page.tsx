@@ -3,7 +3,7 @@ import { getUserId } from "@/lib/auth";
 import { getFeatureFlags } from "@/lib/featureFlags";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { Globe, GlobeLock } from "lucide-react";
+import { Globe } from "lucide-react";
 import { ExploreSearch } from "./ExploreSearch";
 import { JoinWorldButton } from "./JoinWorldButton";
 import { getTranslations } from "next-intl/server";

@@ -17,7 +17,7 @@ import { useNotifications } from "@/components/providers/NotificationsProvider";
 import { WorldPreviewDialog } from "@/components/worlds/WorldPreviewDialog";
 import { TABLE, RPC } from "@/lib/constants";
 import type { AppNotification, NotificationType } from "@/types/db";
-import { emojiFromContent, notifText, notifHref, compactTime } from "@/lib/notifHelpers";
+import { notifText, notifHref, compactTime } from "@/lib/notifHelpers";
 import { useTranslations } from "next-intl";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -126,7 +126,7 @@ function WorldInviteCard({ notif, onMarkRead }: { notif: AppNotification; onMark
 
 // ── NotifAvatar ───────────────────────────────────────────────────────────────
 
-function NotifAvatar({ avatarUrl, actorName, type, isUnread }: {
+function NotifAvatar({ avatarUrl, actorName, type, isUnread: _isUnread }: {
     avatarUrl: string | null | undefined;
     actorName: string | null;
     type: NotificationType;

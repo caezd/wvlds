@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { WorldHeroCard } from "./WorldHeroCard";
@@ -64,7 +64,7 @@ export function WorldHome({
   const [settingsOpen, setSettingsOpen] = useState(view === "settings");
 
   const hasTimeline = world_timeline && !!world.timeline_enabled && !!world.timeline_config;
-  const hasCatalogue = world_catalogue && (!!(world.restrict_inventory || world.restrict_skills) || canEditTabs);
+  const _hasCatalogue = world_catalogue && (!!(world.restrict_inventory || world.restrict_skills) || canEditTabs);
 
   const [mainExpanded, setMainExpanded] = useState(initialPrefs?.main_expanded ?? false);
   const [isFavorite, setIsFavorite] = useState(initialPrefs?.is_favorite ?? false);

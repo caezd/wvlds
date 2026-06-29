@@ -245,8 +245,9 @@ describe("CHALLENGE_CATALOG", () => {
 
   it("les patterns regex du catalogue sont tous valides", () => {
     for (const t of CHALLENGE_CATALOG) {
-      if (t.validation.kind === "contains_regex") {
-        expect(() => new RegExp(t.validation.pattern)).not.toThrow();
+      const validation = t.validation;
+      if (validation.kind === "contains_regex") {
+        expect(() => new RegExp(validation.pattern)).not.toThrow();
       }
     }
   });

@@ -340,7 +340,7 @@ function MessageBubble({ content, isMine, createdAt }: { content: string; isMine
   );
 }
 
-function ConversationView({ conv, onBack }: { conv: DmConversation; onBack: () => void }) {
+function ConversationView({ conv, onBack: _onBack }: { conv: DmConversation; onBack: () => void }) {
   const t = useTranslations("dms");
   const { messages, sendMessage, commonWorldsCount, hasMoreMessages, loadMoreMessages, currentUserId } = useDms();
   const [draft, setDraft] = useState("");

@@ -50,7 +50,7 @@ export function WorldsRailButton() {
           .eq("is_archived", false),
       ]);
 
-      setWorlds((favData ?? []).map((r) => r.worlds as unknown as FavoriteWorld));
+      setWorlds((favData ?? []).map((r: { worlds: unknown }) => r.worlds as FavoriteWorld));
 
       const plan = ((profile as { plan?: string | null } | null)?.plan ?? "free") as "free" | "pro" | "team" | "lifetime";
       const limit = plan === "free" ? 1 : Infinity;

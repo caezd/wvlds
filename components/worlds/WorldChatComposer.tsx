@@ -22,68 +22,6 @@ type MapPinOption = { id: string; title: string; color: string };
  * automatiquement reflétée ici.
  */
 
-function formatTimelineDate(date: WorldTimelineDate, config: WorldTimelineConfig): string {
-  const yearPart = `${config.year_label} ${date.year}${config.era_name ? ` ${config.era_name}` : ""}`;
-  if (date.month !== null && config.month_names[date.month]) {
-    return `${config.month_names[date.month]}, ${yearPart}`;
-  }
-  return yearPart;
-}
-
-function TimelineDatePicker({
-  config,
-  value,
-  onChange,
-}: {
-  config: WorldTimelineConfig;
-  value: WorldTimelineDate | null;
-  onChange: (d: WorldTimelineDate | null) => void;
-}) {
-  const t = useTranslations("worlds");
-  const hasMonths = config.month_names.length > 0;
-  const enabled = value !== null;
-
-  return (
-    <div className="flex flex-wrap items-center gap-2 px-1 py-1 text-xs text-muted-foreground">
-      <button
-        type="button"
-        onClick={() => onChange(enabled ? null : { year: config.current_year, month: config.current_month })}
-        className={`rounded-md border px-2 py-0.5 text-xs transition-colors ${
-          enabled
-            ? "border-primary/40 bg-primary/10 text-primary"
-            : "border-border bg-transparent hover:border-muted-foreground/40 hover:text-foreground"
-        }`}
-      >
-        {enabled && value ? formatTimelineDate(value, config) : t("composer.timelinePlaceholder")}
-      </button>
-
-      {enabled && value && (
-        <>
-          <input
-            type="number"
-            value={value.year}
-            min={-99999}
-            max={99999}
-            className="h-6 w-20 rounded-md border border-input bg-background px-2 text-xs"
-            onChange={e => onChange({ ...value, year: Number(e.target.value) || 1 })}
-          />
-          {hasMonths && (
-            <select
-              value={value.month ?? ""}
-              className="h-6 rounded-md border border-input bg-background px-1 text-xs"
-              onChange={e => onChange({ ...value, month: e.target.value === "" ? null : Number(e.target.value) })}
-            >
-              <option value="">{t("composer.monthPlaceholder")}</option>
-              {config.month_names.map((m, i) => (
-                <option key={i} value={i}>{m}</option>
-              ))}
-            </select>
-          )}
-        </>
-      )}
-    </div>
-  );
-}
 
 export function WorldChatComposer({
   worldId,
@@ -109,7 +47,7 @@ export function WorldChatComposer({
       .select("id, title, color")
       .eq("world_id", worldId)
       .order("sort_index")
-      .then(({ data }) => setMapPins((data ?? []) as MapPinOption[]));
+      .then(({ data }: { data: MapPinOption[] | null }) => setMapPins(data ?? []));
   }, [worldId, world_map]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function resolveChat(): Promise<{ chatId: string } | null> {

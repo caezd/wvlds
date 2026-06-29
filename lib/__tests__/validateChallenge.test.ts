@@ -5,7 +5,7 @@ import type { ValidationKind } from "@/types/db";
 // Textes de base suffisamment longs pour passer le min_word_count par défaut (20 mots)
 const LONG =
   "Le chevalier traversa la forêt sombre sans un mot, l'épée au côté, le regard fixe sur l'horizon lointain et brumeux.";
-const SHORT = "Juste quelques mots.";
+const _SHORT = "Juste quelques mots.";
 
 // ---------------------------------------------------------------------------
 // contains_word
