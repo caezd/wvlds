@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-06 ──────────────────────────────────────────────────────────────
   {
     date: "2026-06",
+    tag: "Performance",
+    text: "Chargement des pages plus rapide (rendu serveur) :\n- L'identité, le profil et les *feature flags* sont désormais **résolus une seule fois par requête** (mémoïsation `React cache()`) et partagés entre le layout racine, le layout protégé, le rail et la sidebar du monde\n- Avant, le rendu d'une page monde refaisait ~3 validations réseau de session (`getUser`), 3-4 lectures de profil et 2-3 lectures de flags, **en série** — principal responsable de la latence au chargement\n- Les validations de session passent par les *claims* locaux du JWT (déjà validé par le middleware), sans aller-retour réseau",
+  },
+  {
+    date: "2026-06",
     tag: "Interface",
     text: "Navigation mobile :\n- Un **menu latéral** (drawer) s'ouvre depuis l'en-tête sur mobile, regroupant le rail d'icônes et le panneau actif (notifications, messages privés, ou navigation du monde)\n- La **sidebar du monde** (sélecteur, navigation, chatrooms) est désormais accessible sur mobile via ce drawer\n- Fermeture automatique du drawer à la navigation\n- Aucun changement sur desktop",
   },

@@ -1,6 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { getUserId } from "@/lib/auth";
-import { getFeatureFlags } from "@/lib/featureFlags";
+import { getCachedFeatureFlags, getCurrentUserId } from "@/lib/currentRequest";
 import { getTranslations } from "next-intl/server";
 import {
   BookOpenText,
@@ -51,8 +50,8 @@ type Category = {
 export default async function WorldSidebar({ worldId }: { worldId: string }) {
   const supabase = await createClient();
   const [userId, featureFlags, t] = await Promise.all([
-    getUserId(supabase),
-    getFeatureFlags(supabase),
+    getCurrentUserId(),
+    getCachedFeatureFlags(),
     getTranslations("worlds"),
   ]);
 

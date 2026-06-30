@@ -5,7 +5,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import AppProviders from "@/components/providers/AppProviders";
 import type { InitialUser } from "@/components/providers/CurrentUserProvider";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentProfile } from "@/lib/currentRequest";
 import { getLocale } from "next-intl/server";
 
 const defaultUrl = process.env.VERCEL_URL
@@ -33,25 +33,17 @@ export default async function RootLayout({
 
   // Identité résolue côté serveur : diffusée par contexte pour éviter que
   // chaque composant client refasse getUser() + select username au boot.
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  let initialUser: InitialUser = null;
-  if (user) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("username, avatar_url, appear_offline, plan")
-      .eq("id", user.id)
-      .single();
-    initialUser = {
-      id: user.id,
-      username: profile?.username ?? null,
-      avatarUrl: profile?.avatar_url ?? null,
-      appearOffline: !!profile?.appear_offline,
-      plan: profile?.plan ?? null,
-    };
-  }
+  // Profil mémoïsé pour la requête → partagé avec le layout protégé et le rail.
+  const profile = await getCurrentProfile();
+  const initialUser: InitialUser = profile
+    ? {
+        id: profile.id,
+        username: profile.username ?? null,
+        avatarUrl: profile.avatar_url ?? null,
+        appearOffline: !!profile.appear_offline,
+        plan: profile.plan ?? null,
+      }
+    : null;
 
   return (
     <html lang={locale} className="dark" style={{ colorScheme: "dark" }} suppressHydrationWarning>
