@@ -13,6 +13,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     date: "2026-06",
+    tag: "Correctif",
+    text: "Correction des pages de connexion/inscription qui ne s'affichaient plus :\n- Les pages `/auth/*` étaient hors du contexte de traduction (`NextIntlClientProvider`), ce qui faisait planter les formulaires utilisant `useTranslations`\n- Le contexte i18n est désormais aussi fourni sur l'espace d'authentification",
+  },
+  {
+    date: "2026-06",
     tag: "Performance",
     text: "Réduction des requêtes réseau au chargement :\n- **Profil courant partagé par contexte** : id, pseudo, avatar, plan et statut « hors-ligne » sont résolus **une seule fois côté serveur** et diffusés via un `CurrentUserProvider`. Avant, chaque composant refaisait son propre `auth.getUser()` + `select` sur `profiles` — soit ~6 requêtes `/auth/v1/user` et plusieurs `profiles?select=…` identiques par page\n- Plus aucun `getUser()` réseau au démarrage : la session est lue depuis le stockage local (`INITIAL_SESSION`)\n- Les variantes de `select` sur le profil (pseudo, avatar, plan, appear_offline) sont **mutualisées** : la barre latérale, la présence et le canal de chatroom lisent le contexte au lieu de re-fetcher\n- **Marquage « lu » dédoublonné** : l'ouverture d'une chatroom ne déclenche plus deux écritures `chatroom_reads` ni deux recalculs de compteurs non-lus\n- Aucun changement d'API pour les composants : le hook `useCurrentUser()` est inchangé",
   },
