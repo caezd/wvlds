@@ -1,35 +1,26 @@
-import { createClient } from "@/lib/supabase/server";
 import { Compass, ShoppingBasket, ShieldCheck, Dices, UserRound } from "lucide-react";
 import { RailIcon } from "./SidebarRailIcons";
 import { NotificationBellButton } from "@/components/notifications";
 import { DmsToggleButton, PinnedDmAvatarsRail } from "@/components/dms";
 import { UserMenuButton } from "./UserMenuButton";
 import { WorldsRailButton } from "./WorldsRailButton";
-import { getFeatureFlags } from "@/lib/featureFlags";
+import { getCachedFeatureFlags, getCurrentProfile, getCurrentAuth } from "@/lib/currentRequest";
 import { MobileMenuButton } from "./MobileMenuButton";
 import { getTranslations } from "next-intl/server";
 
 export default async function SidebarRail() {
-  const supabase = await createClient();
-  const t = await getTranslations("nav");
-  const { data: { user } } = await supabase.auth.getUser();
-  const featureFlags = await getFeatureFlags(supabase);
+  // Tout est mémoïsé pour la requête (partagé avec les layouts).
+  const [t, featureFlags, auth, profile] = await Promise.all([
+    getTranslations("nav"),
+    getCachedFeatureFlags(),
+    getCurrentAuth(),
+    getCurrentProfile(),
+  ]);
 
-  let adminFlag = false;
-  let profileData: { username: string | null; plan: string | null; avatar_url: string | null } | null = null;
-
-  if (user) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("is_admin, username, plan, avatar_url")
-      .eq("id", user.id)
-      .single();
-
-    adminFlag = profile?.is_admin === true;
-    profileData = profile
-      ? { username: profile.username ?? null, plan: profile.plan ?? null, avatar_url: profile.avatar_url ?? null }
-      : null;
-  }
+  const adminFlag = profile?.is_admin === true;
+  const profileData = profile
+    ? { username: profile.username ?? null, plan: profile.plan ?? null, avatar_url: profile.avatar_url ?? null }
+    : null;
 
   return (
     <div className="flex flex-col items-center h-full w-full gap-4 lg:py-3">
@@ -87,13 +78,13 @@ export default async function SidebarRail() {
         {featureFlags.notifications && <NotificationBellButton />}
 
         {/* Avatar / menu utilisateur */}
-        {user && (
+        {auth && (
           <div className="flex flex-col items-center w-full px-1.5">
             <UserMenuButton
               variant="compact"
-              userId={user.id}
+              userId={auth.id}
               username={profileData?.username ?? null}
-              email={user.email ?? ""}
+              email={auth.email ?? ""}
               avatarUrl={profileData?.avatar_url ?? null}
               plan={profileData?.plan ?? null}
             />

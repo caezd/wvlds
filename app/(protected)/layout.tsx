@@ -1,10 +1,9 @@
-import { createClient } from "@/lib/supabase/server";
 import SidebarRail from "@/components/sidebar/SidebarRail";
 import AppShell from "@/components/sidebar/AppShell";
 import GlobalWorldsSidebar from "@/components/sidebar/GlobalWorldsSidebar";
 import { UsernameRequiredDialog } from "@/components/UsernameRequiredDialog";
 import { FeatureFlagsProvider } from "@/components/providers/FeatureFlagsProvider";
-import { getFeatureFlags } from "@/lib/featureFlags";
+import { getCurrentUserId, getCurrentProfile, getCachedFeatureFlags } from "@/lib/currentRequest";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import { cookies } from "next/headers";
@@ -16,36 +15,28 @@ export default async function PageLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const supabase = await createClient();
-  const featureFlags = await getFeatureFlags(supabase);
+  // Tout est mémoïsé pour la requête (partagé avec le root layout et le rail).
+  const userId = await getCurrentUserId();
+  if (!userId) redirect("/auth/login");
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) redirect("/auth/login");
+  const [featureFlags, profile] = await Promise.all([
+    getCachedFeatureFlags(),
+    getCurrentProfile(),
+  ]);
 
   let usernameDialog: React.ReactNode = null;
   let localeSync: React.ReactNode = null;
 
-  if (user) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("username, locale")
-      .eq("id", user.id)
-      .single();
+  if (!profile?.username) {
+    usernameDialog = <UsernameRequiredDialog userId={userId} />;
+  }
 
-    if (!profile?.username) {
-      usernameDialog = <UsernameRequiredDialog userId={user.id} />;
-    }
-
-    // Sync DB locale preference to cookie when they differ (e.g. new device login)
-    if (profile?.locale) {
-      const cookieStore = await cookies();
-      const cookieLocale = cookieStore.get("NEXT_LOCALE")?.value;
-      if (cookieLocale !== profile.locale) {
-        localeSync = <LocaleSync dbLocale={profile.locale} />;
-      }
+  // Sync DB locale preference to cookie when they differ (e.g. new device login)
+  if (profile?.locale) {
+    const cookieStore = await cookies();
+    const cookieLocale = cookieStore.get("NEXT_LOCALE")?.value;
+    if (cookieLocale !== profile.locale) {
+      localeSync = <LocaleSync dbLocale={profile.locale} />;
     }
   }
 
