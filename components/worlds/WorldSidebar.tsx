@@ -14,6 +14,7 @@ import {
 import { WorldSidebarChatrooms } from "./WorldSidebarChatrooms";
 import { WorldSidebarNavLink } from "./WorldSidebarNavLink";
 import { WorldPickerHeader, type WorldItem } from "@/components/sidebar/WorldPickerHeader";
+import { MobileSidebarSlot } from "@/components/sidebar/MobileSidebarSlot";
 import { getUserQuotaWithClient } from "@/lib/userQuota";
 
 type Room = {
@@ -133,44 +134,63 @@ export default async function WorldSidebar({ worldId }: { worldId: string }) {
     });
   }
 
+  const navLinks = (
+    <div className="border-b py-3 mb-3">
+      <WorldSidebarNavLink href={`${worldBase}`} icon={<Home size={14} />} label={t("nav.home")} />
+      <WorldSidebarNavLink href={`${worldBase}?view=members`} icon={<Users size={14} />} label={t("nav.members")} />
+      <WorldSidebarNavLink href={`${worldBase}?view=wiki`} icon={<BookOpenText size={14} />} label={t("nav.wiki")} />
+      <WorldSidebarNavLink href={`${worldBase}?view=canvas`} icon={<Network size={14} />} label={t("nav.relations")} />
+      {featureFlags.world_map && (
+        <WorldSidebarNavLink href={`${worldBase}?view=map`} icon={<MapIcon size={14} />} label={t("nav.map")} />
+      )}
+      {hasTimeline && (
+        <WorldSidebarNavLink href={`${worldBase}?view=timeline`} icon={<Clock size={14} />} label={t("nav.timeline")} />
+      )}
+      {hasCatalogue && (
+        <WorldSidebarNavLink href={`${worldBase}?view=catalogue`} icon={<Library size={14} />} label={t("nav.catalogue")} />
+      )}
+    </div>
+  );
+
+  const pickerHeader = (
+    <WorldPickerHeader
+      worlds={allWorlds}
+      currentWorldId={worldId}
+      plan={quota.plan}
+      ownedCount={quota.owned}
+      quotaLimit={quota.quotaLimit}
+      userId={userId ?? undefined}
+      isAdmin={canAdmin}
+    />
+  );
+
+  const chatrooms = (
+    <WorldSidebarChatrooms
+      worldId={worldId}
+      initialAll={allRooms}
+      initialParticipated={participated}
+      initialFollowedIds={followedIds}
+      categories={categories}
+    />
+  );
+
   return (
-    <aside className="hidden lg:flex w-60 shrink-0 flex-col overflow-hidden border-r border-border-soft p-2">
-      {/* World picker */}
-      <WorldPickerHeader
-        worlds={allWorlds}
-        currentWorldId={worldId}
-        plan={quota.plan}
-        ownedCount={quota.owned}
-        quotaLimit={quota.quotaLimit}
-        userId={userId ?? undefined}
-        isAdmin={canAdmin}
-      />
+    <>
+      {/* Desktop sidebar */}
+      <aside className="hidden lg:flex w-60 shrink-0 flex-col overflow-hidden border-r border-border-soft p-2">
+        {pickerHeader}
+        {navLinks}
+        {chatrooms}
+      </aside>
 
-      {/* Navigation */}
-      <div className="border-b py-3 mb-3">
-        <WorldSidebarNavLink href={`${worldBase}`} icon={<Home size={14} />} label={t("nav.home")} />
-        <WorldSidebarNavLink href={`${worldBase}?view=members`} icon={<Users size={14} />} label={t("nav.members")} />
-        <WorldSidebarNavLink href={`${worldBase}?view=wiki`} icon={<BookOpenText size={14} />} label={t("nav.wiki")} />
-        <WorldSidebarNavLink href={`${worldBase}?view=canvas`} icon={<Network size={14} />} label={t("nav.relations")} />
-        {featureFlags.world_map && (
-          <WorldSidebarNavLink href={`${worldBase}?view=map`} icon={<MapIcon size={14} />} label={t("nav.map")} />
-        )}
-        {hasTimeline && (
-          <WorldSidebarNavLink href={`${worldBase}?view=timeline`} icon={<Clock size={14} />} label={t("nav.timeline")} />
-        )}
-        {hasCatalogue && (
-          <WorldSidebarNavLink href={`${worldBase}?view=catalogue`} icon={<Library size={14} />} label={t("nav.catalogue")} />
-        )}
-      </div>
-
-      {/* Chatrooms */}
-      <WorldSidebarChatrooms
-        worldId={worldId}
-        initialAll={allRooms}
-        initialParticipated={participated}
-        initialFollowedIds={followedIds}
-        categories={categories}
-      />
-    </aside>
+      {/* Mobile: injecte la nav monde dans le drawer global */}
+      <MobileSidebarSlot>
+        <div className="flex flex-col h-full overflow-hidden p-2">
+          {pickerHeader}
+          {navLinks}
+          {chatrooms}
+        </div>
+      </MobileSidebarSlot>
+    </>
   );
 }

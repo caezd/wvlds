@@ -6,7 +6,7 @@ import { DmsToggleButton, PinnedDmAvatarsRail } from "@/components/dms";
 import { UserMenuButton } from "./UserMenuButton";
 import { WorldsRailButton } from "./WorldsRailButton";
 import { getFeatureFlags } from "@/lib/featureFlags";
-import Logo from "../logo";
+import { MobileMenuButton } from "./MobileMenuButton";
 import { getTranslations } from "next-intl/server";
 
 export default async function SidebarRail() {
@@ -32,10 +32,10 @@ export default async function SidebarRail() {
   }
 
   return (
-    <div className="flex flex-col items-center h-full w-full gap-4 py-3">
+    <div className="flex flex-col items-center h-full w-full gap-4 lg:py-3">
 
       <div className="flex flex-col items-center w-full py-1.5">
-        <Logo className="size-6" accent="var(--accent)" />
+        <MobileMenuButton />
       </div>
 
 

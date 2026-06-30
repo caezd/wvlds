@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -9,7 +9,9 @@ import { DmsPanelContent } from "@/components/dms";
 import DmsProvider, { useDms } from "@/components/providers/DmsProvider";
 import { useNotifications } from "@/components/providers/NotificationsProvider";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { MobileSidebarProvider, useMobileSidebar } from "@/components/providers/MobileSidebarProvider";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 // ── Inner shell — consomme useDms() et useNotifications() ────────────────────
 
@@ -22,11 +24,14 @@ function AppShellInner({
   worldsSidebar?: React.ReactNode;
   children: React.ReactNode;
 }) {
-  const [mobileOpen, setMobileOpen] = useState(false);
   const { notifications: notifEnabled, direct_messages: dmsEnabled } = useFeatureFlags();
   const { panelOpen: dmsOpen, closePanel: closeDms } = useDms();
   const { panelOpen: notifOpen, closePanel: closeNotif } = useNotifications();
+  const { mobileSidebar, drawerOpen, setDrawerOpen } = useMobileSidebar();
   const pathname = usePathname();
+
+  // Ferme le drawer sur navigation
+  useEffect(() => { setDrawerOpen(false); }, [pathname, setDrawerOpen]);
 
   const isWorldOrChat = (pathname?.startsWith("/w/") || pathname?.startsWith("/c/")) ?? false;
   const anyPanelOpen = notifOpen || dmsOpen;
@@ -34,6 +39,11 @@ function AppShellInner({
   // Exclusivité mutuelle
   useEffect(() => { if (notifOpen) closeDms(); }, [notifOpen, closeDms]);
   useEffect(() => { if (dmsOpen) closeNotif(); }, [dmsOpen, closeNotif]);
+
+  function handleDrawerChange(open: boolean) {
+    setDrawerOpen(open);
+    if (!open) { closeDms(); closeNotif(); }
+  }
 
   return (
     <div className="relative flex h-full w-full flex-row p-2">
@@ -55,10 +65,33 @@ function AppShellInner({
       </div>
 
       {/* Drawer mobile */}
-      <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-        <SheetContent side="left" className="p-0 border-r border-border-soft">
-          <div className="flex h-full flex-col pt-10 overflow-y-auto">
-            {rail}
+      <Sheet open={drawerOpen} onOpenChange={handleDrawerChange}>
+        <SheetContent
+          side="left"
+          hideClose
+          className="p-0 border-r border-border-soft w-full max-w-[360px]"
+        >
+          <VisuallyHidden><SheetTitle>Navigation</SheetTitle></VisuallyHidden>
+          <div className="flex h-full overflow-hidden">
+            {/* Rail d'icônes */}
+            <div className={cn(
+              "shrink-0 flex flex-col overflow-y-auto py-3",
+              anyPanelOpen || mobileSidebar ? "w-14 border-r border-border-soft" : "w-full",
+            )}>
+              {rail}
+            </div>
+            {/* Panneau DMs / Notifications, ou sidebar monde */}
+            {(anyPanelOpen || mobileSidebar) && (
+              <div className="flex-1 min-w-0 overflow-hidden flex flex-col">
+                {dmsOpen && dmsEnabled ? (
+                  <DmsPanelContent />
+                ) : notifOpen && notifEnabled ? (
+                  <NotificationInlinePanelContent />
+                ) : (
+                  mobileSidebar
+                )}
+              </div>
+            )}
           </div>
         </SheetContent>
       </Sheet>
@@ -68,7 +101,7 @@ function AppShellInner({
         <header className="lg:hidden flex h-12 shrink-0 items-center">
           <button
             type="button"
-            onClick={() => setMobileOpen(true)}
+            onClick={() => setDrawerOpen(true)}
             className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted/60"
             aria-label="Ouvrir le menu"
           >
@@ -106,8 +139,10 @@ export default function AppShell({
   children: React.ReactNode;
 }) {
   return (
-    <DmsProvider>
-      <AppShellInner rail={rail} worldsSidebar={worldsSidebar}>{children}</AppShellInner>
-    </DmsProvider>
+    <MobileSidebarProvider>
+      <DmsProvider>
+        <AppShellInner rail={rail} worldsSidebar={worldsSidebar}>{children}</AppShellInner>
+      </DmsProvider>
+    </MobileSidebarProvider>
   );
 }
