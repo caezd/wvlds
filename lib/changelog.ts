@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-06 ──────────────────────────────────────────────────────────────
   {
     date: "2026-06",
+    tag: "Interface",
+    text: "Navigation mobile :\n- Un **menu latéral** (drawer) s'ouvre depuis l'en-tête sur mobile, regroupant le rail d'icônes et le panneau actif (notifications, messages privés, ou navigation du monde)\n- La **sidebar du monde** (sélecteur, navigation, chatrooms) est désormais accessible sur mobile via ce drawer\n- Fermeture automatique du drawer à la navigation\n- Aucun changement sur desktop",
+  },
+  {
+    date: "2026-06",
     tag: "Correctif",
     text: "Correction des pages de connexion/inscription qui ne s'affichaient plus :\n- Les pages `/auth/*` étaient hors du contexte de traduction (`NextIntlClientProvider`), ce qui faisait planter les formulaires utilisant `useTranslations`\n- Le contexte i18n est désormais aussi fourni sur l'espace d'authentification",
   },
