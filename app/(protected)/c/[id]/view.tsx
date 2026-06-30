@@ -890,9 +890,22 @@ export default function ChatRoomView({
           const { error } = await supabase.from(TABLE.CHAT_MESSAGES).delete().eq("id", id);
           if (error) toast.error("Impossible de supprimer le message : " + error.message);
           else {
-            setMessages((prev) => prev.filter((x) => x.id !== id));
+            const remaining = messages.filter((x) => x.id !== id);
+            setMessages(remaining);
             const pinEntry = pinByMessageId(id);
             if (pinEntry) void unpin(pinEntry.id);
+
+            // Notifie la sidebar du nouveau dernier postant sans re-fetch DB
+            const newLast = remaining.at(-1) ?? null;
+            const lastPosterId = newLast?.author_id ?? null;
+            const lastPosterAvatarUrl =
+              newLast?.persona?.avatar_url ??
+              (lastPosterId ? (onlineUsers[lastPosterId]?.avatar_url ?? null) : null);
+            window.dispatchEvent(
+              new CustomEvent("chatroom-last-post-changed", {
+                detail: { chatroomId: chatId, lastPosterId, lastPosterAvatarUrl },
+              }),
+            );
           }
           setPendingDeleteId(null);
         }}

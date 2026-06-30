@@ -189,6 +189,24 @@ export function WorldSidebarChatrooms({
     }
   }
 
+  // Mise à jour locale du dernier postant après suppression d'un message
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const { chatroomId, lastPosterId, lastPosterAvatarUrl } = (
+        e as CustomEvent<{ chatroomId: string; lastPosterId: string | null; lastPosterAvatarUrl: string | null }>
+      ).detail;
+      setAllRooms((prev) =>
+        prev.map((r) =>
+          r.id === chatroomId
+            ? { ...r, last_poster_id: lastPosterId, last_poster_avatar_url: lastPosterAvatarUrl }
+            : r,
+        ),
+      );
+    };
+    window.addEventListener("chatroom-last-post-changed", handler);
+    return () => window.removeEventListener("chatroom-last-post-changed", handler);
+  }, []);
+
   // Realtime: nouvelles chatrooms + nouveaux messages (pour re-trier ACTIF/SUIVI)
   useEffect(() => {
     const supabase = createClient();
