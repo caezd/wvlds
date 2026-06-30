@@ -7,7 +7,7 @@ vi.mock("@/lib/supabase/client", () => ({ createClient: vi.fn() }));
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 
-import { CreateWorldButton } from "@/app/(protected)/home/CreateWorldButton";
+import { CreateWorldButton } from "@/components/worlds/CreateWorldButton";
 import { createClient } from "@/lib/supabase/client";
 
 const use = (mock: ReturnType<typeof createSupabaseMock>) =>

@@ -75,7 +75,7 @@ export function UpdatePasswordForm() {
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
 
-      router.push("/home");
+      router.push("/");
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "Une erreur est survenue.");
     } finally {
