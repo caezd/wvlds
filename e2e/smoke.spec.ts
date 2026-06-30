@@ -27,7 +27,7 @@ test.describe("Pages publiques", () => {
 
 test.describe("Routes protégées", () => {
   test("un visiteur non connecté est redirigé vers la connexion", async ({ page }) => {
-    await page.goto("/home");
+    await page.goto("/");
     await expect(page).toHaveURL(/\/auth\/login/);
   });
 });

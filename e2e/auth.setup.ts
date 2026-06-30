@@ -21,8 +21,8 @@ setup("authentification", async ({ page }) => {
   await page.getByLabel(/password/i).fill(password!);
   await page.getByRole("button", { name: /^connexion$/i }).click();
 
-  // Connexion réussie → redirection vers /home.
-  await expect(page).toHaveURL(/\/home/, { timeout: 15_000 });
+  // Connexion réussie → redirection vers /w/<id> ou /explore (plus de /home).
+  await expect(page).toHaveURL(/\/(w\/|explore)/, { timeout: 15_000 });
 
   await page.context().storageState({ path: authFile });
 });

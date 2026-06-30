@@ -21,7 +21,6 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Pencil, Check, X, Loader2, SmilePlus, Trash2, MessageCircle, Lock, MoreHorizontal, Pin, PinOff, Dices } from "lucide-react";
 import type { ChallengeBadge } from "@/types/db";
-import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,16 +35,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import {
   Drawer,
   DrawerContent,
@@ -113,7 +102,7 @@ export default function ChatroomMessage({
   invisibleUsers,
   selfId,
   onUpdated,
-  onDeleted,
+  onRequestDelete,
   onReactionsUpdated,
   chatroomKey,
   forceEdit,
@@ -130,7 +119,7 @@ export default function ChatroomMessage({
   invisibleUsers?: Set<string>;
   selfId: string | null;
   onUpdated?: (id: number, content: string) => void;
-  onDeleted?: (id: number) => void;
+  onRequestDelete?: () => void;
   onReactionsUpdated?: (id: number, reactions: ReactionSummary[]) => void;
   chatroomKey?: string | null;
   forceEdit?: boolean;
@@ -172,7 +161,6 @@ export default function ChatroomMessage({
   const [pickerOpen, setPickerOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const { emoji_reactions } = useFeatureFlags();
 
@@ -467,11 +455,7 @@ export default function ChatroomMessage({
                     onEdit={startEdit}
                     onPin={onPin ? () => onPin(message.id) : undefined}
                     onUnpin={pinId && onUnpin ? () => onUnpin(pinId) : undefined}
-                    onDelete={async () => {
-                      const { error } = await supabase.from(TABLE.CHAT_MESSAGES).delete().eq("id", message.id);
-                      if (error) toast.error("Impossible de supprimer le message : " + error.message);
-                      else onDeleted?.(message.id);
-                    }}
+                    onRequestDelete={onRequestDelete}
                   />
                 )}
 
@@ -650,7 +634,7 @@ export default function ChatroomMessage({
                 className="flex items-center gap-4 px-6 py-4 text-left text-base text-destructive hover:bg-muted/50 transition-colors"
                 onClick={() => {
                   setDrawerOpen(false);
-                  setDeleteDialogOpen(true);
+                  onRequestDelete?.();
                 }}
               >
                 <Trash2 className="h-5 w-5 shrink-0" />
@@ -681,33 +665,6 @@ export default function ChatroomMessage({
       </DrawerContent>
     </Drawer>
 
-    {/* Dialog de confirmation de suppression (déclenché depuis le drawer mobile) */}
-    <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>{t("deleteConfirm")}</AlertDialogTitle>
-          <AlertDialogDescription>
-            Ce message sera supprimé définitivement.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Annuler</AlertDialogCancel>
-          <AlertDialogAction
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            onClick={async () => {
-              const { error } = await supabase
-                .from(TABLE.CHAT_MESSAGES)
-                .delete()
-                .eq("id", message.id);
-              if (error) toast.error("Impossible de supprimer le message : " + error.message);
-              else onDeleted?.(message.id);
-            }}
-          >
-            Supprimer
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
     </>
   );
 }
@@ -720,72 +677,62 @@ function MessageActionsDropdown({
   onEdit,
   onPin,
   onUnpin,
-  onDelete,
+  onRequestDelete,
 }: {
   mine: boolean;
   isPinned: boolean;
   onEdit: () => void;
   onPin?: () => void;
   onUnpin?: () => void;
-  onDelete: () => Promise<void>;
+  onRequestDelete?: () => void;
 }) {
   const t = useTranslations("chatrooms");
-  const [deleteOpen, setDeleteOpen] = useState(false);
 
   return (
-    <>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 opacity-0 group-hover/turn-messages:opacity-100 transition-opacity"
-            aria-label={t("actions")}
-            title={t("actions")}
-          >
-            <MoreHorizontal className="h-4 w-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-44">
-          {mine && (
-            <DropdownMenuItem onClick={onEdit}>
-              <Pencil className="mr-2 h-3.5 w-3.5" />
-              Modifier
+    <DropdownMenu modal={false}>
+      <DropdownMenuTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 opacity-0 group-hover/turn-messages:opacity-100 transition-opacity"
+          aria-label={t("actions")}
+          title={t("actions")}
+        >
+          <MoreHorizontal className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-44">
+        {mine && (
+          <DropdownMenuItem onClick={onEdit}>
+            <Pencil className="mr-2 h-3.5 w-3.5" />
+            Modifier
+          </DropdownMenuItem>
+        )}
+        {isPinned ? (
+          <DropdownMenuItem onClick={onUnpin}>
+            <PinOff className="mr-2 h-3.5 w-3.5" />
+            Désépingler
+          </DropdownMenuItem>
+        ) : (
+          <DropdownMenuItem onClick={onPin}>
+            <Pin className="mr-2 h-3.5 w-3.5" />
+            Épingler
+          </DropdownMenuItem>
+        )}
+        {mine && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="text-destructive focus:text-destructive"
+              onClick={onRequestDelete}
+            >
+              <Trash2 className="mr-2 h-3.5 w-3.5" />
+              Supprimer
             </DropdownMenuItem>
-          )}
-          {isPinned ? (
-            <DropdownMenuItem onClick={onUnpin}>
-              <PinOff className="mr-2 h-3.5 w-3.5" />
-              Désépingler
-            </DropdownMenuItem>
-          ) : (
-            <DropdownMenuItem onClick={onPin}>
-              <Pin className="mr-2 h-3.5 w-3.5" />
-              Épingler
-            </DropdownMenuItem>
-          )}
-          {mine && (
-            <>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="text-destructive focus:text-destructive"
-                onClick={() => setDeleteOpen(true)}
-              >
-                <Trash2 className="mr-2 h-3.5 w-3.5" />
-                Supprimer
-              </DropdownMenuItem>
-            </>
-          )}
-        </DropdownMenuContent>
-      </DropdownMenu>
-
-      <DeleteConfirmDialog
-        open={deleteOpen}
-        onOpenChange={setDeleteOpen}
-        description="Ce message sera supprimé définitivement."
-        onConfirm={onDelete}
-      />
-    </>
+          </>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

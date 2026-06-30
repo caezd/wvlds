@@ -22,7 +22,7 @@ export default function InvitePage() {
           setError(error.message);
           return;
         }
-        router.replace("/home");
+        router.replace("/");
         return;
       }
 
