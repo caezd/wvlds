@@ -1,11 +1,18 @@
 import Logo from "@/components/logo";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getMessages } from "next-intl/server";
 
-export default function AuthLayout({
+export default async function AuthLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Les pages d'auth sont hors du groupe (protected) : sans leur propre
+  // NextIntlClientProvider, les formulaires (useTranslations) plantent en SSR
+  // (« context from NextIntlClientProvider was not found »).
+  const [locale, messages] = await Promise.all([getLocale(), getMessages()]);
   return (
+    <NextIntlClientProvider locale={locale} messages={messages}>
     <div className="bg-background flex flex-col md:flex-row-reverse md:h-screen">
       <section className="flex items-start w-full px-4 mx-auto md:px-0 md:items-center md:w-1/3">
         <div className="w-full max-w-sm mx-auto md:mx-0 my-auto min-w-min relative md:-left-6 text-primary">
@@ -39,5 +46,6 @@ export default function AuthLayout({
         </div>
       </section>
     </div>
+    </NextIntlClientProvider>
   );
 }
