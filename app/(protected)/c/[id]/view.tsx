@@ -11,6 +11,7 @@ import { toggleFollowChatroom } from "@/app/(protected)/w/actions";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
+import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import ChatroomSettingsSheet from "@/components/chatrooms/ChatroomSettingsSheet";
 import ChatroomStatsSheet from "@/components/chatrooms/ChatroomStatsSheet";
 import { ScrollAreaWithJumpToBottom } from "@/components/ScrollAreaWithJumpToBottom";
@@ -170,6 +171,7 @@ export default function ChatRoomView({
   );
   const [openPersona, setOpenPersona] = useState<Persona | null>(null);
   const [editMessageId, setEditMessageId] = useState<number | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
   const [userId, setUserId] = useState<string | null>(selfId);
 
   // Couleur de groupe par persona_id (monde du chatroom)
@@ -834,11 +836,7 @@ export default function ChatRoomView({
                               ),
                             );
                           }}
-                          onDeleted={(id) => {
-                            setMessages((prev) => prev.filter((x) => x.id !== id));
-                            const pinEntry = pinByMessageId(id);
-                            if (pinEntry) void unpin(pinEntry.id);
-                          }}
+                          onRequestDelete={() => setPendingDeleteId(m.id)}
                           onAnchorEdited={(messageId, label) => {
                             const pinEntry = pinByMessageId(messageId);
                             if (pinEntry) void updatePinLabel(pinEntry.id, label);
@@ -882,6 +880,23 @@ export default function ChatRoomView({
             />
       </div>
 
+      <DeleteConfirmDialog
+        open={pendingDeleteId !== null}
+        onOpenChange={(open) => { if (!open) setPendingDeleteId(null); }}
+        description="Ce message sera supprimé définitivement."
+        onConfirm={async () => {
+          if (pendingDeleteId === null) return;
+          const id = pendingDeleteId;
+          const { error } = await supabase.from(TABLE.CHAT_MESSAGES).delete().eq("id", id);
+          if (error) toast.error("Impossible de supprimer le message : " + error.message);
+          else {
+            setMessages((prev) => prev.filter((x) => x.id !== id));
+            const pinEntry = pinByMessageId(id);
+            if (pinEntry) void unpin(pinEntry.id);
+          }
+          setPendingDeleteId(null);
+        }}
+      />
     </div>
   );
 }
