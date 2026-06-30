@@ -148,10 +148,6 @@ export default function PresenceProvider({ children }: { children: React.ReactNo
 
         let mounted = true;
         let lastTrack = 0;
-        const profile: { username: string | null; avatar_url: string | null } = {
-            username: selfRef.current.username,
-            avatar_url: selfRef.current.avatarUrl,
-        };
 
         const track = async (force = false) => {
             const ch = channelRef.current;
@@ -164,10 +160,12 @@ export default function PresenceProvider({ children }: { children: React.ReactNo
             // Ainsi, une reconnexion WebSocket (subscribe → force=true) ne remet
             // pas le timer à zéro si l'utilisateur est inactif depuis longtemps.
             const iso = new Date(lastActivityAtRef.current).toISOString();
+            // Lecture du profil le plus récent : si l'identité arrive après le
+            // montage (login client, initialUser=null), le payload reste à jour.
             await ch.track({
                 user_id: userId,
-                username: profile.username,
-                avatar_url: profile.avatar_url,
+                username: selfRef.current.username,
+                avatar_url: selfRef.current.avatarUrl,
                 last_active_at: iso,
             });
             // Heartbeat persistant : alimente le "vu il y a X" des profils
@@ -266,6 +264,28 @@ export default function PresenceProvider({ children }: { children: React.ReactNo
             setOnlineUsers({});
         };
     }, [userId, supabase, recompute]);
+
+    // Si le profil n'est pas seedé par le serveur (login client depuis
+    // /auth/login, initialUser=null), `appear_offline` arrive APRÈS le montage,
+    // une fois le canal déjà créé et la présence trackée. On applique alors le
+    // vrai statut — sinon un utilisateur en mode invisible resterait visible
+    // « en ligne » jusqu'au prochain reload. Pas d'écriture DB : la valeur vient
+    // déjà de la base.
+    useEffect(() => {
+        if (!userId) return;
+        if (ctxAppearOffline === appearOfflineRef.current) return;
+        appearOfflineRef.current = ctxAppearOffline;
+        setAppearOfflineState(ctxAppearOffline);
+        setStatusState(ctxAppearOffline ? "offline" : "online");
+        if (ctxAppearOffline) {
+            void channelRef.current?.untrack();
+            delete rawRef.current[userId];
+            delete lingeringRef.current[userId];
+            recompute();
+        } else {
+            void trackRef.current(true);
+        }
+    }, [ctxAppearOffline, userId, recompute]);
 
     const setAppearOffline = useCallback(
         async (value: boolean) => {
