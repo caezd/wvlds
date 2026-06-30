@@ -137,8 +137,11 @@ export default function NotificationsProvider({ children }: { children: React.Re
 
     const setActiveChat = useCallback((id: string | null) => {
         activeChatRef.current = id;
-        if (id) void markChatRead(id);
-    }, [markChatRead]);
+        // Le marquage « lu » est assuré par la vue chatroom (au mount, avec le
+        // timestamp précis du dernier message). On évite ici un POST
+        // chatroom_reads redondant — d'autant que `userId` est désormais résolu
+        // dès le boot, ce qui ferait sinon partir ce doublon à chaque ouverture.
+    }, []);
 
     const markWorldSeen = useCallback(async (worldId: string) => {
         const uid = userIdRef.current;
@@ -249,13 +252,13 @@ export default function NotificationsProvider({ children }: { children: React.Re
             }
 
             const worldIds = (mw ?? []).map((x: { world_id: string }) => x.world_id);
+
+            // Pas de marquage « lu » ici : `activeChatRef` n'est positionné que
+            // par une vue chatroom montée, qui marque déjà lu de son côté (avec
+            // le timestamp précis du dernier message). On évite donc un POST
+            // `chatroom_reads` redondant au bootstrap.
             await refreshAll();
             if (!mounted) return;
-
-            if (activeChatRef.current) {
-                await markChatRead(activeChatRef.current);
-                if (!mounted) return;
-            }
 
             // Realtime : messages par monde (pour les badges non-lus)
             for (const wid of worldIds) {

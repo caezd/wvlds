@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { Session } from "@supabase/supabase-js";
 import NotificationsProvider from "./NotificationsProvider";
 import PresenceProvider from "./PresenceProvider";
+import { CurrentUserProvider, type InitialUser } from "./CurrentUserProvider";
 
 const OFFLINE_TOAST_ID = "network-offline";
 
@@ -70,14 +71,22 @@ function AuthErrorWatcher() {
   return null;
 }
 
-export default function AppProviders({ children }: { children: React.ReactNode }) {
+export default function AppProviders({
+  children,
+  initialUser = null,
+}: {
+  children: React.ReactNode;
+  initialUser?: InitialUser;
+}) {
   return (
-    <PresenceProvider>
-      <NotificationsProvider>
-        <NetworkStatusWatcher />
-        <AuthErrorWatcher />
-        {children}
-      </NotificationsProvider>
-    </PresenceProvider>
+    <CurrentUserProvider initialUser={initialUser}>
+      <PresenceProvider>
+        <NotificationsProvider>
+          <NetworkStatusWatcher />
+          <AuthErrorWatcher />
+          {children}
+        </NotificationsProvider>
+      </PresenceProvider>
+    </CurrentUserProvider>
   );
 }
