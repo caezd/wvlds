@@ -189,25 +189,7 @@ export function WorldSidebarChatrooms({
     }
   }
 
-  // Mise à jour locale du dernier postant après suppression d'un message
-  useEffect(() => {
-    const handler = (e: Event) => {
-      const { chatroomId, lastPosterId, lastPosterAvatarUrl } = (
-        e as CustomEvent<{ chatroomId: string; lastPosterId: string | null; lastPosterAvatarUrl: string | null }>
-      ).detail;
-      setAllRooms((prev) =>
-        prev.map((r) =>
-          r.id === chatroomId
-            ? { ...r, last_poster_id: lastPosterId, last_poster_avatar_url: lastPosterAvatarUrl }
-            : r,
-        ),
-      );
-    };
-    window.addEventListener("chatroom-last-post-changed", handler);
-    return () => window.removeEventListener("chatroom-last-post-changed", handler);
-  }, []);
-
-  // Realtime: nouvelles chatrooms + nouveaux messages (pour re-trier ACTIF/SUIVI)
+  // Realtime: nouvelles chatrooms + mises à jour chatroom_summaries (avatar, last_message_at)
   useEffect(() => {
     const supabase = createClient();
     const ch = supabase
@@ -230,19 +212,44 @@ export function WorldSidebarChatrooms({
       )
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "chat_messages", filter: `world_id=eq.${worldId}` },
+        { event: "UPDATE", schema: "public", table: "chatroom_summaries" },
         (payload: { new: Record<string, unknown> }) => {
-          const msg = payload.new as { chat_id: string; created_at: string };
+          const s = payload.new as {
+            chat_id: string;
+            last_message_at: string | null;
+            last_message_author_id: string | null;
+            last_message_persona_avatar_url: string | null;
+          };
           setAllRooms((prev) => {
-            const idx = prev.findIndex((r) => r.id === msg.chat_id);
-            if (idx === -1) return prev;
             const updated = prev.map((r) =>
-              r.id === msg.chat_id ? { ...r, last_message_at: msg.created_at } : r,
+              r.id === s.chat_id
+                ? {
+                    ...r,
+                    last_message_at: s.last_message_at,
+                    last_poster_id: s.last_message_author_id,
+                    last_poster_avatar_url: s.last_message_persona_avatar_url,
+                  }
+                : r,
             );
             return updated.sort(
               (a, b) => (b.last_message_at ?? "").localeCompare(a.last_message_at ?? ""),
             );
           });
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "chatroom_summaries" },
+        (payload: { old: Record<string, unknown> }) => {
+          const chatId = (payload.old as { chat_id?: string }).chat_id;
+          if (!chatId) return;
+          setAllRooms((prev) =>
+            prev.map((r) =>
+              r.id === chatId
+                ? { ...r, last_poster_id: null, last_poster_avatar_url: null, last_message_at: null }
+                : r,
+            ),
+          );
         },
       )
       .subscribe();

@@ -603,7 +603,7 @@ export default function ChatRoomView({
     };
     vp.addEventListener("scroll", onScroll, { passive: true });
     return () => vp.removeEventListener("scroll", onScroll);
-     
+
   }, []);
 
   // Canal par chatroom : typing + partage de persona
@@ -686,7 +686,7 @@ export default function ChatRoomView({
     } else {
       pendingScrollMessageIdRef.current = null;
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages]);
 
   useRealtimeChatSync({
@@ -753,131 +753,131 @@ export default function ChatRoomView({
         worldId={chat?.worlds?.id ?? null}
         selfId={userId ?? selfId}
       />
-      <div className="flex flex-col focus-visible:outline-0 flex-1 h-full min-w-0 rounded-2xl border border-border-soft bg-background overflow-hidden">
-            <ChatroomHeader
-              chat={chat}
-              chatId={chatId}
-              rooms={initialChatrooms}
-              rightSlot={
-                <>
-                  {selfId && (
-                    <button
-                      onClick={() => void handleToggleFollow()}
-                      title={isFollowed ? "Ne plus suivre" : "Suivre cette chatroom"}
-                      className={cn(
-                        "flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-muted",
-                        isFollowed ? "text-yellow-500" : "text-muted-foreground",
-                      )}
-                    >
-                      <Star
-                        size={15}
-                        className={isFollowed ? "fill-current" : ""}
-                      />
-                    </button>
+      <div className="flex flex-col focus-visible:outline-0 flex-1 h-full min-w-0 bg-background overflow-hidden">
+        <ChatroomHeader
+          chat={chat}
+          chatId={chatId}
+          rooms={initialChatrooms}
+          rightSlot={
+            <>
+              {selfId && (
+                <button
+                  onClick={() => void handleToggleFollow()}
+                  title={isFollowed ? "Ne plus suivre" : "Suivre cette chatroom"}
+                  className={cn(
+                    "flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-muted",
+                    isFollowed ? "text-yellow-500" : "text-muted-foreground",
                   )}
-                  <ChatroomSettingsSheet
-                    canEdit={canEdit}
-                    chatroom={{
-                      id: chat.id,
-                      title: chat.title,
-                      banner_url: chat.banner_url ?? null,
-                      icon_url: chat.icon_url ?? null,
-                      messages_count: messages.length,
-                      timeline_date: chat.timeline_date ?? null,
-                      map_pin_id: chat.map_pin_id ?? null,
-                    }}
-                    worldTimelineConfig={chat.worlds?.timeline_config ?? null}
-                    worldId={chat.worlds?.id ?? null}
-                  />
-                  <ChatroomStatsSheet chatId={chatId} />
-                </>
-              }
-            />
-            <section className="relative basis-auto flex-col -mb-(--composer-overlap-px) [--composer-overlap-px:64px] [--jump-btn-bottom:calc(var(--composer-overlap-px)+24px)] grow flex overflow-hidden">
-              <div className="relative h-full">
-                <PinBar pins={pins} messages={messages} onScrollToMessage={scrollToMessage} />
-                <ScrollAreaWithJumpToBottom
-                  ref={scrollRef}
-                  className="flex h-full flex-col overflow-y-auto thread-xl:pt-(--header-height)"
                 >
-                  <div className="flex flex-col text-sm thread-xl:pt-header-height pb-25 divide-y divide-border-soft [--thread-content-max-width:40rem] lg:[--thread-content-max-width:48rem] mx-auto max-w-(--thread-content-max-width) flex-1 px-2 lg:px-0">
-                    {loadingOlder && (
-                      <div className="py-3 text-center text-xs text-muted-foreground">
-                        Chargement de l’historique…
-                      </div>
-                    )}
-                    {messages.map((m) => {
-                      return (
-                        <ChatroomMessage
-                          key={m.id}
-                          message={m}
-                          online={onlineUsers}
-                          invisibleUsers={invisibleUsers}
-                          selfId={userId}
-                          chatroomKey={roomKey}
-                          personaGroupColor={personaGroupColors.get(m.persona?.id ?? "") ?? null}
-                          forceEdit={editMessageId === m.id}
-                          onForceEditConsumed={() => setEditMessageId(null)}
-                          pinId={pinByMessageId(m.id)?.id ?? null}
-                          onPin={userId ? (id) => pin(id, userId) : undefined}
-                          onUnpin={unpin}
-                          challengeWon={challengeBadges.get(m.id) ?? null}
-                          onReactionsUpdated={(mid, reactions) => {
-                            setMessages((prev) =>
-                              prev.map((m) =>
-                                m.id === mid ? { ...m, reactions } : m,
-                              ),
-                            );
-                          }}
-                          onUpdated={(id, content) => {
-                            setMessages((prev) =>
-                              prev.map((x) =>
-                                x.id === id ? { ...x, content } : x,
-                              ),
-                            );
-                          }}
-                          onRequestDelete={() => setPendingDeleteId(m.id)}
-                          onAnchorEdited={(messageId, label) => {
-                            const pinEntry = pinByMessageId(messageId);
-                            if (pinEntry) void updatePinLabel(pinEntry.id, label);
-                          }}
-                        />
-                      );
-                    })}
+                  <Star
+                    size={15}
+                    className={isFollowed ? "fill-current" : ""}
+                  />
+                </button>
+              )}
+              <ChatroomSettingsSheet
+                canEdit={canEdit}
+                chatroom={{
+                  id: chat.id,
+                  title: chat.title,
+                  banner_url: chat.banner_url ?? null,
+                  icon_url: chat.icon_url ?? null,
+                  messages_count: messages.length,
+                  timeline_date: chat.timeline_date ?? null,
+                  map_pin_id: chat.map_pin_id ?? null,
+                }}
+                worldTimelineConfig={chat.worlds?.timeline_config ?? null}
+                worldId={chat.worlds?.id ?? null}
+              />
+              <ChatroomStatsSheet chatId={chatId} />
+            </>
+          }
+        />
+        <section className="relative basis-auto flex-col -mb-(--composer-overlap-px) [--composer-overlap-px:64px] [--jump-btn-bottom:calc(var(--composer-overlap-px)+24px)] grow flex overflow-hidden">
+          <div className="relative h-full">
+            <PinBar pins={pins} messages={messages} onScrollToMessage={scrollToMessage} />
+            <ScrollAreaWithJumpToBottom
+              ref={scrollRef}
+              className="flex h-full flex-col overflow-y-auto thread-xl:pt-(--header-height)"
+            >
+              <div className="flex flex-col text-sm thread-xl:pt-header-height pb-25 divide-y divide-border-soft [--thread-content-max-width:40rem] lg:[--thread-content-max-width:48rem] mx-auto max-w-(--thread-content-max-width) flex-1 px-2 lg:px-0">
+                {loadingOlder && (
+                  <div className="py-3 text-center text-xs text-muted-foreground">
+                    Chargement de l’historique…
                   </div>
-                </ScrollAreaWithJumpToBottom>
-              </div>
-            </section>
-            <div className="group/thread-bottom-container relative isolate z-10 w-full basis-auto has-data-has-thread-error:pt-2 md:pt-0 print:hidden before:pointer-events-none before:absolute before:inset-x-0 before:bottom-1/2 max-lg:before:bottom-0 before:-top-10 before:-z-10 before:bg-linear-to-t before:from-background before:from-50% before:to-transparent">
-              <div className="text-base mx-auto [--thread-content-margin:--spacing(4)] thread-sm:[--thread-content-margin:--spacing(6)] thread-lg:[--thread-content-margin:--spacing(16)]">
-                <div className="thread-lg:[--thread-content-max-width:48rem] mx-auto flex-1 p-3 pt-0 lg:p-10 lg:pt-0">
-                  <div className="pointer-events-auto relative z-1 flex h-[var(--composer-container-height,100%)] max-w-full flex-[var(--composer-container-flex,1)] flex-col">
-                    {post_message && <ChatroomComposer
-                      chatId={chatId}
-                      presetPersona={selectedPersona}
-                      onTyping={emitTyping}
-                      onPersonaChange={setSelectedPersona}
+                )}
+                {messages.map((m) => {
+                  return (
+                    <ChatroomMessage
+                      key={m.id}
+                      message={m}
+                      online={onlineUsers}
+                      invisibleUsers={invisibleUsers}
+                      selfId={userId}
                       chatroomKey={roomKey}
-                      typingLine={typingLine}
-                      onEditLastMessage={() => {
-                        const last = [...messages].reverse().find((m) => isMyMessage(m, userId));
-                        if (last) setEditMessageId(last.id);
+                      personaGroupColor={personaGroupColors.get(m.persona?.id ?? "") ?? null}
+                      forceEdit={editMessageId === m.id}
+                      onForceEditConsumed={() => setEditMessageId(null)}
+                      pinId={pinByMessageId(m.id)?.id ?? null}
+                      onPin={userId ? (id) => pin(id, userId) : undefined}
+                      onUnpin={unpin}
+                      challengeWon={challengeBadges.get(m.id) ?? null}
+                      onReactionsUpdated={(mid, reactions) => {
+                        setMessages((prev) =>
+                          prev.map((m) =>
+                            m.id === mid ? { ...m, reactions } : m,
+                          ),
+                        );
                       }}
-                      onAnchorSent={(messageId, label) => {
-                        if (userId) void pinAnchor(messageId, label, userId);
+                      onUpdated={(id, content) => {
+                        setMessages((prev) =>
+                          prev.map((x) =>
+                            x.id === id ? { ...x, content } : x,
+                          ),
+                        );
                       }}
-                      onMessageSent={quests ? (mid, cid, text) => void handleMessageSent(mid, cid, text) : undefined}
-                    />}
-                  </div>
-                </div>
+                      onRequestDelete={() => setPendingDeleteId(m.id)}
+                      onAnchorEdited={(messageId, label) => {
+                        const pinEntry = pinByMessageId(messageId);
+                        if (pinEntry) void updatePinLabel(pinEntry.id, label);
+                      }}
+                    />
+                  );
+                })}
+              </div>
+            </ScrollAreaWithJumpToBottom>
+          </div>
+        </section>
+        <div className="group/thread-bottom-container relative isolate z-10 w-full basis-auto has-data-has-thread-error:pt-2 md:pt-0 print:hidden before:pointer-events-none before:absolute before:inset-x-0 before:bottom-1/2 max-lg:before:bottom-0 before:-top-10 before:-z-10 before:bg-linear-to-t before:from-background before:from-50% before:to-transparent">
+          <div className="text-base mx-auto [--thread-content-margin:--spacing(4)] thread-sm:[--thread-content-margin:--spacing(6)] thread-lg:[--thread-content-margin:--spacing(16)]">
+            <div className="thread-lg:[--thread-content-max-width:48rem] mx-auto flex-1 p-3 pt-0 lg:p-10 lg:pt-0">
+              <div className="pointer-events-auto relative z-1 flex h-[var(--composer-container-height,100%)] max-w-full flex-[var(--composer-container-flex,1)] flex-col">
+                {post_message && <ChatroomComposer
+                  chatId={chatId}
+                  presetPersona={selectedPersona}
+                  onTyping={emitTyping}
+                  onPersonaChange={setSelectedPersona}
+                  chatroomKey={roomKey}
+                  typingLine={typingLine}
+                  onEditLastMessage={() => {
+                    const last = [...messages].reverse().find((m) => isMyMessage(m, userId));
+                    if (last) setEditMessageId(last.id);
+                  }}
+                  onAnchorSent={(messageId, label) => {
+                    if (userId) void pinAnchor(messageId, label, userId);
+                  }}
+                  onMessageSent={quests ? (mid, cid, text) => void handleMessageSent(mid, cid, text) : undefined}
+                />}
               </div>
             </div>
-            <PersonaProfileSheet
-              persona={openPersona}
-              selfId={selfId}
-              onClose={() => setOpenPersona(null)}
-              onUsePersona={(p) => setSelectedPersona(p)}
-            />
+          </div>
+        </div>
+        <PersonaProfileSheet
+          persona={openPersona}
+          selfId={selfId}
+          onClose={() => setOpenPersona(null)}
+          onUsePersona={(p) => setSelectedPersona(p)}
+        />
       </div>
 
       <DeleteConfirmDialog
@@ -894,18 +894,6 @@ export default function ChatRoomView({
             setMessages(remaining);
             const pinEntry = pinByMessageId(id);
             if (pinEntry) void unpin(pinEntry.id);
-
-            // Notifie la sidebar du nouveau dernier postant sans re-fetch DB
-            const newLast = remaining.at(-1) ?? null;
-            const lastPosterId = newLast?.author_id ?? null;
-            const lastPosterAvatarUrl =
-              newLast?.persona?.avatar_url ??
-              (lastPosterId ? (onlineUsers[lastPosterId]?.avatar_url ?? null) : null);
-            window.dispatchEvent(
-              new CustomEvent("chatroom-last-post-changed", {
-                detail: { chatroomId: chatId, lastPosterId, lastPosterAvatarUrl },
-              }),
-            );
           }
           setPendingDeleteId(null);
         }}
