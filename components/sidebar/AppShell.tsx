@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NotificationInlinePanelContent } from "@/components/notifications";
@@ -29,9 +29,13 @@ function AppShellInner({
   const { panelOpen: notifOpen, closePanel: closeNotif } = useNotifications();
   const { mobileSidebar, drawerOpen, setDrawerOpen } = useMobileSidebar();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
 
-  // Ferme le drawer sur navigation
-  useEffect(() => { setDrawerOpen(false); }, [pathname, setDrawerOpen]);
+  // Ferme le drawer à chaque navigation. La nav des mondes change souvent
+  // seulement la query (`/w/{id}?view=members`), d'où la dépendance aux
+  // searchParams en plus du pathname — sinon le drawer reste ouvert par-dessus
+  // la vue qu'on vient de sélectionner.
+  useEffect(() => { setDrawerOpen(false); }, [pathname, searchParams, setDrawerOpen]);
 
   const isWorldOrChat = (pathname?.startsWith("/w/") || pathname?.startsWith("/c/")) ?? false;
   const anyPanelOpen = notifOpen || dmsOpen;
