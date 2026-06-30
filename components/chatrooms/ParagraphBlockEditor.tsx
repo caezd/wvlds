@@ -208,6 +208,32 @@ export function ParagraphBlockEditor({
     const el = editorRef.current;
     if (!el) return;
     normalizeBlocks(el);
+
+    // Après normalisation, le curseur peut pointer sur `el` lui-même (ex: Ctrl+A + Suppr).
+    // Si c'est le cas, on le replace au début du premier bloc.
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0) {
+      let node: Node | null = sel.getRangeAt(0).startContainer;
+      let insideBlock = false;
+      while (node && node !== el) {
+        if (node instanceof HTMLElement && node.hasAttribute("data-block")) {
+          insideBlock = true;
+          break;
+        }
+        node = node.parentElement;
+      }
+      if (!insideBlock) {
+        const firstBlock = el.querySelector<HTMLElement>("[data-block]");
+        if (firstBlock) {
+          const r = document.createRange();
+          r.setStart(firstBlock, 0);
+          r.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(r);
+        }
+      }
+    }
+
     onChange(extractValue(el));
   }
 
