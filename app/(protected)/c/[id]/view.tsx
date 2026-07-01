@@ -118,6 +118,7 @@ export default function ChatRoomView({
   selfId,
   canEdit,
   canWorldAdmin: _canWorldAdmin,
+  canPost,
   initialChatrooms,
   chatroomKey: initialChatroomKey,
   initialIsFollowed,
@@ -138,6 +139,7 @@ export default function ChatRoomView({
   selfId: string | null;
   canEdit: boolean;
   canWorldAdmin: boolean;
+  canPost: boolean;
   initialChatrooms: ChatroomNavItem[];
   chatroomKey: string | null;
   initialIsFollowed: boolean;
@@ -483,7 +485,7 @@ export default function ChatRoomView({
       const { data: older, error } = await supabase
         .from(TABLE.CHAT_MESSAGES)
         .select(
-          "id, chat_id, content, author_id, created_at, metadata, visible_to, persona:personas(id, user_id, name, avatar_url, frame:avatar_frame_id(asset_url))",
+          "id, chat_id, content, author_id, created_at, metadata, visible_to, persona:personas(id, user_id, name, avatar_url, frame:avatar_frame_id(asset_url)), author:profiles(avatar_url, username)",
         )
         .eq("chat_id", chatId)
         .lt("created_at", oldest.created_at)
@@ -852,8 +854,9 @@ export default function ChatRoomView({
           <div className="text-base mx-auto [--thread-content-margin:--spacing(4)] thread-sm:[--thread-content-margin:--spacing(6)] thread-lg:[--thread-content-margin:--spacing(16)]">
             <div className="thread-lg:[--thread-content-max-width:48rem] mx-auto flex-1 p-3 pt-0 lg:p-10 lg:pt-0">
               <div className="pointer-events-auto relative z-1 flex h-[var(--composer-container-height,100%)] max-w-full flex-[var(--composer-container-flex,1)] flex-col">
-                {post_message && <ChatroomComposer
+                {post_message && canPost && <ChatroomComposer
                   chatId={chatId}
+                  worldId={chat?.worlds?.id ?? null}
                   presetPersona={selectedPersona}
                   onTyping={emitTyping}
                   onPersonaChange={setSelectedPersona}

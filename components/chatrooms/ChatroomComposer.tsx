@@ -51,6 +51,7 @@ import { HsvColorPicker } from "@/components/ui/hsv-color-picker";
 
 export function ChatroomComposer({
   chatId,
+  worldId,
   presetPersona,
   onTyping,
   onPersonaChange,
@@ -71,6 +72,7 @@ export function ChatroomComposer({
 }: {
   /** Chatroom existante. Laisser vide pour le mode « création » (voir onResolveChat). */
   chatId?: string;
+  worldId?: string | null;
   presetPersona: Persona | null;
   onTyping?: () => void;
   onPersonaChange?: (p: Persona | null) => void;
@@ -511,6 +513,7 @@ export function ChatroomComposer({
               }}
               required
               userId={userId}
+              worldId={worldId}
             />
             <BlocksDropdown
               onSend={(content) => void sendRaw(content)}

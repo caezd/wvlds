@@ -18,8 +18,10 @@ type ActionState = { ok: boolean; error?: string; id?: string };
 
 export default function PersonaCreateDialog({
   disabled,
+  worldId,
 }: {
   disabled?: boolean;
+  worldId?: string;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -44,6 +46,7 @@ export default function PersonaCreateDialog({
         </DialogHeader>
 
         <form action={formAction} className="space-y-4">
+          {worldId && <input type="hidden" name="world_id" value={worldId} />}
           <div className="space-y-2">
             <Label className="text-sm font-medium">Nom</Label>
             <Input

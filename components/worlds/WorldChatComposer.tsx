@@ -175,6 +175,7 @@ export function WorldChatComposer({
             <ChatroomComposer
               presetPersona={persona}
               onPersonaChange={setPersona}
+              worldId={worldId}
               placeholder={t("composer.placeholder")}
               onResolveChat={resolveChat}
               onAfterSend={(chatId) => {
