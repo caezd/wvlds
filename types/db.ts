@@ -12,6 +12,9 @@ export type Profile = {
   last_seen_at?: string | null;
   appear_offline?: boolean;
   locale?: "fr" | "en" | "es" | null;
+  bio?: string | null;
+  pronouns?: string[] | null;
+  created_at?: string;
 };
 
 export type World = {
@@ -68,6 +71,7 @@ export type ChatMediaItem = {
 export type ChatMessageMeta = {
   bubbles?: boolean;
   bubbleColor?: string;
+  texto?: boolean;
   media?: ChatMediaItem[];
   word_count?: number;
   visible_to_labels?: string[];
@@ -128,6 +132,7 @@ export type ReactionSummary = {
 export type ChatMessageWithPersona = ChatMessage & {
   persona?: Persona | null;
   reactions?: ReactionSummary[];
+  author?: { avatar_url: string | null; username: string | null } | null;
 };
 
 // --- RPC return types --------------------------------------------------------
@@ -140,6 +145,12 @@ export type WorldUnreadRow = {
 
 export type ChatroomUnreadRow = {
   chat_id: string;
+  unread_messages: number;
+};
+
+export type AllChatroomUnreadRow = {
+  chat_id: string;
+  world_id: string;
   unread_messages: number;
 };
 
@@ -264,6 +275,24 @@ export type DmConversation = {
   last_message_content: string | null;
   last_message_author_id: string | null;
   unread_count: number;
+};
+
+// --- App shell (bootstrap agrégé) ---------------------------------------------
+// Retour de la RPC get_app_shell() : fusionne en un seul aller-retour les
+// données chargées au montage de NotificationsProvider et DmsProvider.
+
+export type AppShellNotificationPref = {
+  type: NotificationType;
+  enabled: boolean;
+};
+
+export type AppShellResult = {
+  world_ids: string[];
+  world_unreads: WorldUnreadRow[];
+  room_unreads: AllChatroomUnreadRow[];
+  notification_preferences: AppShellNotificationPref[];
+  notifications: AppNotification[];
+  dm_conversations: DmConversation[];
 };
 
 export type DmMessage = {

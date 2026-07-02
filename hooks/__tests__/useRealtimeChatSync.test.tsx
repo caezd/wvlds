@@ -66,7 +66,17 @@ describe("useRealtimeChatSync", () => {
         new: { id: 9, content: "édité" },
       });
     });
-    expect(cbs.onMessageUpdated).toHaveBeenCalledWith(9, "édité");
+    expect(cbs.onMessageUpdated).toHaveBeenCalledWith(9, "édité", null);
+  });
+
+  it("propage la metadata mise à jour (ex. texto/bubbles décoché)", async () => {
+    const { mock, cbs } = setup();
+    act(() => {
+      mock.channelNamed("chat-messages-updates-c1")!.emit(() => true, {
+        new: { id: 9, content: "édité", metadata: { texto: true } },
+      });
+    });
+    expect(cbs.onMessageUpdated).toHaveBeenCalledWith(9, "édité", { texto: true });
   });
 
   it("propage un patch de chatroom (titre/bannière)", async () => {

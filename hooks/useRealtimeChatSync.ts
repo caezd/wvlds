@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { TABLE, channel as CH } from "@/lib/constants";
-import type { ChatMessageWithPersona } from "@/types/db";
+import type { ChatMessageWithPersona, ChatMessageMeta } from "@/types/db";
 import { toast } from "sonner";
 
 export type ChatroomPatch = {
@@ -18,7 +18,7 @@ type Props = {
   selfId: string | null;
   initialLatestId: number | null;
   onMessageInserted: (msg: ChatMessageWithPersona, authorId?: string) => void;
-  onMessageUpdated: (id: number, content: string) => void;
+  onMessageUpdated: (id: number, content: string, metadata: ChatMessageMeta | null) => void;
   onMessageDeleted: (id: number) => void;
   onChatroomPatched: (patch: ChatroomPatch) => void;
   onReactionChange: (messageId: number, emoji: string, delta: 1 | -1) => void;
@@ -139,8 +139,8 @@ export function useRealtimeChatSync({
         },
         (payload: { new: Record<string, unknown>; old: Record<string, unknown> }) => {
           if (!isMounted) return;
-          const next = payload.new as { id: number; content: string };
-          onMessageUpdated(next.id, next.content);
+          const next = payload.new as { id: number; content: string; metadata: ChatMessageMeta | null };
+          onMessageUpdated(next.id, next.content, next.metadata ?? null);
         },
       )
       .subscribe();

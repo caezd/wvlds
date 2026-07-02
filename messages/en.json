@@ -364,6 +364,8 @@
     "locationBtn": "Location",
     "bubblesMode": "Dialogue bubbles",
     "bubblesHint": "Paragraphs starting with \"…\" or French quotation marks will be displayed as dialogue bubbles.",
+    "textoMode": "Texto",
+    "textoHint": "Sent messages are displayed as SMS-style bubbles, grouped together as long as this option stays active.",
     "colorLabel": "Color",
     "colorChoose": "Choose a color",
     "dialogColorTitle": "Dialogue color",

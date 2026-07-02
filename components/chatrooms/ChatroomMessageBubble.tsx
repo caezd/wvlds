@@ -1,20 +1,23 @@
 "use client";
 
 import { useState } from "react";
-import MarkdownRenderer from "@/components/MarkdownRenderer";
-import { DialogueBubbleRenderer } from "./blocks/DialogueBubbleRenderer";
+import { MarkdownContent, proseClassName } from "@/components/MarkdownRenderer";
+import { parseDialogue } from "@/lib/dialogue-bubbles";
 import { ImageLightbox } from "./ImageLightbox";
 import type { ChatMessageMeta, ChatMediaItem } from "@/types/db";
-import { isSafeUrl } from "@/lib/utils";
+import { cn, isSafeUrl } from "@/lib/utils";
 
 export function ChatroomMessageBubble({
   persona: _persona,
   message,
   isMine: _isMine,
+  ignoreBubbles,
 }: {
   persona?: { user_id?: string | null; name?: string | null } | null;
   message: { content: string; metadata?: ChatMessageMeta | null };
   isMine: boolean;
+  /** Ignore metadata.bubbles même si actif (utilisé par le rendu texto, prioritaire). */
+  ignoreBubbles?: boolean;
 }) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
@@ -39,6 +42,38 @@ export function ChatroomMessageBubble({
     </div>
   );
 
+  const proseClass = proseClassName(
+    "base",
+    "prose-a:underline prose-a:underline-offset-4 prose-hr:my-3 prose-p:my-0 flex flex-col gap-3",
+  );
+
+  const body = !ignoreBubbles && message.metadata?.bubbles ? (
+    <div className={cn(proseClass)}>
+      {parseDialogue(message.content).map((part, i) => {
+        if (part.kind === "prose") {
+          return part.text ? <MarkdownContent key={i} content={part.text} /> : null;
+        }
+        return (
+          <div key={i} className="not-prose inline-flex items-end gap-2 flex-wrap">
+            <div
+              className={cn(
+                "relative rounded-xl rounded-tl-[3px] px-3 py-1.5 text-sm sm:text-base leading-snug max-w-prose",
+                !message.metadata?.bubbleColor && "bg-muted",
+              )}
+              style={message.metadata?.bubbleColor ? { backgroundColor: message.metadata.bubbleColor + "33" } : undefined}
+            >
+              {part.speech}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  ) : message.content ? (
+    <div className={proseClass}>
+      <MarkdownContent content={message.content} />
+    </div>
+  ) : null;
+
   return (
     <>
       {lightboxIndex !== null && (
@@ -48,25 +83,8 @@ export function ChatroomMessageBubble({
           onClose={() => setLightboxIndex(null)}
         />
       )}
-
-      {message.metadata?.bubbles ? (
-        <>
-          {mediaSection}
-          <DialogueBubbleRenderer content={message.content} color={message.metadata?.bubbleColor} />
-        </>
-      ) : (
-        <>
-          {mediaSection}
-          {message.content && (
-            <MarkdownRenderer
-              content={message.content}
-              isMine
-              proseSize="base"
-              className="prose-a:underline prose-a:underline-offset-4 prose-hr:my-3"
-            />
-          )}
-        </>
-      )}
+      {mediaSection}
+      {body}
     </>
   );
 }

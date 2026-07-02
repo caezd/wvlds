@@ -63,6 +63,7 @@ describe("buildMessageMetadata", () => {
     wordCount: 0,
     bubbleMode: false,
     bubbleColor: null,
+    textoMode: false,
     media: [],
     visibleToLabels: null,
   };
@@ -93,12 +94,23 @@ describe("buildMessageMetadata", () => {
     ).toEqual({ media, visible_to_labels: ["@alice"] });
   });
 
+  it("inclut texto quand le mode texto est actif", () => {
+    expect(buildMessageMetadata({ ...base, textoMode: true })).toEqual({ texto: true });
+  });
+
+  it("combine bubbles et texto quand les deux sont actifs", () => {
+    expect(
+      buildMessageMetadata({ ...base, bubbleMode: true, bubbleColor: "#fff", textoMode: true }),
+    ).toEqual({ bubbles: true, bubbleColor: "#fff", texto: true });
+  });
+
   it("combine plusieurs métadonnées", () => {
     expect(
       buildMessageMetadata({
         wordCount: 3,
         bubbleMode: true,
         bubbleColor: null,
+        textoMode: false,
         media: [],
         visibleToLabels: [],
       }),

@@ -33,7 +33,7 @@ export function GameBlockSurface({
   return (
     <div
       className={cn(
-        "group/gblock relative w-full rounded-xl border border-border-soft bg-card px-4 py-3",
+        "group/gblock relative w-full rounded-xl py-3",
         className,
       )}
       style={style}

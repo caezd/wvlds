@@ -17,6 +17,8 @@ import ChatroomStatsSheet from "@/components/chatrooms/ChatroomStatsSheet";
 import { ScrollAreaWithJumpToBottom } from "@/components/ScrollAreaWithJumpToBottom";
 import { ChatroomComposer } from "@/components/chatrooms/ChatroomComposer";
 import ChatroomMessage from "@/components/chatrooms/ChatroomMessage";
+import { GameBlockSurface } from "@/components/chatrooms/blocks/GameBlockShell";
+import { groupMessagesForRender, computeTextoRunFlags, type TextoRunFlags } from "@/lib/chatroomMessageGrouping";
 import { PersonaProfileSheet } from "@/components/chatrooms/PersonaProfileSheet";
 import { ChatroomsNavDropdown } from "@/components/chatrooms/ChatroomsNavDropdown";
 import { WorldMembershipGuard } from "@/components/worlds/WorldMembershipGuard";
@@ -32,6 +34,7 @@ import {
 } from "@/lib/constants";
 import type { ChatMessageWithPersona, Persona, ReactionSummary, ChallengeBadge, ActiveDailyChallenge } from "@/types/db";
 import { validateChallenge } from "@/lib/validateChallenge";
+import { buildActiveChallenges, type DailyChallengeRow } from "@/lib/activeChallenges";
 import { useRealtimeChatSync } from "@/hooks/useRealtimeChatSync";
 import { usePresenceChannel } from "@/hooks/usePresenceChannel";
 import { useNotifications } from "@/components/providers/NotificationsProvider";
@@ -247,37 +250,23 @@ export default function ChatRoomView({
     if (!quests || !userId) return;
     const today = new Date().toISOString().split("T")[0];
     void (async () => {
+      // Une seule requête : les tentatives gagnées de l'utilisateur sont
+      // embarquées (le filtre user_id est indispensable — depuis la policy
+      // « read won », les victoires des autres joueurs sont visibles).
       const { data: rows } = await supabase
         .from(TABLE.CHALLENGES)
-        .select("id, title, description, validation, reward_coins, reward_xp, min_word_count, source, active_date")
+        .select(
+          "id, title, description, validation, reward_coins, reward_xp, min_word_count, source, active_date, challenge_attempts(challenge_id)",
+        )
         .eq("active_date", today)
-        .is("world_id", null);
+        .is("world_id", null)
+        .eq("challenge_attempts.status", "won")
+        .eq("challenge_attempts.user_id", userId);
       if (!rows?.length) return;
 
-      const ids = rows.map((c: Record<string, unknown>) => c.id as string);
-      const { data: won } = await supabase
-        .from(TABLE.CHALLENGE_ATTEMPTS)
-        .select("challenge_id")
-        .in("challenge_id", ids)
-        .eq("status", "won");
-
-      const wonIds = new Set<string>((won ?? []).map((a: Record<string, unknown>) => a.challenge_id as string));
+      const { challenges, wonIds } = buildActiveChallenges(rows as DailyChallengeRow[]);
       wonChallengeIdsRef.current = wonIds;
-
-      setActiveChallenges(
-        rows.map((c: Record<string, unknown>) => ({
-          id: c.id as string,
-          title: c.title as string,
-          description: c.description as string | null,
-          validation: c.validation as ActiveDailyChallenge["validation"],
-          reward_coins: c.reward_coins as number,
-          reward_xp: c.reward_xp as number,
-          min_word_count: c.min_word_count as number,
-          active_date: c.active_date as string,
-          source: c.source as ActiveDailyChallenge["source"],
-          already_won: wonIds.has(c.id as string),
-        })),
-      );
+      setActiveChallenges(challenges);
     })();
   }, [quests, userId]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -708,11 +697,11 @@ export default function ChatRoomView({
         if (authorId) clearTyping(authorId);
       })();
     },
-    onMessageUpdated: (id, content) => {
+    onMessageUpdated: (id, content, metadata) => {
       void (async () => {
         const key = roomKeyRef.current;
         const decrypted = key ? await decryptMessage(content, key) : content;
-        setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, content: decrypted } : m)));
+        setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, content: decrypted, metadata } : m)));
       })();
     },
     onMessageDeleted: (id) => {
@@ -748,6 +737,49 @@ export default function ChatRoomView({
       );
     },
   });
+
+  // Messages "texto" consécutifs regroupés dans un même bloc visuel (cf. lib/chatroomMessageGrouping.ts).
+  const renderGroups = useMemo(() => groupMessagesForRender(messages), [messages]);
+
+  const renderMessage = (m: ChatMessageWithPersona, textoFlags?: TextoRunFlags) => (
+    <ChatroomMessage
+      key={m.id}
+      message={m}
+      online={onlineUsers}
+      invisibleUsers={invisibleUsers}
+      selfId={userId}
+      chatroomKey={roomKey}
+      personaGroupColor={personaGroupColors.get(m.persona?.id ?? "") ?? null}
+      forceEdit={editMessageId === m.id}
+      onForceEditConsumed={() => setEditMessageId(null)}
+      pinId={pinByMessageId(m.id)?.id ?? null}
+      onPin={userId ? (id) => pin(id, userId) : undefined}
+      onUnpin={unpin}
+      challengeWon={challengeBadges.get(m.id) ?? null}
+      textoSharpTop={textoFlags?.sharpTop}
+      textoSharpBottom={textoFlags?.sharpBottom}
+      textoShowAvatar={textoFlags?.showAvatar}
+      onReactionsUpdated={(mid, reactions) => {
+        setMessages((prev) =>
+          prev.map((x) =>
+            x.id === mid ? { ...x, reactions } : x,
+          ),
+        );
+      }}
+      onUpdated={(id, content, metadata) => {
+        setMessages((prev) =>
+          prev.map((x) =>
+            x.id === id ? { ...x, content, metadata } : x,
+          ),
+        );
+      }}
+      onRequestDelete={() => setPendingDeleteId(m.id)}
+      onAnchorEdited={(messageId, label) => {
+        const pinEntry = pinByMessageId(messageId);
+        if (pinEntry) void updatePinLabel(pinEntry.id, label);
+      }}
+    />
+  );
 
   return (
     <div className="composer-parent flex flex-row focus-visible:outline-0 h-full min-w-0 flex-1 gap-3">
@@ -808,44 +840,17 @@ export default function ChatRoomView({
                     Chargement de l’historique…
                   </div>
                 )}
-                {messages.map((m) => {
-                  return (
-                    <ChatroomMessage
-                      key={m.id}
-                      message={m}
-                      online={onlineUsers}
-                      invisibleUsers={invisibleUsers}
-                      selfId={userId}
-                      chatroomKey={roomKey}
-                      personaGroupColor={personaGroupColors.get(m.persona?.id ?? "") ?? null}
-                      forceEdit={editMessageId === m.id}
-                      onForceEditConsumed={() => setEditMessageId(null)}
-                      pinId={pinByMessageId(m.id)?.id ?? null}
-                      onPin={userId ? (id) => pin(id, userId) : undefined}
-                      onUnpin={unpin}
-                      challengeWon={challengeBadges.get(m.id) ?? null}
-                      onReactionsUpdated={(mid, reactions) => {
-                        setMessages((prev) =>
-                          prev.map((m) =>
-                            m.id === mid ? { ...m, reactions } : m,
-                          ),
-                        );
-                      }}
-                      onUpdated={(id, content) => {
-                        setMessages((prev) =>
-                          prev.map((x) =>
-                            x.id === id ? { ...x, content } : x,
-                          ),
-                        );
-                      }}
-                      onRequestDelete={() => setPendingDeleteId(m.id)}
-                      onAnchorEdited={(messageId, label) => {
-                        const pinEntry = pinByMessageId(messageId);
-                        if (pinEntry) void updatePinLabel(pinEntry.id, label);
-                      }}
-                    />
-                  );
-                })}
+                {renderGroups.map((g) =>
+                  g.kind === "texto" ? (
+                    <div key={`texto-${g.messages[0].id}`} className="py-8">
+                      <GameBlockSurface className="flex flex-col gap-1.5">
+                        {computeTextoRunFlags(g.messages).map((flags, i) => renderMessage(g.messages[i], flags))}
+                      </GameBlockSurface>
+                    </div>
+                  ) : (
+                    renderMessage(g.message)
+                  ),
+                )}
               </div>
             </ScrollAreaWithJumpToBottom>
           </div>

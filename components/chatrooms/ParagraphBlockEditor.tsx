@@ -59,6 +59,7 @@ export function ParagraphBlockEditor({
   className,
   wrapperClassName,
   submitOnEnter = true,
+  invertEnter = false,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -70,6 +71,10 @@ export function ParagraphBlockEditor({
   /** Si vrai (défaut), Entrée seule déclenche onKeyDown (envoi). Si faux,
       Entrée crée des sauts de ligne / nouveaux blocs (mode document). */
   submitOnEnter?: boolean;
+  /** Si vrai, inverse le rôle d'Entrée : Entrée seule crée un saut de ligne /
+      nouveau bloc, Maj+Entrée ou Ctrl+Entrée envoie. Utilisé sur mobile où
+      Maj+Entrée n'est pas accessible sur un clavier virtuel. */
+  invertEnter?: boolean;
 }) {
   const editorRef = useRef<HTMLDivElement>(null);
   const [focused, setFocused] = useState(false);
@@ -237,20 +242,47 @@ export function ParagraphBlockEditor({
     onChange(extractValue(el));
   }
 
+  // Coupe `block` au curseur : le contenu après le curseur va dans un nouveau bloc en dessous.
+  function splitBlockAtCursor(block: HTMLElement, range: Range, sel: Selection) {
+    const xr = document.createRange();
+    xr.setStart(range.startContainer, range.startOffset);
+    if (block.lastChild) xr.setEndAfter(block.lastChild);
+    const fragment = xr.extractContents();
+    // Retire les <br> parasites en début du fragment
+    while (fragment.firstChild?.nodeName === "BR") fragment.removeChild(fragment.firstChild);
+    // Bloc original : s'assurer qu'il a au moins un <br>
+    if (!block.childNodes.length) block.appendChild(document.createElement("br"));
+
+    const newBlock = document.createElement("div");
+    newBlock.setAttribute("data-block", "");
+    newBlock.appendChild(fragment.childNodes.length ? fragment : document.createElement("br"));
+    block.insertAdjacentElement("afterend", newBlock);
+
+    const nr = document.createRange();
+    nr.setStart(newBlock, 0);
+    nr.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(nr);
+  }
+
   function handleKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
     if (e.key !== "Enter") { onKeyDown?.(e); return; }
 
     const shift = e.shiftKey;
     const ctrl  = e.ctrlKey;
+    const modifierHeld = shift || ctrl;
 
-    // Enter seul → envoi (mode composer uniquement)
-    if (submitOnEnter && !shift && !ctrl) {
+    // Touche qui déclenche l'envoi : Entrée seule normalement, ou Maj/Ctrl+Entrée
+    // en mode inversé (mobile — Maj+Entrée n'y est pas accessible facilement).
+    const triggersSubmit = invertEnter ? modifierHeld : !modifierHeld;
+
+    if (submitOnEnter && triggersSubmit) {
       e.preventDefault();
       onKeyDown?.(e);
       return;
     }
 
-    // Shift+Enter ou Ctrl+Enter → retour de ligne OU nouveau bloc
+    // Sinon → retour de ligne OU nouveau bloc
     const sel = window.getSelection();
     if (!sel || !sel.rangeCount) return;
     const range = sel.getRangeAt(0);
@@ -279,21 +311,11 @@ export function ParagraphBlockEditor({
           : range.startContainer.previousSibling;
 
     if (prevNode?.nodeName === "BR") {
-      // Deuxième retour consécutif → nouveau bloc paragraphe
+      // Deuxième retour consécutif → couper le bloc au curseur :
+      // le texte après le curseur est poussé dans un nouveau bloc en dessous.
       e.preventDefault();
       block.removeChild(prevNode);
-
-      const newBlock = document.createElement("div");
-      newBlock.setAttribute("data-block", "");
-      newBlock.innerHTML = "<br>";
-      block.insertAdjacentElement("afterend", newBlock);
-
-      const newRange = document.createRange();
-      newRange.setStart(newBlock, 0);
-      newRange.collapse(true);
-      sel.removeAllRanges();
-      sel.addRange(newRange);
-
+      splitBlockAtCursor(block, sel.getRangeAt(0), sel);
       handleInput();
     }
     // Sinon : premier retour → laisse le browser insérer un <br> nativement

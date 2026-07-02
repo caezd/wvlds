@@ -27,6 +27,7 @@ export const TABLE = {
 
 // --- Supabase RPC names -------------------------------------------------------
 export const RPC = {
+  GET_APP_SHELL: "get_app_shell",
   GET_WORLD_UNREADS: "get_world_unreads",
   GET_CHATROOM_UNREADS: "get_chatroom_unreads",
   AWARD_EVENT: "award_event",

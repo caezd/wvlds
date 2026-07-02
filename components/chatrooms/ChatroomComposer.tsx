@@ -109,6 +109,13 @@ export function ChatroomComposer({
   const inFlightRef = useRef(false);
   const pendingBlockMediaRef = useRef<{ url: string; name: string }[]>([]);
 
+  // Sur mobile (clavier virtuel), Maj+Entrée n'est pas accessible : on inverse
+  // le rôle d'Entrée dans le composer (cf. ParagraphBlockEditor `invertEnter`).
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    setIsMobile(window.matchMedia("(pointer: coarse)").matches);
+  }, []);
+
   const DRAFT_KEY = `draft:${chatId ?? "new"}`;
   const draftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Initialiser à "" pour que le rendu SSR corresponde au premier rendu client
@@ -153,6 +160,16 @@ export function ChatroomComposer({
   function setBubbleColor(v: string | null) {
     setBubbleColorRaw(v);
     try { if (v) localStorage.setItem(BUBBLE_COLOR_KEY, v); else localStorage.removeItem(BUBBLE_COLOR_KEY); } catch { }
+  }
+
+  const TEXTO_KEY = `textoMode:${chatId ?? "new"}`;
+  const [textoMode, setTextoModeRaw] = useState(false);
+  useEffect(() => {
+    try { setTextoModeRaw(localStorage.getItem(TEXTO_KEY) === "1"); } catch { }
+  }, [TEXTO_KEY]);
+  function setTextoMode(v: boolean) {
+    setTextoModeRaw(v);
+    try { if (v) localStorage.setItem(TEXTO_KEY, "1"); else localStorage.removeItem(TEXTO_KEY); } catch { }
   }
 
   // Note privée
@@ -270,6 +287,7 @@ export function ChatroomComposer({
         wordCount: computeWordCount(text),
         bubbleMode,
         bubbleColor,
+        textoMode,
         media: allMedia,
         visibleToLabels: buildVisibleToLabels(visibleTo, participants),
       });
@@ -380,7 +398,9 @@ export function ChatroomComposer({
       return;
     }
 
-    if (e.key === "Enter" && !e.shiftKey) {
+    // ParagraphBlockEditor ne relaie "Enter" ici que lorsqu'il a déjà décidé
+    // qu'il s'agit d'un envoi (cf. sa prop `invertEnter`, inversée sur mobile).
+    if (e.key === "Enter") {
       e.preventDefault();
       if (!e.repeat) void send();
     }
@@ -406,7 +426,10 @@ export function ChatroomComposer({
       </div>
 
       <div
-        className="relative z-10 cursor-text overflow-clip p-2.5 contain-inline-size bg-background border border-border-soft grid grid-cols-[auto_1fr_auto] [grid-template-areas:'header_header_header'_'primary_primary_primary'_'leading_footer_trailing'] rounded-3xl"
+        className={cn(
+          "relative z-10 cursor-text overflow-clip p-2.5 contain-inline-size bg-background border grid grid-cols-[auto_1fr_auto] [grid-template-areas:'header_header_header'_'primary_primary_primary'_'leading_footer_trailing'] rounded-3xl",
+          textoMode ? "border-mist-200 rounded-tr-[6px]" : "border-border-soft",
+        )}
         style={{ cornerShape: "superellipse(1.1)" } as React.CSSProperties}
         onPaste={handleOuterPaste}
       >
@@ -492,6 +515,7 @@ export function ChatroomComposer({
               onKeyDown={onKeyDown}
               placeholder={placeholder}
               className="text-sm w-full"
+              invertEnter={isMobile}
             />
           </div>
         </div>
@@ -521,6 +545,8 @@ export function ChatroomComposer({
               onBubbleModeChange={setBubbleMode}
               bubbleColor={bubbleColor}
               onBubbleColorChange={setBubbleColor}
+              textoMode={textoMode}
+              onTextoModeChange={setTextoMode}
               chatId={chatId}
               onBannerSelect={chatId ? () => bannerInputRef.current?.click() : undefined}
               visibleTo={visibleTo}
@@ -569,6 +595,8 @@ function BlocksDropdown({
   onBubbleModeChange,
   bubbleColor,
   onBubbleColorChange,
+  textoMode,
+  onTextoModeChange,
   chatId,
   onBannerSelect,
   visibleTo,
@@ -587,6 +615,8 @@ function BlocksDropdown({
   onBubbleModeChange: (v: boolean) => void;
   bubbleColor: string | null;
   onBubbleColorChange: (v: string | null) => void;
+  textoMode: boolean;
+  onTextoModeChange: (v: boolean) => void;
   chatId?: string;
   onBannerSelect?: () => void;
   visibleTo: string[] | null;
@@ -607,7 +637,7 @@ function BlocksDropdown({
   const [activeTool, setActiveTool] = useState<"dice" | "reveal" | "npc" | "hp" | "callout" | "anchor" | "timeline" | "location" | null>(null);
   const [draftDate, setDraftDate] = useState<WorldTimelineDate>({ year: 1, month: null, day: null });
   const [draftPinId, setDraftPinId] = useState<string | null>(null);
-  const activeOptionsCount = [bubbleMode, visibleTo !== null, !!(worldTimelineConfig && timelineDate), !!(mapPins?.length && mapPinId)].filter(Boolean).length;
+  const activeOptionsCount = [bubbleMode, textoMode, visibleTo !== null, !!(worldTimelineConfig && timelineDate), !!(mapPins?.length && mapPinId)].filter(Boolean).length;
 
   return (
     <>
@@ -627,8 +657,7 @@ function BlocksDropdown({
             )}
           </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" side="top" className="w-56 p-0">
-          <ScrollArea className="max-h-72">
+        <DropdownMenuContent align="start" side="top" className="w-56 p-0 max-h-72 overflow-y-auto">
             <div className="p-1">
               <DropdownMenuItem onSelect={() => { setOpen(false); setActiveTool("dice"); }}>
                 <Dices className="mr-2 h-4 w-4" />
@@ -739,6 +768,18 @@ function BlocksDropdown({
                   </button>
                 </div>
               )}
+              <DropdownMenuCheckboxItem
+                checked={textoMode}
+                onCheckedChange={onTextoModeChange}
+                onSelect={(e) => e.preventDefault()}
+              >
+                <span className="flex items-center gap-1.5">
+                  {t("textoMode")}
+                  <Hint side="right">
+                    {t("textoHint")}
+                  </Hint>
+                </span>
+              </DropdownMenuCheckboxItem>
               <DropdownMenuSeparator />
               <DropdownMenuCheckboxItem
                 checked={visibleTo !== null}
@@ -752,7 +793,6 @@ function BlocksDropdown({
                 </span>
               </DropdownMenuCheckboxItem>
             </div>
-          </ScrollArea>
         </DropdownMenuContent>
       </DropdownMenu>
 

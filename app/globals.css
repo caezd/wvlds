@@ -389,8 +389,8 @@
         margin-top: 4px !important;
     }
 
-    /* Crochet de paragraphe — visible uniquement au focus */
-    .pb-editor [data-block]::before {
+    /* Crochet de paragraphe — visible au focus ET seulement si 2+ blocs */
+    .pb-editor:has([data-block] ~ [data-block]) [data-block]::before {
         content: "";
         border-top: 1px solid rgba(255, 255, 255, 0.1);
         border-bottom: 1px solid rgba(255, 255, 255, 0.1);
@@ -398,10 +398,9 @@
         border-top-left-radius: 3px;
         border-bottom-left-radius: 3px;
         width: 5px;
-        min-height: 4px;
-        height: calc(100% - 10px);
         position: absolute;
         top: 5px;
+        bottom: 5px;
         left: 0;
         transition: border-color 0.15s;
         pointer-events: none;

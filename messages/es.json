@@ -356,6 +356,8 @@
     "locationBtn": "Lugar",
     "bubblesMode": "Diálogos en burbujas",
     "bubblesHint": "Los párrafos que comiencen con \"…\" o comillas francesas se mostrarán como burbujas de diálogo.",
+    "textoMode": "Texto",
+    "textoHint": "Los mensajes enviados se muestran en burbujas estilo SMS, agrupados mientras la opción permanezca activa.",
     "colorLabel": "Color",
     "colorChoose": "Elegir un color",
     "dialogColorTitle": "Color de diálogos",

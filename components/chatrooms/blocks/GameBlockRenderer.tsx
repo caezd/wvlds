@@ -7,6 +7,7 @@ import { TABLE } from "@/lib/constants";
 import { encryptMessage } from "@/lib/crypto";
 import { toWebP } from "@/lib/imageUtils";
 import type { ChatBlock } from "@/lib/chat-blocks";
+import type { ChatMessageMeta } from "@/types/db";
 
 import { DiceMessageView } from "./DiceMessageView";
 import { BannerBlockView } from "./BannerBlock";
@@ -34,9 +35,9 @@ export function GameBlockRenderer({
   block: ChatBlock;
   mine: boolean;
   label: string;
-  message: { id: number; content?: string | null; chat_id?: string };
+  message: { id: number; content?: string | null; chat_id?: string; metadata?: ChatMessageMeta | null };
   chatroomKey?: string | null;
-  onUpdated?: (id: number, content: string) => void;
+  onUpdated?: (id: number, content: string, metadata: ChatMessageMeta | null) => void;
   onAnchorEdited?: (messageId: number, label: string) => void;
 }) {
   const supabase = useMemo(() => createClient(), []);
@@ -53,7 +54,7 @@ export function GameBlockRenderer({
       toast.error("Impossible de modifier : " + error.message);
       return;
     }
-    onUpdated?.(message.id, content);
+    onUpdated?.(message.id, content, message.metadata ?? null);
   };
 
   // Édition d'un CalloutBlock : fusionne les images uploadées pendant l'édition
@@ -86,7 +87,7 @@ export function GameBlockRenderer({
       toast.error("Impossible de modifier : " + error.message);
       return;
     }
-    onUpdated?.(message.id, content);
+    onUpdated?.(message.id, content, newMeta as ChatMessageMeta);
   };
 
   // Upload d'image vers le bucket chat-media pour l'icône d'un CalloutBlock.

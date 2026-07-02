@@ -5,6 +5,32 @@ export type ChangelogEntry = {
 };
 
 export const CHANGELOG: ChangelogEntry[] = [
+  // ── 2026-07 ──────────────────────────────────────────────────────────────
+  {
+    date: "2026-07",
+    tag: "Correctif",
+    text: "Sur mobile, la touche Entrée du composer créait un envoi immédiat sans possibilité pratique de revenir à la ligne (Maj+Entrée n'est pas accessible sur un clavier virtuel) :\n- Sur mobile désormais, **Entrée crée un nouveau paragraphe** et **Maj+Entrée ou Ctrl+Entrée envoie** le message (ou le bouton d'envoi)\n- Le comportement sur ordinateur (Entrée envoie, Maj/Ctrl+Entrée revient à la ligne) reste inchangé",
+  },
+  {
+    date: "2026-07",
+    tag: "Chatrooms",
+    text: "Messages « Texto » :\n- Nouvelle option à cocher dans le composer (persistante jusqu'à décochage) qui affiche les messages envoyés en **bulles façon SMS**, sans le header habituel (nom, avatar, date)\n- Les messages texto envoyés à la suite sont **regroupés dans un même bloc**, comme un lancé de dé ou une bannière — bulle alignée à droite pour ses propres messages, à gauche pour celles des autres, petit avatar au bout, boutons éditer/supprimer à l'opposé\n- Pour des messages consécutifs du même auteur, l'**avatar ne se répète plus** (affiché une seule fois, sur la dernière bulle) et les **coins de raccord se resserrent** entre les bulles, façon Messenger\n- Décocher l'option en éditant un message texto le fait redevenir un message normal une fois sauvegardé",
+  },
+  {
+    date: "2026-07",
+    tag: "Social",
+    text: "Profil joueur personnalisable :\n- **Bio** (500 caractères max) et **pronoms** (jusqu'à 3, choisis dans une liste prédéfinie ou saisis librement) éditables depuis **Paramètres**\n- Nouvelle **carte profil** au clic sur l'avatar joueur dans un message de chatroom : pseudo, statut de présence, pronoms, bio et date d'inscription\n- Distincte du profil de persona existant (fiche de personnage) — ici il s'agit du compte joueur lui-même",
+  },
+  {
+    date: "2026-07",
+    tag: "Performance",
+    text: "Fusion des requêtes de démarrage (notifications, messages privés, badges non-lus) :\n- Nouvelle RPC `get_app_shell()` qui regroupe en **un seul aller-retour** ce qui prenait jusqu'à 6 requêtes séparées au montage (mondes rejoints, compteurs non-lus par monde et par salon, préférences de notification, notifications récentes, conversations privées)\n- `NotificationsProvider` et `DmsProvider` montent dans deux branches différentes de l'arbre de composants et démarraient donc chacun leur propre appel réseau : ils **partagent désormais la même requête en vol**, quel que soit celui qui démarre en premier\n- Les rafraîchissements ciblés (après un message reçu en Realtime) restent inchangés — ils ne rechargent que les compteurs concernés, pas tout le bootstrap",
+  },
+  {
+    date: "2026-07",
+    tag: "Performance",
+    text: "Moins de requêtes au chargement d'un chatroom :\n- Les liens de navigation du monde (`?view=…`) et le globe du rail ne **préfetchent plus** leur page — chaque chargement déclenchait jusqu'à 18 rendus serveur inutiles (pages dynamiques jamais mises en cache, lien `/w` répondant par une redirection)\n- Le **défi du jour et son statut « gagné » sont chargés en une seule requête** (tentatives embarquées) au lieu de deux en cascade\n- Correctif au passage : un défi gagné par **un autre joueur** était marqué comme déjà gagné pour soi (la policy « read won » rend les victoires publiques, le filtre `user_id` manquait)\n- Meta description du site remplacée (texte du starter Supabase)",
+  },
   // ── 2026-06 ──────────────────────────────────────────────────────────────
   {
     date: "2026-06",

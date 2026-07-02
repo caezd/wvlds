@@ -231,13 +231,16 @@ function transformAngleCallouts(input: string): string {
   return out.join("\n");
 }
 
-export default function MarkdownRenderer({
+/**
+ * Rendu markdown brut, sans le wrapper `div.prose` — à utiliser quand
+ * plusieurs segments doivent partager un seul `div.prose` parent
+ * (ex: ChatroomMessageBubble, qui mélange prose et bulles non-prose).
+ */
+export function MarkdownContent({
   content,
-  className,
-  proseSize = "sm",
   allowImages = false,
   isMine = false,
-}: Props) {
+}: Pick<Props, "content" | "allowImages" | "isMine">) {
   const schema = useMemo(() => {
     return {
       ...defaultSchema,
@@ -312,32 +315,49 @@ export default function MarkdownRenderer({
   };
 
   return (
-    <div
-      className={cn(
-        "prose dark:prose-invert max-w-none grid gap-4",
-        proseSize === "sm" && "prose-sm",
-        proseSize === "lg" && "prose-lg",
-        proseSize === "xl" && "prose-xl",
-        "prose-sm sm:prose-base",
-        "[&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
-        className,
-      )}
+    <ReactMarkdown
+      skipHtml
+      remarkPlugins={[remarkGfm, remarkBreaks]}
+      rehypePlugins={[
+        [
+          rehypeExternalLinks,
+          { target: "_blank", rel: ["nofollow", "noopener", "noreferrer"] },
+        ],
+        rehypeHighlight,
+        [rehypeSanitize, schema],
+      ]}
+      components={components}
     >
-      <ReactMarkdown
-        skipHtml
-        remarkPlugins={[remarkGfm, remarkBreaks]}
-        rehypePlugins={[
-          [
-            rehypeExternalLinks,
-            { target: "_blank", rel: ["nofollow", "noopener", "noreferrer"] },
-          ],
-          rehypeHighlight,
-          [rehypeSanitize, schema],
-        ]}
-        components={components}
-      >
-        {normalized}
-      </ReactMarkdown>
+      {normalized}
+    </ReactMarkdown>
+  );
+}
+
+export function proseClassName(
+  proseSize: NonNullable<Props["proseSize"]> = "sm",
+  className?: string,
+) {
+  return cn(
+    "prose dark:prose-invert max-w-none",
+    proseSize === "sm" && "prose-sm",
+    proseSize === "lg" && "prose-lg",
+    proseSize === "xl" && "prose-xl",
+    "prose-sm sm:prose-base",
+    "[&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
+    className,
+  );
+}
+
+export default function MarkdownRenderer({
+  content,
+  className,
+  proseSize = "sm",
+  allowImages = false,
+  isMine = false,
+}: Props) {
+  return (
+    <div className={proseClassName(proseSize, className)}>
+      <MarkdownContent content={content} allowImages={allowImages} isMine={isMine} />
     </div>
   );
 }

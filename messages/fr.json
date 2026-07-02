@@ -364,6 +364,8 @@
     "locationBtn": "Lieu",
     "bubblesMode": "Dialogues en bulles",
     "bubblesHint": "Les paragraphes commençant par \"…\" ou des guillemets français seront affichés en bulle de dialogue.",
+    "textoMode": "Texto",
+    "textoHint": "Les messages envoyés s'affichent en bulles façon SMS, regroupés dans un même bloc tant que l'option reste active.",
     "colorLabel": "Couleur",
     "colorChoose": "Choisir une couleur",
     "dialogColorTitle": "Couleur des dialogues",
