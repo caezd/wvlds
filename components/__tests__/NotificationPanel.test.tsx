@@ -71,6 +71,7 @@ function mockNotifications(overrides: Partial<ReturnType<typeof useNotifications
         worldUnread: {},
         roomUnread: {},
         setActiveChat: vi.fn(),
+        markChatRead: vi.fn().mockResolvedValue(undefined),
         markWorldSeen: vi.fn().mockResolvedValue(undefined),
         refreshAll: vi.fn().mockResolvedValue(undefined),
         panelOpen: false,

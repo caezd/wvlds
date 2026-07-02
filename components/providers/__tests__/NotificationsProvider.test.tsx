@@ -3,12 +3,16 @@ import { render, screen, waitFor, act } from "@testing-library/react";
 import { createClient } from "@/lib/supabase/client";
 import { createSupabaseMock, type SupabaseMock } from "@/test/supabaseMock";
 import NotificationsProvider, { useNotifications } from "@/components/providers/NotificationsProvider";
-import type { AppNotification } from "@/types/db";
+import type { AppNotification, AppShellResult } from "@/types/db";
 
 // Le bootstrap charge tout via une seule RPC get_app_shell() (voir lib/appShell.ts) ;
 // on la mock pour renvoyer les notifications de test, et toute autre RPC
 // (get_world_unreads, get_all_chatroom_unreads via refreshAll) avec une liste vide.
-function mockAppShell(mock: SupabaseMock, notifications: AppNotification[] = []) {
+function mockAppShell(
+    mock: SupabaseMock,
+    notifications: AppNotification[] = [],
+    shell: Partial<AppShellResult> = {},
+) {
     mock.client.rpc.mockImplementation((name: string) => {
         if (name === "get_app_shell") {
             return Promise.resolve({
@@ -19,6 +23,7 @@ function mockAppShell(mock: SupabaseMock, notifications: AppNotification[] = [])
                     notification_preferences: [],
                     notifications,
                     dm_conversations: [],
+                    ...shell,
                 },
                 error: null,
             });
@@ -298,5 +303,330 @@ describe("NotificationsProvider — realtime UPDATE", () => {
         await waitFor(() => {
             expect(screen.queryAllByTestId("notif-n1")).toHaveLength(1);
         });
+    });
+});
+
+// ── Fixtures pour les tests de chatroom ───────────────────────────────────────
+
+const REPLY_C1: AppNotification = {
+    ...BASE_NOTIF,
+    id: "reply-c1",
+    type: "chatroom_reply",
+    chat_id: "c1",
+};
+
+const REPLY_C2: AppNotification = {
+    ...BASE_NOTIF,
+    id: "reply-c2",
+    type: "chatroom_reply",
+    chat_id: "c2",
+};
+
+function ConsumerWithSetActive() {
+    const { notifications, setActiveChat } = useNotifications();
+    return (
+        <>
+            <ul>
+                {notifications.map(n => (
+                    <li key={n.id} data-testid={`notif-${n.id}`}>{n.id}</li>
+                ))}
+            </ul>
+            <button data-testid="activate-c1" onClick={() => setActiveChat("c1")}>
+                Ouvrir c1
+            </button>
+        </>
+    );
+}
+
+// ── setActiveChat — archivage des notifications du chatroom ───────────────────
+
+describe("setActiveChat — archivage des notifications du chatroom", () => {
+    it("archive les notifications du chatroom ouvert et laisse les autres intactes", async () => {
+        const mock = createSupabaseMock({ user: { id: "u1" } });
+        mockAppShell(mock, [REPLY_C1, REPLY_C2]);
+        vi.mocked(createClient).mockReturnValue(mock.client as never);
+
+        render(
+            <NotificationsProvider>
+                <ConsumerWithSetActive />
+            </NotificationsProvider>,
+        );
+
+        await waitFor(() => {
+            expect(screen.getByTestId("notif-reply-c1")).toBeInTheDocument();
+            expect(screen.getByTestId("notif-reply-c2")).toBeInTheDocument();
+        });
+
+        await act(async () => {
+            screen.getByTestId("activate-c1").click();
+        });
+
+        // La notification de c1 disparaît, celle de c2 reste
+        await waitFor(() => {
+            expect(screen.queryByTestId("notif-reply-c1")).not.toBeInTheDocument();
+        });
+        expect(screen.getByTestId("notif-reply-c2")).toBeInTheDocument();
+
+        // DB : update+in uniquement sur l'id de la notif c1
+        const notifBuilders = mock.buildersFor("notifications");
+        const archiveBuilder = notifBuilders.find(b =>
+            b.update.mock.calls.some(call => !!(call[0] as Record<string, unknown>)?.archived_at),
+        );
+        expect(archiveBuilder?.update).toHaveBeenCalledWith(
+            expect.objectContaining({ archived_at: expect.any(String) }),
+        );
+        expect(archiveBuilder?.in).toHaveBeenCalledWith("id", ["reply-c1"]);
+    });
+});
+
+// ── Realtime INSERT — notification pour le chatroom actif ─────────────────────
+
+describe("Realtime INSERT — notification pour le chatroom actif", () => {
+    it("archive sans afficher si le chatroom est actuellement ouvert", async () => {
+        const mock = createSupabaseMock({ user: { id: "u1" } });
+        mockAppShell(mock, []);
+        vi.mocked(createClient).mockReturnValue(mock.client as never);
+
+        render(
+            <NotificationsProvider>
+                <ConsumerWithSetActive />
+            </NotificationsProvider>,
+        );
+
+        await waitFor(() => expect(screen.getByTestId("activate-c1")).toBeInTheDocument());
+
+        // Ouvrir le chatroom c1 (état vide → pas de from() appelé)
+        await act(async () => {
+            screen.getByTestId("activate-c1").click();
+        });
+
+        const notifChannel = mock.channels.find(c => c.name === "notifs:u1");
+        expect(notifChannel).toBeDefined();
+
+        // Arrivée d'une notification pour c1 (chatroom actif)
+        await act(async () => {
+            notifChannel!.emit(
+                h => h.type === "postgres_changes" && (h.config as { event?: string }).event === "INSERT",
+                { new: { id: "notif-incoming", chat_id: "c1", recipient_id: "u1" } },
+            );
+        });
+
+        // Ne doit PAS apparaître dans la liste
+        expect(screen.queryByTestId("notif-notif-incoming")).not.toBeInTheDocument();
+
+        // Doit avoir archivé via update().eq()
+        const notifBuilders = mock.buildersFor("notifications");
+        const archiveBuilder = notifBuilders.find(b =>
+            b.update.mock.calls.some(call => !!(call[0] as Record<string, unknown>)?.archived_at),
+        );
+        expect(archiveBuilder?.update).toHaveBeenCalledWith(
+            expect.objectContaining({ archived_at: expect.any(String) }),
+        );
+        expect(archiveBuilder?.in).toHaveBeenCalledWith("id", ["notif-incoming"]);
+    });
+
+    it("ajoute normalement une notification si le chatroom n'est pas actif", async () => {
+        const incomingNotif: AppNotification = { ...BASE_NOTIF, id: "notif-other", chat_id: "c2" };
+
+        // results[0] sera consommé par le select+single du handler INSERT
+        const mock = createSupabaseMock({ user: { id: "u1" }, results: [{ data: incomingNotif }] });
+        mockAppShell(mock, []);
+        vi.mocked(createClient).mockReturnValue(mock.client as never);
+
+        render(
+            <NotificationsProvider>
+                <ConsumerWithSetActive />
+            </NotificationsProvider>,
+        );
+
+        await waitFor(() => expect(screen.getByTestId("activate-c1")).toBeInTheDocument());
+
+        // Ouvrir c1 (état vide → aucun from() consommé)
+        await act(async () => {
+            screen.getByTestId("activate-c1").click();
+        });
+
+        const notifChannel = mock.channels.find(c => c.name === "notifs:u1");
+        expect(notifChannel).toBeDefined();
+
+        // Notification pour c2 (pas c1)
+        await act(async () => {
+            notifChannel!.emit(
+                h => h.type === "postgres_changes" && (h.config as { event?: string }).event === "INSERT",
+                { new: { id: "notif-other", chat_id: "c2", recipient_id: "u1" } },
+            );
+        });
+
+        // Doit apparaître normalement
+        await waitFor(() => {
+            expect(screen.getByTestId("notif-notif-other")).toBeInTheDocument();
+        });
+
+        // Aucun archivage ne doit avoir été déclenché
+        const notifBuilders = mock.buildersFor("notifications");
+        const archiveBuilder = notifBuilders.find(b =>
+            b.update.mock.calls.some(call => !!(call[0] as Record<string, unknown>)?.archived_at),
+        );
+        expect(archiveBuilder).toBeUndefined();
+    });
+});
+
+// ── Compteurs non-lus — mise à jour locale sans RPC ───────────────────────────
+
+function ConsumerUnreads() {
+    const { roomUnread, worldUnread, markChatRead, markWorldSeen, setActiveChat } = useNotifications();
+    return (
+        <>
+            <span data-testid="room-c1">{roomUnread["c1"] ?? 0}</span>
+            <span data-testid="world-w1">{worldUnread["w1"] ?? 0}</span>
+            <button data-testid="read-c1" onClick={() => void markChatRead("c1")}>lu</button>
+            <button data-testid="seen-w1" onClick={() => void markWorldSeen("w1")}>vu</button>
+            <button data-testid="open-c1" onClick={() => setActiveChat("c1")}>ouvrir</button>
+        </>
+    );
+}
+
+// Shell avec 1 monde (w1) : 2 messages non lus dans c1 + 1 nouvelle salle
+const UNREAD_SHELL: Partial<AppShellResult> = {
+    world_ids: ["w1"],
+    world_unreads: [{ world_id: "w1", unread_messages: 2, unread_rooms: 1 }],
+    room_unreads: [{ chat_id: "c1", world_id: "w1", unread_messages: 2 }],
+};
+
+function setupUnreads(shell: Partial<AppShellResult> = UNREAD_SHELL) {
+    const mock = createSupabaseMock({ user: { id: "u1" } });
+    mockAppShell(mock, [], shell);
+    vi.mocked(createClient).mockReturnValue(mock.client as never);
+
+    render(
+        <NotificationsProvider>
+            <ConsumerUnreads />
+        </NotificationsProvider>,
+    );
+
+    return mock;
+}
+
+function emitMessage(mock: SupabaseMock, row: Record<string, unknown>) {
+    const msgChannel = mock.channels.find(c => c.name === "msgs:u1");
+    expect(msgChannel).toBeDefined();
+    act(() => {
+        msgChannel!.emit(
+            h => h.type === "postgres_changes" && (h.config as { table?: string }).table === "chat_messages",
+            { new: row },
+        );
+    });
+}
+
+describe("Compteurs non-lus — hydratation et dérivation", () => {
+    it("hydrate depuis get_app_shell et dérive le badge de monde (messages + salles)", async () => {
+        setupUnreads();
+
+        await waitFor(() => {
+            expect(screen.getByTestId("room-c1").textContent).toBe("2");
+            // 2 messages non lus + 1 nouvelle salle = 3
+            expect(screen.getByTestId("world-w1").textContent).toBe("3");
+        });
+    });
+});
+
+describe("Compteurs non-lus — Realtime local, sans RPC", () => {
+    it("incrémente localement à l'arrivée d'un message, sans appel RPC", async () => {
+        const mock = setupUnreads({ ...UNREAD_SHELL, world_unreads: [], room_unreads: [] });
+
+        await waitFor(() => expect(screen.getByTestId("room-c1")).toBeInTheDocument());
+
+        emitMessage(mock, { chat_id: "c1", author_id: "someone-else", world_id: "w1" });
+
+        await waitFor(() => {
+            expect(screen.getByTestId("room-c1").textContent).toBe("1");
+            expect(screen.getByTestId("world-w1").textContent).toBe("1");
+        });
+
+        // Aucune RPC de recomptage : seule get_app_shell a été appelée
+        const rpcNames = mock.rpc.mock.calls.map(call => call[0] as string);
+        expect(rpcNames.filter(n => n !== "get_app_shell")).toHaveLength(0);
+    });
+
+    it("ignore ses propres messages", async () => {
+        const mock = setupUnreads({ ...UNREAD_SHELL, world_unreads: [], room_unreads: [] });
+
+        await waitFor(() => expect(screen.getByTestId("room-c1")).toBeInTheDocument());
+
+        emitMessage(mock, { chat_id: "c1", author_id: "u1", world_id: "w1" });
+
+        expect(screen.getByTestId("room-c1").textContent).toBe("0");
+        expect(screen.getByTestId("world-w1").textContent).toBe("0");
+    });
+
+    it("message dans la salle active → marque lu au lieu d'incrémenter", async () => {
+        const mock = setupUnreads({ ...UNREAD_SHELL, world_unreads: [], room_unreads: [] });
+
+        await waitFor(() => expect(screen.getByTestId("open-c1")).toBeInTheDocument());
+
+        await act(async () => {
+            screen.getByTestId("open-c1").click();
+        });
+
+        emitMessage(mock, { chat_id: "c1", author_id: "someone-else", world_id: "w1" });
+
+        // Compteur inchangé, mais la lecture est persistée en DB
+        expect(screen.getByTestId("room-c1").textContent).toBe("0");
+        await waitFor(() => {
+            expect(mock.buildersFor("chatroom_reads").length).toBeGreaterThan(0);
+        });
+    });
+});
+
+describe("Compteurs non-lus — lecture locale", () => {
+    it("markChatRead remet la salle à zéro et le badge de monde suit", async () => {
+        const mock = setupUnreads();
+
+        await waitFor(() => expect(screen.getByTestId("world-w1").textContent).toBe("3"));
+
+        await act(async () => {
+            screen.getByTestId("read-c1").click();
+        });
+
+        expect(screen.getByTestId("room-c1").textContent).toBe("0");
+        // Ne reste que la nouvelle salle non vue
+        expect(screen.getByTestId("world-w1").textContent).toBe("1");
+
+        // Persistance en DB (upsert chatroom_reads), sans RPC de recomptage
+        const readBuilders = mock.buildersFor("chatroom_reads");
+        expect(readBuilders).toHaveLength(1);
+        expect(readBuilders[0].upsert).toHaveBeenCalledWith(
+            expect.objectContaining({ chat_id: "c1", user_id: "u1" }),
+            { onConflict: "chat_id,user_id" },
+        );
+        const rpcNames = mock.rpc.mock.calls.map(call => call[0] as string);
+        expect(rpcNames.filter(n => n !== "get_app_shell")).toHaveLength(0);
+    });
+
+    it("markChatRead throttle : un seul upsert pour deux appels rapprochés", async () => {
+        const mock = setupUnreads();
+
+        await waitFor(() => expect(screen.getByTestId("read-c1")).toBeInTheDocument());
+
+        await act(async () => {
+            screen.getByTestId("read-c1").click();
+            screen.getByTestId("read-c1").click();
+        });
+
+        expect(mock.buildersFor("chatroom_reads")).toHaveLength(1);
+    });
+
+    it("markWorldSeen remet le compteur de nouvelles salles à zéro", async () => {
+        const mock = setupUnreads();
+
+        await waitFor(() => expect(screen.getByTestId("world-w1").textContent).toBe("3"));
+
+        await act(async () => {
+            screen.getByTestId("seen-w1").click();
+        });
+
+        // Les 2 messages non lus restent, la nouvelle salle disparaît du badge
+        expect(screen.getByTestId("world-w1").textContent).toBe("2");
+        expect(mock.buildersFor("world_member_reads")).toHaveLength(1);
     });
 });

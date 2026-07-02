@@ -44,7 +44,7 @@ export const RPC = {
 
 // --- Realtime channel name factories -----------------------------------------
 export const channel = {
-  worldMessages: (wid: string) => `w:${wid}:messages`,
+  userMessages: (userId: string) => `msgs:${userId}`,
   worldRooms: (wid: string) => `w:${wid}:rooms`,
   chatPresence: (chatId: string) => `chat:${chatId}`,
   chatMessages: (chatId: string) => `chat-${chatId}`,
@@ -65,7 +65,8 @@ export const DELAY = {
   MARK_READ_THROTTLE: 800,
   TYPING_THROTTLE: 1500,
   TYPING_TIMEOUT: 4000,
-  NOTIFICATIONS_DEBOUNCE: 400,
+  // Âge minimal du dernier sync avant qu'un retour d'onglet redéclenche refreshAll
+  UNREAD_RESYNC_MIN: 60_000,
 } as const;
 
 // --- Présence globale (indicateur "en ligne") ----------------------------------

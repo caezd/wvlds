@@ -27,7 +27,6 @@ import { type ChatroomNavItem } from "@/components/worlds/WorldChatroomsAside";
 import {
   TABLE,
   RPC,
-  DELAY,
   SCROLL_THRESHOLD_PX,
   CHAT_MESSAGES_PAGE_SIZE,
   LOAD_OLDER_THRESHOLD_PX,
@@ -149,7 +148,7 @@ export default function ChatRoomView({
 }) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
-  const { setActiveChat } = useNotifications();
+  const { setActiveChat, markChatRead: markChatReadCtx } = useNotifications();
   const { post_message, quests } = useFeatureFlags();
 
   const [isFollowed, setIsFollowed] = useState(initialIsFollowed);
@@ -311,28 +310,11 @@ export default function ChatRoomView({
     null,
   );
 
-  /* mark as read */
-  const lastMarkReadRef = useRef<number>(0);
-  async function markChatRead(ts?: string) {
-    if (!userId) return;
-
-    const now = Date.now();
-    if (now - lastMarkReadRef.current < DELAY.MARK_READ_THROTTLE) return;
-    lastMarkReadRef.current = now;
-
-    const lastReadAt = ts ?? new Date().toISOString();
-
-    const { error } = await supabase.from(TABLE.CHATROOM_READS).upsert(
-      {
-        chat_id: chatId,
-        user_id: userId,
-        last_read_at: lastReadAt,
-      },
-      { onConflict: "chat_id,user_id" },
-    );
-
-    if (error) console.error("markChatRead error:", error);
-  }
+  /* mark as read — mutualisé dans NotificationsProvider (throttle + badge inclus) */
+  const markChatRead = useCallback(
+    (ts?: string) => markChatReadCtx(chatId, ts),
+    [markChatReadCtx, chatId],
+  );
 
   /* reactions */
   function updateReactions(
