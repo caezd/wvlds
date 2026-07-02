@@ -7,7 +7,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-export type Plan = "free" | "pro" | "team" | "lifetime";
+export type Plan = "free" | "subscribed" | "lifetime";
 export type Resource = "worlds" | "personas";
 
 type Quota = {
@@ -18,9 +18,10 @@ type Quota = {
 };
 
 // Règles par ressource (facile à étendre)
+// subscribed et lifetime sont tous deux illimités.
 const QUOTA_LIMITS: Record<Resource, Record<Plan, number>> = {
-    worlds: { free: 1, pro: Infinity, team: Infinity, lifetime: Infinity },
-    personas: { free: 2, pro: Infinity, team: Infinity, lifetime: Infinity },
+    worlds: { free: 1, subscribed: Infinity, lifetime: Infinity },
+    personas: { free: 5, subscribed: Infinity, lifetime: Infinity },
 };
 
 function limitFor(plan: Plan, kind: Resource): number {

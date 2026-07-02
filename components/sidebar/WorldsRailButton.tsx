@@ -29,7 +29,7 @@ export function WorldsRailButton() {
   const [open, setOpen] = useState(false);
   const [worlds, setWorlds] = useState<FavoriteWorld[]>([]);
   const [quotaReached, setQuotaReached] = useState(false);
-  const [quotaInfo, setQuotaInfo] = useState<{ plan: "free" | "pro" | "team" | "lifetime"; ownedCount: number; quotaLimit: number }>({ plan: "free", ownedCount: 0, quotaLimit: 1 });
+  const [quotaInfo, setQuotaInfo] = useState<{ plan: "free" | "subscribed" | "lifetime"; ownedCount: number; quotaLimit: number }>({ plan: "free", ownedCount: 0, quotaLimit: 1 });
   const leaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -52,7 +52,7 @@ export function WorldsRailButton() {
 
       setWorlds((favData ?? []).map((r: { worlds: unknown }) => r.worlds as FavoriteWorld));
 
-      const plan = (ctxPlan ?? "free") as "free" | "pro" | "team" | "lifetime";
+      const plan = (ctxPlan ?? "free") as "free" | "subscribed" | "lifetime";
       const limit = plan === "free" ? 1 : Infinity;
       const owned = ownedCount ?? 0;
       setQuotaReached(limit !== Infinity && owned >= limit);
