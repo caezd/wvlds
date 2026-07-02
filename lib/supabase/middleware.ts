@@ -57,7 +57,11 @@ export async function updateSession(request: NextRequest) {
         // no user, potentially respond by redirecting the user to the login page
         const url = request.nextUrl.clone();
         url.pathname = "/auth/login";
-        return NextResponse.redirect(url);
+        const redirectResponse = NextResponse.redirect(url);
+        // Efface le cookie pour qu'un prochain utilisateur ne soit pas redirigé
+        // vers un monde qui appartient à la session précédente.
+        redirectResponse.cookies.set("last_world_id", "", { path: "/", maxAge: 0 });
+        return redirectResponse;
     }
 
     // 1) Quand on visite un monde: /w/<id>
