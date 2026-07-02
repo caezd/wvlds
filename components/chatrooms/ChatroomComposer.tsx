@@ -10,7 +10,7 @@ import { encryptMessage } from "@/lib/crypto";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { PersonaPickerDialog } from "@/components/personas/PersonaPickerDialog";
 import { Button } from "../ui/button";
-import { SendHorizontal, Component, Dices, Pipette, X, ImagePlus, Eye, Lock, Sword, Heart, Square, Anchor, CalendarDays, MapPin } from "lucide-react";
+import { SendHorizontal, Component, Dices, Pipette, X, ImagePlus, Eye, Lock, Sword, Heart, Square, Anchor, CalendarDays, MapPin, MessageCircle, MessageSquareText, Check, type LucideIcon } from "lucide-react";
 import { Hint } from "@/components/ui/hint";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -31,10 +31,7 @@ import {
 } from "@/lib/composerMessage";
 import {
   DropdownMenu,
-  DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -162,14 +159,14 @@ export function ChatroomComposer({
     try { if (v) localStorage.setItem(BUBBLE_COLOR_KEY, v); else localStorage.removeItem(BUBBLE_COLOR_KEY); } catch { }
   }
 
-  const TEXTO_KEY = `textoMode:${chatId ?? "new"}`;
-  const [textoMode, setTextoModeRaw] = useState(false);
+  const SMS_KEY = `smsMode:${chatId ?? "new"}`;
+  const [smsMode, setSmsModeRaw] = useState(false);
   useEffect(() => {
-    try { setTextoModeRaw(localStorage.getItem(TEXTO_KEY) === "1"); } catch { }
-  }, [TEXTO_KEY]);
-  function setTextoMode(v: boolean) {
-    setTextoModeRaw(v);
-    try { if (v) localStorage.setItem(TEXTO_KEY, "1"); else localStorage.removeItem(TEXTO_KEY); } catch { }
+    try { setSmsModeRaw(localStorage.getItem(SMS_KEY) === "1"); } catch { }
+  }, [SMS_KEY]);
+  function setSmsMode(v: boolean) {
+    setSmsModeRaw(v);
+    try { if (v) localStorage.setItem(SMS_KEY, "1"); else localStorage.removeItem(SMS_KEY); } catch { }
   }
 
   // Note privée
@@ -287,7 +284,7 @@ export function ChatroomComposer({
         wordCount: computeWordCount(text),
         bubbleMode,
         bubbleColor,
-        textoMode,
+        smsMode,
         media: allMedia,
         visibleToLabels: buildVisibleToLabels(visibleTo, participants),
       });
@@ -428,7 +425,7 @@ export function ChatroomComposer({
       <div
         className={cn(
           "relative z-10 cursor-text overflow-clip p-2.5 contain-inline-size bg-background border grid grid-cols-[auto_1fr_auto] [grid-template-areas:'header_header_header'_'primary_primary_primary'_'leading_footer_trailing'] rounded-3xl",
-          textoMode ? "border-mist-200 rounded-tr-[6px]" : "border-border-soft",
+          smsMode ? "border-mist-200 rounded-tr-[6px]" : "border-border-soft",
         )}
         style={{ cornerShape: "superellipse(1.1)" } as React.CSSProperties}
         onPaste={handleOuterPaste}
@@ -545,8 +542,8 @@ export function ChatroomComposer({
               onBubbleModeChange={setBubbleMode}
               bubbleColor={bubbleColor}
               onBubbleColorChange={setBubbleColor}
-              textoMode={textoMode}
-              onTextoModeChange={setTextoMode}
+              smsMode={smsMode}
+              onSmsModeChange={setSmsMode}
               chatId={chatId}
               onBannerSelect={chatId ? () => bannerInputRef.current?.click() : undefined}
               visibleTo={visibleTo}
@@ -588,6 +585,66 @@ export function ChatroomComposer({
   );
 }
 
+function formatTimelineLabel(config: WorldTimelineConfig, date: WorldTimelineDate): string {
+  const y = `${config.year_label} ${date.year}${config.era_name ? ` ${config.era_name}` : ""}`;
+  const m = date.month !== null ? config.month_names[date.month] : null;
+  const d = date.day !== null ? `${date.day} ` : "";
+  return m ? `${d}${m}, ${y}` : y;
+}
+
+type ComposerMenuItem = {
+  id: string;
+  icon: LucideIcon;
+  title: string;
+  description: string;
+  checked?: boolean;
+  disabled?: boolean;
+  onActivate: () => void;
+};
+
+// ── Rangée de menu (icône + titre + description) partagée par les deux
+// sections (blocs / options). Le survol/focus met à jour l'aperçu à droite.
+function ComposerMenuRow({
+  item,
+  isActive,
+  onHover,
+}: {
+  item: ComposerMenuItem;
+  isActive: boolean;
+  onHover: () => void;
+}) {
+  const Icon = item.icon;
+  return (
+    <button
+      type="button"
+      disabled={item.disabled}
+      onMouseEnter={onHover}
+      onFocus={onHover}
+      onClick={item.onActivate}
+      className={cn(
+        "flex w-full items-start gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors disabled:opacity-40 disabled:cursor-not-allowed",
+        isActive ? "bg-muted" : "hover:bg-muted/60",
+        item.checked && "ring-1 ring-inset ring-primary/30 bg-primary/5",
+      )}
+    >
+      <span
+        className={cn(
+          "mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md",
+          item.checked ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground",
+        )}
+      >
+        <Icon className="h-3.5 w-3.5" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="flex items-center gap-1.5 text-sm font-medium">
+          <span className="truncate">{item.title}</span>
+          {item.checked && <Check className="h-3 w-3 shrink-0 text-primary" />}
+        </span>
+        <span className="block truncate text-xs text-muted-foreground">{item.description}</span>
+      </span>
+    </button>
+  );
+}
 
 function BlocksDropdown({
   onSend,
@@ -595,8 +652,8 @@ function BlocksDropdown({
   onBubbleModeChange,
   bubbleColor,
   onBubbleColorChange,
-  textoMode,
-  onTextoModeChange,
+  smsMode,
+  onSmsModeChange,
   chatId,
   onBannerSelect,
   visibleTo,
@@ -615,8 +672,8 @@ function BlocksDropdown({
   onBubbleModeChange: (v: boolean) => void;
   bubbleColor: string | null;
   onBubbleColorChange: (v: string | null) => void;
-  textoMode: boolean;
-  onTextoModeChange: (v: boolean) => void;
+  smsMode: boolean;
+  onSmsModeChange: (v: boolean) => void;
   chatId?: string;
   onBannerSelect?: () => void;
   visibleTo: string[] | null;
@@ -637,7 +694,188 @@ function BlocksDropdown({
   const [activeTool, setActiveTool] = useState<"dice" | "reveal" | "npc" | "hp" | "callout" | "anchor" | "timeline" | "location" | null>(null);
   const [draftDate, setDraftDate] = useState<WorldTimelineDate>({ year: 1, month: null, day: null });
   const [draftPinId, setDraftPinId] = useState<string | null>(null);
-  const activeOptionsCount = [bubbleMode, textoMode, visibleTo !== null, !!(worldTimelineConfig && timelineDate), !!(mapPins?.length && mapPinId)].filter(Boolean).length;
+  const [activeItemId, setActiveItemId] = useState<string | null>(null);
+  const activeOptionsCount = [bubbleMode, smsMode, visibleTo !== null, !!(worldTimelineConfig && timelineDate), !!(mapPins?.length && mapPinId)].filter(Boolean).length;
+
+  useEffect(() => {
+    if (open) setActiveItemId("dice");
+  }, [open]);
+
+  const blockItems: ComposerMenuItem[] = [
+    { id: "dice", icon: Dices, title: t("dice"), description: t("diceHint"), onActivate: () => { setOpen(false); setActiveTool("dice"); } },
+    ...(onBannerSelect ? [{ id: "banner", icon: ImagePlus, title: t("banner"), description: t("bannerHint"), onActivate: () => { setOpen(false); onBannerSelect(); } }] : []),
+    { id: "callout", icon: Square, title: t("calloutBtn"), description: t("calloutHint"), onActivate: () => { setOpen(false); setActiveTool("callout"); } },
+    { id: "anchor", icon: Anchor, title: t("anchor"), description: t("anchorHint"), onActivate: () => { setOpen(false); setActiveTool("anchor"); } },
+    { id: "reveal", icon: Eye, title: t("reveal"), description: t("revealHint"), onActivate: () => { setOpen(false); setActiveTool("reveal"); } },
+    ...(chatroom_blocks && block_npc ? [{ id: "npc", icon: Sword, title: t("npcCard"), description: t("npcHint"), onActivate: () => { setOpen(false); setActiveTool("npc"); } }] : []),
+    ...(chatroom_blocks && block_hp ? [{ id: "hp", icon: Heart, title: t("healthBar"), description: t("hpHint"), onActivate: () => { setOpen(false); setActiveTool("hp"); } }] : []),
+  ];
+
+  const optionItems: ComposerMenuItem[] = [
+    ...(worldTimelineConfig ? [{
+      id: "timeline",
+      icon: CalendarDays,
+      title: timelineDate ? formatTimelineLabel(worldTimelineConfig, timelineDate) : t("timeline"),
+      description: t("timelineHint"),
+      checked: !!timelineDate,
+      onActivate: () => {
+        setOpen(false);
+        setDraftDate(timelineDate ?? { year: worldTimelineConfig.current_year, month: worldTimelineConfig.current_month ?? null, day: null });
+        setActiveTool("timeline");
+      },
+    }] : []),
+    ...(mapPins && mapPins.length > 0 ? [{
+      id: "location",
+      icon: MapPin,
+      title: mapPinId ? (mapPins.find(p => p.id === mapPinId)?.title ?? t("locationBtn")) : t("locationBtn"),
+      description: t("locationHint"),
+      checked: !!mapPinId,
+      onActivate: () => { setOpen(false); setDraftPinId(mapPinId ?? null); setActiveTool("location"); },
+    }] : []),
+    { id: "bubbles", icon: MessageCircle, title: t("bubblesMode"), description: t("bubblesHint"), checked: bubbleMode, onActivate: () => onBubbleModeChange(!bubbleMode) },
+    { id: "sms", icon: MessageSquareText, title: t("smsMode"), description: t("smsHint"), checked: smsMode, onActivate: () => onSmsModeChange(!smsMode) },
+    { id: "privateNote", icon: Lock, title: t("privateNote"), description: t("privateNoteHint"), checked: visibleTo !== null, disabled: !chatId, onActivate: () => onPrivateNoteToggle() },
+  ];
+
+  const activeItem = [...blockItems, ...optionItems].find((i) => i.id === activeItemId) ?? blockItems[0] ?? null;
+
+  function renderPreview(id: string): React.ReactNode {
+    switch (id) {
+      case "dice":
+        return (
+          <div className="flex w-full items-center gap-3 rounded-xl border border-border-soft bg-card px-4 py-3">
+            <Dices className="h-5 w-5 shrink-0 text-primary" />
+            <div>
+              <div className="text-[11px] text-muted-foreground">Attaque</div>
+              <div className="font-mono text-base font-semibold">2d6+3 = 12</div>
+            </div>
+          </div>
+        );
+      case "banner":
+        return (
+          <div className="flex h-20 w-full items-center justify-center rounded-xl border border-border-soft bg-muted text-muted-foreground">
+            <ImagePlus className="h-6 w-6" />
+          </div>
+        );
+      case "callout":
+        return (
+          <div className="w-full rounded-xl border border-border-soft bg-card px-4 py-3">
+            <div className="mb-1 flex items-center gap-1.5 text-sm font-medium">
+              <Square className="h-3.5 w-3.5" /> Titre
+            </div>
+            <div className="text-xs text-muted-foreground">Texte de l&apos;encadré…</div>
+          </div>
+        );
+      case "anchor":
+        return (
+          <div className="inline-flex items-center gap-1.5 rounded-full border border-border-soft bg-card px-3 py-1.5 text-xs text-muted-foreground">
+            <Anchor className="h-3 w-3" /> Prologue
+          </div>
+        );
+      case "reveal":
+        return (
+          <div className="w-full rounded-xl border border-dashed border-border-soft px-4 py-3 text-center text-xs text-muted-foreground">
+            <Eye className="mx-auto mb-1 h-4 w-4" />
+            Cliquer pour révéler
+          </div>
+        );
+      case "npc":
+        return (
+          <div className="flex w-full items-center gap-3 rounded-xl border border-border-soft bg-card px-4 py-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-base">🗡️</div>
+            <div>
+              <div className="text-sm font-medium">Garde du donjon</div>
+              <div className="text-[11px] text-muted-foreground">PV 40 · ATQ 12 · DEF 8</div>
+            </div>
+          </div>
+        );
+      case "hp":
+        return (
+          <div className="w-full rounded-xl border border-border-soft bg-card px-4 py-3">
+            <div className="mb-1 flex justify-between text-xs">
+              <span>Garde</span><span>24/40</span>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-muted">
+              <div className="h-full w-3/5 rounded-full bg-destructive" />
+            </div>
+          </div>
+        );
+      case "timeline":
+        return (
+          <div className="flex w-full items-center gap-3 rounded-xl border border-border-soft bg-card px-4 py-3">
+            <CalendarDays className="h-5 w-5 shrink-0 text-primary" />
+            <div className="text-sm">
+              {timelineDate && worldTimelineConfig
+                ? formatTimelineLabel(worldTimelineConfig, timelineDate)
+                : `${worldTimelineConfig?.year_label ?? "An"} ${worldTimelineConfig?.current_year ?? 1}`}
+            </div>
+          </div>
+        );
+      case "location":
+        return (
+          <div className="flex w-full items-center gap-3 rounded-xl border border-border-soft bg-card px-4 py-3">
+            <MapPin className="h-5 w-5 shrink-0 text-primary" />
+            <div className="text-sm">
+              {mapPinId ? (mapPins?.find(p => p.id === mapPinId)?.title ?? t("locationBtn")) : t("locationBtn")}
+            </div>
+          </div>
+        );
+      case "bubbles":
+        return (
+          <div className="flex w-full flex-col gap-3">
+            <div className="flex flex-col gap-2">
+              {["Bonjour...", "Comment vas-tu ?"].map((text, i) => (
+                <div key={i} className="inline-flex flex-nowrap items-end gap-2">
+                  <div
+                    className={cn("rounded-xl rounded-tl-[3px] px-3 py-1.5 text-sm leading-snug", !bubbleColor && "bg-muted")}
+                    style={bubbleColor ? { backgroundColor: bubbleColor + "33" } : undefined}
+                  >
+                    {text}
+                  </div>
+                  {i === 0 && <span className="shrink-0 pb-1 text-xs italic text-muted-foreground">dit-il.</span>}
+                </div>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setOpen(false); setColorPickerOpen(true); }}
+              className="inline-flex w-fit items-center gap-1.5 rounded-full border border-border-soft px-2 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <span
+                className="size-3 shrink-0 rounded-full border border-border/60"
+                style={bubbleColor ? { backgroundColor: bubbleColor } : undefined}
+              >
+                {!bubbleColor && <Pipette className="m-auto size-2.5 text-muted-foreground" />}
+              </span>
+              {t("colorChoose")}
+            </button>
+          </div>
+        );
+      case "sms":
+        return (
+          <div className="flex w-full flex-col gap-1.5">
+            <div className="flex items-end justify-end gap-1.5">
+              <div className="rounded-xl rounded-br-[3px] bg-primary/15 px-3 py-1.5 text-sm">Salut !</div>
+            </div>
+            <div className="flex items-end justify-end gap-1.5">
+              <div className="rounded-xl rounded-tr-[3px] bg-primary/15 px-3 py-1.5 text-sm">Ça va ?</div>
+            </div>
+            <div className="flex items-end justify-start gap-1.5">
+              <div className="rounded-xl rounded-tl-[3px] bg-muted px-3 py-1.5 text-sm">Oui, et toi ?</div>
+            </div>
+          </div>
+        );
+      case "privateNote":
+        return (
+          <div className="flex w-full items-center gap-3 rounded-xl border border-border-soft bg-card px-4 py-3 text-sm text-muted-foreground">
+            <Lock className="h-5 w-5 shrink-0" />
+            Visible par vous seul(e)
+          </div>
+        );
+      default:
+        return null;
+    }
+  }
 
   return (
     <>
@@ -657,142 +895,38 @@ function BlocksDropdown({
             )}
           </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" side="top" className="w-56 p-0 max-h-72 overflow-y-auto">
-            <div className="p-1">
-              <DropdownMenuItem onSelect={() => { setOpen(false); setActiveTool("dice"); }}>
-                <Dices className="mr-2 h-4 w-4" />
-                {t("dice")}
-              </DropdownMenuItem>
-              {onBannerSelect && (
-                <DropdownMenuItem onSelect={() => { setOpen(false); onBannerSelect(); }}>
-                  <ImagePlus className="mr-2 h-4 w-4" />
-                  {t("banner")}
-                </DropdownMenuItem>
-              )}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={() => { setOpen(false); setActiveTool("callout"); }}>
-                <Square className="mr-2 h-4 w-4" />
-                {t("calloutBtn")}
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => { setOpen(false); setActiveTool("anchor"); }}>
-                <Anchor className="mr-2 h-4 w-4" />
-                {t("anchor")}
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => { setOpen(false); setActiveTool("reveal"); }}>
-                <Eye className="mr-2 h-4 w-4" />
-                {t("reveal")}
-              </DropdownMenuItem>
-              {chatroom_blocks && (block_npc || block_hp) && (
-                <DropdownMenuSeparator />
-              )}
-              {chatroom_blocks && block_npc && (
-                <DropdownMenuItem onSelect={() => { setOpen(false); setActiveTool("npc"); }}>
-                  <Sword className="mr-2 h-4 w-4" />
-                  {t("npcCard")}
-                </DropdownMenuItem>
-              )}
-              {chatroom_blocks && block_hp && (
-                <DropdownMenuItem onSelect={() => { setOpen(false); setActiveTool("hp"); }}>
-                  <Heart className="mr-2 h-4 w-4" />
-                  {t("healthBar")}
-                </DropdownMenuItem>
-              )}
-              <DropdownMenuSeparator />
-              {worldTimelineConfig && (
-                <DropdownMenuCheckboxItem
-                  checked={!!(timelineDate)}
-                  onSelect={(e) => {
-                    e.preventDefault();
-                    setOpen(false);
-                    setDraftDate(timelineDate ?? { year: worldTimelineConfig.current_year, month: worldTimelineConfig.current_month ?? null, day: null });
-                    setActiveTool("timeline");
-                  }}
-                >
-                  <span className="flex items-center gap-1.5">
-                    <CalendarDays className="h-3.5 w-3.5 shrink-0" />
-                    {timelineDate
-                      ? (() => {
-                          const y = `${worldTimelineConfig.year_label} ${timelineDate.year}${worldTimelineConfig.era_name ? ` ${worldTimelineConfig.era_name}` : ""}`;
-                          const m = timelineDate.month !== null ? worldTimelineConfig.month_names[timelineDate.month] : null;
-                          const d = timelineDate.day !== null ? `${timelineDate.day} ` : "";
-                          return m ? `${d}${m}, ${y}` : y;
-                        })()
-                      : t("timeline")}
-                  </span>
-                </DropdownMenuCheckboxItem>
-              )}
-              {mapPins && mapPins.length > 0 && (
-                <DropdownMenuCheckboxItem
-                  checked={!!mapPinId}
-                  onSelect={(e) => {
-                    e.preventDefault();
-                    setOpen(false);
-                    setDraftPinId(mapPinId ?? null);
-                    setActiveTool("location");
-                  }}
-                >
-                  <span className="flex items-center gap-1.5">
-                    <MapPin className="h-3.5 w-3.5 shrink-0" />
-                    {mapPinId
-                      ? (mapPins.find(p => p.id === mapPinId)?.title ?? t("locationBtn"))
-                      : t("locationBtn")}
-                  </span>
-                </DropdownMenuCheckboxItem>
-              )}
-              <DropdownMenuCheckboxItem
-                checked={bubbleMode}
-                onCheckedChange={onBubbleModeChange}
-                onSelect={(e) => e.preventDefault()}
-              >
-                <span className="flex items-center gap-1.5">
-                  {t("bubblesMode")}
-                  <Hint side="right">
-                    {t("bubblesHint")}
-                  </Hint>
-                </span>
-              </DropdownMenuCheckboxItem>
-              {bubbleMode && (
-                <div
-                  className="flex items-center gap-2 px-8 py-1 text-xs text-muted-foreground"
-                  onPointerDown={(e) => e.stopPropagation()}
-                >
-                  <span>{t("colorLabel")}</span>
-                  <button
-                    type="button"
-                    title={t("colorChoose")}
-                    onClick={(e) => { e.stopPropagation(); setOpen(false); setColorPickerOpen(true); }}
-                    className="size-3.5 rounded-full border border-border/60 transition-shadow hover:ring-2 hover:ring-ring flex-shrink-0"
-                    style={bubbleColor ? { backgroundColor: bubbleColor } : undefined}
-                  >
-                    {!bubbleColor && <Pipette className="size-2.5 m-auto text-muted-foreground" />}
-                  </button>
-                </div>
-              )}
-              <DropdownMenuCheckboxItem
-                checked={textoMode}
-                onCheckedChange={onTextoModeChange}
-                onSelect={(e) => e.preventDefault()}
-              >
-                <span className="flex items-center gap-1.5">
-                  {t("textoMode")}
-                  <Hint side="right">
-                    {t("textoHint")}
-                  </Hint>
-                </span>
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuCheckboxItem
-                checked={visibleTo !== null}
-                onCheckedChange={onPrivateNoteToggle}
-                onSelect={(e) => e.preventDefault()}
-                disabled={!chatId}
-              >
-                <span className="flex items-center gap-1.5">
-                  <Lock className="h-3.5 w-3.5" />
-                  {t("privateNote")}
-                </span>
-              </DropdownMenuCheckboxItem>
+        <DropdownMenuContent align="start" side="top" className="w-[calc(100vw-2rem)] max-w-[520px] p-0 overflow-hidden sm:w-[520px]">
+          <div className="flex max-h-[24rem]">
+            <div className="min-w-0 flex-1 overflow-y-auto p-2 sm:border-r sm:border-border-soft">
+              <div className="px-2 pb-1.5 pt-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                {t("menuBlocksSection")}
+              </div>
+              {blockItems.map((item) => (
+                <ComposerMenuRow key={item.id} item={item} isActive={activeItemId === item.id} onHover={() => setActiveItemId(item.id)} />
+              ))}
+              <div className="px-2 pb-1.5 pt-3 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                {t("menuOptionsSection")}
+              </div>
+              {optionItems.map((item) => (
+                <ComposerMenuRow key={item.id} item={item} isActive={activeItemId === item.id} onHover={() => setActiveItemId(item.id)} />
+              ))}
             </div>
+
+            <div className="hidden w-52 shrink-0 flex-col p-4 sm:flex">
+              {activeItem && (
+                <>
+                  <div className="mb-3 flex items-center gap-2 text-sm font-medium">
+                    <activeItem.icon className="h-4 w-4 shrink-0" />
+                    <span className="truncate">{activeItem.title}</span>
+                  </div>
+                  <div className="mb-3 flex flex-1 items-center justify-center">
+                    {renderPreview(activeItem.id)}
+                  </div>
+                  <p className="text-xs leading-snug text-muted-foreground">{activeItem.description}</p>
+                </>
+              )}
+            </div>
+          </div>
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -919,11 +1053,10 @@ function BlocksDropdown({
                     key={pin.id}
                     type="button"
                     onClick={() => setDraftPinId(pin.id === draftPinId ? null : pin.id)}
-                    className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
-                      draftPinId === pin.id
+                    className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${draftPinId === pin.id
                         ? "bg-primary/10 text-primary"
                         : "hover:bg-muted"
-                    }`}
+                      }`}
                   >
                     <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: pin.color }} />
                     {pin.title}
@@ -980,4 +1113,3 @@ function BlocksDropdown({
     </>
   );
 }
-

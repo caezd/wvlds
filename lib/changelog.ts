@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-07 ──────────────────────────────────────────────────────────────
   {
     date: "2026-07",
+    tag: "Interface",
+    text: "Refonte du menu blocs/options du composer :\n- Les **blocs à créer** (dé, bannière, encadré, ancre, révélation…) et les **options à cocher** (dialogues en bulles, SMS, chronologie, lieu, note privée) sont désormais dans deux sections distinctes\n- Chaque ligne affiche une **courte description**, et le survol/focus met à jour un **panneau d'aperçu** à droite montrant à quoi ressemble le bloc ou l'option activée\n- Sur mobile, le panneau d'aperçu est masqué pour garder le menu utilisable en largeur réduite",
+  },
+  {
+    date: "2026-07",
     tag: "Correctif",
     text: "Sur mobile, la touche Entrée du composer créait un envoi immédiat sans possibilité pratique de revenir à la ligne (Maj+Entrée n'est pas accessible sur un clavier virtuel) :\n- Sur mobile désormais, **Entrée crée un nouveau paragraphe** et **Maj+Entrée ou Ctrl+Entrée envoie** le message (ou le bouton d'envoi)\n- Le comportement sur ordinateur (Entrée envoie, Maj/Ctrl+Entrée revient à la ligne) reste inchangé",
   },
