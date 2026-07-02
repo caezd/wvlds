@@ -2,6 +2,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getUserId } from "@/lib/auth";
 import { notFound } from "next/navigation";
+import { canMemberPost } from "@/lib/worldPermissions";
 
 import { WorldHome } from "@/components/worlds/WorldHome";
 import { WorldMembershipGuard } from "@/components/worlds/WorldMembershipGuard";
@@ -63,7 +64,7 @@ export default async function WorldPage({
 
   const isShared = true; // guaranteed by the myRole guard above
   const canEditTabs = ["owner", "admin", "editor"].includes(myRole);
-  const canPost = ["owner", "admin", "editor", "player"].includes(myRole);
+  const canPost = canMemberPost(myRole, world.owner_id === userId);
 
   // Ces quatre chargements (nav, droits admin, préférences UI, personas) sont
   // indépendants les uns des autres → on les exécute en parallèle plutôt que

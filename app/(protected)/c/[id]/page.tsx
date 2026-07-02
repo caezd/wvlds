@@ -7,6 +7,7 @@ import { decryptMessage } from "@/lib/crypto";
 import type { ChatMessageWithPersona, Persona } from "@/types/db";
 import WorldSidebar from "@/components/worlds/WorldSidebar";
 import { getTranslations } from "next-intl/server";
+import { canMemberPost } from "@/lib/worldPermissions";
 
 export default async function Page({ params }: { params: { id: string } }) {
   const t = await getTranslations("chatrooms");
@@ -40,7 +41,7 @@ export default async function Page({ params }: { params: { id: string } }) {
     supabase
       .from("chat_messages")
       .select(
-        "id, chat_id, content, author_id, created_at, metadata, visible_to, persona:personas(id, user_id, name, avatar_url, frame:avatar_frame_id(asset_url))",
+        "id, chat_id, content, author_id, created_at, metadata, visible_to, persona:personas(id, user_id, name, avatar_url, frame:avatar_frame_id(asset_url)), author:profiles(avatar_url, username)",
       )
       .eq("chat_id", id)
       .order("created_at", { ascending: false })
@@ -189,6 +190,8 @@ export default async function Page({ params }: { params: { id: string } }) {
     }
   }
 
+  const canPost = canMemberPost(membership?.role ?? null, isWorldOwner);
+
   // Chatrooms du même world (pour l'aside), déjà chargés en phase 2.
   const initialRoomsSafe = navResult.rooms;
 
@@ -223,6 +226,7 @@ export default async function Page({ params }: { params: { id: string } }) {
       selfId={userId}
       canEdit={canEdit}
       canWorldAdmin={canWorldAdmin}
+      canPost={canPost}
       initialChatrooms={initialRoomsSafe}
       chatroomKey={chatroomKey}
       initialIsFollowed={!!followRow.data}
