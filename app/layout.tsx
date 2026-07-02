@@ -15,7 +15,7 @@ const defaultUrl = process.env.VERCEL_URL
 export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
   title: "WVLDS",
-  description: "The fastest way to build apps with Next.js and Supabase",
+  description: "WVLDS — créez des mondes, incarnez vos personnages et écrivez vos histoires en temps réel.",
 };
 
 const geistSans = Geist({

@@ -71,7 +71,7 @@ export function WorldsRailButton() {
 
 
   return (
-    <div className="relative w-full px-1.5" onMouseEnter={onEnter} onMouseLeave={onLeave}>
+    <div className="relative w-11 px-1.5" onMouseEnter={onEnter} onMouseLeave={onLeave}>
       {/* Placeholder dans le flux */}
       <div className="h-9 w-full" />
 
@@ -85,14 +85,17 @@ export function WorldsRailButton() {
         {/* Globe */}
         <Link
           href="/w"
+          // /w répond par une redirection 307 vers le dernier monde : le
+          // prefetch serait systématiquement jeté.
+          prefetch={false}
           aria-label="Mes mondes"
           className={cn(
             "relative flex h-9 w-full shrink-0 items-center justify-center rounded-xl transition-colors",
             isWorldPage || open ? "text-foreground" : "text-muted-foreground",
           )}
         >
-          {isWorldPage && !open && (
-            <span className="absolute -left-4 -translate-x-[2px] h-[20px] w-[8px] rounded-full bg-mist-50" />
+          {isWorldPage && (
+            <span className="absolute -left-3 -translate-x-[2px] h-[20px] w-[8px] rounded-full bg-mist-50" />
           )}
           <Globe size={17} />
         </Link>
@@ -105,7 +108,7 @@ export function WorldsRailButton() {
           )}
         >
           {/* Séparateur toujours présent */}
-          <div className="my-1 h-px w-6 shrink-0 bg-mist-50/10" />
+          <div className="my-1 h-px w-4 shrink-0 bg-mist-50/10" />
 
           {/* Mondes favoris */}
           {worlds.length > 0 && (
@@ -136,12 +139,12 @@ export function WorldsRailButton() {
                   </Tooltip>
                 ))}
               </div>
-              <div className="my-1 h-px w-6 shrink-0 bg-mist-50/10" />
+              <div className="my-1 h-px w-4 shrink-0 bg-mist-50/10" />
             </>
           )}
 
           {/* Bouton créer un monde */}
-          <div className="w-full px-1.5 pb-1.5">
+          <div className="w-full px-1.5 pb-3 flex items-center justify-center">
             <CreateWorldDialog
               disabled={quotaReached}
               plan={quotaInfo.plan}
@@ -151,7 +154,7 @@ export function WorldsRailButton() {
                 <button
                   type="button"
                   disabled={quotaReached}
-                  className="flex h-6 w-full items-center justify-center rounded-md bg-accent text-accent-foreground transition-colors hover:bg-accent/90 disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="flex h-6 w-6 items-center justify-center rounded-md bg-accent text-accent-foreground transition-colors hover:bg-accent/90 disabled:opacity-40 disabled:cursor-not-allowed"
                   aria-label="Nouveau monde"
                 >
                   <Plus size={14} />
