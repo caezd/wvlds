@@ -1,9 +1,31 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, act } from "@testing-library/react";
 import { createClient } from "@/lib/supabase/client";
-import { createSupabaseMock } from "@/test/supabaseMock";
+import { createSupabaseMock, type SupabaseMock } from "@/test/supabaseMock";
 import NotificationsProvider, { useNotifications } from "@/components/providers/NotificationsProvider";
 import type { AppNotification } from "@/types/db";
+
+// Le bootstrap charge tout via une seule RPC get_app_shell() (voir lib/appShell.ts) ;
+// on la mock pour renvoyer les notifications de test, et toute autre RPC
+// (get_world_unreads, get_all_chatroom_unreads via refreshAll) avec une liste vide.
+function mockAppShell(mock: SupabaseMock, notifications: AppNotification[] = []) {
+    mock.client.rpc.mockImplementation((name: string) => {
+        if (name === "get_app_shell") {
+            return Promise.resolve({
+                data: {
+                    world_ids: [],
+                    world_unreads: [],
+                    room_unreads: [],
+                    notification_preferences: [],
+                    notifications,
+                    dm_conversations: [],
+                },
+                error: null,
+            });
+        }
+        return Promise.resolve({ data: [], error: null });
+    });
+}
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
@@ -62,14 +84,8 @@ function ConsumerWithActions() {
 }
 
 function setup(initialNotifs: AppNotification[] = [BASE_NOTIF]) {
-    const mock = createSupabaseMock({
-        user: { id: "u1" },
-        results: [
-            { data: [] },               // world_members
-            { data: initialNotifs },    // notifications (bootstrap)
-            { data: [] },               // notification_preferences
-        ],
-    });
+    const mock = createSupabaseMock({ user: { id: "u1" } });
+    mockAppShell(mock, initialNotifs);
     vi.mocked(createClient).mockReturnValue(mock.client as never);
 
     render(
@@ -86,14 +102,8 @@ function setup(initialNotifs: AppNotification[] = [BASE_NOTIF]) {
 beforeEach(() => vi.clearAllMocks());
 
 function setupWithActions(initialNotifs: AppNotification[] = [BASE_NOTIF]) {
-    const mock = createSupabaseMock({
-        user: { id: "u1" },
-        results: [
-            { data: [] },
-            { data: initialNotifs },
-            { data: [] },
-        ],
-    });
+    const mock = createSupabaseMock({ user: { id: "u1" } });
+    mockAppShell(mock, initialNotifs);
     vi.mocked(createClient).mockReturnValue(mock.client as never);
 
     render(
@@ -118,10 +128,8 @@ function ConsumerActiveChat() {
 
 describe("NotificationsProvider — setActiveChat", () => {
     it("ne marque PAS le chat lu (pas de POST chatroom_reads redondant)", async () => {
-        const mock = createSupabaseMock({
-            user: { id: "u1" },
-            results: [{ data: [] }, { data: [] }, { data: [] }],
-        });
+        const mock = createSupabaseMock({ user: { id: "u1" } });
+        mockAppShell(mock);
         vi.mocked(createClient).mockReturnValue(mock.client as never);
 
         render(

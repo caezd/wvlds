@@ -13,6 +13,18 @@ import { createClient } from "@/lib/supabase/client";
 import { TABLE, RPC, channel } from "@/lib/constants";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import type { DmConversation, DmMessage } from "@/types/db";
+import { fetchAppShell } from "@/lib/appShell";
+
+// Déduplication défensive : `get_dm_conversations()` trie par date desc, on
+// garde la 1re occurrence par other_user_id.
+function dedupeConversations(rows: DmConversation[]): DmConversation[] {
+  const seen = new Set<string>();
+  return rows.filter(c => {
+    if (seen.has(c.other_user_id)) return false;
+    seen.add(c.other_user_id);
+    return true;
+  });
+}
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -145,14 +157,7 @@ export default function DmsProvider({ children }: { children: React.ReactNode })
   const loadConversations = useCallback(async () => {
     const { data } = await supabase.rpc(RPC.GET_DM_CONVERSATIONS);
     if (!data) return;
-    // Déduplication défensive : le RPC trie par date desc, on garde le 1er par other_user_id
-    const seen = new Set<string>();
-    const deduped = (data as DmConversation[]).filter(c => {
-      if (seen.has(c.other_user_id)) return false;
-      seen.add(c.other_user_id);
-      return true;
-    });
-    setConversations(deduped);
+    setConversations(dedupeConversations(data as DmConversation[]));
   }, [supabase]);
 
   const markConvRead = useCallback(async (convId: string) => {
@@ -196,7 +201,7 @@ export default function DmsProvider({ children }: { children: React.ReactNode })
     activeConvIdRef.current = convId as string;
     setCommonWorldsCount(typeof count === "number" ? count : Number(count ?? 0));
 
-    void markConvRead(convId as string);
+    await markConvRead(convId as string);
     void loadConversations();
 
     // Persiste la dernière conversation ouverte
@@ -338,7 +343,16 @@ export default function DmsProvider({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     if (!userId) return;
-    void loadConversations();
+
+    // Bootstrap via get_app_shell() : partagée avec NotificationsProvider, qui
+    // monte en parallèle dans une autre branche de l'arbre. Le second des deux
+    // à appeler récupère la promesse déjà en vol au lieu de refaire la requête.
+    let mounted = true;
+    (async () => {
+      const shell = await fetchAppShell(supabase, userId);
+      if (!mounted) return;
+      setConversations(dedupeConversations(shell.dm_conversations));
+    })();
 
     const convCh = supabase
       .channel(channel.dmConversations(userId))
@@ -348,6 +362,7 @@ export default function DmsProvider({ children }: { children: React.ReactNode })
       .subscribe();
 
     return () => {
+      mounted = false;
       void supabase.removeChannel(convCh);
       if (msgChannelRef.current) {
         void supabase.removeChannel(msgChannelRef.current);

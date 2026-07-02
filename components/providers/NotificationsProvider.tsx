@@ -11,10 +11,10 @@ import {
 } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { TABLE, RPC, channel, DELAY } from "@/lib/constants";
-import type { WorldUnreadRow, AppNotification, NotificationType, NotificationPreference } from "@/types/db";
+import type { WorldUnreadRow, AppNotification, NotificationType, AllChatroomUnreadRow } from "@/types/db";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { fetchAppShell } from "@/lib/appShell";
 
-type AllChatroomUnreadRow = { chat_id: string; world_id: string; unread_messages: number };
 type NotifPrefs = Partial<Record<NotificationType, boolean>>;
 
 const NOTIF_INIT = 20;
@@ -97,7 +97,25 @@ export default function NotificationsProvider({ children }: { children: React.Re
     const activeChatRef = useRef<string | null>(null);
     const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    // Source de vérité unique : toujours la DB.
+    // Dérive les deux maps de badges non-lus à partir des lignes RPC — partagé
+    // entre le refresh ciblé (`refreshAll`) et le bootstrap (`get_app_shell`).
+    const applyUnreads = useCallback((worldRows: WorldUnreadRow[], roomRows: AllChatroomUnreadRow[]) => {
+        const wMap: Record<string, number> = {};
+        for (const r of worldRows) {
+            wMap[r.world_id] = (r.unread_messages ?? 0) + (r.unread_rooms ?? 0);
+        }
+        setWorldUnread(wMap);
+
+        const rMap: Record<string, number> = {};
+        for (const r of roomRows) {
+            rMap[r.chat_id] = r.unread_messages ?? 0;
+        }
+        setRoomUnread(rMap);
+    }, []);
+
+    // Source de vérité unique : toujours la DB. Utilisé pour les rafraîchissements
+    // ciblés (après un événement Realtime) — le bootstrap initial passe par
+    // get_app_shell() qui inclut déjà ces mêmes compteurs.
     const refreshAll = useCallback(async () => {
         const uid = userIdRef.current;
         if (!uid) return;
@@ -107,18 +125,8 @@ export default function NotificationsProvider({ children }: { children: React.Re
             supabase.rpc("get_all_chatroom_unreads"),
         ]);
 
-        const wMap: Record<string, number> = {};
-        for (const r of (worldRows ?? []) as WorldUnreadRow[]) {
-            wMap[r.world_id] = (r.unread_messages ?? 0) + (r.unread_rooms ?? 0);
-        }
-        setWorldUnread(wMap);
-
-        const rMap: Record<string, number> = {};
-        for (const r of (roomRows ?? []) as AllChatroomUnreadRow[]) {
-            rMap[r.chat_id] = r.unread_messages ?? 0;
-        }
-        setRoomUnread(rMap);
-    }, [supabase]);
+        applyUnreads((worldRows ?? []) as WorldUnreadRow[], (roomRows ?? []) as AllChatroomUnreadRow[]);
+    }, [supabase, applyUnreads]);
 
     const scheduleRefresh = useCallback(() => {
         if (debounceTimer.current) clearTimeout(debounceTimer.current);
@@ -224,41 +232,25 @@ export default function NotificationsProvider({ children }: { children: React.Re
         const openChannels: ReturnType<typeof supabase.channel>[] = [];
 
         (async () => {
-            const [{ data: mw }, { data: notifRows }, { data: prefRows }] = await Promise.all([
-                supabase.from(TABLE.WORLD_MEMBERS).select("world_id").eq("user_id", userId),
-                supabase
-                    .from(TABLE.NOTIFICATIONS)
-                    .select(NOTIF_SELECT)
-                    .is("archived_at", null)
-                    .order("updated_at", { ascending: false })
-                    .limit(NOTIF_INIT),
-                supabase
-                    .from(TABLE.NOTIFICATION_PREFERENCES)
-                    .select("type, enabled"),
-            ]);
+            // Un seul aller-retour réseau : world_members + notifications +
+            // notification_preferences + les deux compteurs non-lus sont fusionnés
+            // dans get_app_shell() (partagée avec DmsProvider, qui monte en parallèle).
+            const shell = await fetchAppShell(supabase, userId, NOTIF_INIT);
             if (!mounted) return;
 
-            if (notifRows) {
-                setNotifications(notifRows as AppNotification[]);
-                notifOffsetRef.current = notifRows.length;
-                setHasMoreNotifs(notifRows.length === NOTIF_INIT);
-            }
-            if (prefRows) {
-                const prefs: NotifPrefs = {};
-                for (const p of prefRows as NotificationPreference[]) {
-                    prefs[p.type] = p.enabled;
-                }
-                setNotifPrefs(prefs);
-            }
+            setNotifications(shell.notifications);
+            notifOffsetRef.current = shell.notifications.length;
+            setHasMoreNotifs(shell.notifications.length === NOTIF_INIT);
 
-            const worldIds = (mw ?? []).map((x: { world_id: string }) => x.world_id);
+            const prefs: NotifPrefs = {};
+            for (const p of shell.notification_preferences) {
+                prefs[p.type] = p.enabled;
+            }
+            setNotifPrefs(prefs);
 
-            // Pas de marquage « lu » ici : `activeChatRef` n'est positionné que
-            // par une vue chatroom montée, qui marque déjà lu de son côté (avec
-            // le timestamp précis du dernier message). On évite donc un POST
-            // `chatroom_reads` redondant au bootstrap.
-            await refreshAll();
-            if (!mounted) return;
+            applyUnreads(shell.world_unreads, shell.room_unreads);
+
+            const worldIds = shell.world_ids;
 
             // Realtime : messages par monde (pour les badges non-lus)
             for (const wid of worldIds) {
