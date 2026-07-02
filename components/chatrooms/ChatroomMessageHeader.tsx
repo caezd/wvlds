@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * Avatar + nom + actions (réagir / éditer-supprimer / annuler-enregistrer) et
- * date + badge défi + réactions d'un message normal (hors bloc/texto).
+ * date + badge défi + réactions d'un message normal (hors bloc/SMS).
  */
 export function ChatroomMessageHeader({
   message,

@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import type { ReactionSummary } from "@/types/db";
 import { ChatroomMessageBubble } from "./ChatroomMessageBubble";
-import { ChatroomMessageTexto } from "./ChatroomMessageTexto";
+import { ChatroomMessageSms } from "./ChatroomMessageSms";
 import { ChatroomMessageHeader } from "./ChatroomMessageHeader";
 import { ChatroomMessageMobileDrawers } from "./ChatroomMessageMobileDrawers";
 import { useChatroomMessageEdit } from "./useChatroomMessageEdit";
@@ -89,9 +89,9 @@ export default function ChatroomMessage({
   onUnpin,
   onAnchorEdited,
   challengeWon,
-  textoSharpTop,
-  textoSharpBottom,
-  textoShowAvatar,
+  smsSharpTop,
+  smsSharpBottom,
+  smsShowAvatar,
 }: {
   message: import("@/types/db").ChatMessageWithPersona;
   online: Record<string, { avatar_url?: string | null; username?: string | null }>;
@@ -110,10 +110,10 @@ export default function ChatroomMessage({
   onUnpin?: (pinId: string) => void;
   onAnchorEdited?: (messageId: number, label: string) => void;
   challengeWon?: ChallengeBadge | null;
-  /** Position dans une sous-série "texto" du même auteur (calculée par view.tsx). */
-  textoSharpTop?: boolean;
-  textoSharpBottom?: boolean;
-  textoShowAvatar?: boolean;
+  /** Position dans une sous-série "SMS" du même auteur (calculée par view.tsx). */
+  smsSharpTop?: boolean;
+  smsSharpBottom?: boolean;
+  smsShowAvatar?: boolean;
 }) {
   const t = useTranslations("chatrooms");
   const supabase = useMemo(() => createClient(), []);
@@ -160,8 +160,8 @@ export default function ChatroomMessage({
     err,
     editBubbles,
     setEditBubbles,
-    editTexto,
-    setEditTexto,
+    editSms,
+    setEditSms,
     startEdit,
     cancelEdit,
     save,
@@ -227,19 +227,19 @@ export default function ChatroomMessage({
     );
   }
 
-  // Messages "texto" : bulle compacte façon SMS, sans header (nom/avatar/date).
-  if (message.metadata?.texto && !editing) {
+  // Messages "SMS" : bulle compacte, sans header (nom/avatar/date).
+  if (message.metadata?.sms && !editing) {
     return (
-      <ChatroomMessageTexto
+      <ChatroomMessageSms
         message={message}
         mine={mine}
         label={label}
         avatarSrc={avatarSrc}
         presenceState={presenceState}
         frameUrl={frameUrl}
-        sharpTop={textoSharpTop ?? false}
-        sharpBottom={textoSharpBottom ?? false}
-        showAvatar={textoShowAvatar ?? true}
+        sharpTop={smsSharpTop ?? false}
+        sharpBottom={smsSharpBottom ?? false}
+        showAvatar={smsShowAvatar ?? true}
         onEdit={startEdit}
         onRequestDelete={onRequestDelete}
       />
@@ -336,16 +336,16 @@ export default function ChatroomMessage({
                       </button>
                       <button
                         type="button"
-                        onClick={() => setEditTexto((v) => !v)}
+                        onClick={() => setEditSms((v) => !v)}
                         className={cn(
                           "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors",
-                          editTexto
+                          editSms
                             ? "border-primary/40 bg-primary/10 text-primary"
                             : "border-border-soft text-muted-foreground hover:text-foreground",
                         )}
                       >
                         <MessageSquareText className="h-3 w-3" />
-                        {t("textoMode")}
+                        {t("smsMode")}
                       </button>
                     </div>
                     <div className="mt-1.5 text-xs text-muted-foreground">

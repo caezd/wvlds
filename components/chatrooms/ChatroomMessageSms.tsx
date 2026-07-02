@@ -8,12 +8,12 @@ import { ChatroomMessageBubble } from "./ChatroomMessageBubble";
 import type { ChatMessageWithPersona } from "@/types/db";
 
 /**
- * Bulle "texto" compacte façon SMS, sans header (nom/avatar/date).
+ * Bulle "SMS" compacte, sans header (nom/avatar/date).
  * Regroupée visuellement par view.tsx (GameBlockSurface) quand plusieurs se
  * suivent ; `sharpTop`/`sharpBottom`/`showAvatar` sont calculés par
- * `computeTextoRunFlags` selon la position du message dans sa sous-série.
+ * `computeSmsRunFlags` selon la position du message dans sa sous-série.
  */
-export function ChatroomMessageTexto({
+export function ChatroomMessageSms({
   message,
   mine,
   label,

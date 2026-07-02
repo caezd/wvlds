@@ -18,7 +18,7 @@ import { ScrollAreaWithJumpToBottom } from "@/components/ScrollAreaWithJumpToBot
 import { ChatroomComposer } from "@/components/chatrooms/ChatroomComposer";
 import ChatroomMessage from "@/components/chatrooms/ChatroomMessage";
 import { GameBlockSurface } from "@/components/chatrooms/blocks/GameBlockShell";
-import { groupMessagesForRender, computeTextoRunFlags, type TextoRunFlags } from "@/lib/chatroomMessageGrouping";
+import { groupMessagesForRender, computeSmsRunFlags, type SmsRunFlags } from "@/lib/chatroomMessageGrouping";
 import { PersonaProfileSheet } from "@/components/chatrooms/PersonaProfileSheet";
 import { ChatroomsNavDropdown } from "@/components/chatrooms/ChatroomsNavDropdown";
 import { WorldMembershipGuard } from "@/components/worlds/WorldMembershipGuard";
@@ -738,10 +738,10 @@ export default function ChatRoomView({
     },
   });
 
-  // Messages "texto" consécutifs regroupés dans un même bloc visuel (cf. lib/chatroomMessageGrouping.ts).
+  // Messages "SMS" consécutifs regroupés dans un même bloc visuel (cf. lib/chatroomMessageGrouping.ts).
   const renderGroups = useMemo(() => groupMessagesForRender(messages), [messages]);
 
-  const renderMessage = (m: ChatMessageWithPersona, textoFlags?: TextoRunFlags) => (
+  const renderMessage = (m: ChatMessageWithPersona, smsFlags?: SmsRunFlags) => (
     <ChatroomMessage
       key={m.id}
       message={m}
@@ -756,9 +756,9 @@ export default function ChatRoomView({
       onPin={userId ? (id) => pin(id, userId) : undefined}
       onUnpin={unpin}
       challengeWon={challengeBadges.get(m.id) ?? null}
-      textoSharpTop={textoFlags?.sharpTop}
-      textoSharpBottom={textoFlags?.sharpBottom}
-      textoShowAvatar={textoFlags?.showAvatar}
+      smsSharpTop={smsFlags?.sharpTop}
+      smsSharpBottom={smsFlags?.sharpBottom}
+      smsShowAvatar={smsFlags?.showAvatar}
       onReactionsUpdated={(mid, reactions) => {
         setMessages((prev) =>
           prev.map((x) =>
@@ -841,10 +841,10 @@ export default function ChatRoomView({
                   </div>
                 )}
                 {renderGroups.map((g) =>
-                  g.kind === "texto" ? (
-                    <div key={`texto-${g.messages[0].id}`} className="py-8">
+                  g.kind === "sms" ? (
+                    <div key={`sms-${g.messages[0].id}`} className="py-8">
                       <GameBlockSurface className="flex flex-col gap-1.5">
-                        {computeTextoRunFlags(g.messages).map((flags, i) => renderMessage(g.messages[i], flags))}
+                        {computeSmsRunFlags(g.messages).map((flags, i) => renderMessage(g.messages[i], flags))}
                       </GameBlockSurface>
                     </div>
                   ) : (

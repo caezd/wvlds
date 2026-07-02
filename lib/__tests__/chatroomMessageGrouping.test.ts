@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { groupMessagesForRender, computeTextoRunFlags } from "@/lib/chatroomMessageGrouping";
+import { groupMessagesForRender, computeSmsRunFlags } from "@/lib/chatroomMessageGrouping";
 import type { ChatMessageWithPersona } from "@/types/db";
 
 function makeMessage(overrides: Partial<ChatMessageWithPersona> = {}): ChatMessageWithPersona {
@@ -18,7 +18,7 @@ describe("groupMessagesForRender", () => {
     expect(groupMessagesForRender([])).toEqual([]);
   });
 
-  it("garde chaque message en 'single' quand aucun n'est texto", () => {
+  it("garde chaque message en 'single' quand aucun n'est SMS", () => {
     const messages = [
       makeMessage({ id: 1 }),
       makeMessage({ id: 2 }),
@@ -30,43 +30,43 @@ describe("groupMessagesForRender", () => {
     ]);
   });
 
-  it("fusionne les messages texto consécutifs en un seul groupe", () => {
+  it("fusionne les messages SMS consécutifs en un seul groupe", () => {
     const messages = [
-      makeMessage({ id: 1, metadata: { texto: true } }),
-      makeMessage({ id: 2, metadata: { texto: true } }),
-      makeMessage({ id: 3, metadata: { texto: true } }),
+      makeMessage({ id: 1, metadata: { sms: true } }),
+      makeMessage({ id: 2, metadata: { sms: true } }),
+      makeMessage({ id: 3, metadata: { sms: true } }),
     ];
     const groups = groupMessagesForRender(messages);
-    expect(groups).toEqual([{ kind: "texto", messages }]);
+    expect(groups).toEqual([{ kind: "sms", messages }]);
   });
 
   it("coupe le groupe quand un message normal s'intercale", () => {
-    const texto1 = makeMessage({ id: 1, metadata: { texto: true } });
+    const sms1 = makeMessage({ id: 1, metadata: { sms: true } });
     const normal = makeMessage({ id: 2 });
-    const texto2 = makeMessage({ id: 3, metadata: { texto: true } });
-    const groups = groupMessagesForRender([texto1, normal, texto2]);
+    const sms2 = makeMessage({ id: 3, metadata: { sms: true } });
+    const groups = groupMessagesForRender([sms1, normal, sms2]);
     expect(groups).toEqual([
-      { kind: "texto", messages: [texto1] },
+      { kind: "sms", messages: [sms1] },
       { kind: "single", message: normal },
-      { kind: "texto", messages: [texto2] },
+      { kind: "sms", messages: [sms2] },
     ]);
   });
 
-  it("ne regroupe pas un message dont le contenu est un bloc structuré, même avec metadata.texto", () => {
+  it("ne regroupe pas un message dont le contenu est un bloc structuré, même avec metadata.sms", () => {
     const block = makeMessage({
       id: 1,
       content: '{"_type":"dice","total":4}',
-      metadata: { texto: true },
+      metadata: { sms: true },
     });
     const groups = groupMessagesForRender([block]);
     expect(groups).toEqual([{ kind: "single", message: block }]);
   });
 });
 
-describe("computeTextoRunFlags", () => {
+describe("computeSmsRunFlags", () => {
   it("un message seul (aucun voisin du même auteur) : coins arrondis, avatar visible", () => {
     const solo = makeMessage({ id: 1, persona: { id: "p1", user_id: "u1", name: "Aria", avatar_url: null } });
-    expect(computeTextoRunFlags([solo])).toEqual([
+    expect(computeSmsRunFlags([solo])).toEqual([
       { sharpTop: false, sharpBottom: false, showAvatar: true },
     ]);
   });
@@ -78,7 +78,7 @@ describe("computeTextoRunFlags", () => {
       makeMessage({ id: 2, persona }),
       makeMessage({ id: 3, persona }),
     ];
-    expect(computeTextoRunFlags(messages)).toEqual([
+    expect(computeSmsRunFlags(messages)).toEqual([
       { sharpTop: false, sharpBottom: true, showAvatar: false },
       { sharpTop: true, sharpBottom: true, showAvatar: false },
       { sharpTop: true, sharpBottom: false, showAvatar: true },
@@ -93,7 +93,7 @@ describe("computeTextoRunFlags", () => {
       makeMessage({ id: 2, persona: personaB }),
       makeMessage({ id: 3, persona: personaB }),
     ];
-    expect(computeTextoRunFlags(messages)).toEqual([
+    expect(computeSmsRunFlags(messages)).toEqual([
       { sharpTop: false, sharpBottom: false, showAvatar: true },
       { sharpTop: false, sharpBottom: true, showAvatar: false },
       { sharpTop: true, sharpBottom: false, showAvatar: true },

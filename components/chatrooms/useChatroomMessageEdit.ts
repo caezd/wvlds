@@ -10,7 +10,7 @@ import type { ChatMessageMeta, ChatMessageWithPersona } from "@/types/db";
 
 /**
  * État et logique d'édition d'un message de chatroom : brouillon, options
- * (dialogues en bulles / texto), sauvegarde (chiffrement, réconciliation de
+ * (dialogues en bulles / SMS), sauvegarde (chiffrement, réconciliation de
  * `metadata`, notifications de mention).
  */
 export function useChatroomMessageEdit({
@@ -40,7 +40,7 @@ export function useChatroomMessageEdit({
   const [err, setErr] = useState<string | null>(null);
   const [editBubbles, setEditBubbles] = useState(false);
   const [editBubbleColor, setEditBubbleColor] = useState<string | null>(null);
-  const [editTexto, setEditTexto] = useState(false);
+  const [editSms, setEditSms] = useState(false);
 
   // Si un UPDATE arrive via realtime pendant qu'on n'édite pas, on resync le draft
   useEffect(() => {
@@ -52,7 +52,7 @@ export function useChatroomMessageEdit({
     if (editing) {
       setEditBubbles(message.metadata?.bubbles ?? false);
       setEditBubbleColor(message.metadata?.bubbleColor ?? null);
-      setEditTexto(message.metadata?.texto ?? false);
+      setEditSms(message.metadata?.sms ?? false);
     }
   }, [editing]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -88,8 +88,8 @@ export function useChatroomMessageEdit({
     const bubblesUnchanged =
       editBubbles === (message.metadata?.bubbles ?? false) &&
       editBubbleColor === (message.metadata?.bubbleColor ?? null);
-    const textoUnchanged = editTexto === (message.metadata?.texto ?? false);
-    if (contentUnchanged && bubblesUnchanged && textoUnchanged) {
+    const smsUnchanged = editSms === (message.metadata?.sms ?? false);
+    if (contentUnchanged && bubblesUnchanged && smsUnchanged) {
       setEditing(false);
       return;
     }
@@ -103,14 +103,14 @@ export function useChatroomMessageEdit({
       ? 0
       : next.trim().split(/\s+/).filter(Boolean).length;
 
-    const { bubbles: _b, bubbleColor: _bc, texto: _tx, ...restMeta } = message.metadata ?? {};
+    const { bubbles: _b, bubbleColor: _bc, sms: _sms, ...restMeta } = message.metadata ?? {};
     const updatedMetadata = {
       ...restMeta,
       word_count: wordCount,
       ...(editBubbles
         ? { bubbles: true as const, ...(editBubbleColor ? { bubbleColor: editBubbleColor } : {}) }
         : {}),
-      ...(editTexto ? { texto: true as const } : {}),
+      ...(editSms ? { sms: true as const } : {}),
     };
 
     const { error } = await supabase
@@ -164,7 +164,7 @@ export function useChatroomMessageEdit({
     // Mise à jour optimiste avec le texte en clair (déjà déchiffré dans l'état)
     onUpdated?.(message.id, next, updatedMetadata);
     setEditing(false);
-  }, [draft, mine, message?.content, message?.id, message?.metadata, editBubbles, editBubbleColor, editTexto, onUpdated, supabase, chatroomKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [draft, mine, message?.content, message?.id, message?.metadata, editBubbles, editBubbleColor, editSms, onUpdated, supabase, chatroomKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function onKeyDownEdit(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Escape") {
@@ -188,8 +188,8 @@ export function useChatroomMessageEdit({
     setEditBubbles,
     editBubbleColor,
     setEditBubbleColor,
-    editTexto,
-    setEditTexto,
+    editSms,
+    setEditSms,
     startEdit,
     cancelEdit,
     save,

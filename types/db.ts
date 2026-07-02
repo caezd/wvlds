@@ -71,7 +71,7 @@ export type ChatMediaItem = {
 export type ChatMessageMeta = {
   bubbles?: boolean;
   bubbleColor?: string;
-  texto?: boolean;
+  sms?: boolean;
   media?: ChatMediaItem[];
   word_count?: number;
   visible_to_labels?: string[];

@@ -108,7 +108,7 @@ function makeMessage(overrides: Partial<ChatMessageWithPersona> = {}): ChatMessa
     created_at: "2024-01-01T10:00:00Z",
     persona: { id: "p1", user_id: "user-other", name: "Aria", avatar_url: null },
     reactions: [],
-    metadata: { texto: true },
+    metadata: { sms: true },
     ...overrides,
   };
 }
@@ -121,13 +121,13 @@ function setupMock(results: { data?: unknown; error?: unknown }[] = []) {
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
-describe("ChatroomMessage — texto", () => {
+describe("ChatroomMessage — SMS", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     setupMock([{ data: null, error: null }]);
   });
 
-  it("n'affiche pas le header (nom, date) quand metadata.texto est actif", () => {
+  it("n'affiche pas le header (nom, date) quand metadata.sms est actif", () => {
     const message = makeMessage();
     render(<ChatroomMessage message={message} online={{}} selfId="viewer-1" />);
 
@@ -136,7 +136,7 @@ describe("ChatroomMessage — texto", () => {
     expect(screen.getByText("Salut !")).toBeInTheDocument();
   });
 
-  it("affiche le header normal quand metadata.texto est absent", () => {
+  it("affiche le header normal quand metadata.sms est absent", () => {
     const message = makeMessage({ metadata: null });
     render(<ChatroomMessage message={message} online={{}} selfId="viewer-1" />);
 
@@ -168,16 +168,16 @@ describe("ChatroomMessage — texto", () => {
     expect(screen.getByLabelText("Supprimer")).toBeInTheDocument();
   });
 
-  it("resserre les coins de raccord et masque l'avatar quand textoSharpTop/Bottom/ShowAvatar sont fournis (série du même auteur)", () => {
+  it("resserre les coins de raccord et masque l'avatar quand smsSharpTop/Bottom/ShowAvatar sont fournis (série du même auteur)", () => {
     const message = makeMessage({ author_id: "viewer-1" });
     const { container } = render(
       <ChatroomMessage
         message={message}
         online={{}}
         selfId="viewer-1"
-        textoSharpTop
-        textoSharpBottom
-        textoShowAvatar={false}
+        smsSharpTop
+        smsSharpBottom
+        smsShowAvatar={false}
       />,
     );
 
@@ -195,7 +195,7 @@ describe("ChatroomMessage — texto", () => {
     expect(screen.queryByLabelText("Supprimer")).toBeNull();
   });
 
-  it("passer en édition puis décocher Texto fait revenir au rendu normal après sauvegarde", async () => {
+  it("passer en édition puis décocher SMS fait revenir au rendu normal après sauvegarde", async () => {
     const onUpdated = vi.fn();
     const message = makeMessage({ author_id: "viewer-1", content: "Salut !" });
     render(
@@ -209,18 +209,18 @@ describe("ChatroomMessage — texto", () => {
 
     fireEvent.click(screen.getByLabelText("Modifier"));
 
-    // Le toggle "Texto" est coché initialement (miroir de metadata.texto)
-    const textoToggle = screen.getByText("textoMode").closest("button");
-    expect(textoToggle).not.toBeNull();
-    fireEvent.click(textoToggle!);
+    // Le toggle "SMS" est coché initialement (miroir de metadata.sms)
+    const smsToggle = screen.getByText("smsMode").closest("button");
+    expect(smsToggle).not.toBeNull();
+    fireEvent.click(smsToggle!);
 
     const textarea = screen.getByRole("textbox");
     fireEvent.keyDown(textarea, { key: "Enter" });
 
     await waitFor(() => expect(onUpdated).toHaveBeenCalledOnce());
-    const [id, content, metadata] = onUpdated.mock.calls[0] as [number, string, { texto?: boolean } | null];
+    const [id, content, metadata] = onUpdated.mock.calls[0] as [number, string, { sms?: boolean } | null];
     expect(id).toBe(1);
     expect(content).toBe("Salut !");
-    expect(metadata?.texto).toBeUndefined();
+    expect(metadata?.sms).toBeUndefined();
   });
 });

@@ -14,7 +14,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-07",
     tag: "Chatrooms",
-    text: "Messages « Texto » :\n- Nouvelle option à cocher dans le composer (persistante jusqu'à décochage) qui affiche les messages envoyés en **bulles façon SMS**, sans le header habituel (nom, avatar, date)\n- Les messages texto envoyés à la suite sont **regroupés dans un même bloc**, comme un lancé de dé ou une bannière — bulle alignée à droite pour ses propres messages, à gauche pour celles des autres, petit avatar au bout, boutons éditer/supprimer à l'opposé\n- Pour des messages consécutifs du même auteur, l'**avatar ne se répète plus** (affiché une seule fois, sur la dernière bulle) et les **coins de raccord se resserrent** entre les bulles, façon Messenger\n- Décocher l'option en éditant un message texto le fait redevenir un message normal une fois sauvegardé",
+    text: "Messages « SMS » :\n- Nouvelle option à cocher dans le composer (persistante jusqu'à décochage) qui affiche les messages envoyés en **bulles façon SMS**, sans le header habituel (nom, avatar, date)\n- Les messages SMS envoyés à la suite sont **regroupés dans un même bloc**, comme un lancé de dé ou une bannière — bulle alignée à droite pour ses propres messages, à gauche pour celles des autres, petit avatar au bout, boutons éditer/supprimer à l'opposé\n- Pour des messages consécutifs du même auteur, l'**avatar ne se répète plus** (affiché une seule fois, sur la dernière bulle) et les **coins de raccord se resserrent** entre les bulles, façon Messenger\n- Décocher l'option en éditant un message SMS le fait redevenir un message normal une fois sauvegardé",
   },
   {
     date: "2026-07",

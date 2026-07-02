@@ -38,7 +38,7 @@ export type MessageMetadata = {
   word_count?: number;
   bubbles?: true;
   bubbleColor?: string;
-  texto?: true;
+  sms?: true;
   media?: MediaRef[];
   visible_to_labels?: string[];
 };
@@ -51,15 +51,15 @@ export function buildMessageMetadata(opts: {
   wordCount: number;
   bubbleMode: boolean;
   bubbleColor: string | null;
-  textoMode: boolean;
+  smsMode: boolean;
   media: MediaRef[];
   visibleToLabels: string[] | null;
 }): MessageMetadata | null {
-  const { wordCount, bubbleMode, bubbleColor, textoMode, media, visibleToLabels } = opts;
+  const { wordCount, bubbleMode, bubbleColor, smsMode, media, visibleToLabels } = opts;
   const metadata: MessageMetadata = {
     ...(wordCount > 0 ? { word_count: wordCount } : {}),
     ...(bubbleMode ? { bubbles: true as const, ...(bubbleColor ? { bubbleColor } : {}) } : {}),
-    ...(textoMode ? { texto: true as const } : {}),
+    ...(smsMode ? { sms: true as const } : {}),
     ...(media.length > 0 ? { media } : {}),
     ...(visibleToLabels?.length ? { visible_to_labels: visibleToLabels } : {}),
   };

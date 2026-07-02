@@ -16,7 +16,7 @@ export function ChatroomMessageBubble({
   persona?: { user_id?: string | null; name?: string | null } | null;
   message: { content: string; metadata?: ChatMessageMeta | null };
   isMine: boolean;
-  /** Ignore metadata.bubbles même si actif (utilisé par le rendu texto, prioritaire). */
+  /** Ignore metadata.bubbles même si actif (utilisé par le rendu SMS, prioritaire). */
   ignoreBubbles?: boolean;
 }) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
