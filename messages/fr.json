@@ -43,7 +43,33 @@
       "fr": "Français",
       "en": "English",
       "es": "Español"
+    },
+    "profile": {
+      "title": "Profil",
+      "description": "Personnalisez la façon dont les autres joueurs vous voient",
+      "bioLabel": "Bio",
+      "bioPlaceholder": "Dis-en un peu plus sur toi…",
+      "bioHint": "{count}/500 caractères",
+      "pronounsLabel": "Pronoms",
+      "pronounsHint": "3 maximum",
+      "pronounsCustomLabel": "Autre",
+      "pronounsCustomPlaceholder": "Tes propres pronoms…",
+      "save": "Enregistrer le profil",
+      "saved": "Profil mis à jour"
     }
+  },
+  "pronouns": {
+    "he_him": "Il/Lui",
+    "she_her": "Elle/Elle",
+    "they_them": "Iel/Iel",
+    "he_they": "Il/Iel",
+    "she_they": "Elle/Iel",
+    "any": "Tous pronoms",
+    "ask_me": "Demandez-moi"
+  },
+  "userProfile": {
+    "title": "Profil joueur",
+    "memberSince": "Membre depuis {date}"
   },
   "notifications": {
     "title": "Notifications",
@@ -127,7 +153,7 @@
       "catalogue": "Catalogue"
     },
     "sidebar": {
-      "active": "Actif",
+      "active": "Récents",
       "followed": "Suivis",
       "all": "Tous",
       "back": "Retour",

@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { SUPPORTED_LOCALES, type Locale } from "@/i18n/locales";
+import { sanitizePronouns } from "@/lib/pronouns";
 
 function isSupported(value: string): value is Locale {
   return SUPPORTED_LOCALES.includes(value as Locale);
@@ -39,4 +40,25 @@ export async function syncLocale(locale: string) {
   if (!isSupported(locale)) return;
   const cookieStore = await cookies();
   cookieStore.set("NEXT_LOCALE", locale, COOKIE_OPTIONS);
+}
+
+export async function updateProfileBioAndPronouns(bio: string, pronouns: string[]) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Non authentifié" };
+
+  const trimmedBio = bio.trim().slice(0, 500);
+  const cleanPronouns = sanitizePronouns(pronouns);
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ bio: trimmedBio || null, pronouns: cleanPronouns })
+    .eq("id", user.id);
+
+  if (error) return { error: error.message ?? "Impossible d'enregistrer le profil." };
+
+  revalidatePath("/settings");
+  return { success: true };
 }

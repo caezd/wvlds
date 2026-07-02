@@ -259,7 +259,7 @@ export function PersonaProfileSheetTrigger({
   personaId,
   userId,
   label,
-  hoverPreview = true,
+  hoverPreview = false,
   side = "right",
 }: {
   children: React.ReactNode;
@@ -375,7 +375,7 @@ export function PersonaProfileSheetTrigger({
 
     load();
     return () => { cancelled = true; };
-  }, [personaId, userId, supabase, label]);  
+  }, [personaId, userId, supabase, label]);
 
   // Prefetch dès que la sheet s'ouvre (fallback si le hover n'a pas suffi)
   React.useEffect(() => {
@@ -385,7 +385,6 @@ export function PersonaProfileSheetTrigger({
   const info = balance ? levelInfo(balance.xp) : null;
 
   const userPresence = userId ? getUserPresence(userId) : "offline";
-  const _isOnline = userPresence === "online";
   const presenceLine =
     !ownerPresence && userPresence === "offline"
       ? null // données pas encore chargées — on n'affiche rien
@@ -474,11 +473,10 @@ export function PersonaProfileSheetTrigger({
                   {presenceLine && (
                     <p className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
                       <span
-                        className={`h-2 w-2 rounded-full ${
-                          userPresence === "online" ? "bg-[#58F4A8]"
+                        className={`h-2 w-2 rounded-full ${userPresence === "online" ? "bg-[#58F4A8]"
                           : userPresence === "away" ? "bg-orange-400"
-                          : "bg-muted-foreground/40"
-                        }`}
+                            : "bg-muted-foreground/40"
+                          }`}
                       />
                       {presenceLine}
                     </p>

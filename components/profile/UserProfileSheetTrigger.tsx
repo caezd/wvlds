@@ -1,0 +1,174 @@
+"use client";
+
+import * as React from "react";
+import { useTranslations } from "next-intl";
+import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import MarkdownRenderer from "@/components/MarkdownRenderer";
+import { useGlobalPresence } from "@/components/providers/PresenceProvider";
+import { formatLastSeen } from "@/lib/utils";
+import { isPronounOption } from "@/lib/pronouns";
+
+function formatMemberSince(value: string) {
+  return new Intl.DateTimeFormat("fr-CA", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(value));
+}
+
+function initials(name: string) {
+  return (name.trim()[0] ?? "?").toUpperCase();
+}
+
+type ProfileData = {
+  username: string | null;
+  avatar_url: string | null;
+  bio: string | null;
+  pronouns: string[] | null;
+  created_at: string | null;
+  last_seen_at: string | null;
+  appear_offline: boolean;
+};
+
+export function UserProfileSheetTrigger({
+  children,
+  userId,
+  label,
+  side = "right",
+}: {
+  children: React.ReactNode;
+  userId?: string | null;
+  label?: string | null;
+  side?: "left" | "right" | "top" | "bottom";
+}) {
+  const t = useTranslations("userProfile");
+  const tPronouns = useTranslations("pronouns");
+  const supabase = React.useMemo(() => createClient(), []);
+  const { getUserPresence } = useGlobalPresence();
+  const [open, setOpen] = React.useState(false);
+  const [profile, setProfile] = React.useState<ProfileData | null>(null);
+  const [loading, setLoading] = React.useState(false);
+
+  const fetchedKeyRef = React.useRef<string | null>(null);
+
+  const prefetch = React.useCallback(() => {
+    if (!userId || fetchedKeyRef.current === userId) return;
+    fetchedKeyRef.current = userId;
+    setLoading(true);
+
+    async function load() {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("username,avatar_url,bio,pronouns,created_at,last_seen_at,appear_offline")
+        .eq("id", userId!)
+        .maybeSingle();
+
+      setLoading(false);
+      if (error) {
+        toast.error(error.message ?? "Impossible de charger le profil.");
+        fetchedKeyRef.current = null;
+        return;
+      }
+      if (data) setProfile(data as unknown as ProfileData);
+    }
+
+    void load();
+  }, [userId, supabase]);
+
+  React.useEffect(() => {
+    if (open) prefetch();
+  }, [open, prefetch]);
+
+  const username = profile?.username ?? label ?? null;
+  const userPresence = userId ? getUserPresence(userId) : "offline";
+  const presenceLine =
+    userPresence === "online"
+      ? "En ligne"
+      : userPresence === "away"
+        ? "Absent"
+        : profile?.appear_offline
+          ? "Hors ligne"
+          : profile?.last_seen_at
+            ? `Vu ${formatLastSeen(profile.last_seen_at)}`
+            : null;
+
+  return (
+    <Sheet open={open} onOpenChange={setOpen}>
+      <button
+        type="button"
+        title={label ?? t("title")}
+        aria-label={label ?? t("title")}
+        onPointerEnter={prefetch}
+        onClick={() => setOpen(true)}
+      >
+        {children}
+      </button>
+
+      <SheetContent side={side} className="w-full sm:max-w-sm overflow-y-auto">
+        <SheetHeader className="sr-only">
+          <SheetTitle>{username ?? t("title")}</SheetTitle>
+        </SheetHeader>
+
+        <div className="flex flex-col items-center gap-3 pt-2 text-center">
+          <Avatar className="size-20">
+            {profile?.avatar_url && <AvatarImage src={profile.avatar_url} />}
+            <AvatarFallback className="text-2xl">
+              {initials(username ?? "?")}
+            </AvatarFallback>
+          </Avatar>
+
+          <div>
+            <p className="text-base font-semibold">{username ?? "—"}</p>
+            {presenceLine && (
+              <p className="mt-0.5 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+                <span
+                  className={`h-2 w-2 rounded-full ${userPresence === "online" ? "bg-[#58F4A8]"
+                    : userPresence === "away" ? "bg-orange-400"
+                      : "bg-muted-foreground/40"
+                    }`}
+                />
+                {presenceLine}
+              </p>
+            )}
+          </div>
+
+          {!!profile?.pronouns?.length && (
+            <div className="flex flex-wrap justify-center gap-1.5">
+              {profile.pronouns.map((p) => (
+                <span
+                  key={p}
+                  className="rounded-full border border-border-soft bg-muted/40 px-2.5 py-0.5 text-xs font-medium"
+                >
+                  {isPronounOption(p) ? tPronouns(p) : p}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {profile?.bio && (
+            <div className="w-full rounded-lg border border-border-soft bg-muted/30 p-3 text-left">
+              <MarkdownRenderer content={profile.bio} className="text-sm prose-sm" />
+            </div>
+          )}
+
+          {profile?.created_at && (
+            <p className="text-xs text-muted-foreground">
+              {t("memberSince", { date: formatMemberSince(profile.created_at) })}
+            </p>
+          )}
+
+          {loading && !profile && (
+            <div className="w-full space-y-2 pt-2">
+              <div className="mx-auto h-3 w-32 animate-pulse rounded bg-muted" />
+              <div className="h-16 w-full animate-pulse rounded-lg bg-muted" />
+            </div>
+          )}
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
