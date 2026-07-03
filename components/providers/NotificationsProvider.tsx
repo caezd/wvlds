@@ -31,6 +31,7 @@ type Ctx = {
     worldUnread: Record<string, number>;
     roomUnread: Record<string, number>;
     setActiveChat: (id: string | null) => void;
+    markChatRead: (chatId: string, lastReadAt?: string) => Promise<void>;
     markWorldSeen: (worldId: string) => Promise<void>;
     refreshAll: () => Promise<void>;
     // Notifications feed
@@ -55,6 +56,7 @@ const DEFAULT_CTX: Ctx = {
     worldUnread: {},
     roomUnread: {},
     setActiveChat: () => {},
+    markChatRead: async () => {},
     markWorldSeen: async () => {},
     refreshAll: async () => {},
     notifications: [],
@@ -80,45 +82,71 @@ export default function NotificationsProvider({ children }: { children: React.Re
     const closePanel = useCallback(() => setPanelOpen(false), []);
     const togglePanel = useCallback(() => setPanelOpen(v => !v), []);
 
-    const [worldUnread, setWorldUnread] = useState<Record<string, number>>({});
+    // ── Compteurs non-lus ───────────────────────────────────────────────────
+    // Source de vérité : `roomUnread` (messages non lus par salle) et
+    // `unreadRoomsByWorld` (salles jamais vues par monde). Le badge de monde
+    // est DÉRIVÉ des deux — une seule vérité, pas de double comptage.
+    // Les compteurs sont entretenus localement (incréments Realtime, remise à
+    // zéro sur lecture) : aucune RPC en régime permanent. `refreshAll` ne sert
+    // qu'au resync (retour d'onglet) pour rattraper une éventuelle dérive.
     const [roomUnread, setRoomUnread] = useState<Record<string, number>>({});
+    const [unreadRoomsByWorld, setUnreadRoomsByWorld] = useState<Record<string, number>>({});
+    // chat_id → world_id, pour attribuer les compteurs de salle à leur monde
+    const roomWorldRef = useRef<Record<string, string>>({});
+
+    const worldUnread = useMemo(() => {
+        const map: Record<string, number> = {};
+        for (const [wid, count] of Object.entries(unreadRoomsByWorld)) {
+            if (count > 0) map[wid] = count;
+        }
+        for (const [chatId, count] of Object.entries(roomUnread)) {
+            if (count <= 0) continue;
+            const wid = roomWorldRef.current[chatId];
+            if (!wid) continue;
+            map[wid] = (map[wid] ?? 0) + count;
+        }
+        return map;
+    }, [roomUnread, unreadRoomsByWorld]);
+
     const [notifications, setNotifications] = useState<AppNotification[]>([]);
     const [notifPrefs, setNotifPrefs] = useState<NotifPrefs>({});
     const [hasMoreNotifs, setHasMoreNotifs] = useState(false);
 
-    // Refs pour éviter les stale closures dans loadMoreNotifs
+    // Refs pour éviter les stale closures (Realtime, loadMoreNotifs, setActiveChat)
     const notifOffsetRef = useRef(0);
     const isLoadingMoreRef = useRef(false);
+    const notificationsRef = useRef<AppNotification[]>([]);
+    useEffect(() => { notificationsRef.current = notifications; }, [notifications]);
 
     const { userId } = useCurrentUser();
     const userIdRef = useRef<string | null>(null);
     useEffect(() => { userIdRef.current = userId; }, [userId]);
 
     const activeChatRef = useRef<string | null>(null);
-    const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const lastSyncRef = useRef(0);
+    const lastMarkReadRef = useRef<Record<string, number>>({});
 
-    // Dérive les deux maps de badges non-lus à partir des lignes RPC — partagé
-    // entre le refresh ciblé (`refreshAll`) et le bootstrap (`get_app_shell`).
+    // Hydrate les compteurs depuis les lignes RPC — partagé entre le bootstrap
+    // (`get_app_shell`) et le resync (`refreshAll`).
     const applyUnreads = useCallback((worldRows: WorldUnreadRow[], roomRows: AllChatroomUnreadRow[]) => {
-        const wMap: Record<string, number> = {};
-        for (const r of worldRows) {
-            wMap[r.world_id] = (r.unread_messages ?? 0) + (r.unread_rooms ?? 0);
-        }
-        setWorldUnread(wMap);
-
         const rMap: Record<string, number> = {};
         for (const r of roomRows) {
             rMap[r.chat_id] = r.unread_messages ?? 0;
+            roomWorldRef.current[r.chat_id] = r.world_id;
         }
         setRoomUnread(rMap);
+
+        const nMap: Record<string, number> = {};
+        for (const w of worldRows) {
+            nMap[w.world_id] = w.unread_rooms ?? 0;
+        }
+        setUnreadRoomsByWorld(nMap);
     }, []);
 
-    // Source de vérité unique : toujours la DB. Utilisé pour les rafraîchissements
-    // ciblés (après un événement Realtime) — le bootstrap initial passe par
-    // get_app_shell() qui inclut déjà ces mêmes compteurs.
     const refreshAll = useCallback(async () => {
         const uid = userIdRef.current;
         if (!uid) return;
+        lastSyncRef.current = Date.now();
 
         const [{ data: worldRows }, { data: roomRows }] = await Promise.all([
             supabase.rpc(RPC.GET_WORLD_UNREADS),
@@ -128,51 +156,76 @@ export default function NotificationsProvider({ children }: { children: React.Re
         applyUnreads((worldRows ?? []) as WorldUnreadRow[], (roomRows ?? []) as AllChatroomUnreadRow[]);
     }, [supabase, applyUnreads]);
 
-    const scheduleRefresh = useCallback(() => {
-        if (debounceTimer.current) clearTimeout(debounceTimer.current);
-        debounceTimer.current = setTimeout(() => void refreshAll(), DELAY.NOTIFICATIONS_DEBOUNCE);
+    // Resync au retour sur l'onglet : les compteurs locaux peuvent dériver si
+    // un autre appareil a lu des salles pendant que celui-ci était en veille.
+    useEffect(() => {
+        const onVisible = () => {
+            if (document.visibilityState !== "visible") return;
+            if (Date.now() - lastSyncRef.current < DELAY.UNREAD_RESYNC_MIN) return;
+            void refreshAll();
+        };
+        document.addEventListener("visibilitychange", onVisible);
+        return () => document.removeEventListener("visibilitychange", onVisible);
     }, [refreshAll]);
 
-    const markChatRead = useCallback(async (chatId: string) => {
+    const markChatRead = useCallback(async (chatId: string, lastReadAt?: string) => {
         const uid = userIdRef.current;
         if (!uid) return;
-        await supabase.from(TABLE.CHATROOM_READS).upsert(
-            { chat_id: chatId, user_id: uid, last_read_at: new Date().toISOString() },
+        // Badge remis à zéro immédiatement, la DB suit (throttlée).
+        setRoomUnread(prev => (prev[chatId] ?? 0) === 0 ? prev : { ...prev, [chatId]: 0 });
+
+        const now = Date.now();
+        if (now - (lastMarkReadRef.current[chatId] ?? 0) < DELAY.MARK_READ_THROTTLE) return;
+        lastMarkReadRef.current[chatId] = now;
+
+        const { error } = await supabase.from(TABLE.CHATROOM_READS).upsert(
+            { chat_id: chatId, user_id: uid, last_read_at: lastReadAt ?? new Date().toISOString() },
             { onConflict: "chat_id,user_id" },
         );
-        scheduleRefresh();
-    }, [supabase, scheduleRefresh]);
-
-    const setActiveChat = useCallback((id: string | null) => {
-        activeChatRef.current = id;
-        // Le marquage « lu » est assuré par la vue chatroom (au mount, avec le
-        // timestamp précis du dernier message). On évite ici un POST
-        // chatroom_reads redondant — d'autant que `userId` est désormais résolu
-        // dès le boot, ce qui ferait sinon partir ce doublon à chaque ouverture.
-    }, []);
+        if (error) console.error("markChatRead error:", error);
+    }, [supabase]);
 
     const markWorldSeen = useCallback(async (worldId: string) => {
         const uid = userIdRef.current;
         if (!uid) return;
+        setUnreadRoomsByWorld(prev => (prev[worldId] ?? 0) === 0 ? prev : { ...prev, [worldId]: 0 });
         await supabase.from(TABLE.WORLD_MEMBER_READS).upsert(
             { world_id: worldId, user_id: uid, last_seen_at: new Date().toISOString() },
             { onConflict: "world_id,user_id" },
         );
-        scheduleRefresh();
-    }, [supabase, scheduleRefresh]);
+    }, [supabase]);
 
     // ── Notifications feed ──────────────────────────────────────────────────
 
-    const markNotifRead = useCallback(async (id: string) => {
+    // Retrait optimiste du state + archivage DB — mutualisé entre markNotifRead,
+    // archiveNotif, setActiveChat et le handler Realtime INSERT.
+    const archiveNotifs = useCallback(async (ids: string[], alsoRead = false) => {
+        if (ids.length === 0) return;
         const now = new Date().toISOString();
-        const { error } = await supabase
+        const idSet = new Set(ids);
+        setNotifications(prev => {
+            const removed = prev.filter(n => idSet.has(n.id)).length;
+            if (removed === 0) return prev;
+            notifOffsetRef.current = Math.max(0, notifOffsetRef.current - removed);
+            return prev.filter(n => !idSet.has(n.id));
+        });
+        await supabase
             .from(TABLE.NOTIFICATIONS)
-            .update({ read_at: now, archived_at: now })
-            .eq("id", id);
-        if (error) return;
-        setNotifications(prev => prev.filter(n => n.id !== id));
-        notifOffsetRef.current = Math.max(0, notifOffsetRef.current - 1);
+            .update(alsoRead ? { read_at: now, archived_at: now } : { archived_at: now })
+            .in("id", ids);
     }, [supabase]);
+
+    const markNotifRead = useCallback((id: string) => archiveNotifs([id], true), [archiveNotifs]);
+    const archiveNotif = useCallback((id: string) => archiveNotifs([id]), [archiveNotifs]);
+
+    const setActiveChat = useCallback((id: string | null) => {
+        activeChatRef.current = id;
+        if (!id) return;
+        // Les notifications liées à cette salle (chatroom_reply, mention…)
+        // disparaissent dès l'entrée dans la salle.
+        const ids = notificationsRef.current.filter(n => n.chat_id === id).map(n => n.id);
+        void archiveNotifs(ids);
+    }, [archiveNotifs]);
 
     const markAllNotifsRead = useCallback(async () => {
         const now = new Date().toISOString();
@@ -183,16 +236,6 @@ export default function NotificationsProvider({ children }: { children: React.Re
             .from(TABLE.NOTIFICATIONS)
             .update({ read_at: now, archived_at: now })
             .is("archived_at", null);
-    }, [supabase]);
-
-    const archiveNotif = useCallback(async (id: string) => {
-        const { error } = await supabase
-            .from(TABLE.NOTIFICATIONS)
-            .update({ archived_at: new Date().toISOString() })
-            .eq("id", id);
-        if (error) return;
-        setNotifications(prev => prev.filter(n => n.id !== id));
-        notifOffsetRef.current = Math.max(0, notifOffsetRef.current - 1);
     }, [supabase]);
 
     const loadMoreNotifs = useCallback(async () => {
@@ -237,6 +280,7 @@ export default function NotificationsProvider({ children }: { children: React.Re
             // dans get_app_shell() (partagée avec DmsProvider, qui monte en parallèle).
             const shell = await fetchAppShell(supabase, userId, NOTIF_INIT);
             if (!mounted) return;
+            lastSyncRef.current = Date.now();
 
             setNotifications(shell.notifications);
             notifOffsetRef.current = shell.notifications.length;
@@ -250,33 +294,33 @@ export default function NotificationsProvider({ children }: { children: React.Re
 
             applyUnreads(shell.world_unreads, shell.room_unreads);
 
-            const worldIds = shell.world_ids;
-
-            // Realtime : messages par monde (pour les badges non-lus)
-            for (const wid of worldIds) {
-                const ch = supabase
-                    .channel(channel.worldMessages(wid))
-                    .on(
-                        "postgres_changes",
-                        {
-                            event: "INSERT",
-                            schema: "public",
-                            table: TABLE.CHAT_MESSAGES,
-                            filter: `world_id=eq.${wid}`,
-                        },
-                        (payload: { new: Record<string, unknown>; old: Record<string, unknown> }) => {
-                            const row = payload.new as { chat_id: string; author_id: string | null };
-                            if (row.author_id === userIdRef.current) return;
-                            if (activeChatRef.current === row.chat_id) {
-                                void markChatRead(row.chat_id);
-                                return;
-                            }
-                            scheduleRefresh();
-                        },
-                    )
-                    .subscribe();
-                openChannels.push(ch);
+            // Realtime : un SEUL canal pour les messages de tous les mondes
+            // (un binding filtré par monde), au lieu d'un canal par monde.
+            // Les compteurs sont incrémentés localement — aucune RPC ici.
+            const msgCh = supabase.channel(channel.userMessages(userId));
+            for (const wid of shell.world_ids) {
+                msgCh.on(
+                    "postgres_changes",
+                    {
+                        event: "INSERT",
+                        schema: "public",
+                        table: TABLE.CHAT_MESSAGES,
+                        filter: `world_id=eq.${wid}`,
+                    },
+                    (payload: { new: Record<string, unknown> }) => {
+                        const row = payload.new as { chat_id: string; author_id: string | null };
+                        if (row.author_id === userIdRef.current) return;
+                        if (activeChatRef.current === row.chat_id) {
+                            void markChatRead(row.chat_id);
+                            return;
+                        }
+                        roomWorldRef.current[row.chat_id] = wid;
+                        setRoomUnread(prev => ({ ...prev, [row.chat_id]: (prev[row.chat_id] ?? 0) + 1 }));
+                    },
+                );
             }
+            msgCh.subscribe();
+            openChannels.push(msgCh);
 
             // Realtime : nouvelles notifications + mises à jour agrégées (chatroom_reply)
             const notifCh = supabase
@@ -290,11 +334,17 @@ export default function NotificationsProvider({ children }: { children: React.Re
                         filter: `recipient_id=eq.${userId}`,
                     },
                     async (payload: { new: Record<string, unknown> }) => {
-                        const id = payload.new.id as string;
+                        const incoming = payload.new as { id: string; chat_id: string | null };
+                        // Si la notification concerne le chatroom actuellement ouvert,
+                        // on l'archive immédiatement sans l'afficher.
+                        if (incoming.chat_id && activeChatRef.current === incoming.chat_id) {
+                            void archiveNotifs([incoming.id]);
+                            return;
+                        }
                         const { data } = await supabase
                             .from(TABLE.NOTIFICATIONS)
                             .select(NOTIF_SELECT)
-                            .eq("id", id)
+                            .eq("id", incoming.id)
                             .single();
                         if (!data) return;
                         setNotifications(prev => {
@@ -333,7 +383,6 @@ export default function NotificationsProvider({ children }: { children: React.Re
 
         return () => {
             mounted = false;
-            if (debounceTimer.current) clearTimeout(debounceTimer.current);
             openChannels.forEach((ch) => supabase.removeChannel(ch));
         };
     }, [userId]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -343,6 +392,7 @@ export default function NotificationsProvider({ children }: { children: React.Re
         worldUnread,
         roomUnread,
         setActiveChat,
+        markChatRead,
         markWorldSeen,
         refreshAll,
         notifications,
@@ -355,7 +405,7 @@ export default function NotificationsProvider({ children }: { children: React.Re
         notifPrefs,
         setNotifPref,
     }), [panelOpen, openPanel, closePanel, togglePanel,
-        worldUnread, roomUnread, setActiveChat, markWorldSeen, refreshAll,
+        worldUnread, roomUnread, setActiveChat, markChatRead, markWorldSeen, refreshAll,
         notifications, markNotifRead, markAllNotifsRead, archiveNotif,
         hasMoreNotifs, loadMoreNotifs, notifPrefs, setNotifPref]);
 

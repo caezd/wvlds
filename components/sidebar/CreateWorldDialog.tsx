@@ -24,7 +24,7 @@ export function CreateWorldDialog({
   trigger,
 }: {
   disabled?: boolean;
-  plan: "free" | "pro" | "team" | "lifetime";
+  plan: "free" | "subscribed" | "lifetime";
   ownedCount: number;
   quotaLimit: number;
   trigger?: React.ReactNode;

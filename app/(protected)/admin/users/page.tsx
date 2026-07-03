@@ -20,7 +20,7 @@ async function setUserPlan(userId: string, plan: string) {
   revalidatePath("/admin/users");
 }
 
-const PLANS = ["free", "pro", "team", "lifetime"] as const;
+const PLANS = ["free", "subscribed", "lifetime"] as const;
 
 export default async function AdminUsersPage() {
   const { supabase, user: adminUser } = await requireAdmin();

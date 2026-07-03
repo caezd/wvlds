@@ -118,12 +118,17 @@ export function ChatroomMessageHeader({
       <div className="text-sm flex flex-col w-full">
         {/* Ligne 1 : nom + boutons (réagir / éditer / supprimer) */}
         <div className="flex justify-between items-center gap-2 min-h-7">
-          <strong
-            className="font-medium"
-            style={personaGroupColor ? { color: personaGroupColor } : undefined}
-          >
-            {message.persona?.name}
-          </strong>
+          <div className="flex items-center gap-1 text-mist-50">
+            <strong
+              className="font-medium"
+              style={personaGroupColor ? { color: personaGroupColor } : undefined}
+            >
+              {message.persona?.name}
+            </strong>
+            <span className="text-mist-200 text-xs">
+              (@{(message.author?.username ?? playerUsername ?? "?").toLowerCase()})
+            </span>
+          </div>
           <div className="flex items-center gap-1">
             {!editing && !isMobile && emojiReactions && (
               <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
@@ -197,7 +202,7 @@ export function ChatroomMessageHeader({
 
         {/* Ligne 2 : date + badge défi + réactions */}
         <div className="flex justify-between items-center gap-2 min-h-7">
-          <div className="flex items-center gap-2 text-zinc-400">
+          <div className="flex items-center gap-2 text-zinc-400 text-xs">
             <DateDisplay value={date} />
             {challengeWon && (
               <Tooltip>

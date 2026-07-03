@@ -272,7 +272,7 @@ export function NotificationInlinePanelContent() {
             {/* Header */}
             <div className="shrink-0 h-header-height flex items-center px-4 gap-2">
                 {view === "prefs" && (
-                    <button onClick={() => setView("list")} className={iconBtn} aria-label={t("title")}><ArrowLeft size={15} /></button>
+                    <button onClick={() => setView("list")} className={iconBtn} aria-label={t("back")}><ArrowLeft size={15} /></button>
                 )}
                 <span className="flex-1 font-bold">
                     {view === "prefs" ? t("preferences") : t("title")}

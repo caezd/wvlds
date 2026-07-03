@@ -29,6 +29,31 @@ beforeEach(() => {
   claims = { sub: "u1" };
 });
 
+describe("updateSession — cookie last_world_id", () => {
+  it("efface last_world_id quand l'utilisateur n'est pas authentifié", async () => {
+    claims = null;
+    const req = new NextRequest("http://localhost:3000/w/abc123");
+    req.cookies.set("last_world_id", "abc123");
+    const res = await updateSession(req);
+
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toContain("/auth/login");
+    // Cookie doit être expiré (valeur vide et/ou maxAge 0)
+    const cleared = res.cookies.get("last_world_id");
+    expect(cleared?.value ?? "").toBe("");
+  });
+
+  it("conserve last_world_id quand l'utilisateur est authentifié (pas de suppression prématurée)", async () => {
+    const req = new NextRequest("http://localhost:3000/home");
+    req.cookies.set("last_world_id", "abc123");
+    const res = await updateSession(req);
+
+    // Pas de redirection vers login — le cookie ne doit pas avoir été effacé
+    expect(res.status).not.toBe(307);
+    expect(res.cookies.get("last_world_id")?.value ?? "abc123").toBe("abc123");
+  });
+});
+
 describe("updateSession — préservation de la session", () => {
   it("sur /w/<id> : pose last_world_id ET conserve le cookie de session rafraîchi", async () => {
     const req = new NextRequest("http://localhost:3000/w/abc123");

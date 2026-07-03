@@ -62,7 +62,7 @@ export function WorldPickerHeader({
 }: {
   worlds: WorldItem[];
   currentWorldId: string;
-  plan: "free" | "pro" | "team" | "lifetime";
+  plan: "free" | "subscribed" | "lifetime";
   ownedCount: number;
   quotaLimit: number;
   userId?: string;

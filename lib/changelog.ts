@@ -8,6 +8,21 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-07 ──────────────────────────────────────────────────────────────
   {
     date: "2026-07",
+    tag: "Technique",
+    text: "Refonte des compteurs de non-lus (badges de mondes et de salles) pour la performance :\n- Les compteurs sont désormais **entretenus localement** (incrément à la réception d'un message, remise à zéro à la lecture) au lieu de redemander un recomptage complet au serveur à chaque événement — **zéro requête réseau** en régime permanent\n- Le badge d'un monde est **dérivé** des compteurs de ses salles (une seule source de vérité, plus de double comptage possible)\n- Un seul canal temps réel multiplexé pour les messages de tous les mondes, au lieu d'un canal par monde\n- Une resynchronisation complète est déclenchée au retour sur l'onglet (au plus une fois par minute) pour rattraper une éventuelle dérive due à un autre appareil\n- La logique « marquer la salle comme lue » et l'archivage des notifications sont mutualisés (moins de code dupliqué, comportement identique partout)",
+  },
+  {
+    date: "2026-07",
+    tag: "Correctif",
+    text: "Les notifications de réponse en chatroom se comportaient mal dans deux cas : une notification arrivait même lorsqu'on était déjà dans la salle concernée, et naviguer vers une salle ne supprimait pas les notifications existantes. Ces deux scénarios sont désormais corrigés : toute notification liée à la salle ouverte est archivée immédiatement, que ce soit à l'entrée dans la salle ou à la réception en temps réel.",
+  },
+  {
+    date: "2026-07",
+    tag: "Correctif",
+    text: "Le pseudo affiché entre parenthèses sous un message (@pseudo) affichait **@?** pendant un bref instant à l'envoi, le temps que le message envoyé en optimiste ne connaisse pas encore son auteur complet — il utilise désormais le pseudo déjà connu du joueur en attendant.",
+  },
+  {
+    date: "2026-07",
     tag: "Interface",
     text: "Refonte du menu blocs/options du composer :\n- Les **blocs à créer** (dé, bannière, encadré, ancre, révélation…) et les **options à cocher** (dialogues en bulles, SMS, chronologie, lieu, note privée) sont désormais dans deux sections distinctes\n- Chaque ligne affiche une **courte description**, et le survol/focus met à jour un **panneau d'aperçu** à droite montrant à quoi ressemble le bloc ou l'option activée\n- Sur mobile, le panneau d'aperçu est masqué pour garder le menu utilisable en largeur réduite",
   },
@@ -35,6 +50,16 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-07",
     tag: "Performance",
     text: "Moins de requêtes au chargement d'un chatroom :\n- Les liens de navigation du monde (`?view=…`) et le globe du rail ne **préfetchent plus** leur page — chaque chargement déclenchait jusqu'à 18 rendus serveur inutiles (pages dynamiques jamais mises en cache, lien `/w` répondant par une redirection)\n- Le **défi du jour et son statut « gagné » sont chargés en une seule requête** (tentatives embarquées) au lieu de deux en cascade\n- Correctif au passage : un défi gagné par **un autre joueur** était marqué comme déjà gagné pour soi (la policy « read won » rend les victoires publiques, le filtre `user_id` manquait)\n- Meta description du site remplacée (texte du starter Supabase)",
+  },
+  {
+    date: "2026-07",
+    tag: "Correctif",
+    text: "Correction d'un bug de session partagée entre comptes :\n- Après une déconnexion, le cookie `last_world_id` restait actif — à la reconnexion avec un autre compte, l'application redirigait vers le monde de la session précédente, potentiellement inaccessible\n- `app/page.tsx` vérifie désormais via la base (RLS) que l'utilisateur courant a bien accès au monde retenu avant de le rediriger\n- Le middleware efface aussi le cookie lors des redirections vers `/auth/login` (sessions expirées ou déconnexion depuis un autre onglet)",
+  },
+  {
+    date: "2026-07",
+    tag: "Technique",
+    text: "Correction des 27 tests automatisés échouant depuis l'ajout de i18n :\n- Les composants `ChatroomComposer`, `CreateWorldButton` et `NotificationInlinePanelContent` utilisent `useTranslations()` (next-intl) mais les tests unitaires n'avaient pas de `NextIntlClientProvider` — tous les rendus plantaient\n- Un mock global de `next-intl` dans la configuration de test lit les vraies traductions `fr.json` et implémente `t()`, `t.rich()` (interpolation ICU avec composants React) et `t.has()` sans contexte React\n- Correction au passage : le bouton « Retour » du panel notifications utilisait `aria-label=\"Notifications\"` (copie du titre) au lieu de `\"Retour\"`, la clé `back` a été ajoutée",
   },
   // ── 2026-06 ──────────────────────────────────────────────────────────────
   {
