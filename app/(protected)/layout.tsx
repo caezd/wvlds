@@ -1,6 +1,5 @@
 import SidebarRail from "@/components/sidebar/SidebarRail";
 import AppShell from "@/components/sidebar/AppShell";
-import GlobalWorldsSidebar from "@/components/sidebar/GlobalWorldsSidebar";
 import { UsernameRequiredDialog } from "@/components/UsernameRequiredDialog";
 import { FeatureFlagsProvider } from "@/components/providers/FeatureFlagsProvider";
 import { getCurrentUserId, getCurrentProfile, getCachedFeatureFlags } from "@/lib/currentRequest";
@@ -47,7 +46,7 @@ export default async function PageLayout({
       <FeatureFlagsProvider flags={featureFlags}>
         <div className="flex h-full w-full flex-col">
           <div className="relative flex h-full w-full flex-1 z-0">
-            <AppShell rail={<SidebarRail />} worldsSidebar={<GlobalWorldsSidebar />}>
+            <AppShell rail={<SidebarRail />}>
               {children}
             </AppShell>
             {usernameDialog}

@@ -7,6 +7,7 @@ import { WorldsRailButton } from "./WorldsRailButton";
 import { getCachedFeatureFlags, getCurrentProfile, getCurrentAuth } from "@/lib/currentRequest";
 import { MobileMenuButton } from "./MobileMenuButton";
 import { getTranslations } from "next-intl/server";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default async function SidebarRail() {
   // Tout est mémoïsé pour la requête (partagé avec les layouts).
@@ -23,48 +24,48 @@ export default async function SidebarRail() {
     : null;
 
   return (
-    <div className="flex flex-col items-center h-full w-full gap-4 lg:py-3">
+    <div className="flex flex-col items-center h-full w-full gap-2 lg:py-3 min-h-0">
 
-      <div className="flex flex-col items-center w-full py-1.5">
+      <div className="flex flex-col items-center w-full py-1.5 shrink-0">
         <MobileMenuButton />
       </div>
 
-
       {/* Navigation globale */}
-      <div className="flex flex-col items-center gap-1 w-full px-1.5">
+      <ScrollArea className="w-full flex-1 min-h-0">
+        <div className="flex flex-col items-center gap-1 w-full">
 
-        <WorldsRailButton />
+          <WorldsRailButton />
 
 
-        <RailIcon href="/p" label={t("personas")}>
-          <UserRound size={17} />
-        </RailIcon>
-
-        {featureFlags.public_worlds && (
-          <RailIcon href="/explore" label={t("explore")}>
-            <Compass size={17} />
+          <RailIcon href="/p" label={t("personas")}>
+            <UserRound size={17} />
           </RailIcon>
-        )}
 
-        {featureFlags.quests && (
-          <RailIcon href="/quests" label={t("quests")}>
-            <Dices size={17} />
-          </RailIcon>
-        )}
-        {featureFlags.shop && (
-          <RailIcon href="/shop" label={t("shop")}>
-            <ShoppingBasket size={17} />
-          </RailIcon>
-        )}
-        {adminFlag && (
-          <RailIcon href="/admin" label={t("admin")}>
-            <ShieldCheck size={17} />
-          </RailIcon>
-        )}
-      </div>
+          {featureFlags.public_worlds && (
+            <RailIcon href="/explore" label={t("explore")}>
+              <Compass size={17} />
+            </RailIcon>
+          )}
 
+          {featureFlags.quests && (
+            <RailIcon href="/quests" label={t("quests")}>
+              <Dices size={17} />
+            </RailIcon>
+          )}
+          {featureFlags.shop && (
+            <RailIcon href="/shop" label={t("shop")}>
+              <ShoppingBasket size={17} />
+            </RailIcon>
+          )}
+          {adminFlag && (
+            <RailIcon href="/admin" label={t("admin")}>
+              <ShieldCheck size={17} />
+            </RailIcon>
+          )}
+        </div>
+      </ScrollArea>
 
-      <footer className="flex flex-col items-center gap-4 w-full mt-auto">
+      <footer className="flex flex-col items-center gap-4 w-full mt-auto shrink-0">
 
         {/* Conversations épinglées */}
         <PinnedDmAvatarsRail />

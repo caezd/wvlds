@@ -816,7 +816,7 @@ export default function ChatRoomView({
               ref={scrollRef}
               className="flex h-full flex-col overflow-y-auto thread-xl:pt-(--header-height)"
             >
-              <div className="flex flex-col text-sm thread-xl:pt-header-height pb-25 divide-y divide-border-soft [--thread-content-max-width:40rem] lg:[--thread-content-max-width:48rem] mx-auto max-w-(--thread-content-max-width) flex-1 px-2 lg:px-0">
+              <div className="flex flex-col text-sm thread-xl:pt-header-height pb-25 divide-y divide-border-soft [--thread-content-max-width:40rem] lg:[--thread-content-max-width:48rem] mx-auto max-w-(--thread-content-max-width) flex-1 px-2 lg:px-4">
                 {loadingOlder && (
                   <div className="py-3 text-center text-xs text-muted-foreground">
                     Chargement de l’historique…
