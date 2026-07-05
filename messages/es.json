@@ -230,7 +230,17 @@
     "empty": "Sin personajes. Crea uno desde un mundo.",
     "noWorld": "Sin mundo",
     "pick": "Elegir un personaje",
-    "pickerEmpty": "Sin personajes. Crea uno primero."
+    "pickerEmpty": "Sin personajes. Crea uno primero.",
+    "toggleFavorite": "Marcar/quitar de favoritos",
+    "viewByWorld": "Por mundo",
+    "viewAlphabetical": "Alfabético",
+    "dropHere": "Suelta un personaje aquí",
+    "dropTitle": "¿Mover «{name}»?",
+    "dropDescription": "Mueve «{name}» a {world}, o crea una copia exacta allí. Mover y duplicar respetan el límite de personajes del mundo de destino.",
+    "moveAction": "Mover",
+    "duplicateAction": "Duplicar",
+    "moveSuccess": "«{name}» movido a {world}.",
+    "duplicateSuccess": "«{name}» duplicado a {world}."
   },
   "quests": {
     "title": "Misiones del día",

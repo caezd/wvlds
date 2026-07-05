@@ -2,10 +2,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createSupabaseMock } from "@/test/supabaseMock";
 
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
+vi.mock("@/app/(protected)/p/actions", () => ({ deletePersona: vi.fn() }));
 
 import {
     setWorldFeature,
     setWorldRestriction,
+    setWorldPersonaTemplate,
     addWorldInventoryItem,
     updateWorldInventoryItem,
     deleteWorldInventoryItem,
@@ -19,6 +21,7 @@ import {
     batchUpdateCatalogItemOrder,
 } from "@/app/actions/worldCatalog";
 import { createClient } from "@/lib/supabase/server";
+import { deletePersona } from "@/app/(protected)/p/actions";
 
 const use = (mock: ReturnType<typeof createSupabaseMock>) =>
     vi.mocked(createClient).mockResolvedValue(mock.client as never);
@@ -62,6 +65,62 @@ describe("setWorldFeature", () => {
             ok: false,
             error: "nope",
         });
+    });
+});
+
+// ── setWorldPersonaTemplate ───────────────────────────────────────────────────
+
+describe("setWorldPersonaTemplate", () => {
+    it("refuse si non connecté", async () => {
+        use(createSupabaseMock({ user: null }));
+        expect(await setWorldPersonaTemplate("w1", true)).toMatchObject({ ok: false });
+    });
+
+    it("crée le persona modèle à l'activation", async () => {
+        const mock = createSupabaseMock({
+            user: { id: "u1" },
+            results: [
+                { data: null },              // lookup : pas de modèle existant
+                { data: { id: "tpl1" } },    // insert
+            ],
+        });
+        use(mock);
+        const res = await setWorldPersonaTemplate("w1", true);
+        expect(res).toEqual({ ok: true, templateId: "tpl1" });
+        expect(mock.buildersFor("personas")[1].insert).toHaveBeenCalledWith(
+            expect.objectContaining({ user_id: "u1", world_id: "w1", is_template: true }),
+        );
+    });
+
+    it("est idempotent si un modèle existe déjà", async () => {
+        const mock = createSupabaseMock({
+            user: { id: "u1" },
+            results: [{ data: { id: "tpl1" } }],
+        });
+        use(mock);
+        const res = await setWorldPersonaTemplate("w1", true);
+        expect(res).toEqual({ ok: true, templateId: "tpl1" });
+        expect(mock.buildersFor("personas")).toHaveLength(1); // pas d'insert
+    });
+
+    it("supprime le modèle à la désactivation", async () => {
+        vi.mocked(deletePersona).mockResolvedValue({ ok: true });
+        const mock = createSupabaseMock({
+            user: { id: "u1" },
+            results: [{ data: { id: "tpl1" } }],
+        });
+        use(mock);
+        const res = await setWorldPersonaTemplate("w1", false);
+        expect(res).toEqual({ ok: true, templateId: null });
+        expect(deletePersona).toHaveBeenCalledWith("tpl1");
+    });
+
+    it("désactivation sans modèle existant : ok sans suppression", async () => {
+        const mock = createSupabaseMock({ user: { id: "u1" }, results: [{ data: null }] });
+        use(mock);
+        const res = await setWorldPersonaTemplate("w1", false);
+        expect(res).toEqual({ ok: true, templateId: null });
+        expect(deletePersona).not.toHaveBeenCalled();
     });
 });
 

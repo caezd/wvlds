@@ -109,6 +109,7 @@ export function createSupabaseMock(opts: {
     .fn()
     .mockResolvedValue(opts.storageRemoveResult ?? { data: [], error: null });
   const storageUpload = vi.fn().mockResolvedValue({ data: {}, error: null });
+  const storageCopy = vi.fn().mockResolvedValue({ data: {}, error: null });
   const getPublicUrl = vi.fn((path: string) => ({
     data: { publicUrl: `https://x.supabase.co/storage/v1/object/public/${path}` },
   }));
@@ -139,7 +140,12 @@ export function createSupabaseMock(opts: {
     channel,
     removeChannel,
     storage: {
-      from: vi.fn(() => ({ remove: storageRemove, upload: storageUpload, getPublicUrl })),
+      from: vi.fn(() => ({
+        remove: storageRemove,
+        upload: storageUpload,
+        copy: storageCopy,
+        getPublicUrl,
+      })),
     },
   };
 
@@ -152,6 +158,7 @@ export function createSupabaseMock(opts: {
     removeChannel,
     onAuthStateChange,
     storageRemove,
+    storageCopy,
     /** Canaux Realtime créés, dans l'ordre. */
     channels,
     channelNamed: (name: string) => channels.find((c) => c.name === name),

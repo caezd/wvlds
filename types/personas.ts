@@ -81,6 +81,8 @@ export interface PersonaSectionField {
   type: PersonaFieldType;
   position: number;
   data: PersonaFieldData;
+  /** Champ requis par la fiche modèle du monde : insupprimable hors modèle. */
+  locked?: boolean;
 }
 
 export interface PersonaSection {

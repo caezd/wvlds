@@ -61,6 +61,7 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { setWorldFeature, setWorldRestriction, setWorldTimeline } from "@/app/actions/worldCatalog";
+import { WorldPersonaTemplateSection } from "@/components/worlds/WorldPersonaTemplateSection";
 import type { WorldTimelineConfig } from "@/types/worlds";
 
 /**
@@ -825,6 +826,13 @@ export default function WorldEditDialog({
                                 )}
                             </div>
                         </div>
+
+                        {/* -- Fiche de persona par défaut -------------- */}
+                        <WorldPersonaTemplateSection
+                            worldId={world.id}
+                            restrictInventory={restrictInventory}
+                            restrictSkills={restrictSkills}
+                        />
 
                         {/* -- Timeline -------------------------------- */}
                         {world_timeline && (

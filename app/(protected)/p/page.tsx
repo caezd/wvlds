@@ -1,17 +1,18 @@
 // app/(protected)/personas/page.tsx
 import { Users } from "lucide-react";
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getUserId } from "@/lib/auth";
 import { getTranslations } from "next-intl/server";
-import { PersonaCard } from "@/components/personas/PersonaCard";
 import { PersonaCreateSheet } from "@/components/personas/PersonaCreateSheet";
+import {
+  PersonasView,
+  type PersonaWorldGroup,
+} from "@/components/personas/PersonasView";
 import type {
   PersonaSection,
   PersonaSectionField,
   PersonaSectionWithFields,
 } from "@/types/personas";
-import type { AvatarConfigV1 } from "@/components/personas/avatar/PersonaAvatarPicker";
 
 type PersonaRow = {
   id: string;
@@ -22,12 +23,6 @@ type PersonaRow = {
   frame?: { asset_url?: string | null } | null;
   banner_url?: string | null;
   world_id?: string | null;
-};
-
-type WorldGroup = {
-  worldId: string | null;
-  worldName: string | null;
-  personas: (PersonaRow & { sections: PersonaSectionWithFields[] })[];
 };
 
 export default async function PersonasPage() {
@@ -44,6 +39,7 @@ export default async function PersonasPage() {
         "id, name, avatar_url, avatar_config, banner_url, avatar_frame_id, world_id, frame:avatar_frame_id(asset_url)",
       )
       .eq("user_id", userId)
+      .eq("is_template", false)
       .order("name", { ascending: true });
 
     if (!error) {
@@ -53,6 +49,7 @@ export default async function PersonasPage() {
         .from("personas")
         .select("id, name, world_id")
         .eq("user_id", userId)
+        .eq("is_template", false)
         .order("name", { ascending: true });
       personaList = (basic ?? []) as PersonaRow[];
     }
@@ -67,10 +64,10 @@ export default async function PersonasPage() {
     ),
   ];
 
-  // Les sections/champs (dérivés de personaIds) et les noms de mondes (dérivés
-  // de worldIds) sont indépendants → on les charge en parallèle au lieu de les
-  // enchaîner séquentiellement.
-  const [sectionsByPersona, worldNames] = await Promise.all([
+  // Les sections/champs (dérivés de personaIds), les noms de mondes (dérivés
+  // de worldIds), les mondes accessibles et le plan sont indépendants → on
+  // les charge en parallèle au lieu de les enchaîner séquentiellement.
+  const [sectionsByPersona, worldNames, memberWorlds, plan] = await Promise.all([
     (async (): Promise<Map<string, PersonaSectionWithFields[]>> => {
       const sectionsByPersona = new Map<string, PersonaSectionWithFields[]>();
       if (personaIds.length === 0) return sectionsByPersona;
@@ -88,7 +85,7 @@ export default async function PersonasPage() {
       if (sectionIds.length > 0) {
         const { data: fields } = await supabase
           .from("persona_section_fields")
-          .select("id, section_id, type, position, data")
+          .select("id, section_id, type, position, data, locked")
           .in("section_id", sectionIds)
           .order("position", { ascending: true });
         fieldsList = (fields ?? []) as PersonaSectionField[];
@@ -123,10 +120,41 @@ export default async function PersonasPage() {
         worldNames.set(w.id, w.name ?? "Monde inconnu");
       return worldNames;
     })(),
+    // Tous les mondes accessibles (même sans persona) : chacun devient une
+    // section de la page, donc une cible de dépôt pour le drag & drop.
+    (async (): Promise<{ id: string; name: string | null }[]> => {
+      const { data } = await supabase
+        .from("worlds")
+        .select("id, name, world_members!inner(user_id)")
+        .eq("world_members.user_id", userId)
+        .is("deleted_at", null)
+        .eq("is_archived", false)
+        .order("name");
+      return (data ?? []) as { id: string; name: string | null }[];
+    })(),
+    // La limite de 5 personas par monde ne concerne que le plan gratuit
+    // (has_persona_capacity côté DB) — inutile d'afficher « x / 5 » sinon.
+    (async (): Promise<string> => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("plan")
+        .eq("id", userId)
+        .single();
+      return (data?.plan as string) ?? "free";
+    })(),
   ]);
 
-  // 3) Groupement
-  const groupMap = new Map<string | null, WorldGroup>();
+  // 3) Groupement — les mondes accessibles d'abord (sections toujours
+  // présentes, même vides, pour servir de cibles de dépôt)
+  const groupMap = new Map<string | null, PersonaWorldGroup>();
+
+  for (const w of memberWorlds) {
+    groupMap.set(w.id, {
+      worldId: w.id,
+      worldName: w.name ?? "Monde inconnu",
+      personas: [],
+    });
+  }
 
   for (const p of personaList) {
     const key = p.world_id ?? null;
@@ -138,13 +166,21 @@ export default async function PersonasPage() {
       });
     }
     groupMap.get(key)!.personas.push({
-      ...p,
+      id: p.id,
+      name: p.name,
+      avatar_url: p.avatar_url ?? null,
+      avatar_config: p.avatar_config ?? null,
+      avatar_frame_id: p.avatar_frame_id ?? null,
+      frame_asset_url:
+        (p.frame as { asset_url?: string | null } | null)?.asset_url ?? null,
+      banner_url: p.banner_url ?? null,
+      world_id: key,
       sections: sectionsByPersona.get(p.id) ?? [],
     });
   }
 
   // Mondes en premier, "Sans monde" à la fin
-  const groups: WorldGroup[] = [
+  const groups: PersonaWorldGroup[] = [
     ...[...groupMap.entries()]
       .filter(([k]) => k !== null)
       .map(([, g]) => g)
@@ -173,48 +209,7 @@ export default async function PersonasPage() {
           </p>
         </div>
       ) : (
-        <div className="space-y-8">
-          {groups.map((group) => (
-            <section key={group.worldId ?? "__none__"}>
-              <div className="flex items-center gap-2 mb-4">
-                {group.worldId ? (
-                  <Link
-                    href={`/w/${group.worldId}`}
-                    className="text-base font-semibold hover:underline underline-offset-2"
-                  >
-                    {group.worldName}
-                  </Link>
-                ) : (
-                  <h2 className="text-base font-semibold text-muted-foreground">
-                    {t("noWorld")}
-                  </h2>
-                )}
-                <span className="text-xs text-muted-foreground">
-                  {group.personas.length} / 5
-                </span>
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                {group.personas.map((persona) => (
-                  <PersonaCard
-                    key={persona.id}
-                    personaId={persona.id}
-                    personaName={persona.name ?? "Sans nom"}
-                    avatarUrl={persona.avatar_url}
-                    avatarConfig={persona.avatar_config as AvatarConfigV1 | null}
-                    bannerUrl={persona.banner_url}
-                    initialFrameId={persona.avatar_frame_id ?? null}
-                    initialFrameUrl={
-                      (persona.frame as { asset_url?: string | null } | null)
-                        ?.asset_url ?? null
-                    }
-                    initialSections={persona.sections}
-                  />
-                ))}
-              </div>
-            </section>
-          ))}
-        </div>
+        <PersonasView groups={groups} personaLimit={plan === "free" ? 5 : null} />
       )}
     </div>
   );

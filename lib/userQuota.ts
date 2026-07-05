@@ -65,11 +65,14 @@ export async function getUserQuotaWithClient(
     // Compte des entrées "possédées"
     const table = kind === "personas" ? "personas" : "worlds";
     const ownerColumn = kind === "personas" ? "user_id" : "owner_id";
-    const { count } = await supabase
+    let query = supabase
         .from(table)
         .select("id", { count: "exact", head: true })
         .eq(ownerColumn, uid)
         .is("deleted_at", null);
+    // Les fiches modèles des mondes (is_template) ne comptent pas
+    if (kind === "personas") query = query.eq("is_template", false);
+    const { count } = await query;
 
     const owned = typeof count === "number" ? count : 0;
     const quotaLimit = limitFor(plan, kind);

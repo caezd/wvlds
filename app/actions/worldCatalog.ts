@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { deletePersona } from "@/app/(protected)/p/actions";
 import type { WorldInventoryItem, WorldSkill, WorldCatalogCategory, WorldTimelineConfig } from "@/types/worlds";
 
 export async function setWorldFeature(
@@ -215,6 +216,61 @@ export async function batchUpdateCatalogItemOrder(
     ),
   );
   return { ok: true as const };
+}
+
+// ── Fiche de persona par défaut ───────────────────────────────────────────────
+// La fiche par défaut d'un monde est un persona modèle (is_template = true,
+// un seul par monde, possédé par le propriétaire du monde). Sa structure est
+// copiée sur chaque persona créé dans le monde (voir createPersona).
+
+export async function getWorldPersonaTemplate(worldId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("personas")
+    .select("id")
+    .eq("world_id", worldId)
+    .eq("is_template", true)
+    .maybeSingle();
+  if (error) return { ok: false as const, error: error.message };
+  return { ok: true as const, templateId: (data?.id as string | undefined) ?? null };
+}
+
+export async function setWorldPersonaTemplate(worldId: string, enabled: boolean) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Vous devez être connecté." };
+
+  const { data: existing } = await supabase
+    .from("personas")
+    .select("id")
+    .eq("world_id", worldId)
+    .eq("is_template", true)
+    .maybeSingle();
+
+  if (enabled) {
+    if (existing) return { ok: true as const, templateId: existing.id as string };
+    const { data, error } = await supabase
+      .from("personas")
+      .insert({
+        user_id: user.id,
+        name: "Fiche par défaut",
+        world_id: worldId,
+        is_template: true,
+      })
+      .select("id")
+      .single();
+    if (error) return { ok: false as const, error: error.message };
+    return { ok: true as const, templateId: data.id as string };
+  }
+
+  if (existing) {
+    // deletePersona nettoie aussi les fichiers storage (images de grilles…)
+    const res = await deletePersona(existing.id as string);
+    if (!res.ok) return { ok: false as const, error: res.error ?? "Suppression impossible." };
+  }
+  return { ok: true as const, templateId: null };
 }
 
 export async function setWorldTimeline(

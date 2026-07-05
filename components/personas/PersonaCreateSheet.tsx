@@ -13,7 +13,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PersonaEditorContent } from "./PersonaEditSheet";
 import { createPersona } from "@/app/(protected)/p/actions";
-import type { PersonaSectionWithFields } from "@/types/personas";
+import { createClient } from "@/lib/supabase/client";
+import type {
+  PersonaSection,
+  PersonaSectionField,
+  PersonaSectionWithFields,
+} from "@/types/personas";
 
 export function PersonaCreateSheet({
   worldId,
@@ -61,9 +66,36 @@ export function PersonaCreateSheet({
     const result = await createPersona(undefined, fd);
     setPending(false);
     if (!result.ok) { setError(result.error ?? "Erreur."); return; }
+    // La fiche par défaut du monde a pu être copiée côté serveur : recharge
+    // les sections du persona créé avant d'ouvrir l'éditeur.
+    if (worldId) {
+      setSections(await fetchSections(result.id!));
+    }
     setCreatedId(result.id!);
     setCreatedName(name);
     setPhase("edit");
+  }
+
+  async function fetchSections(personaId: string): Promise<PersonaSectionWithFields[]> {
+    const supabase = createClient();
+    const { data: sectionRows } = await supabase
+      .from("persona_sections")
+      .select("id, persona_id, name, position")
+      .eq("persona_id", personaId)
+      .order("position", { ascending: true });
+    const sectionsList = (sectionRows ?? []) as PersonaSection[];
+    if (sectionsList.length === 0) return [];
+
+    const { data: fields } = await supabase
+      .from("persona_section_fields")
+      .select("id, section_id, type, position, data, locked")
+      .in("section_id", sectionsList.map((s) => s.id))
+      .order("position", { ascending: true });
+    const fieldsList = (fields ?? []) as PersonaSectionField[];
+    return sectionsList.map((s) => ({
+      ...s,
+      fields: fieldsList.filter((f) => f.section_id === s.id),
+    }));
   }
 
   return (
