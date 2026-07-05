@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Loader2, Mail, Pin, PinOff, Plus, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabaseThumb } from "@/lib/storage";
@@ -320,6 +320,18 @@ function NewConvSearch({ onSelect, onCancel }: { onSelect: (id: string) => void;
 
 // ── 3c. Vue conversation ──────────────────────────────────────────────────────
 
+function DayDivider({ date }: { date: Date }) {
+  const format = useFormatter();
+  const label = format.dateTime(date, { day: "numeric", month: "long", year: "numeric" });
+  return (
+    <div className="flex items-center gap-3 py-2">
+      <div className="h-px flex-1 bg-border/30" />
+      <span className="shrink-0 text-[11px] text-muted-foreground/40">{label}</span>
+      <div className="h-px flex-1 bg-border/30" />
+    </div>
+  );
+}
+
 function MessageBubble({ content, isMine, createdAt }: { content: string; isMine: boolean; createdAt: string }) {
   const format = useFormatter();
   const time = format.dateTime(new Date(createdAt), { hour: "2-digit", minute: "2-digit" });
@@ -454,14 +466,20 @@ function ConversationView({ conv, onBack: _onBack }: { conv: DmConversation; onB
             </div>
           )}
 
-          {messages.map(msg => (
-            <MessageBubble
-              key={msg.id}
-              content={msg.content}
-              isMine={msg.author_id === currentUserId}
-              createdAt={msg.created_at}
-            />
-          ))}
+          {messages.map((msg, i) => {
+            const msgDay = new Date(msg.created_at).toDateString();
+            const prevDay = i > 0 ? new Date(messages[i - 1]!.created_at).toDateString() : null;
+            return (
+              <Fragment key={msg.id}>
+                {msgDay !== prevDay && <DayDivider date={new Date(msg.created_at)} />}
+                <MessageBubble
+                  content={msg.content}
+                  isMine={msg.author_id === currentUserId}
+                  createdAt={msg.created_at}
+                />
+              </Fragment>
+            );
+          })}
         </div>
       </ScrollArea>
 
