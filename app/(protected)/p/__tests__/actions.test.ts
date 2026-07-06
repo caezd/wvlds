@@ -243,116 +243,55 @@ describe("movePersona", () => {
     expect(mock.rpc).toHaveBeenCalledWith("release_persona_field_locks", { p_persona_id: "p1" });
   });
 
-  it("applique la fiche par défaut du monde cible (nouvelle section créée)", async () => {
+  it("remplace entièrement la fiche par le modèle du monde cible (reset destructif)", async () => {
     const mock = createSupabaseMock({
       user: { id: "u1" },
       results: [
-        { data: { id: "p1", world_id: "w1" } },                          // select persona
-        { data: null, error: null },                                    // update world_id
-        { data: { id: "tpl1" } },                                       // lookup fiche modèle
-        { data: [{ id: "ts1", name: "Identité", position: 0 }] },       // sections du modèle
+        { data: { id: "p1", world_id: "w1" } },                       // select persona
+        { data: null, error: null },                                  // update world_id
+        { data: { id: "tpl1" } },                                     // lookup fiche modèle
+        { data: [{ id: "s1" }] },                                     // resetPersonaToTemplate : sections existantes à purger
+        { data: [] },                                                 // resetPersonaToTemplate : champs image-grid existants (aucun)
+        { data: [{ id: "ts1", name: "Identité", position: 0 }] },     // copyPersonaSections : sections du modèle
+        { data: [{ id: "ns1", position: 0 }] },                       // insert sections copiées
         {
           data: [
-            { id: "tf1", section_id: "ts1", type: "text", label: null, data: { text: "" } },
+            { id: "tf1", section_id: "ts1", type: "text", label: null, position: 0, data: { text: "" }, locked: true },
           ],
-        },                                                               // champs verrouillés du modèle
-        { data: [] },                                                   // sections existantes du persona (aucune)
-        { data: { id: "ns1" } },                                        // insert nouvelle section
-        { data: null, error: null },                                    // insert champ verrouillé
+        },                                                             // copyPersonaSections : champs du modèle
+        { data: [{ id: "nf1", section_id: "ns1", position: 0 }] },    // insert champs copiés
       ],
     });
     mock.rpc.mockResolvedValue({ data: true, error: null });
     use(mock);
     expect(await movePersona("p1", "w2")).toEqual({ ok: true });
-    // Builders persona_sections dans l'ordre : [0] select du modèle,
-    // [1] select des sections existantes du persona, [2] insert de la nouvelle section.
-    expect(mock.buildersFor("persona_sections")[2].insert).toHaveBeenCalledWith({
-      persona_id: "p1",
-      name: "Identité",
-      position: 10,
-    });
-    // persona_section_fields : [0] select des champs verrouillés du modèle, [1] insert.
-    expect(mock.buildersFor("persona_section_fields")[1].insert).toHaveBeenCalledWith([
-      { section_id: "ns1", type: "text", label: null, locked: true, data: { text: "" } },
+    expect(mock.rpc).toHaveBeenCalledWith("reset_persona_sections", { p_persona_id: "p1" });
+    expect(mock.rpc).not.toHaveBeenCalledWith("release_persona_field_locks", expect.anything());
+    // persona_sections : [0] select existantes (reset), [1] select du modèle, [2] insert copiées.
+    expect(mock.buildersFor("persona_sections")[2].insert).toHaveBeenCalledWith([
+      { persona_id: "p1", name: "Identité", position: 0 },
     ]);
-  });
-
-  it("réutilise une section existante de même nom au lieu d'en créer une nouvelle", async () => {
-    const mock = createSupabaseMock({
-      user: { id: "u1" },
-      results: [
-        { data: { id: "p1", world_id: "w1" } },
-        { data: null, error: null },
-        { data: { id: "tpl1" } },
-        { data: [{ id: "ts1", name: "Identité", position: 0 }] },
-        {
-          data: [
-            { id: "tf1", section_id: "ts1", type: "text", label: null, data: { text: "" } },
-          ],
-        },
-        { data: [{ id: "s1", name: "Identité", position: 0 }] },        // le persona a déjà « Identité »
-        { data: [] },                                                   // aucun champ verrouillé existant dans cette section
-        { data: null, error: null },                                   // insert champ verrouillé dans la section existante
-      ],
-    });
-    mock.rpc.mockResolvedValue({ data: true, error: null });
-    use(mock);
-    expect(await movePersona("p1", "w2")).toEqual({ ok: true });
-    // Aucune section créée : la section « Identité » existante est réutilisée.
-    expect(mock.buildersFor("persona_sections").filter((b) => b.insert.mock.calls.length > 0)).toHaveLength(0);
-    // persona_section_fields : [0] select modèle, [1] select champs existants, [2] insert.
+    // persona_section_fields : [0] select image-grid existants (reset), [1] select du modèle, [2] insert.
+    // Le verrou du modèle est préservé (keepLocked: true, comme à la création).
     expect(mock.buildersFor("persona_section_fields")[2].insert).toHaveBeenCalledWith([
-      { section_id: "s1", type: "text", label: null, locked: true, data: { text: "" } },
+      { section_id: "ns1", type: "text", label: null, position: 0, data: { text: "" }, locked: true },
     ]);
   });
 
-  it("n'ajoute rien si le persona a déjà le champ verrouillé requis (idempotent)", async () => {
+  it("libère les verrous (sans reset) si le monde cible n'a pas de fiche par défaut", async () => {
     const mock = createSupabaseMock({
       user: { id: "u1" },
       results: [
         { data: { id: "p1", world_id: "w1" } },
         { data: null, error: null },
-        { data: { id: "tpl1" } },
-        { data: [{ id: "ts1", name: "Identité", position: 0 }] },
-        {
-          data: [
-            { id: "tf1", section_id: "ts1", type: "text", label: null, data: { text: "" } },
-          ],
-        },
-        { data: [{ id: "s1", name: "Identité", position: 0 }] },
-        { data: [{ id: "f1", section_id: "s1", type: "text", locked: true }] }, // conforme déjà
+        { data: null },                                                // lookup fiche modèle : aucune
       ],
     });
     mock.rpc.mockResolvedValue({ data: true, error: null });
     use(mock);
     expect(await movePersona("p1", "w2")).toEqual({ ok: true });
-    expect(mock.buildersFor("persona_section_fields").some((b) => b.insert.mock.calls.length > 0)).toBe(false);
-  });
-
-  it("verrouille en place un champ existant du même type au lieu d'en créer un doublon", async () => {
-    const mock = createSupabaseMock({
-      user: { id: "u1" },
-      results: [
-        { data: { id: "p1", world_id: "w1" } },
-        { data: null, error: null },
-        { data: { id: "tpl1" } },
-        { data: [{ id: "ts1", name: "Identité", position: 0 }] },
-        {
-          data: [
-            { id: "tf1", section_id: "ts1", type: "text", label: null, data: { text: "" } },
-          ],
-        },
-        { data: [{ id: "s1", name: "Identité", position: 0 }] },
-        // Le joueur a déjà un champ « text » dans cette section, mais pas verrouillé.
-        { data: [{ id: "f1", section_id: "s1", type: "text", locked: false }] },
-      ],
-    });
-    mock.rpc.mockResolvedValue({ data: true, error: null });
-    use(mock);
-    expect(await movePersona("p1", "w2")).toEqual({ ok: true });
-    // Pas de doublon inséré : le champ existant est verrouillé en place via la RPC dédiée.
-    expect(mock.buildersFor("persona_section_fields").some((b) => b.insert.mock.calls.length > 0)).toBe(false);
-    expect(mock.rpc).toHaveBeenCalledWith("lock_persona_field", { p_field_id: "f1" });
+    expect(mock.rpc).toHaveBeenCalledWith("release_persona_field_locks", { p_persona_id: "p1" });
+    expect(mock.rpc).not.toHaveBeenCalledWith("reset_persona_sections", expect.anything());
   });
 });
 
@@ -410,7 +349,8 @@ describe("duplicatePersona", () => {
       results: [
         { data: source },
         { data: { id: "p2" }, error: null }, // insert persona
-        { data: [] }, // select sections
+        { data: null },                      // lookup fiche modèle du monde cible : aucune
+        { data: [] },                        // select sections (copyPersonaSections)
       ],
     });
     use(mock);
@@ -439,7 +379,8 @@ describe("duplicatePersona", () => {
         },
         { data: { id: "p2" }, error: null }, // insert persona
         { data: null, error: null }, // update avatar_url
-        { data: [] }, // select sections
+        { data: null },              // lookup fiche modèle du monde cible : aucune
+        { data: [] },                // select sections (copyPersonaSections)
       ],
     });
     use(mock);
@@ -455,12 +396,13 @@ describe("duplicatePersona", () => {
     );
   });
 
-  it("copie les sections et leurs champs", async () => {
+  it("copie les sections et leurs champs (pas de fiche par défaut dans le monde cible)", async () => {
     const mock = createSupabaseMock({
       user: { id: "u1" },
       results: [
         { data: source },
         { data: { id: "p2" }, error: null }, // insert persona
+        { data: null },                      // lookup fiche modèle du monde cible : aucune
         { data: [{ id: "s1", name: "Identité", position: 0 }] }, // select sections
         { data: [{ id: "s1n", position: 0 }] }, // insert sections
         {
@@ -482,37 +424,34 @@ describe("duplicatePersona", () => {
     ]);
   });
 
-  it("applique la fiche par défaut du monde cible sur la copie", async () => {
+  it("remplace la copie par le modèle du monde cible (reset destructif, pas de copie de la source)", async () => {
     const mock = createSupabaseMock({
       user: { id: "u1" },
       results: [
         { data: source },
-        { data: { id: "p2" }, error: null }, // insert persona
-        { data: [] },                        // select sections du persona source (aucune)
-        { data: { id: "tpl1" } },            // lookup fiche modèle du monde cible
-        { data: [{ id: "ts1", name: "Identité", position: 0 }] }, // sections du modèle
+        { data: { id: "p2" }, error: null },                          // insert persona
+        { data: { id: "tpl1" } },                                     // lookup fiche modèle du monde cible
+        { data: [] },                                                 // resetPersonaToTemplate : sections existantes de la copie (aucune)
+        { data: [{ id: "ts1", name: "Identité", position: 0 }] },     // copyPersonaSections : sections du modèle
+        { data: [{ id: "ns1", position: 0 }] },                       // insert sections copiées
         {
           data: [
-            { id: "tf1", section_id: "ts1", type: "text", label: null, data: { text: "" } },
+            { id: "tf1", section_id: "ts1", type: "text", label: null, position: 0, data: { text: "" }, locked: true },
           ],
-        },                                    // champs verrouillés du modèle
-        { data: [] },                        // sections existantes de la copie (aucune)
-        { data: { id: "ns1" } },              // insert nouvelle section
-        { data: null, error: null },         // insert champ verrouillé
+        },                                                             // copyPersonaSections : champs du modèle
+        { data: [{ id: "nf1", section_id: "ns1", position: 0 }] },    // insert champs copiés
       ],
     });
     use(mock);
     expect(await duplicatePersona("p1", "w2")).toEqual({ ok: true, id: "p2" });
-    // persona_sections : [0] select (vide) du persona source par copyPersonaSections,
-    // [1] select du modèle, [2] select des sections existantes de la copie, [3] insert.
-    expect(mock.buildersFor("persona_sections")[3].insert).toHaveBeenCalledWith({
-      persona_id: "p2",
-      name: "Identité",
-      position: 10,
-    });
-    // persona_section_fields : [0] select des champs verrouillés du modèle, [1] insert.
+    expect(mock.rpc).toHaveBeenCalledWith("reset_persona_sections", { p_persona_id: "p2" });
+    // persona_sections : [0] select existantes de la copie (reset), [1] select du modèle, [2] insert.
+    expect(mock.buildersFor("persona_sections")[2].insert).toHaveBeenCalledWith([
+      { persona_id: "p2", name: "Identité", position: 0 },
+    ]);
+    // persona_section_fields : [0] select du modèle, [1] insert — le verrou du modèle est préservé.
     expect(mock.buildersFor("persona_section_fields")[1].insert).toHaveBeenCalledWith([
-      { section_id: "ns1", type: "text", label: null, locked: true, data: { text: "" } },
+      { section_id: "ns1", type: "text", label: null, position: 0, data: { text: "" }, locked: true },
     ]);
   });
 });

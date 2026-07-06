@@ -245,6 +245,7 @@
     "dropHere": "Drop a persona here",
     "dropTitle": "Move “{name}”?",
     "dropDescription": "Move “{name}” to {world}, or create an exact copy there. Both moving and duplicating respect the target world's persona limit.",
+    "dropDescriptionTemplateWarning": "Warning: {world} uses a default persona sheet. All information in “{name}”'s sheet (sections, fields) will be replaced by that world's default profile.",
     "moveAction": "Move",
     "duplicateAction": "Duplicate",
     "moveSuccess": "“{name}” moved to {world}.",

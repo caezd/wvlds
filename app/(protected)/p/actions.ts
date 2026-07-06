@@ -171,19 +171,13 @@ export async function movePersona(id: string, targetWorldId: string | null) {
         return { ok: false, error: translatePersonaError(error) };
     }
 
-    // Les verrous n'ont de sens que vis-à-vis du monde d'origine : un
-    // déplacement les libère. Le trigger de garde (migration 055) empêche
-    // toute modification directe de `locked` sur un persona normal — cette
-    // RPC (057) l'autorise pour cette seule opération, après vérification
-    // de propriété côté DB.
-    await supabase.rpc("release_persona_field_locks", { p_persona_id: id });
-
-    // Si le monde cible impose une fiche par défaut, garantit la présence de
-    // ses champs verrouillés (ajout additif — voir ensureTemplateFields).
-    //
-    // FUTUR : si la fiche par défaut devient un jour *obligatoire* plutôt
-    // qu'additive, il faudra ici purger les sections non conformes avant de
-    // recopier le modèle (perte de contenu à confirmer explicitement côté UI).
+    // Si le monde cible impose une fiche par défaut, le joueur a confirmé
+    // côté UI (voir PersonasView) que la fiche du persona serait entièrement
+    // remplacée par le modèle — pas de fusion, un remplacement complet.
+    // Sinon, les verrous hérités d'un monde précédent n'ont plus de raison
+    // d'être : le trigger de garde (055) empêche toute modification directe
+    // de `locked` sur un persona normal, cette RPC (057) les libère après
+    // vérification de propriété côté DB.
     if (targetWorldId) {
         const { data: template } = await supabase
             .from("personas")
@@ -192,8 +186,12 @@ export async function movePersona(id: string, targetWorldId: string | null) {
             .eq("is_template", true)
             .maybeSingle();
         if (template) {
-            await ensureTemplateFields(supabase, id, template.id);
+            await resetPersonaToTemplate(supabase, id, template.id);
+        } else {
+            await supabase.rpc("release_persona_field_locks", { p_persona_id: id });
         }
+    } else {
+        await supabase.rpc("release_persona_field_locks", { p_persona_id: id });
     }
 
     revalidatePath("/p");
@@ -286,13 +284,9 @@ export async function duplicatePersona(id: string, targetWorldId: string | null)
             .eq("id", newId);
     }
 
-    await copyPersonaSections(supabase, id, newId, {
-        copyImages: true,
-        keepLocked: false,
-    });
-
-    // Si le monde cible impose une fiche par défaut, garantit la présence de
-    // ses champs verrouillés sur la copie (ajout additif).
+    // Si le monde cible impose une fiche par défaut, le joueur a confirmé
+    // côté UI que la copie recevrait le modèle plutôt que la structure de
+    // l'original — on ne copie alors pas les sections de la source.
     if (targetWorldId) {
         const { data: template } = await supabase
             .from("personas")
@@ -301,9 +295,17 @@ export async function duplicatePersona(id: string, targetWorldId: string | null)
             .eq("is_template", true)
             .maybeSingle();
         if (template) {
-            await ensureTemplateFields(supabase, newId, template.id);
+            await resetPersonaToTemplate(supabase, newId, template.id);
+            revalidatePath("/p");
+            revalidatePath(`/w/${targetWorldId}`);
+            return { ok: true, id: newId };
         }
     }
+
+    await copyPersonaSections(supabase, id, newId, {
+        copyImages: true,
+        keepLocked: false,
+    });
 
     revalidatePath("/p");
     if (targetWorldId) revalidatePath(`/w/${targetWorldId}`);
@@ -439,124 +441,47 @@ async function copyPersonaSections(
     }
 }
 
-type TemplateField = {
-    id: string;
-    section_id: string;
-    type: string;
-    label: string | null;
-    data: Record<string, unknown>;
-};
-
-// Garantit la présence des champs verrouillés de la fiche par défaut d'un
-// monde sur un persona déjà existant (déplacement ou duplication vers un
-// monde avec fiche par défaut). Purement additif : le contenu déjà présent
-// chez le joueur n'est jamais modifié ni supprimé — seuls les champs
-// verrouillés manquants sont ajoutés, dans une section existante de même nom
-// si elle existe, sinon une nouvelle section est créée. Un champ n'est
-// considéré manquant que si aucun champ verrouillé du même type n'existe déjà
-// dans la section (pas de tentative de "mise à niveau" d'un champ existant,
-// qui nécessiterait de contourner le même trigger que pour les verrous —
-// voir release_persona_field_locks).
-async function ensureTemplateFields(
+// Réinitialise entièrement la fiche d'un persona pour qu'elle corresponde à
+// la fiche par défaut du monde cible — DESTRUCTIF : tout le contenu existant
+// (sections, champs, images) est supprimé avant de recopier le modèle. N'est
+// appelée qu'après confirmation explicite du joueur côté UI (voir
+// PersonasView, qui prévient que la fiche sera remplacée).
+async function resetPersonaToTemplate(
     supabase: Awaited<ReturnType<typeof createClient>>,
     personaId: string,
     templateId: string,
 ) {
-    const { data: templateSections } = await supabase
+    // Nettoie les fichiers storage des grilles d'images existantes : la RPC
+    // ci-dessous ne supprime que les lignes DB, pas les fichiers qu'elles
+    // référencent (même logique que deletePersona).
+    const { data: sections } = await supabase
         .from("persona_sections")
-        .select("id, name, position")
-        .eq("persona_id", templateId)
-        .order("position", { ascending: true });
-    const templateSectionsList = (templateSections ?? []) as { id: string; name: string; position: number }[];
-    if (templateSectionsList.length === 0) return;
-
-    const { data: templateFields } = await supabase
-        .from("persona_section_fields")
-        .select("id, section_id, type, label, data")
-        .in("section_id", templateSectionsList.map((s) => s.id))
-        .eq("locked", true);
-    const lockedFields = (templateFields ?? []) as TemplateField[];
-    if (lockedFields.length === 0) return;
-
-    const { data: personaSections } = await supabase
-        .from("persona_sections")
-        .select("id, name, position")
+        .select("id")
         .eq("persona_id", personaId);
-    const existingSections = (personaSections ?? []) as { id: string; name: string; position: number }[];
-    const sectionIdByName = new Map(
-        existingSections.map((s) => [s.name.trim().toLowerCase(), s.id]),
-    );
-    const maxPosition = existingSections.reduce((max, s) => Math.max(max, s.position), 0);
-
-    // Un seul champ existant par (section, type) est retenu — cas déjà rare
-    // en pratique — pour décider s'il faut verrouiller en place ou insérer.
-    const existingFields = existingSections.length
-        ? ((
-            await supabase
-                .from("persona_section_fields")
-                .select("id, section_id, type, locked")
-                .in("section_id", existingSections.map((s) => s.id))
-        ).data ?? [])
-        : [];
-    const existingFieldByKey = new Map<string, { id: string; locked?: boolean }>();
-    for (const f of existingFields as { id: string; section_id: string; type: string; locked?: boolean }[]) {
-        const key = `${f.section_id}:${f.type}`;
-        if (!existingFieldByKey.has(key)) existingFieldByKey.set(key, f);
-    }
-
-    const toInsert: (TemplateField & { targetSectionId: string })[] = [];
-    const toLock: string[] = [];
-
-    for (const templateSection of templateSectionsList) {
-        const fieldsInSection = lockedFields.filter((f) => f.section_id === templateSection.id);
-        if (fieldsInSection.length === 0) continue;
-
-        const key = templateSection.name.trim().toLowerCase();
-        let targetSectionId = sectionIdByName.get(key);
-        if (!targetSectionId) {
-            const { data: newSection } = await supabase
-                .from("persona_sections")
-                .insert({
-                    persona_id: personaId,
-                    name: templateSection.name,
-                    position: maxPosition + templateSection.position + 10,
-                })
-                .select("id")
-                .single();
-            if (!newSection) continue;
-            targetSectionId = newSection.id as string;
-            sectionIdByName.set(key, targetSectionId);
-        }
-
-        for (const f of fieldsInSection) {
-            const existing = existingFieldByKey.get(`${targetSectionId}:${f.type}`);
-            if (!existing) {
-                toInsert.push({ ...f, targetSectionId });
-            } else if (!existing.locked) {
-                // Un champ du joueur du même type existe déjà dans cette
-                // section : on le verrouille en place (son contenu est
-                // préservé) plutôt que d'ajouter un doublon à côté.
-                toLock.push(existing.id);
-            }
-            // Sinon déjà verrouillé : conforme, rien à faire.
+    const sectionIds = (sections ?? []).map((s: { id: string }) => s.id);
+    if (sectionIds.length > 0) {
+        const { data: imageFields } = await supabase
+            .from("persona_section_fields")
+            .select("data")
+            .in("section_id", sectionIds)
+            .eq("type", "image-grid");
+        const imagePaths = (imageFields ?? []).flatMap(
+            (f: { data?: { images?: { id: string }[] } | null }) =>
+                (f.data?.images ?? []).map((img) => img.id),
+        ).filter(Boolean);
+        if (imagePaths.length > 0) {
+            await supabase.storage.from("personas").remove(imagePaths);
         }
     }
 
-    if (toInsert.length > 0) {
-        await supabase.from("persona_section_fields").insert(
-            toInsert.map((f) => ({
-                section_id: f.targetSectionId,
-                type: f.type,
-                label: f.label,
-                locked: true,
-                data: f.type === "image-grid" ? { ...f.data, images: [] } : f.data,
-            })),
-        );
-    }
+    // Supprime toutes les sections existantes (contourne le trigger de garde
+    // des sections/champs verrouillés — légitime ici, le joueur a
+    // explicitement confirmé le remplacement complet de sa fiche).
+    await supabase.rpc("reset_persona_sections", { p_persona_id: personaId });
 
-    // release_persona_field_locks a le même besoin de contourner le trigger
-    // de garde ; verrouiller en place n'est légitime que via cette RPC dédiée.
-    await Promise.all(
-        toLock.map((fieldId) => supabase.rpc("lock_persona_field", { p_field_id: fieldId })),
-    );
+    // Recopie la structure fraîche du modèle (identique à la création).
+    await copyPersonaSections(supabase, templateId, personaId, {
+        copyImages: false,
+        keepLocked: true,
+    });
 }

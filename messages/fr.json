@@ -246,6 +246,7 @@
     "dropHere": "Dépose un persona ici",
     "dropTitle": "Déplacer « {name} » ?",
     "dropDescription": "Déplace « {name} » vers {world}, ou crées-en une copie exacte à cet endroit. Le déplacement et la duplication respectent la limite de personas du monde cible.",
+    "dropDescriptionTemplateWarning": "Attention : {world} utilise une fiche de persona par défaut. Toutes les informations de la fiche de « {name} » (sections, champs) seront remplacées par le profil par défaut attendu par ce monde.",
     "moveAction": "Déplacer",
     "duplicateAction": "Dupliquer",
     "moveSuccess": "« {name} » déplacé vers {world}.",

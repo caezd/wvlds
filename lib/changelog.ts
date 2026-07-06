@@ -9,7 +9,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-07",
     tag: "Personas",
-    text: "Cohérence des champs verrouillés lors d'un déplacement ou d'une duplication :\n- **Sortir un persona d'un monde libère les verrous** hérités de sa fiche par défaut — ils n'ont de sens que pour ce monde\n- **Entrer dans un monde avec une fiche par défaut initialise la fiche** du persona pour garantir la présence de ses champs requis, sans jamais toucher au contenu déjà saisi : un champ existant du même type est verrouillé sur place, un champ manquant est ajouté",
+    text: "Cohérence de la fiche lors d'un déplacement ou d'une duplication vers un monde avec fiche par défaut :\n- **Sortir un persona d'un monde libère les verrous** hérités de sa fiche par défaut — ils n'ont de sens que pour ce monde\n- **Entrer dans un monde avec une fiche par défaut remplace entièrement la fiche** du persona par le modèle du monde (sections, champs, y compris verrous) — une boîte de dialogue prévient avant que cela ne se produise, pour déplacer ou dupliquer en connaissance de cause",
   },
   {
     date: "2026-07",

@@ -237,6 +237,7 @@
     "dropHere": "Suelta un personaje aquí",
     "dropTitle": "¿Mover «{name}»?",
     "dropDescription": "Mueve «{name}» a {world}, o crea una copia exacta allí. Mover y duplicar respetan el límite de personajes del mundo de destino.",
+    "dropDescriptionTemplateWarning": "Atención: {world} usa una ficha de personaje por defecto. Toda la información de la ficha de «{name}» (secciones, campos) será reemplazada por el perfil por defecto de ese mundo.",
     "moveAction": "Mover",
     "duplicateAction": "Duplicar",
     "moveSuccess": "«{name}» movido a {world}.",

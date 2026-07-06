@@ -52,6 +52,8 @@ export type PersonaWorldGroup = {
   /** Restrictions de catalogue du monde, appliquées par l'éditeur de fiche. */
   restrictInventory?: boolean;
   restrictSkills?: boolean;
+  /** Le monde impose une fiche par défaut — déplacer/dupliquer vers lui écrase la fiche du persona. */
+  hasDefaultTemplate?: boolean;
   personas: PersonaItem[];
 };
 
@@ -64,6 +66,7 @@ type PendingDrop = {
   persona: PersonaItem;
   toWorldId: string | null;
   toWorldName: string | null;
+  toWorldHasTemplate: boolean;
 };
 
 function PersonaCardFor({
@@ -202,6 +205,7 @@ export function PersonasView({
       persona,
       toWorldId,
       toWorldName: toGroup?.worldName ?? null,
+      toWorldHasTemplate: !!toGroup?.hasDefaultTemplate,
     });
   }
 
@@ -344,10 +348,15 @@ export function PersonasView({
               {t("dropTitle", { name: displayedDrop?.persona.name ?? "Sans nom" })}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {t("dropDescription", {
-                name: displayedDrop?.persona.name ?? "Sans nom",
-                world: displayedDrop?.toWorldName ?? t("noWorld"),
-              })}
+              {t(
+                displayedDrop?.toWorldHasTemplate
+                  ? "dropDescriptionTemplateWarning"
+                  : "dropDescription",
+                {
+                  name: displayedDrop?.persona.name ?? "Sans nom",
+                  world: displayedDrop?.toWorldName ?? t("noWorld"),
+                },
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
