@@ -239,7 +239,17 @@
     "empty": "Aucun persona. Crée-en un depuis un monde.",
     "noWorld": "Sans monde",
     "pick": "Choisir un persona",
-    "pickerEmpty": "Aucun persona. Crée-en un d'abord."
+    "pickerEmpty": "Aucun persona. Crée-en un d'abord.",
+    "toggleFavorite": "Marquer/retirer des favoris",
+    "viewByWorld": "Par monde",
+    "viewAlphabetical": "Alphabétique",
+    "dropHere": "Dépose un persona ici",
+    "dropTitle": "Déplacer « {name} » ?",
+    "dropDescription": "Déplace « {name} » vers {world}, ou crées-en une copie exacte à cet endroit. Le déplacement et la duplication respectent la limite de personas du monde cible.",
+    "moveAction": "Déplacer",
+    "duplicateAction": "Dupliquer",
+    "moveSuccess": "« {name} » déplacé vers {world}.",
+    "duplicateSuccess": "« {name} » dupliqué vers {world}."
   },
   "quests": {
     "title": "Quêtes du jour",

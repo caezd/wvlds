@@ -112,15 +112,19 @@ export default function NotificationsProvider({ children }: { children: React.Re
     const [notifPrefs, setNotifPrefs] = useState<NotifPrefs>({});
     const [hasMoreNotifs, setHasMoreNotifs] = useState(false);
 
-    // Refs pour éviter les stale closures (Realtime, loadMoreNotifs, setActiveChat)
+    // Refs pour éviter les stale closures (Realtime, loadMoreNotifs, setActiveChat).
+    // Miroirs synchronisés PENDANT le rendu, pas dans un useEffect : les effets
+    // passifs s'exécutent après le commit, laissant une fenêtre où un handler
+    // (clic, Realtime) lirait une ref en retard d'un rendu — ex. setActiveChat
+    // qui n'archive pas les notifications tout juste affichées.
     const notifOffsetRef = useRef(0);
     const isLoadingMoreRef = useRef(false);
     const notificationsRef = useRef<AppNotification[]>([]);
-    useEffect(() => { notificationsRef.current = notifications; }, [notifications]);
+    notificationsRef.current = notifications;
 
     const { userId } = useCurrentUser();
     const userIdRef = useRef<string | null>(null);
-    useEffect(() => { userIdRef.current = userId; }, [userId]);
+    userIdRef.current = userId;
 
     const activeChatRef = useRef<string | null>(null);
     const lastSyncRef = useRef(0);

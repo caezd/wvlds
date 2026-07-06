@@ -538,7 +538,7 @@ export function RelationsCanvas({ worldId, userId, canAdmin, onClose }: Relation
         { data: posRows },
         { data: rtRows },
       ] = await Promise.all([
-        supabase.from("personas").select("id, name, avatar_url, user_id").eq("world_id", worldId).is("deleted_at", null),
+        supabase.from("personas").select("id, name, avatar_url, user_id").eq("world_id", worldId).eq("is_template", false).is("deleted_at", null),
         supabase.from("world_members").select("user_id").eq("world_id", worldId),
         supabase.from("worlds").select("owner_id").eq("id", worldId).single(),
         supabase.from("world_persona_groups").select("id, name, color, sort_index").eq("world_id", worldId).order("sort_index"),

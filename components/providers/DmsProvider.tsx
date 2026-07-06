@@ -26,6 +26,22 @@ function dedupeConversations(rows: DmConversation[]): DmConversation[] {
   });
 }
 
+function sortByLastMessage(convs: DmConversation[]): DmConversation[] {
+  return [...convs].sort((a, b) =>
+    new Date(b.last_message_at ?? b.created_at).getTime() -
+    new Date(a.last_message_at ?? a.created_at).getTime()
+  );
+}
+
+function applyNewMessage(convs: DmConversation[], msg: DmMessage): DmConversation[] {
+  return sortByLastMessage(
+    convs.map(c => c.id === msg.conversation_id
+      ? { ...c, last_message_at: msg.created_at, last_message_content: msg.content, last_message_author_id: msg.author_id }
+      : c
+    )
+  );
+}
+
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const DM_MESSAGES_PAGE = 30;
@@ -97,8 +113,10 @@ export function useDms() {
 export default function DmsProvider({ children }: { children: React.ReactNode }) {
   const supabase = useMemo(() => createClient(), []);
   const { userId } = useCurrentUser();
+  // Miroir synchronisé pendant le rendu (pas dans un effet) : évite la
+  // fenêtre où un handler lirait une ref en retard d'un rendu.
   const userIdRef = useRef<string | null>(null);
-  useEffect(() => { userIdRef.current = userId; }, [userId]);
+  userIdRef.current = userId;
 
   // ── Panel state ───────────────────────────────────────────────────────────
 
@@ -228,9 +246,8 @@ export default function DmsProvider({ children }: { children: React.ReactNode })
         },
         (payload: { new: Record<string, unknown> }) => {
           const msg = payload.new as DmMessage;
-          setMessages(prev =>
-            prev.some(m => m.id === msg.id) ? prev : [...prev, msg],
-          );
+          setMessages(prev => prev.some(m => m.id === msg.id) ? prev : [...prev, msg]);
+          setConversations(prev => applyNewMessage(prev, msg));
           if (
             activeConvIdRef.current === msg.conversation_id &&
             msg.author_id !== userIdRef.current
@@ -313,25 +330,16 @@ export default function DmsProvider({ children }: { children: React.ReactNode })
         .from(TABLE.DM_CONVERSATIONS)
         .update({ last_message_at: data.created_at })
         .eq("id", convId);
-      setConversations(prev =>
-        prev
-          .map(c => c.id === convId
-            ? { ...c, last_message_at: data.created_at, last_message_content: data.content, last_message_author_id: uid }
-            : c,
-          )
-          .sort((a, b) =>
-            new Date(b.last_message_at ?? b.created_at).getTime() -
-            new Date(a.last_message_at ?? a.created_at).getTime(),
-          ),
-      );
+      setConversations(prev => applyNewMessage(prev, data as DmMessage));
     }
   }, [supabase]);
 
   // ── Restauration de la dernière conversation ─────────────────────────────
   // Quand le panel s'ouvre sans conversation active, on rouvre la dernière.
-  // Utilise un ref pour éviter une stale closure sur openConversation.
+  // Utilise un ref pour éviter une stale closure sur openConversation
+  // (miroir synchronisé pendant le rendu, pas dans un effet).
   const openConversationRef = useRef(openConversation);
-  useEffect(() => { openConversationRef.current = openConversation; }, [openConversation]);
+  openConversationRef.current = openConversation;
 
   useEffect(() => {
     if (!panelOpen || !userId || activeConvIdRef.current) return;
@@ -356,7 +364,9 @@ export default function DmsProvider({ children }: { children: React.ReactNode })
 
     const convCh = supabase
       .channel(channel.dmConversations(userId))
-      .on("postgres_changes", { event: "*", schema: "public", table: TABLE.DM_MESSAGES }, () => {
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: TABLE.DM_MESSAGES }, (payload: { new: Record<string, unknown> }) => {
+        const msg = payload.new as DmMessage;
+        setConversations(prev => applyNewMessage(prev, msg));
         void loadConversations();
       })
       .subscribe();

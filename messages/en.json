@@ -238,7 +238,17 @@
     "empty": "No personas. Create one from a world.",
     "noWorld": "No world",
     "pick": "Choose a persona",
-    "pickerEmpty": "No personas yet. Create one first."
+    "pickerEmpty": "No personas yet. Create one first.",
+    "toggleFavorite": "Toggle favorite",
+    "viewByWorld": "By world",
+    "viewAlphabetical": "Alphabetical",
+    "dropHere": "Drop a persona here",
+    "dropTitle": "Move “{name}”?",
+    "dropDescription": "Move “{name}” to {world}, or create an exact copy there. Both moving and duplicating respect the target world's persona limit.",
+    "moveAction": "Move",
+    "duplicateAction": "Duplicate",
+    "moveSuccess": "“{name}” moved to {world}.",
+    "duplicateSuccess": "“{name}” duplicated to {world}."
   },
   "quests": {
     "title": "Daily quests",

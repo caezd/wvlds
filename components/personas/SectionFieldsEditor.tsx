@@ -18,9 +18,10 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 
-import { ArrowUp, ArrowDown, Plus, Trash2, Type, AlignLeft, BarChart3, Minus, X, ImageIcon, Loader2, Expand, Backpack, Swords, Gauge, Quote, Tag, CalendarDays, Lock } from "lucide-react";
+import { ArrowUp, ArrowDown, Plus, Trash2, Type, AlignLeft, BarChart3, Minus, X, ImageIcon, Loader2, Expand, Backpack, Swords, Gauge, Quote, Tag, CalendarDays, Lock, LockOpen } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { WorldInventoryItem, WorldSkill } from "@/types/worlds";
+import { cn } from "@/lib/utils";
 import { ImageLightbox } from "@/components/chatrooms/ImageLightbox";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 
@@ -832,9 +833,11 @@ type SectionFieldsEditorProps = {
   worldId?: string;
   restrictInventory?: boolean;
   restrictSkills?: boolean;
+  /** Édition de la fiche modèle d'un monde : permet de verrouiller des champs. */
+  isTemplate?: boolean;
 };
 
-export function SectionFieldsEditor({ sectionId, personaId, userId, initialFields, onFieldsChange, worldId, restrictInventory, restrictSkills }: SectionFieldsEditorProps) {
+export function SectionFieldsEditor({ sectionId, personaId, userId, initialFields, onFieldsChange, worldId, restrictInventory, restrictSkills, isTemplate }: SectionFieldsEditorProps) {
   const supabase = createClient();
   const flags = useFeatureFlags();
   const fieldsEnabled = flags.persona_fields;
@@ -937,7 +940,7 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
     const { data, error } = await supabase
       .from("persona_section_fields")
       .insert({ section_id: sectionId, type, data: defaultData })
-      .select("id, section_id, type, position, data")
+      .select("id, section_id, type, position, data, locked")
       .single();
 
     if (error) {
@@ -1140,6 +1143,18 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
     await persistPositions(withPos);
   }
 
+  // Verrouille/déverrouille un champ de la fiche modèle (le trigger DB
+  // n'autorise ce changement que sur un persona modèle).
+  async function toggleFieldLock(field: PersonaSectionField) {
+    const next = !field.locked;
+    const { error } = await supabase
+      .from("persona_section_fields")
+      .update({ locked: next })
+      .eq("id", field.id);
+    if (error) { setErrorMessage(error.message ?? "Erreur de verrouillage."); return; }
+    setFields((prev) => prev.map((f) => (f.id === field.id ? { ...f, locked: next } : f)));
+  }
+
   async function handleDeleteField(fieldId: string) {
     const field = fields.find((f) => f.id === fieldId);
     if (field?.type === "image-grid") {
@@ -1300,6 +1315,16 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
             return (
               <div key={field.id} className="group/field">
                 <div className="group relative rounded-md border border-transparent py-1.5 px-2 hover:border-border-soft transition-colors">
+                  {/* Badge permanent : champ requis par la fiche du monde */}
+                  {!isTemplate && field.locked && (
+                    <span
+                      className="absolute right-2.5 top-2 text-muted-foreground/50 group-hover:opacity-0 transition-opacity z-10"
+                      title="Champ requis par la fiche du monde"
+                    >
+                      <Lock className="h-3.5 w-3.5" />
+                    </span>
+                  )}
+
                   {/* Actions flottantes */}
                   <div className="absolute right-1.5 top-1 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                     <Button variant="ghost" size="icon-sm" type="button" className="h-7 w-7" onClick={() => handleMoveField(field.id, "up")} disabled={isFirst}>
@@ -1308,7 +1333,32 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
                     <Button variant="ghost" size="icon-sm" type="button" className="h-7 w-7" onClick={() => handleMoveField(field.id, "down")} disabled={isLast}>
                       <ArrowDown className="h-3.5 w-3.5" />
                     </Button>
-                    {field.type === "image-grid" ? (
+                    {isTemplate && (
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        type="button"
+                        className={cn("h-7 w-7", field.locked ? "text-primary" : "text-muted-foreground")}
+                        title={field.locked
+                          ? "Champ verrouillé (requis sur les fiches des joueurs) — cliquer pour déverrouiller"
+                          : "Verrouiller ce champ : il sera requis sur les fiches des joueurs"}
+                        onClick={() => void toggleFieldLock(field)}
+                      >
+                        {field.locked ? <Lock className="h-3.5 w-3.5" /> : <LockOpen className="h-3.5 w-3.5" />}
+                      </Button>
+                    )}
+                    {!isTemplate && field.locked ? (
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        type="button"
+                        disabled
+                        className="h-7 w-7 text-muted-foreground"
+                        title="Champ requis par la fiche du monde — impossible à supprimer"
+                      >
+                        <Lock className="h-3.5 w-3.5" />
+                      </Button>
+                    ) : field.type === "image-grid" ? (
                       <DeleteConfirmDialog
                         trigger={
                           <Button variant="ghost" size="icon-sm" type="button" className="h-7 w-7 text-muted-foreground hover:bg-destructive/10 hover:text-destructive">

@@ -270,7 +270,7 @@ export default function ChatroomMessage({
             </span>
           </div>
         )}
-        <div className="flex w-full flex-col justify-between gap-8">
+        <div className="flex w-full flex-col justify-between gap-8 ">
           <ChatroomMessageHeader
             message={message}
             mine={mine}

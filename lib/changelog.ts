@@ -8,6 +8,51 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-07 ──────────────────────────────────────────────────────────────
   {
     date: "2026-07",
+    tag: "Correctif",
+    text: "Correction d'une rare condition de course dans les providers de notifications et de messages privés : un clic vers une salle survenant dans la même frame qu'une mise à jour de l'état pouvait lire une liste périmée (et par exemple ne pas archiver une notification tout juste affichée). Les références internes sont désormais synchronisées au rendu et plus dans un effet différé.",
+  },
+  {
+    date: "2026-07",
+    tag: "Mondes",
+    text: "**Champs verrouillés de la fiche par défaut** : dans l'éditeur de la fiche modèle d'un monde, chaque champ peut être **verrouillé** (icône cadenas au survol). Les champs verrouillés sont copiés sur les fiches des nouveaux personas et y sont **impossibles à supprimer** (la section qui les contient aussi) — le contenu reste bien sûr modifiable par le joueur. La règle est garantie côté base de données, pas seulement à l'écran. Dupliquer un persona produit en revanche une copie entièrement libre.",
+  },
+  {
+    date: "2026-07",
+    tag: "Interface",
+    text: "La sidebar de navigation d'un monde affiche un lien **Paramètres** (visible par le propriétaire et les admins) qui ouvre directement le panneau de réglages du monde — plus besoin de passer par la page d'accueil du monde.",
+  },
+  {
+    date: "2026-07",
+    tag: "Mondes",
+    text: "**Fiche de persona par défaut** : dans les paramètres d'un monde, une nouvelle option « Fiche par défaut » permet de définir une fiche modèle (sections et champs) avec l'éditeur habituel — chaque persona créé dans le monde démarre avec une copie de cette structure (les grilles d'images du modèle sont copiées vides). La fiche modèle ne compte pas dans le quota de personas, et sa désactivation la supprime sans toucher aux personas déjà créés.",
+  },
+  {
+    date: "2026-07",
+    tag: "Interface",
+    text: "La page Personas gagne deux nouveautés :\n- Les cartes se **déplacent au glisser-déposer** entre les mondes (ou vers « Sans monde ») — au dépôt, une boîte de confirmation propose de **déplacer** le persona ou d'en créer une **copie exacte** (fiche, sections, images comprises), dans la limite du quota de personas du monde cible\n- Deux vues au choix : **par monde** (comme avant) ou **alphabétique** tous mondes confondus, avec le nom du monde rappelé sous chaque carte\n- Les refus sont expliqués clairement (quota du monde cible atteint, nom déjà utilisé dans le monde cible) au lieu d'une erreur technique\n- Les mondes rejoints **sans persona** apparaissent aussi, avec une zone « Dépose un persona ici » — on peut donc y déplacer ou dupliquer un persona directement\n- Le compteur « x / 5 » n'apparaît plus pour les comptes abonnés (personas illimités)",
+  },
+  {
+    date: "2026-07",
+    tag: "Correctif",
+    text: "Sur mobile, le tiroir de navigation gardait une largeur pleine (jusqu'à 360px) même sans panneau contextuel à afficher (pages Personas, Boutique...) — il se réduit désormais à la largeur du rail d'icônes dans ce cas.",
+  },
+  {
+    date: "2026-07",
+    tag: "Correctif",
+    text: "Le panneau « Mes mondes » (liste des mondes rejoints avec leurs salons) s'affichait sur toutes les pages sauf celles d'un monde ou d'une chatroom (Explore, Personas, Boutique, Admin...) — il n'y avait pas sa place et faisait doublon avec la navigation déjà présente dans les pages de monde. Il a été retiré entièrement.",
+  },
+  {
+    date: "2026-07",
+    tag: "Correctif",
+    text: "Le rail d'icônes de navigation (à gauche) débordait sur les fenêtres de faible hauteur (moins de ~620px), rendant certaines icônes inaccessibles — la zone de navigation défile désormais indépendamment, le bouton menu et le pied (messages privés, notifications, avatar) restant toujours visibles.",
+  },
+  {
+    date: "2026-07",
+    tag: "Interface",
+    text: "Le sélecteur de persona du composer passe d'une grille à une **liste triée par ordre alphabétique**, avatar à gauche et nom bien lisible :\n- Une **étoile** à droite de chaque ligne permet de marquer un persona en **favori** — les favoris remontent automatiquement en tête de liste (toujours alphabétiques entre eux)\n- Les favoris sont mémorisés par joueur (stockage local), sans configuration supplémentaire",
+  },
+  {
+    date: "2026-07",
     tag: "Technique",
     text: "Refonte des compteurs de non-lus (badges de mondes et de salles) pour la performance :\n- Les compteurs sont désormais **entretenus localement** (incrément à la réception d'un message, remise à zéro à la lecture) au lieu de redemander un recomptage complet au serveur à chaque événement — **zéro requête réseau** en régime permanent\n- Le badge d'un monde est **dérivé** des compteurs de ses salles (une seule source de vérité, plus de double comptage possible)\n- Un seul canal temps réel multiplexé pour les messages de tous les mondes, au lieu d'un canal par monde\n- Une resynchronisation complète est déclenchée au retour sur l'onglet (au plus une fois par minute) pour rattraper une éventuelle dérive due à un autre appareil\n- La logique « marquer la salle comme lue » et l'archivage des notifications sont mutualisés (moins de code dupliqué, comportement identique partout)",
   },

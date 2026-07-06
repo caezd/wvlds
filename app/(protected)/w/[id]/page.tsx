@@ -120,6 +120,7 @@ export default async function WorldPage({
           )
           .eq("user_id", userId)
           .eq("world_id", id)
+          .eq("is_template", false)
           .order("name", { ascending: true });
 
         const rows = (personaRows ?? []) as Omit<AsidePersona, "sections">[];
@@ -140,7 +141,7 @@ export default async function WorldPage({
         if (sectionIds.length > 0) {
           const { data: fields } = await supabase
             .from("persona_section_fields")
-            .select("id, section_id, type, position, data")
+            .select("id, section_id, type, position, data, locked")
             .in("section_id", sectionIds)
             .order("position", { ascending: true });
 

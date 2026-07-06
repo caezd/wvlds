@@ -17,11 +17,9 @@ import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 function AppShellInner({
   rail,
-  worldsSidebar,
   children,
 }: {
   rail: React.ReactNode;
-  worldsSidebar?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const { notifications: notifEnabled, direct_messages: dmsEnabled } = useFeatureFlags();
@@ -73,14 +71,17 @@ function AppShellInner({
         <SheetContent
           side="left"
           hideClose
-          className="p-0 border-r border-border-soft w-full max-w-[360px]"
+          className={cn(
+            "p-0 border-r border-border-soft",
+            anyPanelOpen || mobileSidebar ? "w-full max-w-[360px]" : "w-auto max-w-none",
+          )}
         >
           <VisuallyHidden><SheetTitle>Navigation</SheetTitle></VisuallyHidden>
           <div className="flex h-full overflow-hidden">
             {/* Rail d'icônes */}
             <div className={cn(
-              "shrink-0 flex flex-col overflow-y-auto py-3",
-              anyPanelOpen || mobileSidebar ? "w-14 border-r border-border-soft" : "w-full",
+              "w-14 shrink-0 flex flex-col overflow-y-auto py-3",
+              (anyPanelOpen || mobileSidebar) && "border-r border-border-soft",
             )}>
               {rail}
             </div>
@@ -114,7 +115,6 @@ function AppShellInner({
         </header>
 
         <main className="relative flex h-full w-full flex-1 overflow-hidden border bg-background rounded-2xl">
-          {!isWorldOrChat && worldsSidebar}
           <div
             id="thread"
             className={cn(
@@ -135,17 +135,15 @@ function AppShellInner({
 
 export default function AppShell({
   rail,
-  worldsSidebar,
   children,
 }: {
   rail: React.ReactNode;
-  worldsSidebar?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
     <MobileSidebarProvider>
       <DmsProvider>
-        <AppShellInner rail={rail} worldsSidebar={worldsSidebar}>{children}</AppShellInner>
+        <AppShellInner rail={rail}>{children}</AppShellInner>
       </DmsProvider>
     </MobileSidebarProvider>
   );

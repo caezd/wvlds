@@ -21,7 +21,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, ChevronLeft, ChevronRight, Pencil, Trash2 } from "lucide-react";
+import { Lock, MoreHorizontal, ChevronLeft, ChevronRight, Pencil, Trash2 } from "lucide-react";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { toast } from "sonner";
 import type { PersonaSectionWithFields } from "@/types/personas";
@@ -35,6 +35,8 @@ type PersonaSectionsTabsProps = {
   worldId?: string;
   restrictInventory?: boolean;
   restrictSkills?: boolean;
+  /** Édition de la fiche modèle d'un monde : permet de verrouiller des champs. */
+  isTemplate?: boolean;
 };
 
 export function PersonaSectionsTabs({
@@ -45,6 +47,7 @@ export function PersonaSectionsTabs({
   worldId,
   restrictInventory,
   restrictSkills,
+  isTemplate,
 }: PersonaSectionsTabsProps) {
   const supabase = createClient();
 
@@ -126,6 +129,11 @@ export function PersonaSectionsTabs({
 
   const value = activeSectionId ?? sections[0]?.id;
   const activeIndex = sections.findIndex((s) => s.id === value);
+  // Une section contenant un champ verrouillé (requis par la fiche du monde)
+  // ne peut pas être supprimée — hors édition de la fiche modèle elle-même.
+  const activeHasLockedFields =
+    !isTemplate &&
+    (sections.find((s) => s.id === value)?.fields ?? []).some((f) => f.locked);
 
   return (
     <>
@@ -173,15 +181,21 @@ export function PersonaSectionsTabs({
                         <Pencil className="mr-2 h-4 w-4" /> Renommer
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DeleteConfirmDialog
-                        trigger={
-                          <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive">
-                            <Trash2 className="mr-2 h-4 w-4" /> Supprimer
-                          </DropdownMenuItem>
-                        }
-                        description="Cette section et tous ses champs seront supprimés définitivement."
-                        onConfirm={handleDeleteSection}
-                      />
+                      {activeHasLockedFields ? (
+                        <DropdownMenuItem disabled title="Cette section contient des champs requis par la fiche du monde">
+                          <Lock className="mr-2 h-4 w-4" /> Requise par le monde
+                        </DropdownMenuItem>
+                      ) : (
+                        <DeleteConfirmDialog
+                          trigger={
+                            <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive">
+                              <Trash2 className="mr-2 h-4 w-4" /> Supprimer
+                            </DropdownMenuItem>
+                          }
+                          description="Cette section et tous ses champs seront supprimés définitivement."
+                          onConfirm={handleDeleteSection}
+                        />
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 )}
@@ -206,6 +220,7 @@ export function PersonaSectionsTabs({
                 worldId={worldId}
                 restrictInventory={restrictInventory}
                 restrictSkills={restrictSkills}
+                isTemplate={isTemplate}
               />
             </TabsContent>
           ))}

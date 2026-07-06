@@ -11,7 +11,6 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { PersonaPickerDialog } from "@/components/personas/PersonaPickerDialog";
 import { Button } from "../ui/button";
 import { SendHorizontal, Component, Dices, Pipette, X, ImagePlus, Eye, Lock, Sword, Heart, Square, Anchor, CalendarDays, MapPin, MessageCircle, MessageSquareText, Check, type LucideIcon } from "lucide-react";
-import { Hint } from "@/components/ui/hint";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { toWebP } from "@/lib/imageUtils";

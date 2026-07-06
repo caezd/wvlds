@@ -8,6 +8,7 @@ import {
   Library,
   Map as MapIcon,
   Network,
+  Settings,
   Users,
 } from "lucide-react";
 import { WorldSidebarChatrooms } from "./WorldSidebarChatrooms";
@@ -49,10 +50,11 @@ type Category = {
 
 export default async function WorldSidebar({ worldId }: { worldId: string }) {
   const supabase = await createClient();
-  const [userId, featureFlags, t] = await Promise.all([
+  const [userId, featureFlags, t, tNav] = await Promise.all([
     getCurrentUserId(),
     getCachedFeatureFlags(),
     getTranslations("worlds"),
+    getTranslations("nav"),
   ]);
 
   const [worldResult, roomsResult, participatedResult, canAdminResult, allWorldsResult, quota, categoriesResult, followedResult] =
@@ -147,6 +149,9 @@ export default async function WorldSidebar({ worldId }: { worldId: string }) {
       )}
       {hasCatalogue && (
         <WorldSidebarNavLink href={`${worldBase}?view=catalogue`} icon={<Library size={14} />} label={t("nav.catalogue")} />
+      )}
+      {canAdmin && (
+        <WorldSidebarNavLink href={`${worldBase}?view=settings`} icon={<Settings size={14} />} label={tNav("settings")} />
       )}
     </div>
   );

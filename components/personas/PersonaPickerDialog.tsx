@@ -9,67 +9,81 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogTrigger,
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Star } from "lucide-react";
 import { useTranslations } from "next-intl";
 function initials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "?";
 }
 
-function PersonaCard({
+function PersonaRow({
   persona,
   selected,
+  favorite,
   onSelect,
+  onToggleFavorite,
+  favoriteLabel,
 }: {
   persona: Persona;
   selected: boolean;
+  favorite: boolean;
   onSelect: () => void;
+  onToggleFavorite: () => void;
+  favoriteLabel: string;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className="group relative w-full aspect-square rounded-2xl overflow-hidden bg-muted shadow-sm transition-shadow hover:shadow-md focus-visible:outline-none"
-      aria-pressed={selected}
+    <div
+      className={`group flex w-full items-center gap-3 rounded-xl px-2.5 py-2 transition-colors ${selected ? "bg-muted" : "hover:bg-muted/60"}`}
     >
-      {persona.avatar_url ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={supabaseThumb(persona.avatar_url, 200) ?? persona.avatar_url}
-          onError={(e) => { e.currentTarget.src = persona.avatar_url!; e.currentTarget.onerror = null; }}
-          alt={persona.name}
-          className="absolute inset-0 h-full w-full object-cover"
-          draggable={false}
-        />
-      ) : (
-        <div className="absolute inset-0 grid place-items-center text-2xl font-bold text-muted-foreground select-none">
-          {initials(persona.name)}
-        </div>
-      )}
-
-      {/* Gradient + nom */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
-      <div className="absolute bottom-0 left-0 right-0 p-2.5">
-        <span className="text-xs font-semibold text-white leading-tight line-clamp-2 text-left block">
-          {persona.name}
+      <button
+        type="button"
+        onClick={onSelect}
+        className="flex min-w-0 flex-1 items-center gap-3 text-left focus-visible:outline-none"
+        aria-pressed={selected}
+      >
+        <span className="relative size-9 shrink-0 overflow-hidden rounded-full bg-muted">
+          {persona.avatar_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={supabaseThumb(persona.avatar_url, 72) ?? persona.avatar_url}
+              onError={(e) => { e.currentTarget.src = persona.avatar_url!; e.currentTarget.onerror = null; }}
+              alt={persona.name}
+              className="h-full w-full object-cover"
+              draggable={false}
+            />
+          ) : (
+            <span className="grid h-full w-full place-items-center text-xs font-bold text-muted-foreground">
+              {initials(persona.name)}
+            </span>
+          )}
         </span>
-      </div>
+        <span className="min-w-0 flex-1 truncate text-sm font-medium">{persona.name}</span>
+        {selected && (
+          <span className="grid size-5 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground">
+            <svg viewBox="0 0 12 12" className="h-3 w-3 fill-current">
+              <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </span>
+        )}
+      </button>
 
-      {/* Indicateur sélectionné */}
-      {selected && (
-        <div className="absolute top-2 right-2 h-5 w-5 rounded-full bg-white flex items-center justify-center shadow">
-          <svg viewBox="0 0 12 12" className="h-3 w-3 text-black fill-current">
-            <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </div>
-      )}
-    </button>
+      <button
+        type="button"
+        onClick={onToggleFavorite}
+        aria-pressed={favorite}
+        aria-label={favoriteLabel}
+        className="shrink-0 rounded-full p-1.5 text-muted-foreground transition-colors hover:text-yellow-500 focus-visible:outline-none"
+      >
+        <Star size={18} className={favorite ? "fill-yellow-400 text-yellow-500" : ""} />
+      </button>
+    </div>
   );
 }
 
@@ -95,8 +109,35 @@ export function PersonaPickerDialog({
   const [loading, setLoading] = useState(true);
   const [personas, setPersonas] = useState<Persona[]>([]);
   const [value, setValue] = useState<string>(selected?.id ?? "");
+  const [resolvedUserId, setResolvedUserId] = useState<string | null>(userId ?? null);
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
 
   useEffect(() => setValue(selected?.id ?? ""), [selected?.id, open]);
+
+  const favoritesKey = resolvedUserId ? `persona-favorites:${resolvedUserId}` : null;
+
+  // Charge les favoris (localStorage, propre à l'utilisateur) dès qu'on connaît son id.
+  useEffect(() => {
+    if (!favoritesKey) return;
+    try {
+      const raw = localStorage.getItem(favoritesKey);
+      setFavorites(new Set(raw ? (JSON.parse(raw) as string[]) : []));
+    } catch {
+      setFavorites(new Set());
+    }
+  }, [favoritesKey]);
+
+  function toggleFavorite(personaId: string) {
+    setFavorites((prev) => {
+      const next = new Set(prev);
+      if (next.has(personaId)) next.delete(personaId);
+      else next.add(personaId);
+      if (favoritesKey) {
+        try { localStorage.setItem(favoritesKey, JSON.stringify([...next])); } catch { }
+      }
+      return next;
+    });
+  }
 
   // Recharge à chaque ouverture pour avoir les avatars à jour
   useEffect(() => {
@@ -108,11 +149,13 @@ export function PersonaPickerDialog({
         const { data: { session } } = await supabase.auth.getSession();
         uid = session?.user?.id ?? null;
       }
+      setResolvedUserId(uid);
       if (!uid) { setLoading(false); return; }
       let query = supabase
         .from("personas")
         .select("id, user_id, name, avatar_url")
         .eq("user_id", uid)
+        .eq("is_template", false)
         .order("name", { ascending: true });
       if (worldId) query = query.eq("world_id", worldId);
       const { data } = await query;
@@ -122,6 +165,15 @@ export function PersonaPickerDialog({
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, worldId, open]);
+
+  const sortedPersonas = useMemo(() => {
+    return [...personas].sort((a, b) => {
+      const favA = favorites.has(a.id);
+      const favB = favorites.has(b.id);
+      if (favA !== favB) return favA ? -1 : 1;
+      return a.name.localeCompare(b.name);
+    });
+  }, [personas, favorites]);
 
   const canConfirm = !!value && (!required || !!value);
 
@@ -160,12 +212,13 @@ export function PersonaPickerDialog({
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>{t("pick")}</DialogTitle>
+          <DialogDescription className="sr-only">{t("pick")}</DialogDescription>
         </DialogHeader>
 
         {loading ? (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="flex flex-col gap-2">
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="aspect-square rounded-2xl bg-muted animate-pulse" />
+              <div key={i} className="h-14 rounded-xl bg-muted animate-pulse" />
             ))}
           </div>
         ) : personas.length === 0 ? (
@@ -174,13 +227,16 @@ export function PersonaPickerDialog({
           </p>
         ) : (
           <ScrollArea className="max-h-[60vh]">
-            <div className="grid grid-cols-2 gap-3 pr-3 pb-1">
-              {personas.map((p) => (
-                <PersonaCard
+            <div className="flex flex-col gap-1 pr-3 pb-1">
+              {sortedPersonas.map((p) => (
+                <PersonaRow
                   key={p.id}
                   persona={p}
                   selected={value === p.id}
+                  favorite={favorites.has(p.id)}
                   onSelect={() => setValue(p.id)}
+                  onToggleFavorite={() => toggleFavorite(p.id)}
+                  favoriteLabel={t("toggleFavorite")}
                 />
               ))}
             </div>
