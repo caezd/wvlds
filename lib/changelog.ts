@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-07 ──────────────────────────────────────────────────────────────
   {
     date: "2026-07",
+    tag: "Personas",
+    text: "Cohérence des champs verrouillés lors d'un déplacement ou d'une duplication :\n- **Sortir un persona d'un monde libère les verrous** hérités de sa fiche par défaut — ils n'ont de sens que pour ce monde\n- **Entrer dans un monde avec une fiche par défaut initialise la fiche** du persona pour garantir la présence de ses champs requis, sans jamais toucher au contenu déjà saisi : un champ existant du même type est verrouillé sur place, un champ manquant est ajouté",
+  },
+  {
+    date: "2026-07",
     tag: "Correctif",
     text: "Correctifs issus de la revue de code de la page Personas :\n- La page **/p affiche désormais les mondes rejoints (et leurs zones de dépôt) même sans aucun persona** — un nouveau membre invité voyait auparavant un état vide sans accès au glisser-déposer\n- Le **quota de personas est maintenant garanti au niveau base de données lors d'un déplacement** entre mondes (plus seulement à la création) — deux déplacements simultanés ne peuvent plus dépasser la limite\n- Éditer un persona depuis /p applique désormais les **restrictions de catalogue de son monde** (inventaire/compétences), comme depuis la page du monde\n- Lors d'une duplication, un échec de copie d'image abandonne l'image plutôt que de partager le fichier de l'original (dont la suppression aurait cassé la copie)\n- Les erreurs d'activation de la fiche par défaut sont traduites en clair",
   },
