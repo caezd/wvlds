@@ -228,6 +228,71 @@ describe("movePersona", () => {
     expect(await movePersona("p1", null)).toEqual({ ok: true });
     expect(mock.buildersFor("personas")[1].update).toHaveBeenCalledWith({ world_id: null });
   });
+
+  it("libère les verrous existants du persona après un déplacement réussi", async () => {
+    const mock = createSupabaseMock({
+      user: { id: "u1" },
+      results: [
+        { data: { id: "p1", world_id: "w1" } },
+        { data: null, error: null }, // update world_id
+      ],
+    });
+    mock.rpc.mockResolvedValue({ data: true, error: null });
+    use(mock);
+    expect(await movePersona("p1", null)).toEqual({ ok: true });
+    expect(mock.rpc).toHaveBeenCalledWith("release_persona_field_locks", { p_persona_id: "p1" });
+  });
+
+  it("remplace entièrement la fiche par le modèle du monde cible (reset destructif)", async () => {
+    const mock = createSupabaseMock({
+      user: { id: "u1" },
+      results: [
+        { data: { id: "p1", world_id: "w1" } },                       // select persona
+        { data: null, error: null },                                  // update world_id
+        { data: { id: "tpl1" } },                                     // lookup fiche modèle
+        { data: [{ id: "s1" }] },                                     // resetPersonaToTemplate : sections existantes à purger
+        { data: [] },                                                 // resetPersonaToTemplate : champs image-grid existants (aucun)
+        { data: [{ id: "ts1", name: "Identité", position: 0 }] },     // copyPersonaSections : sections du modèle
+        { data: [{ id: "ns1", position: 0 }] },                       // insert sections copiées
+        {
+          data: [
+            { id: "tf1", section_id: "ts1", type: "text", label: null, position: 0, data: { text: "" }, locked: true },
+          ],
+        },                                                             // copyPersonaSections : champs du modèle
+        { data: [{ id: "nf1", section_id: "ns1", position: 0 }] },    // insert champs copiés
+      ],
+    });
+    mock.rpc.mockResolvedValue({ data: true, error: null });
+    use(mock);
+    expect(await movePersona("p1", "w2")).toEqual({ ok: true });
+    expect(mock.rpc).toHaveBeenCalledWith("reset_persona_sections", { p_persona_id: "p1" });
+    expect(mock.rpc).not.toHaveBeenCalledWith("release_persona_field_locks", expect.anything());
+    // persona_sections : [0] select existantes (reset), [1] select du modèle, [2] insert copiées.
+    expect(mock.buildersFor("persona_sections")[2].insert).toHaveBeenCalledWith([
+      { persona_id: "p1", name: "Identité", position: 0 },
+    ]);
+    // persona_section_fields : [0] select image-grid existants (reset), [1] select du modèle, [2] insert.
+    // Le verrou du modèle est préservé (keepLocked: true, comme à la création).
+    expect(mock.buildersFor("persona_section_fields")[2].insert).toHaveBeenCalledWith([
+      { section_id: "ns1", type: "text", label: null, position: 0, data: { text: "" }, locked: true },
+    ]);
+  });
+
+  it("libère les verrous (sans reset) si le monde cible n'a pas de fiche par défaut", async () => {
+    const mock = createSupabaseMock({
+      user: { id: "u1" },
+      results: [
+        { data: { id: "p1", world_id: "w1" } },
+        { data: null, error: null },
+        { data: null },                                                // lookup fiche modèle : aucune
+      ],
+    });
+    mock.rpc.mockResolvedValue({ data: true, error: null });
+    use(mock);
+    expect(await movePersona("p1", "w2")).toEqual({ ok: true });
+    expect(mock.rpc).toHaveBeenCalledWith("release_persona_field_locks", { p_persona_id: "p1" });
+    expect(mock.rpc).not.toHaveBeenCalledWith("reset_persona_sections", expect.anything());
+  });
 });
 
 describe("duplicatePersona", () => {
@@ -284,7 +349,8 @@ describe("duplicatePersona", () => {
       results: [
         { data: source },
         { data: { id: "p2" }, error: null }, // insert persona
-        { data: [] }, // select sections
+        { data: null },                      // lookup fiche modèle du monde cible : aucune
+        { data: [] },                        // select sections (copyPersonaSections)
       ],
     });
     use(mock);
@@ -313,7 +379,8 @@ describe("duplicatePersona", () => {
         },
         { data: { id: "p2" }, error: null }, // insert persona
         { data: null, error: null }, // update avatar_url
-        { data: [] }, // select sections
+        { data: null },              // lookup fiche modèle du monde cible : aucune
+        { data: [] },                // select sections (copyPersonaSections)
       ],
     });
     use(mock);
@@ -329,12 +396,13 @@ describe("duplicatePersona", () => {
     );
   });
 
-  it("copie les sections et leurs champs", async () => {
+  it("copie les sections et leurs champs (pas de fiche par défaut dans le monde cible)", async () => {
     const mock = createSupabaseMock({
       user: { id: "u1" },
       results: [
         { data: source },
         { data: { id: "p2" }, error: null }, // insert persona
+        { data: null },                      // lookup fiche modèle du monde cible : aucune
         { data: [{ id: "s1", name: "Identité", position: 0 }] }, // select sections
         { data: [{ id: "s1n", position: 0 }] }, // insert sections
         {
@@ -353,6 +421,37 @@ describe("duplicatePersona", () => {
     // La duplication ne propage pas les verrous (liés au modèle du monde d'origine)
     expect(mock.buildersFor("persona_section_fields")[1].insert).toHaveBeenCalledWith([
       { section_id: "s1n", type: "text", label: null, position: 0, data: { text: "x" }, locked: false },
+    ]);
+  });
+
+  it("remplace la copie par le modèle du monde cible (reset destructif, pas de copie de la source)", async () => {
+    const mock = createSupabaseMock({
+      user: { id: "u1" },
+      results: [
+        { data: source },
+        { data: { id: "p2" }, error: null },                          // insert persona
+        { data: { id: "tpl1" } },                                     // lookup fiche modèle du monde cible
+        { data: [] },                                                 // resetPersonaToTemplate : sections existantes de la copie (aucune)
+        { data: [{ id: "ts1", name: "Identité", position: 0 }] },     // copyPersonaSections : sections du modèle
+        { data: [{ id: "ns1", position: 0 }] },                       // insert sections copiées
+        {
+          data: [
+            { id: "tf1", section_id: "ts1", type: "text", label: null, position: 0, data: { text: "" }, locked: true },
+          ],
+        },                                                             // copyPersonaSections : champs du modèle
+        { data: [{ id: "nf1", section_id: "ns1", position: 0 }] },    // insert champs copiés
+      ],
+    });
+    use(mock);
+    expect(await duplicatePersona("p1", "w2")).toEqual({ ok: true, id: "p2" });
+    expect(mock.rpc).toHaveBeenCalledWith("reset_persona_sections", { p_persona_id: "p2" });
+    // persona_sections : [0] select existantes de la copie (reset), [1] select du modèle, [2] insert.
+    expect(mock.buildersFor("persona_sections")[2].insert).toHaveBeenCalledWith([
+      { persona_id: "p2", name: "Identité", position: 0 },
+    ]);
+    // persona_section_fields : [0] select du modèle, [1] insert — le verrou du modèle est préservé.
+    expect(mock.buildersFor("persona_section_fields")[1].insert).toHaveBeenCalledWith([
+      { section_id: "ns1", type: "text", label: null, position: 0, data: { text: "" }, locked: true },
     ]);
   });
 });

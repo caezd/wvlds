@@ -162,30 +162,6 @@ export async function movePersona(id: string, targetWorldId: string | null) {
         return { ok: false, error: QUOTA_ERROR_MESSAGE };
     }
 
-    // ── FUTUR : fiche par défaut obligatoire ─────────────────────────────
-    // Les mondes peuvent définir une fiche par défaut (persona modèle,
-    // personas.is_template — voir createPersona qui la copie à la création).
-    // Si elle devient un jour *obligatoire*, il faudra vérifier ici que la
-    // fiche du persona déplacé est conforme au modèle du monde cible, et la
-    // remettre à zéro sinon. Ébauche :
-    //
-    // const { data: template } = await supabase
-    //     .from("personas")
-    //     .select("id")
-    //     .eq("world_id", targetWorldId)
-    //     .eq("is_template", true)
-    //     .maybeSingle();
-    // if (template && templateIsRequired) {
-    //     if (!(await conformsToTemplate(supabase, id, template.id))) {
-    //         // Supprime les sections non conformes et recopie la structure
-    //         // vierge du modèle (les valeurs saisies sont perdues — prévoir
-    //         // une confirmation explicite côté UI avant d'en arriver là).
-    //         // await resetPersonaSections(supabase, id);
-    //         // await copyPersonaSections(supabase, template.id, id, { copyImages: false });
-    //     }
-    // }
-    // ─────────────────────────────────────────────────────────────────────
-
     const { error } = await supabase
         .from("personas")
         .update({ world_id: targetWorldId })
@@ -193,6 +169,29 @@ export async function movePersona(id: string, targetWorldId: string | null) {
         .eq("user_id", user.id);
     if (error) {
         return { ok: false, error: translatePersonaError(error) };
+    }
+
+    // Si le monde cible impose une fiche par défaut, le joueur a confirmé
+    // côté UI (voir PersonasView) que la fiche du persona serait entièrement
+    // remplacée par le modèle — pas de fusion, un remplacement complet.
+    // Sinon, les verrous hérités d'un monde précédent n'ont plus de raison
+    // d'être : le trigger de garde (055) empêche toute modification directe
+    // de `locked` sur un persona normal, cette RPC (057) les libère après
+    // vérification de propriété côté DB.
+    if (targetWorldId) {
+        const { data: template } = await supabase
+            .from("personas")
+            .select("id")
+            .eq("world_id", targetWorldId)
+            .eq("is_template", true)
+            .maybeSingle();
+        if (template) {
+            await resetPersonaToTemplate(supabase, id, template.id);
+        } else {
+            await supabase.rpc("release_persona_field_locks", { p_persona_id: id });
+        }
+    } else {
+        await supabase.rpc("release_persona_field_locks", { p_persona_id: id });
     }
 
     revalidatePath("/p");
@@ -283,6 +282,24 @@ export async function duplicatePersona(id: string, targetWorldId: string | null)
             .from("personas")
             .update({ avatar_url: avatarUrl, banner_url: bannerUrl })
             .eq("id", newId);
+    }
+
+    // Si le monde cible impose une fiche par défaut, le joueur a confirmé
+    // côté UI que la copie recevrait le modèle plutôt que la structure de
+    // l'original — on ne copie alors pas les sections de la source.
+    if (targetWorldId) {
+        const { data: template } = await supabase
+            .from("personas")
+            .select("id")
+            .eq("world_id", targetWorldId)
+            .eq("is_template", true)
+            .maybeSingle();
+        if (template) {
+            await resetPersonaToTemplate(supabase, newId, template.id);
+            revalidatePath("/p");
+            revalidatePath(`/w/${targetWorldId}`);
+            return { ok: true, id: newId };
+        }
     }
 
     await copyPersonaSections(supabase, id, newId, {
@@ -422,4 +439,49 @@ async function copyPersonaSections(
             .update({ data: { ...oldField.data, images: copied } })
             .eq("id", newFieldId);
     }
+}
+
+// Réinitialise entièrement la fiche d'un persona pour qu'elle corresponde à
+// la fiche par défaut du monde cible — DESTRUCTIF : tout le contenu existant
+// (sections, champs, images) est supprimé avant de recopier le modèle. N'est
+// appelée qu'après confirmation explicite du joueur côté UI (voir
+// PersonasView, qui prévient que la fiche sera remplacée).
+async function resetPersonaToTemplate(
+    supabase: Awaited<ReturnType<typeof createClient>>,
+    personaId: string,
+    templateId: string,
+) {
+    // Nettoie les fichiers storage des grilles d'images existantes : la RPC
+    // ci-dessous ne supprime que les lignes DB, pas les fichiers qu'elles
+    // référencent (même logique que deletePersona).
+    const { data: sections } = await supabase
+        .from("persona_sections")
+        .select("id")
+        .eq("persona_id", personaId);
+    const sectionIds = (sections ?? []).map((s: { id: string }) => s.id);
+    if (sectionIds.length > 0) {
+        const { data: imageFields } = await supabase
+            .from("persona_section_fields")
+            .select("data")
+            .in("section_id", sectionIds)
+            .eq("type", "image-grid");
+        const imagePaths = (imageFields ?? []).flatMap(
+            (f: { data?: { images?: { id: string }[] } | null }) =>
+                (f.data?.images ?? []).map((img) => img.id),
+        ).filter(Boolean);
+        if (imagePaths.length > 0) {
+            await supabase.storage.from("personas").remove(imagePaths);
+        }
+    }
+
+    // Supprime toutes les sections existantes (contourne le trigger de garde
+    // des sections/champs verrouillés — légitime ici, le joueur a
+    // explicitement confirmé le remplacement complet de sa fiche).
+    await supabase.rpc("reset_persona_sections", { p_persona_id: personaId });
+
+    // Recopie la structure fraîche du modèle (identique à la création).
+    await copyPersonaSections(supabase, templateId, personaId, {
+        copyImages: false,
+        keepLocked: true,
+    });
 }

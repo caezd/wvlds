@@ -111,6 +111,20 @@ export default async function PersonasPage() {
     })(),
   ]);
 
+  // Mondes accessibles ayant une fiche par défaut — dépend de memberWorlds,
+  // donc après le Promise.all plutôt que dans la même vague parallèle.
+  const worldsWithTemplate = new Set<string>();
+  if (memberWorlds.length > 0) {
+    const { data: templates } = await supabase
+      .from("personas")
+      .select("world_id")
+      .in("world_id", memberWorlds.map((w) => w.id))
+      .eq("is_template", true);
+    for (const t of templates ?? []) {
+      if (t.world_id) worldsWithTemplate.add(t.world_id);
+    }
+  }
+
   // 3) Groupement — les mondes accessibles d'abord (sections toujours
   // présentes, même vides, pour servir de cibles de dépôt)
   const groupMap = new Map<string | null, PersonaWorldGroup>();
@@ -121,6 +135,7 @@ export default async function PersonasPage() {
       worldName: w.name ?? "Monde inconnu",
       restrictInventory: !!w.restrict_inventory,
       restrictSkills: !!w.restrict_skills,
+      hasDefaultTemplate: worldsWithTemplate.has(w.id),
       personas: [],
     });
   }
