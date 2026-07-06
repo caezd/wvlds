@@ -2,18 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-
-const QUOTA_ERROR_MESSAGE =
-    "Limite atteinte : 5 personas par monde (compte gratuit).";
-const DUPLICATE_NAME_MESSAGE =
-    "Un persona portant ce nom existe déjà dans le monde cible.";
-
-// Contrainte unique personas_user_id_world_id_name_key (code 23505).
-function translatePersonaError(error: { code?: string; message: string }) {
-    if (error.code === "P0001") return QUOTA_ERROR_MESSAGE;
-    if (error.code === "23505") return DUPLICATE_NAME_MESSAGE;
-    return error.message;
-}
+import { QUOTA_ERROR_MESSAGE, translatePersonaError } from "@/lib/personaErrors";
 
 function extractStoragePath(url: string | null | undefined) {
     if (!url) return null;
@@ -161,9 +150,10 @@ export async function movePersona(id: string, targetWorldId: string | null) {
     const fromWorldId = (persona.world_id as string | null) ?? null;
     if (fromWorldId === targetWorldId) return { ok: true };
 
-    // Même règle de capacité que l'INSERT (has_persona_capacity côté DB) :
-    // le trigger ne couvre que l'insertion, on vérifie donc explicitement
-    // avant de déplacer.
+    // Pré-check de capacité pour une erreur propre avant l'UPDATE. La vraie
+    // garantie (atomique, avec verrou) est le trigger DB qui couvre aussi
+    // l'UPDATE de world_id depuis la migration 056 — une erreur RPC ici ne
+    // bypasse donc rien, le trigger tranchera.
     const { data: hasCapacity } = await supabase.rpc("has_persona_capacity", {
         u: user.id,
         w: targetWorldId,
@@ -265,7 +255,9 @@ export async function duplicatePersona(id: string, targetWorldId: string | null)
     const newId = created.id as string;
 
     // Copie un fichier du bucket "personas" vers un chemin dérivé du nouvel
-    // id. Best effort : en cas d'échec on réutilise l'URL d'origine.
+    // id. En cas d'échec, l'asset est abandonné (null) plutôt que de pointer
+    // vers le fichier de l'original : deletePersona supprime les fichiers
+    // référencés par les URLs, un chemin partagé casserait l'autre persona.
     async function copyPersonaAsset(url: string | null | undefined) {
         if (!url) return null;
         const path = extractStoragePath(url);
@@ -277,7 +269,7 @@ export async function duplicatePersona(id: string, targetWorldId: string | null)
         const { error } = await supabase.storage
             .from("personas")
             .copy(path, newPath);
-        if (error) return url;
+        if (error) return null;
         const { data } = supabase.storage.from("personas").getPublicUrl(newPath);
         return data.publicUrl;
     }
@@ -335,14 +327,20 @@ async function copyPersonaSections(
                 position: s.position,
             })),
         )
-        .select("id");
+        .select("id, position");
 
-    // PostgREST renvoie les lignes insérées dans l'ordre des VALUES.
+    // Associe ancienne → nouvelle section par la position (unique au sein
+    // d'un persona), sans dépendre de l'ordre de retour de l'INSERT — non
+    // garanti formellement par Postgres pour un insert multi-lignes.
+    const newSectionByPos = new Map<number, string>();
+    for (const s of (newSections ?? []) as { id: string; position: number }[]) {
+        newSectionByPos.set(s.position, s.id);
+    }
     const sectionIdMap = new Map<string, string>();
-    sectionsList.forEach((s, i) => {
-        const nid = (newSections ?? [])[i]?.id;
+    for (const s of sectionsList) {
+        const nid = newSectionByPos.get(s.position);
         if (nid) sectionIdMap.set(s.id, nid);
-    });
+    }
 
     const { data: fields } = await supabase
         .from("persona_section_fields")
@@ -376,34 +374,49 @@ async function copyPersonaSections(
                         : f.data,
             })),
         )
-        .select("id");
+        .select("id, section_id, position");
 
     if (!copyImages) return;
 
-    for (let i = 0; i < copyableFields.length; i++) {
-        const oldField = copyableFields[i];
-        const newFieldId = (newFields ?? [])[i]?.id as string | undefined;
-        if (!newFieldId || oldField.type !== "image-grid") continue;
+    // Même principe que pour les sections : association par clé
+    // (section, position) plutôt que par index de retour d'INSERT.
+    const newFieldByKey = new Map<string, string>();
+    for (const f of (newFields ?? []) as { id: string; section_id: string; position: number }[]) {
+        newFieldByKey.set(`${f.section_id}:${f.position}`, f.id);
+    }
+
+    for (const oldField of copyableFields) {
+        if (oldField.type !== "image-grid") continue;
+        const newFieldId = newFieldByKey.get(
+            `${sectionIdMap.get(oldField.section_id)}:${oldField.position}`,
+        );
+        if (!newFieldId) continue;
         const images = (oldField.data?.images ?? []) as GridImage[];
         if (images.length === 0) continue;
 
-        const copied: GridImage[] = [];
-        for (const img of images) {
-            const newPath = img.id
-                .replaceAll(fromPersonaId, toPersonaId)
-                .replaceAll(oldField.id, newFieldId);
-            const { error } = await supabase.storage
-                .from("personas")
-                .copy(img.id, newPath);
-            if (error) {
-                copied.push(img); // best effort : on garde l'original
-                continue;
-            }
-            const { data } = supabase.storage
-                .from("personas")
-                .getPublicUrl(newPath);
-            copied.push({ ...img, id: newPath, url: data.publicUrl });
-        }
+        // Copies indépendantes → parallélisées. Une image dont le chemin ne
+        // contient pas le persona/champ attendu, ou dont la copie échoue, est
+        // abandonnée plutôt que de garder le chemin de l'original : la
+        // suppression d'un des deux personas détruirait le fichier de l'autre.
+        const copied = (
+            await Promise.all(
+                images.map(async (img): Promise<GridImage | null> => {
+                    const newPath = img.id
+                        .replaceAll(fromPersonaId, toPersonaId)
+                        .replaceAll(oldField.id, newFieldId);
+                    if (newPath === img.id) return null; // chemin inattendu
+                    const { error } = await supabase.storage
+                        .from("personas")
+                        .copy(img.id, newPath);
+                    if (error) return null;
+                    const { data } = supabase.storage
+                        .from("personas")
+                        .getPublicUrl(newPath);
+                    return { ...img, id: newPath, url: data.publicUrl };
+                }),
+            )
+        ).filter((img): img is GridImage => img !== null);
+
         await supabase
             .from("persona_section_fields")
             .update({ data: { ...oldField.data, images: copied } })

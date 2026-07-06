@@ -369,6 +369,14 @@ export default function DmsProvider({ children }: { children: React.ReactNode })
         setConversations(prev => applyNewMessage(prev, msg));
         void loadConversations();
       })
+      // Édition/suppression d'un message (pas d'UI aujourd'hui, mais possible
+      // via modération ou correctif direct) : resynchronise l'aperçu et le tri.
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: TABLE.DM_MESSAGES }, () => {
+        void loadConversations();
+      })
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: TABLE.DM_MESSAGES }, () => {
+        void loadConversations();
+      })
       .subscribe();
 
     return () => {

@@ -65,6 +65,17 @@ describe("PersonasView — vue par monde", () => {
     expect(screen.getByText("Dépose un persona ici")).toBeInTheDocument();
   });
 
+  it("affiche les zones de dépôt même sans aucun persona (nouveau membre)", () => {
+    render(
+      <PersonasView
+        groups={[{ worldId: "w9", worldName: "Nouveau monde", personas: [] }]}
+      />,
+    );
+    expect(screen.getByText("Nouveau monde")).toBeInTheDocument();
+    // Monde vide + « Sans monde » (ajouté automatiquement)
+    expect(screen.getAllByText("Dépose un persona ici")).toHaveLength(2);
+  });
+
   it("affiche un monde sans persona avec sa zone de dépôt", () => {
     render(
       <PersonasView

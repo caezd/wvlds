@@ -23,12 +23,12 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { PersonaSectionsTabs } from "@/components/personas/PersonaSectionsTabs";
-import { setWorldPersonaTemplate } from "@/app/actions/worldCatalog";
-import type {
-  PersonaSection,
-  PersonaSectionField,
-  PersonaSectionWithFields,
-} from "@/types/personas";
+import {
+  getWorldPersonaTemplate,
+  setWorldPersonaTemplate,
+} from "@/app/actions/worldCatalog";
+import { fetchPersonaSections } from "@/lib/personaSections";
+import type { PersonaSectionWithFields } from "@/types/personas";
 
 /**
  * Réglage « Fiche de persona par défaut » d'un monde.
@@ -59,21 +59,16 @@ export function WorldPersonaTemplateSection({
   React.useEffect(() => {
     let cancelled = false;
     (async () => {
-      const { data } = await supabase
-        .from("personas")
-        .select("id")
-        .eq("world_id", worldId)
-        .eq("is_template", true)
-        .maybeSingle();
+      const res = await getWorldPersonaTemplate(worldId);
       if (!cancelled) {
-        setTemplateId((data?.id as string | undefined) ?? null);
+        setTemplateId(res.ok ? res.templateId : null);
         setLoaded(true);
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [supabase, worldId]);
+  }, [worldId]);
 
   async function handleToggle(enabled: boolean) {
     if (!enabled) {
@@ -108,33 +103,12 @@ export function WorldPersonaTemplateSection({
     setEditorOpen(true);
     if (sections !== null) return; // déjà chargées
 
-    const [{ data: auth }, { data: sectionRows }] = await Promise.all([
+    const [{ data: auth }, loadedSections] = await Promise.all([
       supabase.auth.getUser(),
-      supabase
-        .from("persona_sections")
-        .select("id, persona_id, name, position")
-        .eq("persona_id", templateId)
-        .order("position", { ascending: true }),
+      fetchPersonaSections(supabase, templateId),
     ]);
     setUserId(auth.user?.id ?? null);
-
-    const sectionsList = (sectionRows ?? []) as PersonaSection[];
-    const sectionIds = sectionsList.map((s) => s.id);
-    let fieldsList: PersonaSectionField[] = [];
-    if (sectionIds.length > 0) {
-      const { data: fields } = await supabase
-        .from("persona_section_fields")
-        .select("id, section_id, type, position, data, locked")
-        .in("section_id", sectionIds)
-        .order("position", { ascending: true });
-      fieldsList = (fields ?? []) as PersonaSectionField[];
-    }
-    setSections(
-      sectionsList.map((s) => ({
-        ...s,
-        fields: fieldsList.filter((f) => f.section_id === s.id),
-      })),
-    );
+    setSections(loadedSections);
   }
 
   return (

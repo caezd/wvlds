@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { deletePersona } from "@/app/(protected)/p/actions";
+import { translatePersonaError } from "@/lib/personaErrors";
 import type { WorldInventoryItem, WorldSkill, WorldCatalogCategory, WorldTimelineConfig } from "@/types/worlds";
 
 export async function setWorldFeature(
@@ -261,7 +262,7 @@ export async function setWorldPersonaTemplate(worldId: string, enabled: boolean)
       })
       .select("id")
       .single();
-    if (error) return { ok: false as const, error: error.message };
+    if (error) return { ok: false as const, error: translatePersonaError(error) };
     return { ok: true as const, templateId: data.id as string };
   }
 
