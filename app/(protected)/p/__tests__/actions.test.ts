@@ -71,7 +71,7 @@ describe("createPersona", () => {
         { data: { id: "persona-1" }, error: null },          // insert persona
         { data: { id: "tpl1" } },                            // lookup fiche modèle
         { data: [{ id: "ts1", name: "Identité", position: 0 }] }, // sections du modèle
-        { data: [{ id: "ns1" }] },                           // insert sections
+        { data: [{ id: "ns1", position: 0 }] },              // insert sections
         {
           data: [
             { id: "tf1", section_id: "ts1", type: "text", label: null, position: 0, data: { text: "" }, locked: true },
@@ -336,7 +336,7 @@ describe("duplicatePersona", () => {
         { data: source },
         { data: { id: "p2" }, error: null }, // insert persona
         { data: [{ id: "s1", name: "Identité", position: 0 }] }, // select sections
-        { data: [{ id: "s1n" }] }, // insert sections
+        { data: [{ id: "s1n", position: 0 }] }, // insert sections
         {
           data: [
             { id: "f1", section_id: "s1", type: "text", label: null, position: 0, data: { text: "x" }, locked: true },

@@ -17,6 +17,7 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { cn } from "@/lib/utils";
+import { initials } from "@/lib/persona-display";
 import { PersonaCard } from "./PersonaCard";
 import { movePersona, duplicatePersona } from "@/app/(protected)/p/actions";
 import type { PersonaSectionWithFields } from "@/types/personas";
@@ -48,6 +49,9 @@ export type PersonaItem = {
 export type PersonaWorldGroup = {
   worldId: string | null;
   worldName: string | null;
+  /** Restrictions de catalogue du monde, appliquées par l'éditeur de fiche. */
+  restrictInventory?: boolean;
+  restrictSkills?: boolean;
   personas: PersonaItem[];
 };
 
@@ -62,12 +66,13 @@ type PendingDrop = {
   toWorldName: string | null;
 };
 
-function initials(name: string) {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "P";
-}
-
-function PersonaCardFor({ persona }: { persona: PersonaItem }) {
+function PersonaCardFor({
+  persona,
+  group,
+}: {
+  persona: PersonaItem;
+  group?: PersonaWorldGroup;
+}) {
   return (
     <PersonaCard
       personaId={persona.id}
@@ -78,11 +83,20 @@ function PersonaCardFor({ persona }: { persona: PersonaItem }) {
       initialFrameId={persona.avatar_frame_id ?? null}
       initialFrameUrl={persona.frame_asset_url ?? null}
       initialSections={persona.sections}
+      worldId={persona.world_id ?? undefined}
+      restrictInventory={group?.restrictInventory}
+      restrictSkills={group?.restrictSkills}
     />
   );
 }
 
-function DraggablePersona({ persona }: { persona: PersonaItem }) {
+function DraggablePersona({
+  persona,
+  group,
+}: {
+  persona: PersonaItem;
+  group?: PersonaWorldGroup;
+}) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: persona.id,
     data: { persona, fromKey: keyFor(persona.world_id) },
@@ -95,7 +109,7 @@ function DraggablePersona({ persona }: { persona: PersonaItem }) {
       style={{ touchAction: "manipulation" }}
       className={cn(isDragging && "opacity-40")}
     >
-      <PersonaCardFor persona={persona} />
+      <PersonaCardFor persona={persona} group={group} />
     </div>
   );
 }
@@ -159,14 +173,12 @@ export function PersonasView({
   }, [groups]);
 
   const alphabetical = useMemo(() => {
-    const worldNameByKey = new Map(
-      groups.map((g) => [keyFor(g.worldId), g.worldName]),
-    );
+    const groupByKey = new Map(groups.map((g) => [keyFor(g.worldId), g]));
     return {
       personas: groups
         .flatMap((g) => g.personas)
         .sort((a, b) => (a.name ?? "").localeCompare(b.name ?? "")),
-      worldNameByKey,
+      groupByKey,
     };
   }, [groups]);
 
@@ -225,15 +237,17 @@ export function PersonasView({
 
       {view === "alpha" ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-          {alphabetical.personas.map((persona) => (
-            <div key={persona.id} className="space-y-1.5">
-              <PersonaCardFor persona={persona} />
-              <p className="text-xs text-muted-foreground truncate px-1">
-                {alphabetical.worldNameByKey.get(keyFor(persona.world_id)) ??
-                  t("noWorld")}
-              </p>
-            </div>
-          ))}
+          {alphabetical.personas.map((persona) => {
+            const group = alphabetical.groupByKey.get(keyFor(persona.world_id));
+            return (
+              <div key={persona.id} className="space-y-1.5">
+                <PersonaCardFor persona={persona} group={group} />
+                <p className="text-xs text-muted-foreground truncate px-1">
+                  {group?.worldName ?? t("noWorld")}
+                </p>
+              </div>
+            );
+          })}
         </div>
       ) : (
         <DndContext
@@ -262,7 +276,7 @@ export function PersonasView({
                     </h2>
                   )}
                   <span className="text-xs text-muted-foreground">
-                    {personaLimit
+                    {personaLimit != null
                       ? `${group.personas.length} / ${personaLimit}`
                       : group.personas.length}
                   </span>
@@ -275,7 +289,11 @@ export function PersonasView({
                 ) : (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                     {group.personas.map((persona) => (
-                      <DraggablePersona key={persona.id} persona={persona} />
+                      <DraggablePersona
+                        key={persona.id}
+                        persona={persona}
+                        group={group}
+                      />
                     ))}
                   </div>
                 )}

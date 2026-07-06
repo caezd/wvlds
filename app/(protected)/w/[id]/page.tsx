@@ -8,11 +8,7 @@ import { WorldHome } from "@/components/worlds/WorldHome";
 import { WorldMembershipGuard } from "@/components/worlds/WorldMembershipGuard";
 import WorldSidebar from "@/components/worlds/WorldSidebar";
 import type { AsidePersona } from "@/components/personas/WorldPersonaAsideClient";
-import type {
-  PersonaSection,
-  PersonaSectionField,
-  PersonaSectionWithFields,
-} from "@/types/personas";
+import { fetchSectionsByPersona } from "@/lib/personaSections";
 
 export default async function WorldPage({
   params,
@@ -126,48 +122,10 @@ export default async function WorldPage({
         const rows = (personaRows ?? []) as Omit<AsidePersona, "sections">[];
         if (rows.length === 0) return [];
 
-        const personaIds = rows.map((p) => p.id);
-
-        const { data: sections } = await supabase
-          .from("persona_sections")
-          .select("id, persona_id, name, position")
-          .in("persona_id", personaIds)
-          .order("position", { ascending: true });
-
-        const sectionsList = (sections ?? []) as PersonaSection[];
-        const sectionIds = sectionsList.map((s) => s.id);
-        let fieldsList: PersonaSectionField[] = [];
-
-        if (sectionIds.length > 0) {
-          const { data: fields } = await supabase
-            .from("persona_section_fields")
-            .select("id, section_id, type, position, data, locked")
-            .in("section_id", sectionIds)
-            .order("position", { ascending: true });
-
-          fieldsList = (fields ?? []) as PersonaSectionField[];
-        }
-
-        const fieldsBySection = new Map<string, PersonaSectionField[]>();
-        for (const f of fieldsList) {
-          const arr = fieldsBySection.get(f.section_id);
-          if (arr) arr.push(f);
-          else fieldsBySection.set(f.section_id, [f]);
-        }
-
-        const sectionsByPersona = new Map<
-          string,
-          PersonaSectionWithFields[]
-        >();
-        for (const pid of personaIds) sectionsByPersona.set(pid, []);
-        for (const s of sectionsList) {
-          const entry: PersonaSectionWithFields = {
-            ...s,
-            fields: fieldsBySection.get(s.id) ?? [],
-          };
-          sectionsByPersona.get(s.persona_id)?.push(entry);
-        }
-
+        const sectionsByPersona = await fetchSectionsByPersona(
+          supabase,
+          rows.map((p) => p.id),
+        );
         return rows.map((p) => ({
           ...p,
           sections: sectionsByPersona.get(p.id) ?? [],

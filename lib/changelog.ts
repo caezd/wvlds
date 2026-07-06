@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-07",
     tag: "Correctif",
+    text: "Correctifs issus de la revue de code de la page Personas :\n- La page **/p affiche désormais les mondes rejoints (et leurs zones de dépôt) même sans aucun persona** — un nouveau membre invité voyait auparavant un état vide sans accès au glisser-déposer\n- Le **quota de personas est maintenant garanti au niveau base de données lors d'un déplacement** entre mondes (plus seulement à la création) — deux déplacements simultanés ne peuvent plus dépasser la limite\n- Éditer un persona depuis /p applique désormais les **restrictions de catalogue de son monde** (inventaire/compétences), comme depuis la page du monde\n- Lors d'une duplication, un échec de copie d'image abandonne l'image plutôt que de partager le fichier de l'original (dont la suppression aurait cassé la copie)\n- Les erreurs d'activation de la fiche par défaut sont traduites en clair",
+  },
+  {
+    date: "2026-07",
+    tag: "Correctif",
     text: "Correction d'une rare condition de course dans les providers de notifications et de messages privés : un clic vers une salle survenant dans la même frame qu'une mise à jour de l'état pouvait lire une liste périmée (et par exemple ne pas archiver une notification tout juste affichée). Les références internes sont désormais synchronisées au rendu et plus dans un effet différé.",
   },
   {

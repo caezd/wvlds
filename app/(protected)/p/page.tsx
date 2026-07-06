@@ -8,11 +8,8 @@ import {
   PersonasView,
   type PersonaWorldGroup,
 } from "@/components/personas/PersonasView";
-import type {
-  PersonaSection,
-  PersonaSectionField,
-  PersonaSectionWithFields,
-} from "@/types/personas";
+import { fetchSectionsByPersona } from "@/lib/personaSections";
+import { FREE_PERSONAS_PER_WORLD } from "@/lib/userQuota";
 
 type PersonaRow = {
   id: string;
@@ -23,6 +20,13 @@ type PersonaRow = {
   frame?: { asset_url?: string | null } | null;
   banner_url?: string | null;
   world_id?: string | null;
+};
+
+type MemberWorld = {
+  id: string;
+  name: string | null;
+  restrict_inventory?: boolean | null;
+  restrict_skills?: boolean | null;
 };
 
 export default async function PersonasPage() {
@@ -68,46 +72,7 @@ export default async function PersonasPage() {
   // de worldIds), les mondes accessibles et le plan sont indépendants → on
   // les charge en parallèle au lieu de les enchaîner séquentiellement.
   const [sectionsByPersona, worldNames, memberWorlds, plan] = await Promise.all([
-    (async (): Promise<Map<string, PersonaSectionWithFields[]>> => {
-      const sectionsByPersona = new Map<string, PersonaSectionWithFields[]>();
-      if (personaIds.length === 0) return sectionsByPersona;
-
-      const { data: sections } = await supabase
-        .from("persona_sections")
-        .select("id, persona_id, name, position")
-        .in("persona_id", personaIds)
-        .order("position", { ascending: true });
-
-      const sectionsList = (sections ?? []) as PersonaSection[];
-      const sectionIds = sectionsList.map((s) => s.id);
-      let fieldsList: PersonaSectionField[] = [];
-
-      if (sectionIds.length > 0) {
-        const { data: fields } = await supabase
-          .from("persona_section_fields")
-          .select("id, section_id, type, position, data, locked")
-          .in("section_id", sectionIds)
-          .order("position", { ascending: true });
-        fieldsList = (fields ?? []) as PersonaSectionField[];
-      }
-
-      const fieldsBySection = new Map<string, PersonaSectionField[]>();
-      for (const f of fieldsList) {
-        const arr = fieldsBySection.get(f.section_id);
-        if (arr) arr.push(f);
-        else fieldsBySection.set(f.section_id, [f]);
-      }
-
-      for (const pid of personaIds) sectionsByPersona.set(pid, []);
-      for (const s of sectionsList) {
-        const entry: PersonaSectionWithFields = {
-          ...s,
-          fields: fieldsBySection.get(s.id) ?? [],
-        };
-        sectionsByPersona.get(s.persona_id)?.push(entry);
-      }
-      return sectionsByPersona;
-    })(),
+    fetchSectionsByPersona(supabase, personaIds),
     (async (): Promise<Map<string, string>> => {
       const worldNames = new Map<string, string>();
       if (worldIds.length === 0) return worldNames;
@@ -121,16 +86,18 @@ export default async function PersonasPage() {
       return worldNames;
     })(),
     // Tous les mondes accessibles (même sans persona) : chacun devient une
-    // section de la page, donc une cible de dépôt pour le drag & drop.
-    (async (): Promise<{ id: string; name: string | null }[]> => {
+    // section de la page, donc une cible de dépôt pour le drag & drop. Les
+    // flags de restriction accompagnent chaque groupe pour que l'éditeur
+    // ouvert depuis /p applique les mêmes règles que depuis la page du monde.
+    (async (): Promise<MemberWorld[]> => {
       const { data } = await supabase
         .from("worlds")
-        .select("id, name, world_members!inner(user_id)")
+        .select("id, name, restrict_inventory, restrict_skills, world_members!inner(user_id)")
         .eq("world_members.user_id", userId)
         .is("deleted_at", null)
         .eq("is_archived", false)
         .order("name");
-      return (data ?? []) as { id: string; name: string | null }[];
+      return (data ?? []) as MemberWorld[];
     })(),
     // La limite de 5 personas par monde ne concerne que le plan gratuit
     // (has_persona_capacity côté DB) — inutile d'afficher « x / 5 » sinon.
@@ -152,6 +119,8 @@ export default async function PersonasPage() {
     groupMap.set(w.id, {
       worldId: w.id,
       worldName: w.name ?? "Monde inconnu",
+      restrictInventory: !!w.restrict_inventory,
+      restrictSkills: !!w.restrict_skills,
       personas: [],
     });
   }
@@ -201,7 +170,10 @@ export default async function PersonasPage() {
         <PersonaCreateSheet />
       </header>
 
-      {personaList.length === 0 ? (
+      {groups.length === 0 ? (
+        // Ni persona ni monde rejoint : rien à afficher ni à cibler. Avec au
+        // moins un monde (même sans persona), la vue s'affiche pour exposer
+        // les zones de dépôt — cas du nouveau membre invité.
         <div className="flex flex-col items-center justify-center py-12 text-center gap-3 rounded-2xl border border-dashed border-border">
           <Users className="h-8 w-8 text-muted-foreground" />
           <p className="text-sm text-muted-foreground">
@@ -209,7 +181,10 @@ export default async function PersonasPage() {
           </p>
         </div>
       ) : (
-        <PersonasView groups={groups} personaLimit={plan === "free" ? 5 : null} />
+        <PersonasView
+          groups={groups}
+          personaLimit={plan === "free" ? FREE_PERSONAS_PER_WORLD : null}
+        />
       )}
     </div>
   );
