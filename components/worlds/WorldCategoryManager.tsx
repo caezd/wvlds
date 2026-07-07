@@ -315,11 +315,19 @@ export function WorldCategoryManager({
     const newIdx = categories.findIndex((c) => c.id === over.id);
     if (oldIdx === -1 || newIdx === -1) return;
 
+    const previous = categories;
     const reordered = arrayMove(categories, oldIdx, newIdx).map((c, i) => ({ ...c, position: i }));
     setCategories(reordered);
-    void reorderChatroomCategories(reordered.map((c) => ({ id: c.id, position: c.position }))).then(
-      () => router.refresh(),
-    );
+
+    void (async () => {
+      const res = await reorderChatroomCategories(reordered.map((c) => ({ id: c.id, position: c.position })));
+      if (!res.ok) {
+        toast.error(res.error);
+        setCategories(previous);
+        return;
+      }
+      router.refresh();
+    })();
   }
 
   if (categories === null) {
