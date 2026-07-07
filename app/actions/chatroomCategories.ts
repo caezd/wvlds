@@ -9,13 +9,14 @@ export async function addChatroomCategory(
 ) {
   const supabase = await createClient();
 
-  const { data: maxRow } = await supabase
+  const { data: maxRow, error: maxErr } = await supabase
     .from("chatroom_categories")
     .select("position")
     .eq("world_id", worldId)
     .order("position", { ascending: false })
     .limit(1)
     .maybeSingle();
+  if (maxErr) return { ok: false as const, error: maxErr.message };
 
   const position = (maxRow?.position ?? -1) + 1;
 
