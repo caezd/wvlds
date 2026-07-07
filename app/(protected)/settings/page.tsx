@@ -55,20 +55,27 @@ export default async function SettingsPage() {
         <LocaleSelector currentLocale={currentLocale} />
       </section>
 
-      <section className="rounded-lg border p-4 space-y-3">
+      <section className="rounded-lg border p-4 space-y-5">
         <div>
-          <h2 className="font-medium">{t("font")}</h2>
-          <p className="text-sm text-muted-foreground">{t("fontDescription")}</p>
+          <h2 className="font-medium">{t("accessibility.title")}</h2>
+          <p className="text-sm text-muted-foreground">{t("accessibility.description")}</p>
         </div>
-        <MessageFontSelector currentFont={messageFont} />
-      </section>
 
-      <section className="rounded-lg border p-4 space-y-3">
-        <div>
-          <h2 className="font-medium">{t("textSize")}</h2>
-          <p className="text-sm text-muted-foreground">{t("textSizeDescription")}</p>
+        <div className="space-y-2">
+          <div>
+            <h3 className="text-sm font-medium">{t("font")}</h3>
+            <p className="text-xs text-muted-foreground">{t("fontDescription")}</p>
+          </div>
+          <MessageFontSelector currentFont={messageFont} />
         </div>
-        <MessageTextSizeSelector currentSize={messageTextSize} />
+
+        <div className="space-y-2">
+          <div>
+            <h3 className="text-sm font-medium">{t("textSize")}</h3>
+            <p className="text-xs text-muted-foreground">{t("textSizeDescription")}</p>
+          </div>
+          <MessageTextSizeSelector currentSize={messageTextSize} />
+        </div>
       </section>
     </div>
   );

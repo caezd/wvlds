@@ -44,6 +44,10 @@
       "en": "English",
       "es": "Español"
     },
+    "accessibility": {
+      "title": "Accessibilité",
+      "description": "Ajustez la police et la taille du texte des messages pour un meilleur confort de lecture"
+    },
     "font": "Police",
     "fontDescription": "Choisissez la police utilisée pour le texte des chatrooms",
     "fontSaved": "Police mise à jour",

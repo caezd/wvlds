@@ -44,6 +44,10 @@
       "en": "English",
       "es": "Español"
     },
+    "accessibility": {
+      "title": "Accesibilidad",
+      "description": "Ajusta la fuente y el tamaño del texto de los mensajes para una mejor comodidad de lectura"
+    },
     "font": "Fuente",
     "fontDescription": "Elige la fuente usada para el texto de las salas de chat",
     "fontSaved": "Fuente actualizada",

@@ -44,6 +44,10 @@
       "en": "English",
       "es": "Español"
     },
+    "accessibility": {
+      "title": "Accessibility",
+      "description": "Adjust the message font and text size for better reading comfort"
+    },
     "font": "Font",
     "fontDescription": "Choose the font used for chatroom text",
     "fontSaved": "Font updated",
