@@ -45,11 +45,27 @@ ON CONFLICT (id) DO NOTHING;
 CREATE POLICY "chatroom_categories bucket select public" ON storage.objects
   FOR SELECT USING (bucket_id = 'chatroom-categories');
 
-CREATE POLICY "chatroom_categories bucket insert auth" ON storage.objects
-  FOR INSERT WITH CHECK (bucket_id = 'chatroom-categories' AND auth.uid() IS NOT NULL);
+-- Chemin attendu : world-<world_id>/category-*.webp — on extrait le world_id
+-- du chemin et on verifie que l'utilisateur est editeur de ce monde precis,
+-- plutot que d'autoriser n'importe quel utilisateur authentifie a
+-- inserer/modifier/supprimer n'importe quel objet du bucket.
+CREATE POLICY "chatroom_categories bucket insert if editor" ON storage.objects
+  FOR INSERT WITH CHECK (
+    bucket_id = 'chatroom-categories'
+    AND name ~ '^world-[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/'
+    AND is_world_editor((substring(name from '^world-([0-9a-fA-F-]{36})/'))::uuid, auth.uid())
+  );
 
-CREATE POLICY "chatroom_categories bucket update auth" ON storage.objects
-  FOR UPDATE USING (bucket_id = 'chatroom-categories' AND auth.uid() IS NOT NULL);
+CREATE POLICY "chatroom_categories bucket update if editor" ON storage.objects
+  FOR UPDATE USING (
+    bucket_id = 'chatroom-categories'
+    AND name ~ '^world-[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/'
+    AND is_world_editor((substring(name from '^world-([0-9a-fA-F-]{36})/'))::uuid, auth.uid())
+  );
 
-CREATE POLICY "chatroom_categories bucket delete auth" ON storage.objects
-  FOR DELETE USING (bucket_id = 'chatroom-categories' AND auth.uid() IS NOT NULL);
+CREATE POLICY "chatroom_categories bucket delete if editor" ON storage.objects
+  FOR DELETE USING (
+    bucket_id = 'chatroom-categories'
+    AND name ~ '^world-[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/'
+    AND is_world_editor((substring(name from '^world-([0-9a-fA-F-]{36})/'))::uuid, auth.uid())
+  );
