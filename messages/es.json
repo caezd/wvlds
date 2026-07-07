@@ -654,6 +654,8 @@
     "itemsDisabled": "Objetos desactivados en este mundo",
     "itemsUnrestricted": "Objetos: entrada libre (catálogo no restringido)",
     "skillsDisabled": "Habilidades desactivadas en este mundo",
-    "skillsUnrestricted": "Habilidades: entrada libre (catálogo no restringido)"
+    "skillsUnrestricted": "Habilidades: entrada libre (catálogo no restringido)",
+    "faceclaims": "Faceclaims",
+    "emptyFaceclaims": "No hay faceclaims declarados en este mundo."
   }
 }

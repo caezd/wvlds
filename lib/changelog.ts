@@ -8,6 +8,16 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-07 ──────────────────────────────────────────────────────────────
   {
     date: "2026-07",
+    tag: "Correctif",
+    text: "Le lien **« Catalogue »** de la sidebar d'un monde n'apparaissait que si l'inventaire ou les compétences étaient restreints — il ignorait les faceclaims, et disparaissait donc pour la plupart des mondes. Il s'affiche désormais dès qu'au moins une des trois fonctionnalités (objets, compétences, faceclaims) est activée. Corrige au passage un bug plus ancien : les colonnes d'activation individuelle de l'inventaire et des compétences par monde n'avaient jamais été appliquées en base, ce qui rendait ces deux réglages inopérants.",
+  },
+  {
+    date: "2026-07",
+    tag: "Personas",
+    text: "**Faceclaims** : un persona peut désormais indiquer, juste à droite de son nom (\"ft. …\"), l'acteur ou le personnage sur lequel son avatar est basé — pratique pour éviter les doublons dans un même monde. Un nouvel onglet **« Faceclaims »** dans le Catalogue du monde liste, triés alphabétiquement, tous les faceclaims déclarés. La fonctionnalité est activée par défaut et peut être désactivée dans les réglages du monde (le champ et l'onglet disparaissent alors).",
+  },
+  {
+    date: "2026-07",
     tag: "Personas",
     text: "Nouveau champ de fiche persona **« Liste descriptive »** : une série de paires titre/description alignées façon glossaire, où la colonne des titres s'ajuste automatiquement au plus long d'entre eux pour que toutes les descriptions démarrent au même niveau.",
   },

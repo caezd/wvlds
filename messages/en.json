@@ -662,6 +662,8 @@
     "itemsDisabled": "Items disabled in this world",
     "itemsUnrestricted": "Items: free entry (catalogue not restricted)",
     "skillsDisabled": "Skills disabled in this world",
-    "skillsUnrestricted": "Skills: free entry (catalogue not restricted)"
+    "skillsUnrestricted": "Skills: free entry (catalogue not restricted)",
+    "faceclaims": "Faceclaims",
+    "emptyFaceclaims": "No faceclaims declared in this world."
   }
 }

@@ -19,6 +19,7 @@ export type AsidePersona = {
   avatar_frame_id?: string | null;
   banner_url?: string | null;
   frame?: { asset_url?: string | null } | null;
+  faceclaim?: string | null;
   sections: PersonaSectionWithFields[];
 };
 
@@ -35,12 +36,14 @@ export function WorldPersonaAsideClient({
   asideWidth = 192,
   restrictInventory = false,
   restrictSkills = false,
+  faceclaimsEnabled,
 }: {
   worldId: string;
   personas: AsidePersona[];
   asideWidth?: number;
   restrictInventory?: boolean;
   restrictSkills?: boolean;
+  faceclaimsEnabled?: boolean;
 }) {
   const cols = getGridCols(asideWidth);
   const sorted = [...personas].sort((a, b) =>
@@ -105,10 +108,12 @@ export function WorldPersonaAsideClient({
                   (p.frame as { asset_url?: string | null } | null)
                     ?.asset_url ?? null
                 }
+                initialFaceclaim={p.faceclaim ?? null}
                 initialSections={p.sections}
                 worldId={worldId}
                 restrictInventory={restrictInventory}
                 restrictSkills={restrictSkills}
+                faceclaimsEnabled={faceclaimsEnabled}
               />
             ))}
           </div>

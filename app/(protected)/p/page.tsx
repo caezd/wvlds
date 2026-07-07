@@ -21,6 +21,7 @@ type PersonaRow = {
   frame?: { asset_url?: string | null } | null;
   banner_url?: string | null;
   world_id?: string | null;
+  faceclaim?: string | null;
 };
 
 type MemberWorld = {
@@ -28,6 +29,7 @@ type MemberWorld = {
   name: string | null;
   restrict_inventory?: boolean | null;
   restrict_skills?: boolean | null;
+  enable_faceclaims?: boolean | null;
 };
 
 export default async function PersonasPage() {
@@ -41,7 +43,7 @@ export default async function PersonasPage() {
     const { data, error } = await supabase
       .from("personas")
       .select(
-        "id, name, avatar_url, avatar_config, banner_url, avatar_frame_id, world_id, frame:avatar_frame_id(asset_url)",
+        "id, name, avatar_url, avatar_config, banner_url, avatar_frame_id, world_id, faceclaim, frame:avatar_frame_id(asset_url)",
       )
       .eq("user_id", userId)
       .eq("is_template", false)
@@ -93,7 +95,7 @@ export default async function PersonasPage() {
     (async (): Promise<MemberWorld[]> => {
       const { data } = await supabase
         .from("worlds")
-        .select("id, name, restrict_inventory, restrict_skills, world_members!inner(user_id)")
+        .select("id, name, restrict_inventory, restrict_skills, enable_faceclaims, world_members!inner(user_id)")
         .eq("world_members.user_id", userId)
         .is("deleted_at", null)
         .eq("is_archived", false)
@@ -131,6 +133,7 @@ export default async function PersonasPage() {
       worldName: w.name ?? "Monde inconnu",
       restrictInventory: !!w.restrict_inventory,
       restrictSkills: !!w.restrict_skills,
+      faceclaimsEnabled: w.enable_faceclaims !== false,
       hasDefaultTemplate: worldsWithTemplate.has(w.id),
       personas: [],
     });
@@ -155,6 +158,7 @@ export default async function PersonasPage() {
         (p.frame as { asset_url?: string | null } | null)?.asset_url ?? null,
       banner_url: p.banner_url ?? null,
       world_id: key,
+      faceclaim: p.faceclaim ?? null,
       sections: sectionsByPersona.get(p.id) ?? [],
     });
   }

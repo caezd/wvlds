@@ -663,6 +663,8 @@
     "itemsDisabled": "Objets désactivés dans ce monde",
     "itemsUnrestricted": "Objets : saisie libre (catalogue non restreint)",
     "skillsDisabled": "Compétences désactivées dans ce monde",
-    "skillsUnrestricted": "Compétences : saisie libre (catalogue non restreint)"
+    "skillsUnrestricted": "Compétences : saisie libre (catalogue non restreint)",
+    "faceclaims": "Faceclaims",
+    "emptyFaceclaims": "Aucun faceclaim déclaré dans ce monde."
   }
 }

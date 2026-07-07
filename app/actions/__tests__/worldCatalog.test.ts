@@ -7,6 +7,7 @@ vi.mock("@/app/(protected)/p/actions", () => ({ deletePersona: vi.fn() }));
 import {
     setWorldFeature,
     setWorldRestriction,
+    setWorldFaceclaims,
     setWorldPersonaTemplate,
     addWorldInventoryItem,
     updateWorldInventoryItem,
@@ -65,6 +66,30 @@ describe("setWorldFeature", () => {
             ok: false,
             error: "nope",
         });
+    });
+});
+
+// ── setWorldFaceclaims ────────────────────────────────────────────────────────
+
+describe("setWorldFaceclaims", () => {
+    it("active les faceclaims", async () => {
+        const mock = createSupabaseMock({ results: [{ error: null }] });
+        use(mock);
+        const res = await setWorldFaceclaims("w1", true);
+        expect(res).toEqual({ ok: true });
+        expect(mock.buildersFor("worlds")[0].update).toHaveBeenCalledWith({ enable_faceclaims: true });
+    });
+
+    it("désactive les faceclaims", async () => {
+        const mock = createSupabaseMock({ results: [{ error: null }] });
+        use(mock);
+        await setWorldFaceclaims("w1", false);
+        expect(mock.buildersFor("worlds")[0].update).toHaveBeenCalledWith({ enable_faceclaims: false });
+    });
+
+    it("remonte l'erreur Supabase", async () => {
+        use(createSupabaseMock({ results: [{ error: { message: "nope" } }] }));
+        expect(await setWorldFaceclaims("w1", true)).toEqual({ ok: false, error: "nope" });
     });
 });
 
