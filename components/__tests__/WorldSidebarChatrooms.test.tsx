@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, act } from "@testing-library/react";
+import { render, act, fireEvent, screen } from "@testing-library/react";
 import { createSupabaseMock } from "@/test/supabaseMock";
 import { createClient } from "@/lib/supabase/client";
 
@@ -86,7 +86,11 @@ function makeRoom(overrides: Partial<Room> = {}): Room {
   };
 }
 
-function renderSidebar(rooms: Room[], mock: ReturnType<typeof createSupabaseMock>) {
+function renderSidebar(
+  rooms: Room[],
+  mock: ReturnType<typeof createSupabaseMock>,
+  categories: { id: string; title: string; banner_url: string | null; position: number }[] = [],
+) {
   (createClient as ReturnType<typeof vi.fn>).mockReturnValue(mock.client);
   render(
     <WorldSidebarChatrooms
@@ -94,7 +98,7 @@ function renderSidebar(rooms: Room[], mock: ReturnType<typeof createSupabaseMock
       initialAll={rooms}
       initialParticipated={[{ id: rooms[0]?.id ?? "room-1", title: rooms[0]?.title ?? null, name: null, icon_url: null, last_message_at: null, has_unread: false }]}
       initialFollowedIds={[]}
-      categories={[]}
+      categories={categories}
     />,
   );
 }
@@ -174,5 +178,52 @@ describe("WorldSidebarChatrooms — avatar via chatroom_summaries realtime", () 
     });
 
     expect(avatarSrc()).toBe("https://example.com/new-persona.png");
+  });
+});
+
+describe("WorldSidebarChatrooms — drill-down catégories", () => {
+  let mock: ReturnType<typeof createSupabaseMock>;
+
+  beforeEach(() => {
+    mock = createSupabaseMock();
+  });
+
+  it("affiche les chatrooms non catégorisées en ouvrant 'Général'", () => {
+    const rooms = [
+      makeRoom({ id: "room-1", title: "Sujet libre 1", category_id: null }),
+      makeRoom({ id: "room-2", title: "Sujet libre 2", category_id: null }),
+      makeRoom({ id: "room-3", title: "Sujet catégorisé", category_id: "cat-1" }),
+    ];
+    renderSidebar(rooms, mock, [
+      { id: "cat-1", title: "Annonces", banner_url: null, position: 0 },
+    ]);
+
+    // Le compteur affiche bien 2 sujets non catégorisés
+    expect(screen.getByText("2 sujet(s)")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("Général"));
+
+    // Bug de régression : la vue détail affichait "Aucune chatroom dans cette catégorie"
+    // alors que le compteur annonçait 2 sujets.
+    expect(screen.queryByText("Aucune chatroom dans cette catégorie")).not.toBeInTheDocument();
+    expect(screen.getByText("Sujet libre 1")).toBeInTheDocument();
+    expect(screen.getByText("Sujet libre 2")).toBeInTheDocument();
+    expect(screen.queryByText("Sujet catégorisé")).not.toBeInTheDocument();
+  });
+
+  it("affiche les chatrooms d'une catégorie réelle", () => {
+    const rooms = [
+      makeRoom({ id: "room-1", title: "Sujet catégorisé", category_id: "cat-1" }),
+      makeRoom({ id: "room-2", title: "Sujet libre", category_id: null }),
+    ];
+    renderSidebar(rooms, mock, [
+      { id: "cat-1", title: "Annonces", banner_url: null, position: 0 },
+    ]);
+
+    fireEvent.click(screen.getByRole("button", { name: /Annonces/ }));
+
+    expect(screen.queryByText("Aucune chatroom dans cette catégorie")).not.toBeInTheDocument();
+    expect(screen.getByText("Sujet catégorisé")).toBeInTheDocument();
+    expect(screen.queryByText("Sujet libre")).not.toBeInTheDocument();
   });
 });
