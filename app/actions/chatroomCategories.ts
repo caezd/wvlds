@@ -62,10 +62,15 @@ export async function reorderChatroomCategories(
   categories: { id: string; position: number }[],
 ) {
   const supabase = await createClient();
-  await Promise.all(
+
+  const results = await Promise.all(
     categories.map(({ id, position }) =>
       supabase.from("chatroom_categories").update({ position }).eq("id", id),
     ),
   );
+
+  const firstError = results.find((r) => r.error)?.error;
+  if (firstError) return { ok: false as const, error: firstError.message };
+
   return { ok: true as const };
 }
