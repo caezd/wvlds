@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import { useNotifications } from "@/components/providers/NotificationsProvider";
 
 // On étend le type pour inclure le "summary" embarqué
@@ -29,6 +30,7 @@ export function WorldChatroomsList({
 }) {
     const [rooms, setRooms] = useState<Chatroom[]>(initialChatrooms);
     const { roomUnread, setActiveChat } = useNotifications();
+    const reconnectEpoch = useReconnectEpoch();
 
     useEffect(() => {
         const supabase = createClient();
@@ -79,7 +81,7 @@ export function WorldChatroomsList({
         return () => {
             void supabase.removeChannel(channel);
         };
-    }, [worldId]);
+    }, [worldId, reconnectEpoch]);
 
     if (!rooms.length) {
         return (

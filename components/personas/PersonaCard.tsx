@@ -13,10 +13,12 @@ type PersonaCardProps = {
   bannerUrl?: string | null;
   initialFrameId?: string | null;
   initialFrameUrl?: string | null;
+  initialFaceclaim?: string | null;
   initialSections: PersonaSectionWithFields[];
   worldId?: string;
   restrictInventory?: boolean;
   restrictSkills?: boolean;
+  faceclaimsEnabled?: boolean;
 };
 
 function initials(name: string) {
@@ -32,10 +34,12 @@ export function PersonaCard({
   bannerUrl,
   initialFrameId,
   initialFrameUrl,
+  initialFaceclaim,
   initialSections,
   worldId,
   restrictInventory,
   restrictSkills,
+  faceclaimsEnabled,
 }: PersonaCardProps) {
   return (
     <PersonaEditSheet
@@ -47,9 +51,11 @@ export function PersonaCard({
       initialBannerUrl={bannerUrl ?? null}
       initialFrameId={initialFrameId ?? null}
       initialFrameUrl={initialFrameUrl ?? null}
+      initialFaceclaim={initialFaceclaim ?? null}
       worldId={worldId}
       restrictInventory={restrictInventory}
       restrictSkills={restrictSkills}
+      faceclaimsEnabled={faceclaimsEnabled}
       trigger={
         <button className="group relative w-full aspect-square rounded-2xl overflow-hidden bg-muted shadow-sm hover:shadow-lg transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
           {/* Image / fallback */}

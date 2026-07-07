@@ -13,6 +13,7 @@ import { createClient } from "@/lib/supabase/client";
 import { TABLE, RPC, channel, DELAY } from "@/lib/constants";
 import type { WorldUnreadRow, AppNotification, NotificationType, AllChatroomUnreadRow } from "@/types/db";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import { fetchAppShell } from "@/lib/appShell";
 
 type NotifPrefs = Partial<Record<NotificationType, boolean>>;
@@ -125,6 +126,7 @@ export default function NotificationsProvider({ children }: { children: React.Re
     const { userId } = useCurrentUser();
     const userIdRef = useRef<string | null>(null);
     userIdRef.current = userId;
+    const reconnectEpoch = useReconnectEpoch();
 
     const activeChatRef = useRef<string | null>(null);
     const lastSyncRef = useRef(0);
@@ -389,7 +391,9 @@ export default function NotificationsProvider({ children }: { children: React.Re
             mounted = false;
             openChannels.forEach((ch) => supabase.removeChannel(ch));
         };
-    }, [userId]); // eslint-disable-line react-hooks/exhaustive-deps
+        // reconnectEpoch : force la recréation des canaux après une coupure
+        // réseau (voir useReconnectEpoch).
+    }, [userId, reconnectEpoch]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const value = useMemo<Ctx>(() => ({
         panelOpen, openPanel, closePanel, togglePanel,

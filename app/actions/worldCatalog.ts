@@ -22,6 +22,13 @@ export async function setWorldFeature(
   return { ok: true as const };
 }
 
+export async function setWorldFaceclaims(worldId: string, enabled: boolean) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("worlds").update({ enable_faceclaims: enabled }).eq("id", worldId);
+  if (error) return { ok: false as const, error: error.message };
+  return { ok: true as const };
+}
+
 export async function setWorldRestriction(
   worldId: string,
   field: "restrict_inventory" | "restrict_skills",

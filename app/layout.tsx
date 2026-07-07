@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
-import { Geist } from "next/font/google";
+import { Geist, Noto_Serif } from "next/font/google";
+import localFont from "next/font/local";
 
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import AppProviders from "@/components/providers/AppProviders";
 import type { InitialUser } from "@/components/providers/CurrentUserProvider";
+import { asMessageFont, asMessageTextSize } from "@/lib/messagePreferences";
 import { getCurrentProfile } from "@/lib/currentRequest";
 import { getLocale } from "next-intl/server";
 
@@ -22,6 +24,25 @@ const geistSans = Geist({
   variable: "--font-geist-sans",
   display: "swap",
   subsets: ["latin"],
+});
+
+// Police alternative pour le texte des chatrooms (préférence utilisateur, voir /settings).
+const notoSerif = Noto_Serif({
+  variable: "--font-serif",
+  display: "swap",
+  subsets: ["latin"],
+});
+
+// Police adaptée dyslexie pour le texte des chatrooms (préférence utilisateur, voir /settings).
+const openDyslexic = localFont({
+  src: [
+    { path: "../public/fonts/opendyslexic/OpenDyslexic-Regular.woff2", weight: "400", style: "normal" },
+    { path: "../public/fonts/opendyslexic/OpenDyslexic-Italic.woff2", weight: "400", style: "italic" },
+    { path: "../public/fonts/opendyslexic/OpenDyslexic-Bold.woff2", weight: "700", style: "normal" },
+    { path: "../public/fonts/opendyslexic/OpenDyslexic-Bold-Italic.woff2", weight: "700", style: "italic" },
+  ],
+  variable: "--font-dyslexic",
+  display: "swap",
 });
 
 export default async function RootLayout({
@@ -42,12 +63,17 @@ export default async function RootLayout({
         avatarUrl: profile.avatar_url ?? null,
         appearOffline: !!profile.appear_offline,
         plan: profile.plan ?? null,
+        messageFont: asMessageFont(profile.message_font),
+        messageTextSize: asMessageTextSize(profile.message_text_size),
       }
     : null;
 
   return (
     <html lang={locale} className="dark" style={{ colorScheme: "dark" }} suppressHydrationWarning>
-      <body className={`${geistSans.className} antialiased`} suppressHydrationWarning>
+      <body
+        className={`${geistSans.className} ${notoSerif.variable} ${openDyslexic.variable} antialiased`}
+        suppressHydrationWarning
+      >
         <AppProviders initialUser={initialUser}>
           <div id="app-shell" className="h-full">
             {children}

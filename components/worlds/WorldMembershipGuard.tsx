@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import { toast } from "sonner";
 
 /**
@@ -22,6 +23,7 @@ export function WorldMembershipGuard({
   selfId: string | null;
 }) {
   const router = useRouter();
+  const reconnectEpoch = useReconnectEpoch();
 
   useEffect(() => {
     if (!worldId || !selfId) return;
@@ -49,7 +51,7 @@ export function WorldMembershipGuard({
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [worldId, selfId, router]);
+  }, [worldId, selfId, router, reconnectEpoch]);
 
   return null;
 }

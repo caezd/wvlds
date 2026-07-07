@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { supabaseThumb } from "@/lib/storage";
 import { toWebP } from "@/lib/imageUtils";
-import type { PersonaSectionField, PersonaFieldType, PersonaStat, InventoryItem, SkillItem, GaugeItem, TraitItem, TimelineItem } from "@/types/personas";
+import type { PersonaSectionField, PersonaFieldType, PersonaStat, InventoryItem, SkillItem, GaugeItem, TraitItem, TimelineItem, DlItem } from "@/types/personas";
 import { RpgIconPicker } from "./RpgIconPicker";
 import { DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 
@@ -18,7 +18,7 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 
-import { ArrowUp, ArrowDown, Plus, Trash2, Type, AlignLeft, BarChart3, Minus, X, ImageIcon, Loader2, Expand, Backpack, Swords, Gauge, Quote, Tag, CalendarDays, Lock, LockOpen } from "lucide-react";
+import { ArrowUp, ArrowDown, Plus, Trash2, Type, AlignLeft, BarChart3, Minus, X, ImageIcon, Loader2, Expand, Backpack, Swords, Gauge, Quote, Tag, CalendarDays, Lock, LockOpen, List } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { WorldInventoryItem, WorldSkill } from "@/types/worlds";
 import { cn } from "@/lib/utils";
@@ -823,6 +823,62 @@ function TimelineField({
   );
 }
 
+function DlField({
+  initialItems,
+  onSave,
+}: {
+  initialItems: DlItem[];
+  onSave: (items: DlItem[]) => void;
+}) {
+  const [items, setItems] = useState<DlItem[]>(initialItems);
+
+  function update(next: DlItem[]) { setItems(next); onSave(next); }
+  function patch(id: string, key: keyof DlItem, val: string) {
+    update(items.map((it) => (it.id === id ? { ...it, [key]: val } : it)));
+  }
+  function addItem() { update([...items, { id: makeItemId(), label: "", description: "" }]); }
+  function removeItem(id: string) { update(items.filter((it) => it.id !== id)); }
+
+  return (
+    <div className="space-y-2 pr-24">
+      <div className="grid grid-cols-[max-content_1fr] gap-x-3 gap-y-2">
+        {items.map((item) => (
+          <div key={item.id} className="group/dl contents">
+            <input
+              value={item.label}
+              onChange={(e) => patch(item.id, "label", e.target.value)}
+              placeholder="Titre"
+              className="min-w-[3rem] self-start bg-transparent text-sm font-semibold text-left outline-none placeholder:text-muted-foreground/40"
+            />
+            <div className="flex items-start gap-2">
+              <input
+                value={item.description}
+                onChange={(e) => patch(item.id, "description", e.target.value)}
+                placeholder="Description"
+                className="flex-1 min-w-0 bg-transparent text-sm text-muted-foreground outline-none placeholder:text-muted-foreground/40"
+              />
+              <button
+                type="button"
+                onClick={() => removeItem(item.id)}
+                className="shrink-0 h-5 w-5 flex items-center justify-center rounded-full text-muted-foreground opacity-0 group-hover/dl:opacity-100 hover:text-destructive transition-opacity"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+      <button
+        type="button"
+        onClick={addItem}
+        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mt-1"
+      >
+        <Plus className="h-3.5 w-3.5" /> Ajouter une entrée
+      </button>
+    </div>
+  );
+}
+
 type SectionFieldsEditorProps = {
   sectionId: string;
   personaId: string;
@@ -852,6 +908,7 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
   const persona_field_quote      = fieldsEnabled && flags.persona_field_quote;
   const persona_field_traits     = fieldsEnabled && flags.persona_field_traits;
   const persona_field_timeline   = fieldsEnabled && flags.persona_field_timeline;
+  const persona_field_dl         = fieldsEnabled && flags.persona_field_dl;
   const [fields, setFields] = useState<PersonaSectionField[]>(initialFields);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [inventoryCatalog, setInventoryCatalog] = useState<WorldInventoryItem[] | undefined>(undefined);
@@ -935,7 +992,9 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
                         ? { traitItems: [] }
                         : type === "timeline"
                           ? { timelineItems: [] }
-                          : { text: "", format: "markdown" };
+                          : type === "dl"
+                            ? { dlItems: [] }
+                            : { text: "", format: "markdown" };
 
     const { data, error } = await supabase
       .from("persona_section_fields")
@@ -1131,6 +1190,22 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
     [],
   );
 
+  const dlTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveDlItems = useCallback(
+    (fieldId: string, dlItems: DlItem[]) => {
+      setFields((prev) =>
+        prev.map((f) => f.id === fieldId ? { ...f, data: { ...f.data, dlItems } } : f),
+      );
+      if (dlTimer.current) clearTimeout(dlTimer.current);
+      dlTimer.current = setTimeout(async () => {
+        const { error } = await supabase.from("persona_section_fields").update({ data: { dlItems } }).eq("id", fieldId);
+        if (error) setErrorMessage(error.message ?? "Erreur sauvegarde liste.");
+      }, 800);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
   async function handleMoveField(fieldId: string, direction: "up" | "down") {
     const index = fields.findIndex((f) => f.id === fieldId);
     if (index === -1) return;
@@ -1195,6 +1270,11 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
           {persona_field_text && (
             <DropdownMenuItem onClick={() => handleAddField("text", insertAt)}>
               <AlignLeft className="mr-2 h-4 w-4" /> Bloc de texte
+            </DropdownMenuItem>
+          )}
+          {persona_field_dl && (
+            <DropdownMenuItem onClick={() => handleAddField("dl", insertAt)}>
+              <List className="mr-2 h-4 w-4" /> Liste descriptive
             </DropdownMenuItem>
           )}
           {persona_field_quote && (
@@ -1459,6 +1539,13 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
                     <TimelineField
                       initialItems={field.data?.timelineItems ?? []}
                       onSave={(items) => saveTimelineItems(field.id, items)}
+                    />
+                  )}
+
+                  {field.type === "dl" && (
+                    <DlField
+                      initialItems={field.data?.dlItems ?? []}
+                      onSave={(items) => saveDlItems(field.id, items)}
                     />
                   )}
 

@@ -15,7 +15,7 @@ import {
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import { AvatarWithFrame } from "@/components/avatars/AvatarWithFrame";
 import { Coins, Flame, Zap } from "lucide-react";
-import type { PersonaSection, PersonaSectionField, PersonaSectionWithFields, PersonaFieldData, InventoryItem, SkillItem, GaugeItem, TraitItem, TimelineItem } from "@/types/personas";
+import type { PersonaSection, PersonaSectionField, PersonaSectionWithFields, PersonaFieldData, InventoryItem, SkillItem, GaugeItem, TraitItem, TimelineItem, DlItem } from "@/types/personas";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useGlobalPresence } from "@/components/providers/PresenceProvider";
 import { formatLastSeen } from "@/lib/utils";
@@ -208,6 +208,21 @@ function FieldView({ type, data }: { type: string; data: FieldData }) {
     const visible = items.filter((it) => it.title);
     if (!visible.length) return null;
     return <TriggerTimelineView items={visible} />;
+  }
+  if (type === "dl") {
+    const items: DlItem[] = data?.dlItems ?? [];
+    const visible = items.filter((it) => it.label || it.description);
+    if (!visible.length) return null;
+    return (
+      <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1.5 text-sm">
+        {visible.map((item) => (
+          <React.Fragment key={item.id}>
+            <dt className="text-left font-semibold">{item.label}</dt>
+            <dd className="text-muted-foreground">{item.description}</dd>
+          </React.Fragment>
+        ))}
+      </dl>
+    );
   }
   return null;
 }

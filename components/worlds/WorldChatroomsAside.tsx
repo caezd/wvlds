@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/client";
+import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import { TABLE, channel as CH } from "@/lib/constants";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -47,6 +48,7 @@ export default function WorldChatroomsAside({
   className,
 }: Props) {
   const supabase = useMemo(() => createClient(), []);
+  const reconnectEpoch = useReconnectEpoch();
   const { roomUnread } = useNotifications();
   const [rooms, setRooms] = useState<ChatroomNavItem[]>(() =>
     [...(initialRooms ?? [])].sort(sortRooms),
@@ -89,7 +91,7 @@ export default function WorldChatroomsAside({
     return () => {
       void supabase.removeChannel(ch);
     };
-  }, [supabase, worldId, rooms.map((r) => r.id).join(",")]);
+  }, [supabase, worldId, rooms.map((r) => r.id).join(","), reconnectEpoch]);
 
   // 3) Realtime: new chatroom created in this world -> append to nav
   useEffect(() => {
@@ -130,7 +132,7 @@ export default function WorldChatroomsAside({
       .subscribe();
 
     return () => { void supabase.removeChannel(ch); };
-  }, [supabase, worldId]);
+  }, [supabase, worldId, reconnectEpoch]);
 
   return (
     <aside

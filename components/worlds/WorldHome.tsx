@@ -127,6 +127,7 @@ export function WorldHome({
             myPersonas={initialPersonas}
             restrictInventory={!!world.restrict_inventory}
             restrictSkills={!!world.restrict_skills}
+            faceclaimsEnabled={world.enable_faceclaims !== false}
           />
         ) : showCanvas ? (
           <RelationsCanvas
@@ -143,6 +144,7 @@ export function WorldHome({
             inventoryRestricted={!!world.restrict_inventory}
             skillsEnabled={world.enable_skills !== false}
             skillsRestricted={!!world.restrict_skills}
+            faceclaimsEnabled={world.enable_faceclaims !== false}
             onClose={closeView}
           />
         ) : showWiki ? (

@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { createSupabaseMock } from "@/test/supabaseMock";
 import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
 import type { ChatMessageWithPersona } from "@/types/db";
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
@@ -197,6 +198,34 @@ describe("ChatroomMessage — réactions", () => {
       const [, reactions] = onReactionsUpdated.mock.calls[0] as [number, { emoji: string }[]];
       // count tombe à 0 → la réaction disparaît de la liste
       expect(reactions.find((r) => r.emoji === "heart")).toBeUndefined();
+    });
+
+    it("annule la mise à jour optimiste et affiche une erreur si l'insertion échoue (ex: rejet RLS)", async () => {
+      const onReactionsUpdated = vi.fn();
+      const initialReactions = [{ emoji: "heart", count: 3, me: false }];
+      setupMock([
+        { data: null, error: { message: "new row violates row-level security policy" } },
+      ]);
+      const message = makeMessage({ reactions: initialReactions });
+
+      render(
+        <ChatroomMessage
+          message={message}
+          online={{}}
+          selfId="viewer-1"
+          onReactionsUpdated={onReactionsUpdated}
+        />,
+      );
+
+      fireEvent.click(screen.getByRole("button", { name: /Réaction heart/i }));
+
+      // 1er appel : update optimiste. 2e appel : rollback après l'échec de l'INSERT.
+      await waitFor(() => expect(onReactionsUpdated).toHaveBeenCalledTimes(2));
+
+      const [id, reverted] = onReactionsUpdated.mock.calls[1] as [number, typeof initialReactions];
+      expect(id).toBe(1);
+      expect(reverted).toEqual(initialReactions);
+      expect(toast.error).toHaveBeenCalled();
     });
 
     it("n'affiche pas de pills si aucune réaction", () => {

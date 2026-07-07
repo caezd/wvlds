@@ -61,7 +61,7 @@ export default async function WorldSidebar({ worldId }: { worldId: string }) {
     await Promise.all([
       supabase
         .from("worlds")
-        .select("id, name, icon_url, owner_id, description, banner_url, color, visibility, restrict_inventory, restrict_skills, timeline_enabled")
+        .select("id, name, icon_url, owner_id, description, banner_url, color, visibility, restrict_inventory, restrict_skills, enable_inventory, enable_skills, enable_faceclaims, timeline_enabled")
         .eq("id", worldId)
         .single(),
       supabase.rpc("list_chatrooms_nav", { p_world_id: worldId }),
@@ -111,7 +111,7 @@ export default async function WorldSidebar({ worldId }: { worldId: string }) {
 
   const hasCatalogue =
     featureFlags.world_catalogue &&
-    !!(world.restrict_inventory || world.restrict_skills);
+    (world.enable_inventory !== false || world.enable_skills !== false || world.enable_faceclaims !== false);
   const hasTimeline =
     featureFlags.world_timeline && !!world.timeline_enabled;
 

@@ -58,7 +58,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { setWorldFeature, setWorldRestriction, setWorldTimeline } from "@/app/actions/worldCatalog";
+import { setWorldFeature, setWorldRestriction, setWorldFaceclaims, setWorldTimeline } from "@/app/actions/worldCatalog";
 import { WorldPersonaTemplateSection } from "@/components/worlds/WorldPersonaTemplateSection";
 import type { WorldTimelineConfig } from "@/types/worlds";
 
@@ -78,6 +78,7 @@ export type World = {
     visibility?: string | null;
     enable_inventory?: boolean | null;
     enable_skills?: boolean | null;
+    enable_faceclaims?: boolean | null;
     restrict_inventory?: boolean | null;
     restrict_skills?: boolean | null;
     timeline_enabled?: boolean | null;
@@ -172,6 +173,9 @@ export default function WorldEditDialog({
     const [togglingRestriction, setTogglingRestriction] = React.useState(false);
     const [togglingEnable, setTogglingEnable] = React.useState(false);
 
+    const [enableFaceclaims, setEnableFaceclaims] = React.useState(world.enable_faceclaims !== false);
+    const [togglingFaceclaims, setTogglingFaceclaims] = React.useState(false);
+
     const defaultConfig: WorldTimelineConfig = {
         year_label: "an",
         era_name: null,
@@ -252,6 +256,15 @@ export default function WorldEditDialog({
         onUpdated?.({ ...world, [`restrict_${field}`]: true } as World);
     }
 
+    async function handleFaceclaimsToggle(enabled: boolean) {
+        setTogglingFaceclaims(true);
+        const res = await setWorldFaceclaims(world.id, enabled);
+        setTogglingFaceclaims(false);
+        if (!res.ok) { toast.error(res.error); return; }
+        setEnableFaceclaims(enabled);
+        onUpdated?.({ ...world, enable_faceclaims: enabled } as World);
+    }
+
     async function handleTimelineToggle(enabled: boolean) {
         setTogglingTimeline(true);
         const res = await setWorldTimeline(world.id, enabled, enabled ? timelineConfig : null);
@@ -278,6 +291,7 @@ export default function WorldEditDialog({
             setEnableSkills(world.enable_skills !== false);
             setRestrictInventory(!!world.restrict_inventory);
             setRestrictSkills(!!world.restrict_skills);
+            setEnableFaceclaims(world.enable_faceclaims !== false);
             setTimelineEnabled(!!world.timeline_enabled);
             setTimelineConfig(world.timeline_config ?? defaultConfig);
             form.reset({
@@ -737,6 +751,24 @@ export default function WorldEditDialog({
                                         />
                                     </div>
                                 )}
+                            </div>
+
+                            {/* Faceclaims */}
+                            <div className="space-y-2">
+                                <div className="flex items-start justify-between gap-4">
+                                    <div className="space-y-0.5">
+                                        <p className="text-sm font-medium">Faceclaims</p>
+                                        <p className="text-xs text-muted-foreground leading-snug">
+                                            Permet aux personas d&apos;indiquer l&apos;acteur ou le personnage sur lequel leur avatar est basé, et affiche un annuaire dans le Catalogue.
+                                        </p>
+                                    </div>
+                                    <Switch
+                                        checked={enableFaceclaims}
+                                        disabled={togglingFaceclaims}
+                                        onCheckedChange={v => void handleFaceclaimsToggle(v)}
+                                        className="shrink-0 mt-0.5"
+                                    />
+                                </div>
                             </div>
                         </div>
 

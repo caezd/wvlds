@@ -156,6 +156,7 @@ export function WorldPeoplePanel({
   myPersonas,
   restrictInventory = false,
   restrictSkills = false,
+  faceclaimsEnabled,
 }: {
   worldId: string;
   ownerId: string;
@@ -164,6 +165,7 @@ export function WorldPeoplePanel({
   myPersonas: AsidePersona[];
   restrictInventory?: boolean;
   restrictSkills?: boolean;
+  faceclaimsEnabled?: boolean;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const [members, setMembers] = useState<Member[]>([]);
@@ -329,10 +331,12 @@ export function WorldPeoplePanel({
                     bannerUrl={p.banner_url}
                     initialFrameId={p.avatar_frame_id}
                     initialFrameUrl={p.frame?.asset_url}
+                    initialFaceclaim={p.faceclaim ?? null}
                     initialSections={p.sections}
                     worldId={worldId}
                     restrictInventory={restrictInventory}
                     restrictSkills={restrictSkills}
+                    faceclaimsEnabled={faceclaimsEnabled}
                   />
                 ))}
               </div>

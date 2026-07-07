@@ -9,6 +9,41 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-07",
     tag: "Correctif",
+    text: "Après une coupure réseau, la présence (« en ligne »), les messages, les notifications et les messages privés pouvaient rester bloqués sur « hors ligne » même une fois la connexion revenue, obligeant à recharger la page. Tous les canaux temps réel de l'app se reconnectent désormais automatiquement au retour de la connexion.",
+  },
+  {
+    date: "2026-07",
+    tag: "Correctif",
+    text: "Le lien **« Catalogue »** de la sidebar d'un monde n'apparaissait que si l'inventaire ou les compétences étaient restreints — il ignorait les faceclaims, et disparaissait donc pour la plupart des mondes. Il s'affiche désormais dès qu'au moins une des trois fonctionnalités (objets, compétences, faceclaims) est activée. Corrige au passage un bug plus ancien : les colonnes d'activation individuelle de l'inventaire et des compétences par monde n'avaient jamais été appliquées en base, ce qui rendait ces deux réglages inopérants.",
+  },
+  {
+    date: "2026-07",
+    tag: "Personas",
+    text: "**Faceclaims** : un persona peut désormais indiquer, juste à droite de son nom (\"ft. …\"), l'acteur ou le personnage sur lequel son avatar est basé — pratique pour éviter les doublons dans un même monde. Un nouvel onglet **« Faceclaims »** dans le Catalogue du monde liste, triés alphabétiquement, tous les faceclaims déclarés. La fonctionnalité est activée par défaut et peut être désactivée dans les réglages du monde (le champ et l'onglet disparaissent alors).",
+  },
+  {
+    date: "2026-07",
+    tag: "Personas",
+    text: "Nouveau champ de fiche persona **« Liste descriptive »** : une série de paires titre/description alignées façon glossaire, où la colonne des titres s'ajuste automatiquement au plus long d'entre eux pour que toutes les descriptions démarrent au même niveau.",
+  },
+  {
+    date: "2026-07",
+    tag: "Performance",
+    text: "Requêtes en double supprimées au chargement de l'accueil (`/`), de la page Personas et des réglages : elles refaisaient une vérification d'authentification et/ou une lecture de profil déjà résolues par le layout de la requête, au lieu de réutiliser ce résultat.",
+  },
+  {
+    date: "2026-07",
+    tag: "Interface",
+    text: "**Confort de lecture des chatrooms** : dans les réglages du profil, deux nouveaux réglages avec cartes d'aperçu — la **police** du texte des messages (Sans serif par défaut, Serif, ou **Adapté dyslexie** avec OpenDyslexic) et la **taille du texte** (Petit, Normal, Grand).",
+  },
+  {
+    date: "2026-07",
+    tag: "Correctif",
+    text: "Un membre au rôle « spectateur » qui réagissait à un post ne déclenchait aucune notification pour l'auteur : la réaction elle-même était rejetée silencieusement (règle de sécurité limitée aux rôles joueur et plus). Tout membre du monde peut désormais réagir, quel que soit son rôle.",
+  },
+  {
+    date: "2026-07",
+    tag: "Correctif",
     text: "Ouvrir la catégorie « Général » dans la sidebar d'un monde affichait « Aucune chatroom dans cette catégorie » alors que le compteur annonçait bien des sujets — les chatrooms non catégorisées n'étaient jamais retrouvées lors de l'ouverture du détail, seulement dans le compteur.",
   },
   {

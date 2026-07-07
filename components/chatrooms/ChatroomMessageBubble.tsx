@@ -6,6 +6,7 @@ import { parseDialogue } from "@/lib/dialogue-bubbles";
 import { ImageLightbox } from "./ImageLightbox";
 import type { ChatMessageMeta, ChatMediaItem } from "@/types/db";
 import { cn, isSafeUrl } from "@/lib/utils";
+import { useCurrentUser } from "@/components/providers/CurrentUserProvider";
 
 export function ChatroomMessageBubble({
   persona: _persona,
@@ -20,6 +21,7 @@ export function ChatroomMessageBubble({
   ignoreBubbles?: boolean;
 }) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const { messageFont, messageTextSize } = useCurrentUser();
 
   const media: ChatMediaItem[] = (message.metadata?.media ?? []).filter((m) => isSafeUrl(m.url));
 
@@ -42,9 +44,22 @@ export function ChatroomMessageBubble({
     </div>
   );
 
+  const fontClass = cn(
+    messageFont === "serif" && "font-message-serif",
+    messageFont === "dyslexic" && "font-message-dyslexic",
+  );
+  const textSizeClass = cn(
+    messageTextSize === "sm" && "message-text-sm",
+    messageTextSize === "lg" && "message-text-lg",
+  );
+
   const proseClass = proseClassName(
     "base",
-    "prose-a:underline prose-a:underline-offset-4 prose-hr:my-3 prose-p:my-0 flex flex-col gap-3",
+    cn(
+      "prose-a:underline prose-a:underline-offset-4 prose-hr:my-3 prose-p:my-0 flex flex-col gap-3",
+      fontClass,
+      textSizeClass,
+    ),
   );
 
   const body = !ignoreBubbles && message.metadata?.bubbles ? (
@@ -60,6 +75,8 @@ export function ChatroomMessageBubble({
               className={cn(
                 "relative rounded-xl rounded-tl-[3px] px-3 py-1.5 text-sm sm:text-base leading-snug max-w-prose",
                 !color && "bg-muted",
+                fontClass,
+                textSizeClass,
               )}
               style={color ? { backgroundColor: color + "33" } : undefined}
             >

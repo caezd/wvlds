@@ -43,6 +43,7 @@ export type PersonaItem = {
   frame_asset_url?: string | null;
   banner_url?: string | null;
   world_id: string | null;
+  faceclaim?: string | null;
   sections: PersonaSectionWithFields[];
 };
 
@@ -52,6 +53,8 @@ export type PersonaWorldGroup = {
   /** Restrictions de catalogue du monde, appliquées par l'éditeur de fiche. */
   restrictInventory?: boolean;
   restrictSkills?: boolean;
+  /** Le monde autorise les faceclaims (activé par défaut). */
+  faceclaimsEnabled?: boolean;
   /** Le monde impose une fiche par défaut — déplacer/dupliquer vers lui écrase la fiche du persona. */
   hasDefaultTemplate?: boolean;
   personas: PersonaItem[];
@@ -85,10 +88,12 @@ function PersonaCardFor({
       bannerUrl={persona.banner_url}
       initialFrameId={persona.avatar_frame_id ?? null}
       initialFrameUrl={persona.frame_asset_url ?? null}
+      initialFaceclaim={persona.faceclaim ?? null}
       initialSections={persona.sections}
       worldId={persona.world_id ?? undefined}
       restrictInventory={group?.restrictInventory}
       restrictSkills={group?.restrictSkills}
+      faceclaimsEnabled={group?.faceclaimsEnabled}
     />
   );
 }

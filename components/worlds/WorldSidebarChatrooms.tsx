@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import { useNotifications } from "@/components/providers/NotificationsProvider";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -157,6 +158,7 @@ export function WorldSidebarChatrooms({
   const t = useTranslations("worlds");
   const { roomUnread } = useNotifications();
   const pathname = usePathname();
+  const reconnectEpoch = useReconnectEpoch();
   const [allRooms, setAllRooms] = useState<Room[]>(initialAll);
   const [selectedCat, setSelectedCat] = useState<Category | null>(null);
 
@@ -254,7 +256,7 @@ export function WorldSidebarChatrooms({
       )
       .subscribe();
     return () => { void supabase.removeChannel(ch); };
-  }, [worldId]);
+  }, [worldId, reconnectEpoch]);
 
   // Vue catégorie (drill-down)
   if (selectedCat) {

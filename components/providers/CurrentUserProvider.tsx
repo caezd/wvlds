@@ -10,6 +10,14 @@ import {
 } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
+import {
+  asMessageFont,
+  asMessageTextSize,
+  type MessageFont,
+  type MessageTextSize,
+} from "@/lib/messagePreferences";
+
+export type { MessageFont, MessageTextSize };
 
 export type CurrentUser = {
   user: User | null;
@@ -18,6 +26,8 @@ export type CurrentUser = {
   avatarUrl: string | null;
   appearOffline: boolean;
   plan: string | null;
+  messageFont: MessageFont;
+  messageTextSize: MessageTextSize;
   loading: boolean;
 };
 
@@ -28,6 +38,8 @@ export type InitialUser = {
   avatarUrl?: string | null;
   appearOffline?: boolean;
   plan?: string | null;
+  messageFont?: MessageFont;
+  messageTextSize?: MessageTextSize;
 } | null;
 
 const NEUTRAL: CurrentUser = {
@@ -37,6 +49,8 @@ const NEUTRAL: CurrentUser = {
   avatarUrl: null,
   appearOffline: false,
   plan: null,
+  messageFont: "sans",
+  messageTextSize: "base",
   loading: false,
 };
 
@@ -71,6 +85,10 @@ export function CurrentUserProvider({
   const [avatarUrl, setAvatarUrl] = useState<string | null>(initialUser?.avatarUrl ?? null);
   const [appearOffline, setAppearOffline] = useState<boolean>(initialUser?.appearOffline ?? false);
   const [plan, setPlan] = useState<string | null>(initialUser?.plan ?? null);
+  const [messageFont, setMessageFont] = useState<MessageFont>(initialUser?.messageFont ?? "sans");
+  const [messageTextSize, setMessageTextSize] = useState<MessageTextSize>(
+    initialUser?.messageTextSize ?? "base",
+  );
   // Le serveur a déjà validé la session (layout protégé). Si initialUser est
   // fourni, on démarre prêt — aucun getUser() réseau au boot.
   const [loading, setLoading] = useState(initialUser === null);
@@ -80,6 +98,17 @@ export function CurrentUserProvider({
 
   // Évite un fetch de profil redondant quand le serveur l'a déjà fourni.
   const hasProfileRef = useRef(initialUser !== null);
+
+  // Le provider racine n'est jamais remonté entre deux navigations : après un
+  // router.refresh() (ex. changement de police dans les réglages), seule cette
+  // synchronisation permet à `messageFont` de refléter le nouveau profil serveur.
+  useEffect(() => {
+    if (initialUser?.messageFont) setMessageFont(initialUser.messageFont);
+  }, [initialUser?.messageFont]);
+
+  useEffect(() => {
+    if (initialUser?.messageTextSize) setMessageTextSize(initialUser.messageTextSize);
+  }, [initialUser?.messageTextSize]);
 
   useEffect(() => {
     // `onAuthStateChange` émet INITIAL_SESSION (lecture du storage local, sans
@@ -100,6 +129,8 @@ export function CurrentUserProvider({
         setAvatarUrl(null);
         setAppearOffline(false);
         setPlan(null);
+        setMessageFont("sans");
+        setMessageTextSize("base");
         return;
       }
 
@@ -108,7 +139,7 @@ export function CurrentUserProvider({
       if (!hasProfileRef.current) {
         supabase
           .from("profiles")
-          .select("username, avatar_url, appear_offline, plan")
+          .select("username, avatar_url, appear_offline, plan, message_font, message_text_size")
           .eq("id", u.id)
           .single()
           .then(
@@ -120,6 +151,8 @@ export function CurrentUserProvider({
                 avatar_url: string | null;
                 appear_offline: boolean | null;
                 plan: string | null;
+                message_font: string | null;
+                message_text_size: string | null;
               } | null;
             }) => {
               hasProfileRef.current = true;
@@ -127,6 +160,8 @@ export function CurrentUserProvider({
               setAvatarUrl(data?.avatar_url ?? null);
               setAppearOffline(!!data?.appear_offline);
               setPlan(data?.plan ?? null);
+              setMessageFont(asMessageFont(data?.message_font));
+              setMessageTextSize(asMessageTextSize(data?.message_text_size));
             },
           );
       }
@@ -144,9 +179,22 @@ export function CurrentUserProvider({
       avatarUrl,
       appearOffline,
       plan,
+      messageFont,
+      messageTextSize,
       loading,
     }),
-    [user, username, avatarUrl, appearOffline, plan, loading, resolved, initialUser?.id],
+    [
+      user,
+      username,
+      avatarUrl,
+      appearOffline,
+      plan,
+      messageFont,
+      messageTextSize,
+      loading,
+      resolved,
+      initialUser?.id,
+    ],
   );
 
   return (

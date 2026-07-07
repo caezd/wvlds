@@ -1,4 +1,4 @@
-export type PersonaFieldType = "title" | "text" | "stats" | "separator" | "input" | "textarea" | "image-grid" | "inventory" | "skills" | "gauges" | "quote" | "traits" | "timeline";
+export type PersonaFieldType = "title" | "text" | "stats" | "separator" | "input" | "textarea" | "image-grid" | "inventory" | "skills" | "gauges" | "quote" | "traits" | "timeline" | "dl";
 
 /** Une stat individuelle dans un champ de type "stats". */
 export interface PersonaStat {
@@ -58,6 +58,13 @@ export interface TimelineItem {
   description?: string;
 }
 
+/** Une entrée label/description dans un champ de type "dl". */
+export interface DlItem {
+  id: string;
+  label: string;
+  description: string;
+}
+
 /** Contenu JSON d'un champ de persona. La forme dépend du `type` du champ. */
 export interface PersonaFieldData {
   text?: string;
@@ -72,6 +79,7 @@ export interface PersonaFieldData {
   quoteSource?: string;
   traitItems?: TraitItem[];
   timelineItems?: TimelineItem[];
+  dlItems?: DlItem[];
   [key: string]: unknown;
 }
 

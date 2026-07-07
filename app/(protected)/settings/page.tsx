@@ -1,7 +1,10 @@
 import { getTranslations, getLocale } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUserId, getCurrentProfile } from "@/lib/currentRequest";
 import { LocaleSelector } from "./LocaleSelector";
 import { ProfileSettingsForm } from "./ProfileSettingsForm";
+import { MessageFontSelector } from "./MessageFontSelector";
+import { MessageTextSizeSelector } from "./MessageTextSizeSelector";
 
 export default async function SettingsPage() {
   const [t, currentLocale] = await Promise.all([
@@ -10,20 +13,24 @@ export default async function SettingsPage() {
   ]);
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // messageFont/messageTextSize viennent du profil mémoïsé de la requête
+  // (déjà résolu par le layout racine) — seuls bio/pronouns manquent et
+  // nécessitent encore une requête dédiée (colonnes absentes de CurrentProfile).
+  const userId = await getCurrentUserId();
+  const profile = await getCurrentProfile();
 
   let bio = "";
   let pronouns: string[] = [];
-  if (user) {
-    const { data: profile } = await supabase
+  const messageFont = profile?.message_font ?? "sans";
+  const messageTextSize = profile?.message_text_size ?? "base";
+  if (userId) {
+    const { data: extra } = await supabase
       .from("profiles")
       .select("bio,pronouns")
-      .eq("id", user.id)
+      .eq("id", userId)
       .maybeSingle();
-    bio = profile?.bio ?? "";
-    pronouns = profile?.pronouns ?? [];
+    bio = extra?.bio ?? "";
+    pronouns = extra?.pronouns ?? [];
   }
 
   return (
@@ -46,6 +53,29 @@ export default async function SettingsPage() {
           <p className="text-sm text-muted-foreground">{t("languageDescription")}</p>
         </div>
         <LocaleSelector currentLocale={currentLocale} />
+      </section>
+
+      <section className="rounded-lg border p-4 space-y-5">
+        <div>
+          <h2 className="font-medium">{t("accessibility.title")}</h2>
+          <p className="text-sm text-muted-foreground">{t("accessibility.description")}</p>
+        </div>
+
+        <div className="space-y-2">
+          <div>
+            <h3 className="text-sm font-medium">{t("font")}</h3>
+            <p className="text-xs text-muted-foreground">{t("fontDescription")}</p>
+          </div>
+          <MessageFontSelector currentFont={messageFont} />
+        </div>
+
+        <div className="space-y-2">
+          <div>
+            <h3 className="text-sm font-medium">{t("textSize")}</h3>
+            <p className="text-xs text-muted-foreground">{t("textSizeDescription")}</p>
+          </div>
+          <MessageTextSizeSelector currentSize={messageTextSize} />
+        </div>
       </section>
     </div>
   );

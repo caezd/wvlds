@@ -269,10 +269,12 @@ type PersonaEditSheetProps = {
   initialBannerUrl?: string | null;
   initialFrameId?: string | null;
   initialFrameUrl?: string | null;
+  initialFaceclaim?: string | null;
   trigger?: ReactNode;
   worldId?: string;
   restrictInventory?: boolean;
   restrictSkills?: boolean;
+  faceclaimsEnabled?: boolean;
 };
 
 type PersonaEditorContentProps = {
@@ -285,6 +287,7 @@ type PersonaEditorContentProps = {
   initialBannerUrl?: string | null;
   initialFrameId?: string | null;
   initialFrameUrl?: string | null;
+  initialFaceclaim?: string | null;
   /** Notifie le parent quand la sheet Avatar s'ouvre/ferme (effet pile de cartes). */
   onAvatarOpenChange?: (open: boolean) => void;
   /** Notifie le parent quand la sheet Bannière s'ouvre/ferme (effet pile de cartes). */
@@ -292,6 +295,7 @@ type PersonaEditorContentProps = {
   worldId?: string;
   restrictInventory?: boolean;
   restrictSkills?: boolean;
+  faceclaimsEnabled?: boolean;
 };
 
 // ---------------------------------------------------------------------------
@@ -308,11 +312,13 @@ export function PersonaEditorContent({
   initialBannerUrl,
   initialFrameId,
   initialFrameUrl,
+  initialFaceclaim,
   onAvatarOpenChange,
   onBannerOpenChange,
   worldId,
   restrictInventory,
   restrictSkills,
+  faceclaimsEnabled,
 }: PersonaEditorContentProps) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
@@ -409,7 +415,7 @@ export function PersonaEditorContent({
 
             {/* Nom + stats (même layout que le profil) */}
             <div className="pb-1 min-w-0 flex-1">
-              <div className="h-16 pb-2 mb-2 flex items-end">
+              <div className="h-16 pb-2 mb-2 flex items-end gap-2">
                 <input
                   defaultValue={personaName}
                   onBlur={async (e) => {
@@ -422,8 +428,29 @@ export function PersonaEditorContent({
                   onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
                   maxLength={40}
                   placeholder="Nom du personnage"
-                  className="w-full text-xl font-semibold leading-tight bg-transparent outline-none border-none rounded px-1 -mx-1 hover:bg-muted/60 focus:bg-muted/60 focus:underline decoration-dotted underline-offset-4 placeholder:text-muted-foreground/40 transition-colors"
+                  className="min-w-0 flex-1 text-xl font-semibold leading-tight bg-transparent outline-none border-none rounded px-1 -mx-1 hover:bg-muted/60 focus:bg-muted/60 focus:underline decoration-dotted underline-offset-4 placeholder:text-muted-foreground/40 transition-colors"
                 />
+                {faceclaimsEnabled !== false && (
+                  <div className="flex items-baseline gap-1 shrink-0 max-w-[45%]">
+                    <span className="text-sm text-muted-foreground/70 shrink-0">ft.</span>
+                    <input
+                      defaultValue={initialFaceclaim ?? ""}
+                      onBlur={async (e) => {
+                        const newValue = e.target.value.trim();
+                        const clean = newValue.length ? newValue : null;
+                        if (clean === (initialFaceclaim ?? null)) return;
+                        const { error } = await supabase.from("personas").update({ faceclaim: clean }).eq("id", personaId);
+                        if (error) { e.target.value = initialFaceclaim ?? ""; return; }
+                        router.refresh();
+                      }}
+                      onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+                      maxLength={80}
+                      placeholder="acteur/perso"
+                      title="Faceclaim : l'acteur ou le personnage sur lequel est basé l'avatar"
+                      className="min-w-0 w-full text-sm leading-tight bg-transparent outline-none border-none rounded px-1 -mx-1 hover:bg-muted/60 focus:bg-muted/60 focus:underline decoration-dotted underline-offset-4 placeholder:text-muted-foreground/40 transition-colors"
+                    />
+                  </div>
+                )}
               </div>
 
               {xpInfo && balance ? (
@@ -670,10 +697,12 @@ export function PersonaEditSheet({
   initialBannerUrl,
   initialFrameId,
   initialFrameUrl,
+  initialFaceclaim,
   trigger,
   worldId,
   restrictInventory,
   restrictSkills,
+  faceclaimsEnabled,
 }: PersonaEditSheetProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -729,6 +758,8 @@ export function PersonaEditSheet({
               restrictSkills={restrictSkills}
               initialFrameId={initialFrameId}
               initialFrameUrl={initialFrameUrl}
+              initialFaceclaim={initialFaceclaim}
+              faceclaimsEnabled={faceclaimsEnabled}
               onAvatarOpenChange={setAvatarOpen}
               onBannerOpenChange={setBannerOpen}
             />

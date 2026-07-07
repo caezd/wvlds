@@ -44,6 +44,28 @@
       "en": "English",
       "es": "Español"
     },
+    "accessibility": {
+      "title": "Accessibilité",
+      "description": "Ajustez la police et la taille du texte des messages pour un meilleur confort de lecture"
+    },
+    "font": "Police",
+    "fontDescription": "Choisissez la police utilisée pour le texte des chatrooms",
+    "fontSaved": "Police mise à jour",
+    "fontPreview": "Ceci est un aperçu du texte de vos messages.",
+    "fontOptions": {
+      "sans": "Sans serif",
+      "serif": "Serif",
+      "dyslexic": "Adapté dyslexie"
+    },
+    "textSize": "Taille du texte",
+    "textSizeDescription": "Choisissez la taille du texte des messages de chatroom",
+    "textSizeSaved": "Taille du texte mise à jour",
+    "textSizePreview": "Ceci est un aperçu du texte de vos messages.",
+    "textSizeOptions": {
+      "sm": "Petit",
+      "base": "Normal",
+      "lg": "Grand"
+    },
     "profile": {
       "title": "Profil",
       "description": "Personnalisez la façon dont les autres joueurs vous voient",
@@ -641,6 +663,8 @@
     "itemsDisabled": "Objets désactivés dans ce monde",
     "itemsUnrestricted": "Objets : saisie libre (catalogue non restreint)",
     "skillsDisabled": "Compétences désactivées dans ce monde",
-    "skillsUnrestricted": "Compétences : saisie libre (catalogue non restreint)"
+    "skillsUnrestricted": "Compétences : saisie libre (catalogue non restreint)",
+    "faceclaims": "Faceclaims",
+    "emptyFaceclaims": "Aucun faceclaim déclaré dans ce monde."
   }
 }

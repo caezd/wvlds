@@ -1,12 +1,15 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
+import { getUserId } from "@/lib/auth";
 
 export default async function Home() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  // Vérification locale des claims JWT (sans requête réseau), au lieu d'un
+  // auth.getUser() qui revalide en plus auprès du serveur Supabase Auth.
+  const userId = await getUserId(supabase);
 
-  if (!user) {
+  if (!userId) {
     redirect("/auth/login");
   }
 

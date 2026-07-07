@@ -2,11 +2,13 @@
 
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import { TABLE, channel } from "@/lib/constants";
 import type { ChatPin } from "@/types/db";
 
 export function useChatPins(chatId: string | undefined) {
   const supabase = useMemo(() => createClient(), []);
+  const reconnectEpoch = useReconnectEpoch();
   const [pins, setPins] = useState<ChatPin[]>([]);
 
   // Chargement initial
@@ -53,7 +55,7 @@ export function useChatPins(chatId: string | undefined) {
       )
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [chatId, supabase]);
+  }, [chatId, supabase, reconnectEpoch]);
 
   const pin = useCallback(async (messageId: number, selfId: string) => {
     if (!chatId) return;

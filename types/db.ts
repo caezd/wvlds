@@ -106,6 +106,7 @@ export type Persona = {
   avatar_frame_id?: string | null;
   frame?: { asset_url: string | null } | null;
   dialogue_color?: string | null;
+  faceclaim?: string | null;
 };
 
 export type UserEquippedCosmetic = {

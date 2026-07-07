@@ -12,6 +12,7 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { channel, PRESENCE, TABLE } from "@/lib/constants";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 
 export type PresenceStatus = "online" | "offline" | "invisible";
 
@@ -94,6 +95,7 @@ function parsePresenceState(
 export default function PresenceProvider({ children }: { children: React.ReactNode }) {
     const supabase = useMemo(() => createClient(), []);
     const { userId, username, avatarUrl, appearOffline: ctxAppearOffline } = useCurrentUser();
+    const reconnectEpoch = useReconnectEpoch();
 
     const [onlineUsers, setOnlineUsers] = useState<Record<string, GlobalPresenceMeta>>({});
     const [status, setStatusState] = useState<PresenceStatus>("online");
@@ -263,7 +265,10 @@ export default function PresenceProvider({ children }: { children: React.ReactNo
             lingeringRef.current = {};
             setOnlineUsers({});
         };
-    }, [userId, supabase, recompute]);
+        // reconnectEpoch : force la recréation du canal après une coupure
+        // réseau (voir useReconnectEpoch), au lieu de compter sur la
+        // reconnexion interne — peu fiable — de la websocket Realtime.
+    }, [userId, supabase, recompute, reconnectEpoch]);
 
     // Si le profil n'est pas seedé par le serveur (login client depuis
     // /auth/login, initialUser=null), `appear_offline` arrive APRÈS le montage,

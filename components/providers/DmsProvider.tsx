@@ -12,6 +12,7 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { TABLE, RPC, channel } from "@/lib/constants";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import type { DmConversation, DmMessage } from "@/types/db";
 import { fetchAppShell } from "@/lib/appShell";
 
@@ -117,6 +118,7 @@ export default function DmsProvider({ children }: { children: React.ReactNode })
   // fenêtre où un handler lirait une ref en retard d'un rendu.
   const userIdRef = useRef<string | null>(null);
   userIdRef.current = userId;
+  const reconnectEpoch = useReconnectEpoch();
 
   // ── Panel state ───────────────────────────────────────────────────────────
 
@@ -230,34 +232,8 @@ export default function DmsProvider({ children }: { children: React.ReactNode })
     // Ouvre le panel automatiquement
     setPanelOpen(true);
 
-    // Abonnement realtime aux nouveaux messages de cette conv
-    if (msgChannelRef.current) {
-      await supabase.removeChannel(msgChannelRef.current);
-    }
-    const ch = supabase
-      .channel(channel.dmMessages(convId as string))
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: TABLE.DM_MESSAGES,
-          filter: `conversation_id=eq.${convId}`,
-        },
-        (payload: { new: Record<string, unknown> }) => {
-          const msg = payload.new as DmMessage;
-          setMessages(prev => prev.some(m => m.id === msg.id) ? prev : [...prev, msg]);
-          setConversations(prev => applyNewMessage(prev, msg));
-          if (
-            activeConvIdRef.current === msg.conversation_id &&
-            msg.author_id !== userIdRef.current
-          ) {
-            void markConvRead(msg.conversation_id);
-          }
-        },
-      )
-      .subscribe();
-    msgChannelRef.current = ch;
+    // L'abonnement realtime aux messages de cette conv est géré par l'effet
+    // ci-dessous, déclenché par le changement de activeConvId.
   }, [supabase, loadConversations, markConvRead]);
 
   const loadMoreMessages = useCallback(async () => {
@@ -293,11 +269,45 @@ export default function DmsProvider({ children }: { children: React.ReactNode })
     setHasMoreMessages(false);
     msgCursorRef.current = null;
     isLoadingMoreMsgsRef.current = false;
-    if (msgChannelRef.current) {
-      void supabase.removeChannel(msgChannelRef.current);
-      msgChannelRef.current = null;
-    }
-  }, [supabase]);
+  }, []);
+
+  // Abonnement realtime aux nouveaux messages de la conversation active.
+  // Effet séparé (plutôt qu'inline dans openConversation) pour pouvoir se
+  // recréer via reconnectEpoch après une coupure réseau, comme les autres
+  // canaux Realtime de l'app.
+  useEffect(() => {
+    if (!activeConvId) return;
+
+    const ch = supabase
+      .channel(channel.dmMessages(activeConvId))
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: TABLE.DM_MESSAGES,
+          filter: `conversation_id=eq.${activeConvId}`,
+        },
+        (payload: { new: Record<string, unknown> }) => {
+          const msg = payload.new as DmMessage;
+          setMessages(prev => prev.some(m => m.id === msg.id) ? prev : [...prev, msg]);
+          setConversations(prev => applyNewMessage(prev, msg));
+          if (
+            activeConvIdRef.current === msg.conversation_id &&
+            msg.author_id !== userIdRef.current
+          ) {
+            void markConvRead(msg.conversation_id);
+          }
+        },
+      )
+      .subscribe();
+    msgChannelRef.current = ch;
+
+    return () => {
+      void supabase.removeChannel(ch);
+      if (msgChannelRef.current === ch) msgChannelRef.current = null;
+    };
+  }, [activeConvId, supabase, markConvRead, reconnectEpoch]);
 
   const sendMessage = useCallback(async (content: string) => {
     const uid = userIdRef.current;
@@ -382,12 +392,11 @@ export default function DmsProvider({ children }: { children: React.ReactNode })
     return () => {
       mounted = false;
       void supabase.removeChannel(convCh);
-      if (msgChannelRef.current) {
-        void supabase.removeChannel(msgChannelRef.current);
-        msgChannelRef.current = null;
-      }
     };
-  }, [userId]); // eslint-disable-line react-hooks/exhaustive-deps
+    // reconnectEpoch : force la recréation du canal après une coupure réseau
+    // (voir useReconnectEpoch). Le canal de la conversation active a son
+    // propre effet, plus bas.
+  }, [userId, reconnectEpoch]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Value ─────────────────────────────────────────────────────────────────
 

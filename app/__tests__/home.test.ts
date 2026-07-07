@@ -2,14 +2,14 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // ── Variables hoistées (accessibles dans les factories vi.mock) ───────────────
 
-const { mockRedirect, mockCookiesGet, mockGetUser, mockFrom } = vi.hoisted(() => ({
+const { mockRedirect, mockCookiesGet, mockGetClaims, mockFrom } = vi.hoisted(() => ({
   // next/navigation `redirect()` throw une erreur spéciale en prod pour court-circuiter
   // le rendu — on reproduit ce comportement pour que les assertions s'arrêtent au bon endroit.
   mockRedirect: vi.fn().mockImplementation((url: string) => {
     throw Object.assign(new Error("NEXT_REDIRECT"), { digest: `NEXT_REDIRECT;replace;${url};307;` });
   }),
   mockCookiesGet: vi.fn(),
-  mockGetUser: vi.fn(),
+  mockGetClaims: vi.fn(),
   mockFrom: vi.fn(),
 }));
 
@@ -23,7 +23,7 @@ vi.mock("next/headers", () => ({
 
 vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({
-    auth: { getUser: mockGetUser },
+    auth: { getClaims: mockGetClaims },
     from: mockFrom,
   }),
 }));
@@ -50,7 +50,7 @@ function makeChain(maybeSingleData: ChainData, singleData: ChainData = null) {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockGetUser.mockResolvedValue({ data: { user: { id: "u1" } } });
+  mockGetClaims.mockResolvedValue({ data: { claims: { sub: "u1" } } });
 });
 
 // redirect() throw — chaque appel Home() doit être wrappé dans un try/catch
@@ -103,7 +103,7 @@ describe("Home — redirection vers last_world_id", () => {
   });
 
   it("redirige vers /auth/login si non authentifié", async () => {
-    mockGetUser.mockResolvedValue({ data: { user: null } });
+    mockGetClaims.mockResolvedValue({ data: { claims: null } });
     mockCookiesGet.mockReturnValue(undefined);
 
     await runHome();

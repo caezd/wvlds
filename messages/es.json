@@ -44,6 +44,28 @@
       "en": "English",
       "es": "Español"
     },
+    "accessibility": {
+      "title": "Accesibilidad",
+      "description": "Ajusta la fuente y el tamaño del texto de los mensajes para una mejor comodidad de lectura"
+    },
+    "font": "Fuente",
+    "fontDescription": "Elige la fuente usada para el texto de las salas de chat",
+    "fontSaved": "Fuente actualizada",
+    "fontPreview": "Esta es una vista previa del texto de tus mensajes.",
+    "fontOptions": {
+      "sans": "Sans serif",
+      "serif": "Serif",
+      "dyslexic": "Apto para dislexia"
+    },
+    "textSize": "Tamaño del texto",
+    "textSizeDescription": "Elige el tamaño del texto de los mensajes de las salas de chat",
+    "textSizeSaved": "Tamaño del texto actualizado",
+    "textSizePreview": "Esta es una vista previa del texto de tus mensajes.",
+    "textSizeOptions": {
+      "sm": "Pequeño",
+      "base": "Normal",
+      "lg": "Grande"
+    },
     "profile": {
       "title": "Perfil",
       "description": "Personaliza cómo te ven los demás jugadores",
@@ -632,6 +654,8 @@
     "itemsDisabled": "Objetos desactivados en este mundo",
     "itemsUnrestricted": "Objetos: entrada libre (catálogo no restringido)",
     "skillsDisabled": "Habilidades desactivadas en este mundo",
-    "skillsUnrestricted": "Habilidades: entrada libre (catálogo no restringido)"
+    "skillsUnrestricted": "Habilidades: entrada libre (catálogo no restringido)",
+    "faceclaims": "Faceclaims",
+    "emptyFaceclaims": "No hay faceclaims declarados en este mundo."
   }
 }
