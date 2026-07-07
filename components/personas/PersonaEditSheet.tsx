@@ -1,7 +1,7 @@
 // components/personas/PersonaEditSheet.tsx
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -17,13 +17,10 @@ import {
   SheetFooter,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { TabBar } from "@/components/ui/tab-bar";
-import { Input } from "@/components/ui/input";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Check, Coins, Flame, ImagePlus, Loader2, Pencil, Trash2, X, Zap } from "lucide-react";
-import type { Area } from "react-easy-crop";
-import { ImageCropPicker, getCroppedImg } from "@/components/ui/image-crop-picker";
+import { Check, Coins, Flame, Loader2, Pencil, Trash2, X, Zap } from "lucide-react";
+import { ImagePickerCropField } from "@/components/ui/image-crop-picker";
 
 import { PersonaSectionsTabs } from "./PersonaSectionsTabs";
 import type { PersonaSectionWithFields } from "@/types/personas";
@@ -38,38 +35,8 @@ import { toast } from "sonner";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 
 // ---------------------------------------------------------------------------
-// Onglet URL externe (partagé avatar + bannière)
-// ---------------------------------------------------------------------------
-
-function ExternalUrlTab({
-  onSaved,
-}: {
-  current?: string | null;
-  onSaved: (url: string) => void;
-  aspect?: "square" | "wide";
-}) {
-  const [url, setUrl] = useState("");
-
-  return (
-    <div className="space-y-4 max-w-md">
-      <p className="text-sm text-muted-foreground">
-        Colle l&apos;URL d&apos;une image hébergée (jpg, png, webp…).
-      </p>
-      <Input
-        placeholder="https://example.com/image.jpg"
-        value={url}
-        onChange={(e) => setUrl(e.target.value)}
-        onKeyDown={(e) => e.key === "Enter" && url.trim() && onSaved(url.trim())}
-      />
-      <Button onClick={() => url.trim() && onSaved(url.trim())} disabled={!url.trim()}>
-        Utiliser cette image
-      </Button>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Onglet upload fichier générique (avatar ou bannière)
+// Sélection + recadrage d'une image (fichier, presse-papiers ou lien externe),
+// puis upload vers le bucket "personas" (partagé avatar + bannière).
 // ---------------------------------------------------------------------------
 
 function StorageUploadTab({
@@ -80,6 +47,8 @@ function StorageUploadTab({
   dbColumn,
   extraUpdate,
   cropAspect,
+  previewSrc,
+  previewClassName,
   onSaved,
 }: {
   personaId: string;
@@ -88,20 +57,19 @@ function StorageUploadTab({
   subfolder: string;
   dbColumn: string;
   extraUpdate?: Record<string, null>;
-  /** Si fourni, un recadrage est proposé avant l'upload (ex: 1 pour carré). */
   cropAspect?: number;
+  previewSrc?: string | null;
+  previewClassName?: string;
   onSaved: (url: string) => void;
 }) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [cropSrc, setCropSrc] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleFile = useCallback(async (rawFile: File) => {
+  const handleConfirm = useCallback(async (blob: Blob) => {
     if (!userId) { setError("Non connecté."); return; }
     setUploading(true);
     setError(null);
-    const file = await toWebP(rawFile);
+    const file = await toWebP(new File([blob], "image.jpg", { type: blob.type || "image/jpeg" }));
     const path = `user-${userId}/${subfolder}/${personaId}.webp`;
     const { error: upErr } = await supabase.storage
       .from("personas")
@@ -117,76 +85,15 @@ function StorageUploadTab({
     onSaved(displayUrl);
   }, [userId, subfolder, personaId, supabase, dbColumn, extraUpdate, onSaved]);
 
-  function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    if (cropAspect !== undefined) {
-      setCropSrc(URL.createObjectURL(f));
-    } else {
-      void handleFile(f);
-    }
-    e.target.value = "";
-  }
-
-  async function onCropConfirm(pixels: Area) {
-    if (!cropSrc) return;
-    setUploading(true);
-    setError(null);
-    try {
-      const blob = await getCroppedImg(cropSrc, pixels);
-      URL.revokeObjectURL(cropSrc);
-      setCropSrc(null);
-      await handleFile(new File([blob], "image.jpg", { type: "image/jpeg" }));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Erreur lors du recadrage.");
-      setUploading(false);
-    }
-  }
-
-  function cancelCrop() {
-    if (cropSrc) URL.revokeObjectURL(cropSrc);
-    setCropSrc(null);
-  }
-
-  if (cropSrc) {
-    return (
-      <>
-        <ImageCropPicker
-          src={cropSrc}
-          aspect={cropAspect}
-          uploading={uploading}
-          onConfirm={onCropConfirm}
-          onCancel={cancelCrop}
-        />
-        {error && <p className="text-xs text-destructive mt-2">{error}</p>}
-      </>
-    );
-  }
-
   return (
-    <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">
-        Choisissez une image depuis votre appareil (jpg, png, webp — max 5 Mo).
-      </p>
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/jpeg,image/png,image/webp,image/gif"
-        className="hidden"
-        onChange={onFileChange}
+    <div className="space-y-2">
+      <ImagePickerCropField
+        aspect={cropAspect}
+        uploading={uploading}
+        previewSrc={previewSrc}
+        previewClassName={previewClassName}
+        onConfirm={handleConfirm}
       />
-      <button
-        type="button"
-        onClick={() => inputRef.current?.click()}
-        disabled={uploading}
-        className="flex items-center gap-2 rounded-lg border border-dashed px-6 py-8 w-full text-sm text-muted-foreground hover:bg-muted/50 transition-colors disabled:opacity-50"
-      >
-        {uploading ? (
-          <><Loader2 className="h-5 w-5 animate-spin" /> Upload en cours…</>
-        ) : (
-          <><ImagePlus className="h-5 w-5" /> Cliquez pour choisir un fichier</>
-        )}
-      </button>
       {error && <p className="text-xs text-destructive">{error}</p>}
     </div>
   );
@@ -222,34 +129,17 @@ function BannerSheet({
           <SheetTitle>Bannière du personnage</SheetTitle>
         </SheetHeader>
         <div className="flex-1 overflow-y-auto space-y-4 p-6">
-          <Tabs defaultValue="upload">
-            <TabBar className="-mx-6">
-              <TabsTrigger value="upload">Depuis l&apos;appareil</TabsTrigger>
-              <TabsTrigger value="url">URL externe</TabsTrigger>
-            </TabBar>
-            <TabsContent value="upload" className="mt-4">
-              <StorageUploadTab
-                personaId={personaId}
-                supabase={supabase}
-                userId={userId}
-                subfolder="banners"
-                dbColumn="banner_url"
-                cropAspect={744 / 136}
-                onSaved={(url) => { onSaved(url); onOpenChange(false); }}
-              />
-            </TabsContent>
-            <TabsContent value="url" className="mt-4">
-              <ExternalUrlTab
-                current={currentBannerUrl}
-                aspect="wide"
-                onSaved={async (url) => {
-                  await supabase.from("personas").update({ banner_url: url }).eq("id", personaId);
-                  onSaved(url);
-                  onOpenChange(false);
-                }}
-              />
-            </TabsContent>
-          </Tabs>
+          <StorageUploadTab
+            personaId={personaId}
+            supabase={supabase}
+            userId={userId}
+            subfolder="banners"
+            dbColumn="banner_url"
+            cropAspect={744 / 136}
+            previewSrc={currentBannerUrl}
+            previewClassName="aspect-[744/136] w-full rounded-2xl"
+            onSaved={(url) => { onSaved(url); onOpenChange(false); }}
+          />
         </div>
         {currentBannerUrl && (
           <SheetFooter className="border-t border-border-soft px-6 py-3 shrink-0 flex-row justify-start">
@@ -435,7 +325,7 @@ export function PersonaEditorContent({
   const [_frameUrl, setFrameUrl] = useState<string | null>(initialFrameUrl ?? null);
   const { avatar_builder } = useFeatureFlags();
   const [appearanceTab, setAppearanceTab] = useState<"avatar" | "cosmetics">("avatar");
-  const [avatarSubTab, setAvatarSubTab] = useState<"builder" | "upload" | "url">(avatar_builder ? "builder" : "upload");
+  const [avatarSubTab, setAvatarSubTab] = useState<"builder" | "upload">(avatar_builder ? "builder" : "upload");
   const [userId, setUserId] = useState<string | null>(null);
   const [balance, setBalance] = useState<{ xp: number; coins: number; streak_current: number } | null>(null);
   const [balanceLoading, setBalanceLoading] = useState(true);
@@ -619,11 +509,10 @@ export function PersonaEditorContent({
               {appearanceTab === "avatar" && (
                 <>
                   <div className="h-6 w-px bg-border" />
-                  <Tabs value={avatarSubTab} onValueChange={(v) => setAvatarSubTab(v as "builder" | "upload" | "url")}>
+                  <Tabs value={avatarSubTab} onValueChange={(v) => setAvatarSubTab(v as "builder" | "upload")}>
                     <TabsList>
                       {avatar_builder && <TabsTrigger value="builder">Générateur</TabsTrigger>}
-                      <TabsTrigger value="upload">Depuis l&apos;appareil</TabsTrigger>
-                      <TabsTrigger value="url">URL externe</TabsTrigger>
+                      <TabsTrigger value="upload">Image</TabsTrigger>
                     </TabsList>
                   </Tabs>
                 </>
@@ -644,7 +533,7 @@ export function PersonaEditorContent({
                     }}
                   />
                 </div>
-              ) : avatarSubTab === "upload" ? (
+              ) : (
                 <div className="flex-1 overflow-auto p-6">
                   <StorageUploadTab
                     personaId={personaId}
@@ -654,20 +543,9 @@ export function PersonaEditorContent({
                     dbColumn="avatar_url"
                     extraUpdate={{ avatar_config: null }}
                     cropAspect={1}
+                    previewSrc={avatarUrl}
+                    previewClassName="h-32 w-32 rounded-2xl mx-auto"
                     onSaved={(url) => {
-                      setAvatarUrl(url);
-                      setAvatarConfig(null);
-                      setAvatarDialogOpen(false);
-                      router.refresh();
-                    }}
-                  />
-                </div>
-              ) : (
-                <div className="flex-1 overflow-auto p-6">
-                  <ExternalUrlTab
-                    current={null}
-                    onSaved={async (url) => {
-                      await supabase.from("personas").update({ avatar_url: url, avatar_config: null }).eq("id", personaId);
                       setAvatarUrl(url);
                       setAvatarConfig(null);
                       setAvatarDialogOpen(false);

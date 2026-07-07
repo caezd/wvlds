@@ -53,14 +53,15 @@ export function ChatroomMessageBubble({
         if (part.kind === "prose") {
           return part.text ? <MarkdownContent key={i} content={part.text} /> : null;
         }
+        const color = part.color ?? message.metadata?.bubbleColor;
         return (
           <div key={i} className="not-prose inline-flex items-end gap-2 flex-wrap">
             <div
               className={cn(
                 "relative rounded-xl rounded-tl-[3px] px-3 py-1.5 text-sm sm:text-base leading-snug max-w-prose",
-                !message.metadata?.bubbleColor && "bg-muted",
+                !color && "bg-muted",
               )}
-              style={message.metadata?.bubbleColor ? { backgroundColor: message.metadata.bubbleColor + "33" } : undefined}
+              style={color ? { backgroundColor: color + "33" } : undefined}
             >
               {part.speech}
             </div>

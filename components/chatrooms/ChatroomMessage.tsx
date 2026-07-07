@@ -12,11 +12,20 @@ import { parseChatBlock, type ChatBlock } from "@/lib/chat-blocks";
 import { GameBlockRenderer } from "./blocks/GameBlockRenderer";
 import { cn } from "@/lib/utils";
 import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { HsvColorPicker } from "@/components/ui/hsv-color-picker";
 
 import { createClient } from "@/lib/supabase/client";
 import { TABLE } from "@/lib/constants";
 
-import { MessageCircle, MessageSquareText, Lock, Pin } from "lucide-react";
+import { MessageCircle, MessageSquareText, Lock, Pin, Pipette } from "lucide-react";
 import type { ChallengeBadge, ChatMessageMeta } from "@/types/db";
 
 import { toast } from "sonner";
@@ -139,6 +148,7 @@ export default function ChatroomMessage({
   const [pickerOpen, setPickerOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
+  const [editColorPickerOpen, setEditColorPickerOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const { emoji_reactions } = useFeatureFlags();
 
@@ -160,6 +170,8 @@ export default function ChatroomMessage({
     err,
     editBubbles,
     setEditBubbles,
+    editBubbleColor,
+    setEditBubbleColor,
     editSms,
     setEditSms,
     startEdit,
@@ -334,6 +346,21 @@ export default function ChatroomMessage({
                         <MessageCircle className="h-3 w-3" />
                         Dialogues en bulles
                       </button>
+                      {editBubbles && (
+                        <button
+                          type="button"
+                          onClick={() => setEditColorPickerOpen(true)}
+                          className="inline-flex items-center gap-1.5 rounded-full border border-border-soft px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+                        >
+                          <span
+                            className="size-3 shrink-0 rounded-full border border-border/60"
+                            style={editBubbleColor ? { backgroundColor: editBubbleColor } : undefined}
+                          >
+                            {!editBubbleColor && <Pipette className="m-auto size-2.5 text-muted-foreground" />}
+                          </span>
+                          {t("colorChoose")}
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => setEditSms((v) => !v)}
@@ -379,6 +406,30 @@ export default function ChatroomMessage({
         onRequestDelete={onRequestDelete}
         toggleReaction={toggleReaction}
       />
+
+      <Dialog open={editColorPickerOpen} onOpenChange={setEditColorPickerOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-sm">{t("dialogColorTitle")}</DialogTitle>
+          </DialogHeader>
+          <HsvColorPicker
+            color={editBubbleColor ?? "#1d4ed8"}
+            onChange={setEditBubbleColor}
+          />
+          <DialogFooter className="flex-row justify-between sm:justify-between">
+            <button
+              type="button"
+              onClick={() => setEditBubbleColor(null)}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {t("colorReset")}
+            </button>
+            <Button size="sm" onClick={() => setEditColorPickerOpen(false)}>
+              {t("colorConfirm")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
