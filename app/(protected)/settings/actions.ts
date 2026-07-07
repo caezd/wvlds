@@ -42,6 +42,60 @@ export async function syncLocale(locale: string) {
   cookieStore.set("NEXT_LOCALE", locale, COOKIE_OPTIONS);
 }
 
+const MESSAGE_FONTS = ["sans", "serif", "dyslexic"] as const;
+type MessageFont = (typeof MESSAGE_FONTS)[number];
+
+function isSupportedFont(value: string): value is MessageFont {
+  return (MESSAGE_FONTS as readonly string[]).includes(value);
+}
+
+export async function updateMessageFont(font: string) {
+  if (!isSupportedFont(font)) return { error: "Police non supportée" };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Non authentifié" };
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ message_font: font })
+    .eq("id", user.id);
+
+  if (error) return { error: error.message ?? "Impossible d'enregistrer la police." };
+
+  revalidatePath("/", "layout");
+  return { success: true };
+}
+
+const MESSAGE_TEXT_SIZES = ["sm", "base", "lg"] as const;
+type MessageTextSize = (typeof MESSAGE_TEXT_SIZES)[number];
+
+function isSupportedTextSize(value: string): value is MessageTextSize {
+  return (MESSAGE_TEXT_SIZES as readonly string[]).includes(value);
+}
+
+export async function updateMessageTextSize(size: string) {
+  if (!isSupportedTextSize(size)) return { error: "Taille non supportée" };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Non authentifié" };
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ message_text_size: size })
+    .eq("id", user.id);
+
+  if (error) return { error: error.message ?? "Impossible d'enregistrer la taille du texte." };
+
+  revalidatePath("/", "layout");
+  return { success: true };
+}
+
 export async function updateProfileBioAndPronouns(bio: string, pronouns: string[]) {
   const supabase = await createClient();
   const {

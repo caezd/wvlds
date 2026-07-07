@@ -8,6 +8,21 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-07 ──────────────────────────────────────────────────────────────
   {
     date: "2026-07",
+    tag: "Performance",
+    text: "Requêtes en double supprimées au chargement de l'accueil (`/`), de la page Personas et des réglages : elles refaisaient une vérification d'authentification et/ou une lecture de profil déjà résolues par le layout de la requête, au lieu de réutiliser ce résultat.",
+  },
+  {
+    date: "2026-07",
+    tag: "Interface",
+    text: "**Confort de lecture des chatrooms** : dans les réglages du profil, deux nouveaux réglages avec cartes d'aperçu — la **police** du texte des messages (Sans serif par défaut, Serif, ou **Adapté dyslexie** avec OpenDyslexic) et la **taille du texte** (Petit, Normal, Grand).",
+  },
+  {
+    date: "2026-07",
+    tag: "Correctif",
+    text: "Un membre au rôle « spectateur » qui réagissait à un post ne déclenchait aucune notification pour l'auteur : la réaction elle-même était rejetée silencieusement (règle de sécurité limitée aux rôles joueur et plus). Tout membre du monde peut désormais réagir, quel que soit son rôle.",
+  },
+  {
+    date: "2026-07",
     tag: "Correctif",
     text: "Ouvrir la catégorie « Général » dans la sidebar d'un monde affichait « Aucune chatroom dans cette catégorie » alors que le compteur annonçait bien des sujets — les chatrooms non catégorisées n'étaient jamais retrouvées lors de l'ouverture du détail, seulement dans le compteur.",
   },

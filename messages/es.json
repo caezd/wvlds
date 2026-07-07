@@ -44,6 +44,24 @@
       "en": "English",
       "es": "Español"
     },
+    "font": "Fuente",
+    "fontDescription": "Elige la fuente usada para el texto de las salas de chat",
+    "fontSaved": "Fuente actualizada",
+    "fontPreview": "Esta es una vista previa del texto de tus mensajes.",
+    "fontOptions": {
+      "sans": "Sans serif",
+      "serif": "Serif",
+      "dyslexic": "Apto para dislexia"
+    },
+    "textSize": "Tamaño del texto",
+    "textSizeDescription": "Elige el tamaño del texto de los mensajes de las salas de chat",
+    "textSizeSaved": "Tamaño del texto actualizado",
+    "textSizePreview": "Esta es una vista previa del texto de tus mensajes.",
+    "textSizeOptions": {
+      "sm": "Pequeño",
+      "base": "Normal",
+      "lg": "Grande"
+    },
     "profile": {
       "title": "Perfil",
       "description": "Personaliza cómo te ven los demás jugadores",

@@ -44,6 +44,24 @@
       "en": "English",
       "es": "Español"
     },
+    "font": "Police",
+    "fontDescription": "Choisissez la police utilisée pour le texte des chatrooms",
+    "fontSaved": "Police mise à jour",
+    "fontPreview": "Ceci est un aperçu du texte de vos messages.",
+    "fontOptions": {
+      "sans": "Sans serif",
+      "serif": "Serif",
+      "dyslexic": "Adapté dyslexie"
+    },
+    "textSize": "Taille du texte",
+    "textSizeDescription": "Choisissez la taille du texte des messages de chatroom",
+    "textSizeSaved": "Taille du texte mise à jour",
+    "textSizePreview": "Ceci est un aperçu du texte de vos messages.",
+    "textSizeOptions": {
+      "sm": "Petit",
+      "base": "Normal",
+      "lg": "Grand"
+    },
     "profile": {
       "title": "Profil",
       "description": "Personnalisez la façon dont les autres joueurs vous voient",

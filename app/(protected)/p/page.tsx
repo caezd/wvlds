@@ -2,6 +2,7 @@
 import { Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getUserId } from "@/lib/auth";
+import { getCurrentProfile } from "@/lib/currentRequest";
 import { getTranslations } from "next-intl/server";
 import { PersonaCreateSheet } from "@/components/personas/PersonaCreateSheet";
 import {
@@ -101,14 +102,9 @@ export default async function PersonasPage() {
     })(),
     // La limite de 5 personas par monde ne concerne que le plan gratuit
     // (has_persona_capacity côté DB) — inutile d'afficher « x / 5 » sinon.
-    (async (): Promise<string> => {
-      const { data } = await supabase
-        .from("profiles")
-        .select("plan")
-        .eq("id", userId)
-        .single();
-      return (data?.plan as string) ?? "free";
-    })(),
+    // `plan` fait déjà partie du profil mémoïsé de la requête (lib/currentRequest) —
+    // aucune requête `profiles` supplémentaire nécessaire.
+    getCurrentProfile().then((profile) => profile?.plan ?? "free"),
   ]);
 
   // Mondes accessibles ayant une fiche par défaut — dépend de memberWorlds,

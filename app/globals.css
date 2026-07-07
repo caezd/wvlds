@@ -230,6 +230,26 @@
 }
 
 @layer components {
+    /* Polices alternatives des messages de chatroom (préférence utilisateur, /settings). */
+    .font-message-serif {
+        font-family: var(--font-serif), serif;
+    }
+
+    .font-message-dyslexic {
+        font-family: var(--font-dyslexic), sans-serif;
+    }
+
+    /* Taille du texte des messages de chatroom (préférence utilisateur, /settings).
+       !important nécessaire : la taille par défaut vient des classes prose-sm/sm:prose-base
+       du plugin Typography, non reconnues par tailwind-merge (donc jamais dédupliquées). */
+    .message-text-sm {
+        font-size: 0.8125rem !important;
+    }
+
+    .message-text-lg {
+        font-size: 1.125rem !important;
+    }
+
     .icon {
         height: calc(var(--spacing) * 5);
         width: calc(var(--spacing) * 5);

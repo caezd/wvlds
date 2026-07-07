@@ -44,6 +44,24 @@
       "en": "English",
       "es": "Español"
     },
+    "font": "Font",
+    "fontDescription": "Choose the font used for chatroom text",
+    "fontSaved": "Font updated",
+    "fontPreview": "This is a preview of your message text.",
+    "fontOptions": {
+      "sans": "Sans serif",
+      "serif": "Serif",
+      "dyslexic": "Dyslexia-friendly"
+    },
+    "textSize": "Text size",
+    "textSizeDescription": "Choose the text size for chatroom messages",
+    "textSizeSaved": "Text size updated",
+    "textSizePreview": "This is a preview of your message text.",
+    "textSizeOptions": {
+      "sm": "Small",
+      "base": "Normal",
+      "lg": "Large"
+    },
     "profile": {
       "title": "Profile",
       "description": "Customize how other players see you",
