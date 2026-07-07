@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-07 ──────────────────────────────────────────────────────────────
   {
     date: "2026-07",
+    tag: "Chatrooms",
+    text: "**Couleur des bulles de dialogue liée au persona** : choisir une couleur dans le composeur (mode « Dialogues en bulles ») l'associe désormais au persona actif — elle est proposée automatiquement à chaque nouveau message de ce persona, dans n'importe quelle chatroom. La couleur reste modifiable en éditant un message existant dont l'option dialogue est cochée. Une surcharge ponctuelle est aussi possible directement dans le texte, en ajoutant le code hexadécimal juste après les guillemets fermants : `\"Bonjour !\"{#ff0000}`.",
+  },
+  {
+    date: "2026-07",
     tag: "Personas",
     text: "Cohérence de la fiche lors d'un déplacement ou d'une duplication vers un monde avec fiche par défaut :\n- **Sortir un persona d'un monde libère les verrous** hérités de sa fiche par défaut — ils n'ont de sens que pour ce monde\n- **Entrer dans un monde avec une fiche par défaut remplace entièrement la fiche** du persona par le modèle du monde (sections, champs, y compris verrous) — une boîte de dialogue prévient avant que cela ne se produise, pour déplacer ou dupliquer en connaissance de cause",
   },

@@ -153,7 +153,7 @@ export function PersonaPickerDialog({
       if (!uid) { setLoading(false); return; }
       let query = supabase
         .from("personas")
-        .select("id, user_id, name, avatar_url")
+        .select("id, user_id, name, avatar_url, dialogue_color")
         .eq("user_id", uid)
         .eq("is_template", false)
         .order("name", { ascending: true });

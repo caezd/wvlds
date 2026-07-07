@@ -14,6 +14,7 @@ import { SendHorizontal, Component, Dices, Pipette, X, ImagePlus, Eye, Lock, Swo
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { toWebP } from "@/lib/imageUtils";
+import { ImagePickerCropField } from "@/components/ui/image-crop-picker";
 import { ParagraphBlockEditor } from "./ParagraphBlockEditor";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { DiceDialog } from "./blocks/DiceDialog";
@@ -144,10 +145,19 @@ export function ChatroomComposer({
   const BUBBLE_KEY = `bubbleMode:${chatId ?? "new"}`;
   const BUBBLE_COLOR_KEY = `bubbleColor:${chatId ?? "new"}`;
   const [bubbleMode, setBubbleModeRaw] = useState(false);
-  const [bubbleColor, setBubbleColorRaw] = useState<string | null>(null);
+  const [bubbleColor, setBubbleColorRaw] = useState<string | null>(
+    presetPersona?.dialogue_color ?? null,
+  );
   useEffect(() => {
     try { setBubbleModeRaw(localStorage.getItem(BUBBLE_KEY) === "1"); } catch { }
-    try { setBubbleColorRaw(localStorage.getItem(BUBBLE_COLOR_KEY) || null); } catch { }
+    // La couleur du persona (si définie) prend le pas sur le dernier choix
+    // mémorisé pour cette chatroom.
+    if (selectedPersona?.dialogue_color) {
+      setBubbleColorRaw(selectedPersona.dialogue_color);
+    } else {
+      try { setBubbleColorRaw(localStorage.getItem(BUBBLE_COLOR_KEY) || null); } catch { }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [BUBBLE_KEY, BUBBLE_COLOR_KEY]);
   function setBubbleMode(v: boolean) {
     setBubbleModeRaw(v);
@@ -156,6 +166,14 @@ export function ChatroomComposer({
   function setBubbleColor(v: string | null) {
     setBubbleColorRaw(v);
     try { if (v) localStorage.setItem(BUBBLE_COLOR_KEY, v); else localStorage.removeItem(BUBBLE_COLOR_KEY); } catch { }
+  }
+  /** Change la couleur des bulles et l'associe durablement au persona actif. */
+  async function handleBubbleColorChange(v: string | null) {
+    setBubbleColor(v);
+    if (selectedPersona) {
+      setSelectedPersona((prev) => (prev ? { ...prev, dialogue_color: v } : prev));
+      await supabase.from(TABLE.PERSONAS).update({ dialogue_color: v }).eq("id", selectedPersona.id);
+    }
   }
 
   const SMS_KEY = `smsMode:${chatId ?? "new"}`;
@@ -194,15 +212,23 @@ export function ChatroomComposer({
   }
 
   // Bannière
-  const bannerInputRef = useRef<HTMLInputElement>(null);
-  async function uploadBanner(file: File) {
+  const [bannerPickerOpen, setBannerPickerOpen] = useState(false);
+  const [bannerUploading, setBannerUploading] = useState(false);
+
+  async function uploadBanner(blob: Blob) {
     if (!chatId) return;
-    const converted = await toWebP(file);
-    const path = `${chatId}/${crypto.randomUUID()}.webp`;
-    const { error } = await supabase.storage.from("chat-banners").upload(path, converted, { contentType: "image/webp" });
-    if (error) { toast.error("Erreur upload bannière.", { description: error.message }); return; }
-    const { data } = supabase.storage.from("chat-banners").getPublicUrl(path);
-    await sendRaw(JSON.stringify({ _type: "banner", url: data.publicUrl }));
+    setBannerUploading(true);
+    try {
+      const converted = await toWebP(new File([blob], "banner.jpg", { type: blob.type || "image/jpeg" }));
+      const path = `${chatId}/${crypto.randomUUID()}.webp`;
+      const { error } = await supabase.storage.from("chat-banners").upload(path, converted, { contentType: "image/webp" });
+      if (error) { toast.error("Erreur upload bannière.", { description: error.message }); return; }
+      const { data } = supabase.storage.from("chat-banners").getPublicUrl(path);
+      await sendRaw(JSON.stringify({ _type: "banner", url: data.publicUrl }));
+      setBannerPickerOpen(false);
+    } finally {
+      setBannerUploading(false);
+    }
   }
 
   function handleOuterPaste(e: React.ClipboardEvent<HTMLDivElement>) {
@@ -429,18 +455,19 @@ export function ChatroomComposer({
         style={{ cornerShape: "superellipse(1.1)" } as React.CSSProperties}
         onPaste={handleOuterPaste}
       >
-        {/* Input bannière caché */}
-        <input
-          ref={bannerInputRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={async (e) => {
-            const file = e.target.files?.[0];
-            if (file) await uploadBanner(file);
-            e.target.value = "";
-          }}
-        />
+        {/* Sélection + recadrage bannière */}
+        <Dialog open={bannerPickerOpen} onOpenChange={setBannerPickerOpen}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>{tChatrooms("banner")}</DialogTitle>
+            </DialogHeader>
+            <ImagePickerCropField
+              aspect={16 / 7}
+              uploading={bannerUploading}
+              onConfirm={uploadBanner}
+            />
+          </DialogContent>
+        </Dialog>
 
         {/* Destinataires note privée */}
         {visibleTo !== null && (
@@ -523,6 +550,7 @@ export function ChatroomComposer({
               selected={selectedPersona}
               onSelect={async (p) => {
                 setSelectedPersona(p);
+                setBubbleColor(p?.dialogue_color ?? null);
                 onPersonaChange?.(p);
                 if (p && userId && chatId) {
                   await supabase.from(TABLE.CHATROOM_PERSONA_PREFS).upsert(
@@ -540,11 +568,11 @@ export function ChatroomComposer({
               bubbleMode={bubbleMode}
               onBubbleModeChange={setBubbleMode}
               bubbleColor={bubbleColor}
-              onBubbleColorChange={setBubbleColor}
+              onBubbleColorChange={handleBubbleColorChange}
               smsMode={smsMode}
               onSmsModeChange={setSmsMode}
               chatId={chatId}
-              onBannerSelect={chatId ? () => bannerInputRef.current?.click() : undefined}
+              onBannerSelect={chatId ? () => setBannerPickerOpen(true) : undefined}
               visibleTo={visibleTo}
               onPrivateNoteToggle={() => void togglePrivateNote()}
               onUploadIconImage={uploadIconImageForBlock}

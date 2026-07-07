@@ -55,7 +55,7 @@ export default async function Page({ params }: { params: { id: string } }) {
     // Persona par défaut pour cet utilisateur dans cette chatroom (facultatif)
     supabase
       .from("chatroom_persona_prefs")
-      .select("persona:personas(id, user_id, name, avatar_url)")
+      .select("persona:personas(id, user_id, name, avatar_url, dialogue_color)")
       .eq("chat_id", id)
       .eq("user_id", userId)
       .maybeSingle(),

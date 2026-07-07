@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { toWebP } from "@/lib/imageUtils";
@@ -11,14 +11,12 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Camera, KeyRound, Loader2 } from "lucide-react";
-import { ImageCropPicker, getCroppedImg } from "@/components/ui/image-crop-picker";
+import { KeyRound, Loader2 } from "lucide-react";
+import { ImagePickerCropField } from "@/components/ui/image-crop-picker";
 import { toast } from "sonner";
-import type { Area } from "react-easy-crop";
 
 export function UserProfileSheet({
   open,
@@ -42,8 +40,6 @@ export function UserProfileSheet({
   const [avatarUrl, setAvatarUrl] = useState(initialAvatarUrl);
   const [savingUsername, setSavingUsername] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
-  const [cropSrc, setCropSrc] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (open) {
@@ -51,8 +47,6 @@ export function UserProfileSheet({
       setAvatarUrl(initialAvatarUrl);
     }
   }, [open, initialUsername, initialAvatarUrl]);
-
-  const initials = (initialUsername || email).slice(0, 2).toUpperCase();
 
   async function handleUsernameSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -75,10 +69,11 @@ export function UserProfileSheet({
     }
   }
 
-  const handleAvatarFile = useCallback(
-    async (rawFile: File) => {
+  const handleAvatarConfirm = useCallback(
+    async (blob: Blob) => {
       setUploadingAvatar(true);
       try {
+        const rawFile = new File([blob], "image.jpg", { type: blob.type || "image/jpeg" });
         const file = await toWebP(rawFile);
         const path = `user-${userId}/profile.webp`;
         const { error: upErr } = await supabase.storage
@@ -104,32 +99,6 @@ export function UserProfileSheet({
     [userId, supabase, router],
   );
 
-  function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    setCropSrc(URL.createObjectURL(f));
-    e.target.value = "";
-  }
-
-  async function onCropConfirm(pixels: Area) {
-    if (!cropSrc) return;
-    setUploadingAvatar(true);
-    try {
-      const blob = await getCroppedImg(cropSrc, pixels);
-      URL.revokeObjectURL(cropSrc);
-      setCropSrc(null);
-      await handleAvatarFile(new File([blob], "image.jpg", { type: "image/jpeg" }));
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erreur lors du recadrage.");
-      setUploadingAvatar(false);
-    }
-  }
-
-  function cancelCrop() {
-    if (cropSrc) URL.revokeObjectURL(cropSrc);
-    setCropSrc(null);
-  }
-
   const usernameChanged = username.trim() !== (initialUsername ?? "");
 
   return (
@@ -140,46 +109,31 @@ export function UserProfileSheet({
         </SheetHeader>
 
         <div className="flex-1 overflow-y-auto">
-          {cropSrc ? (
-            <div className="p-6">
-              <ImageCropPicker
-                src={cropSrc}
-                aspect={1}
-                uploading={uploadingAvatar}
-                onConfirm={onCropConfirm}
-                onCancel={cancelCrop}
-              />
-            </div>
-          ) : (
-            <div className="flex flex-col gap-8 p-6">
+          <div className="flex flex-col gap-8 p-6">
               {/* Avatar */}
               <div className="flex flex-col items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={uploadingAvatar}
-                  className="group relative h-24 w-24 overflow-hidden rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  aria-label="Changer l'avatar"
-                >
-                  <Avatar className="h-full w-full">
-                    <AvatarImage src={avatarUrl ?? undefined} alt={initialUsername ?? email} />
-                    <AvatarFallback className="text-xl">{initials}</AvatarFallback>
-                  </Avatar>
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
-                    {uploadingAvatar
-                      ? <Loader2 className="h-6 w-6 animate-spin text-white" />
-                      : <Camera className="h-6 w-6 text-white" />
-                    }
+                {avatarUrl ? (
+                  <ImagePickerCropField
+                    aspect={1}
+                    uploading={uploadingAvatar}
+                    previewSrc={avatarUrl}
+                    previewAlt={initialUsername ?? email}
+                    previewClassName="h-24 w-24 rounded-full"
+                    changeLabel="Changer"
+                    onConfirm={handleAvatarConfirm}
+                  />
+                ) : (
+                  <div className="w-full max-w-xs">
+                    <ImagePickerCropField
+                      aspect={1}
+                      uploading={uploadingAvatar}
+                      onConfirm={handleAvatarConfirm}
+                    />
                   </div>
-                </button>
-                <p className="text-xs text-muted-foreground">Cliquez pour modifier l&apos;avatar</p>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/gif"
-                  className="hidden"
-                  onChange={onFileChange}
-                />
+                )}
+                {avatarUrl && (
+                  <p className="text-xs text-muted-foreground">Cliquez pour modifier l&apos;avatar</p>
+                )}
               </div>
 
               {/* Pseudo */}
@@ -205,8 +159,7 @@ export function UserProfileSheet({
                   </Button>
                 </div>
               </form>
-            </div>
-          )}
+          </div>
         </div>
 
         <SheetFooter className="shrink-0 border-t border-border-soft px-6 py-4 flex-row justify-start">

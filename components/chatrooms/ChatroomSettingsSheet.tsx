@@ -10,7 +10,6 @@ import { createClient } from "@/lib/supabase/client";
 import { toWebP } from "@/lib/imageUtils";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import type { Area } from "react-easy-crop";
 
 import {
   Sheet,
@@ -36,8 +35,8 @@ import {
 } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ImageCropPicker, getCroppedImg } from "@/components/ui/image-crop-picker";
-import { Loader2, Settings, ChevronDown, Image as ImageIcon, FileUp } from "lucide-react";
+import { ImagePickerCropField } from "@/components/ui/image-crop-picker";
+import { Loader2, Settings, ChevronDown, Image as ImageIcon } from "lucide-react";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Switch } from "@/components/ui/switch";
@@ -81,7 +80,6 @@ export default function ChatroomSettingsSheet({ canEdit, chatroom, worldTimeline
 
   const [open, setOpen] = React.useState(false);
   const [uploading, setUploading] = React.useState<"icon" | "banner" | null>(null);
-  const [bannerCropSrc, setBannerCropSrc] = React.useState<string | null>(null);
   const [deleting, setDeleting] = React.useState(false);
   const [timelineDate, setTimelineDate] = React.useState<WorldTimelineDate | null>(chatroom.timeline_date ?? null);
   const [savingTimeline, setSavingTimeline] = React.useState(false);
@@ -91,7 +89,6 @@ export default function ChatroomSettingsSheet({ canEdit, chatroom, worldTimeline
   const [savingPin, setSavingPin] = React.useState(false);
 
   const iconInputRef = React.useRef<HTMLInputElement | null>(null);
-  const bannerInputRef = React.useRef<HTMLInputElement | null>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -161,31 +158,14 @@ export default function ChatroomSettingsSheet({ canEdit, chatroom, worldTimeline
     }
   }
 
-  function handleFile(file: File | undefined, kind: "icon" | "banner") {
+  function handleIconFile(file: File | undefined) {
     if (!file) return;
     if (!file.type.startsWith("image/")) { toast.error("Seules les images sont acceptées."); return; }
-    if (kind === "banner") {
-      setBannerCropSrc(URL.createObjectURL(file));
-    } else {
-      void uploadFile(file, "icon");
-    }
+    void uploadFile(file, "icon");
   }
 
-  async function onBannerCropConfirm(pixels: Area) {
-    if (!bannerCropSrc) return;
-    try {
-      const blob = await getCroppedImg(bannerCropSrc, pixels);
-      URL.revokeObjectURL(bannerCropSrc);
-      setBannerCropSrc(null);
-      await uploadFile(new File([blob], "banner.jpg", { type: "image/jpeg" }), "banner");
-    } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Erreur lors du recadrage.");
-    }
-  }
-
-  function cancelBannerCrop() {
-    if (bannerCropSrc) URL.revokeObjectURL(bannerCropSrc);
-    setBannerCropSrc(null);
+  async function onBannerConfirm(blob: Blob) {
+    await uploadFile(new File([blob], "banner.jpg", { type: blob.type || "image/jpeg" }), "banner");
   }
 
   // ---------- persist ----------
@@ -302,7 +282,7 @@ export default function ChatroomSettingsSheet({ canEdit, chatroom, worldTimeline
                   type="file"
                   accept="image/*"
                   className="hidden"
-                  onChange={(e) => { void handleFile(e.target.files?.[0], "icon"); e.target.value = ""; }}
+                  onChange={(e) => { handleIconFile(e.target.files?.[0]); e.target.value = ""; }}
                 />
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -496,73 +476,25 @@ export default function ChatroomSettingsSheet({ canEdit, chatroom, worldTimeline
                 render={() => (
                   <FormItem>
                     <FormLabel>{t("settingsBanner")}</FormLabel>
-                    <input
-                      ref={bannerInputRef}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => { handleFile(e.target.files?.[0], "banner"); e.target.value = ""; }}
+                    <ImagePickerCropField
+                      aspect={16 / 7}
+                      uploading={uploading === "banner"}
+                      previewSrc={bannerUrl || null}
+                      previewClassName="aspect-[16/7] w-full rounded-2xl"
+                      changeLabel={t("settingsBannerHint")}
+                      onConfirm={onBannerConfirm}
                     />
-
-                    {bannerCropSrc ? (
-                      <ImageCropPicker
-                        src={bannerCropSrc}
-                        aspect={16 / 7}
-                        uploading={uploading === "banner"}
-                        onConfirm={onBannerCropConfirm}
-                        onCancel={cancelBannerCrop}
-                      />
-                    ) : (
-                      <>
-                        <div
-                          role="button"
-                          tabIndex={0}
-                          onClick={() => bannerInputRef.current?.click()}
-                          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") bannerInputRef.current?.click(); }}
-                          onDragOver={(e) => e.preventDefault()}
-                          onDrop={(e) => { e.preventDefault(); handleFile(e.dataTransfer.files?.[0], "banner"); }}
-                          className={cn(
-                            "relative grid min-h-36 cursor-pointer place-items-center overflow-hidden rounded-2xl border border-dashed border-border transition-colors hover:border-muted-foreground/40",
-                            bannerUrl && "border-solid",
-                          )}
-                        >
-                          {bannerUrl ? (
-                            <>
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img src={bannerUrl} alt="Bannière" className="absolute inset-0 h-full w-full object-cover" />
-                              <div className="absolute inset-0 grid place-items-center bg-black/50 opacity-0 transition-opacity hover:opacity-100">
-                                <span className="text-xs font-medium text-white">{t("settingsBannerHint")}</span>
-                              </div>
-                            </>
-                          ) : (
-                            <div className="flex flex-col items-center gap-2 py-6 text-center">
-                              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-card-400">
-                                {uploading === "banner"
-                                  ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                                  : <FileUp className="h-4 w-4 text-muted-foreground" />
-                                }
-                              </span>
-                              <p className="text-xs font-medium">
-                                Glisser-déposer ou{" "}
-                                <span className="text-blue-400">{t("settingsBrowse")}</span>
-                              </p>
-                              <p className="text-[11px] text-muted-foreground">Taille max 5 Mo</p>
-                            </div>
-                          )}
-                        </div>
-                        {bannerUrl && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              form.setValue("banner_url", "", { shouldDirty: true });
-                              void persistField("banner_url", "");
-                            }}
-                            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                          >
-                            Retirer la bannière
-                          </button>
-                        )}
-                      </>
+                    {bannerUrl && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          form.setValue("banner_url", "", { shouldDirty: true });
+                          void persistField("banner_url", "");
+                        }}
+                        className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        Retirer la bannière
+                      </button>
                     )}
                     <FormMessage />
                   </FormItem>

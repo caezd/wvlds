@@ -67,4 +67,30 @@ describe("parseDialogue", () => {
       prose("Il s'en alla."),
     ]);
   });
+
+  it("extrait une surcharge de couleur {#hex} juste après le guillemet fermant", () => {
+    expect(parseDialogue('"Bonjour !"{#ff0000}')).toEqual([
+      { kind: "dialogue", speech: "Bonjour !", color: "#ff0000" },
+    ]);
+  });
+
+  it("garde le texte restant en prose après une surcharge de couleur", () => {
+    expect(parseDialogue('"Bonjour !"{#ff0000} dit-il.')).toEqual([
+      { kind: "dialogue", speech: "Bonjour !", color: "#ff0000" },
+      prose("dit-il."),
+    ]);
+  });
+
+  it("accepte une couleur hexadécimale courte {#rgb}", () => {
+    expect(parseDialogue('"Salut"{#f00}')).toEqual([
+      { kind: "dialogue", speech: "Salut", color: "#f00" },
+    ]);
+  });
+
+  it("n'applique pas de surcharge si le format n'est pas une couleur hexadécimale valide", () => {
+    expect(parseDialogue('"Salut"{note}')).toEqual([
+      dialogue("Salut"),
+      prose("{note}"),
+    ]);
+  });
 });

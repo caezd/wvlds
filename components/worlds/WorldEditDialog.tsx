@@ -35,7 +35,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
     ChevronDown,
-    FileUp,
     Globe,
     GlobeLock,
     HelpCircle,
@@ -47,8 +46,7 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
-import { ImageCropPicker, getCroppedImg } from "@/components/ui/image-crop-picker";
-import type { Area } from "react-easy-crop";
+import { ImagePickerCropField } from "@/components/ui/image-crop-picker";
 import { Switch } from "@/components/ui/switch";
 import {
     AlertDialog,
@@ -165,7 +163,6 @@ export default function WorldEditDialog({
     const [uploading, setUploading] = React.useState<null | "icon" | "banner">(null);
     const [confirmDelete, setConfirmDelete] = React.useState(false);
     const [deleting, setDeleting] = React.useState(false);
-    const [bannerCropSrc, setBannerCropSrc] = React.useState<string | null>(null);
 
     const [enableInventory, setEnableInventory] = React.useState(world.enable_inventory !== false);
     const [enableSkills, setEnableSkills] = React.useState(world.enable_skills !== false);
@@ -190,7 +187,6 @@ export default function WorldEditDialog({
     const [newMonthName, setNewMonthName] = React.useState("");
 
     const iconInputRef = React.useRef<HTMLInputElement | null>(null);
-    const bannerInputRef = React.useRef<HTMLInputElement | null>(null);
 
     // Fallback non-contrôlé si `open`/`onOpenChange` ne sont pas fournis
     const [localOpen, setLocalOpen] = React.useState(false);
@@ -337,34 +333,17 @@ export default function WorldEditDialog({
         }
     }
 
-    function handleFile(file: File | undefined, kind: "icon" | "banner") {
+    function handleIconFile(file: File | undefined) {
         if (!file) return;
         if (!file.type.startsWith("image/")) {
             toast.error("Seules les images sont acceptées.");
             return;
         }
-        if (kind === "banner") {
-            setBannerCropSrc(URL.createObjectURL(file));
-        } else {
-            void uploadFile(file, "icon");
-        }
+        void uploadFile(file, "icon");
     }
 
-    async function onBannerCropConfirm(pixels: Area) {
-        if (!bannerCropSrc) return;
-        try {
-            const blob = await getCroppedImg(bannerCropSrc, pixels);
-            URL.revokeObjectURL(bannerCropSrc);
-            setBannerCropSrc(null);
-            await uploadFile(new File([blob], "banner.jpg", { type: "image/jpeg" }), "banner");
-        } catch (e: unknown) {
-            toast.error(e instanceof Error ? e.message : "Erreur lors du recadrage.");
-        }
-    }
-
-    function cancelBannerCrop() {
-        if (bannerCropSrc) URL.revokeObjectURL(bannerCropSrc);
-        setBannerCropSrc(null);
+    async function onBannerConfirm(blob: Blob) {
+        await uploadFile(new File([blob], "banner.jpg", { type: blob.type || "image/jpeg" }), "banner");
     }
 
     // Persiste un champ immédiatement (sauvegarde temps réel, sans bouton).
@@ -460,7 +439,7 @@ export default function WorldEditDialog({
                                 accept="image/*"
                                 className="hidden"
                                 onChange={(e) =>
-                                    void handleFile(e.target.files?.[0], "icon")
+                                    handleIconFile(e.target.files?.[0])
                                 }
                             />
                             <DropdownMenu>
@@ -663,91 +642,25 @@ export default function WorldEditDialog({
                                             Bannière
                                         </LabelWithHelp>
                                     </FormLabel>
-                                    <input
-                                        ref={bannerInputRef}
-                                        type="file"
-                                        accept="image/*"
-                                        className="hidden"
-                                        onChange={(e) => {
-                                            handleFile(e.target.files?.[0], "banner");
-                                            e.target.value = "";
-                                        }}
+                                    <ImagePickerCropField
+                                        aspect={16 / 7}
+                                        uploading={uploading === "banner"}
+                                        previewSrc={bannerUrl || null}
+                                        previewClassName="aspect-[16/7] w-full rounded-2xl"
+                                        changeLabel="Cliquer ou déposer pour remplacer"
+                                        onConfirm={onBannerConfirm}
                                     />
-
-                                    {bannerCropSrc ? (
-                                        <ImageCropPicker
-                                            src={bannerCropSrc}
-                                            aspect={16 / 7}
-                                            uploading={uploading === "banner"}
-                                            onConfirm={onBannerCropConfirm}
-                                            onCancel={cancelBannerCrop}
-                                        />
-                                    ) : (
-                                        <>
-                                            <div
-                                                role="button"
-                                                tabIndex={0}
-                                                onClick={() => bannerInputRef.current?.click()}
-                                                onKeyDown={(e) => {
-                                                    if (e.key === "Enter" || e.key === " ")
-                                                        bannerInputRef.current?.click();
-                                                }}
-                                                onDragOver={(e) => e.preventDefault()}
-                                                onDrop={(e) => {
-                                                    e.preventDefault();
-                                                    handleFile(e.dataTransfer.files?.[0], "banner");
-                                                }}
-                                                className={cn(
-                                                    "relative grid min-h-36 cursor-pointer place-items-center overflow-hidden rounded-2xl border border-dashed border-border transition-colors hover:border-muted-foreground/40",
-                                                    bannerUrl && "border-solid"
-                                                )}
-                                            >
-                                                {bannerUrl ? (
-                                                    <>
-                                                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                                                        <img
-                                                            src={bannerUrl}
-                                                            alt="Bannière"
-                                                            className="absolute inset-0 h-full w-full object-cover"
-                                                        />
-                                                        <div className="absolute inset-0 grid place-items-center bg-black/50 opacity-0 transition-opacity hover:opacity-100">
-                                                            <span className="text-xs font-medium text-white">
-                                                                Cliquer ou déposer pour remplacer
-                                                            </span>
-                                                        </div>
-                                                    </>
-                                                ) : (
-                                                    <div className="flex flex-col items-center gap-2 py-6 text-center">
-                                                        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-card-400">
-                                                            {uploading === "banner" ? (
-                                                                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                                                            ) : (
-                                                                <FileUp className="h-4 w-4 text-muted-foreground" />
-                                                            )}
-                                                        </span>
-                                                        <p className="text-xs font-medium">
-                                                            Glisser-déposer ou{" "}
-                                                            <span className="text-blue-400">parcourir</span>
-                                                        </p>
-                                                        <p className="text-[11px] text-muted-foreground">
-                                                            Taille max 5 Mo
-                                                        </p>
-                                                    </div>
-                                                )}
-                                            </div>
-                                            {bannerUrl && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        form.setValue("banner_url", "", { shouldDirty: true });
-                                                        void persistField("banner_url", "");
-                                                    }}
-                                                    className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                                                >
-                                                    Retirer la bannière
-                                                </button>
-                                            )}
-                                        </>
+                                    {bannerUrl && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                form.setValue("banner_url", "", { shouldDirty: true });
+                                                void persistField("banner_url", "");
+                                            }}
+                                            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                                        >
+                                            Retirer la bannière
+                                        </button>
                                     )}
                                     <FormMessage />
                                 </FormItem>
