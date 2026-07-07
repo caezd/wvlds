@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-07 ──────────────────────────────────────────────────────────────
   {
     date: "2026-07",
+    tag: "Correctif",
+    text: "Ouvrir la catégorie « Général » dans la sidebar d'un monde affichait « Aucune chatroom dans cette catégorie » alors que le compteur annonçait bien des sujets — les chatrooms non catégorisées n'étaient jamais retrouvées lors de l'ouverture du détail, seulement dans le compteur.",
+  },
+  {
+    date: "2026-07",
     tag: "Chatrooms",
     text: "**Couleur des bulles de dialogue liée au persona** : choisir une couleur dans le composeur (mode « Dialogues en bulles ») l'associe désormais au persona actif — elle est proposée automatiquement à chaque nouveau message de ce persona, dans n'importe quelle chatroom. La couleur reste modifiable en éditant un message existant dont l'option dialogue est cochée. Une surcharge ponctuelle est aussi possible directement dans le texte, en ajoutant le code hexadécimal juste après les guillemets fermants : `\"Bonjour !\"{#ff0000}`.",
   },
