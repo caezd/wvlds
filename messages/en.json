@@ -448,6 +448,8 @@
     "settingsMonth": "Month",
     "settingsDay": "Day",
     "settingsNoMonth": "No month",
+    "settingsCategory": "Category",
+    "settingsCategoryNone": "None",
     "settingsLocation": "Location",
     "settingsBanner": "Banner",
     "settingsBannerHint": "Click or drop to replace",

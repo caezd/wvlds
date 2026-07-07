@@ -63,3 +63,29 @@ export interface WorldMapPin {
   border_style: string;
   sort_index: number;
 }
+
+export interface ChatroomCategory {
+  id: string;
+  world_id: string;
+  title: string;
+  description: string | null;
+  banner_url: string | null;
+  position: number;
+}
+
+export type World = {
+  id: string;
+  name: string;
+  description?: string | null;
+  icon_url?: string | null;
+  banner_url?: string | null;
+  color?: string | null; // hex (#RRGGBB)
+  visibility?: string | null;
+  enable_inventory?: boolean | null;
+  enable_skills?: boolean | null;
+  enable_faceclaims?: boolean | null;
+  restrict_inventory?: boolean | null;
+  restrict_skills?: boolean | null;
+  timeline_enabled?: boolean | null;
+  timeline_config?: WorldTimelineConfig | null;
+};

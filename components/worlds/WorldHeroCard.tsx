@@ -8,7 +8,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-import { type World } from "@/components/worlds/WorldEditDialog";
+import { type World } from "@/types/worlds";
 import { supabaseThumb } from "@/lib/storage";
 import { useNotifications } from "@/components/providers/NotificationsProvider";
 import { cn } from "@/lib/utils";

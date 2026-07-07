@@ -32,7 +32,7 @@ export default async function Page({ params }: { params: { id: string } }) {
     supabase
       .from("chatrooms")
       .select(
-        "id, name, title, banner_url, icon_url, world_id, created_by, timeline_date, map_pin_id, worlds(id, name, owner_id, restrict_inventory, restrict_skills, timeline_enabled, timeline_config, world_members(user_id))",
+        "id, name, title, banner_url, icon_url, world_id, created_by, timeline_date, map_pin_id, category_id, worlds(id, name, owner_id, restrict_inventory, restrict_skills, timeline_enabled, timeline_config, world_members(user_id))",
       )
       .eq("id", id)
       .single(),
@@ -207,6 +207,7 @@ export default async function Page({ params }: { params: { id: string } }) {
         icon_url: chatroom.icon_url ?? null,
         timeline_date: (chatroom.timeline_date as { year: number; month: number | null; day: number | null } | null) ?? null,
         map_pin_id: (chatroom.map_pin_id as string | null) ?? null,
+        category_id: (chatroom.category_id as string | null) ?? null,
         worlds: (() => {
           const w = worldData;
           if (!w?.id) return null;

@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { ChevronsUpDown, Plus } from "lucide-react";
 import { supabaseThumb } from "@/lib/storage";
 import { CreateWorldDialog } from "./CreateWorldDialog";
-import WorldEditDialog, { type World } from "@/components/worlds/WorldEditDialog";
 import { useNotifications } from "@/components/providers/NotificationsProvider";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
@@ -57,26 +56,20 @@ export function WorldPickerHeader({
   plan,
   ownedCount,
   quotaLimit,
-  userId,
-  isAdmin = false,
 }: {
   worlds: WorldItem[];
   currentWorldId: string;
   plan: "free" | "subscribed" | "lifetime";
   ownedCount: number;
   quotaLimit: number;
-  userId?: string;
-  isAdmin?: boolean;
 }) {
   const router = useRouter();
   const t = useTranslations("worlds");
   const [open, setOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const currentWorld = worlds.find((w) => w.id === currentWorldId) ?? null;
   const disabled = quotaLimit !== Infinity && ownedCount >= quotaLimit;
-  const canAdmin = !!currentWorld && (isAdmin || currentWorld.owner_id === userId);
 
   const { worldUnread } = useNotifications();
   const currentUnread = worldUnread[currentWorldId] ?? 0;
@@ -91,32 +84,10 @@ export function WorldPickerHeader({
     return () => document.removeEventListener("pointerdown", onPointerDown);
   }, [open]);
 
-  const currentWorldAsWorld: World | null = currentWorld
-    ? {
-      id: currentWorld.id,
-      name: currentWorld.name,
-      icon_url: currentWorld.icon_url,
-      description: currentWorld.description,
-      banner_url: currentWorld.banner_url,
-      color: currentWorld.color,
-      visibility: currentWorld.visibility,
-      restrict_inventory: currentWorld.restrict_inventory,
-      restrict_skills: currentWorld.restrict_skills,
-    }
-    : null;
-
   const otherWorlds = worlds.filter((w) => w.id !== currentWorldId);
 
   return (
     <div className="shrink-0 border-b border-border-soft pb-3">
-      {canAdmin && currentWorldAsWorld && (
-        <WorldEditDialog
-          world={currentWorldAsWorld}
-          open={settingsOpen}
-          onOpenChange={setSettingsOpen}
-        />
-      )}
-
       <div ref={containerRef} className="relative">
         {/* Dropdown flottant */}
         {open && (
