@@ -17,6 +17,7 @@ type TFn = Awaited<ReturnType<typeof getTranslations<"admin">>>;
 const FIELD_KEYS: FlagKey[] = [
   "persona_field_title",
   "persona_field_text",
+  "persona_field_dl",
   "persona_field_stats",
   "persona_field_separator",
   "persona_field_image_grid",

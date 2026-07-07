@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-07 ──────────────────────────────────────────────────────────────
   {
     date: "2026-07",
+    tag: "Personas",
+    text: "Nouveau champ de fiche persona **« Liste descriptive »** : une série de paires titre/description alignées façon glossaire, où la colonne des titres s'ajuste automatiquement au plus long d'entre eux pour que toutes les descriptions démarrent au même niveau.",
+  },
+  {
+    date: "2026-07",
     tag: "Performance",
     text: "Requêtes en double supprimées au chargement de l'accueil (`/`), de la page Personas et des réglages : elles refaisaient une vérification d'authentification et/ou une lecture de profil déjà résolues par le layout de la requête, au lieu de réutiliser ce résultat.",
   },
