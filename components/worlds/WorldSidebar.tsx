@@ -163,8 +163,6 @@ export default async function WorldSidebar({ worldId }: { worldId: string }) {
       plan={quota.plan}
       ownedCount={quota.owned}
       quotaLimit={quota.quotaLimit}
-      userId={userId ?? undefined}
-      isAdmin={canAdmin}
     />
   );
 

@@ -449,6 +449,8 @@
     "settingsMonth": "Mois",
     "settingsDay": "Jour",
     "settingsNoMonth": "Aucun mois",
+    "settingsCategory": "Catégorie",
+    "settingsCategoryNone": "Aucune",
     "settingsLocation": "Lieu",
     "settingsBanner": "Bannière",
     "settingsBannerHint": "Cliquer ou déposer pour remplacer",

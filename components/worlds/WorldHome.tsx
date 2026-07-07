@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { WorldHeroCard } from "./WorldHeroCard";
@@ -8,12 +8,12 @@ import { WorldWiki } from "./WorldWiki";
 import { WorldChatComposer } from "./WorldChatComposer";
 import { WorldChatroomsGrid } from "./WorldChatroomsGrid";
 import { WorldTimeline } from "./WorldTimeline";
-import WorldEditDialog, { type World } from "./WorldEditDialog";
+import { WorldSettingsView } from "./WorldSettingsView";
 import { RelationsCanvas } from "./RelationsCanvas";
 import { WorldCatalogue } from "./WorldCatalogue";
 import { WorldMap } from "./WorldMap";
 import { WorldPeoplePanel } from "./WorldPeoplePanel";
-import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
+import type { World, WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import type { AsidePersona } from "@/components/personas/WorldPersonaAsideClient";
 import { saveWorldPrefs, toggleWorldFavorite } from "@/app/(protected)/w/actions";
@@ -61,17 +61,11 @@ export function WorldHome({
   const { create_chatroom, world_map, world_catalogue, world_timeline } = useFeatureFlags();
   const router = useRouter();
 
-  const [settingsOpen, setSettingsOpen] = useState(view === "settings");
-
   const hasTimeline = world_timeline && !!world.timeline_enabled && !!world.timeline_config;
   const _hasCatalogue = world_catalogue && (!!(world.restrict_inventory || world.restrict_skills) || canEditTabs);
 
   const [mainExpanded, setMainExpanded] = useState(initialPrefs?.main_expanded ?? false);
   const [isFavorite, setIsFavorite] = useState(initialPrefs?.is_favorite ?? false);
-
-  useEffect(() => {
-    setSettingsOpen(view === "settings");
-  }, [view]);
 
   const baseHref = `/w/${worldId}`;
 
@@ -97,28 +91,22 @@ export function WorldHome({
   const showMap = view === "map";
   const showTimeline = view === "timeline";
   const showPeople = view === "members" || view === "personas";
+  const showSettings = view === "settings" && canAdmin;
 
   return (
     <>
-      {/* Dialogs / sheets pilotés par URL */}
-      {canAdmin && (
-        <WorldEditDialog
-          world={world}
-          open={settingsOpen}
-          onOpenChange={(open) => {
-            setSettingsOpen(open);
-            if (!open) closeView();
-          }}
-          onUpdated={(updated) => {
-            Object.assign(world, updated);
-            router.refresh();
-          }}
-        />
-      )}
-
       {/* Contenu */}
       <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
-        {showPeople ? (
+        {showSettings ? (
+          <WorldSettingsView
+            world={world}
+            onUpdated={(updated: World) => {
+              Object.assign(world, updated);
+              router.refresh();
+            }}
+            onClose={closeView}
+          />
+        ) : showPeople ? (
           <WorldPeoplePanel
             worldId={worldId}
             ownerId={world.owner_id}

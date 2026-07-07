@@ -440,6 +440,8 @@
     "settingsMonth": "Mes",
     "settingsDay": "Día",
     "settingsNoMonth": "Sin mes",
+    "settingsCategory": "Categoría",
+    "settingsCategoryNone": "Ninguna",
     "settingsLocation": "Lugar",
     "settingsBanner": "Banner",
     "settingsBannerHint": "Hacer clic o soltar para reemplazar",

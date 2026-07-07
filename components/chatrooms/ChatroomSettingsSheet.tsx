@@ -44,6 +44,7 @@ import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 
 type MapPinOption = { id: string; title: string; color: string };
+type CategoryOption = { id: string; title: string; banner_url: string | null };
 
 const schema = z.object({
   title: z.string().trim().min(1, "Nom requis").max(80),
@@ -68,6 +69,7 @@ type Props = {
     messages_count?: number;
     timeline_date?: WorldTimelineDate | null;
     map_pin_id?: string | null;
+    category_id?: string | null;
   };
   worldTimelineConfig?: WorldTimelineConfig | null;
   worldId?: string | null;
@@ -87,6 +89,9 @@ export default function ChatroomSettingsSheet({ canEdit, chatroom, worldTimeline
   const [mapPins, setMapPins] = React.useState<MapPinOption[]>([]);
   const [mapPinId, setMapPinId] = React.useState<string | null>(chatroom.map_pin_id ?? null);
   const [savingPin, setSavingPin] = React.useState(false);
+  const [categories, setCategories] = React.useState<CategoryOption[]>([]);
+  const [categoryId, setCategoryId] = React.useState<string | null>(chatroom.category_id ?? null);
+  const [savingCategory, setSavingCategory] = React.useState(false);
 
   const iconInputRef = React.useRef<HTMLInputElement | null>(null);
 
@@ -108,6 +113,7 @@ export default function ChatroomSettingsSheet({ canEdit, chatroom, worldTimeline
       });
       setTimelineDate(chatroom.timeline_date ?? null);
       setMapPinId(chatroom.map_pin_id ?? null);
+      setCategoryId(chatroom.category_id ?? null);
       if (world_map && worldId) {
         void supabase
           .from("world_map_pins")
@@ -115,6 +121,14 @@ export default function ChatroomSettingsSheet({ canEdit, chatroom, worldTimeline
           .eq("world_id", worldId)
           .order("sort_index")
           .then(({ data }: { data: MapPinOption[] | null }) => setMapPins(data ?? []));
+      }
+      if (worldId) {
+        void supabase
+          .from("chatroom_categories")
+          .select("id, title, banner_url")
+          .eq("world_id", worldId)
+          .order("position")
+          .then(({ data }: { data: CategoryOption[] | null }) => setCategories(data ?? []));
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -194,6 +208,20 @@ export default function ChatroomSettingsSheet({ canEdit, chatroom, worldTimeline
     setSavingPin(false);
     if (error) { toast.error(error.message); return; }
     setMapPinId(pinId);
+    router.refresh();
+  }
+
+  // ---------- catégorie ----------
+
+  async function persistCategory(catId: string | null) {
+    setSavingCategory(true);
+    const { error } = await supabase
+      .from("chatrooms")
+      .update({ category_id: catId })
+      .eq("id", chatroom.id);
+    setSavingCategory(false);
+    if (error) { toast.error(error.message); return; }
+    setCategoryId(catId);
     router.refresh();
   }
 
@@ -424,6 +452,55 @@ export default function ChatroomSettingsSheet({ canEdit, chatroom, worldTimeline
                       )}
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* Catégorie */}
+              {categories.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-medium">{t("settingsCategory")}</p>
+                      <p className="text-xs text-muted-foreground leading-snug">
+                        Regroupe cette conversation avec d&apos;autres dans la sidebar.
+                      </p>
+                    </div>
+                    {categoryId && (
+                      <button
+                        type="button"
+                        disabled={savingCategory}
+                        onClick={() => void persistCategory(null)}
+                        className="text-xs text-muted-foreground hover:text-destructive transition-colors"
+                      >
+                        {t("settingsCategoryNone")}
+                      </button>
+                    )}
+                  </div>
+                  <div className="grid gap-1">
+                    {categories.map(cat => (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        disabled={savingCategory}
+                        onClick={() => void persistCategory(cat.id === categoryId ? null : cat.id)}
+                        className={`flex w-full items-center gap-3 rounded-xl border px-3 py-2 text-sm transition-colors ${
+                          categoryId === cat.id
+                            ? "border-primary/40 bg-primary/10 text-primary"
+                            : "border-border-soft bg-background text-foreground hover:bg-secondary"
+                        }`}
+                      >
+                        <span className="h-5 w-5 shrink-0 overflow-hidden rounded-md bg-muted-foreground/10 flex items-center justify-center">
+                          {cat.banner_url ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={cat.banner_url} alt="" className="h-full w-full object-cover" />
+                          ) : (
+                            <span className="text-[9px] font-medium text-muted-foreground">{cat.title[0]?.toUpperCase()}</span>
+                          )}
+                        </span>
+                        {cat.title}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
 

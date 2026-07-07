@@ -134,6 +134,7 @@ export default function ChatRoomView({
     icon_url: string | null;
     timeline_date: import("@/types/worlds").WorldTimelineDate | null;
     map_pin_id: string | null;
+    category_id: string | null;
     worlds: { id: string; name: string; isShared: boolean; owner_id: string | null; restrict_inventory: boolean; restrict_skills: boolean; timeline_config: import("@/types/worlds").WorldTimelineConfig | null } | null;
   };
   initialMessages: ChatMessageWithPersona[];
@@ -803,6 +804,7 @@ export default function ChatRoomView({
                   messages_count: messages.length,
                   timeline_date: chat.timeline_date ?? null,
                   map_pin_id: chat.map_pin_id ?? null,
+                  category_id: chat.category_id ?? null,
                 }}
                 worldTimelineConfig={chat.worlds?.timeline_config ?? null}
                 worldId={chat.worlds?.id ?? null}
