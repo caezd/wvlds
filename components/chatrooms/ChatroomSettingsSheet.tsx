@@ -123,12 +123,15 @@ export default function ChatroomSettingsSheet({ canEdit, chatroom, worldTimeline
           .then(({ data }: { data: MapPinOption[] | null }) => setMapPins(data ?? []));
       }
       if (worldId) {
-        void supabase
-          .from("chatroom_categories")
-          .select("id, title, banner_url")
-          .eq("world_id", worldId)
-          .order("position")
-          .then(({ data }: { data: CategoryOption[] | null }) => setCategories(data ?? []));
+        void (async () => {
+          const { data, error } = await supabase
+            .from("chatroom_categories")
+            .select("id, title, banner_url")
+            .eq("world_id", worldId)
+            .order("position");
+          if (error) toast.error(error.message);
+          setCategories((data as CategoryOption[] | null) ?? []);
+        })();
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
