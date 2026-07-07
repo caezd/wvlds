@@ -32,8 +32,14 @@ ALTER TABLE chatrooms
   ADD COLUMN IF NOT EXISTS category_id UUID REFERENCES chatroom_categories(id) ON DELETE SET NULL;
 
 -- Bucket Storage pour les bannières de catégorie
-INSERT INTO storage.buckets (id, name, public, file_size_limit)
-VALUES ('chatroom-categories', 'chatroom-categories', true, 5242880)
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'chatroom-categories',
+  'chatroom-categories',
+  true,
+  5242880,
+  ARRAY['image/png', 'image/jpeg', 'image/webp']
+)
 ON CONFLICT (id) DO NOTHING;
 
 CREATE POLICY "chatroom_categories bucket select public" ON storage.objects
