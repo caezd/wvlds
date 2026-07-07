@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
+import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import {
   Sheet,
   SheetContent,
@@ -128,6 +129,7 @@ export default function ChatroomStatsSheet({
 }) {
   const t = useTranslations("chatrooms");
   const supabase = createClient();
+  const reconnectEpoch = useReconnectEpoch();
   const [open, setOpen] = useState(false);
   const [_loading, setLoading] = useState(false);
   const [stats, setStats] = useState<ChatroomStatsPayload | null>(initialStats ?? null);
@@ -170,7 +172,7 @@ export default function ChatroomStatsSheet({
       refetchTimer.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, chatId]);
+  }, [open, chatId, reconnectEpoch]);
 
   const userRows = useMemo(() => stats?.users ?? [], [stats]);
 

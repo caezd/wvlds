@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
+import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import {
   Check,
   ImagePlus,
@@ -846,6 +847,7 @@ export function WorldMap({
   const t = useTranslations("map");
   const tCommon = useTranslations("common");
   const supabase = createClient();
+  const reconnectEpoch = useReconnectEpoch();
 
   const [mapData, setMapData] = React.useState<WorldMapData | null>(null);
   const [pins, setPins] = React.useState<MapPinType[]>([]);
@@ -940,7 +942,7 @@ export function WorldMap({
       void supabase.removeChannel(channel);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [worldId]);
+  }, [worldId, reconnectEpoch]);
 
   // ── Upload de l'image de carte ────────────────────────────────
   async function handleMapImageUpload(file: File) {

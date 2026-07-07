@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import { TABLE, channel as CH } from "@/lib/constants";
 import type { ChatMessageWithPersona, ChatMessageMeta } from "@/types/db";
 import { toast } from "sonner";
@@ -37,6 +38,7 @@ export function useRealtimeChatSync({
   onPersonaUpdated,
 }: Props) {
   const supabase = useMemo(() => createClient(), []);
+  const reconnectEpoch = useReconnectEpoch();
   const latestIdRef = useRef<number | null>(initialLatestId);
 
   useEffect(() => {
@@ -93,7 +95,7 @@ export function useRealtimeChatSync({
       isMounted = false;
       void supabase.removeChannel(ch);
     };
-  }, [chatId, supabase]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [chatId, supabase, reconnectEpoch]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // DELETE — suppression de message
   useEffect(() => {
@@ -121,7 +123,7 @@ export function useRealtimeChatSync({
       isMounted = false;
       void supabase.removeChannel(ch);
     };
-  }, [chatId, supabase]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [chatId, supabase, reconnectEpoch]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // UPDATE — édition de contenu
   useEffect(() => {
@@ -149,7 +151,7 @@ export function useRealtimeChatSync({
       isMounted = false;
       void supabase.removeChannel(ch);
     };
-  }, [chatId, supabase]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [chatId, supabase, reconnectEpoch]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // UPDATE chatroom — titre / bannière / icône
   useEffect(() => {
@@ -176,7 +178,7 @@ export function useRealtimeChatSync({
       isMounted = false;
       void supabase.removeChannel(ch);
     };
-  }, [chatId, supabase]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [chatId, supabase, reconnectEpoch]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Personas UPDATE — avatar_url mis à jour
   useEffect(() => {
@@ -200,7 +202,7 @@ export function useRealtimeChatSync({
       isMounted = false;
       void supabase.removeChannel(ch);
     };
-  }, [chatId, supabase, onPersonaUpdated]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [chatId, supabase, onPersonaUpdated, reconnectEpoch]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Reactions INSERT / DELETE
   useEffect(() => {
@@ -236,5 +238,5 @@ export function useRealtimeChatSync({
       isMounted = false;
       void supabase.removeChannel(ch);
     };
-  }, [chatId, supabase, selfId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [chatId, supabase, selfId, reconnectEpoch]); // eslint-disable-line react-hooks/exhaustive-deps
 }

@@ -14,6 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { WorldAddTabDialog } from "./WorldAddTabDialog";
 import { createClient } from "@/lib/supabase/client";
+import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
@@ -74,6 +75,7 @@ export function WorldTabs({
     heroSlot,
 }: WorldTabsProps) {
     const supabase = createClient();
+    const reconnectEpoch = useReconnectEpoch();
     const [tabs, setTabs] = React.useState<TabRow[] | null>(null);
     const [current, setCurrent] = React.useState<string | undefined>(
         value ?? (homeNode ? HOME_SLUG : undefined),
@@ -127,7 +129,7 @@ export function WorldTabs({
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [supabase, worldId]);
+    }, [supabase, worldId, reconnectEpoch]);
 
     // External value change sync
     React.useEffect(() => {

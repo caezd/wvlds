@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import { DELAY } from "@/lib/constants";
 import type { Persona } from "@/types/db";
 
@@ -46,6 +47,7 @@ export function usePresenceChannel({
 }) {
   const supabase = useMemo(() => createClient(), []);
   const { userId, username, avatarUrl } = useCurrentUser();
+  const reconnectEpoch = useReconnectEpoch();
   const [online, setOnline] = useState<Record<string, PresenceMeta>>({});
   const [typing, setTyping] = useState<Record<string, TypingEntry>>({});
 
@@ -130,7 +132,9 @@ export function usePresenceChannel({
         channelRef.current = null;
       }
     };
-  }, [chatId, supabase, userId]); // eslint-disable-line react-hooks/exhaustive-deps
+    // reconnectEpoch : force la recréation du canal après une coupure réseau
+    // (voir useReconnectEpoch).
+  }, [chatId, supabase, userId, reconnectEpoch]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Mettre à jour le track quand la persona change
   useEffect(() => {

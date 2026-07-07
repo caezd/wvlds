@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
+import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { decryptMessage, generateRoomKey } from "@/lib/crypto";
 import Link from "next/link";
@@ -147,6 +148,7 @@ export default function ChatRoomView({
   initialIsFollowed: boolean;
 }) {
   const supabase = useMemo(() => createClient(), []);
+  const reconnectEpoch = useReconnectEpoch();
   const router = useRouter();
   const { setActiveChat, markChatRead: markChatReadCtx } = useNotifications();
   const { post_message, quests } = useFeatureFlags();
@@ -242,7 +244,7 @@ export default function ChatRoomView({
       .subscribe();
 
     return () => { void supabase.removeChannel(sub); };
-  }, [chatId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [chatId, reconnectEpoch]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* défis actifs du jour — chargés une fois à l'ouverture du chatroom */
   useEffect(() => {

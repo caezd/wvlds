@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ChevronRight, MessagesSquare } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import { useNotifications } from "@/components/providers/NotificationsProvider";
 import { cn } from "@/lib/utils";
 
@@ -41,6 +42,7 @@ export function WorldChatroomsGrid({
 }) {
   const [rooms, setRooms] = useState<Room[]>(initialRooms);
   const { roomUnread } = useNotifications();
+  const reconnectEpoch = useReconnectEpoch();
 
   useEffect(() => {
     const supabase = createClient();
@@ -69,7 +71,7 @@ export function WorldChatroomsGrid({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [worldId]);
+  }, [worldId, reconnectEpoch]);
 
   if (rooms.length === 0) {
     return (

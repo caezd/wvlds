@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-07",
     tag: "Correctif",
+    text: "Après une coupure réseau, la présence (« en ligne »), les messages, les notifications et les messages privés pouvaient rester bloqués sur « hors ligne » même une fois la connexion revenue, obligeant à recharger la page. Tous les canaux temps réel de l'app se reconnectent désormais automatiquement au retour de la connexion.",
+  },
+  {
+    date: "2026-07",
+    tag: "Correctif",
     text: "Le lien **« Catalogue »** de la sidebar d'un monde n'apparaissait que si l'inventaire ou les compétences étaient restreints — il ignorait les faceclaims, et disparaissait donc pour la plupart des mondes. Il s'affiche désormais dès qu'au moins une des trois fonctionnalités (objets, compétences, faceclaims) est activée. Corrige au passage un bug plus ancien : les colonnes d'activation individuelle de l'inventaire et des compétences par monde n'avaient jamais été appliquées en base, ce qui rendait ces deux réglages inopérants.",
   },
   {
