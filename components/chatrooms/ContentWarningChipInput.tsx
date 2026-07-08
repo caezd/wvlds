@@ -37,6 +37,7 @@ export function ContentWarningChipInput({
         <button
           key={`${tagLabel}-${i}`}
           type="button"
+          // onMouseDown (pas onClick) précède le blur du champ de saisie : en
           // annulant son comportement par défaut ici, le champ ne perd pas le
           // focus avant que ce clic ne soit traité, ce qui évite qu'un texte
           // en cours de frappe soit ajouté comme tag au moment où on clique
