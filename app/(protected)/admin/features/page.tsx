@@ -32,6 +32,7 @@ const FIELD_KEYS: FlagKey[] = [
 const BLOCK_KEYS: FlagKey[] = [
   "block_npc",
   "block_hp",
+  "block_choice",
 ];
 
 type GroupKey = "account" | "game" | "personas" | "shop" | "worlds" | "chatrooms";

@@ -12,7 +12,7 @@ import { useTagChips } from "@/hooks/useTagChips";
 import { PersonaPickerDialog } from "@/components/personas/PersonaPickerDialog";
 import { ContentWarningChipInput } from "@/components/chatrooms/ContentWarningChipInput";
 import { Button } from "../ui/button";
-import { SendHorizontal, Component, Dices, Pipette, X, ImagePlus, Eye, Lock, Sword, Heart, Square, Anchor, CalendarDays, MapPin, MessageCircle, MessageSquareText, Check, AlertTriangle, type LucideIcon } from "lucide-react";
+import { SendHorizontal, Component, Dices, Pipette, X, ImagePlus, Eye, Lock, Sword, Heart, Square, Anchor, CalendarDays, MapPin, MessageCircle, MessageSquareText, Check, AlertTriangle, Vote, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { toWebP } from "@/lib/imageUtils";
@@ -25,6 +25,7 @@ import { NpcDialog } from "./blocks/NpcBlock";
 import { HpDialog } from "./blocks/HpBlock";
 import { CalloutDialog } from "./blocks/CalloutBlock";
 import { AnchorDialog } from "./blocks/AnchorDialog";
+import { ChoiceDialog } from "./blocks/ChoiceBlock";
 import {
   computeWordCount,
   extractMentions,
@@ -762,10 +763,10 @@ function BlocksDropdown({
   onMapPinChange?: (id: string | null) => void;
 }) {
   const t = useTranslations("chatrooms");
-  const { chatroom_blocks, block_npc, block_hp } = useFeatureFlags();
+  const { chatroom_blocks, block_npc, block_hp, block_choice } = useFeatureFlags();
   const [open, setOpen] = useState(false);
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
-  const [activeTool, setActiveTool] = useState<"dice" | "reveal" | "npc" | "hp" | "callout" | "anchor" | "timeline" | "location" | null>(null);
+  const [activeTool, setActiveTool] = useState<"dice" | "reveal" | "npc" | "hp" | "callout" | "anchor" | "choice" | "timeline" | "location" | null>(null);
   const [draftDate, setDraftDate] = useState<WorldTimelineDate>({ year: 1, month: null, day: null });
   const [draftPinId, setDraftPinId] = useState<string | null>(null);
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
@@ -781,6 +782,7 @@ function BlocksDropdown({
     { id: "callout", icon: Square, title: t("calloutBtn"), description: t("calloutHint"), onActivate: () => { setOpen(false); setActiveTool("callout"); } },
     { id: "anchor", icon: Anchor, title: t("anchor"), description: t("anchorHint"), onActivate: () => { setOpen(false); setActiveTool("anchor"); } },
     { id: "reveal", icon: Eye, title: t("reveal"), description: t("revealHint"), onActivate: () => { setOpen(false); setActiveTool("reveal"); } },
+    ...(chatroom_blocks && block_choice ? [{ id: "choice", icon: Vote, title: t("choice"), description: t("choiceHint"), onActivate: () => { setOpen(false); setActiveTool("choice"); } }] : []),
     ...(chatroom_blocks && block_npc ? [{ id: "npc", icon: Sword, title: t("npcCard"), description: t("npcHint"), onActivate: () => { setOpen(false); setActiveTool("npc"); } }] : []),
     ...(chatroom_blocks && block_hp ? [{ id: "hp", icon: Heart, title: t("healthBar"), description: t("hpHint"), onActivate: () => { setOpen(false); setActiveTool("hp"); } }] : []),
   ];
@@ -852,6 +854,22 @@ function BlocksDropdown({
           <div className="w-full rounded-xl border border-dashed border-border-soft px-4 py-3 text-center text-xs text-muted-foreground">
             <Eye className="mx-auto mb-1 h-4 w-4" />
             Cliquer pour révéler
+          </div>
+        );
+      case "choice":
+        return (
+          <div className="grid w-full grid-cols-3 gap-1.5">
+            {["Nord", "Sud", "Est"].map((label, i) => (
+              <div
+                key={label}
+                className={cn(
+                  "rounded-lg border px-2 py-2 text-center text-[11px]",
+                  i === 0 ? "border-violet-500/50 bg-violet-500/10" : "border-border-soft bg-card",
+                )}
+              >
+                {label}
+              </div>
+            ))}
           </div>
         );
       case "npc":
@@ -1198,6 +1216,11 @@ function BlocksDropdown({
       />
       <AnchorDialog
         open={activeTool === "anchor"}
+        onOpenChange={(v) => !v && setActiveTool(null)}
+        onSend={(content) => { onSend(content); setActiveTool(null); }}
+      />
+      <ChoiceDialog
+        open={activeTool === "choice"}
         onOpenChange={(v) => !v && setActiveTool(null)}
         onSend={(content) => { onSend(content); setActiveTool(null); }}
       />

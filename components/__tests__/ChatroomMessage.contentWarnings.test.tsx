@@ -129,32 +129,32 @@ describe("ChatroomMessage — avertissements de contenu", () => {
 
   it("affiche les étiquettes d'avertissement quand metadata.content_warnings est présent", () => {
     const message = makeMessage({ metadata: { content_warnings: ["violence", "deuil"] } });
-    render(<ChatroomMessage message={message} online={{}} selfId="viewer-1" />);
+    const { container } = render(<ChatroomMessage message={message} online={{}} selfId="viewer-1" />);
 
-    expect(screen.getByText("contentWarningPrefix")).toBeInTheDocument();
-    expect(screen.getByText("violence")).toBeInTheDocument();
-    expect(screen.getByText("deuil")).toBeInTheDocument();
+    expect(container.querySelector(".text-amber-700")).not.toBeNull();
+    expect(container.textContent).toContain("violence");
+    expect(container.textContent).toContain("deuil");
   });
 
   it("n'affiche rien quand metadata.content_warnings est absent", () => {
     const message = makeMessage({ metadata: null });
-    render(<ChatroomMessage message={message} online={{}} selfId="viewer-1" />);
+    const { container } = render(<ChatroomMessage message={message} online={{}} selfId="viewer-1" />);
 
-    expect(screen.queryByText("contentWarningPrefix")).toBeNull();
+    expect(container.querySelector(".text-amber-700")).toBeNull();
   });
 
   it("n'affiche rien quand metadata.content_warnings est un tableau vide", () => {
     const message = makeMessage({ metadata: { content_warnings: [] } });
-    render(<ChatroomMessage message={message} online={{}} selfId="viewer-1" />);
+    const { container } = render(<ChatroomMessage message={message} online={{}} selfId="viewer-1" />);
 
-    expect(screen.queryByText("contentWarningPrefix")).toBeNull();
+    expect(container.querySelector(".text-amber-700")).toBeNull();
   });
 
   it("n'affiche pas son propre bandeau pour un message SMS : agrégé une fois par bloc par la vue parente", () => {
     const message = makeMessage({ metadata: { sms: true, content_warnings: ["deuil"] } });
     const { container } = render(<ChatroomMessage message={message} online={{}} selfId="viewer-1" />);
 
-    expect(screen.queryByText("contentWarningPrefix")).toBeNull();
+    expect(container.querySelector(".text-amber-700")).toBeNull();
     const bubbles = container.querySelectorAll('[data-message-id="1"]');
     expect(bubbles.length).toBe(1);
     expect(bubbles[0].className).toContain("justify-start");

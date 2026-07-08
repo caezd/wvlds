@@ -91,6 +91,7 @@ export default function ChatroomMessage({
   onUpdated,
   onRequestDelete,
   onReactionsUpdated,
+  onVotesUpdated,
   chatroomKey,
   forceEdit,
   onForceEditConsumed,
@@ -111,6 +112,7 @@ export default function ChatroomMessage({
   onUpdated?: (id: number, content: string, metadata: ChatMessageMeta | null) => void;
   onRequestDelete?: () => void;
   onReactionsUpdated?: (id: number, reactions: ReactionSummary[]) => void;
+  onVotesUpdated?: (id: number, votes: import("@/types/db").ChoiceVoteSummary[]) => void;
   chatroomKey?: string | null;
   forceEdit?: boolean;
   onForceEditConsumed?: () => void;
@@ -237,6 +239,8 @@ export default function ChatroomMessage({
           chatroomKey={chatroomKey}
           onUpdated={onUpdated}
           onAnchorEdited={onAnchorEdited}
+          votes={message.votes}
+          onVotesUpdated={onVotesUpdated}
         />
       </div>
     );

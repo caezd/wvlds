@@ -4,7 +4,8 @@ import { getUserId } from "@/lib/auth";
 import { notFound } from "next/navigation";
 import { TABLE, CHAT_MESSAGES_PAGE_SIZE } from "@/lib/constants";
 import { decryptMessage } from "@/lib/crypto";
-import type { ChatMessageWithPersona, Persona } from "@/types/db";
+import { aggregateChoiceVotes } from "@/lib/choiceVotes";
+import type { ChatMessageWithPersona, Persona, ChoiceVoteSummary } from "@/types/db";
 import WorldSidebar from "@/components/worlds/WorldSidebar";
 import { getTranslations } from "next-intl/server";
 import { canMemberPost } from "@/lib/worldPermissions";
@@ -86,9 +87,10 @@ export default async function Page({ params }: { params: { id: string } }) {
   // indépendantes entre elles → en parallèle : réactions, nav des salons du
   // monde, et rôle de l'utilisateur dans le monde (si nécessaire).
   type ReactionRow = { message_id: number; emoji: string; user_id: string };
+  type VoteRow = { message_id: number; option_id: string; user_id: string };
   type NavRoom = { id: string; title: string | null; name: string | null; icon_url: string | null; last_message_at: string | null; unread_count: number };
 
-  const [reactionRows, navResult, membership, followRow] = await Promise.all([
+  const [reactionRows, voteRows, navResult, membership, followRow] = await Promise.all([
     (async (): Promise<ReactionRow[]> => {
       if (!messageIds.length) return [];
       const { data: rows } = await supabase
@@ -97,6 +99,15 @@ export default async function Page({ params }: { params: { id: string } }) {
         .eq("chat_id", id)
         .in("message_id", messageIds);
       return (rows ?? []) as ReactionRow[];
+    })(),
+    (async (): Promise<VoteRow[]> => {
+      if (!messageIds.length) return [];
+      const { data: rows } = await supabase
+        .from(TABLE.CHAT_CHOICE_VOTES)
+        .select("message_id, option_id, user_id")
+        .eq("chat_id", id)
+        .in("message_id", messageIds);
+      return (rows ?? []) as VoteRow[];
     })(),
     (async (): Promise<{ rooms: NavRoom[]; rpcFailed: boolean }> => {
       if (!chatroom.world_id) return { rooms: [], rpcFailed: false };
@@ -161,6 +172,14 @@ export default async function Page({ params }: { params: { id: string } }) {
     });
   }
 
+  const votesByMessage = new Map<number, VoteRow[]>();
+  for (const r of voteRows) {
+    const mid = Number(r.message_id);
+    const arr = votesByMessage.get(mid) ?? [];
+    arr.push(r);
+    votesByMessage.set(mid, arr);
+  }
+
   const initialMessagesWithReactions = await Promise.all(
     initialMessages.map(async (m) => {
       const emMap = byMessage.get(m.id);
@@ -169,10 +188,11 @@ export default async function Page({ params }: { params: { id: string } }) {
             .map(([emoji, v]) => ({ emoji, count: v.count, me: v.me }))
             .sort((a, b) => b.count - a.count || a.emoji.localeCompare(b.emoji))
         : [];
+      const votes: ChoiceVoteSummary[] = aggregateChoiceVotes(votesByMessage.get(m.id) ?? [], userId);
       const content = chatroomKey
         ? await decryptMessage((m as { content?: string }).content ?? "", chatroomKey)
         : ((m as { content?: string }).content ?? "");
-      return { ...m, content, reactions };
+      return { ...m, content, reactions, votes };
     }),
   );
   /* reactions */

@@ -20,6 +20,7 @@ import { ChatroomComposer } from "@/components/chatrooms/ChatroomComposer";
 import ChatroomMessage from "@/components/chatrooms/ChatroomMessage";
 import { GameBlockSurface } from "@/components/chatrooms/blocks/GameBlockShell";
 import { groupMessagesForRender, computeSmsRunFlags, aggregateContentWarnings, type SmsRunFlags } from "@/lib/chatroomMessageGrouping";
+import { applyRemoteVoteChange } from "@/lib/choiceVotes";
 import { ContentWarningBanner } from "@/components/chatrooms/ContentWarningBanner";
 import { PersonaProfileSheet } from "@/components/chatrooms/PersonaProfileSheet";
 import { ChatroomsNavDropdown } from "@/components/chatrooms/ChatroomsNavDropdown";
@@ -678,7 +679,7 @@ export default function ChatRoomView({
           : (msg.content ?? "");
         const decrypted = { ...msg, content };
         setMessages((prev) =>
-          prev.some((m) => m.id === decrypted.id) ? prev : [...prev, { ...decrypted, reactions: [] }],
+          prev.some((m) => m.id === decrypted.id) ? prev : [...prev, { ...decrypted, reactions: [], votes: [] }],
         );
         if (authorId) clearTyping(authorId);
       })();
@@ -709,6 +710,15 @@ export default function ChatRoomView({
         prev.map((m) =>
           m.id === mid
             ? { ...m, reactions: updateReactions(m.reactions, emoji, delta) }
+            : m,
+        ),
+      );
+    },
+    onVoteChange: (mid, prevOptionId, nextOptionId) => {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === mid
+            ? { ...m, votes: applyRemoteVoteChange(m.votes ?? [], prevOptionId, nextOptionId) }
             : m,
         ),
       );
@@ -749,6 +759,13 @@ export default function ChatRoomView({
         setMessages((prev) =>
           prev.map((x) =>
             x.id === mid ? { ...x, reactions } : x,
+          ),
+        );
+      }}
+      onVotesUpdated={(mid, votes) => {
+        setMessages((prev) =>
+          prev.map((x) =>
+            x.id === mid ? { ...x, votes } : x,
           ),
         );
       }}

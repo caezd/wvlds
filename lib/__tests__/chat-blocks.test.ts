@@ -21,12 +21,23 @@ describe("parseChatBlock", () => {
     expect(block).toMatchObject({ _type: "dice", total: 4 });
   });
 
-  it.each(["banner", "reveal", "npc", "hp", "callout"])(
+  it.each(["banner", "reveal", "npc", "hp", "callout", "choice"])(
     "reconnaît le type de bloc %s",
     (type) => {
       expect(parseChatBlock(`{"_type":"${type}"}`)).toMatchObject({ _type: type });
     },
   );
+
+  it("parse un bloc choix avec sa question et ses options", () => {
+    const block = parseChatBlock(
+      '{"_type":"choice","question":"Où ?","options":[{"id":"a","label":"Nord"},{"id":"b","label":"Sud"}]}',
+    );
+    expect(block).toMatchObject({
+      _type: "choice",
+      question: "Où ?",
+      options: [{ id: "a", label: "Nord" }, { id: "b", label: "Sud" }],
+    });
+  });
 });
 
 describe("rollDice", () => {

@@ -23,6 +23,7 @@ type Props = {
   onMessageDeleted: (id: number) => void;
   onChatroomPatched: (patch: ChatroomPatch) => void;
   onReactionChange: (messageId: number, emoji: string, delta: 1 | -1) => void;
+  onVoteChange?: (messageId: number, prevOptionId: string | null, nextOptionId: string | null) => void;
   onPersonaUpdated?: (personaId: string, avatarUrl: string | null) => void;
 };
 
@@ -35,6 +36,7 @@ export function useRealtimeChatSync({
   onMessageDeleted,
   onChatroomPatched,
   onReactionChange,
+  onVoteChange,
   onPersonaUpdated,
 }: Props) {
   const supabase = useMemo(() => createClient(), []);
@@ -239,4 +241,47 @@ export function useRealtimeChatSync({
       void supabase.removeChannel(ch);
     };
   }, [chatId, supabase, selfId, reconnectEpoch]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Votes de choix INSERT / UPDATE (revote) / DELETE
+  useEffect(() => {
+    if (!onVoteChange) return;
+    let isMounted = true;
+
+    const ch = supabase
+      .channel(CH.chatVotes(chatId))
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: TABLE.CHAT_CHOICE_VOTES,
+          filter: `chat_id=eq.${chatId}`,
+        },
+        (payload: { eventType: string; new: Record<string, unknown>; old: Record<string, unknown> }) => {
+          if (!isMounted) return;
+          const ev = payload.eventType;
+          if (ev !== "INSERT" && ev !== "UPDATE" && ev !== "DELETE") return;
+
+          type VoteRow = { message_id: number; option_id: string; user_id: string };
+          const newRow = payload.new as VoteRow | null;
+          const oldRow = payload.old as VoteRow | null;
+          const row = ev === "DELETE" ? oldRow : newRow;
+          if (!row) return;
+
+          if (selfId && row.user_id === selfId) return;
+
+          onVoteChange(
+            row.message_id,
+            ev === "INSERT" ? null : (oldRow?.option_id ?? null),
+            ev === "DELETE" ? null : (newRow?.option_id ?? null),
+          );
+        },
+      )
+      .subscribe();
+
+    return () => {
+      isMounted = false;
+      void supabase.removeChannel(ch);
+    };
+  }, [chatId, supabase, selfId, onVoteChange, reconnectEpoch]); // eslint-disable-line react-hooks/exhaustive-deps
 }

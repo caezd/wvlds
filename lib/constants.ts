@@ -2,6 +2,7 @@
 export const TABLE = {
   CHAT_MESSAGES: "chat_messages",
   CHAT_MESSAGE_REACTIONS: "chat_message_reactions",
+  CHAT_CHOICE_VOTES: "chat_choice_votes",
   CHATROOMS: "chatrooms",
   CHATROOM_KEYS: "chatroom_keys",
   CHATROOM_READS: "chatroom_reads",
@@ -51,6 +52,7 @@ export const channel = {
   chatMessages: (chatId: string) => `chat-${chatId}`,
   chatMessageUpdates: (chatId: string) => `chat-messages-updates-${chatId}`,
   chatReactions: (chatId: string) => `chat-reactions-${chatId}`,
+  chatVotes: (chatId: string) => `chat-votes-${chatId}`,
   chatPins: (chatId: string) => `chat-pins-${chatId}`,
   chatroomUpdates: (chatId: string) => `chatroom-updates-${chatId}`,
   navMessages: (worldId: string) => `nav-messages-${worldId}`,
