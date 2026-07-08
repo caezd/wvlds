@@ -195,7 +195,9 @@
       "errorNotConnected": "Debes estar conectado.",
       "errorCreateFailed": "No se pudo crear la sala de chat.",
       "timelinePlaceholder": "Ubicar en la línea de tiempo",
-      "monthPlaceholder": "Mes —"
+      "monthPlaceholder": "Mes —",
+      "categoryPlaceholder": "Categoría",
+      "categoryNone": "Ninguna"
     }
   },
   "auth": {

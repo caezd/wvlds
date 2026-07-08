@@ -204,7 +204,9 @@
       "discardTitle": "Abandonner la conversation ?",
       "discardDescription": "Du texte a été saisi. Fermer le dialog supprimera votre brouillon.",
       "discardConfirm": "Fermer quand même",
-      "discardCancel": "Continuer à écrire"
+      "discardCancel": "Continuer à écrire",
+      "categoryPlaceholder": "Catégorie",
+      "categoryNone": "Aucune"
     }
   },
   "auth": {

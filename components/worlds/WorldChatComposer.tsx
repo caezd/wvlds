@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { generate } from "boring-name-generator";
-import { Plus, Shuffle, X } from "lucide-react";
+import { ChevronDown, Plus, Shuffle, Tag, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import type { Persona } from "@/types/db";
@@ -29,10 +29,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 type MapPinOption = { id: string; title: string; color: string };
+type CategoryOption = { id: string; title: string; banner_url: string | null };
 
 function randomTitle() {
   try { return generate({ words: 2 }).spaced; }
@@ -56,6 +63,8 @@ export function WorldChatComposer({
   const [timelineDate, setTimelineDate] = useState<WorldTimelineDate | null>(null);
   const [mapPins, setMapPins] = useState<MapPinOption[]>([]);
   const [mapPinId, setMapPinId] = useState<string | null>(null);
+  const [categories, setCategories] = useState<CategoryOption[]>([]);
+  const [categoryId, setCategoryId] = useState<string | null>(null);
 
   const [open, setOpen] = useState(false);
   const [confirmClose, setConfirmClose] = useState(false);
@@ -71,6 +80,18 @@ export function WorldChatComposer({
       .order("sort_index")
       .then(({ data }: { data: MapPinOption[] | null }) => setMapPins(data ?? []));
   }, [worldId, world_map]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    void (async () => {
+      const { data, error } = await supabase
+        .from("chatroom_categories")
+        .select("id, title, banner_url")
+        .eq("world_id", worldId)
+        .order("position");
+      if (error) { toast.error(error.message); return; }
+      setCategories((data as CategoryOption[] | null) ?? []);
+    })();
+  }, [worldId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function openDialog() {
     setTitle(randomTitle());
@@ -105,6 +126,7 @@ export function WorldChatComposer({
     };
     if (timelineDate !== null) insert.timeline_date = timelineDate;
     if (mapPinId !== null) insert.map_pin_id = mapPinId;
+    if (categoryId !== null) insert.category_id = categoryId;
 
     const { data: room, error } = await supabase
       .from(TABLE.CHATROOMS)
@@ -168,6 +190,40 @@ export function WorldChatComposer({
             >
               <Shuffle className="h-4 w-4" />
             </Button>
+            {categories.length > 0 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button type="button" variant="outline" className="shrink-0 gap-1.5 max-w-40">
+                    <Tag className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    <span className="truncate">
+                      {categoryId
+                        ? (categories.find((c) => c.id === categoryId)?.title ?? t("composer.categoryPlaceholder"))
+                        : t("composer.categoryPlaceholder")}
+                    </span>
+                    <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  {categories.map((cat) => (
+                    <DropdownMenuItem key={cat.id} onClick={() => setCategoryId(cat.id)}>
+                      <span className="mr-2 flex h-4 w-4 shrink-0 items-center justify-center overflow-hidden rounded-sm bg-muted-foreground/10">
+                        {cat.banner_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={cat.banner_url} alt="" className="h-full w-full object-cover" />
+                        ) : (
+                          <span className="text-[8px] font-medium text-muted-foreground">{cat.title[0]?.toUpperCase()}</span>
+                        )}
+                      </span>
+                      {cat.title}
+                    </DropdownMenuItem>
+                  ))}
+                  <DropdownMenuItem onClick={() => setCategoryId(null)}>
+                    <span className="mr-2 h-4 w-4 shrink-0 rounded-sm border border-border" />
+                    {t("composer.categoryNone")}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
 
           {/* Composer réel — onInput remonte depuis le contenteditable */}
