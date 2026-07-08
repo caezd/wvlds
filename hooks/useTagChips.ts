@@ -25,9 +25,9 @@ export function useTagChips(initial: string[] | null = null) {
     const label = raw.trim();
     if (!label) return;
     setTags((prev) => {
-      const list = prev ?? [];
-      if (list.some((t) => t.toLowerCase() === label.toLowerCase())) return list;
-      return [...list, label];
+      if (prev === null) return prev;
+      if (prev.some((t) => t.toLowerCase() === label.toLowerCase())) return prev;
+      return [...prev, label];
     });
     setInput("");
   }, []);
