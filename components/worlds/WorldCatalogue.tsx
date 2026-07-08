@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { useTranslations } from "next-intl";
 import {
   DndContext,
@@ -80,11 +81,11 @@ function groupByColumn(cats: WorldCatalogCategory[]): WorldCatalogCategory[][] {
 function CatalogIcon({ icon, size = "md" }: { icon?: string | null; size?: "sm" | "md" }) {
   const dim = size === "sm" ? "h-8 w-8" : "h-10 w-10";
   const img = size === "sm" ? "h-5 w-5" : "h-6 w-6";
+  const px = size === "sm" ? 20 : 24;
   return (
     <div className={cn(dim, "shrink-0 flex items-center justify-center rounded-lg border border-border-soft bg-muted/40")}>
       {icon ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={`/rpg_icons/${icon}`} alt="" className={cn(img, "object-contain dark:invert")} />
+        <Image src={`/rpg_icons/${icon}`} alt="" width={px} height={px} className={cn(img, "object-contain dark:invert")} />
       ) : (
         <ImageIcon className={cn(size === "sm" ? "h-3.5 w-3.5" : "h-4 w-4", "text-muted-foreground/30")} />
       )}
@@ -140,8 +141,7 @@ function AddForm({
         trigger={
           <button type="button" title={t("chooseIcon")} className="h-10 w-10 shrink-0 flex items-center justify-center rounded-lg border border-border-soft bg-muted/40 hover:bg-muted transition-colors">
             {icon ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={`/rpg_icons/${icon}`} alt="" className="h-6 w-6 object-contain dark:invert" />
+              <Image src={`/rpg_icons/${icon}`} alt="" width={24} height={24} className="h-6 w-6 object-contain dark:invert" />
             ) : (
               <ImageIcon className="h-4 w-4 text-muted-foreground/50" />
             )}
@@ -220,8 +220,7 @@ function EditRow({
         trigger={
           <button type="button" title={t("chooseIcon")} className="h-10 w-10 shrink-0 flex items-center justify-center rounded-lg border border-border-soft bg-muted/40 hover:bg-muted transition-colors">
             {icon ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={`/rpg_icons/${icon}`} alt="" className="h-6 w-6 object-contain dark:invert" />
+              <Image src={`/rpg_icons/${icon}`} alt="" width={24} height={24} className="h-6 w-6 object-contain dark:invert" />
             ) : (
               <ImageIcon className="h-4 w-4 text-muted-foreground/50" />
             )}
@@ -1265,10 +1264,9 @@ function FaceclaimList({ worldId }: { worldId: string }) {
     <div className="space-y-0.5">
       {rows.map(p => (
         <div key={p.id} className="flex items-center gap-2 px-2 py-1.5">
-          <div className="h-8 w-8 shrink-0 overflow-hidden rounded-full bg-muted">
+          <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full bg-muted">
             {p.avatar_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={p.avatar_url} alt="" className="h-full w-full object-cover" />
+              <Image src={p.avatar_url} alt="" fill sizes="32px" className="object-cover" />
             ) : null}
           </div>
           <div className="min-w-0 flex-1">

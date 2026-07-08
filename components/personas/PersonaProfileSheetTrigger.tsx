@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { supabaseThumb } from "@/lib/storage";
 import { toast } from "sonner";
@@ -101,8 +102,7 @@ function FieldView({ type, data }: { type: string; data: FieldData }) {
               <TooltipTrigger asChild>
                 <div className="flex items-center gap-1.5 rounded-md border border-border-soft bg-background px-2 py-1.5 cursor-default select-none">
                   {item.icon && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={`/rpg_icons/${item.icon}`} alt="" className="h-7 w-7 object-contain dark:invert shrink-0" />
+                    <Image src={`/rpg_icons/${item.icon}`} alt="" width={28} height={28} className="h-7 w-7 object-contain dark:invert shrink-0" />
                   )}
                   <span className="text-sm font-medium leading-none">{item.name}</span>
                   <span className="text-xs text-muted-foreground tabular-nums">x {item.quantity ?? 1}</span>
@@ -128,8 +128,7 @@ function FieldView({ type, data }: { type: string; data: FieldData }) {
         {visible.map((item) => (
           <div key={item.id} className="flex items-start gap-2.5 rounded-lg border border-border-soft bg-muted/30 px-3 py-2">
             {item.icon && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={`/rpg_icons/${item.icon}`} alt="" className="h-5 w-5 object-contain dark:invert shrink-0 mt-0.5" />
+              <Image src={`/rpg_icons/${item.icon}`} alt="" width={20} height={20} className="h-5 w-5 object-contain dark:invert shrink-0 mt-0.5" />
             )}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
@@ -291,6 +290,11 @@ export function PersonaProfileSheetTrigger({
   const [name, setName] = React.useState<string | null>(label ?? null);
   const [avatarUrl, setAvatarUrl] = React.useState<string | null>(null);
   const [bannerUrl, setBannerUrl] = React.useState<string | null>(null);
+  const [bannerThumbFailed, setBannerThumbFailed] = React.useState(false);
+
+  React.useEffect(() => {
+    setBannerThumbFailed(false);
+  }, [bannerUrl]);
   const [_frameUrl, setFrameUrl] = React.useState<string | null>(null);
   const [ownerPresence, setOwnerPresence] = React.useState<{
     last_seen_at: string | null;
@@ -460,8 +464,17 @@ export function PersonaProfileSheetTrigger({
           <div className="relative overflow-hidden">
             {/* Banner */}
             {bannerUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={supabaseThumb(bannerUrl, 880, 80, 272) ?? bannerUrl} onError={(e) => { e.currentTarget.src = bannerUrl!; e.currentTarget.onerror = null; }} alt="" className="h-34 w-full object-cover" draggable={false} />
+              <div className="relative h-34 w-full">
+                <Image
+                  src={bannerThumbFailed ? bannerUrl : (supabaseThumb(bannerUrl, 880, 80, 272) ?? bannerUrl)}
+                  onError={() => setBannerThumbFailed(true)}
+                  alt=""
+                  fill
+                  sizes="768px"
+                  className="object-cover"
+                  draggable={false}
+                />
+              </div>
             ) : (
               <div className="h-34 bg-gradient-to-r from-muted/60 to-muted" />
             )}

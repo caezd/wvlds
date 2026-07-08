@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getUserId } from "@/lib/auth";
 import { getFeatureFlags } from "@/lib/featureFlags";
 import { notFound } from "next/navigation";
+import Image from "next/image";
 import Link from "next/link";
 import { Globe } from "lucide-react";
 import { ExploreSearch } from "./ExploreSearch";
@@ -148,11 +149,12 @@ function ExploreWorldCard({
       {/* Hero */}
       <div className="relative overflow-hidden aspect-[4/3]">
         {world.banner_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <Image
             src={world.banner_url}
             alt=""
-            className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+            fill
+            sizes="(min-width: 1024px) 25vw, 50vw"
+            className="object-cover transition-transform duration-300 group-hover:scale-105"
           />
         ) : (
           <div
@@ -171,8 +173,7 @@ function ExploreWorldCard({
         {!world.banner_url && (
           <div className="absolute inset-0 flex items-center justify-center">
             {world.icon_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={world.icon_url} alt="" className="h-14 w-14 rounded-xl object-cover shadow" />
+              <Image src={world.icon_url} alt="" width={56} height={56} className="h-14 w-14 rounded-xl object-cover shadow" />
             ) : (
               <Globe size={40} className="text-white/60" />
             )}
@@ -181,8 +182,7 @@ function ExploreWorldCard({
         {/* Nom + icône dans le footer du hero */}
         <div className="absolute bottom-0 left-0 right-0 p-3">
           {world.banner_url && world.icon_url && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={world.icon_url} alt="" className="h-8 w-8 rounded-lg object-cover shadow mb-1.5" />
+            <Image src={world.icon_url} alt="" width={32} height={32} className="h-8 w-8 rounded-lg object-cover shadow mb-1.5" />
           )}
           <p className="text-sm font-semibold text-white leading-tight drop-shadow">
             {world.name}

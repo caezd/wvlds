@@ -373,6 +373,8 @@ export function ImagePickerCropField({
       disabled={uploading}
       className={cn("group relative block overflow-hidden focus-visible:outline-none", previewClassName)}
     >
+      {/* previewSrc peut être un blob:/data: URI (aperçu local avant upload) ou un lien externe
+          arbitraire (recadrage depuis une URL) — aucun des deux n'est compatible avec next/image */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={previewSrc ?? undefined} alt={previewAlt} className="h-full w-full object-cover" draggable={false} />
       <div className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition-opacity group-hover:bg-black/40 group-hover:opacity-100">

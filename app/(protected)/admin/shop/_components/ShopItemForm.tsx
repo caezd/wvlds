@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState, useRef } from "react";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -118,11 +119,15 @@ function ImageUploader({
       >
         {url ? (
           <>
-            <img
-              src={url}
-              alt="Aperçu"
-              className="max-h-24 max-w-[160px] rounded object-contain"
-            />
+            <div className="relative h-24 w-40">
+              <Image
+                src={url}
+                alt="Aperçu"
+                fill
+                sizes="160px"
+                className="rounded object-contain"
+              />
+            </div>
             <button
               type="button"
               onClick={(e) => {

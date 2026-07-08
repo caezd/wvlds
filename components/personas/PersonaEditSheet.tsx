@@ -2,6 +2,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import Image from "next/image";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -249,8 +250,7 @@ function FramePicker({
             }`}
           title={f.name}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={f.preview_url ?? f.asset_url ?? ""} alt={f.name} className="h-full w-full object-cover" />
+          <Image src={f.preview_url ?? f.asset_url ?? ""} alt={f.name} fill sizes="56px" className="object-cover" />
           {selected === f.id && <Check className="absolute -right-1.5 -top-1.5 h-4 w-4 rounded-full bg-primary text-primary-foreground p-0.5" />}
         </button>
       ))}
@@ -327,6 +327,11 @@ export function PersonaEditorContent({
   const [bannerDialogOpen, setBannerDialogOpen] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(initialAvatarUrl ?? null);
   const [bannerUrl, setBannerUrl] = useState<string | null>(initialBannerUrl ?? null);
+  const [bannerThumbFailed, setBannerThumbFailed] = useState(false);
+
+  useEffect(() => {
+    setBannerThumbFailed(false);
+  }, [bannerUrl]);
   const [avatarConfig, setAvatarConfig] = useState<AvatarConfigV1 | null>(initialAvatarConfig ?? null);
   const [_frameUrl, setFrameUrl] = useState<string | null>(initialFrameUrl ?? null);
   const { avatar_builder } = useFeatureFlags();
@@ -377,8 +382,15 @@ export function PersonaEditorContent({
           title="Modifier la bannière"
         >
           {bannerUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={supabaseThumb(bannerUrl, 880, 80, 272) ?? bannerUrl} onError={(e) => { e.currentTarget.src = bannerUrl!; e.currentTarget.onerror = null; }} alt="" className="h-full w-full object-cover" draggable={false} />
+            <Image
+              src={bannerThumbFailed ? bannerUrl : (supabaseThumb(bannerUrl, 880, 80, 272) ?? bannerUrl)}
+              onError={() => setBannerThumbFailed(true)}
+              alt=""
+              fill
+              sizes="(min-width: 1024px) 768px, 100vw"
+              className="object-cover"
+              draggable={false}
+            />
           ) : (
             <div className="h-full w-full bg-gradient-to-r from-muted/60 to-muted" />
           )}
@@ -401,8 +413,7 @@ export function PersonaEditorContent({
               title="Modifier l'avatar"
             >
               {avatarUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={avatarUrl} alt="" className="h-full w-full object-cover" draggable={false} />
+                <Image src={avatarUrl} alt="" fill sizes="128px" className="object-cover" draggable={false} />
               ) : (
                 <div className="h-full w-full grid place-items-center text-lg font-semibold text-muted-foreground">
                   {avatarFallback}
@@ -509,10 +520,9 @@ export function PersonaEditorContent({
         <SheetContent side="right" className="w-full sm:max-w-5xl lg:shadow-2xl flex flex-col p-0 gap-0 overflow-hidden">
           <SheetHeader className="px-6 pt-6 pb-0 shrink-0">
             <div className="flex items-center gap-3">
-              <div className="h-14 w-14 shrink-0 rounded-xl border bg-muted overflow-hidden lg:hidden">
+              <div className="relative h-14 w-14 shrink-0 rounded-xl border bg-muted overflow-hidden lg:hidden">
                 {avatarUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={avatarUrl} alt="" className="h-full w-full object-cover" draggable={false} />
+                  <Image src={avatarUrl} alt="" fill sizes="56px" className="object-cover" draggable={false} />
                 ) : (
                   <div className="h-full w-full grid place-items-center text-sm font-semibold text-muted-foreground">
                     {avatarFallback}
@@ -630,10 +640,9 @@ export function PersonaEditorContent({
         createPortal(
           <div className="hidden lg:flex fixed inset-y-0 left-0 right-[64rem] z-[51] items-center justify-center p-10 pointer-events-none">
             <div className="flex flex-col items-center gap-4">
-              <div className="h-64 w-64 overflow-hidden rounded-3xl border bg-muted shadow-2xl">
+              <div className="relative h-64 w-64 overflow-hidden rounded-3xl border bg-muted shadow-2xl">
                 {avatarUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={avatarUrl} alt="" className="h-full w-full object-cover" draggable={false} />
+                  <Image src={avatarUrl} alt="" fill sizes="256px" className="object-cover" draggable={false} />
                 ) : (
                   <div className="h-full w-full grid place-items-center text-4xl font-semibold text-muted-foreground">
                     {avatarFallback}
@@ -652,10 +661,17 @@ export function PersonaEditorContent({
         createPortal(
           <div className="hidden lg:flex fixed inset-y-0 left-0 right-[calc(48rem-24px)] z-[51] items-center justify-center p-10 pointer-events-none">
             <div className="flex w-full max-w-[520px] flex-col items-center gap-4">
-              <div className="aspect-[744/136] w-full overflow-hidden rounded-xl bg-muted shadow-2xl">
+              <div className="relative aspect-[744/136] w-full overflow-hidden rounded-xl bg-muted shadow-2xl">
                 {bannerUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={supabaseThumb(bannerUrl, 1040, 80, 190) ?? bannerUrl} onError={(e) => { e.currentTarget.src = bannerUrl!; e.currentTarget.onerror = null; }} alt="" className="h-full w-full object-cover" draggable={false} />
+                  <Image
+                    src={bannerThumbFailed ? bannerUrl : (supabaseThumb(bannerUrl, 1040, 80, 190) ?? bannerUrl)}
+                    onError={() => setBannerThumbFailed(true)}
+                    alt=""
+                    fill
+                    sizes="520px"
+                    className="object-cover"
+                    draggable={false}
+                  />
                 ) : (
                   <div className="h-full w-full bg-gradient-to-r from-muted/60 to-muted grid place-items-center text-sm font-medium text-muted-foreground">
                     Aucune bannière

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState, useTransition } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -317,11 +318,12 @@ export function PersonasView({
             {activePersona ? (
               <div className="relative w-full aspect-square rounded-2xl overflow-hidden bg-muted shadow-xl ring-2 ring-primary/50">
                 {activePersona.avatar_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
+                  <Image
                     src={activePersona.avatar_url}
                     alt=""
-                    className="absolute inset-0 h-full w-full object-cover"
+                    fill
+                    sizes="200px"
+                    className="object-cover"
                     draggable={false}
                   />
                 ) : (

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import { useTranslations } from "next-intl";
 import {
   Dialog,
@@ -113,10 +114,11 @@ export function RpgIconPicker({ value, onChange, trigger }: Props) {
                         : "border-transparent hover:border-border hover:bg-muted",
                     )}
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+                    <Image
                       src={`/rpg_icons/${icon}`}
                       alt=""
+                      width={24}
+                      height={24}
                       className="h-6 w-6 object-contain dark:invert"
                       loading="lazy"
                     />

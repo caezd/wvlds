@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { X, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -145,8 +146,7 @@ function RoomCard({ room, onClick }: { room: TimelineRoom; onClick: () => void }
       )}
     >
       {room.icon_url ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={room.icon_url} alt="" className="h-7 w-7 shrink-0 rounded-full object-cover" />
+        <Image src={room.icon_url} alt="" width={28} height={28} className="h-7 w-7 shrink-0 rounded-full object-cover" />
       ) : (
         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted">
           <MessageSquare className="h-3.5 w-3.5 text-muted-foreground" />
