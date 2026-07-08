@@ -19,7 +19,8 @@ import { ScrollAreaWithJumpToBottom } from "@/components/ScrollAreaWithJumpToBot
 import { ChatroomComposer } from "@/components/chatrooms/ChatroomComposer";
 import ChatroomMessage from "@/components/chatrooms/ChatroomMessage";
 import { GameBlockSurface } from "@/components/chatrooms/blocks/GameBlockShell";
-import { groupMessagesForRender, computeSmsRunFlags, type SmsRunFlags } from "@/lib/chatroomMessageGrouping";
+import { groupMessagesForRender, computeSmsRunFlags, aggregateContentWarnings, type SmsRunFlags } from "@/lib/chatroomMessageGrouping";
+import { ContentWarningBanner } from "@/components/chatrooms/ContentWarningBanner";
 import { PersonaProfileSheet } from "@/components/chatrooms/PersonaProfileSheet";
 import { ChatroomsNavDropdown } from "@/components/chatrooms/ChatroomsNavDropdown";
 import { WorldMembershipGuard } from "@/components/worlds/WorldMembershipGuard";
@@ -829,6 +830,7 @@ export default function ChatRoomView({
                 {renderGroups.map((g) =>
                   g.kind === "sms" ? (
                     <div key={`sms-${g.messages[0].id}`} className="py-8">
+                      <ContentWarningBanner tags={aggregateContentWarnings(g.messages)} className="mb-1.5 px-1" />
                       <GameBlockSurface className="flex flex-col gap-1.5">
                         {computeSmsRunFlags(g.messages).map((flags, i) => renderMessage(g.messages[i], flags))}
                       </GameBlockSurface>

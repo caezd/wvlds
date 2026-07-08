@@ -4,6 +4,7 @@ import {
   extractMentions,
   buildVisibleToLabels,
   buildMessageMetadata,
+  shouldApplyContentWarnings,
 } from "@/lib/composerMessage";
 
 describe("computeWordCount", () => {
@@ -21,6 +22,21 @@ describe("computeWordCount", () => {
 
   it("retourne 0 pour une chaîne vide", () => {
     expect(computeWordCount("   ")).toBe(0);
+  });
+});
+
+describe("shouldApplyContentWarnings", () => {
+  it("est vrai pour un message texte normal", () => {
+    expect(shouldApplyContentWarnings("Un message tout à fait normal.")).toBe(true);
+  });
+
+  it("est faux pour un bloc structuré (dé, bannière, PNJ…)", () => {
+    expect(shouldApplyContentWarnings('{"_type":"dice","total":4}')).toBe(false);
+    expect(shouldApplyContentWarnings('{"_type":"banner","url":"https://x"}')).toBe(false);
+  });
+
+  it("est vrai pour une chaîne qui ressemble à du JSON mais n'est pas un bloc connu", () => {
+    expect(shouldApplyContentWarnings('{"_type":"inconnu"}')).toBe(true);
   });
 });
 
@@ -115,5 +131,17 @@ describe("buildMessageMetadata", () => {
         visibleToLabels: [],
       }),
     ).toEqual({ word_count: 3, bubbles: true });
+  });
+
+  it("inclut content_warnings quand des étiquettes sont présentes", () => {
+    expect(
+      buildMessageMetadata({ ...base, contentWarnings: ["violence", "deuil"] }),
+    ).toEqual({ content_warnings: ["violence", "deuil"] });
+  });
+
+  it("omet content_warnings quand la liste est vide ou absente", () => {
+    expect(buildMessageMetadata({ ...base, contentWarnings: [] })).toBeNull();
+    expect(buildMessageMetadata({ ...base, contentWarnings: null })).toBeNull();
+    expect(buildMessageMetadata(base)).toBeNull();
   });
 });

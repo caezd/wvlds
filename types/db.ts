@@ -75,6 +75,7 @@ export type ChatMessageMeta = {
   media?: ChatMediaItem[];
   word_count?: number;
   visible_to_labels?: string[];
+  content_warnings?: string[];
 };
 
 export type ChatMessage = {

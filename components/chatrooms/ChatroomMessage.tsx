@@ -8,6 +8,8 @@ import { ChatroomMessageSms } from "./ChatroomMessageSms";
 import { ChatroomMessageHeader } from "./ChatroomMessageHeader";
 import { ChatroomMessageMobileDrawers } from "./ChatroomMessageMobileDrawers";
 import { useChatroomMessageEdit } from "./useChatroomMessageEdit";
+import { ContentWarningChipInput } from "./ContentWarningChipInput";
+import { ContentWarningBanner } from "./ContentWarningBanner";
 import { parseChatBlock, type ChatBlock } from "@/lib/chat-blocks";
 import { GameBlockRenderer } from "./blocks/GameBlockRenderer";
 import { cn } from "@/lib/utils";
@@ -25,7 +27,7 @@ import { HsvColorPicker } from "@/components/ui/hsv-color-picker";
 import { createClient } from "@/lib/supabase/client";
 import { TABLE } from "@/lib/constants";
 
-import { MessageCircle, MessageSquareText, Lock, Pin, Pipette } from "lucide-react";
+import { MessageCircle, MessageSquareText, Lock, Pin, Pipette, AlertTriangle } from "lucide-react";
 import type { ChallengeBadge, ChatMessageMeta } from "@/types/db";
 
 import { toast } from "sonner";
@@ -174,6 +176,7 @@ export default function ChatroomMessage({
     setEditBubbleColor,
     editSms,
     setEditSms,
+    contentWarningsChips,
     startEdit,
     cancelEdit,
     save,
@@ -239,7 +242,10 @@ export default function ChatroomMessage({
     );
   }
 
-  // Messages "SMS" : bulle compacte, sans header (nom/avatar/date).
+  // Messages "SMS" : bulle compacte, sans header (nom/avatar/date). Les
+  // avertissements de contenu du bloc SMS entier sont agrégés et affichés
+  // une seule fois en tête du bloc par la vue parente (voir view.tsx /
+  // aggregateContentWarnings), pas ici par message.
   if (message.metadata?.sms && !editing) {
     return (
       <ChatroomMessageSms
@@ -282,6 +288,7 @@ export default function ChatroomMessage({
             </span>
           </div>
         )}
+        <ContentWarningBanner tags={message.metadata?.content_warnings ?? []} className="mb-3" />
         <div className="flex w-full flex-col justify-between gap-8 ">
           <ChatroomMessageHeader
             message={message}
@@ -374,7 +381,33 @@ export default function ChatroomMessage({
                         <MessageSquareText className="h-3 w-3" />
                         {t("smsMode")}
                       </button>
+                      <button
+                        type="button"
+                        onClick={contentWarningsChips.toggle}
+                        className={cn(
+                          "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors",
+                          contentWarningsChips.tags !== null
+                            ? "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400"
+                            : "border-border-soft text-muted-foreground hover:text-foreground",
+                        )}
+                      >
+                        <AlertTriangle className="h-3 w-3" />
+                        {t("contentWarning")}
+                      </button>
                     </div>
+                    {contentWarningsChips.tags !== null && (
+                      <ContentWarningChipInput
+                        tags={contentWarningsChips.tags}
+                        input={contentWarningsChips.input}
+                        onInputChange={contentWarningsChips.setInput}
+                        onKeyDown={contentWarningsChips.onKeyDown}
+                        onBlur={() => contentWarningsChips.add(contentWarningsChips.input)}
+                        onRemove={contentWarningsChips.remove}
+                        onDisable={contentWarningsChips.toggle}
+                        placeholder={t("contentWarningPlaceholder")}
+                        className="mt-2"
+                      />
+                    )}
                     <div className="mt-1.5 text-xs text-muted-foreground">
                       Esc = annuler • Entrée = enregistrer • Ctrl+Entrée = nouvelle ligne
                     </div>

@@ -8,9 +8,11 @@ import type { Persona } from "@/types/db";
 import { TABLE, RPC } from "@/lib/constants";
 import { encryptMessage } from "@/lib/crypto";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useTagChips } from "@/hooks/useTagChips";
 import { PersonaPickerDialog } from "@/components/personas/PersonaPickerDialog";
+import { ContentWarningChipInput } from "@/components/chatrooms/ContentWarningChipInput";
 import { Button } from "../ui/button";
-import { SendHorizontal, Component, Dices, Pipette, X, ImagePlus, Eye, Lock, Sword, Heart, Square, Anchor, CalendarDays, MapPin, MessageCircle, MessageSquareText, Check, type LucideIcon } from "lucide-react";
+import { SendHorizontal, Component, Dices, Pipette, X, ImagePlus, Eye, Lock, Sword, Heart, Square, Anchor, CalendarDays, MapPin, MessageCircle, MessageSquareText, Check, AlertTriangle, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { toWebP } from "@/lib/imageUtils";
@@ -28,6 +30,7 @@ import {
   extractMentions,
   buildVisibleToLabels,
   buildMessageMetadata,
+  shouldApplyContentWarnings,
 } from "@/lib/composerMessage";
 import {
   DropdownMenu,
@@ -211,6 +214,9 @@ export function ChatroomComposer({
     setVisibleTo([]);
   }
 
+  // Avertissements de contenu (disclaimers / trigger warnings)
+  const contentWarningsChips = useTagChips(null);
+
   // Bannière
   const [bannerPickerOpen, setBannerPickerOpen] = useState(false);
   const [bannerUploading, setBannerUploading] = useState(false);
@@ -283,6 +289,14 @@ export function ChatroomComposer({
       toast.warning("Choisissez au moins un destinataire pour la note privée.");
       return false;
     }
+    // Les avertissements ne concernent que le texte narratif : un envoi de
+    // bloc structuré (dé, bannière, PNJ…) n'est jamais bloqué par cette
+    // validation, puisqu'il n'affichera de toute façon jamais le bandeau.
+    const applyContentWarnings = shouldApplyContentWarnings(text);
+    if (applyContentWarnings && contentWarningsChips.tags !== null && contentWarningsChips.tags.length === 0) {
+      toast.warning(tChatrooms("contentWarningEmpty"));
+      return false;
+    }
     // Verrou global : empêche tout double-envoi (touche maintenue, double-clic, etc.)
     if (inFlightRef.current) return false;
     inFlightRef.current = true;
@@ -312,6 +326,7 @@ export function ChatroomComposer({
         smsMode,
         media: allMedia,
         visibleToLabels: buildVisibleToLabels(visibleTo, participants),
+        contentWarnings: applyContentWarnings ? contentWarningsChips.tags : null,
       });
       const { data: newMessage, error } = await supabase
         .from(TABLE.CHAT_MESSAGES)
@@ -406,6 +421,7 @@ export function ChatroomComposer({
         setPendingMedia([]);
         setVisibleTo(null);
         setParticipants([]);
+        contentWarningsChips.reset(null);
       }
     }
   }
@@ -469,63 +485,86 @@ export function ChatroomComposer({
           </DialogContent>
         </Dialog>
 
-        {/* Destinataires note privée */}
-        {visibleTo !== null && (
-          <div className="[grid-area:header] flex items-center gap-2 flex-wrap px-2 pt-2 pb-0.5">
-            <Lock className="h-3 w-3 shrink-0 text-muted-foreground" />
-            {participants.map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() =>
-                  setVisibleTo((prev) =>
-                    prev?.includes(p.id)
-                      ? prev.filter((id) => id !== p.id)
-                      : [...(prev ?? []), p.id],
-                  )
-                }
-                className={cn(
-                  "rounded-full border px-2 py-0.5 text-xs transition-colors",
-                  visibleTo.includes(p.id)
-                    ? "border-primary/40 bg-primary/10 text-primary"
-                    : "border-border-soft text-muted-foreground hover:text-foreground",
+        {/* Bandeaux d'en-tête (note privée / avertissements / médias collés) :
+            un seul conteneur pour la zone de grille "header" — sinon ces
+            blocs, indépendants les uns des autres, se superposeraient au
+            lieu de s'empiler quand plusieurs sont actifs en même temps. */}
+        {(visibleTo !== null || contentWarningsChips.tags !== null || pendingMedia.length > 0) && (
+          <div className="[grid-area:header] flex flex-col">
+            {/* Destinataires note privée */}
+            {visibleTo !== null && (
+              <div className="flex items-center gap-2 flex-wrap px-2 pt-2 pb-0.5">
+                <Lock className="h-3 w-3 shrink-0 text-muted-foreground" />
+                {participants.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() =>
+                      setVisibleTo((prev) =>
+                        prev?.includes(p.id)
+                          ? prev.filter((id) => id !== p.id)
+                          : [...(prev ?? []), p.id],
+                      )
+                    }
+                    className={cn(
+                      "rounded-full border px-2 py-0.5 text-xs transition-colors",
+                      visibleTo.includes(p.id)
+                        ? "border-primary/40 bg-primary/10 text-primary"
+                        : "border-border-soft text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    @{p.username ?? p.id.slice(0, 8)}
+                  </button>
+                ))}
+                {!participants.length && (
+                  <span className="text-xs text-muted-foreground italic">Aucun autre participant dans ce salon.</span>
                 )}
-              >
-                @{p.username ?? p.id.slice(0, 8)}
-              </button>
-            ))}
-            {!participants.length && (
-              <span className="text-xs text-muted-foreground italic">Aucun autre participant dans ce salon.</span>
-            )}
-            <button
-              type="button"
-              onClick={() => { setVisibleTo(null); setParticipants([]); }}
-              className="ml-auto text-muted-foreground hover:text-destructive transition-colors"
-            >
-              <X className="h-3 w-3" />
-            </button>
-          </div>
-        )}
-
-        {/* Preview médias collés */}
-        {pendingMedia.length > 0 && (
-          <div className="[grid-area:header] flex gap-2 flex-wrap px-1.5 pt-1 pb-0.5">
-            {pendingMedia.map((file, i) => (
-              <div key={i} className="relative group/thumb size-14 rounded-lg overflow-hidden shrink-0">
-                <img
-                  src={pendingMediaPreviews[i]}
-                  alt={file.name}
-                  className="size-full object-cover"
-                />
                 <button
                   type="button"
-                  onClick={() => setPendingMedia((prev) => prev.filter((_, j) => j !== i))}
-                  className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover/thumb:opacity-100 transition-opacity"
+                  onClick={() => { setVisibleTo(null); setParticipants([]); }}
+                  className="ml-auto text-muted-foreground hover:text-destructive transition-colors"
                 >
-                  <X className="size-4 text-white" />
+                  <X className="h-3 w-3" />
                 </button>
               </div>
-            ))}
+            )}
+
+            {/* Avertissements de contenu (disclaimers / trigger warnings) */}
+            {contentWarningsChips.tags !== null && (
+              <ContentWarningChipInput
+                tags={contentWarningsChips.tags}
+                input={contentWarningsChips.input}
+                onInputChange={contentWarningsChips.setInput}
+                onKeyDown={contentWarningsChips.onKeyDown}
+                onBlur={() => contentWarningsChips.add(contentWarningsChips.input)}
+                onRemove={contentWarningsChips.remove}
+                onDisable={contentWarningsChips.toggle}
+                placeholder={tChatrooms("contentWarningPlaceholder")}
+                className="px-2 pt-2 pb-0.5"
+              />
+            )}
+
+            {/* Preview médias collés */}
+            {pendingMedia.length > 0 && (
+              <div className="flex gap-2 flex-wrap px-1.5 pt-1 pb-0.5">
+                {pendingMedia.map((file, i) => (
+                  <div key={i} className="relative group/thumb size-14 rounded-lg overflow-hidden shrink-0">
+                    <img
+                      src={pendingMediaPreviews[i]}
+                      alt={file.name}
+                      className="size-full object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setPendingMedia((prev) => prev.filter((_, j) => j !== i))}
+                      className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover/thumb:opacity-100 transition-opacity"
+                    >
+                      <X className="size-4 text-white" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -575,6 +614,8 @@ export function ChatroomComposer({
               onBannerSelect={chatId ? () => setBannerPickerOpen(true) : undefined}
               visibleTo={visibleTo}
               onPrivateNoteToggle={() => void togglePrivateNote()}
+              contentWarningsActive={contentWarningsChips.tags !== null}
+              onContentWarningsToggle={contentWarningsChips.toggle}
               onUploadIconImage={uploadIconImageForBlock}
               onCalloutClose={() => { pendingBlockMediaRef.current = []; }}
               worldTimelineConfig={worldTimelineConfig ?? null}
@@ -685,6 +726,8 @@ function BlocksDropdown({
   onBannerSelect,
   visibleTo,
   onPrivateNoteToggle,
+  contentWarningsActive,
+  onContentWarningsToggle,
   onUploadIconImage,
   onCalloutClose,
   worldTimelineConfig,
@@ -705,6 +748,8 @@ function BlocksDropdown({
   onBannerSelect?: () => void;
   visibleTo: string[] | null;
   onPrivateNoteToggle: () => void;
+  contentWarningsActive: boolean;
+  onContentWarningsToggle: () => void;
   onUploadIconImage?: (file: File) => Promise<string | null>;
   onCalloutClose?: () => void;
   worldTimelineConfig?: WorldTimelineConfig | null;
@@ -722,7 +767,7 @@ function BlocksDropdown({
   const [draftDate, setDraftDate] = useState<WorldTimelineDate>({ year: 1, month: null, day: null });
   const [draftPinId, setDraftPinId] = useState<string | null>(null);
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
-  const activeOptionsCount = [bubbleMode, smsMode, visibleTo !== null, !!(worldTimelineConfig && timelineDate), !!(mapPins?.length && mapPinId)].filter(Boolean).length;
+  const activeOptionsCount = [bubbleMode, smsMode, visibleTo !== null, contentWarningsActive, !!(worldTimelineConfig && timelineDate), !!(mapPins?.length && mapPinId)].filter(Boolean).length;
 
   useEffect(() => {
     if (open) setActiveItemId("dice");
@@ -762,6 +807,7 @@ function BlocksDropdown({
     { id: "bubbles", icon: MessageCircle, title: t("bubblesMode"), description: t("bubblesHint"), checked: bubbleMode, onActivate: () => onBubbleModeChange(!bubbleMode) },
     { id: "sms", icon: MessageSquareText, title: t("smsMode"), description: t("smsHint"), checked: smsMode, onActivate: () => onSmsModeChange(!smsMode) },
     { id: "privateNote", icon: Lock, title: t("privateNote"), description: t("privateNoteHint"), checked: visibleTo !== null, disabled: !chatId, onActivate: () => onPrivateNoteToggle() },
+    { id: "contentWarning", icon: AlertTriangle, title: t("contentWarning"), description: t("contentWarningHint"), checked: contentWarningsActive, onActivate: () => onContentWarningsToggle() },
   ];
 
   const activeItem = [...blockItems, ...optionItems].find((i) => i.id === activeItemId) ?? blockItems[0] ?? null;
@@ -897,6 +943,22 @@ function BlocksDropdown({
           <div className="flex w-full items-center gap-3 rounded-xl border border-border-soft bg-card px-4 py-3 text-sm text-muted-foreground">
             <Lock className="h-5 w-5 shrink-0" />
             Visible par vous seul(e)
+          </div>
+        );
+      case "contentWarning":
+        return (
+          <div className="flex w-full flex-col gap-2 rounded-xl border border-border-soft bg-card px-4 py-3">
+            <div className="flex items-center gap-2 text-sm text-amber-700 dark:text-amber-400">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              <span className="font-medium">{t("contentWarning")}</span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {[t("contentWarningExample1"), t("contentWarningExample2")].map((tag) => (
+                <span key={tag} className="rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-xs text-amber-700 dark:text-amber-400">
+                  {tag}
+                </span>
+              ))}
+            </div>
           </div>
         );
       default:
