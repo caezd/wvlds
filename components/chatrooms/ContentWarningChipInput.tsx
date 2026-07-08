@@ -66,7 +66,6 @@ export function ContentWarningChipInput({
       />
       <button
         type="button"
-        aria-label="Disable content warning tags"
         onMouseDown={(e) => e.preventDefault()}
         onClick={onDisable}
         aria-label={t("disableContentWarning")}
