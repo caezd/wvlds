@@ -115,7 +115,9 @@
       "new_member": "Nouveaux membres",
       "new_chatroom": "Nouvelles chatrooms",
       "world_invite": "Invitations de monde",
-      "chatroom_reply": "Réponses dans mes chatrooms"
+      "chatroom_reply": "Réponses dans mes chatrooms",
+      "persona_new_chatroom": "Nouveaux salons de mes personas suivis",
+      "persona_reply": "Réponses de mes personas suivis"
     },
     "text": {
       "someone": "Quelqu'un",
@@ -131,7 +133,10 @@
       "chatroomReplyMany": "<b>{count}</b> nouveaux messages dans <b>{chatroom}</b>",
       "chatroomReplyManyNoContent": "<b>{count}</b> nouveaux messages dans une chatroom",
       "chatroomReplySingle": "<b>{actor}</b> a répondu dans <b>{chatroom}</b>",
-      "chatroomReplySingleNoContent": "<b>{actor}</b> a répondu dans une chatroom"
+      "chatroomReplySingleNoContent": "<b>{actor}</b> a répondu dans une chatroom",
+      "chatroomReplyWithPersona": "<b>{actor}</b> a répondu avec <b>{persona}</b> dans <b>{chatroom}</b>",
+      "personaReplyMany": "<b>{actor}</b> a répondu <b>{count}</b> fois dans <b>{chatroom}</b>",
+      "personaReplyManyNoContent": "<b>{actor}</b> a répondu <b>{count}</b> fois"
     }
   },
   "dms": {
@@ -426,6 +431,14 @@
     "removeLocation": "Retirer le lieu",
     "privateNote": "Note privée",
     "privateNoteHint": "Visible seulement par les joueurs choisis.",
+    "contentWarning": "Avertissement de contenu",
+    "contentWarningHint": "Ajoute des étiquettes (violence, deuil…) affichées avant le message pour prévenir les joueurs.",
+    "contentWarningPlaceholder": "Ajouter une étiquette…",
+    "contentWarningEmpty": "Ajoutez au moins une étiquette, ou désactivez l'avertissement.",
+    "disableContentWarning": "Désactiver l'avertissement de contenu",
+    "contentWarningPrefix": "Contient :",
+    "contentWarningExample1": "violence",
+    "contentWarningExample2": "deuil",
     "diceError": "Formule invalide. Exemples : 1d20, 2d6+3, 1d8-1",
     "diceTitle": "Lancer un dé",
     "formula": "Formule",

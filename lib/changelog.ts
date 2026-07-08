@@ -8,6 +8,16 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-07 ──────────────────────────────────────────────────────────────
   {
     date: "2026-07",
+    tag: "Chatrooms",
+    text: "Nouvelle option **avertissement de contenu** dans le composer : ajoutez des étiquettes libres (violence, deuil…) affichées en tête du message pour prévenir les joueurs de ce qu'il contient avant de le lire.",
+  },
+  {
+    date: "2026-07",
+    tag: "Personas",
+    text: "**Suivre un persona** depuis sa fiche : un bouton « Suivre » notifie les abonnés quand ce persona crée une nouvelle chatroom ou y répond, dans un monde.",
+  },
+  {
+    date: "2026-07",
     tag: "Performance",
     text: "La quasi-totalité des images de l'app (avatars, bannières, icônes de mondes/salons/objets, cadres, apparences de personas) passe désormais par l'optimiseur d'images de Next.js : redimensionnement et formats modernes automatiques, chargement différé hors écran, et réservation d'espace pour éviter les sauts de mise en page. Quelques cas restent volontairement en `<img>` classique (aperçus locaux avant upload, images intégrées via URL externe dans le markdown, carte du monde).",
   },

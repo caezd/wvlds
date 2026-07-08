@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { groupMessagesForRender, computeSmsRunFlags } from "@/lib/chatroomMessageGrouping";
+import { groupMessagesForRender, computeSmsRunFlags, aggregateContentWarnings } from "@/lib/chatroomMessageGrouping";
 import type { ChatMessageWithPersona } from "@/types/db";
 
 function makeMessage(overrides: Partial<ChatMessageWithPersona> = {}): ChatMessageWithPersona {
@@ -98,5 +98,37 @@ describe("computeSmsRunFlags", () => {
       { sharpTop: false, sharpBottom: true, showAvatar: false },
       { sharpTop: true, sharpBottom: false, showAvatar: true },
     ]);
+  });
+});
+
+describe("aggregateContentWarnings", () => {
+  it("retourne un tableau vide quand aucun message n'a d'avertissement", () => {
+    const messages = [makeMessage({ id: 1 }), makeMessage({ id: 2 })];
+    expect(aggregateContentWarnings(messages)).toEqual([]);
+  });
+
+  it("regroupe les avertissements de tous les messages du bloc", () => {
+    const messages = [
+      makeMessage({ id: 1, metadata: { sms: true, content_warnings: ["violence"] } }),
+      makeMessage({ id: 2, metadata: { sms: true, content_warnings: ["deuil"] } }),
+    ];
+    expect(aggregateContentWarnings(messages)).toEqual(["violence", "deuil"]);
+  });
+
+  it("déduplique les avertissements répétés (insensible à la casse), en gardant la première occurrence", () => {
+    const messages = [
+      makeMessage({ id: 1, metadata: { sms: true, content_warnings: ["violence"] } }),
+      makeMessage({ id: 2, metadata: { sms: true, content_warnings: ["Violence", "deuil"] } }),
+    ];
+    expect(aggregateContentWarnings(messages)).toEqual(["violence", "deuil"]);
+  });
+
+  it("ignore les messages sans metadata ou sans avertissement", () => {
+    const messages = [
+      makeMessage({ id: 1, metadata: null }),
+      makeMessage({ id: 2, metadata: { sms: true } }),
+      makeMessage({ id: 3, metadata: { sms: true, content_warnings: ["deuil"] } }),
+    ];
+    expect(aggregateContentWarnings(messages)).toEqual(["deuil"]);
   });
 });

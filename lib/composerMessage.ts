@@ -18,6 +18,15 @@ export function extractMentions(text: string): string[] {
 }
 
 /**
+ * Les avertissements de contenu ne s'appliquent qu'aux messages texte
+ * « normaux » : les blocs structurés (dé, bannière, PNJ…) ont leur propre
+ * rendu dédié et n'affichent jamais cette métadonnée.
+ */
+export function shouldApplyContentWarnings(text: string): boolean {
+  return parseChatBlock(text) === null;
+}
+
+/**
  * Convertit la liste d'ids destinataires d'une note privée en libellés `@pseudo`.
  * Retourne null si la note privée n'est pas active (visibleTo === null).
  */
@@ -41,6 +50,7 @@ export type MessageMetadata = {
   sms?: true;
   media?: MediaRef[];
   visible_to_labels?: string[];
+  content_warnings?: string[];
 };
 
 /**
@@ -54,14 +64,16 @@ export function buildMessageMetadata(opts: {
   smsMode: boolean;
   media: MediaRef[];
   visibleToLabels: string[] | null;
+  contentWarnings?: string[] | null;
 }): MessageMetadata | null {
-  const { wordCount, bubbleMode, bubbleColor, smsMode, media, visibleToLabels } = opts;
+  const { wordCount, bubbleMode, bubbleColor, smsMode, media, visibleToLabels, contentWarnings } = opts;
   const metadata: MessageMetadata = {
     ...(wordCount > 0 ? { word_count: wordCount } : {}),
     ...(bubbleMode ? { bubbles: true as const, ...(bubbleColor ? { bubbleColor } : {}) } : {}),
     ...(smsMode ? { sms: true as const } : {}),
     ...(media.length > 0 ? { media } : {}),
     ...(visibleToLabels?.length ? { visible_to_labels: visibleToLabels } : {}),
+    ...(contentWarnings?.length ? { content_warnings: contentWarnings } : {}),
   };
   return Object.keys(metadata).length > 0 ? metadata : null;
 }

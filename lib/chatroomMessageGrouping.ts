@@ -68,3 +68,22 @@ export function computeSmsRunFlags(messages: ChatMessageWithPersona[]): SmsRunFl
     return { sharpTop, sharpBottom, showAvatar: !sharpBottom };
   });
 }
+
+/**
+ * Union dédupliquée (insensible à la casse, ordre de première apparition)
+ * des avertissements de contenu portés par les messages d'un bloc SMS —
+ * affichée une seule fois en tête du bloc plutôt que répétée par message.
+ */
+export function aggregateContentWarnings(messages: ChatMessageWithPersona[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const m of messages) {
+    for (const tag of m.metadata?.content_warnings ?? []) {
+      const key = tag.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      result.push(tag);
+    }
+  }
+  return result;
+}

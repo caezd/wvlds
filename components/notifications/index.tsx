@@ -30,10 +30,13 @@ const NOTIF_ICONS: Record<NotificationType, React.ReactNode> = {
     new_chatroom: <Hash size={13} />,
     world_invite: <UserPlus size={13} />,
     chatroom_reply: <MessageSquare size={13} />,
+    persona_new_chatroom: <Hash size={13} />,
+    persona_reply: <MessageSquare size={13} />,
 };
 
-const ALL_TYPES: NotificationType[] = ["mention", "reaction", "new_member", "new_chatroom", "chatroom_reply"];
-const WORLD_HEADER_TYPES: NotificationType[] = ["mention", "reaction", "new_chatroom"];
+const ALL_TYPES: NotificationType[] = ["mention", "reaction", "new_member", "new_chatroom", "chatroom_reply", "persona_new_chatroom", "persona_reply"];
+const WORLD_HEADER_TYPES: NotificationType[] = ["mention", "reaction", "new_chatroom", "persona_new_chatroom", "persona_reply"];
+const PERSONA_NOTIF_TYPES: NotificationType[] = ["persona_new_chatroom", "persona_reply"];
 
 // ── WorldInviteCard ───────────────────────────────────────────────────────────
 
@@ -166,6 +169,8 @@ function NotificationItem({ notif, actorAvatarUrl, worldInfo, onRead, onClose, o
     const href = isInvite ? null : notifHref(notif);
     const isUnread = !notif.read_at;
     const showWorldHeader = worldInfo && WORLD_HEADER_TYPES.includes(notif.type);
+    const isPersonaNotif = PERSONA_NOTIF_TYPES.includes(notif.type) || !!notif.metadata?.persona_name;
+    const avatarUrl = isPersonaNotif ? notif.metadata?.icon_url ?? null : actorAvatarUrl;
 
     const archiveBtn = (
         <button
@@ -181,7 +186,7 @@ function NotificationItem({ notif, actorAvatarUrl, worldInfo, onRead, onClose, o
         <div className={cn("group relative min-w-0 overflow-hidden px-4 py-3 transition-colors rounded-xl", isUnread && "bg-background")}>
             {archiveBtn}
             <div className="flex items-start gap-3">
-                <NotifAvatar avatarUrl={actorAvatarUrl} actorName={notif.actor_name} type={notif.type} isUnread={isUnread} />
+                <NotifAvatar avatarUrl={avatarUrl} actorName={notif.actor_name} type={notif.type} isUnread={isUnread} />
                 <div className="flex-1 min-w-0 pr-4">
                     {showWorldHeader && (
                         <div className="mb-0.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/50">
@@ -228,6 +233,8 @@ export function NotificationInlinePanelContent() {
         new_chatroom: t("prefs.new_chatroom"),
         world_invite: t("prefs.world_invite"),
         chatroom_reply: t("prefs.chatroom_reply"),
+        persona_new_chatroom: t("prefs.persona_new_chatroom"),
+        persona_reply: t("prefs.persona_reply"),
     };
 
     const sentinelRef = useRef<HTMLDivElement>(null);

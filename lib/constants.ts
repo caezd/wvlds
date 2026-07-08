@@ -7,6 +7,7 @@ export const TABLE = {
   CHATROOM_READS: "chatroom_reads",
   CHATROOM_PERSONA_PREFS: "chatroom_persona_prefs",
   PERSONAS: "personas",
+  PERSONA_FOLLOWS: "persona_follows",
   PROFILES: "profiles",
   WORLDS: "worlds",
   WORLD_MEMBERS: "world_members",
