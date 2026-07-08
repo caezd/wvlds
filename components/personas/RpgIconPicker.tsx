@@ -117,6 +117,7 @@ export function RpgIconPicker({ value, onChange, trigger }: Props) {
                     <Image
                       src={`/rpg_icons/${icon}`}
                       alt=""
+                      unoptimized
                       width={24}
                       height={24}
                       className="h-6 w-6 object-contain dark:invert"

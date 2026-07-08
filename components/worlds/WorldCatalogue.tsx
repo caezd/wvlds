@@ -85,7 +85,7 @@ function CatalogIcon({ icon, size = "md" }: { icon?: string | null; size?: "sm" 
   return (
     <div className={cn(dim, "shrink-0 flex items-center justify-center rounded-lg border border-border-soft bg-muted/40")}>
       {icon ? (
-        <Image src={`/rpg_icons/${icon}`} alt="" width={px} height={px} className={cn(img, "object-contain dark:invert")} />
+        <Image src={`/rpg_icons/${icon}`} alt="" unoptimized width={px} height={px} className={cn(img, "object-contain dark:invert")} />
       ) : (
         <ImageIcon className={cn(size === "sm" ? "h-3.5 w-3.5" : "h-4 w-4", "text-muted-foreground/30")} />
       )}
@@ -141,7 +141,7 @@ function AddForm({
         trigger={
           <button type="button" title={t("chooseIcon")} className="h-10 w-10 shrink-0 flex items-center justify-center rounded-lg border border-border-soft bg-muted/40 hover:bg-muted transition-colors">
             {icon ? (
-              <Image src={`/rpg_icons/${icon}`} alt="" width={24} height={24} className="h-6 w-6 object-contain dark:invert" />
+              <Image src={`/rpg_icons/${icon}`} alt="" unoptimized width={24} height={24} className="h-6 w-6 object-contain dark:invert" />
             ) : (
               <ImageIcon className="h-4 w-4 text-muted-foreground/50" />
             )}
@@ -220,7 +220,7 @@ function EditRow({
         trigger={
           <button type="button" title={t("chooseIcon")} className="h-10 w-10 shrink-0 flex items-center justify-center rounded-lg border border-border-soft bg-muted/40 hover:bg-muted transition-colors">
             {icon ? (
-              <Image src={`/rpg_icons/${icon}`} alt="" width={24} height={24} className="h-6 w-6 object-contain dark:invert" />
+              <Image src={`/rpg_icons/${icon}`} alt="" unoptimized width={24} height={24} className="h-6 w-6 object-contain dark:invert" />
             ) : (
               <ImageIcon className="h-4 w-4 text-muted-foreground/50" />
             )}

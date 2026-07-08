@@ -275,7 +275,7 @@ function IconButton({
           className="h-10 w-10 shrink-0 flex items-center justify-center rounded-lg border border-border-soft bg-muted/40 hover:bg-muted transition-colors"
         >
           {icon ? (
-            <Image src={`/rpg_icons/${icon}`} alt="" width={24} height={24} className="h-6 w-6 object-contain dark:invert" />
+            <Image src={`/rpg_icons/${icon}`} alt="" unoptimized width={24} height={24} className="h-6 w-6 object-contain dark:invert" />
           ) : (
             <ImageIcon className="h-4 w-4 text-muted-foreground/50" />
           )}
@@ -320,7 +320,7 @@ function CatalogPicker<T extends WorldInventoryItem | WorldSkill>({
               >
                 <div className="h-9 w-9 shrink-0 flex items-center justify-center rounded-lg border border-border-soft bg-muted/40">
                   {item.icon ? (
-                    <Image src={`/rpg_icons/${item.icon}`} alt="" width={20} height={20} className="h-5 w-5 object-contain dark:invert" />
+                    <Image src={`/rpg_icons/${item.icon}`} alt="" unoptimized width={20} height={20} className="h-5 w-5 object-contain dark:invert" />
                   ) : (
                     <ImageIcon className="h-4 w-4 text-muted-foreground/30" />
                   )}
@@ -393,7 +393,7 @@ function InventoryField({
           <div key={item.id} className="flex items-center gap-2 group/item">
             <div className="h-10 w-10 shrink-0 flex items-center justify-center rounded-lg border border-border-soft bg-muted/40">
               {item.icon ? (
-                <Image src={`/rpg_icons/${item.icon}`} alt="" width={24} height={24} className="h-6 w-6 object-contain dark:invert" />
+                <Image src={`/rpg_icons/${item.icon}`} alt="" unoptimized width={24} height={24} className="h-6 w-6 object-contain dark:invert" />
               ) : (
                 <ImageIcon className="h-4 w-4 text-muted-foreground/30" />
               )}
@@ -528,7 +528,7 @@ function SkillsField({
           <div key={item.id} className="flex items-center gap-2 group/skill">
             <div className="h-10 w-10 shrink-0 flex items-center justify-center rounded-lg border border-border-soft bg-muted/40">
               {item.icon ? (
-                <Image src={`/rpg_icons/${item.icon}`} alt="" width={24} height={24} className="h-6 w-6 object-contain dark:invert" />
+                <Image src={`/rpg_icons/${item.icon}`} alt="" unoptimized width={24} height={24} className="h-6 w-6 object-contain dark:invert" />
               ) : (
                 <ImageIcon className="h-4 w-4 text-muted-foreground/30" />
               )}
