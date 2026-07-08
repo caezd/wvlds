@@ -194,12 +194,12 @@ export function PersonaPickerDialog({
             <button
               type="button"
               aria-label={selected ? selected.name : t("pick")}
-              className="relative size-9 rounded-full overflow-hidden shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="relative flex size-9 items-center justify-center rounded-full overflow-hidden shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               {selected ? (
                 selected.avatar_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={supabaseThumb(selected.avatar_url, 72) ?? selected.avatar_url} onError={(e) => { e.currentTarget.src = selected.avatar_url!; e.currentTarget.onerror = null; }} alt={selected.name} className="h-full w-full object-cover" />
+                  <img src={supabaseThumb(selected.avatar_url, 72) ?? selected.avatar_url} onError={(e) => { e.currentTarget.src = selected.avatar_url!; e.currentTarget.onerror = null; }} alt={selected.name} className="h-full w-full object-cover " />
                 ) : (
                   <span className="h-full w-full grid place-items-center text-xs font-bold  text-muted-foreground">
                     {initials(selected.name)}

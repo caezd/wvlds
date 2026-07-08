@@ -44,6 +44,7 @@ type Category = {
   id: string;
   title: string;
   banner_url: string | null;
+  icon_url: string | null;
   position: number;
 };
 
@@ -89,7 +90,7 @@ export default async function WorldSidebar({ worldId }: { worldId: string }) {
         : Promise.resolve({ plan: "free" as const, owned: 0, quotaLimit: 1, quotaReached: false }),
       supabase
         .from("chatroom_categories")
-        .select("id, title, banner_url, position")
+        .select("id, title, banner_url, icon_url, position")
         .eq("world_id", worldId)
         .order("position"),
       userId

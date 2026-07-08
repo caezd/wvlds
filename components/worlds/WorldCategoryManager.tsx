@@ -25,6 +25,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ImagePickerCropField } from "@/components/ui/image-crop-picker";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
+import { CategoryAvatar } from "@/components/worlds/CategoryAvatar";
 import {
   addChatroomCategory,
   updateChatroomCategory,
@@ -33,10 +34,11 @@ import {
 } from "@/app/actions/chatroomCategories";
 import type { ChatroomCategory } from "@/types/worlds";
 
-async function uploadCategoryBanner(
+async function uploadCategoryImage(
   supabase: ReturnType<typeof createClient>,
   worldId: string,
   file: File,
+  kind: "banner" | "icon",
 ) {
   const {
     data: { user },
@@ -45,7 +47,7 @@ async function uploadCategoryBanner(
   if (file.size > 5 * 1024 * 1024) throw new Error("Fichier trop volumineux (max 5 Mo).");
 
   const converted = await toWebP(file);
-  const path = `world-${worldId}/category-${Date.now()}.webp`;
+  const path = `world-${worldId}/category-${kind}-${Date.now()}.webp`;
 
   const { error } = await supabase.storage
     .from("chatroom-categories")
@@ -70,22 +72,42 @@ function CategoryForm({
   const [title, setTitle] = React.useState(initial?.title ?? "");
   const [description, setDescription] = React.useState(initial?.description ?? "");
   const [bannerUrl, setBannerUrl] = React.useState(initial?.banner_url ?? "");
-  const [uploading, setUploading] = React.useState(false);
+  const [iconUrl, setIconUrl] = React.useState(initial?.icon_url ?? "");
+  const [uploadingBanner, setUploadingBanner] = React.useState(false);
+  const [uploadingIcon, setUploadingIcon] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
 
   async function handleBannerConfirm(blob: Blob) {
-    setUploading(true);
+    setUploadingBanner(true);
     try {
-      const url = await uploadCategoryBanner(
+      const url = await uploadCategoryImage(
         supabase,
         worldId,
         new File([blob], "banner.jpg", { type: blob.type || "image/jpeg" }),
+        "banner",
       );
       setBannerUrl(url ?? "");
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Téléversement impossible.");
     } finally {
-      setUploading(false);
+      setUploadingBanner(false);
+    }
+  }
+
+  async function handleIconConfirm(blob: Blob) {
+    setUploadingIcon(true);
+    try {
+      const url = await uploadCategoryImage(
+        supabase,
+        worldId,
+        new File([blob], "icon.jpg", { type: blob.type || "image/jpeg" }),
+        "icon",
+      );
+      setIconUrl(url ?? "");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Téléversement impossible.");
+    } finally {
+      setUploadingIcon(false);
     }
   }
 
@@ -98,6 +120,7 @@ function CategoryForm({
       title: trimmed,
       description: description.trim() || null,
       banner_url: bannerUrl || null,
+      icon_url: iconUrl || null,
     };
     if (initial) {
       const res = await updateChatroomCategory(initial.id, data);
@@ -125,12 +148,35 @@ function CategoryForm({
     >
       <ImagePickerCropField
         aspect={3 / 1}
-        uploading={uploading}
+        uploading={uploadingBanner}
         previewSrc={bannerUrl || null}
         previewClassName="aspect-[3/1] w-full rounded-lg"
         changeLabel="Cliquer ou déposer pour remplacer"
         onConfirm={handleBannerConfirm}
       />
+      <div className="space-y-1.5">
+        <p className="text-[11px] text-muted-foreground/70">
+          Image de catégorie — affichée dans la sidebar (remplace la bannière dans les petits avatars)
+        </p>
+        {iconUrl ? (
+          <ImagePickerCropField
+            aspect={1}
+            uploading={uploadingIcon}
+            previewSrc={iconUrl}
+            previewClassName="h-16 w-16 rounded-lg"
+            changeLabel="Changer"
+            onConfirm={handleIconConfirm}
+          />
+        ) : (
+          <div className="w-32">
+            <ImagePickerCropField
+              aspect={1}
+              uploading={uploadingIcon}
+              onConfirm={handleIconConfirm}
+            />
+          </div>
+        )}
+      </div>
       <Input
         autoFocus
         value={title}
@@ -214,16 +260,12 @@ function CategoryRow({
           <GripVertical className="h-3.5 w-3.5" />
         </span>
       )}
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-muted-foreground/10">
-        {category.banner_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={category.banner_url} alt="" className="h-full w-full object-cover" />
-        ) : (
-          <span className="text-[11px] font-medium text-muted-foreground">
-            {category.title[0]?.toUpperCase()}
-          </span>
-        )}
-      </div>
+      <CategoryAvatar
+        title={category.title}
+        bannerUrl={category.banner_url}
+        iconUrl={category.icon_url}
+        className="h-8 w-8 rounded-lg"
+      />
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium text-foreground">{category.title}</p>
         {category.description && (
@@ -276,7 +318,7 @@ export function WorldCategoryManager({
     void (async () => {
       const { data, error } = await supabase
         .from("chatroom_categories")
-        .select("id, world_id, title, description, banner_url, position")
+        .select("id, world_id, title, description, banner_url, icon_url, position")
         .eq("world_id", worldId)
         .order("position", { ascending: true });
       if (error) {
@@ -300,7 +342,7 @@ export function WorldCategoryManager({
   }
 
   async function handleDelete(category: ChatroomCategory) {
-    const res = await deleteChatroomCategory(category.id, category.banner_url);
+    const res = await deleteChatroomCategory(category.id, category.banner_url, category.icon_url);
     if (!res.ok) {
       toast.error(res.error);
       return;

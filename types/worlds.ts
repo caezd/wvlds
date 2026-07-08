@@ -70,6 +70,7 @@ export interface ChatroomCategory {
   title: string;
   description: string | null;
   banner_url: string | null;
+  icon_url: string | null;
   position: number;
 }
 

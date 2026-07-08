@@ -89,7 +89,7 @@ function makeRoom(overrides: Partial<Room> = {}): Room {
 function renderSidebar(
   rooms: Room[],
   mock: ReturnType<typeof createSupabaseMock>,
-  categories: { id: string; title: string; banner_url: string | null; position: number }[] = [],
+  categories: { id: string; title: string; banner_url: string | null; icon_url: string | null; position: number }[] = [],
 ) {
   (createClient as ReturnType<typeof vi.fn>).mockReturnValue(mock.client);
   render(
@@ -195,7 +195,7 @@ describe("WorldSidebarChatrooms — drill-down catégories", () => {
       makeRoom({ id: "room-3", title: "Sujet catégorisé", category_id: "cat-1" }),
     ];
     renderSidebar(rooms, mock, [
-      { id: "cat-1", title: "Annonces", banner_url: null, position: 0 },
+      { id: "cat-1", title: "Annonces", banner_url: null, icon_url: null, position: 0 },
     ]);
 
     // Le compteur affiche bien 2 sujets non catégorisés
@@ -217,7 +217,7 @@ describe("WorldSidebarChatrooms — drill-down catégories", () => {
       makeRoom({ id: "room-2", title: "Sujet libre", category_id: null }),
     ];
     renderSidebar(rooms, mock, [
-      { id: "cat-1", title: "Annonces", banner_url: null, position: 0 },
+      { id: "cat-1", title: "Annonces", banner_url: null, icon_url: null, position: 0 },
     ]);
 
     fireEvent.click(screen.getByRole("button", { name: /Annonces/ }));

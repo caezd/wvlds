@@ -42,9 +42,10 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Switch } from "@/components/ui/switch";
 import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
+import { CategoryAvatar } from "@/components/worlds/CategoryAvatar";
 
 type MapPinOption = { id: string; title: string; color: string };
-type CategoryOption = { id: string; title: string; banner_url: string | null };
+type CategoryOption = { id: string; title: string; banner_url: string | null; icon_url: string | null };
 
 const schema = z.object({
   title: z.string().trim().min(1, "Nom requis").max(80),
@@ -126,7 +127,7 @@ export default function ChatroomSettingsSheet({ canEdit, chatroom, worldTimeline
         void (async () => {
           const { data, error } = await supabase
             .from("chatroom_categories")
-            .select("id, title, banner_url")
+            .select("id, title, banner_url, icon_url")
             .eq("world_id", worldId)
             .order("position");
           if (error) toast.error(error.message);
@@ -492,14 +493,13 @@ export default function ChatroomSettingsSheet({ canEdit, chatroom, worldTimeline
                             : "border-border-soft bg-background text-foreground hover:bg-secondary"
                         }`}
                       >
-                        <span className="h-5 w-5 shrink-0 overflow-hidden rounded-md bg-muted-foreground/10 flex items-center justify-center">
-                          {cat.banner_url ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={cat.banner_url} alt="" className="h-full w-full object-cover" />
-                          ) : (
-                            <span className="text-[9px] font-medium text-muted-foreground">{cat.title[0]?.toUpperCase()}</span>
-                          )}
-                        </span>
+                        <CategoryAvatar
+                          title={cat.title}
+                          bannerUrl={cat.banner_url}
+                          iconUrl={cat.icon_url}
+                          letterClassName="text-[9px]"
+                          className="h-5 w-5 rounded-md"
+                        />
                         {cat.title}
                       </button>
                     ))}
