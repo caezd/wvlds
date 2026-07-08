@@ -863,6 +863,7 @@ export function PersonaAvatarPicker({
                       <Image
                         src={tabThumbUrl}
                         alt=""
+                        unoptimized
                         width={28}
                         height={28}
                         className="h-7 w-7 object-contain"
@@ -948,6 +949,7 @@ export function PersonaAvatarPicker({
                           <Image
                             src={thumbUrl}
                             alt=""
+                            unoptimized
                             fill
                             sizes="36px"
                             className="object-contain"
@@ -996,6 +998,7 @@ export function PersonaAvatarPicker({
                           <Image
                             src={thumbUrl}
                             alt=""
+                            unoptimized
                             fill
                             sizes="(min-width: 1024px) 120px, 25vw"
                             className="object-contain"
