@@ -50,6 +50,7 @@ const BASE_NOTIF: AppNotification = {
     message_id: null,
     actor_id: "a1",
     actor_name: "alice",
+    persona_id: null,
     content: "général",
     metadata: null,
     read_at: null,

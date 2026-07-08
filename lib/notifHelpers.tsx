@@ -34,6 +34,7 @@ export function notifText(n: AppNotification, t: NotifT): ReactNode {
                 ? t.rich("text.newMember", { actor, world: n.content, ...r })
                 : t.rich("text.newMemberNoWorld", { actor, ...r });
         case "new_chatroom":
+        case "persona_new_chatroom":
             return n.content
                 ? t.rich("text.newChatroom", { actor, chatroom: n.content, ...r })
                 : t.rich("text.newChatroomNoName", { actor, ...r });
@@ -41,10 +42,23 @@ export function notifText(n: AppNotification, t: NotifT): ReactNode {
             return t.rich("text.worldInvite", { actor, ...r });
         case "chatroom_reply": {
             const count = n.metadata?.count ?? 1;
+            const persona = n.metadata?.persona_name;
             return count > 1
                 ? n.content
                     ? t.rich("text.chatroomReplyMany", { count, chatroom: n.content, ...r })
                     : t.rich("text.chatroomReplyManyNoContent", { count, ...r })
+                : persona && n.content
+                    ? t.rich("text.chatroomReplyWithPersona", { persona, actor, chatroom: n.content, ...r })
+                    : n.content
+                        ? t.rich("text.chatroomReplySingle", { actor, chatroom: n.content, ...r })
+                        : t.rich("text.chatroomReplySingleNoContent", { actor, ...r });
+        }
+        case "persona_reply": {
+            const count = n.metadata?.count ?? 1;
+            return count > 1
+                ? n.content
+                    ? t.rich("text.personaReplyMany", { count, actor, chatroom: n.content, ...r })
+                    : t.rich("text.personaReplyManyNoContent", { count, actor, ...r })
                 : n.content
                     ? t.rich("text.chatroomReplySingle", { actor, chatroom: n.content, ...r })
                     : t.rich("text.chatroomReplySingleNoContent", { actor, ...r });

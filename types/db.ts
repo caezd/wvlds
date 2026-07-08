@@ -124,6 +124,12 @@ export type ChatPin = {
   created_at: string;
 };
 
+export type PersonaFollow = {
+  follower_id: string;
+  persona_id: string;
+  created_at: string;
+};
+
 // --- Composite / query types -------------------------------------------------
 
 export type ReactionSummary = {
@@ -159,7 +165,7 @@ export type AllChatroomUnreadRow = {
 
 // --- Notifications -----------------------------------------------------------
 
-export type NotificationType = 'mention' | 'reaction' | 'new_member' | 'new_chatroom' | 'world_invite' | 'chatroom_reply';
+export type NotificationType = 'mention' | 'reaction' | 'new_member' | 'new_chatroom' | 'world_invite' | 'chatroom_reply' | 'persona_new_chatroom' | 'persona_reply';
 
 export type WorldInvitation = {
   id: string;
@@ -175,6 +181,7 @@ export type NotificationMeta = {
   icon_url?: string | null;
   banner_url?: string | null;
   description?: string | null;
+  persona_name?: string | null;
   count?: number;
 };
 
@@ -187,6 +194,7 @@ export type AppNotification = {
   message_id: number | null;
   actor_id: string | null;
   actor_name: string | null;
+  persona_id: string | null;
   content: string | null;
   metadata?: NotificationMeta | null;
   read_at: string | null;

@@ -41,6 +41,7 @@ function makeNotif(overrides: Partial<AppNotification> = {}): AppNotification {
         message_id: 42,
         actor_id: "a1",
         actor_name: "alice",
+        persona_id: null,
         content: "général",
         metadata: null,
         read_at: null,

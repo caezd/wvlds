@@ -114,7 +114,9 @@
       "new_member": "Nuevos miembros",
       "new_chatroom": "Nuevas salas de chat",
       "world_invite": "Invitaciones de mundo",
-      "chatroom_reply": "Respuestas en mis salas"
+      "chatroom_reply": "Respuestas en mis salas",
+      "persona_new_chatroom": "Nuevas salas de personas seguidas",
+      "persona_reply": "Respuestas de personas seguidas"
     },
     "text": {
       "someone": "Alguien",
@@ -130,7 +132,10 @@
       "chatroomReplyMany": "<b>{count}</b> nuevos mensajes en <b>{chatroom}</b>",
       "chatroomReplyManyNoContent": "<b>{count}</b> nuevos mensajes en una sala",
       "chatroomReplySingle": "<b>{actor}</b> respondió en <b>{chatroom}</b>",
-      "chatroomReplySingleNoContent": "<b>{actor}</b> respondió en una sala de chat"
+      "chatroomReplySingleNoContent": "<b>{actor}</b> respondió en una sala de chat",
+      "chatroomReplyWithPersona": "<b>{actor}</b> respondió como <b>{persona}</b> en <b>{chatroom}</b>",
+      "personaReplyMany": "<b>{actor}</b> respondió <b>{count}</b> veces en <b>{chatroom}</b>",
+      "personaReplyManyNoContent": "<b>{actor}</b> respondió <b>{count}</b> veces"
     }
   },
   "dms": {

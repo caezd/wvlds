@@ -18,8 +18,10 @@ import { Coins, Flame, Zap } from "lucide-react";
 import type { PersonaSection, PersonaSectionField, PersonaSectionWithFields, PersonaFieldData, InventoryItem, SkillItem, GaugeItem, TraitItem, TimelineItem, DlItem } from "@/types/personas";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useGlobalPresence } from "@/components/providers/PresenceProvider";
-import { formatLastSeen } from "@/lib/utils";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { formatLastSeen, cn } from "@/lib/utils";
 import { ImageGridView } from "@/components/personas/ImageGridView";
+import { TABLE } from "@/lib/constants";
 
 function levelInfo(xp: number) {
   const level = Math.floor(xp / 100) + 1;
@@ -286,6 +288,7 @@ export function PersonaProfileSheetTrigger({
 }) {
   const supabase = React.useMemo(() => createClient(), []);
   const { getUserPresence } = useGlobalPresence();
+  const { userId: viewerId } = useCurrentUser();
   const [open, setOpen] = React.useState(false);
 
   const [name, setName] = React.useState<string | null>(label ?? null);
@@ -300,13 +303,15 @@ export function PersonaProfileSheetTrigger({
   const [sections, setSections] = React.useState<PersonaSectionWithFields[]>([]);
   const [activeTab, setActiveTab] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
+  const [isFollowing, setIsFollowing] = React.useState<boolean | null>(null);
+  const [followBusy, setFollowBusy] = React.useState(false);
 
   // Évite les double-fetch : on ne charge qu'une fois par (personaId+userId)
   const fetchedKeyRef = React.useRef<string | null>(null);
 
   const prefetch = React.useCallback(() => {
     if (!personaId) return;
-    const key = `${personaId}:${userId ?? ""}`;
+    const key = `${personaId}:${userId ?? ""}:${viewerId ?? ""}`;
     if (fetchedKeyRef.current === key) return; // déjà chargé
     fetchedKeyRef.current = key;
 
@@ -327,6 +332,18 @@ export function PersonaProfileSheetTrigger({
         setAvatarUrl(row.avatar_url ?? null);
         setBannerUrl(row.banner_url ?? null);
         setFrameUrl(row.frame?.asset_url ?? null);
+      }
+
+      if (viewerId && userId && viewerId !== userId) {
+        const { data: followRow } = await supabase
+          .from(TABLE.PERSONA_FOLLOWS)
+          .select("persona_id")
+          .eq("persona_id", personaId!)
+          .eq("follower_id", viewerId)
+          .maybeSingle();
+        if (!cancelled) setIsFollowing(!!followRow);
+      } else if (!cancelled) {
+        setIsFollowing(null);
       }
 
       if (userId) {
@@ -390,7 +407,22 @@ export function PersonaProfileSheetTrigger({
 
     load();
     return () => { cancelled = true; };
-  }, [personaId, userId, supabase, label]);
+  }, [personaId, userId, viewerId, supabase, label]);
+
+  async function toggleFollow() {
+    if (!personaId || !viewerId || followBusy) return;
+    setFollowBusy(true);
+    const wasFollowing = isFollowing;
+    setIsFollowing(!wasFollowing);
+    const { error } = wasFollowing
+      ? await supabase.from(TABLE.PERSONA_FOLLOWS).delete().eq("persona_id", personaId).eq("follower_id", viewerId)
+      : await supabase.from(TABLE.PERSONA_FOLLOWS).insert({ persona_id: personaId, follower_id: viewerId });
+    if (error) {
+      setIsFollowing(wasFollowing);
+      toast.error(error.message ?? "Action impossible.");
+    }
+    setFollowBusy(false);
+  }
 
   // Prefetch dès que la sheet s'ouvre (fallback si le hover n'a pas suffi)
   React.useEffect(() => {
@@ -482,9 +514,24 @@ export function PersonaProfileSheetTrigger({
 
                 {/* Nom + stats */}
                 <div className="pb-1 min-w-0 flex-1">
-                  <p className="h-16 pb-2 mb-2 flex items-end text-xl font-semibold leading-tight truncate">
-                    {name ?? label ?? "—"}
-                  </p>
+                  <div className="h-16 pb-2 mb-2 flex items-end justify-between gap-3">
+                    <p className="min-w-0 text-xl font-semibold leading-tight truncate">
+                      {name ?? label ?? "—"}
+                    </p>
+                    {isFollowing !== null && (
+                      <button
+                        type="button"
+                        onClick={toggleFollow}
+                        disabled={followBusy}
+                        className={cn(
+                          "shrink-0 rounded-full border px-4 py-1.5 text-xs font-medium transition-colors disabled:opacity-60",
+                          isFollowing ? "bg-muted" : "hover:bg-muted",
+                        )}
+                      >
+                        {isFollowing ? "Suivi" : "Suivre"}
+                      </button>
+                    )}
+                  </div>
                   {presenceLine && (
                     <p className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
                       <span
