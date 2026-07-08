@@ -33,11 +33,10 @@ export function ContentWarningChipInput({
   return (
     <div className={cn("flex items-center gap-2 flex-wrap", className)}>
       <AlertTriangle className="h-3 w-3 shrink-0 text-amber-600 dark:text-amber-400" />
-      {tags.map((tagLabel) => (
+      {tags.map((tagLabel, i) => (
         <button
-          key={tagLabel}
+          key={`${tagLabel}-${i}`}
           type="button"
-          // onMouseDown (pas onClick) précède le blur du champ de saisie : en
           // annulant son comportement par défaut ici, le champ ne perd pas le
           // focus avant que ce clic ne soit traité, ce qui évite qu'un texte
           // en cours de frappe soit ajouté comme tag au moment où on clique
