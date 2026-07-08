@@ -55,6 +55,7 @@ export function ContentWarningChipInput({
       ))}
       <input
         type="text"
+        aria-label={placeholder}
         data-testid="content-warning-input"
         value={input}
         onChange={(e) => onInputChange(e.target.value)}
@@ -65,6 +66,7 @@ export function ContentWarningChipInput({
       />
       <button
         type="button"
+        aria-label="Disable content warning tags"
         onMouseDown={(e) => e.preventDefault()}
         onClick={onDisable}
         aria-label={t("disableContentWarning")}
