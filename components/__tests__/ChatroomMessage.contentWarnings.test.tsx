@@ -224,4 +224,19 @@ describe("ChatroomMessage — avertissements de contenu", () => {
     const [, , metadata] = onUpdated.mock.calls[0] as [number, string, { content_warnings?: string[] } | null];
     expect(metadata?.content_warnings).toBeUndefined();
   });
+
+  it("expose un nom accessible au bouton de désactivation des avertissements", () => {
+    const message = makeMessage({ author_id: "viewer-1", metadata: { content_warnings: ["violence"] } });
+    render(
+      <ChatroomMessage
+        message={message}
+        online={{}}
+        selfId="viewer-1"
+      />,
+    );
+
+    fireEvent.click(screen.getAllByText("Modifier")[0].closest("button")!);
+
+    expect(screen.getByRole("button", { name: "disableContentWarning" })).toBeInTheDocument();
+  });
 });

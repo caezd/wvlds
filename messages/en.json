@@ -434,6 +434,7 @@
     "contentWarningHint": "Add tags (violence, grief…) shown before the message to warn players.",
     "contentWarningPlaceholder": "Add a tag…",
     "contentWarningEmpty": "Add at least one tag, or turn off the warning.",
+    "disableContentWarning": "Disable content warning",
     "contentWarningPrefix": "Contains:",
     "contentWarningExample1": "violence",
     "contentWarningExample2": "grief",

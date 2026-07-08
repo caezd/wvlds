@@ -434,6 +434,7 @@
     "contentWarningHint": "Añade etiquetas (violencia, duelo…) mostradas antes del mensaje para avisar a los jugadores.",
     "contentWarningPlaceholder": "Añadir una etiqueta…",
     "contentWarningEmpty": "Añade al menos una etiqueta, o desactiva el aviso.",
+    "disableContentWarning": "Desactivar el aviso de contenido",
     "contentWarningPrefix": "Contiene:",
     "contentWarningExample1": "violencia",
     "contentWarningExample2": "duelo",

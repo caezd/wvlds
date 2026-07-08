@@ -2,6 +2,7 @@
 
 import type { KeyboardEvent } from "react";
 import { AlertTriangle, X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
 /**
@@ -30,6 +31,8 @@ export function ContentWarningChipInput({
   placeholder: string;
   className?: string;
 }) {
+  const t = useTranslations("chatrooms");
+
   return (
     <div className={cn("flex items-center gap-2 flex-wrap", className)}>
       <AlertTriangle className="h-3 w-3 shrink-0 text-amber-600 dark:text-amber-400" />
@@ -64,6 +67,8 @@ export function ContentWarningChipInput({
         type="button"
         onMouseDown={(e) => e.preventDefault()}
         onClick={onDisable}
+        aria-label={t("disableContentWarning")}
+        title={t("disableContentWarning")}
         className="ml-auto text-muted-foreground hover:text-destructive transition-colors"
       >
         <X className="h-3 w-3" />
