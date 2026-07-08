@@ -830,7 +830,7 @@ export default function ChatRoomView({
                 {renderGroups.map((g) =>
                   g.kind === "sms" ? (
                     <div key={`sms-${g.messages[0].id}`} className="py-8">
-                      <ContentWarningBanner tags={aggregateContentWarnings(g.messages)} className="mb-1.5 px-1" />
+                      <ContentWarningBanner tags={aggregateContentWarnings(g.messages)} />
                       <GameBlockSurface className="flex flex-col gap-1.5">
                         {computeSmsRunFlags(g.messages).map((flags, i) => renderMessage(g.messages[i], flags))}
                       </GameBlockSurface>
