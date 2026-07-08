@@ -1,5 +1,6 @@
 import { requireAdmin } from "@/lib/admin";
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Plus, Pencil, Eye, EyeOff, Trash2 } from "lucide-react";
 import { toggleItem, deleteItem } from "./actions";
@@ -57,9 +58,11 @@ export default async function AdminShopPage() {
               <tr key={item.id} className="hover:bg-muted/20 transition-colors">
                 <td className="px-4 py-3">
                   {(item.preview_url || item.asset_url) ? (
-                    <img
-                      src={item.preview_url ?? item.asset_url}
+                    <Image
+                      src={(item.preview_url ?? item.asset_url)!}
                       alt={item.name}
+                      width={40}
+                      height={40}
                       className="h-10 w-10 rounded object-cover bg-muted"
                     />
                   ) : (

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { supabaseThumb } from "@/lib/storage";
 import type { Persona } from "@/types/db-chat";
@@ -21,6 +22,21 @@ import { useTranslations } from "next-intl";
 function initials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "?";
+}
+
+function PersonaAvatarThumb({ url, name, size }: { url: string; name: string; size: number }) {
+  const [thumbFailed, setThumbFailed] = useState(false);
+  return (
+    <Image
+      src={thumbFailed ? url : (supabaseThumb(url, size * 2) ?? url)}
+      onError={() => setThumbFailed(true)}
+      alt={name}
+      fill
+      sizes={`${size}px`}
+      className="object-cover"
+      draggable={false}
+    />
+  );
 }
 
 function PersonaRow({
@@ -50,14 +66,7 @@ function PersonaRow({
       >
         <span className="relative size-9 shrink-0 overflow-hidden rounded-full bg-muted">
           {persona.avatar_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={supabaseThumb(persona.avatar_url, 72) ?? persona.avatar_url}
-              onError={(e) => { e.currentTarget.src = persona.avatar_url!; e.currentTarget.onerror = null; }}
-              alt={persona.name}
-              className="h-full w-full object-cover"
-              draggable={false}
-            />
+            <PersonaAvatarThumb url={persona.avatar_url} name={persona.name} size={36} />
           ) : (
             <span className="grid h-full w-full place-items-center text-xs font-bold text-muted-foreground">
               {initials(persona.name)}
@@ -198,8 +207,7 @@ export function PersonaPickerDialog({
             >
               {selected ? (
                 selected.avatar_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={supabaseThumb(selected.avatar_url, 72) ?? selected.avatar_url} onError={(e) => { e.currentTarget.src = selected.avatar_url!; e.currentTarget.onerror = null; }} alt={selected.name} className="h-full w-full object-cover" />
+                  <PersonaAvatarThumb url={selected.avatar_url} name={selected.name} size={36} />
                 ) : (
                   <span className="h-full w-full grid place-items-center text-xs font-bold  text-muted-foreground">
                     {initials(selected.name)}

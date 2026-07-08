@@ -1,5 +1,6 @@
 import { requireAdmin } from "@/lib/admin";
 import { revalidatePath } from "next/cache";
+import Image from "next/image";
 import { Shield, ShieldOff } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
@@ -65,9 +66,11 @@ export default async function AdminUsersPage() {
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       {p.avatar_url ? (
-                        <img
+                        <Image
                           src={p.avatar_url}
                           alt=""
+                          width={28}
+                          height={28}
                           className="h-7 w-7 rounded-full object-cover bg-muted"
                         />
                       ) : (

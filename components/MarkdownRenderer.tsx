@@ -280,6 +280,9 @@ export function MarkdownContent({
     img({ src, alt }) {
       if (allowImages) {
         return (
+          // URL arbitraire saisie par l'utilisateur dans le markdown — domaine inconnu,
+          // ne peut pas passer par l'optimiseur next/image (remotePatterns fermé par design)
+          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={String(src)}
             alt={String(alt ?? "")}

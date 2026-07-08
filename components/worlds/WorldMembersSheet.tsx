@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { MessageSquare, Users } from "lucide-react";
 import { useDms } from "@/components/providers/DmsProvider";
@@ -61,22 +62,22 @@ function Avatar({
   size?: number;
   className?: string;
 }) {
-  const thumb = src ? (supabaseThumb(src, size * 2) ?? src) : null;
+  const [thumbFailed, setThumbFailed] = useState(false);
+  useEffect(() => setThumbFailed(false), [src]);
+  const thumb = src ? (thumbFailed ? src : (supabaseThumb(src, size * 2) ?? src)) : null;
   return (
     <span
-      className={`flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-card-400 font-semibold text-muted-foreground ${className}`}
+      className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-card-400 font-semibold text-muted-foreground ${className}`}
       style={{ width: size, height: size, fontSize: size * 0.38 }}
     >
       {thumb ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        <Image
           src={thumb}
           alt={alt}
-          className="h-full w-full object-cover"
-          onError={(e) => {
-            if (src) e.currentTarget.src = src;
-            e.currentTarget.onerror = null;
-          }}
+          fill
+          sizes={`${size}px`}
+          className="object-cover"
+          onError={() => setThumbFailed(true)}
         />
       ) : (
         fallback

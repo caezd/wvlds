@@ -28,6 +28,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { HsvColorPicker, ACCENT_COLOR_PRESETS } from "@/components/ui/hsv-color-picker";
 import { cn } from "@/lib/utils";
+import Image from "next/image";
 import { EmojiPickerButton } from "@/components/chatrooms/EmojiPickerButton";
 import { ReactionEmoji } from "@/components/chatrooms/ReactionEmoji";
 import { GameBlockSurface, GameBlockToolbar, GameBlockEditButton } from "./GameBlockShell";
@@ -67,13 +68,16 @@ function renderIcon(
   accent: string | undefined,
   size = "h-4 w-4",
   emojiPx = 18,
+  sizePx = 16,
 ) {
   if (iconKind === "image") {
     if (!iconImage) return null;
     return (
-      <img
+      <Image
         src={iconImage}
         alt=""
+        width={sizePx}
+        height={sizePx}
         className={cn(size, "shrink-0 rounded-sm object-cover")}
       />
     );
@@ -211,7 +215,7 @@ export function CalloutBlockView({
             )}
             style={hasAccent ? { color: accent } : undefined}
           >
-            {renderIcon(block.icon, block.iconKind, block.iconImage, accent, "h-3 w-3", 14)}
+            {renderIcon(block.icon, block.iconKind, block.iconImage, accent, "h-3 w-3", 14, 12)}
             {block.title}
           </span>
           <div className="h-px flex-1 bg-border" />
@@ -522,7 +526,7 @@ export function CalloutDialog({
                     {iconImageUploading ? (
                       <Loader2 className="h-4 w-4 animate-spin shrink-0 text-muted-foreground" />
                     ) : hasIconImage ? (
-                      <img src={iconImageUrl} alt="" className="h-5 w-5 rounded-sm object-cover shrink-0" />
+                      <Image src={iconImageUrl} alt="" width={20} height={20} className="h-5 w-5 rounded-sm object-cover shrink-0" />
                     ) : (
                       <ImagePlus className="h-4 w-4 shrink-0 text-muted-foreground" />
                     )}

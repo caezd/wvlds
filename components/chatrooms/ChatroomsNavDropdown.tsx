@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { ChevronDown, ChevronRight, MessagesSquare } from "lucide-react";
 import {
@@ -150,10 +151,11 @@ export function ChatroomsNavDropdown({
                     )}
                   >
                     {room.icon_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
+                      <Image
                         src={room.icon_url}
                         alt=""
+                        width={36}
+                        height={36}
                         className="h-full w-full object-cover"
                       />
                     ) : (

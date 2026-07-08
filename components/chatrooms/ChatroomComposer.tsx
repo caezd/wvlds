@@ -549,6 +549,8 @@ export function ChatroomComposer({
               <div className="flex gap-2 flex-wrap px-1.5 pt-1 pb-0.5">
                 {pendingMedia.map((file, i) => (
                   <div key={i} className="relative group/thumb size-14 rounded-lg overflow-hidden shrink-0">
+                    {/* blob: URL locale (pré-upload) — next/image ne peut pas l'optimiser côté serveur */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={pendingMediaPreviews[i]}
                       alt={file.name}

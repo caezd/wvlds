@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { PersonaEditSheet } from "./PersonaEditSheet";
 import type { PersonaSectionWithFields } from "@/types/personas";
 import type { AvatarConfigV1 } from "./avatar/PersonaAvatarPicker";
@@ -60,11 +61,12 @@ export function PersonaCard({
         <button className="group relative w-full aspect-square rounded-2xl overflow-hidden bg-muted shadow-sm hover:shadow-lg transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
           {/* Image / fallback */}
           {avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <Image
               src={avatarUrl}
               alt={personaName}
-              className="absolute inset-0 h-full w-full object-cover"
+              fill
+              sizes="(min-width: 1024px) 200px, 33vw"
+              className="object-cover"
               draggable={false}
             />
           ) : (

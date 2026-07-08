@@ -14,6 +14,8 @@ export function BannerBlockView({
 }) {
   return (
     <div className="group/banner relative w-full py-2">
+      {/* dimensions intrinsèques inconnues (non stockées) — laisser le navigateur dimensionner naturellement */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={block.url}
         alt={block.alt ?? ""}

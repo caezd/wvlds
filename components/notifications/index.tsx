@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -100,8 +101,7 @@ function WorldInviteCard({ notif, onMarkRead }: { notif: AppNotification; onMark
             <div className="mt-2.5 flex items-center gap-3 min-w-0">
                 <span className="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted min-w-0">
                     {worldIconUrl
-                        // eslint-disable-next-line @next/next/no-img-element
-                        ? <img src={worldIconUrl} alt="" className="h-full w-full object-cover" />
+                        ? <Image src={worldIconUrl} alt="" width={24} height={24} className="h-full w-full object-cover" />
                         : <Globe size={14} className="text-muted-foreground" />
                     }
                 </span>
@@ -137,8 +137,7 @@ function NotifAvatar({ avatarUrl, actorName, type, isUnread: _isUnread }: {
 }) {
     const thumb = avatarUrl ? supabaseThumb(avatarUrl, 56) ?? avatarUrl : null;
     if (thumb) {
-        // eslint-disable-next-line @next/next/no-img-element
-        return <img src={thumb} alt={actorName ?? ""} className="h-7 w-7 shrink-0 rounded-full object-cover" />;
+        return <Image src={thumb} alt={actorName ?? ""} width={28} height={28} className="h-7 w-7 shrink-0 rounded-full object-cover" />;
     }
     const letter = actorName ? actorName[0].toUpperCase() : null;
     if (letter) {

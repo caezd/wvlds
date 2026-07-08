@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
@@ -646,11 +647,12 @@ function PinPopover({
         {/* ── Bannière ─────────────────────────────────── */}
         <div className="relative h-32 w-full overflow-hidden bg-gradient-to-br from-primary/20 to-primary/5">
           {bannerSrc ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <Image
               src={bannerSrc}
               alt=""
-              className="h-full w-full object-cover"
+              fill
+              sizes="340px"
+              className="object-cover"
             />
           ) : isEditMode ? (
             <button
@@ -1259,7 +1261,9 @@ export function WorldMap({
                 transformOrigin: "0 0",
               }}
             >
-              {/* Image : couvre toujours toute la largeur du container */}
+              {/* Image : couvre toujours toute la largeur du container.
+                  imageRef.offsetWidth/offsetHeight pilotent le clamp du pan/zoom —
+                  next/image (fill) changerait ce comportement de dimensionnement intrinsèque. */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 ref={imageRef}

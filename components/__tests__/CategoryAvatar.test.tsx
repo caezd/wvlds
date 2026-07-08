@@ -12,7 +12,7 @@ describe("CategoryAvatar", () => {
       />,
     );
     const img = container.querySelector("img");
-    expect(img?.getAttribute("src")).toBe("https://example.com/icon.webp");
+    expect(img?.getAttribute("src")).toContain(encodeURIComponent("https://example.com/icon.webp"));
   });
 
   it("retombe sur la bannière en l'absence d'image de catégorie", () => {
@@ -20,7 +20,7 @@ describe("CategoryAvatar", () => {
       <CategoryAvatar title="Annonces" bannerUrl="https://example.com/banner.webp" iconUrl={null} />,
     );
     const img = container.querySelector("img");
-    expect(img?.getAttribute("src")).toBe("https://example.com/banner.webp");
+    expect(img?.getAttribute("src")).toContain(encodeURIComponent("https://example.com/banner.webp"));
   });
 
   it("retombe sur l'initiale du titre sans bannière ni image de catégorie", () => {

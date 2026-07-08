@@ -34,6 +34,8 @@ export function ChatroomMessageBubble({
           onClick={() => setLightboxIndex(i)}
           className="focus:outline-none"
         >
+          {/* dimensions intrinsèques inconnues (pas stockées en métadonnée) — fill+contain forcerait l'agrandissement des petites images */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={item.url}
             alt={item.name}
