@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 
 const TWITTER_CDN = "https://cdn.jsdelivr.net/npm/emoji-datasource-twitter/img/twitter/64/";
 
@@ -49,7 +50,7 @@ export function ReactionEmoji({
   }
 
   return (
-    <img
+    <Image
       src={`${TWITTER_CDN}${unified}.png`}
       alt={native}
       width={size}

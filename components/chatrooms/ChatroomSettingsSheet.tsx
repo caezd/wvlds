@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -302,8 +303,7 @@ export default function ChatroomSettingsSheet({ canEdit, chatroom, worldTimeline
                   {uploading === "icon" ? (
                     <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                   ) : iconUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={iconUrl} alt="" className="h-full w-full object-cover" />
+                    <Image src={iconUrl} alt="" width={48} height={48} className="h-full w-full object-cover" />
                   ) : (
                     <ImageIcon className="h-5 w-5 text-muted-foreground" />
                   )}

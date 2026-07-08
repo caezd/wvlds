@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ChevronsUpDown, Plus } from "lucide-react";
 import { supabaseThumb } from "@/lib/storage";
@@ -35,14 +36,18 @@ function WorldAvatar({ world, size = "sm" }: { world: WorldItem; size?: "sm" | "
   const initial = (world.name[0] ?? "W").toUpperCase();
   const color = worldColor(world.name);
   const dim = size === "md" ? "h-9 w-9" : "h-6 w-6";
+  const px = size === "md" ? 36 : 24;
   const text = size === "md" ? "text-xs" : "text-[10px]";
   return world.icon_url ? (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={supabaseThumb(world.icon_url, 48) ?? world.icon_url}
-      alt=""
-      className={cn(dim, "rounded-md object-cover shrink-0")}
-    />
+    <span className={cn(dim, "relative block rounded-md overflow-hidden shrink-0")}>
+      <Image
+        src={supabaseThumb(world.icon_url, 48) ?? world.icon_url}
+        alt=""
+        fill
+        sizes={`${px}px`}
+        className="object-cover"
+      />
+    </span>
   ) : (
     <span className={cn("flex shrink-0 items-center justify-center rounded-md font-semibold text-white", dim, text, color)}>
       {initial}

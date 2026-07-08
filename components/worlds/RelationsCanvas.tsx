@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
@@ -157,8 +158,7 @@ function RelationRow({
       <div className="flex items-center gap-2">
         <span className="shrink-0 text-[11px] text-muted-foreground font-mono">{direction}</span>
         {other.avatar_url
-          // eslint-disable-next-line @next/next/no-img-element
-          ? <img src={other.avatar_url} alt={other.name} className="h-5 w-5 rounded-full object-cover shrink-0" />
+          ? <Image src={other.avatar_url} alt={other.name} width={20} height={20} className="h-5 w-5 rounded-full object-cover shrink-0" />
           : <div className="h-5 w-5 rounded-full bg-muted flex items-center justify-center text-[9px] font-bold shrink-0">{initials(other.name)}</div>
         }
         <span className="truncate text-[12px] font-medium flex-1">{other.name}</span>
@@ -968,8 +968,7 @@ export function RelationsCanvas({ worldId, userId, canAdmin, onClose }: Relation
           <div className="flex w-72 shrink-0 flex-col border-r border-border-soft bg-background">
             <div className="flex items-center gap-2.5 border-b border-border-soft px-3 py-2.5">
               {selectedPersona.avatar_url
-                // eslint-disable-next-line @next/next/no-img-element
-                ? <img src={selectedPersona.avatar_url} alt={selectedPersona.name} className="h-8 w-8 rounded-full object-cover shrink-0" />
+                ? <Image src={selectedPersona.avatar_url} alt={selectedPersona.name} width={32} height={32} className="h-8 w-8 rounded-full object-cover shrink-0" />
                 : <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-[11px] font-bold shrink-0">{initials(selectedPersona.name)}</div>
               }
               <div className="flex-1 min-w-0">
@@ -1113,10 +1112,9 @@ export function RelationsCanvas({ worldId, userId, canAdmin, onClose }: Relation
                         onPointerUp={(e) => onHdrUp(e, uid)}
                         onPointerCancel={(e) => onHdrUp(e, uid)}
                       >
-                        <span className="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted text-[10px] font-bold">
+                        <span className="relative flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted text-[10px] font-bold">
                           {member.avatar_url
-                            // eslint-disable-next-line @next/next/no-img-element
-                            ? <img src={member.avatar_url} alt={dName} className="h-full w-full object-cover" />
+                            ? <Image src={member.avatar_url} alt={dName} fill sizes="24px" className="object-cover" />
                             : letter}
                         </span>
                         <span className="truncate text-xs font-medium text-muted-foreground">{dName}</span>
@@ -1161,8 +1159,7 @@ export function RelationsCanvas({ worldId, userId, canAdmin, onClose }: Relation
                               {/* Avatar + nom */}
                               <div className="absolute inset-0 overflow-hidden rounded-[6px]">
                                 {p.avatar_url ? (
-                                  // eslint-disable-next-line @next/next/no-img-element
-                                  <img src={p.avatar_url} alt={p.name} className="absolute inset-0 h-full w-full object-cover" />
+                                  <Image src={p.avatar_url} alt={p.name} fill sizes={`${CW}px`} className="object-cover" />
                                 ) : (
                                   <div
                                     className="absolute inset-0 flex items-center justify-center text-xl font-bold"

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
+import Image from "next/image";
 import { Globe, GlobeLock, Maximize2, Minimize2, Star } from "lucide-react";
 import {
   Tooltip,
@@ -41,12 +42,17 @@ export function WorldHeroCard({
 }) {
   const t = useTranslations("worlds");
   const [world, _setWorld] = useState(initialWorld);
+  const [bannerThumbFailed, setBannerThumbFailed] = useState(false);
   const { markWorldSeen } = useNotifications();
 
   useEffect(() => {
     void markWorldSeen(world.id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [world.id]);
+
+  useEffect(() => {
+    setBannerThumbFailed(false);
+  }, [world.banner_url]);
 
   return (
     <section
@@ -63,12 +69,13 @@ export function WorldHeroCard({
       }}
     >
       {world.banner_url && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={supabaseThumb(world.banner_url, 1200) ?? world.banner_url}
-          onError={(e) => { e.currentTarget.src = world.banner_url!; e.currentTarget.onerror = null; }}
+        <Image
+          src={bannerThumbFailed ? world.banner_url : (supabaseThumb(world.banner_url, 1200) ?? world.banner_url)}
+          onError={() => setBannerThumbFailed(true)}
           alt=""
-          className="absolute inset-0 h-full w-full rounded-[inherit] object-cover"
+          fill
+          sizes="(min-width: 1024px) 800px, 100vw"
+          className="rounded-[inherit] object-cover"
         />
       )}
       {/* Voile de lisibilité / fallback sans bannière */}
@@ -126,16 +133,17 @@ export function WorldHeroCard({
         <span
           className={
             world.icon_url
-              ? "mb-1 flex h-11 w-11 items-center justify-center overflow-hidden rounded-full"
-              : "mb-1 flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-black/50"
+              ? "relative mb-1 flex h-11 w-11 items-center justify-center overflow-hidden rounded-full"
+              : "relative mb-1 flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-black/50"
           }
         >
           {world.icon_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <Image
               src={world.icon_url}
               alt=""
-              className="h-full w-full object-cover"
+              fill
+              sizes="44px"
+              className="object-cover"
             />
           ) : world.visibility === "public" ? (
             <Globe size={20} className="text-white/90" />

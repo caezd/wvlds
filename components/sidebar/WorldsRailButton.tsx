@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Globe, Plus } from "lucide-react";
@@ -119,14 +120,15 @@ export function WorldsRailButton() {
                     <TooltipTrigger asChild>
                       <Link
                         href={`/w/${w.id}`}
-                        className="flex h-6 w-6 shrink-0 overflow-hidden rounded-sm transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        className="relative flex h-6 w-6 shrink-0 overflow-hidden rounded-sm transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       >
                         {w.icon_url ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
+                          <Image
                             src={supabaseThumb(w.icon_url, 72) ?? w.icon_url}
                             alt={w.name}
-                            className="h-full w-full object-cover"
+                            fill
+                            sizes="24px"
+                            className="object-cover"
                           />
                         ) : (
                           <span className={cn("flex h-full w-full items-center justify-center text-xs font-bold text-white", worldColor(w.name))}>

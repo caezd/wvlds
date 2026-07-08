@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-07 ──────────────────────────────────────────────────────────────
   {
     date: "2026-07",
+    tag: "Performance",
+    text: "La quasi-totalité des images de l'app (avatars, bannières, icônes de mondes/salons/objets, cadres, apparences de personas) passe désormais par l'optimiseur d'images de Next.js : redimensionnement et formats modernes automatiques, chargement différé hors écran, et réservation d'espace pour éviter les sauts de mise en page. Quelques cas restent volontairement en `<img>` classique (aperçus locaux avant upload, images intégrées via URL externe dans le markdown, carte du monde).",
+  },
+  {
+    date: "2026-07",
     tag: "Interface",
     text: "Les **catégories de chatrooms** peuvent désormais avoir une image dédiée (recadrable en carré), en plus de la bannière, depuis le dialog de création/édition dans les réglages du monde. Elle s'affiche à la place de l'initiale partout où la catégorie apparaît en petit format : sidebar, sélecteur de catégorie du composer et des réglages d'un salon.",
   },

@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 /**
@@ -22,13 +23,12 @@ export function CategoryAvatar({
   return (
     <span
       className={cn(
-        "shrink-0 flex items-center justify-center overflow-hidden bg-muted-foreground/10",
+        "relative shrink-0 flex items-center justify-center overflow-hidden bg-muted-foreground/10",
         className,
       )}
     >
       {src ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={src} alt="" className="h-full w-full object-cover" />
+        <Image src={src} alt="" fill sizes="48px" className="object-cover" />
       ) : (
         <span className={cn("font-medium text-muted-foreground", letterClassName)}>
           {title[0]?.toUpperCase()}

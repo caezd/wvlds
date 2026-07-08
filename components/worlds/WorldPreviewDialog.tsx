@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import { Globe, GlobeLock } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -65,11 +66,12 @@ export function WorldPreviewDialog({
                     }}
                 >
                     {world?.banner_url && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
+                        <Image
                             src={supabaseThumb(world.banner_url, 600) ?? world.banner_url}
                             alt=""
-                            className="absolute inset-0 h-full w-full object-cover"
+                            fill
+                            sizes="384px"
+                            className="object-cover"
                         />
                     )}
                     <div
@@ -83,12 +85,11 @@ export function WorldPreviewDialog({
                     />
                     <div className="relative flex min-h-32 flex-col justify-end gap-2">
                         <span className={[
-                            "mb-1 flex h-10 w-10 items-center justify-center overflow-hidden rounded-full",
+                            "relative mb-1 flex h-10 w-10 items-center justify-center overflow-hidden rounded-full",
                             !world?.icon_url ? "bg-black/40 backdrop-blur" : "",
                         ].join(" ")}>
                             {world?.icon_url ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img src={world.icon_url} alt="" className="h-full w-full object-cover" />
+                                <Image src={world.icon_url} alt="" fill sizes="40px" className="object-cover" />
                             ) : world?.visibility === "public" ? (
                                 <Globe size={18} className="text-white/90" />
                             ) : (

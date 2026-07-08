@@ -2,6 +2,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -172,10 +173,12 @@ export default function ShopGrid({
               className="overflow-hidden border"
             >
               <div className="relative aspect-square">
-                <img
+                <Image
                   src={it.preview_url ?? it.asset_url}
                   alt={it.name}
-                  className="h-full w-full object-cover"
+                  fill
+                  sizes="(min-width: 1024px) 200px, 45vw"
+                  className="object-cover"
                 />
 
                 {!it.owned && (

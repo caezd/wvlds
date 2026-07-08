@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { createPortal } from "react-dom";
 import { X, Download } from "lucide-react";
 import { cn, isSafeUrl } from "@/lib/utils";
@@ -51,14 +52,15 @@ export function ImageLightbox({
       </div>
 
       {/* Image principale */}
-      <div className="flex-1 flex items-center justify-center p-16">
-        <img
+      <div className="relative flex-1 p-16">
+        <Image
           key={current}
           src={item.url}
           alt={item.name}
           onClick={(e) => e.stopPropagation()}
-          className="max-h-full max-w-full rounded-xl object-contain select-none"
-          style={{ maxHeight: "calc(100vh - 8rem)" }}
+          fill
+          sizes="100vw"
+          className="rounded-xl object-contain select-none"
         />
       </div>
 
@@ -73,11 +75,11 @@ export function ImageLightbox({
               key={i}
               onClick={() => setCurrent(i)}
               className={cn(
-                "size-16 rounded-lg overflow-hidden shrink-0 border-2 transition-all",
+                "relative size-16 rounded-lg overflow-hidden shrink-0 border-2 transition-all",
                 i === current ? "border-white" : "border-transparent opacity-50 hover:opacity-80",
               )}
             >
-              <img src={it.url} alt={it.name} className="size-full object-cover" />
+              <Image src={it.url} alt={it.name} fill sizes="64px" className="object-cover" />
             </button>
           ))}
         </div>

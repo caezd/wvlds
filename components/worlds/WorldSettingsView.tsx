@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -413,10 +414,11 @@ export function WorldSettingsView({ world, onUpdated, onClose }: WorldSettingsVi
                                         {uploading === "icon" ? (
                                             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                                         ) : iconUrl ? (
-                                            // eslint-disable-next-line @next/next/no-img-element
-                                            <img
+                                            <Image
                                                 src={iconUrl}
                                                 alt=""
+                                                width={48}
+                                                height={48}
                                                 className="h-full w-full object-cover"
                                             />
                                         ) : (

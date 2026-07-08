@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { ChatroomAvatarWithPresence } from "../chatrooms/ChatroomAvatarWithPresence";
 import { supabaseThumb } from "@/lib/storage";
 
@@ -36,12 +37,9 @@ export function AvatarWithFrame({
         className={className}
       />
       {frameUrl && (
-        <img
-          src={frameUrl}
-          alt=""
-          className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 max-w-none"
-          style={{ width: "120%" }}
-        />
+        <div className="pointer-events-none absolute top-1/2 left-1/2 h-[120%] w-[120%] -translate-x-1/2 -translate-y-1/2">
+          <Image src={frameUrl} alt="" fill className="object-contain" />
+        </div>
       )}
     </div>
   );

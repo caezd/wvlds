@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { ImageLightbox } from "@/components/chatrooms/ImageLightbox";
 import { supabaseThumb } from "@/lib/storage";
 
@@ -15,18 +16,20 @@ function Thumb({
   className?: string;
   onClick: () => void;
 }) {
+  const [thumbFailed, setThumbFailed] = useState(false);
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`overflow-hidden focus:outline-none ${className ?? ""}`}
+      className={`relative overflow-hidden focus:outline-none ${className ?? ""}`}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={supabaseThumb(img.url, 600) ?? img.url}
-        onError={(e) => { e.currentTarget.src = img.url; e.currentTarget.onerror = null; }}
+      <Image
+        src={thumbFailed ? img.url : (supabaseThumb(img.url, 600) ?? img.url)}
+        onError={() => setThumbFailed(true)}
         alt={img.caption ?? ""}
-        className="h-full w-full object-cover transition-opacity hover:opacity-90"
+        fill
+        sizes="(min-width: 1024px) 400px, 90vw"
+        className="object-cover transition-opacity hover:opacity-90"
         loading="lazy"
         draggable={false}
       />

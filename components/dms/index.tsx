@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import { Loader2, Mail, Pin, PinOff, Plus, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabaseThumb } from "@/lib/storage";
@@ -38,8 +39,7 @@ function DmAvatar({
       style={{ width: size, height: size, fontSize: size * 0.38 }}
     >
       {thumb
-        // eslint-disable-next-line @next/next/no-img-element
-        ? <img src={thumb} alt="" className="h-full w-full object-cover" />
+        ? <Image src={thumb} alt="" width={size} height={size} className="h-full w-full object-cover" />
         : (fallback[0] ?? "?").toUpperCase()
       }
     </span>

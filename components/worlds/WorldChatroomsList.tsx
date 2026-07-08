@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
@@ -105,13 +106,17 @@ export function WorldChatroomsList({
                             setActiveChat(r.id);
                         }}
                     >
-                        <div className="absolute inset-0">
-                            <img
-                                src={r.banner_url ?? undefined}
-                                alt=""
-                                className="opacity-50 object-fit-cover -z-10 mask-l-from-0% to-100% w-full"
-                            />
-                        </div>
+                        {r.banner_url && (
+                            <div className="absolute inset-0">
+                                <Image
+                                    src={r.banner_url}
+                                    alt=""
+                                    fill
+                                    sizes="100vw"
+                                    className="opacity-50 object-cover -z-10 mask-l-from-0% to-100%"
+                                />
+                            </div>
+                        )}
                         {/* Ligne titre + date */}
                         <div className="flex items-center justify-between">
                             <span className="font-medium truncate">
@@ -135,13 +140,14 @@ export function WorldChatroomsList({
                         {r.summary?.last_message_at && (
                             <div className="mt-1 flex items-start gap-2 text-sm text-muted-foreground">
                                 {r.summary.last_message_persona_avatar_url ? (
-                                    <img
+                                    <Image
                                         src={
                                             r.summary
                                                 .last_message_persona_avatar_url
                                         }
                                         width={20}
                                         height={20}
+                                        alt=""
                                         className="rounded-full"
                                     />
                                 ) : (

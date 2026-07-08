@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { blobToWebP } from "@/lib/imageUtils";
@@ -194,7 +195,7 @@ async function loadImage(url: string): Promise<HTMLImageElement> {
   if (cached) return cached;
 
   const p = new Promise<HTMLImageElement>((resolve, reject) => {
-    const im = new Image();
+    const im = new window.Image();
     im.onload = () => resolve(im);
     im.onerror = () => reject(new Error(`Failed to load: ${url}`));
     im.src = url;
@@ -859,10 +860,11 @@ export function PersonaAvatarPicker({
                     aria-label={c.label}
                   >
                     {tabThumbUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
+                      <Image
                         src={tabThumbUrl}
                         alt=""
+                        width={28}
+                        height={28}
                         className="h-7 w-7 object-contain"
                         draggable={false}
                       />
@@ -934,7 +936,7 @@ export function PersonaAvatarPicker({
                           key={v.key}
                           type="button"
                           className={cn(
-                            "h-9 w-9 rounded-md border overflow-hidden grid place-items-center",
+                            "relative h-9 w-9 rounded-md border overflow-hidden grid place-items-center",
                             on
                               ? "ring-2 ring-primary ring-offset-2 ring-offset-background"
                               : "opacity-90 hover:opacity-100",
@@ -943,11 +945,12 @@ export function PersonaAvatarPicker({
                           title={v.label}
                           aria-label={v.label}
                         >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
+                          <Image
                             src={thumbUrl}
                             alt=""
-                            className="h-full w-full object-contain"
+                            fill
+                            sizes="36px"
+                            className="object-contain"
                             loading={on ? "eager" : "lazy"}
                             draggable={false}
                           />
@@ -979,7 +982,7 @@ export function PersonaAvatarPicker({
                         key={part.id}
                         type="button"
                         className={cn(
-                          "rounded-lg p-1 hover:bg-zinc-100 transition flex items-center justify-center dark:bg-zinc-300",
+                          "relative aspect-square rounded-lg p-1 hover:bg-zinc-100 transition flex items-center justify-center dark:bg-zinc-300",
                           isSelected
                             ? "ring-2 ring-accent ring-offset-2 ring-offset-background"
                             : "",
@@ -990,11 +993,12 @@ export function PersonaAvatarPicker({
                         title={part.label}
                       >
                         {thumbUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
+                          <Image
                             src={thumbUrl}
                             alt=""
-                            className="h-full w-full object-contain"
+                            fill
+                            sizes="(min-width: 1024px) 120px, 25vw"
+                            className="object-contain"
                             loading="lazy"
                             draggable={false}
                           />

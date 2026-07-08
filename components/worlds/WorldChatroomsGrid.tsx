@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { ChevronRight, MessagesSquare } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -110,16 +111,17 @@ export function WorldChatroomsGrid({
                 <span className="relative shrink-0">
                   <span
                     className={cn(
-                      "flex h-10 w-10 items-center justify-center overflow-hidden rounded-full",
+                      "relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-full",
                       !room.icon_url && "bg-card-400",
                     )}
                   >
                     {room.icon_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
+                      <Image
                         src={room.icon_url}
                         alt=""
-                        className="h-full w-full object-cover"
+                        fill
+                        sizes="40px"
+                        className="object-cover"
                       />
                     ) : (
                       <MessagesSquare className="h-4.5 w-4.5 text-muted-foreground" />
