@@ -5,7 +5,7 @@ import type { ChatroomCategory } from "@/types/worlds";
 
 export async function addChatroomCategory(
   worldId: string,
-  data: { title: string; description?: string | null; banner_url?: string | null },
+  data: { title: string; description?: string | null; banner_url?: string | null; icon_url?: string | null },
 ) {
   const supabase = await createClient();
 
@@ -31,7 +31,7 @@ export async function addChatroomCategory(
 
 export async function updateChatroomCategory(
   id: string,
-  data: Partial<{ title: string; description: string | null; banner_url: string | null }>,
+  data: Partial<{ title: string; description: string | null; banner_url: string | null; icon_url: string | null }>,
 ) {
   const supabase = await createClient();
   const { error } = await supabase
@@ -42,13 +42,29 @@ export async function updateChatroomCategory(
   return { ok: true as const };
 }
 
-export async function deleteChatroomCategory(id: string, bannerUrl: string | null) {
+export async function deleteChatroomCategory(
+  id: string,
+  bannerUrl: string | null,
+  iconUrl?: string | null,
+) {
   const supabase = await createClient();
 
-  if (bannerUrl) {
-    const path = bannerUrl.split("/chatroom-categories/")[1];
-    if (path) await supabase.storage.from("chatroom-categories").remove([path]);
-  }
+  const paths = [bannerUrl, iconUrl]
+    .filter((url): url is string => !!url)
+    .map((url) => {
+      try {
+        const pathname = new URL(url).pathname;
+        const marker = "/chatroom-categories/";
+        const idx = pathname.indexOf(marker);
+        if (idx === -1) return null;
+        return pathname.slice(idx + marker.length);
+      } catch {
+        const [, rest] = url.split("/chatroom-categories/");
+        return rest?.split("?")[0] ?? null;
+      }
+    })
+    .filter((path): path is string => !!path);
+  if (paths.length) await supabase.storage.from("chatroom-categories").remove(paths);
 
   const { error } = await supabase
     .from("chatroom_categories")

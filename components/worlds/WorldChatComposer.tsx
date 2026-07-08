@@ -37,9 +37,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CategoryAvatar } from "@/components/worlds/CategoryAvatar";
 
 type MapPinOption = { id: string; title: string; color: string };
-type CategoryOption = { id: string; title: string; banner_url: string | null };
+type CategoryOption = { id: string; title: string; banner_url: string | null; icon_url: string | null };
 
 function randomTitle() {
   try { return generate({ words: 2 }).spaced; }
@@ -85,7 +86,7 @@ export function WorldChatComposer({
     void (async () => {
       const { data, error } = await supabase
         .from("chatroom_categories")
-        .select("id, title, banner_url")
+        .select("id, title, banner_url, icon_url")
         .eq("world_id", worldId)
         .order("position");
       if (error) { toast.error(error.message); return; }
@@ -206,14 +207,13 @@ export function WorldChatComposer({
                 <DropdownMenuContent align="end" className="w-56">
                   {categories.map((cat) => (
                     <DropdownMenuItem key={cat.id} onClick={() => setCategoryId(cat.id)}>
-                      <span className="mr-2 flex h-4 w-4 shrink-0 items-center justify-center overflow-hidden rounded-sm bg-muted-foreground/10">
-                        {cat.banner_url ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={cat.banner_url} alt="" className="h-full w-full object-cover" />
-                        ) : (
-                          <span className="text-[8px] font-medium text-muted-foreground">{cat.title[0]?.toUpperCase()}</span>
-                        )}
-                      </span>
+                      <CategoryAvatar
+                        title={cat.title}
+                        bannerUrl={cat.banner_url}
+                        iconUrl={cat.icon_url}
+                        letterClassName="text-[8px]"
+                        className="mr-2 h-4 w-4 rounded-sm"
+                      />
                       {cat.title}
                     </DropdownMenuItem>
                   ))}

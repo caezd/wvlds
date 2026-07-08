@@ -12,6 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Star, ChevronRight, ArrowLeft, MessagesSquare, Hash } from "lucide-react";
 import { useGlobalPresence } from "@/components/providers/PresenceProvider";
 import { useTranslations } from "next-intl";
+import { CategoryAvatar } from "@/components/worlds/CategoryAvatar";
 
 type Room = {
   id: string;
@@ -40,6 +41,7 @@ type Category = {
   id: string;
   title: string;
   banner_url: string | null;
+  icon_url: string | null;
   position: number;
 };
 
@@ -351,16 +353,12 @@ export function WorldSidebarChatrooms({
                   onClick={() => setSelectedCat(cat)}
                   className="flex items-center gap-2.5 w-full rounded-md px-2 py-1.5 hover:bg-muted transition-colors text-left group"
                 >
-                  {/* Bannière catégorie */}
-                  <div className="h-9 w-9 shrink-0 rounded-lg overflow-hidden bg-muted-foreground/10 flex items-center justify-center">
-                    {cat.banner_url ? (
-                      <img src={cat.banner_url} alt="" className="h-full w-full object-cover" />
-                    ) : (
-                      <span className="text-[11px] font-medium text-muted-foreground">
-                        {cat.title[0].toUpperCase()}
-                      </span>
-                    )}
-                  </div>
+                  <CategoryAvatar
+                    title={cat.title}
+                    bannerUrl={cat.banner_url}
+                    iconUrl={cat.icon_url}
+                    className="h-9 w-9 rounded-lg"
+                  />
                   <div className="flex-1 min-w-0">
                     <p className="truncate text-sm font-medium text-foreground leading-tight">
                       {cat.title}
@@ -378,7 +376,7 @@ export function WorldSidebarChatrooms({
             })}
             {uncategorized.length > 0 && (
               <button
-                onClick={() => setSelectedCat({ id: "__uncategorized__", title: t("sidebar.general"), banner_url: null, position: 9999 })}
+                onClick={() => setSelectedCat({ id: "__uncategorized__", title: t("sidebar.general"), banner_url: null, icon_url: null, position: 9999 })}
                 className="flex items-center gap-2.5 w-full rounded-md px-2 py-1.5 hover:bg-muted transition-colors text-left group"
               >
                 <div className="h-9 w-9 shrink-0 rounded-lg bg-muted-foreground/10 flex items-center justify-center">
