@@ -195,7 +195,17 @@
       "errorNotConnected": "Debes estar conectado.",
       "errorCreateFailed": "No se pudo crear la sala de chat.",
       "timelinePlaceholder": "Ubicar en la línea de tiempo",
-      "monthPlaceholder": "Mes —"
+      "monthPlaceholder": "Mes —",
+      "dialogTitle": "Nueva conversación",
+      "titlePlaceholder": "Título de la conversación",
+      "titleClear": "Borrar el título",
+      "titleRandomize": "Generar un título aleatorio",
+      "discardTitle": "¿Abandonar la conversación?",
+      "discardDescription": "Se ha escrito texto. Cerrar el diálogo eliminará tu borrador.",
+      "discardConfirm": "Cerrar de todos modos",
+      "discardCancel": "Seguir escribiendo",
+      "categoryPlaceholder": "Categoría",
+      "categoryNone": "Ninguna"
     }
   },
   "auth": {

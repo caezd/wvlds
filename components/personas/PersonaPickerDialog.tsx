@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { Plus, Star } from "lucide-react";
+import { Star, UserPlus } from "lucide-react";
 import { useTranslations } from "next-intl";
 function initials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -187,25 +187,31 @@ export function PersonaPickerDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {trigger ?? (
-          <button
-            type="button"
-            className="size-9 rounded-full overflow-hidden shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            {selected ? (
-              selected.avatar_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={supabaseThumb(selected.avatar_url, 72) ?? selected.avatar_url} onError={(e) => { e.currentTarget.src = selected.avatar_url!; e.currentTarget.onerror = null; }} alt={selected.name} className="h-full w-full object-cover" />
-              ) : (
-                <span className="h-full w-full grid place-items-center text-xs font-bold bg-muted text-muted-foreground">
-                  {initials(selected.name)}
-                </span>
-              )
-            ) : (
-              <span className="h-full w-full grid place-items-center bg-muted text-muted-foreground">
-                <Plus size={16} />
-              </span>
+          <span className="relative inline-block shrink-0 rounded-full border">
+            {!selected && (
+              <span className="absolute inset-0 rounded-full animate-ping pointer-events-none bg-primary/30 scale-73" />
             )}
-          </button>
+            <button
+              type="button"
+              aria-label={selected ? selected.name : t("pick")}
+              className="relative size-9 rounded-full overflow-hidden shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {selected ? (
+                selected.avatar_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={supabaseThumb(selected.avatar_url, 72) ?? selected.avatar_url} onError={(e) => { e.currentTarget.src = selected.avatar_url!; e.currentTarget.onerror = null; }} alt={selected.name} className="h-full w-full object-cover" />
+                ) : (
+                  <span className="h-full w-full grid place-items-center text-xs font-bold  text-muted-foreground">
+                    {initials(selected.name)}
+                  </span>
+                )
+              ) : (
+                <span className="h-full w-full grid place-items-center  text-muted-foreground bg-background hover:bg-muted">
+                  <UserPlus size={16} />
+                </span>
+              )}
+            </button>
+          </span>
         )}
       </DialogTrigger>
 
