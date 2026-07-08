@@ -159,14 +159,25 @@ function CategoryForm({
           Image de catégorie — affichée dans la sidebar (remplace la bannière dans les petits avatars)
         </p>
         {iconUrl ? (
-          <ImagePickerCropField
-            aspect={1}
-            uploading={uploadingIcon}
-            previewSrc={iconUrl}
-            previewClassName="h-16 w-16 rounded-lg"
-            changeLabel="Changer"
-            onConfirm={handleIconConfirm}
-          />
+          <div className="flex items-start gap-2">
+            <ImagePickerCropField
+              aspect={1}
+              uploading={uploadingIcon}
+              previewSrc={iconUrl}
+              previewClassName="h-16 w-16 rounded-lg"
+              changeLabel="Changer"
+              onConfirm={handleIconConfirm}
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={uploadingIcon}
+              onClick={() => setIconUrl("")}
+            >
+              Retirer
+            </Button>
+          </div>
         ) : (
           <div className="w-32">
             <ImagePickerCropField

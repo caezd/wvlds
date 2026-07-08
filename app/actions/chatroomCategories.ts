@@ -51,7 +51,18 @@ export async function deleteChatroomCategory(
 
   const paths = [bannerUrl, iconUrl]
     .filter((url): url is string => !!url)
-    .map((url) => url.split("/chatroom-categories/")[1])
+    .map((url) => {
+      try {
+        const pathname = new URL(url).pathname;
+        const marker = "/chatroom-categories/";
+        const idx = pathname.indexOf(marker);
+        if (idx === -1) return null;
+        return pathname.slice(idx + marker.length);
+      } catch {
+        const [, rest] = url.split("/chatroom-categories/");
+        return rest?.split("?")[0] ?? null;
+      }
+    })
     .filter((path): path is string => !!path);
   if (paths.length) await supabase.storage.from("chatroom-categories").remove(paths);
 
