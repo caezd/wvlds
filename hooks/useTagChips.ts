@@ -33,7 +33,7 @@ export function useTagChips(initial: string[] | null = null) {
   }, []);
 
   const remove = useCallback((label: string) => {
-    setTags((prev) => (prev ?? []).filter((t) => t !== label));
+    setTags((prev) => (prev === null ? prev : prev.filter((t) => t !== label)));
   }, []);
 
   const onKeyDown = useCallback(
