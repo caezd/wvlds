@@ -199,7 +199,7 @@ export function PersonaPickerDialog({
               {selected ? (
                 selected.avatar_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={supabaseThumb(selected.avatar_url, 72) ?? selected.avatar_url} onError={(e) => { e.currentTarget.src = selected.avatar_url!; e.currentTarget.onerror = null; }} alt={selected.name} className="h-full w-full object-cover " />
+                  <img src={supabaseThumb(selected.avatar_url, 72) ?? selected.avatar_url} onError={(e) => { e.currentTarget.src = selected.avatar_url!; e.currentTarget.onerror = null; }} alt={selected.name} className="h-full w-full object-cover" />
                 ) : (
                   <span className="h-full w-full grid place-items-center text-xs font-bold  text-muted-foreground">
                     {initials(selected.name)}
