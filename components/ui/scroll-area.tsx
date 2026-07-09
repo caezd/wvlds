@@ -29,6 +29,9 @@ function ScrollArea({
         data-slot="scroll-area-viewport"
         className={cn(
           "focus-visible:ring-ring/50 size-full rounded-[inherit] transition-[color,box-shadow] outline-hidden focus-visible:ring-[3px] focus-visible:outline-1",
+          // Radix injecte un div interne en `display:table` pour mesurer le contenu,
+          // ce qui casse tout `truncate`/`min-w-0` à l'intérieur (il se dimensionne au contenu, pas au parent).
+          "[&>div]:!block",
           viewportClassName,
         )}
       >
