@@ -73,12 +73,21 @@ function CodeBlock({ className, children, ...props }: React.ComponentProps<"code
   );
 }
 
+// Format hex valide en CSS (3/4/6/8 chiffres) — partagé entre `urlTransform`
+// et le composant `a` ci-dessous pour que les deux n'acceptent jamais que le
+// même format, sans dupliquer (et risquer de faire diverger) la regex.
+const COLOR_HEX_RE = /^(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
+
 // react-markdown assainit lui-même les URLs (indépendamment de rehype-sanitize)
 // via une liste figée de protocoles (http/https/mailto/tel) — sans ça, nos
 // faux hrefs `color:`/`underline:` (voir lib/textStyledSpans.ts) seraient
-// vidés avant même d'atteindre le composant `a`.
+// vidés avant même d'atteindre le composant `a`. On ne laisse passer que la
+// forme exacte attendue (`color:` + hex valide, ou `underline:` seul) :
+// un `[texte](underline:foo)` tapé à la main ne doit pas produire un vrai
+// lien avec un href arbitraire.
 function urlTransform(url: string): string {
-  if (url.startsWith("color:") || url.startsWith("underline:")) return url;
+  if (url.startsWith("color:") && COLOR_HEX_RE.test(url.slice("color:".length))) return url;
+  if (url === "underline:") return url;
   return defaultUrlTransform(url);
 }
 
@@ -332,7 +341,7 @@ export function MarkdownContent({
       const hrefStr = String(href ?? "");
       if (hrefStr.startsWith("color:")) {
         const hex = hrefStr.slice("color:".length);
-        if (/^(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(hex)) {
+        if (COLOR_HEX_RE.test(hex)) {
           return <span style={{ color: `#${hex}` }}>{children}</span>;
         }
         return <>{children}</>;

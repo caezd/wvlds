@@ -32,4 +32,16 @@ describe("MarkdownContent — spans stylés", () => {
     const a = container.querySelector("a");
     expect(a?.getAttribute("href")).toBe("https://example.com");
   });
+
+  it("un lien markdown tapé à la main avec un href color:/underline: arbitraire ne produit jamais de <a href> réel", () => {
+    // urlTransform ne laisse passer que `color:` + hex valide ou `underline:`
+    // exact — un `[x](underline:foo)` ou `[x](color:zzz)` tapé directement
+    // (hors du marqueur [#hex]…[/] / ++…++) est blanchi par defaultUrlTransform
+    // avant même d'atteindre le composant `a`.
+    const { container } = render(
+      <MarkdownContent content="[x](underline:foo) et [y](color:zzz)" />,
+    );
+    expect(container.querySelectorAll('a[href^="underline:"]')).toHaveLength(0);
+    expect(container.querySelectorAll('a[href^="color:"]')).toHaveLength(0);
+  });
 });
