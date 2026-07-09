@@ -10,9 +10,23 @@
 // c'est le texte du lien qui est reparsé normalement par remark. La
 // transformation tourne avant que remark ne voie le texte brut, donc
 // `[#hex]…[/]` n'est jamais interprété comme un vrai lien markdown.
+//
+// Un seul marqueur "gagne" par passage de texte : imbriquer couleur et
+// souligné l'un dans l'autre (ex. `[#f00]++x++[/]`) ne peut pas produire
+// deux vrais liens markdown imbriqués (CommonMark ne supporte pas les liens
+// imbriqués, donc l'un des deux resterait cassé au rendu de toute façon) —
+// le marqueur le plus englobant s'applique, l'autre reste littéral plutôt
+// que de produire du markdown invalide. D'où un seul passage combiné (pas
+// deux `.replace()` successifs) : le second ne doit jamais retomber sur le
+// texte déjà produit par le premier.
+const STYLED_SPAN_RE =
+  /\[#([0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\]([^\n]*?)\[\/\]|\+\+([^\n]*?)\+\+/g;
 
-const COLOR_SPAN_RE = /\[#([0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\]([^\n]*?)\[\/\]/g;
-const UNDERLINE_SPAN_RE = /\+\+([^\n]*?)\+\+/g;
+// Un extrait de code inline (`...`, ``...``, …) : CommonMark exige la même
+// longueur de run de backticks en ouverture/fermeture. Les marqueurs à
+// l'intérieur ne doivent jamais être transformés — un `` `[#hex]texte[/]` ``
+// dans un message (ex. pour documenter la syntaxe) doit rester littéral.
+const INLINE_CODE_RE = /(`+)[^\n]*?\1/g;
 
 function isFenceLine(line: string): { char: string; len: number } | null {
   const m = line.match(/^(\s*)(`{3,}|~{3,})(.*)$/);
@@ -20,15 +34,32 @@ function isFenceLine(line: string): { char: string; len: number } | null {
   return { char: m[2][0], len: m[2].length };
 }
 
+function transformSegment(segment: string): string {
+  return segment.replace(
+    STYLED_SPAN_RE,
+    (match, hex: string | undefined, colorInner: string | undefined, underlineInner: string | undefined) => {
+      if (hex !== undefined) {
+        if (!colorInner) return match; // évite un lien vide
+        return `[${colorInner}](color:${hex})`;
+      }
+      if (!underlineInner) return match;
+      return `[${underlineInner}](underline:)`;
+    },
+  );
+}
+
 function transformLine(line: string): string {
-  const withColor = line.replace(COLOR_SPAN_RE, (match, hex: string, inner: string) => {
-    if (!inner) return match; // évite un lien vide
-    return `[${inner}](color:${hex})`;
-  });
-  return withColor.replace(UNDERLINE_SPAN_RE, (match, inner: string) => {
-    if (!inner) return match;
-    return `[${inner}](underline:)`;
-  });
+  const parts: string[] = [];
+  let lastIndex = 0;
+  INLINE_CODE_RE.lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = INLINE_CODE_RE.exec(line))) {
+    parts.push(transformSegment(line.slice(lastIndex, match.index)));
+    parts.push(match[0]); // extrait de code inline : intact
+    lastIndex = INLINE_CODE_RE.lastIndex;
+  }
+  parts.push(transformSegment(line.slice(lastIndex)));
+  return parts.join("");
 }
 
 /**

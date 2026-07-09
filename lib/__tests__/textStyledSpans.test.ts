@@ -68,4 +68,34 @@ describe("transformStyledSpans", () => {
   it("ne confond pas un vrai lien markdown [texte](url) avec la syntaxe couleur", () => {
     expect(transformStyledSpans("[site](https://example.com)")).toBe("[site](https://example.com)");
   });
+
+  it("un souligné imbriqué dans une couleur ne produit pas de lien markdown imbriqué (invalide)", () => {
+    // CommonMark ne supporte pas les liens imbriqués : le marqueur englobant
+    // (couleur) l'emporte, celui de l'intérieur (souligné) reste littéral —
+    // plutôt que ["[x](underline:)"](color:f00) qui casserait le rendu.
+    const result = transformStyledSpans("[#f00]++x++[/]");
+    expect(result).toBe("[++x++](color:f00)");
+    expect(result).not.toContain("(underline:)");
+  });
+
+  it("une couleur imbriquée dans un souligné ne produit pas de lien markdown imbriqué (invalide)", () => {
+    const result = transformStyledSpans("++[#f00]x[/]++");
+    expect(result).toBe("[[#f00]x[/]](underline:)");
+    expect(result).not.toContain("(color:f00)");
+  });
+
+  it("ne transforme pas un marqueur à l'intérieur d'un extrait de code inline", () => {
+    expect(transformStyledSpans("Le marqueur `[#ff0000]texte[/]` sert à colorer.")).toBe(
+      "Le marqueur `[#ff0000]texte[/]` sert à colorer.",
+    );
+    expect(transformStyledSpans("Et `++texte++` pour le souligné.")).toBe(
+      "Et `++texte++` pour le souligné.",
+    );
+  });
+
+  it("continue de transformer un marqueur hors code, sur une ligne qui contient aussi du code inline", () => {
+    expect(transformStyledSpans("`[#hex]` est le marqueur, ex: [#ff0000]rouge[/]")).toBe(
+      "`[#hex]` est le marqueur, ex: [rouge](color:ff0000)",
+    );
+  });
 });
