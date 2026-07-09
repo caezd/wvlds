@@ -91,9 +91,14 @@ vi.mock("@/components/ui/button", () => ({
     <button onClick={onClick} {...props}>{children}</button>
   ),
 }));
-vi.mock("@/components/ui/textarea", () => ({
-  Textarea: (props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => <textarea {...props} />,
-}));
+// Le mock de @/components/ui/popover ci-dessus ignore `open` (rend toujours
+// ses enfants) — sans ça, la barre de mise en forme (ParagraphBlockEditor)
+// monterait HsvColorPicker qui dessine sur un <canvas>, non supporté par
+// jsdom sans le paquet natif "canvas".
+vi.mock("@/components/ui/hsv-color-picker", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/components/ui/hsv-color-picker")>();
+  return { ...actual, HsvColorPicker: () => <div data-testid="hsv-color-picker-stub" /> };
+});
 
 import ChatroomMessage from "@/components/chatrooms/ChatroomMessage";
 
@@ -185,10 +190,10 @@ describe("ChatroomMessage — avertissements de contenu", () => {
     fireEvent.change(tagInput, { target: { value: "violence" } });
     fireEvent.keyDown(tagInput, { key: "Enter" });
 
-    // Le message a aussi un champ texte (la zone d'édition principale) :
-    // on cible spécifiquement le <textarea>, pas l'input de tag ci-dessus.
-    const textarea = screen.getAllByRole("textbox").find((el) => el.tagName === "TEXTAREA")!;
-    fireEvent.keyDown(textarea, { key: "Enter" });
+    // Le message a aussi un champ texte (la zone d'édition principale,
+    // contentEditable) : on la cible spécifiquement, pas l'input de tag ci-dessus.
+    const editor = document.querySelector("[contenteditable]")!;
+    fireEvent.keyDown(editor, { key: "Enter" });
 
     await waitFor(() => expect(onUpdated).toHaveBeenCalledOnce());
     const [, , metadata] = onUpdated.mock.calls[0] as [number, string, { content_warnings?: string[] } | null];
@@ -217,8 +222,8 @@ describe("ChatroomMessage — avertissements de contenu", () => {
     const toggle = screen.getByText("contentWarning").closest("button");
     fireEvent.click(toggle!);
 
-    const textarea = screen.getAllByRole("textbox").find((el) => el.tagName === "TEXTAREA")!;
-    fireEvent.keyDown(textarea, { key: "Enter" });
+    const editor = document.querySelector("[contenteditable]")!;
+    fireEvent.keyDown(editor, { key: "Enter" });
 
     await waitFor(() => expect(onUpdated).toHaveBeenCalledOnce());
     const [, , metadata] = onUpdated.mock.calls[0] as [number, string, { content_warnings?: string[] } | null];

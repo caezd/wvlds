@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import ReactMarkdown from "react-markdown";
+import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
 import type { Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
@@ -10,6 +10,7 @@ import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import rehypeHighlight from "rehype-highlight";
 
 import { cn } from "@/lib/utils";
+import { transformStyledSpans } from "@/lib/textStyledSpans";
 
 type Props = {
   content: string;
@@ -70,6 +71,24 @@ function CodeBlock({ className, children, ...props }: React.ComponentProps<"code
       </pre>
     </div>
   );
+}
+
+// Format hex valide en CSS (3/4/6/8 chiffres) — partagé entre `urlTransform`
+// et le composant `a` ci-dessous pour que les deux n'acceptent jamais que le
+// même format, sans dupliquer (et risquer de faire diverger) la regex.
+const COLOR_HEX_RE = /^(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
+
+// react-markdown assainit lui-même les URLs (indépendamment de rehype-sanitize)
+// via une liste figée de protocoles (http/https/mailto/tel) — sans ça, nos
+// faux hrefs `color:`/`underline:` (voir lib/textStyledSpans.ts) seraient
+// vidés avant même d'atteindre le composant `a`. On ne laisse passer que la
+// forme exacte attendue (`color:` + hex valide, ou `underline:` seul) :
+// un `[texte](underline:foo)` tapé à la main ne doit pas produire un vrai
+// lien avec un href arbitraire.
+function urlTransform(url: string): string {
+  if (url.startsWith("color:") && COLOR_HEX_RE.test(url.slice("color:".length))) return url;
+  if (url === "underline:") return url;
+  return defaultUrlTransform(url);
 }
 
 function isFenceLine(line: string) {
@@ -252,10 +271,22 @@ export function MarkdownContent({
           ["className", /^language-[\w-]+$/],
         ],
       },
+      // Le schéma par défaut ne whitelist que les protocoles usuels (http,
+      // https, mailto…) pour `href`. Nécessaire en plus de `urlTransform`
+      // ci-dessous (react-markdown a son propre filtre d'URL, indépendant
+      // de rehype-sanitize) pour laisser passer `color:`/`underline:`
+      // (voir lib/textStyledSpans.ts) à travers les deux filtres.
+      protocols: {
+        ...defaultSchema.protocols,
+        href: [...(defaultSchema.protocols?.href ?? []), "color", "underline"],
+      },
     } as Parameters<typeof rehypeSanitize>[0];
   }, []);
 
-  const normalized = useMemo(() => transformAngleCallouts(content), [content]);
+  const normalized = useMemo(
+    () => transformAngleCallouts(transformStyledSpans(content)),
+    [content],
+  );
 
   const components: Components = {
     // Tous les blockquotes sont rendus comme "callout" (div)
@@ -304,9 +335,24 @@ export function MarkdownContent({
     },
 
     a({ href, children }) {
+      // Faux liens produits par transformStyledSpans (`[#ff0000]texte[/]` / `++texte++`) —
+      // voir lib/textStyledSpans.ts. Un lien `color:`/`underline:` tapé directement
+      // par l'utilisateur est traité de la même façon : c'est le même contrat.
+      const hrefStr = String(href ?? "");
+      if (hrefStr.startsWith("color:")) {
+        const hex = hrefStr.slice("color:".length);
+        if (COLOR_HEX_RE.test(hex)) {
+          return <span style={{ color: `#${hex}` }}>{children}</span>;
+        }
+        return <>{children}</>;
+      }
+      if (hrefStr.startsWith("underline:")) {
+        if (hrefStr === "underline:") return <span className="underline">{children}</span>;
+        return <>{children}</>;
+      }
       return (
         <a
-          href={String(href)}
+          href={hrefStr}
           target="_blank"
           rel="noreferrer noopener"
           className="underline hover:opacity-80"
@@ -320,6 +366,7 @@ export function MarkdownContent({
   return (
     <ReactMarkdown
       skipHtml
+      urlTransform={urlTransform}
       remarkPlugins={[remarkGfm, remarkBreaks]}
       rehypePlugins={[
         [

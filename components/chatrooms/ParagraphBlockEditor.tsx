@@ -1,7 +1,14 @@
 "use client";
 
 import { useRef, useEffect, useLayoutEffect, useState } from "react";
+import { useTranslations } from "next-intl";
+import { Bold, Italic, Strikethrough, Underline, List, Palette, Heading, Heading1, Heading2, Heading3 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { wrapSelection, applyListPrefix, applyHeadingPrefix } from "@/lib/textFormatting";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { HsvColorPicker } from "@/components/ui/hsv-color-picker";
+import { BUBBLE_COLOR_PRESETS } from "@/components/ui/hsv-color-picker";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 function buildHTML(v: string): string {
   if (!v) return `<div data-block><br></div>`;
@@ -16,6 +23,25 @@ function buildHTML(v: string): string {
       return `<div data-block>${escaped || "<br>"}</div>`;
     })
     .join("");
+}
+
+function textToInsertableHTML(text: string): string {
+  return (
+    text
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/\n/g, "<br>") || "<br>"
+  );
+}
+
+/** Remonte de `node` vers son `[data-block]` (paragraphe) englobant, dans les limites de `el`. */
+function findBlock(el: HTMLDivElement, node: Node | null): HTMLElement | null {
+  while (node && node !== el) {
+    if (node instanceof HTMLElement && node.hasAttribute("data-block")) return node;
+    node = node.parentElement;
+  }
+  return null;
 }
 
 function normalizeBlocks(el: HTMLDivElement) {
@@ -60,6 +86,9 @@ export function ParagraphBlockEditor({
   wrapperClassName,
   submitOnEnter = true,
   invertEnter = false,
+  formatting = false,
+  autoFocus = false,
+  disabled = false,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -75,15 +104,44 @@ export function ParagraphBlockEditor({
       nouveau bloc, Maj+Entrée ou Ctrl+Entrée envoie. Utilisé sur mobile où
       Maj+Entrée n'est pas accessible sur un clavier virtuel. */
   invertEnter?: boolean;
+  /** Affiche une barre de mise en forme (gras/italique/…) au-dessus de la
+   *  zone de saisie tant qu'elle est active. Désactivé par défaut : les
+   *  autres usages de ce composant (WorldMap, WorldWiki) restent inchangés. */
+  formatting?: boolean;
+  /** Focus l'éditeur au montage, curseur placé à la fin du contenu. */
+  autoFocus?: boolean;
+  /** Désactive la saisie (ex: pendant une sauvegarde en cours). */
+  disabled?: boolean;
 }) {
+  const t = useTranslations("chatrooms");
   const editorRef = useRef<HTMLDivElement>(null);
   const [focused, setFocused] = useState(false);
+  const [colorPickerOpen, setColorPickerOpen] = useState(false);
+  const [headingMenuOpen, setHeadingMenuOpen] = useState(false);
+  const [pendingColor, setPendingColor] = useState(BUBBLE_COLOR_PRESETS[4].value);
+  // Sélection sauvegardée avant l'ouverture du picker de couleur — la
+  // sélection dans le contentEditable ne survit pas aux clics dans le popover
+  // (portalé ailleurs dans le DOM), donc on la restaure au moment d'appliquer.
+  const savedRangeRef = useRef<Range | null>(null);
 
   // Initialisation une seule fois au montage
   useLayoutEffect(() => {
     const el = editorRef.current;
     if (!el) return;
     el.innerHTML = buildHTML(value);
+    if (autoFocus) {
+      el.focus();
+      // el.focus() ne déclenche pas toujours de façon fiable l'événement
+      // "focus" natif remonté par React (selon le navigateur/l'état du
+      // document) — sans ça, `focused` resterait faux et la barre de mise
+      // en forme n'apparaîtrait pas tant que l'utilisateur n'a pas recliqué.
+      setFocused(true);
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      range.collapse(false);
+      window.getSelection()?.removeAllRanges();
+      window.getSelection()?.addRange(range);
+    }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Sync depuis l'extérieur uniquement si le DOM ne correspond pas déjà
@@ -321,8 +379,248 @@ export function ParagraphBlockEditor({
     // Sinon : premier retour → laisse le browser insérer un <br> nativement
   }
 
+  // ── Mise en forme ────────────────────────────────────────────────────────
+
+  /** Entoure la sélection courante (ou insère une paire vide) de `before`/`after`. */
+  function applyWrap(before: string, after: string) {
+    const el = editorRef.current;
+    if (!el) return;
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount) return;
+    const range = sel.getRangeAt(0);
+    if (!el.contains(range.commonAncestorContainer)) return;
+
+    // Une sélection qui traverse plusieurs paragraphes ne peut pas être
+    // enveloppée en toute sécurité : `range.toString()` ne pose aucun
+    // séparateur aux frontières de bloc/`<br>`, donc le texte obtenu serait
+    // aplati (deux paragraphes concaténés sans saut de ligne) — et
+    // `execCommand("insertHTML", …)` remplacerait ensuite cette même plage
+    // multi-blocs par un unique blob HTML, cassant potentiellement la
+    // structure en `[data-block]` distincts.
+    if (findBlock(el, range.startContainer) !== findBlock(el, range.endContainer)) return;
+
+    // `range.toString()` plutôt que `sel.toString()` : c'est ce même `range`
+    // qu'`execCommand("insertHTML", …)` remplace juste après, donc les deux
+    // doivent porter exactement sur le même texte.
+    const selectedText = range.toString();
+    const result = wrapSelection(selectedText, 0, selectedText.length, before, after);
+
+    el.focus();
+    document.execCommand("insertHTML", false, textToInsertableHTML(result.text));
+
+    // Replace le curseur à la position calculée par wrapSelection (au milieu
+    // des marqueurs quand rien n'était sélectionné) — insertHTML place le
+    // curseur à la toute fin de ce qui vient d'être inséré par défaut.
+    const stepBack = result.text.length - result.cursorStart;
+    const after2 = window.getSelection();
+    // Selection.modify() est non-standard mais largement supportée par les
+    // navigateurs (Chromium/WebKit/Gecko) ; absente dans certains environnements
+    // (ex. jsdom en test) — dans ce cas on accepte que le curseur reste en fin
+    // de texte plutôt que de faire échouer l'insertion.
+    if (stepBack > 0 && typeof after2?.modify === "function") {
+      for (let i = 0; i < stepBack; i++) after2.modify("move", "backward", "character");
+    }
+
+    handleInput();
+  }
+
+  /** Préfixe le bloc (paragraphe) courant en liste, comme applyListPrefix. */
+  function applyList() {
+    const el = editorRef.current;
+    if (!el) return;
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount) return;
+    const range = sel.getRangeAt(0);
+    const block = findBlock(el, range.startContainer);
+    if (!block) return;
+
+    const blockText = block.innerText.endsWith("\n") ? block.innerText.slice(0, -1) : block.innerText;
+    const preRange = document.createRange();
+    preRange.setStart(block, 0);
+    preRange.setEnd(range.startContainer, range.startOffset);
+    const localOffset = preRange.toString().length;
+
+    const result = applyListPrefix(blockText, localOffset, localOffset);
+
+    const blockRange = document.createRange();
+    blockRange.selectNodeContents(block);
+    sel.removeAllRanges();
+    sel.addRange(blockRange);
+    el.focus();
+    document.execCommand("insertHTML", false, textToInsertableHTML(result.text));
+    handleInput();
+  }
+
+  /** Transforme tout le paragraphe (bloc) contenant le curseur en titre markdown, quelle que soit sa position dedans. */
+  function applyHeading(level: number) {
+    restoreSelection();
+    const el = editorRef.current;
+    if (!el) return;
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount) return;
+    const range = sel.getRangeAt(0);
+    const block = findBlock(el, range.startContainer);
+    if (!block) return;
+
+    const blockText = block.innerText.endsWith("\n") ? block.innerText.slice(0, -1) : block.innerText;
+    const result = applyHeadingPrefix(blockText, level);
+
+    const blockRange = document.createRange();
+    blockRange.selectNodeContents(block);
+    sel.removeAllRanges();
+    sel.addRange(blockRange);
+    el.focus();
+    document.execCommand("insertHTML", false, textToInsertableHTML(result.text));
+    handleInput();
+    setHeadingMenuOpen(false);
+  }
+
+  /** Sauvegarde la sélection avant qu'un clic hors de l'éditeur (ex: popover) ne la perde. */
+  function saveSelection() {
+    const el = editorRef.current;
+    const sel = window.getSelection();
+    if (!el || !sel || !sel.rangeCount) return;
+    const range = sel.getRangeAt(0);
+    if (!el.contains(range.commonAncestorContainer)) return;
+    savedRangeRef.current = range.cloneRange();
+  }
+
+  function restoreSelection() {
+    const range = savedRangeRef.current;
+    if (!range) return;
+    const sel = window.getSelection();
+    sel?.removeAllRanges();
+    sel?.addRange(range);
+  }
+
+  function applyColor(hex: string) {
+    restoreSelection();
+    applyWrap(`[#${hex.replace("#", "")}]`, "[/]");
+    setColorPickerOpen(false);
+  }
+
+  const toolbarButtonClass = "flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground";
+
+  // Une fois un message commencé (ou en édition, où `value` n'est
+  // quasiment jamais vide), la barre reste affichée même après un blur —
+  // pas seulement tant que l'éditeur est focus.
+  const showToolbar = formatting && (focused || colorPickerOpen || headingMenuOpen || value.trim().length > 0);
+
   return (
-    <div className={cn("relative max-h-40 overflow-y-auto [scrollbar-width:thin]", focused && "pb-editor", wrapperClassName)}>
+    <div
+      className={cn(
+        "relative overflow-y-auto [scrollbar-width:thin]",
+        formatting ? "max-h-52" : "max-h-40",
+        focused && "pb-editor",
+        wrapperClassName,
+      )}
+    >
+      {showToolbar && (
+        <div className="sticky top-0 z-10 mb-1.5 flex items-center gap-0.5 border-b border-border-soft bg-background pb-1.5">
+          <DropdownMenu open={headingMenuOpen} onOpenChange={setHeadingMenuOpen}>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                title={t("formatHeading")}
+                aria-label={t("formatHeading")}
+                onMouseDown={(e) => { e.preventDefault(); saveSelection(); }}
+                className={toolbarButtonClass}
+              >
+                <Heading className="h-3.5 w-3.5" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" onCloseAutoFocus={(e) => e.preventDefault()}>
+              <DropdownMenuItem onSelect={() => applyHeading(1)}>
+                <Heading1 className="h-3.5 w-3.5" />
+                {t("formatHeading1")}
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => applyHeading(2)}>
+                <Heading2 className="h-3.5 w-3.5" />
+                {t("formatHeading2")}
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => applyHeading(3)}>
+                <Heading3 className="h-3.5 w-3.5" />
+                {t("formatHeading3")}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <button
+            type="button"
+            title={t("formatBold")}
+            aria-label={t("formatBold")}
+            onMouseDown={(e) => { e.preventDefault(); applyWrap("**", "**"); }}
+            className={toolbarButtonClass}
+          >
+            <Bold className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            title={t("formatItalic")}
+            aria-label={t("formatItalic")}
+            onMouseDown={(e) => { e.preventDefault(); applyWrap("*", "*"); }}
+            className={toolbarButtonClass}
+          >
+            <Italic className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            title={t("formatStrikethrough")}
+            aria-label={t("formatStrikethrough")}
+            onMouseDown={(e) => { e.preventDefault(); applyWrap("~~", "~~"); }}
+            className={toolbarButtonClass}
+          >
+            <Strikethrough className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            title={t("formatUnderline")}
+            aria-label={t("formatUnderline")}
+            onMouseDown={(e) => { e.preventDefault(); applyWrap("++", "++"); }}
+            className={toolbarButtonClass}
+          >
+            <Underline className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            title={t("formatList")}
+            aria-label={t("formatList")}
+            onMouseDown={(e) => { e.preventDefault(); applyList(); }}
+            className={toolbarButtonClass}
+          >
+            <List className="h-3.5 w-3.5" />
+          </button>
+          <Popover open={colorPickerOpen} onOpenChange={setColorPickerOpen}>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                title={t("formatColor")}
+                aria-label={t("formatColor")}
+                // Ne pas appeler setColorPickerOpen(true) ici : PopoverTrigger
+                // gère déjà l'ouverture via son propre onClick (Radix), qui se
+                // déclenche juste après ce mousedown. L'appeler nous-mêmes en
+                // plus créerait un double-toggle (ouvert par le mousedown,
+                // refermé par le onClick de Radix qui inverse l'état courant).
+                onMouseDown={(e) => { e.preventDefault(); saveSelection(); }}
+                className={toolbarButtonClass}
+              >
+                <Palette className="h-3.5 w-3.5" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-56 p-3" align="start" onCloseAutoFocus={(e) => e.preventDefault()}>
+              <div className="space-y-3">
+                <HsvColorPicker color={pendingColor} onChange={setPendingColor} />
+                <button
+                  type="button"
+                  onClick={() => applyColor(pendingColor)}
+                  className="w-full rounded-md bg-primary py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/85 transition-colors"
+                >
+                  {t("colorConfirm")}
+                </button>
+              </div>
+            </PopoverContent>
+          </Popover>
+        </div>
+      )}
       {!value.trim() && !focused && placeholder && (
         <span className="absolute top-[5px] left-[10px] pointer-events-none select-none text-muted-foreground/50 text-sm">
           {placeholder}
@@ -330,7 +628,7 @@ export function ParagraphBlockEditor({
       )}
       <div
         ref={editorRef}
-        contentEditable
+        contentEditable={!disabled}
         suppressContentEditableWarning
         onInput={handleInput}
         onPaste={handlePaste}
@@ -339,6 +637,7 @@ export function ParagraphBlockEditor({
         onBlur={() => setFocused(false)}
         className={cn(
           "outline-none w-full text-sm",
+          disabled && "cursor-not-allowed opacity-50",
           className,
         )}
       />

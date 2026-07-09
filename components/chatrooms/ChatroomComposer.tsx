@@ -581,6 +581,7 @@ export function ChatroomComposer({
               placeholder={placeholder}
               className="text-sm w-full"
               invertEnter={isMobile}
+              formatting
             />
           </div>
         </div>

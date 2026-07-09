@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-07 ──────────────────────────────────────────────────────────────
   {
     date: "2026-07",
+    tag: "Chatrooms",
+    text: "**Barre de mise en forme** dans le composer et lors de l'édition d'un message : sélectionnez du texte et cliquez gras, italique, barré, souligné ou liste pour appliquer le markdown automatiquement, sans le taper à la main. Nouveau bouton **couleur de texte** (marqueur `[#ff0000]texte[/]`) pour colorer un passage, marqueur `++texte++` pour le souligné, et menu **titre** (H1/H2/H3) pour structurer un message.",
+  },
+  {
+    date: "2026-07",
     tag: "Interface",
     text: "**Alignement du texte des chatrooms** : troisième réglage de la carte « Accessibilité » (avec police et taille du texte) — choisissez entre texte **ferré à gauche** (par défaut) et **justifié**.",
   },
@@ -169,7 +174,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-07",
     tag: "Social",
-    text: "Profil joueur personnalisable :\n- **Bio** (500 caractères max) et **pronoms** (jusqu'à 3, choisis dans une liste prédéfinie ou saisis librement) éditables depuis **Paramètres**\n- Nouvelle **carte profil** au clic sur l'avatar joueur dans un message de chatroom : pseudo, statut de présence, pronoms, bio et date d'inscription\n- Distincte du profil de persona existant (fiche de personnage) — ici il s'agit du compte joueur lui-même",
+    text: "Profil joueur personnalisable :\n- **Bio** (500 caractères max) et **pronoms** (jusqu'à 3, choisis dans une liste prédéfinie ou saisis librement) éditables depuis **Paramètres**\n- Nouvelle **carte profil** au clic sur l'avatar **ou** sur le pseudo (`@pseudo`) du joueur dans un message de chatroom : pseudo, statut de présence, pronoms, bio et date d'inscription\n- Distincte du profil de persona existant (fiche de personnage) — ici il s'agit du compte joueur lui-même",
   },
   {
     date: "2026-07",
