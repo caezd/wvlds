@@ -9,7 +9,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-07",
     tag: "Chatrooms",
-    text: "**Barre de mise en forme** dans le composer et lors de l'édition d'un message : sélectionnez du texte et cliquez gras, italique, barré, souligné ou liste pour appliquer le markdown automatiquement, sans le taper à la main. Nouveau bouton **couleur de texte** (marqueur `[#ff0000]texte[/]`) pour colorer un passage, marqueur `++texte++` pour le souligné, et menu **titre** (H1/H2/H3) pour structurer un message.",
+    text: "**Barre de mise en forme flottante** : sélectionnez du texte dans le composer (ou en éditant un message) pour faire apparaître une petite barre au-dessus — gras, italique, barré, souligné, liste, titre (H1/H2/H3) et couleur de texte, appliqués sans taper le markdown à la main. Nouveau marqueur `[#ff0000]texte[/]` pour la couleur et `++texte++` pour le souligné.",
   },
   {
     date: "2026-07",
