@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { wrapSelection, applyListPrefix } from "@/lib/textFormatting";
+import { wrapSelection, applyListPrefix, applyHeadingPrefix } from "@/lib/textFormatting";
 
 describe("wrapSelection", () => {
   it("enveloppe une sélection non vide et place le curseur après", () => {
@@ -60,5 +60,42 @@ describe("applyListPrefix", () => {
     const text = "bonjour le monde";
     const result = applyListPrefix(text, 5, 5);
     expect(result.text).toBe("- bonjour le monde");
+  });
+});
+
+describe("applyHeadingPrefix", () => {
+  it("préfixe une ligne sans titre existant", () => {
+    const result = applyHeadingPrefix("Titre", 0, 5, 2);
+    expect(result.text).toBe("## Titre");
+  });
+
+  it("remplace un niveau de titre existant par le nouveau plutôt que de l'empiler", () => {
+    const result = applyHeadingPrefix("## Titre", 3, 3, 1);
+    expect(result.text).toBe("# Titre");
+  });
+
+  it("bascule (retire le marqueur) en recliquant le même niveau", () => {
+    const result = applyHeadingPrefix("## Titre", 3, 3, 2);
+    expect(result.text).toBe("Titre");
+  });
+
+  it("ne préfixe que la ligne touchée, pas les lignes voisines", () => {
+    const text = "premier\ndeuxième\ntroisième";
+    const start = text.indexOf("deuxième");
+    const end = start + "deuxième".length;
+    const result = applyHeadingPrefix(text, start, end, 3);
+    expect(result.text).toBe("premier\n### deuxième\ntroisième");
+  });
+
+  it("ignore les lignes vides à l'intérieur du bloc", () => {
+    const text = "a\n\nb";
+    const result = applyHeadingPrefix(text, 0, text.length, 1);
+    expect(result.text).toBe("# a\n\n# b");
+  });
+
+  it("étend au bloc entier même avec un curseur collapsed", () => {
+    const text = "bonjour le monde";
+    const result = applyHeadingPrefix(text, 5, 5, 2);
+    expect(result.text).toBe("## bonjour le monde");
   });
 });

@@ -77,6 +77,7 @@ describe("ParagraphBlockEditor — barre de mise en forme", () => {
     expect(screen.getByTitle("Italique")).toBeInTheDocument();
     expect(screen.getByTitle("Barré")).toBeInTheDocument();
     expect(screen.getByTitle("Souligné")).toBeInTheDocument();
+    expect(screen.getByTitle("Titre")).toBeInTheDocument();
     expect(screen.getByTitle("Liste")).toBeInTheDocument();
     expect(screen.getByTitle("Couleur du texte")).toBeInTheDocument();
   });
@@ -133,6 +134,21 @@ describe("ParagraphBlockEditor — barre de mise en forme", () => {
     selectRange(editor, 0, 9);
     fireEvent.mouseDown(screen.getByTitle("Souligné"));
     expect(execCommandSpy).toHaveBeenCalledWith("insertHTML", false, "++important++");
+  });
+
+  it("le dropdown Titre applique le niveau choisi au bloc courant", () => {
+    const { container } = render(<ParagraphBlockEditor value="mon titre" onChange={() => {}} formatting />);
+    const editor = getEditor(container);
+    fireEvent.focus(editor);
+    selectRange(editor, 0, 0);
+    const headingButton = screen.getByTitle("Titre");
+    // DropdownMenuTrigger (Radix) ouvre au pointerdown, pas au click — même
+    // principe que le mousedown+click du bouton couleur, mais sur un autre
+    // événement : il n'ouvre jamais lui-même l'état, seul Radix le fait.
+    fireEvent.mouseDown(headingButton);
+    fireEvent.pointerDown(headingButton, { button: 0 });
+    fireEvent.click(screen.getByText("Titre 2"));
+    expect(execCommandSpy).toHaveBeenCalledWith("insertHTML", false, "## mon titre");
   });
 
   it("Liste préfixe le bloc courant par \"- \"", () => {

@@ -56,3 +56,40 @@ export function applyListPrefix(text: string, selStart: number, selEnd: number):
   const newText = text.slice(0, lineStart) + newBlock + text.slice(lineEnd);
   return { text: newText, cursorStart: lineStart, cursorEnd: lineStart + newBlock.length };
 }
+
+const HEADING_PREFIX_RE = /^(#{1,6})\s+/;
+
+function applyHeadingToLine(line: string, level: number): string {
+  if (!line.length) return line;
+  const match = line.match(HEADING_PREFIX_RE);
+  const bareLine = match ? line.slice(match[0].length) : line;
+  const currentLevel = match ? match[1].length : 0;
+  // Même niveau déjà appliqué → bascule (retire le marqueur au lieu de le dupliquer).
+  return currentLevel === level ? bareLine : `${"#".repeat(level)} ${bareLine}`;
+}
+
+/**
+ * Préfixe chaque ligne non vide couvrant `[selStart, selEnd]` par `"#" * level + " "`
+ * (titre markdown ATX). Remplace un marqueur de titre existant plutôt que de
+ * l'empiler ; reclique le même niveau pour revenir à un paragraphe normal.
+ */
+export function applyHeadingPrefix(
+  text: string,
+  selStart: number,
+  selEnd: number,
+  level: number,
+): WrapResult {
+  const lineStart = text.lastIndexOf("\n", Math.max(selStart - 1, 0)) + 1;
+  const searchFrom = Math.max(selEnd, lineStart);
+  const nlIdx = text.indexOf("\n", searchFrom);
+  const lineEnd = nlIdx === -1 ? text.length : nlIdx;
+
+  const block = text.slice(lineStart, lineEnd);
+  const newBlock = block
+    .split("\n")
+    .map((line) => applyHeadingToLine(line, level))
+    .join("\n");
+
+  const newText = text.slice(0, lineStart) + newBlock + text.slice(lineEnd);
+  return { text: newText, cursorStart: lineStart, cursorEnd: lineStart + newBlock.length };
+}

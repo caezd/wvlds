@@ -2,12 +2,13 @@
 
 import { useRef, useEffect, useLayoutEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Bold, Italic, Strikethrough, Underline, List, Palette } from "lucide-react";
+import { Bold, Italic, Strikethrough, Underline, List, Palette, Heading, Heading1, Heading2, Heading3 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { wrapSelection, applyListPrefix } from "@/lib/textFormatting";
+import { wrapSelection, applyListPrefix, applyHeadingPrefix } from "@/lib/textFormatting";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { HsvColorPicker } from "@/components/ui/hsv-color-picker";
 import { BUBBLE_COLOR_PRESETS } from "@/components/ui/hsv-color-picker";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 function buildHTML(v: string): string {
   if (!v) return `<div data-block><br></div>`;
@@ -107,6 +108,7 @@ export function ParagraphBlockEditor({
   const editorRef = useRef<HTMLDivElement>(null);
   const [focused, setFocused] = useState(false);
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
+  const [headingMenuOpen, setHeadingMenuOpen] = useState(false);
   const [pendingColor, setPendingColor] = useState(BUBBLE_COLOR_PRESETS[4].value);
   // Sélection sauvegardée avant l'ouverture du picker de couleur — la
   // sélection dans le contentEditable ne survit pas aux clics dans le popover
@@ -436,6 +438,40 @@ export function ParagraphBlockEditor({
     handleInput();
   }
 
+  /** Préfixe le bloc (paragraphe) courant en titre markdown (# à ######), comme applyList. */
+  function applyHeading(level: number) {
+    restoreSelection();
+    const el = editorRef.current;
+    if (!el) return;
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount) return;
+    const range = sel.getRangeAt(0);
+    let node: Node | null = range.startContainer;
+    let block: HTMLElement | null = null;
+    while (node && node !== el) {
+      if (node instanceof HTMLElement && node.hasAttribute("data-block")) { block = node; break; }
+      node = node.parentElement;
+    }
+    if (!block) return;
+
+    const blockText = block.innerText.endsWith("\n") ? block.innerText.slice(0, -1) : block.innerText;
+    const preRange = document.createRange();
+    preRange.setStart(block, 0);
+    preRange.setEnd(range.startContainer, range.startOffset);
+    const localOffset = preRange.toString().length;
+
+    const result = applyHeadingPrefix(blockText, localOffset, localOffset, level);
+
+    const blockRange = document.createRange();
+    blockRange.selectNodeContents(block);
+    sel.removeAllRanges();
+    sel.addRange(blockRange);
+    el.focus();
+    document.execCommand("insertHTML", false, textToInsertableHTML(result.text));
+    handleInput();
+    setHeadingMenuOpen(false);
+  }
+
   /** Sauvegarde la sélection avant qu'un clic hors de l'éditeur (ex: popover) ne la perde. */
   function saveSelection() {
     const el = editorRef.current;
@@ -465,7 +501,7 @@ export function ParagraphBlockEditor({
   // Une fois un message commencé (ou en édition, où `value` n'est
   // quasiment jamais vide), la barre reste affichée même après un blur —
   // pas seulement tant que l'éditeur est focus.
-  const showToolbar = formatting && (focused || colorPickerOpen || value.trim().length > 0);
+  const showToolbar = formatting && (focused || colorPickerOpen || headingMenuOpen || value.trim().length > 0);
 
   return (
     <div
@@ -510,6 +546,32 @@ export function ParagraphBlockEditor({
           >
             <Underline className="h-3.5 w-3.5" />
           </button>
+          <DropdownMenu open={headingMenuOpen} onOpenChange={setHeadingMenuOpen}>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                title={t("formatHeading")}
+                onMouseDown={(e) => { e.preventDefault(); saveSelection(); }}
+                className={toolbarButtonClass}
+              >
+                <Heading className="h-3.5 w-3.5" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" onCloseAutoFocus={(e) => e.preventDefault()}>
+              <DropdownMenuItem onSelect={() => applyHeading(1)}>
+                <Heading1 className="h-3.5 w-3.5" />
+                {t("formatHeading1")}
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => applyHeading(2)}>
+                <Heading2 className="h-3.5 w-3.5" />
+                {t("formatHeading2")}
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => applyHeading(3)}>
+                <Heading3 className="h-3.5 w-3.5" />
+                {t("formatHeading3")}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <button
             type="button"
             title={t("formatList")}
