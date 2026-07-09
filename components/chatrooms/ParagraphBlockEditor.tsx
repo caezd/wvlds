@@ -35,6 +35,15 @@ function textToInsertableHTML(text: string): string {
   );
 }
 
+/** Remonte de `node` vers son `[data-block]` (paragraphe) englobant, dans les limites de `el`. */
+function findBlock(el: HTMLDivElement, node: Node | null): HTMLElement | null {
+  while (node && node !== el) {
+    if (node instanceof HTMLElement && node.hasAttribute("data-block")) return node;
+    node = node.parentElement;
+  }
+  return null;
+}
+
 function normalizeBlocks(el: HTMLDivElement) {
   // 1. Donne data-block aux divs directs qui en manquent (créés par le browser)
   Array.from(el.children).forEach((child) => {
@@ -381,6 +390,15 @@ export function ParagraphBlockEditor({
     const range = sel.getRangeAt(0);
     if (!el.contains(range.commonAncestorContainer)) return;
 
+    // Une sélection qui traverse plusieurs paragraphes ne peut pas être
+    // enveloppée en toute sécurité : `range.toString()` ne pose aucun
+    // séparateur aux frontières de bloc/`<br>`, donc le texte obtenu serait
+    // aplati (deux paragraphes concaténés sans saut de ligne) — et
+    // `execCommand("insertHTML", …)` remplacerait ensuite cette même plage
+    // multi-blocs par un unique blob HTML, cassant potentiellement la
+    // structure en `[data-block]` distincts.
+    if (findBlock(el, range.startContainer) !== findBlock(el, range.endContainer)) return;
+
     // `range.toString()` plutôt que `sel.toString()` : c'est ce même `range`
     // qu'`execCommand("insertHTML", …)` remplace juste après, donc les deux
     // doivent porter exactement sur le même texte.
@@ -413,12 +431,7 @@ export function ParagraphBlockEditor({
     const sel = window.getSelection();
     if (!sel || !sel.rangeCount) return;
     const range = sel.getRangeAt(0);
-    let node: Node | null = range.startContainer;
-    let block: HTMLElement | null = null;
-    while (node && node !== el) {
-      if (node instanceof HTMLElement && node.hasAttribute("data-block")) { block = node; break; }
-      node = node.parentElement;
-    }
+    const block = findBlock(el, range.startContainer);
     if (!block) return;
 
     const blockText = block.innerText.endsWith("\n") ? block.innerText.slice(0, -1) : block.innerText;
@@ -446,12 +459,7 @@ export function ParagraphBlockEditor({
     const sel = window.getSelection();
     if (!sel || !sel.rangeCount) return;
     const range = sel.getRangeAt(0);
-    let node: Node | null = range.startContainer;
-    let block: HTMLElement | null = null;
-    while (node && node !== el) {
-      if (node instanceof HTMLElement && node.hasAttribute("data-block")) { block = node; break; }
-      node = node.parentElement;
-    }
+    const block = findBlock(el, range.startContainer);
     if (!block) return;
 
     const blockText = block.innerText.endsWith("\n") ? block.innerText.slice(0, -1) : block.innerText;

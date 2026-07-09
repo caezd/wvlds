@@ -109,6 +109,28 @@ describe("ParagraphBlockEditor — barre de mise en forme", () => {
     expect(execCommandSpy).toHaveBeenCalledWith("insertHTML", false, "**bonjour**");
   });
 
+  it("ne fait rien si la sélection traverse plusieurs paragraphes", () => {
+    // Range.toString() ne pose aucun séparateur aux frontières de bloc — une
+    // sélection multi-paragraphes donnerait un texte aplati, et
+    // execCommand("insertHTML", …) sur cette même plage risquerait de
+    // fusionner les blocs distincts. On refuse plutôt que de corrompre.
+    const { container } = render(
+      <ParagraphBlockEditor value={"premier\n\ndeuxième"} onChange={() => {}} formatting />,
+    );
+    const editor = getEditor(container);
+    fireEvent.focus(editor);
+    const blocks = editor.querySelectorAll("[data-block]");
+    expect(blocks).toHaveLength(2);
+    const range = document.createRange();
+    range.setStart(blocks[0].firstChild as Text, 0);
+    range.setEnd(blocks[1].firstChild as Text, 3);
+    const sel = window.getSelection()!;
+    sel.removeAllRanges();
+    sel.addRange(range);
+    fireEvent.mouseDown(screen.getByTitle("Gras"));
+    expect(execCommandSpy).not.toHaveBeenCalled();
+  });
+
   it("Italique sans sélection insère une paire de marqueurs vide", () => {
     const { container } = render(<ParagraphBlockEditor value="bonjour" onChange={() => {}} formatting />);
     const editor = getEditor(container);
