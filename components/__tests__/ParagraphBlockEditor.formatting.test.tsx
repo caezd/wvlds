@@ -81,13 +81,22 @@ describe("ParagraphBlockEditor — barre de mise en forme", () => {
     expect(screen.getByTitle("Couleur du texte")).toBeInTheDocument();
   });
 
-  it("masque la barre à nouveau quand l'éditeur perd le focus", () => {
+  it("masque la barre à nouveau quand l'éditeur perd le focus (vide)", () => {
     const { container } = render(<ParagraphBlockEditor value="" onChange={() => {}} formatting />);
     const editor = getEditor(container);
     fireEvent.focus(editor);
     expect(screen.getByTitle("Gras")).toBeInTheDocument();
     fireEvent.blur(editor);
     expect(screen.queryByTitle("Gras")).toBeNull();
+  });
+
+  it("garde la barre visible après un blur si le message a déjà du contenu", () => {
+    const { container } = render(<ParagraphBlockEditor value="bonjour" onChange={() => {}} formatting />);
+    const editor = getEditor(container);
+    fireEvent.focus(editor);
+    expect(screen.getByTitle("Gras")).toBeInTheDocument();
+    fireEvent.blur(editor);
+    expect(screen.getByTitle("Gras")).toBeInTheDocument();
   });
 
   it("Gras avec une sélection entoure le texte sélectionné de **", () => {

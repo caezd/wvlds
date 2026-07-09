@@ -462,7 +462,10 @@ export function ParagraphBlockEditor({
 
   const toolbarButtonClass = "flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground";
 
-  const showToolbar = formatting && (focused || colorPickerOpen);
+  // Une fois un message commencé (ou en édition, où `value` n'est
+  // quasiment jamais vide), la barre reste affichée même après un blur —
+  // pas seulement tant que l'éditeur est focus.
+  const showToolbar = formatting && (focused || colorPickerOpen || value.trim().length > 0);
 
   return (
     <div
