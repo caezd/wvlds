@@ -93,6 +93,21 @@ describe("ParagraphBlockEditor — barre de mise en forme", () => {
     expect(screen.getByTitle("Couleur du texte")).toBeInTheDocument();
   });
 
+  it("normalise une espace insécable en espace normale (sinon un titre ## n'est pas reconnu par remark)", () => {
+    // Le navigateur substitue parfois une espace insécable (U+00A0) à une
+    // espace normale en bord de contenu — notamment juste après "## " inséré
+    // via execCommand("insertHTML", …) par le bouton Titre. CommonMark exige
+    // une espace ASCII stricte après les # d'un titre ATX : sans
+    // normalisation, "## titre" reste un paragraphe littéral au rendu.
+    const onChange = vi.fn();
+    const { container } = render(<ParagraphBlockEditor value="" onChange={onChange} formatting />);
+    const editor = getEditor(container);
+    const block = editor.querySelector("[data-block]")!;
+    block.textContent = "## titre";
+    fireEvent.input(editor);
+    expect(onChange).toHaveBeenCalledWith("## titre");
+  });
+
   it("masque la barre quand la sélection est perdue (blur)", () => {
     const { container } = render(<ParagraphBlockEditor value="bonjour" onChange={() => {}} formatting />);
     const editor = getEditor(container);

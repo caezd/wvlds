@@ -65,13 +65,22 @@ function normalizeBlocks(el: HTMLDivElement) {
   }
 }
 
+const NBSP_RE = new RegExp(String.fromCharCode(160), "g");
+
 function extractValue(el: HTMLDivElement): string {
   const blocks = Array.from(
     el.querySelectorAll<HTMLElement>(":scope > [data-block]"),
   );
   return blocks
     .map((b) => {
-      const t = b.innerText ?? "";
+      // Le navigateur substitue parfois une espace insecable a une espace
+      // normale en bord de contenu (ex: juste apres "## " insere via
+      // execCommand("insertHTML", ...)) pour eviter qu'elle ne soit collapsee
+      // visuellement. Ce caractere passe pour une espace normale cote JS,
+      // mais remark/CommonMark exige une espace ASCII stricte apres les #
+      // d'un titre ATX -- sans cette normalisation, un titre tape via la
+      // barre de mise en forme resterait un paragraphe.
+      const t = (b.innerText ?? "").replace(NBSP_RE, " ");
       return t.endsWith("\n") ? t.slice(0, -1) : t;
     })
     .join("\n\n");
