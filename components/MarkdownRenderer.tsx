@@ -342,7 +342,17 @@ export function MarkdownContent({
       if (hrefStr.startsWith("color:")) {
         const hex = hrefStr.slice("color:".length);
         if (COLOR_HEX_RE.test(hex)) {
-          return <span style={{ color: `#${hex}` }}>{children}</span>;
+          // prose force sa propre couleur sur `strong`/`code` (--tw-prose-bold /
+          // --tw-prose-code), ce qui écraserait sinon la couleur héritée de ce
+          // span pour un `**gras**` ou un `` `code` `` imbriqué à l'intérieur.
+          return (
+            <span
+              style={{ color: `#${hex}` }}
+              className="[&_strong]:text-inherit [&_code]:text-inherit"
+            >
+              {children}
+            </span>
+          );
         }
         return <>{children}</>;
       }

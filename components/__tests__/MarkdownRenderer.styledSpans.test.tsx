@@ -27,6 +27,16 @@ describe("MarkdownContent — spans stylés", () => {
     expect(strong?.textContent).toBe("gras");
   });
 
+  it("force l'héritage de couleur sur un <strong>/<code> imbriqué dans un span coloré", () => {
+    // `.prose strong` et `.prose code` imposent leur propre couleur
+    // (--tw-prose-bold / --tw-prose-code), qui écraserait sinon la couleur
+    // héritée du span pour un **gras** ou un `code` imbriqué à l'intérieur.
+    const { container } = render(<MarkdownContent content="[#ff0000]tes**trf**sdfsdf[/]" />);
+    const span = container.querySelector("span");
+    expect(span?.className).toContain("[&_strong]:text-inherit");
+    expect(span?.className).toContain("[&_code]:text-inherit");
+  });
+
   it("un vrai lien markdown reste un <a> fonctionnel", () => {
     const { container } = render(<MarkdownContent content="[site](https://example.com)" />);
     const a = container.querySelector("a");
