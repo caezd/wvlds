@@ -570,12 +570,13 @@ export function ParagraphBlockEditor({
           >
             <Underline className="h-3.5 w-3.5" />
           </button>
-          <button
-            type="button"
-            title={t("formatList")}
-            onMouseDown={(e) => { e.preventDefault(); applyList(); }}
-            className={toolbarButtonClass}
-          >
+<button
+  type="button"
+  title={t("formatList")}
+  aria-label={t("formatList")}
+  onMouseDown={(e) => { e.preventDefault(); applyList(); }}
+  className={toolbarButtonClass}
+>
             <List className="h-3.5 w-3.5" />
           </button>
           <Popover open={colorPickerOpen} onOpenChange={setColorPickerOpen}>
