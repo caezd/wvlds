@@ -544,12 +544,13 @@ export function ParagraphBlockEditor({
           >
             <Bold className="h-3.5 w-3.5" />
           </button>
-          <button
-            type="button"
-            title={t("formatItalic")}
-            onMouseDown={(e) => { e.preventDefault(); applyWrap("*", "*"); }}
-            className={toolbarButtonClass}
-          >
+<button
+  type="button"
+  title={t("formatItalic")}
+  aria-label={t("formatItalic")}
+  onMouseDown={(e) => { e.preventDefault(); applyWrap("*", "*"); }}
+  className={toolbarButtonClass}
+>
             <Italic className="h-3.5 w-3.5" />
           </button>
           <button
