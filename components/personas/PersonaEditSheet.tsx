@@ -250,7 +250,7 @@ function FramePicker({
             }`}
           title={f.name}
         >
-          <Image src={f.preview_url ?? f.asset_url ?? ""} alt={f.name} fill sizes="56px" className="object-cover" />
+          <Image src={f.preview_url ?? f.asset_url ?? ""} alt={f.name} unoptimized fill sizes="56px" className="object-cover" />
           {selected === f.id && <Check className="absolute -right-1.5 -top-1.5 h-4 w-4 rounded-full bg-primary text-primary-foreground p-0.5" />}
         </button>
       ))}
