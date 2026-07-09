@@ -150,7 +150,46 @@ describe("ParagraphBlockEditor — barre de mise en forme", () => {
     const editor = getEditor(container);
     fireEvent.focus(editor);
     selectRange(editor, 0, 5);
-    fireEvent.mouseDown(screen.getByTitle("Couleur du texte"));
+    // Un clic réel déclenche mousedown PUIS click — c'est ce dernier que
+    // PopoverTrigger (Radix) écoute pour ouvrir le popover. Notre bouton
+    // n'agit que sur mousedown (preventDefault + sauvegarde la sélection),
+    // sans jamais ouvrir lui-même le popover : le faire aussi créerait un
+    // double-toggle avec le onClick interne de Radix (ouvert par nous,
+    // refermé aussitôt par Radix qui inverse l'état courant).
+    const paletteButton = screen.getByTitle("Couleur du texte");
+    fireEvent.mouseDown(paletteButton);
+    fireEvent.click(paletteButton);
     expect(screen.getByText("Confirmer")).toBeInTheDocument();
+  });
+
+  it("le mousedown seul (sans click) n'ouvre pas le popover", () => {
+    // Garde-fou contre le double-toggle : si onMouseDown ouvrait lui-même
+    // le popover, le onClick de Radix (déclenché juste après par un clic
+    // réel) l'inverserait aussitôt et le refermerait.
+    const { container } = render(<ParagraphBlockEditor value="rouge" onChange={() => {}} formatting />);
+    const editor = getEditor(container);
+    fireEvent.focus(editor);
+    selectRange(editor, 0, 5);
+    fireEvent.mouseDown(screen.getByTitle("Couleur du texte"));
+    expect(screen.queryByText("Confirmer")).toBeNull();
+  });
+
+  it("le popover de couleur reste ouvert même si l'éditeur perd le focus", () => {
+    // Ouvrir le popover fait perdre le focus au contentEditable (Radix y
+    // déplace le focus) — la barre (et le popover qu'elle contient) ne
+    // doit pas se démonter pour autant, sinon le popover disparaît avant
+    // même que l'utilisateur ait pu choisir une couleur.
+    const { container } = render(<ParagraphBlockEditor value="rouge" onChange={() => {}} formatting />);
+    const editor = getEditor(container);
+    fireEvent.focus(editor);
+    selectRange(editor, 0, 5);
+    const paletteButton = screen.getByTitle("Couleur du texte");
+    fireEvent.mouseDown(paletteButton);
+    fireEvent.click(paletteButton);
+    expect(screen.getByText("Confirmer")).toBeInTheDocument();
+
+    fireEvent.blur(editor);
+    expect(screen.getByText("Confirmer")).toBeInTheDocument();
+    expect(screen.getByTitle("Gras")).toBeInTheDocument();
   });
 });
