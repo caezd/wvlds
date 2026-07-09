@@ -175,7 +175,7 @@ export function useChatroomMessageEdit({
     setEditing(false);
   }, [draft, mine, message?.content, message?.id, message?.metadata, editBubbles, editBubbleColor, editSms, contentWarningsChips.tags, onUpdated, supabase, chatroomKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  function onKeyDownEdit(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+  function onKeyDownEdit(e: React.KeyboardEvent<HTMLElement>) {
     if (e.key === "Escape") {
       e.preventDefault();
       cancelEdit();

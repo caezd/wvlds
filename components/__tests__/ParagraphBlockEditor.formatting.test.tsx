@@ -118,13 +118,13 @@ describe("ParagraphBlockEditor — barre de mise en forme", () => {
     expect(execCommandSpy).toHaveBeenCalledWith("insertHTML", false, "~~oups~~");
   });
 
-  it("Souligné utilise le marqueur {u}…{/}", () => {
+  it("Souligné utilise le marqueur ++texte++", () => {
     const { container } = render(<ParagraphBlockEditor value="important" onChange={() => {}} formatting />);
     const editor = getEditor(container);
     fireEvent.focus(editor);
     selectRange(editor, 0, 9);
     fireEvent.mouseDown(screen.getByTitle("Souligné"));
-    expect(execCommandSpy).toHaveBeenCalledWith("insertHTML", false, "{u}important{/}");
+    expect(execCommandSpy).toHaveBeenCalledWith("insertHTML", false, "++important++");
   });
 
   it("Lien entoure la sélection en syntaxe markdown [texte](https://)", () => {
@@ -191,5 +191,17 @@ describe("ParagraphBlockEditor — barre de mise en forme", () => {
     fireEvent.blur(editor);
     expect(screen.getByText("Confirmer")).toBeInTheDocument();
     expect(screen.getByTitle("Gras")).toBeInTheDocument();
+  });
+
+  it("Confirmer applique le marqueur $#hex$texte$$ avec la couleur par défaut", () => {
+    const { container } = render(<ParagraphBlockEditor value="rouge" onChange={() => {}} formatting />);
+    const editor = getEditor(container);
+    fireEvent.focus(editor);
+    selectRange(editor, 0, 5);
+    const paletteButton = screen.getByTitle("Couleur du texte");
+    fireEvent.mouseDown(paletteButton);
+    fireEvent.click(paletteButton);
+    fireEvent.click(screen.getByText("Confirmer"));
+    expect(execCommandSpy).toHaveBeenCalledWith("insertHTML", false, "$#b91c1c$rouge$$");
   });
 });

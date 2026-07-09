@@ -98,9 +98,6 @@ vi.mock("@/components/ui/button", () => ({
     <button onClick={onClick} {...props}>{children}</button>
   ),
 }));
-vi.mock("@/components/ui/textarea", () => ({
-  Textarea: (props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => <textarea {...props} />,
-}));
 
 import ChatroomMessage from "@/components/chatrooms/ChatroomMessage";
 

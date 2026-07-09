@@ -9,7 +9,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-07",
     tag: "Chatrooms",
-    text: "**Barre de mise en forme** dans le composer : sélectionnez du texte et cliquez gras, italique, barré, souligné, lien ou liste pour appliquer le markdown automatiquement, sans le taper à la main. Nouveau bouton **couleur de texte** (façon `{#ff0000}texte{/}`, dans l'esprit du marqueur déjà utilisé pour la couleur des bulles de dialogue) pour colorer un passage.",
+    text: "**Barre de mise en forme** dans le composer et lors de l'édition d'un message : sélectionnez du texte et cliquez gras, italique, barré, souligné, lien ou liste pour appliquer le markdown automatiquement, sans le taper à la main. Nouveau bouton **couleur de texte** (marqueur `$#ff0000$texte$$`) pour colorer un passage, et marqueur `++texte++` pour le souligné.",
   },
   {
     date: "2026-07",

@@ -1,17 +1,16 @@
-// Langage codé façon markdown pour styler du texte inline, dans l'esprit du
-// marqueur `{#ff0000}` qui existe déjà pour surcharger la couleur de fond
-// d'une bulle de dialogue (voir lib/dialogue-bubbles.ts) :
+// Langage codé façon markdown pour styler du texte inline :
 //
-//   {#RRGGBB}texte coloré{/}   → couleur de texte
-//   {u}texte souligné{/}      → souligné (pas de syntaxe native en markdown/GFM)
+//   $#RRGGBB$texte coloré$$   → couleur de texte
+//   ++texte souligné++       → souligné (pas de syntaxe native en markdown/GFM)
 //
 // Transformé en syntaxe de lien markdown standard (`[texte](color:RRGGBB)` /
 // `[texte](underline:)`) plutôt qu'en HTML brut : le renderer (skipHtml actif
 // par sécurité) ne touche jamais au HTML utilisateur, et le markdown imbriqué
-// à l'intérieur (ex. `{#ff0000}**gras**{/}`) continue de fonctionner puisque
+// à l'intérieur (ex. `$#ff0000$**gras**$$`) continue de fonctionner puisque
 // c'est le texte du lien qui est reparsé normalement par remark.
 
-const STYLED_SPAN_RE = /\{(#[0-9a-fA-F]{3,8}|u)\}([^\n]*?)\{\/\}/g;
+const COLOR_SPAN_RE = /\$#([0-9a-fA-F]{3,8})\$([^\n]*?)\$\$/g;
+const UNDERLINE_SPAN_RE = /\+\+([^\n]*?)\+\+/g;
 
 function isFenceLine(line: string): { char: string; len: number } | null {
   const m = line.match(/^(\s*)(`{3,}|~{3,})(.*)$/);
@@ -20,10 +19,13 @@ function isFenceLine(line: string): { char: string; len: number } | null {
 }
 
 function transformLine(line: string): string {
-  return line.replace(STYLED_SPAN_RE, (match, token: string, inner: string) => {
+  const withColor = line.replace(COLOR_SPAN_RE, (match, hex: string, inner: string) => {
     if (!inner) return match; // évite un lien vide
-    const href = token === "u" ? "underline:" : `color:${token.slice(1)}`;
-    return `[${inner}](${href})`;
+    return `[${inner}](color:${hex})`;
+  });
+  return withColor.replace(UNDERLINE_SPAN_RE, (match, inner: string) => {
+    if (!inner) return match;
+    return `[${inner}](underline:)`;
   });
 }
 

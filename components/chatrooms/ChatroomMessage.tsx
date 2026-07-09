@@ -13,7 +13,7 @@ import { ContentWarningBanner } from "./ContentWarningBanner";
 import { parseChatBlock, type ChatBlock } from "@/lib/chat-blocks";
 import { GameBlockRenderer } from "./blocks/GameBlockRenderer";
 import { cn } from "@/lib/utils";
-import { Textarea } from "@/components/ui/textarea";
+import { ParagraphBlockEditor } from "./ParagraphBlockEditor";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -328,17 +328,15 @@ export default function ChatroomMessage({
               {editing ? (
                 <div className="w-full">
                   <div className="rounded-2xl border bg-background/60 p-2">
-                    <Textarea
+                    <ParagraphBlockEditor
                       value={draft}
-                      onChange={(e) => setDraft(e.target.value)}
+                      onChange={setDraft}
                       onKeyDown={onKeyDownEdit}
                       disabled={saving}
                       autoFocus
-                      rows={Math.min(
-                        10,
-                        Math.max(2, (draft.match(/\n/g)?.length ?? 0) + 1),
-                      )}
-                      className="w-full resize-none border-0 bg-transparent px-2 py-3 shadow-none focus-visible:ring-0 text-sm leading-relaxed min-h-[44px]"
+                      formatting
+                      invertEnter={isMobile}
+                      className="px-2 py-3 leading-relaxed min-h-[44px]"
                     />
                     {err && (
                       <div className="mt-1 text-xs text-destructive">{err}</div>

@@ -77,6 +77,8 @@ export function ParagraphBlockEditor({
   submitOnEnter = true,
   invertEnter = false,
   formatting = false,
+  autoFocus = false,
+  disabled = false,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -96,6 +98,10 @@ export function ParagraphBlockEditor({
    *  zone de saisie tant qu'elle est active. Désactivé par défaut : les
    *  autres usages de ce composant (WorldMap, WorldWiki) restent inchangés. */
   formatting?: boolean;
+  /** Focus l'éditeur au montage, curseur placé à la fin du contenu. */
+  autoFocus?: boolean;
+  /** Désactive la saisie (ex: pendant une sauvegarde en cours). */
+  disabled?: boolean;
 }) {
   const t = useTranslations("chatrooms");
   const editorRef = useRef<HTMLDivElement>(null);
@@ -112,6 +118,19 @@ export function ParagraphBlockEditor({
     const el = editorRef.current;
     if (!el) return;
     el.innerHTML = buildHTML(value);
+    if (autoFocus) {
+      el.focus();
+      // el.focus() ne déclenche pas toujours de façon fiable l'événement
+      // "focus" natif remonté par React (selon le navigateur/l'état du
+      // document) — sans ça, `focused` resterait faux et la barre de mise
+      // en forme n'apparaîtrait pas tant que l'utilisateur n'a pas recliqué.
+      setFocused(true);
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      range.collapse(false);
+      window.getSelection()?.removeAllRanges();
+      window.getSelection()?.addRange(range);
+    }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Sync depuis l'extérieur uniquement si le DOM ne correspond pas déjà
@@ -437,7 +456,7 @@ export function ParagraphBlockEditor({
 
   function applyColor(hex: string) {
     restoreSelection();
-    applyWrap(`{#${hex.replace("#", "")}}`, "{/}");
+    applyWrap(`$#${hex.replace("#", "")}$`, "$$");
     setColorPickerOpen(false);
   }
 
@@ -483,7 +502,7 @@ export function ParagraphBlockEditor({
           <button
             type="button"
             title={t("formatUnderline")}
-            onMouseDown={(e) => { e.preventDefault(); applyWrap("{u}", "{/}"); }}
+            onMouseDown={(e) => { e.preventDefault(); applyWrap("++", "++"); }}
             className={toolbarButtonClass}
           >
             <Underline className="h-3.5 w-3.5" />
@@ -542,7 +561,7 @@ export function ParagraphBlockEditor({
       )}
       <div
         ref={editorRef}
-        contentEditable
+        contentEditable={!disabled}
         suppressContentEditableWarning
         onInput={handleInput}
         onPaste={handlePaste}
@@ -551,6 +570,7 @@ export function ParagraphBlockEditor({
         onBlur={() => setFocused(false)}
         className={cn(
           "outline-none w-full text-sm",
+          disabled && "cursor-not-allowed opacity-50",
           className,
         )}
       />
