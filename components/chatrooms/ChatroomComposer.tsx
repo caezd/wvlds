@@ -143,21 +143,25 @@ export function ChatroomComposer({
   const { chatroom_media } = useFeatureFlags();
   const [pendingMedia, setPendingMedia] = useState<File[]>([]);
   const pendingMediaPreviews = pendingMedia.map((f) => URL.createObjectURL(f));
-  const [selectedPersona, setSelectedPersona] = useState<Persona | null>(
-    presetPersona,
-  );
+  // Initialiser à null pour que le rendu SSR corresponde au premier rendu
+  // client : `presetPersona` vient in fine de préférences résolues côté
+  // parent, et rien ne garantit qu'elles soient déjà stables au moment de
+  // l'hydratation — un mismatch ici se traduisait par l'attribut `disabled`
+  // du bouton d'envoi qui diverge entre le HTML serveur et le premier rendu
+  // client (canSend dépend de selectedPersona). Même garde-fou que `value`
+  // ci-dessus.
+  const [selectedPersona, setSelectedPersona] = useState<Persona | null>(null);
   const BUBBLE_KEY = `bubbleMode:${chatId ?? "new"}`;
   const BUBBLE_COLOR_KEY = `bubbleColor:${chatId ?? "new"}`;
   const [bubbleMode, setBubbleModeRaw] = useState(false);
-  const [bubbleColor, setBubbleColorRaw] = useState<string | null>(
-    presetPersona?.dialogue_color ?? null,
-  );
+  const [bubbleColor, setBubbleColorRaw] = useState<string | null>(null);
   useEffect(() => {
+    setSelectedPersona(presetPersona);
     try { setBubbleModeRaw(localStorage.getItem(BUBBLE_KEY) === "1"); } catch { }
     // La couleur du persona (si définie) prend le pas sur le dernier choix
     // mémorisé pour cette chatroom.
-    if (selectedPersona?.dialogue_color) {
-      setBubbleColorRaw(selectedPersona.dialogue_color);
+    if (presetPersona?.dialogue_color) {
+      setBubbleColorRaw(presetPersona.dialogue_color);
     } else {
       try { setBubbleColorRaw(localStorage.getItem(BUBBLE_COLOR_KEY) || null); } catch { }
     }
