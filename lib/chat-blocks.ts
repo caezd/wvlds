@@ -65,9 +65,20 @@ export type AnchorBlock = {
   label: string;
 };
 
-export type ChatBlock = DiceBlock | BannerBlock | RevealBlock | NpcBlock | HpBlock | CalloutBlock | AnchorBlock;
+// Bloc « Choix » : sondage à cartes. Les votes (qui n'appartiennent pas à
+// l'auteur du message) vivent dans la table chat_choice_votes, pas dans ce
+// JSON — voir ChoiceVoteSummary dans types/db.ts.
+export type ChoiceOption = { id: string; label: string };
 
-const BLOCK_TYPES = new Set(["dice", "banner", "reveal", "npc", "hp", "callout", "anchor"]);
+export type ChoiceBlock = {
+  _type: "choice";
+  question?: string;
+  options: ChoiceOption[];
+};
+
+export type ChatBlock = DiceBlock | BannerBlock | RevealBlock | NpcBlock | HpBlock | CalloutBlock | AnchorBlock | ChoiceBlock;
+
+const BLOCK_TYPES = new Set(["dice", "banner", "reveal", "npc", "hp", "callout", "anchor", "choice"]);
 
 export function parseChatBlock(content: string): ChatBlock | null {
   if (!content.startsWith("{")) return null;

@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-07",
     tag: "Chatrooms",
+    text: "Nouveau bloc **Choix** dans le composer : proposez un choix sous forme de cartes (question optionnelle + 2 à 9 options) que les autres joueurs peuvent voter — l'auteur ne peut pas voter sur son propre choix, les résultats se mettent à jour en temps réel pour tout le monde.",
+  },
+  {
+    date: "2026-07",
+    tag: "Chatrooms",
     text: "Nouvelle option **avertissement de contenu** dans le composer : ajoutez des étiquettes libres (violence, deuil…) affichées en tête du message pour prévenir les joueurs de ce qu'il contient avant de le lire.",
   },
   {

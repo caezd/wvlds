@@ -6,8 +6,10 @@ import { createClient } from "@/lib/supabase/client";
 import { TABLE } from "@/lib/constants";
 import { encryptMessage } from "@/lib/crypto";
 import { toWebP } from "@/lib/imageUtils";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { applyOwnVote } from "@/lib/choiceVotes";
 import type { ChatBlock } from "@/lib/chat-blocks";
-import type { ChatMessageMeta } from "@/types/db";
+import type { ChatMessageMeta, ChoiceVoteSummary } from "@/types/db";
 
 import { DiceMessageView } from "./DiceMessageView";
 import { BannerBlockView } from "./BannerBlock";
@@ -16,6 +18,7 @@ import { NpcBlockView } from "./NpcBlock";
 import { HpBlockView } from "./HpBlock";
 import { CalloutBlockView } from "./CalloutBlock";
 import { AnchorBlockView } from "./AnchorBlockView";
+import { ChoiceBlockView } from "./ChoiceBlock";
 
 /**
  * Aiguilleur unique des blocs de jeu d'un message. Centralise la plomberie
@@ -31,6 +34,8 @@ export function GameBlockRenderer({
   chatroomKey,
   onUpdated,
   onAnchorEdited,
+  votes,
+  onVotesUpdated,
 }: {
   block: ChatBlock;
   mine: boolean;
@@ -39,8 +44,12 @@ export function GameBlockRenderer({
   chatroomKey?: string | null;
   onUpdated?: (id: number, content: string, metadata: ChatMessageMeta | null) => void;
   onAnchorEdited?: (messageId: number, label: string) => void;
+  /** Résumé des votes du bloc "choice" (ignoré pour les autres types de bloc). */
+  votes?: ChoiceVoteSummary[];
+  onVotesUpdated?: (messageId: number, votes: ChoiceVoteSummary[]) => void;
 }) {
   const supabase = useMemo(() => createClient(), []);
+  const { userId } = useCurrentUser();
   const pendingIconMediaRef = useRef<{ url: string; name: string }[]>([]);
 
   // Édition : (ré)écrit le contenu JSON du bloc, chiffré si une clé est fournie.
@@ -110,6 +119,24 @@ export function GameBlockRenderer({
         return data.publicUrl;
       }
     : undefined;
+
+  // Vote sur un bloc "choice" : upsert (clé (message_id, user_id)) donc un
+  // revote met simplement à jour la ligne existante. Optimiste côté appelant
+  // via applyOwnVote — la RLS refuse silencieusement (aucune ligne affectée)
+  // si l'utilisateur est l'auteur du message.
+  const castVote = async (optionId: string) => {
+    if (!userId || !message.chat_id) return;
+    const previousVotes = votes ?? [];
+    onVotesUpdated?.(message.id, applyOwnVote(previousVotes, optionId));
+    const { error } = await supabase.from(TABLE.CHAT_CHOICE_VOTES).upsert(
+      { message_id: message.id, chat_id: message.chat_id, option_id: optionId, user_id: userId },
+      { onConflict: "message_id,user_id" },
+    );
+    if (error) {
+      toast.error("Impossible de voter : " + error.message);
+      onVotesUpdated?.(message.id, previousVotes);
+    }
+  };
 
   // Suppression : `noun` sert au message d'erreur, `before` permet un nettoyage
   // préalable optionnel (ex. retrait du fichier de bannière dans le storage).
@@ -204,6 +231,20 @@ export function GameBlockRenderer({
             onEdit={editCalloutBlock}
             onDelete={deleteBlock("l'encadré")}
             onUploadIconImage={uploadIconImage}
+          />
+        </div>
+      );
+
+    case "choice":
+      return (
+        <div className="py-8">
+          <ChoiceBlockView
+            block={block}
+            mine={mine}
+            votes={votes ?? []}
+            onVote={castVote}
+            onEdit={editBlock}
+            onDelete={deleteBlock("le choix")}
           />
         </div>
       );

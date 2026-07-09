@@ -138,9 +138,16 @@ export type ReactionSummary = {
   me: boolean;
 };
 
+export type ChoiceVoteSummary = {
+  option_id: string;
+  count: number;
+  mine: boolean;
+};
+
 export type ChatMessageWithPersona = ChatMessage & {
   persona?: Persona | null;
   reactions?: ReactionSummary[];
+  votes?: ChoiceVoteSummary[];
   author?: { avatar_url: string | null; username: string | null } | null;
 };
 
