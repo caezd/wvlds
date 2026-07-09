@@ -184,11 +184,11 @@ export function ChoiceBlockView({
   }
 
   return (
-    <GameBlockSurface className="border-violet-600/20 bg-violet-500/5">
-      <div className="flex items-start gap-3">
+    <GameBlockSurface className="border">
+      <div className="flex items-start gap-3 px-2">
         <div className="min-w-0 flex-1">
           {block.question && (
-            <p className="text-sm font-semibold leading-tight mb-2">{block.question}</p>
+            <p className="px-1 text-sm font-semibold leading-tight mb-2">{block.question}</p>
           )}
           <div className="grid grid-cols-3 gap-2">
             {block.options.map((option) => {
@@ -206,19 +206,19 @@ export function ChoiceBlockView({
                   className={cn(
                     "relative flex flex-col items-start gap-1 overflow-hidden rounded-lg border p-2.5 text-left transition-colors",
                     isMine
-                      ? "border-violet-500/50 bg-violet-500/10"
-                      : "border-border-soft bg-card",
-                    clickable && !isMine && "hover:border-violet-500/40 hover:bg-violet-500/5 cursor-pointer",
+                      ? "border-accent/50 bg-accent/10"
+                      : "border-none bg-card",
+                    clickable && !isMine && "hover:border-accent/40 hover:bg-accent/5 cursor-pointer",
                     !clickable && "cursor-default",
                   )}
                 >
                   <div
-                    className="absolute inset-y-0 left-0 bg-violet-500/10"
+                    className="absolute inset-y-0 left-0 bg-accent/10"
                     style={{ width: `${pct}%` }}
                     aria-hidden
                   />
                   <span className="relative flex w-full items-center gap-1 text-xs font-medium">
-                    {isMine && <Check className="h-3 w-3 shrink-0 text-violet-600 dark:text-violet-400" />}
+                    {isMine && <Check className="h-3 w-3 shrink-0 text-accent dark:text-accent" />}
                     <span className="truncate">{option.label}</span>
                   </span>
                   <span className="relative text-[10px] text-muted-foreground">

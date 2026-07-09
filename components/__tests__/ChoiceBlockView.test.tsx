@@ -32,8 +32,8 @@ describe("ChoiceBlockView", () => {
   it("surligne la carte correspondant au vote de l'utilisateur courant", () => {
     const votes: ChoiceVoteSummary[] = [{ option_id: "north", count: 1, mine: true }];
     render(<ChoiceBlockView block={block} mine={false} votes={votes} onVote={vi.fn()} />);
-    expect(cardFor("Nord").className).toContain("border-violet-500/50");
-    expect(cardFor("Sud").className).not.toContain("border-violet-500/50");
+    expect(cardFor("Nord").className).toContain("border-accent/50");
+    expect(cardFor("Sud").className).not.toContain("border-accent/50");
   });
 
   it("appelle onVote avec l'id de l'option cliquée", () => {
