@@ -136,11 +136,13 @@ describe("ParagraphBlockEditor — barre de mise en forme", () => {
     expect(execCommandSpy).toHaveBeenCalledWith("insertHTML", false, "++important++");
   });
 
-  it("le dropdown Titre applique le niveau choisi au bloc courant", () => {
+  it("le dropdown Titre transforme tout le paragraphe, quelle que soit la position du curseur", () => {
     const { container } = render(<ParagraphBlockEditor value="mon titre" onChange={() => {}} formatting />);
     const editor = getEditor(container);
     fireEvent.focus(editor);
-    selectRange(editor, 0, 0);
+    // Curseur en fin de texte (pas au début, pas de sélection) : le titre
+    // doit quand même s'appliquer à tout le paragraphe.
+    selectRange(editor, 9, 9);
     const headingButton = screen.getByTitle("Titre");
     // DropdownMenuTrigger (Radix) ouvre au pointerdown, pas au click — même
     // principe que le mousedown+click du bouton couleur, mais sur un autre

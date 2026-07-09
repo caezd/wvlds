@@ -438,7 +438,7 @@ export function ParagraphBlockEditor({
     handleInput();
   }
 
-  /** Préfixe le bloc (paragraphe) courant en titre markdown (# à ######), comme applyList. */
+  /** Transforme tout le paragraphe (bloc) contenant le curseur en titre markdown, quelle que soit sa position dedans. */
   function applyHeading(level: number) {
     restoreSelection();
     const el = editorRef.current;
@@ -455,12 +455,7 @@ export function ParagraphBlockEditor({
     if (!block) return;
 
     const blockText = block.innerText.endsWith("\n") ? block.innerText.slice(0, -1) : block.innerText;
-    const preRange = document.createRange();
-    preRange.setStart(block, 0);
-    preRange.setEnd(range.startContainer, range.startOffset);
-    const localOffset = preRange.toString().length;
-
-    const result = applyHeadingPrefix(blockText, localOffset, localOffset, level);
+    const result = applyHeadingPrefix(blockText, level);
 
     const blockRange = document.createRange();
     blockRange.selectNodeContents(block);
@@ -514,6 +509,32 @@ export function ParagraphBlockEditor({
     >
       {showToolbar && (
         <div className="sticky top-0 z-10 mb-1.5 flex items-center gap-0.5 border-b border-border-soft bg-background pb-1.5">
+          <DropdownMenu open={headingMenuOpen} onOpenChange={setHeadingMenuOpen}>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                title={t("formatHeading")}
+                onMouseDown={(e) => { e.preventDefault(); saveSelection(); }}
+                className={toolbarButtonClass}
+              >
+                <Heading className="h-3.5 w-3.5" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" onCloseAutoFocus={(e) => e.preventDefault()}>
+              <DropdownMenuItem onSelect={() => applyHeading(1)}>
+                <Heading1 className="h-3.5 w-3.5" />
+                {t("formatHeading1")}
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => applyHeading(2)}>
+                <Heading2 className="h-3.5 w-3.5" />
+                {t("formatHeading2")}
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => applyHeading(3)}>
+                <Heading3 className="h-3.5 w-3.5" />
+                {t("formatHeading3")}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <button
             type="button"
             title={t("formatBold")}
@@ -546,32 +567,6 @@ export function ParagraphBlockEditor({
           >
             <Underline className="h-3.5 w-3.5" />
           </button>
-          <DropdownMenu open={headingMenuOpen} onOpenChange={setHeadingMenuOpen}>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                title={t("formatHeading")}
-                onMouseDown={(e) => { e.preventDefault(); saveSelection(); }}
-                className={toolbarButtonClass}
-              >
-                <Heading className="h-3.5 w-3.5" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" onCloseAutoFocus={(e) => e.preventDefault()}>
-              <DropdownMenuItem onSelect={() => applyHeading(1)}>
-                <Heading1 className="h-3.5 w-3.5" />
-                {t("formatHeading1")}
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => applyHeading(2)}>
-                <Heading2 className="h-3.5 w-3.5" />
-                {t("formatHeading2")}
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => applyHeading(3)}>
-                <Heading3 className="h-3.5 w-3.5" />
-                {t("formatHeading3")}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
           <button
             type="button"
             title={t("formatList")}

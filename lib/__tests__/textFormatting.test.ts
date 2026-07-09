@@ -64,38 +64,28 @@ describe("applyListPrefix", () => {
 });
 
 describe("applyHeadingPrefix", () => {
-  it("préfixe une ligne sans titre existant", () => {
-    const result = applyHeadingPrefix("Titre", 0, 5, 2);
+  it("préfixe un paragraphe sans titre existant", () => {
+    const result = applyHeadingPrefix("Titre", 2);
     expect(result.text).toBe("## Titre");
   });
 
   it("remplace un niveau de titre existant par le nouveau plutôt que de l'empiler", () => {
-    const result = applyHeadingPrefix("## Titre", 3, 3, 1);
+    const result = applyHeadingPrefix("## Titre", 1);
     expect(result.text).toBe("# Titre");
   });
 
-  it("bascule (retire le marqueur) en recliquant le même niveau", () => {
-    const result = applyHeadingPrefix("## Titre", 3, 3, 2);
+  it("bascule (retire le marqueur) en repassant le même niveau", () => {
+    const result = applyHeadingPrefix("## Titre", 2);
     expect(result.text).toBe("Titre");
   });
 
-  it("ne préfixe que la ligne touchée, pas les lignes voisines", () => {
-    const text = "premier\ndeuxième\ntroisième";
-    const start = text.indexOf("deuxième");
-    const end = start + "deuxième".length;
-    const result = applyHeadingPrefix(text, start, end, 3);
-    expect(result.text).toBe("premier\n### deuxième\ntroisième");
+  it("transforme le paragraphe entier, y compris les sauts de ligne internes (Maj+Entrée)", () => {
+    const result = applyHeadingPrefix("première ligne\ndeuxième ligne", 3);
+    expect(result.text).toBe("### première ligne\ndeuxième ligne");
   });
 
-  it("ignore les lignes vides à l'intérieur du bloc", () => {
-    const text = "a\n\nb";
-    const result = applyHeadingPrefix(text, 0, text.length, 1);
-    expect(result.text).toBe("# a\n\n# b");
-  });
-
-  it("étend au bloc entier même avec un curseur collapsed", () => {
-    const text = "bonjour le monde";
-    const result = applyHeadingPrefix(text, 5, 5, 2);
-    expect(result.text).toBe("## bonjour le monde");
+  it("ne fait rien sur un paragraphe vide", () => {
+    const result = applyHeadingPrefix("", 1);
+    expect(result.text).toBe("");
   });
 });

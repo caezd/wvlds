@@ -59,7 +59,7 @@ export function ChatroomMessageBubble({
   const proseClass = proseClassName(
     "base",
     cn(
-      "prose-a:underline prose-a:underline-offset-4 prose-hr:my-3 prose-p:my-0 flex flex-col gap-3",
+      "prose-a:underline prose-a:underline-offset-4 prose-hr:my-3 prose-p:my-0 prose-headings:my-0 prose-ul:my-0 prose-ol:my-0 flex flex-col gap-3",
       fontClass,
       textSizeClass,
       textAlignClass,
