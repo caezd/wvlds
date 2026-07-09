@@ -487,7 +487,7 @@ export function ParagraphBlockEditor({
 
   function applyColor(hex: string) {
     restoreSelection();
-    applyWrap(`$#${hex.replace("#", "")}$`, "$$");
+    applyWrap(`[#${hex.replace("#", "")}]`, "[/]");
     setColorPickerOpen(false);
   }
 

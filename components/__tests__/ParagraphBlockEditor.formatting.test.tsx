@@ -210,7 +210,7 @@ describe("ParagraphBlockEditor — barre de mise en forme", () => {
     expect(screen.getByTitle("Gras")).toBeInTheDocument();
   });
 
-  it("Confirmer applique le marqueur $#hex$texte$$ avec la couleur par défaut", () => {
+  it("Confirmer applique le marqueur [#hex]texte[/] avec la couleur par défaut", () => {
     const { container } = render(<ParagraphBlockEditor value="rouge" onChange={() => {}} formatting />);
     const editor = getEditor(container);
     fireEvent.focus(editor);
@@ -219,6 +219,6 @@ describe("ParagraphBlockEditor — barre de mise en forme", () => {
     fireEvent.mouseDown(paletteButton);
     fireEvent.click(paletteButton);
     fireEvent.click(screen.getByText("Confirmer"));
-    expect(execCommandSpy).toHaveBeenCalledWith("insertHTML", false, "$#b91c1c$rouge$$");
+    expect(execCommandSpy).toHaveBeenCalledWith("insertHTML", false, "[#b91c1c]rouge[/]");
   });
 });

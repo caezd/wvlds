@@ -8,8 +8,8 @@ import { MarkdownContent } from "@/components/MarkdownRenderer";
 // filtres suffit à vider silencieusement les faux hrefs `color:`/
 // `underline:` produits par transformStyledSpans (lib/textStyledSpans.ts).
 describe("MarkdownContent — spans stylés", () => {
-  it("rend $#RRGGBB$...$$ en span coloré", () => {
-    const { container } = render(<MarkdownContent content="$#ff0000$rouge$$" />);
+  it("rend [#RRGGBB]...[/] en span coloré", () => {
+    const { container } = render(<MarkdownContent content="[#ff0000]rouge[/]" />);
     const span = container.querySelector("span");
     expect(span?.textContent).toBe("rouge");
     expect(span?.getAttribute("style")).toContain("255, 0, 0");
@@ -22,7 +22,7 @@ describe("MarkdownContent — spans stylés", () => {
   });
 
   it("garde le markdown imbriqué à l'intérieur d'un span stylé", () => {
-    const { container } = render(<MarkdownContent content="$#00ff00$**gras**$$" />);
+    const { container } = render(<MarkdownContent content="[#00ff00]**gras**[/]" />);
     const strong = container.querySelector("span strong");
     expect(strong?.textContent).toBe("gras");
   });
