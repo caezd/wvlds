@@ -563,12 +563,13 @@ export function ParagraphBlockEditor({
 >
             <Strikethrough className="h-3.5 w-3.5" />
           </button>
-          <button
-            type="button"
-            title={t("formatUnderline")}
-            onMouseDown={(e) => { e.preventDefault(); applyWrap("++", "++"); }}
-            className={toolbarButtonClass}
-          >
+<button
+  type="button"
+  title={t("formatUnderline")}
+  aria-label={t("formatUnderline")}
+  onMouseDown={(e) => { e.preventDefault(); applyWrap("++", "++"); }}
+  className={toolbarButtonClass}
+>
             <Underline className="h-3.5 w-3.5" />
           </button>
 <button
