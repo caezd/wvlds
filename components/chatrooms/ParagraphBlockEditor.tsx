@@ -519,13 +519,13 @@ export function ParagraphBlockEditor({
         <div className="sticky top-0 z-10 mb-1.5 flex items-center gap-0.5 border-b border-border-soft bg-background pb-1.5">
           <DropdownMenu open={headingMenuOpen} onOpenChange={setHeadingMenuOpen}>
             <DropdownMenuTrigger asChild>
-<button
-  type="button"
-  title={t("formatHeading")}
-  aria-label={t("formatHeading")}
-  onMouseDown={(e) => { e.preventDefault(); saveSelection(); }}
-  className={toolbarButtonClass}
->
+              <button
+                type="button"
+                title={t("formatHeading")}
+                aria-label={t("formatHeading")}
+                onMouseDown={(e) => { e.preventDefault(); saveSelection(); }}
+                className={toolbarButtonClass}
+              >
                 <Heading className="h-3.5 w-3.5" />
               </button>
             </DropdownMenuTrigger>
@@ -544,65 +544,64 @@ export function ParagraphBlockEditor({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-<button
-  type="button"
-  title={t("formatBold")}
-  aria-label={t("formatBold")}
-  onMouseDown={(e) => { e.preventDefault(); applyWrap("**", "**"); }}
-  className={toolbarButtonClass}
->
+          <button
+            type="button"
+            title={t("formatBold")}
+            aria-label={t("formatBold")}
+            onMouseDown={(e) => { e.preventDefault(); applyWrap("**", "**"); }}
+            className={toolbarButtonClass}
+          >
             <Bold className="h-3.5 w-3.5" />
           </button>
-<button
-  type="button"
-  title={t("formatItalic")}
-  aria-label={t("formatItalic")}
-  onMouseDown={(e) => { e.preventDefault(); applyWrap("*", "*"); }}
-  className={toolbarButtonClass}
->
+          <button
+            type="button"
+            title={t("formatItalic")}
+            aria-label={t("formatItalic")}
+            onMouseDown={(e) => { e.preventDefault(); applyWrap("*", "*"); }}
+            className={toolbarButtonClass}
+          >
             <Italic className="h-3.5 w-3.5" />
           </button>
-<button
-  type="button"
-  title={t("formatStrikethrough")}
-  aria-label={t("formatStrikethrough")}
-  onMouseDown={(e) => { e.preventDefault(); applyWrap("~~", "~~"); }}
-  className={toolbarButtonClass}
->
+          <button
+            type="button"
+            title={t("formatStrikethrough")}
+            aria-label={t("formatStrikethrough")}
+            onMouseDown={(e) => { e.preventDefault(); applyWrap("~~", "~~"); }}
+            className={toolbarButtonClass}
+          >
             <Strikethrough className="h-3.5 w-3.5" />
           </button>
-<button
-  type="button"
-  title={t("formatUnderline")}
-  aria-label={t("formatUnderline")}
-  onMouseDown={(e) => { e.preventDefault(); applyWrap("++", "++"); }}
-  className={toolbarButtonClass}
->
+          <button
+            type="button"
+            title={t("formatUnderline")}
+            aria-label={t("formatUnderline")}
+            onMouseDown={(e) => { e.preventDefault(); applyWrap("++", "++"); }}
+            className={toolbarButtonClass}
+          >
             <Underline className="h-3.5 w-3.5" />
           </button>
-<button
-  type="button"
-  title={t("formatList")}
-  aria-label={t("formatList")}
-  onMouseDown={(e) => { e.preventDefault(); applyList(); }}
-  className={toolbarButtonClass}
->
+          <button
+            type="button"
+            title={t("formatList")}
+            aria-label={t("formatList")}
+            onMouseDown={(e) => { e.preventDefault(); applyList(); }}
+            className={toolbarButtonClass}
+          >
             <List className="h-3.5 w-3.5" />
           </button>
           <Popover open={colorPickerOpen} onOpenChange={setColorPickerOpen}>
             <PopoverTrigger asChild>
-<button
-  type="button"
-  title={t("formatColor")}
-  aria-label={t("formatColor")}
-  // Ne pas appeler setColorPickerOpen(true) ici : PopoverTrigger
-  // gère déjà l'ouverture via son propre onClick (Radix), qui se
-  // déclenche juste après ce mousedown. L'appeler nous-mêmes en
-  // plus créerait un double-toggle (ouvert par le mousedown,
-  // refermé par le onClick de Radix qui inverse l'état courant).
-  onMouseDown={(e) => { e.preventDefault(); saveSelection(); }}
-  className={toolbarButtonClass}
->
+              <button
+                type="button"
+                title={t("formatColor")}
+                aria-label={t("formatColor")}
+                // Ne pas appeler setColorPickerOpen(true) ici : PopoverTrigger
+                // gère déjà l'ouverture via son propre onClick (Radix), qui se
+                // déclenche juste après ce mousedown. L'appeler nous-mêmes en
+                // plus créerait un double-toggle (ouvert par le mousedown,
+                // refermé par le onClick de Radix qui inverse l'état courant).
+                onMouseDown={(e) => { e.preventDefault(); saveSelection(); }}
+                className={toolbarButtonClass}
               >
                 <Palette className="h-3.5 w-3.5" />
               </button>

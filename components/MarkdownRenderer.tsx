@@ -325,33 +325,22 @@ export function MarkdownContent({
       );
     },
 
-a({ href, children }) {
-  // Faux liens produits par transformStyledSpans (`[#ff0000]texte[/]` / `++texte++`) —
-  // voir lib/textStyledSpans.ts. Un lien `color:`/`underline:` tapé directement
-  // par l'utilisateur est traité de la même façon : c'est le même contrat.
-  const hrefStr = String(href ?? "");
-  if (hrefStr.startsWith("color:")) {
-    const hex = hrefStr.slice("color:".length);
-    if (/^(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(hex)) {
-      return <span style={{ color: `#${hex}` }}>{children}</span>;
-    }
-    return <>{children}</>;
-  }
-  if (hrefStr.startsWith("underline:")) {
-    if (hrefStr === "underline:") return <span className="underline">{children}</span>;
-    return <>{children}</>;
-  }
-  return (
-    <a
-      href={hrefStr}
-      target="_blank"
-      rel="noreferrer noopener"
-      className="underline hover:opacity-80"
-    >
-      {children}
-    </a>
-  );
-}
+    a({ href, children }) {
+      // Faux liens produits par transformStyledSpans (`[#ff0000]texte[/]` / `++texte++`) —
+      // voir lib/textStyledSpans.ts. Un lien `color:`/`underline:` tapé directement
+      // par l'utilisateur est traité de la même façon : c'est le même contrat.
+      const hrefStr = String(href ?? "");
+      if (hrefStr.startsWith("color:")) {
+        const hex = hrefStr.slice("color:".length);
+        if (/^(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(hex)) {
+          return <span style={{ color: `#${hex}` }}>{children}</span>;
+        }
+        return <>{children}</>;
+      }
+      if (hrefStr.startsWith("underline:")) {
+        if (hrefStr === "underline:") return <span className="underline">{children}</span>;
+        return <>{children}</>;
+      }
       return (
         <a
           href={hrefStr}

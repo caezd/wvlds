@@ -12,6 +12,7 @@
 // `[#hex]…[/]` n'est jamais interprété comme un vrai lien markdown.
 
 const COLOR_SPAN_RE = /\[#([0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\]([^\n]*?)\[\/\]/g;
+const UNDERLINE_SPAN_RE = /\+\+([^\n]*?)\+\+/g;
 
 function isFenceLine(line: string): { char: string; len: number } | null {
   const m = line.match(/^(\s*)(`{3,}|~{3,})(.*)$/);
