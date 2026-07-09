@@ -46,7 +46,7 @@
     },
     "accessibility": {
       "title": "Accessibilité",
-      "description": "Ajustez la police et la taille du texte des messages pour un meilleur confort de lecture"
+      "description": "Ajustez la police, la taille et l'alignement du texte des messages pour un meilleur confort de lecture"
     },
     "font": "Police",
     "fontDescription": "Choisissez la police utilisée pour le texte des chatrooms",
@@ -65,6 +65,14 @@
       "sm": "Petit",
       "base": "Normal",
       "lg": "Grand"
+    },
+    "textAlign": "Alignement du texte",
+    "textAlignDescription": "Choisissez l'alignement du texte des messages de chatroom",
+    "textAlignSaved": "Alignement du texte mis à jour",
+    "textAlignPreview": "Ceci est un aperçu du texte de vos messages. Sur plusieurs lignes, la différence entre les deux alignements devient visible.",
+    "textAlignOptions": {
+      "left": "Ferré à gauche",
+      "justify": "Justifié"
     },
     "profile": {
       "title": "Profil",

@@ -24,6 +24,7 @@ export type CurrentProfile = {
   locale: string | null;
   message_font: string | null;
   message_text_size: string | null;
+  message_text_align: string | null;
 };
 
 export type CurrentAuth = { id: string; email: string | null };
@@ -56,7 +57,7 @@ export const getCurrentProfile = cache(async (): Promise<CurrentProfile | null> 
   const supabase = await createClient();
   const { data } = await supabase
     .from("profiles")
-    .select("id, username, avatar_url, appear_offline, plan, is_admin, locale, message_font, message_text_size")
+    .select("id, username, avatar_url, appear_offline, plan, is_admin, locale, message_font, message_text_size, message_text_align")
     .eq("id", userId)
     .single();
   return (data as CurrentProfile) ?? null;

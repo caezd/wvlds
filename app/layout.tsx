@@ -6,7 +6,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import AppProviders from "@/components/providers/AppProviders";
 import type { InitialUser } from "@/components/providers/CurrentUserProvider";
-import { asMessageFont, asMessageTextSize } from "@/lib/messagePreferences";
+import { asMessageFont, asMessageTextSize, asMessageTextAlign } from "@/lib/messagePreferences";
 import { getCurrentProfile } from "@/lib/currentRequest";
 import { getLocale } from "next-intl/server";
 
@@ -65,6 +65,7 @@ export default async function RootLayout({
         plan: profile.plan ?? null,
         messageFont: asMessageFont(profile.message_font),
         messageTextSize: asMessageTextSize(profile.message_text_size),
+        messageTextAlign: asMessageTextAlign(profile.message_text_align),
       }
     : null;
 

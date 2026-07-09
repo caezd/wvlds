@@ -14,9 +14,11 @@ vi.mock("@/components/MarkdownRenderer", () => ({
 
 import { ChatroomMessageBubble } from "../ChatroomMessageBubble";
 
+const BASE_PREFS = { messageFont: "sans", messageTextSize: "base", messageTextAlign: "left" };
+
 describe("ChatroomMessageBubble — police du texte", () => {
   it("n'ajoute pas de classe de police quand la préférence est 'sans'", () => {
-    useCurrentUser.mockReturnValue({ messageFont: "sans", messageTextSize: "base" });
+    useCurrentUser.mockReturnValue({ ...BASE_PREFS });
 
     const { container } = render(
       <ChatroomMessageBubble message={{ content: "Bonjour !" }} isMine={false} />,
@@ -27,7 +29,7 @@ describe("ChatroomMessageBubble — police du texte", () => {
   });
 
   it("ajoute la classe serif quand la préférence est 'serif'", () => {
-    useCurrentUser.mockReturnValue({ messageFont: "serif", messageTextSize: "base" });
+    useCurrentUser.mockReturnValue({ ...BASE_PREFS, messageFont: "serif" });
 
     const { container } = render(
       <ChatroomMessageBubble message={{ content: "Bonjour !" }} isMine={false} />,
@@ -37,7 +39,7 @@ describe("ChatroomMessageBubble — police du texte", () => {
   });
 
   it("ajoute la classe dyslexie quand la préférence est 'dyslexic'", () => {
-    useCurrentUser.mockReturnValue({ messageFont: "dyslexic", messageTextSize: "base" });
+    useCurrentUser.mockReturnValue({ ...BASE_PREFS, messageFont: "dyslexic" });
 
     const { container } = render(
       <ChatroomMessageBubble message={{ content: "Bonjour !" }} isMine={false} />,
@@ -47,7 +49,7 @@ describe("ChatroomMessageBubble — police du texte", () => {
   });
 
   it("applique aussi la police choisie au mode « dialogues en bulles »", () => {
-    useCurrentUser.mockReturnValue({ messageFont: "dyslexic", messageTextSize: "base" });
+    useCurrentUser.mockReturnValue({ ...BASE_PREFS, messageFont: "dyslexic" });
 
     const { container } = render(
       <ChatroomMessageBubble
@@ -62,7 +64,7 @@ describe("ChatroomMessageBubble — police du texte", () => {
 
 describe("ChatroomMessageBubble — taille du texte", () => {
   it("n'ajoute pas de classe de taille quand la préférence est 'base'", () => {
-    useCurrentUser.mockReturnValue({ messageFont: "sans", messageTextSize: "base" });
+    useCurrentUser.mockReturnValue({ ...BASE_PREFS });
 
     const { container } = render(
       <ChatroomMessageBubble message={{ content: "Bonjour !" }} isMine={false} />,
@@ -73,7 +75,7 @@ describe("ChatroomMessageBubble — taille du texte", () => {
   });
 
   it("ajoute la classe message-text-sm quand la préférence est 'sm'", () => {
-    useCurrentUser.mockReturnValue({ messageFont: "sans", messageTextSize: "sm" });
+    useCurrentUser.mockReturnValue({ ...BASE_PREFS, messageTextSize: "sm" });
 
     const { container } = render(
       <ChatroomMessageBubble message={{ content: "Bonjour !" }} isMine={false} />,
@@ -83,7 +85,7 @@ describe("ChatroomMessageBubble — taille du texte", () => {
   });
 
   it("ajoute la classe message-text-lg quand la préférence est 'lg', y compris en mode bulles", () => {
-    useCurrentUser.mockReturnValue({ messageFont: "sans", messageTextSize: "lg" });
+    useCurrentUser.mockReturnValue({ ...BASE_PREFS, messageTextSize: "lg" });
 
     const { container } = render(
       <ChatroomMessageBubble
@@ -93,5 +95,30 @@ describe("ChatroomMessageBubble — taille du texte", () => {
     );
 
     expect(container.querySelectorAll(".message-text-lg").length).toBeGreaterThan(0);
+  });
+});
+
+describe("ChatroomMessageBubble — alignement du texte", () => {
+  it("n'ajoute pas de classe d'alignement quand la préférence est 'left'", () => {
+    useCurrentUser.mockReturnValue({ ...BASE_PREFS });
+
+    const { container } = render(
+      <ChatroomMessageBubble message={{ content: "Bonjour !" }} isMine={false} />,
+    );
+
+    expect(container.querySelector(".text-justify")).toBeNull();
+  });
+
+  it("ajoute la classe text-justify quand la préférence est 'justify', y compris en mode bulles", () => {
+    useCurrentUser.mockReturnValue({ ...BASE_PREFS, messageTextAlign: "justify" });
+
+    const { container } = render(
+      <ChatroomMessageBubble
+        message={{ content: '"Bonjour !"', metadata: { bubbles: true } }}
+        isMine={false}
+      />,
+    );
+
+    expect(container.querySelectorAll(".text-justify").length).toBeGreaterThan(0);
   });
 });

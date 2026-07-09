@@ -46,7 +46,7 @@
     },
     "accessibility": {
       "title": "Accessibility",
-      "description": "Adjust the message font and text size for better reading comfort"
+      "description": "Adjust the font, size, and alignment of message text for better reading comfort"
     },
     "font": "Font",
     "fontDescription": "Choose the font used for chatroom text",
@@ -65,6 +65,14 @@
       "sm": "Small",
       "base": "Normal",
       "lg": "Large"
+    },
+    "textAlign": "Text alignment",
+    "textAlignDescription": "Choose the text alignment for chatroom messages",
+    "textAlignSaved": "Text alignment updated",
+    "textAlignPreview": "This is a preview of your message text. Over several lines, the difference between the two alignments becomes visible.",
+    "textAlignOptions": {
+      "left": "Left-aligned",
+      "justify": "Justified"
     },
     "profile": {
       "title": "Profile",
