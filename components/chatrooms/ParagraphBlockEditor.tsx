@@ -511,12 +511,13 @@ export function ParagraphBlockEditor({
         <div className="sticky top-0 z-10 mb-1.5 flex items-center gap-0.5 border-b border-border-soft bg-background pb-1.5">
           <DropdownMenu open={headingMenuOpen} onOpenChange={setHeadingMenuOpen}>
             <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                title={t("formatHeading")}
-                onMouseDown={(e) => { e.preventDefault(); saveSelection(); }}
-                className={toolbarButtonClass}
-              >
+<button
+  type="button"
+  title={t("formatHeading")}
+  aria-label={t("formatHeading")}
+  onMouseDown={(e) => { e.preventDefault(); saveSelection(); }}
+  className={toolbarButtonClass}
+>
                 <Heading className="h-3.5 w-3.5" />
               </button>
             </DropdownMenuTrigger>
