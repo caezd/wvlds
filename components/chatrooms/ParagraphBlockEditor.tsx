@@ -360,7 +360,10 @@ export function ParagraphBlockEditor({
     const range = sel.getRangeAt(0);
     if (!el.contains(range.commonAncestorContainer)) return;
 
-    const selectedText = sel.toString();
+    // `range.toString()` plutôt que `sel.toString()` : c'est ce même `range`
+    // qu'`execCommand("insertHTML", …)` remplace juste après, donc les deux
+    // doivent porter exactement sur le même texte.
+    const selectedText = range.toString();
     const result = wrapSelection(selectedText, 0, selectedText.length, before, after);
 
     el.focus();
@@ -440,10 +443,19 @@ export function ParagraphBlockEditor({
 
   const toolbarButtonClass = "flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground";
 
+  const showToolbar = formatting && (focused || colorPickerOpen);
+
   return (
-    <div className={cn("relative max-h-40 overflow-y-auto [scrollbar-width:thin]", focused && "pb-editor", wrapperClassName)}>
-      {formatting && focused && (
-        <div className="mb-1.5 flex items-center gap-0.5 border-b border-border-soft pb-1.5">
+    <div
+      className={cn(
+        "relative overflow-y-auto [scrollbar-width:thin]",
+        formatting ? "max-h-52" : "max-h-40",
+        focused && "pb-editor",
+        wrapperClassName,
+      )}
+    >
+      {showToolbar && (
+        <div className="sticky top-0 z-10 mb-1.5 flex items-center gap-0.5 border-b border-border-soft bg-background pb-1.5">
           <button
             type="button"
             title={t("formatBold")}
