@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-07 ──────────────────────────────────────────────────────────────
   {
     date: "2026-07",
+    tag: "Chatrooms",
+    text: "**Barre de mise en forme** dans le composer : sélectionnez du texte et cliquez gras, italique, barré, souligné, lien ou liste pour appliquer le markdown automatiquement, sans le taper à la main. Nouveau bouton **couleur de texte** (façon `{#ff0000}texte{/}`, dans l'esprit du marqueur déjà utilisé pour la couleur des bulles de dialogue) pour colorer un passage.",
+  },
+  {
+    date: "2026-07",
     tag: "Interface",
     text: "**Alignement du texte des chatrooms** : troisième réglage de la carte « Accessibilité » (avec police et taille du texte) — choisissez entre texte **ferré à gauche** (par défaut) et **justifié**.",
   },

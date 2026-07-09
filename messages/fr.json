@@ -402,6 +402,13 @@
   "chatrooms": {
     "newRoom": "Nouvelle salle",
     "insertBlock": "Insérer un bloc",
+    "formatBold": "Gras",
+    "formatItalic": "Italique",
+    "formatStrikethrough": "Barré",
+    "formatUnderline": "Souligné",
+    "formatLink": "Lien",
+    "formatList": "Liste",
+    "formatColor": "Couleur du texte",
     "menuBlocksSection": "Blocs",
     "menuOptionsSection": "Options",
     "dice": "Lancer un dé",
