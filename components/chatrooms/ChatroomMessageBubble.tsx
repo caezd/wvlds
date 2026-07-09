@@ -75,7 +75,7 @@ export function ChatroomMessageBubble({
           <div key={i} className="not-prose inline-flex items-end gap-2 flex-wrap">
             <div
               className={cn(
-                "relative rounded-xl rounded-tl-[3px] px-3 py-1.5 text-sm sm:text-base leading-snug max-w-prose",
+                "relative rounded-xl rounded-tl-[3px] px-3 py-1.5 -ml-1.5 text-sm sm:text-base leading-snug max-w-prose",
                 !color && "bg-muted",
                 fontClass,
                 textSizeClass,

@@ -909,18 +909,18 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
   const supabase = createClient();
   const flags = useFeatureFlags();
   const fieldsEnabled = flags.persona_fields;
-  const persona_field_title     = fieldsEnabled && flags.persona_field_title;
-  const persona_field_text      = fieldsEnabled && flags.persona_field_text;
-  const persona_field_stats     = fieldsEnabled && flags.persona_field_stats;
+  const persona_field_title = fieldsEnabled && flags.persona_field_title;
+  const persona_field_text = fieldsEnabled && flags.persona_field_text;
+  const persona_field_stats = fieldsEnabled && flags.persona_field_stats;
   const persona_field_separator = fieldsEnabled && flags.persona_field_separator;
   const persona_field_image_grid = fieldsEnabled && flags.persona_field_image_grid;
-  const persona_field_inventory  = fieldsEnabled && flags.persona_field_inventory;
-  const persona_field_skills     = fieldsEnabled && flags.persona_field_skills;
-  const persona_field_gauges     = fieldsEnabled && flags.persona_field_gauges;
-  const persona_field_quote      = fieldsEnabled && flags.persona_field_quote;
-  const persona_field_traits     = fieldsEnabled && flags.persona_field_traits;
-  const persona_field_timeline   = fieldsEnabled && flags.persona_field_timeline;
-  const persona_field_dl         = fieldsEnabled && flags.persona_field_dl;
+  const persona_field_inventory = fieldsEnabled && flags.persona_field_inventory;
+  const persona_field_skills = fieldsEnabled && flags.persona_field_skills;
+  const persona_field_gauges = fieldsEnabled && flags.persona_field_gauges;
+  const persona_field_quote = fieldsEnabled && flags.persona_field_quote;
+  const persona_field_traits = fieldsEnabled && flags.persona_field_traits;
+  const persona_field_timeline = fieldsEnabled && flags.persona_field_timeline;
+  const persona_field_dl = fieldsEnabled && flags.persona_field_dl;
   const [fields, setFields] = useState<PersonaSectionField[]>(initialFields);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [inventoryCatalog, setInventoryCatalog] = useState<WorldInventoryItem[] | undefined>(undefined);
@@ -949,7 +949,7 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
       }
     }
     void fetchCatalog();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [worldId, restrictInventory, restrictSkills]);
 
   // Synchronise l'état local vers le parent à chaque changement (sauf au montage
@@ -1267,9 +1267,9 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
     return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <div className="cursor-pointer transition-opacity opacity-0 hover:opacity-100 group-hover/field:opacity-100 relative h-3 w-full flex justify-center before:absolute before:h-px before:w-full before:top-1/2 before:-translate-y-1/2 before:bg-border">
-            <button className="w-4 h-4 bg-border rounded-full inline-flex items-center justify-center absolute top-1/2 -translate-y-1/2 z-10">
-              <Plus size={10} />
+          <div className="cursor-pointer transition-opacity opacity-0 hover:opacity-100 group-hover/field:opacity-100 relative h-6 w-full flex justify-center before:absolute before:h-px before:w-full before:top-1/2 before:-translate-y-1/2 before:bg-border">
+            <button className="w-4 h-4 bg-accent/50 text-primary rounded-full inline-flex items-center justify-center absolute top-1/2 -translate-y-1/2 z-10">
+              <Plus size={12} />
             </button>
           </div>
         </DropdownMenuTrigger>

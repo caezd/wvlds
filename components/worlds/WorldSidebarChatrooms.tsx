@@ -81,7 +81,7 @@ function RoomItem({
       aria-current={isActive ? "page" : undefined}
       className={cn(
         "flex items-center gap-2.5 rounded-xl px-2 py-1.5 text-sm transition-colors",
-        "hover:bg-hoverCard",
+        "hover:bg-hoverCard min-w-0",
         isActive ? "bg-hoverCard" : "",
       )}
     >
@@ -228,11 +228,11 @@ export function WorldSidebarChatrooms({
             const updated = prev.map((r) =>
               r.id === s.chat_id
                 ? {
-                    ...r,
-                    last_message_at: s.last_message_at,
-                    last_poster_id: s.last_message_author_id,
-                    last_poster_avatar_url: s.last_message_persona_avatar_url,
-                  }
+                  ...r,
+                  last_message_at: s.last_message_at,
+                  last_poster_id: s.last_message_author_id,
+                  last_poster_avatar_url: s.last_message_persona_avatar_url,
+                }
                 : r,
             );
             return updated.sort(
@@ -301,14 +301,14 @@ export function WorldSidebarChatrooms({
   }
 
   return (
-    <ScrollArea className="flex-1 min-h-0">
-      <div className="p-2 space-y-4">
+    <ScrollArea className="flex-1 min-h-0 min-w-0">
+      <div className="p-2 space-y-4 min-w-0">
 
         {/* ACTIF */}
         {actif.length > 0 && (
           <section>
             <SectionLabel><Hash size={12} /> {t("sidebar.active")}</SectionLabel>
-            <div className="space-y-0.5">
+            <div className="space-y-0.5 min-w-0">
               {actif.map((room) => (
                 <RoomItem
                   key={room.id}
@@ -326,7 +326,7 @@ export function WorldSidebarChatrooms({
         {suivi.length > 0 && (
           <section>
             <SectionLabel><Star size={12} /> {t("sidebar.followed")}</SectionLabel>
-            <div className="space-y-0.5">
+            <div className="space-y-0.5 min-w-0">
               {suivi.map((room) => (
                 <RoomItem
                   key={room.id}
