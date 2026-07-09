@@ -581,16 +581,18 @@ export function ParagraphBlockEditor({
           </button>
           <Popover open={colorPickerOpen} onOpenChange={setColorPickerOpen}>
             <PopoverTrigger asChild>
-              <button
-                type="button"
-                title={t("formatColor")}
-                // Ne pas appeler setColorPickerOpen(true) ici : PopoverTrigger
-                // gère déjà l'ouverture via son propre onClick (Radix), qui se
-                // déclenche juste après ce mousedown. L'appeler nous-mêmes en
-                // plus créerait un double-toggle (ouvert par le mousedown,
-                // refermé par le onClick de Radix qui inverse l'état courant).
-                onMouseDown={(e) => { e.preventDefault(); saveSelection(); }}
-                className={toolbarButtonClass}
+<button
+  type="button"
+  title={t("formatColor")}
+  aria-label={t("formatColor")}
+  // Ne pas appeler setColorPickerOpen(true) ici : PopoverTrigger
+  // gère déjà l'ouverture via son propre onClick (Radix), qui se
+  // déclenche juste après ce mousedown. L'appeler nous-mêmes en
+  // plus créerait un double-toggle (ouvert par le mousedown,
+  // refermé par le onClick de Radix qui inverse l'état courant).
+  onMouseDown={(e) => { e.preventDefault(); saveSelection(); }}
+  className={toolbarButtonClass}
+>
               >
                 <Palette className="h-3.5 w-3.5" />
               </button>
