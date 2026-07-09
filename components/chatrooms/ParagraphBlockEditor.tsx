@@ -536,12 +536,13 @@ export function ParagraphBlockEditor({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <button
-            type="button"
-            title={t("formatBold")}
-            onMouseDown={(e) => { e.preventDefault(); applyWrap("**", "**"); }}
-            className={toolbarButtonClass}
-          >
+<button
+  type="button"
+  title={t("formatBold")}
+  aria-label={t("formatBold")}
+  onMouseDown={(e) => { e.preventDefault(); applyWrap("**", "**"); }}
+  className={toolbarButtonClass}
+>
             <Bold className="h-3.5 w-3.5" />
           </button>
 <button
