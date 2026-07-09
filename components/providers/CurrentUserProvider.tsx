@@ -13,11 +13,13 @@ import type { User, Session } from "@supabase/supabase-js";
 import {
   asMessageFont,
   asMessageTextSize,
+  asMessageTextAlign,
   type MessageFont,
   type MessageTextSize,
+  type MessageTextAlign,
 } from "@/lib/messagePreferences";
 
-export type { MessageFont, MessageTextSize };
+export type { MessageFont, MessageTextSize, MessageTextAlign };
 
 export type CurrentUser = {
   user: User | null;
@@ -28,6 +30,7 @@ export type CurrentUser = {
   plan: string | null;
   messageFont: MessageFont;
   messageTextSize: MessageTextSize;
+  messageTextAlign: MessageTextAlign;
   loading: boolean;
 };
 
@@ -40,6 +43,7 @@ export type InitialUser = {
   plan?: string | null;
   messageFont?: MessageFont;
   messageTextSize?: MessageTextSize;
+  messageTextAlign?: MessageTextAlign;
 } | null;
 
 const NEUTRAL: CurrentUser = {
@@ -51,6 +55,7 @@ const NEUTRAL: CurrentUser = {
   plan: null,
   messageFont: "sans",
   messageTextSize: "base",
+  messageTextAlign: "left",
   loading: false,
 };
 
@@ -89,6 +94,9 @@ export function CurrentUserProvider({
   const [messageTextSize, setMessageTextSize] = useState<MessageTextSize>(
     initialUser?.messageTextSize ?? "base",
   );
+  const [messageTextAlign, setMessageTextAlign] = useState<MessageTextAlign>(
+    initialUser?.messageTextAlign ?? "left",
+  );
   // Le serveur a déjà validé la session (layout protégé). Si initialUser est
   // fourni, on démarre prêt — aucun getUser() réseau au boot.
   const [loading, setLoading] = useState(initialUser === null);
@@ -111,6 +119,10 @@ export function CurrentUserProvider({
   }, [initialUser?.messageTextSize]);
 
   useEffect(() => {
+    if (initialUser?.messageTextAlign) setMessageTextAlign(initialUser.messageTextAlign);
+  }, [initialUser?.messageTextAlign]);
+
+  useEffect(() => {
     // `onAuthStateChange` émet INITIAL_SESSION (lecture du storage local, sans
     // requête réseau) puis les transitions (refresh, login, logout). On évite
     // ainsi le `getUser()` réseau au démarrage : une requête /auth/v1/user
@@ -131,6 +143,7 @@ export function CurrentUserProvider({
         setPlan(null);
         setMessageFont("sans");
         setMessageTextSize("base");
+        setMessageTextAlign("left");
         return;
       }
 
@@ -139,7 +152,7 @@ export function CurrentUserProvider({
       if (!hasProfileRef.current) {
         supabase
           .from("profiles")
-          .select("username, avatar_url, appear_offline, plan, message_font, message_text_size")
+          .select("username, avatar_url, appear_offline, plan, message_font, message_text_size, message_text_align")
           .eq("id", u.id)
           .single()
           .then(
@@ -153,6 +166,7 @@ export function CurrentUserProvider({
                 plan: string | null;
                 message_font: string | null;
                 message_text_size: string | null;
+                message_text_align: string | null;
               } | null;
             }) => {
               hasProfileRef.current = true;
@@ -162,6 +176,7 @@ export function CurrentUserProvider({
               setPlan(data?.plan ?? null);
               setMessageFont(asMessageFont(data?.message_font));
               setMessageTextSize(asMessageTextSize(data?.message_text_size));
+              setMessageTextAlign(asMessageTextAlign(data?.message_text_align));
             },
           );
       }
@@ -181,6 +196,7 @@ export function CurrentUserProvider({
       plan,
       messageFont,
       messageTextSize,
+      messageTextAlign,
       loading,
     }),
     [
@@ -191,6 +207,7 @@ export function CurrentUserProvider({
       plan,
       messageFont,
       messageTextSize,
+      messageTextAlign,
       loading,
       resolved,
       initialUser?.id,

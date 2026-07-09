@@ -5,6 +5,7 @@ import { LocaleSelector } from "./LocaleSelector";
 import { ProfileSettingsForm } from "./ProfileSettingsForm";
 import { MessageFontSelector } from "./MessageFontSelector";
 import { MessageTextSizeSelector } from "./MessageTextSizeSelector";
+import { MessageTextAlignSelector } from "./MessageTextAlignSelector";
 
 export default async function SettingsPage() {
   const [t, currentLocale] = await Promise.all([
@@ -23,6 +24,7 @@ export default async function SettingsPage() {
   let pronouns: string[] = [];
   const messageFont = profile?.message_font ?? "sans";
   const messageTextSize = profile?.message_text_size ?? "base";
+  const messageTextAlign = profile?.message_text_align ?? "left";
   if (userId) {
     const { data: extra } = await supabase
       .from("profiles")
@@ -75,6 +77,14 @@ export default async function SettingsPage() {
             <p className="text-xs text-muted-foreground">{t("textSizeDescription")}</p>
           </div>
           <MessageTextSizeSelector currentSize={messageTextSize} />
+        </div>
+
+        <div className="space-y-2">
+          <div>
+            <h3 className="text-sm font-medium">{t("textAlign")}</h3>
+            <p className="text-xs text-muted-foreground">{t("textAlignDescription")}</p>
+          </div>
+          <MessageTextAlignSelector currentAlign={messageTextAlign} />
         </div>
       </section>
     </div>

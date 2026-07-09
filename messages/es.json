@@ -46,7 +46,7 @@
     },
     "accessibility": {
       "title": "Accesibilidad",
-      "description": "Ajusta la fuente y el tamaño del texto de los mensajes para una mejor comodidad de lectura"
+      "description": "Ajusta la fuente, el tamaño y la alineación del texto de los mensajes para una mejor comodidad de lectura"
     },
     "font": "Fuente",
     "fontDescription": "Elige la fuente usada para el texto de las salas de chat",
@@ -65,6 +65,14 @@
       "sm": "Pequeño",
       "base": "Normal",
       "lg": "Grande"
+    },
+    "textAlign": "Alineación del texto",
+    "textAlignDescription": "Elige la alineación del texto de los mensajes de las salas de chat",
+    "textAlignSaved": "Alineación del texto actualizada",
+    "textAlignPreview": "Esta es una vista previa del texto de tus mensajes. En varias líneas, la diferencia entre las dos alineaciones se hace visible.",
+    "textAlignOptions": {
+      "left": "Alineado a la izquierda",
+      "justify": "Justificado"
     },
     "profile": {
       "title": "Perfil",

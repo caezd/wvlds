@@ -96,6 +96,33 @@ export async function updateMessageTextSize(size: string) {
   return { success: true };
 }
 
+const MESSAGE_TEXT_ALIGNS = ["left", "justify"] as const;
+type MessageTextAlign = (typeof MESSAGE_TEXT_ALIGNS)[number];
+
+function isSupportedTextAlign(value: string): value is MessageTextAlign {
+  return (MESSAGE_TEXT_ALIGNS as readonly string[]).includes(value);
+}
+
+export async function updateMessageTextAlign(align: string) {
+  if (!isSupportedTextAlign(align)) return { error: "Alignement non supporté" };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Non authentifié" };
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ message_text_align: align })
+    .eq("id", user.id);
+
+  if (error) return { error: error.message ?? "Impossible d'enregistrer l'alignement du texte." };
+
+  revalidatePath("/", "layout");
+  return { success: true };
+}
+
 export async function updateProfileBioAndPronouns(bio: string, pronouns: string[]) {
   const supabase = await createClient();
   const {

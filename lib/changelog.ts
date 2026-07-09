@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-07 ──────────────────────────────────────────────────────────────
   {
     date: "2026-07",
+    tag: "Interface",
+    text: "**Alignement du texte des chatrooms** : troisième réglage de la carte « Accessibilité » (avec police et taille du texte) — choisissez entre texte **ferré à gauche** (par défaut) et **justifié**.",
+  },
+  {
+    date: "2026-07",
     tag: "Chatrooms",
     text: "Nouveau bloc **Choix** dans le composer : proposez un choix sous forme de cartes (question optionnelle + 2 à 9 options) que les autres joueurs peuvent voter — l'auteur ne peut pas voter sur son propre choix, les résultats se mettent à jour en temps réel pour tout le monde.",
   },

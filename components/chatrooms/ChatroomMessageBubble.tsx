@@ -21,7 +21,7 @@ export function ChatroomMessageBubble({
   ignoreBubbles?: boolean;
 }) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
-  const { messageFont, messageTextSize } = useCurrentUser();
+  const { messageFont, messageTextSize, messageTextAlign } = useCurrentUser();
 
   const media: ChatMediaItem[] = (message.metadata?.media ?? []).filter((m) => isSafeUrl(m.url));
 
@@ -54,6 +54,7 @@ export function ChatroomMessageBubble({
     messageTextSize === "sm" && "message-text-sm",
     messageTextSize === "lg" && "message-text-lg",
   );
+  const textAlignClass = messageTextAlign === "justify" && "text-justify";
 
   const proseClass = proseClassName(
     "base",
@@ -61,6 +62,7 @@ export function ChatroomMessageBubble({
       "prose-a:underline prose-a:underline-offset-4 prose-hr:my-3 prose-p:my-0 flex flex-col gap-3",
       fontClass,
       textSizeClass,
+      textAlignClass,
     ),
   );
 
@@ -79,6 +81,7 @@ export function ChatroomMessageBubble({
                 !color && "bg-muted",
                 fontClass,
                 textSizeClass,
+                textAlignClass,
               )}
               style={color ? { backgroundColor: color + "33" } : undefined}
             >
