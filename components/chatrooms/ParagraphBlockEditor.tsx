@@ -553,12 +553,13 @@ export function ParagraphBlockEditor({
 >
             <Italic className="h-3.5 w-3.5" />
           </button>
-          <button
-            type="button"
-            title={t("formatStrikethrough")}
-            onMouseDown={(e) => { e.preventDefault(); applyWrap("~~", "~~"); }}
-            className={toolbarButtonClass}
-          >
+<button
+  type="button"
+  title={t("formatStrikethrough")}
+  aria-label={t("formatStrikethrough")}
+  onMouseDown={(e) => { e.preventDefault(); applyWrap("~~", "~~"); }}
+  className={toolbarButtonClass}
+>
             <Strikethrough className="h-3.5 w-3.5" />
           </button>
           <button
