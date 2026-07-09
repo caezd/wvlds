@@ -77,7 +77,6 @@ describe("ParagraphBlockEditor — barre de mise en forme", () => {
     expect(screen.getByTitle("Italique")).toBeInTheDocument();
     expect(screen.getByTitle("Barré")).toBeInTheDocument();
     expect(screen.getByTitle("Souligné")).toBeInTheDocument();
-    expect(screen.getByTitle("Lien")).toBeInTheDocument();
     expect(screen.getByTitle("Liste")).toBeInTheDocument();
     expect(screen.getByTitle("Couleur du texte")).toBeInTheDocument();
   });
@@ -125,15 +124,6 @@ describe("ParagraphBlockEditor — barre de mise en forme", () => {
     selectRange(editor, 0, 9);
     fireEvent.mouseDown(screen.getByTitle("Souligné"));
     expect(execCommandSpy).toHaveBeenCalledWith("insertHTML", false, "++important++");
-  });
-
-  it("Lien entoure la sélection en syntaxe markdown [texte](https://)", () => {
-    const { container } = render(<ParagraphBlockEditor value="ici" onChange={() => {}} formatting />);
-    const editor = getEditor(container);
-    fireEvent.focus(editor);
-    selectRange(editor, 0, 3);
-    fireEvent.mouseDown(screen.getByTitle("Lien"));
-    expect(execCommandSpy).toHaveBeenCalledWith("insertHTML", false, "[ici](https://)");
   });
 
   it("Liste préfixe le bloc courant par \"- \"", () => {

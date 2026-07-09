@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useLayoutEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Bold, Italic, Strikethrough, Underline, Link2, List, Palette } from "lucide-react";
+import { Bold, Italic, Strikethrough, Underline, List, Palette } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { wrapSelection, applyListPrefix } from "@/lib/textFormatting";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -506,14 +506,6 @@ export function ParagraphBlockEditor({
             className={toolbarButtonClass}
           >
             <Underline className="h-3.5 w-3.5" />
-          </button>
-          <button
-            type="button"
-            title={t("formatLink")}
-            onMouseDown={(e) => { e.preventDefault(); applyWrap("[", "](https://)"); }}
-            className={toolbarButtonClass}
-          >
-            <Link2 className="h-3.5 w-3.5" />
           </button>
           <button
             type="button"
