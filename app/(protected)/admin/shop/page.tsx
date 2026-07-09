@@ -61,6 +61,7 @@ export default async function AdminShopPage() {
                     <Image
                       src={(item.preview_url ?? item.asset_url)!}
                       alt={item.name}
+                      unoptimized
                       width={40}
                       height={40}
                       className="h-10 w-10 rounded object-cover bg-muted"

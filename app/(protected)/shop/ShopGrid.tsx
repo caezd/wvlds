@@ -176,6 +176,7 @@ export default function ShopGrid({
                 <Image
                   src={it.preview_url ?? it.asset_url}
                   alt={it.name}
+                  unoptimized
                   fill
                   sizes="(min-width: 1024px) 200px, 45vw"
                   className="object-cover"

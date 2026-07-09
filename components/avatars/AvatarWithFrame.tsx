@@ -38,7 +38,7 @@ export function AvatarWithFrame({
       />
       {frameUrl && (
         <div className="pointer-events-none absolute top-1/2 left-1/2 h-[120%] w-[120%] -translate-x-1/2 -translate-y-1/2">
-          <Image src={frameUrl} alt="" fill sizes={`${Math.round(size * 1.2)}px`} className="object-contain" />
+          <Image src={frameUrl} alt="" unoptimized fill sizes={`${Math.round(size * 1.2)}px`} className="object-contain" />
         </div>
       )}
     </div>

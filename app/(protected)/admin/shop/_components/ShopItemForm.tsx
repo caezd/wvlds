@@ -123,6 +123,7 @@ function ImageUploader({
               <Image
                 src={url}
                 alt="Aperçu"
+                unoptimized
                 fill
                 sizes="160px"
                 className="rounded object-contain"
