@@ -123,6 +123,45 @@ export function ParagraphBlockEditor({
   // sélection dans le contentEditable ne survit pas aux clics dans le popover
   // (portalé ailleurs dans le DOM), donc on la restaure au moment d'appliquer.
   const savedRangeRef = useRef<Range | null>(null);
+  // Position de la barre flottante, calculée depuis la sélection courante —
+  // null = pas de sélection (donc pas de barre). Contrairement à `focused`,
+  // ne se base pas sur le focus de l'éditeur : la barre n'apparaît que
+  // lorsque du texte est réellement sélectionné (façon Discord/Notion).
+  const [selectionRect, setSelectionRect] = useState<DOMRect | null>(null);
+
+  // Met à jour (ou efface) la position de la barre flottante à partir de la
+  // sélection courante. Ignoré tant qu'un popover/dropdown de la barre est
+  // ouvert : la sélection réelle a pu être perdue au profit du popover
+  // (portalé ailleurs), mais la barre doit rester ancrée là où elle était.
+  function updateSelectionRect() {
+    if (!formatting || colorPickerOpen || headingMenuOpen) return;
+    const el = editorRef.current;
+    const sel = window.getSelection();
+    if (!el || !sel || sel.rangeCount === 0 || sel.isCollapsed) {
+      setSelectionRect(null);
+      return;
+    }
+    const range = sel.getRangeAt(0);
+    if (!el.contains(range.commonAncestorContainer)) {
+      setSelectionRect(null);
+      return;
+    }
+    // Range.getBoundingClientRect() n'existe pas sous jsdom (pas de layout
+    // réel) — un rect à zéro suffit à rendre la sélection "truthy" pour les
+    // tests, la position exacte n'y a pas d'importance.
+    setSelectionRect(
+      typeof range.getBoundingClientRect === "function"
+        ? range.getBoundingClientRect()
+        : ({ top: 0, bottom: 0, left: 0, right: 0, width: 0, height: 0, x: 0, y: 0, toJSON: () => ({}) } as DOMRect),
+    );
+  }
+
+  useEffect(() => {
+    if (!formatting) return;
+    document.addEventListener("selectionchange", updateSelectionRect);
+    return () => document.removeEventListener("selectionchange", updateSelectionRect);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formatting, colorPickerOpen, headingMenuOpen]);
 
   // Initialisation une seule fois au montage
   useLayoutEffect(() => {
@@ -133,8 +172,9 @@ export function ParagraphBlockEditor({
       el.focus();
       // el.focus() ne déclenche pas toujours de façon fiable l'événement
       // "focus" natif remonté par React (selon le navigateur/l'état du
-      // document) — sans ça, `focused` resterait faux et la barre de mise
-      // en forme n'apparaîtrait pas tant que l'utilisateur n'a pas recliqué.
+      // document) — sans ça, `focused` resterait faux (placeholder qui
+      // réapparaît, `pb-editor` non appliqué) tant que l'utilisateur n'a
+      // pas recliqué.
       setFocused(true);
       const range = document.createRange();
       range.selectNodeContents(el);
@@ -501,22 +541,40 @@ export function ParagraphBlockEditor({
 
   const toolbarButtonClass = "flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground";
 
-  // Une fois un message commencé (ou en édition, où `value` n'est
-  // quasiment jamais vide), la barre reste affichée même après un blur —
-  // pas seulement tant que l'éditeur est focus.
-  const showToolbar = formatting && (focused || colorPickerOpen || headingMenuOpen || value.trim().length > 0);
+  // Barre flottante ancrée au-dessus (ou en dessous, si pas assez de place)
+  // de la sélection — façon Discord/Notion. `position: fixed` : les
+  // coordonnées de `getBoundingClientRect()` sont déjà relatives au viewport,
+  // et ça évite tout clip par l'`overflow-y-auto` du wrapper si la sélection
+  // est proche d'un bord pendant que l'éditeur est scrollé.
+  const TOOLBAR_HEIGHT = 40;
+  const TOOLBAR_GAP = 8;
+  const toolbarStyle: React.CSSProperties | undefined = selectionRect
+    ? {
+        top:
+          selectionRect.top - TOOLBAR_HEIGHT - TOOLBAR_GAP >= 0
+            ? selectionRect.top - TOOLBAR_HEIGHT - TOOLBAR_GAP
+            : selectionRect.bottom + TOOLBAR_GAP,
+        left: Math.min(
+          Math.max(selectionRect.left + selectionRect.width / 2, 140),
+          window.innerWidth - 140,
+        ),
+        transform: "translateX(-50%)",
+      }
+    : undefined;
 
   return (
     <div
       className={cn(
-        "relative overflow-y-auto [scrollbar-width:thin]",
-        formatting ? "max-h-52" : "max-h-40",
+        "relative overflow-y-auto [scrollbar-width:thin] max-h-40",
         focused && "pb-editor",
         wrapperClassName,
       )}
     >
-      {showToolbar && (
-        <div className="sticky top-0 z-10 mb-1.5 flex items-center gap-0.5 border-b border-border-soft bg-background pb-1.5">
+      {formatting && selectionRect && (
+        <div
+          style={toolbarStyle}
+          className="fixed z-50 flex items-center gap-0.5 rounded-lg border border-border-soft bg-background p-1 shadow-lg"
+        >
           <DropdownMenu open={headingMenuOpen} onOpenChange={setHeadingMenuOpen}>
             <DropdownMenuTrigger asChild>
               <button
@@ -633,8 +691,15 @@ export function ParagraphBlockEditor({
         onInput={handleInput}
         onPaste={handlePaste}
         onKeyDown={handleKeyDown}
+        onKeyUp={updateSelectionRect}
+        onMouseUp={updateSelectionRect}
         onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
+        onBlur={() => {
+          setFocused(false);
+          // Un clic dans le popover couleur / dropdown titre déclenche aussi
+          // ce blur (focus volé par Radix) — ne pas y cacher la barre.
+          if (!colorPickerOpen && !headingMenuOpen) setSelectionRect(null);
+        }}
         className={cn(
           "outline-none w-full text-sm",
           disabled && "cursor-not-allowed opacity-50",

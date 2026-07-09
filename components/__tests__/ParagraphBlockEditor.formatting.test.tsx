@@ -17,7 +17,12 @@ function getEditor(container: HTMLElement) {
   return el as HTMLElement;
 }
 
-/** Sélectionne `text[start:end]` dans le nœud texte du premier bloc de l'éditeur. */
+/**
+ * Sélectionne `text[start:end]` dans le nœud texte du premier bloc de
+ * l'éditeur, puis déclenche mouseup — la barre flottante n'apparaît que sur
+ * ce même événement (ou selectionchange, que jsdom ne déclenche pas
+ * automatiquement sur un `Selection.addRange()` programmatique).
+ */
 function selectRange(editor: HTMLElement, start: number, end: number) {
   const block = editor.querySelector("[data-block]")!;
   const textNode = block.firstChild as Text;
@@ -27,6 +32,7 @@ function selectRange(editor: HTMLElement, start: number, end: number) {
   const sel = window.getSelection()!;
   sel.removeAllRanges();
   sel.addRange(range);
+  fireEvent.mouseUp(editor);
 }
 
 describe("ParagraphBlockEditor — barre de mise en forme", () => {
@@ -60,19 +66,24 @@ describe("ParagraphBlockEditor — barre de mise en forme", () => {
   });
 
   it("n'affiche pas la barre par défaut (formatting non activé)", () => {
-    const { container } = render(<ParagraphBlockEditor value="" onChange={() => {}} />);
+    const { container } = render(<ParagraphBlockEditor value="bonjour" onChange={() => {}} />);
+    const editor = getEditor(container);
+    fireEvent.focus(editor);
+    selectRange(editor, 0, 7);
+    expect(screen.queryByTitle("Gras")).toBeNull();
+  });
+
+  it("le focus seul (sans sélection) n'affiche pas la barre", () => {
+    const { container } = render(<ParagraphBlockEditor value="bonjour" onChange={() => {}} formatting />);
     fireEvent.focus(getEditor(container));
     expect(screen.queryByTitle("Gras")).toBeNull();
   });
 
-  it("n'affiche pas la barre tant que l'éditeur n'est pas focus", () => {
-    render(<ParagraphBlockEditor value="" onChange={() => {}} formatting />);
-    expect(screen.queryByTitle("Gras")).toBeNull();
-  });
-
-  it("affiche la barre quand formatting est activé et l'éditeur est focus", () => {
-    const { container } = render(<ParagraphBlockEditor value="" onChange={() => {}} formatting />);
-    fireEvent.focus(getEditor(container));
+  it("affiche la barre quand du texte est sélectionné", () => {
+    const { container } = render(<ParagraphBlockEditor value="bonjour" onChange={() => {}} formatting />);
+    const editor = getEditor(container);
+    fireEvent.focus(editor);
+    selectRange(editor, 0, 7);
     expect(screen.getByTitle("Gras")).toBeInTheDocument();
     expect(screen.getByTitle("Italique")).toBeInTheDocument();
     expect(screen.getByTitle("Barré")).toBeInTheDocument();
@@ -82,22 +93,14 @@ describe("ParagraphBlockEditor — barre de mise en forme", () => {
     expect(screen.getByTitle("Couleur du texte")).toBeInTheDocument();
   });
 
-  it("masque la barre à nouveau quand l'éditeur perd le focus (vide)", () => {
-    const { container } = render(<ParagraphBlockEditor value="" onChange={() => {}} formatting />);
-    const editor = getEditor(container);
-    fireEvent.focus(editor);
-    expect(screen.getByTitle("Gras")).toBeInTheDocument();
-    fireEvent.blur(editor);
-    expect(screen.queryByTitle("Gras")).toBeNull();
-  });
-
-  it("garde la barre visible après un blur si le message a déjà du contenu", () => {
+  it("masque la barre quand la sélection est perdue (blur)", () => {
     const { container } = render(<ParagraphBlockEditor value="bonjour" onChange={() => {}} formatting />);
     const editor = getEditor(container);
     fireEvent.focus(editor);
+    selectRange(editor, 0, 7);
     expect(screen.getByTitle("Gras")).toBeInTheDocument();
     fireEvent.blur(editor);
-    expect(screen.getByTitle("Gras")).toBeInTheDocument();
+    expect(screen.queryByTitle("Gras")).toBeNull();
   });
 
   it("Gras avec une sélection entoure le texte sélectionné de **", () => {
@@ -127,17 +130,9 @@ describe("ParagraphBlockEditor — barre de mise en forme", () => {
     const sel = window.getSelection()!;
     sel.removeAllRanges();
     sel.addRange(range);
+    fireEvent.mouseUp(editor);
     fireEvent.mouseDown(screen.getByTitle("Gras"));
     expect(execCommandSpy).not.toHaveBeenCalled();
-  });
-
-  it("Italique sans sélection insère une paire de marqueurs vide", () => {
-    const { container } = render(<ParagraphBlockEditor value="bonjour" onChange={() => {}} formatting />);
-    const editor = getEditor(container);
-    fireEvent.focus(editor);
-    selectRange(editor, 3, 3);
-    fireEvent.mouseDown(screen.getByTitle("Italique"));
-    expect(execCommandSpy).toHaveBeenCalledWith("insertHTML", false, "**");
   });
 
   it("Barré entoure la sélection de ~~", () => {
@@ -158,13 +153,13 @@ describe("ParagraphBlockEditor — barre de mise en forme", () => {
     expect(execCommandSpy).toHaveBeenCalledWith("insertHTML", false, "++important++");
   });
 
-  it("le dropdown Titre transforme tout le paragraphe, quelle que soit la position du curseur", () => {
+  it("le dropdown Titre transforme tout le paragraphe, même avec une sélection partielle", () => {
     const { container } = render(<ParagraphBlockEditor value="mon titre" onChange={() => {}} formatting />);
     const editor = getEditor(container);
     fireEvent.focus(editor);
-    // Curseur en fin de texte (pas au début, pas de sélection) : le titre
-    // doit quand même s'appliquer à tout le paragraphe.
-    selectRange(editor, 9, 9);
+    // Sélectionne seulement "titre" (pas tout le paragraphe) : le titre
+    // doit quand même s'appliquer à l'ensemble du bloc.
+    selectRange(editor, 4, 9);
     const headingButton = screen.getByTitle("Titre");
     // DropdownMenuTrigger (Radix) ouvre au pointerdown, pas au click — même
     // principe que le mousedown+click du bouton couleur, mais sur un autre
@@ -179,7 +174,7 @@ describe("ParagraphBlockEditor — barre de mise en forme", () => {
     const { container } = render(<ParagraphBlockEditor value="une ligne" onChange={() => {}} formatting />);
     const editor = getEditor(container);
     fireEvent.focus(editor);
-    selectRange(editor, 0, 0);
+    selectRange(editor, 0, 4);
     fireEvent.mouseDown(screen.getByTitle("Liste"));
     expect(execCommandSpy).toHaveBeenCalledWith("insertHTML", false, "- une ligne");
   });
