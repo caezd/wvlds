@@ -29,16 +29,16 @@ vi.mock("sonner", () => ({ toast: { error: vi.fn() } }));
 vi.mock("@/components/avatars/AvatarWithFrame", () => ({
   AvatarWithFrame: () => <div data-testid="avatar" />,
 }));
-vi.mock("@/components/chatrooms/ChatroomMessageBubble", () => ({
+vi.mock("@/components/chatrooms/message/ChatroomMessageBubble", () => ({
   ChatroomMessageBubble: () => <div />,
 }));
 vi.mock("@/components/personas/PersonaProfileSheetTrigger", () => ({
   PersonaProfileSheetTrigger: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
-vi.mock("@/components/chatrooms/ChatReactionPicker", () => ({
+vi.mock("@/components/chatrooms/reactions/ChatReactionPicker", () => ({
   ChatReactionPicker: () => <div data-testid="reaction-picker" />,
 }));
-vi.mock("@/components/chatrooms/ReactionEmoji", () => ({
+vi.mock("@/components/chatrooms/reactions/ReactionEmoji", () => ({
   ReactionEmoji: ({ value }: { value: string }) => <span>{value}</span>,
 }));
 vi.mock("@/components/chatrooms/blocks/GameBlockRenderer", () => ({
@@ -101,7 +101,7 @@ vi.mock("@/components/ui/textarea", () => ({
   Textarea: (props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => <textarea {...props} />,
 }));
 
-import ChatroomMessage from "@/components/chatrooms/ChatroomMessage";
+import ChatroomMessage from "@/components/chatrooms/message/ChatroomMessage";
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
