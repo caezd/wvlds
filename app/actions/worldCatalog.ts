@@ -311,13 +311,17 @@ export async function getWorldTags(worldId: string) {
 export async function addWorldTag(worldId: string, rawTag: string) {
   const tag = rawTag.trim().toLowerCase().slice(0, MAX_TAG_LENGTH);
   if (!tag) return { ok: false as const, error: "Tag vide." };
+  // La virgule sert de séparateur dans le paramètre d'URL `tags` de /explore
+  // (voir exploreQuery.ts) — un tag qui en contient casserait le filtrage.
+  if (tag.includes(",")) return { ok: false as const, error: "Un tag ne peut pas contenir de virgule." };
 
   const supabase = await createClient();
 
-  const { count } = await supabase
+  const { count, error: countError } = await supabase
     .from("world_tags")
     .select("id", { count: "exact", head: true })
     .eq("world_id", worldId);
+  if (countError) return { ok: false as const, error: countError.message };
   if ((count ?? 0) >= MAX_WORLD_TAGS) {
     return { ok: false as const, error: `Maximum ${MAX_WORLD_TAGS} tags par monde.` };
   }

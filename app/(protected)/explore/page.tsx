@@ -12,6 +12,8 @@ import { buildExploreParams } from "./exploreQuery";
 
 const PAGE_SIZE = 16;
 const NO_MATCH_SENTINEL = "00000000-0000-0000-0000-000000000000";
+const MAX_FILTER_TAGS = 10;
+const MAX_TAG_LENGTH = 24;
 
 type PublicWorld = {
   id: string;
@@ -50,10 +52,16 @@ export default async function ExplorePage({
   const from = page * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;
 
-  const selectedTags = (resolved?.tags ?? "")
-    .split(",")
-    .map((t) => t.trim().toLowerCase())
-    .filter(Boolean);
+  // Dérivé directement de l'URL : on déduplique et on borne (nombre + longueur)
+  // pour éviter des requêtes `.in(...)` coûteuses sur une liste forgée.
+  const selectedTags = Array.from(
+    new Set(
+      (resolved?.tags ?? "")
+        .split(",")
+        .map((t) => t.trim().toLowerCase())
+        .filter((t) => t.length > 0 && t.length <= MAX_TAG_LENGTH),
+    ),
+  ).slice(0, MAX_FILTER_TAGS);
   const selectedAvatarTypes = (resolved?.avatar ?? "")
     .split(",")
     .filter((v): v is "real" | "illustrated" => v === "real" || v === "illustrated");
@@ -165,7 +173,13 @@ export default async function ExplorePage({
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {publicWorlds.map((world) => (
-                <ExploreWorldCard key={world.id} world={world} noDescription={t("noDescription")} />
+                <ExploreWorldCard
+                  key={world.id}
+                  world={world}
+                  noDescription={t("noDescription")}
+                  avatarRealLabel={t("avatarReal")}
+                  avatarIllustratedLabel={t("avatarIllustrated")}
+                />
               ))}
             </div>
           )}
@@ -218,9 +232,13 @@ export default async function ExplorePage({
 function ExploreWorldCard({
   world,
   noDescription,
+  avatarRealLabel,
+  avatarIllustratedLabel,
 }: {
   world: PublicWorld;
   noDescription: string;
+  avatarRealLabel: string;
+  avatarIllustratedLabel: string;
 }) {
   return (
     <div className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card">
@@ -270,12 +288,12 @@ function ExploreWorldCard({
         {(world.allows_real_avatars || world.allows_illustrated_avatars) && (
           <div className="absolute top-2 right-2 flex gap-1">
             {world.allows_real_avatars && (
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm" title="Avatars réels">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm" title={avatarRealLabel}>
                 <Camera className="h-3 w-3" />
               </span>
             )}
             {world.allows_illustrated_avatars && (
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm" title="Avatars illustrés">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm" title={avatarIllustratedLabel}>
                 <Palette className="h-3 w-3" />
               </span>
             )}
@@ -304,12 +322,12 @@ function LatestWorldRow({ world }: { world: LatestWorld }) {
     <div className="flex items-center gap-2.5 rounded-xl border border-border bg-card p-2.5">
       <span
         className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg"
-        style={{ backgroundColor: !world.icon_url ? (world.color ?? "hsl(var(--card))") : undefined }}
+        style={{ backgroundColor: !world.icon_url ? (world.color ?? "#64748b") : undefined }}
       >
         {world.icon_url ? (
           <Image src={world.icon_url} alt="" width={36} height={36} className="h-full w-full object-cover" />
         ) : (
-          <Globe className="h-4 w-4 text-white/70" />
+          <Globe className="h-4 w-4 text-white/90" />
         )}
       </span>
       <p className="min-w-0 flex-1 truncate text-sm font-medium">{world.name}</p>

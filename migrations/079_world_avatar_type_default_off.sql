@@ -8,7 +8,8 @@
 ALTER TABLE worlds ALTER COLUMN allows_real_avatars SET DEFAULT false;
 ALTER TABLE worlds ALTER COLUMN allows_illustrated_avatars SET DEFAULT false;
 
-UPDATE worlds SET allows_real_avatars = false, allows_illustrated_avatars = false;
+UPDATE worlds SET allows_real_avatars = false, allows_illustrated_avatars = false
+  WHERE allows_real_avatars IS DISTINCT FROM false OR allows_illustrated_avatars IS DISTINCT FROM false;
 
 -- ── ROLLBACK ────────────────────────────────────────────────────────────────
 -- ALTER TABLE worlds ALTER COLUMN allows_real_avatars SET DEFAULT true;
