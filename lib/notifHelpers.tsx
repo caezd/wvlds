@@ -1,19 +1,14 @@
 import type { ReactNode } from "react";
 import type { useTranslations } from "next-intl";
 import type { AppNotification } from "@/types/db";
+import { UNIFIED_EMOJI_RE, unifiedToNative } from "@/lib/emoji";
 
 export type NotifT = ReturnType<typeof useTranslations<"notifications">>;
 
-const UNIFIED_RE = /^[0-9a-fA-F]+(-[0-9a-fA-F]+)*$/;
-
 export function emojiFromContent(raw: string | null): string {
     if (!raw) return "";
-    if (!UNIFIED_RE.test(raw)) return raw;
-    try {
-        return raw.split("-").map(u => String.fromCodePoint(parseInt(u, 16))).join("");
-    } catch {
-        return raw;
-    }
+    if (!UNIFIED_EMOJI_RE.test(raw)) return raw;
+    return unifiedToNative(raw);
 }
 
 const b = (chunks: ReactNode) => <span className="font-semibold">{chunks}</span>;

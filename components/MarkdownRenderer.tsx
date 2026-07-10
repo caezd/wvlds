@@ -10,7 +10,7 @@ import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import rehypeHighlight from "rehype-highlight";
 
 import { cn } from "@/lib/utils";
-import { transformStyledSpans } from "@/lib/textStyledSpans";
+import { transformStyledSpans, createFenceTracker } from "@/lib/textStyledSpans";
 
 type Props = {
   content: string;
@@ -91,14 +91,6 @@ function urlTransform(url: string): string {
   return defaultUrlTransform(url);
 }
 
-function isFenceLine(line: string) {
-  // ex: ```ts, ~~~, ``` etc.
-  const m = line.match(/^(\s*)(`{3,}|~{3,})(.*)$/);
-  if (!m) return null;
-  const fence = m[2];
-  return { char: fence[0], len: fence.length };
-}
-
 /**
  * Transforme << ... >> en blockquote markdown, même au milieu d’un paragraphe.
  * Comme un <div> ne peut pas être au milieu d'un <p>, on force une séparation par paragraphes.
@@ -110,9 +102,7 @@ function transformAngleCallouts(input: string): string {
   const src = (input ?? "").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
   const lines = src.split("\n");
 
-  let inFence = false;
-  let fenceChar: "`" | "~" | null = null;
-  let fenceLen = 0;
+  const fenceTracker = createFenceTracker();
 
   const out: string[] = [];
 
@@ -215,23 +205,8 @@ function transformAngleCallouts(input: string): string {
   };
 
   for (const line of lines) {
-    const fence = isFenceLine(line);
-
-    if (!inFence && fence) {
-      inFence = true;
-      fenceChar = fence.char as "`" | "~";
-      fenceLen = fence.len;
+    if (fenceTracker.consume(line)) {
       out.push(line);
-      continue;
-    }
-
-    if (inFence) {
-      out.push(line);
-      if (fence && fence.char === fenceChar && fence.len >= fenceLen) {
-        inFence = false;
-        fenceChar = null;
-        fenceLen = 0;
-      }
       continue;
     }
 

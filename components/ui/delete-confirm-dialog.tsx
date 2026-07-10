@@ -14,13 +14,19 @@ import {
 
 export function DeleteConfirmDialog({
   trigger,
+  title = "Confirmer la suppression",
   description = "Cette action est irréversible.",
+  cancelLabel = "Annuler",
+  confirmLabel = "Supprimer",
   onConfirm,
   open,
   onOpenChange,
 }: {
   trigger?: React.ReactNode;
-  description?: string;
+  title?: React.ReactNode;
+  description?: React.ReactNode;
+  cancelLabel?: string;
+  confirmLabel?: string;
   onConfirm: () => void;
   /** Mode contrôlé : passe open + onOpenChange sans trigger. */
   open?: boolean;
@@ -31,16 +37,16 @@ export function DeleteConfirmDialog({
       {trigger && <AlertDialogTrigger asChild>{trigger}</AlertDialogTrigger>}
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
+          <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Annuler</AlertDialogCancel>
+          <AlertDialogCancel>{cancelLabel}</AlertDialogCancel>
           <AlertDialogAction
             onClick={onConfirm}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
-            Supprimer
+            {confirmLabel}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

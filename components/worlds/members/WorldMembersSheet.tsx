@@ -19,6 +19,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { supabaseThumb } from "@/lib/storage";
+import { getLeadingLetter } from "@/lib/textFormatting";
+import { cn } from "@/lib/utils";
 import { WorldInviteDialog } from "@/components/worlds/members/WorldInviteDialog";
 
 const ROLE_LABEL: Record<string, string> = {
@@ -67,7 +69,7 @@ function Avatar({
   const thumb = src ? (thumbFailed ? src : (supabaseThumb(src, size * 2) ?? src)) : null;
   return (
     <span
-      className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-card-400 font-semibold text-muted-foreground ${className}`}
+      className={cn("relative flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-card-400 font-semibold text-muted-foreground", className)}
       style={{ width: size, height: size, fontSize: size * 0.38 }}
     >
       {thumb ? (
@@ -90,7 +92,7 @@ function MemberRow({ member }: { member: Member }) {
   const displayName = member.username
     ? `@${member.username}`
     : member.user_id.slice(0, 8);
-  const letter = (displayName.replace(/^@/, "")[0] ?? "?").toUpperCase();
+  const letter = getLeadingLetter(displayName);
   const shown = member.personas.slice(0, 4);
   const rest = member.personas.length - shown.length;
   const { userId: currentUserId } = useCurrentUser();

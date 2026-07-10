@@ -1167,10 +1167,10 @@ function BlocksDropdown({
                     key={pin.id}
                     type="button"
                     onClick={() => setDraftPinId(pin.id === draftPinId ? null : pin.id)}
-                    className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${draftPinId === pin.id
-                        ? "bg-primary/10 text-primary"
-                        : "hover:bg-muted"
-                      }`}
+                    className={cn(
+                      "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+                      draftPinId === pin.id ? "bg-primary/10 text-primary" : "hover:bg-muted",
+                    )}
                   >
                     <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: pin.color }} />
                     {pin.title}

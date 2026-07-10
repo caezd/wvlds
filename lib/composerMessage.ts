@@ -6,10 +6,15 @@ import { parseChatBlock } from "./chat-blocks";
 export type MediaRef = { url: string; name: string };
 export type ParticipantLike = { id: string; username: string | null };
 
+/** Nombre de mots du texte brut. */
+export function wordCount(text: string): number {
+  return text.trim().split(/\s+/).filter(Boolean).length;
+}
+
 /** Nombre de mots du texte. Un bloc structuré (dés, encadré…) compte pour 0. */
 export function computeWordCount(text: string): number {
   if (parseChatBlock(text) !== null) return 0;
-  return text.trim().split(/\s+/).filter(Boolean).length;
+  return wordCount(text);
 }
 
 /** Extrait les `@pseudos` mentionnés (alphanumérique + underscore). */

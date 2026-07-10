@@ -19,10 +19,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Star, UserPlus } from "lucide-react";
 import { useTranslations } from "next-intl";
-function initials(name: string) {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "?";
-}
+import { getInitials } from "@/lib/textFormatting";
+import { cn } from "@/lib/utils";
 
 function PersonaAvatarThumb({ url, name, size }: { url: string; name: string; size: number }) {
   const [thumbFailed, setThumbFailed] = useState(false);
@@ -56,7 +54,10 @@ function PersonaRow({
 }) {
   return (
     <div
-      className={`group flex w-full items-center gap-3 rounded-xl px-2.5 py-2 transition-colors ${selected ? "bg-muted" : "hover:bg-muted/60"}`}
+      className={cn(
+        "group flex w-full items-center gap-3 rounded-xl px-2.5 py-2 transition-colors",
+        selected ? "bg-muted" : "hover:bg-muted/60",
+      )}
     >
       <button
         type="button"
@@ -69,7 +70,7 @@ function PersonaRow({
             <PersonaAvatarThumb url={persona.avatar_url} name={persona.name} size={36} />
           ) : (
             <span className="grid h-full w-full place-items-center text-xs font-bold text-muted-foreground">
-              {initials(persona.name)}
+              {getInitials(persona.name)}
             </span>
           )}
         </span>
@@ -210,7 +211,7 @@ export function PersonaPickerDialog({
                   <PersonaAvatarThumb url={selected.avatar_url} name={selected.name} size={36} />
                 ) : (
                   <span className="h-full w-full grid place-items-center text-xs font-bold  text-muted-foreground">
-                    {initials(selected.name)}
+                    {getInitials(selected.name)}
                   </span>
                 )
               ) : (

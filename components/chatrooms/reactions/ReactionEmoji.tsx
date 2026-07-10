@@ -2,22 +2,9 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import { UNIFIED_EMOJI_RE, unifiedToNative } from "@/lib/emoji";
 
 const TWITTER_CDN = "https://cdn.jsdelivr.net/npm/emoji-datasource-twitter/img/twitter/64/";
-
-const UNIFIED_RE = /^[0-9a-fA-F]+(-[0-9a-fA-F]+)*$/;
-
-/** "1f44d-1f3fb" -> "👍🏻" (pour le fallback texte et l'alt). */
-function unifiedToNative(unified: string): string {
-  try {
-    return unified
-      .split("-")
-      .map((u) => String.fromCodePoint(parseInt(u, 16)))
-      .join("");
-  } catch {
-    return unified;
-  }
-}
 
 /** "👍" -> "1f44d" (pour les anciennes réactions stockées en caractère natif). */
 function nativeToUnified(native: string): string {
@@ -41,7 +28,7 @@ export function ReactionEmoji({
 }) {
   const [failed, setFailed] = useState(false);
 
-  const isUnified = UNIFIED_RE.test(value);
+  const isUnified = UNIFIED_EMOJI_RE.test(value);
   const unified = (isUnified ? value : nativeToUnified(value)).toLowerCase();
   const native = isUnified ? unifiedToNative(value) : value;
 

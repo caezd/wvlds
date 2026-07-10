@@ -487,11 +487,12 @@ export default function ChatroomSettingsSheet({ canEdit, chatroom, worldTimeline
                         type="button"
                         disabled={savingCategory}
                         onClick={() => void persistCategory(cat.id === categoryId ? null : cat.id)}
-                        className={`flex w-full items-center gap-3 rounded-xl border px-3 py-2 text-sm transition-colors ${
+                        className={cn(
+                          "flex w-full items-center gap-3 rounded-xl border px-3 py-2 text-sm transition-colors",
                           categoryId === cat.id
                             ? "border-primary/40 bg-primary/10 text-primary"
-                            : "border-border-soft bg-background text-foreground hover:bg-secondary"
-                        }`}
+                            : "border-border-soft bg-background text-foreground hover:bg-secondary",
+                        )}
                       >
                         <CategoryAvatar
                           title={cat.title}
@@ -535,11 +536,12 @@ export default function ChatroomSettingsSheet({ canEdit, chatroom, worldTimeline
                         type="button"
                         disabled={savingPin}
                         onClick={() => void persistMapPin(pin.id === mapPinId ? null : pin.id)}
-                        className={`flex w-full items-center gap-3 rounded-xl border px-3 py-2 text-sm transition-colors ${
+                        className={cn(
+                          "flex w-full items-center gap-3 rounded-xl border px-3 py-2 text-sm transition-colors",
                           mapPinId === pin.id
                             ? "border-primary/40 bg-primary/10 text-primary"
-                            : "border-border-soft bg-background text-foreground hover:bg-secondary"
-                        }`}
+                            : "border-border-soft bg-background text-foreground hover:bg-secondary",
+                        )}
                       >
                         <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: pin.color }} />
                         {pin.title}

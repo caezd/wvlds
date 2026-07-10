@@ -48,16 +48,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 
 const WIKI_NAV_MIN = 120;
 const WIKI_NAV_MAX = 360;
@@ -731,34 +722,18 @@ export function WorldWiki({
   // ── Render ────────────────────────────────────────────────────
   return (
     <>
-      <AlertDialog
+      <DeleteConfirmDialog
         open={!!confirmDelete}
         onOpenChange={open => { if (!open) setConfirmDelete(null); }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("deleteTitle", { title: confirmDelete?.title ?? "" })}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {confirmDelete?.is_folder
-                ? t("deleteFolderDesc")
-                : t("deletePageDesc")}{" "}
-              {t("deleteIrreversible")}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{tCommon("cancel")}</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => {
-                if (confirmDelete) void deletePage(confirmDelete);
-                setConfirmDelete(null);
-              }}
-            >
-              {tCommon("delete")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        title={t("deleteTitle", { title: confirmDelete?.title ?? "" })}
+        description={`${confirmDelete?.is_folder ? t("deleteFolderDesc") : t("deletePageDesc")} ${t("deleteIrreversible")}`}
+        cancelLabel={tCommon("cancel")}
+        confirmLabel={tCommon("delete")}
+        onConfirm={() => {
+          if (confirmDelete) void deletePage(confirmDelete);
+          setConfirmDelete(null);
+        }}
+      />
 
       <div className="flex h-full min-h-0 flex-1 flex-col">
         {/* ── Header ─────────────────────────────────────── */}

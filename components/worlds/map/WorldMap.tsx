@@ -29,16 +29,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { toWebP } from "@/lib/imageUtils";
 import { supabaseThumb } from "@/lib/storage";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import {
   createMapPin,
   deleteMapPin,
@@ -603,28 +594,18 @@ function PinPopover({
 
   return (
     <>
-      <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("deleteTitle", { title: pin.title })}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("deleteDesc")}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{tCommon("cancel")}</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => {
-                setConfirmDelete(false);
-                onDelete();
-              }}
-            >
-              {tCommon("delete")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConfirmDialog
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title={t("deleteTitle", { title: pin.title })}
+        description={t("deleteDesc")}
+        cancelLabel={tCommon("cancel")}
+        confirmLabel={tCommon("delete")}
+        onConfirm={() => {
+          setConfirmDelete(false);
+          onDelete();
+        }}
+      />
 
       {isEditMode && (
         // Le div arrête la propagation vers le onClick extérieur de WorldMap

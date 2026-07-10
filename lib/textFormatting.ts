@@ -80,3 +80,14 @@ export function applyHeadingPrefix(text: string, level: number): WrapResult {
 
   return { text: newText, cursorStart: newText.length, cursorEnd: newText.length };
 }
+
+/** Initiales (1re lettre des 2 premiers mots) pour un fallback d'avatar. */
+export function getInitials(name: string, fallback = "?"): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || fallback;
+}
+
+/** 1re lettre d'un nom d'affichage (ex. "@username") pour un fallback d'avatar. */
+export function getLeadingLetter(name: string, fallback = "?"): string {
+  return (name.replace(/^@/, "")[0] ?? fallback).toUpperCase();
+}

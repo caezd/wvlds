@@ -16,6 +16,7 @@ import { useGlobalPresence } from "@/components/providers/PresenceProvider";
 import { formatLastSeen } from "@/lib/utils";
 import { ImageGridView } from "@/components/personas/ImageGridView";
 import { supabaseThumb } from "@/lib/storage";
+import { getInitials } from "@/lib/textFormatting";
 
 // -- Level helpers --------------------------------------------
 // level = floor(sqrt(xp / 50)) + 1
@@ -401,11 +402,6 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
                 ? `Vu ${formatLastSeen(ownerPresence.last_seen_at)}`
                 : "Hors ligne";
 
-  function initials(name: string) {
-    const parts = name.trim().split(/\s+/).filter(Boolean);
-    return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "?";
-  }
-
   return (
     <Sheet open={!!persona} onOpenChange={(o) => !o && onClose()}>
       <SheetContent
@@ -478,7 +474,7 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
               <AvatarWithFrame
                 src={persona.avatar_url}
                 alt={persona.name}
-                fallback={initials(persona.name)}
+                fallback={getInitials(persona.name)}
                 presenceState="invisible"
                 size={80}
                 className="outline-4 outline-background rounded-2xl"

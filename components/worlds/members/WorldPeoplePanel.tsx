@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Plus, Users } from "lucide-react";
 import { supabaseThumb } from "@/lib/storage";
 import { cn } from "@/lib/utils";
+import { getLeadingLetter } from "@/lib/textFormatting";
 import { WorldInviteDialog } from "./WorldInviteDialog";
 import { PersonaCard } from "@/components/personas/PersonaCard";
 import { PersonaCreateSheet } from "@/components/personas/PersonaCreateSheet";
@@ -83,7 +84,7 @@ function Av({
 
 function MemberRow({ member }: { member: Member }) {
   const displayName = member.username ? `@${member.username}` : member.user_id.slice(0, 8);
-  const letter = (displayName.replace(/^@/, "")[0] ?? "?").toUpperCase();
+  const letter = getLeadingLetter(displayName);
   const shown = member.personas.slice(0, 5);
   const rest = member.personas.length - shown.length;
 

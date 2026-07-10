@@ -17,16 +17,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import {
     MoreHorizontal,
     ArrowLeft,
@@ -347,31 +338,16 @@ export function WorldTabs({
 
     return (
         <>
-        <AlertDialog
+        <DeleteConfirmDialog
             open={!!confirmDeleteTab}
             onOpenChange={(open) => { if (!open) setConfirmDeleteTab(null); }}
-        >
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>Supprimer l&apos;onglet ?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        L&apos;onglet <strong>{confirmDeleteTab?.label}</strong> et tout son contenu seront supprimés définitivement. Cette action est irréversible.
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogCancel>Annuler</AlertDialogCancel>
-                    <AlertDialogAction
-                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        onClick={() => {
-                            if (confirmDeleteTab) void deleteTab(confirmDeleteTab);
-                            setConfirmDeleteTab(null);
-                        }}
-                    >
-                        Supprimer
-                    </AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
+            title="Supprimer l'onglet ?"
+            description={<>L&apos;onglet <strong>{confirmDeleteTab?.label}</strong> et tout son contenu seront supprimés définitivement. Cette action est irréversible.</>}
+            onConfirm={() => {
+                if (confirmDeleteTab) void deleteTab(confirmDeleteTab);
+                setConfirmDeleteTab(null);
+            }}
+        />
         <Tabs
             value={current}
             onValueChange={selectTab}

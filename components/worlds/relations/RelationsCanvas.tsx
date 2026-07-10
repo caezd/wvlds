@@ -9,6 +9,7 @@ import { Link2, Network, Plus, Settings, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { getInitials } from "@/lib/textFormatting";
 import {
   Dialog,
   DialogContent,
@@ -69,11 +70,6 @@ function cardTL(i: number) {
 function cardCtr(bx: number, by: number, i: number) {
   const p = cardTL(i);
   return { x: bx + p.x + CW / 2, y: by + p.y + CH / 2 };
-}
-
-function initials(name: string) {
-  const p = name.trim().split(/\s+/).filter(Boolean);
-  return ((p[0]?.[0] ?? "") + (p[1]?.[0] ?? "")).toUpperCase() || "?";
 }
 
 // ─── Arrow math ───────────────────────────────────────────────────────────────
@@ -159,7 +155,7 @@ function RelationRow({
         <span className="shrink-0 text-[11px] text-muted-foreground font-mono">{direction}</span>
         {other.avatar_url
           ? <Image src={other.avatar_url} alt={other.name} width={20} height={20} className="h-5 w-5 rounded-full object-cover shrink-0" />
-          : <div className="h-5 w-5 rounded-full bg-muted flex items-center justify-center text-[9px] font-bold shrink-0">{initials(other.name)}</div>
+          : <div className="h-5 w-5 rounded-full bg-muted flex items-center justify-center text-[9px] font-bold shrink-0">{getInitials(other.name)}</div>
         }
         <span className="truncate text-[12px] font-medium flex-1">{other.name}</span>
         {canEdit && (
@@ -969,7 +965,7 @@ export function RelationsCanvas({ worldId, userId, canAdmin, onClose }: Relation
             <div className="flex items-center gap-2.5 border-b border-border-soft px-3 py-2.5">
               {selectedPersona.avatar_url
                 ? <Image src={selectedPersona.avatar_url} alt={selectedPersona.name} width={32} height={32} className="h-8 w-8 rounded-full object-cover shrink-0" />
-                : <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-[11px] font-bold shrink-0">{initials(selectedPersona.name)}</div>
+                : <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-[11px] font-bold shrink-0">{getInitials(selectedPersona.name)}</div>
               }
               <div className="flex-1 min-w-0">
                 <p className="truncate text-sm font-semibold">{selectedPersona.name}</p>
@@ -1165,7 +1161,7 @@ export function RelationsCanvas({ worldId, userId, canAdmin, onClose }: Relation
                                     className="absolute inset-0 flex items-center justify-center text-xl font-bold"
                                     style={{ background: gc ? `${gc}33` : "var(--muted)", color: gc ?? "var(--muted-foreground)" }}
                                   >
-                                    {initials(p.name)}
+                                    {getInitials(p.name)}
                                   </div>
                                 )}
                                 <div
