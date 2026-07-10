@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, memo } from "react";
 import { useTranslations } from "next-intl";
 import type { ReactionSummary } from "@/types/db";
 import { ChatroomMessageBubble } from "./ChatroomMessageBubble";
@@ -83,7 +83,7 @@ function isMyMessage(
 }
 
 
-export default function ChatroomMessage({
+function ChatroomMessage({
   message,
   online,
   invisibleUsers,
@@ -468,3 +468,5 @@ export default function ChatroomMessage({
     </>
   );
 }
+
+export default memo(ChatroomMessage);

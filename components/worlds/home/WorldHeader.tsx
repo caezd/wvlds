@@ -1,11 +1,15 @@
 "use client";
 
 import { useEffect } from "react";
+import dynamic from "next/dynamic";
 
 import { Globe, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { WorldInviteDialog } from "../members/WorldInviteDialog";
 import { useNotifications } from "@/components/providers/NotificationsProvider";
+
+const WorldInviteDialog = dynamic(() =>
+  import("../members/WorldInviteDialog").then((m) => m.WorldInviteDialog),
+);
 
 export function WorldHeader({
   world,

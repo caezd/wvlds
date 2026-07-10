@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { Plus, Users } from "lucide-react";
 import { supabaseThumb } from "@/lib/storage";
 import { cn } from "@/lib/utils";
 import { getLeadingLetter } from "@/lib/textFormatting";
-import { WorldInviteDialog } from "./WorldInviteDialog";
+
+const WorldInviteDialog = dynamic(() => import("./WorldInviteDialog").then((m) => m.WorldInviteDialog));
 import { PersonaCard } from "@/components/personas/PersonaCard";
 import { PersonaCreateSheet } from "@/components/personas/PersonaCreateSheet";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";

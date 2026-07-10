@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import dynamic from "next/dynamic";
 import * as TabsPrimitive from "@radix-ui/react-tabs";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -12,7 +13,8 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { WorldAddTabDialog } from "./WorldAddTabDialog";
+
+const WorldAddTabDialog = dynamic(() => import("./WorldAddTabDialog").then((m) => m.WorldAddTabDialog));
 import { createClient } from "@/lib/supabase/client";
 import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import { cn } from "@/lib/utils";

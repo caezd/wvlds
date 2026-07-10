@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { MessageSquare, Users } from "lucide-react";
@@ -21,7 +22,9 @@ import {
 import { supabaseThumb } from "@/lib/storage";
 import { getLeadingLetter } from "@/lib/textFormatting";
 import { cn } from "@/lib/utils";
-import { WorldInviteDialog } from "@/components/worlds/members/WorldInviteDialog";
+const WorldInviteDialog = dynamic(() =>
+  import("@/components/worlds/members/WorldInviteDialog").then((m) => m.WorldInviteDialog),
+);
 
 const ROLE_LABEL: Record<string, string> = {
   owner: "Propriétaire",

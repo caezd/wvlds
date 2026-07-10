@@ -1,22 +1,26 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 
 import { WorldHeroCard } from "./WorldHeroCard";
-import { WorldWiki } from "../wiki/WorldWiki";
 import { WorldChatComposer } from "../chatrooms/WorldChatComposer";
 import { WorldChatroomsGrid } from "../chatrooms/WorldChatroomsGrid";
-import { WorldTimeline } from "../timeline/WorldTimeline";
-import { WorldSettingsView } from "../settings/WorldSettingsView";
-import { RelationsCanvas } from "../relations/RelationsCanvas";
-import { WorldCatalogue } from "../catalogue/WorldCatalogue";
-import { WorldMap } from "../map/WorldMap";
-import { WorldPeoplePanel } from "../members/WorldPeoplePanel";
 import type { World, WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import type { AsidePersona } from "@/components/personas/WorldPersonaAsideClient";
 import { saveWorldPrefs, toggleWorldFavorite } from "@/app/(protected)/w/actions";
+
+// Onglets secondaires — un seul est actif à la fois, chargés à la demande
+// pour ne pas alourdir le bundle de la vue par défaut du monde.
+const WorldWiki = dynamic(() => import("../wiki/WorldWiki").then((m) => m.WorldWiki));
+const WorldSettingsView = dynamic(() => import("../settings/WorldSettingsView").then((m) => m.WorldSettingsView));
+const RelationsCanvas = dynamic(() => import("../relations/RelationsCanvas").then((m) => m.RelationsCanvas));
+const WorldCatalogue = dynamic(() => import("../catalogue/WorldCatalogue").then((m) => m.WorldCatalogue));
+const WorldMap = dynamic(() => import("../map/WorldMap").then((m) => m.WorldMap));
+const WorldTimeline = dynamic(() => import("../timeline/WorldTimeline").then((m) => m.WorldTimeline));
+const WorldPeoplePanel = dynamic(() => import("../members/WorldPeoplePanel").then((m) => m.WorldPeoplePanel));
 
 type WorldPrefs = { main_expanded: boolean; is_favorite: boolean; wiki_sidebar_width?: number };
 

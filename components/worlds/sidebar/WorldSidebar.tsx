@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { getCachedFeatureFlags, getCurrentUserId } from "@/lib/currentRequest";
+import { getCachedFeatureFlags, getCurrentUserId, getWorldById } from "@/lib/currentRequest";
 import { getTranslations } from "next-intl/server";
 import {
   BookOpenText,
@@ -58,13 +58,9 @@ export default async function WorldSidebar({ worldId }: { worldId: string }) {
     getTranslations("nav"),
   ]);
 
-  const [worldResult, roomsResult, participatedResult, canAdminResult, allWorldsResult, quota, categoriesResult, followedResult] =
+  const [world, roomsResult, participatedResult, canAdminResult, allWorldsResult, quota, categoriesResult, followedResult] =
     await Promise.all([
-      supabase
-        .from("worlds")
-        .select("id, name, icon_url, owner_id, description, banner_url, color, visibility, restrict_inventory, restrict_skills, enable_inventory, enable_skills, enable_faceclaims, timeline_enabled")
-        .eq("id", worldId)
-        .single(),
+      getWorldById(worldId),
       supabase.rpc("list_chatrooms_nav", { p_world_id: worldId }),
       userId
         ? supabase.rpc("list_participated_chatrooms", {
@@ -101,7 +97,6 @@ export default async function WorldSidebar({ worldId }: { worldId: string }) {
         : Promise.resolve({ data: [] }),
     ]);
 
-  const world = worldResult.data;
   if (!world) return null;
 
   const allRooms = (roomsResult.data ?? []) as Room[];
@@ -125,9 +120,9 @@ export default async function WorldSidebar({ worldId }: { worldId: string }) {
     allWorlds.unshift({
       id: world.id,
       name: world.name,
-      icon_url: world.icon_url,
+      icon_url: world.icon_url ?? null,
       owner_id: world.owner_id ?? "",
-      description: world.description,
+      description: world.description ?? null,
       banner_url: world.banner_url,
       color: world.color,
       visibility: world.visibility,

@@ -1,6 +1,6 @@
+import dynamic from "next/dynamic";
 import SidebarRail from "@/components/sidebar/SidebarRail";
 import AppShell from "@/components/sidebar/AppShell";
-import { UsernameRequiredDialog } from "@/components/UsernameRequiredDialog";
 import { FeatureFlagsProvider } from "@/components/providers/FeatureFlagsProvider";
 import { getCurrentUserId, getCurrentProfile, getCachedFeatureFlags } from "@/lib/currentRequest";
 import { NextIntlClientProvider } from "next-intl";
@@ -8,6 +8,12 @@ import { getLocale, getMessages } from "next-intl/server";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { LocaleSync } from "@/components/i18n/LocaleSync";
+
+// Rendu uniquement pour les comptes sans pseudo (rare) — pas de chunk client
+// dédié pour la quasi-totalité des chargements de pages protégées.
+const UsernameRequiredDialog = dynamic(() =>
+  import("@/components/UsernameRequiredDialog").then((m) => m.UsernameRequiredDialog),
+);
 
 export default async function PageLayout({
   children,

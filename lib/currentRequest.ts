@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { getFeatureFlags, type FeatureFlags } from "@/lib/featureFlags";
+import type { World } from "@/types/worlds";
 
 /**
  * Getters mémoïsés pour la durée d'**une seule requête serveur** (`React cache()`).
@@ -67,4 +68,26 @@ export const getCurrentProfile = cache(async (): Promise<CurrentProfile | null> 
 export const getCachedFeatureFlags = cache(async (): Promise<FeatureFlags> => {
   const supabase = await createClient();
   return getFeatureFlags(supabase);
+});
+
+export type WorldWithMembership = World & {
+  owner_id: string;
+  world_members: { user_id: string; role: string }[];
+};
+
+/**
+ * Ligne `worlds` (+ `world_members` pour la résolution de rôle), mémoïsée
+ * par `worldId` pour la durée de la requête — `/w/[id]` et `WorldSidebar`
+ * la chargeaient chacun séparément avec un jeu de colonnes quasi identique.
+ */
+export const getWorldById = cache(async (worldId: string): Promise<WorldWithMembership | null> => {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("worlds")
+    .select(
+      "id, name, description, owner_id, banner_url, icon_url, color, visibility, restrict_inventory, restrict_skills, enable_inventory, enable_skills, enable_faceclaims, timeline_enabled, timeline_config, world_members(user_id, role)",
+    )
+    .eq("id", worldId)
+    .maybeSingle();
+  return (data as WorldWithMembership | null) ?? null;
 });
