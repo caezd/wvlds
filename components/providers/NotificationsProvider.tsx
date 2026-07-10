@@ -188,7 +188,7 @@ export default function NotificationsProvider({ children }: { children: React.Re
             { chat_id: chatId, user_id: uid, last_read_at: lastReadAt ?? new Date().toISOString() },
             { onConflict: "chat_id,user_id" },
         );
-        if (error) console.error("markChatRead error:", error);
+        if (error) console.error("markChatRead error:", error.message, error.details, error.hint, error.code);
     }, [supabase]);
 
     const markWorldSeen = useCallback(async (worldId: string) => {

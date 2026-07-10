@@ -308,12 +308,17 @@ export async function getWorldTags(worldId: string) {
   return { ok: true as const, tags: (data ?? []) as WorldTag[] };
 }
 
+// Lettres (accents inclus) et chiffres uniquement — ni espaces, ni apostrophes,
+// ni ponctuation ou autres symboles (la virgule casserait aussi le filtrage
+// par `tags` dans l'URL de /explore, voir exploreQuery.ts).
+const TAG_FORMAT = /^[\p{L}\p{N}]+$/u;
+
 export async function addWorldTag(worldId: string, rawTag: string) {
   const tag = rawTag.trim().toLowerCase().slice(0, MAX_TAG_LENGTH);
   if (!tag) return { ok: false as const, error: "Tag vide." };
-  // La virgule sert de séparateur dans le paramètre d'URL `tags` de /explore
-  // (voir exploreQuery.ts) — un tag qui en contient casserait le filtrage.
-  if (tag.includes(",")) return { ok: false as const, error: "Un tag ne peut pas contenir de virgule." };
+  if (!TAG_FORMAT.test(tag)) {
+    return { ok: false as const, error: "Un tag ne peut contenir que des lettres et des chiffres." };
+  }
 
   const supabase = await createClient();
 
@@ -332,7 +337,10 @@ export async function addWorldTag(worldId: string, rawTag: string) {
     .select()
     .single();
   if (error) {
-    if (error.code === "23505") return { ok: false as const, error: "Ce tag existe déjà." };
+    // Déjà présent pour ce monde : idempotent plutôt qu'une erreur — l'appelant
+    // récupère simplement le tag existant.
+    if (error.code === "23505") return { ok: true as const, tag };
+    if (error.code === "23514") return { ok: false as const, error: "Format de tag invalide." };
     return { ok: false as const, error: error.message };
   }
   return { ok: true as const, tag };

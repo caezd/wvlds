@@ -261,16 +261,16 @@ function ExploreWorldCard({
   const hasAvatarType = world.allows_real_avatars || world.allows_illustrated_avatars;
 
   return (
-    <div className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card transition-shadow hover:shadow-lg">
-      {/* Hero */}
-      <div className="relative overflow-hidden aspect-[4/3] shrink-0">
+    <div className="group flex h-80 flex-col overflow-hidden rounded-2xl border border-border bg-card transition-[shadow,padding] hover:shadow-lg hover:p-2">
+      {/* Hero plein cadre par défaut, réduit à une vignette au survol pour laisser la place au panneau (carte à hauteur fixe) */}
+      <div className="relative h-80 shrink-0 overflow-hidden transition-[height] duration-300 ease-out group-hover:h-40 group-hover:rounded-xl">
         {world.banner_url ? (
           <Image
             src={world.banner_url}
             alt=""
             fill
             sizes="(min-width: 1024px) 25vw, 50vw"
-            className="object-cover transition-transform duration-300 group-hover:scale-105"
+            className="object-cover transition-transform duration-300"
           />
         ) : (
           <div
@@ -281,8 +281,8 @@ function ExploreWorldCard({
         <div
           className={
             world.banner_url
-              ? "absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent"
-              : "absolute inset-0 bg-gradient-to-tl from-white/5 to-transparent"
+              ? "absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent rounded-xl"
+              : "absolute inset-0 bg-gradient-to-tl from-white/5 to-transparent rounded-xl"
           }
         />
         {/* Icône centrée (sans bannière) */}
@@ -306,46 +306,42 @@ function ExploreWorldCard({
         </div>
       </div>
 
-      {/* Panneau : description + tags + type d'avatars révélés au survol */}
-      <div className="flex flex-col p-3 gap-2">
-        <div
-          className="grid grid-rows-[0fr] transition-[grid-template-rows] duration-300 ease-out group-hover:grid-rows-[1fr]"
-        >
-          <div className="overflow-hidden">
-            <div className="flex flex-col gap-2 pb-2">
-              {world.description ? (
-                <p className="text-xs text-muted-foreground line-clamp-3 leading-relaxed">
-                  {world.description}
-                </p>
-              ) : (
-                <p className="text-xs text-muted-foreground/40 italic">{noDescription}</p>
-              )}
+      {/* Panneau : description + tags + type d'avatars révélés au survol (hauteur de carte fixe, l'espace vient du hero qui rétrécit) */}
+      <div className="flex min-h-0 flex-1 flex-col gap-2 p-3">
+        <div className="min-h-0 flex-1 overflow-hidden opacity-0 transition-opacity delay-100 duration-300 ease-out group-hover:opacity-100">
+          <div className="flex flex-col gap-2">
+            {world.description ? (
+              <p className="text-xs text-muted-foreground line-clamp-3 leading-relaxed">
+                {world.description}
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground/40 italic">{noDescription}</p>
+            )}
 
-              {(tags.length > 0 || hasAvatarType) && (
-                <div className="flex flex-wrap gap-1">
-                  {tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="inline-flex items-center rounded-full border border-border-soft bg-muted/40 px-2 py-0.5 text-[11px] text-muted-foreground"
-                    >
-                      #{tag}
-                    </span>
-                  ))}
-                  {world.allows_real_avatars && (
-                    <span className="inline-flex items-center gap-1 rounded-full border border-border-soft bg-muted/40 px-2 py-0.5 text-[11px] text-muted-foreground">
-                      <Camera className="h-2.5 w-2.5" />
-                      {avatarRealLabel}
-                    </span>
-                  )}
-                  {world.allows_illustrated_avatars && (
-                    <span className="inline-flex items-center gap-1 rounded-full border border-border-soft bg-muted/40 px-2 py-0.5 text-[11px] text-muted-foreground">
-                      <Palette className="h-2.5 w-2.5" />
-                      {avatarIllustratedLabel}
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
+            {(tags.length > 0 || hasAvatarType) && (
+              <div className="flex flex-wrap gap-1">
+                {tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="inline-flex items-center rounded-full border border-border-soft bg-muted/40 px-2 py-0.5 text-[11px] text-muted-foreground"
+                  >
+                    #{tag}
+                  </span>
+                ))}
+                {world.allows_real_avatars && (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-border-soft bg-muted/40 px-2 py-0.5 text-[11px] text-muted-foreground">
+                    <Camera className="h-2.5 w-2.5" />
+                    {avatarRealLabel}
+                  </span>
+                )}
+                {world.allows_illustrated_avatars && (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-border-soft bg-muted/40 px-2 py-0.5 text-[11px] text-muted-foreground">
+                    <Palette className="h-2.5 w-2.5" />
+                    {avatarIllustratedLabel}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
