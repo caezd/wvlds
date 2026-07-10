@@ -3,7 +3,7 @@ import { revalidatePath } from "next/cache";
 import Image from "next/image";
 import { Shield, ShieldOff } from "lucide-react";
 import { getTranslations } from "next-intl/server";
-import { PlanSelect } from "./PlanSelect";
+import { PlanSelect, PLANS } from "./PlanSelect";
 
 async function toggleAdmin(userId: string, isAdmin: boolean) {
   "use server";
@@ -17,7 +17,8 @@ async function toggleAdmin(userId: string, isAdmin: boolean) {
 
 async function setUserPlan(userId: string, formData: FormData) {
   "use server";
-  const plan = String(formData.get("plan") ?? "free");
+  const raw = formData.get("plan");
+  const plan = (PLANS as readonly string[]).includes(raw as string) ? (raw as (typeof PLANS)[number]) : "free";
   const { supabase } = await requireAdmin();
   await supabase.from("profiles").update({ plan }).eq("id", userId);
   revalidatePath("/admin/users");

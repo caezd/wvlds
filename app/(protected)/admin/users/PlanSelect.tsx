@@ -1,6 +1,6 @@
 "use client";
 
-const PLANS = ["free", "subscribed", "lifetime"] as const;
+export const PLANS = ["free", "subscribed", "lifetime"] as const;
 
 export function PlanSelect({
   userId,
