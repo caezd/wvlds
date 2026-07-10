@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-07 ──────────────────────────────────────────────────────────────
   {
     date: "2026-07",
+    tag: "Mondes",
+    text: "Nouvel onglet **« Communauté »** dans les réglages d'un monde : ajoutez jusqu'à 10 **tags** libres pour aider les autres joueurs à le trouver dans l'Explorateur, et indiquez le **type d'avatars accepté** (réels et/ou illustrés). L'Explorateur propose désormais des filtres correspondants, en plus de la recherche par nom/description.",
+  },
+  {
+    date: "2026-07",
     tag: "Correctif",
     text: "Le sélecteur de plan de la page admin **Utilisateurs** ne changeait jamais réellement le plan d'un compte : le menu déroulant ne soumettait rien au changement de valeur. Il applique désormais le nouveau plan immédiatement.",
   },

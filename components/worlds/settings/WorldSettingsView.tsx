@@ -28,12 +28,14 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
+    Camera,
     ChevronDown,
     Globe,
     GlobeLock,
     HelpCircle,
     Loader2,
     Image as ImageIcon,
+    Palette,
     Plus,
     Settings,
     Trash2,
@@ -54,7 +56,16 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { setWorldFeature, setWorldRestriction, setWorldFaceclaims, setWorldTimeline } from "@/app/actions/worldCatalog";
+import {
+    setWorldFeature,
+    setWorldRestriction,
+    setWorldFaceclaims,
+    setWorldTimeline,
+    setWorldAvatarType,
+    getWorldTags,
+    addWorldTag,
+    removeWorldTag,
+} from "@/app/actions/worldCatalog";
 import { WorldPersonaTemplateSection } from "@/components/worlds/settings/WorldPersonaTemplateSection";
 import { WorldCategoryManager } from "@/components/worlds/settings/WorldCategoryManager";
 import type { World, WorldTimelineConfig } from "@/types/worlds";
@@ -147,6 +158,14 @@ export function WorldSettingsView({ world, onUpdated, onClose }: WorldSettingsVi
     const [enableFaceclaims, setEnableFaceclaims] = React.useState(world.enable_faceclaims !== false);
     const [togglingFaceclaims, setTogglingFaceclaims] = React.useState(false);
 
+    const [allowsRealAvatars, setAllowsRealAvatars] = React.useState(world.allows_real_avatars === true);
+    const [allowsIllustratedAvatars, setAllowsIllustratedAvatars] = React.useState(world.allows_illustrated_avatars === true);
+    const [togglingAvatarType, setTogglingAvatarType] = React.useState(false);
+
+    const [tags, setTags] = React.useState<string[]>([]);
+    const [newTag, setNewTag] = React.useState("");
+    const [savingTag, setSavingTag] = React.useState(false);
+
     const defaultConfig: WorldTimelineConfig = {
         year_label: "an",
         era_name: null,
@@ -231,6 +250,39 @@ export function WorldSettingsView({ world, onUpdated, onClose }: WorldSettingsVi
         onUpdated?.({ ...world, enable_faceclaims: enabled } as World);
     }
 
+    async function handleAvatarTypeToggle(
+        field: "allows_real_avatars" | "allows_illustrated_avatars",
+        enabled: boolean,
+    ) {
+        setTogglingAvatarType(true);
+        const res = await setWorldAvatarType(world.id, field, enabled);
+        setTogglingAvatarType(false);
+        if (!res.ok) { toast.error(res.error); return; }
+        if (field === "allows_real_avatars") setAllowsRealAvatars(enabled);
+        else setAllowsIllustratedAvatars(enabled);
+        onUpdated?.({ ...world, [field]: enabled } as World);
+    }
+
+    async function handleAddTag() {
+        const value = newTag.trim();
+        if (!value) return;
+        setSavingTag(true);
+        const res = await addWorldTag(world.id, value);
+        setSavingTag(false);
+        if (!res.ok) { toast.error(res.error); return; }
+        setTags((prev) => (prev.includes(res.tag) ? prev : [...prev, res.tag]));
+        setNewTag("");
+    }
+
+    async function handleRemoveTag(tag: string) {
+        setTags((prev) => prev.filter((t) => t !== tag));
+        const res = await removeWorldTag(world.id, tag);
+        if (!res.ok) {
+            toast.error(res.error);
+            setTags((prev) => [...prev, tag]);
+        }
+    }
+
     async function handleTimelineToggle(enabled: boolean) {
         setTogglingTimeline(true);
         const res = await setWorldTimeline(world.id, enabled, enabled ? timelineConfig : null);
@@ -257,6 +309,8 @@ export function WorldSettingsView({ world, onUpdated, onClose }: WorldSettingsVi
         setRestrictInventory(!!world.restrict_inventory);
         setRestrictSkills(!!world.restrict_skills);
         setEnableFaceclaims(world.enable_faceclaims !== false);
+        setAllowsRealAvatars(world.allows_real_avatars === true);
+        setAllowsIllustratedAvatars(world.allows_illustrated_avatars === true);
         setTimelineEnabled(!!world.timeline_enabled);
         setTimelineConfig(world.timeline_config ?? defaultConfig);
         form.reset({
@@ -268,6 +322,16 @@ export function WorldSettingsView({ world, onUpdated, onClose }: WorldSettingsVi
             visibility: (world.visibility === "public" ? "public" : "private") as "private" | "public",
         });
         // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [world?.id]);
+
+    React.useEffect(() => {
+        let cancelled = false;
+        setTags([]);
+        void getWorldTags(world.id).then((res) => {
+            if (cancelled) return;
+            if (res.ok) setTags(res.tags.map((t) => t.tag));
+        });
+        return () => { cancelled = true; };
     }, [world?.id]);
 
     async function uploadToWorlds(file: File, kind: "icon" | "banner") {
@@ -388,6 +452,9 @@ export function WorldSettingsView({ world, onUpdated, onClose }: WorldSettingsVi
                             <TabsTrigger value="appearance" className="h-7 px-3 text-xs">Apparence</TabsTrigger>
                             <TabsTrigger value="categories" className="h-7 px-3 text-xs">Catégories</TabsTrigger>
                             <TabsTrigger value="features" className="h-7 px-3 text-xs">Fonctions</TabsTrigger>
+                            {public_worlds && (
+                                <TabsTrigger value="community" className="h-7 px-3 text-xs">Communauté</TabsTrigger>
+                            )}
                         </TabsList>
                     </div>
 
@@ -569,60 +636,6 @@ export function WorldSettingsView({ world, onUpdated, onClose }: WorldSettingsVi
                                         </FormItem>
                                     )}
                                 />
-
-                                {/* -- Visibilité ----------------------------- */}
-                                {public_worlds && (
-                                    <FormField
-                                        control={form.control}
-                                        name="visibility"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>
-                                                    <LabelWithHelp help="Un monde public est accessible à tous les membres de la plateforme">
-                                                        Visibilité
-                                                    </LabelWithHelp>
-                                                </FormLabel>
-                                                <FormControl>
-                                                    <div className="flex gap-2">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => {
-                                                                field.onChange("private");
-                                                                void persistField("visibility", "private");
-                                                            }}
-                                                            className={cn(
-                                                                "flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition-colors",
-                                                                field.value === "private"
-                                                                    ? "border-primary bg-primary/10 text-primary"
-                                                                    : "border-border bg-transparent text-muted-foreground hover:border-muted-foreground/40 hover:text-foreground"
-                                                            )}
-                                                        >
-                                                            <GlobeLock className="h-4 w-4 shrink-0" />
-                                                            Privé
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => {
-                                                                field.onChange("public");
-                                                                void persistField("visibility", "public");
-                                                            }}
-                                                            className={cn(
-                                                                "flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition-colors",
-                                                                field.value === "public"
-                                                                    ? "border-primary bg-primary/10 text-primary"
-                                                                    : "border-border bg-transparent text-muted-foreground hover:border-muted-foreground/40 hover:text-foreground"
-                                                            )}
-                                                        >
-                                                            <Globe className="h-4 w-4 shrink-0" />
-                                                            Public
-                                                        </button>
-                                                    </div>
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                )}
 
                                 {/* -- Bannière -------------------------------- */}
                                 <FormField
@@ -937,6 +950,167 @@ export function WorldSettingsView({ world, onUpdated, onClose }: WorldSettingsVi
                                 )}
                             </div>
                         </TabsContent>
+
+                        {/* ── Communauté ───────────────────────────────── */}
+                        {public_worlds && (
+                            <TabsContent value="community" className="mt-0">
+                                <div className="mx-auto max-w-xl space-y-6">
+                                    {/* -- Visibilité ----------------------------- */}
+                                    <FormField
+                                        control={form.control}
+                                        name="visibility"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>
+                                                    <LabelWithHelp help="Un monde public est accessible à tous les membres de la plateforme">
+                                                        Visibilité
+                                                    </LabelWithHelp>
+                                                </FormLabel>
+                                                <FormControl>
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                field.onChange("private");
+                                                                void persistField("visibility", "private");
+                                                            }}
+                                                            className={cn(
+                                                                "flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition-colors",
+                                                                field.value === "private"
+                                                                    ? "border-primary bg-primary/10 text-primary"
+                                                                    : "border-border bg-transparent text-muted-foreground hover:border-muted-foreground/40 hover:text-foreground"
+                                                            )}
+                                                        >
+                                                            <GlobeLock className="h-4 w-4 shrink-0" />
+                                                            Privé
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                field.onChange("public");
+                                                                void persistField("visibility", "public");
+                                                            }}
+                                                            className={cn(
+                                                                "flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition-colors",
+                                                                field.value === "public"
+                                                                    ? "border-primary bg-primary/10 text-primary"
+                                                                    : "border-border bg-transparent text-muted-foreground hover:border-muted-foreground/40 hover:text-foreground"
+                                                            )}
+                                                        >
+                                                            <Globe className="h-4 w-4 shrink-0" />
+                                                            Public
+                                                        </button>
+                                                    </div>
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+
+                                    {/* -- Tags -------------------------------- */}
+                                    <div className="space-y-3">
+                                        <div className="space-y-0.5">
+                                            <p className="text-sm font-medium">Tags</p>
+                                            <p className="text-xs text-muted-foreground leading-snug">
+                                                Aident les autres joueurs à trouver ce monde dans l&apos;Explorateur.
+                                            </p>
+                                        </div>
+                                        {tags.length > 0 && (
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {tags.map((tag) => (
+                                                    <span
+                                                        key={tag}
+                                                        className="inline-flex items-center gap-1 rounded-full border border-border-soft bg-muted/40 px-2.5 py-1 text-xs"
+                                                    >
+                                                        {tag}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => void handleRemoveTag(tag)}
+                                                            className="text-muted-foreground hover:text-destructive transition-colors"
+                                                            aria-label={`Retirer le tag ${tag}`}
+                                                        >
+                                                            <X className="h-3 w-3" />
+                                                        </button>
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
+                                        {tags.length < 10 && (
+                                            <div className="flex gap-2">
+                                                <Input
+                                                    value={newTag}
+                                                    placeholder="Ajouter un tag…"
+                                                    className="h-8 text-sm"
+                                                    maxLength={24}
+                                                    disabled={savingTag}
+                                                    onChange={(e) => setNewTag(e.target.value)}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === "Enter") {
+                                                            e.preventDefault();
+                                                            void handleAddTag();
+                                                        }
+                                                    }}
+                                                />
+                                                <Button
+                                                    type="button"
+                                                    variant="secondary"
+                                                    size="sm"
+                                                    disabled={!newTag.trim() || savingTag}
+                                                    onClick={() => void handleAddTag()}
+                                                >
+                                                    <Plus className="h-3.5 w-3.5" />
+                                                </Button>
+                                            </div>
+                                        )}
+                                        {tags.length >= 10 && (
+                                            <p className="text-[11px] text-muted-foreground">Maximum 10 tags.</p>
+                                        )}
+                                    </div>
+
+                                    {/* -- Type d'avatars ----------------------- */}
+                                    <div className="space-y-3">
+                                        <div className="space-y-0.5">
+                                            <p className="text-sm font-medium">Type d&apos;avatars accepté</p>
+                                            <p className="text-xs text-muted-foreground leading-snug">
+                                                Indique aux visiteurs le style d&apos;avatars utilisé dans ce monde.
+                                            </p>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button
+                                                type="button"
+                                                disabled={togglingAvatarType}
+                                                onClick={() => void handleAvatarTypeToggle("allows_real_avatars", !allowsRealAvatars)}
+                                                aria-pressed={allowsRealAvatars}
+                                                className={cn(
+                                                    "flex flex-1 flex-col items-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition-colors disabled:opacity-60",
+                                                    allowsRealAvatars
+                                                        ? "border-primary bg-primary/10 text-primary"
+                                                        : "border-border bg-transparent text-muted-foreground hover:border-muted-foreground/40 hover:text-foreground"
+                                                )}
+                                            >
+                                                <Camera className="h-4 w-4 shrink-0" />
+                                                Avatars réels
+                                            </button>
+                                            <button
+                                                type="button"
+                                                disabled={togglingAvatarType}
+                                                onClick={() => void handleAvatarTypeToggle("allows_illustrated_avatars", !allowsIllustratedAvatars)}
+                                                aria-pressed={allowsIllustratedAvatars}
+                                                className={cn(
+                                                    "flex flex-1 flex-col items-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition-colors disabled:opacity-60",
+                                                    allowsIllustratedAvatars
+                                                        ? "border-primary bg-primary/10 text-primary"
+                                                        : "border-border bg-transparent text-muted-foreground hover:border-muted-foreground/40 hover:text-foreground"
+                                                )}
+                                            >
+                                                <Palette className="h-4 w-4 shrink-0" />
+                                                Avatars illustrés
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </TabsContent>
+                        )}
                     </div>
                 </Tabs>
             </Form>

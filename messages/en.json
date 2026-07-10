@@ -244,7 +244,14 @@
     "enter": "Enter",
     "noDescription": "No description",
     "join": "Join",
-    "joining": "…"
+    "joining": "…",
+    "avatarReal": "Real avatars",
+    "avatarIllustrated": "Illustrated avatars",
+    "resetFilters": "Reset filters",
+    "tagsLabel": "Tags",
+    "searchTagsPlaceholder": "Search a tag…",
+    "noTags": "No tag found.",
+    "latestWorlds": "Latest worlds"
   },
   "home": {
     "title": "Worlds",

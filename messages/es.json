@@ -244,7 +244,14 @@
     "enter": "Entrar",
     "noDescription": "Sin descripción",
     "join": "Unirse",
-    "joining": "…"
+    "joining": "…",
+    "avatarReal": "Avatares reales",
+    "avatarIllustrated": "Avatares ilustrados",
+    "resetFilters": "Restablecer filtros",
+    "tagsLabel": "Etiquetas",
+    "searchTagsPlaceholder": "Buscar una etiqueta…",
+    "noTags": "No se encontró ninguna etiqueta.",
+    "latestWorlds": "Últimos mundos creados"
   },
   "home": {
     "title": "Mundos",

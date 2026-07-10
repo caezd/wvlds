@@ -3,12 +3,15 @@ import { getCurrentUserId, getCachedFeatureFlags } from "@/lib/currentRequest";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { Globe } from "lucide-react";
+import { Globe, Camera, Palette } from "lucide-react";
 import { ExploreSearch } from "./ExploreSearch";
+import { ExploreFilters } from "./ExploreFilters";
 import { JoinWorldButton } from "./JoinWorldButton";
 import { getTranslations } from "next-intl/server";
+import { buildExploreParams } from "./exploreQuery";
 
 const PAGE_SIZE = 16;
+const NO_MATCH_SENTINEL = "00000000-0000-0000-0000-000000000000";
 
 type PublicWorld = {
   id: string;
@@ -17,12 +20,21 @@ type PublicWorld = {
   banner_url: string | null;
   icon_url: string | null;
   color: string | null;
+  allows_real_avatars: boolean | null;
+  allows_illustrated_avatars: boolean | null;
+};
+
+type LatestWorld = {
+  id: string;
+  name: string;
+  icon_url: string | null;
+  color: string | null;
 };
 
 export default async function ExplorePage({
   searchParams,
 }: {
-  searchParams?: Promise<{ q?: string; page?: string }>;
+  searchParams?: Promise<{ q?: string; page?: string; tags?: string; avatar?: string }>;
 }) {
   const supabase = await createClient();
   const [flags, userId] = await Promise.all([
@@ -38,37 +50,86 @@ export default async function ExplorePage({
   const from = page * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;
 
+  const selectedTags = (resolved?.tags ?? "")
+    .split(",")
+    .map((t) => t.trim().toLowerCase())
+    .filter(Boolean);
+  const selectedAvatarTypes = (resolved?.avatar ?? "")
+    .split(",")
+    .filter((v): v is "real" | "illustrated" => v === "real" || v === "illustrated");
+
+  // L'Explorateur est un annuaire : les mondes déjà rejoints n'y apparaissent
+  // plus (ils restent accessibles depuis "Mes mondes").
+  let joinedWorldIds: string[] = [];
+  if (userId) {
+    const { data: memberships } = await supabase
+      .from("world_members")
+      .select("world_id")
+      .eq("user_id", userId);
+    joinedWorldIds = (memberships ?? []).map((m) => m.world_id as string);
+  }
+
   let query = supabase
     .from("worlds")
-    .select("id, name, description, banner_url, icon_url, color", { count: "exact" })
+    .select(
+      "id, name, description, banner_url, icon_url, color, allows_real_avatars, allows_illustrated_avatars",
+      { count: "exact" },
+    )
     .eq("visibility", "public")
     .is("deleted_at", null)
     .eq("is_archived", false);
+
+  if (joinedWorldIds.length > 0) {
+    query = query.not("id", "in", `(${joinedWorldIds.join(",")})`);
+  }
 
   if (q) {
     query = query.or(`name.ilike.%${q}%,description.ilike.%${q}%`);
   }
 
-  const { data: worlds, count } = await query
-    .order("created_at", { ascending: false })
-    .range(from, to);
+  if (selectedAvatarTypes.length === 1) {
+    query = query.eq(
+      selectedAvatarTypes[0] === "real" ? "allows_real_avatars" : "allows_illustrated_avatars",
+      true,
+    );
+  } else if (selectedAvatarTypes.length === 2) {
+    query = query.or("allows_real_avatars.eq.true,allows_illustrated_avatars.eq.true");
+  }
+
+  if (selectedTags.length > 0) {
+    const { data: tagRows } = await supabase
+      .from("world_tags")
+      .select("world_id")
+      .in("tag", selectedTags);
+    const matchingIds = Array.from(new Set((tagRows ?? []).map((r) => r.world_id as string)));
+    query = query.in("id", matchingIds.length > 0 ? matchingIds : [NO_MATCH_SENTINEL]);
+  }
+
+  // Vitrine "derniers mondes créés" : fixe, indépendante des filtres/recherche
+  // en cours, pour toujours pouvoir repérer les nouveautés de l'annuaire.
+  let latestQuery = supabase
+    .from("worlds")
+    .select("id, name, icon_url, color")
+    .eq("visibility", "public")
+    .is("deleted_at", null)
+    .eq("is_archived", false);
+  if (joinedWorldIds.length > 0) {
+    latestQuery = latestQuery.not("id", "in", `(${joinedWorldIds.join(",")})`);
+  }
+
+  const [{ data: worlds, count }, { data: tagOptions }, { data: latest }] = await Promise.all([
+    query.order("created_at", { ascending: false }).range(from, to),
+    supabase.rpc("get_public_world_tags"),
+    latestQuery.order("created_at", { ascending: false }).limit(3),
+  ]);
 
   const publicWorlds = (worlds ?? []) as PublicWorld[];
-
-  // Déterminer quels mondes l'utilisateur a déjà rejoints
-  let memberSet = new Set<string>();
-  if (userId && publicWorlds.length > 0) {
-    const worldIds = publicWorlds.map((w) => w.id);
-    const { data: memberships } = await supabase
-      .from("world_members")
-      .select("world_id")
-      .in("world_id", worldIds)
-      .eq("user_id", userId);
-    memberSet = new Set((memberships ?? []).map((m) => m.world_id));
-  }
+  const availableTags = ((tagOptions ?? []) as { tag: string; world_count: number }[]).map((t) => t.tag);
+  const latestWorlds = (latest ?? []) as LatestWorld[];
 
   const total = count ?? 0;
   const totalPages = Math.ceil(total / PAGE_SIZE);
+  const hasFilters = !!q || selectedTags.length > 0 || selectedAvatarTypes.length > 0;
   const t = await getTranslations("explore");
 
   return (
@@ -81,66 +142,84 @@ export default async function ExplorePage({
             {q && <span className="ml-1">· « {q} »</span>}
           </p>
         </div>
-        <ExploreSearch defaultValue={q} />
+        <ExploreSearch defaultValue={q} tags={selectedTags} avatarTypes={selectedAvatarTypes} />
       </header>
 
-      {publicWorlds.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center gap-3 rounded-2xl border border-dashed border-border">
-          <Globe className="h-8 w-8 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">
-            {q ? t("noResults") : t("noWorlds")}
-          </p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {publicWorlds.map((world) => {
-            const isMember = memberSet.has(world.id);
-            return (
-              <ExploreWorldCard
-                key={world.id}
-                world={world}
-                isMember={isMember}
-                noDescription={t("noDescription")}
-              />
-            );
-          })}
-        </div>
-      )}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
+        {/* Contenu principal (3/4) */}
+        <div className="space-y-6 lg:col-span-3">
+          <ExploreFilters
+            q={q}
+            availableTags={availableTags}
+            selectedTags={selectedTags}
+            selectedAvatarTypes={selectedAvatarTypes}
+          />
 
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-3 pt-2">
-          {page > 0 && (
-            <Link
-              href={`/explore?q=${encodeURIComponent(q)}&page=${page - 1}`}
-              className="rounded-xl border border-border px-4 py-1.5 text-sm hover:bg-muted/50 transition-colors"
-            >
-              {t("previous")}
-            </Link>
+          {publicWorlds.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-center gap-3 rounded-2xl border border-dashed border-border">
+              <Globe className="h-8 w-8 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">
+                {hasFilters ? t("noResults") : t("noWorlds")}
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {publicWorlds.map((world) => (
+                <ExploreWorldCard key={world.id} world={world} noDescription={t("noDescription")} />
+              ))}
+            </div>
           )}
-          <span className="text-sm text-muted-foreground tabular-nums">
-            {page + 1} / {totalPages}
-          </span>
-          {page < totalPages - 1 && (
-            <Link
-              href={`/explore?q=${encodeURIComponent(q)}&page=${page + 1}`}
-              className="rounded-xl border border-border px-4 py-1.5 text-sm hover:bg-muted/50 transition-colors"
-            >
-              {t("next")}
-            </Link>
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-3 pt-2">
+              {page > 0 && (
+                <Link
+                  href={`/explore?${buildExploreParams({ q, tags: selectedTags, avatarTypes: selectedAvatarTypes, page: page - 1 })}`}
+                  className="rounded-xl border border-border px-4 py-1.5 text-sm hover:bg-muted/50 transition-colors"
+                >
+                  {t("previous")}
+                </Link>
+              )}
+              <span className="text-sm text-muted-foreground tabular-nums">
+                {page + 1} / {totalPages}
+              </span>
+              {page < totalPages - 1 && (
+                <Link
+                  href={`/explore?${buildExploreParams({ q, tags: selectedTags, avatarTypes: selectedAvatarTypes, page: page + 1 })}`}
+                  className="rounded-xl border border-border px-4 py-1.5 text-sm hover:bg-muted/50 transition-colors"
+                >
+                  {t("next")}
+                </Link>
+              )}
+            </div>
           )}
         </div>
-      )}
+
+        {/* Derniers mondes créés (1/4) */}
+        <aside className="space-y-3 lg:col-span-1">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            {t("latestWorlds")}
+          </p>
+          {latestWorlds.length === 0 ? (
+            <p className="text-xs italic text-muted-foreground/60">{t("noWorlds")}</p>
+          ) : (
+            <div className="space-y-2">
+              {latestWorlds.map((world) => (
+                <LatestWorldRow key={world.id} world={world} />
+              ))}
+            </div>
+          )}
+        </aside>
+      </div>
     </div>
   );
 }
 
 function ExploreWorldCard({
   world,
-  isMember,
   noDescription,
 }: {
   world: PublicWorld;
-  isMember: boolean;
   noDescription: string;
 }) {
   return (
@@ -187,6 +266,21 @@ function ExploreWorldCard({
             {world.name}
           </p>
         </div>
+        {/* Type d'avatars, uniquement si le monde en a explicitement déclaré au moins un */}
+        {(world.allows_real_avatars || world.allows_illustrated_avatars) && (
+          <div className="absolute top-2 right-2 flex gap-1">
+            {world.allows_real_avatars && (
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm" title="Avatars réels">
+                <Camera className="h-3 w-3" />
+              </span>
+            )}
+            {world.allows_illustrated_avatars && (
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm" title="Avatars illustrés">
+                <Palette className="h-3 w-3" />
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Description + CTA */}
@@ -199,17 +293,27 @@ function ExploreWorldCard({
           <p className="text-xs text-muted-foreground/40 italic">{noDescription}</p>
         )}
 
-        {isMember ? (
-          <Link
-            href={`/w/${world.id}`}
-            className="w-full rounded-xl border border-border py-1.5 text-center text-xs font-medium text-foreground transition-colors hover:bg-muted/50"
-          >
-            Entrer
-          </Link>
-        ) : (
-          <JoinWorldButton worldId={world.id} />
-        )}
+        <JoinWorldButton worldId={world.id} />
       </div>
+    </div>
+  );
+}
+
+function LatestWorldRow({ world }: { world: LatestWorld }) {
+  return (
+    <div className="flex items-center gap-2.5 rounded-xl border border-border bg-card p-2.5">
+      <span
+        className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg"
+        style={{ backgroundColor: !world.icon_url ? (world.color ?? "hsl(var(--card))") : undefined }}
+      >
+        {world.icon_url ? (
+          <Image src={world.icon_url} alt="" width={36} height={36} className="h-full w-full object-cover" />
+        ) : (
+          <Globe className="h-4 w-4 text-white/70" />
+        )}
+      </span>
+      <p className="min-w-0 flex-1 truncate text-sm font-medium">{world.name}</p>
+      <JoinWorldButton worldId={world.id} compact />
     </div>
   );
 }
