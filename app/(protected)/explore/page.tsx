@@ -135,6 +135,21 @@ export default async function ExplorePage({
   const availableTags = ((tagOptions ?? []) as { tag: string; world_count: number }[]).map((t) => t.tag);
   const latestWorlds = (latest ?? []) as LatestWorld[];
 
+  // Tags affichés sur chaque carte (aperçu au survol) — jusqu'à 5 par monde.
+  const cardTagsByWorld = new Map<string, string[]>();
+  if (publicWorlds.length > 0) {
+    const { data: cardTagRows } = await supabase
+      .from("world_tags")
+      .select("world_id, tag")
+      .in("world_id", publicWorlds.map((w) => w.id))
+      .order("created_at", { ascending: true });
+    for (const row of cardTagRows ?? []) {
+      const list = cardTagsByWorld.get(row.world_id) ?? [];
+      if (list.length < 5) list.push(row.tag);
+      cardTagsByWorld.set(row.world_id, list);
+    }
+  }
+
   const total = count ?? 0;
   const totalPages = Math.ceil(total / PAGE_SIZE);
   const hasFilters = !!q || selectedTags.length > 0 || selectedAvatarTypes.length > 0;
@@ -176,6 +191,7 @@ export default async function ExplorePage({
                 <ExploreWorldCard
                   key={world.id}
                   world={world}
+                  tags={cardTagsByWorld.get(world.id) ?? []}
                   noDescription={t("noDescription")}
                   avatarRealLabel={t("avatarReal")}
                   avatarIllustratedLabel={t("avatarIllustrated")}
@@ -231,19 +247,23 @@ export default async function ExplorePage({
 
 function ExploreWorldCard({
   world,
+  tags,
   noDescription,
   avatarRealLabel,
   avatarIllustratedLabel,
 }: {
   world: PublicWorld;
+  tags: string[];
   noDescription: string;
   avatarRealLabel: string;
   avatarIllustratedLabel: string;
 }) {
+  const hasAvatarType = world.allows_real_avatars || world.allows_illustrated_avatars;
+
   return (
-    <div className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card">
+    <div className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card transition-shadow hover:shadow-lg">
       {/* Hero */}
-      <div className="relative overflow-hidden aspect-[4/3]">
+      <div className="relative overflow-hidden aspect-[4/3] shrink-0">
         {world.banner_url ? (
           <Image
             src={world.banner_url}
@@ -284,32 +304,50 @@ function ExploreWorldCard({
             {world.name}
           </p>
         </div>
-        {/* Type d'avatars, uniquement si le monde en a explicitement déclaré au moins un */}
-        {(world.allows_real_avatars || world.allows_illustrated_avatars) && (
-          <div className="absolute top-2 right-2 flex gap-1">
-            {world.allows_real_avatars && (
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm" title={avatarRealLabel}>
-                <Camera className="h-3 w-3" />
-              </span>
-            )}
-            {world.allows_illustrated_avatars && (
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm" title={avatarIllustratedLabel}>
-                <Palette className="h-3 w-3" />
-              </span>
-            )}
-          </div>
-        )}
       </div>
 
-      {/* Description + CTA */}
-      <div className="flex flex-col gap-3 p-3">
-        {world.description ? (
-          <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-            {world.description}
-          </p>
-        ) : (
-          <p className="text-xs text-muted-foreground/40 italic">{noDescription}</p>
-        )}
+      {/* Panneau : description + tags + type d'avatars révélés au survol */}
+      <div className="flex flex-col p-3 gap-2">
+        <div
+          className="grid grid-rows-[0fr] transition-[grid-template-rows] duration-300 ease-out group-hover:grid-rows-[1fr]"
+        >
+          <div className="overflow-hidden">
+            <div className="flex flex-col gap-2 pb-2">
+              {world.description ? (
+                <p className="text-xs text-muted-foreground line-clamp-3 leading-relaxed">
+                  {world.description}
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground/40 italic">{noDescription}</p>
+              )}
+
+              {(tags.length > 0 || hasAvatarType) && (
+                <div className="flex flex-wrap gap-1">
+                  {tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="inline-flex items-center rounded-full border border-border-soft bg-muted/40 px-2 py-0.5 text-[11px] text-muted-foreground"
+                    >
+                      #{tag}
+                    </span>
+                  ))}
+                  {world.allows_real_avatars && (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-border-soft bg-muted/40 px-2 py-0.5 text-[11px] text-muted-foreground">
+                      <Camera className="h-2.5 w-2.5" />
+                      {avatarRealLabel}
+                    </span>
+                  )}
+                  {world.allows_illustrated_avatars && (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-border-soft bg-muted/40 px-2 py-0.5 text-[11px] text-muted-foreground">
+                      <Palette className="h-2.5 w-2.5" />
+                      {avatarIllustratedLabel}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
 
         <JoinWorldButton worldId={world.id} />
       </div>
