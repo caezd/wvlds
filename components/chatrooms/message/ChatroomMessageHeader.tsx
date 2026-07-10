@@ -12,8 +12,8 @@ import DateDisplay from "@/components/date-display";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import { PersonaProfileSheetTrigger } from "@/components/personas/PersonaProfileSheetTrigger";
 import { UserProfileSheetTrigger } from "@/components/profile/UserProfileSheetTrigger";
-import { ChatReactionPicker } from "./ChatReactionPicker";
-import { ReactionEmoji } from "./ReactionEmoji";
+import { ChatReactionPicker } from "../reactions/ChatReactionPicker";
+import { ReactionEmoji } from "../reactions/ReactionEmoji";
 import { MessageActionsDropdown } from "./MessageActionsDropdown";
 import { cn } from "@/lib/utils";
 

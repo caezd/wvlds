@@ -13,19 +13,19 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
-import ChatroomSettingsSheet from "@/components/chatrooms/ChatroomSettingsSheet";
-import ChatroomStatsSheet from "@/components/chatrooms/ChatroomStatsSheet";
+import ChatroomSettingsSheet from "@/components/chatrooms/settings/ChatroomSettingsSheet";
+import ChatroomStatsSheet from "@/components/chatrooms/settings/ChatroomStatsSheet";
 import { ScrollAreaWithJumpToBottom } from "@/components/ScrollAreaWithJumpToBottom";
-import { ChatroomComposer } from "@/components/chatrooms/ChatroomComposer";
-import ChatroomMessage from "@/components/chatrooms/ChatroomMessage";
+import { ChatroomComposer } from "@/components/chatrooms/composer/ChatroomComposer";
+import ChatroomMessage from "@/components/chatrooms/message/ChatroomMessage";
 import { GameBlockSurface } from "@/components/chatrooms/blocks/GameBlockShell";
 import { groupMessagesForRender, computeSmsRunFlags, aggregateContentWarnings, type SmsRunFlags } from "@/lib/chatroomMessageGrouping";
 import { applyRemoteVoteChange } from "@/lib/choiceVotes";
-import { ContentWarningBanner } from "@/components/chatrooms/ContentWarningBanner";
-import { PersonaProfileSheet } from "@/components/chatrooms/PersonaProfileSheet";
-import { ChatroomsNavDropdown } from "@/components/chatrooms/ChatroomsNavDropdown";
-import { WorldMembershipGuard } from "@/components/worlds/WorldMembershipGuard";
-import { type ChatroomNavItem } from "@/components/worlds/WorldChatroomsAside";
+import { ContentWarningBanner } from "@/components/chatrooms/composer/ContentWarningBanner";
+import { PersonaProfileSheet } from "@/components/chatrooms/persona/PersonaProfileSheet";
+import { ChatroomsNavDropdown } from "@/components/chatrooms/settings/ChatroomsNavDropdown";
+import { WorldMembershipGuard } from "@/components/worlds/members/WorldMembershipGuard";
+import { type ChatroomNavItem } from "@/components/worlds/chatrooms/WorldChatroomsAside";
 
 import {
   TABLE,
@@ -43,10 +43,10 @@ import { useNotifications } from "@/components/providers/NotificationsProvider";
 import { useGlobalPresence } from "@/components/providers/PresenceProvider";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import { useChatPins } from "@/hooks/useChatPins";
-import { PinBar } from "@/components/chatrooms/PinBar";
+import { PinBar } from "@/components/chatrooms/message/PinBar";
 
 export type { Persona, ChatMessageWithPersona, ReactionSummary } from "@/types/db";
-export type { ChatroomNavItem } from "@/components/worlds/WorldChatroomsAside";
+export type { ChatroomNavItem } from "@/components/worlds/chatrooms/WorldChatroomsAside";
 
 function ChatroomHeader({
   chat,

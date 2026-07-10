@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { TABLE } from "@/lib/constants";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
-import { ChatroomComposer } from "@/components/chatrooms/ChatroomComposer";
+import { ChatroomComposer } from "@/components/chatrooms/composer/ChatroomComposer";
 import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
 import {
   Dialog,
@@ -37,7 +37,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { CategoryAvatar } from "@/components/worlds/CategoryAvatar";
+import { CategoryAvatar } from "@/components/worlds/catalogue/CategoryAvatar";
 
 type MapPinOption = { id: string; title: string; color: string };
 type CategoryOption = { id: string; title: string; banner_url: string | null; icon_url: string | null };

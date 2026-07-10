@@ -7,7 +7,7 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { ChatReactionPicker } from "./ChatReactionPicker";
+import { ChatReactionPicker } from "../reactions/ChatReactionPicker";
 
 /** Drawers mobiles (long-press) : options du message, puis picker d'emoji. */
 export function ChatroomMessageMobileDrawers({

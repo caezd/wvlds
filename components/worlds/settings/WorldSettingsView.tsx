@@ -55,8 +55,8 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { setWorldFeature, setWorldRestriction, setWorldFaceclaims, setWorldTimeline } from "@/app/actions/worldCatalog";
-import { WorldPersonaTemplateSection } from "@/components/worlds/WorldPersonaTemplateSection";
-import { WorldCategoryManager } from "@/components/worlds/WorldCategoryManager";
+import { WorldPersonaTemplateSection } from "@/components/worlds/settings/WorldPersonaTemplateSection";
+import { WorldCategoryManager } from "@/components/worlds/settings/WorldCategoryManager";
 import type { World, WorldTimelineConfig } from "@/types/worlds";
 
 /**

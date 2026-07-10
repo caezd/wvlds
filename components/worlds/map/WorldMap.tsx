@@ -24,7 +24,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
-import { ParagraphBlockEditor } from "@/components/chatrooms/ParagraphBlockEditor";
+import { ParagraphBlockEditor } from "@/components/chatrooms/composer/ParagraphBlockEditor";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { toWebP } from "@/lib/imageUtils";

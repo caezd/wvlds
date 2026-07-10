@@ -12,7 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Star, ChevronRight, ArrowLeft, MessagesSquare, Hash } from "lucide-react";
 import { useGlobalPresence } from "@/components/providers/PresenceProvider";
 import { useTranslations } from "next-intl";
-import { CategoryAvatar } from "@/components/worlds/CategoryAvatar";
+import { CategoryAvatar } from "@/components/worlds/catalogue/CategoryAvatar";
 
 type Room = {
   id: string;

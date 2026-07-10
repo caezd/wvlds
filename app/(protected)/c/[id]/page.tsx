@@ -6,7 +6,7 @@ import { TABLE, CHAT_MESSAGES_PAGE_SIZE } from "@/lib/constants";
 import { decryptMessage } from "@/lib/crypto";
 import { aggregateChoiceVotes } from "@/lib/choiceVotes";
 import type { ChatMessageWithPersona, Persona, ChoiceVoteSummary } from "@/types/db";
-import WorldSidebar from "@/components/worlds/WorldSidebar";
+import WorldSidebar from "@/components/worlds/sidebar/WorldSidebar";
 import { getTranslations } from "next-intl/server";
 import { canMemberPost } from "@/lib/worldPermissions";
 

@@ -4,7 +4,7 @@ import { useEffect } from "react";
 
 import { Globe, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { WorldInviteDialog } from "./WorldInviteDialog";
+import { WorldInviteDialog } from "../members/WorldInviteDialog";
 import { useNotifications } from "@/components/providers/NotificationsProvider";
 
 export function WorldHeader({

@@ -36,7 +36,7 @@ vi.mock("@/lib/crypto", () => ({
 
 // ParagraphBlockEditor remplacé par un <textarea> contrôlé pour éviter les
 // manipulations DOM contenteditable qui ne fonctionnent pas dans jsdom.
-vi.mock("@/components/chatrooms/ParagraphBlockEditor", () => ({
+vi.mock("@/components/chatrooms/composer/ParagraphBlockEditor", () => ({
   ParagraphBlockEditor: ({
     value,
     onChange,
@@ -58,7 +58,7 @@ vi.mock("@/components/personas/PersonaPickerDialog", () => ({
   PersonaPickerDialog: () => null,
 }));
 
-import { ChatroomComposer } from "@/components/chatrooms/ChatroomComposer";
+import { ChatroomComposer } from "@/components/chatrooms/composer/ChatroomComposer";
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 

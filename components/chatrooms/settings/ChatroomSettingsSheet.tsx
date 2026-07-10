@@ -43,7 +43,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Switch } from "@/components/ui/switch";
 import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
-import { CategoryAvatar } from "@/components/worlds/CategoryAvatar";
+import { CategoryAvatar } from "@/components/worlds/catalogue/CategoryAvatar";
 
 type MapPinOption = { id: string; title: string; color: string };
 type CategoryOption = { id: string; title: string; banner_url: string | null; icon_url: string | null };

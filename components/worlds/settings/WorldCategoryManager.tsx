@@ -25,7 +25,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ImagePickerCropField } from "@/components/ui/image-crop-picker";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
-import { CategoryAvatar } from "@/components/worlds/CategoryAvatar";
+import { CategoryAvatar } from "@/components/worlds/catalogue/CategoryAvatar";
 import {
   addChatroomCategory,
   updateChatroomCategory,

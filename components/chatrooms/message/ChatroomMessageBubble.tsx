@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { MarkdownContent, proseClassName } from "@/components/MarkdownRenderer";
 import { parseDialogue } from "@/lib/dialogue-bubbles";
-import { ImageLightbox } from "./ImageLightbox";
+import { ImageLightbox } from "../ImageLightbox";
 import type { ChatMessageMeta, ChatMediaItem } from "@/types/db";
 import { cn, isSafeUrl } from "@/lib/utils";
 import { useCurrentUser } from "@/components/providers/CurrentUserProvider";

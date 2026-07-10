@@ -7,13 +7,13 @@ import { ChatroomMessageBubble } from "./ChatroomMessageBubble";
 import { ChatroomMessageSms } from "./ChatroomMessageSms";
 import { ChatroomMessageHeader } from "./ChatroomMessageHeader";
 import { ChatroomMessageMobileDrawers } from "./ChatroomMessageMobileDrawers";
-import { useChatroomMessageEdit } from "./useChatroomMessageEdit";
-import { ContentWarningChipInput } from "./ContentWarningChipInput";
-import { ContentWarningBanner } from "./ContentWarningBanner";
+import { useChatroomMessageEdit } from "../composer/useChatroomMessageEdit";
+import { ContentWarningChipInput } from "../composer/ContentWarningChipInput";
+import { ContentWarningBanner } from "../composer/ContentWarningBanner";
 import { parseChatBlock, type ChatBlock } from "@/lib/chat-blocks";
-import { GameBlockRenderer } from "./blocks/GameBlockRenderer";
+import { GameBlockRenderer } from "../blocks/GameBlockRenderer";
 import { cn } from "@/lib/utils";
-import { ParagraphBlockEditor } from "./ParagraphBlockEditor";
+import { ParagraphBlockEditor } from "../composer/ParagraphBlockEditor";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,

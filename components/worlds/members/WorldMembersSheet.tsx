@@ -19,7 +19,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { supabaseThumb } from "@/lib/storage";
-import { WorldInviteDialog } from "@/components/worlds/WorldInviteDialog";
+import { WorldInviteDialog } from "@/components/worlds/members/WorldInviteDialog";
 
 const ROLE_LABEL: Record<string, string> = {
   owner: "Propriétaire",

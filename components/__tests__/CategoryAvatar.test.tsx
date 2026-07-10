@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { render } from "@testing-library/react";
-import { CategoryAvatar } from "@/components/worlds/CategoryAvatar";
+import { CategoryAvatar } from "@/components/worlds/catalogue/CategoryAvatar";
 
 describe("CategoryAvatar", () => {
   it("priorise l'image de catégorie (icon_url) sur la bannière", () => {

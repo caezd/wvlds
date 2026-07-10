@@ -29,8 +29,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { HsvColorPicker, ACCENT_COLOR_PRESETS } from "@/components/ui/hsv-color-picker";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
-import { EmojiPickerButton } from "@/components/chatrooms/EmojiPickerButton";
-import { ReactionEmoji } from "@/components/chatrooms/ReactionEmoji";
+import { EmojiPickerButton } from "@/components/chatrooms/reactions/EmojiPickerButton";
+import { ReactionEmoji } from "@/components/chatrooms/reactions/ReactionEmoji";
 import { GameBlockSurface, GameBlockToolbar, GameBlockEditButton } from "./GameBlockShell";
 
 /* ─── Presets : reproduisent l'esprit des anciens blocs ──────────────────── */

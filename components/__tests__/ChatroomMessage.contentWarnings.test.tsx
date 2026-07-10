@@ -26,16 +26,16 @@ vi.mock("sonner", () => ({ toast: { error: vi.fn() } }));
 vi.mock("@/components/avatars/AvatarWithFrame", () => ({
   AvatarWithFrame: ({ size }: { size?: number }) => <div data-testid="avatar" data-size={size} />,
 }));
-vi.mock("@/components/chatrooms/ChatroomMessageBubble", () => ({
+vi.mock("@/components/chatrooms/message/ChatroomMessageBubble", () => ({
   ChatroomMessageBubble: ({ message }: { message: { content: string } }) => <span>{message.content}</span>,
 }));
 vi.mock("@/components/personas/PersonaProfileSheetTrigger", () => ({
   PersonaProfileSheetTrigger: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
-vi.mock("@/components/chatrooms/ChatReactionPicker", () => ({
+vi.mock("@/components/chatrooms/reactions/ChatReactionPicker", () => ({
   ChatReactionPicker: () => null,
 }));
-vi.mock("@/components/chatrooms/ReactionEmoji", () => ({
+vi.mock("@/components/chatrooms/reactions/ReactionEmoji", () => ({
   ReactionEmoji: ({ value }: { value: string }) => <span>{value}</span>,
 }));
 vi.mock("@/components/chatrooms/blocks/GameBlockRenderer", () => ({
@@ -100,7 +100,7 @@ vi.mock("@/components/ui/hsv-color-picker", async (importOriginal) => {
   return { ...actual, HsvColorPicker: () => <div data-testid="hsv-color-picker-stub" /> };
 });
 
-import ChatroomMessage from "@/components/chatrooms/ChatroomMessage";
+import ChatroomMessage from "@/components/chatrooms/message/ChatroomMessage";
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 

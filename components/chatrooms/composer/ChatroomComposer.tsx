@@ -10,8 +10,8 @@ import { encryptMessage } from "@/lib/crypto";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useTagChips } from "@/hooks/useTagChips";
 import { PersonaPickerDialog } from "@/components/personas/PersonaPickerDialog";
-import { ContentWarningChipInput } from "@/components/chatrooms/ContentWarningChipInput";
-import { Button } from "../ui/button";
+import { ContentWarningChipInput } from "@/components/chatrooms/composer/ContentWarningChipInput";
+import { Button } from "../../ui/button";
 import { SendHorizontal, Component, Dices, Pipette, X, ImagePlus, Eye, Lock, Sword, Heart, Square, Anchor, CalendarDays, MapPin, MessageCircle, MessageSquareText, Check, AlertTriangle, Vote, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -19,13 +19,13 @@ import { toWebP } from "@/lib/imageUtils";
 import { ImagePickerCropField } from "@/components/ui/image-crop-picker";
 import { ParagraphBlockEditor } from "./ParagraphBlockEditor";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { DiceDialog } from "./blocks/DiceDialog";
-import { NarrativeBlockDialog } from "./blocks/NarrativeBlockDialog";
-import { NpcDialog } from "./blocks/NpcBlock";
-import { HpDialog } from "./blocks/HpBlock";
-import { CalloutDialog } from "./blocks/CalloutBlock";
-import { AnchorDialog } from "./blocks/AnchorDialog";
-import { ChoiceDialog } from "./blocks/ChoiceBlock";
+import { DiceDialog } from "../blocks/DiceDialog";
+import { NarrativeBlockDialog } from "../blocks/NarrativeBlockDialog";
+import { NpcDialog } from "../blocks/NpcBlock";
+import { HpDialog } from "../blocks/HpBlock";
+import { CalloutDialog } from "../blocks/CalloutBlock";
+import { AnchorDialog } from "../blocks/AnchorDialog";
+import { ChoiceDialog } from "../blocks/ChoiceBlock";
 import {
   computeWordCount,
   extractMentions,

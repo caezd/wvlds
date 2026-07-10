@@ -4,9 +4,9 @@ import { getUserId } from "@/lib/auth";
 import { notFound } from "next/navigation";
 import { canMemberPost } from "@/lib/worldPermissions";
 
-import { WorldHome } from "@/components/worlds/WorldHome";
-import { WorldMembershipGuard } from "@/components/worlds/WorldMembershipGuard";
-import WorldSidebar from "@/components/worlds/WorldSidebar";
+import { WorldHome } from "@/components/worlds/home/WorldHome";
+import { WorldMembershipGuard } from "@/components/worlds/members/WorldMembershipGuard";
+import WorldSidebar from "@/components/worlds/sidebar/WorldSidebar";
 import type { AsidePersona } from "@/components/personas/WorldPersonaAsideClient";
 import { fetchSectionsByPersona } from "@/lib/personaSections";
 

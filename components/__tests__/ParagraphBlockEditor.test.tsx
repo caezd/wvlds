@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, fireEvent } from "@testing-library/react";
-import { ParagraphBlockEditor } from "@/components/chatrooms/ParagraphBlockEditor";
+import { ParagraphBlockEditor } from "@/components/chatrooms/composer/ParagraphBlockEditor";
 
 function getEditor(container: HTMLElement) {
   const el = container.querySelector("[contenteditable]");

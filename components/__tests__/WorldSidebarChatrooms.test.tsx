@@ -51,7 +51,7 @@ vi.mock("@/components/ui/avatar", () => ({
   AvatarFallback: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
 }));
 
-import { WorldSidebarChatrooms } from "@/components/worlds/WorldSidebarChatrooms";
+import { WorldSidebarChatrooms } from "@/components/worlds/sidebar/WorldSidebarChatrooms";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 

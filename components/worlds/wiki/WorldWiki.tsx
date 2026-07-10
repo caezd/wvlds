@@ -38,7 +38,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { Button } from "@/components/ui/button";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
-import { ParagraphBlockEditor } from "@/components/chatrooms/ParagraphBlockEditor";
+import { ParagraphBlockEditor } from "@/components/chatrooms/composer/ParagraphBlockEditor";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
