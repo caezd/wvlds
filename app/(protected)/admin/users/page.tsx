@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import Image from "next/image";
 import { Shield, ShieldOff } from "lucide-react";
 import { getTranslations } from "next-intl/server";
+import { PlanSelect } from "./PlanSelect";
 
 async function toggleAdmin(userId: string, isAdmin: boolean) {
   "use server";
@@ -14,14 +15,13 @@ async function toggleAdmin(userId: string, isAdmin: boolean) {
   revalidatePath("/admin/users");
 }
 
-async function setUserPlan(userId: string, plan: string) {
+async function setUserPlan(userId: string, formData: FormData) {
   "use server";
+  const plan = String(formData.get("plan") ?? "free");
   const { supabase } = await requireAdmin();
   await supabase.from("profiles").update({ plan }).eq("id", userId);
   revalidatePath("/admin/users");
 }
-
-const PLANS = ["free", "subscribed", "lifetime"] as const;
 
 export default async function AdminUsersPage() {
   const { supabase, user: adminUser } = await requireAdmin();
@@ -91,25 +91,10 @@ export default async function AdminUsersPage() {
 
                   {/* Plan */}
                   <td className="px-4 py-3">
-                    <form>
-                      <select
-                        name="plan"
-                        defaultValue={p.plan ?? "free"}
-                        onChange={async (_e) => {
-                          // handled via form action below
-                        }}
-                        className="text-sm bg-transparent border border-border-soft rounded px-2 py-1 cursor-pointer"
-                        form={`plan-${p.id}`}
-                      >
-                        {PLANS.map((pl) => (
-                          <option key={pl} value={pl}>{pl}</option>
-                        ))}
-                      </select>
-                    </form>
-                    <form
-                      id={`plan-${p.id}`}
-                      action={setUserPlan.bind(null, p.id, "")}
-                      className="hidden"
+                    <PlanSelect
+                      userId={p.id}
+                      currentPlan={p.plan ?? "free"}
+                      action={setUserPlan.bind(null, p.id)}
                     />
                   </td>
 

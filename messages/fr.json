@@ -381,7 +381,7 @@
       "cantEditSelf": "Vous ne pouvez pas modifier votre propre rôle",
       "removeAdmin": "Retirer le rôle admin",
       "grantAdmin": "Accorder le rôle admin",
-      "planInfo": "Pour modifier le plan via le formulaire ci-dessus, changez la valeur puis soumettez. La modification du plan est immédiate côté serveur."
+      "planInfo": "Le plan est modifié immédiatement dès que vous changez la valeur du menu déroulant."
     },
     "features": {
       "title": "Fonctionnalités",

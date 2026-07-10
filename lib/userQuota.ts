@@ -28,7 +28,7 @@ type Quota = {
 // subscribed et lifetime sont tous deux illimités.
 const QUOTA_LIMITS: Record<Resource, Record<Plan, number>> = {
     worlds: { free: 1, subscribed: Infinity, lifetime: Infinity },
-    personas: { free: 5, subscribed: Infinity, lifetime: Infinity },
+    personas: { free: FREE_PERSONAS_PER_WORLD, subscribed: Infinity, lifetime: Infinity },
 };
 
 function limitFor(plan: Plan, kind: Resource): number {
