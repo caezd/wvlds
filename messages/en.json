@@ -380,7 +380,7 @@
       "cantEditSelf": "You cannot edit your own role",
       "removeAdmin": "Remove admin role",
       "grantAdmin": "Grant admin role",
-      "planInfo": "To change the plan via the form above, update the value and submit. The plan change is immediate server-side."
+      "planInfo": "The plan is updated immediately as soon as you change the dropdown value."
     },
     "features": {
       "title": "Features",

@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-07 ──────────────────────────────────────────────────────────────
   {
     date: "2026-07",
+    tag: "Correctif",
+    text: "Le sélecteur de plan de la page admin **Utilisateurs** ne changeait jamais réellement le plan d'un compte : le menu déroulant ne soumettait rien au changement de valeur. Il applique désormais le nouveau plan immédiatement.",
+  },
+  {
+    date: "2026-07",
     tag: "Chatrooms",
     text: "**Barre de mise en forme flottante** : sélectionnez du texte dans le composer (ou en éditant un message) pour faire apparaître une petite barre au-dessus — gras, italique, barré, souligné, liste, titre (H1/H2/H3) et couleur de texte, appliqués sans taper le markdown à la main. Nouveau marqueur `[#ff0000]texte[/]` pour la couleur et `++texte++` pour le souligné.",
   },
@@ -34,7 +39,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-07",
     tag: "Performance",
-    text: "La quasi-totalité des images de l'app (avatars, bannières, icônes de mondes/salons/objets, cadres, apparences de personas) passe désormais par l'optimiseur d'images de Next.js : redimensionnement et formats modernes automatiques, chargement différé hors écran, et réservation d'espace pour éviter les sauts de mise en page. Quelques cas restent volontairement en `<img>` classique (aperçus locaux avant upload, images intégrées via URL externe dans le markdown, carte du monde).",
+    text: "La quasi-totalité des images de l'app (avatars, bannières, icônes de mondes/salons/objets, cadres, apparences de personas) passe désormais par l'optimiseur d'images de Next.js : redimensionnement et formats modernes automatiques, chargement différé hors écran, et réservation d'espace pour éviter les sauts de mise en page. Quelques cas restent volontairement en `<img>` classique (aperçus locaux avant upload, images intégrées via URL externe dans le markdown, carte du monde). Par ailleurs, les onglets d'un monde (wiki, réglages, relations, catalogue, carte, chronologie, membres), les panneaux DMs/notifications et plusieurs boîtes de dialogue peu utilisées ne sont désormais chargés qu'à l'ouverture au lieu d'alourdir chaque page ; certaines requêtes redondantes (infos du monde, utilisateur courant, feature flags) ont été dédupliquées ; et un indicateur de chargement s'affiche désormais pendant la navigation vers les pages monde, salon, découverte, personas, boutique et admin.",
   },
   {
     date: "2026-07",

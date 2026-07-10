@@ -1,17 +1,25 @@
 "use client";
 
 import { useEffect } from "react";
+import dynamic from "next/dynamic";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { NotificationInlinePanelContent } from "@/components/notifications";
-import { DmsPanelContent } from "@/components/dms";
 import DmsProvider, { useDms } from "@/components/providers/DmsProvider";
 import { useNotifications } from "@/components/providers/NotificationsProvider";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import { MobileSidebarProvider, useMobileSidebar } from "@/components/providers/MobileSidebarProvider";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+
+const NotificationInlinePanelContent = dynamic(
+  () => import("@/components/notifications").then((m) => m.NotificationInlinePanelContent),
+  { ssr: false },
+);
+const DmsPanelContent = dynamic(
+  () => import("@/components/dms").then((m) => m.DmsPanelContent),
+  { ssr: false },
+);
 
 // ── Inner shell — consomme useDms() et useNotifications() ────────────────────
 

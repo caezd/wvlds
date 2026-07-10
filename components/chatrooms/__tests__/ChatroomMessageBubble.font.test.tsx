@@ -12,7 +12,7 @@ vi.mock("@/components/MarkdownRenderer", () => ({
     ["prose", className].filter(Boolean).join(" "),
 }));
 
-import { ChatroomMessageBubble } from "../ChatroomMessageBubble";
+import { ChatroomMessageBubble } from "../message/ChatroomMessageBubble";
 
 const BASE_PREFS = { messageFont: "sans", messageTextSize: "base", messageTextAlign: "left" };
 

@@ -1,12 +1,13 @@
 // app/(protected)/w/[id]/page.tsx
 import { createClient } from "@/lib/supabase/server";
 import { getUserId } from "@/lib/auth";
+import { getWorldById } from "@/lib/currentRequest";
 import { notFound } from "next/navigation";
 import { canMemberPost } from "@/lib/worldPermissions";
 
-import { WorldHome } from "@/components/worlds/WorldHome";
-import { WorldMembershipGuard } from "@/components/worlds/WorldMembershipGuard";
-import WorldSidebar from "@/components/worlds/WorldSidebar";
+import { WorldHome } from "@/components/worlds/home/WorldHome";
+import { WorldMembershipGuard } from "@/components/worlds/members/WorldMembershipGuard";
+import WorldSidebar from "@/components/worlds/sidebar/WorldSidebar";
 import type { AsidePersona } from "@/components/personas/WorldPersonaAsideClient";
 import { fetchSectionsByPersona } from "@/lib/personaSections";
 
@@ -22,14 +23,8 @@ export default async function WorldPage({
 
   // La requête `world` (RLS) et l'id utilisateur (vérification locale du JWT)
   // sont indépendants → on les résout en parallèle.
-  const [{ data: world }, userId] = await Promise.all([
-    supabase
-      .from("worlds")
-      .select(
-        "id, name, description, owner_id, banner_url, icon_url, color, visibility, restrict_inventory, restrict_skills, enable_inventory, enable_skills, enable_faceclaims, timeline_enabled, timeline_config, world_members(user_id, role)",
-      )
-      .eq("id", id)
-      .maybeSingle(),
+  const [world, userId] = await Promise.all([
+    getWorldById(id),
     getUserId(supabase),
   ]);
 

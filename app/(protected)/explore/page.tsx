@@ -1,6 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { getUserId } from "@/lib/auth";
-import { getFeatureFlags } from "@/lib/featureFlags";
+import { getCurrentUserId, getCachedFeatureFlags } from "@/lib/currentRequest";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -27,8 +26,8 @@ export default async function ExplorePage({
 }) {
   const supabase = await createClient();
   const [flags, userId] = await Promise.all([
-    getFeatureFlags(supabase),
-    getUserId(supabase),
+    getCachedFeatureFlags(),
+    getCurrentUserId(),
   ]);
 
   if (!flags.public_worlds) notFound();

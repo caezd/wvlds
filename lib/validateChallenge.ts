@@ -1,8 +1,5 @@
 import type { ValidationKind } from "@/types/db";
-
-function wordCount(text: string): number {
-  return text.trim().split(/\s+/).filter(Boolean).length;
-}
+import { wordCount } from "@/lib/composerMessage";
 
 /**
  * Valide le contenu d'un message contre une règle de défi.

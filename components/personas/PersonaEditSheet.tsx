@@ -232,8 +232,10 @@ function FramePicker({
         type="button"
         disabled={saving}
         onClick={() => void selectFrame(null)}
-        className={`relative h-14 w-14 rounded-xl border-2 bg-muted text-xs text-muted-foreground transition-colors ${selected === null ? "border-primary" : "border-transparent hover:border-border"
-          }`}
+        className={cn(
+          "relative h-14 w-14 rounded-xl border-2 bg-muted text-xs text-muted-foreground transition-colors",
+          selected === null ? "border-primary" : "border-transparent hover:border-border",
+        )}
         title="Aucun cadre"
       >
         <X className="m-auto h-5 w-5" />
@@ -246,8 +248,10 @@ function FramePicker({
           type="button"
           disabled={saving}
           onClick={() => void selectFrame(f.id)}
-          className={`relative h-14 w-14 rounded-xl border-2 overflow-hidden transition-colors ${selected === f.id ? "border-primary" : "border-transparent hover:border-border"
-            }`}
+          className={cn(
+            "relative h-14 w-14 rounded-xl border-2 overflow-hidden transition-colors",
+            selected === f.id ? "border-primary" : "border-transparent hover:border-border",
+          )}
           title={f.name}
         >
           <Image src={f.preview_url ?? f.asset_url ?? ""} alt={f.name} unoptimized fill sizes="56px" className="object-cover" />

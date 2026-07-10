@@ -9,7 +9,7 @@ vi.mock("@/components/ui/hsv-color-picker", async (importOriginal) => {
   return { ...actual, HsvColorPicker: () => <div data-testid="hsv-color-picker-stub" /> };
 });
 
-import { ParagraphBlockEditor } from "@/components/chatrooms/ParagraphBlockEditor";
+import { ParagraphBlockEditor } from "@/components/chatrooms/composer/ParagraphBlockEditor";
 
 function getEditor(container: HTMLElement) {
   const el = container.querySelector("[contenteditable]");

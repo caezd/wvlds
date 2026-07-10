@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { EmojiPickerButton } from "@/components/chatrooms/EmojiPickerButton";
+import { EmojiPickerButton } from "@/components/chatrooms/reactions/EmojiPickerButton";
 import { GameBlockSurface, GameBlockToolbar, GameBlockEditButton } from "./GameBlockShell";
 
 export function NpcDialog({

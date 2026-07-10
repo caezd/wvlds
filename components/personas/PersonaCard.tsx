@@ -5,6 +5,7 @@ import { PersonaEditSheet } from "./PersonaEditSheet";
 import type { PersonaSectionWithFields } from "@/types/personas";
 import type { AvatarConfigV1 } from "./avatar/PersonaAvatarPicker";
 import { Pencil } from "lucide-react";
+import { getInitials } from "@/lib/textFormatting";
 
 type PersonaCardProps = {
   personaId: string;
@@ -21,11 +22,6 @@ type PersonaCardProps = {
   restrictSkills?: boolean;
   faceclaimsEnabled?: boolean;
 };
-
-function initials(name: string) {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "P";
-}
 
 export function PersonaCard({
   personaId,
@@ -71,7 +67,7 @@ export function PersonaCard({
             />
           ) : (
             <div className="absolute inset-0 grid place-items-center text-3xl font-bold text-muted-foreground select-none">
-              {initials(personaName)}
+              {getInitials(personaName, "P")}
             </div>
           )}
 

@@ -380,7 +380,7 @@
       "cantEditSelf": "No puedes modificar tu propio rol",
       "removeAdmin": "Quitar rol de administrador",
       "grantAdmin": "Conceder rol de administrador",
-      "planInfo": "Para cambiar el plan mediante el formulario de arriba, cambia el valor y envía. El cambio de plan es inmediato en el servidor."
+      "planInfo": "El plan se actualiza inmediatamente en cuanto cambias el valor del menú desplegable."
     },
     "features": {
       "title": "Funcionalidades",

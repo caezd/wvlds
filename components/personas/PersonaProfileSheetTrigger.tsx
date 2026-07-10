@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/hover-card";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import { AvatarWithFrame } from "@/components/avatars/AvatarWithFrame";
+import { PresenceDot } from "@/components/avatars/PresenceDot";
 import { Coins, Flame, Zap } from "lucide-react";
 import type { PersonaSection, PersonaSectionField, PersonaSectionWithFields, PersonaFieldData, InventoryItem, SkillItem, GaugeItem, TraitItem, TimelineItem, DlItem } from "@/types/personas";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -23,17 +24,13 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { formatLastSeen, cn } from "@/lib/utils";
 import { ImageGridView } from "@/components/personas/ImageGridView";
 import { TABLE } from "@/lib/constants";
+import { getInitials } from "@/lib/textFormatting";
 
 function levelInfo(xp: number) {
   const level = Math.floor(xp / 100) + 1;
   const base = (level - 1) * 100;
   const progress = Math.min(100, Math.round(((xp - base) / 100) * 100));
   return { level, xpForNext: level * 100, progress };
-}
-
-function initials(name: string) {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "?";
 }
 
 type BalanceSummary = {
@@ -518,7 +515,7 @@ export function PersonaProfileSheetTrigger({
                   <AvatarWithFrame
                     src={avatarUrl}
                     alt={name ?? ""}
-                    fallback={name ? initials(name) : "?"}
+                    fallback={name ? getInitials(name) : "?"}
                     presenceState="invisible"
                     size={128}
                     className="outline-4 outline-background rounded-2xl"
@@ -547,12 +544,7 @@ export function PersonaProfileSheetTrigger({
                   </div>
                   {presenceLine && (
                     <p className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <span
-                        className={`h-2 w-2 rounded-full ${userPresence === "online" ? "bg-[#58F4A8]"
-                          : userPresence === "away" ? "bg-orange-400"
-                            : "bg-muted-foreground/40"
-                          }`}
-                      />
+                      <PresenceDot state={userPresence} />
                       {presenceLine}
                     </p>
                   )}

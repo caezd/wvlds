@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { ChatroomAvatarWithPresence } from "../chatrooms/ChatroomAvatarWithPresence";
+import { ChatroomAvatarWithPresence } from "../chatrooms/persona/ChatroomAvatarWithPresence";
 import { supabaseThumb } from "@/lib/storage";
 
 export function AvatarWithFrame({

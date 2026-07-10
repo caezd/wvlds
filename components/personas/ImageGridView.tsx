@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { ImageLightbox } from "@/components/chatrooms/ImageLightbox";
 import { supabaseThumb } from "@/lib/storage";
+import { cn } from "@/lib/utils";
 
 type GridImage = { id: string; url: string; caption?: string };
 
@@ -21,7 +22,7 @@ function Thumb({
     <button
       type="button"
       onClick={onClick}
-      className={`relative overflow-hidden focus:outline-none ${className ?? ""}`}
+      className={cn("relative overflow-hidden focus:outline-none", className)}
     >
       <Image
         src={thumbFailed ? img.url : (supabaseThumb(img.url, 600) ?? img.url)}

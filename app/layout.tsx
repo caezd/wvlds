@@ -27,10 +27,13 @@ const geistSans = Geist({
 });
 
 // Police alternative pour le texte des chatrooms (préférence utilisateur, voir /settings).
+// preload: false — n'est utilisée que par une minorité d'utilisateurs, inutile
+// de la précharger pour tout le monde par défaut.
 const notoSerif = Noto_Serif({
   variable: "--font-serif",
   display: "swap",
   subsets: ["latin"],
+  preload: false,
 });
 
 // Police adaptée dyslexie pour le texte des chatrooms (préférence utilisateur, voir /settings).
@@ -43,6 +46,7 @@ const openDyslexic = localFont({
   ],
   variable: "--font-dyslexic",
   display: "swap",
+  preload: false,
 });
 
 export default async function RootLayout({

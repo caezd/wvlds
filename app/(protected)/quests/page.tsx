@@ -1,7 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
-import { getUserId } from "@/lib/auth";
+import { getCurrentUserId, getCachedFeatureFlags } from "@/lib/currentRequest";
 import { redirect } from "next/navigation";
-import { getFeatureFlags } from "@/lib/featureFlags";
 import { RPC, TABLE } from "@/lib/constants";
 import type { ActiveDailyChallenge, DailyChallengeJournalEntry } from "@/types/db";
 import { pickRandomChallenge } from "@/lib/challengeTemplates";
@@ -34,10 +33,10 @@ function ValidationHint({ validation, t }: { validation: ActiveDailyChallenge["v
 export default async function QuestsPage() {
   const t = await getTranslations("quests");
   const supabase = await createClient();
-  const userId = await getUserId(supabase);
+  const userId = await getCurrentUserId();
   if (!userId) redirect("/login");
 
-  const featureFlags = await getFeatureFlags(supabase);
+  const featureFlags = await getCachedFeatureFlags();
   if (!featureFlags.quests) redirect("/");
 
   const today = new Date().toISOString().split("T")[0];

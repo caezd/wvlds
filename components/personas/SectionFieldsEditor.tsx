@@ -11,7 +11,7 @@ import { DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 
 import { Button } from "@/components/ui/button";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
-import { ParagraphBlockEditor } from "@/components/chatrooms/ParagraphBlockEditor";
+import { ParagraphBlockEditor } from "@/components/chatrooms/composer/ParagraphBlockEditor";
 import {
   DropdownMenu,
   DropdownMenuTrigger,

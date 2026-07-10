@@ -28,10 +28,47 @@ const STYLED_SPAN_RE =
 // dans un message (ex. pour documenter la syntaxe) doit rester littéral.
 const INLINE_CODE_RE = /(`+)[^\n]*?\1/g;
 
-function isFenceLine(line: string): { char: string; len: number } | null {
+export function isFenceLine(line: string): { char: string; len: number } | null {
   const m = line.match(/^(\s*)(`{3,}|~{3,})(.*)$/);
   if (!m) return null;
   return { char: m[2][0], len: m[2].length };
+}
+
+/**
+ * Machine d'état pour suivre l'ouverture/fermeture d'un bloc de code fencé
+ * (```/~~~) ligne par ligne. `consume(line)` renvoie `true` (et met à jour
+ * l'état interne) si la ligne fait partie d'un fence — ouverture, contenu,
+ * ou fermeture — auquel cas l'appelant doit la laisser passer telle quelle
+ * sans lui appliquer de transformation de texte.
+ */
+export function createFenceTracker() {
+  let inFence = false;
+  let fenceChar: string | null = null;
+  let fenceLen = 0;
+
+  return {
+    consume(line: string): boolean {
+      const fence = isFenceLine(line);
+
+      if (!inFence && fence) {
+        inFence = true;
+        fenceChar = fence.char;
+        fenceLen = fence.len;
+        return true;
+      }
+
+      if (inFence) {
+        if (fence && fence.char === fenceChar && fence.len >= fenceLen) {
+          inFence = false;
+          fenceChar = null;
+          fenceLen = 0;
+        }
+        return true;
+      }
+
+      return false;
+    },
+  };
 }
 
 function transformSegment(segment: string): string {
@@ -73,32 +110,14 @@ function transformLine(line: string): string {
 export function transformStyledSpans(input: string): string {
   const lines = (input ?? "").replace(/\r\n/g, "\n").split("\n");
 
-  let inFence = false;
-  let fenceChar: string | null = null;
-  let fenceLen = 0;
+  const fenceTracker = createFenceTracker();
   const out: string[] = [];
 
   for (const line of lines) {
-    const fence = isFenceLine(line);
-
-    if (!inFence && fence) {
-      inFence = true;
-      fenceChar = fence.char;
-      fenceLen = fence.len;
+    if (fenceTracker.consume(line)) {
       out.push(line);
       continue;
     }
-
-    if (inFence) {
-      out.push(line);
-      if (fence && fence.char === fenceChar && fence.len >= fenceLen) {
-        inFence = false;
-        fenceChar = null;
-        fenceLen = 0;
-      }
-      continue;
-    }
-
     out.push(transformLine(line));
   }
 

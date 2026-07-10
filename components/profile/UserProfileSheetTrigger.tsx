@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { PresenceDot } from "@/components/avatars/PresenceDot";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import { useGlobalPresence } from "@/components/providers/PresenceProvider";
 import { formatLastSeen } from "@/lib/utils";
@@ -125,12 +126,7 @@ export function UserProfileSheetTrigger({
             <p className="text-base font-semibold">{username ?? "—"}</p>
             {presenceLine && (
               <p className="mt-0.5 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
-                <span
-                  className={`h-2 w-2 rounded-full ${userPresence === "online" ? "bg-[#58F4A8]"
-                    : userPresence === "away" ? "bg-orange-400"
-                      : "bg-muted-foreground/40"
-                    }`}
-                />
+                <PresenceDot state={userPresence} />
                 {presenceLine}
               </p>
             )}

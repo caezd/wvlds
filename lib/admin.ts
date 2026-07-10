@@ -1,5 +1,15 @@
 import { createClient } from "@/lib/supabase/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
+
+async function fetchIsAdmin(supabase: SupabaseClient, userId: string): Promise<boolean> {
+  const { data } = await supabase
+    .from("profiles")
+    .select("is_admin")
+    .eq("id", userId)
+    .single();
+  return data?.is_admin === true;
+}
 
 /** Vérifie que l'utilisateur courant est admin. Redirige sinon. */
 export async function requireAdmin() {
@@ -8,13 +18,7 @@ export async function requireAdmin() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login");
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("is_admin")
-    .eq("id", user.id)
-    .single();
-
-  if (!profile?.is_admin) redirect("/");
+  if (!(await fetchIsAdmin(supabase, user.id))) redirect("/");
 
   return { user, supabase };
 }
@@ -25,11 +29,5 @@ export async function isAdmin(): Promise<boolean> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return false;
 
-  const { data } = await supabase
-    .from("profiles")
-    .select("is_admin")
-    .eq("id", user.id)
-    .single();
-
-  return data?.is_admin === true;
+  return fetchIsAdmin(supabase, user.id);
 }
