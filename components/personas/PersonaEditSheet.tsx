@@ -322,7 +322,11 @@ export function MaritalStatusPicker({
       .from("personas")
       .update({ marital_status: next, ...(clearSpouse ? { spouse_persona_id: null } : {}) })
       .eq("id", personaId);
-    if (error) { setStatus(previous); return; }
+    if (error) {
+      toast.error("Enregistrement impossible.", { description: error.message });
+      setStatus(previous);
+      return;
+    }
     if (clearSpouse) setSpouseId(null);
     router.refresh();
   }
