@@ -74,6 +74,13 @@ export interface ChatroomCategory {
   position: number;
 }
 
+export interface WorldTag {
+  id: string;
+  world_id: string;
+  tag: string;
+  created_at: string;
+}
+
 export type World = {
   id: string;
   name: string;
@@ -89,4 +96,6 @@ export type World = {
   restrict_skills?: boolean | null;
   timeline_enabled?: boolean | null;
   timeline_config?: WorldTimelineConfig | null;
+  allows_real_avatars?: boolean | null;
+  allows_illustrated_avatars?: boolean | null;
 };

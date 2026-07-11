@@ -3,7 +3,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { deletePersona } from "@/app/(protected)/p/actions";
 import { translatePersonaError } from "@/lib/personaErrors";
-import type { WorldInventoryItem, WorldSkill, WorldCatalogCategory, WorldTimelineConfig } from "@/types/worlds";
+import type { WorldInventoryItem, WorldSkill, WorldCatalogCategory, WorldTimelineConfig, WorldTag } from "@/types/worlds";
+
+const MAX_WORLD_TAGS = 10;
+const MAX_TAG_LENGTH = 24;
 
 export async function setWorldFeature(
   worldId: string,
@@ -279,6 +282,82 @@ export async function setWorldPersonaTemplate(worldId: string, enabled: boolean)
     if (!res.ok) return { ok: false as const, error: res.error ?? "Suppression impossible." };
   }
   return { ok: true as const, templateId: null };
+}
+
+// ── Communauté : tags & type d'avatars ────────────────────────────────────────
+
+const WORLD_AVATAR_TYPE_FIELDS = new Set(["allows_real_avatars", "allows_illustrated_avatars"]);
+
+export async function setWorldAvatarType(
+  worldId: string,
+  field: "allows_real_avatars" | "allows_illustrated_avatars",
+  enabled: boolean,
+) {
+  if (!WORLD_AVATAR_TYPE_FIELDS.has(field)) return { ok: false as const, error: "Champ invalide." };
+  const supabase = await createClient();
+  const { error } = await supabase.from("worlds").update({ [field]: enabled }).eq("id", worldId);
+  if (error) return { ok: false as const, error: error.message };
+  return { ok: true as const };
+}
+
+export async function getWorldTags(worldId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("world_tags")
+    .select("id, world_id, tag, created_at")
+    .eq("world_id", worldId)
+    .order("created_at", { ascending: true });
+  if (error) return { ok: false as const, error: error.message };
+  return { ok: true as const, tags: (data ?? []) as WorldTag[] };
+}
+
+// Lettres (accents inclus) et chiffres uniquement — ni espaces, ni apostrophes,
+// ni ponctuation ou autres symboles (la virgule casserait aussi le filtrage
+// par `tags` dans l'URL de /explore, voir exploreQuery.ts).
+const TAG_FORMAT = /^[\p{L}\p{N}]+$/u;
+
+export async function addWorldTag(worldId: string, rawTag: string) {
+  const tag = rawTag.trim().toLowerCase().slice(0, MAX_TAG_LENGTH);
+  if (!tag) return { ok: false as const, error: "Tag vide." };
+  if (!TAG_FORMAT.test(tag)) {
+    return { ok: false as const, error: "Un tag ne peut contenir que des lettres et des chiffres." };
+  }
+
+  const supabase = await createClient();
+
+  const { count, error: countError } = await supabase
+    .from("world_tags")
+    .select("id", { count: "exact", head: true })
+    .eq("world_id", worldId);
+  if (countError) return { ok: false as const, error: countError.message };
+  if ((count ?? 0) >= MAX_WORLD_TAGS) {
+    return { ok: false as const, error: `Maximum ${MAX_WORLD_TAGS} tags par monde.` };
+  }
+
+  const { error } = await supabase
+    .from("world_tags")
+    .insert({ world_id: worldId, tag })
+    .select()
+    .single();
+  if (error) {
+    // Déjà présent pour ce monde : idempotent plutôt qu'une erreur — l'appelant
+    // récupère simplement le tag existant.
+    if (error.code === "23505") return { ok: true as const, tag };
+    if (error.code === "23514") return { ok: false as const, error: "Format de tag invalide." };
+    return { ok: false as const, error: error.message };
+  }
+  return { ok: true as const, tag };
+}
+
+export async function removeWorldTag(worldId: string, tag: string) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("world_tags")
+    .delete()
+    .eq("world_id", worldId)
+    .eq("tag", tag);
+  if (error) return { ok: false as const, error: error.message };
+  return { ok: true as const };
 }
 
 export async function setWorldTimeline(

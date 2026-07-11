@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import Image from "next/image";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -9,12 +8,6 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { toWebP } from "@/lib/imageUtils";
 
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import {
     Form,
@@ -28,12 +21,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
-    ChevronDown,
+    Camera,
     Globe,
     GlobeLock,
     HelpCircle,
     Loader2,
-    Image as ImageIcon,
+    Palette,
     Plus,
     Settings,
     Trash2,
@@ -54,7 +47,16 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { setWorldFeature, setWorldRestriction, setWorldFaceclaims, setWorldTimeline } from "@/app/actions/worldCatalog";
+import {
+    setWorldFeature,
+    setWorldRestriction,
+    setWorldFaceclaims,
+    setWorldTimeline,
+    setWorldAvatarType,
+    getWorldTags,
+    addWorldTag,
+    removeWorldTag,
+} from "@/app/actions/worldCatalog";
 import { WorldPersonaTemplateSection } from "@/components/worlds/settings/WorldPersonaTemplateSection";
 import { WorldCategoryManager } from "@/components/worlds/settings/WorldCategoryManager";
 import type { World, WorldTimelineConfig } from "@/types/worlds";
@@ -65,14 +67,15 @@ import type { World, WorldTimelineConfig } from "@/types/worlds";
  * (Sheet) — la visibilité est pilotée par le parent via le système `?view=`.
  */
 
-const COLOR_PRESETS = [
-    { name: "Bleu", value: "#3b82f6" },
-    { name: "Vert", value: "#22c55e" },
-    { name: "Orange", value: "#f97316" },
-    { name: "Violet", value: "#8b5cf6" },
-    { name: "Rouge", value: "#ef4444" },
-    { name: "Rose", value: "#f94b5f" },
-];
+// Sélecteur de couleur désactivé temporairement (voir onglet Apparence) — conservé pour restauration future.
+// const COLOR_PRESETS = [
+//     { name: "Bleu", value: "#3b82f6" },
+//     { name: "Vert", value: "#22c55e" },
+//     { name: "Orange", value: "#f97316" },
+//     { name: "Violet", value: "#8b5cf6" },
+//     { name: "Rouge", value: "#ef4444" },
+//     { name: "Rose", value: "#f94b5f" },
+// ];
 
 const schema = z.object({
     name: z.string().min(2, "Au moins 2 caractères"),
@@ -147,6 +150,15 @@ export function WorldSettingsView({ world, onUpdated, onClose }: WorldSettingsVi
     const [enableFaceclaims, setEnableFaceclaims] = React.useState(world.enable_faceclaims !== false);
     const [togglingFaceclaims, setTogglingFaceclaims] = React.useState(false);
 
+    const [allowsRealAvatars, setAllowsRealAvatars] = React.useState(world.allows_real_avatars === true);
+    const [allowsIllustratedAvatars, setAllowsIllustratedAvatars] = React.useState(world.allows_illustrated_avatars === true);
+    const [togglingAvatarType, setTogglingAvatarType] = React.useState(false);
+
+    const [tags, setTags] = React.useState<string[]>([]);
+    const [newTag, setNewTag] = React.useState("");
+    const [savingTag, setSavingTag] = React.useState(false);
+    const [existingTags, setExistingTags] = React.useState<string[]>([]);
+
     const defaultConfig: WorldTimelineConfig = {
         year_label: "an",
         era_name: null,
@@ -160,8 +172,6 @@ export function WorldSettingsView({ world, onUpdated, onClose }: WorldSettingsVi
     );
     const [togglingTimeline, setTogglingTimeline] = React.useState(false);
     const [newMonthName, setNewMonthName] = React.useState("");
-
-    const iconInputRef = React.useRef<HTMLInputElement | null>(null);
 
     const form = useForm<WorldFormValues>({
         resolver: zodResolver(schema),
@@ -231,6 +241,55 @@ export function WorldSettingsView({ world, onUpdated, onClose }: WorldSettingsVi
         onUpdated?.({ ...world, enable_faceclaims: enabled } as World);
     }
 
+    async function handleAvatarTypeToggle(
+        field: "allows_real_avatars" | "allows_illustrated_avatars",
+        enabled: boolean,
+    ) {
+        setTogglingAvatarType(true);
+        const res = await setWorldAvatarType(world.id, field, enabled);
+        setTogglingAvatarType(false);
+        if (!res.ok) { toast.error(res.error); return; }
+        if (field === "allows_real_avatars") setAllowsRealAvatars(enabled);
+        else setAllowsIllustratedAvatars(enabled);
+        onUpdated?.({ ...world, [field]: enabled } as World);
+    }
+
+    async function handleAddTag(tagOverride?: string) {
+        const value = (tagOverride ?? newTag).trim();
+        if (!value) return;
+        setSavingTag(true);
+        const res = await addWorldTag(world.id, value);
+        setSavingTag(false);
+        if (!res.ok) { toast.error(res.error); return; }
+        setTags((prev) => (prev.includes(res.tag) ? prev : [...prev, res.tag]));
+        setExistingTags((prev) => (prev.includes(res.tag) ? prev : [...prev, res.tag]));
+        setNewTag("");
+    }
+
+    const tagSuggestions = React.useMemo(() => {
+        const query = newTag.trim().toLowerCase();
+        if (!query) return [];
+        return existingTags
+            .filter((t) => t !== query && t.includes(query) && !tags.includes(t))
+            .slice(0, 6);
+    }, [newTag, existingTags, tags]);
+
+    // existingTags est déjà trié par popularité (get_public_world_tags) — les 6
+    // premiers non encore ajoutés à ce monde suffisent.
+    const popularTags = React.useMemo(
+        () => existingTags.filter((t) => !tags.includes(t)).slice(0, 6),
+        [existingTags, tags],
+    );
+
+    async function handleRemoveTag(tag: string) {
+        setTags((prev) => prev.filter((t) => t !== tag));
+        const res = await removeWorldTag(world.id, tag);
+        if (!res.ok) {
+            toast.error(res.error);
+            setTags((prev) => [...prev, tag]);
+        }
+    }
+
     async function handleTimelineToggle(enabled: boolean) {
         setTogglingTimeline(true);
         const res = await setWorldTimeline(world.id, enabled, enabled ? timelineConfig : null);
@@ -257,6 +316,8 @@ export function WorldSettingsView({ world, onUpdated, onClose }: WorldSettingsVi
         setRestrictInventory(!!world.restrict_inventory);
         setRestrictSkills(!!world.restrict_skills);
         setEnableFaceclaims(world.enable_faceclaims !== false);
+        setAllowsRealAvatars(world.allows_real_avatars === true);
+        setAllowsIllustratedAvatars(world.allows_illustrated_avatars === true);
         setTimelineEnabled(!!world.timeline_enabled);
         setTimelineConfig(world.timeline_config ?? defaultConfig);
         form.reset({
@@ -269,6 +330,30 @@ export function WorldSettingsView({ world, onUpdated, onClose }: WorldSettingsVi
         });
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [world?.id]);
+
+    React.useEffect(() => {
+        let cancelled = false;
+        setTags([]);
+        void getWorldTags(world.id).then((res) => {
+            if (cancelled) return;
+            if (res.ok) setTags(res.tags.map((t) => t.tag));
+        });
+        return () => { cancelled = true; };
+    }, [world?.id]);
+
+    // Tags déjà utilisés ailleurs (mondes publics) — sert de source pour les
+    // suggestions affichées pendant la saisie, indépendant du monde courant.
+    React.useEffect(() => {
+        let cancelled = false;
+        void supabase
+            .rpc("get_public_world_tags")
+            .then(({ data }: { data: { tag: string; world_count: number }[] | null }) => {
+                if (cancelled) return;
+                setExistingTags((data ?? []).map((t) => t.tag));
+            });
+        return () => { cancelled = true; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     async function uploadToWorlds(file: File, kind: "icon" | "banner") {
         const {
@@ -310,13 +395,8 @@ export function WorldSettingsView({ world, onUpdated, onClose }: WorldSettingsVi
         }
     }
 
-    function handleIconFile(file: File | undefined) {
-        if (!file) return;
-        if (!file.type.startsWith("image/")) {
-            toast.error("Seules les images sont acceptées.");
-            return;
-        }
-        void uploadFile(file, "icon");
+    async function onIconConfirm(blob: Blob) {
+        await uploadFile(new File([blob], "icon.jpg", { type: blob.type || "image/jpeg" }), "icon");
     }
 
     async function onBannerConfirm(blob: Blob) {
@@ -365,8 +445,6 @@ export function WorldSettingsView({ world, onUpdated, onClose }: WorldSettingsVi
 
     const iconUrl = form.watch("icon_url");
     const bannerUrl = form.watch("banner_url");
-    const color = form.watch("color");
-    const colorPreset = COLOR_PRESETS.find((c) => c.value === color);
 
     return (
         <div className="flex h-full w-full flex-col bg-background">
@@ -388,6 +466,9 @@ export function WorldSettingsView({ world, onUpdated, onClose }: WorldSettingsVi
                             <TabsTrigger value="appearance" className="h-7 px-3 text-xs">Apparence</TabsTrigger>
                             <TabsTrigger value="categories" className="h-7 px-3 text-xs">Catégories</TabsTrigger>
                             <TabsTrigger value="features" className="h-7 px-3 text-xs">Fonctions</TabsTrigger>
+                            {public_worlds && (
+                                <TabsTrigger value="community" className="h-7 px-3 text-xs">Communauté</TabsTrigger>
+                            )}
                         </TabsList>
                     </div>
 
@@ -398,123 +479,6 @@ export function WorldSettingsView({ world, onUpdated, onClose }: WorldSettingsVi
                                 onSubmit={(e) => e.preventDefault()}
                                 className="mx-auto max-w-xl space-y-6"
                             >
-                                {/* -- Icône + couleur ------------------------ */}
-                                <div className="flex items-center gap-3">
-                                    <span
-                                        className={cn(
-                                            "flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full",
-                                            !iconUrl && "bg-card-400"
-                                        )}
-                                        style={{
-                                            backgroundColor: !iconUrl
-                                                ? color || undefined
-                                                : undefined,
-                                        }}
-                                    >
-                                        {uploading === "icon" ? (
-                                            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                                        ) : iconUrl ? (
-                                            <Image
-                                                src={iconUrl}
-                                                alt=""
-                                                width={48}
-                                                height={48}
-                                                className="h-full w-full object-cover"
-                                            />
-                                        ) : (
-                                            <ImageIcon className="h-5 w-5 text-white/70" />
-                                        )}
-                                    </span>
-
-                                    <input
-                                        ref={iconInputRef}
-                                        type="file"
-                                        accept="image/*"
-                                        className="hidden"
-                                        onChange={(e) =>
-                                            handleIconFile(e.target.files?.[0])
-                                        }
-                                    />
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button type="button" variant="secondary" size="sm">
-                                                Changer l’icône
-                                                <ChevronDown className="ml-1 h-3.5 w-3.5 text-muted-foreground" />
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="start">
-                                            <DropdownMenuItem
-                                                onClick={() => iconInputRef.current?.click()}
-                                            >
-                                                Téléverser une image…
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem
-                                                disabled={!iconUrl}
-                                                onClick={() => {
-                                                    form.setValue("icon_url", "", {
-                                                        shouldDirty: true,
-                                                    });
-                                                    void persistField("icon_url", "");
-                                                }}
-                                            >
-                                                Retirer l’icône
-                                            </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button type="button" variant="secondary" size="sm">
-                                                <span
-                                                    className="h-2.5 w-2.5 rounded-full"
-                                                    style={{
-                                                        backgroundColor:
-                                                            color || "transparent",
-                                                        boxShadow: color
-                                                            ? "none"
-                                                            : "inset 0 0 0 1px var(--color-border)",
-                                                    }}
-                                                />
-                                                {colorPreset?.name ??
-                                                    (color ? color : "Couleur")}
-                                                <ChevronDown className="ml-1 h-3.5 w-3.5 text-muted-foreground" />
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="start" className="w-44">
-                                            {COLOR_PRESETS.map((c) => (
-                                                <DropdownMenuItem
-                                                    key={c.value}
-                                                    onClick={() => {
-                                                        form.setValue("color", c.value, {
-                                                            shouldDirty: true,
-                                                            shouldValidate: true,
-                                                        });
-                                                        void persistField("color", c.value);
-                                                    }}
-                                                >
-                                                    <span
-                                                        className="mr-2 h-2.5 w-2.5 rounded-full"
-                                                        style={{ backgroundColor: c.value }}
-                                                    />
-                                                    {c.name}
-                                                </DropdownMenuItem>
-                                            ))}
-                                            <DropdownMenuItem
-                                                onClick={() => {
-                                                    form.setValue("color", "", {
-                                                        shouldDirty: true,
-                                                        shouldValidate: true,
-                                                    });
-                                                    void persistField("color", "");
-                                                }}
-                                            >
-                                                <span className="mr-2 h-2.5 w-2.5 rounded-full border border-border" />
-                                                Aucune
-                                            </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </div>
-
                                 {/* -- Nom ------------------------------------ */}
                                 <FormField
                                     control={form.control}
@@ -570,59 +534,109 @@ export function WorldSettingsView({ world, onUpdated, onClose }: WorldSettingsVi
                                     )}
                                 />
 
-                                {/* -- Visibilité ----------------------------- */}
-                                {public_worlds && (
-                                    <FormField
-                                        control={form.control}
-                                        name="visibility"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>
-                                                    <LabelWithHelp help="Un monde public est accessible à tous les membres de la plateforme">
-                                                        Visibilité
-                                                    </LabelWithHelp>
-                                                </FormLabel>
-                                                <FormControl>
-                                                    <div className="flex gap-2">
-                                                        <button
+                                {/* -- Icône ----------------------------------- */}
+                                <FormField
+                                    control={form.control}
+                                    name="icon_url"
+                                    render={() => (
+                                        <FormItem>
+                                            <FormLabel>
+                                                <LabelWithHelp help="Affichée dans la sidebar et sur la carte du monde">
+                                                    Icône du monde
+                                                </LabelWithHelp>
+                                            </FormLabel>
+                                            <div className="flex items-start gap-3">
+                                                {iconUrl ? (
+                                                    <div className="flex items-start gap-2">
+                                                        <ImagePickerCropField
+                                                            aspect={1}
+                                                            uploading={uploading === "icon"}
+                                                            previewSrc={iconUrl}
+                                                            previewClassName="h-12 w-12 shrink-0 rounded-lg"
+                                                            changeLabel="Changer"
+                                                            onConfirm={onIconConfirm}
+                                                        />
+                                                        <Button
                                                             type="button"
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            disabled={uploading === "icon"}
                                                             onClick={() => {
-                                                                field.onChange("private");
-                                                                void persistField("visibility", "private");
+                                                                form.setValue("icon_url", "", { shouldDirty: true });
+                                                                void persistField("icon_url", "");
                                                             }}
-                                                            className={cn(
-                                                                "flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition-colors",
-                                                                field.value === "private"
-                                                                    ? "border-primary bg-primary/10 text-primary"
-                                                                    : "border-border bg-transparent text-muted-foreground hover:border-muted-foreground/40 hover:text-foreground"
-                                                            )}
                                                         >
-                                                            <GlobeLock className="h-4 w-4 shrink-0" />
-                                                            Privé
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => {
-                                                                field.onChange("public");
-                                                                void persistField("visibility", "public");
-                                                            }}
-                                                            className={cn(
-                                                                "flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition-colors",
-                                                                field.value === "public"
-                                                                    ? "border-primary bg-primary/10 text-primary"
-                                                                    : "border-border bg-transparent text-muted-foreground hover:border-muted-foreground/40 hover:text-foreground"
-                                                            )}
-                                                        >
-                                                            <Globe className="h-4 w-4 shrink-0" />
-                                                            Public
-                                                        </button>
+                                                            Retirer
+                                                        </Button>
                                                     </div>
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                )}
+                                                ) : (
+                                                    <div className="w-full">
+                                                        <ImagePickerCropField
+                                                            aspect={1}
+                                                            uploading={uploading === "icon"}
+                                                            onConfirm={onIconConfirm}
+                                                        />
+                                                    </div>
+                                                )}
+
+                                                {/* Sélecteur de couleur désactivé temporairement
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button type="button" variant="secondary" size="sm">
+                                                            <span
+                                                                className="h-2.5 w-2.5 rounded-full"
+                                                                style={{
+                                                                    backgroundColor:
+                                                                        color || "transparent",
+                                                                    boxShadow: color
+                                                                        ? "none"
+                                                                        : "inset 0 0 0 1px var(--color-border)",
+                                                                }}
+                                                            />
+                                                            {colorPreset?.name ??
+                                                                (color ? color : "Couleur")}
+                                                            <ChevronDown className="ml-1 h-3.5 w-3.5 text-muted-foreground" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="start" className="w-44">
+                                                        {COLOR_PRESETS.map((c) => (
+                                                            <DropdownMenuItem
+                                                                key={c.value}
+                                                                onClick={() => {
+                                                                    form.setValue("color", c.value, {
+                                                                        shouldDirty: true,
+                                                                        shouldValidate: true,
+                                                                    });
+                                                                    void persistField("color", c.value);
+                                                                }}
+                                                            >
+                                                                <span
+                                                                    className="mr-2 h-2.5 w-2.5 rounded-full"
+                                                                    style={{ backgroundColor: c.value }}
+                                                                />
+                                                                {c.name}
+                                                            </DropdownMenuItem>
+                                                        ))}
+                                                        <DropdownMenuItem
+                                                            onClick={() => {
+                                                                form.setValue("color", "", {
+                                                                    shouldDirty: true,
+                                                                    shouldValidate: true,
+                                                                });
+                                                                void persistField("color", "");
+                                                            }}
+                                                        >
+                                                            <span className="mr-2 h-2.5 w-2.5 rounded-full border border-border" />
+                                                            Aucune
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                                */}
+                                            </div>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
 
                                 {/* -- Bannière -------------------------------- */}
                                 <FormField
@@ -937,6 +951,204 @@ export function WorldSettingsView({ world, onUpdated, onClose }: WorldSettingsVi
                                 )}
                             </div>
                         </TabsContent>
+
+                        {/* ── Communauté ───────────────────────────────── */}
+                        {public_worlds && (
+                            <TabsContent value="community" className="mt-0">
+                                <div className="mx-auto max-w-xl space-y-6">
+                                    {/* -- Visibilité ----------------------------- */}
+                                    <FormField
+                                        control={form.control}
+                                        name="visibility"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>
+                                                    <LabelWithHelp help="Un monde public est accessible à tous les membres de la plateforme">
+                                                        Visibilité
+                                                    </LabelWithHelp>
+                                                </FormLabel>
+                                                <FormControl>
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                field.onChange("private");
+                                                                void persistField("visibility", "private");
+                                                            }}
+                                                            className={cn(
+                                                                "flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition-colors",
+                                                                field.value === "private"
+                                                                    ? "border-primary bg-primary/10 text-primary"
+                                                                    : "border-border bg-transparent text-muted-foreground hover:border-muted-foreground/40 hover:text-foreground"
+                                                            )}
+                                                        >
+                                                            <GlobeLock className="h-4 w-4 shrink-0" />
+                                                            Privé
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                field.onChange("public");
+                                                                void persistField("visibility", "public");
+                                                            }}
+                                                            className={cn(
+                                                                "flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition-colors",
+                                                                field.value === "public"
+                                                                    ? "border-primary bg-primary/10 text-primary"
+                                                                    : "border-border bg-transparent text-muted-foreground hover:border-muted-foreground/40 hover:text-foreground"
+                                                            )}
+                                                        >
+                                                            <Globe className="h-4 w-4 shrink-0" />
+                                                            Public
+                                                        </button>
+                                                    </div>
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+
+                                    {/* -- Tags -------------------------------- */}
+                                    <div className="space-y-3">
+                                        <div className="space-y-0.5">
+                                            <p className="text-sm font-medium">Tags</p>
+                                            <p className="text-xs text-muted-foreground leading-snug">
+                                                Aident les autres joueurs à trouver ce monde dans l&apos;Explorateur.
+                                            </p>
+                                        </div>
+                                        {tags.length > 0 && (
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {tags.map((tag) => (
+                                                    <span
+                                                        key={tag}
+                                                        className="inline-flex items-center gap-1 rounded-full border border-border-soft bg-muted/40 px-2.5 py-1 text-xs"
+                                                    >
+                                                        {tag}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => void handleRemoveTag(tag)}
+                                                            className="text-muted-foreground hover:text-destructive transition-colors"
+                                                            aria-label={`Retirer le tag ${tag}`}
+                                                        >
+                                                            <X className="h-3 w-3" />
+                                                        </button>
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
+                                        {tags.length < 10 && !newTag.trim() && popularTags.length > 0 && (
+                                            <div className="space-y-1">
+                                                <p className="text-[11px] font-medium text-muted-foreground">Tags populaires</p>
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    {popularTags.map((tag) => (
+                                                        <button
+                                                            key={tag}
+                                                            type="button"
+                                                            disabled={savingTag}
+                                                            onClick={() => void handleAddTag(tag)}
+                                                            className="inline-flex items-center gap-1 rounded-full border border-dashed border-border-soft px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+                                                        >
+                                                            <Plus className="h-3 w-3" />
+                                                            {tag}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                        {tags.length < 10 && (
+                                            <div className="space-y-1.5">
+                                                <div className="flex gap-2">
+                                                    <Input
+                                                        value={newTag}
+                                                        placeholder="Ajouter un tag…"
+                                                        className="h-8 text-sm"
+                                                        maxLength={24}
+                                                        disabled={savingTag}
+                                                        onChange={(e) => setNewTag(e.target.value.replace(/[^\p{L}\p{N}]/gu, ""))}
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === "Enter" || e.key === " " || e.key === ",") {
+                                                                e.preventDefault();
+                                                                void handleAddTag();
+                                                            }
+                                                        }}
+                                                    />
+                                                    <Button
+                                                        type="button"
+                                                        variant="secondary"
+                                                        size="sm"
+                                                        disabled={!newTag.trim() || savingTag}
+                                                        onClick={() => void handleAddTag()}
+                                                    >
+                                                        <Plus className="h-3.5 w-3.5" />
+                                                    </Button>
+                                                </div>
+                                                {tagSuggestions.length > 0 && (
+                                                    <div className="flex flex-wrap gap-1.5">
+                                                        {tagSuggestions.map((tag) => (
+                                                            <button
+                                                                key={tag}
+                                                                type="button"
+                                                                disabled={savingTag}
+                                                                onClick={() => void handleAddTag(tag)}
+                                                                className="inline-flex items-center gap-1 rounded-full border border-dashed border-border-soft px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+                                                            >
+                                                                <Plus className="h-3 w-3" />
+                                                                {tag}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                        {tags.length >= 10 && (
+                                            <p className="text-[11px] text-muted-foreground">Maximum 10 tags.</p>
+                                        )}
+                                    </div>
+
+                                    {/* -- Type d'avatars ----------------------- */}
+                                    <div className="space-y-3">
+                                        <div className="space-y-0.5">
+                                            <p className="text-sm font-medium">Type d&apos;avatars accepté</p>
+                                            <p className="text-xs text-muted-foreground leading-snug">
+                                                Indique aux visiteurs le style d&apos;avatars utilisé dans ce monde.
+                                            </p>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button
+                                                type="button"
+                                                disabled={togglingAvatarType}
+                                                onClick={() => void handleAvatarTypeToggle("allows_real_avatars", !allowsRealAvatars)}
+                                                aria-pressed={allowsRealAvatars}
+                                                className={cn(
+                                                    "flex flex-1 flex-col items-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition-colors disabled:opacity-60",
+                                                    allowsRealAvatars
+                                                        ? "border-primary bg-primary/10 text-primary"
+                                                        : "border-border bg-transparent text-muted-foreground hover:border-muted-foreground/40 hover:text-foreground"
+                                                )}
+                                            >
+                                                <Camera className="h-4 w-4 shrink-0" />
+                                                Avatars réels
+                                            </button>
+                                            <button
+                                                type="button"
+                                                disabled={togglingAvatarType}
+                                                onClick={() => void handleAvatarTypeToggle("allows_illustrated_avatars", !allowsIllustratedAvatars)}
+                                                aria-pressed={allowsIllustratedAvatars}
+                                                className={cn(
+                                                    "flex flex-1 flex-col items-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition-colors disabled:opacity-60",
+                                                    allowsIllustratedAvatars
+                                                        ? "border-primary bg-primary/10 text-primary"
+                                                        : "border-border bg-transparent text-muted-foreground hover:border-muted-foreground/40 hover:text-foreground"
+                                                )}
+                                            >
+                                                <Palette className="h-4 w-4 shrink-0" />
+                                                Avatars illustrés
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </TabsContent>
+                        )}
                     </div>
                 </Tabs>
             </Form>

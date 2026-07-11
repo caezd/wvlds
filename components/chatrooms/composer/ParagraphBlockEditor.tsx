@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useLayoutEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 import { Bold, Italic, Strikethrough, Underline, List, Palette, Heading, Heading1, Heading2, Heading3 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -555,6 +556,12 @@ export function ParagraphBlockEditor({
   // coordonnées de `getBoundingClientRect()` sont déjà relatives au viewport,
   // et ça évite tout clip par l'`overflow-y-auto` du wrapper si la sélection
   // est proche d'un bord pendant que l'éditeur est scrollé.
+  //
+  // Portalée dans document.body (plus bas) : un ancêtre avec `transform`
+  // (ex. DialogContent, centré via translate-x/y-[-50%]) redéfinirait le
+  // containing block d'un `position: fixed` descendant — les coordonnées
+  // viewport de getBoundingClientRect() ne correspondraient alors plus à la
+  // position réelle de la barre (composeur de création en dialog).
   const TOOLBAR_HEIGHT = 40;
   const TOOLBAR_GAP = 8;
   const toolbarStyle: React.CSSProperties | undefined = selectionRect
@@ -579,7 +586,7 @@ export function ParagraphBlockEditor({
         wrapperClassName,
       )}
     >
-      {formatting && selectionRect && (
+      {formatting && selectionRect && createPortal(
         <div
           style={toolbarStyle}
           className="fixed z-50 flex items-center gap-0.5 rounded-lg border border-border-soft bg-background p-1 shadow-lg"
@@ -686,7 +693,8 @@ export function ParagraphBlockEditor({
               </div>
             </PopoverContent>
           </Popover>
-        </div>
+        </div>,
+        document.body,
       )}
       {!value.trim() && !focused && placeholder && (
         <span className="absolute top-[5px] left-[10px] pointer-events-none select-none text-muted-foreground/50 text-sm">

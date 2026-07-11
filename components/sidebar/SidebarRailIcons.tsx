@@ -26,7 +26,7 @@ export function RailIcon({
           href={href}
           aria-current={isActive ? "page" : undefined}
           className={cn(
-            "flex h-9 w-9 items-center justify-center rounded-xl transition-colors hover:text-mist-50",
+            "flex h-9 w-9 items-center justify-center rounded-xl transition-colors hover:text-mist-50 relative",
             isActive
               ? "bg-carbon-700 text-mist-50"
               : "text-mist-100",
@@ -34,7 +34,7 @@ export function RailIcon({
           aria-label={label}
         >
           {isActive && (
-            <span className="absolute w-[8px] h-[20px] bg-mist-50 -left-2 -translate-x-[4px] rounded-full" />
+            <span className="absolute w-[8px] h-[20px] bg-mist-50 -left-2 -translate-x-[6px] rounded-full" />
           )}
           {children}
         </Link>

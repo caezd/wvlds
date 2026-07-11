@@ -3,12 +3,12 @@
 import { useMemo, useState } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { Search } from "lucide-react";
-import { DynamicIcon, type IconName, iconNames } from "lucide-react/dynamic";
+import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { LUCIDE_CATEGORIES, LUCIDE_ALL_ICONS } from "@/lib/lucideCategories";
 import { cn } from "@/lib/utils";
 
-export const VALID_LUCIDE_ICONS = new Set<string>(iconNames);
+export const VALID_LUCIDE_ICONS = new Set<string>(LUCIDE_ALL_ICONS);
 
 const ICON_RENDER_CAP = 180;
 
@@ -136,8 +136,8 @@ function LucideIconButton({
         active ? "border-primary bg-primary/10" : "border-transparent hover:bg-muted",
       )}
     >
-      <DynamicIcon
-        name={name as IconName}
+      <LazyLucideIcon
+        name={name}
         className="h-4 w-4"
         style={active && accent ? { color: accent } : undefined}
       />
@@ -185,8 +185,8 @@ export function LucideIconPicker({
       className="flex h-9 w-full items-center gap-2 rounded-md border border-input bg-transparent px-3 text-sm shadow-xs transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
     >
       {value ? (
-        <DynamicIcon
-          name={value as IconName}
+        <LazyLucideIcon
+          name={value}
           className="h-4 w-4 shrink-0"
           style={accent ? { color: accent } : undefined}
         />

@@ -11,6 +11,7 @@ import {
 } from "@/components/personas/PersonasView";
 import { fetchSectionsByPersona } from "@/lib/personaSections";
 import { FREE_PERSONAS_PER_WORLD } from "@/lib/userQuota";
+import type { MaritalStatus } from "@/types/db";
 
 type PersonaRow = {
   id: string;
@@ -22,6 +23,8 @@ type PersonaRow = {
   banner_url?: string | null;
   world_id?: string | null;
   faceclaim?: string | null;
+  marital_status?: string | null;
+  spouse_persona_id?: string | null;
 };
 
 type MemberWorld = {
@@ -43,7 +46,7 @@ export default async function PersonasPage() {
     const { data, error } = await supabase
       .from("personas")
       .select(
-        "id, name, avatar_url, avatar_config, banner_url, avatar_frame_id, world_id, faceclaim, frame:avatar_frame_id(asset_url)",
+        "id, name, avatar_url, avatar_config, banner_url, avatar_frame_id, world_id, faceclaim, marital_status, spouse_persona_id, frame:avatar_frame_id(asset_url)",
       )
       .eq("user_id", userId)
       .eq("is_template", false)
@@ -159,6 +162,8 @@ export default async function PersonasPage() {
       banner_url: p.banner_url ?? null,
       world_id: key,
       faceclaim: p.faceclaim ?? null,
+      marital_status: (p.marital_status as MaritalStatus | null) ?? null,
+      spouse_persona_id: p.spouse_persona_id ?? null,
       sections: sectionsByPersona.get(p.id) ?? [],
     });
   }

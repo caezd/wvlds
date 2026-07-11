@@ -4,8 +4,17 @@ import { useRouter, usePathname } from "next/navigation";
 import { useCallback, useRef } from "react";
 import { Search } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { buildExploreParams } from "./exploreQuery";
 
-export function ExploreSearch({ defaultValue }: { defaultValue: string }) {
+export function ExploreSearch({
+  defaultValue,
+  tags = [],
+  avatarTypes = [],
+}: {
+  defaultValue: string;
+  tags?: string[];
+  avatarTypes?: string[];
+}) {
   const t = useTranslations("explore");
   const router = useRouter();
   const pathname = usePathname();
@@ -16,12 +25,10 @@ export function ExploreSearch({ defaultValue }: { defaultValue: string }) {
       if (timerRef.current) clearTimeout(timerRef.current);
       const q = e.target.value.trim();
       timerRef.current = setTimeout(() => {
-        const params = new URLSearchParams();
-        if (q) params.set("q", q);
-        router.push(`${pathname}?${params.toString()}`);
+        router.push(`${pathname}?${buildExploreParams({ q, tags, avatarTypes })}`);
       }, 300);
     },
-    [router, pathname],
+    [router, pathname, tags, avatarTypes],
   );
 
   return (

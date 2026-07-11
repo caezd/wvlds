@@ -4,6 +4,7 @@ import Image from "next/image";
 import { PersonaEditSheet } from "./PersonaEditSheet";
 import type { PersonaSectionWithFields } from "@/types/personas";
 import type { AvatarConfigV1 } from "./avatar/PersonaAvatarPicker";
+import type { MaritalStatus } from "@/types/db";
 import { Pencil } from "lucide-react";
 import { getInitials } from "@/lib/textFormatting";
 
@@ -16,6 +17,8 @@ type PersonaCardProps = {
   initialFrameId?: string | null;
   initialFrameUrl?: string | null;
   initialFaceclaim?: string | null;
+  initialMaritalStatus?: MaritalStatus | null;
+  initialSpousePersonaId?: string | null;
   initialSections: PersonaSectionWithFields[];
   worldId?: string;
   restrictInventory?: boolean;
@@ -32,6 +35,8 @@ export function PersonaCard({
   initialFrameId,
   initialFrameUrl,
   initialFaceclaim,
+  initialMaritalStatus,
+  initialSpousePersonaId,
   initialSections,
   worldId,
   restrictInventory,
@@ -49,6 +54,8 @@ export function PersonaCard({
       initialFrameId={initialFrameId ?? null}
       initialFrameUrl={initialFrameUrl ?? null}
       initialFaceclaim={initialFaceclaim ?? null}
+      initialMaritalStatus={initialMaritalStatus ?? null}
+      initialSpousePersonaId={initialSpousePersonaId ?? null}
       worldId={worldId}
       restrictInventory={restrictInventory}
       restrictSkills={restrictSkills}

@@ -125,9 +125,11 @@ export function ChatroomMessageHeader({
             >
               {message.persona?.name}
             </strong>
-            <span className="text-mist-200 text-xs">
-              (@{(message.author?.username ?? playerUsername ?? "?").toLowerCase()})
-            </span>
+            <UserProfileSheetTrigger userId={userId} label={playerUsername}>
+              <span className="text-mist-200 text-xs hover:text-mist-50 hover:underline transition-colors">
+                (@{(message.author?.username ?? playerUsername ?? "?").toLowerCase()})
+              </span>
+            </UserProfileSheetTrigger>
           </div>
           <div className="flex items-center gap-1">
             {!editing && !isMobile && emojiReactions && (

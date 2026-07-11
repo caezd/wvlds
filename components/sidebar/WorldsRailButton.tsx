@@ -26,7 +26,7 @@ export function WorldsRailButton() {
   const supabase = useMemo(() => createClient(), []);
   const { userId, plan: ctxPlan } = useCurrentUser();
   const pathname = usePathname();
-  const isWorldPage = pathname?.startsWith("/w/") ?? false;
+  const isWorldPage = pathname?.startsWith("/w/") || pathname?.startsWith("/c/") || pathname === "/w" || pathname === "/c";
   const [open, setOpen] = useState(false);
   const [worlds, setWorlds] = useState<FavoriteWorld[]>([]);
   const [quotaReached, setQuotaReached] = useState(false);

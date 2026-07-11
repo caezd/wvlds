@@ -245,7 +245,14 @@
     "enter": "Entrer",
     "noDescription": "Aucune description",
     "join": "Rejoindre",
-    "joining": "…"
+    "joining": "…",
+    "avatarReal": "Avatars réels",
+    "avatarIllustrated": "Avatars illustrés",
+    "resetFilters": "Réinitialiser les filtres",
+    "tagsLabel": "Tags",
+    "searchTagsPlaceholder": "Chercher un tag…",
+    "noTags": "Aucun tag trouvé.",
+    "latestWorlds": "Derniers mondes créés"
   },
   "home": {
     "title": "Mondes",
@@ -287,7 +294,19 @@
     "moveAction": "Déplacer",
     "duplicateAction": "Dupliquer",
     "moveSuccess": "« {name} » déplacé vers {world}.",
-    "duplicateSuccess": "« {name} » dupliqué vers {world}."
+    "duplicateSuccess": "« {name} » dupliqué vers {world}.",
+    "maritalStatus": {
+      "label": "Statut marital",
+      "none": "Non renseigné",
+      "single": "Célibataire",
+      "in_relationship": "En couple",
+      "married": "Marié(e)",
+      "divorced": "Divorcé(e)",
+      "widowed": "Veuf(ve)",
+      "spouseLabel": "Conjoint(e)",
+      "spousePlaceholder": "Choisir un persona du monde",
+      "spouseNone": "Aucun"
+    }
   },
   "quests": {
     "title": "Quêtes du jour",
