@@ -1,5 +1,7 @@
 export type AvatarTypeFilter = "real" | "illustrated";
 
+export const MAX_FILTER_TAGS = 10;
+
 export function buildExploreParams(params: {
   q?: string;
   tags?: string[];

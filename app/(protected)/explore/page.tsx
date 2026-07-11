@@ -8,11 +8,10 @@ import { ExploreSearch } from "./ExploreSearch";
 import { ExploreFilters } from "./ExploreFilters";
 import { JoinWorldButton } from "./JoinWorldButton";
 import { getTranslations } from "next-intl/server";
-import { buildExploreParams } from "./exploreQuery";
+import { buildExploreParams, MAX_FILTER_TAGS } from "./exploreQuery";
 
 const PAGE_SIZE = 16;
 const NO_MATCH_SENTINEL = "00000000-0000-0000-0000-000000000000";
-const MAX_FILTER_TAGS = 10;
 const MAX_TAG_LENGTH = 24;
 
 type PublicWorld = {

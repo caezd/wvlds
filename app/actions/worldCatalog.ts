@@ -286,11 +286,14 @@ export async function setWorldPersonaTemplate(worldId: string, enabled: boolean)
 
 // ── Communauté : tags & type d'avatars ────────────────────────────────────────
 
+const WORLD_AVATAR_TYPE_FIELDS = new Set(["allows_real_avatars", "allows_illustrated_avatars"]);
+
 export async function setWorldAvatarType(
   worldId: string,
   field: "allows_real_avatars" | "allows_illustrated_avatars",
   enabled: boolean,
 ) {
+  if (!WORLD_AVATAR_TYPE_FIELDS.has(field)) return { ok: false as const, error: "Champ invalide." };
   const supabase = await createClient();
   const { error } = await supabase.from("worlds").update({ [field]: enabled }).eq("id", worldId);
   if (error) return { ok: false as const, error: error.message };

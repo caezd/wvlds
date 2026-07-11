@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { buildExploreParams } from "./exploreQuery";
+import { buildExploreParams, MAX_FILTER_TAGS } from "./exploreQuery";
 
 export function ExploreFilters({
   q,
@@ -49,7 +49,11 @@ export function ExploreFilters({
   }
 
   function togglePendingTag(tag: string) {
-    setPendingTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
+    setPendingTags((prev) => {
+      if (prev.includes(tag)) return prev.filter((t) => t !== tag);
+      if (prev.length >= MAX_FILTER_TAGS) return prev;
+      return [...prev, tag];
+    });
   }
 
   // On applique tous les tags cochés en une seule navigation, à la fermeture
