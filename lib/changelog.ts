@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-07 ──────────────────────────────────────────────────────────────
   {
     date: "2026-07",
+    tag: "Personas",
+    text: "**Statut marital** sur la fiche d'un persona (célibataire, en couple, marié·e, divorcé·e, veuf·ve) : quand le statut implique une relation, choisissez un **conjoint** parmi les autres personas du même monde.",
+  },
+  {
+    date: "2026-07",
     tag: "Mondes",
     text: "Nouvel onglet **« Communauté »** dans les réglages d'un monde : ajoutez jusqu'à 10 **tags** libres pour aider les autres joueurs à le trouver dans l'Explorateur, et indiquez le **type d'avatars accepté** (réels et/ou illustrés). L'Explorateur propose désormais des filtres correspondants, en plus de la recherche par nom/description.",
   },
@@ -205,6 +210,16 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-07",
     tag: "Technique",
     text: "Correction des 27 tests automatisés échouant depuis l'ajout de i18n :\n- Les composants `ChatroomComposer`, `CreateWorldButton` et `NotificationInlinePanelContent` utilisent `useTranslations()` (next-intl) mais les tests unitaires n'avaient pas de `NextIntlClientProvider` — tous les rendus plantaient\n- Un mock global de `next-intl` dans la configuration de test lit les vraies traductions `fr.json` et implémente `t()`, `t.rich()` (interpolation ICU avec composants React) et `t.has()` sans contexte React\n- Correction au passage : le bouton « Retour » du panel notifications utilisait `aria-label=\"Notifications\"` (copie du titre) au lieu de `\"Retour\"`, la clé `back` a été ajoutée",
+  },
+  {
+    date: "2026-07",
+    tag: "Correctif",
+    text: "La barre de mise en forme flottante du composer apparaissait mal placée dans le dialog de création d'une chatroom depuis la page d'un monde : le centrage du dialog (`translate`) redéfinissait le repère de positionnement de la barre (`position: fixed`), décalant ses coordonnées calculées depuis la sélection. La barre est désormais rendue directement dans `document.body`, quel que soit le composeur qui l'affiche.",
+  },
+  {
+    date: "2026-07",
+    tag: "Correctif",
+    text: "Fermer le dialog de création d'une chatroom (depuis la page d'un monde) ne vidait jamais réellement le composer, y compris en confirmant l'abandon du brouillon : le texte revenait à la prochaine ouverture, restauré depuis le brouillon toujours présent en local. Toute fermeture du dialog (avec ou sans confirmation) vide désormais le composer et supprime son brouillon local.",
   },
   // ── 2026-06 ──────────────────────────────────────────────────────────────
   {

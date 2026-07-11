@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useMemo, useEffect } from "react";
+import React, { useState, useRef, useMemo, useEffect, forwardRef, useImperativeHandle } from "react";
 import { useTranslations } from "next-intl";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import { createClient } from "@/lib/supabase/client";
@@ -50,27 +50,7 @@ import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
 type MapPinOption = { id: string; title: string; color: string };
 import { HsvColorPicker } from "@/components/ui/hsv-color-picker";
 
-export function ChatroomComposer({
-  chatId,
-  worldId,
-  presetPersona,
-  onTyping,
-  onPersonaChange,
-  chatroomKey,
-  onEditLastMessage,
-  placeholder = "Écris ton message en Markdown…",
-  onResolveChat,
-  onAfterSend,
-  onMessageSent,
-  typingLine,
-  onAnchorSent,
-  worldTimelineConfig,
-  timelineDate,
-  onTimelineDateChange,
-  mapPins,
-  mapPinId,
-  onMapPinChange,
-}: {
+type ChatroomComposerProps = {
   /** Chatroom existante. Laisser vide pour le mode « création » (voir onResolveChat). */
   chatId?: string;
   worldId?: string | null;
@@ -101,7 +81,35 @@ export function ChatroomComposer({
   mapPins?: MapPinOption[];
   mapPinId?: string | null;
   onMapPinChange?: (id: string | null) => void;
-}) {
+};
+
+/** Permet au parent (ex: dialog de création) de vider le composer et son
+ *  brouillon persisté — utilisé quand l'utilisateur annule/ferme sans envoyer. */
+export type ChatroomComposerHandle = {
+  clearDraft: () => void;
+};
+
+export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomComposerProps>(function ChatroomComposer({
+  chatId,
+  worldId,
+  presetPersona,
+  onTyping,
+  onPersonaChange,
+  chatroomKey,
+  onEditLastMessage,
+  placeholder = "Écris ton message en Markdown…",
+  onResolveChat,
+  onAfterSend,
+  onMessageSent,
+  typingLine,
+  onAnchorSent,
+  worldTimelineConfig,
+  timelineDate,
+  onTimelineDateChange,
+  mapPins,
+  mapPinId,
+  onMapPinChange,
+}, ref) {
   const tChatrooms = useTranslations("chatrooms");
   const tPersonas = useTranslations("personas");
   const tDms = useTranslations("dms");
@@ -221,6 +229,17 @@ export function ChatroomComposer({
 
   // Avertissements de contenu (disclaimers / trigger warnings)
   const contentWarningsChips = useTagChips(null);
+
+  useImperativeHandle(ref, () => ({
+    clearDraft() {
+      setValue("");
+      setPendingMedia([]);
+      setVisibleTo(null);
+      setParticipants([]);
+      contentWarningsChips.reset(null);
+      try { localStorage.removeItem(DRAFT_KEY); } catch { }
+    },
+  }));
 
   // Bannière
   const [bannerPickerOpen, setBannerPickerOpen] = useState(false);
@@ -659,7 +678,7 @@ export function ChatroomComposer({
       </div>
     </div>
   );
-}
+});
 
 function formatTimelineLabel(config: WorldTimelineConfig, date: WorldTimelineDate): string {
   const y = `${config.year_label} ${date.year}${config.era_name ? ` ${config.era_name}` : ""}`;

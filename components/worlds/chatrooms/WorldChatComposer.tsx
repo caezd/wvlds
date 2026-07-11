@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { generate } from "boring-name-generator";
 import { ChevronDown, Plus, Shuffle, Tag, X } from "lucide-react";
@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { TABLE } from "@/lib/constants";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
-import { ChatroomComposer } from "@/components/chatrooms/composer/ChatroomComposer";
+import { ChatroomComposer, type ChatroomComposerHandle } from "@/components/chatrooms/composer/ChatroomComposer";
 import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
 import {
   Dialog,
@@ -71,6 +71,7 @@ export function WorldChatComposer({
   const [confirmClose, setConfirmClose] = useState(false);
   const [title, setTitle] = useState("");
   const [hasContent, setHasContent] = useState(false);
+  const composerRef = useRef<ChatroomComposerHandle>(null);
 
   useEffect(() => {
     if (!world_map) return;
@@ -104,11 +105,19 @@ export function WorldChatComposer({
     if (hasContent) {
       setConfirmClose(true);
     } else {
-      setOpen(false);
+      // Pas de nouvelle saisie depuis l'ouverture, mais un brouillon d'une
+      // session précédente a pu être restauré silencieusement (hasContent ne
+      // suit que les événements onInput) — on le vide quand même pour ne pas
+      // le laisser traîner en local.
+      forceClose();
     }
   }
 
   function forceClose() {
+    // Vide le composer et son brouillon persisté (localStorage) : sans ça,
+    // le texte réapparaîtrait à la prochaine ouverture du dialog malgré la
+    // confirmation d'abandon.
+    composerRef.current?.clearDraft();
     setConfirmClose(false);
     setOpen(false);
     setHasContent(false);
@@ -229,6 +238,7 @@ export function WorldChatComposer({
           {/* Composer réel — onInput remonte depuis le contenteditable */}
           <div onInput={() => setHasContent(true)}>
             <ChatroomComposer
+              ref={composerRef}
               presetPersona={persona}
               onPersonaChange={setPersona}
               worldId={worldId}

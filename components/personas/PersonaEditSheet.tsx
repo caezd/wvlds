@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react
 import Image from "next/image";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { supabaseThumb } from "@/lib/storage";
 import { toWebP } from "@/lib/imageUtils";
@@ -20,8 +21,16 @@ import {
 } from "@/components/ui/sheet";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Check, Coins, Flame, Loader2, Pencil, Trash2, X, Zap } from "lucide-react";
 import { ImagePickerCropField } from "@/components/ui/image-crop-picker";
+import type { MaritalStatus } from "@/types/db";
 
 import { PersonaSectionsTabs } from "./PersonaSectionsTabs";
 import type { PersonaSectionWithFields } from "@/types/personas";
@@ -263,6 +272,101 @@ function FramePicker({
 }
 
 // ---------------------------------------------------------------------------
+// Statut marital + conjoint (persona du même monde)
+// ---------------------------------------------------------------------------
+
+const MARITAL_STATUS_VALUES: MaritalStatus[] = ["single", "in_relationship", "married", "divorced", "widowed"];
+
+export function MaritalStatusPicker({
+  personaId,
+  supabase,
+  worldId,
+  initialStatus,
+  initialSpouseId,
+}: {
+  personaId: string;
+  supabase: ReturnType<typeof createClient>;
+  worldId?: string;
+  initialStatus: MaritalStatus | null;
+  initialSpouseId: string | null;
+}) {
+  const t = useTranslations("personas.maritalStatus");
+  const router = useRouter();
+  const [status, setStatus] = useState<MaritalStatus | null>(initialStatus);
+  const [spouseId, setSpouseId] = useState<string | null>(initialSpouseId);
+  const [worldPersonas, setWorldPersonas] = useState<{ id: string; name: string }[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const showSpouse = status === "in_relationship" || status === "married";
+
+  useEffect(() => {
+    if (!worldId || !showSpouse || loaded) return;
+    supabase
+      .from("personas")
+      .select("id, name")
+      .eq("world_id", worldId)
+      .eq("is_template", false)
+      .is("deleted_at", null)
+      .neq("id", personaId)
+      .order("name", { ascending: true })
+      .then((res: { data: { id: string; name: string }[] | null }) => {
+        setWorldPersonas(res.data ?? []);
+        setLoaded(true);
+      });
+  }, [worldId, showSpouse, loaded, supabase, personaId]);
+
+  async function updateStatus(next: MaritalStatus | null) {
+    const previous = status;
+    setStatus(next);
+    const clearSpouse = next !== "in_relationship" && next !== "married";
+    const { error } = await supabase
+      .from("personas")
+      .update({ marital_status: next, ...(clearSpouse ? { spouse_persona_id: null } : {}) })
+      .eq("id", personaId);
+    if (error) { setStatus(previous); return; }
+    if (clearSpouse) setSpouseId(null);
+    router.refresh();
+  }
+
+  async function updateSpouse(next: string | null) {
+    const previous = spouseId;
+    setSpouseId(next);
+    const { error } = await supabase.from("personas").update({ spouse_persona_id: next }).eq("id", personaId);
+    if (error) { setSpouseId(previous); return; }
+    router.refresh();
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <Select value={status ?? "none"} onValueChange={(v) => void updateStatus(v === "none" ? null : (v as MaritalStatus))}>
+        <SelectTrigger size="sm" className="w-auto min-w-40" aria-label={t("label")}>
+          <SelectValue placeholder={t("label")} />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="none">{t("none")}</SelectItem>
+          {MARITAL_STATUS_VALUES.map((value) => (
+            <SelectItem key={value} value={value}>{t(value)}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      {showSpouse && worldId && (
+        <Select value={spouseId ?? "none"} onValueChange={(v) => void updateSpouse(v === "none" ? null : v)}>
+          <SelectTrigger size="sm" className="w-auto min-w-48" aria-label={t("spouseLabel")}>
+            <SelectValue placeholder={t("spousePlaceholder")} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">{t("spouseNone")}</SelectItem>
+            {worldPersonas.map((p) => (
+              <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 
 type PersonaEditSheetProps = {
   personaId: string;
@@ -274,6 +378,8 @@ type PersonaEditSheetProps = {
   initialFrameId?: string | null;
   initialFrameUrl?: string | null;
   initialFaceclaim?: string | null;
+  initialMaritalStatus?: MaritalStatus | null;
+  initialSpousePersonaId?: string | null;
   trigger?: ReactNode;
   worldId?: string;
   restrictInventory?: boolean;
@@ -292,6 +398,8 @@ type PersonaEditorContentProps = {
   initialFrameId?: string | null;
   initialFrameUrl?: string | null;
   initialFaceclaim?: string | null;
+  initialMaritalStatus?: MaritalStatus | null;
+  initialSpousePersonaId?: string | null;
   /** Notifie le parent quand la sheet Avatar s'ouvre/ferme (effet pile de cartes). */
   onAvatarOpenChange?: (open: boolean) => void;
   /** Notifie le parent quand la sheet Bannière s'ouvre/ferme (effet pile de cartes). */
@@ -317,6 +425,8 @@ export function PersonaEditorContent({
   initialFrameId,
   initialFrameUrl,
   initialFaceclaim,
+  initialMaritalStatus,
+  initialSpousePersonaId,
   onAvatarOpenChange,
   onBannerOpenChange,
   worldId,
@@ -466,6 +576,16 @@ export function PersonaEditorContent({
                     />
                   </div>
                 )}
+              </div>
+
+              <div className="mb-3">
+                <MaritalStatusPicker
+                  personaId={personaId}
+                  supabase={supabase}
+                  worldId={worldId}
+                  initialStatus={initialMaritalStatus ?? null}
+                  initialSpouseId={initialSpousePersonaId ?? null}
+                />
               </div>
 
               {xpInfo && balance ? (
@@ -718,6 +838,8 @@ export function PersonaEditSheet({
   initialFrameId,
   initialFrameUrl,
   initialFaceclaim,
+  initialMaritalStatus,
+  initialSpousePersonaId,
   trigger,
   worldId,
   restrictInventory,
@@ -779,6 +901,8 @@ export function PersonaEditSheet({
               initialFrameId={initialFrameId}
               initialFrameUrl={initialFrameUrl}
               initialFaceclaim={initialFaceclaim}
+              initialMaritalStatus={initialMaritalStatus}
+              initialSpousePersonaId={initialSpousePersonaId}
               faceclaimsEnabled={faceclaimsEnabled}
               onAvatarOpenChange={setAvatarOpen}
               onBannerOpenChange={setBannerOpen}

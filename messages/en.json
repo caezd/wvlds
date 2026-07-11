@@ -293,7 +293,19 @@
     "moveAction": "Move",
     "duplicateAction": "Duplicate",
     "moveSuccess": "“{name}” moved to {world}.",
-    "duplicateSuccess": "“{name}” duplicated to {world}."
+    "duplicateSuccess": "“{name}” duplicated to {world}.",
+    "maritalStatus": {
+      "label": "Marital status",
+      "none": "Not set",
+      "single": "Single",
+      "in_relationship": "In a relationship",
+      "married": "Married",
+      "divorced": "Divorced",
+      "widowed": "Widowed",
+      "spouseLabel": "Spouse",
+      "spousePlaceholder": "Choose a persona from this world",
+      "spouseNone": "None"
+    }
   },
   "quests": {
     "title": "Daily quests",

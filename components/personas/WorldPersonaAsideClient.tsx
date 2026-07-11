@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/tooltip";
 import type { PersonaSectionWithFields } from "@/types/personas";
 import type { AvatarConfigV1 } from "./avatar/PersonaAvatarPicker";
+import type { MaritalStatus } from "@/types/db";
 
 export type AsidePersona = {
   id: string;
@@ -20,6 +21,8 @@ export type AsidePersona = {
   banner_url?: string | null;
   frame?: { asset_url?: string | null } | null;
   faceclaim?: string | null;
+  marital_status?: MaritalStatus | null;
+  spouse_persona_id?: string | null;
   sections: PersonaSectionWithFields[];
 };
 
@@ -109,6 +112,8 @@ export function WorldPersonaAsideClient({
                     ?.asset_url ?? null
                 }
                 initialFaceclaim={p.faceclaim ?? null}
+                initialMaritalStatus={p.marital_status ?? null}
+                initialSpousePersonaId={p.spouse_persona_id ?? null}
                 initialSections={p.sections}
                 worldId={worldId}
                 restrictInventory={restrictInventory}

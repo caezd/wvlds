@@ -99,6 +99,8 @@ export type ChatMessageReaction = {
   created_at: string;
 };
 
+export type MaritalStatus = "single" | "in_relationship" | "married" | "divorced" | "widowed";
+
 export type Persona = {
   id: string;
   user_id: string;
@@ -108,6 +110,8 @@ export type Persona = {
   frame?: { asset_url: string | null } | null;
   dialogue_color?: string | null;
   faceclaim?: string | null;
+  marital_status?: MaritalStatus | null;
+  spouse_persona_id?: string | null;
 };
 
 export type UserEquippedCosmetic = {

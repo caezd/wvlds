@@ -46,7 +46,9 @@ vi.mock("next-intl", async () => {
   }
 
   function makeT(namespace?: string) {
-    const ns = (namespace ? frMsgs[namespace] : frMsgs) ?? {};
+    // Le namespace peut être imbriqué (ex. "settings.profile") — même résolution
+    // par point que pour les clés.
+    const ns = (namespace ? getNested(frMsgs, namespace) : frMsgs) ?? {};
     const msgs = ns as Record<string, unknown>;
 
     function t(key: string, values?: Record<string, unknown>): string {

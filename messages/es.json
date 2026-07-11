@@ -293,7 +293,19 @@
     "moveAction": "Mover",
     "duplicateAction": "Duplicar",
     "moveSuccess": "«{name}» movido a {world}.",
-    "duplicateSuccess": "«{name}» duplicado a {world}."
+    "duplicateSuccess": "«{name}» duplicado a {world}.",
+    "maritalStatus": {
+      "label": "Estado civil",
+      "none": "Sin especificar",
+      "single": "Soltero/a",
+      "in_relationship": "En pareja",
+      "married": "Casado/a",
+      "divorced": "Divorciado/a",
+      "widowed": "Viudo/a",
+      "spouseLabel": "Pareja",
+      "spousePlaceholder": "Elegir un personaje de este mundo",
+      "spouseNone": "Ninguno"
+    }
   },
   "quests": {
     "title": "Misiones del día",
