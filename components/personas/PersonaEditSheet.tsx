@@ -335,7 +335,11 @@ export function MaritalStatusPicker({
     const previous = spouseId;
     setSpouseId(next);
     const { error } = await supabase.from("personas").update({ spouse_persona_id: next }).eq("id", personaId);
-    if (error) { setSpouseId(previous); return; }
+    if (error) {
+      toast.error("Enregistrement impossible.", { description: error.message });
+      setSpouseId(previous);
+      return;
+    }
     router.refresh();
   }
 
