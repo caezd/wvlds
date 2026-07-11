@@ -76,6 +76,7 @@ export function WorldHeroCard({
           fill
           sizes="(min-width: 1024px) 800px, 100vw"
           className="rounded-[inherit] object-cover"
+          priority
         />
       )}
       {/* Voile de lisibilité / fallback sans bannière */}
