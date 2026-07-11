@@ -232,6 +232,7 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
 
   useImperativeHandle(ref, () => ({
     clearDraft() {
+      if (draftTimerRef.current) { clearTimeout(draftTimerRef.current); draftTimerRef.current = null; }
       setValue("");
       setPendingMedia([]);
       setVisibleTo(null);

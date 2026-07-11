@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-07 ──────────────────────────────────────────────────────────────
   {
     date: "2026-07",
+    tag: "Technique",
+    text: "Durcissement de la fiche persona et de l'Explorateur suite à une revue de code : le conjoint d'un persona doit désormais appartenir au même monde (contrainte base de données), la limite de 10 tags par monde est appliquée de façon fiable en cas d'insertions concurrentes, le filtre par tags de l'Explorateur ne peut plus dépasser cette limite côté interface, et l'annulation d'un brouillon de composer (fermeture du dialog) annule aussi immédiatement la sauvegarde différée en cours pour éviter qu'elle ne réécrive le brouillon juste après.",
+  },
+  {
+    date: "2026-07",
     tag: "Personas",
     text: "**Statut marital** sur la fiche d'un persona (célibataire, en couple, marié·e, divorcé·e, veuf·ve) : quand le statut implique une relation, choisissez un **conjoint** parmi les autres personas du même monde.",
   },

@@ -1,9 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { createRef } from "react";
 import { createSupabaseMock } from "@/test/supabaseMock";
 import { createClient } from "@/lib/supabase/client";
 import type { Persona } from "@/types/db";
+import type { ChatroomComposerHandle } from "@/components/chatrooms/composer/ChatroomComposer";
 
 // ── localStorage en mémoire ───────────────────────────────────────────────────
 // jsdom fournit un localStorage partiel (pas de .clear()) — on le remplace par
@@ -174,6 +176,28 @@ describe("ChatroomComposer — brouillons localStorage", () => {
       await waitFor(() =>
         expect(screen.getByTestId("editor")).toHaveValue(""),
       );
+    });
+
+    it("clearDraft() annule immédiatement le timer de debounce en cours", async () => {
+      const user = userEvent.setup();
+      const ref = createRef<ChatroomComposerHandle>();
+      render(<ChatroomComposer ref={ref} chatId="chat1" presetPersona={mockPersona} />);
+
+      // Frappe : programme le debounce (500 ms) mais ne le laisse pas expirer.
+      await user.type(screen.getByTestId("editor"), "Brouillon abandonné");
+
+      // clearDraft() doit annuler ce timer synchronement, sans dépendre du
+      // prochain rendu React déclenché par setValue("") : si on ne compte que
+      // sur ce rendu, le timer déjà armé peut encore écrire l'ancien
+      // brouillon dans la fenêtre avant que l'effet ne se ré-exécute.
+      const clearTimeoutSpy = vi.spyOn(window, "clearTimeout");
+      ref.current?.clearDraft();
+      expect(clearTimeoutSpy).toHaveBeenCalled();
+      clearTimeoutSpy.mockRestore();
+
+      // Le brouillon ne doit pas réapparaître une fois le délai écoulé.
+      await new Promise((resolve) => setTimeout(resolve, 700));
+      expect(localStorage.getItem("draft:chat1")).toBeNull();
     });
 
     it("conserve le brouillon si l'envoi échoue", async () => {

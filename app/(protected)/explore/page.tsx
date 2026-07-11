@@ -104,11 +104,8 @@ export default async function ExplorePage({
   }
 
   if (selectedTags.length > 0) {
-    const { data: tagRows } = await supabase
-      .from("world_tags")
-      .select("world_id")
-      .in("tag", selectedTags);
-    const matchingIds = Array.from(new Set((tagRows ?? []).map((r) => r.world_id as string)));
+    const { data: tagWorldRows } = await supabase.rpc("get_world_ids_for_tags", { tags: selectedTags });
+    const matchingIds = (tagWorldRows ?? []).map((r: { world_id: string }) => r.world_id);
     query = query.in("id", matchingIds.length > 0 ? matchingIds : [NO_MATCH_SENTINEL]);
   }
 
