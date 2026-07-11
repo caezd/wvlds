@@ -98,11 +98,12 @@ export function ExploreFilters({
         <Camera className="h-3 w-3" />
         {t("avatarReal")}
       </button>
-      <button
-        type="button"
-        onClick={() => toggleAvatarType("illustrated")}
-        className={chipClass(selectedAvatarTypes.includes("illustrated"))}
-      >
+<button
+  type="button"
+  onClick={() => toggleAvatarType("illustrated")}
+  aria-pressed={selectedAvatarTypes.includes("illustrated")}
+  className={chipClass(selectedAvatarTypes.includes("illustrated"))}
+>
         <Palette className="h-3 w-3" />
         {t("avatarIllustrated")}
       </button>
