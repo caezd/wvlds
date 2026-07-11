@@ -89,11 +89,12 @@ export function ExploreFilters({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <button
-        type="button"
-        onClick={() => toggleAvatarType("real")}
-        className={chipClass(selectedAvatarTypes.includes("real"))}
-      >
+<button
+  type="button"
+  onClick={() => toggleAvatarType("real")}
+  aria-pressed={selectedAvatarTypes.includes("real")}
+  className={chipClass(selectedAvatarTypes.includes("real"))}
+>
         <Camera className="h-3 w-3" />
         {t("avatarReal")}
       </button>
