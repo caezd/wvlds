@@ -20,7 +20,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { DynamicIcon, type IconName } from "lucide-react/dynamic";
+import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
 import {
   DndContext,
   type DragEndEvent,
@@ -159,7 +159,7 @@ function SortableTreeNode({
                 title={t("changeIcon")}
               >
                 {renameIcon && VALID_LUCIDE_ICONS.has(renameIcon) ? (
-                  <DynamicIcon name={renameIcon as IconName} className="h-3.5 w-3.5" />
+                  <LazyLucideIcon name={renameIcon} className="h-3.5 w-3.5" />
                 ) : page.is_folder ? (
                   <Folder className="h-3.5 w-3.5" />
                 ) : (
@@ -169,7 +169,7 @@ function SortableTreeNode({
             }
           />
         ) : page.icon && VALID_LUCIDE_ICONS.has(page.icon) ? (
-          <DynamicIcon name={page.icon as IconName} className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+          <LazyLucideIcon name={page.icon} className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
         ) : page.is_folder ? (
           isExpanded
             ? <FolderOpen className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
@@ -529,7 +529,7 @@ export function WorldWiki({
               title={t("chooseIcon")}
             >
               {createIcon && VALID_LUCIDE_ICONS.has(createIcon) ? (
-                <DynamicIcon name={createIcon as IconName} className="h-3.5 w-3.5" />
+                <LazyLucideIcon name={createIcon} className="h-3.5 w-3.5" />
               ) : isFolder ? (
                 <Folder className="h-3.5 w-3.5" />
               ) : (
@@ -626,7 +626,7 @@ export function WorldWiki({
           <div className="flex items-center gap-3">
             <h1 className="flex flex-1 items-center gap-2 truncate text-xl font-semibold">
               {selectedPage.icon && VALID_LUCIDE_ICONS.has(selectedPage.icon) && (
-                <DynamicIcon name={selectedPage.icon as IconName} className="h-5 w-5 shrink-0 text-muted-foreground" />
+                <LazyLucideIcon name={selectedPage.icon} className="h-5 w-5 shrink-0 text-muted-foreground" />
               )}
               {selectedPage.title}
             </h1>
@@ -692,7 +692,7 @@ export function WorldWiki({
           <div className="mb-6 flex items-start justify-between gap-4">
             <h1 className="flex items-center gap-2 text-xl font-semibold">
               {selectedPage.icon && VALID_LUCIDE_ICONS.has(selectedPage.icon) && (
-                <DynamicIcon name={selectedPage.icon as IconName} className="h-5 w-5 shrink-0 text-muted-foreground" />
+                <LazyLucideIcon name={selectedPage.icon} className="h-5 w-5 shrink-0 text-muted-foreground" />
               )}
               {selectedPage.title}
             </h1>

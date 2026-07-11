@@ -17,7 +17,7 @@ import {
   Upload,
   X,
 } from "lucide-react";
-import { DynamicIcon, type IconName } from "lucide-react/dynamic";
+import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
 import { LucideIconPicker } from "@/components/ui/LucideIconPicker";
 import { HsvColorPicker, BUBBLE_COLOR_PRESETS, ACCENT_COLOR_PRESETS, type ColorPreset } from "@/components/ui/hsv-color-picker";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -181,8 +181,8 @@ function PinMarker({
         }}
       >
         {pin.icon && (
-          <DynamicIcon
-            name={pin.icon as IconName}
+          <LazyLucideIcon
+            name={pin.icon}
             className="h-4 w-4"
             style={{ color: pin.icon_color || "#ffffff" }}
           />
@@ -368,8 +368,8 @@ function PinVisualDialog({
               }}
             >
               {iconName && (
-                <DynamicIcon
-                  name={iconName as IconName}
+                <LazyLucideIcon
+                  name={iconName}
                   className="h-6 w-6"
                   style={{ color: iconColor }}
                 />
@@ -682,8 +682,8 @@ function PinPopover({
               }}
             >
               {pin.icon && (
-                <DynamicIcon
-                  name={pin.icon as IconName}
+                <LazyLucideIcon
+                  name={pin.icon}
                   className="h-3 w-3"
                   style={{ color: pin.icon_color || "#ffffff" }}
                 />
@@ -700,8 +700,8 @@ function PinPopover({
               }}
             >
               {pin.icon && (
-                <DynamicIcon
-                  name={pin.icon as IconName}
+                <LazyLucideIcon
+                  name={pin.icon}
                   className="h-3 w-3"
                   style={{ color: pin.icon_color || "#ffffff" }}
                 />

@@ -6,7 +6,7 @@ import { Square, PanelLeft, Minus, Ban, AlignLeft, AlignCenter, Palette, ImagePl
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
-import { DynamicIcon, type IconName } from "lucide-react/dynamic";
+import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
 import type { CalloutBlock, CalloutBorder, CalloutAlign, CalloutIconKind, Gauge } from "@/lib/chat-blocks";
 import {
   LucideIconPicker,
@@ -86,8 +86,8 @@ function renderIcon(
   if (iconKind === "lucide") {
     if (!VALID_ICON_SET.has(icon)) return null;
     return (
-      <DynamicIcon
-        name={icon as IconName}
+      <LazyLucideIcon
+        name={icon}
         className={cn(size, "shrink-0", !accent && "text-muted-foreground")}
         style={accent ? { color: accent } : undefined}
       />
