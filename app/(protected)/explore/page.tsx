@@ -3,10 +3,11 @@ import { getCurrentUserId, getCachedFeatureFlags } from "@/lib/currentRequest";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { Globe, Camera, Palette } from "lucide-react";
+import { Globe } from "lucide-react";
 import { ExploreSearch } from "./ExploreSearch";
 import { ExploreFilters } from "./ExploreFilters";
 import { JoinWorldButton } from "./JoinWorldButton";
+import { ExploreWorldCard, type PublicWorld } from "./ExploreWorldCard";
 import { getTranslations } from "next-intl/server";
 import { buildExploreParams, MAX_FILTER_TAGS } from "./exploreQuery";
 
@@ -14,22 +15,12 @@ const PAGE_SIZE = 16;
 const NO_MATCH_SENTINEL = "00000000-0000-0000-0000-000000000000";
 const MAX_TAG_LENGTH = 24;
 
-type PublicWorld = {
-  id: string;
-  name: string;
-  description: string | null;
-  banner_url: string | null;
-  icon_url: string | null;
-  color: string | null;
-  allows_real_avatars: boolean | null;
-  allows_illustrated_avatars: boolean | null;
-};
-
 type LatestWorld = {
   id: string;
   name: string;
   icon_url: string | null;
   color: string | null;
+  is_age_restricted: boolean | null;
 };
 
 export default async function ExplorePage({
@@ -79,7 +70,7 @@ export default async function ExplorePage({
   let query = supabase
     .from("worlds")
     .select(
-      "id, name, description, banner_url, icon_url, color, allows_real_avatars, allows_illustrated_avatars",
+      "id, name, description, banner_url, icon_url, color, allows_real_avatars, allows_illustrated_avatars, is_age_restricted",
       { count: "exact" },
     )
     .eq("visibility", "public")
@@ -113,7 +104,7 @@ export default async function ExplorePage({
   // en cours, pour toujours pouvoir repérer les nouveautés de l'annuaire.
   let latestQuery = supabase
     .from("worlds")
-    .select("id, name, icon_url, color")
+    .select("id, name, icon_url, color, is_age_restricted")
     .eq("visibility", "public")
     .is("deleted_at", null)
     .eq("is_archived", false);
@@ -188,9 +179,6 @@ export default async function ExplorePage({
                   key={world.id}
                   world={world}
                   tags={cardTagsByWorld.get(world.id) ?? []}
-                  noDescription={t("noDescription")}
-                  avatarRealLabel={t("avatarReal")}
-                  avatarIllustratedLabel={t("avatarIllustrated")}
                 />
               ))}
             </div>
@@ -241,112 +229,6 @@ export default async function ExplorePage({
   );
 }
 
-function ExploreWorldCard({
-  world,
-  tags,
-  noDescription,
-  avatarRealLabel,
-  avatarIllustratedLabel,
-}: {
-  world: PublicWorld;
-  tags: string[];
-  noDescription: string;
-  avatarRealLabel: string;
-  avatarIllustratedLabel: string;
-}) {
-  const hasAvatarType = world.allows_real_avatars || world.allows_illustrated_avatars;
-
-  return (
-    <div className="group flex h-80 flex-col overflow-hidden rounded-2xl border border-border bg-card transition-[shadow,padding] hover:shadow-lg hover:p-2">
-      {/* Hero plein cadre par défaut, réduit à une vignette au survol pour laisser la place au panneau (carte à hauteur fixe) */}
-      <div className="relative h-80 shrink-0 overflow-hidden transition-[height] duration-300 ease-out group-hover:h-40 group-hover:rounded-xl">
-        {world.banner_url ? (
-          <Image
-            src={world.banner_url}
-            alt=""
-            fill
-            sizes="(min-width: 1024px) 25vw, 50vw"
-            className="object-cover transition-transform duration-300"
-          />
-        ) : (
-          <div
-            className="absolute inset-0"
-            style={{ backgroundColor: world.color ?? "hsl(var(--card))" }}
-          />
-        )}
-        <div
-          className={
-            world.banner_url
-              ? "absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent rounded-xl"
-              : "absolute inset-0 bg-gradient-to-tl from-white/5 to-transparent rounded-xl"
-          }
-        />
-        {/* Icône centrée (sans bannière) */}
-        {!world.banner_url && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            {world.icon_url ? (
-              <Image src={world.icon_url} alt="" width={56} height={56} className="h-14 w-14 rounded-xl object-cover shadow" />
-            ) : (
-              <Globe size={40} className="text-white/60" />
-            )}
-          </div>
-        )}
-        {/* Nom + icône dans le footer du hero */}
-        <div className="absolute bottom-0 left-0 right-0 p-3">
-          {world.banner_url && world.icon_url && (
-            <Image src={world.icon_url} alt="" width={32} height={32} className="h-8 w-8 rounded-lg object-cover shadow mb-1.5" />
-          )}
-          <p className="text-sm font-semibold text-white leading-tight drop-shadow">
-            {world.name}
-          </p>
-        </div>
-      </div>
-
-      {/* Panneau : description + tags + type d'avatars révélés au survol (hauteur de carte fixe, l'espace vient du hero qui rétrécit) */}
-      <div className="flex min-h-0 flex-1 flex-col gap-2 p-3">
-        <div className="min-h-0 flex-1 overflow-hidden opacity-0 transition-opacity delay-100 duration-300 ease-out group-hover:opacity-100">
-          <div className="flex flex-col gap-2">
-            {world.description ? (
-              <p className="text-xs text-muted-foreground line-clamp-3 leading-relaxed">
-                {world.description}
-              </p>
-            ) : (
-              <p className="text-xs text-muted-foreground/40 italic">{noDescription}</p>
-            )}
-
-            {(tags.length > 0 || hasAvatarType) && (
-              <div className="flex flex-wrap gap-1">
-                {tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="inline-flex items-center rounded-full border border-border-soft bg-muted/40 px-2 py-0.5 text-[11px] text-muted-foreground"
-                  >
-                    #{tag}
-                  </span>
-                ))}
-                {world.allows_real_avatars && (
-                  <span className="inline-flex items-center gap-1 rounded-full border border-border-soft bg-muted/40 px-2 py-0.5 text-[11px] text-muted-foreground">
-                    <Camera className="h-2.5 w-2.5" />
-                    {avatarRealLabel}
-                  </span>
-                )}
-                {world.allows_illustrated_avatars && (
-                  <span className="inline-flex items-center gap-1 rounded-full border border-border-soft bg-muted/40 px-2 py-0.5 text-[11px] text-muted-foreground">
-                    <Palette className="h-2.5 w-2.5" />
-                    {avatarIllustratedLabel}
-                  </span>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-
-        <JoinWorldButton worldId={world.id} />
-      </div>
-    </div>
-  );
-}
-
 function LatestWorldRow({ world }: { world: LatestWorld }) {
   return (
     <div className="flex items-center gap-2.5 rounded-xl border border-border bg-card p-2.5">
@@ -361,7 +243,7 @@ function LatestWorldRow({ world }: { world: LatestWorld }) {
         )}
       </span>
       <p className="min-w-0 flex-1 truncate text-sm font-medium">{world.name}</p>
-      <JoinWorldButton worldId={world.id} compact />
+      <JoinWorldButton worldId={world.id} worldName={world.name} ageRestricted={!!world.is_age_restricted} compact />
     </div>
   );
 }

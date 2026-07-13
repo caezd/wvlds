@@ -8,6 +8,31 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-07 ──────────────────────────────────────────────────────────────
   {
     date: "2026-07",
+    tag: "Mondes",
+    text: "**Quitter un monde** directement depuis le sélecteur de la sidebar : clic droit sur un monde de la liste puis « Quitter le serveur », avec confirmation. Option indisponible sur les mondes dont vous êtes propriétaire.",
+  },
+  {
+    date: "2026-07",
+    tag: "Mondes",
+    text: "Un monde peut être marqué **« réservé aux 18 ans et plus »** dans ses réglages (onglet Fonctions). Toute personne qui rejoint ce monde pour la première fois — depuis l'Explorateur ou une invitation — doit d'abord confirmer avoir 18 ans ou plus ; les membres déjà présents devront confirmer à leur prochaine visite si le monde devient 18+ après coup.",
+  },
+  {
+    date: "2026-07",
+    tag: "Correctif",
+    text: "Le bouton **Rejoindre** d'un monde public dans l'Explorateur ne fonctionnait pas : la fonction serveur qu'il appelait n'avait jamais été déployée, et l'échec restait silencieux. Corrigé, avec un message d'erreur visible en cas de problème.",
+  },
+  {
+    date: "2026-07",
+    tag: "Explorateur",
+    text: "Cliquez une **carte de monde** dans l'Explorateur pour ouvrir ses statistiques (messages, membres, personas) avant de rejoindre — le bouton **Rejoindre** a été déplacé dans cette fenêtre. Les statistiques ne sont chargées qu'à l'ouverture, pas pour toutes les cartes de la page.",
+  },
+  {
+    date: "2026-07",
+    tag: "Chatrooms",
+    text: "**Cartes de catégories** sur l'accueil d'un monde, au-dessus du composer : d'un coup d'œil, le nombre de parties par catégorie — cliquez une carte pour filtrer la liste des parties sur cette catégorie. Le filtre reste actif au rechargement de la page et le lien peut se partager.",
+  },
+  {
+    date: "2026-07",
     tag: "Technique",
     text: "Durcissement de la fiche persona et de l'Explorateur suite à une revue de code : le conjoint d'un persona doit désormais appartenir au même monde (contrainte base de données), la limite de 10 tags par monde est appliquée de façon fiable en cas d'insertions concurrentes, le filtre par tags de l'Explorateur ne peut plus dépasser cette limite côté interface, et l'annulation d'un brouillon de composer (fermeture du dialog) annule aussi immédiatement la sauvegarde différée en cours pour éviter qu'elle ne réécrive le brouillon juste après.",
   },

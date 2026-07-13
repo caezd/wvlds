@@ -54,6 +54,30 @@ describe("updateSession — cookie last_world_id", () => {
   });
 });
 
+describe("updateSession — index /w", () => {
+  it("redirige /w vers / (la page d'accueil choisit le monde selon l'appartenance)", async () => {
+    const req = new NextRequest("http://localhost:3000/w");
+    req.cookies.set("last_world_id", "abc123");
+    const res = await updateSession(req);
+
+    expect(res.status).toBe(307);
+    const location = res.headers.get("location") ?? "";
+    expect(new URL(location).pathname).toBe("/");
+    // Ne redirige plus aveuglément vers /w/<last_world_id> (monde peut-être quitté).
+    expect(location).not.toContain("/w/abc123");
+    // Cookie de session rafraîchi préservé.
+    expect(res.cookies.get("sb-access-token")?.value).toBe("REFRESHED");
+  });
+
+  it("redirige /w vers / même sans cookie last_world_id", async () => {
+    const req = new NextRequest("http://localhost:3000/w");
+    const res = await updateSession(req);
+
+    expect(res.status).toBe(307);
+    expect(new URL(res.headers.get("location") ?? "").pathname).toBe("/");
+  });
+});
+
 describe("updateSession — préservation de la session", () => {
   it("sur /w/<id> : pose last_world_id ET conserve le cookie de session rafraîchi", async () => {
     const req = new NextRequest("http://localhost:3000/w/abc123");

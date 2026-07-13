@@ -83,20 +83,22 @@ export async function updateSession(request: NextRequest) {
         }
     }
 
-    // 2) Quand on visite l’index: /w
+    // 2) Quand on visite l’index /w (bouton « mondes » de la sidebar) : on
+    // délègue à la page d'accueil, seule responsable de choisir le monde de
+    // destination. Elle vérifie que l'utilisateur est toujours MEMBRE du
+    // dernier monde visité, puis retombe sur le premier monde accessible,
+    // sinon /explore. Rediriger directement vers /w/<last_world_id> depuis
+    // ici court-circuitait cette logique et menait à un 404 quand le monde
+    // avait été quitté entre-temps (le cookie pointait encore dessus).
     if (url.pathname === "/w") {
-        const lastWorldId = request.cookies.get("last_world_id")?.value;
-
-        if (lastWorldId) {
-            const redirectUrl = url.clone();
-            redirectUrl.pathname = `/w/${lastWorldId}`;
-            const redirectResponse = NextResponse.redirect(redirectUrl);
-            // Recopier les cookies de session pour ne pas casser l'auth.
-            supabaseResponse.cookies.getAll().forEach((cookie) =>
-                redirectResponse.cookies.set(cookie.name, cookie.value, cookie),
-            );
-            return redirectResponse;
-        }
+        const redirectUrl = url.clone();
+        redirectUrl.pathname = "/";
+        const redirectResponse = NextResponse.redirect(redirectUrl);
+        // Recopier les cookies de session pour ne pas casser l'auth.
+        supabaseResponse.cookies.getAll().forEach((cookie) =>
+            redirectResponse.cookies.set(cookie.name, cookie.value, cookie),
+        );
+        return redirectResponse;
     }
 
     // IMPORTANT: You *must* return the supabaseResponse object as it is.

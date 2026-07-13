@@ -32,6 +32,18 @@ export async function setWorldFaceclaims(worldId: string, enabled: boolean) {
   return { ok: true as const };
 }
 
+export async function setWorldAgeRestricted(worldId: string, enabled: boolean) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("worlds").update({ is_age_restricted: enabled }).eq("id", worldId);
+  if (error) return { ok: false as const, error: error.message };
+  // La personne qui active le réglage est déjà membre (owner/admin) — on la
+  // considère comme ayant confirmé, pour ne pas se bloquer elle-même l'accès.
+  if (enabled) {
+    await supabase.rpc("confirm_world_age", { p_world_id: worldId });
+  }
+  return { ok: true as const };
+}
+
 export async function setWorldRestriction(
   worldId: string,
   field: "restrict_inventory" | "restrict_skills",

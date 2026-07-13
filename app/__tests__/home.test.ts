@@ -72,6 +72,30 @@ describe("Home — redirection vers last_world_id", () => {
     expect(mockFrom).toHaveBeenCalledTimes(1);
   });
 
+  it("filtre la vérification d'accès et le fallback par appartenance réelle (world_members.user_id)", async () => {
+    // Régression : un monde public reste lisible via RLS même après l'avoir
+    // quitté — la vérification doit porter sur l'appartenance, pas sur la
+    // simple lisibilité du monde.
+    mockCookiesGet.mockImplementation((k: string) =>
+      k === "last_world_id" ? { value: "world-quitte" } : undefined,
+    );
+    let call = 0;
+    const chains: ReturnType<typeof makeChain>[] = [];
+    mockFrom.mockImplementation(() => {
+      const chain = call++ === 0 ? makeChain(null) : makeChain(null, { id: "world-B" });
+      chains.push(chain);
+      return chain;
+    });
+
+    await runHome();
+
+    expect(mockRedirect).toHaveBeenCalledWith("/w/world-B");
+    // 1er appel (vérification du cookie) et 2e appel (fallback) filtrent
+    // tous les deux sur world_members.user_id = u1.
+    expect(chains[0].eq).toHaveBeenCalledWith("world_members.user_id", "u1");
+    expect(chains[1].eq).toHaveBeenCalledWith("world_members.user_id", "u1");
+  });
+
   it("ignore last_world_id et utilise le fallback si l'utilisateur n'y a pas accès", async () => {
     mockCookiesGet.mockImplementation((k: string) =>
       k === "last_world_id" ? { value: "world-autre-compte" } : undefined,

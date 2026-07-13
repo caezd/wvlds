@@ -98,4 +98,5 @@ export type World = {
   timeline_config?: WorldTimelineConfig | null;
   allows_real_avatars?: boolean | null;
   allows_illustrated_avatars?: boolean | null;
+  is_age_restricted?: boolean | null;
 };

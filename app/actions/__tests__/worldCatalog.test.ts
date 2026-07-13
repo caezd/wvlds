@@ -8,6 +8,7 @@ import {
     setWorldFeature,
     setWorldRestriction,
     setWorldFaceclaims,
+    setWorldAgeRestricted,
     setWorldPersonaTemplate,
     addWorldInventoryItem,
     updateWorldInventoryItem,
@@ -90,6 +91,33 @@ describe("setWorldFaceclaims", () => {
     it("remonte l'erreur Supabase", async () => {
         use(createSupabaseMock({ results: [{ error: { message: "nope" } }] }));
         expect(await setWorldFaceclaims("w1", true)).toEqual({ ok: false, error: "nope" });
+    });
+});
+
+// ── setWorldAgeRestricted ─────────────────────────────────────────────────────
+
+describe("setWorldAgeRestricted", () => {
+    it("active la restriction et confirme l'âge de l'acteur", async () => {
+        const mock = createSupabaseMock({ results: [{ error: null }] });
+        use(mock);
+        const res = await setWorldAgeRestricted("w1", true);
+        expect(res).toEqual({ ok: true });
+        expect(mock.buildersFor("worlds")[0].update).toHaveBeenCalledWith({ is_age_restricted: true });
+        expect(mock.rpc).toHaveBeenCalledWith("confirm_world_age", { p_world_id: "w1" });
+    });
+
+    it("désactive la restriction sans appeler confirm_world_age", async () => {
+        const mock = createSupabaseMock({ results: [{ error: null }] });
+        use(mock);
+        const res = await setWorldAgeRestricted("w1", false);
+        expect(res).toEqual({ ok: true });
+        expect(mock.buildersFor("worlds")[0].update).toHaveBeenCalledWith({ is_age_restricted: false });
+        expect(mock.rpc).not.toHaveBeenCalled();
+    });
+
+    it("remonte l'erreur Supabase", async () => {
+        use(createSupabaseMock({ results: [{ error: { message: "nope" } }] }));
+        expect(await setWorldAgeRestricted("w1", true)).toEqual({ ok: false, error: "nope" });
     });
 });
 
