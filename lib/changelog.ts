@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-07 ──────────────────────────────────────────────────────────────
   {
     date: "2026-07",
+    tag: "Abonnement",
+    text: "**Connectez votre compte Patreon** depuis vos réglages : si vous êtes mécène actif au palier requis, votre abonnement est activé automatiquement (mondes et personas illimités), et retiré si votre mécénat s'arrête. Vous pouvez délier votre compte à tout moment.",
+  },
+  {
+    date: "2026-07",
     tag: "Mondes",
     text: "**Quitter un monde** directement depuis le sélecteur de la sidebar : clic droit sur un monde de la liste puis « Quitter le serveur », avec confirmation. Option indisponible sur les mondes dont vous êtes propriétaire.",
   },

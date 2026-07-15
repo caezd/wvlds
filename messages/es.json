@@ -86,6 +86,29 @@
       "pronounsCustomPlaceholder": "Tus propios pronombres…",
       "save": "Guardar perfil",
       "saved": "Perfil actualizado"
+    },
+    "subscription": {
+      "title": "Suscripción",
+      "description": "Conecta tu cuenta de Patreon para activar automáticamente tus ventajas de suscriptor",
+      "connect": "Conectar mi cuenta de Patreon",
+      "activeBadge": "Mecenas activo",
+      "inactiveBadge": "Mecenazgo inactivo",
+      "linkedActive": "Tu cuenta de Patreon está vinculada y tu suscripción está activa.",
+      "linkedInactive": "Tu cuenta de Patreon está vinculada, pero no eres mecenas activo en el nivel requerido.",
+      "notLinked": "Aún no has vinculado ninguna cuenta de Patreon.",
+      "managePatreon": "Gestionar en Patreon",
+      "disconnect": "Desvincular",
+      "disconnectTitle": "¿Desvincular Patreon?",
+      "disconnectDescription": "Tus ventajas de suscriptor se retirarán hasta que vincules de nuevo una cuenta de Patreon activa.",
+      "cancel": "Cancelar",
+      "toast": {
+        "linked": "Cuenta de Patreon vinculada.",
+        "alreadyLinked": "Esta cuenta de Patreon ya está vinculada a otro usuario.",
+        "cancelled": "Vinculación de Patreon cancelada.",
+        "error": "La vinculación de Patreon falló. Inténtalo de nuevo.",
+        "disconnected": "Cuenta de Patreon desvinculada.",
+        "disconnectError": "No se pudo desvincular la cuenta de Patreon."
+      }
     }
   },
   "pronouns": {
