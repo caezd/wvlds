@@ -115,3 +115,19 @@ if (!window.IntersectionObserver) {
     disconnect() {}
   } as unknown as typeof IntersectionObserver;
 }
+
+// Radix Select/Dropdown s'appuient sur des API DOM absentes de jsdom :
+// scrollIntoView et la capture de pointeur. Stubs no-op pour pouvoir piloter
+// ces composants dans les tests (ouvrir le menu, cliquer une option).
+if (!Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = () => {};
+}
+if (!Element.prototype.hasPointerCapture) {
+  Element.prototype.hasPointerCapture = () => false;
+}
+if (!Element.prototype.setPointerCapture) {
+  Element.prototype.setPointerCapture = () => {};
+}
+if (!Element.prototype.releasePointerCapture) {
+  Element.prototype.releasePointerCapture = () => {};
+}

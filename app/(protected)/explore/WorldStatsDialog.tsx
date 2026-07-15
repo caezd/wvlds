@@ -6,16 +6,7 @@ import { Camera, MessageSquare, Palette, UserRound, Users } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { AgeConfirmDialog } from "@/components/worlds/AgeConfirmDialog";
 import { JoinWorldButton } from "./JoinWorldButton";
 import { useJoinWorld } from "./useJoinWorld";
 import type { PublicWorld } from "./ExploreWorldCard";
@@ -172,27 +163,15 @@ export function WorldStatsDialog({
       {/* Sibling du Dialog ci-dessus (pas un enfant) : fermer la stats
           dialog ne doit pas démonter cette confirmation. */}
       {world.is_age_restricted && (
-        <AlertDialog open={ageConfirmOpen} onOpenChange={setAgeConfirmOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>{t("ageConfirmTitle")}</AlertDialogTitle>
-              <AlertDialogDescription>
-                {t("ageConfirmDescription", { name: world.name })}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>{t("ageConfirmCancel")}</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => {
-                  setAgeConfirmOpen(false);
-                  join(true);
-                }}
-              >
-                {t("ageConfirmContinue")}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <AgeConfirmDialog
+          worldName={world.name}
+          open={ageConfirmOpen}
+          onOpenChange={setAgeConfirmOpen}
+          onConfirm={() => {
+            setAgeConfirmOpen(false);
+            join(true);
+          }}
+        />
       )}
     </>
   );
