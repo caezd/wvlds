@@ -81,6 +81,7 @@ export default async function SettingsPage() {
             patronStatus={patronStatus}
             entitledCents={entitledCents}
             minCents={patreonMinCents}
+            plan={profile?.plan ?? "free"}
             patreonUrl={process.env.NEXT_PUBLIC_PATREON_URL}
           />
         </section>

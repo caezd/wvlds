@@ -4,7 +4,7 @@ import { useEffect, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { Heart, ExternalLink } from "lucide-react";
+import { Heart, ExternalLink, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
@@ -15,6 +15,8 @@ type PatreonSectionProps = {
   patronStatus: string | null;
   entitledCents: number;
   minCents: number;
+  /** Plan courant — pour afficher le badge « Accès à vie » aux comptes lifetime. */
+  plan: string;
   /** URL publique de la campagne Patreon (optionnelle). */
   patreonUrl?: string;
 };
@@ -32,6 +34,7 @@ export function PatreonSection({
   patronStatus,
   entitledCents,
   minCents,
+  plan,
   patreonUrl,
 }: PatreonSectionProps) {
   const t = useTranslations("settings.subscription");
@@ -39,6 +42,7 @@ export function PatreonSection({
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
 
+  const isLifetime = plan === "lifetime";
   const isActivePatron = patronStatus === "active_patron" && entitledCents >= minCents;
 
   // Toast au retour du flux OAuth, puis nettoyage de l'URL.
@@ -65,6 +69,43 @@ export function PatreonSection({
         toast.error(t("toast.disconnectError"));
       }
     });
+  }
+
+  // ── Accès à vie : badge visible que le compte soit lié ou non ──
+  if (isLifetime) {
+    return (
+      <div className="space-y-3">
+        <Badge className="gap-1">
+          <Crown className="size-3" />
+          {t("lifetimeBadge")}
+        </Badge>
+        <p className="text-sm text-muted-foreground">{t("lifetimeMessage")}</p>
+        {linked && (
+          <div className="flex flex-wrap items-center gap-2">
+            {patreonUrl ? (
+              <Button asChild variant="outline" size="sm">
+                <a href={patreonUrl} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="size-4" />
+                  {t("managePatreon")}
+                </a>
+              </Button>
+            ) : null}
+            <DeleteConfirmDialog
+              title={t("disconnectTitle")}
+              description={t("disconnectLifetimeDescription")}
+              cancelLabel={t("cancel")}
+              confirmLabel={t("disconnect")}
+              onConfirm={handleDisconnect}
+              trigger={
+                <Button variant="ghost" size="sm" disabled={isPending}>
+                  {t("disconnect")}
+                </Button>
+              }
+            />
+          </div>
+        )}
+      </div>
+    );
   }
 
   // ── Non lié ──────────────────────────────────────────────

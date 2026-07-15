@@ -93,6 +93,8 @@
       "connect": "Conectar mi cuenta de Patreon",
       "activeBadge": "Mecenas activo",
       "inactiveBadge": "Mecenazgo inactivo",
+      "lifetimeBadge": "Acceso de por vida",
+      "lifetimeMessage": "Tienes acceso de por vida — no se requiere suscripción.",
       "linkedActive": "Tu cuenta de Patreon está vinculada y tu suscripción está activa.",
       "linkedInactive": "Tu cuenta de Patreon está vinculada, pero no eres mecenas activo en el nivel requerido.",
       "notLinked": "Aún no has vinculado ninguna cuenta de Patreon.",
@@ -100,6 +102,7 @@
       "disconnect": "Desvincular",
       "disconnectTitle": "¿Desvincular Patreon?",
       "disconnectDescription": "Tus ventajas de suscriptor se retirarán hasta que vincules de nuevo una cuenta de Patreon activa.",
+      "disconnectLifetimeDescription": "Tu cuenta de Patreon se desvinculará. Tu acceso de por vida no se verá afectado.",
       "cancel": "Cancelar",
       "toast": {
         "linked": "Cuenta de Patreon vinculada.",

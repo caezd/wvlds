@@ -93,6 +93,8 @@
       "connect": "Connecter mon compte Patreon",
       "activeBadge": "Mécène actif",
       "inactiveBadge": "Mécénat inactif",
+      "lifetimeBadge": "Accès à vie",
+      "lifetimeMessage": "Tu bénéficies d'un accès à vie — aucun abonnement requis.",
       "linkedActive": "Ton compte Patreon est lié et ton abonnement est actif.",
       "linkedInactive": "Ton compte Patreon est lié, mais tu n'es pas mécène actif au palier requis.",
       "notLinked": "Tu n'as pas encore lié de compte Patreon.",
@@ -100,6 +102,7 @@
       "disconnect": "Délier",
       "disconnectTitle": "Délier Patreon ?",
       "disconnectDescription": "Tes avantages d'abonné seront retirés jusqu'à ce que tu relies un compte Patreon actif.",
+      "disconnectLifetimeDescription": "Ton compte Patreon sera délié. Ton accès à vie n'est pas affecté.",
       "cancel": "Annuler",
       "toast": {
         "linked": "Compte Patreon lié.",

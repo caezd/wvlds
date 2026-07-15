@@ -93,6 +93,8 @@
       "connect": "Connect my Patreon account",
       "activeBadge": "Active patron",
       "inactiveBadge": "Membership inactive",
+      "lifetimeBadge": "Lifetime access",
+      "lifetimeMessage": "You have lifetime access — no subscription required.",
       "linkedActive": "Your Patreon account is linked and your subscription is active.",
       "linkedInactive": "Your Patreon account is linked, but you aren't an active patron at the required tier.",
       "notLinked": "You haven't linked a Patreon account yet.",
@@ -100,6 +102,7 @@
       "disconnect": "Unlink",
       "disconnectTitle": "Unlink Patreon?",
       "disconnectDescription": "Your subscriber perks will be removed until you link an active Patreon account again.",
+      "disconnectLifetimeDescription": "Your Patreon account will be unlinked. Your lifetime access is not affected.",
       "cancel": "Cancel",
       "toast": {
         "linked": "Patreon account linked.",
