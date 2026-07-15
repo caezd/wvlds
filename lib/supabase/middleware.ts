@@ -52,7 +52,11 @@ export async function updateSession(request: NextRequest) {
         request.nextUrl.pathname !== "/" &&
         !user &&
         !request.nextUrl.pathname.startsWith("/login") &&
-        !request.nextUrl.pathname.startsWith("/auth")
+        !request.nextUrl.pathname.startsWith("/auth") &&
+        // Les routes API gèrent leur propre authentification (ex. le webhook
+        // Patreon, authentifié par signature HMAC). Les rediriger vers la page
+        // de login casserait les appels serveur-à-serveur sans session.
+        !request.nextUrl.pathname.startsWith("/api")
     ) {
         // no user, potentially respond by redirecting the user to the login page
         const url = request.nextUrl.clone();

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { parseIdentity, parseTokenResponse } from "@/lib/patreon/client";
+import { parseIdentity, parseTokenResponse, parseWebhookMember } from "@/lib/patreon/client";
 
 const CAMPAIGN = "9055832";
 
@@ -86,5 +86,38 @@ describe("parseIdentity", () => {
 
   it("lève si l'id utilisateur est absent", () => {
     expect(() => parseIdentity({ data: {} }, CAMPAIGN)).toThrow();
+  });
+});
+
+describe("parseWebhookMember", () => {
+  it("extrait id utilisateur + statut + montant depuis un payload webhook", () => {
+    const payload = {
+      data: {
+        attributes: { patron_status: "active_patron", currently_entitled_amount_cents: 500 },
+        relationships: { user: { data: { id: "user-9" } } },
+      },
+    };
+    expect(parseWebhookMember(payload)).toEqual({
+      patreonUserId: "user-9",
+      patronStatus: "active_patron",
+      entitledCents: 500,
+    });
+  });
+
+  it("gère un désabonnement (former_patron, 0 cents)", () => {
+    const payload = {
+      data: {
+        attributes: { patron_status: "former_patron", currently_entitled_amount_cents: 0 },
+        relationships: { user: { data: { id: "user-9" } } },
+      },
+    };
+    expect(parseWebhookMember(payload)).toMatchObject({
+      patronStatus: "former_patron",
+      entitledCents: 0,
+    });
+  });
+
+  it("lève si la relation user est absente", () => {
+    expect(() => parseWebhookMember({ data: { attributes: {} } })).toThrow();
   });
 });

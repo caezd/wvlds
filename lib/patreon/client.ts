@@ -51,6 +51,26 @@ type IdentityResponse = {
   }>;
 };
 
+/** Forme (partielle) d'un payload webhook Patreon (data = objet `member`). */
+type WebhookPayload = {
+  data?: {
+    attributes?: {
+      patron_status?: string | null;
+      currently_entitled_amount_cents?: number | null;
+    };
+    relationships?: {
+      user?: { data?: { id?: string } | null };
+    };
+  };
+};
+
+/** Normalise un patron_status brut vers notre union (inconnu → null). */
+function normalizePatronStatus(raw: string | null | undefined): PatronStatus {
+  return raw === "active_patron" || raw === "declined_patron" || raw === "former_patron"
+    ? raw
+    : null;
+}
+
 // ── Parsing pur (testable) ───────────────────────────────────
 
 export function parseTokenResponse(json: TokenResponse): PatreonTokens {
@@ -82,18 +102,27 @@ export function parseIdentity(json: IdentityResponse, campaignId: string): Patre
       item.relationships?.campaign?.data?.id === campaignId,
   );
 
-  const rawStatus = member?.attributes?.patron_status ?? null;
-  const patronStatus: PatronStatus =
-    rawStatus === "active_patron" ||
-    rawStatus === "declined_patron" ||
-    rawStatus === "former_patron"
-      ? rawStatus
-      : null;
-
   return {
     patreonUserId,
-    patronStatus,
+    patronStatus: normalizePatronStatus(member?.attributes?.patron_status),
     entitledCents: member?.attributes?.currently_entitled_amount_cents ?? 0,
+  };
+}
+
+/**
+ * Extrait le mécénat depuis un payload WEBHOOK (events members:pledge:*).
+ * Ici `data` est directement l'objet `member` ; l'id utilisateur Patreon est
+ * dans la relation `user`.
+ */
+export function parseWebhookMember(json: WebhookPayload): PatreonMembership {
+  const patreonUserId = json.data?.relationships?.user?.data?.id;
+  if (!patreonUserId) {
+    throw new Error("Payload webhook Patreon invalide : id utilisateur manquant.");
+  }
+  return {
+    patreonUserId,
+    patronStatus: normalizePatronStatus(json.data?.attributes?.patron_status),
+    entitledCents: json.data?.attributes?.currently_entitled_amount_cents ?? 0,
   };
 }
 
