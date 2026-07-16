@@ -62,7 +62,7 @@ describe("PersonasView — vue par monde", () => {
   it("expose toujours une section « Sans monde » comme zone de dépôt", () => {
     render(<PersonasView groups={groups} />);
     expect(screen.getByText("Sans monde")).toBeInTheDocument();
-    expect(screen.getByText("Dépose un persona ici")).toBeInTheDocument();
+    expect(screen.getByText("Déposez un persona ici")).toBeInTheDocument();
   });
 
   it("affiche les zones de dépôt même sans aucun persona (nouveau membre)", () => {
@@ -73,7 +73,7 @@ describe("PersonasView — vue par monde", () => {
     );
     expect(screen.getByText("Nouveau monde")).toBeInTheDocument();
     // Monde vide + « Sans monde » (ajouté automatiquement)
-    expect(screen.getAllByText("Dépose un persona ici")).toHaveLength(2);
+    expect(screen.getAllByText("Déposez un persona ici")).toHaveLength(2);
   });
 
   it("affiche un monde sans persona avec sa zone de dépôt", () => {
@@ -84,7 +84,7 @@ describe("PersonasView — vue par monde", () => {
     );
     expect(screen.getByText("Monde vide")).toBeInTheDocument();
     // Monde vide + « Sans monde » (ajouté automatiquement)
-    expect(screen.getAllByText("Dépose un persona ici")).toHaveLength(2);
+    expect(screen.getAllByText("Déposez un persona ici")).toHaveLength(2);
   });
 
   it("affiche « x / limite » en plan gratuit, juste le compte sinon", () => {

@@ -9,8 +9,9 @@ import { syncPatreonEntitlement } from "@/lib/patreon/sync";
  * Webhook Patreon (members:pledge:create/update/delete). Vérifie la signature
  * HMAC, retrouve l'utilisateur par son patreon_user_id et resynchronise le plan.
  *
- * Renvoie 401 sur signature invalide ; 200 sinon (y compris patron inconnu) pour
- * que Patreon ne re-tente pas indéfiniment.
+ * Codes : 401 signature invalide, 400 payload illisible, 500 échec de synchro,
+ * 200 sinon (y compris patron inconnu chez nous, pour que Patreon ne
+ * re-tente pas indéfiniment un cas qui ne se résoudra jamais).
  */
 export async function POST(request: NextRequest) {
   const { webhookSecret } = getPatreonConfig();

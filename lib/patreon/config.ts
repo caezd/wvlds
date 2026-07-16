@@ -34,6 +34,18 @@ export function isPatreonEnabled(): boolean {
 }
 
 /**
+ * Palier minimum (en cents) — lecture directe de `PATREON_MIN_CENTS`, utilisable
+ * au rendu de page (contrairement à `getPatreonConfig()`, qui lève si les
+ * secrets OAuth manquent). NaN (variable absente/malformée) retombe sur 0
+ * plutôt que de rendre `entitledCents >= minCents` faux à tort pour tout
+ * mécène, même actif.
+ */
+export function getPatreonMinCents(): number {
+  const minCents = Number.parseInt(process.env.PATREON_MIN_CENTS ?? "0", 10);
+  return Number.isFinite(minCents) ? minCents : 0;
+}
+
+/**
  * Lit la config Patreon depuis l'environnement. Lève si une variable requise
  * manque — à n'appeler que dans du code serveur qui a besoin d'agir sur Patreon
  * (routes OAuth / webhook), pas au rendu de pages.
@@ -57,14 +69,12 @@ export function getPatreonConfig(): PatreonConfig {
     throw new Error(`Configuration Patreon incomplète : ${missing.join(", ")}`);
   }
 
-  const minCents = Number.parseInt(process.env.PATREON_MIN_CENTS ?? "0", 10);
-
   return {
     clientId: clientId!,
     clientSecret: clientSecret!,
     campaignId: campaignId!,
     webhookSecret: webhookSecret!,
-    minCents: Number.isFinite(minCents) ? minCents : 0,
+    minCents: getPatreonMinCents(),
     redirectUri: `${siteUrl()}/auth/patreon/callback`,
   };
 }

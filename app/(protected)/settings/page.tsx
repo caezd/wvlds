@@ -7,7 +7,7 @@ import { MessageFontSelector } from "./MessageFontSelector";
 import { MessageTextSizeSelector } from "./MessageTextSizeSelector";
 import { MessageTextAlignSelector } from "./MessageTextAlignSelector";
 import { PatreonSection } from "./PatreonSection";
-import { isPatreonEnabled } from "@/lib/patreon/config";
+import { isPatreonEnabled, getPatreonMinCents } from "@/lib/patreon/config";
 
 export default async function SettingsPage() {
   const [t, currentLocale] = await Promise.all([
@@ -54,7 +54,7 @@ export default async function SettingsPage() {
       entitledCents = patreon.entitled_cents ?? 0;
     }
   }
-  const patreonMinCents = Number.parseInt(process.env.PATREON_MIN_CENTS ?? "0", 10);
+  const patreonMinCents = getPatreonMinCents();
 
   return (
     <div className="p-6 max-w-2xl mx-auto w-full space-y-6">

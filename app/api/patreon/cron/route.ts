@@ -24,6 +24,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ skipped: "patreon disabled" });
   }
 
-  const result = await resyncStalePatreonAccounts();
-  return NextResponse.json(result);
+  try {
+    const result = await resyncStalePatreonAccounts();
+    return NextResponse.json(result);
+  } catch (err) {
+    console.error("Patreon cron resync error:", err);
+    return NextResponse.json({ error: "resync failed" }, { status: 500 });
+  }
 }

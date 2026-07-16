@@ -43,12 +43,17 @@ export async function syncPatreonEntitlement(params: {
     throw new PatreonAlreadyLinkedError();
   }
 
-  // Plan courant (pour préserver lifetime).
-  const { data: profile } = await admin
+  // Plan courant (pour préserver lifetime). Erreur non tolérée : un échec
+  // silencieux ferait traiter currentPlan comme null et pourrait écraser un
+  // compte lifetime avec un plan Patreon incorrect.
+  const { data: profile, error: profileError } = await admin
     .from("profiles")
     .select("plan")
     .eq("id", userId)
     .single();
+  if (profileError) {
+    throw new Error(`Impossible de lire le profil (${userId}) : ${profileError.message}`);
+  }
 
   const plan = resolvePlan({
     patronStatus: membership.patronStatus,
@@ -69,14 +74,22 @@ export async function syncPatreonEntitlement(params: {
     row.refresh_token = tokens.refreshToken;
     row.token_expires_at = tokens.expiresAt.toISOString();
   }
-  await admin.from("patreon_accounts").upsert(row, { onConflict: "user_id" });
+  const { error: upsertError } = await admin
+    .from("patreon_accounts")
+    .upsert(row, { onConflict: "user_id" });
+  if (upsertError) {
+    throw new Error(`Échec de l'enregistrement du lien Patreon (${userId}) : ${upsertError.message}`);
+  }
 
   // patreon_managed reste false si le compte est lifetime (plan non piloté par
   // Patreon) ; true sinon (Patreon contrôle le basculement free/subscribed).
-  await admin
+  const { error: updateError } = await admin
     .from("profiles")
     .update({ plan, patreon_managed: plan !== "lifetime" })
     .eq("id", userId);
+  if (updateError) {
+    throw new Error(`Échec de la mise à jour du plan (${userId}) : ${updateError.message}`);
+  }
 
   return { plan };
 }
@@ -87,20 +100,32 @@ export async function syncPatreonEntitlement(params: {
  */
 export async function disconnectPatreon(userId: string): Promise<void> {
   const admin = createAdminClient();
-  await admin.from("patreon_accounts").delete().eq("user_id", userId);
+  const { error: deleteError } = await admin
+    .from("patreon_accounts")
+    .delete()
+    .eq("user_id", userId);
+  if (deleteError) {
+    throw new Error(`Échec de la suppression du lien Patreon (${userId}) : ${deleteError.message}`);
+  }
 
-  const { data: profile } = await admin
+  const { data: profile, error: profileError } = await admin
     .from("profiles")
     .select("plan")
     .eq("id", userId)
     .single();
+  if (profileError) {
+    throw new Error(`Impossible de lire le profil (${userId}) : ${profileError.message}`);
+  }
 
   const update =
     profile?.plan === "lifetime"
       ? { patreon_managed: false }
       : { plan: "free", patreon_managed: false };
 
-  await admin.from("profiles").update(update).eq("id", userId);
+  const { error: updateError } = await admin.from("profiles").update(update).eq("id", userId);
+  if (updateError) {
+    throw new Error(`Échec de la mise à jour du plan (${userId}) : ${updateError.message}`);
+  }
 }
 
 /**
@@ -127,12 +152,17 @@ export async function resyncStalePatreonAccounts(
   const admin = createAdminClient();
   const cutoff = new Date(Date.now() - staleHours * 3_600_000).toISOString();
 
-  const { data: accounts } = await admin
+  const { data: accounts, error: selectError } = await admin
     .from("patreon_accounts")
     .select("user_id, refresh_token")
     .lt("last_synced_at", cutoff)
     .order("last_synced_at", { ascending: true })
     .limit(limit);
+  // Distinct d'un vrai "rien à faire" : une panne de lecture ne doit pas se
+  // faire passer pour { processed: 0, errors: 0 } auprès du cron.
+  if (selectError) {
+    throw new Error(`Impossible de lister les comptes Patreon à resynchroniser : ${selectError.message}`);
+  }
 
   let processed = 0;
   let errors = 0;
