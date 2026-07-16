@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import { canMemberPost } from "@/lib/worldPermissions";
 
 import { WorldHome } from "@/components/worlds/home/WorldHome";
+import { AgeGate } from "@/components/worlds/AgeGate";
 import { WorldMembershipGuard } from "@/components/worlds/members/WorldMembershipGuard";
 import WorldSidebar from "@/components/worlds/sidebar/WorldSidebar";
 import type { AsidePersona } from "@/components/personas/WorldPersonaAsideClient";
@@ -16,7 +17,7 @@ export default async function WorldPage({
   searchParams,
 }: {
   params: { id: string };
-  searchParams?: { view?: string };
+  searchParams?: { view?: string; category?: string };
 }) {
   const { id } = await params;
   const supabase = await createClient();
@@ -43,6 +44,11 @@ export default async function WorldPage({
     notFound();
   }
 
+  const myAgeConfirmedAt = members.find((m) => m.user_id === userId)?.age_confirmed_at ?? null;
+  if (world.is_age_restricted && !myAgeConfirmedAt) {
+    return <AgeGate worldId={world.id} worldName={world.name} />;
+  }
+
   type NavRoom = {
     id: string;
     title: string | null;
@@ -50,6 +56,7 @@ export default async function WorldPage({
     icon_url: string | null;
     last_message_at: string | null;
     unread_count: number;
+    category_id: string | null;
     timeline_date?: { year: number; month: number | null; day: number | null } | null;
   };
 
@@ -128,7 +135,9 @@ export default async function WorldPage({
       })(),
     ]);
 
-  const view = (await searchParams)?.view;
+  const resolvedSearchParams = await searchParams;
+  const view = resolvedSearchParams?.view;
+  const initialCategoryId = resolvedSearchParams?.category ?? null;
 
   return (
     <main className="composer-parent flex h-full flex-col focus-visible:outline-0">
@@ -147,6 +156,7 @@ export default async function WorldPage({
           initialPersonas={initialPersonas}
           initialPrefs={worldPrefs}
           view={view}
+          initialCategoryId={initialCategoryId}
         />
       </div>
     </main>

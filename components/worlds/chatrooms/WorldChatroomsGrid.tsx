@@ -17,6 +17,7 @@ type Room = {
   last_message_at: string | null;
   last_message_excerpt?: string | null;
   unread_count: number;
+  category_id?: string | null;
 };
 
 function relativeTime(iso: string | null) {
@@ -36,10 +37,13 @@ export function WorldChatroomsGrid({
   worldId,
   initialRooms,
   onRoomClick,
+  categoryId,
 }: {
   worldId: string;
   initialRooms: Room[];
   onRoomClick?: (href: string) => void;
+  /** Filtre l'affichage sur une catégorie ; "__uncategorized__" pour les chatrooms sans catégorie. */
+  categoryId?: string | null;
 }) {
   const [rooms, setRooms] = useState<Room[]>(initialRooms);
   const { roomUnread } = useNotifications();
@@ -74,6 +78,13 @@ export function WorldChatroomsGrid({
     };
   }, [worldId, reconnectEpoch]);
 
+  const visibleRooms =
+    categoryId === undefined || categoryId === null
+      ? rooms
+      : rooms.filter((room) =>
+          categoryId === "__uncategorized__" ? !room.category_id : room.category_id === categoryId,
+        );
+
   if (rooms.length === 0) {
     return (
       <div className="rounded-3xl border border-border-soft p-8 text-center text-sm text-muted-foreground">
@@ -82,10 +93,18 @@ export function WorldChatroomsGrid({
     );
   }
 
+  if (visibleRooms.length === 0) {
+    return (
+      <div className="rounded-3xl border border-border-soft p-8 text-center text-sm text-muted-foreground">
+        Aucune partie dans cette catégorie.
+      </div>
+    );
+  }
+
   return (
     <div className="rounded-3xl border border-border-soft p-3 md:p-4">
       <ul className="grid gap-x-6 md:grid-cols-2">
-        {rooms.map((room) => {
+        {visibleRooms.map((room) => {
           const href = `/c/${room.id}`;
           const unread = roomUnread[room.id] ?? room.unread_count ?? 0;
           const label = room.title || room.name || "Sans titre";

@@ -16,6 +16,7 @@ import { createClient } from "@/lib/supabase/client";
 import { supabaseThumb } from "@/lib/storage";
 import { useNotifications } from "@/components/providers/NotificationsProvider";
 import { WorldPreviewDialog } from "@/components/worlds/WorldPreviewDialog";
+import { AgeConfirmDialog } from "@/components/worlds/AgeConfirmDialog";
 import { TABLE, RPC } from "@/lib/constants";
 import type { AppNotification, NotificationType } from "@/types/db";
 import { notifText, notifHref, compactTime } from "@/lib/notifHelpers";
@@ -49,6 +50,8 @@ function WorldInviteCard({ notif, onMarkRead }: { notif: AppNotification; onMark
         : null;
     const supabase = createClient(); // eslint-disable-line react-hooks/rules-of-hooks
     const [status, setStatus] = useState<"pending" | "accepted" | "declined" | "cancelled" | null>(null);
+    const [ageRestricted, setAgeRestricted] = useState(false);
+    const [confirmOpen, setConfirmOpen] = useState(false);
     const [previewOpen, setPreviewOpen] = useState(false);
     const [acting, setActing] = useState(false);
     const router = useRouter();
@@ -64,12 +67,22 @@ function WorldInviteCard({ notif, onMarkRead }: { notif: AppNotification; onMark
             .then(({ data: inv }: { data: { status: string; role: string } | null }) => {
                 setStatus(inv ? (inv.status as "pending" | "accepted" | "declined") : "cancelled");
             });
+        supabase.from("worlds")
+            .select("is_age_restricted")
+            .eq("id", notif.world_id)
+            .maybeSingle()
+            .then(({ data }: { data: { is_age_restricted: boolean | null } | null }) => {
+                setAgeRestricted(!!data?.is_age_restricted);
+            });
     }, [notif.world_id, notif.recipient_id, supabase]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    async function accept() {
+    async function doAccept(ageConfirmed: boolean) {
         if (!notif.world_id || acting) return;
         setActing(true);
-        const { error } = await supabase.rpc(RPC.ACCEPT_WORLD_INVITATION, { p_world_id: notif.world_id });
+        const { error } = await supabase.rpc(RPC.ACCEPT_WORLD_INVITATION, {
+            p_world_id: notif.world_id,
+            p_age_confirmed: ageConfirmed,
+        });
         if (!error) {
             setStatus("accepted");
             onMarkRead(notif.id);
@@ -77,6 +90,14 @@ function WorldInviteCard({ notif, onMarkRead }: { notif: AppNotification; onMark
             router.push(`/w/${notif.world_id}`);
         }
         setActing(false);
+    }
+
+    function accept() {
+        if (ageRestricted) {
+            setConfirmOpen(true);
+            return;
+        }
+        void doAccept(false);
     }
 
     async function decline() {
@@ -123,6 +144,17 @@ function WorldInviteCard({ notif, onMarkRead }: { notif: AppNotification; onMark
                 fallbackName={notif.content}
                 prefetchedData={prefetchedData}
             />
+            {ageRestricted && (
+                <AgeConfirmDialog
+                    worldName={notif.content ?? t("invite.worldFallback")}
+                    open={confirmOpen}
+                    onOpenChange={setConfirmOpen}
+                    onConfirm={() => {
+                        setConfirmOpen(false);
+                        void doAccept(true);
+                    }}
+                />
+            )}
         </>
     );
 }

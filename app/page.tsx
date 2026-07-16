@@ -14,26 +14,29 @@ export default async function Home() {
   }
 
   // Dernier monde visité (cookie posé par le middleware).
-  // On vérifie que l'utilisateur courant y a toujours accès (RLS) avant de
-  // rediriger : un autre compte connecté après déconnexion ne doit pas
-  // atterrir sur un monde inaccessible.
+  // On vérifie que l'utilisateur courant en est toujours MEMBRE avant de
+  // rediriger — pas seulement que le monde existe et reste lisible via RLS
+  // (un monde public reste lisible par n'importe quel compte même après
+  // l'avoir quitté, ce qui redirigeait à tort vers un monde inaccessible).
   const cookieStore = await cookies();
   const lastWorldId = cookieStore.get("last_world_id")?.value;
   if (lastWorldId) {
     const { data: accessible } = await supabase
       .from("worlds")
-      .select("id")
+      .select("id, world_members!inner(user_id)")
       .eq("id", lastWorldId)
+      .eq("world_members.user_id", userId)
       .is("deleted_at", null)
       .eq("is_archived", false)
       .maybeSingle();
     if (accessible) redirect(`/w/${lastWorldId}`);
   }
 
-  // Fallback : premier monde accessible de l'utilisateur
+  // Fallback : premier monde dont l'utilisateur est membre
   const { data: world } = await supabase
     .from("worlds")
-    .select("id")
+    .select("id, world_members!inner(user_id)")
+    .eq("world_members.user_id", userId)
     .is("deleted_at", null)
     .eq("is_archived", false)
     .limit(1)

@@ -29,6 +29,7 @@ import {
     Palette,
     Plus,
     Settings,
+    ShieldAlert,
     Trash2,
     X,
 } from "lucide-react";
@@ -51,6 +52,7 @@ import {
     setWorldFeature,
     setWorldRestriction,
     setWorldFaceclaims,
+    setWorldAgeRestricted,
     setWorldTimeline,
     setWorldAvatarType,
     getWorldTags,
@@ -150,6 +152,9 @@ export function WorldSettingsView({ world, onUpdated, onClose }: WorldSettingsVi
     const [enableFaceclaims, setEnableFaceclaims] = React.useState(world.enable_faceclaims !== false);
     const [togglingFaceclaims, setTogglingFaceclaims] = React.useState(false);
 
+    const [ageRestricted, setAgeRestricted] = React.useState(world.is_age_restricted === true);
+    const [togglingAgeRestricted, setTogglingAgeRestricted] = React.useState(false);
+
     const [allowsRealAvatars, setAllowsRealAvatars] = React.useState(world.allows_real_avatars === true);
     const [allowsIllustratedAvatars, setAllowsIllustratedAvatars] = React.useState(world.allows_illustrated_avatars === true);
     const [togglingAvatarType, setTogglingAvatarType] = React.useState(false);
@@ -241,6 +246,15 @@ export function WorldSettingsView({ world, onUpdated, onClose }: WorldSettingsVi
         onUpdated?.({ ...world, enable_faceclaims: enabled } as World);
     }
 
+    async function handleAgeRestrictedToggle(enabled: boolean) {
+        setTogglingAgeRestricted(true);
+        const res = await setWorldAgeRestricted(world.id, enabled);
+        setTogglingAgeRestricted(false);
+        if (!res.ok) { toast.error(res.error); return; }
+        setAgeRestricted(enabled);
+        onUpdated?.({ ...world, is_age_restricted: enabled } as World);
+    }
+
     async function handleAvatarTypeToggle(
         field: "allows_real_avatars" | "allows_illustrated_avatars",
         enabled: boolean,
@@ -316,6 +330,7 @@ export function WorldSettingsView({ world, onUpdated, onClose }: WorldSettingsVi
         setRestrictInventory(!!world.restrict_inventory);
         setRestrictSkills(!!world.restrict_skills);
         setEnableFaceclaims(world.enable_faceclaims !== false);
+        setAgeRestricted(world.is_age_restricted === true);
         setAllowsRealAvatars(world.allows_real_avatars === true);
         setAllowsIllustratedAvatars(world.allows_illustrated_avatars === true);
         setTimelineEnabled(!!world.timeline_enabled);
@@ -774,6 +789,28 @@ export function WorldSettingsView({ world, onUpdated, onClose }: WorldSettingsVi
                                                 className="shrink-0 mt-0.5"
                                             />
                                         </div>
+                                    </div>
+                                </div>
+
+                                {/* -- Sécurité ---------------------------------- */}
+                                <div className="space-y-5 pt-2">
+                                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Sécurité</p>
+                                    <div className="flex items-start justify-between gap-4">
+                                        <div className="space-y-0.5">
+                                            <p className="flex items-center gap-1.5 text-sm font-medium">
+                                                <ShieldAlert className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                                                Monde réservé aux 18 ans et plus
+                                            </p>
+                                            <p className="text-xs text-muted-foreground leading-snug">
+                                                Les nouveaux membres devront confirmer avoir 18 ans ou plus avant de pouvoir rejoindre ce monde.
+                                            </p>
+                                        </div>
+                                        <Switch
+                                            checked={ageRestricted}
+                                            disabled={togglingAgeRestricted}
+                                            onCheckedChange={v => void handleAgeRestrictedToggle(v)}
+                                            className="shrink-0 mt-0.5"
+                                        />
                                     </div>
                                 </div>
 

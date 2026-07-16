@@ -156,6 +156,7 @@ export default async function WorldSidebar({ worldId }: { worldId: string }) {
     <WorldPickerHeader
       worlds={allWorlds}
       currentWorldId={worldId}
+      currentUserId={userId ?? null}
       plan={quota.plan}
       ownedCount={quota.owned}
       quotaLimit={quota.quotaLimit}

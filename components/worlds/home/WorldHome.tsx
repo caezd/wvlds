@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { WorldHeroCard } from "./WorldHeroCard";
 import { WorldChatComposer } from "../chatrooms/WorldChatComposer";
 import { WorldChatroomsGrid } from "../chatrooms/WorldChatroomsGrid";
+import { WorldCategoryFolders } from "../chatrooms/WorldCategoryFolders";
 import type { World, WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import type { AsidePersona } from "@/components/personas/WorldPersonaAsideClient";
@@ -34,6 +35,7 @@ type Room = {
   last_message_at: string | null;
   last_message_excerpt?: string | null;
   unread_count: number;
+  category_id?: string | null;
   timeline_date?: WorldTimelineDate | null;
 };
 
@@ -49,6 +51,7 @@ export function WorldHome({
   initialPersonas,
   initialPrefs,
   view,
+  initialCategoryId,
 }: {
   world: HeroWorld;
   worldId: string;
@@ -61,6 +64,7 @@ export function WorldHome({
   initialPersonas: AsidePersona[];
   initialPrefs: WorldPrefs | null;
   view?: string;
+  initialCategoryId?: string | null;
 }) {
   const { create_chatroom, world_map, world_catalogue, world_timeline } = useFeatureFlags();
   const router = useRouter();
@@ -70,11 +74,18 @@ export function WorldHome({
 
   const [mainExpanded, setMainExpanded] = useState(initialPrefs?.main_expanded ?? false);
   const [isFavorite, setIsFavorite] = useState(initialPrefs?.is_favorite ?? false);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(initialCategoryId ?? null);
 
   const baseHref = `/w/${worldId}`;
 
   function closeView() {
     router.replace(baseHref, { scroll: false });
+  }
+
+  function handleSelectCategory(categoryId: string | null) {
+    setSelectedCategoryId(categoryId);
+    const url = categoryId ? `${baseHref}?category=${encodeURIComponent(categoryId)}` : baseHref;
+    router.replace(url, { scroll: false });
   }
 
   function handleToggleFavorite() {
@@ -180,13 +191,22 @@ export function WorldHome({
                 />
               </div>
               <div className="mx-auto flex w-full flex-col gap-6 px-4 pb-4 [--world-content-max-width:36rem] lg:[--world-content-max-width:44rem] max-w-(--world-content-max-width)">
+                <WorldCategoryFolders
+                  worldId={worldId}
+                  selectedCategoryId={selectedCategoryId}
+                  onSelectCategory={handleSelectCategory}
+                />
                 {canPost && create_chatroom && (
                   <WorldChatComposer
                     worldId={worldId}
                     timelineConfig={hasTimeline ? (world.timeline_config as WorldTimelineConfig) : undefined}
                   />
                 )}
-                <WorldChatroomsGrid worldId={worldId} initialRooms={initialRooms} />
+                <WorldChatroomsGrid
+                  worldId={worldId}
+                  initialRooms={initialRooms}
+                  categoryId={selectedCategoryId}
+                />
               </div>
             </div>
           </div>
