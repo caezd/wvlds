@@ -3,16 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useJoinWorld } from "./useJoinWorld";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { AgeConfirmDialog } from "@/components/worlds/AgeConfirmDialog";
 
 export function JoinWorldButton({
   worldId,
@@ -62,27 +53,15 @@ export function JoinWorldButton({
       </button>
 
       {ageRestricted && !onRequestAgeConfirm && (
-        <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>{t("ageConfirmTitle")}</AlertDialogTitle>
-              <AlertDialogDescription>
-                {t("ageConfirmDescription", { name: worldName })}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>{t("ageConfirmCancel")}</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => {
-                  setConfirmOpen(false);
-                  join(true);
-                }}
-              >
-                {t("ageConfirmContinue")}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <AgeConfirmDialog
+          worldName={worldName}
+          open={confirmOpen}
+          onOpenChange={setConfirmOpen}
+          onConfirm={() => {
+            setConfirmOpen(false);
+            join(true);
+          }}
+        />
       )}
     </>
   );

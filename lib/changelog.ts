@@ -19,7 +19,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-07",
     tag: "Mondes",
-    text: "Un monde peut être marqué **« réservé aux 18 ans et plus »** dans ses réglages (onglet Fonctions). Toute personne qui rejoint ce monde pour la première fois — depuis l'Explorateur ou une invitation — doit d'abord confirmer avoir 18 ans ou plus ; les membres déjà présents devront confirmer à leur prochaine visite si le monde devient 18+ après coup.",
+    text: "Un monde peut être marqué **« réservé aux 18 ans et plus »** dans ses réglages (onglet Fonctions). Toute personne qui rejoint ce monde pour la première fois — depuis l'Explorateur ou une invitation — doit d'abord **indiquer sa date de naissance** et être majeure ; les membres déjà présents devront confirmer à leur prochaine visite si le monde devient 18+ après coup.",
   },
   {
     date: "2026-07",

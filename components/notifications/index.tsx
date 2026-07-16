@@ -16,16 +16,7 @@ import { createClient } from "@/lib/supabase/client";
 import { supabaseThumb } from "@/lib/storage";
 import { useNotifications } from "@/components/providers/NotificationsProvider";
 import { WorldPreviewDialog } from "@/components/worlds/WorldPreviewDialog";
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { AgeConfirmDialog } from "@/components/worlds/AgeConfirmDialog";
 import { TABLE, RPC } from "@/lib/constants";
 import type { AppNotification, NotificationType } from "@/types/db";
 import { notifText, notifHref, compactTime } from "@/lib/notifHelpers";
@@ -52,7 +43,6 @@ const PERSONA_NOTIF_TYPES: NotificationType[] = ["persona_new_chatroom", "person
 
 function WorldInviteCard({ notif, onMarkRead }: { notif: AppNotification; onMarkRead: (id: string) => void }) {
     const t = useTranslations("notifications");
-    const tExplore = useTranslations("explore");
     const meta = notif.metadata ?? null;
     const worldIconUrl = meta?.icon_url ?? null;
     const prefetchedData = notif.content
@@ -155,27 +145,15 @@ function WorldInviteCard({ notif, onMarkRead }: { notif: AppNotification; onMark
                 prefetchedData={prefetchedData}
             />
             {ageRestricted && (
-                <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-                    <AlertDialogContent>
-                        <AlertDialogHeader>
-                            <AlertDialogTitle>{tExplore("ageConfirmTitle")}</AlertDialogTitle>
-                            <AlertDialogDescription>
-                                {tExplore("ageConfirmDescription", { name: notif.content ?? t("invite.worldFallback") })}
-                            </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                            <AlertDialogCancel>{tExplore("ageConfirmCancel")}</AlertDialogCancel>
-                            <AlertDialogAction
-                                onClick={() => {
-                                    setConfirmOpen(false);
-                                    void doAccept(true);
-                                }}
-                            >
-                                {tExplore("ageConfirmContinue")}
-                            </AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
+                <AgeConfirmDialog
+                    worldName={notif.content ?? t("invite.worldFallback")}
+                    open={confirmOpen}
+                    onOpenChange={setConfirmOpen}
+                    onConfirm={() => {
+                        setConfirmOpen(false);
+                        void doAccept(true);
+                    }}
+                />
             )}
         </>
     );

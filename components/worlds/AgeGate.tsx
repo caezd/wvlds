@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { ShieldAlert, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { AgeVerificationFields } from "./AgeVerificationFields";
 
 /**
  * Barrière plein écran affichée à la place du monde tant que le membre
@@ -15,9 +17,13 @@ import { toast } from "sonner";
  */
 export function AgeGate({ worldId, worldName }: { worldId: string; worldName: string }) {
   const router = useRouter();
+  const t = useTranslations("explore");
+  const tCommon = useTranslations("common");
   const [confirming, setConfirming] = useState(false);
+  const [adult, setAdult] = useState(false);
 
   async function confirm() {
+    if (!adult) return;
     setConfirming(true);
     const supabase = createClient();
     const { error } = await supabase.rpc("confirm_world_age", { p_world_id: worldId });
@@ -31,23 +37,24 @@ export function AgeGate({ worldId, worldName }: { worldId: string; worldName: st
 
   return (
     <main className="flex h-full flex-1 items-center justify-center p-6">
-      <div className="w-full max-w-sm space-y-4 rounded-2xl border border-border-soft bg-card p-6 text-center shadow-sm">
+      <div className="w-full max-w-sm space-y-4 rounded-2xl border border-border-soft bg-card p-6 shadow-sm">
         <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
           <ShieldAlert className="h-6 w-6 text-destructive" />
         </div>
-        <div className="space-y-1.5">
-          <h2 className="text-base font-semibold">Contenu réservé aux 18 ans et plus</h2>
+        <div className="space-y-1.5 text-center">
+          <h2 className="text-base font-semibold">{t("ageConfirmTitle")}</h2>
           <p className="text-sm text-muted-foreground leading-snug">
-            « {worldName} » est réservé aux personnes majeures. Confirmez votre âge pour continuer.
+            {t("ageConfirmDescription", { name: worldName })}
           </p>
         </div>
+        <AgeVerificationFields onAdultChange={setAdult} disabled={confirming} />
         <div className="flex flex-col gap-2 pt-1">
-          <Button onClick={() => void confirm()} disabled={confirming}>
+          <Button onClick={() => void confirm()} disabled={confirming || !adult}>
             {confirming && <Loader2 className="h-4 w-4 animate-spin" />}
-            J&apos;ai 18 ans ou plus
+            {tCommon("confirm")}
           </Button>
           <Button variant="ghost" onClick={() => router.push("/p")} disabled={confirming}>
-            Retour
+            {tCommon("back")}
           </Button>
         </div>
       </div>
