@@ -6,6 +6,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getPatreonConfig } from "./config";
 import { resolvePlan } from "./entitlement";
+import { refreshAccessToken, fetchMembership } from "./client";
 import type { PatreonMembership, PatreonTokens } from "./client";
 
 /** Levée quand le compte Patreon est déjà lié à un AUTRE utilisateur wvlds. */
@@ -100,4 +101,49 @@ export async function disconnectPatreon(userId: string): Promise<void> {
       : { plan: "free", patreon_managed: false };
 
   await admin.from("profiles").update(update).eq("id", userId);
+}
+
+/**
+ * Rafraîchit le token d'un compte et resynchronise son mécénat.
+ * Toujours un refresh : Patreon renvoie un nouveau couple access/refresh, ce qui
+ * évite de gérer l'expiration au cas par cas et garde les tokens frais.
+ */
+async function resyncOnePatreonAccount(userId: string, refreshToken: string): Promise<void> {
+  const tokens = await refreshAccessToken(refreshToken);
+  const membership = await fetchMembership(tokens.accessToken);
+  await syncPatreonEntitlement({ userId, membership, tokens });
+}
+
+/**
+ * Filet de sécurité (cron) : re-synchronise les comptes Patreon dont la dernière
+ * synchro remonte à plus de `staleHours`, pour rattraper un webhook manqué.
+ * Isolé par compte — l'échec de l'un (token révoqué, etc.) n'interrompt pas les autres.
+ */
+export async function resyncStalePatreonAccounts(
+  opts: { staleHours?: number; limit?: number } = {},
+): Promise<{ processed: number; errors: number }> {
+  const staleHours = opts.staleHours ?? 12;
+  const limit = opts.limit ?? 100;
+  const admin = createAdminClient();
+  const cutoff = new Date(Date.now() - staleHours * 3_600_000).toISOString();
+
+  const { data: accounts } = await admin
+    .from("patreon_accounts")
+    .select("user_id, refresh_token")
+    .lt("last_synced_at", cutoff)
+    .order("last_synced_at", { ascending: true })
+    .limit(limit);
+
+  let processed = 0;
+  let errors = 0;
+  for (const acc of accounts ?? []) {
+    try {
+      await resyncOnePatreonAccount(acc.user_id as string, acc.refresh_token as string);
+      processed++;
+    } catch (err) {
+      errors++;
+      console.error("Patreon resync error for user", acc.user_id, err);
+    }
+  }
+  return { processed, errors };
 }
