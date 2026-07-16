@@ -54,6 +54,17 @@ describe("updateSession — cookie last_world_id", () => {
   });
 });
 
+describe("updateSession — routes API non redirigées vers login", () => {
+  it("ne redirige PAS le webhook Patreon même sans session (auth par signature)", async () => {
+    claims = null;
+    const req = new NextRequest("http://localhost:3000/api/patreon/webhook", { method: "POST" });
+    const res = await updateSession(req);
+
+    expect(res.status).not.toBe(307);
+    expect(res.headers.get("location")).toBeNull();
+  });
+});
+
 describe("updateSession — index /w", () => {
   it("redirige /w vers / (la page d'accueil choisit le monde selon l'appartenance)", async () => {
     const req = new NextRequest("http://localhost:3000/w");

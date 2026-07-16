@@ -1,4 +1,5 @@
 import { requireAdmin } from "@/lib/admin";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import Image from "next/image";
 import { Shield, ShieldOff } from "lucide-react";
@@ -7,8 +8,12 @@ import { PlanSelect, PLANS } from "./PlanSelect";
 
 async function toggleAdmin(userId: string, isAdmin: boolean) {
   "use server";
-  const { supabase } = await requireAdmin();
-  await supabase
+  // requireAdmin() = garde d'accès (rôle authenticated). L'écriture des colonnes
+  // privilégiées (verrouillées pour authenticated depuis la migration 089) passe
+  // par le service_role, qui contourne la RLS.
+  await requireAdmin();
+  const admin = createAdminClient();
+  await admin
     .from("profiles")
     .update({ is_admin: isAdmin })
     .eq("id", userId);
@@ -19,8 +24,15 @@ async function setUserPlan(userId: string, formData: FormData) {
   "use server";
   const raw = formData.get("plan");
   const plan = (PLANS as readonly string[]).includes(raw as string) ? (raw as (typeof PLANS)[number]) : "free";
-  const { supabase } = await requireAdmin();
-  await supabase.from("profiles").update({ plan }).eq("id", userId);
+  // Idem : garde admin + écriture privilégiée via service_role. On repasse le
+  // plan sous contrôle manuel (patreon_managed = false) pour que la synchro
+  // Patreon n'écrase pas ce choix.
+  await requireAdmin();
+  const admin = createAdminClient();
+  await admin
+    .from("profiles")
+    .update({ plan, patreon_managed: false })
+    .eq("id", userId);
   revalidatePath("/admin/users");
 }
 

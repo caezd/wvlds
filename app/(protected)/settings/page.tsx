@@ -6,6 +6,8 @@ import { ProfileSettingsForm } from "./ProfileSettingsForm";
 import { MessageFontSelector } from "./MessageFontSelector";
 import { MessageTextSizeSelector } from "./MessageTextSizeSelector";
 import { MessageTextAlignSelector } from "./MessageTextAlignSelector";
+import { PatreonSection } from "./PatreonSection";
+import { isPatreonEnabled, getPatreonMinCents } from "@/lib/patreon/config";
 
 export default async function SettingsPage() {
   const [t, currentLocale] = await Promise.all([
@@ -35,6 +37,25 @@ export default async function SettingsPage() {
     pronouns = extra?.pronouns ?? [];
   }
 
+  // Statut Patreon (RLS : l'utilisateur ne lit que sa propre ligne, hors tokens).
+  const patreonEnabled = isPatreonEnabled();
+  let patreonLinked = false;
+  let patronStatus: string | null = null;
+  let entitledCents = 0;
+  if (patreonEnabled && userId) {
+    const { data: patreon } = await supabase
+      .from("patreon_accounts")
+      .select("patron_status,entitled_cents")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (patreon) {
+      patreonLinked = true;
+      patronStatus = patreon.patron_status ?? null;
+      entitledCents = patreon.entitled_cents ?? 0;
+    }
+  }
+  const patreonMinCents = getPatreonMinCents();
+
   return (
     <div className="p-6 max-w-2xl mx-auto w-full space-y-6">
       <header>
@@ -48,6 +69,23 @@ export default async function SettingsPage() {
         </div>
         <ProfileSettingsForm initialBio={bio} initialPronouns={pronouns} />
       </section>
+
+      {patreonEnabled && (
+        <section className="rounded-lg border p-4 space-y-3">
+          <div>
+            <h2 className="font-medium">{t("subscription.title")}</h2>
+            <p className="text-sm text-muted-foreground">{t("subscription.description")}</p>
+          </div>
+          <PatreonSection
+            linked={patreonLinked}
+            patronStatus={patronStatus}
+            entitledCents={entitledCents}
+            minCents={patreonMinCents}
+            plan={profile?.plan ?? "free"}
+            patreonUrl={process.env.NEXT_PUBLIC_PATREON_URL}
+          />
+        </section>
+      )}
 
       <section className="rounded-lg border p-4 space-y-3">
         <div>
