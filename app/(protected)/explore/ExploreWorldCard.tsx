@@ -113,8 +113,7 @@ export function ExploreWorldCard({ world, tags }: { world: PublicWorld; tags: st
                 {world.icon_url ? (
                   <Image src={world.icon_url} alt="" width={56} height={56} className="h-14 w-14 rounded-xl object-cover shadow" />
                 ) : (
-                  <Globe size={40} className="text-white
-                  " />
+                  <Globe size={40} className="text-white" />
                 )}
               </div>
             )}

@@ -102,15 +102,21 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
+  -- Idempotente : un membre déjà confirmé ne doit pas déclencher d'erreur
+  -- (l'UPDATE ci-dessous ne touche alors aucune ligne, ce qui ne veut pas dire
+  -- « pas membre »). On vérifie donc l'appartenance séparément.
+  IF NOT EXISTS (
+    SELECT 1 FROM public.world_members
+    WHERE world_id = p_world_id AND user_id = auth.uid()
+  ) THEN
+    RAISE EXCEPTION 'Vous n''êtes pas membre de ce monde.';
+  END IF;
+
   UPDATE public.world_members
   SET age_confirmed_at = now()
   WHERE world_id = p_world_id
     AND user_id = auth.uid()
     AND age_confirmed_at IS NULL;
-
-  IF NOT FOUND THEN
-    RAISE EXCEPTION 'Vous n''êtes pas membre de ce monde.';
-  END IF;
 END;
 $$;
 

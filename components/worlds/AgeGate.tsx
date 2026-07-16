@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { ShieldAlert, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,8 @@ import { AgeVerificationFields } from "./AgeVerificationFields";
  */
 export function AgeGate({ worldId, worldName }: { worldId: string; worldName: string }) {
   const router = useRouter();
+  const t = useTranslations("explore");
+  const tCommon = useTranslations("common");
   const [confirming, setConfirming] = useState(false);
   const [adult, setAdult] = useState(false);
 
@@ -39,19 +42,19 @@ export function AgeGate({ worldId, worldName }: { worldId: string; worldName: st
           <ShieldAlert className="h-6 w-6 text-destructive" />
         </div>
         <div className="space-y-1.5 text-center">
-          <h2 className="text-base font-semibold">Contenu réservé aux 18 ans et plus</h2>
+          <h2 className="text-base font-semibold">{t("ageConfirmTitle")}</h2>
           <p className="text-sm text-muted-foreground leading-snug">
-            « {worldName} » est réservé aux personnes majeures. Indiquez votre date de naissance pour continuer.
+            {t("ageConfirmDescription", { name: worldName })}
           </p>
         </div>
         <AgeVerificationFields onAdultChange={setAdult} disabled={confirming} />
         <div className="flex flex-col gap-2 pt-1">
           <Button onClick={() => void confirm()} disabled={confirming || !adult}>
             {confirming && <Loader2 className="h-4 w-4 animate-spin" />}
-            Confirmer
+            {tCommon("confirm")}
           </Button>
           <Button variant="ghost" onClick={() => router.push("/p")} disabled={confirming}>
-            Retour
+            {tCommon("back")}
           </Button>
         </div>
       </div>

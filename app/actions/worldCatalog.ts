@@ -38,8 +38,15 @@ export async function setWorldAgeRestricted(worldId: string, enabled: boolean) {
   if (error) return { ok: false as const, error: error.message };
   // La personne qui active le réglage est déjà membre (owner/admin) — on la
   // considère comme ayant confirmé, pour ne pas se bloquer elle-même l'accès.
+  // Le réglage lui-même a déjà été enregistré (ci-dessus) : un échec de cet
+  // appel n'annule pas l'activation, mais est journalisé pour ne pas rester
+  // totalement invisible (l'acteur peut sinon se retrouver bloqué derrière
+  // l'AgeGate juste après avoir activé la restriction).
   if (enabled) {
-    await supabase.rpc("confirm_world_age", { p_world_id: worldId });
+    const { error: confirmError } = await supabase.rpc("confirm_world_age", { p_world_id: worldId });
+    if (confirmError) {
+      console.error("confirm_world_age failed after enabling age restriction:", confirmError);
+    }
   }
   return { ok: true as const };
 }
