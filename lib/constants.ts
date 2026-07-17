@@ -12,7 +12,6 @@ export const TABLE = {
   PROFILES: "profiles",
   WORLDS: "worlds",
   WORLD_MEMBERS: "world_members",
-  WORLD_MEMBER_READS: "world_member_reads",
   USER_EQUIPPED_COSMETICS: "user_equipped_cosmetics",
   USER_OWNED_COSMETICS: "user_owned_cosmetics",
   COSMETIC_ITEMS: "cosmetic_items",
@@ -30,7 +29,6 @@ export const TABLE = {
 // --- Supabase RPC names -------------------------------------------------------
 export const RPC = {
   GET_APP_SHELL: "get_app_shell",
-  GET_WORLD_UNREADS: "get_world_unreads",
   GET_CHATROOM_UNREADS: "get_chatroom_unreads",
   AWARD_EVENT: "award_event",
   GET_BALANCE_SUMMARY: "get_balance_summary",

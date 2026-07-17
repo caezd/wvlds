@@ -11,7 +11,6 @@ import {
 
 import { type World } from "@/types/worlds";
 import { supabaseThumb } from "@/lib/storage";
-import { useNotifications } from "@/components/providers/NotificationsProvider";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
 
@@ -43,12 +42,6 @@ export function WorldHeroCard({
   const t = useTranslations("worlds");
   const [world, _setWorld] = useState(initialWorld);
   const [bannerThumbFailed, setBannerThumbFailed] = useState(false);
-  const { markWorldSeen } = useNotifications();
-
-  useEffect(() => {
-    void markWorldSeen(world.id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [world.id]);
 
   useEffect(() => {
     setBannerThumbFailed(false);

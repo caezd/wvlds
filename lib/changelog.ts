@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-07 ──────────────────────────────────────────────────────────────
   {
     date: "2026-07",
+    tag: "Correctif",
+    text: "La pastille **« nouvelle salle »** d'un monde ne s'effaçait plus correctement : elle disparaissait dès l'affichage de la bannière du monde, même pour les salles que vous n'aviez jamais ouvertes, et pouvait revenir au rechargement. Elle se fonde désormais sur les salles réellement ouvertes — une salle neuve reste signalée tant que vous n'y êtes pas entré.",
+  },
+  {
+    date: "2026-07",
     tag: "Abonnement",
     text: "**Connectez votre compte Patreon** depuis vos réglages : si vous êtes mécène actif au palier requis, votre abonnement est activé automatiquement (mondes et personas illimités), et retiré si votre mécénat s'arrête. Vous pouvez délier votre compte à tout moment.",
   },
