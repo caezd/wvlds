@@ -4,8 +4,7 @@ import { createSupabaseMock } from "@/test/supabaseMock";
 
 const SHELL_ROW = {
   world_ids: ["w1"],
-  world_unreads: [{ world_id: "w1", unread_messages: 2, unread_rooms: 0 }],
-  room_unreads: [],
+  room_unreads: [{ chat_id: "c1", world_id: "w1", unread_messages: 2, never_opened: false }],
   notification_preferences: [],
   notifications: [],
   dm_conversations: [],
@@ -68,7 +67,6 @@ describe("fetchAppShell", () => {
     const result = await fetchAppShell(mock.client as never, "u1");
     expect(result).toEqual({
       world_ids: [],
-      world_unreads: [],
       room_unreads: [],
       notification_preferences: [],
       notifications: [],

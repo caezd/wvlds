@@ -7,7 +7,7 @@ import type { AppNotification, AppShellResult } from "@/types/db";
 
 // Le bootstrap charge tout via une seule RPC get_app_shell() (voir lib/appShell.ts) ;
 // on la mock pour renvoyer les notifications de test, et toute autre RPC
-// (get_world_unreads, get_all_chatroom_unreads via refreshAll) avec une liste vide.
+// (get_all_chatroom_unreads via refreshAll) avec une liste vide.
 function mockAppShell(
     mock: SupabaseMock,
     notifications: AppNotification[] = [],
@@ -18,7 +18,6 @@ function mockAppShell(
             return Promise.resolve({
                 data: {
                     world_ids: [],
-                    world_unreads: [],
                     room_unreads: [],
                     notification_preferences: [],
                     notifications,
@@ -475,23 +474,24 @@ describe("Realtime INSERT — notification pour le chatroom actif", () => {
 // ── Compteurs non-lus — mise à jour locale sans RPC ───────────────────────────
 
 function ConsumerUnreads() {
-    const { roomUnread, worldUnread, markChatRead, markWorldSeen, setActiveChat } = useNotifications();
+    const { roomUnread, worldUnread, markChatRead, setActiveChat } = useNotifications();
     return (
         <>
             <span data-testid="room-c1">{roomUnread["c1"] ?? 0}</span>
             <span data-testid="world-w1">{worldUnread["w1"] ?? 0}</span>
             <button data-testid="read-c1" onClick={() => void markChatRead("c1")}>lu</button>
-            <button data-testid="seen-w1" onClick={() => void markWorldSeen("w1")}>vu</button>
+            <button data-testid="read-c2" onClick={() => void markChatRead("c2")}>lu c2</button>
             <button data-testid="open-c1" onClick={() => setActiveChat("c1")}>ouvrir</button>
         </>
     );
 }
 
-// Shell avec 1 monde (w1) : 2 messages non lus dans c1 + 1 nouvelle salle
+// Shell avec 1 monde (w1) : 2 messages non lus dans c1, déjà ouverte.
 const UNREAD_SHELL: Partial<AppShellResult> = {
     world_ids: ["w1"],
-    world_unreads: [{ world_id: "w1", unread_messages: 2, unread_rooms: 1 }],
-    room_unreads: [{ chat_id: "c1", world_id: "w1", unread_messages: 2 }],
+    room_unreads: [
+        { chat_id: "c1", world_id: "w1", unread_messages: 2, never_opened: false },
+    ],
 };
 
 function setupUnreads(shell: Partial<AppShellResult> = UNREAD_SHELL) {
@@ -520,20 +520,85 @@ function emitMessage(mock: SupabaseMock, row: Record<string, unknown>) {
 }
 
 describe("Compteurs non-lus — hydratation et dérivation", () => {
-    it("hydrate depuis get_app_shell et dérive le badge de monde (messages + salles)", async () => {
+    it("hydrate depuis get_app_shell et dérive le badge de monde", async () => {
         setupUnreads();
 
         await waitFor(() => {
             expect(screen.getByTestId("room-c1").textContent).toBe("2");
-            // 2 messages non lus + 1 nouvelle salle = 3
-            expect(screen.getByTestId("world-w1").textContent).toBe("3");
+            expect(screen.getByTestId("world-w1").textContent).toBe("2");
         });
+    });
+
+    it("une salle jamais ouverte pèse 1, sans s'ajouter à ses messages non lus", async () => {
+        // Régression du double comptage : une salle neuve de 11 messages
+        // affichait 12 (1 pour la salle + 11 pour les messages).
+        setupUnreads({
+            world_ids: ["w1"],
+            room_unreads: [
+                { chat_id: "c2", world_id: "w1", unread_messages: 11, never_opened: true },
+            ],
+        });
+
+        await waitFor(() => expect(screen.getByTestId("world-w1").textContent).toBe("11"));
+    });
+
+    it("une salle neuve encore vide pèse 1 (signal « nouvelle salle »)", async () => {
+        setupUnreads({
+            world_ids: ["w1"],
+            room_unreads: [
+                { chat_id: "c2", world_id: "w1", unread_messages: 0, never_opened: true },
+            ],
+        });
+
+        await waitFor(() => expect(screen.getByTestId("world-w1").textContent).toBe("1"));
+    });
+});
+
+describe("Compteurs non-lus — la pastille de monde s'efface par la lecture", () => {
+    // LE bug corrigé par la migration 075. Avant : la part « nouvelle salle »
+    // ne se calculait que depuis world_member_reads.last_seen_at, que seul
+    // l'accueil du monde repoussait. Un joueur arrivant par /c/{id} depuis son
+    // centre de notifications lisait tout sans jamais pouvoir effacer la
+    // pastille — parfois pendant des heures, jusqu'à un passage par l'accueil.
+    it("lire une salle jamais ouverte efface la pastille, sans passer par l'accueil du monde", async () => {
+        setupUnreads({
+            world_ids: ["w1"],
+            room_unreads: [
+                { chat_id: "c2", world_id: "w1", unread_messages: 0, never_opened: true },
+            ],
+        });
+
+        await waitFor(() => expect(screen.getByTestId("world-w1").textContent).toBe("1"));
+
+        // Entrer dans la salle — seul markChatRead, aucun marquage de monde.
+        await act(async () => {
+            screen.getByTestId("read-c2").click();
+        });
+
+        expect(screen.getByTestId("world-w1").textContent).toBe("0");
+    });
+
+    it("lire une salle neuve à messages efface la pastille entièrement", async () => {
+        setupUnreads({
+            world_ids: ["w1"],
+            room_unreads: [
+                { chat_id: "c2", world_id: "w1", unread_messages: 11, never_opened: true },
+            ],
+        });
+
+        await waitFor(() => expect(screen.getByTestId("world-w1").textContent).toBe("11"));
+
+        await act(async () => {
+            screen.getByTestId("read-c2").click();
+        });
+
+        expect(screen.getByTestId("world-w1").textContent).toBe("0");
     });
 });
 
 describe("Compteurs non-lus — Realtime local, sans RPC", () => {
     it("incrémente localement à l'arrivée d'un message, sans appel RPC", async () => {
-        const mock = setupUnreads({ ...UNREAD_SHELL, world_unreads: [], room_unreads: [] });
+        const mock = setupUnreads({ ...UNREAD_SHELL, room_unreads: [] });
 
         await waitFor(() => expect(screen.getByTestId("room-c1")).toBeInTheDocument());
 
@@ -550,7 +615,7 @@ describe("Compteurs non-lus — Realtime local, sans RPC", () => {
     });
 
     it("ignore ses propres messages", async () => {
-        const mock = setupUnreads({ ...UNREAD_SHELL, world_unreads: [], room_unreads: [] });
+        const mock = setupUnreads({ ...UNREAD_SHELL, room_unreads: [] });
 
         await waitFor(() => expect(screen.getByTestId("room-c1")).toBeInTheDocument());
 
@@ -561,7 +626,7 @@ describe("Compteurs non-lus — Realtime local, sans RPC", () => {
     });
 
     it("message dans la salle active → marque lu au lieu d'incrémenter", async () => {
-        const mock = setupUnreads({ ...UNREAD_SHELL, world_unreads: [], room_unreads: [] });
+        const mock = setupUnreads({ ...UNREAD_SHELL, room_unreads: [] });
 
         await waitFor(() => expect(screen.getByTestId("open-c1")).toBeInTheDocument());
 
@@ -583,15 +648,14 @@ describe("Compteurs non-lus — lecture locale", () => {
     it("markChatRead remet la salle à zéro et le badge de monde suit", async () => {
         const mock = setupUnreads();
 
-        await waitFor(() => expect(screen.getByTestId("world-w1").textContent).toBe("3"));
+        await waitFor(() => expect(screen.getByTestId("world-w1").textContent).toBe("2"));
 
         await act(async () => {
             screen.getByTestId("read-c1").click();
         });
 
         expect(screen.getByTestId("room-c1").textContent).toBe("0");
-        // Ne reste que la nouvelle salle non vue
-        expect(screen.getByTestId("world-w1").textContent).toBe("1");
+        expect(screen.getByTestId("world-w1").textContent).toBe("0");
 
         // Persistance en DB (upsert chatroom_reads), sans RPC de recomptage
         const readBuilders = mock.buildersFor("chatroom_reads");
@@ -617,17 +681,4 @@ describe("Compteurs non-lus — lecture locale", () => {
         expect(mock.buildersFor("chatroom_reads")).toHaveLength(1);
     });
 
-    it("markWorldSeen remet le compteur de nouvelles salles à zéro", async () => {
-        const mock = setupUnreads();
-
-        await waitFor(() => expect(screen.getByTestId("world-w1").textContent).toBe("3"));
-
-        await act(async () => {
-            screen.getByTestId("seen-w1").click();
-        });
-
-        // Les 2 messages non lus restent, la nouvelle salle disparaît du badge
-        expect(screen.getByTestId("world-w1").textContent).toBe("2");
-        expect(mock.buildersFor("world_member_reads")).toHaveLength(1);
-    });
 });

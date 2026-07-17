@@ -10,8 +10,8 @@ import {
     useState,
 } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { TABLE, RPC, channel, DELAY } from "@/lib/constants";
-import type { WorldUnreadRow, AppNotification, NotificationType, AllChatroomUnreadRow } from "@/types/db";
+import { TABLE, channel, DELAY } from "@/lib/constants";
+import type { AppNotification, NotificationType, AllChatroomUnreadRow } from "@/types/db";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import { fetchAppShell } from "@/lib/appShell";
@@ -33,7 +33,6 @@ type Ctx = {
     roomUnread: Record<string, number>;
     setActiveChat: (id: string | null) => void;
     markChatRead: (chatId: string, lastReadAt?: string) => Promise<void>;
-    markWorldSeen: (worldId: string) => Promise<void>;
     refreshAll: () => Promise<void>;
     // Notifications feed
     notifications: AppNotification[];
@@ -58,7 +57,6 @@ const DEFAULT_CTX: Ctx = {
     roomUnread: {},
     setActiveChat: () => {},
     markChatRead: async () => {},
-    markWorldSeen: async () => {},
     refreshAll: async () => {},
     notifications: [],
     unreadNotifCount: 0,
@@ -84,30 +82,32 @@ export default function NotificationsProvider({ children }: { children: React.Re
     const togglePanel = useCallback(() => setPanelOpen(v => !v), []);
 
     // ── Compteurs non-lus ───────────────────────────────────────────────────
-    // Source de vérité : `roomUnread` (messages non lus par salle) et
-    // `unreadRoomsByWorld` (salles jamais vues par monde). Le badge de monde
-    // est DÉRIVÉ des deux — une seule vérité, pas de double comptage.
+    // Tout se dérive de la SALLE : `roomUnread` (messages non lus) et
+    // `neverOpened` (aucune ligne dans chatroom_reads). Le badge de monde est
+    // la somme des contributions de ses salles — une seule vérité.
     // Les compteurs sont entretenus localement (incréments Realtime, remise à
     // zéro sur lecture) : aucune RPC en régime permanent. `refreshAll` ne sert
     // qu'au resync (retour d'onglet) pour rattraper une éventuelle dérive.
     const [roomUnread, setRoomUnread] = useState<Record<string, number>>({});
-    const [unreadRoomsByWorld, setUnreadRoomsByWorld] = useState<Record<string, number>>({});
+    const [neverOpened, setNeverOpened] = useState<Record<string, true>>({});
     // chat_id → world_id, pour attribuer les compteurs de salle à leur monde
     const roomWorldRef = useRef<Record<string, string>>({});
 
     const worldUnread = useMemo(() => {
         const map: Record<string, number> = {};
-        for (const [wid, count] of Object.entries(unreadRoomsByWorld)) {
-            if (count > 0) map[wid] = count;
-        }
-        for (const [chatId, count] of Object.entries(roomUnread)) {
-            if (count <= 0) continue;
+        const chatIds = new Set([...Object.keys(roomUnread), ...Object.keys(neverOpened)]);
+        for (const chatId of chatIds) {
             const wid = roomWorldRef.current[chatId];
             if (!wid) continue;
-            map[wid] = (map[wid] ?? 0) + count;
+            // Une salle jamais ouverte pèse au moins 1 — c'est le signal
+            // « nouvelle salle », seul moyen de voir une salle neuve encore
+            // vide. max() et non somme : sinon une salle neuve de 11 messages
+            // afficherait 12.
+            const n = Math.max(roomUnread[chatId] ?? 0, neverOpened[chatId] ? 1 : 0);
+            if (n > 0) map[wid] = (map[wid] ?? 0) + n;
         }
         return map;
-    }, [roomUnread, unreadRoomsByWorld]);
+    }, [roomUnread, neverOpened]);
 
     const [notifications, setNotifications] = useState<AppNotification[]>([]);
     const [notifPrefs, setNotifPrefs] = useState<NotifPrefs>({});
@@ -134,19 +134,18 @@ export default function NotificationsProvider({ children }: { children: React.Re
 
     // Hydrate les compteurs depuis les lignes RPC — partagé entre le bootstrap
     // (`get_app_shell`) et le resync (`refreshAll`).
-    const applyUnreads = useCallback((worldRows: WorldUnreadRow[], roomRows: AllChatroomUnreadRow[]) => {
+    // Les salles entièrement lues sont absentes des lignes : reconstruire les
+    // deux maps de zéro les ramène donc naturellement à 0.
+    const applyUnreads = useCallback((roomRows: AllChatroomUnreadRow[]) => {
         const rMap: Record<string, number> = {};
+        const nMap: Record<string, true> = {};
         for (const r of roomRows) {
             rMap[r.chat_id] = r.unread_messages ?? 0;
+            if (r.never_opened) nMap[r.chat_id] = true;
             roomWorldRef.current[r.chat_id] = r.world_id;
         }
         setRoomUnread(rMap);
-
-        const nMap: Record<string, number> = {};
-        for (const w of worldRows) {
-            nMap[w.world_id] = w.unread_rooms ?? 0;
-        }
-        setUnreadRoomsByWorld(nMap);
+        setNeverOpened(nMap);
     }, []);
 
     const refreshAll = useCallback(async () => {
@@ -154,12 +153,8 @@ export default function NotificationsProvider({ children }: { children: React.Re
         if (!uid) return;
         lastSyncRef.current = Date.now();
 
-        const [{ data: worldRows }, { data: roomRows }] = await Promise.all([
-            supabase.rpc(RPC.GET_WORLD_UNREADS),
-            supabase.rpc("get_all_chatroom_unreads"),
-        ]);
-
-        applyUnreads((worldRows ?? []) as WorldUnreadRow[], (roomRows ?? []) as AllChatroomUnreadRow[]);
+        const { data: roomRows } = await supabase.rpc("get_all_chatroom_unreads");
+        applyUnreads((roomRows ?? []) as AllChatroomUnreadRow[]);
     }, [supabase, applyUnreads]);
 
     // Resync au retour sur l'onglet : les compteurs locaux peuvent dériver si
@@ -179,6 +174,15 @@ export default function NotificationsProvider({ children }: { children: React.Re
         if (!uid) return;
         // Badge remis à zéro immédiatement, la DB suit (throttlée).
         setRoomUnread(prev => (prev[chatId] ?? 0) === 0 ? prev : { ...prev, [chatId]: 0 });
+        // L'upsert ci-dessous crée la ligne chatroom_reads : la salle n'est
+        // plus « neuve », quel que soit le chemin par lequel on y est entré.
+        // C'est ce qui rend la pastille de monde effaçable depuis /c/{id}.
+        setNeverOpened(prev => {
+            if (!prev[chatId]) return prev;
+            const next = { ...prev };
+            delete next[chatId];
+            return next;
+        });
 
         const now = Date.now();
         if (now - (lastMarkReadRef.current[chatId] ?? 0) < DELAY.MARK_READ_THROTTLE) return;
@@ -189,16 +193,6 @@ export default function NotificationsProvider({ children }: { children: React.Re
             { onConflict: "chat_id,user_id" },
         );
         if (error) console.error("markChatRead error:", error.message, error.details, error.hint, error.code);
-    }, [supabase]);
-
-    const markWorldSeen = useCallback(async (worldId: string) => {
-        const uid = userIdRef.current;
-        if (!uid) return;
-        setUnreadRoomsByWorld(prev => (prev[worldId] ?? 0) === 0 ? prev : { ...prev, [worldId]: 0 });
-        await supabase.from(TABLE.WORLD_MEMBER_READS).upsert(
-            { world_id: worldId, user_id: uid, last_seen_at: new Date().toISOString() },
-            { onConflict: "world_id,user_id" },
-        );
     }, [supabase]);
 
     // ── Notifications feed ──────────────────────────────────────────────────
@@ -298,7 +292,7 @@ export default function NotificationsProvider({ children }: { children: React.Re
             }
             setNotifPrefs(prefs);
 
-            applyUnreads(shell.world_unreads, shell.room_unreads);
+            applyUnreads(shell.room_unreads);
 
             // Realtime : un SEUL canal pour les messages de tous les mondes
             // (un binding filtré par monde), au lieu d'un canal par monde.
@@ -401,7 +395,6 @@ export default function NotificationsProvider({ children }: { children: React.Re
         roomUnread,
         setActiveChat,
         markChatRead,
-        markWorldSeen,
         refreshAll,
         notifications,
         unreadNotifCount: notifications.filter(n => !n.read_at).length,
@@ -413,7 +406,7 @@ export default function NotificationsProvider({ children }: { children: React.Re
         notifPrefs,
         setNotifPref,
     }), [panelOpen, openPanel, closePanel, togglePanel,
-        worldUnread, roomUnread, setActiveChat, markChatRead, markWorldSeen, refreshAll,
+        worldUnread, roomUnread, setActiveChat, markChatRead, refreshAll,
         notifications, markNotifRead, markAllNotifsRead, archiveNotif,
         hasMoreNotifs, loadMoreNotifs, notifPrefs, setNotifPref]);
 

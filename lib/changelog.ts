@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-07 ──────────────────────────────────────────────────────────────
   {
     date: "2026-07",
+    tag: "Correctif",
+    text: "Une **pastille de notification restait parfois collée sur un monde**, sans aucun moyen de l'effacer : quand une nouvelle salle apparaissait, seul un passage par l'accueil du monde faisait disparaître le compteur — lire la salle ne suffisait pas. En arrivant directement dans une partie depuis le centre de notifications, la pastille pouvait donc traîner des heures. Une salle est désormais considérée comme vue dès que vous l'ouvrez, quel que soit le chemin emprunté. Au passage, une nouvelle salle ne compte plus en double (elle affichait 12 pour 11 messages).",
+  },
+  {
+    date: "2026-07",
     tag: "Abonnement",
     text: "**Connectez votre compte Patreon** depuis vos réglages : si vous êtes mécène actif au palier requis, votre abonnement est activé automatiquement (mondes et personas illimités), et retiré si votre mécénat s'arrête. Vous pouvez délier votre compte à tout moment.",
   },

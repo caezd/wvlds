@@ -1,11 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
 import dynamic from "next/dynamic";
 
 import { Globe, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useNotifications } from "@/components/providers/NotificationsProvider";
 
 const WorldInviteDialog = dynamic(() =>
   import("../members/WorldInviteDialog").then((m) => m.WorldInviteDialog),
@@ -22,13 +20,6 @@ export function WorldHeader({
   };
   canAdmin: boolean;
 }) {
-  const { markWorldSeen } = useNotifications();
-
-  useEffect(() => {
-    void markWorldSeen(world.id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [world.id]);
-
   return (
     <header className="draggable no-draggable-children sticky top-0 p-2 touch:p-2.5 flex items-center justify-between z-20 h-header-height bg-token-main-surface-primary pointer-events-none select-none [view-transition-name:var(--vt-page-header)] *:pointer-events-auto motion-safe:transition max-md:hidden [box-shadow:var(--sharp-edge-top-shadow-placeholder)] bg-background border-b border-border-soft">
       <div className="pointer-events-none absolute start-0 flex flex-col items-center gap-2 lg:start-1/2 ltr:-translate-x-1/2 rtl:translate-x-1/2">

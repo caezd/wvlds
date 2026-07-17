@@ -157,12 +157,6 @@ export type ChatMessageWithPersona = ChatMessage & {
 
 // --- RPC return types --------------------------------------------------------
 
-export type WorldUnreadRow = {
-  world_id: string;
-  unread_messages: number;
-  unread_rooms: number;
-};
-
 export type ChatroomUnreadRow = {
   chat_id: string;
   unread_messages: number;
@@ -172,6 +166,12 @@ export type AllChatroomUnreadRow = {
   chat_id: string;
   world_id: string;
   unread_messages: number;
+  /**
+   * Aucune ligne dans `chatroom_reads` : la salle n'a jamais été ouverte.
+   * Porte le signal « une nouvelle salle est apparue » même quand elle est
+   * vide — sans lui, une salle neuve sans message serait invisible.
+   */
+  never_opened: boolean;
 };
 
 // --- Notifications -----------------------------------------------------------
@@ -310,7 +310,6 @@ export type AppShellNotificationPref = {
 
 export type AppShellResult = {
   world_ids: string[];
-  world_unreads: WorldUnreadRow[];
   room_unreads: AllChatroomUnreadRow[];
   notification_preferences: AppShellNotificationPref[];
   notifications: AppNotification[];
