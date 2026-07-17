@@ -5,7 +5,6 @@ export const TABLE = {
   CHAT_CHOICE_VOTES: "chat_choice_votes",
   CHATROOMS: "chatrooms",
   CHATROOM_KEYS: "chatroom_keys",
-  CHATROOM_READS: "chatroom_reads",
   CHATROOM_PERSONA_PREFS: "chatroom_persona_prefs",
   PERSONAS: "personas",
   PERSONA_FOLLOWS: "persona_follows",
@@ -30,6 +29,7 @@ export const TABLE = {
 export const RPC = {
   GET_APP_SHELL: "get_app_shell",
   GET_CHATROOM_UNREADS: "get_chatroom_unreads",
+  MARK_CHATROOM_READ: "mark_chatroom_read",
   AWARD_EVENT: "award_event",
   GET_BALANCE_SUMMARY: "get_balance_summary",
   ACCEPT_WORLD_INVITATION: "accept_world_invitation",
