@@ -4,7 +4,6 @@ import type { AppShellResult } from "@/types/db";
 
 const EMPTY_SHELL: AppShellResult = {
   world_ids: [],
-  world_unreads: [],
   room_unreads: [],
   notification_preferences: [],
   notifications: [],
