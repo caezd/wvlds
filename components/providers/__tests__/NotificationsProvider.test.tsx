@@ -540,6 +540,18 @@ describe("Compteurs non-lus — hydratation et dérivation", () => {
         await waitFor(() => expect(screen.getByTestId("room-c1")).toBeInTheDocument());
         expect(screen.getByTestId("world-w1").textContent).toBe("0");
     });
+
+    it("une salle jamais ouverte ET porteuse de messages ne compte pas deux fois", async () => {
+        // Le cas croisé — celui que les autres fixtures ne couvraient pas.
+        // En additionnant salle + messages, une salle neuve de 11 messages
+        // afficherait 12. Cas réel observé en prod avant correctif.
+        setupUnreads({
+            world_ids: ["w1"],
+            room_unreads: [{ chat_id: "c2", world_id: "w1", unread_messages: 11, never_opened: true }],
+        });
+
+        await waitFor(() => expect(screen.getByTestId("world-w1").textContent).toBe("11"));
+    });
 });
 
 describe("Compteurs non-lus — Realtime local, sans RPC", () => {

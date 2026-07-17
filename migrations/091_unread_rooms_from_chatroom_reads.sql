@@ -1,4 +1,4 @@
--- 090 — Le badge « nouvelle salle » se dérive de chatroom_reads
+-- 091 — Le badge « nouvelle salle » se dérive de chatroom_reads
 --
 -- Avant : le badge venait de world_member_reads.last_seen_at (une date de
 -- « dernière visite » par monde). Ouvrir le monde remettait tout à zéro, même
@@ -11,8 +11,9 @@
 --
 -- NOTE DE NUMÉROTATION : appliquée en base sous le nom
 -- `unread_rooms_from_chatroom_reads` (version 20260717131702). Les commentaires
--- laissés en base la désignent comme « 075 » ; ce numéro était déjà pris par
--- 075_chat_choice_votes. Elle porte 090 dans le dépôt.
+-- laissés en base la désignent comme « 075 », un numéro déjà pris par
+-- 075_chat_choice_votes — erreur de l'auteur, sans effet sur le SQL appliqué.
+-- 090 est allé à 090_persona_usable_quota : elle porte donc 091 dans le dépôt.
 --
 -- DÉPRÉCIATIONS À PURGER (une fois ce client déployé et les onglets rechargés) :
 --   - public.get_world_unreads()  → plus aucun appelant

@@ -83,8 +83,9 @@ export default function NotificationsProvider({ children }: { children: React.Re
 
     // ── Compteurs non-lus ───────────────────────────────────────────────────
     // Source de vérité : `roomUnread` (messages non lus par salle) et
-    // `neverOpenedRooms` (salles jamais ouvertes). Le badge de monde est DÉRIVÉ
-    // des deux — une seule vérité, pas de double comptage.
+    // `neverOpenedRooms` (salles jamais ouvertes), toutes deux dérivées de
+    // `chatroom_reads`. Le badge de monde est la somme des contributions de
+    // ses salles.
     // Les compteurs sont entretenus localement (incréments Realtime, remise à
     // zéro sur lecture) : aucune RPC en régime permanent. `refreshAll` ne sert
     // qu'au resync (retour d'onglet) pour rattraper une éventuelle dérive.
@@ -95,16 +96,16 @@ export default function NotificationsProvider({ children }: { children: React.Re
 
     const worldUnread = useMemo(() => {
         const map: Record<string, number> = {};
-        for (const chatId of neverOpenedRooms) {
+        const chatIds = new Set([...Object.keys(roomUnread), ...neverOpenedRooms]);
+        for (const chatId of chatIds) {
             const wid = roomWorldRef.current[chatId];
             if (!wid) continue;
-            map[wid] = (map[wid] ?? 0) + 1;
-        }
-        for (const [chatId, count] of Object.entries(roomUnread)) {
-            if (count <= 0) continue;
-            const wid = roomWorldRef.current[chatId];
-            if (!wid) continue;
-            map[wid] = (map[wid] ?? 0) + count;
+            // Une salle jamais ouverte pèse au moins 1 — c'est le signal
+            // « nouvelle salle », seul moyen de voir une salle neuve encore
+            // vide. max() et non somme : additionner les deux ferait afficher
+            // 12 à une salle neuve de 11 messages.
+            const n = Math.max(roomUnread[chatId] ?? 0, neverOpenedRooms.has(chatId) ? 1 : 0);
+            if (n > 0) map[wid] = (map[wid] ?? 0) + n;
         }
         return map;
     }, [roomUnread, neverOpenedRooms]);
