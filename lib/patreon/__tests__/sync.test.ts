@@ -31,17 +31,57 @@ function useAdmin(results: import("@/test/supabaseMock").QueryResult[]) {
 }
 
 const membership = { patreonUserId: "pt-1", patronStatus: "active_patron" as const, entitledCents: 500 };
+const tokens = {
+  accessToken: "acc-new",
+  refreshToken: "ref-new",
+  expiresAt: new Date("2026-08-01T00:00:00.000Z"),
+};
 
 describe("syncPatreonEntitlement", () => {
-  it("chemin nominal : upsert + update sans erreur", async () => {
+  it("chemin callback OAuth (tokens fournis, premier lien) : upsert + update sans erreur", async () => {
     useAdmin([
       { data: null }, // existing (patreon_accounts lookup) -> aucun conflit
       { data: { plan: "free" } }, // profiles.select plan
       { error: null }, // patreon_accounts upsert
       { error: null }, // profiles update
     ]);
+    const res = await syncPatreonEntitlement({ userId: "u1", membership, tokens });
+    expect(res).toEqual({ plan: "subscribed" });
+  });
+
+  it("chemin webhook (pas de tokens, compte déjà lié) : reporte les tokens existants dans l'upsert", async () => {
+    const mock = useAdmin([
+      {
+        data: {
+          user_id: "u1",
+          access_token: "acc-existing",
+          refresh_token: "ref-existing",
+          token_expires_at: "2026-07-01T00:00:00.000Z",
+        },
+      }, // existing -> compte déjà lié, avec ses tokens
+      { data: { plan: "free" } },
+      { error: null },
+      { error: null },
+    ]);
     const res = await syncPatreonEntitlement({ userId: "u1", membership });
     expect(res).toEqual({ plan: "subscribed" });
+
+    // Régression du bug : l'upsert doit reporter les tokens existants
+    // (access_token/refresh_token sont NOT NULL en base) au lieu de les omettre.
+    const upsertBuilder = mock.buildersFor("patreon_accounts")[1];
+    expect(upsertBuilder.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        access_token: "acc-existing",
+        refresh_token: "ref-existing",
+        token_expires_at: "2026-07-01T00:00:00.000Z",
+      }),
+      expect.anything(),
+    );
+  });
+
+  it("lève si aucun token n'est disponible (ni fourni, ni en base) — ne devrait jamais arriver en pratique", async () => {
+    useAdmin([{ data: null }]);
+    await expect(syncPatreonEntitlement({ userId: "u1", membership })).rejects.toThrow(/aucun token/i);
   });
 
   it("lève si la lecture du profil échoue (ne doit pas traiter le plan comme null silencieusement)", async () => {
@@ -49,7 +89,7 @@ describe("syncPatreonEntitlement", () => {
       { data: null },
       { data: null, error: { message: "boom" } },
     ]);
-    await expect(syncPatreonEntitlement({ userId: "u1", membership })).rejects.toThrow(/profil/i);
+    await expect(syncPatreonEntitlement({ userId: "u1", membership, tokens })).rejects.toThrow(/profil/i);
   });
 
   it("lève si l'upsert patreon_accounts échoue", async () => {
@@ -58,7 +98,7 @@ describe("syncPatreonEntitlement", () => {
       { data: { plan: "free" } },
       { error: { message: "upsert failed" } },
     ]);
-    await expect(syncPatreonEntitlement({ userId: "u1", membership })).rejects.toThrow(/lien Patreon/i);
+    await expect(syncPatreonEntitlement({ userId: "u1", membership, tokens })).rejects.toThrow(/lien Patreon/i);
   });
 
   it("lève si l'update de profiles.plan échoue", async () => {
@@ -68,7 +108,7 @@ describe("syncPatreonEntitlement", () => {
       { error: null },
       { error: { message: "update failed" } },
     ]);
-    await expect(syncPatreonEntitlement({ userId: "u1", membership })).rejects.toThrow(/mise à jour du plan/i);
+    await expect(syncPatreonEntitlement({ userId: "u1", membership, tokens })).rejects.toThrow(/mise à jour du plan/i);
   });
 });
 

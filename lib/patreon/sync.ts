@@ -34,13 +34,22 @@ export async function syncPatreonEntitlement(params: {
   const { minCents } = getPatreonConfig();
 
   // Garde-fou : un compte Patreon ne peut être lié qu'à un seul compte wvlds.
+  // On récupère aussi les tokens existants : le webhook ne fournit pas de
+  // `tokens` (Patreon n'en envoie pas dans ses événements), il faut donc les
+  // reporter tels quels dans l'upsert ci-dessous (access_token/refresh_token
+  // sont NOT NULL en base — les omettre ferait échouer l'upsert).
   const { data: existing } = await admin
     .from("patreon_accounts")
-    .select("user_id")
+    .select("user_id, access_token, refresh_token, token_expires_at")
     .eq("patreon_user_id", membership.patreonUserId)
     .maybeSingle();
   if (existing && existing.user_id !== userId) {
     throw new PatreonAlreadyLinkedError();
+  }
+  if (!tokens && !existing) {
+    // Ne devrait pas arriver : le webhook ne synchronise que des comptes déjà
+    // liés (trouvés via patreon_user_id avant d'appeler cette fonction).
+    throw new Error(`Aucun token Patreon disponible pour créer le lien (${userId}).`);
   }
 
   // Plan courant (pour préserver lifetime). Erreur non tolérée : un échec
@@ -73,6 +82,11 @@ export async function syncPatreonEntitlement(params: {
     row.access_token = tokens.accessToken;
     row.refresh_token = tokens.refreshToken;
     row.token_expires_at = tokens.expiresAt.toISOString();
+  } else if (existing) {
+    // Webhook : reporte les tokens déjà en base (colonnes NOT NULL).
+    row.access_token = existing.access_token;
+    row.refresh_token = existing.refresh_token;
+    row.token_expires_at = existing.token_expires_at;
   }
   const { error: upsertError } = await admin
     .from("patreon_accounts")
