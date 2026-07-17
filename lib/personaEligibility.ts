@@ -8,7 +8,7 @@
 // Pure, sans I/O : à appeler avec les personas d'UN SEUL (utilisateur, monde),
 // comme le fait déjà PersonaPickerDialog/PersonaProfileSheet.
 
-import { FREE_PERSONAS_PER_WORLD } from "@/lib/userQuota";
+import { FREE_PERSONAS_PER_WORLD } from "@/lib/personaQuotaConstants";
 
 export type EligibilityPersona = {
   id: string;

@@ -6,16 +6,15 @@
 //   const { plan, owned, quotaLimit, quotaReached } = await getUserQuotaClient('worlds');
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { FREE_PERSONAS_PER_WORLD } from "@/lib/personaQuotaConstants";
 
 export type Plan = "free" | "subscribed" | "lifetime";
 export type Resource = "worlds" | "personas";
 
-/**
- * Limite de personas PAR MONDE pour le plan gratuit — miroir de la règle DB
- * has_persona_capacity (migrations 052/054/056). À garder synchronisée avec
- * la fonction SQL si elle change.
- */
-export const FREE_PERSONAS_PER_WORLD = 5;
+// Ré-exportée pour compatibilité (lib/personaErrors.ts et code existant) —
+// la valeur elle-même vit dans lib/personaQuotaConstants.ts (zéro dépendance,
+// importable depuis un composant client sans entraîner next/headers).
+export { FREE_PERSONAS_PER_WORLD };
 
 type Quota = {
     plan: Plan;
