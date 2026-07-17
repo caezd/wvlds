@@ -329,6 +329,7 @@
     "pick": "Elegir un personaje",
     "pickerEmpty": "Sin personajes. Cree uno primero.",
     "toggleFavorite": "Marcar/quitar de favoritos",
+    "lockedHint": "Este personaje ya no se puede usar con el plan gratuito — mejore su plan para volver a usarlo.",
     "viewByWorld": "Por mundo",
     "viewAlphabetical": "Alfabético",
     "dropHere": "Suelte un personaje aquí",

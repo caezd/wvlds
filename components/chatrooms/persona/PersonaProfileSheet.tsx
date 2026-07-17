@@ -17,6 +17,10 @@ import { formatLastSeen } from "@/lib/utils";
 import { ImageGridView } from "@/components/personas/ImageGridView";
 import { supabaseThumb } from "@/lib/storage";
 import { getInitials } from "@/lib/textFormatting";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { getUsablePersonaIds } from "@/lib/personaEligibility";
+import { useTranslations } from "next-intl";
+import { Lock } from "lucide-react";
 
 // -- Level helpers --------------------------------------------
 // level = floor(sqrt(xp / 50)) + 1
@@ -280,10 +284,15 @@ type Props = {
 
 export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: Props) {
   const supabase = useMemo(() => createClient(), []);
+  const { plan } = useCurrentUser();
+  const t = useTranslations("personas");
 
   const { getUserPresence } = useGlobalPresence();
 
   const [balance, setBalance] = useState<Balance | null>(null);
+  // Éligibilité (plan gratuit : 5 personas les plus anciens par monde) — ne
+  // concerne que le persona du viewer lui-même (cf. migration 090).
+  const [usableForSelf, setUsableForSelf] = useState(true);
   const [sections, setSections] = useState<PersonaSectionWithFields[]>([]);
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -307,19 +316,35 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
       setOwnerPresence(null);
       setBannerUrl(null);
       setFrameUrl(null);
+      setUsableForSelf(true);
       return;
     }
 
     let cancelled = false;
     setLoading(true);
+    setUsableForSelf(true); // par défaut : pas de verrou tant que le check n'a pas résolu
 
     async function load() {
       // bannière + cadre du persona
       const { data: personaRow } = await supabase
         .from("personas")
-        .select("banner_url, frame:avatar_frame_id(asset_url)")
+        .select("banner_url, frame:avatar_frame_id(asset_url), world_id")
         .eq("id", persona!.id)
         .maybeSingle();
+
+      // Éligibilité (uniquement pour le persona du viewer lui-même) : les
+      // frères/sœurs non-templates du même monde suffisent à reproduire
+      // exactement le calcul de getUsablePersonaIds (voir PersonaPickerDialog).
+      let usableForSelfResult = true;
+      const worldId = (personaRow as unknown as { world_id?: string | null } | null)?.world_id;
+      if (persona!.user_id === selfId && worldId) {
+        const { data: siblings } = await supabase
+          .from("personas")
+          .select("id, created_at, is_template")
+          .eq("user_id", selfId!)
+          .eq("world_id", worldId);
+        usableForSelfResult = getUsablePersonaIds(siblings ?? [], plan).has(persona!.id);
+      }
 
       // gamification balance
       const { data: bal } = await supabase
@@ -361,6 +386,7 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
       const row = personaRow as unknown as { banner_url?: string | null; frame?: { asset_url?: string | null } | null } | null;
       setBannerUrl(row?.banner_url ?? null);
       setFrameUrl(row?.frame?.asset_url ?? null);
+      setUsableForSelf(usableForSelfResult);
       setBalance(bal ?? null);
       setOwnerPresence(
         ownerProfile
@@ -381,7 +407,7 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
 
     load();
     return () => { cancelled = true; };
-  }, [persona?.id, supabase]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [persona?.id, selfId, plan, supabase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const xpInfo = balance ? levelFromXp(balance.xp) : null;
 
@@ -498,12 +524,29 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
                 )}
               </div>
               {onUsePersona && (
-                <button
-                  className="mt-1 rounded-full border px-4 py-1.5 text-xs font-medium hover:bg-muted transition-colors"
-                  onClick={() => { onUsePersona(persona); onClose(); }}
-                >
-                  Utiliser ce persona
-                </button>
+                persona.user_id === selfId && !usableForSelf ? (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        disabled
+                        className="mt-1 flex items-center gap-1.5 rounded-full border px-4 py-1.5 text-xs font-medium opacity-50 cursor-not-allowed"
+                      >
+                        <Lock className="h-3 w-3" />
+                        Utiliser ce persona
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="max-w-56 text-center">
+                      {t("lockedHint")}
+                    </TooltipContent>
+                  </Tooltip>
+                ) : (
+                  <button
+                    className="mt-1 rounded-full border px-4 py-1.5 text-xs font-medium hover:bg-muted transition-colors"
+                    onClick={() => { onUsePersona(persona); onClose(); }}
+                  >
+                    Utiliser ce persona
+                  </button>
+                )
               )}
             </div>
 

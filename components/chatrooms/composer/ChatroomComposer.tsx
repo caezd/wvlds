@@ -49,6 +49,7 @@ import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
 
 type MapPinOption = { id: string; title: string; color: string };
 import { HsvColorPicker } from "@/components/ui/hsv-color-picker";
+import { getUsablePersonaIds } from "@/lib/personaEligibility";
 
 type ChatroomComposerProps = {
   /** Chatroom existante. Laisser vide pour le mode « création » (voir onResolveChat). */
@@ -114,7 +115,7 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
   const tPersonas = useTranslations("personas");
   const tDms = useTranslations("dms");
   const supabase = useMemo(() => createClient(), []);
-  const { userId, username } = useCurrentUser();
+  const { userId, username, plan } = useCurrentUser();
   const inFlightRef = useRef(false);
   const pendingBlockMediaRef = useRef<{ url: string; name: string }[]>([]);
 
@@ -159,6 +160,25 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
   // client (canSend dépend de selectedPersona). Même garde-fou que `value`
   // ci-dessus.
   const [selectedPersona, setSelectedPersona] = useState<Persona | null>(null);
+  // Ids des personas utilisables pour poster (plan gratuit : les 5 plus
+  // anciens du monde, cf. migration 090 / lib/personaEligibility.ts). `null`
+  // tant que non résolu — on ne bloque alors pas l'envoi par prudence (la
+  // vraie barrière est de toute façon la RLS/le trigger côté base).
+  const [usableIds, setUsableIds] = useState<Set<string> | null>(null);
+  useEffect(() => {
+    if (!userId || !worldId) { setUsableIds(null); return; }
+    let cancelled = false;
+    supabase
+      .from(TABLE.PERSONAS)
+      .select("id, created_at, is_template")
+      .eq("user_id", userId)
+      .eq("world_id", worldId)
+      .then(({ data }: { data: { id: string; created_at: string; is_template: boolean }[] | null }) => {
+        if (cancelled) return;
+        setUsableIds(getUsablePersonaIds(data ?? [], plan));
+      });
+    return () => { cancelled = true; };
+  }, [supabase, userId, worldId, plan]);
   const BUBBLE_KEY = `bubbleMode:${chatId ?? "new"}`;
   const BUBBLE_COLOR_KEY = `bubbleColor:${chatId ?? "new"}`;
   const [bubbleMode, setBubbleModeRaw] = useState(false);
@@ -469,7 +489,9 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
     }
   }
 
-  const canSend = (value.trim().length > 0 || pendingMedia.length > 0) && !!selectedPersona;
+  const selectedPersonaLocked = !!selectedPersona && !!usableIds && !usableIds.has(selectedPersona.id);
+  const canSend =
+    (value.trim().length > 0 || pendingMedia.length > 0) && !!selectedPersona && !selectedPersonaLocked;
 
   return (
     <div className="group/composer relative w-full [--thread-content-max-width:40rem] lg:[--thread-content-max-width:48rem] mx-auto max-w-(--thread-content-max-width)">
@@ -670,7 +692,11 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
               onClick={() => void send()}
               disabled={!canSend}
               aria-disabled={!canSend}
-              title={selectedPersona ? tDms("send") : tPersonas("pick")}
+              title={
+                selectedPersonaLocked ? tPersonas("lockedHint")
+                : selectedPersona ? tDms("send")
+                : tPersonas("pick")
+              }
             >
               <SendHorizontal />
             </Button>

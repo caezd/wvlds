@@ -112,6 +112,8 @@ export type Persona = {
   faceclaim?: string | null;
   marital_status?: MaritalStatus | null;
   spouse_persona_id?: string | null;
+  /** Requis pour calculer l'éligibilité chronologique (voir lib/personaEligibility.ts). */
+  created_at?: string;
 };
 
 export type UserEquippedCosmetic = {

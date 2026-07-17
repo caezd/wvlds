@@ -330,6 +330,7 @@
     "pick": "Choisir un persona",
     "pickerEmpty": "Aucun persona. Créez-en un d'abord.",
     "toggleFavorite": "Marquer/retirer des favoris",
+    "lockedHint": "Ce persona n'est plus jouable avec le plan gratuit — passez à un plan supérieur pour le réutiliser.",
     "viewByWorld": "Par monde",
     "viewAlphabetical": "Alphabétique",
     "dropHere": "Déposez un persona ici",
