@@ -329,6 +329,7 @@
     "pick": "Choose a persona",
     "pickerEmpty": "No personas yet. Create one first.",
     "toggleFavorite": "Toggle favorite",
+    "lockedHint": "This persona can no longer be used on the free plan — upgrade to use it again.",
     "viewByWorld": "By world",
     "viewAlphabetical": "Alphabetical",
     "dropHere": "Drop a persona here",

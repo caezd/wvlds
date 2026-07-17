@@ -15,18 +15,23 @@ vi.stubGlobal("localStorage", {
 
 vi.mock("@/lib/supabase/client", () => ({ createClient: vi.fn() }));
 
+const currentUserMock = vi.hoisted(() => ({ plan: "free" as string | null }));
+vi.mock("@/hooks/useCurrentUser", () => ({
+  useCurrentUser: () => ({ plan: currentUserMock.plan }),
+}));
+
 import { PersonaPickerDialog } from "@/components/personas/PersonaPickerDialog";
 
 const personas: Persona[] = [
-  { id: "p-caelan", user_id: "u1", name: "Caelan Voss", avatar_url: null },
-  { id: "p-corry", user_id: "u1", name: "Corry", avatar_url: null },
-  { id: "p-jett", user_id: "u1", name: "Jett", avatar_url: null },
+  { id: "p-caelan", user_id: "u1", name: "Caelan Voss", avatar_url: null, created_at: "2026-01-01T00:00:00Z" },
+  { id: "p-corry", user_id: "u1", name: "Corry", avatar_url: null, created_at: "2026-01-02T00:00:00Z" },
+  { id: "p-jett", user_id: "u1", name: "Jett", avatar_url: null, created_at: "2026-01-03T00:00:00Z" },
 ];
 
-function setup() {
+function setup(personaList: Persona[] = personas) {
   const mock = createSupabaseMock({
     user: { id: "u1" },
-    results: [{ data: personas, error: null }],
+    results: [{ data: personaList, error: null }],
   });
   vi.mocked(createClient).mockReturnValue(mock.client as never);
   return mock;
@@ -35,6 +40,7 @@ function setup() {
 beforeEach(() => {
   vi.clearAllMocks();
   for (const k of Object.keys(_store)) delete _store[k];
+  currentUserMock.plan = "free";
   setup();
 });
 
@@ -84,5 +90,39 @@ describe("PersonaPickerDialog — liste et favoris", () => {
     await user.click(star);
 
     expect(JSON.parse(localStorage.getItem("persona-favorites:u1")!)).toEqual(["p-corry"]);
+  });
+});
+
+describe("PersonaPickerDialog — éligibilité (plan gratuit)", () => {
+  const sixPersonas: Persona[] = [
+    { id: "p1", user_id: "u1", name: "Alpha", avatar_url: null, created_at: "2026-01-01T00:00:00Z" },
+    { id: "p2", user_id: "u1", name: "Beta", avatar_url: null, created_at: "2026-01-02T00:00:00Z" },
+    { id: "p3", user_id: "u1", name: "Gamma", avatar_url: null, created_at: "2026-01-03T00:00:00Z" },
+    { id: "p4", user_id: "u1", name: "Delta", avatar_url: null, created_at: "2026-01-04T00:00:00Z" },
+    { id: "p5", user_id: "u1", name: "Epsilon", avatar_url: null, created_at: "2026-01-05T00:00:00Z" },
+    { id: "p6", user_id: "u1", name: "Zeta", avatar_url: null, created_at: "2026-01-06T00:00:00Z" },
+  ];
+
+  it("verrouille le 6e persona (le plus récent) en plan gratuit", async () => {
+    setup(sixPersonas);
+    await openDialog();
+    await screen.findByText("Zeta");
+
+    const zetaRow = screen.getByText("Zeta").closest("div")!;
+    const selectButton = zetaRow.querySelector("button")!;
+    expect(selectButton).toBeDisabled();
+
+    const alphaRow = screen.getByText("Alpha").closest("div")!;
+    expect(alphaRow.querySelector("button")).not.toBeDisabled();
+  });
+
+  it("ne verrouille aucun persona pour un compte abonné", async () => {
+    currentUserMock.plan = "subscribed";
+    setup(sixPersonas);
+    await openDialog();
+    await screen.findByText("Zeta");
+
+    const zetaRow = screen.getByText("Zeta").closest("div")!;
+    expect(zetaRow.querySelector("button")).not.toBeDisabled();
   });
 });

@@ -17,10 +17,13 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { Star, UserPlus } from "lucide-react";
+import { Hint } from "@/components/ui/hint";
+import { Star, UserPlus, Lock } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { getInitials } from "@/lib/textFormatting";
 import { cn } from "@/lib/utils";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { getUsablePersonaIds } from "@/lib/personaEligibility";
 
 function PersonaAvatarThumb({ url, name, size }: { url: string; name: string; size: number }) {
   const [thumbFailed, setThumbFailed] = useState(false);
@@ -41,6 +44,8 @@ function PersonaRow({
   persona,
   selected,
   favorite,
+  locked,
+  lockedHint,
   onSelect,
   onToggleFavorite,
   favoriteLabel,
@@ -48,6 +53,8 @@ function PersonaRow({
   persona: Persona;
   selected: boolean;
   favorite: boolean;
+  locked: boolean;
+  lockedHint: string;
   onSelect: () => void;
   onToggleFavorite: () => void;
   favoriteLabel: string;
@@ -56,13 +63,14 @@ function PersonaRow({
     <div
       className={cn(
         "group flex w-full items-center gap-3 rounded-xl px-2.5 py-2 transition-colors",
-        selected ? "bg-muted" : "hover:bg-muted/60",
+        locked ? "opacity-50" : selected ? "bg-muted" : "hover:bg-muted/60",
       )}
     >
       <button
         type="button"
         onClick={onSelect}
-        className="flex min-w-0 flex-1 items-center gap-3 text-left focus-visible:outline-none"
+        disabled={locked}
+        className="flex min-w-0 flex-1 items-center gap-3 text-left focus-visible:outline-none disabled:cursor-not-allowed"
         aria-pressed={selected}
       >
         <span className="relative size-9 shrink-0 overflow-hidden rounded-full bg-muted">
@@ -75,7 +83,7 @@ function PersonaRow({
           )}
         </span>
         <span className="min-w-0 flex-1 truncate text-sm font-medium">{persona.name}</span>
-        {selected && (
+        {selected && !locked && (
           <span className="grid size-5 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground">
             <svg viewBox="0 0 12 12" className="h-3 w-3 fill-current">
               <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
@@ -83,6 +91,14 @@ function PersonaRow({
           </span>
         )}
       </button>
+
+      {locked && (
+        <Hint content={lockedHint} side="left">
+          <span className="shrink-0 text-muted-foreground" aria-label={lockedHint}>
+            <Lock size={15} />
+          </span>
+        </Hint>
+      )}
 
       <button
         type="button"
@@ -114,6 +130,7 @@ export function PersonaPickerDialog({
 }) {
   const t = useTranslations("personas");
   const tCommon = useTranslations("common");
+  const { plan } = useCurrentUser();
   const supabase = useMemo(() => createClient(), []);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -163,7 +180,7 @@ export function PersonaPickerDialog({
       if (!uid) { setLoading(false); return; }
       let query = supabase
         .from("personas")
-        .select("id, user_id, name, avatar_url, dialogue_color")
+        .select("id, user_id, name, avatar_url, dialogue_color, created_at")
         .eq("user_id", uid)
         .eq("is_template", false)
         .order("name", { ascending: true });
@@ -184,6 +201,13 @@ export function PersonaPickerDialog({
       return a.name.localeCompare(b.name);
     });
   }, [personas, favorites]);
+
+  // Plan gratuit : seuls les 5 personas les plus anciens (par monde) restent
+  // sélectionnables — les autres s'affichent verrouillés (voir migration 090).
+  const usableIds = useMemo(
+    () => getUsablePersonaIds(personas.map((p) => ({ id: p.id, created_at: p.created_at ?? "" })), plan),
+    [personas, plan],
+  );
 
   const canConfirm = !!value && (!required || !!value);
 
@@ -249,6 +273,8 @@ export function PersonaPickerDialog({
                   persona={p}
                   selected={value === p.id}
                   favorite={favorites.has(p.id)}
+                  locked={!usableIds.has(p.id)}
+                  lockedHint={t("lockedHint")}
                   onSelect={() => setValue(p.id)}
                   onToggleFavorite={() => toggleFavorite(p.id)}
                   favoriteLabel={t("toggleFavorite")}
