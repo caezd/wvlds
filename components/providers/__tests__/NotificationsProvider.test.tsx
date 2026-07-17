@@ -597,7 +597,8 @@ describe("Compteurs non-lus — Realtime local, sans RPC", () => {
         // Compteur inchangé, mais la lecture est persistée en DB
         expect(screen.getByTestId("room-c1").textContent).toBe("0");
         await waitFor(() => {
-            expect(mock.buildersFor("chatroom_reads").length).toBeGreaterThan(0);
+            const calls = mock.rpc.mock.calls.filter(c => c[0] === "mark_chatroom_read");
+            expect(calls.length).toBeGreaterThan(0);
         });
     });
 });
@@ -616,18 +617,17 @@ describe("Compteurs non-lus — lecture locale", () => {
         // Ne reste que la nouvelle salle non vue
         expect(screen.getByTestId("world-w1").textContent).toBe("1");
 
-        // Persistance en DB (upsert chatroom_reads), sans RPC de recomptage
-        const readBuilders = mock.buildersFor("chatroom_reads");
-        expect(readBuilders).toHaveLength(1);
-        expect(readBuilders[0].upsert).toHaveBeenCalledWith(
-            expect.objectContaining({ chat_id: "c1", user_id: "u1" }),
-            { onConflict: "chat_id,user_id" },
+        // Persistance via la RPC mark_chatroom_read (horloge serveur, cf. migration 092)
+        const readCalls = mock.rpc.mock.calls.filter(c => c[0] === "mark_chatroom_read");
+        expect(readCalls).toHaveLength(1);
+        expect(readCalls[0][1]).toEqual(
+            expect.objectContaining({ p_chat_id: "c1", p_last_read_at: null }),
         );
         const rpcNames = mock.rpc.mock.calls.map(call => call[0] as string);
-        expect(rpcNames.filter(n => n !== "get_app_shell")).toHaveLength(0);
+        expect(rpcNames.filter(n => n !== "get_app_shell" && n !== "mark_chatroom_read")).toHaveLength(0);
     });
 
-    it("markChatRead throttle : un seul upsert pour deux appels rapprochés", async () => {
+    it("markChatRead throttle : un seul appel RPC pour deux clics rapprochés", async () => {
         const mock = setupUnreads();
 
         await waitFor(() => expect(screen.getByTestId("read-c1")).toBeInTheDocument());
@@ -637,10 +637,44 @@ describe("Compteurs non-lus — lecture locale", () => {
             screen.getByTestId("read-c1").click();
         });
 
-        expect(mock.buildersFor("chatroom_reads")).toHaveLength(1);
+        expect(mock.rpc.mock.calls.filter(c => c[0] === "mark_chatroom_read")).toHaveLength(1);
     });
 
-    it("ouvrir une salle jamais ouverte la retire du badge, via chatroom_reads", async () => {
+    it("markChatRead throttle : le second clic dans la fenêtre programme quand même une écriture finale", async () => {
+        // Régression du throttle « leading-edge only » : un clic isolé dans la
+        // fenêtre de throttle ne doit pas être perdu silencieusement — il doit
+        // être rattrapé à la fin de la fenêtre (queue), sinon un dernier
+        // message d'une rafale reste non lu en base malgré un badge à 0 côté
+        // client.
+        const mock = setupUnreads();
+
+        await waitFor(() => expect(screen.getByTestId("read-c1")).toBeInTheDocument());
+
+        vi.useFakeTimers();
+
+        try {
+            act(() => {
+                screen.getByTestId("read-c1").click();
+            });
+            expect(mock.rpc.mock.calls.filter(c => c[0] === "mark_chatroom_read")).toHaveLength(1);
+
+            act(() => {
+                screen.getByTestId("read-c1").click();
+            });
+            // Toujours 1 : le deuxième clic tombe dans la fenêtre, il est mis en attente
+            expect(mock.rpc.mock.calls.filter(c => c[0] === "mark_chatroom_read")).toHaveLength(1);
+
+            await act(async () => {
+                vi.advanceTimersByTime(800);
+            });
+
+            // L'écriture programmée part à la fin de la fenêtre
+            expect(mock.rpc.mock.calls.filter(c => c[0] === "mark_chatroom_read")).toHaveLength(2);
+        } finally {
+            vi.useRealTimers();
+        }
+
+    it("ouvrir une salle jamais ouverte la retire du badge, via la RPC mark_chatroom_read", async () => {
         const mock = setupUnreads();
 
         await waitFor(() => expect(screen.getByTestId("world-w1").textContent).toBe("3"));
@@ -652,13 +686,12 @@ describe("Compteurs non-lus — lecture locale", () => {
         // Les 2 messages non lus de c1 restent, la salle neuve sort du badge
         expect(screen.getByTestId("world-w1").textContent).toBe("2");
 
-        // La lecture est persistée dans chatroom_reads — plus de world_member_reads
-        const readBuilders = mock.buildersFor("chatroom_reads");
-        expect(readBuilders).toHaveLength(1);
-        expect(readBuilders[0].upsert).toHaveBeenCalledWith(
-            expect.objectContaining({ chat_id: "c2", user_id: "u1" }),
-            { onConflict: "chat_id,user_id" },
+        const readCalls = mock.rpc.mock.calls.filter(c => c[0] === "mark_chatroom_read");
+        expect(readCalls).toHaveLength(1);
+        expect(readCalls[0][1]).toEqual(
+            expect.objectContaining({ p_chat_id: "c2", p_last_read_at: null }),
         );
+        // Plus de world_member_reads : aucun builder de table pour ce chemin
         expect(mock.buildersFor("world_member_reads")).toHaveLength(0);
     });
 

@@ -10,7 +10,7 @@ import {
     useState,
 } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { TABLE, channel, DELAY } from "@/lib/constants";
+import { TABLE, RPC, channel, DELAY } from "@/lib/constants";
 import type { AppNotification, NotificationType, AllChatroomUnreadRow } from "@/types/db";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
@@ -132,6 +132,8 @@ export default function NotificationsProvider({ children }: { children: React.Re
     const activeChatRef = useRef<string | null>(null);
     const lastSyncRef = useRef(0);
     const lastMarkReadRef = useRef<Record<string, number>>({});
+    // Écritures « lu » programmées par le throttle (queue de fenêtre).
+    const pendingReadRef = useRef<Record<string, { timer: ReturnType<typeof setTimeout>; ts?: string }>>({});
 
     // Hydrate les compteurs depuis les lignes RPC — partagé entre le bootstrap
     // (`get_app_shell`) et le resync (`refreshAll`). Les deux salles et les
@@ -170,13 +172,39 @@ export default function NotificationsProvider({ children }: { children: React.Re
         return () => document.removeEventListener("visibilitychange", onVisible);
     }, [refreshAll]);
 
+    // Écriture réelle. `lastReadAt` absent ⇒ la RPC résout avec now() côté
+    // SERVEUR : l'horloge du navigateur ne fait pas autorité face aux
+    // `created_at` posés par le serveur (cf. migration 092).
+    const writeChatRead = useCallback(async (chatId: string, lastReadAt?: string) => {
+        lastMarkReadRef.current[chatId] = Date.now();
+        const { error } = await supabase.rpc(RPC.MARK_CHATROOM_READ, {
+            p_chat_id: chatId,
+            p_last_read_at: lastReadAt ?? null,
+        });
+        if (error) console.error("markChatRead error:", error.message, error.details, error.hint, error.code);
+    }, [supabase]);
+
+    // Démontage avec des écritures encore en attente : on les envoie plutôt que
+    // de les perdre (sans await — le provider s'en va). Mieux vaut une requête
+    // qui n'aboutit peut-être pas qu'un non-lu ressuscité à coup sûr.
+    useEffect(() => {
+        const pending = pendingReadRef.current;
+        return () => {
+            for (const [chatId, p] of Object.entries(pending)) {
+                clearTimeout(p.timer);
+                void writeChatRead(chatId, p.ts);
+            }
+            pendingReadRef.current = {};
+        };
+    }, [writeChatRead]);
+
     const markChatRead = useCallback(async (chatId: string, lastReadAt?: string) => {
         const uid = userIdRef.current;
         if (!uid) return;
         // Badge remis à zéro immédiatement, la DB suit (throttlée).
         setRoomUnread(prev => (prev[chatId] ?? 0) === 0 ? prev : { ...prev, [chatId]: 0 });
-        // Ouvrir la salle la fait sortir des « jamais ouvertes » : c'est l'upsert
-        // sur chatroom_reads ci-dessous qui rendra `never_opened` faux côté DB.
+        // Ouvrir la salle la fait sortir des « jamais ouvertes » : c'est
+        // l'écriture sur chatroom_reads qui rendra `never_opened` faux côté DB.
         setNeverOpenedRooms(prev => {
             if (!prev.has(chatId)) return prev;
             const next = new Set(prev);
@@ -184,16 +212,32 @@ export default function NotificationsProvider({ children }: { children: React.Re
             return next;
         });
 
-        const now = Date.now();
-        if (now - (lastMarkReadRef.current[chatId] ?? 0) < DELAY.MARK_READ_THROTTLE) return;
-        lastMarkReadRef.current[chatId] = now;
+        const elapsed = Date.now() - (lastMarkReadRef.current[chatId] ?? 0);
+        if (elapsed >= DELAY.MARK_READ_THROTTLE) {
+            await writeChatRead(chatId, lastReadAt);
+            return;
+        }
 
-        const { error } = await supabase.from(TABLE.CHATROOM_READS).upsert(
-            { chat_id: chatId, user_id: uid, last_read_at: lastReadAt ?? new Date().toISOString() },
-            { onConflict: "chat_id,user_id" },
-        );
-        if (error) console.error("markChatRead error:", error.message, error.details, error.hint, error.code);
-    }, [supabase]);
+        // Dans la fenêtre : on PROGRAMME l'écriture pour la fin, au lieu de la
+        // jeter. Sans cette queue, une rafale qui s'arrête pendant la fenêtre
+        // laissait ses derniers messages non lus en base — badge à zéro à
+        // l'écran, puis de retour au rechargement ou au resync d'onglet.
+        // La position la plus récente gagne ; la RPC applique GREATEST, donc
+        // un écrasement par une valeur plus ancienne est sans effet.
+        const pending = pendingReadRef.current[chatId];
+        if (pending) {
+            pending.ts = lastReadAt;
+            return;
+        }
+        pendingReadRef.current[chatId] = {
+            ts: lastReadAt,
+            timer: setTimeout(() => {
+                const p = pendingReadRef.current[chatId];
+                delete pendingReadRef.current[chatId];
+                void writeChatRead(chatId, p?.ts);
+            }, DELAY.MARK_READ_THROTTLE - elapsed),
+        };
+    }, [writeChatRead]);
 
     // ── Notifications feed ──────────────────────────────────────────────────
 
