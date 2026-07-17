@@ -440,11 +440,17 @@
       "colUser": "User",
       "colPlan": "Plan",
       "colAdmin": "Admin",
+      "colPatreon": "Patreon",
       "noName": "No name",
       "cantEditSelf": "You cannot edit your own role",
       "removeAdmin": "Remove admin role",
       "grantAdmin": "Grant admin role",
-      "planInfo": "The plan is updated immediately as soon as you change the dropdown value."
+      "planInfo": "The plan is updated immediately as soon as you change the dropdown value.",
+      "patreonNotLinked": "Not linked",
+      "patreonActive": "Active",
+      "patreonBelowThreshold": "Below threshold",
+      "patreonInactive": "Inactive",
+      "patreonManagedHint": "Plan automatically managed by Patreon — changing it manually disables this sync."
     },
     "features": {
       "title": "Features",
