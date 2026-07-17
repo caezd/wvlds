@@ -652,25 +652,27 @@ describe("Compteurs non-lus — lecture locale", () => {
 
         vi.useFakeTimers();
 
-        act(() => {
-            screen.getByTestId("read-c1").click();
-        });
-        expect(mock.rpc.mock.calls.filter(c => c[0] === "mark_chatroom_read")).toHaveLength(1);
+        try {
+            act(() => {
+                screen.getByTestId("read-c1").click();
+            });
+            expect(mock.rpc.mock.calls.filter(c => c[0] === "mark_chatroom_read")).toHaveLength(1);
 
-        act(() => {
-            screen.getByTestId("read-c1").click();
-        });
-        // Toujours 1 : le deuxième clic tombe dans la fenêtre, il est mis en attente
-        expect(mock.rpc.mock.calls.filter(c => c[0] === "mark_chatroom_read")).toHaveLength(1);
+            act(() => {
+                screen.getByTestId("read-c1").click();
+            });
+            // Toujours 1 : le deuxième clic tombe dans la fenêtre, il est mis en attente
+            expect(mock.rpc.mock.calls.filter(c => c[0] === "mark_chatroom_read")).toHaveLength(1);
 
-        await act(async () => {
-            vi.advanceTimersByTime(800);
-        });
+            await act(async () => {
+                vi.advanceTimersByTime(800);
+            });
 
-        // L'écriture programmée part à la fin de la fenêtre
-        expect(mock.rpc.mock.calls.filter(c => c[0] === "mark_chatroom_read")).toHaveLength(2);
-        vi.useRealTimers();
-    });
+            // L'écriture programmée part à la fin de la fenêtre
+            expect(mock.rpc.mock.calls.filter(c => c[0] === "mark_chatroom_read")).toHaveLength(2);
+        } finally {
+            vi.useRealTimers();
+        }
 
     it("ouvrir une salle jamais ouverte la retire du badge, via la RPC mark_chatroom_read", async () => {
         const mock = setupUnreads();
