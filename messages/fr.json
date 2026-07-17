@@ -441,11 +441,17 @@
       "colUser": "Utilisateur",
       "colPlan": "Plan",
       "colAdmin": "Admin",
+      "colPatreon": "Patreon",
       "noName": "Sans nom",
       "cantEditSelf": "Vous ne pouvez pas modifier votre propre rôle",
       "removeAdmin": "Retirer le rôle admin",
       "grantAdmin": "Accorder le rôle admin",
-      "planInfo": "Le plan est modifié immédiatement dès que vous changez la valeur du menu déroulant."
+      "planInfo": "Le plan est modifié immédiatement dès que vous changez la valeur du menu déroulant.",
+      "patreonNotLinked": "Non lié",
+      "patreonActive": "Actif",
+      "patreonBelowThreshold": "Sous le palier",
+      "patreonInactive": "Inactif",
+      "patreonManagedHint": "Plan piloté automatiquement par Patreon — le modifier manuellement désactive cette synchronisation."
     },
     "features": {
       "title": "Fonctionnalités",
