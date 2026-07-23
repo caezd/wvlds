@@ -60,7 +60,7 @@ function AppShellInner({
   }
 
   return (
-    <div className="relative flex h-full w-full flex-row p-2">
+    <div className="relative flex h-full w-full flex-row lg:p-2">
 
       {/* Rail permanent (desktop) */}
       <aside className="relative z-20 hidden w-14 shrink-0 rounded-lg lg:flex pr-2">
@@ -126,7 +126,7 @@ function AppShellInner({
           </button>
         </header>
 
-        <main className="relative flex h-full w-full flex-1 overflow-hidden border bg-background rounded-2xl">
+        <main className="relative flex h-full w-full flex-1 overflow-hidden lg:border lg:bg-background lg:rounded-2xl">
           <div
             id="thread"
             className={cn(

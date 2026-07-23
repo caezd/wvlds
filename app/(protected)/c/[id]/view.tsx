@@ -79,33 +79,33 @@ function ChatroomHeader({
           >
             <Menu className="h-5 w-5" />
           </button>
-        {chat && (
-          <>
-            {/* Breadcrumbs : retour au monde / conversations */}
-            <div className="flex min-w-0 items-center gap-0.5 px-1">
-              {world && (
-                <Link
-                  href={`/w/${world.id}`}
-                  title={t("backTo", { name: world.name })}
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
-                >
-                  {world.isShared
-                    ? <Globe className="h-4 w-4" />
-                    : <GlobeLock className="h-4 w-4" />
-                  }
-                </Link>
-              )}
-              <span className="px-0.5 text-muted-foreground/50">/</span>
-              <ChatroomsNavDropdown
-                worldId={world?.id ?? null}
-                currentChatId={chatId}
-                label={chat.title}
-                initialRooms={rooms}
-              />
-            </div>
+          {chat && (
+            <>
+              {/* Breadcrumbs : retour au monde / conversations */}
+              <div className="flex min-w-0 items-center gap-0.5 px-1">
+                {world && (
+                  <Link
+                    href={`/w/${world.id}`}
+                    title={t("backTo", { name: world.name })}
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                  >
+                    {world.isShared
+                      ? <Globe className="h-4 w-4" />
+                      : <GlobeLock className="h-4 w-4" />
+                    }
+                  </Link>
+                )}
+                <span className="px-0.5 text-muted-foreground/50">/</span>
+                <ChatroomsNavDropdown
+                  worldId={world?.id ?? null}
+                  currentChatId={chatId}
+                  label={chat.title}
+                  initialRooms={rooms}
+                />
+              </div>
 
-          </>
-        )}
+            </>
+          )}
         </div>
         {rightSlot && (
           <div className="flex shrink-0 items-center gap-1 pr-1">
@@ -808,7 +808,7 @@ export default function ChatRoomView({
         worldId={chat?.worlds?.id ?? null}
         selfId={userId ?? selfId}
       />
-      <div className="flex flex-col focus-visible:outline-0 flex-1 h-full min-w-0 bg-background overflow-hidden">
+      <div className="flex flex-col focus-visible:outline-0 flex-1 h-full min-w-0 lg:bg-background overflow-hidden">
         <ChatroomHeader
           chat={chat}
           chatId={chatId}
@@ -878,7 +878,7 @@ export default function ChatRoomView({
             </ScrollAreaWithJumpToBottom>
           </div>
         </section>
-        <div className="group/thread-bottom-container relative isolate z-10 w-full basis-auto has-data-has-thread-error:pt-2 md:pt-0 print:hidden before:pointer-events-none before:absolute before:inset-x-0 before:bottom-1/2 max-lg:before:bottom-0 before:-top-10 before:-z-10 before:bg-linear-to-t before:from-background before:from-50% before:to-transparent">
+        <div className="group/thread-bottom-container relative isolate z-10 w-full basis-auto has-data-has-thread-error:pt-2 md:pt-0 print:hidden before:pointer-events-none before:absolute before:inset-x-0 before:bottom-1/2 max-lg:before:bottom-0 before:-top-10 before:-z-10 before:bg-linear-to-t lg:before:from-background lg:before:from-50% lg:before:to-transparent before:from-body before:from-50% before:to-transparent">
           <div className="text-base mx-auto [--thread-content-margin:--spacing(4)] thread-sm:[--thread-content-margin:--spacing(6)] thread-lg:[--thread-content-margin:--spacing(16)]">
             <div className="thread-lg:[--thread-content-max-width:48rem] mx-auto flex-1 p-3 pt-0 lg:p-10 lg:pt-0">
               <div className="pointer-events-auto relative z-1 flex h-[var(--composer-container-height,100%)] max-w-full flex-[var(--composer-container-flex,1)] flex-col">
