@@ -134,7 +134,10 @@ export function PersonaPickerDialog({
 }: {
   selected: Persona | null;
   onSelect: (persona: Persona | null) => void;
-  trigger?: React.ReactNode;
+  /** Doit être un élément unique (pas juste un `ReactNode`) : cloné via
+   *  `asChild` (Dialog) ou passé à `render` (Drawer/Base UI), qui exige
+   *  un `ReactElement`. */
+  trigger?: React.ReactElement;
   required?: boolean;
   userId?: string | null;
   worldId?: string | null;

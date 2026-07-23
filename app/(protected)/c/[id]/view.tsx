@@ -7,7 +7,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import dynamic from "next/dynamic";
 import { decryptMessage, generateRoomKey } from "@/lib/crypto";
 import Link from "next/link";
-import { Globe, GlobeLock, Star } from "lucide-react";
+import { Globe, GlobeLock, Menu, Star } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toggleFollowChatroom } from "@/app/(protected)/w/actions";
 import { cn } from "@/lib/utils";
@@ -43,6 +43,7 @@ import { usePresenceChannel } from "@/hooks/usePresenceChannel";
 import { useNotifications } from "@/components/providers/NotificationsProvider";
 import { useGlobalPresence } from "@/components/providers/PresenceProvider";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
+import { useMobileSidebar } from "@/components/providers/MobileSidebarProvider";
 import { useChatPins } from "@/hooks/useChatPins";
 import { PinBar } from "@/components/chatrooms/message/PinBar";
 
@@ -62,10 +63,22 @@ function ChatroomHeader({
 }) {
   const t = useTranslations("chatrooms");
   const world = chat?.worlds ?? null;
+  const { setDrawerOpen } = useMobileSidebar();
 
   return (
-    <header className="draggable no-draggable-children sticky top-0 p-2 touch:p-2.5 flex items-center justify-between z-20 h-header-height bg-background pointer-events-none select-none [view-transition-name:var(--vt-page-header)] *:pointer-events-auto motion-safe:transition max-md:hidden [box-shadow:var(--sharp-edge-top-shadow-placeholder)] border-b border-border-soft">
-      <div className="flex flex-1 items-center justify-between gap-2">
+    <header className="draggable no-draggable-children sticky top-0 p-2 touch:p-2.5 flex items-center justify-between z-20 h-header-height bg-background pointer-events-none select-none [view-transition-name:var(--vt-page-header)] *:pointer-events-auto motion-safe:transition [box-shadow:var(--sharp-edge-top-shadow-placeholder)] border-b border-border-soft">
+      <div className="flex flex-1 items-center justify-between gap-2 min-w-0">
+        <div className="flex min-w-0 items-center gap-0.5">
+          {/* Ouvre le menu (rail + sidebar du monde) — remplace la barre
+              générique de AppShell sur les pages de chatroom (cf. AppShell.tsx). */}
+          <button
+            type="button"
+            onClick={() => setDrawerOpen(true)}
+            aria-label="Ouvrir le menu"
+            className="lg:hidden flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted/60"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
         {chat && (
           <>
             {/* Breadcrumbs : retour au monde / conversations */}
@@ -93,6 +106,7 @@ function ChatroomHeader({
 
           </>
         )}
+        </div>
         {rightSlot && (
           <div className="flex shrink-0 items-center gap-1 pr-1">
             {rightSlot}

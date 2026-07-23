@@ -44,6 +44,10 @@ function AppShellInner({
   useEffect(() => { setDrawerOpen(false); }, [pathname, searchParams, setDrawerOpen]);
 
   const isWorldOrChat = (pathname?.startsWith("/w/") || pathname?.startsWith("/c/")) ?? false;
+  // Les pages de chatroom affichent leur propre header (visible sur mobile
+  // désormais) avec le bouton menu intégré en tête — la barre générique
+  // ci-dessous serait redondante (cf. ChatroomHeader dans app/(protected)/c/[id]/view.tsx).
+  const isChatRoute = pathname?.startsWith("/c/") ?? false;
   const anyPanelOpen = notifOpen || dmsOpen;
 
   // Exclusivité mutuelle
@@ -111,7 +115,7 @@ function AppShellInner({
 
       {/* Contenu principal */}
       <section id="app-shell" className="relative flex min-h-0 max-w-full flex-1 flex-col">
-        <header className="lg:hidden flex h-12 shrink-0 items-center">
+        <header className={cn("lg:hidden flex h-12 shrink-0 items-center", isChatRoute && "hidden")}>
           <button
             type="button"
             onClick={() => setDrawerOpen(true)}
