@@ -471,6 +471,7 @@
   },
   "chatrooms": {
     "newRoom": "New room",
+    "composerTitle": "Write a message",
     "insertBlock": "Insert a block",
     "formatBold": "Bold",
     "formatItalic": "Italic",

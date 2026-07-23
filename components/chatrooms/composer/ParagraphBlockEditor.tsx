@@ -186,8 +186,14 @@ export function ParagraphBlockEditor({
       // réapparaît, `pb-editor` non appliqué) tant que l'utilisateur n'a
       // pas recliqué.
       setFocused(true);
+      // Cibler le dernier [data-block] plutôt que `el` : `selectNodeContents(el)`
+      // + `collapse(false)` positionne le curseur après le dernier enfant de
+      // `el` (donc au niveau de `el`, pas à l'intérieur du bloc) — la première
+      // lettre tapée s'insère alors comme nœud texte hors paragraphe.
+      const blocks = el.querySelectorAll<HTMLElement>("[data-block]");
+      const lastBlock = blocks[blocks.length - 1] ?? el;
       const range = document.createRange();
-      range.selectNodeContents(el);
+      range.selectNodeContents(lastBlock);
       range.collapse(false);
       window.getSelection()?.removeAllRanges();
       window.getSelection()?.addRange(range);
@@ -216,8 +222,12 @@ export function ParagraphBlockEditor({
       }
       return;
     }
+    // Même précaution qu'à l'initialisation (cf. plus haut) : cibler le
+    // dernier bloc, pas `el`, pour ne pas placer le curseur hors paragraphe.
+    const blocks = el.querySelectorAll<HTMLElement>("[data-block]");
+    const lastBlock = blocks[blocks.length - 1] ?? el;
     const range = document.createRange();
-    range.selectNodeContents(el);
+    range.selectNodeContents(lastBlock);
     range.collapse(false);
     window.getSelection()?.removeAllRanges();
     window.getSelection()?.addRange(range);

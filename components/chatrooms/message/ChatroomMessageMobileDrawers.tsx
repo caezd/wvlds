@@ -36,7 +36,7 @@ export function ChatroomMessageMobileDrawers({
   return (
     <>
       {/* Drawer mobile — liste d'options (long-press) */}
-      <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
+      <Drawer open={drawerOpen} onOpenChange={setDrawerOpen} showSwipeHandle>
         <DrawerContent>
           <DrawerHeader>
             <DrawerTitle className="text-center text-sm font-medium text-muted-foreground">
@@ -88,7 +88,7 @@ export function ChatroomMessageMobileDrawers({
       </Drawer>
 
       {/* Drawer mobile — picker d'emoji (séparé du drawer options) */}
-      <Drawer open={emojiPickerOpen} onOpenChange={setEmojiPickerOpen}>
+      <Drawer open={emojiPickerOpen} onOpenChange={setEmojiPickerOpen} showSwipeHandle>
         <DrawerContent>
           <DrawerHeader>
             <DrawerTitle className="text-center text-sm font-medium text-muted-foreground">

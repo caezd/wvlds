@@ -87,3 +87,38 @@ describe("ParagraphBlockEditor — Entrée / invertEnter", () => {
     expect(onKeyDown).not.toHaveBeenCalled();
   });
 });
+
+describe("ParagraphBlockEditor — positionnement du curseur dans [data-block]", () => {
+  // Régression : `selectNodeContents(el).collapse(false)` place le curseur au
+  // niveau de l'éditeur racine (après le dernier enfant), pas à l'intérieur
+  // du bloc — la première lettre tapée s'insérait alors comme nœud texte en
+  // dehors du paragraphe (cf. composer mobile, autoFocus à l'ouverture du drawer).
+  it("autoFocus au montage : le curseur est à l'intérieur du bloc, pas au niveau de l'éditeur", () => {
+    const { container } = render(
+      <ParagraphBlockEditor value="" onChange={() => {}} autoFocus />,
+    );
+    const editor = getEditor(container);
+    const block = editor.querySelector("[data-block]");
+    expect(block).not.toBeNull();
+
+    const sel = window.getSelection();
+    expect(sel?.anchorNode).not.toBe(editor);
+    expect(block === sel?.anchorNode || block!.contains(sel?.anchorNode ?? null)).toBe(true);
+  });
+
+  it("sync externe (value non vide) : le curseur est aussi placé dans le dernier bloc", () => {
+    const { container, rerender } = render(
+      <ParagraphBlockEditor value="" onChange={() => {}} />,
+    );
+    rerender(<ParagraphBlockEditor value="Bonjour" onChange={() => {}} />);
+
+    const editor = getEditor(container);
+    const blocks = editor.querySelectorAll("[data-block]");
+    const lastBlock = blocks[blocks.length - 1];
+    expect(lastBlock).not.toBeUndefined();
+
+    const sel = window.getSelection();
+    expect(sel?.anchorNode).not.toBe(editor);
+    expect(lastBlock === sel?.anchorNode || lastBlock.contains(sel?.anchorNode ?? null)).toBe(true);
+  });
+});

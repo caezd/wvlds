@@ -1,9 +1,12 @@
 "use client";
 
 import React, { useState, useRef, useMemo, useEffect, forwardRef, useImperativeHandle } from "react";
+import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import { createClient } from "@/lib/supabase/client";
+import { supabaseThumb } from "@/lib/storage";
+import { getInitials } from "@/lib/textFormatting";
 import type { Persona } from "@/types/db";
 import { TABLE, RPC } from "@/lib/constants";
 import { encryptMessage } from "@/lib/crypto";
@@ -12,7 +15,7 @@ import { useTagChips } from "@/hooks/useTagChips";
 import { PersonaPickerDialog } from "@/components/personas/PersonaPickerDialog";
 import { ContentWarningChipInput } from "@/components/chatrooms/composer/ContentWarningChipInput";
 import { Button } from "../../ui/button";
-import { SendHorizontal, Component, Dices, Pipette, X, ImagePlus, Eye, Lock, Sword, Heart, Square, Anchor, CalendarDays, MapPin, MessageCircle, MessageSquareText, Check, AlertTriangle, Vote, type LucideIcon } from "lucide-react";
+import { SendHorizontal, Component, Dices, Pipette, X, ImagePlus, Eye, Lock, Sword, Heart, Square, Anchor, CalendarDays, MapPin, MessageCircle, MessageSquareText, Check, AlertTriangle, Vote, UserPlus, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { toWebP } from "@/lib/imageUtils";
@@ -45,6 +48,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerTitle,
+  DrawerDescription,
+  DrawerTrigger,
+} from "@/components/ui/drawer";
 import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
 
 type MapPinOption = { id: string; title: string; color: string };
@@ -125,6 +135,9 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
   useEffect(() => {
     setIsMobile(window.matchMedia("(pointer: coarse)").matches);
   }, []);
+  // Sur mobile, le composeur complet ne s'affiche qu'à la demande, dans un
+  // drawer bottom (barre compacte sinon) — cf. `composerCard` plus bas.
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   const DRAFT_KEY = `draft:${chatId ?? "new"}`;
   const draftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -468,6 +481,7 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
         setParticipants([]);
         contentWarningsChips.reset(null);
       }
+      if (isMobile) setDrawerOpen(false);
     }
   }
 
@@ -493,27 +507,33 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
   const canSend =
     (value.trim().length > 0 || pendingMedia.length > 0) && !!selectedPersona && !selectedPersonaLocked;
 
-  return (
-    <div className="group/composer relative w-full [--thread-content-max-width:40rem] lg:[--thread-content-max-width:48rem] mx-auto max-w-(--thread-content-max-width)">
-      {/* Languette « en train d'écrire » : cachée derrière le composer (fond
-          opaque qui la masque), elle glisse vers le haut pour dépasser au-dessus
-          quand quelqu'un écrit. */}
-      <div
-        aria-live="polite"
-        className={cn(
-          "pointer-events-none absolute inset-x-0 bottom-full z-0 transition-all duration-300 ease-out",
-          typingLine ? "translate-y-8 opacity-100" : "translate-y-full opacity-0",
-        )}
-      >
-        <div className="w-full rounded-t-2xl border border-b-0 border-border bg-body px-5 pt-2 pb-10 text-xs italic text-muted-foreground">
-          {typingLine}
-        </div>
+  const typingBanner = (
+    // Languette « en train d'écrire » : cachée derrière le composer (fond
+    // opaque qui la masque), elle glisse vers le haut pour dépasser au-dessus
+    // quand quelqu'un écrit.
+    <div
+      aria-live="polite"
+      className={cn(
+        "pointer-events-none absolute inset-x-0 bottom-full z-0 transition-all duration-300 ease-out",
+        typingLine ? "translate-y-8 opacity-100" : "translate-y-full opacity-0",
+      )}
+    >
+      <div className="w-full rounded-t-2xl border border-b-0 border-border bg-body px-5 pt-2 pb-10 text-xs italic text-muted-foreground">
+        {typingLine}
       </div>
+    </div>
+  );
 
+  const composerCard = (
       <div
         className={cn(
-          "relative z-10 cursor-text overflow-clip p-2.5 contain-inline-size bg-background border grid grid-cols-[auto_1fr_auto] [grid-template-areas:'header_header_header'_'primary_primary_primary'_'leading_footer_trailing'] rounded-3xl",
+          "relative z-10 cursor-text overflow-clip p-2.5 contain-inline-size bg-background border flex flex-col rounded-3xl",
           smsMode ? "border-mist-200 rounded-tr-[6px]" : "border-border-soft",
+          // Dans le drawer mobile, la carte occupe toute la hauteur dispo —
+          // le bloc "content" ci-dessous s'étire pour la remplir, le footer
+          // (actions/envoi) garde sa taille naturelle. Sur desktop,
+          // comportement inchangé (hauteur au contenu).
+          isMobile && "h-full",
         )}
         style={{ cornerShape: "superellipse(1.1)" } as React.CSSProperties}
         onPaste={handleOuterPaste}
@@ -532,12 +552,15 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
           </DialogContent>
         </Dialog>
 
+        {/* Content : bandeaux d'en-tête + éditeur — grandit pour remplir la
+            carte (mobile) ; le footer plus bas garde sa hauteur naturelle. */}
+        <div className={cn("flex flex-col", isMobile && "flex-1 min-h-0")}>
         {/* Bandeaux d'en-tête (note privée / avertissements / médias collés) :
-            un seul conteneur pour la zone de grille "header" — sinon ces
-            blocs, indépendants les uns des autres, se superposeraient au
-            lieu de s'empiler quand plusieurs sont actifs en même temps. */}
+            un seul conteneur — sinon ces blocs, indépendants les uns des
+            autres, se superposeraient au lieu de s'empiler quand plusieurs
+            sont actifs en même temps. */}
         {(visibleTo !== null || contentWarningsChips.tags !== null || pendingMedia.length > 0) && (
-          <div className="[grid-area:header] flex flex-col">
+          <div className="flex flex-col">
             {/* Destinataires note privée */}
             {visibleTo !== null && (
               <div className="flex items-center gap-2 flex-wrap px-2 pt-2 pb-0.5">
@@ -618,22 +641,32 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
         )}
 
         {/* Zone de saisie */}
-        <div className="flex min-h-10 items-start overflow-hidden [grid-area:primary] group-data-expanded/composer:mb-0 group-data-expanded/composer:px-2.5">
-          <div className="flex-1">
+        <div className={cn(
+          "flex min-h-10 items-start overflow-hidden group-data-expanded/composer:mb-0 group-data-expanded/composer:px-2.5",
+          // `items-start` (défaut) laisse l'enfant se dimensionner à son
+          // contenu — sur mobile on veut au contraire qu'il s'étire pour
+          // remplir l'espace restant du bloc "content", d'où `items-stretch`.
+          isMobile && "flex-1 min-h-0 items-stretch",
+        )}>
+          <div className={cn("flex-1", isMobile && "flex flex-col min-h-0")}>
             <ParagraphBlockEditor
               value={value}
               onChange={(v) => { setValue(v); onTyping?.(); }}
               onKeyDown={onKeyDown}
               placeholder={placeholder}
               className="text-sm w-full"
+              wrapperClassName={isMobile ? "flex-1 min-h-0 max-h-none" : undefined}
               invertEnter={isMobile}
+              autoFocus={isMobile}
               formatting
             />
           </div>
         </div>
+        </div>
 
-        {/* Sélecteur de persona + actions */}
-        <div className="[grid-area:leading]">
+        {/* Footer : sélecteur de persona, actions et bouton d'envoi — taille
+            fixée à son contenu (jamais étiré), toujours en bas de carte. */}
+        <div className="flex shrink-0 items-center justify-between gap-2">
           <span className="flex items-center gap-2">
             <PersonaPickerDialog
               selected={selectedPersona}
@@ -651,6 +684,7 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
               required
               userId={userId}
               worldId={worldId}
+              variant={isMobile ? "drawer" : "dialog"}
             />
             <BlocksDropdown
               onSend={(content) => void sendRaw(content)}
@@ -676,10 +710,8 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
               onMapPinChange={onMapPinChange}
             />
           </span>
-        </div>
 
-        {/* Bouton envoyer */}
-        <div className="[grid-area:trailing]">
+          {/* Bouton envoyer */}
           <div
             className={cn(
               "min-w-9 transition-transform",
@@ -703,6 +735,65 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
           </div>
         </div>
       </div>
+  );
+
+  // Sur mobile, le composeur complet (mise en forme, blocs, sélecteur de
+  // persona…) prend trop de place affiché en permanence : seule une barre
+  // compacte reste collée en bas, et l'ouvre en plein dans un drawer bottom
+  // (avec poignée de swipe) au tap — façon Discord/Messenger.
+  const previewText = value.trim().replace(/\s+/g, " ");
+
+  return (
+    <div className="group/composer relative w-full [--thread-content-max-width:40rem] lg:[--thread-content-max-width:48rem] mx-auto max-w-(--thread-content-max-width)">
+      {typingBanner}
+
+      {isMobile ? (
+        <Drawer open={drawerOpen} onOpenChange={setDrawerOpen} showSwipeHandle>
+          <DrawerTrigger
+            render={
+              <button
+                type="button"
+                className="relative z-10 flex w-full items-center gap-2.5 rounded-full border border-border-soft bg-background px-2.5 py-2 text-left shadow-sm"
+              />
+            }
+          >
+            <span className="relative size-8 shrink-0 overflow-hidden rounded-full bg-muted">
+              {selectedPersona ? (
+                selectedPersona.avatar_url ? (
+                  <Image
+                    src={supabaseThumb(selectedPersona.avatar_url, 64) ?? selectedPersona.avatar_url}
+                    alt=""
+                    fill
+                    sizes="32px"
+                    className="object-cover"
+                  />
+                ) : (
+                  <span className="grid h-full w-full place-items-center text-[10px] font-bold text-muted-foreground">
+                    {getInitials(selectedPersona.name)}
+                  </span>
+                )
+              ) : (
+                <span className="grid h-full w-full place-items-center text-muted-foreground">
+                  <UserPlus size={14} />
+                </span>
+              )}
+            </span>
+            <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
+              {previewText || placeholder}
+            </span>
+            {previewText && <SendHorizontal className="size-4 shrink-0 text-primary" />}
+          </DrawerTrigger>
+          <DrawerContent className="h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] [--drawer-inset:8px]">
+            <DrawerTitle className="sr-only">{tChatrooms("composerTitle")}</DrawerTitle>
+            <DrawerDescription className="sr-only">{placeholder}</DrawerDescription>
+            <div className="flex-1 min-h-0 px-2.5 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
+              {composerCard}
+            </div>
+          </DrawerContent>
+        </Drawer>
+      ) : (
+        composerCard
+      )}
     </div>
   );
 });

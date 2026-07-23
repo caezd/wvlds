@@ -15,6 +15,16 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerDescription,
+  DrawerTrigger,
+  DrawerFooter,
+  DrawerClose,
+} from "@/components/ui/drawer";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Hint } from "@/components/ui/hint";
@@ -120,6 +130,7 @@ export function PersonaPickerDialog({
   required = true,
   userId,
   worldId,
+  variant = "dialog",
 }: {
   selected: Persona | null;
   onSelect: (persona: Persona | null) => void;
@@ -127,6 +138,9 @@ export function PersonaPickerDialog({
   required?: boolean;
   userId?: string | null;
   worldId?: string | null;
+  /** "drawer" : rendu comme drawer — se nest automatiquement si monté sous
+   *  un `<Drawer>` ancêtre déjà ouvert (ex: composer mobile). */
+  variant?: "dialog" | "drawer";
 }) {
   const t = useTranslations("personas");
   const tCommon = useTranslations("common");
@@ -217,36 +231,100 @@ export function PersonaPickerDialog({
     setOpen(false);
   }
 
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger ?? (
-          <span className="relative inline-block shrink-0 rounded-full border">
-            {!selected && (
-              <span className="absolute inset-0 rounded-full animate-ping pointer-events-none bg-primary/30 scale-73" />
-            )}
-            <button
-              type="button"
-              aria-label={selected ? selected.name : t("pick")}
-              className="relative flex size-9 items-center justify-center rounded-full overflow-hidden shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              {selected ? (
-                selected.avatar_url ? (
-                  <PersonaAvatarThumb url={selected.avatar_url} name={selected.name} size={36} />
-                ) : (
-                  <span className="h-full w-full grid place-items-center text-xs font-bold  text-muted-foreground">
-                    {getInitials(selected.name)}
-                  </span>
-                )
-              ) : (
-                <span className="h-full w-full grid place-items-center  text-muted-foreground bg-background hover:bg-muted">
-                  <UserPlus size={16} />
-                </span>
-              )}
-            </button>
+  // Contenu du trigger par défaut, partagé entre les deux variantes — seul
+  // l'élément « hôte » change (span cloné via `asChild`/`render`).
+  const defaultTriggerContent = (
+    <>
+      {!selected && (
+        <span className="absolute inset-0 rounded-full animate-ping pointer-events-none bg-primary/30 scale-73" />
+      )}
+      <button
+        type="button"
+        aria-label={selected ? selected.name : t("pick")}
+        className="relative flex size-9 items-center justify-center rounded-full overflow-hidden shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        {selected ? (
+          selected.avatar_url ? (
+            <PersonaAvatarThumb url={selected.avatar_url} name={selected.name} size={36} />
+          ) : (
+            <span className="h-full w-full grid place-items-center text-xs font-bold  text-muted-foreground">
+              {getInitials(selected.name)}
+            </span>
+          )
+        ) : (
+          <span className="h-full w-full grid place-items-center  text-muted-foreground bg-background hover:bg-muted">
+            <UserPlus size={16} />
           </span>
         )}
-      </DialogTrigger>
+      </button>
+    </>
+  );
+
+  const triggerNode = trigger ?? (
+    <span className="relative inline-block shrink-0 rounded-full border">
+      {defaultTriggerContent}
+    </span>
+  );
+
+  const rows = sortedPersonas.map((p) => (
+    <PersonaRow
+      key={p.id}
+      persona={p}
+      selected={value === p.id}
+      favorite={favorites.has(p.id)}
+      locked={!usableIds.has(p.id)}
+      lockedHint={t("lockedHint")}
+      onSelect={() => setValue(p.id)}
+      onToggleFavorite={() => toggleFavorite(p.id)}
+      favoriteLabel={t("toggleFavorite")}
+    />
+  ));
+
+  const emptyOrLoading = loading ? (
+    <div className="flex flex-col gap-2">
+      {[1, 2, 3, 4].map((i) => (
+        <div key={i} className="h-14 rounded-xl bg-muted animate-pulse" />
+      ))}
+    </div>
+  ) : personas.length === 0 ? (
+    <p className="py-6 text-center text-sm text-muted-foreground">
+      {t("pickerEmpty")}
+    </p>
+  ) : null;
+
+  if (variant === "drawer") {
+    return (
+      <Drawer open={open} onOpenChange={setOpen} showSwipeHandle>
+        <DrawerTrigger render={trigger ?? <span className="relative inline-block shrink-0 rounded-full border" />}>
+          {trigger ? null : defaultTriggerContent}
+        </DrawerTrigger>
+        <DrawerContent className="h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] [--drawer-inset:8px]">
+          <DrawerHeader>
+            <DrawerTitle>{t("pick")}</DrawerTitle>
+            <DrawerDescription className="sr-only">{t("pick")}</DrawerDescription>
+          </DrawerHeader>
+          {/* Conteneur scrollable natif (flex item, pas de ScrollArea) —
+              c'est le pattern recommandé par Base UI pour le contenu
+              défilant d'un drawer. */}
+          <div className="min-h-0 flex-1 overflow-y-auto px-4">
+            {emptyOrLoading ?? <div className="flex flex-col gap-1 pb-1">{rows}</div>}
+          </div>
+          <DrawerFooter className="flex-row gap-2">
+            <DrawerClose render={<Button variant="ghost" className="flex-1" />}>
+              {tCommon("cancel")}
+            </DrawerClose>
+            <Button className="flex-1" disabled={!canConfirm} onClick={confirm}>
+              {tCommon("confirm")}
+            </Button>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>{triggerNode}</DialogTrigger>
 
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
@@ -254,33 +332,9 @@ export function PersonaPickerDialog({
           <DialogDescription className="sr-only">{t("pick")}</DialogDescription>
         </DialogHeader>
 
-        {loading ? (
-          <div className="flex flex-col gap-2">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-14 rounded-xl bg-muted animate-pulse" />
-            ))}
-          </div>
-        ) : personas.length === 0 ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">
-            {t("pickerEmpty")}
-          </p>
-        ) : (
+        {emptyOrLoading ?? (
           <ScrollArea className="max-h-[60vh]">
-            <div className="flex flex-col gap-1 pr-3 pb-1">
-              {sortedPersonas.map((p) => (
-                <PersonaRow
-                  key={p.id}
-                  persona={p}
-                  selected={value === p.id}
-                  favorite={favorites.has(p.id)}
-                  locked={!usableIds.has(p.id)}
-                  lockedHint={t("lockedHint")}
-                  onSelect={() => setValue(p.id)}
-                  onToggleFavorite={() => toggleFavorite(p.id)}
-                  favoriteLabel={t("toggleFavorite")}
-                />
-              ))}
-            </div>
+            <div className="flex flex-col gap-1 pr-3 pb-1">{rows}</div>
           </ScrollArea>
         )}
 
