@@ -272,7 +272,7 @@ function ChatroomMessage({
     <>
       <article
         data-message-id={message.id}
-        className={cn("w-full py-8 group/turn-messages", message.visible_to && "bg-card/40 px-4")}
+        className={cn("w-full py-8 group/turn-messages px-2", message.visible_to && "bg-card/40 px-4")}
         {...(isMobile && hasActions ? longPressHandlers : {})}
       >
         {pinId && (
@@ -323,7 +323,7 @@ function ChatroomMessage({
             setPickerOpen={setPickerOpen}
           />
 
-          <div className={cn("relative flex flex-col gap-2 grow ")}>
+          <div className={cn("relative flex flex-col gap-2 grow")}>
             <div className="">
               {editing ? (
                 <div className="w-full">

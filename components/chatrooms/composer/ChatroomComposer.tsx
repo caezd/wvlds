@@ -525,36 +525,36 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
   );
 
   const composerCard = (
-      <div
-        className={cn(
-          "relative z-10 cursor-text overflow-clip p-2.5 contain-inline-size bg-background border flex flex-col rounded-3xl",
-          smsMode ? "border-mist-200 rounded-tr-[6px]" : "border-border-soft",
-          // Dans le drawer mobile, la carte occupe toute la hauteur dispo —
-          // le bloc "content" ci-dessous s'étire pour la remplir, le footer
-          // (actions/envoi) garde sa taille naturelle. Sur desktop,
-          // comportement inchangé (hauteur au contenu).
-          isMobile && "h-full",
-        )}
-        style={{ cornerShape: "superellipse(1.1)" } as React.CSSProperties}
-        onPaste={handleOuterPaste}
-      >
-        {/* Sélection + recadrage bannière */}
-        <Dialog open={bannerPickerOpen} onOpenChange={setBannerPickerOpen}>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle>{tChatrooms("banner")}</DialogTitle>
-            </DialogHeader>
-            <ImagePickerCropField
-              aspect={16 / 7}
-              uploading={bannerUploading}
-              onConfirm={uploadBanner}
-            />
-          </DialogContent>
-        </Dialog>
+    <div
+      className={cn(
+        "relative z-10 cursor-text overflow-clip p-2.5 contain-inline-size bg-background border flex flex-col rounded-3xl",
+        smsMode ? "border-mist-200 rounded-tr-[6px]" : "border-border-soft",
+        // Dans le drawer mobile, la carte occupe toute la hauteur dispo —
+        // le bloc "content" ci-dessous s'étire pour la remplir, le footer
+        // (actions/envoi) garde sa taille naturelle. Sur desktop,
+        // comportement inchangé (hauteur au contenu).
+        isMobile && "h-full",
+      )}
+      style={{ cornerShape: "superellipse(1.1)" } as React.CSSProperties}
+      onPaste={handleOuterPaste}
+    >
+      {/* Sélection + recadrage bannière */}
+      <Dialog open={bannerPickerOpen} onOpenChange={setBannerPickerOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{tChatrooms("banner")}</DialogTitle>
+          </DialogHeader>
+          <ImagePickerCropField
+            aspect={16 / 7}
+            uploading={bannerUploading}
+            onConfirm={uploadBanner}
+          />
+        </DialogContent>
+      </Dialog>
 
-        {/* Content : bandeaux d'en-tête + éditeur — grandit pour remplir la
+      {/* Content : bandeaux d'en-tête + éditeur — grandit pour remplir la
             carte (mobile) ; le footer plus bas garde sa hauteur naturelle. */}
-        <div className={cn("flex flex-col", isMobile && "flex-1 min-h-0")}>
+      <div className={cn("flex flex-col", isMobile && "flex-1 min-h-0")}>
         {/* Bandeaux d'en-tête (note privée / avertissements / médias collés) :
             un seul conteneur — sinon ces blocs, indépendants les uns des
             autres, se superposeraient au lieu de s'empiler quand plusieurs
@@ -662,79 +662,79 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
             />
           </div>
         </div>
-        </div>
+      </div>
 
-        {/* Footer : sélecteur de persona, actions et bouton d'envoi — taille
+      {/* Footer : sélecteur de persona, actions et bouton d'envoi — taille
             fixée à son contenu (jamais étiré), toujours en bas de carte. */}
-        <div className="flex shrink-0 items-center justify-between gap-2">
-          <span className="flex items-center gap-2">
-            <PersonaPickerDialog
-              selected={selectedPersona}
-              onSelect={async (p) => {
-                setSelectedPersona(p);
-                setBubbleColor(p?.dialogue_color ?? null);
-                onPersonaChange?.(p);
-                if (p && userId && chatId) {
-                  await supabase.from(TABLE.CHATROOM_PERSONA_PREFS).upsert(
-                    { chat_id: chatId, user_id: userId, persona_id: p.id },
-                    { onConflict: "chat_id,user_id" },
-                  );
-                }
-              }}
-              required
-              userId={userId}
-              worldId={worldId}
-              variant={isMobile ? "drawer" : "dialog"}
-            />
-            <BlocksDropdown
-              onSend={(content) => void sendRaw(content)}
-              bubbleMode={bubbleMode}
-              onBubbleModeChange={setBubbleMode}
-              bubbleColor={bubbleColor}
-              onBubbleColorChange={handleBubbleColorChange}
-              smsMode={smsMode}
-              onSmsModeChange={setSmsMode}
-              chatId={chatId}
-              onBannerSelect={chatId ? () => setBannerPickerOpen(true) : undefined}
-              visibleTo={visibleTo}
-              onPrivateNoteToggle={() => void togglePrivateNote()}
-              contentWarningsActive={contentWarningsChips.tags !== null}
-              onContentWarningsToggle={contentWarningsChips.toggle}
-              onUploadIconImage={uploadIconImageForBlock}
-              onCalloutClose={() => { pendingBlockMediaRef.current = []; }}
-              worldTimelineConfig={worldTimelineConfig ?? null}
-              timelineDate={timelineDate ?? null}
-              onTimelineDateChange={onTimelineDateChange}
-              mapPins={mapPins}
-              mapPinId={mapPinId ?? null}
-              onMapPinChange={onMapPinChange}
-            />
-          </span>
-
-          {/* Bouton envoyer */}
-          <div
-            className={cn(
-              "min-w-9 transition-transform",
-              value.trim() ? "visible scale-100" : "invisible scale-80",
-              selectedPersona ? "ml-2" : "ml-0",
-            )}
-          >
-            <Button
-              size="icon"
-              onClick={() => void send()}
-              disabled={!canSend}
-              aria-disabled={!canSend}
-              title={
-                selectedPersonaLocked ? tPersonas("lockedHint")
-                : selectedPersona ? tDms("send")
-                : tPersonas("pick")
+      <div className="flex shrink-0 items-center justify-between gap-2">
+        <span className="flex items-center gap-2">
+          <PersonaPickerDialog
+            selected={selectedPersona}
+            onSelect={async (p) => {
+              setSelectedPersona(p);
+              setBubbleColor(p?.dialogue_color ?? null);
+              onPersonaChange?.(p);
+              if (p && userId && chatId) {
+                await supabase.from(TABLE.CHATROOM_PERSONA_PREFS).upsert(
+                  { chat_id: chatId, user_id: userId, persona_id: p.id },
+                  { onConflict: "chat_id,user_id" },
+                );
               }
-            >
-              <SendHorizontal />
-            </Button>
-          </div>
+            }}
+            required
+            userId={userId}
+            worldId={worldId}
+            variant={isMobile ? "drawer" : "dialog"}
+          />
+          <BlocksDropdown
+            onSend={(content) => void sendRaw(content)}
+            bubbleMode={bubbleMode}
+            onBubbleModeChange={setBubbleMode}
+            bubbleColor={bubbleColor}
+            onBubbleColorChange={handleBubbleColorChange}
+            smsMode={smsMode}
+            onSmsModeChange={setSmsMode}
+            chatId={chatId}
+            onBannerSelect={chatId ? () => setBannerPickerOpen(true) : undefined}
+            visibleTo={visibleTo}
+            onPrivateNoteToggle={() => void togglePrivateNote()}
+            contentWarningsActive={contentWarningsChips.tags !== null}
+            onContentWarningsToggle={contentWarningsChips.toggle}
+            onUploadIconImage={uploadIconImageForBlock}
+            onCalloutClose={() => { pendingBlockMediaRef.current = []; }}
+            worldTimelineConfig={worldTimelineConfig ?? null}
+            timelineDate={timelineDate ?? null}
+            onTimelineDateChange={onTimelineDateChange}
+            mapPins={mapPins}
+            mapPinId={mapPinId ?? null}
+            onMapPinChange={onMapPinChange}
+          />
+        </span>
+
+        {/* Bouton envoyer */}
+        <div
+          className={cn(
+            "min-w-9 transition-transform",
+            value.trim() ? "visible scale-100" : "invisible scale-80",
+            selectedPersona ? "ml-2" : "ml-0",
+          )}
+        >
+          <Button
+            size="icon"
+            onClick={() => void send()}
+            disabled={!canSend}
+            aria-disabled={!canSend}
+            title={
+              selectedPersonaLocked ? tPersonas("lockedHint")
+                : selectedPersona ? tDms("send")
+                  : tPersonas("pick")
+            }
+          >
+            <SendHorizontal />
+          </Button>
         </div>
       </div>
+    </div>
   );
 
   // Sur mobile, le composeur complet (mise en forme, blocs, sélecteur de
@@ -748,7 +748,7 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
       {typingBanner}
 
       {isMobile ? (
-        <Drawer open={drawerOpen} onOpenChange={setDrawerOpen} showSwipeHandle>
+        <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
           <DrawerTrigger
             render={
               <button
@@ -783,10 +783,10 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
             </span>
             {previewText && <SendHorizontal className="size-4 shrink-0 text-primary" />}
           </DrawerTrigger>
-          <DrawerContent className="h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] [--drawer-inset:8px]">
+          <DrawerContent className="h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] [--drawer-inset:8px] p-0 border-0 bg-transparent">
             <DrawerTitle className="sr-only">{tChatrooms("composerTitle")}</DrawerTitle>
             <DrawerDescription className="sr-only">{placeholder}</DrawerDescription>
-            <div className="flex-1 min-h-0 px-2.5 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
+            <div className="flex-1 min-h-0 p-0">
               {composerCard}
             </div>
           </DrawerContent>

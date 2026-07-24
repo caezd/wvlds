@@ -298,7 +298,13 @@ export function PersonaPickerDialog({
   if (variant === "drawer") {
     return (
       <Drawer open={open} onOpenChange={setOpen} showSwipeHandle>
-        <DrawerTrigger render={trigger ?? <span className="relative inline-block shrink-0 rounded-full border" />}>
+        {/* `nativeButton={false}` : le trigger par défaut est un <span> (avec
+            le vrai bouton cliquable imbriqué dedans, pour l'anneau de pulsation
+            décoratif) — Base UI suppose sinon un <button> natif. */}
+        <DrawerTrigger
+          nativeButton={false}
+          render={trigger ?? <span className="relative inline-block shrink-0 rounded-full border" />}
+        >
           {trigger ? null : defaultTriggerContent}
         </DrawerTrigger>
         <DrawerContent className="h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] [--drawer-inset:8px]">

@@ -121,7 +121,9 @@ function ScrollAreaWithJumpToBottom({
           type="button"
           size="icon"
           variant="secondary"
-          className="pointer-events-auto rounded-full shadow"
+          className={showDown ? "pointer-events-auto rounded-full shadow" : "pointer-events-none rounded-full shadow"}
+          tabIndex={showDown ? 0 : -1}
+          aria-hidden={!showDown}
           onClick={scrollToBottom}
           aria-label="Descendre"
         >

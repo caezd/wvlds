@@ -4,6 +4,7 @@ import { Pencil, SmilePlus, Trash2 } from "lucide-react";
 import {
   Drawer,
   DrawerContent,
+  DrawerDescription,
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
@@ -42,6 +43,9 @@ export function ChatroomMessageMobileDrawers({
             <DrawerTitle className="text-center text-sm font-medium text-muted-foreground">
               {personaName ?? "Options"}
             </DrawerTitle>
+            <DrawerDescription className="sr-only">
+              Actions disponibles pour ce message.
+            </DrawerDescription>
           </DrawerHeader>
           <div className="flex flex-col pb-6">
             {emojiReactions && (
@@ -94,6 +98,9 @@ export function ChatroomMessageMobileDrawers({
             <DrawerTitle className="text-center text-sm font-medium text-muted-foreground">
               Réagir
             </DrawerTitle>
+            <DrawerDescription className="sr-only">
+              Choisir une réaction à ajouter à ce message.
+            </DrawerDescription>
           </DrawerHeader>
           <div className="px-4 pb-6">
             <ChatReactionPicker

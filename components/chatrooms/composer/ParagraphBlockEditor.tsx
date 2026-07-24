@@ -706,7 +706,7 @@ export function ParagraphBlockEditor({
         </div>,
         document.body,
       )}
-      {!value.trim() && !focused && placeholder && (
+      {!value.trim() && placeholder && (
         <span className="absolute top-[5px] left-[10px] pointer-events-none select-none text-muted-foreground/50 text-sm">
           {placeholder}
         </span>
