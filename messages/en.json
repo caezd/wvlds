@@ -263,7 +263,18 @@
     "sending": "Sending…",
     "resetSuccess": "If an account exists for this address, you will receive an email with a link to reset your password.",
     "newUser": "New? Sign up here.",
-    "emailPlaceholder": "m@example.com"
+    "emailPlaceholder": "m@example.com",
+    "usernameRequired": {
+      "dialogTitle": "Choose your username",
+      "greeting": "Hello,",
+      "addButton": "Add username",
+      "placeholder": "username",
+      "helper": "This username will be visible to other members of your worlds. You can change it later from your profile.",
+      "invalidError": "The username must be 3 to 32 characters long (letters, numbers, underscore).",
+      "takenError": "This username is already taken.",
+      "continue": "Continue",
+      "saving": "Saving…"
+    }
   },
   "explore": {
     "title": "Explore",

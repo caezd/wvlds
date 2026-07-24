@@ -263,7 +263,18 @@
     "sending": "Enviando…",
     "resetSuccess": "Si existe una cuenta para esta dirección, recibirá un correo con un enlace para restablecer su contraseña.",
     "newUser": "¿Nuevo? Regístrate aquí.",
-    "emailPlaceholder": "m@example.com"
+    "emailPlaceholder": "m@example.com",
+    "usernameRequired": {
+      "dialogTitle": "Elija su nombre de usuario",
+      "greeting": "Hola,",
+      "addButton": "Añadir nombre de usuario",
+      "placeholder": "usuario",
+      "helper": "Este nombre de usuario será visible para los demás miembros de sus mundos. Podrá cambiarlo más tarde desde su perfil.",
+      "invalidError": "El nombre de usuario debe tener entre 3 y 32 caracteres (letras, números, guión bajo).",
+      "takenError": "Este nombre de usuario ya está en uso.",
+      "continue": "Continuar",
+      "saving": "Guardando…"
+    }
   },
   "explore": {
     "title": "Explorar",

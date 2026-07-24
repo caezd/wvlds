@@ -264,7 +264,18 @@
     "sending": "Envoi…",
     "resetSuccess": "Si un compte existe pour cette adresse, vous recevrez un email avec un lien pour réinitialiser votre mot de passe.",
     "newUser": "Nouveau ? Inscrivez-vous ici.",
-    "emailPlaceholder": "m@example.com"
+    "emailPlaceholder": "m@example.com",
+    "usernameRequired": {
+      "dialogTitle": "Choisissez votre pseudo",
+      "greeting": "Bonjour,",
+      "addButton": "Ajouter un pseudo",
+      "placeholder": "pseudo",
+      "helper": "Ce pseudo sera visible par les autres membres de vos mondes. Vous pourrez le modifier plus tard depuis votre profil.",
+      "invalidError": "Le pseudo doit contenir entre 3 et 32 caractères (lettres, chiffres, underscore).",
+      "takenError": "Ce pseudo est déjà pris.",
+      "continue": "Continuer",
+      "saving": "Enregistrement…"
+    }
   },
   "explore": {
     "title": "Explorer",
