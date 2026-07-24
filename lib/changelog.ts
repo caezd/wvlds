@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-07 ──────────────────────────────────────────────────────────────
   {
     date: "2026-07",
+    tag: "Comptes",
+    text: "Nouvel écran d'accueil pour choisir son pseudo à la première connexion : un simple bouton **« Ajouter un pseudo »** se transforme en champ de saisie au clic, à la place du formulaire précédent.",
+  },
+  {
+    date: "2026-07",
     tag: "Correctif",
     text: "La pastille **« nouvelle salle »** d'un monde ne s'effaçait plus correctement : elle disparaissait dès l'affichage de la bannière du monde, même pour les salles que vous n'aviez jamais ouvertes, et pouvait revenir au rechargement. Elle se fonde désormais sur les salles réellement ouvertes — une salle neuve reste signalée tant que vous n'y êtes pas entré.",
   },
