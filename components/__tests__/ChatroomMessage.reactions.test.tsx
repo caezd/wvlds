@@ -66,6 +66,7 @@ vi.mock("@/components/ui/drawer", () => ({
   DrawerContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DrawerHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DrawerTitle: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DrawerDescription: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 vi.mock("@/components/ui/sheet", () => ({
   Sheet: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,

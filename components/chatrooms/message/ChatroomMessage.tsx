@@ -337,6 +337,7 @@ function ChatroomMessage({
                       formatting
                       invertEnter={isMobile}
                       className="px-2 py-3 leading-relaxed min-h-[44px]"
+                      wrapperClassName="max-h-none"
                     />
                     {err && (
                       <div className="mt-1 text-xs text-destructive">{err}</div>
