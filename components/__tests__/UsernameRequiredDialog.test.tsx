@@ -2,9 +2,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createSupabaseMock } from "@/test/supabaseMock";
-import { createClient } from "@/lib/supabase/client";
 
 vi.mock("@/lib/supabase/client", () => ({ createClient: vi.fn() }));
+import { createClient } from "@/lib/supabase/client";
 
 const refresh = vi.fn();
 vi.mock("next/navigation", () => ({
@@ -12,7 +12,6 @@ vi.mock("next/navigation", () => ({
 }));
 
 import { UsernameRequiredDialog } from "@/components/UsernameRequiredDialog";
-
 beforeEach(() => {
   vi.clearAllMocks();
 });
