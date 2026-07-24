@@ -4,12 +4,15 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Plus } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 
 const USERNAME_RE = /^[A-Za-z0-9_]{3,32}$/;
 
 export function UsernameRequiredDialog({ userId }: { userId: string }) {
+  const t = useTranslations("auth.usernameRequired");
+  const tCommon = useTranslations("common");
   const [open, setOpen] = useState(true);
   const [editing, setEditing] = useState(false);
   const [username, setUsername] = useState("");
@@ -29,9 +32,7 @@ export function UsernameRequiredDialog({ userId }: { userId: string }) {
 
     const trimmed = username.trim();
     if (!USERNAME_RE.test(trimmed)) {
-      setError(
-        "Le pseudo doit contenir entre 3 et 32 caractères (lettres, chiffres, underscore)."
-      );
+      setError(t("invalidError"));
       startEditing();
       return;
     }
@@ -45,14 +46,14 @@ export function UsernameRequiredDialog({ userId }: { userId: string }) {
         .eq("id", userId);
       if (error) {
         if (/unique|duplicate/i.test(error.message)) {
-          throw new Error("Ce pseudo est déjà pris.");
+          throw new Error(t("takenError"));
         }
         throw error;
       }
       setOpen(false);
       router.refresh();
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : "Une erreur est survenue.");
+      setError(error instanceof Error ? error.message : tCommon("error"));
       startEditing();
     } finally {
       setIsLoading(false);
@@ -67,19 +68,19 @@ export function UsernameRequiredDialog({ userId }: { userId: string }) {
         onEscapeKeyDown={(e) => e.preventDefault()}
         className="sm:max-w-md"
       >
-        <DialogTitle className="sr-only">Choisissez votre pseudo</DialogTitle>
+        <DialogTitle className="sr-only">{t("dialogTitle")}</DialogTitle>
         <form
           onSubmit={handleSubmit}
           className="flex flex-col items-center gap-8 py-8 text-center"
         >
           <div className="flex flex-wrap items-center justify-center gap-3">
             <span className="text-4xl font-black tracking-tight text-foreground sm:text-5xl">
-              Bonjour,
+              {t("greeting")}
             </span>
             {editing ? (
               <div className="flex items-center rounded-full border-2 border-dashed border-border-soft px-4 py-2.5">
                 <label htmlFor="required-username" className="sr-only">
-                  Pseudo
+                  {t("placeholder")}
                 </label>
                 <input
                   ref={inputRef}
@@ -89,7 +90,7 @@ export function UsernameRequiredDialog({ userId }: { userId: string }) {
                   onBlur={() => {
                     if (!username.trim()) setEditing(false);
                   }}
-                  placeholder="pseudo"
+                  placeholder={t("placeholder")}
                   maxLength={32}
                   autoComplete="username"
                   className="w-32 bg-transparent text-lg font-semibold text-foreground outline-none placeholder:text-muted-foreground/40 sm:w-40 sm:text-xl"
@@ -105,7 +106,7 @@ export function UsernameRequiredDialog({ userId }: { userId: string }) {
                   <Plus className="h-4 w-4" />
                 </span>
                 <span className="text-lg font-semibold sm:text-xl">
-                  Ajouter un pseudo
+                  {t("addButton")}
                 </span>
               </button>
             )}
@@ -113,17 +114,14 @@ export function UsernameRequiredDialog({ userId }: { userId: string }) {
           {error ? (
             <p className="text-sm text-destructive">{error}</p>
           ) : (
-            <p className="text-sm text-muted-foreground">
-              Ce nom sera visible par les autres membres de vos mondes. Vous pourrez le
-              modifier plus tard depuis votre profil.
-            </p>
+            <p className="text-sm text-muted-foreground">{t("helper")}</p>
           )}
           <Button
             type="submit"
             className="w-full max-w-[200px]"
             disabled={isLoading || !username.trim()}
           >
-            {isLoading ? "Enregistrement…" : "Continuer"}
+            {isLoading ? t("saving") : t("continue")}
           </Button>
         </form>
       </DialogContent>
