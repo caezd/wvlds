@@ -92,6 +92,11 @@ type ChatroomComposerProps = {
   mapPins?: MapPinOption[];
   mapPinId?: string | null;
   onMapPinChange?: (id: string | null) => void;
+  /** Sur mobile, étire la carte du composer en pleine hauteur (éditeur
+   *  flex-1) même quand le composer n'utilise pas son propre Drawer interne
+   *  (mode création) — à passer quand le parent héberge déjà le composer
+   *  dans son propre drawer plein écran (ex: WorldChatComposer). */
+  fillHeight?: boolean;
 };
 
 /** Permet au parent (ex: dialog de création) de vider le composer et son
@@ -120,6 +125,7 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
   mapPins,
   mapPinId,
   onMapPinChange,
+  fillHeight = false,
 }, ref) {
   const tChatrooms = useTranslations("chatrooms");
   const tPersonas = useTranslations("personas");
@@ -137,6 +143,21 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
   }, []);
   // Sur mobile, le composeur complet ne s'affiche qu'à la demande, dans un
   // drawer bottom (barre compacte sinon) — cf. `composerCard` plus bas.
+  //
+  // Exception : en mode « création » (onResolveChat fourni), le composer est
+  // déjà rendu à l'intérieur d'un Dialog (ex: WorldChatComposer). Empiler
+  // notre propre Drawer (position: fixed) dans ce Dialog transformé casse
+  // son containing block — le drawer se retrouve mal positionné/inatteignable
+  // et l'éditeur devient impossible à focus. On reste donc en rendu inline
+  // dans ce cas, même sur mobile.
+  const useMobileDrawer = isMobile && !onResolveChat;
+  // Habillage « pleine hauteur » de la carte (grid/flex étirés, éditeur
+  // flex-1…) : s'applique quand on utilise notre propre drawer, mais aussi
+  // quand le parent signale via `fillHeight` qu'il héberge déjà le composer
+  // dans SON propre drawer plein écran (mode création) — dissocié de
+  // `useMobileDrawer`, qui ne doit rester vrai que pour éviter d'imbriquer
+  // un second Drawer.
+  const stretchCard = useMobileDrawer || (isMobile && fillHeight);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const DRAFT_KEY = `draft:${chatId ?? "new"}`;
@@ -481,7 +502,7 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
         setParticipants([]);
         contentWarningsChips.reset(null);
       }
-      if (isMobile) setDrawerOpen(false);
+      if (useMobileDrawer) setDrawerOpen(false);
     }
   }
 
@@ -533,7 +554,7 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
         // le bloc "content" ci-dessous s'étire pour la remplir, le footer
         // (actions/envoi) garde sa taille naturelle. Sur desktop,
         // comportement inchangé (hauteur au contenu).
-        isMobile && "h-full",
+        stretchCard && "h-full",
       )}
       style={{ cornerShape: "superellipse(1.1)" } as React.CSSProperties}
       onPaste={handleOuterPaste}
@@ -554,7 +575,7 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
 
       {/* Content : bandeaux d'en-tête + éditeur — grandit pour remplir la
             carte (mobile) ; le footer plus bas garde sa hauteur naturelle. */}
-      <div className={cn("flex flex-col", isMobile && "flex-1 min-h-0")}>
+      <div className={cn("flex flex-col", stretchCard && "flex-1 min-h-0")}>
         {/* Bandeaux d'en-tête (note privée / avertissements / médias collés) :
             un seul conteneur — sinon ces blocs, indépendants les uns des
             autres, se superposeraient au lieu de s'empiler quand plusieurs
@@ -646,18 +667,18 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
           // `items-start` (défaut) laisse l'enfant se dimensionner à son
           // contenu — sur mobile on veut au contraire qu'il s'étire pour
           // remplir l'espace restant du bloc "content", d'où `items-stretch`.
-          isMobile && "flex-1 min-h-0 items-stretch",
+          stretchCard && "flex-1 min-h-0 items-stretch",
         )}>
-          <div className={cn("flex-1", isMobile && "flex flex-col min-h-0")}>
+          <div className={cn("flex-1", stretchCard && "flex flex-col min-h-0")}>
             <ParagraphBlockEditor
               value={value}
               onChange={(v) => { setValue(v); onTyping?.(); }}
               onKeyDown={onKeyDown}
               placeholder={placeholder}
               className="text-sm w-full"
-              wrapperClassName={isMobile ? "flex-1 min-h-0 max-h-none" : undefined}
+              wrapperClassName={stretchCard ? "flex-1 min-h-0 max-h-none" : undefined}
               invertEnter={isMobile}
-              autoFocus={isMobile}
+              autoFocus={stretchCard}
               formatting
             />
           </div>
@@ -684,7 +705,7 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
             required
             userId={userId}
             worldId={worldId}
-            variant={isMobile ? "drawer" : "dialog"}
+            variant={useMobileDrawer ? "drawer" : "dialog"}
           />
           <BlocksDropdown
             onSend={(content) => void sendRaw(content)}
@@ -737,17 +758,16 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
     </div>
   );
 
-  // Sur mobile, le composeur complet (mise en forme, blocs, sélecteur de
-  // persona…) prend trop de place affiché en permanence : seule une barre
-  // compacte reste collée en bas, et l'ouvre en plein dans un drawer bottom
-  // (avec poignée de swipe) au tap — façon Discord/Messenger.
   const previewText = value.trim().replace(/\s+/g, " ");
 
   return (
-    <div className="group/composer relative w-full [--thread-content-max-width:40rem] lg:[--thread-content-max-width:48rem] mx-auto max-w-(--thread-content-max-width)">
+    <div className={cn(
+      "group/composer relative w-full [--thread-content-max-width:40rem] lg:[--thread-content-max-width:48rem] mx-auto max-w-(--thread-content-max-width)",
+      stretchCard && "h-full",
+    )}>
       {typingBanner}
 
-      {isMobile ? (
+      {useMobileDrawer ? (
         <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
           <DrawerTrigger
             render={
