@@ -7,7 +7,7 @@ export default async function ChatRoomLayout({
   params,
 }: {
   children: ReactNode;
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
   const { data: chatroom } = await getChatroomWithWorld(id);
