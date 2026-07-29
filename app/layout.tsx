@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Noto_Serif } from "next/font/google";
 import localFont from "next/font/local";
 
@@ -18,6 +18,17 @@ export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
   title: "WVLDS",
   description: "WVLDS — créez des mondes, incarnez vos personnages et écrivez vos histoires en temps réel.",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  // Le clavier virtuel mobile rétrécit le viewport de layout (donc les
+  // unités dvh) au lieu de simplement se superposer par-dessus — permet aux
+  // drawers plein écran en h-[calc(100dvh-…)] (composer, etc.) de rester
+  // correctement dimensionnés et à leurs actions du bas de rester visibles
+  // juste au-dessus du clavier, sans JS.
+  interactiveWidget: "resizes-content",
 };
 
 const geistSans = Geist({
