@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server";
 import {
   BookOpenText,
   Clock,
+  Drama,
   Home,
   Library,
   Map as MapIcon,
@@ -135,6 +136,7 @@ export default async function WorldSidebar({ worldId }: { worldId: string }) {
     <div className="border-b py-3 mb-3">
       <WorldSidebarNavLink href={`${worldBase}`} icon={<Home size={14} />} label={t("nav.home")} />
       <WorldSidebarNavLink href={`${worldBase}?view=members`} icon={<Users size={14} />} label={t("nav.members")} />
+      <WorldSidebarNavLink href={`${worldBase}?view=personas`} icon={<Drama size={14} />} label={t("nav.personas")} />
       <WorldSidebarNavLink href={`${worldBase}?view=wiki`} icon={<BookOpenText size={14} />} label={t("nav.wiki")} />
       <WorldSidebarNavLink href={`${worldBase}?view=canvas`} icon={<Network size={14} />} label={t("nav.relations")} />
       {featureFlags.world_map && (

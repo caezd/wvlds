@@ -230,6 +230,7 @@
 }
 
 @layer components {
+
     /* Polices alternatives des messages de chatroom (préférence utilisateur, /settings). */
     .font-message-serif {
         font-family: var(--font-serif), serif;
@@ -352,7 +353,7 @@
     }
 
     body {
-        @apply bg-body text-foreground;
+        @apply bg-body text-foreground relative;
     }
 }
 

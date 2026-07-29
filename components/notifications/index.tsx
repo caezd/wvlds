@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-    ArrowLeft, AtSign, Bell, CheckCheck, Globe, Hash, Loader2,
+    ArrowLeft, AtSign, Bell, CheckCheck, Globe, Hash, Heart, Loader2,
     MessageSquare, Settings, Smile, UserPlus, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -33,11 +33,13 @@ const NOTIF_ICONS: Record<NotificationType, React.ReactNode> = {
     chatroom_reply: <MessageSquare size={13} />,
     persona_new_chatroom: <Hash size={13} />,
     persona_reply: <MessageSquare size={13} />,
+    marital_request: <Heart size={13} />,
 };
 
-const ALL_TYPES: NotificationType[] = ["mention", "reaction", "new_member", "new_chatroom", "chatroom_reply", "persona_new_chatroom", "persona_reply"];
-const WORLD_HEADER_TYPES: NotificationType[] = ["mention", "reaction", "new_chatroom", "persona_new_chatroom", "persona_reply"];
-const PERSONA_NOTIF_TYPES: NotificationType[] = ["persona_new_chatroom", "persona_reply"];
+const ALL_TYPES: NotificationType[] = ["mention", "reaction", "new_member", "new_chatroom", "chatroom_reply", "persona_new_chatroom", "persona_reply", "marital_request"];
+const WORLD_HEADER_TYPES: NotificationType[] = ["mention", "reaction", "new_chatroom", "persona_new_chatroom", "persona_reply", "marital_request"];
+const PERSONA_NOTIF_TYPES: NotificationType[] = ["persona_new_chatroom", "persona_reply", "marital_request"];
+const ACTIONABLE_TYPES: NotificationType[] = ["world_invite", "marital_request"];
 
 // ── WorldInviteCard ───────────────────────────────────────────────────────────
 
@@ -159,6 +161,64 @@ function WorldInviteCard({ notif, onMarkRead }: { notif: AppNotification; onMark
     );
 }
 
+// ── MaritalRequestCard ────────────────────────────────────────────────────────
+
+function MaritalRequestCard({ notif, onMarkRead }: { notif: AppNotification; onMarkRead: (id: string) => void }) {
+    const t = useTranslations("notifications");
+    const requestId = notif.metadata?.request_id ?? null;
+    const supabase = createClient(); // eslint-disable-line react-hooks/rules-of-hooks
+    const [status, setStatus] = useState<"pending" | "accepted" | "declined" | "expired" | null>(null);
+    const [acting, setActing] = useState(false);
+
+    useEffect(() => {
+        if (!requestId) { setStatus("expired"); return; }
+        supabase.from(TABLE.PERSONA_MARITAL_REQUESTS)
+            .select("status")
+            .eq("id", requestId)
+            .maybeSingle()
+            .then(({ data }: { data: { status: string } | null }) => {
+                setStatus(data ? (data.status as "pending" | "accepted" | "declined") : "expired");
+            });
+    }, [requestId, supabase]);
+
+    async function accept() {
+        if (!requestId || acting) return;
+        setActing(true);
+        const { error } = await supabase.rpc(RPC.ACCEPT_MARITAL_REQUEST, { p_request_id: requestId });
+        if (!error) {
+            setStatus("accepted");
+            onMarkRead(notif.id);
+        }
+        setActing(false);
+    }
+
+    async function decline() {
+        if (!requestId || acting) return;
+        setActing(true);
+        await supabase.from(TABLE.PERSONA_MARITAL_REQUESTS).delete().eq("id", requestId);
+        setStatus("declined");
+        onMarkRead(notif.id);
+        setActing(false);
+    }
+
+    if (status === null) return null;
+    if (status === "accepted") return <p className="mt-2 text-[11px] text-muted-foreground">{t("maritalRequest.accepted")}</p>;
+    if (status === "declined") return <p className="mt-2 text-[11px] text-muted-foreground">{t("maritalRequest.declined")}</p>;
+    if (status === "expired") return <p className="mt-2 text-[11px] text-muted-foreground">{t("maritalRequest.expired")}</p>;
+
+    return (
+        <div className="mt-2.5 flex items-center gap-2">
+            <Button size="sm" className="h-7 shrink-0 px-3 text-xs" onClick={accept} disabled={acting}>
+                {t("maritalRequest.confirm")}
+            </Button>
+            <button onClick={decline} disabled={acting} aria-label={t("maritalRequest.decline")}
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+                <X size={14} />
+            </button>
+        </div>
+    );
+}
+
 // ── NotifAvatar ───────────────────────────────────────────────────────────────
 
 function NotifAvatar({ avatarUrl, actorName, type, isUnread: _isUnread }: {
@@ -198,7 +258,9 @@ function NotificationItem({ notif, actorAvatarUrl, worldInfo, onRead, onClose, o
 }) {
     const t = useTranslations("notifications");
     const isInvite = notif.type === "world_invite";
-    const href = isInvite ? null : notifHref(notif);
+    const isMaritalRequest = notif.type === "marital_request";
+    const isActionable = ACTIONABLE_TYPES.includes(notif.type);
+    const href = isActionable ? null : notifHref(notif);
     const isUnread = !notif.read_at;
     const showWorldHeader = worldInfo && WORLD_HEADER_TYPES.includes(notif.type);
     const isPersonaNotif = PERSONA_NOTIF_TYPES.includes(notif.type) || !!notif.metadata?.persona_name;
@@ -232,6 +294,7 @@ function NotificationItem({ notif, actorAvatarUrl, worldInfo, onRead, onClose, o
                 </div>
             </div>
             {isInvite && <WorldInviteCard notif={notif} onMarkRead={onRead} />}
+            {isMaritalRequest && <MaritalRequestCard notif={notif} onMarkRead={onRead} />}
         </div>
     );
 
@@ -267,6 +330,7 @@ export function NotificationInlinePanelContent() {
         chatroom_reply: t("prefs.chatroom_reply"),
         persona_new_chatroom: t("prefs.persona_new_chatroom"),
         persona_reply: t("prefs.persona_reply"),
+        marital_request: t("prefs.marital_request"),
     };
 
     const sentinelRef = useRef<HTMLDivElement>(null);

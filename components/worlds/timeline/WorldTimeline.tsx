@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { X, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { MobileDrawerOpenButton } from "@/components/sidebar/MobileDrawerOpenButton";
 import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
 
 type TimelineRoom = {
@@ -70,7 +71,10 @@ export function WorldTimeline({
     <div className="flex min-h-0 flex-1 flex-col">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-border-soft px-5 py-3">
-        <h2 className="text-sm font-semibold">Chronologie</h2>
+        <div className="flex items-center gap-2">
+          <MobileDrawerOpenButton />
+          <h2 className="text-sm font-semibold">Chronologie</h2>
+        </div>
         <button
           type="button"
           onClick={onClose}

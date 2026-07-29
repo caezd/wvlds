@@ -31,6 +31,7 @@ import {
 import { Check, Coins, Flame, Loader2, Pencil, Trash2, X, Zap } from "lucide-react";
 import { ImagePickerCropField } from "@/components/ui/image-crop-picker";
 import type { MaritalStatus } from "@/types/db";
+import { TABLE } from "@/lib/constants";
 
 import { PersonaSectionsTabs } from "./PersonaSectionsTabs";
 import type { PersonaSectionWithFields } from "@/types/personas";
@@ -296,22 +297,39 @@ export function MaritalStatusPicker({
   const [spouseId, setSpouseId] = useState<string | null>(initialSpouseId);
   const [worldPersonas, setWorldPersonas] = useState<{ id: string; name: string }[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [pendingRequest, setPendingRequest] = useState<{ id: string; targetName: string } | null>(null);
   const showSpouse = status === "in_relationship" || status === "married";
 
   useEffect(() => {
     if (!worldId || !showSpouse || loaded) return;
-    supabase
-      .from("personas")
-      .select("id, name")
-      .eq("world_id", worldId)
-      .eq("is_template", false)
-      .is("deleted_at", null)
-      .neq("id", personaId)
-      .order("name", { ascending: true })
-      .then((res: { data: { id: string; name: string }[] | null }) => {
-        setWorldPersonas(res.data ?? []);
-        setLoaded(true);
-      });
+    (async () => {
+      const [personasRes, pendingRes] = await Promise.all([
+        supabase
+          .from("personas")
+          .select("id, name")
+          .eq("world_id", worldId)
+          .eq("is_template", false)
+          .is("deleted_at", null)
+          .neq("id", personaId)
+          .order("name", { ascending: true }),
+        supabase
+          .from(TABLE.PERSONA_MARITAL_REQUESTS)
+          .select("id, target_persona_id")
+          .eq("requester_persona_id", personaId)
+          .eq("status", "pending")
+          .maybeSingle(),
+      ]) as [
+        { data: { id: string; name: string }[] | null },
+        { data: { id: string; target_persona_id: string } | null },
+      ];
+      const personas = personasRes.data ?? [];
+      setWorldPersonas(personas);
+      if (pendingRes.data) {
+        const target = personas.find((p) => p.id === pendingRes.data!.target_persona_id);
+        setPendingRequest({ id: pendingRes.data.id, targetName: target?.name ?? "" });
+      }
+      setLoaded(true);
+    })();
   }, [worldId, showSpouse, loaded, supabase, personaId]);
 
   async function updateStatus(next: MaritalStatus | null) {
@@ -327,20 +345,53 @@ export function MaritalStatusPicker({
       setStatus(previous);
       return;
     }
-    if (clearSpouse) setSpouseId(null);
+    if (clearSpouse) {
+      setSpouseId(null);
+      if (pendingRequest) {
+        await supabase.from(TABLE.PERSONA_MARITAL_REQUESTS).delete().eq("id", pendingRequest.id);
+        setPendingRequest(null);
+      }
+    }
     router.refresh();
   }
 
-  async function updateSpouse(next: string | null) {
-    const previous = spouseId;
-    setSpouseId(next);
-    const { error } = await supabase.from("personas").update({ spouse_persona_id: next }).eq("id", personaId);
-    if (error) {
-      toast.error("Enregistrement impossible.", { description: error.message });
-      setSpouseId(previous);
+  // Retirer son/sa conjoint·e reste une action unilatérale immédiate.
+  // En désigner un·e nouveau n'écrit plus directement spouse_persona_id :
+  // ça envoie une demande que l'autre joueur doit confirmer (notification).
+  async function requestSpouse(next: string | null) {
+    if (next === null) {
+      const previous = spouseId;
+      setSpouseId(null);
+      const { error } = await supabase.from("personas").update({ spouse_persona_id: null }).eq("id", personaId);
+      if (error) {
+        toast.error("Enregistrement impossible.", { description: error.message });
+        setSpouseId(previous);
+      }
+      router.refresh();
       return;
     }
-    router.refresh();
+    if (!status) return;
+    const { data, error } = await supabase
+      .from(TABLE.PERSONA_MARITAL_REQUESTS)
+      .insert({ requester_persona_id: personaId, target_persona_id: next, requested_status: status })
+      .select("id")
+      .single();
+    if (error) {
+      toast.error("Impossible d'envoyer la demande.", { description: error.message });
+      return;
+    }
+    const targetName = worldPersonas.find((p) => p.id === next)?.name ?? "";
+    setPendingRequest({ id: data.id, targetName });
+  }
+
+  async function cancelRequest() {
+    if (!pendingRequest) return;
+    const { error } = await supabase.from(TABLE.PERSONA_MARITAL_REQUESTS).delete().eq("id", pendingRequest.id);
+    if (error) {
+      toast.error("Annulation impossible.", { description: error.message });
+      return;
+    }
+    setPendingRequest(null);
   }
 
   return (
@@ -358,17 +409,26 @@ export function MaritalStatusPicker({
       </Select>
 
       {showSpouse && worldId && (
-        <Select value={spouseId ?? "none"} onValueChange={(v) => void updateSpouse(v === "none" ? null : v)}>
-          <SelectTrigger size="sm" className="w-auto min-w-48" aria-label={t("spouseLabel")}>
-            <SelectValue placeholder={t("spousePlaceholder")} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">{t("spouseNone")}</SelectItem>
-            {worldPersonas.map((p) => (
-              <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        pendingRequest ? (
+          <div className="flex items-center gap-2 rounded-full border border-border-soft px-3 py-1.5 text-xs text-muted-foreground">
+            <span>{t("pendingRequest", { name: pendingRequest.targetName })}</span>
+            <button type="button" onClick={() => void cancelRequest()} className="underline hover:text-foreground">
+              {t("cancelRequest")}
+            </button>
+          </div>
+        ) : (
+          <Select value={spouseId ?? "none"} onValueChange={(v) => void requestSpouse(v === "none" ? null : v)}>
+            <SelectTrigger size="sm" className="w-auto min-w-48" aria-label={t("spouseLabel")}>
+              <SelectValue placeholder={t("spousePlaceholder")} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">{t("spouseNone")}</SelectItem>
+              {worldPersonas.map((p) => (
+                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )
       )}
     </div>
   );

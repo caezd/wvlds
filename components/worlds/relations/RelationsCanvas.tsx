@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { getInitials } from "@/lib/textFormatting";
+import { MobileDrawerOpenButton } from "@/components/sidebar/MobileDrawerOpenButton";
 import {
   Dialog,
   DialogContent,
@@ -916,6 +917,7 @@ export function RelationsCanvas({ worldId, userId, canAdmin, onClose }: Relation
 
       {/* ── Toolbar ── */}
       <div className="flex shrink-0 items-center gap-3 border-b border-border-soft px-4 py-3">
+        <MobileDrawerOpenButton />
         <Network className="h-4 w-4 shrink-0 text-muted-foreground" />
         <span className="text-sm font-semibold">{t("title")}</span>
 

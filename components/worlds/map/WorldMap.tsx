@@ -30,6 +30,7 @@ import { cn } from "@/lib/utils";
 import { toWebP } from "@/lib/imageUtils";
 import { supabaseThumb } from "@/lib/storage";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
+import { MobileDrawerOpenButton } from "@/components/sidebar/MobileDrawerOpenButton";
 import {
   createMapPin,
   deleteMapPin,
@@ -1156,6 +1157,7 @@ export function WorldMap({
     >
       {/* ── Header ─────────────────────────────────────────────── */}
       <div className="flex shrink-0 items-center gap-3 border-b border-border-soft px-4 py-3">
+        <MobileDrawerOpenButton />
         <Map className="h-4 w-4 shrink-0 text-muted-foreground" />
         <span className="text-sm font-semibold">{t("title")}</span>
 

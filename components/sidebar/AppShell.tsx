@@ -21,6 +21,11 @@ const DmsPanelContent = dynamic(
   { ssr: false },
 );
 
+// Onglets secondaires d'un monde ayant leur propre header (avec bouton menu intégré).
+const WORLD_PANEL_VIEWS = new Set([
+  "members", "personas", "wiki", "canvas", "catalogue", "map", "timeline", "settings",
+]);
+
 // ── Inner shell — consomme useDms() et useNotifications() ────────────────────
 
 function AppShellInner({
@@ -48,6 +53,11 @@ function AppShellInner({
   // désormais) avec le bouton menu intégré en tête — la barre générique
   // ci-dessous serait redondante (cf. ChatroomHeader dans app/(protected)/c/[id]/view.tsx).
   const isChatRoute = pathname?.startsWith("/c/") ?? false;
+  // Idem pour les onglets secondaires d'un monde (membres, personas, wiki, …) :
+  // chacun a son propre header avec le bouton menu intégré (cf. WorldHome.tsx).
+  // Seule la vue par défaut (?view absent) n'en a pas et garde la barre générique.
+  const worldView = searchParams.get("view");
+  const hasWorldPanelHeader = (pathname?.startsWith("/w/") ?? false) && !!worldView && WORLD_PANEL_VIEWS.has(worldView);
   const anyPanelOpen = notifOpen || dmsOpen;
 
   // Exclusivité mutuelle
@@ -115,7 +125,7 @@ function AppShellInner({
 
       {/* Contenu principal */}
       <section id="app-shell" className="relative flex min-h-0 max-w-full flex-1 flex-col">
-        <header className={cn("lg:hidden flex h-12 shrink-0 items-center", isChatRoute && "hidden")}>
+        <header className={cn("lg:hidden flex h-12 shrink-0 items-center", (isChatRoute || hasWorldPanelHeader) && "hidden")}>
           <button
             type="button"
             onClick={() => setDrawerOpen(true)}

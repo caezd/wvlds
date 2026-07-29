@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { supabaseThumb } from "@/lib/storage";
@@ -1263,15 +1263,17 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
   }
 
 
-  function AddFieldMenu({ insertAt }: { insertAt: number }) {
+  function AddFieldMenu({ insertAt, trigger }: { insertAt: number; trigger?: ReactNode }) {
     return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <div className="cursor-pointer transition-opacity opacity-0 hover:opacity-100 group-hover/field:opacity-100 relative h-6 w-full flex justify-center before:absolute before:h-px before:w-full before:top-1/2 before:-translate-y-1/2 before:bg-border">
-            <button className="w-4 h-4 bg-accent/50 text-primary rounded-full inline-flex items-center justify-center absolute top-1/2 -translate-y-1/2 z-10">
-              <Plus size={12} />
-            </button>
-          </div>
+          {trigger ?? (
+            <div className="cursor-pointer transition-opacity opacity-0 hover:opacity-100 group-hover/field:opacity-100 relative h-6 w-full flex justify-center before:absolute before:h-px before:w-full before:top-1/2 before:-translate-y-1/2 before:bg-border">
+              <button className="w-4 h-4 bg-accent/50 text-primary rounded-full inline-flex items-center justify-center absolute top-1/2 -translate-y-1/2 z-10">
+                <Plus size={12} />
+              </button>
+            </div>
+          )}
         </DropdownMenuTrigger>
         <DropdownMenuContent align="center" className="w-48">
           {persona_field_title && (
@@ -1349,52 +1351,14 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
       {fields.length === 0 ? (
         <div className="py-4 space-y-3">
           <p className="text-sm text-muted-foreground">Aucun champ. Ajoutes-en un pour commencer.</p>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+          <AddFieldMenu
+            insertAt={0}
+            trigger={
               <Button variant="outline" size="sm" type="button" className="w-full">
                 <Plus className="mr-2 h-4 w-4" /> Ajouter un champ
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="center" className="w-48">
-              {persona_field_title && (
-                <DropdownMenuItem onClick={() => handleAddField("title", 0)}>
-                  <Type className="mr-2 h-4 w-4" /> Titre
-                </DropdownMenuItem>
-              )}
-              {persona_field_text && (
-                <DropdownMenuItem onClick={() => handleAddField("text", 0)}>
-                  <AlignLeft className="mr-2 h-4 w-4" /> Bloc de texte
-                </DropdownMenuItem>
-              )}
-              {(persona_field_stats || persona_field_inventory || persona_field_skills) && <DropdownMenuSeparator />}
-              {persona_field_stats && (
-                <DropdownMenuItem onClick={() => handleAddField("stats", 0)}>
-                  <BarChart3 className="mr-2 h-4 w-4" /> Stats
-                </DropdownMenuItem>
-              )}
-              {persona_field_inventory && (
-                <DropdownMenuItem onClick={() => handleAddField("inventory", 0)}>
-                  <Backpack className="mr-2 h-4 w-4" /> Inventaire
-                </DropdownMenuItem>
-              )}
-              {persona_field_skills && (
-                <DropdownMenuItem onClick={() => handleAddField("skills", 0)}>
-                  <Swords className="mr-2 h-4 w-4" /> Compétences
-                </DropdownMenuItem>
-              )}
-              {(persona_field_separator || persona_field_image_grid) && <DropdownMenuSeparator />}
-              {persona_field_separator && (
-                <DropdownMenuItem onClick={() => handleAddField("separator", 0)}>
-                  <Minus className="mr-2 h-4 w-4" /> Séparateur
-                </DropdownMenuItem>
-              )}
-              {persona_field_image_grid && (
-                <DropdownMenuItem onClick={() => handleAddField("image-grid", 0)}>
-                  <ImageIcon className="mr-2 h-4 w-4" /> Grille d&apos;images
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+            }
+          />
         </div>
       ) : (
         <div className="space-y-0">

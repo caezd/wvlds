@@ -142,6 +142,13 @@
       "cancelled": "Invitación cancelada.",
       "worldFallback": "Mundo"
     },
+    "maritalRequest": {
+      "confirm": "Confirmar",
+      "decline": "Rechazar",
+      "accepted": "Relación confirmada.",
+      "declined": "Solicitud rechazada.",
+      "expired": "Esta solicitud ya no es válida."
+    },
     "prefs": {
       "mention": "Menciones",
       "reaction": "Reacciones",
@@ -150,7 +157,8 @@
       "world_invite": "Invitaciones de mundo",
       "chatroom_reply": "Respuestas en mis salas",
       "persona_new_chatroom": "Nuevas salas de personas seguidas",
-      "persona_reply": "Respuestas de personas seguidas"
+      "persona_reply": "Respuestas de personas seguidas",
+      "marital_request": "Solicitudes de relación entre personas"
     },
     "text": {
       "someone": "Alguien",
@@ -169,7 +177,9 @@
       "chatroomReplySingleNoContent": "<b>{actor}</b> respondió en una sala de chat",
       "chatroomReplyWithPersona": "<b>{actor}</b> respondió como <b>{persona}</b> en <b>{chatroom}</b>",
       "personaReplyMany": "<b>{actor}</b> respondió <b>{count}</b> veces en <b>{chatroom}</b>",
-      "personaReplyManyNoContent": "<b>{actor}</b> respondió <b>{count}</b> veces"
+      "personaReplyManyNoContent": "<b>{actor}</b> respondió <b>{count}</b> veces",
+      "maritalRequestMarried": "<b>{actor}</b> quiere casar a su personaje con <b>{target}</b>",
+      "maritalRequestRelationship": "<b>{actor}</b> quiere poner a su personaje en pareja con <b>{target}</b>"
     }
   },
   "dms": {
@@ -212,7 +222,8 @@
     "worldDeleted": "Mundo eliminado",
     "nav": {
       "home": "Inicio",
-      "members": "Miembros y Personajes",
+      "members": "Miembros",
+      "personas": "Personajes",
       "wiki": "Apéndices",
       "relations": "Relaciones",
       "map": "Mapa",
@@ -361,7 +372,9 @@
       "widowed": "Viudo/a",
       "spouseLabel": "Pareja",
       "spousePlaceholder": "Elegir un personaje de este mundo",
-      "spouseNone": "Ninguno"
+      "spouseNone": "Ninguno",
+      "pendingRequest": "Esperando confirmación de {name}",
+      "cancelRequest": "Cancelar"
     }
   },
   "quests": {

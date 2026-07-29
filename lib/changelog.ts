@@ -54,7 +54,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-07",
     tag: "Personas",
-    text: "**Statut marital** sur la fiche d'un persona (célibataire, en couple, marié·e, divorcé·e, veuf·ve) : quand le statut implique une relation, choisissez un **conjoint** parmi les autres personas du même monde.",
+    text: "**Statut marital** sur la fiche d'un persona (célibataire, en couple, marié·e, divorcé·e, veuf·ve) : quand le statut implique une relation, choisissez un **conjoint** parmi les autres personas du même monde. Désigner un·e conjoint·e envoie désormais une **notification de demande** au joueur concerné, qui doit la confirmer pour que la relation apparaisse sur les deux fiches (retirer un·e conjoint·e reste immédiat et ne nécessite pas de confirmation).",
   },
   {
     date: "2026-07",
@@ -94,7 +94,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-07",
     tag: "Performance",
-    text: "La quasi-totalité des images de l'app (avatars, bannières, icônes de mondes/salons/objets, cadres, apparences de personas) passe désormais par l'optimiseur d'images de Next.js : redimensionnement et formats modernes automatiques, chargement différé hors écran, et réservation d'espace pour éviter les sauts de mise en page. Quelques cas restent volontairement en `<img>` classique (aperçus locaux avant upload, images intégrées via URL externe dans le markdown, carte du monde). Par ailleurs, les onglets d'un monde (wiki, réglages, relations, catalogue, carte, chronologie, membres), les panneaux DMs/notifications et plusieurs boîtes de dialogue peu utilisées ne sont désormais chargés qu'à l'ouverture au lieu d'alourdir chaque page ; certaines requêtes redondantes (infos du monde, utilisateur courant, feature flags) ont été dédupliquées ; et un indicateur de chargement s'affiche désormais pendant la navigation vers les pages monde, salon, découverte, personas, boutique et admin.",
+    text: "La quasi-totalité des images de l'app (avatars, bannières, icônes de mondes/salons/objets, cadres, apparences de personas) passe désormais par l'optimiseur d'images de Next.js : redimensionnement et formats modernes automatiques, chargement différé hors écran, et réservation d'espace pour éviter les sauts de mise en page. Quelques cas restent volontairement en `<img>` classique (aperçus locaux avant upload, images intégrées via URL externe dans le markdown, carte du monde). Par ailleurs, les onglets d'un monde (wiki, réglages, relations, catalogue, carte, chronologie, membres), les panneaux DMs/notifications et plusieurs boîtes de dialogue peu utilisées ne sont désormais chargés qu'à l'ouverture au lieu d'alourdir chaque page ; certaines requêtes redondantes (infos du monde, utilisateur courant, feature flags) ont été dédupliquées ; et un indicateur de chargement s'affiche désormais pendant la navigation vers les pages monde, salon, découverte, personas, boutique et admin. Sur les pages monde et salon, cet indicateur ne couvre plus que la zone de contenu (accueil du monde ou messages) : la sidebar du monde (sélecteur, navigation, liste des salons) reste visible et utilisable pendant ce chargement au lieu de disparaître avec le reste de la page.",
   },
   {
     date: "2026-07",

@@ -175,7 +175,7 @@ export type AllChatroomUnreadRow = {
 
 // --- Notifications -----------------------------------------------------------
 
-export type NotificationType = 'mention' | 'reaction' | 'new_member' | 'new_chatroom' | 'world_invite' | 'chatroom_reply' | 'persona_new_chatroom' | 'persona_reply';
+export type NotificationType = 'mention' | 'reaction' | 'new_member' | 'new_chatroom' | 'world_invite' | 'chatroom_reply' | 'persona_new_chatroom' | 'persona_reply' | 'marital_request';
 
 export type WorldInvitation = {
   id: string;
@@ -187,12 +187,24 @@ export type WorldInvitation = {
   created_at: string;
 };
 
+export type PersonaMaritalRequest = {
+  id: string;
+  requester_persona_id: string;
+  target_persona_id: string;
+  requested_status: 'in_relationship' | 'married';
+  status: 'pending' | 'accepted' | 'declined';
+  created_at: string;
+};
+
 export type NotificationMeta = {
   icon_url?: string | null;
   banner_url?: string | null;
   description?: string | null;
   persona_name?: string | null;
   count?: number;
+  requested_status?: 'in_relationship' | 'married';
+  request_id?: string;
+  target_persona_id?: string;
 };
 
 export type AppNotification = {

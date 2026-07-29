@@ -36,6 +36,7 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
+import { MobileDrawerOpenButton } from "@/components/sidebar/MobileDrawerOpenButton";
 import { ImagePickerCropField } from "@/components/ui/image-crop-picker";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -465,6 +466,7 @@ export function WorldSettingsView({ world, onUpdated, onClose }: WorldSettingsVi
         <div className="flex h-full w-full flex-col bg-background">
             {/* Toolbar */}
             <div className="flex shrink-0 items-center gap-3 border-b border-border-soft px-4 py-3">
+                <MobileDrawerOpenButton />
                 <Settings className="h-4 w-4 shrink-0 text-muted-foreground" />
                 <span className="text-sm font-semibold">Paramètres</span>
                 <div className="ml-auto">

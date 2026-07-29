@@ -21,7 +21,8 @@ const RelationsCanvas = dynamic(() => import("../relations/RelationsCanvas").the
 const WorldCatalogue = dynamic(() => import("../catalogue/WorldCatalogue").then((m) => m.WorldCatalogue));
 const WorldMap = dynamic(() => import("../map/WorldMap").then((m) => m.WorldMap));
 const WorldTimeline = dynamic(() => import("../timeline/WorldTimeline").then((m) => m.WorldTimeline));
-const WorldPeoplePanel = dynamic(() => import("../members/WorldPeoplePanel").then((m) => m.WorldPeoplePanel));
+const WorldMembersPanel = dynamic(() => import("../members/WorldMembersPanel").then((m) => m.WorldMembersPanel));
+const WorldPersonasPanel = dynamic(() => import("@/components/personas/WorldPersonasPanel").then((m) => m.WorldPersonasPanel));
 
 type WorldPrefs = { main_expanded: boolean; is_favorite: boolean; wiki_sidebar_width?: number };
 
@@ -105,7 +106,8 @@ export function WorldHome({
   const showWiki = view === "wiki";
   const showMap = view === "map";
   const showTimeline = view === "timeline";
-  const showPeople = view === "members" || view === "personas";
+  const showMembers = view === "members";
+  const showPersonas = view === "personas";
   const showSettings = view === "settings" && canAdmin;
 
   return (
@@ -121,12 +123,16 @@ export function WorldHome({
             }}
             onClose={closeView}
           />
-        ) : showPeople ? (
-          <WorldPeoplePanel
+        ) : showMembers ? (
+          <WorldMembersPanel
             worldId={worldId}
             ownerId={world.owner_id}
             canManage={canAdmin}
             isShared={isShared}
+          />
+        ) : showPersonas ? (
+          <WorldPersonasPanel
+            worldId={worldId}
             myPersonas={initialPersonas}
             restrictInventory={!!world.restrict_inventory}
             restrictSkills={!!world.restrict_skills}

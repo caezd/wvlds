@@ -4,17 +4,15 @@ import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
-import { Plus, Users } from "lucide-react";
+import { Users } from "lucide-react";
 import { supabaseThumb } from "@/lib/storage";
 import { cn } from "@/lib/utils";
 import { getLeadingLetter } from "@/lib/textFormatting";
+import { MobileDrawerOpenButton } from "@/components/sidebar/MobileDrawerOpenButton";
 
 const WorldInviteDialog = dynamic(() => import("./WorldInviteDialog").then((m) => m.WorldInviteDialog));
-import { PersonaCard } from "@/components/personas/PersonaCard";
-import { PersonaCreateSheet } from "@/components/personas/PersonaCreateSheet";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import type { AsidePersona } from "@/components/personas/WorldPersonaAsideClient";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -150,26 +148,18 @@ function RoleGroup({ role, members }: { role: string; members: Member[] }) {
   );
 }
 
-// ── WorldPeoplePanel ──────────────────────────────────────────────────────────
+// ── WorldMembersPanel ─────────────────────────────────────────────────────────
 
-export function WorldPeoplePanel({
+export function WorldMembersPanel({
   worldId,
   ownerId,
   canManage,
   isShared,
-  myPersonas,
-  restrictInventory = false,
-  restrictSkills = false,
-  faceclaimsEnabled,
 }: {
   worldId: string;
   ownerId: string;
   canManage: boolean;
   isShared: boolean;
-  myPersonas: AsidePersona[];
-  restrictInventory?: boolean;
-  restrictSkills?: boolean;
-  faceclaimsEnabled?: boolean;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const [members, setMembers] = useState<Member[]>([]);
@@ -260,16 +250,13 @@ export function WorldPeoplePanel({
     setLoading(false);
   }
 
-  const sorted = [...myPersonas].sort((a, b) =>
-    (a.name ?? "").localeCompare(b.name ?? "", "fr", { sensitivity: "base" }),
-  );
-
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
       {/* Header */}
       <div className="flex shrink-0 items-center gap-3 border-b border-border-soft px-4 py-3">
+        <MobileDrawerOpenButton />
         <Users className="h-4 w-4 shrink-0 text-muted-foreground" />
-        <span className="text-sm font-semibold">Membres & Personas</span>
+        <span className="text-sm font-semibold">Membres</span>
         {isShared && canManage && (
           <div className="ml-auto">
             <WorldInviteDialog worldId={worldId} ownerId={ownerId} canManage={canManage} />
@@ -278,107 +265,29 @@ export function WorldPeoplePanel({
       </div>
 
       <ScrollArea className="flex-1 min-h-0">
-        <div className="space-y-8 px-6 py-6">
-
-          {/* ── Mes personas ── */}
-          <section>
-            <div className="mb-4 flex items-center gap-2">
-              <h3 className="text-sm font-semibold text-foreground">
-                Mes personas
-                {sorted.length > 0 && (
-                  <span className="ml-1.5 text-xs font-normal text-muted-foreground">{sorted.length}</span>
-                )}
-              </h3>
-              <PersonaCreateSheet
-                worldId={worldId}
-                restrictInventory={restrictInventory}
-                restrictSkills={restrictSkills}
-                trigger={
-                  <button
-                    type="button"
-                    aria-label="Nouveau persona"
-                    className="flex h-6 w-6 items-center justify-center rounded-full border border-border-soft text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                  >
-                    <Plus size={13} />
-                  </button>
-                }
-              />
+        <div className="px-6 py-6">
+          {!isShared ? (
+            <p className="rounded-xl border border-dashed border-border-soft py-8 text-center text-sm text-muted-foreground">
+              Aucun membre.
+            </p>
+          ) : loading ? (
+            <div className="space-y-2">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-12 animate-pulse rounded-xl bg-muted" />
+              ))}
             </div>
-
-            {sorted.length === 0 ? (
-              <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border-soft py-10 text-center">
-                <p className="text-sm text-muted-foreground">Aucun persona dans ce monde</p>
-                <PersonaCreateSheet
-                  worldId={worldId}
-                  restrictInventory={restrictInventory}
-                  restrictSkills={restrictSkills}
-                  trigger={
-                    <button
-                      type="button"
-                      className="flex items-center gap-1.5 rounded-lg bg-muted px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground"
-                    >
-                      <Plus size={14} />
-                      Créer un persona
-                    </button>
-                  }
-                />
-              </div>
-            ) : (
-              <div className="grid grid-cols-5 gap-3">
-                {sorted.map((p) => (
-                  <PersonaCard
-                    key={p.id}
-                    personaId={p.id}
-                    personaName={p.name ?? "Sans nom"}
-                    avatarUrl={p.avatar_url}
-                    avatarConfig={p.avatar_config as never}
-                    bannerUrl={p.banner_url}
-                    initialFrameId={p.avatar_frame_id}
-                    initialFrameUrl={p.frame?.asset_url}
-                    initialFaceclaim={p.faceclaim ?? null}
-                    initialSections={p.sections}
-                    worldId={worldId}
-                    restrictInventory={restrictInventory}
-                    restrictSkills={restrictSkills}
-                    faceclaimsEnabled={faceclaimsEnabled}
-                  />
-                ))}
-              </div>
-            )}
-          </section>
-
-          {/* ── Membres ── */}
-          {isShared && (
-            <section>
-              <div className="mb-3 flex items-center gap-2">
-                <h3 className="text-sm font-semibold text-foreground">
-                  Membres
-                  {!loading && members.length > 0 && (
-                    <span className="ml-1.5 text-xs font-normal text-muted-foreground">{members.length}</span>
-                  )}
-                </h3>
-              </div>
-
-              {loading ? (
-                <div className="space-y-2">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="h-12 animate-pulse rounded-xl bg-muted" />
-                  ))}
+          ) : members.length === 0 ? (
+            <p className="rounded-xl border border-dashed border-border-soft py-8 text-center text-sm text-muted-foreground">
+              Aucun membre.
+            </p>
+          ) : (
+            <div className="rounded-xl border border-border-soft">
+              {grouped.map((g, i) => (
+                <div key={g.role} className={cn(i > 0 && "border-t border-border-soft")}>
+                  <RoleGroup role={g.role} members={g.members} />
                 </div>
-              ) : members.length === 0 ? (
-                <p className="rounded-xl border border-dashed border-border-soft py-8 text-center text-sm text-muted-foreground">
-                  Aucun membre.
-                </p>
-              ) : (
-                <div className="rounded-xl border border-border-soft">
-                  {grouped.map((g, i) => (
-                    <div key={g.role} className={cn(i > 0 && "border-t border-border-soft")}>
-                      <RoleGroup role={g.role} members={g.members} />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
+              ))}
+            </div>
           )}
         </div>
       </ScrollArea>

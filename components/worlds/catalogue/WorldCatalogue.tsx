@@ -59,6 +59,7 @@ import {
   batchUpdateCatalogItemOrder,
 } from "@/app/actions/worldCatalog";
 import type { WorldInventoryItem, WorldSkill, WorldCatalogCategory } from "@/types/worlds";
+import { MobileDrawerOpenButton } from "@/components/sidebar/MobileDrawerOpenButton";
 
 type CatalogType = "inventory" | "skills";
 type CatalogItem = (WorldInventoryItem | WorldSkill) & { category_id: string | null };
@@ -1309,6 +1310,7 @@ export function WorldCatalogue({ worldId, canEdit, inventoryEnabled, inventoryRe
     <div className="flex h-full w-full flex-col bg-background">
       {/* Toolbar */}
       <div className="flex shrink-0 items-center gap-3 border-b border-border-soft px-4 py-3">
+        <MobileDrawerOpenButton />
         <Library className="h-4 w-4 shrink-0 text-muted-foreground" />
         <span className="text-sm font-semibold">{t("title")}</span>
         {canEdit && (

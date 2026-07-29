@@ -90,7 +90,7 @@ type FieldData = PersonaFieldData | null | undefined;
 function FieldView({ type, data }: { type: string; data: FieldData }) {
   if (type === "title") {
     return (
-      <h3 className="text-base font-semibold text-foreground">
+      <h3 className="text-xl font-semibold text-foreground">
         {data?.text || ""}
       </h3>
     );

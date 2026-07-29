@@ -676,7 +676,9 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
               onKeyDown={onKeyDown}
               placeholder={placeholder}
               className="text-sm w-full"
-              wrapperClassName={stretchCard ? "flex-1 min-h-0 max-h-none" : undefined}
+              // Desktop : grandit avec le contenu jusqu'à 50vh puis scrolle
+              // en interne (au lieu du plafond par défaut, plus petit).
+              wrapperClassName={stretchCard ? "flex-1 min-h-0 max-h-none" : "max-h-[50vh]"}
               invertEnter={isMobile}
               autoFocus={stretchCard}
               formatting

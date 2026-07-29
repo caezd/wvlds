@@ -84,6 +84,8 @@ const FR_NOTIF: Record<string, string> = {
     "text.chatroomReplyManyNoContent": "{count} nouveaux messages dans une chatroom",
     "text.chatroomReplySingle": "{actor} a répondu dans {chatroom}",
     "text.chatroomReplySingleNoContent": "{actor} a répondu dans une chatroom",
+    "text.maritalRequestMarried": "{actor} souhaite marier son personnage à {target}",
+    "text.maritalRequestRelationship": "{actor} souhaite mettre son personnage en couple avec {target}",
 };
 
 function interpolate(tmpl: string, params: Record<string, unknown>): string {
@@ -171,6 +173,18 @@ describe("notifText", () => {
     it("chatroom_reply sans metadata → count implicite à 1", () => {
         expect(textOf(notifText(makeNotif({ type: "chatroom_reply", actor_name: "bob", content: "annonces", metadata: null }), mockNotifT)))
             .toBe("bob a répondu dans annonces");
+    });
+
+    it("marital_request (married) → texte mariage", () => {
+        expect(textOf(notifText(makeNotif({
+            type: "marital_request", actor_name: "alice", content: "Yuki", metadata: { requested_status: "married" },
+        }), mockNotifT))).toBe("alice souhaite marier son personnage à Yuki");
+    });
+
+    it("marital_request (in_relationship) → texte mise en couple", () => {
+        expect(textOf(notifText(makeNotif({
+            type: "marital_request", actor_name: "alice", content: "Yuki", metadata: { requested_status: "in_relationship" },
+        }), mockNotifT))).toBe("alice souhaite mettre son personnage en couple avec Yuki");
     });
 });
 

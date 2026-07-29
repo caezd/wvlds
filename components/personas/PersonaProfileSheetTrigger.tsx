@@ -45,7 +45,7 @@ type FieldData = PersonaFieldData | null | undefined;
 function FieldView({ type, data }: { type: string; data: FieldData }) {
   if (type === "title") {
     const text = data?.text as string | undefined;
-    return text ? <h3 className="text-sm font-semibold text-foreground">{text}</h3> : null;
+    return text ? <h3 className="text-xl font-semibold text-foreground">{text}</h3> : null;
   }
   if (type === "text") {
     const text = data?.text as string | undefined;
@@ -274,6 +274,7 @@ export function PersonaProfileSheetTrigger({
   label,
   hoverPreview = false,
   side = "right",
+  triggerClassName = "size-12",
 }: {
   children: React.ReactNode;
   personaId?: string | null;
@@ -281,6 +282,7 @@ export function PersonaProfileSheetTrigger({
   label?: string | null;
   hoverPreview?: boolean;
   side?: "left" | "right" | "top" | "bottom";
+  triggerClassName?: string;
 }) {
   const supabase = React.useMemo(() => createClient(), []);
   const { getUserPresence } = useGlobalPresence();
@@ -449,7 +451,7 @@ export function PersonaProfileSheetTrigger({
   const TriggerButton = (
     <button
       type="button"
-      className="size-12"
+      className={triggerClassName}
       title={label ?? "Voir le profil"}
       aria-label={label ?? "Voir le profil"}
       onPointerEnter={prefetch}
