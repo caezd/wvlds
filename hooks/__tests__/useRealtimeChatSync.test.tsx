@@ -18,10 +18,10 @@ function setup(opts: Parameters<typeof createSupabaseMock>[0] = {}, props: Parti
     onChatroomPatched: vi.fn(),
     onReactionChange: vi.fn(),
   };
-  renderHook(() =>
+  const view = renderHook(() =>
     useRealtimeChatSync({ chatId: "c1", selfId: "me", initialLatestId: 3, ...cbs, ...props }),
   );
-  return { mock, cbs };
+  return { mock, cbs, unmount: view.unmount };
 }
 
 const insert = (h: { config: Record<string, unknown> }) => h.config.event === "INSERT";
@@ -111,5 +111,42 @@ describe("useRealtimeChatSync", () => {
       });
     });
     expect(cbs.onReactionChange).not.toHaveBeenCalled();
+  });
+});
+
+describe("useRealtimeChatSync — cleanup et reconnexion", () => {
+  it("supprime les 5 canaux Realtime au démontage", () => {
+    const { mock, unmount } = setup();
+    const created = [...mock.channels];
+    expect(created).toHaveLength(5);
+
+    unmount();
+
+    for (const ch of created) {
+      expect(mock.removeChannel).toHaveBeenCalledWith(ch);
+    }
+    expect(mock.removeChannel).toHaveBeenCalledTimes(5);
+  });
+
+  it("recrée les 5 canaux après un retour de connexion réseau (reconnectEpoch)", () => {
+    const { mock } = setup();
+    const before = [...mock.channels];
+    expect(before).toHaveLength(5);
+
+    act(() => {
+      window.dispatchEvent(new Event("online"));
+    });
+
+    // Les anciens canaux sont bien fermés...
+    for (const ch of before) {
+      expect(mock.removeChannel).toHaveBeenCalledWith(ch);
+    }
+    // ...et remplacés par de nouvelles instances de même nom, pas réutilisées.
+    expect(mock.channels).toHaveLength(10);
+    for (const ch of before) {
+      const sameName = mock.channels.filter((c) => c.name === ch.name);
+      expect(sameName).toHaveLength(2);
+      expect(sameName[1]).not.toBe(ch);
+    }
   });
 });

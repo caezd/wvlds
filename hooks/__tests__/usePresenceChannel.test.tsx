@@ -84,3 +84,32 @@ describe("usePresenceChannel", () => {
     await waitFor(() => expect(result.current.typingLine).toBe(""));
   });
 });
+
+describe("usePresenceChannel — cleanup et reconnexion", () => {
+  it("untrack et supprime le canal au démontage", async () => {
+    const { mock, ch, unmount } = await setup();
+
+    unmount();
+
+    expect(ch.untrack).toHaveBeenCalled();
+    expect(mock.removeChannel).toHaveBeenCalledWith(ch);
+  });
+
+  it("recrée le canal de présence après un retour de connexion réseau", async () => {
+    const { mock, ch } = await setup();
+
+    await act(async () => {
+      window.dispatchEvent(new Event("online"));
+    });
+
+    await waitFor(() => {
+      expect(ch.untrack).toHaveBeenCalled();
+      expect(mock.removeChannel).toHaveBeenCalledWith(ch);
+    });
+
+    const newCh = mock.lastChannel()!;
+    expect(newCh).not.toBe(ch);
+    expect(newCh.name).toBe("chat:c1");
+    await waitFor(() => expect(newCh.track).toHaveBeenCalled());
+  });
+});

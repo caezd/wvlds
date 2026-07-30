@@ -76,3 +76,48 @@ describe("PresenceProvider — appear_offline résolu tardivement", () => {
     expect(ch.track).not.toHaveBeenCalled();
   });
 });
+
+describe("PresenceProvider — cleanup et reconnexion", () => {
+  it("untrack et supprime le canal de présence au démontage", async () => {
+    const mock = createSupabaseMock({ user: { id: "u1" } });
+    vi.mocked(createClient).mockReturnValue(mock.client as never);
+
+    const { unmount } = render(
+      <PresenceProvider>
+        <div />
+      </PresenceProvider>,
+    );
+
+    await waitFor(() => expect(mock.lastChannel()?.track).toHaveBeenCalled());
+    const ch = mock.lastChannel()!;
+
+    unmount();
+
+    expect(ch.untrack).toHaveBeenCalled();
+    expect(mock.removeChannel).toHaveBeenCalledWith(ch);
+  });
+
+  it("recrée le canal de présence après un retour de connexion réseau", async () => {
+    const mock = createSupabaseMock({ user: { id: "u1" } });
+    vi.mocked(createClient).mockReturnValue(mock.client as never);
+
+    render(
+      <PresenceProvider>
+        <div />
+      </PresenceProvider>,
+    );
+
+    await waitFor(() => expect(mock.lastChannel()?.track).toHaveBeenCalled());
+    const oldCh = mock.lastChannel()!;
+
+    await act(async () => {
+      window.dispatchEvent(new Event("online"));
+    });
+
+    await waitFor(() => expect(mock.removeChannel).toHaveBeenCalledWith(oldCh));
+    const newCh = mock.lastChannel()!;
+    expect(newCh).not.toBe(oldCh);
+    expect(newCh.name).toBe("presence:app");
+    await waitFor(() => expect(newCh.track).toHaveBeenCalled());
+  });
+});

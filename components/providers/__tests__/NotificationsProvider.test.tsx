@@ -673,6 +673,7 @@ describe("Compteurs non-lus — lecture locale", () => {
         } finally {
             vi.useRealTimers();
         }
+    });
 
     it("ouvrir une salle jamais ouverte la retire du badge, via la RPC mark_chatroom_read", async () => {
         const mock = setupUnreads();
@@ -702,5 +703,68 @@ describe("Compteurs non-lus — lecture locale", () => {
 
         const rpcNames = mock.rpc.mock.calls.map(call => call[0] as string);
         expect(rpcNames).not.toContain("get_world_unreads");
+    });
+});
+
+// ── Realtime : cleanup et reconnexion ─────────────────────────────────────────
+
+describe("NotificationsProvider — cleanup et reconnexion", () => {
+    it("supprime les canaux msgs et notifs au démontage", async () => {
+        const mock = createSupabaseMock({ user: { id: "u1" } });
+        mockAppShell(mock);
+        vi.mocked(createClient).mockReturnValue(mock.client as never);
+
+        const { unmount } = render(
+            <NotificationsProvider>
+                <Consumer />
+            </NotificationsProvider>,
+        );
+
+        await waitFor(() => {
+            expect(mock.channelNamed("msgs:u1")).toBeDefined();
+            expect(mock.channelNamed("notifs:u1")).toBeDefined();
+        });
+        const msgCh = mock.channelNamed("msgs:u1")!;
+        const notifCh = mock.channelNamed("notifs:u1")!;
+
+        unmount();
+
+        expect(mock.removeChannel).toHaveBeenCalledWith(msgCh);
+        expect(mock.removeChannel).toHaveBeenCalledWith(notifCh);
+    });
+
+    it("recrée les canaux msgs et notifs après un retour de connexion réseau", async () => {
+        const mock = createSupabaseMock({ user: { id: "u1" } });
+        mockAppShell(mock);
+        vi.mocked(createClient).mockReturnValue(mock.client as never);
+
+        render(
+            <NotificationsProvider>
+                <Consumer />
+            </NotificationsProvider>,
+        );
+
+        await waitFor(() => {
+            expect(mock.channelNamed("msgs:u1")).toBeDefined();
+            expect(mock.channelNamed("notifs:u1")).toBeDefined();
+        });
+        const oldMsgCh = mock.channelNamed("msgs:u1")!;
+        const oldNotifCh = mock.channelNamed("notifs:u1")!;
+
+        await act(async () => {
+            window.dispatchEvent(new Event("online"));
+        });
+
+        await waitFor(() => {
+            expect(mock.removeChannel).toHaveBeenCalledWith(oldMsgCh);
+            expect(mock.removeChannel).toHaveBeenCalledWith(oldNotifCh);
+        });
+
+        const msgChannels = mock.channels.filter(c => c.name === "msgs:u1");
+        const notifChannels = mock.channels.filter(c => c.name === "notifs:u1");
+        expect(msgChannels).toHaveLength(2);
+        expect(notifChannels).toHaveLength(2);
+        expect(msgChannels[1]).not.toBe(oldMsgCh);
+        expect(notifChannels[1]).not.toBe(oldNotifCh);
     });
 });
