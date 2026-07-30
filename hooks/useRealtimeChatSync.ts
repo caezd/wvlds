@@ -47,149 +47,130 @@ export function useRealtimeChatSync({
     latestIdRef.current = initialLatestId;
   }, [chatId, initialLatestId]);
 
-  // INSERT — re-fetch avec join persona pour garder la structure uniforme
+  // Un seul canal Realtime par chatroom (au lieu d'un canal par table/événement) :
+  // messages (INSERT/UPDATE/DELETE), chatroom (UPDATE), réactions, votes et avatar
+  // persona sont tous multiplexés sur le même canal via plusieurs bindings `.on()`.
+  // Réduit le nombre de handshakes `subscribe()` à l'ouverture d'une salle et la
+  // charge Realtime (canaux concurrents) côté client comme côté projet Supabase.
   useEffect(() => {
     // isMounted guards against Strict Mode: cleanup sets it to false so that
     // a channel lingering after removeChannel() ignores any late-arriving events.
     let isMounted = true;
 
-    const ch = supabase
-      .channel(CH.chatMessages(chatId))
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: TABLE.CHAT_MESSAGES,
-          filter: `chat_id=eq.${chatId}`,
-        },
-        async (payload: { new: Record<string, unknown>; old: Record<string, unknown> }) => {
-          if (!isMounted) return;
+    const ch = supabase.channel(CH.chatMessages(chatId));
 
-          const id = (payload.new as { id: number }).id;
-          if (latestIdRef.current !== null && id <= latestIdRef.current) return;
-          latestIdRef.current = id;
+    // INSERT — re-fetch avec join persona pour garder la structure uniforme
+    ch.on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: TABLE.CHAT_MESSAGES,
+        filter: `chat_id=eq.${chatId}`,
+      },
+      async (payload: { new: Record<string, unknown>; old: Record<string, unknown> }) => {
+        if (!isMounted) return;
 
-          const { data, error } = await supabase
-            .from(TABLE.CHAT_MESSAGES)
-            .select(
-              "id, chat_id, content, author_id, created_at, metadata, visible_to, persona:personas(id, user_id, name, avatar_url)",
-            )
-            .eq("id", id)
-            .single();
+        const id = (payload.new as { id: number }).id;
+        if (latestIdRef.current !== null && id <= latestIdRef.current) return;
+        latestIdRef.current = id;
 
-          if (!isMounted) return;
+        const { data, error } = await supabase
+          .from(TABLE.CHAT_MESSAGES)
+          .select(
+            "id, chat_id, content, author_id, created_at, metadata, visible_to, persona:personas(id, user_id, name, avatar_url)",
+          )
+          .eq("id", id)
+          .single();
 
-          if (error || !data) {
-            toast.error("Impossible de charger le nouveau message.");
-            return;
-          }
+        if (!isMounted) return;
 
-          onMessageInserted(
-            data as unknown as ChatMessageWithPersona,
-            data.author_id ?? undefined,
-          );
-        },
-      )
-      .subscribe();
+        if (error || !data) {
+          toast.error("Impossible de charger le nouveau message.");
+          return;
+        }
 
-    return () => {
-      isMounted = false;
-      void supabase.removeChannel(ch);
-    };
-  }, [chatId, supabase, reconnectEpoch]); // eslint-disable-line react-hooks/exhaustive-deps
+        onMessageInserted(
+          data as unknown as ChatMessageWithPersona,
+          data.author_id ?? undefined,
+        );
+      },
+    );
 
-  // DELETE — suppression de message
-  useEffect(() => {
-    let isMounted = true;
+    // DELETE — suppression de message
+    ch.on(
+      "postgres_changes",
+      {
+        event: "DELETE",
+        schema: "public",
+        table: TABLE.CHAT_MESSAGES,
+        filter: `chat_id=eq.${chatId}`,
+      },
+      (payload: { new: Record<string, unknown>; old: Record<string, unknown> }) => {
+        if (!isMounted) return;
+        const id = (payload.old as { id: number }).id;
+        if (id) onMessageDeleted(id);
+      },
+    );
 
-    const ch = supabase
-      .channel(`${CH.chatMessages(chatId)}-delete`)
-      .on(
-        "postgres_changes",
-        {
-          event: "DELETE",
-          schema: "public",
-          table: TABLE.CHAT_MESSAGES,
-          filter: `chat_id=eq.${chatId}`,
-        },
-        (payload: { new: Record<string, unknown>; old: Record<string, unknown> }) => {
-          if (!isMounted) return;
-          const id = (payload.old as { id: number }).id;
-          if (id) onMessageDeleted(id);
-        },
-      )
-      .subscribe();
+    // UPDATE — édition de contenu
+    ch.on(
+      "postgres_changes",
+      {
+        event: "UPDATE",
+        schema: "public",
+        table: TABLE.CHAT_MESSAGES,
+        filter: `chat_id=eq.${chatId}`,
+      },
+      (payload: { new: Record<string, unknown>; old: Record<string, unknown> }) => {
+        if (!isMounted) return;
+        const next = payload.new as { id: number; content: string; metadata: ChatMessageMeta | null };
+        onMessageUpdated(next.id, next.content, next.metadata ?? null);
+      },
+    );
 
-    return () => {
-      isMounted = false;
-      void supabase.removeChannel(ch);
-    };
-  }, [chatId, supabase, reconnectEpoch]); // eslint-disable-line react-hooks/exhaustive-deps
+    // UPDATE chatroom — titre / bannière / icône
+    ch.on(
+      "postgres_changes",
+      {
+        event: "UPDATE",
+        schema: "public",
+        table: TABLE.CHATROOMS,
+        filter: `id=eq.${chatId}`,
+      },
+      (payload: { new: Record<string, unknown>; old: Record<string, unknown> }) => {
+        if (!isMounted) return;
+        onChatroomPatched(payload.new as ChatroomPatch);
+      },
+    );
 
-  // UPDATE — édition de contenu
-  useEffect(() => {
-    let isMounted = true;
+    // Reactions INSERT / DELETE
+    ch.on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: TABLE.CHAT_MESSAGE_REACTIONS,
+        filter: `chat_id=eq.${chatId}`,
+      },
+      (payload: { eventType: string; new: Record<string, unknown>; old: Record<string, unknown> }) => {
+        if (!isMounted) return;
+        const ev = payload.eventType;
+        if (ev !== "INSERT" && ev !== "DELETE") return;
 
-    const ch = supabase
-      .channel(CH.chatMessageUpdates(chatId))
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: TABLE.CHAT_MESSAGES,
-          filter: `chat_id=eq.${chatId}`,
-        },
-        (payload: { new: Record<string, unknown>; old: Record<string, unknown> }) => {
-          if (!isMounted) return;
-          const next = payload.new as { id: number; content: string; metadata: ChatMessageMeta | null };
-          onMessageUpdated(next.id, next.content, next.metadata ?? null);
-        },
-      )
-      .subscribe();
+        type ReactionRow = { message_id: number; emoji: string; user_id: string };
+        const row = (ev === "DELETE" ? payload.old : payload.new) as ReactionRow | null;
+        if (!row) return;
 
-    return () => {
-      isMounted = false;
-      void supabase.removeChannel(ch);
-    };
-  }, [chatId, supabase, reconnectEpoch]); // eslint-disable-line react-hooks/exhaustive-deps
+        if (selfId && row.user_id === selfId) return;
 
-  // UPDATE chatroom — titre / bannière / icône
-  useEffect(() => {
-    let isMounted = true;
+        onReactionChange(row.message_id, row.emoji, ev === "INSERT" ? 1 : -1);
+      },
+    );
 
-    const ch = supabase
-      .channel(CH.chatroomUpdates(chatId))
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: TABLE.CHATROOMS,
-          filter: `id=eq.${chatId}`,
-        },
-        (payload: { new: Record<string, unknown>; old: Record<string, unknown> }) => {
-          if (!isMounted) return;
-          onChatroomPatched(payload.new as ChatroomPatch);
-        },
-      )
-      .subscribe();
-
-    return () => {
-      isMounted = false;
-      void supabase.removeChannel(ch);
-    };
-  }, [chatId, supabase, reconnectEpoch]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Personas UPDATE — avatar_url mis à jour
-  useEffect(() => {
-    if (!onPersonaUpdated) return;
-    let isMounted = true;
-
-    const ch = supabase
-      .channel(`personas-avatar-${chatId}`)
-      .on(
+    // Personas UPDATE — avatar_url mis à jour
+    if (onPersonaUpdated) {
+      ch.on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "personas" },
         (payload: { new: Record<string, unknown> }) => {
@@ -197,59 +178,12 @@ export function useRealtimeChatSync({
           const row = payload.new as { id: string; avatar_url?: string | null };
           if (row.id) onPersonaUpdated(row.id, row.avatar_url ?? null);
         },
-      )
-      .subscribe();
+      );
+    }
 
-    return () => {
-      isMounted = false;
-      void supabase.removeChannel(ch);
-    };
-  }, [chatId, supabase, onPersonaUpdated, reconnectEpoch]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Reactions INSERT / DELETE
-  useEffect(() => {
-    let isMounted = true;
-
-    const ch = supabase
-      .channel(CH.chatReactions(chatId))
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: TABLE.CHAT_MESSAGE_REACTIONS,
-          filter: `chat_id=eq.${chatId}`,
-        },
-        (payload: { eventType: string; new: Record<string, unknown>; old: Record<string, unknown> }) => {
-          if (!isMounted) return;
-          const ev = payload.eventType;
-          if (ev !== "INSERT" && ev !== "DELETE") return;
-
-          type ReactionRow = { message_id: number; emoji: string; user_id: string };
-          const row = (ev === "DELETE" ? payload.old : payload.new) as ReactionRow | null;
-          if (!row) return;
-
-          if (selfId && row.user_id === selfId) return;
-
-          onReactionChange(row.message_id, row.emoji, ev === "INSERT" ? 1 : -1);
-        },
-      )
-      .subscribe();
-
-    return () => {
-      isMounted = false;
-      void supabase.removeChannel(ch);
-    };
-  }, [chatId, supabase, selfId, reconnectEpoch]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Votes de choix INSERT / UPDATE (revote) / DELETE
-  useEffect(() => {
-    if (!onVoteChange) return;
-    let isMounted = true;
-
-    const ch = supabase
-      .channel(CH.chatVotes(chatId))
-      .on(
+    // Votes de choix INSERT / UPDATE (revote) / DELETE
+    if (onVoteChange) {
+      ch.on(
         "postgres_changes",
         {
           event: "*",
@@ -276,12 +210,14 @@ export function useRealtimeChatSync({
             ev === "DELETE" ? null : (newRow?.option_id ?? null),
           );
         },
-      )
-      .subscribe();
+      );
+    }
+
+    ch.subscribe();
 
     return () => {
       isMounted = false;
       void supabase.removeChannel(ch);
     };
-  }, [chatId, supabase, selfId, onVoteChange, reconnectEpoch]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [chatId, supabase, selfId, onPersonaUpdated, onVoteChange, reconnectEpoch]); // eslint-disable-line react-hooks/exhaustive-deps
 }

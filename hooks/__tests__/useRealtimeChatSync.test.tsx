@@ -24,7 +24,14 @@ function setup(opts: Parameters<typeof createSupabaseMock>[0] = {}, props: Parti
   return { mock, cbs, unmount: view.unmount };
 }
 
-const insert = (h: { config: Record<string, unknown> }) => h.config.event === "INSERT";
+// Tous les bindings sont désormais multiplexés sur un seul canal ("chat-c1") :
+// les prédicats doivent donc désambiguïser par event + table, pas seulement par event.
+type Handler = { type: string; config: Record<string, unknown> };
+const isInsert = (h: Handler) => h.config.event === "INSERT" && h.config.table === "chat_messages";
+const isDelete = (h: Handler) => h.config.event === "DELETE" && h.config.table === "chat_messages";
+const isMessageUpdate = (h: Handler) => h.config.event === "UPDATE" && h.config.table === "chat_messages";
+const isChatroomUpdate = (h: Handler) => h.config.event === "UPDATE" && h.config.table === "chatrooms";
+const isReaction = (h: Handler) => h.config.event === "*" && h.config.table === "chat_message_reactions";
 
 beforeEach(() => vi.clearAllMocks());
 
@@ -32,7 +39,7 @@ describe("useRealtimeChatSync", () => {
   it("ignore un INSERT déjà connu (id <= initialLatestId)", async () => {
     const { mock, cbs } = setup();
     await act(async () => {
-      mock.channelNamed("chat-c1")!.emit(insert, { new: { id: 2 } });
+      mock.channelNamed("chat-c1")!.emit(isInsert, { new: { id: 2 } });
     });
     expect(cbs.onMessageInserted).not.toHaveBeenCalled();
   });
@@ -42,7 +49,7 @@ describe("useRealtimeChatSync", () => {
       results: [{ data: { id: 5, content: "salut", author_id: "a2" } }],
     });
     await act(async () => {
-      mock.channelNamed("chat-c1")!.emit(insert, { new: { id: 5 } });
+      mock.channelNamed("chat-c1")!.emit(isInsert, { new: { id: 5 } });
     });
     await waitFor(() => expect(cbs.onMessageInserted).toHaveBeenCalled());
     expect(cbs.onMessageInserted).toHaveBeenCalledWith(
@@ -54,7 +61,7 @@ describe("useRealtimeChatSync", () => {
   it("propage une suppression de message", async () => {
     const { mock, cbs } = setup();
     act(() => {
-      mock.channelNamed("chat-c1-delete")!.emit(() => true, { old: { id: 7 } });
+      mock.channelNamed("chat-c1")!.emit(isDelete, { old: { id: 7 } });
     });
     expect(cbs.onMessageDeleted).toHaveBeenCalledWith(7);
   });
@@ -62,7 +69,7 @@ describe("useRealtimeChatSync", () => {
   it("propage une édition de contenu", async () => {
     const { mock, cbs } = setup();
     act(() => {
-      mock.channelNamed("chat-messages-updates-c1")!.emit(() => true, {
+      mock.channelNamed("chat-c1")!.emit(isMessageUpdate, {
         new: { id: 9, content: "édité" },
       });
     });
@@ -72,7 +79,7 @@ describe("useRealtimeChatSync", () => {
   it("propage la metadata mise à jour (ex. sms/bubbles décoché)", async () => {
     const { mock, cbs } = setup();
     act(() => {
-      mock.channelNamed("chat-messages-updates-c1")!.emit(() => true, {
+      mock.channelNamed("chat-c1")!.emit(isMessageUpdate, {
         new: { id: 9, content: "édité", metadata: { sms: true } },
       });
     });
@@ -82,7 +89,7 @@ describe("useRealtimeChatSync", () => {
   it("propage un patch de chatroom (titre/bannière)", async () => {
     const { mock, cbs } = setup();
     act(() => {
-      mock.channelNamed("chatroom-updates-c1")!.emit(() => true, {
+      mock.channelNamed("chat-c1")!.emit(isChatroomUpdate, {
         new: { title: "Nouveau titre" },
       });
     });
@@ -94,7 +101,7 @@ describe("useRealtimeChatSync", () => {
   it("applique une réaction d'un autre utilisateur (delta +1)", async () => {
     const { mock, cbs } = setup();
     act(() => {
-      mock.channelNamed("chat-reactions-c1")!.emit(() => true, {
+      mock.channelNamed("chat-c1")!.emit(isReaction, {
         eventType: "INSERT",
         new: { message_id: 1, emoji: "👍", user_id: "autre" },
       });
@@ -105,48 +112,59 @@ describe("useRealtimeChatSync", () => {
   it("ignore sa propre réaction (évite le double comptage)", async () => {
     const { mock, cbs } = setup();
     act(() => {
-      mock.channelNamed("chat-reactions-c1")!.emit(() => true, {
+      mock.channelNamed("chat-c1")!.emit(isReaction, {
         eventType: "INSERT",
         new: { message_id: 1, emoji: "👍", user_id: "me" },
       });
     });
     expect(cbs.onReactionChange).not.toHaveBeenCalled();
   });
+
+  it("ne crée qu'un seul canal Realtime pour toute la salle (INSERT/DELETE/UPDATE/réactions fusionnés)", () => {
+    const { mock } = setup();
+    expect(mock.channels).toHaveLength(1);
+    expect(mock.channels[0].name).toBe("chat-c1");
+  });
+
+  it("ajoute les bindings votes/personas sur le même canal quand les callbacks optionnels sont fournis", () => {
+    const { mock } = setup({}, {
+      onVoteChange: vi.fn(),
+      onPersonaUpdated: vi.fn(),
+    });
+    // Toujours un seul canal, avec deux bindings supplémentaires.
+    expect(mock.channels).toHaveLength(1);
+    const events = mock.channels[0].handlers.map(h => `${h.config.event}:${h.config.table}`);
+    expect(events).toContain("*:chat_choice_votes");
+    expect(events).toContain("UPDATE:personas");
+  });
 });
 
 describe("useRealtimeChatSync — cleanup et reconnexion", () => {
-  it("supprime les 5 canaux Realtime au démontage", () => {
+  it("supprime le canal Realtime au démontage", () => {
     const { mock, unmount } = setup();
     const created = [...mock.channels];
-    expect(created).toHaveLength(5);
+    expect(created).toHaveLength(1);
 
     unmount();
 
-    for (const ch of created) {
-      expect(mock.removeChannel).toHaveBeenCalledWith(ch);
-    }
-    expect(mock.removeChannel).toHaveBeenCalledTimes(5);
+    expect(mock.removeChannel).toHaveBeenCalledWith(created[0]);
+    expect(mock.removeChannel).toHaveBeenCalledTimes(1);
   });
 
-  it("recrée les 5 canaux après un retour de connexion réseau (reconnectEpoch)", () => {
+  it("recrée le canal après un retour de connexion réseau (reconnectEpoch)", () => {
     const { mock } = setup();
-    const before = [...mock.channels];
-    expect(before).toHaveLength(5);
+    const before = mock.channels[0];
+    expect(mock.channels).toHaveLength(1);
 
     act(() => {
       window.dispatchEvent(new Event("online"));
     });
 
-    // Les anciens canaux sont bien fermés...
-    for (const ch of before) {
-      expect(mock.removeChannel).toHaveBeenCalledWith(ch);
-    }
-    // ...et remplacés par de nouvelles instances de même nom, pas réutilisées.
-    expect(mock.channels).toHaveLength(10);
-    for (const ch of before) {
-      const sameName = mock.channels.filter((c) => c.name === ch.name);
-      expect(sameName).toHaveLength(2);
-      expect(sameName[1]).not.toBe(ch);
-    }
+    // L'ancien canal est bien fermé...
+    expect(mock.removeChannel).toHaveBeenCalledWith(before);
+    // ...et remplacé par une nouvelle instance de même nom, pas réutilisée.
+    expect(mock.channels).toHaveLength(2);
+    expect(mock.channels[1].name).toBe(before.name);
+    expect(mock.channels[1]).not.toBe(before);
   });
 });
