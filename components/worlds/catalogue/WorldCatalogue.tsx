@@ -1329,7 +1329,7 @@ export function WorldCatalogue({ worldId, canEdit, inventoryEnabled, inventoryRe
           </button>
         )}
         <div className="ml-auto">
-          <Button size="icon" variant="ghost" onClick={onClose} aria-label={tCommon("close")} className="rounded-lg">
+          <Button size="icon" variant="ghost" onClick={onClose} aria-label={tCommon("close")} className="rounded-lg hover:bg-hoverCard">
             <X className="h-5 w-5" />
           </Button>
         </div>

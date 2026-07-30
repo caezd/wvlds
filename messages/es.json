@@ -581,6 +581,8 @@
     "deleteConfirm": "Confirmar la eliminación",
     "actions": "Acciones",
     "backTo": "Volver a {name}",
+    "follow": "Seguir esta sala de chat",
+    "unfollow": "Dejar de seguir",
     "settingsTitle": "Configuración de la sala",
     "settingsName": "Nombre de la sala",
     "settingsNamePlaceholder": "Nombre de la sala…",

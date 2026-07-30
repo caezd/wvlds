@@ -470,7 +470,7 @@ export function WorldSettingsView({ world, onUpdated, onClose }: WorldSettingsVi
                 <Settings className="h-4 w-4 shrink-0 text-muted-foreground" />
                 <span className="text-sm font-semibold">Paramètres</span>
                 <div className="ml-auto">
-                    <Button size="icon" variant="ghost" onClick={onClose} aria-label="Fermer" className="rounded-lg">
+                    <Button size="icon" variant="ghost" onClick={onClose} aria-label="Fermer" className="rounded-lg hover:bg-hoverCard">
                         <X className="h-5 w-5" />
                     </Button>
                 </div>

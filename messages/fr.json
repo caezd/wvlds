@@ -582,6 +582,8 @@
     "deleteConfirm": "Confirmer la suppression",
     "actions": "Actions",
     "backTo": "Revenir à {name}",
+    "follow": "Suivre cette chatroom",
+    "unfollow": "Ne plus suivre",
     "settingsTitle": "Paramètres de la salle",
     "settingsName": "Nom de la salle",
     "settingsNamePlaceholder": "Nom de la salle…",

@@ -581,6 +581,8 @@
     "deleteConfirm": "Confirm deletion",
     "actions": "Actions",
     "backTo": "Back to {name}",
+    "follow": "Follow this chatroom",
+    "unfollow": "Unfollow",
     "settingsTitle": "Room settings",
     "settingsName": "Room name",
     "settingsNamePlaceholder": "Room name…",

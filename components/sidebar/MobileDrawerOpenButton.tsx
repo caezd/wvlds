@@ -14,7 +14,7 @@ export function MobileDrawerOpenButton() {
       type="button"
       onClick={() => setDrawerOpen(true)}
       aria-label="Ouvrir le menu"
-      className="lg:hidden flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted/60"
+      className="lg:hidden flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-hoverCard"
     >
       <Menu className="h-5 w-5" />
     </button>

@@ -98,7 +98,7 @@ export function ChatroomsNavDropdown({
       <PopoverTrigger asChild>
         <button
           type="button"
-          className="flex min-w-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium hover:bg-secondary transition-colors"
+          className="flex min-w-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium hover:bg-hoverCard transition-colors"
           aria-label="Conversations du monde"
         >
           <span className="truncate">{label}</span>

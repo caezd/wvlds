@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import ChatroomSettingsSheet from "@/components/chatrooms/settings/ChatroomSettingsSheet";
 const ChatroomStatsSheet = dynamic(() => import("@/components/chatrooms/settings/ChatroomStatsSheet"));
 import { ScrollAreaWithJumpToBottom } from "@/components/ScrollAreaWithJumpToBottom";
@@ -75,7 +76,7 @@ function ChatroomHeader({
             type="button"
             onClick={() => setDrawerOpen(true)}
             aria-label="Ouvrir le menu"
-            className="lg:hidden flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted/60"
+            className="lg:hidden flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-hoverCard"
           >
             <Menu className="h-5 w-5" />
           </button>
@@ -84,16 +85,20 @@ function ChatroomHeader({
               {/* Breadcrumbs : retour au monde / conversations */}
               <div className="flex min-w-0 items-center gap-0.5 px-1">
                 {world && (
-                  <Link
-                    href={`/w/${world.id}`}
-                    title={t("backTo", { name: world.name })}
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
-                  >
-                    {world.isShared
-                      ? <Globe className="h-4 w-4" />
-                      : <GlobeLock className="h-4 w-4" />
-                    }
-                  </Link>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Link
+                        href={`/w/${world.id}`}
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-hoverCard hover:text-foreground transition-colors"
+                      >
+                        {world.isShared
+                          ? <Globe className="h-4 w-4" />
+                          : <GlobeLock className="h-4 w-4" />
+                        }
+                      </Link>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" sideOffset={8}>{t("backTo", { name: world.name })}</TooltipContent>
+                  </Tooltip>
                 )}
                 <span className="px-0.5 text-muted-foreground/50">/</span>
                 <ChatroomsNavDropdown
@@ -165,6 +170,7 @@ export default function ChatRoomView({
   chatroomKey: string | null;
   initialIsFollowed: boolean;
 }) {
+  const t = useTranslations("chatrooms");
   const supabase = useMemo(() => createClient(), []);
   const reconnectEpoch = useReconnectEpoch();
   const router = useRouter();
@@ -816,19 +822,26 @@ export default function ChatRoomView({
           rightSlot={
             <>
               {selfId && (
-                <button
-                  onClick={() => void handleToggleFollow()}
-                  title={isFollowed ? "Ne plus suivre" : "Suivre cette chatroom"}
-                  className={cn(
-                    "flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-muted",
-                    isFollowed ? "text-yellow-500" : "text-muted-foreground",
-                  )}
-                >
-                  <Star
-                    size={15}
-                    className={isFollowed ? "fill-current" : ""}
-                  />
-                </button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => void handleToggleFollow()}
+                      aria-label={isFollowed ? t("unfollow") : t("follow")}
+                      className={cn(
+                        "flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-hoverCard",
+                        isFollowed ? "text-yellow-500" : "text-muted-foreground",
+                      )}
+                    >
+                      <Star
+                        size={15}
+                        className={isFollowed ? "fill-current" : ""}
+                      />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" sideOffset={8}>
+                    {isFollowed ? t("unfollow") : t("follow")}
+                  </TooltipContent>
+                </Tooltip>
               )}
               <ChatroomSettingsSheet
                 canEdit={canEdit}
