@@ -952,7 +952,7 @@ export function RelationsCanvas({ worldId, userId, canAdmin, onClose }: Relation
               onRelTypesChange={setRelTypes}
             />
           )}
-          <Button size="icon" variant="ghost" onClick={onClose} aria-label={tCommon("close")}>
+          <Button size="icon" variant="ghost" onClick={onClose} aria-label={tCommon("close")} className="rounded-lg">
             <X className="h-5 w-5" />
           </Button>
         </div>

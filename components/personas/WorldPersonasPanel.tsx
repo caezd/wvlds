@@ -168,7 +168,7 @@ export function WorldPersonasPanel({
               <button
                 type="button"
                 aria-label="Nouveau persona"
-                className="flex h-6 w-6 items-center justify-center rounded-full border border-border-soft text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                className="flex h-6 w-6 items-center justify-center rounded-lg border border-border-soft text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               >
                 <Plus size={13} />
               </button>

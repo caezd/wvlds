@@ -1195,7 +1195,7 @@ export function WorldMap({
         )}
 
         <div className="ml-auto">
-          <Button size="icon" variant="ghost" onClick={onClose} aria-label={t("closeMap")}>
+          <Button size="icon" variant="ghost" onClick={onClose} aria-label={t("closeMap")} className="rounded-lg">
             <X className="h-5 w-5" />
           </Button>
         </div>

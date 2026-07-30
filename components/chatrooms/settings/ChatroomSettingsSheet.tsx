@@ -275,7 +275,7 @@ export default function ChatroomSettingsSheet({ canEdit, chatroom, worldTimeline
               <button
                 type="button"
                 aria-label="Paramètres de la salle"
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-border-soft bg-background text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                className="flex h-9 w-9 items-center justify-center rounded-lg border border-border-soft bg-background text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
               >
                 <Settings className="h-4 w-4" />
               </button>

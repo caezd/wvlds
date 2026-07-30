@@ -779,7 +779,7 @@ export function WorldWiki({
           )}
 
           <div className="ml-auto">
-            <Button size="icon" variant="ghost" onClick={onClose} aria-label={t("closeWiki")}>
+            <Button size="icon" variant="ghost" onClick={onClose} aria-label={t("closeWiki")} className="rounded-lg">
               <X className="h-5 w-5" />
             </Button>
           </div>

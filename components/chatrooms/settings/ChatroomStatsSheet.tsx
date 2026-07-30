@@ -184,7 +184,7 @@ export default function ChatroomStatsSheet({
             type="button"
             onClick={() => setOpen(true)}
             aria-label={t("statsTitle")}
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-border-soft bg-background text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-border-soft bg-background text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
           >
             <BarChart3 className="h-4 w-4" />
           </button>

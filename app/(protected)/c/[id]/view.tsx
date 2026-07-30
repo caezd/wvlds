@@ -87,7 +87,7 @@ function ChatroomHeader({
                   <Link
                     href={`/w/${world.id}`}
                     title={t("backTo", { name: world.name })}
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
                   >
                     {world.isShared
                       ? <Globe className="h-4 w-4" />
@@ -820,7 +820,7 @@ export default function ChatRoomView({
                   onClick={() => void handleToggleFollow()}
                   title={isFollowed ? "Ne plus suivre" : "Suivre cette chatroom"}
                   className={cn(
-                    "flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-muted",
+                    "flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-muted",
                     isFollowed ? "text-yellow-500" : "text-muted-foreground",
                   )}
                 >
