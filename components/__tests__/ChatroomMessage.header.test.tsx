@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { createSupabaseMock } from "@/test/supabaseMock";
 import { createClient } from "@/lib/supabase/client";
 import type { ChatMessageWithPersona } from "@/types/db";
@@ -141,7 +141,7 @@ describe("ChatroomMessage — pseudo joueur cliquable", () => {
     expect(screen.getByText("(@capou)")).toBeInTheDocument();
   });
 
-  it("le pseudo est cliquable et déclenche le chargement du profil joueur", () => {
+  it("le pseudo est cliquable et déclenche le chargement du profil joueur", async () => {
     render(<ChatroomMessage message={makeMessage()} online={{}} selfId="viewer-1" />);
 
     const trigger = screen.getByText("(@capou)").closest("button");
@@ -149,6 +149,8 @@ describe("ChatroomMessage — pseudo joueur cliquable", () => {
 
     fireEvent.click(trigger!);
 
-    expect(mock.from).toHaveBeenCalledWith("profiles");
+    // Laisse le fetch mocké (setLoading/setProfile) se résoudre dans act()
+    // avant la fin du test.
+    await waitFor(() => expect(mock.from).toHaveBeenCalledWith("profiles"));
   });
 });

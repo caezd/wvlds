@@ -277,6 +277,7 @@
     "emailPlaceholder": "m@example.com",
     "usernameRequired": {
       "dialogTitle": "Choose your username",
+      "dialogDescription": "Choose a username to keep using the app.",
       "greeting": "Hello,",
       "addButton": "Add username",
       "placeholder": "username",
@@ -318,7 +319,8 @@
     "latestWorlds": "Latest worlds",
     "statsMessages": "Messages",
     "statsMembers": "Members",
-    "statsPersonas": "Personas"
+    "statsPersonas": "Personas",
+    "statsDialogDescription": "Statistics and information about the world."
   },
   "home": {
     "title": "Worlds",
@@ -335,6 +337,7 @@
     "newNamePlaceholder": "E.g. Avalonia",
     "newDescLabel": "Description",
     "newDescPlaceholder": "Optional",
+    "newDialogDescription": "Form to create a new world.",
     "newCreate": "Create",
     "newCancel": "Cancel",
     "sidebarTitle": "My worlds",
@@ -352,6 +355,7 @@
     "pickerEmpty": "No personas yet. Create one first.",
     "toggleFavorite": "Toggle favorite",
     "lockedHint": "This persona can no longer be used on the free plan — upgrade to use it again.",
+    "profileSheetDescription": "Detailed profile of the persona.",
     "viewByWorld": "By world",
     "viewAlphabetical": "Alphabetical",
     "dropHere": "Drop a persona here",
@@ -581,7 +585,7 @@
     "deleteConfirm": "Confirm deletion",
     "actions": "Actions",
     "backTo": "Back to {name}",
-    "follow": "Follow this chatroom",
+    "follow": "Follow",
     "unfollow": "Unfollow",
     "settingsTitle": "Room settings",
     "settingsName": "Room name",

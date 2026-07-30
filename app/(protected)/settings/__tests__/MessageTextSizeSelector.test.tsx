@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock("next-intl", () => ({
@@ -42,7 +42,7 @@ describe("MessageTextSizeSelector", () => {
 
     fireEvent.click(screen.getByText("textSizeOptions.sm"));
 
-    await vi.waitFor(() => {
+    await waitFor(() => {
       expect(updateMessageTextSize).toHaveBeenCalledWith("sm");
       expect(toast.success).toHaveBeenCalledWith("textSizeSaved");
       expect(refresh).toHaveBeenCalled();
@@ -63,7 +63,7 @@ describe("MessageTextSizeSelector", () => {
 
     fireEvent.click(screen.getByText("textSizeOptions.lg"));
 
-    await vi.waitFor(() => {
+    await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith("Taille non supportée");
     });
     expect(refresh).not.toHaveBeenCalled();

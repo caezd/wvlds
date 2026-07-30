@@ -17,6 +17,9 @@ async function pickDate(user: ReturnType<typeof userEvent.setup>, day: string, m
 beforeEach(() => vi.clearAllMocks());
 
 describe("AgeVerificationFields", () => {
+  // Timeout relevé (défaut 5000ms) : 3 sélections Radix Select enchaînées
+  // (vrais timers/animations, pas de mock) peuvent dépasser 5s sous la charge
+  // CPU d'une suite complète en parallèle, même si chaque test est rapide en isolation.
   it("remonte adult=true pour une date de naissance majeure", async () => {
     const onAdultChange = vi.fn();
     const user = userEvent.setup();
@@ -26,7 +29,7 @@ describe("AgeVerificationFields", () => {
     await pickDate(user, "15", "6", year);
 
     await waitFor(() => expect(onAdultChange).toHaveBeenLastCalledWith(true));
-  });
+  }, 10000);
 
   it("remonte adult=false et affiche l'erreur pour une date mineure", async () => {
     const onAdultChange = vi.fn();
@@ -38,7 +41,7 @@ describe("AgeVerificationFields", () => {
 
     await waitFor(() => expect(onAdultChange).toHaveBeenLastCalledWith(false));
     expect(screen.getByText(/18 ans ou plus/i)).toBeVisible();
-  });
+  }, 10000);
 
   it("ne signale pas majeur tant que les trois champs ne sont pas remplis", async () => {
     const onAdultChange = vi.fn();

@@ -278,6 +278,7 @@
     "emailPlaceholder": "m@example.com",
     "usernameRequired": {
       "dialogTitle": "Choisissez votre pseudo",
+      "dialogDescription": "Choisissez un pseudo pour continuer à utiliser l'application.",
       "greeting": "Bonjour,",
       "addButton": "Ajouter un pseudo",
       "placeholder": "pseudo",
@@ -319,7 +320,8 @@
     "latestWorlds": "Derniers mondes créés",
     "statsMessages": "Messages",
     "statsMembers": "Membres",
-    "statsPersonas": "Personas"
+    "statsPersonas": "Personas",
+    "statsDialogDescription": "Statistiques et informations du monde."
   },
   "home": {
     "title": "Mondes",
@@ -336,6 +338,7 @@
     "newNamePlaceholder": "Ex. Avalonia",
     "newDescLabel": "Description",
     "newDescPlaceholder": "Optionnel",
+    "newDialogDescription": "Formulaire de création d'un nouveau monde.",
     "newCreate": "Créer",
     "newCancel": "Annuler",
     "sidebarTitle": "Mes mondes",
@@ -353,6 +356,7 @@
     "pickerEmpty": "Aucun persona. Créez-en un d'abord.",
     "toggleFavorite": "Marquer/retirer des favoris",
     "lockedHint": "Ce persona n'est plus jouable avec le plan gratuit — passez à un plan supérieur pour le réutiliser.",
+    "profileSheetDescription": "Profil détaillé du persona.",
     "viewByWorld": "Par monde",
     "viewAlphabetical": "Alphabétique",
     "dropHere": "Déposez un persona ici",
@@ -582,7 +586,7 @@
     "deleteConfirm": "Confirmer la suppression",
     "actions": "Actions",
     "backTo": "Revenir à {name}",
-    "follow": "Suivre cette chatroom",
+    "follow": "Suivre",
     "unfollow": "Ne plus suivre",
     "settingsTitle": "Paramètres de la salle",
     "settingsName": "Nom de la salle",

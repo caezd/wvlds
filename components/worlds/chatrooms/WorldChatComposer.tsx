@@ -19,6 +19,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -301,6 +302,7 @@ export function WorldChatComposer({
           <DialogContent className="sm:max-w-2xl gap-4">
             <DialogHeader>
               <DialogTitle>{t("composer.dialogTitle")}</DialogTitle>
+              <DialogDescription className="sr-only">{t("composer.placeholder")}</DialogDescription>
             </DialogHeader>
             {titleRow}
             {composerBlock}

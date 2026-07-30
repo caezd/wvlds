@@ -5,7 +5,7 @@ import Image from "next/image";
 import { Camera, MessageSquare, Palette, UserRound, Users } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { AgeConfirmDialog } from "@/components/worlds/AgeConfirmDialog";
 import { JoinWorldButton } from "./JoinWorldButton";
 import { useJoinWorld } from "./useJoinWorld";
@@ -56,6 +56,7 @@ export function WorldStatsDialog({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-sm gap-0 overflow-hidden border-border-soft p-0">
           <DialogTitle className="sr-only">{world.name}</DialogTitle>
+          <DialogDescription className="sr-only">{t("statsDialogDescription")}</DialogDescription>
 
           <div
             className="relative isolate overflow-hidden p-6"

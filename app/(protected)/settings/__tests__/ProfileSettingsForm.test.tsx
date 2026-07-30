@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock("next-intl", () => ({
@@ -65,7 +65,7 @@ describe("ProfileSettingsForm", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "save" }));
 
-    await vi.waitFor(() => {
+    await waitFor(() => {
       expect(updateProfileBioAndPronouns).toHaveBeenCalledWith("Une bio", ["they_them", "custom"]);
     });
   });

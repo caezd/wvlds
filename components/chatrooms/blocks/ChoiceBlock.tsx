@@ -11,6 +11,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
   DialogTrigger,
 } from "@/components/ui/dialog";
@@ -91,6 +92,9 @@ export function ChoiceDialog({
             <Vote className="h-4 w-4" />
             {t("choiceDialogTitle")}
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            Configurer un choix à insérer dans le message
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-1.5">

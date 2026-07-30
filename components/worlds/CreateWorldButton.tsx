@@ -10,6 +10,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
   DialogTrigger,
 } from "@/components/ui/dialog";
@@ -70,6 +71,7 @@ export function CreateWorldButton({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{t("new")}</DialogTitle>
+          <DialogDescription className="sr-only">{t("newDialogDescription")}</DialogDescription>
         </DialogHeader>
         {quotaReached ? (
           <div className="rounded-md bg-muted p-3 text-sm">
