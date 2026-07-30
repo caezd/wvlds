@@ -3,7 +3,7 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { AvatarWithFrame } from "@/components/avatars/AvatarWithFrame";
 import { Tabs, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { TabBar } from "@/components/ui/tab-bar";
@@ -436,6 +436,11 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
       >
         {persona && (
           <>
+            <SheetHeader className="sr-only">
+              <SheetTitle>{persona.name}</SheetTitle>
+              <SheetDescription>{t("profileSheetDescription")}</SheetDescription>
+            </SheetHeader>
+
             {/* -- Bannière -- */}
             {bannerUrl ? (
               <div className="relative h-34 w-full shrink-0">

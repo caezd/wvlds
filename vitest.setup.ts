@@ -1,6 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
 import { afterEach, vi } from "vitest";
+import { cloneElement, isValidElement } from "react";
 
 // ── Mock next-intl ──────────────────────────────────────────────────────────────
 // Fournit useTranslations() backed par les vraies traductions fr.json, sans avoir
@@ -37,7 +38,11 @@ vi.mock("next-intl", async () => {
       if (before) parts.push(interpolate(before, vals));
       const fn = vals[m[1]];
       const inner = interpolate(m[2], vals);
-      parts.push(typeof fn === "function" ? (fn as (c: unknown) => unknown)(inner) : inner);
+      const rendered = typeof fn === "function" ? (fn as (c: unknown) => unknown)(inner) : inner;
+      // Le vrai next-intl clé ses fragments riches en interne ; ce mock doit
+      // faire pareil pour ne pas déclencher le warning React "unique key"
+      // dès qu'un template mélange texte brut et éléments (ex. <b>...</b>).
+      parts.push(isValidElement(rendered) ? cloneElement(rendered, { key: parts.length }) : rendered);
       last = m.index + m[0].length;
     }
     const tail = tpl.slice(last);

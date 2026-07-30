@@ -41,12 +41,15 @@ describe("WorldCategoryFolders", () => {
     (createClient as ReturnType<typeof vi.fn>).mockReturnValue(mock.client);
   });
 
-  it("n'affiche rien tant qu'il n'y a pas de catégories", () => {
+  it("n'affiche rien tant qu'il n'y a pas de catégories", async () => {
     const localMock = createSupabaseMock({ results: [{ data: [] }, { data: [] }] });
     (createClient as ReturnType<typeof vi.fn>).mockReturnValue(localMock.client);
-    const { container } = render(
-      <WorldCategoryFolders worldId="world-1" selectedCategoryId={null} onSelectCategory={vi.fn()} />,
-    );
+    let container!: HTMLElement;
+    await act(async () => {
+      ({ container } = render(
+        <WorldCategoryFolders worldId="world-1" selectedCategoryId={null} onSelectCategory={vi.fn()} />,
+      ));
+    });
     expect(container.textContent).toBe("");
   });
 

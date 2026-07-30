@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createRef } from "react";
 import { createSupabaseMock } from "@/test/supabaseMock";
@@ -191,7 +191,9 @@ describe("ChatroomComposer — brouillons localStorage", () => {
       // sur ce rendu, le timer déjà armé peut encore écrire l'ancien
       // brouillon dans la fenêtre avant que l'effet ne se ré-exécute.
       const clearTimeoutSpy = vi.spyOn(window, "clearTimeout");
-      ref.current?.clearDraft();
+      act(() => {
+        ref.current?.clearDraft();
+      });
       expect(clearTimeoutSpy).toHaveBeenCalled();
       clearTimeoutSpy.mockRestore();
 

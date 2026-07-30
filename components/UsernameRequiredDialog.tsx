@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
@@ -69,6 +69,7 @@ export function UsernameRequiredDialog({ userId }: { userId: string }) {
         className="sm:max-w-md"
       >
         <DialogTitle className="sr-only">{t("dialogTitle")}</DialogTitle>
+        <DialogDescription className="sr-only">{t("dialogDescription")}</DialogDescription>
         <form
           onSubmit={handleSubmit}
           className="flex flex-col items-center gap-8 py-8 text-center"

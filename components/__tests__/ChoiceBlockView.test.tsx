@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import { ChoiceBlockView } from "@/components/chatrooms/blocks/ChoiceBlock";
 import type { ChoiceBlock } from "@/lib/chat-blocks";
 import type { ChoiceVoteSummary } from "@/types/db";
@@ -36,10 +36,14 @@ describe("ChoiceBlockView", () => {
     expect(cardFor("Sud").className).not.toContain("border-accent/50");
   });
 
-  it("appelle onVote avec l'id de l'option cliquée", () => {
+  it("appelle onVote avec l'id de l'option cliquée", async () => {
     const onVote = vi.fn();
     render(<ChoiceBlockView block={block} mine={false} votes={[]} onVote={onVote} />);
-    fireEvent.click(cardFor("Sud"));
+    // handleVote est async (await onVote(...) même si onVote est synchrone) :
+    // il faut laisser la microtask de retour se résoudre dans act().
+    await act(async () => {
+      fireEvent.click(cardFor("Sud"));
+    });
     expect(onVote).toHaveBeenCalledWith("south");
   });
 

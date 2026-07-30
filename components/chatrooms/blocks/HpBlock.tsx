@@ -9,6 +9,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
   DialogTrigger,
 } from "@/components/ui/dialog";
@@ -73,6 +74,9 @@ export function HpDialog({
             <Heart className="h-4 w-4" />
             Jauge de vie
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            Configurer une jauge de vie à insérer dans le message
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-1.5">
