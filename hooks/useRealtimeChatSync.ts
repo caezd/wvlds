@@ -238,10 +238,7 @@ export function useRealtimeChatSync({
       );
     }
 
-    (window as unknown as { __rtDebug: unknown[] }).__rtDebug ??= [];
-    ch.subscribe((status: string) => {
-      (window as unknown as { __rtDebug: unknown[] }).__rtDebug.push(status);
-    });
+ch.subscribe();
 
     return () => {
       isMounted = false;
