@@ -171,7 +171,10 @@ export function ChatroomMessageHeader({
               />
             )}
 
-            {mine && editing && (
+            {/* Sur mobile, ces boutons se retrouvent en en-tête sticky du
+                composer d'édition (cf. ChatroomMessage) — plus accessibles
+                une fois qu'on a scrollé dans un message long. */}
+            {mine && editing && !isMobile && (
               <div className="flex items-center gap-1">
                 <Button
                   type="button"

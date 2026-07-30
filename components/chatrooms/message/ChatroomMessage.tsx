@@ -27,7 +27,7 @@ import { HsvColorPicker } from "@/components/ui/hsv-color-picker";
 import { createClient } from "@/lib/supabase/client";
 import { TABLE } from "@/lib/constants";
 
-import { MessageCircle, MessageSquareText, Lock, Pin, Pipette, AlertTriangle } from "lucide-react";
+import { MessageCircle, MessageSquareText, Lock, Pin, Pipette, AlertTriangle, Check, X, Loader2 } from "lucide-react";
 import type { ChallengeBadge, ChatMessageMeta } from "@/types/db";
 
 import { toast } from "sonner";
@@ -327,92 +327,129 @@ function ChatroomMessage({
             <div className="">
               {editing ? (
                 <div className="w-full">
-                  <div className="rounded-2xl border bg-background/60 p-2">
-                    <ParagraphBlockEditor
-                      value={draft}
-                      onChange={setDraft}
-                      onKeyDown={onKeyDownEdit}
-                      disabled={saving}
-                      autoFocus
-                      formatting
-                      invertEnter={isMobile}
-                      className="px-2 py-3 leading-relaxed min-h-[44px]"
-                      wrapperClassName="max-h-none"
-                    />
-                    {err && (
-                      <div className="mt-1 text-xs text-destructive">{err}</div>
+                  <div className="rounded-2xl border bg-background/60">
+                    {/* Sur mobile, annuler/enregistrer vivent ici plutôt que
+                        dans l'en-tête du message (moins accessible une fois
+                        qu'on a scrollé dans un message long) — sticky pour
+                        rester atteignables pendant le scroll. Sur desktop,
+                        ces actions restent dans l'en-tête (cf.
+                        ChatroomMessageHeader).
+                        Pas d'`overflow-hidden` sur le conteneur : ça casse
+                        `sticky` (l'ancêtre overflow devient le containing
+                        block du sticky au lieu du scroll area des messages) —
+                        on arrondit donc la barre elle-même à la place. */}
+                    {isMobile && (
+                      <div className="sticky top-0 z-10 flex items-center justify-end gap-1 rounded-t-2xl bg-card border-b px-2 py-1.5">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={cancelEdit}
+                          disabled={saving}
+                          aria-label={t("cancelEdit")}
+                          title={t("cancelEdit")}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => void save()}
+                          disabled={saving}
+                          aria-label={t("saveEdit")}
+                          title={t("saveEdit")}
+                        >
+                          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                        </Button>
+                      </div>
                     )}
-                    <div className="mt-2 flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setEditBubbles((v) => !v)}
-                        className={cn(
-                          "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors",
-                          editBubbles
-                            ? "border-primary/40 bg-primary/10 text-primary"
-                            : "border-border-soft text-muted-foreground hover:text-foreground",
-                        )}
-                      >
-                        <MessageCircle className="h-3 w-3" />
-                        Dialogues en bulles
-                      </button>
-                      {editBubbles && (
+                    <div className="p-2">
+                      <ParagraphBlockEditor
+                        value={draft}
+                        onChange={setDraft}
+                        onKeyDown={onKeyDownEdit}
+                        disabled={saving}
+                        autoFocus
+                        formatting
+                        invertEnter={isMobile}
+                        className="px-2 py-3 leading-relaxed min-h-[44px]"
+                        wrapperClassName="max-h-none"
+                      />
+                      {err && (
+                        <div className="mt-1 text-xs text-destructive">{err}</div>
+                      )}
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
                         <button
                           type="button"
-                          onClick={() => setEditColorPickerOpen(true)}
-                          className="inline-flex items-center gap-1.5 rounded-full border border-border-soft px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+                          onClick={() => setEditBubbles((v) => !v)}
+                          className={cn(
+                            "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors",
+                            editBubbles
+                              ? "border-primary/40 bg-primary/10 text-primary"
+                              : "border-border-soft text-muted-foreground hover:text-foreground",
+                          )}
                         >
-                          <span
-                            className="size-3 shrink-0 rounded-full border border-border/60"
-                            style={editBubbleColor ? { backgroundColor: editBubbleColor } : undefined}
-                          >
-                            {!editBubbleColor && <Pipette className="m-auto size-2.5 text-muted-foreground" />}
-                          </span>
-                          {t("colorChoose")}
+                          <MessageCircle className="h-3 w-3" />
+                          Dialogues en bulles
                         </button>
+                        {editBubbles && (
+                          <button
+                            type="button"
+                            onClick={() => setEditColorPickerOpen(true)}
+                            className="inline-flex items-center gap-1.5 rounded-full border border-border-soft px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+                          >
+                            <span
+                              className="size-3 shrink-0 rounded-full border border-border/60"
+                              style={editBubbleColor ? { backgroundColor: editBubbleColor } : undefined}
+                            >
+                              {!editBubbleColor && <Pipette className="m-auto size-2.5 text-muted-foreground" />}
+                            </span>
+                            {t("colorChoose")}
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => setEditSms((v) => !v)}
+                          className={cn(
+                            "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors",
+                            editSms
+                              ? "border-primary/40 bg-primary/10 text-primary"
+                              : "border-border-soft text-muted-foreground hover:text-foreground",
+                          )}
+                        >
+                          <MessageSquareText className="h-3 w-3" />
+                          {t("smsMode")}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={contentWarningsChips.toggle}
+                          className={cn(
+                            "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors",
+                            contentWarningsChips.tags !== null
+                              ? "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400"
+                              : "border-border-soft text-muted-foreground hover:text-foreground",
+                          )}
+                        >
+                          <AlertTriangle className="h-3 w-3" />
+                          {t("contentWarning")}
+                        </button>
+                      </div>
+                      {contentWarningsChips.tags !== null && (
+                        <ContentWarningChipInput
+                          tags={contentWarningsChips.tags}
+                          input={contentWarningsChips.input}
+                          onInputChange={contentWarningsChips.setInput}
+                          onKeyDown={contentWarningsChips.onKeyDown}
+                          onBlur={() => contentWarningsChips.add(contentWarningsChips.input)}
+                          onRemove={contentWarningsChips.remove}
+                          onDisable={contentWarningsChips.toggle}
+                          placeholder={t("contentWarningPlaceholder")}
+                          className="mt-2"
+                        />
                       )}
-                      <button
-                        type="button"
-                        onClick={() => setEditSms((v) => !v)}
-                        className={cn(
-                          "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors",
-                          editSms
-                            ? "border-primary/40 bg-primary/10 text-primary"
-                            : "border-border-soft text-muted-foreground hover:text-foreground",
-                        )}
-                      >
-                        <MessageSquareText className="h-3 w-3" />
-                        {t("smsMode")}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={contentWarningsChips.toggle}
-                        className={cn(
-                          "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors",
-                          contentWarningsChips.tags !== null
-                            ? "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400"
-                            : "border-border-soft text-muted-foreground hover:text-foreground",
-                        )}
-                      >
-                        <AlertTriangle className="h-3 w-3" />
-                        {t("contentWarning")}
-                      </button>
-                    </div>
-                    {contentWarningsChips.tags !== null && (
-                      <ContentWarningChipInput
-                        tags={contentWarningsChips.tags}
-                        input={contentWarningsChips.input}
-                        onInputChange={contentWarningsChips.setInput}
-                        onKeyDown={contentWarningsChips.onKeyDown}
-                        onBlur={() => contentWarningsChips.add(contentWarningsChips.input)}
-                        onRemove={contentWarningsChips.remove}
-                        onDisable={contentWarningsChips.toggle}
-                        placeholder={t("contentWarningPlaceholder")}
-                        className="mt-2"
-                      />
-                    )}
-                    <div className="mt-1.5 text-xs text-muted-foreground">
-                      Esc = annuler • Entrée = enregistrer • Ctrl+Entrée = nouvelle ligne
                     </div>
                   </div>
                 </div>
