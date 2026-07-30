@@ -47,6 +47,31 @@ export function useRealtimeChatSync({
     latestIdRef.current = initialLatestId;
   }, [chatId, initialLatestId]);
 
+  // Miroir synchronisé PENDANT le rendu (pas dans un effet) : les callbacks du
+  // parent sont souvent recréés à chaque rendu (fonctions inline). Si l'effet
+  // ci-dessous en dépendait directement, le canal seul et fusionné se
+  // fermerait/rouvrirait en boucle à chaque rendu du parent — perdant tout
+  // événement arrivant pendant la fenêtre fermée. On les lit via ce ref à
+  // l'intérieur des handlers à la place.
+  const callbacksRef = useRef({
+    onMessageInserted,
+    onMessageUpdated,
+    onMessageDeleted,
+    onChatroomPatched,
+    onReactionChange,
+    onVoteChange,
+    onPersonaUpdated,
+  });
+  callbacksRef.current = {
+    onMessageInserted,
+    onMessageUpdated,
+    onMessageDeleted,
+    onChatroomPatched,
+    onReactionChange,
+    onVoteChange,
+    onPersonaUpdated,
+  };
+
   // Un seul canal Realtime par chatroom (au lieu d'un canal par table/événement) :
   // messages (INSERT/UPDATE/DELETE), chatroom (UPDATE), réactions, votes et avatar
   // persona sont tous multiplexés sur le même canal via plusieurs bindings `.on()`.
@@ -90,7 +115,7 @@ export function useRealtimeChatSync({
           return;
         }
 
-        onMessageInserted(
+        callbacksRef.current.onMessageInserted(
           data as unknown as ChatMessageWithPersona,
           data.author_id ?? undefined,
         );
@@ -109,7 +134,7 @@ export function useRealtimeChatSync({
       (payload: { new: Record<string, unknown>; old: Record<string, unknown> }) => {
         if (!isMounted) return;
         const id = (payload.old as { id: number }).id;
-        if (id) onMessageDeleted(id);
+        if (id) callbacksRef.current.onMessageDeleted(id);
       },
     );
 
@@ -125,7 +150,7 @@ export function useRealtimeChatSync({
       (payload: { new: Record<string, unknown>; old: Record<string, unknown> }) => {
         if (!isMounted) return;
         const next = payload.new as { id: number; content: string; metadata: ChatMessageMeta | null };
-        onMessageUpdated(next.id, next.content, next.metadata ?? null);
+        callbacksRef.current.onMessageUpdated(next.id, next.content, next.metadata ?? null);
       },
     );
 
@@ -140,7 +165,7 @@ export function useRealtimeChatSync({
       },
       (payload: { new: Record<string, unknown>; old: Record<string, unknown> }) => {
         if (!isMounted) return;
-        onChatroomPatched(payload.new as ChatroomPatch);
+        callbacksRef.current.onChatroomPatched(payload.new as ChatroomPatch);
       },
     );
 
@@ -164,25 +189,25 @@ export function useRealtimeChatSync({
 
         if (selfId && row.user_id === selfId) return;
 
-        onReactionChange(row.message_id, row.emoji, ev === "INSERT" ? 1 : -1);
+        callbacksRef.current.onReactionChange(row.message_id, row.emoji, ev === "INSERT" ? 1 : -1);
       },
     );
 
     // Personas UPDATE — avatar_url mis à jour
-    if (onPersonaUpdated) {
+    if (callbacksRef.current.onPersonaUpdated) {
       ch.on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "personas" },
         (payload: { new: Record<string, unknown> }) => {
           if (!isMounted) return;
           const row = payload.new as { id: string; avatar_url?: string | null };
-          if (row.id) onPersonaUpdated(row.id, row.avatar_url ?? null);
+          if (row.id) callbacksRef.current.onPersonaUpdated?.(row.id, row.avatar_url ?? null);
         },
       );
     }
 
     // Votes de choix INSERT / UPDATE (revote) / DELETE
-    if (onVoteChange) {
+    if (callbacksRef.current.onVoteChange) {
       ch.on(
         "postgres_changes",
         {
@@ -204,7 +229,7 @@ export function useRealtimeChatSync({
 
           if (selfId && row.user_id === selfId) return;
 
-          onVoteChange(
+          callbacksRef.current.onVoteChange?.(
             row.message_id,
             ev === "INSERT" ? null : (oldRow?.option_id ?? null),
             ev === "DELETE" ? null : (newRow?.option_id ?? null),
@@ -213,11 +238,18 @@ export function useRealtimeChatSync({
       );
     }
 
-    ch.subscribe();
+    (window as unknown as { __rtDebug: unknown[] }).__rtDebug ??= [];
+    ch.subscribe((status: string) => {
+      (window as unknown as { __rtDebug: unknown[] }).__rtDebug.push(status);
+    });
 
     return () => {
       isMounted = false;
       void supabase.removeChannel(ch);
     };
-  }, [chatId, supabase, selfId, onPersonaUpdated, onVoteChange, reconnectEpoch]); // eslint-disable-line react-hooks/exhaustive-deps
+    // onVoteChange/onPersonaUpdated délibérément absents des deps : seule leur
+    // présence (fournis ou non par l'appelant) compte pour construire les
+    // bindings, lue via callbacksRef au moment où l'effet tourne — pas leur
+    // identité de fonction, qui changerait à chaque rendu du parent.
+  }, [chatId, supabase, selfId, reconnectEpoch]); // eslint-disable-line react-hooks/exhaustive-deps
 }
