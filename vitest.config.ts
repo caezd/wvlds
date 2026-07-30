@@ -13,8 +13,10 @@ export default defineConfig({
     setupFiles: ["./vitest.setup.ts"],
     css: false,
     // Les specs Playwright vivent dans e2e/ et ne doivent pas être ramassées par Vitest.
+    // .claude/** exclut aussi les worktrees d'agents (ex. .claude/worktrees/**), qui
+    // contiennent leur propre copie de e2e/ non couverte par le pattern ci-dessus.
     include: ["**/*.{test,spec}.{ts,tsx}"],
-    exclude: ["node_modules/**", ".next/**", "e2e/**"],
+    exclude: ["node_modules/**", ".next/**", "e2e/**", ".claude/**"],
     coverage: {
       provider: "v8",
       reporter: ["text", "html"],
