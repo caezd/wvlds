@@ -30,7 +30,7 @@ export function WorldSidebarNavLink({
       prefetch={false}
       aria-current={isActive ? "page" : undefined}
       className={cn(
-        "flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm transition-colors hover:bg-hoverCard",
+        "flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm transition-colors hover:bg-hoverCard",
         isActive && "bg-hoverCard text-foreground",
       )}
     >

@@ -80,7 +80,7 @@ function RoomItem({
       href={`/c/${room.id}`}
       aria-current={isActive ? "page" : undefined}
       className={cn(
-        "flex items-center gap-2.5 rounded-xl px-2 py-1.5 text-sm transition-colors",
+        "flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm transition-colors",
         "hover:bg-hoverCard min-w-0",
         isActive ? "bg-hoverCard" : "",
       )}
@@ -271,7 +271,7 @@ export function WorldSidebarChatrooms({
         <div className="p-2">
           <button
             onClick={() => setSelectedCat(null)}
-            className="flex items-center gap-1.5 px-2 py-1.5 mb-2 text-xs text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-muted w-full"
+            className="flex items-center gap-1.5 px-2 py-1.5 mb-2 text-xs text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-muted w-full"
           >
             <ArrowLeft size={12} />
             {t("sidebar.back")}
@@ -351,7 +351,7 @@ export function WorldSidebarChatrooms({
                 <button
                   key={cat.id}
                   onClick={() => setSelectedCat(cat)}
-                  className="flex items-center gap-2.5 w-full rounded-md px-2 py-1.5 hover:bg-muted transition-colors text-left group"
+                  className="flex items-center gap-2.5 w-full rounded-lg px-2 py-1.5 hover:bg-muted transition-colors text-left group"
                 >
                   <CategoryAvatar
                     title={cat.title}
@@ -377,7 +377,7 @@ export function WorldSidebarChatrooms({
             {uncategorized.length > 0 && (
               <button
                 onClick={() => setSelectedCat({ id: "__uncategorized__", title: t("sidebar.general"), banner_url: null, icon_url: null, position: 9999 })}
-                className="flex items-center gap-2.5 w-full rounded-md px-2 py-1.5 hover:bg-muted transition-colors text-left group"
+                className="flex items-center gap-2.5 w-full rounded-lg px-2 py-1.5 hover:bg-muted transition-colors text-left group"
               >
                 <div className="h-9 w-9 shrink-0 rounded-lg bg-muted-foreground/10 flex items-center justify-center">
                   <span className="text-[11px] font-medium text-muted-foreground">G</span>

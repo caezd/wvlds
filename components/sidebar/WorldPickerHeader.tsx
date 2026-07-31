@@ -57,7 +57,7 @@ function WorldAvatar({ world, size = "sm" }: { world: WorldItem; size?: "sm" | "
   const px = size === "md" ? 36 : 24;
   const text = size === "md" ? "text-xs" : "text-[10px]";
   return world.icon_url ? (
-    <span className={cn(dim, "relative block rounded-md overflow-hidden shrink-0")}>
+    <span className={cn(dim, "relative block rounded-lg overflow-hidden shrink-0")}>
       <Image
         src={supabaseThumb(world.icon_url, 48) ?? world.icon_url}
         alt=""
@@ -67,7 +67,7 @@ function WorldAvatar({ world, size = "sm" }: { world: WorldItem; size?: "sm" | "
       />
     </span>
   ) : (
-    <span className={cn("flex shrink-0 items-center justify-center rounded-md font-semibold text-white", dim, text, color)}>
+    <span className={cn("flex shrink-0 items-center justify-center rounded-lg font-semibold text-white", dim, text, color)}>
       {initial}
     </span>
   );
@@ -145,7 +145,7 @@ export function WorldPickerHeader({
       <div ref={containerRef} className="relative">
         {/* Dropdown flottant */}
         {open && (
-          <div className="absolute top-full left-0 right-0 mt-1 overflow-hidden rounded-xl border border-border bg-background shadow-lg z-50">
+          <div className="absolute top-full left-0 right-0 mt-1 overflow-hidden rounded-lg border border-border bg-background shadow-lg z-50">
             <div className="px-1 py-1">
               {otherWorlds.length === 0 ? (
                 <p className="px-2 py-1.5 text-xs text-muted-foreground">Aucun autre monde</p>
@@ -217,7 +217,7 @@ export function WorldPickerHeader({
         {(() => {
           const trigger = (
             <div className={cn(
-              "flex items-center gap-1 rounded-xl p-1 transition-colors",
+              "flex items-center gap-1 rounded-lg p-1 transition-colors",
               open ? "bg-muted" : "hover:bg-muted/60",
             )}>
               <button
