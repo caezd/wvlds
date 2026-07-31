@@ -38,7 +38,7 @@ function AppShellInner({
   const { notifications: notifEnabled, direct_messages: dmsEnabled } = useFeatureFlags();
   const { panelOpen: dmsOpen, closePanel: closeDms } = useDms();
   const { panelOpen: notifOpen, closePanel: closeNotif } = useNotifications();
-  const { mobileSidebar, drawerOpen, setDrawerOpen } = useMobileSidebar();
+  const { mobileSidebar, drawerOpen, setDrawerOpen, hideMobileHeader } = useMobileSidebar();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
@@ -125,7 +125,7 @@ function AppShellInner({
 
       {/* Contenu principal */}
       <section id="app-shell" className="relative flex min-h-0 max-w-full flex-1 flex-col">
-        <header className={cn("lg:hidden flex h-12 shrink-0 items-center", (isChatRoute || hasWorldPanelHeader) && "hidden")}>
+        <header className={cn("lg:hidden flex h-12 shrink-0 items-center p-2", (isChatRoute || hasWorldPanelHeader || hideMobileHeader) && "hidden")}>
           <button
             type="button"
             onClick={() => setDrawerOpen(true)}

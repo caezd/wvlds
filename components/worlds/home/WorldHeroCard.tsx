@@ -13,6 +13,8 @@ import { type World } from "@/types/worlds";
 import { supabaseThumb } from "@/lib/storage";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
+import { useMobileSidebar } from "@/components/providers/MobileSidebarProvider";
+import { MobileDrawerOpenButton } from "@/components/sidebar/MobileDrawerOpenButton";
 
 type HeroWorld = World & { owner_id: string };
 
@@ -42,10 +44,18 @@ export function WorldHeroCard({
   const t = useTranslations("worlds");
   const [world, _setWorld] = useState(initialWorld);
   const [bannerThumbFailed, setBannerThumbFailed] = useState(false);
+  const { setHideMobileHeader } = useMobileSidebar();
 
   useEffect(() => {
     setBannerThumbFailed(false);
   }, [world.banner_url]);
+
+  // Plein écran : la bannière intègre son propre bouton menu (coin gauche),
+  // la barre mobile générique de AppShell devient redondante.
+  useEffect(() => {
+    setHideMobileHeader(isExpanded);
+    return () => setHideMobileHeader(false);
+  }, [isExpanded, setHideMobileHeader]);
 
   return (
     <section
@@ -83,6 +93,16 @@ export function WorldHeroCard({
         }
       />
 
+      {/* Menu mobile — uniquement en plein écran, où il remplace la barre générique */}
+      {isExpanded && (
+        <div className="absolute left-3 top-3 z-10">
+          <MobileDrawerOpenButton
+            className="flex h-8 w-8 items-center justify-center rounded-lg bg-black/40 transition-colors hover:bg-black/60 text-muted-foreground"
+            iconClassName="h-[15px] w-[15px]"
+          />
+        </div>
+      )}
+
       {/* Boutons superposés : favoris + plein écran */}
       {(onToggleFavorite || onToggleExpand) && (
         <div className="absolute right-3 top-3 flex items-center gap-1.5">
@@ -93,12 +113,15 @@ export function WorldHeroCard({
                   type="button"
                   onClick={onToggleFavorite}
                   aria-label={isFavorite ? t("hero.removeFavorite") : t("hero.addFavorite")}
-                  className="flex h-7 w-7 items-center justify-center rounded-full bg-black/40 transition-all hover:bg-black/60"
+                  className={cn(
+                    "flex h-8 w-8 items-center justify-center rounded-lg bg-black/40 transition-colors hover:bg-black/60",
+                    isFavorite ? "text-yellow-500" : "text-muted-foreground",
+                  )}
                 >
-                  <Star className={cn("h-3.5 w-3.5 transition-colors", isFavorite ? "fill-yellow-400 text-yellow-400" : "text-white/80")} />
+                  <Star size={15} className={isFavorite ? "fill-current" : ""} />
                 </button>
               </TooltipTrigger>
-              <TooltipContent side="left" sideOffset={6}>
+              <TooltipContent side="bottom" sideOffset={6}>
                 {isFavorite ? t("hero.removeFavorite") : t("hero.addFavorite")}
               </TooltipContent>
             </Tooltip>
@@ -110,12 +133,12 @@ export function WorldHeroCard({
                   type="button"
                   onClick={onToggleExpand}
                   aria-label={isExpanded ? t("hero.collapse") : t("hero.expand")}
-                  className="flex h-7 w-7 items-center justify-center rounded-full bg-black/40 text-white/80 transition-all hover:bg-black/60 hover:text-white"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg bg-black/40 transition-colors hover:bg-black/60 text-muted-foreground"
                 >
-                  {isExpanded ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+                  {isExpanded ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
                 </button>
               </TooltipTrigger>
-              <TooltipContent side="left" sideOffset={6}>
+              <TooltipContent side="bottom" sideOffset={6}>
                 {isExpanded ? t("hero.collapse") : t("hero.expand")}
               </TooltipContent>
             </Tooltip>
