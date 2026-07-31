@@ -85,7 +85,7 @@ export function ChatroomMessageBubble({
               )}
               style={color ? { backgroundColor: color + "33" } : undefined}
             >
-              {part.speech}
+              <MarkdownContent content={part.speech} />
             </div>
           </div>
         );
