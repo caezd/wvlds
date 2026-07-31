@@ -76,9 +76,9 @@ function ChatroomHeader({
             type="button"
             onClick={() => setDrawerOpen(true)}
             aria-label="Ouvrir le menu"
-            className="lg:hidden flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-hoverCard"
+            className="lg:hidden flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-hoverCard hover:text-foreground"
           >
-            <Menu className="h-5 w-5" />
+            <Menu className="h-4 w-4" />
           </button>
           {chat && (
             <>
@@ -829,7 +829,7 @@ export default function ChatRoomView({
                       aria-label={isFollowed ? t("unfollow") : t("follow")}
                       className={cn(
                         "flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-hoverCard",
-                        isFollowed ? "text-yellow-500" : "text-muted-foreground",
+                        isFollowed ? "text-yellow-500" : "text-muted-foreground hover:text-foreground",
                       )}
                     >
                       <Star

@@ -79,6 +79,7 @@ type Props = {
 
 export default function ChatroomSettingsSheet({ canEdit, chatroom, worldTimelineConfig, worldId }: Props) {
   const t = useTranslations("chatrooms");
+  const tCommon = useTranslations("common");
   const router = useRouter();
   const supabase = React.useMemo(() => createClient(), []);
 
@@ -274,14 +275,14 @@ export default function ChatroomSettingsSheet({ canEdit, chatroom, worldTimeline
             <SheetTrigger asChild>
               <button
                 type="button"
-                aria-label="Paramètres de la salle"
+                aria-label={tCommon("settings")}
                 className="flex h-9 w-9 items-center justify-center rounded-lg bg-background text-muted-foreground transition-colors hover:bg-hoverCard hover:text-foreground"
               >
                 <Settings className="h-4 w-4" />
               </button>
             </SheetTrigger>
           </TooltipTrigger>
-          <TooltipContent side="bottom" sideOffset={8}>Paramètres</TooltipContent>
+          <TooltipContent side="bottom" sideOffset={8}>{tCommon("settings")}</TooltipContent>
         </Tooltip>
       )}
 
