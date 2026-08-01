@@ -24,9 +24,9 @@ export default async function SidebarRail() {
     : null;
 
   return (
-    <div className="flex flex-col items-center h-full w-full gap-2 lg:py-3 min-h-0">
+    <div className="flex flex-col items-center h-full w-full gap-2 lg:py-2 min-h-0">
 
-      <div className="flex flex-col items-center w-full py-1.5 shrink-0">
+      <div className="flex flex-col items-center w-full shrink-0">
         <MobileMenuButton />
       </div>
 

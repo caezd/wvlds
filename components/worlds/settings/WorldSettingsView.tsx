@@ -36,7 +36,7 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
-import { MobileDrawerOpenButton } from "@/components/sidebar/MobileDrawerOpenButton";
+import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 import { ImagePickerCropField } from "@/components/ui/image-crop-picker";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -464,17 +464,15 @@ export function WorldSettingsView({ world, onUpdated, onClose }: WorldSettingsVi
 
     return (
         <div className="flex h-full w-full flex-col bg-background">
-            {/* Toolbar */}
-            <div className="flex shrink-0 items-center gap-3 border-b border-border-soft px-4 py-3">
-                <MobileDrawerOpenButton />
-                <Settings className="h-4 w-4 shrink-0 text-muted-foreground" />
-                <span className="text-sm font-semibold">Paramètres</span>
-                <div className="ml-auto">
+            <WorldPanelHeader
+                icon={<Settings className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                title="Paramètres"
+                right={
                     <Button size="icon" variant="ghost" onClick={onClose} aria-label="Fermer" className="rounded-lg hover:bg-hoverCard">
                         <X className="h-5 w-5" />
                     </Button>
-                </div>
-            </div>
+                }
+            />
 
             <Form {...form}>
                 <Tabs defaultValue="appearance" className="flex min-h-0 flex-1 flex-col">

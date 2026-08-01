@@ -49,7 +49,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
-import { MobileDrawerOpenButton } from "@/components/sidebar/MobileDrawerOpenButton";
+import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 
 const WIKI_NAV_MIN = 120;
 const WIKI_NAV_MAX = 360;
@@ -737,12 +737,15 @@ export function WorldWiki({
       />
 
       <div className="flex h-full min-h-0 flex-1 flex-col">
-        {/* ── Header ─────────────────────────────────────── */}
-        <div className="flex shrink-0 items-center gap-3 border-b border-border-soft px-4 py-3">
-          <MobileDrawerOpenButton />
-          <BookOpenText className="h-4 w-4 shrink-0 text-muted-foreground" />
-          <span className="text-sm font-semibold">Wiki</span>
-
+        <WorldPanelHeader
+          icon={<BookOpenText className="h-4 w-4 shrink-0 text-muted-foreground" />}
+          title="Wiki"
+          right={
+            <Button size="icon" variant="ghost" onClick={onClose} aria-label={t("closeWiki")} className="rounded-lg hover:bg-hoverCard">
+              <X className="h-5 w-5" />
+            </Button>
+          }
+        >
           {canEdit && (
             <button
               type="button"
@@ -777,13 +780,7 @@ export function WorldWiki({
               </button>
             </div>
           )}
-
-          <div className="ml-auto">
-            <Button size="icon" variant="ghost" onClick={onClose} aria-label={t("closeWiki")} className="rounded-lg hover:bg-hoverCard">
-              <X className="h-5 w-5" />
-            </Button>
-          </div>
-        </div>
+        </WorldPanelHeader>
 
         {/* ── Body ───────────────────────────────────────── */}
         <div className="flex min-h-0 flex-1">

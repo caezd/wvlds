@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { getInitials } from "@/lib/textFormatting";
-import { MobileDrawerOpenButton } from "@/components/sidebar/MobileDrawerOpenButton";
+import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 import {
   Dialog,
   DialogContent,
@@ -915,17 +915,31 @@ export function RelationsCanvas({ worldId, userId, canAdmin, onClose }: Relation
   return (
     <div className="flex h-full w-full flex-col bg-background">
 
-      {/* ── Toolbar ── */}
-      <div className="flex shrink-0 items-center gap-3 border-b border-border-soft px-4 py-3">
-        <MobileDrawerOpenButton />
-        <Network className="h-4 w-4 shrink-0 text-muted-foreground" />
-        <span className="text-sm font-semibold">{t("title")}</span>
-
+      <WorldPanelHeader
+        icon={<Network className="h-4 w-4 shrink-0 text-muted-foreground" />}
+        title={t("title")}
+        right={
+          <>
+            {canAdmin && (
+              <CanvasSettingsDialog
+                worldId={worldId}
+                groups={groups}
+                relTypes={relTypes}
+                onGroupsChange={setGroups}
+                onRelTypesChange={setRelTypes}
+              />
+            )}
+            <Button size="icon" variant="ghost" onClick={onClose} aria-label={tCommon("close")} className="rounded-lg hover:bg-hoverCard">
+              <X className="h-5 w-5" />
+            </Button>
+          </>
+        }
+      >
         <button
           type="button"
           onClick={() => { setConnectMode((v) => !v); cancelConnect(); }}
           className={cn(
-            "ml-2 flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+            "flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
             connectMode
               ? "border-indigo-500/40 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400"
               : "border-border-soft bg-background text-muted-foreground hover:bg-secondary",
@@ -941,22 +955,7 @@ export function RelationsCanvas({ worldId, userId, canAdmin, onClose }: Relation
             <button onClick={cancelConnect}><X className="h-3 w-3" /></button>
           </span>
         )}
-
-        <div className="ml-auto flex items-center gap-2">
-          {canAdmin && (
-            <CanvasSettingsDialog
-              worldId={worldId}
-              groups={groups}
-              relTypes={relTypes}
-              onGroupsChange={setGroups}
-              onRelTypesChange={setRelTypes}
-            />
-          )}
-          <Button size="icon" variant="ghost" onClick={onClose} aria-label={tCommon("close")} className="rounded-lg hover:bg-hoverCard">
-            <X className="h-5 w-5" />
-          </Button>
-        </div>
-      </div>
+      </WorldPanelHeader>
 
       {/* ── Main area: aside + canvas ── */}
       <div className="flex min-h-0 flex-1">

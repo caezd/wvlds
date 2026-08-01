@@ -102,8 +102,8 @@ function AppShellInner({
           <div className="flex h-full overflow-hidden">
             {/* Rail d'icônes */}
             <div className={cn(
-              "w-14 shrink-0 flex flex-col overflow-y-auto py-3",
-              (anyPanelOpen || mobileSidebar) && "border-r border-border-soft",
+              "w-14 shrink-0 flex flex-col overflow-y-auto py-2",
+              (anyPanelOpen || mobileSidebar) && "border-r",
             )}>
               {rail}
             </div>

@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { X, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { MobileDrawerOpenButton } from "@/components/sidebar/MobileDrawerOpenButton";
+import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
 
 type TimelineRoom = {
@@ -69,20 +69,18 @@ export function WorldTimeline({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-border-soft px-5 py-3">
-        <div className="flex items-center gap-2">
-          <MobileDrawerOpenButton />
-          <h2 className="text-sm font-semibold">Chronologie</h2>
-        </div>
-        <button
-          type="button"
-          onClick={onClose}
-          className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-        >
-          <X className="h-4 w-4" />
-        </button>
-      </div>
+      <WorldPanelHeader
+        title="Chronologie"
+        right={
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        }
+      />
 
       <div className="flex-1 overflow-y-auto px-5 py-5 space-y-8">
         {years.map(year => {

@@ -30,7 +30,7 @@ import { cn } from "@/lib/utils";
 import { toWebP } from "@/lib/imageUtils";
 import { supabaseThumb } from "@/lib/storage";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
-import { MobileDrawerOpenButton } from "@/components/sidebar/MobileDrawerOpenButton";
+import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 import {
   createMapPin,
   deleteMapPin,
@@ -1155,12 +1155,15 @@ export function WorldMap({
         if (selectedPin) { setSelectedPin(null); setPopoverPos(null); }
       }}
     >
-      {/* ── Header ─────────────────────────────────────────────── */}
-      <div className="flex shrink-0 items-center gap-3 border-b border-border-soft px-4 py-3">
-        <MobileDrawerOpenButton />
-        <Map className="h-4 w-4 shrink-0 text-muted-foreground" />
-        <span className="text-sm font-semibold">{t("title")}</span>
-
+      <WorldPanelHeader
+        icon={<Map className="h-4 w-4 shrink-0 text-muted-foreground" />}
+        title={t("title")}
+        right={
+          <Button size="icon" variant="ghost" onClick={onClose} aria-label={t("closeMap")} className="rounded-lg hover:bg-hoverCard">
+            <X className="h-5 w-5" />
+          </Button>
+        }
+      >
         {canEdit && (
           <>
             <button
@@ -1193,13 +1196,7 @@ export function WorldMap({
             )}
           </>
         )}
-
-        <div className="ml-auto">
-          <Button size="icon" variant="ghost" onClick={onClose} aria-label={t("closeMap")} className="rounded-lg hover:bg-hoverCard">
-            <X className="h-5 w-5" />
-          </Button>
-        </div>
-      </div>
+      </WorldPanelHeader>
 
       {/* ── Corps ──────────────────────────────────────────────── */}
       <div className="relative flex min-h-0 flex-1 overflow-hidden">

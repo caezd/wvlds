@@ -8,7 +8,7 @@ import { Users } from "lucide-react";
 import { supabaseThumb } from "@/lib/storage";
 import { cn } from "@/lib/utils";
 import { getLeadingLetter } from "@/lib/textFormatting";
-import { MobileDrawerOpenButton } from "@/components/sidebar/MobileDrawerOpenButton";
+import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 
 const WorldInviteDialog = dynamic(() => import("./WorldInviteDialog").then((m) => m.WorldInviteDialog));
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -252,17 +252,11 @@ export function WorldMembersPanel({
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
-      {/* Header */}
-      <div className="flex shrink-0 items-center gap-3 border-b border-border-soft px-4 py-3">
-        <MobileDrawerOpenButton />
-        <Users className="h-4 w-4 shrink-0 text-muted-foreground" />
-        <span className="text-sm font-semibold">Membres</span>
-        {isShared && canManage && (
-          <div className="ml-auto">
-            <WorldInviteDialog worldId={worldId} ownerId={ownerId} canManage={canManage} />
-          </div>
-        )}
-      </div>
+      <WorldPanelHeader
+        icon={<Users className="h-4 w-4 shrink-0 text-muted-foreground" />}
+        title="Membres"
+        right={isShared && canManage && <WorldInviteDialog worldId={worldId} ownerId={ownerId} canManage={canManage} />}
+      />
 
       <ScrollArea className="flex-1 min-h-0">
         <div className="px-6 py-6">

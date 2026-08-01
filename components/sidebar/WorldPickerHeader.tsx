@@ -53,7 +53,7 @@ function worldColor(name: string) {
 function WorldAvatar({ world, size = "sm" }: { world: WorldItem; size?: "sm" | "md" }) {
   const initial = (world.name[0] ?? "W").toUpperCase();
   const color = worldColor(world.name);
-  const dim = size === "md" ? "h-9 w-9" : "h-6 w-6";
+  const dim = size === "md" ? "h-8 w-8" : "h-6 w-6";
   const px = size === "md" ? 36 : 24;
   const text = size === "md" ? "text-xs" : "text-[10px]";
   return world.icon_url ? (
@@ -141,7 +141,7 @@ export function WorldPickerHeader({
   const otherWorlds = worlds.filter((w) => w.id !== currentWorldId);
 
   return (
-    <div className="shrink-0 border-b border-border-soft pb-3">
+    <div className="shrink-0 border-b px-2 py-1 h-header-height flex flex-col justify-center min-w-0">
       <div ref={containerRef} className="relative">
         {/* Dropdown flottant */}
         {open && (
@@ -217,8 +217,7 @@ export function WorldPickerHeader({
         {(() => {
           const trigger = (
             <div className={cn(
-              "flex items-center gap-1 rounded-lg p-1 transition-colors",
-              open ? "bg-muted" : "hover:bg-muted/60",
+              "flex items-center gap-1 rounded-lg transition-colors"
             )}>
               <button
                 type="button"

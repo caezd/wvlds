@@ -133,7 +133,7 @@ export default async function WorldSidebar({ worldId }: { worldId: string }) {
   }
 
   const navLinks = (
-    <div className="border-b py-3 mb-3">
+    <div className="border-b py-1 px-2 flex flex-col gap-0.5">
       <WorldSidebarNavLink href={`${worldBase}`} icon={<Home size={14} />} label={t("nav.home")} />
       <WorldSidebarNavLink href={`${worldBase}?view=members`} icon={<Users size={14} />} label={t("nav.members")} />
       <WorldSidebarNavLink href={`${worldBase}?view=personas`} icon={<Drama size={14} />} label={t("nav.personas")} />
@@ -178,7 +178,7 @@ export default async function WorldSidebar({ worldId }: { worldId: string }) {
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="hidden lg:flex w-60 shrink-0 flex-col overflow-hidden border-r border-border-soft p-2">
+      <aside className="hidden lg:flex w-60 shrink-0 flex-col overflow-hidden border-r border-border-soft">
         {pickerHeader}
         {navLinks}
         {chatrooms}
@@ -186,7 +186,7 @@ export default async function WorldSidebar({ worldId }: { worldId: string }) {
 
       {/* Mobile: injecte la nav monde dans le drawer global */}
       <MobileSidebarSlot>
-        <div className="flex flex-col h-full overflow-hidden p-2">
+        <div className="flex flex-col h-full overflow-hidden">
           {pickerHeader}
           {navLinks}
           {chatrooms}

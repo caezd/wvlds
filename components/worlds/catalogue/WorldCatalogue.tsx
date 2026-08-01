@@ -59,7 +59,7 @@ import {
   batchUpdateCatalogItemOrder,
 } from "@/app/actions/worldCatalog";
 import type { WorldInventoryItem, WorldSkill, WorldCatalogCategory } from "@/types/worlds";
-import { MobileDrawerOpenButton } from "@/components/sidebar/MobileDrawerOpenButton";
+import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 
 type CatalogType = "inventory" | "skills";
 type CatalogItem = (WorldInventoryItem | WorldSkill) & { category_id: string | null };
@@ -1308,11 +1308,15 @@ export function WorldCatalogue({ worldId, canEdit, inventoryEnabled, inventoryRe
 
   return (
     <div className="flex h-full w-full flex-col bg-background">
-      {/* Toolbar */}
-      <div className="flex shrink-0 items-center gap-3 border-b border-border-soft px-4 py-3">
-        <MobileDrawerOpenButton />
-        <Library className="h-4 w-4 shrink-0 text-muted-foreground" />
-        <span className="text-sm font-semibold">{t("title")}</span>
+      <WorldPanelHeader
+        icon={<Library className="h-4 w-4 shrink-0 text-muted-foreground" />}
+        title={t("title")}
+        right={
+          <Button size="icon" variant="ghost" onClick={onClose} aria-label={tCommon("close")} className="rounded-lg hover:bg-hoverCard">
+            <X className="h-5 w-5" />
+          </Button>
+        }
+      >
         {canEdit && (
           <button
             type="button"
@@ -1328,12 +1332,7 @@ export function WorldCatalogue({ worldId, canEdit, inventoryEnabled, inventoryRe
             {editMode ? t("editingActive") : tCommon("edit")}
           </button>
         )}
-        <div className="ml-auto">
-          <Button size="icon" variant="ghost" onClick={onClose} aria-label={tCommon("close")} className="rounded-lg hover:bg-hoverCard">
-            <X className="h-5 w-5" />
-          </Button>
-        </div>
-      </div>
+      </WorldPanelHeader>
 
       {/* Body — always show both tabs for editors */}
       <Tabs defaultValue={defaultTab} className="flex min-h-0 flex-1 flex-col">

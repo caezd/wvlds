@@ -8,8 +8,8 @@ import { useMobileSidebar } from "@/components/providers/MobileSidebarProvider";
 // des vues qui ont leur propre header — évite la barre générique redondante de
 // AppShell (cf. isChatRoute / hasWorldPanelHeader dans AppShell.tsx).
 export function MobileDrawerOpenButton({
-  className = "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-hoverCard",
-  iconClassName = "h-5 w-5",
+  className = "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-hoverCard hover:text-foreground",
+  iconClassName = "h-4 w-4",
 }: {
   className?: string;
   iconClassName?: string;

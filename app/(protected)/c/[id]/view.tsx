@@ -83,7 +83,7 @@ function ChatroomHeader({
           {chat && (
             <>
               {/* Breadcrumbs : retour au monde / conversations */}
-              <div className="flex min-w-0 items-center gap-0.5 px-1">
+              <div className="flex min-w-0 items-center gap-0.5">
                 {world && (
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -113,7 +113,7 @@ function ChatroomHeader({
           )}
         </div>
         {rightSlot && (
-          <div className="flex shrink-0 items-center gap-1 pr-1">
+          <div className="flex shrink-0 items-center gap-0.5">
             {rightSlot}
           </div>
         )}

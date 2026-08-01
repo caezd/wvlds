@@ -8,7 +8,7 @@ import { getInitials } from "@/lib/textFormatting";
 import { PersonaCard } from "./PersonaCard";
 import { PersonaCreateSheet } from "./PersonaCreateSheet";
 import { PersonaProfileSheetTrigger } from "./PersonaProfileSheetTrigger";
-import { MobileDrawerOpenButton } from "@/components/sidebar/MobileDrawerOpenButton";
+import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { AsidePersona } from "./WorldPersonaAsideClient";
 
@@ -149,17 +149,17 @@ export function WorldPersonasPanel({
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
-      {/* Header */}
-      <div className="flex shrink-0 items-center gap-3 border-b border-border-soft px-4 py-3">
-        <MobileDrawerOpenButton />
-        <Drama className="h-4 w-4 shrink-0 text-muted-foreground" />
-        <span className="text-sm font-semibold">
-          Personas
-          {mine.length + otherTotal > 0 && (
-            <span className="ml-1.5 text-xs font-normal text-muted-foreground">{mine.length + otherTotal}</span>
-          )}
-        </span>
-        <div className="ml-auto">
+      <WorldPanelHeader
+        icon={<Drama className="h-4 w-4 shrink-0 text-muted-foreground" />}
+        title={
+          <>
+            Personas
+            {mine.length + otherTotal > 0 && (
+              <span className="ml-1.5 text-xs font-normal text-muted-foreground">{mine.length + otherTotal}</span>
+            )}
+          </>
+        }
+        right={
           <PersonaCreateSheet
             worldId={worldId}
             restrictInventory={restrictInventory}
@@ -174,8 +174,8 @@ export function WorldPersonasPanel({
               </button>
             }
           />
-        </div>
-      </div>
+        }
+      />
 
       <ScrollArea className="flex-1 min-h-0">
         <div className="space-y-8 px-6 py-6">
