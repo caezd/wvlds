@@ -5,6 +5,22 @@ export type ChangelogEntry = {
 };
 
 export const CHANGELOG: ChangelogEntry[] = [
+  // ── 2026-08 ──────────────────────────────────────────────────────────────
+  {
+    date: "2026-08",
+    tag: "Correctif",
+    text: "Le texte d'une bulle de dialogue (mode « dialogues en bulles ») ignorait le markdown : **gras**, *italique*, etc. restaient affichés tels quels au lieu d'être interprétés. Corrigé.",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
+    text: "Sur mobile, le bouton menu s'intègre désormais directement dans l'en-tête de chaque page d'un monde (Membres, Personas, Wiki, Catalogue, Carte, Chronologie, Relations, Paramètres) et dans la bannière d'accueil en plein écran, au lieu d'une barre séparée au-dessus.",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
+    text: "Cohérence visuelle : rayons d'arrondi uniformisés (`rounded-lg`) dans la sidebar d'un monde, boutons du header de chatroom alignés en taille et en couleur.",
+  },
   // ── 2026-07 ──────────────────────────────────────────────────────────────
   {
     date: "2026-07",
