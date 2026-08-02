@@ -12,6 +12,7 @@ type NavRoom = {
   name: string | null;
   icon_url: string | null;
   last_message_at: string | null;
+  last_poster_avatar_url: string | null;
   unread_count: number;
   category_id: string | null;
   timeline_date?: { year: number; month: number | null; day: number | null } | null;
