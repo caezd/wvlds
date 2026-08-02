@@ -75,15 +75,31 @@ type Props = {
   };
   worldTimelineConfig?: WorldTimelineConfig | null;
   worldId?: string | null;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  hideTrigger?: boolean;
 };
 
-export default function ChatroomSettingsSheet({ canEdit, chatroom, worldTimelineConfig, worldId }: Props) {
+export default function ChatroomSettingsSheet({
+  canEdit,
+  chatroom,
+  worldTimelineConfig,
+  worldId,
+  open: controlledOpen,
+  onOpenChange,
+  hideTrigger = false,
+}: Props) {
   const t = useTranslations("chatrooms");
   const tCommon = useTranslations("common");
   const router = useRouter();
   const supabase = React.useMemo(() => createClient(), []);
 
-  const [open, setOpen] = React.useState(false);
+  const [internalOpen, setInternalOpen] = React.useState(false);
+  const open = controlledOpen ?? internalOpen;
+  function setOpen(v: boolean) {
+    setInternalOpen(v);
+    onOpenChange?.(v);
+  }
   const [uploading, setUploading] = React.useState<"icon" | "banner" | null>(null);
   const [deleting, setDeleting] = React.useState(false);
   const [timelineDate, setTimelineDate] = React.useState<WorldTimelineDate | null>(chatroom.timeline_date ?? null);
@@ -269,7 +285,7 @@ export default function ChatroomSettingsSheet({ canEdit, chatroom, worldTimeline
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      {canShow && (
+      {!hideTrigger && canShow && (
         <Tooltip>
           <TooltipTrigger asChild>
             <SheetTrigger asChild>

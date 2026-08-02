@@ -123,14 +123,25 @@ function MsgBadge({ count }: { count: number }) {
 export default function ChatroomStatsSheet({
   chatId,
   initialStats,
+  open: controlledOpen,
+  onOpenChange,
+  hideTrigger = false,
 }: {
   chatId: string;
   initialStats?: ChatroomStatsPayload | null;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  hideTrigger?: boolean;
 }) {
   const t = useTranslations("chatrooms");
   const supabase = createClient();
   const reconnectEpoch = useReconnectEpoch();
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen ?? internalOpen;
+  function setOpen(v: boolean) {
+    setInternalOpen(v);
+    onOpenChange?.(v);
+  }
   const [_loading, setLoading] = useState(false);
   const [stats, setStats] = useState<ChatroomStatsPayload | null>(initialStats ?? null);
   const [personas, setPersonas] = useState<StatsPersona[]>([]);
@@ -178,19 +189,21 @@ export default function ChatroomStatsSheet({
 
   return (
     <>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <button
-            type="button"
-            onClick={() => setOpen(true)}
-            aria-label={t("statsTitle")}
-            className="flex h-9 w-9 items-center justify-center rounded-lg bg-background text-muted-foreground transition-colors hover:bg-hoverCard hover:text-foreground"
-          >
-            <BarChart3 className="h-4 w-4" />
-          </button>
-        </TooltipTrigger>
-        <TooltipContent side="bottom" sideOffset={8}>{t("statsTitle")}</TooltipContent>
-      </Tooltip>
+      {!hideTrigger && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              onClick={() => setOpen(true)}
+              aria-label={t("statsTitle")}
+              className="flex h-9 w-9 items-center justify-center rounded-lg bg-background text-muted-foreground transition-colors hover:bg-hoverCard hover:text-foreground"
+            >
+              <BarChart3 className="h-4 w-4" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" sideOffset={8}>{t("statsTitle")}</TooltipContent>
+        </Tooltip>
+      )}
 
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-lg">
