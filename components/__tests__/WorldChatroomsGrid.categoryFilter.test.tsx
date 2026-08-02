@@ -92,9 +92,9 @@ describe("WorldChatroomsGrid — sous-titre et avatar du dernier auteur", () => 
   });
 
   it("affiche toujours l'heure relative, jamais un extrait du message", () => {
-    const room = makeRoom({ last_message_at: new Date().toISOString() });
+    const room = makeRoom({ last_message_at: new Date(Date.now() - 61 * 60_000).toISOString() });
     render(<WorldChatroomsGrid worldId="world-1" initialRooms={[room]} categoryId={null} />);
-    expect(screen.getByText("À l'instant")).toBeInTheDocument();
+    expect(screen.getByText("Il y a 1 h")).toBeInTheDocument();
   });
 
   it("superpose l'avatar du dernier auteur sur l'icône quand il est connu", () => {
