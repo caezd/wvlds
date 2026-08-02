@@ -7,7 +7,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import dynamic from "next/dynamic";
 import { decryptMessage, generateRoomKey } from "@/lib/crypto";
 import Link from "next/link";
-import { Globe, GlobeLock, Menu, Star } from "lucide-react";
+import { BarChart3, Globe, GlobeLock, Menu, MoreVertical, Settings, Star } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toggleFollowChatroom } from "@/app/(protected)/w/actions";
 import { cn } from "@/lib/utils";
@@ -15,6 +15,12 @@ import { toast } from "sonner";
 
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import ChatroomSettingsSheet from "@/components/chatrooms/settings/ChatroomSettingsSheet";
 const ChatroomStatsSheet = dynamic(() => import("@/components/chatrooms/settings/ChatroomStatsSheet"));
 import { ScrollAreaWithJumpToBottom } from "@/components/ScrollAreaWithJumpToBottom";
@@ -171,6 +177,7 @@ export default function ChatRoomView({
   initialIsFollowed: boolean;
 }) {
   const t = useTranslations("chatrooms");
+  const tCommon = useTranslations("common");
   const supabase = useMemo(() => createClient(), []);
   const reconnectEpoch = useReconnectEpoch();
   const router = useRouter();
@@ -179,6 +186,8 @@ export default function ChatRoomView({
   const { setActiveWorldId } = useMobileSidebar();
 
   const [isFollowed, setIsFollowed] = useState(initialIsFollowed);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [statsOpen, setStatsOpen] = useState(false);
 
   async function handleToggleFollow() {
     const next = !isFollowed;
@@ -816,6 +825,11 @@ export default function ChatRoomView({
     />
   );
 
+  // Reflète la garde interne de ChatroomSettingsSheet (canShow) — désormais
+  // aussi décidée ici puisque son trigger est masqué (hideTrigger) et
+  // remplacé par les boutons/menu ci-dessous.
+  const canShowSettings = canEdit && messages.length > 0;
+
   return (
     <div className="composer-parent flex flex-row focus-visible:outline-0 h-full min-w-0 flex-1 gap-3">
       <WorldMembershipGuard
@@ -829,28 +843,91 @@ export default function ChatRoomView({
           rooms={initialChatrooms}
           rightSlot={
             <>
-              {selfId && (
+              {/* Desktop : icônes individuelles */}
+              <div className="hidden lg:flex items-center gap-0.5">
+                {selfId && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={() => void handleToggleFollow()}
+                        aria-label={isFollowed ? t("unfollow") : t("follow")}
+                        className={cn(
+                          "flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-hoverCard",
+                          isFollowed ? "text-yellow-500" : "text-muted-foreground hover:text-foreground",
+                        )}
+                      >
+                        <Star size={15} className={isFollowed ? "fill-current" : ""} />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" sideOffset={8}>
+                      {isFollowed ? t("unfollow") : t("follow")}
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+                {canShowSettings && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={() => setSettingsOpen(true)}
+                        aria-label={tCommon("settings")}
+                        className="flex h-9 w-9 items-center justify-center rounded-lg bg-background text-muted-foreground transition-colors hover:bg-hoverCard hover:text-foreground"
+                      >
+                        <Settings className="h-4 w-4" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" sideOffset={8}>{tCommon("settings")}</TooltipContent>
+                  </Tooltip>
+                )}
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <button
-                      onClick={() => void handleToggleFollow()}
-                      aria-label={isFollowed ? t("unfollow") : t("follow")}
-                      className={cn(
-                        "flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-hoverCard",
-                        isFollowed ? "text-yellow-500" : "text-muted-foreground hover:text-foreground",
-                      )}
+                      type="button"
+                      onClick={() => setStatsOpen(true)}
+                      aria-label={t("statsTitle")}
+                      className="flex h-9 w-9 items-center justify-center rounded-lg bg-background text-muted-foreground transition-colors hover:bg-hoverCard hover:text-foreground"
                     >
-                      <Star
-                        size={15}
-                        className={isFollowed ? "fill-current" : ""}
-                      />
+                      <BarChart3 className="h-4 w-4" />
                     </button>
                   </TooltipTrigger>
-                  <TooltipContent side="bottom" sideOffset={8}>
-                    {isFollowed ? t("unfollow") : t("follow")}
-                  </TooltipContent>
+                  <TooltipContent side="bottom" sideOffset={8}>{t("statsTitle")}</TooltipContent>
                 </Tooltip>
-              )}
+              </div>
+
+              {/* Mobile : menu "…" (mêmes options, regroupées) */}
+              <div className="flex lg:hidden">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      aria-label={t("actions")}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-hoverCard hover:text-foreground"
+                    >
+                      <MoreVertical className="h-4 w-4" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {selfId && (
+                      <DropdownMenuItem onClick={() => void handleToggleFollow()}>
+                        <Star className={cn("mr-2 h-3.5 w-3.5", isFollowed && "fill-current text-yellow-500")} />
+                        {isFollowed ? t("unfollow") : t("follow")}
+                      </DropdownMenuItem>
+                    )}
+                    {canShowSettings && (
+                      <DropdownMenuItem onClick={() => setSettingsOpen(true)}>
+                        <Settings className="mr-2 h-3.5 w-3.5" />
+                        {tCommon("settings")}
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuItem onClick={() => setStatsOpen(true)}>
+                      <BarChart3 className="mr-2 h-3.5 w-3.5" />
+                      {t("statsTitle")}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+
               <ChatroomSettingsSheet
                 canEdit={canEdit}
                 chatroom={{
@@ -865,8 +942,11 @@ export default function ChatRoomView({
                 }}
                 worldTimelineConfig={chat.worlds?.timeline_config ?? null}
                 worldId={chat.worlds?.id ?? null}
+                hideTrigger
+                open={settingsOpen}
+                onOpenChange={setSettingsOpen}
               />
-              <ChatroomStatsSheet chatId={chatId} />
+              <ChatroomStatsSheet chatId={chatId} hideTrigger open={statsOpen} onOpenChange={setStatsOpen} />
             </>
           }
         />

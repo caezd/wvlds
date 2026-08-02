@@ -26,6 +26,11 @@ export const CHANGELOG: ChangelogEntry[] = [
     tag: "Mondes",
     text: "Le menu mobile affiche désormais un rail avec les icônes de tous vos mondes rejoints, entre le rail d'icônes et la navigation du monde : un tap suffit pour changer de monde, avec une pastille de non-lu superposée sur l'icône si du contenu vous attend. Toujours visible, y compris hors d'un monde et dans une chatroom ; masqué le temps qu'un panneau (messages privés, notifications) occupe l'espace. Le bouton **Monde** de l'ancien rail d'icônes, devenu redondant sur mobile, n'y apparaît plus (conservé sur le rail permanent desktop).",
   },
+  {
+    date: "2026-08",
+    tag: "Interface",
+    text: "Sur mobile, les actions de l'en-tête d'une chatroom (suivre, paramètres, statistiques) sont regroupées dans un menu **⋮** au lieu de trois icônes séparées, pour laisser plus de place au fil de discussion.",
+  },
   // ── 2026-07 ──────────────────────────────────────────────────────────────
   {
     date: "2026-07",
