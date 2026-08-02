@@ -7,7 +7,7 @@ import { AvatarWithFrame } from "@/components/avatars/AvatarWithFrame";
 import type { ChatPin, ChatMessageWithPersona } from "@/types/db";
 import DateDisplay from "@/components/date-display";
 
-function excerpt(content: string | null | undefined, max = 60): string {
+export function excerpt(content: string | null | undefined, max = 60): string {
   if (!content) return "";
   if (content.startsWith("{")) return "";
   return content.length > max ? content.slice(0, max).trimEnd() + "…" : content;
@@ -20,7 +20,7 @@ function tickWidth(text: string, hovered: boolean): number {
   return hovered ? Math.min(base + HOVER_BONUS, MAX + HOVER_BONUS) : base;
 }
 
-function PinCard({
+export function PinCard({
   pin,
   message,
   highlighted,
@@ -107,7 +107,9 @@ export function PinBar({
 
   return (
     // pointer-events-none sur le container pour ne pas bloquer le scroll sous la zone vide
-    <div className="absolute right-2 top-0 bottom-0 flex items-center z-20 pointer-events-none">
+    // Masqué en dessous de lg : sur écran réduit, les tirets se superposent au texte des
+    // messages et deviennent inaccessibles — la liste des épingles passe par PinsSheet (menu "…").
+    <div className="hidden lg:flex absolute right-2 top-0 bottom-0 items-center z-20 pointer-events-none">
       {/* Popover de cartes — apparaît à gauche de la barre sur survol */}
       <div
         onMouseEnter={onEnter}

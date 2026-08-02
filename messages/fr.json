@@ -580,6 +580,8 @@
     "diceCritical": "Critique !",
     "diceFumble": "Fumble…",
     "pinned": "Épinglé",
+    "pinsTitle": "Épingles",
+    "pinsEmpty": "Aucun message épinglé.",
     "addReaction": "Ajouter une réaction",
     "cancelEdit": "Annuler",
     "saveEdit": "Enregistrer",

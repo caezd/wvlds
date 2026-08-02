@@ -575,6 +575,8 @@
     "diceCritical": "¡Crítico!",
     "diceFumble": "Pifia…",
     "pinned": "Fijado",
+    "pinsTitle": "Fijados",
+    "pinsEmpty": "Ningún mensaje fijado.",
     "addReaction": "Añadir una reacción",
     "cancelEdit": "Cancelar",
     "saveEdit": "Guardar",

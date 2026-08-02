@@ -7,7 +7,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import dynamic from "next/dynamic";
 import { decryptMessage, generateRoomKey } from "@/lib/crypto";
 import Link from "next/link";
-import { BarChart3, Globe, GlobeLock, Menu, MoreVertical, Settings, Star } from "lucide-react";
+import { BarChart3, Globe, GlobeLock, Menu, MoreVertical, Pin, Settings, Star } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toggleFollowChatroom } from "@/app/(protected)/w/actions";
 import { cn } from "@/lib/utils";
@@ -53,6 +53,7 @@ import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import { useMobileSidebar } from "@/components/providers/MobileSidebarProvider";
 import { useChatPins } from "@/hooks/useChatPins";
 import { PinBar } from "@/components/chatrooms/message/PinBar";
+import { PinsSheet } from "@/components/chatrooms/message/PinsSheet";
 
 export type { Persona, ChatMessageWithPersona, ReactionSummary } from "@/types/db";
 export type { ChatroomNavItem } from "@/components/worlds/chatrooms/WorldChatroomsAside";
@@ -188,6 +189,7 @@ export default function ChatRoomView({
   const [isFollowed, setIsFollowed] = useState(initialIsFollowed);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [statsOpen, setStatsOpen] = useState(false);
+  const [pinsOpen, setPinsOpen] = useState(false);
 
   async function handleToggleFollow() {
     const next = !isFollowed;
@@ -392,6 +394,7 @@ export default function ChatRoomView({
     loadingOlderRef.current = false;
     setLoadingOlder(false);
     scrollAdjustRef.current = null;
+    setPinnedMessagesExtra([]);
 
     // Réinitialise la clé quand on change de chatroom
     roomKeyRef.current = initialChatroomKey;
@@ -675,6 +678,46 @@ export default function ChatRoomView({
 
   const { pins, pin, pinAnchor, unpin, updatePinLabel, pinByMessageId } = useChatPins(chatId);
 
+  // Messages épinglés situés hors de la fenêtre de pagination chargée (historique
+  // trop ancien) : récupérés à part pour que PinBar/PinsSheet affichent bien leur
+  // contenu au lieu d'une carte vide.
+  const [pinnedMessagesExtra, setPinnedMessagesExtra] = useState<ChatMessageWithPersona[]>([]);
+  useEffect(() => {
+    const loadedIds = new Set(messages.map((m) => m.id));
+    const cachedIds = new Set(pinnedMessagesExtra.map((m) => m.id));
+    const missing = [...new Set(
+      pins
+        .map((p) => p.message_id)
+        .filter((id): id is number => id !== null && !loadedIds.has(id) && !cachedIds.has(id)),
+    )];
+    if (!missing.length) return;
+    void (async () => {
+      const { data } = await supabase
+        .from(TABLE.CHAT_MESSAGES)
+        .select(
+          "id, chat_id, content, author_id, created_at, metadata, visible_to, persona:personas(id, user_id, name, avatar_url, frame:avatar_frame_id(asset_url)), author:profiles(avatar_url, username)",
+        )
+        .in("id", missing);
+      if (!data) return;
+      const key = roomKeyRef.current;
+      const decrypted = await Promise.all(
+        (data as unknown as ChatMessageWithPersona[]).map(async (m) => ({
+          ...m,
+          content: key ? await decryptMessage(m.content ?? "", key) : (m.content ?? ""),
+        })),
+      );
+      setPinnedMessagesExtra((prev) => [...prev, ...decrypted]);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pins, messages, roomKey, pinnedMessagesExtra]);
+
+  // Messages disponibles pour l'affichage des épingles : la liste chargée
+  // prévaut sur le cache (un message peut finir par charger via la pagination).
+  const pinsDisplayMessages = useMemo(
+    () => [...pinnedMessagesExtra, ...messages],
+    [pinnedMessagesExtra, messages],
+  );
+
   // Scroll vers un message — charge les pages précédentes si le message n'est pas encore dans le DOM
   const pendingScrollMessageIdRef = useRef<number | null>(null);
 
@@ -845,7 +888,7 @@ export default function ChatRoomView({
             <>
               {/* Desktop : icônes individuelles */}
               <div className="hidden lg:flex items-center gap-0.5">
-                {selfId && (
+                {userId && (
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <button
@@ -908,7 +951,7 @@ export default function ChatRoomView({
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    {selfId && (
+                    {userId && (
                       <DropdownMenuItem onClick={() => void handleToggleFollow()}>
                         <Star className={cn("mr-2 h-3.5 w-3.5", isFollowed && "fill-current text-yellow-500")} />
                         {isFollowed ? t("unfollow") : t("follow")}
@@ -924,6 +967,12 @@ export default function ChatRoomView({
                       <BarChart3 className="mr-2 h-3.5 w-3.5" />
                       {t("statsTitle")}
                     </DropdownMenuItem>
+                    {pins.length > 0 && (
+                      <DropdownMenuItem onClick={() => setPinsOpen(true)}>
+                        <Pin className="mr-2 h-3.5 w-3.5" />
+                        {t("pinsTitle")}
+                      </DropdownMenuItem>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
@@ -947,12 +996,19 @@ export default function ChatRoomView({
                 onOpenChange={setSettingsOpen}
               />
               <ChatroomStatsSheet chatId={chatId} hideTrigger open={statsOpen} onOpenChange={setStatsOpen} />
+              <PinsSheet
+                open={pinsOpen}
+                onOpenChange={setPinsOpen}
+                pins={pins}
+                messages={pinsDisplayMessages}
+                onScrollToMessage={scrollToMessage}
+              />
             </>
           }
         />
         <section className="relative basis-auto flex-col -mb-(--composer-overlap-px) [--composer-overlap-px:64px] [--jump-btn-bottom:calc(var(--composer-overlap-px)+24px)] grow flex overflow-hidden">
           <div className="relative h-full">
-            <PinBar pins={pins} messages={messages} onScrollToMessage={scrollToMessage} />
+            <PinBar pins={pins} messages={pinsDisplayMessages} onScrollToMessage={scrollToMessage} />
             <ScrollAreaWithJumpToBottom
               ref={scrollRef}
               className="flex h-full flex-col overflow-y-auto thread-xl:pt-(--header-height)"
