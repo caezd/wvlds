@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ChevronsUpDown, LogOut, Plus } from "lucide-react";
-import { supabaseThumb } from "@/lib/storage";
+import { WorldAvatar } from "@/components/avatars/WorldAvatar";
 import { CreateWorldDialog } from "./CreateWorldDialog";
 import { useNotifications } from "@/components/providers/NotificationsProvider";
 import { cn } from "@/lib/utils";
@@ -40,38 +39,6 @@ export type WorldItem = {
   restrict_inventory?: boolean | null;
   restrict_skills?: boolean | null;
 };
-
-const COLORS = [
-  "bg-violet-500", "bg-blue-500", "bg-emerald-500", "bg-amber-500",
-  "bg-rose-500", "bg-cyan-500", "bg-indigo-500", "bg-pink-500",
-];
-
-function worldColor(name: string) {
-  return COLORS[name.charCodeAt(0) % COLORS.length];
-}
-
-function WorldAvatar({ world, size = "sm" }: { world: WorldItem; size?: "sm" | "md" }) {
-  const initial = (world.name[0] ?? "W").toUpperCase();
-  const color = worldColor(world.name);
-  const dim = size === "md" ? "h-8 w-8" : "h-6 w-6";
-  const px = size === "md" ? 36 : 24;
-  const text = size === "md" ? "text-xs" : "text-[10px]";
-  return world.icon_url ? (
-    <span className={cn(dim, "relative block rounded-lg overflow-hidden shrink-0")}>
-      <Image
-        src={supabaseThumb(world.icon_url, 48) ?? world.icon_url}
-        alt=""
-        fill
-        sizes={`${px}px`}
-        className="object-cover"
-      />
-    </span>
-  ) : (
-    <span className={cn("flex shrink-0 items-center justify-center rounded-lg font-semibold text-white", dim, text, color)}>
-      {initial}
-    </span>
-  );
-}
 
 export function WorldPickerHeader({
   worlds,

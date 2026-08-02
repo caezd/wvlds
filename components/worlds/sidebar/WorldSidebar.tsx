@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { getCachedFeatureFlags, getCurrentUserId, getWorldById } from "@/lib/currentRequest";
+import { getCachedFeatureFlags, getCurrentUserId, getUserWorlds, getWorldById } from "@/lib/currentRequest";
 import { getTranslations } from "next-intl/server";
 import {
   BookOpenText,
@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { WorldSidebarChatrooms } from "./WorldSidebarChatrooms";
 import { WorldSidebarNavLink } from "./WorldSidebarNavLink";
-import { WorldPickerHeader, type WorldItem } from "@/components/sidebar/WorldPickerHeader";
+import { WorldPickerHeader } from "@/components/sidebar/WorldPickerHeader";
 import { MobileSidebarSlot } from "@/components/sidebar/MobileSidebarSlot";
 import { getUserQuotaWithClient } from "@/lib/userQuota";
 
@@ -59,7 +59,7 @@ export default async function WorldSidebar({ worldId }: { worldId: string }) {
     getTranslations("nav"),
   ]);
 
-  const [world, roomsResult, participatedResult, canAdminResult, allWorldsResult, quota, categoriesResult, followedResult] =
+  const [world, roomsResult, participatedResult, canAdminResult, userWorlds, quota, categoriesResult, followedResult] =
     await Promise.all([
       getWorldById(worldId),
       supabase.rpc("list_chatrooms_nav", { p_world_id: worldId }),
@@ -72,16 +72,7 @@ export default async function WorldSidebar({ worldId }: { worldId: string }) {
       userId
         ? supabase.rpc("is_world_admin", { wid: worldId, uid: userId })
         : Promise.resolve({ data: false }),
-      // Tous les mondes accessibles (membre ou propriétaire)
-      userId
-        ? supabase
-          .from("worlds")
-          .select("id, name, icon_url, owner_id, description, banner_url, color, visibility, restrict_inventory, restrict_skills, world_members!inner(user_id)")
-          .eq("world_members.user_id", userId)
-          .is("deleted_at", null)
-          .eq("is_archived", false)
-          .order("name")
-        : Promise.resolve({ data: [] }),
+      getUserWorlds(),
       userId
         ? getUserQuotaWithClient(supabase, userId, "worlds")
         : Promise.resolve({ plan: "free" as const, owned: 0, quotaLimit: 1, quotaReached: false }),
@@ -114,23 +105,27 @@ export default async function WorldSidebar({ worldId }: { worldId: string }) {
 
   const worldBase = `/w/${worldId}`;
 
-  const allWorlds = (allWorldsResult.data ?? []) as WorldItem[];
-
-  // S'assurer que le monde courant est dans la liste
-  if (userId && !allWorlds.some((w) => w.id === worldId)) {
-    allWorlds.unshift({
-      id: world.id,
-      name: world.name,
-      icon_url: world.icon_url ?? null,
-      owner_id: world.owner_id ?? "",
-      description: world.description ?? null,
-      banner_url: world.banner_url,
-      color: world.color,
-      visibility: world.visibility,
-      restrict_inventory: world.restrict_inventory,
-      restrict_skills: world.restrict_skills,
-    });
-  }
+  // S'assurer que le monde courant est dans la liste — `userWorlds` vient
+  // d'un getter mémoïsé pour la requête (`getUserWorlds`, partagé avec le
+  // layout protégé) : on ne le mute jamais, on en dérive une copie.
+  const allWorlds =
+    userId && !userWorlds.some((w) => w.id === worldId)
+      ? [
+        {
+          id: world.id,
+          name: world.name,
+          icon_url: world.icon_url ?? null,
+          owner_id: world.owner_id ?? "",
+          description: world.description ?? null,
+          banner_url: world.banner_url,
+          color: world.color,
+          visibility: world.visibility,
+          restrict_inventory: world.restrict_inventory,
+          restrict_skills: world.restrict_skills,
+        },
+        ...userWorlds,
+      ]
+      : userWorlds;
 
   const navLinks = (
     <div className="border-b py-1 px-2 flex flex-col gap-0.5">

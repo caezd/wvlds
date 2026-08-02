@@ -176,6 +176,7 @@ export default function ChatRoomView({
   const router = useRouter();
   const { setActiveChat, markChatRead: markChatReadCtx } = useNotifications();
   const { post_message, quests } = useFeatureFlags();
+  const { setActiveWorldId } = useMobileSidebar();
 
   const [isFollowed, setIsFollowed] = useState(initialIsFollowed);
 
@@ -206,6 +207,13 @@ export default function ChatRoomView({
 
   // Couleur de groupe par persona_id (monde du chatroom)
   const [personaGroupColors, setPersonaGroupColors] = useState<Map<string, string>>(new Map());
+
+  // Signale le monde du chatroom courant pour le surlignage actif de
+  // MobileWorldsRail (le pathname `/c/[id]` seul ne le révèle pas).
+  useEffect(() => {
+    setActiveWorldId(chat.worlds?.id ?? null);
+    return () => setActiveWorldId(null);
+  }, [chat.worlds?.id, setActiveWorldId]);
 
   useEffect(() => {
     const worldId = chat.worlds?.id;

@@ -2,7 +2,7 @@ import dynamic from "next/dynamic";
 import SidebarRail from "@/components/sidebar/SidebarRail";
 import AppShell from "@/components/sidebar/AppShell";
 import { FeatureFlagsProvider } from "@/components/providers/FeatureFlagsProvider";
-import { getCurrentUserId, getCurrentProfile, getCachedFeatureFlags } from "@/lib/currentRequest";
+import { getCurrentUserId, getCurrentProfile, getCachedFeatureFlags, getUserWorlds } from "@/lib/currentRequest";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import { cookies } from "next/headers";
@@ -24,9 +24,10 @@ export default async function PageLayout({
   const userId = await getCurrentUserId();
   if (!userId) redirect("/auth/login");
 
-  const [featureFlags, profile] = await Promise.all([
+  const [featureFlags, profile, worlds] = await Promise.all([
     getCachedFeatureFlags(),
     getCurrentProfile(),
+    getUserWorlds(),
   ]);
 
   let usernameDialog: React.ReactNode = null;
@@ -52,7 +53,7 @@ export default async function PageLayout({
       <FeatureFlagsProvider flags={featureFlags}>
         <div className="flex h-full w-full flex-col">
           <div className="relative flex h-full w-full flex-1 z-0">
-            <AppShell rail={<SidebarRail />}>
+            <AppShell rail={<SidebarRail />} worlds={worlds}>
               {children}
             </AppShell>
             {usernameDialog}
