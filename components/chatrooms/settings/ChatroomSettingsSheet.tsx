@@ -97,7 +97,7 @@ export default function ChatroomSettingsSheet({
   const [internalOpen, setInternalOpen] = React.useState(false);
   const open = controlledOpen ?? internalOpen;
   function setOpen(v: boolean) {
-    setInternalOpen(v);
+    if (controlledOpen === undefined) setInternalOpen(v);
     onOpenChange?.(v);
   }
   const [uploading, setUploading] = React.useState<"icon" | "banner" | null>(null);

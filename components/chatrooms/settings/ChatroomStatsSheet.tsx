@@ -139,7 +139,7 @@ export default function ChatroomStatsSheet({
   const [internalOpen, setInternalOpen] = useState(false);
   const open = controlledOpen ?? internalOpen;
   function setOpen(v: boolean) {
-    setInternalOpen(v);
+    if (controlledOpen === undefined) setInternalOpen(v);
     onOpenChange?.(v);
   }
   const [_loading, setLoading] = useState(false);
