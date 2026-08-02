@@ -156,10 +156,10 @@ export function WorldChatroomsGrid({
                 }
                 className="group flex items-center gap-3.5 rounded-2xl px-3 py-3 hover:bg-secondary transition-colors"
               >
-                <span className="relative shrink-0">
+                <span className="relative shrink-0 size-9">
                   <span
                     className={cn(
-                      "relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-full",
+                      "absolute left-0 top-0 flex size-6 items-center justify-center overflow-hidden rounded-full ring-2 ring-background",
                       !room.icon_url && "bg-card-400",
                     )}
                   >
@@ -168,15 +168,15 @@ export function WorldChatroomsGrid({
                         src={room.icon_url}
                         alt=""
                         fill
-                        sizes="40px"
+                        sizes="24px"
                         className="object-cover"
                       />
                     ) : (
-                      <MessagesSquare className="h-4.5 w-4.5 text-muted-foreground" />
+                      <MessagesSquare className="h-3.5 w-3.5 text-muted-foreground" />
                     )}
                   </span>
                   {room.last_poster_avatar_url && (
-                    <Avatar className="absolute -right-1 -bottom-1 size-4.5 rounded-full ring-2 ring-background">
+                    <Avatar className="absolute bottom-0 right-0 size-6 rounded-full ring-2 ring-background">
                       <AvatarImage src={room.last_poster_avatar_url} alt="" className="rounded-full" />
                       <AvatarFallback className="rounded-full" />
                     </Avatar>
