@@ -11,6 +11,9 @@ import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import { MobileSidebarProvider, useMobileSidebar } from "@/components/providers/MobileSidebarProvider";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { MobileWorldsRail } from "./MobileWorldsRail";
+
+type WorldRailItem = { id: string; name: string; icon_url: string | null };
 
 const NotificationInlinePanelContent = dynamic(
   () => import("@/components/notifications").then((m) => m.NotificationInlinePanelContent),
@@ -30,9 +33,11 @@ const WORLD_PANEL_VIEWS = new Set([
 
 function AppShellInner({
   rail,
+  worlds,
   children,
 }: {
   rail: React.ReactNode;
+  worlds: WorldRailItem[];
   children: React.ReactNode;
 }) {
   const { notifications: notifEnabled, direct_messages: dmsEnabled } = useFeatureFlags();
@@ -103,10 +108,13 @@ function AppShellInner({
             {/* Rail d'icônes */}
             <div className={cn(
               "w-14 shrink-0 flex flex-col overflow-y-auto py-2",
-              (anyPanelOpen || mobileSidebar) && "border-r",
+              (anyPanelOpen || mobileSidebar || worlds.length > 1) && "border-r",
             )}>
               {rail}
             </div>
+            {/* Rail des mondes rejoints — masqué quand un panneau (DMs/notifs)
+                occupe l'espace restant, pour lui laisser toute la largeur. */}
+            {worlds.length > 1 && !anyPanelOpen && <MobileWorldsRail worlds={worlds} />}
             {/* Panneau DMs / Notifications, ou sidebar monde */}
             {(anyPanelOpen || mobileSidebar) && (
               <div className="flex-1 min-w-0 overflow-hidden flex flex-col">
@@ -157,15 +165,17 @@ function AppShellInner({
 
 export default function AppShell({
   rail,
+  worlds = [],
   children,
 }: {
   rail: React.ReactNode;
+  worlds?: WorldRailItem[];
   children: React.ReactNode;
 }) {
   return (
     <MobileSidebarProvider>
       <DmsProvider>
-        <AppShellInner rail={rail}>{children}</AppShellInner>
+        <AppShellInner rail={rail} worlds={worlds}>{children}</AppShellInner>
       </DmsProvider>
     </MobileSidebarProvider>
   );

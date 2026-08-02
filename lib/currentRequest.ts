@@ -2,6 +2,7 @@ import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { getFeatureFlags, type FeatureFlags } from "@/lib/featureFlags";
 import type { World } from "@/types/worlds";
+import type { WorldItem } from "@/components/sidebar/WorldPickerHeader";
 
 /**
  * Getters mémoïsés pour la durée d'**une seule requête serveur** (`React cache()`).
@@ -90,4 +91,23 @@ export const getWorldById = cache(async (worldId: string): Promise<WorldWithMemb
     .eq("id", worldId)
     .maybeSingle();
   return (data as WorldWithMembership | null) ?? null;
+});
+
+/**
+ * Tous les mondes rejoints (membre ou propriétaire) par l'utilisateur courant,
+ * mémoïsée — partagée entre le layout protégé (rail mondes mobile) et
+ * `WorldSidebar` (sélecteur "Changer de monde").
+ */
+export const getUserWorlds = cache(async (): Promise<WorldItem[]> => {
+  const userId = await getCurrentUserId();
+  if (!userId) return [];
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("worlds")
+    .select("id, name, icon_url, owner_id, description, banner_url, color, visibility, restrict_inventory, restrict_skills, world_members!inner(user_id)")
+    .eq("world_members.user_id", userId)
+    .is("deleted_at", null)
+    .eq("is_archived", false)
+    .order("name");
+  return (data as WorldItem[]) ?? [];
 });

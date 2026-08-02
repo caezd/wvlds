@@ -72,7 +72,7 @@ export function WorldsRailButton() {
 
 
   return (
-    <div className="relative w-11 px-1.5" onMouseEnter={onEnter} onMouseLeave={onLeave}>
+    <div className="hidden lg:block relative w-11 px-1.5" onMouseEnter={onEnter} onMouseLeave={onLeave}>
       {/* Placeholder dans le flux */}
       <div className="h-9 w-full" />
 

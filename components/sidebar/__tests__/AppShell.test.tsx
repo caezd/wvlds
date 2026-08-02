@@ -16,22 +16,41 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
+vi.mock("next/link", () => ({
+  default: ({ href, children, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { href: string }) => (
+    <a href={href} {...props}>{children}</a>
+  ),
+}));
+
+vi.mock("next/image", () => ({
+  default: (props: React.ImgHTMLAttributes<HTMLImageElement>) => <img {...props} alt={props.alt ?? ""} />,
+}));
+
 vi.mock("@/components/providers/FeatureFlagsProvider", () => ({
   useFeatureFlags: () => ({ notifications: false, direct_messages: false }),
 }));
 
+const notifPanelOpenMock = vi.hoisted(() => ({ value: false }));
 vi.mock("@/components/providers/NotificationsProvider", () => ({
-  useNotifications: () => ({ panelOpen: false, closePanel: vi.fn() }),
+  useNotifications: () => ({ panelOpen: notifPanelOpenMock.value, closePanel: vi.fn(), worldUnread: {} }),
 }));
 
+const dmsPanelOpenMock = vi.hoisted(() => ({ value: false }));
 vi.mock("@/components/providers/DmsProvider", () => ({
   __esModule: true,
   default: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  useDms: () => ({ panelOpen: false, closePanel: vi.fn() }),
+  useDms: () => ({ panelOpen: dmsPanelOpenMock.value, closePanel: vi.fn() }),
 }));
+
+const WORLDS = [
+  { id: "world-1", name: "Monde un", icon_url: null },
+  { id: "world-2", name: "Monde deux", icon_url: null },
+];
 
 beforeEach(() => {
   pathnameMock.value = "/w/world-1";
+  notifPanelOpenMock.value = false;
+  dmsPanelOpenMock.value = false;
 });
 
 describe("AppShell — barre mobile générique vs header de chatroom", () => {
@@ -57,5 +76,46 @@ describe("AppShell — barre mobile générique vs header de chatroom", () => {
     const button = screen.getByLabelText("Ouvrir le menu");
     const header = button.closest("header");
     expect(header).toHaveClass("hidden");
+  });
+});
+
+describe("AppShell — rail des mondes dans le drawer mobile", () => {
+  it("affiche le rail des mondes quand plus d'un monde est rejoint et aucun panneau n'est ouvert", () => {
+    render(
+      <AppShell rail={<div>rail</div>} worlds={WORLDS}>
+        <div>contenu</div>
+      </AppShell>,
+    );
+    expect(screen.getByLabelText("Monde un")).toBeInTheDocument();
+    expect(screen.getByLabelText("Monde deux")).toBeInTheDocument();
+  });
+
+  it("masque le rail des mondes quand le panneau notifications est ouvert, pour lui laisser toute la place", () => {
+    notifPanelOpenMock.value = true;
+    render(
+      <AppShell rail={<div>rail</div>} worlds={WORLDS}>
+        <div>contenu</div>
+      </AppShell>,
+    );
+    expect(screen.queryByLabelText("Monde un")).not.toBeInTheDocument();
+  });
+
+  it("masque le rail des mondes quand le panneau DMs est ouvert", () => {
+    dmsPanelOpenMock.value = true;
+    render(
+      <AppShell rail={<div>rail</div>} worlds={WORLDS}>
+        <div>contenu</div>
+      </AppShell>,
+    );
+    expect(screen.queryByLabelText("Monde un")).not.toBeInTheDocument();
+  });
+
+  it("ne rend pas de rail des mondes s'il n'y a qu'un seul monde", () => {
+    render(
+      <AppShell rail={<div>rail</div>} worlds={[WORLDS[0]]}>
+        <div>contenu</div>
+      </AppShell>,
+    );
+    expect(screen.queryByLabelText("Monde un")).not.toBeInTheDocument();
   });
 });
