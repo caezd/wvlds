@@ -9,6 +9,16 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Interface",
+    text: "Catégories du changelog consolidées : les doublons (« Correctif »/« Corrections », « Personnages »/« Personas ») sont fusionnés et les étiquettes isolées à une seule entrée (« Explorateur », « i18n », « Jeu », « Abonnement », « Profil ») sont regroupées dans la catégorie la plus proche, pour une liste de filtres plus courte et plus lisible.",
+  },
+  {
+    date: "2026-08",
+    tag: "Mobile",
+    text: "Page du changelog repensée pour les petits écrans : les filtres par catégorie passent en rangée de puces au-dessus de la liste (au lieu d'une colonne fixe qui prenait toute la largeur), et chaque entrée s'affiche désormais sur une seule colonne.",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
     text: "Liste des salles sur l'accueil d'un monde : l'heure du dernier message est désormais toujours affichée (au lieu d'un extrait du texte selon les salles), avec un petit avatar superposé à l'icône pour identifier la dernière personne à avoir écrit.",
   },
   {
@@ -49,7 +59,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     date: "2026-07",
-    tag: "Abonnement",
+    tag: "Comptes",
     text: "**Connectez votre compte Patreon** depuis vos réglages : si vous êtes mécène actif au palier requis, votre abonnement est activé automatiquement (mondes et personas illimités), et retiré si votre mécénat s'arrête. Vous pouvez délier votre compte à tout moment.",
   },
   {
@@ -69,7 +79,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     date: "2026-07",
-    tag: "Explorateur",
+    tag: "Mondes",
     text: "Cliquez une **carte de monde** dans l'Explorateur pour ouvrir ses statistiques (messages, membres, personas) avant de rejoindre — le bouton **Rejoindre** a été déplacé dans cette fenêtre. Les statistiques ne sont chargées qu'à l'ouverture, pas pour toutes les cartes de la page.",
   },
   {
@@ -320,17 +330,17 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     date: "2026-06",
-    tag: "i18n",
+    tag: "Interface",
     text: "Traduction de l'interface :\n- Support de **3 langues** : Français, English, Español\n- Détection automatique via la langue du navigateur (`Accept-Language`)\n- Préférence sauvegardée dans le profil (synchronisation entre appareils)\n- Sélecteur de langue dans **Paramètres** (`/settings`)\n- Nouveau lien « Paramètres » dans le menu utilisateur\n- Page admin `/admin/translations` : tableau de couverture par namespace, alerte sur les clés manquantes\n- Architecture `next-intl` sans routing — les URLs restent inchangées",
   },
   {
     date: "2026-06",
-    tag: "Social",
+    tag: "Mondes",
     text: "Catalogue des mondes publics :\n- Nouvelle page `/explore` : grille paginée (16 par page) de tous les mondes dont la visibilité est **publique**\n- **Recherche** par nom et description avec debounce 300 ms\n- Bouton **Rejoindre** directement depuis la carte (role `player` attribué automatiquement) ; bouton **Entrer** si déjà membre\n- Icône Boussole dans le rail de navigation (visible uniquement si le flag `public_worlds` est actif)\n- Les owners peuvent basculer leur monde en public/privé depuis les paramètres du monde (section Visibilité)\n- Activable via le flag admin `public_worlds`",
   },
   {
     date: "2026-06",
-    tag: "Jeu",
+    tag: "Chatrooms",
     text: "Défis quotidiens :\n- Chaque joueur reçoit **son propre défi aléatoire** chaque jour — personne n'a le même\n- 7 types de défis : mot imposé, mot interdit, longueur précise (100–350 mots), incipit imposé, question finale, sans adverbe en -ment, motif regex\n- Un badge apparaît sur le message gagnant dans le chatroom, avec tooltip markdown affichant les détails du défi\n- Journal des victoires anonymisé sur la page `/quests` (aucun pseudo ni chatroom révélé)\n- Défis générés au chargement de `/quests` s'ils n'existent pas encore pour la journée\n- Le « Mot du jour » reste une option parmi les 17 défis possibles (même probabilité que les autres)\n- Désactivable via le flag admin `quests`",
   },
   {
@@ -385,12 +395,12 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     date: "2026-06",
-    tag: "Corrections",
+    tag: "Correctif",
     text: "Correction d'un **404 à l'ouverture d'un monde** (avec disparition de la sidebar) :\n- En cause : le middleware réécrivait la réponse sur les routes `/w/...` sans recopier les cookies de session rafraîchis, ce qui faisait paraître l'utilisateur déconnecté côté serveur — la page ne trouvait alors plus le monde et renvoyait un 404, même pour des mondes accessibles. La session est désormais préservée sur toutes les routes monde\n- Nettoyage de mondes hérités restés **sans propriétaire** (créés avant le câblage de l'ownership), qui étaient inaccessibles à tous\n- La colonne `owner_id` des mondes est désormais **obligatoire** (NOT NULL), empêchant qu'un monde puisse à nouveau exister sans propriétaire",
   },
   {
     date: "2026-06",
-    tag: "Corrections",
+    tag: "Correctif",
     text: "Correction du chargement de la page /home et de la sidebar :\n- Les mondes où l'utilisateur a une **invitation en attente** n'apparaissent plus dans la liste « Partagés avec moi » avant qu'il ait accepté\n- Les mondes **quittés** (où l'utilisateur a encore un persona) n'apparaissent plus dans la sidebar ni dans /home\n- Les mondes **archivés** n'apparaissent plus dans la sidebar",
   },
   {
@@ -425,7 +435,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     date: "2026-06",
-    tag: "Personnages",
+    tag: "Personas",
     text: "Toile des relations dans les mondes :\n- Nouveau canvas accessible depuis l'icône Réseau (⊕) dans le rail latéral du monde\n- Blocs utilisateurs en pointillés, déplaçables librement sur le canvas — positions persistées par joueur et par monde\n- Cartes personas colorées par **groupe** (défini par le propriétaire du monde : nom + couleur) ; chaque joueur peut assigner ses propres personas à un groupe\n- **Relations directionnelles** : la flèche indique le sens déclaré par l'auteur\n- Si A→B et B→A existent avec le **même type** : double flèche (↔) sur un chemin unique\n- Si A→B et B→A existent avec des **types différents** : deux courbes décalées en parallèle avec un séparateur **/** au milieu, chacune de sa couleur\n- **6 types de relations** avec style de flèche distinct : Allié, Ennemi, Rival, Amant, Famille, Inconnu\n- **Description markdown** par relation, saisie au moment de la création ou éditée en ligne dans le panneau latéral\n- **Panneau persona** (gauche) : cliquer une carte affiche toutes ses relations sortantes et reçues, avec description éditable et bouton supprimer\n- **Mode lien** activable via le bouton « Créer un lien » dans la barre d'outils — en mode normal, cliquer une carte ouvre le panneau persona\n- Survol d'un lien : badge type + bouton Supprimer apparaissent au milieu de la flèche\n- **Permissions** : un joueur ne peut créer/supprimer que ses propres relations (depuis ses propres personas) ; les admins gardent un accès complet\n- **Types de relation dynamiques** : le propriétaire du monde peut créer, éditer et supprimer des types personnalisés (nom, couleur, style de trait) via le bouton Paramètres ; deux types par défaut (Allié et Ennemi) sont créés automatiquement\n- **Couleur de groupe dans les chatrooms** : le nom d'un persona apparaît dans la couleur de son groupe dans les messages des chatrooms du même monde",
   },
   {
@@ -435,12 +445,12 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     date: "2026-06",
-    tag: "Personnages",
+    tag: "Personas",
     text: "Préférences d'affichage par monde (persistées) :\n- **Aside redimensionnable** — glisser le séparateur vertical pour ajuster la largeur de la colonne personas (150–380 px)\n- **Mode plein écran** — icône sur la bannière du monde pour basculer entre contenu centré (max-w) et plein écran\n- Préférences sauvegardées par utilisateur et par monde dans `world_user_preferences`",
   },
   {
     date: "2026-06",
-    tag: "Personnages",
+    tag: "Personas",
     text: "Les personas sont maintenant liés à un monde :\n- Chaque monde possède ses propres personas (jusqu'à 5 par compte gratuit)\n- Panneau **Personas** intégré à gauche dans la page d'un monde : créer, visualiser et éditer ses personnages sans quitter le monde\n- Page `/p` refaite en vue globale : tous les personas regroupés par monde avec lien direct vers le monde\n- Sur mobile, les personas sont accessibles via le bouton dédié dans le rail latéral",
   },
   {
@@ -450,12 +460,12 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     date: "2026-06",
-    tag: "Profil",
+    tag: "Personas",
     text: "Dix blocs disponibles dans l'éditeur de profil des personnages :\n- **Titre** et **Bloc de texte** (markdown)\n- **Stats** — valeurs chiffrées avec unité, en grille adaptative\n- **Inventaire** — objets avec icône RPG, quantité et description au survol\n- **Compétences** — icône RPG, nom, niveau libre et description\n- **Jauges** — barres de progression avec valeur, max et couleur personnalisable\n- **Citation** — blockquote markdown avec source optionnelle\n- **Traits** — pills de personnalité\n- **Timeline** — chronologie avec date libre et description repliable\n- **Séparateur** et **Grille d'images**\n\nPlus de 4 100 icônes SVG issues de game-icons.net, sélectionnables via un picker avec recherche.",
   },
   {
     date: "2026-06",
-    tag: "Personnages",
+    tag: "Personas",
     text: "Améliorations de l'éditeur de personnage :\n- Édition d'apparence repensée : onglets Avatar / Cosmétiques et Générateur / Upload / URL alignés en sous-menus, aperçu grand format sur desktop\n- Cadre cosmétique persisté localement dès la sélection, sans rechargement\n- Gestion des sections : renommer, réordonner (gauche/droite) et supprimer via le bouton « … » de l'onglet actif\n- L'avatar se met à jour en temps réel dans les messages dès qu'il est modifié\n- Bouton d'édition au survol dans la grille, état vide harmonisé",
   },
   {
@@ -521,7 +531,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     date: "2026-05",
-    tag: "Personnages",
+    tag: "Personas",
     text: "Nouveau sélecteur d'avatar avec support des cadres et configuration avancée.",
   },
   {
@@ -537,7 +547,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     date: "2026-04",
-    tag: "Personnages",
+    tag: "Personas",
     text: "Sections personnalisables sur les fiches de personnages : ajoutez, réorganisez et supprimez des blocs.",
   },
   // ── 2026-03 ──────────────────────────────────────────────────────────────

@@ -6,10 +6,10 @@ import { Label } from "@/components/ui/label";
 import { CHANGELOG, groupByMonth, formatMonth, allTags } from "@/lib/changelog";
 import type { ChangelogEntry } from "@/lib/changelog";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
+import { cn } from "@/lib/utils";
 
 const TAG_COLORS: Record<string, string> = {
-  Profil:        "var(--color-brand-purple)",
-  Personnages:   "var(--color-brand-purple)",
+  Personas:      "var(--color-brand-purple)",
   Chatrooms:     "var(--color-chain-cyan)",
   Mondes:        "var(--color-brand-green)",
   Interface:     "var(--color-chain-indigo)",
@@ -21,6 +21,7 @@ const TAG_COLORS: Record<string, string> = {
   Technique:     "var(--color-chain-blue)",
   Mobile:        "var(--color-chain-mint)",
   Notifications: "var(--color-chain-gold)",
+  Social:        "var(--color-chain-rose)",
 };
 
 function TagBadge({ tag }: { tag: string }) {
@@ -67,9 +68,50 @@ export function ChangelogFilters() {
   const months = [...grouped.keys()];
 
   return (
-    <div className="flex gap-8 items-start">
+    <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start">
+      {/* Filtre — rangée de puces scrollable sur mobile/écran réduit, sidebar sticky dès lg */}
+      <div className="lg:hidden w-full -mx-4 px-4 sm:mx-0 sm:px-0">
+        <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+          {tags.map((tag) => {
+            const color = TAG_COLORS[tag];
+            const isActive = active.has(tag);
+            return (
+              <button
+                key={tag}
+                type="button"
+                onClick={() => toggle(tag)}
+                aria-pressed={isActive}
+                className={cn(
+                  "shrink-0 inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-colors",
+                  isActive
+                    ? "border-foreground/20 bg-foreground/10 text-foreground"
+                    : "border-border text-muted-foreground",
+                )}
+              >
+                {color && (
+                  <span
+                    className="w-1.5 h-1.5 rounded-full shrink-0"
+                    style={{ backgroundColor: color }}
+                  />
+                )}
+                {tag}
+              </button>
+            );
+          })}
+          {active.size > 0 && (
+            <button
+              type="button"
+              onClick={() => setActive(new Set())}
+              className="shrink-0 px-1 text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
+            >
+              Réinitialiser
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* Timeline */}
-      <div className="flex-1 min-w-0 space-y-12">
+      <div className="flex-1 min-w-0 w-full space-y-10 sm:space-y-12">
         {months.length === 0 ? (
           <p className="text-sm text-muted-foreground py-8 text-center">
             Aucune entrée pour ce filtre.
@@ -78,10 +120,10 @@ export function ChangelogFilters() {
           months.map((month) => {
             const entries = grouped.get(month)!;
             return (
-              <div key={month} className="flex gap-6 items-start">
+              <div key={month} className="flex gap-3 sm:gap-6 items-start">
                 {/* Date */}
-                <div className="w-24 shrink-0 pt-1">
-                  <span className="text-sm font-semibold capitalize text-foreground">
+                <div className="w-14 sm:w-24 shrink-0 pt-1">
+                  <span className="text-xs sm:text-sm font-semibold capitalize text-foreground">
                     {formatMonth(month)}
                   </span>
                 </div>
@@ -104,8 +146,8 @@ export function ChangelogFilters() {
         )}
       </div>
 
-      {/* Filtre */}
-      <aside className="w-48 shrink-0 sticky top-6 rounded-xl border border-border bg-card p-4 space-y-3">
+      {/* Filtre — sidebar sticky, dès lg */}
+      <aside className="hidden lg:block w-48 shrink-0 sticky top-6 rounded-xl border border-border bg-card p-4 space-y-3">
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
           Filtrer
         </p>
@@ -150,8 +192,8 @@ export function ChangelogFilters() {
 
 function EntryRow({ entry }: { entry: ChangelogEntry }) {
   return (
-    <div className="rounded-xl border border-border/60 bg-card/50 px-4 py-3 flex gap-4 items-start">
-      <div className="w-24 shrink-0 pt-0.5">
+    <div className="rounded-xl border border-border/60 bg-card/50 px-3 py-3 sm:px-4 flex flex-col sm:flex-row gap-2 sm:gap-4 items-start">
+      <div className="sm:w-24 shrink-0 sm:pt-0.5">
         <TagBadge tag={entry.tag} />
       </div>
       <MarkdownRenderer content={entry.text} className="gap-1 text-sm leading-relaxed" />
