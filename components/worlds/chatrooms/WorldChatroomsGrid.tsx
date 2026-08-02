@@ -72,6 +72,37 @@ export function WorldChatroomsGrid({
         },
         () => void load(),
       )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "chatroom_summaries" },
+        (payload: { new: Record<string, unknown> }) => {
+          const s = payload.new as {
+            chat_id: string;
+            last_message_at: string | null;
+            last_message_persona_avatar_url: string | null;
+          };
+          setRooms((prev) =>
+            prev.map((r) =>
+              r.id === s.chat_id
+                ? { ...r, last_message_at: s.last_message_at, last_poster_avatar_url: s.last_message_persona_avatar_url }
+                : r,
+            ),
+          );
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "chatroom_summaries" },
+        (payload: { old: Record<string, unknown> }) => {
+          const chatId = (payload.old as { chat_id?: string }).chat_id;
+          if (!chatId) return;
+          setRooms((prev) =>
+            prev.map((r) =>
+              r.id === chatId ? { ...r, last_poster_avatar_url: null, last_message_at: null } : r,
+            ),
+          );
+        },
+      )
       .subscribe();
 
     return () => {
@@ -146,7 +177,7 @@ export function WorldChatroomsGrid({
                   </span>
                   {room.last_poster_avatar_url && (
                     <Avatar className="absolute -right-1 -bottom-1 size-4.5 rounded-full ring-2 ring-background">
-                      <AvatarImage src={room.last_poster_avatar_url} className="rounded-full" />
+                      <AvatarImage src={room.last_poster_avatar_url} alt="" className="rounded-full" />
                       <AvatarFallback className="rounded-full" />
                     </Avatar>
                   )}
