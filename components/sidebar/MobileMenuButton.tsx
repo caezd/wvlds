@@ -1,6 +1,6 @@
 "use client";
 
-import { Menu } from "lucide-react";
+import { X } from "lucide-react";
 import Logo from "@/components/logo";
 import { useMobileSidebar } from "@/components/providers/MobileSidebarProvider";
 
@@ -16,7 +16,7 @@ export function MobileMenuButton() {
         aria-label="Fermer le menu"
         className="lg:hidden flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted/60"
       >
-        <Menu className="h-4 w-4" />
+        <X className="h-4 w-4" />
       </button>
 
       {/* Desktop : logo */}

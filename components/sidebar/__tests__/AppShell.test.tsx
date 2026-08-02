@@ -110,9 +110,18 @@ describe("AppShell — rail des mondes dans le drawer mobile", () => {
     expect(screen.queryByLabelText("Monde un")).not.toBeInTheDocument();
   });
 
-  it("ne rend pas de rail des mondes s'il n'y a qu'un seul monde", () => {
+  it("affiche le rail même avec un seul monde rejoint — seul lien mobile vers ce monde hors de ses pages", () => {
     render(
       <AppShell rail={<div>rail</div>} worlds={[WORLDS[0]]}>
+        <div>contenu</div>
+      </AppShell>,
+    );
+    expect(screen.getByLabelText("Monde un")).toBeInTheDocument();
+  });
+
+  it("ne rend pas de rail des mondes si l'utilisateur n'a rejoint aucun monde", () => {
+    render(
+      <AppShell rail={<div>rail</div>} worlds={[]}>
         <div>contenu</div>
       </AppShell>,
     );

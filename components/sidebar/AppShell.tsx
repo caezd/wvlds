@@ -108,13 +108,16 @@ function AppShellInner({
             {/* Rail d'icônes */}
             <div className={cn(
               "w-14 shrink-0 flex flex-col overflow-y-auto py-2",
-              (anyPanelOpen || mobileSidebar || worlds.length > 1) && "border-r",
+              (anyPanelOpen || mobileSidebar || worlds.length > 0) && "border-r",
             )}>
               {rail}
             </div>
-            {/* Rail des mondes rejoints — masqué quand un panneau (DMs/notifs)
-                occupe l'espace restant, pour lui laisser toute la largeur. */}
-            {worlds.length > 1 && !anyPanelOpen && <MobileWorldsRail worlds={worlds} />}
+            {/* Rail des mondes rejoints — seul lien mobile vers un monde
+                depuis les pages hors-monde (explore, personas, …), donc
+                affiché dès qu'il y en a au moins un, pas seulement > 1.
+                Masqué quand un panneau (DMs/notifs) occupe l'espace restant,
+                pour lui laisser toute la largeur. */}
+            {worlds.length > 0 && !anyPanelOpen && <MobileWorldsRail worlds={worlds} />}
             {/* Panneau DMs / Notifications, ou sidebar monde */}
             {(anyPanelOpen || mobileSidebar) && (
               <div className="flex-1 min-w-0 overflow-hidden flex flex-col">
