@@ -95,7 +95,7 @@ export function WorldHeroCard({
 
       {/* Menu mobile — uniquement en plein écran, où il remplace la barre générique */}
       {isExpanded && (
-        <div className="absolute left-3 top-3 z-10">
+        <div className="absolute left-3 top-3 z-20">
           <MobileDrawerOpenButton
             className="flex h-8 w-8 items-center justify-center rounded-lg bg-black/40 transition-colors hover:bg-black/60 text-muted-foreground"
             iconClassName="h-[15px] w-[15px]"
@@ -105,7 +105,7 @@ export function WorldHeroCard({
 
       {/* Boutons superposés : favoris + plein écran */}
       {(onToggleFavorite || onToggleExpand) && (
-        <div className="absolute right-3 top-3 flex items-center gap-1.5">
+        <div className="absolute right-3 z-20 top-3 flex items-center gap-1.5">
           {onToggleFavorite && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -146,7 +146,7 @@ export function WorldHeroCard({
         </div>
       )}
 
-<div className="relative z-10 flex min-h-40 flex-col justify-end gap-2 md:min-h-48">
+      <div className="relative z-10 flex min-h-40 flex-col justify-end gap-2 md:min-h-48">
         <span
           className={
             world.icon_url

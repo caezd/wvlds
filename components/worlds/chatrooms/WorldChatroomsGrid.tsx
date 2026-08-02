@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import { useNotifications } from "@/components/providers/NotificationsProvider";
 import { cn } from "@/lib/utils";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 type Room = {
   id: string;
@@ -15,7 +16,7 @@ type Room = {
   name: string | null;
   icon_url: string | null;
   last_message_at: string | null;
-  last_message_excerpt?: string | null;
+  last_poster_avatar_url?: string | null;
   unread_count: number;
   category_id?: string | null;
 };
@@ -108,10 +109,7 @@ export function WorldChatroomsGrid({
           const href = `/c/${room.id}`;
           const unread = roomUnread[room.id] ?? room.unread_count ?? 0;
           const label = room.title || room.name || "Sans titre";
-          const excerpt = room.last_message_excerpt?.trim();
-          const subtitle =
-            (excerpt && !excerpt.startsWith("enc:") ? excerpt : null) ??
-            relativeTime(room.last_message_at);
+          const subtitle = relativeTime(room.last_message_at);
           return (
             <li key={room.id}>
               <Link
@@ -146,6 +144,12 @@ export function WorldChatroomsGrid({
                       <MessagesSquare className="h-4.5 w-4.5 text-muted-foreground" />
                     )}
                   </span>
+                  {room.last_poster_avatar_url && (
+                    <Avatar className="absolute -right-1 -bottom-1 size-4.5 rounded-full ring-2 ring-background">
+                      <AvatarImage src={room.last_poster_avatar_url} className="rounded-full" />
+                      <AvatarFallback className="rounded-full" />
+                    </Avatar>
+                  )}
                   {unread > 0 && (
                     <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-accent ring-2 ring-background" />
                   )}

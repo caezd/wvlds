@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Interface",
+    text: "Liste des salles sur l'accueil d'un monde : l'heure du dernier message est désormais toujours affichée (au lieu d'un extrait du texte selon les salles), avec un petit avatar superposé à l'icône pour identifier la dernière personne à avoir écrit.",
+  },
+  {
+    date: "2026-08",
     tag: "Correctif",
     text: "Le texte d'une bulle de dialogue (mode « dialogues en bulles ») ignorait le markdown : **gras**, *italique*, etc. restaient affichés tels quels au lieu d'être interprétés. Corrigé.",
   },

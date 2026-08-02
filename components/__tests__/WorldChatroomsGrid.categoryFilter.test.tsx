@@ -15,6 +15,14 @@ vi.mock("next/link", () => ({
   ),
 }));
 
+vi.mock("@/components/ui/avatar", () => ({
+  Avatar: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <span className={className}>{children}</span>
+  ),
+  AvatarImage: ({ src }: { src?: string }) => <img src={src} alt="" />,
+  AvatarFallback: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
+}));
+
 import { WorldChatroomsGrid } from "@/components/worlds/chatrooms/WorldChatroomsGrid";
 
 type Room = {
@@ -23,6 +31,7 @@ type Room = {
   name: string | null;
   icon_url: string | null;
   last_message_at: string | null;
+  last_poster_avatar_url?: string | null;
   unread_count: number;
   category_id?: string | null;
 };
@@ -34,6 +43,7 @@ function makeRoom(overrides: Partial<Room> = {}): Room {
     name: null,
     icon_url: null,
     last_message_at: null,
+    last_poster_avatar_url: null,
     unread_count: 0,
     category_id: null,
     ...overrides,
@@ -72,5 +82,30 @@ describe("WorldChatroomsGrid — filtre par catégorie", () => {
   it("affiche un message dédié quand le filtre ne retourne aucune room", () => {
     render(<WorldChatroomsGrid worldId="world-1" initialRooms={rooms} categoryId="cat-inexistante" />);
     expect(screen.getByText("Aucune partie dans cette catégorie.")).toBeInTheDocument();
+  });
+});
+
+describe("WorldChatroomsGrid — sous-titre et avatar du dernier auteur", () => {
+  beforeEach(() => {
+    const mock = createSupabaseMock();
+    (createClient as ReturnType<typeof vi.fn>).mockReturnValue(mock.client);
+  });
+
+  it("affiche toujours l'heure relative, jamais un extrait du message", () => {
+    const room = makeRoom({ last_message_at: new Date().toISOString() });
+    render(<WorldChatroomsGrid worldId="world-1" initialRooms={[room]} categoryId={null} />);
+    expect(screen.getByText("À l'instant")).toBeInTheDocument();
+  });
+
+  it("superpose l'avatar du dernier auteur sur l'icône quand il est connu", () => {
+    const room = makeRoom({ last_poster_avatar_url: "https://example.com/avatar.png" });
+    const { container } = render(<WorldChatroomsGrid worldId="world-1" initialRooms={[room]} categoryId={null} />);
+    expect(container.querySelector("img")).toHaveAttribute("src", "https://example.com/avatar.png");
+  });
+
+  it("n'affiche pas d'avatar superposé quand le dernier auteur est inconnu", () => {
+    const room = makeRoom({ last_poster_avatar_url: null });
+    const { container } = render(<WorldChatroomsGrid worldId="world-1" initialRooms={[room]} categoryId={null} />);
+    expect(container.querySelector("img")).not.toBeInTheDocument();
   });
 });
