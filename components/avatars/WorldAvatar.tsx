@@ -8,7 +8,9 @@ const COLORS = [
 ];
 
 function worldColor(name: string) {
-  return COLORS[name.charCodeAt(0) % COLORS.length];
+  const code = name.charCodeAt(0);
+  const idx = Number.isFinite(code) ? code % COLORS.length : 0;
+  return COLORS[idx];
 }
 
 const SIZES = {
