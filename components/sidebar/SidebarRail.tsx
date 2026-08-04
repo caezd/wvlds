@@ -41,10 +41,13 @@ export default async function SidebarRail() {
             <UserRound size={17} />
           </RailIcon>
 
+          {/* Mobile : déplacé en tête du rail des mondes rejoints (MobileWorldsRail) */}
           {featureFlags.public_worlds && (
-            <RailIcon href="/explore" label={t("explore")}>
-              <Compass size={17} />
-            </RailIcon>
+            <div className="hidden lg:block">
+              <RailIcon href="/explore" label={t("explore")}>
+                <Compass size={17} />
+              </RailIcon>
+            </div>
           )}
 
           {featureFlags.quests && (
@@ -65,7 +68,7 @@ export default async function SidebarRail() {
         </div>
       </ScrollArea>
 
-      <footer className="flex flex-col items-center gap-4 w-full mt-auto shrink-0">
+      <footer className="flex flex-col items-center gap-1.5 w-full mt-auto shrink-0">
 
         {/* Conversations épinglées */}
         <PinnedDmAvatarsRail />
@@ -73,7 +76,7 @@ export default async function SidebarRail() {
         {/* Messages privés */}
         <DmsToggleButton />
 
-        <div className="h-px w-9 my-2 bg-border" />
+        <div className="my-0.5 h-px w-8 shrink-0 bg-border-soft" />
 
         {/* Notifications */}
         {featureFlags.notifications && <NotificationBellButton />}

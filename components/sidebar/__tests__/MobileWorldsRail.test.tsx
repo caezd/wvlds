@@ -1,10 +1,11 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MobileWorldsRail } from "@/components/sidebar/MobileWorldsRail";
 
 const worldUnreadMock = vi.hoisted(() => ({ value: {} as Record<string, number> }));
 const pathnameMock = vi.hoisted(() => ({ value: "/w/world-1" }));
 const activeWorldIdMock = vi.hoisted(() => ({ value: null as string | null }));
+const publicWorldsMock = vi.hoisted(() => ({ value: false }));
 
 vi.mock("@/components/providers/NotificationsProvider", () => ({
   useNotifications: () => ({ worldUnread: worldUnreadMock.value }),
@@ -12,6 +13,14 @@ vi.mock("@/components/providers/NotificationsProvider", () => ({
 
 vi.mock("@/components/providers/MobileSidebarProvider", () => ({
   useMobileSidebar: () => ({ activeWorldId: activeWorldIdMock.value }),
+}));
+
+vi.mock("@/components/providers/FeatureFlagsProvider", () => ({
+  useFeatureFlags: () => ({ public_worlds: publicWorldsMock.value }),
+}));
+
+vi.mock("next-intl", () => ({
+  useTranslations: () => (key: string) => (key === "explore" ? "Explorer" : key),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -27,6 +36,10 @@ vi.mock("next/link", () => ({
 vi.mock("next/image", () => ({
   default: (props: React.ImgHTMLAttributes<HTMLImageElement>) => <img {...props} alt={props.alt ?? ""} />,
 }));
+
+beforeEach(() => {
+  publicWorldsMock.value = false;
+});
 
 const WORLDS = [
   { id: "world-1", name: "Final Cocktasy", icon_url: null },
@@ -102,5 +115,30 @@ describe("MobileWorldsRail", () => {
     render(<MobileWorldsRail worlds={WORLDS} />);
 
     expect(screen.getByText("99+")).toBeInTheDocument();
+  });
+
+  it("affiche le lien Explorer en tête de liste quand le flag public_worlds est actif", () => {
+    publicWorldsMock.value = true;
+    pathnameMock.value = "/w/world-1";
+    render(<MobileWorldsRail worlds={WORLDS} />);
+
+    const links = screen.getAllByRole("link");
+    expect(links[0]).toHaveAttribute("href", "/explore");
+    expect(links[0]).toHaveAccessibleName("Explorer");
+  });
+
+  it("masque le lien Explorer quand le flag public_worlds est désactivé", () => {
+    publicWorldsMock.value = false;
+    render(<MobileWorldsRail worlds={WORLDS} />);
+
+    expect(screen.queryByLabelText("Explorer")).not.toBeInTheDocument();
+  });
+
+  it("marque le lien Explorer comme actif sur /explore", () => {
+    publicWorldsMock.value = true;
+    pathnameMock.value = "/explore";
+    render(<MobileWorldsRail worlds={WORLDS} />);
+
+    expect(screen.getByLabelText("Explorer")).toHaveAttribute("aria-current", "page");
   });
 });

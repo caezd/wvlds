@@ -26,8 +26,13 @@ vi.mock("next/image", () => ({
   default: (props: React.ImgHTMLAttributes<HTMLImageElement>) => <img {...props} alt={props.alt ?? ""} />,
 }));
 
+vi.mock("next-intl", () => ({
+  useTranslations: () => (key: string) => (key === "explore" ? "Explorer" : key),
+}));
+
+const publicWorldsMock = vi.hoisted(() => ({ value: false }));
 vi.mock("@/components/providers/FeatureFlagsProvider", () => ({
-  useFeatureFlags: () => ({ notifications: false, direct_messages: false }),
+  useFeatureFlags: () => ({ notifications: false, direct_messages: false, public_worlds: publicWorldsMock.value }),
 }));
 
 const notifPanelOpenMock = vi.hoisted(() => ({ value: false }));
@@ -51,6 +56,7 @@ beforeEach(() => {
   pathnameMock.value = "/w/world-1";
   notifPanelOpenMock.value = false;
   dmsPanelOpenMock.value = false;
+  publicWorldsMock.value = false;
 });
 
 describe("AppShell — barre mobile générique vs header de chatroom", () => {
@@ -119,12 +125,23 @@ describe("AppShell — rail des mondes dans le drawer mobile", () => {
     expect(screen.getByLabelText("Monde un")).toBeInTheDocument();
   });
 
-  it("ne rend pas de rail des mondes si l'utilisateur n'a rejoint aucun monde", () => {
+  it("ne rend pas de rail des mondes si l'utilisateur n'a rejoint aucun monde et qu'Explorer est désactivé", () => {
     render(
       <AppShell rail={<div>rail</div>} worlds={[]}>
         <div>contenu</div>
       </AppShell>,
     );
     expect(screen.queryByLabelText("Monde un")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Explorer")).not.toBeInTheDocument();
+  });
+
+  it("affiche quand même le rail (avec le lien Explorer) sans aucun monde rejoint si le flag public_worlds est actif", () => {
+    publicWorldsMock.value = true;
+    render(
+      <AppShell rail={<div>rail</div>} worlds={[]}>
+        <div>contenu</div>
+      </AppShell>,
+    );
+    expect(screen.getByLabelText("Explorer")).toBeInTheDocument();
   });
 });
