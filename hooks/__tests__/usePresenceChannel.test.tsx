@@ -57,11 +57,20 @@ describe("usePresenceChannel", () => {
     expect(result.current.online.u2.persona_name).toBe("Mage");
   });
 
-  it("construit la ligne « est en train d'écrire » sur broadcast typing", async () => {
+  it("construit la ligne « est en train d'écrire » sur broadcast typing, sans persona", async () => {
     const { ch, result } = await setup();
     act(() => ch.emit(isBroadcastTyping, { payload: { user_id: "u2", username: "bob" } }));
     await waitFor(() => expect(result.current.typingLine).toContain("@bob"));
     expect(result.current.typingLine).toMatch(/écrit/);
+    // Sans persona (persona_name absent), pas de « avec » qui traîne devant les points de suspension.
+    expect(result.current.typingLine).toBe("@bob écrit...");
+  });
+
+  it("inclut le nom du persona dans la ligne « est en train d'écrire » quand il est présent", async () => {
+    const { ch, result } = await setup();
+    act(() => ch.emit(isBroadcastTyping, { payload: { user_id: "u2", username: "bob", persona_name: "Mage" } }));
+    await waitFor(() => expect(result.current.typingLine).toContain("@bob"));
+    expect(result.current.typingLine).toBe("@bob écrit avec Mage...");
   });
 
   it("emitTyping est throttlé (un seul send rapproché)", async () => {

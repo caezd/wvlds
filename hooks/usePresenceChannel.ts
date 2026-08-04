@@ -176,8 +176,8 @@ export function usePresenceChannel({
       .map((e) => (e.username ? `@${e.username}` : "Quelqu'un"))
       .slice(0, 3);
     const who = names.join(", ");
-    const personaName = entries[0]?.personaName ? ` · ${entries[0].personaName}` : "";
-    return `${who} ${names.length > 1 ? "écrivent" : "écrit"}…${personaName}`;
+    const withPersona = entries[0]?.personaName ? ` avec ${entries[0].personaName}` : "";
+    return `${who} ${names.length > 1 ? "écrivent" : "écrit"}${withPersona}...`;
   })();
 
   function clearTyping(userId: string) {
