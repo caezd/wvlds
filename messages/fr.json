@@ -591,6 +591,7 @@
     "follow": "Suivre",
     "unfollow": "Ne plus suivre",
     "settingsTitle": "Paramètres de la salle",
+    "settingsIcon": "Icône",
     "settingsName": "Nom de la salle",
     "settingsNamePlaceholder": "Nom de la salle…",
     "settingsTimeline": "Situer dans la chronologie",
@@ -731,8 +732,44 @@
     "editingActive": "Modification active",
     "newPage": "Page",
     "newFolder": "Dossier",
-    "closeWiki": "Fermer le wiki",
-    "noPages": "Aucune page."
+    "noPages": "Aucune page.",
+    "publish": "Publier",
+    "draftSavedAt": "Brouillon enregistré à {time}",
+    "draftBadge": "Brouillon",
+    "searchPlaceholder": "Rechercher dans le wiki…",
+    "clearSearch": "Effacer la recherche",
+    "searchNoResults": "Aucun résultat.",
+    "tocTitle": "Sommaire",
+    "versionHistory": "Historique",
+    "restore": "Restaurer",
+    "restoreVersionTitle": "Restaurer cette version ?",
+    "restoreVersionDesc": "Le contenu actuel sera remplacé par cette version. Cette action crée elle-même une nouvelle entrée dans l'historique.",
+    "noVersions": "Aucune version enregistrée pour le moment.",
+    "unknownAuthor": "Auteur inconnu",
+    "versionRestored": "Version restaurée.",
+    "markRestricted": "Réserver aux éditeurs",
+    "unmarkRestricted": "Rendre visible aux joueurs",
+    "restrictedBadge": "Réservé aux éditeurs",
+    "templates": {
+      "pickerLabel": "Modèle",
+      "blank": "Vierge",
+      "character": {
+        "label": "Fiche personnage",
+        "content": "## Apparence\n\n## Personnalité\n\n## Histoire\n\n## Relations\n\n## Objectifs\n\n## Notes"
+      },
+      "location": {
+        "label": "Lieu",
+        "content": "## Description\n\n## Habitants\n\n## Histoire\n\n## Points d'intérêt\n\n## Dangers"
+      },
+      "faction": {
+        "label": "Faction / Organisation",
+        "content": "## Objectifs\n\n## Structure et hiérarchie\n\n## Membres notables\n\n## Territoire\n\n## Relations avec les autres factions\n\n## Histoire"
+      },
+      "event": {
+        "label": "Événement historique",
+        "content": "## Contexte\n\n## Déroulement\n\n## Conséquences\n\n## Personnages impliqués\n\n## Dates clés"
+      }
+    }
   },
   "map": {
     "title": "Carte",

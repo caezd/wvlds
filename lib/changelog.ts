@@ -8,6 +8,66 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Mondes",
+    text: "Retrait du bouton « Fermer » dans l'en-tête du wiki, redondant. Le bouton de bascule du mode modification est désormais aligné à droite de l'en-tête.",
+  },
+  {
+    date: "2026-08",
+    tag: "Mondes",
+    text: "Hiérarchie des titres du wiki corrigée : les sous-titres (##, ###…) d'une page rendaient parfois plus gros que le titre de la page elle-même. Le titre de page est agrandi et l'échelle des titres du contenu redéfinie pour rester clairement subordonnée.",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
+    text: "La barre de mise en forme flottante (wiki, messages…) pouvait rester figée à sa position d'avant un défilement au lieu de suivre le texte sélectionné. Elle se recale désormais aussi au scroll et au redimensionnement de la fenêtre.",
+  },
+  {
+    date: "2026-08",
+    tag: "Mondes",
+    text: "Une page (ou un dossier) du wiki peut désormais être réservée aux éditeurs du monde — invisible pour les autres membres, utile pour des notes de meneur de jeu. Bascule via le menu ⋯ de la page.",
+  },
+  {
+    date: "2026-08",
+    tag: "Mondes",
+    text: "Une page de wiki garde désormais un historique de ses versions publiées : consultez-le via le bouton « Historique » en mode édition pour prévisualiser et restaurer une ancienne version.",
+  },
+  {
+    date: "2026-08",
+    tag: "Mondes",
+    text: "La création d'une page de wiki propose désormais 4 modèles de départ (fiche personnage, lieu, faction, événement historique) en plus d'une page vierge, avec ouverture directe en édition.",
+  },
+  {
+    date: "2026-08",
+    tag: "Mondes",
+    text: "Une page de wiki avec au moins deux titres affiche désormais un sommaire cliquable dans la marge, pour sauter directement à une section.",
+  },
+  {
+    date: "2026-08",
+    tag: "Mondes",
+    text: "Le wiki d'un monde a maintenant une barre de recherche (titre et contenu des pages) et un fil d'Ariane au-dessus de chaque page pour retrouver rapidement son dossier parent.",
+  },
+  {
+    date: "2026-08",
+    tag: "Mondes",
+    text: "Le wiki d'un monde permet désormais de lier une page à une autre avec la syntaxe « [[Titre de la page]] » : un clic sur le lien affiche directement la page ciblée.",
+  },
+  {
+    date: "2026-08",
+    tag: "Mondes",
+    text: "Le wiki d'un monde distingue désormais brouillon et contenu publié : les modifications sont autosauvegardées en continu pendant la rédaction, mais ne deviennent visibles des autres membres qu'après avoir cliqué sur « Publier ».",
+  },
+  {
+    date: "2026-08",
+    tag: "Mondes",
+    text: "Le wiki d'un monde propose désormais une barre de mise en forme (gras, italique, titres, liste, couleur) pendant la rédaction, et affiche les images insérées en markdown au lieu d'un simple lien.",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
+    text: "L'icône d'une salle se choisit désormais avec le même sélecteur que la bannière : glisser-déposer, presse-papiers ou lien externe, avec recadrage carré avant l'enregistrement (au lieu d'un envoi direct sans recadrage).",
+  },
+  {
+    date: "2026-08",
     tag: "Interface",
     text: "Catégories du changelog consolidées : les doublons (« Correctif »/« Corrections », « Personnages »/« Personas ») sont fusionnés et les étiquettes isolées à une seule entrée (« Explorateur », « i18n », « Jeu », « Abonnement », « Profil ») sont regroupées dans la catégorie la plus proche, pour une liste de filtres plus courte et plus lisible.",
   },

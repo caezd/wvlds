@@ -108,6 +108,38 @@ describe("ParagraphBlockEditor — barre de mise en forme", () => {
     expect(onChange).toHaveBeenCalledWith("## titre");
   });
 
+  it("recalcule la position de la barre après un scroll, pas seulement au changement de sélection", () => {
+    // jsdom n'implémente pas Range.getBoundingClientRect nativement (voir le
+    // fallback dans le composant) — on le stub ici pour vérifier qu'un
+    // scroll (qui ne déclenche pas "selectionchange") redéclenche bien le
+    // recalcul, plutôt que de laisser la barre ancrée à sa position d'avant
+    // scroll pendant que le texte sélectionné défile sous elle.
+    let rectTop = 100;
+    const getBoundingClientRectSpy = vi.fn(() => ({
+      top: rectTop, bottom: rectTop + 20, left: 50, right: 150,
+      width: 100, height: 20, x: 50, y: rectTop, toJSON: () => ({}),
+    }));
+    Range.prototype.getBoundingClientRect = getBoundingClientRectSpy as unknown as typeof Range.prototype.getBoundingClientRect;
+
+    try {
+      const { container } = render(<ParagraphBlockEditor value="bonjour" onChange={() => {}} formatting />);
+      const editor = getEditor(container);
+      fireEvent.focus(editor);
+      selectRange(editor, 0, 7);
+
+      const callsAfterSelect = getBoundingClientRectSpy.mock.calls.length;
+      expect(callsAfterSelect).toBeGreaterThan(0);
+
+      rectTop = 300; // simule le texte sélectionné qui a défilé ailleurs à l'écran
+      fireEvent.scroll(window);
+
+      expect(getBoundingClientRectSpy.mock.calls.length).toBeGreaterThan(callsAfterSelect);
+    } finally {
+      // @ts-expect-error -- retire le stub ajouté pour le test
+      delete Range.prototype.getBoundingClientRect;
+    }
+  });
+
   it("masque la barre quand la sélection est perdue (blur)", () => {
     const { container } = render(<ParagraphBlockEditor value="bonjour" onChange={() => {}} formatting />);
     const editor = getEditor(container);

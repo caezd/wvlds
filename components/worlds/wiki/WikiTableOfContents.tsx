@@ -1,0 +1,33 @@
+"use client";
+
+import { useTranslations } from "next-intl";
+import type { WikiHeading } from "@/lib/wikiToc";
+
+/** Sommaire flottant à droite du contenu — masqué en dessous de 2 titres et sur mobile/tablette. */
+export function WikiTableOfContents({ headings }: { headings: WikiHeading[] }) {
+  const t = useTranslations("wiki");
+
+  if (headings.length < 2) return null;
+
+  return (
+    <nav className="hidden w-48 shrink-0 lg:block" aria-label={t("tocTitle")}>
+      <div className="sticky top-6 border-l border-border-soft pl-3">
+        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          {t("tocTitle")}
+        </p>
+        <ul className="space-y-1 text-sm">
+          {headings.map(h => (
+            <li key={h.id} style={{ paddingLeft: `${(h.level - 1) * 0.75}rem` }}>
+              <a
+                href={`#${h.id}`}
+                className="block truncate text-muted-foreground hover:text-foreground hover:underline"
+              >
+                {h.text}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </nav>
+  );
+}

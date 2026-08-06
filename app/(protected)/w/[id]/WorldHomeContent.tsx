@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getUserId } from "@/lib/auth";
-import { canMemberPost } from "@/lib/worldPermissions";
+import { canEditContent, canMemberPost } from "@/lib/worldPermissions";
 import { WorldHome } from "@/components/worlds/home/WorldHome";
 import type { AsidePersona } from "@/components/personas/WorldPersonaAsideClient";
 import { fetchSectionsByPersona } from "@/lib/personaSections";
@@ -35,7 +35,7 @@ export default async function WorldHomeContent({
   const userId = await getUserId(supabase);
 
   const isShared = true; // guaranteed by the myRole guard in page.tsx
-  const canEditTabs = ["owner", "admin", "editor"].includes(myRole);
+  const canEditTabs = canEditContent(myRole, world.owner_id === userId);
   const canPost = canMemberPost(myRole, world.owner_id === userId);
 
   // Ces quatre chargements (nav, droits admin, préférences UI, personas) sont

@@ -169,7 +169,20 @@ export function ParagraphBlockEditor({
   useEffect(() => {
     if (!formatting) return;
     document.addEventListener("selectionchange", updateSelectionRect);
-    return () => document.removeEventListener("selectionchange", updateSelectionRect);
+    // Un scroll (dans l'éditeur ou un ancêtre — ex: la zone de contenu du
+    // wiki) ne déclenche pas "selectionchange" alors que la sélection se
+    // déplace bel et bien à l'écran : sans ceci, la barre reste ancrée à sa
+    // position d'avant le scroll, désynchronisée du texte sélectionné.
+    // `capture: true` : l'événement "scroll" ne remonte pas (bubble), il
+    // faut l'écouter en phase de capture pour l'attraper depuis `window`
+    // quel que soit l'élément qui a réellement scrollé.
+    window.addEventListener("scroll", updateSelectionRect, true);
+    window.addEventListener("resize", updateSelectionRect);
+    return () => {
+      document.removeEventListener("selectionchange", updateSelectionRect);
+      window.removeEventListener("scroll", updateSelectionRect, true);
+      window.removeEventListener("resize", updateSelectionRect);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formatting, colorPickerOpen, headingMenuOpen]);
 
