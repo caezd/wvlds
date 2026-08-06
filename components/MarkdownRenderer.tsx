@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
 import type { Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -11,6 +11,7 @@ import rehypeHighlight from "rehype-highlight";
 
 import { cn } from "@/lib/utils";
 import { transformStyledSpans, createFenceTracker } from "@/lib/textStyledSpans";
+import { extractHeadings } from "@/lib/wikiToc";
 
 type Props = {
   content: string;
@@ -20,6 +21,10 @@ type Props = {
   /** autoriser les images inline ![alt](url) ? par défaut: false */
   allowImages?: boolean;
   isMine?: boolean;
+  /** Gère les liens internes `[texte](wiki:slug)` (voir lib/wikiLinks.ts) — si
+   *  absent, ces liens sont rendus visuellement cassés plutôt que cliquables
+   *  (contexte hors wiki, ex: un `wiki:` tapé à la main dans un message). */
+  onWikiLink?: (slug: string) => void;
 };
 
 function extractText(node: React.ReactNode): string {
@@ -88,6 +93,7 @@ const COLOR_HEX_RE = /^(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-
 function urlTransform(url: string): string {
   if (url.startsWith("color:") && COLOR_HEX_RE.test(url.slice("color:".length))) return url;
   if (url === "underline:") return url;
+  if (url.startsWith("wiki:")) return url;
   return defaultUrlTransform(url);
 }
 
@@ -234,7 +240,8 @@ export function MarkdownContent({
   content,
   allowImages = false,
   isMine = false,
-}: Pick<Props, "content" | "allowImages" | "isMine">) {
+  onWikiLink,
+}: Pick<Props, "content" | "allowImages" | "isMine" | "onWikiLink">) {
   const schema = useMemo(() => {
     return {
       ...defaultSchema,
@@ -253,7 +260,7 @@ export function MarkdownContent({
       // (voir lib/textStyledSpans.ts) à travers les deux filtres.
       protocols: {
         ...defaultSchema.protocols,
-        href: [...(defaultSchema.protocols?.href ?? []), "color", "underline"],
+        href: [...(defaultSchema.protocols?.href ?? []), "color", "underline", "wiki"],
       },
     } as Parameters<typeof rehypeSanitize>[0];
   }, []);
@@ -263,7 +270,32 @@ export function MarkdownContent({
     [content],
   );
 
+  // Ids d'ancre posés sur les titres (h1-h6), pour le sommaire du wiki
+  // (lib/wikiToc.ts::extractHeadings, appelé côté appelant sur ce même
+  // `content` brut — même algorithme de slug, consommé ici par position dans
+  // le document plutôt que par texte : les transforms ci-dessus (callouts,
+  // spans stylés) ne changent jamais le nombre ni l'ordre des lignes de
+  // titre, seulement leur contenu inline).
+  const headingsRef = useRef(extractHeadings(content));
+  headingsRef.current = useMemo(() => extractHeadings(content), [content]);
+  const headingIndexRef = useRef(0);
+  headingIndexRef.current = 0;
+
+  function headingComponent(Tag: "h1" | "h2" | "h3" | "h4" | "h5" | "h6") {
+    return function Heading({ children }: { children?: React.ReactNode }) {
+      const heading = headingsRef.current[headingIndexRef.current];
+      headingIndexRef.current += 1;
+      return <Tag id={heading?.id}>{children}</Tag>;
+    };
+  }
+
   const components: Components = {
+    h1: headingComponent("h1"),
+    h2: headingComponent("h2"),
+    h3: headingComponent("h3"),
+    h4: headingComponent("h4"),
+    h5: headingComponent("h5"),
+    h6: headingComponent("h6"),
     // Tous les blockquotes sont rendus comme "callout" (div)
     blockquote({ children }) {
       return (
@@ -335,6 +367,25 @@ export function MarkdownContent({
         if (hrefStr === "underline:") return <span className="underline">{children}</span>;
         return <>{children}</>;
       }
+      if (hrefStr.startsWith("wiki:")) {
+        const slug = hrefStr.slice("wiki:".length);
+        if (!slug || !onWikiLink) {
+          return (
+            <span className="cursor-not-allowed text-destructive underline decoration-dashed decoration-destructive/60">
+              {children}
+            </span>
+          );
+        }
+        return (
+          <button
+            type="button"
+            onClick={() => onWikiLink(slug)}
+            className="underline decoration-dotted underline-offset-2 hover:opacity-80"
+          >
+            {children}
+          </button>
+        );
+      }
       return (
         <a
           href={hrefStr}
@@ -389,10 +440,11 @@ export default function MarkdownRenderer({
   proseSize = "sm",
   allowImages = false,
   isMine = false,
+  onWikiLink,
 }: Props) {
   return (
     <div className={proseClassName(proseSize, className)}>
-      <MarkdownContent content={content} allowImages={allowImages} isMine={isMine} />
+      <MarkdownContent content={content} allowImages={allowImages} isMine={isMine} onWikiLink={onWikiLink} />
     </div>
   );
 }

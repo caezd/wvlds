@@ -7,7 +7,6 @@ import { saveWorldPrefs } from "@/app/(protected)/w/actions";
 import {
   BookOpenText,
   Check,
-  Eye,
   FileText,
   FilePlus,
   Folder,
@@ -15,6 +14,8 @@ import {
   FolderPlus,
   GripVertical,
   Loader2,
+  Lock,
+  LockOpen,
   MoreHorizontal,
   Pencil,
   Trash2,
@@ -36,9 +37,10 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Button } from "@/components/ui/button";
-import MarkdownRenderer from "@/components/MarkdownRenderer";
-import { ParagraphBlockEditor } from "@/components/chatrooms/composer/ParagraphBlockEditor";
+import { WikiPageContent } from "./WikiPageContent";
+import { WikiSearchBar, type WikiSearchResult } from "./WikiSearchBar";
+import { WikiTemplatePicker } from "./WikiTemplatePicker";
+import { WIKI_TEMPLATE_ICONS, type WikiTemplateId } from "@/lib/wikiTemplates";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
@@ -50,12 +52,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
+import { slugify } from "@/lib/slug";
 
 const WIKI_NAV_MIN = 120;
 const WIKI_NAV_MAX = 360;
 const WIKI_NAV_DEFAULT = 208;
 
-type WikiPage = {
+export type WikiPage = {
   id: string;
   world_id: string;
   parent_id: string | null;
@@ -65,18 +68,20 @@ type WikiPage = {
   is_folder: boolean;
   sort_index: number;
   icon: string | null;
+  is_restricted: boolean;
+  draft_updated_at: string | null;
+  published_at: string | null;
 };
 
-function slugify(input: string): string {
-  return (
-    input
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/\p{Diacritic}/gu, "")
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "")
-      .slice(0, 64) || "page"
-  );
+/** Colonnes chargées en masse — exclut volontairement `draft_content` :
+ *  ce champ n'est récupéré qu'à la demande (entrée en édition d'une page),
+ *  pour ne jamais transférer de texte de brouillon à qui ne devrait pas l'avoir. */
+const WIKI_PAGE_COLUMNS =
+  "id, world_id, parent_id, title, slug, content, is_folder, sort_index, icon, is_restricted, draft_updated_at, published_at";
+
+/** Normalise pour une recherche insensible à la casse et aux diacritiques (sans slugifier les espaces). */
+function normalizeForSearch(input: string): string {
+  return input.toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "");
 }
 
 // ── Nœud sortable ─────────────────────────────────────────────────────────────
@@ -101,13 +106,14 @@ type SortableTreeNodeProps = {
   onCancelRename: () => void;
   onDelete: () => void;
   onCreateInFolder: () => void;
+  onToggleRestricted: () => void;
 };
 
 function SortableTreeNode({
   page, depth, isSelected, isExpanded, isRenaming, renameValue, renameIcon,
   editMode, subtree, createInput, onSelect, onToggleFolder, onStartRename,
   onRenameChange, onRenameIconChange, onConfirmRename, onCancelRename,
-  onDelete, onCreateInFolder,
+  onDelete, onCreateInFolder, onToggleRestricted,
 }: SortableTreeNodeProps) {
   const t = useTranslations("wiki");
   const tCommon = useTranslations("common");
@@ -207,6 +213,10 @@ function SortableTreeNode({
           </span>
         )}
 
+        {!isRenaming && page.is_restricted && (
+          <Lock className="h-3 w-3 shrink-0 text-muted-foreground/70" />
+        )}
+
         {editMode && !isRenaming && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -230,6 +240,12 @@ function SortableTreeNode({
               )}
               <DropdownMenuItem onClick={e => { e.stopPropagation(); onStartRename(); }}>
                 <Pencil className="mr-2 h-4 w-4" /> {t("rename")}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={e => { e.stopPropagation(); onToggleRestricted(); }}>
+                {page.is_restricted
+                  ? <><LockOpen className="mr-2 h-4 w-4" /> {t("unmarkRestricted")}</>
+                  : <><Lock className="mr-2 h-4 w-4" /> {t("markRestricted")}</>
+                }
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
@@ -259,12 +275,10 @@ export function WorldWiki({
   worldId,
   canEdit,
   initialSidebarWidth,
-  onClose,
 }: {
   worldId: string;
   canEdit: boolean;
   initialSidebarWidth?: number;
-  onClose: () => void;
 }) {
   const t = useTranslations("wiki");
   const tCommon = useTranslations("common");
@@ -282,12 +296,16 @@ export function WorldWiki({
   const [createTitle, setCreateTitle] = React.useState("");
   const createInputRef = React.useRef<HTMLInputElement>(null);
 
-  const [editing, setEditing] = React.useState(false);
-  const [draft, setDraft] = React.useState("");
-  const [saving, setSaving] = React.useState(false);
-  const [showPreview, setShowPreview] = React.useState(false);
   const [createIcon, setCreateIcon] = React.useState("");
   const [renameIcon, setRenameIcon] = React.useState("");
+  const [createTemplate, setCreateTemplate] = React.useState<WikiTemplateId | null>(null);
+  const tTemplates = useTranslations("wiki.templates");
+
+  const [searchQuery, setSearchQuery] = React.useState("");
+
+  // Id de la page qui vient d'être créée depuis un modèle — déclenche
+  // l'entrée automatique en édition une seule fois (voir WikiPageContent).
+  const [pendingAutoEditId, setPendingAutoEditId] = React.useState<string | null>(null);
 
   // ── Resize de la sidebar nav ──────────────────────────────
   const [navWidth, setNavWidth] = React.useState(
@@ -337,7 +355,7 @@ export function WorldWiki({
   async function load() {
     const { data, error } = await supabase
       .from("world_wiki_pages")
-      .select("*")
+      .select(WIKI_PAGE_COLUMNS)
       .eq("world_id", worldId)
       .order("sort_index", { ascending: true });
     if (error) { toast.error(error.message); return; }
@@ -350,23 +368,14 @@ export function WorldWiki({
     if (creating) {
       setCreateTitle("");
       setCreateIcon("");
+      setCreateTemplate(null);
       requestAnimationFrame(() => createInputRef.current?.focus());
     }
   }, [creating]);
 
-  // Reset content editor on page change
-  React.useEffect(() => {
-    setEditing(false);
-    setShowPreview(false);
-    const page = pages?.find(p => p.id === selectedId);
-    setDraft(page?.content ?? "");
-  }, [selectedId]); // eslint-disable-line react-hooks/exhaustive-deps
-
   // Leaving edit mode clears transient editing state
   React.useEffect(() => {
     if (!editMode) {
-      setEditing(false);
-      setShowPreview(false);
       setCreating(null);
       setRenamingId(null);
     }
@@ -388,7 +397,13 @@ export function WorldWiki({
   }
 
   // ── CRUD ─────────────────────────────────────────────────────
-  async function createPage(parentId: string | null, title: string, isFolder: boolean, icon: string) {
+  async function createPage(
+    parentId: string | null,
+    title: string,
+    isFolder: boolean,
+    icon: string,
+    templateContent?: string,
+  ) {
     const siblings = childrenOf(parentId);
     const sort_index = siblings.length;
 
@@ -400,10 +415,18 @@ export function WorldWiki({
       slug = `${slug}-${n}`;
     }
 
+    const insertPayload: Record<string, unknown> = {
+      world_id: worldId, parent_id: parentId, title, slug, is_folder: isFolder, sort_index, icon: icon || null,
+    };
+    if (templateContent) {
+      insertPayload.draft_content = templateContent;
+      insertPayload.draft_updated_at = new Date().toISOString();
+    }
+
     const { data, error } = await supabase
       .from("world_wiki_pages")
-      .insert({ world_id: worldId, parent_id: parentId, title, slug, is_folder: isFolder, sort_index, icon: icon || null })
-      .select("*")
+      .insert(insertPayload)
+      .select(WIKI_PAGE_COLUMNS)
       .single();
     if (error) { toast.error(error.message); return; }
 
@@ -412,6 +435,7 @@ export function WorldWiki({
       setExpandedFolders(prev => new Set([...prev, data.id]));
     } else {
       setSelectedId(data.id);
+      if (templateContent) setPendingAutoEditId(data.id);
     }
     setCreating(null);
   }
@@ -427,6 +451,16 @@ export function WorldWiki({
     if (error) { toast.error(error.message); return; }
     setPages(prev => prev?.map(p => p.id === page.id ? { ...p, title, icon } : p) ?? null);
     setRenamingId(null);
+  }
+
+  async function toggleRestricted(page: WikiPage) {
+    const is_restricted = !page.is_restricted;
+    const { error } = await supabase
+      .from("world_wiki_pages")
+      .update({ is_restricted })
+      .eq("id", page.id);
+    if (error) { toast.error(error.message); return; }
+    setPages(prev => prev?.map(p => p.id === page.id ? { ...p, is_restricted } : p) ?? null);
   }
 
   async function deletePage(page: WikiPage) {
@@ -448,20 +482,81 @@ export function WorldWiki({
     toast.success(t("deleted"));
   }
 
-  async function saveContent() {
-    if (!selectedPage) return;
-    setSaving(true);
-    const { error } = await supabase
-      .from("world_wiki_pages")
-      .update({ content: draft, updated_at: new Date().toISOString() })
-      .eq("id", selectedPage.id);
-    setSaving(false);
-    if (error) { toast.error(t("saveError"), { description: error.message }); return; }
-    setPages(prev =>
-      prev?.map(p => p.id === selectedPage.id ? { ...p, content: draft } : p) ?? null
-    );
-    setEditing(false);
+  function onPageUpdated(patch: Partial<WikiPage> & { id: string }) {
+    setPages(prev => prev?.map(p => p.id === patch.id ? { ...p, ...patch } : p) ?? null);
   }
+
+  /** Ids des dossiers ancêtres d'une page, du plus proche au plus ancien. */
+  function ancestorIdsOf(pageId: string): string[] {
+    const ids: string[] = [];
+    let parentId = pages?.find(p => p.id === pageId)?.parent_id ?? null;
+    while (parentId) {
+      ids.push(parentId);
+      parentId = pages?.find(p => p.id === parentId)?.parent_id ?? null;
+    }
+    return ids;
+  }
+
+  /** Pages des dossiers ancêtres, du plus ancien au plus proche (fil d'Ariane). */
+  function ancestorsOf(page: WikiPage): WikiPage[] {
+    return ancestorIdsOf(page.id)
+      .reverse()
+      .map(id => pages?.find(p => p.id === id))
+      .filter((p): p is WikiPage => !!p);
+  }
+
+  /** Sélectionne une page et déplie tous ses dossiers ancêtres dans la sidebar. */
+  function selectPageById(pageId: string) {
+    const target = pages?.find(p => p.id === pageId);
+    if (!target) return;
+    const ids = ancestorIdsOf(target.id);
+    if (ids.length) setExpandedFolders(prev => new Set([...prev, ...ids]));
+    setSelectedId(target.id);
+  }
+
+  /** Déplie un dossier (et ses propres ancêtres) sans changer la sélection — utilisé par le fil d'Ariane. */
+  function expandFolderChain(folderId: string) {
+    setExpandedFolders(prev => new Set([...prev, folderId, ...ancestorIdsOf(folderId)]));
+  }
+
+  /** Navigue vers la page ciblée par un lien interne `[[Titre]]`. */
+  function navigateToSlug(slug: string) {
+    const target = pages?.find(p => p.slug === slug);
+    if (target) selectPageById(target.id);
+  }
+
+  function selectSearchResult(pageId: string) {
+    selectPageById(pageId);
+    setSearchQuery("");
+  }
+
+  const searchResults = React.useMemo<WikiSearchResult[] | null>(() => {
+    const q = normalizeForSearch(searchQuery.trim());
+    if (!q) return null;
+
+    return (pages ?? [])
+      .filter(p => !p.is_folder)
+      .map((p): WikiSearchResult | null => {
+        const titleMatch = normalizeForSearch(p.title).includes(q);
+        const contentNorm = p.content ? normalizeForSearch(p.content) : "";
+        const contentIdx = contentNorm.indexOf(q);
+        if (!titleMatch && contentIdx === -1) return null;
+
+        let excerpt = "";
+        if (!titleMatch && contentIdx !== -1 && p.content) {
+          const start = Math.max(0, contentIdx - 30);
+          excerpt = (start > 0 ? "…" : "") + p.content.slice(start, start + 90).trim() + "…";
+        }
+
+        return {
+          page: p,
+          path: ancestorsOf(p).map(a => a.title).join(" / "),
+          excerpt,
+        };
+      })
+      .filter((r): r is WikiSearchResult => r !== null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery, pages]);
 
   // ── DnD ──────────────────────────────────────────────────────
   function onDragEnd({ active, over }: DragEndEvent) {
@@ -515,52 +610,63 @@ export function WorldWiki({
   // ── Tree ─────────────────────────────────────────────────────
   function renderCreateInput(parentId: string | null, depth: number) {
     const isFolder = creating?.isFolder ?? false;
+    const templateContent = createTemplate ? tTemplates.raw(`${createTemplate}.content`) as string : undefined;
     return (
-      <div
-        className="flex items-center gap-1.5 rounded-md px-2 py-1"
-        style={{ paddingLeft: `${0.5 + depth}rem` }}
-      >
-        <LucideIconPicker
-          value={createIcon}
-          onChange={setCreateIcon}
-          trigger={
-            <button
-              type="button"
-              className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-secondary hover:text-foreground"
-              title={t("chooseIcon")}
-            >
-              {createIcon && VALID_LUCIDE_ICONS.has(createIcon) ? (
-                <LazyLucideIcon name={createIcon} className="h-3.5 w-3.5" />
-              ) : isFolder ? (
-                <Folder className="h-3.5 w-3.5" />
-              ) : (
-                <FileText className="h-3.5 w-3.5" />
-              )}
-            </button>
-          }
-        />
-        <input
-          ref={createInputRef}
-          value={createTitle}
-          onChange={e => setCreateTitle(e.target.value)}
-          onKeyDown={e => {
-            if (e.key === "Enter" && createTitle.trim()) {
-              e.preventDefault();
-              void createPage(parentId, createTitle.trim(), isFolder, createIcon);
+      <div className="rounded-md px-2 py-1" style={{ paddingLeft: `${0.5 + depth}rem` }}>
+        <div className="flex items-center gap-1.5">
+          <LucideIconPicker
+            value={createIcon}
+            onChange={setCreateIcon}
+            trigger={
+              <button
+                type="button"
+                className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-secondary hover:text-foreground"
+                title={t("chooseIcon")}
+              >
+                {createIcon && VALID_LUCIDE_ICONS.has(createIcon) ? (
+                  <LazyLucideIcon name={createIcon} className="h-3.5 w-3.5" />
+                ) : isFolder ? (
+                  <Folder className="h-3.5 w-3.5" />
+                ) : (
+                  <FileText className="h-3.5 w-3.5" />
+                )}
+              </button>
             }
-            if (e.key === "Escape") setCreating(null);
-          }}
-          placeholder={isFolder ? t("folderNamePlaceholder") : t("pageTitlePlaceholder")}
-          className="flex-1 border-b border-border bg-transparent py-0 text-sm outline-none placeholder:text-muted-foreground/60"
-        />
-        <button
-          type="button"
-          onClick={() => setCreating(null)}
-          className="shrink-0 text-muted-foreground hover:text-foreground"
-          aria-label={tCommon("cancel")}
-        >
-          <X className="h-3 w-3" />
-        </button>
+          />
+          <input
+            ref={createInputRef}
+            value={createTitle}
+            onChange={e => setCreateTitle(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === "Enter" && createTitle.trim()) {
+                e.preventDefault();
+                void createPage(parentId, createTitle.trim(), isFolder, createIcon, templateContent);
+              }
+              if (e.key === "Escape") setCreating(null);
+            }}
+            placeholder={isFolder ? t("folderNamePlaceholder") : t("pageTitlePlaceholder")}
+            className="flex-1 border-b border-border bg-transparent py-0 text-sm outline-none placeholder:text-muted-foreground/60"
+          />
+          <button
+            type="button"
+            onClick={() => setCreating(null)}
+            className="shrink-0 text-muted-foreground hover:text-foreground"
+            aria-label={tCommon("cancel")}
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </div>
+        {!isFolder && (
+          <div className="mt-1 pl-6">
+            <WikiTemplatePicker
+              value={createTemplate}
+              onChange={id => {
+                setCreateTemplate(id);
+                if (id) setCreateIcon(WIKI_TEMPLATE_ICONS[id]);
+              }}
+            />
+          </div>
+        )}
       </div>
     );
   }
@@ -597,6 +703,7 @@ export function WorldWiki({
                 if (!expandedFolders.has(page.id)) toggleFolder(page.id);
                 setCreating({ parentId: page.id, isFolder: false });
               }}
+              onToggleRestricted={() => void toggleRestricted(page)}
             />
           );
         })}
@@ -621,102 +728,21 @@ export function WorldWiki({
       );
     }
 
-    if (editing) {
-      return (
-        <div className="flex flex-1 flex-col gap-3 overflow-hidden p-6">
-          <div className="flex items-center gap-3">
-            <h1 className="flex flex-1 items-center gap-2 truncate text-xl font-semibold">
-              {selectedPage.icon && VALID_LUCIDE_ICONS.has(selectedPage.icon) && (
-                <LazyLucideIcon name={selectedPage.icon} className="h-5 w-5 shrink-0 text-muted-foreground" />
-              )}
-              {selectedPage.title}
-            </h1>
-            <button
-              type="button"
-              onClick={() => setShowPreview(v => !v)}
-              className={cn(
-                "flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-                showPreview
-                  ? "border-primary/40 bg-primary/10 text-primary"
-                  : "border-border-soft text-muted-foreground hover:bg-secondary hover:text-foreground",
-              )}
-            >
-              <Eye className="h-3 w-3" /> {t("preview")}
-            </button>
-          </div>
-
-          <div className={cn("min-h-0 flex-1", showPreview ? "flex gap-4" : "flex flex-col")}>
-            <div className={cn(
-              "rounded-2xl border border-border-soft p-4",
-              showPreview ? "flex flex-1 flex-col overflow-hidden" : "flex flex-1 flex-col overflow-hidden",
-            )}>
-              <ParagraphBlockEditor
-                value={draft}
-                onChange={setDraft}
-                placeholder={t("contentPlaceholder")}
-                submitOnEnter={false}
-                wrapperClassName="max-h-none flex-1 overflow-y-auto"
-                className="text-sm"
-              />
-            </div>
-            {showPreview && (
-              <div className="flex-1 overflow-y-auto rounded-2xl border border-border-soft p-4">
-                {draft.trim()
-                  ? <MarkdownRenderer content={draft} />
-                  : <p className="text-sm italic text-muted-foreground">{t("nothingToPreview")}</p>
-                }
-              </div>
-            )}
-          </div>
-
-          <div className="flex shrink-0 items-center justify-end gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => { setDraft(selectedPage.content ?? ""); setEditing(false); setShowPreview(false); }}
-              disabled={saving}
-            >
-              {tCommon("cancel")}
-            </Button>
-            <Button size="sm" onClick={() => void saveContent()} disabled={saving}>
-              {saving && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
-              {tCommon("save")}
-            </Button>
-          </div>
-        </div>
-      );
-    }
-
     return (
-      <div className="flex-1 overflow-y-auto p-6">
-        <div className="mx-auto max-w-2xl">
-          <div className="mb-6 flex items-start justify-between gap-4">
-            <h1 className="flex items-center gap-2 text-xl font-semibold">
-              {selectedPage.icon && VALID_LUCIDE_ICONS.has(selectedPage.icon) && (
-                <LazyLucideIcon name={selectedPage.icon} className="h-5 w-5 shrink-0 text-muted-foreground" />
-              )}
-              {selectedPage.title}
-            </h1>
-            {isEditMode && (
-              <Button
-                variant="secondary"
-                size="sm"
-                className="shrink-0"
-                onClick={() => { setDraft(selectedPage.content ?? ""); setEditing(true); }}
-              >
-                <Pencil className="mr-1.5 h-3.5 w-3.5" /> {tCommon("edit")}
-              </Button>
-            )}
-          </div>
-          {selectedPage.content?.trim() ? (
-            <MarkdownRenderer content={selectedPage.content} />
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              {isEditMode ? t("pageEmptyEdit") : t("pageEmpty")}
-            </p>
-          )}
-        </div>
-      </div>
+      <WikiPageContent
+        key={selectedPage.id}
+        page={selectedPage}
+        pages={pages ?? []}
+        ancestors={ancestorsOf(selectedPage)}
+        canEdit={canEdit}
+        isEditMode={isEditMode}
+        supabase={supabase}
+        onPageUpdated={onPageUpdated}
+        onNavigate={navigateToSlug}
+        onExpandFolder={expandFolderChain}
+        autoEdit={selectedPage.id === pendingAutoEditId}
+        onAutoEditConsumed={() => setPendingAutoEditId(null)}
+      />
     );
   }
 
@@ -741,27 +767,23 @@ export function WorldWiki({
           icon={<BookOpenText className="h-4 w-4 shrink-0 text-muted-foreground" />}
           title="Wiki"
           right={
-            <Button size="icon" variant="ghost" onClick={onClose} aria-label={t("closeWiki")} className="rounded-lg hover:bg-hoverCard">
-              <X className="h-5 w-5" />
-            </Button>
+            canEdit && (
+              <button
+                type="button"
+                onClick={() => setEditMode(v => !v)}
+                className={cn(
+                  "flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                  editMode
+                    ? "border-primary/40 bg-primary/10 text-primary"
+                    : "border-border-soft bg-background text-muted-foreground hover:bg-secondary hover:text-foreground",
+                )}
+              >
+                <Pencil className="h-3 w-3" />
+                {editMode ? t("editingActive") : tCommon("edit")}
+              </button>
+            )
           }
         >
-          {canEdit && (
-            <button
-              type="button"
-              onClick={() => setEditMode(v => !v)}
-              className={cn(
-                "flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-                editMode
-                  ? "border-primary/40 bg-primary/10 text-primary"
-                  : "border-border-soft bg-background text-muted-foreground hover:bg-secondary hover:text-foreground",
-              )}
-            >
-              <Pencil className="h-3 w-3" />
-              {editMode ? t("editingActive") : tCommon("edit")}
-            </button>
-          )}
-
           {isEditMode && (
             <div className="flex items-center gap-0.5">
               <button
@@ -785,24 +807,29 @@ export function WorldWiki({
         {/* ── Body ───────────────────────────────────────── */}
         <div className="flex min-h-0 flex-1">
           {/* Sidebar nav */}
-          <div
-            className="shrink-0 overflow-y-auto border-r border-border-soft py-1.5"
-            style={{ width: navWidth }}
-          >
-            {pages === null ? (
-              <div className="flex items-center justify-center p-6">
-                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-              </div>
-            ) : (
-              <nav className="px-1">
-                <DndContext sensors={sensors} onDragEnd={onDragEnd}>
-                  {renderTree(null)}
-                </DndContext>
-                {pages.length === 0 && !creating && (
-                  <p className="px-2 py-1 text-xs italic text-muted-foreground">{t("noPages")}</p>
-                )}
-              </nav>
-            )}
+          <div className="flex shrink-0 flex-col border-r border-border-soft" style={{ width: navWidth }}>
+            <WikiSearchBar
+              query={searchQuery}
+              onQueryChange={setSearchQuery}
+              results={searchResults}
+              onSelectResult={selectSearchResult}
+            />
+            <div className="flex-1 overflow-y-auto py-1.5">
+              {pages === null ? (
+                <div className="flex items-center justify-center p-6">
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                </div>
+              ) : searchQuery.trim() === "" ? (
+                <nav className="px-1">
+                  <DndContext sensors={sensors} onDragEnd={onDragEnd}>
+                    {renderTree(null)}
+                  </DndContext>
+                  {pages.length === 0 && !creating && (
+                    <p className="px-2 py-1 text-xs italic text-muted-foreground">{t("noPages")}</p>
+                  )}
+                </nav>
+              ) : null}
+            </div>
           </div>
 
           {/* Handle de redimensionnement — visible uniquement en mode modification */}

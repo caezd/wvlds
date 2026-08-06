@@ -161,7 +161,6 @@ export function WorldHome({
             worldId={worldId}
             canEdit={canEditTabs}
             initialSidebarWidth={initialPrefs?.wiki_sidebar_width}
-            onClose={closeView}
           />
         ) : showMap && world_map ? (
           <WorldMap

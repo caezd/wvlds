@@ -590,6 +590,7 @@
     "follow": "Follow",
     "unfollow": "Unfollow",
     "settingsTitle": "Room settings",
+    "settingsIcon": "Icon",
     "settingsName": "Room name",
     "settingsNamePlaceholder": "Room name…",
     "settingsTimeline": "Place on timeline",
@@ -730,8 +731,44 @@
     "editingActive": "Editing active",
     "newPage": "Page",
     "newFolder": "Folder",
-    "closeWiki": "Close wiki",
-    "noPages": "No pages."
+    "noPages": "No pages.",
+    "publish": "Publish",
+    "draftSavedAt": "Draft saved at {time}",
+    "draftBadge": "Draft",
+    "searchPlaceholder": "Search the wiki…",
+    "clearSearch": "Clear search",
+    "searchNoResults": "No results.",
+    "tocTitle": "Contents",
+    "versionHistory": "History",
+    "restore": "Restore",
+    "restoreVersionTitle": "Restore this version?",
+    "restoreVersionDesc": "The current content will be replaced by this version. This action itself creates a new history entry.",
+    "noVersions": "No versions recorded yet.",
+    "unknownAuthor": "Unknown author",
+    "versionRestored": "Version restored.",
+    "markRestricted": "Restrict to editors",
+    "unmarkRestricted": "Make visible to players",
+    "restrictedBadge": "Editors only",
+    "templates": {
+      "pickerLabel": "Template",
+      "blank": "Blank",
+      "character": {
+        "label": "Character sheet",
+        "content": "## Appearance\n\n## Personality\n\n## History\n\n## Relationships\n\n## Goals\n\n## Notes"
+      },
+      "location": {
+        "label": "Location",
+        "content": "## Description\n\n## Inhabitants\n\n## History\n\n## Points of interest\n\n## Dangers"
+      },
+      "faction": {
+        "label": "Faction / Organization",
+        "content": "## Goals\n\n## Structure and hierarchy\n\n## Notable members\n\n## Territory\n\n## Relations with other factions\n\n## History"
+      },
+      "event": {
+        "label": "Historical event",
+        "content": "## Context\n\n## Course of events\n\n## Consequences\n\n## People involved\n\n## Key dates"
+      }
+    }
   },
   "map": {
     "title": "Map",
