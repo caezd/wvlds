@@ -434,6 +434,7 @@ export function WorldSettingsView({ world, onUpdated, onClose }: WorldSettingsVi
                 .eq("id", world.id);
             if (error) throw error;
             onUpdated?.({ ...world, [field]: clean } as World);
+            toast.success("Modification enregistrée.");
         } catch (e: unknown) {
             toast.error(e instanceof Error ? e.message : "Enregistrement impossible.");
         }

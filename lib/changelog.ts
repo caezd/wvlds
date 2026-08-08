@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Mondes",
+    text: "Les paramètres d'un monde affichent désormais une confirmation lors de l'enregistrement d'une modification (nom, description, visibilité, nom du lien wiki…), là où rien ne le signalait auparavant.",
+  },
+  {
+    date: "2026-08",
+    tag: "Mondes",
     text: "Le lien « Annexes » vers le wiki dans la sidebar d'un monde peut désormais être renommé (ex: « Compendium ») depuis les paramètres du monde, onglet Fonctions.",
   },
   {

@@ -3,9 +3,11 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createSupabaseMock } from "@/test/supabaseMock";
 import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
 import type { World } from "@/types/worlds";
 
 vi.mock("@/lib/supabase/client", () => ({ createClient: vi.fn() }));
+vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
 }));
@@ -97,6 +99,21 @@ describe("WorldSettingsView — libellé personnalisé du lien wiki", () => {
     await waitFor(() => {
       const builders = mock.buildersFor("worlds");
       expect(builders.at(-1)?.update).toHaveBeenCalledWith({ wiki_label: "Compendium" });
+    });
+  });
+
+  it("confirme la sauvegarde par un toast", async () => {
+    setup();
+    const user = userEvent.setup();
+    render(<WorldSettingsView world={BASE_WORLD} onClose={vi.fn()} />);
+
+    await user.click(screen.getByRole("tab", { name: "Fonctions" }));
+    const input = screen.getByPlaceholderText("Annexes");
+    await user.type(input, "Compendium");
+    await user.tab();
+
+    await waitFor(() => {
+      expect(toast.success).toHaveBeenCalledWith("Modification enregistrée.");
     });
   });
 
