@@ -275,13 +275,17 @@ export function WorldWiki({
   worldId,
   canEdit,
   initialSidebarWidth,
+  label,
 }: {
   worldId: string;
   canEdit: boolean;
   initialSidebarWidth?: number;
+  /** Libellé personnalisé du monde pour ce panneau (ex: "Compendium") — vide = libellé traduit par défaut. */
+  label?: string | null;
 }) {
   const t = useTranslations("wiki");
   const tCommon = useTranslations("common");
+  const tNav = useTranslations("worlds.nav");
   const supabase = React.useMemo(() => createClient(), []);
   const [pages, setPages] = React.useState<WikiPage[] | null>(null);
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
@@ -782,7 +786,7 @@ export function WorldWiki({
       <div className="flex h-full min-h-0 flex-1 flex-col">
         <WorldPanelHeader
           icon={<BookOpenText className="h-4 w-4 shrink-0 text-muted-foreground" />}
-          title="Wiki"
+          title={label || tNav("wiki")}
           right={
             canEdit && (
               <button

@@ -99,4 +99,6 @@ export type World = {
   allows_real_avatars?: boolean | null;
   allows_illustrated_avatars?: boolean | null;
   is_age_restricted?: boolean | null;
+  /** Libellé personnalisé du lien wiki dans la sidebar (ex: "Compendium") — null = libellé traduit par défaut. */
+  wiki_label?: string | null;
 };

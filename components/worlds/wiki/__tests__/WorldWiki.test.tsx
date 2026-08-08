@@ -279,3 +279,24 @@ describe("WorldWiki — cascade de renommage", () => {
     expect(mock.rpc).not.toHaveBeenCalled();
   });
 });
+
+describe("WorldWiki — libellé personnalisé du panneau", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("affiche le libellé traduit par défaut sans prop label", () => {
+    setup();
+    render(<WorldWiki worldId="w1" canEdit={false} />);
+
+    expect(screen.getByText("Annexes")).toBeInTheDocument();
+  });
+
+  it("affiche le libellé personnalisé quand il est fourni", () => {
+    setup();
+    render(<WorldWiki worldId="w1" canEdit={false} label="Compendium" />);
+
+    expect(screen.getByText("Compendium")).toBeInTheDocument();
+    expect(screen.queryByText("Annexes")).not.toBeInTheDocument();
+  });
+});

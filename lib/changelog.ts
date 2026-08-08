@@ -9,6 +9,16 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Mondes",
+    text: "Le lien « Annexes » vers le wiki dans la sidebar d'un monde peut désormais être renommé (ex: « Compendium ») depuis les paramètres du monde, onglet Fonctions.",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
+    text: "L'accès aux paramètres d'une salle ne demande plus qu'au moins un message y ait été posté au préalable.",
+  },
+  {
+    date: "2026-08",
+    tag: "Mondes",
     text: "Renommer une page de wiki met désormais à jour en cascade tous les liens internes [[Ancien titre]] qui la ciblent ailleurs dans le monde, au lieu de les laisser cassés silencieusement.",
   },
   {

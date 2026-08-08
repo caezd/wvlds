@@ -98,6 +98,7 @@ const schema = z.object({
         .optional()
         .or(z.literal("")),
     visibility: z.enum(["private", "public"]),
+    wiki_label: z.string().trim().max(40, "40 caractères max").optional().or(z.literal("")),
 });
 
 export type WorldFormValues = z.infer<typeof schema>;
@@ -188,6 +189,7 @@ export function WorldSettingsView({ world, onUpdated, onClose }: WorldSettingsVi
             banner_url: world.banner_url ?? "",
             color: world.color ?? "",
             visibility: (world.visibility === "public" ? "public" : "private") as "private" | "public",
+            wiki_label: world.wiki_label ?? "",
         },
         mode: "onChange",
     });
@@ -343,6 +345,7 @@ export function WorldSettingsView({ world, onUpdated, onClose }: WorldSettingsVi
             banner_url: world.banner_url ?? "",
             color: world.color ?? "",
             visibility: (world.visibility === "public" ? "public" : "private") as "private" | "public",
+            wiki_label: world.wiki_label ?? "",
         });
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [world?.id]);
@@ -420,7 +423,7 @@ export function WorldSettingsView({ world, onUpdated, onClose }: WorldSettingsVi
     }
 
     async function persistField(
-        field: "name" | "description" | "icon_url" | "banner_url" | "color" | "visibility",
+        field: "name" | "description" | "icon_url" | "banner_url" | "color" | "visibility" | "wiki_label",
         value: string | null,
     ) {
         const clean = truthyOrNull(value);
@@ -790,6 +793,35 @@ export function WorldSettingsView({ world, onUpdated, onClose }: WorldSettingsVi
                                             />
                                         </div>
                                     </div>
+                                </div>
+
+                                {/* -- Wiki ---------------------------------- */}
+                                <div className="space-y-3 pt-2">
+                                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Wiki</p>
+                                    <FormField
+                                        control={form.control}
+                                        name="wiki_label"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>
+                                                    <LabelWithHelp help="Renomme le lien du wiki dans la sidebar du monde">
+                                                        Nom du lien
+                                                    </LabelWithHelp>
+                                                </FormLabel>
+                                                <FormControl>
+                                                    <Input
+                                                        placeholder="Annexes"
+                                                        {...field}
+                                                        onBlur={(e) => {
+                                                            field.onBlur();
+                                                            void persistField("wiki_label", e.target.value.trim());
+                                                        }}
+                                                    />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
                                 </div>
 
                                 {/* -- Sécurité ---------------------------------- */}
