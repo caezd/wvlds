@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Correctif",
+    text: "Un lien interne [[Titre]] du wiki partagé par deux pages homonymes pointait arbitrairement vers l'une des deux. Il est désormais rendu comme un lien cassé plutôt que de risquer de pointer vers la mauvaise page.",
+  },
+  {
+    date: "2026-08",
     tag: "Mondes",
     text: "Retrait du bouton « Fermer » dans l'en-tête du wiki, redondant. Le bouton de bascule du mode modification est désormais aligné à droite de l'en-tête.",
   },

@@ -314,18 +314,19 @@ export function WikiPageContent({
               {pageIcon}
               {page.title}
             </h1>
-            {draftBadge}
-          {restrictedBadge}
-            {isEditMode && (
-              <Button
-                variant="secondary"
-                size="sm"
-                className="shrink-0"
-                onClick={() => void startEditing()}
-              >
-                <Pencil className="mr-1.5 h-3.5 w-3.5" /> {tCommon("edit")}
-              </Button>
-            )}
+            <div className="flex shrink-0 items-center gap-2">
+              {draftBadge}
+              {restrictedBadge}
+              {isEditMode && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => void startEditing()}
+                >
+                  <Pencil className="mr-1.5 h-3.5 w-3.5" /> {tCommon("edit")}
+                </Button>
+              )}
+            </div>
           </div>
           {page.content?.trim() ? (
             <MarkdownRenderer
