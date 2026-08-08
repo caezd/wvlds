@@ -712,6 +712,7 @@
     "options": "Options",
     "addPage": "Add a page",
     "rename": "Rename",
+    "renameCascadeUpdated": "{count, plural, one {# internal link} other {# internal links}} to this page updated elsewhere in the wiki.",
     "deleted": "Deleted.",
     "saveError": "Could not save.",
     "folderNamePlaceholder": "Folder name…",

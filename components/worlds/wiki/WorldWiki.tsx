@@ -444,6 +444,7 @@ export function WorldWiki({
     const title = newTitle.trim();
     if (!title) { setRenamingId(null); return; }
     const icon = newIcon || null;
+    const previousTitle = page.title;
     const { error } = await supabase
       .from("world_wiki_pages")
       .update({ title, icon })
@@ -451,6 +452,22 @@ export function WorldWiki({
     if (error) { toast.error(error.message); return; }
     setPages(prev => prev?.map(p => p.id === page.id ? { ...p, title, icon } : p) ?? null);
     setRenamingId(null);
+
+    // Met à jour en cascade les liens internes [[Ancien titre]] des autres
+    // pages du monde (contenu publié + brouillon) — sinon ils cassent
+    // silencieusement sans que personne ne le remarque.
+    if (title !== previousTitle) {
+      const { data: updatedCount, error: cascadeError } = await supabase.rpc("wwp_rename_cascade", {
+        p_world_id: worldId,
+        p_old_title: previousTitle,
+        p_new_title: title,
+      });
+      if (cascadeError) { toast.error(cascadeError.message); return; }
+      if (typeof updatedCount === "number" && updatedCount > 0) {
+        toast.success(t("renameCascadeUpdated", { count: updatedCount }));
+        void load();
+      }
+    }
   }
 
   async function toggleRestricted(page: WikiPage) {

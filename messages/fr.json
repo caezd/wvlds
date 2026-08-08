@@ -713,6 +713,7 @@
     "options": "Options",
     "addPage": "Ajouter une page",
     "rename": "Renommer",
+    "renameCascadeUpdated": "{count, plural, one {# lien interne mis à jour} other {# liens internes mis à jour}} vers cette page ailleurs dans le wiki.",
     "deleted": "Supprimé.",
     "saveError": "Sauvegarde impossible.",
     "folderNamePlaceholder": "Nom du dossier…",
