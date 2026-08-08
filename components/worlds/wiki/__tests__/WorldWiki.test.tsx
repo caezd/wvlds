@@ -212,3 +212,70 @@ describe("WorldWiki — pages restreintes", () => {
     });
   });
 });
+
+describe("WorldWiki — cascade de renommage", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("renommer une page déclenche la cascade des liens internes vers l'ancien titre", async () => {
+    const mock = createSupabaseMock({
+      results: [
+        { data: [PAGE], error: null }, // load() initial
+        { data: null, error: null },   // update du titre
+        { data: [PAGE], error: null }, // load() de rafraîchissement après cascade
+      ],
+    });
+    mock.rpc.mockResolvedValueOnce({ data: 2, error: null });
+    vi.mocked(createClient).mockReturnValue(mock.client as never);
+
+    const user = userEvent.setup();
+    render(<WorldWiki worldId="w1" canEdit />);
+
+    await user.click(screen.getByText("Modifier"));
+    await screen.findByText("Accueil");
+
+    await user.click(screen.getByLabelText("Options"));
+    await user.click(screen.getByText("Renommer"));
+
+    const input = screen.getByDisplayValue("Accueil");
+    await user.clear(input);
+    await user.type(input, "Nouveau titre{Enter}");
+
+    await waitFor(() => {
+      expect(mock.rpc).toHaveBeenCalledWith("wwp_rename_cascade", {
+        p_world_id: "w1",
+        p_old_title: "Accueil",
+        p_new_title: "Nouveau titre",
+      });
+    });
+  });
+
+  it("ne déclenche pas de cascade quand seule l'icône change (titre inchangé)", async () => {
+    const mock = createSupabaseMock({
+      results: [
+        { data: [PAGE], error: null },
+        { data: null, error: null },
+      ],
+    });
+    vi.mocked(createClient).mockReturnValue(mock.client as never);
+
+    const user = userEvent.setup();
+    render(<WorldWiki worldId="w1" canEdit />);
+
+    await user.click(screen.getByText("Modifier"));
+    await screen.findByText("Accueil");
+
+    await user.click(screen.getByLabelText("Options"));
+    await user.click(screen.getByText("Renommer"));
+
+    const input = screen.getByDisplayValue("Accueil");
+    await user.type(input, "{Enter}"); // même titre, pas de changement
+
+    await waitFor(() => {
+      const builders = mock.buildersFor("world_wiki_pages");
+      expect(builders[1].update).toHaveBeenCalledWith({ title: "Accueil", icon: null });
+    });
+    expect(mock.rpc).not.toHaveBeenCalled();
+  });
+});

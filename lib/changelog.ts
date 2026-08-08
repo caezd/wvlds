@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Mondes",
+    text: "Renommer une page de wiki met désormais à jour en cascade tous les liens internes [[Ancien titre]] qui la ciblent ailleurs dans le monde, au lieu de les laisser cassés silencieusement.",
+  },
+  {
+    date: "2026-08",
     tag: "Correctif",
     text: "Durcissement de la sécurité des pages de wiki (règle d'écriture) et correction de l'historique des versions qui pouvait manquer une republication à l'identique.",
   },
