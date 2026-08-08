@@ -45,4 +45,14 @@ describe("resolveWikiLinks", () => {
   it("laisse un [[ ]] vide tel quel plutôt que de créer un lien vide", () => {
     expect(resolveWikiLinks("[[]]", PAGES)).toBe("[[]]");
   });
+
+  it("produit un slug vide (lien cassé) pour un titre partagé par deux pages", () => {
+    // Seul (world_id, slug) est unique — deux pages peuvent avoir le même
+    // titre (le dédoublonnage à la création ne renomme que le slug).
+    const pagesWithDuplicateTitle = [
+      { title: "Aria", slug: "aria" },
+      { title: "Aria", slug: "aria-2" },
+    ];
+    expect(resolveWikiLinks("[[Aria]]", pagesWithDuplicateTitle)).toBe("[Aria](wiki:)");
+  });
 });

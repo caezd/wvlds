@@ -38,7 +38,20 @@ function transformLine(line: string, bySlug: Map<string, string>): string {
  * contenu des blocs de code fencés, comme `transformStyledSpans`.
  */
 export function resolveWikiLinks(markdown: string, pages: WikiLinkTarget[]): string {
-  const bySlug = new Map(pages.map(p => [p.title.toLowerCase(), p.slug]));
+  // Seul (world_id, slug) est garanti unique — deux pages peuvent partager le
+  // même titre (le dédoublonnage à la création ne renomme que le slug, pas
+  // le titre). Un titre ambigu doit rester "non résolu" (lien cassé) plutôt
+  // que de pointer arbitrairement vers l'une des deux pages homonymes.
+  const counts = new Map<string, number>();
+  for (const p of pages) {
+    const key = p.title.toLowerCase();
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  const bySlug = new Map<string, string>();
+  for (const p of pages) {
+    const key = p.title.toLowerCase();
+    if (counts.get(key) === 1) bySlug.set(key, p.slug);
+  }
   const lines = (markdown ?? "").replace(/\r\n/g, "\n").split("\n");
   const fenceTracker = createFenceTracker();
   const out: string[] = [];
