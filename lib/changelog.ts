@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Correctif",
+    text: "Durcissement de la sécurité des pages de wiki (règle d'écriture) et correction de l'historique des versions qui pouvait manquer une republication à l'identique.",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
     text: "Un lien interne [[Titre]] du wiki partagé par deux pages homonymes pointait arbitrairement vers l'une des deux. Il est désormais rendu comme un lien cassé plutôt que de risquer de pointer vers la mauvaise page.",
   },
   {
