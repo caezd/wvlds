@@ -4,7 +4,7 @@ import { TABLE, CHAT_MESSAGES_PAGE_SIZE } from "@/lib/constants";
 import { decryptMessage } from "@/lib/crypto";
 import { aggregateChoiceVotes } from "@/lib/choiceVotes";
 import type { ChatMessageWithPersona, Persona, ChoiceVoteSummary } from "@/types/db";
-import { canMemberPost } from "@/lib/worldPermissions";
+import { canMemberPost, canEditChatroom, canManageWorld } from "@/lib/worldPermissions";
 import type { ChatroomWithWorld } from "./getChatroom";
 
 export default async function ChatRoomContent({
@@ -182,19 +182,15 @@ export default async function ChatRoomContent({
   /* reactions */
 
   // Droits d'édition / d'admin monde, dérivés des données déjà chargées.
-  let canEdit = chatroom.created_by === userId;
-  let canWorldAdmin = false;
-  if (chatroom.world_id) {
-    if (isWorldOwner) {
-      canWorldAdmin = true;
-      canEdit = true;
-    } else if (membership && ["owner", "admin"].includes(membership.role)) {
-      canWorldAdmin = true;
-      canEdit = true;
-    }
-  }
+  // Règles partagées avec le reste de l'app (lib/worldPermissions.ts), elles-
+  // mêmes alignées sur les policies RLS (`chatrooms_update_authenticated_merged`,
+  // `is_world_editor`) — sinon le client cache des actions pourtant permises en base.
+  const isCreator = chatroom.created_by === userId;
+  const role = membership?.role ?? null;
+  const canEdit = canEditChatroom(isCreator, role, isWorldOwner);
+  const canWorldAdmin = canManageWorld(role, isWorldOwner);
 
-  const canPost = canMemberPost(membership?.role ?? null, isWorldOwner);
+  const canPost = canMemberPost(role, isWorldOwner);
 
   // Chatrooms du même world (pour l'aside), déjà chargés ci-dessus.
   const initialRoomsSafe = navResult.rooms;

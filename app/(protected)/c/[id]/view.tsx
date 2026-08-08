@@ -868,11 +868,6 @@ export default function ChatRoomView({
     />
   );
 
-  // Reflète la garde interne de ChatroomSettingsSheet (canShow) — désormais
-  // aussi décidée ici puisque son trigger est masqué (hideTrigger) et
-  // remplacé par les boutons/menu ci-dessous.
-  const canShowSettings = canEdit && messages.length > 0;
-
   return (
     <div className="composer-parent flex flex-row focus-visible:outline-0 h-full min-w-0 flex-1 gap-3">
       <WorldMembershipGuard
@@ -908,7 +903,7 @@ export default function ChatRoomView({
                     </TooltipContent>
                   </Tooltip>
                 )}
-                {canShowSettings && (
+                {canEdit && (
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <button
@@ -957,7 +952,7 @@ export default function ChatRoomView({
                         {isFollowed ? t("unfollow") : t("follow")}
                       </DropdownMenuItem>
                     )}
-                    {canShowSettings && (
+                    {canEdit && (
                       <DropdownMenuItem onClick={() => setSettingsOpen(true)}>
                         <Settings className="mr-2 h-3.5 w-3.5" />
                         {tCommon("settings")}
@@ -984,7 +979,6 @@ export default function ChatRoomView({
                   title: chat.title,
                   banner_url: chat.banner_url ?? null,
                   icon_url: chat.icon_url ?? null,
-                  messages_count: messages.length,
                   timeline_date: chat.timeline_date ?? null,
                   map_pin_id: chat.map_pin_id ?? null,
                   category_id: chat.category_id ?? null,
