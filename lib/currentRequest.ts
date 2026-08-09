@@ -111,3 +111,26 @@ export const getUserWorlds = cache(async (): Promise<WorldItem[]> => {
     .order("name");
   return (data as WorldItem[]) ?? [];
 });
+
+export type FavoriteWorld = { id: string; name: string; icon_url: string | null };
+
+/**
+ * Mondes épinglés par l'utilisateur courant (world_user_preferences.is_favorite),
+ * mémoïsée — utilisée pour les raccourcis du manifest PWA. Limité à 4 : Chrome
+ * n'affiche de toute façon pas plus de raccourcis.
+ */
+export const getFavoriteWorlds = cache(async (): Promise<FavoriteWorld[]> => {
+  const userId = await getCurrentUserId();
+  if (!userId) return [];
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("worlds")
+    .select("id, name, icon_url, world_user_preferences!inner(is_favorite)")
+    .eq("world_user_preferences.user_id", userId)
+    .eq("world_user_preferences.is_favorite", true)
+    .is("deleted_at", null)
+    .eq("is_archived", false)
+    .order("name")
+    .limit(4);
+  return (data ?? []).map(({ id, name, icon_url }) => ({ id, name, icon_url }));
+});

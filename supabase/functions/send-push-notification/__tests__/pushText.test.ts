@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildPushText, pushHref, type PushNotifPayload } from "../pushText";
+import { buildPushText, pushHref, resolvePushImage, type PushNotifPayload } from "../pushText";
 
 const ALL_TYPES: PushNotifPayload["type"][] = [
   "mention", "reaction", "new_member", "new_chatroom", "world_invite",
@@ -68,5 +68,43 @@ describe("pushHref", () => {
   });
   it("renvoie null si ni l'un ni l'autre", () => {
     expect(pushHref({ chat_id: null, world_id: null })).toBeNull();
+  });
+});
+
+describe("resolvePushImage", () => {
+  it("utilise l'avatar humain pour un type non-persona", () => {
+    expect(resolvePushImage({ ...base, type: "mention" }, "https://ex.test/human.png")).toBe("https://ex.test/human.png");
+  });
+
+  it("renvoie null pour un type non-persona sans avatar", () => {
+    expect(resolvePushImage({ ...base, type: "reaction" }, null)).toBeNull();
+  });
+
+  it("utilise metadata.icon_url pour un type persona explicite", () => {
+    const img = resolvePushImage(
+      { ...base, type: "persona_reply", metadata: { icon_url: "https://ex.test/persona.png" } },
+      "https://ex.test/human.png", // avatar humain présent mais ignoré
+    );
+    expect(img).toBe("https://ex.test/persona.png");
+  });
+
+  it("renvoie null pour un type persona sans icon_url en metadata", () => {
+    expect(resolvePushImage({ ...base, type: "marital_request", metadata: null }, "https://ex.test/human.png")).toBeNull();
+  });
+
+  it("détecte un chatroom_reply enrichi d'un persona via metadata.persona_name", () => {
+    const img = resolvePushImage(
+      { ...base, type: "chatroom_reply", metadata: { count: 1, persona_name: "Elric", icon_url: "https://ex.test/elric.png" } },
+      "https://ex.test/human.png",
+    );
+    expect(img).toBe("https://ex.test/elric.png");
+  });
+
+  it("utilise l'avatar humain pour un chatroom_reply sans persona", () => {
+    const img = resolvePushImage(
+      { ...base, type: "chatroom_reply", metadata: { count: 1 } },
+      "https://ex.test/human.png",
+    );
+    expect(img).toBe("https://ex.test/human.png");
   });
 });

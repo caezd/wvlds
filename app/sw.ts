@@ -8,6 +8,13 @@ declare global {
   interface WorkerGlobalScope extends SerwistGlobalConfig {
     __SW_MANIFEST: (PrecacheEntry | string)[] | undefined;
   }
+
+  // lib.dom.d.ts n'a pas encore `image` dans NotificationOptions bien que ce
+  // soit dans le spec Notifications API et supporté par les navigateurs
+  // ciblés (Chrome/Edge/Android).
+  interface NotificationOptions {
+    image?: string;
+  }
 }
 
 declare const self: ServiceWorkerGlobalScope;
@@ -41,6 +48,7 @@ type PushPayload = {
   body: string;
   icon?: string;
   badge?: string;
+  image?: string;
   data?: { url?: string | null; notificationId?: string };
 };
 
@@ -52,6 +60,7 @@ self.addEventListener("push", (event: PushEvent) => {
       body: payload.body,
       icon: payload.icon ?? "/icons/icon-192.png",
       badge: payload.badge ?? "/icons/badge-96.png",
+      image: payload.image,
       data: payload.data,
     }),
   );
@@ -70,5 +79,22 @@ self.addEventListener("notificationclick", (event: NotificationEvent) => {
       }
       return self.clients.openWindow(url);
     }),
+  );
+});
+
+// Balayer/fermer une notification (sans cliquer dessus) vaut "vu" — évite
+// de devoir rouvrir l'app juste pour faire disparaître le badge associé.
+// Best-effort : ne se déclenche pas de façon garantie sur toutes les
+// plateformes (purge OS sans passer par le navigateur, app tuée…).
+self.addEventListener("notificationclose", (event: NotificationEvent) => {
+  const id = (event.notification.data as PushPayload["data"] | undefined)?.notificationId;
+  if (!id) return;
+  event.waitUntil(
+    fetch("/api/notifications/mark-read", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ notificationId: id }),
+      credentials: "same-origin",
+    }).catch(() => {}),
   );
 });

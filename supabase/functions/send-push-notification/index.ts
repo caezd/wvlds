@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import webpush from "npm:web-push@3";
-import { buildPushText, pushHref, type PushLocale, type PushNotifPayload } from "./pushText.ts";
+import { buildPushText, pushHref, resolvePushImage, type PushLocale, type PushNotifPayload } from "./pushText.ts";
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") return new Response("Method Not Allowed", { status: 405 });
@@ -12,11 +12,16 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
 
-  const [{ data: subs, error: subsError }, { data: profile }] = await Promise.all([
+  const [{ data: subs, error: subsError }, { data: profile }, { data: actorProfile }] = await Promise.all([
     supabase.from("push_subscriptions")
       .select("id, endpoint, p256dh, auth_key")
       .eq("user_id", body.recipient_id),
     supabase.from("profiles").select("locale").eq("id", body.recipient_id).single(),
+    // Avatar de l'ACTEUR (celui qui a déclenché la notif), pas du
+    // destinataire — n'interroge que si un acteur humain existe.
+    body.actor_id
+      ? supabase.from("profiles").select("avatar_url").eq("id", body.actor_id).single()
+      : Promise.resolve({ data: null }),
   ]);
 
   // Une erreur de lecture (RLS, panne DB, …) ne doit jamais se confondre avec
@@ -47,6 +52,7 @@ Deno.serve(async (req) => {
   const locale = (profile?.locale ?? "fr") as PushLocale;
   const { title, body: text } = buildPushText(body, locale);
   const url = pushHref(body);
+  const image = resolvePushImage(body, actorProfile?.avatar_url ?? null);
   const payload = JSON.stringify({
     title,
     body: text,
@@ -56,6 +62,9 @@ Deno.serve(async (req) => {
     // fond plein comme icon-192.png donnerait un simple carré dans la barre
     // de statut.
     badge: "/icons/badge-96.png",
+    // Avatar de l'acteur (ou icône du persona) — absent si aucun avatar
+    // n'est renseigné, showNotification s'en passe très bien.
+    ...(image ? { image } : {}),
     data: { url, notificationId: body.id },
   });
 
