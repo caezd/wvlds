@@ -27,5 +27,13 @@ export function useLongPress(onLongPress: () => void, delay = 500) {
       // Empêche le menu contextuel natif si le long-press a déjà déclenché l'action
       if (firedRef.current) e.preventDefault();
     },
+    // Empêche le clic (ex: navigation d'un <Link>) qui suit le relâchement du
+    // doigt sur mobile quand le long-press a déjà déclenché son action.
+    onClick: (e: React.MouseEvent) => {
+      if (firedRef.current) {
+        e.preventDefault();
+        firedRef.current = false;
+      }
+    },
   };
 }

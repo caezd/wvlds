@@ -11,9 +11,12 @@ import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import { MobileSidebarProvider, useMobileSidebar } from "@/components/providers/MobileSidebarProvider";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
-import { MobileWorldsRail } from "./MobileWorldsRail";
+import { WorldsRail } from "./WorldsRail";
+import type { Quota } from "@/lib/userQuota";
 
-type WorldRailItem = { id: string; name: string; icon_url: string | null };
+type WorldRailItem = { id: string; name: string; icon_url: string | null; owner_id: string };
+
+const DEFAULT_WORLDS_QUOTA: Quota = { plan: "free", owned: 0, quotaLimit: 1, quotaReached: false };
 
 const NotificationInlinePanelContent = dynamic(
   () => import("@/components/notifications").then((m) => m.NotificationInlinePanelContent),
@@ -34,10 +37,12 @@ const WORLD_PANEL_VIEWS = new Set([
 function AppShellInner({
   rail,
   worlds,
+  worldsQuota,
   children,
 }: {
   rail: React.ReactNode;
   worlds: WorldRailItem[];
+  worldsQuota: Quota;
   children: React.ReactNode;
 }) {
   const { notifications: notifEnabled, direct_messages: dmsEnabled, public_worlds: exploreEnabled } = useFeatureFlags();
@@ -78,9 +83,18 @@ function AppShellInner({
     <div className="relative flex h-full w-full flex-row lg:p-2">
 
       {/* Rail permanent (desktop) */}
-      <aside className="relative z-20 hidden w-14 shrink-0 rounded-lg lg:flex pr-2">
+      <aside className="relative z-20 hidden w-14 shrink-0 rounded-lg lg:flex">
         {rail}
       </aside>
+
+      {/* Rail des mondes rejoints (desktop) — même composant que dans le
+          drawer mobile ci-dessous, affiché en permanence à côté du rail
+          d'icônes. */}
+      {(worlds.length > 0 || exploreEnabled) && (
+        <div className="relative z-20 hidden shrink-0 lg:flex pr-2">
+          <WorldsRail worlds={worlds} quota={worldsQuota} />
+        </div>
+      )}
 
       {/* Panneau global — notifs ou DMs */}
       <div
@@ -119,7 +133,7 @@ function AppShellInner({
                 pour ne pas priver les comptes sans monde de ce lien.
                 Masqué quand un panneau (DMs/notifs) occupe l'espace restant,
                 pour lui laisser toute la largeur. */}
-            {(worlds.length > 0 || exploreEnabled) && !anyPanelOpen && <MobileWorldsRail worlds={worlds} />}
+            {(worlds.length > 0 || exploreEnabled) && !anyPanelOpen && <WorldsRail worlds={worlds} quota={worldsQuota} />}
             {/* Panneau DMs / Notifications, ou sidebar monde */}
             {(anyPanelOpen || mobileSidebar) && (
               <div className="flex-1 min-w-0 overflow-hidden flex flex-col">
@@ -171,16 +185,18 @@ function AppShellInner({
 export default function AppShell({
   rail,
   worlds = [],
+  worldsQuota = DEFAULT_WORLDS_QUOTA,
   children,
 }: {
   rail: React.ReactNode;
   worlds?: WorldRailItem[];
+  worldsQuota?: Quota;
   children: React.ReactNode;
 }) {
   return (
     <MobileSidebarProvider>
       <DmsProvider>
-        <AppShellInner rail={rail} worlds={worlds}>{children}</AppShellInner>
+        <AppShellInner rail={rail} worlds={worlds} worldsQuota={worldsQuota}>{children}</AppShellInner>
       </DmsProvider>
     </MobileSidebarProvider>
   );

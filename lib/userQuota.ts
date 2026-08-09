@@ -16,7 +16,7 @@ export type Resource = "worlds" | "personas";
 // importable depuis un composant client sans entraîner next/headers).
 export { FREE_PERSONAS_PER_WORLD };
 
-type Quota = {
+export type Quota = {
     plan: Plan;
     owned: number;
     quotaLimit: number; // Infinity = illimité

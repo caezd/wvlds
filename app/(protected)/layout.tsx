@@ -3,6 +3,7 @@ import SidebarRail from "@/components/sidebar/SidebarRail";
 import AppShell from "@/components/sidebar/AppShell";
 import { FeatureFlagsProvider } from "@/components/providers/FeatureFlagsProvider";
 import { getCurrentUserId, getCurrentProfile, getCachedFeatureFlags, getUserWorlds } from "@/lib/currentRequest";
+import { getUserQuotaServer } from "@/lib/userQuota";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import { cookies } from "next/headers";
@@ -24,10 +25,11 @@ export default async function PageLayout({
   const userId = await getCurrentUserId();
   if (!userId) redirect("/auth/login");
 
-  const [featureFlags, profile, worlds] = await Promise.all([
+  const [featureFlags, profile, worlds, worldsQuota] = await Promise.all([
     getCachedFeatureFlags(),
     getCurrentProfile(),
     getUserWorlds(),
+    getUserQuotaServer("worlds"),
   ]);
 
   let usernameDialog: React.ReactNode = null;
@@ -53,7 +55,7 @@ export default async function PageLayout({
       <FeatureFlagsProvider flags={featureFlags}>
         <div className="flex h-full w-full flex-col">
           <div className="relative flex h-full w-full flex-1 z-0">
-            <AppShell rail={<SidebarRail />} worlds={worlds}>
+            <AppShell rail={<SidebarRail />} worlds={worlds} worldsQuota={worldsQuota}>
               {children}
             </AppShell>
             {usernameDialog}

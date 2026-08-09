@@ -1,9 +1,8 @@
-import { Compass, ShoppingBasket, ShieldCheck, Dices, UserRound } from "lucide-react";
+import { ShoppingBasket, ShieldCheck, Dices, UserRound } from "lucide-react";
 import { RailIcon } from "./SidebarRailIcons";
 import { NotificationBellButton } from "@/components/notifications";
 import { DmsToggleButton, PinnedDmAvatarsRail } from "@/components/dms";
 import { UserMenuButton } from "./UserMenuButton";
-import { WorldsRailButton } from "./WorldsRailButton";
 import { getCachedFeatureFlags, getCurrentProfile, getCurrentAuth } from "@/lib/currentRequest";
 import { MobileMenuButton } from "./MobileMenuButton";
 import { getTranslations } from "next-intl/server";
@@ -34,21 +33,9 @@ export default async function SidebarRail() {
       <ScrollArea className="w-full flex-1 min-h-0">
         <div className="flex flex-col items-center gap-1 w-full">
 
-          <WorldsRailButton />
-
-
           <RailIcon href="/p" label={t("personas")}>
             <UserRound size={17} />
           </RailIcon>
-
-          {/* Mobile : déplacé en tête du rail des mondes rejoints (MobileWorldsRail) */}
-          {featureFlags.public_worlds && (
-            <div className="hidden lg:block">
-              <RailIcon href="/explore" label={t("explore")}>
-                <Compass size={17} />
-              </RailIcon>
-            </div>
-          )}
 
           {featureFlags.quests && (
             <RailIcon href="/quests" label={t("quests")}>

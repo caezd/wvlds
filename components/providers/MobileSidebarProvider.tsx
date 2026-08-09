@@ -13,7 +13,7 @@ type Ctx = {
   setHideMobileHeader: (hide: boolean) => void;
   // Monde affiché par la page courante quand il n'est pas dérivable du
   // pathname (ex: `/c/[id]`, où l'id du monde parent n'est connu que côté
-  // client) — alimente le surlignage actif de MobileWorldsRail.
+  // client) — alimente le surlignage actif de WorldsRail.
   activeWorldId: string | null;
   setActiveWorldId: (id: string | null) => void;
 };

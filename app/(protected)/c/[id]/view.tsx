@@ -220,7 +220,7 @@ export default function ChatRoomView({
   const [personaGroupColors, setPersonaGroupColors] = useState<Map<string, string>>(new Map());
 
   // Signale le monde du chatroom courant pour le surlignage actif de
-  // MobileWorldsRail (le pathname `/c/[id]` seul ne le révèle pas).
+  // WorldsRail (le pathname `/c/[id]` seul ne le révèle pas).
   useEffect(() => {
     setActiveWorldId(chat.worlds?.id ?? null);
     return () => setActiveWorldId(null);

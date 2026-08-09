@@ -14,6 +14,7 @@ const pathnameMock = vi.hoisted(() => ({ value: "/w/world-1" }));
 vi.mock("next/navigation", () => ({
   usePathname: () => pathnameMock.value,
   useSearchParams: () => new URLSearchParams(),
+  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
 }));
 
 vi.mock("next/link", () => ({
@@ -48,8 +49,8 @@ vi.mock("@/components/providers/DmsProvider", () => ({
 }));
 
 const WORLDS = [
-  { id: "world-1", name: "Monde un", icon_url: null },
-  { id: "world-2", name: "Monde deux", icon_url: null },
+  { id: "world-1", name: "Monde un", icon_url: null, owner_id: "owner-1" },
+  { id: "world-2", name: "Monde deux", icon_url: null, owner_id: "owner-2" },
 ];
 
 beforeEach(() => {
@@ -85,35 +86,40 @@ describe("AppShell — barre mobile générique vs header de chatroom", () => {
   });
 });
 
-describe("AppShell — rail des mondes dans le drawer mobile", () => {
-  it("affiche le rail des mondes quand plus d'un monde est rejoint et aucun panneau n'est ouvert", () => {
+describe("AppShell — rail des mondes (desktop permanent + drawer mobile)", () => {
+  // Le rail des mondes est rendu deux fois : une copie permanente à côté du
+  // rail d'icônes desktop, une copie dans le drawer mobile. Le mock de Sheet
+  // rend toujours ses children (indépendamment de `open`), donc les deux
+  // copies coexistent dans le DOM de test — d'où getAllByLabelText.
+
+  it("affiche le rail des mondes (desktop + drawer) quand plus d'un monde est rejoint et aucun panneau n'est ouvert", () => {
     render(
       <AppShell rail={<div>rail</div>} worlds={WORLDS}>
         <div>contenu</div>
       </AppShell>,
     );
-    expect(screen.getByLabelText("Monde un")).toBeInTheDocument();
-    expect(screen.getByLabelText("Monde deux")).toBeInTheDocument();
+    expect(screen.getAllByLabelText("Monde un")).toHaveLength(2);
+    expect(screen.getAllByLabelText("Monde deux")).toHaveLength(2);
   });
 
-  it("masque le rail des mondes quand le panneau notifications est ouvert, pour lui laisser toute la place", () => {
+  it("masque la copie du drawer quand le panneau notifications est ouvert, mais garde la copie desktop permanente", () => {
     notifPanelOpenMock.value = true;
     render(
       <AppShell rail={<div>rail</div>} worlds={WORLDS}>
         <div>contenu</div>
       </AppShell>,
     );
-    expect(screen.queryByLabelText("Monde un")).not.toBeInTheDocument();
+    expect(screen.getAllByLabelText("Monde un")).toHaveLength(1);
   });
 
-  it("masque le rail des mondes quand le panneau DMs est ouvert", () => {
+  it("masque la copie du drawer quand le panneau DMs est ouvert, mais garde la copie desktop permanente", () => {
     dmsPanelOpenMock.value = true;
     render(
       <AppShell rail={<div>rail</div>} worlds={WORLDS}>
         <div>contenu</div>
       </AppShell>,
     );
-    expect(screen.queryByLabelText("Monde un")).not.toBeInTheDocument();
+    expect(screen.getAllByLabelText("Monde un")).toHaveLength(1);
   });
 
   it("affiche le rail même avec un seul monde rejoint — seul lien mobile vers ce monde hors de ses pages", () => {
@@ -122,7 +128,7 @@ describe("AppShell — rail des mondes dans le drawer mobile", () => {
         <div>contenu</div>
       </AppShell>,
     );
-    expect(screen.getByLabelText("Monde un")).toBeInTheDocument();
+    expect(screen.getAllByLabelText("Monde un")).toHaveLength(2);
   });
 
   it("ne rend pas de rail des mondes si l'utilisateur n'a rejoint aucun monde et qu'Explorer est désactivé", () => {
@@ -142,6 +148,6 @@ describe("AppShell — rail des mondes dans le drawer mobile", () => {
         <div>contenu</div>
       </AppShell>,
     );
-    expect(screen.getByLabelText("Explorer")).toBeInTheDocument();
+    expect(screen.getAllByLabelText("Explorer")).toHaveLength(2);
   });
 });
