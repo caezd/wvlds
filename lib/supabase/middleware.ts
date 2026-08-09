@@ -56,7 +56,11 @@ export async function updateSession(request: NextRequest) {
         // Les routes API gèrent leur propre authentification (ex. le webhook
         // Patreon, authentifié par signature HMAC). Les rediriger vers la page
         // de login casserait les appels serveur-à-serveur sans session.
-        !request.nextUrl.pathname.startsWith("/api")
+        !request.nextUrl.pathname.startsWith("/api") &&
+        // Précachée par le service worker comme fallback hors-ligne : doit
+        // rester joignable même sans session, sinon le SW précache /auth/login
+        // à sa place et l'affiche à tout le monde en cas de coupure réseau.
+        request.nextUrl.pathname !== "/offline"
     ) {
         // no user, potentially respond by redirecting the user to the login page
         const url = request.nextUrl.clone();

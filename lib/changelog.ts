@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Mobile",
+    text: "WVLDS peut désormais s'installer comme une application depuis le navigateur mobile (icône sur l'écran d'accueil, plein écran sans barre d'adresse) et reste partiellement utilisable hors connexion.",
+  },
+  {
+    date: "2026-08",
     tag: "Social",
     text: "Messages privés : possibilité de modifier ou supprimer ses propres messages, recherche dans l'historique des conversations, et respect des préférences de lecture (police, taille, alignement) déjà réglables dans les paramètres.",
   },
