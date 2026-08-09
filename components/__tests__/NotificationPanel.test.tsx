@@ -246,8 +246,9 @@ describe("NotificationInlinePanelContent — préférences", () => {
         mockNotifications({ notifPrefs: { mention: true } });
         render(<NotificationInlinePanelContent />);
         await user.click(screen.getByLabelText(/préférences/i));
-        const switches = screen.getAllByRole("switch");
-        await user.click(switches[0]);
+        // Ciblé par nom accessible (aria-label) plutôt que par index — insensible
+        // à l'ajout/retrait d'autres switches dans la liste (ex. push en tête).
+        await user.click(screen.getByRole("switch", { name: /mentions/i }));
         expect(mockSetNotifPref).toHaveBeenCalledOnce();
     });
 });

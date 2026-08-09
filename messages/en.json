@@ -133,6 +133,10 @@
   "notifications": {
     "title": "Notifications",
     "preferences": "Preferences",
+    "push": "Push notifications",
+    "pushHint": "Get notified even when the app is closed.",
+    "pushBlocked": "Blocked in your browser settings.",
+    "pushUnsupported": "Not available on this device — install the app to enable it.",
     "markAllRead": "Mark all as read",
     "archive": "Delete notification",
     "empty": "No notifications",
@@ -801,7 +805,6 @@
     "mapAlt": "World map",
     "editingActive": "Editing active",
     "changeMap": "Change map",
-    "closeMap": "Close map",
     "noMapConfigured": "No map configured for this world.",
     "importMapImage": "Import a map image",
     "clickToAddPin": "Click on the map to add a pin",

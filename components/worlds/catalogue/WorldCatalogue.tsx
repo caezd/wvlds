@@ -40,7 +40,6 @@ import {
   FolderPlus,
   ArrowUpAZ,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -1290,10 +1289,9 @@ export type WorldCatalogueProps = {
   skillsEnabled: boolean;
   skillsRestricted: boolean;
   faceclaimsEnabled: boolean;
-  onClose: () => void;
 };
 
-export function WorldCatalogue({ worldId, canEdit, inventoryEnabled, inventoryRestricted, skillsEnabled, skillsRestricted, faceclaimsEnabled, onClose }: WorldCatalogueProps) {
+export function WorldCatalogue({ worldId, canEdit, inventoryEnabled, inventoryRestricted, skillsEnabled, skillsRestricted, faceclaimsEnabled }: WorldCatalogueProps) {
   const t = useTranslations("catalogue");
   const tCommon = useTranslations("common");
   const [editMode, setEditMode] = useState(false);
@@ -1312,27 +1310,23 @@ export function WorldCatalogue({ worldId, canEdit, inventoryEnabled, inventoryRe
         icon={<Library className="h-4 w-4 shrink-0 text-muted-foreground" />}
         title={t("title")}
         right={
-          <Button size="icon" variant="ghost" onClick={onClose} aria-label={tCommon("close")} className="rounded-lg hover:bg-hoverCard">
-            <X className="h-5 w-5" />
-          </Button>
+          canEdit && (
+            <button
+              type="button"
+              onClick={() => setEditMode(v => !v)}
+              className={cn(
+                "flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                editMode
+                  ? "border-primary/40 bg-primary/10 text-primary"
+                  : "border-border-soft bg-background text-muted-foreground hover:bg-secondary hover:text-foreground",
+              )}
+            >
+              <Pencil className="h-3 w-3" />
+              {editMode ? t("editingActive") : tCommon("edit")}
+            </button>
+          )
         }
-      >
-        {canEdit && (
-          <button
-            type="button"
-            onClick={() => setEditMode(v => !v)}
-            className={cn(
-              "flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-              editMode
-                ? "border-primary/40 bg-primary/10 text-primary"
-                : "border-border-soft bg-background text-muted-foreground hover:bg-secondary hover:text-foreground",
-            )}
-          >
-            <Pencil className="h-3 w-3" />
-            {editMode ? t("editingActive") : tCommon("edit")}
-          </button>
-        )}
-      </WorldPanelHeader>
+      />
 
       {/* Body — always show both tabs for editors */}
       <Tabs defaultValue={defaultTab} className="flex min-h-0 flex-1 flex-col">

@@ -133,6 +133,10 @@
   "notifications": {
     "title": "Notificaciones",
     "preferences": "Preferencias",
+    "push": "Notificaciones push",
+    "pushHint": "Reciba notificaciones incluso con la aplicación cerrada.",
+    "pushBlocked": "Bloqueadas en la configuración del navegador.",
+    "pushUnsupported": "No disponible en este dispositivo — instale la aplicación para activarlo.",
     "markAllRead": "Marcar todo como leído",
     "archive": "Eliminar notificación",
     "empty": "Sin notificaciones",
@@ -797,7 +801,6 @@
     "mapAlt": "Mapa del mundo",
     "editingActive": "Edición activa",
     "changeMap": "Cambiar mapa",
-    "closeMap": "Cerrar mapa",
     "noMapConfigured": "Ningún mapa configurado para este mundo.",
     "importMapImage": "Importar una imagen de mapa",
     "clickToAddPin": "Haga clic en el mapa para añadir un pin",

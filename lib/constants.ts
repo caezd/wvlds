@@ -16,6 +16,7 @@ export const TABLE = {
   COSMETIC_ITEMS: "cosmetic_items",
   NOTIFICATIONS: "notifications",
   NOTIFICATION_PREFERENCES: "notification_preferences",
+  PUSH_SUBSCRIPTIONS: "push_subscriptions",
   WORLD_INVITATIONS: "world_invitations",
   PERSONA_MARITAL_REQUESTS: "persona_marital_requests",
   CHAT_PINS: "chat_pins",

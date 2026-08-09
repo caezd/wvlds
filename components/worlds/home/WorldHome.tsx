@@ -154,7 +154,6 @@ export function WorldHome({
             skillsEnabled={world.enable_skills !== false}
             skillsRestricted={!!world.restrict_skills}
             faceclaimsEnabled={world.enable_faceclaims !== false}
-            onClose={closeView}
           />
         ) : showWiki ? (
           <WorldWiki
@@ -168,7 +167,6 @@ export function WorldHome({
             worldId={worldId}
             userId={userId ?? ""}
             canEdit={canEditTabs}
-            onClose={closeView}
           />
         ) : showTimeline && hasTimeline ? (
           <WorldTimeline

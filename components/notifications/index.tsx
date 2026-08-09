@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { supabaseThumb } from "@/lib/storage";
 import { useNotifications } from "@/components/providers/NotificationsProvider";
+import { usePushSubscription } from "@/hooks/usePushSubscription";
 import { WorldPreviewDialog } from "@/components/worlds/WorldPreviewDialog";
 import { AgeConfirmDialog } from "@/components/worlds/AgeConfirmDialog";
 import { TABLE, RPC } from "@/lib/constants";
@@ -308,6 +309,39 @@ function NotificationItem({ notif, actorAvatarUrl, worldInfo, onRead, onClose, o
     return <div>{content}</div>;
 }
 
+// ── PushToggleRow ─────────────────────────────────────────────────────────────
+
+function PushToggleRow() {
+    const t = useTranslations("notifications");
+    const { supported, permission, isSubscribed, loading, subscribe, unsubscribe } = usePushSubscription();
+
+    const hint = !supported
+        ? t("pushUnsupported")
+        : permission === "denied"
+            ? t("pushBlocked")
+            : t("pushHint");
+
+    return (
+        <div className="flex items-center justify-between border-b border-border-soft px-4 py-3">
+            <div className="flex items-center gap-3 text-sm">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                    <Bell size={13} />
+                </span>
+                <div className="flex flex-col">
+                    <span>{t("push")}</span>
+                    <span className="text-[11px] text-muted-foreground">{hint}</span>
+                </div>
+            </div>
+            <Switch
+                checked={isSubscribed}
+                disabled={!supported || permission === "denied" || loading}
+                onCheckedChange={checked => { void (checked ? subscribe() : unsubscribe()); }}
+                aria-label={t("push")}
+            />
+        </div>
+    );
+}
+
 // ── 1. Panel content ──────────────────────────────────────────────────────────
 
 export function NotificationInlinePanelContent() {
@@ -393,6 +427,7 @@ export function NotificationInlinePanelContent() {
             {/* Body */}
             {view === "prefs" ? (
                 <div className="flex flex-col">
+                    <PushToggleRow />
                     {ALL_TYPES.map(type => (
                         <div key={type} className="flex items-center justify-between border-b border-border-soft px-4 py-3">
                             <div className="flex items-center gap-3 text-sm">
@@ -401,7 +436,11 @@ export function NotificationInlinePanelContent() {
                                 </span>
                                 {PREF_LABELS[type]}
                             </div>
-                            <Switch checked={notifPrefs[type] !== false} onCheckedChange={checked => setNotifPref(type, checked)} />
+                            <Switch
+                                checked={notifPrefs[type] !== false}
+                                onCheckedChange={checked => setNotifPref(type, checked)}
+                                aria-label={PREF_LABELS[type]}
+                            />
                         </div>
                     ))}
                 </div>
