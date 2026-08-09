@@ -1,6 +1,8 @@
 import type { MetadataRoute } from "next";
 import { getFavoriteWorlds } from "@/lib/currentRequest";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 // Route jamais gardée par le middleware d'auth (voir proxy.ts) — un visiteur
 // non connecté doit pouvoir installer l'app, donc getFavoriteWorlds() doit
 // tolérer l'absence de session (retourne []) plutôt que d'en dépendre.
