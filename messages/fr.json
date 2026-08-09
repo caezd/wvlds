@@ -26,7 +26,8 @@
     "quests": "Quêtes",
     "personas": "Personas",
     "shop": "Boutique",
-    "admin": "Administration"
+    "admin": "Administration",
+    "installApp": "Installer l'application"
   },
   "presence": {
     "online": "En ligne",
