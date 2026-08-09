@@ -167,10 +167,10 @@ export function WorldPersonasPanel({
             trigger={
               <button
                 type="button"
-                aria-label="Nouveau persona"
-                className="flex h-6 w-6 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-hoverCard hover:text-foreground"
+                className="flex items-center gap-1.5 rounded-full bg-primary px-3 py-1 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
               >
-                <Plus size={13} />
+                <Plus className="h-3.5 w-3.5" />
+                Nouveau persona
               </button>
             }
           />

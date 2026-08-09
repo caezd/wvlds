@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Mondes",
+    text: "Le bouton « + » de création d'un persona dans l'en-tête de l'onglet Personas d'un monde devient un bouton « Nouveau persona » plus explicite.",
+  },
+  {
+    date: "2026-08",
+    tag: "Mondes",
     text: "Retrait du bouton « Fermer » redondant dans l'en-tête de la carte et du catalogue d'un monde ; le bouton de bascule du mode modification est désormais aligné à droite, comme pour le wiki.",
   },
   {
