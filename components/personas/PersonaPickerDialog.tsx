@@ -239,12 +239,12 @@ export function PersonaPickerDialog({
   const defaultTriggerContent = (
     <>
       {!selected && (
-        <span className="absolute inset-0 rounded-full animate-ping pointer-events-none bg-primary/30 scale-73" />
+        <span className="absolute inset-0 rounded-md animate-ping pointer-events-none bg-primary/30 scale-75" />
       )}
       <button
         type="button"
         aria-label={selected ? selected.name : t("pick")}
-        className="relative flex size-9 items-center justify-center rounded-full overflow-hidden shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="relative flex size-9 items-center justify-center rounded-md overflow-hidden shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         {selected ? (
           selected.avatar_url ? (
