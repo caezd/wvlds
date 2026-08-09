@@ -64,3 +64,26 @@ for (const size of [192, 512]) {
   writeFileSync(path.join(root, "app/apple-icon.png"), buf);
   console.log("✓ app/apple-icon.png");
 }
+
+// Badge push (notifications Android) — DOIT être transparent avec un tracé
+// opaque en silhouette : Android n'utilise que le canal alpha (masque en
+// blanc/couleur système), un fond plein comme les icônes ci-dessus donnerait
+// un simple carré plein dans la barre de statut. Les deux tracés du logo
+// (V blanc + virgule rouge) sont ici forcés en blanc uni : la couleur n'a
+// aucune importance côté OS, seul l'alpha compte.
+{
+  const size = 96;
+  const monoSvg = rawSvg
+    .replace(/currentColor/g, LOGO_WHITE)
+    .replace(/#F94B5F/g, LOGO_WHITE);
+  const logoWidth = size * 0.8;
+  const logo = await sharp(Buffer.from(monoSvg), { density: 384 })
+    .resize({ width: Math.round(logoWidth) })
+    .toBuffer({ resolveWithObject: true });
+  const buf = await sharp({ create: { width: size, height: size, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
+    .composite([{ input: logo.data, left: Math.round((size - logo.info.width) / 2), top: Math.round((size - logo.info.height) / 2) }])
+    .png()
+    .toBuffer();
+  writeFileSync(path.join(iconsDir, "badge-96.png"), buf);
+  console.log("✓ public/icons/badge-96.png");
+}

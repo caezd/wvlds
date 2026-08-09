@@ -776,11 +776,11 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
                         render={
                             <button
                                 type="button"
-                                className="relative z-10 flex w-full items-center gap-2.5 rounded-full border border-border-soft bg-background px-2.5 py-2 text-left shadow-sm"
+                                className="relative z-10 flex w-full items-center gap-2.5 rounded-lg border bg-background p-2 text-left shadow-sm"
                             />
                         }
                     >
-                        <span className="relative size-8 shrink-0 overflow-hidden rounded-full bg-muted">
+                        <span className="relative size-8 shrink-0 overflow-hidden rounded-md border bg-muted">
                             {selectedPersona ? (
                                 selectedPersona.avatar_url ? (
                                     <Image
@@ -806,7 +806,7 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
                         </span>
                         {previewText && <SendHorizontal className="size-4 shrink-0 text-primary" />}
                     </DrawerTrigger>
-                    <DrawerContent className="h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] [--drawer-inset:8px] p-0 border-0 bg-transparent">
+                    <DrawerContent className="h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] [--drawer-inset:8px] p-0 border-0 rounded-lg">
                         <DrawerTitle className="sr-only">{tChatrooms("composerTitle")}</DrawerTitle>
                         <DrawerDescription className="sr-only">{placeholder}</DrawerDescription>
                         <div className="flex-1 min-h-0 p-0">
