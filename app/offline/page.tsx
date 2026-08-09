@@ -14,7 +14,7 @@ export default async function OfflinePage() {
         <h1 className="text-lg font-semibold">{t("title")}</h1>
         <p className="text-sm text-muted-foreground">{t("description")}</p>
       </div>
-      <RetryButton />
+      <RetryButton label={t("retry")} />
     </div>
   );
 }
