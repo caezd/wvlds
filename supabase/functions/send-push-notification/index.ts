@@ -51,7 +51,11 @@ Deno.serve(async (req) => {
     title,
     body: text,
     icon: "/icons/icon-192.png",
-    badge: "/icons/icon-192.png",
+    // Badge Android : image distincte, transparente, silhouette seule — l'OS
+    // n'utilise que le canal alpha (masqué en blanc/couleur système). Un
+    // fond plein comme icon-192.png donnerait un simple carré dans la barre
+    // de statut.
+    badge: "/icons/badge-96.png",
     data: { url, notificationId: body.id },
   });
 
