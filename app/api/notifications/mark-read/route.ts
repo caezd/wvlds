@@ -27,7 +27,8 @@ export async function POST(request: Request) {
         .update({ read_at: now, archived_at: now })
         .eq("id", parsed.data.notificationId);
 
-    if (error) {
+if (error) {
+        console.error("notifications mark-read update_failed:", error.message);
         return Response.json({ error: "update_failed" }, { status: 500 });
     }
 
