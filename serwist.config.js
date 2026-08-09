@@ -4,7 +4,10 @@ import { serwist } from "@serwist/next/config";
 // Sert de "cache-buster" pour le fallback /offline précaché explicitement
 // ci-dessous (route rendue par le serveur, jamais exportée en fichier
 // statique que le build pourrait découvrir tout seul).
-const revision = spawnSync("git", ["rev-parse", "HEAD"], { encoding: "utf-8" }).stdout?.trim() ?? crypto.randomUUID();
+const gitHead = spawnSync("git", ["rev-parse", "HEAD"], { encoding: "utf-8" });
+// gitHead.stdout est "" (pas null/undefined) en cas d'échec — ?? seul ne
+// détecte jamais ce cas et servirait éternellement la même révision vide.
+const revision = gitHead.status === 0 && gitHead.stdout.trim() ? gitHead.stdout.trim() : crypto.randomUUID();
 
 export default serwist({
   swSrc: "app/sw.ts",
