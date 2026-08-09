@@ -16,11 +16,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ChevronsUpDown, KeyRound, LogOut, Scale, ScrollText, Settings, UserRound } from "lucide-react";
+import { ChevronsUpDown, Download, KeyRound, LogOut, Scale, ScrollText, Settings, UserRound } from "lucide-react";
 import { useGlobalPresence, type PresenceStatus } from "@/components/providers/PresenceProvider";
 import { cn } from "@/lib/utils";
 import { UserProfileSheet } from "./UserProfileSheet";
 import { useTranslations } from "next-intl";
+import { useInstallPrompt } from "@/hooks/useInstallPrompt";
 
 type UserMenuButtonProps = {
   userId: string;
@@ -55,6 +56,7 @@ export function UserMenuButton({
   const [profileOpen, setProfileOpen] = useState(false);
   const tPresence = useTranslations("presence");
   const tNav = useTranslations("nav");
+  const { canInstall, promptInstall } = useInstallPrompt();
 
   const STATUSES: { key: PresenceStatus; label: string }[] = [
     { key: "online",    label: tPresence("online") },
@@ -176,6 +178,12 @@ export function UserMenuButton({
             <Scale className="mr-2 size-4" />
             {tNav("legal")}
           </DropdownMenuItem>
+          {canInstall && (
+            <DropdownMenuItem onClick={() => void promptInstall()}>
+              <Download className="mr-2 size-4" />
+              {tNav("installApp")}
+            </DropdownMenuItem>
+          )}
 
           <DropdownMenuSeparator />
 

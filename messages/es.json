@@ -26,7 +26,8 @@
     "quests": "Misiones",
     "personas": "Personajes",
     "shop": "Tienda",
-    "admin": "Administración"
+    "admin": "Administración",
+    "installApp": "Instalar la aplicación"
   },
   "presence": {
     "online": "En línea",
