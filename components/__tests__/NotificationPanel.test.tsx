@@ -246,8 +246,9 @@ describe("NotificationInlinePanelContent — préférences", () => {
         mockNotifications({ notifPrefs: { mention: true } });
         render(<NotificationInlinePanelContent />);
         await user.click(screen.getByLabelText(/préférences/i));
+        // Index 0 = switch "Notifications push" (PushToggleRow, en tête de liste).
         const switches = screen.getAllByRole("switch");
-        await user.click(switches[0]);
+        await user.click(switches[1]);
         expect(mockSetNotifPref).toHaveBeenCalledOnce();
     });
 });

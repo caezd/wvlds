@@ -133,6 +133,10 @@
   "notifications": {
     "title": "Notificaciones",
     "preferences": "Preferencias",
+    "push": "Notificaciones push",
+    "pushHint": "Reciba notificaciones incluso con la aplicación cerrada.",
+    "pushBlocked": "Bloqueadas en la configuración del navegador.",
+    "pushUnsupported": "No disponible en este dispositivo — instale la aplicación para activarlo.",
     "markAllRead": "Marcar todo como leído",
     "archive": "Eliminar notificación",
     "empty": "Sin notificaciones",
