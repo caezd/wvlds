@@ -207,8 +207,9 @@ export default function ChatroomSettingsSheet({
       .from("chatrooms")
       .update({ [field]: clean })
       .eq("id", chatroom.id);
-    if (error) toast.error(error.message);
-    else router.refresh();
+    if (error) { toast.error(error.message); return; }
+    toast.success("Modification enregistrée.");
+    router.refresh();
   }
 
   // ---------- lieu ----------
@@ -222,6 +223,7 @@ export default function ChatroomSettingsSheet({
     setSavingPin(false);
     if (error) { toast.error(error.message); return; }
     setMapPinId(pinId);
+    toast.success("Modification enregistrée.");
     router.refresh();
   }
 
@@ -236,6 +238,7 @@ export default function ChatroomSettingsSheet({
     setSavingCategory(false);
     if (error) { toast.error(error.message); return; }
     setCategoryId(catId);
+    toast.success("Modification enregistrée.");
     router.refresh();
   }
 
@@ -250,6 +253,7 @@ export default function ChatroomSettingsSheet({
     setSavingTimeline(false);
     if (error) { toast.error(error.message); return; }
     setTimelineDate(date);
+    toast.success("Modification enregistrée.");
     router.refresh();
   }
 

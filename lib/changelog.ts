@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Interface",
+    text: "Les paramètres d'une chatroom (nom, lieu, catégorie, chronologie) affichent désormais une confirmation à l'enregistrement, là où rien ne le signalait auparavant.",
+  },
+  {
+    date: "2026-08",
     tag: "Correctif",
     text: "Changer son statut de présence (En ligne/Hors ligne/Invisible) affiche désormais une confirmation, et l'affichage revient à l'ancien statut si l'enregistrement échoue au lieu de rester bloqué sur une valeur non sauvegardée.",
   },
