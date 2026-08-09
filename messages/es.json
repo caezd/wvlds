@@ -27,7 +27,9 @@
     "personas": "Personajes",
     "shop": "Tienda",
     "admin": "Administración",
-    "installApp": "Instalar la aplicación"
+    "installApp": "Instalar la aplicación",
+    "installInstructionsIOS": "Toque el botón Compartir y luego «A la pantalla de inicio».",
+    "installInstructionsOther": "Abra el menú de su navegador (⋮) y luego «Instalar la aplicación»."
   },
   "presence": {
     "online": "En línea",

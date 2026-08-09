@@ -56,7 +56,7 @@ export function UserMenuButton({
   const [profileOpen, setProfileOpen] = useState(false);
   const tPresence = useTranslations("presence");
   const tNav = useTranslations("nav");
-  const { canInstall, promptInstall } = useInstallPrompt();
+  const { canInstall, installed, promptInstall } = useInstallPrompt();
 
   const STATUSES: { key: PresenceStatus; label: string }[] = [
     { key: "online",    label: tPresence("online") },
@@ -178,8 +178,21 @@ export function UserMenuButton({
             <Scale className="mr-2 size-4" />
             {tNav("legal")}
           </DropdownMenuItem>
-          {canInstall && (
-            <DropdownMenuItem onClick={() => void promptInstall()}>
+          {!installed && (
+            <DropdownMenuItem
+              onClick={() => {
+                // Chrome ne déclenche pas toujours beforeinstallprompt (heuristique
+                // d'engagement propre à Chrome, indépendante de l'installabilité
+                // technique) — dans ce cas on guide vers le menu natif du navigateur
+                // plutôt que de laisser l'entrée sans effet.
+                if (canInstall) {
+                  void promptInstall();
+                  return;
+                }
+                const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+                toast.info(isIOS ? tNav("installInstructionsIOS") : tNav("installInstructionsOther"), { duration: 8000 });
+              }}
+            >
               <Download className="mr-2 size-4" />
               {tNav("installApp")}
             </DropdownMenuItem>

@@ -44,5 +44,5 @@ export function useInstallPrompt() {
     setDeferredPrompt(null);
   }, [deferredPrompt]);
 
-  return { canInstall: !!deferredPrompt && !installed, promptInstall };
+  return { canInstall: !!deferredPrompt && !installed, installed, promptInstall };
 }

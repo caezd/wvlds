@@ -27,7 +27,9 @@
     "personas": "Personas",
     "shop": "Shop",
     "admin": "Administration",
-    "installApp": "Install app"
+    "installApp": "Install app",
+    "installInstructionsIOS": "Tap the Share button, then \"Add to Home Screen\".",
+    "installInstructionsOther": "Open your browser menu (⋮), then \"Install app\"."
   },
   "presence": {
     "online": "Online",
