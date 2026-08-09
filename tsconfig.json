@@ -4,7 +4,8 @@
     "lib": [
       "dom",
       "dom.iterable",
-      "esnext"
+      "esnext",
+      "webworker"
     ],
     "allowJs": true,
     "skipLibCheck": true,
@@ -23,6 +24,9 @@
         "name": "next"
       }
     ],
+    "types": [
+      "@serwist/next/typings"
+    ],
     "paths": {
       "@/*": [
         "./*"
@@ -38,6 +42,7 @@
   ],
   "exclude": [
     "node_modules",
-    "supabase/functions"
+    "supabase/functions",
+    "public/sw.js"
   ]
 }

@@ -3,6 +3,7 @@ import { Geist, Noto_Serif } from "next/font/google";
 import localFont from "next/font/local";
 
 import "./globals.css";
+import { SerwistProvider } from "@serwist/next/react";
 import { Toaster } from "@/components/ui/sonner";
 import AppProviders from "@/components/providers/AppProviders";
 import type { InitialUser } from "@/components/providers/CurrentUserProvider";
@@ -18,11 +19,20 @@ export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
   title: "WVLDS",
   description: "WVLDS — créez des mondes, incarnez vos personnages et écrivez vos histoires en temps réel.",
+  appleWebApp: {
+    capable: true,
+    title: "WVLDS",
+    statusBarStyle: "black-translucent",
+  },
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  // Étend le contenu sous les zones d'encoche/coins arrondis en PWA
+  // installée (safe-area-inset-* disponibles côté CSS).
+  viewportFit: "cover",
+  themeColor: "#1B1B1D",
   // Le clavier virtuel mobile rétrécit le viewport de layout (donc les
   // unités dvh) au lieu de simplement se superposer par-dessus — permet aux
   // drawers plein écran en h-[calc(100dvh-…)] (composer, etc.) de rester
@@ -90,12 +100,14 @@ export default async function RootLayout({
         className={`${geistSans.className} ${notoSerif.variable} ${openDyslexic.variable} antialiased`}
         suppressHydrationWarning
       >
-        <AppProviders initialUser={initialUser}>
-          <div id="app-shell" className="h-full">
-            {children}
-          </div>
-        </AppProviders>
-        <Toaster />
+        <SerwistProvider swUrl="/sw.js" cacheOnNavigation reloadOnOnline>
+          <AppProviders initialUser={initialUser}>
+            <div id="app-shell" className="h-full">
+              {children}
+            </div>
+          </AppProviders>
+          <Toaster />
+        </SerwistProvider>
       </body>
     </html>
   );

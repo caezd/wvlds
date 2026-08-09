@@ -1,8 +1,8 @@
 {
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
-    "build": "next build",
+    "dev": "concurrently -p none \"serwist build --watch\" \"next dev --turbopack\"",
+    "build": "next build && serwist build",
     "start": "next start",
     "lint": "eslint .",
     "test": "vitest run",
@@ -33,6 +33,7 @@
     "@radix-ui/react-switch": "^1.2.6",
     "@radix-ui/react-tabs": "^1.1.13",
     "@radix-ui/react-tooltip": "^1.2.8",
+    "@serwist/next": "^9.5.12",
     "@supabase/ssr": "latest",
     "@supabase/supabase-js": "latest",
     "@tailwindcss/postcss": "^4.1.16",
@@ -70,6 +71,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@playwright/test": "^1.61.0",
+    "@serwist/cli": "^9.5.12",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
@@ -81,15 +83,23 @@
     "@vitest/coverage-v8": "^4.1.9",
     "autoprefixer": "^10.4.20",
     "baseline-browser-mapping": "^2.9.5",
+    "concurrently": "^10.0.4",
+    "esbuild": "^0.28.2",
     "eslint": "^9",
     "eslint-config-next": "15.3.1",
     "jsdom": "^29.1.1",
     "postcss": "^8.5.6",
+    "serwist": "^9.5.12",
     "shadcn": "^3.5.2",
     "tailwindcss": "^4.1.16",
     "tailwindcss-animate": "^1.0.7",
     "typescript": "^5",
     "vite-tsconfig-paths": "^6.1.1",
     "vitest": "^4.1.9"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
   }
 }

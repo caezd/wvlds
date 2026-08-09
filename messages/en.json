@@ -875,5 +875,10 @@
     "skillsUnrestricted": "Skills: free entry (catalogue not restricted)",
     "faceclaims": "Faceclaims",
     "emptyFaceclaims": "No faceclaims declared in this world."
+  },
+  "offline": {
+    "title": "You're offline",
+    "description": "Check your connection and try again.",
+    "retry": "Try again"
   }
 }

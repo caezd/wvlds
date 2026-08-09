@@ -871,5 +871,10 @@
     "skillsUnrestricted": "Habilidades: entrada libre (catálogo no restringido)",
     "faceclaims": "Faceclaims",
     "emptyFaceclaims": "No hay faceclaims declarados en este mundo."
+  },
+  "offline": {
+    "title": "Está sin conexión",
+    "description": "Compruebe su conexión e inténtelo de nuevo.",
+    "retry": "Reintentar"
   }
 }
