@@ -9,7 +9,7 @@ import DmsProvider, { useDms } from "@/components/providers/DmsProvider";
 import { useNotifications } from "@/components/providers/NotificationsProvider";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import { MobileSidebarProvider, useMobileSidebar } from "@/components/providers/MobileSidebarProvider";
-import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { WorldsRail } from "./WorldsRail";
 import type { Quota } from "@/lib/userQuota";
@@ -108,16 +108,14 @@ function AppShellInner({
       </div>
 
       {/* Drawer mobile */}
-      <Sheet open={drawerOpen} onOpenChange={handleDrawerChange}>
-        <SheetContent
-          side="left"
-          hideClose
+      <Drawer open={drawerOpen} onOpenChange={handleDrawerChange} swipeDirection="left">
+        <DrawerContent
           className={cn(
-            "p-0 border-r border-border-soft",
+            "inset-y-0 left-0 m-0 h-full rounded-none border-0 border-r border-border-soft bg-background text-foreground shadow-lg",
             anyPanelOpen || mobileSidebar ? "w-full max-w-[360px]" : "w-auto max-w-none",
           )}
         >
-          <VisuallyHidden><SheetTitle>Navigation</SheetTitle></VisuallyHidden>
+          <VisuallyHidden><DrawerTitle>Navigation</DrawerTitle></VisuallyHidden>
           <div className="flex h-full overflow-hidden">
             {/* Rail d'icônes */}
             <div className={cn(
@@ -147,8 +145,8 @@ function AppShellInner({
               </div>
             )}
           </div>
-        </SheetContent>
-      </Sheet>
+        </DrawerContent>
+      </Drawer>
 
       {/* Contenu principal */}
       <section id="app-shell" className="relative flex min-h-0 max-w-full flex-1 flex-col">
