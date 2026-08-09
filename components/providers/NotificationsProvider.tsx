@@ -433,6 +433,18 @@ export default function NotificationsProvider({ children }: { children: React.Re
         // réseau (voir useReconnectEpoch).
     }, [userId, reconnectEpoch]); // eslint-disable-line react-hooks/exhaustive-deps
 
+    const unreadNotifCount = notifications.filter(n => !n.read_at).length;
+
+    // Badge natif sur l'icône de l'app (PWA installée) — reflète le compteur
+    // de non-lus sans avoir à ouvrir l'app. API sans rapport avec le "badge"
+    // des notifications push (canal alpha uniquement) : ici c'est un nombre
+    // affiché par l'OS sur l'icône elle-même.
+    useEffect(() => {
+        if (!("setAppBadge" in navigator)) return;
+        if (unreadNotifCount > 0) void navigator.setAppBadge(unreadNotifCount).catch(() => {});
+        else void navigator.clearAppBadge().catch(() => {});
+    }, [unreadNotifCount]);
+
     const value = useMemo<Ctx>(() => ({
         panelOpen, openPanel, closePanel, togglePanel,
         worldUnread,
@@ -441,7 +453,7 @@ export default function NotificationsProvider({ children }: { children: React.Re
         markChatRead,
         refreshAll,
         notifications,
-        unreadNotifCount: notifications.filter(n => !n.read_at).length,
+        unreadNotifCount,
         markNotifRead,
         markAllNotifsRead,
         archiveNotif,
@@ -451,7 +463,7 @@ export default function NotificationsProvider({ children }: { children: React.Re
         setNotifPref,
     }), [panelOpen, openPanel, closePanel, togglePanel,
         worldUnread, roomUnread, setActiveChat, markChatRead, refreshAll,
-        notifications, markNotifRead, markAllNotifsRead, archiveNotif,
+        notifications, unreadNotifCount, markNotifRead, markAllNotifsRead, archiveNotif,
         hasMoreNotifs, loadMoreNotifs, notifPrefs, setNotifPref]);
 
     return (

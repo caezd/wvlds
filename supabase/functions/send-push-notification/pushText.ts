@@ -84,3 +84,17 @@ export function pushHref(n: Pick<PushNotifPayload, "chat_id" | "world_id">): str
   if (n.world_id) return `/w/${n.world_id}`;
   return null;
 }
+
+const PERSONA_TYPES = new Set<PushNotifPayload["type"]>(["persona_new_chatroom", "persona_reply", "marital_request"]);
+
+// Miroir de la logique de NotifAvatar/isPersonaNotif dans
+// components/notifications/index.tsx : pour les notifications "persona",
+// l'avatar affiché est celui du persona (metadata.icon_url), pas celui du
+// compte humain qui l'incarne.
+export function resolvePushImage(n: PushNotifPayload, actorAvatarUrl: string | null): string | null {
+  const isPersonaNotif = PERSONA_TYPES.has(n.type) || typeof n.metadata?.persona_name === "string";
+  if (isPersonaNotif) {
+    return typeof n.metadata?.icon_url === "string" ? n.metadata.icon_url : null;
+  }
+  return actorAvatarUrl;
+}
