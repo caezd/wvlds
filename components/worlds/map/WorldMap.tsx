@@ -821,12 +821,10 @@ export function WorldMap({
   worldId,
   userId,
   canEdit,
-  onClose,
 }: {
   worldId: string;
   userId: string;
   canEdit: boolean;
-  onClose: () => void;
 }) {
   const t = useTranslations("map");
   const tCommon = useTranslations("common");
@@ -1159,13 +1157,7 @@ export function WorldMap({
         icon={<Map className="h-4 w-4 shrink-0 text-muted-foreground" />}
         title={t("title")}
         right={
-          <Button size="icon" variant="ghost" onClick={onClose} aria-label={t("closeMap")} className="rounded-lg hover:bg-hoverCard">
-            <X className="h-5 w-5" />
-          </Button>
-        }
-      >
-        {canEdit && (
-          <>
+          canEdit && (
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); setEditMode((v) => !v); setSelectedPin(null); setPopoverPos(null); setPendingPin(null); }}
@@ -1179,22 +1171,22 @@ export function WorldMap({
               <Pencil className="h-3 w-3" />
               {isEditMode ? t("editingActive") : tCommon("edit")}
             </button>
-
-            {isEditMode && mapData?.image_url && (
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); mapFileInputRef.current?.click(); }}
-                className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
-              >
-                {uploadingMap ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Upload className="h-3.5 w-3.5" />
-                )}
-                {t("changeMap")}
-              </button>
+          )
+        }
+      >
+        {canEdit && isEditMode && mapData?.image_url && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); mapFileInputRef.current?.click(); }}
+            className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
+          >
+            {uploadingMap ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Upload className="h-3.5 w-3.5" />
             )}
-          </>
+            {t("changeMap")}
+          </button>
         )}
       </WorldPanelHeader>
 

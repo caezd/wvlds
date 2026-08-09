@@ -797,7 +797,6 @@
     "mapAlt": "Mapa del mundo",
     "editingActive": "Edición activa",
     "changeMap": "Cambiar mapa",
-    "closeMap": "Cerrar mapa",
     "noMapConfigured": "Ningún mapa configurado para este mundo.",
     "importMapImage": "Importar una imagen de mapa",
     "clickToAddPin": "Haga clic en el mapa para añadir un pin",

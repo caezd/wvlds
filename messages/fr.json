@@ -802,7 +802,6 @@
     "mapAlt": "Carte du monde",
     "editingActive": "Modification active",
     "changeMap": "Changer la carte",
-    "closeMap": "Fermer la carte",
     "noMapConfigured": "Aucune carte configurée pour ce monde.",
     "importMapImage": "Importer une image de carte",
     "clickToAddPin": "Cliquer sur la carte pour ajouter un pin",
