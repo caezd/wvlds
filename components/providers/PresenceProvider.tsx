@@ -9,6 +9,7 @@ import {
     useRef,
     useState,
 } from "react";
+import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { channel, PRESENCE, TABLE } from "@/lib/constants";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -32,8 +33,9 @@ type Ctx = {
     status: PresenceStatus;
     /** Mode invisible : ne publie ni présence realtime ni last_seen_at */
     appearOffline: boolean;
-    setAppearOffline: (value: boolean) => Promise<void>;
-    setStatus: (status: PresenceStatus) => Promise<void>;
+    setAppearOffline: (value: boolean) => Promise<boolean>;
+    /** Retourne `false` si l'enregistrement a échoué (déjà signalé via toast.error). */
+    setStatus: (status: PresenceStatus) => Promise<boolean>;
 };
 
 const PresenceCtx = createContext<Ctx | null>(null);
@@ -44,8 +46,8 @@ const DEFAULT_CTX: Ctx = {
     getUserPresence: () => "offline",
     status: "online",
     appearOffline: false,
-    setAppearOffline: async () => {},
-    setStatus: async () => {},
+    setAppearOffline: async () => false,
+    setStatus: async () => false,
 };
 
 export function useGlobalPresence() {
@@ -294,14 +296,24 @@ export default function PresenceProvider({ children }: { children: React.ReactNo
 
     const setAppearOffline = useCallback(
         async (value: boolean) => {
+            const previous = appearOfflineRef.current;
             appearOfflineRef.current = value;
             setAppearOfflineState(value);
-            if (!userId) return;
+            if (!userId) return true;
 
-            await supabase
+            const { error } = await supabase
                 .from(TABLE.PROFILES)
                 .update({ appear_offline: value })
                 .eq("id", userId);
+
+            if (error) {
+                // Rollback de la mise à jour optimiste — sans ça l'UI resterait
+                // désynchronisée de la valeur réellement en base.
+                appearOfflineRef.current = previous;
+                setAppearOfflineState(previous);
+                toast.error("Impossible d'enregistrer le statut.");
+                return false;
+            }
 
             if (value) {
                 await channelRef.current?.untrack();
@@ -311,18 +323,22 @@ export default function PresenceProvider({ children }: { children: React.ReactNo
             } else {
                 await trackRef.current(true);
             }
+            return true;
         },
         [supabase, userId, recompute],
     );
 
     const setStatus = useCallback(
         async (next: PresenceStatus) => {
+            const previous = status;
             setStatusState(next);
             // "offline" et "invisible" masquent tous les deux la présence réseau.
             // La distinction est uniquement locale (libellé + couleur).
-            await setAppearOffline(next !== "online");
+            const ok = await setAppearOffline(next !== "online");
+            if (!ok) setStatusState(previous);
+            return ok;
         },
-        [setAppearOffline],
+        [setAppearOffline, status],
     );
 
     const isUserOnline = useCallback(

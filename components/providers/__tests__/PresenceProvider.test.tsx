@@ -1,10 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, waitFor, act } from "@testing-library/react";
+import { render, screen, waitFor, act } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
 import { createSupabaseMock } from "@/test/supabaseMock";
-import PresenceProvider from "@/components/providers/PresenceProvider";
+import PresenceProvider, { useGlobalPresence } from "@/components/providers/PresenceProvider";
 
 vi.mock("@/lib/supabase/client", () => ({ createClient: vi.fn() }));
+vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 // Identité issue du contexte, mutable entre les rendus pour simuler l'arrivée
 // tardive du profil (login client : initialUser=null puis profil async).
@@ -119,5 +122,81 @@ describe("PresenceProvider — cleanup et reconnexion", () => {
     expect(newCh).not.toBe(oldCh);
     expect(newCh.name).toBe("presence:app");
     await waitFor(() => expect(newCh.track).toHaveBeenCalled());
+  });
+});
+
+// Chainable minimal ne couvrant que .update().eq() — seule la chaîne
+// réellement utilisée par setAppearOffline() — pour forcer une erreur sur
+// UN SEUL appel .from() précis, sans perturber le heartbeat déclenché au
+// montage (qui consomme aussi .from(TABLE.PROFILES).update(...)).
+function errorBuilder() {
+  const b = {
+    then: (resolve: (v: unknown) => unknown) =>
+      Promise.resolve({ data: null, error: { message: "boom" } }).then(resolve),
+  } as { then: unknown; update?: unknown; eq?: unknown };
+  b.update = () => b;
+  b.eq = () => b;
+  return b;
+}
+
+function StatusConsumer() {
+  const { setStatus, status } = useGlobalPresence();
+  return (
+    <button onClick={() => void setStatus("invisible")}>
+      changer ({status})
+    </button>
+  );
+}
+
+describe("PresenceProvider — confirmation du changement de statut", () => {
+  it("setStatus() résout à true sans erreur (succès par défaut du mock)", async () => {
+    const mock = createSupabaseMock({ user: { id: "u1" } });
+    vi.mocked(createClient).mockReturnValue(mock.client as never);
+    const user = userEvent.setup();
+
+    render(
+      <PresenceProvider>
+        <StatusConsumer />
+      </PresenceProvider>,
+    );
+    await waitFor(() => expect(mock.lastChannel()?.track).toHaveBeenCalled());
+
+    await user.click(screen.getByText(/changer/));
+
+    await waitFor(() => {
+      const builders = mock.buildersFor("profiles");
+      expect(
+        builders.some((b) =>
+          (b.update as ReturnType<typeof vi.fn>).mock.calls.some(
+            (c: unknown[]) => (c[0] as Record<string, unknown>)?.appear_offline === true,
+          ),
+        ),
+      ).toBe(true);
+    });
+    expect(toast.error).not.toHaveBeenCalled();
+  });
+
+  it("annule le changement et affiche une erreur si l'enregistrement échoue", async () => {
+    const mock = createSupabaseMock({ user: { id: "u1" } });
+    vi.mocked(createClient).mockReturnValue(mock.client as never);
+    const user = userEvent.setup();
+
+    render(
+      <PresenceProvider>
+        <StatusConsumer />
+      </PresenceProvider>,
+    );
+    await waitFor(() => expect(mock.lastChannel()?.track).toHaveBeenCalled());
+    expect(screen.getByText("changer (online)")).toBeInTheDocument();
+
+    // Ne fait échouer que le prochain appel .from() — celui déclenché par le
+    // clic ci-dessous, pas le heartbeat déjà résolu au montage.
+    mock.from.mockImplementationOnce(() => errorBuilder() as never);
+
+    await user.click(screen.getByText(/changer/));
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalled());
+    // Le statut affiché revient à "online" — pas resté bloqué sur "invisible".
+    expect(screen.getByText("changer (online)")).toBeInTheDocument();
   });
 });

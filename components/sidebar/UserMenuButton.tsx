@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import {
   DropdownMenu,
@@ -138,7 +139,10 @@ export function UserMenuButton({
                 {STATUSES.map(({ key, label }) => (
                   <DropdownMenuItem
                     key={key}
-                    onClick={() => void setStatus(key)}
+                    onClick={() => {
+                      if (key === status) return;
+                      void setStatus(key).then((ok) => { if (ok) toast.success(label); });
+                    }}
                     className="flex items-center gap-2"
                   >
                     <span className={cn("h-2 w-2 rounded-full shrink-0", STATUS_COLOR[key])} />

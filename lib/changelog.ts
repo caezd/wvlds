@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Correctif",
+    text: "Changer son statut de présence (En ligne/Hors ligne/Invisible) affiche désormais une confirmation, et l'affichage revient à l'ancien statut si l'enregistrement échoue au lieu de rester bloqué sur une valeur non sauvegardée.",
+  },
+  {
+    date: "2026-08",
     tag: "Mondes",
     text: "Les paramètres d'un monde affichent désormais une confirmation lors de l'enregistrement d'une modification (nom, description, visibilité, nom du lien wiki…), là où rien ne le signalait auparavant.",
   },
