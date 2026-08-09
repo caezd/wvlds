@@ -303,7 +303,7 @@ export function PersonaPickerDialog({
             décoratif) — Base UI suppose sinon un <button> natif. */}
         <DrawerTrigger
           nativeButton={false}
-          render={trigger ?? <span className="relative inline-block shrink-0 rounded-full border" />}
+          render={trigger ?? <span className="relative inline-block shrink-0 rounded-md border" />}
         >
           {trigger ? null : defaultTriggerContent}
         </DrawerTrigger>
