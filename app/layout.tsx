@@ -100,7 +100,12 @@ export default async function RootLayout({
         className={`${geistSans.className} ${notoSerif.variable} ${openDyslexic.variable} antialiased`}
         suppressHydrationWarning
       >
-        <SerwistProvider swUrl="/sw.js" cacheOnNavigation reloadOnOnline>
+        <SerwistProvider
+          swUrl="/sw.js"
+          disable={process.env.NODE_ENV === "development"}
+          cacheOnNavigation
+          reloadOnOnline
+        >
           <AppProviders initialUser={initialUser}>
             <div id="app-shell" className="h-full">
               {children}
