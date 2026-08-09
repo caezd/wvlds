@@ -63,8 +63,10 @@ self.addEventListener("notificationclick", (event: NotificationEvent) => {
   const url = (event.notification.data as PushPayload["data"] | undefined)?.url ?? "/";
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+      // Comparaison sur le pathname exact — .includes() matcherait à tort
+      // "/w/1" à l'intérieur de "/w/10".
       for (const client of clients) {
-        if ("focus" in client && client.url.includes(url)) return client.focus();
+        if ("focus" in client && new URL(client.url).pathname === url) return client.focus();
       }
       return self.clients.openWindow(url);
     }),

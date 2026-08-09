@@ -336,6 +336,7 @@ function PushToggleRow() {
                 checked={isSubscribed}
                 disabled={!supported || permission === "denied" || loading}
                 onCheckedChange={checked => { void (checked ? subscribe() : unsubscribe()); }}
+                aria-label={t("push")}
             />
         </div>
     );
@@ -435,7 +436,11 @@ export function NotificationInlinePanelContent() {
                                 </span>
                                 {PREF_LABELS[type]}
                             </div>
-                            <Switch checked={notifPrefs[type] !== false} onCheckedChange={checked => setNotifPref(type, checked)} />
+                            <Switch
+                                checked={notifPrefs[type] !== false}
+                                onCheckedChange={checked => setNotifPref(type, checked)}
+                                aria-label={PREF_LABELS[type]}
+                            />
                         </div>
                     ))}
                 </div>

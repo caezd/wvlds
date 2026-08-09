@@ -12,12 +12,20 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
 
-  const [{ data: subs }, { data: profile }] = await Promise.all([
+  const [{ data: subs, error: subsError }, { data: profile }] = await Promise.all([
     supabase.from("push_subscriptions")
       .select("id, endpoint, p256dh, auth_key")
       .eq("user_id", body.recipient_id),
     supabase.from("profiles").select("locale").eq("id", body.recipient_id).single(),
   ]);
+
+  // Une erreur de lecture (RLS, panne DB, …) ne doit jamais se confondre avec
+  // "aucun abonnement" — sinon un vrai incident serait masqué et aucun
+  // nettoyage d'abonnement invalide ne serait tenté ce cycle-ci.
+  if (subsError) {
+    console.error("push_subscriptions read error:", subsError.message);
+    return Response.json({ ok: false, error: "subscriptions_read_failed" }, { status: 500 });
+  }
 
   if (!subs || subs.length === 0) {
     return Response.json({ ok: true, sent: 0, removed: 0 });

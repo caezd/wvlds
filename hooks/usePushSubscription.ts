@@ -33,14 +33,18 @@ export function usePushSubscription() {
 
   const subscribe = useCallback(async () => {
     if (!supported || !userId) return;
+    const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+    if (!vapidKey) {
+      console.error("NEXT_PUBLIC_VAPID_PUBLIC_KEY manquante — abonnement push impossible.");
+      return;
+    }
     setLoading(true);
     try {
       const reg = await navigator.serviceWorker.ready;
       const sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!),
+        applicationServerKey: urlBase64ToUint8Array(vapidKey),
       });
-      setPermission(Notification.permission);
       const json = sub.toJSON();
       const supabase = createClient();
       await supabase.from(TABLE.PUSH_SUBSCRIPTIONS).upsert({
@@ -53,6 +57,11 @@ export function usePushSubscription() {
       }, { onConflict: "endpoint" });
       setIsSubscribed(true);
     } finally {
+      // Dans le finally (pas juste après subscribe()) : si l'utilisateur
+      // refuse la permission, subscribe() rejette et Notification.permission
+      // passe quand même à "denied" côté navigateur — l'état local doit
+      // refléter ce refus, pas rester figé sur sa valeur précédente.
+      setPermission(Notification.permission);
       setLoading(false);
     }
   }, [supported, userId]);

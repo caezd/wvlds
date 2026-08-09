@@ -36,10 +36,16 @@ CREATE POLICY "push_subscriptions: insert own"
   TO authenticated
   WITH CHECK (user_id = (SELECT auth.uid()));
 
+-- WITH CHECK identique à USING : sans lui, un utilisateur pourrait modifier
+-- SA propre ligne (autorisé par USING) mais en réassignant user_id vers un
+-- AUTRE compte — la ligne resterait alors retournée par le trigger de push
+-- pour ce dernier tout en restant physiquement l'abonnement du navigateur
+-- de l'attaquant (Copilot review).
 CREATE POLICY "push_subscriptions: update own"
   ON public.push_subscriptions FOR UPDATE
   TO authenticated
-  USING (user_id = (SELECT auth.uid()));
+  USING (user_id = (SELECT auth.uid()))
+  WITH CHECK (user_id = (SELECT auth.uid()));
 
 CREATE POLICY "push_subscriptions: delete own"
   ON public.push_subscriptions FOR DELETE
@@ -59,11 +65,11 @@ REVOKE ALL ON public.push_subscriptions FROM anon;
 -- current_setting('app.supabase_url'/'app.supabase_service_role_key'), mais
 -- ces settings DB n'ont en réalité jamais été configurés (confirmé : ALTER
 -- DATABASE échoue avec "unrecognized configuration parameter"). Le cron du
--- défi quotidien qui fonctionne réellement en prod (cron.job) a l'URL et
--- l'Authorization codées en dur — on suit ce même pattern ici. Sans
--- conséquence sécurité : la fonction Edge est déployée avec verify_jwt=false
--- (comme generate-daily-challenge) et ne vérifie pas non plus ce header elle-
--- même ; il n'a besoin d'être qu'un Bearer syntaxiquement valide.
+-- défi quotidien qui fonctionne réellement en prod (cron.job) a l'URL codée
+-- en dur — on suit ce même pattern ici. Pas de header Authorization : la
+-- fonction Edge est déployée avec verify_jwt=false et ne le vérifie pas non
+-- plus elle-même, donc committer un token ici n'apporterait rien (Copilot
+-- review — supprimé plutôt que remplacé par un token vide).
 
 CREATE OR REPLACE FUNCTION public.notify_push_on_notification_insert()
 RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER
@@ -77,10 +83,7 @@ BEGIN
 
   PERFORM net.http_post(
     url     := 'https://aecdzqmdkmnpdbtfaxnx.supabase.co/functions/v1/send-push-notification',
-    headers := jsonb_build_object(
-      'Content-Type',  'application/json',
-      'Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFlY2R6cW1ka21ucGRidGZheG54Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3MTU5OTQsImV4cCI6MjA5NjI5MTk5NH0.xs6alw0HbjvsfcR3fxLIAEY4vD8ki48Z_SymC1_LtSA'
-    ),
+    headers := jsonb_build_object('Content-Type', 'application/json'),
     body    := jsonb_build_object(
       'id',           NEW.id,
       'recipient_id', NEW.recipient_id,
