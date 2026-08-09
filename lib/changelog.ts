@@ -8,6 +8,26 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Social",
+    text: "Messages privés : possibilité de modifier ou supprimer ses propres messages, recherche dans l'historique des conversations, et respect des préférences de lecture (police, taille, alignement) déjà réglables dans les paramètres.",
+  },
+  {
+    date: "2026-08",
+    tag: "Social",
+    text: "Messages privés : indicateur « en train d'écrire » dans une conversation, et chargement progressif de la liste des conversations (au lieu de tout charger d'un coup) en faisant défiler le rail vers la droite.",
+  },
+  {
+    date: "2026-08",
+    tag: "Technique",
+    text: "Messages privés : un message reçu dans une conversation déjà ouverte ne recharge plus toute la liste des conversations (compteur de non-lus mis à jour localement), et deux index manquants sur les tables de messages/lectures sont ajoutés.",
+  },
+  {
+    date: "2026-08",
+    tag: "Social",
+    text: "Messages privés : possibilité de bloquer un joueur depuis une conversation. Une personne bloquée ne peut plus vous envoyer de nouveaux messages ni démarrer de nouvelle conversation avec vous, et disparaît de votre recherche — débloquable à tout moment depuis la conversation.",
+  },
+  {
+    date: "2026-08",
     tag: "Interface",
     text: "Les paramètres d'une chatroom (nom, lieu, catégorie, chronologie) affichent désormais une confirmation à l'enregistrement, là où rien ne le signalait auparavant.",
   },

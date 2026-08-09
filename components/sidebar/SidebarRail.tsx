@@ -70,11 +70,13 @@ export default async function SidebarRail() {
 
       <footer className="flex flex-col items-center gap-1.5 w-full mt-auto shrink-0">
 
-        {/* Conversations épinglées */}
-        <PinnedDmAvatarsRail />
-
-        {/* Messages privés */}
-        <DmsToggleButton />
+        {/* Conversations épinglées + messages privés */}
+        {featureFlags.direct_messages && (
+          <>
+            <PinnedDmAvatarsRail />
+            <DmsToggleButton />
+          </>
+        )}
 
         <div className="my-0.5 h-px w-8 shrink-0 bg-border-soft" />
 

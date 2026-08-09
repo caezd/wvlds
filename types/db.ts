@@ -334,3 +334,20 @@ export type DmMessage = {
   content: string;
   created_at: string;
 };
+
+export type DmSearchUser = {
+  id: string;
+  username: string | null;
+  avatar_url: string | null;
+};
+
+export type DmSearchMessage = {
+  id: number;
+  conversation_id: string;
+  author_id: string;
+  content: string;
+  created_at: string;
+  other_user_id: string;
+  other_username: string | null;
+  other_avatar_url: string | null;
+};

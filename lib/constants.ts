@@ -22,6 +22,7 @@ export const TABLE = {
   DM_CONVERSATIONS: "dm_conversations",
   DM_MESSAGES: "dm_messages",
   DM_READS: "dm_reads",
+  USER_BLOCKS: "user_blocks",
   CHALLENGES: "challenges",
   CHALLENGE_ATTEMPTS: "challenge_attempts",
 } as const;
@@ -38,6 +39,10 @@ export const RPC = {
   FIND_OR_CREATE_DM: "find_or_create_dm",
   GET_DM_CONVERSATIONS: "get_dm_conversations",
   COUNT_COMMON_WORLDS: "count_common_worlds",
+  SEARCH_DM_USERS: "search_dm_users",
+  SEARCH_DM_MESSAGES: "search_dm_messages",
+  BLOCK_USER: "block_user",
+  UNBLOCK_USER: "unblock_user",
   GET_ACTIVE_DAILY_CHALLENGES: "get_active_daily_challenges",
   CLAIM_CHALLENGE_ATTEMPT: "claim_challenge_attempt",
   EXPIRE_DAILY_CHALLENGES: "expire_daily_challenges",
