@@ -700,7 +700,6 @@
   },
   "relations": {
     "title": "Relations canvas",
-    "settingsTitle": "Canvas settings",
     "groups": "Groups",
     "relTypes": "Relation types",
     "noGroupsDefined": "No groups defined",

@@ -5,26 +5,10 @@ import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
-import { Link2, Network, Plus, Settings, Trash2, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Link2, Network, Trash2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getInitials } from "@/lib/textFormatting";
 import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import { HsvColorPicker } from "@/components/ui/hsv-color-picker";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -34,17 +18,6 @@ type CMember = { user_id: string; username: string | null; avatar_url: string | 
 type CGroup = { id: string; name: string; color: string; sort_index: number };
 type CRelation = { id: string; from_persona_id: string; to_persona_id: string; type: string; label: string | null; description: string | null };
 type BlockPos = { x: number; y: number };
-
-type DashOption = { label: string; value: string };
-function getDashOptions(t: ReturnType<typeof useTranslations<"relations">>): DashOption[] {
-  return [
-    { label: t("dash.solid"), value: "" },
-    { label: t("dash.dashed"), value: "5 3" },
-    { label: t("dash.dotted"), value: "2 3" },
-    { label: t("dash.long"), value: "8 4" },
-    { label: t("dash.mixed"), value: "8 3 2 3" },
-  ];
-}
 
 const REL_W = 1.5;
 const FALLBACK_BASE = { id: "__fallback__", color: "#94a3b8", dash: "3 4", sort_index: 999 };
@@ -192,286 +165,15 @@ function RelationRow({
   );
 }
 
-// ─── ColorPickerButton ───────────────────────────────────────────────────────
-// Rendu inline (pas de portail) pour éviter que Radix Dialog interprète le
-// pointerdown sur le canvas HSV comme un clic hors du dialog.
-
-function ColorPickerButton({ color, onChange }: { color: string; onChange: (c: string) => void }) {
-  const [open, setOpen] = React.useState(false);
-  const ref = React.useRef<HTMLDivElement>(null);
-
-  React.useEffect(() => {
-    if (!open) return;
-    function onDown(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
-  }, [open]);
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="h-8 w-8 shrink-0 rounded-md border border-border shadow-sm transition-shadow hover:ring-2 hover:ring-ring"
-        style={{ backgroundColor: color }}
-      />
-      {open && (
-        <div className="absolute left-0 top-full z-50 mt-1 w-[220px] rounded-lg border border-border bg-popover p-3 shadow-md">
-          <HsvColorPicker color={color} onChange={onChange} presets={[]} />
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── CanvasSettingsDialog ─────────────────────────────────────────────────────
-
-function CanvasSettingsDialog({
-  worldId,
-  groups,
-  relTypes,
-  onGroupsChange,
-  onRelTypesChange,
-}: {
-  worldId: string;
-  groups: CGroup[];
-  relTypes: CRelType[];
-  onGroupsChange: (gs: CGroup[]) => void;
-  onRelTypesChange: (ts: CRelType[]) => void;
-}) {
-  const t = useTranslations("relations");
-  const tCommon = useTranslations("common");
-  const dashOptions = getDashOptions(t);
-  const supabase = React.useMemo(() => createClient(), []);
-
-  // Groups form
-  const [gName, setGName] = React.useState("");
-  const [gColor, setGColor] = React.useState("#6366f1");
-
-  // Editing group
-  const [editGId, setEditGId] = React.useState<string | null>(null);
-  const [editGName, setEditGName] = React.useState("");
-  const [editGColor, setEditGColor] = React.useState("");
-
-  // Relation type form
-  const [rtName, setRtName] = React.useState("");
-  const [rtColor, setRtColor] = React.useState("#22c55e");
-  const [rtDash, setRtDash] = React.useState("");
-
-  // Editing relation type
-  const [editRtId, setEditRtId] = React.useState<string | null>(null);
-  const [editRtName, setEditRtName] = React.useState("");
-  const [editRtColor, setEditRtColor] = React.useState("");
-  const [editRtDash, setEditRtDash] = React.useState("");
-
-  // ── Groups ──────────────────────────────────────────────────────────────────
-
-  async function addGroup() {
-    if (!gName.trim()) return;
-    const { data, error } = await supabase
-      .from("world_persona_groups")
-      .insert({ world_id: worldId, name: gName.trim(), color: gColor, sort_index: groups.length })
-      .select("id, name, color, sort_index")
-      .single();
-    if (error) { toast.error(error.message); return; }
-    onGroupsChange([...groups, data as CGroup]);
-    setGName("");
-  }
-
-  async function deleteGroup(id: string) {
-    const { error } = await supabase.from("world_persona_groups").delete().eq("id", id);
-    if (error) { toast.error(error.message); return; }
-    onGroupsChange(groups.filter((g) => g.id !== id));
-  }
-
-  function startEditG(g: CGroup) {
-    setEditGId(g.id);
-    setEditGName(g.name);
-    setEditGColor(g.color);
-  }
-
-  async function saveEditG() {
-    if (!editGId) return;
-    const { error } = await supabase
-      .from("world_persona_groups")
-      .update({ name: editGName.trim(), color: editGColor })
-      .eq("id", editGId);
-    if (error) { toast.error(error.message); return; }
-    onGroupsChange(groups.map((g) =>
-      g.id === editGId ? { ...g, name: editGName.trim(), color: editGColor } : g
-    ));
-    setEditGId(null);
-  }
-
-  // ── Relation types ───────────────────────────────────────────────────────────
-
-  async function addRelType() {
-    if (!rtName.trim()) return;
-    const { data, error } = await supabase
-      .from("world_relation_types")
-      .insert({ world_id: worldId, name: rtName.trim(), color: rtColor, dash: rtDash, sort_index: relTypes.length })
-      .select("id, name, color, dash, sort_index")
-      .single();
-    if (error) { toast.error(error.message); return; }
-    onRelTypesChange([...relTypes, data as CRelType]);
-    setRtName("");
-    setRtColor("#22c55e");
-    setRtDash("");
-  }
-
-  async function deleteRelType(id: string) {
-    const { error } = await supabase.from("world_relation_types").delete().eq("id", id);
-    if (error) { toast.error(error.message); return; }
-    onRelTypesChange(relTypes.filter((t) => t.id !== id));
-  }
-
-  function startEditRt(t: CRelType) {
-    setEditRtId(t.id);
-    setEditRtName(t.name);
-    setEditRtColor(t.color);
-    setEditRtDash(t.dash);
-  }
-
-  async function saveEditRt() {
-    if (!editRtId) return;
-    const { error } = await supabase
-      .from("world_relation_types")
-      .update({ name: editRtName.trim(), color: editRtColor, dash: editRtDash })
-      .eq("id", editRtId);
-    if (error) { toast.error(error.message); return; }
-    onRelTypesChange(relTypes.map((t) =>
-      t.id === editRtId ? { ...t, name: editRtName.trim(), color: editRtColor, dash: editRtDash } : t
-    ));
-    setEditRtId(null);
-  }
-
-  return (
-    <Dialog>
-      <DialogTrigger asChild>
-        <Button size="sm" variant="outline" className="h-7 gap-1.5 text-xs">
-          <Settings className="h-3 w-3" />
-          {tCommon("settings")}
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{t("settingsTitle")}</DialogTitle>
-        </DialogHeader>
-        <Tabs defaultValue="groups">
-          <TabsList className="w-full">
-            <TabsTrigger value="groups" className="flex-1">{t("groups")}</TabsTrigger>
-            <TabsTrigger value="reltypes" className="flex-1">{t("relTypes")}</TabsTrigger>
-          </TabsList>
-
-          {/* ── Groupes ── */}
-          <TabsContent value="groups" className="mt-4 space-y-3">
-            <div className="space-y-1.5">
-              {groups.length === 0 && (
-                <p className="text-center text-[12px] text-muted-foreground py-4">{t("noGroupsDefined")}</p>
-              )}
-              {groups.map((g) =>
-                editGId === g.id ? (
-                  <div key={g.id} className="flex items-center gap-2 rounded-lg border border-primary/30 bg-card px-3 py-2">
-                    <ColorPickerButton color={editGColor} onChange={setEditGColor} />
-                    <Input value={editGName} onChange={(e) => setEditGName(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === "Enter") void saveEditG(); }}
-                      className="h-8 flex-1 text-[12px]" autoFocus />
-                    <button onClick={() => void saveEditG()} className="text-xs font-medium text-primary hover:underline">OK</button>
-                    <button onClick={() => setEditGId(null)} className="text-muted-foreground hover:text-foreground"><X className="h-3 w-3" /></button>
-                  </div>
-                ) : (
-                  <div key={g.id} className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2">
-                    <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: g.color }} />
-                    <span className="flex-1 text-[13px] font-medium">{g.name}</span>
-                    <button onClick={() => startEditG(g)} className="text-[11px] text-muted-foreground hover:text-foreground">{tCommon("edit")}</button>
-                    <button onClick={() => void deleteGroup(g.id)} className="text-muted-foreground hover:text-destructive">
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                )
-              )}
-            </div>
-            <div className="flex items-center gap-2 border-t border-border-soft pt-3">
-              <ColorPickerButton color={gColor} onChange={setGColor} />
-              <Input value={gName} onChange={(e) => setGName(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") void addGroup(); }}
-                placeholder={t("groupNamePlaceholder")} className="h-8 flex-1 text-sm" />
-              <Button size="icon" className="h-8 w-8 shrink-0" onClick={() => void addGroup()}>
-                <Plus className="h-3.5 w-3.5" />
-              </Button>
-            </div>
-          </TabsContent>
-
-          {/* ── Types de relation ── */}
-          <TabsContent value="reltypes" className="mt-4 space-y-3">
-            <div className="space-y-1.5">
-              {relTypes.length === 0 && (
-                <p className="text-center text-[12px] text-muted-foreground py-4">{t("noTypesDefined")}</p>
-              )}
-              {relTypes.map((rt) =>
-                editRtId === rt.id ? (
-                  <div key={rt.id} className="flex items-center gap-2 rounded-lg border border-primary/30 bg-card px-3 py-2">
-                    <ColorPickerButton color={editRtColor} onChange={setEditRtColor} />
-                    <Input value={editRtName} onChange={(e) => setEditRtName(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === "Enter") void saveEditRt(); }}
-                      className="h-7 flex-1 text-[12px]" />
-                    <select value={editRtDash} onChange={(e) => setEditRtDash(e.target.value)}
-                      className="h-7 rounded-md border border-border bg-background px-2 text-[11px] outline-none focus:ring-1 focus:ring-ring">
-                      {dashOptions.map((o) => (
-                        <option key={o.value} value={o.value}>{o.label}</option>
-                      ))}
-                    </select>
-                    <button onClick={() => void saveEditRt()} className="text-xs font-medium text-primary hover:underline">OK</button>
-                    <button onClick={() => setEditRtId(null)} className="text-muted-foreground hover:text-foreground"><X className="h-3 w-3" /></button>
-                  </div>
-                ) : (
-                  <div key={rt.id} className="flex items-center gap-2.5 rounded-lg border border-border bg-card px-3 py-2">
-                    <svg width="24" height="8" className="shrink-0">
-                      <line x1="0" y1="4" x2="24" y2="4" stroke={rt.color} strokeWidth={REL_W} strokeDasharray={rt.dash || undefined} />
-                    </svg>
-                    <span className="flex-1 text-[13px] font-medium">{rt.name}</span>
-                    <button onClick={() => startEditRt(rt)} className="text-[11px] text-muted-foreground hover:text-foreground">{tCommon("edit")}</button>
-                    <button onClick={() => void deleteRelType(rt.id)} className="text-muted-foreground hover:text-destructive">
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                )
-              )}
-            </div>
-            <div className="flex items-center gap-2 border-t border-border-soft pt-3">
-              <ColorPickerButton color={rtColor} onChange={setRtColor} />
-              <Input value={rtName} onChange={(e) => setRtName(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") void addRelType(); }}
-                placeholder={t("typeNamePlaceholder")} className="h-8 flex-1 text-sm" />
-              <select value={rtDash} onChange={(e) => setRtDash(e.target.value)}
-                className="h-8 rounded-md border border-border bg-background px-2 text-[11px] outline-none focus:ring-1 focus:ring-ring">
-                {dashOptions.map((o) => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
-                ))}
-              </select>
-              <Button size="icon" className="h-8 w-8 shrink-0" onClick={() => void addRelType()}>
-                <Plus className="h-3.5 w-3.5" />
-              </Button>
-            </div>
-          </TabsContent>
-        </Tabs>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export type RelationsCanvasProps = {
   worldId: string;
   userId: string;
   canAdmin: boolean;
-  onClose: () => void;
 };
 
-export function RelationsCanvas({ worldId, userId, canAdmin, onClose }: RelationsCanvasProps) {
+export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasProps) {
   const t = useTranslations("relations");
   const tCommon = useTranslations("common");
   const fallback: CRelType = React.useMemo(() => ({ ...FALLBACK_BASE, name: t("unknown") }), [t]);
@@ -920,42 +622,28 @@ export function RelationsCanvas({ worldId, userId, canAdmin, onClose }: Relation
         title={t("title")}
         right={
           <>
-            {canAdmin && (
-              <CanvasSettingsDialog
-                worldId={worldId}
-                groups={groups}
-                relTypes={relTypes}
-                onGroupsChange={setGroups}
-                onRelTypesChange={setRelTypes}
-              />
+            {connecting && connectMode && (
+              <span className="flex items-center gap-1.5 rounded-full bg-indigo-500/10 px-3 py-1 text-xs font-medium text-indigo-600 dark:text-indigo-400">
+                {t("clickAnotherCard")}
+                <button onClick={cancelConnect}><X className="h-3 w-3" /></button>
+              </span>
             )}
-            <Button size="icon" variant="ghost" onClick={onClose} aria-label={tCommon("close")} className="rounded-lg hover:bg-hoverCard">
-              <X className="h-5 w-5" />
-            </Button>
+            <button
+              type="button"
+              onClick={() => { setConnectMode((v) => !v); cancelConnect(); }}
+              className={cn(
+                "flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                connectMode
+                  ? "border-indigo-500/40 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400"
+                  : "border-border-soft bg-background text-muted-foreground hover:bg-secondary",
+              )}
+            >
+              <Link2 className="h-3 w-3" />
+              {connectMode ? t("linkModeActive") : t("createLink")}
+            </button>
           </>
         }
-      >
-        <button
-          type="button"
-          onClick={() => { setConnectMode((v) => !v); cancelConnect(); }}
-          className={cn(
-            "flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-            connectMode
-              ? "border-indigo-500/40 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400"
-              : "border-border-soft bg-background text-muted-foreground hover:bg-secondary",
-          )}
-        >
-          <Link2 className="h-3 w-3" />
-          {connectMode ? t("linkModeActive") : t("createLink")}
-        </button>
-
-        {connecting && connectMode && (
-          <span className="flex items-center gap-1.5 rounded-full bg-indigo-500/10 px-3 py-1 text-xs font-medium text-indigo-600 dark:text-indigo-400">
-            {t("clickAnotherCard")}
-            <button onClick={cancelConnect}><X className="h-3 w-3" /></button>
-          </span>
-        )}
-      </WorldPanelHeader>
+      />
 
       {/* ── Main area: aside + canvas ── */}
       <div className="flex min-h-0 flex-1">

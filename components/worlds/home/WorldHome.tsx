@@ -142,7 +142,6 @@ export function WorldHome({
             worldId={worldId}
             userId={userId ?? ""}
             canAdmin={canAdmin}
-            onClose={closeView}
           />
         ) : showCatalogue ? (
           <WorldCatalogue

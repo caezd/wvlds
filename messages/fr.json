@@ -701,7 +701,6 @@
   },
   "relations": {
     "title": "Toile des relations",
-    "settingsTitle": "Paramètres de la toile",
     "groups": "Groupes",
     "relTypes": "Types de relation",
     "noGroupsDefined": "Aucun groupe défini",

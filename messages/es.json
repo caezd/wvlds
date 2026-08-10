@@ -696,7 +696,6 @@
   },
   "relations": {
     "title": "Lienzo de relaciones",
-    "settingsTitle": "Ajustes del lienzo",
     "groups": "Grupos",
     "relTypes": "Tipos de relación",
     "noGroupsDefined": "Ningún grupo definido",

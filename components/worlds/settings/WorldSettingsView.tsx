@@ -62,6 +62,7 @@ import {
 } from "@/app/actions/worldCatalog";
 import { WorldPersonaTemplateSection } from "@/components/worlds/settings/WorldPersonaTemplateSection";
 import { WorldCategoryManager } from "@/components/worlds/settings/WorldCategoryManager";
+import { WorldRelationsSettings } from "@/components/worlds/settings/WorldRelationsSettings";
 import type { World, WorldTimelineConfig } from "@/types/worlds";
 
 /**
@@ -479,6 +480,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                             <TabsTrigger value="appearance" className="h-7 px-3 text-xs">Apparence</TabsTrigger>
                             <TabsTrigger value="categories" className="h-7 px-3 text-xs">Catégories</TabsTrigger>
                             <TabsTrigger value="features" className="h-7 px-3 text-xs">Fonctions</TabsTrigger>
+                            <TabsTrigger value="relations" className="h-7 px-3 text-xs">Relations</TabsTrigger>
                             {public_worlds && (
                                 <TabsTrigger value="community" className="h-7 px-3 text-xs">Communauté</TabsTrigger>
                             )}
@@ -1013,6 +1015,13 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                         )}
                                     </div>
                                 )}
+                            </div>
+                        </TabsContent>
+
+                        {/* ── Relations ────────────────────────────────── */}
+                        <TabsContent value="relations" className="mt-0">
+                            <div className="mx-auto max-w-xl">
+                                <WorldRelationsSettings worldId={world.id} />
                             </div>
                         </TabsContent>
 
