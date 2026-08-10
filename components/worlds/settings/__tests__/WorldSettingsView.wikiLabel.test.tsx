@@ -69,7 +69,7 @@ describe("WorldSettingsView — libellé personnalisé du lien wiki", () => {
   it("affiche « Annexes » en placeholder quand aucun libellé n'est défini", async () => {
     setup();
     const user = userEvent.setup();
-    render(<WorldSettingsView world={BASE_WORLD} onClose={vi.fn()} />);
+    render(<WorldSettingsView world={BASE_WORLD} />);
 
     await user.click(screen.getByRole("tab", { name: "Fonctions" }));
 
@@ -79,7 +79,7 @@ describe("WorldSettingsView — libellé personnalisé du lien wiki", () => {
   it("préremplit le champ avec le libellé déjà enregistré", async () => {
     setup();
     const user = userEvent.setup();
-    render(<WorldSettingsView world={{ ...BASE_WORLD, wiki_label: "Compendium" }} onClose={vi.fn()} />);
+    render(<WorldSettingsView world={{ ...BASE_WORLD, wiki_label: "Compendium" }} />);
 
     await user.click(screen.getByRole("tab", { name: "Fonctions" }));
 
@@ -89,7 +89,7 @@ describe("WorldSettingsView — libellé personnalisé du lien wiki", () => {
   it("enregistre le nouveau libellé au blur", async () => {
     const mock = setup();
     const user = userEvent.setup();
-    render(<WorldSettingsView world={BASE_WORLD} onClose={vi.fn()} />);
+    render(<WorldSettingsView world={BASE_WORLD} />);
 
     await user.click(screen.getByRole("tab", { name: "Fonctions" }));
     const input = screen.getByPlaceholderText("Annexes");
@@ -105,7 +105,7 @@ describe("WorldSettingsView — libellé personnalisé du lien wiki", () => {
   it("confirme la sauvegarde par un toast", async () => {
     setup();
     const user = userEvent.setup();
-    render(<WorldSettingsView world={BASE_WORLD} onClose={vi.fn()} />);
+    render(<WorldSettingsView world={BASE_WORLD} />);
 
     await user.click(screen.getByRole("tab", { name: "Fonctions" }));
     const input = screen.getByPlaceholderText("Annexes");
@@ -120,7 +120,7 @@ describe("WorldSettingsView — libellé personnalisé du lien wiki", () => {
   it("effacer le champ enregistre null (retour au libellé par défaut)", async () => {
     const mock = setup();
     const user = userEvent.setup();
-    render(<WorldSettingsView world={{ ...BASE_WORLD, wiki_label: "Compendium" }} onClose={vi.fn()} />);
+    render(<WorldSettingsView world={{ ...BASE_WORLD, wiki_label: "Compendium" }} />);
 
     await user.click(screen.getByRole("tab", { name: "Fonctions" }));
     const input = screen.getByPlaceholderText("Annexes");

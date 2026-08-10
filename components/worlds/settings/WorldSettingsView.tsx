@@ -114,7 +114,6 @@ function truthyOrNull<T extends string | undefined | null>(
 export interface WorldSettingsViewProps {
     world: World;
     onUpdated?: (world: World) => void;
-    onClose: () => void;
 }
 
 function LabelWithHelp({
@@ -135,7 +134,7 @@ function LabelWithHelp({
     );
 }
 
-export function WorldSettingsView({ world, onUpdated, onClose }: WorldSettingsViewProps) {
+export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) {
     const supabase = createClient();
     const router = useRouter();
     const { public_worlds, world_timeline } = useFeatureFlags();
@@ -471,11 +470,6 @@ export function WorldSettingsView({ world, onUpdated, onClose }: WorldSettingsVi
             <WorldPanelHeader
                 icon={<Settings className="h-4 w-4 shrink-0 text-muted-foreground" />}
                 title="Paramètres"
-                right={
-                    <Button size="icon" variant="ghost" onClick={onClose} aria-label="Fermer" className="rounded-lg hover:bg-hoverCard">
-                        <X className="h-5 w-5" />
-                    </Button>
-                }
             />
 
             <Form {...form}>

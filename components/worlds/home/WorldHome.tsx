@@ -121,7 +121,6 @@ export function WorldHome({
               Object.assign(world, updated);
               router.refresh();
             }}
-            onClose={closeView}
           />
         ) : showMembers ? (
           <WorldMembersPanel
