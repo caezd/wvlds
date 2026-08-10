@@ -2,12 +2,15 @@
 
 import { useTranslations } from "next-intl";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerClose,
+} from "@/components/ui/drawer";
+import { X } from "lucide-react";
 import { PinCard } from "@/components/chatrooms/message/PinBar";
+import { cn } from "@/lib/utils";
 import type { ChatPin, ChatMessageWithPersona } from "@/types/db";
 
 export function PinsSheet({
@@ -24,14 +27,26 @@ export function PinsSheet({
   onScrollToMessage: (messageId: number) => void;
 }) {
   const t = useTranslations("chatrooms");
+  const tCommon = useTranslations("common");
   const messageById = new Map(messages.map((m) => [m.id, m]));
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-sm">
-        <SheetHeader className="border-b border-border-soft px-6 py-4">
-          <SheetTitle>{t("pinsTitle")}</SheetTitle>
-        </SheetHeader>
+    <Drawer open={open} onOpenChange={onOpenChange} swipeDirection="right">
+      <DrawerContent
+        className={cn(
+          "inset-y-0 right-0 flex flex-col gap-0 border rounded-md bg-background text-foreground shadow-lg p-0",
+          "w-[min(calc(100%_-_var(--drawer-inset)*2),_360px)]",
+        )}
+      >
+        <DrawerClose
+          aria-label={tCommon("close")}
+          className="absolute right-4 top-4 rounded-xs text-muted-foreground opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
+        >
+          <X className="size-4" />
+        </DrawerClose>
+        <DrawerHeader className="border-b border-border-soft px-6 py-4">
+          <DrawerTitle>{t("pinsTitle")}</DrawerTitle>
+        </DrawerHeader>
 
         <div className="flex-1 space-y-1.5 overflow-y-auto p-3">
           {pins.length === 0 ? (
@@ -55,7 +70,7 @@ export function PinsSheet({
             ))
           )}
         </div>
-      </SheetContent>
-    </Sheet>
+      </DrawerContent>
+    </Drawer>
   );
 }

@@ -54,10 +54,13 @@ function resolveObjectFit(aspect?: number): "horizontal-cover" | "vertical-cover
   return "contain";
 }
 
+// clamp() plutôt qu'une hauteur fixe — sur mobile la zone de recadrage suit
+// la largeur réelle de l'écran (proche de 100vw) au lieu d'imposer 320px de
+// haut sur un conteneur qui peut faire moins de 350px de large.
 function resolveCropHeight(aspect?: number): string {
-  if (!aspect) return "16rem";
-  if (aspect > 1.2) return "20rem";
-  return "16rem";
+  if (!aspect) return "clamp(10rem, 60vw, 16rem)";
+  if (aspect > 1.2) return "clamp(10rem, 60vw, 20rem)";
+  return "clamp(10rem, 60vw, 16rem)";
 }
 
 // ---------------------------------------------------------------------------
@@ -231,7 +234,7 @@ export function ImageSourceStep({
         onDrop={(e) => { e.preventDefault(); if (!disabled) selectFile(e.dataTransfer.files?.[0]); }}
         onPaste={handlePaste}
         className={cn(
-          "flex flex-col items-center gap-2 rounded-2xl border border-dashed border-border px-6 py-8 text-center transition-colors",
+          "flex flex-col items-center gap-2 rounded-2xl border border-dashed border-border px-4 py-5 text-center transition-colors sm:px-6 sm:py-8",
           disabled ? "opacity-50" : "cursor-pointer hover:border-muted-foreground/40",
         )}
       >
@@ -259,7 +262,7 @@ export function ImageSourceStep({
             disabled={disabled || checking}
             onChange={(e) => setUrl(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") void selectUrl(url); }}
-            className="pl-8"
+            className="h-8 pl-8 text-sm"
           />
         </div>
         <Button type="button" size="sm" variant="secondary" disabled={disabled || checking || !url.trim()} onClick={() => void selectUrl(url)}>

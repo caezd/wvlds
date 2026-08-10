@@ -5,16 +5,17 @@ import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerClose,
+} from "@/components/ui/drawer";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { BarChart3 } from "lucide-react";
+import { BarChart3, X } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
-import { formatDaysAgo } from "@/lib/utils";
+import { cn, formatDaysAgo } from "@/lib/utils";
 import { supabaseThumb } from "@/lib/storage";
 
 type StatsUser = {
@@ -134,6 +135,7 @@ export default function ChatroomStatsSheet({
   hideTrigger?: boolean;
 }) {
   const t = useTranslations("chatrooms");
+  const tCommon = useTranslations("common");
   const supabase = createClient();
   const reconnectEpoch = useReconnectEpoch();
   const [internalOpen, setInternalOpen] = useState(false);
@@ -205,11 +207,22 @@ export default function ChatroomStatsSheet({
         </Tooltip>
       )}
 
-      <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-lg">
-          <SheetHeader className="border-b border-border-soft px-6 py-4">
-            <SheetTitle>{t("statsTitle")}</SheetTitle>
-          </SheetHeader>
+      <Drawer open={open} onOpenChange={setOpen} swipeDirection="right">
+        <DrawerContent
+          className={cn(
+            "inset-y-0 right-0 flex flex-col gap-0 border rounded-md bg-background text-foreground shadow-lg p-0",
+            "w-[min(calc(100%_-_var(--drawer-inset)*2),_360px)]",
+          )}
+        >
+          <DrawerClose
+            aria-label={tCommon("close")}
+            className="absolute right-4 top-4 rounded-xs text-muted-foreground opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            <X className="size-4" />
+          </DrawerClose>
+          <DrawerHeader className="border-b border-border-soft px-6 py-4">
+            <DrawerTitle>{t("statsTitle")}</DrawerTitle>
+          </DrawerHeader>
 
           <div className="flex-1 space-y-6 overflow-y-auto p-6">
 
@@ -299,8 +312,8 @@ export default function ChatroomStatsSheet({
             </div>
 
           </div>
-        </SheetContent>
-      </Sheet>
+        </DrawerContent>
+      </Drawer>
     </>
   );
 }

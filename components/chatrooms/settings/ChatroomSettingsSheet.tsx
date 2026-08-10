@@ -12,13 +12,14 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-  SheetFooter,
-} from "@/components/ui/sheet";
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+  DrawerFooter,
+  DrawerClose,
+} from "@/components/ui/drawer";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,7 +37,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ImagePickerCropField } from "@/components/ui/image-crop-picker";
-import { Loader2, Settings, ChevronDown } from "lucide-react";
+import { Loader2, Settings, ChevronDown, X } from "lucide-react";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Switch } from "@/components/ui/switch";
@@ -280,32 +281,40 @@ export default function ChatroomSettingsSheet({
   }
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
+    <Drawer open={open} onOpenChange={setOpen} swipeDirection="right">
       {!hideTrigger && canEdit && (
         <Tooltip>
           <TooltipTrigger asChild>
-            <SheetTrigger asChild>
-              <button
-                type="button"
-                aria-label={tCommon("settings")}
-                className="flex h-9 w-9 items-center justify-center rounded-lg bg-background text-muted-foreground transition-colors hover:bg-hoverCard hover:text-foreground"
-              >
-                <Settings className="h-4 w-4" />
-              </button>
-            </SheetTrigger>
+            <DrawerTrigger
+              aria-label={tCommon("settings")}
+              className="flex h-9 w-9 items-center justify-center rounded-lg bg-background text-muted-foreground transition-colors hover:bg-hoverCard hover:text-foreground"
+            >
+              <Settings className="h-4 w-4" />
+            </DrawerTrigger>
           </TooltipTrigger>
           <TooltipContent side="bottom" sideOffset={8}>{tCommon("settings")}</TooltipContent>
         </Tooltip>
       )}
 
-      <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-lg">
-        <SheetHeader className="border-b border-border-soft px-6 py-4">
-          <SheetTitle>{t("settingsTitle")}</SheetTitle>
-        </SheetHeader>
+      <DrawerContent
+        className={cn(
+          "inset-y-0 right-0 flex flex-col gap-0 border rounded-md bg-background text-foreground shadow-lg p-0",
+          "w-[min(calc(100%_-_var(--drawer-inset)*2),_360px)]",
+        )}
+      >
+        <DrawerClose
+          aria-label={tCommon("close")}
+          className="absolute right-4 top-4 rounded-xs text-muted-foreground opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
+        >
+          <X className="size-4" />
+        </DrawerClose>
+        <DrawerHeader className="border-b border-border-soft px-4 py-3 sm:px-6 sm:py-4">
+          <DrawerTitle>{t("settingsTitle")}</DrawerTitle>
+        </DrawerHeader>
 
         <Form {...form}>
           <form onSubmit={(e) => e.preventDefault()} className="flex flex-1 flex-col overflow-hidden">
-            <div className="flex-1 space-y-6 overflow-y-auto p-6">
+            <div className="flex-1 space-y-5 overflow-y-auto p-4 sm:space-y-6 sm:p-6">
 
               {/* Icône */}
               <FormField
@@ -359,6 +368,7 @@ export default function ChatroomSettingsSheet({
                     <FormControl>
                       <Input
                         placeholder={t("settingsNamePlaceholder")}
+                        className="h-8 text-sm"
                         {...field}
                         onBlur={(e) => {
                           field.onBlur();
@@ -407,7 +417,7 @@ export default function ChatroomSettingsSheet({
                         </label>
                         <Input
                           type="number"
-                          className="h-8 w-28 text-sm"
+                          className="h-8 flex-1 min-w-0 text-sm"
                           value={timelineDate.year}
                           onChange={(e) => setTimelineDate({ ...timelineDate, year: Number(e.target.value) })}
                           onBlur={(e) => {
@@ -423,7 +433,7 @@ export default function ChatroomSettingsSheet({
                           <label className="w-20 shrink-0 text-xs text-muted-foreground">{t("settingsMonth")}</label>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button type="button" variant="outline" size="sm" className="h-8 min-w-28 justify-between text-sm" disabled={savingTimeline}>
+                              <Button type="button" variant="outline" size="sm" className="h-8 flex-1 min-w-0 justify-between text-sm" disabled={savingTimeline}>
                                 {timelineDate.month !== null && worldTimelineConfig.month_names[timelineDate.month]
                                   ? worldTimelineConfig.month_names[timelineDate.month]
                                   : <span className="text-muted-foreground">—</span>}
@@ -453,7 +463,7 @@ export default function ChatroomSettingsSheet({
                             min={1}
                             max={31}
                             placeholder="—"
-                            className="h-8 w-28 text-sm"
+                            className="h-8 flex-1 min-w-0 text-sm"
                             value={timelineDate.day ?? ""}
                             onChange={(e) => setTimelineDate({ ...timelineDate, day: e.target.value ? Number(e.target.value) : null })}
                             onBlur={(e) => {
@@ -594,7 +604,7 @@ export default function ChatroomSettingsSheet({
               />
             </div>
 
-            <SheetFooter className="border-t border-border-soft px-6 py-3 flex-row justify-start">
+            <DrawerFooter className="border-t border-border-soft px-4 py-3 sm:px-6 flex-row justify-start">
               <DeleteConfirmDialog
                 description="La salle et tous ses messages seront supprimés définitivement."
                 onConfirm={() => void handleDelete()}
@@ -611,10 +621,10 @@ export default function ChatroomSettingsSheet({
                   </Button>
                 }
               />
-            </SheetFooter>
+            </DrawerFooter>
           </form>
         </Form>
-      </SheetContent>
-    </Sheet>
+      </DrawerContent>
+    </Drawer>
   );
 }
