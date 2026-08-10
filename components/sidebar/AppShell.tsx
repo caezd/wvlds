@@ -111,8 +111,8 @@ function AppShellInner({
       <Drawer open={drawerOpen} onOpenChange={handleDrawerChange} swipeDirection="left">
         <DrawerContent
           className={cn(
-            "inset-y-0 left-0 m-0 h-full rounded-none border-0 border-r border-border-soft bg-background text-foreground shadow-lg",
-            anyPanelOpen || mobileSidebar ? "w-full max-w-[360px]" : "w-auto max-w-none",
+            "inset-y-0 left-0 border rounded-md bg-background text-foreground shadow-lg",
+            anyPanelOpen || mobileSidebar ? "w-[min(calc(100%_-_var(--drawer-inset)*2),_360px)]" : "w-auto max-w-none",
           )}
         >
           <VisuallyHidden><DrawerTitle>Navigation</DrawerTitle></VisuallyHidden>
