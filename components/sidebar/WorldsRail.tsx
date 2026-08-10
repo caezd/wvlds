@@ -164,9 +164,7 @@ export function WorldsRail({
               href={`/w/${world.id}`}
               aria-label={world.name}
               aria-current={isActive ? "page" : undefined}
-              className={cn(
-                "relative flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors",
-              )}
+              className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors"
               {...(isTouch ? bindLongPress(world) : {})}
             >
               {isActive && <span className="absolute w-[8px] h-[20px] bg-mist-50 -left-2 -translate-x-[8px] rounded-full" />}
