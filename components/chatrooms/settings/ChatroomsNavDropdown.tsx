@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ChevronDown, ChevronRight, MessagesSquare } from "lucide-react";
@@ -22,7 +22,8 @@ export type NavRoom = {
   icon_url: string | null;
   last_message_at: string | null;
   last_message_excerpt?: string | null;
-  unread_count: number;
+  unread_count?: number;
+  has_unread?: boolean;
 };
 
 function relativeTime(iso: string | null) {
@@ -40,9 +41,10 @@ function relativeTime(iso: string | null) {
 
 /**
  * Breadcrumb de la chatroom : titre + chevron, badge de non-lus.
- * Le dropdown liste les conversations du monde (5 d'abord, le reste
- * chargé graduellement au scroll), avec le visuel des cartes de
- * l'accueil de monde.
+ * Le dropdown liste les conversations du monde auxquelles l'utilisateur
+ * participe (au moins un message posté avec un de ses personas) — 5
+ * d'abord, le reste chargé graduellement au scroll —, avec le visuel des
+ * cartes de l'accueil de monde.
  */
 export function ChatroomsNavDropdown({
   worldId,
@@ -60,31 +62,50 @@ export function ChatroomsNavDropdown({
   const [rooms, setRooms] = useState<NavRoom[]>(initialRooms);
   const [visible, setVisible] = useState(PAGE_SIZE);
   const [open, setOpen] = useState(false);
-  const listRef = useRef<HTMLDivElement | null>(null);
+  // État (pas useRef) : Radix ne monte le contenu du Popover qu'à
+  // l'ouverture, parfois après le rendu où `open` passe à true — un simple
+  // ref ne redéclencherait pas l'effet ci-dessous une fois le nœud DOM
+  // réellement disponible, alors qu'un changement d'état si.
+  const [listEl, setListEl] = useState<HTMLDivElement | null>(null);
 
-  // Rafraîchit la liste à l'ouverture, et repart sur la première page
+  // Rafraîchit la liste à l'ouverture, et repart sur la première page.
+  // list_participated_chatrooms (et non list_chatrooms_nav) : ne remonte que
+  // les salles où l'utilisateur a posté au moins un message — pas toutes
+  // celles du monde.
   useEffect(() => {
     if (!open || !worldId) return;
     setVisible(PAGE_SIZE);
     (async () => {
-      const { data, error } = await supabase.rpc("list_chatrooms_nav", {
+      const { data, error } = await supabase.rpc("list_participated_chatrooms", {
         p_world_id: worldId,
+        p_limit: 100,
       });
       if (!error && data) setRooms(data as NavRoom[]);
     })();
   }, [open, worldId, supabase]);
 
   function onScroll() {
-    const el = listRef.current;
-    if (!el) return;
-    if (el.scrollHeight - el.scrollTop - el.clientHeight < 48) {
+    if (!listEl) return;
+    if (listEl.scrollHeight - listEl.scrollTop - listEl.clientHeight < 48) {
       setVisible((v) => Math.min(v + PAGE_SIZE, rooms.length));
     }
   }
 
   const otherRooms = rooms.filter((r) => r.id !== currentChatId);
 
-  const unreadOf = (r: NavRoom) => roomUnread[r.id] ?? r.unread_count ?? 0;
+  // Avec peu de salons, les `visible` premiers éléments ne remplissent parfois
+  // pas la hauteur max de la liste (max-h-80) : rien à scroller, donc
+  // `onScroll` ne se déclenche jamais alors que l'indice "faites défiler"
+  // reste affiché. On charge la page suivante tant que la liste ne déborde
+  // pas réellement — se stabilise dès qu'elle déborde ou que tout est affiché.
+  useEffect(() => {
+    if (!open || !listEl) return;
+    if (visible < otherRooms.length && listEl.scrollHeight <= listEl.clientHeight) {
+      setVisible((v) => Math.min(v + PAGE_SIZE, otherRooms.length));
+    }
+  }, [open, listEl, visible, otherRooms.length]);
+
+  const unreadOf = (r: NavRoom) => roomUnread[r.id] ?? r.unread_count ?? (r.has_unread ? 1 : 0);
   const totalUnread = otherRooms.reduce((acc, r) => acc + unreadOf(r), 0);
 
   if (otherRooms.length === 0) {
@@ -118,7 +139,7 @@ export function ChatroomsNavDropdown({
 
       <PopoverContent align="start" sideOffset={8} className="w-80 p-1.5">
         <div
-          ref={listRef}
+          ref={setListEl}
           onScroll={onScroll}
           className="max-h-80 overflow-y-auto [scrollbar-width:thin]"
         >
