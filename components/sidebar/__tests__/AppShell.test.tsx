@@ -2,12 +2,14 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import AppShell from "@/components/sidebar/AppShell";
 
-// Évite les soucis de portail Radix dans jsdom (même convention que
+// Évite les soucis de portail Radix/base-ui dans jsdom (même convention que
 // ChatroomMessage.header.test.tsx pour Sheet/Popover/Drawer/...).
-vi.mock("@/components/ui/sheet", () => ({
-  Sheet: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  SheetContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  SheetTitle: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+vi.mock("@/components/ui/drawer", () => ({
+  Drawer: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DrawerContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DrawerHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DrawerTitle: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DrawerDescription: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
 const pathnameMock = vi.hoisted(() => ({ value: "/w/world-1" }));
