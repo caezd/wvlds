@@ -4,7 +4,7 @@ import { NotificationBellButton } from "@/components/notifications";
 import { DmsToggleButton, PinnedDmAvatarsRail } from "@/components/dms";
 import { UserMenuButton } from "./UserMenuButton";
 import { getCachedFeatureFlags, getCurrentProfile, getCurrentAuth } from "@/lib/currentRequest";
-import { MobileMenuButton } from "./MobileMenuButton";
+import { SidebarLogo } from "./SidebarLogo";
 import { getTranslations } from "next-intl/server";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -26,7 +26,7 @@ export default async function SidebarRail() {
     <div className="flex flex-col items-center h-full w-full gap-2 lg:py-2 min-h-0">
 
       <div className="flex flex-col items-center w-full shrink-0">
-        <MobileMenuButton />
+        <SidebarLogo />
       </div>
 
       {/* Navigation globale */}
