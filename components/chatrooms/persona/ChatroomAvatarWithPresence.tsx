@@ -26,8 +26,8 @@ export function ChatroomAvatarWithPresence({
     >
       <Avatar
         className={cn(
-          "outline outline-hover-400",
-          rounded ? "rounded-[4px]" : "rounded-none",
+          "border",
+          rounded ? "rounded-md" : "rounded-none",
           className,
         )}
         style={{ width: size, height: size }}
@@ -39,13 +39,13 @@ export function ChatroomAvatarWithPresence({
       </Avatar>
 
       {presenceState === "online" && (
-        <span className="absolute -bottom-1 -right-1 h-2 w-2 z-10 rounded-full ring-2 ring-background bg-[#58F4A8]" />
+        <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 z-10 rounded-full ring-2 ring-background bg-[#58F4A8]" />
       )}
       {presenceState === "away" && (
-        <span className="absolute -bottom-1 -right-1 h-2 w-2 z-10 rounded-full ring-2 ring-background bg-orange-400" />
+        <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 z-10 rounded-full ring-2 ring-background bg-orange-400" />
       )}
       {presenceState === "offline" && (
-        <span className="absolute -bottom-1 -right-1 h-2 w-2 z-10 rounded-full ring-2 ring-background bg-red-500" />
+        <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 z-10 rounded-full ring-2 ring-background bg-red-500" />
       )}
       {/* invisible → aucune pastille */}
     </div>

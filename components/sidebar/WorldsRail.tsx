@@ -166,10 +166,10 @@ export function WorldsRail({
               aria-current={isActive ? "page" : undefined}
               className={cn(
                 "relative flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors",
-                isActive && "ring-2 ring-accent",
               )}
               {...(isTouch ? bindLongPress(world) : {})}
             >
+              {isActive && <span className="absolute w-[8px] h-[20px] bg-mist-50 -left-2 -translate-x-[8px] rounded-full" />}
               <WorldAvatar world={world} size="lg" />
               {unread > 0 && (
                 <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-0.5 text-[9px] font-bold leading-none text-accent-foreground ring-2 ring-background">

@@ -2,17 +2,6 @@ import Image from "next/image";
 import { supabaseThumb } from "@/lib/storage";
 import { cn } from "@/lib/utils";
 
-const COLORS = [
-  "bg-violet-500", "bg-blue-500", "bg-emerald-500", "bg-amber-500",
-  "bg-rose-500", "bg-cyan-500", "bg-indigo-500", "bg-pink-500",
-];
-
-function worldColor(name: string) {
-  const code = name.charCodeAt(0);
-  const idx = Number.isFinite(code) ? code % COLORS.length : 0;
-  return COLORS[idx];
-}
-
 const SIZES = {
   sm: { dim: "h-6 w-6", px: 24, text: "text-[10px]" },
   md: { dim: "h-8 w-8", px: 32, text: "text-xs" },
@@ -29,7 +18,6 @@ export function WorldAvatar({
   className?: string;
 }) {
   const initial = (world.name[0] ?? "W").toUpperCase();
-  const color = worldColor(world.name);
   const { dim, px, text } = SIZES[size];
 
   return world.icon_url ? (
@@ -43,7 +31,7 @@ export function WorldAvatar({
       />
     </span>
   ) : (
-    <span className={cn("flex shrink-0 items-center justify-center rounded-lg font-semibold text-white", dim, text, color, className)}>
+    <span className={cn("flex shrink-0 items-center justify-center rounded-lg font-semibold text-white bg-muted", dim, text, className)}>
       {initial}
     </span>
   );
