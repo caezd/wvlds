@@ -83,7 +83,7 @@ function PersonaRow({
         className="flex min-w-0 flex-1 items-center gap-3 text-left focus-visible:outline-none disabled:cursor-not-allowed"
         aria-pressed={selected}
       >
-        <span className="relative size-9 shrink-0 overflow-hidden rounded-full bg-muted">
+        <span className="relative shrink-0 overflow-hidden bg-muted size-9 rounded-md">
           {persona.avatar_url ? (
             <PersonaAvatarThumb url={persona.avatar_url} name={persona.name} size={36} />
           ) : (
@@ -94,7 +94,7 @@ function PersonaRow({
         </span>
         <span className="min-w-0 flex-1 truncate text-sm font-medium">{persona.name}</span>
         {selected && !locked && (
-          <span className="grid size-5 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground">
+          <span className="grid size-5 shrink-0 place-items-center bg-primary text-primary-foreground rounded-full">
             <svg viewBox="0 0 12 12" className="h-3 w-3 fill-current">
               <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
@@ -115,7 +115,7 @@ function PersonaRow({
         onClick={onToggleFavorite}
         aria-pressed={favorite}
         aria-label={favoriteLabel}
-        className="shrink-0 rounded-full p-1.5 text-muted-foreground transition-colors hover:text-yellow-500 focus-visible:outline-none"
+        className="shrink-0 p-1.5 text-muted-foreground transition-colors hover:text-yellow-500 focus-visible:outline-none"
       >
         <Star size={18} className={favorite ? "fill-yellow-400 text-yellow-500" : ""} />
       </button>
@@ -244,7 +244,7 @@ export function PersonaPickerDialog({
       <button
         type="button"
         aria-label={selected ? selected.name : t("pick")}
-        className="relative flex size-9 items-center justify-center rounded-md overflow-hidden shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="relative flex size-9 items-center justify-center rounded-md overflow-hidden shrink-0"
       >
         {selected ? (
           selected.avatar_url ? (
@@ -264,7 +264,7 @@ export function PersonaPickerDialog({
   );
 
   const triggerNode = trigger ?? (
-    <span className="relative inline-block shrink-0 rounded-full border">
+    <span className="relative inline-block shrink-0">
       {defaultTriggerContent}
     </span>
   );
@@ -303,7 +303,7 @@ export function PersonaPickerDialog({
             décoratif) — Base UI suppose sinon un <button> natif. */}
         <DrawerTrigger
           nativeButton={false}
-          render={trigger ?? <span className="relative inline-block shrink-0 rounded-md border" />}
+          render={trigger ?? <span className="relative inline-block shrink-0" />}
         >
           {trigger ? null : defaultTriggerContent}
         </DrawerTrigger>
