@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Interface",
+    text: "La page Explorateur reprend le même en-tête que les pages d'un monde (Membres, Wiki, Réglages…), avec le champ de recherche déplacé à droite, au lieu d'un en-tête différent du reste de l'app.",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
     text: "Sur écran tactile (mobile, tablette), le menu latéral et les tiroirs de réglages/statistiques/épingles d'une salle s'élargissent un peu plus (jusqu'à 460px au lieu de 360px), quelle que soit la taille de la fenêtre.",
   },
   {
