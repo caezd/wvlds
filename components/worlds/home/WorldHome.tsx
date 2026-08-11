@@ -1,17 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { Home, Maximize2, Minimize2, Star } from "lucide-react";
 
 import { WorldHeroCard } from "./WorldHeroCard";
 import { WorldChatComposer } from "../chatrooms/WorldChatComposer";
 import { WorldChatroomsGrid } from "../chatrooms/WorldChatroomsGrid";
 import { WorldCategoryFolders } from "../chatrooms/WorldCategoryFolders";
+import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { World, WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
+import { useMobileSidebar } from "@/components/providers/MobileSidebarProvider";
 import type { AsidePersona } from "@/components/personas/WorldPersonaAsideClient";
 import { saveWorldPrefs, toggleWorldFavorite } from "@/app/(protected)/w/actions";
+import { cn } from "@/lib/utils";
 
 // Onglets secondaires — un seul est actif à la fois, chargés à la demande
 // pour ne pas alourdir le bundle de la vue par défaut du monde.
@@ -69,6 +75,16 @@ export function WorldHome({
 }) {
   const { create_chatroom, world_map, world_catalogue, world_timeline } = useFeatureFlags();
   const router = useRouter();
+  const t = useTranslations("worlds");
+  const { setHideMobileHeader } = useMobileSidebar();
+
+  // La vue par défaut du monde affiche désormais son propre WorldPanelHeader
+  // (comme tous les autres onglets) — la barre mobile générique de AppShell
+  // deviendrait redondante.
+  useEffect(() => {
+    setHideMobileHeader(true);
+    return () => setHideMobileHeader(false);
+  }, [setHideMobileHeader]);
 
   const hasTimeline = world_timeline && !!world.timeline_enabled && !!world.timeline_config;
   const _hasCatalogue = world_catalogue && (!!(world.restrict_inventory || world.restrict_skills) || canEditTabs);
@@ -174,41 +190,85 @@ export function WorldHome({
             onClose={closeView}
           />
         ) : (
-          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-            <div className="flex w-full flex-col gap-6">
-              <div
-                className={
-                  mainExpanded
-                    ? ""
-                    : "mx-auto w-full px-4 pt-4 [--world-content-max-width:36rem] lg:[--world-content-max-width:44rem] max-w-(--world-content-max-width)"
-                }
-              >
-                <WorldHeroCard
-                  world={world}
-                  canAdmin={canAdmin}
-                  isExpanded={mainExpanded}
-                  onToggleExpand={handleToggleExpand}
-                  isFavorite={isFavorite}
-                  onToggleFavorite={handleToggleFavorite}
-                />
-              </div>
-              <div className="mx-auto flex w-full flex-col gap-6 px-4 pb-4 [--world-content-max-width:36rem] lg:[--world-content-max-width:44rem] max-w-(--world-content-max-width)">
-                <WorldCategoryFolders
-                  worldId={worldId}
-                  selectedCategoryId={selectedCategoryId}
-                  onSelectCategory={handleSelectCategory}
-                />
-                {canPost && create_chatroom && (
-                  <WorldChatComposer
-                    worldId={worldId}
-                    timelineConfig={hasTimeline ? (world.timeline_config as WorldTimelineConfig) : undefined}
+          <div className="flex min-h-0 flex-1 flex-col">
+            {/* Header classique (comme les autres onglets d'un monde), qu'on
+                soit en plein écran ou non — favoris + agrandir/réduire y
+                vivent, avec le bouton menu mobile intégré, plutôt que flottés
+                par-dessus la bannière. */}
+            <WorldPanelHeader
+              icon={<Home className="h-4 w-4 shrink-0 text-muted-foreground" />}
+              title={world.name}
+              right={
+                <>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={handleToggleFavorite}
+                        aria-label={isFavorite ? t("hero.removeFavorite") : t("hero.addFavorite")}
+                        className={cn(
+                          "flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-hoverCard",
+                          isFavorite ? "text-yellow-500" : "text-muted-foreground hover:text-foreground",
+                        )}
+                      >
+                        <Star size={16} className={isFavorite ? "fill-current" : ""} />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" sideOffset={6}>
+                      {isFavorite ? t("hero.removeFavorite") : t("hero.addFavorite")}
+                    </TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={handleToggleExpand}
+                        aria-label={mainExpanded ? t("hero.collapse") : t("hero.expand")}
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-hoverCard hover:text-foreground"
+                      >
+                        {mainExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" sideOffset={6}>
+                      {mainExpanded ? t("hero.collapse") : t("hero.expand")}
+                    </TooltipContent>
+                  </Tooltip>
+                </>
+              }
+            />
+            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+              <div className="flex w-full flex-col gap-6">
+                <div
+                  className={
+                    mainExpanded
+                      ? ""
+                      : "mx-auto w-full px-4 pt-4 [--world-content-max-width:36rem] lg:[--world-content-max-width:44rem] max-w-(--world-content-max-width)"
+                  }
+                >
+                  <WorldHeroCard
+                    world={world}
+                    canAdmin={canAdmin}
+                    isExpanded={mainExpanded}
                   />
-                )}
-                <WorldChatroomsGrid
-                  worldId={worldId}
-                  initialRooms={initialRooms}
-                  categoryId={selectedCategoryId}
-                />
+                </div>
+                <div className="mx-auto flex w-full flex-col gap-6 px-4 pb-4 [--world-content-max-width:36rem] lg:[--world-content-max-width:44rem] max-w-(--world-content-max-width)">
+                  <WorldCategoryFolders
+                    worldId={worldId}
+                    selectedCategoryId={selectedCategoryId}
+                    onSelectCategory={handleSelectCategory}
+                  />
+                  {canPost && create_chatroom && (
+                    <WorldChatComposer
+                      worldId={worldId}
+                      timelineConfig={hasTimeline ? (world.timeline_config as WorldTimelineConfig) : undefined}
+                    />
+                  )}
+                  <WorldChatroomsGrid
+                    worldId={worldId}
+                    initialRooms={initialRooms}
+                    categoryId={selectedCategoryId}
+                  />
+                </div>
               </div>
             </div>
           </div>

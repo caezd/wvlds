@@ -2,19 +2,10 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import Image from "next/image";
-import { Globe, GlobeLock, Maximize2, Minimize2, Star } from "lucide-react";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Globe, GlobeLock } from "lucide-react";
 
 import { type World } from "@/types/worlds";
 import { supabaseThumb } from "@/lib/storage";
-import { cn } from "@/lib/utils";
-import { useTranslations } from "next-intl";
-import { useMobileSidebar } from "@/components/providers/MobileSidebarProvider";
-import { MobileDrawerOpenButton } from "@/components/sidebar/MobileDrawerOpenButton";
 
 type HeroWorld = World & { owner_id: string };
 
@@ -28,34 +19,19 @@ export function WorldHeroCard({
   canAdmin: _canAdmin = false,
   footer,
   isExpanded = false,
-  onToggleExpand,
-  isFavorite = false,
-  onToggleFavorite,
 }: {
   world: HeroWorld;
   canAdmin?: boolean;
   /** Contenu rendu tout en bas de la bannière (ex: barre d'onglets). */
   footer?: ReactNode;
   isExpanded?: boolean;
-  onToggleExpand?: () => void;
-  isFavorite?: boolean;
-  onToggleFavorite?: () => void;
 }) {
-  const t = useTranslations("worlds");
   const [world, _setWorld] = useState(initialWorld);
   const [bannerThumbFailed, setBannerThumbFailed] = useState(false);
-  const { setHideMobileHeader } = useMobileSidebar();
 
   useEffect(() => {
     setBannerThumbFailed(false);
   }, [world.banner_url]);
-
-  // Plein écran : la bannière intègre son propre bouton menu (coin gauche),
-  // la barre mobile générique de AppShell devient redondante.
-  useEffect(() => {
-    setHideMobileHeader(isExpanded);
-    return () => setHideMobileHeader(false);
-  }, [isExpanded, setHideMobileHeader]);
 
   return (
     <section
@@ -92,59 +68,6 @@ export function WorldHeroCard({
               : "absolute inset-0 rounded-[inherit] bg-gradient-to-br from-card-400 to-card"
         }
       />
-
-      {/* Menu mobile — uniquement en plein écran, où il remplace la barre générique */}
-      {isExpanded && (
-        <div className="absolute left-3 top-3 z-20">
-          <MobileDrawerOpenButton
-            className="flex h-8 w-8 items-center justify-center rounded-lg bg-black/40 transition-colors hover:bg-black/60 text-muted-foreground"
-            iconClassName="h-[15px] w-[15px]"
-          />
-        </div>
-      )}
-
-      {/* Boutons superposés : favoris + plein écran */}
-      {(onToggleFavorite || onToggleExpand) && (
-        <div className="absolute right-3 z-20 top-3 flex items-center gap-1.5">
-          {onToggleFavorite && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  onClick={onToggleFavorite}
-                  aria-label={isFavorite ? t("hero.removeFavorite") : t("hero.addFavorite")}
-                  className={cn(
-                    "flex h-8 w-8 items-center justify-center rounded-lg bg-black/40 transition-colors hover:bg-black/60",
-                    isFavorite ? "text-yellow-500" : "text-muted-foreground",
-                  )}
-                >
-                  <Star size={15} className={isFavorite ? "fill-current" : ""} />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" sideOffset={6}>
-                {isFavorite ? t("hero.removeFavorite") : t("hero.addFavorite")}
-              </TooltipContent>
-            </Tooltip>
-          )}
-          {onToggleExpand && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  onClick={onToggleExpand}
-                  aria-label={isExpanded ? t("hero.collapse") : t("hero.expand")}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg bg-black/40 transition-colors hover:bg-black/60 text-muted-foreground"
-                >
-                  {isExpanded ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" sideOffset={6}>
-                {isExpanded ? t("hero.collapse") : t("hero.expand")}
-              </TooltipContent>
-            </Tooltip>
-          )}
-        </div>
-      )}
 
       <div className="relative z-10 flex min-h-40 flex-col justify-end gap-2 md:min-h-48">
         <span
