@@ -299,7 +299,7 @@ export default function ChatroomSettingsSheet({
       <DrawerContent
         className={cn(
           "inset-y-0 right-0 flex flex-col gap-0 border rounded-md bg-background text-foreground shadow-lg p-0",
-          "w-[min(calc(100%_-_var(--drawer-inset)*2),_360px)]",
+          "w-[min(calc(100%_-_var(--drawer-inset)*2),_360px)] touch:w-[min(calc(100%_-_var(--drawer-inset)*2),_460px)]",
         )}
       >
         <DrawerClose

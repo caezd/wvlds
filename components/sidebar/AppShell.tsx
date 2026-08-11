@@ -112,7 +112,7 @@ function AppShellInner({
         <DrawerContent
           className={cn(
             "inset-y-0 left-0 border rounded-md bg-background text-foreground shadow-lg",
-            anyPanelOpen || mobileSidebar ? "w-[min(calc(100%_-_var(--drawer-inset)*2),_360px)]" : "w-auto max-w-none",
+            anyPanelOpen || mobileSidebar ? "w-[min(calc(100%_-_var(--drawer-inset)*2),_360px)] touch:w-[min(calc(100%_-_var(--drawer-inset)*2),_460px)]" : "w-auto max-w-none",
           )}
         >
           <VisuallyHidden><DrawerTitle>Navigation</DrawerTitle></VisuallyHidden>

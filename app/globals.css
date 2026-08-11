@@ -6,6 +6,7 @@
 @custom-variant dark (&:is(.dark *));
 @custom-variant dark (&:where(.dark, .dark *));
 @custom-variant light (&:where(.light, .light *));
+@custom-variant touch (@media (pointer: coarse));
 
 :root {
     --radius: 1rem;
