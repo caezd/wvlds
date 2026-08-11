@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Interface",
+    text: "Sur mobile, le menu « Insérer un bloc » du composeur s'ouvre désormais en tiroir plein écran : taper un bloc ou une option déplie son aperçu et sa description directement sous lui (avant, ces informations n'étaient visibles qu'au survol sur ordinateur, donc invisibles sur mobile — le choix de couleur des bulles de dialogue en était même inaccessible).",
+  },
+  {
+    date: "2026-08",
     tag: "Correctif",
     text: "Dans une chatroom, le bouton pour redescendre en bas de la conversation devenait presque invisible au survol (fond semi-transparent qui laissait apparaître le texte des messages derrière).",
   },

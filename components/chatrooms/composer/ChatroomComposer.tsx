@@ -54,6 +54,7 @@ import {
     DrawerTitle,
     DrawerDescription,
     DrawerTrigger,
+    DrawerHeader,
 } from "@/components/ui/drawer";
 import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
 
@@ -710,6 +711,7 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
                         variant={useMobileDrawer ? "drawer" : "dialog"}
                     />
                     <BlocksDropdown
+                        variant={useMobileDrawer ? "drawer" : "dropdown"}
                         onSend={(content) => void sendRaw(content)}
                         bubbleMode={bubbleMode}
                         onBubbleModeChange={setBubbleMode}
@@ -882,7 +884,70 @@ function ComposerMenuRow({
     );
 }
 
+// ── Rangée-accordéon (drawer mobile) : pas de survol au toucher, donc la
+// sélection d'un item déplie directement l'aperçu + la description sous son
+// propre bloc (bordure englobant tout l'ensemble) au lieu du panneau latéral
+// desktop. Une confirmation explicite déclenche l'action.
+function ComposerMenuAccordionRow({
+    item,
+    isOpen,
+    onToggle,
+    onConfirm,
+    renderPreview,
+    confirmLabel,
+}: {
+    item: ComposerMenuItem;
+    isOpen: boolean;
+    onToggle: () => void;
+    onConfirm: () => void;
+    renderPreview: (id: string) => React.ReactNode;
+    confirmLabel: string;
+}) {
+    const Icon = item.icon;
+    return (
+        <div
+            className={cn(
+                "overflow-hidden rounded-lg border transition-colors",
+                isOpen ? "border-primary/40 bg-primary/5" : "border-border-soft",
+            )}
+        >
+            <button
+                type="button"
+                disabled={item.disabled}
+                onClick={onToggle}
+                className="flex w-full items-start gap-2.5 px-2.5 py-2 text-left disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+                <span
+                    className={cn(
+                        "mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md",
+                        item.checked ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground",
+                    )}
+                >
+                    <Icon className="h-3.5 w-3.5" />
+                </span>
+                <span className="min-w-0 flex-1">
+                    <span className="flex items-center gap-1.5 text-sm font-medium">
+                        <span className="truncate">{item.title}</span>
+                        {item.checked && <Check className="h-3 w-3 shrink-0 text-primary" />}
+                    </span>
+                    {!isOpen && (
+                        <span className="block truncate text-xs text-muted-foreground">{item.description}</span>
+                    )}
+                </span>
+            </button>
+            {isOpen && (
+                <div className="flex flex-col gap-3 border-t border-border-soft px-3 py-3">
+                    <div className="flex items-center justify-center">{renderPreview(item.id)}</div>
+                    <p className="text-xs leading-snug text-muted-foreground">{item.description}</p>
+                    <Button size="sm" onClick={onConfirm}>{confirmLabel}</Button>
+                </div>
+            )}
+        </div>
+    );
+}
+
 function BlocksDropdown({
+    variant = "dropdown",
     onSend,
     bubbleMode,
     onBubbleModeChange,
@@ -905,6 +970,10 @@ function BlocksDropdown({
     mapPinId,
     onMapPinChange,
 }: {
+    /** "drawer" : rendu en drawer plein écran (mobile, pas de survol — cf.
+     *  `useMobileDrawer` côté parent) avec aperçu + confirmation explicite au
+     *  lieu du survol desktop. */
+    variant?: "dropdown" | "drawer";
     onSend: (content: string) => void;
     bubbleMode: boolean;
     onBubbleModeChange: (v: boolean) => void;
@@ -928,6 +997,7 @@ function BlocksDropdown({
     onMapPinChange?: (id: string | null) => void;
 }) {
     const t = useTranslations("chatrooms");
+    const tCommon = useTranslations("common");
     const { chatroom_blocks, block_npc, block_hp, block_choice } = useFeatureFlags();
     const [open, setOpen] = useState(false);
     const [colorPickerOpen, setColorPickerOpen] = useState(false);
@@ -938,8 +1008,11 @@ function BlocksDropdown({
     const activeOptionsCount = [bubbleMode, smsMode, visibleTo !== null, contentWarningsActive, !!(worldTimelineConfig && timelineDate), !!(mapPins?.length && mapPinId)].filter(Boolean).length;
 
     useEffect(() => {
-        if (open) setActiveItemId("dice");
-    }, [open]);
+        // Desktop : le premier item est prévisualisé par défaut (mime le
+        // survol). Drawer mobile : rien de déplié tant que l'utilisateur n'a
+        // pas tapé une ligne (pas d'équivalent au survol au toucher).
+        if (open) setActiveItemId(variant === "drawer" ? null : "dice");
+    }, [open, variant]);
 
     const blockItems: ComposerMenuItem[] = [
         { id: "dice", icon: Dices, title: t("dice"), description: t("diceHint"), onActivate: () => { setOpen(false); setActiveTool("dice"); } },
@@ -1151,59 +1224,114 @@ function BlocksDropdown({
         }
     }
 
+    const triggerContent = (
+        <>
+            <Component className="h-4 w-4" />
+            {activeOptionsCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 flex h-3 w-3 items-center justify-center rounded-md bg-primary text-[9px] font-semibold text-primary-foreground leading-none">
+                    {activeOptionsCount}
+                </span>
+            )}
+        </>
+    );
+    const triggerClassName = cn(
+        "relative size-9 rounded-md shrink-0 flex items-center justify-center hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring border border-border-soft",
+        activeOptionsCount > 0 && "bg-muted",
+    );
+
     return (
         <>
-            <DropdownMenu open={open} onOpenChange={setOpen}>
-                <DropdownMenuTrigger asChild>
-                    <button
-                        type="button"
-                        title={t("insertBlock")}
-                        className={cn("relative size-9 rounded-md shrink-0 flex items-center justify-center hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring border border-border-soft",
-                            activeOptionsCount > 0 && "bg-muted"
-                        )}
-                    >
-                        <Component className="h-4 w-4" />
-                        {activeOptionsCount > 0 && (
-                            <span className="absolute -top-0.5 -right-0.5 flex h-3 w-3 items-center justify-center rounded-md bg-primary text-[9px] font-semibold text-primary-foreground leading-none">
-                                {activeOptionsCount}
-                            </span>
-                        )}
-                    </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" side="top" className="w-[calc(100vw-2rem)] max-w-[520px] p-0 overflow-hidden sm:w-[520px]">
-                    <div className="flex max-h-[24rem]">
-                        <div className="min-w-0 flex-1 overflow-y-auto p-2 sm:border-r sm:border-border-soft">
-                            <div className="px-2 pb-1.5 pt-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+            {variant === "drawer" ? (
+                <Drawer open={open} onOpenChange={setOpen} showSwipeHandle>
+                    <DrawerTrigger render={<button type="button" title={t("insertBlock")} className={triggerClassName} />}>
+                        {triggerContent}
+                    </DrawerTrigger>
+                    <DrawerContent className="h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] [--drawer-inset:8px]">
+                        <DrawerHeader>
+                            <DrawerTitle>{t("insertBlock")}</DrawerTitle>
+                            <DrawerDescription className="sr-only">{t("insertBlock")}</DrawerDescription>
+                        </DrawerHeader>
+                        {/* Pas de survol au toucher : taper une ligne la déplie sur place
+                        (aperçu + description, bordure englobant tout le bloc) au lieu du
+                        panneau latéral desktop. Une confirmation explicite déclenche l'action. */}
+                        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
+                            <div className="px-1 pb-1.5 pt-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
                                 {t("menuBlocksSection")}
                             </div>
-                            {blockItems.map((item) => (
-                                <ComposerMenuRow key={item.id} item={item} isActive={activeItemId === item.id} onHover={() => setActiveItemId(item.id)} />
-                            ))}
-                            <div className="px-2 pb-1.5 pt-3 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                            <div className="flex flex-col gap-1.5 pb-3">
+                                {blockItems.map((item) => (
+                                    <ComposerMenuAccordionRow
+                                        key={item.id}
+                                        item={item}
+                                        isOpen={activeItemId === item.id}
+                                        onToggle={() => setActiveItemId(activeItemId === item.id ? null : item.id)}
+                                        onConfirm={() => { item.onActivate(); setActiveItemId(null); }}
+                                        renderPreview={renderPreview}
+                                        confirmLabel={tCommon("confirm")}
+                                    />
+                                ))}
+                            </div>
+                            <div className="px-1 pb-1.5 pt-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
                                 {t("menuOptionsSection")}
                             </div>
-                            {optionItems.map((item) => (
-                                <ComposerMenuRow key={item.id} item={item} isActive={activeItemId === item.id} onHover={() => setActiveItemId(item.id)} />
-                            ))}
+                            <div className="flex flex-col gap-1.5">
+                                {optionItems.map((item) => (
+                                    <ComposerMenuAccordionRow
+                                        key={item.id}
+                                        item={item}
+                                        isOpen={activeItemId === item.id}
+                                        onToggle={() => setActiveItemId(activeItemId === item.id ? null : item.id)}
+                                        onConfirm={() => { item.onActivate(); setActiveItemId(null); }}
+                                        renderPreview={renderPreview}
+                                        confirmLabel={tCommon("confirm")}
+                                    />
+                                ))}
+                            </div>
                         </div>
+                    </DrawerContent>
+                </Drawer>
+            ) : (
+                <DropdownMenu open={open} onOpenChange={setOpen}>
+                    <DropdownMenuTrigger asChild>
+                        <button type="button" title={t("insertBlock")} className={triggerClassName}>
+                            {triggerContent}
+                        </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" side="top" className="w-[calc(100vw-2rem)] max-w-[520px] p-0 overflow-hidden sm:w-[520px]">
+                        <div className="flex max-h-[24rem]">
+                            <div className="min-w-0 flex-1 overflow-y-auto p-2 sm:border-r sm:border-border-soft">
+                                <div className="px-2 pb-1.5 pt-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                                    {t("menuBlocksSection")}
+                                </div>
+                                {blockItems.map((item) => (
+                                    <ComposerMenuRow key={item.id} item={item} isActive={activeItemId === item.id} onHover={() => setActiveItemId(item.id)} />
+                                ))}
+                                <div className="px-2 pb-1.5 pt-3 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                                    {t("menuOptionsSection")}
+                                </div>
+                                {optionItems.map((item) => (
+                                    <ComposerMenuRow key={item.id} item={item} isActive={activeItemId === item.id} onHover={() => setActiveItemId(item.id)} />
+                                ))}
+                            </div>
 
-                        <div className="hidden w-52 shrink-0 flex-col p-4 sm:flex">
-                            {activeItem && (
-                                <>
-                                    <div className="mb-3 flex items-center gap-2 text-sm font-medium">
-                                        <activeItem.icon className="h-4 w-4 shrink-0" />
-                                        <span className="truncate">{activeItem.title}</span>
-                                    </div>
-                                    <div className="mb-3 flex flex-1 items-center justify-center">
-                                        {renderPreview(activeItem.id)}
-                                    </div>
-                                    <p className="text-xs leading-snug text-muted-foreground">{activeItem.description}</p>
-                                </>
-                            )}
+                            <div className="hidden w-52 shrink-0 flex-col p-4 sm:flex">
+                                {activeItem && (
+                                    <>
+                                        <div className="mb-3 flex items-center gap-2 text-sm font-medium">
+                                            <activeItem.icon className="h-4 w-4 shrink-0" />
+                                            <span className="truncate">{activeItem.title}</span>
+                                        </div>
+                                        <div className="mb-3 flex flex-1 items-center justify-center">
+                                            {renderPreview(activeItem.id)}
+                                        </div>
+                                        <p className="text-xs leading-snug text-muted-foreground">{activeItem.description}</p>
+                                    </>
+                                )}
+                            </div>
                         </div>
-                    </div>
-                </DropdownMenuContent>
-            </DropdownMenu>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            )}
 
             <Dialog open={colorPickerOpen} onOpenChange={setColorPickerOpen}>
                 <DialogContent className="max-w-sm p-0 overflow-hidden">
