@@ -179,7 +179,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Interface",
-    text: "Cohérence visuelle : rayons d'arrondi uniformisés (`rounded-lg`) dans la sidebar d'un monde, boutons du header de chatroom alignés en taille et en couleur.",
+    text: "Cohérence visuelle : rayons d'arrondi uniformisés (`rounded-lg`/`rounded-md`) dans la sidebar d'un monde, les cartes de catégories, le composer, la grille de parties et la carte d'accueil d'un monde ; boutons du header de chatroom et du menu message alignés en taille et en couleur.",
   },
   {
     date: "2026-08",
