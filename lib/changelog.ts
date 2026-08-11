@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Interface",
+    text: "L'animation de chargement des pages (salle, monde, explorateur, admin, boutique) affiche désormais le logo de WVLDS qui pulse, à la place d'une icône générique en rotation.",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
     text: "La page Explorateur reprend le même en-tête que les pages d'un monde (Membres, Wiki, Réglages…), avec le champ de recherche déplacé à droite, au lieu d'un en-tête différent du reste de l'app.",
   },
   {
