@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Interface",
+    text: "Sur écran tactile (mobile, tablette), le menu latéral et les tiroirs de réglages/statistiques/épingles d'une salle s'élargissent un peu plus (jusqu'à 460px au lieu de 360px), quelle que soit la taille de la fenêtre.",
+  },
+  {
+    date: "2026-08",
     tag: "Correctif",
     text: "Le menu d'options d'un message (copier, modifier, épingler, supprimer) affichait toujours du texte en français, même en anglais ou en espagnol.",
   },
