@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Correctif",
+    text: "Dans une chatroom, le bouton pour redescendre en bas de la conversation devenait presque invisible au survol (fond semi-transparent qui laissait apparaître le texte des messages derrière).",
+  },
+  {
+    date: "2026-08",
     tag: "Interface",
     text: "L'animation de chargement des pages (salle, monde, explorateur, admin, boutique) affiche désormais le logo de WVLDS qui pulse, à la place d'une icône générique en rotation.",
   },
