@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Interface",
+    text: "L'en-tête de la sidebar d'un monde redevient le sélecteur de monde (dropdown avec la liste de tes mondes, créer un monde, quitter…), à la place du simple nom + icône réglages. Le lien « Paramètres » reprend sa place dans le menu de navigation du monde.",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
     text: "Sur mobile, le menu « Insérer un bloc » du composeur s'ouvre désormais en tiroir plein écran : taper un bloc ou une option déplie son aperçu et sa description directement sous lui (avant, ces informations n'étaient visibles qu'au survol sur ordinateur, donc invisibles sur mobile — le choix de couleur des bulles de dialogue en était même inaccessible).",
   },
   {

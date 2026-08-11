@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { getCachedFeatureFlags, getCurrentUserId, getWorldById } from "@/lib/currentRequest";
+import { getCachedFeatureFlags, getCurrentUserId, getUserWorlds, getWorldById } from "@/lib/currentRequest";
 import { getTranslations } from "next-intl/server";
 import {
   BookOpenText,
@@ -9,12 +9,14 @@ import {
   Library,
   Map as MapIcon,
   Network,
+  Settings,
   Users,
 } from "lucide-react";
 import { WorldSidebarChatrooms } from "./WorldSidebarChatrooms";
 import { WorldSidebarNavLink } from "./WorldSidebarNavLink";
-import { WorldSidebarHeader } from "./WorldSidebarHeader";
+import { WorldPickerHeader } from "@/components/sidebar/WorldPickerHeader";
 import { MobileSidebarSlot } from "@/components/sidebar/MobileSidebarSlot";
+import { getUserQuotaWithClient } from "@/lib/userQuota";
 
 type Room = {
   id: string;
@@ -57,7 +59,7 @@ export default async function WorldSidebar({ worldId }: { worldId: string }) {
     getTranslations("nav"),
   ]);
 
-  const [world, roomsResult, participatedResult, canAdminResult, categoriesResult, followedResult] =
+  const [world, roomsResult, participatedResult, canAdminResult, userWorlds, quota, categoriesResult, followedResult] =
     await Promise.all([
       getWorldById(worldId),
       supabase.rpc("list_chatrooms_nav", { p_world_id: worldId }),
@@ -70,6 +72,10 @@ export default async function WorldSidebar({ worldId }: { worldId: string }) {
       userId
         ? supabase.rpc("is_world_admin", { wid: worldId, uid: userId })
         : Promise.resolve({ data: false }),
+      getUserWorlds(),
+      userId
+        ? getUserQuotaWithClient(supabase, userId, "worlds")
+        : Promise.resolve({ plan: "free" as const, owned: 0, quotaLimit: 1, quotaReached: false }),
       supabase
         .from("chatroom_categories")
         .select("id, title, banner_url, icon_url, position")
@@ -99,6 +105,28 @@ export default async function WorldSidebar({ worldId }: { worldId: string }) {
 
   const worldBase = `/w/${worldId}`;
 
+  // S'assurer que le monde courant est dans la liste — `userWorlds` vient
+  // d'un getter mémoïsé pour la requête (`getUserWorlds`, partagé avec le
+  // layout protégé) : on ne le mute jamais, on en dérive une copie.
+  const allWorlds =
+    userId && !userWorlds.some((w) => w.id === worldId)
+      ? [
+        {
+          id: world.id,
+          name: world.name,
+          icon_url: world.icon_url ?? null,
+          owner_id: world.owner_id ?? "",
+          description: world.description ?? null,
+          banner_url: world.banner_url,
+          color: world.color,
+          visibility: world.visibility,
+          restrict_inventory: world.restrict_inventory,
+          restrict_skills: world.restrict_skills,
+        },
+        ...userWorlds,
+      ]
+      : userWorlds;
+
   const navLinks = (
     <div className="border-b py-1 px-2 flex flex-col gap-0.5">
       <WorldSidebarNavLink href={`${worldBase}`} icon={<Home size={14} />} label={t("nav.home")} />
@@ -115,16 +143,20 @@ export default async function WorldSidebar({ worldId }: { worldId: string }) {
       {hasCatalogue && (
         <WorldSidebarNavLink href={`${worldBase}?view=catalogue`} icon={<Library size={14} />} label={t("nav.catalogue")} />
       )}
+      {canAdmin && (
+        <WorldSidebarNavLink href={`${worldBase}?view=settings`} icon={<Settings size={14} />} label={tNav("settings")} />
+      )}
     </div>
   );
 
   const header = (
-    <WorldSidebarHeader
-      name={world.name}
-      iconUrl={world.icon_url ?? null}
-      worldBase={worldBase}
-      canAdmin={canAdmin}
-      settingsLabel={tNav("settings")}
+    <WorldPickerHeader
+      worlds={allWorlds}
+      currentWorldId={worldId}
+      currentUserId={userId ?? null}
+      plan={quota.plan}
+      ownedCount={quota.owned}
+      quotaLimit={quota.quotaLimit}
     />
   );
 
