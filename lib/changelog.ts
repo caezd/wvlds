@@ -8,6 +8,16 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Correctif",
+    text: "Le menu d'options d'un message (copier, modifier, épingler, supprimer) affichait toujours du texte en français, même en anglais ou en espagnol.",
+  },
+  {
+    date: "2026-08",
+    tag: "Mondes",
+    text: "L'accueil d'un monde affiche désormais le même en-tête que ses autres pages (Membres, Wiki, Réglages…), avec les actions favoris et plein écran alignées dedans, à la place des boutons flottés sur la bannière.",
+  },
+  {
+    date: "2026-08",
     tag: "Mondes",
     text: "Le bouton « + » de création d'un persona dans l'en-tête de l'onglet Personas d'un monde devient un bouton « Nouveau persona » plus explicite.",
   },
