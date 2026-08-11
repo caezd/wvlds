@@ -121,7 +121,11 @@ function ScrollAreaWithJumpToBottom({
           type="button"
           size="icon"
           variant="secondary"
-          className={showDown ? "pointer-events-auto rounded-full shadow" : "pointer-events-none rounded-full shadow"}
+          className={
+            showDown
+              ? "pointer-events-auto rounded-full shadow hover:bg-hoverCard hover:text-foreground"
+              : "pointer-events-none rounded-full shadow hover:bg-hoverCard hover:text-foreground"
+          }
           tabIndex={showDown ? 0 : -1}
           aria-hidden={!showDown}
           onClick={scrollToBottom}
