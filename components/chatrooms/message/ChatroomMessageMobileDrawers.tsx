@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Code, FileText, Pencil, SmilePlus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -12,12 +13,12 @@ import {
 import { ChatReactionPicker } from "../reactions/ChatReactionPicker";
 import { markdownToPlainText } from "@/lib/markdownToPlainText";
 
-async function copyToClipboard(text: string, successMessage: string) {
+async function copyToClipboard(text: string, successMessage: string, errorMessage: string) {
   try {
     await navigator.clipboard.writeText(text);
     toast.success(successMessage);
   } catch {
-    toast.error("Impossible de copier dans le presse-papiers.");
+    toast.error(errorMessage);
   }
 }
 
@@ -47,6 +48,9 @@ export function ChatroomMessageMobileDrawers({
   onRequestDelete?: () => void;
   toggleReaction: (emoteKey: string) => void | Promise<void>;
 }) {
+  const t = useTranslations("chatrooms");
+  const tCommon = useTranslations("common");
+
   return (
     <>
       {/* Drawer mobile — liste d'options (long-press) */}
@@ -54,10 +58,10 @@ export function ChatroomMessageMobileDrawers({
         <DrawerContent>
           <DrawerHeader>
             <DrawerTitle className="text-center text-sm font-medium text-muted-foreground">
-              {personaName ?? "Options"}
+              {personaName ?? t("actions")}
             </DrawerTitle>
             <DrawerDescription className="sr-only">
-              Actions disponibles pour ce message.
+              {t("mobileOptionsDescription")}
             </DrawerDescription>
           </DrawerHeader>
           <div className="flex flex-col pb-6">
@@ -71,7 +75,7 @@ export function ChatroomMessageMobileDrawers({
                 }}
               >
                 <SmilePlus className="h-5 w-5 shrink-0 text-muted-foreground" />
-                Réagir
+                {t("react")}
               </button>
             )}
             <button
@@ -79,22 +83,22 @@ export function ChatroomMessageMobileDrawers({
               className="flex items-center gap-4 px-6 py-4 text-left text-base hover:bg-muted/50 transition-colors"
               onClick={() => {
                 setDrawerOpen(false);
-                void copyToClipboard(markdownToPlainText(content), "Texte copié dans le presse-papiers.");
+                void copyToClipboard(markdownToPlainText(content), t("copyTextSuccess"), t("copyError"));
               }}
             >
               <FileText className="h-5 w-5 shrink-0 text-muted-foreground" />
-              Copier le texte
+              {t("copyText")}
             </button>
             <button
               type="button"
               className="flex items-center gap-4 px-6 py-4 text-left text-base hover:bg-muted/50 transition-colors"
               onClick={() => {
                 setDrawerOpen(false);
-                void copyToClipboard(content, "Markdown copié dans le presse-papiers.");
+                void copyToClipboard(content, t("copyMarkdownSuccess"), t("copyError"));
               }}
             >
               <Code className="h-5 w-5 shrink-0 text-muted-foreground" />
-              Copier le markdown
+              {t("copyMarkdown")}
             </button>
             {mine && (
               <>
@@ -107,7 +111,7 @@ export function ChatroomMessageMobileDrawers({
                   }}
                 >
                   <Pencil className="h-5 w-5 shrink-0 text-muted-foreground" />
-                  Modifier
+                  {tCommon("edit")}
                 </button>
                 <button
                   type="button"
@@ -118,7 +122,7 @@ export function ChatroomMessageMobileDrawers({
                   }}
                 >
                   <Trash2 className="h-5 w-5 shrink-0" />
-                  Supprimer
+                  {tCommon("delete")}
                 </button>
               </>
             )}
@@ -131,10 +135,10 @@ export function ChatroomMessageMobileDrawers({
         <DrawerContent>
           <DrawerHeader>
             <DrawerTitle className="text-center text-sm font-medium text-muted-foreground">
-              Réagir
+              {t("react")}
             </DrawerTitle>
             <DrawerDescription className="sr-only">
-              Choisir une réaction à ajouter à ce message.
+              {t("mobileReactionDescription")}
             </DrawerDescription>
           </DrawerHeader>
           <div className="px-4 pb-6">

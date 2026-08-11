@@ -16,12 +16,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { markdownToPlainText } from "@/lib/markdownToPlainText";
 
-async function copyToClipboard(text: string, successMessage: string) {
+async function copyToClipboard(text: string, successMessage: string, errorMessage: string) {
   try {
     await navigator.clipboard.writeText(text);
     toast.success(successMessage);
   } catch {
-    toast.error("Impossible de copier dans le presse-papiers.");
+    toast.error(errorMessage);
   }
 }
 
@@ -44,12 +44,13 @@ export function MessageActionsDropdown({
   onRequestDelete?: () => void;
 }) {
   const t = useTranslations("chatrooms");
+  const tCommon = useTranslations("common");
 
   function copyText() {
-    void copyToClipboard(markdownToPlainText(content), "Texte copié dans le presse-papiers.");
+    void copyToClipboard(markdownToPlainText(content), t("copyTextSuccess"), t("copyError"));
   }
   function copyMarkdown() {
-    void copyToClipboard(content, "Markdown copié dans le presse-papiers.");
+    void copyToClipboard(content, t("copyMarkdownSuccess"), t("copyError"));
   }
 
   return (
@@ -59,7 +60,7 @@ export function MessageActionsDropdown({
           type="button"
           variant="ghost"
           size="icon"
-          className="h-7 w-7 opacity-0 group-hover/turn-messages:opacity-100 transition-opacity"
+          className="h-7 rounded-md w-7 opacity-0 group-hover/turn-messages:opacity-100 transition-opacity"
           aria-label={t("actions")}
           title={t("actions")}
         >
@@ -70,16 +71,16 @@ export function MessageActionsDropdown({
         <DropdownMenuSub>
           <DropdownMenuSubTrigger onClick={copyText} className="whitespace-nowrap">
             <Copy className="mr-2 h-3.5 w-3.5" />
-            Copier le message
+            {t("copyMessage")}
           </DropdownMenuSubTrigger>
           <DropdownMenuSubContent className="w-48">
             <DropdownMenuItem onClick={copyText} className="whitespace-nowrap">
               <FileText className="mr-2 h-3.5 w-3.5" />
-              Copier le texte
+              {t("copyText")}
             </DropdownMenuItem>
             <DropdownMenuItem onClick={copyMarkdown} className="whitespace-nowrap">
               <Code className="mr-2 h-3.5 w-3.5" />
-              Copier le markdown
+              {t("copyMarkdown")}
             </DropdownMenuItem>
           </DropdownMenuSubContent>
         </DropdownMenuSub>
@@ -87,18 +88,18 @@ export function MessageActionsDropdown({
         {mine && (
           <DropdownMenuItem onClick={onEdit}>
             <Pencil className="mr-2 h-3.5 w-3.5" />
-            Modifier
+            {tCommon("edit")}
           </DropdownMenuItem>
         )}
         {isPinned ? (
           <DropdownMenuItem onClick={onUnpin}>
             <PinOff className="mr-2 h-3.5 w-3.5" />
-            Désépingler
+            {t("unpin")}
           </DropdownMenuItem>
         ) : (
           <DropdownMenuItem onClick={onPin}>
             <Pin className="mr-2 h-3.5 w-3.5" />
-            Épingler
+            {t("pin")}
           </DropdownMenuItem>
         )}
         {mine && (
@@ -109,7 +110,7 @@ export function MessageActionsDropdown({
               onClick={onRequestDelete}
             >
               <Trash2 className="mr-2 h-3.5 w-3.5" />
-              Supprimer
+              {tCommon("delete")}
             </DropdownMenuItem>
           </>
         )}

@@ -182,10 +182,11 @@ describe("ChatroomMessage — avertissements de contenu", () => {
       />,
     );
 
-    // Pour un message hors mode SMS, "Modifier" apparaît deux fois (menu
-    // d'actions + tiroir mobile, toujours monté dans ces tests) : on prend le
-    // premier, celui du menu d'actions.
-    fireEvent.click(screen.getAllByText("Modifier")[0].closest("button")!);
+    // Pour un message hors mode SMS, le bouton "edit" (clé i18n, mock next-intl
+    // en passthrough) apparaît deux fois (menu d'actions + tiroir mobile,
+    // toujours monté dans ces tests) : on prend le premier, celui du menu
+    // d'actions.
+    fireEvent.click(screen.getAllByText("edit")[0].closest("button")!);
 
     const toggle = screen.getByText("contentWarning").closest("button");
     expect(toggle).not.toBeNull();
@@ -217,10 +218,11 @@ describe("ChatroomMessage — avertissements de contenu", () => {
       />,
     );
 
-    // Pour un message hors mode SMS, "Modifier" apparaît deux fois (menu
-    // d'actions + tiroir mobile, toujours monté dans ces tests) : on prend le
-    // premier, celui du menu d'actions.
-    fireEvent.click(screen.getAllByText("Modifier")[0].closest("button")!);
+    // Pour un message hors mode SMS, le bouton "edit" (clé i18n, mock next-intl
+    // en passthrough) apparaît deux fois (menu d'actions + tiroir mobile,
+    // toujours monté dans ces tests) : on prend le premier, celui du menu
+    // d'actions.
+    fireEvent.click(screen.getAllByText("edit")[0].closest("button")!);
 
     // Le toggle reflète l'état existant : la section est déjà active.
     expect(screen.getByTestId("content-warning-input")).toBeInTheDocument();
@@ -245,7 +247,7 @@ describe("ChatroomMessage — avertissements de contenu", () => {
       />,
     );
 
-    fireEvent.click(screen.getAllByText("Modifier")[0].closest("button")!);
+    fireEvent.click(screen.getAllByText("edit")[0].closest("button")!);
 
     expect(screen.getByRole("button", { name: "disableContentWarning" })).toBeInTheDocument();
   });
