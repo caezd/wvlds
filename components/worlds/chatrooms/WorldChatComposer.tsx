@@ -271,7 +271,7 @@ export function WorldChatComposer({
       <button
         type="button"
         onClick={openDialog}
-        className="w-full text-left rounded-2xl border border-border-soft bg-background px-4 py-3 text-sm text-muted-foreground hover:border-border hover:bg-secondary/30 transition-colors"
+        className="w-full text-left rounded-lg border bg-background px-4 py-3 text-sm text-muted-foreground hover:border-border hover:bg-secondary/30 transition-colors"
       >
         <Plus className="inline-block mr-2 h-3.5 w-3.5 opacity-50" />
         {t("composer.placeholder")}

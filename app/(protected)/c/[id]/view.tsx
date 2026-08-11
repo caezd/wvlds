@@ -83,7 +83,7 @@ function ChatroomHeader({
             type="button"
             onClick={() => setDrawerOpen(true)}
             aria-label="Ouvrir le menu"
-            className="lg:hidden flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-hoverCard hover:text-foreground"
+            className="lg:hidden flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-hoverCard hover:text-foreground"
           >
             <Menu className="h-4 w-4" />
           </button>
@@ -96,7 +96,7 @@ function ChatroomHeader({
                     <TooltipTrigger asChild>
                       <Link
                         href={`/w/${world.id}`}
-                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-hoverCard hover:text-foreground transition-colors"
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-hoverCard hover:text-foreground transition-colors"
                       >
                         {world.isShared
                           ? <Globe className="h-4 w-4" />
@@ -891,7 +891,7 @@ export default function ChatRoomView({
                         onClick={() => void handleToggleFollow()}
                         aria-label={isFollowed ? t("unfollow") : t("follow")}
                         className={cn(
-                          "flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-hoverCard",
+                          "flex h-9 w-9 items-center justify-center rounded-md transition-colors hover:bg-hoverCard",
                           isFollowed ? "text-yellow-500" : "text-muted-foreground hover:text-foreground",
                         )}
                       >
@@ -910,7 +910,7 @@ export default function ChatRoomView({
                         type="button"
                         onClick={() => setSettingsOpen(true)}
                         aria-label={tCommon("settings")}
-                        className="flex h-9 w-9 items-center justify-center rounded-lg bg-background text-muted-foreground transition-colors hover:bg-hoverCard hover:text-foreground"
+                        className="flex h-9 w-9 items-center justify-center rounded-md bg-background text-muted-foreground transition-colors hover:bg-hoverCard hover:text-foreground"
                       >
                         <Settings className="h-4 w-4" />
                       </button>
@@ -924,7 +924,7 @@ export default function ChatRoomView({
                       type="button"
                       onClick={() => setStatsOpen(true)}
                       aria-label={t("statsTitle")}
-                      className="flex h-9 w-9 items-center justify-center rounded-lg bg-background text-muted-foreground transition-colors hover:bg-hoverCard hover:text-foreground"
+                      className="flex h-9 w-9 items-center justify-center rounded-md bg-background text-muted-foreground transition-colors hover:bg-hoverCard hover:text-foreground"
                     >
                       <BarChart3 className="h-4 w-4" />
                     </button>
@@ -940,7 +940,7 @@ export default function ChatRoomView({
                     <button
                       type="button"
                       aria-label={t("actions")}
-                      className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-hoverCard hover:text-foreground"
+                      className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-hoverCard hover:text-foreground"
                     >
                       <MoreVertical className="h-4 w-4" />
                     </button>

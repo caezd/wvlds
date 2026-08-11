@@ -83,10 +83,10 @@ export function WorldCategoryFolders({
             type="button"
             onClick={() => onSelectCategory(isActive ? null : cat.id)}
             className={cn(
-              "flex min-w-40 max-w-56 shrink-0 items-center gap-2.5 rounded-2xl border px-3 py-2.5 text-left transition-colors",
+              "flex min-w-40 max-w-56 shrink-0 items-center gap-2.5 rounded-lg border px-3 py-2.5 text-left transition-colors",
               isActive
                 ? "border-primary bg-primary/5"
-                : "border-border-soft bg-background hover:border-border hover:bg-secondary/30",
+                : "border bg-background hover:border-border hover:bg-secondary/30",
             )}
           >
             <CategoryAvatar

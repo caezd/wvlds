@@ -37,7 +37,7 @@ export function WorldHeroCard({
     <section
       className={[
         "group/hero relative overflow-hidden p-6 md:p-8",
-        isExpanded ? "" : "rounded-3xl",
+        isExpanded ? "" : "rounded-md",
       ].join(" ")}
       style={{
         // Pas de couleur de fond derrière une bannière image : elle dépasse

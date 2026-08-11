@@ -161,7 +161,7 @@ function AppShellInner({
           </button>
         </header>
 
-        <main className="relative flex h-full w-full flex-1 overflow-hidden lg:border lg:bg-background lg:rounded-2xl">
+        <main className="relative flex h-full w-full flex-1 overflow-hidden lg:border lg:bg-background lg:rounded-lg">
           <div
             id="thread"
             className={cn(

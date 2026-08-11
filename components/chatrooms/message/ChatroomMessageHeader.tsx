@@ -139,7 +139,7 @@ export function ChatroomMessageHeader({
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7 opacity-0 group-hover/turn-messages:opacity-100 transition-opacity"
+                    className="h-7 w-7 rounded-md opacity-0 group-hover/turn-messages:opacity-100 transition-opacity"
                     aria-label={t("addReaction")}
                     title={t("addReaction")}
                   >
@@ -181,7 +181,7 @@ export function ChatroomMessageHeader({
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7"
+                  className="h-7 w-7 rounded-md"
                   onClick={cancelEdit}
                   disabled={saving}
                   aria-label={t("cancelEdit")}
@@ -193,7 +193,7 @@ export function ChatroomMessageHeader({
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7"
+                  className="h-7 w-7 rounded-md"
                   onClick={() => void save()}
                   disabled={saving}
                   aria-label={t("saveEdit")}
@@ -218,7 +218,7 @@ export function ChatroomMessageHeader({
                     a remporté un défi
                   </span>
                 </TooltipTrigger>
-                <TooltipContent side="top" className="max-w-64">
+                <TooltipContent side="top" className="max-w-74">
                   <p className="font-medium mb-0.5">{challengeWon.title}</p>
                   {challengeWon.description && (
                     <MarkdownRenderer

@@ -114,12 +114,12 @@ export function WorldChatroomsGrid({
     categoryId === undefined || categoryId === null
       ? rooms
       : rooms.filter((room) =>
-          categoryId === "__uncategorized__" ? !room.category_id : room.category_id === categoryId,
-        );
+        categoryId === "__uncategorized__" ? !room.category_id : room.category_id === categoryId,
+      );
 
   if (rooms.length === 0) {
     return (
-      <div className="rounded-3xl border border-border-soft p-8 text-center text-sm text-muted-foreground">
+      <div className="rounded-lg border border-border-soft p-8 text-center text-sm text-muted-foreground">
         Aucune partie pour le moment — lance la première !
       </div>
     );
@@ -127,14 +127,14 @@ export function WorldChatroomsGrid({
 
   if (visibleRooms.length === 0) {
     return (
-      <div className="rounded-3xl border border-border-soft p-8 text-center text-sm text-muted-foreground">
+      <div className="rounded-lg border p-8 text-center text-sm text-muted-foreground">
         Aucune partie dans cette catégorie.
       </div>
     );
   }
 
   return (
-    <div className="rounded-3xl border border-border-soft p-3 md:p-4">
+    <div className="rounded-lg border p-3 md:p-4">
       <ul className="grid gap-x-6 md:grid-cols-2">
         {visibleRooms.map((room) => {
           const href = `/c/${room.id}`;
@@ -148,13 +148,13 @@ export function WorldChatroomsGrid({
                 onClick={
                   onRoomClick
                     ? (e) => {
-                        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-                        e.preventDefault();
-                        onRoomClick(href);
-                      }
+                      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+                      e.preventDefault();
+                      onRoomClick(href);
+                    }
                     : undefined
                 }
-                className="group flex items-center gap-3.5 rounded-2xl px-3 py-3 hover:bg-secondary transition-colors"
+                className="group flex items-center gap-3.5 rounded-md px-3 py-3 hover:bg-hoverCard transition-colors"
               >
                 <span className="relative shrink-0 size-9">
                   <span
