@@ -470,6 +470,7 @@ function ChatroomMessage({
       <ChatroomMessageMobileDrawers
         personaName={message.persona?.name}
         mine={mine}
+        content={message.content}
         emojiReactions={emoji_reactions}
         drawerOpen={drawerOpen}
         setDrawerOpen={setDrawerOpen}

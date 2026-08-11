@@ -164,6 +164,7 @@ export function ChatroomMessageHeader({
               <MessageActionsDropdown
                 mine={mine}
                 isPinned={!!pinId}
+                content={message.content}
                 onEdit={startEdit}
                 onPin={onPin ? () => onPin(message.id) : undefined}
                 onUnpin={pinId && onUnpin ? () => onUnpin(pinId) : undefined}

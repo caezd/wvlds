@@ -81,6 +81,10 @@ vi.mock("@/components/ui/dropdown-menu", () => ({
   DropdownMenuSeparator: () => <hr />,
   DropdownMenuTrigger: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) =>
     asChild ? <>{children}</> : <div>{children}</div>,
+  DropdownMenuSub: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DropdownMenuSubTrigger: ({ children, onClick }: { children: React.ReactNode; onClick?: () => void }) =>
+    <button onClick={onClick}>{children}</button>,
+  DropdownMenuSubContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 vi.mock("@/components/ui/avatar", () => ({
   Avatar: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,

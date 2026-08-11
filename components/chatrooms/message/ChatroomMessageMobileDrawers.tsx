@@ -1,6 +1,7 @@
 "use client";
 
-import { Pencil, SmilePlus, Trash2 } from "lucide-react";
+import { Code, FileText, Pencil, SmilePlus, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import {
   Drawer,
   DrawerContent,
@@ -9,11 +10,22 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 import { ChatReactionPicker } from "../reactions/ChatReactionPicker";
+import { markdownToPlainText } from "@/lib/markdownToPlainText";
+
+async function copyToClipboard(text: string, successMessage: string) {
+  try {
+    await navigator.clipboard.writeText(text);
+    toast.success(successMessage);
+  } catch {
+    toast.error("Impossible de copier dans le presse-papiers.");
+  }
+}
 
 /** Drawers mobiles (long-press) : options du message, puis picker d'emoji. */
 export function ChatroomMessageMobileDrawers({
   personaName,
   mine,
+  content,
   emojiReactions,
   drawerOpen,
   setDrawerOpen,
@@ -25,6 +37,7 @@ export function ChatroomMessageMobileDrawers({
 }: {
   personaName?: string | null;
   mine: boolean;
+  content: string;
   emojiReactions?: boolean;
   drawerOpen: boolean;
   setDrawerOpen: (open: boolean) => void;
@@ -61,6 +74,28 @@ export function ChatroomMessageMobileDrawers({
                 Réagir
               </button>
             )}
+            <button
+              type="button"
+              className="flex items-center gap-4 px-6 py-4 text-left text-base hover:bg-muted/50 transition-colors"
+              onClick={() => {
+                setDrawerOpen(false);
+                void copyToClipboard(markdownToPlainText(content), "Texte copié dans le presse-papiers.");
+              }}
+            >
+              <FileText className="h-5 w-5 shrink-0 text-muted-foreground" />
+              Copier le texte
+            </button>
+            <button
+              type="button"
+              className="flex items-center gap-4 px-6 py-4 text-left text-base hover:bg-muted/50 transition-colors"
+              onClick={() => {
+                setDrawerOpen(false);
+                void copyToClipboard(content, "Markdown copié dans le presse-papiers.");
+              }}
+            >
+              <Code className="h-5 w-5 shrink-0 text-muted-foreground" />
+              Copier le markdown
+            </button>
             {mine && (
               <>
                 <button

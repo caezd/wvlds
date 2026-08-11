@@ -104,7 +104,7 @@ function urlTransform(url: string): string {
  * - Ignore les fenced code blocks (``` / ~~~)
  * - Ignore l'inline code (`...`)
  */
-function transformAngleCallouts(input: string): string {
+export function transformAngleCallouts(input: string): string {
   const src = (input ?? "").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
   const lines = src.split("\n");
 
