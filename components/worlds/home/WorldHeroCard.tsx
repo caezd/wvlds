@@ -37,7 +37,7 @@ export function WorldHeroCard({
     <section
       className={[
         "group/hero relative overflow-hidden p-6 md:p-8",
-        isExpanded ? "" : "rounded-md",
+        isExpanded ? "" : "rounded-lg",
       ].join(" ")}
       style={{
         // Pas de couleur de fond derrière une bannière image : elle dépasse
@@ -73,8 +73,8 @@ export function WorldHeroCard({
         <span
           className={
             world.icon_url
-              ? "relative mb-1 flex h-11 w-11 items-center justify-center overflow-hidden rounded-full"
-              : "relative mb-1 flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-black/50"
+              ? "relative mb-1 flex h-11 w-11 items-center justify-center overflow-hidden rounded-md"
+              : "relative mb-1 flex h-11 w-11 items-center justify-center overflow-hidden rounded-md bg-black/50"
           }
         >
           {world.icon_url ? (

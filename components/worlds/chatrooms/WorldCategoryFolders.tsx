@@ -83,7 +83,7 @@ export function WorldCategoryFolders({
             type="button"
             onClick={() => onSelectCategory(isActive ? null : cat.id)}
             className={cn(
-              "flex min-w-40 max-w-56 shrink-0 items-center gap-2.5 rounded-lg border px-3 py-2.5 text-left transition-colors",
+              "flex min-w-40 max-w-56 shrink-0 items-center gap-2.5 rounded-lg border p-2 text-left transition-colors",
               isActive
                 ? "border-primary bg-primary/5"
                 : "border bg-background hover:border-border hover:bg-secondary/30",
@@ -93,7 +93,7 @@ export function WorldCategoryFolders({
               title={cat.title}
               bannerUrl={cat.banner_url}
               iconUrl={cat.icon_url}
-              className="h-9 w-9 rounded-lg"
+              className="h-9 w-9 rounded-md"
             />
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium text-foreground leading-tight">{cat.title}</p>
