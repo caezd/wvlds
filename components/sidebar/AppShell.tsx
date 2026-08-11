@@ -18,6 +18,11 @@ type WorldRailItem = { id: string; name: string; icon_url: string | null; owner_
 
 const DEFAULT_WORLDS_QUOTA: Quota = { plan: "free", owned: 0, quotaLimit: 1, quotaReached: false };
 
+// Rail des mondes masqué le temps de valider le nouveau panneau « favoris »
+// intégré au rail d'icônes (cf. WorldsQuickAccess dans SidebarRail) — code
+// conservé intact pour un retour en arrière facile.
+const WORLDS_RAIL_ENABLED = false;
+
 const NotificationInlinePanelContent = dynamic(
   () => import("@/components/notifications").then((m) => m.NotificationInlinePanelContent),
   { ssr: false },
@@ -92,7 +97,7 @@ function AppShellInner({
       {/* Rail des mondes rejoints (desktop) — même composant que dans le
           drawer mobile ci-dessous, affiché en permanence à côté du rail
           d'icônes. */}
-      {(worlds.length > 0 || exploreEnabled) && (
+      {WORLDS_RAIL_ENABLED && (worlds.length > 0 || exploreEnabled) && (
         <div className="relative z-20 hidden shrink-0 lg:flex pr-2">
           <WorldsRail worlds={worlds} quota={worldsQuota} />
         </div>
@@ -122,7 +127,7 @@ function AppShellInner({
             {/* Rail d'icônes */}
             <div className={cn(
               "w-14 shrink-0 flex flex-col overflow-y-auto py-2",
-              (anyPanelOpen || mobileSidebar || worlds.length > 0 || exploreEnabled) && "border-r",
+              (anyPanelOpen || mobileSidebar || (WORLDS_RAIL_ENABLED && (worlds.length > 0 || exploreEnabled))) && "border-r",
             )}>
               {rail}
             </div>
@@ -133,7 +138,7 @@ function AppShellInner({
                 pour ne pas priver les comptes sans monde de ce lien.
                 Masqué quand un panneau (DMs/notifs) occupe l'espace restant,
                 pour lui laisser toute la largeur. */}
-            {(worlds.length > 0 || exploreEnabled) && !anyPanelOpen && <WorldsRail worlds={worlds} quota={worldsQuota} />}
+            {WORLDS_RAIL_ENABLED && (worlds.length > 0 || exploreEnabled) && !anyPanelOpen && <WorldsRail worlds={worlds} quota={worldsQuota} />}
             {/* Panneau DMs / Notifications, ou sidebar monde */}
             {(anyPanelOpen || mobileSidebar) && (
               <div className="flex-1 min-w-0 overflow-hidden flex flex-col">

@@ -88,68 +88,30 @@ describe("AppShell — barre mobile générique vs header de chatroom", () => {
   });
 });
 
-describe("AppShell — rail des mondes (desktop permanent + drawer mobile)", () => {
-  // Le rail des mondes est rendu deux fois : une copie permanente à côté du
-  // rail d'icônes desktop, une copie dans le drawer mobile. Le mock de Sheet
-  // rend toujours ses children (indépendamment de `open`), donc les deux
-  // copies coexistent dans le DOM de test — d'où getAllByLabelText.
+describe("AppShell — rail des mondes (temporairement masqué)", () => {
+  // WORLDS_RAIL_ENABLED = false dans AppShell.tsx : la fonctionnalité est
+  // remplacée par le panneau « favoris » intégré au rail d'icônes
+  // (WorldsQuickAccess, cf. SidebarRail.tsx) mais le code du rail dédié
+  // reste en place pour un retour en arrière facile. Ces tests vérifient
+  // qu'il ne s'affiche plus nulle part tant que le flag est désactivé.
 
-  it("affiche le rail des mondes (desktop + drawer) quand plus d'un monde est rejoint et aucun panneau n'est ouvert", () => {
+  it("ne rend le rail des mondes ni en desktop ni dans le drawer, même avec plusieurs mondes rejoints", () => {
     render(
       <AppShell rail={<div>rail</div>} worlds={WORLDS}>
-        <div>contenu</div>
-      </AppShell>,
-    );
-    expect(screen.getAllByLabelText("Monde un")).toHaveLength(2);
-    expect(screen.getAllByLabelText("Monde deux")).toHaveLength(2);
-  });
-
-  it("masque la copie du drawer quand le panneau notifications est ouvert, mais garde la copie desktop permanente", () => {
-    notifPanelOpenMock.value = true;
-    render(
-      <AppShell rail={<div>rail</div>} worlds={WORLDS}>
-        <div>contenu</div>
-      </AppShell>,
-    );
-    expect(screen.getAllByLabelText("Monde un")).toHaveLength(1);
-  });
-
-  it("masque la copie du drawer quand le panneau DMs est ouvert, mais garde la copie desktop permanente", () => {
-    dmsPanelOpenMock.value = true;
-    render(
-      <AppShell rail={<div>rail</div>} worlds={WORLDS}>
-        <div>contenu</div>
-      </AppShell>,
-    );
-    expect(screen.getAllByLabelText("Monde un")).toHaveLength(1);
-  });
-
-  it("affiche le rail même avec un seul monde rejoint — seul lien mobile vers ce monde hors de ses pages", () => {
-    render(
-      <AppShell rail={<div>rail</div>} worlds={[WORLDS[0]]}>
-        <div>contenu</div>
-      </AppShell>,
-    );
-    expect(screen.getAllByLabelText("Monde un")).toHaveLength(2);
-  });
-
-  it("ne rend pas de rail des mondes si l'utilisateur n'a rejoint aucun monde et qu'Explorer est désactivé", () => {
-    render(
-      <AppShell rail={<div>rail</div>} worlds={[]}>
         <div>contenu</div>
       </AppShell>,
     );
     expect(screen.queryByLabelText("Monde un")).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("Explorer")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Monde deux")).not.toBeInTheDocument();
   });
 
-  it("affiche quand même le rail (avec le lien Explorer) sans aucun monde rejoint si le flag public_worlds est actif", () => {
+  it("ne rend pas non plus le lien Explorer du rail des mondes quand le flag public_worlds est actif", () => {
     publicWorldsMock.value = true;
     render(
       <AppShell rail={<div>rail</div>} worlds={[]}>
         <div>contenu</div>
       </AppShell>,
     );
-    expect(screen.getAllByLabelText("Explorer")).toHaveLength(2);
+    expect(screen.queryByLabelText("Explorer")).not.toBeInTheDocument();
   });
 });
