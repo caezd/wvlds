@@ -327,7 +327,7 @@ function ChatroomMessage({
             <div className="">
               {editing ? (
                 <div className="w-full">
-                  <div className="rounded-2xl border bg-background/60">
+                  <div className="rounded-lg border">
                     {/* Sur mobile, annuler/enregistrer vivent ici plutôt que
                         dans l'en-tête du message (moins accessible une fois
                         qu'on a scrollé dans un message long) — sticky pour
@@ -339,7 +339,7 @@ function ChatroomMessage({
                         block du sticky au lieu du scroll area des messages) —
                         on arrondit donc la barre elle-même à la place. */}
                     {isMobile && (
-                      <div className="sticky top-0 z-10 flex items-center justify-end gap-1 rounded-t-2xl bg-card border-b px-2 py-1.5">
+                      <div className="sticky top-0 z-10 flex items-center justify-end gap-1 rounded-t-2xl bg-body border-b px-2 py-1.5">
                         <Button
                           type="button"
                           variant="ghost"
@@ -366,7 +366,7 @@ function ChatroomMessage({
                         </Button>
                       </div>
                     )}
-                    <div className="p-2">
+                    <div className="">
                       <ParagraphBlockEditor
                         value={draft}
                         onChange={setDraft}
@@ -381,7 +381,7 @@ function ChatroomMessage({
                       {err && (
                         <div className="mt-1 text-xs text-destructive">{err}</div>
                       )}
-                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2 p-2">
                         <button
                           type="button"
                           onClick={() => setEditBubbles((v) => !v)}
