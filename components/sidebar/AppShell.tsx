@@ -68,6 +68,8 @@ function AppShellInner({
   // Seule la vue par défaut (?view absent) n'en a pas et garde la barre générique.
   const worldView = searchParams.get("view");
   const hasWorldPanelHeader = (pathname?.startsWith("/w/") ?? false) && !!worldView && WORLD_PANEL_VIEWS.has(worldView);
+  // L'Explorateur a lui aussi son propre WorldPanelHeader (cf. explore/page.tsx).
+  const isExploreRoute = pathname?.startsWith("/explore") ?? false;
   const anyPanelOpen = notifOpen || dmsOpen;
 
   // Exclusivité mutuelle
@@ -150,7 +152,7 @@ function AppShellInner({
 
       {/* Contenu principal */}
       <section id="app-shell" className="relative flex min-h-0 max-w-full flex-1 flex-col">
-        <header className={cn("lg:hidden flex h-12 shrink-0 items-center p-2", (isChatRoute || hasWorldPanelHeader || hideMobileHeader) && "hidden")}>
+        <header className={cn("lg:hidden flex h-12 shrink-0 items-center p-2", (isChatRoute || hasWorldPanelHeader || isExploreRoute || hideMobileHeader) && "hidden")}>
           <button
             type="button"
             onClick={() => setDrawerOpen(true)}

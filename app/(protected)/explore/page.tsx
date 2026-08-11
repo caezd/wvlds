@@ -3,13 +3,14 @@ import { getCurrentUserId, getCachedFeatureFlags } from "@/lib/currentRequest";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { Globe } from "lucide-react";
+import { Compass, Globe } from "lucide-react";
 import { ExploreSearch } from "./ExploreSearch";
 import { ExploreFilters } from "./ExploreFilters";
 import { JoinWorldButton } from "./JoinWorldButton";
 import { ExploreWorldCard, type PublicWorld } from "./ExploreWorldCard";
 import { getTranslations } from "next-intl/server";
 import { buildExploreParams, MAX_FILTER_TAGS } from "./exploreQuery";
+import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 
 const PAGE_SIZE = 16;
 const NO_MATCH_SENTINEL = "00000000-0000-0000-0000-000000000000";
@@ -143,87 +144,91 @@ export default async function ExplorePage({
   const t = await getTranslations("explore");
 
   return (
-    <div className="p-6 space-y-6">
-      <header className="flex flex-col sm:flex-row sm:items-center gap-4">
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
+      <WorldPanelHeader
+        icon={<Compass className="h-4 w-4 shrink-0 text-muted-foreground" />}
+        title={t("title")}
+        right={<ExploreSearch defaultValue={q} tags={selectedTags} avatarTypes={selectedAvatarTypes} />}
+      />
+
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="p-6 space-y-6">
+          <p className="text-xs text-muted-foreground">
             {t("worldsCount", { count: total })}
             {q && <span className="ml-1">· « {q} »</span>}
           </p>
-        </div>
-        <ExploreSearch defaultValue={q} tags={selectedTags} avatarTypes={selectedAvatarTypes} />
-      </header>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
-        {/* Contenu principal (3/4) */}
-        <div className="space-y-6 lg:col-span-3">
-          <ExploreFilters
-            q={q}
-            availableTags={availableTags}
-            selectedTags={selectedTags}
-            selectedAvatarTypes={selectedAvatarTypes}
-          />
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
+            {/* Contenu principal (3/4) */}
+            <div className="space-y-6 lg:col-span-3">
+              <ExploreFilters
+                q={q}
+                availableTags={availableTags}
+                selectedTags={selectedTags}
+                selectedAvatarTypes={selectedAvatarTypes}
+              />
 
-          {publicWorlds.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center gap-3 rounded-2xl border border-dashed border-border">
-              <Globe className="h-8 w-8 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">
-                {hasFilters ? t("noResults") : t("noWorlds")}
+              {publicWorlds.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 text-center gap-3 rounded-2xl border border-dashed border-border">
+                  <Globe className="h-8 w-8 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">
+                    {hasFilters ? t("noResults") : t("noWorlds")}
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {publicWorlds.map((world) => (
+                    <ExploreWorldCard
+                      key={world.id}
+                      world={world}
+                      tags={cardTagsByWorld.get(world.id) ?? []}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-3 pt-2">
+                  {page > 0 && (
+                    <Link
+                      href={`/explore?${buildExploreParams({ q, tags: selectedTags, avatarTypes: selectedAvatarTypes, page: page - 1 })}`}
+                      className="rounded-xl border border-border px-4 py-1.5 text-sm hover:bg-muted/50 transition-colors"
+                    >
+                      {t("previous")}
+                    </Link>
+                  )}
+                  <span className="text-sm text-muted-foreground tabular-nums">
+                    {page + 1} / {totalPages}
+                  </span>
+                  {page < totalPages - 1 && (
+                    <Link
+                      href={`/explore?${buildExploreParams({ q, tags: selectedTags, avatarTypes: selectedAvatarTypes, page: page + 1 })}`}
+                      className="rounded-xl border border-border px-4 py-1.5 text-sm hover:bg-muted/50 transition-colors"
+                    >
+                      {t("next")}
+                    </Link>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Derniers mondes créés (1/4) */}
+            <aside className="space-y-3 lg:col-span-1">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                {t("latestWorlds")}
               </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {publicWorlds.map((world) => (
-                <ExploreWorldCard
-                  key={world.id}
-                  world={world}
-                  tags={cardTagsByWorld.get(world.id) ?? []}
-                />
-              ))}
-            </div>
-          )}
-
-          {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-3 pt-2">
-              {page > 0 && (
-                <Link
-                  href={`/explore?${buildExploreParams({ q, tags: selectedTags, avatarTypes: selectedAvatarTypes, page: page - 1 })}`}
-                  className="rounded-xl border border-border px-4 py-1.5 text-sm hover:bg-muted/50 transition-colors"
-                >
-                  {t("previous")}
-                </Link>
+              {latestWorlds.length === 0 ? (
+                <p className="text-xs italic text-muted-foreground/60">{t("noWorlds")}</p>
+              ) : (
+                <div className="space-y-2">
+                  {latestWorlds.map((world) => (
+                    <LatestWorldRow key={world.id} world={world} />
+                  ))}
+                </div>
               )}
-              <span className="text-sm text-muted-foreground tabular-nums">
-                {page + 1} / {totalPages}
-              </span>
-              {page < totalPages - 1 && (
-                <Link
-                  href={`/explore?${buildExploreParams({ q, tags: selectedTags, avatarTypes: selectedAvatarTypes, page: page + 1 })}`}
-                  className="rounded-xl border border-border px-4 py-1.5 text-sm hover:bg-muted/50 transition-colors"
-                >
-                  {t("next")}
-                </Link>
-              )}
-            </div>
-          )}
+            </aside>
+          </div>
         </div>
-
-        {/* Derniers mondes créés (1/4) */}
-        <aside className="space-y-3 lg:col-span-1">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            {t("latestWorlds")}
-          </p>
-          {latestWorlds.length === 0 ? (
-            <p className="text-xs italic text-muted-foreground/60">{t("noWorlds")}</p>
-          ) : (
-            <div className="space-y-2">
-              {latestWorlds.map((world) => (
-                <LatestWorldRow key={world.id} world={world} />
-              ))}
-            </div>
-          )}
-        </aside>
       </div>
     </div>
   );
