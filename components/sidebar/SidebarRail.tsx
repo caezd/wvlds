@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import { ShoppingBasket, ShieldCheck, Dices, UserRound, Compass } from "lucide-react";
 import { RailIcon } from "./SidebarRailIcons";
 import { WorldsQuickAccess } from "./WorldsQuickAccess";
@@ -11,13 +12,19 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default async function SidebarRail() {
   // Tout est mémoïsé pour la requête (partagé avec les layouts).
-  const [t, featureFlags, auth, profile, favoriteWorlds] = await Promise.all([
+  const [t, featureFlags, auth, profile, favoriteWorlds, cookieStore] = await Promise.all([
     getTranslations("nav"),
     getCachedFeatureFlags(),
     getCurrentAuth(),
     getCurrentProfile(),
     getFavoriteWorlds(),
+    cookies(),
   ]);
+  // Dernier monde visité (même cookie que app/page.tsx) — lien direct du
+  // bouton "Mondes" vers `/w/<id>` plutôt que `/w` (qui repasse par `/` pour
+  // la résolution). Pas de revérification d'appartenance ici : la page cible
+  // s'en charge déjà (notFound() si on a quitté ce monde entre-temps).
+  const lastWorldId = cookieStore.get("last_world_id")?.value ?? null;
 
   const adminFlag = profile?.is_admin === true;
   const profileData = profile
@@ -35,7 +42,7 @@ export default async function SidebarRail() {
       <ScrollArea className="w-full flex-1 min-h-0">
         <div className="flex flex-col items-center gap-1 w-full">
 
-          <WorldsQuickAccess worlds={favoriteWorlds} label={t("worlds")} />
+          <WorldsQuickAccess worlds={favoriteWorlds} label={t("worlds")} lastWorldId={lastWorldId} />
 
           {featureFlags.public_worlds && (
             <RailIcon href="/explore" label={t("explore")}>

@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Interface",
+    text: "Le bouton « Mondes » pointe directement vers ton dernier monde visité (plus besoin de passer par une redirection intermédiaire). Le favori déjà actif (monde ou chatroom en cours) n'est plus cliquable dans la liste et gagne un contour accent, au lieu de renaviguer vers la page déjà affichée.",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
     text: "Le bouton « Mondes » de la barre d'icônes principale ramène directement à ton dernier monde visité, et affiche en permanence tes mondes favoris juste en dessous (plus besoin de cliquer pour les voir). Dans le sélecteur de monde de la sidebar, les favoris remontent en tête de liste avec une petite étoile.",
   },
   {
