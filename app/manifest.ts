@@ -7,7 +7,7 @@ export const revalidate = 0;
 // non connecté doit pouvoir installer l'app, donc getFavoriteWorlds() doit
 // tolérer l'absence de session (retourne []) plutôt que d'en dépendre.
 export default async function manifest(): Promise<MetadataRoute.Manifest> {
-  const favorites = await getFavoriteWorlds();
+  const favorites = await getFavoriteWorlds(4);
 
   return {
     name: "WVLDS",

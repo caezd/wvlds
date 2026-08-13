@@ -1,20 +1,22 @@
-import { ShoppingBasket, ShieldCheck, Dices, UserRound } from "lucide-react";
+import { ShoppingBasket, ShieldCheck, Dices, UserRound, Compass } from "lucide-react";
 import { RailIcon } from "./SidebarRailIcons";
+import { WorldsQuickAccess } from "./WorldsQuickAccess";
 import { NotificationBellButton } from "@/components/notifications";
 import { DmsToggleButton, PinnedDmAvatarsRail } from "@/components/dms";
 import { UserMenuButton } from "./UserMenuButton";
-import { getCachedFeatureFlags, getCurrentProfile, getCurrentAuth } from "@/lib/currentRequest";
+import { getCachedFeatureFlags, getCurrentProfile, getCurrentAuth, getFavoriteWorlds } from "@/lib/currentRequest";
 import { SidebarLogo } from "./SidebarLogo";
 import { getTranslations } from "next-intl/server";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default async function SidebarRail() {
   // Tout est mémoïsé pour la requête (partagé avec les layouts).
-  const [t, featureFlags, auth, profile] = await Promise.all([
+  const [t, featureFlags, auth, profile, favoriteWorlds] = await Promise.all([
     getTranslations("nav"),
     getCachedFeatureFlags(),
     getCurrentAuth(),
     getCurrentProfile(),
+    getFavoriteWorlds(),
   ]);
 
   const adminFlag = profile?.is_admin === true;
@@ -32,6 +34,14 @@ export default async function SidebarRail() {
       {/* Navigation globale */}
       <ScrollArea className="w-full flex-1 min-h-0">
         <div className="flex flex-col items-center gap-1 w-full">
+
+          <WorldsQuickAccess worlds={favoriteWorlds} label={t("worlds")} />
+
+          {featureFlags.public_worlds && (
+            <RailIcon href="/explore" label={t("explore")}>
+              <Compass size={17} />
+            </RailIcon>
+          )}
 
           <RailIcon href="/p" label={t("personas")}>
             <UserRound size={17} />

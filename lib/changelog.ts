@@ -9,6 +9,21 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Interface",
+    text: "Le bouton « Mondes » de la barre d'icônes principale ramène directement à ton dernier monde visité, et affiche en permanence tes mondes favoris juste en dessous (plus besoin de cliquer pour les voir). Dans le sélecteur de monde de la sidebar, les favoris remontent en tête de liste avec une petite étoile.",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
+    text: "Le rail des mondes rejoints est temporairement retiré au profit d'un bouton « Mondes » dans la barre d'icônes principale : il déplie sur place tes mondes favoris pour y accéder rapidement.",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
+    text: "L'en-tête de la sidebar d'un monde redevient le sélecteur de monde (dropdown avec la liste de tes mondes, créer un monde, quitter…), à la place du simple nom + icône réglages. Le lien « Paramètres » reprend sa place dans le menu de navigation du monde.",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
     text: "Sur mobile, le menu « Insérer un bloc » du composeur s'ouvre désormais en tiroir plein écran : taper un bloc ou une option déplie son aperçu et sa description directement sous lui (avant, ces informations n'étaient visibles qu'au survol sur ordinateur, donc invisibles sur mobile — le choix de couleur des bulles de dialogue en était même inaccessible).",
   },
   {
