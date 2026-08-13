@@ -41,6 +41,10 @@ export function WorldsQuickAccess({
             className={cn(
               "relative flex h-9 w-9 items-center justify-center rounded-xl transition-colors hover:text-mist-50",
               highlighted ? "text-mist-50" : "text-mist-100",
+              // Sans favoris, le fond de carte (sur le conteneur) ne s'affiche
+              // pas — on le pose alors directement sur le bouton pour que la
+              // pastille active ne se retrouve pas seule, sans boîte (cf. RailIcon).
+              isActive && !hasFavorites && "bg-carbon-700",
             )}
           >
             {isActive && (

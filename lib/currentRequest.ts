@@ -102,41 +102,53 @@ export const getUserWorlds = cache(async (): Promise<WorldItem[]> => {
   const userId = await getCurrentUserId();
   if (!userId) return [];
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("worlds")
-    .select("id, name, icon_url, owner_id, description, banner_url, color, visibility, restrict_inventory, restrict_skills, world_members!inner(user_id), world_user_preferences(is_favorite)")
-    .eq("world_members.user_id", userId)
-    .eq("world_user_preferences.user_id", userId)
-    .is("deleted_at", null)
-    .eq("is_archived", false)
-    .order("name");
-  return ((data ?? []) as unknown as (WorldItem & { world_user_preferences: { is_favorite: boolean }[] })[]).map(
-    ({ world_user_preferences, ...world }) => ({
-      ...world,
-      is_favorite: world_user_preferences?.[0]?.is_favorite ?? false,
-    }),
-  );
+  // Deux requêtes séparées plutôt qu'un embed `world_user_preferences(is_favorite)`
+  // filtré par `.eq("world_user_preferences.user_id", userId)` : ce filtre sur
+  // une relation embarquée (même non-`!inner`) exclut les mondes sans ligne de
+  // préférences (cas normal — la ligne n'est créée qu'au premier réglage), donc
+  // amputait la liste des mondes rejoints n'ayant jamais eu de préférences.
+  const [{ data }, { data: favorites }] = await Promise.all([
+    supabase
+      .from("worlds")
+      .select("id, name, icon_url, owner_id, description, banner_url, color, visibility, restrict_inventory, restrict_skills, world_members!inner(user_id)")
+      .eq("world_members.user_id", userId)
+      .is("deleted_at", null)
+      .eq("is_archived", false)
+      .order("name"),
+    supabase
+      .from("world_user_preferences")
+      .select("world_id")
+      .eq("user_id", userId)
+      .eq("is_favorite", true),
+  ]);
+  const favoriteIds = new Set((favorites ?? []).map((f: { world_id: string }) => f.world_id));
+  return ((data ?? []) as WorldItem[]).map((world) => ({
+    ...world,
+    is_favorite: favoriteIds.has(world.id),
+  }));
 });
 
 export type FavoriteWorld = { id: string; name: string; icon_url: string | null };
 
 /**
  * Mondes épinglés par l'utilisateur courant (world_user_preferences.is_favorite),
- * mémoïsée — utilisée pour les raccourcis du manifest PWA. Limité à 4 : Chrome
- * n'affiche de toute façon pas plus de raccourcis.
+ * mémoïsée — partagée entre les raccourcis du manifest PWA (`limit: 4`, Chrome
+ * n'affiche de toute façon pas plus de raccourcis) et le panneau favoris du
+ * rail d'icônes (`SidebarRail`, sans limite).
  */
-export const getFavoriteWorlds = cache(async (): Promise<FavoriteWorld[]> => {
+export const getFavoriteWorlds = cache(async (limit?: number): Promise<FavoriteWorld[]> => {
   const userId = await getCurrentUserId();
   if (!userId) return [];
   const supabase = await createClient();
-  const { data } = await supabase
+  let query = supabase
     .from("worlds")
     .select("id, name, icon_url, world_user_preferences!inner(is_favorite)")
     .eq("world_user_preferences.user_id", userId)
     .eq("world_user_preferences.is_favorite", true)
     .is("deleted_at", null)
     .eq("is_archived", false)
-    .order("name")
-    .limit(4);
+    .order("name");
+  if (limit) query = query.limit(limit);
+  const { data } = await query;
   return (data ?? []).map(({ id, name, icon_url }) => ({ id, name, icon_url }));
 });

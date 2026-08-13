@@ -68,6 +68,10 @@ describe("WorldsQuickAccess", () => {
     const link = screen.getByLabelText("Mondes");
     expect(link.querySelector("span.bg-mist-50")).toBeTruthy();
     expect(link).toHaveClass("text-mist-50");
+    // Sans favoris, le conteneur n'a pas le fond de carte — la pastille ne
+    // doit pas se retrouver seule, sans boîte : le bouton porte lui-même le
+    // fond actif dans ce cas.
+    expect(link).toHaveClass("bg-carbon-700");
   });
 
   it("affiche la pastille active dans une chatroom (/c/...)", () => {
