@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronsUpDown, LogOut, Plus } from "lucide-react";
+import { ChevronsUpDown, LogOut, Plus, Star } from "lucide-react";
 import { WorldAvatar } from "@/components/avatars/WorldAvatar";
 import { CreateWorldDialog } from "./CreateWorldDialog";
 import { useNotifications } from "@/components/providers/NotificationsProvider";
@@ -38,6 +38,7 @@ export type WorldItem = {
   visibility?: string | null;
   restrict_inventory?: boolean | null;
   restrict_skills?: boolean | null;
+  is_favorite?: boolean;
 };
 
 export function WorldPickerHeader({
@@ -105,7 +106,11 @@ export function WorldPickerHeader({
     return () => document.removeEventListener("pointerdown", onPointerDown);
   }, [open]);
 
-  const otherWorlds = worlds.filter((w) => w.id !== currentWorldId);
+  // Favoris en tête de liste — tri stable, l'ordre alphabétique (déjà
+  // appliqué côté serveur) est conservé au sein de chaque groupe.
+  const otherWorlds = worlds
+    .filter((w) => w.id !== currentWorldId)
+    .sort((a, b) => Number(!!b.is_favorite) - Number(!!a.is_favorite));
 
   return (
     <div className="shrink-0 border-b px-2 py-1 h-header-height flex flex-col justify-center min-w-0">
@@ -136,6 +141,9 @@ export function WorldPickerHeader({
                         )}
                       </div>
                       <span className="flex-1 truncate text-left">{w.name}</span>
+                      {w.is_favorite && (
+                        <Star className="h-3.5 w-3.5 shrink-0 fill-yellow-500 text-yellow-500" />
+                      )}
                     </button>
                   );
 

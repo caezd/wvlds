@@ -104,12 +104,18 @@ export const getUserWorlds = cache(async (): Promise<WorldItem[]> => {
   const supabase = await createClient();
   const { data } = await supabase
     .from("worlds")
-    .select("id, name, icon_url, owner_id, description, banner_url, color, visibility, restrict_inventory, restrict_skills, world_members!inner(user_id)")
+    .select("id, name, icon_url, owner_id, description, banner_url, color, visibility, restrict_inventory, restrict_skills, world_members!inner(user_id), world_user_preferences(is_favorite)")
     .eq("world_members.user_id", userId)
+    .eq("world_user_preferences.user_id", userId)
     .is("deleted_at", null)
     .eq("is_archived", false)
     .order("name");
-  return (data as WorldItem[]) ?? [];
+  return ((data ?? []) as unknown as (WorldItem & { world_user_preferences: { is_favorite: boolean }[] })[]).map(
+    ({ world_user_preferences, ...world }) => ({
+      ...world,
+      is_favorite: world_user_preferences?.[0]?.is_favorite ?? false,
+    }),
+  );
 });
 
 export type FavoriteWorld = { id: string; name: string; icon_url: string | null };

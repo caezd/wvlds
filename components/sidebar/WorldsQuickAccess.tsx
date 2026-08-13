@@ -1,17 +1,21 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Globe } from "lucide-react";
 import { WorldAvatar } from "@/components/avatars/WorldAvatar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import type { FavoriteWorld } from "@/lib/currentRequest";
 
-/** Bouton "Mondes" du rail d'icônes : déplie sur place (pas de panneau
- *  flottant séparé) les mondes favoris de l'utilisateur pour un accès rapide
- *  — cf. rail des mondes (WorldsRail), temporairement masqué au profit de ce
- *  panneau intégré. */
+/** Carte "Mondes" du rail d'icônes : le bouton lui-même ramène directement
+ *  au dernier monde visité (`/` redirige via le cookie `last_world_id`, cf.
+ *  app/page.tsx) — plus de toggle à ouvrir. Les mondes favoris restent
+ *  affichés en permanence en dessous pour un accès rapide — cf. rail des
+ *  mondes (WorldsRail), temporairement masqué au profit de ce panneau
+ *  intégré. Sans favoris, le bouton redevient une icône de rail normale
+ *  (pas de fond permanent) — sauf le pastille active (cf. RailIcon), affichée
+ *  quand on est dans un monde ou une chatroom. */
 export function WorldsQuickAccess({
   worlds,
   label,
@@ -19,42 +23,36 @@ export function WorldsQuickAccess({
   worlds: FavoriteWorld[];
   label: string;
 }) {
-  const [open, setOpen] = useState(false);
+  const hasFavorites = worlds.length > 0;
+  const pathname = usePathname();
+  const isActive = (pathname?.startsWith("/w/") || pathname?.startsWith("/c/")) ?? false;
+  const highlighted = hasFavorites || isActive;
 
   return (
-    // Le fond ne se limite pas au bouton : replié, seule sa forme (h-9 w-9)
-    // compte ; déplié, ce même conteneur s'étire pour envelopper d'un seul
-    // bloc arrondi le bouton et le contenu déplié (mondes favoris).
-    // Pas de padding ajouté : le cadre colle exactement à la taille des
-    // boutons (h-9 w-9) empilés, le bouton ne change pas de taille à l'ouverture.
-    <div
-      className={cn(
-        "flex flex-col items-center gap-1 rounded-xl transition-colors",
-        open && "bg-carbon-700",
-      )}
-    >
+    // Le fond englobe d'un seul bloc arrondi le bouton et les mondes
+    // favoris — toujours "ouvert" dès qu'il y en a, pas de padding ajouté :
+    // le cadre colle exactement à la taille des boutons (h-9 w-9) empilés.
+    <div className={cn("flex flex-col items-center gap-1 rounded-xl", hasFavorites && "bg-carbon-700")}>
       <Tooltip>
         <TooltipTrigger asChild>
-          <button
-            type="button"
-            onClick={() => setOpen((v) => !v)}
-            aria-expanded={open}
+          <Link
+            href="/"
             aria-label={label}
             className={cn(
               "relative flex h-9 w-9 items-center justify-center rounded-xl transition-colors hover:text-mist-50",
-              open ? "text-mist-50" : "text-mist-100",
+              highlighted ? "text-mist-50" : "text-mist-100",
             )}
           >
-            {open && (
+            {isActive && (
               <span className="absolute w-[8px] h-[20px] bg-mist-50 -left-2 -translate-x-[6px] rounded-full" />
             )}
             <Globe size={17} />
-          </button>
+          </Link>
         </TooltipTrigger>
         <TooltipContent side="right" sideOffset={8}>{label}</TooltipContent>
       </Tooltip>
 
-      {open && worlds.length > 0 && (
+      {hasFavorites && (
         <div className="flex w-full flex-col items-center gap-1">
           {worlds.map((world) => (
             <Tooltip key={world.id}>
