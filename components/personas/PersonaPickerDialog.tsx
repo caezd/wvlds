@@ -239,7 +239,7 @@ export function PersonaPickerDialog({
   const defaultTriggerContent = (
     <>
       {!selected && (
-        <span className="absolute inset-0 rounded-md animate-ping pointer-events-none bg-primary/30 scale-75" />
+        <span className="absolute inset-0 rounded-md animate-ping pointer-events-none bg-primary/30 scale-65" />
       )}
       <button
         type="button"
@@ -255,7 +255,7 @@ export function PersonaPickerDialog({
             </span>
           )
         ) : (
-          <span className="h-full w-full grid place-items-center  text-muted-foreground bg-background hover:bg-muted">
+          <span className="h-full w-full grid place-items-center  text-muted-foreground bg-background hover:bg-muted border rounded-md">
             <UserPlus size={16} />
           </span>
         )}

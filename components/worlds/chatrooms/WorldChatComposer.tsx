@@ -196,7 +196,8 @@ export function WorldChatComposer({
       </div>
       <Button
         type="button"
-        variant="outline"
+        variant="ghost"
+        className="rounded-md"
         size="icon"
         title={t("composer.titleRandomize")}
         onClick={() => setTitle(randomTitle())}

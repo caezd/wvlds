@@ -491,8 +491,8 @@ export function NotificationBellButton() {
                     aria-label={t("title")}
                     aria-pressed={panelOpen}
                     className={cn(
-                        "relative flex h-9 w-9 bg-carbon-800 items-center justify-center rounded-xl transition-colors",
-                        panelOpen ? "text-accent bg-accent/10" : "hover:bg-muted hover:text-foreground",
+                        "relative flex h-9 w-9 items-center justify-center rounded-md transition-colors",
+                        panelOpen ? "text-accent bg-accent/10" : "text-mist-100 hover:bg-muted hover:text-mist-50",
                     )}
                 >
                     <Bell size={17} />

@@ -102,10 +102,10 @@ export function DmsToggleButton() {
           aria-label={t("title")}
           aria-pressed={panelOpen}
           className={cn(
-            "relative flex h-9 w-9 items-center bg-carbon-800 justify-center rounded-xl transition-colors",
+            "relative flex h-9 w-9 items-center justify-center rounded-md transition-colors",
             panelOpen
               ? "text-accent bg-accent/10"
-              : "text-muted-foreground hover:bg-muted hover:text-foreground",
+              : "text-mist-100 hover:bg-muted hover:text-mist-50",
           )}
         >
           <Mail size={17} />
