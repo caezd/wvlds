@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ChevronDown, ChevronRight, MessagesSquare } from "lucide-react";
@@ -68,21 +68,41 @@ export function ChatroomsNavDropdown({
   // réellement disponible, alors qu'un changement d'état si.
   const [listEl, setListEl] = useState<HTMLDivElement | null>(null);
 
-  // Rafraîchit la liste à l'ouverture, et repart sur la première page.
   // list_participated_chatrooms (et non list_chatrooms_nav) : ne remonte que
   // les salles où l'utilisateur a posté au moins un message — pas toutes
   // celles du monde.
+  async function fetchRooms(id: string) {
+    const { data, error } = await supabase.rpc("list_participated_chatrooms", {
+      p_world_id: id,
+      p_limit: 100,
+    });
+    if (!error && data) setRooms(data as NavRoom[]);
+  }
+
+  // Le composant n'est pas remonté en changeant de monde (pas de `key` côté
+  // parent) : sans ce rafraîchissement dédié, `rooms` restait celle de
+  // l'ancien monde jusqu'à la prochaine ouverture du dropdown, affichée le
+  // temps d'un clignement le temps que l'effet ci-dessous se déclenche.
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    if (!worldId) return;
+    setVisible(PAGE_SIZE);
+    void fetchRooms(worldId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [worldId]);
+
+  // Rafraîchit aussi à l'ouverture (activité depuis le dernier chargement),
+  // et repart sur la première page.
   useEffect(() => {
     if (!open || !worldId) return;
     setVisible(PAGE_SIZE);
-    (async () => {
-      const { data, error } = await supabase.rpc("list_participated_chatrooms", {
-        p_world_id: worldId,
-        p_limit: 100,
-      });
-      if (!error && data) setRooms(data as NavRoom[]);
-    })();
-  }, [open, worldId, supabase]);
+    void fetchRooms(worldId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   function onScroll() {
     if (!listEl) return;

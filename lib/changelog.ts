@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Correctif",
+    text: "En changeant de monde, le menu déroulant des conversations dans l'en-tête affichait brièvement l'ancien monde à l'ouverture — il se rafraîchit désormais dès le changement de monde, pas seulement à l'ouverture.",
+  },
+  {
+    date: "2026-08",
     tag: "Interface",
     text: "L'avatar d'un membre dans la liste « Membres » d'un monde affiche désormais une pastille de présence (en ligne, absent, hors ligne), comme pour les personas dans une chatroom.",
   },
