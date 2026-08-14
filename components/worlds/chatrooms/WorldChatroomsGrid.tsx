@@ -134,8 +134,8 @@ export function WorldChatroomsGrid({
   }
 
   return (
-    <div className="rounded-lg border p-3 md:p-4">
-      <ul className="grid gap-x-6 md:grid-cols-2">
+    <div className="rounded-lg border p-2">
+      <ul className="grid gap-x-2 md:grid-cols-2">
         {visibleRooms.map((room) => {
           const href = `/c/${room.id}`;
           const unread = roomUnread[room.id] ?? room.unread_count ?? 0;

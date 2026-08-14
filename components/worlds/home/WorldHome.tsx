@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Home, Maximize2, Minimize2, Star } from "lucide-react";
+import { Home, LayoutGrid, Maximize2, Minimize2, Star } from "lucide-react";
 
 import { WorldHeroCard } from "./WorldHeroCard";
 import { WorldChatComposer } from "../chatrooms/WorldChatComposer";
@@ -18,6 +18,7 @@ import { useMobileSidebar } from "@/components/providers/MobileSidebarProvider";
 import type { AsidePersona } from "@/components/personas/WorldPersonaAsideClient";
 import { saveWorldPrefs, toggleWorldFavorite } from "@/app/(protected)/w/actions";
 import { cn } from "@/lib/utils";
+import { resolveWorldHomeLayout, type WorldHomeWidgetId } from "./worldHomeWidgets";
 
 // Onglets secondaires — un seul est actif à la fois, chargés à la demande
 // pour ne pas alourdir le bundle de la vue par défaut du monde.
@@ -29,6 +30,9 @@ const WorldMap = dynamic(() => import("../map/WorldMap").then((m) => m.WorldMap)
 const WorldTimeline = dynamic(() => import("../timeline/WorldTimeline").then((m) => m.WorldTimeline));
 const WorldMembersPanel = dynamic(() => import("../members/WorldMembersPanel").then((m) => m.WorldMembersPanel));
 const WorldPersonasPanel = dynamic(() => import("@/components/personas/WorldPersonasPanel").then((m) => m.WorldPersonasPanel));
+const WorldStatsWidget = dynamic(() => import("./widgets/WorldStatsWidget").then((m) => m.WorldStatsWidget));
+const WorldMembersOnlineWidget = dynamic(() => import("./widgets/WorldMembersOnlineWidget").then((m) => m.WorldMembersOnlineWidget));
+const WorldHomeLayoutEditor = dynamic(() => import("./WorldHomeLayoutEditor").then((m) => m.WorldHomeLayoutEditor));
 
 type WorldPrefs = { main_expanded: boolean; is_favorite: boolean; wiki_sidebar_width?: number };
 
@@ -92,6 +96,8 @@ export function WorldHome({
   const [mainExpanded, setMainExpanded] = useState(initialPrefs?.main_expanded ?? false);
   const [isFavorite, setIsFavorite] = useState(initialPrefs?.is_favorite ?? false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(initialCategoryId ?? null);
+  const [homeLayout, setHomeLayout] = useState<WorldHomeWidgetId[]>(() => resolveWorldHomeLayout(world.home_layout));
+  const [editingLayout, setEditingLayout] = useState(false);
 
   const baseHref = `/w/${worldId}`;
 
@@ -115,6 +121,43 @@ export function WorldHome({
     const next = !mainExpanded;
     setMainExpanded(next);
     void saveWorldPrefs(worldId, { main_expanded: next });
+  }
+
+  function renderWidget(id: WorldHomeWidgetId) {
+    switch (id) {
+      case "categories":
+        return (
+          <WorldCategoryFolders
+            key={id}
+            worldId={worldId}
+            selectedCategoryId={selectedCategoryId}
+            onSelectCategory={handleSelectCategory}
+          />
+        );
+      case "composer":
+        return canPost && create_chatroom ? (
+          <WorldChatComposer
+            key={id}
+            worldId={worldId}
+            timelineConfig={hasTimeline ? (world.timeline_config as WorldTimelineConfig) : undefined}
+          />
+        ) : null;
+      case "chatrooms":
+        return (
+          <WorldChatroomsGrid
+            key={id}
+            worldId={worldId}
+            initialRooms={initialRooms}
+            categoryId={selectedCategoryId}
+          />
+        );
+      case "stats":
+        return <WorldStatsWidget key={id} worldId={worldId} />;
+      case "members_online":
+        return <WorldMembersOnlineWidget key={id} worldId={worldId} />;
+      default:
+        return null;
+    }
   }
 
   const showCanvas = view === "canvas";
@@ -200,6 +243,26 @@ export function WorldHome({
               title={world.name}
               right={
                 <>
+                  {canAdmin && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          onClick={() => setEditingLayout((v) => !v)}
+                          aria-label={editingLayout ? t("home.done") : t("home.customize")}
+                          className={cn(
+                            "flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-hoverCard",
+                            editingLayout ? "text-foreground bg-hoverCard" : "text-muted-foreground hover:text-foreground",
+                          )}
+                        >
+                          <LayoutGrid size={16} />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" sideOffset={6}>
+                        {editingLayout ? t("home.done") : t("home.customize")}
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <button
@@ -252,22 +315,15 @@ export function WorldHome({
                   />
                 </div>
                 <div className="mx-auto flex w-full flex-col gap-6 px-4 pb-4 [--world-content-max-width:36rem] lg:[--world-content-max-width:44rem] max-w-(--world-content-max-width)">
-                  <WorldCategoryFolders
-                    worldId={worldId}
-                    selectedCategoryId={selectedCategoryId}
-                    onSelectCategory={handleSelectCategory}
-                  />
-                  {canPost && create_chatroom && (
-                    <WorldChatComposer
+                  {editingLayout ? (
+                    <WorldHomeLayoutEditor
                       worldId={worldId}
-                      timelineConfig={hasTimeline ? (world.timeline_config as WorldTimelineConfig) : undefined}
+                      layout={homeLayout}
+                      onLayoutChange={setHomeLayout}
                     />
+                  ) : (
+                    homeLayout.map((id) => renderWidget(id))
                   )}
-                  <WorldChatroomsGrid
-                    worldId={worldId}
-                    initialRooms={initialRooms}
-                    categoryId={selectedCategoryId}
-                  />
                 </div>
               </div>
             </div>

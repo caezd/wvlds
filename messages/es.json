@@ -292,6 +292,21 @@
       "discardCancel": "Seguir escribiendo",
       "categoryPlaceholder": "Categoría",
       "categoryNone": "Ninguna"
+    },
+    "home": {
+      "customize": "Personalizar la página de inicio",
+      "done": "Listo",
+      "addWidget": "Añadir un widget",
+      "noWidgets": "No hay widgets mostrados — añada uno abajo.",
+      "widgets": {
+        "categories": "Categorías",
+        "composer": "Crear una partida",
+        "chatrooms": "Salas",
+        "stats": "Estadísticas",
+        "members_online": "Miembros en línea"
+      },
+      "onlineCount": "{count, plural, one {# miembro en línea} other {# miembros en línea}}",
+      "noneOnline": "Nadie en línea por ahora"
     }
   },
   "auth": {

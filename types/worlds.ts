@@ -101,4 +101,6 @@ export type World = {
   is_age_restricted?: boolean | null;
   /** Libellé personnalisé du lien wiki dans la sidebar (ex: "Compendium") — null = libellé traduit par défaut. */
   wiki_label?: string | null;
+  /** Ordre des widgets de la page d'accueil, réglé par un admin — null = ordre par défaut. */
+  home_layout?: string[] | null;
 };

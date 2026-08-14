@@ -292,6 +292,21 @@
       "discardCancel": "Continue writing",
       "categoryPlaceholder": "Category",
       "categoryNone": "None"
+    },
+    "home": {
+      "customize": "Customize homepage",
+      "done": "Done",
+      "addWidget": "Add a widget",
+      "noWidgets": "No widgets shown — add one below.",
+      "widgets": {
+        "categories": "Categories",
+        "composer": "Create a game",
+        "chatrooms": "Chatrooms",
+        "stats": "Stats",
+        "members_online": "Members online"
+      },
+      "onlineCount": "{count, plural, one {# member online} other {# members online}}",
+      "noneOnline": "No one online right now"
     }
   },
   "auth": {

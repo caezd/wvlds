@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Interface",
+    text: "La page d'accueil d'un monde devient personnalisable pour les admins : un nouveau bouton dans l'en-tête permet de réorganiser ses blocs (catégories, composer, salons) par glisser-déposer, et d'y ajouter deux nouveaux widgets — statistiques du monde et membres en ligne. L'ordre choisi s'applique à tous les visiteurs du monde.",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
     text: "Le bouton « Mondes » pointe directement vers ton dernier monde visité (plus besoin de passer par une redirection intermédiaire). Le favori déjà actif (monde ou chatroom en cours) n'est plus cliquable dans la liste et gagne un contour accent, au lieu de renaviguer vers la page déjà affichée.",
   },
   {

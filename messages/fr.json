@@ -293,6 +293,21 @@
       "discardCancel": "Continuer à écrire",
       "categoryPlaceholder": "Catégorie",
       "categoryNone": "Aucune"
+    },
+    "home": {
+      "customize": "Personnaliser la page d'accueil",
+      "done": "Terminé",
+      "addWidget": "Ajouter un widget",
+      "noWidgets": "Aucun widget affiché — ajoutez-en un ci-dessous.",
+      "widgets": {
+        "categories": "Catégories",
+        "composer": "Créer une partie",
+        "chatrooms": "Salons",
+        "stats": "Statistiques",
+        "members_online": "Membres en ligne"
+      },
+      "onlineCount": "{count, plural, one {# membre en ligne} other {# membres en ligne}}",
+      "noneOnline": "Personne en ligne pour le moment"
     }
   },
   "auth": {
