@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Interface",
+    text: "L'avatar d'un membre dans la liste « Membres » d'un monde affiche désormais une pastille de présence (en ligne, absent, hors ligne), comme pour les personas dans une chatroom.",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
     text: "Le bouton « Mondes » pointe directement vers ton dernier monde visité (plus besoin de passer par une redirection intermédiaire). Le favori déjà actif (monde ou chatroom en cours) n'est plus cliquable dans la liste et gagne un contour accent, au lieu de renaviguer vers la page déjà affichée.",
   },
   {
