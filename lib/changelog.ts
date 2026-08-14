@@ -9,6 +9,26 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Interface",
+    text: "Une catégorie de chatrooms n'a plus qu'une seule image à gérer (au lieu d'une bannière et d'une icône séparées) — utilisée à la fois pour la grande carte et les petits avatars. Un bouton « Retirer l'image » permet aussi de l'effacer, ce qui était impossible avant pour la bannière.",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
+    text: "En modifiant l'image d'une catégorie de chatrooms, valider le recadrage soumettait aussi le formulaire malgré soi, ce qui enregistrait la catégorie avant la fin du téléversement — la nouvelle image n'était donc jamais prise en compte. Corrigé pour ce sélecteur d'image, utilisé partout dans l'app (avatars, bannières…).",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
+    text: "Modifier une catégorie de chatrooms (titre, description, image) s'enregistrait bien, mais l'affichage ne se mettait pas à jour en temps réel — il fallait recharger la page pour voir le changement.",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
+    text: "Les catégories de chatrooms s'affichent désormais en grandes cartes avec leur image de bannière et leur description, à la place des petites pastilles avec juste le nombre de sujets.",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
     text: "La page d'accueil d'un monde devient personnalisable pour les admins : un nouveau bouton dans l'en-tête permet de réorganiser ses blocs (catégories, composer, salons) par glisser-déposer, et d'y ajouter deux nouveaux widgets — statistiques du monde et membres en ligne. L'ordre choisi s'applique à tous les visiteurs du monde.",
   },
   {

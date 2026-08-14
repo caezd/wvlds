@@ -17,8 +17,8 @@ vi.mock("next-intl", () => ({
 import { WorldCategoryFolders } from "@/components/worlds/chatrooms/WorldCategoryFolders";
 
 const categories = [
-  { id: "cat-1", title: "Annonces", banner_url: null, icon_url: null, position: 0 },
-  { id: "cat-2", title: "Hors-sujet", banner_url: null, icon_url: null, position: 1 },
+  { id: "cat-1", title: "Annonces", description: null, banner_url: null, icon_url: null, position: 0 },
+  { id: "cat-2", title: "Hors-sujet", description: null, banner_url: null, icon_url: null, position: 1 },
 ];
 
 const chatroomsByCategory = [
@@ -86,5 +86,73 @@ describe("WorldCategoryFolders", () => {
 
     screen.getByText("Annonces").closest("button")!.click();
     expect(onSelectCategory).toHaveBeenCalledWith(null);
+  });
+
+  it("affiche la description à la place du nombre de sujets quand elle est renseignée", async () => {
+    const localMock = createSupabaseMock({
+      results: [
+        {
+          data: [
+            { id: "cat-1", title: "Annonces", description: "Les news du monde", banner_url: null, icon_url: null, position: 0 },
+          ],
+        },
+        { data: [] },
+      ],
+    });
+    (createClient as ReturnType<typeof vi.fn>).mockReturnValue(localMock.client);
+
+    await act(async () => {
+      render(<WorldCategoryFolders worldId="world-1" selectedCategoryId={null} onSelectCategory={vi.fn()} />);
+    });
+
+    expect(screen.getByText("Les news du monde")).toBeInTheDocument();
+    expect(screen.queryByText("0 sujet(s)")).not.toBeInTheDocument();
+  });
+
+  it("affiche l'image de bannière de la catégorie quand elle est renseignée", async () => {
+    const localMock = createSupabaseMock({
+      results: [
+        {
+          data: [
+            { id: "cat-1", title: "Annonces", description: null, banner_url: "https://x/banner.png", icon_url: null, position: 0 },
+          ],
+        },
+        { data: [] },
+      ],
+    });
+    (createClient as ReturnType<typeof vi.fn>).mockReturnValue(localMock.client);
+
+    let container!: HTMLElement;
+    await act(async () => {
+      ({ container } = render(
+        <WorldCategoryFolders worldId="world-1" selectedCategoryId={null} onSelectCategory={vi.fn()} />,
+      ));
+    });
+
+    expect(container.querySelector("img")).toHaveAttribute("src", expect.stringContaining("banner.png"));
+  });
+
+  it("n'étire pas l'image de l'icône (petit format) sur la grande carte quand il n'y a pas de bannière", async () => {
+    const localMock = createSupabaseMock({
+      results: [
+        {
+          data: [
+            { id: "cat-1", title: "Annonces", description: null, banner_url: null, icon_url: "https://x/icon.png", position: 0 },
+          ],
+        },
+        { data: [] },
+      ],
+    });
+    (createClient as ReturnType<typeof vi.fn>).mockReturnValue(localMock.client);
+
+    let container!: HTMLElement;
+    await act(async () => {
+      ({ container } = render(
+        <WorldCategoryFolders worldId="world-1" selectedCategoryId={null} onSelectCategory={vi.fn()} />,
+      ));
+    });
+
+    expect(container.querySelector("img")).toBeNull();
+    expect(screen.getByText("A")).toBeInTheDocument();
   });
 });

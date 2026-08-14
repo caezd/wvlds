@@ -1,15 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
-import { CategoryAvatar } from "@/components/worlds/catalogue/CategoryAvatar";
 import { cn } from "@/lib/utils";
 
 type Category = {
   id: string;
   title: string;
+  description: string | null;
   banner_url: string | null;
   icon_url: string | null;
   position: number;
@@ -36,7 +37,7 @@ export function WorldCategoryFolders({
       const [{ data: cats }, { data: rooms }] = await Promise.all([
         supabase
           .from("chatroom_categories")
-          .select("id, title, banner_url, icon_url, position")
+          .select("id, title, description, banner_url, icon_url, position")
           .eq("world_id", worldId)
           .order("position"),
         supabase.from("chatrooms").select("category_id").eq("world_id", worldId),
@@ -74,33 +75,40 @@ export function WorldCategoryFolders({
   if (categories.length === 0) return null;
 
   return (
-    <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+    <div className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-1">
       {categories.map((cat) => {
         const isActive = selectedCategoryId === cat.id;
+        // icon_url est une petite image dédiée aux avatars (sidebar) — l'étirer
+        // sur la grande carte la pixelliserait ; seule la bannière (pensée pour
+        // du grand format) convient ici.
+        const image = cat.banner_url;
         return (
           <button
             key={cat.id}
             type="button"
             onClick={() => onSelectCategory(isActive ? null : cat.id)}
             className={cn(
-              "flex min-w-40 max-w-56 shrink-0 items-center gap-2.5 rounded-lg border p-2 text-left transition-colors",
+              "flex w-36 shrink-0 flex-col overflow-hidden rounded-xl border text-left transition-colors sm:w-44",
               isActive
-                ? "border-primary bg-primary/5"
-                : "border bg-background hover:border-border hover:bg-secondary/30",
+                ? "border-primary ring-1 ring-primary"
+                : "border-border-soft hover:border-border",
             )}
           >
-            <CategoryAvatar
-              title={cat.title}
-              bannerUrl={cat.banner_url}
-              iconUrl={cat.icon_url}
-              className="h-9 w-9 rounded-md"
-            />
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-foreground leading-tight">{cat.title}</p>
-              <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                {t("sidebar.subjects", { count: counts.get(cat.id) ?? 0 })}
-              </p>
-            </div>
+            <span className="relative block aspect-[4/3] w-full shrink-0 bg-muted-foreground/10">
+              {image ? (
+                <Image src={image} alt="" fill sizes="176px" className="object-cover" />
+              ) : (
+                <span className="flex h-full w-full items-center justify-center text-lg font-medium text-muted-foreground">
+                  {cat.title[0]?.toUpperCase()}
+                </span>
+              )}
+            </span>
+            <span className="flex flex-col gap-0.5 bg-card px-2.5 py-2">
+              <span className="truncate text-sm font-semibold text-foreground">{cat.title}</span>
+              <span className="line-clamp-2 text-xs text-muted-foreground">
+                {cat.description || t("sidebar.subjects", { count: counts.get(cat.id) ?? 0 })}
+              </span>
+            </span>
           </button>
         );
       })}

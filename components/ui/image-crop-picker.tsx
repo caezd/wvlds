@@ -133,11 +133,12 @@ export function ImageCropPicker({
       </div>
 
       <div className="flex gap-2">
-        <Button variant="outline" size="sm" onClick={onCancel} disabled={uploading}>
+        <Button type="button" variant="outline" size="sm" onClick={onCancel} disabled={uploading}>
           <RotateCcw className="h-4 w-4 mr-1.5" />
           Autre image
         </Button>
         <Button
+          type="button"
           size="sm"
           disabled={uploading || !croppedAreaPixels}
           onClick={() => croppedAreaPixels && onConfirm(croppedAreaPixels)}
