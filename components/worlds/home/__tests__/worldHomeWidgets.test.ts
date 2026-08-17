@@ -42,4 +42,11 @@ describe("resolveWorldHomeLayout", () => {
   it("conserve l'annonce quand un admin l'a explicitement ajoutée à l'ordre", () => {
     expect(resolveWorldHomeLayout(["chatrooms", "announcement"])).toEqual(["chatrooms", "announcement"]);
   });
+
+  it("les raccourcis wiki et personas récentes sont connus mais pas activés par défaut (opt-in)", () => {
+    expect(ALL_WORLD_HOME_WIDGETS).toContain("wiki_shortcuts");
+    expect(ALL_WORLD_HOME_WIDGETS).toContain("personas_recent");
+    expect(DEFAULT_WORLD_HOME_LAYOUT).not.toContain("wiki_shortcuts");
+    expect(DEFAULT_WORLD_HOME_LAYOUT).not.toContain("personas_recent");
+  });
 });

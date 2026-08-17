@@ -10,7 +10,9 @@ export type WorldHomeWidgetId =
   | "chatrooms"
   | "stats"
   | "members_online"
-  | "announcement";
+  | "announcement"
+  | "wiki_shortcuts"
+  | "personas_recent";
 
 export const ALL_WORLD_HOME_WIDGETS: WorldHomeWidgetId[] = [
   "categories",
@@ -19,6 +21,8 @@ export const ALL_WORLD_HOME_WIDGETS: WorldHomeWidgetId[] = [
   "stats",
   "members_online",
   "announcement",
+  "wiki_shortcuts",
+  "personas_recent",
 ];
 
 /** Ordre affiché avant que l'admin n'ait jamais personnalisé la page. */

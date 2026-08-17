@@ -34,6 +34,8 @@ const WorldPersonasPanel = dynamic(() => import("@/components/personas/WorldPers
 const WorldStatsWidget = dynamic(() => import("./widgets/WorldStatsWidget").then((m) => m.WorldStatsWidget));
 const WorldMembersOnlineWidget = dynamic(() => import("./widgets/WorldMembersOnlineWidget").then((m) => m.WorldMembersOnlineWidget));
 const WorldAnnouncementWidget = dynamic(() => import("./widgets/WorldAnnouncementWidget").then((m) => m.WorldAnnouncementWidget));
+const WorldWikiShortcutsWidget = dynamic(() => import("./widgets/WorldWikiShortcutsWidget").then((m) => m.WorldWikiShortcutsWidget));
+const WorldRecentPersonasWidget = dynamic(() => import("./widgets/WorldRecentPersonasWidget").then((m) => m.WorldRecentPersonasWidget));
 
 type WorldPrefs = { main_expanded: boolean; is_favorite: boolean; wiki_sidebar_width?: number };
 
@@ -64,6 +66,7 @@ export function WorldHome({
   initialPrefs,
   view,
   initialCategoryId,
+  initialWikiSlug,
 }: {
   world: HeroWorld;
   worldId: string;
@@ -77,6 +80,7 @@ export function WorldHome({
   initialPrefs: WorldPrefs | null;
   view?: string;
   initialCategoryId?: string | null;
+  initialWikiSlug?: string | null;
 }) {
   const { create_chatroom, world_map, world_catalogue, world_timeline } = useFeatureFlags();
   const router = useRouter();
@@ -165,6 +169,10 @@ export function WorldHome({
             size={(world.announcement_size as AnnouncementSize | null) ?? "md"}
           />
         );
+      case "wiki_shortcuts":
+        return <WorldWikiShortcutsWidget key={id} worldId={worldId} />;
+      case "personas_recent":
+        return <WorldRecentPersonasWidget key={id} worldId={worldId} />;
       default:
         return null;
     }
@@ -228,6 +236,7 @@ export function WorldHome({
             canEdit={canEditTabs}
             initialSidebarWidth={initialPrefs?.wiki_sidebar_width}
             label={world.wiki_label}
+            initialSlug={initialWikiSlug}
           />
         ) : showMap && world_map ? (
           <WorldMap

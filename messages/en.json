@@ -302,10 +302,15 @@
         "chatrooms": "Chatrooms",
         "stats": "Stats",
         "members_online": "Members online",
-        "announcement": "Announcement"
+        "announcement": "Announcement",
+        "wiki_shortcuts": "Wiki shortcuts",
+        "personas_recent": "Recent personas"
       },
       "onlineCount": "{count, plural, one {# member online} other {# members online}}",
       "noneOnline": "No one online right now",
+      "wikiShortcuts": {
+        "updated": "Updated {time}"
+      },
       "announcement": {
         "add": "Add an announcement",
         "edit": "Edit announcement",

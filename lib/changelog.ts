@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Interface",
+    text: "Deux nouveaux widgets pour la page d'accueil d'un monde : « Raccourcis wiki » (dernières pages modifiées, lien direct) et « Personas récents » (dernières personas créées, aperçu au clic).",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
     text: "Nouveau widget « Annonce » pour la page d'accueil d'un monde : un admin peut y écrire du HTML et du CSS libres (3 hauteurs au choix), depuis un nouvel onglet « Page d'accueil » dans les réglages du monde. Le rendu passe par un cadre isolé où aucun script ne peut s'exécuter, quel que soit le contenu saisi.",
   },
   {
