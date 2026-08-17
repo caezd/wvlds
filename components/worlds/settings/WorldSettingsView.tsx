@@ -20,6 +20,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+// Popover + HsvColorPicker : utilisés par HomeColorField, désactivé
+// temporairement (voir plus bas) — imports retirés en attendant.
 import {
     Camera,
     Globe,
@@ -137,6 +139,92 @@ function LabelWithHelp({
     );
 }
 
+// Personnalisation des couleurs de la page d'accueil désactivée temporairement
+// (2026-08-17) — WorldHome.tsx ignore désormais home_body_color/home_panel_color
+// et applique toujours les couleurs par défaut du thème. Code conservé
+// ci-dessous pour réactivation future.
+//
+// Sélecteur de couleur pour un fond de page d'accueil — pastille + picker,
+// avec un bouton pour revenir à la couleur par défaut du thème (defaultSwatchClassName
+// reproduit exactement cette couleur via les mêmes classes Tailwind que l'affichage réel).
+// Le glissement dans le picker (canvas + slider de teinte) déclenche onChange
+// du HsvColorPicker à chaque pixel survolé — enregistrer à chaque appel
+// spammerait le serveur pendant tout le glissement. On bufferise donc la
+// couleur choisie localement (draft) et on ne persiste qu'à la fermeture
+// du popover (fin du glissement, quelle qu'en soit la cause : clic ailleurs,
+// Échap, ré-ouverture).
+//
+// function HomeColorField({
+//     label,
+//     help,
+//     value,
+//     defaultSwatchClassName,
+//     defaultHex,
+//     resetLabel,
+//     onChange,
+// }: {
+//     label: string;
+//     help: string;
+//     value: string;
+//     /** Classe Tailwind reproduisant la couleur par défaut réellement appliquée (ex: "bg-card"). */
+//     defaultSwatchClassName: string;
+//     /** Teinte de départ du picker quand aucune couleur n'est encore choisie (juste un point de départ visuel). */
+//     defaultHex: string;
+//     resetLabel: string;
+//     onChange: (hex: string) => void;
+// }) {
+//     const [open, setOpen] = React.useState(false);
+//     const [draft, setDraft] = React.useState(value);
+//
+//     function handleOpenChange(next: boolean) {
+//         if (next) {
+//             setDraft(value);
+//         } else if (draft !== value) {
+//             onChange(draft);
+//         }
+//         setOpen(next);
+//     }
+//
+//     return (
+//         <FormItem>
+//             <FormLabel>
+//                 <LabelWithHelp help={help}>{label}</LabelWithHelp>
+//             </FormLabel>
+//             <div className="flex items-center gap-2">
+//                 <Popover open={open} onOpenChange={handleOpenChange}>
+//                     <PopoverTrigger asChild>
+//                         <button
+//                             type="button"
+//                             className="flex items-center gap-2 rounded-md border border-border px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+//                         >
+//                             <span
+//                                 className={cn("h-3.5 w-3.5 rounded-full border border-border/60", !value && defaultSwatchClassName)}
+//                                 style={value ? { backgroundColor: value } : undefined}
+//                             />
+//                             {value || resetLabel}
+//                         </button>
+//                     </PopoverTrigger>
+//                     <PopoverContent className="w-[220px] p-3" align="start">
+//                         <HsvColorPicker color={draft || defaultHex} onChange={setDraft} presets={[]} />
+//                     </PopoverContent>
+//                 </Popover>
+//                 {value && (
+//                     <button
+//                         type="button"
+//                         onClick={() => {
+//                             setDraft("");
+//                             onChange("");
+//                         }}
+//                         className="text-xs text-muted-foreground transition-colors hover:text-foreground"
+//                     >
+//                         {resetLabel}
+//                     </button>
+//                 )}
+//             </div>
+//         </FormItem>
+//     );
+// }
+
 export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) {
     const supabase = createClient();
     const router = useRouter();
@@ -162,6 +250,8 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
     const [allowsRealAvatars, setAllowsRealAvatars] = React.useState(world.allows_real_avatars === true);
     const [allowsIllustratedAvatars, setAllowsIllustratedAvatars] = React.useState(world.allows_illustrated_avatars === true);
     const [togglingAvatarType, setTogglingAvatarType] = React.useState(false);
+
+    // homeBodyColor/homePanelColor : voir HomeColorField (désactivé temporairement) plus haut.
 
     const [tags, setTags] = React.useState<string[]>([]);
     const [newTag, setNewTag] = React.useState("");
@@ -425,7 +515,16 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
     }
 
     async function persistField(
-        field: "name" | "description" | "icon_url" | "banner_url" | "color" | "visibility" | "wiki_label",
+        field:
+            | "name"
+            | "description"
+            | "icon_url"
+            | "banner_url"
+            | "color"
+            | "visibility"
+            | "wiki_label"
+            | "home_body_color"
+            | "home_panel_color",
         value: string | null,
     ) {
         const clean = truthyOrNull(value);
@@ -691,6 +790,10 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                         </FormItem>
                                     )}
                                 />
+
+                                {/* -- Couleurs de la page d'accueil : désactivé temporairement
+                                     (voir HomeColorField plus haut) — WorldHome applique
+                                     toujours les couleurs par défaut du thème. */}
                             </form>
                         </TabsContent>
 

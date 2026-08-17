@@ -11,23 +11,19 @@ type WorldStats = {
   persona_count: number;
 };
 
+/** Rangée compacte de statistiques, affichée sous le titre de la page d'accueil. */
 export function WorldStatsWidget({ worldId }: { worldId: string }) {
   const t = useTranslations("explore");
   const [stats, setStats] = useState<WorldStats | null>(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     const supabase = createClient();
-    setLoading(true);
     supabase
       .rpc("get_world_public_stats", { p_world_id: worldId })
       .then(({ data }: { data: WorldStats | null }) => {
         if (cancelled) return;
         setStats(data ?? { message_count: 0, member_count: 0, persona_count: 0 });
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
       });
     return () => {
       cancelled = true;
@@ -35,34 +31,32 @@ export function WorldStatsWidget({ worldId }: { worldId: string }) {
   }, [worldId]);
 
   return (
-    <div className="grid grid-cols-3 gap-2 rounded-lg border p-3">
-      <StatTile icon={<MessageSquare className="h-4 w-4" />} value={stats?.message_count} loading={loading} label={t("statsMessages")} />
-      <StatTile icon={<Users className="h-4 w-4" />} value={stats?.member_count} loading={loading} label={t("statsMembers")} />
-      <StatTile icon={<UserRound className="h-4 w-4" />} value={stats?.persona_count} loading={loading} label={t("statsPersonas")} />
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+      <StatPill icon={<MessageSquare className="h-3.5 w-3.5" />} value={stats?.message_count} label={t("statsMessages")} />
+      <StatPill icon={<Users className="h-3.5 w-3.5" />} value={stats?.member_count} label={t("statsMembers")} />
+      <StatPill icon={<UserRound className="h-3.5 w-3.5" />} value={stats?.persona_count} label={t("statsPersonas")} />
     </div>
   );
 }
 
-function StatTile({
+function StatPill({
   icon,
   value,
-  loading,
   label,
 }: {
   icon: ReactNode;
   value?: number;
-  loading: boolean;
   label: string;
 }) {
   return (
-    <div className="flex flex-col items-center gap-1 rounded-md bg-muted/30 py-3 text-center">
-      <span className="text-muted-foreground">{icon}</span>
-      {loading ? (
-        <span className="h-5 w-8 animate-pulse rounded bg-muted" />
+    <span className="inline-flex items-center gap-1.5">
+      {icon}
+      {value === undefined ? (
+        <span className="h-3.5 w-6 animate-pulse rounded bg-muted" />
       ) : (
-        <span className="text-base font-bold tabular-nums">{value ?? 0}</span>
+        <span className="font-medium tabular-nums text-foreground">{value}</span>
       )}
-      <span className="text-[11px] text-muted-foreground">{label}</span>
-    </div>
+      <span>{label}</span>
+    </span>
   );
 }

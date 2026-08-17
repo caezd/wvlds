@@ -106,4 +106,8 @@ export type World = {
   /** HTML/CSS libre du widget « Annonce », rendu dans une iframe sandboxée (pas de JS). */
   announcement_html?: string | null;
   announcement_size?: "sm" | "md" | "lg" | null;
+  /** Couleur de fond (hex) sous la bannière de la page d'accueil — null = couleur par défaut du thème. */
+  home_body_color?: string | null;
+  /** Couleur de fond (hex) du panel de contenu de la page d'accueil — null = couleur par défaut du thème. */
+  home_panel_color?: string | null;
 };

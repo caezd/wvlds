@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Interface",
+    text: "Nouvelle présentation de la page d'accueil d'un monde, désormais toujours pleine largeur (l'ancienne option plein écran a disparu) : la bannière passe en fond, collée au bord du contenu et estompée vers le bas, avec les boutons favoris et menu mobile incrustés dessus. Le titre et la description deviennent du contenu normal (avec les statistiques juste en dessous si ce widget est activé), et le reste des widgets s'affiche dans un panel dédié avec 48px de marge. Les couleurs de fond et du panel sont personnalisables depuis l'onglet Apparence des réglages du monde.",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
     text: "Deux nouveaux widgets pour la page d'accueil d'un monde : « Raccourcis wiki » (dernières pages modifiées, lien direct) et « Personas récents » (dernières personas créées, aperçu au clic).",
   },
   {
