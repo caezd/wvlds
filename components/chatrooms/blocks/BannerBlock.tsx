@@ -19,7 +19,7 @@ export function BannerBlockView({
       <img
         src={block.url}
         alt={block.alt ?? ""}
-        className="w-full rounded-2xl object-cover max-h-80"
+        className="w-full rounded-lg object-cover max-h-80"
       />
       {mine && onDelete && (
         <div className="absolute top-4 right-4 opacity-0 group-hover/banner:opacity-100 transition-opacity">
