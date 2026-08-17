@@ -7,9 +7,7 @@ import { useTranslations } from "next-intl";
 import { Home, Maximize2, Minimize2, Star } from "lucide-react";
 
 import { WorldHeroCard } from "./WorldHeroCard";
-import { WorldChatComposer } from "../chatrooms/WorldChatComposer";
-import { WorldChatroomsGrid } from "../chatrooms/WorldChatroomsGrid";
-import { WorldCategoryFolders } from "../chatrooms/WorldCategoryFolders";
+import { WorldHomeGridView } from "./WorldHomeGridView";
 import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { World, WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
@@ -18,8 +16,7 @@ import { useMobileSidebar } from "@/components/providers/MobileSidebarProvider";
 import type { AsidePersona } from "@/components/personas/WorldPersonaAsideClient";
 import { saveWorldPrefs, toggleWorldFavorite } from "@/app/(protected)/w/actions";
 import { cn } from "@/lib/utils";
-import { resolveWorldHomeLayout, type WorldHomeWidgetId } from "./worldHomeWidgets";
-import type { AnnouncementSize } from "./widgets/WorldAnnouncementWidget";
+import { resolveWorldHomeGrid } from "./worldHomeGrid";
 
 // Onglets secondaires — un seul est actif à la fois, chargés à la demande
 // pour ne pas alourdir le bundle de la vue par défaut du monde.
@@ -31,11 +28,6 @@ const WorldMap = dynamic(() => import("../map/WorldMap").then((m) => m.WorldMap)
 const WorldTimeline = dynamic(() => import("../timeline/WorldTimeline").then((m) => m.WorldTimeline));
 const WorldMembersPanel = dynamic(() => import("../members/WorldMembersPanel").then((m) => m.WorldMembersPanel));
 const WorldPersonasPanel = dynamic(() => import("@/components/personas/WorldPersonasPanel").then((m) => m.WorldPersonasPanel));
-const WorldStatsWidget = dynamic(() => import("./widgets/WorldStatsWidget").then((m) => m.WorldStatsWidget));
-const WorldMembersOnlineWidget = dynamic(() => import("./widgets/WorldMembersOnlineWidget").then((m) => m.WorldMembersOnlineWidget));
-const WorldAnnouncementWidget = dynamic(() => import("./widgets/WorldAnnouncementWidget").then((m) => m.WorldAnnouncementWidget));
-const WorldWikiShortcutsWidget = dynamic(() => import("./widgets/WorldWikiShortcutsWidget").then((m) => m.WorldWikiShortcutsWidget));
-const WorldRecentPersonasWidget = dynamic(() => import("./widgets/WorldRecentPersonasWidget").then((m) => m.WorldRecentPersonasWidget));
 
 type WorldPrefs = { main_expanded: boolean; is_favorite: boolean; wiki_sidebar_width?: number };
 
@@ -101,7 +93,12 @@ export function WorldHome({
   const [mainExpanded, setMainExpanded] = useState(initialPrefs?.main_expanded ?? false);
   const [isFavorite, setIsFavorite] = useState(initialPrefs?.is_favorite ?? false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(initialCategoryId ?? null);
-  const homeLayout = resolveWorldHomeLayout(world.home_layout);
+  // Le composer est retiré de la grille avant le calcul du layout (pas juste
+  // au rendu) : sinon un visiteur sans droit de post verrait un trou vide à
+  // la place du bloc plutôt qu'une grille recomposée sans lui.
+  const gridItems = resolveWorldHomeGrid(world.home_grid, world.home_layout, world.announcement_html).filter(
+    (item) => item.widgetId !== "composer" || (canPost && create_chatroom),
+  );
 
   const baseHref = `/w/${worldId}`;
 
@@ -125,57 +122,6 @@ export function WorldHome({
     const next = !mainExpanded;
     setMainExpanded(next);
     void saveWorldPrefs(worldId, { main_expanded: next });
-  }
-
-  function renderWidget(id: WorldHomeWidgetId) {
-    switch (id) {
-      case "categories":
-        return (
-          <WorldCategoryFolders
-            key={id}
-            worldId={worldId}
-            selectedCategoryId={selectedCategoryId}
-            onSelectCategory={handleSelectCategory}
-          />
-        );
-      case "composer":
-        return canPost && create_chatroom ? (
-          <WorldChatComposer
-            key={id}
-            worldId={worldId}
-            timelineConfig={hasTimeline ? (world.timeline_config as WorldTimelineConfig) : undefined}
-          />
-        ) : null;
-      case "chatrooms":
-        return (
-          <WorldChatroomsGrid
-            key={id}
-            worldId={worldId}
-            initialRooms={initialRooms}
-            categoryId={selectedCategoryId}
-          />
-        );
-      case "stats":
-        return <WorldStatsWidget key={id} worldId={worldId} />;
-      case "members_online":
-        return <WorldMembersOnlineWidget key={id} worldId={worldId} />;
-      case "announcement":
-        return (
-          <WorldAnnouncementWidget
-            key={id}
-            worldId={worldId}
-            canAdmin={canAdmin}
-            html={world.announcement_html ?? null}
-            size={(world.announcement_size as AnnouncementSize | null) ?? "md"}
-          />
-        );
-      case "wiki_shortcuts":
-        return <WorldWikiShortcutsWidget key={id} worldId={worldId} />;
-      case "personas_recent":
-        return <WorldRecentPersonasWidget key={id} worldId={worldId} />;
-      default:
-        return null;
-    }
   }
 
   const showCanvas = view === "canvas";
@@ -313,8 +259,18 @@ export function WorldHome({
                     isExpanded={mainExpanded}
                   />
                 </div>
-                <div className="mx-auto flex w-full flex-col gap-6 px-4 pb-4 [--world-content-max-width:36rem] lg:[--world-content-max-width:44rem] max-w-(--world-content-max-width)">
-                  {homeLayout.map((id) => renderWidget(id))}
+                <div className="mx-auto w-full px-4 pb-4 [--world-content-max-width:36rem] lg:[--world-content-max-width:44rem] max-w-(--world-content-max-width)">
+                  <WorldHomeGridView
+                    items={gridItems}
+                    worldId={worldId}
+                    canPost={canPost}
+                    canCreateChatroom={create_chatroom}
+                    timelineConfig={hasTimeline ? (world.timeline_config as WorldTimelineConfig) : undefined}
+                    initialRooms={initialRooms}
+                    selectedCategoryId={selectedCategoryId}
+                    onSelectCategory={handleSelectCategory}
+                    onWikiLink={(slug) => router.push(`${baseHref}?view=wiki&page=${encodeURIComponent(slug)}`)}
+                  />
                 </div>
               </div>
             </div>

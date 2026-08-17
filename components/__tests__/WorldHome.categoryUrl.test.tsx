@@ -75,7 +75,9 @@ describe("WorldHome — persistance de la catégorie sélectionnée dans l'URL",
     render(<WorldHome {...baseProps()} initialCategoryId="cat-1" />);
 
     expect(screen.getByText((_, node) => node?.textContent === "folders-selected:cat-1")).toBeInTheDocument();
-    expect(screen.getByText((_, node) => node?.textContent === "grid-category:cat-1")).toBeInTheDocument();
+    expect(
+      screen.getByText((_, node) => node?.textContent === "grid-category:cat-1" && node.children.length === 0),
+    ).toBeInTheDocument();
   });
 
   it("met à jour l'URL avec ?category=<id> quand on sélectionne une catégorie", () => {
@@ -85,7 +87,9 @@ describe("WorldHome — persistance de la catégorie sélectionnée dans l'URL",
 
     expect(replace).toHaveBeenCalledWith("/w/world-1?category=cat-1", { scroll: false });
     expect(screen.getByText((_, node) => node?.textContent === "folders-selected:cat-1")).toBeInTheDocument();
-    expect(screen.getByText((_, node) => node?.textContent === "grid-category:cat-1")).toBeInTheDocument();
+    expect(
+      screen.getByText((_, node) => node?.textContent === "grid-category:cat-1" && node.children.length === 0),
+    ).toBeInTheDocument();
   });
 
   it("retire le paramètre de l'URL quand on désélectionne", () => {

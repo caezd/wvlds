@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Interface",
+    text: "La page d'accueil d'un monde passe à une grille de blocs libre : chaque bloc (widget, HTML/CSS custom ou Markdown) se place et se redimensionne en largeur depuis Réglages > Page d'accueil, plusieurs blocs pouvant tenir côte à côte sur une même ligne. Glisser la frontière entre deux blocs voisins élargit l'un en rétrécissant l'autre ; la hauteur, elle, s'ajuste toute seule au contenu. Certains widgets ont leurs propres réglages (nombre de lignes visibles des salons, nombre d'entrées listées…), et les blocs HTML/Markdown peuvent recevoir un titre qui sert à les repérer dans l'éditeur. Le widget « Annonce » devient un bloc HTML custom parmi d'autres.",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
     text: "Deux nouveaux widgets pour la page d'accueil d'un monde : « Raccourcis wiki » (dernières pages modifiées, lien direct) et « Personas récents » (dernières personas créées, aperçu au clic).",
   },
   {

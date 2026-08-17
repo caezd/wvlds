@@ -1,8 +1,12 @@
 /**
- * Registre des widgets réordonnables de la page d'accueil d'un monde (hors
- * bannière hero, toujours fixe en tête). Un admin choisit lesquels sont
- * actifs et dans quel ordre via `worlds.home_layout` — même liste pour tous
- * les visiteurs du monde.
+ * Registre des widgets plaçables dans la grille de la page d'accueil d'un
+ * monde (hors bannière hero, toujours fixe en tête) — voir `worldHomeGrid.ts`
+ * pour le système de grille actuel, qui remplace l'ancien ordre à colonne
+ * unique (`worlds.home_layout`, encore lu ici pour la synthèse de repli).
+ * `"announcement"` n'est plus un widget plaçable (remplacé par les blocs
+ * html génériques de la grille) mais reste un id historique valide, pour
+ * que `resolveWorldHomeLayout` continue de le reconnaître dans les anciens
+ * `home_layout` — sa synthèse en bloc html est gérée par `worldHomeGrid.ts`.
  */
 export type WorldHomeWidgetId =
   | "categories"
@@ -31,10 +35,6 @@ export const DEFAULT_WORLD_HOME_LAYOUT: WorldHomeWidgetId[] = [
   "composer",
   "chatrooms",
 ];
-
-/** Limite de taille du HTML/CSS libre du widget « Annonce » — partagée entre
- *  l'éditeur (validation immédiate) et l'action serveur (source de vérité). */
-export const MAX_ANNOUNCEMENT_HTML_LENGTH = 20_000;
 
 function isWorldHomeWidgetId(value: unknown): value is WorldHomeWidgetId {
   return typeof value === "string" && (ALL_WORLD_HOME_WIDGETS as string[]).includes(value);

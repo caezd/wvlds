@@ -155,4 +155,24 @@ describe("WorldCategoryFolders", () => {
     expect(container.querySelector("img")).toBeNull();
     expect(screen.getByText("A")).toBeInTheDocument();
   });
+
+  it("adapte sa mise en page à la largeur de son conteneur (container queries), pas au viewport", async () => {
+    let container!: HTMLElement;
+    await act(async () => {
+      ({ container } = render(
+        <WorldCategoryFolders worldId="world-1" selectedCategoryId={null} onSelectCategory={vi.fn()} />,
+      ));
+    });
+
+    // Liste verticale compacte par défaut (conteneur étroit) ; étagère
+    // horizontale de cartes seulement à partir de @sm — jamais de classe
+    // dépendant du viewport (sm:/md:) qui ignorerait la largeur réelle de
+    // la cellule de grille dans laquelle ce widget peut être placé.
+    const root = container.firstElementChild!;
+    expect(root.className).toContain("@sm:flex-row");
+    expect(root.className).not.toMatch(/(?<!@)\bsm:/);
+
+    const card = screen.getByText("Annonces").closest("button")!;
+    expect(card.className).toContain("@sm:flex-col");
+  });
 });

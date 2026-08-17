@@ -34,17 +34,26 @@ function relativeTime(iso: string | null) {
   return new Date(iso).toLocaleDateString("fr-FR");
 }
 
+/** Hauteur d'une ligne de la liste (py-3 + contenu ≈ 66px) — sert à traduire
+ *  `visibleRows` en hauteur maximale avant défilement. */
+const ROOM_ROW_HEIGHT = 66;
+
 export function WorldChatroomsGrid({
   worldId,
   initialRooms,
   onRoomClick,
   categoryId,
+  visibleRows,
 }: {
   worldId: string;
   initialRooms: Room[];
   onRoomClick?: (href: string) => void;
   /** Filtre l'affichage sur une catégorie ; "__uncategorized__" pour les chatrooms sans catégorie. */
   categoryId?: string | null;
+  /** Nombre de lignes visibles avant que le reste ne défile — réglage du
+   *  widget sur la page d'accueil (voir WORLD_HOME_WIDGET_OPTIONS). Non
+   *  défini = pas de limite de hauteur. */
+  visibleRows?: number;
 }) {
   const [rooms, setRooms] = useState<Room[]>(initialRooms);
   const { roomUnread } = useNotifications();
@@ -134,8 +143,16 @@ export function WorldChatroomsGrid({
   }
 
   return (
-    <div className="rounded-lg border p-2">
-      <ul className="grid gap-x-2 md:grid-cols-2">
+    <div
+      className="overflow-y-auto rounded-lg border p-2"
+      // `visibleRows` borne la hauteur d'affichage, le reste défile ici même
+      // — réglage d'affichage seulement : toutes les parties restent listées.
+      style={visibleRows ? { maxHeight: visibleRows * ROOM_ROW_HEIGHT } : undefined}
+    >
+      {/* @sm (largeur du conteneur), pas md: (viewport) — ce widget peut être
+          placé dans une cellule de grille étroite même sur un écran large,
+          voir WorldHomeGridView.tsx. */}
+      <ul className="grid gap-x-2 @sm:grid-cols-2">
         {visibleRooms.map((room) => {
           const href = `/c/${room.id}`;
           const unread = roomUnread[room.id] ?? room.unread_count ?? 0;

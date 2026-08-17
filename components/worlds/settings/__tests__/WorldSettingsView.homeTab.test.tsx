@@ -19,14 +19,9 @@ vi.mock("@/components/worlds/settings/WorldPersonaTemplateSection", () => ({
 vi.mock("@/components/worlds/settings/WorldCategoryManager", () => ({
   WorldCategoryManager: () => <div data-testid="category-manager-stub" />,
 }));
-vi.mock("@/components/worlds/settings/WorldAnnouncementSettings", () => ({
-  WorldAnnouncementSettings: ({ world }: { world: World }) => (
-    <div data-testid="announcement-settings-stub">{world.id}</div>
-  ),
-}));
-vi.mock("@/components/worlds/settings/WorldHomeLayoutSettings", () => ({
-  WorldHomeLayoutSettings: ({ world }: { world: World }) => (
-    <div data-testid="home-layout-settings-stub">{world.id}</div>
+vi.mock("@/components/worlds/settings/WorldHomeGridSettings", () => ({
+  WorldHomeGridSettings: ({ world }: { world: World }) => (
+    <div data-testid="home-grid-settings-stub">{world.id}</div>
   ),
 }));
 vi.mock("@/app/actions/worldCatalog", () => ({
@@ -71,23 +66,13 @@ function setup() {
 }
 
 describe("WorldSettingsView — onglet « Page d'accueil »", () => {
-  it("affiche l'éditeur d'annonce quand on ouvre l'onglet", async () => {
+  it("affiche l'éditeur de grille quand on ouvre l'onglet", async () => {
     setup();
     const user = userEvent.setup();
     render(<WorldSettingsView world={BASE_WORLD} />);
 
     await user.click(screen.getByRole("tab", { name: "Page d'accueil" }));
 
-    expect(screen.getByTestId("announcement-settings-stub")).toHaveTextContent("w1");
-  });
-
-  it("affiche aussi l'éditeur de widgets dans le même onglet", async () => {
-    setup();
-    const user = userEvent.setup();
-    render(<WorldSettingsView world={BASE_WORLD} />);
-
-    await user.click(screen.getByRole("tab", { name: "Page d'accueil" }));
-
-    expect(screen.getByTestId("home-layout-settings-stub")).toHaveTextContent("w1");
+    expect(screen.getByTestId("home-grid-settings-stub")).toHaveTextContent("w1");
   });
 });

@@ -9,7 +9,7 @@ import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
 import { VALID_LUCIDE_ICONS } from "@/components/ui/LucideIconPicker";
 
-const PAGE_LIMIT = 6;
+const DEFAULT_PAGE_LIMIT = 6;
 
 type WikiPage = {
   id: string;
@@ -32,7 +32,14 @@ function relativeTime(iso: string) {
 }
 
 /** Dernières pages de wiki modifiées — liens directs (voir WorldWiki `initialSlug`). */
-export function WorldWikiShortcutsWidget({ worldId }: { worldId: string }) {
+export function WorldWikiShortcutsWidget({
+  worldId,
+  limit = DEFAULT_PAGE_LIMIT,
+}: {
+  worldId: string;
+  /** Nombre de pages listées — réglage du widget (voir WORLD_HOME_WIDGET_OPTIONS). */
+  limit?: number;
+}) {
   const t = useTranslations("worlds");
   const [pages, setPages] = useState<WikiPage[]>([]);
   const reconnectEpoch = useReconnectEpoch();
@@ -47,7 +54,7 @@ export function WorldWikiShortcutsWidget({ worldId }: { worldId: string }) {
         .eq("world_id", worldId)
         .eq("is_folder", false)
         .order("updated_at", { ascending: false })
-        .limit(PAGE_LIMIT);
+        .limit(limit);
       setPages((data as WikiPage[] | null) ?? []);
     };
 
@@ -65,7 +72,7 @@ export function WorldWikiShortcutsWidget({ worldId }: { worldId: string }) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [worldId, reconnectEpoch]);
+  }, [worldId, reconnectEpoch, limit]);
 
   if (pages.length === 0) return null;
 

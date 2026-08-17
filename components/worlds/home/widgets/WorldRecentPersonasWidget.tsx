@@ -13,7 +13,7 @@ const PersonaProfileSheetTrigger = dynamic(() =>
   import("@/components/personas/PersonaProfileSheetTrigger").then((m) => m.PersonaProfileSheetTrigger),
 );
 
-const PERSONA_LIMIT = 10;
+const DEFAULT_PERSONA_LIMIT = 10;
 
 type RecentPersona = {
   id: string;
@@ -25,7 +25,14 @@ type RecentPersona = {
 };
 
 /** Personas les plus récemment créées dans le monde. */
-export function WorldRecentPersonasWidget({ worldId }: { worldId: string }) {
+export function WorldRecentPersonasWidget({
+  worldId,
+  limit = DEFAULT_PERSONA_LIMIT,
+}: {
+  worldId: string;
+  /** Nombre de personas listées — réglage du widget (voir WORLD_HOME_WIDGET_OPTIONS). */
+  limit?: number;
+}) {
   const t = useTranslations("worlds");
   const [personas, setPersonas] = useState<RecentPersona[]>([]);
   const { getUserPresence } = useGlobalPresence();
@@ -42,7 +49,7 @@ export function WorldRecentPersonasWidget({ worldId }: { worldId: string }) {
         .eq("is_template", false)
         .is("deleted_at", null)
         .order("created_at", { ascending: false })
-        .limit(PERSONA_LIMIT);
+        .limit(limit);
       setPersonas((data as unknown as RecentPersona[] | null) ?? []);
     };
 
@@ -60,7 +67,7 @@ export function WorldRecentPersonasWidget({ worldId }: { worldId: string }) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [worldId, reconnectEpoch]);
+  }, [worldId, reconnectEpoch, limit]);
 
   if (personas.length === 0) return null;
 

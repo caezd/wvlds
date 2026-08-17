@@ -21,9 +21,9 @@ import {
     deleteWorldCatalogCategory,
     batchUpdateCatalogCategoryOrder,
     batchUpdateCatalogItemOrder,
-    setWorldAnnouncement,
+    setWorldHomeGrid,
 } from "@/app/actions/worldCatalog";
-import { MAX_ANNOUNCEMENT_HTML_LENGTH } from "@/components/worlds/home/worldHomeWidgets";
+import { HOME_GRID_COLS, MAX_HOME_BLOCK_CONTENT_LENGTH, MAX_HOME_GRID_ITEMS } from "@/components/worlds/home/worldHomeGrid";
 import { createClient } from "@/lib/supabase/server";
 import { deletePersona } from "@/app/(protected)/p/actions";
 
@@ -430,49 +430,231 @@ describe("batchUpdateCatalogItemOrder", () => {
     });
 });
 
-// ── setWorldAnnouncement ──────────────────────────────────────────────────────
+// ── setWorldHomeGrid ──────────────────────────────────────────────────────
 
-describe("setWorldAnnouncement", () => {
-    it("enregistre le HTML (trim) et la taille choisie", async () => {
+describe("setWorldHomeGrid", () => {
+    it("enregistre un bloc widget valide en préservant son id", async () => {
         const mock = createSupabaseMock({ results: [{ error: null }] });
         use(mock);
-        const res = await setWorldAnnouncement("w1", "  <p>Salut</p>  ", "lg");
-        expect(res).toEqual({ ok: true });
-        expect(mock.buildersFor("worlds")[0].update).toHaveBeenCalledWith({
-            announcement_html: "<p>Salut</p>",
-            announcement_size: "lg",
-        });
+        const res = await setWorldHomeGrid("w1", [
+            { id: "bloc-1", type: "widget", x: 0, y: 0, w: 6, widgetId: "chatrooms" },
+        ]);
+        expect(res.ok).toBe(true);
+        const written = mock.buildersFor("worlds")[0].update.mock.calls[0][0].home_grid;
+        expect(written).toHaveLength(1);
+        // L'id doit survivre à l'enregistrement : c'est la clé React et
+        // l'identité react-grid-layout du bloc — le régénérer démonterait
+        // tous les blocs à chaque sauvegarde (geste de resize cassé).
+        expect(written[0]).toMatchObject({ id: "bloc-1", type: "widget", x: 0, y: 0, w: 6, widgetId: "chatrooms" });
     });
 
-    it("enregistre null quand le HTML est vide (ou ne contient que des espaces)", async () => {
-        const mock = createSupabaseMock({ results: [{ error: null }] });
-        use(mock);
-        await setWorldAnnouncement("w1", "   ", "md");
-        expect(mock.buildersFor("worlds")[0].update).toHaveBeenCalledWith({
-            announcement_html: null,
-            announcement_size: "md",
-        });
-    });
-
-    it("refuse un HTML dépassant la limite, sans appeler Supabase", async () => {
+    it("refuse un id dupliqué entre deux blocs", async () => {
         const mock = createSupabaseMock();
         use(mock);
-        const tooLong = "a".repeat(MAX_ANNOUNCEMENT_HTML_LENGTH + 1);
-        const res = await setWorldAnnouncement("w1", tooLong, "md");
+        const res = await setWorldHomeGrid("w1", [
+            { id: "meme-id", type: "widget", x: 0, y: 0, w: 6, widgetId: "chatrooms" },
+            { id: "meme-id", type: "widget", x: 6, y: 0, w: 6, widgetId: "categories" },
+        ]);
         expect(res.ok).toBe(false);
         expect(mock.from).not.toHaveBeenCalled();
     });
 
-    it("refuse une taille invalide, sans appeler Supabase", async () => {
+    it("refuse un id vide ou démesuré", async () => {
         const mock = createSupabaseMock();
         use(mock);
-        const res = await setWorldAnnouncement("w1", "<p>x</p>", "xl" as never);
+        expect(
+            (await setWorldHomeGrid("w1", [{ id: "", type: "widget", x: 0, y: 0, w: 6, widgetId: "chatrooms" }])).ok,
+        ).toBe(false);
+        expect(
+            (await setWorldHomeGrid("w1", [
+                { id: "x".repeat(100), type: "widget", x: 0, y: 0, w: 6, widgetId: "chatrooms" },
+            ])).ok,
+        ).toBe(false);
+        expect(mock.from).not.toHaveBeenCalled();
+    });
+
+    it("trim le HTML/Markdown avant enregistrement", async () => {
+        const mock = createSupabaseMock({ results: [{ error: null }] });
+        use(mock);
+        await setWorldHomeGrid("w1", [
+            { id: "a", type: "html", x: 0, y: 0, w: 12, html: "  <p>x</p>  " },
+            { id: "b", type: "markdown", x: 0, y: 4, w: 12, content: "  # x  " },
+        ]);
+        const written = mock.buildersFor("worlds")[0].update.mock.calls[0][0].home_grid;
+        expect(written[0]).toMatchObject({ type: "html", html: "<p>x</p>" });
+        expect(written[1]).toMatchObject({ type: "markdown", content: "# x" });
+    });
+
+    it("refuse une valeur qui n'est pas un tableau, sans appeler Supabase", async () => {
+        const mock = createSupabaseMock();
+        use(mock);
+        const res = await setWorldHomeGrid("w1", "not-an-array" as never);
         expect(res.ok).toBe(false);
         expect(mock.from).not.toHaveBeenCalled();
+    });
+
+    it("refuse plus que le nombre maximal de blocs, sans appeler Supabase", async () => {
+        const mock = createSupabaseMock();
+        use(mock);
+        const items = Array.from({ length: MAX_HOME_GRID_ITEMS + 1 }, (_, i) => ({
+            id: `i${i}`, type: "markdown", x: 0, y: i, w: 12, content: "x",
+        }));
+        const res = await setWorldHomeGrid("w1", items);
+        expect(res.ok).toBe(false);
+        expect(mock.from).not.toHaveBeenCalled();
+    });
+
+    it("refuse un widgetId inconnu, sans appeler Supabase", async () => {
+        const mock = createSupabaseMock();
+        use(mock);
+        const res = await setWorldHomeGrid("w1", [
+            { id: "a", type: "widget", x: 0, y: 0, w: 6, widgetId: "inconnu" },
+        ]);
+        expect(res.ok).toBe(false);
+        expect(mock.from).not.toHaveBeenCalled();
+    });
+
+    it("refuse 'announcement' comme widgetId — retiré au profit des blocs html", async () => {
+        const mock = createSupabaseMock();
+        use(mock);
+        const res = await setWorldHomeGrid("w1", [
+            { id: "a", type: "widget", x: 0, y: 0, w: 6, widgetId: "announcement" },
+        ]);
+        expect(res.ok).toBe(false);
+        expect(mock.from).not.toHaveBeenCalled();
+    });
+
+    it("refuse un widgetId dupliqué entre deux blocs", async () => {
+        const mock = createSupabaseMock();
+        use(mock);
+        const res = await setWorldHomeGrid("w1", [
+            { id: "a", type: "widget", x: 0, y: 0, w: 6, widgetId: "chatrooms" },
+            { id: "b", type: "widget", x: 6, y: 0, w: 6, widgetId: "chatrooms" },
+        ]);
+        expect(res.ok).toBe(false);
+        expect(mock.from).not.toHaveBeenCalled();
+    });
+
+    it("refuse un bloc qui déborde la grille (x + w > 12)", async () => {
+        const mock = createSupabaseMock();
+        use(mock);
+        const res = await setWorldHomeGrid("w1", [
+            { id: "a", type: "widget", x: 8, y: 0, w: 6, widgetId: "chatrooms" },
+        ]);
+        expect(res.ok).toBe(false);
+        expect(mock.from).not.toHaveBeenCalled();
+    });
+
+    it("refuse des coordonnées non entières ou négatives", async () => {
+        const mock = createSupabaseMock();
+        use(mock);
+        const res = await setWorldHomeGrid("w1", [
+            { id: "a", type: "widget", x: 0, y: -1, w: 6, widgetId: "chatrooms" },
+        ]);
+        expect(res.ok).toBe(false);
+        expect(mock.from).not.toHaveBeenCalled();
+    });
+
+    it("refuse une largeur sous le minimum (w<2)", async () => {
+        const mock = createSupabaseMock();
+        use(mock);
+        const res = await setWorldHomeGrid("w1", [
+            { id: "a", type: "widget", x: 0, y: 0, w: 1, widgetId: "chatrooms" },
+        ]);
+        expect(res.ok).toBe(false);
+        expect(mock.from).not.toHaveBeenCalled();
+    });
+
+    it("enregistre les réglages de widget bornés, en écartant les clés inconnues", async () => {
+        const mock = createSupabaseMock({ results: [{ error: null }] });
+        use(mock);
+        const res = await setWorldHomeGrid("w1", [
+            {
+                id: "a", type: "widget", x: 0, y: 0, w: 12, widgetId: "chatrooms",
+                options: { visibleRows: 999, inconnu: 3 },
+            },
+        ]);
+        expect(res.ok).toBe(true);
+        const written = mock.buildersFor("worlds")[0].update.mock.calls[0][0].home_grid;
+        expect(written[0].options).toEqual({ visibleRows: 50 });
+    });
+
+    it("n'enregistre pas de réglages pour un widget qui n'en déclare aucun", async () => {
+        const mock = createSupabaseMock({ results: [{ error: null }] });
+        use(mock);
+        await setWorldHomeGrid("w1", [
+            { id: "a", type: "widget", x: 0, y: 0, w: 12, widgetId: "stats", options: { visibleRows: 4 } },
+        ]);
+        const written = mock.buildersFor("worlds")[0].update.mock.calls[0][0].home_grid;
+        expect(written[0]).not.toHaveProperty("options");
+    });
+
+    it("renumérote les lignes en séquence (pas de ligne fantôme après suppression)", async () => {
+        const mock = createSupabaseMock({ results: [{ error: null }] });
+        use(mock);
+        const res = await setWorldHomeGrid("w1", [
+            { id: "a", type: "widget", x: 0, y: 0, w: 12, widgetId: "chatrooms" },
+            { id: "b", type: "widget", x: 0, y: 3, w: 12, widgetId: "stats" },
+        ]);
+        expect(res.ok).toBe(true);
+        const written = mock.buildersFor("worlds")[0].update.mock.calls[0][0].home_grid;
+        expect(written.map((i: { y: number }) => i.y)).toEqual([0, 1]);
+    });
+
+    it("ignore une hauteur envoyée par un client obsolète — pas de h enregistré", async () => {
+        const mock = createSupabaseMock({ results: [{ error: null }] });
+        use(mock);
+        const res = await setWorldHomeGrid("w1", [
+            { id: "a", type: "widget", x: 0, y: 0, w: 6, h: 7, widgetId: "chatrooms" },
+        ]);
+        expect(res.ok).toBe(true);
+        const written = mock.buildersFor("worlds")[0].update.mock.calls[0][0].home_grid;
+        expect(written[0]).not.toHaveProperty("h");
+    });
+
+    it("refuse un contenu HTML dépassant la limite", async () => {
+        const mock = createSupabaseMock();
+        use(mock);
+        const tooLong = "a".repeat(MAX_HOME_BLOCK_CONTENT_LENGTH + 1);
+        const res = await setWorldHomeGrid("w1", [{ id: "a", type: "html", x: 0, y: 0, w: 12, html: tooLong }]);
+        expect(res.ok).toBe(false);
+        expect(mock.from).not.toHaveBeenCalled();
+    });
+
+    it("refuse un bloc widget qui porte aussi du contenu html", async () => {
+        const mock = createSupabaseMock();
+        use(mock);
+        const res = await setWorldHomeGrid("w1", [
+            { id: "a", type: "widget", x: 0, y: 0, w: 6, widgetId: "chatrooms", html: "<p>x</p>" },
+        ]);
+        expect(res.ok).toBe(false);
+        expect(mock.from).not.toHaveBeenCalled();
+    });
+
+    it("refuse un bloc html qui porte aussi un widgetId", async () => {
+        const mock = createSupabaseMock();
+        use(mock);
+        const res = await setWorldHomeGrid("w1", [
+            { id: "a", type: "html", x: 0, y: 0, w: 12, html: "<p>x</p>", widgetId: "chatrooms" },
+        ]);
+        expect(res.ok).toBe(false);
+        expect(mock.from).not.toHaveBeenCalled();
+    });
+
+    it("accepte une largeur maximale égale au nombre de colonnes", async () => {
+        const mock = createSupabaseMock({ results: [{ error: null }] });
+        use(mock);
+        const res = await setWorldHomeGrid("w1", [
+            { id: "a", type: "widget", x: 0, y: 0, w: HOME_GRID_COLS, widgetId: "chatrooms" },
+        ]);
+        expect(res.ok).toBe(true);
     });
 
     it("remonte l'erreur Supabase", async () => {
         use(createSupabaseMock({ results: [{ error: { message: "nope" } }] }));
-        expect(await setWorldAnnouncement("w1", "<p>x</p>", "md")).toEqual({ ok: false, error: "nope" });
+        const res = await setWorldHomeGrid("w1", [
+            { id: "a", type: "widget", x: 0, y: 0, w: 6, widgetId: "chatrooms" },
+        ]);
+        expect(res).toEqual({ ok: false, error: "nope" });
     });
 });

@@ -75,7 +75,12 @@ export function WorldCategoryFolders({
   if (categories.length === 0) return null;
 
   return (
-    <div className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-1">
+    // Conteneur de container queries hérité du bloc parent (voir
+    // WorldHomeGridView.tsx) : la mise en page s'adapte à la largeur réelle
+    // de la cellule de grille, pas au viewport. Étroit (par défaut) → liste
+    // verticale compacte sur toute la hauteur ; large (@sm+) → étagère
+    // horizontale de grandes cartes, comme avant.
+    <div className="flex h-full flex-col gap-1.5 overflow-y-auto @sm:flex-row @sm:gap-3 @sm:overflow-x-auto @sm:overflow-y-visible @sm:px-1">
       {categories.map((cat) => {
         const isActive = selectedCategoryId === cat.id;
         // icon_url est une petite image dédiée aux avatars (sidebar) — l'étirer
@@ -88,24 +93,25 @@ export function WorldCategoryFolders({
             type="button"
             onClick={() => onSelectCategory(isActive ? null : cat.id)}
             className={cn(
-              "flex w-36 shrink-0 flex-col overflow-hidden rounded-xl border text-left transition-colors sm:w-44",
+              "flex items-center gap-2 rounded-lg border p-1.5 text-left transition-colors",
+              "@sm:w-36 @sm:shrink-0 @sm:flex-col @sm:items-stretch @sm:gap-0 @sm:overflow-hidden @sm:rounded-xl @sm:p-0",
               isActive
                 ? "border-primary ring-1 ring-primary"
                 : "border-border-soft hover:border-border",
             )}
           >
-            <span className="relative block aspect-[4/3] w-full shrink-0 bg-muted-foreground/10">
+            <span className="relative block h-10 w-10 shrink-0 overflow-hidden rounded-md bg-muted-foreground/10 @sm:aspect-[4/3] @sm:h-auto @sm:w-full @sm:rounded-none">
               {image ? (
-                <Image src={image} alt="" fill sizes="176px" className="object-cover" />
+                <Image src={image} alt="" fill sizes="(min-width: 640px) 176px, 40px" className="object-cover" />
               ) : (
                 <span className="flex h-full w-full items-center justify-center text-lg font-medium text-muted-foreground">
                   {cat.title[0]?.toUpperCase()}
                 </span>
               )}
             </span>
-            <span className="flex flex-col gap-0.5 bg-card px-2.5 py-2">
+            <span className="flex min-w-0 flex-1 flex-col gap-0.5 @sm:bg-card @sm:px-2.5 @sm:py-2">
               <span className="truncate text-sm font-semibold text-foreground">{cat.title}</span>
-              <span className="line-clamp-2 text-xs text-muted-foreground">
+              <span className="truncate text-xs text-muted-foreground @sm:line-clamp-2 @sm:whitespace-normal">
                 {cat.description || t("sidebar.subjects", { count: counts.get(cat.id) ?? 0 })}
               </span>
             </span>

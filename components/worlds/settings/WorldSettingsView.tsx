@@ -63,8 +63,7 @@ import {
 import { WorldPersonaTemplateSection } from "@/components/worlds/settings/WorldPersonaTemplateSection";
 import { WorldCategoryManager } from "@/components/worlds/settings/WorldCategoryManager";
 import { WorldRelationsSettings } from "@/components/worlds/settings/WorldRelationsSettings";
-import { WorldAnnouncementSettings } from "@/components/worlds/settings/WorldAnnouncementSettings";
-import { WorldHomeLayoutSettings } from "@/components/worlds/settings/WorldHomeLayoutSettings";
+import { WorldHomeGridSettings } from "@/components/worlds/settings/WorldHomeGridSettings";
 import type { World, WorldTimelineConfig } from "@/types/worlds";
 
 /**
@@ -702,16 +701,11 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                         </TabsContent>
 
                         {/* ── Page d'accueil ───────────────────────────── */}
+                        {/* max-w-2xl plutôt que max-w-xl (comme les autres onglets) :
+                            un éditeur de grille 12 colonnes a besoin de plus de place. */}
                         <TabsContent value="home" className="mt-0">
-                            <div className="mx-auto max-w-xl space-y-6">
-                                <div className="space-y-2">
-                                    <h3 className="text-sm font-semibold text-foreground">Widgets affichés</h3>
-                                    <WorldHomeLayoutSettings world={world} />
-                                </div>
-                                <div className="space-y-2">
-                                    <h3 className="text-sm font-semibold text-foreground">Annonce</h3>
-                                    <WorldAnnouncementSettings world={world} />
-                                </div>
+                            <div className="mx-auto max-w-2xl">
+                                <WorldHomeGridSettings world={world} />
                             </div>
                         </TabsContent>
 

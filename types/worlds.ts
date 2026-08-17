@@ -101,9 +101,14 @@ export type World = {
   is_age_restricted?: boolean | null;
   /** Libellé personnalisé du lien wiki dans la sidebar (ex: "Compendium") — null = libellé traduit par défaut. */
   wiki_label?: string | null;
-  /** Ordre des widgets de la page d'accueil, réglé par un admin — null = ordre par défaut. */
+  /** Ancien ordre des widgets de la page d'accueil (remplacé par `home_grid`) —
+   *  conservé pour la synthèse de repli, voir resolveWorldHomeGrid(). */
   home_layout?: string[] | null;
-  /** HTML/CSS libre du widget « Annonce », rendu dans une iframe sandboxée (pas de JS). */
+  /** Ancien HTML/CSS libre du widget « Annonce » (remplacé par les blocs html
+   *  de `home_grid`) — conservé pour la synthèse de repli. */
   announcement_html?: string | null;
   announcement_size?: "sm" | "md" | "lg" | null;
+  /** Grille de blocs de la page d'accueil, réglée par un admin — null = synthèse
+   *  depuis l'ancien système, voir resolveWorldHomeGrid(). */
+  home_grid?: unknown[] | null;
 };

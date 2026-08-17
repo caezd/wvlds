@@ -3,7 +3,17 @@
 import { createClient } from "@/lib/supabase/server";
 import { deletePersona } from "@/app/(protected)/p/actions";
 import { translatePersonaError } from "@/lib/personaErrors";
-import { MAX_ANNOUNCEMENT_HTML_LENGTH } from "@/components/worlds/home/worldHomeWidgets";
+import { ALL_WORLD_HOME_WIDGETS, type WorldHomeWidgetId } from "@/components/worlds/home/worldHomeWidgets";
+import {
+  compactHomeGridRows,
+  HOME_GRID_COLS,
+  MAX_HOME_BLOCK_CONTENT_LENGTH,
+  MAX_HOME_BLOCK_TITLE_LENGTH,
+  MAX_HOME_GRID_ITEMS,
+  MAX_HOME_GRID_Y,
+  sanitizeWidgetOptions,
+  type WorldHomeGridItem,
+} from "@/components/worlds/home/worldHomeGrid";
 import type { WorldInventoryItem, WorldSkill, WorldCatalogCategory, WorldTimelineConfig, WorldTag } from "@/types/worlds";
 
 const MAX_WORLD_TAGS = 10;
@@ -393,27 +403,107 @@ export async function setWorldTimeline(
   return { ok: true as const };
 }
 
-// ── Widget « Annonce » (HTML/CSS libre, rendu en iframe sandboxée) ────────────
+// ── Grille de blocs de la page d'accueil ──────────────────────────────────
 
-const ANNOUNCEMENT_SIZES = new Set(["sm", "md", "lg"]);
+const HOME_GRID_BLOCK_TYPES = new Set(["widget", "html", "markdown"]);
 
-export async function setWorldAnnouncement(
-  worldId: string,
-  html: string,
-  size: "sm" | "md" | "lg",
-) {
-  const trimmed = html.trim();
-  if (trimmed.length > MAX_ANNOUNCEMENT_HTML_LENGTH) {
-    return { ok: false as const, error: `Maximum ${MAX_ANNOUNCEMENT_HTML_LENGTH} caractères.` };
+function isFiniteInt(v: unknown): v is number {
+  return typeof v === "number" && Number.isFinite(v) && Number.isInteger(v);
+}
+
+function isWorldHomeWidgetId(value: unknown): value is WorldHomeWidgetId {
+  return typeof value === "string" && (ALL_WORLD_HOME_WIDGETS as string[]).includes(value);
+}
+
+/** Longueur maximale d'un id de bloc (uuid = 36). */
+const MAX_BLOCK_ID_LENGTH = 64;
+
+/**
+ * Valide un item envoyé par le client et retourne sa forme normalisée, ou
+ * `null` s'il est invalide — rejeté plutôt qu'ignoré silencieusement (une
+ * incohérence type/champs ou une coordonnée hors bornes peut indiquer une
+ * donnée corrompue ou un contournement de l'UI, pas juste un cas à filtrer).
+ *
+ * L'id fourni par le client est conservé (après validation : chaîne non vide,
+ * bornée, unique dans la grille). Le régénérer à chaque enregistrement
+ * changerait l'identité de tous les blocs à chaque sauvegarde — donc leur clé
+ * React et leur identité côté react-grid-layout — ce qui les démonte/remonte
+ * et casse un geste de redimensionnement encore en cours. `seenIds` garantit
+ * l'unicité, ce qui suffit à écarter collision et écrasement.
+ */
+function validateHomeGridItem(
+  raw: unknown,
+  seenIds: Set<string>,
+  seenWidgetIds: Set<WorldHomeWidgetId>,
+): WorldHomeGridItem | null {
+  if (typeof raw !== "object" || raw === null) return null;
+  const r = raw as Record<string, unknown>;
+
+  if (!HOME_GRID_BLOCK_TYPES.has(r.type as string)) return null;
+  const type = r.type as "widget" | "html" | "markdown";
+
+  // Pas de hauteur : chaque bloc occupe une ligne qui s'auto-dimensionne à
+  // son contenu au rendu (voir worldHomeGrid.ts).
+  if (!isFiniteInt(r.x) || !isFiniteInt(r.y) || !isFiniteInt(r.w)) return null;
+  const { x, y, w } = r as { x: number; y: number; w: number };
+  if (x < 0 || y < 0 || y > MAX_HOME_GRID_Y || w < 2 || x + w > HOME_GRID_COLS) return null;
+
+  if (typeof r.id !== "string" || !r.id || r.id.length > MAX_BLOCK_ID_LENGTH || seenIds.has(r.id)) return null;
+  const id = r.id;
+  seenIds.add(id);
+
+  if (type === "widget") {
+    if (!isWorldHomeWidgetId(r.widgetId) || r.widgetId === "announcement") return null;
+    if (seenWidgetIds.has(r.widgetId)) return null;
+    if (r.html !== undefined || r.content !== undefined) return null;
+    seenWidgetIds.add(r.widgetId);
+    // Réglages bornés au registre : une clé inconnue ou une valeur hors
+    // bornes est écartée plutôt qu'enregistrée telle quelle.
+    const options = sanitizeWidgetOptions(r.widgetId, r.options);
+    return { id, type, x, y, w, widgetId: r.widgetId, ...(options ? { options } : {}) };
   }
-  if (!ANNOUNCEMENT_SIZES.has(size)) {
-    return { ok: false as const, error: "Taille invalide." };
+
+  // Titre libre optionnel (html/markdown) — tronqué plutôt que rejeté : il
+  // est purement descriptif, pas la peine d'invalider tout le bloc.
+  const title =
+    typeof r.title === "string" && r.title.trim()
+      ? { title: r.title.trim().slice(0, MAX_HOME_BLOCK_TITLE_LENGTH) }
+      : {};
+
+  if (type === "html") {
+    if (typeof r.html !== "string" || r.widgetId !== undefined || r.content !== undefined) return null;
+    const html = r.html.trim();
+    if (html.length > MAX_HOME_BLOCK_CONTENT_LENGTH) return null;
+    return { id, type, x, y, w, html, ...title };
   }
+
+  // markdown
+  if (typeof r.content !== "string" || r.widgetId !== undefined || r.html !== undefined) return null;
+  const content = r.content.trim();
+  if (content.length > MAX_HOME_BLOCK_CONTENT_LENGTH) return null;
+  return { id, type, x, y, w, content, ...title };
+}
+
+export async function setWorldHomeGrid(worldId: string, items: unknown[]) {
+  if (!Array.isArray(items)) return { ok: false as const, error: "Grille invalide." };
+  if (items.length > MAX_HOME_GRID_ITEMS) {
+    return { ok: false as const, error: `Maximum ${MAX_HOME_GRID_ITEMS} blocs.` };
+  }
+
+  const seenIds = new Set<string>();
+  const seenWidgetIds = new Set<WorldHomeWidgetId>();
+  const parsed: WorldHomeGridItem[] = [];
+  for (const raw of items) {
+    const item = validateHomeGridItem(raw, seenIds, seenWidgetIds);
+    if (!item) return { ok: false as const, error: "Un des blocs est invalide." };
+    parsed.push(item);
+  }
+  // Renumérote les lignes : retirer un bloc laisse sinon sa ligne vide, et le
+  // rendu afficherait un trou à sa place (voir compactHomeGridRows).
+  const validated = compactHomeGridRows(parsed);
+
   const supabase = await createClient();
-  const { error } = await supabase
-    .from("worlds")
-    .update({ announcement_html: trimmed || null, announcement_size: size })
-    .eq("id", worldId);
+  const { error } = await supabase.from("worlds").update({ home_grid: validated }).eq("id", worldId);
   if (error) return { ok: false as const, error: error.message };
-  return { ok: true as const };
+  return { ok: true as const, items: validated };
 }

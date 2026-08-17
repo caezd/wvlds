@@ -17,9 +17,17 @@ type Member = {
   avatar_url: string | null;
 };
 
-const MAX_SHOWN = 8;
+const DEFAULT_MAX_SHOWN = 8;
 
-export function WorldMembersOnlineWidget({ worldId }: { worldId: string }) {
+export function WorldMembersOnlineWidget({
+  worldId,
+  limit = DEFAULT_MAX_SHOWN,
+}: {
+  worldId: string;
+  /** Nombre d'avatars affichés avant le compteur « +N » — réglage du widget
+   *  (voir WORLD_HOME_WIDGET_OPTIONS). */
+  limit?: number;
+}) {
   const t = useTranslations("worlds");
   const [members, setMembers] = useState<Member[]>([]);
   const { onlineUsers } = useGlobalPresence();
@@ -74,7 +82,7 @@ export function WorldMembersOnlineWidget({ worldId }: { worldId: string }) {
     () => members.filter((m) => !!onlineUsers[m.user_id]),
     [members, onlineUsers],
   );
-  const shown = online.slice(0, MAX_SHOWN);
+  const shown = online.slice(0, limit);
   const overflow = online.length - shown.length;
 
   return (
@@ -83,7 +91,7 @@ export function WorldMembersOnlineWidget({ worldId }: { worldId: string }) {
       className="flex items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-hoverCard"
     >
       <Users className="h-4 w-4 shrink-0 text-muted-foreground" />
-      <span className="flex-1 text-sm font-medium text-foreground">
+      <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
         {online.length > 0 ? t("home.onlineCount", { count: online.length }) : t("home.noneOnline")}
       </span>
       {shown.length > 0 && (

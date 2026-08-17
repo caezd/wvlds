@@ -324,6 +324,24 @@
         "sizeMedium": "Mediana",
         "sizeLarge": "Grande",
         "previewLabel": "Vista previa"
+      },
+      "grid": {
+        "addBlock": "Añadir un bloque",
+        "htmlBlockTitle": "Bloque HTML",
+        "markdownBlockTitle": "Bloque Markdown",
+        "markdownLabel": "Markdown",
+        "markdownPlaceholder": "# Título\n\nSu texto…",
+        "editBlock": "Editar el bloque",
+        "blockTitleLabel": "Título",
+        "blockTitleHelp": "Solo sirve para identificar el bloque en este editor — nunca se muestra en la página de inicio.",
+        "blockOptions": "Ajustes del bloque",
+        "options": {
+          "range": "Entre {min} y {max}",
+          "visibleRows": "Filas visibles",
+          "limit": "Número de entradas"
+        },
+        "deleteTitle": "¿Eliminar este bloque?",
+        "deleteDesc": "Este bloque se eliminará de la página de inicio. Esta acción es irreversible."
       }
     }
   },
