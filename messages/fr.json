@@ -273,9 +273,7 @@
     },
     "hero": {
       "addFavorite": "Ajouter aux favoris",
-      "removeFavorite": "Retirer des favoris",
-      "expand": "Plein écran",
-      "collapse": "Réduire"
+      "removeFavorite": "Retirer des favoris"
     },
     "composer": {
       "placeholder": "Nouveau jeu…",

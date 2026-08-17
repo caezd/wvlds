@@ -111,4 +111,8 @@ export type World = {
   /** Grille de blocs de la page d'accueil, réglée par un admin — null = synthèse
    *  depuis l'ancien système, voir resolveWorldHomeGrid(). */
   home_grid?: unknown[] | null;
+  /** Couleur de fond (hex) sous la bannière de la page d'accueil — null = couleur par défaut du thème. */
+  home_body_color?: string | null;
+  /** Couleur de fond (hex) du panel de contenu de la page d'accueil — null = couleur par défaut du thème. */
+  home_panel_color?: string | null;
 };

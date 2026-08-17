@@ -2,19 +2,20 @@
 
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Home, Maximize2, Minimize2, Star } from "lucide-react";
+import { Globe, GlobeLock, Star } from "lucide-react";
 
 import { WorldHeroCard } from "./WorldHeroCard";
 import { WorldHomeGridView } from "./WorldHomeGridView";
-import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
+import { MobileDrawerOpenButton } from "@/components/sidebar/MobileDrawerOpenButton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { World, WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import { useMobileSidebar } from "@/components/providers/MobileSidebarProvider";
 import type { AsidePersona } from "@/components/personas/WorldPersonaAsideClient";
-import { saveWorldPrefs, toggleWorldFavorite } from "@/app/(protected)/w/actions";
+import { toggleWorldFavorite } from "@/app/(protected)/w/actions";
 import { cn } from "@/lib/utils";
 import { resolveWorldHomeGrid } from "./worldHomeGrid";
 
@@ -79,9 +80,8 @@ export function WorldHome({
   const t = useTranslations("worlds");
   const { setHideMobileHeader } = useMobileSidebar();
 
-  // La vue par défaut du monde affiche désormais son propre WorldPanelHeader
-  // (comme tous les autres onglets) — la barre mobile générique de AppShell
-  // deviendrait redondante.
+  // La vue par défaut du monde a son propre bouton menu mobile, incrusté sur
+  // la bannière — la barre mobile générique de AppShell deviendrait redondante.
   useEffect(() => {
     setHideMobileHeader(true);
     return () => setHideMobileHeader(false);
@@ -90,7 +90,6 @@ export function WorldHome({
   const hasTimeline = world_timeline && !!world.timeline_enabled && !!world.timeline_config;
   const _hasCatalogue = world_catalogue && (!!(world.restrict_inventory || world.restrict_skills) || canEditTabs);
 
-  const [mainExpanded, setMainExpanded] = useState(initialPrefs?.main_expanded ?? false);
   const [isFavorite, setIsFavorite] = useState(initialPrefs?.is_favorite ?? false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(initialCategoryId ?? null);
   // Le composer est retiré de la grille avant le calcul du layout (pas juste
@@ -99,6 +98,12 @@ export function WorldHome({
   const gridItems = resolveWorldHomeGrid(world.home_grid, world.home_layout, world.announcement_html).filter(
     (item) => item.widgetId !== "composer" || (canPost && create_chatroom),
   );
+  // Personnalisation désactivée temporairement (voir HomeColorField dans
+  // WorldSettingsView.tsx) — toujours les couleurs par défaut du thème,
+  // même si world.home_body_color/home_panel_color est déjà enregistré. Le
+  // panel reprend la même couleur que le body (pas de carte distincte).
+  const bodyColor = "var(--background)";
+  const panelColor = bodyColor;
 
   const baseHref = `/w/${worldId}`;
 
@@ -116,12 +121,6 @@ export function WorldHome({
     const next = !isFavorite;
     setIsFavorite(next);
     void toggleWorldFavorite(worldId, next);
-  }
-
-  function handleToggleExpand() {
-    const next = !mainExpanded;
-    setMainExpanded(next);
-    void saveWorldPrefs(worldId, { main_expanded: next });
   }
 
   const showCanvas = view === "canvas";
@@ -198,80 +197,89 @@ export function WorldHome({
             onClose={closeView}
           />
         ) : (
-          <div className="flex min-h-0 flex-1 flex-col">
-            {/* Header classique (comme les autres onglets d'un monde), qu'on
-                soit en plein écran ou non — favoris + agrandir/réduire y
-                vivent, avec le bouton menu mobile intégré, plutôt que flottés
-                par-dessus la bannière. */}
-            <WorldPanelHeader
-              icon={<Home className="h-4 w-4 shrink-0 text-muted-foreground" />}
-              title={world.name}
-              right={
-                <>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        type="button"
-                        onClick={handleToggleFavorite}
-                        aria-label={isFavorite ? t("hero.removeFavorite") : t("hero.addFavorite")}
-                        className={cn(
-                          "flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-hoverCard",
-                          isFavorite ? "text-yellow-500" : "text-muted-foreground hover:text-foreground",
-                        )}
-                      >
-                        <Star size={16} className={isFavorite ? "fill-current" : ""} />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" sideOffset={6}>
-                      {isFavorite ? t("hero.removeFavorite") : t("hero.addFavorite")}
-                    </TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        type="button"
-                        onClick={handleToggleExpand}
-                        aria-label={mainExpanded ? t("hero.collapse") : t("hero.expand")}
-                        className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-hoverCard hover:text-foreground"
-                      >
-                        {mainExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" sideOffset={6}>
-                      {mainExpanded ? t("hero.collapse") : t("hero.expand")}
-                    </TooltipContent>
-                  </Tooltip>
-                </>
-              }
-            />
-            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-              <div className="flex w-full flex-col gap-6">
-                <div
-                  className={
-                    mainExpanded
-                      ? ""
-                      : "mx-auto w-full px-4 pt-4 [--world-content-max-width:36rem] lg:[--world-content-max-width:44rem] max-w-(--world-content-max-width)"
-                  }
-                >
-                  <WorldHeroCard
-                    world={world}
-                    canAdmin={canAdmin}
-                    isExpanded={mainExpanded}
-                  />
+          <div
+            className="flex min-h-0 flex-1 flex-col overflow-y-auto"
+            style={{ backgroundColor: bodyColor }}
+          >
+            {/* Bannière en fond, collée au bord du content (pas de padding) —
+                boutons incrustés au-dessus (menu mobile, favoris). Plus de
+                header séparé ni d'option plein écran : la page d'accueil
+                occupe désormais toujours toute la largeur. Le fond (image +
+                fondu) remplit tout ce conteneur, dont la hauteur suit celle
+                du bloc titre — le fondu se termine donc pile avant le panel,
+                quelle que soit la longueur de la description. */}
+            <div className="relative">
+              <WorldHeroCard world={world} bodyColor={bodyColor} />
+              <div className="absolute inset-x-0 top-0 flex items-center justify-between p-3">
+                <MobileDrawerOpenButton className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-black/30 text-white backdrop-blur-sm transition-colors hover:bg-black/45" />
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={handleToggleFavorite}
+                      aria-label={isFavorite ? t("hero.removeFavorite") : t("hero.addFavorite")}
+                      className={cn(
+                        "ml-auto flex h-8 w-8 items-center justify-center rounded-lg bg-black/30 backdrop-blur-sm transition-colors hover:bg-black/45",
+                        isFavorite ? "text-yellow-400" : "text-white",
+                      )}
+                    >
+                      <Star size={16} className={isFavorite ? "fill-current" : ""} />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" sideOffset={6}>
+                    {isFavorite ? t("hero.removeFavorite") : t("hero.addFavorite")}
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+
+              {/* Titre + description, désormais du contenu de page normal
+                  (plus superposés sur la bannière). pt-40/56 réserve la
+                  hauteur visuelle de la bannière.  est nécessaire
+                  ici : sans position, ce bloc statique se peindrait sous le
+                  fond absolu de WorldHeroCard malgré son ordre plus tardif
+                  dans le DOM (règles d'empilement CSS), le rendant invisible.
+                  Les statistiques ne sont plus un cas à part : c'est un bloc
+                  de la grille comme un autre, plaçable où l'admin veut. */}
+              <div className="relative w-full space-y-2 px-12 pb-4 pt-40 md:pt-56">
+                <span className="relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-md bg-muted">
+                  {world.icon_url ? (
+                    <Image src={world.icon_url} alt="" fill sizes="44px" className="object-cover" />
+                  ) : world.visibility === "public" ? (
+                    <Globe size={20} className="text-muted-foreground" />
+                  ) : (
+                    <GlobeLock size={20} className="text-muted-foreground" />
+                  )}
+                </span>
+                <div>
+                  <h1 className="text-2xl font-semibold text-foreground md:text-3xl">
+                    {world.name}
+                  </h1>
+                  {world.description && (
+                    <p className="mt-1 max-w-xl text-sm text-muted-foreground">{world.description}</p>
+                  )}
                 </div>
-                <div className="mx-auto w-full px-4 pb-4 [--world-content-max-width:36rem] lg:[--world-content-max-width:44rem] max-w-(--world-content-max-width)">
-                  <WorldHomeGridView
-                    items={gridItems}
-                    worldId={worldId}
-                    canPost={canPost}
-                    canCreateChatroom={create_chatroom}
-                    timelineConfig={hasTimeline ? (world.timeline_config as WorldTimelineConfig) : undefined}
-                    initialRooms={initialRooms}
-                    selectedCategoryId={selectedCategoryId}
-                    onSelectCategory={handleSelectCategory}
-                    onWikiLink={(slug) => router.push(`${baseHref}?view=wiki&page=${encodeURIComponent(slug)}`)}
-                  />
-                </div>
+              </div>
+            </div>
+
+            {/* Panel de contenu : accueille la grille de blocs configurée par
+                l'admin (voir WorldHomeGridView / WorldHomeGridEditor). */}
+            <div className="px-12 pb-12">
+              <div
+                data-home-panel
+                className="w-full rounded-2xl"
+                style={{ backgroundColor: panelColor }}
+              >
+                <WorldHomeGridView
+                  items={gridItems}
+                  worldId={worldId}
+                  canPost={canPost}
+                  canCreateChatroom={create_chatroom}
+                  timelineConfig={hasTimeline ? (world.timeline_config as WorldTimelineConfig) : undefined}
+                  initialRooms={initialRooms}
+                  selectedCategoryId={selectedCategoryId}
+                  onSelectCategory={handleSelectCategory}
+                  onWikiLink={(slug) => router.push(`${baseHref}?view=wiki&page=${encodeURIComponent(slug)}`)}
+                />
               </div>
             </div>
           </div>

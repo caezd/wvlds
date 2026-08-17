@@ -1,32 +1,29 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
-import { Globe, GlobeLock } from "lucide-react";
 
 import { type World } from "@/types/worlds";
 import { supabaseThumb } from "@/lib/storage";
 
-type HeroWorld = World & { owner_id: string };
-
 /**
- * Carte hero du monde (kit "Constructor X") : bannière, icône, nom,
- * description. Intègre le bouton d'invitation et, pour les admins,
- * un crayon au survol qui ouvre le modal d'édition.
+ * Fond de la page d'accueil : image (ou couleur unie à défaut) en arrière-plan
+ * absolu, sans titre/description superposés — ceux-ci sont désormais du
+ * contenu de page normal, rendu par-dessus sur un fond opaque garantissant
+ * leur lisibilité (voir WorldHome.tsx). Remplit tout le conteneur `relative`
+ * parent (banderole + bloc titre). Le fondu vers `bodyColor` utilise des
+ * paliers en unités fixes (pas des pourcentages) : il se termine toujours à
+ * une hauteur constante, quelle que soit la hauteur totale (variable) du
+ * conteneur — au-delà, la couleur reste unie jusqu'au panel.
  */
 export function WorldHeroCard({
-  world: initialWorld,
-  canAdmin: _canAdmin = false,
-  footer,
-  isExpanded = false,
+  world,
+  bodyColor,
 }: {
-  world: HeroWorld;
-  canAdmin?: boolean;
-  /** Contenu rendu tout en bas de la bannière (ex: barre d'onglets). */
-  footer?: ReactNode;
-  isExpanded?: boolean;
+  world: Pick<World, "banner_url" | "color">;
+  /** Couleur de fond du body vers laquelle l'image s'estompe (doit correspondre au fond réellement affiché derrière). */
+  bodyColor: string;
 }) {
-  const [world, _setWorld] = useState(initialWorld);
   const [bannerThumbFailed, setBannerThumbFailed] = useState(false);
 
   useEffect(() => {
@@ -34,72 +31,32 @@ export function WorldHeroCard({
   }, [world.banner_url]);
 
   return (
-    <section
-      className={[
-        "group/hero relative overflow-hidden p-6 md:p-8",
-        isExpanded ? "" : "rounded-lg",
-      ].join(" ")}
+    <div
+      aria-hidden
+      className="pointer-events-none absolute inset-0 overflow-hidden"
       style={{
-        // Pas de couleur de fond derrière une bannière image : elle dépasse
-        // dans les coins arrondis sous l'image.
-        backgroundColor: world.banner_url
-          ? undefined
-          : (world.color ?? undefined),
+        backgroundColor: world.banner_url ? undefined : (world.color ?? undefined),
       }}
     >
-      {world.banner_url && (
+      {world.banner_url ? (
         <Image
-          src={bannerThumbFailed ? world.banner_url : (supabaseThumb(world.banner_url, 1200) ?? world.banner_url)}
+          src={bannerThumbFailed ? world.banner_url : (supabaseThumb(world.banner_url, 1920, 90, undefined, "cover") ?? world.banner_url)}
           onError={() => setBannerThumbFailed(true)}
           alt=""
           fill
-          sizes="(min-width: 1024px) 800px, 100vw"
-          className="rounded-[inherit] object-cover"
+          sizes="100vw"
+          className="object-cover"
           priority
         />
-      )}
-      {/* Voile de lisibilité / fallback sans bannière */}
+      ) : !world.color ? (
+        <div className="absolute inset-0 bg-gradient-to-br from-card-400 to-card" />
+      ) : null}
+
+      {/* Fondu vers le bas, sur une hauteur fixe — au-delà, `${bodyColor}` reste uni jusqu'au panel. */}
       <div
-        className={
-          world.banner_url
-            ? "absolute inset-0 rounded-[inherit] bg-gradient-to-r from-black/70 via-black/40 to-transparent"
-            : world.color
-              ? "absolute inset-0 rounded-[inherit] bg-black/20"
-              : "absolute inset-0 rounded-[inherit] bg-gradient-to-br from-card-400 to-card"
-        }
+        className="absolute inset-0"
+        style={{ background: `linear-gradient(to bottom, transparent 10rem, ${bodyColor} 20rem)` }}
       />
-
-      <div className="relative z-10 flex min-h-40 flex-col justify-end gap-2 md:min-h-48">
-        <span
-          className={
-            world.icon_url
-              ? "relative mb-1 flex h-11 w-11 items-center justify-center overflow-hidden rounded-md"
-              : "relative mb-1 flex h-11 w-11 items-center justify-center overflow-hidden rounded-md bg-black/50"
-          }
-        >
-          {world.icon_url ? (
-            <Image
-              src={world.icon_url}
-              alt=""
-              fill
-              sizes="44px"
-              className="object-cover"
-            />
-          ) : world.visibility === "public" ? (
-            <Globe size={20} className="text-white/90" />
-          ) : (
-            <GlobeLock size={20} className="text-white/90" />
-          )}
-        </span>
-        <h1 className="text-2xl font-semibold text-white md:text-3xl">
-          {world.name}
-        </h1>
-        {world.description && (
-          <p className="max-w-xl text-sm text-white/75">{world.description}</p>
-        )}
-      </div>
-
-      {footer && <div className="relative mt-6">{footer}</div>}
-    </section>
+    </div>
   );
 }

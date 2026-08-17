@@ -18,10 +18,8 @@ vi.mock("@/components/providers/FeatureFlagsProvider", () => ({
   }),
 }));
 
-const saveWorldPrefs = vi.fn();
 const toggleWorldFavorite = vi.fn();
 vi.mock("@/app/(protected)/w/actions", () => ({
-  saveWorldPrefs: (...args: unknown[]) => saveWorldPrefs(...args),
   toggleWorldFavorite: (...args: unknown[]) => toggleWorldFavorite(...args),
 }));
 
@@ -54,51 +52,32 @@ function baseProps() {
 }
 
 beforeEach(() => {
-  saveWorldPrefs.mockClear();
   toggleWorldFavorite.mockClear();
 });
 
-describe("WorldHome — header classique toujours affiché (au lieu des boutons flottés sur la bannière)", () => {
-  it("affiche le header avec le nom du monde et l'action agrandir quand le mode plein écran est désactivé", () => {
+describe("WorldHome — pas de header séparé ni d'option plein écran, boutons incrustés sur la bannière", () => {
+  it("n'affiche aucune option plein écran (toujours pleine largeur)", () => {
     render(<WorldHome {...baseProps()} initialPrefs={{ main_expanded: false, is_favorite: false }} />);
 
-    expect(screen.getByText("Avalonia")).toBeInTheDocument();
-    expect(screen.getByLabelText("Plein écran")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Plein écran")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Réduire")).not.toBeInTheDocument();
   });
 
-  it("affiche le header avec le nom du monde et l'action réduire en plein écran", () => {
-    render(<WorldHome {...baseProps()} initialPrefs={{ main_expanded: true, is_favorite: false }} />);
+  it("affiche le bouton menu mobile incrusté sur la bannière", () => {
+    render(<WorldHome {...baseProps()} initialPrefs={{ main_expanded: false, is_favorite: false }} />);
 
-    expect(screen.getByText("Avalonia")).toBeInTheDocument();
-    expect(screen.getByLabelText("Réduire")).toBeInTheDocument();
+    expect(screen.getByLabelText("Ouvrir le menu")).toBeInTheDocument();
+  });
+
+  it("affiche le bouton favoris incrusté sur la bannière", () => {
+    render(<WorldHome {...baseProps()} initialPrefs={{ main_expanded: false, is_favorite: false }} />);
+
     expect(screen.getByLabelText("Ajouter aux favoris")).toBeInTheDocument();
   });
 
-  it("le bouton réduire quitte le plein écran, persiste la préférence et bascule vers l'action agrandir", async () => {
-    const user = userEvent.setup();
-    render(<WorldHome {...baseProps()} initialPrefs={{ main_expanded: true, is_favorite: false }} />);
-
-    await user.click(screen.getByLabelText("Réduire"));
-
-    expect(saveWorldPrefs).toHaveBeenCalledWith("world-1", { main_expanded: false });
-    expect(screen.getByText("Avalonia")).toBeInTheDocument();
-    expect(screen.getByLabelText("Plein écran")).toBeInTheDocument();
-  });
-
-  it("le bouton agrandir depuis le header compact passe en plein écran et persiste la préférence", async () => {
+  it("le bouton favoris bascule la préférence et son libellé", async () => {
     const user = userEvent.setup();
     render(<WorldHome {...baseProps()} initialPrefs={{ main_expanded: false, is_favorite: false }} />);
-
-    await user.click(screen.getByLabelText("Plein écran"));
-
-    expect(saveWorldPrefs).toHaveBeenCalledWith("world-1", { main_expanded: true });
-    expect(screen.getByLabelText("Réduire")).toBeInTheDocument();
-  });
-
-  it("le bouton favoris depuis le header bascule la préférence", async () => {
-    const user = userEvent.setup();
-    render(<WorldHome {...baseProps()} initialPrefs={{ main_expanded: true, is_favorite: false }} />);
 
     await user.click(screen.getByLabelText("Ajouter aux favoris"));
 
