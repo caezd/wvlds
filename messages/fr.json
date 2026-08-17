@@ -928,6 +928,18 @@
     "markRestricted": "Réserver aux éditeurs",
     "unmarkRestricted": "Rendre visible aux joueurs",
     "restrictedBadge": "Réservé aux éditeurs",
+    "lexicon": {
+      "manageButton": "Lexique",
+      "title": "Lexique du monde",
+      "description": "Les termes définis ici sont automatiquement mis en évidence dans tout le contenu du wiki, avec leur description affichée au clic.",
+      "termPlaceholder": "Terme…",
+      "descriptionPlaceholder": "Description…",
+      "addTerm": "Ajouter un terme",
+      "noTerms": "Aucun terme pour l'instant.",
+      "duplicateTerm": "Ce terme existe déjà dans le lexique.",
+      "deleteTitle": "Supprimer « {term} » ?",
+      "deleteDesc": "Ce terme ne sera plus mis en évidence dans le wiki. Cette action est irréversible."
+    },
     "templates": {
       "pickerLabel": "Modèle",
       "blank": "Vierge",

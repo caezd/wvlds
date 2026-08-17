@@ -11,7 +11,10 @@ import rehypeHighlight from "rehype-highlight";
 
 import { cn } from "@/lib/utils";
 import { transformStyledSpans, createFenceTracker } from "@/lib/textStyledSpans";
+import { highlightLexiconTerms } from "@/lib/lexiconHighlight";
 import { extractHeadings } from "@/lib/wikiToc";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import type { WorldLexiconTerm } from "@/types/worlds";
 
 type Props = {
   content: string;
@@ -25,6 +28,9 @@ type Props = {
    *  absent, ces liens sont rendus visuellement cassés plutôt que cliquables
    *  (contexte hors wiki, ex: un `wiki:` tapé à la main dans un message). */
   onWikiLink?: (slug: string) => void;
+  /** Lexique du monde (voir lib/lexiconHighlight.ts) — absent = pas de
+   *  surlignage. Réservé aux pages du wiki, jamais aux messages de chat. */
+  lexiconTerms?: WorldLexiconTerm[];
 };
 
 function extractText(node: React.ReactNode): string {
@@ -94,6 +100,7 @@ function urlTransform(url: string): string {
   if (url.startsWith("color:") && COLOR_HEX_RE.test(url.slice("color:".length))) return url;
   if (url === "underline:") return url;
   if (url.startsWith("wiki:")) return url;
+  if (url.startsWith("lexicon:")) return url;
   return defaultUrlTransform(url);
 }
 
@@ -241,7 +248,8 @@ export function MarkdownContent({
   allowImages = false,
   isMine = false,
   onWikiLink,
-}: Pick<Props, "content" | "allowImages" | "isMine" | "onWikiLink">) {
+  lexiconTerms,
+}: Pick<Props, "content" | "allowImages" | "isMine" | "onWikiLink" | "lexiconTerms">) {
   const schema = useMemo(() => {
     return {
       ...defaultSchema,
@@ -260,15 +268,17 @@ export function MarkdownContent({
       // (voir lib/textStyledSpans.ts) à travers les deux filtres.
       protocols: {
         ...defaultSchema.protocols,
-        href: [...(defaultSchema.protocols?.href ?? []), "color", "underline", "wiki"],
+        href: [...(defaultSchema.protocols?.href ?? []), "color", "underline", "wiki", "lexicon"],
       },
     } as Parameters<typeof rehypeSanitize>[0];
   }, []);
 
-  const normalized = useMemo(
-    () => transformAngleCallouts(transformStyledSpans(content)),
-    [content],
-  );
+  const normalized = useMemo(() => {
+    const withLexicon = lexiconTerms?.length
+      ? highlightLexiconTerms(content, lexiconTerms)
+      : content;
+    return transformAngleCallouts(transformStyledSpans(withLexicon));
+  }, [content, lexiconTerms]);
 
   // Ids d'ancre posés sur les titres (h1-h6), pour le sommaire du wiki
   // (lib/wikiToc.ts::extractHeadings, appelé côté appelant sur ce même
@@ -280,6 +290,12 @@ export function MarkdownContent({
   headingsRef.current = useMemo(() => extractHeadings(content), [content]);
   const headingIndexRef = useRef(0);
   headingIndexRef.current = 0;
+
+  const lexiconById = useMemo(() => {
+    const map = new Map<string, WorldLexiconTerm>();
+    for (const t of lexiconTerms ?? []) map.set(t.id, t);
+    return map;
+  }, [lexiconTerms]);
 
   function headingComponent(Tag: "h1" | "h2" | "h3" | "h4" | "h5" | "h6") {
     return function Heading({ children }: { children?: React.ReactNode }) {
@@ -367,6 +383,28 @@ export function MarkdownContent({
         if (hrefStr === "underline:") return <span className="underline">{children}</span>;
         return <>{children}</>;
       }
+      if (hrefStr.startsWith("lexicon:")) {
+        const termId = hrefStr.slice("lexicon:".length);
+        const term = lexiconById.get(termId);
+        // Terme supprimé depuis le rendu du texte source : reste du texte simple.
+        if (!term) return <>{children}</>;
+        return (
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                className="rounded-sm px-0.5 underline decoration-dotted decoration-primary/60 underline-offset-2 hover:bg-primary/10"
+              >
+                {children}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-72 text-sm">
+              <p className="font-semibold text-foreground">{term.term}</p>
+              <p className="mt-1 text-muted-foreground">{term.description}</p>
+            </PopoverContent>
+          </Popover>
+        );
+      }
       if (hrefStr.startsWith("wiki:")) {
         const slug = hrefStr.slice("wiki:".length);
         if (!slug || !onWikiLink) {
@@ -441,10 +479,17 @@ export default function MarkdownRenderer({
   allowImages = false,
   isMine = false,
   onWikiLink,
+  lexiconTerms,
 }: Props) {
   return (
     <div className={proseClassName(proseSize, className)}>
-      <MarkdownContent content={content} allowImages={allowImages} isMine={isMine} onWikiLink={onWikiLink} />
+      <MarkdownContent
+        content={content}
+        allowImages={allowImages}
+        isMine={isMine}
+        onWikiLink={onWikiLink}
+        lexiconTerms={lexiconTerms}
+      />
     </div>
   );
 }

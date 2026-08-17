@@ -89,6 +89,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Interface",
+    text: "Nouveau lexique du monde dans le wiki : un admin peut y définir des termes propres à son univers, automatiquement mis en évidence dans tout le contenu du wiki, avec la description affichée au clic. Gestion des termes depuis un nouveau bouton « Lexique » en mode modification.",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
     text: "Deux nouveaux widgets pour la page d'accueil d'un monde : « Raccourcis wiki » (dernières pages modifiées, lien direct) et « Personas récents » (dernières personas créées, aperçu au clic).",
   },
   {
