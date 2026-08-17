@@ -42,11 +42,15 @@ function isWorldHomeWidgetId(value: unknown): value is WorldHomeWidgetId {
 
 /**
  * Résout la valeur brute stockée en base vers une liste d'ids valides.
- * `null`/vide/tout-invalide retombe sur l'ordre par défaut ; les entrées
- * inconnues (widget supprimé depuis) sont filtrées silencieusement.
+ * `null`/non-tableau retombe sur l'ordre par défaut ; un tableau vide est une
+ * désactivation volontaire de tous les widgets et reste vide. Les entrées
+ * inconnues (widget supprimé depuis) sont filtrées silencieusement, et si un
+ * tableau non vide ne contient plus que des entrées invalides, on retombe
+ * aussi sur l'ordre par défaut plutôt que d'afficher une page vide involontaire.
  */
 export function resolveWorldHomeLayout(raw: unknown): WorldHomeWidgetId[] {
   if (!Array.isArray(raw)) return DEFAULT_WORLD_HOME_LAYOUT;
+  if (raw.length === 0) return [];
   const seen = new Set<WorldHomeWidgetId>();
   const filtered = raw.filter((id): id is WorldHomeWidgetId => {
     if (!isWorldHomeWidgetId(id) || seen.has(id)) return false;

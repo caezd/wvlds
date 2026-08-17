@@ -34,6 +34,10 @@ describe("resolveWorldHomeLayout", () => {
     expect(resolveWorldHomeLayout(["foo", "bar"])).toEqual(DEFAULT_WORLD_HOME_LAYOUT);
   });
 
+  it("respecte un tableau vide explicite (admin ayant retiré tous les widgets)", () => {
+    expect(resolveWorldHomeLayout([])).toEqual([]);
+  });
+
   it("l'annonce est un widget connu mais pas activé par défaut (opt-in)", () => {
     expect(ALL_WORLD_HOME_WIDGETS).toContain("announcement");
     expect(DEFAULT_WORLD_HOME_LAYOUT).not.toContain("announcement");
