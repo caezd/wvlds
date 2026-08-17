@@ -21,7 +21,9 @@ import {
     deleteWorldCatalogCategory,
     batchUpdateCatalogCategoryOrder,
     batchUpdateCatalogItemOrder,
+    setWorldAnnouncement,
 } from "@/app/actions/worldCatalog";
+import { MAX_ANNOUNCEMENT_HTML_LENGTH } from "@/components/worlds/home/worldHomeWidgets";
 import { createClient } from "@/lib/supabase/server";
 import { deletePersona } from "@/app/(protected)/p/actions";
 
@@ -425,5 +427,52 @@ describe("batchUpdateCatalogItemOrder", () => {
         await batchUpdateCatalogItemOrder([{ id: "i1", sort_index: 5, category_id: "cat2" }], "inventory");
         expect(mock.buildersFor("world_inventory_items")[0].update)
             .toHaveBeenCalledWith({ sort_index: 5, category_id: "cat2" });
+    });
+});
+
+// ── setWorldAnnouncement ──────────────────────────────────────────────────────
+
+describe("setWorldAnnouncement", () => {
+    it("enregistre le HTML (trim) et la taille choisie", async () => {
+        const mock = createSupabaseMock({ results: [{ error: null }] });
+        use(mock);
+        const res = await setWorldAnnouncement("w1", "  <p>Salut</p>  ", "lg");
+        expect(res).toEqual({ ok: true });
+        expect(mock.buildersFor("worlds")[0].update).toHaveBeenCalledWith({
+            announcement_html: "<p>Salut</p>",
+            announcement_size: "lg",
+        });
+    });
+
+    it("enregistre null quand le HTML est vide (ou ne contient que des espaces)", async () => {
+        const mock = createSupabaseMock({ results: [{ error: null }] });
+        use(mock);
+        await setWorldAnnouncement("w1", "   ", "md");
+        expect(mock.buildersFor("worlds")[0].update).toHaveBeenCalledWith({
+            announcement_html: null,
+            announcement_size: "md",
+        });
+    });
+
+    it("refuse un HTML dépassant la limite, sans appeler Supabase", async () => {
+        const mock = createSupabaseMock();
+        use(mock);
+        const tooLong = "a".repeat(MAX_ANNOUNCEMENT_HTML_LENGTH + 1);
+        const res = await setWorldAnnouncement("w1", tooLong, "md");
+        expect(res.ok).toBe(false);
+        expect(mock.from).not.toHaveBeenCalled();
+    });
+
+    it("refuse une taille invalide, sans appeler Supabase", async () => {
+        const mock = createSupabaseMock();
+        use(mock);
+        const res = await setWorldAnnouncement("w1", "<p>x</p>", "xl" as never);
+        expect(res.ok).toBe(false);
+        expect(mock.from).not.toHaveBeenCalled();
+    });
+
+    it("remonte l'erreur Supabase", async () => {
+        use(createSupabaseMock({ results: [{ error: { message: "nope" } }] }));
+        expect(await setWorldAnnouncement("w1", "<p>x</p>", "md")).toEqual({ ok: false, error: "nope" });
     });
 });

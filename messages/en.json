@@ -294,8 +294,6 @@
       "categoryNone": "None"
     },
     "home": {
-      "customize": "Customize homepage",
-      "done": "Done",
       "addWidget": "Add a widget",
       "noWidgets": "No widgets shown — add one below.",
       "widgets": {
@@ -303,10 +301,25 @@
         "composer": "Create a game",
         "chatrooms": "Chatrooms",
         "stats": "Stats",
-        "members_online": "Members online"
+        "members_online": "Members online",
+        "announcement": "Announcement"
       },
       "onlineCount": "{count, plural, one {# member online} other {# members online}}",
-      "noneOnline": "No one online right now"
+      "noneOnline": "No one online right now",
+      "announcement": {
+        "add": "Add an announcement",
+        "edit": "Edit announcement",
+        "dialogTitle": "World announcement",
+        "htmlLabel": "HTML / CSS",
+        "htmlPlaceholder": "'<style>…</style>\n<div>…</div>'",
+        "htmlHelp": "HTML and CSS only — rendered in an isolated frame, no script can run.",
+        "htmlTooLong": "Maximum {max} characters.",
+        "sizeLabel": "Height",
+        "sizeSmall": "Small",
+        "sizeMedium": "Medium",
+        "sizeLarge": "Large",
+        "previewLabel": "Preview"
+      }
     }
   },
   "auth": {

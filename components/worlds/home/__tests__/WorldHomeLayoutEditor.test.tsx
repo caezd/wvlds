@@ -92,4 +92,32 @@ describe("WorldHomeLayoutEditor", () => {
     render(<WorldHomeLayoutEditor worldId="w1" layout={[]} onLayoutChange={vi.fn()} />);
     expect(screen.getByText("Aucun widget affiché — ajoutez-en un ci-dessous.")).toBeInTheDocument();
   });
+
+  it("appelle onPersisted une fois l'écriture confirmée en base", async () => {
+    setup();
+    const onPersisted = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <WorldHomeLayoutEditor worldId="w1" layout={["chatrooms"]} onLayoutChange={vi.fn()} onPersisted={onPersisted} />,
+    );
+
+    await user.click(screen.getByText("Ajouter un widget"));
+    await user.click(screen.getByRole("menuitem", { name: "Statistiques" }));
+
+    expect(onPersisted).toHaveBeenCalledTimes(1);
+  });
+
+  it("n'appelle pas onPersisted si la persistance échoue", async () => {
+    setup([{ error: { message: "boom" } }]);
+    const onPersisted = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <WorldHomeLayoutEditor worldId="w1" layout={["chatrooms"]} onLayoutChange={vi.fn()} onPersisted={onPersisted} />,
+    );
+
+    await user.click(screen.getByText("Ajouter un widget"));
+    await user.click(screen.getByRole("menuitem", { name: "Statistiques" }));
+
+    expect(onPersisted).not.toHaveBeenCalled();
+  });
 });

@@ -9,6 +9,16 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Interface",
+    text: "Nouveau widget « Annonce » pour la page d'accueil d'un monde : un admin peut y écrire du HTML et du CSS libres (3 hauteurs au choix), depuis un nouvel onglet « Page d'accueil » dans les réglages du monde. Le rendu passe par un cadre isolé où aucun script ne peut s'exécuter, quel que soit le contenu saisi.",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
+    text: "Le bouton pour redescendre en bas d'une chatroom apparaît désormais avec une légère animation (glissement depuis le bas), au lieu d'un simple fondu, et adopte une forme carrée arrondie plutôt que ronde.",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
     text: "Une catégorie de chatrooms n'a plus qu'une seule image à gérer (au lieu d'une bannière et d'une icône séparées) — utilisée à la fois pour la grande carte et les petits avatars. Un bouton « Retirer l'image » permet aussi de l'effacer, ce qui était impossible avant pour la bannière.",
   },
   {
@@ -29,7 +39,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Interface",
-    text: "La page d'accueil d'un monde devient personnalisable pour les admins : un nouveau bouton dans l'en-tête permet de réorganiser ses blocs (catégories, composer, salons) par glisser-déposer, et d'y ajouter deux nouveaux widgets — statistiques du monde et membres en ligne. L'ordre choisi s'applique à tous les visiteurs du monde.",
+    text: "La page d'accueil d'un monde devient personnalisable pour les admins, depuis un nouvel onglet « Page d'accueil » dans les réglages du monde : réorganiser ses blocs (catégories, composer, salons) par glisser-déposer, et y ajouter deux nouveaux widgets — statistiques du monde et membres en ligne. L'ordre choisi s'applique à tous les visiteurs du monde.",
   },
   {
     date: "2026-08",

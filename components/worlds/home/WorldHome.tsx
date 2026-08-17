@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Home, LayoutGrid, Maximize2, Minimize2, Star } from "lucide-react";
+import { Home, Maximize2, Minimize2, Star } from "lucide-react";
 
 import { WorldHeroCard } from "./WorldHeroCard";
 import { WorldChatComposer } from "../chatrooms/WorldChatComposer";
@@ -19,6 +19,7 @@ import type { AsidePersona } from "@/components/personas/WorldPersonaAsideClient
 import { saveWorldPrefs, toggleWorldFavorite } from "@/app/(protected)/w/actions";
 import { cn } from "@/lib/utils";
 import { resolveWorldHomeLayout, type WorldHomeWidgetId } from "./worldHomeWidgets";
+import type { AnnouncementSize } from "./widgets/WorldAnnouncementWidget";
 
 // Onglets secondaires — un seul est actif à la fois, chargés à la demande
 // pour ne pas alourdir le bundle de la vue par défaut du monde.
@@ -32,7 +33,7 @@ const WorldMembersPanel = dynamic(() => import("../members/WorldMembersPanel").t
 const WorldPersonasPanel = dynamic(() => import("@/components/personas/WorldPersonasPanel").then((m) => m.WorldPersonasPanel));
 const WorldStatsWidget = dynamic(() => import("./widgets/WorldStatsWidget").then((m) => m.WorldStatsWidget));
 const WorldMembersOnlineWidget = dynamic(() => import("./widgets/WorldMembersOnlineWidget").then((m) => m.WorldMembersOnlineWidget));
-const WorldHomeLayoutEditor = dynamic(() => import("./WorldHomeLayoutEditor").then((m) => m.WorldHomeLayoutEditor));
+const WorldAnnouncementWidget = dynamic(() => import("./widgets/WorldAnnouncementWidget").then((m) => m.WorldAnnouncementWidget));
 
 type WorldPrefs = { main_expanded: boolean; is_favorite: boolean; wiki_sidebar_width?: number };
 
@@ -96,8 +97,7 @@ export function WorldHome({
   const [mainExpanded, setMainExpanded] = useState(initialPrefs?.main_expanded ?? false);
   const [isFavorite, setIsFavorite] = useState(initialPrefs?.is_favorite ?? false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(initialCategoryId ?? null);
-  const [homeLayout, setHomeLayout] = useState<WorldHomeWidgetId[]>(() => resolveWorldHomeLayout(world.home_layout));
-  const [editingLayout, setEditingLayout] = useState(false);
+  const homeLayout = resolveWorldHomeLayout(world.home_layout);
 
   const baseHref = `/w/${worldId}`;
 
@@ -155,6 +155,16 @@ export function WorldHome({
         return <WorldStatsWidget key={id} worldId={worldId} />;
       case "members_online":
         return <WorldMembersOnlineWidget key={id} worldId={worldId} />;
+      case "announcement":
+        return (
+          <WorldAnnouncementWidget
+            key={id}
+            worldId={worldId}
+            canAdmin={canAdmin}
+            html={world.announcement_html ?? null}
+            size={(world.announcement_size as AnnouncementSize | null) ?? "md"}
+          />
+        );
       default:
         return null;
     }
@@ -243,26 +253,6 @@ export function WorldHome({
               title={world.name}
               right={
                 <>
-                  {canAdmin && (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          type="button"
-                          onClick={() => setEditingLayout((v) => !v)}
-                          aria-label={editingLayout ? t("home.done") : t("home.customize")}
-                          className={cn(
-                            "flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-hoverCard",
-                            editingLayout ? "text-foreground bg-hoverCard" : "text-muted-foreground hover:text-foreground",
-                          )}
-                        >
-                          <LayoutGrid size={16} />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent side="bottom" sideOffset={6}>
-                        {editingLayout ? t("home.done") : t("home.customize")}
-                      </TooltipContent>
-                    </Tooltip>
-                  )}
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <button
@@ -315,15 +305,7 @@ export function WorldHome({
                   />
                 </div>
                 <div className="mx-auto flex w-full flex-col gap-6 px-4 pb-4 [--world-content-max-width:36rem] lg:[--world-content-max-width:44rem] max-w-(--world-content-max-width)">
-                  {editingLayout ? (
-                    <WorldHomeLayoutEditor
-                      worldId={worldId}
-                      layout={homeLayout}
-                      onLayoutChange={setHomeLayout}
-                    />
-                  ) : (
-                    homeLayout.map((id) => renderWidget(id))
-                  )}
+                  {homeLayout.map((id) => renderWidget(id))}
                 </div>
               </div>
             </div>

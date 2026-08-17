@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { DEFAULT_WORLD_HOME_LAYOUT, resolveWorldHomeLayout } from "@/components/worlds/home/worldHomeWidgets";
+import {
+  ALL_WORLD_HOME_WIDGETS,
+  DEFAULT_WORLD_HOME_LAYOUT,
+  resolveWorldHomeLayout,
+} from "@/components/worlds/home/worldHomeWidgets";
 
 describe("resolveWorldHomeLayout", () => {
   it("retombe sur l'ordre par défaut quand la valeur est null", () => {
@@ -28,5 +32,14 @@ describe("resolveWorldHomeLayout", () => {
 
   it("retombe sur l'ordre par défaut si tous les ids sont invalides", () => {
     expect(resolveWorldHomeLayout(["foo", "bar"])).toEqual(DEFAULT_WORLD_HOME_LAYOUT);
+  });
+
+  it("l'annonce est un widget connu mais pas activé par défaut (opt-in)", () => {
+    expect(ALL_WORLD_HOME_WIDGETS).toContain("announcement");
+    expect(DEFAULT_WORLD_HOME_LAYOUT).not.toContain("announcement");
+  });
+
+  it("conserve l'annonce quand un admin l'a explicitement ajoutée à l'ordre", () => {
+    expect(resolveWorldHomeLayout(["chatrooms", "announcement"])).toEqual(["chatrooms", "announcement"]);
   });
 });

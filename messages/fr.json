@@ -295,8 +295,6 @@
       "categoryNone": "Aucune"
     },
     "home": {
-      "customize": "Personnaliser la page d'accueil",
-      "done": "Terminé",
       "addWidget": "Ajouter un widget",
       "noWidgets": "Aucun widget affiché — ajoutez-en un ci-dessous.",
       "widgets": {
@@ -304,10 +302,25 @@
         "composer": "Créer une partie",
         "chatrooms": "Salons",
         "stats": "Statistiques",
-        "members_online": "Membres en ligne"
+        "members_online": "Membres en ligne",
+        "announcement": "Annonce"
       },
       "onlineCount": "{count, plural, one {# membre en ligne} other {# membres en ligne}}",
-      "noneOnline": "Personne en ligne pour le moment"
+      "noneOnline": "Personne en ligne pour le moment",
+      "announcement": {
+        "add": "Ajouter une annonce",
+        "edit": "Modifier l'annonce",
+        "dialogTitle": "Annonce du monde",
+        "htmlLabel": "HTML / CSS",
+        "htmlPlaceholder": "'<style>…</style>\n<div>…</div>'",
+        "htmlHelp": "HTML et CSS uniquement — affiché dans un cadre isolé, aucun script ne peut s'exécuter.",
+        "htmlTooLong": "Maximum {max} caractères.",
+        "sizeLabel": "Hauteur",
+        "sizeSmall": "Petite",
+        "sizeMedium": "Moyenne",
+        "sizeLarge": "Grande",
+        "previewLabel": "Aperçu"
+      }
     }
   },
   "auth": {

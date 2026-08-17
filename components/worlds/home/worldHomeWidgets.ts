@@ -9,7 +9,8 @@ export type WorldHomeWidgetId =
   | "composer"
   | "chatrooms"
   | "stats"
-  | "members_online";
+  | "members_online"
+  | "announcement";
 
 export const ALL_WORLD_HOME_WIDGETS: WorldHomeWidgetId[] = [
   "categories",
@@ -17,6 +18,7 @@ export const ALL_WORLD_HOME_WIDGETS: WorldHomeWidgetId[] = [
   "chatrooms",
   "stats",
   "members_online",
+  "announcement",
 ];
 
 /** Ordre affiché avant que l'admin n'ait jamais personnalisé la page. */
@@ -25,6 +27,10 @@ export const DEFAULT_WORLD_HOME_LAYOUT: WorldHomeWidgetId[] = [
   "composer",
   "chatrooms",
 ];
+
+/** Limite de taille du HTML/CSS libre du widget « Annonce » — partagée entre
+ *  l'éditeur (validation immédiate) et l'action serveur (source de vérité). */
+export const MAX_ANNOUNCEMENT_HTML_LENGTH = 20_000;
 
 function isWorldHomeWidgetId(value: unknown): value is WorldHomeWidgetId {
   return typeof value === "string" && (ALL_WORLD_HOME_WIDGETS as string[]).includes(value);

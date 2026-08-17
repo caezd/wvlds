@@ -103,4 +103,7 @@ export type World = {
   wiki_label?: string | null;
   /** Ordre des widgets de la page d'accueil, réglé par un admin — null = ordre par défaut. */
   home_layout?: string[] | null;
+  /** HTML/CSS libre du widget « Annonce », rendu dans une iframe sandboxée (pas de JS). */
+  announcement_html?: string | null;
+  announcement_size?: "sm" | "md" | "lg" | null;
 };

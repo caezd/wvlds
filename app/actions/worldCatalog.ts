@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { deletePersona } from "@/app/(protected)/p/actions";
 import { translatePersonaError } from "@/lib/personaErrors";
+import { MAX_ANNOUNCEMENT_HTML_LENGTH } from "@/components/worlds/home/worldHomeWidgets";
 import type { WorldInventoryItem, WorldSkill, WorldCatalogCategory, WorldTimelineConfig, WorldTag } from "@/types/worlds";
 
 const MAX_WORLD_TAGS = 10;
@@ -388,6 +389,31 @@ export async function setWorldTimeline(
   const updates: Record<string, unknown> = { timeline_enabled: enabled };
   if (config !== undefined) updates.timeline_config = config;
   const { error } = await supabase.from("worlds").update(updates).eq("id", worldId);
+  if (error) return { ok: false as const, error: error.message };
+  return { ok: true as const };
+}
+
+// ── Widget « Annonce » (HTML/CSS libre, rendu en iframe sandboxée) ────────────
+
+const ANNOUNCEMENT_SIZES = new Set(["sm", "md", "lg"]);
+
+export async function setWorldAnnouncement(
+  worldId: string,
+  html: string,
+  size: "sm" | "md" | "lg",
+) {
+  const trimmed = html.trim();
+  if (trimmed.length > MAX_ANNOUNCEMENT_HTML_LENGTH) {
+    return { ok: false as const, error: `Maximum ${MAX_ANNOUNCEMENT_HTML_LENGTH} caractères.` };
+  }
+  if (!ANNOUNCEMENT_SIZES.has(size)) {
+    return { ok: false as const, error: "Taille invalide." };
+  }
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("worlds")
+    .update({ announcement_html: trimmed || null, announcement_size: size })
+    .eq("id", worldId);
   if (error) return { ok: false as const, error: error.message };
   return { ok: true as const };
 }

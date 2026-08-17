@@ -63,6 +63,8 @@ import {
 import { WorldPersonaTemplateSection } from "@/components/worlds/settings/WorldPersonaTemplateSection";
 import { WorldCategoryManager } from "@/components/worlds/settings/WorldCategoryManager";
 import { WorldRelationsSettings } from "@/components/worlds/settings/WorldRelationsSettings";
+import { WorldAnnouncementSettings } from "@/components/worlds/settings/WorldAnnouncementSettings";
+import { WorldHomeLayoutSettings } from "@/components/worlds/settings/WorldHomeLayoutSettings";
 import type { World, WorldTimelineConfig } from "@/types/worlds";
 
 /**
@@ -479,6 +481,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                         <TabsList className="h-8 rounded-lg p-0.5">
                             <TabsTrigger value="appearance" className="h-7 px-3 text-xs">Apparence</TabsTrigger>
                             <TabsTrigger value="categories" className="h-7 px-3 text-xs">Catégories</TabsTrigger>
+                            <TabsTrigger value="home" className="h-7 px-3 text-xs">Page d&apos;accueil</TabsTrigger>
                             <TabsTrigger value="features" className="h-7 px-3 text-xs">Fonctions</TabsTrigger>
                             <TabsTrigger value="relations" className="h-7 px-3 text-xs">Relations</TabsTrigger>
                             {public_worlds && (
@@ -695,6 +698,20 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                         <TabsContent value="categories" className="mt-0">
                             <div className="mx-auto max-w-xl">
                                 <WorldCategoryManager worldId={world.id} canEdit />
+                            </div>
+                        </TabsContent>
+
+                        {/* ── Page d'accueil ───────────────────────────── */}
+                        <TabsContent value="home" className="mt-0">
+                            <div className="mx-auto max-w-xl space-y-6">
+                                <div className="space-y-2">
+                                    <h3 className="text-sm font-semibold text-foreground">Widgets affichés</h3>
+                                    <WorldHomeLayoutSettings world={world} />
+                                </div>
+                                <div className="space-y-2">
+                                    <h3 className="text-sm font-semibold text-foreground">Annonce</h3>
+                                    <WorldAnnouncementSettings world={world} />
+                                </div>
                             </div>
                         </TabsContent>
 

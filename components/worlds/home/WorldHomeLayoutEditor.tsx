@@ -73,10 +73,13 @@ export function WorldHomeLayoutEditor({
   worldId,
   layout,
   onLayoutChange,
+  onPersisted,
 }: {
   worldId: string;
   layout: WorldHomeWidgetId[];
   onLayoutChange: (next: WorldHomeWidgetId[]) => void;
+  /** Appelé une fois l'écriture confirmée en base (pas sur l'application optimiste ni le rollback). */
+  onPersisted?: () => void;
 }) {
   const t = useTranslations("worlds");
   const supabase = React.useMemo(() => createClient(), []);
@@ -91,7 +94,9 @@ export function WorldHomeLayoutEditor({
     if (error) {
       onLayoutChange(previous);
       toast.error(error.message);
+      return;
     }
+    onPersisted?.();
   }
 
   function onDragEnd({ active, over }: DragEndEvent) {
