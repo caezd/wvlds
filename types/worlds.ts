@@ -81,6 +81,13 @@ export interface WorldTag {
   created_at: string;
 }
 
+export interface WorldLexiconTerm {
+  id: string;
+  world_id: string;
+  term: string;
+  description: string;
+}
+
 export type World = {
   id: string;
   name: string;

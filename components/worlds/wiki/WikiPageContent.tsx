@@ -17,6 +17,7 @@ import { WikiBreadcrumb } from "./WikiBreadcrumb";
 import { WikiTableOfContents } from "./WikiTableOfContents";
 import { WikiVersionHistoryPanel } from "./WikiVersionHistoryPanel";
 import type { WikiPage } from "./WorldWiki";
+import type { WorldLexiconTerm } from "@/types/worlds";
 
 /** Délai d'autosauvegarde du brouillon après la dernière frappe. */
 const WIKI_AUTOSAVE_DELAY = 1800;
@@ -57,6 +58,7 @@ export function WikiPageContent({
   onExpandFolder,
   autoEdit = false,
   onAutoEditConsumed,
+  lexiconTerms,
 }: {
   page: WikiPage;
   /** Toutes les pages du wiki — pour résoudre les liens internes `[[Titre]]`. */
@@ -76,6 +78,8 @@ export function WikiPageContent({
   /** Entre automatiquement en édition au montage (page tout juste créée depuis un modèle). */
   autoEdit?: boolean;
   onAutoEditConsumed?: () => void;
+  /** Lexique du monde — surligné automatiquement dans le contenu rendu. */
+  lexiconTerms?: WorldLexiconTerm[];
 }) {
   const t = useTranslations("wiki");
   const tCommon = useTranslations("common");
@@ -261,6 +265,7 @@ export function WikiPageContent({
                       allowImages
                       onWikiLink={onNavigate}
                       className={WIKI_PROSE_HEADING_CLASSES}
+                      lexiconTerms={lexiconTerms}
                     />
                   )
                   : <p className="text-sm italic text-muted-foreground">{t("nothingToPreview")}</p>
@@ -334,6 +339,7 @@ export function WikiPageContent({
               allowImages
               onWikiLink={onNavigate}
               className={WIKI_PROSE_HEADING_CLASSES}
+              lexiconTerms={lexiconTerms}
             />
           ) : (
             <p className="text-sm text-muted-foreground">

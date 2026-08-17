@@ -13,6 +13,7 @@ import {
   FolderOpen,
   FolderPlus,
   GripVertical,
+  Library,
   Loader2,
   Lock,
   LockOpen,
@@ -38,6 +39,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { WikiPageContent } from "./WikiPageContent";
+import { WorldLexiconManager } from "./WorldLexiconManager";
 import { WikiSearchBar, type WikiSearchResult } from "./WikiSearchBar";
 import { WikiTemplatePicker } from "./WikiTemplatePicker";
 import { WIKI_TEMPLATE_ICONS, type WikiTemplateId } from "@/lib/wikiTemplates";
@@ -53,6 +55,8 @@ import {
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 import { slugify } from "@/lib/slug";
+import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
+import type { WorldLexiconTerm } from "@/types/worlds";
 
 const WIKI_NAV_MIN = 120;
 const WIKI_NAV_MAX = 360;
@@ -290,7 +294,9 @@ export function WorldWiki({
   const tCommon = useTranslations("common");
   const tNav = useTranslations("worlds.nav");
   const supabase = React.useMemo(() => createClient(), []);
+  const reconnectEpoch = useReconnectEpoch();
   const [pages, setPages] = React.useState<WikiPage[] | null>(null);
+  const [lexiconTerms, setLexiconTerms] = React.useState<WorldLexiconTerm[]>([]);
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const [expandedFolders, setExpandedFolders] = React.useState<Set<string>>(new Set());
   const [editMode, setEditMode] = React.useState(false);
@@ -298,6 +304,8 @@ export function WorldWiki({
   const [renamingId, setRenamingId] = React.useState<string | null>(null);
   const [renameValue, setRenameValue] = React.useState("");
   const [confirmDelete, setConfirmDelete] = React.useState<WikiPage | null>(null);
+
+  const [lexiconManagerOpen, setLexiconManagerOpen] = React.useState(false);
 
   const [creating, setCreating] = React.useState<{ parentId: string | null; isFolder: boolean } | null>(null);
   const [createTitle, setCreateTitle] = React.useState("");
@@ -370,6 +378,34 @@ export function WorldWiki({
   }
 
   React.useEffect(() => { void load(); }, [worldId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Lexique ───────────────────────────────────────────────────
+  React.useEffect(() => {
+    const loadLexicon = async () => {
+      const { data, error } = await supabase
+        .from("world_lexicon_terms")
+        .select("id, world_id, term, description")
+        .eq("world_id", worldId)
+        .order("term", { ascending: true });
+      if (error) { toast.error(error.message); return; }
+      setLexiconTerms((data as WorldLexiconTerm[] | null) ?? []);
+    };
+
+    void loadLexicon();
+
+    const channel = supabase
+      .channel(`world_lexicon_terms:${worldId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "world_lexicon_terms", filter: `world_id=eq.${worldId}` },
+        () => void loadLexicon(),
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [worldId, supabase, reconnectEpoch]);
 
   // Sélectionne `initialSlug` une fois les pages chargées (ex: arrivée depuis
   // un raccourci de l'accueil du monde) — une seule fois, pour ne pas revenir
@@ -777,6 +813,7 @@ export function WorldWiki({
         onExpandFolder={expandFolderChain}
         autoEdit={selectedPage.id === pendingAutoEditId}
         onAutoEditConsumed={() => setPendingAutoEditId(null)}
+        lexiconTerms={lexiconTerms}
       />
     );
   }
@@ -795,6 +832,14 @@ export function WorldWiki({
           if (confirmDelete) void deletePage(confirmDelete);
           setConfirmDelete(null);
         }}
+      />
+
+      <WorldLexiconManager
+        open={lexiconManagerOpen}
+        onOpenChange={setLexiconManagerOpen}
+        worldId={worldId}
+        supabase={supabase}
+        terms={lexiconTerms}
       />
 
       <div className="flex h-full min-h-0 flex-1 flex-col">
@@ -834,6 +879,13 @@ export function WorldWiki({
                 className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
               >
                 <FolderPlus className="h-3.5 w-3.5" /> {t("newFolder")}
+              </button>
+              <button
+                type="button"
+                onClick={() => setLexiconManagerOpen(true)}
+                className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
+              >
+                <Library className="h-3.5 w-3.5" /> {t("lexicon.manageButton")}
               </button>
             </div>
           )}

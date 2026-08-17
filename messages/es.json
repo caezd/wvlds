@@ -819,6 +819,18 @@
     "markRestricted": "Restringir a editores",
     "unmarkRestricted": "Hacer visible a los jugadores",
     "restrictedBadge": "Solo editores",
+    "lexicon": {
+      "manageButton": "Léxico",
+      "title": "Léxico del mundo",
+      "description": "Los términos definidos aquí se resaltan automáticamente en todo el contenido del wiki, con su descripción visible al hacer clic.",
+      "termPlaceholder": "Término…",
+      "descriptionPlaceholder": "Descripción…",
+      "addTerm": "Añadir un término",
+      "noTerms": "Aún no hay términos.",
+      "duplicateTerm": "Este término ya existe en el léxico.",
+      "deleteTitle": "¿Eliminar «{term}»?",
+      "deleteDesc": "Este término dejará de resaltarse en el wiki. Esta acción es irreversible."
+    },
     "templates": {
       "pickerLabel": "Plantilla",
       "blank": "En blanco",
