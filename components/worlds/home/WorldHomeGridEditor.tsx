@@ -4,7 +4,7 @@ import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 import * as React from "react";
 import { useTranslations } from "next-intl";
-import ReactGridLayout, { useContainerWidth, type Layout, type EventCallback, type LayoutItem } from "react-grid-layout";
+import ReactGridLayout, { type Layout, type EventCallback, type LayoutItem } from "react-grid-layout";
 import { Code2, FileText, GripVertical, Pencil, Plus, Settings2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { setWorldHomeGrid } from "@/app/actions/worldCatalog";
@@ -35,6 +35,62 @@ import {
 const MIN_BLOCK_W = 2;
 import { WorldHomeHtmlBlockEditor } from "./blocks/WorldHomeHtmlBlockEditor";
 import { WorldHomeMarkdownBlockEditor } from "./blocks/WorldHomeMarkdownBlockEditor";
+
+/**
+ * Largeur de CONTENU du conteneur (hors `border`/`padding`) — react-grid-layout
+ * positionne ses colonnes dans cette zone, pas dans la boîte pleine renvoyée
+ * par `getBoundingClientRect()`. Notre conteneur a son propre `border` et
+ * `p-2` : les compter en trop surdimensionnait la grille d'une quinzaine de
+ * pixels en continu (pas un à-coup ponctuel — un écart constant, présent dès
+ * que l'onglet est chargé). `getComputedStyle(node).width` résout toujours
+ * la largeur de contenu, y compris sous `box-sizing: border-box` — c'est le
+ * même calcul que `getContentWidth()` dans react-grid-layout, repris ici pour
+ * rester cohérent avec la mesure que ferait la librairie elle-même.
+ */
+/** Exporté uniquement pour être testable isolément — pas d'usage prévu hors ce fichier. */
+export function getContentWidth(node: HTMLElement): number {
+  const style = window.getComputedStyle(node);
+  const parsed = Number.parseFloat(style.width);
+  if (Number.isFinite(parsed)) return Math.max(0, parsed);
+  const px = (v: string) => { const n = Number.parseFloat(v); return Number.isFinite(n) ? n : 0; };
+  return Math.max(0, node.clientWidth - px(style.paddingLeft) - px(style.paddingRight));
+}
+
+/**
+ * Largeur du conteneur, mesurée nous-mêmes plutôt que via le
+ * `useContainerWidth()` de react-grid-layout : ce dernier mesure dans un
+ * `useEffect` (après la peinture du navigateur), donc même avec son option
+ * `measureBeforeMount`, un premier rendu (vide) est toujours peint avant
+ * que le vrai contenu n'apparaisse — un à-coup résiduel. `useLayoutEffect`
+ * mesure de façon synchrone, avant la peinture : le tout premier rendu
+ * visible porte déjà la bonne largeur, sans transition à corriger après coup.
+ */
+function useMeasuredWidth(): { containerRef: React.RefObject<HTMLDivElement | null>; width: number; measured: boolean } {
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const [width, setWidth] = React.useState(0);
+  // Séparé de `width` : sous jsdom (tests), la mesure renvoie toujours 0
+  // (pas de moteur de mise en page réel) — `width > 0` ne deviendrait donc
+  // jamais vrai. Ce drapeau ne dit qu'une chose : une mesure a eu lieu, peu
+  // importe le résultat.
+  const [measured, setMeasured] = React.useState(false);
+
+  React.useLayoutEffect(() => {
+    const node = containerRef.current;
+    if (!node) return;
+    setWidth(Math.round(getContentWidth(node)));
+    setMeasured(true);
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(([entry]) => {
+      // `entry.contentRect` exclut déjà `border`/`padding` — cohérent avec
+      // `getContentWidth()` ci-dessus pour la mesure initiale.
+      if (entry) setWidth(Math.round(entry.contentRect.width));
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  return { containerRef, width, measured };
+}
 
 /** Fusionne les positions/largeurs renvoyées par react-grid-layout dans les
  *  items existants (par id) — `h` est ignoré : la hauteur n'est pas réglable,
@@ -150,7 +206,7 @@ export function WorldHomeGridEditor({
 }) {
   const t = useTranslations("worlds");
   const tCommon = useTranslations("common");
-  const { width, containerRef, mounted } = useContainerWidth();
+  const { containerRef, width, measured } = useMeasuredWidth();
   const [editingBlock, setEditingBlock] = React.useState<
     { type: "html" | "markdown"; item?: WorldHomeGridItem } | null
   >(null);
@@ -337,8 +393,13 @@ export function WorldHomeGridEditor({
       />
 
       <div ref={containerRef} className="rounded-lg border border-dashed p-2">
-        {mounted && items.length > 0 && (
+        {measured && items.length > 0 && (
           <ReactGridLayout
+            // Même raison que `!transition-none` sur chaque bloc plus bas :
+            // le conteneur racine, lui, anime sa hauteur en continu — visible
+            // comme un étirement vertical au montage, avant même de compter
+            // le glissement horizontal des blocs.
+            className="!transition-none"
             layout={layout}
             width={width}
             gridConfig={{ cols: HOME_GRID_COLS, rowHeight: HOME_GRID_ROW_HEIGHT, margin: [8, 8] }}
@@ -356,9 +417,19 @@ export function WorldHomeGridEditor({
               // Le bloc se réduit à sa barre de titre : l'éditeur sert à
               // agencer, pas à prévisualiser — un corps vide ne ferait que
               // répéter le libellé en occupant de la hauteur pour rien.
+              //
+              // `!transition-none` : le CSS de react-grid-layout anime en
+              // continu (`transition: all 200ms`) tout changement de
+              // position/taille d'un bloc, hors glisser-déposer actif (qui
+              // s'en affranchit déjà via ses propres classes d'état). Cette
+              // transition permanente jouait aussi au montage — un bloc qui
+              // vient d'apparaître glissait visiblement vers sa position,
+              // au lieu d'y être direct. `!important` nécessaire : la classe
+              // `.react-grid-item`, posée par la librairie sur ce même
+              // élément, a la même spécificité qu'une classe Tailwind.
               <div
                 key={item.id}
-                className="group relative flex flex-col overflow-hidden rounded-lg border border-border-soft bg-muted/30"
+                className="group relative flex flex-col overflow-hidden rounded-lg border border-border-soft bg-muted/30 !transition-none"
               >
                 <div className="wghe-drag-handle flex h-full cursor-grab items-center gap-1.5 bg-muted/60 px-2 text-xs text-muted-foreground active:cursor-grabbing">
                   <GripVertical className="h-3.5 w-3.5 shrink-0" />

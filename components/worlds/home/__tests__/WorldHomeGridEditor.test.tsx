@@ -12,7 +12,7 @@ vi.mock("@/app/actions/worldCatalog", () => ({
 vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 
 import { toast } from "sonner";
-import { WorldHomeGridEditor } from "@/components/worlds/home/WorldHomeGridEditor";
+import { WorldHomeGridEditor, getContentWidth } from "@/components/worlds/home/WorldHomeGridEditor";
 
 function Harness({ initial, onPersisted }: { initial: WorldHomeGridItem[]; onPersisted?: () => void }) {
   const [items, setItems] = React.useState(initial);
@@ -26,7 +26,49 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
+describe("getContentWidth", () => {
+  it("exclut le border et le padding du conteneur, pas seulement getBoundingClientRect", () => {
+    // Régression : mesurer via getBoundingClientRect() (boîte englobante,
+    // border + padding inclus) surdimensionnait la grille en continu — le
+    // conteneur de l'éditeur a son propre border + p-2. getComputedStyle()
+    // résout toujours la largeur de CONTENU, même sous box-sizing: border-box.
+    const node = { clientWidth: 316 } as HTMLElement;
+    const restore = window.getComputedStyle;
+    window.getComputedStyle = () =>
+      ({ width: "300px", paddingLeft: "8px", paddingRight: "8px" }) as CSSStyleDeclaration;
+    try {
+      expect(getContentWidth(node)).toBe(300);
+    } finally {
+      window.getComputedStyle = restore;
+    }
+  });
+
+  it("retombe sur clientWidth moins le padding si `width` n'est pas un nombre exploitable", () => {
+    const node = { clientWidth: 316 } as HTMLElement;
+    const restore = window.getComputedStyle;
+    window.getComputedStyle = () =>
+      ({ width: "auto", paddingLeft: "8px", paddingRight: "8px" }) as CSSStyleDeclaration;
+    try {
+      expect(getContentWidth(node)).toBe(300);
+    } finally {
+      window.getComputedStyle = restore;
+    }
+  });
+});
+
 describe("WorldHomeGridEditor", () => {
+  it("désactive la transition CSS de react-grid-layout, qui jouait aussi au montage", () => {
+    // Régression : `.react-grid-item`/`.react-grid-layout` animent en continu
+    // (transition CSS de la librairie) tout changement de position/hauteur,
+    // y compris au montage — un bloc qui vient d'apparaître glissait
+    // visiblement vers sa position au lieu d'y être direct, perceptible en
+    // changeant d'onglet dans les réglages (l'éditeur est remonté).
+    const { container } = render(<Harness initial={[CHATROOMS_ITEM]} />);
+
+    expect(container.querySelector(".react-grid-layout")).toHaveClass("!transition-none");
+    expect(container.querySelector(".react-grid-item")).toHaveClass("!transition-none");
+  });
+
   it("affiche les blocs existants et ne propose que les widgets non utilisés dans le menu", async () => {
     const user = userEvent.setup();
     render(<Harness initial={[CHATROOMS_ITEM]} />);
@@ -128,8 +170,8 @@ describe("WorldHomeGridEditor", () => {
   });
 
   it("n'affiche l'icône de réglages que pour les widgets qui en déclarent", async () => {
-    render(<Harness initial={[CHATROOMS_ITEM, { id: "s", type: "widget", x: 0, y: 1, w: 12, widgetId: "stats" }]} />);
-    // « Salons » déclare visibleRows, « Statistiques » ne déclare rien.
+    render(<Harness initial={[CHATROOMS_ITEM, { id: "c", type: "widget", x: 0, y: 1, w: 12, widgetId: "categories" }]} />);
+    // « Salons » déclare visibleRows, « Catégories » ne déclare rien.
     expect(screen.getAllByLabelText("Réglages du bloc")).toHaveLength(1);
   });
 

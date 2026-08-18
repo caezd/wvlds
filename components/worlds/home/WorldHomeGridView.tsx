@@ -8,7 +8,6 @@ import { WorldCategoryFolders } from "../chatrooms/WorldCategoryFolders";
 import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
 import { widgetOptionValue, type WorldHomeGridItem } from "./worldHomeGrid";
 
-const WorldStatsWidget = dynamic(() => import("./widgets/WorldStatsWidget").then((m) => m.WorldStatsWidget));
 const WorldMembersOnlineWidget = dynamic(() => import("./widgets/WorldMembersOnlineWidget").then((m) => m.WorldMembersOnlineWidget));
 const WorldWikiShortcutsWidget = dynamic(() => import("./widgets/WorldWikiShortcutsWidget").then((m) => m.WorldWikiShortcutsWidget));
 const WorldRecentPersonasWidget = dynamic(() => import("./widgets/WorldRecentPersonasWidget").then((m) => m.WorldRecentPersonasWidget));
@@ -144,8 +143,6 @@ function renderBlock(
           visibleRows={widgetOptionValue("chatrooms", "visibleRows", item.options)}
         />
       );
-    case "stats":
-      return <WorldStatsWidget worldId={ctx.worldId} />;
     case "members_online":
       return (
         <WorldMembersOnlineWidget

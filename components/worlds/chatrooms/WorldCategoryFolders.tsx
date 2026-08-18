@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
+import { supabaseThumb } from "@/lib/storage";
 import { cn } from "@/lib/utils";
 
 type Category = {
@@ -102,7 +103,27 @@ export function WorldCategoryFolders({
           >
             <span className="relative block h-10 w-10 shrink-0 overflow-hidden rounded-md bg-muted-foreground/10 @sm:aspect-[4/3] @sm:h-auto @sm:w-full @sm:rounded-none">
               {image ? (
-                <Image src={image} alt="" fill sizes="(min-width: 640px) 176px, 40px" className="object-cover" />
+                // La largeur réelle de CE conteneur est pilotée par une
+                // container query (@sm:, voir le parent), pas par le
+                // viewport — la carte peut donc être une liste 40px ou une
+                // étagère 144px selon la colonne de grille, sans qu'aucun
+                // `sizes` viewport-based ne puisse le distinguer. On
+                // pré-dimensionne donc nous-mêmes via imgproxy, large de
+                // marge (400px, x2 la plus grande carte réelle pour le DPR).
+                //
+                // `unoptimized` indispensable : un `sizes` en px fixe (sans
+                // `vw`) fait retomber Next.js sur sa plus grande largeur
+                // configurée (jusqu'à 3840px) au lieu d'une taille adaptée —
+                // voir le commentaire détaillé dans WorldAvatar.tsx. Sans
+                // `unoptimized`, Next tenterait de ré-agrandir une source
+                // déjà petite jusqu'à 3840px et l'image ne chargerait pas.
+                <Image
+                  src={supabaseThumb(image, 400, 90) ?? image}
+                  alt=""
+                  fill
+                  unoptimized
+                  className="object-cover"
+                />
               ) : (
                 <span className="flex h-full w-full items-center justify-center text-lg font-medium text-muted-foreground">
                   {cat.title[0]?.toUpperCase()}

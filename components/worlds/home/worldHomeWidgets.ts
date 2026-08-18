@@ -8,11 +8,17 @@
  * que `resolveWorldHomeLayout` continue de le reconnaître dans les anciens
  * `home_layout` — sa synthèse en bloc html est gérée par `worldHomeGrid.ts`.
  */
+/**
+ * `"stats"` n'est plus un widget plaçable : les statistiques sont désormais
+ * une zone fixe sous le titre/description de la page d'accueil, dont
+ * l'affichage se règle par une case à cocher dédiée (voir
+ * `home_show_stats` dans `types/worlds.ts` et `WorldHomeGridSettings.tsx`),
+ * pas par sa présence dans un ordre ou une grille de blocs.
+ */
 export type WorldHomeWidgetId =
   | "categories"
   | "composer"
   | "chatrooms"
-  | "stats"
   | "members_online"
   | "announcement"
   | "wiki_shortcuts"
@@ -22,7 +28,6 @@ export const ALL_WORLD_HOME_WIDGETS: WorldHomeWidgetId[] = [
   "categories",
   "composer",
   "chatrooms",
-  "stats",
   "members_online",
   "announcement",
   "wiki_shortcuts",

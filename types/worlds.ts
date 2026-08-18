@@ -115,4 +115,7 @@ export type World = {
   home_body_color?: string | null;
   /** Couleur de fond (hex) du panel de contenu de la page d'accueil — null = couleur par défaut du thème. */
   home_panel_color?: string | null;
+  /** Affiche le bloc statistiques sous le titre/description de la page d'accueil
+   *  (position fixe, pas un bloc de la grille) — null/false = masqué. */
+  home_show_stats?: boolean | null;
 };

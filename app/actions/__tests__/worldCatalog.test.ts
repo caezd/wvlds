@@ -8,6 +8,7 @@ import {
     setWorldFeature,
     setWorldRestriction,
     setWorldFaceclaims,
+    setWorldHomeShowStats,
     setWorldAgeRestricted,
     setWorldPersonaTemplate,
     addWorldInventoryItem,
@@ -93,6 +94,30 @@ describe("setWorldFaceclaims", () => {
     it("remonte l'erreur Supabase", async () => {
         use(createSupabaseMock({ results: [{ error: { message: "nope" } }] }));
         expect(await setWorldFaceclaims("w1", true)).toEqual({ ok: false, error: "nope" });
+    });
+});
+
+// ── setWorldHomeShowStats ─────────────────────────────────────────────────────
+
+describe("setWorldHomeShowStats", () => {
+    it("active l'affichage des statistiques", async () => {
+        const mock = createSupabaseMock({ results: [{ error: null }] });
+        use(mock);
+        const res = await setWorldHomeShowStats("w1", true);
+        expect(res).toEqual({ ok: true });
+        expect(mock.buildersFor("worlds")[0].update).toHaveBeenCalledWith({ home_show_stats: true });
+    });
+
+    it("désactive l'affichage des statistiques", async () => {
+        const mock = createSupabaseMock({ results: [{ error: null }] });
+        use(mock);
+        await setWorldHomeShowStats("w1", false);
+        expect(mock.buildersFor("worlds")[0].update).toHaveBeenCalledWith({ home_show_stats: false });
+    });
+
+    it("remonte l'erreur Supabase", async () => {
+        use(createSupabaseMock({ results: [{ error: { message: "nope" } }] }));
+        expect(await setWorldHomeShowStats("w1", true)).toEqual({ ok: false, error: "nope" });
     });
 });
 
@@ -583,7 +608,7 @@ describe("setWorldHomeGrid", () => {
         const mock = createSupabaseMock({ results: [{ error: null }] });
         use(mock);
         await setWorldHomeGrid("w1", [
-            { id: "a", type: "widget", x: 0, y: 0, w: 12, widgetId: "stats", options: { visibleRows: 4 } },
+            { id: "a", type: "widget", x: 0, y: 0, w: 12, widgetId: "categories", options: { visibleRows: 4 } },
         ]);
         const written = mock.buildersFor("worlds")[0].update.mock.calls[0][0].home_grid;
         expect(written[0]).not.toHaveProperty("options");
@@ -594,7 +619,7 @@ describe("setWorldHomeGrid", () => {
         use(mock);
         const res = await setWorldHomeGrid("w1", [
             { id: "a", type: "widget", x: 0, y: 0, w: 12, widgetId: "chatrooms" },
-            { id: "b", type: "widget", x: 0, y: 3, w: 12, widgetId: "stats" },
+            { id: "b", type: "widget", x: 0, y: 3, w: 12, widgetId: "members_online" },
         ]);
         expect(res.ok).toBe(true);
         const written = mock.buildersFor("worlds")[0].update.mock.calls[0][0].home_grid;

@@ -34,9 +34,6 @@ vi.mock("@/components/MarkdownRenderer", () => ({
   },
 }));
 
-vi.mock("@/components/worlds/home/widgets/WorldStatsWidget", () => ({
-  WorldStatsWidget: () => <div data-testid="stats" />,
-}));
 vi.mock("@/components/worlds/home/widgets/WorldMembersOnlineWidget", () => ({
   WorldMembersOnlineWidget: () => <div data-testid="members_online" />,
 }));
@@ -66,7 +63,6 @@ describe("WorldHomeGridView", () => {
     const items: WorldHomeGridItem[] = [
       { id: "a", type: "widget", x: 0, y: 0, w: 6, widgetId: "categories" },
       { id: "b", type: "widget", x: 6, y: 0, w: 6, widgetId: "chatrooms" },
-      { id: "c", type: "widget", x: 0, y: 4, w: 12, widgetId: "stats" },
       { id: "d", type: "widget", x: 0, y: 6, w: 12, widgetId: "members_online" },
       { id: "e", type: "widget", x: 0, y: 9, w: 12, widgetId: "wiki_shortcuts" },
       { id: "f", type: "widget", x: 0, y: 13, w: 12, widgetId: "personas_recent" },
@@ -76,7 +72,6 @@ describe("WorldHomeGridView", () => {
     expect(screen.getByTestId("categories")).toBeInTheDocument();
     expect(screen.getByTestId("chatrooms")).toBeInTheDocument();
     // Widgets chargés via next/dynamic — résolution asynchrone même mockés.
-    expect(await screen.findByTestId("stats")).toBeInTheDocument();
     expect(await screen.findByTestId("members_online")).toBeInTheDocument();
     expect(await screen.findByTestId("wiki_shortcuts")).toBeInTheDocument();
     expect(await screen.findByTestId("personas_recent")).toBeInTheDocument();
@@ -181,17 +176,19 @@ describe("WorldHomeGridView", () => {
     expect(markdownProps).toHaveBeenCalledWith(expect.objectContaining({ content: "# Titre", allowImages: true }));
   });
 
-  it("trie les blocs par y puis x pour un ordre de pile mobile cohérent", () => {
+  it("trie les blocs par y puis x pour un ordre de pile mobile cohérent", async () => {
     render(
       <WorldHomeGridView
         {...baseProps([
-          { id: "second", type: "widget", x: 6, y: 5, w: 6, widgetId: "stats" },
+          { id: "second", type: "widget", x: 6, y: 5, w: 6, widgetId: "members_online" },
           { id: "first", type: "widget", x: 0, y: 0, w: 6, widgetId: "categories" },
           { id: "third", type: "widget", x: 0, y: 5, w: 6, widgetId: "chatrooms" },
         ])}
       />,
     );
-    const testIds = screen.getAllByTestId(/categories|stats|chatrooms/).map((el) => el.dataset.testid);
-    expect(testIds).toEqual(["categories", "chatrooms", "stats"]);
+    // Widget chargé via next/dynamic — résolution asynchrone même mocké.
+    await screen.findByTestId("members_online");
+    const testIds = screen.getAllByTestId(/categories|members_online|chatrooms/).map((el) => el.dataset.testid);
+    expect(testIds).toEqual(["categories", "chatrooms", "members_online"]);
   });
 });

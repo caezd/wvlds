@@ -294,11 +294,12 @@
     "home": {
       "addWidget": "Añadir un widget",
       "noWidgets": "No hay widgets mostrados — añada uno abajo.",
+      "showStats": "Mostrar las estadísticas",
+      "showStatsDesc": "Número de mensajes, miembros y personas, mostrado bajo el título de la página de inicio.",
       "widgets": {
         "categories": "Categorías",
         "composer": "Crear una partida",
         "chatrooms": "Salas",
-        "stats": "Estadísticas",
         "members_online": "Miembros en línea",
         "announcement": "Anuncio",
         "wiki_shortcuts": "Accesos directos del wiki",

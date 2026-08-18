@@ -8,6 +8,21 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Correctif",
+    text: "Corrigé un bref à-coup de mise en page en arrivant sur la page d'accueil d'un monde (ou en la quittant), et un autre dans l'éditeur de grille de Réglages > Page d'accueil en changeant d'onglet — dans les deux cas, un premier rendu utilisait encore une taille provisoire avant de se corriger à la bonne taille l'instant d'après, visible comme un étirement suivi d'un ajustement. La légère animation de glissement des blocs qui accompagnait ce correctif au montage de l'éditeur a aussi été retirée, ainsi qu'un décalage de largeur constant (quelques pixels de trop, comptés depuis la bordure du cadre plutôt que son contenu).",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
+    text: "Les icônes de monde (sélecteur de monde, favoris et rail d'icônes de la sidebar, page d'accueil) et les images de catégorie sur la page d'accueil ne s'affichaient plus du tout dans certains cas, ou très dégradées — un réglage de dimensionnement d'image mal formé faisait demander une taille de secours bien trop grande à Next.js, qui échouait à l'agrandir depuis une source plus petite. Elles s'affichent maintenant nettes, sur tous les écrans y compris haute densité (Retina, la plupart des téléphones).",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
+    text: "Les statistiques (messages, membres, personas) de la page d'accueil d'un monde ne sont plus un bloc de la grille de contenu : elles reprennent une position fixe sous le titre/description, et leur affichage se règle par une simple case à cocher depuis Réglages > Page d'accueil. Le dégradé de la bannière s'étire aussi mieux : il s'estompe désormais en transparence (plus vers une couleur figée), jusqu'au bas du bloc titre, quelle que soit la longueur de la description.",
+  },
+  {
+    date: "2026-08",
     tag: "Interface",
     text: "Refonte complète de la page d'accueil d'un monde. La présentation d'abord : toujours pleine largeur (l'ancienne option plein écran a disparu), la bannière passe en fond estompé vers le bas avec les boutons favoris et menu mobile incrustés dessus, le titre et la description deviennent du contenu normal, et l'ensemble du contenu vit dans un panel dédié. Le contenu ensuite : une grille de blocs libre, où chaque bloc (widget, HTML/CSS custom ou Markdown) se place et se redimensionne en largeur depuis Réglages > Page d'accueil, plusieurs blocs pouvant tenir côte à côte sur une même ligne. Glisser la frontière entre deux blocs voisins élargit l'un en rétrécissant l'autre ; la hauteur s'ajuste toute seule au contenu. Certains widgets ont leurs propres réglages (nombre de lignes visibles des salons, nombre d'entrées listées…), et les blocs HTML/Markdown peuvent recevoir un titre qui sert à les repérer dans l'éditeur. Le widget « Annonce » devient un bloc HTML custom parmi d'autres.",
   },

@@ -16,14 +16,22 @@ describe("resolveWorldHomeLayout", () => {
   });
 
   it("conserve l'ordre choisi par l'admin", () => {
-    expect(resolveWorldHomeLayout(["stats", "chatrooms"])).toEqual(["stats", "chatrooms"]);
+    expect(resolveWorldHomeLayout(["members_online", "chatrooms"])).toEqual(["members_online", "chatrooms"]);
   });
 
   it("filtre les ids inconnus (widget supprimé depuis)", () => {
-    expect(resolveWorldHomeLayout(["chatrooms", "ancien_widget", "stats"])).toEqual([
+    expect(resolveWorldHomeLayout(["chatrooms", "ancien_widget", "members_online"])).toEqual([
       "chatrooms",
-      "stats",
+      "members_online",
     ]);
+  });
+
+  it("« stats » n'est plus un widget reconnu — filtré comme un id inconnu", () => {
+    // Régression : les statistiques sont désormais une zone fixe sous le
+    // titre, réglée par une case à cocher (home_show_stats), plus un widget
+    // plaçable dans un ordre/une grille — voir worldHomeGrid.ts.
+    expect(ALL_WORLD_HOME_WIDGETS).not.toContain("stats");
+    expect(resolveWorldHomeLayout(["chatrooms", "stats"])).toEqual(["chatrooms"]);
   });
 
   it("déduplique les ids répétés", () => {

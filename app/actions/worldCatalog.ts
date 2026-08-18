@@ -43,6 +43,15 @@ export async function setWorldFaceclaims(worldId: string, enabled: boolean) {
   return { ok: true as const };
 }
 
+/** Affiche/masque le bloc statistiques sous le titre de la page d'accueil —
+ *  position fixe, ce n'est plus un bloc de home_grid (voir worldHomeGrid.ts). */
+export async function setWorldHomeShowStats(worldId: string, enabled: boolean) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("worlds").update({ home_show_stats: enabled }).eq("id", worldId);
+  if (error) return { ok: false as const, error: error.message };
+  return { ok: true as const };
+}
+
 export async function setWorldAgeRestricted(worldId: string, enabled: boolean) {
   const supabase = await createClient();
   const { error } = await supabase.from("worlds").update({ is_age_restricted: enabled }).eq("id", worldId);

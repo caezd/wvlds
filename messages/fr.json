@@ -295,11 +295,12 @@
     "home": {
       "addWidget": "Ajouter un widget",
       "noWidgets": "Aucun widget affiché — ajoutez-en un ci-dessous.",
+      "showStats": "Afficher les statistiques",
+      "showStatsDesc": "Nombre de messages, de membres et de personas, affiché sous le titre de la page d'accueil.",
       "widgets": {
         "categories": "Catégories",
         "composer": "Créer une partie",
         "chatrooms": "Salons",
-        "stats": "Statistiques",
         "members_online": "Membres en ligne",
         "announcement": "Annonce",
         "wiki_shortcuts": "Raccourcis wiki",

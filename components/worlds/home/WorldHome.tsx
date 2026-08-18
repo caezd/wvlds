@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useLayoutEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -17,6 +17,7 @@ import { useMobileSidebar } from "@/components/providers/MobileSidebarProvider";
 import type { AsidePersona } from "@/components/personas/WorldPersonaAsideClient";
 import { toggleWorldFavorite } from "@/app/(protected)/w/actions";
 import { cn } from "@/lib/utils";
+import { supabaseThumb } from "@/lib/storage";
 import { resolveWorldHomeGrid } from "./worldHomeGrid";
 
 // Onglets secondaires — un seul est actif à la fois, chargés à la demande
@@ -29,6 +30,7 @@ const WorldMap = dynamic(() => import("../map/WorldMap").then((m) => m.WorldMap)
 const WorldTimeline = dynamic(() => import("../timeline/WorldTimeline").then((m) => m.WorldTimeline));
 const WorldMembersPanel = dynamic(() => import("../members/WorldMembersPanel").then((m) => m.WorldMembersPanel));
 const WorldPersonasPanel = dynamic(() => import("@/components/personas/WorldPersonasPanel").then((m) => m.WorldPersonasPanel));
+const WorldStatsWidget = dynamic(() => import("./widgets/WorldStatsWidget").then((m) => m.WorldStatsWidget));
 
 type WorldPrefs = { main_expanded: boolean; is_favorite: boolean; wiki_sidebar_width?: number };
 
@@ -82,7 +84,16 @@ export function WorldHome({
 
   // La vue par défaut du monde a son propre bouton menu mobile, incrusté sur
   // la bannière — la barre mobile générique de AppShell deviendrait redondante.
-  useEffect(() => {
+  //
+  // `useLayoutEffect`, pas `useEffect` : AppShell.tsx masque cette barre
+  // (h-12, shrink-0) uniquement une fois `hideMobileHeader` passé à true, un
+  // rendu APRÈS le montage — avec `useEffect` (différé après la peinture du
+  // navigateur), la première image peinte montrait encore la barre, avant
+  // qu'une seconde image ne l'efface et n'étire le contenu dans l'espace
+  // libéré (et l'inverse en quittant Accueil) : un bond de layout visible à
+  // chaque bascule vers/depuis cette vue précisément. `useLayoutEffect`
+  // s'exécute avant la peinture, donc dans la même image que le montage.
+  useLayoutEffect(() => {
     setHideMobileHeader(true);
     return () => setHideMobileHeader(false);
   }, [setHideMobileHeader]);
@@ -98,13 +109,6 @@ export function WorldHome({
   const gridItems = resolveWorldHomeGrid(world.home_grid, world.home_layout, world.announcement_html).filter(
     (item) => item.widgetId !== "composer" || (canPost && create_chatroom),
   );
-  // Personnalisation désactivée temporairement (voir HomeColorField dans
-  // WorldSettingsView.tsx) — toujours les couleurs par défaut du thème,
-  // même si world.home_body_color/home_panel_color est déjà enregistré. Le
-  // panel reprend la même couleur que le body (pas de carte distincte).
-  const bodyColor = "var(--background)";
-  const panelColor = bodyColor;
-
   const baseHref = `/w/${worldId}`;
 
   function closeView() {
@@ -197,20 +201,48 @@ export function WorldHome({
             onClose={closeView}
           />
         ) : (
-          <div
-            className="flex min-h-0 flex-1 flex-col overflow-y-auto"
-            style={{ backgroundColor: bodyColor }}
-          >
-            {/* Bannière en fond, collée au bord du content (pas de padding) —
+          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+            {/* Pas de couleur de fond forcée ici (ni sur le panel plus bas) :
+                ce conteneur reste transparent et laisse voir le fond ambiant
+                réel de la page — celui-ci diffère entre desktop (`<main>`
+                pose `lg:bg-background`, voir AppShell.tsx) et mobile (en
+                dessous de `lg:`, c'est le fond du `<body>` qui doit rester
+                visible). Peindre `var(--background)` en dur ici cassait
+                justement ce second cas.
+
+                Bannière en fond, collée au bord du content (pas de padding) —
                 boutons incrustés au-dessus (menu mobile, favoris). Plus de
                 header séparé ni d'option plein écran : la page d'accueil
                 occupe désormais toujours toute la largeur. Le fond (image +
                 fondu) remplit tout ce conteneur, dont la hauteur suit celle
-                du bloc titre — le fondu se termine donc pile avant le panel,
-                quelle que soit la longueur de la description. */}
-            <div className="relative">
-              <WorldHeroCard world={world} bodyColor={bodyColor} />
-              <div className="absolute inset-x-0 top-0 flex items-center justify-between p-3">
+                du bloc titre.
+
+                Le dégradé (fondu d'opacité, voir WorldHeroCard.tsx) démarre à
+                --hero-fade-start et devient transparent à 100% de ce
+                conteneur, c'est-à-dire sous le bloc titre : il s'étire donc
+                avec la description au lieu de se couper net. `min-h` garantit
+                une présence minimale de la bannière pour un monde sans
+                description. Hauteur réservée (pt-40) et début du fondu sont
+                constants et déclarés ensemble — les avoir désaccordés
+                (padding responsive, fondu fixe) coupait le fondu pile à
+                767px, sans raison visible.
+
+                `shrink-0` est indispensable : ce bloc et le panel sont des
+                enfants d'un conteneur flex-col, donc compressibles par défaut.
+                Dès que le contenu dépassait la hauteur du viewport, ce bloc
+                était réduit sous sa hauteur naturelle ; son contenu (padding
+                fixe + titre + description) débordait alors de la boîte, et le
+                panel — qui démarre au bord inférieur de la boîte *réduite* —
+                venait se superposer à la description. */}
+            <div className="relative min-h-60 shrink-0 [--hero-fade-start:6rem]">
+              <WorldHeroCard world={world} />
+              {/* z-10 obligatoire : le bloc titre qui suit est `relative`, donc
+                  positionné comme cette barre — à z-index égal, c'est le
+                  dernier du DOM qui se peint au-dessus. Son `pt` (la hauteur
+                  réservée à la bannière) recouvre alors exactement ces boutons
+                  et, une zone de padding captant les événements pointeur, les
+                  rendait inertes. */}
+              <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between p-3">
                 <MobileDrawerOpenButton className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-black/30 text-white backdrop-blur-sm transition-colors hover:bg-black/45" />
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -233,17 +265,30 @@ export function WorldHome({
               </div>
 
               {/* Titre + description, désormais du contenu de page normal
-                  (plus superposés sur la bannière). pt-40/56 réserve la
-                  hauteur visuelle de la bannière.  est nécessaire
+                  (plus superposés sur la bannière). `pt-40` réserve la hauteur
+                  visuelle de la bannière — à garder en phase avec
+                  --hero-fade-* du conteneur parent. `relative` est nécessaire
                   ici : sans position, ce bloc statique se peindrait sous le
                   fond absolu de WorldHeroCard malgré son ordre plus tardif
                   dans le DOM (règles d'empilement CSS), le rendant invisible.
-                  Les statistiques ne sont plus un cas à part : c'est un bloc
-                  de la grille comme un autre, plaçable où l'admin veut. */}
-              <div className="relative w-full space-y-2 px-12 pb-4 pt-40 md:pt-56">
+                  Les statistiques ont une position fixe ici (pas un bloc de
+                  la grille) — seul leur affichage se règle, depuis Réglages
+                  > Page d'accueil (voir WorldHomeGridSettings.tsx). */}
+              <div className="relative w-full space-y-2 px-12 pb-4 pt-40">
                 <span className="relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-md bg-muted">
                   {world.icon_url ? (
-                    <Image src={world.icon_url} alt="" fill sizes="44px" className="object-cover" />
+                    // `unoptimized` : `sizes` en px fixe (pas `vw`) fait
+                    // demander à Next.js sa plus grande largeur configurée
+                    // (jusqu'à 3840px) au lieu d'une taille adaptée — voir le
+                    // commentaire détaillé dans WorldAvatar.tsx. On
+                    // pré-dimensionne donc nous-mêmes via imgproxy.
+                    <Image
+                      src={supabaseThumb(world.icon_url, 44 * 3, 90) ?? world.icon_url}
+                      alt=""
+                      fill
+                      unoptimized
+                      className="object-cover"
+                    />
                   ) : world.visibility === "public" ? (
                     <Globe size={20} className="text-muted-foreground" />
                   ) : (
@@ -258,17 +303,17 @@ export function WorldHome({
                     <p className="mt-1 max-w-xl text-sm text-muted-foreground">{world.description}</p>
                   )}
                 </div>
+                {world.home_show_stats && <WorldStatsWidget worldId={worldId} />}
               </div>
             </div>
 
             {/* Panel de contenu : accueille la grille de blocs configurée par
-                l'admin (voir WorldHomeGridView / WorldHomeGridEditor). */}
-            <div className="px-12 pb-12">
-              <div
-                data-home-panel
-                className="w-full rounded-2xl"
-                style={{ backgroundColor: panelColor }}
-              >
+                l'admin (voir WorldHomeGridView / WorldHomeGridEditor).
+                `shrink-0` pour la même raison que le bloc bannière ci-dessus —
+                sans lui, la grille se ferait comprimer et son contenu
+                déborderait de la boîte au lieu de faire défiler la page. */}
+            <div className="shrink-0 px-12 pb-12">
+              <div data-home-panel className="w-full rounded-2xl">
                 <WorldHomeGridView
                   items={gridItems}
                   worldId={worldId}

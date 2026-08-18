@@ -808,7 +808,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                             un éditeur de grille 12 colonnes a besoin de plus de place. */}
                         <TabsContent value="home" className="mt-0">
                             <div className="mx-auto max-w-2xl">
-                                <WorldHomeGridSettings world={world} />
+                                <WorldHomeGridSettings world={world} onUpdated={onUpdated} />
                             </div>
                         </TabsContent>
 

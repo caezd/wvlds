@@ -33,6 +33,11 @@ describe("resolveWorldHomeGrid — home_grid valide", () => {
     expect(resolveWorldHomeGrid(grid, [], null)).toEqual([]);
   });
 
+  it("rejette l'id 'stats' comme widgetId — devenu une case à cocher, plus un bloc plaçable", () => {
+    const grid = [{ id: "a", type: "widget", x: 0, y: 0, w: 6, widgetId: "stats" }];
+    expect(resolveWorldHomeGrid(grid, [], null)).toEqual([]);
+  });
+
   it("déduplique les widgetId répétés (ne garde que la première occurrence)", () => {
     const grid = [
       { id: "a", type: "widget", x: 0, y: 0, w: 6, widgetId: "chatrooms" },
@@ -53,7 +58,7 @@ describe("resolveWorldHomeGrid — home_grid valide", () => {
     const grid = [
       { id: "a", type: "widget", x: -1, y: 0, w: 6, widgetId: "chatrooms" },
       { id: "b", type: "widget", x: 0, y: 0, w: 1.5, widgetId: "categories" },
-      { id: "c", type: "widget", x: 0, y: 0, w: 0, widgetId: "stats" },
+      { id: "c", type: "widget", x: 0, y: 0, w: 0, widgetId: "members_online" },
     ];
     expect(resolveWorldHomeGrid(grid, [], null)).toEqual([]);
   });
@@ -98,8 +103,10 @@ describe("resolveWorldHomeGrid — home_grid valide", () => {
 
   it("retombe sur la synthèse legacy si tous les items sont invalides", () => {
     const grid = [{ id: "a", type: "widget", x: 0, y: 0, w: 6, widgetId: "inconnu" }];
-    const resolved = resolveWorldHomeGrid(grid, ["stats"], null);
-    expect(resolved).toEqual([{ id: "stats", type: "widget", x: 0, y: 0, w: HOME_GRID_COLS, widgetId: "stats" }]);
+    const resolved = resolveWorldHomeGrid(grid, ["members_online"], null);
+    expect(resolved).toEqual([
+      { id: "members_online", type: "widget", x: 0, y: 0, w: HOME_GRID_COLS, widgetId: "members_online" },
+    ]);
   });
 });
 
@@ -115,8 +122,8 @@ describe("resolveWorldHomeGrid — synthèse depuis l'ancien système", () => {
   });
 
   it("synthétise un bloc par widget de l'ancien home_layout, une ligne chacun", () => {
-    const resolved = resolveWorldHomeGrid(null, ["chatrooms", "stats"], null);
-    expect(resolved.map((i) => i.widgetId)).toEqual(["chatrooms", "stats"]);
+    const resolved = resolveWorldHomeGrid(null, ["chatrooms", "members_online"], null);
+    expect(resolved.map((i) => i.widgetId)).toEqual(["chatrooms", "members_online"]);
     expect(resolved.map((i) => i.y)).toEqual([0, 1]);
   });
 
@@ -148,7 +155,7 @@ describe("réglages de widget (options)", () => {
   });
 
   it("retourne 0 pour un widget sans réglage déclaré", () => {
-    expect(widgetOptionValue("stats", "visibleRows", { visibleRows: 4 })).toBe(0);
+    expect(widgetOptionValue("categories", "visibleRows", { visibleRows: 4 })).toBe(0);
   });
 
   it("sanitizeWidgetOptions écarte les clés inconnues", () => {
@@ -161,7 +168,7 @@ describe("réglages de widget (options)", () => {
 
   it("sanitizeWidgetOptions retourne undefined plutôt qu'un objet vide", () => {
     expect(sanitizeWidgetOptions("chatrooms", { inconnu: 3 })).toBeUndefined();
-    expect(sanitizeWidgetOptions("stats", { visibleRows: 4 })).toBeUndefined();
+    expect(sanitizeWidgetOptions("categories", { visibleRows: 4 })).toBeUndefined();
   });
 
   it("les réglages valides survivent à la résolution de la grille", () => {
@@ -211,7 +218,7 @@ describe("compactHomeGridRows", () => {
   it("est appliqué à la lecture — une grille trouée en base se répare à l'affichage", () => {
     const grid = [
       { id: "a", type: "widget", x: 0, y: 0, w: 12, widgetId: "chatrooms" },
-      { id: "b", type: "widget", x: 0, y: 4, w: 12, widgetId: "stats" },
+      { id: "b", type: "widget", x: 0, y: 4, w: 12, widgetId: "members_online" },
     ];
     expect(resolveWorldHomeGrid(grid, null, null).map((i) => i.y)).toEqual([0, 1]);
   });
