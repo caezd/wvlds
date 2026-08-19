@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import * as React from "react";
 import type { WorldHomeGridItem } from "@/components/worlds/home/worldHomeGrid";
@@ -27,46 +27,181 @@ beforeEach(() => {
 });
 
 describe("getContentWidth", () => {
-  it("exclut le border et le padding du conteneur, pas seulement getBoundingClientRect", () => {
-    // Régression : mesurer via getBoundingClientRect() (boîte englobante,
-    // border + padding inclus) surdimensionnait la grille en continu — le
-    // conteneur de l'éditeur a son propre border + p-2. getComputedStyle()
-    // résout toujours la largeur de CONTENU, même sous box-sizing: border-box.
-    const node = { clientWidth: 316 } as HTMLElement;
+  /** Simule un élément mesurable : boîte englobante + styles calculés. */
+  function nodeWith({ rectWidth, clientWidth }: { rectWidth: number; clientWidth: number }) {
+    return {
+      clientWidth,
+      getBoundingClientRect: () => ({ width: rectWidth }) as DOMRect,
+    } as HTMLElement;
+  }
+
+  const STYLE = {
+    // Sous `box-sizing: border-box` (preflight Tailwind), `width` vaut la
+    // boîte de BORDURE — c'est précisément le piège dans lequel tombe
+    // `getContentWidth()` de react-grid-layout.
+    width: "672px",
+    borderLeftWidth: "1px",
+    borderRightWidth: "1px",
+    paddingLeft: "8px",
+    paddingRight: "8px",
+  } as CSSStyleDeclaration;
+
+  function withStyle<T>(style: CSSStyleDeclaration, fn: () => T): T {
     const restore = window.getComputedStyle;
-    window.getComputedStyle = () =>
-      ({ width: "300px", paddingLeft: "8px", paddingRight: "8px" }) as CSSStyleDeclaration;
+    window.getComputedStyle = () => style;
     try {
-      expect(getContentWidth(node)).toBe(300);
+      return fn();
     } finally {
       window.getComputedStyle = restore;
     }
+  }
+
+  it("retire bordures ET paddings, sans se fier à `width` (faux sous box-sizing: border-box)", () => {
+    // Régression : `getComputedStyle().width` renvoie ici 672 (boîte de
+    // bordure). S'y fier annonçait 672px de place disponible pour 654px
+    // réels — les blocs débordaient du cadre de 18px en permanence.
+    expect(withStyle(STYLE, () => getContentWidth(nodeWith({ rectWidth: 672, clientWidth: 670 })))).toBe(654);
   });
 
-  it("retombe sur clientWidth moins le padding si `width` n'est pas un nombre exploitable", () => {
-    const node = { clientWidth: 316 } as HTMLElement;
-    const restore = window.getComputedStyle;
-    window.getComputedStyle = () =>
-      ({ width: "auto", paddingLeft: "8px", paddingRight: "8px" }) as CSSStyleDeclaration;
-    try {
-      expect(getContentWidth(node)).toBe(300);
-    } finally {
-      window.getComputedStyle = restore;
-    }
+  it("retombe sur clientWidth moins le padding quand la boîte englobante est à zéro (jsdom)", () => {
+    expect(withStyle(STYLE, () => getContentWidth(nodeWith({ rectWidth: 0, clientWidth: 670 })))).toBe(654);
   });
 });
 
 describe("WorldHomeGridEditor", () => {
-  it("désactive la transition CSS de react-grid-layout, qui jouait aussi au montage", () => {
-    // Régression : `.react-grid-item`/`.react-grid-layout` animent en continu
-    // (transition CSS de la librairie) tout changement de position/hauteur,
-    // y compris au montage — un bloc qui vient d'apparaître glissait
-    // visiblement vers sa position au lieu d'y être direct, perceptible en
-    // changeant d'onglet dans les réglages (l'éditeur est remonté).
-    const { container } = render(<Harness initial={[CHATROOMS_ITEM]} />);
+  it("place chaque bloc par grille CSS, aux coordonnées de son modèle", () => {
+    // Même mécanisme que le rendu public (WorldHomeGridView) : l'éditeur
+    // montre donc littéralement la disposition finale, et aucun moteur de
+    // layout tiers n'a plus à être tenu synchronisé avec nos calculs.
+    const { container } = render(
+      <Harness
+        initial={[
+          { id: "a", type: "widget", x: 0, y: 0, w: 4, widgetId: "categories" },
+          { id: "b", type: "widget", x: 4, y: 0, w: 8, widgetId: "chatrooms" },
+        ]}
+      />,
+    );
 
-    expect(container.querySelector(".react-grid-layout")).toHaveClass("!transition-none");
-    expect(container.querySelector(".react-grid-item")).toHaveClass("!transition-none");
+    const a = container.querySelector<HTMLElement>('[data-block-id="a"]')!;
+    const b = container.querySelector<HTMLElement>('[data-block-id="b"]')!;
+    expect(a.style.gridColumn).toBe("1 / span 4");
+    expect(a.style.gridRow).toBe("1");
+    expect(b.style.gridColumn).toBe("5 / span 8");
+    expect(b.style.gridRow).toBe("1");
+  });
+
+  it("place un diviseur dans la gouttière, un seul par frontière entre colonnes", () => {
+    // La gouttière elle-même est la zone de saisie : un point d'accroche par
+    // séparation, plutôt que deux poignées de blocs voisins qui se
+    // chevauchaient dans le même espace.
+    const { container } = render(
+      <Harness
+        initial={[
+          { id: "a", type: "widget", x: 0, y: 0, w: 4, widgetId: "categories" },
+          { id: "b", type: "widget", x: 4, y: 0, w: 8, widgetId: "chatrooms" },
+        ]}
+      />,
+    );
+
+    const dividers = container.querySelectorAll<HTMLElement>(".wghe-divider");
+    expect(dividers).toHaveLength(1);
+    // Posé dans la première colonne du bloc de droite, puis ramené d'une
+    // gouttière vers la gauche pour occuper exactement l'espace entre les deux.
+    expect(dividers[0].style.gridColumn).toBe("5");
+    expect(dividers[0].style.gridRow).toBe("1");
+  });
+
+  it("ne réarrange pas la grille pendant le glissement, seulement au relâchement", async () => {
+    // Régression : appliquer le déplacement en continu déplaçait les lignes
+    // sous le curseur, ce qui changeait la cible, ce qui réarrangeait encore…
+    // La zone visée se dérobait, rendant l'insertion entre deux lignes très
+    // difficile à viser. Le geste ne montre donc plus qu'un repère.
+    setWorldHomeGridMock.mockResolvedValue({ ok: true, items: [CHATROOMS_ITEM] });
+    const { container } = render(
+      <Harness
+        initial={[
+          { id: "a", type: "widget", x: 0, y: 0, w: 6, widgetId: "categories" },
+          { id: "b", type: "widget", x: 6, y: 0, w: 6, widgetId: "chatrooms" },
+        ]}
+      />,
+    );
+
+    const before = [...container.querySelectorAll<HTMLElement>("[data-block-id]")].map(
+      (el) => `${el.dataset.blockId}:${el.style.gridColumn}:${el.style.gridRow}`,
+    );
+
+    const handle = container.querySelector('[data-block-id="b"] .wghe-drag-handle')!;
+    await act(async () => {
+      fireEvent.pointerDown(handle, { button: 0, clientX: 100, clientY: 10 });
+      fireEvent.pointerMove(window, { clientX: 100, clientY: 60 });
+    });
+
+    // Positions inchangées : rien n'a bougé sous le curseur.
+    const during = [...container.querySelectorAll<HTMLElement>("[data-block-id]")].map(
+      (el) => `${el.dataset.blockId}:${el.style.gridColumn}:${el.style.gridRow}`,
+    );
+    expect(during).toEqual(before);
+    expect(setWorldHomeGridMock).not.toHaveBeenCalled();
+
+    await act(async () => {
+      fireEvent.pointerUp(window);
+    });
+    await waitFor(() => expect(setWorldHomeGridMock).toHaveBeenCalledTimes(1));
+  });
+
+  it("suit le curseur au pixel pendant le glissement d'une frontière, et ne se cale qu'au relâchement", async () => {
+    // Le modèle ne connaît que des colonnes entières : arrondir en continu
+    // faisait sauter la séparation d'une colonne (~50px) à la fois. Pendant
+    // le geste on ne décale donc que l'affichage (marges), sans toucher aux
+    // coordonnées ; la conversion en colonnes n'a lieu qu'à la fin.
+    setWorldHomeGridMock.mockResolvedValue({ ok: true, items: [CHATROOMS_ITEM] });
+    const { container } = render(
+      <Harness
+        initial={[
+          { id: "a", type: "widget", x: 0, y: 0, w: 6, widgetId: "categories" },
+          { id: "b", type: "widget", x: 6, y: 0, w: 6, widgetId: "chatrooms" },
+        ]}
+      />,
+    );
+
+    const divider = container.querySelector<HTMLElement>(".wghe-divider")!;
+    const blockA = container.querySelector<HTMLElement>('[data-block-id="a"]')!;
+    const blockB = container.querySelector<HTMLElement>('[data-block-id="b"]')!;
+
+    await act(async () => {
+      fireEvent.pointerDown(divider, { button: 0, clientX: 300 });
+      fireEvent.pointerMove(window, { clientX: 317 });
+    });
+
+    // Décalage purement visuel : les colonnes du modèle n'ont pas bougé.
+    expect(blockA.style.gridColumn).toBe("1 / span 6");
+    expect(blockB.style.gridColumn).toBe("7 / span 6");
+    // Le bloc de gauche déborde d'autant que celui de droite se rétracte —
+    // la frontière bouge, la paire garde sa largeur totale. (La valeur exacte
+    // dépend de la largeur mesurée du conteneur, nulle sous jsdom : le geste
+    // est alors borné par la largeur minimale, ce qui est le comportement
+    // attendu. On vérifie donc la mécanique, pas un nombre de pixels.)
+    const shift = Number.parseFloat(blockB.style.marginLeft);
+    expect(shift).toBeGreaterThan(0);
+    expect(Number.parseFloat(blockA.style.marginRight)).toBeCloseTo(-shift);
+    expect(setWorldHomeGridMock).not.toHaveBeenCalled();
+
+    // Les DEUX blocs de la paire sont marqués : la frontière appartient
+    // autant à l'un qu'à l'autre, et leurs largeurs changent ensemble.
+    expect(blockA.className).toContain("opacity-50");
+    expect(blockB.className).toContain("opacity-50");
+
+    await act(async () => {
+      fireEvent.pointerUp(window);
+    });
+    await waitFor(() => expect(setWorldHomeGridMock).toHaveBeenCalledTimes(1));
+  });
+
+  it("ne met aucun diviseur autour d'un bloc seul sur sa ligne", () => {
+    // Une ligne occupe toujours toute la largeur : ses bords extérieurs n'ont
+    // rien à étirer.
+    const { container } = render(<Harness initial={[CHATROOMS_ITEM]} />);
+    expect(container.querySelectorAll(".wghe-divider")).toHaveLength(0);
   });
 
   it("affiche les blocs existants et ne propose que les widgets non utilisés dans le menu", async () => {

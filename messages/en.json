@@ -333,6 +333,7 @@
         "editBlock": "Edit block",
         "blockTitleLabel": "Title",
         "blockTitleHelp": "Only used to identify the block in this editor — never shown on the home page.",
+        "resizeBoundary": "Resize both columns",
         "blockOptions": "Block settings",
         "options": {
           "range": "Between {min} and {max}",

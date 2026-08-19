@@ -334,6 +334,7 @@
         "editBlock": "Modifier le bloc",
         "blockTitleLabel": "Titre",
         "blockTitleHelp": "Sert uniquement à repérer le bloc dans cet éditeur — jamais affiché sur la page d'accueil.",
+        "resizeBoundary": "Redimensionner les deux colonnes",
         "blockOptions": "Réglages du bloc",
         "options": {
           "range": "Entre {min} et {max}",

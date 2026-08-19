@@ -1,10 +1,15 @@
 import { describe, it, expect } from "vitest";
 import {
   compactHomeGridRows,
+  findLeftNeighbor,
   findRightNeighbor,
   HOME_GRID_COLS,
+  MAX_BLOCKS_PER_ROW,
   MAX_HOME_GRID_ITEMS,
+  moveBlock,
+  resizeBlock,
   resolveWorldHomeGrid,
+  rowBoundaries,
   sanitizeWidgetOptions,
   widgetOptionValue,
   type WorldHomeGridItem,
@@ -244,5 +249,195 @@ describe("findRightNeighbor", () => {
   it("ignore un bloc séparé par un espace vide", () => {
     const gapped = { ...right, id: "g", x: 8 };
     expect(findRightNeighbor([left, gapped], left)).toBeNull();
+  });
+});
+
+describe("resizeBlock", () => {
+  const pair = (): WorldHomeGridItem[] => [
+    { id: "l", type: "markdown", x: 0, y: 0, w: 6, content: "l" },
+    { id: "r", type: "markdown", x: 6, y: 0, w: 6, content: "r" },
+  ];
+
+  it("élargir par le bord droit rétrécit d'autant le voisin de droite", () => {
+    const [l, r] = resizeBlock(pair(), "l", "e", 2);
+    expect([l.x, l.w]).toEqual([0, 8]);
+    expect([r.x, r.w]).toEqual([8, 4]);
+  });
+
+  it("élargir par le bord gauche rétrécit d'autant le voisin de gauche", () => {
+    // Le bord DROIT du bloc tiré reste fixe : seule la séparation bouge.
+    const [l, r] = resizeBlock(pair(), "r", "w", -2);
+    expect([l.x, l.w]).toEqual([0, 4]);
+    expect([r.x, r.w]).toEqual([4, 8]);
+  });
+
+  it("la paire garde sa largeur totale, quel que soit le bord tiré", () => {
+    for (const edge of ["w", "e"] as const) {
+      for (const delta of [-5, -1, 3, 9]) {
+        const id = edge === "e" ? "l" : "r";
+        const total = resizeBlock(pair(), id, edge, delta).reduce((sum, i) => sum + i.w, 0);
+        expect(total).toBe(HOME_GRID_COLS);
+      }
+    }
+  });
+
+  it("ne laisse aucun des deux passer sous la largeur minimale", () => {
+    expect(resizeBlock(pair(), "l", "e", 99).map((i) => i.w)).toEqual([10, 2]);
+    expect(resizeBlock(pair(), "l", "e", -99).map((i) => i.w)).toEqual([2, 10]);
+  });
+
+  it("sans voisin, le bloc s'étend jusqu'au bord de la grille", () => {
+    const solo: WorldHomeGridItem[] = [{ id: "a", type: "markdown", x: 0, y: 0, w: 6, content: "a" }];
+    expect(resizeBlock(solo, "a", "e", 99)[0].w).toBe(HOME_GRID_COLS);
+    expect(resizeBlock(solo, "a", "e", -99)[0].w).toBe(2);
+  });
+});
+
+describe("moveBlock", () => {
+  const items = (): WorldHomeGridItem[] => [
+    { id: "a", type: "markdown", x: 0, y: 0, w: 12, content: "a" },
+    { id: "b", type: "markdown", x: 0, y: 1, w: 12, content: "b" },
+  ];
+
+  it("déposer un bloc sur la ligne d'un autre les met côte à côte", () => {
+    // C'est le geste qui crée une ligne à deux colonnes : la ligne d'arrivée
+    // se redistribue pour faire de la place.
+    const moved = moveBlock(items(), "b", 0, 11);
+    expect(moved.map((i) => [i.id, i.x, i.y, i.w])).toEqual([
+      ["a", 0, 0, 6],
+      ["b", 6, 0, 6],
+    ]);
+  });
+
+  it("insère à gauche ou à droite selon la colonne visée", () => {
+    const before = moveBlock(items(), "b", 0, 0);
+    expect(before.map((i) => i.id)).toEqual(["b", "a"]);
+  });
+
+  it("retirer un bloc d'une ligne rend sa place aux autres", () => {
+    const shared: WorldHomeGridItem[] = [
+      { id: "a", type: "markdown", x: 0, y: 0, w: 6, content: "a" },
+      { id: "b", type: "markdown", x: 6, y: 0, w: 6, content: "b" },
+    ];
+    // `b` descend sur une nouvelle ligne : `a` doit reprendre toute la place.
+    const moved = moveBlock(shared, "b", 1, 0);
+    expect(moved.map((i) => [i.id, i.y, i.w])).toEqual([
+      ["a", 0, 12],
+      ["b", 1, 12],
+    ]);
+  });
+
+  it("ne touche pas aux largeurs des lignes non concernées", () => {
+    const three: WorldHomeGridItem[] = [
+      { id: "a", type: "markdown", x: 0, y: 0, w: 4, content: "a" },
+      { id: "b", type: "markdown", x: 4, y: 0, w: 8, content: "b" },
+      { id: "c", type: "markdown", x: 0, y: 1, w: 12, content: "c" },
+      { id: "d", type: "markdown", x: 0, y: 2, w: 12, content: "d" },
+    ];
+    // `d` rejoint la ligne de `c` : la première ligne (4/8, réglée à la
+    // main) doit rester intacte.
+    const moved = moveBlock(three, "d", 1, 11);
+    const byId = Object.fromEntries(moved.map((i) => [i.id, i]));
+    expect([byId.a.w, byId.b.w]).toEqual([4, 8]);
+    expect([byId.c.w, byId.d.w]).toEqual([6, 6]);
+  });
+
+  it("refuse d'ajouter un bloc à une ligne déjà pleine", () => {
+    const full: WorldHomeGridItem[] = [
+      ...Array.from({ length: MAX_BLOCKS_PER_ROW }, (_, i) => ({
+        id: `f${i}`,
+        type: "markdown" as const,
+        x: i * 2,
+        y: 0,
+        w: 2,
+        content: "x",
+      })),
+      { id: "extra", type: "markdown", x: 0, y: 1, w: 12, content: "e" },
+    ];
+    expect(moveBlock(full, "extra", 0, 0)).toEqual(full);
+  });
+
+  it("déposer sous la dernière ligne crée une nouvelle ligne", () => {
+    const moved = moveBlock(items(), "a", 5, 0);
+    expect(moved.map((i) => [i.id, i.y])).toEqual([
+      ["b", 0],
+      ["a", 1],
+    ]);
+  });
+
+  it("en mode « nouvelle ligne », s'insère seul au-dessus sans rejoindre la ligne visée", () => {
+    // Régression : une ligne à deux colonnes absorbait tout bloc qu'on
+    // essayait de faire passer au-dessus d'elle — il n'y avait aucun moyen
+    // d'exprimer « place-le sur sa propre ligne ici ».
+    const twoCols: WorldHomeGridItem[] = [
+      { id: "a", type: "markdown", x: 0, y: 0, w: 6, content: "a" },
+      { id: "b", type: "markdown", x: 6, y: 0, w: 6, content: "b" },
+      { id: "c", type: "markdown", x: 0, y: 1, w: 12, content: "c" },
+    ];
+    const moved = moveBlock(twoCols, "c", 0, 0, true);
+    expect(moved.map((i) => [i.id, i.y, i.w])).toEqual([
+      ["c", 0, 12],
+      ["a", 1, 6],
+      ["b", 1, 6],
+    ]);
+  });
+
+  it("en mode « nouvelle ligne », la ligne quittée se repartage la largeur", () => {
+    const twoCols: WorldHomeGridItem[] = [
+      { id: "a", type: "markdown", x: 0, y: 0, w: 6, content: "a" },
+      { id: "b", type: "markdown", x: 6, y: 0, w: 6, content: "b" },
+    ];
+    // `a` descend seul en dessous : `b` doit reprendre toute la ligne.
+    const moved = moveBlock(twoCols, "a", 1, 0, true);
+    expect(moved.map((i) => [i.id, i.y, i.w])).toEqual([
+      ["b", 0, 12],
+      ["a", 1, 12],
+    ]);
+  });
+});
+
+describe("rowBoundaries", () => {
+  it("retourne une frontière par paire de colonnes voisines", () => {
+    const items: WorldHomeGridItem[] = [
+      { id: "a", type: "markdown", x: 0, y: 0, w: 4, content: "a" },
+      { id: "b", type: "markdown", x: 4, y: 0, w: 4, content: "b" },
+      { id: "c", type: "markdown", x: 8, y: 0, w: 4, content: "c" },
+    ];
+    expect(rowBoundaries(items).map(({ left, right }) => [left.id, right.id])).toEqual([
+      ["a", "b"],
+      ["b", "c"],
+    ]);
+  });
+
+  it("ignore les bords extérieurs et les lignes à un seul bloc", () => {
+    const items: WorldHomeGridItem[] = [
+      { id: "solo", type: "markdown", x: 0, y: 0, w: 12, content: "s" },
+      { id: "x", type: "markdown", x: 0, y: 1, w: 6, content: "x" },
+      { id: "y", type: "markdown", x: 6, y: 1, w: 6, content: "y" },
+    ];
+    expect(rowBoundaries(items).map(({ left, right }) => [left.id, right.id])).toEqual([["x", "y"]]);
+  });
+});
+
+describe("findLeftNeighbor", () => {
+  const left: WorldHomeGridItem = { id: "l", type: "widget", x: 0, y: 0, w: 6, widgetId: "categories" };
+  const right: WorldHomeGridItem = { id: "r", type: "widget", x: 6, y: 0, w: 6, widgetId: "chatrooms" };
+
+  it("trouve le bloc collé au bord gauche, sur la même ligne", () => {
+    expect(findLeftNeighbor([left, right], right)).toEqual(left);
+  });
+
+  it("ne retourne rien pour le bloc de gauche (rien avant lui)", () => {
+    expect(findLeftNeighbor([left, right], left)).toBeNull();
+  });
+
+  it("ignore un bloc d'une autre ligne, même adjacent en x", () => {
+    const above = { ...left, id: "a", y: 1 };
+    expect(findLeftNeighbor([above, right], right)).toBeNull();
+  });
+
+  it("ignore un bloc séparé par un espace vide", () => {
+    const gapped = { ...left, id: "g", w: 4 };
+    expect(findLeftNeighbor([gapped, right], right)).toBeNull();
   });
 });

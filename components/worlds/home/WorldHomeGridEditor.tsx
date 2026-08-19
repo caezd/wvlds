@@ -1,10 +1,7 @@
 "use client";
 
-import "react-grid-layout/css/styles.css";
-import "react-resizable/css/styles.css";
 import * as React from "react";
 import { useTranslations } from "next-intl";
-import ReactGridLayout, { type Layout, type EventCallback, type LayoutItem } from "react-grid-layout";
 import { Code2, FileText, GripVertical, Pencil, Plus, Settings2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { setWorldHomeGrid } from "@/app/actions/worldCatalog";
@@ -22,63 +19,76 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   compactHomeGridRows,
-  findRightNeighbor,
   HOME_GRID_COLS,
+  HOME_GRID_GAP,
   HOME_GRID_ROW_HEIGHT,
+  MIN_BLOCK_W,
+  moveBlock,
+  resizeBlock,
+  rowBoundaries,
   widgetOptionValue,
   WORLD_HOME_WIDGET_OPTIONS,
   type WorldHomeGridItem,
   type WorldHomeWidgetOption,
 } from "./worldHomeGrid";
-
-/** Largeur minimale d'un bloc, en colonnes (miroir de la validation serveur). */
-const MIN_BLOCK_W = 2;
 import { WorldHomeHtmlBlockEditor } from "./blocks/WorldHomeHtmlBlockEditor";
 import { WorldHomeMarkdownBlockEditor } from "./blocks/WorldHomeMarkdownBlockEditor";
 
 /**
- * Largeur de CONTENU du conteneur (hors `border`/`padding`) — react-grid-layout
- * positionne ses colonnes dans cette zone, pas dans la boîte pleine renvoyée
- * par `getBoundingClientRect()`. Notre conteneur a son propre `border` et
- * `p-2` : les compter en trop surdimensionnait la grille d'une quinzaine de
- * pixels en continu (pas un à-coup ponctuel — un écart constant, présent dès
- * que l'onglet est chargé). `getComputedStyle(node).width` résout toujours
- * la largeur de contenu, y compris sous `box-sizing: border-box` — c'est le
- * même calcul que `getContentWidth()` dans react-grid-layout, repris ici pour
- * rester cohérent avec la mesure que ferait la librairie elle-même.
+ * Destination d'un déplacement en cours. `asNewRow` distingue les deux
+ * intentions : rejoindre la ligne visée et s'y partager la largeur, ou
+ * s'insérer seul sur une nouvelle ligne à cet endroit.
+ */
+type DropTarget = { row: number; col: number; asNewRow: boolean };
+
+/**
+ * Décalage visuel d'une frontière en cours de glissement, en pixels. Purement
+ * d'affichage : le modèle (en colonnes entières) n'est mis à jour qu'au
+ * relâchement, une fois le décalage converti en colonnes.
+ */
+type ResizePreview = { leftId: string; rightId: string; dx: number };
+
+/** Part haute et basse d'une ligne visant l'espace ENTRE deux lignes plutôt
+ *  que la ligne elle-même (un tiers de chaque côté). */
+const NEW_ROW_BAND = 1 / 3;
+
+/**
+ * Largeur de CONTENU du conteneur (hors `border` et `padding`).
+ *
+ * On soustrait explicitement bordures et paddings de la boîte englobante
+ * plutôt que de lire `getComputedStyle(node).width` : sous
+ * `box-sizing: border-box` — appliqué globalement par le preflight Tailwind —
+ * cette propriété renvoie la largeur de la boîte de BORDURE, pas du contenu.
+ * Ce calcul-ci est juste quel que soit le `box-sizing`, et garde la précision
+ * sous-pixel (contrairement à `clientWidth`, arrondi à l'entier).
  */
 /** Exporté uniquement pour être testable isolément — pas d'usage prévu hors ce fichier. */
 export function getContentWidth(node: HTMLElement): number {
   const style = window.getComputedStyle(node);
-  const parsed = Number.parseFloat(style.width);
-  if (Number.isFinite(parsed)) return Math.max(0, parsed);
   const px = (v: string) => { const n = Number.parseFloat(v); return Number.isFinite(n) ? n : 0; };
+  const inset =
+    px(style.borderLeftWidth) + px(style.borderRightWidth) + px(style.paddingLeft) + px(style.paddingRight);
+  const border = node.getBoundingClientRect().width;
+  if (border > 0) return Math.max(0, border - inset);
+  // Repli (jsdom : pas de moteur de mise en page, rect toujours à 0).
   return Math.max(0, node.clientWidth - px(style.paddingLeft) - px(style.paddingRight));
 }
 
 /**
- * Largeur du conteneur, mesurée nous-mêmes plutôt que via le
- * `useContainerWidth()` de react-grid-layout : ce dernier mesure dans un
- * `useEffect` (après la peinture du navigateur), donc même avec son option
- * `measureBeforeMount`, un premier rendu (vide) est toujours peint avant
- * que le vrai contenu n'apparaisse — un à-coup résiduel. `useLayoutEffect`
- * mesure de façon synchrone, avant la peinture : le tout premier rendu
- * visible porte déjà la bonne largeur, sans transition à corriger après coup.
+ * Largeur du conteneur, en pixels — sert uniquement à convertir un
+ * déplacement de curseur en colonnes de grille pendant un geste. La
+ * disposition, elle, ne dépend d'aucune mesure : c'est la grille CSS qui
+ * place les blocs. Une mesure absente ou périmée ne peut donc plus décaler
+ * l'affichage, seulement la sensibilité d'un glissement en cours.
  */
-function useMeasuredWidth(): { containerRef: React.RefObject<HTMLDivElement | null>; width: number; measured: boolean } {
+function useMeasuredWidth(): { containerRef: React.RefObject<HTMLDivElement | null>; width: number } {
   const containerRef = React.useRef<HTMLDivElement>(null);
   const [width, setWidth] = React.useState(0);
-  // Séparé de `width` : sous jsdom (tests), la mesure renvoie toujours 0
-  // (pas de moteur de mise en page réel) — `width > 0` ne deviendrait donc
-  // jamais vrai. Ce drapeau ne dit qu'une chose : une mesure a eu lieu, peu
-  // importe le résultat.
-  const [measured, setMeasured] = React.useState(false);
 
   React.useLayoutEffect(() => {
     const node = containerRef.current;
     if (!node) return;
     setWidth(Math.round(getContentWidth(node)));
-    setMeasured(true);
     if (typeof ResizeObserver === "undefined") return;
     const observer = new ResizeObserver(([entry]) => {
       // `entry.contentRect` exclut déjà `border`/`padding` — cohérent avec
@@ -89,18 +99,7 @@ function useMeasuredWidth(): { containerRef: React.RefObject<HTMLDivElement | nu
     return () => observer.disconnect();
   }, []);
 
-  return { containerRef, width, measured };
-}
-
-/** Fusionne les positions/largeurs renvoyées par react-grid-layout dans les
- *  items existants (par id) — `h` est ignoré : la hauteur n'est pas réglable,
- *  chaque bloc occupe une ligne qui s'auto-dimensionne au rendu. */
-function mergeLayout(items: WorldHomeGridItem[], layout: Layout): WorldHomeGridItem[] {
-  const byId = new Map(layout.map((l) => [l.i, l]));
-  return items.map((item) => {
-    const l = byId.get(item.id);
-    return l ? { ...item, x: l.x, y: l.y, w: l.w } : item;
-  });
+  return { containerRef, width };
 }
 
 /**
@@ -187,11 +186,22 @@ function blockLabel(item: WorldHomeGridItem, widgetLabel: (id: WorldHomeWidgetId
 
 /**
  * Éditeur admin de la grille de blocs de la page d'accueil (Réglages > Page
- * d'accueil) — déplacement/redimensionnement libres via react-grid-layout,
- * chargé uniquement ici (pas dans le rendu public, voir WorldHomeGridView.tsx).
- * La persistance ne se déclenche qu'à la fin d'un geste (onDragStop/
- * onResizeStop), jamais en continu pendant le glissement — même leçon que
- * le sélecteur de couleur de l'onglet Apparence plus tôt dans ce chantier.
+ * d'accueil) : déplacement et redimensionnement des blocs.
+ *
+ * Sans moteur de layout tiers — la disposition est une grille CSS, la même
+ * que le rendu public (WorldHomeGridView), et les gestes ne font que produire
+ * de nouveaux (x, y, w) via des fonctions pures (`moveBlock`, `resizeBlock`,
+ * voir worldHomeGrid.ts). C'est un choix délibéré : react-grid-layout, utilisé
+ * ici auparavant, résout les conflits en POUSSANT les blocs les uns hors des
+ * autres, alors qu'une ligne est ici un simple partage de 12 colonnes entre
+ * voisins. Les deux modèles se contredisaient à chaque geste (voisin renvoyé
+ * à la ligne, fantôme superposé, largeurs recalculées pendant le glissement),
+ * et pendant un geste c'était la librairie qui avait le dernier mot. Le
+ * modèle « lignes de colonnes » rend ces états simplement impossibles.
+ *
+ * La persistance ne se déclenche qu'à la fin d'un geste, jamais en continu
+ * pendant le glissement — même leçon que le sélecteur de couleur de l'onglet
+ * Apparence plus tôt dans ce chantier.
  */
 export function WorldHomeGridEditor({
   worldId,
@@ -206,7 +216,7 @@ export function WorldHomeGridEditor({
 }) {
   const t = useTranslations("worlds");
   const tCommon = useTranslations("common");
-  const { containerRef, width, measured } = useMeasuredWidth();
+  const { containerRef, width } = useMeasuredWidth();
   const [editingBlock, setEditingBlock] = React.useState<
     { type: "html" | "markdown"; item?: WorldHomeGridItem } | null
   >(null);
@@ -239,72 +249,136 @@ export function WorldHomeGridEditor({
     onPersisted?.();
   }
 
-  // Un redimensionnement en cours ajuste aussi le voisin (voir handleResize) ;
-  // onLayoutChange, qui se déclenche également pendant ce geste, écraserait
-  // cet ajustement avec le layout brut de react-grid-layout.
-  const resizingRef = React.useRef(false);
+  /** Geste en cours : bloque la persistance concurrente et sert de repère
+   *  visuel (le bloc saisi passe au premier plan). */
+  const [activeId, setActiveId] = React.useState<string | null>(null);
+  /** Destination visée pendant un déplacement — sert uniquement à l'afficher ;
+   *  la grille n'est réarrangée qu'au relâchement (voir startMove). */
+  const [dropPreview, setDropPreview] = React.useState<DropTarget | null>(null);
+  /** Décalage de la frontière en cours de glissement — affichage seulement. */
+  const [resizePreview, setResizePreview] = React.useState<ResizePreview | null>(null);
+  /** La grille elle-même — repère des coordonnées de dépôt (voir dropTarget). */
+  const gridRef = React.useRef<HTMLDivElement>(null);
+  /** Nombre de lignes occupées — borne le repère de dépôt. */
+  const rowCount = items.reduce((max, i) => Math.max(max, i.y + 1), 0);
 
-  function handleLayoutChange(layout: Layout) {
-    if (resizingRef.current) return;
-    // Retour visuel continu pendant le glissement — état local uniquement,
-    // aucune écriture réseau tant que le geste n'est pas terminé.
-    onItemsChange(mergeLayout(items, layout));
-  }
-
-  const handleGestureStop: EventCallback = (layout) => {
-    void persist(mergeLayout(items, layout));
-  };
+  /** Pas d'une colonne / d'une ligne en pixels, gouttière comprise —
+   *  convertit un déplacement de curseur en unités de grille. */
+  const colPitch = (width + HOME_GRID_GAP) / HOME_GRID_COLS;
+  const rowPitch = HOME_GRID_ROW_HEIGHT + HOME_GRID_GAP;
 
   /**
-   * Redimensionnement en tandem : élargir un bloc rétrécit d'autant son
-   * voisin de droite (et inversement), de sorte que glisser leur frontière
-   * commune déplace vraiment la séparation entre les deux colonnes.
+   * Redimensionnement : la frontière suit le curseur au pixel près pendant le
+   * geste, et ne se cale sur la colonne la plus proche qu'au relâchement.
    *
-   * Le calcul part de l'état d'AVANT le geste (`items`) et de la seule
-   * largeur demandée, jamais du layout renvoyé par react-grid-layout : sa
-   * compaction a déjà, à ce stade, poussé le voisin sur une autre ligne
-   * (le bloc élargi ne tenait plus à côté de lui) — le corriger après coup
-   * reviendrait à rattraper un déplacement qu'on ne veut pas du tout. La
-   * paire conserve donc sa ligne et sa largeur totale ; seule la frontière
-   * bouge, bornée pour qu'aucun des deux ne passe sous la largeur minimale.
+   * Le modèle ne connaît que des colonnes entières — arrondir en continu
+   * faisait sauter la séparation d'une colonne entière à la fois (une
+   * cinquantaine de pixels), ce qui rendait le geste saccadé. On applique
+   * donc pendant le glissement un simple décalage visuel des deux blocs
+   * concernés (marges négatives/positives, sans toucher au modèle), puis on
+   * convertit ce décalage en colonnes une seule fois, à la fin.
    */
-  const handleResize: EventCallback = (layout, oldItem, newItem) => {
-    resizingRef.current = true;
-    if (!newItem) return;
-    const previous = items.find((i) => i.id === newItem.i);
-    if (!previous) return;
+  function startResize(
+    event: React.PointerEvent,
+    left: WorldHomeGridItem,
+    right: WorldHomeGridItem,
+  ) {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    event.stopPropagation();
 
-    const neighbor = findRightNeighbor(items, previous);
-    if (!neighbor) {
-      // Pas de voisin : simple élargissement, borné au bord de la grille.
-      const w = Math.max(MIN_BLOCK_W, Math.min(newItem.w, HOME_GRID_COLS - previous.x));
-      onItemsChange(items.map((i) => (i.id === previous.id ? { ...i, w } : i)));
-      return;
-    }
+    const startX = event.clientX;
+    const startItems = items;
+    setActiveId(left.id);
 
-    const total = previous.w + neighbor.w;
-    const w = Math.max(MIN_BLOCK_W, Math.min(newItem.w, total - MIN_BLOCK_W));
-    onItemsChange(
-      items.map((i) => {
-        if (i.id === previous.id) return { ...i, w };
-        if (i.id === neighbor.id) return { ...i, x: previous.x + w, w: total - w };
-        return i;
-      }),
-    );
-  };
+    // La frontière ne peut pas réduire l'un des deux blocs sous la largeur
+    // minimale : on borne le décalage en pixels, pas seulement à l'arrivée.
+    const minDx = (MIN_BLOCK_W - left.w) * colPitch;
+    const maxDx = (right.w - MIN_BLOCK_W) * colPitch;
 
-  const handleResizeStop: EventCallback = () => {
-    // `items` porte déjà le résultat du geste (appliqué par handleResize) —
-    // on persiste cet état plutôt que le layout brut de react-grid-layout,
-    // qui ignore l'ajustement du voisin. Le drapeau ne retombe qu'après la
-    // frame courante : react-grid-layout émet encore un onLayoutChange (avec
-    // sa version compactée) juste après ce callback, qui écraserait sinon
-    // l'ajustement qu'on vient d'appliquer.
-    requestAnimationFrame(() => {
-      resizingRef.current = false;
-    });
-    void persist(items);
-  };
+    let dx = 0;
+    const onPointerMove = (moveEvent: PointerEvent) => {
+      dx = Math.min(Math.max(moveEvent.clientX - startX, minDx), maxDx);
+      setResizePreview({ leftId: left.id, rightId: right.id, dx });
+    };
+    const onPointerUp = () => {
+      window.removeEventListener("pointermove", onPointerMove);
+      setActiveId(null);
+      setResizePreview(null);
+      const columns = Math.round(dx / colPitch);
+      if (columns !== 0) void persist(resizeBlock(startItems, left.id, "e", columns));
+    };
+
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", onPointerUp, { once: true });
+  }
+
+  /**
+   * Cible d'un déplacement, lue à la position ABSOLUE du curseur dans la
+   * grille (pas en delta depuis le point de saisie) : la zone survolée est
+   * alors exactement celle qu'on voit sous le pointeur.
+   *
+   * Chaque ligne est découpée en trois bandes. Le curseur dans la bande
+   * centrale vise la ligne elle-même — le bloc la rejoint et ils se partagent
+   * la largeur. Dans une bande de bord (le quart haut ou bas, à cheval sur la
+   * gouttière), il vise l'ESPACE entre deux lignes : le bloc s'y insère seul,
+   * sur une nouvelle ligne. Sans ces bandes, une ligne déjà remplie absorbait
+   * tout bloc qu'on tentait de faire passer au-dessus ou en dessous d'elle,
+   * sans aucun moyen de l'éviter.
+   */
+  function dropTarget(clientX: number, clientY: number): DropTarget | null {
+    const rect = gridRef.current?.getBoundingClientRect();
+    if (!rect) return null;
+    const rowFloat = (clientY - rect.top) / rowPitch;
+    const row = Math.max(0, Math.floor(rowFloat));
+    const withinRow = rowFloat - Math.floor(rowFloat);
+    const col = (clientX - rect.left) / colPitch;
+
+    // Bandes larges (un tiers en haut, un tiers en bas) : créer une ligne est
+    // le geste le plus courant, il ne doit pas demander de viser au pixel.
+    if (withinRow < NEW_ROW_BAND) return { row, col, asNewRow: true };
+    if (withinRow > 1 - NEW_ROW_BAND) return { row: row + 1, col, asNewRow: true };
+    return { row, col, asNewRow: false };
+  }
+
+  /**
+   * Déplacement : on n'applique RIEN pendant le glissement, on montre
+   * seulement où le bloc atterrirait ; la grille n'est réarrangée qu'au
+   * relâchement.
+   *
+   * Réarranger en continu créait une boucle : chaque réarrangement déplaçait
+   * les lignes sous le curseur, ce qui changeait la cible, ce qui réarrangeait
+   * à nouveau… La zone visée se dérobait au fur et à mesure qu'on l'approchait
+   * — d'où la difficulté à viser l'espace entre deux lignes. Ici les repères
+   * restent immobiles pendant tout le geste.
+   */
+  function startMove(event: React.PointerEvent, item: WorldHomeGridItem) {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+
+    setActiveId(item.id);
+    let target: DropTarget | null = null;
+    let moved = false;
+
+    const onPointerMove = (moveEvent: PointerEvent) => {
+      moved = true;
+      target = dropTarget(moveEvent.clientX, moveEvent.clientY);
+      setDropPreview(target);
+    };
+    const onPointerUp = () => {
+      window.removeEventListener("pointermove", onPointerMove);
+      setActiveId(null);
+      setDropPreview(null);
+      // Un simple clic sur la poignée ne doit rien réécrire.
+      if (moved && target) {
+        void persist(moveBlock(items, item.id, target.row, target.col, target.asNewRow));
+      }
+    };
+
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", onPointerUp, { once: true });
+  }
 
   /** Prochaine ligne libre — un bloc par ligne, `y` séquentiel. */
   function nextY() {
@@ -359,12 +433,6 @@ export function WorldHomeGridEditor({
     (id) => id !== "announcement" && !usedWidgetIds.has(id),
   );
 
-  // `h: 1` figé et poignée de redimensionnement limitée au bord droit ("e") :
-  // seule la largeur se règle, la hauteur suit le contenu au rendu.
-  const layout: Layout = items.map(
-    (item): LayoutItem => ({ i: item.id, x: item.x, y: item.y, w: item.w, h: 1, minW: 2, minH: 1, maxH: 1 }),
-  );
-
   return (
     <div className="space-y-3">
       <DeleteConfirmDialog
@@ -393,45 +461,60 @@ export function WorldHomeGridEditor({
       />
 
       <div ref={containerRef} className="rounded-lg border border-dashed p-2">
-        {measured && items.length > 0 && (
-          <ReactGridLayout
-            // Même raison que `!transition-none` sur chaque bloc plus bas :
-            // le conteneur racine, lui, anime sa hauteur en continu — visible
-            // comme un étirement vertical au montage, avant même de compter
-            // le glissement horizontal des blocs.
-            className="!transition-none"
-            layout={layout}
-            width={width}
-            gridConfig={{ cols: HOME_GRID_COLS, rowHeight: HOME_GRID_ROW_HEIGHT, margin: [8, 8] }}
-            dragConfig={{ handle: ".wghe-drag-handle" }}
-            // Poignée "e" (bord droit) uniquement : glisser la frontière
-            // entre deux colonnes élargit l'un et rétrécit l'autre. Pas de
-            // poignée verticale — la hauteur n'est pas réglable.
-            resizeConfig={{ handles: ["e"] }}
-            onLayoutChange={handleLayoutChange}
-            onDragStop={handleGestureStop}
-            onResize={handleResize}
-            onResizeStop={handleResizeStop}
+        {items.length > 0 && (
+          // Grille CSS pure — exactement le mécanisme du rendu public
+          // (WorldHomeGridView) : l'éditeur montre donc littéralement la
+          // disposition finale, et il n'y a plus de moteur de layout à
+          // synchroniser avec nos propres calculs. Les gestes ne font que
+          // produire de nouveaux (x, y, w) ; le navigateur place le reste.
+          <div
+            ref={gridRef}
+            className="grid grid-cols-12"
+            style={{ gap: HOME_GRID_GAP, gridAutoRows: `${HOME_GRID_ROW_HEIGHT}px` }}
           >
             {items.map((item) => (
               // Le bloc se réduit à sa barre de titre : l'éditeur sert à
               // agencer, pas à prévisualiser — un corps vide ne ferait que
               // répéter le libellé en occupant de la hauteur pour rien.
               //
-              // `!transition-none` : le CSS de react-grid-layout anime en
-              // continu (`transition: all 200ms`) tout changement de
-              // position/taille d'un bloc, hors glisser-déposer actif (qui
-              // s'en affranchit déjà via ses propres classes d'état). Cette
-              // transition permanente jouait aussi au montage — un bloc qui
-              // vient d'apparaître glissait visiblement vers sa position,
-              // au lieu d'y être direct. `!important` nécessaire : la classe
-              // `.react-grid-item`, posée par la librairie sur ce même
-              // élément, a la même spécificité qu'une classe Tailwind.
+              // `select-none` : sans lui, glisser un bloc (ou sa frontière)
+              // sélectionne son libellé au passage, laissant du texte
+              // surligné en travers de l'éditeur. Rien n'est à copier ici —
+              // ce ne sont que des étiquettes d'agencement.
               <div
                 key={item.id}
-                className="group relative flex flex-col overflow-hidden rounded-lg border border-border-soft bg-muted/30 !transition-none"
+                data-block-id={item.id}
+                style={{
+                  gridColumn: `${item.x + 1} / span ${item.w}`,
+                  gridRow: item.y + 1,
+                  // Décalage visuel pendant un glissement de frontière : le
+                  // bloc de gauche déborde de sa case (marge négative), celui
+                  // de droite se rétracte d'autant. La grille, elle, ne bouge
+                  // pas — elle sera recalculée au relâchement.
+                  ...(resizePreview?.leftId === item.id && { marginRight: -resizePreview.dx }),
+                  ...(resizePreview?.rightId === item.id && { marginLeft: resizePreview.dx }),
+                }}
+                className={cn(
+                  "group relative flex select-none flex-col overflow-hidden rounded-lg border border-border-soft bg-muted/30",
+                  // Blocs concernés par le geste en cours, signalés par leur
+                  // transparence plutôt que par un contour : une bordure
+                  // ajoutée en cours de geste élargit la boîte et fait bouger
+                  // ce qu'on est justement en train de viser.
+                  //
+                  // Un redimensionnement en concerne DEUX — la frontière
+                  // appartient autant à l'un qu'à l'autre, et les deux
+                  // changent de largeur ensemble. N'en marquer qu'un seul
+                  // laissait croire que l'autre ne bougeait pas.
+                  (activeId === item.id ||
+                    resizePreview?.leftId === item.id ||
+                    resizePreview?.rightId === item.id) &&
+                    "z-10 opacity-50",
+                )}
               >
-                <div className="wghe-drag-handle flex h-full cursor-grab items-center gap-1.5 bg-muted/60 px-2 text-xs text-muted-foreground active:cursor-grabbing">
+                <div
+                  onPointerDown={(event) => startMove(event, item)}
+                  className="wghe-drag-handle flex h-full cursor-grab items-center gap-1.5 bg-muted/60 px-2 text-xs text-muted-foreground active:cursor-grabbing"
+                >
                   <GripVertical className="h-3.5 w-3.5 shrink-0" />
                   {item.type === "html" && <Code2 className="h-3 w-3 shrink-0" />}
                   {item.type === "markdown" && <FileText className="h-3 w-3 shrink-0" />}
@@ -466,9 +549,75 @@ export function WorldHomeGridEditor({
                     </button>
                   </div>
                 </div>
+
               </div>
             ))}
-          </ReactGridLayout>
+
+            {/* La gouttière ELLE-MÊME est le diviseur : un point de saisie par
+                frontière, plutôt que deux poignées de blocs voisins qui se
+                chevauchaient dans le même espace (celle du dessus l'emportait,
+                sans que rien ne le laisse deviner).
+
+                Placé dans la première colonne du bloc de droite puis décalé
+                d'une gouttière vers la gauche (`marginLeft` négatif), il vient
+                occuper exactement l'espace entre les deux — sans calcul de
+                pixels : c'est la grille CSS qui donne la position, comme pour
+                les blocs. Il s'étire sur toute la hauteur de la ligne. */}
+            {/* Repère de dépôt, pendant un déplacement seulement.
+                — Trait horizontal : le bloc s'insérera SEUL sur une nouvelle
+                  ligne, à cet endroit. Posé dans la gouttière, entre les deux
+                  lignes concernées.
+                — Aplat coloré : le bloc REJOINDRA cette ligne et s'y
+                  partagera la largeur. Un aplat plutôt qu'un contour : une
+                  bordure s'ajoute à la boîte et décale ce qu'elle entoure.
+                Sans ce repère, les deux issues étaient indiscernables avant
+                le relâchement. */}
+            {dropPreview?.asNewRow && rowCount > 0 && (
+              <div
+                aria-hidden
+                style={{
+                  gridColumn: "1 / -1",
+                  gridRow: Math.min(dropPreview.row + 1, rowCount),
+                  alignSelf: dropPreview.row >= rowCount ? "end" : "start",
+                  [dropPreview.row >= rowCount ? "marginBottom" : "marginTop"]: -(HOME_GRID_GAP / 2 + 1),
+                  height: 2,
+                }}
+                className="pointer-events-none z-20 rounded-full bg-primary"
+              />
+            )}
+            {dropPreview && !dropPreview.asNewRow && dropPreview.row < rowCount && (
+              <div
+                aria-hidden
+                style={{ gridColumn: "1 / -1", gridRow: dropPreview.row + 1 }}
+                className="pointer-events-none z-20 rounded-lg bg-primary/15"
+              />
+            )}
+
+            {rowBoundaries(items).map(({ left, right }) => (
+              <button
+                key={`boundary-${right.id}`}
+                type="button"
+                aria-label={t("home.grid.resizeBoundary")}
+                onPointerDown={(event) => startResize(event, left, right)}
+                style={{
+                  gridColumn: right.x + 1,
+                  gridRow: right.y + 1,
+                  width: HOME_GRID_GAP,
+                  marginLeft: -HOME_GRID_GAP,
+                  // Suit le curseur avec les deux blocs qu'il sépare.
+                  ...(resizePreview?.rightId === right.id && {
+                    transform: `translateX(${resizePreview.dx}px)`,
+                  }),
+                }}
+                className={cn(
+                  "wghe-divider relative z-10 cursor-ew-resize justify-self-start self-stretch",
+                  // Le trait reste visible tant qu'on tire, même si le curseur
+                  // s'éloigne de la bande de 8px.
+                  resizePreview?.rightId === right.id && "wghe-divider-active",
+                )}
+              />
+            ))}
+          </div>
         )}
 
         {items.length === 0 && (

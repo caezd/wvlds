@@ -9,7 +9,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Correctif",
-    text: "Corrigé un bref à-coup de mise en page en arrivant sur la page d'accueil d'un monde (ou en la quittant), et un autre dans l'éditeur de grille de Réglages > Page d'accueil en changeant d'onglet — dans les deux cas, un premier rendu utilisait encore une taille provisoire avant de se corriger à la bonne taille l'instant d'après, visible comme un étirement suivi d'un ajustement. La légère animation de glissement des blocs qui accompagnait ce correctif au montage de l'éditeur a aussi été retirée, ainsi qu'un décalage de largeur constant (quelques pixels de trop, comptés depuis la bordure du cadre plutôt que son contenu).",
+    text: "L'éditeur de grille (Réglages > Page d'accueil) a été reconstruit sur le même mécanisme d'affichage que la page d'accueil elle-même : il montre donc exactement la disposition finale, et toute une série de défauts disparaît d'un coup — étirement au changement d'onglet, décalage de largeur permanent, animation parasite au chargement, bloc voisin renvoyé à la ligne au lieu de se partager la largeur, fantôme superposé pendant un glissement. Étirer la frontière entre deux colonnes se fait maintenant des deux côtés, et redimensionne bien les deux blocs à la fois.",
   },
   {
     date: "2026-08",

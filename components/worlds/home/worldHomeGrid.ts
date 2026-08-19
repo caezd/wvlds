@@ -106,12 +106,21 @@ export function sanitizeWidgetOptions(
 }
 
 export const HOME_GRID_COLS = 12;
-/** Hauteur d'une ligne dans l'éditeur (react-grid-layout a besoin d'une unité
- *  fixe pour ses calculs de glisser-déposer) — purement indicative : le rendu
- *  public (WorldHomeGridView) ignore cette constante et s'auto-dimensionne au
- *  contenu réel de chaque ligne. Calée sur la hauteur d'une barre de titre,
- *  seul contenu d'un bloc dans l'éditeur. */
+/** Hauteur d'une ligne dans l'éditeur, en pixels — purement indicative : le
+ *  rendu public (WorldHomeGridView) l'ignore et s'auto-dimensionne au contenu
+ *  réel de chaque ligne. Calée sur la hauteur d'une barre de titre, seul
+ *  contenu d'un bloc dans l'éditeur. */
 export const HOME_GRID_ROW_HEIGHT = 36;
+/** Gouttière entre blocs dans l'éditeur, en pixels (doit rester en phase avec
+ *  la classe `gap-2` du conteneur — elle sert à convertir des pixels de
+ *  curseur en colonnes de grille). */
+export const HOME_GRID_GAP = 8;
+/** Largeur minimale d'un bloc, en colonnes — miroir de la validation serveur
+ *  (`w < 2` rejeté, voir setWorldHomeGrid). */
+export const MIN_BLOCK_W = 2;
+/** Une ligne ne peut pas contenir plus de blocs que sa largeur ne permet, en
+ *  respectant la largeur minimale de chacun. */
+export const MAX_BLOCKS_PER_ROW = Math.floor(HOME_GRID_COLS / MIN_BLOCK_W);
 /** Limite de taille du contenu HTML/Markdown libre d'un bloc — partagée
  *  entre les éditeurs de bloc (validation immédiate) et l'action serveur
  *  (source de vérité). Anciennement `MAX_ANNOUNCEMENT_HTML_LENGTH`. */
@@ -278,4 +287,193 @@ export function resolveWorldHomeGrid(
  */
 export function findRightNeighbor(items: WorldHomeGridItem[], item: WorldHomeGridItem): WorldHomeGridItem | null {
   return items.find((other) => other.id !== item.id && other.y === item.y && other.x === item.x + item.w) ?? null;
+}
+
+/**
+ * Symétrique de `findRightNeighbor` : le bloc dont le bord DROIT touche le
+ * bord gauche de `item`, sur la même ligne — la frontière que le glisser du
+ * bord gauche de `item` redimensionne en tandem. `null` si `item` commence
+ * déjà au bord gauche de la grille ou si rien ne le borde directement.
+ */
+export function findLeftNeighbor(items: WorldHomeGridItem[], item: WorldHomeGridItem): WorldHomeGridItem | null {
+  return items.find((other) => other.id !== item.id && other.y === item.y && other.x + other.w === item.x) ?? null;
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
+}
+
+/**
+ * Frontières internes de la grille : chaque couple de blocs voisins sur une
+ * même ligne. C'est exactement l'ensemble des gouttières situées ENTRE deux
+ * colonnes — l'éditeur y place un diviseur, seul point de saisie pour régler
+ * la largeur (voir WorldHomeGridEditor.tsx). Les bords extérieurs d'une ligne
+ * n'en font pas partie : une ligne occupe toujours toute la largeur, il n'y a
+ * rien à y étirer.
+ */
+export function rowBoundaries(
+  items: WorldHomeGridItem[],
+): { left: WorldHomeGridItem; right: WorldHomeGridItem }[] {
+  return toRows(items).flatMap((row) =>
+    row.slice(1).map((right, index) => ({ left: row[index], right })),
+  );
+}
+
+/** Regroupe les blocs par ligne, chaque ligne triée de gauche à droite. */
+export function toRows(items: WorldHomeGridItem[]): WorldHomeGridItem[][] {
+  const byRow = new Map<number, WorldHomeGridItem[]>();
+  for (const item of [...items].sort((a, b) => a.y - b.y || a.x - b.x)) {
+    const row = byRow.get(item.y);
+    if (row) row.push(item);
+    else byRow.set(item.y, [item]);
+  }
+  return [...byRow.entries()].sort(([a], [b]) => a - b).map(([, row]) => row);
+}
+
+/**
+ * Inverse de `toRows` : renumérote les lignes en séquence et recalcule le `x`
+ * de chaque bloc en enchaînant les largeurs. Les lignes vides disparaissent.
+ */
+export function fromRows(rows: WorldHomeGridItem[][]): WorldHomeGridItem[] {
+  return rows
+    .filter((row) => row.length > 0)
+    .flatMap((row, y) => {
+      let x = 0;
+      return row.map((item) => {
+        const placed = { ...item, x, y };
+        x += item.w;
+        return placed;
+      });
+    });
+}
+
+/**
+ * Répartit la largeur de la grille à parts égales entre les blocs d'une ligne
+ * (le reste de la division allant aux premiers). Appliqué aux seules lignes
+ * dont la composition change lors d'un déplacement : une ligne qui perd un
+ * bloc doit combler le trou, une ligne qui en gagne un doit faire de la
+ * place. Les autres lignes gardent les largeurs réglées à la main.
+ */
+export function distributeRow(row: WorldHomeGridItem[]): WorldHomeGridItem[] {
+  if (row.length === 0) return row;
+  const base = Math.floor(HOME_GRID_COLS / row.length);
+  const extra = HOME_GRID_COLS - base * row.length;
+  let x = 0;
+  return row.map((item, index) => {
+    const w = base + (index < extra ? 1 : 0);
+    const placed = { ...item, x, w };
+    x += w;
+    return placed;
+  });
+}
+
+/**
+ * Déplace la frontière d'un bloc de `deltaCols` colonnes, en tandem avec son
+ * voisin : la paire garde sa largeur totale et sa ligne, seule la séparation
+ * bouge. Sans voisin de ce côté, le bloc s'étend jusqu'au bord de la grille.
+ * Bornée pour qu'aucun des deux ne passe sous `MIN_BLOCK_W`.
+ *
+ * Fonction pure : c'est ici que vit toute l'arithmétique du redimensionnement,
+ * pas dans les gestionnaires d'événements — elle est ainsi testable seule,
+ * sans simuler de geste de souris.
+ */
+export function resizeBlock(
+  items: WorldHomeGridItem[],
+  id: string,
+  edge: "w" | "e",
+  deltaCols: number,
+): WorldHomeGridItem[] {
+  const item = items.find((i) => i.id === id);
+  if (!item) return items;
+
+  if (edge === "e") {
+    const neighbor = findRightNeighbor(items, item);
+    if (!neighbor) {
+      const w = clamp(item.w + deltaCols, MIN_BLOCK_W, HOME_GRID_COLS - item.x);
+      return items.map((i) => (i.id === id ? { ...i, w } : i));
+    }
+    const total = item.w + neighbor.w;
+    const w = clamp(item.w + deltaCols, MIN_BLOCK_W, total - MIN_BLOCK_W);
+    return items.map((i) => {
+      if (i.id === id) return { ...i, w };
+      if (i.id === neighbor.id) return { ...i, x: item.x + w, w: total - w };
+      return i;
+    });
+  }
+
+  // Bord gauche : le bord DROIT du bloc reste fixe, c'est `x` qui bouge.
+  const rightEdge = item.x + item.w;
+  const neighbor = findLeftNeighbor(items, item);
+  const minX = neighbor ? neighbor.x + MIN_BLOCK_W : 0;
+  const x = clamp(item.x + deltaCols, minX, rightEdge - MIN_BLOCK_W);
+  return items.map((i) => {
+    if (i.id === id) return { ...i, x, w: rightEdge - x };
+    if (neighbor && i.id === neighbor.id) return { ...i, w: x - neighbor.x };
+    return i;
+  });
+}
+
+/**
+ * Déplace un bloc vers la ligne `targetRow`, inséré à hauteur de la colonne
+ * `targetCol` (le bloc se place avant le premier bloc dont il dépasse le
+ * milieu). `targetRow` au-delà de la dernière ligne crée une nouvelle ligne.
+ *
+ * Aucune notion de collision : un bloc appartient à une ligne, une ligne est
+ * une suite ordonnée de blocs qui se partagent les 12 colonnes. Insérer ou
+ * retirer ne peut donc jamais produire de chevauchement — seules les deux
+ * lignes touchées sont redistribuées, les autres gardent leurs largeurs.
+ */
+export function moveBlock(
+  items: WorldHomeGridItem[],
+  id: string,
+  targetRow: number,
+  targetCol: number,
+  asNewRow = false,
+): WorldHomeGridItem[] {
+  const moved = items.find((i) => i.id === id);
+  if (!moved) return items;
+
+  const rows = toRows(items);
+  const sourceRow = rows.findIndex((row) => row.some((i) => i.id === id));
+  const remaining = rows.map((row) => row.filter((i) => i.id !== id));
+
+  // Déposer ENTRE deux lignes plutôt que SUR l'une d'elles : le bloc s'insère
+  // seul, sur sa propre ligne, au lieu de venir se partager la largeur de la
+  // ligne visée. Sans cette distinction, une ligne à deux colonnes absorbait
+  // tout bloc qu'on essayait de faire passer au-dessus d'elle.
+  if (asNewRow) {
+    const at = clamp(targetRow, 0, remaining.length);
+    const next = [...remaining];
+    next.splice(at, 0, [moved]);
+    // L'insertion décale d'un cran l'index de la ligne d'origine si celle-ci
+    // se trouve après le point d'insertion.
+    const shiftedSource = sourceRow >= at ? sourceRow + 1 : sourceRow;
+    // La ligne créée est redistribuée elle aussi : seule sur sa ligne, le
+    // bloc doit en prendre toute la largeur plutôt que de conserver celle
+    // qu'il avait quand il partageait sa ligne précédente.
+    return fromRows(
+      next.map((row, i) => (i === at || i === shiftedSource ? distributeRow(row) : row)),
+    );
+  }
+
+  const clampedRow = clamp(targetRow, 0, remaining.length);
+  const destination = remaining[clampedRow] ?? [];
+
+  // Une ligne pleine (largeur minimale partout) ne peut pas en accueillir un
+  // de plus : le geste est ignoré plutôt que d'écraser un bloc existant.
+  const isNewRow = clampedRow >= remaining.length;
+  if (!isNewRow && destination.length >= MAX_BLOCKS_PER_ROW && sourceRow !== clampedRow) return items;
+
+  let index = destination.findIndex((b) => targetCol < b.x + b.w / 2);
+  if (index < 0) index = destination.length;
+
+  const next = [...remaining];
+  if (isNewRow) next.push([moved]);
+  else next[clampedRow] = [...destination.slice(0, index), moved, ...destination.slice(index)];
+
+  // Seules la ligne d'origine (qui a un trou à combler) et la ligne d'arrivée
+  // (qui doit faire de la place) sont redistribuées.
+  return fromRows(
+    next.map((row, i) => (i === sourceRow || i === clampedRow ? distributeRow(row) : row)),
+  );
 }
