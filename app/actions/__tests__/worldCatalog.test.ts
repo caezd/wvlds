@@ -9,6 +9,7 @@ import {
     setWorldRestriction,
     setWorldFaceclaims,
     setWorldHomeShowStats,
+    setWorldHomeGridGap,
     setWorldAgeRestricted,
     setWorldPersonaTemplate,
     addWorldInventoryItem,
@@ -118,6 +119,33 @@ describe("setWorldHomeShowStats", () => {
     it("remonte l'erreur Supabase", async () => {
         use(createSupabaseMock({ results: [{ error: { message: "nope" } }] }));
         expect(await setWorldHomeShowStats("w1", true)).toEqual({ ok: false, error: "nope" });
+    });
+});
+
+// ── setWorldHomeGridGap ────────────────────────────────────────────────────────
+
+describe("setWorldHomeGridGap", () => {
+    it("enregistre un préréglage valide", async () => {
+        const mock = createSupabaseMock({ results: [{ error: null }] });
+        use(mock);
+        const res = await setWorldHomeGridGap("w1", "spacious");
+        expect(res).toEqual({ ok: true });
+        expect(mock.buildersFor("worlds")[0].update).toHaveBeenCalledWith({ home_grid_gap: "spacious" });
+    });
+
+    it("refuse une valeur qui n'est pas un préréglage connu, sans appeler Supabase", async () => {
+        const mock = createSupabaseMock();
+        use(mock);
+        // @ts-expect-error — valeur volontairement hors du type, comme le
+        // ferait un client obsolète ou un appel forgé.
+        const res = await setWorldHomeGridGap("w1", "huge");
+        expect(res.ok).toBe(false);
+        expect(mock.from).not.toHaveBeenCalled();
+    });
+
+    it("remonte l'erreur Supabase", async () => {
+        use(createSupabaseMock({ results: [{ error: { message: "nope" } }] }));
+        expect(await setWorldHomeGridGap("w1", "compact")).toEqual({ ok: false, error: "nope" });
     });
 });
 

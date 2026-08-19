@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-import type { WorldHomeGridItem } from "@/components/worlds/home/worldHomeGrid";
+import { HOME_GRID_GAP_PRESETS, type WorldHomeGridItem } from "@/components/worlds/home/worldHomeGrid";
 
 const categoryFoldersProps = vi.fn();
 vi.mock("@/components/worlds/chatrooms/WorldCategoryFolders", () => ({
@@ -133,6 +133,27 @@ describe("WorldHomeGridView", () => {
     // `--gr` cible une ligne précise, sans `span`.
     expect(cell.style.getPropertyValue("--gc")).toContain("span");
     expect(cell.style.getPropertyValue("--gr")).not.toContain("span");
+  });
+
+  it("applique le préréglage d'espacement du monde, comfortable par défaut", () => {
+    const { container } = render(
+      <WorldHomeGridView
+        {...baseProps([{ id: "a", type: "widget", x: 0, y: 0, w: 12, widgetId: "chatrooms" }])}
+      />,
+    );
+    const grid = container.firstElementChild as HTMLElement;
+    expect(grid.style.gap).toBe(`${HOME_GRID_GAP_PRESETS.comfortable}px`);
+  });
+
+  it("bascule sur le préréglage choisi par l'admin — même valeur que l'éditeur, voir worldHomeGrid.ts", () => {
+    const { container } = render(
+      <WorldHomeGridView
+        {...baseProps([{ id: "a", type: "widget", x: 0, y: 0, w: 12, widgetId: "chatrooms" }])}
+        gap="spacious"
+      />,
+    );
+    const grid = container.firstElementChild as HTMLElement;
+    expect(grid.style.gap).toBe(`${HOME_GRID_GAP_PRESETS.spacious}px`);
   });
 
   it("n'affiche jamais le titre d'un bloc — il ne sert qu'à l'éditeur", () => {

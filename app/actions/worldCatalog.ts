@@ -7,11 +7,13 @@ import { ALL_WORLD_HOME_WIDGETS, type WorldHomeWidgetId } from "@/components/wor
 import {
   compactHomeGridRows,
   HOME_GRID_COLS,
+  HOME_GRID_GAP_PRESETS,
   MAX_HOME_BLOCK_CONTENT_LENGTH,
   MAX_HOME_BLOCK_TITLE_LENGTH,
   MAX_HOME_GRID_ITEMS,
   MAX_HOME_GRID_Y,
   sanitizeWidgetOptions,
+  type WorldHomeGridGap,
   type WorldHomeGridItem,
 } from "@/components/worlds/home/worldHomeGrid";
 import type { WorldInventoryItem, WorldSkill, WorldCatalogCategory, WorldTimelineConfig, WorldTag } from "@/types/worlds";
@@ -48,6 +50,16 @@ export async function setWorldFaceclaims(worldId: string, enabled: boolean) {
 export async function setWorldHomeShowStats(worldId: string, enabled: boolean) {
   const supabase = await createClient();
   const { error } = await supabase.from("worlds").update({ home_show_stats: enabled }).eq("id", worldId);
+  if (error) return { ok: false as const, error: error.message };
+  return { ok: true as const };
+}
+
+/** Règle la gouttière de la grille de la page d'accueil — partagée par le
+ *  rendu public et l'éditeur, voir HOME_GRID_GAP_PRESETS. */
+export async function setWorldHomeGridGap(worldId: string, gap: WorldHomeGridGap) {
+  if (!(gap in HOME_GRID_GAP_PRESETS)) return { ok: false as const, error: "Espacement invalide." };
+  const supabase = await createClient();
+  const { error } = await supabase.from("worlds").update({ home_grid_gap: gap }).eq("id", worldId);
   if (error) return { ok: false as const, error: error.message };
   return { ok: true as const };
 }

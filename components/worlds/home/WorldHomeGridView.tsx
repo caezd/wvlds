@@ -6,7 +6,13 @@ import { WorldChatComposer } from "../chatrooms/WorldChatComposer";
 import { WorldChatroomsGrid } from "../chatrooms/WorldChatroomsGrid";
 import { WorldCategoryFolders } from "../chatrooms/WorldCategoryFolders";
 import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
-import { widgetOptionValue, type WorldHomeGridItem } from "./worldHomeGrid";
+import {
+  DEFAULT_HOME_GRID_GAP,
+  HOME_GRID_GAP_PRESETS,
+  widgetOptionValue,
+  type WorldHomeGridGap,
+  type WorldHomeGridItem,
+} from "./worldHomeGrid";
 
 const WorldMembersOnlineWidget = dynamic(() => import("./widgets/WorldMembersOnlineWidget").then((m) => m.WorldMembersOnlineWidget));
 const WorldWikiShortcutsWidget = dynamic(() => import("./widgets/WorldWikiShortcutsWidget").then((m) => m.WorldWikiShortcutsWidget));
@@ -53,6 +59,7 @@ export function WorldHomeGridView({
   selectedCategoryId,
   onSelectCategory,
   onWikiLink,
+  gap = DEFAULT_HOME_GRID_GAP,
 }: {
   items: WorldHomeGridItem[];
   worldId: string;
@@ -63,11 +70,16 @@ export function WorldHomeGridView({
   selectedCategoryId: string | null;
   onSelectCategory: (categoryId: string | null) => void;
   onWikiLink?: (slug: string) => void;
+  /** Gouttière — même préréglage que l'éditeur admin, voir worldHomeGrid.ts. */
+  gap?: WorldHomeGridGap;
 }) {
   const sorted = [...items].sort((a, b) => a.y - b.y || a.x - b.x);
 
   return (
-    <div className="grid auto-rows-min grid-cols-1 gap-3 sm:grid-cols-12">
+    <div
+      className="grid auto-rows-min grid-cols-1 sm:grid-cols-12"
+      style={{ gap: HOME_GRID_GAP_PRESETS[gap] }}
+    >
       {sorted.map((item) => (
         <div
           key={item.id}

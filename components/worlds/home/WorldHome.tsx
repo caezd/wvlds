@@ -18,7 +18,7 @@ import type { AsidePersona } from "@/components/personas/WorldPersonaAsideClient
 import { toggleWorldFavorite } from "@/app/(protected)/w/actions";
 import { cn } from "@/lib/utils";
 import { supabaseThumb } from "@/lib/storage";
-import { resolveWorldHomeGrid } from "./worldHomeGrid";
+import { resolveHomeGridGap, resolveWorldHomeGrid } from "./worldHomeGrid";
 
 // Onglets secondaires — un seul est actif à la fois, chargés à la demande
 // pour ne pas alourdir le bundle de la vue par défaut du monde.
@@ -109,6 +109,7 @@ export function WorldHome({
   const gridItems = resolveWorldHomeGrid(world.home_grid, world.home_layout, world.announcement_html).filter(
     (item) => item.widgetId !== "composer" || (canPost && create_chatroom),
   );
+  const gridGap = resolveHomeGridGap(world.home_grid_gap);
   const baseHref = `/w/${worldId}`;
 
   function closeView() {
@@ -324,6 +325,7 @@ export function WorldHome({
                   selectedCategoryId={selectedCategoryId}
                   onSelectCategory={handleSelectCategory}
                   onWikiLink={(slug) => router.push(`${baseHref}?view=wiki&page=${encodeURIComponent(slug)}`)}
+                  gap={gridGap}
                 />
               </div>
             </div>

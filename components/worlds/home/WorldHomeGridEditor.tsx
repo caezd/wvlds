@@ -19,8 +19,9 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   compactHomeGridRows,
+  DEFAULT_HOME_GRID_GAP,
   HOME_GRID_COLS,
-  HOME_GRID_GAP,
+  HOME_GRID_GAP_PRESETS,
   HOME_GRID_ROW_HEIGHT,
   MIN_BLOCK_W,
   moveBlock,
@@ -28,6 +29,7 @@ import {
   rowBoundaries,
   widgetOptionValue,
   WORLD_HOME_WIDGET_OPTIONS,
+  type WorldHomeGridGap,
   type WorldHomeGridItem,
   type WorldHomeWidgetOption,
 } from "./worldHomeGrid";
@@ -51,6 +53,12 @@ type ResizePreview = { leftId: string; rightId: string; dx: number };
 /** Part haute et basse d'une ligne visant l'espace ENTRE deux lignes plutôt
  *  que la ligne elle-même (un tiers de chaque côté). */
 const NEW_ROW_BAND = 1 / 3;
+
+/** Largeur minimale de la zone de saisie d'un diviseur, en pixels — bien
+ *  au-delà de l'espacement "compact" (8px), trop fin pour viser au doigt.
+ *  Toujours centrée sur la gouttière réelle, qui reste visuellement fine :
+ *  seule la zone qui RÉAGIT au toucher/clic s'élargit. */
+const MIN_DIVIDER_HIT_WIDTH = 24;
 
 /**
  * Largeur de CONTENU du conteneur (hors `border` et `padding`).
@@ -208,14 +216,21 @@ export function WorldHomeGridEditor({
   items,
   onItemsChange,
   onPersisted,
+  gap = DEFAULT_HOME_GRID_GAP,
 }: {
   worldId: string;
   items: WorldHomeGridItem[];
   onItemsChange: (items: WorldHomeGridItem[]) => void;
   onPersisted?: () => void;
+  /** Gouttière — même préréglage que le rendu public, voir worldHomeGrid.ts. */
+  gap?: WorldHomeGridGap;
 }) {
   const t = useTranslations("worlds");
   const tCommon = useTranslations("common");
+  const gapPx = HOME_GRID_GAP_PRESETS[gap];
+  // Zone de saisie du diviseur, toujours au moins MIN_DIVIDER_HIT_WIDTH même
+  // si la gouttière elle-même est plus étroite (voir la constante).
+  const dividerHitWidth = Math.max(gapPx, MIN_DIVIDER_HIT_WIDTH);
   const { containerRef, width } = useMeasuredWidth();
   const [editingBlock, setEditingBlock] = React.useState<
     { type: "html" | "markdown"; item?: WorldHomeGridItem } | null
@@ -264,8 +279,8 @@ export function WorldHomeGridEditor({
 
   /** Pas d'une colonne / d'une ligne en pixels, gouttière comprise —
    *  convertit un déplacement de curseur en unités de grille. */
-  const colPitch = (width + HOME_GRID_GAP) / HOME_GRID_COLS;
-  const rowPitch = HOME_GRID_ROW_HEIGHT + HOME_GRID_GAP;
+  const colPitch = (width + gapPx) / HOME_GRID_COLS;
+  const rowPitch = HOME_GRID_ROW_HEIGHT + gapPx;
 
   /**
    * Redimensionnement : la frontière suit le curseur au pixel près pendant le
@@ -286,6 +301,10 @@ export function WorldHomeGridEditor({
     if (event.button !== 0) return;
     event.preventDefault();
     event.stopPropagation();
+    // Garantit que CE pointeur continue d'envoyer ses événements ici même
+    // s'il quitte la zone de 24px pendant le geste — surtout utile au doigt,
+    // moins précis qu'un curseur pour rester sur une cible aussi fine.
+    event.currentTarget.setPointerCapture(event.pointerId);
 
     const startX = event.clientX;
     const startItems = items;
@@ -356,6 +375,7 @@ export function WorldHomeGridEditor({
     if (event.button !== 0) return;
     event.preventDefault();
     event.stopPropagation();
+    event.currentTarget.setPointerCapture(event.pointerId);
 
     setActiveId(item.id);
     let target: DropTarget | null = null;
@@ -470,7 +490,7 @@ export function WorldHomeGridEditor({
           <div
             ref={gridRef}
             className="grid grid-cols-12"
-            style={{ gap: HOME_GRID_GAP, gridAutoRows: `${HOME_GRID_ROW_HEIGHT}px` }}
+            style={{ gap: gapPx, gridAutoRows: `${HOME_GRID_ROW_HEIGHT}px` }}
           >
             {items.map((item) => (
               // Le bloc se réduit à sa barre de titre : l'éditeur sert à
@@ -513,7 +533,12 @@ export function WorldHomeGridEditor({
               >
                 <div
                   onPointerDown={(event) => startMove(event, item)}
-                  className="wghe-drag-handle flex h-full cursor-grab items-center gap-1.5 bg-muted/60 px-2 text-xs text-muted-foreground active:cursor-grabbing"
+                  // `touch-none` (touch-action: none) : sans lui, un doigt qui
+                  // appuie puis bouge sur la poignée déclenche le défilement
+                  // natif de la page au lieu du geste — le navigateur
+                  // interprète le mouvement comme un scroll AVANT même que
+                  // notre JS ne reçoive le premier pointermove.
+                  className="wghe-drag-handle flex h-full touch-none cursor-grab items-center gap-1.5 bg-muted/60 px-2 text-xs text-muted-foreground active:cursor-grabbing"
                 >
                   <GripVertical className="h-3.5 w-3.5 shrink-0" />
                   {item.type === "html" && <Code2 className="h-3 w-3 shrink-0" />}
@@ -579,7 +604,7 @@ export function WorldHomeGridEditor({
                   gridColumn: "1 / -1",
                   gridRow: Math.min(dropPreview.row + 1, rowCount),
                   alignSelf: dropPreview.row >= rowCount ? "end" : "start",
-                  [dropPreview.row >= rowCount ? "marginBottom" : "marginTop"]: -(HOME_GRID_GAP / 2 + 1),
+                  [dropPreview.row >= rowCount ? "marginBottom" : "marginTop"]: -(gapPx / 2 + 1),
                   height: 2,
                 }}
                 className="pointer-events-none z-20 rounded-full bg-primary"
@@ -602,17 +627,23 @@ export function WorldHomeGridEditor({
                 style={{
                   gridColumn: right.x + 1,
                   gridRow: right.y + 1,
-                  width: HOME_GRID_GAP,
-                  marginLeft: -HOME_GRID_GAP,
+                  width: dividerHitWidth,
+                  // Centre la zone de saisie sur la gouttière réelle, même
+                  // élargie au-delà de sa largeur visuelle — voir le calcul
+                  // dans MIN_DIVIDER_HIT_WIDTH.
+                  marginLeft: -(gapPx + dividerHitWidth) / 2,
                   // Suit le curseur avec les deux blocs qu'il sépare.
                   ...(resizePreview?.rightId === right.id && {
                     transform: `translateX(${resizePreview.dx}px)`,
                   }),
                 }}
+                // `touch-none` : même raison que sur la poignée de
+                // déplacement — sans lui un doigt qui tire la frontière fait
+                // défiler la page au lieu de redimensionner.
                 className={cn(
-                  "wghe-divider relative z-10 cursor-ew-resize justify-self-start self-stretch",
+                  "wghe-divider relative z-10 touch-none cursor-ew-resize justify-self-start self-stretch",
                   // Le trait reste visible tant qu'on tire, même si le curseur
-                  // s'éloigne de la bande de 8px.
+                  // s'éloigne de la zone de saisie.
                   resizePreview?.rightId === right.id && "wghe-divider-active",
                 )}
               />

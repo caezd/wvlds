@@ -118,4 +118,8 @@ export type World = {
   /** Affiche le bloc statistiques sous le titre/description de la page d'accueil
    *  (position fixe, pas un bloc de la grille) — null/false = masqué. */
   home_show_stats?: boolean | null;
+  /** Gouttière entre les blocs de la grille de la page d'accueil — un des
+   *  préréglages de HOME_GRID_GAP_PRESETS, null = "comfortable". Partagé par
+   *  le rendu public et l'éditeur, voir resolveHomeGridGap(). */
+  home_grid_gap?: string | null;
 };

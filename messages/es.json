@@ -296,6 +296,13 @@
       "noWidgets": "No hay widgets mostrados — añada uno abajo.",
       "showStats": "Mostrar las estadísticas",
       "showStatsDesc": "Número de mensajes, miembros y personas, mostrado bajo el título de la página de inicio.",
+      "gridGap": "Espaciado de los bloques",
+      "gridGapDesc": "Espacio entre los bloques de la cuadrícula, tanto en la página de inicio como en este editor.",
+      "gridGapOptions": {
+        "compact": "Compacto",
+        "comfortable": "Cómodo",
+        "spacious": "Espacioso"
+      },
       "widgets": {
         "categories": "Categorías",
         "composer": "Crear una partida",

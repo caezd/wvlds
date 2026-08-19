@@ -296,6 +296,13 @@
       "noWidgets": "No widgets shown — add one below.",
       "showStats": "Show statistics",
       "showStatsDesc": "Message, member, and persona counts, shown under the home page title.",
+      "gridGap": "Block spacing",
+      "gridGapDesc": "Space between blocks, on the home page as well as in this editor.",
+      "gridGapOptions": {
+        "compact": "Compact",
+        "comfortable": "Comfortable",
+        "spacious": "Spacious"
+      },
       "widgets": {
         "categories": "Categories",
         "composer": "Create a game",

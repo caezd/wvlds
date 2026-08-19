@@ -1,19 +1,42 @@
 import { describe, it, expect } from "vitest";
 import {
   compactHomeGridRows,
+  DEFAULT_HOME_GRID_GAP,
   findLeftNeighbor,
   findRightNeighbor,
   HOME_GRID_COLS,
+  HOME_GRID_GAP_PRESETS,
   MAX_BLOCKS_PER_ROW,
   MAX_HOME_GRID_ITEMS,
   moveBlock,
   resizeBlock,
+  resolveHomeGridGap,
   resolveWorldHomeGrid,
   rowBoundaries,
   sanitizeWidgetOptions,
   widgetOptionValue,
   type WorldHomeGridItem,
 } from "@/components/worlds/home/worldHomeGrid";
+
+describe("resolveHomeGridGap", () => {
+  it("reconnaît chacun des préréglages valides", () => {
+    for (const preset of Object.keys(HOME_GRID_GAP_PRESETS)) {
+      expect(resolveHomeGridGap(preset)).toBe(preset);
+    }
+  });
+
+  it("retombe sur la valeur par défaut pour une valeur inconnue ou absente", () => {
+    expect(resolveHomeGridGap(null)).toBe(DEFAULT_HOME_GRID_GAP);
+    expect(resolveHomeGridGap(undefined)).toBe(DEFAULT_HOME_GRID_GAP);
+    expect(resolveHomeGridGap("huge")).toBe(DEFAULT_HOME_GRID_GAP);
+    expect(resolveHomeGridGap(42)).toBe(DEFAULT_HOME_GRID_GAP);
+  });
+
+  it("les préréglages sont strictement croissants (compact < confortable < spacieux)", () => {
+    expect(HOME_GRID_GAP_PRESETS.compact).toBeLessThan(HOME_GRID_GAP_PRESETS.comfortable);
+    expect(HOME_GRID_GAP_PRESETS.comfortable).toBeLessThan(HOME_GRID_GAP_PRESETS.spacious);
+  });
+});
 
 describe("resolveWorldHomeGrid — home_grid valide", () => {
   it("utilise la grille telle quelle quand elle est valide et non vide", () => {

@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Interface",
+    text: "L'espacement entre les blocs de la page d'accueil se règle désormais depuis Réglages > Page d'accueil (compact, confortable ou spacieux), avec un aperçu fidèle directement dans l'éditeur. Sur mobile et tablette, glisser un bloc ou la frontière entre deux colonnes ne fait plus défiler la page par erreur, et les zones de saisie sont plus faciles à attraper au doigt.",
+  },
+  {
+    date: "2026-08",
     tag: "Correctif",
     text: "L'éditeur de grille (Réglages > Page d'accueil) a été reconstruit sur le même mécanisme d'affichage que la page d'accueil elle-même : il montre donc exactement la disposition finale, et toute une série de défauts disparaît d'un coup — étirement au changement d'onglet, décalage de largeur permanent, animation parasite au chargement, bloc voisin renvoyé à la ligne au lieu de se partager la largeur, fantôme superposé pendant un glissement. Étirer la frontière entre deux colonnes se fait maintenant des deux côtés, et redimensionne bien les deux blocs à la fois.",
   },

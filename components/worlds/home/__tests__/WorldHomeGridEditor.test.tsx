@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import * as React from "react";
-import type { WorldHomeGridItem } from "@/components/worlds/home/worldHomeGrid";
+import { HOME_GRID_GAP_PRESETS, type WorldHomeGridGap, type WorldHomeGridItem } from "@/components/worlds/home/worldHomeGrid";
 
 const setWorldHomeGridMock = vi.fn();
 vi.mock("@/app/actions/worldCatalog", () => ({
@@ -14,9 +14,19 @@ vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 import { toast } from "sonner";
 import { WorldHomeGridEditor, getContentWidth } from "@/components/worlds/home/WorldHomeGridEditor";
 
-function Harness({ initial, onPersisted }: { initial: WorldHomeGridItem[]; onPersisted?: () => void }) {
+function Harness({
+  initial,
+  onPersisted,
+  gap,
+}: {
+  initial: WorldHomeGridItem[];
+  onPersisted?: () => void;
+  gap?: WorldHomeGridGap;
+}) {
   const [items, setItems] = React.useState(initial);
-  return <WorldHomeGridEditor worldId="w1" items={items} onItemsChange={setItems} onPersisted={onPersisted} />;
+  return (
+    <WorldHomeGridEditor worldId="w1" items={items} onItemsChange={setItems} onPersisted={onPersisted} gap={gap} />
+  );
 }
 
 const CHATROOMS_ITEM: WorldHomeGridItem = { id: "a", type: "widget", x: 0, y: 0, w: 12, widgetId: "chatrooms" };
@@ -109,6 +119,55 @@ describe("WorldHomeGridEditor", () => {
     // gouttière vers la gauche pour occuper exactement l'espace entre les deux.
     expect(dividers[0].style.gridColumn).toBe("5");
     expect(dividers[0].style.gridRow).toBe("1");
+  });
+
+  it("applique le préréglage d'espacement reçu, comfortable par défaut", () => {
+    const { container, rerender } = render(<Harness initial={[CHATROOMS_ITEM]} />);
+    let grid = container.querySelector<HTMLElement>(".grid.grid-cols-12")!;
+    expect(grid.style.gap).toBe(`${HOME_GRID_GAP_PRESETS.comfortable}px`);
+
+    rerender(<Harness initial={[CHATROOMS_ITEM]} gap="spacious" />);
+    grid = container.querySelector<HTMLElement>(".grid.grid-cols-12")!;
+    expect(grid.style.gap).toBe(`${HOME_GRID_GAP_PRESETS.spacious}px`);
+  });
+
+  it("bloque le défilement natif sur la poignée de déplacement et sur le diviseur (mobile)", () => {
+    // `touch-action: none` — sans lui, un doigt qui appuie puis bouge sur ces
+    // éléments déclenche le défilement natif de la page avant même que notre
+    // JS ne reçoive le premier `pointermove`.
+    const { container } = render(
+      <Harness
+        initial={[
+          { id: "a", type: "widget", x: 0, y: 0, w: 4, widgetId: "categories" },
+          { id: "b", type: "widget", x: 4, y: 0, w: 8, widgetId: "chatrooms" },
+        ]}
+      />,
+    );
+    expect(container.querySelector(".wghe-drag-handle")).toHaveClass("touch-none");
+    expect(container.querySelector(".wghe-divider")).toHaveClass("touch-none");
+  });
+
+  it("élargit la zone de saisie d'un diviseur au-delà de la gouttière visuelle sur les petits espacements", () => {
+    // Une gouttière "compact" (8px) est trop fine pour viser au doigt — la
+    // zone RÉACTIVE au toucher/clic s'élargit à 24px minimum, centrée sur la
+    // gouttière visuelle réelle, qui reste fine.
+    const { container } = render(
+      <Harness
+        initial={[
+          { id: "a", type: "widget", x: 0, y: 0, w: 4, widgetId: "categories" },
+          { id: "b", type: "widget", x: 4, y: 0, w: 8, widgetId: "chatrooms" },
+        ]}
+        gap="compact"
+      />,
+    );
+    const divider = container.querySelector<HTMLElement>(".wghe-divider")!;
+    const hitWidth = Number.parseFloat(divider.style.width);
+    const gapPx = HOME_GRID_GAP_PRESETS.compact;
+    expect(hitWidth).toBeGreaterThanOrEqual(24);
+    expect(hitWidth).toBeGreaterThan(gapPx);
+    // Centrée sur la gouttière : la boîte déborde symétriquement de part et
+    // d'autre de l'espace visuel de gapPx.
+    expect(Number.parseFloat(divider.style.marginLeft)).toBeCloseTo(-(gapPx + hitWidth) / 2);
   });
 
   it("ne réarrange pas la grille pendant le glissement, seulement au relâchement", async () => {

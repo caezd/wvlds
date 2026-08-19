@@ -111,10 +111,35 @@ export const HOME_GRID_COLS = 12;
  *  réel de chaque ligne. Calée sur la hauteur d'une barre de titre, seul
  *  contenu d'un bloc dans l'éditeur. */
 export const HOME_GRID_ROW_HEIGHT = 36;
-/** Gouttière entre blocs dans l'éditeur, en pixels (doit rester en phase avec
- *  la classe `gap-2` du conteneur — elle sert à convertir des pixels de
- *  curseur en colonnes de grille). */
-export const HOME_GRID_GAP = 8;
+/**
+ * Gouttière entre blocs — un des trois préréglages ci-dessous, choisi par
+ * l'admin (Réglages > Page d'accueil) et partagé par le rendu public
+ * (WorldHomeGridView) ET l'éditeur (WorldHomeGridEditor, qui s'en sert aussi
+ * pour convertir des pixels de curseur en colonnes de grille pendant un
+ * geste). Avant l'introduction de ce réglage, les deux vues utilisaient des
+ * valeurs codées en dur différentes (12px côté public, 8px côté éditeur) —
+ * l'éditeur ne montrait donc pas fidèlement le rendu final.
+ */
+export type WorldHomeGridGap = "compact" | "comfortable" | "spacious";
+
+export const HOME_GRID_GAP_PRESETS: Record<WorldHomeGridGap, number> = {
+  compact: 8,
+  comfortable: 12,
+  spacious: 20,
+};
+
+/** Valeur par défaut pour un monde qui n'a jamais réglé ce paramètre —
+ *  reprend le 12px qu'affichait déjà tout visiteur avant ce réglage. */
+export const DEFAULT_HOME_GRID_GAP: WorldHomeGridGap = "comfortable";
+
+/** Résout la valeur brute stockée en base (`worlds.home_grid_gap`) vers un
+ *  préréglage valide — une valeur inconnue (jamais réglé, ou préréglage
+ *  retiré depuis) retombe sur `DEFAULT_HOME_GRID_GAP` plutôt que d'échouer. */
+export function resolveHomeGridGap(raw: unknown): WorldHomeGridGap {
+  return typeof raw === "string" && raw in HOME_GRID_GAP_PRESETS
+    ? (raw as WorldHomeGridGap)
+    : DEFAULT_HOME_GRID_GAP;
+}
 /** Largeur minimale d'un bloc, en colonnes — miroir de la validation serveur
  *  (`w < 2` rejeté, voir setWorldHomeGrid). */
 export const MIN_BLOCK_W = 2;
