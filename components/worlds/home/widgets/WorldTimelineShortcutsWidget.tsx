@@ -126,15 +126,19 @@ export function WorldTimelineShortcutsWidget({
   const day = hasCalendar ? selectedDay : null;
 
   function goToMonth(delta: number) {
-    if (!activeCursor) return;
+    if (!activeCursor || !config) return;
     const next = shiftMonth(activeCursor, delta, monthCount);
     setCursor(next);
     // Réamorce la sélection sur le premier jour à contenu du nouveau mois
     // (même logique qu'au montage) — sinon la bande affiche des pastilles
-    // sans qu'aucune entrée ne soit listée en dessous.
+    // sans qu'aucune entrée ne soit listée en dessous. `dayList` (state
+    // React, pas encore recalculé) correspond toujours à l'ANCIEN mois
+    // quitté : si le nouveau mois compte plus de jours, une entrée située
+    // au-delà de l'ancienne longueur ne pouvait jamais être trouvée.
+    const nextDayList = Array.from({ length: daysInMonth(config, next.month) }, (_, i) => i + 1);
     const nextMonthEntries = dated.filter((r) => r.timeline_date.year === next.year && r.timeline_date.month === next.month);
     const nextEntryDays = new Set(nextMonthEntries.filter((r) => r.timeline_date.day !== null).map((r) => r.timeline_date.day!));
-    setSelectedDay(dayList.find((d) => nextEntryDays.has(d)) ?? null);
+    setSelectedDay(nextDayList.find((d) => nextEntryDays.has(d)) ?? null);
   }
 
   if (!config || dated.length === 0) return null;

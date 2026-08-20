@@ -137,6 +137,36 @@ describe("WorldTimelineShortcutsWidget", () => {
     expect(screen.getAllByRole("button", { name: /Voir les entrées du/ })).toHaveLength(4);
   });
 
+  it("sélectionne une entrée du mois suivant même sur un jour au-delà de la longueur de l'ancien mois", async () => {
+    // Régression : la réamorce de sélection après un changement de mois
+    // cherchait le premier jour à contenu dans `dayList` — la bande de
+    // jours calculée pour l'ANCIEN mois, pas encore mise à jour au moment
+    // du clic. Un mois plus court (2 jours) suivi d'un mois plus long (4
+    // jours) avec une entrée au jour 4 ne pouvait alors jamais être trouvée
+    // (4 > 2), la sélection retombait sur `null` malgré une entrée réelle.
+    const user = userEvent.setup();
+    const config: WorldTimelineConfig = { ...CONFIG, days_per_month: [2, 4, 5] };
+    render(
+      <WorldTimelineShortcutsWidget
+        worldId="w1"
+        rooms={[
+          // Une entrée en janvier (mois de 2 jours) pour que le curseur de
+          // départ soit bien janvier — sinon `pickStartCursor` saute
+          // directement au mois de la prochaine entrée (février).
+          { id: "a0", title: "Janvier", name: null, icon_url: null, timeline_date: { year: 1, month: 0, day: 1 } },
+          { id: "a", title: "Jour 4 de février", name: null, icon_url: null, timeline_date: { year: 1, month: 1, day: 4 } },
+        ]}
+        config={config}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Mois suivant" }));
+
+    const days = screen.getAllByRole("button", { name: /Voir les entrées du/ });
+    expect(days[3]).toHaveAttribute("aria-pressed", "true"); // jour 4
+    expect(screen.getByText("Jour 4 de février")).toBeInTheDocument();
+  });
+
   it("naviguer au mois précédent depuis le premier mois de l'année passe à l'année précédente", async () => {
     const user = userEvent.setup();
     render(

@@ -834,4 +834,41 @@ describe("setWorldHomeGrid", () => {
         const written = mock.buildersFor("worlds")[0].update.mock.calls[0][0].home_grid;
         expect(written[0].card).toBe(false);
     });
+
+    it("refuse deux blocs valides pris isolément mais qui se chevauchent sur une même ligne", async () => {
+        // Régression (retour Copilot) : chaque bloc est validé indépendamment
+        // (bornes, largeur…), mais rien n'empêchait deux blocs par ailleurs
+        // valides de se recouvrir sur une même ligne (x=0,w=8 et x=6,w=6 se
+        // chevauchent sur les colonnes 6 et 7) — un cas que l'éditeur ne peut
+        // pas produire via moveBlock/resizeBlock, mais que le serveur doit
+        // rejeter lui-même plutôt que de faire confiance au client.
+        const mock = createSupabaseMock();
+        use(mock);
+        const res = await setWorldHomeGrid("w1", [
+            { id: "a", type: "widget", x: 0, y: 0, w: 8, widgetId: "chatrooms" },
+            { id: "b", type: "widget", x: 6, y: 0, w: 6, widgetId: "categories" },
+        ]);
+        expect(res.ok).toBe(false);
+        expect(mock.from).not.toHaveBeenCalled();
+    });
+
+    it("accepte deux blocs valides qui se touchent exactement sans se chevaucher", async () => {
+        const mock = createSupabaseMock({ results: [{ error: null }] });
+        use(mock);
+        const res = await setWorldHomeGrid("w1", [
+            { id: "a", type: "widget", x: 0, y: 0, w: 6, widgetId: "chatrooms" },
+            { id: "b", type: "widget", x: 6, y: 0, w: 6, widgetId: "categories" },
+        ]);
+        expect(res.ok).toBe(true);
+    });
+
+    it("ignore les chevauchements entre blocs de lignes différentes", async () => {
+        const mock = createSupabaseMock({ results: [{ error: null }] });
+        use(mock);
+        const res = await setWorldHomeGrid("w1", [
+            { id: "a", type: "widget", x: 0, y: 0, w: 8, widgetId: "chatrooms" },
+            { id: "b", type: "widget", x: 6, y: 1, w: 6, widgetId: "categories" },
+        ]);
+        expect(res.ok).toBe(true);
+    });
 });

@@ -18,7 +18,7 @@ import type { AsidePersona } from "@/components/personas/WorldPersonaAsideClient
 import { toggleWorldFavorite } from "@/app/(protected)/w/actions";
 import { cn } from "@/lib/utils";
 import { supabaseThumb } from "@/lib/storage";
-import { resolveHomeGridGap, resolveWorldHomeGrid } from "./worldHomeGrid";
+import { compactHomeGridRows, resolveHomeGridGap, resolveWorldHomeGrid } from "./worldHomeGrid";
 
 // Onglets secondaires — un seul est actif à la fois, chargés à la demande
 // pour ne pas alourdir le bundle de la vue par défaut du monde.
@@ -105,9 +105,14 @@ export function WorldHome({
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(initialCategoryId ?? null);
   // Le composer est retiré de la grille avant le calcul du layout (pas juste
   // au rendu) : sinon un visiteur sans droit de post verrait un trou vide à
-  // la place du bloc plutôt qu'une grille recomposée sans lui.
-  const gridItems = resolveWorldHomeGrid(world.home_grid, world.home_layout, world.announcement_html).filter(
-    (item) => item.widgetId !== "composer" || (canPost && create_chatroom),
+  // la place du bloc plutôt qu'une grille recomposée sans lui. `compactHomeGridRows`
+  // renumérote les lignes qui suivent pour combler le vide laissé par le
+  // retrait — sans lui, un composer seul sur sa ligne (cas par défaut)
+  // laissait la ligne vide et deux gouttières avant les blocs suivants.
+  const gridItems = compactHomeGridRows(
+    resolveWorldHomeGrid(world.home_grid, world.home_layout, world.announcement_html).filter(
+      (item) => item.widgetId !== "composer" || (canPost && create_chatroom),
+    ),
   );
   const gridGap = resolveHomeGridGap(world.home_grid_gap);
   const baseHref = `/w/${worldId}`;

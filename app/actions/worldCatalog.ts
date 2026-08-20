@@ -14,6 +14,7 @@ import {
   MAX_HOME_GRID_Y,
   sanitizeBannerContent,
   sanitizeWidgetOptions,
+  toRows,
   type WorldHomeGridGap,
   type WorldHomeGridItem,
 } from "@/components/worlds/home/worldHomeGrid";
@@ -537,6 +538,19 @@ export async function setWorldHomeGrid(worldId: string, items: unknown[]) {
     const item = validateHomeGridItem(raw, seenIds, seenWidgetIds);
     if (!item) return { ok: false as const, error: "Un des blocs est invalide." };
     parsed.push(item);
+  }
+  // Chaque bloc est valide pris isolément (bornes, largeur…), mais rien
+  // n'empêche encore deux blocs valides de se chevaucher sur une même ligne
+  // (ex: x=0,w=8 et x=6,w=6) — l'éditeur ne peut pas produire ce cas via
+  // moveBlock/resizeBlock, mais le serveur ne doit pas faire confiance à la
+  // seule discipline du client. `toRows` trie déjà chaque ligne par `x`, il
+  // suffit de vérifier qu'aucun bloc ne commence avant la fin du précédent.
+  for (const row of toRows(parsed)) {
+    for (let i = 1; i < row.length; i++) {
+      if (row[i].x < row[i - 1].x + row[i - 1].w) {
+        return { ok: false as const, error: "Deux blocs se chevauchent sur la même ligne." };
+      }
+    }
   }
   // Renumérote les lignes : retirer un bloc laisse sinon sa ligne vide, et le
   // rendu afficherait un trou à sa place (voir compactHomeGridRows).
