@@ -33,12 +33,6 @@ function initials(name: string) {
   return (name.trim()[0] ?? "?").toUpperCase();
 }
 
-function toSwipeDirection(side: "left" | "right" | "top" | "bottom"): "left" | "right" | "up" | "down" {
-  if (side === "top") return "up";
-  if (side === "bottom") return "down";
-  return side;
-}
-
 type ProfileData = {
   username: string | null;
   avatar_url: string | null;
@@ -59,12 +53,10 @@ export function UserProfileSheetTrigger({
   children,
   userId,
   label,
-  side = "right",
 }: {
   children: React.ReactNode;
   userId?: string | null;
   label?: string | null;
-  side?: "left" | "right" | "top" | "bottom";
 }) {
   const t = useTranslations("userProfile");
   const tPronouns = useTranslations("pronouns");
@@ -135,7 +127,7 @@ export function UserProfileSheetTrigger({
             : null;
 
   return (
-    <Drawer open={open} onOpenChange={setOpen} swipeDirection={toSwipeDirection(side)}>
+    <Drawer open={open} onOpenChange={setOpen} swipeDirection="right">
       <button
         type="button"
         title={label ?? t("title")}

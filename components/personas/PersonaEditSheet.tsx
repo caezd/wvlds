@@ -782,7 +782,7 @@ export function PersonaEditorContent({
           Porté vers document.body pour passer au-dessus de l'obfuscateur Radix. */}
       {bannerDialogOpen && typeof document !== "undefined" &&
         createPortal(
-          <div className="hidden lg:flex fixed inset-y-0 left-0 right-[calc(48rem-24px)] z-[51] items-center justify-center p-10 pointer-events-none">
+          <div className="hidden lg:flex fixed inset-y-0 left-0 right-[460px] z-[51] items-center justify-center p-10 pointer-events-none">
             <div className="flex w-full max-w-[520px] flex-col items-center gap-4">
               <div className="relative aspect-[744/136] w-full overflow-hidden rounded-xl bg-muted shadow-2xl">
                 {bannerUrl ? (
@@ -880,7 +880,7 @@ export function PersonaEditSheet({
         <DrawerContent className="inset-y-0 right-0 flex flex-col border rounded-md bg-background text-foreground shadow-lg p-0 w-[min(calc(100%_-_var(--drawer-inset)*2),_460px)]">
           <DrawerClose
             aria-label="Fermer"
-            className="absolute right-4 top-4 rounded-xs text-muted-foreground opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
+            className="absolute right-4 top-4 z-10 rounded-xs text-muted-foreground opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
           >
             <X className="size-4" />
           </DrawerClose>

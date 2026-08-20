@@ -411,7 +411,7 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
           <>
             <DrawerClose
               aria-label="Fermer"
-              className="absolute right-4 top-4 rounded-xs text-muted-foreground opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
+              className="absolute right-4 top-4 z-10 rounded-xs text-muted-foreground opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
             >
               <X className="size-4" />
             </DrawerClose>

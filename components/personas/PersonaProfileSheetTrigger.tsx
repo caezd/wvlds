@@ -32,12 +32,6 @@ import { ImageGridView } from "@/components/personas/ImageGridView";
 import { TABLE } from "@/lib/constants";
 import { getInitials } from "@/lib/textFormatting";
 
-function toSwipeDirection(side: "left" | "right" | "top" | "bottom"): "left" | "right" | "up" | "down" {
-  if (side === "top") return "up";
-  if (side === "bottom") return "down";
-  return side;
-}
-
 type FieldData = PersonaFieldData | null | undefined;
 
 function FieldView({ type, data }: { type: string; data: FieldData }) {
@@ -271,7 +265,6 @@ export function PersonaProfileSheetTrigger({
   userId,
   label,
   hoverPreview = false,
-  side = "right",
   triggerClassName = "size-12",
 }: {
   children: React.ReactNode;
@@ -279,7 +272,6 @@ export function PersonaProfileSheetTrigger({
   userId?: string | null;
   label?: string | null;
   hoverPreview?: boolean;
-  side?: "left" | "right" | "top" | "bottom";
   triggerClassName?: string;
 }) {
   const supabase = React.useMemo(() => createClient(), []);
@@ -446,7 +438,7 @@ export function PersonaProfileSheetTrigger({
   );
 
   return (
-    <Drawer open={open} onOpenChange={setOpen} swipeDirection={toSwipeDirection(side)}>
+    <Drawer open={open} onOpenChange={setOpen} swipeDirection="right">
       {hoverPreview ? (
         <HoverCard openDelay={120} closeDelay={120}>
           <HoverCardTrigger asChild>{TriggerButton}</HoverCardTrigger>
@@ -461,7 +453,7 @@ export function PersonaProfileSheetTrigger({
       <DrawerContent className="inset-y-0 right-0 flex flex-col gap-0 border rounded-md bg-background text-foreground shadow-lg w-[min(calc(100%_-_var(--drawer-inset)*2),_460px)] p-0">
         <DrawerClose
           aria-label="Fermer"
-          className="absolute right-4 top-4 rounded-xs text-muted-foreground opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
+          className="absolute right-4 top-4 z-10 rounded-xs text-muted-foreground opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
         >
           <X className="size-4" />
         </DrawerClose>
