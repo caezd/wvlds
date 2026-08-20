@@ -115,6 +115,27 @@ describe("WorldHomeGridView", () => {
     expect(iframe).toHaveAttribute("srcdoc", "<p>Salut</p>");
   });
 
+  it("donne à l'iframe html le titre du bloc, pour l'accessibilité", () => {
+    render(
+      <WorldHomeGridView
+        {...baseProps([
+          { id: "a", type: "html", x: 0, y: 0, w: 12, html: "<p>Salut</p>", title: "Bandeau d'accueil" },
+        ])}
+      />,
+    );
+    expect(document.querySelector("iframe")).toHaveAttribute("title", "Bandeau d'accueil");
+  });
+
+  it("retombe sur un titre générique quand le bloc html n'a pas de titre", () => {
+    render(
+      <WorldHomeGridView
+        {...baseProps([{ id: "a", type: "html", x: 0, y: 0, w: 12, html: "<p>Salut</p>" }])}
+      />,
+    );
+    const iframe = document.querySelector("iframe")!;
+    expect(iframe.getAttribute("title")).toBeTruthy();
+  });
+
   it("laisse les lignes s'auto-dimensionner au contenu, sans overflow ni hauteur imposée", () => {
     const { container } = render(
       <WorldHomeGridView

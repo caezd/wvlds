@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useTranslations } from "next-intl";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import { WorldChatComposer } from "../chatrooms/WorldChatComposer";
 import { WorldChatroomsGrid } from "../chatrooms/WorldChatroomsGrid";
@@ -73,6 +74,7 @@ export function WorldHomeGridView({
   /** Gouttière — même préréglage que l'éditeur admin, voir worldHomeGrid.ts. */
   gap?: WorldHomeGridGap;
 }) {
+  const t = useTranslations("worlds");
   const sorted = [...items].sort((a, b) => a.y - b.y || a.x - b.x);
 
   return (
@@ -98,6 +100,7 @@ export function WorldHomeGridView({
             selectedCategoryId,
             onSelectCategory,
             onWikiLink,
+            htmlBlockFallbackTitle: t("home.grid.htmlBlockTitle"),
           })}
         </div>
       ))}
@@ -116,6 +119,7 @@ function renderBlock(
     selectedCategoryId: string | null;
     onSelectCategory: (categoryId: string | null) => void;
     onWikiLink?: (slug: string) => void;
+    htmlBlockFallbackTitle: string;
   },
 ) {
   if (item.type === "html") {
@@ -123,7 +127,7 @@ function renderBlock(
       <iframe
         sandbox=""
         srcDoc={item.html ?? ""}
-        title=""
+        title={item.title || ctx.htmlBlockFallbackTitle}
         className="h-full w-full rounded-lg border bg-background"
       />
     );

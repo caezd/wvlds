@@ -77,4 +77,34 @@ describe("WorldMembersOnlineWidget", () => {
       expect(screen.getByRole("link")).toHaveAttribute("href", "/w/w1?view=members");
     });
   });
+
+  it("ne requête les profils que pour les membres en ligne, pas pour tout le monde", async () => {
+    // 3 membres dans le monde, mais un seul en ligne (présence globale) —
+    // la requête `profiles` ne doit porter que sur celui-ci, pas les 3.
+    mockOnlineUsers.mockReturnValue({ u1: { user_id: "u1" } });
+    const mock = createSupabaseMock({
+      results: [
+        { data: [{ user_id: "u1" }, { user_id: "u2" }, { user_id: "u3" }] },
+        { data: [{ id: "u1", username: "alice", avatar_url: null }] },
+      ],
+    });
+    vi.mocked(createClient).mockReturnValue(mock.client as never);
+    render(<WorldMembersOnlineWidget worldId="w1" />);
+
+    await waitFor(() => {
+      expect(screen.getByText("A")).toBeInTheDocument();
+    });
+    const profilesBuilder = mock.builders.find((b) => b.table === "profiles")!.builder;
+    expect(profilesBuilder.in).toHaveBeenCalledWith("id", ["u1"]);
+  });
+
+  it("ne requête pas les profils quand personne n'est en ligne", async () => {
+    const mock = setup();
+    render(<WorldMembersOnlineWidget worldId="w1" />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Personne en ligne pour le moment")).toBeInTheDocument();
+    });
+    expect(mock.builders.some((b) => b.table === "profiles")).toBe(false);
+  });
 });

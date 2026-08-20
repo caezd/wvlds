@@ -316,7 +316,8 @@
       "onlineCount": "{count, plural, one {# membre en ligne} other {# membres en ligne}}",
       "noneOnline": "Personne en ligne pour le moment",
       "wikiShortcuts": {
-        "updated": "Modifié {time}"
+        "updated": "Modifié {time}",
+        "justNow": "à l'instant"
       },
       "announcement": {
         "add": "Ajouter une annonce",

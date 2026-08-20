@@ -29,7 +29,8 @@ export function WorldMembersOnlineWidget({
   limit?: number;
 }) {
   const t = useTranslations("worlds");
-  const [members, setMembers] = useState<Member[]>([]);
+  const [memberIds, setMemberIds] = useState<string[]>([]);
+  const [online, setOnline] = useState<Member[]>([]);
   const { onlineUsers } = useGlobalPresence();
   const reconnectEpoch = useReconnectEpoch();
 
@@ -41,25 +42,7 @@ export function WorldMembersOnlineWidget({
         .from("world_members")
         .select("user_id")
         .eq("world_id", worldId);
-      const userIds = ((memberRows ?? []) as { user_id: string }[]).map((m) => m.user_id);
-      if (userIds.length === 0) {
-        setMembers([]);
-        return;
-      }
-      const { data: profileRows } = await supabase
-        .from("profiles")
-        .select("id, username, avatar_url")
-        .in("id", userIds);
-      const profileById = new Map(
-        ((profileRows ?? []) as { id: string; username: string | null; avatar_url: string | null }[]).map((p) => [p.id, p]),
-      );
-      setMembers(
-        userIds.map((id) => ({
-          user_id: id,
-          username: profileById.get(id)?.username ?? null,
-          avatar_url: profileById.get(id)?.avatar_url ?? null,
-        })),
-      );
+      setMemberIds(((memberRows ?? []) as { user_id: string }[]).map((m) => m.user_id));
     };
 
     void load();
@@ -78,10 +61,51 @@ export function WorldMembersOnlineWidget({
     };
   }, [worldId, reconnectEpoch]);
 
-  const online = useMemo(
-    () => members.filter((m) => !!onlineUsers[m.user_id]),
-    [members, onlineUsers],
+  // Membres présents à la fois dans world_members et dans la présence globale
+  // (temps réel, tous mondes confondus) — seuls ceux-ci ont besoin d'un profil.
+  const onlineMemberIds = useMemo(
+    () => memberIds.filter((id) => !!onlineUsers[id]),
+    [memberIds, onlineUsers],
   );
+  // Clé stable (triée) pour ne relancer la requête profils que si l'ensemble
+  // des membres en ligne change réellement, pas à chaque battement de présence.
+  const onlineMemberIdsKey = [...onlineMemberIds].sort().join(",");
+
+  useEffect(() => {
+    if (onlineMemberIds.length === 0) {
+      setOnline([]);
+      return;
+    }
+    let cancelled = false;
+    const supabase = createClient();
+    void (async () => {
+      const { data: profileRows } = await supabase
+        .from("profiles")
+        .select("id, username, avatar_url")
+        .in("id", onlineMemberIds);
+      if (cancelled) return;
+      const profileById = new Map(
+        ((profileRows ?? []) as { id: string; username: string | null; avatar_url: string | null }[]).map((p) => [
+          p.id,
+          p,
+        ]),
+      );
+      // Mise à jour atomique : évite un flash d'initiales dérivées de l'id
+      // avant que le profil (nom, avatar) ne soit chargé.
+      setOnline(
+        onlineMemberIds.map((id) => ({
+          user_id: id,
+          username: profileById.get(id)?.username ?? null,
+          avatar_url: profileById.get(id)?.avatar_url ?? null,
+        })),
+      );
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- onlineMemberIdsKey est une clé stable dérivée de onlineMemberIds
+  }, [onlineMemberIdsKey]);
+
   const shown = online.slice(0, limit);
   const overflow = online.length - shown.length;
 

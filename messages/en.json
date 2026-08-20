@@ -315,7 +315,8 @@
       "onlineCount": "{count, plural, one {# member online} other {# members online}}",
       "noneOnline": "No one online right now",
       "wikiShortcuts": {
-        "updated": "Updated {time}"
+        "updated": "Updated {time}",
+        "justNow": "just now"
       },
       "announcement": {
         "add": "Add an announcement",

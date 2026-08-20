@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ChevronRight, FileText } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
@@ -19,16 +19,17 @@ type WikiPage = {
   updated_at: string;
 };
 
-function relativeTime(iso: string) {
+function relativeTime(iso: string, locale: string, justNow: string) {
   const diff = Date.now() - new Date(iso).getTime();
   const min = Math.floor(diff / 60_000);
-  if (min < 1) return "À l'instant";
-  if (min < 60) return `Il y a ${min} min`;
+  if (min < 1) return justNow;
+  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
+  if (min < 60) return rtf.format(-min, "minute");
   const h = Math.floor(min / 60);
-  if (h < 24) return `Il y a ${h} h`;
+  if (h < 24) return rtf.format(-h, "hour");
   const d = Math.floor(h / 24);
-  if (d < 30) return `Il y a ${d} j`;
-  return new Date(iso).toLocaleDateString("fr-FR");
+  if (d < 30) return rtf.format(-d, "day");
+  return new Date(iso).toLocaleDateString(locale);
 }
 
 /** Dernières pages de wiki modifiées — liens directs (voir WorldWiki `initialSlug`). */
@@ -41,6 +42,7 @@ export function WorldWikiShortcutsWidget({
   limit?: number;
 }) {
   const t = useTranslations("worlds");
+  const locale = useLocale();
   const [pages, setPages] = useState<WikiPage[]>([]);
   const reconnectEpoch = useReconnectEpoch();
 
@@ -99,7 +101,9 @@ export function WorldWikiShortcutsWidget({
                     {page.title}
                   </span>
                   <span className="mt-0.5 block truncate text-xs text-muted-foreground">
-                    {t("home.wikiShortcuts.updated", { time: relativeTime(page.updated_at) })}
+                    {t("home.wikiShortcuts.updated", {
+                      time: relativeTime(page.updated_at, locale, t("home.wikiShortcuts.justNow")),
+                    })}
                   </span>
                 </span>
                 <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground opacity-60 transition-transform group-hover:translate-x-0.5" />
