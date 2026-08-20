@@ -3,14 +3,21 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerDescription,
+} from "@/components/ui/drawer";
 import { AvatarWithFrame } from "@/components/avatars/AvatarWithFrame";
 import { Tabs, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { TabBar } from "@/components/ui/tab-bar";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import type { Persona } from "@/types/db";
 import type { PersonaSection, PersonaSectionField, PersonaSectionWithFields, PersonaFieldData, InventoryItem, SkillItem, GaugeItem, TraitItem, TimelineItem, DlItem } from "@/types/personas";
-import { Coins, Flame, Zap } from "lucide-react";
+import { Coins, Flame, X, Zap } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useGlobalPresence } from "@/components/providers/PresenceProvider";
 import { formatLastSeen } from "@/lib/utils";
@@ -429,18 +436,22 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
                 : "Hors ligne";
 
   return (
-    <Sheet open={!!persona} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent
-        side="right"
-        className="w-[380px] sm:w-[440px] flex flex-col gap-0 p-0 overflow-y-auto"
-      >
+    <Drawer open={!!persona} onOpenChange={(o) => !o && onClose()} swipeDirection="right">
+      <DrawerContent className="inset-y-0 right-0 flex flex-col gap-0 border rounded-md bg-background text-foreground shadow-lg p-0 w-[min(calc(100%_-_var(--drawer-inset)*2),_380px)] touch:w-[min(calc(100%_-_var(--drawer-inset)*2),_440px)]">
         {persona && (
           <>
-            <SheetHeader className="sr-only">
-              <SheetTitle>{persona.name}</SheetTitle>
-              <SheetDescription>{t("profileSheetDescription")}</SheetDescription>
-            </SheetHeader>
+            <DrawerClose
+              aria-label="Fermer"
+              className="absolute right-4 top-4 rounded-xs text-muted-foreground opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              <X className="size-4" />
+            </DrawerClose>
+            <DrawerHeader className="sr-only">
+              <DrawerTitle>{persona.name}</DrawerTitle>
+              <DrawerDescription>{t("profileSheetDescription")}</DrawerDescription>
+            </DrawerHeader>
 
+            <div className="min-h-0 flex-1 overflow-y-auto">
             {/* -- Bannière -- */}
             {bannerUrl ? (
               <div className="relative h-34 w-full shrink-0">
@@ -599,9 +610,10 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
                 ))}
               </div>
             )}
+            </div>
           </>
         )}
-      </SheetContent>
-    </Sheet>
+      </DrawerContent>
+    </Drawer>
   );
 }

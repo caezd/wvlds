@@ -5,7 +5,13 @@ import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { supabaseThumb } from "@/lib/storage";
 import { toast } from "sonner";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { Tabs, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { TabBar } from "@/components/ui/tab-bar";
 import {
@@ -16,7 +22,7 @@ import {
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import { AvatarWithFrame } from "@/components/avatars/AvatarWithFrame";
 import { PresenceDot } from "@/components/avatars/PresenceDot";
-import { Coins, Flame, Zap } from "lucide-react";
+import { Coins, Flame, X, Zap } from "lucide-react";
 import type { PersonaSection, PersonaSectionField, PersonaSectionWithFields, PersonaFieldData, InventoryItem, SkillItem, GaugeItem, TraitItem, TimelineItem, DlItem } from "@/types/personas";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useGlobalPresence } from "@/components/providers/PresenceProvider";
@@ -25,6 +31,12 @@ import { formatLastSeen, cn } from "@/lib/utils";
 import { ImageGridView } from "@/components/personas/ImageGridView";
 import { TABLE } from "@/lib/constants";
 import { getInitials } from "@/lib/textFormatting";
+
+function toSwipeDirection(side: "left" | "right" | "top" | "bottom"): "left" | "right" | "up" | "down" {
+  if (side === "top") return "up";
+  if (side === "bottom") return "down";
+  return side;
+}
 
 function levelInfo(xp: number) {
   const level = Math.floor(xp / 100) + 1;
@@ -462,7 +474,7 @@ export function PersonaProfileSheetTrigger({
   );
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
+    <Drawer open={open} onOpenChange={setOpen} swipeDirection={toSwipeDirection(side)}>
       {hoverPreview ? (
         <HoverCard openDelay={120} closeDelay={120}>
           <HoverCardTrigger asChild>{TriggerButton}</HoverCardTrigger>
@@ -485,11 +497,18 @@ export function PersonaProfileSheetTrigger({
         TriggerButton
       )}
 
-      <SheetContent side={side} className="w-full sm:max-w-3xl overflow-y-auto p-0">
-        <SheetHeader className="sr-only">
-          <SheetTitle>{name ?? label ?? "Profil persona"}</SheetTitle>
-        </SheetHeader>
+      <DrawerContent className="inset-y-0 right-0 flex flex-col gap-0 border rounded-md bg-background text-foreground shadow-lg w-[min(calc(100%_-_var(--drawer-inset)*2),_768px)] p-0">
+        <DrawerClose
+          aria-label="Fermer"
+          className="absolute right-4 top-4 rounded-xs text-muted-foreground opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
+        >
+          <X className="size-4" />
+        </DrawerClose>
+        <DrawerHeader className="sr-only">
+          <DrawerTitle>{name ?? label ?? "Profil persona"}</DrawerTitle>
+        </DrawerHeader>
 
+        <div className="min-h-0 flex-1 overflow-y-auto">
         {/* -- Header : banner + avatar + nom + stats -- */}
         <div>
           <div className="relative overflow-hidden">
@@ -633,7 +652,8 @@ export function PersonaProfileSheetTrigger({
             </div>
           )}
         </div>
-      </SheetContent>
-    </Sheet>
+        </div>
+      </DrawerContent>
+    </Drawer>
   );
 }

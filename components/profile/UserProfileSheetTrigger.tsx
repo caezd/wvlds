@@ -4,7 +4,14 @@ import * as React from "react";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
+import { X } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { PresenceDot } from "@/components/avatars/PresenceDot";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
@@ -23,6 +30,12 @@ function formatMemberSince(value: string) {
 
 function initials(name: string) {
   return (name.trim()[0] ?? "?").toUpperCase();
+}
+
+function toSwipeDirection(side: "left" | "right" | "top" | "bottom"): "left" | "right" | "up" | "down" {
+  if (side === "top") return "up";
+  if (side === "bottom") return "down";
+  return side;
 }
 
 type ProfileData = {
@@ -48,6 +61,7 @@ export function UserProfileSheetTrigger({
 }) {
   const t = useTranslations("userProfile");
   const tPronouns = useTranslations("pronouns");
+  const tCommon = useTranslations("common");
   const supabase = React.useMemo(() => createClient(), []);
   const { getUserPresence } = useGlobalPresence();
   const [open, setOpen] = React.useState(false);
@@ -98,7 +112,7 @@ export function UserProfileSheetTrigger({
             : null;
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
+    <Drawer open={open} onOpenChange={setOpen} swipeDirection={toSwipeDirection(side)}>
       <button
         type="button"
         title={label ?? t("title")}
@@ -109,12 +123,18 @@ export function UserProfileSheetTrigger({
         {children}
       </button>
 
-      <SheetContent side={side} className="w-full sm:max-w-sm overflow-y-auto">
-        <SheetHeader className="sr-only">
-          <SheetTitle>{username ?? t("title")}</SheetTitle>
-        </SheetHeader>
+      <DrawerContent className="inset-y-0 right-0 flex flex-col gap-0 border rounded-md bg-background text-foreground shadow-lg p-0 w-[min(calc(100%_-_var(--drawer-inset)*2),_384px)]">
+        <DrawerClose
+          aria-label={tCommon("close")}
+          className="absolute right-4 top-4 rounded-xs text-muted-foreground opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
+        >
+          <X className="size-4" />
+        </DrawerClose>
+        <DrawerHeader className="sr-only">
+          <DrawerTitle>{username ?? t("title")}</DrawerTitle>
+        </DrawerHeader>
 
-        <div className="flex flex-col items-center gap-3 pt-2 text-center">
+        <div className="min-h-0 flex-1 overflow-y-auto flex flex-col items-center gap-3 pt-2 text-center">
           <Avatar className="size-20">
             {profile?.avatar_url && <AvatarImage src={profile.avatar_url} />}
             <AvatarFallback className="text-2xl">
@@ -164,7 +184,7 @@ export function UserProfileSheetTrigger({
             </div>
           )}
         </div>
-      </SheetContent>
-    </Sheet>
+      </DrawerContent>
+    </Drawer>
   );
 }

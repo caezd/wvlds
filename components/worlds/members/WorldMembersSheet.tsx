@@ -9,16 +9,18 @@ import { useDms } from "@/components/providers/DmsProvider";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { X } from "lucide-react";
 import { supabaseThumb } from "@/lib/storage";
 import { getLeadingLetter } from "@/lib/textFormatting";
 import { cn } from "@/lib/utils";
@@ -340,18 +342,29 @@ export function WorldMembersSheet({
         </Tooltip>
       )}
 
-      <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent side="right" className="flex flex-col gap-0 p-0 sm:max-w-[320px]">
-          <SheetHeader className="border-b border-border-soft px-5 py-4">
+      <Drawer open={open} onOpenChange={setOpen} swipeDirection="right">
+        <DrawerContent
+          className={cn(
+            "inset-y-0 right-0 flex flex-col gap-0 border rounded-md bg-background text-foreground shadow-lg p-0",
+            "w-[min(calc(100%_-_var(--drawer-inset)*2),_320px)]",
+          )}
+        >
+          <DrawerClose
+            aria-label="Fermer"
+            className="absolute right-4 top-4 rounded-xs text-muted-foreground opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            <X className="size-4" />
+          </DrawerClose>
+          <DrawerHeader className="border-b border-border-soft px-5 py-4">
             <div className="flex items-center justify-between gap-2">
-              <SheetTitle className="flex items-center gap-2">
+              <DrawerTitle className="flex items-center gap-2">
                 Membres
                 {!loading && (
                   <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-xs font-normal text-muted-foreground">
                     {members.length}
                   </span>
                 )}
-              </SheetTitle>
+              </DrawerTitle>
               {canManage && (
                 <WorldInviteDialog
                   worldId={worldId}
@@ -360,7 +373,7 @@ export function WorldMembersSheet({
                 />
               )}
             </div>
-          </SheetHeader>
+          </DrawerHeader>
 
           <div className="flex-1 overflow-y-auto p-2">
             {loading ? (
@@ -381,8 +394,8 @@ export function WorldMembersSheet({
               </div>
             )}
           </div>
-        </SheetContent>
-      </Sheet>
+        </DrawerContent>
+      </Drawer>
     </>
   );
 }

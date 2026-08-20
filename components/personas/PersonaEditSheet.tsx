@@ -13,12 +13,13 @@ import { levelInfo } from "@/lib/xp";
 import { initials } from "@/lib/persona-display";
 import { cn } from "@/lib/utils";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetFooter,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerHeader,
+  DrawerFooter,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import {
@@ -134,11 +135,17 @@ function BannerSheet({
   onRemove: () => void;
 }) {
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-[calc(48rem-24px)] lg:shadow-2xl flex flex-col">
-        <SheetHeader>
-          <SheetTitle>Bannière du personnage</SheetTitle>
-        </SheetHeader>
+    <Drawer open={open} onOpenChange={onOpenChange} swipeDirection="right">
+      <DrawerContent className="inset-y-0 right-0 flex flex-col gap-4 border rounded-md bg-background text-foreground shadow-lg p-0 w-[min(calc(100%_-_var(--drawer-inset)*2),_744px)] lg:shadow-2xl">
+        <DrawerClose
+          aria-label="Fermer"
+          className="absolute right-4 top-4 rounded-xs text-muted-foreground opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
+        >
+          <X className="size-4" />
+        </DrawerClose>
+        <DrawerHeader>
+          <DrawerTitle>Bannière du personnage</DrawerTitle>
+        </DrawerHeader>
         <div className="flex-1 overflow-y-auto space-y-4 p-6">
           <StorageUploadTab
             personaId={personaId}
@@ -153,7 +160,7 @@ function BannerSheet({
           />
         </div>
         {currentBannerUrl && (
-          <SheetFooter className="border-t border-border-soft px-6 py-3 shrink-0 flex-row justify-start">
+          <DrawerFooter className="border-t border-border-soft px-6 py-3 shrink-0 flex-row justify-start">
             <DeleteConfirmDialog
               trigger={
                 <Button variant="ghost" size="sm" className="inline-flex text-muted-foreground hover:text-destructive hover:bg-destructive/10">
@@ -170,10 +177,10 @@ function BannerSheet({
                 onOpenChange(false);
               }}
             />
-          </SheetFooter>
+          </DrawerFooter>
         )}
-      </SheetContent>
-    </Sheet>
+      </DrawerContent>
+    </Drawer>
   );
 }
 
@@ -707,10 +714,16 @@ export function PersonaEditorContent({
         onRemove={() => setBannerUrl(null)}
       />
 
-      {/* Sheet apparence (avatar + cosmétiques) */}
-      <Sheet open={avatarDialogOpen} onOpenChange={setAvatarDialogOpen}>
-        <SheetContent side="right" className="w-full sm:max-w-5xl lg:shadow-2xl flex flex-col p-0 gap-0 overflow-hidden">
-          <SheetHeader className="px-6 pt-6 pb-0 shrink-0">
+      {/* Drawer apparence (avatar + cosmétiques) */}
+      <Drawer open={avatarDialogOpen} onOpenChange={setAvatarDialogOpen} swipeDirection="right">
+        <DrawerContent className="inset-y-0 right-0 flex flex-col border rounded-md bg-background text-foreground shadow-lg p-0 gap-0 w-[min(calc(100%_-_var(--drawer-inset)*2),_1024px)] lg:shadow-2xl overflow-hidden">
+          <DrawerClose
+            aria-label="Fermer"
+            className="absolute right-4 top-4 rounded-xs text-muted-foreground opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            <X className="size-4" />
+          </DrawerClose>
+          <DrawerHeader className="px-6 pt-6 pb-0 shrink-0">
             <div className="flex items-center gap-3">
               <div className="relative h-14 w-14 shrink-0 rounded-xl border bg-muted overflow-hidden lg:hidden">
                 {avatarUrl ? (
@@ -721,9 +734,9 @@ export function PersonaEditorContent({
                   </div>
                 )}
               </div>
-              <SheetTitle>Avatar</SheetTitle>
+              <DrawerTitle>Avatar</DrawerTitle>
             </div>
-          </SheetHeader>
+          </DrawerHeader>
 
           <div className="flex flex-col flex-1 overflow-hidden mt-4">
             {/* Menus alignés côte à côte (sous-menu) */}
@@ -802,7 +815,7 @@ export function PersonaEditorContent({
           </div>
 
           {(avatarUrl || avatarConfig) && (
-            <SheetFooter className="border-t border-border-soft px-6 py-3 shrink-0 flex-row justify-start">
+            <DrawerFooter className="border-t border-border-soft px-6 py-3 shrink-0 flex-row justify-start">
               <DeleteConfirmDialog
                 trigger={
                   <Button variant="ghost" size="sm" className="inline-flex text-muted-foreground hover:text-destructive hover:bg-destructive/10">
@@ -821,10 +834,10 @@ export function PersonaEditorContent({
                   router.refresh();
                 }}
               />
-            </SheetFooter>
+            </DrawerFooter>
           )}
-        </SheetContent>
-      </Sheet>
+        </DrawerContent>
+      </Drawer>
 
       {/* Aperçu de l'avatar actuel dans l'espace libre à gauche (desktop only).
           Porté vers document.body pour passer au-dessus de l'obfuscateur Radix. */}
@@ -940,18 +953,30 @@ export function PersonaEditSheet({
         ? <span onClick={() => setOpen(true)} style={{ display: "contents" }}>{trigger}</span>
         : <button className="text-sm underline" onClick={() => setOpen(true)}>Éditer</button>
       }
-      <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent
-          side="right"
+      <Drawer open={open} onOpenChange={setOpen} swipeDirection="right">
+        <DrawerContent
           className={cn(
-            "w-full sm:max-w-3xl flex flex-col p-0",
-            avatarOpen && "lg:-translate-x-[280px] lg:blur-[2px]",
+            "inset-y-0 right-0 flex flex-col border rounded-md bg-background text-foreground shadow-lg p-0",
+            "w-[min(calc(100%_-_var(--drawer-inset)*2),_768px)]",
+            // `mr-*` plutôt que `translate-x-*` : le popup du drawer pose déjà
+            // son propre `transform` (glissement d'ouverture, arbitraire — pas
+            // le système de transform composable de Tailwind), donc un
+            // translate-x ajouté ici pourrait l'écraser plutôt que s'y
+            // ajouter. Une marge droite s'additionne sans y toucher, puisque
+            // ce popup est positionné via `right: 0`.
+            avatarOpen && "lg:mr-[280px] lg:blur-[2px]",
             bannerOpen && "lg:blur-[2px]",
           )}
         >
-          <SheetHeader className="sr-only">
-            <SheetTitle>Éditer — {personaName}</SheetTitle>
-          </SheetHeader>
+          <DrawerClose
+            aria-label="Fermer"
+            className="absolute right-4 top-4 rounded-xs text-muted-foreground opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            <X className="size-4" />
+          </DrawerClose>
+          <DrawerHeader className="sr-only">
+            <DrawerTitle>Éditer — {personaName}</DrawerTitle>
+          </DrawerHeader>
 
           {/* Zone scrollable */}
           <div className="flex-1 overflow-y-auto">
@@ -978,7 +1003,7 @@ export function PersonaEditSheet({
           </div>
 
           {/* Footer fixe en bas */}
-          <SheetFooter className="border-t border-border-soft px-6 py-3 flex-row justify-start bg-background">
+          <DrawerFooter className="border-t border-border-soft px-6 py-3 flex-row justify-start bg-background">
             <DeleteConfirmDialog
               trigger={
                 <Button
@@ -994,9 +1019,9 @@ export function PersonaEditSheet({
               description={`"${personaName}" sera supprimé définitivement, ainsi que son avatar, sa bannière et toutes ses images de section.`}
               onConfirm={handleDelete}
             />
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
     </>
   );
 }
