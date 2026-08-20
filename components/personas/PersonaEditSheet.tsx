@@ -9,7 +9,6 @@ import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { supabaseThumb } from "@/lib/storage";
 import { toWebP } from "@/lib/imageUtils";
-import { levelInfo } from "@/lib/xp";
 import { initials } from "@/lib/persona-display";
 import { cn } from "@/lib/utils";
 import {
@@ -29,7 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Check, Coins, Flame, Loader2, Pencil, Trash2, X, Zap } from "lucide-react";
+import { Check, Loader2, Pencil, Trash2, X } from "lucide-react";
 import { ImagePickerCropField } from "@/components/ui/image-crop-picker";
 import type { MaritalStatus } from "@/types/db";
 import { TABLE } from "@/lib/constants";
@@ -521,28 +520,15 @@ export function PersonaEditorContent({
   const [appearanceTab, setAppearanceTab] = useState<"avatar" | "cosmetics">("avatar");
   const [avatarSubTab, setAvatarSubTab] = useState<"builder" | "upload">(avatar_builder ? "builder" : "upload");
   const [userId, setUserId] = useState<string | null>(null);
-  const [balance, setBalance] = useState<{ xp: number; coins: number; streak_current: number } | null>(null);
-  const [balanceLoading, setBalanceLoading] = useState(true);
   const avatarFallback = useMemo(() => initials(personaName), [personaName]);
 
-  // Récupère l'userId pour l'upload fichier + balance gamification
+  // Récupère l'userId, nécessaire pour l'upload de fichier (avatar/bannière).
   useMemo(() => {
-    supabase.auth.getUser().then(async (res: { data: { user: { id: string } | null } }) => {
-      const uid = res.data.user?.id ?? null;
-      setUserId(uid);
-      if (!uid) { setBalanceLoading(false); return; }
-      const { data: bal } = await supabase
-        .from("gamification_balances")
-        .select("xp, coins, streak_current")
-        .eq("user_id", uid)
-        .maybeSingle();
-      setBalance(bal ?? null);
-      setBalanceLoading(false);
+    supabase.auth.getUser().then((res: { data: { user: { id: string } | null } }) => {
+      setUserId(res.data.user?.id ?? null);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const xpInfo = balance ? levelInfo(balance.xp) : null;
 
   return (
     <>
@@ -649,39 +635,6 @@ export function PersonaEditorContent({
                 />
               </div>
 
-              {xpInfo && balance ? (
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span className="font-medium text-foreground">Niveau {xpInfo.level}</span>
-                    <span>{balance.xp} / {xpInfo.xpForNext} XP</span>
-                  </div>
-                  <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-primary transition-all"
-                      style={{ width: `${xpInfo.progress}%` }}
-                    />
-                  </div>
-                  <div className="flex items-center gap-3 text-xs pt-0.5">
-                    <span className="flex items-center gap-1 text-yellow-400">
-                      <Coins className="h-3.5 w-3.5" />
-                      {balance.coins.toLocaleString()}
-                    </span>
-                    <span className="flex items-center gap-1 text-orange-400">
-                      <Flame className="h-3.5 w-3.5" />
-                      {balance.streak_current} j.
-                    </span>
-                    <span className="flex items-center gap-1 text-blue-400">
-                      <Zap className="h-3.5 w-3.5" />
-                      {balance.xp} XP
-                    </span>
-                  </div>
-                </div>
-              ) : balanceLoading ? (
-                <div className="space-y-1.5">
-                  <div className="h-1.5 w-full animate-pulse rounded-full bg-muted" />
-                  <div className="h-3 w-32 animate-pulse rounded bg-muted" />
-                </div>
-              ) : null}
             </div>
           </div>
         </div>

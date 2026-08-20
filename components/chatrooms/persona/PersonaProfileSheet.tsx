@@ -17,7 +17,7 @@ import { TabBar } from "@/components/ui/tab-bar";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import type { Persona } from "@/types/db";
 import type { PersonaSection, PersonaSectionField, PersonaSectionWithFields, PersonaFieldData, InventoryItem, SkillItem, GaugeItem, TraitItem, TimelineItem, DlItem } from "@/types/personas";
-import { Coins, Flame, X, Zap } from "lucide-react";
+import { X } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useGlobalPresence } from "@/components/providers/PresenceProvider";
 import { formatLastSeen } from "@/lib/utils";
@@ -28,25 +28,6 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { getUsablePersonaIds } from "@/lib/personaEligibility";
 import { useTranslations } from "next-intl";
 import { Lock } from "lucide-react";
-
-// -- Level helpers --------------------------------------------
-// level = floor(sqrt(xp / 50)) + 1
-// xp needed for level N = (N-1)² × 50
-function levelFromXp(xp: number) {
-  const level = Math.floor(Math.sqrt(xp / 50)) + 1;
-  const xpForCurrent = (level - 1) * (level - 1) * 50;
-  const xpForNext = level * level * 50;
-  const progress = xpForNext > xpForCurrent
-    ? ((xp - xpForCurrent) / (xpForNext - xpForCurrent)) * 100
-    : 100;
-  return { level, xpForCurrent, xpForNext, progress: Math.min(progress, 100) };
-}
-
-type Balance = {
-  xp: number;
-  coins: number;
-  streak_current: number;
-};
 
 // -- Timeline collapsible -------------------------------------
 function TimelineView({ items }: { items: TimelineItem[] }) {
@@ -296,7 +277,6 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
 
   const { getUserPresence } = useGlobalPresence();
 
-  const [balance, setBalance] = useState<Balance | null>(null);
   // Éligibilité (plan gratuit : 5 personas les plus anciens par monde) — ne
   // concerne que le persona du viewer lui-même (cf. migration 090).
   const [usableForSelf, setUsableForSelf] = useState(true);
@@ -317,7 +297,6 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
 
   useEffect(() => {
     if (!persona) {
-      setBalance(null);
       setSections([]);
       setActiveTab(null);
       setOwnerPresence(null);
@@ -353,13 +332,6 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
         usableForSelfResult = getUsablePersonaIds(siblings ?? [], plan).has(persona!.id);
       }
 
-      // gamification balance
-      const { data: bal } = await supabase
-        .from("gamification_balances")
-        .select("xp, coins, streak_current")
-        .eq("user_id", persona!.user_id)
-        .maybeSingle();
-
       // présence persistée du propriétaire (pour "vu il y a X")
       const { data: ownerProfile } = await supabase
         .from("profiles")
@@ -394,7 +366,6 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
       setBannerUrl(row?.banner_url ?? null);
       setFrameUrl(row?.frame?.asset_url ?? null);
       setUsableForSelf(usableForSelfResult);
-      setBalance(bal ?? null);
       setOwnerPresence(
         ownerProfile
           ? {
@@ -415,8 +386,6 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
     load();
     return () => { cancelled = true; };
   }, [persona?.id, selfId, plan, supabase]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const xpInfo = balance ? levelFromXp(balance.xp) : null;
 
   const userPresence = persona ? getUserPresence(persona.user_id) : "offline";
   const _isOnline = userPresence === "online";
@@ -468,48 +437,6 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
             ) : (
               <div className="h-34 w-full shrink-0 bg-gradient-to-r from-muted/60 to-muted" />
             )}
-
-            {/* -- Header stats -- */}
-            <div className="px-5 pt-5 pb-4 border-b border-border-soft space-y-3">
-              {xpInfo && balance ? (
-                <>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-semibold text-foreground">
-                      Niveau {xpInfo.level}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {balance.xp} / {xpInfo.xpForNext} XP
-                    </span>
-                  </div>
-                  {/* XP bar */}
-                  <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-primary transition-all"
-                      style={{ width: `${xpInfo.progress}%` }}
-                    />
-                  </div>
-                  {/* Coins + streak */}
-                  <div className="flex items-center gap-4 text-sm">
-                    <span className="flex items-center gap-1 text-yellow-400">
-                      <Coins className="h-4 w-4" />
-                      {balance.coins.toLocaleString()}
-                    </span>
-                    <span className="flex items-center gap-1 text-orange-400">
-                      <Flame className="h-4 w-4" />
-                      {balance.streak_current} j.
-                    </span>
-                    <span className="flex items-center gap-1 text-blue-400">
-                      <Zap className="h-4 w-4" />
-                      {balance.xp} XP
-                    </span>
-                  </div>
-                </>
-              ) : loading ? (
-                <div className="h-8 animate-pulse rounded bg-muted" />
-              ) : (
-                <p className="text-xs text-muted-foreground">Aucune donnée de progression.</p>
-              )}
-            </div>
 
             {/* -- Avatar + nom -- */}
             <div className="flex flex-col items-center gap-2 py-6 border-b border-border-soft">
