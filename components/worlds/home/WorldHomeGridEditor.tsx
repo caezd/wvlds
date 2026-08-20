@@ -309,6 +309,11 @@ export function WorldHomeGridEditor({
     const startX = event.clientX;
     const startItems = items;
     setActiveId(left.id);
+    // Posé dès le pointerdown (dx: 0), pas au premier pointermove : sinon
+    // seul le bloc de gauche (via activeId) devenait transparent à l'instant
+    // où le geste démarre, le droit n'affichant le même style qu'après le
+    // tout premier mouvement du curseur — un instant d'asymétrie visible.
+    setResizePreview({ leftId: left.id, rightId: right.id, dx: 0 });
 
     // La frontière ne peut pas réduire l'un des deux blocs sous la largeur
     // minimale : on borne le décalage en pixels, pas seulement à l'arrivée.
@@ -373,6 +378,12 @@ export function WorldHomeGridEditor({
    */
   function startMove(event: React.PointerEvent, item: WorldHomeGridItem) {
     if (event.button !== 0) return;
+    // Les boutons d'action (éditer, réglages, supprimer) vivent DANS la
+    // poignée de déplacement (même rangée que le libellé) — sans ce
+    // garde-fou, un simple clic dessus capturait déjà le pointeur ici et
+    // déclenchait un déplacement au lieu de l'action : le clic natif
+    // n'atteignait jamais le bouton.
+    if (event.target instanceof HTMLElement && event.target.closest("button")) return;
     event.preventDefault();
     event.stopPropagation();
     event.currentTarget.setPointerCapture(event.pointerId);

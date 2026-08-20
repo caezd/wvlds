@@ -170,6 +170,37 @@ describe("WorldHomeGridEditor", () => {
     expect(Number.parseFloat(divider.style.marginLeft)).toBeCloseTo(-(gapPx + hitWidth) / 2);
   });
 
+  it("un pointerdown sur un bouton d'action (poignée) ne déclenche pas de déplacement", async () => {
+    // Régression : les boutons d'action (éditer, réglages, supprimer)
+    // vivent dans la même poignée que le glisser-déposer. Un pointerdown
+    // dessus capturait déjà le pointeur et démarrait un déplacement avant
+    // que le clic natif n'atteigne le bouton — celui-ci devenait
+    // impossible à actionner. jsdom stubbant `setPointerCapture` en no-op
+    // (voir vitest.setup.ts), on ne peut pas simuler la vraie suppression
+    // du clic ; on vérifie donc le garde-fou lui-même, via son effet
+    // observable (le bloc ne passe jamais en transparence de "actif").
+    const { container } = render(
+      <Harness
+        initial={[
+          { id: "a", type: "widget", x: 0, y: 0, w: 12, widgetId: "categories" },
+        ]}
+      />,
+    );
+
+    const deleteButton = screen.getByLabelText("Supprimer");
+    const block = container.querySelector<HTMLElement>('[data-block-id="a"]')!;
+
+    await act(async () => {
+      fireEvent.pointerDown(deleteButton, { button: 0 });
+    });
+
+    expect(block.className).not.toContain("opacity-50");
+
+    await act(async () => {
+      fireEvent.pointerUp(window);
+    });
+  });
+
   it("ne réarrange pas la grille pendant le glissement, seulement au relâchement", async () => {
     // Régression : appliquer le déplacement en continu déplaçait les lignes
     // sous le curseur, ce qui changeait la cible, ce qui réarrangeait encore…
@@ -260,6 +291,36 @@ describe("WorldHomeGridEditor", () => {
     });
 
     expect(screen.getAllByTestId("wghe-column-grid-line")).toHaveLength(11);
+
+    await act(async () => {
+      fireEvent.pointerUp(window);
+    });
+  });
+
+  it("marque les deux blocs en transparence dès le pointerdown sur la frontière, avant tout mouvement", async () => {
+    // Régression : `activeId` (posé au pointerdown) ne rendait transparent
+    // QUE le bloc de gauche — le droit dépendait de `resizePreview`, posé
+    // seulement au premier pointermove. Le temps d'un instant, un seul des
+    // deux blocs de la paire changeait de style.
+    const { container } = render(
+      <Harness
+        initial={[
+          { id: "a", type: "widget", x: 0, y: 0, w: 6, widgetId: "categories" },
+          { id: "b", type: "widget", x: 6, y: 0, w: 6, widgetId: "chatrooms" },
+        ]}
+      />,
+    );
+
+    const divider = container.querySelector<HTMLElement>(".wghe-divider")!;
+    const blockA = container.querySelector<HTMLElement>('[data-block-id="a"]')!;
+    const blockB = container.querySelector<HTMLElement>('[data-block-id="b"]')!;
+
+    await act(async () => {
+      fireEvent.pointerDown(divider, { button: 0, clientX: 300 });
+    });
+
+    expect(blockA.className).toContain("opacity-50");
+    expect(blockB.className).toContain("opacity-50");
 
     await act(async () => {
       fireEvent.pointerUp(window);
