@@ -310,13 +310,21 @@
         "members_online": "Miembros en línea",
         "announcement": "Anuncio",
         "wiki_shortcuts": "Accesos directos del wiki",
-        "personas_recent": "Personajes recientes"
+        "personas_recent": "Personajes recientes",
+        "timeline_shortcuts": "Accesos directos de la línea de tiempo"
       },
       "onlineCount": "{count, plural, one {# miembro en línea} other {# miembros en línea}}",
       "noneOnline": "Nadie en línea por ahora",
       "wikiShortcuts": {
         "updated": "Actualizado {time}",
         "justNow": "ahora mismo"
+      },
+      "timelineShortcuts": {
+        "previousMonth": "Mes anterior",
+        "nextMonth": "Mes siguiente",
+        "selectDay": "Ver las entradas del {day}",
+        "noEntries": "Ninguna entrada este mes.",
+        "viewAll": "Ver la línea de tiempo completa"
       },
       "announcement": {
         "add": "Añadir un anuncio",

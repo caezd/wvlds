@@ -311,13 +311,21 @@
         "members_online": "Membres en ligne",
         "announcement": "Annonce",
         "wiki_shortcuts": "Raccourcis wiki",
-        "personas_recent": "Personas récents"
+        "personas_recent": "Personas récents",
+        "timeline_shortcuts": "Raccourcis chronologie"
       },
       "onlineCount": "{count, plural, one {# membre en ligne} other {# membres en ligne}}",
       "noneOnline": "Personne en ligne pour le moment",
       "wikiShortcuts": {
         "updated": "Modifié {time}",
         "justNow": "à l'instant"
+      },
+      "timelineShortcuts": {
+        "previousMonth": "Mois précédent",
+        "nextMonth": "Mois suivant",
+        "selectDay": "Voir les entrées du {day}",
+        "noEntries": "Aucune entrée ce mois-ci.",
+        "viewAll": "Voir la chronologie complète"
       },
       "announcement": {
         "add": "Ajouter une annonce",

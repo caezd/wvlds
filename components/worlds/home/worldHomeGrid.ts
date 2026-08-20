@@ -68,6 +68,7 @@ export const WORLD_HOME_WIDGET_OPTIONS: Partial<Record<WorldHomeWidgetId, WorldH
   wiki_shortcuts: [{ key: "limit", min: 1, max: 20, default: 6 }],
   personas_recent: [{ key: "limit", min: 1, max: 30, default: 10 }],
   members_online: [{ key: "limit", min: 1, max: 20, default: 8 }],
+  timeline_shortcuts: [{ key: "limit", min: 1, max: 20, default: 6 }],
 };
 
 /** Valeur d'un réglage, bornée au registre, avec repli sur la valeur par défaut. */

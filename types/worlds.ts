@@ -4,6 +4,10 @@ export interface WorldTimelineConfig {
   month_names: string[];
   current_year: number;
   current_month: number | null;
+  /** Jours par mois, même index que `month_names` — un mois sans entrée
+   *  (tableau absent, ou plus court que `month_names`) retombe sur
+   *  DEFAULT_DAYS_PER_MONTH, voir daysInMonth() dans lib/worldTimeline.ts. */
+  days_per_month?: number[];
 }
 
 export interface WorldTimelineDate {

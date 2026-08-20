@@ -57,6 +57,7 @@ import {
     DrawerHeader,
 } from "@/components/ui/drawer";
 import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
+import { formatTimelineLabel } from "@/lib/worldTimeline";
 
 type MapPinOption = { id: string; title: string; color: string };
 import { HsvColorPicker } from "@/components/ui/hsv-color-picker";
@@ -822,13 +823,6 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
         </div>
     );
 });
-
-function formatTimelineLabel(config: WorldTimelineConfig, date: WorldTimelineDate): string {
-    const y = `${config.year_label} ${date.year}${config.era_name ? ` ${config.era_name}` : ""}`;
-    const m = date.month !== null ? config.month_names[date.month] : null;
-    const d = date.day !== null ? `${date.day} ` : "";
-    return m ? `${d}${m}, ${y}` : y;
-}
 
 type ComposerMenuItem = {
     id: string;

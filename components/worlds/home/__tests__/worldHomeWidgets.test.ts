@@ -61,4 +61,9 @@ describe("resolveWorldHomeLayout", () => {
     expect(DEFAULT_WORLD_HOME_LAYOUT).not.toContain("wiki_shortcuts");
     expect(DEFAULT_WORLD_HOME_LAYOUT).not.toContain("personas_recent");
   });
+
+  it("les raccourcis chronologie sont connus mais pas activés par défaut (opt-in)", () => {
+    expect(ALL_WORLD_HOME_WIDGETS).toContain("timeline_shortcuts");
+    expect(DEFAULT_WORLD_HOME_LAYOUT).not.toContain("timeline_shortcuts");
+  });
 });

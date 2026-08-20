@@ -67,6 +67,7 @@ import { WorldCategoryManager } from "@/components/worlds/settings/WorldCategory
 import { WorldRelationsSettings } from "@/components/worlds/settings/WorldRelationsSettings";
 import { WorldHomeGridSettings } from "@/components/worlds/settings/WorldHomeGridSettings";
 import type { World, WorldTimelineConfig } from "@/types/worlds";
+import { DEFAULT_DAYS_PER_MONTH, REAL_DAYS_PER_MONTH, REAL_MONTH_NAMES } from "@/lib/worldTimeline";
 
 /**
  * Vue plein-écran des paramètres d'un « monde », organisée en onglets
@@ -263,6 +264,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
         month_names: [],
         current_year: 1,
         current_month: null,
+        days_per_month: [],
     };
     const [timelineEnabled, setTimelineEnabled] = React.useState(!!world.timeline_enabled);
     const [timelineConfig, setTimelineConfig] = React.useState<WorldTimelineConfig>(
@@ -1044,14 +1046,18 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                                     )}
                                                 </div>
 
-                                                {/* Liste des mois */}
+                                                {/* Liste des mois — chacun avec son propre nombre de jours (borne le
+                                                    calendrier du widget « Raccourcis chronologie » de la page
+                                                    d'accueil, voir WorldTimelineShortcutsWidget.tsx). Les deux tableaux
+                                                    (`month_names`/`days_per_month`) restent parallèles : tout ajout,
+                                                    retrait ou préréglage touche les deux à la fois. */}
                                                 <div className="space-y-2">
                                                     <div className="flex items-center justify-between">
                                                         <p className="text-xs font-medium text-muted-foreground">Mois du calendrier</p>
                                                         {timelineConfig.month_names.length === 0 && (
                                                             <button
                                                                 type="button"
-                                                                onClick={() => void persistTimelineConfig({ month_names: ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"] })}
+                                                                onClick={() => void persistTimelineConfig({ month_names: REAL_MONTH_NAMES, days_per_month: REAL_DAYS_PER_MONTH })}
                                                                 className="text-[11px] text-primary hover:underline"
                                                             >
                                                                 Utiliser les mois réels
@@ -1077,13 +1083,34 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                                                             void persistTimelineConfig({ month_names: next });
                                                                         }}
                                                                     />
+                                                                    <Input
+                                                                        type="number"
+                                                                        aria-label={`Jours en ${m || `mois ${i + 1}`}`}
+                                                                        value={timelineConfig.days_per_month?.[i] ?? DEFAULT_DAYS_PER_MONTH}
+                                                                        min={1}
+                                                                        max={999}
+                                                                        title="Nombre de jours"
+                                                                        className="h-7 w-16 shrink-0 text-sm"
+                                                                        onChange={e => {
+                                                                            const next = [...(timelineConfig.days_per_month ?? [])];
+                                                                            next[i] = Number(e.target.value) || DEFAULT_DAYS_PER_MONTH;
+                                                                            setTimelineConfig(c => ({ ...c, days_per_month: next }));
+                                                                        }}
+                                                                        onBlur={e => {
+                                                                            const next = [...(timelineConfig.days_per_month ?? [])];
+                                                                            next[i] = Number(e.target.value) || DEFAULT_DAYS_PER_MONTH;
+                                                                            void persistTimelineConfig({ days_per_month: next });
+                                                                        }}
+                                                                    />
                                                                     <button
                                                                         type="button"
                                                                         onClick={() => {
                                                                             const next = timelineConfig.month_names.filter((_, j) => j !== i);
+                                                                            const nextDays = (timelineConfig.days_per_month ?? []).filter((_, j) => j !== i);
                                                                             const currentMonth = timelineConfig.current_month;
                                                                             void persistTimelineConfig({
                                                                                 month_names: next,
+                                                                                days_per_month: nextDays,
                                                                                 current_month: currentMonth !== null && currentMonth >= next.length ? null : currentMonth,
                                                                             });
                                                                         }}
@@ -1105,7 +1132,8 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                                                 if (e.key === "Enter" && newMonthName.trim()) {
                                                                     e.preventDefault();
                                                                     const next = [...timelineConfig.month_names, newMonthName.trim()];
-                                                                    void persistTimelineConfig({ month_names: next });
+                                                                    const nextDays = [...(timelineConfig.days_per_month ?? []), DEFAULT_DAYS_PER_MONTH];
+                                                                    void persistTimelineConfig({ month_names: next, days_per_month: nextDays });
                                                                     setNewMonthName("");
                                                                 }
                                                             }}
@@ -1117,7 +1145,8 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                                             disabled={!newMonthName.trim()}
                                                             onClick={() => {
                                                                 const next = [...timelineConfig.month_names, newMonthName.trim()];
-                                                                void persistTimelineConfig({ month_names: next });
+                                                                const nextDays = [...(timelineConfig.days_per_month ?? []), DEFAULT_DAYS_PER_MONTH];
+                                                                void persistTimelineConfig({ month_names: next, days_per_month: nextDays });
                                                                 setNewMonthName("");
                                                             }}
                                                         >

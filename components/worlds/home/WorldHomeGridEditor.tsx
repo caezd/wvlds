@@ -492,6 +492,28 @@ export function WorldHomeGridEditor({
             className="grid grid-cols-12"
             style={{ gap: gapPx, gridAutoRows: `${HOME_GRID_ROW_HEIGHT}px` }}
           >
+            {/* Grillage des 12 colonnes, visible seulement pendant un geste
+                (déplacement ou redimensionnement) — repère visuel pour aligner
+                un bloc pendant qu'on le glisse, sans encombrer la vue au repos.
+                Un trait par frontière interne (11, comme `rowBoundaries` mais
+                pour les 12 colonnes entières plutôt que les seuls blocs
+                existants), centré sur le MILIEU de la gouttière — pas calé
+                sur le bord d'une piste — avec la même formule que le
+                diviseur de redimensionnement (`.wghe-divider` : le centre
+                d'un élément posé au début de la colonne de droite et décalé
+                de `-(gap + largeur)/2` ne dépend pas de sa largeur, donc
+                `-gapPx / 2` centre exactement un trait de largeur nulle). */}
+            {activeId && rowCount > 0 &&
+              Array.from({ length: HOME_GRID_COLS - 1 }, (_, i) => (
+                <div
+                  key={i}
+                  aria-hidden
+                  data-testid="wghe-column-grid-line"
+                  style={{ gridColumn: i + 2, gridRow: `1 / ${rowCount + 1}`, marginLeft: -gapPx / 2 }}
+                  className="pointer-events-none z-0 justify-self-start self-stretch border-l border-dashed"
+                />
+              ))}
+
             {items.map((item) => (
               // Le bloc se réduit à sa barre de titre : l'éditeur sert à
               // agencer, pas à prévisualiser — un corps vide ne ferait que

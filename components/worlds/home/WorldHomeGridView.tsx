@@ -6,6 +6,7 @@ import MarkdownRenderer from "@/components/MarkdownRenderer";
 import { WorldChatComposer } from "../chatrooms/WorldChatComposer";
 import { WorldChatroomsGrid } from "../chatrooms/WorldChatroomsGrid";
 import { WorldCategoryFolders } from "../chatrooms/WorldCategoryFolders";
+import { WorldTimelineShortcutsWidget } from "./widgets/WorldTimelineShortcutsWidget";
 import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
 import {
   DEFAULT_HOME_GRID_GAP,
@@ -178,6 +179,15 @@ function renderBlock(
         <WorldRecentPersonasWidget
           worldId={ctx.worldId}
           limit={widgetOptionValue("personas_recent", "limit", item.options)}
+        />
+      );
+    case "timeline_shortcuts":
+      return (
+        <WorldTimelineShortcutsWidget
+          worldId={ctx.worldId}
+          rooms={ctx.initialRooms}
+          config={ctx.timelineConfig}
+          limit={widgetOptionValue("timeline_shortcuts", "limit", item.options)}
         />
       );
     default:

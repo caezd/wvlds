@@ -208,6 +208,64 @@ describe("WorldHomeGridEditor", () => {
     await waitFor(() => expect(setWorldHomeGridMock).toHaveBeenCalledTimes(1));
   });
 
+  it("affiche un grillage des colonnes (11 frontières) pendant un déplacement, absent au repos", async () => {
+    setWorldHomeGridMock.mockResolvedValue({ ok: true, items: [CHATROOMS_ITEM] });
+    const { container } = render(
+      <Harness
+        initial={[
+          { id: "a", type: "widget", x: 0, y: 0, w: 6, widgetId: "categories" },
+          { id: "b", type: "widget", x: 6, y: 0, w: 6, widgetId: "chatrooms" },
+        ]}
+      />,
+    );
+
+    expect(screen.queryAllByTestId("wghe-column-grid-line")).toHaveLength(0);
+
+    const handle = container.querySelector('[data-block-id="b"] .wghe-drag-handle')!;
+    await act(async () => {
+      fireEvent.pointerDown(handle, { button: 0, clientX: 100, clientY: 10 });
+      fireEvent.pointerMove(window, { clientX: 100, clientY: 60 });
+    });
+
+    const lines = screen.getAllByTestId("wghe-column-grid-line");
+    expect(lines).toHaveLength(11);
+    // Centré sur le milieu de la gouttière, pas calé sur le bord d'une piste
+    // — même formule que le diviseur de redimensionnement (voir le
+    // commentaire dans WorldHomeGridEditor.tsx). Gouttière par défaut
+    // (comfortable) puisque `Harness` ne reçoit pas de `gap` ici.
+    const gapPx = HOME_GRID_GAP_PRESETS.comfortable;
+    expect(lines[0].style.marginLeft).toBe(`${-gapPx / 2}px`);
+
+    await act(async () => {
+      fireEvent.pointerUp(window);
+    });
+    await waitFor(() => expect(setWorldHomeGridMock).toHaveBeenCalledTimes(1));
+    expect(screen.queryAllByTestId("wghe-column-grid-line")).toHaveLength(0);
+  });
+
+  it("affiche aussi le grillage des colonnes pendant un redimensionnement de frontière", async () => {
+    setWorldHomeGridMock.mockResolvedValue({ ok: true, items: [CHATROOMS_ITEM] });
+    const { container } = render(
+      <Harness
+        initial={[
+          { id: "a", type: "widget", x: 0, y: 0, w: 6, widgetId: "categories" },
+          { id: "b", type: "widget", x: 6, y: 0, w: 6, widgetId: "chatrooms" },
+        ]}
+      />,
+    );
+
+    const divider = container.querySelector<HTMLElement>(".wghe-divider")!;
+    await act(async () => {
+      fireEvent.pointerDown(divider, { button: 0, clientX: 300 });
+    });
+
+    expect(screen.getAllByTestId("wghe-column-grid-line")).toHaveLength(11);
+
+    await act(async () => {
+      fireEvent.pointerUp(window);
+    });
+  });
+
   it("suit le curseur au pixel pendant le glissement d'une frontière, et ne se cale qu'au relâchement", async () => {
     // Le modèle ne connaît que des colonnes entières : arrondir en continu
     // faisait sauter la séparation d'une colonne (~50px) à la fois. Pendant

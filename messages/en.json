@@ -310,13 +310,21 @@
         "members_online": "Members online",
         "announcement": "Announcement",
         "wiki_shortcuts": "Wiki shortcuts",
-        "personas_recent": "Recent personas"
+        "personas_recent": "Recent personas",
+        "timeline_shortcuts": "Timeline shortcuts"
       },
       "onlineCount": "{count, plural, one {# member online} other {# members online}}",
       "noneOnline": "No one online right now",
       "wikiShortcuts": {
         "updated": "Updated {time}",
         "justNow": "just now"
+      },
+      "timelineShortcuts": {
+        "previousMonth": "Previous month",
+        "nextMonth": "Next month",
+        "selectDay": "View entries for {day}",
+        "noEntries": "No entries this month.",
+        "viewAll": "View full timeline"
       },
       "announcement": {
         "add": "Add an announcement",

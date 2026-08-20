@@ -8,6 +8,16 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Interface",
+    text: "En déplaçant ou redimensionnant un bloc dans l'éditeur de grille de la page d'accueil (Réglages > Page d'accueil), un grillage des 12 colonnes s'affiche en fond pour repérer l'alignement, aligné sur la bordure en pointillé de l'éditeur.",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
+    text: "Nouveau widget « Raccourcis chronologie » pour la page d'accueil d'un monde : un petit calendrier pour parcourir les salons déjà situés dans la Chronologie (dates fictives) — flèches pour changer de mois/année, bande des jours du mois avec une pastille sur ceux qui ont une entrée, liste du jour sélectionné en dessous, et un lien vers la chronologie complète. Chaque mois du calendrier d'un monde a désormais son propre nombre de jours (réglable depuis Réglages > Fonctions > Chronologie ; le préréglage « mois réels » applique automatiquement les longueurs grégoriennes). Disponible pour les mondes où la Chronologie est activée.",
+  },
+  {
+    date: "2026-08",
     tag: "Correctif",
     text: "Le bloc « Raccourcis wiki » de la page d'accueil affiche désormais son heure de dernière modification dans la langue courante (au lieu de toujours l'afficher en français), le bloc « Membres en ligne » ne charge plus que les profils des membres réellement en ligne (au lieu de tous les membres du monde à chaque rafraîchissement), et un bloc HTML personnalisé porte maintenant un titre pour les technologies d'assistance.",
   },

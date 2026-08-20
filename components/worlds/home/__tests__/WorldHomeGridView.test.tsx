@@ -44,6 +44,14 @@ vi.mock("@/components/worlds/home/widgets/WorldRecentPersonasWidget", () => ({
   WorldRecentPersonasWidget: () => <div data-testid="personas_recent" />,
 }));
 
+const timelineShortcutsProps = vi.fn();
+vi.mock("@/components/worlds/home/widgets/WorldTimelineShortcutsWidget", () => ({
+  WorldTimelineShortcutsWidget: (props: Record<string, unknown>) => {
+    timelineShortcutsProps(props);
+    return <div data-testid="timeline_shortcuts" />;
+  },
+}));
+
 import { WorldHomeGridView } from "@/components/worlds/home/WorldHomeGridView";
 
 function baseProps(items: WorldHomeGridItem[]) {
@@ -66,15 +74,41 @@ describe("WorldHomeGridView", () => {
       { id: "d", type: "widget", x: 0, y: 6, w: 12, widgetId: "members_online" },
       { id: "e", type: "widget", x: 0, y: 9, w: 12, widgetId: "wiki_shortcuts" },
       { id: "f", type: "widget", x: 0, y: 13, w: 12, widgetId: "personas_recent" },
+      { id: "g", type: "widget", x: 0, y: 17, w: 12, widgetId: "timeline_shortcuts" },
     ];
     render(<WorldHomeGridView {...baseProps(items)} />);
 
     expect(screen.getByTestId("categories")).toBeInTheDocument();
     expect(screen.getByTestId("chatrooms")).toBeInTheDocument();
+    expect(screen.getByTestId("timeline_shortcuts")).toBeInTheDocument();
     // Widgets chargés via next/dynamic — résolution asynchrone même mockés.
     expect(await screen.findByTestId("members_online")).toBeInTheDocument();
     expect(await screen.findByTestId("wiki_shortcuts")).toBeInTheDocument();
     expect(await screen.findByTestId("personas_recent")).toBeInTheDocument();
+  });
+
+  it("transmet les salons et la config de chronologie au widget de raccourcis chronologie", () => {
+    const initialRooms = [{ id: "r1", title: "Prologue", name: null, icon_url: null, last_message_at: null, unread_count: 0, timeline_date: { year: 1, month: null, day: null } }];
+    const timelineConfig = { year_label: "An", era_name: null, month_names: [], current_year: 1, current_month: null };
+    render(
+      <WorldHomeGridView
+        {...baseProps([{ id: "a", type: "widget", x: 0, y: 0, w: 12, widgetId: "timeline_shortcuts" }])}
+        initialRooms={initialRooms}
+        timelineConfig={timelineConfig}
+      />,
+    );
+    expect(timelineShortcutsProps).toHaveBeenCalledWith(
+      expect.objectContaining({ worldId: "w1", rooms: initialRooms, config: timelineConfig, limit: 6 }),
+    );
+  });
+
+  it("le widget de raccourcis chronologie ne reçoit aucune config quand la chronologie n'est pas activée", () => {
+    render(
+      <WorldHomeGridView
+        {...baseProps([{ id: "a", type: "widget", x: 0, y: 0, w: 12, widgetId: "timeline_shortcuts" }])}
+      />,
+    );
+    expect(timelineShortcutsProps).toHaveBeenCalledWith(expect.objectContaining({ config: undefined }));
   });
 
   it("rend un bloc composer", () => {

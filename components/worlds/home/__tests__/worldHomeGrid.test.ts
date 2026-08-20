@@ -194,6 +194,11 @@ describe("réglages de widget (options)", () => {
     expect(sanitizeWidgetOptions("wiki_shortcuts", { limit: 999 })).toEqual({ limit: 20 });
   });
 
+  it("timeline_shortcuts a un réglage limit enregistré, avec sa valeur par défaut", () => {
+    expect(widgetOptionValue("timeline_shortcuts", "limit", undefined)).toBe(6);
+    expect(widgetOptionValue("timeline_shortcuts", "limit", { limit: 999 })).toBe(20);
+  });
+
   it("sanitizeWidgetOptions retourne undefined plutôt qu'un objet vide", () => {
     expect(sanitizeWidgetOptions("chatrooms", { inconnu: 3 })).toBeUndefined();
     expect(sanitizeWidgetOptions("categories", { visibleRows: 4 })).toBeUndefined();

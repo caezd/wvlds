@@ -22,7 +22,8 @@ export type WorldHomeWidgetId =
   | "members_online"
   | "announcement"
   | "wiki_shortcuts"
-  | "personas_recent";
+  | "personas_recent"
+  | "timeline_shortcuts";
 
 export const ALL_WORLD_HOME_WIDGETS: WorldHomeWidgetId[] = [
   "categories",
@@ -32,6 +33,7 @@ export const ALL_WORLD_HOME_WIDGETS: WorldHomeWidgetId[] = [
   "announcement",
   "wiki_shortcuts",
   "personas_recent",
+  "timeline_shortcuts",
 ];
 
 /** Ordre affiché avant que l'admin n'ait jamais personnalisé la page. */
