@@ -57,21 +57,17 @@ vi.mock("@/components/ui/popover", () => ({
     asChild ? <>{children}</> : <div>{children}</div>,
   PopoverContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
+// Drawer réel utilisé par UserProfileSheetTrigger (et PersonaProfileSheetTrigger) :
+// on le remplace par un passthrough pour éviter les soucis de portail dans
+// jsdom, tout en gardant le contenu monté (visible dans le DOM pour les
+// assertions).
 vi.mock("@/components/ui/drawer", () => ({
   Drawer: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DrawerClose: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DrawerContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DrawerHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DrawerTitle: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DrawerDescription: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-}));
-// Sheet réel utilisé par UserProfileSheetTrigger : on le remplace par un
-// passthrough pour éviter les soucis de portail Radix dans jsdom, tout en
-// gardant le contenu monté (visible dans le DOM pour les assertions).
-vi.mock("@/components/ui/sheet", () => ({
-  Sheet: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  SheetContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  SheetHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  SheetTitle: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 vi.mock("@/components/ui/tooltip", () => ({
   Tooltip: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,

@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Interface",
+    text: "Le niveau, l'XP, les pièces et le streak — liés au compte, pas au personnage — ont été retirés des fiches de persona (profil, édition) et déplacés dans le profil joueur, consultable en cliquant sur un pseudo.",
+  },
+  {
+    date: "2026-08",
     tag: "Correctif",
     text: "En changeant de monde, le menu déroulant des conversations dans l'en-tête affichait brièvement l'ancien monde à l'ouverture — il se rafraîchit désormais dès le changement de monde, pas seulement à l'ouverture.",
   },

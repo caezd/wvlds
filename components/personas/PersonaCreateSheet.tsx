@@ -3,11 +3,13 @@
 import { useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
+import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -83,14 +85,21 @@ export function PersonaCreateSheet({
         <Button onClick={() => setOpen(true)}>Nouveau persona</Button>
       )}
 
-      <Sheet open={open} onOpenChange={handleOpen}>
-        <SheetContent side="right" className="w-full sm:max-w-3xl overflow-y-auto">
-          <SheetHeader className="sr-only">
-            <SheetTitle>
+      <Drawer open={open} onOpenChange={handleOpen} swipeDirection="right">
+        <DrawerContent className="inset-y-0 right-0 flex flex-col gap-0 border rounded-md bg-background text-foreground shadow-lg p-0 w-[min(calc(100%_-_var(--drawer-inset)*2),_460px)]">
+          <DrawerClose
+            aria-label="Fermer"
+            className="absolute right-4 top-4 z-10 rounded-xs text-muted-foreground opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            <X className="size-4" />
+          </DrawerClose>
+          <DrawerHeader className="sr-only">
+            <DrawerTitle>
               {phase === "name" ? "Nouveau persona" : `Éditer — ${createdName}`}
-            </SheetTitle>
-          </SheetHeader>
+            </DrawerTitle>
+          </DrawerHeader>
 
+          <div className="min-h-0 flex-1 overflow-y-auto">
           {phase === "name" ? (
             <form onSubmit={handleCreate} className="flex flex-col gap-6 p-6">
               <div className="space-y-1">
@@ -134,8 +143,9 @@ export function PersonaCreateSheet({
               onSectionsChange={setSections}
             />
           ) : null}
-        </SheetContent>
-      </Sheet>
+          </div>
+        </DrawerContent>
+      </Drawer>
     </>
   );
 }

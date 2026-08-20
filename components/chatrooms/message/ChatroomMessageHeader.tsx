@@ -102,7 +102,6 @@ export function ChatroomMessageHeader({
             personaId={message.persona?.id ?? null}
             userId={userId}
             label={label}
-            side="right"
           >
             <AvatarWithFrame
               src={message.persona?.avatar_url ?? avatarSrc}

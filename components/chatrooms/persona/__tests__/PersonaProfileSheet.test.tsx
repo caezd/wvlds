@@ -40,7 +40,6 @@ function setup(plan: string | null = "free", ownsPersona = true) {
     results: [
       { data: { banner_url: null, frame: null, world_id: "w1" } }, // personaRow
       ...(ownsPersona ? [{ data: siblings }] : []), // siblings (éligibilité, si propriétaire)
-      { data: null }, // gamification_balances
       { data: null }, // profiles (owner presence)
       { data: [] }, // persona_sections
     ],

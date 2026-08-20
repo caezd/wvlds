@@ -9,16 +9,16 @@ import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { supabaseThumb } from "@/lib/storage";
 import { toWebP } from "@/lib/imageUtils";
-import { levelInfo } from "@/lib/xp";
 import { initials } from "@/lib/persona-display";
 import { cn } from "@/lib/utils";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetFooter,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerHeader,
+  DrawerFooter,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,7 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Check, Coins, Flame, Loader2, Pencil, Trash2, X, Zap } from "lucide-react";
+import { Check, Loader2, Pencil, Trash2, X } from "lucide-react";
 import { ImagePickerCropField } from "@/components/ui/image-crop-picker";
 import type { MaritalStatus } from "@/types/db";
 import { TABLE } from "@/lib/constants";
@@ -134,11 +134,17 @@ function BannerSheet({
   onRemove: () => void;
 }) {
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-[calc(48rem-24px)] lg:shadow-2xl flex flex-col">
-        <SheetHeader>
-          <SheetTitle>Bannière du personnage</SheetTitle>
-        </SheetHeader>
+    <Drawer open={open} onOpenChange={onOpenChange} swipeDirection="right">
+      <DrawerContent className="inset-y-0 right-0 flex flex-col gap-4 border rounded-md bg-background text-foreground shadow-lg p-0 w-[min(calc(100%_-_var(--drawer-inset)*2),_460px)] lg:shadow-2xl">
+        <DrawerClose
+          aria-label="Fermer"
+          className="absolute right-4 top-4 rounded-xs text-muted-foreground opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
+        >
+          <X className="size-4" />
+        </DrawerClose>
+        <DrawerHeader>
+          <DrawerTitle>Bannière du personnage</DrawerTitle>
+        </DrawerHeader>
         <div className="flex-1 overflow-y-auto space-y-4 p-6">
           <StorageUploadTab
             personaId={personaId}
@@ -153,7 +159,7 @@ function BannerSheet({
           />
         </div>
         {currentBannerUrl && (
-          <SheetFooter className="border-t border-border-soft px-6 py-3 shrink-0 flex-row justify-start">
+          <DrawerFooter className="border-t border-border-soft px-6 py-3 shrink-0 flex-row justify-start">
             <DeleteConfirmDialog
               trigger={
                 <Button variant="ghost" size="sm" className="inline-flex text-muted-foreground hover:text-destructive hover:bg-destructive/10">
@@ -170,10 +176,10 @@ function BannerSheet({
                 onOpenChange(false);
               }}
             />
-          </SheetFooter>
+          </DrawerFooter>
         )}
-      </SheetContent>
-    </Sheet>
+      </DrawerContent>
+    </Drawer>
   );
 }
 
@@ -468,10 +474,6 @@ type PersonaEditorContentProps = {
   initialFaceclaim?: string | null;
   initialMaritalStatus?: MaritalStatus | null;
   initialSpousePersonaId?: string | null;
-  /** Notifie le parent quand la sheet Avatar s'ouvre/ferme (effet pile de cartes). */
-  onAvatarOpenChange?: (open: boolean) => void;
-  /** Notifie le parent quand la sheet Bannière s'ouvre/ferme (effet pile de cartes). */
-  onBannerOpenChange?: (open: boolean) => void;
   worldId?: string;
   restrictInventory?: boolean;
   restrictSkills?: boolean;
@@ -495,8 +497,6 @@ export function PersonaEditorContent({
   initialFaceclaim,
   initialMaritalStatus,
   initialSpousePersonaId,
-  onAvatarOpenChange,
-  onBannerOpenChange,
   worldId,
   restrictInventory,
   restrictSkills,
@@ -520,36 +520,15 @@ export function PersonaEditorContent({
   const [appearanceTab, setAppearanceTab] = useState<"avatar" | "cosmetics">("avatar");
   const [avatarSubTab, setAvatarSubTab] = useState<"builder" | "upload">(avatar_builder ? "builder" : "upload");
   const [userId, setUserId] = useState<string | null>(null);
-  const [balance, setBalance] = useState<{ xp: number; coins: number; streak_current: number } | null>(null);
-  const [balanceLoading, setBalanceLoading] = useState(true);
   const avatarFallback = useMemo(() => initials(personaName), [personaName]);
 
-  // Récupère l'userId pour l'upload fichier + balance gamification
+  // Récupère l'userId, nécessaire pour l'upload de fichier (avatar/bannière).
   useMemo(() => {
-    supabase.auth.getUser().then(async (res: { data: { user: { id: string } | null } }) => {
-      const uid = res.data.user?.id ?? null;
-      setUserId(uid);
-      if (!uid) { setBalanceLoading(false); return; }
-      const { data: bal } = await supabase
-        .from("gamification_balances")
-        .select("xp, coins, streak_current")
-        .eq("user_id", uid)
-        .maybeSingle();
-      setBalance(bal ?? null);
-      setBalanceLoading(false);
+    supabase.auth.getUser().then((res: { data: { user: { id: string } | null } }) => {
+      setUserId(res.data.user?.id ?? null);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const xpInfo = balance ? levelInfo(balance.xp) : null;
-
-  useEffect(() => {
-    onAvatarOpenChange?.(avatarDialogOpen);
-  }, [avatarDialogOpen, onAvatarOpenChange]);
-
-  useEffect(() => {
-    onBannerOpenChange?.(bannerDialogOpen);
-  }, [bannerDialogOpen, onBannerOpenChange]);
 
   return (
     <>
@@ -656,39 +635,6 @@ export function PersonaEditorContent({
                 />
               </div>
 
-              {xpInfo && balance ? (
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span className="font-medium text-foreground">Niveau {xpInfo.level}</span>
-                    <span>{balance.xp} / {xpInfo.xpForNext} XP</span>
-                  </div>
-                  <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-primary transition-all"
-                      style={{ width: `${xpInfo.progress}%` }}
-                    />
-                  </div>
-                  <div className="flex items-center gap-3 text-xs pt-0.5">
-                    <span className="flex items-center gap-1 text-yellow-400">
-                      <Coins className="h-3.5 w-3.5" />
-                      {balance.coins.toLocaleString()}
-                    </span>
-                    <span className="flex items-center gap-1 text-orange-400">
-                      <Flame className="h-3.5 w-3.5" />
-                      {balance.streak_current} j.
-                    </span>
-                    <span className="flex items-center gap-1 text-blue-400">
-                      <Zap className="h-3.5 w-3.5" />
-                      {balance.xp} XP
-                    </span>
-                  </div>
-                </div>
-              ) : balanceLoading ? (
-                <div className="space-y-1.5">
-                  <div className="h-1.5 w-full animate-pulse rounded-full bg-muted" />
-                  <div className="h-3 w-32 animate-pulse rounded bg-muted" />
-                </div>
-              ) : null}
             </div>
           </div>
         </div>
@@ -707,10 +653,16 @@ export function PersonaEditorContent({
         onRemove={() => setBannerUrl(null)}
       />
 
-      {/* Sheet apparence (avatar + cosmétiques) */}
-      <Sheet open={avatarDialogOpen} onOpenChange={setAvatarDialogOpen}>
-        <SheetContent side="right" className="w-full sm:max-w-5xl lg:shadow-2xl flex flex-col p-0 gap-0 overflow-hidden">
-          <SheetHeader className="px-6 pt-6 pb-0 shrink-0">
+      {/* Drawer apparence (avatar + cosmétiques) */}
+      <Drawer open={avatarDialogOpen} onOpenChange={setAvatarDialogOpen} swipeDirection="right">
+        <DrawerContent className="inset-y-0 right-0 flex flex-col border rounded-md bg-background text-foreground shadow-lg p-0 gap-0 w-[min(calc(100%_-_var(--drawer-inset)*2),_460px)] lg:shadow-2xl overflow-hidden">
+          <DrawerClose
+            aria-label="Fermer"
+            className="absolute right-4 top-4 rounded-xs text-muted-foreground opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            <X className="size-4" />
+          </DrawerClose>
+          <DrawerHeader className="px-6 pt-6 pb-0 shrink-0">
             <div className="flex items-center gap-3">
               <div className="relative h-14 w-14 shrink-0 rounded-xl border bg-muted overflow-hidden lg:hidden">
                 {avatarUrl ? (
@@ -721,9 +673,9 @@ export function PersonaEditorContent({
                   </div>
                 )}
               </div>
-              <SheetTitle>Avatar</SheetTitle>
+              <DrawerTitle>Avatar</DrawerTitle>
             </div>
-          </SheetHeader>
+          </DrawerHeader>
 
           <div className="flex flex-col flex-1 overflow-hidden mt-4">
             {/* Menus alignés côte à côte (sous-menu) */}
@@ -802,7 +754,7 @@ export function PersonaEditorContent({
           </div>
 
           {(avatarUrl || avatarConfig) && (
-            <SheetFooter className="border-t border-border-soft px-6 py-3 shrink-0 flex-row justify-start">
+            <DrawerFooter className="border-t border-border-soft px-6 py-3 shrink-0 flex-row justify-start">
               <DeleteConfirmDialog
                 trigger={
                   <Button variant="ghost" size="sm" className="inline-flex text-muted-foreground hover:text-destructive hover:bg-destructive/10">
@@ -821,37 +773,16 @@ export function PersonaEditorContent({
                   router.refresh();
                 }}
               />
-            </SheetFooter>
+            </DrawerFooter>
           )}
-        </SheetContent>
-      </Sheet>
-
-      {/* Aperçu de l'avatar actuel dans l'espace libre à gauche (desktop only).
-          Porté vers document.body pour passer au-dessus de l'obfuscateur Radix. */}
-      {avatarDialogOpen && typeof document !== "undefined" &&
-        createPortal(
-          <div className="hidden lg:flex fixed inset-y-0 left-0 right-[64rem] z-[51] items-center justify-center p-10 pointer-events-none">
-            <div className="flex flex-col items-center gap-4">
-              <div className="relative h-64 w-64 overflow-hidden rounded-3xl border bg-muted shadow-2xl">
-                {avatarUrl ? (
-                  <Image src={avatarUrl} alt="" fill sizes="256px" className="object-cover" draggable={false} />
-                ) : (
-                  <div className="h-full w-full grid place-items-center text-4xl font-semibold text-muted-foreground">
-                    {avatarFallback}
-                  </div>
-                )}
-              </div>
-              <p className="text-sm font-medium text-white/80">Avatar actuel</p>
-            </div>
-          </div>,
-          document.body,
-        )}
+        </DrawerContent>
+      </Drawer>
 
       {/* Aperçu de la bannière actuelle dans l'espace libre à gauche (desktop only).
           Porté vers document.body pour passer au-dessus de l'obfuscateur Radix. */}
       {bannerDialogOpen && typeof document !== "undefined" &&
         createPortal(
-          <div className="hidden lg:flex fixed inset-y-0 left-0 right-[calc(48rem-24px)] z-[51] items-center justify-center p-10 pointer-events-none">
+          <div className="hidden lg:flex fixed inset-y-0 left-0 right-[460px] z-[51] items-center justify-center p-10 pointer-events-none">
             <div className="flex w-full max-w-[520px] flex-col items-center gap-4">
               <div className="relative aspect-[744/136] w-full overflow-hidden rounded-xl bg-muted shadow-2xl">
                 {bannerUrl ? (
@@ -916,8 +847,6 @@ export function PersonaEditSheet({
 }: PersonaEditSheetProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [avatarOpen, setAvatarOpen] = useState(false);
-  const [bannerOpen, setBannerOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [sections, setSections] = useState(initialSections);
 
@@ -940,18 +869,24 @@ export function PersonaEditSheet({
         ? <span onClick={() => setOpen(true)} style={{ display: "contents" }}>{trigger}</span>
         : <button className="text-sm underline" onClick={() => setOpen(true)}>Éditer</button>
       }
-      <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent
-          side="right"
-          className={cn(
-            "w-full sm:max-w-3xl flex flex-col p-0",
-            avatarOpen && "lg:-translate-x-[280px] lg:blur-[2px]",
-            bannerOpen && "lg:blur-[2px]",
-          )}
-        >
-          <SheetHeader className="sr-only">
-            <SheetTitle>Éditer — {personaName}</SheetTitle>
-          </SheetHeader>
+      <Drawer open={open} onOpenChange={setOpen} swipeDirection="right">
+        {/* Le recul visuel de ce drawer quand le drawer avatar/bannière
+            imbriqué s'ouvre (assombrissement, contenu masqué) vient du
+            stack natif de Drawer — voir `data-nested-drawer-open` dans
+            components/ui/drawer.tsx — puisque BannerSheet et le drawer
+            avatar (dans PersonaEditorContent) sont déjà rendus à
+            l'intérieur de ce DrawerContent, donc réellement imbriqués. Plus
+            besoin de décalage/flou manuel piloté par un état local. */}
+        <DrawerContent className="inset-y-0 right-0 flex flex-col border rounded-md bg-background text-foreground shadow-lg p-0 w-[min(calc(100%_-_var(--drawer-inset)*2),_460px)]">
+          <DrawerClose
+            aria-label="Fermer"
+            className="absolute right-4 top-4 z-10 rounded-xs text-muted-foreground opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            <X className="size-4" />
+          </DrawerClose>
+          <DrawerHeader className="sr-only">
+            <DrawerTitle>Éditer — {personaName}</DrawerTitle>
+          </DrawerHeader>
 
           {/* Zone scrollable */}
           <div className="flex-1 overflow-y-auto">
@@ -972,13 +907,11 @@ export function PersonaEditSheet({
               initialMaritalStatus={initialMaritalStatus}
               initialSpousePersonaId={initialSpousePersonaId}
               faceclaimsEnabled={faceclaimsEnabled}
-              onAvatarOpenChange={setAvatarOpen}
-              onBannerOpenChange={setBannerOpen}
             />
           </div>
 
           {/* Footer fixe en bas */}
-          <SheetFooter className="border-t border-border-soft px-6 py-3 flex-row justify-start bg-background">
+          <DrawerFooter className="border-t border-border-soft px-6 py-3 flex-row justify-start bg-background">
             <DeleteConfirmDialog
               trigger={
                 <Button
@@ -994,9 +927,9 @@ export function PersonaEditSheet({
               description={`"${personaName}" sera supprimé définitivement, ainsi que son avatar, sa bannière et toutes ses images de section.`}
               onConfirm={handleDelete}
             />
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
     </>
   );
 }

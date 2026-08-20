@@ -5,7 +5,13 @@ import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { supabaseThumb } from "@/lib/storage";
 import { toast } from "sonner";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { Tabs, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { TabBar } from "@/components/ui/tab-bar";
 import {
@@ -16,7 +22,7 @@ import {
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import { AvatarWithFrame } from "@/components/avatars/AvatarWithFrame";
 import { PresenceDot } from "@/components/avatars/PresenceDot";
-import { Coins, Flame, Zap } from "lucide-react";
+import { X } from "lucide-react";
 import type { PersonaSection, PersonaSectionField, PersonaSectionWithFields, PersonaFieldData, InventoryItem, SkillItem, GaugeItem, TraitItem, TimelineItem, DlItem } from "@/types/personas";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useGlobalPresence } from "@/components/providers/PresenceProvider";
@@ -25,20 +31,6 @@ import { formatLastSeen, cn } from "@/lib/utils";
 import { ImageGridView } from "@/components/personas/ImageGridView";
 import { TABLE } from "@/lib/constants";
 import { getInitials } from "@/lib/textFormatting";
-
-function levelInfo(xp: number) {
-  const level = Math.floor(xp / 100) + 1;
-  const base = (level - 1) * 100;
-  const progress = Math.min(100, Math.round(((xp - base) / 100) * 100));
-  return { level, xpForNext: level * 100, progress };
-}
-
-type BalanceSummary = {
-  xp: number;
-  coins: number;
-  streak_current: number;
-  streak_longest: number;
-};
 
 type FieldData = PersonaFieldData | null | undefined;
 
@@ -273,7 +265,6 @@ export function PersonaProfileSheetTrigger({
   userId,
   label,
   hoverPreview = false,
-  side = "right",
   triggerClassName = "size-12",
 }: {
   children: React.ReactNode;
@@ -281,7 +272,6 @@ export function PersonaProfileSheetTrigger({
   userId?: string | null;
   label?: string | null;
   hoverPreview?: boolean;
-  side?: "left" | "right" | "top" | "bottom";
   triggerClassName?: string;
 }) {
   const supabase = React.useMemo(() => createClient(), []);
@@ -302,7 +292,6 @@ export function PersonaProfileSheetTrigger({
     last_seen_at: string | null;
     appear_offline: boolean;
   } | null>(null);
-  const [balance, setBalance] = React.useState<BalanceSummary | null>(null);
   const [sections, setSections] = React.useState<PersonaSectionWithFields[]>([]);
   const [activeTab, setActiveTab] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
@@ -365,17 +354,6 @@ export function PersonaProfileSheetTrigger({
             appear_offline: !!row.appear_offline,
           });
         }
-
-        const { data: bal } = await supabase.rpc("get_balance_summary", { p_user_id: userId });
-        const row = Array.isArray(bal) ? bal?.[0] : bal;
-        if (!cancelled && row) {
-          setBalance({
-            xp: Number(row.xp) || 0,
-            coins: Number(row.coins) || 0,
-            streak_current: Number(row.streak_current) || 0,
-            streak_longest: Number(row.streak_longest) || 0,
-          });
-        }
       }
 
       const { data: secs } = await supabase
@@ -432,8 +410,6 @@ export function PersonaProfileSheetTrigger({
     if (open) prefetch();
   }, [open, prefetch]);
 
-  const info = balance ? levelInfo(balance.xp) : null;
-
   const userPresence = userId ? getUserPresence(userId) : "offline";
   const presenceLine =
     !ownerPresence && userPresence === "offline"
@@ -462,34 +438,30 @@ export function PersonaProfileSheetTrigger({
   );
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
+    <Drawer open={open} onOpenChange={setOpen} swipeDirection="right">
       {hoverPreview ? (
         <HoverCard openDelay={120} closeDelay={120}>
           <HoverCardTrigger asChild>{TriggerButton}</HoverCardTrigger>
           <HoverCardContent className="w-64 p-3 space-y-2">
             <p className="text-sm font-medium truncate">{label ?? "Profil"}</p>
-            {info && balance && (
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>Niv. {info.level}</span>
-                  <span>{balance.xp} / {info.xpForNext} XP</span>
-                </div>
-                <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
-                  <div className="h-full rounded-full bg-primary" style={{ width: `${info.progress}%` }} />
-                </div>
-              </div>
-            )}
           </HoverCardContent>
         </HoverCard>
       ) : (
         TriggerButton
       )}
 
-      <SheetContent side={side} className="w-full sm:max-w-3xl overflow-y-auto p-0">
-        <SheetHeader className="sr-only">
-          <SheetTitle>{name ?? label ?? "Profil persona"}</SheetTitle>
-        </SheetHeader>
+      <DrawerContent className="inset-y-0 right-0 flex flex-col gap-0 border rounded-md bg-background text-foreground shadow-lg w-[min(calc(100%_-_var(--drawer-inset)*2),_460px)] p-0">
+        <DrawerClose
+          aria-label="Fermer"
+          className="absolute right-4 top-4 z-10 rounded-xs text-muted-foreground opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
+        >
+          <X className="size-4" />
+        </DrawerClose>
+        <DrawerHeader className="sr-only">
+          <DrawerTitle>{name ?? label ?? "Profil persona"}</DrawerTitle>
+        </DrawerHeader>
 
+        <div className="min-h-0 flex-1 overflow-y-auto">
         {/* -- Header : banner + avatar + nom + stats -- */}
         <div>
           <div className="relative overflow-hidden">
@@ -550,40 +522,6 @@ export function PersonaProfileSheetTrigger({
                       {presenceLine}
                     </p>
                   )}
-
-                  {info && balance ? (
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <span className="font-medium text-foreground">Niveau {info.level}</span>
-                        <span>{balance.xp} / {info.xpForNext} XP</span>
-                      </div>
-                      <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
-                        <div
-                          className="h-full rounded-full bg-primary transition-all"
-                          style={{ width: `${info.progress}%` }}
-                        />
-                      </div>
-                      <div className="flex items-center gap-3 text-xs pt-0.5">
-                        <span className="flex items-center gap-1 text-yellow-400">
-                          <Coins className="h-3.5 w-3.5" />
-                          {balance.coins.toLocaleString()}
-                        </span>
-                        <span className="flex items-center gap-1 text-orange-400">
-                          <Flame className="h-3.5 w-3.5" />
-                          {balance.streak_current} j.
-                        </span>
-                        <span className="flex items-center gap-1 text-blue-400">
-                          <Zap className="h-3.5 w-3.5" />
-                          {balance.xp} XP
-                        </span>
-                      </div>
-                    </div>
-                  ) : loading ? (
-                    <div className="mt-1.5 space-y-1.5">
-                      <div className="h-1.5 w-full animate-pulse rounded-full bg-muted" />
-                      <div className="h-3 w-32 animate-pulse rounded bg-muted" />
-                    </div>
-                  ) : null}
                 </div>
               </div>
             </div>
@@ -633,7 +571,8 @@ export function PersonaProfileSheetTrigger({
             </div>
           )}
         </div>
-      </SheetContent>
-    </Sheet>
+        </div>
+      </DrawerContent>
+    </Drawer>
   );
 }

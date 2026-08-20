@@ -3,15 +3,16 @@
 import * as React from "react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Pencil } from "lucide-react";
+import { Loader2, Pencil, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -174,12 +175,18 @@ export function WorldPersonaTemplateSection({
       </AlertDialog>
 
       {/* Éditeur de la fiche modèle */}
-      <Sheet open={editorOpen} onOpenChange={setEditorOpen}>
-        <SheetContent side="right" className="w-full sm:max-w-3xl overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>Fiche par défaut des personas</SheetTitle>
-          </SheetHeader>
-          <div className="p-6 pt-2">
+      <Drawer open={editorOpen} onOpenChange={setEditorOpen} swipeDirection="right">
+        <DrawerContent className="inset-y-0 right-0 flex flex-col gap-0 border rounded-md bg-background text-foreground shadow-lg p-0 w-[min(calc(100%_-_var(--drawer-inset)*2),_460px)]">
+          <DrawerClose
+            aria-label="Fermer"
+            className="absolute right-4 top-4 rounded-xs text-muted-foreground opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            <X className="size-4" />
+          </DrawerClose>
+          <DrawerHeader>
+            <DrawerTitle>Fiche par défaut des personas</DrawerTitle>
+          </DrawerHeader>
+          <div className="min-h-0 flex-1 overflow-y-auto p-6 pt-2">
             {templateId && sections !== null ? (
               <PersonaSectionsTabs
                 personaId={templateId}
@@ -197,8 +204,8 @@ export function WorldPersonaTemplateSection({
               </div>
             )}
           </div>
-        </SheetContent>
-      </Sheet>
+        </DrawerContent>
+      </Drawer>
     </div>
   );
 }

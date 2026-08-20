@@ -5,16 +5,17 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { toWebP } from "@/lib/imageUtils";
 import {
-  Sheet,
-  SheetContent,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { KeyRound, Loader2 } from "lucide-react";
+import { KeyRound, Loader2, X } from "lucide-react";
 import { ImagePickerCropField } from "@/components/ui/image-crop-picker";
 import { toast } from "sonner";
 
@@ -102,11 +103,17 @@ export function UserProfileSheet({
   const usernameChanged = username.trim() !== (initialUsername ?? "");
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-md flex flex-col gap-0 p-0">
-        <SheetHeader className="px-6 py-5 border-b border-border-soft shrink-0">
-          <SheetTitle>Mon profil</SheetTitle>
-        </SheetHeader>
+    <Drawer open={open} onOpenChange={onOpenChange} swipeDirection="right">
+      <DrawerContent className="inset-y-0 right-0 flex flex-col gap-0 border rounded-md bg-background text-foreground shadow-lg p-0 w-[min(calc(100%_-_var(--drawer-inset)*2),_448px)]">
+        <DrawerClose
+          aria-label="Fermer"
+          className="absolute right-4 top-4 rounded-xs text-muted-foreground opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
+        >
+          <X className="size-4" />
+        </DrawerClose>
+        <DrawerHeader className="px-6 py-5 border-b border-border-soft shrink-0">
+          <DrawerTitle>Mon profil</DrawerTitle>
+        </DrawerHeader>
 
         <div className="flex-1 overflow-y-auto">
           <div className="flex flex-col gap-8 p-6">
@@ -162,7 +169,7 @@ export function UserProfileSheet({
           </div>
         </div>
 
-        <SheetFooter className="shrink-0 border-t border-border-soft px-6 py-4 flex-row justify-start">
+        <DrawerFooter className="shrink-0 border-t border-border-soft px-6 py-4 flex-row justify-start">
           <Button
             variant="ghost"
             className="text-muted-foreground"
@@ -171,8 +178,8 @@ export function UserProfileSheet({
             <KeyRound className="mr-2 h-4 w-4" />
             Changer le mot de passe
           </Button>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   );
 }

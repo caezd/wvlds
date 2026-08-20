@@ -2,8 +2,14 @@
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
-import { History, Loader2 } from "lucide-react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { History, Loader2, X } from "lucide-react";
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
@@ -102,13 +108,19 @@ export function WikiVersionHistoryPanel({
         }}
       />
 
-      <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent side="right" className="flex flex-col gap-0 p-0 sm:max-w-2xl">
-          <SheetHeader className="border-b border-border-soft">
-            <SheetTitle className="flex items-center gap-2">
+      <Drawer open={open} onOpenChange={onOpenChange} swipeDirection="right">
+        <DrawerContent className="inset-y-0 right-0 flex flex-col gap-0 border rounded-md bg-background text-foreground shadow-lg p-0 w-[min(calc(100%_-_var(--drawer-inset)*2),_460px)]">
+          <DrawerClose
+            aria-label={tCommon("close")}
+            className="absolute right-4 top-4 rounded-xs text-muted-foreground opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            <X className="size-4" />
+          </DrawerClose>
+          <DrawerHeader className="border-b border-border-soft">
+            <DrawerTitle className="flex items-center gap-2">
               <History className="h-4 w-4" /> {t("versionHistory")}
-            </SheetTitle>
-          </SheetHeader>
+            </DrawerTitle>
+          </DrawerHeader>
 
           <div className="flex min-h-0 flex-1">
             <div className={cn("min-h-0 w-64 shrink-0 overflow-y-auto p-3", previewing && "border-r border-border-soft")}>
@@ -156,8 +168,8 @@ export function WikiVersionHistoryPanel({
               </div>
             )}
           </div>
-        </SheetContent>
-      </Sheet>
+        </DrawerContent>
+      </Drawer>
     </>
   );
 }
