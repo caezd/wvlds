@@ -2,8 +2,8 @@
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
-import { Code2 } from "lucide-react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
+import { Code2, X } from "lucide-react";
+import { Drawer, DrawerClose, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -58,13 +58,19 @@ export function WorldHomeHtmlBlockEditor({
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="flex flex-col gap-0 p-0 sm:max-w-lg">
-        <SheetHeader className="border-b border-border-soft">
-          <SheetTitle className="flex items-center gap-2">
+    <Drawer open={open} onOpenChange={onOpenChange} swipeDirection="right">
+      <DrawerContent className="inset-y-0 right-0 flex flex-col gap-0 border rounded-md bg-background text-foreground shadow-lg p-0 w-[min(calc(100%_-_var(--drawer-inset)*2),_460px)]">
+        <DrawerClose
+          aria-label={tCommon("close")}
+          className="absolute right-4 top-4 rounded-xs text-muted-foreground opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
+        >
+          <X className="size-4" />
+        </DrawerClose>
+        <DrawerHeader className="border-b border-border-soft">
+          <DrawerTitle className="flex items-center gap-2">
             <Code2 className="h-4 w-4" /> {t("home.grid.htmlBlockTitle")}
-          </SheetTitle>
-        </SheetHeader>
+          </DrawerTitle>
+        </DrawerHeader>
 
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
           <div className="space-y-1.5">
@@ -123,15 +129,15 @@ export function WorldHomeHtmlBlockEditor({
           )}
         </div>
 
-        <SheetFooter className="flex-row justify-end gap-2 border-t border-border-soft">
+        <DrawerFooter className="flex-row justify-end gap-2 border-t border-border-soft">
           <Button type="button" variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
             {tCommon("cancel")}
           </Button>
           <Button type="button" size="sm" onClick={handleSave} disabled={tooLong || !html.trim()}>
             {tCommon("save")}
           </Button>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   );
 }
