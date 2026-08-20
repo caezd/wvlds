@@ -34,7 +34,7 @@ describe("WorldHomeMarkdownBlockEditor", () => {
     await user.type(screen.getByLabelText("Markdown"), "Salut");
     await user.click(screen.getByRole("button", { name: "Enregistrer" }));
 
-    expect(onSave).toHaveBeenCalledWith("Salut", "");
+    expect(onSave).toHaveBeenCalledWith("Salut", "", false);
   });
 
   it("remonte le titre saisi avec le contenu", async () => {
@@ -46,7 +46,7 @@ describe("WorldHomeMarkdownBlockEditor", () => {
     await user.type(screen.getByLabelText("Markdown"), "Salut");
     await user.click(screen.getByRole("button", { name: "Enregistrer" }));
 
-    expect(onSave).toHaveBeenCalledWith("Salut", "Intro");
+    expect(onSave).toHaveBeenCalledWith("Salut", "Intro", false);
   });
 
   it("pré-remplit le titre existant en édition", () => {
@@ -72,6 +72,33 @@ describe("WorldHomeMarkdownBlockEditor", () => {
       />,
     );
     expect(screen.getByRole("button", { name: "Enregistrer" })).toBeDisabled();
+  });
+
+  it("la carte est désactivée par défaut, activable via le bouton — transmis à onSave", async () => {
+    const onSave = vi.fn();
+    const user = userEvent.setup();
+    render(<WorldHomeMarkdownBlockEditor open onOpenChange={vi.fn()} onSave={onSave} />);
+
+    expect(screen.getByRole("switch")).not.toBeChecked();
+
+    await user.click(screen.getByRole("switch"));
+    await user.type(screen.getByLabelText("Markdown"), "Salut");
+    await user.click(screen.getByRole("button", { name: "Enregistrer" }));
+
+    expect(onSave).toHaveBeenCalledWith("Salut", "", true);
+  });
+
+  it("pré-remplit l'état de la carte en édition", () => {
+    render(
+      <WorldHomeMarkdownBlockEditor
+        open
+        onOpenChange={vi.fn()}
+        initialContent="Salut"
+        initialCard
+        onSave={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole("switch")).toBeChecked();
   });
 
   it("le bouton Annuler ferme le panneau sans appeler onSave", async () => {

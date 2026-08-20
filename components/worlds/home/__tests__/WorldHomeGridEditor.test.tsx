@@ -11,6 +11,30 @@ vi.mock("@/app/actions/worldCatalog", () => ({
 
 vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 
+// browser-image-compression s'appuie sur un Web Worker, indisponible sous
+// jsdom (la promesse ne se résout jamais sans ce mock) — voir aussi
+// ChatroomSettingsSheet.test.tsx pour le même besoin.
+vi.mock("@/lib/imageUtils", () => ({
+  toWebP: vi.fn(async (file: File) => file),
+}));
+
+// Uploadée par le bloc bannière (voir uploadBannerImage) — non exercée par la
+// plupart des tests, un stub suffit à éviter un vrai appel réseau/Supabase.
+const bannerUploadMock = vi.fn().mockResolvedValue({ error: null });
+vi.mock("@/lib/supabase/client", () => ({
+  createClient: () => ({
+    auth: {
+      getUser: vi.fn().mockResolvedValue({ data: { user: { id: "u1" } } }),
+    },
+    storage: {
+      from: () => ({
+        upload: (...args: unknown[]) => bannerUploadMock(...args),
+        getPublicUrl: vi.fn().mockReturnValue({ data: { publicUrl: "https://example.com/banner.webp" } }),
+      }),
+    },
+  }),
+}));
+
 import { toast } from "sonner";
 import { WorldHomeGridEditor, getContentWidth } from "@/components/worlds/home/WorldHomeGridEditor";
 
@@ -192,6 +216,39 @@ describe("WorldHomeGridEditor", () => {
 
     await act(async () => {
       fireEvent.pointerDown(deleteButton, { button: 0 });
+    });
+
+    expect(block.className).not.toContain("opacity-50");
+
+    await act(async () => {
+      fireEvent.pointerUp(window);
+    });
+  });
+
+  it("un pointerdown sur l'icône SVG à l'intérieur d'un bouton d'action ne déclenche pas non plus de déplacement", async () => {
+    // Régression : au centre d'une icône (Pencil/Trash2/Settings2…),
+    // `elementFromPoint` renvoie le `<svg>` lui-même, pas le `<button>` qui le
+    // contient — vérifié en conditions réelles via un navigateur. Un
+    // SVGElement n'hérite PAS de HTMLElement, donc le garde-fou d'origine
+    // (`event.target instanceof HTMLElement`) y était toujours faux : la
+    // quasi-totalité des clics sur ces icônes déclenchaient un déplacement
+    // au lieu de l'action. Ce test cible explicitement le `<svg>`, pas le
+    // `<button>`, pour reproduire ce cas — le test précédent (qui cible le
+    // bouton directement) ne l'aurait pas détecté.
+    const { container } = render(
+      <Harness
+        initial={[
+          { id: "a", type: "widget", x: 0, y: 0, w: 12, widgetId: "categories" },
+        ]}
+      />,
+    );
+
+    const deleteButton = screen.getByLabelText("Supprimer");
+    const icon = deleteButton.querySelector("svg")!;
+    const block = container.querySelector<HTMLElement>('[data-block-id="a"]')!;
+
+    await act(async () => {
+      fireEvent.pointerDown(icon, { button: 0 });
     });
 
     expect(block.className).not.toContain("opacity-50");
@@ -442,6 +499,75 @@ describe("WorldHomeGridEditor", () => {
       expect(setWorldHomeGridMock).toHaveBeenCalledWith(
         "w1",
         expect.arrayContaining([expect.objectContaining({ type: "markdown", content: "Salut" })]),
+      );
+    });
+  });
+
+  it("ajoute un bloc bannière via son dialogue et persiste", async () => {
+    setWorldHomeGridMock.mockResolvedValue({
+      ok: true,
+      items: [{ id: "new", type: "banner", x: 0, y: 0, w: 12, banner: { title: "Bienvenue" } }],
+    });
+    const user = userEvent.setup();
+    render(<Harness initial={[]} />);
+
+    await user.click(screen.getByText("Ajouter un bloc"));
+    await user.click(screen.getByRole("menuitem", { name: "Bloc bannière" }));
+    await user.type(screen.getByLabelText("Titre"), "Bienvenue");
+    await user.click(screen.getByRole("button", { name: "Créer" }));
+
+    await waitFor(() => {
+      expect(setWorldHomeGridMock).toHaveBeenCalledWith(
+        "w1",
+        expect.arrayContaining([expect.objectContaining({ type: "banner", banner: { title: "Bienvenue" } })]),
+      );
+    });
+  });
+
+  it("uploade l'image de fond d'une bannière sous le préfixe user-{id}/world-{id}/, requis par la policy RLS du bucket worlds", async () => {
+    // Régression : un premier essai stockait sous `home-banner/{worldId}/…`,
+    // rejeté par la policy RLS d'écriture du bucket `worlds`, qui n'autorise
+    // que le préfixe `user-{auth.uid()}/…` (voir WorldSettingsView.tsx pour
+    // le même schéma côté bannière/icône de monde).
+    const user = userEvent.setup();
+    render(<Harness initial={[]} />);
+
+    await user.click(screen.getByText("Ajouter un bloc"));
+    await user.click(screen.getByRole("menuitem", { name: "Bloc bannière" }));
+
+    const file = new File(["x"], "banner.png", { type: "image/png" });
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    await act(async () => {
+      fireEvent.change(input, { target: { files: [file] } });
+    });
+
+    await waitFor(() => expect(bannerUploadMock).toHaveBeenCalled());
+    const path = bannerUploadMock.mock.calls[0][0] as string;
+    expect(path).toMatch(/^user-u1\/world-w1\//);
+  });
+
+  it("modifie un bloc bannière existant via le crayon", async () => {
+    const bannerItem: WorldHomeGridItem = {
+      id: "c", type: "banner", x: 0, y: 8, w: 12, banner: { title: "Ancien titre" },
+    };
+    setWorldHomeGridMock.mockResolvedValue({
+      ok: true,
+      items: [{ ...bannerItem, banner: { title: "Nouveau titre" } }],
+    });
+    const user = userEvent.setup();
+    render(<Harness initial={[bannerItem]} />);
+
+    await user.click(screen.getByLabelText("Modifier le bloc"));
+    const field = screen.getByLabelText("Titre");
+    expect(field).toHaveValue("Ancien titre");
+    await user.clear(field);
+    await user.type(field, "Nouveau titre");
+    await user.click(screen.getByRole("button", { name: "Enregistrer" }));
+
+    await waitFor(() => {
+      expect(setWorldHomeGridMock).toHaveBeenCalledWith(
+        "w1",
+        [expect.objectContaining({ id: "c", type: "banner", banner: { title: "Nouveau titre" } })],
       );
     });
   });

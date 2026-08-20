@@ -7,6 +7,8 @@ import { WorldChatComposer } from "../chatrooms/WorldChatComposer";
 import { WorldChatroomsGrid } from "../chatrooms/WorldChatroomsGrid";
 import { WorldCategoryFolders } from "../chatrooms/WorldCategoryFolders";
 import { WorldTimelineShortcutsWidget } from "./widgets/WorldTimelineShortcutsWidget";
+import { WorldHomeBannerView } from "./blocks/WorldHomeBannerBlock";
+import { cn } from "@/lib/utils";
 import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
 import {
   DEFAULT_HOME_GRID_GAP,
@@ -123,19 +125,28 @@ function renderBlock(
     htmlBlockFallbackTitle: string;
   },
 ) {
+  if (item.type === "banner") {
+    return item.banner ? <WorldHomeBannerView banner={item.banner} /> : null;
+  }
+
   if (item.type === "html") {
     return (
       <iframe
         sandbox=""
         srcDoc={item.html ?? ""}
         title={item.title || ctx.htmlBlockFallbackTitle}
-        className="h-full w-full rounded-lg border bg-background"
+        className={cn("h-full w-full", item.card !== false && "rounded-lg border bg-background")}
       />
     );
   }
 
   if (item.type === "markdown") {
-    return <MarkdownRenderer content={item.content ?? ""} allowImages onWikiLink={ctx.onWikiLink} />;
+    const content = <MarkdownRenderer content={item.content ?? ""} allowImages onWikiLink={ctx.onWikiLink} />;
+    return item.card ? (
+      <div className="rounded-lg border border-border-soft bg-card/40 p-4">{content}</div>
+    ) : (
+      content
+    );
   }
 
   switch (item.widgetId) {

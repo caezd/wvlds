@@ -12,6 +12,7 @@ import {
   MAX_HOME_BLOCK_TITLE_LENGTH,
   MAX_HOME_GRID_ITEMS,
   MAX_HOME_GRID_Y,
+  sanitizeBannerContent,
   sanitizeWidgetOptions,
   type WorldHomeGridGap,
   type WorldHomeGridItem,
@@ -435,7 +436,7 @@ export async function setWorldTimeline(
 
 // ── Grille de blocs de la page d'accueil ──────────────────────────────────
 
-const HOME_GRID_BLOCK_TYPES = new Set(["widget", "html", "markdown"]);
+const HOME_GRID_BLOCK_TYPES = new Set(["widget", "html", "markdown", "banner"]);
 
 function isFiniteInt(v: unknown): v is number {
   return typeof v === "number" && Number.isFinite(v) && Number.isInteger(v);
@@ -470,7 +471,7 @@ function validateHomeGridItem(
   const r = raw as Record<string, unknown>;
 
   if (!HOME_GRID_BLOCK_TYPES.has(r.type as string)) return null;
-  const type = r.type as "widget" | "html" | "markdown";
+  const type = r.type as "widget" | "html" | "markdown" | "banner";
 
   // Pas de hauteur : chaque bloc occupe une ligne qui s'auto-dimensionne à
   // son contenu au rendu (voir worldHomeGrid.ts).
@@ -493,6 +494,13 @@ function validateHomeGridItem(
     return { id, type, x, y, w, widgetId: r.widgetId, ...(options ? { options } : {}) };
   }
 
+  if (type === "banner") {
+    if (r.widgetId !== undefined || r.html !== undefined || r.content !== undefined) return null;
+    const banner = sanitizeBannerContent(r.banner);
+    if (!banner) return null;
+    return { id, type, x, y, w, banner };
+  }
+
   // Titre libre optionnel (html/markdown) — tronqué plutôt que rejeté : il
   // est purement descriptif, pas la peine d'invalider tout le bloc.
   const title =
@@ -504,14 +512,16 @@ function validateHomeGridItem(
     if (typeof r.html !== "string" || r.widgetId !== undefined || r.content !== undefined) return null;
     const html = r.html.trim();
     if (html.length > MAX_HOME_BLOCK_CONTENT_LENGTH) return null;
-    return { id, type, x, y, w, html, ...title };
+    const card = r.card !== false;
+    return { id, type, x, y, w, html, card, ...title };
   }
 
   // markdown
   if (typeof r.content !== "string" || r.widgetId !== undefined || r.html !== undefined) return null;
   const content = r.content.trim();
   if (content.length > MAX_HOME_BLOCK_CONTENT_LENGTH) return null;
-  return { id, type, x, y, w, content, ...title };
+  const card = r.card === true;
+  return { id, type, x, y, w, content, card, ...title };
 }
 
 export async function setWorldHomeGrid(worldId: string, items: unknown[]) {

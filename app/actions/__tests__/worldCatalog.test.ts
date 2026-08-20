@@ -761,4 +761,77 @@ describe("setWorldHomeGrid", () => {
         ]);
         expect(res).toEqual({ ok: false, error: "nope" });
     });
+
+    it("enregistre un bloc bannière valide", async () => {
+        const mock = createSupabaseMock({ results: [{ error: null }] });
+        use(mock);
+        const res = await setWorldHomeGrid("w1", [
+            { id: "a", type: "banner", x: 0, y: 0, w: 12, banner: { title: "Bienvenue", text: "Salut" } },
+        ]);
+        expect(res.ok).toBe(true);
+        const written = mock.buildersFor("worlds")[0].update.mock.calls[0][0].home_grid;
+        expect(written[0]).toMatchObject({ type: "banner", banner: { title: "Bienvenue", text: "Salut" } });
+    });
+
+    it("refuse un bloc bannière sans titre, texte ni image", async () => {
+        const mock = createSupabaseMock();
+        use(mock);
+        const res = await setWorldHomeGrid("w1", [{ id: "a", type: "banner", x: 0, y: 0, w: 12, banner: {} }]);
+        expect(res.ok).toBe(false);
+        expect(mock.from).not.toHaveBeenCalled();
+    });
+
+    it("refuse un bloc bannière qui porte aussi un widgetId", async () => {
+        const mock = createSupabaseMock();
+        use(mock);
+        const res = await setWorldHomeGrid("w1", [
+            { id: "a", type: "banner", x: 0, y: 0, w: 12, banner: { title: "x" }, widgetId: "chatrooms" },
+        ]);
+        expect(res.ok).toBe(false);
+        expect(mock.from).not.toHaveBeenCalled();
+    });
+
+    it("écarte une URL de bouton non http(s) sans invalider tout le bloc bannière", async () => {
+        const mock = createSupabaseMock({ results: [{ error: null }] });
+        use(mock);
+        const res = await setWorldHomeGrid("w1", [
+            {
+                id: "a", type: "banner", x: 0, y: 0, w: 12,
+                banner: { title: "x", buttonLabel: "Voir", buttonUrl: "javascript:alert(1)" },
+            },
+        ]);
+        expect(res.ok).toBe(true);
+        const written = mock.buildersFor("worlds")[0].update.mock.calls[0][0].home_grid;
+        expect(written[0].banner).not.toHaveProperty("buttonUrl");
+        expect(written[0].banner).not.toHaveProperty("buttonLabel");
+    });
+
+    it("un bloc html sans card explicite est enregistré en carte (défaut préservant l'apparence historique)", async () => {
+        const mock = createSupabaseMock({ results: [{ error: null }] });
+        use(mock);
+        const res = await setWorldHomeGrid("w1", [{ id: "a", type: "html", x: 0, y: 0, w: 12, html: "<p>x</p>" }]);
+        expect(res.ok).toBe(true);
+        const written = mock.buildersFor("worlds")[0].update.mock.calls[0][0].home_grid;
+        expect(written[0].card).toBe(true);
+    });
+
+    it("un bloc markdown sans card explicite est enregistré plein largeur (défaut préservant l'apparence historique)", async () => {
+        const mock = createSupabaseMock({ results: [{ error: null }] });
+        use(mock);
+        const res = await setWorldHomeGrid("w1", [{ id: "a", type: "markdown", x: 0, y: 0, w: 12, content: "x" }]);
+        expect(res.ok).toBe(true);
+        const written = mock.buildersFor("worlds")[0].update.mock.calls[0][0].home_grid;
+        expect(written[0].card).toBe(false);
+    });
+
+    it("respecte card: false explicite sur un bloc html", async () => {
+        const mock = createSupabaseMock({ results: [{ error: null }] });
+        use(mock);
+        const res = await setWorldHomeGrid("w1", [
+            { id: "a", type: "html", x: 0, y: 0, w: 12, html: "<p>x</p>", card: false },
+        ]);
+        expect(res.ok).toBe(true);
+        const written = mock.buildersFor("worlds")[0].update.mock.calls[0][0].home_grid;
+        expect(written[0].card).toBe(false);
+    });
 });

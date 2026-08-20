@@ -357,7 +357,29 @@
           "limit": "Número de entradas"
         },
         "deleteTitle": "¿Eliminar este bloque?",
-        "deleteDesc": "Este bloque se eliminará de la página de inicio. Esta acción es irreversible."
+        "deleteDesc": "Este bloque se eliminará de la página de inicio. Esta acción es irreversible.",
+        "cardLabel": "Mostrar como tarjeta",
+        "cardHelp": "Desactívelo para un bloque a todo lo ancho, integrado en la página — sin borde ni fondo.",
+        "bannerBlockTitle": "Bloque de banner",
+        "bannerDialogTitle": "Banner",
+        "bannerTitleLabel": "Título",
+        "bannerTitlePlaceholder": "Título del banner",
+        "bannerTextLabel": "Texto",
+        "bannerTextPlaceholder": "Un subtítulo breve…",
+        "bannerImageLabel": "Imagen de fondo",
+        "bannerImageUpload": "Subir una imagen",
+        "bannerImageChange": "Cambiar",
+        "bannerImageRemove": "Quitar",
+        "bannerImageDisabled": "Subida no disponible",
+        "bannerAccentLabel": "Acento",
+        "bannerAccentNone": "Ninguno",
+        "bannerAlignLabel": "Alineación",
+        "bannerAlignLeft": "Izquierda",
+        "bannerAlignCenter": "Centrado",
+        "bannerButtonLabel": "Botón",
+        "bannerButtonLabelPlaceholder": "Texto del botón",
+        "bannerButtonUrlPlaceholder": "https://…",
+        "bannerButtonClear": "Quitar"
       }
     }
   },

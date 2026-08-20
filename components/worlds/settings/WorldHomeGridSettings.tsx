@@ -71,43 +71,45 @@ export function WorldHomeGridSettings({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4 rounded-xl border border-border-soft bg-muted/20 p-3">
-        <div className="space-y-0.5">
-          <p className="text-sm font-medium">{t("home.showStats")}</p>
-          <p className="text-xs leading-snug text-muted-foreground">{t("home.showStatsDesc")}</p>
+      <div className="divide-y divide-border-soft rounded-lg border border-border-soft">
+        <div className="flex items-start justify-between gap-4 p-3">
+          <div className="space-y-0.5">
+            <p className="text-sm font-medium">{t("home.showStats")}</p>
+            <p className="text-xs leading-snug text-muted-foreground">{t("home.showStatsDesc")}</p>
+          </div>
+          <Switch
+            checked={showStats}
+            disabled={togglingStats}
+            onCheckedChange={(v) => void handleToggleStats(v)}
+            className="mt-0.5 shrink-0"
+          />
         </div>
-        <Switch
-          checked={showStats}
-          disabled={togglingStats}
-          onCheckedChange={(v) => void handleToggleStats(v)}
-          className="mt-0.5 shrink-0"
-        />
-      </div>
 
-      <div className="space-y-2 rounded-xl border border-border-soft bg-muted/20 p-3">
-        <div className="space-y-0.5">
-          <p className="text-sm font-medium">{t("home.gridGap")}</p>
-          <p className="text-xs leading-snug text-muted-foreground">{t("home.gridGapDesc")}</p>
-        </div>
-        <div className="flex gap-1.5" role="radiogroup" aria-label={t("home.gridGap")}>
-          {GAP_OPTIONS.map((option) => (
-            <button
-              key={option}
-              type="button"
-              role="radio"
-              aria-checked={gap === option}
-              disabled={savingGap}
-              onClick={() => void handleChangeGap(option)}
-              className={cn(
-                "flex-1 rounded-lg border px-2 py-1.5 text-xs font-medium transition-colors disabled:opacity-60",
-                gap === option
-                  ? "border-primary bg-primary/10 text-foreground"
-                  : "border-border-soft text-muted-foreground hover:bg-secondary hover:text-foreground",
-              )}
-            >
-              {t(`home.gridGapOptions.${option}`)}
-            </button>
-          ))}
+        <div className="space-y-2 p-3">
+          <div className="space-y-0.5">
+            <p className="text-sm font-medium">{t("home.gridGap")}</p>
+            <p className="text-xs leading-snug text-muted-foreground">{t("home.gridGapDesc")}</p>
+          </div>
+          <div className="flex gap-1.5" role="radiogroup" aria-label={t("home.gridGap")}>
+            {GAP_OPTIONS.map((option) => (
+              <button
+                key={option}
+                type="button"
+                role="radio"
+                aria-checked={gap === option}
+                disabled={savingGap}
+                onClick={() => void handleChangeGap(option)}
+                className={cn(
+                  "flex-1 rounded-lg border px-2 py-1.5 text-xs font-medium transition-colors disabled:opacity-60",
+                  gap === option
+                    ? "border-primary bg-primary/10 text-foreground"
+                    : "border-border-soft text-muted-foreground hover:bg-secondary hover:text-foreground",
+                )}
+              >
+                {t(`home.gridGapOptions.${option}`)}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

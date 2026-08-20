@@ -19,7 +19,28 @@ import {
  * largeur reste au choix de l'admin, en glissant le bord droit d'un bloc
  * (voir le diviseur de WorldHomeGridEditor.tsx).
  */
-export type WorldHomeBlockType = "widget" | "html" | "markdown";
+export type WorldHomeBlockType = "widget" | "html" | "markdown" | "banner";
+
+export type WorldHomeBannerAlign = "left" | "center";
+
+/** Contenu d'un bloc bannière — structuré plutôt que du HTML/Markdown libre,
+ *  inspiré des blocs « encadré » (callout) des chatrooms : image de fond,
+ *  titre, texte court et bouton d'action optionnels. */
+export type WorldHomeBannerContent = {
+  title?: string;
+  text?: string;
+  /** Image de fond, hébergée dans le bucket `worlds` (voir WorldHomeGridEditor). */
+  image?: string;
+  /** Couleur d'accent (bouton) — sans valeur, le bouton reprend la couleur
+   *  primaire du thème. */
+  accent?: string;
+  /** Absent = "left", valeur implicite (voir sanitizeBannerContent). */
+  align?: WorldHomeBannerAlign;
+  /** Le bouton n'est rendu que si le libellé ET l'URL sont tous les deux
+   *  présents — voir sanitizeBannerContent. */
+  buttonLabel?: string;
+  buttonUrl?: string;
+};
 
 export type WorldHomeGridItem = {
   id: string;
@@ -33,6 +54,13 @@ export type WorldHomeGridItem = {
   html?: string;
   /** type === "markdown" */
   content?: string;
+  /** type === "html" | "markdown" — carte (bordure + fond) ou plein largeur
+   *  sans bordure. Toujours résolu en booléen explicite par
+   *  sanitizeGridItem/validateHomeGridItem (jamais laissé `undefined`), pour
+   *  que le rendu n'ait pas à connaître de valeur par défaut par type. */
+  card?: boolean;
+  /** type === "banner" */
+  banner?: WorldHomeBannerContent;
   /** Titre libre d'un bloc html/markdown — sert à l'identifier dans l'éditeur
    *  (à défaut : « Bloc HTML »/« Bloc Markdown »). Purement descriptif, non
    *  affiché sur la page d'accueil. */
@@ -41,8 +69,62 @@ export type WorldHomeGridItem = {
   options?: Record<string, number>;
 };
 
-/** Longueur maximale du titre d'un bloc html/markdown. */
+/** Longueur maximale du titre d'un bloc html/markdown, et du titre/libellé de
+ *  bouton d'un bloc bannière. */
 export const MAX_HOME_BLOCK_TITLE_LENGTH = 80;
+/** Longueur maximale du texte court d'un bloc bannière — un sous-titre, pas
+ *  un pavé de texte (voir MAX_HOME_BLOCK_CONTENT_LENGTH pour html/markdown). */
+export const MAX_HOME_BANNER_TEXT_LENGTH = 400;
+/** Longueur maximale d'une URL de bannière (image de fond ou bouton). */
+export const MAX_HOME_BANNER_URL_LENGTH = 2000;
+
+const HEX_COLOR_RE = /^#[0-9a-fA-F]{3,8}$/;
+
+/** N'accepte qu'une URL absolue http(s) ou un chemin relatif au site — même
+ *  restriction que les liens rendus par CalloutMarkdown (components/chatrooms/blocks/CalloutBlock.tsx). */
+function sanitizeBannerUrl(raw: unknown): string | undefined {
+  if (typeof raw !== "string") return undefined;
+  const trimmed = raw.trim().slice(0, MAX_HOME_BANNER_URL_LENGTH);
+  if (!trimmed) return undefined;
+  return /^https?:\/\//i.test(trimmed) || trimmed.startsWith("/") ? trimmed : undefined;
+}
+
+/**
+ * Valide/assainit le contenu d'un bloc bannière — partagée par la validation
+ * client (sanitizeGridItem) et serveur (validateHomeGridItem dans
+ * app/actions/worldCatalog.ts), comme sanitizeWidgetOptions pour les widgets.
+ * `null` si le bloc n'a ni titre, ni texte, ni image (rien à afficher) — le
+ * bouton, lui, n'est jamais requis à lui seul.
+ */
+export function sanitizeBannerContent(raw: unknown): WorldHomeBannerContent | null {
+  if (typeof raw !== "object" || raw === null) return null;
+  const r = raw as Record<string, unknown>;
+
+  const title =
+    typeof r.title === "string" && r.title.trim() ? r.title.trim().slice(0, MAX_HOME_BLOCK_TITLE_LENGTH) : undefined;
+  const text =
+    typeof r.text === "string" && r.text.trim() ? r.text.trim().slice(0, MAX_HOME_BANNER_TEXT_LENGTH) : undefined;
+  const image = sanitizeBannerUrl(r.image);
+  const accent = typeof r.accent === "string" && HEX_COLOR_RE.test(r.accent.trim()) ? r.accent.trim() : undefined;
+  const align = r.align === "center" ? ("center" as const) : undefined;
+  const buttonLabel =
+    typeof r.buttonLabel === "string" && r.buttonLabel.trim()
+      ? r.buttonLabel.trim().slice(0, MAX_HOME_BLOCK_TITLE_LENGTH)
+      : undefined;
+  const buttonUrl = sanitizeBannerUrl(r.buttonUrl);
+  const hasButton = !!buttonLabel && !!buttonUrl;
+
+  if (!title && !text && !image) return null;
+
+  return {
+    ...(title ? { title } : {}),
+    ...(text ? { text } : {}),
+    ...(image ? { image } : {}),
+    ...(accent ? { accent } : {}),
+    ...(align ? { align } : {}),
+    ...(hasButton ? { buttonLabel, buttonUrl } : {}),
+  };
+}
 
 /** Définition d'un réglage numérique de widget — pilote à la fois le champ
  *  affiché dans l'éditeur et la validation (client et serveur), pour qu'un
@@ -181,7 +263,7 @@ function sanitizeGridItem(
   const r = raw as Record<string, unknown>;
 
   if (typeof r.id !== "string" || !r.id || seenIds.has(r.id)) return null;
-  if (r.type !== "widget" && r.type !== "html" && r.type !== "markdown") return null;
+  if (r.type !== "widget" && r.type !== "html" && r.type !== "markdown" && r.type !== "banner") return null;
   if (!isFiniteInt(r.x) || !isFiniteInt(r.y) || !isFiniteInt(r.w)) return null;
   if (r.x < 0 || r.y < 0 || r.y > MAX_HOME_GRID_Y || r.w < 2) return null;
 
@@ -202,6 +284,14 @@ function sanitizeGridItem(
     return { id: r.id, type: "widget", x, y, w, widgetId: r.widgetId, ...(options ? { options } : {}) };
   }
 
+  if (r.type === "banner") {
+    if (r.widgetId !== undefined || r.html !== undefined || r.content !== undefined) return null;
+    const banner = sanitizeBannerContent(r.banner);
+    if (!banner) return null;
+    seenIds.add(r.id);
+    return { id: r.id, type: "banner", x, y, w, banner };
+  }
+
   const title =
     typeof r.title === "string" && r.title.trim()
       ? { title: r.title.trim().slice(0, MAX_HOME_BLOCK_TITLE_LENGTH) }
@@ -210,13 +300,19 @@ function sanitizeGridItem(
   if (r.type === "html") {
     if (typeof r.html !== "string" || r.widgetId !== undefined || r.content !== undefined) return null;
     seenIds.add(r.id);
-    return { id: r.id, type: "html", x, y, w, html: r.html, ...title };
+    // Défaut "carte" (bordure + fond) : préserve l'apparence d'avant
+    // l'introduction de ce réglage, où un bloc html était toujours ainsi.
+    const card = r.card !== false;
+    return { id: r.id, type: "html", x, y, w, html: r.html, card, ...title };
   }
 
   // markdown
   if (typeof r.content !== "string" || r.widgetId !== undefined || r.html !== undefined) return null;
   seenIds.add(r.id);
-  return { id: r.id, type: "markdown", x, y, w, content: r.content, ...title };
+  // Défaut "plein largeur" : préserve l'apparence d'avant ce réglage, où un
+  // bloc markdown n'avait jamais de carte.
+  const card = r.card === true;
+  return { id: r.id, type: "markdown", x, y, w, content: r.content, card, ...title };
 }
 
 /**
@@ -251,7 +347,7 @@ function synthesizeLegacyGrid(
       // Repli positionnel : l'annonce redevient un bloc html à sa place
       // d'origine dans la pile, pas ajoutée en fin de liste.
       if (!html.trim()) continue;
-      items.push({ id: "announcement", type: "html", x: 0, y, w: HOME_GRID_COLS, html });
+      items.push({ id: "announcement", type: "html", x: 0, y, w: HOME_GRID_COLS, html, card: true });
       y += 1;
       continue;
     }

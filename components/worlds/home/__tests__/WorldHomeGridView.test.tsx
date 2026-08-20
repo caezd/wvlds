@@ -252,6 +252,76 @@ describe("WorldHomeGridView", () => {
     expect(markdownProps).toHaveBeenCalledWith(expect.objectContaining({ content: "# Titre", allowImages: true }));
   });
 
+  it("un bloc html en carte (défaut) a une bordure et un fond", () => {
+    render(
+      <WorldHomeGridView
+        {...baseProps([{ id: "a", type: "html", x: 0, y: 0, w: 12, html: "<p>x</p>", card: true }])}
+      />,
+    );
+    const iframe = document.querySelector("iframe")!;
+    expect(iframe.className).toContain("border");
+    expect(iframe.className).toContain("bg-background");
+  });
+
+  it("un bloc html en plein largeur (card: false) n'a ni bordure ni fond", () => {
+    render(
+      <WorldHomeGridView
+        {...baseProps([{ id: "a", type: "html", x: 0, y: 0, w: 12, html: "<p>x</p>", card: false }])}
+      />,
+    );
+    const iframe = document.querySelector("iframe")!;
+    expect(iframe.className).not.toContain("border");
+    expect(iframe.className).not.toContain("bg-background");
+  });
+
+  it("un bloc markdown en plein largeur (défaut) n'est pas enveloppé dans une carte", () => {
+    render(
+      <WorldHomeGridView
+        {...baseProps([{ id: "a", type: "markdown", x: 0, y: 0, w: 12, content: "x", card: false }])}
+      />,
+    );
+    const markdown = screen.getByTestId("markdown");
+    // Le parent direct est la cellule de grille (@container), pas une carte.
+    expect(markdown.parentElement?.className).not.toContain("border");
+  });
+
+  it("un bloc markdown en carte (card: true) est enveloppé dans une carte", () => {
+    render(
+      <WorldHomeGridView
+        {...baseProps([{ id: "a", type: "markdown", x: 0, y: 0, w: 12, content: "x", card: true }])}
+      />,
+    );
+    const markdown = screen.getByTestId("markdown");
+    expect(markdown.parentElement?.className).toContain("border");
+  });
+
+  it("rend un bloc bannière avec son titre et son texte", () => {
+    render(
+      <WorldHomeGridView
+        {...baseProps([
+          { id: "a", type: "banner", x: 0, y: 0, w: 12, banner: { title: "Bienvenue", text: "Salut à tous" } },
+        ])}
+      />,
+    );
+    expect(screen.getByText("Bienvenue")).toBeInTheDocument();
+    expect(screen.getByText("Salut à tous")).toBeInTheDocument();
+  });
+
+  it("rend le bouton d'un bloc bannière quand libellé et URL sont présents", () => {
+    render(
+      <WorldHomeGridView
+        {...baseProps([
+          {
+            id: "a", type: "banner", x: 0, y: 0, w: 12,
+            banner: { title: "Bienvenue", buttonLabel: "En savoir plus", buttonUrl: "/wiki" },
+          },
+        ])}
+      />,
+    );
+    const link = screen.getByRole("link", { name: "En savoir plus" });
+    expect(link).toHaveAttribute("href", "/wiki");
+  });
+
   it("trie les blocs par y puis x pour un ordre de pile mobile cohérent", async () => {
     render(
       <WorldHomeGridView

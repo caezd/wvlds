@@ -6,6 +6,7 @@ import { FileText } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import { cn } from "@/lib/utils";
@@ -21,31 +22,37 @@ export function WorldHomeMarkdownBlockEditor({
   onOpenChange,
   initialContent,
   initialTitle,
+  initialCard = false,
   onSave,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   initialContent?: string;
   initialTitle?: string;
-  onSave: (content: string, title: string) => void;
+  /** Défaut false — un bloc markdown n'a jamais eu de carte avant ce réglage. */
+  initialCard?: boolean;
+  onSave: (content: string, title: string, card: boolean) => void;
 }) {
   const t = useTranslations("worlds");
   const tCommon = useTranslations("common");
   const [content, setContent] = React.useState(initialContent ?? "");
   const [title, setTitle] = React.useState(initialTitle ?? "");
+  const [card, setCard] = React.useState(initialCard);
 
   React.useEffect(() => {
     if (open) {
       setContent(initialContent ?? "");
       setTitle(initialTitle ?? "");
+      setCard(initialCard);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, initialContent, initialTitle]);
 
   const tooLong = content.length > MAX_HOME_BLOCK_CONTENT_LENGTH;
 
   function handleSave() {
     if (tooLong || !content.trim()) return;
-    onSave(content, title);
+    onSave(content, title, card);
   }
 
   return (
@@ -70,6 +77,14 @@ export function WorldHomeMarkdownBlockEditor({
               maxLength={MAX_HOME_BLOCK_TITLE_LENGTH}
             />
             <p className="text-xs text-muted-foreground">{t("home.grid.blockTitleHelp")}</p>
+          </div>
+
+          <div className="flex items-center justify-between gap-4 rounded-lg border border-border-soft p-3">
+            <div className="space-y-0.5">
+              <p className="text-sm font-medium text-foreground">{t("home.grid.cardLabel")}</p>
+              <p className="text-xs text-muted-foreground leading-snug">{t("home.grid.cardHelp")}</p>
+            </div>
+            <Switch checked={card} onCheckedChange={setCard} className="shrink-0" />
           </div>
 
           <div className="space-y-1.5">

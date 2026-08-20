@@ -19,7 +19,9 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import * as TabsPrimitive from "@radix-ui/react-tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 // Popover + HsvColorPicker : utilisés par HomeColorField, désactivé
 // temporairement (voir plus bas) — imports retirés en attendant.
 import {
@@ -84,6 +86,30 @@ import { clampDaysPerMonth, DEFAULT_DAYS_PER_MONTH, REAL_DAYS_PER_MONTH, REAL_MO
 //     { name: "Rouge", value: "#ef4444" },
 //     { name: "Rose", value: "#f94b5f" },
 // ];
+
+/** Onglets en soulignement plutôt qu'en pastille pleine (style shadcn par
+ *  défaut) — remplace TabsList/TabsTrigger par les primitives Radix
+ *  directement pour ce seul usage, plus lisible à 6 onglets et mieux espacé.
+ *
+ *  Le trait actif est une ombre `inset`, pas un `border-b` : une ombre reste
+ *  DANS la boîte de l'élément (jamais comptée dans le « scrollable overflow »
+ *  qu'utilise ScrollArea pour décider d'afficher sa scrollbar), contrairement
+ *  à un `border`, une marge négative ou un `transform` — les trois essais
+ *  précédents ajoutaient chacun 1px à la hauteur mesurée par ScrollArea et
+ *  faisaient apparaître une scrollbar verticale parasite plus haut dans
+ *  l'arbre.
+ *
+ *  Le conteneur parent trace lui aussi sa ligne de base en `shadow-[inset…]`
+ *  plutôt qu'en `border-b` (voir plus bas) : un vrai `border` occupe sa
+ *  propre tranche de boîte, 1px EN DEHORS de la boîte du trigger — même
+ *  parfaitement alignés, les deux traits restent deux éléments distincts,
+ *  perceptiblement séparés par une micro-teinte différente. Deux ombres
+ *  posées sur le MÊME bord bas, elles, se superposent au pixel près (le
+ *  trigger, enfant, se peint après son parent) : celle du trigger actif
+ *  recouvre entièrement celle du conteneur à cet endroit, comme un seul
+ *  trait continu. */
+const SETTINGS_TAB_TRIGGER_CLASS =
+    "relative shrink-0 px-0.5 py-3 text-sm font-medium text-muted-foreground whitespace-nowrap transition-colors hover:text-foreground data-[state=active]:text-foreground data-[state=active]:shadow-[inset_0_-2px_0_0_var(--color-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50";
 
 const schema = z.object({
     name: z.string().min(2, "Au moins 2 caractères"),
@@ -569,7 +595,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
     const bannerUrl = form.watch("banner_url");
 
     return (
-        <div className="flex h-full w-full flex-col bg-background">
+        <div className="flex h-full w-full flex-col">
             <WorldPanelHeader
                 icon={<Settings className="h-4 w-4 shrink-0 text-muted-foreground" />}
                 title="Paramètres"
@@ -577,17 +603,26 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
 
             <Form {...form}>
                 <Tabs defaultValue="appearance" className="flex min-h-0 flex-1 flex-col">
-                    <div className="shrink-0 border-b border-border-soft px-4 pt-3">
-                        <TabsList className="h-8 rounded-lg p-0.5">
-                            <TabsTrigger value="appearance" className="h-7 px-3 text-xs">Apparence</TabsTrigger>
-                            <TabsTrigger value="categories" className="h-7 px-3 text-xs">Catégories</TabsTrigger>
-                            <TabsTrigger value="home" className="h-7 px-3 text-xs">Page d&apos;accueil</TabsTrigger>
-                            <TabsTrigger value="features" className="h-7 px-3 text-xs">Fonctions</TabsTrigger>
-                            <TabsTrigger value="relations" className="h-7 px-3 text-xs">Relations</TabsTrigger>
-                            {public_worlds && (
-                                <TabsTrigger value="community" className="h-7 px-3 text-xs">Communauté</TabsTrigger>
-                            )}
-                        </TabsList>
+                    <div className="shrink-0 shadow-[inset_0_-1px_0_0_var(--color-border-soft)]">
+                        {/* ScrollArea plutôt qu'un simple `overflow-x-auto` : la
+                            barre de défilement native (toujours visible sur
+                            certains systèmes/navigateurs) est remplacée par le
+                            style fin de l'appli, et n'apparaît que si les
+                            onglets débordent réellement du conteneur — utile
+                            sur un écran étroit avec les 6 onglets. */}
+                        <ScrollArea className="w-full">
+                            <TabsPrimitive.List className="flex w-max items-center gap-6 px-4">
+                                <TabsPrimitive.Trigger value="appearance" className={SETTINGS_TAB_TRIGGER_CLASS}>Apparence</TabsPrimitive.Trigger>
+                                <TabsPrimitive.Trigger value="categories" className={SETTINGS_TAB_TRIGGER_CLASS}>Catégories</TabsPrimitive.Trigger>
+                                <TabsPrimitive.Trigger value="home" className={SETTINGS_TAB_TRIGGER_CLASS}>Page d&apos;accueil</TabsPrimitive.Trigger>
+                                <TabsPrimitive.Trigger value="features" className={SETTINGS_TAB_TRIGGER_CLASS}>Fonctions</TabsPrimitive.Trigger>
+                                <TabsPrimitive.Trigger value="relations" className={SETTINGS_TAB_TRIGGER_CLASS}>Relations</TabsPrimitive.Trigger>
+                                {public_worlds && (
+                                    <TabsPrimitive.Trigger value="community" className={SETTINGS_TAB_TRIGGER_CLASS}>Communauté</TabsPrimitive.Trigger>
+                                )}
+                            </TabsPrimitive.List>
+                            <ScrollBar orientation="horizontal" />
+                        </ScrollArea>
                     </div>
 
                     <div className="flex-1 overflow-y-auto p-4">

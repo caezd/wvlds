@@ -357,7 +357,29 @@
           "limit": "Number of entries"
         },
         "deleteTitle": "Delete this block?",
-        "deleteDesc": "This block will be removed from the home page. This action is irreversible."
+        "deleteDesc": "This block will be removed from the home page. This action is irreversible.",
+        "cardLabel": "Display as a card",
+        "cardHelp": "Off for a full-width block, blended into the page — no border or background.",
+        "bannerBlockTitle": "Banner block",
+        "bannerDialogTitle": "Banner",
+        "bannerTitleLabel": "Title",
+        "bannerTitlePlaceholder": "Banner title",
+        "bannerTextLabel": "Text",
+        "bannerTextPlaceholder": "A short subtitle…",
+        "bannerImageLabel": "Background image",
+        "bannerImageUpload": "Upload an image",
+        "bannerImageChange": "Change",
+        "bannerImageRemove": "Remove",
+        "bannerImageDisabled": "Upload unavailable",
+        "bannerAccentLabel": "Accent",
+        "bannerAccentNone": "None",
+        "bannerAlignLabel": "Alignment",
+        "bannerAlignLeft": "Left",
+        "bannerAlignCenter": "Centered",
+        "bannerButtonLabel": "Button",
+        "bannerButtonLabelPlaceholder": "Button label",
+        "bannerButtonUrlPlaceholder": "https://…",
+        "bannerButtonClear": "Remove"
       }
     }
   },

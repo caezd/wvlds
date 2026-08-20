@@ -13,6 +13,7 @@ import {
   resolveHomeGridGap,
   resolveWorldHomeGrid,
   rowBoundaries,
+  sanitizeBannerContent,
   sanitizeWidgetOptions,
   widgetOptionValue,
   type WorldHomeGridItem,
@@ -107,14 +108,43 @@ describe("resolveWorldHomeGrid — home_grid valide", () => {
     expect(resolveWorldHomeGrid(grid, [], null)).toEqual([]);
   });
 
-  it("accepte un bloc html avec du contenu", () => {
+  it("accepte un bloc html avec du contenu — carte activée par défaut", () => {
     const grid: WorldHomeGridItem[] = [{ id: "a", type: "html", x: 0, y: 0, w: 12, html: "<p>Salut</p>" }];
-    expect(resolveWorldHomeGrid(grid, null, null)).toEqual(grid);
+    expect(resolveWorldHomeGrid(grid, null, null)).toEqual([{ ...grid[0], card: true }]);
   });
 
-  it("accepte un bloc markdown avec du contenu", () => {
+  it("accepte un bloc markdown avec du contenu — plein largeur par défaut", () => {
     const grid: WorldHomeGridItem[] = [{ id: "a", type: "markdown", x: 0, y: 0, w: 12, content: "# Titre" }];
-    expect(resolveWorldHomeGrid(grid, null, null)).toEqual(grid);
+    expect(resolveWorldHomeGrid(grid, null, null)).toEqual([{ ...grid[0], card: false }]);
+  });
+
+  it("préserve card: false explicite sur un bloc html", () => {
+    const grid = [{ id: "a", type: "html", x: 0, y: 0, w: 12, html: "<p>x</p>", card: false }];
+    expect(resolveWorldHomeGrid(grid, null, null)[0].card).toBe(false);
+  });
+
+  it("préserve card: true explicite sur un bloc markdown", () => {
+    const grid = [{ id: "a", type: "markdown", x: 0, y: 0, w: 12, content: "x", card: true }];
+    expect(resolveWorldHomeGrid(grid, null, null)[0].card).toBe(true);
+  });
+
+  it("accepte un bloc bannière avec un titre", () => {
+    const grid = [{ id: "a", type: "banner", x: 0, y: 0, w: 12, banner: { title: "Bienvenue" } }];
+    expect(resolveWorldHomeGrid(grid, null, null)).toEqual([
+      { id: "a", type: "banner", x: 0, y: 0, w: 12, banner: { title: "Bienvenue" } },
+    ]);
+  });
+
+  it("rejette un bloc bannière entièrement vide (ni titre, ni texte, ni image)", () => {
+    const grid = [{ id: "a", type: "banner", x: 0, y: 0, w: 12, banner: {} }];
+    expect(resolveWorldHomeGrid(grid, [], null)).toEqual([]);
+  });
+
+  it("rejette un bloc bannière qui porte aussi un widgetId", () => {
+    const grid = [
+      { id: "a", type: "banner", x: 0, y: 0, w: 12, banner: { title: "x" }, widgetId: "chatrooms" },
+    ];
+    expect(resolveWorldHomeGrid(grid, [], null)).toEqual([]);
   });
 
   it("tronque au nombre maximal de blocs", () => {
@@ -216,6 +246,54 @@ describe("réglages de widget (options)", () => {
       { id: "a", type: "widget", x: 0, y: 0, w: 12, widgetId: "chatrooms", options: { visibleRows: 999 } },
     ];
     expect(resolveWorldHomeGrid(grid, null, null)[0].options).toEqual({ visibleRows: 50 });
+  });
+});
+
+describe("sanitizeBannerContent", () => {
+  it("rejette un objet sans titre, texte ni image", () => {
+    expect(sanitizeBannerContent({})).toBeNull();
+    expect(sanitizeBannerContent(null)).toBeNull();
+    expect(sanitizeBannerContent({ accent: "#ff0000" })).toBeNull();
+  });
+
+  it("accepte un titre seul", () => {
+    expect(sanitizeBannerContent({ title: "  Bienvenue  " })).toEqual({ title: "Bienvenue" });
+  });
+
+  it("tronque le titre et le texte à leur longueur maximale", () => {
+    const result = sanitizeBannerContent({ title: "a".repeat(200), text: "b".repeat(1000) });
+    expect(result?.title?.length).toBeLessThanOrEqual(80);
+    expect(result?.text?.length).toBeLessThanOrEqual(400);
+  });
+
+  it("n'accepte une image que sous forme d'URL absolue http(s) ou de chemin relatif", () => {
+    expect(sanitizeBannerContent({ image: "https://example.com/x.webp" })?.image).toBe("https://example.com/x.webp");
+    expect(sanitizeBannerContent({ image: "/local/x.webp" })?.image).toBe("/local/x.webp");
+    expect(sanitizeBannerContent({ title: "x", image: "javascript:alert(1)" })?.image).toBeUndefined();
+  });
+
+  it("n'accepte un accent que sous forme de couleur hexadécimale", () => {
+    expect(sanitizeBannerContent({ title: "x", accent: "#3b82f6" })?.accent).toBe("#3b82f6");
+    expect(sanitizeBannerContent({ title: "x", accent: "red" })?.accent).toBeUndefined();
+  });
+
+  it("align 'center' explicite est conservé, tout le reste retombe sur l'absence (gauche implicite)", () => {
+    expect(sanitizeBannerContent({ title: "x", align: "center" })?.align).toBe("center");
+    expect(sanitizeBannerContent({ title: "x", align: "left" })?.align).toBeUndefined();
+    expect(sanitizeBannerContent({ title: "x", align: "n'importe quoi" })?.align).toBeUndefined();
+  });
+
+  it("le bouton n'est conservé que si le libellé ET l'URL sont tous les deux présents", () => {
+    expect(sanitizeBannerContent({ title: "x", buttonLabel: "Voir" })?.buttonLabel).toBeUndefined();
+    expect(sanitizeBannerContent({ title: "x", buttonUrl: "https://x.test" })?.buttonUrl).toBeUndefined();
+    const both = sanitizeBannerContent({ title: "x", buttonLabel: "Voir", buttonUrl: "https://x.test" });
+    expect(both).toMatchObject({ buttonLabel: "Voir", buttonUrl: "https://x.test" });
+  });
+
+  it("rejette une URL de bouton qui n'est ni http(s) ni un chemin relatif", () => {
+    const result = sanitizeBannerContent({ title: "x", buttonLabel: "Voir", buttonUrl: "javascript:alert(1)" });
+    expect(result?.buttonLabel).toBeUndefined();
+    expect(result?.buttonUrl).toBeUndefined();
   });
 });
 

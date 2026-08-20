@@ -2,9 +2,11 @@
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
-import { Code2, FileText, GripVertical, Pencil, Plus, Settings2, Trash2 } from "lucide-react";
+import { Code2, FileText, GripVertical, Image as ImageIcon, Pencil, Plus, Settings2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { setWorldHomeGrid } from "@/app/actions/worldCatalog";
+import { createClient } from "@/lib/supabase/client";
+import { toWebP } from "@/lib/imageUtils";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import {
   DropdownMenu,
@@ -29,12 +31,14 @@ import {
   rowBoundaries,
   widgetOptionValue,
   WORLD_HOME_WIDGET_OPTIONS,
+  type WorldHomeBannerContent,
   type WorldHomeGridGap,
   type WorldHomeGridItem,
   type WorldHomeWidgetOption,
 } from "./worldHomeGrid";
 import { WorldHomeHtmlBlockEditor } from "./blocks/WorldHomeHtmlBlockEditor";
 import { WorldHomeMarkdownBlockEditor } from "./blocks/WorldHomeMarkdownBlockEditor";
+import { WorldHomeBannerDialog } from "./blocks/WorldHomeBannerBlock";
 
 /**
  * Destination d'un déplacement en cours. `asNewRow` distingue les deux
@@ -189,6 +193,7 @@ function WidgetOptionsPopover({
  *  « Bloc Markdown » — jamais sur un extrait du contenu, illisible. */
 function blockLabel(item: WorldHomeGridItem, widgetLabel: (id: WorldHomeWidgetId) => string): string {
   if (item.type === "widget" && item.widgetId) return widgetLabel(item.widgetId);
+  if (item.type === "banner") return item.banner?.title?.trim() ?? "";
   return item.title?.trim() ?? "";
 }
 
@@ -233,9 +238,42 @@ export function WorldHomeGridEditor({
   const dividerHitWidth = Math.max(gapPx, MIN_DIVIDER_HIT_WIDTH);
   const { containerRef, width } = useMeasuredWidth();
   const [editingBlock, setEditingBlock] = React.useState<
-    { type: "html" | "markdown"; item?: WorldHomeGridItem } | null
+    { type: "html" | "markdown" | "banner"; item?: WorldHomeGridItem } | null
   >(null);
   const [confirmDelete, setConfirmDelete] = React.useState<WorldHomeGridItem | null>(null);
+  const supabase = React.useMemo(() => createClient(), []);
+
+  /** Image de fond d'un bloc bannière — bucket `worlds`, même stockage que la
+   *  bannière/icône du monde (voir WorldSettingsView.tsx). La policy RLS
+   *  d'écriture n'autorise que le préfixe `user-{auth.uid()}/…` : contrairement
+   *  aux autres champs de la grille (protégés par la server action
+   *  setWorldHomeGrid), cet upload passe directement par le client Supabase.
+   */
+  async function uploadBannerImage(file: File): Promise<string | null> {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error(t("home.grid.bannerImageDisabled"));
+        return null;
+      }
+      const converted = await toWebP(file);
+      const path = `user-${user.id}/world-${worldId}/home-banner-${Date.now()}-${Math.random().toString(36).slice(2)}.webp`;
+      const { error } = await supabase.storage
+        .from("worlds")
+        .upload(path, converted, { contentType: "image/webp" });
+      if (error) {
+        toast.error(error.message);
+        return null;
+      }
+      const { data } = supabase.storage.from("worlds").getPublicUrl(path);
+      return data.publicUrl;
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err));
+      return null;
+    }
+  }
 
   function widgetLabel(id: WorldHomeWidgetId) {
     return t(`home.widgets.${id}`);
@@ -383,7 +421,14 @@ export function WorldHomeGridEditor({
     // garde-fou, un simple clic dessus capturait déjà le pointeur ici et
     // déclenchait un déplacement au lieu de l'action : le clic natif
     // n'atteignait jamais le bouton.
-    if (event.target instanceof HTMLElement && event.target.closest("button")) return;
+    //
+    // `instanceof Element`, pas `HTMLElement` : au centre de chaque icône
+    // (Pencil/Trash2/Settings2…), `elementFromPoint` renvoie le `<svg>` lui-même,
+    // pas le `<button>` qui le contient — un SVGElement n'hérite PAS de
+    // HTMLElement, donc `instanceof HTMLElement` y était toujours `false` et le
+    // garde-fou ne se déclenchait quasiment jamais en pratique. `Element` est
+    // l'ancêtre commun aux deux, et `.closest()` y est défini pareil.
+    if (event.target instanceof Element && event.target.closest("button")) return;
     event.preventDefault();
     event.stopPropagation();
     event.currentTarget.setPointerCapture(event.pointerId);
@@ -428,12 +473,12 @@ export function WorldHomeGridEditor({
     void persist([...items, newItem]);
   }
 
-  function saveBlock(content: string, title: string, field: "html" | "content") {
+  function saveBlock(content: string, title: string, card: boolean, field: "html" | "content") {
     const trimmedTitle = title.trim();
     const editing = editingBlock?.item;
     const next = editing
       ? items.map((i) =>
-          i.id === editing.id ? { ...i, [field]: content, title: trimmedTitle || undefined } : i,
+          i.id === editing.id ? { ...i, [field]: content, card, title: trimmedTitle || undefined } : i,
         )
       : [
           ...items,
@@ -444,7 +489,27 @@ export function WorldHomeGridEditor({
             y: nextY(),
             w: HOME_GRID_COLS,
             [field]: content,
+            card,
             ...(trimmedTitle ? { title: trimmedTitle } : {}),
+          } as WorldHomeGridItem,
+        ];
+    void persist(next);
+    setEditingBlock(null);
+  }
+
+  function saveBanner(banner: WorldHomeBannerContent) {
+    const editing = editingBlock?.item;
+    const next = editing
+      ? items.map((i) => (i.id === editing.id ? { ...i, banner } : i))
+      : [
+          ...items,
+          {
+            id: crypto.randomUUID(),
+            type: "banner",
+            x: 0,
+            y: nextY(),
+            w: HOME_GRID_COLS,
+            banner,
           } as WorldHomeGridItem,
         ];
     void persist(next);
@@ -481,14 +546,23 @@ export function WorldHomeGridEditor({
         onOpenChange={(open) => { if (!open) setEditingBlock(null); }}
         initialHtml={editingBlock?.item?.html}
         initialTitle={editingBlock?.item?.title}
-        onSave={(html, title) => saveBlock(html, title, "html")}
+        initialCard={editingBlock?.item?.card ?? true}
+        onSave={(html, title, card) => saveBlock(html, title, card, "html")}
       />
       <WorldHomeMarkdownBlockEditor
         open={editingBlock?.type === "markdown"}
         onOpenChange={(open) => { if (!open) setEditingBlock(null); }}
         initialContent={editingBlock?.item?.content}
         initialTitle={editingBlock?.item?.title}
-        onSave={(content, title) => saveBlock(content, title, "content")}
+        initialCard={editingBlock?.item?.card ?? false}
+        onSave={(content, title, card) => saveBlock(content, title, card, "content")}
+      />
+      <WorldHomeBannerDialog
+        open={editingBlock?.type === "banner"}
+        onOpenChange={(open) => { if (!open) setEditingBlock(null); }}
+        initialBanner={editingBlock?.item?.banner}
+        onSave={saveBanner}
+        onUploadImage={uploadBannerImage}
       />
 
       <div ref={containerRef} className="rounded-lg border border-dashed p-2">
@@ -576,12 +650,13 @@ export function WorldHomeGridEditor({
                   <GripVertical className="h-3.5 w-3.5 shrink-0" />
                   {item.type === "html" && <Code2 className="h-3 w-3 shrink-0" />}
                   {item.type === "markdown" && <FileText className="h-3 w-3 shrink-0" />}
+                  {item.type === "banner" && <ImageIcon className="h-3 w-3 shrink-0" />}
                   <span className="truncate">{blockLabel(item, widgetLabel) || t(`home.grid.${item.type}BlockTitle`)}</span>
                   <div className="ml-auto flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
                     {item.type !== "widget" && (
                       <button
                         type="button"
-                        onClick={() => setEditingBlock({ type: item.type as "html" | "markdown", item })}
+                        onClick={() => setEditingBlock({ type: item.type as "html" | "markdown" | "banner", item })}
                         className="flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:bg-secondary hover:text-foreground"
                         aria-label={t("home.grid.editBlock")}
                       >
@@ -720,6 +795,10 @@ export function WorldHomeGridEditor({
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
+            <DropdownMenuItem onClick={() => setEditingBlock({ type: "banner" })}>
+              <ImageIcon className="mr-2 h-3.5 w-3.5" /> {t("home.grid.bannerBlockTitle")}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => setEditingBlock({ type: "html" })}>
               <Code2 className="mr-2 h-3.5 w-3.5" /> {t("home.grid.htmlBlockTitle")}
             </DropdownMenuItem>

@@ -8,6 +8,21 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Correctif",
+    text: "En taille mobile, les onglets Paramètres et Catalogue d'un monde affichaient un fond plus clair que les autres onglets (Wiki, Membres, Personas, Chronologie…), qui laissent voir le fond ambiant plus sombre de l'application — les deux sont désormais cohérents.",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
+    text: "Dans l'éditeur de grille de la page d'accueil (Réglages > Page d'accueil), les boutons éditer/réglages/supprimer d'un bloc ne réagissaient presque jamais à un clic précis sur leur icône — celui-ci était interprété comme un début de glisser-déposer du bloc, empêchant l'action de s'exécuter.",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
+    text: "Nouveau bloc « Bannière » pour la page d'accueil d'un monde : titre, texte court, image de fond et bouton d'action optionnels, dans un éditeur inspiré du modal des encadrés de chatroom (aperçu en direct). Les blocs HTML et Markdown peuvent en plus être affichés en plein largeur, sans bordure ni fond, plutôt qu'en carte — un réglage disponible dans leur éditeur de contenu.",
+  },
+  {
+    date: "2026-08",
     tag: "Interface",
     text: "En déplaçant ou redimensionnant un bloc dans l'éditeur de grille de la page d'accueil (Réglages > Page d'accueil), un grillage des 12 colonnes s'affiche en fond pour repérer l'alignement, aligné sur la bordure en pointillé de l'éditeur.",
   },
