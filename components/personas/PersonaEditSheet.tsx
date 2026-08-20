@@ -136,7 +136,7 @@ function BannerSheet({
 }) {
   return (
     <Drawer open={open} onOpenChange={onOpenChange} swipeDirection="right">
-      <DrawerContent className="inset-y-0 right-0 flex flex-col gap-4 border rounded-md bg-background text-foreground shadow-lg p-0 w-[min(calc(100%_-_var(--drawer-inset)*2),_744px)] lg:shadow-2xl">
+      <DrawerContent className="inset-y-0 right-0 flex flex-col gap-4 border rounded-md bg-background text-foreground shadow-lg p-0 w-[min(calc(100%_-_var(--drawer-inset)*2),_460px)] lg:shadow-2xl">
         <DrawerClose
           aria-label="Fermer"
           className="absolute right-4 top-4 rounded-xs text-muted-foreground opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
@@ -475,10 +475,6 @@ type PersonaEditorContentProps = {
   initialFaceclaim?: string | null;
   initialMaritalStatus?: MaritalStatus | null;
   initialSpousePersonaId?: string | null;
-  /** Notifie le parent quand la sheet Avatar s'ouvre/ferme (effet pile de cartes). */
-  onAvatarOpenChange?: (open: boolean) => void;
-  /** Notifie le parent quand la sheet Bannière s'ouvre/ferme (effet pile de cartes). */
-  onBannerOpenChange?: (open: boolean) => void;
   worldId?: string;
   restrictInventory?: boolean;
   restrictSkills?: boolean;
@@ -502,8 +498,6 @@ export function PersonaEditorContent({
   initialFaceclaim,
   initialMaritalStatus,
   initialSpousePersonaId,
-  onAvatarOpenChange,
-  onBannerOpenChange,
   worldId,
   restrictInventory,
   restrictSkills,
@@ -549,14 +543,6 @@ export function PersonaEditorContent({
   }, []);
 
   const xpInfo = balance ? levelInfo(balance.xp) : null;
-
-  useEffect(() => {
-    onAvatarOpenChange?.(avatarDialogOpen);
-  }, [avatarDialogOpen, onAvatarOpenChange]);
-
-  useEffect(() => {
-    onBannerOpenChange?.(bannerDialogOpen);
-  }, [bannerDialogOpen, onBannerOpenChange]);
 
   return (
     <>
@@ -716,7 +702,7 @@ export function PersonaEditorContent({
 
       {/* Drawer apparence (avatar + cosmétiques) */}
       <Drawer open={avatarDialogOpen} onOpenChange={setAvatarDialogOpen} swipeDirection="right">
-        <DrawerContent className="inset-y-0 right-0 flex flex-col border rounded-md bg-background text-foreground shadow-lg p-0 gap-0 w-[min(calc(100%_-_var(--drawer-inset)*2),_1024px)] lg:shadow-2xl overflow-hidden">
+        <DrawerContent className="inset-y-0 right-0 flex flex-col border rounded-md bg-background text-foreground shadow-lg p-0 gap-0 w-[min(calc(100%_-_var(--drawer-inset)*2),_460px)] lg:shadow-2xl overflow-hidden">
           <DrawerClose
             aria-label="Fermer"
             className="absolute right-4 top-4 rounded-xs text-muted-foreground opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
@@ -839,27 +825,6 @@ export function PersonaEditorContent({
         </DrawerContent>
       </Drawer>
 
-      {/* Aperçu de l'avatar actuel dans l'espace libre à gauche (desktop only).
-          Porté vers document.body pour passer au-dessus de l'obfuscateur Radix. */}
-      {avatarDialogOpen && typeof document !== "undefined" &&
-        createPortal(
-          <div className="hidden lg:flex fixed inset-y-0 left-0 right-[64rem] z-[51] items-center justify-center p-10 pointer-events-none">
-            <div className="flex flex-col items-center gap-4">
-              <div className="relative h-64 w-64 overflow-hidden rounded-3xl border bg-muted shadow-2xl">
-                {avatarUrl ? (
-                  <Image src={avatarUrl} alt="" fill sizes="256px" className="object-cover" draggable={false} />
-                ) : (
-                  <div className="h-full w-full grid place-items-center text-4xl font-semibold text-muted-foreground">
-                    {avatarFallback}
-                  </div>
-                )}
-              </div>
-              <p className="text-sm font-medium text-white/80">Avatar actuel</p>
-            </div>
-          </div>,
-          document.body,
-        )}
-
       {/* Aperçu de la bannière actuelle dans l'espace libre à gauche (desktop only).
           Porté vers document.body pour passer au-dessus de l'obfuscateur Radix. */}
       {bannerDialogOpen && typeof document !== "undefined" &&
@@ -929,8 +894,6 @@ export function PersonaEditSheet({
 }: PersonaEditSheetProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [avatarOpen, setAvatarOpen] = useState(false);
-  const [bannerOpen, setBannerOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [sections, setSections] = useState(initialSections);
 
@@ -954,20 +917,14 @@ export function PersonaEditSheet({
         : <button className="text-sm underline" onClick={() => setOpen(true)}>Éditer</button>
       }
       <Drawer open={open} onOpenChange={setOpen} swipeDirection="right">
-        <DrawerContent
-          className={cn(
-            "inset-y-0 right-0 flex flex-col border rounded-md bg-background text-foreground shadow-lg p-0",
-            "w-[min(calc(100%_-_var(--drawer-inset)*2),_768px)]",
-            // `mr-*` plutôt que `translate-x-*` : le popup du drawer pose déjà
-            // son propre `transform` (glissement d'ouverture, arbitraire — pas
-            // le système de transform composable de Tailwind), donc un
-            // translate-x ajouté ici pourrait l'écraser plutôt que s'y
-            // ajouter. Une marge droite s'additionne sans y toucher, puisque
-            // ce popup est positionné via `right: 0`.
-            avatarOpen && "lg:mr-[280px] lg:blur-[2px]",
-            bannerOpen && "lg:blur-[2px]",
-          )}
-        >
+        {/* Le recul visuel de ce drawer quand le drawer avatar/bannière
+            imbriqué s'ouvre (assombrissement, contenu masqué) vient du
+            stack natif de Drawer — voir `data-nested-drawer-open` dans
+            components/ui/drawer.tsx — puisque BannerSheet et le drawer
+            avatar (dans PersonaEditorContent) sont déjà rendus à
+            l'intérieur de ce DrawerContent, donc réellement imbriqués. Plus
+            besoin de décalage/flou manuel piloté par un état local. */}
+        <DrawerContent className="inset-y-0 right-0 flex flex-col border rounded-md bg-background text-foreground shadow-lg p-0 w-[min(calc(100%_-_var(--drawer-inset)*2),_460px)]">
           <DrawerClose
             aria-label="Fermer"
             className="absolute right-4 top-4 rounded-xs text-muted-foreground opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
@@ -997,8 +954,6 @@ export function PersonaEditSheet({
               initialMaritalStatus={initialMaritalStatus}
               initialSpousePersonaId={initialSpousePersonaId}
               faceclaimsEnabled={faceclaimsEnabled}
-              onAvatarOpenChange={setAvatarOpen}
-              onBannerOpenChange={setBannerOpen}
             />
           </div>
 
