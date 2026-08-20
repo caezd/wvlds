@@ -73,4 +73,36 @@ describe("ScrollAreaWithJumpToBottom — bouton « descendre »", () => {
     await waitFor(() => expect(button.className).toContain("pointer-events-none"));
     expect(button).toHaveAttribute("tabindex", "-1");
   });
+
+  it("apparaît en glissant légèrement depuis le bas (translate-y) plutôt qu'en fondu seul", async () => {
+    const { container, getByLabelText } = render(
+      <ScrollAreaWithJumpToBottom thresholdPx={100}>
+        <div style={{ height: 2000 }}>contenu</div>
+      </ScrollAreaWithJumpToBottom>,
+    );
+    const viewport = getViewport(container);
+    const wrapper = getByLabelText("Descendre").parentElement!;
+
+    // Caché : décalé vers le bas, invisible.
+    expect(wrapper.className).toContain("translate-y-2");
+    expect(wrapper.className).toContain("opacity-0");
+
+    setScrollMetrics(viewport, { scrollTop: 0, scrollHeight: 1000, clientHeight: 200 });
+
+    // Visible : revenu à sa position, opaque.
+    await waitFor(() => expect(wrapper.className).toContain("opacity-100"));
+    expect(wrapper.className).toContain("translate-y-0");
+    expect(wrapper.className).not.toContain("translate-y-2");
+  });
+
+  it("est un carré arrondi (rounded-lg), pas un cercle", () => {
+    const { getByLabelText } = render(
+      <ScrollAreaWithJumpToBottom>
+        <div style={{ height: 2000 }}>contenu</div>
+      </ScrollAreaWithJumpToBottom>,
+    );
+    const button = getByLabelText("Descendre");
+    expect(button.className).toContain("rounded-lg");
+    expect(button.className).not.toContain("rounded-full");
+  });
 });

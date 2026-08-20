@@ -104,6 +104,21 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Interface",
+    text: "Le niveau, l'XP, les pièces et le streak — liés au compte, pas au personnage — ont été retirés des fiches de persona (profil, édition) et déplacés dans le profil joueur, consultable en cliquant sur un pseudo.",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
+    text: "En changeant de monde, le menu déroulant des conversations dans l'en-tête affichait brièvement l'ancien monde à l'ouverture — il se rafraîchit désormais dès le changement de monde, pas seulement à l'ouverture.",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
+    text: "L'avatar d'un membre dans la liste « Membres » d'un monde affiche désormais une pastille de présence (en ligne, absent, hors ligne), comme pour les personas dans une chatroom.",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
     text: "Le bouton « Mondes » pointe directement vers ton dernier monde visité (plus besoin de passer par une redirection intermédiaire). Le favori déjà actif (monde ou chatroom en cours) n'est plus cliquable dans la liste et gagne un contour accent, au lieu de renaviguer vers la page déjà affichée.",
   },
   {

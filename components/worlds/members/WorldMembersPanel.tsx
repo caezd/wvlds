@@ -9,6 +9,7 @@ import { supabaseThumb } from "@/lib/storage";
 import { cn } from "@/lib/utils";
 import { getLeadingLetter } from "@/lib/textFormatting";
 import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
+import { useGlobalPresence } from "@/components/providers/PresenceProvider";
 
 const WorldInviteDialog = dynamic(() => import("./WorldInviteDialog").then((m) => m.WorldInviteDialog));
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -80,9 +81,31 @@ function Av({
   );
 }
 
+// ── Pastille de présence ─────────────────────────────────────────────────────
+// Mêmes couleurs que ChatroomAvatarWithPresence (état online/away/offline),
+// mais superposable à un avatar rond (celui-ci n'a que la variante rounded-md).
+
+const PRESENCE_DOT_COLOR: Record<"online" | "away" | "offline", string> = {
+  online: "bg-[#58F4A8]",
+  away: "bg-orange-400",
+  offline: "bg-red-500",
+};
+
+function PresenceDot({ state }: { state: "online" | "away" | "offline" }) {
+  return (
+    <span
+      className={cn(
+        "absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full ring-2 ring-background",
+        PRESENCE_DOT_COLOR[state],
+      )}
+    />
+  );
+}
+
 // ── MemberRow ─────────────────────────────────────────────────────────────────
 
 function MemberRow({ member }: { member: Member }) {
+  const { getUserPresence } = useGlobalPresence();
   const displayName = member.username ? `@${member.username}` : member.user_id.slice(0, 8);
   const letter = getLeadingLetter(displayName);
   const shown = member.personas.slice(0, 5);
@@ -90,7 +113,10 @@ function MemberRow({ member }: { member: Member }) {
 
   return (
     <div className="flex items-center gap-3 rounded-xl px-3 py-2 transition-colors hover:bg-muted/40">
-      <Av src={member.avatar_url} alt={displayName} fallback={letter} size={34} />
+      <span className="relative shrink-0">
+        <Av src={member.avatar_url} alt={displayName} fallback={letter} size={34} />
+        <PresenceDot state={getUserPresence(member.user_id)} />
+      </span>
       <span className="min-w-0 flex-1 truncate text-sm font-medium">{displayName}</span>
       {shown.length > 0 && (
         <div className="flex -space-x-1.5 shrink-0">

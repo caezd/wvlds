@@ -4,13 +4,21 @@ import * as React from "react";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
+import { Coins, Flame, X, Zap } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { PresenceDot } from "@/components/avatars/PresenceDot";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import { useGlobalPresence } from "@/components/providers/PresenceProvider";
 import { formatLastSeen } from "@/lib/utils";
 import { isPronounOption } from "@/lib/pronouns";
+import { levelInfo } from "@/lib/xp";
 
 function formatMemberSince(value: string) {
   return new Intl.DateTimeFormat("fr-CA", {
@@ -35,23 +43,29 @@ type ProfileData = {
   appear_offline: boolean;
 };
 
+type BalanceSummary = {
+  xp: number;
+  coins: number;
+  streak_current: number;
+};
+
 export function UserProfileSheetTrigger({
   children,
   userId,
   label,
-  side = "right",
 }: {
   children: React.ReactNode;
   userId?: string | null;
   label?: string | null;
-  side?: "left" | "right" | "top" | "bottom";
 }) {
   const t = useTranslations("userProfile");
   const tPronouns = useTranslations("pronouns");
+  const tCommon = useTranslations("common");
   const supabase = React.useMemo(() => createClient(), []);
   const { getUserPresence } = useGlobalPresence();
   const [open, setOpen] = React.useState(false);
   const [profile, setProfile] = React.useState<ProfileData | null>(null);
+  const [balance, setBalance] = React.useState<BalanceSummary | null>(null);
   const [loading, setLoading] = React.useState(false);
 
   const fetchedKeyRef = React.useRef<string | null>(null);
@@ -62,11 +76,17 @@ export function UserProfileSheetTrigger({
     setLoading(true);
 
     async function load() {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("username,avatar_url,bio,pronouns,created_at,last_seen_at,appear_offline")
-        .eq("id", userId!)
-        .maybeSingle();
+      const [{ data, error }, { data: bal }] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("username,avatar_url,bio,pronouns,created_at,last_seen_at,appear_offline")
+          .eq("id", userId!)
+          .maybeSingle(),
+        // RPC (pas une lecture directe de gamification_balances) : nécessaire
+        // pour consulter le solde d'un AUTRE utilisateur, la RLS de la table
+        // ne laissant lire que sa propre ligne.
+        supabase.rpc("get_balance_summary", { p_user_id: userId! }),
+      ]);
 
       setLoading(false);
       if (error) {
@@ -75,6 +95,14 @@ export function UserProfileSheetTrigger({
         return;
       }
       if (data) setProfile(data as unknown as ProfileData);
+      const balRow = Array.isArray(bal) ? bal?.[0] : bal;
+      if (balRow) {
+        setBalance({
+          xp: Number(balRow.xp) || 0,
+          coins: Number(balRow.coins) || 0,
+          streak_current: Number(balRow.streak_current) || 0,
+        });
+      }
     }
 
     void load();
@@ -84,6 +112,7 @@ export function UserProfileSheetTrigger({
     if (open) prefetch();
   }, [open, prefetch]);
 
+  const xpInfo = balance ? levelInfo(balance.xp) : null;
   const username = profile?.username ?? label ?? null;
   const userPresence = userId ? getUserPresence(userId) : "offline";
   const presenceLine =
@@ -98,7 +127,7 @@ export function UserProfileSheetTrigger({
             : null;
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
+    <Drawer open={open} onOpenChange={setOpen} swipeDirection="right">
       <button
         type="button"
         title={label ?? t("title")}
@@ -109,12 +138,18 @@ export function UserProfileSheetTrigger({
         {children}
       </button>
 
-      <SheetContent side={side} className="w-full sm:max-w-sm overflow-y-auto">
-        <SheetHeader className="sr-only">
-          <SheetTitle>{username ?? t("title")}</SheetTitle>
-        </SheetHeader>
+      <DrawerContent className="inset-y-0 right-0 flex flex-col gap-0 border rounded-md bg-background text-foreground shadow-lg p-0 w-[min(calc(100%_-_var(--drawer-inset)*2),_384px)]">
+        <DrawerClose
+          aria-label={tCommon("close")}
+          className="absolute right-4 top-4 rounded-xs text-muted-foreground opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
+        >
+          <X className="size-4" />
+        </DrawerClose>
+        <DrawerHeader className="sr-only">
+          <DrawerTitle>{username ?? t("title")}</DrawerTitle>
+        </DrawerHeader>
 
-        <div className="flex flex-col items-center gap-3 pt-2 text-center">
+        <div className="min-h-0 flex-1 overflow-y-auto flex flex-col items-center gap-3 pt-2 text-center">
           <Avatar className="size-20">
             {profile?.avatar_url && <AvatarImage src={profile.avatar_url} />}
             <AvatarFallback className="text-2xl">
@@ -131,6 +166,35 @@ export function UserProfileSheetTrigger({
               </p>
             )}
           </div>
+
+          {xpInfo && balance && (
+            <div className="w-full space-y-1">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span className="font-medium text-foreground">Niveau {xpInfo.level}</span>
+                <span>{balance.xp} / {xpInfo.xpForNext} XP</span>
+              </div>
+              <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-primary transition-all"
+                  style={{ width: `${xpInfo.progress}%` }}
+                />
+              </div>
+              <div className="flex items-center justify-center gap-3 pt-0.5 text-xs">
+                <span className="flex items-center gap-1 text-yellow-400">
+                  <Coins className="h-3.5 w-3.5" />
+                  {balance.coins.toLocaleString()}
+                </span>
+                <span className="flex items-center gap-1 text-orange-400">
+                  <Flame className="h-3.5 w-3.5" />
+                  {balance.streak_current} j.
+                </span>
+                <span className="flex items-center gap-1 text-blue-400">
+                  <Zap className="h-3.5 w-3.5" />
+                  {balance.xp} XP
+                </span>
+              </div>
+            </div>
+          )}
 
           {!!profile?.pronouns?.length && (
             <div className="flex flex-wrap justify-center gap-1.5">
@@ -164,7 +228,7 @@ export function UserProfileSheetTrigger({
             </div>
           )}
         </div>
-      </SheetContent>
-    </Sheet>
+      </DrawerContent>
+    </Drawer>
   );
 }

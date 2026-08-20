@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createSupabaseMock } from "@/test/supabaseMock";
 import { createClient } from "@/lib/supabase/client";
@@ -103,5 +103,61 @@ describe("ChatroomsNavDropdown — charge la suite sans avoir besoin de scroller
     await waitFor(() => {
       expect(screen.queryByText("Faites défiler pour en voir plus…")).not.toBeInTheDocument();
     });
+  });
+});
+
+describe("ChatroomsNavDropdown — rafraîchit en changeant de monde, pas seulement à l'ouverture", () => {
+  it("ne charge rien au premier montage tant que le dropdown n'est pas ouvert", () => {
+    const mock = setup();
+    render(
+      <ChatroomsNavDropdown worldId="w1" currentChatId="current" label="Salle actuelle" initialRooms={makeRooms(1)} />,
+    );
+
+    expect(mock.rpc).not.toHaveBeenCalled();
+  });
+
+  it("recharge dès que worldId change, même dropdown fermé", async () => {
+    const mock = setup();
+    mock.rpc.mockResolvedValue({ data: [], error: null });
+    const { rerender } = render(
+      <ChatroomsNavDropdown worldId="w1" currentChatId="current" label="Salle actuelle" initialRooms={makeRooms(1)} />,
+    );
+
+    rerender(
+      <ChatroomsNavDropdown worldId="w2" currentChatId="current" label="Salle actuelle" initialRooms={makeRooms(1)} />,
+    );
+
+    await waitFor(() => {
+      expect(mock.rpc).toHaveBeenCalledWith("list_participated_chatrooms", { p_world_id: "w2", p_limit: 100 });
+    });
+  });
+
+  it("n'affiche plus l'ancien monde à l'ouverture juste après un changement de monde", async () => {
+    const mock = setup();
+    mock.rpc.mockResolvedValueOnce({
+      data: [{ id: "room-new", title: "Salle du nouveau monde", name: null, icon_url: null, last_message_at: null, has_unread: false }],
+      error: null,
+    });
+    const { rerender } = render(
+      <ChatroomsNavDropdown worldId="w1" currentChatId="current" label="Salle actuelle" initialRooms={makeRooms(1)} />,
+    );
+
+    await act(async () => {
+      rerender(
+        <ChatroomsNavDropdown worldId="w2" currentChatId="current" label="Salle actuelle" initialRooms={makeRooms(1)} />,
+      );
+    });
+    // Laisse le fetch déclenché par le changement de monde se résoudre avant
+    // l'ouverture — c'est justement ce délai qui masquait le bug (l'ancienne
+    // liste s'affichait le temps que l'effet gated sur `open` se déclenche).
+    await waitFor(() => {
+      expect(mock.rpc).toHaveBeenCalledWith("list_participated_chatrooms", { p_world_id: "w2", p_limit: 100 });
+    });
+
+    const user = userEvent.setup();
+    await user.click(screen.getByLabelText("Conversations du monde"));
+
+    expect(await screen.findByText("Salle du nouveau monde")).toBeInTheDocument();
+    expect(screen.queryByText("Salle 0")).not.toBeInTheDocument();
   });
 });
