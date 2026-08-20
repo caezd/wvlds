@@ -17,6 +17,7 @@ import {
   type WorldHomeGridItem,
 } from "@/components/worlds/home/worldHomeGrid";
 import type { WorldInventoryItem, WorldSkill, WorldCatalogCategory, WorldTimelineConfig, WorldTag } from "@/types/worlds";
+import { clampDaysPerMonth } from "@/lib/worldTimeline";
 
 const MAX_WORLD_TAGS = 10;
 const MAX_TAG_LENGTH = 24;
@@ -418,7 +419,15 @@ export async function setWorldTimeline(
 ) {
   const supabase = await createClient();
   const updates: Record<string, unknown> = { timeline_enabled: enabled };
-  if (config !== undefined) updates.timeline_config = config;
+  // `days_per_month` borné même côté serveur : le client clampe déjà à la
+  // saisie, mais rien ne garantit qu'une valeur aberrante ne l'atteigne pas
+  // par un autre chemin — cette longueur alimente ensuite un `Array.from`
+  // dans le widget de calendrier (voir clampDaysPerMonth).
+  if (config !== undefined) {
+    updates.timeline_config = config && config.days_per_month
+      ? { ...config, days_per_month: config.days_per_month.map(clampDaysPerMonth) }
+      : config;
+  }
   const { error } = await supabase.from("worlds").update(updates).eq("id", worldId);
   if (error) return { ok: false as const, error: error.message };
   return { ok: true as const };

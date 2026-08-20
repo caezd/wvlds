@@ -67,7 +67,7 @@ import { WorldCategoryManager } from "@/components/worlds/settings/WorldCategory
 import { WorldRelationsSettings } from "@/components/worlds/settings/WorldRelationsSettings";
 import { WorldHomeGridSettings } from "@/components/worlds/settings/WorldHomeGridSettings";
 import type { World, WorldTimelineConfig } from "@/types/worlds";
-import { DEFAULT_DAYS_PER_MONTH, REAL_DAYS_PER_MONTH, REAL_MONTH_NAMES } from "@/lib/worldTimeline";
+import { clampDaysPerMonth, DEFAULT_DAYS_PER_MONTH, REAL_DAYS_PER_MONTH, REAL_MONTH_NAMES } from "@/lib/worldTimeline";
 
 /**
  * Vue plein-écran des paramètres d'un « monde », organisée en onglets
@@ -1093,12 +1093,12 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                                                         className="h-7 w-16 shrink-0 text-sm"
                                                                         onChange={e => {
                                                                             const next = [...(timelineConfig.days_per_month ?? [])];
-                                                                            next[i] = Number(e.target.value) || DEFAULT_DAYS_PER_MONTH;
+                                                                            next[i] = clampDaysPerMonth(Number(e.target.value));
                                                                             setTimelineConfig(c => ({ ...c, days_per_month: next }));
                                                                         }}
                                                                         onBlur={e => {
                                                                             const next = [...(timelineConfig.days_per_month ?? [])];
-                                                                            next[i] = Number(e.target.value) || DEFAULT_DAYS_PER_MONTH;
+                                                                            next[i] = clampDaysPerMonth(Number(e.target.value));
                                                                             void persistTimelineConfig({ days_per_month: next });
                                                                         }}
                                                                     />

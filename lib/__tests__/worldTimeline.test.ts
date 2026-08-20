@@ -1,8 +1,11 @@
 import { describe, it, expect } from "vitest";
 import {
+  clampDaysPerMonth,
   DEFAULT_DAYS_PER_MONTH,
   daysInMonth,
   formatTimelineLabel,
+  MAX_DAYS_PER_MONTH,
+  MIN_DAYS_PER_MONTH,
   REAL_DAYS_PER_MONTH,
   REAL_MONTH_NAMES,
 } from "@/lib/worldTimeline";
@@ -56,5 +59,37 @@ describe("daysInMonth", () => {
 
   it("le préréglage « mois réels » a autant de longueurs que de noms de mois", () => {
     expect(REAL_DAYS_PER_MONTH).toHaveLength(REAL_MONTH_NAMES.length);
+  });
+
+  it("borne une valeur enregistrée hors limites — les attributs HTML min/max ne l'empêchent pas", () => {
+    // Régression (retour Copilot) : un `<input type=number min max>` n'écrête
+    // pas la valeur saisie ; sans ce garde-fou, la valeur alimentait ensuite
+    // un `Array.from({ length })` dans le widget de calendrier.
+    expect(daysInMonth({ ...CONFIG, days_per_month: [0] }, 0)).toBe(MIN_DAYS_PER_MONTH);
+    expect(daysInMonth({ ...CONFIG, days_per_month: [-5] }, 0)).toBe(MIN_DAYS_PER_MONTH);
+    expect(daysInMonth({ ...CONFIG, days_per_month: [999_999] }, 0)).toBe(MAX_DAYS_PER_MONTH);
+    expect(daysInMonth({ ...CONFIG, days_per_month: [15.7] }, 0)).toBe(16);
+  });
+});
+
+describe("clampDaysPerMonth", () => {
+  it("laisse passer une valeur déjà dans les bornes", () => {
+    expect(clampDaysPerMonth(30)).toBe(30);
+  });
+
+  it("arrondit une valeur décimale à l'entier le plus proche", () => {
+    expect(clampDaysPerMonth(15.4)).toBe(15);
+    expect(clampDaysPerMonth(15.5)).toBe(16);
+  });
+
+  it("borne au minimum/maximum plutôt que de laisser passer une valeur aberrante", () => {
+    expect(clampDaysPerMonth(0)).toBe(MIN_DAYS_PER_MONTH);
+    expect(clampDaysPerMonth(-42)).toBe(MIN_DAYS_PER_MONTH);
+    expect(clampDaysPerMonth(1_000_000)).toBe(MAX_DAYS_PER_MONTH);
+  });
+
+  it("retombe sur la valeur par défaut pour une entrée non finie (NaN, saisie vidée)", () => {
+    expect(clampDaysPerMonth(Number.NaN)).toBe(DEFAULT_DAYS_PER_MONTH);
+    expect(clampDaysPerMonth(Number.POSITIVE_INFINITY)).toBe(DEFAULT_DAYS_PER_MONTH);
   });
 });

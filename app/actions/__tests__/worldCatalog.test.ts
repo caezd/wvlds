@@ -11,6 +11,7 @@ import {
     setWorldHomeShowStats,
     setWorldHomeGridGap,
     setWorldAgeRestricted,
+    setWorldTimeline,
     setWorldPersonaTemplate,
     addWorldInventoryItem,
     updateWorldInventoryItem,
@@ -173,6 +174,56 @@ describe("setWorldAgeRestricted", () => {
     it("remonte l'erreur Supabase", async () => {
         use(createSupabaseMock({ results: [{ error: { message: "nope" } }] }));
         expect(await setWorldAgeRestricted("w1", true)).toEqual({ ok: false, error: "nope" });
+    });
+});
+
+// ── setWorldTimeline ──────────────────────────────────────────────────────────
+
+describe("setWorldTimeline", () => {
+    const CONFIG = {
+        year_label: "An",
+        era_name: null,
+        month_names: ["Janvier", "Février"],
+        current_year: 1,
+        current_month: null,
+        days_per_month: [31, 28],
+    };
+
+    it("active/désactive et enregistre la config telle quelle quand elle est déjà valide", async () => {
+        const mock = createSupabaseMock({ results: [{ error: null }] });
+        use(mock);
+        const res = await setWorldTimeline("w1", true, CONFIG);
+        expect(res).toEqual({ ok: true });
+        expect(mock.buildersFor("worlds")[0].update).toHaveBeenCalledWith({
+            timeline_enabled: true,
+            timeline_config: CONFIG,
+        });
+    });
+
+    it("borne les jours par mois hors limites — les attributs min/max HTML côté client ne suffisent pas", async () => {
+        // Régression (retour Copilot) : une valeur aberrante alimenterait
+        // ensuite un `Array.from({ length })` dans le widget de calendrier.
+        const mock = createSupabaseMock({ results: [{ error: null }] });
+        use(mock);
+        const res = await setWorldTimeline("w1", true, { ...CONFIG, days_per_month: [0, 999999] });
+        expect(res).toEqual({ ok: true });
+        expect(mock.buildersFor("worlds")[0].update).toHaveBeenCalledWith({
+            timeline_enabled: true,
+            timeline_config: { ...CONFIG, days_per_month: [1, 999] },
+        });
+    });
+
+    it("désactive sans toucher timeline_config quand aucune config n'est fournie", async () => {
+        const mock = createSupabaseMock({ results: [{ error: null }] });
+        use(mock);
+        const res = await setWorldTimeline("w1", false);
+        expect(res).toEqual({ ok: true });
+        expect(mock.buildersFor("worlds")[0].update).toHaveBeenCalledWith({ timeline_enabled: false });
+    });
+
+    it("remonte l'erreur Supabase", async () => {
+        use(createSupabaseMock({ results: [{ error: { message: "nope" } }] }));
+        expect(await setWorldTimeline("w1", true, CONFIG)).toEqual({ ok: false, error: "nope" });
     });
 });
 

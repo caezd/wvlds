@@ -126,6 +126,26 @@ describe("WorldSettingsView — Chronologie — jours par mois", () => {
     });
   });
 
+  it("borne une valeur hors limites saisie au clavier — les attributs min/max HTML ne l'empêchent pas", async () => {
+    // Régression (retour Copilot) : sans ce garde-fou, une valeur aberrante
+    // (0, négative, énorme) survivait jusqu'au widget de calendrier, qui
+    // construit un bouton par jour du mois (`Array.from({ length })`).
+    setup();
+    await openTimelineSection(WITH_MONTHS);
+    const input = screen.getByLabelText("Jours en Février");
+
+    fireEvent.change(input, { target: { value: "999999" } });
+    fireEvent.blur(input);
+
+    await waitFor(() => {
+      expect(setWorldTimelineMock).toHaveBeenCalledWith(
+        "w1",
+        true,
+        expect.objectContaining({ days_per_month: [31, 999] }),
+      );
+    });
+  });
+
   it("« Utiliser les mois réels » règle aussi les longueurs de mois grégoriennes", async () => {
     setup();
     const user = await openTimelineSection(NO_MONTHS);
