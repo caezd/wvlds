@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Correctif",
+    text: "Sur mobile, le bouton menu pouvait devenir inaccessible pendant le chargement d'une conversation, de l'Explorateur ou d'un onglet de monde (membres, personas, wiki, chronologie…) : un bouton de secours s'affiche désormais pendant tout le temps de chargement.",
+  },
+  {
+    date: "2026-08",
     tag: "Interface",
     text: "Dans le panneau Chronologie, les salons sont désormais regroupés par mois (pas seulement par année) : chaque mois a son propre titre et une puce reliée à la ligne de temps de l'année. L'en-tête du panneau a aussi son icône.",
   },

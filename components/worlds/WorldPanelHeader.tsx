@@ -16,7 +16,8 @@ export function WorldPanelHeader({
 }: {
   /** Icône en tête (déjà stylée, ex: `<Users className="h-4 w-4 shrink-0 text-muted-foreground" />`). */
   icon?: ReactNode;
-  title: ReactNode;
+  /** Omis pour un état de chargement (squelette) : seul le bouton menu est utile tant que le contenu réel n'a pas encore de titre. */
+  title?: ReactNode;
   /** Contenu additionnel entre le titre et le slot de droite (ex: bascule mode édition). */
   children?: ReactNode;
   /** Actions poussées à droite (ex: bouton fermer), regroupées avec un espacement commun. */

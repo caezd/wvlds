@@ -33,7 +33,10 @@ const DmsPanelContent = dynamic(
 );
 
 // Onglets secondaires d'un monde ayant leur propre header (avec bouton menu intégré).
-const WORLD_PANEL_VIEWS = new Set([
+// Exporté : réutilisé par `w/[id]/loading.tsx` pour savoir, pendant le
+// chargement, si le futur contenu aura son propre bouton menu (auquel cas
+// il faut en afficher un de secours le temps que ce contenu monte).
+export const WORLD_PANEL_VIEWS = new Set([
   "members", "personas", "wiki", "canvas", "catalogue", "map", "timeline", "settings",
 ]);
 
