@@ -225,7 +225,7 @@ function CategoryRow({
     <div
       ref={setNodeRef}
       style={style}
-      className="group flex items-center gap-2.5 rounded-xl px-2 py-1.5 transition-colors hover:bg-muted/40"
+      className="group flex items-center gap-2.5 rounded-lg bg-muted/60 px-2.5 py-1.5 transition-colors hover:bg-muted/70"
     >
       {canEdit && (
         <span
@@ -249,7 +249,10 @@ function CategoryRow({
         )}
       </div>
       {canEdit && (
-        <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+        // Toujours visibles (pas de `opacity-0 group-hover:...`) : le survol
+        // n'existe pas au tactile, ces boutons restaient sinon inatteignables
+        // au tap (même correctif que WorldHomeGridEditor.tsx).
+        <div className="flex shrink-0 items-center gap-1">
           <button
             type="button"
             onClick={onEdit}
@@ -358,30 +361,34 @@ export function WorldCategoryManager({
 
   return (
     <div className="space-y-3">
-      <DndContext sensors={sensors} onDragEnd={onDragEnd}>
-        <SortableContext items={categories.map((c) => c.id)} strategy={verticalListSortingStrategy}>
-          <div className="space-y-0.5">
-            {categories.map((category) => (
-              <CategoryRow
-                key={category.id}
-                category={category}
-                canEdit={canEdit}
-                isEditing={editingId === category.id}
-                onEdit={() => setEditingId(category.id)}
-                onCancelEdit={() => setEditingId(null)}
-                onSaved={handleUpdated}
-                onDelete={() => void handleDelete(category)}
-              />
-            ))}
-          </div>
-        </SortableContext>
-      </DndContext>
+      {/* Même conteneur de zone de glisser-déposer que la grille d'accueil
+          (WorldHomeGridEditor) : `rounded-lg border border-dashed p-2`. */}
+      <div className="rounded-lg border border-dashed p-2">
+        <DndContext sensors={sensors} onDragEnd={onDragEnd}>
+          <SortableContext items={categories.map((c) => c.id)} strategy={verticalListSortingStrategy}>
+            <div className="space-y-1.5">
+              {categories.map((category) => (
+                <CategoryRow
+                  key={category.id}
+                  category={category}
+                  canEdit={canEdit}
+                  isEditing={editingId === category.id}
+                  onEdit={() => setEditingId(category.id)}
+                  onCancelEdit={() => setEditingId(null)}
+                  onSaved={handleUpdated}
+                  onDelete={() => void handleDelete(category)}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
 
-      {categories.length === 0 && !creating && (
-        <p className="px-2 py-1 text-xs text-muted-foreground/60">
-          Aucune catégorie pour l&apos;instant.
-        </p>
-      )}
+        {categories.length === 0 && !creating && (
+          <p className="px-2 py-4 text-center text-xs text-muted-foreground/60">
+            Aucune catégorie pour l&apos;instant.
+          </p>
+        )}
+      </div>
 
       {canEdit &&
         (creating ? (
@@ -390,7 +397,7 @@ export function WorldCategoryManager({
           <button
             type="button"
             onClick={() => setCreating(true)}
-            className="flex w-full items-center gap-2 rounded-xl px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground"
+            className="flex items-center gap-1.5 rounded-md border border-border-soft px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
           >
             <Plus className="h-3.5 w-3.5" />
             Nouvelle catégorie
