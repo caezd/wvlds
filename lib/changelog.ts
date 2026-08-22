@@ -8,6 +8,16 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Interface",
+    text: "La Toile des relations d'un monde a une recherche dans son en-tête (icône loupe, se déplie en champ de saisie au clic) : trouver un persona par son nom ou par le pseudo de son joueur filtre la liste mobile et estompe les cartes non correspondantes sur le canevas desktop.",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
+    text: "La Toile des relations d'un monde a désormais une vue mobile dédiée : le canevas (courbes, pan/zoom), illisible en petit écran, est remplacé par une liste de personas groupée par joueur — taper l'un d'eux ouvre ses relations, et un bouton dédié permet d'en créer une nouvelle sans passer par le canevas.",
+  },
+  {
+    date: "2026-08",
     tag: "Correctif",
     text: "Les boutons éditer/réglages/supprimer d'un bloc dans l'éditeur de grille de la page d'accueil (Réglages > Page d'accueil) n'apparaissaient qu'au survol de la souris — invisibles, et donc impossibles à atteindre, sur écran tactile. Ils restent maintenant affichés en permanence.",
   },

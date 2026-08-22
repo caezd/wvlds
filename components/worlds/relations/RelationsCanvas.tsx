@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
-import { Link2, Network, Trash2, X } from "lucide-react";
+import { ArrowLeft, ChevronRight, Link2, Network, Plus, Search, Trash2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getInitials } from "@/lib/textFormatting";
 import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
@@ -201,6 +201,22 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
   const [hovRelId, setHovRelId] = React.useState<string | null>(null);
   const [selectedPersonaId, setSelectedPersonaId] = React.useState<string | null>(null);
   const [asideTab, setAsideTab] = React.useState<"out" | "in">("out");
+
+  // Recherche (header) — filtre la liste mobile, atténue les cartes non
+  // correspondantes sur le canevas desktop. Partagée entre les deux vues.
+  const [search, setSearch] = React.useState("");
+  const [searchOpen, setSearchOpen] = React.useState(false);
+  const searchInputRef = React.useRef<HTMLInputElement>(null);
+
+  function closeSearch() {
+    setSearch("");
+    setSearchOpen(false);
+  }
+
+  // Autofocus au moment où le champ apparaît (l'icône seule n'a pas de focus).
+  React.useEffect(() => {
+    if (searchOpen) searchInputRef.current?.focus();
+  }, [searchOpen]);
 
   // Group picker
   const [openGroupPicker, setOpenGroupPicker] = React.useState<{ personaId: string; x: number; y: number } | null>(null);
@@ -483,6 +499,36 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
     [members, personasByUser]
   );
 
+  // ── Recherche ─────────────────────────────────────────────────────────────
+
+  function ownerDisplayName(uid: string): string {
+    const m = members.find((mm) => mm.user_id === uid);
+    return m?.username ? `@${m.username}` : uid.slice(0, 8);
+  }
+
+  /** Un persona correspond si son nom OU le pseudo de son joueur matche. */
+  function matchesSearch(p: CPersona): boolean {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    if (p.name.toLowerCase().includes(q)) return true;
+    return ownerDisplayName(p.user_id).toLowerCase().includes(q);
+  }
+
+  /** Liste mobile filtrée : un pseudo qui matche garde tous ses personas,
+   *  sinon seuls les personas dont le nom matche sont gardés. Groupes vides
+   *  après filtrage retirés (plutôt qu'affichés avec un pseudo sans personas). */
+  const filteredUserList = React.useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return userList;
+    return userList
+      .map(({ member, ps }) => {
+        const ownerMatches = ownerDisplayName(member.user_id).toLowerCase().includes(q);
+        return { member, ps: ownerMatches ? ps : ps.filter((p) => p.name.toLowerCase().includes(q)) };
+      })
+      .filter(({ ps }) => ps.length > 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userList, search, members]);
+
   let maxW = 600, maxH = 400;
   for (const [uid, pos] of blockPos) {
     const n = personasByUser.get(uid)?.length ?? 0;
@@ -614,14 +660,117 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
 
   const selectedPersona = selectedPersonaId ? personaMap.get(selectedPersonaId) : null;
 
+  /**
+   * Liste des relations d'un persona, groupées par type — partagée par le
+   * panneau latéral desktop et la vue détail mobile (voir plus bas), pour ne
+   * pas dupliquer le tri/regroupement.
+   */
+  function renderRelationsFor(persona: CPersona, tab: "out" | "in") {
+    type RelItem = { rel: CRelation; direction: "→" | "←"; other: CPersona; canEdit: boolean };
+    const outItems: RelItem[] = relations
+      .filter((r) => r.from_persona_id === persona.id)
+      .flatMap((r) => {
+        const other = personaMap.get(r.to_persona_id);
+        return other ? [{ rel: r, direction: "→" as const, other, canEdit: canAdmin || persona.user_id === userId }] : [];
+      });
+    const inItems: RelItem[] = relations
+      .filter((r) => r.to_persona_id === persona.id)
+      .flatMap((r) => {
+        const other = personaMap.get(r.from_persona_id);
+        return other ? [{ rel: r, direction: "←" as const, other, canEdit: canAdmin || other.user_id === userId }] : [];
+      });
+    const items = tab === "out" ? outItems : inItems;
+
+    if (items.length === 0) return (
+      <p className="py-8 text-center text-[12px] text-muted-foreground">{t("noRelations")}</p>
+    );
+
+    const grouped = new Map<string, RelItem[]>();
+    for (const item of items) {
+      const tid = item.rel.type;
+      if (!grouped.has(tid)) grouped.set(tid, []);
+      grouped.get(tid)!.push(item);
+    }
+    const sortedTypes = [...grouped.keys()].sort((a, b) => {
+      const ia = relTypeMap.get(a)?.sort_index ?? 999;
+      const ib = relTypeMap.get(b)?.sort_index ?? 999;
+      return ia - ib;
+    });
+
+    return (
+      <>
+        {sortedTypes.map((tid) => {
+          const meta = relTypeMap.get(tid) ?? fallback;
+          return (
+            <section key={tid} className="space-y-2">
+              <h3 className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest" style={{ color: meta.color }}>
+                <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: meta.color }} />
+                {meta.name}
+              </h3>
+              {grouped.get(tid)!.map(({ rel, direction, other, canEdit }) => (
+                <RelationRow key={rel.id} rel={rel} other={other} direction={direction}
+                  canEdit={canEdit}
+                  onDelete={deleteRel} onUpdateDesc={updateRelDesc}
+                  onHoverChange={setHovRelId} />
+              ))}
+            </section>
+          );
+        })}
+      </>
+    );
+  }
+
+  // `lg:bg-background` : fond plein seulement en desktop (le canevas en a
+  // besoin) — en mobile, transparent comme Membres/Personas/Wiki, pour
+  // laisser voir le fond ambiant du body.
   return (
-    <div className="flex h-full w-full flex-col bg-background">
+    <div className="flex h-full w-full flex-col lg:bg-background">
 
       <WorldPanelHeader
         icon={<Network className="h-4 w-4 shrink-0 text-muted-foreground" />}
         title={t("title")}
         right={
           <>
+            {/* Recherche — filtre la liste mobile, atténue les cartes non
+                correspondantes sur le canevas desktop (voir plus bas).
+                Visible dans les deux vues, contrairement au bouton lien.
+                Repliée en simple icône au repos ; un clic la transforme en
+                champ de saisie, pour ne pas encombrer l'en-tête en continu. */}
+            {searchOpen ? (
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  ref={searchInputRef}
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Escape") closeSearch(); }}
+                  placeholder={t("searchPlaceholder")}
+                  className="w-28 rounded-md border border-border-soft bg-background py-1 pl-7 pr-6 text-xs outline-none focus:border-primary/50 sm:w-40"
+                />
+                <button
+                  type="button"
+                  onClick={closeSearch}
+                  className="absolute right-1.5 top-1/2 flex h-4 w-4 -translate-y-1/2 items-center justify-center text-muted-foreground hover:text-foreground"
+                  aria-label={t("clearSearch")}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setSearchOpen(true)}
+                className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                aria-label={t("searchPlaceholder")}
+              >
+                <Search className="h-4 w-4" />
+              </button>
+            )}
+
+            {/* Le mode lien pilote le flux « cliquer deux cartes » du canevas —
+                n'a pas de sens sur mobile, qui a son propre flux de création
+                (bouton + dans le détail d'un persona, voir plus bas). */}
+            <div className="hidden items-center gap-1.5 lg:flex">
             {connecting && connectMode && (
               <span className="flex items-center gap-1.5 rounded-full bg-indigo-500/10 px-3 py-1 text-xs font-medium text-indigo-600 dark:text-indigo-400">
                 {t("clickAnotherCard")}
@@ -641,12 +790,14 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
               <Link2 className="h-3 w-3" />
               {connectMode ? t("linkModeActive") : t("createLink")}
             </button>
+            </div>
           </>
         }
       />
 
-      {/* ── Main area: aside + canvas ── */}
-      <div className="flex min-h-0 flex-1">
+      {/* ── Main area (desktop) : aside + canevas — illisible en petit écran,
+          remplacé par la liste + détail mobile juste en dessous. ── */}
+      <div className="hidden min-h-0 flex-1 lg:flex">
 
         {/* ── Persona aside ── */}
         {selectedPersona && (
@@ -687,61 +838,7 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
             </div>
 
             <div className="flex-1 overflow-y-auto p-3 space-y-3">
-              {(() => {
-                type RelItem = { rel: CRelation; direction: "→" | "←"; other: CPersona; canEdit: boolean };
-                const outItems: RelItem[] = relations
-                  .filter((r) => r.from_persona_id === selectedPersona.id)
-                  .flatMap((r) => {
-                    const other = personaMap.get(r.to_persona_id);
-                    return other ? [{ rel: r, direction: "→" as const, other, canEdit: canAdmin || selectedPersona.user_id === userId }] : [];
-                  });
-                const inItems: RelItem[] = relations
-                  .filter((r) => r.to_persona_id === selectedPersona.id)
-                  .flatMap((r) => {
-                    const other = personaMap.get(r.from_persona_id);
-                    return other ? [{ rel: r, direction: "←" as const, other, canEdit: canAdmin || other.user_id === userId }] : [];
-                  });
-                const items = asideTab === "out" ? outItems : inItems;
-
-                if (items.length === 0) return (
-                  <p className="py-8 text-center text-[12px] text-muted-foreground">{t("noRelations")}</p>
-                );
-
-                // Grouper par type, dans l'ordre de relTypes
-                const grouped = new Map<string, RelItem[]>();
-                for (const item of items) {
-                  const tid = item.rel.type;
-                  if (!grouped.has(tid)) grouped.set(tid, []);
-                  grouped.get(tid)!.push(item);
-                }
-                const sortedTypes = [...grouped.keys()].sort((a, b) => {
-                  const ia = relTypeMap.get(a)?.sort_index ?? 999;
-                  const ib = relTypeMap.get(b)?.sort_index ?? 999;
-                  return ia - ib;
-                });
-
-                return (
-                  <>
-                    {sortedTypes.map((tid) => {
-                      const meta = relTypeMap.get(tid) ?? fallback;
-                      return (
-                        <section key={tid} className="space-y-2">
-                          <h3 className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest" style={{ color: meta.color }}>
-                            <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: meta.color }} />
-                            {meta.name}
-                          </h3>
-                          {grouped.get(tid)!.map(({ rel, direction, other, canEdit }) => (
-                            <RelationRow key={rel.id} rel={rel} other={other} direction={direction}
-                              canEdit={canEdit}
-                              onDelete={deleteRel} onUpdateDesc={updateRelDesc}
-                              onHoverChange={setHovRelId} />
-                          ))}
-                        </section>
-                      );
-                    })}
-                  </>
-                );
-              })()}
+              {renderRelationsFor(selectedPersona, asideTab)}
             </div>
           </div>
         )}
@@ -814,6 +911,7 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
                           const gc = groupColor.get(p.id);
                           const isSrc = connecting === p.id;
                           const isSel = selectedPersonaId === p.id;
+                          const dimmed = search.trim() !== "" && !matchesSearch(p);
                           return (
                             <div
                               key={p.id}
@@ -829,6 +927,11 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
                                     : connectMode
                                       ? "hover:border-indigo-400 hover:ring-1 hover:ring-indigo-400/30"
                                       : "hover:opacity-90",
+                                // Recherche active : les cartes qui ne correspondent
+                                // ni par nom de persona ni par pseudo du joueur
+                                // s'effacent, plutôt que d'être retirées (perdrait
+                                // le repère spatial du canevas en position libre).
+                                dimmed && "opacity-20 grayscale",
                               )}
                               onClick={() => {
                                 const tl = cardTL(i);
@@ -1126,6 +1229,174 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
         </div>
       </div>
 
+      {/* ── Mobile : liste des personas + détail d'un persona sélectionné.
+          Le canevas (position libre, courbes, pan/zoom) est illisible en
+          petit écran — remplacé ici par une liste, groupée par joueur comme
+          les blocs du canevas, où taper un persona ouvre ses relations
+          (même contenu que le panneau latéral desktop, voir renderRelationsFor). ── */}
+      <div data-testid="relations-mobile" className="flex min-h-0 flex-1 flex-col lg:hidden">
+        {loading ? (
+          <div className="flex h-full items-center justify-center text-sm text-muted-foreground">{tCommon("loading")}</div>
+        ) : selectedPersona ? (
+          <>
+            <div className="flex items-center gap-2.5 border-b border-border-soft px-3 py-2.5">
+              <button
+                type="button"
+                onClick={() => { setSelectedPersonaId(null); cancelConnect(); }}
+                className="shrink-0 text-muted-foreground hover:text-foreground"
+                aria-label={tCommon("back")}
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </button>
+              {selectedPersona.avatar_url
+                ? <Image src={selectedPersona.avatar_url} alt={selectedPersona.name} width={32} height={32} className="h-8 w-8 rounded-full object-cover shrink-0" />
+                : <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-[11px] font-bold shrink-0">{getInitials(selectedPersona.name)}</div>
+              }
+              <div className="flex-1 min-w-0">
+                <p className="truncate text-sm font-semibold">{selectedPersona.name}</p>
+                {(() => {
+                  const owner = members.find((m) => m.user_id === selectedPersona.user_id);
+                  return owner?.username ? <p className="text-[11px] text-muted-foreground">@{owner.username}</p> : null;
+                })()}
+              </div>
+              {(canAdmin || selectedPersona.user_id === userId) && !connecting && (
+                <button
+                  type="button"
+                  onClick={() => setConnecting(selectedPersona.id)}
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  aria-label={t("addRelation")}
+                >
+                  <Plus className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+
+            {connecting === selectedPersona.id ? (
+              connectTarget ? (
+                // Étape 2/2 : type de relation — même flux que le sélecteur du
+                // canevas (createRel/cancelConnect), sans positionnement cx/cy.
+                <div className="flex flex-1 flex-col gap-2 overflow-y-auto p-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{t("relTypeLabel")}</p>
+                  {relTypes.length === 0 ? (
+                    <p className="text-[11px] text-muted-foreground">{t("noTypesHint")}</p>
+                  ) : (
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {relTypes.map((rt) => (
+                        <button
+                          key={rt.id}
+                          type="button"
+                          onClick={() => void createRel(rt.id)}
+                          className="flex flex-col items-center gap-1 rounded-xl border border-border-soft px-2 py-2 text-[10px] font-medium hover:bg-muted"
+                          style={{ color: rt.color }}
+                        >
+                          <svg width="20" height="6"><line x1="0" y1="3" x2="20" y2="3" stroke={rt.color} strokeWidth={REL_W} strokeDasharray={rt.dash || undefined} /></svg>
+                          {rt.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <textarea
+                    value={pendingDesc}
+                    onChange={(e) => setPendingDesc(e.target.value)}
+                    placeholder={t("descPlaceholder")}
+                    rows={3}
+                    className="resize-none rounded-lg border border-border bg-muted/40 px-2 py-1.5 text-[11px] outline-none focus:ring-1 focus:ring-ring"
+                  />
+                  <button type="button" onClick={cancelConnect} className="rounded-lg px-2 py-1.5 text-center text-xs text-muted-foreground hover:bg-muted">
+                    {tCommon("cancel")}
+                  </button>
+                </div>
+              ) : (
+                // Étape 1/2 : choisir la personne visée
+                <div className="flex flex-1 flex-col overflow-y-auto">
+                  <p className="px-3 py-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{t("pickTarget")}</p>
+                  {personas.filter((p) => p.id !== selectedPersona.id).map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => setConnectTarget({ personaId: p.id, cx: 0, cy: 0 })}
+                      className="flex items-center gap-3 border-b border-border-soft px-3 py-2.5 text-left transition-colors hover:bg-muted/40"
+                    >
+                      {p.avatar_url
+                        ? <Image src={p.avatar_url} alt={p.name} width={28} height={28} className="h-7 w-7 rounded-full object-cover shrink-0" />
+                        : <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center text-[10px] font-bold shrink-0">{getInitials(p.name)}</div>
+                      }
+                      <span className="flex-1 truncate text-sm">{p.name}</span>
+                    </button>
+                  ))}
+                  <button type="button" onClick={cancelConnect} className="px-3 py-2 text-left text-xs text-muted-foreground hover:text-foreground">
+                    {tCommon("cancel")}
+                  </button>
+                </div>
+              )
+            ) : (
+              <>
+                <div className="flex border-b border-border-soft">
+                  {(["out", "in"] as const).map((tab) => (
+                    <button
+                      key={tab}
+                      type="button"
+                      onClick={() => setAsideTab(tab)}
+                      className={cn(
+                        "flex-1 py-2 text-[11px] font-medium transition-colors",
+                        asideTab === tab
+                          ? "border-b-2 border-primary text-foreground"
+                          : "text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      {tab === "out" ? t("tabOut") : t("tabIn")}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex-1 overflow-y-auto p-3 space-y-3">
+                  {renderRelationsFor(selectedPersona, asideTab)}
+                </div>
+              </>
+            )}
+          </>
+        ) : (
+          <div className="flex-1 overflow-y-auto">
+            {filteredUserList.length === 0 ? (
+              <p className="px-3 py-8 text-center text-xs text-muted-foreground/60">
+                {search.trim() ? t("noSearchResults") : t("noPersonas")}
+              </p>
+            ) : (
+              filteredUserList.map(({ member, ps }) => {
+                const dName = member.username ? `@${member.username}` : member.user_id.slice(0, 8);
+                const letter = dName.replace(/^@/, "")[0]?.toUpperCase() ?? "?";
+                return (
+                  <div key={member.user_id}>
+                    <div className="sticky top-0 z-10 flex items-center gap-2 border-b border-border-soft bg-background px-3 py-2">
+                      <span className="relative flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted text-[9px] font-bold">
+                        {member.avatar_url
+                          ? <Image src={member.avatar_url} alt={dName} fill sizes="20px" className="object-cover" />
+                          : letter}
+                      </span>
+                      <span className="truncate text-xs font-medium text-muted-foreground">{dName}</span>
+                    </div>
+                    {ps.map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => setSelectedPersonaId(p.id)}
+                        className="flex w-full items-center gap-3 border-b border-border-soft px-3 py-2.5 text-left transition-colors hover:bg-muted/40"
+                      >
+                        {p.avatar_url
+                          ? <Image src={p.avatar_url} alt={p.name} width={32} height={32} className="h-8 w-8 rounded-full object-cover shrink-0" />
+                          : <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-[11px] font-bold shrink-0">{getInitials(p.name)}</div>
+                        }
+                        <span className="flex-1 truncate text-sm font-medium">{p.name}</span>
+                        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/40" />
+                      </button>
+                    ))}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )}
+      </div>
+
       {/* ── Footer legend ── */}
       <div className="flex shrink-0 flex-wrap items-center gap-4 border-t border-border-soft px-4 py-2">
         {relTypes.map((t) => (
@@ -1136,7 +1407,9 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
             {t.name}
           </span>
         ))}
-        <span className="ml-auto text-[11px] text-muted-foreground/60">
+        {/* Instructions du canevas (clics souris) — sans objet sur mobile,
+            qui a son propre flux (voir la liste + détail juste au-dessus). */}
+        <span className="ml-auto hidden text-[11px] text-muted-foreground/60 lg:inline">
           {connectMode ? t("footerHintConnect") : t("footerHintView")}
         </span>
       </div>
