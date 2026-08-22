@@ -107,6 +107,7 @@ export function ImageCropPicker({
       <div
         className="relative mx-auto w-[95%] rounded-lg overflow-hidden bg-black"
         style={{ height }}
+        data-base-ui-swipe-ignore=""
       >
         <Cropper
           image={src}
