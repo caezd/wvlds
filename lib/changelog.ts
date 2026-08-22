@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Interface",
+    text: "Dans le panneau Chronologie, les salons sont désormais regroupés par mois (pas seulement par année) : chaque mois a son propre titre et une puce reliée à la ligne de temps de l'année. L'en-tête du panneau a aussi son icône.",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
     text: "La Toile des relations d'un monde a une recherche dans son en-tête (icône loupe, se déplie en champ de saisie au clic) : trouver un persona par son nom ou par le pseudo de son joueur filtre la liste mobile et estompe les cartes non correspondantes sur le canevas desktop.",
   },
   {
