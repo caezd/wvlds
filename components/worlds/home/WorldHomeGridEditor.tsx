@@ -652,7 +652,11 @@ export function WorldHomeGridEditor({
                   {item.type === "markdown" && <FileText className="h-3 w-3 shrink-0" />}
                   {item.type === "banner" && <ImageIcon className="h-3 w-3 shrink-0" />}
                   <span className="truncate">{blockLabel(item, widgetLabel) || t(`home.grid.${item.type}BlockTitle`)}</span>
-                  <div className="ml-auto flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                  {/* Toujours visibles (pas de `opacity-0 group-hover:...`) :
+                      le survol n'existe pas au tactile — sur mobile, ces
+                      boutons restaient invisibles et donc inatteignables au
+                      tap, éditer/supprimer un bloc était impossible. */}
+                  <div className="ml-auto flex shrink-0 items-center gap-0.5">
                     {item.type !== "widget" && (
                       <button
                         type="button"

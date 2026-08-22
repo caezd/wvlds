@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Correctif",
+    text: "Les boutons éditer/réglages/supprimer d'un bloc dans l'éditeur de grille de la page d'accueil (Réglages > Page d'accueil) n'apparaissaient qu'au survol de la souris — invisibles, et donc impossibles à atteindre, sur écran tactile. Ils restent maintenant affichés en permanence.",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
     text: "En taille mobile, les onglets Paramètres et Catalogue d'un monde affichaient un fond plus clair que les autres onglets (Wiki, Membres, Personas, Chronologie…), qui laissent voir le fond ambiant plus sombre de l'application — les deux sont désormais cohérents.",
   },
   {
