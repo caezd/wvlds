@@ -7,8 +7,8 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import dynamic from "next/dynamic";
 import { decryptMessage, generateRoomKey } from "@/lib/crypto";
 import Link from "next/link";
-import { BarChart3, Globe, GlobeLock, Menu, MoreVertical, Pin, Settings, Star } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { BarChart3, Globe, GlobeLock, Menu, MoreVertical, Pin, Search, Settings, Star } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toggleFollowChatroom } from "@/app/(protected)/w/actions";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -54,6 +54,7 @@ import { useMobileSidebar } from "@/components/providers/MobileSidebarProvider";
 import { useChatPins } from "@/hooks/useChatPins";
 import { PinBar } from "@/components/chatrooms/message/PinBar";
 import { PinsSheet } from "@/components/chatrooms/message/PinsSheet";
+import { SearchCenter } from "@/components/chatrooms/search/SearchCenter";
 
 export type { Persona, ChatMessageWithPersona, ReactionSummary } from "@/types/db";
 export type { ChatroomNavItem } from "@/components/worlds/chatrooms/WorldChatroomsAside";
@@ -182,6 +183,7 @@ export default function ChatRoomView({
   const supabase = useMemo(() => createClient(), []);
   const reconnectEpoch = useReconnectEpoch();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { setActiveChat, markChatRead: markChatReadCtx } = useNotifications();
   const { post_message, quests } = useFeatureFlags();
   const { setActiveWorldId } = useMobileSidebar();
@@ -190,6 +192,7 @@ export default function ChatRoomView({
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [statsOpen, setStatsOpen] = useState(false);
   const [pinsOpen, setPinsOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
 
   async function handleToggleFollow() {
     const next = !isFollowed;
@@ -748,6 +751,15 @@ export default function ChatRoomView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages]);
 
+  // Arrivée depuis le centre de recherche (autre salon) : /c/[id]?m=<messageId>
+  useEffect(() => {
+    const raw = searchParams.get("m");
+    const target = raw ? Number(raw) : null;
+    if (!target || Number.isNaN(target)) return;
+    scrollToMessage(target);
+    router.replace(`/c/${chatId}`, { scroll: false });
+  }, [chatId, searchParams, router]);
+
   useRealtimeChatSync({
     chatId,
     selfId: userId,
@@ -883,6 +895,19 @@ export default function ChatRoomView({
             <>
               {/* Desktop : icônes individuelles */}
               <div className="hidden lg:flex items-center gap-0.5">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={() => setSearchOpen(true)}
+                      aria-label={t("search.title")}
+                      className="flex h-9 w-9 items-center justify-center rounded-md bg-background text-muted-foreground transition-colors hover:bg-hoverCard hover:text-foreground"
+                    >
+                      <Search className="h-4 w-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" sideOffset={8}>{t("search.title")}</TooltipContent>
+                </Tooltip>
                 {userId && (
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -946,6 +971,10 @@ export default function ChatRoomView({
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => setSearchOpen(true)}>
+                      <Search className="mr-2 h-3.5 w-3.5" />
+                      {t("search.title")}
+                    </DropdownMenuItem>
                     {userId && (
                       <DropdownMenuItem onClick={() => void handleToggleFollow()}>
                         <Star className={cn("mr-2 h-3.5 w-3.5", isFollowed && "fill-current text-yellow-500")} />
@@ -997,6 +1026,14 @@ export default function ChatRoomView({
                 messages={pinsDisplayMessages}
                 onScrollToMessage={scrollToMessage}
               />
+              {chat?.worlds?.id && (
+                <SearchCenter
+                  worldId={chat.worlds.id}
+                  initialChatId={chatId}
+                  open={searchOpen}
+                  onOpenChange={setSearchOpen}
+                />
+              )}
             </>
           }
         />

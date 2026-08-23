@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Home, Maximize2, Minimize2, Star } from "lucide-react";
+import { Home, Maximize2, Minimize2, Search, Star } from "lucide-react";
 
 import { WorldHeroCard } from "./WorldHeroCard";
 import { WorldChatComposer } from "../chatrooms/WorldChatComposer";
@@ -18,6 +18,7 @@ import { useMobileSidebar } from "@/components/providers/MobileSidebarProvider";
 import type { AsidePersona } from "@/components/personas/WorldPersonaAsideClient";
 import { saveWorldPrefs, toggleWorldFavorite } from "@/app/(protected)/w/actions";
 import { cn } from "@/lib/utils";
+import { SearchCenter } from "@/components/chatrooms/search/SearchCenter";
 
 // Onglets secondaires — un seul est actif à la fois, chargés à la demande
 // pour ne pas alourdir le bundle de la vue par défaut du monde.
@@ -76,6 +77,7 @@ export function WorldHome({
   const { create_chatroom, world_map, world_catalogue, world_timeline } = useFeatureFlags();
   const router = useRouter();
   const t = useTranslations("worlds");
+  const tChat = useTranslations("chatrooms");
   const { setHideMobileHeader } = useMobileSidebar();
 
   // La vue par défaut du monde affiche désormais son propre WorldPanelHeader
@@ -91,6 +93,7 @@ export function WorldHome({
 
   const [mainExpanded, setMainExpanded] = useState(initialPrefs?.main_expanded ?? false);
   const [isFavorite, setIsFavorite] = useState(initialPrefs?.is_favorite ?? false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(initialCategoryId ?? null);
 
   const baseHref = `/w/${worldId}`;
@@ -204,6 +207,19 @@ export function WorldHome({
                     <TooltipTrigger asChild>
                       <button
                         type="button"
+                        onClick={() => setSearchOpen(true)}
+                        aria-label={tChat("search.title")}
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-hoverCard hover:text-foreground"
+                      >
+                        <Search size={16} />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" sideOffset={6}>{tChat("search.title")}</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
                         onClick={handleToggleFavorite}
                         aria-label={isFavorite ? t("hero.removeFavorite") : t("hero.addFavorite")}
                         className={cn(
@@ -236,6 +252,7 @@ export function WorldHome({
                 </>
               }
             />
+            <SearchCenter worldId={worldId} open={searchOpen} onOpenChange={setSearchOpen} />
             <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
               <div className="flex w-full flex-col gap-6">
                 <div
