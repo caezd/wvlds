@@ -224,7 +224,7 @@ export function SearchCenter({
               </div>
               <Button
                 type="button"
-                variant="outline"
+                variant="ghost"
                 size="icon"
                 className="rounded-md"
                 aria-label={t("search.filtersTitle")}
