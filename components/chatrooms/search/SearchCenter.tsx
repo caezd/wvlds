@@ -32,6 +32,31 @@ import { SearchFiltersDrawer } from "./SearchFiltersDrawer";
 import { SearchResultsList } from "./SearchResultsList";
 import type { SearchToken } from "./types";
 
+// Seule source de vérité pour le passage token <-> filtre (utilisée par
+// addToken/removeToken) — évite de dupliquer le mapping type -> clé de
+// filtre dans deux fonctions qui doivent rester en miroir exact.
+function applyTokenToFilters(filters: SearchFilters, token: SearchToken, mode: "add" | "remove"): SearchFilters {
+  const arrayOp = (arr: string[] | undefined) =>
+    mode === "add"
+      ? [...new Set([...(arr ?? []), token.value])]
+      : (arr ?? []).filter((x) => x !== token.value);
+
+  if (token.type === "author") {
+    return token.kind === "profile"
+      ? { ...filters, authorIds: arrayOp(filters.authorIds) }
+      : { ...filters, personaIds: arrayOp(filters.personaIds) };
+  }
+  if (token.type === "channel") {
+    return { ...filters, chatIds: arrayOp(filters.chatIds) };
+  }
+  if (token.type === "mentions") {
+    return { ...filters, mentionsUsername: mode === "add" ? token.mentionUsername ?? token.label : undefined };
+  }
+  // token.type === "contains"
+  const flagKey = token.value === "media" ? "hasMedia" : "hasLink";
+  return { ...filters, [flagKey]: mode === "add" ? true : null };
+}
+
 export function SearchCenter({
   worldId,
   initialChatId,
@@ -51,6 +76,10 @@ export function SearchCenter({
   // WorldHome et ChatroomHeader rendent toujours <SearchCenter/>, y compris
   // fermé, et un client Supabase ne doit pas être instancié pour rien.
   const supabaseRef = useRef<SupabaseClient | null>(null);
+  // Ignore la résolution d'un runSearch devenu obsolète (une recherche plus
+  // récente a démarré entre-temps) — sinon une réponse lente peut écraser
+  // des résultats déjà à jour.
+  const searchRequestIdRef = useRef(0);
   function getSupabase(): SupabaseClient {
     const existing = supabaseRef.current;
     if (existing) return existing;
@@ -96,17 +125,19 @@ export function SearchCenter({
   }, [open, initialChatId, chatrooms]);
 
   async function runSearch(nextFilters: SearchFilters, cursor: SearchCursor, pushHistory: boolean) {
+    const requestId = ++searchRequestIdRef.current;
     setLoading(true);
     setHasSearched(true);
     try {
       const page = await searchChatMessages(getSupabase(), worldId, nextFilters, cursor);
+      if (searchRequestIdRef.current !== requestId) return;
       setResults(page.results);
       setHistory((h) => (pushHistory ? [...h, cursorForCurrentPage] : h));
       setCursorForCurrentPage(cursor);
       setNextCursor(page.nextCursor);
       setHasMore(page.hasMore);
     } finally {
-      setLoading(false);
+      if (searchRequestIdRef.current === requestId) setLoading(false);
     }
   }
 
@@ -121,23 +152,14 @@ export function SearchCenter({
       return;
     }
     setNeedFilterWarning(false);
+    // Nouvelle recherche : l'historique de pagination ("Précédent") portait
+    // sur l'ancien jeu de filtres, ses curseurs n'ont plus de sens ici.
+    setHistory([]);
     void runSearch(next, null, false);
   }
 
   function addToken(token: SearchToken) {
-    let next = filters;
-    if (token.type === "author") {
-      next =
-        token.kind === "profile"
-          ? { ...filters, authorIds: [...new Set([...(filters.authorIds ?? []), token.value])] }
-          : { ...filters, personaIds: [...new Set([...(filters.personaIds ?? []), token.value])] };
-    } else if (token.type === "channel") {
-      next = { ...filters, chatIds: [...new Set([...(filters.chatIds ?? []), token.value])] };
-    } else if (token.type === "mentions") {
-      next = { ...filters, mentionsUsername: token.mentionUsername ?? token.label };
-    } else if (token.type === "contains") {
-      next = token.value === "media" ? { ...filters, hasMedia: true } : { ...filters, hasLink: true };
-    }
+    const next = applyTokenToFilters(filters, token, "add");
     setFilters(next);
     setTokens((prev) => (prev.some((tk) => tk.id === token.id) ? prev : [...prev, token]));
     attemptSearch(next);
@@ -146,19 +168,7 @@ export function SearchCenter({
   function removeToken(id: string) {
     const token = tokens.find((tk) => tk.id === id);
     if (!token) return;
-    let next = filters;
-    if (token.type === "author") {
-      next =
-        token.kind === "profile"
-          ? { ...filters, authorIds: (filters.authorIds ?? []).filter((x) => x !== token.value) }
-          : { ...filters, personaIds: (filters.personaIds ?? []).filter((x) => x !== token.value) };
-    } else if (token.type === "channel") {
-      next = { ...filters, chatIds: (filters.chatIds ?? []).filter((x) => x !== token.value) };
-    } else if (token.type === "mentions") {
-      next = { ...filters, mentionsUsername: undefined };
-    } else if (token.type === "contains") {
-      next = token.value === "media" ? { ...filters, hasMedia: null } : { ...filters, hasLink: null };
-    }
+    const next = applyTokenToFilters(filters, token, "remove");
     setFilters(next);
     setTokens((prev) => prev.filter((tk) => tk.id !== id));
     attemptSearch(next);

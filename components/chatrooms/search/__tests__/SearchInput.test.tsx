@@ -71,6 +71,20 @@ describe("SearchInput", () => {
     expect(input).toHaveValue("");
   });
 
+  it("sélectionne une suggestion au clavier (flèche bas puis Entrée)", async () => {
+    const { onAddToken } = setup();
+    const input = screen.getByPlaceholderText("Rechercher…");
+    await userEvent.type(input, "de:kael");
+    await screen.findByText("kael");
+
+    await userEvent.keyboard("{ArrowDown}{Enter}");
+
+    expect(onAddToken).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "author", kind: "persona", value: "p-kael", label: "kael" }),
+    );
+    expect(input).toHaveValue("");
+  });
+
   it("propose les salons après \"dans:\"", async () => {
     setup();
     const input = screen.getByPlaceholderText("Rechercher…");

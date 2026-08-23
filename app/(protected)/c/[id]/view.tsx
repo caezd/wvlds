@@ -723,6 +723,11 @@ export default function ChatRoomView({
 
   // Scroll vers un message — charge les pages précédentes si le message n'est pas encore dans le DOM
   const pendingScrollMessageIdRef = useRef<number | null>(null);
+  // Borne le nombre de pages chargées à la recherche d'une cible absente
+  // (id invalide/supprimé, lien ?m= périmé) — sans ça, une cible introuvable
+  // paginerait tout l'historique du salon avant d'abandonner.
+  const pendingScrollAttemptsRef = useRef(0);
+  const MAX_SCROLL_LOAD_ATTEMPTS = 20;
 
   function scrollToMessage(messageId: number) {
     const el = document.querySelector(`[data-message-id="${messageId}"]`);
@@ -732,6 +737,7 @@ export default function ChatRoomView({
     }
     // Message absent du DOM : on charge les pages précédentes
     pendingScrollMessageIdRef.current = messageId;
+    pendingScrollAttemptsRef.current = 0;
     void loadOlderMessagesRef.current();
   }
 
@@ -743,7 +749,8 @@ export default function ChatRoomView({
     if (el) {
       pendingScrollMessageIdRef.current = null;
       el.scrollIntoView({ behavior: "smooth", block: "center" });
-    } else if (hasMoreRef.current) {
+    } else if (hasMoreRef.current && pendingScrollAttemptsRef.current < MAX_SCROLL_LOAD_ATTEMPTS) {
+      pendingScrollAttemptsRef.current += 1;
       void loadOlderMessagesRef.current();
     } else {
       pendingScrollMessageIdRef.current = null;
@@ -752,13 +759,18 @@ export default function ChatRoomView({
   }, [messages]);
 
   // Arrivée depuis le centre de recherche (autre salon) : /c/[id]?m=<messageId>
+  // `chat` n'est resynchronisé sur `chatId` que par l'effet de reset
+  // ci-dessus (setChat/setMessages) — tant que `chat.id` ne correspond pas
+  // encore, `messages` porte toujours l'ancien salon et scrollToMessage
+  // paginerait sur son historique. On attend que le reset ait été appliqué.
   useEffect(() => {
     const raw = searchParams.get("m");
     const target = raw ? Number(raw) : null;
     if (!target || Number.isNaN(target)) return;
+    if (chat?.id !== chatId) return;
     scrollToMessage(target);
     router.replace(`/c/${chatId}`, { scroll: false });
-  }, [chatId, searchParams, router]);
+  }, [chatId, chat, searchParams, router]);
 
   useRealtimeChatSync({
     chatId,

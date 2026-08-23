@@ -76,6 +76,7 @@ export function SearchInput({
 }) {
   const t = useTranslations("chatrooms");
   const inputRef = useRef<HTMLInputElement>(null);
+  const popupRef = useRef<HTMLDivElement>(null);
   const [raw, setRaw] = useState(freeText);
   const [isFocused, setIsFocused] = useState(false);
   const [history, setHistory] = useState<string[]>([]);
@@ -103,6 +104,15 @@ export function SearchInput({
   const channelOptions = chatrooms
     .filter((c) => c.label.toLowerCase().includes(partialQuery.toLowerCase()))
     .slice(0, 20);
+  // Le motif "mot:texte" peut matcher une phrase tapée sans intention de
+  // filtre (ex. "je suis dans:Paris") : n'autoriser Entrée à sélectionner
+  // que s'il y a vraiment une suggestion correspondante à choisir, sinon
+  // Entrée reste un simple envoi du texte libre tel quel.
+  const hasSelectableOption =
+    showQuickHelper ||
+    ((activeType === "author" || activeType === "mentions") && authorOptions.length > 0) ||
+    (activeType === "channel" && channelOptions.length > 0) ||
+    (activeType === "contains" && containsOptions.length > 0);
 
   function stripMatchedToken() {
     if (!match) return;
@@ -146,9 +156,29 @@ export function SearchInput({
     setHistory([]);
   }
 
+  // Le champ vit hors de l'arbre DOM de <Command> (il reste visible quand le
+  // panneau est fermé) : cmdk ne reçoit donc jamais les flèches/Entrée
+  // tapées dans l'input. On relaie ces touches vers la racine cmdk pour que
+  // sa navigation clavier native s'applique.
+  function forwardToCommand(key: string) {
+    const root = popupRef.current?.querySelector<HTMLElement>("[cmdk-root]");
+    root?.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true }));
+  }
+
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === "Enter" && !open) {
-      submit(raw.trim());
+    if (open && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
+      e.preventDefault();
+      forwardToCommand(e.key);
+      return;
+    }
+    if (e.key === "Enter") {
+      if (open && hasSelectableOption) {
+        e.preventDefault();
+        forwardToCommand(e.key);
+      } else {
+        submit(raw.trim());
+      }
+      return;
     }
     if (e.key === "Backspace" && raw === "" && tokens.length > 0) {
       onRemoveToken(tokens[tokens.length - 1].id);
@@ -205,6 +235,7 @@ export function SearchInput({
       </div>
       {open && (
         <div
+          ref={popupRef}
           className="bg-popover text-popover-foreground absolute inset-x-0 top-full z-50 mt-1 rounded-md border shadow-md outline-hidden"
           // Empêche le mousedown sur une suggestion de blurer le champ avant
           // que le clic n'atteigne le CommandItem (sinon le panneau se

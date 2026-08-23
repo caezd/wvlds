@@ -168,5 +168,35 @@ describe("searchChatMessages — scan progressif (texte libre)", () => {
     // Le lot était plein (150) donc on ne sait pas encore si on a tout balayé.
     expect(page.hasMore).toBe(true);
     expect(page.nextCursor).not.toBeNull();
+    // Le curseur doit reprendre juste après le dernier message EXAMINÉ
+    // (index 24, id 624), pas après tout le lot (id 749) — sinon les lignes
+    // jamais vérifiées du lot seraient sautées pour de bon.
+    expect(page.nextCursor).toEqual({ createdAt: rows[24].created_at, id: 624 });
+  });
+
+  it("ne perd pas les correspondances situées après le quota de page dans le même lot", async () => {
+    // 150 lignes : les 25 premières + 5 autres plus loin dans le même lot
+    // matchent toutes "mot clé" — seules les 25 premières tiennent dans
+    // page.results, mais le curseur renvoyé ne doit pas sauter les 5 autres.
+    const rows = Array.from({ length: 150 }, (_, i) =>
+      makeRow(700 + i, i < 25 || (i >= 30 && i < 35) ? "mot clé" : "rien", "chat-d"),
+    );
+    const rpc = vi
+      .fn()
+      .mockResolvedValueOnce({ data: rows, error: null })
+      .mockResolvedValueOnce({ data: rows.slice(25), error: null });
+    const supabase = makeSupabase(rpc);
+
+    const firstPage = await searchChatMessages(supabase, "world-1", { freeText: "mot clé" }, null);
+    expect(firstPage.results).toHaveLength(25);
+
+    const secondPage = await searchChatMessages(supabase, "world-1", { freeText: "mot clé" }, firstPage.nextCursor);
+
+    expect(rpc).toHaveBeenCalledTimes(2);
+    const secondCallParams = rpc.mock.calls[1][1] as { p_cursor_id: number };
+    // Le second appel doit reprendre à la ligne 724 (index 24, pas 849 —
+    // la fin du 1er lot) pour retrouver les correspondances des index 30-34.
+    expect(secondCallParams.p_cursor_id).toBe(724);
+    expect(secondPage.results).toHaveLength(5);
   });
 });

@@ -53,10 +53,15 @@ const PAGE_SIZE = 25;
 const SCAN_BATCH_SIZE = 150;
 const SCAN_CAP = 2000;
 const DECRYPT_CHUNK_SIZE = 25;
+const CONTENT_CACHE_MAX_SIZE = 5000;
 
 // Cache de session : une même recherche affinée (ajout d'un filtre après un
-// scan) ne re-déchiffre pas les messages déjà vus.
-const decryptedContentCache = new Map<number, string>();
+// scan) ne re-déchiffre pas les messages déjà vus. Gardé avec le contenu
+// chiffré d'origine (`raw`) : si le message a été modifié depuis (nouveau
+// texte chiffré), l'entrée ne sert plus et est redéchiffrée. Taille plafonnée
+// (éviction FIFO) — sans ça, plusieurs scans larges dans la même session
+// feraient grossir ce cache indéfiniment.
+const decryptedContentCache = new Map<number, { raw: string; plain: string }>();
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -150,10 +155,14 @@ async function decryptRows(
     const decrypted = await Promise.all(
       chunk.map(async (row) => {
         const cached = decryptedContentCache.get(row.id);
-        if (cached !== undefined) return cached;
+        if (cached !== undefined && cached.raw === row.content) return cached.plain;
         const key = keys.get(row.chat_id);
         const content = key ? await decryptMessage(row.content, key) : row.content;
-        decryptedContentCache.set(row.id, content);
+        if (decryptedContentCache.size >= CONTENT_CACHE_MAX_SIZE) {
+          const oldestKey = decryptedContentCache.keys().next().value;
+          if (oldestKey !== undefined) decryptedContentCache.delete(oldestKey);
+        }
+        decryptedContentCache.set(row.id, { raw: row.content, plain: content });
         return content;
       }),
     );
@@ -221,14 +230,25 @@ export async function searchChatMessages(
       break;
     }
     const decrypted = await decryptRows(supabase, rows);
+    let stoppedEarly = false;
     for (const msg of decrypted) {
       if (matchesTextPredicates(msg.content, filters)) matches.push(msg);
-      if (matches.length >= PAGE_SIZE) break;
+      if (matches.length >= PAGE_SIZE) {
+        // La page est pleine avant la fin du lot : le curseur doit reprendre
+        // juste après le dernier message EXAMINÉ, pas après tout le lot —
+        // sinon les lignes du lot jamais vérifiées seraient sautées pour de
+        // bon au prochain appel.
+        scanCursor = { createdAt: msg.createdAt, id: msg.id };
+        stoppedEarly = true;
+        break;
+      }
     }
-    scanCursor = rowCursor(rows.at(-1)!);
-    if (rows.length < SCAN_BATCH_SIZE) {
-      exhausted = true;
-      break;
+    if (!stoppedEarly) {
+      scanCursor = rowCursor(rows.at(-1)!);
+      if (rows.length < SCAN_BATCH_SIZE) {
+        exhausted = true;
+        break;
+      }
     }
   }
 

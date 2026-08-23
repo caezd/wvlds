@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { SearchCenter } from "@/components/chatrooms/search/SearchCenter";
 import type { SearchAuthorOption, SearchChatroomOption } from "@/lib/chatSearchDirectory";
@@ -112,6 +112,52 @@ describe("SearchCenter", () => {
     );
     // L'auteur est résolu via la persona (personaId prioritaire sur authorId).
     expect(screen.getByText("kael")).toBeInTheDocument();
+  });
+
+  it("ignore la réponse d'une recherche devenue obsolète", async () => {
+    let resolveFirst!: (page: SearchPage) => void;
+    const firstPromise = new Promise<SearchPage>((resolve) => {
+      resolveFirst = resolve;
+    });
+    searchMock
+      .mockReturnValueOnce(firstPromise)
+      .mockResolvedValueOnce(
+        resultPage({
+          results: [
+            {
+              id: 2,
+              chatId: "c2",
+              authorId: "u1",
+              personaId: null,
+              content: "second résultat plus récent",
+              createdAt: "2026-01-02T00:00:00Z",
+              metadata: null,
+              pinned: false,
+            },
+          ],
+        }),
+      );
+
+    render(<SearchCenter worldId="w1" open onOpenChange={() => {}} />);
+    const input = await screen.findByPlaceholderText("Rechercher…");
+
+    // Sélectionne "général" -> recherche A, qui reste en attente (lente).
+    await userEvent.type(input, "dans:gén");
+    await userEvent.click(await screen.findByText("# général"));
+    // Sélectionne aussi "photos" -> recherche B, qui se résout tout de suite.
+    await userEvent.type(input, "dans:pho");
+    await userEvent.click(await screen.findByText("# photos"));
+
+    expect(await screen.findByText("second résultat plus récent")).toBeInTheDocument();
+
+    // La recherche A (obsolète) se résout enfin : ne doit pas écraser B.
+    await act(async () => {
+      resolveFirst(resultPage({ results: [{ ...resultPage().results[0], id: 1, content: "premier résultat périmé" }] }));
+      await Promise.resolve();
+    });
+
+    expect(screen.queryByText("premier résultat périmé")).not.toBeInTheDocument();
+    expect(screen.getByText("second résultat plus récent")).toBeInTheDocument();
   });
 
   it("pré-remplit un token de salon retirable quand ouvert depuis une chatroom", async () => {

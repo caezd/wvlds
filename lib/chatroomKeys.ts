@@ -6,6 +6,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { TABLE } from "@/lib/constants";
 
 const keyCache = new Map<string, string>();
+// Plafond (éviction FIFO) — évite une croissance sans borne sur une session
+// qui visite beaucoup de salons/mondes différents.
+const KEY_CACHE_MAX_SIZE = 500;
 
 export async function getChatroomKeys(
   supabase: SupabaseClient,
@@ -18,6 +21,10 @@ export async function getChatroomKeys(
       .select("chatroom_id, key_b64")
       .in("chatroom_id", missing);
     for (const row of data ?? []) {
+      if (keyCache.size >= KEY_CACHE_MAX_SIZE) {
+        const oldestKey = keyCache.keys().next().value;
+        if (oldestKey !== undefined) keyCache.delete(oldestKey);
+      }
       keyCache.set(row.chatroom_id as string, row.key_b64 as string);
     }
   }
