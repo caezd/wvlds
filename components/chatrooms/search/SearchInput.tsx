@@ -1,10 +1,10 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { AtSign, Hash, Paperclip, Search as SearchIcon, SlidersHorizontal, User, X } from "lucide-react";
+import { AtSign, Hash, Paperclip, Search as SearchIcon, SlidersHorizontal, Trash2, User, X } from "lucide-react";
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
+import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -13,6 +13,7 @@ import {
   type SearchAuthorOption,
   type SearchChatroomOption,
 } from "@/lib/chatSearchDirectory";
+import { addSearchHistoryEntry, clearSearchHistory, loadSearchHistory } from "@/lib/searchHistory";
 import type { SearchToken, SearchTokenType } from "./types";
 
 // Préfixes reconnus dans la barre (français uniquement pour l'instant — la
@@ -47,6 +48,7 @@ function authorToToken(option: SearchAuthorOption, type: "author" | "mentions"):
 }
 
 export function SearchInput({
+  worldId,
   authors,
   chatrooms,
   tokens,
@@ -57,6 +59,7 @@ export function SearchInput({
   onOpenAdvancedFilters,
   autoFocus,
 }: {
+  worldId: string;
   authors: SearchAuthorOption[];
   chatrooms: SearchChatroomOption[];
   tokens: SearchToken[];
@@ -71,6 +74,11 @@ export function SearchInput({
   const inputRef = useRef<HTMLInputElement>(null);
   const [raw, setRaw] = useState(freeText);
   const [isFocused, setIsFocused] = useState(false);
+  const [history, setHistory] = useState<string[]>([]);
+
+  useEffect(() => {
+    setHistory(loadSearchHistory(worldId));
+  }, [worldId]);
 
   const match = useMemo(() => raw.match(TRAILING_TOKEN_RE), [raw]);
   const activeType = match
@@ -118,9 +126,25 @@ export function SearchInput({
     inputRef.current?.focus();
   }
 
+  function submit(text: string) {
+    if (text.trim()) setHistory(addSearchHistoryEntry(worldId, text));
+    onSubmit(text);
+  }
+
+  function selectHistory(term: string) {
+    setRaw(term);
+    submit(term);
+    inputRef.current?.blur();
+  }
+
+  function clearHistory() {
+    clearSearchHistory(worldId);
+    setHistory([]);
+  }
+
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === "Enter" && !open) {
-      onSubmit(raw.trim());
+      submit(raw.trim());
     }
     if (e.key === "Backspace" && raw === "" && tokens.length > 0) {
       onRemoveToken(tokens[tokens.length - 1].id);
@@ -199,6 +223,30 @@ export function SearchInput({
                     <QuickFilterRow icon={<SlidersHorizontal className="h-4 w-4" />} title={t("search.quickMoreTitle")} sub={t("search.quickMoreSub")} />
                   </CommandItem>
                 </CommandGroup>
+              )}
+              {showQuickHelper && history.length > 0 && (
+                <>
+                  <CommandSeparator />
+                  <div className="flex items-center justify-between px-2 pt-2 pb-1">
+                    <span className="text-muted-foreground px-0 py-1.5 text-xs font-medium">{t("search.historyTitle")}</span>
+                    <button
+                      type="button"
+                      onClick={clearHistory}
+                      aria-label={t("search.clearHistory")}
+                      className="rounded p-1 text-muted-foreground hover:bg-hoverCard hover:text-foreground"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                  <CommandGroup>
+                    {history.map((term) => (
+                      <CommandItem key={term} onSelect={() => selectHistory(term)}>
+                        <SearchIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span>{term}</span>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </>
               )}
               {activeType === "author" && (
                 <CommandGroup heading={t("search.suggestAuthor")}>

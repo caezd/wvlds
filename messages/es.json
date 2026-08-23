@@ -671,6 +671,8 @@
       "quickMentionsTitle": "Menciona a un usuario específico",
       "quickMoreTitle": "Más filtros",
       "quickMoreSub": "fechas, tipo de autor y más",
+      "historyTitle": "Historial",
+      "clearHistory": "Borrar el historial de búsqueda",
       "suggestAuthor": "Del usuario",
       "suggestMentions": "Menciona al usuario",
       "suggestChannel": "En la sala",

@@ -210,6 +210,7 @@ export function SearchCenter({
             <div className="flex items-start gap-2">
               <div className="flex-1">
                 <SearchInput
+                  worldId={worldId}
                   authors={authors}
                   chatrooms={chatrooms}
                   tokens={tokens}
