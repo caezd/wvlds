@@ -30,6 +30,11 @@ const TRAILING_TOKEN_RE = new RegExp(
   "i",
 );
 
+// Couleur de sélection de ce panneau : "muted" plutôt que l'"accent" par
+// défaut de CommandItem (components/ui/command.tsx), sans toucher au
+// composant partagé (utilisé aussi par ExploreFilters et WorldInviteDialog).
+const SELECTED_ITEM_CLASS = "data-[selected=true]:bg-muted data-[selected=true]:text-foreground";
+
 function prefixLabel(type: SearchTokenType): string {
   return TOKEN_PREFIXES.find((p) => p.type === type)?.prefix ?? type;
 }
@@ -210,19 +215,19 @@ export function SearchInput({
             <CommandList>
               {showQuickHelper && (
                 <CommandGroup heading={t("search.filtersTitle")}>
-                  <CommandItem onSelect={() => pickQuickFilter("author")}>
+                  <CommandItem className={SELECTED_ITEM_CLASS} onSelect={() => pickQuickFilter("author")}>
                     <QuickFilterRow icon={<User className="h-4 w-4" />} title={t("search.quickAuthorTitle")} sub="de: utilisateur" />
                   </CommandItem>
-                  <CommandItem onSelect={() => pickQuickFilter("channel")}>
+                  <CommandItem className={SELECTED_ITEM_CLASS} onSelect={() => pickQuickFilter("channel")}>
                     <QuickFilterRow icon={<Hash className="h-4 w-4" />} title={t("search.quickChannelTitle")} sub="dans: salon" />
                   </CommandItem>
-                  <CommandItem onSelect={() => pickQuickFilter("contains")}>
+                  <CommandItem className={SELECTED_ITEM_CLASS} onSelect={() => pickQuickFilter("contains")}>
                     <QuickFilterRow icon={<Paperclip className="h-4 w-4" />} title={t("search.quickContainsTitle")} sub="contient: lien, pièce jointe" />
                   </CommandItem>
-                  <CommandItem onSelect={() => pickQuickFilter("mentions")}>
+                  <CommandItem className={SELECTED_ITEM_CLASS} onSelect={() => pickQuickFilter("mentions")}>
                     <QuickFilterRow icon={<AtSign className="h-4 w-4" />} title={t("search.quickMentionsTitle")} sub="mentions: utilisateur" />
                   </CommandItem>
-                  <CommandItem onSelect={openAdvancedFilters}>
+                  <CommandItem className={SELECTED_ITEM_CLASS} onSelect={openAdvancedFilters}>
                     <QuickFilterRow icon={<SlidersHorizontal className="h-4 w-4" />} title={t("search.quickMoreTitle")} sub={t("search.quickMoreSub")} />
                   </CommandItem>
                 </CommandGroup>
@@ -243,7 +248,7 @@ export function SearchInput({
                   </div>
                   <CommandGroup>
                     {history.map((term) => (
-                      <CommandItem key={term} onSelect={() => selectHistory(term)}>
+                      <CommandItem key={term} className={SELECTED_ITEM_CLASS} onSelect={() => selectHistory(term)}>
                         <SearchIcon className="h-3.5 w-3.5 text-muted-foreground" />
                         <span>{term}</span>
                       </CommandItem>
@@ -255,7 +260,7 @@ export function SearchInput({
                 <CommandGroup heading={t("search.suggestAuthor")}>
                   {authorOptions.length === 0 && <CommandEmpty>{t("search.noResults")}</CommandEmpty>}
                   {authorOptions.map((option) => (
-                    <CommandItem key={`${option.kind}:${option.id}`} onSelect={() => selectAuthor(option, "author")}>
+                    <CommandItem key={`${option.kind}:${option.id}`} className={SELECTED_ITEM_CLASS} onSelect={() => selectAuthor(option, "author")}>
                       <AuthorRow option={option} />
                     </CommandItem>
                   ))}
@@ -265,7 +270,7 @@ export function SearchInput({
                 <CommandGroup heading={t("search.suggestMentions")}>
                   {authorOptions.length === 0 && <CommandEmpty>{t("search.noResults")}</CommandEmpty>}
                   {authorOptions.map((option) => (
-                    <CommandItem key={`${option.kind}:${option.id}`} onSelect={() => selectAuthor(option, "mentions")}>
+                    <CommandItem key={`${option.kind}:${option.id}`} className={SELECTED_ITEM_CLASS} onSelect={() => selectAuthor(option, "mentions")}>
                       <AuthorRow option={option} />
                     </CommandItem>
                   ))}
@@ -275,7 +280,7 @@ export function SearchInput({
                 <CommandGroup heading={t("search.suggestChannel")}>
                   {channelOptions.length === 0 && <CommandEmpty>{t("search.noResults")}</CommandEmpty>}
                   {channelOptions.map((option) => (
-                    <CommandItem key={option.id} onSelect={() => selectChannel(option)}>
+                    <CommandItem key={option.id} className={SELECTED_ITEM_CLASS} onSelect={() => selectChannel(option)}>
                       # {option.label}
                     </CommandItem>
                   ))}
@@ -285,7 +290,7 @@ export function SearchInput({
                 <CommandGroup heading={t("search.suggestContains")}>
                   {containsOptions.length === 0 && <CommandEmpty>{t("search.noResults")}</CommandEmpty>}
                   {containsOptions.map((option) => (
-                    <CommandItem key={option.value} onSelect={() => selectContains(option.value, option.label)}>
+                    <CommandItem key={option.value} className={SELECTED_ITEM_CLASS} onSelect={() => selectContains(option.value, option.label)}>
                       {option.label}
                     </CommandItem>
                   ))}
