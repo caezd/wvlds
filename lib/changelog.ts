@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Chatrooms",
+    text: "Nouveau centre de recherche de messages, accessible depuis l'accueil d'un monde ou l'en-tête d'une chatroom : filtres par salon, auteur (persona ou pseudo), mentions, pièce jointe/lien, date, type d'auteur et épinglé, combinables avec une recherche texte libre.",
+  },
+  {
+    date: "2026-08",
     tag: "Interface",
     text: "Le niveau, l'XP, les pièces et le streak — liés au compte, pas au personnage — ont été retirés des fiches de persona (profil, édition) et déplacés dans le profil joueur, consultable en cliquant sur un pseudo.",
   },
