@@ -171,7 +171,7 @@ export function SearchInput({
         </PopoverAnchor>
         <PopoverContent
           align="start"
-          className="w-[--radix-popover-trigger-width] p-0"
+          className="w-(--radix-popover-trigger-width) p-0"
           onOpenAutoFocus={(e) => e.preventDefault()}
           onCloseAutoFocus={(e) => e.preventDefault()}
           // Empêche le mousedown sur une suggestion de blurer le champ avant
