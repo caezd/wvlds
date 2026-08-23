@@ -660,7 +660,6 @@
     "selectPersonaFirst": "Select a persona before sending.",
     "search": {
       "title": "Search",
-      "hint": "Type de: dans: contient: or mentions: to filter, or free text to search message content.",
       "needFilter": "Add at least one filter (de: dans: contient: mentions: or \"Filters\") before running a search.",
       "placeholder": "Search…",
       "filtersTitle": "Filters",

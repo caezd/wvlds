@@ -656,7 +656,6 @@
     "selectPersonaFirst": "Seleccione un personaje antes de enviar.",
     "search": {
       "title": "Buscar",
-      "hint": "Escriba de: dans: contient: o mentions: para filtrar, o texto libre para buscar en los mensajes.",
       "needFilter": "Añada al menos un filtro (de: dans: contient: mentions: o «Filtros») antes de lanzar una búsqueda.",
       "placeholder": "Buscar…",
       "filtersTitle": "Filtros",

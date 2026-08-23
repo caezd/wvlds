@@ -76,9 +76,10 @@ beforeEach(() => {
 });
 
 describe("SearchCenter", () => {
-  it("affiche l'indice tant qu'aucune recherche n'a été lancée", () => {
+  it("n'affiche aucun résultat tant qu'aucune recherche n'a été lancée", () => {
     render(<SearchCenter worldId="w1" open onOpenChange={() => {}} />);
-    expect(screen.getByText(/Tapez de: dans: contient:/)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Rechercher…")).toBeInTheDocument();
+    expect(searchMock).not.toHaveBeenCalled();
   });
 
   it("ne lance aucune recherche pour du texte libre seul, sans filtre", async () => {

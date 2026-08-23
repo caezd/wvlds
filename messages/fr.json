@@ -661,7 +661,6 @@
     "selectPersonaFirst": "Sélectionnez un persona avant d'envoyer.",
     "search": {
       "title": "Rechercher",
-      "hint": "Tapez de: dans: contient: ou mentions: pour filtrer, ou du texte libre pour chercher dans les messages.",
       "needFilter": "Ajoutez au moins un filtre (de: dans: contient: mentions: ou « Filtres ») avant de lancer une recherche.",
       "placeholder": "Rechercher…",
       "filtersTitle": "Filtres",

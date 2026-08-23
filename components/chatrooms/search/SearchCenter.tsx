@@ -226,6 +226,7 @@ export function SearchCenter({
                 type="button"
                 variant="outline"
                 size="icon"
+                className="rounded-md"
                 aria-label={t("search.filtersTitle")}
                 onClick={() => setFiltersOpen(true)}
               >
@@ -238,7 +239,7 @@ export function SearchCenter({
           </DrawerHeader>
 
           <div className="flex-1 overflow-y-auto p-4">
-            {hasSearched ? (
+            {hasSearched && (
               <SearchResultsList
                 results={results}
                 authors={authors}
@@ -251,8 +252,6 @@ export function SearchCenter({
                 onPrev={goPrev}
                 onSelectMessage={selectMessage}
               />
-            ) : (
-              <p className="p-6 text-center text-sm text-muted-foreground">{t("search.hint")}</p>
             )}
           </div>
         </DrawerContent>

@@ -176,7 +176,7 @@ export function SearchInput({
     // du DOM (pas de portail), le panneau suit nativement la même transform
     // que le reste du drawer, sans lag ni saut.
     <div className="relative flex flex-col gap-2">
-      <div className="flex flex-wrap items-center gap-1.5 rounded-md border bg-background px-2 py-1.5 focus-within:ring-1 focus-within:ring-ring">
+      <div className="flex min-h-9 flex-wrap items-center gap-1.5 rounded-md border bg-background px-2 py-1.5 focus-within:ring-1 focus-within:ring-ring">
         <SearchIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
         {tokens.map((token) => (
           <Badge key={token.id} variant="secondary" className="gap-1 pr-1">
