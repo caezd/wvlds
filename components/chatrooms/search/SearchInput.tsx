@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { AtSign, Hash, Paperclip, Search as SearchIcon, SlidersHorizontal, Trash2, User, X } from "lucide-react";
-import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -162,44 +161,48 @@ export function SearchInput({
   }
 
   return (
-    <div className="flex flex-col gap-2">
-      <Popover open={open} onOpenChange={() => {}}>
-        <PopoverAnchor asChild>
-          <div className="flex flex-wrap items-center gap-1.5 rounded-md border bg-background px-2 py-1.5 focus-within:ring-1 focus-within:ring-ring">
-            <SearchIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
-            {tokens.map((token) => (
-              <Badge key={token.id} variant="secondary" className="gap-1 pr-1">
-                {prefixLabel(token.type)}: {token.label}
-                <button
-                  type="button"
-                  onClick={() => onRemoveToken(token.id)}
-                  aria-label={t("search.removeToken", { label: token.label })}
-                  className="rounded-full p-0.5 hover:bg-hoverCard"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </Badge>
-            ))}
-            <input
-              ref={inputRef}
-              autoFocus={autoFocus}
-              value={raw}
-              onChange={(e) => setRaw(e.target.value)}
-              onKeyDown={handleKeyDown}
-              onFocus={() => setIsFocused(true)}
-              onBlur={() => setIsFocused(false)}
-              placeholder={tokens.length === 0 ? t("search.placeholder") : undefined}
-              className="min-w-[120px] flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-            />
-          </div>
-        </PopoverAnchor>
-        <PopoverContent
-          align="start"
-          className="w-(--radix-popover-trigger-width) p-0"
-          onOpenAutoFocus={(e) => e.preventDefault()}
-          onCloseAutoFocus={(e) => e.preventDefault()}
+    // `relative` : le panneau de suggestions est positionné en `absolute` à
+    // l'intérieur de ce conteneur plutôt que via un Popover Radix (portalé
+    // dans document.body et repositionné en `fixed` par floating-ui). Le
+    // drawer de recherche s'ouvre avec une transition CSS (transform) sur
+    // laquelle le champ prend le focus immédiatement (autoFocus) : un popover
+    // en position fixed recalcule sa position par rapport au viewport pendant
+    // cette translation et "saute" visiblement. En restant un enfant normal
+    // du DOM (pas de portail), le panneau suit nativement la même transform
+    // que le reste du drawer, sans lag ni saut.
+    <div className="relative flex flex-col gap-2">
+      <div className="flex flex-wrap items-center gap-1.5 rounded-md border bg-background px-2 py-1.5 focus-within:ring-1 focus-within:ring-ring">
+        <SearchIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
+        {tokens.map((token) => (
+          <Badge key={token.id} variant="secondary" className="gap-1 pr-1">
+            {prefixLabel(token.type)}: {token.label}
+            <button
+              type="button"
+              onClick={() => onRemoveToken(token.id)}
+              aria-label={t("search.removeToken", { label: token.label })}
+              className="rounded-full p-0.5 hover:bg-hoverCard"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </Badge>
+        ))}
+        <input
+          ref={inputRef}
+          autoFocus={autoFocus}
+          value={raw}
+          onChange={(e) => setRaw(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
+          placeholder={tokens.length === 0 ? t("search.placeholder") : undefined}
+          className="min-w-[120px] flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+        />
+      </div>
+      {open && (
+        <div
+          className="bg-popover text-popover-foreground absolute inset-x-0 top-full z-50 mt-1 rounded-md border shadow-md outline-hidden"
           // Empêche le mousedown sur une suggestion de blurer le champ avant
-          // que le clic n'atteigne le CommandItem (sinon le popover se
+          // que le clic n'atteigne le CommandItem (sinon le panneau se
           // referme — via showQuickHelper/isFocused — avant la sélection).
           onMouseDown={(e) => e.preventDefault()}
         >
@@ -290,8 +293,8 @@ export function SearchInput({
               )}
             </CommandList>
           </Command>
-        </PopoverContent>
-      </Popover>
+        </div>
+      )}
     </div>
   );
 }
