@@ -83,6 +83,13 @@ describe("WorldChatroomsGrid — filtre par catégorie", () => {
     render(<WorldChatroomsGrid worldId="world-1" initialRooms={rooms} categoryId="cat-inexistante" />);
     expect(screen.getByText("Aucune partie dans cette catégorie.")).toBeInTheDocument();
   });
+
+  it("passe en 2 colonnes selon la largeur du conteneur (@sm), pas du viewport (md:)", () => {
+    const { container } = render(<WorldChatroomsGrid worldId="world-1" initialRooms={rooms} categoryId={null} />);
+    const list = container.querySelector("ul")!;
+    expect(list.className).toContain("@sm:grid-cols-2");
+    expect(list.className).not.toMatch(/(?<!@)\bmd:/);
+  });
 });
 
 describe("WorldChatroomsGrid — sous-titre et avatar du dernier auteur", () => {

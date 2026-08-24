@@ -272,9 +272,7 @@
     },
     "hero": {
       "addFavorite": "Add to favorites",
-      "removeFavorite": "Remove from favorites",
-      "expand": "Full screen",
-      "collapse": "Minimize"
+      "removeFavorite": "Remove from favorites"
     },
     "composer": {
       "placeholder": "New game…",
@@ -292,6 +290,97 @@
       "discardCancel": "Continue writing",
       "categoryPlaceholder": "Category",
       "categoryNone": "None"
+    },
+    "home": {
+      "addWidget": "Add a widget",
+      "noWidgets": "No widgets shown — add one below.",
+      "showStats": "Show statistics",
+      "showStatsDesc": "Message, member, and persona counts, shown under the home page title.",
+      "gridGap": "Block spacing",
+      "gridGapDesc": "Space between blocks, on the home page as well as in this editor.",
+      "gridGapOptions": {
+        "compact": "Compact",
+        "comfortable": "Comfortable",
+        "spacious": "Spacious"
+      },
+      "widgets": {
+        "categories": "Categories",
+        "composer": "Create a game",
+        "chatrooms": "Chatrooms",
+        "members_online": "Members online",
+        "announcement": "Announcement",
+        "wiki_shortcuts": "Wiki shortcuts",
+        "personas_recent": "Recent personas",
+        "timeline_shortcuts": "Timeline shortcuts"
+      },
+      "onlineCount": "{count, plural, one {# member online} other {# members online}}",
+      "noneOnline": "No one online right now",
+      "wikiShortcuts": {
+        "updated": "Updated {time}",
+        "justNow": "just now"
+      },
+      "timelineShortcuts": {
+        "previousMonth": "Previous month",
+        "nextMonth": "Next month",
+        "selectDay": "View entries for {day}",
+        "noEntries": "No entries this month.",
+        "viewAll": "View full timeline"
+      },
+      "announcement": {
+        "add": "Add an announcement",
+        "edit": "Edit announcement",
+        "dialogTitle": "World announcement",
+        "htmlLabel": "HTML / CSS",
+        "htmlPlaceholder": "'<style>…</style>\n<div>…</div>'",
+        "htmlHelp": "HTML and CSS only — rendered in an isolated frame, no script can run.",
+        "htmlTooLong": "Maximum {max} characters.",
+        "sizeLabel": "Height",
+        "sizeSmall": "Small",
+        "sizeMedium": "Medium",
+        "sizeLarge": "Large",
+        "previewLabel": "Preview"
+      },
+      "grid": {
+        "addBlock": "Add a block",
+        "htmlBlockTitle": "HTML block",
+        "markdownBlockTitle": "Markdown block",
+        "markdownLabel": "Markdown",
+        "markdownPlaceholder": "# Title\n\nYour text…",
+        "editBlock": "Edit block",
+        "blockTitleLabel": "Title",
+        "blockTitleHelp": "Only used to identify the block in this editor — never shown on the home page.",
+        "resizeBoundary": "Resize both columns",
+        "blockOptions": "Block settings",
+        "options": {
+          "range": "Between {min} and {max}",
+          "visibleRows": "Visible rows",
+          "limit": "Number of entries"
+        },
+        "deleteTitle": "Delete this block?",
+        "deleteDesc": "This block will be removed from the home page. This action is irreversible.",
+        "cardLabel": "Display as a card",
+        "cardHelp": "Off for a full-width block, blended into the page — no border or background.",
+        "bannerBlockTitle": "Banner block",
+        "bannerDialogTitle": "Banner",
+        "bannerTitleLabel": "Title",
+        "bannerTitlePlaceholder": "Banner title",
+        "bannerTextLabel": "Text",
+        "bannerTextPlaceholder": "A short subtitle…",
+        "bannerImageLabel": "Background image",
+        "bannerImageUpload": "Upload an image",
+        "bannerImageChange": "Change",
+        "bannerImageRemove": "Remove",
+        "bannerImageDisabled": "Upload unavailable",
+        "bannerAccentLabel": "Accent",
+        "bannerAccentNone": "None",
+        "bannerAlignLabel": "Alignment",
+        "bannerAlignLeft": "Left",
+        "bannerAlignCenter": "Centered",
+        "bannerButtonLabel": "Button",
+        "bannerButtonLabelPlaceholder": "Button label",
+        "bannerButtonUrlPlaceholder": "https://…",
+        "bannerButtonClear": "Remove"
+      }
     }
   },
   "auth": {
@@ -771,6 +860,12 @@
     "footerHintConnect": "Click a card → click another to create a link",
     "footerHintView": "Click a card to see its relations",
     "noRelations": "No relations",
+    "noPersonas": "No personas to show.",
+    "searchPlaceholder": "Search…",
+    "clearSearch": "Clear search",
+    "noSearchResults": "No results.",
+    "pickTarget": "Choose the target persona",
+    "addRelation": "Add a relation",
     "addDescription": "Add a description…",
     "typeChanged": "Type changed to « {name} ».",
     "relCreated": "« {name} » relation created.",

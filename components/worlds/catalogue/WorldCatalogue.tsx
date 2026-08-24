@@ -1305,7 +1305,7 @@ export function WorldCatalogue({ worldId, canEdit, inventoryEnabled, inventoryRe
   const inactiveNote = inactiveLines.length > 0 ? inactiveLines.join(" · ") : null;
 
   return (
-    <div className="flex h-full w-full flex-col bg-background">
+    <div className="flex h-full w-full flex-col">
       <WorldPanelHeader
         icon={<Library className="h-4 w-4 shrink-0 text-muted-foreground" />}
         title={t("title")}

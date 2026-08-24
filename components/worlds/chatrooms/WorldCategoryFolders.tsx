@@ -1,15 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
-import { CategoryAvatar } from "@/components/worlds/catalogue/CategoryAvatar";
+import { supabaseThumb } from "@/lib/storage";
 import { cn } from "@/lib/utils";
 
 type Category = {
   id: string;
   title: string;
+  description: string | null;
   banner_url: string | null;
   icon_url: string | null;
   position: number;
@@ -36,7 +38,7 @@ export function WorldCategoryFolders({
       const [{ data: cats }, { data: rooms }] = await Promise.all([
         supabase
           .from("chatroom_categories")
-          .select("id, title, banner_url, icon_url, position")
+          .select("id, title, description, banner_url, icon_url, position")
           .eq("world_id", worldId)
           .order("position"),
         supabase.from("chatrooms").select("category_id").eq("world_id", worldId),
@@ -74,33 +76,66 @@ export function WorldCategoryFolders({
   if (categories.length === 0) return null;
 
   return (
-    <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+    // Conteneur de container queries hérité du bloc parent (voir
+    // WorldHomeGridView.tsx) : la mise en page s'adapte à la largeur réelle
+    // de la cellule de grille, pas au viewport. Étroit (par défaut) → liste
+    // verticale compacte sur toute la hauteur ; large (@sm+) → étagère
+    // horizontale de grandes cartes, comme avant.
+    <div className="flex h-full flex-col gap-1.5 overflow-y-auto @sm:flex-row @sm:gap-3 @sm:overflow-x-auto @sm:overflow-y-visible @sm:px-1">
       {categories.map((cat) => {
         const isActive = selectedCategoryId === cat.id;
+        // icon_url est une petite image dédiée aux avatars (sidebar) — l'étirer
+        // sur la grande carte la pixelliserait ; seule la bannière (pensée pour
+        // du grand format) convient ici.
+        const image = cat.banner_url;
         return (
           <button
             key={cat.id}
             type="button"
             onClick={() => onSelectCategory(isActive ? null : cat.id)}
             className={cn(
-              "flex min-w-40 max-w-56 shrink-0 items-center gap-2.5 rounded-lg border p-2 text-left transition-colors",
+              "flex items-center gap-2 rounded-lg border p-1.5 text-left transition-colors",
+              "@sm:w-36 @sm:shrink-0 @sm:flex-col @sm:items-stretch @sm:gap-0 @sm:overflow-hidden @sm:rounded-xl @sm:p-0",
               isActive
-                ? "border-primary bg-primary/5"
-                : "border bg-background hover:border-border hover:bg-secondary/30",
+                ? "border-primary ring-1 ring-primary"
+                : "border-border-soft hover:border-border",
             )}
           >
-            <CategoryAvatar
-              title={cat.title}
-              bannerUrl={cat.banner_url}
-              iconUrl={cat.icon_url}
-              className="h-9 w-9 rounded-md"
-            />
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-foreground leading-tight">{cat.title}</p>
-              <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                {t("sidebar.subjects", { count: counts.get(cat.id) ?? 0 })}
-              </p>
-            </div>
+            <span className="relative block h-10 w-10 shrink-0 overflow-hidden rounded-md bg-muted-foreground/10 @sm:aspect-[4/3] @sm:h-auto @sm:w-full @sm:rounded-none">
+              {image ? (
+                // La largeur réelle de CE conteneur est pilotée par une
+                // container query (@sm:, voir le parent), pas par le
+                // viewport — la carte peut donc être une liste 40px ou une
+                // étagère 144px selon la colonne de grille, sans qu'aucun
+                // `sizes` viewport-based ne puisse le distinguer. On
+                // pré-dimensionne donc nous-mêmes via imgproxy, large de
+                // marge (400px, x2 la plus grande carte réelle pour le DPR).
+                //
+                // `unoptimized` indispensable : un `sizes` en px fixe (sans
+                // `vw`) fait retomber Next.js sur sa plus grande largeur
+                // configurée (jusqu'à 3840px) au lieu d'une taille adaptée —
+                // voir le commentaire détaillé dans WorldAvatar.tsx. Sans
+                // `unoptimized`, Next tenterait de ré-agrandir une source
+                // déjà petite jusqu'à 3840px et l'image ne chargerait pas.
+                <Image
+                  src={supabaseThumb(image, 400, 90) ?? image}
+                  alt=""
+                  fill
+                  unoptimized
+                  className="object-cover"
+                />
+              ) : (
+                <span className="flex h-full w-full items-center justify-center text-lg font-medium text-muted-foreground">
+                  {cat.title[0]?.toUpperCase()}
+                </span>
+              )}
+            </span>
+            <span className="flex min-w-0 flex-1 flex-col gap-0.5 @sm:bg-card @sm:px-2.5 @sm:py-2">
+              <span className="truncate text-sm font-semibold text-foreground">{cat.title}</span>
+              <span className="truncate text-xs text-muted-foreground @sm:line-clamp-2 @sm:whitespace-normal">
+                {cat.description || t("sidebar.subjects", { count: counts.get(cat.id) ?? 0 })}
+              </span>
+            </span>
           </button>
         );
       })}

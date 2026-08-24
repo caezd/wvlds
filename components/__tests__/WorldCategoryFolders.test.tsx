@@ -17,8 +17,8 @@ vi.mock("next-intl", () => ({
 import { WorldCategoryFolders } from "@/components/worlds/chatrooms/WorldCategoryFolders";
 
 const categories = [
-  { id: "cat-1", title: "Annonces", banner_url: null, icon_url: null, position: 0 },
-  { id: "cat-2", title: "Hors-sujet", banner_url: null, icon_url: null, position: 1 },
+  { id: "cat-1", title: "Annonces", description: null, banner_url: null, icon_url: null, position: 0 },
+  { id: "cat-2", title: "Hors-sujet", description: null, banner_url: null, icon_url: null, position: 1 },
 ];
 
 const chatroomsByCategory = [
@@ -86,5 +86,133 @@ describe("WorldCategoryFolders", () => {
 
     screen.getByText("Annonces").closest("button")!.click();
     expect(onSelectCategory).toHaveBeenCalledWith(null);
+  });
+
+  it("affiche la description à la place du nombre de sujets quand elle est renseignée", async () => {
+    const localMock = createSupabaseMock({
+      results: [
+        {
+          data: [
+            { id: "cat-1", title: "Annonces", description: "Les news du monde", banner_url: null, icon_url: null, position: 0 },
+          ],
+        },
+        { data: [] },
+      ],
+    });
+    (createClient as ReturnType<typeof vi.fn>).mockReturnValue(localMock.client);
+
+    await act(async () => {
+      render(<WorldCategoryFolders worldId="world-1" selectedCategoryId={null} onSelectCategory={vi.fn()} />);
+    });
+
+    expect(screen.getByText("Les news du monde")).toBeInTheDocument();
+    expect(screen.queryByText("0 sujet(s)")).not.toBeInTheDocument();
+  });
+
+  it("affiche l'image de bannière de la catégorie quand elle est renseignée", async () => {
+    const localMock = createSupabaseMock({
+      results: [
+        {
+          data: [
+            { id: "cat-1", title: "Annonces", description: null, banner_url: "https://x/banner.png", icon_url: null, position: 0 },
+          ],
+        },
+        { data: [] },
+      ],
+    });
+    (createClient as ReturnType<typeof vi.fn>).mockReturnValue(localMock.client);
+
+    let container!: HTMLElement;
+    await act(async () => {
+      ({ container } = render(
+        <WorldCategoryFolders worldId="world-1" selectedCategoryId={null} onSelectCategory={vi.fn()} />,
+      ));
+    });
+
+    expect(container.querySelector("img")).toHaveAttribute("src", expect.stringContaining("banner.png"));
+  });
+
+  it("pré-dimensionne l'image via imgproxy et laisse Next.js de côté", async () => {
+    // Régression : un `sizes` en px fixe (sans `vw`, seule unité que
+    // Next.js sait interpréter) faisait retomber son optimiseur sur sa plus
+    // grande largeur configurée (jusqu'à 3840px) plutôt qu'une taille
+    // adaptée à la cellule — demander à Next d'agrandir une source déjà
+    // petite jusque-là échouait purement et simplement au chargement. On
+    // pré-dimensionne donc nous-mêmes (imgproxy, marge DPR) et on court-
+    // circuite l'optimiseur de Next via `unoptimized`.
+    const localMock = createSupabaseMock({
+      results: [
+        {
+          data: [
+            {
+              id: "cat-1",
+              title: "Annonces",
+              description: null,
+              banner_url: "https://x.supabase.co/storage/v1/object/public/chatroom-categories/banner.webp",
+              icon_url: null,
+              position: 0,
+            },
+          ],
+        },
+        { data: [] },
+      ],
+    });
+    (createClient as ReturnType<typeof vi.fn>).mockReturnValue(localMock.client);
+
+    let container!: HTMLElement;
+    await act(async () => {
+      ({ container } = render(
+        <WorldCategoryFolders worldId="world-1" selectedCategoryId={null} onSelectCategory={vi.fn()} />,
+      ));
+    });
+
+    const img = container.querySelector("img")!;
+    expect(img).toHaveAttribute("src", expect.stringContaining("width=400"));
+    expect(img).toHaveAttribute("src", expect.stringContaining("quality=90"));
+    expect(img.getAttribute("src")).not.toContain("/_next/image");
+  });
+
+  it("n'étire pas l'image de l'icône (petit format) sur la grande carte quand il n'y a pas de bannière", async () => {
+    const localMock = createSupabaseMock({
+      results: [
+        {
+          data: [
+            { id: "cat-1", title: "Annonces", description: null, banner_url: null, icon_url: "https://x/icon.png", position: 0 },
+          ],
+        },
+        { data: [] },
+      ],
+    });
+    (createClient as ReturnType<typeof vi.fn>).mockReturnValue(localMock.client);
+
+    let container!: HTMLElement;
+    await act(async () => {
+      ({ container } = render(
+        <WorldCategoryFolders worldId="world-1" selectedCategoryId={null} onSelectCategory={vi.fn()} />,
+      ));
+    });
+
+    expect(container.querySelector("img")).toBeNull();
+    expect(screen.getByText("A")).toBeInTheDocument();
+  });
+
+  it("adapte sa mise en page à la largeur de son conteneur (container queries), pas au viewport", async () => {
+    let container!: HTMLElement;
+    await act(async () => {
+      ({ container } = render(
+        <WorldCategoryFolders worldId="world-1" selectedCategoryId={null} onSelectCategory={vi.fn()} />,
+      ));
+    });
+
+    // Liste verticale compacte par défaut (conteneur étroit) ; étagère
+    // horizontale de cartes seulement à partir de @sm — jamais de classe
+    // dépendant du viewport (sm:/md:) qui ignorerait la largeur réelle de
+    // la cellule de grille dans laquelle ce widget peut être placé.
+    const root = container.firstElementChild!;
+    expect(root.className).toContain("@sm:flex-row");
+    expect(root.className).not.toMatch(/(?<!@)\bsm:/);
+
+    const card = screen.getByText("Annonces").closest("button")!;
+    expect(card.className).toContain("@sm:flex-col");
   });
 });

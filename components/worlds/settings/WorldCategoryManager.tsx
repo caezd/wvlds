@@ -38,7 +38,6 @@ async function uploadCategoryImage(
   supabase: ReturnType<typeof createClient>,
   worldId: string,
   file: File,
-  kind: "banner" | "icon",
 ) {
   const {
     data: { user },
@@ -47,7 +46,7 @@ async function uploadCategoryImage(
   if (file.size > 5 * 1024 * 1024) throw new Error("Fichier trop volumineux (max 5 Mo).");
 
   const converted = await toWebP(file);
-  const path = `world-${worldId}/category-${kind}-${Date.now()}.webp`;
+  const path = `world-${worldId}/category-image-${Date.now()}.webp`;
 
   const { error } = await supabase.storage
     .from("chatroom-categories")
@@ -71,43 +70,25 @@ function CategoryForm({
   const supabase = React.useMemo(() => createClient(), []);
   const [title, setTitle] = React.useState(initial?.title ?? "");
   const [description, setDescription] = React.useState(initial?.description ?? "");
-  const [bannerUrl, setBannerUrl] = React.useState(initial?.banner_url ?? "");
-  const [iconUrl, setIconUrl] = React.useState(initial?.icon_url ?? "");
-  const [uploadingBanner, setUploadingBanner] = React.useState(false);
-  const [uploadingIcon, setUploadingIcon] = React.useState(false);
+  // Une seule image sert à la fois de bannière (grande carte) et d'icône
+  // (petits avatars) — plus de champs séparés à gérer côté admin.
+  const [imageUrl, setImageUrl] = React.useState(initial?.banner_url ?? initial?.icon_url ?? "");
+  const [uploadingImage, setUploadingImage] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
 
-  async function handleBannerConfirm(blob: Blob) {
-    setUploadingBanner(true);
+  async function handleImageConfirm(blob: Blob) {
+    setUploadingImage(true);
     try {
       const url = await uploadCategoryImage(
         supabase,
         worldId,
-        new File([blob], "banner.jpg", { type: blob.type || "image/jpeg" }),
-        "banner",
+        new File([blob], "category.jpg", { type: blob.type || "image/jpeg" }),
       );
-      setBannerUrl(url ?? "");
+      setImageUrl(url ?? "");
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Téléversement impossible.");
     } finally {
-      setUploadingBanner(false);
-    }
-  }
-
-  async function handleIconConfirm(blob: Blob) {
-    setUploadingIcon(true);
-    try {
-      const url = await uploadCategoryImage(
-        supabase,
-        worldId,
-        new File([blob], "icon.jpg", { type: blob.type || "image/jpeg" }),
-        "icon",
-      );
-      setIconUrl(url ?? "");
-    } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Téléversement impossible.");
-    } finally {
-      setUploadingIcon(false);
+      setUploadingImage(false);
     }
   }
 
@@ -115,12 +96,18 @@ function CategoryForm({
     e.preventDefault();
     const trimmed = title.trim();
     if (!trimmed) return;
+    // Un upload d'image en cours n'a pas encore mis à jour imageUrl —
+    // enregistrer maintenant sauvegarderait silencieusement l'ancienne image.
+    if (uploadingImage) {
+      toast.error("Attends la fin du téléversement de l'image avant d'enregistrer.");
+      return;
+    }
     setSaving(true);
     const data = {
       title: trimmed,
       description: description.trim() || null,
-      banner_url: bannerUrl || null,
-      icon_url: iconUrl || null,
+      banner_url: imageUrl || null,
+      icon_url: imageUrl || null,
     };
     if (initial) {
       const res = await updateChatroomCategory(initial.id, data);
@@ -146,46 +133,24 @@ function CategoryForm({
       onSubmit={(e) => void handleSubmit(e)}
       className="space-y-3 rounded-xl border border-border-soft bg-muted/20 p-3"
     >
-      <ImagePickerCropField
-        aspect={3 / 1}
-        uploading={uploadingBanner}
-        previewSrc={bannerUrl || null}
-        previewClassName="aspect-[3/1] w-full rounded-lg"
-        changeLabel="Cliquer ou déposer pour remplacer"
-        onConfirm={handleBannerConfirm}
-      />
       <div className="space-y-1.5">
-        <p className="text-[11px] text-muted-foreground/70">
-          Image de catégorie — affichée dans la sidebar (remplace la bannière dans les petits avatars)
-        </p>
-        {iconUrl ? (
-          <div className="flex items-start gap-2">
-            <ImagePickerCropField
-              aspect={1}
-              uploading={uploadingIcon}
-              previewSrc={iconUrl}
-              previewClassName="h-16 w-16 rounded-lg"
-              changeLabel="Changer"
-              onConfirm={handleIconConfirm}
-            />
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              disabled={uploadingIcon}
-              onClick={() => setIconUrl("")}
-            >
-              Retirer
-            </Button>
-          </div>
-        ) : (
-          <div className="w-32">
-            <ImagePickerCropField
-              aspect={1}
-              uploading={uploadingIcon}
-              onConfirm={handleIconConfirm}
-            />
-          </div>
+        <ImagePickerCropField
+          aspect={4 / 3}
+          uploading={uploadingImage}
+          previewSrc={imageUrl || null}
+          previewClassName="aspect-[4/3] w-full rounded-lg"
+          changeLabel="Cliquer ou déposer pour remplacer"
+          onConfirm={handleImageConfirm}
+        />
+        {imageUrl && (
+          <button
+            type="button"
+            onClick={() => setImageUrl("")}
+            disabled={uploadingImage}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+          >
+            Retirer l&apos;image
+          </button>
         )}
       </div>
       <Input
@@ -206,7 +171,7 @@ function CategoryForm({
         <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
           Annuler
         </Button>
-        <Button type="submit" size="sm" disabled={!title.trim() || saving}>
+        <Button type="submit" size="sm" disabled={!title.trim() || saving || uploadingImage}>
           {saving ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : null}
           {initial ? "Enregistrer" : "Créer"}
         </Button>
@@ -260,7 +225,7 @@ function CategoryRow({
     <div
       ref={setNodeRef}
       style={style}
-      className="group flex items-center gap-2.5 rounded-xl px-2 py-1.5 transition-colors hover:bg-muted/40"
+      className="group flex items-center gap-2.5 rounded-lg bg-muted/60 px-2.5 py-1.5 transition-colors hover:bg-muted/70"
     >
       {canEdit && (
         <span
@@ -284,7 +249,10 @@ function CategoryRow({
         )}
       </div>
       {canEdit && (
-        <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+        // Toujours visibles (pas de `opacity-0 group-hover:...`) : le survol
+        // n'existe pas au tactile, ces boutons restaient sinon inatteignables
+        // au tap (même correctif que WorldHomeGridEditor.tsx).
+        <div className="flex shrink-0 items-center gap-1">
           <button
             type="button"
             onClick={onEdit}
@@ -393,30 +361,34 @@ export function WorldCategoryManager({
 
   return (
     <div className="space-y-3">
-      <DndContext sensors={sensors} onDragEnd={onDragEnd}>
-        <SortableContext items={categories.map((c) => c.id)} strategy={verticalListSortingStrategy}>
-          <div className="space-y-0.5">
-            {categories.map((category) => (
-              <CategoryRow
-                key={category.id}
-                category={category}
-                canEdit={canEdit}
-                isEditing={editingId === category.id}
-                onEdit={() => setEditingId(category.id)}
-                onCancelEdit={() => setEditingId(null)}
-                onSaved={handleUpdated}
-                onDelete={() => void handleDelete(category)}
-              />
-            ))}
-          </div>
-        </SortableContext>
-      </DndContext>
+      {/* Même conteneur de zone de glisser-déposer que la grille d'accueil
+          (WorldHomeGridEditor) : `rounded-lg border border-dashed p-2`. */}
+      <div className="rounded-lg border border-dashed p-2">
+        <DndContext sensors={sensors} onDragEnd={onDragEnd}>
+          <SortableContext items={categories.map((c) => c.id)} strategy={verticalListSortingStrategy}>
+            <div className="space-y-1.5">
+              {categories.map((category) => (
+                <CategoryRow
+                  key={category.id}
+                  category={category}
+                  canEdit={canEdit}
+                  isEditing={editingId === category.id}
+                  onEdit={() => setEditingId(category.id)}
+                  onCancelEdit={() => setEditingId(null)}
+                  onSaved={handleUpdated}
+                  onDelete={() => void handleDelete(category)}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
 
-      {categories.length === 0 && !creating && (
-        <p className="px-2 py-1 text-xs text-muted-foreground/60">
-          Aucune catégorie pour l&apos;instant.
-        </p>
-      )}
+        {categories.length === 0 && !creating && (
+          <p className="px-2 py-4 text-center text-xs text-muted-foreground/60">
+            Aucune catégorie pour l&apos;instant.
+          </p>
+        )}
+      </div>
 
       {canEdit &&
         (creating ? (
@@ -425,7 +397,7 @@ export function WorldCategoryManager({
           <button
             type="button"
             onClick={() => setCreating(true)}
-            className="flex w-full items-center gap-2 rounded-xl px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground"
+            className="flex items-center gap-1.5 rounded-md border border-border-soft px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
           >
             <Plus className="h-3.5 w-3.5" />
             Nouvelle catégorie

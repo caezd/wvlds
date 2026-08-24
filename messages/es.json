@@ -272,9 +272,7 @@
     },
     "hero": {
       "addFavorite": "Añadir a favoritos",
-      "removeFavorite": "Quitar de favoritos",
-      "expand": "Pantalla completa",
-      "collapse": "Minimizar"
+      "removeFavorite": "Quitar de favoritos"
     },
     "composer": {
       "placeholder": "Nuevo juego…",
@@ -292,6 +290,97 @@
       "discardCancel": "Seguir escribiendo",
       "categoryPlaceholder": "Categoría",
       "categoryNone": "Ninguna"
+    },
+    "home": {
+      "addWidget": "Añadir un widget",
+      "noWidgets": "No hay widgets mostrados — añada uno abajo.",
+      "showStats": "Mostrar las estadísticas",
+      "showStatsDesc": "Número de mensajes, miembros y personas, mostrado bajo el título de la página de inicio.",
+      "gridGap": "Espaciado de los bloques",
+      "gridGapDesc": "Espacio entre los bloques de la cuadrícula, tanto en la página de inicio como en este editor.",
+      "gridGapOptions": {
+        "compact": "Compacto",
+        "comfortable": "Cómodo",
+        "spacious": "Espacioso"
+      },
+      "widgets": {
+        "categories": "Categorías",
+        "composer": "Crear una partida",
+        "chatrooms": "Salas",
+        "members_online": "Miembros en línea",
+        "announcement": "Anuncio",
+        "wiki_shortcuts": "Accesos directos del wiki",
+        "personas_recent": "Personajes recientes",
+        "timeline_shortcuts": "Accesos directos de la línea de tiempo"
+      },
+      "onlineCount": "{count, plural, one {# miembro en línea} other {# miembros en línea}}",
+      "noneOnline": "Nadie en línea por ahora",
+      "wikiShortcuts": {
+        "updated": "Actualizado {time}",
+        "justNow": "ahora mismo"
+      },
+      "timelineShortcuts": {
+        "previousMonth": "Mes anterior",
+        "nextMonth": "Mes siguiente",
+        "selectDay": "Ver las entradas del {day}",
+        "noEntries": "Ninguna entrada este mes.",
+        "viewAll": "Ver la línea de tiempo completa"
+      },
+      "announcement": {
+        "add": "Añadir un anuncio",
+        "edit": "Editar el anuncio",
+        "dialogTitle": "Anuncio del mundo",
+        "htmlLabel": "HTML / CSS",
+        "htmlPlaceholder": "'<style>…</style>\n<div>…</div>'",
+        "htmlHelp": "Solo HTML y CSS — se muestra en un marco aislado, ningún script puede ejecutarse.",
+        "htmlTooLong": "Máximo {max} caracteres.",
+        "sizeLabel": "Altura",
+        "sizeSmall": "Pequeña",
+        "sizeMedium": "Mediana",
+        "sizeLarge": "Grande",
+        "previewLabel": "Vista previa"
+      },
+      "grid": {
+        "addBlock": "Añadir un bloque",
+        "htmlBlockTitle": "Bloque HTML",
+        "markdownBlockTitle": "Bloque Markdown",
+        "markdownLabel": "Markdown",
+        "markdownPlaceholder": "# Título\n\nSu texto…",
+        "editBlock": "Editar el bloque",
+        "blockTitleLabel": "Título",
+        "blockTitleHelp": "Solo sirve para identificar el bloque en este editor — nunca se muestra en la página de inicio.",
+        "resizeBoundary": "Redimensionar ambas columnas",
+        "blockOptions": "Ajustes del bloque",
+        "options": {
+          "range": "Entre {min} y {max}",
+          "visibleRows": "Filas visibles",
+          "limit": "Número de entradas"
+        },
+        "deleteTitle": "¿Eliminar este bloque?",
+        "deleteDesc": "Este bloque se eliminará de la página de inicio. Esta acción es irreversible.",
+        "cardLabel": "Mostrar como tarjeta",
+        "cardHelp": "Desactívelo para un bloque a todo lo ancho, integrado en la página — sin borde ni fondo.",
+        "bannerBlockTitle": "Bloque de banner",
+        "bannerDialogTitle": "Banner",
+        "bannerTitleLabel": "Título",
+        "bannerTitlePlaceholder": "Título del banner",
+        "bannerTextLabel": "Texto",
+        "bannerTextPlaceholder": "Un subtítulo breve…",
+        "bannerImageLabel": "Imagen de fondo",
+        "bannerImageUpload": "Subir una imagen",
+        "bannerImageChange": "Cambiar",
+        "bannerImageRemove": "Quitar",
+        "bannerImageDisabled": "Subida no disponible",
+        "bannerAccentLabel": "Acento",
+        "bannerAccentNone": "Ninguno",
+        "bannerAlignLabel": "Alineación",
+        "bannerAlignLeft": "Izquierda",
+        "bannerAlignCenter": "Centrado",
+        "bannerButtonLabel": "Botón",
+        "bannerButtonLabelPlaceholder": "Texto del botón",
+        "bannerButtonUrlPlaceholder": "https://…",
+        "bannerButtonClear": "Quitar"
+      }
     }
   },
   "auth": {
@@ -767,6 +856,12 @@
     "footerHintConnect": "Haga clic en una carta → haga clic en otra para crear un enlace",
     "footerHintView": "Haga clic en una carta para ver sus relaciones",
     "noRelations": "Sin relaciones",
+    "noPersonas": "No hay personas que mostrar.",
+    "searchPlaceholder": "Buscar…",
+    "clearSearch": "Borrar la búsqueda",
+    "noSearchResults": "Sin resultados.",
+    "pickTarget": "Elija la persona objetivo",
+    "addRelation": "Añadir una relación",
     "addDescription": "Añadir una descripción…",
     "typeChanged": "Tipo cambiado a « {name} ».",
     "relCreated": "Relación « {name} » creada.",

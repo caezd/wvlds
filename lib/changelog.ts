@@ -8,6 +8,126 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Correctif",
+    text: "Sur mobile, le bouton menu pouvait devenir inaccessible pendant le chargement d'une conversation, de l'Explorateur ou d'un onglet de monde (membres, personas, wiki, chronologie…) : un bouton de secours s'affiche désormais pendant tout le temps de chargement.",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
+    text: "Dans le panneau Chronologie, les salons sont désormais regroupés par mois (pas seulement par année) : chaque mois a son propre titre et une puce reliée à la ligne de temps de l'année. L'en-tête du panneau a aussi son icône.",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
+    text: "La Toile des relations d'un monde a une recherche dans son en-tête (icône loupe, se déplie en champ de saisie au clic) : trouver un persona par son nom ou par le pseudo de son joueur filtre la liste mobile et estompe les cartes non correspondantes sur le canevas desktop.",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
+    text: "La Toile des relations d'un monde a désormais une vue mobile dédiée : le canevas (courbes, pan/zoom), illisible en petit écran, est remplacé par une liste de personas groupée par joueur — taper l'un d'eux ouvre ses relations, et un bouton dédié permet d'en créer une nouvelle sans passer par le canevas.",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
+    text: "Les boutons éditer/réglages/supprimer d'un bloc dans l'éditeur de grille de la page d'accueil (Réglages > Page d'accueil) n'apparaissaient qu'au survol de la souris — invisibles, et donc impossibles à atteindre, sur écran tactile. Ils restent maintenant affichés en permanence.",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
+    text: "En taille mobile, les onglets Paramètres et Catalogue d'un monde affichaient un fond plus clair que les autres onglets (Wiki, Membres, Personas, Chronologie…), qui laissent voir le fond ambiant plus sombre de l'application — les deux sont désormais cohérents.",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
+    text: "Dans l'éditeur de grille de la page d'accueil (Réglages > Page d'accueil), les boutons éditer/réglages/supprimer d'un bloc ne réagissaient presque jamais à un clic précis sur leur icône — celui-ci était interprété comme un début de glisser-déposer du bloc, empêchant l'action de s'exécuter.",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
+    text: "Nouveau bloc « Bannière » pour la page d'accueil d'un monde : titre, texte court, image de fond et bouton d'action optionnels, dans un éditeur inspiré du modal des encadrés de chatroom (aperçu en direct). Les blocs HTML et Markdown peuvent en plus être affichés en plein largeur, sans bordure ni fond, plutôt qu'en carte — un réglage disponible dans leur éditeur de contenu.",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
+    text: "En déplaçant ou redimensionnant un bloc dans l'éditeur de grille de la page d'accueil (Réglages > Page d'accueil), un grillage des 12 colonnes s'affiche en fond pour repérer l'alignement, aligné sur la bordure en pointillé de l'éditeur.",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
+    text: "Nouveau widget « Raccourcis chronologie » pour la page d'accueil d'un monde : un petit calendrier pour parcourir les salons déjà situés dans la Chronologie (dates fictives) — flèches pour changer de mois/année, bande des jours du mois avec une pastille sur ceux qui ont une entrée, liste du jour sélectionné en dessous, et un lien vers la chronologie complète. Chaque mois du calendrier d'un monde a désormais son propre nombre de jours (réglable depuis Réglages > Fonctions > Chronologie ; le préréglage « mois réels » applique automatiquement les longueurs grégoriennes). Disponible pour les mondes où la Chronologie est activée.",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
+    text: "Le bloc « Raccourcis wiki » de la page d'accueil affiche désormais son heure de dernière modification dans la langue courante (au lieu de toujours l'afficher en français), le bloc « Membres en ligne » ne charge plus que les profils des membres réellement en ligne (au lieu de tous les membres du monde à chaque rafraîchissement), et un bloc HTML personnalisé porte maintenant un titre pour les technologies d'assistance.",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
+    text: "L'espacement entre les blocs de la page d'accueil se règle désormais depuis Réglages > Page d'accueil (compact, confortable ou spacieux), avec un aperçu fidèle directement dans l'éditeur. Sur mobile et tablette, glisser un bloc ou la frontière entre deux colonnes ne fait plus défiler la page par erreur, et les zones de saisie sont plus faciles à attraper au doigt.",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
+    text: "L'éditeur de grille (Réglages > Page d'accueil) a été reconstruit sur le même mécanisme d'affichage que la page d'accueil elle-même : il montre donc exactement la disposition finale, et toute une série de défauts disparaît d'un coup — étirement au changement d'onglet, décalage de largeur permanent, animation parasite au chargement, bloc voisin renvoyé à la ligne au lieu de se partager la largeur, fantôme superposé pendant un glissement. Étirer la frontière entre deux colonnes se fait maintenant des deux côtés, et redimensionne bien les deux blocs à la fois.",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
+    text: "Les icônes de monde (sélecteur de monde, favoris et rail d'icônes de la sidebar, page d'accueil) et les images de catégorie sur la page d'accueil ne s'affichaient plus du tout dans certains cas, ou très dégradées — un réglage de dimensionnement d'image mal formé faisait demander une taille de secours bien trop grande à Next.js, qui échouait à l'agrandir depuis une source plus petite. Elles s'affichent maintenant nettes, sur tous les écrans y compris haute densité (Retina, la plupart des téléphones).",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
+    text: "Les statistiques (messages, membres, personas) de la page d'accueil d'un monde ne sont plus un bloc de la grille de contenu : elles reprennent une position fixe sous le titre/description, et leur affichage se règle par une simple case à cocher depuis Réglages > Page d'accueil. Le dégradé de la bannière s'étire aussi mieux : il s'estompe désormais en transparence (plus vers une couleur figée), jusqu'au bas du bloc titre, quelle que soit la longueur de la description.",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
+    text: "Refonte complète de la page d'accueil d'un monde. La présentation d'abord : toujours pleine largeur (l'ancienne option plein écran a disparu), la bannière passe en fond estompé vers le bas avec les boutons favoris et menu mobile incrustés dessus, le titre et la description deviennent du contenu normal, et l'ensemble du contenu vit dans un panel dédié. Le contenu ensuite : une grille de blocs libre, où chaque bloc (widget, HTML/CSS custom ou Markdown) se place et se redimensionne en largeur depuis Réglages > Page d'accueil, plusieurs blocs pouvant tenir côte à côte sur une même ligne. Glisser la frontière entre deux blocs voisins élargit l'un en rétrécissant l'autre ; la hauteur s'ajuste toute seule au contenu. Certains widgets ont leurs propres réglages (nombre de lignes visibles des salons, nombre d'entrées listées…), et les blocs HTML/Markdown peuvent recevoir un titre qui sert à les repérer dans l'éditeur. Le widget « Annonce » devient un bloc HTML custom parmi d'autres.",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
+    text: "Deux nouveaux widgets pour la page d'accueil d'un monde : « Raccourcis wiki » (dernières pages modifiées, lien direct) et « Personas récents » (dernières personas créées, aperçu au clic).",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
+    text: "Nouveau widget « Annonce » pour la page d'accueil d'un monde : un admin peut y écrire du HTML et du CSS libres (3 hauteurs au choix), depuis un nouvel onglet « Page d'accueil » dans les réglages du monde. Le rendu passe par un cadre isolé où aucun script ne peut s'exécuter, quel que soit le contenu saisi.",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
+    text: "Le bouton pour redescendre en bas d'une chatroom apparaît désormais avec une légère animation (glissement depuis le bas), au lieu d'un simple fondu, et adopte une forme carrée arrondie plutôt que ronde.",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
+    text: "Une catégorie de chatrooms n'a plus qu'une seule image à gérer (au lieu d'une bannière et d'une icône séparées) — utilisée à la fois pour la grande carte et les petits avatars. Un bouton « Retirer l'image » permet aussi de l'effacer, ce qui était impossible avant pour la bannière.",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
+    text: "En modifiant l'image d'une catégorie de chatrooms, valider le recadrage soumettait aussi le formulaire malgré soi, ce qui enregistrait la catégorie avant la fin du téléversement — la nouvelle image n'était donc jamais prise en compte. Corrigé pour ce sélecteur d'image, utilisé partout dans l'app (avatars, bannières…).",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
+    text: "Modifier une catégorie de chatrooms (titre, description, image) s'enregistrait bien, mais l'affichage ne se mettait pas à jour en temps réel — il fallait recharger la page pour voir le changement.",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
+    text: "Les catégories de chatrooms s'affichent désormais en grandes cartes avec leur image de bannière et leur description, à la place des petites pastilles avec juste le nombre de sujets.",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
+    text: "La page d'accueil d'un monde devient personnalisable pour les admins, depuis un nouvel onglet « Page d'accueil » dans les réglages du monde : réorganiser ses blocs (catégories, composer, salons) par glisser-déposer, et y ajouter deux nouveaux widgets — statistiques du monde et membres en ligne. L'ordre choisi s'applique à tous les visiteurs du monde.",
+  },
+  {
+    date: "2026-08",
     tag: "Chatrooms",
     text: "Nouveau centre de recherche de messages, accessible depuis l'accueil d'un monde ou l'en-tête d'une chatroom : filtres par salon, auteur (persona ou pseudo), mentions, pièce jointe/lien, date, type d'auteur et épinglé, combinables avec une recherche texte libre.",
   },

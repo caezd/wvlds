@@ -280,6 +280,39 @@ describe("WorldWiki — cascade de renommage", () => {
   });
 });
 
+describe("WorldWiki — sélection initiale via initialSlug (raccourci externe)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("sélectionne la page ciblée par initialSlug dès le chargement, sans clic", async () => {
+    setupWithFolder();
+    render(<WorldWiki worldId="w1" canEdit={false} initialSlug="foret-noire" />);
+
+    await waitFor(() => {
+      expect(mdProps).toHaveBeenCalledWith(
+        expect.objectContaining({ content: NESTED_PAGE.content }),
+      );
+    });
+  });
+
+  it("déplie le dossier ancêtre de la page ciblée", async () => {
+    setupWithFolder();
+    render(<WorldWiki worldId="w1" canEdit={false} initialSlug="foret-noire" />);
+
+    // Titre de la page ouverte (h1) — distinct de son entrée dans l'arbre latéral.
+    expect(await screen.findByRole("heading", { name: "La Forêt Noire" })).toBeInTheDocument();
+  });
+
+  it("ignore un slug inconnu sans planter", async () => {
+    setup();
+    render(<WorldWiki worldId="w1" canEdit={false} initialSlug="inexistant" />);
+
+    expect(await screen.findByText("Accueil")).toBeInTheDocument();
+    expect(mdProps).not.toHaveBeenCalled();
+  });
+});
+
 describe("WorldWiki — libellé personnalisé du panneau", () => {
   beforeEach(() => {
     vi.clearAllMocks();

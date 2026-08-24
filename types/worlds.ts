@@ -4,6 +4,10 @@ export interface WorldTimelineConfig {
   month_names: string[];
   current_year: number;
   current_month: number | null;
+  /** Jours par mois, même index que `month_names` — un mois sans entrée
+   *  (tableau absent, ou plus court que `month_names`) retombe sur
+   *  DEFAULT_DAYS_PER_MONTH, voir daysInMonth() dans lib/worldTimeline.ts. */
+  days_per_month?: number[];
 }
 
 export interface WorldTimelineDate {
@@ -101,4 +105,25 @@ export type World = {
   is_age_restricted?: boolean | null;
   /** Libellé personnalisé du lien wiki dans la sidebar (ex: "Compendium") — null = libellé traduit par défaut. */
   wiki_label?: string | null;
+  /** Ancien ordre des widgets de la page d'accueil (remplacé par `home_grid`) —
+   *  conservé pour la synthèse de repli, voir resolveWorldHomeGrid(). */
+  home_layout?: string[] | null;
+  /** Ancien HTML/CSS libre du widget « Annonce » (remplacé par les blocs html
+   *  de `home_grid`) — conservé pour la synthèse de repli. */
+  announcement_html?: string | null;
+  announcement_size?: "sm" | "md" | "lg" | null;
+  /** Grille de blocs de la page d'accueil, réglée par un admin — null = synthèse
+   *  depuis l'ancien système, voir resolveWorldHomeGrid(). */
+  home_grid?: unknown[] | null;
+  /** Couleur de fond (hex) sous la bannière de la page d'accueil — null = couleur par défaut du thème. */
+  home_body_color?: string | null;
+  /** Couleur de fond (hex) du panel de contenu de la page d'accueil — null = couleur par défaut du thème. */
+  home_panel_color?: string | null;
+  /** Affiche le bloc statistiques sous le titre/description de la page d'accueil
+   *  (position fixe, pas un bloc de la grille) — null/false = masqué. */
+  home_show_stats?: boolean | null;
+  /** Gouttière entre les blocs de la grille de la page d'accueil — un des
+   *  préréglages de HOME_GRID_GAP_PRESETS, null = "comfortable". Partagé par
+   *  le rendu public et l'éditeur, voir resolveHomeGridGap(). */
+  home_grid_gap?: string | null;
 };

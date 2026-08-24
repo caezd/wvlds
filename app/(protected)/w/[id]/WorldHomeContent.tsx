@@ -24,12 +24,14 @@ export default async function WorldHomeContent({
   myRole,
   view,
   initialCategoryId,
+  initialWikiSlug,
 }: {
   world: WorldWithMembership;
   worldId: string;
   myRole: string;
   view?: string;
   initialCategoryId: string | null;
+  initialWikiSlug?: string | null;
 }) {
   const supabase = await createClient();
   const userId = await getUserId(supabase);
@@ -122,6 +124,7 @@ export default async function WorldHomeContent({
       initialPrefs={worldPrefs}
       view={view}
       initialCategoryId={initialCategoryId}
+      initialWikiSlug={initialWikiSlug}
     />
   );
 }

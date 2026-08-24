@@ -276,12 +276,15 @@ export function WorldWiki({
   canEdit,
   initialSidebarWidth,
   label,
+  initialSlug,
 }: {
   worldId: string;
   canEdit: boolean;
   initialSidebarWidth?: number;
   /** Libellé personnalisé du monde pour ce panneau (ex: "Compendium") — vide = libellé traduit par défaut. */
   label?: string | null;
+  /** Slug à sélectionner à l'arrivée (ex: lien "raccourci" depuis l'accueil du monde). */
+  initialSlug?: string | null;
 }) {
   const t = useTranslations("wiki");
   const tCommon = useTranslations("common");
@@ -367,6 +370,17 @@ export function WorldWiki({
   }
 
   React.useEffect(() => { void load(); }, [worldId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Sélectionne `initialSlug` une fois les pages chargées (ex: arrivée depuis
+  // un raccourci de l'accueil du monde) — une seule fois, pour ne pas revenir
+  // sur cette page à chaque rechargement de `pages` (edit, suppression…).
+  const initialSlugConsumedRef = React.useRef(false);
+  React.useEffect(() => {
+    if (!initialSlug || initialSlugConsumedRef.current || !pages) return;
+    initialSlugConsumedRef.current = true;
+    navigateToSlug(initialSlug);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialSlug, pages]);
 
   React.useEffect(() => {
     if (creating) {

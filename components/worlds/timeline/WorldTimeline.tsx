@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { X, MessageSquare } from "lucide-react";
+import { Clock, X, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
@@ -70,6 +70,7 @@ export function WorldTimeline({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <WorldPanelHeader
+        icon={<Clock className="h-4 w-4 shrink-0 text-muted-foreground" />}
         title="Chronologie"
         right={
           <button
@@ -107,9 +108,36 @@ export function WorldTimeline({
                     : null;
 
                   return (
+                    // Les salons ne sont plus décalés en plus du titre du
+                    // mois (retrait supplémentaire retiré) : ça permettait au
+                    // connecteur de ne couvrir QUE le pl-5 du wrapper année
+                    // (mesuré en repro isolée : ligne à x=0, puce posée pile
+                    // au bout, sans écart) au lieu d'un aller-retour plus
+                    // long — la ligne courbée est donc plus courte.
                     <div key={month ?? "nomonth"} className="space-y-2">
                       {monthLabel && (
-                        <p className="text-xs font-medium text-muted-foreground">{monthLabel}</p>
+                        // `pl-3` réserve la place de la puce : posée en
+                        // `absolute`, elle ne pousse pas le texte comme le
+                        // ferait un enfant flex normal — sans ce padding, le
+                        // titre du mois démarrait par-dessus la puce/courbe.
+                        <div className="relative flex items-center pl-3">
+                          {/* Ligne courbée façon fil de réponses imbriquées :
+                              part du fil de l'année (`-left-5` = -20px, pile
+                              le pl-5 du wrapper année) puis rejoint la puce du
+                              mois — largeur = hauteur pour un quart de cercle.
+                              `top-1/2 -translate-y-full` ancre le BAS de la
+                              courbe (là où elle rejoint la puce) au centre
+                              vertical de la ligne, comme la puce elle-même
+                              (`top-1/2 -translate-y-1/2`) — un simple `top-0`
+                              calait la courbe sur le HAUT de la ligne, un cran
+                              plus haut que la puce, d'où le décalage. */}
+                          <div className="absolute -left-5 top-1/2 h-5 w-5 -translate-y-full rounded-bl-lg border-b border-l border-border-soft" />
+                          {/* `left-0`, pas de décalage négatif : la puce touche
+                              exactement la pointe de la courbe, sans chevaucher
+                              ni laisser d'écart. */}
+                          <div className="absolute left-0 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full border-2 border-accent bg-background" />
+                          <p className="text-sm font-medium text-foreground">{monthLabel}</p>
+                        </div>
                       )}
                       <div className="grid gap-2">
                         {roomsInGroup.map(room => (

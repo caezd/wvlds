@@ -3,7 +3,23 @@
 import { createClient } from "@/lib/supabase/server";
 import { deletePersona } from "@/app/(protected)/p/actions";
 import { translatePersonaError } from "@/lib/personaErrors";
+import { ALL_WORLD_HOME_WIDGETS, type WorldHomeWidgetId } from "@/components/worlds/home/worldHomeWidgets";
+import {
+  compactHomeGridRows,
+  HOME_GRID_COLS,
+  HOME_GRID_GAP_PRESETS,
+  MAX_HOME_BLOCK_CONTENT_LENGTH,
+  MAX_HOME_BLOCK_TITLE_LENGTH,
+  MAX_HOME_GRID_ITEMS,
+  MAX_HOME_GRID_Y,
+  sanitizeBannerContent,
+  sanitizeWidgetOptions,
+  toRows,
+  type WorldHomeGridGap,
+  type WorldHomeGridItem,
+} from "@/components/worlds/home/worldHomeGrid";
 import type { WorldInventoryItem, WorldSkill, WorldCatalogCategory, WorldTimelineConfig, WorldTag } from "@/types/worlds";
+import { clampDaysPerMonth } from "@/lib/worldTimeline";
 
 const MAX_WORLD_TAGS = 10;
 const MAX_TAG_LENGTH = 24;
@@ -28,6 +44,25 @@ export async function setWorldFeature(
 export async function setWorldFaceclaims(worldId: string, enabled: boolean) {
   const supabase = await createClient();
   const { error } = await supabase.from("worlds").update({ enable_faceclaims: enabled }).eq("id", worldId);
+  if (error) return { ok: false as const, error: error.message };
+  return { ok: true as const };
+}
+
+/** Affiche/masque le bloc statistiques sous le titre de la page d'accueil —
+ *  position fixe, ce n'est plus un bloc de home_grid (voir worldHomeGrid.ts). */
+export async function setWorldHomeShowStats(worldId: string, enabled: boolean) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("worlds").update({ home_show_stats: enabled }).eq("id", worldId);
+  if (error) return { ok: false as const, error: error.message };
+  return { ok: true as const };
+}
+
+/** Règle la gouttière de la grille de la page d'accueil — partagée par le
+ *  rendu public et l'éditeur, voir HOME_GRID_GAP_PRESETS. */
+export async function setWorldHomeGridGap(worldId: string, gap: WorldHomeGridGap) {
+  if (!(gap in HOME_GRID_GAP_PRESETS)) return { ok: false as const, error: "Espacement invalide." };
+  const supabase = await createClient();
+  const { error } = await supabase.from("worlds").update({ home_grid_gap: gap }).eq("id", worldId);
   if (error) return { ok: false as const, error: error.message };
   return { ok: true as const };
 }
@@ -386,8 +421,143 @@ export async function setWorldTimeline(
 ) {
   const supabase = await createClient();
   const updates: Record<string, unknown> = { timeline_enabled: enabled };
-  if (config !== undefined) updates.timeline_config = config;
+  // `days_per_month` borné même côté serveur : le client clampe déjà à la
+  // saisie, mais rien ne garantit qu'une valeur aberrante ne l'atteigne pas
+  // par un autre chemin — cette longueur alimente ensuite un `Array.from`
+  // dans le widget de calendrier (voir clampDaysPerMonth).
+  if (config !== undefined) {
+    updates.timeline_config = config && config.days_per_month
+      ? { ...config, days_per_month: config.days_per_month.map(clampDaysPerMonth) }
+      : config;
+  }
   const { error } = await supabase.from("worlds").update(updates).eq("id", worldId);
   if (error) return { ok: false as const, error: error.message };
   return { ok: true as const };
+}
+
+// ── Grille de blocs de la page d'accueil ──────────────────────────────────
+
+const HOME_GRID_BLOCK_TYPES = new Set(["widget", "html", "markdown", "banner"]);
+
+function isFiniteInt(v: unknown): v is number {
+  return typeof v === "number" && Number.isFinite(v) && Number.isInteger(v);
+}
+
+function isWorldHomeWidgetId(value: unknown): value is WorldHomeWidgetId {
+  return typeof value === "string" && (ALL_WORLD_HOME_WIDGETS as string[]).includes(value);
+}
+
+/** Longueur maximale d'un id de bloc (uuid = 36). */
+const MAX_BLOCK_ID_LENGTH = 64;
+
+/**
+ * Valide un item envoyé par le client et retourne sa forme normalisée, ou
+ * `null` s'il est invalide — rejeté plutôt qu'ignoré silencieusement (une
+ * incohérence type/champs ou une coordonnée hors bornes peut indiquer une
+ * donnée corrompue ou un contournement de l'UI, pas juste un cas à filtrer).
+ *
+ * L'id fourni par le client est conservé (après validation : chaîne non vide,
+ * bornée, unique dans la grille). Le régénérer à chaque enregistrement
+ * changerait l'identité de tous les blocs à chaque sauvegarde — donc leur clé
+ * React et leur identité côté react-grid-layout — ce qui les démonte/remonte
+ * et casse un geste de redimensionnement encore en cours. `seenIds` garantit
+ * l'unicité, ce qui suffit à écarter collision et écrasement.
+ */
+function validateHomeGridItem(
+  raw: unknown,
+  seenIds: Set<string>,
+  seenWidgetIds: Set<WorldHomeWidgetId>,
+): WorldHomeGridItem | null {
+  if (typeof raw !== "object" || raw === null) return null;
+  const r = raw as Record<string, unknown>;
+
+  if (!HOME_GRID_BLOCK_TYPES.has(r.type as string)) return null;
+  const type = r.type as "widget" | "html" | "markdown" | "banner";
+
+  // Pas de hauteur : chaque bloc occupe une ligne qui s'auto-dimensionne à
+  // son contenu au rendu (voir worldHomeGrid.ts).
+  if (!isFiniteInt(r.x) || !isFiniteInt(r.y) || !isFiniteInt(r.w)) return null;
+  const { x, y, w } = r as { x: number; y: number; w: number };
+  if (x < 0 || y < 0 || y > MAX_HOME_GRID_Y || w < 2 || x + w > HOME_GRID_COLS) return null;
+
+  if (typeof r.id !== "string" || !r.id || r.id.length > MAX_BLOCK_ID_LENGTH || seenIds.has(r.id)) return null;
+  const id = r.id;
+  seenIds.add(id);
+
+  if (type === "widget") {
+    if (!isWorldHomeWidgetId(r.widgetId) || r.widgetId === "announcement") return null;
+    if (seenWidgetIds.has(r.widgetId)) return null;
+    if (r.html !== undefined || r.content !== undefined) return null;
+    seenWidgetIds.add(r.widgetId);
+    // Réglages bornés au registre : une clé inconnue ou une valeur hors
+    // bornes est écartée plutôt qu'enregistrée telle quelle.
+    const options = sanitizeWidgetOptions(r.widgetId, r.options);
+    return { id, type, x, y, w, widgetId: r.widgetId, ...(options ? { options } : {}) };
+  }
+
+  if (type === "banner") {
+    if (r.widgetId !== undefined || r.html !== undefined || r.content !== undefined) return null;
+    const banner = sanitizeBannerContent(r.banner);
+    if (!banner) return null;
+    return { id, type, x, y, w, banner };
+  }
+
+  // Titre libre optionnel (html/markdown) — tronqué plutôt que rejeté : il
+  // est purement descriptif, pas la peine d'invalider tout le bloc.
+  const title =
+    typeof r.title === "string" && r.title.trim()
+      ? { title: r.title.trim().slice(0, MAX_HOME_BLOCK_TITLE_LENGTH) }
+      : {};
+
+  if (type === "html") {
+    if (typeof r.html !== "string" || r.widgetId !== undefined || r.content !== undefined) return null;
+    const html = r.html.trim();
+    if (html.length > MAX_HOME_BLOCK_CONTENT_LENGTH) return null;
+    const card = r.card !== false;
+    return { id, type, x, y, w, html, card, ...title };
+  }
+
+  // markdown
+  if (typeof r.content !== "string" || r.widgetId !== undefined || r.html !== undefined) return null;
+  const content = r.content.trim();
+  if (content.length > MAX_HOME_BLOCK_CONTENT_LENGTH) return null;
+  const card = r.card === true;
+  return { id, type, x, y, w, content, card, ...title };
+}
+
+export async function setWorldHomeGrid(worldId: string, items: unknown[]) {
+  if (!Array.isArray(items)) return { ok: false as const, error: "Grille invalide." };
+  if (items.length > MAX_HOME_GRID_ITEMS) {
+    return { ok: false as const, error: `Maximum ${MAX_HOME_GRID_ITEMS} blocs.` };
+  }
+
+  const seenIds = new Set<string>();
+  const seenWidgetIds = new Set<WorldHomeWidgetId>();
+  const parsed: WorldHomeGridItem[] = [];
+  for (const raw of items) {
+    const item = validateHomeGridItem(raw, seenIds, seenWidgetIds);
+    if (!item) return { ok: false as const, error: "Un des blocs est invalide." };
+    parsed.push(item);
+  }
+  // Chaque bloc est valide pris isolément (bornes, largeur…), mais rien
+  // n'empêche encore deux blocs valides de se chevaucher sur une même ligne
+  // (ex: x=0,w=8 et x=6,w=6) — l'éditeur ne peut pas produire ce cas via
+  // moveBlock/resizeBlock, mais le serveur ne doit pas faire confiance à la
+  // seule discipline du client. `toRows` trie déjà chaque ligne par `x`, il
+  // suffit de vérifier qu'aucun bloc ne commence avant la fin du précédent.
+  for (const row of toRows(parsed)) {
+    for (let i = 1; i < row.length; i++) {
+      if (row[i].x < row[i - 1].x + row[i - 1].w) {
+        return { ok: false as const, error: "Deux blocs se chevauchent sur la même ligne." };
+      }
+    }
+  }
+  // Renumérote les lignes : retirer un bloc laisse sinon sa ligne vide, et le
+  // rendu afficherait un trou à sa place (voir compactHomeGridRows).
+  const validated = compactHomeGridRows(parsed);
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("worlds").update({ home_grid: validated }).eq("id", worldId);
+  if (error) return { ok: false as const, error: error.message };
+  return { ok: true as const, items: validated };
 }

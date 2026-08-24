@@ -19,7 +19,11 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import * as TabsPrimitive from "@radix-ui/react-tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+// Popover + HsvColorPicker : utilisés par HomeColorField, désactivé
+// temporairement (voir plus bas) — imports retirés en attendant.
 import {
     Camera,
     Globe,
@@ -63,7 +67,9 @@ import {
 import { WorldPersonaTemplateSection } from "@/components/worlds/settings/WorldPersonaTemplateSection";
 import { WorldCategoryManager } from "@/components/worlds/settings/WorldCategoryManager";
 import { WorldRelationsSettings } from "@/components/worlds/settings/WorldRelationsSettings";
+import { WorldHomeGridSettings } from "@/components/worlds/settings/WorldHomeGridSettings";
 import type { World, WorldTimelineConfig } from "@/types/worlds";
+import { clampDaysPerMonth, DEFAULT_DAYS_PER_MONTH, REAL_DAYS_PER_MONTH, REAL_MONTH_NAMES } from "@/lib/worldTimeline";
 
 /**
  * Vue plein-écran des paramètres d'un « monde », organisée en onglets
@@ -80,6 +86,30 @@ import type { World, WorldTimelineConfig } from "@/types/worlds";
 //     { name: "Rouge", value: "#ef4444" },
 //     { name: "Rose", value: "#f94b5f" },
 // ];
+
+/** Onglets en soulignement plutôt qu'en pastille pleine (style shadcn par
+ *  défaut) — remplace TabsList/TabsTrigger par les primitives Radix
+ *  directement pour ce seul usage, plus lisible à 6 onglets et mieux espacé.
+ *
+ *  Le trait actif est une ombre `inset`, pas un `border-b` : une ombre reste
+ *  DANS la boîte de l'élément (jamais comptée dans le « scrollable overflow »
+ *  qu'utilise ScrollArea pour décider d'afficher sa scrollbar), contrairement
+ *  à un `border`, une marge négative ou un `transform` — les trois essais
+ *  précédents ajoutaient chacun 1px à la hauteur mesurée par ScrollArea et
+ *  faisaient apparaître une scrollbar verticale parasite plus haut dans
+ *  l'arbre.
+ *
+ *  Le conteneur parent trace lui aussi sa ligne de base en `shadow-[inset…]`
+ *  plutôt qu'en `border-b` (voir plus bas) : un vrai `border` occupe sa
+ *  propre tranche de boîte, 1px EN DEHORS de la boîte du trigger — même
+ *  parfaitement alignés, les deux traits restent deux éléments distincts,
+ *  perceptiblement séparés par une micro-teinte différente. Deux ombres
+ *  posées sur le MÊME bord bas, elles, se superposent au pixel près (le
+ *  trigger, enfant, se peint après son parent) : celle du trigger actif
+ *  recouvre entièrement celle du conteneur à cet endroit, comme un seul
+ *  trait continu. */
+const SETTINGS_TAB_TRIGGER_CLASS =
+    "relative shrink-0 px-0.5 py-3 text-sm font-medium text-muted-foreground whitespace-nowrap transition-colors hover:text-foreground data-[state=active]:text-foreground data-[state=active]:shadow-[inset_0_-2px_0_0_var(--color-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50";
 
 const schema = z.object({
     name: z.string().min(2, "Au moins 2 caractères"),
@@ -135,6 +165,92 @@ function LabelWithHelp({
     );
 }
 
+// Personnalisation des couleurs de la page d'accueil désactivée temporairement
+// (2026-08-17) — WorldHome.tsx ignore désormais home_body_color/home_panel_color
+// et applique toujours les couleurs par défaut du thème. Code conservé
+// ci-dessous pour réactivation future.
+//
+// Sélecteur de couleur pour un fond de page d'accueil — pastille + picker,
+// avec un bouton pour revenir à la couleur par défaut du thème (defaultSwatchClassName
+// reproduit exactement cette couleur via les mêmes classes Tailwind que l'affichage réel).
+// Le glissement dans le picker (canvas + slider de teinte) déclenche onChange
+// du HsvColorPicker à chaque pixel survolé — enregistrer à chaque appel
+// spammerait le serveur pendant tout le glissement. On bufferise donc la
+// couleur choisie localement (draft) et on ne persiste qu'à la fermeture
+// du popover (fin du glissement, quelle qu'en soit la cause : clic ailleurs,
+// Échap, ré-ouverture).
+//
+// function HomeColorField({
+//     label,
+//     help,
+//     value,
+//     defaultSwatchClassName,
+//     defaultHex,
+//     resetLabel,
+//     onChange,
+// }: {
+//     label: string;
+//     help: string;
+//     value: string;
+//     /** Classe Tailwind reproduisant la couleur par défaut réellement appliquée (ex: "bg-card"). */
+//     defaultSwatchClassName: string;
+//     /** Teinte de départ du picker quand aucune couleur n'est encore choisie (juste un point de départ visuel). */
+//     defaultHex: string;
+//     resetLabel: string;
+//     onChange: (hex: string) => void;
+// }) {
+//     const [open, setOpen] = React.useState(false);
+//     const [draft, setDraft] = React.useState(value);
+//
+//     function handleOpenChange(next: boolean) {
+//         if (next) {
+//             setDraft(value);
+//         } else if (draft !== value) {
+//             onChange(draft);
+//         }
+//         setOpen(next);
+//     }
+//
+//     return (
+//         <FormItem>
+//             <FormLabel>
+//                 <LabelWithHelp help={help}>{label}</LabelWithHelp>
+//             </FormLabel>
+//             <div className="flex items-center gap-2">
+//                 <Popover open={open} onOpenChange={handleOpenChange}>
+//                     <PopoverTrigger asChild>
+//                         <button
+//                             type="button"
+//                             className="flex items-center gap-2 rounded-md border border-border px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+//                         >
+//                             <span
+//                                 className={cn("h-3.5 w-3.5 rounded-full border border-border/60", !value && defaultSwatchClassName)}
+//                                 style={value ? { backgroundColor: value } : undefined}
+//                             />
+//                             {value || resetLabel}
+//                         </button>
+//                     </PopoverTrigger>
+//                     <PopoverContent className="w-[220px] p-3" align="start">
+//                         <HsvColorPicker color={draft || defaultHex} onChange={setDraft} presets={[]} />
+//                     </PopoverContent>
+//                 </Popover>
+//                 {value && (
+//                     <button
+//                         type="button"
+//                         onClick={() => {
+//                             setDraft("");
+//                             onChange("");
+//                         }}
+//                         className="text-xs text-muted-foreground transition-colors hover:text-foreground"
+//                     >
+//                         {resetLabel}
+//                     </button>
+//                 )}
+//             </div>
+//         </FormItem>
+//     );
+// }
+
 export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) {
     const supabase = createClient();
     const router = useRouter();
@@ -161,6 +277,8 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
     const [allowsIllustratedAvatars, setAllowsIllustratedAvatars] = React.useState(world.allows_illustrated_avatars === true);
     const [togglingAvatarType, setTogglingAvatarType] = React.useState(false);
 
+    // homeBodyColor/homePanelColor : voir HomeColorField (désactivé temporairement) plus haut.
+
     const [tags, setTags] = React.useState<string[]>([]);
     const [newTag, setNewTag] = React.useState("");
     const [savingTag, setSavingTag] = React.useState(false);
@@ -172,6 +290,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
         month_names: [],
         current_year: 1,
         current_month: null,
+        days_per_month: [],
     };
     const [timelineEnabled, setTimelineEnabled] = React.useState(!!world.timeline_enabled);
     const [timelineConfig, setTimelineConfig] = React.useState<WorldTimelineConfig>(
@@ -423,7 +542,16 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
     }
 
     async function persistField(
-        field: "name" | "description" | "icon_url" | "banner_url" | "color" | "visibility" | "wiki_label",
+        field:
+            | "name"
+            | "description"
+            | "icon_url"
+            | "banner_url"
+            | "color"
+            | "visibility"
+            | "wiki_label"
+            | "home_body_color"
+            | "home_panel_color",
         value: string | null,
     ) {
         const clean = truthyOrNull(value);
@@ -467,7 +595,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
     const bannerUrl = form.watch("banner_url");
 
     return (
-        <div className="flex h-full w-full flex-col bg-background">
+        <div className="flex h-full w-full flex-col">
             <WorldPanelHeader
                 icon={<Settings className="h-4 w-4 shrink-0 text-muted-foreground" />}
                 title="Paramètres"
@@ -475,16 +603,26 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
 
             <Form {...form}>
                 <Tabs defaultValue="appearance" className="flex min-h-0 flex-1 flex-col">
-                    <div className="shrink-0 border-b border-border-soft px-4 pt-3">
-                        <TabsList className="h-8 rounded-lg p-0.5">
-                            <TabsTrigger value="appearance" className="h-7 px-3 text-xs">Apparence</TabsTrigger>
-                            <TabsTrigger value="categories" className="h-7 px-3 text-xs">Catégories</TabsTrigger>
-                            <TabsTrigger value="features" className="h-7 px-3 text-xs">Fonctions</TabsTrigger>
-                            <TabsTrigger value="relations" className="h-7 px-3 text-xs">Relations</TabsTrigger>
-                            {public_worlds && (
-                                <TabsTrigger value="community" className="h-7 px-3 text-xs">Communauté</TabsTrigger>
-                            )}
-                        </TabsList>
+                    <div className="shrink-0 shadow-[inset_0_-1px_0_0_var(--color-border-soft)]">
+                        {/* ScrollArea plutôt qu'un simple `overflow-x-auto` : la
+                            barre de défilement native (toujours visible sur
+                            certains systèmes/navigateurs) est remplacée par le
+                            style fin de l'appli, et n'apparaît que si les
+                            onglets débordent réellement du conteneur — utile
+                            sur un écran étroit avec les 6 onglets. */}
+                        <ScrollArea className="w-full">
+                            <TabsPrimitive.List className="flex w-max items-center gap-6 px-4">
+                                <TabsPrimitive.Trigger value="appearance" className={SETTINGS_TAB_TRIGGER_CLASS}>Apparence</TabsPrimitive.Trigger>
+                                <TabsPrimitive.Trigger value="categories" className={SETTINGS_TAB_TRIGGER_CLASS}>Catégories</TabsPrimitive.Trigger>
+                                <TabsPrimitive.Trigger value="home" className={SETTINGS_TAB_TRIGGER_CLASS}>Page d&apos;accueil</TabsPrimitive.Trigger>
+                                <TabsPrimitive.Trigger value="features" className={SETTINGS_TAB_TRIGGER_CLASS}>Fonctions</TabsPrimitive.Trigger>
+                                <TabsPrimitive.Trigger value="relations" className={SETTINGS_TAB_TRIGGER_CLASS}>Relations</TabsPrimitive.Trigger>
+                                {public_worlds && (
+                                    <TabsPrimitive.Trigger value="community" className={SETTINGS_TAB_TRIGGER_CLASS}>Communauté</TabsPrimitive.Trigger>
+                                )}
+                            </TabsPrimitive.List>
+                            <ScrollBar orientation="horizontal" />
+                        </ScrollArea>
                     </div>
 
                     <div className="flex-1 overflow-y-auto p-4">
@@ -688,6 +826,10 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                         </FormItem>
                                     )}
                                 />
+
+                                {/* -- Couleurs de la page d'accueil : désactivé temporairement
+                                     (voir HomeColorField plus haut) — WorldHome applique
+                                     toujours les couleurs par défaut du thème. */}
                             </form>
                         </TabsContent>
 
@@ -695,6 +837,15 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                         <TabsContent value="categories" className="mt-0">
                             <div className="mx-auto max-w-xl">
                                 <WorldCategoryManager worldId={world.id} canEdit />
+                            </div>
+                        </TabsContent>
+
+                        {/* ── Page d'accueil ───────────────────────────── */}
+                        {/* max-w-2xl plutôt que max-w-xl (comme les autres onglets) :
+                            un éditeur de grille 12 colonnes a besoin de plus de place. */}
+                        <TabsContent value="home" className="mt-0">
+                            <div className="mx-auto max-w-2xl">
+                                <WorldHomeGridSettings world={world} onUpdated={onUpdated} />
                             </div>
                         </TabsContent>
 
@@ -930,14 +1081,18 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                                     )}
                                                 </div>
 
-                                                {/* Liste des mois */}
+                                                {/* Liste des mois — chacun avec son propre nombre de jours (borne le
+                                                    calendrier du widget « Raccourcis chronologie » de la page
+                                                    d'accueil, voir WorldTimelineShortcutsWidget.tsx). Les deux tableaux
+                                                    (`month_names`/`days_per_month`) restent parallèles : tout ajout,
+                                                    retrait ou préréglage touche les deux à la fois. */}
                                                 <div className="space-y-2">
                                                     <div className="flex items-center justify-between">
                                                         <p className="text-xs font-medium text-muted-foreground">Mois du calendrier</p>
                                                         {timelineConfig.month_names.length === 0 && (
                                                             <button
                                                                 type="button"
-                                                                onClick={() => void persistTimelineConfig({ month_names: ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"] })}
+                                                                onClick={() => void persistTimelineConfig({ month_names: REAL_MONTH_NAMES, days_per_month: REAL_DAYS_PER_MONTH })}
                                                                 className="text-[11px] text-primary hover:underline"
                                                             >
                                                                 Utiliser les mois réels
@@ -963,13 +1118,34 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                                                             void persistTimelineConfig({ month_names: next });
                                                                         }}
                                                                     />
+                                                                    <Input
+                                                                        type="number"
+                                                                        aria-label={`Jours en ${m || `mois ${i + 1}`}`}
+                                                                        value={timelineConfig.days_per_month?.[i] ?? DEFAULT_DAYS_PER_MONTH}
+                                                                        min={1}
+                                                                        max={999}
+                                                                        title="Nombre de jours"
+                                                                        className="h-7 w-16 shrink-0 text-sm"
+                                                                        onChange={e => {
+                                                                            const next = [...(timelineConfig.days_per_month ?? [])];
+                                                                            next[i] = clampDaysPerMonth(Number(e.target.value));
+                                                                            setTimelineConfig(c => ({ ...c, days_per_month: next }));
+                                                                        }}
+                                                                        onBlur={e => {
+                                                                            const next = [...(timelineConfig.days_per_month ?? [])];
+                                                                            next[i] = clampDaysPerMonth(Number(e.target.value));
+                                                                            void persistTimelineConfig({ days_per_month: next });
+                                                                        }}
+                                                                    />
                                                                     <button
                                                                         type="button"
                                                                         onClick={() => {
                                                                             const next = timelineConfig.month_names.filter((_, j) => j !== i);
+                                                                            const nextDays = (timelineConfig.days_per_month ?? []).filter((_, j) => j !== i);
                                                                             const currentMonth = timelineConfig.current_month;
                                                                             void persistTimelineConfig({
                                                                                 month_names: next,
+                                                                                days_per_month: nextDays,
                                                                                 current_month: currentMonth !== null && currentMonth >= next.length ? null : currentMonth,
                                                                             });
                                                                         }}
@@ -991,7 +1167,8 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                                                 if (e.key === "Enter" && newMonthName.trim()) {
                                                                     e.preventDefault();
                                                                     const next = [...timelineConfig.month_names, newMonthName.trim()];
-                                                                    void persistTimelineConfig({ month_names: next });
+                                                                    const nextDays = [...(timelineConfig.days_per_month ?? []), DEFAULT_DAYS_PER_MONTH];
+                                                                    void persistTimelineConfig({ month_names: next, days_per_month: nextDays });
                                                                     setNewMonthName("");
                                                                 }
                                                             }}
@@ -1003,7 +1180,8 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                                             disabled={!newMonthName.trim()}
                                                             onClick={() => {
                                                                 const next = [...timelineConfig.month_names, newMonthName.trim()];
-                                                                void persistTimelineConfig({ month_names: next });
+                                                                const nextDays = [...(timelineConfig.days_per_month ?? []), DEFAULT_DAYS_PER_MONTH];
+                                                                void persistTimelineConfig({ month_names: next, days_per_month: nextDays });
                                                                 setNewMonthName("");
                                                             }}
                                                         >

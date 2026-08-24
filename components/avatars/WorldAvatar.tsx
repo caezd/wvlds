@@ -23,10 +23,24 @@ export function WorldAvatar({
   return world.icon_url ? (
     <span className={cn(dim, "relative block rounded-lg overflow-hidden shrink-0", className)}>
       <Image
-        src={supabaseThumb(world.icon_url, px * 1.5) ?? world.icon_url}
+        // ×3 (pas ×1.5) : couvre les écrans 3x DPR (courants sur mobile) —
+        // en dessous, l'avatar reste net à 1x mais flou dès qu'il est
+        // affiché sur un écran haute densité, où `px` CSS ne correspond plus
+        // du tout au nombre de pixels physiques réellement affichés.
+        //
+        // `unoptimized` : l'image est déjà pré-dimensionnée par imgproxy
+        // (ci-dessus) — laisser Next la ré-optimiser est non seulement
+        // inutile, mais activement cassé ici. Un `sizes` en px fixe (sans
+        // unité `vw`) ne correspond à aucun des deux formats que Next sait
+        // reconnaître (ratio vw, ou largeur/hauteur explicites) : il retombe
+        // alors sur `allSizes`, la liste ENTIÈRE des largeurs configurées —
+        // jusqu'à 3840px. Demander à Next d'agrandir une source de 96px
+        // jusqu'à 3840px échoue purement et simplement (`naturalWidth: 0`,
+        // vérifié en direct), pas juste flou.
+        src={supabaseThumb(world.icon_url, px * 3, 90) ?? world.icon_url}
         alt=""
         fill
-        sizes={`${px}px`}
+        unoptimized
         className="object-cover"
       />
     </span>
