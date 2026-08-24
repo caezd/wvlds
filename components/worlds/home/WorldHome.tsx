@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Globe, GlobeLock, Star } from "lucide-react";
+import { Globe, GlobeLock, Search, Star } from "lucide-react";
 
 import { WorldHeroCard } from "./WorldHeroCard";
 import { WorldHomeGridView } from "./WorldHomeGridView";
@@ -19,6 +19,7 @@ import { toggleWorldFavorite } from "@/app/(protected)/w/actions";
 import { cn } from "@/lib/utils";
 import { supabaseThumb } from "@/lib/storage";
 import { compactHomeGridRows, resolveHomeGridGap, resolveWorldHomeGrid } from "./worldHomeGrid";
+import { SearchCenter } from "@/components/chatrooms/search/SearchCenter";
 
 // Onglets secondaires — un seul est actif à la fois, chargés à la demande
 // pour ne pas alourdir le bundle de la vue par défaut du monde.
@@ -80,6 +81,7 @@ export function WorldHome({
   const { create_chatroom, world_map, world_catalogue, world_timeline } = useFeatureFlags();
   const router = useRouter();
   const t = useTranslations("worlds");
+  const tChat = useTranslations("chatrooms");
   const { setHideMobileHeader } = useMobileSidebar();
 
   // La vue par défaut du monde a son propre bouton menu mobile, incrusté sur
@@ -102,6 +104,7 @@ export function WorldHome({
   const _hasCatalogue = world_catalogue && (!!(world.restrict_inventory || world.restrict_skills) || canEditTabs);
 
   const [isFavorite, setIsFavorite] = useState(initialPrefs?.is_favorite ?? false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(initialCategoryId ?? null);
   // Le composer est retiré de la grille avant le calcul du layout (pas juste
   // au rendu) : sinon un visiteur sans droit de post verrait un trou vide à
@@ -250,25 +253,42 @@ export function WorldHome({
                   rendait inertes. */}
               <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between p-3">
                 <MobileDrawerOpenButton className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-black/30 text-white backdrop-blur-sm transition-colors hover:bg-black/45" />
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      onClick={handleToggleFavorite}
-                      aria-label={isFavorite ? t("hero.removeFavorite") : t("hero.addFavorite")}
-                      className={cn(
-                        "ml-auto flex h-8 w-8 items-center justify-center rounded-lg bg-black/30 backdrop-blur-sm transition-colors hover:bg-black/45",
-                        isFavorite ? "text-yellow-400" : "text-white",
-                      )}
-                    >
-                      <Star size={16} className={isFavorite ? "fill-current" : ""} />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" sideOffset={6}>
-                    {isFavorite ? t("hero.removeFavorite") : t("hero.addFavorite")}
-                  </TooltipContent>
-                </Tooltip>
+                <div className="ml-auto flex items-center gap-2">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={() => setSearchOpen(true)}
+                        aria-label={tChat("search.title")}
+                        className="flex h-8 w-8 items-center justify-center rounded-lg bg-black/30 text-white backdrop-blur-sm transition-colors hover:bg-black/45"
+                      >
+                        <Search size={16} />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" sideOffset={6}>{tChat("search.title")}</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={handleToggleFavorite}
+                        aria-label={isFavorite ? t("hero.removeFavorite") : t("hero.addFavorite")}
+                        className={cn(
+                          "flex h-8 w-8 items-center justify-center rounded-lg bg-black/30 backdrop-blur-sm transition-colors hover:bg-black/45",
+                          isFavorite ? "text-yellow-400" : "text-white",
+                        )}
+                      >
+                        <Star size={16} className={isFavorite ? "fill-current" : ""} />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" sideOffset={6}>
+                      {isFavorite ? t("hero.removeFavorite") : t("hero.addFavorite")}
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
               </div>
+
+              <SearchCenter worldId={worldId} open={searchOpen} onOpenChange={setSearchOpen} />
 
               {/* Titre + description, désormais du contenu de page normal
                   (plus superposés sur la bannière). `pt-40` réserve la hauteur
