@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Code, FileText, Pencil, SmilePlus, Trash2 } from "lucide-react";
+import { Code, FileText, Pencil, Pipette, SmilePlus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   Drawer,
@@ -27,6 +27,7 @@ export function ChatroomMessageMobileDrawers({
   personaName,
   mine,
   content,
+  dialogueColor,
   emojiReactions,
   drawerOpen,
   setDrawerOpen,
@@ -39,6 +40,9 @@ export function ChatroomMessageMobileDrawers({
   personaName?: string | null;
   mine: boolean;
   content: string;
+  /** Couleur de bulle du message (mode "Dialogues en bulles" actif) — affiche
+   *  l'option de copie dans le drawer si définie. */
+  dialogueColor?: string | null;
   emojiReactions?: boolean;
   drawerOpen: boolean;
   setDrawerOpen: (open: boolean) => void;
@@ -100,6 +104,19 @@ export function ChatroomMessageMobileDrawers({
               <Code className="h-5 w-5 shrink-0 text-muted-foreground" />
               {t("copyMarkdown")}
             </button>
+            {dialogueColor && (
+              <button
+                type="button"
+                className="flex items-center gap-4 px-6 py-4 text-left text-base hover:bg-muted/50 transition-colors"
+                onClick={() => {
+                  setDrawerOpen(false);
+                  void copyToClipboard(dialogueColor, t("copyDialogueColorSuccess"), t("copyError"));
+                }}
+              >
+                <Pipette className="h-5 w-5 shrink-0 text-muted-foreground" />
+                {t("copyDialogueColor")}
+              </button>
+            )}
             {mine && (
               <>
                 <button

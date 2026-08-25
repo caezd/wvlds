@@ -1517,7 +1517,7 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           {trigger ?? (
-            <div className="cursor-pointer transition-opacity opacity-0 hover:opacity-100 group-hover/field:opacity-100 relative h-6 w-full flex justify-center before:absolute before:h-px before:w-full before:top-1/2 before:-translate-y-1/2 before:bg-border">
+            <div className="cursor-pointer transition-opacity opacity-100 sm:opacity-0 sm:hover:opacity-100 sm:group-hover/field:opacity-100 relative h-6 w-full flex justify-center before:absolute before:h-px before:w-full before:top-1/2 before:-translate-y-1/2 before:bg-border">
               <button className="w-4 h-4 bg-accent/50 text-primary rounded-full inline-flex items-center justify-center absolute top-1/2 -translate-y-1/2 z-10">
                 <Plus size={12} />
               </button>
@@ -1619,7 +1619,7 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
 
             return (
               <div key={field.id} className="group/field">
-                <div className="group relative rounded-md border border-transparent py-1.5 px-2 hover:border-border-soft transition-colors">
+                <div className="group relative rounded-md border py-1.5 px-2 transition-colors sm:border-transparent sm:hover:border-border">
                   {/* Badge permanent : champ requis par la fiche du monde */}
                   {!isTemplate && field.locked && (
                     <span

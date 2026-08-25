@@ -7,13 +7,12 @@ import { supabaseThumb } from "@/lib/storage";
 import { toast } from "sonner";
 import {
   Drawer,
-  DrawerClose,
   DrawerContent,
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { Tabs, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { TabBar } from "@/components/ui/tab-bar";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { TabBar, TabBarTrigger } from "@/components/ui/tab-bar";
 import {
   HoverCard,
   HoverCardContent,
@@ -22,7 +21,6 @@ import {
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import { AvatarWithFrame } from "@/components/avatars/AvatarWithFrame";
 import { PresenceDot } from "@/components/avatars/PresenceDot";
-import { X } from "lucide-react";
 import type { PersonaSection, PersonaSectionField, PersonaSectionWithFields, PersonaFieldData, InventoryItem, SkillItem, GaugeItem, TraitItem, TimelineItem, DlItem } from "@/types/personas";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useGlobalPresence } from "@/components/providers/PresenceProvider";
@@ -32,9 +30,12 @@ import { ImageGridView } from "@/components/personas/ImageGridView";
 import { TABLE } from "@/lib/constants";
 import { getInitials } from "@/lib/textFormatting";
 
-type FieldData = PersonaFieldData | null | undefined;
+export type FieldData = PersonaFieldData | null | undefined;
 
-function FieldView({ type, data }: { type: string; data: FieldData }) {
+/** Rendu lecture seule d'un champ de section — partagé avec l'aperçu affiché
+ *  dans la sheet d'édition (voir PersonaEditSheet.tsx, bouton « Aperçu »),
+ *  pour ne pas maintenir deux moteurs de rendu de champs en parallèle. */
+export function FieldView({ type, data }: { type: string; data: FieldData }) {
   if (type === "title") {
     const text = data?.text as string | undefined;
     return text ? <h3 className="text-xl font-semibold text-foreground">{text}</h3> : null;
@@ -259,6 +260,218 @@ function TriggerTimelineView({ items }: { items: TimelineItem[] }) {
   );
 }
 
+/** Formule d'affichage de la ligne de présence — extraite pour rester
+ *  identique entre la fiche publique (PersonaProfileSheetTrigger) et
+ *  l'aperçu affiché dans la sheet d'édition (PersonaEditSheet.tsx). */
+export function formatPersonaPresenceLine(
+  userPresence: "online" | "away" | "offline",
+  ownerPresence: { last_seen_at: string | null; appear_offline: boolean } | null,
+): string | null {
+  if (!ownerPresence && userPresence === "offline") return null; // pas encore chargé
+  if (userPresence === "online") return "En ligne";
+  if (userPresence === "away") return "Absent";
+  if (ownerPresence?.appear_offline) return "Hors ligne";
+  if (ownerPresence?.last_seen_at) return `Vu ${formatLastSeen(ownerPresence.last_seen_at)}`;
+  return "Hors ligne"; // last_seen_at null (compte ancien ou sans activité récente)
+}
+
+export type PersonaProfileBodyProps = {
+  name: string | null;
+  label?: string | null;
+  avatarUrl: string | null;
+  bannerUrl: string | null;
+  frameUrl: string | null;
+  dialogueColor: string | null;
+  presenceLine: string | null;
+  userPresence: "online" | "away" | "offline";
+  isFollowing: boolean | null;
+  followBusy: boolean;
+  onToggleFollow: () => void;
+  sections: PersonaSectionWithFields[];
+  activeTab: string | null;
+  onActiveTabChange: (id: string) => void;
+  loading: boolean;
+  /** Contenu additionnel superposé au coin de la bannière (ex. le bouton
+   *  Aperçu/Éditer de PersonaEditSheet.tsx) — rendu après le contenu de la
+   *  bannière pour rester visible par-dessus. */
+  headerAction?: React.ReactNode;
+};
+
+/**
+ * Rendu lecture seule complet d'une fiche persona (bannière + avatar/cadre +
+ * nom + statut + sections) — partagé entre PersonaProfileSheetTrigger (fiche
+ * ouverte depuis une chatroom) et l'aperçu de PersonaEditSheet.tsx, pour que
+ * les deux affichent exactement la même chose.
+ */
+export function PersonaProfileBody({
+  name,
+  label,
+  avatarUrl,
+  bannerUrl,
+  frameUrl,
+  dialogueColor,
+  presenceLine,
+  userPresence,
+  isFollowing,
+  followBusy,
+  onToggleFollow,
+  sections,
+  activeTab,
+  onActiveTabChange,
+  loading,
+  headerAction,
+}: PersonaProfileBodyProps) {
+  const [bannerThumbFailed, setBannerThumbFailed] = React.useState(false);
+  React.useEffect(() => {
+    setBannerThumbFailed(false);
+  }, [bannerUrl]);
+
+  return (
+    <div>
+      {/* -- Header : banner + avatar + nom + stats -- */}
+      <div className="relative overflow-hidden">
+        {/* Banner — fondu vers le bas en opacité (mask-image), pas une
+            couleur peinte en dur : même technique que WorldHeroCard.tsx,
+            pour ne pas trancher net sur le fond réel de la page derrière
+            le drawer. */}
+        {bannerUrl ? (
+          <div className="relative h-34 w-full [--hero-fade-start:3rem] [mask-image:linear-gradient(to_bottom,black_var(--hero-fade-start),transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,black_var(--hero-fade-start),transparent_100%)]">
+            <Image
+              src={bannerThumbFailed ? bannerUrl : (supabaseThumb(bannerUrl, 920, 80, 272) ?? bannerUrl)}
+              onError={() => setBannerThumbFailed(true)}
+              alt=""
+              fill
+              sizes="768px"
+              className="object-cover"
+              draggable={false}
+            />
+          </div>
+        ) : (
+          <div className="h-34 bg-gradient-to-br from-card-400 to-card [--hero-fade-start:3rem] [mask-image:linear-gradient(to_bottom,black_var(--hero-fade-start),transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,black_var(--hero-fade-start),transparent_100%)]" />
+        )}
+        {/* Après le contenu de la bannière dans le DOM — sinon la bannière
+            (rendue après en cas contraire) le recouvrirait visuellement,
+            même sans z-index explicite (ordre d'empilement par défaut). */}
+        {headerAction}
+
+        <div className="px-6 pb-4 -mt-16">
+          <div className="relative flex items-start gap-4">
+            {/* Avatar */}
+            <div className="shrink-0">
+              <AvatarWithFrame
+                src={avatarUrl}
+                alt={name ?? ""}
+                fallback={name ? getInitials(name) : "?"}
+                presenceState="invisible"
+                size={128}
+                frameUrl={frameUrl}
+                className="outline-4 outline-background rounded-2xl"
+              />
+            </div>
+
+            {/* Nom + stats */}
+            <div className="pb-1 min-w-0 flex-1">
+              <div className="flex items-center justify-between gap-3 pb-2 mb-2">
+                <p className="min-w-0 text-xl font-semibold leading-tight truncate">
+                  {name ?? label ?? "—"}
+                </p>
+                {isFollowing !== null && (
+                  <button
+                    type="button"
+                    onClick={onToggleFollow}
+                    disabled={followBusy}
+                    className={cn(
+                      "shrink-0 rounded-full border px-4 py-1.5 text-xs font-medium transition-colors disabled:opacity-60",
+                      isFollowing ? "bg-muted" : "hover:bg-muted",
+                    )}
+                  >
+                    {isFollowing ? "Suivi" : "Suivre"}
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                {presenceLine && (
+                  <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <PresenceDot state={userPresence} />
+                    {presenceLine}
+                  </p>
+                )}
+                {dialogueColor && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            await navigator.clipboard.writeText(dialogueColor);
+                            toast.success("Couleur copiée dans le presse-papier.");
+                          } catch {
+                            toast.error("Impossible de copier la couleur.");
+                          }
+                        }}
+                        className="flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+                      >
+                        <span
+                          className="h-3 w-3 shrink-0 rounded-full border border-border-soft"
+                          style={{ backgroundColor: dialogueColor }}
+                        />
+                        Couleur de dialogue
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">{dialogueColor} — cliquer pour copier</TooltipContent>
+                  </Tooltip>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* -- Sections (read-only) -- */}
+      <div className="space-y-4">
+        {sections.length > 0 ? (
+          <Tabs
+            value={activeTab ?? sections[0].id}
+            onValueChange={onActiveTabChange}
+            className="space-y-4"
+          >
+            <TabBar>
+              {sections.map((s) => (
+                <TabBarTrigger key={s.id} value={s.id}>
+                  {s.name}
+                </TabBarTrigger>
+              ))}
+            </TabBar>
+
+            {sections.map((s) => (
+              <TabsContent
+                key={s.id}
+                value={s.id}
+                forceMount
+                className="px-6 space-y-4 data-[state=inactive]:hidden"
+              >
+                {s.fields.length === 0 ? (
+                  <p className="text-sm text-muted-foreground italic">Aucun contenu.</p>
+                ) : (
+                  s.fields.map((f) => (
+                    <FieldView key={f.id} type={f.type} data={f.data} />
+                  ))
+                )}
+              </TabsContent>
+            ))}
+          </Tabs>
+        ) : !loading ? null : (
+          <div className="px-6 space-y-2">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-4 animate-pulse rounded bg-muted" />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function PersonaProfileSheetTrigger({
   children,
   personaId,
@@ -282,11 +495,6 @@ export function PersonaProfileSheetTrigger({
   const [name, setName] = React.useState<string | null>(label ?? null);
   const [avatarUrl, setAvatarUrl] = React.useState<string | null>(null);
   const [bannerUrl, setBannerUrl] = React.useState<string | null>(null);
-  const [bannerThumbFailed, setBannerThumbFailed] = React.useState(false);
-
-  React.useEffect(() => {
-    setBannerThumbFailed(false);
-  }, [bannerUrl]);
   const [frameUrl, setFrameUrl] = React.useState<string | null>(null);
   const [dialogueColor, setDialogueColor] = React.useState<string | null>(null);
   const [ownerPresence, setOwnerPresence] = React.useState<{
@@ -413,18 +621,7 @@ export function PersonaProfileSheetTrigger({
   }, [open, prefetch]);
 
   const userPresence = userId ? getUserPresence(userId) : "offline";
-  const presenceLine =
-    !ownerPresence && userPresence === "offline"
-      ? null // données pas encore chargées — on n'affiche rien
-      : userPresence === "online"
-        ? "En ligne"
-        : userPresence === "away"
-          ? "Absent"
-          : ownerPresence?.appear_offline
-            ? "Hors ligne"
-            : ownerPresence?.last_seen_at
-              ? `Vu ${formatLastSeen(ownerPresence.last_seen_at)}`
-              : "Hors ligne"; // last_seen_at null (compte ancien ou sans activité récente)
+  const presenceLine = formatPersonaPresenceLine(userPresence, ownerPresence);
 
   const TriggerButton = (
     <button
@@ -453,146 +650,28 @@ export function PersonaProfileSheetTrigger({
       )}
 
       <DrawerContent className="inset-y-0 right-0 flex flex-col gap-0 border rounded-md bg-background text-foreground shadow-lg w-[min(calc(100%_-_var(--drawer-inset)*2),_460px)] p-0">
-        <DrawerClose
-          aria-label="Fermer"
-          className="absolute right-4 top-4 z-10 rounded-xs text-muted-foreground opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
-        >
-          <X className="size-4" />
-        </DrawerClose>
         <DrawerHeader className="sr-only">
           <DrawerTitle>{name ?? label ?? "Profil persona"}</DrawerTitle>
         </DrawerHeader>
 
         <div className="min-h-0 flex-1 overflow-y-auto">
-        {/* -- Header : banner + avatar + nom + stats -- */}
-        <div>
-          <div className="relative overflow-hidden">
-            {/* Banner — fondu vers le bas en opacité (mask-image), pas une
-                couleur peinte en dur : même technique que WorldHeroCard.tsx,
-                pour ne pas trancher net sur le fond réel de la page derrière
-                le drawer. */}
-            {bannerUrl ? (
-              <div className="relative h-34 w-full [--hero-fade-start:3rem] [mask-image:linear-gradient(to_bottom,black_var(--hero-fade-start),transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,black_var(--hero-fade-start),transparent_100%)]">
-                <Image
-                  src={bannerThumbFailed ? bannerUrl : (supabaseThumb(bannerUrl, 880, 80, 272) ?? bannerUrl)}
-                  onError={() => setBannerThumbFailed(true)}
-                  alt=""
-                  fill
-                  sizes="768px"
-                  className="object-cover"
-                  draggable={false}
-                />
-              </div>
-            ) : (
-              <div className="h-34 bg-gradient-to-br from-card-400 to-card [--hero-fade-start:3rem] [mask-image:linear-gradient(to_bottom,black_var(--hero-fade-start),transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,black_var(--hero-fade-start),transparent_100%)]" />
-            )}
-
-            <div className="px-4 pb-4 -mt-16">
-              <div className="relative flex items-start gap-4">
-                {/* Avatar */}
-                <div className="shrink-0 mt-2">
-                  <AvatarWithFrame
-                    src={avatarUrl}
-                    alt={name ?? ""}
-                    fallback={name ? getInitials(name) : "?"}
-                    presenceState="invisible"
-                    size={128}
-                    frameUrl={frameUrl}
-                    className="outline-4 outline-background rounded-2xl"
-                  />
-                </div>
-
-                {/* Nom + stats */}
-                <div className="pb-1 min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-3 pb-2 mb-2">
-                    <p className="min-w-0 text-xl font-semibold leading-tight truncate">
-                      {name ?? label ?? "—"}
-                    </p>
-                    {isFollowing !== null && (
-                      <button
-                        type="button"
-                        onClick={toggleFollow}
-                        disabled={followBusy}
-                        className={cn(
-                          "shrink-0 rounded-full border px-4 py-1.5 text-xs font-medium transition-colors disabled:opacity-60",
-                          isFollowing ? "bg-muted" : "hover:bg-muted",
-                        )}
-                      >
-                        {isFollowing ? "Suivi" : "Suivre"}
-                      </button>
-                    )}
-                  </div>
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                    {presenceLine && (
-                      <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <PresenceDot state={userPresence} />
-                        {presenceLine}
-                      </p>
-                    )}
-                    {dialogueColor && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                            <span
-                              className="h-3 w-3 shrink-0 rounded-full border border-border-soft"
-                              style={{ backgroundColor: dialogueColor }}
-                            />
-                            Couleur de dialogue
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom">{dialogueColor}</TooltipContent>
-                      </Tooltip>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* -- Sections (read-only) -- */}
-        <div className="space-y-4">
-          {sections.length > 0 ? (
-            <Tabs
-              value={activeTab ?? sections[0].id}
-              onValueChange={setActiveTab}
-              className="space-y-4"
-            >
-              <TabBar>
-                {sections.map((s) => (
-                  <TabsTrigger key={s.id} value={s.id}>
-                    {s.name}
-                  </TabsTrigger>
-                ))}
-              </TabBar>
-
-              {sections.map((s) => (
-                <TabsContent
-                  key={s.id}
-                  value={s.id}
-                  forceMount
-                  className="px-4 space-y-4 data-[state=inactive]:hidden"
-                >
-                  {s.fields.length === 0 ? (
-                    <p className="text-sm text-muted-foreground italic">Aucun contenu.</p>
-                  ) : (
-                    s.fields.map((f) => (
-                      <FieldView key={f.id} type={f.type} data={f.data} />
-                    ))
-                  )}
-                </TabsContent>
-              ))}
-            </Tabs>
-          ) : !loading ? (
-            <p className="px-4 text-sm text-muted-foreground italic">Aucune section.</p>
-          ) : (
-            <div className="px-4 space-y-2">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="h-4 animate-pulse rounded bg-muted" />
-              ))}
-            </div>
-          )}
-        </div>
+          <PersonaProfileBody
+            name={name}
+            label={label}
+            avatarUrl={avatarUrl}
+            bannerUrl={bannerUrl}
+            frameUrl={frameUrl}
+            dialogueColor={dialogueColor}
+            presenceLine={presenceLine}
+            userPresence={userPresence}
+            isFollowing={isFollowing}
+            followBusy={followBusy}
+            onToggleFollow={toggleFollow}
+            sections={sections}
+            activeTab={activeTab}
+            onActiveTabChange={setActiveTab}
+            loading={loading}
+          />
         </div>
       </DrawerContent>
     </Drawer>

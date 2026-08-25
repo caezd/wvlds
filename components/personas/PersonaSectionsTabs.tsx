@@ -3,8 +3,8 @@
 
 import React, { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Tabs, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { TabBar } from "@/components/ui/tab-bar";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { TabBar, TabBarTrigger } from "@/components/ui/tab-bar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -158,12 +158,12 @@ export function PersonaSectionsTabs({
             </Button>
           }>
             {sections.map((section) => (
-              <React.Fragment key={section.id}>
-                <TabsTrigger value={section.id}>
+              <div key={section.id} className="flex shrink-0 items-center gap-1">
+                <TabBarTrigger value={section.id}>
                   {section.name}
-                </TabsTrigger>
+                </TabBarTrigger>
                 {value === section.id && (
-                  <DropdownMenu key={`${section.id}-menu`}>
+                  <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button type="button" variant="ghost" size="icon" className="h-6 w-6 shrink-0">
                         <MoreHorizontal className="h-3.5 w-3.5" />
@@ -199,7 +199,7 @@ export function PersonaSectionsTabs({
                     </DropdownMenuContent>
                   </DropdownMenu>
                 )}
-              </React.Fragment>
+              </div>
             ))}
           </TabBar>
 

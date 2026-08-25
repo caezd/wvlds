@@ -459,6 +459,7 @@ function ChatroomMessage({
                     persona={message.persona}
                     message={message}
                     isMine={mine}
+                    isMobile={isMobile}
                   />
                 </div>
               )}
@@ -471,6 +472,7 @@ function ChatroomMessage({
         personaName={message.persona?.name}
         mine={mine}
         content={message.content}
+        dialogueColor={message.metadata?.bubbles ? (message.metadata?.bubbleColor ?? null) : null}
         emojiReactions={emoji_reactions}
         drawerOpen={drawerOpen}
         setDrawerOpen={setDrawerOpen}

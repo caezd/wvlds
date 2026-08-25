@@ -1,7 +1,7 @@
 // components/personas/PersonaEditSheet.tsx
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Image from "next/image";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
@@ -28,12 +28,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Check, Loader2, Pencil, Trash2, X } from "lucide-react";
+import { Check, Eye, Loader2, Pencil, Trash2, X } from "lucide-react";
 import { ImagePickerCropField } from "@/components/ui/image-crop-picker";
 import type { MaritalStatus } from "@/types/db";
 import { TABLE } from "@/lib/constants";
 
 import { PersonaSectionsTabs } from "./PersonaSectionsTabs";
+import { PersonaProfileBody, formatPersonaPresenceLine } from "./PersonaProfileSheetTrigger";
+import { useGlobalPresence } from "@/components/providers/PresenceProvider";
 import type { PersonaSectionWithFields } from "@/types/personas";
 
 import {
@@ -114,6 +116,20 @@ function StorageUploadTab({
 // Dialog bannière
 // ---------------------------------------------------------------------------
 
+/**
+ * Proportions réelles d'une bannière de persona telle qu'elle s'affiche :
+ * `h-34` (136px) sur toute la largeur d'un drawer plafonné à 460px — voir
+ * les deux rendus (éditeur ici, lecture dans PersonaProfileSheetTrigger).
+ *
+ * Une seule constante pour la zone de recadrage ET les aperçus : ces trois
+ * valeurs étaient dupliquées et avaient dérivé vers 744/136 (≈5.47), bien
+ * plus large que l'affichage réel (≈3.38) — `object-cover` rognait donc
+ * silencieusement ~38% de la largeur choisie par l'utilisateur.
+ */
+const BANNER_WIDTH = 460;
+const BANNER_HEIGHT = 136;
+const BANNER_ASPECT = BANNER_WIDTH / BANNER_HEIGHT;
+
 function BannerSheet({
   open,
   onOpenChange,
@@ -152,9 +168,9 @@ function BannerSheet({
             userId={userId}
             subfolder="banners"
             dbColumn="banner_url"
-            cropAspect={744 / 136}
+            cropAspect={BANNER_ASPECT}
             previewSrc={currentBannerUrl}
-            previewClassName="aspect-[744/136] w-full rounded-2xl"
+            previewClassName="aspect-[460/136] w-full rounded-2xl"
             onSaved={(url) => { onSaved(url); onOpenChange(false); }}
           />
         </div>
@@ -515,11 +531,19 @@ export function PersonaEditorContent({
     setBannerThumbFailed(false);
   }, [bannerUrl]);
   const [avatarConfig, setAvatarConfig] = useState<AvatarConfigV1 | null>(initialAvatarConfig ?? null);
-  const [_frameUrl, setFrameUrl] = useState<string | null>(initialFrameUrl ?? null);
+  const [frameUrl, setFrameUrl] = useState<string | null>(initialFrameUrl ?? null);
   const { avatar_builder } = useFeatureFlags();
   const [appearanceTab, setAppearanceTab] = useState<"avatar" | "cosmetics">("avatar");
   const [avatarSubTab, setAvatarSubTab] = useState<"builder" | "upload">(avatar_builder ? "builder" : "upload");
   const [userId, setUserId] = useState<string | null>(null);
+  const [previewMode, setPreviewMode] = useState(false);
+  const [previewTab, setPreviewTab] = useState<string | null>(null);
+  const [dialogueColor, setDialogueColor] = useState<string | null>(null);
+  const [ownerPresence, setOwnerPresence] = useState<{
+    last_seen_at: string | null;
+    appear_offline: boolean;
+  } | null>(null);
+  const { getUserPresence } = useGlobalPresence();
   const avatarFallback = useMemo(() => initials(personaName), [personaName]);
 
   // Récupère l'userId, nécessaire pour l'upload de fichier (avatar/bannière).
@@ -530,115 +554,190 @@ export function PersonaEditorContent({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Charge à la demande (au premier passage en aperçu) ce que l'éditeur ne
+  // tient pas déjà localement — couleur de dialogue et présence du
+  // propriétaire — pour que PersonaProfileBody rende exactement la même
+  // chose que la fiche vue depuis une chatroom (PersonaProfileSheetTrigger).
+  const previewFetchedRef = useRef(false);
+  useEffect(() => {
+    if (!previewMode || previewFetchedRef.current) return;
+    previewFetchedRef.current = true;
+    (async () => {
+      const { data: persona } = await supabase
+        .from("personas")
+        .select("dialogue_color")
+        .eq("id", personaId)
+        .maybeSingle();
+      setDialogueColor((persona as { dialogue_color?: string | null } | null)?.dialogue_color ?? null);
+
+      if (!userId) return;
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("last_seen_at, appear_offline")
+        .eq("id", userId)
+        .maybeSingle();
+      if (profile) {
+        const row = profile as { last_seen_at?: string | null; appear_offline?: boolean | null };
+        setOwnerPresence({ last_seen_at: row.last_seen_at ?? null, appear_offline: !!row.appear_offline });
+      }
+    })();
+  }, [previewMode, personaId, userId, supabase]);
+
+  const previewUserPresence = userId ? getUserPresence(userId) : "offline";
+  const previewPresenceLine = formatPersonaPresenceLine(previewUserPresence, ownerPresence);
+
+  // Bascule édition / aperçu — laisse la sheet d'édition et affiche
+  // exactement le rendu de la fiche publique (PersonaProfileBody, le même
+  // composant que PersonaProfileSheetTrigger utilise pour la fiche ouverte
+  // depuis une chatroom), sans dupliquer son moteur de rendu. Toujours
+  // visible (superposé au coin de la bannière), pas seulement au survol.
+  const previewToggle = (
+    <button
+      type="button"
+      onClick={() => setPreviewMode((v) => !v)}
+      className="absolute top-3 right-3 z-10 flex items-center gap-1 rounded-full bg-white/20 backdrop-blur-sm px-2.5 py-1 text-xs font-medium text-white"
+    >
+      {previewMode ? <Pencil className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+      {previewMode ? "Éditer" : "Aperçu"}
+    </button>
+  );
+
   return (
     <>
-      {/* Header — même structure que le profil en lecture */}
-      <div className="relative">
-        {/* Bannière cliquable */}
-        <button
-          type="button"
-          onClick={() => setBannerDialogOpen(true)}
-          className="group relative h-34 w-full block overflow-hidden focus-visible:outline-none"
-          aria-label="Modifier la bannière"
-          title="Modifier la bannière"
-        >
-          {bannerUrl ? (
-            <Image
-              src={bannerThumbFailed ? bannerUrl : (supabaseThumb(bannerUrl, 880, 80, 272) ?? bannerUrl)}
-              onError={() => setBannerThumbFailed(true)}
-              alt=""
-              fill
-              sizes="(min-width: 1024px) 768px, 100vw"
-              className="object-cover"
-              draggable={false}
-            />
-          ) : (
-            <div className="h-full w-full bg-gradient-to-r from-muted/60 to-muted" />
-          )}
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition bg-black/30 grid place-items-center">
-            <span className="flex items-center gap-1.5 rounded-full bg-black/50 px-3 py-1.5 text-xs font-medium text-white">
-              <Pencil className="h-3.5 w-3.5" />
-              {bannerUrl ? "Modifier la bannière" : "Ajouter une bannière"}
-            </span>
-          </div>
-        </button>
+      {previewMode ? (
+        <PersonaProfileBody
+          name={personaName}
+          label={personaName}
+          avatarUrl={avatarUrl}
+          bannerUrl={bannerUrl}
+          frameUrl={frameUrl}
+          dialogueColor={dialogueColor}
+          presenceLine={previewPresenceLine}
+          userPresence={previewUserPresence}
+          isFollowing={null}
+          followBusy={false}
+          onToggleFollow={() => {}}
+          sections={sections}
+          activeTab={previewTab}
+          onActiveTabChange={setPreviewTab}
+          loading={false}
+          headerAction={previewToggle}
+        />
+      ) : (
+        <>
+        {/* Header — même structure que le profil en lecture */}
+        <div className="relative">
+          {/* Bannière cliquable */}
+          <button
+            type="button"
+            onClick={() => setBannerDialogOpen(true)}
+            className="group relative h-34 w-full block overflow-hidden focus-visible:outline-none"
+            aria-label={bannerUrl ? "Modifier la bannière" : "Ajouter une bannière"}
+            title={bannerUrl ? "Modifier la bannière" : "Ajouter une bannière"}
+          >
+            {bannerUrl ? (
+              <Image
+                src={bannerThumbFailed ? bannerUrl : (supabaseThumb(bannerUrl, 920, 80, 272) ?? bannerUrl)}
+                onError={() => setBannerThumbFailed(true)}
+                alt=""
+                fill
+                sizes="(min-width: 1024px) 768px, 100vw"
+                className="object-cover"
+                draggable={false}
+              />
+            ) : (
+              <div className="h-full w-full bg-gradient-to-r from-muted/60 to-muted" />
+            )}
+            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition bg-black/30 grid place-items-center">
+              <span className="flex items-center gap-1.5 rounded-full bg-black/50 px-3 py-1.5 text-xs font-medium text-white">
+                <Pencil className="h-3.5 w-3.5" />
+                {bannerUrl ? "Modifier la bannière" : "Ajouter une bannière"}
+              </span>
+            </div>
+          </button>
+          {previewToggle}
 
-        <div className="px-6 pb-4 -mt-16">
-          <div className="relative flex items-start gap-4">
-            {/* Avatar cliquable */}
-            <button
-              type="button"
-              onClick={() => setAvatarDialogOpen(true)}
-              className="group relative h-32 w-32 rounded-2xl border-4 border-background bg-muted overflow-hidden shadow shrink-0 focus-visible:outline-none"
-              aria-label="Modifier l'avatar"
-              title="Modifier l'avatar"
-            >
-              {avatarUrl ? (
-                <Image src={avatarUrl} alt="" fill sizes="128px" className="object-cover" draggable={false} />
-              ) : (
-                <div className="h-full w-full grid place-items-center text-lg font-semibold text-muted-foreground">
-                  {avatarFallback}
-                </div>
-              )}
-              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition bg-black/30 grid place-items-center">
-                <div className="text-xs text-white font-medium">Modifier</div>
-              </div>
-            </button>
-
-            {/* Nom + stats (même layout que le profil) */}
-            <div className="pb-1 min-w-0 flex-1">
-              <div className="h-16 pb-2 mb-2 flex items-end gap-2">
-                <input
-                  defaultValue={personaName}
-                  onBlur={async (e) => {
-                    const newName = e.target.value.trim();
-                    if (!newName || newName === personaName) return;
-                    const { error } = await supabase.from("personas").update({ name: newName }).eq("id", personaId);
-                    if (error) { e.target.value = personaName; return; }
-                    router.refresh();
-                  }}
-                  onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
-                  maxLength={40}
-                  placeholder="Nom du personnage"
-                  className="min-w-0 flex-1 text-xl font-semibold leading-tight bg-transparent outline-none border-none rounded px-1 -mx-1 hover:bg-muted/60 focus:bg-muted/60 focus:underline decoration-dotted underline-offset-4 placeholder:text-muted-foreground/40 transition-colors"
-                />
-                {faceclaimsEnabled !== false && (
-                  <div className="flex items-baseline gap-1 shrink-0 max-w-[45%]">
-                    <span className="text-sm text-muted-foreground/70 shrink-0">ft.</span>
-                    <input
-                      defaultValue={initialFaceclaim ?? ""}
-                      onBlur={async (e) => {
-                        const newValue = e.target.value.trim();
-                        const clean = newValue.length ? newValue : null;
-                        if (clean === (initialFaceclaim ?? null)) return;
-                        const { error } = await supabase.from("personas").update({ faceclaim: clean }).eq("id", personaId);
-                        if (error) { e.target.value = initialFaceclaim ?? ""; return; }
-                        router.refresh();
-                      }}
-                      onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
-                      maxLength={80}
-                      placeholder="acteur/perso"
-                      title="Faceclaim : l'acteur ou le personnage sur lequel est basé l'avatar"
-                      className="min-w-0 w-full text-sm leading-tight bg-transparent outline-none border-none rounded px-1 -mx-1 hover:bg-muted/60 focus:bg-muted/60 focus:underline decoration-dotted underline-offset-4 placeholder:text-muted-foreground/40 transition-colors"
-                    />
+          <div className="px-6 pb-4 -mt-16">
+            <div className="relative flex items-start gap-4">
+              {/* Avatar cliquable */}
+              <button
+                type="button"
+                onClick={() => setAvatarDialogOpen(true)}
+                // `outline` plutôt que `border` : même technique que
+                // AvatarWithFrame (utilisé par l'aperçu et la fiche
+                // publique) — un `border` mange sur la boîte de 128px (image
+                // réduite à 120px, recadrée différemment), alors qu'un
+                // `outline` se dessine par-dessus sans réduire l'image.
+                className="group relative h-32 w-32 rounded-2xl outline-4 outline-background bg-muted overflow-hidden shadow shrink-0"
+                aria-label="Modifier l'avatar"
+                title="Modifier l'avatar"
+              >
+                {avatarUrl ? (
+                  <Image src={avatarUrl} alt="" fill sizes="128px" className="object-cover" draggable={false} />
+                ) : (
+                  <div className="h-full w-full grid place-items-center text-lg font-semibold text-muted-foreground">
+                    {avatarFallback}
                   </div>
                 )}
-              </div>
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition bg-black/30 grid place-items-center">
+                  <div className="text-xs text-white font-medium">Modifier</div>
+                </div>
+              </button>
 
-              <div className="mb-3">
-                <MaritalStatusPicker
-                  personaId={personaId}
-                  supabase={supabase}
-                  worldId={worldId}
-                  initialStatus={initialMaritalStatus ?? null}
-                  initialSpouseId={initialSpousePersonaId ?? null}
-                />
-              </div>
+              {/* Nom + stats (même layout que le profil) */}
+              <div className="pb-1 min-w-0 flex-1">
+                <div className="h-16 pb-2 mb-2 flex items-end gap-2">
+                  <input
+                    defaultValue={personaName}
+                    onBlur={async (e) => {
+                      const newName = e.target.value.trim();
+                      if (!newName || newName === personaName) return;
+                      const { error } = await supabase.from("personas").update({ name: newName }).eq("id", personaId);
+                      if (error) { e.target.value = personaName; return; }
+                      router.refresh();
+                    }}
+                    onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+                    maxLength={40}
+                    placeholder="Nom du personnage"
+                    className="min-w-0 flex-1 text-xl font-semibold leading-tight bg-transparent outline-none border-none rounded px-1 -mx-1 hover:bg-muted/60 focus:bg-muted/60 focus:underline decoration-dotted underline-offset-4 placeholder:text-muted-foreground/40 transition-colors"
+                  />
+                  {faceclaimsEnabled !== false && (
+                    <div className="flex items-baseline gap-1 shrink-0 max-w-[45%]">
+                      <span className="text-sm text-muted-foreground/70 shrink-0">ft.</span>
+                      <input
+                        defaultValue={initialFaceclaim ?? ""}
+                        onBlur={async (e) => {
+                          const newValue = e.target.value.trim();
+                          const clean = newValue.length ? newValue : null;
+                          if (clean === (initialFaceclaim ?? null)) return;
+                          const { error } = await supabase.from("personas").update({ faceclaim: clean }).eq("id", personaId);
+                          if (error) { e.target.value = initialFaceclaim ?? ""; return; }
+                          router.refresh();
+                        }}
+                        onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+                        maxLength={80}
+                        placeholder="acteur/perso"
+                        title="Faceclaim : l'acteur ou le personnage sur lequel est basé l'avatar"
+                        className="min-w-0 w-full text-sm leading-tight bg-transparent outline-none border-none rounded px-1 -mx-1 hover:bg-muted/60 focus:bg-muted/60 focus:underline decoration-dotted underline-offset-4 placeholder:text-muted-foreground/40 transition-colors"
+                      />
+                    </div>
+                  )}
+                </div>
 
+                <div className="mb-3">
+                  <MaritalStatusPicker
+                    personaId={personaId}
+                    supabase={supabase}
+                    worldId={worldId}
+                    initialStatus={initialMaritalStatus ?? null}
+                    initialSpouseId={initialSpousePersonaId ?? null}
+                  />
+                </div>
+
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
       {/* Dialog bannière */}
       {/* Sheet bannière */}
@@ -649,8 +748,8 @@ export function PersonaEditorContent({
         supabase={supabase}
         userId={userId}
         currentBannerUrl={bannerUrl}
-        onSaved={setBannerUrl}
-        onRemove={() => setBannerUrl(null)}
+        onSaved={(url) => { setBannerUrl(url); router.refresh(); }}
+        onRemove={() => { setBannerUrl(null); router.refresh(); }}
       />
 
       {/* Drawer apparence (avatar + cosmétiques) */}
@@ -784,10 +883,10 @@ export function PersonaEditorContent({
         createPortal(
           <div className="hidden lg:flex fixed inset-y-0 left-0 right-[460px] z-[51] items-center justify-center p-10 pointer-events-none">
             <div className="flex w-full max-w-[520px] flex-col items-center gap-4">
-              <div className="relative aspect-[744/136] w-full overflow-hidden rounded-xl bg-muted shadow-2xl">
+              <div className="relative aspect-[460/136] w-full overflow-hidden rounded-xl bg-muted shadow-2xl">
                 {bannerUrl ? (
                   <Image
-                    src={bannerThumbFailed ? bannerUrl : (supabaseThumb(bannerUrl, 1040, 80, 190) ?? bannerUrl)}
+                    src={bannerThumbFailed ? bannerUrl : (supabaseThumb(bannerUrl, 1040, 80, 308) ?? bannerUrl)}
                     onError={() => setBannerThumbFailed(true)}
                     alt=""
                     fill
@@ -819,6 +918,8 @@ export function PersonaEditorContent({
           restrictSkills={restrictSkills}
         />
       </div>
+        </>
+      )}
     </>
   );
 }
@@ -878,12 +979,6 @@ export function PersonaEditSheet({
             l'intérieur de ce DrawerContent, donc réellement imbriqués. Plus
             besoin de décalage/flou manuel piloté par un état local. */}
         <DrawerContent className="inset-y-0 right-0 flex flex-col border rounded-md bg-background text-foreground shadow-lg p-0 w-[min(calc(100%_-_var(--drawer-inset)*2),_460px)]">
-          <DrawerClose
-            aria-label="Fermer"
-            className="absolute right-4 top-4 z-10 rounded-xs text-muted-foreground opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
-          >
-            <X className="size-4" />
-          </DrawerClose>
           <DrawerHeader className="sr-only">
             <DrawerTitle>Éditer — {personaName}</DrawerTitle>
           </DrawerHeader>

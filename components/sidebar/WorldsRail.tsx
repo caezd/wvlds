@@ -90,9 +90,9 @@ export function WorldsRail({
   function bindLongPress(world: WorldRailItem) {
     return {
       ...longPress,
-      onTouchStart: () => {
+      onTouchStart: (event: React.TouchEvent) => {
         pressedWorldRef.current = world;
-        longPress.onTouchStart();
+        longPress.onTouchStart(event);
       },
     };
   }

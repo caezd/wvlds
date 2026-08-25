@@ -8,6 +8,46 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Correctif",
+    text: "La zone de recadrage d'une bannière de persona était bien plus large que la bannière une fois affichée : environ 38% de la largeur choisie était rognée silencieusement, sans que l'aperçu ne le montre. Le recadrage et ses aperçus correspondent désormais exactement aux proportions réelles.",
+  },
+  {
+    date: "2026-08",
+    tag: "Chatrooms",
+    text: "Clic droit (ou appui long sur mobile) sur une bulle de dialogue colorée dans une chatroom : « Copier la couleur de dialogue » copie son code hexadécimal. Corrige au passage un bug où ouvrir le profil d'un persona depuis un message pouvait faire surgir par erreur le menu d'options de ce message par-dessus — un appui long n'ouvre plus jamais son menu tant qu'un autre panneau est affiché.",
+  },
+  {
+    date: "2026-08",
+    tag: "Personas",
+    text: "La sheet d'un profil persona (ouverte depuis une chatroom ou ailleurs) perd elle aussi son bouton de fermeture (✕) — swiper ou cliquer en dehors suffit, comme pour la sheet d'édition.",
+  },
+  {
+    date: "2026-08",
+    tag: "Personas",
+    text: "Cliquer sur la pastille « Couleur de dialogue » d'une fiche persona (depuis une chatroom, ou en aperçu dans la sheet d'édition) copie son code hexadécimal dans le presse-papier.",
+  },
+  {
+    date: "2026-08",
+    tag: "Personas",
+    text: "La fiche d'un persona sans aucune section affiche désormais un profil vide (juste bannière/avatar/nom) plutôt que le message « Aucune section. ».",
+  },
+  {
+    date: "2026-08",
+    tag: "Personas",
+    text: "Les onglets de section d'un profil de persona (édition, aperçu, fiche publique) passent d'un style en pastille pleine à un soulignement, comme dans les paramètres d'un monde, et restent épinglés en haut du panneau une fois l'en-tête (bannière + avatar) défilé hors du cadre — la liste défile aussi horizontalement (comme les paramètres) au lieu de déborder, pour que le bouton « + Ajouter une section » reste toujours atteignable sur mobile. Dans l'éditeur, le bouton « ⋯ » (déplacer/renommer/supprimer une section) se rattache maintenant à son onglet plutôt que de flotter dans l'espacement entre onglets, et la bordure de chaque champ ainsi que le bouton d'ajout entre deux champs (masqués au survol seulement) restent visibles sur mobile, où il n'y a pas de survol.",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
+    text: "Changer la bannière d'un persona puis fermer/rouvrir sa fiche d'édition faisait disparaître le changement (la fiche se rouvrait avec l'ancienne bannière, jamais rafraîchie depuis le serveur) — contrairement à l'avatar, qui rafraîchissait déjà correctement. Corrigé.",
+  },
+  {
+    date: "2026-08",
+    tag: "Personas",
+    text: "Un bouton « Aperçu » (pastille superposée au coin de la bannière) dans la sheet d'édition d'un persona bascule vers le rendu exact de la fiche vue depuis une chatroom (même composant, même padding), sans quitter l'édition. Son avatar utilise désormais le même contour (`outline`, par-dessus l'image) que la fiche publique, au lieu d'une bordure qui la recadrait différemment. Le bouton de fermeture (✕) de ce drawer est retiré — swiper ou cliquer en dehors suffit.",
+  },
+  {
+    date: "2026-08",
     tag: "Personas",
     text: "Les images d'une section « Galerie » d'un profil de persona deviennent modulables : chaque image se redimensionne en glissant sa poignée en coin, jusqu'à occuper toute la largeur de sa ligne si elle est seule, et peut être déplacée (y compris recentrée sur sa propre ligne, sans perdre sa largeur) ou vers une autre ligne — un encadré affiche désormais l'emplacement exact où elle atterrira pendant le glissement. Un bouton par image permet d'afficher ou non un fond derrière elle. Les images sont affichées en entier plutôt que recadrées et gardent leurs propres proportions (hauteur naturelle) — y compris sur mobile, où leur largeur respecte le même %age de la grille qu'en édition, et où les boutons d'action restent visibles sans survol.",
   },

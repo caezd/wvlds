@@ -5,19 +5,17 @@ import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import {
   Drawer,
-  DrawerClose,
   DrawerContent,
   DrawerHeader,
   DrawerTitle,
   DrawerDescription,
 } from "@/components/ui/drawer";
 import { AvatarWithFrame } from "@/components/avatars/AvatarWithFrame";
-import { Tabs, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { TabBar } from "@/components/ui/tab-bar";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { TabBar, TabBarTrigger } from "@/components/ui/tab-bar";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import type { Persona } from "@/types/db";
 import type { PersonaSection, PersonaSectionField, PersonaSectionWithFields, PersonaFieldData, InventoryItem, SkillItem, GaugeItem, TraitItem, TimelineItem, DlItem } from "@/types/personas";
-import { X } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useGlobalPresence } from "@/components/providers/PresenceProvider";
 import { formatLastSeen } from "@/lib/utils";
@@ -409,12 +407,6 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
       <DrawerContent className="inset-y-0 right-0 flex flex-col gap-0 border rounded-md bg-background text-foreground shadow-lg p-0 w-[min(calc(100%_-_var(--drawer-inset)*2),_380px)] touch:w-[min(calc(100%_-_var(--drawer-inset)*2),_440px)]">
         {persona && (
           <>
-            <DrawerClose
-              aria-label="Fermer"
-              className="absolute right-4 top-4 z-10 rounded-xs text-muted-foreground opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
-            >
-              <X className="size-4" />
-            </DrawerClose>
             <DrawerHeader className="sr-only">
               <DrawerTitle>{persona.name}</DrawerTitle>
               <DrawerDescription>{t("profileSheetDescription")}</DrawerDescription>
@@ -425,7 +417,7 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
             {bannerUrl ? (
               <div className="relative h-34 w-full shrink-0">
                 <Image
-                  src={bannerThumbFailed ? bannerUrl : (supabaseThumb(bannerUrl, 880, 80, 272) ?? bannerUrl)}
+                  src={bannerThumbFailed ? bannerUrl : (supabaseThumb(bannerUrl, 920, 80, 272) ?? bannerUrl)}
                   onError={() => setBannerThumbFailed(true)}
                   alt=""
                   fill
@@ -500,11 +492,11 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
                   value={activeTab ?? sections[0].id}
                   onValueChange={setActiveTab}
                 >
-                  <TabBar className="px-5">
+                  <TabBar listClassName="px-5">
                       {sections.map((s) => (
-                        <TabsTrigger key={s.id} value={s.id}>
+                        <TabBarTrigger key={s.id} value={s.id}>
                           {s.name}
-                        </TabsTrigger>
+                        </TabBarTrigger>
                       ))}
                   </TabBar>
 
