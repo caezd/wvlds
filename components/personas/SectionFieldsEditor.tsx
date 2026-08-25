@@ -306,13 +306,17 @@ export function ImageGridField({
     window.addEventListener("pointerup", onPointerUp, { once: true });
   }
 
-  function dropTarget(clientX: number, clientY: number): ImageDropTarget | null {
+  function dropTarget(clientX: number, clientY: number, colOffset: number): ImageDropTarget | null {
     const rect = gridRef.current?.getBoundingClientRect();
     if (!rect) return null;
     const rowFloat = (clientY - rect.top) / rowPitch;
     const row = Math.max(0, Math.floor(rowFloat));
     const withinRow = rowFloat - Math.floor(rowFloat);
-    const col = (clientX - rect.left) / colPitch;
+    // `colOffset` = distance (en colonnes) entre le point où l'image a été
+    // saisie et son propre bord gauche — sans ça, le bord gauche de l'image
+    // saute sous le curseur au premier mouvement, peu importe où elle avait
+    // été attrapée (poignée à gauche vs n'importe où sur la vignette).
+    const col = (clientX - rect.left) / colPitch - colOffset;
 
     if (withinRow < NEW_ROW_BAND) return { row, col, asNewRow: true };
     if (withinRow > 1 - NEW_ROW_BAND) return { row: row + 1, col, asNewRow: true };
@@ -329,13 +333,16 @@ export function ImageGridField({
     event.stopPropagation();
     event.currentTarget.setPointerCapture(event.pointerId);
 
+    const rect = gridRef.current?.getBoundingClientRect();
+    const colOffset = rect ? (event.clientX - rect.left) / colPitch - item.x : 0;
+
     setActiveId(item.id);
     let target: ImageDropTarget | null = null;
     let moved = false;
 
     const onPointerMove = (moveEvent: PointerEvent) => {
       moved = true;
-      target = dropTarget(moveEvent.clientX, moveEvent.clientY);
+      target = dropTarget(moveEvent.clientX, moveEvent.clientY, colOffset);
       setDropPreview(target);
     };
     const onPointerUp = () => {
@@ -452,13 +459,24 @@ export function ImageGridField({
                 className="pointer-events-none z-20 rounded-full bg-primary"
               />
             )}
-            {dropPreview && !dropPreview.asNewRow && dropPreview.row < rowCount && (
-              <div
-                aria-hidden
-                style={{ gridColumn: "1 / -1", gridRow: dropPreview.row + 1 }}
-                className="pointer-events-none z-20 rounded-md bg-primary/15"
-              />
-            )}
+            {dropPreview && !dropPreview.asNewRow && activeId && (() => {
+              // Projection exacte de l'atterrissage : on rejoue moveImage
+              // avec la cible courante et on lit la position/largeur
+              // résultante de l'image déplacée — garantit que le fantôme
+              // affiché correspond toujours à ce que produira le dépôt
+              // (recentrage sur sa ligne, insertion + redistribution, etc.).
+              const placed = moveImage(items, activeId, dropPreview.row, dropPreview.col, false).find(
+                (i) => i.id === activeId,
+              );
+              if (!placed) return null;
+              return (
+                <div
+                  aria-hidden
+                  style={{ gridColumn: `${placed.x + 1} / span ${placed.w}`, gridRow: placed.y + 1 }}
+                  className="pointer-events-none z-20 rounded-md border-2 border-dashed border-primary bg-primary/15"
+                />
+              );
+            })()}
           </div>
         )}
       </div>

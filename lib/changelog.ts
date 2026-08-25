@@ -9,7 +9,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Personas",
-    text: "Les images d'une section « Galerie » d'un profil de persona deviennent modulables : chaque image se redimensionne en glissant sa poignée en coin, jusqu'à occuper toute la largeur de sa ligne si elle est seule, et peut être déplacée (y compris recentrée sur sa propre ligne, sans perdre sa largeur) ou vers une autre ligne. Un bouton par image permet d'afficher ou non un fond derrière elle. Les images sont affichées en entier plutôt que recadrées et gardent leurs propres proportions (hauteur naturelle) — y compris sur mobile, où leur largeur respecte le même %age de la grille qu'en édition, et où les boutons d'action restent visibles sans survol.",
+    text: "Les images d'une section « Galerie » d'un profil de persona deviennent modulables : chaque image se redimensionne en glissant sa poignée en coin, jusqu'à occuper toute la largeur de sa ligne si elle est seule, et peut être déplacée (y compris recentrée sur sa propre ligne, sans perdre sa largeur) ou vers une autre ligne — un encadré affiche désormais l'emplacement exact où elle atterrira pendant le glissement. Un bouton par image permet d'afficher ou non un fond derrière elle. Les images sont affichées en entier plutôt que recadrées et gardent leurs propres proportions (hauteur naturelle) — y compris sur mobile, où leur largeur respecte le même %age de la grille qu'en édition, et où les boutons d'action restent visibles sans survol.",
   },
   {
     date: "2026-08",
