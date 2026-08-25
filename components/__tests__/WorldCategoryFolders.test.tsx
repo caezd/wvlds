@@ -196,7 +196,7 @@ describe("WorldCategoryFolders", () => {
     expect(screen.getByText("A")).toBeInTheDocument();
   });
 
-  it("adapte sa mise en page à la largeur de son conteneur (container queries), pas au viewport", async () => {
+  it("étagère horizontale de cartes par défaut (mobile : la grille repasse en une colonne unique)", async () => {
     let container!: HTMLElement;
     await act(async () => {
       ({ container } = render(
@@ -204,15 +204,37 @@ describe("WorldCategoryFolders", () => {
       ));
     });
 
-    // Liste verticale compacte par défaut (conteneur étroit) ; étagère
-    // horizontale de cartes seulement à partir de @sm — jamais de classe
-    // dépendant du viewport (sm:/md:) qui ignorerait la largeur réelle de
-    // la cellule de grille dans laquelle ce widget peut être placé.
     const root = container.firstElementChild!;
-    expect(root.className).toContain("@sm:flex-row");
-    expect(root.className).not.toMatch(/(?<!@)\bsm:/);
-
+    expect(root.className).toContain("overflow-x-auto");
     const card = screen.getByText("Annonces").closest("button")!;
-    expect(card.className).toContain("@sm:flex-col");
+    expect(card.className).toContain("w-36");
+  });
+
+  it("redevient une liste verticale à partir de `sm:` quand le bloc partage sa ligne avec un autre (fullWidth=false)", async () => {
+    let container!: HTMLElement;
+    await act(async () => {
+      ({ container } = render(
+        <WorldCategoryFolders worldId="world-1" selectedCategoryId={null} onSelectCategory={vi.fn()} fullWidth={false} />,
+      ));
+    });
+
+    const root = container.firstElementChild!;
+    expect(root.className).toContain("sm:flex-col");
+    const card = screen.getByText("Annonces").closest("button")!;
+    expect(card.className).toContain("sm:w-auto");
+  });
+
+  it("reste en étagère même à partir de `sm:` quand le bloc occupe seul toute sa ligne (fullWidth=true)", async () => {
+    let container!: HTMLElement;
+    await act(async () => {
+      ({ container } = render(
+        <WorldCategoryFolders worldId="world-1" selectedCategoryId={null} onSelectCategory={vi.fn()} fullWidth />,
+      ));
+    });
+
+    const root = container.firstElementChild!;
+    expect(root.className).not.toContain("sm:flex-col");
+    const card = screen.getByText("Annonces").closest("button")!;
+    expect(card.className).not.toContain("sm:w-auto");
   });
 });

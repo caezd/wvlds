@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Interface",
+    text: "Le bloc Catégories de la page d'accueil affiche désormais une liste verticale compacte quand il partage sa ligne avec un autre bloc, et une étagère de cartes à défilement horizontal quand il occupe seul toute la largeur (y compris sur mobile, où la grille repasse en une colonne).",
+  },
+  {
+    date: "2026-08",
     tag: "Correctif",
     text: "Sur mobile, le bouton menu pouvait devenir inaccessible pendant le chargement d'une conversation, de l'Explorateur ou d'un onglet de monde (membres, personas, wiki, chronologie…) : un bouton de secours s'affiche désormais pendant tout le temps de chargement.",
   },

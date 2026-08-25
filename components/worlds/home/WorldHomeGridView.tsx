@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
 import {
   DEFAULT_HOME_GRID_GAP,
+  HOME_GRID_COLS,
   HOME_GRID_GAP_PRESETS,
   widgetOptionValue,
   type WorldHomeGridGap,
@@ -156,6 +157,7 @@ function renderBlock(
           worldId={ctx.worldId}
           selectedCategoryId={ctx.selectedCategoryId}
           onSelectCategory={ctx.onSelectCategory}
+          fullWidth={item.w >= HOME_GRID_COLS}
         />
       );
     case "composer":

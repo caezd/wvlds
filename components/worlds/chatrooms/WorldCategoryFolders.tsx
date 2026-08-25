@@ -21,10 +21,13 @@ export function WorldCategoryFolders({
   worldId,
   selectedCategoryId,
   onSelectCategory,
+  fullWidth = false,
 }: {
   worldId: string;
   selectedCategoryId: string | null;
   onSelectCategory: (categoryId: string | null) => void;
+  /** Le bloc occupe seul toute la largeur de sa ligne (ex: `item.w === HOME_GRID_COLS`) — étagère horizontale de cartes même en desktop, comme sur mobile (cf. WorldHomeGridView.tsx). */
+  fullWidth?: boolean;
 }) {
   const t = useTranslations("worlds");
   const [categories, setCategories] = useState<Category[]>([]);
@@ -76,12 +79,20 @@ export function WorldCategoryFolders({
   if (categories.length === 0) return null;
 
   return (
-    // Conteneur de container queries hérité du bloc parent (voir
-    // WorldHomeGridView.tsx) : la mise en page s'adapte à la largeur réelle
-    // de la cellule de grille, pas au viewport. Étroit (par défaut) → liste
-    // verticale compacte sur toute la hauteur ; large (@sm+) → étagère
-    // horizontale de grandes cartes, comme avant.
-    <div className="flex h-full flex-col gap-1.5 overflow-y-auto @sm:flex-row @sm:gap-3 @sm:overflow-x-auto @sm:overflow-y-visible @sm:px-1">
+    // Étagère horizontale de grandes cartes par défaut (mobile : le layout
+    // de la grille repasse en une colonne unique, cf. `grid-cols-1 sm:grid-
+    // cols-12` dans WorldHomeGridView.tsx — une liste verticale y prendrait
+    // toute la hauteur de l'écran) ; à partir de `sm:`, la grille reprend
+    // ses colonnes réelles et ce bloc redevient une liste verticale
+    // compacte — SAUF s'il occupe seul toute la largeur de sa ligne
+    // (`fullWidth`), auquel cas l'étagère reste plus lisible qu'une liste
+    // qui s'étirerait sur toute la largeur de l'écran.
+    <div
+      className={cn(
+        "flex h-full gap-3 overflow-x-auto overflow-y-visible px-1",
+        !fullWidth && "sm:flex-col sm:gap-1.5 sm:overflow-x-visible sm:overflow-y-auto sm:px-0",
+      )}
+    >
       {categories.map((cat) => {
         const isActive = selectedCategoryId === cat.id;
         // icon_url est une petite image dédiée aux avatars (sidebar) — l'étirer
@@ -94,22 +105,25 @@ export function WorldCategoryFolders({
             type="button"
             onClick={() => onSelectCategory(isActive ? null : cat.id)}
             className={cn(
-              "flex items-center gap-2 rounded-lg border p-1.5 text-left transition-colors",
-              "@sm:w-36 @sm:shrink-0 @sm:flex-col @sm:items-stretch @sm:gap-0 @sm:overflow-hidden @sm:rounded-xl @sm:p-0",
+              "flex w-36 shrink-0 flex-col items-stretch overflow-hidden rounded-xl border p-0 text-left transition-colors",
+              !fullWidth && "sm:w-auto sm:shrink sm:flex-row sm:items-center sm:gap-2 sm:overflow-visible sm:rounded-lg sm:p-1.5",
               isActive
                 ? "border-primary ring-1 ring-primary"
                 : "border-border-soft hover:border-border",
             )}
           >
-            <span className="relative block h-10 w-10 shrink-0 overflow-hidden rounded-md bg-muted-foreground/10 @sm:aspect-[4/3] @sm:h-auto @sm:w-full @sm:rounded-none">
+            <span
+              className={cn(
+                "relative block aspect-[4/3] h-auto w-full shrink-0 overflow-hidden rounded-none bg-muted-foreground/10",
+                !fullWidth && "sm:aspect-auto sm:h-10 sm:w-10 sm:rounded-md",
+              )}
+            >
               {image ? (
-                // La largeur réelle de CE conteneur est pilotée par une
-                // container query (@sm:, voir le parent), pas par le
-                // viewport — la carte peut donc être une liste 40px ou une
-                // étagère 144px selon la colonne de grille, sans qu'aucun
-                // `sizes` viewport-based ne puisse le distinguer. On
-                // pré-dimensionne donc nous-mêmes via imgproxy, large de
-                // marge (400px, x2 la plus grande carte réelle pour le DPR).
+                // La carte peut être une grande vignette (étagère) ou une
+                // petite icône 40px (liste) selon `fullWidth`/le viewport —
+                // on pré-dimensionne large (400px, x2 la plus grande carte
+                // réelle pour le DPR) plutôt que de deviner laquelle des
+                // deux tailles s'applique.
                 //
                 // `unoptimized` indispensable : un `sizes` en px fixe (sans
                 // `vw`) fait retomber Next.js sur sa plus grande largeur
@@ -130,9 +144,19 @@ export function WorldCategoryFolders({
                 </span>
               )}
             </span>
-            <span className="flex min-w-0 flex-1 flex-col gap-0.5 @sm:bg-card @sm:px-2.5 @sm:py-2">
+            <span
+              className={cn(
+                "flex min-w-0 flex-1 flex-col gap-0.5 bg-card px-2.5 py-2",
+                !fullWidth && "sm:bg-transparent sm:px-0 sm:py-0",
+              )}
+            >
               <span className="truncate text-sm font-semibold text-foreground">{cat.title}</span>
-              <span className="truncate text-xs text-muted-foreground @sm:line-clamp-2 @sm:whitespace-normal">
+              <span
+                className={cn(
+                  "text-xs text-muted-foreground line-clamp-2 whitespace-normal",
+                  !fullWidth && "sm:line-clamp-none sm:truncate sm:whitespace-nowrap",
+                )}
+              >
                 {cat.description || t("sidebar.subjects", { count: counts.get(cat.id) ?? 0 })}
               </span>
             </span>
