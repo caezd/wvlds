@@ -287,7 +287,8 @@ export function PersonaProfileSheetTrigger({
   React.useEffect(() => {
     setBannerThumbFailed(false);
   }, [bannerUrl]);
-  const [_frameUrl, setFrameUrl] = React.useState<string | null>(null);
+  const [frameUrl, setFrameUrl] = React.useState<string | null>(null);
+  const [dialogueColor, setDialogueColor] = React.useState<string | null>(null);
   const [ownerPresence, setOwnerPresence] = React.useState<{
     last_seen_at: string | null;
     appear_offline: boolean;
@@ -313,16 +314,17 @@ export function PersonaProfileSheetTrigger({
     async function load() {
       const { data: persona, error } = await supabase
         .from("personas")
-        .select("id,user_id,name,avatar_url,banner_url,frame:avatar_frame_id(asset_url)")
+        .select("id,user_id,name,avatar_url,banner_url,dialogue_color,frame:avatar_frame_id(asset_url)")
         .eq("id", personaId!)
         .maybeSingle();
 
       if (error) { toast.error(error.message ?? "Impossible de charger le profil."); fetchedKeyRef.current = null; return; }
       if (!cancelled && persona) {
-        const row = persona as unknown as { name?: string | null; avatar_url?: string | null; banner_url?: string | null; frame?: { asset_url?: string | null } | null };
+        const row = persona as unknown as { name?: string | null; avatar_url?: string | null; banner_url?: string | null; dialogue_color?: string | null; frame?: { asset_url?: string | null } | null };
         setName(row.name ?? label ?? null);
         setAvatarUrl(row.avatar_url ?? null);
         setBannerUrl(row.banner_url ?? null);
+        setDialogueColor(row.dialogue_color ?? null);
         setFrameUrl(row.frame?.asset_url ?? null);
       }
 
@@ -465,9 +467,12 @@ export function PersonaProfileSheetTrigger({
         {/* -- Header : banner + avatar + nom + stats -- */}
         <div>
           <div className="relative overflow-hidden">
-            {/* Banner */}
+            {/* Banner — fondu vers le bas en opacité (mask-image), pas une
+                couleur peinte en dur : même technique que WorldHeroCard.tsx,
+                pour ne pas trancher net sur le fond réel de la page derrière
+                le drawer. */}
             {bannerUrl ? (
-              <div className="relative h-34 w-full">
+              <div className="relative h-34 w-full [--hero-fade-start:3rem] [mask-image:linear-gradient(to_bottom,black_var(--hero-fade-start),transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,black_var(--hero-fade-start),transparent_100%)]">
                 <Image
                   src={bannerThumbFailed ? bannerUrl : (supabaseThumb(bannerUrl, 880, 80, 272) ?? bannerUrl)}
                   onError={() => setBannerThumbFailed(true)}
@@ -479,7 +484,7 @@ export function PersonaProfileSheetTrigger({
                 />
               </div>
             ) : (
-              <div className="h-34 bg-gradient-to-r from-muted/60 to-muted" />
+              <div className="h-34 bg-gradient-to-br from-card-400 to-card [--hero-fade-start:3rem] [mask-image:linear-gradient(to_bottom,black_var(--hero-fade-start),transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,black_var(--hero-fade-start),transparent_100%)]" />
             )}
 
             <div className="px-4 pb-4 -mt-16">
@@ -492,13 +497,14 @@ export function PersonaProfileSheetTrigger({
                     fallback={name ? getInitials(name) : "?"}
                     presenceState="invisible"
                     size={128}
+                    frameUrl={frameUrl}
                     className="outline-4 outline-background rounded-2xl"
                   />
                 </div>
 
                 {/* Nom + stats */}
                 <div className="pb-1 min-w-0 flex-1">
-                  <div className="h-16 pb-2 mb-2 flex items-end justify-between gap-3">
+                  <div className="flex items-center justify-between gap-3 pb-2 mb-2">
                     <p className="min-w-0 text-xl font-semibold leading-tight truncate">
                       {name ?? label ?? "—"}
                     </p>
@@ -516,12 +522,28 @@ export function PersonaProfileSheetTrigger({
                       </button>
                     )}
                   </div>
-                  {presenceLine && (
-                    <p className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <PresenceDot state={userPresence} />
-                      {presenceLine}
-                    </p>
-                  )}
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                    {presenceLine && (
+                      <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <PresenceDot state={userPresence} />
+                        {presenceLine}
+                      </p>
+                    )}
+                    {dialogueColor && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <span
+                              className="h-3 w-3 shrink-0 rounded-full border border-border-soft"
+                              style={{ backgroundColor: dialogueColor }}
+                            />
+                            Couleur de dialogue
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom">{dialogueColor}</TooltipContent>
+                      </Tooltip>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

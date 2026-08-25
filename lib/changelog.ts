@@ -8,6 +8,16 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Personas",
+    text: "Les images d'une section « Galerie » d'un profil de persona deviennent modulables : chaque image se redimensionne en glissant sa poignée en coin, jusqu'à occuper toute la largeur de sa ligne si elle est seule, et peut être déplacée (y compris recentrée sur sa propre ligne, sans perdre sa largeur) ou vers une autre ligne. Un bouton par image permet d'afficher ou non un fond derrière elle. Les images sont affichées en entier plutôt que recadrées et gardent leurs propres proportions (hauteur naturelle) — y compris sur mobile, où leur largeur respecte le même %age de la grille qu'en édition, et où les boutons d'action restent visibles sans survol.",
+  },
+  {
+    date: "2026-08",
+    tag: "Personas",
+    text: "La fiche d'un persona affiche désormais sa couleur de dialogue quand elle est définie, et son cadre d'avatar équipé — chargé mais jamais affiché jusqu'ici. La bannière s'estompe aussi en fondu vers le bas plutôt que de s'arrêter net, comme sur la page d'accueil d'un monde.",
+  },
+  {
+    date: "2026-08",
     tag: "Correctif",
     text: "Sur mobile, le bouton menu pouvait devenir inaccessible pendant le chargement d'une conversation, de l'Explorateur ou d'un onglet de monde (membres, personas, wiki, chronologie…) : un bouton de secours s'affiche désormais pendant tout le temps de chargement.",
   },
