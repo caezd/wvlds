@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useTranslations } from "next-intl";
 import { Library, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -183,13 +183,13 @@ export function WorldLexiconManager({
   }, [open]);
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="flex flex-col gap-0 p-0 sm:max-w-lg">
-        <SheetHeader className="border-b border-border-soft">
-          <SheetTitle className="flex items-center gap-2">
+    <Drawer open={open} onOpenChange={onOpenChange} swipeDirection="right">
+      <DrawerContent className="inset-y-0 right-0 flex flex-col gap-0 border rounded-md bg-background text-foreground shadow-lg p-0 w-[min(calc(100%_-_var(--drawer-inset)*2),_460px)]">
+        <DrawerHeader className="border-b border-border-soft">
+          <DrawerTitle className="flex items-center gap-2">
             <Library className="h-4 w-4" /> {t("title")}
-          </SheetTitle>
-        </SheetHeader>
+          </DrawerTitle>
+        </DrawerHeader>
 
         <div className="min-h-0 flex-1 space-y-0.5 overflow-y-auto p-3">
           <p className="px-2 pb-2 text-xs text-muted-foreground">{t("description")}</p>
@@ -228,7 +228,7 @@ export function WorldLexiconManager({
             </button>
           )}
         </div>
-      </SheetContent>
-    </Sheet>
+      </DrawerContent>
+    </Drawer>
   );
 }

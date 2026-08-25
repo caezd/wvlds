@@ -1,5 +1,5 @@
 -- ============================================================
--- Migration 111 — Lexique du monde
+-- Migration 115 — Lexique du monde
 -- ============================================================
 -- Termes propres à un univers, définis par un éditeur du monde, mis en
 -- évidence automatiquement dans tout le contenu du wiki (voir
