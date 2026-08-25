@@ -8,6 +8,16 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Personas",
+    text: "Les « sections » d'une fiche de persona s'appellent désormais des « onglets », ce qui correspond mieux à ce qu'on manipule à l'écran. Toute cette partie de l'éditeur est aussi traduite en anglais et en espagnol, alors qu'elle était restée en français.",
+  },
+  {
+    date: "2026-08",
+    tag: "Personas",
+    text: "Édition d'une fiche sur mobile : tous les boutons qui n'apparaissaient qu'au survol (monter, descendre, supprimer un champ, et les suppressions dans l'inventaire, les compétences, les jauges, les traits, la chronologie et les listes) sont désormais visibles en permanence — le survol n'existe pas au tactile. Le bloc de texte s'ajuste aussi à la hauteur de son contenu au lieu de scroller, et passe en plus petit sur mobile. Un onglet vide reprend enfin le séparateur « ⊕ » habituel pour ajouter un champ, au lieu d'un bouton et d'un message dédiés.",
+  },
+  {
+    date: "2026-08",
     tag: "Correctif",
     text: "La zone de recadrage d'une bannière de persona était bien plus large que la bannière une fois affichée : environ 38% de la largeur choisie était rognée silencieusement, sans que l'aperçu ne le montre. Le recadrage et ses aperçus correspondent désormais exactement aux proportions réelles.",
   },
@@ -34,7 +44,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Personas",
-    text: "Les onglets de section d'un profil de persona (édition, aperçu, fiche publique) passent d'un style en pastille pleine à un soulignement, comme dans les paramètres d'un monde, et restent épinglés en haut du panneau une fois l'en-tête (bannière + avatar) défilé hors du cadre — la liste défile aussi horizontalement (comme les paramètres) au lieu de déborder, pour que le bouton « + Ajouter une section » reste toujours atteignable sur mobile. Dans l'éditeur, le bouton « ⋯ » (déplacer/renommer/supprimer une section) se rattache maintenant à son onglet plutôt que de flotter dans l'espacement entre onglets, et la bordure de chaque champ ainsi que le bouton d'ajout entre deux champs (masqués au survol seulement) restent visibles sur mobile, où il n'y a pas de survol.",
+    text: "Les onglets d'un profil de persona (édition, aperçu, fiche publique) passent d'un style en pastille pleine à un soulignement, comme dans les paramètres d'un monde, et restent épinglés en haut du panneau une fois l'en-tête (bannière + avatar) défilé hors du cadre — la liste défile aussi horizontalement (comme les paramètres) au lieu de déborder, pour que le bouton « + Ajouter un onglet » reste toujours atteignable sur mobile. Dans l'éditeur, le bouton « ⋯ » (déplacer/renommer/supprimer un onglet) se rattache maintenant à son onglet plutôt que de flotter dans l'espacement entre onglets, et la bordure de chaque champ ainsi que le bouton d'ajout entre deux champs (masqués au survol seulement) restent visibles sur mobile, où il n'y a pas de survol.",
   },
   {
     date: "2026-08",

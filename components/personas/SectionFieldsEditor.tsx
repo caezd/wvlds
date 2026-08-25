@@ -78,7 +78,7 @@ function StatsField({
           <button
             type="button"
             onClick={() => removeStat(stat.id)}
-            className="absolute -right-1.5 -top-1.5 hidden h-4 w-4 items-center justify-center rounded-full bg-muted text-muted-foreground hover:bg-destructive/10 hover:text-destructive group-hover/stat:flex"
+            className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-muted text-muted-foreground hover:bg-destructive/10 hover:text-destructive sm:hidden sm:group-hover/stat:flex"
             aria-label="Supprimer la stat"
           >
             <X className="h-2.5 w-2.5" />
@@ -135,7 +135,13 @@ function MarkdownTextField({
       }}
       submitOnEnter={false}
       placeholder="Écris en markdown…"
-      className="text-sm leading-relaxed font-mono pr-24"
+      className="text-xs sm:text-sm leading-relaxed font-mono pr-24"
+      // Le champ est un contentEditable : il grandit tout seul avec son
+      // contenu. Seul le `max-h-40` par défaut du wrapper le plafonnait et
+      // le faisait scroller — inadapté à une fiche, où le texte doit se lire
+      // d'un bloc (l'édition d'un message lève ce plafond de même, voir
+      // ChatroomMessage.tsx).
+      wrapperClassName="max-h-none"
     />
   );
 }
@@ -661,7 +667,7 @@ function InventoryField({
             <button
               type="button"
               onClick={() => removeItem(item.id)}
-              className="shrink-0 h-5 w-5 flex items-center justify-center rounded-full text-muted-foreground opacity-0 group-hover/item:opacity-100 hover:text-destructive transition-opacity"
+              className="shrink-0 h-5 w-5 flex items-center justify-center rounded-full text-muted-foreground opacity-100 sm:opacity-0 sm:group-hover/item:opacity-100 hover:text-destructive transition-opacity"
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -707,7 +713,7 @@ function InventoryField({
           <button
             type="button"
             onClick={() => removeItem(item.id)}
-            className="shrink-0 mt-2.5 h-5 w-5 flex items-center justify-center rounded-full text-muted-foreground opacity-0 group-hover/item:opacity-100 hover:text-destructive transition-opacity"
+            className="shrink-0 mt-2.5 h-5 w-5 flex items-center justify-center rounded-full text-muted-foreground opacity-100 sm:opacity-0 sm:group-hover/item:opacity-100 hover:text-destructive transition-opacity"
           >
             <X className="h-3.5 w-3.5" />
           </button>
@@ -792,7 +798,7 @@ function SkillsField({
             <button
               type="button"
               onClick={() => removeItem(item.id)}
-              className="shrink-0 h-5 w-5 flex items-center justify-center rounded-full text-muted-foreground opacity-0 group-hover/skill:opacity-100 hover:text-destructive transition-opacity"
+              className="shrink-0 h-5 w-5 flex items-center justify-center rounded-full text-muted-foreground opacity-100 sm:opacity-0 sm:group-hover/skill:opacity-100 hover:text-destructive transition-opacity"
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -834,7 +840,7 @@ function SkillsField({
           <button
             type="button"
             onClick={() => removeItem(item.id)}
-            className="shrink-0 mt-2.5 h-5 w-5 flex items-center justify-center rounded-full text-muted-foreground opacity-0 group-hover/skill:opacity-100 hover:text-destructive transition-opacity"
+            className="shrink-0 mt-2.5 h-5 w-5 flex items-center justify-center rounded-full text-muted-foreground opacity-100 sm:opacity-0 sm:group-hover/skill:opacity-100 hover:text-destructive transition-opacity"
           >
             <X className="h-3.5 w-3.5" />
           </button>
@@ -908,7 +914,7 @@ function GaugesField({
                 <button
                   type="button"
                   onClick={() => removeItem(item.id)}
-                  className="h-5 w-5 flex items-center justify-center rounded-full text-muted-foreground opacity-0 group-hover/gauge:opacity-100 hover:text-destructive transition-opacity"
+                  className="h-5 w-5 flex items-center justify-center rounded-full text-muted-foreground opacity-100 sm:opacity-0 sm:group-hover/gauge:opacity-100 hover:text-destructive transition-opacity"
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
@@ -998,7 +1004,7 @@ function TraitsField({
           <button
             type="button"
             onClick={() => removeItem(item.id)}
-            className="shrink-0 text-muted-foreground opacity-0 group-hover/trait:opacity-100 hover:text-destructive transition-opacity"
+            className="shrink-0 text-muted-foreground opacity-100 sm:opacity-0 sm:group-hover/trait:opacity-100 hover:text-destructive transition-opacity"
           >
             <X className="h-3 w-3" />
           </button>
@@ -1058,7 +1064,7 @@ function TimelineField({
               <button
                 type="button"
                 onClick={() => removeItem(item.id)}
-                className="shrink-0 h-5 w-5 flex items-center justify-center rounded-full text-muted-foreground opacity-0 group-hover/event:opacity-100 hover:text-destructive transition-opacity"
+                className="shrink-0 h-5 w-5 flex items-center justify-center rounded-full text-muted-foreground opacity-100 sm:opacity-0 sm:group-hover/event:opacity-100 hover:text-destructive transition-opacity"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -1121,7 +1127,7 @@ function DlField({
               <button
                 type="button"
                 onClick={() => removeItem(item.id)}
-                className="shrink-0 h-5 w-5 flex items-center justify-center rounded-full text-muted-foreground opacity-0 group-hover/dl:opacity-100 hover:text-destructive transition-opacity"
+                className="shrink-0 h-5 w-5 flex items-center justify-center rounded-full text-muted-foreground opacity-100 sm:opacity-0 sm:group-hover/dl:opacity-100 hover:text-destructive transition-opacity"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -1512,12 +1518,29 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
   }
 
 
-  function AddFieldMenu({ insertAt, trigger }: { insertAt: number; trigger?: ReactNode }) {
+  function AddFieldMenu({
+    insertAt,
+    trigger,
+    alwaysVisible,
+  }: {
+    insertAt: number;
+    trigger?: ReactNode;
+    /** Section vide : ce séparateur est la seule affordance d'ajout, il ne
+     *  peut donc pas rester discret comme entre deux champs existants. */
+    alwaysVisible?: boolean;
+  }) {
     return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           {trigger ?? (
-            <div className="cursor-pointer transition-opacity opacity-100 sm:opacity-0 sm:hover:opacity-100 sm:group-hover/field:opacity-100 relative h-6 w-full flex justify-center before:absolute before:h-px before:w-full before:top-1/2 before:-translate-y-1/2 before:bg-border">
+            <div
+              className={cn(
+                "cursor-pointer transition-opacity relative h-6 w-full flex justify-center before:absolute before:h-px before:w-full before:top-1/2 before:-translate-y-1/2 before:bg-border",
+                alwaysVisible
+                  ? "opacity-100"
+                  : "opacity-100 sm:opacity-0 sm:hover:opacity-100 sm:group-hover/field:opacity-100",
+              )}
+            >
               <button className="w-4 h-4 bg-accent/50 text-primary rounded-full inline-flex items-center justify-center absolute top-1/2 -translate-y-1/2 z-10">
                 <Plus size={12} />
               </button>
@@ -1598,16 +1621,8 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
       {errorMessage && <p className="text-xs text-red-500 mb-2">{errorMessage}</p>}
 
       {fields.length === 0 ? (
-        <div className="py-4 space-y-3">
-          <p className="text-sm text-muted-foreground">Aucun champ. Ajoutes-en un pour commencer.</p>
-          <AddFieldMenu
-            insertAt={0}
-            trigger={
-              <Button variant="outline" size="sm" type="button" className="w-full">
-                <Plus className="mr-2 h-4 w-4" /> Ajouter un champ
-              </Button>
-            }
-          />
+        <div className="py-4">
+          <AddFieldMenu insertAt={0} alwaysVisible />
         </div>
       ) : (
         <div className="space-y-0">
@@ -1623,7 +1638,7 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
                   {/* Badge permanent : champ requis par la fiche du monde */}
                   {!isTemplate && field.locked && (
                     <span
-                      className="absolute right-2.5 top-2 text-muted-foreground/50 group-hover:opacity-0 transition-opacity z-10"
+                      className="absolute right-2.5 top-2 text-muted-foreground/50 opacity-0 transition-opacity z-10 sm:opacity-100 sm:group-hover:opacity-0"
                       title="Champ requis par la fiche du monde"
                     >
                       <Lock className="h-3.5 w-3.5" />
@@ -1631,7 +1646,7 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
                   )}
 
                   {/* Actions flottantes */}
-                  <div className="absolute right-1.5 top-1 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                  <div className="absolute right-1.5 top-1 flex items-center gap-0.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity z-10">
                     <Button variant="ghost" size="icon-sm" type="button" className="h-7 w-7" onClick={() => handleMoveField(field.id, "up")} disabled={isFirst}>
                       <ArrowUp className="h-3.5 w-3.5" />
                     </Button>

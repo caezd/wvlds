@@ -12,6 +12,13 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./vitest.setup.ts"],
     css: false,
+    // 15 s plutôt que les 5 s par défaut. Aucun test ici ne mesure une durée :
+    // ce délai n'est qu'un garde-fou contre un test réellement bloqué. Les plus
+    // lents (ChangelogFilters, WorldWiki) tournent en ~0,5–0,9 s isolés, mais
+    // la suite lance un worker jsdom par fichier en parallèle — sous contention
+    // (beaucoup de cœurs, serveur de dev à côté) ils franchissaient les 5 s et
+    // échouaient sans qu'aucun code ne soit en cause.
+    testTimeout: 15000,
     // Les specs Playwright vivent dans e2e/ et ne doivent pas être ramassées par Vitest.
     // .claude/** exclut aussi les worktrees d'agents (ex. .claude/worktrees/**), qui
     // contiennent leur propre copie de e2e/ non couverte par le pattern ci-dessus.

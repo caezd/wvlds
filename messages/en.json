@@ -465,6 +465,22 @@
     "sidebarRelations": "Relations"
   },
   "personas": {
+    "tabs": {
+      "add": "Add a tab",
+      "createFirst": "Create a first tab",
+      "empty": "No tab for this character yet.",
+      "moveLeft": "Left",
+      "moveRight": "Right",
+      "rename": "Rename",
+      "lockedTitle": "This tab contains fields required by the world’s sheet",
+      "lockedLabel": "Required by the world",
+      "deleteDescription": "This tab and all its fields will be permanently deleted.",
+      "nameLabel": "Tab name",
+      "namePlaceholder": "e.g. Information",
+      "creating": "Creating…",
+      "renameTitle": "Rename tab",
+      "renaming": "Saving…"
+    },
     "title": "Personas",
     "count": "{count, plural, one {# persona} other {# personas}}",
     "groups": "{count, plural, one {# group} other {# groups}}",

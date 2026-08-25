@@ -462,6 +462,22 @@
     "sidebarRelations": "Relaciones"
   },
   "personas": {
+    "tabs": {
+      "add": "Añadir una pestaña",
+      "createFirst": "Crear una primera pestaña",
+      "empty": "Ninguna pestaña para este personaje.",
+      "moveLeft": "Izquierda",
+      "moveRight": "Derecha",
+      "rename": "Renombrar",
+      "lockedTitle": "Esta pestaña contiene campos requeridos por la ficha del mundo",
+      "lockedLabel": "Requerida por el mundo",
+      "deleteDescription": "Esta pestaña y todos sus campos se eliminarán definitivamente.",
+      "nameLabel": "Nombre de la pestaña",
+      "namePlaceholder": "Ej. Información",
+      "creating": "Creando…",
+      "renameTitle": "Renombrar la pestaña",
+      "renaming": "Guardando…"
+    },
     "title": "Personajes",
     "count": "{count, plural, one {# personaje} other {# personajes}}",
     "groups": "{count, plural, one {# grupo} other {# grupos}}",

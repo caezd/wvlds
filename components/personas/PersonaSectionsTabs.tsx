@@ -24,6 +24,7 @@ import {
 import { Lock, MoreHorizontal, ChevronLeft, ChevronRight, Pencil, Trash2 } from "lucide-react";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import type { PersonaSectionWithFields } from "@/types/personas";
 import { SectionFieldsEditor } from "./SectionFieldsEditor";
 
@@ -50,6 +51,8 @@ export function PersonaSectionsTabs({
   isTemplate,
 }: PersonaSectionsTabsProps) {
   const supabase = createClient();
+  const t = useTranslations("personas.tabs");
+  const tCommon = useTranslations("common");
 
   const [activeSectionId, setActiveSectionId] = useState<string | null>(
     sections[0]?.id ?? null,
@@ -139,11 +142,9 @@ export function PersonaSectionsTabs({
     <>
       {!sections.length ? (
         <div className="border rounded-md p-6 mx-4 mb-4 space-y-3">
-          <p className="text-sm text-muted-foreground">
-            Aucune section pour ce personnage.
-          </p>
+          <p className="text-sm text-muted-foreground">{t("empty")}</p>
           <Button variant="outline" size="sm" onClick={() => { setName(""); setAddDialogOpen(true); }}>
-            + Créer une première section
+            + {t("createFirst")}
           </Button>
         </div>
       ) : (
@@ -154,7 +155,7 @@ export function PersonaSectionsTabs({
         >
           <TabBar action={
             <Button type="button" variant="ghost" size="sm" onClick={() => { setName(""); setAddDialogOpen(true); }}>
-              + Ajouter une section
+              + {t("add")}
             </Button>
           }>
             {sections.map((section) => (
@@ -171,28 +172,28 @@ export function PersonaSectionsTabs({
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="start" className="w-44">
                       <DropdownMenuItem onClick={() => handleMoveSection("left")} disabled={activeIndex <= 0}>
-                        <ChevronLeft className="mr-2 h-4 w-4" /> Déplacer à gauche
+                        <ChevronLeft className="mr-2 h-4 w-4" /> {t("moveLeft")}
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => handleMoveSection("right")} disabled={activeIndex >= sections.length - 1}>
-                        <ChevronRight className="mr-2 h-4 w-4" /> Déplacer à droite
+                        <ChevronRight className="mr-2 h-4 w-4" /> {t("moveRight")}
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={() => { setName(sections.find((s) => s.id === value)?.name ?? ""); setRenameDialogOpen(true); }}>
-                        <Pencil className="mr-2 h-4 w-4" /> Renommer
+                        <Pencil className="mr-2 h-4 w-4" /> {t("rename")}
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       {activeHasLockedFields ? (
-                        <DropdownMenuItem disabled title="Cette section contient des champs requis par la fiche du monde">
-                          <Lock className="mr-2 h-4 w-4" /> Requise par le monde
+                        <DropdownMenuItem disabled title={t("lockedTitle")}>
+                          <Lock className="mr-2 h-4 w-4" /> {t("lockedLabel")}
                         </DropdownMenuItem>
                       ) : (
                         <DeleteConfirmDialog
                           trigger={
                             <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive">
-                              <Trash2 className="mr-2 h-4 w-4" /> Supprimer
+                              <Trash2 className="mr-2 h-4 w-4" /> {tCommon("delete")}
                             </DropdownMenuItem>
                           }
-                          description="Cette section et tous ses champs seront supprimés définitivement."
+                          description={t("deleteDescription")}
                           onConfirm={handleDeleteSection}
                         />
                       )}
@@ -227,58 +228,58 @@ export function PersonaSectionsTabs({
         </Tabs>
       )}
 
-      {/* Dialog : ajouter une section */}
+      {/* Dialog : ajouter un onglet */}
       <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
         <DialogContent className="sm:max-w-sm">
           <form onSubmit={handleAddSection} className="grid gap-4">
             <div className="grid gap-3">
               <DialogTitle asChild>
-                <Label htmlFor="section-name">Nom de la section</Label>
+                <Label htmlFor="section-name">{t("nameLabel")}</Label>
               </DialogTitle>
               <Input
                 id="section-name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Ex. Informations"
+                placeholder={t("namePlaceholder")}
                 autoFocus
                 maxLength={60}
               />
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setAddDialogOpen(false)}>
-                Annuler
+                {tCommon("cancel")}
               </Button>
               <Button type="submit" disabled={!name.trim() || saving}>
-                {saving ? "Création…" : "Créer"}
+                {saving ? t("creating") : tCommon("create")}
               </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
-      {/* Dialog : renommer une section */}
+      {/* Dialog : renommer un onglet */}
       <Dialog open={renameDialogOpen} onOpenChange={setRenameDialogOpen}>
         <DialogContent className="sm:max-w-sm">
           <form onSubmit={handleRenameSection} className="grid gap-4">
             <div className="grid gap-3">
               <DialogTitle asChild>
-                <Label htmlFor="rename-section">Renommer la section</Label>
+                <Label htmlFor="rename-section">{t("renameTitle")}</Label>
               </DialogTitle>
               <Input
                 id="rename-section"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Nom de la section"
+                placeholder={t("nameLabel")}
                 autoFocus
                 maxLength={60}
               />
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setRenameDialogOpen(false)}>
-                Annuler
+                {tCommon("cancel")}
               </Button>
               <Button type="submit" disabled={!name.trim() || saving}>
-                {saving ? "Enregistrement…" : "Renommer"}
+                {saving ? t("renaming") : t("rename")}
               </Button>
             </DialogFooter>
           </form>

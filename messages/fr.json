@@ -466,6 +466,22 @@
     "sidebarRelations": "Relations"
   },
   "personas": {
+    "tabs": {
+      "add": "Ajouter un onglet",
+      "createFirst": "Créer un premier onglet",
+      "empty": "Aucun onglet pour ce personnage.",
+      "moveLeft": "Gauche",
+      "moveRight": "Droite",
+      "rename": "Renommer",
+      "lockedTitle": "Cet onglet contient des champs requis par la fiche du monde",
+      "lockedLabel": "Requis par le monde",
+      "deleteDescription": "Cet onglet et tous ses champs seront supprimés définitivement.",
+      "nameLabel": "Nom de l’onglet",
+      "namePlaceholder": "Ex. Informations",
+      "creating": "Création…",
+      "renameTitle": "Renommer l’onglet",
+      "renaming": "Enregistrement…"
+    },
     "title": "Personas",
     "count": "{count, plural, one {# persona} other {# personas}}",
     "groups": "{count, plural, one {# groupe} other {# groupes}}",
