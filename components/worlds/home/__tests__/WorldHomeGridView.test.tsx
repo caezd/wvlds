@@ -138,6 +138,25 @@ describe("WorldHomeGridView", () => {
     expect(chatroomsGridProps).toHaveBeenCalledWith(expect.objectContaining({ categoryId: "cat-1" }));
   });
 
+  it("passe fullWidth=true au bloc catégories quand il occupe seul les 12 colonnes, false s'il partage sa ligne", () => {
+    const { rerender } = render(
+      <WorldHomeGridView
+        {...baseProps([
+          { id: "a", type: "widget", x: 0, y: 0, w: 6, widgetId: "categories" },
+          { id: "b", type: "widget", x: 6, y: 0, w: 6, widgetId: "chatrooms" },
+        ])}
+      />,
+    );
+    expect(categoryFoldersProps).toHaveBeenCalledWith(expect.objectContaining({ fullWidth: false }));
+
+    rerender(
+      <WorldHomeGridView
+        {...baseProps([{ id: "a", type: "widget", x: 0, y: 0, w: 12, widgetId: "categories" }])}
+      />,
+    );
+    expect(categoryFoldersProps).toHaveBeenCalledWith(expect.objectContaining({ fullWidth: true }));
+  });
+
   it("rend un bloc html dans une iframe sandboxée", () => {
     render(
       <WorldHomeGridView

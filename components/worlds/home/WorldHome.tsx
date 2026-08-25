@@ -300,7 +300,7 @@ export function WorldHome({
                   Les statistiques ont une position fixe ici (pas un bloc de
                   la grille) — seul leur affichage se règle, depuis Réglages
                   > Page d'accueil (voir WorldHomeGridSettings.tsx). */}
-              <div className="relative w-full space-y-2 px-12 pb-4 pt-40">
+              <div className="relative w-full space-y-2 px-3 pb-4 pt-40 sm:px-6 md:px-8 lg:px-12">
                 <span className="relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-md bg-muted">
                   {world.icon_url ? (
                     // `unoptimized` : `sizes` en px fixe (pas `vw`) fait
@@ -338,7 +338,7 @@ export function WorldHome({
                 `shrink-0` pour la même raison que le bloc bannière ci-dessus —
                 sans lui, la grille se ferait comprimer et son contenu
                 déborderait de la boîte au lieu de faire défiler la page. */}
-            <div className="shrink-0 px-12 pb-12">
+            <div className="shrink-0 px-3 pb-12 sm:px-6 md:px-8 lg:px-12">
               <div data-home-panel className="w-full rounded-2xl">
                 <WorldHomeGridView
                   items={gridItems}
