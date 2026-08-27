@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Interface",
+    text: "Les onglets du navigateur portent enfin un nom : jusqu'ici tous affichaient « WVLDS », y compris quand on ouvre plusieurs salons côte à côte. Un salon affiche désormais son nom et celui de son monde, une page de monde son nom, et chaque section son intitulé. Les favoris et les liens partagés en profitent aussi.",
+  },
+  {
+    date: "2026-08",
     tag: "Correctif",
     text: "Écran d'erreur : jusqu'ici, une erreur imprévue affichait une page blanche du framework, sans repère ni moyen de repartir autrement qu'en rechargeant à la main. L'application propose désormais un écran propre, avec un bouton « Réessayer » qui retente l'affichage sans recharger, un retour à l'accueil, et un code d'erreur à communiquer au support. Il s'affiche dans votre langue.",
   },
