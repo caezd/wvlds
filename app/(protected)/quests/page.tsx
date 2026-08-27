@@ -37,12 +37,15 @@ export async function generateMetadata() {
 }
 
 export default async function QuestsPage() {
-  const t = await getTranslations("quests");
-  const supabase = await createClient();
-  const userId = await getCurrentUserId();
+  // Ces quatre-là ne dépendent d'aucun des autres : ils partaient pourtant
+  // l'un après l'autre, avant même la première requête métier de la page.
+  const [t, supabase, userId, featureFlags] = await Promise.all([
+    getTranslations("quests"),
+    createClient(),
+    getCurrentUserId(),
+    getCachedFeatureFlags(),
+  ]);
   if (!userId) redirect("/login");
-
-  const featureFlags = await getCachedFeatureFlags();
   if (!featureFlags.quests) redirect("/");
 
   const today = new Date().toISOString().split("T")[0];
