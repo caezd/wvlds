@@ -9,6 +9,16 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Performance",
+    text: "Page de connexion nettement plus rapide à s'afficher : elle téléchargeait l'intégralité des traductions de l'application (37 Ko) alors qu'elle n'en utilise qu'un millième. Les pages internes n'embarquent plus non plus les textes de l'administration, de la boutique ou des réglages quand on ne s'y trouve pas.",
+  },
+  {
+    date: "2026-08",
+    tag: "Technique",
+    text: "Mise à jour des bibliothèques Supabase (client et intégration serveur), figées plusieurs dizaines de versions en arrière. Suppression au passage de deux composants d'affichage des salons devenus inutilisés, dont l'un maintenait un abonnement temps réel qui se recréait à chaque création de salon.",
+  },
+  {
+    date: "2026-08",
+    tag: "Performance",
     text: "Onglet « Membres » d'un monde : la liste des personas jouées par chaque membre était déduite en téléchargeant jusqu'à 2000 messages du monde pour les dédupliquer dans le navigateur — plusieurs centaines de Ko sur un monde actif. Le tri est désormais fait par la base, qui ne renvoie que le résultat. Corrige au passage un défaut de justesse : au-delà de 2000 messages, la troncature était silencieuse et arbitraire, si bien que des personas disparaissaient de la liste sans raison apparente.",
   },
   {
