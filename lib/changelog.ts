@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Correctif",
+    text: "Trois durcissements sur des opérations privilégiées :\n- L'**expiration des défis du jour** — une tâche de maintenance qui marque le défi comme échoué pour tous les joueurs — était déclenchable par n'importe qui, même sans compte. Elle est désormais réservée aux tâches planifiées\n- La **boutique** vérifiait le solde puis débitait en deux temps : deux achats lancés en même temps pouvaient tous deux passer et faire tomber le solde en négatif. Les deux opérations n'en font plus qu'une\n- Un **défi relevé** deux fois simultanément créditait la récompense en double. Le crédit est maintenant conditionné à la première validation",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
     text: "Les récompenses de message (XP et pièces) ne vérifiaient pas leur référence. On pouvait toucher le maximum quotidien sans rien écrire, et surtout réserver à l'avance les identifiants de messages à venir — privant leurs véritables auteurs de leur récompense, la protection anti-double-comptage étant commune à tous les comptes.\nLa référence doit désormais désigner un message réel, écrit par le compte qui la présente. Vérification faite : la faille n'avait jamais été exploitée.",
   },
   {
