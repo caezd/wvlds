@@ -6,6 +6,7 @@
     "confirm": "Confirm",
     "loading": "Loading…",
     "error": "An error occurred",
+    "saveError": "Couldn't save your change",
     "success": "Success",
     "close": "Close",
     "edit": "Edit",

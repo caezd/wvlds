@@ -222,7 +222,14 @@ export default function ChatRoomView({
   async function handleToggleFollow() {
     const next = !isFollowed;
     setIsFollowed(next);
-    await toggleFollowChatroom(chatId, next);
+    const res = await toggleFollowChatroom(chatId, next);
+    if (!res.ok) {
+      // Rien n'a été enregistré : on remet l'étoile dans son état réel plutôt
+      // que de laisser croire à un suivi qui n'existe pas.
+      setIsFollowed(!next);
+      toast.error(tCommon("saveError"), { description: res.error });
+      return;
+    }
     router.refresh();
   }
 

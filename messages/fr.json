@@ -6,6 +6,7 @@
     "confirm": "Confirmer",
     "loading": "Chargement…",
     "error": "Une erreur est survenue",
+    "saveError": "L'enregistrement a échoué",
     "success": "Succès",
     "close": "Fermer",
     "edit": "Modifier",

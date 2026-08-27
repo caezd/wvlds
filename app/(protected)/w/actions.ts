@@ -34,28 +34,34 @@ export async function saveWorldPrefs(
   }
 }
 
+/**
+ * L'appelant bascule l'étoile de façon optimiste : il lui faut savoir si
+ * l'écriture a tenu. Cette action renvoyait `void` et avalait ses erreurs —
+ * un refus laissait l'étoile allumée jusqu'au rechargement.
+ */
 export async function toggleFollowChatroom(
   chatroomId: string,
   follow: boolean,
-): Promise<void> {
+): Promise<{ ok: true } | { ok: false; error: string }> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return;
+  if (!user) return { ok: false, error: "Non authentifié." };
 
-  if (follow) {
-    await supabase.from("chatroom_follows").upsert(
-      { user_id: user.id, chatroom_id: chatroomId },
-      { onConflict: "user_id,chatroom_id" },
-    );
-  } else {
-    await supabase
-      .from("chatroom_follows")
-      .delete()
-      .eq("user_id", user.id)
-      .eq("chatroom_id", chatroomId);
-  }
+  const { error } = follow
+    ? await supabase.from("chatroom_follows").upsert(
+        { user_id: user.id, chatroom_id: chatroomId },
+        { onConflict: "user_id,chatroom_id" },
+      )
+    : await supabase
+        .from("chatroom_follows")
+        .delete()
+        .eq("user_id", user.id)
+        .eq("chatroom_id", chatroomId);
+
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
 }
 
 export async function toggleWorldFavorite(

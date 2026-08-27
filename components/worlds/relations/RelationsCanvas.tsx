@@ -613,13 +613,22 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
 
   async function assignGroup(personaId: string, gid: string | null) {
     setOpenGroupPicker(null);
-    if (!gid) {
-      await supabase.from("persona_group_assignments").delete().eq("persona_id", personaId).eq("world_id", worldId);
-      setGroupByPersona((p) => { const n = new Map(p); n.delete(personaId); return n; });
-    } else {
-      await supabase.from("persona_group_assignments").upsert({ persona_id: personaId, world_id: worldId, group_id: gid });
-      setGroupByPersona((p) => new Map(p).set(personaId, gid));
+    // L'erreur d'écriture n'était pas lue : un refus laissait l'affichage
+    // montrer le nouveau groupe, qui disparaissait au rechargement suivant.
+    const { error } = !gid
+      ? await supabase.from("persona_group_assignments").delete().eq("persona_id", personaId).eq("world_id", worldId)
+      : await supabase.from("persona_group_assignments").upsert({ persona_id: personaId, world_id: worldId, group_id: gid });
+
+    if (error) {
+      toast.error(tCommon("saveError"), { description: error.message });
+      return;
     }
+
+    setGroupByPersona((p) => {
+      const n = new Map(p);
+      if (gid) n.set(personaId, gid); else n.delete(personaId);
+      return n;
+    });
   }
 
   // ── Arrow pair detection ──────────────────────────────────────────────────

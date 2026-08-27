@@ -257,15 +257,22 @@ export async function deleteWorldCatalogCategory(id: string) {
   return { ok: true as const };
 }
 
+// Ces deux actions renvoyaient `{ ok: true }` sans jamais regarder le résultat
+// des écritures. L'appelant réordonne de façon optimiste : un refus RLS ou une
+// panne réseau laissait donc l'utilisateur devant un ordre qui semblait
+// enregistré et disparaissait au rechargement suivant. Les autres actions du
+// fichier, elles, remontent bien leur erreur.
 export async function batchUpdateCatalogCategoryOrder(
   categories: { id: string; sort_index: number; column_index: number }[],
 ) {
   const supabase = await createClient();
-  await Promise.all(
+  const results = await Promise.all(
     categories.map(({ id, sort_index, column_index }) =>
       supabase.from("world_catalog_categories").update({ sort_index, column_index }).eq("id", id),
     ),
   );
+  const failed = results.find((r) => r.error);
+  if (failed?.error) return { ok: false as const, error: failed.error.message };
   return { ok: true as const };
 }
 
@@ -275,11 +282,13 @@ export async function batchUpdateCatalogItemOrder(
 ) {
   const supabase = await createClient();
   const table = tableType === "inventory" ? "world_inventory_items" : "world_skills";
-  await Promise.all(
+  const results = await Promise.all(
     items.map(({ id, sort_index, category_id }) =>
       supabase.from(table).update({ sort_index, category_id }).eq("id", id),
     ),
   );
+  const failed = results.find((r) => r.error);
+  if (failed?.error) return { ok: false as const, error: failed.error.message };
   return { ok: true as const };
 }
 

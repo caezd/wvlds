@@ -629,6 +629,7 @@ export function WorldWiki({
     const reordered = arrayMove(siblings, oldIdx, newIdx);
     const updates = reordered.map((p, i) => ({ id: p.id, sort_index: i }));
 
+    const previous = pages;
     setPages(prev =>
       prev?.map(p => {
         const u = updates.find(u => u.id === p.id);
@@ -636,7 +637,14 @@ export function WorldWiki({
       }) ?? null
     );
 
-    void supabase.from("world_wiki_pages").upsert(updates);
+    // Le résultat de l'écriture n'était pas lu : un refus laissait le nouvel
+    // ordre à l'écran, perdu au rechargement suivant. On rétablit l'ordre
+    // précédent plutôt que d'afficher un état que la base ne connaît pas.
+    void supabase.from("world_wiki_pages").upsert(updates).then(({ error }: { error: { message: string } | null }) => {
+      if (!error) return;
+      setPages(previous);
+      toast.error(t("saveError"), { description: error.message });
+    });
   }
 
   const selectedPage = pages?.find(p => p.id === selectedId) ?? null;

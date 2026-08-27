@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Correctif",
+    text: "Des enregistrements qui échouaient sans le dire. L'interface se met à jour avant la réponse du serveur : quand l'écriture était refusée, le changement restait affiché et disparaissait au rechargement suivant, sans le moindre message. Corrigé pour :\n- Le **réordonnancement du catalogue** (objets, compétences et catégories)\n- Le **réordonnancement des pages du wiki**, qui rétablit désormais l'ordre précédent en cas d'échec\n- L'**assignation d'un groupe** dans la vue des relations\n- L'**étoile « salon suivi »**, qui revient à son état réel si le suivi n'a pas pu être enregistré",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
     text: "Trois durcissements sur des opérations privilégiées :\n- L'**expiration des défis du jour** — une tâche de maintenance qui marque le défi comme échoué pour tous les joueurs — était déclenchable par n'importe qui, même sans compte. Elle est désormais réservée aux tâches planifiées\n- La **boutique** vérifiait le solde puis débitait en deux temps : deux achats lancés en même temps pouvaient tous deux passer et faire tomber le solde en négatif. Les deux opérations n'en font plus qu'une\n- Un **défi relevé** deux fois simultanément créditait la récompense en double. Le crédit est maintenant conditionné à la première validation",
   },
   {

@@ -6,6 +6,7 @@
     "confirm": "Confirmar",
     "loading": "Cargando…",
     "error": "Ha ocurrido un error",
+    "saveError": "No se pudo guardar el cambio",
     "success": "Éxito",
     "close": "Cerrar",
     "edit": "Editar",

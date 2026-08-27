@@ -726,6 +726,19 @@ function DroppableColumn({
 
 // ── Catalogue list (main DnD logic) ──────────────────────────────────────────
 
+// Les réordonnancements du catalogue sont optimistes : la liste bouge avant
+// la réponse du serveur. Si l'écriture échoue — refus RLS, coupure réseau —
+// on ne peut pas laisser croire qu'elle a réussi : l'ordre affiché
+// disparaîtrait au rechargement sans que personne n'ait rien vu.
+function reportSaveFailure(
+  promise: Promise<{ ok: boolean; error?: string }>,
+  message: string,
+) {
+  void promise.then((res) => {
+    if (!res.ok) toast.error(message, { description: res.error });
+  });
+}
+
 function CatalogueList({
   type,
   worldId,
@@ -736,6 +749,7 @@ function CatalogueList({
   canEdit: boolean;
 }) {
   const t = useTranslations("catalogue");
+  const tCommon = useTranslations("common");
   const supabase = createClient();
   const [categories, setCategories] = useState<WorldCatalogCategory[]>([]);
   const [items, setItems] = useState<CatalogItem[]>([]);
@@ -859,10 +873,10 @@ function CatalogueList({
     );
     const reindexed = sorted.map((item, idx) => ({ ...item, sort_index: idx }));
     setItems(prev => [...prev.filter(i => i.category_id !== categoryId), ...reindexed]);
-    void batchUpdateCatalogItemOrder(
+    reportSaveFailure(batchUpdateCatalogItemOrder(
       reindexed.map(item => ({ id: item.id, sort_index: item.sort_index, category_id: categoryId })),
       type,
-    );
+    ), tCommon("saveError"));
   }
 
   // ── DnD ──
@@ -952,7 +966,7 @@ function CatalogueList({
         const colMap = new Map(distinctCols.map((col, i) => [col, i]));
         const next = raw.map(c => ({ ...c, column_index: colMap.get(c.column_index)! }));
         setCategories(next);
-        void batchUpdateCatalogCategoryOrder(next.map(c => ({ id: c.id, sort_index: c.sort_index, column_index: c.column_index })));
+        reportSaveFailure(batchUpdateCatalogCategoryOrder(next.map(c => ({ id: c.id, sort_index: c.sort_index, column_index: c.column_index }))), tCommon("saveError"));
         return;
       }
 
@@ -972,7 +986,7 @@ function CatalogueList({
         const colMap = new Map(distinctCols.map((col, i) => [col, i]));
         const next = raw.map(c => ({ ...c, column_index: colMap.get(c.column_index)! }));
         setCategories(next);
-        void batchUpdateCatalogCategoryOrder(next.map(c => ({ id: c.id, sort_index: c.sort_index, column_index: c.column_index })));
+        reportSaveFailure(batchUpdateCatalogCategoryOrder(next.map(c => ({ id: c.id, sort_index: c.sort_index, column_index: c.column_index }))), tCommon("saveError"));
         return;
       }
 
@@ -992,7 +1006,7 @@ function CatalogueList({
         const reordered = arrayMove(colCats, fromIdx, toIdx).map((c, i) => ({ ...c, sort_index: i }));
         const next = [...categories.filter(c => c.column_index !== targetColIdx), ...reordered];
         setCategories(next);
-        void batchUpdateCatalogCategoryOrder(next.map(c => ({ id: c.id, sort_index: c.sort_index, column_index: c.column_index })));
+        reportSaveFailure(batchUpdateCatalogCategoryOrder(next.map(c => ({ id: c.id, sort_index: c.sort_index, column_index: c.column_index }))), tCommon("saveError"));
       } else {
         // Cross-column move: insert before overCat in target column
         const updatedActive = { ...activeCat, column_index: targetColIdx };
@@ -1016,7 +1030,7 @@ function CatalogueList({
         const colMap = new Map(distinctCols.map((col, i) => [col, i]));
         const next = raw.map(c => ({ ...c, column_index: colMap.get(c.column_index)! }));
         setCategories(next);
-        void batchUpdateCatalogCategoryOrder(next.map(c => ({ id: c.id, sort_index: c.sort_index, column_index: c.column_index })));
+        reportSaveFailure(batchUpdateCatalogCategoryOrder(next.map(c => ({ id: c.id, sort_index: c.sort_index, column_index: c.column_index }))), tCommon("saveError"));
       }
       return;
     }
@@ -1043,10 +1057,10 @@ function CatalogueList({
 
         const reordered = arrayMove(catItems, fromIdx, toIdx);
         setItems([...items.filter(i => i.category_id !== targetCategoryId), ...reordered]);
-        void batchUpdateCatalogItemOrder(
+        reportSaveFailure(batchUpdateCatalogItemOrder(
           reordered.map((item, idx) => ({ id: item.id, sort_index: idx, category_id: targetCategoryId })),
           type,
-        );
+        ), tCommon("saveError"));
       } else {
         // Cross-category: onDragOver may have already moved the item in state.
         // Rebuild target list explicitly (always exclude active item) to stay idempotent.
@@ -1061,15 +1075,15 @@ function CatalogueList({
         const rest = items.filter(i => i.category_id !== targetCategoryId && i.id !== active.id);
         setItems([...rest, ...newTargetItems]);
 
-        void batchUpdateCatalogItemOrder(
+        reportSaveFailure(batchUpdateCatalogItemOrder(
           newTargetItems.map((item, idx) => ({ id: item.id, sort_index: idx, category_id: targetCategoryId })),
           type,
-        );
+        ), tCommon("saveError"));
         const sourceItems = rest.filter(i => i.category_id === origCategoryId);
-        void batchUpdateCatalogItemOrder(
+        reportSaveFailure(batchUpdateCatalogItemOrder(
           sourceItems.map((item, idx) => ({ id: item.id, sort_index: idx, category_id: origCategoryId })),
           type,
-        );
+        ), tCommon("saveError"));
       }
     }
   }
