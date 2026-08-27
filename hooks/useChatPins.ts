@@ -11,17 +11,32 @@ export function useChatPins(chatId: string | undefined) {
   const reconnectEpoch = useReconnectEpoch();
   const [pins, setPins] = useState<ChatPin[]>([]);
 
-  // Chargement initial
+  // Chargement initial.
+  //
+  // `ChatRoomView` n'est pas remonté quand on passe d'un salon à l'autre (même
+  // position dans l'arbre, pas de `key`) : ce hook garde donc son état d'un
+  // salon au suivant. Sans les deux précautions ci-dessous, changer de salon
+  // laissait les épingles du précédent à l'écran — et `view.tsx` allait alors
+  // chercher les messages épinglés de l'ancien salon pour les déchiffrer avec
+  // la clé du nouveau.
   useEffect(() => {
+    // 1) On repart d'une liste vide immédiatement, sans attendre la réponse.
+    setPins([]);
     if (!chatId) return;
+
+    // 2) Une réponse tardive pour un salon déjà quitté est ignorée : deux
+    //    navigations rapprochées peuvent revenir dans le désordre.
+    let cancelled = false;
     supabase
       .from(TABLE.CHAT_PINS)
       .select("*")
       .eq("chat_id", chatId)
       .order("created_at", { ascending: true })
       .then(({ data }: { data: ChatPin[] | null }) => {
-        if (data) setPins(data);
+        if (cancelled || !data) return;
+        setPins(data);
       });
+    return () => { cancelled = true; };
   }, [chatId, supabase]);
 
   // Realtime — INSERT / DELETE

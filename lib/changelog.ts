@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Correctif",
+    text: "Trois défauts d'affichage en passant d'un salon à l'autre, tous invisibles au rechargement de la page — ils ne se produisaient qu'en navigation interne :\n- Les **messages épinglés** du salon précédent restaient affichés le temps que les nouveaux arrivent, et pouvaient même s'y substituer durablement si deux changements de salon se suivaient de près\n- L'**étoile « salon suivi »** gardait l'état du salon quitté\n- Les **badges de défi gagné** du nouveau salon n'apparaissaient pas",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
     text: "Deux failles de confidentialité fermées, trouvées lors d'une revue systématique des règles d'accès à la base :\n- Les **clés de chiffrement des salons** étaient lisibles par n'importe quel compte, même membre d'aucun monde. Les messages eux-mêmes restaient protégés, mais la garantie du chiffrement — qu'une fuite des messages ne livre pas leur contenu — ne tenait plus. L'accès est désormais réservé aux membres du monde concerné\n- Les **profils** (dont les bios) et **le détail des votes** dans les sondages, y compris ceux de salons privés, étaient lisibles sans même être connecté. Il faut maintenant un compte",
   },
   {

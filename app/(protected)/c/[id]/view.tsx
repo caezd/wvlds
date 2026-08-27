@@ -417,6 +417,14 @@ export default function ChatRoomView({
     scrollAdjustRef.current = null;
     setPinnedMessagesExtra([]);
 
+    // Ces deux-là manquaient : leur `useState` ne lit son prop qu'au montage,
+    // et cette vue n'est PAS remontée quand on passe d'un salon à l'autre
+    // (même position dans l'arbre, pas de `key`). En navigation client,
+    // l'étoile « suivi » restait donc celle du salon précédent, et les badges
+    // de défi gagné du nouveau salon n'apparaissaient qu'après rechargement.
+    setIsFollowed(initialIsFollowed);
+    setChallengeBadges(new Map(initialChallengeBadges));
+
     // Réinitialise la clé quand on change de chatroom
     roomKeyRef.current = initialChatroomKey;
     setRoomKey(initialChatroomKey);
