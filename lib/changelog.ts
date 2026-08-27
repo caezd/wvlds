@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Correctif",
+    text: "Écran d'erreur : jusqu'ici, une erreur imprévue affichait une page blanche du framework, sans repère ni moyen de repartir autrement qu'en rechargeant à la main. L'application propose désormais un écran propre, avec un bouton « Réessayer » qui retente l'affichage sans recharger, un retour à l'accueil, et un code d'erreur à communiquer au support. Il s'affiche dans votre langue.",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
     text: "Fuite de mémoire dans le composer : joindre des images à un message puis continuer à écrire consommait de la mémoire à chaque caractère tapé, sans jamais la libérer — les images restaient retenues jusqu'au rechargement de la page. Sur une longue session avec plusieurs images, l'onglet pouvait devenir sensiblement plus lourd.",
   },
   {
