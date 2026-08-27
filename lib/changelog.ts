@@ -9,9 +9,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Correctif",
-    text: "Deux failles de confidentialité fermées, trouvées lors d'une revue systématique des règles d'accès à la base :
-- Les **clés de chiffrement des salons** étaient lisibles par n'importe quel compte, même membre d'aucun monde. Les messages eux-mêmes restaient protégés, mais la garantie du chiffrement — qu'une fuite des messages ne livre pas leur contenu — ne tenait plus. L'accès est désormais réservé aux membres du monde concerné
-- Les **profils** (dont les bios) et **le détail des votes** dans les sondages, y compris ceux de salons privés, étaient lisibles sans même être connecté. Il faut maintenant un compte",
+    text: "Deux failles de confidentialité fermées, trouvées lors d'une revue systématique des règles d'accès à la base :\n- Les **clés de chiffrement des salons** étaient lisibles par n'importe quel compte, même membre d'aucun monde. Les messages eux-mêmes restaient protégés, mais la garantie du chiffrement — qu'une fuite des messages ne livre pas leur contenu — ne tenait plus. L'accès est désormais réservé aux membres du monde concerné\n- Les **profils** (dont les bios) et **le détail des votes** dans les sondages, y compris ceux de salons privés, étaient lisibles sans même être connecté. Il faut maintenant un compte",
   },
   {
     date: "2026-08",
