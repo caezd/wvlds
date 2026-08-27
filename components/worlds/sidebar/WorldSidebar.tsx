@@ -1,8 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import {
   getCachedFeatureFlags,
+  getChatroomCategories,
   getChatroomsNav,
   getCurrentUserId,
+  getFollowedChatroomIds,
   getIsWorldAdmin,
   getUserWorlds,
   getWorldById,
@@ -34,15 +36,6 @@ type ParticipatedRoom = {
   has_unread: boolean;
 };
 
-type Category = {
-  id: string;
-  title: string;
-  banner_url: string | null;
-  icon_url: string | null;
-  position: number;
-};
-
-
 export default async function WorldSidebar({ worldId }: { worldId: string }) {
   const supabase = await createClient();
   const [userId, featureFlags, t, tNav] = await Promise.all([
@@ -56,7 +49,7 @@ export default async function WorldSidebar({ worldId }: { worldId: string }) {
   // la requête : la page (`WorldHomeContent` / `ChatRoomContent`) réclame les
   // mêmes données, elles ne sont donc plus chargées qu'une seule fois pour tout
   // l'arbre au lieu d'une fois par composant.
-  const [world, allRooms, participatedResult, canAdmin, userWorlds, quota, categoriesResult, followedResult] =
+  const [world, allRooms, participatedResult, canAdmin, userWorlds, quota, categories, followedIds] =
     await Promise.all([
       getWorldById(worldId),
       getChatroomsNav(worldId),
@@ -69,24 +62,13 @@ export default async function WorldSidebar({ worldId }: { worldId: string }) {
       getIsWorldAdmin(worldId, userId),
       getUserWorlds(),
       getWorldsQuota(),
-      supabase
-        .from("chatroom_categories")
-        .select("id, title, banner_url, icon_url, position")
-        .eq("world_id", worldId)
-        .order("position"),
-      userId
-        ? supabase
-          .from("chatroom_follows")
-          .select("chatroom_id")
-          .eq("user_id", userId)
-        : Promise.resolve({ data: [] }),
+      getChatroomCategories(worldId),
+      getFollowedChatroomIds(),
     ]);
 
   if (!world) return null;
 
   const participated = (participatedResult.data ?? []) as ParticipatedRoom[];
-  const categories = (categoriesResult.data ?? []) as Category[];
-  const followedIds = ((followedResult.data ?? []) as { chatroom_id: string }[]).map((r) => r.chatroom_id);
 
   const hasCatalogue =
     featureFlags.world_catalogue &&
@@ -156,7 +138,7 @@ export default async function WorldSidebar({ worldId }: { worldId: string }) {
       worldId={worldId}
       initialAll={allRooms}
       initialParticipated={participated}
-      initialFollowedIds={followedIds}
+      initialFollowedIds={[...followedIds]}
       categories={categories}
     />
   );

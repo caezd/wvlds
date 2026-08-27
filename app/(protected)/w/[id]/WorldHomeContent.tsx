@@ -4,7 +4,7 @@ import { canEditContent, canMemberPost } from "@/lib/worldPermissions";
 import { WorldHome } from "@/components/worlds/home/WorldHome";
 import type { AsidePersona } from "@/components/personas/WorldPersonaAsideClient";
 import { fetchSectionsByPersona } from "@/lib/personaSections";
-import { getChatroomsNav, getIsWorldAdmin, type WorldWithMembership } from "@/lib/currentRequest";
+import { getChatroomCategories, getChatroomsNav, getIsWorldAdmin, type WorldWithMembership } from "@/lib/currentRequest";
 
 type NavRoom = {
   id: string;
@@ -46,7 +46,7 @@ export default async function WorldHomeContent({
   // `getChatroomsNav` et `getIsWorldAdmin` sont mémoïsés pour la requête et
   // partagés avec `WorldSidebar`, monté par le layout : chacun ne part qu'une
   // fois, quel que soit le nombre de composants qui le réclame.
-  const [initialRooms, canAdmin, worldPrefs, initialPersonas] = await Promise.all([
+  const [initialRooms, canAdmin, worldPrefs, initialPersonas, initialCategories] = await Promise.all([
     (async (): Promise<NavRoom[]> => {
       const rooms = (await getChatroomsNav(worldId)) as NavRoom[];
       if (!world?.timeline_enabled || rooms.length === 0) return rooms;
@@ -107,6 +107,10 @@ export default async function WorldHomeContent({
         sections: sectionsByPersona.get(p.id) ?? [],
       }));
     })(),
+    // Mémoïsé et partagé avec `WorldSidebar` : elles étaient chargées côté
+    // serveur pour la barre latérale, puis **à nouveau côté client** par le bloc
+    // « Catégories » de l'accueil, qui repartait d'un état vide.
+    getChatroomCategories(worldId),
   ]);
 
   return (
@@ -119,6 +123,7 @@ export default async function WorldHomeContent({
       canEditTabs={canEditTabs}
       canPost={canPost}
       initialRooms={initialRooms}
+      initialCategories={initialCategories}
       initialPersonas={initialPersonas}
       initialPrefs={worldPrefs}
       view={view}

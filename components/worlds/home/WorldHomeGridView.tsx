@@ -10,6 +10,7 @@ import { WorldTimelineShortcutsWidget } from "./widgets/WorldTimelineShortcutsWi
 import { WorldHomeBannerView } from "./blocks/WorldHomeBannerBlock";
 import { cn } from "@/lib/utils";
 import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
+import type { ChatroomCategory } from "@/lib/currentRequest";
 import {
   DEFAULT_HOME_GRID_GAP,
   HOME_GRID_COLS,
@@ -61,6 +62,7 @@ export function WorldHomeGridView({
   canCreateChatroom,
   timelineConfig,
   initialRooms,
+  categories = [],
   selectedCategoryId,
   onSelectCategory,
   onWikiLink,
@@ -72,6 +74,9 @@ export function WorldHomeGridView({
   canCreateChatroom: boolean;
   timelineConfig?: WorldTimelineConfig;
   initialRooms: Room[];
+  /** Catégories chargées côté serveur (getChatroomCategories) — évite au bloc
+   *  « Catégories » de repartir d'un état vide puis de les refetcher. */
+  categories?: ChatroomCategory[];
   selectedCategoryId: string | null;
   onSelectCategory: (categoryId: string | null) => void;
   onWikiLink?: (slug: string) => void;
@@ -101,6 +106,7 @@ export function WorldHomeGridView({
             canCreateChatroom,
             timelineConfig,
             initialRooms,
+            categories,
             selectedCategoryId,
             onSelectCategory,
             onWikiLink,
@@ -120,6 +126,7 @@ function renderBlock(
     canCreateChatroom: boolean;
     timelineConfig?: WorldTimelineConfig;
     initialRooms: Room[];
+    categories: ChatroomCategory[];
     selectedCategoryId: string | null;
     onSelectCategory: (categoryId: string | null) => void;
     onWikiLink?: (slug: string) => void;
@@ -158,6 +165,8 @@ function renderBlock(
           selectedCategoryId={ctx.selectedCategoryId}
           onSelectCategory={ctx.onSelectCategory}
           fullWidth={item.w >= HOME_GRID_COLS}
+          initialCategories={ctx.categories}
+          initialRooms={ctx.initialRooms}
         />
       );
     case "composer":

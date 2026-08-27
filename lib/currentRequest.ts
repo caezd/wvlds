@@ -205,6 +205,53 @@ export const getWorldsQuota = cache(async (): Promise<Quota> => {
   return getUserQuotaWithClient(supabase, userId, "worlds", (profile?.plan as Plan | null) ?? null);
 });
 
+export type ChatroomCategory = {
+  id: string;
+  title: string;
+  description: string | null;
+  banner_url: string | null;
+  icon_url: string | null;
+  position: number;
+};
+
+/**
+ * Catégories de salons d'un monde, mémoïsées par `worldId`.
+ *
+ * Sur `/w/[id]` elles étaient chargées deux fois : côté serveur par
+ * `WorldSidebar`, puis **à nouveau côté client** par `WorldCategoryFolders` au
+ * montage. Ce getter sert les deux, et le bloc d'accueil reçoit désormais ses
+ * catégories en props initiales — il s'affiche donc au premier rendu au lieu
+ * d'apparaître après un aller-retour réseau.
+ */
+export const getChatroomCategories = cache(async (worldId: string): Promise<ChatroomCategory[]> => {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("chatroom_categories")
+    .select("id, title, description, banner_url, icon_url, position")
+    .eq("world_id", worldId)
+    .order("position");
+  return (data ?? []) as ChatroomCategory[];
+});
+
+/**
+ * Salons suivis par l'utilisateur courant, mémoïsés.
+ *
+ * `WorldSidebar` chargeait déjà la liste complète pour afficher la section
+ * « Suivi » ; `ChatRoomContent` relisait la même table pour la seule ligne du
+ * salon courant. Sur `/c/[id]`, les deux partaient dans le même rendu — la
+ * seconde est désormais dérivée de la première.
+ */
+export const getFollowedChatroomIds = cache(async (): Promise<Set<string>> => {
+  const userId = await getCurrentUserId();
+  if (!userId) return new Set();
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("chatroom_follows")
+    .select("chatroom_id")
+    .eq("user_id", userId);
+  return new Set(((data ?? []) as { chatroom_id: string }[]).map((r) => r.chatroom_id));
+});
+
 export type FavoriteWorld = { id: string; name: string; icon_url: string | null };
 
 /**

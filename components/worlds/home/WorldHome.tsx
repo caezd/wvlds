@@ -9,6 +9,7 @@ import { Globe, GlobeLock, Search, Star } from "lucide-react";
 
 import { WorldHeroCard } from "./WorldHeroCard";
 import { WorldHomeGridView } from "./WorldHomeGridView";
+import type { ChatroomCategory } from "@/lib/currentRequest";
 import { MobileDrawerOpenButton } from "@/components/sidebar/MobileDrawerOpenButton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { World, WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
@@ -61,6 +62,7 @@ export function WorldHome({
   canEditTabs,
   canPost,
   initialRooms,
+  initialCategories = [],
   initialPersonas,
   initialPrefs,
   view,
@@ -75,6 +77,8 @@ export function WorldHome({
   canEditTabs: boolean;
   canPost: boolean;
   initialRooms: Room[];
+  /** Catégories chargées côté serveur, partagées avec WorldSidebar. */
+  initialCategories?: ChatroomCategory[];
   initialPersonas: AsidePersona[];
   initialPrefs: WorldPrefs | null;
   view?: string;
@@ -350,6 +354,7 @@ export function WorldHome({
                   canCreateChatroom={create_chatroom}
                   timelineConfig={hasTimeline ? (world.timeline_config as WorldTimelineConfig) : undefined}
                   initialRooms={initialRooms}
+                  categories={initialCategories}
                   selectedCategoryId={selectedCategoryId}
                   onSelectCategory={handleSelectCategory}
                   onWikiLink={(slug) => router.push(`${baseHref}?view=wiki&page=${encodeURIComponent(slug)}`)}

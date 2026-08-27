@@ -5,7 +5,7 @@ import { decryptMessage } from "@/lib/crypto";
 import { aggregateChoiceVotes } from "@/lib/choiceVotes";
 import type { ChatMessageWithPersona, Persona, ChoiceVoteSummary } from "@/types/db";
 import { canMemberPost, canEditChatroom, canManageWorld } from "@/lib/worldPermissions";
-import { getChatroomsNav, type NavRoom } from "@/lib/currentRequest";
+import { getChatroomsNav, getFollowedChatroomIds, type NavRoom } from "@/lib/currentRequest";
 import type { ChatroomWithWorld } from "./getChatroom";
 
 export default async function ChatRoomContent({
@@ -74,7 +74,7 @@ export default async function ChatRoomContent({
   type ReactionRow = { message_id: number; emoji: string; user_id: string };
   type VoteRow = { message_id: number; option_id: string; user_id: string };
 
-  const [reactionRows, voteRows, navRooms, membership, followRow] = await Promise.all([
+  const [reactionRows, voteRows, navRooms, membership, followedIds] = await Promise.all([
     (async (): Promise<ReactionRow[]> => {
       if (!messageIds.length) return [];
       const { data: rows } = await supabase
@@ -107,12 +107,9 @@ export default async function ChatRoomContent({
         .maybeSingle();
       return data as { role: string } | null;
     })(),
-    supabase
-      .from("chatroom_follows")
-      .select("chatroom_id")
-      .eq("user_id", userId)
-      .eq("chatroom_id", id)
-      .maybeSingle(),
+    // Mémoïsé et partagé avec `WorldSidebar`, qui charge de toute façon la liste
+    // complète des salons suivis pour sa section « Suivi ».
+    getFollowedChatroomIds(),
   ]);
 
   const byMessage = new Map<
@@ -207,7 +204,7 @@ export default async function ChatRoomContent({
       canPost={canPost}
       initialChatrooms={initialRoomsSafe}
       chatroomKey={chatroomKey}
-      initialIsFollowed={!!followRow.data}
+      initialIsFollowed={followedIds.has(id)}
     />
   );
 }
