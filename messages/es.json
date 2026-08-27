@@ -18,7 +18,11 @@
     "openMenu": "Abrir el menú",
     "accountMenu": "Menú de la cuenta",
     "copyCode": "Copiar el código",
-    "pickEmoji": "Elegir un emoji"
+    "pickEmoji": "Elegir un emoji",
+    "copy": "Copiar",
+    "copied": "Copiado",
+    "navigation": "Navegación",
+    "worldPreview": "Vista previa del mundo"
   },
   "nav": {
     "profile": "Mi perfil",

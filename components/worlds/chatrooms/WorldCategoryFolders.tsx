@@ -32,7 +32,7 @@ export function WorldCategoryFolders({
   selectedCategoryId,
   onSelectCategory,
   fullWidth = false,
-  initialCategories = [],
+  initialCategories,
   initialRooms = [],
 }: {
   worldId: string;
@@ -43,17 +43,21 @@ export function WorldCategoryFolders({
   /** Catégories déjà chargées côté serveur (getChatroomCategories, mémoïsé et
    *  partagé avec WorldSidebar). Sans elles, le bloc démarrait vide — donc
    *  invisible (`categories.length === 0` rend `null`) — jusqu'au retour de son
-   *  propre fetch client. */
+   *  propre fetch client.
+   *
+   *  `undefined` = non fourni, le bloc charge alors lui-même. Un tableau vide
+   *  est une réponse à part entière (« ce monde n'a aucune catégorie ») et ne
+   *  doit surtout pas déclencher de requête de repli. */
   initialCategories?: Category[];
   /** Salons déjà chargés côté serveur : les compteurs en sont dérivés
    *  directement, au lieu d'un `select category_id from chatrooms` complet. */
   initialRooms?: { category_id?: string | null }[];
 }) {
   const t = useTranslations("worlds");
-  const [categories, setCategories] = useState<Category[]>(initialCategories);
+  const [categories, setCategories] = useState<Category[]>(initialCategories ?? []);
   const [counts, setCounts] = useState<Map<string, number>>(() => countByCategory(initialRooms));
   const reconnectEpoch = useReconnectEpoch();
-  const hasServerCategories = initialCategories.length > 0;
+  const hasServerCategories = initialCategories !== undefined;
 
   useEffect(() => {
     const supabase = createClient();

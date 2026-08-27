@@ -18,7 +18,11 @@
     "openMenu": "Open menu",
     "accountMenu": "Account menu",
     "copyCode": "Copy code",
-    "pickEmoji": "Pick an emoji"
+    "pickEmoji": "Pick an emoji",
+    "copy": "Copy",
+    "copied": "Copied",
+    "navigation": "Navigation",
+    "worldPreview": "World preview"
   },
   "nav": {
     "profile": "My profile",

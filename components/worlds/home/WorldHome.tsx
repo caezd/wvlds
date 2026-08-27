@@ -53,7 +53,7 @@ export function WorldHome({
   canEditTabs,
   canPost,
   initialRooms,
-  initialCategories = [],
+  initialCategories,
   initialWidgetData = {},
   initialPersonas,
   initialPrefs,

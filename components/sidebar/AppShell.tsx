@@ -130,7 +130,7 @@ function AppShellInner({
             anyPanelOpen || mobileSidebar ? "w-[min(calc(100%_-_var(--drawer-inset)*2),_360px)] touch:w-[min(calc(100%_-_var(--drawer-inset)*2),_460px)]" : "w-auto max-w-none",
           )}
         >
-          <VisuallyHidden><DrawerTitle>Navigation</DrawerTitle></VisuallyHidden>
+          <VisuallyHidden><DrawerTitle>{tCommon("navigation")}</DrawerTitle></VisuallyHidden>
           <div className="flex h-full overflow-hidden">
             {/* Rail d'icônes */}
             <div className={cn(

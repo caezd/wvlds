@@ -68,7 +68,7 @@ function CodeBlock({ className, children, ...props }: React.ComponentProps<"code
         className="opacity-0 group-hover:opacity-100 transition-opacity text-xs absolute right-2 top-2 rounded-md border bg-background/80 px-2 py-1"
         aria-label={tCommon("copyCode")}
       >
-        {copied ? "Copié" : "Copier"}
+        {copied ? tCommon("copied") : tCommon("copy")}
       </button>
       <pre className="overflow-x-auto rounded-lg border bg-muted/60 p-3">
         <code className={className} {...props} data-lang={lang}>

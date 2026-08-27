@@ -53,7 +53,7 @@ export function WorldHomeGridView({
   canCreateChatroom,
   timelineConfig,
   initialRooms,
-  categories = [],
+  categories,
   widgetData = {},
   selectedCategoryId,
   onSelectCategory,
@@ -68,6 +68,8 @@ export function WorldHomeGridView({
   initialRooms: Room[];
   /** Catégories chargées côté serveur (getChatroomCategories) — évite au bloc
    *  « Catégories » de repartir d'un état vide puis de les refetcher. */
+  /** `undefined` se propage jusqu'au bloc « Catégories », qui distingue
+   *  « non fourni » de « aucune catégorie ». */
   categories?: ChatroomCategory[];
   /** Données des widgets résolues côté serveur. */
   widgetData?: { recentPersonas?: RecentPersona[]; wikiPages?: WikiPage[] };
@@ -121,7 +123,7 @@ function renderBlock(
     canCreateChatroom: boolean;
     timelineConfig?: WorldTimelineConfig;
     initialRooms: Room[];
-    categories: ChatroomCategory[];
+    categories: ChatroomCategory[] | undefined;
     widgetData: { recentPersonas?: RecentPersona[]; wikiPages?: WikiPage[] };
     selectedCategoryId: string | null;
     onSelectCategory: (categoryId: string | null) => void;
