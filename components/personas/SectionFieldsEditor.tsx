@@ -174,17 +174,21 @@ function ImageGridField({
     if (!files?.length || !userId) return;
     setUploading(true);
     setUploadError(null);
-    const added: PersonaGridImage[] = [];
-    let errored = false;
-    for (const rawFile of Array.from(files)) {
-      const file = await toWebP(rawFile);
-      const path = `user-${userId}/section-images/${personaId}/${fieldId}/${Date.now()}-${file.name}`;
-      const { error } = await supabase.storage.from("personas").upload(path, file, { upsert: false, contentType: file.type });
-      if (error) { errored = true; continue; }
-      const { data } = supabase.storage.from("personas").getPublicUrl(path);
-      added.push({ id: path, url: data.publicUrl });
-    }
-    if (errored) setUploadError("Certaines images n'ont pas pu être uploadées.");
+    // En parallèle plutôt qu'en série : ajouter plusieurs images à une galerie
+    // enchaînait autant de cycles compression + envoi. `toWebP` travaille dans
+    // un web worker, et `Promise.all` conserve l'ordre de sélection.
+    const settled = await Promise.all(
+      Array.from(files).map(async (rawFile): Promise<PersonaGridImage | null> => {
+        const file = await toWebP(rawFile);
+        const path = `user-${userId}/section-images/${personaId}/${fieldId}/${Date.now()}-${Math.random().toString(36).slice(2)}-${file.name}`;
+        const { error } = await supabase.storage.from("personas").upload(path, file, { upsert: false, contentType: file.type });
+        if (error) return null;
+        const { data } = supabase.storage.from("personas").getPublicUrl(path);
+        return { id: path, url: data.publicUrl };
+      }),
+    );
+    const added = settled.filter((img): img is PersonaGridImage => img !== null);
+    if (added.length < settled.length) setUploadError("Certaines images n'ont pas pu être uploadées.");
     const next = [...images, ...added];
     setImages(next);
     onSave(next);

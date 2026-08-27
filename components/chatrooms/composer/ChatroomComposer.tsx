@@ -334,17 +334,24 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
     }
 
     async function uploadMedia(files: File[], targetChatId: string): Promise<{ url: string; name: string }[]> {
-        const results: { url: string; name: string }[] = [];
-        for (const rawFile of files) {
-            const file = await toWebP(rawFile);
-            const ext = file.name.split(".").pop() ?? "webp";
-            const path = `${targetChatId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-            const { error } = await supabase.storage.from("chat-media").upload(path, file, { contentType: file.type });
-            if (error) { toast.error("Erreur upload image.", { description: error.message }); continue; }
-            const { data } = supabase.storage.from("chat-media").getPublicUrl(path);
-            results.push({ url: data.publicUrl, name: file.name });
-        }
-        return results;
+        // En parallèle plutôt qu'en série : joindre quatre images enchaînait
+        // quatre cycles compression + envoi, chacun attendant le précédent.
+        // `toWebP` compresse dans un web worker (browser-image-compression),
+        // l'interface ne bloque donc pas. `Promise.all` conserve l'ordre du
+        // tableau, et un échec isolé laisse simplement passer les autres —
+        // comme le `continue` d'avant.
+        const settled = await Promise.all(
+            files.map(async (rawFile): Promise<{ url: string; name: string } | null> => {
+                const file = await toWebP(rawFile);
+                const ext = file.name.split(".").pop() ?? "webp";
+                const path = `${targetChatId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+                const { error } = await supabase.storage.from("chat-media").upload(path, file, { contentType: file.type });
+                if (error) { toast.error("Erreur upload image.", { description: error.message }); return null; }
+                const { data } = supabase.storage.from("chat-media").getPublicUrl(path);
+                return { url: data.publicUrl, name: file.name };
+            }),
+        );
+        return settled.filter((r): r is { url: string; name: string } => r !== null);
     }
 
     async function uploadIconImageForBlock(file: File): Promise<string | null> {
