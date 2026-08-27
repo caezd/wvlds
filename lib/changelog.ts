@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Correctif",
+    text: "Les récompenses de message (XP et pièces) ne vérifiaient pas leur référence. On pouvait toucher le maximum quotidien sans rien écrire, et surtout réserver à l'avance les identifiants de messages à venir — privant leurs véritables auteurs de leur récompense, la protection anti-double-comptage étant commune à tous les comptes.\nLa référence doit désormais désigner un message réel, écrit par le compte qui la présente. Vérification faite : la faille n'avait jamais été exploitée.",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
     text: "Faille critique fermée dans les invitations de monde. N'importe quel compte connecté pouvait devenir **administrateur de n'importe quel monde**, y compris privé, en deux appels : s'auto-inviter avec le rôle de son choix, puis accepter cette invitation. Une seconde voie permettait à un invité légitime de se promouvoir en administrateur avant d'accepter. Les deux ont été reproduites puis refermées :\n- Créer une invitation exige désormais d'être administrateur du monde visé\n- Le rôle d'une invitation n'est plus modifiable après son envoi\n- Une invitation ne peut plus conférer la propriété d'un monde\n- Inviter par courriel vérifie aussi les droits de l'envoyeur : cette action contourne les règles d'accès habituelles et ne le contrôlait pas, permettant à quiconque de faire envoyer un courriel d'invitation signé du site vers n'importe quelle adresse\nAu passage, l'invitation par courriel **fonctionne enfin** : elle n'ajoutait en réalité jamais l'invité au monde. Le monde et le rôle transitaient par les métadonnées du compte, que l'utilisateur peut réécrire lui-même, et l'ajout était de toute façon refusé sans que l'erreur soit lue. L'invitation est maintenant enregistrée comme les autres et apparaît dans les notifications de l'invité.",
   },
   {
