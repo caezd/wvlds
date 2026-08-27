@@ -49,6 +49,7 @@ export const RPC = {
   CLAIM_CHALLENGE_ATTEMPT: "claim_challenge_attempt",
   EXPIRE_DAILY_CHALLENGES: "expire_daily_challenges",
   GET_DAILY_CHALLENGE_JOURNAL: "get_daily_challenge_journal",
+  GET_WORLD_MEMBER_PERSONAS: "get_world_member_personas",
 } as const;
 
 // --- Realtime channel name factories -----------------------------------------

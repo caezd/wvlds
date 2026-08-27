@@ -24,6 +24,7 @@ import { X } from "lucide-react";
 import { supabaseThumb } from "@/lib/storage";
 import { getLeadingLetter } from "@/lib/textFormatting";
 import { cn } from "@/lib/utils";
+import { fetchPersonasByMember } from "@/lib/worldMemberPersonas";
 const WorldInviteDialog = dynamic(() =>
   import("@/components/worlds/members/WorldInviteDialog").then((m) => m.WorldInviteDialog),
 );
@@ -276,36 +277,10 @@ export function WorldMembersSheet({
       ((profileRows ?? []) as ProfileRow[]).map((p) => [p.id, p])
     );
 
-    // 4. Salles du monde
-    const { data: chatrooms } = await supabase
-      .from("chatrooms")
-      .select("id")
-      .eq("world_id", worldId);
-
-    const chatroomIds = ((chatrooms ?? []) as Array<{ id: string }>).map((c) => c.id);
-
-    // 5. Personas distincts par auteur dans les salles du monde
-    const personasByUser = new Map<string, PersonaInfo[]>();
-
-    if (chatroomIds.length > 0) {
-      const { data: msgRows } = await supabase
-        .from("chat_messages")
-        .select("author_id, persona:persona_id(id, name, avatar_url)")
-        .in("chat_id", chatroomIds)
-        .not("persona_id", "is", null)
-        .limit(2000);
-
-      for (const row of msgRows ?? []) {
-        const uid = row.author_id as string | null;
-        const p = row.persona as unknown as PersonaInfo | null;
-        if (!uid || !p?.id) continue;
-        if (!personasByUser.has(uid)) personasByUser.set(uid, []);
-        const list = personasByUser.get(uid)!;
-        if (!list.some((x) => x.id === p.id)) {
-          list.push({ id: p.id, name: p.name, avatar_url: p.avatar_url });
-        }
-      }
-    }
+    // 4. Personas distincts par auteur — dédupliqués par Postgres. Remplace le
+    // couple « salles du monde » + 2000 `chat_messages` filtrés dessus
+    // (cf. lib/worldMemberPersonas.ts, migration 118).
+    const personasByUser = await fetchPersonasByMember(supabase, worldId);
 
     const result: Member[] = allRows
       .map((row) => {
