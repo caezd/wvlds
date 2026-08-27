@@ -9,6 +9,21 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Performance",
+    text: "Joindre plusieurs images à un message, ou en ajouter à une galerie de fiche, les envoie désormais en parallèle au lieu d'une par une : quatre images ne demandent plus quatre attentes bout à bout. Corrige au passage un cas où deux fichiers portant le même nom, envoyés en même temps, pouvaient se refuser mutuellement.",
+  },
+  {
+    date: "2026-08",
+    tag: "Performance",
+    text: "Explorateur, page des personas et boutique : ces pages enchaînaient des requêtes qui ne s'attendaient pas les unes les autres (jusqu'à six allers-retours successifs sur l'Explorateur, dont les traductions, demandées en tout dernier). Elles sont désormais groupées — quatre allers-retours économisés au total.",
+  },
+  {
+    date: "2026-08",
+    tag: "Performance",
+    text: "Page d'accueil d'un monde : les blocs « Personas récentes » et « Raccourcis wiki » s'affichaient vides le temps d'un aller-retour. Leur contenu arrive maintenant avec la page, et n'est chargé que pour les blocs réellement placés dans la grille du monde.",
+  },
+  {
+    date: "2026-08",
+    tag: "Performance",
     text: "Déchiffrement des messages accéléré : la clé du salon était redérivée à chaque message affiché, soit une cinquantaine d'opérations cryptographiques pour ouvrir une conversation — et bien davantage pendant une recherche, qui parcourt les messages de plusieurs salons. Elle n'est plus calculée qu'une fois.",
   },
   {
