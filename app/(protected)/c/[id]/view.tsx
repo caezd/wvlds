@@ -169,6 +169,8 @@ export default function ChatRoomView({
   initialChatrooms,
   chatroomKey: initialChatroomKey,
   initialIsFollowed,
+  initialPersonaGroupColors,
+  initialChallengeBadges,
 }: {
   chatId: string;
   initialChat: {
@@ -191,6 +193,10 @@ export default function ChatRoomView({
   initialChatrooms: ChatroomNavItem[];
   chatroomKey: string | null;
   initialIsFollowed: boolean;
+  /** Couleurs de groupe des personas, résolues côté serveur (cf. ChatRoomContent). */
+  initialPersonaGroupColors: Record<string, string>;
+  /** Badges « défi remporté » des messages initiaux, résolus côté serveur. */
+  initialChallengeBadges: [number, ChallengeBadge][];
 }) {
   const t = useTranslations("chatrooms");
   const tCommon = useTranslations("common");
@@ -225,7 +231,9 @@ export default function ChatRoomView({
 
   const [chat, setChat] = useState(initialChat);
   const [messages, setMessages] = useState(initialMessages);
-  const [challengeBadges, setChallengeBadges] = useState<Map<number, ChallengeBadge>>(new Map());
+  const [challengeBadges, setChallengeBadges] = useState<Map<number, ChallengeBadge>>(
+    () => new Map(initialChallengeBadges),
+  );
   const [activeChallenges, setActiveChallenges] = useState<ActiveDailyChallenge[]>([]);
   const wonChallengeIdsRef = useRef(new Set<string>());
 
@@ -238,7 +246,12 @@ export default function ChatRoomView({
   const [userId, setUserId] = useState<string | null>(selfId);
 
   // Couleur de groupe par persona_id (monde du chatroom)
-  const [personaGroupColors, setPersonaGroupColors] = useState<Map<string, string>>(new Map());
+  // Statiques pour la durée de la page : plus aucun code ne les met à jour
+  // depuis que le serveur les fournit — un état n'aurait plus de raison d'être.
+  const personaGroupColors = useMemo(
+    () => new Map(Object.entries(initialPersonaGroupColors)),
+    [initialPersonaGroupColors],
+  );
 
   // Signale le monde du chatroom courant pour le surlignage actif de
   // WorldsRail (le pathname `/c/[id]` seul ne le révèle pas).
@@ -247,23 +260,8 @@ export default function ChatRoomView({
     return () => setActiveWorldId(null);
   }, [chat.worlds?.id, setActiveWorldId]);
 
-  useEffect(() => {
-    const worldId = chat.worlds?.id;
-    if (!worldId) return;
-    void (async () => {
-      type AssignRow = { persona_id: string; group: { color: string } | null };
-      const { data } = await supabase
-        .from("persona_group_assignments")
-        .select("persona_id, group:group_id(color)")
-        .eq("world_id", worldId);
-      if (!data) return;
-      const map = new Map<string, string>();
-      for (const row of data as AssignRow[]) {
-        if (row.group?.color) map.set(row.persona_id, row.group.color);
-      }
-      setPersonaGroupColors(map);
-    })();
-  }, [chat.worlds?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Les couleurs de groupe arrivent en props (résolues côté serveur) : plus
+  // d'aller-retour réseau après l'hydratation pour cette donnée.
 
   /* challenge badges — charge + met à jour en Realtime */
   const loadChallengeBadges = useCallback(async (ids: number[]) => {
@@ -285,7 +283,8 @@ export default function ChatRoomView({
   }, [supabase]);
 
   useEffect(() => {
-    void loadChallengeBadges(initialMessages.map((m) => m.id));
+    // Les badges des messages initiaux viennent des props ; `loadChallengeBadges`
+    // ne sert plus qu'au Realtime ci-dessous et aux pages d'historique.
 
     const sub = supabase
       .channel(`challenge-badges-${chatId}`)

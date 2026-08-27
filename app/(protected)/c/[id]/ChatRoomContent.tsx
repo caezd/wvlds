@@ -74,7 +74,7 @@ export default async function ChatRoomContent({
   type ReactionRow = { message_id: number; emoji: string; user_id: string };
   type VoteRow = { message_id: number; option_id: string; user_id: string };
 
-  const [reactionRows, voteRows, navRooms, membership, followedIds] = await Promise.all([
+  const [reactionRows, voteRows, navRooms, membership, followedIds, personaGroupColors, challengeBadges] = await Promise.all([
     (async (): Promise<ReactionRow[]> => {
       if (!messageIds.length) return [];
       const { data: rows } = await supabase
@@ -110,6 +110,36 @@ export default async function ChatRoomContent({
     // Mémoïsé et partagé avec `WorldSidebar`, qui charge de toute façon la liste
     // complète des salons suivis pour sa section « Suivi ».
     getFollowedChatroomIds(),
+    // Couleurs de groupe des personas du monde. Chargées ici plutôt que dans un
+    // effet au montage : c'était un aller-retour réseau de plus après
+    // l'hydratation, pour une donnée que le serveur pouvait joindre au rendu.
+    (async (): Promise<Record<string, string>> => {
+      if (!chatroom.world_id) return {};
+      type AssignRow = { persona_id: string; group: { color: string } | null };
+      const { data } = await supabase
+        .from("persona_group_assignments")
+        .select("persona_id, group:group_id(color)")
+        .eq("world_id", chatroom.world_id);
+      const out: Record<string, string> = {};
+      for (const row of ((data ?? []) as unknown as AssignRow[])) {
+        if (row.group?.color) out[row.persona_id] = row.group.color;
+      }
+      return out;
+    })(),
+    // Badges « défi remporté » des messages affichés — même raison. L'effet
+    // client subsiste pour le Realtime et pour les pages d'historique.
+    (async (): Promise<[number, { title: string; description: string | null }][]> => {
+      if (!messageIds.length) return [];
+      type Row = { message_id: number; challenge: { title: string; description: string | null } | null };
+      const { data } = await supabase
+        .from(TABLE.CHALLENGE_ATTEMPTS)
+        .select("message_id, challenge:challenge_id(title, description)")
+        .in("message_id", messageIds)
+        .eq("status", "won");
+      return ((data ?? []) as unknown as Row[])
+        .filter((r) => r.challenge)
+        .map((r) => [Number(r.message_id), r.challenge!]);
+    })(),
   ]);
 
   const byMessage = new Map<
@@ -205,6 +235,8 @@ export default async function ChatRoomContent({
       initialChatrooms={initialRoomsSafe}
       chatroomKey={chatroomKey}
       initialIsFollowed={followedIds.has(id)}
+      initialPersonaGroupColors={personaGroupColors}
+      initialChallengeBadges={challengeBadges}
     />
   );
 }
