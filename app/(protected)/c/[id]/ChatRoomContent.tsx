@@ -5,6 +5,7 @@ import { decryptMessage } from "@/lib/crypto";
 import { aggregateChoiceVotes } from "@/lib/choiceVotes";
 import type { ChatMessageWithPersona, Persona, ChoiceVoteSummary } from "@/types/db";
 import { canMemberPost, canEditChatroom, canManageWorld } from "@/lib/worldPermissions";
+import { getChatroomsNav, type NavRoom } from "@/lib/currentRequest";
 import type { ChatroomWithWorld } from "./getChatroom";
 
 export default async function ChatRoomContent({
@@ -72,9 +73,8 @@ export default async function ChatRoomContent({
   // monde, et rôle de l'utilisateur dans le monde (si nécessaire).
   type ReactionRow = { message_id: number; emoji: string; user_id: string };
   type VoteRow = { message_id: number; option_id: string; user_id: string };
-  type NavRoom = { id: string; title: string | null; name: string | null; icon_url: string | null; last_message_at: string | null; unread_count: number };
 
-  const [reactionRows, voteRows, navResult, membership, followRow] = await Promise.all([
+  const [reactionRows, voteRows, navRooms, membership, followRow] = await Promise.all([
     (async (): Promise<ReactionRow[]> => {
       if (!messageIds.length) return [];
       const { data: rows } = await supabase
@@ -93,31 +93,10 @@ export default async function ChatRoomContent({
         .in("message_id", messageIds);
       return (rows ?? []) as VoteRow[];
     })(),
-    (async (): Promise<{ rooms: NavRoom[]; rpcFailed: boolean }> => {
-      if (!chatroom.world_id) return { rooms: [], rpcFailed: false };
-      const { data: navRooms, error: navErr } = await supabase.rpc(
-        "list_chatrooms_nav",
-        { p_world_id: chatroom.world_id },
-      );
-      if (!navErr && navRooms) return { rooms: navRooms as NavRoom[], rpcFailed: false };
-      // Fallback : requête directe si le RPC n'existe pas encore
-      const { data: fallback } = await supabase
-        .from(TABLE.CHATROOMS)
-        .select("id, title, name, icon_url, updated_at")
-        .eq("world_id", chatroom.world_id)
-        .order("updated_at", { ascending: false });
-      return {
-        rooms: (fallback ?? []).map((r) => ({
-          id: r.id,
-          title: r.title ?? null,
-          name: r.name ?? null,
-          icon_url: r.icon_url ?? null,
-          last_message_at: r.updated_at ?? null,
-          unread_count: 0,
-        })),
-        rpcFailed: true,
-      };
-    })(),
+    // Mémoïsé pour la requête et partagé avec `WorldSidebar` (monté par le
+    // layout) : c'est la requête la plus lourde du chemin chaud, elle était
+    // payée deux fois par rendu. Le repli défensif vit désormais dans le getter.
+    chatroom.world_id ? getChatroomsNav(chatroom.world_id) : Promise.resolve([] as NavRoom[]),
     (async (): Promise<{ role: string } | null> => {
       if (!needMembership) return null;
       const { data } = await supabase
@@ -193,7 +172,7 @@ export default async function ChatRoomContent({
   const canPost = canMemberPost(role, isWorldOwner);
 
   // Chatrooms du même world (pour l'aside), déjà chargés ci-dessus.
-  const initialRoomsSafe = navResult.rooms;
+  const initialRoomsSafe = navRooms;
 
   return (
     <ChatRoomView

@@ -4,7 +4,7 @@ import { canEditContent, canMemberPost } from "@/lib/worldPermissions";
 import { WorldHome } from "@/components/worlds/home/WorldHome";
 import type { AsidePersona } from "@/components/personas/WorldPersonaAsideClient";
 import { fetchSectionsByPersona } from "@/lib/personaSections";
-import type { WorldWithMembership } from "@/lib/currentRequest";
+import { getChatroomsNav, getIsWorldAdmin, type WorldWithMembership } from "@/lib/currentRequest";
 
 type NavRoom = {
   id: string;
@@ -43,12 +43,12 @@ export default async function WorldHomeContent({
   // Ces quatre chargements (nav, droits admin, préférences UI, personas) sont
   // indépendants les uns des autres → on les exécute en parallèle plutôt que
   // d'enchaîner quatre allers-retours réseau séquentiels.
+  // `getChatroomsNav` et `getIsWorldAdmin` sont mémoïsés pour la requête et
+  // partagés avec `WorldSidebar`, monté par le layout : chacun ne part qu'une
+  // fois, quel que soit le nombre de composants qui le réclame.
   const [initialRooms, canAdmin, worldPrefs, initialPersonas] = await Promise.all([
     (async (): Promise<NavRoom[]> => {
-      const { data: navRooms } = await supabase.rpc("list_chatrooms_nav", {
-        p_world_id: worldId,
-      });
-      const rooms = (navRooms as NavRoom[] | null) ?? [];
+      const rooms = (await getChatroomsNav(worldId)) as NavRoom[];
       if (!world?.timeline_enabled || rooms.length === 0) return rooms;
       const roomIds = rooms.map((r) => r.id);
       const { data: timelineDates } = await supabase
@@ -59,13 +59,7 @@ export default async function WorldHomeContent({
       const dateMap = new Map(timelineDates.map((r) => [r.id, r.timeline_date as NavRoom["timeline_date"]]));
       return rooms.map((r) => ({ ...r, timeline_date: dateMap.get(r.id) ?? null }));
     })(),
-    (async (): Promise<boolean> => {
-      const { data } = await supabase.rpc("is_world_admin", {
-        wid: world.id,
-        uid: userId ?? null,
-      });
-      return !!data;
-    })(),
+    getIsWorldAdmin(world.id, userId ?? null),
     (async (): Promise<{
       main_expanded: boolean;
       is_favorite: boolean;
@@ -85,7 +79,12 @@ export default async function WorldHomeContent({
       } | null;
     })(),
     (async (): Promise<AsidePersona[]> => {
-      if (!userId) return [];
+      // Consommées uniquement par l'onglet « Personas » (cf. WorldHome).
+      // Sans ce garde, les trois requêtes ci-dessous (personas, puis sections,
+      // puis champs) partaient aussi pour l'accueil, le wiki, la carte, les
+      // membres… et leur résultat était jeté. Les `data` jsonb des champs
+      // peuvent être volumineux.
+      if (!userId || view !== "personas") return [];
       const { data: personaRows } = await supabase
         .from("personas")
         .select(

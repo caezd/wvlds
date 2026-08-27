@@ -38,11 +38,21 @@ function reached(owned: number, limit: number): boolean {
     return Number.isFinite(limit) ? owned >= limit : false;
 }
 
-/** Noyau réutilisable si tu as déjà un client Supabase */
+/**
+ * Noyau réutilisable si tu as déjà un client Supabase.
+ *
+ * `knownPlan` : le plan de l'utilisateur quand l'appelant l'a déjà sous la main
+ * (typiquement via `getCurrentProfile()`, mémoïsé pour la requête). Le passer
+ * évite un `select plan from profiles` redondant — c'était la même ligne relue
+ * une deuxième, voire une troisième fois dans un même rendu.
+ * Quand il n'est pas fourni, la lecture du plan et le comptage sont lancés en
+ * parallèle : ils sont indépendants, les enchaîner coûtait deux allers-retours.
+ */
 export async function getUserQuotaWithClient(
     supabase: SupabaseClient,
     userId?: string | null,
-    kind: Resource = "worlds"
+    kind: Resource = "worlds",
+    knownPlan?: Plan | null
 ): Promise<Quota> {
     const fallback: Quota = {
         plan: "free",
@@ -59,26 +69,30 @@ export async function getUserQuotaWithClient(
     }
     if (!uid) return fallback;
 
-    // Plan dans profiles
-    const { data: profile } = await supabase
-        .from("profiles")
-        .select("plan")
-        .eq("id", uid)
-        .single();
-
-    const plan = (profile?.plan as Plan) ?? "free";
+    // Plan dans profiles — lancé en premier (l'ordre des appels à `.from()`
+    // reste celui d'avant), mais plus attendu avant de lancer le comptage.
+    const planPromise: Promise<Plan> = knownPlan
+        ? Promise.resolve(knownPlan)
+        : Promise.resolve(
+            supabase
+                .from("profiles")
+                .select("plan")
+                .eq("id", uid)
+                .single()
+        ).then(({ data }) => ((data?.plan as Plan) ?? "free"));
 
     // Compte des entrées "possédées"
     const table = kind === "personas" ? "personas" : "worlds";
     const ownerColumn = kind === "personas" ? "user_id" : "owner_id";
-    let query = supabase
+    let countQuery = supabase
         .from(table)
         .select("id", { count: "exact", head: true })
         .eq(ownerColumn, uid)
         .is("deleted_at", null);
     // Les fiches modèles des mondes (is_template) ne comptent pas
-    if (kind === "personas") query = query.eq("is_template", false);
-    const { count } = await query;
+    if (kind === "personas") countQuery = countQuery.eq("is_template", false);
+
+    const [plan, { count }] = await Promise.all([planPromise, countQuery]);
 
     const owned = typeof count === "number" ? count : 0;
     const quotaLimit = limitFor(plan, kind);

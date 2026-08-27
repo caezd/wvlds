@@ -264,7 +264,7 @@ export default function ChatRoomView({
       }
       return next;
     });
-  }, [supabase]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [supabase]);
 
   useEffect(() => {
     void loadChallengeBadges(initialMessages.map((m) => m.id));
@@ -345,7 +345,7 @@ export default function ChatRoomView({
         }
       }
     },
-    [activeChallenges, supabase], // eslint-disable-line react-hooks/exhaustive-deps
+    [activeChallenges, supabase],
   );
 
   /* pagination : historique chargé à la demande en remontant */
@@ -639,19 +639,28 @@ export default function ChatRoomView({
   // Utilisateurs ayant explicitement choisi "invisible" ou "hors ligne" (appear_offline = true)
   // → pas de pastille ; les autres absents de onlineUsers reçoivent une pastille rouge
   const [invisibleUsers, setInvisibleUsers] = useState<Set<string>>(new Set());
+  // Clé stable = l'ensemble *distinct* des auteurs affichés. L'effet dépendait
+  // de `messages.length`, donc chaque message reçu (y compris les siens)
+  // relançait un `select profiles` sur jusqu'à 50 ids — une requête par message
+  // dans un salon actif. Ici il ne repart que si un auteur nouveau apparaît.
+  const authorIdsKey = useMemo(
+    () => [...new Set(messages.map((m) => m.author_id).filter(Boolean) as string[])].sort().join(","),
+    [messages],
+  );
   useEffect(() => {
-    const ids = [...new Set(messages.map((m) => m.author_id).filter(Boolean))] as string[];
-    if (ids.length === 0) return;
+    if (!authorIdsKey) return;
+    const ids = authorIdsKey.split(",");
+    let cancelled = false;
     supabase
       .from("profiles")
       .select("id, appear_offline")
       .in("id", ids)
       .then(({ data }: { data: { id: string; appear_offline: boolean }[] | null }) => {
-        if (!data) return;
+        if (cancelled || !data) return;
         setInvisibleUsers(new Set(data.filter((p) => p.appear_offline).map((p) => p.id)));
       });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [messages.length]);
+    return () => { cancelled = true; };
+  }, [authorIdsKey, supabase]);
 
   // Si l'utilisateur n'était pas présent côté serveur, on le récupère ici
   useEffect(() => {
@@ -755,7 +764,6 @@ export default function ChatRoomView({
     } else {
       pendingScrollMessageIdRef.current = null;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages]);
 
   // Arrivée depuis le centre de recherche (autre salon) : /c/[id]?m=<messageId>

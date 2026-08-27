@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { getFeatureFlags, type FeatureFlags } from "@/lib/featureFlags";
+import { getUserQuotaWithClient, type Plan, type Quota } from "@/lib/userQuota";
 import type { World } from "@/types/worlds";
 import type { WorldItem } from "@/components/sidebar/WorldPickerHeader";
 
@@ -126,6 +127,82 @@ export const getUserWorlds = cache(async (): Promise<WorldItem[]> => {
     ...world,
     is_favorite: favoriteIds.has(world.id),
   }));
+});
+
+export type NavRoom = {
+  id: string;
+  title: string | null;
+  name: string | null;
+  icon_url: string | null;
+  last_message_at: string | null;
+  unread_count: number;
+  category_id: string | null;
+  last_poster_avatar_url: string | null;
+  last_poster_id: string | null;
+  participant_count: number;
+  second_poster_avatar_url: string | null;
+};
+
+/**
+ * Salons du monde pour la nav (`list_chatrooms_nav`), mémoïsée par `worldId`.
+ *
+ * C'est la requête la plus lourde du chemin chaud (agrégats de non-lus +
+ * derniers posteurs) et elle était payée **deux fois** par rendu : le layout
+ * monte `WorldSidebar`, la page monte `WorldHomeContent` (ou `ChatRoomContent`),
+ * et chacun l'appelait pour son propre compte avec le même `p_world_id`.
+ */
+export const getChatroomsNav = cache(async (worldId: string): Promise<NavRoom[]> => {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("list_chatrooms_nav", { p_world_id: worldId });
+  if (!error && data) return data as NavRoom[];
+  // Repli défensif si le RPC est indisponible : liste nue, sans les agrégats
+  // (non-lus, derniers posteurs). Vient de `ChatRoomContent`, où il vivait
+  // en double — il couvre désormais les trois appelants.
+  const { data: fallback } = await supabase
+    .from("chatrooms")
+    .select("id, title, name, icon_url, updated_at")
+    .eq("world_id", worldId)
+    .order("updated_at", { ascending: false });
+  return ((fallback ?? []) as { id: string; title: string | null; name: string | null; icon_url: string | null; updated_at: string | null }[]).map((r) => ({
+    id: r.id,
+    title: r.title ?? null,
+    name: r.name ?? null,
+    icon_url: r.icon_url ?? null,
+    last_message_at: r.updated_at ?? null,
+    unread_count: 0,
+    category_id: null,
+    last_poster_avatar_url: null,
+    last_poster_id: null,
+    participant_count: 0,
+    second_poster_avatar_url: null,
+  }));
+});
+
+/**
+ * Droits d'admin sur un monde (`is_world_admin`), mémoïsée par (worldId, userId).
+ * Même motif que ci-dessus : `WorldSidebar` et `WorldHomeContent` la demandaient
+ * séparément avec des arguments identiques.
+ */
+export const getIsWorldAdmin = cache(async (worldId: string, userId: string | null): Promise<boolean> => {
+  if (!userId) return false;
+  const supabase = await createClient();
+  const { data } = await supabase.rpc("is_world_admin", { wid: worldId, uid: userId });
+  return !!data;
+});
+
+/**
+ * Quota de mondes de l'utilisateur courant, mémoïsé.
+ *
+ * Réutilise le `plan` déjà chargé par `getCurrentProfile()` au lieu de relire
+ * `profiles` : ce quota était calculé deux fois par rendu de page de monde
+ * (layout protégé + `WorldSidebar`), soit deux `select plan` et deux `count`
+ * de trop.
+ */
+export const getWorldsQuota = cache(async (): Promise<Quota> => {
+  const [userId, profile] = await Promise.all([getCurrentUserId(), getCurrentProfile()]);
+  if (!userId) return { plan: "free", owned: 0, quotaLimit: 1, quotaReached: false };
+  const supabase = await createClient();
+  return getUserQuotaWithClient(supabase, userId, "worlds", (profile?.plan as Plan | null) ?? null);
 });
 
 export type FavoriteWorld = { id: string; name: string; icon_url: string | null };
