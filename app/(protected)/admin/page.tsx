@@ -3,6 +3,12 @@ import Link from "next/link";
 import { ShoppingBag, Users, ToggleLeft, Languages } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
+/** Titre d'onglet — sans lui la page héritait du « WVLDS » générique. */
+export async function generateMetadata() {
+  const t = await getTranslations("admin");
+  return { title: t("title") };
+}
+
 export default async function AdminDashboard() {
   await requireAdmin();
   const t = await getTranslations("admin");

@@ -30,6 +30,12 @@ function ValidationHint({ validation, t }: { validation: ActiveDailyChallenge["v
   }
 }
 
+/** Titre d'onglet — sans lui la page héritait du « WVLDS » générique. */
+export async function generateMetadata() {
+  const t = await getTranslations("quests");
+  return { title: t("title") };
+}
+
 export default async function QuestsPage() {
   const t = await getTranslations("quests");
   const supabase = await createClient();

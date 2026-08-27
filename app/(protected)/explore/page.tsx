@@ -24,6 +24,12 @@ type LatestWorld = {
   is_age_restricted: boolean | null;
 };
 
+/** Titre d'onglet — sans lui la page héritait du « WVLDS » générique. */
+export async function generateMetadata() {
+  const t = await getTranslations("explore");
+  return { title: t("title") };
+}
+
 export default async function ExplorePage({
   searchParams,
 }: {

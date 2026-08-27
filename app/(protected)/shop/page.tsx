@@ -7,6 +7,12 @@ import type { ShopItem } from "./ShopGrid";
 import { getTranslations } from "next-intl/server";
 
 
+/** Titre d'onglet — sans lui la page héritait du « WVLDS » générique. */
+export async function generateMetadata() {
+  const t = await getTranslations("shop");
+  return { title: t("title") };
+}
+
 export default async function ShopPage() {
   const [t, supabase] = await Promise.all([getTranslations("shop"), createClient()]);
 

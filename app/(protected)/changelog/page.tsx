@@ -1,6 +1,12 @@
 import { ChangelogFilters } from "./ChangelogFilters";
 import { getTranslations } from "next-intl/server";
 
+/** Titre d'onglet — sans lui la page héritait du « WVLDS » générique. */
+export async function generateMetadata() {
+  const t = await getTranslations("changelog");
+  return { title: t("title") };
+}
+
 export default async function ChangelogPage() {
   const t = await getTranslations("changelog");
   return (

@@ -35,6 +35,12 @@ type MemberWorld = {
   enable_faceclaims?: boolean | null;
 };
 
+/** Titre d'onglet — sans lui la page héritait du « WVLDS » générique. */
+export async function generateMetadata() {
+  const t = await getTranslations("personas");
+  return { title: t("title") };
+}
+
 export default async function PersonasPage() {
   const [t, supabase] = await Promise.all([getTranslations("personas"), createClient()]);
   const userId = await getUserId(supabase);

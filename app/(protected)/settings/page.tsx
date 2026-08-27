@@ -9,6 +9,12 @@ import { MessageTextAlignSelector } from "./MessageTextAlignSelector";
 import { PatreonSection } from "./PatreonSection";
 import { isPatreonEnabled, getPatreonMinCents } from "@/lib/patreon/config";
 
+/** Titre d'onglet — sans lui la page héritait du « WVLDS » générique. */
+export async function generateMetadata() {
+  const t = await getTranslations("settings");
+  return { title: t("title") };
+}
+
 export default async function SettingsPage() {
   const [t, currentLocale] = await Promise.all([
     getTranslations("settings"),

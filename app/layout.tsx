@@ -17,7 +17,13 @@ const defaultUrl = process.env.VERCEL_URL
 
 export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
-  title: "WVLDS",
+  title: {
+    // Chaque page hérite du gabarit : sans lui, tous les onglets s'appelaient
+    // « WVLDS », y compris quand on en ouvre plusieurs sur des salons
+    // différents. `default` couvre les pages qui ne posent pas de titre.
+    default: "WVLDS",
+    template: "%s · WVLDS",
+  },
   description: "WVLDS — créez des mondes, incarnez vos personnages et écrivez vos histoires en temps réel.",
   appleWebApp: {
     capable: true,
