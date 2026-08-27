@@ -19,7 +19,10 @@ import { toggleWorldFavorite } from "@/app/(protected)/w/actions";
 import { cn } from "@/lib/utils";
 import { supabaseThumb } from "@/lib/storage";
 import { compactHomeGridRows, resolveHomeGridGap, resolveWorldHomeGrid } from "./worldHomeGrid";
-import { SearchCenter } from "@/components/chatrooms/search/SearchCenter";
+// Modale rarement ouverte : même traitement que les onglets ci-dessous.
+const SearchCenter = dynamic(() =>
+  import("@/components/chatrooms/search/SearchCenter").then((m) => m.SearchCenter),
+);
 
 // Onglets secondaires — un seul est actif à la fois, chargés à la demande
 // pour ne pas alourdir le bundle de la vue par défaut du monde.

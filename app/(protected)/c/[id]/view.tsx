@@ -21,7 +21,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import ChatroomSettingsSheet from "@/components/chatrooms/settings/ChatroomSettingsSheet";
+// Panneaux pilotés par une prop `open` : montés en permanence mais affichés à
+// la demande. En `dynamic()` (comme ChatroomStatsSheet juste en dessous), leur
+// code sort du bundle initial du salon et n'est téléchargé qu'après hydratation
+// — ChatroomSettingsSheet fait à lui seul 630 lignes.
+const ChatroomSettingsSheet = dynamic(() => import("@/components/chatrooms/settings/ChatroomSettingsSheet"));
 const ChatroomStatsSheet = dynamic(() => import("@/components/chatrooms/settings/ChatroomStatsSheet"));
 import { ScrollAreaWithJumpToBottom } from "@/components/ScrollAreaWithJumpToBottom";
 import { ChatroomComposer } from "@/components/chatrooms/composer/ChatroomComposer";
@@ -33,7 +37,16 @@ import { ContentWarningBanner } from "@/components/chatrooms/composer/ContentWar
 import { PersonaProfileSheet } from "@/components/chatrooms/persona/PersonaProfileSheet";
 import { ChatroomsNavDropdown } from "@/components/chatrooms/settings/ChatroomsNavDropdown";
 import { WorldMembershipGuard } from "@/components/worlds/members/WorldMembershipGuard";
-import { type ChatroomNavItem } from "@/components/worlds/chatrooms/WorldChatroomsAside";
+
+/** Salon tel qu'affiché dans les listes de navigation (dropdown, aside). */
+export type ChatroomNavItem = {
+  id: string;
+  title: string | null;
+  name: string | null;
+  icon_url: string | null;
+  last_message_at: string | null;
+  unread_count: number;
+};
 
 import {
   TABLE,
@@ -54,10 +67,11 @@ import { useMobileSidebar } from "@/components/providers/MobileSidebarProvider";
 import { useChatPins } from "@/hooks/useChatPins";
 import { PinBar } from "@/components/chatrooms/message/PinBar";
 import { PinsSheet } from "@/components/chatrooms/message/PinsSheet";
-import { SearchCenter } from "@/components/chatrooms/search/SearchCenter";
+const SearchCenter = dynamic(() =>
+  import("@/components/chatrooms/search/SearchCenter").then((m) => m.SearchCenter),
+);
 
 export type { Persona, ChatMessageWithPersona, ReactionSummary } from "@/types/db";
-export type { ChatroomNavItem } from "@/components/worlds/chatrooms/WorldChatroomsAside";
 
 function ChatroomHeader({
   chat,
