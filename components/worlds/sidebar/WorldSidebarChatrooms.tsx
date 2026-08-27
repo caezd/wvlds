@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -193,11 +193,21 @@ export function WorldSidebarChatrooms({
     }
   }
 
+  // `WorldSidebar` rend ce composant DEUX fois : une fois dans l'aside desktop,
+  // une fois dans `MobileSidebarSlot` (le drawer). Deux instances, donc deux
+  // effets — et `supabase.channel(topic)` renvoie le canal existant quand le
+  // topic est identique. La seconde instance recevait donc un canal déjà
+  // souscrit, sur lequel `.on()` est interdit : jusqu'à supabase-js 2.79 ses
+  // handlers étaient ignorés en silence (elle ne recevait aucun événement
+  // temps réel), depuis 2.112 l'appel lève. D'où un topic propre à chaque
+  // instance, via useId().
+  const channelId = useId();
+
   // Realtime: nouvelles chatrooms + mises à jour chatroom_summaries (avatar, last_message_at)
   useEffect(() => {
     const supabase = createClient();
     const ch = supabase
-      .channel(`sidebar-rooms:${worldId}`)
+      .channel(`sidebar-rooms:${worldId}:${channelId}`)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "chatrooms", filter: `world_id=eq.${worldId}` },
@@ -258,7 +268,7 @@ export function WorldSidebarChatrooms({
       )
       .subscribe();
     return () => { void supabase.removeChannel(ch); };
-  }, [worldId, reconnectEpoch]);
+  }, [worldId, reconnectEpoch, channelId]);
 
   // Vue catégorie (drill-down)
   if (selectedCat) {

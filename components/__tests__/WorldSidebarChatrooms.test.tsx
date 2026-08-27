@@ -227,3 +227,66 @@ describe("WorldSidebarChatrooms — drill-down catégories", () => {
     expect(screen.queryByText("Sujet libre")).not.toBeInTheDocument();
   });
 });
+
+// ── Canal temps réel : un topic par instance ──────────────────────────────────
+//
+// `WorldSidebar` rend ce composant DEUX fois : dans l'aside desktop et dans
+// `MobileSidebarSlot` (le drawer mobile). `supabase.channel(topic)` renvoyant le
+// canal existant pour un topic identique, les deux instances se partageaient un
+// même canal — la seconde recevait un canal déjà souscrit, sur lequel `.on()`
+// est interdit. Jusqu'à supabase-js 2.79 ses handlers étaient ignorés en
+// silence (le drawer ne recevait jamais d'événement temps réel) ; depuis 2.112
+// l'appel lève « cannot add `postgres_changes` callbacks … after `subscribe()` »
+// et l'ouverture du menu plantait.
+
+describe("WorldSidebarChatrooms — isolation du canal temps réel", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("n'utilise pas le même topic pour deux instances montées en parallèle", () => {
+    const mock = createSupabaseMock({ user: { id: "u1" } });
+    (createClient as ReturnType<typeof vi.fn>).mockReturnValue(mock.client);
+
+    const props = {
+      worldId: "world-1",
+      initialAll: [makeRoom()],
+      initialParticipated: [],
+      initialFollowedIds: [],
+      categories: [],
+    };
+
+    // Les deux montages simultanés que produit WorldSidebar.
+    render(
+      <>
+        <WorldSidebarChatrooms {...props} />
+        <WorldSidebarChatrooms {...props} />
+      </>,
+    );
+
+    const topics = mock.channel.mock.calls.map((c) => c[0] as string);
+    expect(topics).toHaveLength(2);
+    expect(new Set(topics).size, `topics en collision : ${topics.join(", ")}`).toBe(2);
+    // Le monde reste identifiable dans le topic (lisibilité du debug realtime).
+    for (const topic of topics) expect(topic).toContain("world-1");
+  });
+
+  it("souscrit chaque canal et le retire au démontage", () => {
+    const mock = createSupabaseMock({ user: { id: "u1" } });
+    (createClient as ReturnType<typeof vi.fn>).mockReturnValue(mock.client);
+
+    const { unmount } = render(
+      <WorldSidebarChatrooms
+        worldId="world-1"
+        initialAll={[makeRoom()]}
+        initialParticipated={[]}
+        initialFollowedIds={[]}
+        categories={[]}
+      />,
+    );
+
+    expect(mock.channel).toHaveBeenCalledTimes(1);
+    expect(mock.lastChannel()!.subscribe).toHaveBeenCalled();
+
+    unmount();
+    expect(mock.removeChannel).toHaveBeenCalledTimes(1);
+  });
+});
