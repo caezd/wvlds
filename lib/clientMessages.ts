@@ -11,9 +11,8 @@ import type { AbstractIntlMessages } from "next-intl";
  * appels dans le code (aucun `useTranslations()` sans namespace, aucune clé
  * pointée traversant un namespace — les deux formes casseraient ce découpage) :
  *
- *  - `SERVER_ONLY_NAMESPACES` : aucun composant client ne les lit, seulement
- *    des Server Components via `getTranslations`, qui n'ont besoin d'aucune
- *    donnée côté navigateur.
+ *  - `NOT_IN_SHELL_NAMESPACES` : rien, dans l'arbre protégé, ne les lit côté
+ *    client (voir le détail sur la constante).
  *  - `ROUTE_SCOPED_NAMESPACES` : lus par des composants clients, mais d'une
  *    seule route. Chaque route concernée les remonte elle-même via un
  *    `NextIntlClientProvider` imbriqué dans son layout de segment
@@ -24,8 +23,16 @@ import type { AbstractIntlMessages } from "next-intl";
  * `NextResponse.next()` neuve jette les cookies de session rafraîchis.
  */
 
-/** Lus uniquement par des Server Components (`getTranslations`). */
-export const SERVER_ONLY_NAMESPACES = ["auth", "quests", "changelog", "offline"] as const;
+/**
+ * Retirés du tronc commun parce que rien, dans l'arbre protégé, ne les lit
+ * côté client.
+ *
+ * `quests`, `changelog` et `offline` ne sont lus que par des Server Components
+ * (`getTranslations`). `auth` est bien lu côté client — mais uniquement par les
+ * formulaires de `app/auth/**`, qui vivent hors du groupe `(protected)` et ont
+ * leur propre provider (cf. app/auth/layout.tsx).
+ */
+export const NOT_IN_SHELL_NAMESPACES = ["auth", "quests", "changelog", "offline"] as const;
 
 /** Lus par des composants clients, mais d'une seule route chacun. */
 export const ROUTE_SCOPED_NAMESPACES = [
@@ -51,7 +58,7 @@ export const ROUTE_SCOPED_NAMESPACES = [
 export const WORLD_ROUTE_NAMESPACES = ["wiki", "map", "relations", "catalogue"] as const;
 
 const EXCLUDED_FROM_SHELL = new Set<string>([
-    ...SERVER_ONLY_NAMESPACES,
+    ...NOT_IN_SHELL_NAMESPACES,
     ...ROUTE_SCOPED_NAMESPACES,
 ]);
 

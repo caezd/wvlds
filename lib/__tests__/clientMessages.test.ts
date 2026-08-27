@@ -6,7 +6,7 @@ import type { AbstractIntlMessages } from "next-intl";
 import {
     ROUTE_SCOPED_NAMESPACES,
     WORLD_ROUTE_NAMESPACES,
-    SERVER_ONLY_NAMESPACES,
+    NOT_IN_SHELL_NAMESPACES,
     shellMessages,
     withRouteMessages,
 } from "@/lib/clientMessages";
@@ -43,11 +43,11 @@ function namespacesUsedIn(files: { src: string }[], call: "useTranslations" | "g
 describe("découpage des messages envoyés au client", () => {
     it("shellMessages retire exactement les namespaces exclus", () => {
         const shell = shellMessages(fr);
-        for (const ns of [...SERVER_ONLY_NAMESPACES, ...ROUTE_SCOPED_NAMESPACES]) {
+        for (const ns of [...NOT_IN_SHELL_NAMESPACES, ...ROUTE_SCOPED_NAMESPACES]) {
             expect(shell, `${ns} ne doit pas être dans le tronc commun`).not.toHaveProperty(ns);
         }
         const expected = Object.keys(fr).filter(
-            (k) => ![...SERVER_ONLY_NAMESPACES, ...ROUTE_SCOPED_NAMESPACES].includes(k as never),
+            (k) => ![...NOT_IN_SHELL_NAMESPACES, ...ROUTE_SCOPED_NAMESPACES].includes(k as never),
         );
         expect(Object.keys(shell).sort()).toEqual(expected.sort());
     });
@@ -87,7 +87,7 @@ describe("découpage des messages envoyés au client", () => {
 
     it("aucun namespace retiré n'est lu par un composant client de l'arbre protégé", () => {
         const usedByClients = namespacesUsedIn(PROTECTED_CLIENT_FILES, "useTranslations");
-        for (const ns of SERVER_ONLY_NAMESPACES) {
+        for (const ns of NOT_IN_SHELL_NAMESPACES) {
             expect(
                 usedByClients.has(ns),
                 `${ns} est déclaré serveur-seul mais un composant client l'utilise`,
@@ -237,11 +237,22 @@ describe("découpage des messages envoyés au client", () => {
         // Détecte un namespace ajouté au JSON puis oublié dans le découpage.
         const shell = new Set(Object.keys(shellMessages(fr)));
         const serverUsed = namespacesUsedIn(FILES, "getTranslations");
+        // `auth` est le cas limite : hors du tronc commun et lu par aucun
+        // Server Component, mais bien vivant — les formulaires de app/auth/**
+        // le lisent côté client, via leur propre provider.
+        const authTreeRead = namespacesUsedIn(
+            FILES.filter((f) => {
+                const rel = f.path.slice(ROOT.length + 1).replace(/\\/g, "/");
+                return rel.startsWith("app/auth/") || AUTH_TREE_CLIENT_FILES.includes(rel);
+            }),
+            "useTranslations",
+        );
         const orphans = Object.keys(fr).filter(
             (ns) =>
                 !shell.has(ns) &&
                 !ROUTE_SCOPED_NAMESPACES.includes(ns as never) &&
-                !serverUsed.has(ns),
+                !serverUsed.has(ns) &&
+                !authTreeRead.has(ns),
         );
         expect(orphans).toEqual([]);
     });
