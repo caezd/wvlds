@@ -4,6 +4,7 @@ import AppShell from "@/components/sidebar/AppShell";
 import { FeatureFlagsProvider } from "@/components/providers/FeatureFlagsProvider";
 import { getCurrentUserId, getCurrentProfile, getCachedFeatureFlags } from "@/lib/currentRequest";
 import { NextIntlClientProvider } from "next-intl";
+import { shellMessages } from "@/lib/clientMessages";
 import { getLocale, getMessages } from "next-intl/server";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
@@ -53,7 +54,7 @@ export default async function PageLayout({
   const [locale, messages] = await Promise.all([getLocale(), getMessages()]);
 
   return (
-    <NextIntlClientProvider locale={locale} messages={messages}>
+    <NextIntlClientProvider locale={locale} messages={shellMessages(messages)}>
       <FeatureFlagsProvider flags={featureFlags}>
         <div className="flex h-full w-full flex-col">
           <div className="relative flex h-full w-full flex-1 z-0">

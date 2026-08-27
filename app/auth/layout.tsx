@@ -1,6 +1,7 @@
 import Logo from "@/components/logo";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
+import { pickMessages } from "@/lib/clientMessages";
 
 export default async function AuthLayout({
   children,
@@ -10,9 +11,14 @@ export default async function AuthLayout({
   // Les pages d'auth sont hors du groupe (protected) : sans leur propre
   // NextIntlClientProvider, les formulaires (useTranslations) plantent en SSR
   // (« context from NextIntlClientProvider was not found »).
+  //
+  // Tout cet arbre (login, inscription, mot de passe oublié, mise à jour) ne lit
+  // que le namespace `auth` — vérifié par lib/__tests__/clientMessages.test.ts.
+  // On ne sérialise donc plus les 37 Ko du catalogue complet sur la toute
+  // première page qu'un visiteur charge.
   const [locale, messages] = await Promise.all([getLocale(), getMessages()]);
   return (
-    <NextIntlClientProvider locale={locale} messages={messages}>
+    <NextIntlClientProvider locale={locale} messages={pickMessages(messages, ["auth"])}>
     <div className="bg-background flex flex-col md:flex-row-reverse md:h-screen">
       <section className="flex items-start w-full px-4 mx-auto md:px-0 md:items-center md:w-1/3">
         <div className="w-full max-w-sm mx-auto md:mx-0 my-auto min-w-min relative md:-left-6 text-primary">
