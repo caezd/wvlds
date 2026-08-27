@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Correctif",
+    text: "Faille critique fermée dans les invitations de monde. N'importe quel compte connecté pouvait devenir **administrateur de n'importe quel monde**, y compris privé, en deux appels : s'auto-inviter avec le rôle de son choix, puis accepter cette invitation. Une seconde voie permettait à un invité légitime de se promouvoir en administrateur avant d'accepter. Les deux ont été reproduites puis refermées :\n- Créer une invitation exige désormais d'être administrateur du monde visé\n- Le rôle d'une invitation n'est plus modifiable après son envoi\n- Une invitation ne peut plus conférer la propriété d'un monde\n- Inviter par courriel vérifie aussi les droits de l'envoyeur : cette action contourne les règles d'accès habituelles et ne le contrôlait pas, permettant à quiconque de faire envoyer un courriel d'invitation signé du site vers n'importe quelle adresse\nAu passage, l'invitation par courriel **fonctionne enfin** : elle n'ajoutait en réalité jamais l'invité au monde. Le monde et le rôle transitaient par les métadonnées du compte, que l'utilisateur peut réécrire lui-même, et l'ajout était de toute façon refusé sans que l'erreur soit lue. L'invitation est maintenant enregistrée comme les autres et apparaît dans les notifications de l'invité.",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
     text: "Plusieurs restes d'affichage en passant d'un salon ou d'un monde à l'autre, tous invisibles au rechargement de la page — ils ne se produisaient qu'en navigation interne :\n- Les **messages épinglés** du salon précédent restaient affichés le temps que les nouveaux arrivent, et pouvaient même s'y substituer durablement si deux changements de salon se suivaient de près\n- L'**étoile « salon suivi »** gardait l'état du salon quitté, et l'**étoile « monde favori »** celle du monde quitté\n- Les **badges de défi gagné** du nouveau salon n'apparaissaient pas\n- La **liste des salons** de la barre latérale, la **grille des salons** et les **dossiers de catégories** pouvaient rester ceux du monde précédent\n- Une **catégorie sélectionnée** continuait de filtrer la grille du monde suivant, où elle n'existe pas",
   },
   {
