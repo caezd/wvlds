@@ -1,12 +1,28 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Cropper from "react-easy-crop";
-import type { Area } from "react-easy-crop";
+import dynamic from "next/dynamic";
+import type { Area, CropperProps } from "react-easy-crop";
 import { ZoomIn, ZoomOut, RotateCcw, Loader2, ImagePlus, Link as LinkIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+
+// Le recadreur n'est monté qu'à l'ouverture d'un dialogue d'ajout d'image, mais
+// l'import statique le plaçait dans le bundle de tout écran qui importe ce
+// fichier — dont le composer, donc chaque salon. Même motif que
+// `emoji-picker-react` (cf. ChatReactionPicker / EmojiPickerButton).
+// `CropperProps` déclare obligatoires une douzaine de props (aspect, rotation,
+// minZoom, cropShape…) que la librairie remplit en réalité via ses
+// `defaultProps` — un détail que `dynamic()` n'expose plus au typage. D'où ce
+// cast : seules les props sans défaut restent requises. Sans effet à
+// l'exécution (React applique toujours les defaultProps sur `undefined`).
+const Cropper = dynamic(() => import("react-easy-crop"), {
+  ssr: false,
+  loading: () => <div className="h-full w-full animate-pulse bg-muted/30" />,
+}) as React.ComponentType<
+  Partial<CropperProps> & Pick<CropperProps, "image" | "crop" | "zoom" | "onCropChange">
+>;
 
 // ---------------------------------------------------------------------------
 // Utilitaire : découpe l'image sur canvas et retourne un Blob JPEG

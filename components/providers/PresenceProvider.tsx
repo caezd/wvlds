@@ -14,15 +14,21 @@ import { createClient } from "@/lib/supabase/client";
 import { channel, PRESENCE, TABLE } from "@/lib/constants";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
+import {
+    derivePresenceStatus,
+    resetPresenceStatuses,
+    setPresenceStatuses,
+    type GlobalPresenceMeta,
+} from "@/lib/presenceStore";
 
 export type PresenceStatus = "online" | "offline" | "invisible";
 
-export type GlobalPresenceMeta = {
-    user_id: string;
-    username?: string | null;
-    avatar_url?: string | null;
-    last_active_at?: string | null;
-};
+export type { GlobalPresenceMeta };
+// `useUserPresence` — abonnement à la présence d'UN utilisateur, sans se
+// re-rendre à chaque mouvement de présence de l'application. À préférer à
+// `useGlobalPresence().getUserPresence(uid)` dans les composants nombreux
+// (bulles de message, lignes de liste). Voir lib/presenceStore.ts.
+export { useUserPresence } from "@/lib/presenceStore";
 
 type Ctx = {
     /** Utilisateurs visibles : "en ligne" ou "absent" (dans la fenêtre PRESENCE.OFFLINE_WINDOW_MS) */
@@ -54,14 +60,7 @@ export function useGlobalPresence() {
     return useContext(PresenceCtx) ?? DEFAULT_CTX;
 }
 
-function getPresenceStatus(meta: GlobalPresenceMeta): "online" | "away" | "offline" {
-    if (!meta.last_active_at) return "offline";
-    const elapsed = Date.now() - Date.parse(meta.last_active_at);
-    if (!Number.isFinite(elapsed)) return "offline";
-    if (elapsed < PRESENCE.AWAY_WINDOW_MS) return "online";
-    if (elapsed < PRESENCE.OFFLINE_WINDOW_MS) return "away";
-    return "offline";
-}
+const getPresenceStatus = derivePresenceStatus;
 
 function isVisible(meta: GlobalPresenceMeta) {
     return getPresenceStatus(meta) !== "offline";
@@ -135,6 +134,9 @@ export default function PresenceProvider({ children }: { children: React.ReactNo
                 if (isVisible(meta)) next[uid] = meta;
             }
         }
+        // Alimente le store par tranche : les abonnés de `useUserPresence(uid)`
+        // ne seront réveillés que si le statut de LEUR utilisateur a bougé.
+        setPresenceStatuses(next);
         setOnlineUsers((prev) => {
             const prevKeys = Object.keys(prev);
             const nextKeys = Object.keys(next);
@@ -146,6 +148,10 @@ export default function PresenceProvider({ children }: { children: React.ReactNo
             return same ? prev : next;
         });
     }, []);
+
+    // Le store est un singleton de module : on le vide au démontage pour ne pas
+    // laisser des statuts périmés à un prochain montage (changement de compte).
+    useEffect(() => resetPresenceStatuses, []);
 
     useEffect(() => {
         if (!userId) return;

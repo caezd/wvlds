@@ -32,7 +32,7 @@ import type { ChallengeBadge, ChatMessageMeta } from "@/types/db";
 
 import { toast } from "sonner";
 
-import { useGlobalPresence } from "@/components/providers/PresenceProvider";
+import { useUserPresence } from "@/components/providers/PresenceProvider";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import { useLongPress } from "@/hooks/useLongPress";
 
@@ -130,7 +130,10 @@ function ChatroomMessage({
 }) {
   const t = useTranslations("chatrooms");
   const supabase = useMemo(() => createClient(), []);
-  const { getUserPresence } = useGlobalPresence();
+  // Abonnement à la présence du seul auteur de ce message : une bulle ne se
+  // re-rend que si SON auteur change d'état, au lieu de re-rendre les ~50
+  // bulles affichées à chaque battement de présence de n'importe qui.
+  const authorPresence = useUserPresence(message.author_id);
 
   const block = parseChatBlock(message.content ?? "") as ChatBlock | null;
   const mine = isMyMessage(message, selfId);
@@ -139,7 +142,7 @@ function ChatroomMessage({
   const avatarSrc = playerAvatarSrc;
   const presenceState: "online" | "away" | "offline" | "invisible" = invisibleUsers?.has(message.author_id)
     ? "invisible"
-    : getUserPresence(message.author_id);
+    : authorPresence;
 
   const date = message.created_at;
 

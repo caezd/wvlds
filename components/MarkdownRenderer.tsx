@@ -7,7 +7,6 @@ import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
 import rehypeExternalLinks from "rehype-external-links";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
-import rehypeHighlight from "rehype-highlight";
 
 import { cn } from "@/lib/utils";
 import { transformStyledSpans, createFenceTracker } from "@/lib/textStyledSpans";
@@ -409,7 +408,13 @@ export function MarkdownContent({
           rehypeExternalLinks,
           { target: "_blank", rel: ["nofollow", "noopener", "noreferrer"] },
         ],
-        rehypeHighlight,
+        // `rehypeHighlight` retiré : il posait des classes `hljs-*` que le
+        // `rehypeSanitize` ci-dessous supprimait aussitôt (le schéma n'autorise
+        // `className` sur `code` que pour `/^language-[\w-]+$/`, et aucune sur
+        // `span`). Aucune coloration n'atteignait donc l'écran — et aucune CSS
+        // du projet ne définit `hljs-*` — mais il embarquait ~35 grammaires
+        // (lowlight) dans le chunk de chaque message et fragmentait le code en
+        // spans vides. Voir MarkdownRenderer.codeBlocks.test.tsx.
         [rehypeSanitize, schema],
       ]}
       components={components}

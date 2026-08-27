@@ -8,6 +8,26 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Correctif",
+    text: "Faille corrigée : les tentatives de défis quotidiens réussies étaient lisibles publiquement. Deux règles de sécurité se cumulaient sur cette table, et la plus large (« toute tentative gagnée ») annulait la plus stricte (« ses propres tentatives ») — n'importe qui, même sans être connecté, pouvait savoir qui avait relevé un défi, dans quel salon et sur quel message, y compris dans des mondes privés. La lecture est désormais réservée aux membres du monde concerné ; le badge « défi remporté » sur les messages des autres continue de s'afficher normalement.",
+  },
+  {
+    date: "2026-08",
+    tag: "Performance",
+    text: "Chargement des pages de monde et de salon nettement allégé :\n- Les données de navigation des salons (la requête la plus lourde de ces pages : compteurs de non-lus, derniers posteurs) et les droits d'administration étaient demandés **deux fois** par affichage — une fois par la barre latérale, une fois par la page. Ils ne sont plus chargés qu'une seule fois et partagés\n- Le quota de mondes relisait le profil jusqu'à trois fois par affichage ; il réutilise désormais le profil déjà chargé, et ses deux requêtes partent en parallèle au lieu de s'enchaîner\n- Toutes les pages hors monde (personas, Explorateur, boutique, réglages, quêtes…) chargeaient la liste complète des mondes et le quota associé pour alimenter un panneau désactivé : quatre requêtes inutiles par navigation, plus l'envoi de cette liste au navigateur\n- Les fiches de personas n'étaient utiles qu'à l'onglet « Personas » mais étaient chargées pour l'accueil, le wiki, la carte et les membres également — trois requêtes économisées sur toutes ces vues\n- Dans un salon actif, chaque message reçu déclenchait une requête pour recalculer les pastilles de présence ; elle ne repart plus que lorsqu'un nouvel auteur apparaît",
+  },
+  {
+    date: "2026-08",
+    tag: "Performance",
+    text: "Salons plus fluides et plus légers à charger :\n- Les pastilles de présence s'abonnent maintenant à un seul utilisateur chacune : un changement de statut ne rafraîchit plus que les bulles concernées, au lieu de refaire tout l'affichage des messages à chaque signal de présence reçu dans l'application\n- La coloration syntaxique des blocs de code embarquait une trentaine de grammaires de langages dans le code envoyé à chaque salon, alors que son résultat était systématiquement supprimé avant l'affichage (aucune couleur n'apparaissait jamais). Retirée\n- L'outil de recadrage d'image et les sept fenêtres de blocs du composer (dés, PNJ, points de vie, encadré, ancre, choix, narration) ne sont plus téléchargés qu'au moment où on les ouvre",
+  },
+  {
+    date: "2026-08",
+    tag: "Technique",
+    text: "Audit de l'application et durcissement de la base de données :\n- Les 24 fonctions SQL du schéma applicatif épinglent désormais leur `search_path`. La moitié d'entre elles s'exécutent avec les droits de leur propriétaire (boutique, notifications, défis quotidiens) : sans cet épinglage, un appelant pouvait en théorie faire résoudre une table vers un objet à lui\n- Les 24 règles de sécurité (RLS) qui appelaient `auth.uid()` directement l'évaluaient **une fois par ligne lue** — désormais une seule fois par requête. Gain de performance sur les grandes tables (chat, wiki, tags), à comportement strictement identique : la migration a été validée en transaction annulée avant application, avec vérification que la logique des 148 règles restait inchangée\n- Nettoyage de la configuration de lint : le service worker généré et les copies de travail Git n'étaient pas exclus, ce qui noyait les vraies alertes sous 91 erreurs sans objet",
+  },
+  {
+    date: "2026-08",
     tag: "Interface",
     text: "Les marges latérales de la page d'accueil d'un monde se réduisent désormais progressivement sur les petits écrans, au lieu de garder une marge fixe trop large en mobile.",
   },

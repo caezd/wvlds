@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useMemo, useEffect, forwardRef, useImperativeHandle } from "react";
+import dynamic from "next/dynamic";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
@@ -22,13 +23,17 @@ import { toWebP } from "@/lib/imageUtils";
 import { ImagePickerCropField } from "@/components/ui/image-crop-picker";
 import { ParagraphBlockEditor } from "./ParagraphBlockEditor";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { DiceDialog } from "../blocks/DiceDialog";
-import { NarrativeBlockDialog } from "../blocks/NarrativeBlockDialog";
-import { NpcDialog } from "../blocks/NpcBlock";
-import { HpDialog } from "../blocks/HpBlock";
-import { CalloutDialog } from "../blocks/CalloutBlock";
-import { AnchorDialog } from "../blocks/AnchorDialog";
-import { ChoiceDialog } from "../blocks/ChoiceBlock";
+// Les sept dialogues de blocs ne sont montés qu'à la demande (clic sur l'outil
+// correspondant), mais l'import statique les embarquait dans le bundle de tout
+// salon. `CalloutDialog` tirait en plus un second `react-markdown` complet
+// (+ remark-gfm, remark-breaks) via CalloutBlock.
+const DiceDialog = dynamic(() => import("../blocks/DiceDialog").then((m) => m.DiceDialog), { ssr: false });
+const NarrativeBlockDialog = dynamic(() => import("../blocks/NarrativeBlockDialog").then((m) => m.NarrativeBlockDialog), { ssr: false });
+const NpcDialog = dynamic(() => import("../blocks/NpcBlock").then((m) => m.NpcDialog), { ssr: false });
+const HpDialog = dynamic(() => import("../blocks/HpBlock").then((m) => m.HpDialog), { ssr: false });
+const CalloutDialog = dynamic(() => import("../blocks/CalloutBlock").then((m) => m.CalloutDialog), { ssr: false });
+const AnchorDialog = dynamic(() => import("../blocks/AnchorDialog").then((m) => m.AnchorDialog), { ssr: false });
+const ChoiceDialog = dynamic(() => import("../blocks/ChoiceBlock").then((m) => m.ChoiceDialog), { ssr: false });
 import {
     computeWordCount,
     extractMentions,
@@ -173,7 +178,6 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
             const draft = localStorage.getItem(DRAFT_KEY);
             if (draft) setValue(draft);
         } catch { }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [DRAFT_KEY]);
     useEffect(() => {
         if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
