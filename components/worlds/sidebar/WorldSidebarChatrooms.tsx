@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
+import { useResetOnKeyChange } from "@/hooks/useResetOnKeyChange";
 import { useNotifications } from "@/components/providers/NotificationsProvider";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -162,7 +163,16 @@ export function WorldSidebarChatrooms({
   const pathname = usePathname();
   const reconnectEpoch = useReconnectEpoch();
   const [allRooms, setAllRooms] = useState<Room[]>(initialAll);
+
   const [selectedCat, setSelectedCat] = useState<Category | null>(null);
+
+  // Passer d'un monde à l'autre ne remonte pas ce composant : sans ce
+  // resemis, la liste affichée reste celle du monde quitté, les props du
+  // nouveau monde étant purement ignorés. Cf. useResetOnKeyChange.
+  useResetOnKeyChange(worldId, () => {
+    setAllRooms(initialAll);
+    setSelectedCat(null);
+  });
 
   const activeChatroomId = pathname?.startsWith("/c/")
     ? pathname.split("/c/")[1]?.split("/")[0]

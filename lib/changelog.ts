@@ -9,7 +9,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Correctif",
-    text: "Trois défauts d'affichage en passant d'un salon à l'autre, tous invisibles au rechargement de la page — ils ne se produisaient qu'en navigation interne :\n- Les **messages épinglés** du salon précédent restaient affichés le temps que les nouveaux arrivent, et pouvaient même s'y substituer durablement si deux changements de salon se suivaient de près\n- L'**étoile « salon suivi »** gardait l'état du salon quitté\n- Les **badges de défi gagné** du nouveau salon n'apparaissaient pas",
+    text: "Plusieurs restes d'affichage en passant d'un salon ou d'un monde à l'autre, tous invisibles au rechargement de la page — ils ne se produisaient qu'en navigation interne :\n- Les **messages épinglés** du salon précédent restaient affichés le temps que les nouveaux arrivent, et pouvaient même s'y substituer durablement si deux changements de salon se suivaient de près\n- L'**étoile « salon suivi »** gardait l'état du salon quitté, et l'**étoile « monde favori »** celle du monde quitté\n- Les **badges de défi gagné** du nouveau salon n'apparaissaient pas\n- La **liste des salons** de la barre latérale, la **grille des salons** et les **dossiers de catégories** pouvaient rester ceux du monde précédent\n- Une **catégorie sélectionnée** continuait de filtrer la grille du monde suivant, où elle n'existe pas",
   },
   {
     date: "2026-08",

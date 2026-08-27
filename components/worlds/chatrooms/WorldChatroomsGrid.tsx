@@ -7,10 +7,10 @@ import Link from "next/link";
 import { ChevronRight, MessagesSquare } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
+import { useResetOnKeyChange } from "@/hooks/useResetOnKeyChange";
 import { useNotifications } from "@/components/providers/NotificationsProvider";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-
 
 function relativeTime(iso: string | null) {
   if (!iso) return "Aucun message";
@@ -47,6 +47,15 @@ export function WorldChatroomsGrid({
   visibleRows?: number;
 }) {
   const [rooms, setRooms] = useState<Room[]>(initialRooms);
+
+  // Passer d'un monde à l'autre ne remonte pas ce composant : sans ce
+  // resemis, la liste affichée reste celle du monde quitté, les props du
+  // nouveau monde étant purement ignorés. Cf. useResetOnKeyChange.
+  useResetOnKeyChange(worldId, () => {
+    setRooms(initialRooms);
+  });
+
+
   const { roomUnread } = useNotifications();
   const reconnectEpoch = useReconnectEpoch();
 

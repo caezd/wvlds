@@ -1,0 +1,19 @@
+# Le dépôt stocke tout le texte en LF, y compris sur les postes Windows où
+# `core.autocrlf=true` convertit à la volée dans la copie de travail. Sans
+# cette règle, un outil qui réécrit un fichier avec des fins de ligne Windows
+# peut faire entrer des CR dans un blob : le fichier apparaît alors modifié en
+# entier dans la revue, alors que seules quelques lignes ont bougé.
+* text=auto eol=lf
+
+# Binaires : jamais de conversion (la détection automatique les reconnaît, mais
+# autant être explicite pour ceux qu'on manipule le plus).
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.webp   binary
+*.gif    binary
+*.ico    binary
+*.woff   binary
+*.woff2  binary
+*.gz     binary
+*.pdf    binary

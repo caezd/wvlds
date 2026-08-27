@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
+import { useResetOnKeyChange } from "@/hooks/useResetOnKeyChange";
 import { supabaseThumb } from "@/lib/storage";
 import { cn } from "@/lib/utils";
 
@@ -56,6 +57,16 @@ export function WorldCategoryFolders({
   const t = useTranslations("worlds");
   const [categories, setCategories] = useState<Category[]>(initialCategories ?? []);
   const [counts, setCounts] = useState<Map<string, number>>(() => countByCategory(initialRooms));
+
+  // Passer d'un monde à l'autre ne remonte pas ce composant : sans ce
+  // resemis, la liste affichée reste celle du monde quitté, les props du
+  // nouveau monde étant purement ignorés. Cf. useResetOnKeyChange.
+  useResetOnKeyChange(worldId, () => {
+    setCategories(initialCategories ?? []);
+    setCounts(countByCategory(initialRooms));
+  });
+
+
   const reconnectEpoch = useReconnectEpoch();
   const hasServerCategories = initialCategories !== undefined;
 

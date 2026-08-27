@@ -1,6 +1,7 @@
 "use client";
 
 import { useLayoutEffect, useState } from "react";
+import { useResetOnKeyChange } from "@/hooks/useResetOnKeyChange";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -42,7 +43,6 @@ const WorldStatsWidget = dynamic(() => import("./widgets/WorldStatsWidget").then
 type WorldPrefs = { main_expanded: boolean; is_favorite: boolean; wiki_sidebar_width?: number };
 
 type HeroWorld = World & { owner_id: string };
-
 
 export function WorldHome({
   world,
@@ -108,6 +108,17 @@ export function WorldHome({
   const [isFavorite, setIsFavorite] = useState(initialPrefs?.is_favorite ?? false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(initialCategoryId ?? null);
+
+  // Passer d'un monde à l'autre depuis le rail est une navigation client :
+  // ce composant n'est pas remonté et ses états gardent la valeur du monde
+  // quitté. Sans ce resemis, l'étoile « favori » restait celle du monde
+  // précédent, et une catégorie sélectionnée continuait de filtrer la grille
+  // du nouveau monde alors que son identifiant n'y existe pas.
+  useResetOnKeyChange(worldId, () => {
+    setIsFavorite(initialPrefs?.is_favorite ?? false);
+    setSelectedCategoryId(initialCategoryId ?? null);
+  });
+
   // Le composer est retiré de la grille avant le calcul du layout (pas juste
   // au rendu) : sinon un visiteur sans droit de post verrait un trou vide à
   // la place du bloc plutôt qu'une grille recomposée sans lui. `compactHomeGridRows`
