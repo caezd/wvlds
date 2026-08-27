@@ -47,7 +47,7 @@ import { validateChallenge } from "@/lib/validateChallenge";
 import { buildActiveChallenges, type DailyChallengeRow } from "@/lib/activeChallenges";
 import { useRealtimeChatSync } from "@/hooks/useRealtimeChatSync";
 import { usePresenceChannel } from "@/hooks/usePresenceChannel";
-import { useNotifications } from "@/components/providers/NotificationsProvider";
+import { useNotificationsActions } from "@/components/providers/NotificationsProvider";
 import { useGlobalPresence } from "@/components/providers/PresenceProvider";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import { useMobileSidebar } from "@/components/providers/MobileSidebarProvider";
@@ -184,7 +184,11 @@ export default function ChatRoomView({
   const reconnectEpoch = useReconnectEpoch();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { setActiveChat, markChatRead: markChatReadCtx } = useNotifications();
+  // Contexte des actions seules : ChatRoomView n'a besoin que de ces deux
+  // callbacks. Via `useNotifications()`, ce composant (le plus lourd de l'app)
+  // se re-rendait à chaque message reçu dans n'importe lequel de vos mondes,
+  // parce que la valeur du contexte complet porte aussi les compteurs.
+  const { setActiveChat, markChatRead: markChatReadCtx } = useNotificationsActions();
   const { post_message, quests } = useFeatureFlags();
   const { setActiveWorldId } = useMobileSidebar();
 

@@ -6,7 +6,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
 import DmsProvider, { useDms } from "@/components/providers/DmsProvider";
-import { useNotifications } from "@/components/providers/NotificationsProvider";
+import { useNotificationsPanel } from "@/components/providers/NotificationsProvider";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import { MobileSidebarProvider, useMobileSidebar } from "@/components/providers/MobileSidebarProvider";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
@@ -55,7 +55,10 @@ function AppShellInner({
 }) {
   const { notifications: notifEnabled, direct_messages: dmsEnabled, public_worlds: exploreEnabled } = useFeatureFlags();
   const { panelOpen: dmsOpen, closePanel: closeDms } = useDms();
-  const { panelOpen: notifOpen, closePanel: closeNotif } = useNotifications();
+  // Contexte du panneau seul : AppShell enveloppe toute l'application et
+  // n'utilise que ces deux valeurs. Via `useNotifications()`, il se re-rendait
+  // à chaque message reçu dans n'importe lequel de vos mondes.
+  const { panelOpen: notifOpen, closePanel: closeNotif } = useNotificationsPanel();
   const { mobileSidebar, drawerOpen, setDrawerOpen, hideMobileHeader } = useMobileSidebar();
   const pathname = usePathname();
   const searchParams = useSearchParams();

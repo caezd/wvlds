@@ -2,7 +2,11 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, act } from "@testing-library/react";
 import { createClient } from "@/lib/supabase/client";
 import { createSupabaseMock, type SupabaseMock } from "@/test/supabaseMock";
-import NotificationsProvider, { useNotifications } from "@/components/providers/NotificationsProvider";
+import NotificationsProvider, {
+    useNotifications,
+    useNotificationsActions,
+    useNotificationsPanel,
+} from "@/components/providers/NotificationsProvider";
 import type { AppNotification, AppShellResult } from "@/types/db";
 
 // Le bootstrap charge tout via une seule RPC get_app_shell() (voir lib/appShell.ts) ;
@@ -766,5 +770,80 @@ describe("NotificationsProvider — cleanup et reconnexion", () => {
         expect(notifChannels).toHaveLength(2);
         expect(msgChannels[1]).not.toBe(oldMsgCh);
         expect(notifChannels[1]).not.toBe(oldNotifCh);
+    });
+});
+
+// ── Granularité des contextes ─────────────────────────────────────────────────
+//
+// La valeur de `useNotifications()` porte 18 champs de fréquences très
+// différentes : un message reçu dans n'importe lequel de vos mondes incrémente
+// `roomUnread` et invalide donc l'ensemble, réveillant tous les consommateurs —
+// y compris `ChatRoomView`, le plus lourd de l'application, qui n'utilise que
+// deux callbacks stables. D'où deux contextes plus étroits.
+
+function ActionsProbe({ onRender }: { onRender: () => void }) {
+    const { setActiveChat, markChatRead } = useNotificationsActions();
+    onRender();
+    return (
+        <>
+            <button data-testid="a-open" onClick={() => setActiveChat("c1")}>ouvrir</button>
+            <button data-testid="a-read" onClick={() => void markChatRead("c1")}>lu</button>
+        </>
+    );
+}
+
+function PanelProbe({ onRender }: { onRender: () => void }) {
+    const { panelOpen } = useNotificationsPanel();
+    onRender();
+    return <span data-testid="panel">{panelOpen ? "ouvert" : "ferme"}</span>;
+}
+
+describe("Granularité des contextes de notifications", () => {
+    it("un message reçu ne réveille ni le contexte d'actions ni celui du panneau", async () => {
+        const onActionsRender = vi.fn();
+        const onPanelRender = vi.fn();
+
+        const mock = createSupabaseMock({ user: { id: "u1" } });
+        mockAppShell(mock, [], { ...UNREAD_SHELL, room_unreads: [] });
+        vi.mocked(createClient).mockReturnValue(mock.client as never);
+
+        render(
+            <NotificationsProvider>
+                <ConsumerUnreads />
+                <ActionsProbe onRender={onActionsRender} />
+                <PanelProbe onRender={onPanelRender} />
+            </NotificationsProvider>,
+        );
+
+        await waitFor(() => expect(screen.getByTestId("room-c1")).toBeInTheDocument());
+        const actionsBase = onActionsRender.mock.calls.length;
+        const panelBase = onPanelRender.mock.calls.length;
+
+        emitMessage(mock, { chat_id: "c1", world_id: "w1", author_id: "autre" });
+
+        // Le compteur bouge…
+        await waitFor(() => expect(screen.getByTestId("room-c1").textContent).toBe("1"));
+        // …mais les deux contextes étroits n'ont pas été invalidés.
+        expect(onActionsRender.mock.calls.length).toBe(actionsBase);
+        expect(onPanelRender.mock.calls.length).toBe(panelBase);
+    });
+
+    it("expose des actions fonctionnelles malgré l'isolation", async () => {
+        const mock = createSupabaseMock({ user: { id: "u1" } });
+        mockAppShell(mock, [], UNREAD_SHELL);
+        vi.mocked(createClient).mockReturnValue(mock.client as never);
+
+        render(
+            <NotificationsProvider>
+                <ConsumerUnreads />
+                <ActionsProbe onRender={() => {}} />
+            </NotificationsProvider>,
+        );
+
+        await waitFor(() => expect(screen.getByTestId("room-c1").textContent).toBe("2"));
+
+        // markChatRead via le contexte d'actions remet bien le compteur à zéro.
+        act(() => { screen.getByTestId("a-read").click(); });
+        await waitFor(() => expect(screen.getByTestId("room-c1").textContent).toBe("0"));
     });
 });

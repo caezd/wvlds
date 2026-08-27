@@ -14,7 +14,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { supabaseThumb } from "@/lib/storage";
-import { useNotifications } from "@/components/providers/NotificationsProvider";
+import { useNotifications, useNotificationsActions } from "@/components/providers/NotificationsProvider";
 import { usePushSubscription } from "@/hooks/usePushSubscription";
 import { WorldPreviewDialog } from "@/components/worlds/WorldPreviewDialog";
 import { AgeConfirmDialog } from "@/components/worlds/AgeConfirmDialog";
@@ -58,7 +58,9 @@ function WorldInviteCard({ notif, onMarkRead }: { notif: AppNotification; onMark
     const [previewOpen, setPreviewOpen] = useState(false);
     const [acting, setActing] = useState(false);
     const router = useRouter();
-    const { closePanel } = useNotifications();
+    // Une seule action : le contexte d'actions suffit (jamais invalidé par un
+    // compteur qui bouge), et cette carte est rendue une fois par notification.
+    const { closePanel } = useNotificationsActions();
 
     useEffect(() => {
         if (!notif.world_id) return;

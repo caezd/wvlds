@@ -8,6 +8,16 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Performance",
+    text: "Onglet « Membres » d'un monde : la liste des personas jouées par chaque membre était déduite en téléchargeant jusqu'à 2000 messages du monde pour les dédupliquer dans le navigateur — plusieurs centaines de Ko sur un monde actif. Le tri est désormais fait par la base, qui ne renvoie que le résultat. Corrige au passage un défaut de justesse : au-delà de 2000 messages, la troncature était silencieuse et arbitraire, si bien que des personas disparaissaient de la liste sans raison apparente.",
+  },
+  {
+    date: "2026-08",
+    tag: "Performance",
+    text: "Réception d'un message : jusqu'ici, chaque message arrivant dans l'un de vos mondes provoquait un rafraîchissement de toute la page de salon — le composant le plus lourd de l'application — alors qu'il n'avait besoin d'aucun des compteurs mis à jour. Les compteurs de non-lus et l'état du panneau de notifications sont désormais distribués séparément des actions, et l'affichage du salon comme la coque de l'application ne réagissent plus qu'à ce qui les concerne réellement.",
+  },
+  {
+    date: "2026-08",
     tag: "Correctif",
     text: "Faille corrigée : les tentatives de défis quotidiens réussies étaient lisibles publiquement. Deux règles de sécurité se cumulaient sur cette table, et la plus large (« toute tentative gagnée ») annulait la plus stricte (« ses propres tentatives ») — n'importe qui, même sans être connecté, pouvait savoir qui avait relevé un défi, dans quel salon et sur quel message, y compris dans des mondes privés. La lecture est désormais réservée aux membres du monde concerné ; le badge « défi remporté » sur les messages des autres continue de s'afficher normalement.",
   },

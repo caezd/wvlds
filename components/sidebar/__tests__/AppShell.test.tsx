@@ -40,6 +40,9 @@ vi.mock("@/components/providers/FeatureFlagsProvider", () => ({
 
 const notifPanelOpenMock = vi.hoisted(() => ({ value: false }));
 vi.mock("@/components/providers/NotificationsProvider", () => ({
+  // AppShell consomme le contexte du panneau seul ; les autres hooks restent
+  // mockés pour les composants voisins rendus dans le même arbre.
+  useNotificationsPanel: () => ({ panelOpen: notifPanelOpenMock.value, closePanel: vi.fn(), openPanel: vi.fn(), togglePanel: vi.fn() }),
   useNotifications: () => ({ panelOpen: notifPanelOpenMock.value, closePanel: vi.fn(), worldUnread: {} }),
 }));
 

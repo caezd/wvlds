@@ -15,6 +15,11 @@ import type { AppNotification, NotificationType, AllChatroomUnreadRow } from "@/
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import { fetchAppShell } from "@/lib/appShell";
+import { resetUnreadCounts, setUnreadCounts } from "@/lib/unreadStore";
+
+// Compteurs par clé — à préférer quand un composant ne suit qu'une salle ou
+// qu'un monde, plutôt que de lire le `Record` complet. Voir lib/unreadStore.ts.
+export { useRoomUnread, useWorldUnread } from "@/lib/unreadStore";
 
 type NotifPrefs = Partial<Record<NotificationType, boolean>>;
 
@@ -47,6 +52,54 @@ type Ctx = {
 };
 
 const NotificationsCtx = createContext<Ctx | null>(null);
+
+/**
+ * Actions seules — toutes stables (useCallback sur des deps stables), donc ce
+ * contexte n'est jamais invalidé par un compteur qui bouge. Les consommateurs
+ * qui ne veulent que déclencher des actions (au premier rang desquels
+ * `ChatRoomView`, qui n'utilise que `setActiveChat` et `markChatRead`)
+ * l'utilisent au lieu du contexte complet, dont la valeur change à chaque
+ * message reçu dans n'importe lequel de vos mondes.
+ */
+type ActionsCtx = Pick<
+    Ctx,
+    "openPanel" | "closePanel" | "togglePanel" | "setActiveChat" | "markChatRead" | "refreshAll"
+>;
+
+const NotificationsActionsCtx = createContext<ActionsCtx | null>(null);
+
+const DEFAULT_ACTIONS: ActionsCtx = {
+    openPanel: () => {},
+    closePanel: () => {},
+    togglePanel: () => {},
+    setActiveChat: () => {},
+    markChatRead: async () => {},
+    refreshAll: async () => {},
+};
+
+export function useNotificationsActions(): ActionsCtx {
+    return useContext(NotificationsActionsCtx) ?? DEFAULT_ACTIONS;
+}
+
+/**
+ * État du panneau + ses actions. Invalidé uniquement quand le panneau s'ouvre
+ * ou se ferme (un clic occasionnel), jamais par un compteur de non-lus. Pour
+ * `AppShell`, qui enveloppe toute l'application et n'a besoin que de ça.
+ */
+type PanelCtx = Pick<Ctx, "panelOpen" | "openPanel" | "closePanel" | "togglePanel">;
+
+const NotificationsPanelCtx = createContext<PanelCtx | null>(null);
+
+const DEFAULT_PANEL: PanelCtx = {
+    panelOpen: false,
+    openPanel: () => {},
+    closePanel: () => {},
+    togglePanel: () => {},
+};
+
+export function useNotificationsPanel(): PanelCtx {
+    return useContext(NotificationsPanelCtx) ?? DEFAULT_PANEL;
+}
 
 const DEFAULT_CTX: Ctx = {
     panelOpen: false,
@@ -466,9 +519,35 @@ export default function NotificationsProvider({ children }: { children: React.Re
         notifications, unreadNotifCount, markNotifRead, markAllNotifsRead, archiveNotif,
         hasMoreNotifs, loadMoreNotifs, notifPrefs, setNotifPref]);
 
+    // Toutes ces callbacks sont stables : cette valeur est donc calculée une
+    // fois et ne change plus de la vie du provider.
+    const actions = useMemo<ActionsCtx>(
+        () => ({ openPanel, closePanel, togglePanel, setActiveChat, markChatRead, refreshAll }),
+        [openPanel, closePanel, togglePanel, setActiveChat, markChatRead, refreshAll],
+    );
+
+    const panel = useMemo<PanelCtx>(
+        () => ({ panelOpen, openPanel, closePanel, togglePanel }),
+        [panelOpen, openPanel, closePanel, togglePanel],
+    );
+
+    // Alimente le store par clé, pour les abonnés d'une seule salle / d'un seul
+    // monde (useRoomUnread / useWorldUnread).
+    useEffect(() => {
+        setUnreadCounts(roomUnread, worldUnread);
+    }, [roomUnread, worldUnread]);
+
+    // Le store est un singleton de module : on le vide au démontage pour ne pas
+    // laisser des compteurs périmés à un prochain montage (changement de compte).
+    useEffect(() => resetUnreadCounts, []);
+
     return (
         <NotificationsCtx.Provider value={value}>
-            {children}
+            <NotificationsActionsCtx.Provider value={actions}>
+                <NotificationsPanelCtx.Provider value={panel}>
+                    {children}
+                </NotificationsPanelCtx.Provider>
+            </NotificationsActionsCtx.Provider>
         </NotificationsCtx.Provider>
     );
 }
