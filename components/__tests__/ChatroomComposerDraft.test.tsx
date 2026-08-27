@@ -128,20 +128,26 @@ describe("ChatroomComposer — brouillons localStorage", () => {
     // - waitFor qui attend que le délai expire naturellement.
 
     it("sauvegarde le brouillon dans localStorage après le délai de debounce", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<ChatroomComposer chatId="chat1" presetPersona={mockPersona} />);
       await user.type(screen.getByTestId("editor"), "Bonjour monde");
 
       expect(localStorage.getItem("draft:chat1")).toBeNull();
 
+      // Plafond large à dessein : `waitFor` rend la main dès que la
+      // condition tient, donc un plafond haut ne coûte rien sur un
+      // lancement sain. À 1500 ms pour un debounce de 500 ms, il ne
+      // restait aucune marge sous la contention CPU de la suite
+      // complète — c'est ce plafond local, et non le timeout global,
+      // qui faisait échouer ce test une fois sur quatre.
       await waitFor(
         () => expect(localStorage.getItem("draft:chat1")).toBe("Bonjour monde"),
-        { timeout: 1500 },
+        { timeout: 10_000 },
       );
     });
 
     it("n'écrit pas encore dans localStorage juste après la frappe", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<ChatroomComposer chatId="chat1" presetPersona={mockPersona} />);
       await user.type(screen.getByTestId("editor"), "En cours de frappe");
       // user.type() résout tous les effets React synchrones ; le setTimeout
@@ -152,7 +158,7 @@ describe("ChatroomComposer — brouillons localStorage", () => {
 
   describe("suppression après envoi", () => {
     it("supprime le brouillon du localStorage après un envoi réussi", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       localStorage.setItem("draft:chat1", "Message prêt à envoyer");
 
       render(<ChatroomComposer chatId="chat1" presetPersona={mockPersona} />);
@@ -167,7 +173,7 @@ describe("ChatroomComposer — brouillons localStorage", () => {
     });
 
     it("vide l'éditeur après un envoi réussi", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       localStorage.setItem("draft:chat1", "Message prêt à envoyer");
 
       render(<ChatroomComposer chatId="chat1" presetPersona={mockPersona} />);
@@ -179,7 +185,7 @@ describe("ChatroomComposer — brouillons localStorage", () => {
     });
 
     it("clearDraft() annule immédiatement le timer de debounce en cours", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const ref = createRef<ChatroomComposerHandle>();
       render(<ChatroomComposer ref={ref} chatId="chat1" presetPersona={mockPersona} />);
 
@@ -209,7 +215,7 @@ describe("ChatroomComposer — brouillons localStorage", () => {
       });
       vi.mocked(createClient).mockReturnValue(mock.client as never);
 
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       localStorage.setItem("draft:chat1", "Message important");
 
       render(<ChatroomComposer chatId="chat1" presetPersona={mockPersona} />);

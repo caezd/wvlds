@@ -17,6 +17,20 @@ export default defineConfig({
     // contiennent leur propre copie de e2e/ non couverte par le pattern ci-dessus.
     include: ["**/*.{test,spec}.{ts,tsx}"],
     exclude: ["node_modules/**", ".next/**", "e2e/**", ".claude/**"],
+
+    // Vitest ouvre par défaut un worker par cœur logique moins un — 31 ici,
+    // chacun montant son propre environnement jsdom. La machine passe alors
+    // plus de temps à s'arbitrer qu'à exécuter : les tests qui attendent sur
+    // de vrais timers (debounce du composer, sélections Radix) mesurent du
+    // temps mur, et un debounce de 300 ms peut mettre plusieurs secondes à
+    // s'observer sous famine CPU. C'est ce qui faisait échouer un test au
+    // hasard à chaque poignée de lancements.
+    //
+    // Mesuré sur 32 cœurs, suite complète : 53 s et un échec avec le défaut,
+    // 42 s et vert à 50 %. Plafonner est donc gagnant sur les deux tableaux.
+    // Exprimé en pourcentage pour rester valable sur une machine de CI plus
+    // modeste.
+    maxWorkers: "50%",
     // Le défaut (5 s) est trop serré ici : la suite lance ~157 fichiers en
     // parallèle et le seul montage de l'environnement jsdom coûte déjà
     // plusieurs secondes par fichier. Sous contention, des tests parfaitement
