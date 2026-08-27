@@ -17,7 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner"; // ou ton système de toasts shadcn
 
-type ShopItem = {
+export type ShopItem = {
   id: string;
   key: string;
   name: string;

@@ -9,7 +9,7 @@ import { WorldCategoryFolders } from "../chatrooms/WorldCategoryFolders";
 import { WorldTimelineShortcutsWidget } from "./widgets/WorldTimelineShortcutsWidget";
 import { WorldHomeBannerView } from "./blocks/WorldHomeBannerBlock";
 import { cn } from "@/lib/utils";
-import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
+import type { WorldTimelineConfig, WorldHomeRoom as Room } from "@/types/worlds";
 import type { ChatroomCategory } from "@/lib/currentRequest";
 import type { RecentPersona } from "./widgets/WorldRecentPersonasWidget";
 import type { WikiPage } from "./widgets/WorldWikiShortcutsWidget";
@@ -26,17 +26,6 @@ const WorldMembersOnlineWidget = dynamic(() => import("./widgets/WorldMembersOnl
 const WorldWikiShortcutsWidget = dynamic(() => import("./widgets/WorldWikiShortcutsWidget").then((m) => m.WorldWikiShortcutsWidget));
 const WorldRecentPersonasWidget = dynamic(() => import("./widgets/WorldRecentPersonasWidget").then((m) => m.WorldRecentPersonasWidget));
 
-type Room = {
-  id: string;
-  title: string | null;
-  name: string | null;
-  icon_url: string | null;
-  last_message_at: string | null;
-  last_poster_avatar_url?: string | null;
-  unread_count: number;
-  category_id?: string | null;
-  timeline_date?: WorldTimelineDate | null;
-};
 
 /**
  * Rendu lecture seule de la grille de blocs de la page d'accueil — pure

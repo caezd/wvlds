@@ -127,3 +127,22 @@ export type World = {
    *  le rendu public et l'éditeur, voir resolveHomeGridGap(). */
   home_grid_gap?: string | null;
 };
+
+/**
+ * Salon tel qu'affiché sur la page d'accueil d'un monde et dans ses blocs.
+ *
+ * Ce type était recopié à l'identique dans WorldHome, WorldHomeGridView et
+ * WorldChatroomsGrid — trois copies qu'un champ ajouté d'un seul côté aurait
+ * fait diverger en silence (`timeline_date` manquait déjà dans la troisième).
+ */
+export type WorldHomeRoom = {
+  id: string;
+  title: string | null;
+  name: string | null;
+  icon_url: string | null;
+  last_message_at: string | null;
+  last_poster_avatar_url?: string | null;
+  unread_count: number;
+  category_id?: string | null;
+  timeline_date?: WorldTimelineDate | null;
+};

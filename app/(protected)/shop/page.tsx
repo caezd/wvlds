@@ -3,21 +3,9 @@ import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import { getFeatureFlags } from "@/lib/featureFlags";
 import ShopGrid from "./ShopGrid";
+import type { ShopItem } from "./ShopGrid";
 import { getTranslations } from "next-intl/server";
 
-type ShopItem = {
-  id: string;
-  key: string;
-  name: string;
-  slot: "avatar_frame" | string;
-  price_coins: number;
-  asset_url: string;
-  preview_url: string | null;
-  active: boolean;
-  owned: boolean;
-  can_afford: boolean;
-  equipped: boolean;
-};
 
 export default async function ShopPage() {
   const [t, supabase] = await Promise.all([getTranslations("shop"), createClient()]);

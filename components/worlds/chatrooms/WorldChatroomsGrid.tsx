@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { WorldHomeRoom as Room } from "@/types/worlds";
 import Image from "next/image";
 import Link from "next/link";
 import { ChevronRight, MessagesSquare } from "lucide-react";
@@ -10,16 +11,6 @@ import { useNotifications } from "@/components/providers/NotificationsProvider";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-type Room = {
-  id: string;
-  title: string | null;
-  name: string | null;
-  icon_url: string | null;
-  last_message_at: string | null;
-  last_poster_avatar_url?: string | null;
-  unread_count: number;
-  category_id?: string | null;
-};
 
 function relativeTime(iso: string | null) {
   if (!iso) return "Aucun message";

@@ -14,7 +14,7 @@ import type { RecentPersona } from "./widgets/WorldRecentPersonasWidget";
 import type { WikiPage } from "./widgets/WorldWikiShortcutsWidget";
 import { MobileDrawerOpenButton } from "@/components/sidebar/MobileDrawerOpenButton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import type { World, WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
+import type { World, WorldTimelineConfig, WorldHomeRoom as Room } from "@/types/worlds";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import { useMobileSidebar } from "@/components/providers/MobileSidebarProvider";
 import type { AsidePersona } from "@/components/personas/WorldPersonaAsideClient";
@@ -43,17 +43,6 @@ type WorldPrefs = { main_expanded: boolean; is_favorite: boolean; wiki_sidebar_w
 
 type HeroWorld = World & { owner_id: string };
 
-type Room = {
-  id: string;
-  title: string | null;
-  name: string | null;
-  icon_url: string | null;
-  last_message_at: string | null;
-  last_poster_avatar_url?: string | null;
-  unread_count: number;
-  category_id?: string | null;
-  timeline_date?: WorldTimelineDate | null;
-};
 
 export function WorldHome({
   world,
