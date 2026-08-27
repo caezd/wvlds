@@ -8,6 +8,13 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Correctif",
+    text: "Deux failles de confidentialité fermées, trouvées lors d'une revue systématique des règles d'accès à la base :
+- Les **clés de chiffrement des salons** étaient lisibles par n'importe quel compte, même membre d'aucun monde. Les messages eux-mêmes restaient protégés, mais la garantie du chiffrement — qu'une fuite des messages ne livre pas leur contenu — ne tenait plus. L'accès est désormais réservé aux membres du monde concerné
+- Les **profils** (dont les bios) et **le détail des votes** dans les sondages, y compris ceux de salons privés, étaient lisibles sans même être connecté. Il faut maintenant un compte",
+  },
+  {
+    date: "2026-08",
     tag: "Interface",
     text: "Les onglets du navigateur portent enfin un nom : jusqu'ici tous affichaient « WVLDS », y compris quand on ouvre plusieurs salons côte à côte. Un salon affiche désormais son nom et celui de son monde, une page de monde son nom, et chaque section son intitulé. Les favoris et les liens partagés en profitent aussi.",
   },
