@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Correctif",
+    text: "Fuite de mémoire dans le composer : joindre des images à un message puis continuer à écrire consommait de la mémoire à chaque caractère tapé, sans jamais la libérer — les images restaient retenues jusqu'au rechargement de la page. Sur une longue session avec plusieurs images, l'onglet pouvait devenir sensiblement plus lourd.",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
     text: "Accessibilité : quinze boutons annonçaient leur rôle en français aux lecteurs d'écran, quelle que soit la langue du compte (« Ouvrir le menu », « Copier le code », « Modifier l'avatar »…). Le texte visible, lui, était bien traduit — rien ne signalait donc le problème à l'écran. Tous passent désormais par les traductions, en français, anglais et espagnol.",
   },
   {
