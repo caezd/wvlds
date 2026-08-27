@@ -191,7 +191,45 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
     }, [value, DRAFT_KEY]);
     const { chatroom_media } = useFeatureFlags();
     const [pendingMedia, setPendingMedia] = useState<File[]>([]);
-    const pendingMediaPreviews = pendingMedia.map((f) => URL.createObjectURL(f));
+    // Aperçus des images en attente d'envoi, mémorisés par fichier.
+    //
+    // Ces URL étaient créées à chaque rendu — or ce composant se re-rend à
+    // chaque frappe (il porte l'état `value`). Écrire un message avec trois
+    // images attachées fabriquait donc trois `blob:` par caractère tapé, aucune
+    // n'étant jamais révoquée : chacune retient son fichier en mémoire jusqu'au
+    // rechargement de la page.
+    //
+    // Le cache est indexé par l'objet `File` lui-même, pas par sa position :
+    // un même fichier garde son URL d'un rendu à l'autre, donc aucune vignette
+    // ne clignote à l'ajout ou au retrait d'une image. La création reste
+    // idempotente, ce qui la rend sûre en mode strict (double rendu en
+    // développement).
+    const previewUrlsRef = useRef(new Map<File, string>());
+    const pendingMediaPreviews = pendingMedia.map((file) => {
+        let url = previewUrlsRef.current.get(file);
+        if (!url) {
+            url = URL.createObjectURL(file);
+            previewUrlsRef.current.set(file, url);
+        }
+        return url;
+    });
+
+    // Libère les URL des fichiers retirés de la liste, puis tout au démontage.
+    useEffect(() => {
+        const stillPending = new Set(pendingMedia);
+        for (const [file, url] of previewUrlsRef.current) {
+            if (stillPending.has(file)) continue;
+            URL.revokeObjectURL(url);
+            previewUrlsRef.current.delete(file);
+        }
+    }, [pendingMedia]);
+    useEffect(() => {
+        const cache = previewUrlsRef.current;
+        return () => {
+            for (const url of cache.values()) URL.revokeObjectURL(url);
+            cache.clear();
+        };
+    }, []);
     // Initialiser à null pour que le rendu SSR corresponde au premier rendu
     // client : `presetPersona` vient in fine de préférences résolues côté
     // parent, et rien ne garantit qu'elles soient déjà stables au moment de
