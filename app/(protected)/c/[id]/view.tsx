@@ -477,39 +477,47 @@ export default function ChatRoomView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chatId]);
 
+  // Horodatage du dernier message, lu par les écouteurs ci-dessous sans les
+  // faire dépendre de `messages` : l'effet dépendait de `messages.length`, donc
+  // chaque message reçu détachait puis rattachait les deux écouteurs, juste
+  // pour rafraîchir cette seule valeur.
+  const lastMessageAtRef = useRef<string | undefined>(undefined);
+  lastMessageAtRef.current = messages.at(-1)?.created_at;
+
   useEffect(() => {
     if (!userId) return;
 
-    const onFocus = () => void markChatRead(messages.at(-1)?.created_at);
+    const mark = () => void markChatRead(lastMessageAtRef.current);
     const onVis = () => {
-      if (document.visibilityState === "visible") {
-        void markChatRead(messages.at(-1)?.created_at);
-      }
+      if (document.visibilityState === "visible") mark();
     };
 
-    window.addEventListener("focus", onFocus);
+    window.addEventListener("focus", mark);
     document.addEventListener("visibilitychange", onVis);
 
     return () => {
-      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("focus", mark);
       document.removeEventListener("visibilitychange", onVis);
     };
-  }, [userId, chatId, messages.length]);
+  }, [userId, markChatRead]);
 
   /* scroll bottom behavior */
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const nearBottomRef = useRef(true);
 
-  function getViewport() {
+  // Stables (ils ne lisent qu'une ref) : sans `useCallback`, les inclure dans
+  // les dépendances des effets de scroll ci-dessous les aurait relancés à
+  // chaque rendu — d'où les `eslint-disable` qui les omettaient.
+  const getViewport = useCallback(() => {
     return scrollRef.current?.querySelector(
       "[data-radix-scroll-area-viewport]",
     ) as HTMLElement | null;
-  }
-  function scrollToBottom(behavior: ScrollBehavior = "auto") {
+  }, []);
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = "auto") => {
     const vp = getViewport();
     if (!vp) return;
     vp.scrollTo({ top: vp.scrollHeight, behavior });
-  }
+  }, [getViewport]);
   /* chargement des messages plus anciens (scroll vers le haut) */
   async function loadOlderMessages() {
     if (loadingOlderRef.current || !hasMoreRef.current) return;
@@ -617,7 +625,7 @@ export default function ChatRoomView({
     const vp = getViewport();
     if (!vp) return;
     vp.scrollTop = adjust.prevTop + (vp.scrollHeight - adjust.prevHeight);
-  }, [messages]);
+  }, [messages, getViewport]);
 
   // Si le contenu initial ne remplit pas la fenêtre, impossible de scroller :
   // on charge directement la page suivante
@@ -627,7 +635,7 @@ export default function ChatRoomView({
     if (vp.scrollHeight <= vp.clientHeight) {
       void loadOlderMessagesRef.current();
     }
-  }, [hasMore, messages.length]);
+  }, [hasMore, messages.length, getViewport]);
 
   // Suivre en temps réel si l'utilisateur est près du bas,
   // et charger l'historique quand il approche du haut
@@ -643,8 +651,7 @@ export default function ChatRoomView({
     };
     vp.addEventListener("scroll", onScroll, { passive: true });
     return () => vp.removeEventListener("scroll", onScroll);
-
-  }, []);
+  }, [getViewport]);
 
   // Canal par chatroom : typing + partage de persona
   const { emitTyping, typingLine, clearTyping } = usePresenceChannel({
@@ -691,7 +698,7 @@ export default function ChatRoomView({
   // Scroll initial
   useEffect(() => {
     scrollToBottom("auto");
-  }, []);
+  }, [scrollToBottom]);
 
   // Auto-scroll uniquement quand un nouveau message arrive en bas
   // (pas sur update/réactions, ni sur prépend de l'historique)
@@ -704,7 +711,7 @@ export default function ChatRoomView({
     if (nearBottomRef.current || isMyMessage(last, userId)) {
       scrollToBottom("smooth");
     }
-  }, [messages, userId]);
+  }, [messages, userId, scrollToBottom]);
 
   const { pins, pin, pinAnchor, unpin, updatePinLabel, pinByMessageId } = useChatPins(chatId);
 

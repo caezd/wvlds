@@ -75,12 +75,13 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const locale = await getLocale();
-
   // Identité résolue côté serveur : diffusée par contexte pour éviter que
   // chaque composant client refasse getUser() + select username au boot.
   // Profil mémoïsé pour la requête → partagé avec le layout protégé et le rail.
-  const profile = await getCurrentProfile();
+  //
+  // La locale (cookie/en-tête) et le profil (requête réseau) sont indépendants :
+  // les enchaîner faisait attendre le second pour rien.
+  const [locale, profile] = await Promise.all([getLocale(), getCurrentProfile()]);
   const initialUser: InitialUser = profile
     ? {
         id: profile.id,
