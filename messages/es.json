@@ -14,7 +14,11 @@
     "back": "Volver",
     "settings": "Ajustes",
     "show": "Ver",
-    "collapse": "Contraer"
+    "collapse": "Contraer",
+    "openMenu": "Abrir el menú",
+    "accountMenu": "Menú de la cuenta",
+    "copyCode": "Copiar el código",
+    "pickEmoji": "Elegir un emoji"
   },
   "nav": {
     "profile": "Mi perfil",
@@ -474,7 +478,12 @@
       "spouseNone": "Ninguno",
       "pendingRequest": "Esperando confirmación de {name}",
       "cancelRequest": "Cancelar"
-    }
+    },
+    "editAvatar": "Editar el avatar",
+    "editBanner": "Editar el banner",
+    "addImages": "Añadir imágenes",
+    "deleteImage": "Eliminar la imagen",
+    "deleteStat": "Eliminar la estadística"
   },
   "quests": {
     "title": "Misiones del día",
@@ -811,7 +820,8 @@
         "ellipsis": "Más tarde…",
         "atmosphere": "Buen tiempo"
       }
-    }
+    },
+    "worldConversations": "Conversaciones del mundo"
   },
   "changelog": {
     "title": "Historial de cambios",

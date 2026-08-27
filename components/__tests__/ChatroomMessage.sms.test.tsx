@@ -170,8 +170,8 @@ describe("ChatroomMessage — SMS", () => {
     const row = container.querySelector('[data-message-id="1"]');
     expect(row?.className).toContain("justify-end");
     expect(row?.innerHTML).toContain("rounded-tr-xl");
-    expect(screen.getByLabelText("Modifier")).toBeInTheDocument();
-    expect(screen.getByLabelText("Supprimer")).toBeInTheDocument();
+    expect(screen.getByLabelText("edit")).toBeInTheDocument();
+    expect(screen.getByLabelText("delete")).toBeInTheDocument();
   });
 
   it("resserre les coins de raccord et masque l'avatar quand smsSharpTop/Bottom/ShowAvatar sont fournis (série du même auteur)", () => {
@@ -197,8 +197,8 @@ describe("ChatroomMessage — SMS", () => {
     const message = makeMessage({ author_id: "user-other" });
     render(<ChatroomMessage message={message} online={{}} selfId="viewer-1" />);
 
-    expect(screen.queryByLabelText("Modifier")).toBeNull();
-    expect(screen.queryByLabelText("Supprimer")).toBeNull();
+    expect(screen.queryByLabelText("edit")).toBeNull();
+    expect(screen.queryByLabelText("delete")).toBeNull();
   });
 
   it("passer en édition puis décocher SMS fait revenir au rendu normal après sauvegarde", async () => {
@@ -213,7 +213,7 @@ describe("ChatroomMessage — SMS", () => {
       />,
     );
 
-    fireEvent.click(screen.getByLabelText("Modifier"));
+    fireEvent.click(screen.getByLabelText("edit"));
 
     // Le toggle "SMS" est coché initialement (miroir de metadata.sms)
     const smsToggle = screen.getByText("smsMode").closest("button");

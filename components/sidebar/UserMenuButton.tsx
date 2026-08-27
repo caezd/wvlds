@@ -50,6 +50,7 @@ export function UserMenuButton({
   plan,
   variant = "full",
 }: UserMenuButtonProps) {
+  const tCommon = useTranslations("common");
   const router = useRouter();
   const supabase = createClient();
   const { status, setStatus } = useGlobalPresence();
@@ -87,7 +88,7 @@ export function UserMenuButton({
         <DropdownMenuTrigger asChild>
           {variant === "compact" ? (
             <button
-              aria-label="Menu du compte"
+              aria-label={tCommon("accountMenu")}
               className="flex h-9 w-9 items-center justify-center outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-full"
             >
               <div className="relative shrink-0">

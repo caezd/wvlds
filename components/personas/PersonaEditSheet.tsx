@@ -495,6 +495,7 @@ export function PersonaEditorContent({
   restrictSkills,
   faceclaimsEnabled,
 }: PersonaEditorContentProps) {
+  const tPersonas = useTranslations("personas");
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
 
@@ -532,7 +533,7 @@ export function PersonaEditorContent({
           type="button"
           onClick={() => setBannerDialogOpen(true)}
           className="group relative h-34 w-full block overflow-hidden focus-visible:outline-none"
-          aria-label="Modifier la bannière"
+          aria-label={tPersonas("editBanner")}
           title="Modifier la bannière"
         >
           {bannerUrl ? (
@@ -563,7 +564,7 @@ export function PersonaEditorContent({
               type="button"
               onClick={() => setAvatarDialogOpen(true)}
               className="group relative h-32 w-32 rounded-2xl border-4 border-background bg-muted overflow-hidden shadow shrink-0 focus-visible:outline-none"
-              aria-label="Modifier l'avatar"
+              aria-label={tPersonas("editAvatar")}
               title="Modifier l'avatar"
             >
               {avatarUrl ? (

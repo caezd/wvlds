@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
 import type { Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -36,6 +37,7 @@ function extractText(node: React.ReactNode): string {
 }
 
 function CodeBlock({ className, children, ...props }: React.ComponentProps<"code">) {
+  const tCommon = useTranslations("common");
   const [copied, setCopied] = useState(false);
   const isBlock = /language-/.test(className ?? "");
 
@@ -64,7 +66,7 @@ function CodeBlock({ className, children, ...props }: React.ComponentProps<"code
         type="button"
         onClick={doCopy}
         className="opacity-0 group-hover:opacity-100 transition-opacity text-xs absolute right-2 top-2 rounded-md border bg-background/80 px-2 py-1"
-        aria-label="Copier le code"
+        aria-label={tCommon("copyCode")}
       >
         {copied ? "Copié" : "Copier"}
       </button>

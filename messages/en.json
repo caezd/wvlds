@@ -14,7 +14,11 @@
     "back": "Back",
     "settings": "Settings",
     "show": "Show",
-    "collapse": "Collapse"
+    "collapse": "Collapse",
+    "openMenu": "Open menu",
+    "accountMenu": "Account menu",
+    "copyCode": "Copy code",
+    "pickEmoji": "Pick an emoji"
   },
   "nav": {
     "profile": "My profile",
@@ -477,7 +481,12 @@
       "spouseNone": "None",
       "pendingRequest": "Awaiting confirmation from {name}",
       "cancelRequest": "Cancel"
-    }
+    },
+    "editAvatar": "Edit avatar",
+    "editBanner": "Edit banner",
+    "addImages": "Add images",
+    "deleteImage": "Delete image",
+    "deleteStat": "Delete stat"
   },
   "quests": {
     "title": "Daily quests",
@@ -814,7 +823,8 @@
         "ellipsis": "Later…",
         "atmosphere": "Fine weather"
       }
-    }
+    },
+    "worldConversations": "World conversations"
   },
   "changelog": {
     "title": "Changelog",

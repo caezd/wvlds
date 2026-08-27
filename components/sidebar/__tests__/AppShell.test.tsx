@@ -73,7 +73,7 @@ describe("AppShell — barre mobile générique vs header de chatroom", () => {
         <div>contenu</div>
       </AppShell>,
     );
-    const button = screen.getByLabelText("Ouvrir le menu");
+    const button = screen.getByLabelText("openMenu");
     const header = button.closest("header");
     expect(header).not.toHaveClass("hidden");
   });
@@ -85,7 +85,7 @@ describe("AppShell — barre mobile générique vs header de chatroom", () => {
         <div>contenu</div>
       </AppShell>,
     );
-    const button = screen.getByLabelText("Ouvrir le menu");
+    const button = screen.getByLabelText("openMenu");
     const header = button.closest("header");
     expect(header).toHaveClass("hidden");
   });

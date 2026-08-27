@@ -50,6 +50,7 @@ function ImageUploader({
   initialUrl?: string | null;
   hint?: string;
 }) {
+  const tCommon = useTranslations("common");
   const t = useTranslations("admin");
   const supabase = createClient();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -136,7 +137,7 @@ function ImageUploader({
                 setUrl("");
               }}
               className="absolute right-2 top-2 rounded-full bg-background/80 p-0.5 text-muted-foreground hover:text-destructive"
-              aria-label="Supprimer"
+              aria-label={tCommon("delete")}
             >
               <X className="h-3.5 w-3.5" />
             </button>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { supabaseThumb } from "@/lib/storage";
@@ -37,6 +38,7 @@ function StatsField({
   initialItems: PersonaStat[];
   onSave: (items: PersonaStat[]) => void;
 }) {
+  const tPersonas = useTranslations("personas");
   const [items, setItems] = useState<PersonaStat[]>(initialItems);
 
   function update(next: PersonaStat[]) {
@@ -67,7 +69,7 @@ function StatsField({
             type="button"
             onClick={() => removeStat(stat.id)}
             className="absolute -right-1.5 -top-1.5 hidden h-4 w-4 items-center justify-center rounded-full bg-muted text-muted-foreground hover:bg-destructive/10 hover:text-destructive group-hover/stat:flex"
-            aria-label="Supprimer la stat"
+            aria-label={tPersonas("deleteStat")}
           >
             <X className="h-2.5 w-2.5" />
           </button>
@@ -163,6 +165,7 @@ function ImageGridField({
   userId: string | null;
   onSave: (images: PersonaGridImage[]) => void;
 }) {
+  const tPersonas = useTranslations("personas");
   const supabase = createClient();
   const [images, setImages] = useState<PersonaGridImage[]>(initialImages);
   const [uploading, setUploading] = useState(false);
@@ -228,7 +231,7 @@ function ImageGridField({
                 type="button"
                 onClick={() => removeImage(img.id)}
                 className="h-5 w-5 flex items-center justify-center rounded-full bg-black/60 text-white hover:bg-destructive"
-                aria-label="Supprimer l'image"
+                aria-label={tPersonas("deleteImage")}
               >
                 <X className="h-3 w-3" />
               </button>
@@ -240,7 +243,7 @@ function ImageGridField({
           onClick={() => inputRef.current?.click()}
           disabled={uploading || !userId}
           className="flex aspect-square items-center justify-center rounded-md border border-dashed border-border-soft text-muted-foreground transition-colors hover:border-border hover:text-foreground disabled:opacity-50"
-          aria-label="Ajouter des images"
+          aria-label={tPersonas("addImages")}
         >
           {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
         </button>

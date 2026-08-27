@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Menu } from "lucide-react";
@@ -53,6 +54,7 @@ function AppShellInner({
   worldsQuota: Quota;
   children: React.ReactNode;
 }) {
+  const tCommon = useTranslations("common");
   const { notifications: notifEnabled, direct_messages: dmsEnabled, public_worlds: exploreEnabled } = useFeatureFlags();
   const { panelOpen: dmsOpen, closePanel: closeDms } = useDms();
   // Contexte du panneau seul : AppShell enveloppe toute l'application et
@@ -168,7 +170,7 @@ function AppShellInner({
             type="button"
             onClick={() => setDrawerOpen(true)}
             className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-hoverCard"
-            aria-label="Ouvrir le menu"
+            aria-label={tCommon("openMenu")}
           >
             <Menu className="h-5 w-5" />
           </button>

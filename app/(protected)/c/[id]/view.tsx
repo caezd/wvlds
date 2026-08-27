@@ -85,6 +85,7 @@ function ChatroomHeader({
   rightSlot?: React.ReactNode;
 }) {
   const t = useTranslations("chatrooms");
+  const tCommon = useTranslations("common");
   const world = chat?.worlds ?? null;
   const { setDrawerOpen } = useMobileSidebar();
 
@@ -97,7 +98,7 @@ function ChatroomHeader({
           <button
             type="button"
             onClick={() => setDrawerOpen(true)}
-            aria-label="Ouvrir le menu"
+            aria-label={tCommon("openMenu")}
             className="lg:hidden flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-hoverCard hover:text-foreground"
           >
             <Menu className="h-4 w-4" />

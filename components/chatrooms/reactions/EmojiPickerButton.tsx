@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { EMOJI_PICKER_THEME_VARS } from "./emojiPickerTheme";
 import dynamic from "next/dynamic";
 import { Smile } from "lucide-react";
@@ -29,6 +30,7 @@ export function EmojiPickerButton({
   className?: string;
   emojiStyle?: "native" | "twitter";
 }) {
+  const tCommon = useTranslations("common");
   const [open, setOpen] = useState(false);
 
   return (
@@ -40,7 +42,7 @@ export function EmojiPickerButton({
             "flex h-9 w-full items-center justify-center rounded-md border border-input bg-transparent text-base shadow-xs transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
             className,
           )}
-          aria-label="Choisir un emoji"
+          aria-label={tCommon("pickEmoji")}
         >
           {value ? (
             emojiStyle === "twitter" ? (
