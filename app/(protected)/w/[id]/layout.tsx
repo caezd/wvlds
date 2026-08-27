@@ -4,6 +4,9 @@ import { createClient } from "@/lib/supabase/server";
 import { getUserId } from "@/lib/auth";
 import { getWorldById } from "@/lib/currentRequest";
 import { notFound } from "next/navigation";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getMessages } from "next-intl/server";
+import { WORLD_ROUTE_NAMESPACES, withRouteMessages } from "@/lib/clientMessages";
 
 import { AgeGate } from "@/components/worlds/AgeGate";
 import { WorldMembershipGuard } from "@/components/worlds/members/WorldMembershipGuard";
@@ -23,9 +26,11 @@ export default async function WorldLayout({
   // sont indépendants → on les résout en parallèle. `getWorldById` est
   // mémoïsé (React cache()) : `page.tsx` et `WorldSidebar` la réutilisent
   // sans requête supplémentaire.
-  const [world, userId] = await Promise.all([
+  const [world, userId, locale, messages] = await Promise.all([
     getWorldById(id),
     getUserId(supabase),
+    getLocale(),
+    getMessages(),
   ]);
 
   if (!world) {
@@ -51,13 +56,19 @@ export default async function WorldLayout({
   // Ce layout n'est pas enveloppé par le `loading.tsx` du segment (seul
   // `page.tsx` l'est) : la sidebar reste donc montée et cliquable pendant
   // qu'on navigue entre deux vues du même monde.
+  // Les onglets secondaires (wiki, carte, relations, catalogue) ne sont montés
+  // que sous cette route : leurs namespaces sont retirés du tronc commun et
+  // remontés ici, pour ne pas voyager sur les pages de salon ni ailleurs
+  // (cf. lib/clientMessages.ts).
   return (
-    <main className="composer-parent flex h-full flex-col focus-visible:outline-0">
-      <WorldMembershipGuard worldId={world.id} selfId={userId ?? null} />
-      <div className="flex min-h-0 w-full flex-1 flex-row">
-        <WorldSidebar worldId={id} />
-        {children}
-      </div>
-    </main>
+    <NextIntlClientProvider locale={locale} messages={withRouteMessages(messages, WORLD_ROUTE_NAMESPACES)}>
+      <main className="composer-parent flex h-full flex-col focus-visible:outline-0">
+        <WorldMembershipGuard worldId={world.id} selfId={userId ?? null} />
+        <div className="flex min-h-0 w-full flex-1 flex-row">
+          <WorldSidebar worldId={id} />
+          {children}
+        </div>
+      </main>
+    </NextIntlClientProvider>
   );
 }

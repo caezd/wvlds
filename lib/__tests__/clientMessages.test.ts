@@ -5,6 +5,7 @@ import { join } from "node:path";
 import type { AbstractIntlMessages } from "next-intl";
 import {
     ROUTE_SCOPED_NAMESPACES,
+    WORLD_ROUTE_NAMESPACES,
     SERVER_ONLY_NAMESPACES,
     shellMessages,
     withRouteMessages,
@@ -24,7 +25,7 @@ function sourceFiles(dir: string, acc: string[] = []): string[] {
     return acc;
 }
 
-const FILES = [join(ROOT, "app"), join(ROOT, "components"), join(ROOT, "hooks")]
+const FILES = [join(ROOT, "app"), join(ROOT, "components"), join(ROOT, "hooks"), join(ROOT, "lib")]
     .flatMap((d) => sourceFiles(d))
     .map((path) => ({ path, src: readFileSync(path, "utf8") }));
 
@@ -108,19 +109,104 @@ describe("découpage des messages envoyés au client", () => {
         expect([...used].sort()).toEqual(["auth"]);
     });
 
-    it("chaque namespace de route n'est lu que sous sa propre route", () => {
+    it("chaque namespace à route unique n'est lu que sous sa propre route", () => {
+        // Les namespaces d'onglets de monde en sont exclus : ils partagent une
+        // route et vivent dans components/worlds/**, donc un test par chemin ne
+        // dirait rien d'utile. Ils sont couverts par le parcours d'imports.
         const routeOf: Record<string, string> = {
             admin: "app/(protected)/admin",
             settings: "app/(protected)/settings",
             shop: "app/(protected)/shop",
         };
-        for (const ns of ROUTE_SCOPED_NAMESPACES) {
+        for (const ns of Object.keys(routeOf)) {
             const re = new RegExp(`useTranslations\\(\\s*["']${ns}["']`);
             const offenders = CLIENT_FILES
                 .filter((f) => re.test(f.src))
                 .map((f) => f.path.slice(ROOT.length + 1).replace(/\\/g, "/"))
                 .filter((p) => !p.startsWith(routeOf[ns]));
             expect(offenders, `${ns} est lu hors de ${routeOf[ns]}`).toEqual([]);
+        }
+    });
+
+    // ── Atteignabilité réelle, par parcours du graphe d'imports ──────────────
+    //
+    // Les namespaces d'onglets de monde (wiki, carte, relations, catalogue) ne
+    // sont plus envoyés que sous /w/[id]. Un test par chemin de fichier ne
+    // suffirait pas : ces composants vivent dans components/worlds/**, d'où
+    // l'arbre du salon importe déjà des choses (CategoryAvatar, par exemple).
+    // On suit donc les imports pour de bon, depuis les entrées de la route.
+
+    const byPath = new Map(
+        FILES.map((f) => [f.path.replace(/\\/g, "/"), f.src] as const),
+    );
+
+    /** Résout un specifier d'import vers un fichier du dépôt, si possible. */
+    function resolveImport(fromPath: string, spec: string): string | null {
+        let base: string;
+        if (spec.startsWith("@/")) base = join(ROOT, spec.slice(2)).replace(/\\/g, "/");
+        else if (spec.startsWith(".")) base = join(fromPath, "..", spec).replace(/\\/g, "/");
+        else return null; // dépendance externe
+        for (const cand of [base, `${base}.ts`, `${base}.tsx`, `${base}/index.ts`, `${base}/index.tsx`]) {
+            if (byPath.has(cand)) return cand;
+        }
+        return null;
+    }
+
+    /** Tous les fichiers du dépôt atteignables depuis `entries`. */
+    function reachableFrom(entries: string[]): Set<string> {
+        const seen = new Set<string>();
+        const queue = entries.map((e) => join(ROOT, e).replace(/\\/g, "/"));
+        // `import x from "…"`, `import "…"` et `import("…")` dynamiques.
+        const importRe = /(?:from\s*|import\s*\(\s*)["']([^"']+)["']/g;
+        while (queue.length) {
+            const path = queue.pop()!;
+            if (seen.has(path)) continue;
+            const src = byPath.get(path);
+            if (src === undefined) continue;
+            seen.add(path);
+            for (const m of src.matchAll(importRe)) {
+                const target = resolveImport(path, m[1]);
+                if (target && !seen.has(target)) queue.push(target);
+            }
+        }
+        return seen;
+    }
+
+    it("les namespaces d'onglets de monde sont inatteignables depuis une page de salon", () => {
+        const reachable = reachableFrom([
+            "app/(protected)/layout.tsx",
+            "app/(protected)/c/[id]/layout.tsx",
+            "app/(protected)/c/[id]/page.tsx",
+        ]);
+        // Garde-fou du garde-fou : si le parcours ne trouve presque rien, c'est
+        // la résolution qui est cassée, pas le code — un test vert ne voudrait
+        // alors plus rien dire.
+        expect(reachable.size).toBeGreaterThan(50);
+
+        const offenders: string[] = [];
+        for (const ns of WORLD_ROUTE_NAMESPACES) {
+            const re = new RegExp(`useTranslations\\(\\s*["']${ns}["']`);
+            for (const path of reachable) {
+                if (re.test(byPath.get(path) ?? "")) {
+                    offenders.push(`${ns} ← ${path.slice(ROOT.length + 1)}`);
+                }
+            }
+        }
+        expect(offenders).toEqual([]);
+    });
+
+    it("les namespaces d'onglets de monde restent atteignables depuis une page de monde", () => {
+        // Le pendant du test précédent : sans lui, retirer un namespace du
+        // tronc commun sans que personne ne le lise passerait pour un succès.
+        const reachable = reachableFrom([
+            "app/(protected)/layout.tsx",
+            "app/(protected)/w/[id]/layout.tsx",
+            "app/(protected)/w/[id]/page.tsx",
+        ]);
+        for (const ns of WORLD_ROUTE_NAMESPACES) {
+            const re = new RegExp(`useTranslations\\(\\s*["']${ns}["']`);
+            const used = [...reachable].some((p) => re.test(byPath.get(p) ?? ""));
+            expect(used, `${ns} n'est lu par aucun composant de /w — namespace mort ?`).toBe(true);
         }
     });
 

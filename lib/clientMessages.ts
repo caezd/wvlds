@@ -28,7 +28,27 @@ import type { AbstractIntlMessages } from "next-intl";
 export const SERVER_ONLY_NAMESPACES = ["auth", "quests", "changelog", "offline"] as const;
 
 /** Lus par des composants clients, mais d'une seule route chacun. */
-export const ROUTE_SCOPED_NAMESPACES = ["admin", "settings", "shop"] as const;
+export const ROUTE_SCOPED_NAMESPACES = [
+    "admin",
+    "settings",
+    "shop",
+    // Onglets secondaires d'un monde : wiki, carte, relations, catalogue. Ils
+    // ne sont montés que par `WorldHome` (donc `/w/[id]`) et par les réglages
+    // de monde — jamais depuis un salon, dont la barre latérale se contente du
+    // namespace `worlds` pour ses liens de nav.
+    "wiki",
+    "map",
+    "relations",
+    "catalogue",
+] as const;
+
+/**
+ * Namespaces remontés par `app/(protected)/w/[id]/layout.tsx`.
+ *
+ * Séparé de la liste ci-dessus parce que ces quatre-là partagent une même
+ * route, là où `admin`/`settings`/`shop` ont chacune la leur.
+ */
+export const WORLD_ROUTE_NAMESPACES = ["wiki", "map", "relations", "catalogue"] as const;
 
 const EXCLUDED_FROM_SHELL = new Set<string>([
     ...SERVER_ONLY_NAMESPACES,

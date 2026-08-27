@@ -9,6 +9,16 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Performance",
+    text: "Déchiffrement des messages accéléré : la clé du salon était redérivée à chaque message affiché, soit une cinquantaine d'opérations cryptographiques pour ouvrir une conversation — et bien davantage pendant une recherche, qui parcourt les messages de plusieurs salons. Elle n'est plus calculée qu'une fois.",
+  },
+  {
+    date: "2026-08",
+    tag: "Performance",
+    text: "Page d'accueil d'un monde : le bloc « Catégories » apparaissait avec un temps de retard, car il rechargeait depuis le navigateur des catégories que le serveur avait déjà envoyées à la barre latérale. Il s'affiche désormais immédiatement, sans requête supplémentaire. La liste des salons suivis n'est également plus lue deux fois à l'ouverture d'un salon.",
+  },
+  {
+    date: "2026-08",
+    tag: "Performance",
     text: "Page de connexion nettement plus rapide à s'afficher : elle téléchargeait l'intégralité des traductions de l'application (37 Ko) alors qu'elle n'en utilise qu'un millième. Les pages internes n'embarquent plus non plus les textes de l'administration, de la boutique ou des réglages quand on ne s'y trouve pas.",
   },
   {
