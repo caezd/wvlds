@@ -8,6 +8,16 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Correctif",
+    text: "Accessibilité : quinze boutons annonçaient leur rôle en français aux lecteurs d'écran, quelle que soit la langue du compte (« Ouvrir le menu », « Copier le code », « Modifier l'avatar »…). Le texte visible, lui, était bien traduit — rien ne signalait donc le problème à l'écran. Tous passent désormais par les traductions, en français, anglais et espagnol.",
+  },
+  {
+    date: "2026-08",
+    tag: "Technique",
+    text: "Nettoyage interne : la structure des panneaux latéraux (réglages de salon, épingles, statistiques, profils, éditeurs de blocs, historique du wiki…) était recopiée à l'identique dans seize écrans, tailles et bouton de fermeture compris. Elle vit maintenant à un seul endroit — une correction de style s'y applique partout d'un coup, et deux panneaux ne peuvent plus diverger sans qu'on le remarque. Même traitement pour la chronologie des fiches de persona et le thème du sélecteur d'emoji, chacun dupliqué en deux exemplaires.",
+  },
+  {
+    date: "2026-08",
     tag: "Performance",
     text: "Joindre plusieurs images à un message, ou en ajouter à une galerie de fiche, les envoie désormais en parallèle au lieu d'une par une : quatre images ne demandent plus quatre attentes bout à bout. Corrige au passage un cas où deux fichiers portant le même nom, envoyés en même temps, pouvaient se refuser mutuellement.",
   },
