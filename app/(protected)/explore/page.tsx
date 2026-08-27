@@ -57,16 +57,25 @@ export default async function ExplorePage({
     .split(",")
     .filter((v): v is "real" | "illustrated" => v === "real" || v === "illustrated");
 
+  // Une seule vague pour tout ce qui ne dépend pas de la requête `worlds` :
+  // les adhésions (pour exclure les mondes déjà rejoints), les mondes portant
+  // les tags filtrés, la liste des tags publics et les traductions. Ces quatre
+  // appels étaient enchaînés alors qu'aucun n'attend le résultat d'un autre.
+  const [membershipsRes, tagWorldRes, tagOptionsRes, t] = await Promise.all([
+    userId
+      ? supabase.from("world_members").select("world_id").eq("user_id", userId)
+      : Promise.resolve({ data: [] as { world_id: string }[] }),
+    selectedTags.length > 0
+      ? supabase.rpc("get_world_ids_for_tags", { tags: selectedTags })
+      : Promise.resolve({ data: null }),
+    supabase.rpc("get_public_world_tags"),
+    getTranslations("explore"),
+  ]);
+
   // L'Explorateur est un annuaire : les mondes déjà rejoints n'y apparaissent
   // plus (ils restent accessibles depuis "Mes mondes").
-  let joinedWorldIds: string[] = [];
-  if (userId) {
-    const { data: memberships } = await supabase
-      .from("world_members")
-      .select("world_id")
-      .eq("user_id", userId);
-    joinedWorldIds = (memberships ?? []).map((m) => m.world_id as string);
-  }
+  const joinedWorldIds = ((membershipsRes.data ?? []) as { world_id: string }[])
+    .map((m) => m.world_id);
 
   let query = supabase
     .from("worlds")
@@ -96,8 +105,7 @@ export default async function ExplorePage({
   }
 
   if (selectedTags.length > 0) {
-    const { data: tagWorldRows } = await supabase.rpc("get_world_ids_for_tags", { tags: selectedTags });
-    const matchingIds = (tagWorldRows ?? []).map((r: { world_id: string }) => r.world_id);
+    const matchingIds = ((tagWorldRes.data ?? []) as { world_id: string }[]).map((r) => r.world_id);
     query = query.in("id", matchingIds.length > 0 ? matchingIds : [NO_MATCH_SENTINEL]);
   }
 
@@ -113,11 +121,11 @@ export default async function ExplorePage({
     latestQuery = latestQuery.not("id", "in", `(${joinedWorldIds.join(",")})`);
   }
 
-  const [{ data: worlds, count }, { data: tagOptions }, { data: latest }] = await Promise.all([
+  const [{ data: worlds, count }, { data: latest }] = await Promise.all([
     query.order("created_at", { ascending: false }).range(from, to),
-    supabase.rpc("get_public_world_tags"),
     latestQuery.order("created_at", { ascending: false }).limit(3),
   ]);
+  const tagOptions = tagOptionsRes.data;
 
   const publicWorlds = (worlds ?? []) as PublicWorld[];
   const availableTags = ((tagOptions ?? []) as { tag: string; world_count: number }[]).map((t) => t.tag);
@@ -141,7 +149,7 @@ export default async function ExplorePage({
   const total = count ?? 0;
   const totalPages = Math.ceil(total / PAGE_SIZE);
   const hasFilters = !!q || selectedTags.length > 0 || selectedAvatarTypes.length > 0;
-  const t = await getTranslations("explore");
+
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">

@@ -20,12 +20,20 @@ type ShopItem = {
 };
 
 export default async function ShopPage() {
-  const t = await getTranslations("shop");
-  const supabase = await createClient();
-  const flags = await getFeatureFlags(supabase);
+  const [t, supabase] = await Promise.all([getTranslations("shop"), createClient()]);
+
+  // Les trois appels suivants ne dépendent que du client Supabase, pas les uns
+  // des autres : ils étaient enchaînés en quatre allers-retours successifs.
+  // Le drapeau est vérifié après coup — charger le catalogue d'une boutique
+  // désactivée coûte une requête, la garder séquentielle en coûtait trois.
+  const [flags, itemsRes, balRes] = await Promise.all([
+    getFeatureFlags(supabase),
+    supabase.rpc("shop_list_items"),
+    supabase.from("gamification_balances").select("coins").single(),
+  ]);
   if (!flags.shop) notFound();
 
-  const { data: items, error: itemsErr } = await supabase.rpc("shop_list_items");
+  const { data: items, error: itemsErr } = itemsRes;
 
   // La boutique nécessite des RPCs et tables non encore provisionnés
   if (itemsErr) {
@@ -42,12 +50,7 @@ export default async function ShopPage() {
     );
   }
 
-  const { data: bal } = await supabase
-    .from("gamification_balances")
-    .select("coins")
-    .single();
-
-  const initialCoins = bal?.coins ?? 0;
+  const initialCoins = balRes.data?.coins ?? 0;
   const initialItems: ShopItem[] = (items ?? []) as ShopItem[];
 
   return (

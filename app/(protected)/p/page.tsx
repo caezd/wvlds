@@ -36,60 +36,32 @@ type MemberWorld = {
 };
 
 export default async function PersonasPage() {
-  const t = await getTranslations("personas");
-  const supabase = await createClient();
+  const [t, supabase] = await Promise.all([getTranslations("personas"), createClient()]);
   const userId = await getUserId(supabase);
 
-  // 1) Personas avec world_id
-  let personaList: PersonaRow[] = [];
-  {
-    const { data, error } = await supabase
-      .from("personas")
-      .select(
-        "id, name, avatar_url, avatar_config, banner_url, avatar_frame_id, world_id, faceclaim, marital_status, spouse_persona_id, frame:avatar_frame_id(asset_url)",
-      )
-      .eq("user_id", userId)
-      .eq("is_template", false)
-      .order("name", { ascending: true });
+  // 1) Personas, mondes accessibles et plan : tous ne dépendent que de `userId`.
+  //    Les mondes et le plan attendaient jusqu'ici la liste des personas, alors
+  //    qu'ils n'en ont aucun besoin — une vague réseau de perdue.
+  const [personaList, memberWorlds, plan] = await Promise.all([
+    (async (): Promise<PersonaRow[]> => {
+      const { data, error } = await supabase
+        .from("personas")
+        .select(
+          "id, name, avatar_url, avatar_config, banner_url, avatar_frame_id, world_id, faceclaim, marital_status, spouse_persona_id, frame:avatar_frame_id(asset_url)",
+        )
+        .eq("user_id", userId)
+        .eq("is_template", false)
+        .order("name", { ascending: true });
 
-    if (!error) {
-      personaList = (data ?? []) as PersonaRow[];
-    } else {
+      if (!error) return (data ?? []) as PersonaRow[];
+
       const { data: basic } = await supabase
         .from("personas")
         .select("id, name, world_id")
         .eq("user_id", userId)
         .eq("is_template", false)
         .order("name", { ascending: true });
-      personaList = (basic ?? []) as PersonaRow[];
-    }
-  }
-
-  const personaIds = personaList.map((p) => p.id);
-
-  // 2) Noms des mondes impliqués
-  const worldIds = [
-    ...new Set(
-      personaList.map((p) => p.world_id).filter((w): w is string => !!w),
-    ),
-  ];
-
-  // Les sections/champs (dérivés de personaIds), les noms de mondes (dérivés
-  // de worldIds), les mondes accessibles et le plan sont indépendants → on
-  // les charge en parallèle au lieu de les enchaîner séquentiellement.
-  const [sectionsByPersona, worldNames, memberWorlds, plan] = await Promise.all([
-    fetchSectionsByPersona(supabase, personaIds),
-    (async (): Promise<Map<string, string>> => {
-      const worldNames = new Map<string, string>();
-      if (worldIds.length === 0) return worldNames;
-
-      const { data: worlds } = await supabase
-        .from("worlds")
-        .select("id, name")
-        .in("id", worldIds);
-      for (const w of worlds ?? [])
-        worldNames.set(w.id, w.name ?? "Monde inconnu");
-      return worldNames;
+      return (basic ?? []) as PersonaRow[];
     })(),
     // Tous les mondes accessibles (même sans persona) : chacun devient une
     // section de la page, donc une cible de dépôt pour le drag & drop. Les
@@ -112,19 +84,47 @@ export default async function PersonasPage() {
     getCurrentProfile().then((profile) => profile?.plan ?? "free"),
   ]);
 
-  // Mondes accessibles ayant une fiche par défaut — dépend de memberWorlds,
-  // donc après le Promise.all plutôt que dans la même vague parallèle.
-  const worldsWithTemplate = new Set<string>();
-  if (memberWorlds.length > 0) {
-    const { data: templates } = await supabase
-      .from("personas")
-      .select("world_id")
-      .in("world_id", memberWorlds.map((w) => w.id))
-      .eq("is_template", true);
-    for (const t of templates ?? []) {
-      if (t.world_id) worldsWithTemplate.add(t.world_id);
-    }
-  }
+  const personaIds = personaList.map((p) => p.id);
+
+  // 2) Noms des mondes impliqués
+  const worldIds = [
+    ...new Set(
+      personaList.map((p) => p.world_id).filter((w): w is string => !!w),
+    ),
+  ];
+
+  // Seconde vague : tout ce qui dérive de la première (sections des personas,
+  // noms des mondes cités, mondes dotés d'une fiche par défaut). `templates`
+  // s'exécutait auparavant seul, APRÈS ce groupe — il n'attendait pourtant que
+  // `memberWorlds`, désormais résolu.
+  const [sectionsByPersona, worldNames, worldsWithTemplate] = await Promise.all([
+    fetchSectionsByPersona(supabase, personaIds),
+    (async (): Promise<Map<string, string>> => {
+      const worldNames = new Map<string, string>();
+      if (worldIds.length === 0) return worldNames;
+
+      const { data: worlds } = await supabase
+        .from("worlds")
+        .select("id, name")
+        .in("id", worldIds);
+      for (const w of worlds ?? [])
+        worldNames.set(w.id, w.name ?? "Monde inconnu");
+      return worldNames;
+    })(),
+    (async (): Promise<Set<string>> => {
+      const out = new Set<string>();
+      if (memberWorlds.length === 0) return out;
+      const { data: templates } = await supabase
+        .from("personas")
+        .select("world_id")
+        .in("world_id", memberWorlds.map((w) => w.id))
+        .eq("is_template", true);
+      for (const row of templates ?? []) {
+        if (row.world_id) out.add(row.world_id);
+      }
+      return out;
+    })(),
+  ]);
 
   // 3) Groupement — les mondes accessibles d'abord (sections toujours
   // présentes, même vides, pour servir de cibles de dépôt)
