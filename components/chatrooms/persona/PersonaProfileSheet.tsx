@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useEffect, useMemo, useState } from "react";
+import { PersonaTimelineView } from "@/components/personas/PersonaTimelineView";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -28,48 +29,6 @@ import { useTranslations } from "next-intl";
 import { Lock } from "lucide-react";
 
 // -- Timeline collapsible -------------------------------------
-function TimelineView({ items }: { items: TimelineItem[] }) {
-  return (
-    <div>
-      {items.map((item, i) => (
-        <TimelineItemRow key={item.id} item={item} isLast={i === items.length - 1} />
-      ))}
-    </div>
-  );
-}
-
-function TimelineItemRow({ item, isLast }: { item: TimelineItem; isLast: boolean }) {
-  const [expanded, setExpanded] = useState(false);
-  return (
-    <div className="flex gap-3">
-      <div className="flex flex-col items-center">
-        <div className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary/50" />
-        {!isLast && <div className="flex-1 w-px bg-border mt-1" />}
-      </div>
-      <div className="flex-1 pb-3 min-w-0">
-        <div className="flex items-baseline gap-2">
-          {item.date && (
-            <span className="text-[0.65rem] text-muted-foreground shrink-0">{item.date}</span>
-          )}
-          <span className="text-sm font-medium leading-tight">{item.title}</span>
-          {item.description && (
-            <button
-              type="button"
-              onClick={() => setExpanded((v) => !v)}
-              className="ml-auto shrink-0 text-[0.65rem] text-muted-foreground hover:text-foreground transition-colors"
-            >
-              {expanded ? "Réduire" : "Voir"}
-            </button>
-          )}
-        </div>
-        {expanded && item.description && (
-          <p className="mt-1 text-xs text-muted-foreground leading-relaxed">{item.description}</p>
-        )}
-      </div>
-    </div>
-  );
-}
-
 // -- Read-only field renderer ---------------------------------
 type FieldData = PersonaFieldData | null | undefined;
 
@@ -211,7 +170,7 @@ function FieldView({ type, data }: { type: string; data: FieldData }) {
     const items: TimelineItem[] = data?.timelineItems ?? [];
     const visible = items.filter((it) => it.title);
     if (!visible.length) return null;
-    return <TimelineView items={visible} />;
+    return <PersonaTimelineView items={visible} />;
   }
   if (type === "dl") {
     const items: DlItem[] = data?.dlItems ?? [];

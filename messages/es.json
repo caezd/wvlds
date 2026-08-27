@@ -12,7 +12,9 @@
     "create": "Crear",
     "search": "Buscar",
     "back": "Volver",
-    "settings": "Ajustes"
+    "settings": "Ajustes",
+    "show": "Ver",
+    "collapse": "Contraer"
   },
   "nav": {
     "profile": "Mi perfil",
