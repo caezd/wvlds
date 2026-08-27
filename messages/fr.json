@@ -1028,5 +1028,11 @@
     "title": "Vous êtes hors ligne",
     "description": "Vérifiez votre connexion et réessayez.",
     "retry": "Réessayer"
+  },
+  "errorBoundary": {
+    "title": "Une erreur est survenue",
+    "description": "Quelque chose s’est mal passé de notre côté. Vous pouvez réessayer — si le problème persiste, revenez à l’accueil.",
+    "retry": "Réessayer",
+    "home": "Retour à l’accueil"
   }
 }

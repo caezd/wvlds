@@ -1024,5 +1024,11 @@
     "title": "Está sin conexión",
     "description": "Compruebe su conexión e inténtelo de nuevo.",
     "retry": "Reintentar"
+  },
+  "errorBoundary": {
+    "title": "Se ha producido un error",
+    "description": "Algo ha fallado por nuestra parte. Puede volver a intentarlo — si el problema persiste, vuelva al inicio.",
+    "retry": "Reintentar",
+    "home": "Volver al inicio"
   }
 }

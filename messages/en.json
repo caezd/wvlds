@@ -1027,5 +1027,11 @@
     "title": "You're offline",
     "description": "Check your connection and try again.",
     "retry": "Try again"
+  },
+  "errorBoundary": {
+    "title": "Something went wrong",
+    "description": "An error occurred on our side. You can try again — if the problem persists, head back home.",
+    "retry": "Try again",
+    "home": "Back to home"
   }
 }
