@@ -11,6 +11,8 @@ import { WorldHomeBannerView } from "./blocks/WorldHomeBannerBlock";
 import { cn } from "@/lib/utils";
 import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
 import type { ChatroomCategory } from "@/lib/currentRequest";
+import type { RecentPersona } from "./widgets/WorldRecentPersonasWidget";
+import type { WikiPage } from "./widgets/WorldWikiShortcutsWidget";
 import {
   DEFAULT_HOME_GRID_GAP,
   HOME_GRID_COLS,
@@ -63,6 +65,7 @@ export function WorldHomeGridView({
   timelineConfig,
   initialRooms,
   categories = [],
+  widgetData = {},
   selectedCategoryId,
   onSelectCategory,
   onWikiLink,
@@ -77,6 +80,8 @@ export function WorldHomeGridView({
   /** Catégories chargées côté serveur (getChatroomCategories) — évite au bloc
    *  « Catégories » de repartir d'un état vide puis de les refetcher. */
   categories?: ChatroomCategory[];
+  /** Données des widgets résolues côté serveur. */
+  widgetData?: { recentPersonas?: RecentPersona[]; wikiPages?: WikiPage[] };
   selectedCategoryId: string | null;
   onSelectCategory: (categoryId: string | null) => void;
   onWikiLink?: (slug: string) => void;
@@ -107,6 +112,7 @@ export function WorldHomeGridView({
             timelineConfig,
             initialRooms,
             categories,
+            widgetData,
             selectedCategoryId,
             onSelectCategory,
             onWikiLink,
@@ -127,6 +133,7 @@ function renderBlock(
     timelineConfig?: WorldTimelineConfig;
     initialRooms: Room[];
     categories: ChatroomCategory[];
+    widgetData: { recentPersonas?: RecentPersona[]; wikiPages?: WikiPage[] };
     selectedCategoryId: string | null;
     onSelectCategory: (categoryId: string | null) => void;
     onWikiLink?: (slug: string) => void;
@@ -194,6 +201,7 @@ function renderBlock(
         <WorldWikiShortcutsWidget
           worldId={ctx.worldId}
           limit={widgetOptionValue("wiki_shortcuts", "limit", item.options)}
+          initialPages={ctx.widgetData.wikiPages}
         />
       );
     case "personas_recent":
@@ -201,6 +209,7 @@ function renderBlock(
         <WorldRecentPersonasWidget
           worldId={ctx.worldId}
           limit={widgetOptionValue("personas_recent", "limit", item.options)}
+          initialPersonas={ctx.widgetData.recentPersonas}
         />
       );
     case "timeline_shortcuts":

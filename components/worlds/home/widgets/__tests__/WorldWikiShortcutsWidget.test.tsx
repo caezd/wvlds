@@ -103,3 +103,47 @@ describe("WorldWikiShortcutsWidget", () => {
     });
   });
 });
+
+// ── Amorçage depuis le serveur ───────────────────────────────────────────────
+//
+// Le widget partait d'un état vide et chargeait au montage : il s'affichait donc
+// vide le temps d'un aller-retour réseau, alors que la page de monde était déjà
+// rendue. `WorldHomeContent` lui fournit désormais ses pages (uniquement si le
+// bloc est présent dans la grille) ; le chargement client ne subsiste que pour
+// le rafraîchissement Realtime.
+
+describe("WorldWikiShortcutsWidget — données fournies par le serveur", () => {
+  const PAGE = {
+    id: "p1",
+    title: "Page serveur",
+    slug: "page-serveur",
+    icon: null,
+    updated_at: new Date().toISOString(),
+  };
+
+  it("affiche les pages initiales sans aucune requête au montage", async () => {
+    const mock = setup([]);
+    render(<WorldWikiShortcutsWidget worldId="w1" initialPages={[PAGE]} />);
+
+    expect(await screen.findByText("Page serveur")).toBeInTheDocument();
+    expect(mock.from).not.toHaveBeenCalled();
+  });
+
+  it("respecte une liste initiale vide sans retomber sur une requête", async () => {
+    // `[]` signifie « le serveur a regardé, il n'y a rien » — à distinguer de
+    // `undefined`, qui veut dire « non fourni ».
+    const mock = setup([PAGE]);
+    const { container } = render(<WorldWikiShortcutsWidget worldId="w1" initialPages={[]} />);
+
+    await waitFor(() => expect(mock.from).not.toHaveBeenCalled());
+    expect(container.textContent).not.toContain("Page serveur");
+  });
+
+  it("charge lui-même quand rien ne lui est fourni", async () => {
+    const mock = setup([PAGE]);
+    render(<WorldWikiShortcutsWidget worldId="w1" />);
+
+    expect(await screen.findByText("Page serveur")).toBeInTheDocument();
+    expect(mock.from).toHaveBeenCalledWith("world_wiki_pages");
+  });
+});

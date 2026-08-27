@@ -10,6 +10,8 @@ import { Globe, GlobeLock, Search, Star } from "lucide-react";
 import { WorldHeroCard } from "./WorldHeroCard";
 import { WorldHomeGridView } from "./WorldHomeGridView";
 import type { ChatroomCategory } from "@/lib/currentRequest";
+import type { RecentPersona } from "./widgets/WorldRecentPersonasWidget";
+import type { WikiPage } from "./widgets/WorldWikiShortcutsWidget";
 import { MobileDrawerOpenButton } from "@/components/sidebar/MobileDrawerOpenButton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { World, WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
@@ -63,6 +65,7 @@ export function WorldHome({
   canPost,
   initialRooms,
   initialCategories = [],
+  initialWidgetData = {},
   initialPersonas,
   initialPrefs,
   view,
@@ -79,6 +82,9 @@ export function WorldHome({
   initialRooms: Room[];
   /** Catégories chargées côté serveur, partagées avec WorldSidebar. */
   initialCategories?: ChatroomCategory[];
+  /** Données des widgets d'accueil résolues côté serveur, quand le bloc est
+   *  présent dans la grille (cf. WorldHomeContent). */
+  initialWidgetData?: { recentPersonas?: RecentPersona[]; wikiPages?: WikiPage[] };
   initialPersonas: AsidePersona[];
   initialPrefs: WorldPrefs | null;
   view?: string;
@@ -355,6 +361,7 @@ export function WorldHome({
                   timelineConfig={hasTimeline ? (world.timeline_config as WorldTimelineConfig) : undefined}
                   initialRooms={initialRooms}
                   categories={initialCategories}
+                  widgetData={initialWidgetData}
                   selectedCategoryId={selectedCategoryId}
                   onSelectCategory={handleSelectCategory}
                   onWikiLink={(slug) => router.push(`${baseHref}?view=wiki&page=${encodeURIComponent(slug)}`)}

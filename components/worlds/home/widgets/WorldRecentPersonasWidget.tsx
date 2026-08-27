@@ -15,7 +15,7 @@ const PersonaProfileSheetTrigger = dynamic(() =>
 
 const DEFAULT_PERSONA_LIMIT = 10;
 
-type RecentPersona = {
+export type RecentPersona = {
   id: string;
   user_id: string;
   name: string;
@@ -28,13 +28,18 @@ type RecentPersona = {
 export function WorldRecentPersonasWidget({
   worldId,
   limit = DEFAULT_PERSONA_LIMIT,
+  initialPersonas,
 }: {
   worldId: string;
   /** Nombre de personas listées — réglage du widget (voir WORLD_HOME_WIDGET_OPTIONS). */
   limit?: number;
+  /** Données résolues côté serveur (cf. WorldHomeContent). `undefined` =
+   *  non fournies, le widget charge alors lui-même au montage. */
+  initialPersonas?: RecentPersona[];
 }) {
   const t = useTranslations("worlds");
-  const [personas, setPersonas] = useState<RecentPersona[]>([]);
+  const [personas, setPersonas] = useState<RecentPersona[]>(initialPersonas ?? []);
+  const hasServerData = initialPersonas !== undefined;
   const { getUserPresence } = useGlobalPresence();
   const reconnectEpoch = useReconnectEpoch();
 
@@ -53,7 +58,8 @@ export function WorldRecentPersonasWidget({
       setPersonas((data as unknown as RecentPersona[] | null) ?? []);
     };
 
-    void load();
+    // Le serveur a déjà fourni la liste : `load` ne sert plus qu'au Realtime.
+    if (!hasServerData) void load();
 
     const channel = supabase
       .channel(`world_recent_personas:${worldId}`)
@@ -67,7 +73,7 @@ export function WorldRecentPersonasWidget({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [worldId, reconnectEpoch, limit]);
+  }, [worldId, reconnectEpoch, limit, hasServerData]);
 
   if (personas.length === 0) return null;
 
