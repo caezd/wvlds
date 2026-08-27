@@ -248,5 +248,5 @@ ch.subscribe();
     // présence (fournis ou non par l'appelant) compte pour construire les
     // bindings, lue via callbacksRef au moment où l'effet tourne — pas leur
     // identité de fonction, qui changerait à chaque rendu du parent.
-  }, [chatId, supabase, selfId, reconnectEpoch]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [chatId, supabase, selfId, reconnectEpoch]);
 }

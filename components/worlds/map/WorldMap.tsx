@@ -1021,7 +1021,6 @@ export function WorldMap({
 
     node.addEventListener("wheel", onWheel, { passive: false });
     wheelCleanupRef.current = () => node.removeEventListener("wheel", onWheel);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── Pan handlers ─────────────────────────────────────────────

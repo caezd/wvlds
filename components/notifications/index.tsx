@@ -51,7 +51,7 @@ function WorldInviteCard({ notif, onMarkRead }: { notif: AppNotification; onMark
     const prefetchedData = notif.content
         ? { name: notif.content, icon_url: meta?.icon_url ?? null, banner_url: meta?.banner_url ?? null, description: meta?.description ?? null }
         : null;
-    const supabase = createClient(); // eslint-disable-line react-hooks/rules-of-hooks
+    const supabase = createClient();
     const [status, setStatus] = useState<"pending" | "accepted" | "declined" | "cancelled" | null>(null);
     const [ageRestricted, setAgeRestricted] = useState(false);
     const [confirmOpen, setConfirmOpen] = useState(false);
@@ -77,7 +77,7 @@ function WorldInviteCard({ notif, onMarkRead }: { notif: AppNotification; onMark
             .then(({ data }: { data: { is_age_restricted: boolean | null } | null }) => {
                 setAgeRestricted(!!data?.is_age_restricted);
             });
-    }, [notif.world_id, notif.recipient_id, supabase]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [notif.world_id, notif.recipient_id, supabase]);
 
     async function doAccept(ageConfirmed: boolean) {
         if (!notif.world_id || acting) return;
@@ -167,7 +167,7 @@ function WorldInviteCard({ notif, onMarkRead }: { notif: AppNotification; onMark
 function MaritalRequestCard({ notif, onMarkRead }: { notif: AppNotification; onMarkRead: (id: string) => void }) {
     const t = useTranslations("notifications");
     const requestId = notif.metadata?.request_id ?? null;
-    const supabase = createClient(); // eslint-disable-line react-hooks/rules-of-hooks
+    const supabase = createClient();
     const [status, setStatus] = useState<"pending" | "accepted" | "declined" | "expired" | null>(null);
     const [acting, setActing] = useState(false);
 
@@ -383,7 +383,7 @@ export function NotificationInlinePanelContent() {
         return () => observer.disconnect();
     }, [hasMoreNotifs, loadingMore, loadMoreNotifs]);
 
-    const supabase = createClient(); // eslint-disable-line react-hooks/rules-of-hooks
+    const supabase = createClient();
     const [actorAvatars, setActorAvatars] = useState<Record<string, string | null>>({});
 
     useEffect(() => {
