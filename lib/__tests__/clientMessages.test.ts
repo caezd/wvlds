@@ -219,6 +219,20 @@ describe("découpage des messages envoyés au client", () => {
         expect(offenders).toEqual([]);
     });
 
+    it("aucun namespace du tronc commun n'est mort", () => {
+        // Le test suivant vérifie qu'un namespace n'est pas *oublié* du
+        // découpage ; celui-ci vérifie l'inverse — qu'on n'envoie pas à tout le
+        // monde des traductions que plus personne ne lit. `home` (849 o, en
+        // trois langues) était dans ce cas : son unique lecteur,
+        // CreateWorldButton, n'était plus monté nulle part.
+        const clientRead = namespacesUsedIn(FILES, "useTranslations");
+        const serverRead = namespacesUsedIn(FILES, "getTranslations");
+        const dead = Object.keys(shellMessages(fr)).filter(
+            (ns) => !clientRead.has(ns) && !serverRead.has(ns),
+        );
+        expect(dead, "namespaces envoyés au navigateur mais jamais lus").toEqual([]);
+    });
+
     it("tout namespace du catalogue est soit envoyé, soit lu côté serveur", () => {
         // Détecte un namespace ajouté au JSON puis oublié dans le découpage.
         const shell = new Set(Object.keys(shellMessages(fr)));

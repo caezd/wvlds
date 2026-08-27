@@ -439,28 +439,6 @@
     "statsMembers": "Miembros",
     "statsPersonas": "Personajes"
   },
-  "home": {
-    "title": "Mundos",
-    "myWorlds": "Mis mundos",
-    "sharedWithMe": "Compartidos conmigo",
-    "empty": "Ningún mundo creado por el momento.",
-    "planUnlimited": "Plan {plan} — mundos ilimitados",
-    "planUsage": "{owned, plural, one {# / {limit} mundo usado} other {# / {limit} mundos usados}}",
-    "quotaReached": "cuota alcanzada",
-    "quotaTooltip": "Cuota alcanzada — actualice su plan",
-    "new": "Nuevo mundo",
-    "newQuotaMessage": "Su cuota gratuita está agotada. Actualice su plan para crear más mundos.",
-    "newNameLabel": "Nombre del mundo",
-    "newNamePlaceholder": "Ej. Avalonia",
-    "newDescLabel": "Descripción",
-    "newDescPlaceholder": "Opcional",
-    "newCreate": "Crear",
-    "newCancel": "Cancelar",
-    "sidebarTitle": "Mis mundos",
-    "sidebarMembers": "Miembros",
-    "sidebarWiki": "Wiki",
-    "sidebarRelations": "Relaciones"
-  },
   "personas": {
     "title": "Personajes",
     "count": "{count, plural, one {# personaje} other {# personajes}}",
