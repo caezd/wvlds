@@ -6,16 +6,15 @@ import { createClient } from "@/lib/supabase/client";
 import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import {
   Drawer,
-  DrawerContent,
   DrawerHeader,
   DrawerTitle,
-  DrawerClose,
 } from "@/components/ui/drawer";
+import { SideSheetContent } from "@/components/ui/side-sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { BarChart3, X } from "lucide-react";
+import { BarChart3 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
-import { cn, formatDaysAgo } from "@/lib/utils";
+import { formatDaysAgo } from "@/lib/utils";
 import { supabaseThumb } from "@/lib/storage";
 
 type StatsUser = {
@@ -135,7 +134,6 @@ export default function ChatroomStatsSheet({
   hideTrigger?: boolean;
 }) {
   const t = useTranslations("chatrooms");
-  const tCommon = useTranslations("common");
   const supabase = createClient();
   const reconnectEpoch = useReconnectEpoch();
   const [internalOpen, setInternalOpen] = useState(false);
@@ -208,18 +206,7 @@ export default function ChatroomStatsSheet({
       )}
 
       <Drawer open={open} onOpenChange={setOpen} swipeDirection="right">
-        <DrawerContent
-          className={cn(
-            "inset-y-0 right-0 flex flex-col gap-0 border rounded-md bg-background text-foreground shadow-lg p-0",
-            "w-[min(calc(100%_-_var(--drawer-inset)*2),_360px)] touch:w-[min(calc(100%_-_var(--drawer-inset)*2),_460px)]",
-          )}
-        >
-          <DrawerClose
-            aria-label={tCommon("close")}
-            className="absolute right-4 top-4 rounded-xs text-muted-foreground opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
-          >
-            <X className="size-4" />
-          </DrawerClose>
+        <SideSheetContent width="chat">
           <DrawerHeader className="border-b border-border-soft px-6 py-4">
             <DrawerTitle>{t("statsTitle")}</DrawerTitle>
           </DrawerHeader>
@@ -312,7 +299,7 @@ export default function ChatroomStatsSheet({
             </div>
 
           </div>
-        </DrawerContent>
+        </SideSheetContent>
       </Drawer>
     </>
   );

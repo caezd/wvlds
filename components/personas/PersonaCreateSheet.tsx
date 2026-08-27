@@ -4,12 +4,10 @@ import { useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import {
   Drawer,
-  DrawerClose,
-  DrawerContent,
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { X } from "lucide-react";
+import { SideSheetContent } from "@/components/ui/side-sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -86,13 +84,7 @@ export function PersonaCreateSheet({
       )}
 
       <Drawer open={open} onOpenChange={handleOpen} swipeDirection="right">
-        <DrawerContent className="inset-y-0 right-0 flex flex-col gap-0 border rounded-md bg-background text-foreground shadow-lg p-0 w-[min(calc(100%_-_var(--drawer-inset)*2),_460px)]">
-          <DrawerClose
-            aria-label="Fermer"
-            className="absolute right-4 top-4 z-10 rounded-xs text-muted-foreground opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
-          >
-            <X className="size-4" />
-          </DrawerClose>
+        <SideSheetContent closeClassName="z-10">
           <DrawerHeader className="sr-only">
             <DrawerTitle>
               {phase === "name" ? "Nouveau persona" : `Éditer — ${createdName}`}
@@ -144,7 +136,7 @@ export function PersonaCreateSheet({
             />
           ) : null}
           </div>
-        </DrawerContent>
+        </SideSheetContent>
       </Drawer>
     </>
   );

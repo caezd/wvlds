@@ -3,15 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { SlidersHorizontal, X } from "lucide-react";
+import { SlidersHorizontal } from "lucide-react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   Drawer,
-  DrawerContent,
   DrawerHeader,
   DrawerTitle,
-  DrawerClose,
 } from "@/components/ui/drawer";
+import { SideSheetContent } from "@/components/ui/side-sheet";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -70,7 +69,6 @@ export function SearchCenter({
   onOpenChange: (open: boolean) => void;
 }) {
   const t = useTranslations("chatrooms");
-  const tCommon = useTranslations("common");
   const router = useRouter();
   // Créé au premier besoin réel (ouverture du panneau), pas au montage —
   // WorldHome et ChatroomHeader rendent toujours <SearchCenter/>, y compris
@@ -206,15 +204,7 @@ export function SearchCenter({
   return (
     <>
       <Drawer open={open} onOpenChange={onOpenChange} swipeDirection="right">
-        <DrawerContent
-          className="inset-y-0 right-0 flex w-[min(calc(100%_-_var(--drawer-inset)*2),_520px)] flex-col gap-0 rounded-md border bg-background p-0 text-foreground shadow-lg"
-        >
-          <DrawerClose
-            aria-label={tCommon("close")}
-            className="absolute right-4 top-4 rounded-xs text-muted-foreground opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
-          >
-            <X className="size-4" />
-          </DrawerClose>
+        <SideSheetContent width="search">
           <DrawerHeader className="gap-3 border-b border-border-soft px-4 py-4">
             <DrawerTitle>{t("search.title")}</DrawerTitle>
             <div className="flex items-start gap-2">
@@ -264,7 +254,7 @@ export function SearchCenter({
               />
             )}
           </div>
-        </DrawerContent>
+        </SideSheetContent>
       </Drawer>
 
       <SearchFiltersDrawer

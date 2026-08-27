@@ -7,11 +7,10 @@ import { supabaseThumb } from "@/lib/storage";
 import { toast } from "sonner";
 import {
   Drawer,
-  DrawerClose,
-  DrawerContent,
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
+import { SideSheetContent } from "@/components/ui/side-sheet";
 import { Tabs, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { TabBar } from "@/components/ui/tab-bar";
 import {
@@ -22,7 +21,6 @@ import {
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import { AvatarWithFrame } from "@/components/avatars/AvatarWithFrame";
 import { PresenceDot } from "@/components/avatars/PresenceDot";
-import { X } from "lucide-react";
 import type { PersonaSection, PersonaSectionField, PersonaSectionWithFields, PersonaFieldData, InventoryItem, SkillItem, GaugeItem, TraitItem, TimelineItem, DlItem } from "@/types/personas";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useGlobalPresence } from "@/components/providers/PresenceProvider";
@@ -450,13 +448,7 @@ export function PersonaProfileSheetTrigger({
         TriggerButton
       )}
 
-      <DrawerContent className="inset-y-0 right-0 flex flex-col gap-0 border rounded-md bg-background text-foreground shadow-lg w-[min(calc(100%_-_var(--drawer-inset)*2),_460px)] p-0">
-        <DrawerClose
-          aria-label="Fermer"
-          className="absolute right-4 top-4 z-10 rounded-xs text-muted-foreground opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
-        >
-          <X className="size-4" />
-        </DrawerClose>
+      <SideSheetContent closeClassName="z-10">
         <DrawerHeader className="sr-only">
           <DrawerTitle>{name ?? label ?? "Profil persona"}</DrawerTitle>
         </DrawerHeader>
@@ -572,7 +564,7 @@ export function PersonaProfileSheetTrigger({
           )}
         </div>
         </div>
-      </DrawerContent>
+      </SideSheetContent>
     </Drawer>
   );
 }

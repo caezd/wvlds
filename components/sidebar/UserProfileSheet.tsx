@@ -6,16 +6,15 @@ import { createClient } from "@/lib/supabase/client";
 import { toWebP } from "@/lib/imageUtils";
 import {
   Drawer,
-  DrawerClose,
-  DrawerContent,
   DrawerFooter,
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
+import { SideSheetContent } from "@/components/ui/side-sheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { KeyRound, Loader2, X } from "lucide-react";
+import { KeyRound, Loader2 } from "lucide-react";
 import { ImagePickerCropField } from "@/components/ui/image-crop-picker";
 import { toast } from "sonner";
 
@@ -104,13 +103,7 @@ export function UserProfileSheet({
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange} swipeDirection="right">
-      <DrawerContent className="inset-y-0 right-0 flex flex-col gap-0 border rounded-md bg-background text-foreground shadow-lg p-0 w-[min(calc(100%_-_var(--drawer-inset)*2),_448px)]">
-        <DrawerClose
-          aria-label="Fermer"
-          className="absolute right-4 top-4 rounded-xs text-muted-foreground opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
-        >
-          <X className="size-4" />
-        </DrawerClose>
+      <SideSheetContent width="profile">
         <DrawerHeader className="px-6 py-5 border-b border-border-soft shrink-0">
           <DrawerTitle>Mon profil</DrawerTitle>
         </DrawerHeader>
@@ -179,7 +172,7 @@ export function UserProfileSheet({
             Changer le mot de passe
           </Button>
         </DrawerFooter>
-      </DrawerContent>
+      </SideSheetContent>
     </Drawer>
   );
 }

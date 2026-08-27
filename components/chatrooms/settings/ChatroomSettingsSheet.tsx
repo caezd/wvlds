@@ -13,13 +13,12 @@ import { cn } from "@/lib/utils";
 
 import {
   Drawer,
-  DrawerContent,
   DrawerHeader,
   DrawerTitle,
   DrawerTrigger,
   DrawerFooter,
-  DrawerClose,
 } from "@/components/ui/drawer";
+import { SideSheetContent } from "@/components/ui/side-sheet";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,7 +36,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ImagePickerCropField } from "@/components/ui/image-crop-picker";
-import { Loader2, Settings, ChevronDown, X } from "lucide-react";
+import { Loader2, Settings, ChevronDown } from "lucide-react";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Switch } from "@/components/ui/switch";
@@ -296,18 +295,7 @@ export default function ChatroomSettingsSheet({
         </Tooltip>
       )}
 
-      <DrawerContent
-        className={cn(
-          "inset-y-0 right-0 flex flex-col gap-0 border rounded-md bg-background text-foreground shadow-lg p-0",
-          "w-[min(calc(100%_-_var(--drawer-inset)*2),_360px)] touch:w-[min(calc(100%_-_var(--drawer-inset)*2),_460px)]",
-        )}
-      >
-        <DrawerClose
-          aria-label={tCommon("close")}
-          className="absolute right-4 top-4 rounded-xs text-muted-foreground opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
-        >
-          <X className="size-4" />
-        </DrawerClose>
+      <SideSheetContent width="chat">
         <DrawerHeader className="border-b border-border-soft px-4 py-3 sm:px-6 sm:py-4">
           <DrawerTitle>{t("settingsTitle")}</DrawerTitle>
         </DrawerHeader>
@@ -624,7 +612,7 @@ export default function ChatroomSettingsSheet({
             </DrawerFooter>
           </form>
         </Form>
-      </DrawerContent>
+      </SideSheetContent>
     </Drawer>
   );
 }

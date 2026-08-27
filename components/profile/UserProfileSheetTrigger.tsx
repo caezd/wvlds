@@ -6,12 +6,11 @@ import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import {
   Drawer,
-  DrawerClose,
-  DrawerContent,
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { Coins, Flame, X, Zap } from "lucide-react";
+import { SideSheetContent } from "@/components/ui/side-sheet";
+import { Coins, Flame, Zap } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { PresenceDot } from "@/components/avatars/PresenceDot";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
@@ -60,7 +59,6 @@ export function UserProfileSheetTrigger({
 }) {
   const t = useTranslations("userProfile");
   const tPronouns = useTranslations("pronouns");
-  const tCommon = useTranslations("common");
   const supabase = React.useMemo(() => createClient(), []);
   const { getUserPresence } = useGlobalPresence();
   const [open, setOpen] = React.useState(false);
@@ -138,13 +136,7 @@ export function UserProfileSheetTrigger({
         {children}
       </button>
 
-      <DrawerContent className="inset-y-0 right-0 flex flex-col gap-0 border rounded-md bg-background text-foreground shadow-lg p-0 w-[min(calc(100%_-_var(--drawer-inset)*2),_384px)]">
-        <DrawerClose
-          aria-label={tCommon("close")}
-          className="absolute right-4 top-4 rounded-xs text-muted-foreground opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
-        >
-          <X className="size-4" />
-        </DrawerClose>
+      <SideSheetContent width="compact">
         <DrawerHeader className="sr-only">
           <DrawerTitle>{username ?? t("title")}</DrawerTitle>
         </DrawerHeader>
@@ -228,7 +220,7 @@ export function UserProfileSheetTrigger({
             </div>
           )}
         </div>
-      </DrawerContent>
+      </SideSheetContent>
     </Drawer>
   );
 }

@@ -13,12 +13,11 @@ import { initials } from "@/lib/persona-display";
 import { cn } from "@/lib/utils";
 import {
   Drawer,
-  DrawerClose,
-  DrawerContent,
   DrawerHeader,
   DrawerFooter,
   DrawerTitle,
 } from "@/components/ui/drawer";
+import { SideSheetContent } from "@/components/ui/side-sheet";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import {
@@ -135,13 +134,7 @@ function BannerSheet({
 }) {
   return (
     <Drawer open={open} onOpenChange={onOpenChange} swipeDirection="right">
-      <DrawerContent className="inset-y-0 right-0 flex flex-col gap-4 border rounded-md bg-background text-foreground shadow-lg p-0 w-[min(calc(100%_-_var(--drawer-inset)*2),_460px)] lg:shadow-2xl">
-        <DrawerClose
-          aria-label="Fermer"
-          className="absolute right-4 top-4 rounded-xs text-muted-foreground opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
-        >
-          <X className="size-4" />
-        </DrawerClose>
+      <SideSheetContent className="gap-4 lg:shadow-2xl">
         <DrawerHeader>
           <DrawerTitle>Bannière du personnage</DrawerTitle>
         </DrawerHeader>
@@ -178,7 +171,7 @@ function BannerSheet({
             />
           </DrawerFooter>
         )}
-      </DrawerContent>
+      </SideSheetContent>
     </Drawer>
   );
 }
@@ -655,13 +648,7 @@ export function PersonaEditorContent({
 
       {/* Drawer apparence (avatar + cosmétiques) */}
       <Drawer open={avatarDialogOpen} onOpenChange={setAvatarDialogOpen} swipeDirection="right">
-        <DrawerContent className="inset-y-0 right-0 flex flex-col border rounded-md bg-background text-foreground shadow-lg p-0 gap-0 w-[min(calc(100%_-_var(--drawer-inset)*2),_460px)] lg:shadow-2xl overflow-hidden">
-          <DrawerClose
-            aria-label="Fermer"
-            className="absolute right-4 top-4 rounded-xs text-muted-foreground opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
-          >
-            <X className="size-4" />
-          </DrawerClose>
+        <SideSheetContent className="lg:shadow-2xl overflow-hidden">
           <DrawerHeader className="px-6 pt-6 pb-0 shrink-0">
             <div className="flex items-center gap-3">
               <div className="relative h-14 w-14 shrink-0 rounded-xl border bg-muted overflow-hidden lg:hidden">
@@ -775,7 +762,7 @@ export function PersonaEditorContent({
               />
             </DrawerFooter>
           )}
-        </DrawerContent>
+        </SideSheetContent>
       </Drawer>
 
       {/* Aperçu de la bannière actuelle dans l'espace libre à gauche (desktop only).
@@ -877,13 +864,7 @@ export function PersonaEditSheet({
             avatar (dans PersonaEditorContent) sont déjà rendus à
             l'intérieur de ce DrawerContent, donc réellement imbriqués. Plus
             besoin de décalage/flou manuel piloté par un état local. */}
-        <DrawerContent className="inset-y-0 right-0 flex flex-col border rounded-md bg-background text-foreground shadow-lg p-0 w-[min(calc(100%_-_var(--drawer-inset)*2),_460px)]">
-          <DrawerClose
-            aria-label="Fermer"
-            className="absolute right-4 top-4 z-10 rounded-xs text-muted-foreground opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
-          >
-            <X className="size-4" />
-          </DrawerClose>
+        <SideSheetContent closeClassName="z-10">
           <DrawerHeader className="sr-only">
             <DrawerTitle>Éditer — {personaName}</DrawerTitle>
           </DrawerHeader>
@@ -928,7 +909,7 @@ export function PersonaEditSheet({
               onConfirm={handleDelete}
             />
           </DrawerFooter>
-        </DrawerContent>
+        </SideSheetContent>
       </Drawer>
     </>
   );
