@@ -9,7 +9,9 @@ import AppProviders from "@/components/providers/AppProviders";
 import type { InitialUser } from "@/components/providers/CurrentUserProvider";
 import { asMessageFont, asMessageTextSize, asMessageTextAlign } from "@/lib/messagePreferences";
 import { getCurrentProfile } from "@/lib/currentRequest";
-import { getLocale } from "next-intl/server";
+import { getLocale, getMessages } from "next-intl/server";
+import { NextIntlClientProvider } from "next-intl";
+import { ROOT_PROVIDER_NAMESPACES, pickMessages } from "@/lib/clientMessages";
 
 const defaultUrl = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
@@ -87,7 +89,11 @@ export default async function RootLayout({
   //
   // La locale (cookie/en-tête) et le profil (requête réseau) sont indépendants :
   // les enchaîner faisait attendre le second pour rien.
-  const [locale, profile] = await Promise.all([getLocale(), getCurrentProfile()]);
+  const [locale, messages, profile] = await Promise.all([
+    getLocale(),
+    getMessages(),
+    getCurrentProfile(),
+  ]);
   const initialUser: InitialUser = profile
     ? {
         id: profile.id,
@@ -113,11 +119,22 @@ export default async function RootLayout({
           cacheOnNavigation
           reloadOnOnline
         >
+          {/* Les providers de la racine (présence, veille réseau et session)
+              affichent des messages traduits, et vivent AU-DESSUS du provider
+              du groupe (protected) : sans celui-ci, `useTranslations` n'y
+              trouve aucun contexte et le rendu casse. On ne remonte que les
+              deux namespaces qu'ils lisent — le tronc commun reste découpé
+              par segment, cf. lib/clientMessages. */}
+          <NextIntlClientProvider
+            locale={locale}
+            messages={pickMessages(messages, ROOT_PROVIDER_NAMESPACES)}
+          >
           <AppProviders initialUser={initialUser}>
             <div id="app-shell" className="h-full">
               {children}
             </div>
           </AppProviders>
+          </NextIntlClientProvider>
           <Toaster />
         </SerwistProvider>
       </body>

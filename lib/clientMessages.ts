@@ -34,6 +34,18 @@ import type { AbstractIntlMessages } from "next-intl";
  */
 export const NOT_IN_SHELL_NAMESPACES = ["auth", "quests", "changelog", "offline"] as const;
 
+/**
+ * Namespaces remontés par le provider de `app/layout.tsx`.
+ *
+ * `PresenceProvider` et les veilleurs réseau/session d'`AppProviders` sont
+ * montés dans le layout RACINE, au-dessus du provider du groupe (protected).
+ * Ils affichent pourtant des messages traduits : sans contexte à cet endroit,
+ * `useTranslations` lève « no context was found » et toute l'application
+ * cesse de se rendre. On leur donne le strict nécessaire — le tronc commun
+ * reste découpé par segment.
+ */
+export const ROOT_PROVIDER_NAMESPACES = ["common", "presence"] as const;
+
 /** Lus par des composants clients, mais d'une seule route chacun. */
 export const ROUTE_SCOPED_NAMESPACES = [
     "admin",

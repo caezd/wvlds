@@ -21,6 +21,17 @@ import { test, expect } from "@playwright/test";
 
 /** Rejoue une coupure puis un retour de connexion, comme le navigateur. */
 async function couperPuisRetablir(page: import("@playwright/test").Page) {
+  // Attendre que la page ait fini de naviguer : `page.evaluate` sur un
+  // contexte en cours de destruction lève « Execution context was destroyed ».
+  // `networkidle` ne convient pas — l'application garde des websockets
+  // ouvertes et ne devient jamais inactive. On attend le chargement du
+  // document, puis on vérifie que l'URL a cessé de bouger.
+  await page.waitForLoadState("domcontentloaded");
+  let precedente = "";
+  for (let i = 0; i < 20 && page.url() !== precedente; i++) {
+    precedente = page.url();
+    await page.waitForTimeout(250);
+  }
   await page.evaluate(() => {
     window.dispatchEvent(new Event("offline"));
   });
@@ -50,6 +61,7 @@ async function ouvrirUnMondeAvecSalon(page: import("@playwright/test").Page) {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/");
   await expect(page).toHaveURL(/\/(w\/|explore)/, { timeout: 20_000 });
+  await page.waitForLoadState("domcontentloaded");
 
   const salon = () => page.locator('a[href^="/c/"]');
   if (await salon().count()) return salon().first();
@@ -70,14 +82,30 @@ async function ouvrirUnMondeAvecSalon(page: import("@playwright/test").Page) {
       await page.keyboard.press("Escape");
       continue; // monde devenu courant : il ne figure plus dans la liste
     }
+    const avant = page.url();
     await item.click();
-    await page.waitForTimeout(1200);
+    // Attendre que l'URL CHANGE, pas seulement qu'elle corresponde : on est
+    // déjà sur une page de monde, donc `waitForURL(/\/w\//)` serait satisfait
+    // immédiatement et l'on inspecterait l'ancien affichage.
+    await page.waitForURL((u) => u.toString() !== avant, { timeout: 20_000 });
+    await page.waitForLoadState("domcontentloaded");
     if (await salon().count()) return salon().first();
   }
   return null;
 }
 
 test.describe("Realtime — retour de connexion réseau", () => {
+  // Séquentiel : `beforeAll` s'exécute une fois par worker, et le
+  // parallélisme total répartissait les tests sur des workers différents —
+  // ceux qui n'avaient pas exécuté la découverte trouvaient `urlSalon` à
+  // null. Ces trois tests partagent la même préparation, ils appartiennent
+  // au même worker.
+  test.describe.configure({ mode: "default" });
+  // Chaque test coupe le réseau et attend des reconnexions : lent par nature.
+  test.setTimeout(90_000);
+
+
+
   test("aucune erreur de canal après plusieurs coupures", async ({ page }) => {
     const erreurs: string[] = [];
     page.on("pageerror", (e) => erreurs.push(e.message));
@@ -85,9 +113,13 @@ test.describe("Realtime — retour de connexion réseau", () => {
       if (m.type() === "error") erreurs.push(m.text());
     });
 
-    await page.goto("/");
-    // On atterrit sur un monde ou sur /explore selon l'état du compte.
-    await expect(page).toHaveURL(/\/(w\/|explore)/, { timeout: 20_000 });
+    // On part d'une page concrète plutôt que de « / » : la racine redirige
+    // côté client, et une coupure déclenchée pendant cette redirection détruit
+    // le contexte d'exécution sous les pieds de `page.evaluate`.
+    const lienSalon = await ouvrirUnMondeAvecSalon(page);
+    expect(lienSalon, "aucun salon accessible pour le compte de test").not.toBeNull();
+    await lienSalon!.click();
+    await expect(page).toHaveURL(/\/c\//, { timeout: 20_000 });
 
     // Plusieurs cycles : le défaut se manifestait dès le premier, mais
     // l'enchaînement de fermetures est justement ce qui est délicat.
@@ -106,7 +138,6 @@ test.describe("Realtime — retour de connexion réseau", () => {
 
     const lienSalon = await ouvrirUnMondeAvecSalon(page);
     expect(lienSalon, "aucun salon accessible pour le compte de test").not.toBeNull();
-
     await lienSalon!.click();
     await expect(page).toHaveURL(/\/c\//, { timeout: 20_000 });
 
@@ -130,13 +161,12 @@ test.describe("Realtime — retour de connexion réseau", () => {
       if (m.type() === "error") erreurs.push(m.text());
     });
 
-    // Navigation en largeur « bureau » (le sélecteur de monde y vit), puis on
-    // rétrécit : le tiroir mobile n'existe qu'en dessous de `lg`.
     const lienSalon = await ouvrirUnMondeAvecSalon(page);
     expect(lienSalon, "aucun salon accessible pour le compte de test").not.toBeNull();
     await lienSalon!.click();
     await expect(page).toHaveURL(/\/c\//, { timeout: 20_000 });
 
+    // Le tiroir mobile n'existe qu'en dessous de `lg`.
     await page.setViewportSize({ width: 390, height: 844 });
     await page.waitForTimeout(600);
 

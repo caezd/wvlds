@@ -34,6 +34,10 @@ export default defineConfig({
     {
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
+      // Les specs authentifiées ont leur propre projet, avec le
+      // storageState. Ici elles tourneraient sans session et
+      // échoueraient toutes sur la redirection vers la connexion.
+      testIgnore: /.*\.authed\.spec\.ts/,
     },
     {
       name: "chromium-auth",
