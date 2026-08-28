@@ -36,6 +36,25 @@
 -- Les bornes de longueur ajoutées par la migration 126 ne figurent pas ici :
 -- elles appartiennent à la 126, qui s'exécute après.
 
+-- ── Une fonction, elle aussi jamais versionnée ───────────────
+-- `is_world_owner_direct` souffrait du même défaut. Elle est ici, et non avec
+-- les quatre autres de la migration 130, parce que la migration 039 crée une
+-- policy sur `world_members` qui l'appelle : une reconstruction cassait dès
+-- l'étape 39. Elle ne lit que `worlds(id, owner_id)`, toutes deux présentes
+-- dans `.backup`, donc rien ne s'oppose à la créer d'emblée.
+
+CREATE OR REPLACE FUNCTION public.is_world_owner_direct(wid uuid, uid uuid)
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+  SELECT EXISTS(
+    SELECT 1 FROM public.worlds
+    WHERE id = wid AND owner_id = uid
+  );
+$function$;
+
 -- ── Tables ───────────────────────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS public.chatroom_keys (

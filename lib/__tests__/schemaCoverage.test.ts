@@ -28,6 +28,31 @@ const RACINE = process.cwd();
 const MIGRATIONS = join(RACINE, "migrations");
 const SOURCES = ["app", "components", "lib", "hooks"];
 
+/** Tout le SQL du dépôt : le socle `.backup` puis les migrations. */
+function sqlDuDepot(): string[] {
+  const morceaux: string[] = [];
+  const backup = join(RACINE, ".backup");
+  if (existsSync(backup)) morceaux.push(readFileSync(backup, "utf-8"));
+  for (const f of readdirSync(MIGRATIONS).filter((f) => f.endsWith(".sql"))) {
+    morceaux.push(readFileSync(join(MIGRATIONS, f), "utf-8"));
+  }
+  return morceaux;
+}
+
+/** Fonctions déclarées par le dépôt. */
+function fonctionsDeclarees(): Set<string> {
+  const noms = new Set<string>();
+  const motif =
+    /CREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION\s+(?:(\w+)\.)?(\w+)\s*\(/gi;
+  for (const sql of sqlDuDepot()) {
+    for (const m of sql.matchAll(motif)) {
+      if (m[1] && m[1].toLowerCase() !== "public") continue;
+      noms.add(m[2]);
+    }
+  }
+  return noms;
+}
+
 /** Relations déclarées par le dépôt : tables, vues et vues matérialisées. */
 function relationsDeclarees(): Set<string> {
   const noms = new Set<string>();
@@ -61,19 +86,54 @@ function relationsDeclarees(): Set<string> {
  * Sans le résoudre, le contrôle ci-dessous ignorerait ces appels — et c'est
  * précisément par là que passent `chat_pins` et `chatroom_keys`.
  */
-function registreDesTables(): Map<string, string> {
+function registre(nom: "TABLE" | "RPC"): Map<string, string> {
   const src = readFileSync(join(RACINE, "lib", "constants.ts"), "utf-8");
-  const bloc = src.match(/export\s+const\s+TABLE\s*=\s*\{([\s\S]*?)\}\s*as\s+const/);
+  const bloc = src.match(
+    new RegExp(String.raw`export\s+const\s+${nom}\s*=\s*\{([\s\S]*?)\}\s*as\s+const`),
+  );
   const par = new Map<string, string>();
   if (!bloc) return par;
   for (const m of bloc[1].matchAll(/(\w+)\s*:\s*"([a-z_]+)"/g)) par.set(m[1], m[2]);
   return par;
 }
 
+/** Fonctions appelées par le code, via `.rpc("…")` ou `.rpc(RPC.X)`. */
+function rpcUtilises(): Map<string, string[]> {
+  const par = new Map<string, string[]>();
+  const noms = registre("RPC");
+
+  const parcourir = (dossier: string) => {
+    for (const e of readdirSync(dossier, { withFileTypes: true })) {
+      const chemin = join(dossier, e.name);
+      if (e.isDirectory()) {
+        if (e.name === "node_modules" || e.name === "__tests__") continue;
+        parcourir(chemin);
+        continue;
+      }
+      if (!/\.tsx?$/.test(e.name)) continue;
+      const src = readFileSync(chemin, "utf-8");
+      for (const m of src.matchAll(/\.rpc\(\s*(?:"([a-z_]+)"|RPC\.(\w+))/g)) {
+        const nom = m[1] ?? noms.get(m[2]);
+        if (!nom) continue;
+        const rel = chemin.slice(RACINE.length + 1).split(sep).join("/");
+        const liste = par.get(nom) ?? [];
+        if (!liste.includes(rel)) liste.push(rel);
+        par.set(nom, liste);
+      }
+    }
+  };
+
+  for (const d of SOURCES) {
+    const chemin = join(RACINE, d);
+    if (existsSync(chemin)) parcourir(chemin);
+  }
+  return par;
+}
+
 /** Relations interrogées par le code applicatif, via `.from("…")` ou `.from(TABLE.X)`. */
 function relationsUtilisees(): Map<string, string[]> {
   const par = new Map<string, string[]>();
-  const registre = registreDesTables();
+  const tables = registre("TABLE");
 
   const parcourir = (dossier: string) => {
     for (const e of readdirSync(dossier, { withFileTypes: true })) {
@@ -86,7 +146,7 @@ function relationsUtilisees(): Map<string, string[]> {
       if (!/\.tsx?$/.test(e.name)) continue;
       const src = readFileSync(chemin, "utf-8");
       for (const m of src.matchAll(/\.from\(\s*(?:"([a-z_]+)"|TABLE\.(\w+))\s*\)/g)) {
-        const nom = m[1] ?? registre.get(m[2]);
+        const nom = m[1] ?? tables.get(m[2]);
         if (!nom) continue; // clé de registre inconnue : hors sujet ici
         const rel = chemin.slice(RACINE.length + 1).split(sep).join("/");
         const liste = par.get(nom) ?? [];
@@ -123,6 +183,53 @@ describe("le dépôt déclare le schéma qu'il utilise", () => {
     ).toEqual([]);
   });
 
+  it("toute fonction appelée par le code est déclarée dans le dépôt", () => {
+    // Même défaut que pour les tables : cinq fonctions existaient en production
+    // sans figurer dans le dépôt, dont `list_chatrooms_nav` — sans laquelle la
+    // barre latérale ne liste aucun salon. Rapatriées par la migration 001.
+    const declarees = fonctionsDeclarees();
+    const manquantes = [...rpcUtilises().entries()]
+      .filter(([nom]) => !declarees.has(nom))
+      .map(([nom, fichiers]) => `  ${nom} — appelée depuis ${fichiers.join(", ")}`);
+
+    expect(
+      manquantes,
+      manquantes.length
+        ? "Fonctions appelées par le code mais déclarées nulle part dans le dépôt :\n" +
+            manquantes.join("\n") +
+            "\n\nAjoutez une migration qui les crée."
+        : "",
+    ).toEqual([]);
+  });
+
+  it("le complément de socle couvre bien les cinq fonctions jamais versionnées", () => {
+    // Réparties selon leurs dépendances, et le contrôle suit cette répartition :
+    // `is_world_owner_direct` ouvre la séquence (la migration 039 crée une policy
+    // qui l'appelle) ; les quatre autres la ferment, car PostgreSQL valide le
+    // corps d'une fonction `LANGUAGE sql` dès sa création et `list_chatrooms_nav`
+    // lit `chatrooms.category_id`, colonne ajoutée par la migration 070.
+    const sql =
+      readFileSync(join(MIGRATIONS, "000_baseline_missing_tables.sql"), "utf-8") +
+      readFileSync(join(MIGRATIONS, "130_baseline_missing_functions.sql"), "utf-8");
+    for (const f of [
+      "get_chatroom_persona_stats",
+      "get_chatroom_stats",
+      "get_world_public_stats",
+      "is_world_owner_direct",
+      "list_chatrooms_nav",
+    ]) {
+      expect(sql, `fonction absente du complément de socle : ${f}`).toContain(
+        `CREATE OR REPLACE FUNCTION public.${f}(`,
+      );
+      // Toutes sont SECURITY DEFINER : sans `search_path` fixe, elles seraient
+      // détournables par une table homonyme placée dans un schéma en amont.
+      // C'est ce que durcit la migration 115 ; le socle doit déjà l'écrire.
+      expect(sql, `search_path non fixé pour ${f}`).toMatch(
+        new RegExp(String.raw`FUNCTION public\.${f}\([\s\S]{0,600}?SET search_path`),
+      );
+    }
+  });
+
   it("le complément de socle couvre bien les dix tables jamais versionnées", () => {
     // Garde le fichier 000 intact : c'est lui qui rend la reconstruction
     // possible, et rien d'autre dans le dépôt ne décrit ces tables.
@@ -155,5 +262,7 @@ describe("le dépôt déclare le schéma qu'il utilise", () => {
     // Un préfixe qui ne trie pas en tête casserait la reconstruction.
     const fichiers = readdirSync(MIGRATIONS).filter((f) => f.endsWith(".sql")).sort();
     expect(fichiers[0]).toBe("000_baseline_missing_tables.sql");
+    // Et le complément de fonctions ferme la séquence, pour la raison inverse.
+    expect(fichiers[fichiers.length - 1]).toBe("130_baseline_missing_functions.sql");
   });
 });
