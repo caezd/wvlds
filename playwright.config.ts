@@ -1,4 +1,12 @@
 import { defineConfig, devices } from "@playwright/test";
+import { config as loadEnv } from "dotenv";
+
+// Les identifiants du compte de test vivent dans `.env.local` (non commité),
+// comme le reste de la configuration locale. Playwright ne lit pas ce fichier
+// de lui-même : sans ce chargement, E2E_EMAIL/E2E_PASSWORD sont absents et
+// tous les tests authentifiés sont silencieusement ignorés — on croit alors
+// avoir une suite verte alors qu'elle n'a rien vérifié.
+loadEnv({ path: ".env.local", quiet: true });
 
 const PORT = 3000;
 const baseURL = process.env.E2E_BASE_URL ?? `http://localhost:${PORT}`;

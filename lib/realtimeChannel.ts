@@ -10,18 +10,31 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  * Dans supabase-js, `channel(topic)` ne crée pas toujours un canal : il rend
  * celui qui porte déjà ce nom (`RealtimeClient.channel`, qui cherche d'abord
  * dans `this.channels`). Et `removeChannel()` est `async` — elle attend
- * `unsubscribe()` avant de démonter le canal.
+ * `unsubscribe()` avant que le canal quitte le registre.
  *
  * Or React exécute le nettoyage d'un effet puis l'effet suivant dans la même
  * passe, sans rien attendre. Un composant qui referme puis rouvre un canal du
  * même nom — ce que fait chaque reconnexion réseau via `reconnectEpoch` —
- * récupère donc l'ancien canal, encore joint. `.on()` refuse alors :
+ * récupère donc l'ANCIEN canal, et ses `.on()` s'ajoutent aux bindings déjà
+ * présents au lieu de les remplacer.
+ *
+ * Le préjudice est silencieux : aucune erreur, mais après N reconnexions
+ * chaque message entrant est traité N fois — messages dupliqués à l'écran,
+ * compteurs faussés. Vérifié : sans sérialisation, quatre reconnexions ne
+ * produisent que deux canaux, le second cumulant les handlers.
+ *
+ * Le cas voisin, lui, lève franchement : deux composants qui souscrivent
+ * SIMULTANÉMENT au même nom. Le second reçoit un canal encore joint, et
+ * `.on()` refuse avec
  *
  *   cannot add `postgres_changes` callbacks for realtime:<nom> after `subscribe()`
  *
- * Jusqu'à supabase-js 2.79 l'appel était ignoré en silence : les handlers
- * étaient simplement perdus, et le composant cessait de recevoir le temps réel
- * sans que rien ne le signale. Depuis 2.112, il lève.
+ * C'est ce qui faisait planter l'ouverture du tiroir latéral. Depuis
+ * supabase-js 2.112 l'appel lève ; jusqu'en 2.79 il était ignoré en silence,
+ * et le second composant n'avait simplement aucun temps réel.
+ *
+ * La sérialisation ci-dessous couvre les deux : une réouverture attend la
+ * fermeture précédente, et obtient donc toujours un canal neuf.
  *
  * ── Pourquoi pas simplement un nom unique ────────────────────
  * Parce que le nom n'est pas toujours un détail local. Pour un canal de

@@ -9,7 +9,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Correctif",
-    text: "Correction importante : l'application cessait de fonctionner correctement après un retour de connexion réseau. Chaque reprise recréait ses connexions temps réel — messages, notifications, messages privés, présence — et l'opération échouait, une erreur pouvant s'afficher à l'écran.\nLe rétablissement des connexions attend désormais que les précédentes soient réellement fermées. Six endroits étaient concernés.",
+    text: "Après un retour de connexion réseau, l'application rouvrait ses connexions temps réel en réutilisant les anciennes. Les traitements s'y ajoutaient au lieu de les remplacer : après plusieurs coupures, un même message pouvait être affiché plusieurs fois et les compteurs se dérégler. Rien ne le signalait.\nChaque rétablissement crée maintenant une connexion propre, en attendant la fermeture de la précédente. Six endroits étaient concernés : messages, notifications, messages privés, présence et liste des salons.",
   },
   {
     date: "2026-08",

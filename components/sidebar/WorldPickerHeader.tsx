@@ -130,6 +130,7 @@ export function WorldPickerHeader({
                       key={w.id}
                       type="button"
                       onClick={() => { router.push(`/w/${w.id}`); setOpen(false); }}
+                      data-testid="world-picker-item"
                       className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm transition-colors hover:bg-muted"
                     >
                       <div className="relative shrink-0">
@@ -197,6 +198,9 @@ export function WorldPickerHeader({
               <button
                 type="button"
                 onClick={() => setOpen(v => !v)}
+                // Repère stable pour les tests de bout en bout : les
+                // libellés dépendent de la langue du navigateur.
+                data-testid="world-picker-trigger"
                 className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-1.5 py-1 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 {currentWorld ? (

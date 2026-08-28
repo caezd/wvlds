@@ -77,6 +77,8 @@ export type MockChannel = {
   untrack: ReturnType<typeof vi.fn>;
   send: ReturnType<typeof vi.fn>;
   presenceState: ReturnType<typeof vi.fn>;
+  /** Sort de l'état « joint », comme `leave()`. @internal */
+  __quitter: () => void;
   /** Déclenche tous les handlers correspondant au prédicat. */
   emit: (predicate: (h: RegisteredHandler) => boolean, payload: unknown) => void;
 };
@@ -98,6 +100,11 @@ function makeChannel(name: string): MockChannel {
     if (cb) cb("SUBSCRIBED");
     return ch;
   });
+  // `removeChannel` appelle `unsubscribe()` → `leave()`, qui fait sortir le
+  // canal de l'état « joint » SYNCHRONEMENT. `.on()` ne lève donc plus après
+  // ce point : ne pas le modéliser rendrait le mock plus strict que le vrai
+  // client et produirait de faux échecs.
+  ch.__quitter = () => { souscrit = false; };
   ch.track = vi.fn(() => Promise.resolve("ok"));
   ch.untrack = vi.fn(() => Promise.resolve("ok"));
   ch.send = vi.fn(() => Promise.resolve("ok"));
@@ -154,6 +161,7 @@ export function createSupabaseMock(opts: {
     // nom retombe donc sur le canal encore souscrit — c'est précisément la
     // fenêtre qui fait lever `.on()`. Une réouverture qui attend la fermeture
     // obtient au contraire un canal neuf.
+    ch?.__quitter();
     return Promise.resolve().then(() => {
       if (ch && parNom.get(ch.name) === ch) parNom.delete(ch.name);
       return "ok";

@@ -99,6 +99,10 @@ function ChatroomHeader({
             type="button"
             onClick={() => setDrawerOpen(true)}
             aria-label={tCommon("openMenu")}
+            // Même repère que le bouton équivalent d'AppShell : sur une page
+            // de salon, c'est celui-ci qui est rendu, l'en-tête générique
+            // étant masqué.
+            data-testid="open-mobile-menu"
             className="lg:hidden flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-hoverCard hover:text-foreground"
           >
             <Menu className="h-4 w-4" />

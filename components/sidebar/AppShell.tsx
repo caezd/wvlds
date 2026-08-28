@@ -171,6 +171,9 @@ function AppShellInner({
             onClick={() => setDrawerOpen(true)}
             className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-hoverCard"
             aria-label={tCommon("openMenu")}
+            // Repère stable pour les tests de bout en bout : le libellé
+            // dépend de la langue du navigateur.
+            data-testid="open-mobile-menu"
           >
             <Menu className="h-5 w-5" />
           </button>
