@@ -1306,6 +1306,7 @@ export function WorldMap({
                       )}
                     </button>
                     <button
+                      aria-label={tCommon("cancel")}
                       type="button"
                       onClick={() => setPendingPin(null)}
                       className="flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:bg-secondary"

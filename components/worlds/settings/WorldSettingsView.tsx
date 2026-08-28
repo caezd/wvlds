@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -252,6 +253,7 @@ function LabelWithHelp({
 // }
 
 export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) {
+  const tCommon = useTranslations("common");
     const supabase = createClient();
     const router = useRouter();
     const { public_worlds, world_timeline } = useFeatureFlags();
@@ -1138,6 +1140,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                                                         }}
                                                                     />
                                                                     <button
+                                                                      aria-label={tCommon("delete")}
                                                                         type="button"
                                                                         onClick={() => {
                                                                             const next = timelineConfig.month_names.filter((_, j) => j !== i);

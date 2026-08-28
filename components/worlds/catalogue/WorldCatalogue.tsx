@@ -120,6 +120,7 @@ function AddForm({
   onCancel: () => void;
 }) {
   const t = useTranslations("catalogue");
+  const tCommon = useTranslations("common");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [icon, setIcon] = useState<string | undefined>(undefined);
@@ -175,6 +176,7 @@ function AddForm({
           {t("add")}
         </button>
         <button
+          aria-label={tCommon("cancel")}
           type="button"
           onClick={onCancel}
           className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground transition-colors"
@@ -253,6 +255,7 @@ function EditRow({
           {tCommon("save")}
         </button>
         <button
+          aria-label={tCommon("cancel")}
           type="button"
           onClick={onCancel}
           className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground transition-colors"
@@ -283,6 +286,7 @@ function SortableItemRow({
   onSave: (data: { name: string; description: string | null; icon: string | null }) => Promise<void>;
   onCancelEdit: () => void;
 }) {
+  const tCommon = useTranslations("common");
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.id,
     data: { type: "item", categoryId: item.category_id },
@@ -319,6 +323,7 @@ function SortableItemRow({
       {canEdit && (
         <div className="flex items-center gap-1 opacity-0 group-hover/item:opacity-100 transition-opacity shrink-0">
           <button
+            aria-label={tCommon("edit")}
             type="button"
             onClick={onEdit}
             className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
@@ -326,6 +331,7 @@ function SortableItemRow({
             <Pencil className="h-3.5 w-3.5" />
           </button>
           <button
+            aria-label={tCommon("delete")}
             type="button"
             onClick={onDelete}
             className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
@@ -413,6 +419,7 @@ function SortableCategoryContainer({
   };
 
   const t = useTranslations("catalogue");
+  const tCommon = useTranslations("common");
   const [renameValue, setRenameValue] = useState(category.name);
   const [renameSaving, setRenameSaving] = useState(false);
   const isRenaming = renamingId === category.id;
@@ -448,6 +455,7 @@ function SortableCategoryContainer({
               {renameSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
             </button>
             <button
+              aria-label={tCommon("cancel")}
               type="button"
               onClick={() => { setRenameValue(category.name); onSetRenaming(null); }}
               className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:text-foreground"
@@ -461,6 +469,7 @@ function SortableCategoryContainer({
             {canEdit && (
               <div className="flex items-center gap-1 opacity-0 group-hover/cat:opacity-100 transition-opacity shrink-0">
                 <button
+                  aria-label={tCommon("edit")}
                   type="button"
                   onClick={() => { setRenameValue(category.name); onSetRenaming(category.id); }}
                   className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:text-foreground transition-colors"
@@ -468,6 +477,7 @@ function SortableCategoryContainer({
                   <Pencil className="h-3 w-3" />
                 </button>
                 <button
+                  aria-label={tCommon("delete")}
                   type="button"
                   onClick={() => onDeleteCategory(category.id)}
                   className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:text-destructive transition-colors"
@@ -645,6 +655,7 @@ function UncategorizedSection({
 
 function AddCategoryForm({ onAdd, onCancel }: { onAdd: (name: string) => Promise<void>; onCancel: () => void }) {
   const t = useTranslations("catalogue");
+  const tCommon = useTranslations("common");
   const [name, setName] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -677,6 +688,7 @@ function AddCategoryForm({ onAdd, onCancel }: { onAdd: (name: string) => Promise
         {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
       </button>
       <button
+        aria-label={tCommon("cancel")}
         type="button"
         onClick={onCancel}
         className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:text-foreground"

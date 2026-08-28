@@ -135,6 +135,7 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
     fillHeight = false,
 }, ref) {
     const tChatrooms = useTranslations("chatrooms");
+    const tCommon = useTranslations("common");
     const tPersonas = useTranslations("personas");
     const tDms = useTranslations("dms");
     const supabase = useMemo(() => createClient(), []);
@@ -679,6 +680,7 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
                                     <span className="text-xs text-muted-foreground italic">Aucun autre participant dans ce salon.</span>
                                 )}
                                 <button
+                                  aria-label={tCommon("remove")}
                                     type="button"
                                     onClick={() => { setVisibleTo(null); setParticipants([]); }}
                                     className="ml-auto text-muted-foreground hover:text-destructive transition-colors"
@@ -716,6 +718,7 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
                                             className="size-full object-cover"
                                         />
                                         <button
+                                          aria-label={tCommon("remove")}
                                             type="button"
                                             onClick={() => setPendingMedia((prev) => prev.filter((_, j) => j !== i))}
                                             className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover/thumb:opacity-100 transition-opacity"

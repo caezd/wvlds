@@ -315,6 +315,7 @@ export function CalloutDialog({
   onUploadIconImage?: (file: File) => Promise<string | null>;
 }) {
   const t = useTranslations("chatrooms");
+  const tCommon = useTranslations("common");
 
   const PRESETS: Preset[] = PRESET_KEYS.map((key) => ({
     key,
@@ -739,6 +740,7 @@ export function CalloutDialog({
                           </PopoverContent>
                         </Popover>
                         <button
+                          aria-label={tCommon("remove")}
                           type="button"
                           onClick={() => removeGauge(i)}
                           className="shrink-0 text-muted-foreground hover:text-destructive transition-colors"

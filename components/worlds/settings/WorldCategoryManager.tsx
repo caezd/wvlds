@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { toWebP } from "@/lib/imageUtils";
@@ -197,6 +198,7 @@ function CategoryRow({
   onSaved: (category: ChatroomCategory) => void;
   onDelete: () => void;
 }) {
+  const tCommon = useTranslations("common");
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: category.id,
     disabled: !canEdit,
@@ -254,6 +256,7 @@ function CategoryRow({
         // au tap (même correctif que WorldHomeGridEditor.tsx).
         <div className="flex shrink-0 items-center gap-1">
           <button
+            aria-label={tCommon("edit")}
             type="button"
             onClick={onEdit}
             className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
@@ -265,6 +268,7 @@ function CategoryRow({
             onConfirm={onDelete}
             trigger={
               <button
+                aria-label={tCommon("delete")}
                 type="button"
                 className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
               >

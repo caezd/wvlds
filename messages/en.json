@@ -3,6 +3,8 @@
     "save": "Save",
     "cancel": "Cancel",
     "delete": "Delete",
+    "remove": "Remove",
+    "add": "Add",
     "confirm": "Confirm",
     "loading": "Loading…",
     "error": "An error occurred",

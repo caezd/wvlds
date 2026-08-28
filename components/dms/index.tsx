@@ -295,6 +295,7 @@ function ConversationRail({
 
 function NewConvSearch({ onSelect, onCancel }: { onSelect: (id: string) => void; onCancel: () => void }) {
   const t = useTranslations("dms");
+  const tCommon = useTranslations("common");
   const supabase = useMemo(() => createClient(), []);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<DmSearchUser[]>([]);
@@ -328,6 +329,7 @@ function NewConvSearch({ onSelect, onCancel }: { onSelect: (id: string) => void;
           className="h-9 w-full rounded-full bg-muted pl-8 pr-10 text-sm outline-none placeholder:text-muted-foreground"
         />
         <button
+          aria-label={tCommon("cancel")}
           onClick={onCancel}
           className="absolute right-2 top-1/2 -translate-y-1/2 flex h-5 w-5 items-center justify-center rounded-full text-muted-foreground hover:text-foreground"
         >
@@ -353,6 +355,7 @@ function NewConvSearch({ onSelect, onCancel }: { onSelect: (id: string) => void;
 
 function MessageSearch({ onSelectConv, onCancel }: { onSelectConv: (otherUserId: string) => void; onCancel: () => void }) {
   const t = useTranslations("dms");
+  const tCommon = useTranslations("common");
   const supabase = useMemo(() => createClient(), []);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<DmSearchMessage[]>([]);
@@ -384,6 +387,7 @@ function MessageSearch({ onSelectConv, onCancel }: { onSelectConv: (otherUserId:
           className="h-9 w-full rounded-full bg-muted pl-8 pr-10 text-sm outline-none placeholder:text-muted-foreground"
         />
         <button
+          aria-label={tCommon("cancel")}
           onClick={onCancel}
           className="absolute right-2 top-1/2 -translate-y-1/2 flex h-5 w-5 items-center justify-center rounded-full text-muted-foreground hover:text-foreground"
         >

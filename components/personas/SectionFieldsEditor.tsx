@@ -356,6 +356,7 @@ function InventoryField({
   onSave: (items: InventoryItem[]) => void;
   catalogItems?: WorldInventoryItem[];
 }) {
+  const tCommon = useTranslations("common");
   const [items, setItems] = useState<InventoryItem[]>(initialItems);
 
   function update(next: InventoryItem[]) {
@@ -417,6 +418,7 @@ function InventoryField({
               />
             </div>
             <button
+              aria-label={tCommon("remove")}
               type="button"
               onClick={() => removeItem(item.id)}
               className="shrink-0 h-5 w-5 flex items-center justify-center rounded-full text-muted-foreground opacity-0 group-hover/item:opacity-100 hover:text-destructive transition-opacity"
@@ -463,6 +465,7 @@ function InventoryField({
             />
           </div>
           <button
+            aria-label={tCommon("remove")}
             type="button"
             onClick={() => removeItem(item.id)}
             className="shrink-0 mt-2.5 h-5 w-5 flex items-center justify-center rounded-full text-muted-foreground opacity-0 group-hover/item:opacity-100 hover:text-destructive transition-opacity"
@@ -491,6 +494,7 @@ function SkillsField({
   onSave: (items: SkillItem[]) => void;
   catalogItems?: WorldSkill[];
 }) {
+  const tCommon = useTranslations("common");
   const [items, setItems] = useState<SkillItem[]>(initialItems);
 
   function update(next: SkillItem[]) {
@@ -548,6 +552,7 @@ function SkillsField({
               className="w-20 shrink-0 bg-transparent text-xs text-right text-muted-foreground outline-none placeholder:text-muted-foreground/40"
             />
             <button
+              aria-label={tCommon("remove")}
               type="button"
               onClick={() => removeItem(item.id)}
               className="shrink-0 h-5 w-5 flex items-center justify-center rounded-full text-muted-foreground opacity-0 group-hover/skill:opacity-100 hover:text-destructive transition-opacity"
@@ -590,6 +595,7 @@ function SkillsField({
             />
           </div>
           <button
+            aria-label={tCommon("remove")}
             type="button"
             onClick={() => removeItem(item.id)}
             className="shrink-0 mt-2.5 h-5 w-5 flex items-center justify-center rounded-full text-muted-foreground opacity-0 group-hover/skill:opacity-100 hover:text-destructive transition-opacity"
@@ -616,6 +622,7 @@ function GaugesField({
   initialItems: GaugeItem[];
   onSave: (items: GaugeItem[]) => void;
 }) {
+  const tCommon = useTranslations("common");
   const [items, setItems] = useState<GaugeItem[]>(initialItems);
 
   function update(next: GaugeItem[]) { setItems(next); onSave(next); }
@@ -664,6 +671,7 @@ function GaugesField({
                   title="Couleur"
                 />
                 <button
+                  aria-label={tCommon("remove")}
                   type="button"
                   onClick={() => removeItem(item.id)}
                   className="h-5 w-5 flex items-center justify-center rounded-full text-muted-foreground opacity-0 group-hover/gauge:opacity-100 hover:text-destructive transition-opacity"
@@ -730,6 +738,7 @@ function TraitsField({
   initialItems: TraitItem[];
   onSave: (items: TraitItem[]) => void;
 }) {
+  const tCommon = useTranslations("common");
   const [items, setItems] = useState<TraitItem[]>(initialItems);
 
   function update(next: TraitItem[]) { setItems(next); onSave(next); }
@@ -754,6 +763,7 @@ function TraitsField({
             className="bg-transparent text-xs font-medium outline-none placeholder:text-muted-foreground/40 min-w-[4rem]"
           />
           <button
+            aria-label={tCommon("remove")}
             type="button"
             onClick={() => removeItem(item.id)}
             className="shrink-0 text-muted-foreground opacity-0 group-hover/trait:opacity-100 hover:text-destructive transition-opacity"
@@ -780,6 +790,7 @@ function TimelineField({
   initialItems: TimelineItem[];
   onSave: (items: TimelineItem[]) => void;
 }) {
+  const tCommon = useTranslations("common");
   const [items, setItems] = useState<TimelineItem[]>(initialItems);
 
   function update(next: TimelineItem[]) { setItems(next); onSave(next); }
@@ -814,6 +825,7 @@ function TimelineField({
                 className="flex-1 min-w-0 bg-transparent text-sm font-medium outline-none placeholder:text-muted-foreground/40"
               />
               <button
+                aria-label={tCommon("remove")}
                 type="button"
                 onClick={() => removeItem(item.id)}
                 className="shrink-0 h-5 w-5 flex items-center justify-center rounded-full text-muted-foreground opacity-0 group-hover/event:opacity-100 hover:text-destructive transition-opacity"
@@ -849,6 +861,7 @@ function DlField({
   initialItems: DlItem[];
   onSave: (items: DlItem[]) => void;
 }) {
+  const tCommon = useTranslations("common");
   const [items, setItems] = useState<DlItem[]>(initialItems);
 
   function update(next: DlItem[]) { setItems(next); onSave(next); }
@@ -877,6 +890,7 @@ function DlField({
                 className="flex-1 min-w-0 bg-transparent text-sm text-muted-foreground outline-none placeholder:text-muted-foreground/40"
               />
               <button
+                aria-label={tCommon("remove")}
                 type="button"
                 onClick={() => removeItem(item.id)}
                 className="shrink-0 h-5 w-5 flex items-center justify-center rounded-full text-muted-foreground opacity-0 group-hover/dl:opacity-100 hover:text-destructive transition-opacity"
@@ -913,6 +927,7 @@ type SectionFieldsEditorProps = {
 };
 
 export function SectionFieldsEditor({ sectionId, personaId, userId, initialFields, onFieldsChange, worldId, restrictInventory, restrictSkills, isTemplate }: SectionFieldsEditorProps) {
+  const tCommon = useTranslations("common");
   const supabase = createClient();
   const flags = useFeatureFlags();
   const fieldsEnabled = flags.persona_fields;
@@ -1276,7 +1291,7 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
         <DropdownMenuTrigger asChild>
           {trigger ?? (
             <div className="cursor-pointer transition-opacity opacity-0 hover:opacity-100 group-hover/field:opacity-100 relative h-6 w-full flex justify-center before:absolute before:h-px before:w-full before:top-1/2 before:-translate-y-1/2 before:bg-border">
-              <button className="w-4 h-4 bg-accent/50 text-primary rounded-full inline-flex items-center justify-center absolute top-1/2 -translate-y-1/2 z-10">
+              <button className="w-4 h-4 bg-accent/50 text-primary rounded-full inline-flex items-center justify-center absolute top-1/2 -translate-y-1/2 z-10" aria-label={tCommon("add")}>
                 <Plus size={12} />
               </button>
             </div>

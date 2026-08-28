@@ -207,14 +207,14 @@ export function WorldRelationsSettings({ worldId }: { worldId: string }) {
                   onKeyDown={(e) => { if (e.key === "Enter") void saveEditG(); }}
                   className="h-8 flex-1 text-[12px]" autoFocus />
                 <button onClick={() => void saveEditG()} className="text-xs font-medium text-primary hover:underline">OK</button>
-                <button onClick={() => setEditGId(null)} className="text-muted-foreground hover:text-foreground"><X className="h-3 w-3" /></button>
+                <button onClick={() => setEditGId(null)} className="text-muted-foreground hover:text-foreground" aria-label={tCommon("cancel")}><X className="h-3 w-3" /></button>
               </div>
             ) : (
               <div key={g.id} className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2">
                 <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: g.color }} />
                 <span className="flex-1 text-[13px] font-medium">{g.name}</span>
                 <button onClick={() => startEditG(g)} className="text-[11px] text-muted-foreground hover:text-foreground">{tCommon("edit")}</button>
-                <button onClick={() => void deleteGroup(g.id)} className="text-muted-foreground hover:text-destructive">
+                <button onClick={() => void deleteGroup(g.id)} className="text-muted-foreground hover:text-destructive" aria-label={tCommon("delete")}>
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
               </div>
@@ -252,7 +252,7 @@ export function WorldRelationsSettings({ worldId }: { worldId: string }) {
                   ))}
                 </select>
                 <button onClick={() => void saveEditRt()} className="text-xs font-medium text-primary hover:underline">OK</button>
-                <button onClick={() => setEditRtId(null)} className="text-muted-foreground hover:text-foreground"><X className="h-3 w-3" /></button>
+                <button onClick={() => setEditRtId(null)} className="text-muted-foreground hover:text-foreground" aria-label={tCommon("cancel")}><X className="h-3 w-3" /></button>
               </div>
             ) : (
               <div key={rt.id} className="flex items-center gap-2.5 rounded-lg border border-border bg-card px-3 py-2">
@@ -261,7 +261,7 @@ export function WorldRelationsSettings({ worldId }: { worldId: string }) {
                 </svg>
                 <span className="flex-1 text-[13px] font-medium">{rt.name}</span>
                 <button onClick={() => startEditRt(rt)} className="text-[11px] text-muted-foreground hover:text-foreground">{tCommon("edit")}</button>
-                <button onClick={() => void deleteRelType(rt.id)} className="text-muted-foreground hover:text-destructive">
+                <button onClick={() => void deleteRelType(rt.id)} className="text-muted-foreground hover:text-destructive" aria-label={tCommon("delete")}>
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
               </div>

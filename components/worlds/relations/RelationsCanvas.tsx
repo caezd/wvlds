@@ -111,6 +111,7 @@ function RelationRow({
   onHoverChange?: (id: string | null) => void;
 }) {
   const t = useTranslations("relations");
+  const tCommon = useTranslations("common");
   const [editing, setEditing] = React.useState(false);
   const [draft, setDraft] = React.useState(rel.description ?? "");
 
@@ -133,7 +134,7 @@ function RelationRow({
         }
         <span className="truncate text-[12px] font-medium flex-1">{other.name}</span>
         {canEdit && (
-          <button onClick={() => onDelete(rel.id)} className="shrink-0 opacity-0 group-hover/row:opacity-100 text-muted-foreground hover:text-destructive transition-opacity">
+          <button onClick={() => onDelete(rel.id)} className="shrink-0 opacity-0 group-hover/row:opacity-100 text-muted-foreground hover:text-destructive transition-opacity" aria-label={tCommon("delete")}>
             <Trash2 className="h-3 w-3" />
           </button>
         )}
@@ -783,7 +784,7 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
             {connecting && connectMode && (
               <span className="flex items-center gap-1.5 rounded-full bg-indigo-500/10 px-3 py-1 text-xs font-medium text-indigo-600 dark:text-indigo-400">
                 {t("clickAnotherCard")}
-                <button onClick={cancelConnect}><X className="h-3 w-3" /></button>
+                <button onClick={cancelConnect} aria-label={tCommon("cancel")}><X className="h-3 w-3" /></button>
               </span>
             )}
             <button
@@ -823,7 +824,7 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
                   return owner?.username ? <p className="text-[11px] text-muted-foreground">@{owner.username}</p> : null;
                 })()}
               </div>
-              <button onClick={() => setSelectedPersonaId(null)} className="shrink-0 text-muted-foreground hover:text-foreground">
+              <button onClick={() => setSelectedPersonaId(null)} className="shrink-0 text-muted-foreground hover:text-foreground" aria-label={tCommon("close")}>
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -1041,7 +1042,7 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
                             <div className="flex items-center justify-center gap-1 rounded-full border border-border bg-background px-2 py-1 shadow-md">
                               <span className="text-[10px] font-semibold" style={{ color: meta.color }}>{meta.name}</span>
                               {(canAdmin || myPersonaIds.has(rel.from_persona_id)) && (
-                                <button onClick={() => void deleteRel(rel.id)} className="text-muted-foreground hover:text-destructive">
+                                <button onClick={() => void deleteRel(rel.id)} className="text-muted-foreground hover:text-destructive" aria-label={tCommon("delete")}>
                                   <Trash2 style={{ width: 10, height: 10 }} />
                                 </button>
                               )}
@@ -1078,7 +1079,7 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
                             <div className="flex items-center justify-center gap-1 rounded-full border border-border bg-background px-2 py-1 shadow-md">
                               <span className="text-[10px] font-semibold" style={{ color: meta.color }}>{meta.name} ↔</span>
                               {(canAdmin || myPersonaIds.has(rel.from_persona_id)) && (
-                                <button onClick={() => void deleteRel(rel.id)} className="text-muted-foreground hover:text-destructive">
+                                <button onClick={() => void deleteRel(rel.id)} className="text-muted-foreground hover:text-destructive" aria-label={tCommon("delete")}>
                                   <Trash2 style={{ width: 10, height: 10 }} />
                                 </button>
                               )}
@@ -1121,14 +1122,14 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
                             <div className="flex items-center justify-center gap-1 rounded-full border border-border bg-background px-2 py-1 shadow-md">
                               <span className="text-[10px] font-semibold" style={{ color: metaAB.color }}>{metaAB.name}</span>
                               {(canAdmin || myPersonaIds.has(relAB.from_persona_id)) && (
-                                <button onClick={() => void deleteRel(relAB.id)} className="text-muted-foreground hover:text-destructive">
+                                <button onClick={() => void deleteRel(relAB.id)} className="text-muted-foreground hover:text-destructive" aria-label={tCommon("delete")}>
                                   <Trash2 style={{ width: 10, height: 10 }} />
                                 </button>
                               )}
                               <span className="text-[10px] text-muted-foreground">·</span>
                               <span className="text-[10px] font-semibold" style={{ color: metaBA.color }}>{metaBA.name}</span>
                               {(canAdmin || myPersonaIds.has(relBA.from_persona_id)) && (
-                                <button onClick={() => void deleteRel(relBA.id)} className="text-muted-foreground hover:text-destructive">
+                                <button onClick={() => void deleteRel(relBA.id)} className="text-muted-foreground hover:text-destructive" aria-label={tCommon("delete")}>
                                   <Trash2 style={{ width: 10, height: 10 }} />
                                 </button>
                               )}

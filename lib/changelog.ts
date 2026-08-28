@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Interface",
+    text: "Accessibilité : 40 boutons n'avaient aucun nom lisible par un lecteur d'écran. Réduits à une icône (une croix, une corbeille, un crayon), ils étaient annoncés « bouton », sans plus de précision — impossible de savoir ce qu'ils font sans voir l'écran.\nChacun porte maintenant un libellé traduit : fermer, annuler, retirer, supprimer, modifier, ajouter.",
+  },
+  {
+    date: "2026-08",
     tag: "Correctif",
     text: "Failles fermées sur les fichiers. Les règles d'accès aux images n'avaient jamais été auditées ; trois d'entre elles ne vérifiaient l'identité de personne :\n- N'importe quel compte connecté pouvait **écraser l'avatar ou la bannière d'un personnage d'autrui** par l'image de son choix — 77 fichiers étaient concernés\n- Il pouvait aussi **supprimer ou remplacer l'icône et la bannière de n'importe quel salon**, y compris dans un monde qu'il n'a jamais rejoint\n- Et supprimer les **bannières postées dans les messages** de n'importe quel salon\nChaque envoi et chaque suppression vérifie maintenant que vous en avez le droit sur le salon ou le monde concerné. Trois espaces de stockage n'avaient par ailleurs aucune limite de taille ni de format : ils n'acceptent plus que des images, dans une taille raisonnable.",
   },
