@@ -29,6 +29,7 @@ import {
 } from "@/app/actions/worldCatalog";
 import { fetchPersonaSections } from "@/lib/personaSections";
 import type { PersonaSectionWithFields } from "@/types/personas";
+import { useTranslations } from "next-intl";
 
 /**
  * Réglage « Fiche de persona par défaut » d'un monde.
@@ -46,6 +47,7 @@ export function WorldPersonaTemplateSection({
   restrictInventory?: boolean;
   restrictSkills?: boolean;
 }) {
+  const t = useTranslations("worlds");
   const supabase = React.useMemo(() => createClient(), []);
   const [templateId, setTemplateId] = React.useState<string | null>(null);
   const [loaded, setLoaded] = React.useState(false);
@@ -120,7 +122,7 @@ export function WorldPersonaTemplateSection({
       <div className="space-y-2">
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-0.5">
-            <p className="text-sm font-medium">Fiche par défaut</p>
+            <p className="text-sm font-medium">{t("defaultSheet")}</p>
             <p className="text-xs text-muted-foreground leading-snug">
               Chaque persona créé dans ce monde démarre avec une copie de
               cette fiche (sections et champs).
@@ -158,7 +160,7 @@ export function WorldPersonaTemplateSection({
       <AlertDialog open={confirmDisable} onOpenChange={setConfirmDisable}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Désactiver la fiche par défaut ?</AlertDialogTitle>
+            <AlertDialogTitle>{t("disableDefaultSheetTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
               La fiche modèle et tout son contenu seront supprimés
               définitivement. Les personas déjà créés ne sont pas modifiés.
@@ -177,7 +179,7 @@ export function WorldPersonaTemplateSection({
       <Drawer open={editorOpen} onOpenChange={setEditorOpen} swipeDirection="right">
         <SideSheetContent>
           <DrawerHeader>
-            <DrawerTitle>Fiche par défaut des personas</DrawerTitle>
+            <DrawerTitle>{t("defaultSheetPersonas")}</DrawerTitle>
           </DrawerHeader>
           <div className="min-h-0 flex-1 overflow-y-auto p-6 pt-2">
             {templateId && sections !== null ? (

@@ -180,7 +180,7 @@ export default function ChatroomSettingsSheet({
       const field = kind === "icon" ? "icon_url" : "banner_url";
       form.setValue(field, url, { shouldDirty: true, shouldValidate: true });
       await persistField(field, url);
-      toast.success("Image enregistrée.");
+      toast.success(tCommon("imageSaved"));
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Téléversement impossible.");
     } finally {
@@ -208,7 +208,7 @@ export default function ChatroomSettingsSheet({
       .update({ [field]: clean })
       .eq("id", chatroom.id);
     if (error) { toast.error(error.message); return; }
-    toast.success("Modification enregistrée.");
+    toast.success(tCommon("changesSaved"));
     router.refresh();
   }
 
@@ -223,7 +223,7 @@ export default function ChatroomSettingsSheet({
     setSavingPin(false);
     if (error) { toast.error(error.message); return; }
     setMapPinId(pinId);
-    toast.success("Modification enregistrée.");
+    toast.success(tCommon("changesSaved"));
     router.refresh();
   }
 
@@ -238,7 +238,7 @@ export default function ChatroomSettingsSheet({
     setSavingCategory(false);
     if (error) { toast.error(error.message); return; }
     setCategoryId(catId);
-    toast.success("Modification enregistrée.");
+    toast.success(tCommon("changesSaved"));
     router.refresh();
   }
 
@@ -253,7 +253,7 @@ export default function ChatroomSettingsSheet({
     setSavingTimeline(false);
     if (error) { toast.error(error.message); return; }
     setTimelineDate(date);
-    toast.success("Modification enregistrée.");
+    toast.success(tCommon("changesSaved"));
     router.refresh();
   }
 
@@ -268,7 +268,7 @@ export default function ChatroomSettingsSheet({
       ]);
       const { error } = await supabase.from("chatrooms").delete().eq("id", chatroom.id);
       if (error) throw error;
-      toast.success("Salle supprimée.");
+      toast.success(t("roomDeleted"));
       setOpen(false);
       router.back();
       router.refresh();

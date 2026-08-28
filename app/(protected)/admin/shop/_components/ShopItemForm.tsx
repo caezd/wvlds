@@ -123,7 +123,7 @@ function ImageUploader({
             <div className="relative h-24 w-40">
               <Image
                 src={url}
-                alt="Aperçu"
+                alt={tCommon("preview")}
                 unoptimized
                 fill
                 sizes="160px"
@@ -159,7 +159,7 @@ function ImageUploader({
 
       {/* Fallback URL manuelle */}
       <Input
-        placeholder="ou colle une URL directement"
+        placeholder={t("orPasteUrl")}
         value={url}
         onChange={(e) => setUrl(e.target.value)}
         className="text-xs"

@@ -35,7 +35,13 @@
     "changesSaved": "Cambio guardado.",
     "noData": "Sin datos.",
     "noContent": "Sin contenido.",
-    "uploadImageError": "No se pudo subir la imagen."
+    "uploadImageError": "No se pudo subir la imagen.",
+    "uploadBannerError": "No se pudo subir el estandarte.",
+    "editFailed": "No se pudo modificar.",
+    "clickToPickFile": "haga clic para elegir un archivo",
+    "orPasteUrl": "o pegue una URL directamente",
+    "preview": "Vista previa",
+    "icon": "Icono"
   },
   "nav": {
     "profile": "Mi perfil",
@@ -59,7 +65,8 @@
     "online": "En línea",
     "offline": "Sin conexión",
     "invisible": "Invisible",
-    "changeStatus": "Cambiar estado"
+    "changeStatus": "Cambiar estado",
+    "statusSaveFailed": "No se pudo guardar el estado."
   },
   "settings": {
     "title": "Configuración",
@@ -152,7 +159,10 @@
   },
   "userProfile": {
     "title": "Perfil del jugador",
-    "memberSince": "Miembro desde {date}"
+    "memberSince": "Miembro desde {date}",
+    "avatarUpdated": "Avatar actualizado.",
+    "usernameUpdated": "Nombre de usuario actualizado.",
+    "clickToEditAvatar": "Haga clic para cambiar el avatar"
   },
   "notifications": {
     "title": "Notificaciones",
@@ -211,7 +221,8 @@
       "personaReplyManyNoContent": "<b>{actor}</b> respondió <b>{count}</b> veces",
       "maritalRequestMarried": "<b>{actor}</b> quiere casar a su personaje con <b>{target}</b>",
       "maritalRequestRelationship": "<b>{actor}</b> quiere poner a su personaje en pareja con <b>{target}</b>"
-    }
+    },
+    "back": "Volver"
   },
   "dms": {
     "title": "Mensajes privados",
@@ -418,7 +429,30 @@
     "monthNamePlaceholder": "Nombre del mes…",
     "addTagPlaceholder": "Añadir una etiqueta…",
     "acceptedAvatarTypes": "Tipo de avatar admitido",
-    "enableRestrictionTitle": "¿Activar la restricción?"
+    "enableRestrictionTitle": "¿Activar la restricción?",
+    "roleChangeFailed": "No se pudo cambiar el rol.",
+    "memberRemoveFailed": "No se pudo quitar al miembro.",
+    "inviteCancelFailed": "No se pudo cancelar la invitación.",
+    "inviteSent": "Invitación enviada",
+    "roleChanged": "Rol modificado",
+    "addMember": "Añadir un miembro",
+    "pickRole": "Elegir un rol",
+    "newWorld": "Nuevo mundo",
+    "categoryUploadWait": "Espere a que termine la subida de la imagen antes de guardar.",
+    "removedFromWorld": "Se le ha retirado de este mundo.",
+    "defaultSheet": "Ficha por defecto",
+    "defaultSheetPersonas": "Ficha por defecto de los personajes",
+    "disableDefaultSheetTitle": "¿Desactivar la ficha por defecto?",
+    "noOtherWorld": "Ningún otro mundo",
+    "noPersonaInWorld": "Ningún personaje en este mundo",
+    "timelineEmpty": "Ninguna conversación se ha situado aún en la cronología.",
+    "role": "Rol",
+    "roleEditor": "Editor",
+    "tabSettings": "Ajustes",
+    "tabCategories": "Categorías",
+    "tabCommunity": "Comunidad",
+    "tabSkills": "Habilidades",
+    "tabSecurity": "Seguridad"
   },
   "auth": {
     "signin": "Iniciar sesión",
@@ -440,7 +474,8 @@
       "invalidError": "El nombre de usuario debe tener entre 3 y 32 caracteres (letras, números, guión bajo).",
       "takenError": "Este nombre de usuario ya está en uso.",
       "continue": "Continuar",
-      "saving": "Guardando…"
+      "saving": "Guardando…",
+      "dialogDescription": "Elija un nombre de usuario para seguir usando la aplicación."
     },
     "confirmPassword": "Confirmar la contraseña",
     "checkInbox": "Revise su correo",
@@ -477,7 +512,8 @@
     "latestWorlds": "Últimos mundos creados",
     "statsMessages": "Mensajes",
     "statsMembers": "Miembros",
-    "statsPersonas": "Personajes"
+    "statsPersonas": "Personajes",
+    "statsDialogDescription": "Estadísticas e información del mundo."
   },
   "personas": {
     "title": "Personajes",
@@ -537,7 +573,16 @@
     "fieldRequiredLocked": "Campo requerido por la ficha del mundo — no se puede eliminar",
     "sectionRequiredByWorld": "Esta pestaña contiene campos requeridos por la ficha del mundo",
     "sectionName": "Nombre de la pestaña",
-    "renameSection": "Renombrar la pestaña"
+    "renameSection": "Renombrar la pestaña",
+    "newPersona": "Nuevo personaje",
+    "namePlaceholderExample": "Ej. Kaori, Lyra, Teo…",
+    "yourPersona": "Su personaje",
+    "noSection": "Ninguna pestaña.",
+    "profileSheetDescription": "Perfil detallado del personaje.",
+    "tabCosmetics": "Cosméticos",
+    "tabBuilder": "Generador",
+    "editAction": "Editar",
+    "skillLabel": "habilidad"
   },
   "quests": {
     "title": "Misiones del día",
@@ -653,7 +698,8 @@
         "worlds": "Mundos",
         "chatrooms": "Salas de chat"
       }
-    }
+    },
+    "editItem": "Editar el artículo"
   },
   "chatrooms": {
     "newRoom": "Nueva sala",
@@ -875,7 +921,25 @@
         "atmosphere": "Buen tiempo"
       }
     },
-    "worldConversations": "Conversaciones del mundo"
+    "worldConversations": "Conversaciones del mundo",
+    "pickRoomFirst": "Seleccione primero una sala para subir una imagen.",
+    "pickRecipient": "Elija al menos un destinatario para la nota privada.",
+    "sendFailed": "No se pudo enviar.",
+    "noOtherParticipant": "Ningún otro participante en esta sala.",
+    "calloutPlaceholder": "Texto del recuadro…",
+    "npcExampleName": "Guardia de la mazmorra",
+    "messageExample": "¿Qué tal?",
+    "roomDeleted": "Sala eliminada.",
+    "voteFailed": "No se pudo votar.",
+    "mustBeSignedIn": "Debe iniciar sesión para reaccionar.",
+    "statsLoadFailed": "No se pudieron cargar las estadísticas.",
+    "editDescription": "Editar la descripción",
+    "hpExampleName": "ej. Gornak el Berserker",
+    "npcRoleOptional": "Rol (opcional)",
+    "npcExampleTitle": "Wyrm de las Cenizas",
+    "npcRolePlaceholder": "ej. Guardián de la mazmorra, Mercader…",
+    "deleteMessageFailed": "No se pudo eliminar el mensaje.",
+    "loadMessageFailed": "No se pudo cargar el nuevo mensaje."
   },
   "changelog": {
     "title": "Historial de cambios",

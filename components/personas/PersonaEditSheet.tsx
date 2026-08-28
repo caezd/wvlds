@@ -694,7 +694,7 @@ export function PersonaEditorContent({
               <Tabs value={appearanceTab} onValueChange={(v) => setAppearanceTab(v as "avatar" | "cosmetics")}>
                 <TabsList>
                   <TabsTrigger value="avatar">Avatar</TabsTrigger>
-                  <TabsTrigger value="cosmetics">Cosmétiques</TabsTrigger>
+                  <TabsTrigger value="cosmetics">{tPersonas("tabCosmetics")}</TabsTrigger>
                 </TabsList>
               </Tabs>
 
@@ -703,7 +703,7 @@ export function PersonaEditorContent({
                   <div className="h-6 w-px bg-border" />
                   <Tabs value={avatarSubTab} onValueChange={(v) => setAvatarSubTab(v as "builder" | "upload")}>
                     <TabsList>
-                      {avatar_builder && <TabsTrigger value="builder">Générateur</TabsTrigger>}
+                      {avatar_builder && <TabsTrigger value="builder">{tPersonas("tabBuilder")}</TabsTrigger>}
                       <TabsTrigger value="upload">Image</TabsTrigger>
                     </TabsList>
                   </Tabs>
@@ -885,7 +885,7 @@ export function PersonaEditSheet({
     <>
       {trigger
         ? <span onClick={() => setOpen(true)} style={{ display: "contents" }}>{trigger}</span>
-        : <button className="text-sm underline" onClick={() => setOpen(true)}>Éditer</button>
+        : <button className="text-sm underline" onClick={() => setOpen(true)}>{tPersonas("editAction")}</button>
       }
       <Drawer open={open} onOpenChange={setOpen} swipeDirection="right">
         {/* Le recul visuel de ce drawer quand le drawer avatar/bannière

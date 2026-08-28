@@ -601,7 +601,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
         <div className="flex h-full w-full flex-col">
             <WorldPanelHeader
                 icon={<Settings className="h-4 w-4 shrink-0 text-muted-foreground" />}
-                title="Paramètres"
+                title={t("tabSettings")}
             />
 
             <Form {...form}>
@@ -616,12 +616,12 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                         <ScrollArea className="w-full">
                             <TabsPrimitive.List className="flex w-max items-center gap-6 px-4">
                                 <TabsPrimitive.Trigger value="appearance" className={SETTINGS_TAB_TRIGGER_CLASS}>Apparence</TabsPrimitive.Trigger>
-                                <TabsPrimitive.Trigger value="categories" className={SETTINGS_TAB_TRIGGER_CLASS}>Catégories</TabsPrimitive.Trigger>
+                                <TabsPrimitive.Trigger value="categories" className={SETTINGS_TAB_TRIGGER_CLASS}>{t("tabCategories")}</TabsPrimitive.Trigger>
                                 <TabsPrimitive.Trigger value="home" className={SETTINGS_TAB_TRIGGER_CLASS}>Page d&apos;accueil</TabsPrimitive.Trigger>
                                 <TabsPrimitive.Trigger value="features" className={SETTINGS_TAB_TRIGGER_CLASS}>Fonctions</TabsPrimitive.Trigger>
                                 <TabsPrimitive.Trigger value="relations" className={SETTINGS_TAB_TRIGGER_CLASS}>Relations</TabsPrimitive.Trigger>
                                 {public_worlds && (
-                                    <TabsPrimitive.Trigger value="community" className={SETTINGS_TAB_TRIGGER_CLASS}>Communauté</TabsPrimitive.Trigger>
+                                    <TabsPrimitive.Trigger value="community" className={SETTINGS_TAB_TRIGGER_CLASS}>{t("tabCommunity")}</TabsPrimitive.Trigger>
                                 )}
                             </TabsPrimitive.List>
                             <ScrollBar orientation="horizontal" />
@@ -897,7 +897,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                     <div className="space-y-2">
                                         <div className="flex items-start justify-between gap-4">
                                             <div className="space-y-0.5">
-                                                <p className="text-sm font-medium">Compétences</p>
+                                                <p className="text-sm font-medium">{t("tabSkills")}</p>
                                                 <p className="text-xs text-muted-foreground leading-snug">
                                                     Les personas peuvent lister leurs compétences.
                                                 </p>
@@ -977,7 +977,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
 
                                 {/* -- Sécurité ---------------------------------- */}
                                 <div className="space-y-5 pt-2">
-                                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Sécurité</p>
+                                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("tabSecurity")}</p>
                                     <div className="flex items-start justify-between gap-4">
                                         <div className="space-y-0.5">
                                             <p className="flex items-center gap-1.5 text-sm font-medium">

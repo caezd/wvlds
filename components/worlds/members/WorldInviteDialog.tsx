@@ -54,6 +54,7 @@ import { cn } from "@/lib/utils";
 import { Check, ChevronDown, Loader2, Mail, UserPlus, X } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 type Role = "owner" | "admin" | "editor" | "player" | "viewer";
 
@@ -136,6 +137,7 @@ export function WorldInviteDialog({
     canManage?: boolean;
     defaultRole?: Role;
 }) {
+  const t = useTranslations("worlds");
     const [open, setOpen] = useState(false);
     const [query, setQuery] = useState("");
     const [results, setResults] = useState<FoundUser[]>([]);
@@ -260,7 +262,7 @@ export function WorldInviteDialog({
             .eq("user_id", m.user_id);
 
         if (error) {
-            toast.error("Impossible de modifier le rôle.", {
+            toast.error(t("roleChangeFailed"), {
                 description: error.message,
             });
             return;
@@ -291,7 +293,7 @@ export function WorldInviteDialog({
             .eq("user_id", m.user_id);
 
         if (error) {
-            toast.error("Impossible de retirer ce membre.", {
+            toast.error(t("memberRemoveFailed"), {
                 description: error.message,
             });
             return;
@@ -312,7 +314,7 @@ export function WorldInviteDialog({
             .eq("id", inv.id);
 
         if (error) {
-            toast.error("Impossible d’annuler l’invitation.", { description: error.message });
+            toast.error(t("inviteCancelFailed"), { description: error.message });
             return;
         }
 
@@ -392,7 +394,7 @@ export function WorldInviteDialog({
             if (result.error) {
                 setError(result.error);
             } else {
-                toast.success("Invitation envoyée", {
+                toast.success(t("inviteSent"), {
                     description: `Un courriel d'invitation a été envoyé à ${target}.`,
                 });
                 setOpen(false);
@@ -430,7 +432,7 @@ export function WorldInviteDialog({
                     console.error(error);
                     return;
                 }
-                toast.success("Rôle modifié", {
+                toast.success(t("roleChanged"), {
                     description: selected?.username
                         ? `@${selected.username} est maintenant ${role}.`
                         : "Le rôle a été mis à jour.",
@@ -483,7 +485,7 @@ export function WorldInviteDialog({
             });
             if (notifError) console.error("[WorldInviteDialog] notification non créée", notifError.message);
 
-            toast.success("Invitation envoyée", {
+            toast.success(t("inviteSent"), {
                 description: selected?.username
                     ? `Une invitation a été envoyée à @${selected.username}.`
                     : "L’invitation a été envoyée.",
@@ -516,7 +518,7 @@ export function WorldInviteDialog({
 
             <DialogContent className="sm:max-w-lg">
                 <DialogHeader>
-                    <DialogTitle>Ajouter un membre</DialogTitle>
+                    <DialogTitle>{t("addMember")}</DialogTitle>
                 </DialogHeader>
 
                 <div className="space-y-3">
@@ -608,17 +610,17 @@ export function WorldInviteDialog({
                     </div>
 
                     <div className="grid gap-1.5">
-                        <Label>Rôle</Label>
+                        <Label>{t("role")}</Label>
                         <Select
                             value={role}
                             onValueChange={(v) => setRole(v as Role)}
                         >
                             <SelectTrigger>
-                                <SelectValue placeholder="Choisir un rôle" />
+                                <SelectValue placeholder={t("pickRole")} />
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="admin">Admin</SelectItem>
-                                <SelectItem value="editor">Éditeur</SelectItem>
+                                <SelectItem value="editor">{t("roleEditor")}</SelectItem>
                                 <SelectItem value="player">Joueur</SelectItem>
                                 <SelectItem value="viewer">Lecteur</SelectItem>
                             </SelectContent>

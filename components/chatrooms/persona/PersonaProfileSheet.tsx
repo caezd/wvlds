@@ -414,7 +414,7 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
                   </div>
                 )}
                 {persona.user_id === selfId && (
-                  <div className="text-xs text-muted-foreground">Votre persona</div>
+                  <div className="text-xs text-muted-foreground">{t("yourPersona")}</div>
                 )}
               </div>
               {onUsePersona && (

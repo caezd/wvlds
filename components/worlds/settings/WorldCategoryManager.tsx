@@ -68,6 +68,8 @@ function CategoryForm({
   onCancel: () => void;
   onSaved: (category: ChatroomCategory) => void;
 }) {
+  const tCatalogue = useTranslations("catalogue");
+  const t = useTranslations("worlds");
   const supabase = React.useMemo(() => createClient(), []);
   const [title, setTitle] = React.useState(initial?.title ?? "");
   const [description, setDescription] = React.useState(initial?.description ?? "");
@@ -100,7 +102,7 @@ function CategoryForm({
     // Un upload d'image en cours n'a pas encore mis à jour imageUrl —
     // enregistrer maintenant sauvegarderait silencieusement l'ancienne image.
     if (uploadingImage) {
-      toast.error("Attends la fin du téléversement de l'image avant d'enregistrer.");
+      toast.error(t("categoryUploadWait"));
       return;
     }
     setSaving(true);
@@ -158,7 +160,7 @@ function CategoryForm({
         autoFocus
         value={title}
         onChange={(e) => setTitle(e.target.value)}
-        placeholder="Nom de la catégorie"
+        placeholder={tCatalogue("categoryNamePlaceholder")}
         maxLength={60}
       />
       <Textarea

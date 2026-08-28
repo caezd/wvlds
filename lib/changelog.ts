@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Interface",
+    text: "L'application est enfin entièrement traduite. 140 textes restaient écrits en français dans le code : ils s'affichaient tels quels aux personnes utilisant l'anglais ou l'espagnol — le cas le plus visible étant la page de connexion, titrée en français au-dessus d'un formulaire entièrement anglais.\nRéglages de monde, fiches de personnage, salons, invitations, messages d'erreur et de confirmation : tout passe désormais par les traductions. Deux textes tutoyaient alors que le reste de l'application vouvoie ; c'est corrigé.\nSeules les mentions légales restent en français, leur traduction demandant une relecture juridique.",
+  },
+  {
+    date: "2026-08",
     tag: "Correctif",
     text: "Après un retour de connexion réseau, l'application rouvrait ses connexions temps réel en réutilisant les anciennes. Les traitements s'y ajoutaient au lieu de les remplacer : après plusieurs coupures, un même message pouvait être affiché plusieurs fois et les compteurs se dérégler. Rien ne le signalait.\nChaque rétablissement crée maintenant une connexion propre, en attendant la fermeture de la précédente. Six endroits étaient concernés : messages, notifications, messages privés, présence et liste des salons.",
   },

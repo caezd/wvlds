@@ -120,7 +120,7 @@ export function WorldPickerHeader({
           <div className="absolute top-full left-0 right-0 mt-1 overflow-hidden rounded-lg border border-border bg-background shadow-lg z-50">
             <div className="px-1 py-1">
               {otherWorlds.length === 0 ? (
-                <p className="px-2 py-1.5 text-xs text-muted-foreground">Aucun autre monde</p>
+                <p className="px-2 py-1.5 text-xs text-muted-foreground">{t("noOtherWorld")}</p>
               ) : (
                 otherWorlds.map((w) => {
                   const unread = worldUnread[w.id] ?? 0;

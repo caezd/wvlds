@@ -195,7 +195,7 @@ function ChatroomMessage({
 
   async function toggleReaction(emoteKey: string) {
     if (!selfId) {
-      toast.error("Vous devez être connecté pour réagir.");
+      toast.error(t("mustBeSignedIn"));
       return;
     }
 

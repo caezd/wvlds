@@ -35,7 +35,13 @@
     "changesSaved": "Modification enregistrée.",
     "noData": "Aucune donnée.",
     "noContent": "Aucun contenu.",
-    "uploadImageError": "Envoi de l'image impossible."
+    "uploadImageError": "Envoi de l'image impossible.",
+    "uploadBannerError": "Envoi de la bannière impossible.",
+    "editFailed": "Modification impossible.",
+    "clickToPickFile": "cliquez pour choisir un fichier",
+    "orPasteUrl": "ou collez une URL directement",
+    "preview": "Aperçu",
+    "icon": "Icône"
   },
   "nav": {
     "profile": "Mon profil",
@@ -59,7 +65,8 @@
     "online": "En ligne",
     "offline": "Hors ligne",
     "invisible": "Invisible",
-    "changeStatus": "Changer de statut"
+    "changeStatus": "Changer de statut",
+    "statusSaveFailed": "Enregistrement du statut impossible."
   },
   "settings": {
     "title": "Paramètres",
@@ -152,7 +159,10 @@
   },
   "userProfile": {
     "title": "Profil joueur",
-    "memberSince": "Membre depuis {date}"
+    "memberSince": "Membre depuis {date}",
+    "avatarUpdated": "Avatar mis à jour.",
+    "usernameUpdated": "Pseudo mis à jour.",
+    "clickToEditAvatar": "Cliquez pour modifier l'avatar"
   },
   "notifications": {
     "title": "Notifications",
@@ -419,7 +429,30 @@
     "monthNamePlaceholder": "Nom du mois…",
     "addTagPlaceholder": "Ajouter un tag…",
     "acceptedAvatarTypes": "Type d'avatars accepté",
-    "enableRestrictionTitle": "Activer la restriction ?"
+    "enableRestrictionTitle": "Activer la restriction ?",
+    "roleChangeFailed": "Modification du rôle impossible.",
+    "memberRemoveFailed": "Retrait du membre impossible.",
+    "inviteCancelFailed": "Annulation de l'invitation impossible.",
+    "inviteSent": "Invitation envoyée",
+    "roleChanged": "Rôle modifié",
+    "addMember": "Ajouter un membre",
+    "pickRole": "Choisir un rôle",
+    "newWorld": "Nouveau monde",
+    "categoryUploadWait": "Attendez la fin de l'envoi de l'image avant d'enregistrer.",
+    "removedFromWorld": "Vous avez été retiré de ce monde.",
+    "defaultSheet": "Fiche par défaut",
+    "defaultSheetPersonas": "Fiche par défaut des personas",
+    "disableDefaultSheetTitle": "Désactiver la fiche par défaut ?",
+    "noOtherWorld": "Aucun autre monde",
+    "noPersonaInWorld": "Aucun persona dans ce monde",
+    "timelineEmpty": "Aucune conversation n'a encore été située dans la chronologie.",
+    "role": "Rôle",
+    "roleEditor": "Éditeur",
+    "tabSettings": "Paramètres",
+    "tabCategories": "Catégories",
+    "tabCommunity": "Communauté",
+    "tabSkills": "Compétences",
+    "tabSecurity": "Sécurité"
   },
   "auth": {
     "signin": "Connexion",
@@ -541,7 +574,15 @@
     "fieldRequiredLocked": "Champ requis par la fiche du monde — impossible à supprimer",
     "sectionRequiredByWorld": "Cette section contient des champs requis par la fiche du monde",
     "sectionName": "Nom de l'onglet",
-    "renameSection": "Renommer l'onglet"
+    "renameSection": "Renommer l'onglet",
+    "newPersona": "Nouveau persona",
+    "namePlaceholderExample": "Ex. Kaori, Lyra, Théo…",
+    "yourPersona": "Votre persona",
+    "noSection": "Aucun onglet.",
+    "tabCosmetics": "Cosmétiques",
+    "tabBuilder": "Générateur",
+    "editAction": "Éditer",
+    "skillLabel": "compétence"
   },
   "quests": {
     "title": "Quêtes du jour",
@@ -657,7 +698,8 @@
         "worlds": "Mondes",
         "chatrooms": "Chatrooms"
       }
-    }
+    },
+    "editItem": "Modifier l'article"
   },
   "chatrooms": {
     "newRoom": "Nouvelle salle",
@@ -879,7 +921,25 @@
         "atmosphere": "Beau temps"
       }
     },
-    "worldConversations": "Conversations du monde"
+    "worldConversations": "Conversations du monde",
+    "pickRoomFirst": "Sélectionnez d'abord un salon pour envoyer une image.",
+    "pickRecipient": "Choisissez au moins un destinataire pour la note privée.",
+    "sendFailed": "Envoi impossible.",
+    "noOtherParticipant": "Aucun autre participant dans ce salon.",
+    "calloutPlaceholder": "Texte de l'encadré…",
+    "npcExampleName": "Garde du donjon",
+    "messageExample": "Ça va ?",
+    "roomDeleted": "Salon supprimé.",
+    "voteFailed": "Vote impossible.",
+    "mustBeSignedIn": "Vous devez être connecté pour réagir.",
+    "statsLoadFailed": "Chargement des statistiques impossible.",
+    "editDescription": "Modifier la description",
+    "hpExampleName": "ex. Gornak le Berserker",
+    "npcRoleOptional": "Rôle (facultatif)",
+    "npcExampleTitle": "Wyrm des Cendres",
+    "npcRolePlaceholder": "ex. Gardien du donjon, Marchande…",
+    "deleteMessageFailed": "Suppression du message impossible.",
+    "loadMessageFailed": "Chargement du nouveau message impossible."
   },
   "changelog": {
     "title": "Changelog",

@@ -364,7 +364,7 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
             const converted = await toWebP(new File([blob], "banner.jpg", { type: blob.type || "image/jpeg" }));
             const path = `${chatId}/${crypto.randomUUID()}.webp`;
             const { error } = await supabase.storage.from("chat-banners").upload(path, converted, { contentType: "image/webp" });
-            if (error) { toast.error("Erreur upload bannière.", { description: error.message }); return; }
+            if (error) { toast.error(tCommon("uploadBannerError"), { description: error.message }); return; }
             const { data } = supabase.storage.from("chat-banners").getPublicUrl(path);
             await sendRaw(JSON.stringify({ _type: "banner", url: data.publicUrl }));
             setBannerPickerOpen(false);
@@ -397,7 +397,7 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
                 const ext = file.name.split(".").pop() ?? "webp";
                 const path = `${targetChatId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
                 const { error } = await supabase.storage.from("chat-media").upload(path, file, { contentType: file.type });
-                if (error) { toast.error("Erreur upload image.", { description: error.message }); return null; }
+                if (error) { toast.error(tCommon("uploadImageError"), { description: error.message }); return null; }
                 const { data } = supabase.storage.from("chat-media").getPublicUrl(path);
                 return { url: data.publicUrl, name: file.name };
             }),
@@ -407,7 +407,7 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
 
     async function uploadIconImageForBlock(file: File): Promise<string | null> {
         if (!chatId) {
-            toast.error("Sélectionnez d'abord une chatroom pour uploader une image.");
+            toast.error(tChatrooms("pickRoomFirst"));
             return null;
         }
         const converted = await toWebP(file);
@@ -415,7 +415,7 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
         const { error } = await supabase.storage
             .from("chat-media")
             .upload(path, converted, { contentType: "image/webp" });
-        if (error) { toast.error("Erreur upload image.", { description: error.message }); return null; }
+        if (error) { toast.error(tCommon("uploadImageError"), { description: error.message }); return null; }
         const { data } = supabase.storage.from("chat-media").getPublicUrl(path);
         pendingBlockMediaRef.current = [...pendingBlockMediaRef.current, { url: data.publicUrl, name: file.name }];
         return data.publicUrl;
@@ -429,7 +429,7 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
             return false;
         }
         if (visibleTo !== null && visibleTo.length === 0) {
-            toast.warning("Choisissez au moins un destinataire pour la note privée.");
+            toast.warning(tChatrooms("pickRecipient"));
             return false;
         }
         // Les avertissements ne concernent que le texte narratif : un envoi de
@@ -483,7 +483,7 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
                 })
                 .select("id, world_id")
                 .single();
-            if (error) { toast.error("Envoi impossible.", { description: error.message }); return false; }
+            if (error) { toast.error(tChatrooms("sendFailed"), { description: error.message }); return false; }
             onMessageSent?.(newMessage.id, targetChatId, text);
             await supabase.from(TABLE.CHATROOM_PERSONA_PREFS).upsert(
                 { chat_id: targetChatId, user_id: userId, persona_id: selectedPersona.id },
@@ -677,7 +677,7 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
                                     </button>
                                 ))}
                                 {!participants.length && (
-                                    <span className="text-xs text-muted-foreground italic">Aucun autre participant dans ce salon.</span>
+                                    <span className="text-xs text-muted-foreground italic">{tChatrooms("noOtherParticipant")}</span>
                                 )}
                                 <button
                                   aria-label={tCommon("remove")}
@@ -1064,6 +1064,7 @@ function BlocksDropdown({
     onMapPinChange?: (id: string | null) => void;
 }) {
     const t = useTranslations("chatrooms");
+    const tChatrooms = useTranslations("chatrooms");
     const tCommon = useTranslations("common");
     const { chatroom_blocks, block_npc, block_hp, block_choice } = useFeatureFlags();
     const [open, setOpen] = useState(false);
@@ -1145,7 +1146,7 @@ function BlocksDropdown({
                         <div className="mb-1 flex items-center gap-1.5 text-sm font-medium">
                             <Square className="h-3.5 w-3.5" /> Titre
                         </div>
-                        <div className="text-xs text-muted-foreground">Texte de l&apos;encadré…</div>
+                        <div className="text-xs text-muted-foreground">{tChatrooms("calloutPlaceholder")}</div>
                     </div>
                 );
             case "anchor":
@@ -1182,7 +1183,7 @@ function BlocksDropdown({
                     <div className="flex w-full items-center gap-3 rounded-xl border border-border-soft bg-card px-4 py-3">
                         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-base">🗡️</div>
                         <div>
-                            <div className="text-sm font-medium">Garde du donjon</div>
+                            <div className="text-sm font-medium">{tChatrooms("npcExampleName")}</div>
                             <div className="text-[11px] text-muted-foreground">PV 40 · ATQ 12 · DEF 8</div>
                         </div>
                     </div>
@@ -1256,7 +1257,7 @@ function BlocksDropdown({
                             <div className="rounded-xl rounded-br-[3px] bg-primary/15 px-3 py-1.5 text-sm">Salut !</div>
                         </div>
                         <div className="flex items-end justify-end gap-1.5">
-                            <div className="rounded-xl rounded-tr-[3px] bg-primary/15 px-3 py-1.5 text-sm">Ça va ?</div>
+                            <div className="rounded-xl rounded-tr-[3px] bg-primary/15 px-3 py-1.5 text-sm">{tChatrooms("messageExample")}</div>
                         </div>
                         <div className="flex items-end justify-start gap-1.5">
                             <div className="rounded-xl rounded-tl-[3px] bg-muted px-3 py-1.5 text-sm">Oui, et toi ?</div>

@@ -16,6 +16,7 @@ import { createPersona } from "@/app/(protected)/p/actions";
 import { createClient } from "@/lib/supabase/client";
 import { fetchPersonaSections } from "@/lib/personaSections";
 import type { PersonaSectionWithFields } from "@/types/personas";
+import { useTranslations } from "next-intl";
 
 export function PersonaCreateSheet({
   worldId,
@@ -28,6 +29,7 @@ export function PersonaCreateSheet({
   restrictInventory?: boolean;
   restrictSkills?: boolean;
 }) {
+  const t = useTranslations("personas");
   const [open, setOpen] = useState(false);
   const [phase, setPhase] = useState<"name" | "edit">("name");
   const [createdId, setCreatedId] = useState<string | null>(null);
@@ -80,14 +82,14 @@ export function PersonaCreateSheet({
           {trigger}
         </span>
       ) : (
-        <Button onClick={() => setOpen(true)}>Nouveau persona</Button>
+        <Button onClick={() => setOpen(true)}>{t("newPersona")}</Button>
       )}
 
       <Drawer open={open} onOpenChange={handleOpen} swipeDirection="right">
         <SideSheetContent closeClassName="z-10">
           <DrawerHeader className="sr-only">
             <DrawerTitle>
-              {phase === "name" ? "Nouveau persona" : `Éditer — ${createdName}`}
+              {phase === "name" ? t("newPersona") : `Éditer — ${createdName}`}
             </DrawerTitle>
           </DrawerHeader>
 
@@ -95,7 +97,7 @@ export function PersonaCreateSheet({
           {phase === "name" ? (
             <form onSubmit={handleCreate} className="flex flex-col gap-6 p-6">
               <div className="space-y-1">
-                <h2 className="text-xl font-semibold">Nouveau persona</h2>
+                <h2 className="text-xl font-semibold">{t("newPersona")}</h2>
                 <p className="text-sm text-muted-foreground">
                   Donne un nom à ton personnage pour commencer. Tu pourras tout configurer ensuite.
                 </p>
@@ -107,7 +109,7 @@ export function PersonaCreateSheet({
                   id="persona-name"
                   ref={nameRef}
                   autoFocus
-                  placeholder="Ex. Kaori, Lyra, Théo…"
+                  placeholder={t("namePlaceholderExample")}
                   maxLength={40}
                   required
                 />

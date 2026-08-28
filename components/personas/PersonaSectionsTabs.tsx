@@ -26,6 +26,7 @@ import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { toast } from "sonner";
 import type { PersonaSectionWithFields } from "@/types/personas";
 import { SectionFieldsEditor } from "./SectionFieldsEditor";
+import { useTranslations } from "next-intl";
 
 type PersonaSectionsTabsProps = {
   personaId: string;
@@ -49,6 +50,7 @@ export function PersonaSectionsTabs({
   restrictSkills,
   isTemplate,
 }: PersonaSectionsTabsProps) {
+  const t = useTranslations("personas");
   const supabase = createClient();
 
   const [activeSectionId, setActiveSectionId] = useState<string | null>(
@@ -190,7 +192,7 @@ export function PersonaSectionsTabs({
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       {activeHasLockedFields ? (
-                        <DropdownMenuItem disabled title="Cette section contient des champs requis par la fiche du monde">
+                        <DropdownMenuItem disabled title={t("sectionRequiredByWorld")}>
                           <Lock className="mr-2 h-4 w-4" /> Requise par le monde
                         </DropdownMenuItem>
                       ) : (
@@ -241,7 +243,7 @@ export function PersonaSectionsTabs({
           <form onSubmit={handleAddSection} className="grid gap-4">
             <div className="grid gap-3">
               <DialogTitle asChild>
-                <Label htmlFor="section-name">Nom de la section</Label>
+                <Label htmlFor="section-name">{t("sectionName")}</Label>
               </DialogTitle>
               <Input
                 id="section-name"
@@ -270,13 +272,13 @@ export function PersonaSectionsTabs({
           <form onSubmit={handleRenameSection} className="grid gap-4">
             <div className="grid gap-3">
               <DialogTitle asChild>
-                <Label htmlFor="rename-section">Renommer la section</Label>
+                <Label htmlFor="rename-section">{t("renameSection")}</Label>
               </DialogTitle>
               <Input
                 id="rename-section"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Nom de la section"
+                placeholder={t("sectionName")}
                 autoFocus
                 maxLength={60}
               />

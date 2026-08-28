@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { KeyRound, Loader2 } from "lucide-react";
 import { ImagePickerCropField } from "@/components/ui/image-crop-picker";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 
 export function UserProfileSheet({
   open,
@@ -33,6 +34,7 @@ export function UserProfileSheet({
   initialAvatarUrl: string | null;
   email: string;
 }) {
+  const t = useTranslations("userProfile");
   const supabase = createClient();
   const router = useRouter();
 
@@ -64,7 +66,7 @@ export function UserProfileSheet({
         : error.message;
       toast.error(msg);
     } else {
-      toast.success("Pseudo mis à jour.");
+      toast.success(t("usernameUpdated"));
       router.refresh();
     }
   }
@@ -88,7 +90,7 @@ export function UserProfileSheet({
           .eq("id", userId);
         if (dbErr) throw dbErr;
         setAvatarUrl(displayUrl);
-        toast.success("Avatar mis à jour.");
+        toast.success(t("avatarUpdated"));
         router.refresh();
       } catch (e: unknown) {
         toast.error(e instanceof Error ? e.message : "Erreur lors de l'upload.");
@@ -96,7 +98,7 @@ export function UserProfileSheet({
         setUploadingAvatar(false);
       }
     },
-    [userId, supabase, router],
+    [userId, supabase, router, t],
   );
 
   const usernameChanged = username.trim() !== (initialUsername ?? "");
@@ -132,7 +134,7 @@ export function UserProfileSheet({
                   </div>
                 )}
                 {avatarUrl && (
-                  <p className="text-xs text-muted-foreground">Cliquez pour modifier l&apos;avatar</p>
+                  <p className="text-xs text-muted-foreground">{t("clickToEditAvatar")}</p>
                 )}
               </div>
 

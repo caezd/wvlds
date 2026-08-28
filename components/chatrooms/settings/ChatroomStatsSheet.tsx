@@ -133,6 +133,7 @@ export default function ChatroomStatsSheet({
   onOpenChange?: (open: boolean) => void;
   hideTrigger?: boolean;
 }) {
+  const tCommon = useTranslations("common");
   const t = useTranslations("chatrooms");
   const supabase = createClient();
   const reconnectEpoch = useReconnectEpoch();
@@ -159,7 +160,7 @@ export default function ChatroomStatsSheet({
       supabase.rpc("get_chatroom_stats", { p_chat_id: chatId }),
       supabase.rpc("get_chatroom_persona_stats", { p_chat_id: chatId }),
     ]);
-    if (statsRes.error) toast.error("Impossible de charger les statistiques.", { description: statsRes.error.message });
+    if (statsRes.error) toast.error(t("statsLoadFailed"), { description: statsRes.error.message });
     else setStats((statsRes.data as ChatroomStatsPayload) ?? null);
     if (!personasRes.error) setPersonas((personasRes.data as StatsPersona[] | null) ?? []);
     setLoading(false);
@@ -256,7 +257,7 @@ export default function ChatroomStatsSheet({
 
               {tab === "users" ? (
                 !userRows.length ? (
-                  <p className="text-sm text-muted-foreground">Aucune donnée.</p>
+                  <p className="text-sm text-muted-foreground">{tCommon("noData")}</p>
                 ) : (
                   <div className="space-y-2">
                     {userRows.map((u) => {
@@ -276,7 +277,7 @@ export default function ChatroomStatsSheet({
                 )
               ) : (
                 !personas.length ? (
-                  <p className="text-sm text-muted-foreground">Aucune donnée.</p>
+                  <p className="text-sm text-muted-foreground">{tCommon("noData")}</p>
                 ) : (
                   <div className="space-y-2">
                     {personas.map((pe) => {

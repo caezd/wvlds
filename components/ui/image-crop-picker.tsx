@@ -7,6 +7,7 @@ import { ZoomIn, ZoomOut, RotateCcw, Loader2, ImagePlus, Link as LinkIcon } from
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 
 // Le recadreur n'est monté qu'à l'ouverture d'un dialogue d'ajout d'image, mais
 // l'import statique le plaçait dans le bundle de tout écran qui importe ce
@@ -197,6 +198,7 @@ export function ImageSourceStep({
   onSelect: (src: string) => void;
   disabled?: boolean;
 }) {
+  const t = useTranslations("common");
   const inputRef = useRef<HTMLInputElement>(null);
   const [url, setUrl] = useState("");
   const [checking, setChecking] = useState(false);
@@ -266,7 +268,7 @@ export function ImageSourceStep({
         <ImagePlus className="h-5 w-5 text-muted-foreground" />
         <p className="text-xs font-medium">
           Glissez-déposez ou collez (Ctrl+V) une image, ou{" "}
-          <span className="text-blue-400">cliquez pour choisir un fichier</span>
+          <span className="text-blue-400">{t("clickToPickFile")}</span>
         </p>
         <p className="text-[11px] text-muted-foreground">Taille max 5 Mo</p>
       </div>

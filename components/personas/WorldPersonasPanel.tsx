@@ -11,6 +11,7 @@ import { PersonaProfileSheetTrigger } from "./PersonaProfileSheetTrigger";
 import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { AsidePersona } from "./WorldPersonaAsideClient";
+import { useTranslations } from "next-intl";
 
 type OtherPersona = {
   id: string;
@@ -86,6 +87,7 @@ export function WorldPersonasPanel({
   restrictSkills?: boolean;
   faceclaimsEnabled?: boolean;
 }) {
+  const t = useTranslations("worlds");
   const supabase = useMemo(() => createClient(), []);
   const [others, setOthers] = useState<OtherPersona[] | null>(null);
   const myIds = useMemo(() => new Set(myPersonas.map((p) => p.id)), [myPersonas]);
@@ -190,7 +192,7 @@ export function WorldPersonasPanel({
 
             {mine.length === 0 ? (
               <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border-soft py-10 text-center">
-                <p className="text-sm text-muted-foreground">Aucun persona dans ce monde</p>
+                <p className="text-sm text-muted-foreground">{t("noPersonaInWorld")}</p>
                 <PersonaCreateSheet
                   worldId={worldId}
                   restrictInventory={restrictInventory}

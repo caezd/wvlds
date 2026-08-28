@@ -30,6 +30,7 @@ export function WorldTimeline({
   config: WorldTimelineConfig;
   onClose: () => void;
 }) {
+  const t = useTranslations("worlds");
   const tCommon = useTranslations("common");
   const router = useRouter();
 
@@ -160,7 +161,7 @@ export function WorldTimeline({
         })}
 
         {dated.length === 0 && (
-          <p className="text-sm text-muted-foreground">Aucune conversation n&apos;a encore été située dans la chronologie.</p>
+          <p className="text-sm text-muted-foreground">{t("timelineEmpty")}</p>
         )}
       </div>
     </div>

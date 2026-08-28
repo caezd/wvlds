@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { openRealtimeChannel } from "@/lib/realtimeChannel";
 import { createClient } from "@/lib/supabase/client";
 import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import { TABLE, channel as CH } from "@/lib/constants";
 import type { ChatMessageWithPersona, ChatMessageMeta } from "@/types/db";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 
 export type ChatroomPatch = {
   title?: string | null;
@@ -40,6 +41,7 @@ export function useRealtimeChatSync({
   onVoteChange,
   onPersonaUpdated,
 }: Props) {
+  const t = useTranslations("chatrooms");
   const supabase = useMemo(() => createClient(), []);
   const reconnectEpoch = useReconnectEpoch();
   const latestIdRef = useRef<number | null>(initialLatestId);
@@ -114,7 +116,7 @@ export function useRealtimeChatSync({
         if (!isMounted) return;
 
         if (error || !data) {
-          toast.error("Impossible de charger le nouveau message.");
+          toast.error(t("loadMessageFailed"));
           return;
         }
 
@@ -253,5 +255,5 @@ return ch;
     // présence (fournis ou non par l'appelant) compte pour construire les
     // bindings, lue via callbacksRef au moment où l'effet tourne — pas leur
     // identité de fonction, qui changerait à chaque rendu du parent.
-  }, [chatId, supabase, selfId, reconnectEpoch]);
+  }, [chatId, supabase, selfId, reconnectEpoch, t]);
 }

@@ -1171,7 +1171,7 @@ export default function ChatRoomView({
           if (pendingDeleteId === null) return;
           const id = pendingDeleteId;
           const { error } = await supabase.from(TABLE.CHAT_MESSAGES).delete().eq("id", id);
-          if (error) toast.error("Impossible de supprimer le message : " + error.message);
+          if (error) toast.error(t("deleteMessageFailed"), { description: error.message });
           else {
             const remaining = messages.filter((x) => x.id !== id);
             setMessages(remaining);

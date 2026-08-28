@@ -30,6 +30,7 @@ import { formatLastSeen, cn } from "@/lib/utils";
 import { ImageGridView } from "@/components/personas/ImageGridView";
 import { TABLE } from "@/lib/constants";
 import { getInitials } from "@/lib/textFormatting";
+import { useTranslations } from "next-intl";
 
 type FieldData = PersonaFieldData | null | undefined;
 
@@ -231,6 +232,8 @@ export function PersonaProfileSheetTrigger({
   hoverPreview?: boolean;
   triggerClassName?: string;
 }) {
+  const t = useTranslations("personas");
+  const tCommon = useTranslations("common");
   const supabase = React.useMemo(() => createClient(), []);
   const { getUserPresence } = useGlobalPresence();
   const { userId: viewerId } = useCurrentUser();
@@ -503,7 +506,7 @@ export function PersonaProfileSheetTrigger({
                   className="px-4 space-y-4 data-[state=inactive]:hidden"
                 >
                   {s.fields.length === 0 ? (
-                    <p className="text-sm text-muted-foreground italic">Aucun contenu.</p>
+                    <p className="text-sm text-muted-foreground italic">{tCommon("noContent")}</p>
                   ) : (
                     s.fields.map((f) => (
                       <FieldView key={f.id} type={f.type} data={f.data} />
@@ -513,7 +516,7 @@ export function PersonaProfileSheetTrigger({
               ))}
             </Tabs>
           ) : !loading ? (
-            <p className="px-4 text-sm text-muted-foreground italic">Aucune section.</p>
+            <p className="px-4 text-sm text-muted-foreground italic">{t("noSection")}</p>
           ) : (
             <div className="px-4 space-y-2">
               {[1, 2, 3].map((i) => (

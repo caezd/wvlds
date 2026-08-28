@@ -54,3 +54,6 @@ next-env.d.ts
 
 # Supabase CLI (cache local)
 /supabase/.temp
+
+# Fichier de travail de l'inventaire i18n (généré, non versionné)
+inventaire_i18n.txt

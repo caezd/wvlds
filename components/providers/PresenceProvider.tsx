@@ -21,6 +21,7 @@ import {
     type GlobalPresenceMeta,
 } from "@/lib/presenceStore";
 import { openRealtimeChannel } from "@/lib/realtimeChannel";
+import { useTranslations } from "next-intl";
 
 export type PresenceStatus = "online" | "offline" | "invisible";
 
@@ -95,6 +96,7 @@ function parsePresenceState(
 }
 
 export default function PresenceProvider({ children }: { children: React.ReactNode }) {
+  const t = useTranslations("presence");
     const supabase = useMemo(() => createClient(), []);
     const { userId, username, avatarUrl, appearOffline: ctxAppearOffline } = useCurrentUser();
     const reconnectEpoch = useReconnectEpoch();
@@ -337,7 +339,7 @@ export default function PresenceProvider({ children }: { children: React.ReactNo
                 // désynchronisée de la valeur réellement en base.
                 appearOfflineRef.current = previous;
                 setAppearOfflineState(previous);
-                toast.error("Impossible d'enregistrer le statut.");
+                toast.error(t("statusSaveFailed"));
                 return false;
             }
 
@@ -351,7 +353,7 @@ export default function PresenceProvider({ children }: { children: React.ReactNo
             }
             return true;
         },
-        [supabase, userId, recompute],
+        [supabase, userId, recompute, t],
     );
 
     const setStatus = useCallback(

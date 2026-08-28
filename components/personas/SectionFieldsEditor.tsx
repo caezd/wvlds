@@ -496,6 +496,7 @@ function SkillsField({
   onSave: (items: SkillItem[]) => void;
   catalogItems?: WorldSkill[];
 }) {
+  const tPersonas = useTranslations("personas");
   const tCommon = useTranslations("common");
   const tCatalogue = useTranslations("catalogue");
   const [items, setItems] = useState<SkillItem[]>(initialItems);
@@ -564,7 +565,7 @@ function SkillsField({
             </button>
           </div>
         ))}
-        <CatalogPicker available={available} label="compétence" onSelect={addFromCatalog} />
+        <CatalogPicker available={available} label={tPersonas("skillLabel")} onSelect={addFromCatalog} />
       </div>
     );
   }

@@ -35,7 +35,13 @@
     "changesSaved": "Change saved.",
     "noData": "No data.",
     "noContent": "No content.",
-    "uploadImageError": "Couldn't upload the image."
+    "uploadImageError": "Couldn't upload the image.",
+    "uploadBannerError": "Couldn't upload the banner.",
+    "editFailed": "Couldn't apply the change.",
+    "clickToPickFile": "click to pick a file",
+    "orPasteUrl": "or paste a URL directly",
+    "preview": "Preview",
+    "icon": "Icon"
   },
   "nav": {
     "profile": "My profile",
@@ -59,7 +65,8 @@
     "online": "Online",
     "offline": "Offline",
     "invisible": "Invisible",
-    "changeStatus": "Change status"
+    "changeStatus": "Change status",
+    "statusSaveFailed": "Couldn't save the status."
   },
   "settings": {
     "title": "Settings",
@@ -152,7 +159,10 @@
   },
   "userProfile": {
     "title": "Player profile",
-    "memberSince": "Member since {date}"
+    "memberSince": "Member since {date}",
+    "avatarUpdated": "Avatar updated.",
+    "usernameUpdated": "Username updated.",
+    "clickToEditAvatar": "Click to change the avatar"
   },
   "notifications": {
     "title": "Notifications",
@@ -211,7 +221,8 @@
       "personaReplyManyNoContent": "<b>{actor}</b> replied <b>{count}</b> times",
       "maritalRequestMarried": "<b>{actor}</b> wants to marry their character to <b>{target}</b>",
       "maritalRequestRelationship": "<b>{actor}</b> wants to put their character in a relationship with <b>{target}</b>"
-    }
+    },
+    "back": "Back"
   },
   "dms": {
     "title": "Direct messages",
@@ -418,7 +429,30 @@
     "monthNamePlaceholder": "Month name…",
     "addTagPlaceholder": "Add a tag…",
     "acceptedAvatarTypes": "Accepted avatar type",
-    "enableRestrictionTitle": "Enable the restriction?"
+    "enableRestrictionTitle": "Enable the restriction?",
+    "roleChangeFailed": "Couldn't change the role.",
+    "memberRemoveFailed": "Couldn't remove the member.",
+    "inviteCancelFailed": "Couldn't cancel the invitation.",
+    "inviteSent": "Invitation sent",
+    "roleChanged": "Role changed",
+    "addMember": "Add a member",
+    "pickRole": "Pick a role",
+    "newWorld": "New world",
+    "categoryUploadWait": "Wait for the image upload to finish before saving.",
+    "removedFromWorld": "You have been removed from this world.",
+    "defaultSheet": "Default template",
+    "defaultSheetPersonas": "Default persona template",
+    "disableDefaultSheetTitle": "Disable the default template?",
+    "noOtherWorld": "No other world",
+    "noPersonaInWorld": "No persona in this world",
+    "timelineEmpty": "No conversation has been placed on the timeline yet.",
+    "role": "Role",
+    "roleEditor": "Editor",
+    "tabSettings": "Settings",
+    "tabCategories": "Categories",
+    "tabCommunity": "Community",
+    "tabSkills": "Skills",
+    "tabSecurity": "Security"
   },
   "auth": {
     "signin": "Sign in",
@@ -540,7 +574,15 @@
     "fieldRequiredLocked": "Field required by the world's template — cannot be removed",
     "sectionRequiredByWorld": "This tab contains fields required by the world's template",
     "sectionName": "Tab name",
-    "renameSection": "Rename the tab"
+    "renameSection": "Rename the tab",
+    "newPersona": "New persona",
+    "namePlaceholderExample": "E.g. Kaori, Lyra, Theo…",
+    "yourPersona": "Your persona",
+    "noSection": "No tab.",
+    "tabCosmetics": "Cosmetics",
+    "tabBuilder": "Builder",
+    "editAction": "Edit",
+    "skillLabel": "skill"
   },
   "quests": {
     "title": "Daily quests",
@@ -656,7 +698,8 @@
         "worlds": "Worlds",
         "chatrooms": "Chatrooms"
       }
-    }
+    },
+    "editItem": "Edit the item"
   },
   "chatrooms": {
     "newRoom": "New room",
@@ -878,7 +921,25 @@
         "atmosphere": "Fine weather"
       }
     },
-    "worldConversations": "World conversations"
+    "worldConversations": "World conversations",
+    "pickRoomFirst": "Pick a room first to upload an image.",
+    "pickRecipient": "Pick at least one recipient for the private note.",
+    "sendFailed": "Couldn't send.",
+    "noOtherParticipant": "No other participant in this room.",
+    "calloutPlaceholder": "Callout text…",
+    "npcExampleName": "Dungeon guard",
+    "messageExample": "How are you?",
+    "roomDeleted": "Room deleted.",
+    "voteFailed": "Couldn't vote.",
+    "mustBeSignedIn": "You must be signed in to react.",
+    "statsLoadFailed": "Couldn't load the statistics.",
+    "editDescription": "Edit the description",
+    "hpExampleName": "e.g. Gornak the Berserker",
+    "npcRoleOptional": "Role (optional)",
+    "npcExampleTitle": "Wyrm of Ashes",
+    "npcRolePlaceholder": "e.g. Dungeon keeper, Merchant…",
+    "deleteMessageFailed": "Couldn't delete the message.",
+    "loadMessageFailed": "Couldn't load the new message."
   },
   "changelog": {
     "title": "Changelog",
