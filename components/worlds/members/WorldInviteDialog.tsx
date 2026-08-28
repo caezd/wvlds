@@ -469,7 +469,10 @@ export function WorldInviteDialog({
                 return;
             }
 
-            await supabase.from(TABLE.NOTIFICATIONS).insert({
+            // L'invitation est enregistrée ; sans notification, l'invité ne
+            // la verra pas apparaître. On ne fait pas échouer l'envoi pour
+            // autant, mais on cesse de l'ignorer.
+            const { error: notifError } = await supabase.from(TABLE.NOTIFICATIONS).insert({
                 recipient_id: userId,
                 type: "world_invite",
                 world_id: worldId,
@@ -478,6 +481,7 @@ export function WorldInviteDialog({
                 content: worldName,
                 metadata: worldMeta,
             });
+            if (notifError) console.error("[WorldInviteDialog] notification non créée", notifError.message);
 
             toast.success("Invitation envoyée", {
                 description: selected?.username

@@ -178,7 +178,12 @@ export default function PresenceProvider({ children }: { children: React.ReactNo
                 avatar_url: selfRef.current.avatarUrl,
                 last_active_at: iso,
             });
-            // Heartbeat persistant : alimente le "vu il y a X" des profils
+            // Heartbeat persistant : alimente le "vu il y a X" des profils.
+            // Seule écriture de l'application dont on ignore délibérément
+            // l'erreur : elle se répète à chaque battement, donc un échec
+            // ponctuel se rattrape de lui-même au suivant, et journaliser
+            // chaque tentative ratée noierait la console pendant une coupure
+            // réseau. Le "vu il y a X" est au demeurant purement indicatif.
             void supabase
                 .from(TABLE.PROFILES)
                 .update({ last_seen_at: iso })

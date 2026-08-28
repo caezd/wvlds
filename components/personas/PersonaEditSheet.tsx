@@ -163,7 +163,15 @@ function BannerSheet({
               description="La bannière de ce personnage sera supprimée définitivement du stockage."
               onConfirm={async () => {
                 const path = currentBannerUrl?.match(/\/object\/public\/personas\/([^?]+)/)?.[1];
-                await supabase.from("personas").update({ banner_url: null }).eq("id", personaId);
+                // L'ordre compte : le fichier n'est effacé qu'une fois la
+                // fiche mise à jour. Sans ce contrôle, un refus laissait la
+                // fiche pointer vers un fichier détruit — image cassée, sans
+                // retour possible.
+                const { error } = await supabase.from("personas").update({ banner_url: null }).eq("id", personaId);
+                if (error) {
+                  toast.error(error.message);
+                  return;
+                }
                 if (path) await supabase.storage.from("personas").remove([path]);
                 onRemove();
                 onOpenChange(false);
@@ -221,7 +229,13 @@ function FramePicker({
 
   async function selectFrame(frameId: string | null) {
     setSaving(true);
-    await supabase.from("personas").update({ avatar_frame_id: frameId }).eq("id", personaId);
+    const { error } = await supabase.from("personas").update({ avatar_frame_id: frameId }).eq("id", personaId);
+    if (error) {
+      // Le cadre n'a pas changé en base : ne pas le montrer comme sélectionné.
+      setSaving(false);
+      toast.error(error.message);
+      return;
+    }
     setSelected(frameId);
     const assetUrl = frameId ? (frames.find((f) => f.id === frameId)?.asset_url ?? null) : null;
     onFrameChange?.(frameId, assetUrl);
@@ -347,7 +361,13 @@ export function MaritalStatusPicker({
     if (clearSpouse) {
       setSpouseId(null);
       if (pendingRequest) {
-        await supabase.from(TABLE.PERSONA_MARITAL_REQUESTS).delete().eq("id", pendingRequest.id);
+        const { error } = await supabase.from(TABLE.PERSONA_MARITAL_REQUESTS).delete().eq("id", pendingRequest.id);
+        // Sans ce contrôle, la demande disparaissait de l'écran tout en
+        // restant en attente côté serveur.
+        if (error) {
+          toast.error(error.message);
+          return;
+        }
         setPendingRequest(null);
       }
     }
@@ -753,7 +773,13 @@ export function PersonaEditorContent({
                 description="L'avatar de ce personnage sera supprimé définitivement du stockage."
                 onConfirm={async () => {
                   const path = avatarUrl?.match(/\/object\/public\/personas\/([^?]+)/)?.[1];
-                  await supabase.from("personas").update({ avatar_url: null, avatar_config: null }).eq("id", personaId);
+                  // Même précaution que pour la bannière : on n'efface le
+                  // fichier qu'une fois la fiche effectivement mise à jour.
+                  const { error } = await supabase.from("personas").update({ avatar_url: null, avatar_config: null }).eq("id", personaId);
+                  if (error) {
+                    toast.error(error.message);
+                    return;
+                  }
                   if (path) await supabase.storage.from("personas").remove([path]);
                   setAvatarUrl(null);
                   setAvatarConfig(null);

@@ -120,11 +120,16 @@ export async function setWorldRestriction(
       const sectionIds = (sections ?? []).map((s: { id: string }) => s.id);
 
       if (sectionIds.length > 0) {
-        await supabase
+        // Purge secondaire : la restriction du monde est déjà enregistrée.
+        // Si elle échoue, des contenus d'inventaire ou de compétences
+        // subsistent dans les fiches — visible, donc à ne pas taire, mais pas
+        // de quoi annuler le changement de réglage lui-même.
+        const { error } = await supabase
           .from("persona_section_fields")
           .update({ data: { [dataKey]: [] } })
           .in("section_id", sectionIds)
           .eq("type", fieldType);
+        if (error) console.error("[setWorldRestriction] champs non purgés", error.message);
       }
     }
   }

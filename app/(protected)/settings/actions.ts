@@ -28,7 +28,11 @@ export async function updateLocale(locale: string) {
   } = await supabase.auth.getUser();
 
   if (user) {
-    await supabase.from("profiles").update({ locale }).eq("id", user.id);
+    // Le cookie est déjà posé, donc la langue change à l'écran quoi qu'il
+    // arrive — mais si la préférence n'atteint pas le profil, elle sera perdue
+    // à la prochaine session. On le dit plutôt que d'annoncer un succès.
+    const { error } = await supabase.from("profiles").update({ locale }).eq("id", user.id);
+    if (error) return { error: error.message };
   }
 
   revalidatePath("/", "layout");

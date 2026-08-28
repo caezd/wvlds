@@ -47,7 +47,7 @@ export function usePushSubscription() {
       });
       const json = sub.toJSON();
       const supabase = createClient();
-      await supabase.from(TABLE.PUSH_SUBSCRIPTIONS).upsert({
+      const { error } = await supabase.from(TABLE.PUSH_SUBSCRIPTIONS).upsert({
         user_id: userId,
         endpoint: sub.endpoint,
         p256dh: json.keys!.p256dh,
@@ -55,6 +55,16 @@ export function usePushSubscription() {
         user_agent: navigator.userAgent,
         last_seen_at: new Date().toISOString(),
       }, { onConflict: "endpoint" });
+
+      // L'abonnement navigateur existe, mais s'il n'atteint pas le serveur
+      // aucune notification ne partira jamais. On annonçait pourtant
+      // « activé » sans condition : l'utilisateur attendait des push qui ne
+      // pouvaient pas arriver. On défait l'abonnement navigateur pour rester
+      // cohérent, plutôt que de laisser les deux côtés en désaccord.
+      if (error) {
+        await sub.unsubscribe().catch(() => {});
+        throw new Error(error.message);
+      }
       setIsSubscribed(true);
     } finally {
       // Dans le finally (pas juste après subscribe()) : si l'utilisateur
@@ -74,7 +84,11 @@ export function usePushSubscription() {
       const sub = await reg.pushManager.getSubscription();
       if (sub) {
         const supabase = createClient();
-        await supabase.from(TABLE.PUSH_SUBSCRIPTIONS).delete().eq("endpoint", sub.endpoint);
+        // L'ordre compte : on ne coupe l'abonnement navigateur qu'une fois la
+        // ligne serveur retirée. Sinon le serveur continue de viser un
+        // point d'accès mort, indéfiniment.
+        const { error } = await supabase.from(TABLE.PUSH_SUBSCRIPTIONS).delete().eq("endpoint", sub.endpoint);
+        if (error) throw new Error(error.message);
         await sub.unsubscribe();
       }
       setIsSubscribed(false);

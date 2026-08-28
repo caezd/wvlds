@@ -289,10 +289,16 @@ export default function DmsProvider({ children }: { children: React.ReactNode })
   const markConvRead = useCallback(async (convId: string) => {
     const uid = userIdRef.current;
     if (!uid) return;
-    await supabase.from(TABLE.DM_READS).upsert(
+    const { error } = await supabase.from(TABLE.DM_READS).upsert(
       { conversation_id: convId, user_id: uid, last_read_at: new Date().toISOString() },
       { onConflict: "conversation_id,user_id" },
     );
+    // Marquer « lu » à l'écran alors que le serveur l'ignore fait réapparaître
+    // le compteur au rechargement, sans explication. On garde l'état réel.
+    if (error) {
+      console.error("[markConvRead]", error.message);
+      return;
+    }
     setConversations(prev =>
       prev.map(c => c.id === convId ? { ...c, unread_count: 0 } : c),
     );
@@ -488,10 +494,13 @@ export default function DmsProvider({ children }: { children: React.ReactNode })
 
     if (data) {
       setMessages(prev => prev.map(m => m.id === optimistic.id ? data as DmMessage : m));
-      await supabase
+      // Champ dénormalisé : le message lui-même est enregistré, seul le tri
+      // des conversations peut être décalé. On trace sans interrompre.
+      const { error: bumpError } = await supabase
         .from(TABLE.DM_CONVERSATIONS)
         .update({ last_message_at: data.created_at })
         .eq("id", convId);
+      if (bumpError) console.error("[sendDm] last_message_at non mis à jour", bumpError.message);
       setConversations(prev => applyNewMessage(prev, data as DmMessage));
     }
   }, [supabase, t]);

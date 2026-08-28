@@ -283,10 +283,22 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
     }
     /** Change la couleur des bulles et l'associe durablement au persona actif. */
     async function handleBubbleColorChange(v: string | null) {
+        const previousColor = bubbleColor;
         setBubbleColor(v);
         if (selectedPersona) {
+            const previousPersona = selectedPersona;
             setSelectedPersona((prev) => (prev ? { ...prev, dialogue_color: v } : prev));
-            await supabase.from(TABLE.PERSONAS).update({ dialogue_color: v }).eq("id", selectedPersona.id);
+            // Sans lire l'erreur, la couleur restait appliquée à l'écran et
+            // revenait à l'ancienne au rechargement, sans explication.
+            const { error } = await supabase
+                .from(TABLE.PERSONAS)
+                .update({ dialogue_color: v })
+                .eq("id", selectedPersona.id);
+            if (error) {
+                setBubbleColor(previousColor);
+                setSelectedPersona(previousPersona);
+                toast.error(error.message);
+            }
         }
     }
 
@@ -503,7 +515,11 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
                             .eq("world_id", newMessage.world_id).in("user_id", recipientIds);
                         const validIds = (members ?? []).map((m: { user_id: string }) => m.user_id);
                         if (validIds.length > 0) {
-                            await supabase.from(TABLE.NOTIFICATIONS).insert(
+                            // Le message est publié : c'est l'essentiel, et
+                            // échouer ici ne doit pas le remettre en cause.
+                            // Mais une mention qui n'alerte personne passe
+                            // pour une mention reçue — on la trace.
+                            const { error: mentionError } = await supabase.from(TABLE.NOTIFICATIONS).insert(
                                 validIds.map((rid: string) => ({
                                     recipient_id: rid,
                                     type: "mention",
@@ -515,6 +531,7 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
                                     content: chatroomTitle,
                                 })),
                             );
+                            if (mentionError) console.error("[mentions] notifications non créées", mentionError.message);
                         }
                     }
                 }
@@ -749,10 +766,14 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
                             setBubbleColor(p?.dialogue_color ?? null);
                             onPersonaChange?.(p);
                             if (p && userId && chatId) {
-                                await supabase.from(TABLE.CHATROOM_PERSONA_PREFS).upsert(
+                                // Le persona est bien sélectionné pour la
+                                // session en cours ; seule sa mémorisation
+                                // d'une visite à l'autre peut échouer.
+                                const { error } = await supabase.from(TABLE.CHATROOM_PERSONA_PREFS).upsert(
                                     { chat_id: chatId, user_id: userId, persona_id: p.id },
                                     { onConflict: "chat_id,user_id" },
                                 );
+                                if (error) console.error("[chatroomPersonaPrefs]", error.message);
                             }
                         }}
                         required

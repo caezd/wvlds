@@ -63,10 +63,18 @@ const GROUPS: GroupDef[] = [
 async function toggleFlag(key: FlagKey, enabled: boolean) {
   "use server";
   const { supabase } = await requireAdmin();
-  await supabase
+  const { error } = await supabase
     .from("feature_flags")
     .update({ enabled, updated_at: new Date().toISOString() })
     .eq("key", key);
+
+  // Cette action est appelée par un `<form action={…}>` : elle ne peut rien
+  // renvoyer à l'écran. Sans lever, un échec passait totalement inaperçu —
+  // `revalidatePath` s'exécutait quand même et la page réaffichait l'ancienne
+  // valeur, laissant croire que le drapeau avait basculé. La limite d'erreur
+  // du segment protégé prend le relais.
+  if (error) throw new Error(`Bascule du drapeau « ${key} » impossible : ${error.message}`);
+
   revalidatePath("/admin/features");
   revalidatePath("/", "layout");
 }

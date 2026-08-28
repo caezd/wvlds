@@ -306,10 +306,14 @@ export default function NotificationsProvider({ children }: { children: React.Re
             notifOffsetRef.current = Math.max(0, notifOffsetRef.current - removed);
             return prev.filter(n => !idSet.has(n.id));
         });
-        await supabase
+        // Retrait optimiste : en cas d'échec, les notifications réapparaissent
+        // au rechargement. Ce n'est pas une perte de données et une alerte à
+        // chaque lecture serait pénible — mais la panne cesse d'être invisible.
+        const { error } = await supabase
             .from(TABLE.NOTIFICATIONS)
             .update(alsoRead ? { read_at: now, archived_at: now } : { archived_at: now })
             .in("id", ids);
+        if (error) console.error("[archiveNotifs]", error.message);
     }, [supabase]);
 
     const markNotifRead = useCallback((id: string) => archiveNotifs([id], true), [archiveNotifs]);
@@ -329,10 +333,11 @@ export default function NotificationsProvider({ children }: { children: React.Re
         setNotifications([]);
         notifOffsetRef.current = 0;
         setHasMoreNotifs(false);
-        await supabase
+        const { error } = await supabase
             .from(TABLE.NOTIFICATIONS)
             .update({ read_at: now, archived_at: now })
             .is("archived_at", null);
+        if (error) console.error("[markAllNotifsRead]", error.message);
     }, [supabase]);
 
     const loadMoreNotifs = useCallback(async () => {
@@ -359,9 +364,16 @@ export default function NotificationsProvider({ children }: { children: React.Re
         const uid = userIdRef.current;
         if (!uid) return;
         setNotifPrefs(prev => ({ ...prev, [type]: enabled }));
-        await supabase
+        // Bascule optimiste : sans ce contrôle, l'interrupteur restait dans sa
+        // nouvelle position et revenait en arrière au rechargement — on croit
+        // avoir coupé une notification qu'on continue de recevoir.
+        const { error } = await supabase
             .from(TABLE.NOTIFICATION_PREFERENCES)
             .upsert({ user_id: uid, type, enabled }, { onConflict: "user_id,type" });
+        if (error) {
+            setNotifPrefs(prev => ({ ...prev, [type]: !enabled }));
+            console.error("[setNotifPref]", error.message);
+        }
     }, [supabase]);
 
     // ── Bootstrap + realtime ────────────────────────────────────────────────

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -108,10 +109,17 @@ function WorldInviteCard({ notif, onMarkRead }: { notif: AppNotification; onMark
     async function decline() {
         if (!notif.world_id || acting) return;
         setActing(true);
-        await supabase.from(TABLE.WORLD_INVITATIONS)
+        const { error } = await supabase.from(TABLE.WORLD_INVITATIONS)
             .delete()
             .eq("world_id", notif.world_id)
             .eq("invitee_id", notif.recipient_id);
+        // Afficher « refusée » alors que l'invitation est toujours en base la
+        // fait réapparaître au rechargement, sans explication.
+        if (error) {
+            toast.error(error.message);
+            setActing(false);
+            return;
+        }
         setStatus("declined");
         onMarkRead(notif.id);
         setActing(false);
@@ -198,7 +206,14 @@ function MaritalRequestCard({ notif, onMarkRead }: { notif: AppNotification; onM
     async function decline() {
         if (!requestId || acting) return;
         setActing(true);
-        await supabase.from(TABLE.PERSONA_MARITAL_REQUESTS).delete().eq("id", requestId);
+        // Même défaut que le refus d'invitation de monde : annoncer
+        // « refusée » sans vérifier la fait réapparaître au rechargement.
+        const { error } = await supabase.from(TABLE.PERSONA_MARITAL_REQUESTS).delete().eq("id", requestId);
+        if (error) {
+            toast.error(error.message);
+            setActing(false);
+            return;
+        }
         setStatus("declined");
         onMarkRead(notif.id);
         setActing(false);

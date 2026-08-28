@@ -16,10 +16,14 @@ async function toggleAdmin(userId: string, isAdmin: boolean) {
   // par le service_role, qui contourne la RLS.
   await requireAdmin();
   const admin = createAdminClient();
-  await admin
+  const { error } = await admin
     .from("profiles")
     .update({ is_admin: isAdmin })
     .eq("id", userId);
+  // Accorder ou retirer le rôle admin sans le dire en cas d'échec est
+  // particulièrement trompeur : `revalidatePath` réaffiche l'ancien état et
+  // l'administrateur croit son action passée.
+  if (error) throw new Error(`Modification du rôle administrateur impossible : ${error.message}`);
   revalidatePath("/admin/users");
 }
 
@@ -32,10 +36,11 @@ async function setUserPlan(userId: string, formData: FormData) {
   // Patreon n'écrase pas ce choix.
   await requireAdmin();
   const admin = createAdminClient();
-  await admin
+  const { error } = await admin
     .from("profiles")
     .update({ plan, patreon_managed: false })
     .eq("id", userId);
+  if (error) throw new Error(`Changement de plan impossible : ${error.message}`);
   revalidatePath("/admin/users");
 }
 

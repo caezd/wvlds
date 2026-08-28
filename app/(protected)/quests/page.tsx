@@ -61,7 +61,10 @@ export default async function QuestsPage() {
 
   if (!existing) {
     const template = pickRandomChallenge();
-    await supabase.from(TABLE.CHALLENGES).insert({
+    // Un échec ici laisse la page sans défi du jour, sans explication : au
+    // moins le trace-t-on. (Le résultat est relu juste après, la page reste
+    // fonctionnelle.)
+    const { error: insertError } = await supabase.from(TABLE.CHALLENGES).insert({
       user_id: userId,
       world_id: null,
       active_date: today,
@@ -73,6 +76,7 @@ export default async function QuestsPage() {
       min_word_count: template.min_word_count,
       source: "admin",
     });
+    if (insertError) console.error("[quests] défi du jour non créé", insertError.message);
   }
 
   const [

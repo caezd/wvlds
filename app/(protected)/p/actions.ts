@@ -278,10 +278,14 @@ export async function duplicatePersona(id: string, targetWorldId: string | null)
         copyPersonaAsset(src.banner_url),
     ]);
     if (avatarUrl || bannerUrl) {
-        await supabase
+        // Échec secondaire : le persona dupliqué existe, seuls ses visuels
+        // manquent. On ne fait donc pas échouer la duplication — cela
+        // laisserait une copie orpheline — mais on cesse de le taire.
+        const { error } = await supabase
             .from("personas")
             .update({ avatar_url: avatarUrl, banner_url: bannerUrl })
             .eq("id", newId);
+        if (error) console.error("[duplicatePersona] visuels non recopiés", error.message);
     }
 
     // Si le monde cible impose une fiche par défaut, le joueur a confirmé
@@ -434,10 +438,13 @@ async function copyPersonaSections(
             )
         ).filter((img): img is GridImage => img !== null);
 
-        await supabase
+        // Idem : la section et son champ sont créés, seules les images
+        // recopiées n'ont pas été rattachées.
+        const { error } = await supabase
             .from("persona_section_fields")
             .update({ data: { ...oldField.data, images: copied } })
             .eq("id", newFieldId);
+        if (error) console.error("[copyPersonaSections] images non rattachées", error.message);
     }
 }
 

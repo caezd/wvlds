@@ -49,14 +49,21 @@ export async function updateItem(id: string, prevState: unknown, formData: FormD
   redirect("/admin/shop");
 }
 
+// Appelées depuis des `<form action={…}>`, sans retour possible vers l'écran :
+// on lève pour que l'échec soit visible (limite d'erreur du segment) plutôt que
+// de laisser `revalidatePath` réafficher l'état d'avant comme si de rien
+// n'était. `updateItem`, juste au-dessus, remonte bien son erreur — ces deux-là
+// étaient les exceptions.
 export async function toggleItem(id: string, active: boolean) {
   const { supabase } = await requireAdmin();
-  await supabase.from("cosmetic_items").update({ active }).eq("id", id);
+  const { error } = await supabase.from("cosmetic_items").update({ active }).eq("id", id);
+  if (error) throw new Error(`Activation de l'article impossible : ${error.message}`);
   revalidatePath("/admin/shop");
 }
 
 export async function deleteItem(id: string) {
   const { supabase } = await requireAdmin();
-  await supabase.from("cosmetic_items").delete().eq("id", id);
+  const { error } = await supabase.from("cosmetic_items").delete().eq("id", id);
+  if (error) throw new Error(`Suppression de l'article impossible : ${error.message}`);
   revalidatePath("/admin/shop");
 }
