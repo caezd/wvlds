@@ -21,10 +21,38 @@ import { trouverLienSalon } from "./decouverte";
 // ne peut garantir : que l'application réelle traverse une coupure sans lever.
 // ──────────────────────────────────────────────────────────────────────────
 
+/**
+ * Émet un événement de fenêtre, en tolérant une navigation concurrente.
+ *
+ * Attendre que l'URL cesse de bouger ne suffit pas : l'application navigue
+ * aussi côté client, et `page.evaluate` lancé pendant que le contexte est
+ * remplacé lève « Execution context was destroyed ». Ce n'était pas un défaut
+ * de l'application mais une fluctuation du test — qui passait isolément et
+ * échouait une fois sur quelques suites complètes.
+ *
+ * On réessaie donc sur cette erreur précise, après avoir laissé la navigation
+ * se terminer. Toute autre erreur remonte telle quelle.
+ */
+async function emettre(page: import("@playwright/test").Page, nom: string) {
+  for (let essai = 0; ; essai++) {
+    try {
+      await page.evaluate((n) => {
+        window.dispatchEvent(new Event(n));
+      }, nom);
+      return;
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      if (essai >= 3 || !/Execution context was destroyed|context was destroyed/i.test(message)) {
+        throw e;
+      }
+      await page.waitForLoadState("domcontentloaded");
+      await page.waitForTimeout(500);
+    }
+  }
+}
+
 /** Rejoue une coupure puis un retour de connexion, comme le navigateur. */
 async function couperPuisRetablir(page: import("@playwright/test").Page) {
-  // Attendre que la page ait fini de naviguer : `page.evaluate` sur un
-  // contexte en cours de destruction lève « Execution context was destroyed ».
   // `networkidle` ne convient pas — l'application garde des websockets
   // ouvertes et ne devient jamais inactive. On attend le chargement du
   // document, puis on vérifie que l'URL a cessé de bouger.
@@ -34,13 +62,9 @@ async function couperPuisRetablir(page: import("@playwright/test").Page) {
     precedente = page.url();
     await page.waitForTimeout(250);
   }
-  await page.evaluate(() => {
-    window.dispatchEvent(new Event("offline"));
-  });
+  await emettre(page, "offline");
   await page.waitForTimeout(200);
-  await page.evaluate(() => {
-    window.dispatchEvent(new Event("online"));
-  });
+  await emettre(page, "online");
   // Laisse la fermeture se propager et la réouverture s'enchaîner.
   await page.waitForTimeout(1500);
 }
