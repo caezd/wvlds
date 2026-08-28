@@ -9,7 +9,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Performance",
-    text: "La liste des salons de la barre latérale n'ouvre plus qu'une seule connexion temps réel au lieu de deux. Elle est affichée à deux endroits — la colonne de gauche sur ordinateur, le tiroir sur mobile — et l'un des deux est toujours masqué, mais tous deux restaient connectés. Moins de charge sur le serveur à chaque page de monde et de salon.\nMénage au passage : une table et une fonction devenues inutilisées depuis le changement de calcul des messages non lus, en juillet, ont été retirées. Les compteurs de non-lus ne s'en servaient plus.",
+    text: "La liste des salons de la barre latérale n'ouvre plus qu'une seule connexion temps réel. Elle est affichée à deux endroits — la colonne de gauche et le tiroir mobile — et les deux se connectaient séparément lorsque le tiroir était ouvert.\nMénage au passage : une table et une fonction devenues inutilisées depuis le changement de calcul des messages non lus, en juillet, ont été retirées. Les compteurs de non-lus ne s'en servaient plus.",
   },
   {
     date: "2026-08",
