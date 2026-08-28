@@ -9,6 +9,8 @@ import { config as loadEnv } from "dotenv";
 loadEnv({ path: ".env.local", quiet: true });
 
 const PORT = 3000;
+// Quand cette variable est absente, Playwright démarre lui-même `next dev`.
+const serveurDeDeveloppement = !process.env.E2E_BASE_URL;
 const baseURL = process.env.E2E_BASE_URL ?? `http://localhost:${PORT}`;
 
 /**
@@ -20,6 +22,24 @@ const baseURL = process.env.E2E_BASE_URL ?? `http://localhost:${PORT}`;
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
+  // Un seul worker face à `next dev`, plusieurs face à un serveur bâti.
+  //
+  // `next dev` compile à la demande, dans un seul processus. Deux workers qui
+  // ouvrent des pages différentes en même temps le mettent en défaut : des
+  // routes prises au hasard répondent 500 — avec, curieusement, un corps
+  // complet et correctement rendu. La route fautive change à chaque exécution.
+  //
+  // Mesuré le 2026-08-28, trois exécutions par cas :
+  //   dev,        parallèle   → 1 à 2 routes en 500, jamais les mêmes
+  //   dev,        1 worker    → 25/25, en 1 min 30
+  //   production, parallèle   → 25/25, en 21 s
+  //
+  // C'est donc un artefact du serveur de développement, pas un défaut de
+  // l'application. Une suite de fumée qui échoue au hasard ne vaut rien : on
+  // sérialise là où c'est nécessaire, et on garde le parallélisme quand la
+  // cible est un serveur bâti (`E2E_BASE_URL`), où il est à la fois sûr et
+  // quatre fois plus rapide.
+  workers: serveurDeDeveloppement ? 1 : undefined,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI ? "github" : "list",

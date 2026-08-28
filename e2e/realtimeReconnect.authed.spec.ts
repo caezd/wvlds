@@ -1,5 +1,7 @@
 import { test, expect } from "@playwright/test";
 
+import { trouverLienSalon } from "./decouverte";
+
 // ──────────────────────────────────────────────────────────────────────────
 // Reconnexion réseau et canaux Realtime.
 //
@@ -44,67 +46,26 @@ async function couperPuisRetablir(page: import("@playwright/test").Page) {
 }
 
 /**
- * Ouvre un monde qui expose au moins un salon, et rend son lien.
+ * Ouvre un salon accessible au compte de test.
  *
- * Le compte de test appartient à plusieurs mondes, dont certains sans aucun
- * salon : `/` peut atterrir sur un monde vide. Le rail des mondes est
- * désactivé et le sélecteur change de monde par `router.push`, pas par un
- * lien — il faut donc ouvrir sa liste et cliquer les entrées.
- *
- * On parcourt par NOM et non par position : la liste exclut le monde courant,
- * sa composition change donc à chaque navigation.
- *
- * Exige une largeur « bureau » : le sélecteur vit dans l'aside, masqué en
- * dessous de `lg`.
+ * La découverte elle-même vit dans `./decouverte` : le parcours des mondes à la
+ * recherche d'un salon sert aussi au balayage des routes, et l'avoir en double
+ * garantissait qu'une seule des deux copies serait corrigée.
  */
-async function ouvrirUnMondeAvecSalon(page: import("@playwright/test").Page) {
-  await page.setViewportSize({ width: 1280, height: 900 });
-  await page.goto("/");
-  await expect(page).toHaveURL(/\/(w\/|explore)/, { timeout: 20_000 });
-  await page.waitForLoadState("domcontentloaded");
-
-  const salon = () => page.locator('a[href^="/c/"]');
-  if (await salon().count()) return salon().first();
-
-  const trigger = page.getByTestId("world-picker-trigger");
-  if (!(await trigger.count())) return null;
-
-  await trigger.click();
-  const noms = await page
-    .getByTestId("world-picker-item")
-    .evaluateAll((els) => els.map((e) => (e.textContent ?? "").trim()));
-  await page.keyboard.press("Escape");
-
-  for (const nom of noms) {
-    await trigger.click();
-    const item = page.getByTestId("world-picker-item").filter({ hasText: nom }).first();
-    if (!(await item.count())) {
-      await page.keyboard.press("Escape");
-      continue; // monde devenu courant : il ne figure plus dans la liste
-    }
-    const avant = page.url();
-    await item.click();
-    // Attendre que l'URL CHANGE, pas seulement qu'elle corresponde : on est
-    // déjà sur une page de monde, donc `waitForURL(/\/w\//)` serait satisfait
-    // immédiatement et l'on inspecterait l'ancien affichage.
-    await page.waitForURL((u) => u.toString() !== avant, { timeout: 20_000 });
-    await page.waitForLoadState("domcontentloaded");
-    if (await salon().count()) return salon().first();
-  }
-  return null;
+async function ouvrirUnSalon(page: import("@playwright/test").Page) {
+  const href = await trouverLienSalon(page);
+  expect(href, "aucun salon accessible pour le compte de test").not.toBeNull();
+  await page.goto(href!);
+  await expect(page).toHaveURL(/\/c\//, { timeout: 20_000 });
 }
 
 test.describe("Realtime — retour de connexion réseau", () => {
-  // Séquentiel : `beforeAll` s'exécute une fois par worker, et le
-  // parallélisme total répartissait les tests sur des workers différents —
-  // ceux qui n'avaient pas exécuté la découverte trouvaient `urlSalon` à
-  // null. Ces trois tests partagent la même préparation, ils appartiennent
-  // au même worker.
+  // Séquentiel : chaque test parcourt les mondes pour trouver un salon, et
+  // trois navigations concurrentes sur le serveur de développement se
+  // gênaient. Ils partagent la même préparation, ils partagent le worker.
   test.describe.configure({ mode: "default" });
   // Chaque test coupe le réseau et attend des reconnexions : lent par nature.
   test.setTimeout(90_000);
-
-
 
   test("aucune erreur de canal après plusieurs coupures", async ({ page }) => {
     const erreurs: string[] = [];
@@ -116,10 +77,7 @@ test.describe("Realtime — retour de connexion réseau", () => {
     // On part d'une page concrète plutôt que de « / » : la racine redirige
     // côté client, et une coupure déclenchée pendant cette redirection détruit
     // le contexte d'exécution sous les pieds de `page.evaluate`.
-    const lienSalon = await ouvrirUnMondeAvecSalon(page);
-    expect(lienSalon, "aucun salon accessible pour le compte de test").not.toBeNull();
-    await lienSalon!.click();
-    await expect(page).toHaveURL(/\/c\//, { timeout: 20_000 });
+    await ouvrirUnSalon(page);
 
     // Plusieurs cycles : le défaut se manifestait dès le premier, mais
     // l'enchaînement de fermetures est justement ce qui est délicat.
@@ -136,10 +94,7 @@ test.describe("Realtime — retour de connexion réseau", () => {
       if (m.type() === "error") erreurs.push(m.text());
     });
 
-    const lienSalon = await ouvrirUnMondeAvecSalon(page);
-    expect(lienSalon, "aucun salon accessible pour le compte de test").not.toBeNull();
-    await lienSalon!.click();
-    await expect(page).toHaveURL(/\/c\//, { timeout: 20_000 });
+    await ouvrirUnSalon(page);
 
     await couperPuisRetablir(page);
 
@@ -161,10 +116,7 @@ test.describe("Realtime — retour de connexion réseau", () => {
       if (m.type() === "error") erreurs.push(m.text());
     });
 
-    const lienSalon = await ouvrirUnMondeAvecSalon(page);
-    expect(lienSalon, "aucun salon accessible pour le compte de test").not.toBeNull();
-    await lienSalon!.click();
-    await expect(page).toHaveURL(/\/c\//, { timeout: 20_000 });
+    await ouvrirUnSalon(page);
 
     // Le tiroir mobile n'existe qu'en dessous de `lg`.
     await page.setViewportSize({ width: 390, height: 844 });

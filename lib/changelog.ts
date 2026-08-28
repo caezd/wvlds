@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Technique",
+    text: "Toutes les pages de l'espace connecté sont désormais chargées pour de vrai par les tests, et doivent s'afficher sans erreur. Deux d'entre elles seulement l'étaient jusqu'ici : une modification touchant les fondations pouvait mettre l'application entière à terre sans qu'aucun test ne s'en aperçoive — c'est arrivé cette semaine.\nAu passage, la suite de tests a cessé d'échouer au hasard : elle malmenait le serveur de développement en ouvrant plusieurs pages à la fois. Lancée contre une version compilée, elle passe de 1 min 30 à 21 secondes.",
+  },
+  {
+    date: "2026-08",
+    tag: "Technique",
     text: "Le code du projet peut de nouveau reconstruire la base de données. Dix tables et cinq fonctions avaient été créées au fil du temps directement depuis le tableau de bord, sans laisser de trace dans le projet : elles auraient purement et simplement manqué à une restauration — dont la table qui conserve les clés de chiffrement des salons, et la fonction sans laquelle la liste des salons reste vide.\nToutes sont maintenant décrites dans le projet, règles d'accès comprises. Aucun changement en base : la description a été rejouée sur la base réelle pour vérifier qu'elle reproduit l'existant à l'identique.\nUn contrôle automatique refuse désormais toute table ou fonction utilisée par l'application mais absente du projet.",
   },
   {

@@ -37,7 +37,13 @@ export default function ProtectedError({
     }, [error]);
 
     return (
-        <div className="flex h-full flex-1 flex-col items-center justify-center gap-4 p-6 text-center">
+        // `data-testid` : repère stable pour le parcours de routes E2E, qui
+        // vérifie qu'aucune page connectée ne retombe sur cette frontière. Le
+        // texte est traduit, donc inutilisable comme sélecteur.
+        <div
+            data-testid="error-boundary"
+            className="flex h-full flex-1 flex-col items-center justify-center gap-4 p-6 text-center"
+        >
             <AlertTriangle className="size-10 text-muted-foreground" />
             <div className="max-w-md space-y-1">
                 <h1 className="text-lg font-semibold">{t("title")}</h1>
