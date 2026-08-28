@@ -596,6 +596,8 @@ export function WorldWiki({
   // ── DnD ──────────────────────────────────────────────────────
   function onDragEnd({ active, over }: DragEndEvent) {
     if (!over || active.id === over.id || !pages) return;
+    // Ordre d'origine, pour le rétablir si l'écriture est refusée.
+    const previousPages = pages;
 
     const activePage = pages.find(p => p.id === active.id);
     const overPage = pages.find(p => p.id === over.id);
@@ -611,10 +613,18 @@ export function WorldWiki({
         ) ?? null
       );
       setExpandedFolders(prev => new Set([...prev, overPage.id]));
+      // Même précaution que pour le réordonnancement : sans lire l'erreur, la
+      // page paraissait rangée dans le dossier et en ressortait au
+      // rechargement suivant.
       void supabase
         .from("world_wiki_pages")
         .update({ parent_id: overPage.id, sort_index })
-        .eq("id", activePage.id);
+        .eq("id", activePage.id)
+        .then(({ error }: { error: { message: string } | null }) => {
+          if (!error) return;
+          setPages(previousPages);
+          toast.error(t("saveError"), { description: error.message });
+        });
       return;
     }
 
@@ -629,7 +639,6 @@ export function WorldWiki({
     const reordered = arrayMove(siblings, oldIdx, newIdx);
     const updates = reordered.map((p, i) => ({ id: p.id, sort_index: i }));
 
-    const previous = pages;
     setPages(prev =>
       prev?.map(p => {
         const u = updates.find(u => u.id === p.id);
@@ -642,7 +651,7 @@ export function WorldWiki({
     // précédent plutôt que d'afficher un état que la base ne connaît pas.
     void supabase.from("world_wiki_pages").upsert(updates).then(({ error }: { error: { message: string } | null }) => {
       if (!error) return;
-      setPages(previous);
+      setPages(previousPages);
       toast.error(t("saveError"), { description: error.message });
     });
   }

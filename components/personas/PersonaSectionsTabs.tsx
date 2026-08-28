@@ -113,9 +113,17 @@ export function PersonaSectionsTabs({
     [next[idx], next[target]] = [next[target], next[idx]];
     const withPos = next.map((s, i) => ({ ...s, position: i * 10 }));
     onSectionsChange(withPos);
-    await Promise.all(
+    // L'ordre était appliqué à l'écran sans que le résultat des écritures ne
+    // soit lu : un refus le laissait affiché jusqu'au rechargement, où il
+    // revenait en arrière sans explication.
+    const results = await Promise.all(
       withPos.map((s) => supabase.from("persona_sections").update({ position: s.position }).eq("id", s.id)),
     );
+    const failed = results.find((r) => r.error);
+    if (failed?.error) {
+      onSectionsChange(sections);
+      toast.error(failed.error.message);
+    }
   }
 
   async function handleDeleteSection() {
