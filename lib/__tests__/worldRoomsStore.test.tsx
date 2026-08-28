@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
+import { StrictMode } from "react";
 
 // ──────────────────────────────────────────────────────────────────────────
 // `WorldSidebar` rend `WorldSidebarChatrooms` deux fois — aside desktop et
@@ -18,18 +19,43 @@ type Handler = (payload: unknown) => void;
 const canaux: { topic: string; handlers: { table: string; event: string; handler: Handler }[] }[] = [];
 let retires = 0;
 
-function makeChannel(topic: string) {
+/**
+ * Reproduit le registre par topic de supabase-js : `channel(topic)` rend le
+ * canal EXISTANT pour un nom déjà connu, et `.on()` lève sur un canal déjà
+ * souscrit. `removeChannel` étant asynchrone côté réel, on garde ici le canal
+ * dans le registre après retrait — c'est exactement la fenêtre qui faisait
+ * planter l'ouverture du tiroir.
+ */
+const registre = new Map<string, ReturnType<typeof creerCanal>>();
+
+function creerCanal(topic: string) {
   const entree = { topic, handlers: [] as { table: string; event: string; handler: Handler }[] };
   canaux.push(entree);
+  let souscrit = false;
   const ch = {
+    topic,
     on(_type: string, cfg: { table: string; event: string }, handler: Handler) {
+      if (souscrit) {
+        throw new Error(
+          `cannot add \`postgres_changes\` callbacks for realtime:${topic} after \`subscribe()\`.`,
+        );
+      }
       entree.handlers.push({ table: cfg.table, event: cfg.event, handler });
       return ch;
     },
     subscribe() {
+      souscrit = true;
       return ch;
     },
   };
+  return ch;
+}
+
+function makeChannel(topic: string) {
+  const existant = registre.get(topic);
+  if (existant) return existant;
+  const ch = creerCanal(topic);
+  registre.set(topic, ch);
   return ch;
 }
 
@@ -84,6 +110,7 @@ const B = room("b", "2026-01-01T00:00:00Z");
 beforeEach(() => {
   __resetWorldRoomsStore();
   canaux.length = 0;
+  registre.clear();
   retires = 0;
 });
 
@@ -170,12 +197,39 @@ describe("useWorldRooms", () => {
     const vue = renderHook(({ w }: { w: string }) => useWorldRooms(w, [A]), {
       initialProps: { w: "w1" },
     });
-    expect(canaux.map((c) => c.topic)).toEqual(["sidebar-rooms:w1"]);
+    // Le nom porte un suffixe d'ouverture (cf. `compteurCanal`) : on vérifie le
+    // monde, pas le nom exact.
+    expect(canaux).toHaveLength(1);
+    expect(canaux[0].topic).toMatch(/^sidebar-rooms:w1:/);
 
     act(() => { vue.rerender({ w: "w2" }); });
 
-    expect(canaux.map((c) => c.topic)).toEqual(["sidebar-rooms:w1", "sidebar-rooms:w2"]);
+    expect(canaux).toHaveLength(2);
+    expect(canaux[1].topic).toMatch(/^sidebar-rooms:w2:/);
     expect(retires).toBe(1);
     expect(__openChannelCount()).toBe(1);
+  });
+  it("survit au montage/démontage/remontage du mode strict", () => {
+    // React monte, démonte puis remonte chaque effet en développement. Avec un
+    // nom de canal stable, le remontage récupérait le canal encore souscrit
+    // (`removeChannel` est asynchrone) et `.on()` levait « cannot add
+    // postgres_changes callbacks after subscribe() » — le tiroir de la barre
+    // latérale plantait à l'ouverture.
+    expect(() =>
+      renderHook(() => useWorldRooms("w1", [A, B]), { wrapper: StrictMode }),
+    ).not.toThrow();
+
+    // Et il reste bien UN canal ouvert au bout du compte.
+    expect(__openChannelCount()).toBe(1);
+  });
+
+  it("ne réutilise jamais un canal déjà souscrit", () => {
+    const un = renderHook(() => useWorldRooms("w1", [A]));
+    un.unmount();
+    // Remontage immédiat, alors que le retrait précédent n'est pas encore
+    // propagé côté supabase-js.
+    expect(() => renderHook(() => useWorldRooms("w1", [A]))).not.toThrow();
+    expect(canaux.map((c) => c.topic)).toHaveLength(2);
+    expect(new Set(canaux.map((c) => c.topic)).size).toBe(2);
   });
 });

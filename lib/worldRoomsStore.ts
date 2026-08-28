@@ -101,11 +101,24 @@ function majRooms(worldId: string, f: (prev: WorldRoom[]) => WorldRoom[]): void 
   notifier(e);
 }
 
+/**
+ * Compteur d'ouvertures, pour donner un nom de canal unique à chaque fois.
+ *
+ * `removeChannel()` est ASYNCHRONE : le canal reste un instant dans le registre
+ * de supabase-js. Un nom stable ferait donc rendre par `channel(topic)` le canal
+ * précédent, encore souscrit — et `.on()` lève alors « cannot add
+ * postgres_changes callbacks after subscribe() ». Le cas se produit à chaque
+ * remontage rapproché, notamment le montage/démontage/remontage que React
+ * effectue en mode strict.
+ */
+let compteurCanal = 0;
+
 /** Ouvre LE canal Realtime du monde — un seul, quel que soit le nombre d'instances. */
 function ouvrirCanal(worldId: string): () => void {
   const supabase = createClient();
+  compteurCanal += 1;
   const ch = supabase
-    .channel(`sidebar-rooms:${worldId}`)
+    .channel(`sidebar-rooms:${worldId}:${compteurCanal}`)
     .on(
       "postgres_changes",
       { event: "INSERT", schema: "public", table: "chatrooms", filter: `world_id=eq.${worldId}` },
@@ -188,12 +201,15 @@ function acquerir(worldId: string, rooms: WorldRoom[]): () => void {
   if (e.refs === 1) e.fermer = ouvrirCanal(worldId);
 
   return () => {
+    // L'entrée n'est jamais retirée de la table : une fonction de relâchement
+    // tardive décrémenterait sinon un objet mort pendant qu'une entrée neuve,
+    // recréée entre-temps, garderait un compteur faussé — et rouvrirait un
+    // canal alors qu'un autre est déjà souscrit. Le coût mémoire se limite à
+    // une liste par monde visité.
     e.refs -= 1;
     if (e.refs > 0) return;
     e.fermer?.();
     e.fermer = null;
-    // Plus personne n'affiche ce monde : on ne garde pas sa liste en mémoire.
-    if (e.listeners.size === 0) mondes.delete(worldId);
   };
 }
 
