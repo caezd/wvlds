@@ -8,6 +8,16 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Technique",
+    text: "Le code du projet peut de nouveau reconstruire la base de données. Dix tables avaient été créées au fil du temps directement depuis le tableau de bord, sans laisser de trace dans le projet : elles auraient purement et simplement manqué à une restauration — dont celle qui conserve les clés de chiffrement des salons.\nElles sont maintenant décrites dans le projet, règles d'accès comprises. Aucun changement en base : la description a été rejouée sur la base réelle pour vérifier qu'elle reproduit l'existant à l'identique.\nUn contrôle automatique refuse désormais toute table utilisée par l'application mais absente du projet.",
+  },
+  {
+    date: "2026-08",
+    tag: "Technique",
+    text: "Les deux bibliothèques d'accès à la base étaient déclarées en version « la plus récente ». Une simple réinstallation pouvait donc changer de version sans que personne ne l'ait demandé — c'est exactement ce qui a fait apparaître, ce mois-ci, le plantage à l'ouverture du menu latéral. Elles sont désormais fixées.",
+  },
+  {
+    date: "2026-08",
     tag: "Interface",
     text: "L'application est enfin entièrement traduite. 140 textes restaient écrits en français dans le code : ils s'affichaient tels quels aux personnes utilisant l'anglais ou l'espagnol — le cas le plus visible étant la page de connexion, titrée en français au-dessus d'un formulaire entièrement anglais.\nRéglages de monde, fiches de personnage, salons, invitations, messages d'erreur et de confirmation : tout passe désormais par les traductions. Deux textes tutoyaient alors que le reste de l'application vouvoie ; c'est corrigé.\nSeules les mentions légales restent en français, leur traduction demandant une relecture juridique.",
   },

@@ -78,10 +78,10 @@ importers:
         specifier: ^9.5.12
         version: 9.5.12(@serwist/cli@9.5.12(@types/node@20.19.24)(browserslist@4.28.6)(esbuild@0.28.2)(typescript@5.9.3))(next@16.2.8(@babel/core@7.29.7)(@playwright/test@1.61.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(typescript@5.9.3)
       '@supabase/ssr':
-        specifier: latest
+        specifier: ^0.12.5
         version: 0.12.5(@supabase/supabase-js@2.112.4)
       '@supabase/supabase-js':
-        specifier: latest
+        specifier: ^2.112.4
         version: 2.112.4
       '@tailwindcss/postcss':
         specifier: ^4.1.16
@@ -3688,6 +3688,7 @@ packages:
   eslint@9.39.1:
     resolution: {integrity: sha512-BhHmn2yNOFA9H9JmmIVKJmd288g9hrVRDkdoIgRCRuSySRUHH7r/DI6aAXW9T1WwUuY3DFgrcaqB+deURBLR5g==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+    deprecated: This version is no longer supported. Please see https://eslint.org/version-support for other options.
     hasBin: true
     peerDependencies:
       jiti: '*'
