@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import { useResetOnKeyChange } from "@/hooks/useResetOnKeyChange";
+import { useWorldRooms, type WorldRoom } from "@/lib/worldRoomsStore";
 import { useNotifications } from "@/components/providers/NotificationsProvider";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -15,19 +14,8 @@ import { useGlobalPresence } from "@/components/providers/PresenceProvider";
 import { useTranslations } from "next-intl";
 import { CategoryAvatar } from "@/components/worlds/catalogue/CategoryAvatar";
 
-type Room = {
-  id: string;
-  title: string | null;
-  name: string | null;
-  icon_url: string | null;
-  last_message_at: string | null;
-  unread_count: number;
-  category_id: string | null;
-  last_poster_avatar_url: string | null;
-  last_poster_id: string | null;
-  participant_count: number;
-  second_poster_avatar_url: string | null;
-};
+// Forme partagée avec le store : une seule définition pour les deux.
+type Room = WorldRoom;
 
 type ParticipatedRoom = {
   id: string;
@@ -161,8 +149,10 @@ export function WorldSidebarChatrooms({
   const t = useTranslations("worlds");
   const { roomUnread } = useNotifications();
   const pathname = usePathname();
-  const reconnectEpoch = useReconnectEpoch();
-  const [allRooms, setAllRooms] = useState<Room[]>(initialAll);
+  // Liste partagée : les deux instances de ce composant (aside desktop et
+  // tiroir mobile) lisent le même store, qui n'ouvre qu'un seul canal
+  // Realtime pour les deux. Cf. lib/worldRoomsStore.
+  const allRooms = useWorldRooms(worldId, initialAll);
 
   const [selectedCat, setSelectedCat] = useState<Category | null>(null);
 
@@ -170,7 +160,8 @@ export function WorldSidebarChatrooms({
   // resemis, la liste affichée reste celle du monde quitté, les props du
   // nouveau monde étant purement ignorés. Cf. useResetOnKeyChange.
   useResetOnKeyChange(worldId, () => {
-    setAllRooms(initialAll);
+    // `allRooms` est resemé par le store lui-même ; seule la vue
+    // « catégorie » ouverte est un état propre à cette instance.
     setSelectedCat(null);
   });
 
@@ -203,82 +194,6 @@ export function WorldSidebarChatrooms({
     }
   }
 
-  // `WorldSidebar` rend ce composant DEUX fois : une fois dans l'aside desktop,
-  // une fois dans `MobileSidebarSlot` (le drawer). Deux instances, donc deux
-  // effets — et `supabase.channel(topic)` renvoie le canal existant quand le
-  // topic est identique. La seconde instance recevait donc un canal déjà
-  // souscrit, sur lequel `.on()` est interdit : jusqu'à supabase-js 2.79 ses
-  // handlers étaient ignorés en silence (elle ne recevait aucun événement
-  // temps réel), depuis 2.112 l'appel lève. D'où un topic propre à chaque
-  // instance, via useId().
-  const channelId = useId();
-
-  // Realtime: nouvelles chatrooms + mises à jour chatroom_summaries (avatar, last_message_at)
-  useEffect(() => {
-    const supabase = createClient();
-    const ch = supabase
-      .channel(`sidebar-rooms:${worldId}:${channelId}`)
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "chatrooms", filter: `world_id=eq.${worldId}` },
-        (payload: { new: Record<string, unknown> }) => {
-          const r = payload.new as {
-            id: string; title: string | null; name: string | null;
-            icon_url: string | null; last_message_at: string | null; category_id: string | null;
-          };
-          setAllRooms((prev) => {
-            if (prev.some((x) => x.id === r.id)) return prev;
-            return [...prev, { ...r, unread_count: 0, last_poster_avatar_url: null, last_poster_id: null, participant_count: 0, second_poster_avatar_url: null }].sort(
-              (a, b) => (b.last_message_at ?? "").localeCompare(a.last_message_at ?? ""),
-            );
-          });
-        },
-      )
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "chatroom_summaries" },
-        (payload: { new: Record<string, unknown> }) => {
-          const s = payload.new as {
-            chat_id: string;
-            last_message_at: string | null;
-            last_message_author_id: string | null;
-            last_message_persona_avatar_url: string | null;
-          };
-          setAllRooms((prev) => {
-            const updated = prev.map((r) =>
-              r.id === s.chat_id
-                ? {
-                  ...r,
-                  last_message_at: s.last_message_at,
-                  last_poster_id: s.last_message_author_id,
-                  last_poster_avatar_url: s.last_message_persona_avatar_url,
-                }
-                : r,
-            );
-            return updated.sort(
-              (a, b) => (b.last_message_at ?? "").localeCompare(a.last_message_at ?? ""),
-            );
-          });
-        },
-      )
-      .on(
-        "postgres_changes",
-        { event: "DELETE", schema: "public", table: "chatroom_summaries" },
-        (payload: { old: Record<string, unknown> }) => {
-          const chatId = (payload.old as { chat_id?: string }).chat_id;
-          if (!chatId) return;
-          setAllRooms((prev) =>
-            prev.map((r) =>
-              r.id === chatId
-                ? { ...r, last_poster_id: null, last_poster_avatar_url: null, last_message_at: null }
-                : r,
-            ),
-          );
-        },
-      )
-      .subscribe();
-    return () => { void supabase.removeChannel(ch); };
-  }, [worldId, reconnectEpoch, channelId]);
 
   // Vue catégorie (drill-down)
   if (selectedCat) {

@@ -24,7 +24,9 @@ import { join } from "node:path";
 const SURVIVORS: { file: string; routeId: string }[] = [
   { file: join("app", "(protected)", "c", "[id]", "view.tsx"), routeId: "chatId" },
   { file: join("components", "worlds", "home", "WorldHome.tsx"), routeId: "worldId" },
-  { file: join("components", "worlds", "sidebar", "WorldSidebarChatrooms.tsx"), routeId: "worldId" },
+  // `WorldSidebarChatrooms` n'y figure plus : sa liste de salons a quitté
+  // l'état local pour `lib/worldRoomsStore`, qui la resème lui-même au
+  // changement de monde. Le composant n'a plus aucun `useState(initial*)`.
   { file: join("components", "worlds", "chatrooms", "WorldChatroomsGrid.tsx"), routeId: "worldId" },
   { file: join("components", "worlds", "chatrooms", "WorldCategoryFolders.tsx"), routeId: "worldId" },
 ];

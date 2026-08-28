@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Performance",
+    text: "La liste des salons de la barre latérale n'ouvre plus qu'une seule connexion temps réel au lieu de deux. Elle est affichée à deux endroits — la colonne de gauche sur ordinateur, le tiroir sur mobile — et l'un des deux est toujours masqué, mais tous deux restaient connectés. Moins de charge sur le serveur à chaque page de monde et de salon.\nMénage au passage : une table et une fonction devenues inutilisées depuis le changement de calcul des messages non lus, en juillet, ont été retirées. Les compteurs de non-lus ne s'en servaient plus.",
+  },
+  {
+    date: "2026-08",
+    tag: "Performance",
     text: "Premier lancement allégé : l'application préchargeait 5,77 Mo, dont près d'un mégaoctet inutile — les images d'aperçu réservées aux réseaux sociaux, les vignettes du constructeur d'avatar et les cadres de la boutique. Ramené à 4,91 Mo, et 45 fichiers de moins à télécharger. Ces images restent mises en cache dès qu'on en a réellement besoin.",
   },
   {

@@ -52,6 +52,7 @@ vi.mock("@/components/ui/avatar", () => ({
 }));
 
 import { WorldSidebarChatrooms } from "@/components/worlds/sidebar/WorldSidebarChatrooms";
+import { __resetWorldRoomsStore } from "@/lib/worldRoomsStore";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -109,6 +110,7 @@ describe("WorldSidebarChatrooms — avatar via chatroom_summaries realtime", () 
   let mock: ReturnType<typeof createSupabaseMock>;
 
   beforeEach(() => {
+    __resetWorldRoomsStore();
     mock = createSupabaseMock();
   });
 
@@ -185,6 +187,7 @@ describe("WorldSidebarChatrooms — drill-down catégories", () => {
   let mock: ReturnType<typeof createSupabaseMock>;
 
   beforeEach(() => {
+    __resetWorldRoomsStore();
     mock = createSupabaseMock();
   });
 
@@ -228,21 +231,31 @@ describe("WorldSidebarChatrooms — drill-down catégories", () => {
   });
 });
 
-// ── Canal temps réel : un topic par instance ──────────────────────────────────
+// ── Canal temps réel : UN seul, partagé ──────────────────────────────────────
 //
 // `WorldSidebar` rend ce composant DEUX fois : dans l'aside desktop et dans
-// `MobileSidebarSlot` (le drawer mobile). `supabase.channel(topic)` renvoyant le
-// canal existant pour un topic identique, les deux instances se partageaient un
-// même canal — la seconde recevait un canal déjà souscrit, sur lequel `.on()`
-// est interdit. Jusqu'à supabase-js 2.79 ses handlers étaient ignorés en
-// silence (le drawer ne recevait jamais d'événement temps réel) ; depuis 2.112
-// l'appel lève « cannot add `postgres_changes` callbacks … after `subscribe()` »
-// et l'ouverture du menu plantait.
+// `MobileSidebarSlot` (le tiroir mobile). `hidden` en CSS masque mais ne
+// démonte pas — les deux instances vivent en permanence.
+//
+// Historique du problème : les deux partageaient au départ le même nom de
+// canal, et `supabase.channel(topic)` renvoyait à la seconde le canal déjà
+// souscrit, sur lequel `.on()` est interdit. Jusqu'à supabase-js 2.79 ses
+// handlers étaient ignorés en silence (le tiroir n'avait aucun temps réel) ;
+// depuis 2.112 l'appel lève et l'ouverture du menu plantait. Un topic par
+// instance a corrigé le plantage — au prix d'une seconde souscription bien
+// réelle, pour afficher la même liste.
+//
+// La souscription vit désormais dans `lib/worldRoomsStore`, ouverte par le
+// premier consommateur et fermée par le dernier. L'invariant a donc changé de
+// sens : ce n'est plus « deux topics distincts » mais « un seul canal ».
 
-describe("WorldSidebarChatrooms — isolation du canal temps réel", () => {
-  beforeEach(() => vi.clearAllMocks());
+describe("WorldSidebarChatrooms — canal temps réel partagé", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    __resetWorldRoomsStore();
+  });
 
-  it("n'utilise pas le même topic pour deux instances montées en parallèle", () => {
+  it("n'ouvre qu'un seul canal pour les deux instances montées en parallèle", () => {
     const mock = createSupabaseMock({ user: { id: "u1" } });
     (createClient as ReturnType<typeof vi.fn>).mockReturnValue(mock.client);
 
@@ -263,24 +276,27 @@ describe("WorldSidebarChatrooms — isolation du canal temps réel", () => {
     );
 
     const topics = mock.channel.mock.calls.map((c) => c[0] as string);
-    expect(topics).toHaveLength(2);
-    expect(new Set(topics).size, `topics en collision : ${topics.join(", ")}`).toBe(2);
+    expect(topics, `un canal attendu, obtenu : ${topics.join(", ")}`).toHaveLength(1);
     // Le monde reste identifiable dans le topic (lisibilité du debug realtime).
-    for (const topic of topics) expect(topic).toContain("world-1");
+    expect(topics[0]).toContain("world-1");
   });
 
-  it("souscrit chaque canal et le retire au démontage", () => {
+  it("retire le canal quand la dernière instance est démontée", () => {
     const mock = createSupabaseMock({ user: { id: "u1" } });
     (createClient as ReturnType<typeof vi.fn>).mockReturnValue(mock.client);
 
+    const props = {
+      worldId: "world-1",
+      initialAll: [makeRoom()],
+      initialParticipated: [],
+      initialFollowedIds: [],
+      categories: [],
+    };
     const { unmount } = render(
-      <WorldSidebarChatrooms
-        worldId="world-1"
-        initialAll={[makeRoom()]}
-        initialParticipated={[]}
-        initialFollowedIds={[]}
-        categories={[]}
-      />,
+      <>
+        <WorldSidebarChatrooms {...props} />
+        <WorldSidebarChatrooms {...props} />
+      </>,
     );
 
     expect(mock.channel).toHaveBeenCalledTimes(1);
