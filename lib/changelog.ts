@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Performance",
+    text: "Premier lancement allégé : l'application préchargeait 5,77 Mo, dont près d'un mégaoctet inutile — les images d'aperçu réservées aux réseaux sociaux, les vignettes du constructeur d'avatar et les cadres de la boutique. Ramené à 4,91 Mo, et 45 fichiers de moins à télécharger. Ces images restent mises en cache dès qu'on en a réellement besoin.",
+  },
+  {
+    date: "2026-08",
     tag: "Interface",
     text: "Accessibilité : 40 boutons n'avaient aucun nom lisible par un lecteur d'écran. Réduits à une icône (une croix, une corbeille, un crayon), ils étaient annoncés « bouton », sans plus de précision — impossible de savoir ce qu'ils font sans voir l'écran.\nChacun porte maintenant un libellé traduit : fermer, annuler, retirer, supprimer, modifier, ajouter.",
   },
