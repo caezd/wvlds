@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Correctif",
+    text: "Failles fermées sur les fichiers. Les règles d'accès aux images n'avaient jamais été auditées ; trois d'entre elles ne vérifiaient l'identité de personne :\n- N'importe quel compte connecté pouvait **écraser l'avatar ou la bannière d'un personnage d'autrui** par l'image de son choix — 77 fichiers étaient concernés\n- Il pouvait aussi **supprimer ou remplacer l'icône et la bannière de n'importe quel salon**, y compris dans un monde qu'il n'a jamais rejoint\n- Et supprimer les **bannières postées dans les messages** de n'importe quel salon\nChaque envoi et chaque suppression vérifie maintenant que vous en avez le droit sur le salon ou le monde concerné. Trois espaces de stockage n'avaient par ailleurs aucune limite de taille ni de format : ils n'acceptent plus que des images, dans une taille raisonnable.",
+  },
+  {
+    date: "2026-08",
     tag: "Technique",
     text: "Les contenus sont désormais bornés côté base. Les limites de saisie des formulaires ne protégeaient rien : en s'adressant directement à l'API, il était possible d'enregistrer un texte de plusieurs millions de caractères — de quoi gonfler la base et ralentir toute la lecture d'un monde.\n38 champs sont concernés : noms, titres, descriptions, biographies, pages de wiki, messages. Les bornes sont larges, très au-dessus de toute saisie normale — elles visent l'abus, pas votre écriture.",
   },
