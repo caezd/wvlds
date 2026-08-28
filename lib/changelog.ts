@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Technique",
+    text: "Les contenus sont désormais bornés côté base. Les limites de saisie des formulaires ne protégeaient rien : en s'adressant directement à l'API, il était possible d'enregistrer un texte de plusieurs millions de caractères — de quoi gonfler la base et ralentir toute la lecture d'un monde.\n38 champs sont concernés : noms, titres, descriptions, biographies, pages de wiki, messages. Les bornes sont larges, très au-dessus de toute saisie normale — elles visent l'abus, pas votre écriture.",
+  },
+  {
+    date: "2026-08",
     tag: "Correctif",
     text: "Suite et fin du ménage sur les enregistrements muets : toutes les écritures de l'application vérifient désormais leur résultat. Les plus notables :\n- Supprimer la **bannière ou l'avatar** d'un personnage effaçait le fichier même si la fiche n'avait pas pu être mise à jour — l'image restait alors référencée mais détruite. Le fichier n'est plus effacé qu'après confirmation\n- **Activer les notifications push** annonçait le succès sans vérifier que le serveur avait bien enregistré l'abonnement : aucune notification ne serait jamais arrivée\n- **Refuser une invitation** ou une **demande de mariage** affichait « refusée » alors que la demande pouvait rester en attente\n- Les bascules d'**administration** (droits, plan, articles de la boutique, fonctionnalités) réaffichaient l'ancienne valeur sans rien signaler\n- La **couleur de dialogue**, le **cadre d'avatar**, les **préférences de notification** et le **marquage des messages privés comme lus** reviennent à leur état réel en cas d'échec",
   },
