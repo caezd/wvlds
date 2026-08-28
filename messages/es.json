@@ -25,7 +25,17 @@
     "copy": "Copiar",
     "copied": "Copiado",
     "navigation": "Navegación",
-    "worldPreview": "Vista previa del mundo"
+    "worldPreview": "Vista previa del mundo",
+    "offline": "Sin conexión a internet",
+    "offlineDescription": "Algunas funciones no están disponibles.",
+    "connectionRestored": "Conexión restablecida",
+    "sessionExpired": "Sesión caducada",
+    "sessionExpiredDescription": "Recargue la página para continuar.",
+    "imageSaved": "Imagen guardada.",
+    "changesSaved": "Cambio guardado.",
+    "noData": "Sin datos.",
+    "noContent": "Sin contenido.",
+    "uploadImageError": "No se pudo subir la imagen."
   },
   "nav": {
     "profile": "Mi perfil",
@@ -394,7 +404,21 @@
         "bannerButtonUrlPlaceholder": "https://…",
         "bannerButtonClear": "Quitar"
       }
-    }
+    },
+    "namePlaceholder": "Ej. Mundo de Veldis",
+    "descriptionPlaceholder": "Breve descripción del mundo…",
+    "restrictToCatalogue": "Restringir al catálogo del mundo",
+    "enableTimeline": "Activar la cronología",
+    "yearLabel": "Etiqueta del año",
+    "eraSuffix": "Era / sufijo",
+    "eraPlaceholder": "de las Cenizas",
+    "currentYear": "Año actual",
+    "calendarMonths": "Meses del calendario",
+    "daysCount": "Número de días",
+    "monthNamePlaceholder": "Nombre del mes…",
+    "addTagPlaceholder": "Añadir una etiqueta…",
+    "acceptedAvatarTypes": "Tipo de avatar admitido",
+    "enableRestrictionTitle": "¿Activar la restricción?"
   },
   "auth": {
     "signin": "Iniciar sesión",
@@ -417,7 +441,10 @@
       "takenError": "Este nombre de usuario ya está en uso.",
       "continue": "Continuar",
       "saving": "Guardando…"
-    }
+    },
+    "confirmPassword": "Confirmar la contraseña",
+    "checkInbox": "Revise su correo",
+    "checkInboxDescription": "Le hemos enviado un enlace de confirmación. Haga clic en él para activar su cuenta antes de iniciar sesión."
   },
   "explore": {
     "title": "Explorar",
@@ -490,7 +517,27 @@
     "editBanner": "Editar el banner",
     "addImages": "Añadir imágenes",
     "deleteImage": "Eliminar la imagen",
-    "deleteStat": "Eliminar la estadística"
+    "deleteStat": "Eliminar la estadística",
+    "bannerTitle": "Estandarte del personaje",
+    "currentBanner": "Estandarte actual",
+    "noFrameOwned": "No posee ningún marco. Compre uno en la tienda.",
+    "noFrame": "Sin marco",
+    "saveFailed": "No se pudo guardar.",
+    "requestFailed": "No se pudo enviar la solicitud.",
+    "cancelFailed": "No se pudo cancelar.",
+    "deleteFailed": "No se pudo eliminar.",
+    "namePlaceholder": "Nombre del personaje",
+    "faceclaimHint": "Faceclaim: el actor o personaje en el que se basa el avatar",
+    "markdownPlaceholder": "Escriba en markdown…",
+    "gaugeNamePlaceholder": "Nombre del indicador",
+    "eraPlaceholder": "Época…",
+    "eventTitlePlaceholder": "Título del evento",
+    "noField": "Ningún campo. Añada uno para empezar.",
+    "fieldRequiredByWorld": "Campo requerido por la ficha del mundo",
+    "fieldRequiredLocked": "Campo requerido por la ficha del mundo — no se puede eliminar",
+    "sectionRequiredByWorld": "Esta pestaña contiene campos requeridos por la ficha del mundo",
+    "sectionName": "Nombre de la pestaña",
+    "renameSection": "Renombrar la pestaña"
   },
   "quests": {
     "title": "Misiones del día",
@@ -1032,6 +1079,9 @@
     "title": "Se ha producido un error",
     "description": "Algo ha fallado por nuestra parte. Puede volver a intentarlo — si el problema persiste, vuelva al inicio.",
     "retry": "Reintentar",
-    "home": "Volver al inicio"
+    "home": "Volver al inicio",
+    "notFoundCode": "Error 404",
+    "notFoundTitle": "Página no encontrada",
+    "notFoundDescription": "Lo sentimos, la página que busca no existe o ya no está disponible."
   }
 }

@@ -6,10 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 
 const USERNAME_RE = /^[A-Za-z0-9_]{3,32}$/;
 
 export function UpdatePasswordForm() {
+  const t = useTranslations("auth");
   const [username, setUsername] = useState("");
   const [needsUsername, setNeedsUsername] = useState(false);
   const [password, setPassword] = useState("");
@@ -113,7 +115,7 @@ export function UpdatePasswordForm() {
             </div>
           )}
           <div className="mb-6 flex gap-3 flex-col">
-            <Label htmlFor="password">Mot de passe</Label>
+            <Label htmlFor="password">{t("password")}</Label>
             <Input
               id="password"
               type="password"
@@ -125,7 +127,7 @@ export function UpdatePasswordForm() {
             />
           </div>
           <div className="mb-6 flex gap-3 flex-col">
-            <Label htmlFor="confirm">Confirmer le mot de passe</Label>
+            <Label htmlFor="confirm">{t("confirmPassword")}</Label>
             <Input
               id="confirm"
               type="password"

@@ -25,7 +25,17 @@
     "copy": "Copier",
     "copied": "Copié",
     "navigation": "Navigation",
-    "worldPreview": "Aperçu du monde"
+    "worldPreview": "Aperçu du monde",
+    "offline": "Pas de connexion internet",
+    "offlineDescription": "Certaines fonctionnalités sont indisponibles.",
+    "connectionRestored": "Connexion rétablie",
+    "sessionExpired": "Session expirée",
+    "sessionExpiredDescription": "Rechargez la page pour continuer.",
+    "imageSaved": "Image enregistrée.",
+    "changesSaved": "Modification enregistrée.",
+    "noData": "Aucune donnée.",
+    "noContent": "Aucun contenu.",
+    "uploadImageError": "Envoi de l'image impossible."
   },
   "nav": {
     "profile": "Mon profil",
@@ -395,7 +405,21 @@
         "bannerButtonUrlPlaceholder": "https://…",
         "bannerButtonClear": "Retirer"
       }
-    }
+    },
+    "namePlaceholder": "Ex. Monde de Veldis",
+    "descriptionPlaceholder": "Brève description du monde…",
+    "restrictToCatalogue": "Restreindre au catalogue du monde",
+    "enableTimeline": "Activer la chronologie",
+    "yearLabel": "Libellé d'année",
+    "eraSuffix": "Ère / suffixe",
+    "eraPlaceholder": "des Cendres",
+    "currentYear": "Année actuelle",
+    "calendarMonths": "Mois du calendrier",
+    "daysCount": "Nombre de jours",
+    "monthNamePlaceholder": "Nom du mois…",
+    "addTagPlaceholder": "Ajouter un tag…",
+    "acceptedAvatarTypes": "Type d'avatars accepté",
+    "enableRestrictionTitle": "Activer la restriction ?"
   },
   "auth": {
     "signin": "Connexion",
@@ -419,7 +443,10 @@
       "takenError": "Ce pseudo est déjà pris.",
       "continue": "Continuer",
       "saving": "Enregistrement…"
-    }
+    },
+    "confirmPassword": "Confirmer le mot de passe",
+    "checkInbox": "Vérifiez votre boîte mail",
+    "checkInboxDescription": "Un lien de confirmation vous a été envoyé. Cliquez dessus pour activer votre compte avant de vous connecter."
   },
   "explore": {
     "title": "Explorer",
@@ -494,7 +521,27 @@
     "editBanner": "Modifier la bannière",
     "addImages": "Ajouter des images",
     "deleteImage": "Supprimer l’image",
-    "deleteStat": "Supprimer la stat"
+    "deleteStat": "Supprimer la stat",
+    "bannerTitle": "Bannière du personnage",
+    "currentBanner": "Bannière actuelle",
+    "noFrameOwned": "Aucun cadre possédé. Achetez-en un dans la boutique.",
+    "noFrame": "Aucun cadre",
+    "saveFailed": "Enregistrement impossible.",
+    "requestFailed": "Impossible d'envoyer la demande.",
+    "cancelFailed": "Annulation impossible.",
+    "deleteFailed": "Suppression impossible.",
+    "namePlaceholder": "Nom du personnage",
+    "faceclaimHint": "Faceclaim : l'acteur ou le personnage sur lequel est basé l'avatar",
+    "markdownPlaceholder": "Écrivez en markdown…",
+    "gaugeNamePlaceholder": "Nom de la jauge",
+    "eraPlaceholder": "Époque…",
+    "eventTitlePlaceholder": "Titre de l'événement",
+    "noField": "Aucun champ. Ajoutez-en un pour commencer.",
+    "fieldRequiredByWorld": "Champ requis par la fiche du monde",
+    "fieldRequiredLocked": "Champ requis par la fiche du monde — impossible à supprimer",
+    "sectionRequiredByWorld": "Cette section contient des champs requis par la fiche du monde",
+    "sectionName": "Nom de l'onglet",
+    "renameSection": "Renommer l'onglet"
   },
   "quests": {
     "title": "Quêtes du jour",
@@ -1036,6 +1083,9 @@
     "title": "Une erreur est survenue",
     "description": "Quelque chose s’est mal passé de notre côté. Vous pouvez réessayer — si le problème persiste, revenez à l’accueil.",
     "retry": "Réessayer",
-    "home": "Retour à l’accueil"
+    "home": "Retour à l’accueil",
+    "notFoundCode": "Erreur 404",
+    "notFoundTitle": "Page introuvable",
+    "notFoundDescription": "Désolé, la page que vous cherchez n'existe pas ou n'est plus accessible."
   }
 }

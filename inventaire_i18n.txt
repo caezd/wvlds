@@ -1,0 +1,78 @@
+app/(protected)/admin/shop/[id]/page.tsx	27	Modifier l&apos;article
+app/(protected)/admin/shop/_components/ShopItemForm.tsx	162	ou colle une URL directement
+app/(protected)/c/[id]/view.tsx	1174	Impossible de supprimer le message : 
+app/legal/page.tsx	57	Éditeur du site
+app/legal/page.tsx	67	Responsable de la protection des renseignements personnels
+app/legal/page.tsx	92	Renseignements personnels collectés
+app/legal/page.tsx	103	Conservation des données
+app/legal/page.tsx	113	Vos droits
+app/legal/page.tsx	131	Témoins (cookies)
+app/legal/page.tsx	141	Incidents de confidentialité
+app/legal/page.tsx	151	Propriété intellectuelle — contenu utilisateurs
+app/legal/page.tsx	170	Images et médias tiers
+components/chatrooms/blocks/DiceMessageView.tsx	65	Modifier la description
+components/chatrooms/blocks/GameBlockRenderer.tsx	63	Impossible de modifier : 
+components/chatrooms/blocks/GameBlockRenderer.tsx	96	Impossible de modifier : 
+components/chatrooms/blocks/GameBlockRenderer.tsx	111	Erreur upload image.
+components/chatrooms/blocks/GameBlockRenderer.tsx	136	Impossible de voter : 
+components/chatrooms/blocks/HpBlock.tsx	89	ex. Gornak le Berserker
+components/chatrooms/blocks/NpcBlock.tsx	87	Wyrm des Cendres
+components/chatrooms/blocks/NpcBlock.tsx	94	Rôle (optionnel)
+components/chatrooms/blocks/NpcBlock.tsx	98	ex. Gardien du donjon, Marchande…
+components/chatrooms/composer/ChatroomComposer.tsx	367	Erreur upload bannière.
+components/chatrooms/composer/ChatroomComposer.tsx	400	Erreur upload image.
+components/chatrooms/composer/ChatroomComposer.tsx	410	Sélectionnez d'abord une chatroom pour uploader une image.
+components/chatrooms/composer/ChatroomComposer.tsx	418	Erreur upload image.
+components/chatrooms/composer/ChatroomComposer.tsx	432	Choisissez au moins un destinataire pour la note privée.
+components/chatrooms/composer/ChatroomComposer.tsx	486	Envoi impossible.
+components/chatrooms/composer/ChatroomComposer.tsx	680	Aucun autre participant dans ce salon.
+components/chatrooms/composer/ChatroomComposer.tsx	1148	Texte de l&apos;encadré…
+components/chatrooms/composer/ChatroomComposer.tsx	1185	Garde du donjon
+components/chatrooms/composer/ChatroomComposer.tsx	1259	Ça va ?
+components/chatrooms/message/ChatroomMessage.tsx	198	Vous devez être connecté pour réagir.
+components/chatrooms/persona/PersonaProfileSheet.tsx	417	Votre persona
+components/chatrooms/settings/ChatroomSettingsSheet.tsx	183	Image enregistrée.
+components/chatrooms/settings/ChatroomSettingsSheet.tsx	211	Modification enregistrée.
+components/chatrooms/settings/ChatroomSettingsSheet.tsx	226	Modification enregistrée.
+components/chatrooms/settings/ChatroomSettingsSheet.tsx	241	Modification enregistrée.
+components/chatrooms/settings/ChatroomSettingsSheet.tsx	256	Modification enregistrée.
+components/chatrooms/settings/ChatroomSettingsSheet.tsx	271	Salle supprimée.
+components/chatrooms/settings/ChatroomStatsSheet.tsx	162	Impossible de charger les statistiques.
+components/chatrooms/settings/ChatroomStatsSheet.tsx	259	Aucune donnée.
+components/chatrooms/settings/ChatroomStatsSheet.tsx	279	Aucune donnée.
+components/personas/PersonaCreateSheet.tsx	83	Nouveau persona
+components/personas/PersonaCreateSheet.tsx	98	Nouveau persona
+components/personas/PersonaCreateSheet.tsx	110	Ex. Kaori, Lyra, Théo…
+components/personas/PersonaProfileSheetTrigger.tsx	506	Aucun contenu.
+components/personas/PersonaProfileSheetTrigger.tsx	516	Aucune section.
+components/personas/PersonaSectionsTabs.tsx	193	Cette section contient des champs requis par la fiche du monde
+components/personas/PersonaSectionsTabs.tsx	244	Nom de la section
+components/personas/PersonaSectionsTabs.tsx	273	Renommer la section
+components/personas/PersonaSectionsTabs.tsx	279	Nom de la section
+components/personas/WorldPersonaAsideClient.tsx	75	Nouveau persona
+components/personas/WorldPersonaAsideClient.tsx	83	Nouveau persona
+components/personas/WorldPersonasPanel.tsx	193	Aucun persona dans ce monde
+components/providers/PresenceProvider.tsx	340	Impossible d'enregistrer le statut.
+components/sidebar/CreateWorldDialog.tsx	70	Nouveau monde
+components/sidebar/CreateWorldDialog.tsx	82	Nom du monde
+components/sidebar/UserProfileSheet.tsx	67	Pseudo mis à jour.
+components/sidebar/UserProfileSheet.tsx	91	Avatar mis à jour.
+components/sidebar/UserProfileSheet.tsx	135	Cliquez pour modifier l&apos;avatar
+components/sidebar/WorldPickerHeader.tsx	123	Aucun autre monde
+components/ui/image-crop-picker.tsx	269	cliquez pour choisir un fichier
+components/worlds/members/WorldInviteDialog.tsx	263	Impossible de modifier le rôle.
+components/worlds/members/WorldInviteDialog.tsx	294	Impossible de retirer ce membre.
+components/worlds/members/WorldInviteDialog.tsx	315	Impossible d’annuler l’invitation.
+components/worlds/members/WorldInviteDialog.tsx	395	Invitation envoyée
+components/worlds/members/WorldInviteDialog.tsx	433	Rôle modifié
+components/worlds/members/WorldInviteDialog.tsx	486	Invitation envoyée
+components/worlds/members/WorldInviteDialog.tsx	519	Ajouter un membre
+components/worlds/members/WorldInviteDialog.tsx	617	Choisir un rôle
+components/worlds/members/WorldMembershipGuard.tsx	43	Tu as été retiré de ce monde.
+components/worlds/settings/WorldCategoryManager.tsx	103	Attends la fin du téléversement de l'image avant d'enregistrer.
+components/worlds/settings/WorldCategoryManager.tsx	161	Nom de la catégorie
+components/worlds/settings/WorldPersonaTemplateSection.tsx	123	Fiche par défaut
+components/worlds/settings/WorldPersonaTemplateSection.tsx	161	Désactiver la fiche par défaut ?
+components/worlds/settings/WorldPersonaTemplateSection.tsx	180	Fiche par défaut des personas
+components/worlds/timeline/WorldTimeline.tsx	163	Aucune conversation n&apos;a encore été située dans la chronologie.
+hooks/useRealtimeChatSync.ts	118	Impossible de charger le nouveau message.

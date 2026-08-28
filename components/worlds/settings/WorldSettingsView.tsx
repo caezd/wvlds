@@ -254,6 +254,7 @@ function LabelWithHelp({
 
 export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) {
   const tCommon = useTranslations("common");
+  const t = useTranslations("worlds");
     const supabase = createClient();
     const router = useRouter();
     const { public_worlds, world_timeline } = useFeatureFlags();
@@ -527,7 +528,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                 .eq("id", world.id);
             if (error) throw error;
             onUpdated?.({ ...world, [field]: url } as World);
-            toast.success("Image enregistrée.");
+            toast.success(tCommon("imageSaved"));
         } catch (e: unknown) {
             toast.error(e instanceof Error ? e.message : "Téléversement impossible.");
         } finally {
@@ -564,7 +565,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                 .eq("id", world.id);
             if (error) throw error;
             onUpdated?.({ ...world, [field]: clean } as World);
-            toast.success("Modification enregistrée.");
+            toast.success(tCommon("changesSaved"));
         } catch (e: unknown) {
             toast.error(e instanceof Error ? e.message : "Enregistrement impossible.");
         }
@@ -583,7 +584,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                 .eq("id", world.id);
             if (error) throw error;
 
-            toast.success("Monde supprimé.");
+            toast.success(t("worldDeleted"));
             router.push("/");
             router.refresh();
         } catch (e: unknown) {
@@ -647,7 +648,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                             </FormLabel>
                                             <FormControl>
                                                 <Input
-                                                    placeholder="Ex. Monde de Veldis"
+                                                    placeholder={t("namePlaceholder")}
                                                     {...field}
                                                     onBlur={(e) => {
                                                         field.onBlur();
@@ -675,7 +676,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                             <FormControl>
                                                 <Textarea
                                                     rows={5}
-                                                    placeholder="Brève description du monde…"
+                                                    placeholder={t("descriptionPlaceholder")}
                                                     className="rounded-2xl"
                                                     {...field}
                                                     onBlur={(e) => {
@@ -877,7 +878,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                         {enableInventory && (
                                             <div className="ml-4 flex items-start justify-between gap-4 rounded-xl border border-border-soft bg-muted/20 p-3">
                                                 <div className="space-y-0.5">
-                                                    <p className="text-sm font-medium">Restreindre au catalogue du monde</p>
+                                                    <p className="text-sm font-medium">{t("restrictToCatalogue")}</p>
                                                     <p className="text-xs text-muted-foreground leading-snug">
                                                         Les personas ne peuvent posséder que des objets définis dans le catalogue — la saisie libre est désactivée.
                                                     </p>
@@ -911,7 +912,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                         {enableSkills && (
                                             <div className="ml-4 flex items-start justify-between gap-4 rounded-xl border border-border-soft bg-muted/20 p-3">
                                                 <div className="space-y-0.5">
-                                                    <p className="text-sm font-medium">Restreindre au catalogue du monde</p>
+                                                    <p className="text-sm font-medium">{t("restrictToCatalogue")}</p>
                                                     <p className="text-xs text-muted-foreground leading-snug">
                                                         Les personas ne peuvent avoir que des compétences définies dans le catalogue — la saisie libre est désactivée.
                                                     </p>
@@ -1010,7 +1011,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
 
                                         <div className="flex items-start justify-between gap-4">
                                             <div className="space-y-0.5">
-                                                <p className="text-sm font-medium">Activer la timeline</p>
+                                                <p className="text-sm font-medium">{t("enableTimeline")}</p>
                                                 <p className="text-xs text-muted-foreground leading-snug">
                                                     Permet de situer chaque conversation dans un calendrier fictif.
                                                 </p>
@@ -1028,7 +1029,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                                 {/* Année courante */}
                                                 <div className="grid grid-cols-2 gap-3">
                                                     <div className="space-y-1.5">
-                                                        <p className="text-xs font-medium text-muted-foreground">Libellé d&apos;année</p>
+                                                        <p className="text-xs font-medium text-muted-foreground">{t("yearLabel")}</p>
                                                         <Input
                                                             value={timelineConfig.year_label}
                                                             placeholder="an"
@@ -1038,10 +1039,10 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                                         />
                                                     </div>
                                                     <div className="space-y-1.5">
-                                                        <p className="text-xs font-medium text-muted-foreground">Ère / suffixe</p>
+                                                        <p className="text-xs font-medium text-muted-foreground">{t("eraSuffix")}</p>
                                                         <Input
                                                             value={timelineConfig.era_name ?? ""}
-                                                            placeholder="des Cendres"
+                                                            placeholder={t("eraPlaceholder")}
                                                             className="h-8 text-sm"
                                                             onChange={e => setTimelineConfig(c => ({ ...c, era_name: e.target.value || null }))}
                                                             onBlur={e => void persistTimelineConfig({ era_name: e.target.value || null })}
@@ -1052,7 +1053,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                                 {/* Année / mois courant */}
                                                 <div className="grid grid-cols-2 gap-3">
                                                     <div className="space-y-1.5">
-                                                        <p className="text-xs font-medium text-muted-foreground">Année actuelle</p>
+                                                        <p className="text-xs font-medium text-muted-foreground">{t("currentYear")}</p>
                                                         <Input
                                                             type="number"
                                                             value={timelineConfig.current_year}
@@ -1090,7 +1091,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                                     retrait ou préréglage touche les deux à la fois. */}
                                                 <div className="space-y-2">
                                                     <div className="flex items-center justify-between">
-                                                        <p className="text-xs font-medium text-muted-foreground">Mois du calendrier</p>
+                                                        <p className="text-xs font-medium text-muted-foreground">{t("calendarMonths")}</p>
                                                         {timelineConfig.month_names.length === 0 && (
                                                             <button
                                                                 type="button"
@@ -1126,7 +1127,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                                                         value={timelineConfig.days_per_month?.[i] ?? DEFAULT_DAYS_PER_MONTH}
                                                                         min={1}
                                                                         max={999}
-                                                                        title="Nombre de jours"
+                                                                        title={t("daysCount")}
                                                                         className="h-7 w-16 shrink-0 text-sm"
                                                                         onChange={e => {
                                                                             const next = [...(timelineConfig.days_per_month ?? [])];
@@ -1163,7 +1164,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                                     <div className="flex gap-2">
                                                         <Input
                                                             value={newMonthName}
-                                                            placeholder="Nom du mois…"
+                                                            placeholder={t("monthNamePlaceholder")}
                                                             className="h-8 text-sm"
                                                             onChange={e => setNewMonthName(e.target.value)}
                                                             onKeyDown={e => {
@@ -1314,7 +1315,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                                 <div className="flex gap-2">
                                                     <Input
                                                         value={newTag}
-                                                        placeholder="Ajouter un tag…"
+                                                        placeholder={t("addTagPlaceholder")}
                                                         className="h-8 text-sm"
                                                         maxLength={24}
                                                         disabled={savingTag}
@@ -1362,7 +1363,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                     {/* -- Type d'avatars ----------------------- */}
                                     <div className="space-y-3">
                                         <div className="space-y-0.5">
-                                            <p className="text-sm font-medium">Type d&apos;avatars accepté</p>
+                                            <p className="text-sm font-medium">{t("acceptedAvatarTypes")}</p>
                                             <p className="text-xs text-muted-foreground leading-snug">
                                                 Indique aux visiteurs le style d&apos;avatars utilisé dans ce monde.
                                             </p>
@@ -1411,7 +1412,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
             <AlertDialog open={!!pendingRestriction} onOpenChange={open => { if (!open) setPendingRestriction(null); }}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Activer la restriction ?</AlertDialogTitle>
+                        <AlertDialogTitle>{t("enableRestrictionTitle")}</AlertDialogTitle>
                         <AlertDialogDescription>
                             Cette action effacera immédiatement tous les {pendingRestriction === "inventory" ? "objets d'inventaire" : "compétences"} des personas de ce monde. Cette opération est irréversible.
                         </AlertDialogDescription>

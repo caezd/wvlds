@@ -114,6 +114,7 @@ function MarkdownTextField({
   initialText: string;
   onSave: (val: string) => void;
 }) {
+  const tPersonas = useTranslations("personas");
   const [value, setValue] = useState(initialText);
 
   return (
@@ -124,7 +125,7 @@ function MarkdownTextField({
         onSave(v);
       }}
       submitOnEnter={false}
-      placeholder="Écris en markdown…"
+      placeholder={tPersonas("markdownPlaceholder")}
       className="text-sm leading-relaxed font-mono pr-24"
     />
   );
@@ -357,6 +358,7 @@ function InventoryField({
   catalogItems?: WorldInventoryItem[];
 }) {
   const tCommon = useTranslations("common");
+  const tCatalogue = useTranslations("catalogue");
   const [items, setItems] = useState<InventoryItem[]>(initialItems);
 
   function update(next: InventoryItem[]) {
@@ -443,7 +445,7 @@ function InventoryField({
               <input
                 value={item.name}
                 onChange={(e) => patch(item.id, "name", e.target.value)}
-                placeholder="Nom de l'objet"
+                placeholder={tCatalogue("itemNamePlaceholder")}
                 className="flex-1 min-w-0 bg-transparent text-sm font-medium outline-none placeholder:text-muted-foreground/40"
               />
               <div className="flex items-center gap-1 shrink-0">
@@ -495,6 +497,7 @@ function SkillsField({
   catalogItems?: WorldSkill[];
 }) {
   const tCommon = useTranslations("common");
+  const tCatalogue = useTranslations("catalogue");
   const [items, setItems] = useState<SkillItem[]>(initialItems);
 
   function update(next: SkillItem[]) {
@@ -577,7 +580,7 @@ function SkillsField({
               <input
                 value={item.name}
                 onChange={(e) => patch(item.id, "name", e.target.value)}
-                placeholder="Nom de la compétence"
+                placeholder={tCatalogue("skillNamePlaceholder")}
                 className="flex-1 min-w-0 bg-transparent text-sm font-medium outline-none placeholder:text-muted-foreground/40"
               />
               <input
@@ -623,6 +626,7 @@ function GaugesField({
   onSave: (items: GaugeItem[]) => void;
 }) {
   const tCommon = useTranslations("common");
+  const tPersonas = useTranslations("personas");
   const [items, setItems] = useState<GaugeItem[]>(initialItems);
 
   function update(next: GaugeItem[]) { setItems(next); onSave(next); }
@@ -644,7 +648,7 @@ function GaugesField({
               <input
                 value={item.name}
                 onChange={(e) => patch(item.id, "name", e.target.value)}
-                placeholder="Nom de la jauge"
+                placeholder={tPersonas("gaugeNamePlaceholder")}
                 className="flex-1 min-w-0 bg-transparent text-sm font-medium outline-none placeholder:text-muted-foreground/40"
               />
               <div className="flex items-center gap-1.5 shrink-0 text-sm tabular-nums text-muted-foreground">
@@ -791,6 +795,7 @@ function TimelineField({
   onSave: (items: TimelineItem[]) => void;
 }) {
   const tCommon = useTranslations("common");
+  const tPersonas = useTranslations("personas");
   const [items, setItems] = useState<TimelineItem[]>(initialItems);
 
   function update(next: TimelineItem[]) { setItems(next); onSave(next); }
@@ -815,13 +820,13 @@ function TimelineField({
               <input
                 value={item.date ?? ""}
                 onChange={(e) => patch(item.id, "date", e.target.value)}
-                placeholder="Époque…"
+                placeholder={tPersonas("eraPlaceholder")}
                 className="w-24 shrink-0 bg-transparent text-[0.65rem] text-muted-foreground outline-none placeholder:text-muted-foreground/40"
               />
               <input
                 value={item.title}
                 onChange={(e) => patch(item.id, "title", e.target.value)}
-                placeholder="Titre de l'événement"
+                placeholder={tPersonas("eventTitlePlaceholder")}
                 className="flex-1 min-w-0 bg-transparent text-sm font-medium outline-none placeholder:text-muted-foreground/40"
               />
               <button
@@ -928,6 +933,7 @@ type SectionFieldsEditorProps = {
 
 export function SectionFieldsEditor({ sectionId, personaId, userId, initialFields, onFieldsChange, worldId, restrictInventory, restrictSkills, isTemplate }: SectionFieldsEditorProps) {
   const tCommon = useTranslations("common");
+  const tPersonas = useTranslations("personas");
   const supabase = createClient();
   const flags = useFeatureFlags();
   const fieldsEnabled = flags.persona_fields;
@@ -1372,7 +1378,7 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
 
       {fields.length === 0 ? (
         <div className="py-4 space-y-3">
-          <p className="text-sm text-muted-foreground">Aucun champ. Ajoutes-en un pour commencer.</p>
+          <p className="text-sm text-muted-foreground">{tPersonas("noField")}</p>
           <AddFieldMenu
             insertAt={0}
             trigger={
@@ -1397,7 +1403,7 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
                   {!isTemplate && field.locked && (
                     <span
                       className="absolute right-2.5 top-2 text-muted-foreground/50 group-hover:opacity-0 transition-opacity z-10"
-                      title="Champ requis par la fiche du monde"
+                      title={tPersonas("fieldRequiredByWorld")}
                     >
                       <Lock className="h-3.5 w-3.5" />
                     </span>
@@ -1432,7 +1438,7 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
                         type="button"
                         disabled
                         className="h-7 w-7 text-muted-foreground"
-                        title="Champ requis par la fiche du monde — impossible à supprimer"
+                        title={tPersonas("fieldRequiredLocked")}
                       >
                         <Lock className="h-3.5 w-3.5" />
                       </Button>

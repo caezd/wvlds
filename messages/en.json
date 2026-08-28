@@ -25,7 +25,17 @@
     "copy": "Copy",
     "copied": "Copied",
     "navigation": "Navigation",
-    "worldPreview": "World preview"
+    "worldPreview": "World preview",
+    "offline": "No internet connection",
+    "offlineDescription": "Some features are unavailable.",
+    "connectionRestored": "Connection restored",
+    "sessionExpired": "Session expired",
+    "sessionExpiredDescription": "Reload the page to continue.",
+    "imageSaved": "Image saved.",
+    "changesSaved": "Change saved.",
+    "noData": "No data.",
+    "noContent": "No content.",
+    "uploadImageError": "Couldn't upload the image."
   },
   "nav": {
     "profile": "My profile",
@@ -394,7 +404,21 @@
         "bannerButtonUrlPlaceholder": "https://…",
         "bannerButtonClear": "Remove"
       }
-    }
+    },
+    "namePlaceholder": "E.g. World of Veldis",
+    "descriptionPlaceholder": "Short description of the world…",
+    "restrictToCatalogue": "Restrict to the world catalogue",
+    "enableTimeline": "Enable the timeline",
+    "yearLabel": "Year label",
+    "eraSuffix": "Era / suffix",
+    "eraPlaceholder": "of Ashes",
+    "currentYear": "Current year",
+    "calendarMonths": "Calendar months",
+    "daysCount": "Number of days",
+    "monthNamePlaceholder": "Month name…",
+    "addTagPlaceholder": "Add a tag…",
+    "acceptedAvatarTypes": "Accepted avatar type",
+    "enableRestrictionTitle": "Enable the restriction?"
   },
   "auth": {
     "signin": "Sign in",
@@ -418,7 +442,10 @@
       "takenError": "This username is already taken.",
       "continue": "Continue",
       "saving": "Saving…"
-    }
+    },
+    "confirmPassword": "Confirm password",
+    "checkInbox": "Check your inbox",
+    "checkInboxDescription": "A confirmation link has been sent to you. Click it to activate your account before signing in."
   },
   "explore": {
     "title": "Explore",
@@ -493,7 +520,27 @@
     "editBanner": "Edit banner",
     "addImages": "Add images",
     "deleteImage": "Delete image",
-    "deleteStat": "Delete stat"
+    "deleteStat": "Delete stat",
+    "bannerTitle": "Character banner",
+    "currentBanner": "Current banner",
+    "noFrameOwned": "You don't own any frame. Buy one from the shop.",
+    "noFrame": "No frame",
+    "saveFailed": "Couldn't save.",
+    "requestFailed": "Couldn't send the request.",
+    "cancelFailed": "Couldn't cancel.",
+    "deleteFailed": "Couldn't delete.",
+    "namePlaceholder": "Character name",
+    "faceclaimHint": "Faceclaim: the actor or character the avatar is based on",
+    "markdownPlaceholder": "Write in markdown…",
+    "gaugeNamePlaceholder": "Gauge name",
+    "eraPlaceholder": "Era…",
+    "eventTitlePlaceholder": "Event title",
+    "noField": "No field yet. Add one to get started.",
+    "fieldRequiredByWorld": "Field required by the world's template",
+    "fieldRequiredLocked": "Field required by the world's template — cannot be removed",
+    "sectionRequiredByWorld": "This tab contains fields required by the world's template",
+    "sectionName": "Tab name",
+    "renameSection": "Rename the tab"
   },
   "quests": {
     "title": "Daily quests",
@@ -1035,6 +1082,9 @@
     "title": "Something went wrong",
     "description": "An error occurred on our side. You can try again — if the problem persists, head back home.",
     "retry": "Try again",
-    "home": "Back to home"
+    "home": "Back to home",
+    "notFoundCode": "Error 404",
+    "notFoundTitle": "Page not found",
+    "notFoundDescription": "Sorry, the page you are looking for does not exist or is no longer available."
   }
 }

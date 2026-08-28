@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import Logo from "@/components/logo";
+import { getTranslations } from "next-intl/server";
 
 /** Étoiles en pur CSS : une poignée de points blancs en radial-gradient */
 const STARRY_SKY: React.CSSProperties = {
@@ -21,7 +22,8 @@ const STARRY_SKY: React.CSSProperties = {
   `,
 };
 
-export default function NotFound() {
+export default async function NotFound() {
+  const t = await getTranslations("errorBoundary");
   return (
     <div className="flex h-full w-full gap-3 p-3">
       {/* -- Colonne principale ------------------------------------ */}
@@ -31,13 +33,12 @@ export default function NotFound() {
         </div>
 
         <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
-          <p className="text-xs font-semibold text-accent">Erreur 404</p>
+          <p className="text-xs font-semibold text-accent">{t("notFoundCode")}</p>
           <h1 className="mt-2 text-3xl font-semibold md:text-4xl">
-            Page introuvable
+            {t("notFoundTitle")}
           </h1>
           <p className="mt-3 max-w-sm text-sm text-muted-foreground">
-            Désolé, la page que tu cherches n&apos;existe pas ou n&apos;est
-            plus accessible.
+            {t("notFoundDescription")}
           </p>
           <Link
             href="/"

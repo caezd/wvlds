@@ -132,11 +132,12 @@ function BannerSheet({
   onSaved: (url: string) => void;
   onRemove: () => void;
 }) {
+  const tPersonas = useTranslations("personas");
   return (
     <Drawer open={open} onOpenChange={onOpenChange} swipeDirection="right">
       <SideSheetContent className="gap-4 lg:shadow-2xl">
         <DrawerHeader>
-          <DrawerTitle>Bannière du personnage</DrawerTitle>
+          <DrawerTitle>{tPersonas("bannerTitle")}</DrawerTitle>
         </DrawerHeader>
         <div className="flex-1 overflow-y-auto space-y-4 p-6">
           <StorageUploadTab
@@ -205,6 +206,7 @@ function FramePicker({
   initialFrameId: string | null;
   onFrameChange?: (frameId: string | null, assetUrl: string | null) => void;
 }) {
+  const tPersonas = useTranslations("personas");
   const router = useRouter();
   const [frames, setFrames] = useState<OwnedFrame[]>([]);
   const [selected, setSelected] = useState<string | null>(initialFrameId);
@@ -245,7 +247,7 @@ function FramePicker({
 
   if (!loaded) return <div className="h-4 w-32 animate-pulse rounded bg-muted" />;
   if (!frames.length) return (
-    <p className="text-xs text-muted-foreground">Aucun cadre possédé. Achetez-en un dans la boutique.</p>
+    <p className="text-xs text-muted-foreground">{tPersonas("noFrameOwned")}</p>
   );
 
   return (
@@ -259,7 +261,7 @@ function FramePicker({
           "relative h-14 w-14 rounded-xl border-2 bg-muted text-xs text-muted-foreground transition-colors",
           selected === null ? "border-primary" : "border-transparent hover:border-border",
         )}
-        title="Aucun cadre"
+        title={tPersonas("noFrame")}
       >
         <X className="m-auto h-5 w-5" />
         {selected === null && <Check className="absolute -right-1.5 -top-1.5 h-4 w-4 rounded-full bg-primary text-primary-foreground p-0.5" />}
@@ -305,6 +307,7 @@ export function MaritalStatusPicker({
   initialSpouseId: string | null;
 }) {
   const t = useTranslations("personas.maritalStatus");
+  const tPersonas = useTranslations("personas");
   const router = useRouter();
   const [status, setStatus] = useState<MaritalStatus | null>(initialStatus);
   const [spouseId, setSpouseId] = useState<string | null>(initialSpouseId);
@@ -354,7 +357,7 @@ export function MaritalStatusPicker({
       .update({ marital_status: next, ...(clearSpouse ? { spouse_persona_id: null } : {}) })
       .eq("id", personaId);
     if (error) {
-      toast.error("Enregistrement impossible.", { description: error.message });
+      toast.error(tPersonas("saveFailed"), { description: error.message });
       setStatus(previous);
       return;
     }
@@ -383,7 +386,7 @@ export function MaritalStatusPicker({
       setSpouseId(null);
       const { error } = await supabase.from("personas").update({ spouse_persona_id: null }).eq("id", personaId);
       if (error) {
-        toast.error("Enregistrement impossible.", { description: error.message });
+        toast.error(tPersonas("saveFailed"), { description: error.message });
         setSpouseId(previous);
       }
       router.refresh();
@@ -396,7 +399,7 @@ export function MaritalStatusPicker({
       .select("id")
       .single();
     if (error) {
-      toast.error("Impossible d'envoyer la demande.", { description: error.message });
+      toast.error(tPersonas("requestFailed"), { description: error.message });
       return;
     }
     const targetName = worldPersonas.find((p) => p.id === next)?.name ?? "";
@@ -407,7 +410,7 @@ export function MaritalStatusPicker({
     if (!pendingRequest) return;
     const { error } = await supabase.from(TABLE.PERSONA_MARITAL_REQUESTS).delete().eq("id", pendingRequest.id);
     if (error) {
-      toast.error("Annulation impossible.", { description: error.message });
+      toast.error(tPersonas("cancelFailed"), { description: error.message });
       return;
     }
     setPendingRequest(null);
@@ -554,7 +557,7 @@ export function PersonaEditorContent({
           onClick={() => setBannerDialogOpen(true)}
           className="group relative h-34 w-full block overflow-hidden focus-visible:outline-none"
           aria-label={tPersonas("editBanner")}
-          title="Modifier la bannière"
+          title={tPersonas("editBanner")}
         >
           {bannerUrl ? (
             <Image
@@ -585,7 +588,7 @@ export function PersonaEditorContent({
               onClick={() => setAvatarDialogOpen(true)}
               className="group relative h-32 w-32 rounded-2xl border-4 border-background bg-muted overflow-hidden shadow shrink-0 focus-visible:outline-none"
               aria-label={tPersonas("editAvatar")}
-              title="Modifier l'avatar"
+              title={tPersonas("editAvatar")}
             >
               {avatarUrl ? (
                 <Image src={avatarUrl} alt="" fill sizes="128px" className="object-cover" draggable={false} />
@@ -613,7 +616,7 @@ export function PersonaEditorContent({
                   }}
                   onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
                   maxLength={40}
-                  placeholder="Nom du personnage"
+                  placeholder={tPersonas("namePlaceholder")}
                   className="min-w-0 flex-1 text-xl font-semibold leading-tight bg-transparent outline-none border-none rounded px-1 -mx-1 hover:bg-muted/60 focus:bg-muted/60 focus:underline decoration-dotted underline-offset-4 placeholder:text-muted-foreground/40 transition-colors"
                 />
                 {faceclaimsEnabled !== false && (
@@ -632,7 +635,7 @@ export function PersonaEditorContent({
                       onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
                       maxLength={80}
                       placeholder="acteur/perso"
-                      title="Faceclaim : l'acteur ou le personnage sur lequel est basé l'avatar"
+                      title={tPersonas("faceclaimHint")}
                       className="min-w-0 w-full text-sm leading-tight bg-transparent outline-none border-none rounded px-1 -mx-1 hover:bg-muted/60 focus:bg-muted/60 focus:underline decoration-dotted underline-offset-4 placeholder:text-muted-foreground/40 transition-colors"
                     />
                   </div>
@@ -815,7 +818,7 @@ export function PersonaEditorContent({
                   </div>
                 )}
               </div>
-              <p className="text-sm font-medium text-white/80">Bannière actuelle</p>
+              <p className="text-sm font-medium text-white/80">{tPersonas("currentBanner")}</p>
             </div>
           </div>,
           document.body,
@@ -859,6 +862,7 @@ export function PersonaEditSheet({
   restrictSkills,
   faceclaimsEnabled,
 }: PersonaEditSheetProps) {
+  const tPersonas = useTranslations("personas");
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -868,7 +872,7 @@ export function PersonaEditSheet({
     setDeleting(true);
     const result = await deletePersona(personaId);
     if (!result.ok) {
-      toast.error("Erreur lors de la suppression", { description: result.error });
+      toast.error(tPersonas("deleteFailed"), { description: result.error });
       setDeleting(false);
       return;
     }
