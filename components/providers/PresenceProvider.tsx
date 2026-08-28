@@ -20,6 +20,7 @@ import {
     setPresenceStatuses,
     type GlobalPresenceMeta,
 } from "@/lib/presenceStore";
+import { openRealtimeChannel } from "@/lib/realtimeChannel";
 
 export type PresenceStatus = "online" | "offline" | "invisible";
 
@@ -157,6 +158,7 @@ export default function PresenceProvider({ children }: { children: React.ReactNo
         if (!userId) return;
 
         let mounted = true;
+        let fermerCanal: (() => void) | null = null;
         let lastTrack = 0;
 
         const track = async (force = false) => {
@@ -197,9 +199,15 @@ export default function PresenceProvider({ children }: { children: React.ReactNo
             setAppearOfflineState(appearOfflineRef.current);
             setStatusState(appearOfflineRef.current ? "offline" : "online");
 
-            const ch = supabase.channel(channel.appPresence(), {
-                config: { presence: { key: userId } },
-            });
+            // Nom stable : c'est le rendez-vous commun à tous les navigateurs
+            // de l'application. Le rendre unique isolerait chacun dans son
+            // propre canal et la présence ne montrerait plus personne. Seul
+            // l'enchaînement ouverture/fermeture est sérialisé, pour ne pas
+            // rouvrir sur un canal encore joint. Cf. lib/realtimeChannel.
+            fermerCanal = openRealtimeChannel(
+                supabase,
+                channel.appPresence(),
+                (ch) => {
             channelRef.current = ch;
 
             ch.on("presence", { event: "sync" }, () => {
@@ -236,6 +244,12 @@ export default function PresenceProvider({ children }: { children: React.ReactNo
                 if (status !== "SUBSCRIBED") return;
                 await track(true);
             });
+            return ch;
+                },
+                { config: { presence: { key: userId } } },
+            );
+            // L'effet a pu être nettoyé pendant l'attente ci-dessus.
+            if (!mounted) { fermerCanal(); fermerCanal = null; }
         })();
 
         // Toute interaction rafraîchit last_active_at (throttlé par HEARTBEAT_MS)
@@ -269,11 +283,12 @@ export default function PresenceProvider({ children }: { children: React.ReactNo
             events.forEach((e) => window.removeEventListener(e, onActivity));
             document.removeEventListener("visibilitychange", onVis);
             window.clearInterval(interval);
-            if (channelRef.current) {
-                channelRef.current.untrack();
-                supabase.removeChannel(channelRef.current);
-                channelRef.current = null;
-            }
+            // `untrack()` retire notre présence avant la fermeture ; sans lui,
+            // les autres nous verraient encore jusqu'au prochain sync.
+            channelRef.current?.untrack();
+            channelRef.current = null;
+            fermerCanal?.();
+            fermerCanal = null;
             rawRef.current = {};
             lingeringRef.current = {};
             setOnlineUsers({});

@@ -2,6 +2,7 @@
 
 import { useEffect, useSyncExternalStore } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { openRealtimeChannel } from "@/lib/realtimeChannel";
 import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 
 /**
@@ -101,24 +102,14 @@ function majRooms(worldId: string, f: (prev: WorldRoom[]) => WorldRoom[]): void 
   notifier(e);
 }
 
-/**
- * Compteur d'ouvertures, pour donner un nom de canal unique à chaque fois.
- *
- * `removeChannel()` est ASYNCHRONE : le canal reste un instant dans le registre
- * de supabase-js. Un nom stable ferait donc rendre par `channel(topic)` le canal
- * précédent, encore souscrit — et `.on()` lève alors « cannot add
- * postgres_changes callbacks after subscribe() ». Le cas se produit à chaque
- * remontage rapproché, notamment le montage/démontage/remontage que React
- * effectue en mode strict.
- */
-let compteurCanal = 0;
-
 /** Ouvre LE canal Realtime du monde — un seul, quel que soit le nombre d'instances. */
 function ouvrirCanal(worldId: string): () => void {
   const supabase = createClient();
-  compteurCanal += 1;
-  const ch = supabase
-    .channel(`sidebar-rooms:${worldId}:${compteurCanal}`)
+  // Nom stable, ouverture sérialisée : c'est le mécanisme commun à tous les
+  // canaux du dépôt. Une réouverture attend la fermeture précédente, sans quoi
+  // `channel()` rendrait le canal encore joint et `.on()` lèverait.
+  return openRealtimeChannel(supabase, `sidebar-rooms:${worldId}`, (ch) =>
+    ch
     .on(
       "postgres_changes",
       { event: "INSERT", schema: "public", table: "chatrooms", filter: `world_id=eq.${worldId}` },
@@ -186,11 +177,8 @@ function ouvrirCanal(worldId: string): () => void {
         });
       },
     )
-    .subscribe();
-
-  return () => {
-    void supabase.removeChannel(ch);
-  };
+      .subscribe(),
+  );
 }
 
 /** Prend une référence sur le monde ; rend la fonction de relâchement. */

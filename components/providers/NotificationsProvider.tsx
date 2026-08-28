@@ -16,6 +16,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import { fetchAppShell } from "@/lib/appShell";
 import { resetUnreadCounts, setUnreadCounts } from "@/lib/unreadStore";
+import { openRealtimeChannel } from "@/lib/realtimeChannel";
 
 // Compteurs par clé — à préférer quand un composant ne suit qu'une salle ou
 // qu'un monde, plutôt que de lire le `Record` complet. Voir lib/unreadStore.ts.
@@ -381,7 +382,15 @@ export default function NotificationsProvider({ children }: { children: React.Re
         if (!userId) return;
 
         let mounted = true;
-        const openChannels: ReturnType<typeof supabase.channel>[] = [];
+        // On collecte des FERMETURES, pas des canaux : l'ouverture peut être
+        // différée quand une fermeture du même nom est encore en vol
+        // (reconnexion réseau). Cf. lib/realtimeChannel.
+        const fermetures: (() => void)[] = [];
+        /** Referme aussitôt si l'effet a déjà été nettoyé pendant l'attente. */
+        const enregistrer = (fermer: () => void) => {
+            if (!mounted) { fermer(); return; }
+            fermetures.push(fermer);
+        };
 
         (async () => {
             // Un seul aller-retour réseau : world_members + notifications +
@@ -406,7 +415,7 @@ export default function NotificationsProvider({ children }: { children: React.Re
             // Realtime : un SEUL canal pour les messages de tous les mondes
             // (un binding filtré par monde), au lieu d'un canal par monde.
             // Les compteurs sont incrémentés localement — aucune RPC ici.
-            const msgCh = supabase.channel(channel.userMessages(userId));
+            const fermerMsg = openRealtimeChannel(supabase, channel.userMessages(userId), (msgCh) => {
             for (const wid of shell.world_ids) {
                 msgCh.on(
                     "postgres_changes",
@@ -429,11 +438,12 @@ export default function NotificationsProvider({ children }: { children: React.Re
                 );
             }
             msgCh.subscribe();
-            openChannels.push(msgCh);
+            return msgCh;
+            });
+            enregistrer(fermerMsg);
 
             // Realtime : nouvelles notifications + mises à jour agrégées (chatroom_reply)
-            const notifCh = supabase
-                .channel(channel.userNotifs(userId))
+            const fermerNotif = openRealtimeChannel(supabase, channel.userNotifs(userId), (notifCh) => notifCh
                 .on(
                     "postgres_changes",
                     {
@@ -486,13 +496,13 @@ export default function NotificationsProvider({ children }: { children: React.Re
                         );
                     },
                 )
-                .subscribe();
-            openChannels.push(notifCh);
+                .subscribe());
+            enregistrer(fermerNotif);
         })();
 
         return () => {
             mounted = false;
-            openChannels.forEach((ch) => supabase.removeChannel(ch));
+            fermetures.forEach((fermer) => fermer());
         };
         // reconnectEpoch : force la recréation des canaux après une coupure
         // réseau (voir useReconnectEpoch).

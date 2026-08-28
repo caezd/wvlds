@@ -18,6 +18,7 @@ import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import type { DmConversation, DmMessage } from "@/types/db";
 import { fetchAppShell } from "@/lib/appShell";
+import { openRealtimeChannel } from "@/lib/realtimeChannel";
 
 // Déduplication défensive : `get_dm_conversations()` trie par date desc, on
 // garde la 1re occurrence par other_user_id.
@@ -394,8 +395,18 @@ export default function DmsProvider({ children }: { children: React.ReactNode })
     if (!activeConvId) return;
     setOtherTyping(false);
 
-    const ch = supabase
-      .channel(channel.dmMessages(activeConvId), { config: { broadcast: { self: false } } })
+    // Nom stable, ouverture sérialisée : une réouverture (reconnexion réseau)
+    // attend la fermeture précédente. Sans cela, `channel()` rendrait le canal
+    // encore souscrit et `.on()` lèverait. Cf. lib/realtimeChannel.
+    const fermerCanal = openRealtimeChannel(
+      supabase,
+      channel.dmMessages(activeConvId),
+      (ch) => {
+        // La ref sert à émettre le « en train d'écrire » : elle doit pointer
+        // sur le canal réellement ouvert, y compris quand l'ouverture a été
+        // différée par une fermeture en cours.
+        msgChannelRef.current = ch;
+        return ch
       .on(
         "postgres_changes",
         {
@@ -448,12 +459,14 @@ export default function DmsProvider({ children }: { children: React.ReactNode })
         if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
         typingTimeoutRef.current = setTimeout(() => setOtherTyping(false), DELAY.TYPING_TIMEOUT);
       })
-      .subscribe();
-    msgChannelRef.current = ch;
+        .subscribe();
+      },
+      { config: { broadcast: { self: false } } },
+    );
 
     return () => {
-      void supabase.removeChannel(ch);
-      if (msgChannelRef.current === ch) msgChannelRef.current = null;
+      fermerCanal();
+      msgChannelRef.current = null;
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       setOtherTyping(false);
     };
@@ -569,8 +582,10 @@ export default function DmsProvider({ children }: { children: React.ReactNode })
     })();
     void loadBlockedUsers();
 
-    const convCh = supabase
-      .channel(channel.dmConversations(userId))
+    const fermerConvCanal = openRealtimeChannel(
+      supabase,
+      channel.dmConversations(userId),
+      (convCh) => convCh
       .on("postgres_changes", { event: "INSERT", schema: "public", table: TABLE.DM_MESSAGES }, (payload: { new: Record<string, unknown> }) => {
         const msg = payload.new as DmMessage;
 
@@ -606,11 +621,12 @@ export default function DmsProvider({ children }: { children: React.ReactNode })
       .on("postgres_changes", { event: "DELETE", schema: "public", table: TABLE.DM_MESSAGES }, () => {
         void loadConversations();
       })
-      .subscribe();
+        .subscribe(),
+    );
 
     return () => {
       mounted = false;
-      void supabase.removeChannel(convCh);
+      fermerConvCanal();
     };
     // reconnectEpoch : force la recréation du canal après une coupure réseau
     // (voir useReconnectEpoch). Le canal de la conversation active a son

@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Correctif",
+    text: "Correction importante : l'application cessait de fonctionner correctement après un retour de connexion réseau. Chaque reprise recréait ses connexions temps réel — messages, notifications, messages privés, présence — et l'opération échouait, une erreur pouvant s'afficher à l'écran.\nLe rétablissement des connexions attend désormais que les précédentes soient réellement fermées. Six endroits étaient concernés.",
+  },
+  {
+    date: "2026-08",
     tag: "Performance",
     text: "La liste des salons de la barre latérale n'ouvre plus qu'une seule connexion temps réel. Elle est affichée à deux endroits — la colonne de gauche et le tiroir mobile — et les deux se connectaient séparément lorsque le tiroir était ouvert.\nMénage au passage : une table et une fonction devenues inutilisées depuis le changement de calcul des messages non lus, en juillet, ont été retirées. Les compteurs de non-lus ne s'en servaient plus.",
   },

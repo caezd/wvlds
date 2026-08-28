@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
+import { openRealtimeChannel } from "@/lib/realtimeChannel";
 import { createClient } from "@/lib/supabase/client";
 import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import { TABLE, channel as CH } from "@/lib/constants";
@@ -82,7 +83,9 @@ export function useRealtimeChatSync({
     // a channel lingering after removeChannel() ignores any late-arriving events.
     let isMounted = true;
 
-    const ch = supabase.channel(CH.chatMessages(chatId));
+    // Nom de canal stable, ouverture sérialisée : une réouverture attend la
+    // fermeture précédente. Cf. lib/realtimeChannel.
+    const fermerCanal = openRealtimeChannel(supabase, CH.chatMessages(chatId), (ch) => {
 
     // INSERT — re-fetch avec join persona pour garder la structure uniforme
     ch.on(
@@ -239,10 +242,12 @@ export function useRealtimeChatSync({
     }
 
 ch.subscribe();
+return ch;
+    });
 
     return () => {
       isMounted = false;
-      void supabase.removeChannel(ch);
+      fermerCanal();
     };
     // onVoteChange/onPersonaUpdated délibérément absents des deps : seule leur
     // présence (fournis ou non par l'appelant) compte pour construire les

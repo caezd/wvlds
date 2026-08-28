@@ -151,12 +151,16 @@ describe("useRealtimeChatSync — cleanup et reconnexion", () => {
     expect(mock.removeChannel).toHaveBeenCalledTimes(1);
   });
 
-  it("recrée le canal après un retour de connexion réseau (reconnectEpoch)", () => {
+  it("recrée le canal après un retour de connexion réseau (reconnectEpoch)", async () => {
     const { mock } = setup();
     const before = mock.channels[0];
     expect(mock.channels).toHaveLength(1);
 
-    act(() => {
+    // `await` indispensable : la réouverture ATTEND la fermeture précédente.
+    // `removeChannel` est asynchrone dans supabase-js — le canal ne quitte le
+    // registre qu'après `unsubscribe()`. Rouvrir sans attendre récupérerait le
+    // canal encore souscrit, et `.on()` lèverait. Cf. lib/realtimeChannel.
+    await act(async () => {
       window.dispatchEvent(new Event("online"));
     });
 

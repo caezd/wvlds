@@ -62,8 +62,15 @@ function makeChannel(topic: string) {
 vi.mock("@/lib/supabase/client", () => ({
   createClient: () => ({
     channel: (topic: string) => makeChannel(topic),
-    removeChannel: () => {
+    removeChannel: (ch?: { topic: string }) => {
       retires += 1;
+      // Asynchrone comme le vrai client : le canal ne quitte le registre
+      // qu'après `unsubscribe()`. Une réouverture qui attend obtient donc un
+      // canal neuf ; une réouverture synchrone retomberait sur l'ancien.
+      return Promise.resolve().then(() => {
+        if (ch && registre.get(ch.topic)) registre.delete(ch.topic);
+        return "ok";
+      });
     },
   }),
 }));
@@ -197,15 +204,14 @@ describe("useWorldRooms", () => {
     const vue = renderHook(({ w }: { w: string }) => useWorldRooms(w, [A]), {
       initialProps: { w: "w1" },
     });
-    // Le nom porte un suffixe d'ouverture (cf. `compteurCanal`) : on vérifie le
-    // monde, pas le nom exact.
+    // Le nom reste stable — c'est l'enchaînement qui est sérialisé.
     expect(canaux).toHaveLength(1);
-    expect(canaux[0].topic).toMatch(/^sidebar-rooms:w1:/);
+    expect(canaux[0].topic).toBe("sidebar-rooms:w1");
 
     act(() => { vue.rerender({ w: "w2" }); });
 
     expect(canaux).toHaveLength(2);
-    expect(canaux[1].topic).toMatch(/^sidebar-rooms:w2:/);
+    expect(canaux[1].topic).toBe("sidebar-rooms:w2");
     expect(retires).toBe(1);
     expect(__openChannelCount()).toBe(1);
   });
@@ -223,13 +229,21 @@ describe("useWorldRooms", () => {
     expect(__openChannelCount()).toBe(1);
   });
 
-  it("ne réutilise jamais un canal déjà souscrit", () => {
+  it("ne réutilise jamais un canal déjà souscrit", async () => {
     const un = renderHook(() => useWorldRooms("w1", [A]));
+    const premier = canaux[0];
     un.unmount();
+
     // Remontage immédiat, alors que le retrait précédent n'est pas encore
-    // propagé côté supabase-js.
-    expect(() => renderHook(() => useWorldRooms("w1", [A]))).not.toThrow();
-    expect(canaux.map((c) => c.topic)).toHaveLength(2);
-    expect(new Set(canaux.map((c) => c.topic)).size).toBe(2);
+    // propagé côté supabase-js. L'ouverture attend cette fermeture.
+    await act(async () => {
+      renderHook(() => useWorldRooms("w1", [A]));
+    });
+
+    // Même nom — c'est le point de repère du canal — mais une instance neuve,
+    // jamais celle qui était encore souscrite.
+    expect(canaux).toHaveLength(2);
+    expect(canaux[1].topic).toBe(premier.topic);
+    expect(canaux[1]).not.toBe(premier);
   });
 });
