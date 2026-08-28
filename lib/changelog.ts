@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Technique",
+    text: "Ménage en base : la colonne `profiles.last_world_id` est supprimée. Le « dernier monde visité » ne passe que par un cookie depuis longtemps ; la colonne n'était plus ni lue ni écrite, et était vide pour tous les comptes.",
+  },
+  {
+    date: "2026-08",
     tag: "Correctif",
     text: "Des enregistrements qui échouaient sans le dire. L'interface se met à jour avant la réponse du serveur : quand l'écriture était refusée, le changement restait affiché et disparaissait au rechargement suivant, sans le moindre message. Corrigé pour :\n- Le **réordonnancement du catalogue** (objets, compétences et catégories)\n- Le **réordonnancement des pages du wiki**, qui rétablit désormais l'ordre précédent en cas d'échec\n- L'**assignation d'un groupe** dans la vue des relations\n- L'**étoile « salon suivi »**, qui revient à son état réel si le suivi n'a pas pu être enregistré",
   },
