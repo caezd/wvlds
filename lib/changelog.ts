@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Correctif",
+    text: "Faille fermée côté base de données. Certaines opérations privilégiées — vérifier qu'un compte vous a bloqué, compter vos récompenses, lister vos conversations — consultaient des tables sans préciser où les chercher. Un compte connecté pouvait glisser au bon endroit une table portant le même nom : l'opération lisait alors la sienne au lieu de la vraie.\nLe cas le plus concret : le contrôle qui refuse d'ouvrir une conversation privée avec quelqu'un qui vous a bloqué pouvait être neutralisé de cette façon.\n54 opérations sur 67 étaient concernées. Toutes désignent désormais explicitement les vraies tables, et un contrôle automatique refuse toute nouvelle opération qui l'oublierait.",
+  },
+  {
+    date: "2026-08",
     tag: "Technique",
     text: "Les quatre plus gros fichiers du projet ont été démêlés : le composeur de messages, l'éditeur de champs de fiche, l'écran de réglages d'un monde et le canevas de relations, chacun autour de 1 500 lignes. Rien ne change à l'écran — les morceaux ont été déplacés, pas réécrits, et les blocs extraits ont été comparés caractère par caractère à l'original.\nIls n'avaient presque aucun test ; ils en ont maintenant une soixantaine, dont ceux qui vérifient que le zoom du canevas garde bien immobile le point sous le curseur, et que les cartes ne se chevauchent jamais.\nLes tests de pages ont aussi gagné en sérieux : ils concluaient trop vite, avant que les parties lourdes de l'écran ne soient affichées. En cassant volontairement le canevas, la page passait au vert. Plus maintenant — et les huit vues d'un monde sont désormais toutes chargées à chaque exécution.",
   },

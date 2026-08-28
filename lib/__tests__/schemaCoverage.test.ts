@@ -262,7 +262,15 @@ describe("le dépôt déclare le schéma qu'il utilise", () => {
     // Un préfixe qui ne trie pas en tête casserait la reconstruction.
     const fichiers = readdirSync(MIGRATIONS).filter((f) => f.endsWith(".sql")).sort();
     expect(fichiers[0]).toBe("000_baseline_missing_tables.sql");
-    // Et le complément de fonctions ferme la séquence, pour la raison inverse.
-    expect(fichiers[fichiers.length - 1]).toBe("130_baseline_missing_functions.sql");
+
+    // Le complément de fonctions, lui, passe APRÈS. La contrainte n'est pas
+    // qu'il ferme la séquence — ce que ce contrôle exigeait d'abord, et qui l'a
+    // fait échouer dès l'ajout de la 131 — mais qu'il suive la migration qui
+    // ajoute `chatrooms.category_id` : PostgreSQL valide le corps d'une fonction
+    // `LANGUAGE sql` dès sa création, et `list_chatrooms_nav` lit cette colonne.
+    const rang = (nom: string) => fichiers.findIndex((f) => f === nom);
+    expect(rang("130_baseline_missing_functions.sql")).toBeGreaterThan(
+      rang("070_chatroom_categories_baseline.sql"),
+    );
   });
 });
