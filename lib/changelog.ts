@@ -9,7 +9,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Technique",
-    text: "Toutes les pages de l'espace connecté sont désormais chargées pour de vrai par les tests, et doivent s'afficher sans erreur. Deux d'entre elles seulement l'étaient jusqu'ici : une modification touchant les fondations pouvait mettre l'application entière à terre sans qu'aucun test ne s'en aperçoive — c'est arrivé cette semaine.\nAu passage, la suite de tests a cessé d'échouer au hasard : elle malmenait le serveur de développement en ouvrant plusieurs pages à la fois. Lancée contre une version compilée, elle passe de 1 min 30 à 21 secondes.",
+    text: "Toutes les pages de l'espace connecté sont désormais chargées pour de vrai par les tests, et doivent s'afficher sans erreur. Deux d'entre elles seulement l'étaient jusqu'ici : une modification touchant les fondations pouvait mettre l'application entière à terre sans qu'aucun test ne s'en aperçoive — c'est arrivé cette semaine.\nAu passage, la suite de tests a cessé d'échouer au hasard : elle malmenait le serveur de développement en ouvrant plusieurs pages à la fois. Lancée contre une version compilée, elle passe de 1 min 30 à 21 secondes.\nEt ces vérifications s'exécutent maintenant toutes seules à chaque modification envoyée, au lieu de dépendre de la mémoire de qui la propose.",
   },
   {
     date: "2026-08",
