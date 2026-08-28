@@ -9,7 +9,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Technique",
-    text: "Deux des plus gros fichiers du projet ont été démêlés : l'éditeur de champs de fiche et le canevas de relations, chacun autour de 1 500 lignes. Rien ne change à l'écran — les morceaux ont été déplacés, pas réécrits, et chaque bloc extrait a été comparé caractère par caractère à l'original.\nL'un et l'autre n'avaient presque aucun test ; ils en ont maintenant cinquante, dont ceux qui vérifient que le zoom du canevas garde bien immobile le point sous le curseur, et que les cartes ne se chevauchent jamais.\nLes tests de pages ont aussi gagné en sérieux : ils concluaient trop vite, avant que les parties lourdes de l'écran ne soient affichées. En cassant volontairement le canevas, la page passait au vert. Plus maintenant.",
+    text: "Les plus gros fichiers du projet ont été démêlés : l'éditeur de champs de fiche, le canevas de relations et l'écran de réglages d'un monde, chacun autour de 1 500 lignes. Rien ne change à l'écran — les morceaux ont été déplacés, pas réécrits, et les blocs extraits ont été comparés caractère par caractère à l'original.\nIls n'avaient presque aucun test ; ils en ont maintenant une soixantaine, dont ceux qui vérifient que le zoom du canevas garde bien immobile le point sous le curseur, et que les cartes ne se chevauchent jamais.\nLes tests de pages ont aussi gagné en sérieux : ils concluaient trop vite, avant que les parties lourdes de l'écran ne soient affichées. En cassant volontairement le canevas, la page passait au vert. Plus maintenant — et les huit vues d'un monde sont désormais toutes chargées à chaque exécution.",
   },
   {
     date: "2026-08",

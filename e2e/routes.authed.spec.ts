@@ -165,7 +165,9 @@ test.describe("Toutes les routes connectées rendent", () => {
   // Chaque route est un chargement de page complet ; le parallélisme total
   // ouvrirait autant de sessions Realtime sur le serveur de développement.
   test.describe.configure({ mode: "default" });
-  test.setTimeout(60_000);
+  // Le balayage des vues d'un monde enchaîne neuf chargements, chacun suivi de
+  // son délai de montage : c'est lui qui fixe la limite, pas les autres tests.
+  test.setTimeout(120_000);
 
   for (const chemin of ROUTES) {
     test(`${chemin}`, async ({ page }) => {
@@ -177,7 +179,7 @@ test.describe("Toutes les routes connectées rendent", () => {
   // montent pourtant les composants les plus lourds de l'application — le
   // canevas de relations, la carte, le wiki, le catalogue. Sans ce balayage,
   // une seule d'entre elles était chargée par les tests : la vue par défaut.
-  const VUES = ["canvas", "catalogue", "wiki", "map", "timeline", "members", "personas"];
+  const VUES = ["canvas", "catalogue", "wiki", "map", "timeline", "members", "personas", "settings"];
 
   test("/w/[id] — la page d'un monde et toutes ses vues", async ({ page }) => {
     const base = await trouverUnMonde(page);
