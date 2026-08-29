@@ -9,7 +9,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Technique",
-    text: "Dernier volet du rattrapage de la base : deux automatismes existaient bien en production, mais n'étaient décrits nulle part dans le projet. Le plus important déclenche l'effacement du contenu quand quelqu'un ferme son compte — sans lui, une base restaurée aurait laissé les personnages et les mondes de cette personne en ligne, sans propriétaire, au lieu de les retirer.\nAucun changement pour vous : la production les avait déjà. Un contrôle automatique refuse désormais qu'un automatisme soit décrit sans être branché.",
+    text: "Dernier volet du rattrapage de la base : deux automatismes existaient bien en production, mais n'étaient décrits nulle part dans le projet. Le plus important déclenche l'effacement du contenu quand quelqu'un ferme son compte — sans lui, une base restaurée aurait laissé les personnages et les mondes de cette personne en ligne, sans propriétaire, au lieu de les retirer. Deux règles d'unicité des défis quotidiens manquaient de la même façon.\nAucun changement pour vous : la production les avait déjà. Un contrôle automatique refuse désormais qu'un automatisme soit décrit sans être branché.",
   },
   {
     date: "2026-08",
