@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Technique",
+    text: "Dernier volet du rattrapage de la base : deux automatismes existaient bien en production, mais n'étaient décrits nulle part dans le projet. Le plus important déclenche l'effacement du contenu quand quelqu'un ferme son compte — sans lui, une base restaurée aurait laissé les personnages et les mondes de cette personne en ligne, sans propriétaire, au lieu de les retirer.\nAucun changement pour vous : la production les avait déjà. Un contrôle automatique refuse désormais qu'un automatisme soit décrit sans être branché.",
+  },
+  {
+    date: "2026-08",
     tag: "Correctif",
     text: "Les votes des blocs « choix » ne s'échappent plus d'un monde. Déposer un vote exigeait bien d'être membre du monde concerné, mais les lire n'exigeait rien : n'importe quel compte connecté pouvait consulter qui avait voté quoi, dans tous les mondes, y compris ceux qu'il n'a jamais rejoints.\nVérifié avec un compte membre d'aucun monde : il ne voyait aucun salon, aucun message — et la totalité des votes. Il n'en voit plus aucun, tandis que les membres continuent de voir les leurs.\nUn contrôle automatique refuse désormais toute nouvelle règle de lecture ouverte sans justification écrite. C'est lui qui a permis de trouver un second cas, sur les réactions aux messages.",
   },
