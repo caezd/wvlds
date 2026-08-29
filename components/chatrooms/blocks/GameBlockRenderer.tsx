@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { TABLE } from "@/lib/constants";
 import { encryptMessage } from "@/lib/crypto";
 import { toWebP } from "@/lib/imageUtils";
+import { nomDeFichierUnique } from "@/lib/storagePaths";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { applyOwnVote } from "@/lib/choiceVotes";
 import type { ChatBlock } from "@/lib/chat-blocks";
@@ -106,7 +107,7 @@ export function GameBlockRenderer({
   const uploadIconImage = message.chat_id
     ? async (file: File): Promise<string | null> => {
         const converted = await toWebP(file);
-        const path = `${message.chat_id}/${Date.now()}-${Math.random().toString(36).slice(2)}.webp`;
+        const path = `${message.chat_id}/${nomDeFichierUnique("webp")}`;
         const { error } = await supabase.storage
           .from("chat-media")
           .upload(path, converted, { contentType: "image/webp" });

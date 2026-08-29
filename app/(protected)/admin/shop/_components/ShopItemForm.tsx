@@ -18,6 +18,7 @@ import { X, Loader2, ImageIcon } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
+import { nomDeFichierPourType } from "@/lib/storagePaths";
 
 const BUCKET = "cosmetics";
 
@@ -72,9 +73,7 @@ function ImageUploader({
 
     setUploading(true);
     try {
-      // Nom unique basé sur timestamp + nom d'origine
-      const ext = file.name.split(".").pop() ?? "png";
-      const path = `${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+      const path = nomDeFichierPourType(file.type, "png");
 
       const { error: upErr } = await supabase.storage
         .from(BUCKET)

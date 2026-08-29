@@ -19,6 +19,7 @@ import { SendHorizontal, X, Lock, UserPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { toWebP } from "@/lib/imageUtils";
+import { nomDeFichierPourType, nomDeFichierUnique } from "@/lib/storagePaths";
 import { ImagePickerCropField } from "@/components/ui/image-crop-picker";
 import { ParagraphBlockEditor } from "./ParagraphBlockEditor";
 import {
@@ -375,8 +376,7 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
         const settled = await Promise.all(
             files.map(async (rawFile): Promise<{ url: string; name: string } | null> => {
                 const file = await toWebP(rawFile);
-                const ext = file.name.split(".").pop() ?? "webp";
-                const path = `${targetChatId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+                const path = `${targetChatId}/${nomDeFichierPourType(file.type)}`;
                 const { error } = await supabase.storage.from("chat-media").upload(path, file, { contentType: file.type });
                 if (error) { toast.error(tCommon("uploadImageError"), { description: error.message }); return null; }
                 const { data } = supabase.storage.from("chat-media").getPublicUrl(path);
@@ -392,7 +392,7 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
             return null;
         }
         const converted = await toWebP(file);
-        const path = `${chatId}/${Date.now()}-${Math.random().toString(36).slice(2)}.webp`;
+        const path = `${chatId}/${nomDeFichierUnique("webp")}`;
         const { error } = await supabase.storage
             .from("chat-media")
             .upload(path, converted, { contentType: "image/webp" });

@@ -8,6 +8,7 @@ import { Expand, Loader2, Plus, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { supabaseThumb } from "@/lib/storage";
 import { toWebP } from "@/lib/imageUtils";
+import { nomDeFichierPourType } from "@/lib/storagePaths";
 import { ImageLightbox } from "@/components/chatrooms/ImageLightbox";
 import type { PersonaGridImage } from "@/types/personas";
 
@@ -58,7 +59,7 @@ export function ImageGridField({
     const settled = await Promise.all(
       Array.from(files).map(async (rawFile): Promise<PersonaGridImage | null> => {
         const file = await toWebP(rawFile);
-        const path = `user-${userId}/section-images/${personaId}/${fieldId}/${Date.now()}-${Math.random().toString(36).slice(2)}-${file.name}`;
+        const path = `user-${userId}/section-images/${personaId}/${fieldId}/${nomDeFichierPourType(file.type)}`;
         const { error } = await supabase.storage.from("personas").upload(path, file, { upsert: false, contentType: file.type });
         if (error) return null;
         const { data } = supabase.storage.from("personas").getPublicUrl(path);

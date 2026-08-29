@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { setWorldHomeGrid } from "@/app/actions/worldCatalog";
 import { createClient } from "@/lib/supabase/client";
 import { toWebP } from "@/lib/imageUtils";
+import { nomDeFichierUnique } from "@/lib/storagePaths";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import {
   DropdownMenu,
@@ -259,7 +260,7 @@ export function WorldHomeGridEditor({
         return null;
       }
       const converted = await toWebP(file);
-      const path = `user-${user.id}/world-${worldId}/home-banner-${Date.now()}-${Math.random().toString(36).slice(2)}.webp`;
+      const path = `user-${user.id}/world-${worldId}/home-banner-${nomDeFichierUnique("webp")}`;
       const { error } = await supabase.storage
         .from("worlds")
         .upload(path, converted, { contentType: "image/webp" });

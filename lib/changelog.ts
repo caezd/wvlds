@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Correctif",
+    text: "Les images que vous envoyez portent maintenant un nom réellement imprévisible. Les fichiers sont servis par adresse directe, sans mot de passe : leur nom est donc ce qui les protège. Six des sept chemins d'envoi le tiraient d'un générateur aléatoire non prévu pour cet usage, et de longueur variable — un fichier déjà en ligne portait un nom plus court que les autres.\nAu passage, le nom d'origine de votre fichier ne se retrouve plus dans l'adresse publique : envoyer « photo-de-mariage-julie.jpg » n'en laissait rien deviner à personne, sauf à qui recevait le lien.",
+  },
+  {
+    date: "2026-08",
     tag: "Technique",
     text: "Dernier volet du rattrapage de la base : deux automatismes existaient bien en production, mais n'étaient décrits nulle part dans le projet. Le plus important déclenche l'effacement du contenu quand quelqu'un ferme son compte — sans lui, une base restaurée aurait laissé les personnages et les mondes de cette personne en ligne, sans propriétaire, au lieu de les retirer. Deux règles d'unicité des défis quotidiens manquaient de la même façon.\nAucun changement pour vous : la production les avait déjà. Un contrôle automatique refuse désormais qu'un automatisme soit décrit sans être branché.",
   },
