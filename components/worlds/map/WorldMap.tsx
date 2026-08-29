@@ -324,6 +324,18 @@ function PinVisualDialog({
     }
   }
 
+  // Échap ferme le panneau. Il est construit à la main plutôt qu'avec `Dialog`,
+  // qui s'en chargerait : sans cela, le fond semi-transparent était la SEULE
+  // sortie, donc aucune au clavier.
+  React.useEffect(() => {
+    if (!open) return;
+    function surTouche(e: KeyboardEvent) {
+      if (e.key === "Escape") onOpenChange(false);
+    }
+    window.addEventListener("keydown", surTouche);
+    return () => window.removeEventListener("keydown", surTouche);
+  }, [open, onOpenChange]);
+
   const effectiveBg = noBg ? "transparent" : bgColor;
   const previewBorder = hasBorder ? `2px ${borderStyle} ${borderColor}` : "none";
   const previewEmpty = noBg && !hasBorder && !iconName;

@@ -137,7 +137,51 @@ describe("WorldWiki — recherche et fil d'Ariane", () => {
     await user.click(screen.getByText("Lieux")); // déplie le dossier
     await user.click(await screen.findByText("La Forêt Noire"));
 
-    expect(screen.getByRole("button", { name: "Lieux" })).toBeInTheDocument();
+    // Deux boutons portent ce nom : l'entrée de l'arbre et le fil d'Ariane.
+    // C'est voulu — le titre d'une page de l'arbre est devenu un vrai bouton,
+    // pour être atteignable au clavier. On vise donc explicitement celui du
+    // fil d'Ariane, seul objet de ce test : il n'annonce pas d'état déplié.
+    const boutons = screen.getAllByRole("button", { name: "Lieux" });
+    const filDAriane = boutons.filter((b) => !b.hasAttribute("aria-expanded"));
+    expect(filDAriane).toHaveLength(1);
+    expect(filDAriane[0]).toBeInTheDocument();
+  });
+
+  it("le titre d'une page est atteignable au clavier", async () => {
+    // L'arbre du wiki était une pile de `<div onClick>` : naviguer dans le wiki
+    // au clavier était impossible. Le titre porte désormais l'action, la ligne
+    // restant cliquable à la souris — elle ne peut pas devenir un bouton, elle
+    // contient déjà une poignée de déplacement et un menu.
+    setupWithFolder();
+    const user = userEvent.setup();
+    render(<WorldWiki worldId="w1" canEdit={false} />);
+
+    await screen.findByText("Accueil");
+    const dossier = screen.getByRole("button", { name: "Lieux" });
+
+    dossier.focus();
+    expect(dossier).toHaveFocus();
+    expect(dossier).toHaveAttribute("aria-expanded", "false");
+
+    await user.keyboard("{Enter}");
+    // Le dossier s'ouvre : son contenu apparaît, et l'état est annoncé.
+    expect(await screen.findByText("La Forêt Noire")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Lieux" })).toHaveAttribute("aria-expanded", "true");
+  });
+
+  it("cliquer le titre d'un dossier ne le replie pas aussitôt", async () => {
+    // Le titre est un bouton DANS une ligne elle-même cliquable. Sans
+    // `stopPropagation`, le clic remonterait et `onToggleFolder` s'exécuterait
+    // deux fois — le dossier s'ouvrirait puis se refermerait, sans que rien ne
+    // bouge à l'écran.
+    setupWithFolder();
+    const user = userEvent.setup();
+    render(<WorldWiki worldId="w1" canEdit={false} />);
+
+    await screen.findByText("Accueil");
+    await user.click(screen.getByRole("button", { name: "Lieux" }));
+
+    expect(await screen.findByText("La Forêt Noire")).toBeInTheDocument();
   });
 });
 

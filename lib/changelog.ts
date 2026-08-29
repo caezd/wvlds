@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Interface",
+    text: "Trois endroits ne répondaient qu'à la souris. L'arbre du wiki en faisait partie : ouvrir un dossier ou choisir une page était impossible au clavier, alors que c'est la navigation principale de cette page. Le titre de chaque entrée est désormais un vrai bouton, la ligne entière restant cliquable comme avant.\nDe même pour la description d'une relation entre personnages, qu'on ne pouvait pas commencer à écrire sans souris, et pour le panneau d'apparence d'un point de carte, que la touche Échap ferme enfin.\nSur les dix-huit endroits examinés, les autres n'avaient pas lieu d'être modifiés : fonds de fenêtre, poignées de déplacement et zones de dessin ne sont pas des commandes, et trois cas signalés étaient déjà accessibles.",
+  },
+  {
+    date: "2026-08",
     tag: "Correctif",
     text: "Les images que vous envoyez portent maintenant un nom réellement imprévisible. Les fichiers sont servis par adresse directe, sans mot de passe : leur nom est donc ce qui les protège. Six des sept chemins d'envoi le tiraient d'un générateur aléatoire non prévu pour cet usage, et de longueur variable — un fichier déjà en ligne portait un nom plus court que les autres.\nAu passage, le nom d'origine de votre fichier ne se retrouve plus dans l'adresse publique : envoyer « photo-de-mariage-julie.jpg » n'en laissait rien deviner à personne, sauf à qui recevait le lien.",
   },

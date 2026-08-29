@@ -61,16 +61,34 @@ export function RelationRow({
           rows={3}
         />
       ) : (
-        <div
-          onClick={() => canEdit && setEditing(true)}
-          className={cn(
-            "text-[11px] text-muted-foreground whitespace-pre-wrap leading-relaxed min-h-[20px]",
-            canEdit && "cursor-text hover:text-foreground transition-colors",
-            !rel.description && "italic opacity-50",
-          )}
-        >
-          {rel.description || (canEdit ? t("addDescription") : "")}
-        </div>
+        // Quand la description est modifiable, c'est une commande : elle ouvre
+        // un champ de saisie. Un `<div onClick>` la rendait inatteignable au
+        // clavier — impossible de renseigner une relation sans souris. Hors
+        // droit d'édition, ce n'est que du texte, et un bouton mentirait sur
+        // ce qu'on peut en faire.
+        canEdit ? (
+          <button
+            type="button"
+            onClick={() => setEditing(true)}
+            className={cn(
+              "w-full text-left text-[11px] text-muted-foreground whitespace-pre-wrap leading-relaxed min-h-[20px]",
+              "cursor-text hover:text-foreground transition-colors",
+              "rounded-sm outline-none focus-visible:ring-1 focus-visible:ring-ring",
+              !rel.description && "italic opacity-50",
+            )}
+          >
+            {rel.description || t("addDescription")}
+          </button>
+        ) : (
+          <div
+            className={cn(
+              "text-[11px] text-muted-foreground whitespace-pre-wrap leading-relaxed min-h-[20px]",
+              !rel.description && "italic opacity-50",
+            )}
+          >
+            {rel.description}
+          </div>
+        )
       )}
     </div>
   );

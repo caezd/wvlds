@@ -208,9 +208,32 @@ function SortableTreeNode({
             </button>
           </>
         ) : (
-          <span className={cn("flex-1 truncate", page.is_folder && "font-medium text-foreground/80")}>
+          // Le titre porte l'action, pas la ligne. La ligne reste cliquable —
+          // c'est une cible large, agréable à la souris — mais elle ne peut pas
+          // devenir un `<button>` : elle contient déjà une poignée de
+          // déplacement, un sélecteur d'icône et un menu, et imbriquer des
+          // commandes dans un bouton produit un balisage invalide qu'un lecteur
+          // d'écran ne sait pas restituer.
+          //
+          // `stopPropagation` est indispensable : sans lui le clic remonterait
+          // à la ligne et `onToggleFolder` s'exécuterait deux fois, donc
+          // s'annulerait — un dossier refuserait de s'ouvrir.
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (page.is_folder) onToggleFolder();
+              else onSelect();
+            }}
+            aria-expanded={page.is_folder ? isExpanded : undefined}
+            aria-current={isSelected && !page.is_folder ? "page" : undefined}
+            className={cn(
+              "flex-1 truncate text-left outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-sm",
+              page.is_folder && "font-medium text-foreground/80",
+            )}
+          >
             {page.title}
-          </span>
+          </button>
         )}
 
         {!isRenaming && page.is_restricted && (
