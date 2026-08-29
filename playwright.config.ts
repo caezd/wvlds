@@ -40,6 +40,13 @@ export default defineConfig({
   // cible est un serveur bâti (`E2E_BASE_URL`), où il est à la fois sûr et
   // quatre fois plus rapide.
   workers: serveurDeDeveloppement ? 1 : undefined,
+  // Même raison, autre symptôme : `next dev` compile chaque route au premier
+  // accès, et la limite de 30 s par défaut suffit largement à un spec lancé
+  // seul mais pas au sein de la suite complète, où le serveur compile déjà
+  // autre chose. Un `page.goto` sur « / » a ainsi dépassé les 30 s, puis passé
+  // en 8 s isolément. Contre un serveur bâti, rien à compiler : on garde le
+  // défaut, qui reste un vrai garde-fou contre un blocage.
+  timeout: serveurDeDeveloppement ? 90_000 : 30_000,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI ? "github" : "list",

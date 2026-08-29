@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Correctif",
+    text: "Les votes des blocs « choix » ne s'échappent plus d'un monde. Déposer un vote exigeait bien d'être membre du monde concerné, mais les lire n'exigeait rien : n'importe quel compte connecté pouvait consulter qui avait voté quoi, dans tous les mondes, y compris ceux qu'il n'a jamais rejoints.\nVérifié avec un compte membre d'aucun monde : il ne voyait aucun salon, aucun message — et la totalité des votes. Il n'en voit plus aucun, tandis que les membres continuent de voir les leurs.\nUn contrôle automatique refuse désormais toute nouvelle règle de lecture ouverte sans justification écrite. C'est lui qui a permis de trouver un second cas, sur les réactions aux messages.",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
     text: "Faille fermée côté base de données. Certaines opérations privilégiées — vérifier qu'un compte vous a bloqué, compter vos récompenses, lister vos conversations — consultaient des tables sans préciser où les chercher. Un compte connecté pouvait glisser au bon endroit une table portant le même nom : l'opération lisait alors la sienne au lieu de la vraie.\nLe cas le plus concret : le contrôle qui refuse d'ouvrir une conversation privée avec quelqu'un qui vous a bloqué pouvait être neutralisé de cette façon.\n54 opérations sur 67 étaient concernées. Toutes désignent désormais explicitement les vraies tables, et un contrôle automatique refuse toute nouvelle opération qui l'oublierait.",
   },
   {
