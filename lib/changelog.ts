@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Correctif",
+    text: "Sur téléphone, la fiche d'un lieu de la carte s'ouvrait à moitié hors de l'écran — parfois presque entièrement, ne laissant qu'une vingtaine de pixels visibles sur trois cent quarante, bouton de fermeture compris. Elle se replace maintenant dans l'écran quelle que soit la largeur.\nLe défaut existait depuis le début : le calcul ramenait bien la fiche entre le haut et le bas de l'écran, mais avait été oublié pour la gauche et la droite.",
+  },
+  {
+    date: "2026-08",
     tag: "Interface",
     text: "Trois endroits ne répondaient qu'à la souris. L'arbre du wiki en faisait partie : ouvrir un dossier ou choisir une page était impossible au clavier, alors que c'est la navigation principale de cette page. Le titre de chaque entrée est désormais un vrai bouton, la ligne entière restant cliquable comme avant.\nDe même pour la description d'une relation entre personnages, qu'on ne pouvait pas commencer à écrire sans souris, et pour le panneau d'apparence d'un point de carte, que la touche Échap ferme enfin.\nSur les dix-huit endroits examinés, les autres n'avaient pas lieu d'être modifiés : fonds de fenêtre, poignées de déplacement et zones de dessin ne sont pas des commandes, et trois cas signalés étaient déjà accessibles.",
   },
