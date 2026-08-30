@@ -58,6 +58,6 @@ describe("createItem", () => {
     const mock = createSupabaseMock({ results: [{ error: { message: "doublon" } }] });
     requireAdmin.mockResolvedValue({ supabase: mock.client });
     const res = await createItem(null, fd(validItem));
-    expect(res).toEqual({ ok: false, error: "doublon" });
+    expect(res).toEqual({ ok: false, error: "saveFailed" });
   });
 });

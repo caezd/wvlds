@@ -140,7 +140,9 @@ describe("updateChatroomCategory", () => {
 
     const res = await updateChatroomCategory("c1", { title: "Nouveau" });
 
-    expect(res).toEqual({ ok: false, error: "row-level security" });
+    // Le message brut de la base ne franchit plus la frontière : il reste dans
+    // les journaux serveur, l'action ne renvoie qu'un code.
+    expect(res).toEqual({ ok: false, error: "saveFailed" });
   });
 });
 
@@ -161,7 +163,7 @@ describe("reorderChatroomCategories", () => {
       { id: "c", position: 2 },
     ]);
 
-    expect(res).toEqual({ ok: false, error: "refusé" });
+    expect(res).toEqual({ ok: false, error: "saveFailed" });
   });
 
   it("accepte une liste vide sans rien tenter", async () => {

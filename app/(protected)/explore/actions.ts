@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import { ERR_NON_AUTHENTIFIE } from "@/lib/actionErrors";
+import { ERR_NON_AUTHENTIFIE, echecEnregistrement } from "@/lib/actionErrors";
 
 export async function joinPublicWorld(
   worldId: string,
@@ -16,7 +16,7 @@ export async function joinPublicWorld(
     p_world_id: worldId,
     p_age_confirmed: ageConfirmed,
   });
-  if (error) return { error: error.message };
+  if (error) return { error: echecEnregistrement("joinPublicWorld", error) };
 
   revalidatePath("/explore");
   return {};

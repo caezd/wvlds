@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { QUOTA_ERROR_MESSAGE, translatePersonaError } from "@/lib/personaErrors";
-import { ERR_INTROUVABLE, ERR_NOM_PERSONA, ERR_NON_AUTHENTIFIE } from "@/lib/actionErrors";
+import { ERR_INTROUVABLE, ERR_NOM_PERSONA, ERR_NON_AUTHENTIFIE, echecEnregistrement } from "@/lib/actionErrors";
 
 function extractStoragePath(url: string | null | undefined) {
     if (!url) return null;
@@ -118,7 +118,7 @@ export async function deletePersona(id: string) {
         .select("id")
         .maybeSingle();
 
-    if (error) return { ok: false, error: error.message };
+    if (error) return { ok: false, error: echecEnregistrement("deletePersona", error) };
     if (!data) {
         return {
             ok: false,

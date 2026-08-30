@@ -70,7 +70,7 @@ describe("setWorldFeature", () => {
         use(createSupabaseMock({ results: [{ error: { message: "nope" } }] }));
         expect(await setWorldFeature("w1", "enable_inventory", true)).toEqual({
             ok: false,
-            error: "nope",
+            error: "saveFailed",
         });
     });
 });
@@ -95,7 +95,7 @@ describe("setWorldFaceclaims", () => {
 
     it("remonte l'erreur Supabase", async () => {
         use(createSupabaseMock({ results: [{ error: { message: "nope" } }] }));
-        expect(await setWorldFaceclaims("w1", true)).toEqual({ ok: false, error: "nope" });
+        expect(await setWorldFaceclaims("w1", true)).toEqual({ ok: false, error: "saveFailed" });
     });
 });
 
@@ -119,7 +119,7 @@ describe("setWorldHomeShowStats", () => {
 
     it("remonte l'erreur Supabase", async () => {
         use(createSupabaseMock({ results: [{ error: { message: "nope" } }] }));
-        expect(await setWorldHomeShowStats("w1", true)).toEqual({ ok: false, error: "nope" });
+        expect(await setWorldHomeShowStats("w1", true)).toEqual({ ok: false, error: "saveFailed" });
     });
 });
 
@@ -146,7 +146,7 @@ describe("setWorldHomeGridGap", () => {
 
     it("remonte l'erreur Supabase", async () => {
         use(createSupabaseMock({ results: [{ error: { message: "nope" } }] }));
-        expect(await setWorldHomeGridGap("w1", "compact")).toEqual({ ok: false, error: "nope" });
+        expect(await setWorldHomeGridGap("w1", "compact")).toEqual({ ok: false, error: "saveFailed" });
     });
 });
 
@@ -173,7 +173,7 @@ describe("setWorldAgeRestricted", () => {
 
     it("remonte l'erreur Supabase", async () => {
         use(createSupabaseMock({ results: [{ error: { message: "nope" } }] }));
-        expect(await setWorldAgeRestricted("w1", true)).toEqual({ ok: false, error: "nope" });
+        expect(await setWorldAgeRestricted("w1", true)).toEqual({ ok: false, error: "saveFailed" });
     });
 });
 
@@ -223,7 +223,7 @@ describe("setWorldTimeline", () => {
 
     it("remonte l'erreur Supabase", async () => {
         use(createSupabaseMock({ results: [{ error: { message: "nope" } }] }));
-        expect(await setWorldTimeline("w1", true, CONFIG)).toEqual({ ok: false, error: "nope" });
+        expect(await setWorldTimeline("w1", true, CONFIG)).toEqual({ ok: false, error: "saveFailed" });
     });
 });
 
@@ -376,7 +376,7 @@ describe("CRUD world_inventory_items", () => {
 
     it("addWorldInventoryItem remonte l'erreur Supabase", async () => {
         use(createSupabaseMock({ results: [{ error: { message: "fk" } }] }));
-        expect(await addWorldInventoryItem("w1", { name: "x" })).toEqual({ ok: false, error: "fk" });
+        expect(await addWorldInventoryItem("w1", { name: "x" })).toEqual({ ok: false, error: "saveFailed" });
     });
 
     it("updateWorldInventoryItem — succès", async () => {
@@ -386,7 +386,7 @@ describe("CRUD world_inventory_items", () => {
 
     it("updateWorldInventoryItem — erreur", async () => {
         use(createSupabaseMock({ results: [{ error: { message: "not found" } }] }));
-        expect(await updateWorldInventoryItem("i1", { name: "x" })).toEqual({ ok: false, error: "not found" });
+        expect(await updateWorldInventoryItem("i1", { name: "x" })).toEqual({ ok: false, error: "saveFailed" });
     });
 
     it("deleteWorldInventoryItem — succès", async () => {
@@ -396,7 +396,7 @@ describe("CRUD world_inventory_items", () => {
 
     it("deleteWorldInventoryItem — erreur", async () => {
         use(createSupabaseMock({ results: [{ error: { message: "rls" } }] }));
-        expect(await deleteWorldInventoryItem("i1")).toEqual({ ok: false, error: "rls" });
+        expect(await deleteWorldInventoryItem("i1")).toEqual({ ok: false, error: "saveFailed" });
     });
 });
 
@@ -411,7 +411,7 @@ describe("CRUD world_skills", () => {
 
     it("addWorldSkill remonte l'erreur", async () => {
         use(createSupabaseMock({ results: [{ error: { message: "rls" } }] }));
-        expect(await addWorldSkill("w1", { name: "x" })).toEqual({ ok: false, error: "rls" });
+        expect(await addWorldSkill("w1", { name: "x" })).toEqual({ ok: false, error: "saveFailed" });
     });
 
     it("updateWorldSkill — succès", async () => {
@@ -421,7 +421,7 @@ describe("CRUD world_skills", () => {
 
     it("deleteWorldSkill — erreur Supabase", async () => {
         use(createSupabaseMock({ results: [{ error: { message: "fk" } }] }));
-        expect(await deleteWorldSkill("s1")).toEqual({ ok: false, error: "fk" });
+        expect(await deleteWorldSkill("s1")).toEqual({ ok: false, error: "saveFailed" });
     });
 });
 
@@ -459,7 +459,7 @@ describe("CRUD world_catalog_categories", () => {
 
     it("addWorldCatalogCategory remonte l'erreur", async () => {
         use(createSupabaseMock({ results: [{ error: { message: "dup" } }] }));
-        expect(await addWorldCatalogCategory("w1", "inventory", "x")).toEqual({ ok: false, error: "dup" });
+        expect(await addWorldCatalogCategory("w1", "inventory", "x")).toEqual({ ok: false, error: "saveFailed" });
     });
 
     it("updateWorldCatalogCategory — succès", async () => {
@@ -759,7 +759,7 @@ describe("setWorldHomeGrid", () => {
         const res = await setWorldHomeGrid("w1", [
             { id: "a", type: "widget", x: 0, y: 0, w: 6, widgetId: "chatrooms" },
         ]);
-        expect(res).toEqual({ ok: false, error: "nope" });
+        expect(res).toEqual({ ok: false, error: "saveFailed" });
     });
 
     it("enregistre un bloc bannière valide", async () => {

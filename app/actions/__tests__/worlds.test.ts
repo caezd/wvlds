@@ -45,7 +45,8 @@ describe("leaveWorld", () => {
         use(mock);
         expect(await leaveWorld("w1")).toEqual({
             ok: false,
-            error: "new row violates row-level security policy",
+            // Le message de PostgreSQL citait la règle enfreinte ; il reste côté serveur.
+            error: "saveFailed",
         });
     });
 

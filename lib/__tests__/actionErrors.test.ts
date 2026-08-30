@@ -124,4 +124,27 @@ describe("aucune action serveur ne renvoie de phrase française", () => {
         : "",
     ).toEqual([]);
   });
+
+  it("aucune action ne renvoie le message brut de la base", () => {
+    // `error: error.message` faisait traverser le message de PostgreSQL
+    // jusqu'au navigateur. La couche d'affichage ne le montrait plus, mais la
+    // chaîne partait quand même dans la réponse — lisible par qui inspecte le
+    // réseau, et citant le nom des tables et des règles.
+    //
+    // `echecEnregistrement` la journalise côté serveur et ne renvoie qu'un code.
+    const fautifs: string[] = [];
+    for (const p of actionsServeur()) {
+      const src = readFileSync(p, "utf-8");
+      for (const m of src.matchAll(/error:[ ]*[\w.?]*\.message/g)) {
+        fautifs.push(`  ${p.slice(process.cwd().length + 1)} — ${m[0]}`);
+      }
+    }
+    expect(
+      fautifs,
+      fautifs.length
+        ? "Message brut de la base renvoyé au client. Passez par " +
+          "`echecEnregistrement(nomDeLAction, erreur)` : " + fautifs.join(" | ")
+        : "",
+    ).toEqual([]);
+  });
 });

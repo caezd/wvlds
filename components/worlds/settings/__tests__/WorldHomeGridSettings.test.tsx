@@ -72,7 +72,7 @@ describe("WorldHomeGridSettings — espacement de la grille", () => {
   });
 
   it("annule le changement optimiste et affiche une erreur si la persistance échoue", async () => {
-    setWorldHomeGridGapMock.mockResolvedValue({ ok: false, error: "nope" });
+    setWorldHomeGridGapMock.mockResolvedValue({ ok: false, error: "saveFailed" });
     const user = userEvent.setup();
     render(<WorldHomeGridSettings world={BASE_WORLD} />);
 

@@ -36,7 +36,7 @@ describe("batchUpdateCatalogCategoryOrder", () => {
     use(createSupabaseMock({ results: [ok, boom] }));
     expect(await batchUpdateCatalogCategoryOrder(cats)).toEqual({
       ok: false,
-      error: "refusé par la RLS",
+      error: "saveFailed",
     });
   });
 
@@ -56,7 +56,7 @@ describe("batchUpdateCatalogItemOrder", () => {
     use(createSupabaseMock({ results: [boom, ok] }));
     expect(await batchUpdateCatalogItemOrder(items, "inventory")).toEqual({
       ok: false,
-      error: "refusé par la RLS",
+      error: "saveFailed",
     });
   });
 
@@ -82,7 +82,7 @@ describe("toggleFollowChatroom", () => {
     use(createSupabaseMock({ user: { id: "u1" }, results: [boom] }));
     expect(await toggleFollowChatroom("chat1", true)).toEqual({
       ok: false,
-      error: "refusé par la RLS",
+      error: "saveFailed",
     });
   });
 
@@ -90,7 +90,7 @@ describe("toggleFollowChatroom", () => {
     use(createSupabaseMock({ user: { id: "u1" }, results: [boom] }));
     expect(await toggleFollowChatroom("chat1", false)).toEqual({
       ok: false,
-      error: "refusé par la RLS",
+      error: "saveFailed",
     });
   });
 

@@ -64,6 +64,27 @@ export const ERR_NOM_PERSONA_PRIS = "personaNameTaken";
 export const ERR_NOM_PERSONA = "personaNameLength";
 
 /**
+ * Journalise une erreur de base côté serveur, et rend le code à renvoyer.
+ *
+ * Les actions renvoyaient `error: error.message` — le message brut de
+ * PostgreSQL. La couche d'affichage ne le montre plus, mais la chaîne
+ * traversait encore la frontière serveur/client : elle partait dans la réponse,
+ * lisible par qui inspecte le réseau, et cite le nom des tables et des règles.
+ *
+ * Le détail reste donc là où il sert — les journaux serveur — et seul un code
+ * franchit la frontière.
+ *
+ * @param action nom de l'action, pour retrouver l'origine dans les journaux
+ */
+export function echecEnregistrement(
+  action: string,
+  erreur: { message?: string } | null | undefined,
+): string {
+  if (erreur?.message) console.error(`[action ${action}] ${erreur.message}`);
+  return ERR_ENREGISTREMENT;
+}
+
+/**
  * Message à afficher pour un code d'erreur d'action.
  *
  * @param code ce que l'action a renvoyé — un code, ou n'importe quoi d'autre

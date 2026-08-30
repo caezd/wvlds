@@ -3,7 +3,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { getUserId } from "@/lib/auth";
-import { ERR_ENREGISTREMENT, ERR_NON_AUTHENTIFIE , ERR_NON_AUTORISE } from "@/lib/actionErrors";
+import { ERR_ENREGISTREMENT, ERR_NON_AUTHENTIFIE , ERR_NON_AUTORISE, echecEnregistrement } from "@/lib/actionErrors";
 
 type Role = "admin" | "editor" | "player" | "viewer";
 
@@ -60,7 +60,7 @@ export async function inviteUserToWorld(
   // dashboard. Le middleware renvoie vers /auth/login, qui détecte
   // type=invite dans le fragment et redirige vers /auth/invite.
   const { data, error } = await admin.auth.admin.inviteUserByEmail(email);
-  if (error) return { error: error.message };
+  if (error) return { error: echecEnregistrement("inviteUserToWorld", error) };
 
   // L'API d'administration crée le compte immédiatement (non confirmé) :
   // son identifiant est disponible tout de suite, ce qui permet d'écrire une
@@ -73,7 +73,7 @@ export async function inviteUserToWorld(
   const { error: invErr } = await admin
     .from("world_invitations")
     .insert({ world_id: worldId, invitee_id: inviteeId, inviter_id: userId, role });
-  if (invErr) return { error: invErr.message };
+  if (invErr) return { error: echecEnregistrement("inviteUserToWorld", invErr) };
 
   // Sans notification, l'invité arrive dans l'application sans rien voir :
   // la carte d'invitation du panneau est rendue à partir d'une notification,

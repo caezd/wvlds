@@ -125,7 +125,7 @@ describe("inviteUserToWorld", () => {
     mockCaller("u1", "admin");
     inviteUserByEmail.mockResolvedValue({ data: null, error: { message: "déjà invité" } });
     const res = await inviteUserToWorld("a@b.com", "w1", "player");
-    expect(res.error).toBe("déjà invité");
+    expect(res.error).toBe("saveFailed");
   });
 
   it("n'enregistre rien si le compte invité n'a pas pu être créé", async () => {

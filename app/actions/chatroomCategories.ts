@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import type { ChatroomCategory } from "@/types/worlds";
+import { echecEnregistrement } from "@/lib/actionErrors";
 
 export async function addChatroomCategory(
   worldId: string,
@@ -16,7 +17,7 @@ export async function addChatroomCategory(
     .order("position", { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (maxErr) return { ok: false as const, error: maxErr.message };
+  if (maxErr) return { ok: false as const, error: echecEnregistrement("addChatroomCategory", maxErr) };
 
   const position = (maxRow?.position ?? -1) + 1;
 
@@ -25,7 +26,7 @@ export async function addChatroomCategory(
     .insert({ world_id: worldId, position, ...data })
     .select()
     .single();
-  if (error) return { ok: false as const, error: error.message };
+  if (error) return { ok: false as const, error: echecEnregistrement("addChatroomCategory", error) };
   return { ok: true as const, category: category as ChatroomCategory };
 }
 
@@ -38,7 +39,7 @@ export async function updateChatroomCategory(
     .from("chatroom_categories")
     .update(data)
     .eq("id", id);
-  if (error) return { ok: false as const, error: error.message };
+  if (error) return { ok: false as const, error: echecEnregistrement("updateChatroomCategory", error) };
   return { ok: true as const };
 }
 
@@ -64,7 +65,7 @@ export async function deleteChatroomCategory(
     .from("chatroom_categories")
     .delete()
     .eq("id", id);
-  if (error) return { ok: false as const, error: error.message };
+  if (error) return { ok: false as const, error: echecEnregistrement("deleteChatroomCategory", error) };
 
   const paths = [bannerUrl, iconUrl]
     .filter((url): url is string => !!url)
@@ -98,7 +99,7 @@ export async function reorderChatroomCategories(
   );
 
   const firstError = results.find((r) => r.error)?.error;
-  if (firstError) return { ok: false as const, error: firstError.message };
+  if (firstError) return { ok: false as const, error: echecEnregistrement("reorderChatroomCategories", firstError) };
 
   return { ok: true as const };
 }

@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/admin";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { echecEnregistrement } from "@/lib/actionErrors";
 
 const ItemSchema = z.object({
   key:         z.string().trim().min(1).max(64).regex(/^[a-z0-9_-]+$/, "Clé : minuscules, chiffres, - ou _"),
@@ -24,7 +25,7 @@ export async function createItem(prevState: unknown, formData: FormData) {
   }
 
   const { error } = await supabase.from("cosmetic_items").insert(parsed.data);
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: echecEnregistrement("createItem", error) };
 
   revalidatePath("/admin/shop");
   redirect("/admin/shop");
@@ -43,7 +44,7 @@ export async function updateItem(id: string, prevState: unknown, formData: FormD
     .update({ ...parsed.data, updated_at: new Date().toISOString() })
     .eq("id", id);
 
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: echecEnregistrement("updateItem", error) };
 
   revalidatePath("/admin/shop");
   redirect("/admin/shop");

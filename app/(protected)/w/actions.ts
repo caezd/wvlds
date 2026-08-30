@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { ERR_NON_AUTHENTIFIE } from "@/lib/actionErrors";
+import { ERR_NON_AUTHENTIFIE, echecEnregistrement } from "@/lib/actionErrors";
 
 type WorldPrefsInput = {
   main_expanded?: boolean;
@@ -61,7 +61,7 @@ export async function toggleFollowChatroom(
         .eq("user_id", user.id)
         .eq("chatroom_id", chatroomId);
 
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: echecEnregistrement("toggleFollowChatroom", error) };
   return { ok: true };
 }
 

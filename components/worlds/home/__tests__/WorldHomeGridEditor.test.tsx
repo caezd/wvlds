@@ -651,7 +651,7 @@ describe("WorldHomeGridEditor", () => {
   });
 
   it("annule le changement optimiste et affiche une erreur si la persistance échoue", async () => {
-    setWorldHomeGridMock.mockResolvedValue({ ok: false, error: "nope" });
+    setWorldHomeGridMock.mockResolvedValue({ ok: false, error: "saveFailed" });
     const user = userEvent.setup();
     render(<Harness initial={[CHATROOMS_ITEM]} />);
 
