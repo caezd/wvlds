@@ -20,11 +20,21 @@ export type PublicWorld = {
   is_age_restricted: boolean | null;
 };
 
-// Dimensions fixes de la carte (en px) — servent à calculer la hauteur du
-// hero au survol en fonction du contenu du panneau. h-80=320, p-1=4×2,
-// h-40=160 (hero min), p-3=12×2 (padding panneau), gap-2=8 (desc↔tags).
-const CARD_INNER_H = 320 - 8;
-const HERO_MIN_H = 160;
+// La carte est carrée (aspect-square) : sa hauteur suit la largeur de la
+// colonne au lieu d'être figée. Surtout pas de min-h/max-h dessus — avec un
+// ratio d'aspect, une contrainte de hauteur se *transfère en contrainte de
+// largeur*, et la carte cesse de remplir sa colonne. Les dimensions ci-dessous
+// (en px) servent à calculer la hauteur du hero au survol ; la hauteur de la
+// carte, elle, est mesurée à l'exécution. p-1=4×2, p-3=12×2 (padding
+// panneau), gap-2=8 (desc↔tags).
+const CARD_PADDING = 8;
+// Hauteur du hero au survol : plafonnée à 160 px, mais jamais plus de 55 % de
+// la carte — sur une carte courte, le hero doit garder assez de place pour son
+// en-tête (badges 18+ / type d'avatars) et le nom en pied.
+const HERO_MAX_MIN_H = 160;
+const HERO_MIN_RATIO = 0.55;
+// Hauteur retenue tant que la carte n'a pas pu être mesurée (SSR, jsdom).
+const CARD_FALLBACK_H = 320;
 const PANEL_PADDING = 24;
 const PANEL_GAP = 8;
 // Marge de sécurité : `scrollHeight` est arrondi à l'entier alors que la
@@ -39,29 +49,42 @@ export function ExploreWorldCard({ world, tags }: { world: PublicWorld; tags: st
   const hasAvatarType = world.allows_real_avatars || world.allows_illustrated_avatars;
 
   // Hauteur du hero au survol : le hero rétrécit juste assez pour révéler le
-  // panneau à la taille de sa description (+ tags), avec un plancher à h-40.
-  // Au-delà, la description défile dans sa ScrollArea.
+  // panneau à la taille de sa description (+ tags), avec un plancher qui
+  // s'adapte à la hauteur réelle de la carte. Au-delà, la description défile
+  // dans sa ScrollArea.
+  const cardRef = useRef<HTMLDivElement>(null);
   const descRef = useRef<HTMLDivElement>(null);
   const tagsRef = useRef<HTMLDivElement>(null);
-  const [heroHoverH, setHeroHoverH] = useState(HERO_MIN_H);
+  const [sizes, setSizes] = useState({
+    cardInnerH: CARD_FALLBACK_H - CARD_PADDING,
+    heroHoverH: HERO_MAX_MIN_H,
+  });
 
   useEffect(() => {
+    const card = cardRef.current;
+    if (!card) return;
     const desc = descRef.current;
-    if (!desc) {
-      setHeroHoverH(HERO_MIN_H);
-      return;
-    }
     const measure = () => {
-      const descH = desc.scrollHeight;
+      // `clientHeight` vaut 0 tant que la carte n'est pas mise en page (jsdom,
+      // premier passage) : on garde alors la hauteur de repli.
+      const cardInnerH =
+        card.clientHeight > 0 ? card.clientHeight - CARD_PADDING : CARD_FALLBACK_H - CARD_PADDING;
+      const heroMinH = Math.min(HERO_MAX_MIN_H, Math.round(cardInnerH * HERO_MIN_RATIO));
+      const descH = desc ? desc.scrollHeight : 0;
       const tagsH = tagsRef.current ? tagsRef.current.offsetHeight + PANEL_GAP : 0;
-      const panelNeeded = descH + tagsH + PANEL_PADDING + PANEL_SLACK;
-      const maxPanel = CARD_INNER_H - HERO_MIN_H;
-      const panel = Math.min(panelNeeded, maxPanel);
-      setHeroHoverH(CARD_INNER_H - panel);
+      const panelNeeded = desc ? descH + tagsH + PANEL_PADDING + PANEL_SLACK : 0;
+      const panel = Math.min(panelNeeded, Math.max(0, cardInnerH - heroMinH));
+      const heroHoverH = cardInnerH - panel;
+      setSizes((prev) =>
+        prev.cardInnerH === cardInnerH && prev.heroHoverH === heroHoverH
+          ? prev
+          : { cardInnerH, heroHoverH },
+      );
     };
     measure();
     const ro = new ResizeObserver(measure);
-    ro.observe(desc);
+    ro.observe(card);
+    if (desc) ro.observe(desc);
     if (tagsRef.current) ro.observe(tagsRef.current);
     return () => ro.disconnect();
   }, [world.description, tags]);
@@ -78,20 +101,25 @@ export function ExploreWorldCard({ world, tags }: { world: PublicWorld; tags: st
             setOpen(true);
           }
         }}
-        className="group flex h-80 cursor-pointer flex-col overflow-hidden rounded-2xl border border-border bg-card transition-[shadow,padding] hover:shadow-lg p-1"
-        style={{ ["--hero-hover-h" as string]: `${heroHoverH}px` }}
+        ref={cardRef}
+        className="group flex aspect-square w-full cursor-pointer flex-col overflow-hidden rounded-2xl border border-border bg-card transition-[shadow,padding] hover:shadow-lg p-1"
+        style={{
+          ["--hero-hover-h" as string]: `${sizes.heroHoverH}px`,
+          ["--card-inner-h" as string]: `${sizes.cardInnerH}px`,
+        }}
       >
         <div className="flex flex-col h-full group-hover:h-[var(--hero-hover-h)] transition-[height] duration-300">
           {/* Hero plein cadre par défaut, réduit à une vignette au survol pour
             laisser la place au panneau (carte à hauteur fixe) */}
           <div className="relative flex-1 shrink-0 overflow-hidden transition-[height,opacity,scale] duration-300 rounded-xl group-hover:opacity-75">
             {world.banner_url ? (
-              // Calque image à hauteur FIXE (≈ hauteur max du hero) : l'échelle
-              // `cover` est calculée contre une boîte qui ne change pas de
-              // hauteur, donc aucun rescale/zoom quand le hero rétrécit au
-              // survol — seul le bas est rogné par overflow-hidden.
+              // Calque image à hauteur figée sur la hauteur de la carte (=
+              // hauteur max du hero) : l'échelle `cover` est calculée contre
+              // une boîte qui ne change pas de hauteur, donc aucun
+              // rescale/zoom quand le hero rétrécit au survol — seul le bas est
+              // rogné par overflow-hidden.
               <div
-                className="absolute inset-x-0 top-1/2 h-80 -translate-y-1/2 bg-cover bg-center"
+                className="absolute inset-x-0 top-1/2 h-[var(--card-inner-h)] -translate-y-1/2 bg-cover bg-center"
                 style={{ backgroundImage: `url(${world.banner_url})` }}
               />
             ) : (
