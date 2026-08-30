@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { QUOTA_ERROR_MESSAGE, translatePersonaError } from "@/lib/personaErrors";
+import { ERR_INTROUVABLE, ERR_NOM_PERSONA, ERR_NON_AUTHENTIFIE, echecEnregistrement } from "@/lib/actionErrors";
 
 function extractStoragePath(url: string | null | undefined) {
     if (!url) return null;
@@ -15,7 +16,7 @@ export async function createPersona(_prevState: unknown, formData: FormData) {
     const {
         data: { user },
     } = await supabase.auth.getUser();
-    if (!user) return { ok: false, error: "Vous devez être connecté." };
+    if (!user) return { ok: false, error: ERR_NON_AUTHENTIFIE };
 
     const name = String(formData.get("name") || "").trim();
     const bio = (String(formData.get("bio") || "").trim() || null) as string | null;
@@ -25,7 +26,7 @@ export async function createPersona(_prevState: unknown, formData: FormData) {
     if (name.length < 1 || name.length > 40) {
         return {
             ok: false,
-            error: "Le nom doit contenir entre 1 et 40 caractères.",
+            error: ERR_NOM_PERSONA,
         };
     }
 
@@ -69,7 +70,7 @@ export async function deletePersona(id: string) {
     } = await supabase.auth.getUser();
 
     if (!user) {
-        return { ok: false, error: "Vous devez être connecté." };
+        return { ok: false, error: ERR_NON_AUTHENTIFIE };
     }
 
     const storagePaths: string[] = [];
@@ -117,11 +118,11 @@ export async function deletePersona(id: string) {
         .select("id")
         .maybeSingle();
 
-    if (error) return { ok: false, error: error.message };
+    if (error) return { ok: false, error: echecEnregistrement("deletePersona", error) };
     if (!data) {
         return {
             ok: false,
-            error: "Persona introuvable ou accès non autorisé.",
+            error: ERR_INTROUVABLE,
         };
     }
 
@@ -135,7 +136,7 @@ export async function movePersona(id: string, targetWorldId: string | null) {
     const {
         data: { user },
     } = await supabase.auth.getUser();
-    if (!user) return { ok: false, error: "Vous devez être connecté." };
+    if (!user) return { ok: false, error: ERR_NON_AUTHENTIFIE };
 
     const { data: persona } = await supabase
         .from("personas")
@@ -144,7 +145,7 @@ export async function movePersona(id: string, targetWorldId: string | null) {
         .eq("user_id", user.id)
         .maybeSingle();
     if (!persona) {
-        return { ok: false, error: "Persona introuvable ou accès non autorisé." };
+        return { ok: false, error: ERR_INTROUVABLE };
     }
 
     const fromWorldId = (persona.world_id as string | null) ?? null;
@@ -216,7 +217,7 @@ export async function duplicatePersona(id: string, targetWorldId: string | null)
     const {
         data: { user },
     } = await supabase.auth.getUser();
-    if (!user) return { ok: false, error: "Vous devez être connecté." };
+    if (!user) return { ok: false, error: ERR_NON_AUTHENTIFIE };
 
     const { data: source } = await supabase
         .from("personas")
@@ -225,7 +226,7 @@ export async function duplicatePersona(id: string, targetWorldId: string | null)
         .eq("user_id", user.id)
         .maybeSingle();
     if (!source) {
-        return { ok: false, error: "Persona introuvable ou accès non autorisé." };
+        return { ok: false, error: ERR_INTROUVABLE };
     }
     const src = source as SourcePersonaRow;
 
@@ -278,10 +279,14 @@ export async function duplicatePersona(id: string, targetWorldId: string | null)
         copyPersonaAsset(src.banner_url),
     ]);
     if (avatarUrl || bannerUrl) {
-        await supabase
+        // Échec secondaire : le persona dupliqué existe, seuls ses visuels
+        // manquent. On ne fait donc pas échouer la duplication — cela
+        // laisserait une copie orpheline — mais on cesse de le taire.
+        const { error } = await supabase
             .from("personas")
             .update({ avatar_url: avatarUrl, banner_url: bannerUrl })
             .eq("id", newId);
+        if (error) console.error("[duplicatePersona] visuels non recopiés", error.message);
     }
 
     // Si le monde cible impose une fiche par défaut, le joueur a confirmé
@@ -434,10 +439,13 @@ async function copyPersonaSections(
             )
         ).filter((img): img is GridImage => img !== null);
 
-        await supabase
+        // Idem : la section et son champ sont créés, seules les images
+        // recopiées n'ont pas été rattachées.
+        const { error } = await supabase
             .from("persona_section_fields")
             .update({ data: { ...oldField.data, images: copied } })
             .eq("id", newFieldId);
+        if (error) console.error("[copyPersonaSections] images non rattachées", error.message);
     }
 }
 

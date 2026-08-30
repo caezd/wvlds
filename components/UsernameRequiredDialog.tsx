@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { ERR_NOM_UTILISATEUR_PRIS, messageErreurAction } from "@/lib/actionErrors";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 
@@ -46,14 +47,16 @@ export function UsernameRequiredDialog({ userId }: { userId: string }) {
         .eq("id", userId);
       if (error) {
         if (/unique|duplicate/i.test(error.message)) {
-          throw new Error(t("takenError"));
+          throw new Error(ERR_NOM_UTILISATEUR_PRIS);
         }
         throw error;
       }
       setOpen(false);
       router.refresh();
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : tCommon("error"));
+      // Pas `e.message` : texte brut de PostgreSQL, il nomme table et policy.
+      console.error("[UsernameRequiredDialog]", error);
+      setError(messageErreurAction(error instanceof Error ? error.message : null, tCommon));
       startEditing();
     } finally {
       setIsLoading(false);

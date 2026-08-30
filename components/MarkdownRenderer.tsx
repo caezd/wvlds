@@ -1,13 +1,13 @@
 "use client";
 
 import React, { useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
 import type { Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
 import rehypeExternalLinks from "rehype-external-links";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
-import rehypeHighlight from "rehype-highlight";
 
 import { cn } from "@/lib/utils";
 import { transformStyledSpans, createFenceTracker } from "@/lib/textStyledSpans";
@@ -37,6 +37,7 @@ function extractText(node: React.ReactNode): string {
 }
 
 function CodeBlock({ className, children, ...props }: React.ComponentProps<"code">) {
+  const tCommon = useTranslations("common");
   const [copied, setCopied] = useState(false);
   const isBlock = /language-/.test(className ?? "");
 
@@ -64,10 +65,10 @@ function CodeBlock({ className, children, ...props }: React.ComponentProps<"code
       <button
         type="button"
         onClick={doCopy}
-        className="opacity-0 group-hover:opacity-100 transition-opacity text-xs absolute right-2 top-2 rounded-md border bg-background/80 px-2 py-1"
-        aria-label="Copier le code"
+        className="opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity text-xs absolute right-2 top-2 rounded-md border bg-background/80 px-2 py-1"
+        aria-label={tCommon("copyCode")}
       >
-        {copied ? "Copié" : "Copier"}
+        {copied ? tCommon("copied") : tCommon("copy")}
       </button>
       <pre className="overflow-x-auto rounded-lg border bg-muted/60 p-3">
         <code className={className} {...props} data-lang={lang}>
@@ -409,7 +410,13 @@ export function MarkdownContent({
           rehypeExternalLinks,
           { target: "_blank", rel: ["nofollow", "noopener", "noreferrer"] },
         ],
-        rehypeHighlight,
+        // `rehypeHighlight` retiré : il posait des classes `hljs-*` que le
+        // `rehypeSanitize` ci-dessous supprimait aussitôt (le schéma n'autorise
+        // `className` sur `code` que pour `/^language-[\w-]+$/`, et aucune sur
+        // `span`). Aucune coloration n'atteignait donc l'écran — et aucune CSS
+        // du projet ne définit `hljs-*` — mais il embarquait ~35 grammaires
+        // (lowlight) dans le chunk de chaque message et fragmentait le code en
+        // spans vides. Voir MarkdownRenderer.codeBlocks.test.tsx.
         [rehypeSanitize, schema],
       ]}
       components={components}

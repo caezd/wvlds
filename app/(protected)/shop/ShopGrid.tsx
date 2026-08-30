@@ -17,7 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner"; // ou ton système de toasts shadcn
 
-type ShopItem = {
+export type ShopItem = {
   id: string;
   key: string;
   name: string;
@@ -125,12 +125,14 @@ export default function ShopGrid({
         // Rollback
         setCoins(rollback.coins);
         setItems(rollback.items);
-        toast.error(e instanceof Error ? e.message : "Erreur lors de l’achat");
+        // Pas `e.message` : texte brut de PostgreSQL, il nomme table et policy.
+        console.error("[ShopGrid] achat", e);
+        toast.error(t("purchaseError"));
       } finally {
         markLoading(it.id, false);
       }
     },
-    [coins, items, loadingById, supabase, refetchShop],
+    [coins, items, loadingById, supabase, refetchShop, t],
   );
 
   return (
@@ -147,7 +149,7 @@ export default function ShopGrid({
       {/* Filtres */}
       <div className="flex items-center justify-between gap-2">
         <Select value={slotFilter} onValueChange={setSlotFilter}>
-          <SelectTrigger className="w-44">
+          <SelectTrigger className="w-44" aria-label={t("filterType")}>
             <SelectValue placeholder={t("filterType")} />
           </SelectTrigger>
           <SelectContent>

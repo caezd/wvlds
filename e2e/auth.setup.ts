@@ -17,9 +17,13 @@ setup("authentification", async ({ page }) => {
   );
 
   await page.goto("/auth/login");
-  await page.getByLabel(/email/i).fill(email!);
-  await page.getByLabel(/password/i).fill(password!);
-  await page.getByRole("button", { name: /^connexion$/i }).click();
+  await page.locator("#email").fill(email!);
+  await page.locator("#password").fill(password!);
+  // Sélecteur indépendant de la langue : le navigateur de test annonce
+  // `en-US`, l'interface se rend donc en anglais et le libellé « Connexion »
+  // ne correspond à rien. Le bouton de soumission du formulaire, lui, ne
+  // dépend pas de la locale.
+  await page.locator('form button[type="submit"]').click();
 
   // Connexion réussie → redirection vers /w/<id> ou /explore (plus de /home).
   await expect(page).toHaveURL(/\/(w\/|explore)/, { timeout: 15_000 });

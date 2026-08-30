@@ -40,6 +40,9 @@ vi.mock("@/components/providers/FeatureFlagsProvider", () => ({
 
 const notifPanelOpenMock = vi.hoisted(() => ({ value: false }));
 vi.mock("@/components/providers/NotificationsProvider", () => ({
+  // AppShell consomme le contexte du panneau seul ; les autres hooks restent
+  // mockés pour les composants voisins rendus dans le même arbre.
+  useNotificationsPanel: () => ({ panelOpen: notifPanelOpenMock.value, closePanel: vi.fn(), openPanel: vi.fn(), togglePanel: vi.fn() }),
   useNotifications: () => ({ panelOpen: notifPanelOpenMock.value, closePanel: vi.fn(), worldUnread: {} }),
 }));
 
@@ -70,7 +73,7 @@ describe("AppShell — barre mobile générique vs header de chatroom", () => {
         <div>contenu</div>
       </AppShell>,
     );
-    const button = screen.getByLabelText("Ouvrir le menu");
+    const button = screen.getByLabelText("openMenu");
     const header = button.closest("header");
     expect(header).not.toHaveClass("hidden");
   });
@@ -82,7 +85,7 @@ describe("AppShell — barre mobile générique vs header de chatroom", () => {
         <div>contenu</div>
       </AppShell>,
     );
-    const button = screen.getByLabelText("Ouvrir le menu");
+    const button = screen.getByLabelText("openMenu");
     const header = button.closest("header");
     expect(header).toHaveClass("hidden");
   });

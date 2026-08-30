@@ -30,13 +30,22 @@ function ValidationHint({ validation, t }: { validation: ActiveDailyChallenge["v
   }
 }
 
-export default async function QuestsPage() {
+/** Titre d'onglet — sans lui la page héritait du « WVLDS » générique. */
+export async function generateMetadata() {
   const t = await getTranslations("quests");
-  const supabase = await createClient();
-  const userId = await getCurrentUserId();
-  if (!userId) redirect("/login");
+  return { title: t("title") };
+}
 
-  const featureFlags = await getCachedFeatureFlags();
+export default async function QuestsPage() {
+  // Ces quatre-là ne dépendent d'aucun des autres : ils partaient pourtant
+  // l'un après l'autre, avant même la première requête métier de la page.
+  const [t, supabase, userId, featureFlags] = await Promise.all([
+    getTranslations("quests"),
+    createClient(),
+    getCurrentUserId(),
+    getCachedFeatureFlags(),
+  ]);
+  if (!userId) redirect("/login");
   if (!featureFlags.quests) redirect("/");
 
   const today = new Date().toISOString().split("T")[0];
@@ -52,7 +61,10 @@ export default async function QuestsPage() {
 
   if (!existing) {
     const template = pickRandomChallenge();
-    await supabase.from(TABLE.CHALLENGES).insert({
+    // Un échec ici laisse la page sans défi du jour, sans explication : au
+    // moins le trace-t-on. (Le résultat est relu juste après, la page reste
+    // fonctionnelle.)
+    const { error: insertError } = await supabase.from(TABLE.CHALLENGES).insert({
       user_id: userId,
       world_id: null,
       active_date: today,
@@ -64,6 +76,7 @@ export default async function QuestsPage() {
       min_word_count: template.min_word_count,
       source: "admin",
     });
+    if (insertError) console.error("[quests] défi du jour non créé", insertError.message);
   }
 
   const [
@@ -167,7 +180,7 @@ export default async function QuestsPage() {
                   <ValidationHint validation={c.validation} t={t} />
                 </span>
                 {c.min_word_count > 0 && (
-                  <span className="ml-auto text-[0.65rem] text-muted-foreground/60 shrink-0">
+                  <span className="ml-auto text-[0.65rem] text-muted-foreground shrink-0">
                     min. {c.min_word_count} mots
                   </span>
                 )}
@@ -200,7 +213,7 @@ export default async function QuestsPage() {
                   {" · "}
                   <span className="text-foreground/80 font-medium">{e.challenge_title}</span>
                 </p>
-                <span className="text-[0.65rem] text-muted-foreground/60 shrink-0">
+                <span className="text-[0.65rem] text-muted-foreground shrink-0">
                   <DateDisplay value={e.won_at} />
                 </span>
               </div>

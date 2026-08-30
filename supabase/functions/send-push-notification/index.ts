@@ -91,7 +91,11 @@ Deno.serve(async (req) => {
   }));
 
   if (toRemove.length > 0) {
-    await supabase.from("push_subscriptions").delete().in("id", toRemove);
+    // Purge des points d'accès morts. Un échec n'empêche rien d'être envoyé,
+    // mais laisse la table grossir de lignes inutilisables à chaque envoi :
+    // autant le voir dans les journaux de la fonction.
+    const { error } = await supabase.from("push_subscriptions").delete().in("id", toRemove);
+    if (error) console.error("purge des abonnements morts:", error.message);
   }
 
   return Response.json({ ok: true, sent, removed: toRemove.length });

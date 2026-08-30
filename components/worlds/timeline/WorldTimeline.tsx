@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useTranslations } from "next-intl";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Clock, X, MessageSquare } from "lucide-react";
@@ -29,6 +30,8 @@ export function WorldTimeline({
   config: WorldTimelineConfig;
   onClose: () => void;
 }) {
+  const t = useTranslations("worlds");
+  const tCommon = useTranslations("common");
   const router = useRouter();
 
   const { dated } = useMemo(() => {
@@ -74,6 +77,7 @@ export function WorldTimeline({
         title="Chronologie"
         right={
           <button
+            aria-label={tCommon("close")}
             type="button"
             onClick={onClose}
             className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
@@ -157,7 +161,7 @@ export function WorldTimeline({
         })}
 
         {dated.length === 0 && (
-          <p className="text-sm text-muted-foreground">Aucune conversation n&apos;a encore été située dans la chronologie.</p>
+          <p className="text-sm text-muted-foreground">{t("timelineEmpty")}</p>
         )}
       </div>
     </div>

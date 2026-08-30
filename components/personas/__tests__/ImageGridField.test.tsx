@@ -1,7 +1,10 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import { ImageGridField } from "@/components/personas/SectionFieldsEditor";
+import { ImageGridField } from "@/components/personas/fields/ImageGridField";
 import type { PersonaGridImage } from "@/types/personas";
+// Le libellé passe par next-intl (mocké sur fr.json dans vitest.setup) : on le
+// lit à la source plutôt que de recopier une apostrophe typographique.
+import fr from "@/messages/fr.json";
 
 vi.mock("@/lib/supabase/client", () => ({
   createClient: vi.fn(() => ({
@@ -17,7 +20,7 @@ const images: PersonaGridImage[] = [
 describe("ImageGridField", () => {
   it("affiche une tuile et une poignée de redimensionnement par image", () => {
     render(<ImageGridField fieldId="f1" personaId="p1" userId="u1" initialImages={images} onSave={vi.fn()} />);
-    expect(screen.getAllByLabelText("Supprimer l'image")).toHaveLength(2);
+    expect(screen.getAllByLabelText(fr.personas.deleteImage)).toHaveLength(2);
     expect(screen.getAllByLabelText("Redimensionner")).toHaveLength(2);
   });
 
@@ -76,7 +79,7 @@ describe("ImageGridField", () => {
     const onSave = vi.fn();
     render(<ImageGridField fieldId="f1" personaId="p1" userId="u1" initialImages={images} onSave={onSave} />);
 
-    fireEvent.click(screen.getAllByLabelText("Supprimer l'image")[0]);
+    fireEvent.click(screen.getAllByLabelText(fr.personas.deleteImage)[0]);
 
     expect(onSave).toHaveBeenCalledTimes(1);
     const saved = onSave.mock.calls[0][0] as PersonaGridImage[];

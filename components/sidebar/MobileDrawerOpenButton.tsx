@@ -1,6 +1,7 @@
 "use client";
 
 import { Menu } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { useMobileSidebar } from "@/components/providers/MobileSidebarProvider";
 
@@ -14,13 +15,14 @@ export function MobileDrawerOpenButton({
   className?: string;
   iconClassName?: string;
 }) {
+  const tCommon = useTranslations("common");
   const { setDrawerOpen } = useMobileSidebar();
 
   return (
     <button
       type="button"
       onClick={() => setDrawerOpen(true)}
-      aria-label="Ouvrir le menu"
+      aria-label={tCommon("openMenu")}
       className={cn("lg:hidden", className)}
     >
       <Menu className={iconClassName} />

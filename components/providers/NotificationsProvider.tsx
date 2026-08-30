@@ -15,6 +15,12 @@ import type { AppNotification, NotificationType, AllChatroomUnreadRow } from "@/
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import { fetchAppShell } from "@/lib/appShell";
+import { resetUnreadCounts, setUnreadCounts } from "@/lib/unreadStore";
+import { openRealtimeChannel } from "@/lib/realtimeChannel";
+
+// Compteurs par clé — à préférer quand un composant ne suit qu'une salle ou
+// qu'un monde, plutôt que de lire le `Record` complet. Voir lib/unreadStore.ts.
+export { useRoomUnread, useWorldUnread } from "@/lib/unreadStore";
 
 type NotifPrefs = Partial<Record<NotificationType, boolean>>;
 
@@ -47,6 +53,54 @@ type Ctx = {
 };
 
 const NotificationsCtx = createContext<Ctx | null>(null);
+
+/**
+ * Actions seules — toutes stables (useCallback sur des deps stables), donc ce
+ * contexte n'est jamais invalidé par un compteur qui bouge. Les consommateurs
+ * qui ne veulent que déclencher des actions (au premier rang desquels
+ * `ChatRoomView`, qui n'utilise que `setActiveChat` et `markChatRead`)
+ * l'utilisent au lieu du contexte complet, dont la valeur change à chaque
+ * message reçu dans n'importe lequel de vos mondes.
+ */
+type ActionsCtx = Pick<
+    Ctx,
+    "openPanel" | "closePanel" | "togglePanel" | "setActiveChat" | "markChatRead" | "refreshAll"
+>;
+
+const NotificationsActionsCtx = createContext<ActionsCtx | null>(null);
+
+const DEFAULT_ACTIONS: ActionsCtx = {
+    openPanel: () => {},
+    closePanel: () => {},
+    togglePanel: () => {},
+    setActiveChat: () => {},
+    markChatRead: async () => {},
+    refreshAll: async () => {},
+};
+
+export function useNotificationsActions(): ActionsCtx {
+    return useContext(NotificationsActionsCtx) ?? DEFAULT_ACTIONS;
+}
+
+/**
+ * État du panneau + ses actions. Invalidé uniquement quand le panneau s'ouvre
+ * ou se ferme (un clic occasionnel), jamais par un compteur de non-lus. Pour
+ * `AppShell`, qui enveloppe toute l'application et n'a besoin que de ça.
+ */
+type PanelCtx = Pick<Ctx, "panelOpen" | "openPanel" | "closePanel" | "togglePanel">;
+
+const NotificationsPanelCtx = createContext<PanelCtx | null>(null);
+
+const DEFAULT_PANEL: PanelCtx = {
+    panelOpen: false,
+    openPanel: () => {},
+    closePanel: () => {},
+    togglePanel: () => {},
+};
+
+export function useNotificationsPanel(): PanelCtx {
+    return useContext(NotificationsPanelCtx) ?? DEFAULT_PANEL;
+}
 
 const DEFAULT_CTX: Ctx = {
     panelOpen: false,
@@ -253,10 +307,14 @@ export default function NotificationsProvider({ children }: { children: React.Re
             notifOffsetRef.current = Math.max(0, notifOffsetRef.current - removed);
             return prev.filter(n => !idSet.has(n.id));
         });
-        await supabase
+        // Retrait optimiste : en cas d'échec, les notifications réapparaissent
+        // au rechargement. Ce n'est pas une perte de données et une alerte à
+        // chaque lecture serait pénible — mais la panne cesse d'être invisible.
+        const { error } = await supabase
             .from(TABLE.NOTIFICATIONS)
             .update(alsoRead ? { read_at: now, archived_at: now } : { archived_at: now })
             .in("id", ids);
+        if (error) console.error("[archiveNotifs]", error.message);
     }, [supabase]);
 
     const markNotifRead = useCallback((id: string) => archiveNotifs([id], true), [archiveNotifs]);
@@ -276,10 +334,11 @@ export default function NotificationsProvider({ children }: { children: React.Re
         setNotifications([]);
         notifOffsetRef.current = 0;
         setHasMoreNotifs(false);
-        await supabase
+        const { error } = await supabase
             .from(TABLE.NOTIFICATIONS)
             .update({ read_at: now, archived_at: now })
             .is("archived_at", null);
+        if (error) console.error("[markAllNotifsRead]", error.message);
     }, [supabase]);
 
     const loadMoreNotifs = useCallback(async () => {
@@ -306,9 +365,16 @@ export default function NotificationsProvider({ children }: { children: React.Re
         const uid = userIdRef.current;
         if (!uid) return;
         setNotifPrefs(prev => ({ ...prev, [type]: enabled }));
-        await supabase
+        // Bascule optimiste : sans ce contrôle, l'interrupteur restait dans sa
+        // nouvelle position et revenait en arrière au rechargement — on croit
+        // avoir coupé une notification qu'on continue de recevoir.
+        const { error } = await supabase
             .from(TABLE.NOTIFICATION_PREFERENCES)
             .upsert({ user_id: uid, type, enabled }, { onConflict: "user_id,type" });
+        if (error) {
+            setNotifPrefs(prev => ({ ...prev, [type]: !enabled }));
+            console.error("[setNotifPref]", error.message);
+        }
     }, [supabase]);
 
     // ── Bootstrap + realtime ────────────────────────────────────────────────
@@ -316,7 +382,15 @@ export default function NotificationsProvider({ children }: { children: React.Re
         if (!userId) return;
 
         let mounted = true;
-        const openChannels: ReturnType<typeof supabase.channel>[] = [];
+        // On collecte des FERMETURES, pas des canaux : l'ouverture peut être
+        // différée quand une fermeture du même nom est encore en vol
+        // (reconnexion réseau). Cf. lib/realtimeChannel.
+        const fermetures: (() => void)[] = [];
+        /** Referme aussitôt si l'effet a déjà été nettoyé pendant l'attente. */
+        const enregistrer = (fermer: () => void) => {
+            if (!mounted) { fermer(); return; }
+            fermetures.push(fermer);
+        };
 
         (async () => {
             // Un seul aller-retour réseau : world_members + notifications +
@@ -341,7 +415,7 @@ export default function NotificationsProvider({ children }: { children: React.Re
             // Realtime : un SEUL canal pour les messages de tous les mondes
             // (un binding filtré par monde), au lieu d'un canal par monde.
             // Les compteurs sont incrémentés localement — aucune RPC ici.
-            const msgCh = supabase.channel(channel.userMessages(userId));
+            const fermerMsg = openRealtimeChannel(supabase, channel.userMessages(userId), (msgCh) => {
             for (const wid of shell.world_ids) {
                 msgCh.on(
                     "postgres_changes",
@@ -364,11 +438,12 @@ export default function NotificationsProvider({ children }: { children: React.Re
                 );
             }
             msgCh.subscribe();
-            openChannels.push(msgCh);
+            return msgCh;
+            });
+            enregistrer(fermerMsg);
 
             // Realtime : nouvelles notifications + mises à jour agrégées (chatroom_reply)
-            const notifCh = supabase
-                .channel(channel.userNotifs(userId))
+            const fermerNotif = openRealtimeChannel(supabase, channel.userNotifs(userId), (notifCh) => notifCh
                 .on(
                     "postgres_changes",
                     {
@@ -421,13 +496,13 @@ export default function NotificationsProvider({ children }: { children: React.Re
                         );
                     },
                 )
-                .subscribe();
-            openChannels.push(notifCh);
+                .subscribe());
+            enregistrer(fermerNotif);
         })();
 
         return () => {
             mounted = false;
-            openChannels.forEach((ch) => supabase.removeChannel(ch));
+            fermetures.forEach((fermer) => fermer());
         };
         // reconnectEpoch : force la recréation des canaux après une coupure
         // réseau (voir useReconnectEpoch).
@@ -466,9 +541,35 @@ export default function NotificationsProvider({ children }: { children: React.Re
         notifications, unreadNotifCount, markNotifRead, markAllNotifsRead, archiveNotif,
         hasMoreNotifs, loadMoreNotifs, notifPrefs, setNotifPref]);
 
+    // Toutes ces callbacks sont stables : cette valeur est donc calculée une
+    // fois et ne change plus de la vie du provider.
+    const actions = useMemo<ActionsCtx>(
+        () => ({ openPanel, closePanel, togglePanel, setActiveChat, markChatRead, refreshAll }),
+        [openPanel, closePanel, togglePanel, setActiveChat, markChatRead, refreshAll],
+    );
+
+    const panel = useMemo<PanelCtx>(
+        () => ({ panelOpen, openPanel, closePanel, togglePanel }),
+        [panelOpen, openPanel, closePanel, togglePanel],
+    );
+
+    // Alimente le store par clé, pour les abonnés d'une seule salle / d'un seul
+    // monde (useRoomUnread / useWorldUnread).
+    useEffect(() => {
+        setUnreadCounts(roomUnread, worldUnread);
+    }, [roomUnread, worldUnread]);
+
+    // Le store est un singleton de module : on le vide au démontage pour ne pas
+    // laisser des compteurs périmés à un prochain montage (changement de compte).
+    useEffect(() => resetUnreadCounts, []);
+
     return (
         <NotificationsCtx.Provider value={value}>
-            {children}
+            <NotificationsActionsCtx.Provider value={actions}>
+                <NotificationsPanelCtx.Provider value={panel}>
+                    {children}
+                </NotificationsPanelCtx.Provider>
+            </NotificationsActionsCtx.Provider>
         </NotificationsCtx.Provider>
     );
 }

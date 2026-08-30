@@ -11,6 +11,7 @@ import { PersonaProfileSheetTrigger } from "./PersonaProfileSheetTrigger";
 import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { AsidePersona } from "./WorldPersonaAsideClient";
+import { useTranslations } from "next-intl";
 
 type OtherPersona = {
   id: string;
@@ -86,6 +87,7 @@ export function WorldPersonasPanel({
   restrictSkills?: boolean;
   faceclaimsEnabled?: boolean;
 }) {
+  const t = useTranslations("worlds");
   const supabase = useMemo(() => createClient(), []);
   const [others, setOthers] = useState<OtherPersona[] | null>(null);
   const myIds = useMemo(() => new Set(myPersonas.map((p) => p.id)), [myPersonas]);
@@ -190,7 +192,7 @@ export function WorldPersonasPanel({
 
             {mine.length === 0 ? (
               <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border-soft py-10 text-center">
-                <p className="text-sm text-muted-foreground">Aucun persona dans ce monde</p>
+                <p className="text-sm text-muted-foreground">{t("noPersonaInWorld")}</p>
                 <PersonaCreateSheet
                   worldId={worldId}
                   restrictInventory={restrictInventory}
@@ -255,7 +257,7 @@ export function WorldPersonasPanel({
               <div className="space-y-5">
                 {otherGroups.map(([letter, list]) => (
                   <div key={letter}>
-                    <div className="px-0.5 pb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                    <div className="px-0.5 pb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                       {letter}
                     </div>
                     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">

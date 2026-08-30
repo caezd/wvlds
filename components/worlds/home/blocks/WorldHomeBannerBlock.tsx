@@ -275,6 +275,7 @@ export function WorldHomeBannerDialog({
                     <button
                       type="button"
                       className="flex items-center gap-1 shrink-0 rounded-md border border-border/60 px-1.5 py-0.5 hover:border-foreground/40 transition-colors"
+                      aria-label={tCommon("chooseColor")}
                     >
                       <Palette className="h-3.5 w-3.5 text-muted-foreground" />
                       <span

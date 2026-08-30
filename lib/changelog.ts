@@ -68,6 +68,346 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     date: "2026-08",
+    tag: "Correctif",
+    text: "Les pastilles de présence affichaient tout le monde hors ligne, vous compris. Elles étaient bien alimentées — votre navigateur annonçait bien votre présence — mais rangées sous un identifiant tiré au hasard au lieu du vôtre : l'application cherchait donc quelqu'un qu'elle venait elle-même de classer ailleurs.\nEn cause, une option perdue à l'ouverture du canal temps réel. Elle n'était transmise que sur un chemin secondaire, emprunté seulement après une reconnexion réseau — ce qui explique que la présence semblait fonctionner par moments.",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
+    text: "Les avatars étaient annoncés par leur adresse web aux lecteurs d'écran, faute de texte alternatif. Ils sont désormais marqués décoratifs : le nom qu'ils accompagnent est déjà lu juste à côté, et l'entendre deux fois n'aide personne.",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
+    text: "Cinq textes gris pâle de plus redeviennent lisibles : les messages « aucun élément » du catalogue, la mention sur les restrictions, et les deux invitations à démarrer une conversation privée. Ils descendaient jusqu'à 2,6 pour 1 de contraste, là où la norme en demande 4,5.\nIls ont été trouvés en élargissant la vérification automatique à trois écrans de monde qu'elle ne regardait pas encore.",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
+    text: "Les commandes qui n'apparaissent qu'au survol se montrent enfin aussi quand on les atteint au clavier. Une trentaine d'entre elles — les actions d'un message, la suppression d'une bannière, les poignées des champs d'un personnage, les boutons d'une carte de monde — restaient parfaitement invisibles une fois sélectionnées à la tabulation.\nNaviguer sans souris revenait donc à avancer à l'aveugle : la commande répondait bien, mais rien à l'écran ne disait où l'on se trouvait.",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
+    text: "Les cartes de l'Explorateur gardent une forme carrée. Leur hauteur était figée à 320 pixels quelle que soit leur largeur : sur un écran étroit, où quatre colonnes se resserrent, elles devenaient de hautes vignettes en colonne ; sur un écran large, des bandeaux écrasés.\nLeur hauteur suit désormais leur largeur, et le bandeau conserve toujours la place de son en-tête — la mention 18+ et les types d'avatars autorisés.",
+  },
+  {
+    date: "2026-08",
+    tag: "Technique",
+    text: "Les pages d'administration n'affichent plus le message technique de la base de données. Trois d'entre elles montraient « Erreur : » suivi du texte brut de PostgreSQL, en anglais, citant le nom de la table interrogée — et cinq actions le recopiaient dans l'erreur qu'elles levaient.\nLe détail reste dans les journaux serveur, où il sert au diagnostic, et l'écran affiche un message traduit.",
+  },
+  {
+    date: "2026-08",
+    tag: "Technique",
+    text: "Un salon réagit un peu mieux pendant son chargement. Les vingt messages affichés étaient entièrement reconstruits à chaque information qui arrivait — la clé du salon, les épingles, les badges de défi, la présence des autres — alors qu'ils n'avaient pas changé.\nSur un téléphone de milieu de gamme, cela représentait environ 750 ms pendant lesquelles la page ne répondait pas, en six à-coups. Il en reste un peu moins de 660, en quatre. Le gain est modeste et honnêtement mesuré : c'est le rendu de la liste elle-même qui coûte, pas les recalculs inutiles qu'on vient de supprimer.",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
+    text: "Deux liens n'avaient pas de nom pour un lecteur d'écran : le bouton de modification d'un article de boutique, et le téléchargement d'une image affichée en plein écran. Tous deux n'étaient qu'une icône.\nLe contrôle automatique qui interdit ces oublis ne regardait que les boutons ; il couvre désormais aussi les liens.",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
+    text: "Le petit texte gris clair est devenu lisible. Plusieurs libellés — noms de sections, compteurs, mentions sous les salons — étaient affichés à une opacité réduite qui les amenait à un contraste de 3.2 pour 1 sur le fond sombre, là où la norme d'accessibilité en demande 4.5.\nIls passent à l'opacité pleine. La teinte reste la même, seul le voile disparaît.",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
+    text: "La barre latérale des mondes annonce enfin correctement où vous êtes. Le repère du monde courant était un élément sans rôle, sur lequel son nom et l'indication « page actuelle » étaient purement ignorés : un lecteur d'écran ne lisait rien du tout à cet endroit.\nDans le même passage : les deux onglets de la page des personas pointaient vers un contenu qu'ils ne contenaient pas, les cartes de personas s'annonçaient déplaçables au clavier alors que ça n'existe pas, et les zones défilantes ne pouvaient pas recevoir le focus.",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
+    text: "Vingt-trois boutons n'avaient aucun nom pour un lecteur d'écran : une icône pour seul contenu, ou rien du tout — une pastille de couleur, un interrupteur. Ils étaient annoncés « bouton », sans plus. Supprimer un champ, monter une ligne d'un cran, changer une couleur, zoomer sur le canevas des relations : rien ne disait lequel faisait quoi.\nChacun porte désormais un libellé, traduit dans les trois langues.",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
+    text: "La fenêtre de confirmation de suppression s'affichait en français pour tout le monde. Son titre et ses deux boutons — « Annuler », « Supprimer » — étaient des valeurs par défaut écrites en dur, et dix des dix-huit écrans qui l'utilisent s'en remettaient à elles.\nIls suivent maintenant la langue choisie.",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
+    text: "Un message épinglé ancien ne peut plus apparaître dans le mauvais salon. La barre d'épingles va chercher séparément les messages trop vieux pour être déjà chargés ; en changeant de salon pendant cette recherche, la réponse arrivait après coup et son contenu était déchiffré avec la clé du nouveau salon.\nLe résultat : un message du salon précédent, illisible, épinglé là où il n'a rien à faire. La liste des épingles était déjà protégée contre ce décalage — c'est l'étape suivante qui ne l'était pas.",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
+    text: "Les messages d'erreur de connexion et d'inscription s'affichent enfin dans votre langue. Ils venaient directement de notre fournisseur d'authentification et arrivaient donc toujours en anglais : « Invalid login credentials » au moment précis où vous aviez besoin d'être compris.\nMot de passe incorrect, adresse non confirmée, trop de tentatives, compte déjà existant, mot de passe trop faible : chacun a désormais son message, dans les trois langues.",
+  },
+  {
+    date: "2026-08",
+    tag: "Technique",
+    text: "Le message technique d'une erreur de base de données ne peut plus apparaître à l'écran. Il avait déjà été retiré des actions serveur, mais quatorze écrans l'affichaient encore directement en cas d'échec — envoi d'image, achat en boutique, suppression d'un salon ou d'un monde, changement de pseudo. Le texte montré était celui de PostgreSQL, en anglais, et il nommait les tables et les règles internes.\nIl est maintenant consigné côté serveur, où il sert au diagnostic, et vous recevez une explication lisible dans votre langue.",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
+    text: "Une trentaine de textes d'interface étaient restés écrits en français dans le code et s'affichaient tels quels quelle que soit la langue choisie : les bulles d'aide des paramètres d'un monde, les confirmations de suppression, la page « introuvable », les aperçus de blocs du compositeur.\nIls sont désormais traduits en français, anglais et espagnol. Trois d'entre eux tutoyaient, ce que le reste de l'application ne fait jamais.",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
+    text: "Changer de salon très vite juste après en avoir créé un ne peut plus abîmer les messages. La clé de chiffrement du salon quitté pouvait arriver en retard et remplacer celle du salon affiché : les messages devenaient illisibles, et surtout un message envoyé dans cet état l'aurait été avec la mauvaise clé — définitivement indéchiffrable, y compris pour son auteur.\nLa fenêtre était étroite — elle n'existait que pour un salon fraîchement créé, avant que sa clé ne soit posée — mais le dégât aurait été irréversible.",
+  },
+  {
+    date: "2026-08",
+    tag: "Technique",
+    text: "Le détail technique des erreurs de base de données ne quitte plus le serveur. Il n'était déjà plus affiché, mais il voyageait encore jusqu'à votre navigateur — lisible par qui inspecte le trafic, et citant les noms de tables et de règles internes.\nIl est désormais consigné côté serveur, où il sert au diagnostic, et seul un code franchit la frontière. Rien ne change à l'écran.",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
+    text: "Les messages d'erreur s'affichent enfin dans votre langue. Ils étaient écrits en français dans le code et présentés tels quels : une personne lisant l'application en anglais ou en espagnol recevait du français.\nPlus gênant encore, quand l'erreur venait de la base de données, c'est son message technique brut qui apparaissait — une phrase en anglais citant des noms de tables internes. Ces messages restent désormais côté serveur, où ils servent au diagnostic, et vous recevez une explication lisible.\nCertaines situations gagnent au passage un message propre : session expirée, quota de personnages atteint, nom déjà pris, droits insuffisants.",
+  },
+  {
+    date: "2026-08",
+    tag: "Nouveauté",
+    text: "La carte et le wiki d'un monde peuvent maintenant être désactivés, depuis Paramètres → Fonctions. Jusqu'ici ils apparaissaient dans tous les mondes, qu'ils servent ou non, là où l'inventaire, les compétences et la chronologie avaient déjà leur interrupteur.\nDésactiver retire la section de la navigation, et le bloc de raccourcis correspondant de la page d'accueil. Rien n'est supprimé : les pages et la carte sont conservées et réapparaissent telles quelles à la réactivation. Les mondes existants gardent les deux sections actives.",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
+    text: "L'appui long fonctionne enfin de façon fiable sur téléphone. Il était abandonné au moindre mouvement du doigt — or un doigt posé sur un écran ne tient jamais parfaitement immobile : on appuyait, rien ne se passait, il fallait recommencer. Un léger tremblement est désormais toléré, alors qu'un vrai défilement continue d'annuler le geste.\nAutre correction du même endroit : appuyer longuement sur un message qui disparaissait entre-temps faisait vibrer le téléphone dans le vide.",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
+    text: "Se déconnecter coupe désormais les notifications sur cet appareil. Elles restaient rattachées au navigateur et non au compte : quelqu'un se connectant ensuite sur le même navigateur recevait les alertes de la personne précédente — titre et aperçu du message compris. Sur un ordinateur partagé, c'était une fuite réelle.\nDans le même esprit, le réglage n'affiche plus « activé » à quelqu'un qui vient de se connecter sur un appareil abonné par un autre : il indiquait une activation dont cette personne n'aurait jamais rien reçu.",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
+    text: "La recherche ne bute plus sur les accents. Taper « de:elodie » ne trouvait pas Élodie, et « dans:foret » ignorait La Forêt Noire : la comparaison tenait compte des accents alors que personne ne les tape en cherchant.\nLa liste des salons proposée après « dans: » sortait par ailleurs dans un ordre arbitraire. Elle était triée sur un nom interne que tous les salons partagent, et non sur le titre affiché. Elle est désormais classée par ordre alphabétique, accents à leur place — Élodie entre Elena et Emma, plus après Zoé.",
+  },
+  {
+    date: "2026-08",
+    tag: "Technique",
+    text: "Le centre de recherche garde en mémoire les clés des salons qu'il a déjà consultés, pour éviter de les redemander à chaque page de résultats. Ce cache n'a de sens que dans votre navigateur : sur un serveur, il serait partagé entre toutes les personnes connectées. Il refuse désormais explicitement de s'y exécuter.\nRien ne change à l'usage — il n'a jamais tourné ailleurs que chez vous. C'est un garde-fou contre une erreur future, posé après relecture du code de chiffrement.",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
+    text: "Les très longs messages partent enfin. Au-delà d'environ 125 000 caractères — ou seulement 31 000 s'il s'agit d'émoji, quatre fois plus lourds — le chiffrement du message échouait et l'envoi était refusé sans explication utile. Un simple collage suffisait à l'atteindre, la limite affichée étant de 200 000 caractères.\nRien ne change pour les messages ordinaires : le chiffrement lui-même est intact, seule sa dernière étape a été réécrite pour ne plus dépendre de la longueur.",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
+    text: "Sur téléphone, la fiche d'un lieu de la carte s'ouvrait à moitié hors de l'écran — parfois presque entièrement, ne laissant qu'une vingtaine de pixels visibles sur trois cent quarante, bouton de fermeture compris. Elle se replace maintenant dans l'écran quelle que soit la largeur.\nLe défaut existait depuis le début : le calcul ramenait bien la fiche entre le haut et le bas de l'écran, mais avait été oublié pour la gauche et la droite.",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
+    text: "Trois endroits ne répondaient qu'à la souris. L'arbre du wiki en faisait partie : ouvrir un dossier ou choisir une page était impossible au clavier, alors que c'est la navigation principale de cette page. Le titre de chaque entrée est désormais un vrai bouton, la ligne entière restant cliquable comme avant.\nDe même pour la description d'une relation entre personnages, qu'on ne pouvait pas commencer à écrire sans souris, et pour le panneau d'apparence d'un point de carte, que la touche Échap ferme enfin.\nSur les dix-huit endroits examinés, les autres n'avaient pas lieu d'être modifiés : fonds de fenêtre, poignées de déplacement et zones de dessin ne sont pas des commandes, et trois cas signalés étaient déjà accessibles.",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
+    text: "Les images que vous envoyez portent maintenant un nom réellement imprévisible. Les fichiers sont servis par adresse directe, sans mot de passe : leur nom est donc ce qui les protège. Six des sept chemins d'envoi le tiraient d'un générateur aléatoire non prévu pour cet usage, et de longueur variable — un fichier déjà en ligne portait un nom plus court que les autres.\nAu passage, le nom d'origine de votre fichier ne se retrouve plus dans l'adresse publique : envoyer « photo-de-mariage-julie.jpg » n'en laissait rien deviner à personne, sauf à qui recevait le lien.",
+  },
+  {
+    date: "2026-08",
+    tag: "Technique",
+    text: "Dernier volet du rattrapage de la base : deux automatismes existaient bien en production, mais n'étaient décrits nulle part dans le projet. Le plus important déclenche l'effacement du contenu quand quelqu'un ferme son compte — sans lui, une base restaurée aurait laissé les personnages et les mondes de cette personne en ligne, sans propriétaire, au lieu de les retirer. Deux règles d'unicité des défis quotidiens manquaient de la même façon.\nAucun changement pour vous : la production les avait déjà. Un contrôle automatique refuse désormais qu'un automatisme soit décrit sans être branché.",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
+    text: "Les votes des blocs « choix » ne s'échappent plus d'un monde. Déposer un vote exigeait bien d'être membre du monde concerné, mais les lire n'exigeait rien : n'importe quel compte connecté pouvait consulter qui avait voté quoi, dans tous les mondes, y compris ceux qu'il n'a jamais rejoints.\nVérifié avec un compte membre d'aucun monde : il ne voyait aucun salon, aucun message — et la totalité des votes. Il n'en voit plus aucun, tandis que les membres continuent de voir les leurs.\nUn contrôle automatique refuse désormais toute nouvelle règle de lecture ouverte sans justification écrite. C'est lui qui a permis de trouver un second cas, sur les réactions aux messages.",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
+    text: "Faille fermée côté base de données. Certaines opérations privilégiées — vérifier qu'un compte vous a bloqué, compter vos récompenses, lister vos conversations — consultaient des tables sans préciser où les chercher. Un compte connecté pouvait glisser au bon endroit une table portant le même nom : l'opération lisait alors la sienne au lieu de la vraie.\nLe cas le plus concret : le contrôle qui refuse d'ouvrir une conversation privée avec quelqu'un qui vous a bloqué pouvait être neutralisé de cette façon.\n54 opérations sur 67 étaient concernées. Toutes désignent désormais explicitement les vraies tables, et un contrôle automatique refuse toute nouvelle opération qui l'oublierait.",
+  },
+  {
+    date: "2026-08",
+    tag: "Technique",
+    text: "Les quatre plus gros fichiers du projet ont été démêlés : le composeur de messages, l'éditeur de champs de fiche, l'écran de réglages d'un monde et le canevas de relations, chacun autour de 1 500 lignes. Rien ne change à l'écran — les morceaux ont été déplacés, pas réécrits, et les blocs extraits ont été comparés caractère par caractère à l'original.\nIls n'avaient presque aucun test ; ils en ont maintenant une soixantaine, dont ceux qui vérifient que le zoom du canevas garde bien immobile le point sous le curseur, et que les cartes ne se chevauchent jamais.\nLes tests de pages ont aussi gagné en sérieux : ils concluaient trop vite, avant que les parties lourdes de l'écran ne soient affichées. En cassant volontairement le canevas, la page passait au vert. Plus maintenant — et les huit vues d'un monde sont désormais toutes chargées à chaque exécution.",
+  },
+  {
+    date: "2026-08",
+    tag: "Technique",
+    text: "Toutes les pages de l'espace connecté sont désormais chargées pour de vrai par les tests, et doivent s'afficher sans erreur. Deux d'entre elles seulement l'étaient jusqu'ici : une modification touchant les fondations pouvait mettre l'application entière à terre sans qu'aucun test ne s'en aperçoive — c'est arrivé cette semaine.\nAu passage, la suite de tests a cessé d'échouer au hasard : elle malmenait le serveur de développement en ouvrant plusieurs pages à la fois. Lancée contre une version compilée, elle passe de 1 min 30 à 21 secondes.\nEt ces vérifications s'exécutent maintenant toutes seules à chaque modification envoyée, au lieu de dépendre de la mémoire de qui la propose.",
+  },
+  {
+    date: "2026-08",
+    tag: "Technique",
+    text: "Le code du projet peut de nouveau reconstruire la base de données. Dix tables et cinq fonctions avaient été créées au fil du temps directement depuis le tableau de bord, sans laisser de trace dans le projet : elles auraient purement et simplement manqué à une restauration — dont la table qui conserve les clés de chiffrement des salons, et la fonction sans laquelle la liste des salons reste vide.\nToutes sont maintenant décrites dans le projet, règles d'accès comprises. Aucun changement en base : la description a été rejouée sur la base réelle pour vérifier qu'elle reproduit l'existant à l'identique.\nUn contrôle automatique refuse désormais toute table ou fonction utilisée par l'application mais absente du projet.",
+  },
+  {
+    date: "2026-08",
+    tag: "Technique",
+    text: "Les deux bibliothèques d'accès à la base étaient déclarées en version « la plus récente ». Une simple réinstallation pouvait donc changer de version sans que personne ne l'ait demandé — c'est exactement ce qui a fait apparaître, ce mois-ci, le plantage à l'ouverture du menu latéral. Elles sont désormais fixées.",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
+    text: "L'application est enfin entièrement traduite. 140 textes restaient écrits en français dans le code : ils s'affichaient tels quels aux personnes utilisant l'anglais ou l'espagnol — le cas le plus visible étant la page de connexion, titrée en français au-dessus d'un formulaire entièrement anglais.\nRéglages de monde, fiches de personnage, salons, invitations, messages d'erreur et de confirmation : tout passe désormais par les traductions. Deux textes tutoyaient alors que le reste de l'application vouvoie ; c'est corrigé.\nSeules les mentions légales restent en français, leur traduction demandant une relecture juridique.",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
+    text: "Après un retour de connexion réseau, l'application rouvrait ses connexions temps réel en réutilisant les anciennes. Les traitements s'y ajoutaient au lieu de les remplacer : après plusieurs coupures, un même message pouvait être affiché plusieurs fois et les compteurs se dérégler. Rien ne le signalait.\nChaque rétablissement crée maintenant une connexion propre, en attendant la fermeture de la précédente. Six endroits étaient concernés : messages, notifications, messages privés, présence et liste des salons.",
+  },
+  {
+    date: "2026-08",
+    tag: "Performance",
+    text: "La liste des salons de la barre latérale n'ouvre plus qu'une seule connexion temps réel. Elle est affichée à deux endroits — la colonne de gauche et le tiroir mobile — et les deux se connectaient séparément lorsque le tiroir était ouvert.\nMénage au passage : une table et une fonction devenues inutilisées depuis le changement de calcul des messages non lus, en juillet, ont été retirées. Les compteurs de non-lus ne s'en servaient plus.",
+  },
+  {
+    date: "2026-08",
+    tag: "Performance",
+    text: "Premier lancement allégé : l'application préchargeait 5,77 Mo, dont près d'un mégaoctet inutile — les images d'aperçu réservées aux réseaux sociaux, les vignettes du constructeur d'avatar et les cadres de la boutique. Ramené à 4,91 Mo, et 45 fichiers de moins à télécharger. Ces images restent mises en cache dès qu'on en a réellement besoin.",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
+    text: "Accessibilité : 40 boutons n'avaient aucun nom lisible par un lecteur d'écran. Réduits à une icône (une croix, une corbeille, un crayon), ils étaient annoncés « bouton », sans plus de précision — impossible de savoir ce qu'ils font sans voir l'écran.\nChacun porte maintenant un libellé traduit : fermer, annuler, retirer, supprimer, modifier, ajouter.",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
+    text: "Failles fermées sur les fichiers. Les règles d'accès aux images n'avaient jamais été auditées ; trois d'entre elles ne vérifiaient l'identité de personne :\n- N'importe quel compte connecté pouvait **écraser l'avatar ou la bannière d'un personnage d'autrui** par l'image de son choix — 77 fichiers étaient concernés\n- Il pouvait aussi **supprimer ou remplacer l'icône et la bannière de n'importe quel salon**, y compris dans un monde qu'il n'a jamais rejoint\n- Et supprimer les **bannières postées dans les messages** de n'importe quel salon\nChaque envoi et chaque suppression vérifie maintenant que vous en avez le droit sur le salon ou le monde concerné. Trois espaces de stockage n'avaient par ailleurs aucune limite de taille ni de format : ils n'acceptent plus que des images, dans une taille raisonnable.",
+  },
+  {
+    date: "2026-08",
+    tag: "Technique",
+    text: "Les contenus sont désormais bornés côté base. Les limites de saisie des formulaires ne protégeaient rien : en s'adressant directement à l'API, il était possible d'enregistrer un texte de plusieurs millions de caractères — de quoi gonfler la base et ralentir toute la lecture d'un monde.\n38 champs sont concernés : noms, titres, descriptions, biographies, pages de wiki, messages. Les bornes sont larges, très au-dessus de toute saisie normale — elles visent l'abus, pas votre écriture.",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
+    text: "Suite et fin du ménage sur les enregistrements muets : toutes les écritures de l'application vérifient désormais leur résultat. Les plus notables :\n- Supprimer la **bannière ou l'avatar** d'un personnage effaçait le fichier même si la fiche n'avait pas pu être mise à jour — l'image restait alors référencée mais détruite. Le fichier n'est plus effacé qu'après confirmation\n- **Activer les notifications push** annonçait le succès sans vérifier que le serveur avait bien enregistré l'abonnement : aucune notification ne serait jamais arrivée\n- **Refuser une invitation** ou une **demande de mariage** affichait « refusée » alors que la demande pouvait rester en attente\n- Les bascules d'**administration** (droits, plan, articles de la boutique, fonctionnalités) réaffichaient l'ancienne valeur sans rien signaler\n- La **couleur de dialogue**, le **cadre d'avatar**, les **préférences de notification** et le **marquage des messages privés comme lus** reviennent à leur état réel en cas d'échec",
+  },
+  {
+    date: "2026-08",
+    tag: "Technique",
+    text: "Ménage en base : la colonne `profiles.last_world_id` est supprimée. Le « dernier monde visité » ne passe que par un cookie depuis longtemps ; la colonne n'était plus ni lue ni écrite, et était vide pour tous les comptes.",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
+    text: "Des enregistrements qui échouaient sans le dire. L'interface se met à jour avant la réponse du serveur : quand l'écriture était refusée, le changement restait affiché et disparaissait au rechargement suivant, sans le moindre message. Corrigé pour :\n- Le **réordonnancement du catalogue** (objets, compétences et catégories)\n- Le **réordonnancement des pages du wiki**, qui rétablit désormais l'ordre précédent en cas d'échec\n- L'**assignation d'un groupe** dans la vue des relations\n- L'**étoile « salon suivi »**, qui revient à son état réel si le suivi n'a pas pu être enregistré",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
+    text: "Trois durcissements sur des opérations privilégiées :\n- L'**expiration des défis du jour** — une tâche de maintenance qui marque le défi comme échoué pour tous les joueurs — était déclenchable par n'importe qui, même sans compte. Elle est désormais réservée aux tâches planifiées\n- La **boutique** vérifiait le solde puis débitait en deux temps : deux achats lancés en même temps pouvaient tous deux passer et faire tomber le solde en négatif. Les deux opérations n'en font plus qu'une\n- Un **défi relevé** deux fois simultanément créditait la récompense en double. Le crédit est maintenant conditionné à la première validation",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
+    text: "Les récompenses de message (XP et pièces) ne vérifiaient pas leur référence. On pouvait toucher le maximum quotidien sans rien écrire, et surtout réserver à l'avance les identifiants de messages à venir — privant leurs véritables auteurs de leur récompense, la protection anti-double-comptage étant commune à tous les comptes.\nLa référence doit désormais désigner un message réel, écrit par le compte qui la présente. Vérification faite : la faille n'avait jamais été exploitée.",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
+    text: "Faille critique fermée dans les invitations de monde. N'importe quel compte connecté pouvait devenir **administrateur de n'importe quel monde**, y compris privé, en deux appels : s'auto-inviter avec le rôle de son choix, puis accepter cette invitation. Une seconde voie permettait à un invité légitime de se promouvoir en administrateur avant d'accepter. Les deux ont été reproduites puis refermées :\n- Créer une invitation exige désormais d'être administrateur du monde visé\n- Le rôle d'une invitation n'est plus modifiable après son envoi\n- Une invitation ne peut plus conférer la propriété d'un monde\n- Inviter par courriel vérifie aussi les droits de l'envoyeur : cette action contourne les règles d'accès habituelles et ne le contrôlait pas, permettant à quiconque de faire envoyer un courriel d'invitation signé du site vers n'importe quelle adresse\nAu passage, l'invitation par courriel **fonctionne enfin** : elle n'ajoutait en réalité jamais l'invité au monde. Le monde et le rôle transitaient par les métadonnées du compte, que l'utilisateur peut réécrire lui-même, et l'ajout était de toute façon refusé sans que l'erreur soit lue. L'invitation est maintenant enregistrée comme les autres et apparaît dans les notifications de l'invité.",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
+    text: "Plusieurs restes d'affichage en passant d'un salon ou d'un monde à l'autre, tous invisibles au rechargement de la page — ils ne se produisaient qu'en navigation interne :\n- Les **messages épinglés** du salon précédent restaient affichés le temps que les nouveaux arrivent, et pouvaient même s'y substituer durablement si deux changements de salon se suivaient de près\n- L'**étoile « salon suivi »** gardait l'état du salon quitté, et l'**étoile « monde favori »** celle du monde quitté\n- Les **badges de défi gagné** du nouveau salon n'apparaissaient pas\n- La **liste des salons** de la barre latérale, la **grille des salons** et les **dossiers de catégories** pouvaient rester ceux du monde précédent\n- Une **catégorie sélectionnée** continuait de filtrer la grille du monde suivant, où elle n'existe pas",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
+    text: "Deux failles de confidentialité fermées, trouvées lors d'une revue systématique des règles d'accès à la base :\n- Les **clés de chiffrement des salons** étaient lisibles par n'importe quel compte, même membre d'aucun monde. Les messages eux-mêmes restaient protégés, mais la garantie du chiffrement — qu'une fuite des messages ne livre pas leur contenu — ne tenait plus. L'accès est désormais réservé aux membres du monde concerné\n- Les **profils** (dont les bios) et **le détail des votes** dans les sondages, y compris ceux de salons privés, étaient lisibles sans même être connecté. Il faut maintenant un compte",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
+    text: "Les onglets du navigateur portent enfin un nom : jusqu'ici tous affichaient « WVLDS », y compris quand on ouvre plusieurs salons côte à côte. Un salon affiche désormais son nom et celui de son monde, une page de monde son nom, et chaque section son intitulé. Les favoris et les liens partagés en profitent aussi.",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
+    text: "Écran d'erreur : jusqu'ici, une erreur imprévue affichait une page blanche du framework, sans repère ni moyen de repartir autrement qu'en rechargeant à la main. L'application propose désormais un écran propre, avec un bouton « Réessayer » qui retente l'affichage sans recharger, un retour à l'accueil, et un code d'erreur à communiquer au support. Il s'affiche dans votre langue.",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
+    text: "Fuite de mémoire dans le composer : joindre des images à un message puis continuer à écrire consommait de la mémoire à chaque caractère tapé, sans jamais la libérer — les images restaient retenues jusqu'au rechargement de la page. Sur une longue session avec plusieurs images, l'onglet pouvait devenir sensiblement plus lourd.",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
+    text: "Accessibilité : quinze boutons annonçaient leur rôle en français aux lecteurs d'écran, quelle que soit la langue du compte (« Ouvrir le menu », « Copier le code », « Modifier l'avatar »…). Le texte visible, lui, était bien traduit — rien ne signalait donc le problème à l'écran. Tous passent désormais par les traductions, en français, anglais et espagnol.",
+  },
+  {
+    date: "2026-08",
+    tag: "Technique",
+    text: "Nettoyage interne : la structure des panneaux latéraux (réglages de salon, épingles, statistiques, profils, éditeurs de blocs, historique du wiki…) était recopiée à l'identique dans seize écrans, tailles et bouton de fermeture compris. Elle vit maintenant à un seul endroit — une correction de style s'y applique partout d'un coup, et deux panneaux ne peuvent plus diverger sans qu'on le remarque. Même traitement pour la chronologie des fiches de persona et le thème du sélecteur d'emoji, chacun dupliqué en deux exemplaires.",
+  },
+  {
+    date: "2026-08",
+    tag: "Performance",
+    text: "Joindre plusieurs images à un message, ou en ajouter à une galerie de fiche, les envoie désormais en parallèle au lieu d'une par une : quatre images ne demandent plus quatre attentes bout à bout. Corrige au passage un cas où deux fichiers portant le même nom, envoyés en même temps, pouvaient se refuser mutuellement.",
+  },
+  {
+    date: "2026-08",
+    tag: "Performance",
+    text: "Explorateur, page des personas et boutique : ces pages enchaînaient des requêtes qui ne s'attendaient pas les unes les autres (jusqu'à six allers-retours successifs sur l'Explorateur, dont les traductions, demandées en tout dernier). Elles sont désormais groupées — quatre allers-retours économisés au total.",
+  },
+  {
+    date: "2026-08",
+    tag: "Performance",
+    text: "Page d'accueil d'un monde : les blocs « Personas récentes » et « Raccourcis wiki » s'affichaient vides le temps d'un aller-retour. Leur contenu arrive maintenant avec la page, et n'est chargé que pour les blocs réellement placés dans la grille du monde.",
+  },
+  {
+    date: "2026-08",
+    tag: "Performance",
+    text: "Déchiffrement des messages accéléré : la clé du salon était redérivée à chaque message affiché, soit une cinquantaine d'opérations cryptographiques pour ouvrir une conversation — et bien davantage pendant une recherche, qui parcourt les messages de plusieurs salons. Elle n'est plus calculée qu'une fois.",
+  },
+  {
+    date: "2026-08",
+    tag: "Performance",
+    text: "Page d'accueil d'un monde : le bloc « Catégories » apparaissait avec un temps de retard, car il rechargeait depuis le navigateur des catégories que le serveur avait déjà envoyées à la barre latérale. Il s'affiche désormais immédiatement, sans requête supplémentaire. La liste des salons suivis n'est également plus lue deux fois à l'ouverture d'un salon.",
+  },
+  {
+    date: "2026-08",
+    tag: "Performance",
+    text: "Page de connexion nettement plus rapide à s'afficher : elle téléchargeait l'intégralité des traductions de l'application (37 Ko) alors qu'elle n'en utilise qu'un millième. Les pages internes n'embarquent plus non plus les textes de l'administration, de la boutique ou des réglages quand on ne s'y trouve pas.",
+  },
+  {
+    date: "2026-08",
+    tag: "Technique",
+    text: "Mise à jour des bibliothèques Supabase (client et intégration serveur), figées plusieurs dizaines de versions en arrière. Suppression au passage de deux composants d'affichage des salons devenus inutilisés, dont l'un maintenait un abonnement temps réel qui se recréait à chaque création de salon.",
+  },
+  {
+    date: "2026-08",
+    tag: "Performance",
+    text: "Onglet « Membres » d'un monde : la liste des personas jouées par chaque membre était déduite en téléchargeant jusqu'à 2000 messages du monde pour les dédupliquer dans le navigateur — plusieurs centaines de Ko sur un monde actif. Le tri est désormais fait par la base, qui ne renvoie que le résultat. Corrige au passage un défaut de justesse : au-delà de 2000 messages, la troncature était silencieuse et arbitraire, si bien que des personas disparaissaient de la liste sans raison apparente.",
+  },
+  {
+    date: "2026-08",
+    tag: "Performance",
+    text: "Réception d'un message : jusqu'ici, chaque message arrivant dans l'un de vos mondes provoquait un rafraîchissement de toute la page de salon — le composant le plus lourd de l'application — alors qu'il n'avait besoin d'aucun des compteurs mis à jour. Les compteurs de non-lus et l'état du panneau de notifications sont désormais distribués séparément des actions, et l'affichage du salon comme la coque de l'application ne réagissent plus qu'à ce qui les concerne réellement.",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
+    text: "Faille corrigée : les tentatives de défis quotidiens réussies étaient lisibles publiquement. Deux règles de sécurité se cumulaient sur cette table, et la plus large (« toute tentative gagnée ») annulait la plus stricte (« ses propres tentatives ») — n'importe qui, même sans être connecté, pouvait savoir qui avait relevé un défi, dans quel salon et sur quel message, y compris dans des mondes privés. La lecture est désormais réservée aux membres du monde concerné ; le badge « défi remporté » sur les messages des autres continue de s'afficher normalement.",
+  },
+  {
+    date: "2026-08",
+    tag: "Performance",
+    text: "Chargement des pages de monde et de salon nettement allégé :\n- Les données de navigation des salons (la requête la plus lourde de ces pages : compteurs de non-lus, derniers posteurs) et les droits d'administration étaient demandés **deux fois** par affichage — une fois par la barre latérale, une fois par la page. Ils ne sont plus chargés qu'une seule fois et partagés\n- Le quota de mondes relisait le profil jusqu'à trois fois par affichage ; il réutilise désormais le profil déjà chargé, et ses deux requêtes partent en parallèle au lieu de s'enchaîner\n- Toutes les pages hors monde (personas, Explorateur, boutique, réglages, quêtes…) chargeaient la liste complète des mondes et le quota associé pour alimenter un panneau désactivé : quatre requêtes inutiles par navigation, plus l'envoi de cette liste au navigateur\n- Les fiches de personas n'étaient utiles qu'à l'onglet « Personas » mais étaient chargées pour l'accueil, le wiki, la carte et les membres également — trois requêtes économisées sur toutes ces vues\n- Dans un salon actif, chaque message reçu déclenchait une requête pour recalculer les pastilles de présence ; elle ne repart plus que lorsqu'un nouvel auteur apparaît",
+  },
+  {
+    date: "2026-08",
+    tag: "Performance",
+    text: "Salons plus fluides et plus légers à charger :\n- Les pastilles de présence s'abonnent maintenant à un seul utilisateur chacune : un changement de statut ne rafraîchit plus que les bulles concernées, au lieu de refaire tout l'affichage des messages à chaque signal de présence reçu dans l'application\n- La coloration syntaxique des blocs de code embarquait une trentaine de grammaires de langages dans le code envoyé à chaque salon, alors que son résultat était systématiquement supprimé avant l'affichage (aucune couleur n'apparaissait jamais). Retirée\n- L'outil de recadrage d'image et les sept fenêtres de blocs du composer (dés, PNJ, points de vie, encadré, ancre, choix, narration) ne sont plus téléchargés qu'au moment où on les ouvre",
+  },
+  {
+    date: "2026-08",
+    tag: "Technique",
+    text: "Audit de l'application et durcissement de la base de données :\n- Les 24 fonctions SQL du schéma applicatif épinglent désormais leur `search_path`. La moitié d'entre elles s'exécutent avec les droits de leur propriétaire (boutique, notifications, défis quotidiens) : sans cet épinglage, un appelant pouvait en théorie faire résoudre une table vers un objet à lui\n- Les 24 règles de sécurité (RLS) qui appelaient `auth.uid()` directement l'évaluaient **une fois par ligne lue** — désormais une seule fois par requête. Gain de performance sur les grandes tables (chat, wiki, tags), à comportement strictement identique : la migration a été validée en transaction annulée avant application, avec vérification que la logique des 148 règles restait inchangée\n- Nettoyage de la configuration de lint : le service worker généré et les copies de travail Git n'étaient pas exclus, ce qui noyait les vraies alertes sous 91 erreurs sans objet",
+  },
+  {
+    date: "2026-08",
     tag: "Interface",
     text: "Les marges latérales de la page d'accueil d'un monde se réduisent désormais progressivement sur les petits écrans, au lieu de garder une marge fixe trop large en mobile.",
   },

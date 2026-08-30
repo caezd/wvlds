@@ -13,6 +13,7 @@ import {
     setWorldAgeRestricted,
     setWorldTimeline,
     setWorldPersonaTemplate,
+    getWorldPersonaTemplate,
     addWorldInventoryItem,
     updateWorldInventoryItem,
     deleteWorldInventoryItem,
@@ -70,7 +71,7 @@ describe("setWorldFeature", () => {
         use(createSupabaseMock({ results: [{ error: { message: "nope" } }] }));
         expect(await setWorldFeature("w1", "enable_inventory", true)).toEqual({
             ok: false,
-            error: "nope",
+            error: "saveFailed",
         });
     });
 });
@@ -95,7 +96,7 @@ describe("setWorldFaceclaims", () => {
 
     it("remonte l'erreur Supabase", async () => {
         use(createSupabaseMock({ results: [{ error: { message: "nope" } }] }));
-        expect(await setWorldFaceclaims("w1", true)).toEqual({ ok: false, error: "nope" });
+        expect(await setWorldFaceclaims("w1", true)).toEqual({ ok: false, error: "saveFailed" });
     });
 });
 
@@ -119,7 +120,7 @@ describe("setWorldHomeShowStats", () => {
 
     it("remonte l'erreur Supabase", async () => {
         use(createSupabaseMock({ results: [{ error: { message: "nope" } }] }));
-        expect(await setWorldHomeShowStats("w1", true)).toEqual({ ok: false, error: "nope" });
+        expect(await setWorldHomeShowStats("w1", true)).toEqual({ ok: false, error: "saveFailed" });
     });
 });
 
@@ -146,7 +147,7 @@ describe("setWorldHomeGridGap", () => {
 
     it("remonte l'erreur Supabase", async () => {
         use(createSupabaseMock({ results: [{ error: { message: "nope" } }] }));
-        expect(await setWorldHomeGridGap("w1", "compact")).toEqual({ ok: false, error: "nope" });
+        expect(await setWorldHomeGridGap("w1", "compact")).toEqual({ ok: false, error: "saveFailed" });
     });
 });
 
@@ -173,7 +174,7 @@ describe("setWorldAgeRestricted", () => {
 
     it("remonte l'erreur Supabase", async () => {
         use(createSupabaseMock({ results: [{ error: { message: "nope" } }] }));
-        expect(await setWorldAgeRestricted("w1", true)).toEqual({ ok: false, error: "nope" });
+        expect(await setWorldAgeRestricted("w1", true)).toEqual({ ok: false, error: "saveFailed" });
     });
 });
 
@@ -223,11 +224,45 @@ describe("setWorldTimeline", () => {
 
     it("remonte l'erreur Supabase", async () => {
         use(createSupabaseMock({ results: [{ error: { message: "nope" } }] }));
-        expect(await setWorldTimeline("w1", true, CONFIG)).toEqual({ ok: false, error: "nope" });
+        expect(await setWorldTimeline("w1", true, CONFIG)).toEqual({ ok: false, error: "saveFailed" });
     });
 });
 
 // ── setWorldPersonaTemplate ───────────────────────────────────────────────────
+
+describe("getWorldPersonaTemplate", () => {
+    // La lecture qui décide de l'affichage : un `templateId` erroné enverrait
+    // l'éditeur de fiche par défaut sur le mauvais persona, ou l'ouvrirait
+    // alors qu'aucun modèle n'existe.
+
+    it("rend l'identifiant du modèle du monde visé", async () => {
+        const mock = createSupabaseMock({ results: [{ data: { id: "tpl1" } }] });
+        use(mock);
+
+        expect(await getWorldPersonaTemplate("w1")).toEqual({ ok: true, templateId: "tpl1" });
+
+        const b = mock.buildersFor("personas")[0];
+        expect(b.eq).toHaveBeenCalledWith("world_id", "w1");
+        // Sans ce filtre, le premier persona venu du monde passerait pour le
+        // modèle.
+        expect(b.eq).toHaveBeenCalledWith("is_template", true);
+    });
+
+    it("rend null, et non une erreur, quand le monde n'a pas de modèle", async () => {
+        // C'est le cas ordinaire : la plupart des mondes n'en ont pas.
+        use(createSupabaseMock({ results: [{ data: null }] }));
+        expect(await getWorldPersonaTemplate("w1")).toEqual({ ok: true, templateId: null });
+    });
+
+    it("rend un code, jamais le message de la base", async () => {
+        const brut = 'permission denied for table "personas"';
+        use(createSupabaseMock({ results: [{ data: null, error: { message: brut } }] }));
+
+        const res = await getWorldPersonaTemplate("w1");
+        expect(res).toEqual({ ok: false, error: "saveFailed" });
+        expect(JSON.stringify(res)).not.toContain("personas");
+    });
+});
 
 describe("setWorldPersonaTemplate", () => {
     it("refuse si non connecté", async () => {
@@ -376,7 +411,7 @@ describe("CRUD world_inventory_items", () => {
 
     it("addWorldInventoryItem remonte l'erreur Supabase", async () => {
         use(createSupabaseMock({ results: [{ error: { message: "fk" } }] }));
-        expect(await addWorldInventoryItem("w1", { name: "x" })).toEqual({ ok: false, error: "fk" });
+        expect(await addWorldInventoryItem("w1", { name: "x" })).toEqual({ ok: false, error: "saveFailed" });
     });
 
     it("updateWorldInventoryItem — succès", async () => {
@@ -386,7 +421,7 @@ describe("CRUD world_inventory_items", () => {
 
     it("updateWorldInventoryItem — erreur", async () => {
         use(createSupabaseMock({ results: [{ error: { message: "not found" } }] }));
-        expect(await updateWorldInventoryItem("i1", { name: "x" })).toEqual({ ok: false, error: "not found" });
+        expect(await updateWorldInventoryItem("i1", { name: "x" })).toEqual({ ok: false, error: "saveFailed" });
     });
 
     it("deleteWorldInventoryItem — succès", async () => {
@@ -396,7 +431,7 @@ describe("CRUD world_inventory_items", () => {
 
     it("deleteWorldInventoryItem — erreur", async () => {
         use(createSupabaseMock({ results: [{ error: { message: "rls" } }] }));
-        expect(await deleteWorldInventoryItem("i1")).toEqual({ ok: false, error: "rls" });
+        expect(await deleteWorldInventoryItem("i1")).toEqual({ ok: false, error: "saveFailed" });
     });
 });
 
@@ -411,7 +446,7 @@ describe("CRUD world_skills", () => {
 
     it("addWorldSkill remonte l'erreur", async () => {
         use(createSupabaseMock({ results: [{ error: { message: "rls" } }] }));
-        expect(await addWorldSkill("w1", { name: "x" })).toEqual({ ok: false, error: "rls" });
+        expect(await addWorldSkill("w1", { name: "x" })).toEqual({ ok: false, error: "saveFailed" });
     });
 
     it("updateWorldSkill — succès", async () => {
@@ -421,7 +456,7 @@ describe("CRUD world_skills", () => {
 
     it("deleteWorldSkill — erreur Supabase", async () => {
         use(createSupabaseMock({ results: [{ error: { message: "fk" } }] }));
-        expect(await deleteWorldSkill("s1")).toEqual({ ok: false, error: "fk" });
+        expect(await deleteWorldSkill("s1")).toEqual({ ok: false, error: "saveFailed" });
     });
 });
 
@@ -459,7 +494,7 @@ describe("CRUD world_catalog_categories", () => {
 
     it("addWorldCatalogCategory remonte l'erreur", async () => {
         use(createSupabaseMock({ results: [{ error: { message: "dup" } }] }));
-        expect(await addWorldCatalogCategory("w1", "inventory", "x")).toEqual({ ok: false, error: "dup" });
+        expect(await addWorldCatalogCategory("w1", "inventory", "x")).toEqual({ ok: false, error: "saveFailed" });
     });
 
     it("updateWorldCatalogCategory — succès", async () => {
@@ -759,7 +794,7 @@ describe("setWorldHomeGrid", () => {
         const res = await setWorldHomeGrid("w1", [
             { id: "a", type: "widget", x: 0, y: 0, w: 6, widgetId: "chatrooms" },
         ]);
-        expect(res).toEqual({ ok: false, error: "nope" });
+        expect(res).toEqual({ ok: false, error: "saveFailed" });
     });
 
     it("enregistre un bloc bannière valide", async () => {

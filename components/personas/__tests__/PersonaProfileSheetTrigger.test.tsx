@@ -5,6 +5,9 @@ import { toast } from "sonner";
 import { createSupabaseMock } from "@/test/supabaseMock";
 import { createClient } from "@/lib/supabase/client";
 import { PersonaProfileSheetTrigger } from "@/components/personas/PersonaProfileSheetTrigger";
+// Le message passe par next-intl (mocké sur fr.json dans vitest.setup) : on le
+// lit à la source plutôt que de recopier la chaîne.
+import fr from "@/messages/fr.json";
 
 vi.mock("sonner", () => ({
   toast: { success: vi.fn(), error: vi.fn() },
@@ -142,6 +145,6 @@ describe("PersonaProfileSheetTrigger", () => {
     await user.click(await screen.findByRole("button", { name: "Couleur de dialogue" }));
 
     expect(writeText).toHaveBeenCalledWith("#ff00aa");
-    expect(toast.success).toHaveBeenCalledWith("Couleur copiée dans le presse-papier.");
+    expect(toast.success).toHaveBeenCalledWith(fr.common.copyDialogueColorSuccess);
   });
 });

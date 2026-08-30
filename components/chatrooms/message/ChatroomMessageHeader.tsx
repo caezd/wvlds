@@ -87,7 +87,7 @@ export function ChatroomMessageHeader({
               déborde vers la droite via translate sans sortir du scroll area. */}
           <div className="hidden lg:block w-0 shrink-0 self-start relative">
             <UserProfileSheetTrigger userId={userId} label={playerUsername}>
-              <div className="flex absolute right-0 top-0 opacity-0 group-hover/avatar:opacity-100 group-hover/avatar:translate-x-3 transition-all duration-200 ease-out focus:opacity-100 focus:translate-x-3">
+              <div className="flex absolute right-0 top-0 opacity-0 transition-all duration-200 ease-out group-hover/avatar:opacity-100 group-hover/avatar:translate-x-3 focus-within:opacity-100 focus-within:translate-x-3">
                 <Avatar className="size-14 ring-2 ring-background rounded-full">
                   {avatarSrc && <AvatarImage src={avatarSrc} className="rounded-full" />}
                   <AvatarFallback className="text-base rounded-full">
@@ -138,7 +138,7 @@ export function ChatroomMessageHeader({
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7 rounded-md opacity-0 group-hover/turn-messages:opacity-100 transition-opacity"
+                    className="h-7 w-7 rounded-md opacity-0 group-hover/turn-messages:opacity-100 focus-within:opacity-100 transition-opacity"
                     aria-label={t("addReaction")}
                     title={t("addReaction")}
                   >

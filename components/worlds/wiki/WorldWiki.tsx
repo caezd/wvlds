@@ -208,9 +208,32 @@ function SortableTreeNode({
             </button>
           </>
         ) : (
-          <span className={cn("flex-1 truncate", page.is_folder && "font-medium text-foreground/80")}>
+          // Le titre porte l'action, pas la ligne. La ligne reste cliquable —
+          // c'est une cible large, agréable à la souris — mais elle ne peut pas
+          // devenir un `<button>` : elle contient déjà une poignée de
+          // déplacement, un sélecteur d'icône et un menu, et imbriquer des
+          // commandes dans un bouton produit un balisage invalide qu'un lecteur
+          // d'écran ne sait pas restituer.
+          //
+          // `stopPropagation` est indispensable : sans lui le clic remonterait
+          // à la ligne et `onToggleFolder` s'exécuterait deux fois, donc
+          // s'annulerait — un dossier refuserait de s'ouvrir.
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (page.is_folder) onToggleFolder();
+              else onSelect();
+            }}
+            aria-expanded={page.is_folder ? isExpanded : undefined}
+            aria-current={isSelected && !page.is_folder ? "page" : undefined}
+            className={cn(
+              "flex-1 truncate text-left outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-sm",
+              page.is_folder && "font-medium text-foreground/80",
+            )}
+          >
             {page.title}
-          </span>
+          </button>
         )}
 
         {!isRenaming && page.is_restricted && (
@@ -223,7 +246,7 @@ function SortableTreeNode({
               <button
                 type="button"
                 onClick={e => e.stopPropagation()}
-                className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-secondary hover:text-foreground"
+                className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted-foreground opacity-0 group-hover:opacity-100 focus-within:opacity-100 hover:bg-secondary hover:text-foreground"
                 aria-label={t("options")}
               >
                 <MoreHorizontal className="h-3.5 w-3.5" />
@@ -596,6 +619,8 @@ export function WorldWiki({
   // ── DnD ──────────────────────────────────────────────────────
   function onDragEnd({ active, over }: DragEndEvent) {
     if (!over || active.id === over.id || !pages) return;
+    // Ordre d'origine, pour le rétablir si l'écriture est refusée.
+    const previousPages = pages;
 
     const activePage = pages.find(p => p.id === active.id);
     const overPage = pages.find(p => p.id === over.id);
@@ -611,10 +636,18 @@ export function WorldWiki({
         ) ?? null
       );
       setExpandedFolders(prev => new Set([...prev, overPage.id]));
+      // Même précaution que pour le réordonnancement : sans lire l'erreur, la
+      // page paraissait rangée dans le dossier et en ressortait au
+      // rechargement suivant.
       void supabase
         .from("world_wiki_pages")
         .update({ parent_id: overPage.id, sort_index })
-        .eq("id", activePage.id);
+        .eq("id", activePage.id)
+        .then(({ error }: { error: { message: string } | null }) => {
+          if (!error) return;
+          setPages(previousPages);
+          toast.error(t("saveError"), { description: error.message });
+        });
       return;
     }
 
@@ -636,7 +669,14 @@ export function WorldWiki({
       }) ?? null
     );
 
-    void supabase.from("world_wiki_pages").upsert(updates);
+    // Le résultat de l'écriture n'était pas lu : un refus laissait le nouvel
+    // ordre à l'écran, perdu au rechargement suivant. On rétablit l'ordre
+    // précédent plutôt que d'afficher un état que la base ne connaît pas.
+    void supabase.from("world_wiki_pages").upsert(updates).then(({ error }: { error: { message: string } | null }) => {
+      if (!error) return;
+      setPages(previousPages);
+      toast.error(t("saveError"), { description: error.message });
+    });
   }
 
   const selectedPage = pages?.find(p => p.id === selectedId) ?? null;

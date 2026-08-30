@@ -15,6 +15,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import type { World } from "@/types/worlds";
+import { messageErreurAction } from "@/lib/actionErrors";
 
 const GAP_OPTIONS: WorldHomeGridGap[] = ["compact", "comfortable", "spacious"];
 
@@ -34,6 +35,7 @@ export function WorldHomeGridSettings({
 }) {
   const router = useRouter();
   const t = useTranslations("worlds");
+  const tCommun = useTranslations("common");
   const [items, setItems] = React.useState<WorldHomeGridItem[]>(() =>
     resolveWorldHomeGrid(world.home_grid, world.home_layout, world.announcement_html),
   );
@@ -47,7 +49,7 @@ export function WorldHomeGridSettings({
     const res = await setWorldHomeShowStats(world.id, enabled);
     setTogglingStats(false);
     if (!res.ok) {
-      toast.error(res.error);
+      toast.error(messageErreurAction(res.error, tCommun));
       return;
     }
     setShowStats(enabled);
@@ -63,7 +65,7 @@ export function WorldHomeGridSettings({
     setSavingGap(false);
     if (!res.ok) {
       setGap(previous);
-      toast.error(res.error);
+      toast.error(messageErreurAction(res.error, tCommun));
       return;
     }
     onUpdated?.({ ...world, home_grid_gap: next });

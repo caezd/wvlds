@@ -11,6 +11,7 @@ import {
   deleteMapPin,
 } from "@/app/actions/worldMap";
 import { createClient } from "@/lib/supabase/server";
+import { ERR_NON_AUTHENTIFIE } from "@/lib/actionErrors";
 
 const use = (mock: ReturnType<typeof createSupabaseMock>) =>
   vi.mocked(createClient).mockResolvedValue(mock.client as never);
@@ -43,7 +44,10 @@ describe("mutations carte — garde d'authentification", () => {
     ["deleteMapPin", () => deleteMapPin("p1")],
   ])("%s lève si non connecté", async (_name, fn) => {
     use(createSupabaseMock({ user: null }));
-    await expect(fn()).rejects.toThrow(/connecté/i);
+    // Un CODE, pas une phrase : le message d'une exception finit dans un
+    // `toast.error(e.message)` quelque part, et une phrase y arriverait en
+    // français quelle que soit la langue lue.
+    await expect(fn()).rejects.toThrow(ERR_NON_AUTHENTIFIE);
   });
 });
 

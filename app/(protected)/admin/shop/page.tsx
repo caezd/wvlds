@@ -19,7 +19,7 @@ export default async function AdminShopPage() {
   if (error) {
     return (
       <div className="text-sm text-destructive">
-        Erreur de chargement : {error.message}
+        {t("loadError")}
       </div>
     );
   }
@@ -95,7 +95,7 @@ export default async function AdminShopPage() {
                 <td className="px-4 py-3">
                   <div className="flex items-center justify-end gap-2">
                     <Button variant="ghost" size="icon" className="h-7 w-7" asChild>
-                      <Link href={`/admin/shop/${item.id}`}>
+                      <Link href={`/admin/shop/${item.id}`} aria-label={t("shopItemEdit")}>
                         <Pencil className="h-3.5 w-3.5" />
                       </Link>
                     </Button>
@@ -108,6 +108,7 @@ export default async function AdminShopPage() {
                         size="icon"
                         className="h-7 w-7 text-destructive hover:text-destructive"
                         type="submit"
+                        aria-label={t("shopItemDelete")}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>

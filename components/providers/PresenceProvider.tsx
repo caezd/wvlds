@@ -14,15 +14,23 @@ import { createClient } from "@/lib/supabase/client";
 import { channel, PRESENCE, TABLE } from "@/lib/constants";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
+import {
+    derivePresenceStatus,
+    resetPresenceStatuses,
+    setPresenceStatuses,
+    type GlobalPresenceMeta,
+} from "@/lib/presenceStore";
+import { openRealtimeChannel } from "@/lib/realtimeChannel";
+import { useTranslations } from "next-intl";
 
 export type PresenceStatus = "online" | "offline" | "invisible";
 
-export type GlobalPresenceMeta = {
-    user_id: string;
-    username?: string | null;
-    avatar_url?: string | null;
-    last_active_at?: string | null;
-};
+export type { GlobalPresenceMeta };
+// `useUserPresence` — abonnement à la présence d'UN utilisateur, sans se
+// re-rendre à chaque mouvement de présence de l'application. À préférer à
+// `useGlobalPresence().getUserPresence(uid)` dans les composants nombreux
+// (bulles de message, lignes de liste). Voir lib/presenceStore.ts.
+export { useUserPresence } from "@/lib/presenceStore";
 
 type Ctx = {
     /** Utilisateurs visibles : "en ligne" ou "absent" (dans la fenêtre PRESENCE.OFFLINE_WINDOW_MS) */
@@ -54,14 +62,7 @@ export function useGlobalPresence() {
     return useContext(PresenceCtx) ?? DEFAULT_CTX;
 }
 
-function getPresenceStatus(meta: GlobalPresenceMeta): "online" | "away" | "offline" {
-    if (!meta.last_active_at) return "offline";
-    const elapsed = Date.now() - Date.parse(meta.last_active_at);
-    if (!Number.isFinite(elapsed)) return "offline";
-    if (elapsed < PRESENCE.AWAY_WINDOW_MS) return "online";
-    if (elapsed < PRESENCE.OFFLINE_WINDOW_MS) return "away";
-    return "offline";
-}
+const getPresenceStatus = derivePresenceStatus;
 
 function isVisible(meta: GlobalPresenceMeta) {
     return getPresenceStatus(meta) !== "offline";
@@ -95,6 +96,7 @@ function parsePresenceState(
 }
 
 export default function PresenceProvider({ children }: { children: React.ReactNode }) {
+  const t = useTranslations("presence");
     const supabase = useMemo(() => createClient(), []);
     const { userId, username, avatarUrl, appearOffline: ctxAppearOffline } = useCurrentUser();
     const reconnectEpoch = useReconnectEpoch();
@@ -135,6 +137,9 @@ export default function PresenceProvider({ children }: { children: React.ReactNo
                 if (isVisible(meta)) next[uid] = meta;
             }
         }
+        // Alimente le store par tranche : les abonnés de `useUserPresence(uid)`
+        // ne seront réveillés que si le statut de LEUR utilisateur a bougé.
+        setPresenceStatuses(next);
         setOnlineUsers((prev) => {
             const prevKeys = Object.keys(prev);
             const nextKeys = Object.keys(next);
@@ -147,10 +152,15 @@ export default function PresenceProvider({ children }: { children: React.ReactNo
         });
     }, []);
 
+    // Le store est un singleton de module : on le vide au démontage pour ne pas
+    // laisser des statuts périmés à un prochain montage (changement de compte).
+    useEffect(() => resetPresenceStatuses, []);
+
     useEffect(() => {
         if (!userId) return;
 
         let mounted = true;
+        let fermerCanal: (() => void) | null = null;
         let lastTrack = 0;
 
         const track = async (force = false) => {
@@ -172,7 +182,12 @@ export default function PresenceProvider({ children }: { children: React.ReactNo
                 avatar_url: selfRef.current.avatarUrl,
                 last_active_at: iso,
             });
-            // Heartbeat persistant : alimente le "vu il y a X" des profils
+            // Heartbeat persistant : alimente le "vu il y a X" des profils.
+            // Seule écriture de l'application dont on ignore délibérément
+            // l'erreur : elle se répète à chaque battement, donc un échec
+            // ponctuel se rattrape de lui-même au suivant, et journaliser
+            // chaque tentative ratée noierait la console pendant une coupure
+            // réseau. Le "vu il y a X" est au demeurant purement indicatif.
             void supabase
                 .from(TABLE.PROFILES)
                 .update({ last_seen_at: iso })
@@ -186,9 +201,15 @@ export default function PresenceProvider({ children }: { children: React.ReactNo
             setAppearOfflineState(appearOfflineRef.current);
             setStatusState(appearOfflineRef.current ? "offline" : "online");
 
-            const ch = supabase.channel(channel.appPresence(), {
-                config: { presence: { key: userId } },
-            });
+            // Nom stable : c'est le rendez-vous commun à tous les navigateurs
+            // de l'application. Le rendre unique isolerait chacun dans son
+            // propre canal et la présence ne montrerait plus personne. Seul
+            // l'enchaînement ouverture/fermeture est sérialisé, pour ne pas
+            // rouvrir sur un canal encore joint. Cf. lib/realtimeChannel.
+            fermerCanal = openRealtimeChannel(
+                supabase,
+                channel.appPresence(),
+                (ch) => {
             channelRef.current = ch;
 
             ch.on("presence", { event: "sync" }, () => {
@@ -225,6 +246,12 @@ export default function PresenceProvider({ children }: { children: React.ReactNo
                 if (status !== "SUBSCRIBED") return;
                 await track(true);
             });
+            return ch;
+                },
+                { config: { presence: { key: userId } } },
+            );
+            // L'effet a pu être nettoyé pendant l'attente ci-dessus.
+            if (!mounted) { fermerCanal(); fermerCanal = null; }
         })();
 
         // Toute interaction rafraîchit last_active_at (throttlé par HEARTBEAT_MS)
@@ -258,11 +285,12 @@ export default function PresenceProvider({ children }: { children: React.ReactNo
             events.forEach((e) => window.removeEventListener(e, onActivity));
             document.removeEventListener("visibilitychange", onVis);
             window.clearInterval(interval);
-            if (channelRef.current) {
-                channelRef.current.untrack();
-                supabase.removeChannel(channelRef.current);
-                channelRef.current = null;
-            }
+            // `untrack()` retire notre présence avant la fermeture ; sans lui,
+            // les autres nous verraient encore jusqu'au prochain sync.
+            channelRef.current?.untrack();
+            channelRef.current = null;
+            fermerCanal?.();
+            fermerCanal = null;
             rawRef.current = {};
             lingeringRef.current = {};
             setOnlineUsers({});
@@ -311,7 +339,7 @@ export default function PresenceProvider({ children }: { children: React.ReactNo
                 // désynchronisée de la valeur réellement en base.
                 appearOfflineRef.current = previous;
                 setAppearOfflineState(previous);
-                toast.error("Impossible d'enregistrer le statut.");
+                toast.error(t("statusSaveFailed"));
                 return false;
             }
 
@@ -325,7 +353,7 @@ export default function PresenceProvider({ children }: { children: React.ReactNo
             }
             return true;
         },
-        [supabase, userId, recompute],
+        [supabase, userId, recompute, t],
     );
 
     const setStatus = useCallback(

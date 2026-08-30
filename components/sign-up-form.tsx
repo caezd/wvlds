@@ -7,8 +7,11 @@ import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
+import { messageErreurAuth } from "@/lib/authErrors";
 
 export function SignUpForm() {
+  const t = useTranslations("auth");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [repeatPassword, setRepeatPassword] = useState("");
@@ -23,7 +26,7 @@ export function SignUpForm() {
     setError(null);
 
     if (password !== repeatPassword) {
-      setError("Les mots de passe ne correspondent pas.");
+      setError(t("errorPasswordsDoNotMatch"));
       setIsLoading(false);
       return;
     }
@@ -39,7 +42,7 @@ export function SignUpForm() {
       if (error) throw error;
       router.push("/auth/sign-up-success");
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : "Une erreur est survenue.");
+      setError(messageErreurAuth(error, t));
     } finally {
       setIsLoading(false);
     }
@@ -58,18 +61,18 @@ export function SignUpForm() {
       <div className="my-4">
         <form onSubmit={handleSignUp}>
           <div className="mb-6 flex gap-3 flex-col">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">{t("email")}</Label>
             <Input
               id="email"
               type="email"
-              placeholder="m@example.com"
+              placeholder={t("emailPlaceholder")}
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
           </div>
           <div className="mb-6 flex gap-3 flex-col">
-            <Label htmlFor="password">Mot de passe</Label>
+            <Label htmlFor="password">{t("password")}</Label>
             <Input
               id="password"
               type="password"
@@ -79,7 +82,7 @@ export function SignUpForm() {
             />
           </div>
           <div className="mb-6 flex gap-3 flex-col">
-            <Label htmlFor="repeat-password">Confirmer le mot de passe</Label>
+            <Label htmlFor="repeat-password">{t("confirmPassword")}</Label>
             <Input
               id="repeat-password"
               type="password"

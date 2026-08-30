@@ -13,12 +13,11 @@ import { initials } from "@/lib/persona-display";
 import { cn } from "@/lib/utils";
 import {
   Drawer,
-  DrawerClose,
-  DrawerContent,
   DrawerHeader,
   DrawerFooter,
   DrawerTitle,
 } from "@/components/ui/drawer";
+import { SideSheetContent } from "@/components/ui/side-sheet";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import {
@@ -149,17 +148,12 @@ function BannerSheet({
   onSaved: (url: string) => void;
   onRemove: () => void;
 }) {
+  const tPersonas = useTranslations("personas");
   return (
     <Drawer open={open} onOpenChange={onOpenChange} swipeDirection="right">
-      <DrawerContent className="inset-y-0 right-0 flex flex-col gap-4 border rounded-md bg-background text-foreground shadow-lg p-0 w-[min(calc(100%_-_var(--drawer-inset)*2),_460px)] lg:shadow-2xl">
-        <DrawerClose
-          aria-label="Fermer"
-          className="absolute right-4 top-4 rounded-xs text-muted-foreground opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
-        >
-          <X className="size-4" />
-        </DrawerClose>
+      <SideSheetContent className="gap-4 lg:shadow-2xl">
         <DrawerHeader>
-          <DrawerTitle>Bannière du personnage</DrawerTitle>
+          <DrawerTitle>{tPersonas("bannerTitle")}</DrawerTitle>
         </DrawerHeader>
         <div className="flex-1 overflow-y-auto space-y-4 p-6">
           <StorageUploadTab
@@ -183,10 +177,18 @@ function BannerSheet({
                   Supprimer la bannière
                 </Button>
               }
-              description="La bannière de ce personnage sera supprimée définitivement du stockage."
+              description={tPersonas("bannerDeleteDescription")}
               onConfirm={async () => {
                 const path = currentBannerUrl?.match(/\/object\/public\/personas\/([^?]+)/)?.[1];
-                await supabase.from("personas").update({ banner_url: null }).eq("id", personaId);
+                // L'ordre compte : le fichier n'est effacé qu'une fois la
+                // fiche mise à jour. Sans ce contrôle, un refus laissait la
+                // fiche pointer vers un fichier détruit — image cassée, sans
+                // retour possible.
+                const { error } = await supabase.from("personas").update({ banner_url: null }).eq("id", personaId);
+                if (error) {
+                  toast.error(error.message);
+                  return;
+                }
                 if (path) await supabase.storage.from("personas").remove([path]);
                 onRemove();
                 onOpenChange(false);
@@ -194,7 +196,7 @@ function BannerSheet({
             />
           </DrawerFooter>
         )}
-      </DrawerContent>
+      </SideSheetContent>
     </Drawer>
   );
 }
@@ -220,6 +222,7 @@ function FramePicker({
   initialFrameId: string | null;
   onFrameChange?: (frameId: string | null, assetUrl: string | null) => void;
 }) {
+  const tPersonas = useTranslations("personas");
   const router = useRouter();
   const [frames, setFrames] = useState<OwnedFrame[]>([]);
   const [selected, setSelected] = useState<string | null>(initialFrameId);
@@ -244,7 +247,13 @@ function FramePicker({
 
   async function selectFrame(frameId: string | null) {
     setSaving(true);
-    await supabase.from("personas").update({ avatar_frame_id: frameId }).eq("id", personaId);
+    const { error } = await supabase.from("personas").update({ avatar_frame_id: frameId }).eq("id", personaId);
+    if (error) {
+      // Le cadre n'a pas changé en base : ne pas le montrer comme sélectionné.
+      setSaving(false);
+      toast.error(error.message);
+      return;
+    }
     setSelected(frameId);
     const assetUrl = frameId ? (frames.find((f) => f.id === frameId)?.asset_url ?? null) : null;
     onFrameChange?.(frameId, assetUrl);
@@ -254,7 +263,7 @@ function FramePicker({
 
   if (!loaded) return <div className="h-4 w-32 animate-pulse rounded bg-muted" />;
   if (!frames.length) return (
-    <p className="text-xs text-muted-foreground">Aucun cadre possédé. Achetez-en un dans la boutique.</p>
+    <p className="text-xs text-muted-foreground">{tPersonas("noFrameOwned")}</p>
   );
 
   return (
@@ -268,7 +277,7 @@ function FramePicker({
           "relative h-14 w-14 rounded-xl border-2 bg-muted text-xs text-muted-foreground transition-colors",
           selected === null ? "border-primary" : "border-transparent hover:border-border",
         )}
-        title="Aucun cadre"
+        title={tPersonas("noFrame")}
       >
         <X className="m-auto h-5 w-5" />
         {selected === null && <Check className="absolute -right-1.5 -top-1.5 h-4 w-4 rounded-full bg-primary text-primary-foreground p-0.5" />}
@@ -314,6 +323,7 @@ export function MaritalStatusPicker({
   initialSpouseId: string | null;
 }) {
   const t = useTranslations("personas.maritalStatus");
+  const tPersonas = useTranslations("personas");
   const router = useRouter();
   const [status, setStatus] = useState<MaritalStatus | null>(initialStatus);
   const [spouseId, setSpouseId] = useState<string | null>(initialSpouseId);
@@ -363,14 +373,20 @@ export function MaritalStatusPicker({
       .update({ marital_status: next, ...(clearSpouse ? { spouse_persona_id: null } : {}) })
       .eq("id", personaId);
     if (error) {
-      toast.error("Enregistrement impossible.", { description: error.message });
+      toast.error(tPersonas("saveFailed"), { description: error.message });
       setStatus(previous);
       return;
     }
     if (clearSpouse) {
       setSpouseId(null);
       if (pendingRequest) {
-        await supabase.from(TABLE.PERSONA_MARITAL_REQUESTS).delete().eq("id", pendingRequest.id);
+        const { error } = await supabase.from(TABLE.PERSONA_MARITAL_REQUESTS).delete().eq("id", pendingRequest.id);
+        // Sans ce contrôle, la demande disparaissait de l'écran tout en
+        // restant en attente côté serveur.
+        if (error) {
+          toast.error(error.message);
+          return;
+        }
         setPendingRequest(null);
       }
     }
@@ -386,7 +402,7 @@ export function MaritalStatusPicker({
       setSpouseId(null);
       const { error } = await supabase.from("personas").update({ spouse_persona_id: null }).eq("id", personaId);
       if (error) {
-        toast.error("Enregistrement impossible.", { description: error.message });
+        toast.error(tPersonas("saveFailed"), { description: error.message });
         setSpouseId(previous);
       }
       router.refresh();
@@ -399,7 +415,7 @@ export function MaritalStatusPicker({
       .select("id")
       .single();
     if (error) {
-      toast.error("Impossible d'envoyer la demande.", { description: error.message });
+      toast.error(tPersonas("requestFailed"), { description: error.message });
       return;
     }
     const targetName = worldPersonas.find((p) => p.id === next)?.name ?? "";
@@ -410,7 +426,7 @@ export function MaritalStatusPicker({
     if (!pendingRequest) return;
     const { error } = await supabase.from(TABLE.PERSONA_MARITAL_REQUESTS).delete().eq("id", pendingRequest.id);
     if (error) {
-      toast.error("Annulation impossible.", { description: error.message });
+      toast.error(tPersonas("cancelFailed"), { description: error.message });
       return;
     }
     setPendingRequest(null);
@@ -518,6 +534,7 @@ export function PersonaEditorContent({
   restrictSkills,
   faceclaimsEnabled,
 }: PersonaEditorContentProps) {
+  const tPersonas = useTranslations("personas");
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
 
@@ -632,8 +649,8 @@ export function PersonaEditorContent({
             type="button"
             onClick={() => setBannerDialogOpen(true)}
             className="group relative h-34 w-full block overflow-hidden focus-visible:outline-none"
-            aria-label={bannerUrl ? "Modifier la bannière" : "Ajouter une bannière"}
-            title={bannerUrl ? "Modifier la bannière" : "Ajouter une bannière"}
+            aria-label={bannerUrl ? tPersonas("editBanner") : tPersonas("addBanner")}
+            title={bannerUrl ? tPersonas("editBanner") : tPersonas("addBanner")}
           >
             {bannerUrl ? (
               <Image
@@ -648,10 +665,10 @@ export function PersonaEditorContent({
             ) : (
               <div className="h-full w-full bg-gradient-to-r from-muted/60 to-muted" />
             )}
-            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition bg-black/30 grid place-items-center">
+            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition bg-black/30 grid place-items-center">
               <span className="flex items-center gap-1.5 rounded-full bg-black/50 px-3 py-1.5 text-xs font-medium text-white">
                 <Pencil className="h-3.5 w-3.5" />
-                {bannerUrl ? "Modifier la bannière" : "Ajouter une bannière"}
+                {bannerUrl ? tPersonas("editBanner") : tPersonas("addBanner")}
               </span>
             </div>
           </button>
@@ -669,8 +686,8 @@ export function PersonaEditorContent({
                 // réduite à 120px, recadrée différemment), alors qu'un
                 // `outline` se dessine par-dessus sans réduire l'image.
                 className="group relative h-32 w-32 rounded-2xl outline-4 outline-background bg-muted overflow-hidden shadow shrink-0"
-                aria-label="Modifier l'avatar"
-                title="Modifier l'avatar"
+                aria-label={tPersonas("editAvatar")}
+                title={tPersonas("editAvatar")}
               >
                 {avatarUrl ? (
                   <Image src={avatarUrl} alt="" fill sizes="128px" className="object-cover" draggable={false} />
@@ -679,7 +696,7 @@ export function PersonaEditorContent({
                     {avatarFallback}
                   </div>
                 )}
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition bg-black/30 grid place-items-center">
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition bg-black/30 grid place-items-center">
                   <div className="text-xs text-white font-medium">Modifier</div>
                 </div>
               </button>
@@ -698,7 +715,7 @@ export function PersonaEditorContent({
                     }}
                     onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
                     maxLength={40}
-                    placeholder="Nom du personnage"
+                    placeholder={tPersonas("namePlaceholder")}
                     className="min-w-0 flex-1 text-xl font-semibold leading-tight bg-transparent outline-none border-none rounded px-1 -mx-1 hover:bg-muted/60 focus:bg-muted/60 focus:underline decoration-dotted underline-offset-4 placeholder:text-muted-foreground/40 transition-colors"
                   />
                   {faceclaimsEnabled !== false && (
@@ -717,7 +734,7 @@ export function PersonaEditorContent({
                         onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
                         maxLength={80}
                         placeholder="acteur/perso"
-                        title="Faceclaim : l'acteur ou le personnage sur lequel est basé l'avatar"
+                        title={tPersonas("faceclaimHint")}
                         className="min-w-0 w-full text-sm leading-tight bg-transparent outline-none border-none rounded px-1 -mx-1 hover:bg-muted/60 focus:bg-muted/60 focus:underline decoration-dotted underline-offset-4 placeholder:text-muted-foreground/40 transition-colors"
                       />
                     </div>
@@ -754,13 +771,7 @@ export function PersonaEditorContent({
 
       {/* Drawer apparence (avatar + cosmétiques) */}
       <Drawer open={avatarDialogOpen} onOpenChange={setAvatarDialogOpen} swipeDirection="right">
-        <DrawerContent className="inset-y-0 right-0 flex flex-col border rounded-md bg-background text-foreground shadow-lg p-0 gap-0 w-[min(calc(100%_-_var(--drawer-inset)*2),_460px)] lg:shadow-2xl overflow-hidden">
-          <DrawerClose
-            aria-label="Fermer"
-            className="absolute right-4 top-4 rounded-xs text-muted-foreground opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
-          >
-            <X className="size-4" />
-          </DrawerClose>
+        <SideSheetContent className="lg:shadow-2xl overflow-hidden">
           <DrawerHeader className="px-6 pt-6 pb-0 shrink-0">
             <div className="flex items-center gap-3">
               <div className="relative h-14 w-14 shrink-0 rounded-xl border bg-muted overflow-hidden lg:hidden">
@@ -782,7 +793,7 @@ export function PersonaEditorContent({
               <Tabs value={appearanceTab} onValueChange={(v) => setAppearanceTab(v as "avatar" | "cosmetics")}>
                 <TabsList>
                   <TabsTrigger value="avatar">Avatar</TabsTrigger>
-                  <TabsTrigger value="cosmetics">Cosmétiques</TabsTrigger>
+                  <TabsTrigger value="cosmetics">{tPersonas("tabCosmetics")}</TabsTrigger>
                 </TabsList>
               </Tabs>
 
@@ -791,7 +802,7 @@ export function PersonaEditorContent({
                   <div className="h-6 w-px bg-border" />
                   <Tabs value={avatarSubTab} onValueChange={(v) => setAvatarSubTab(v as "builder" | "upload")}>
                     <TabsList>
-                      {avatar_builder && <TabsTrigger value="builder">Générateur</TabsTrigger>}
+                      {avatar_builder && <TabsTrigger value="builder">{tPersonas("tabBuilder")}</TabsTrigger>}
                       <TabsTrigger value="upload">Image</TabsTrigger>
                     </TabsList>
                   </Tabs>
@@ -861,10 +872,16 @@ export function PersonaEditorContent({
                     Supprimer l&apos;avatar
                   </Button>
                 }
-                description="L'avatar de ce personnage sera supprimé définitivement du stockage."
+                description={tPersonas("avatarDeleteDescription")}
                 onConfirm={async () => {
                   const path = avatarUrl?.match(/\/object\/public\/personas\/([^?]+)/)?.[1];
-                  await supabase.from("personas").update({ avatar_url: null, avatar_config: null }).eq("id", personaId);
+                  // Même précaution que pour la bannière : on n'efface le
+                  // fichier qu'une fois la fiche effectivement mise à jour.
+                  const { error } = await supabase.from("personas").update({ avatar_url: null, avatar_config: null }).eq("id", personaId);
+                  if (error) {
+                    toast.error(error.message);
+                    return;
+                  }
                   if (path) await supabase.storage.from("personas").remove([path]);
                   setAvatarUrl(null);
                   setAvatarConfig(null);
@@ -874,7 +891,7 @@ export function PersonaEditorContent({
               />
             </DrawerFooter>
           )}
-        </DrawerContent>
+        </SideSheetContent>
       </Drawer>
 
       {/* Aperçu de la bannière actuelle dans l'espace libre à gauche (desktop only).
@@ -900,7 +917,7 @@ export function PersonaEditorContent({
                   </div>
                 )}
               </div>
-              <p className="text-sm font-medium text-white/80">Bannière actuelle</p>
+              <p className="text-sm font-medium text-white/80">{tPersonas("currentBanner")}</p>
             </div>
           </div>,
           document.body,
@@ -946,6 +963,7 @@ export function PersonaEditSheet({
   restrictSkills,
   faceclaimsEnabled,
 }: PersonaEditSheetProps) {
+  const tPersonas = useTranslations("personas");
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -955,7 +973,7 @@ export function PersonaEditSheet({
     setDeleting(true);
     const result = await deletePersona(personaId);
     if (!result.ok) {
-      toast.error("Erreur lors de la suppression", { description: result.error });
+      toast.error(tPersonas("deleteFailed"), { description: result.error });
       setDeleting(false);
       return;
     }
@@ -968,7 +986,7 @@ export function PersonaEditSheet({
     <>
       {trigger
         ? <span onClick={() => setOpen(true)} style={{ display: "contents" }}>{trigger}</span>
-        : <button className="text-sm underline" onClick={() => setOpen(true)}>Éditer</button>
+        : <button className="text-sm underline" onClick={() => setOpen(true)}>{tPersonas("editAction")}</button>
       }
       <Drawer open={open} onOpenChange={setOpen} swipeDirection="right">
         {/* Le recul visuel de ce drawer quand le drawer avatar/bannière
@@ -978,7 +996,7 @@ export function PersonaEditSheet({
             avatar (dans PersonaEditorContent) sont déjà rendus à
             l'intérieur de ce DrawerContent, donc réellement imbriqués. Plus
             besoin de décalage/flou manuel piloté par un état local. */}
-        <DrawerContent className="inset-y-0 right-0 flex flex-col border rounded-md bg-background text-foreground shadow-lg p-0 w-[min(calc(100%_-_var(--drawer-inset)*2),_460px)]">
+        <SideSheetContent hideClose>
           <DrawerHeader className="sr-only">
             <DrawerTitle>Éditer — {personaName}</DrawerTitle>
           </DrawerHeader>
@@ -1023,7 +1041,7 @@ export function PersonaEditSheet({
               onConfirm={handleDelete}
             />
           </DrawerFooter>
-        </DrawerContent>
+        </SideSheetContent>
       </Drawer>
     </>
   );

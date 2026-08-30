@@ -154,7 +154,10 @@ export function useChatroomMessageEdit({
           .eq("world_id", message.world_id).in("user_id", recipientIds);
         const validIds = (members ?? []).map((m: { user_id: string }) => m.user_id);
         if (validIds.length > 0) {
-          await supabase.from(TABLE.NOTIFICATIONS).insert(
+          // Idem qu'à la publication : la modification du message est déjà
+          // enregistrée, seules les alertes des nouvelles mentions peuvent
+          // manquer.
+          const { error: mentionError } = await supabase.from(TABLE.NOTIFICATIONS).insert(
             validIds.map((rid: string) => ({
               recipient_id: rid,
               type: "mention",
@@ -166,6 +169,7 @@ export function useChatroomMessageEdit({
               content: chatroomTitle,
             })),
           );
+          if (mentionError) console.error("[mentions] notifications non créées", mentionError.message);
         }
       }
     }

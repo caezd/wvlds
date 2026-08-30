@@ -26,6 +26,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { messageErreurAction } from "@/lib/actionErrors";
 
 export type WorldItem = {
   id: string;
@@ -58,6 +59,7 @@ export function WorldPickerHeader({
 }) {
   const router = useRouter();
   const t = useTranslations("worlds");
+  const tCommun = useTranslations("common");
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const [pendingLeave, setPendingLeave] = useState<WorldItem | null>(null);
@@ -71,7 +73,7 @@ export function WorldPickerHeader({
       const res = await leaveWorld(world.id);
       setPendingLeave(null);
       if (!res.ok) {
-        toast.error(res.error);
+        toast.error(messageErreurAction(res.error, tCommun));
         return;
       }
       toast.success(t("leftWorld", { name: world.name }));
@@ -120,7 +122,7 @@ export function WorldPickerHeader({
           <div className="absolute top-full left-0 right-0 mt-1 overflow-hidden rounded-lg border border-border bg-background shadow-lg z-50">
             <div className="px-1 py-1">
               {otherWorlds.length === 0 ? (
-                <p className="px-2 py-1.5 text-xs text-muted-foreground">Aucun autre monde</p>
+                <p className="px-2 py-1.5 text-xs text-muted-foreground">{t("noOtherWorld")}</p>
               ) : (
                 otherWorlds.map((w) => {
                   const unread = worldUnread[w.id] ?? 0;
@@ -130,6 +132,7 @@ export function WorldPickerHeader({
                       key={w.id}
                       type="button"
                       onClick={() => { router.push(`/w/${w.id}`); setOpen(false); }}
+                      data-testid="world-picker-item"
                       className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm transition-colors hover:bg-muted"
                     >
                       <div className="relative shrink-0">
@@ -197,6 +200,9 @@ export function WorldPickerHeader({
               <button
                 type="button"
                 onClick={() => setOpen(v => !v)}
+                // Repère stable pour les tests de bout en bout : les
+                // libellés dépendent de la langue du navigateur.
+                data-testid="world-picker-trigger"
                 className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-1.5 py-1 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 {currentWorld ? (

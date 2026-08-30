@@ -11,7 +11,7 @@ import { VALID_LUCIDE_ICONS } from "@/components/ui/LucideIconPicker";
 
 const DEFAULT_PAGE_LIMIT = 6;
 
-type WikiPage = {
+export type WikiPage = {
   id: string;
   title: string;
   slug: string;
@@ -36,14 +36,19 @@ function relativeTime(iso: string, locale: string, justNow: string) {
 export function WorldWikiShortcutsWidget({
   worldId,
   limit = DEFAULT_PAGE_LIMIT,
+  initialPages,
 }: {
   worldId: string;
   /** Nombre de pages listées — réglage du widget (voir WORLD_HOME_WIDGET_OPTIONS). */
   limit?: number;
+  /** Données résolues côté serveur (cf. WorldHomeContent). `undefined` =
+   *  non fournies, le widget charge alors lui-même au montage. */
+  initialPages?: WikiPage[];
 }) {
   const t = useTranslations("worlds");
   const locale = useLocale();
-  const [pages, setPages] = useState<WikiPage[]>([]);
+  const [pages, setPages] = useState<WikiPage[]>(initialPages ?? []);
+  const hasServerData = initialPages !== undefined;
   const reconnectEpoch = useReconnectEpoch();
 
   useEffect(() => {
@@ -60,7 +65,8 @@ export function WorldWikiShortcutsWidget({
       setPages((data as WikiPage[] | null) ?? []);
     };
 
-    void load();
+    // Le serveur a déjà fourni la liste : `load` ne sert plus qu'au Realtime.
+    if (!hasServerData) void load();
 
     const channel = supabase
       .channel(`world_wiki_shortcuts:${worldId}`)
@@ -74,7 +80,7 @@ export function WorldWikiShortcutsWidget({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [worldId, reconnectEpoch, limit]);
+  }, [worldId, reconnectEpoch, limit, hasServerData]);
 
   if (pages.length === 0) return null;
 

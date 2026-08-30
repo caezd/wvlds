@@ -20,9 +20,18 @@ const eslintConfig = [
       "coverage/**",
       "playwright-report/**",
       "test-results/**",
+      ".claude/worktrees/**",
+      "public/sw.js",
     ],
   },
   ...compat.extends("next/core-web-vitals", "next/typescript"),
+  {
+    // Les tests remplacent next/image et les Avatar par de simples <img> mockés.
+    files: ["**/__tests__/**", "**/*.test.{ts,tsx}", "vitest.setup.ts"],
+    rules: {
+      "@next/next/no-img-element": "off",
+    },
+  },
   {
     rules: {
       "@typescript-eslint/no-unused-vars": [

@@ -471,9 +471,11 @@ export function PersonaAvatarPicker({
   const canvasRef = React.useRef<HTMLCanvasElement | null>(null);
 
   // Lookup rapide + mémorisation du dernier focus par onglet (layer)
+  // `avatarParts` est une constante de module (avatarCatalog.ts) : la lister en
+  // dépendance n'a aucun sens, elle ne peut pas changer entre deux rendus.
   const partById = React.useMemo(() => {
     return new Map<string, AvatarPartRef>(avatarParts.map((p) => [p.id, p]));
-  }, [avatarParts]);
+  }, []);
 
   const lastFocusedByLayerRef = React.useRef<Record<string, string>>({});
 
@@ -699,7 +701,11 @@ export function PersonaAvatarPicker({
     }
 
     urls.forEach((u) => void loadImage(u).catch(() => {}));
-  }, [activeLayer, partsInLayer, selectedItems, variantTargetPart?.id]);
+    // `variantTargetPart` est mémoïsé sur son seul id et renvoie un élément de
+    // la constante de module `avatarParts` : sa référence est stable à id égal,
+    // en dépendre directement équivaut donc à dépendre de `?.id` — sans laisser
+    // `category` et `variants`, lus dans l'effet, hors des dépendances.
+  }, [activeLayer, partsInLayer, selectedItems, variantTargetPart]);
 
   function resetToDefault() {
     setConfig(buildDefaultConfig());

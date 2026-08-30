@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect } from "react";
+import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
 import DmsProvider, { useDms } from "@/components/providers/DmsProvider";
-import { useNotifications } from "@/components/providers/NotificationsProvider";
+import { useNotificationsPanel } from "@/components/providers/NotificationsProvider";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import { MobileSidebarProvider, useMobileSidebar } from "@/components/providers/MobileSidebarProvider";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
@@ -53,9 +54,13 @@ function AppShellInner({
   worldsQuota: Quota;
   children: React.ReactNode;
 }) {
+  const tCommon = useTranslations("common");
   const { notifications: notifEnabled, direct_messages: dmsEnabled, public_worlds: exploreEnabled } = useFeatureFlags();
   const { panelOpen: dmsOpen, closePanel: closeDms } = useDms();
-  const { panelOpen: notifOpen, closePanel: closeNotif } = useNotifications();
+  // Contexte du panneau seul : AppShell enveloppe toute l'application et
+  // n'utilise que ces deux valeurs. Via `useNotifications()`, il se re-rendait
+  // à chaque message reçu dans n'importe lequel de vos mondes.
+  const { panelOpen: notifOpen, closePanel: closeNotif } = useNotificationsPanel();
   const { mobileSidebar, drawerOpen, setDrawerOpen, hideMobileHeader } = useMobileSidebar();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -125,7 +130,7 @@ function AppShellInner({
             anyPanelOpen || mobileSidebar ? "w-[min(calc(100%_-_var(--drawer-inset)*2),_360px)] touch:w-[min(calc(100%_-_var(--drawer-inset)*2),_460px)]" : "w-auto max-w-none",
           )}
         >
-          <VisuallyHidden><DrawerTitle>Navigation</DrawerTitle></VisuallyHidden>
+          <VisuallyHidden><DrawerTitle>{tCommon("navigation")}</DrawerTitle></VisuallyHidden>
           <div className="flex h-full overflow-hidden">
             {/* Rail d'icônes */}
             <div className={cn(
@@ -165,7 +170,10 @@ function AppShellInner({
             type="button"
             onClick={() => setDrawerOpen(true)}
             className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-hoverCard"
-            aria-label="Ouvrir le menu"
+            aria-label={tCommon("openMenu")}
+            // Repère stable pour les tests de bout en bout : le libellé
+            // dépend de la langue du navigateur.
+            data-testid="open-mobile-menu"
           >
             <Menu className="h-5 w-5" />
           </button>

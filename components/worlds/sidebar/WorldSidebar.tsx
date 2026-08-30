@@ -1,5 +1,15 @@
 import { createClient } from "@/lib/supabase/server";
-import { getCachedFeatureFlags, getCurrentUserId, getUserWorlds, getWorldById } from "@/lib/currentRequest";
+import {
+  getCachedFeatureFlags,
+  getChatroomCategories,
+  getChatroomsNav,
+  getCurrentUserId,
+  getFollowedChatroomIds,
+  getIsWorldAdmin,
+  getUserWorlds,
+  getWorldById,
+  getWorldsQuota,
+} from "@/lib/currentRequest";
 import { getTranslations } from "next-intl/server";
 import {
   BookOpenText,
@@ -16,21 +26,6 @@ import { WorldSidebarChatrooms } from "./WorldSidebarChatrooms";
 import { WorldSidebarNavLink } from "./WorldSidebarNavLink";
 import { WorldPickerHeader } from "@/components/sidebar/WorldPickerHeader";
 import { MobileSidebarSlot } from "@/components/sidebar/MobileSidebarSlot";
-import { getUserQuotaWithClient } from "@/lib/userQuota";
-
-type Room = {
-  id: string;
-  title: string | null;
-  name: string | null;
-  icon_url: string | null;
-  last_message_at: string | null;
-  unread_count: number;
-  category_id: string | null;
-  last_poster_avatar_url: string | null;
-  last_poster_id: string | null;
-  participant_count: number;
-  second_poster_avatar_url: string | null;
-};
 
 type ParticipatedRoom = {
   id: string;
@@ -41,15 +36,6 @@ type ParticipatedRoom = {
   has_unread: boolean;
 };
 
-type Category = {
-  id: string;
-  title: string;
-  banner_url: string | null;
-  icon_url: string | null;
-  position: number;
-};
-
-
 export default async function WorldSidebar({ worldId }: { worldId: string }) {
   const supabase = await createClient();
   const [userId, featureFlags, t, tNav] = await Promise.all([
@@ -59,49 +45,41 @@ export default async function WorldSidebar({ worldId }: { worldId: string }) {
     getTranslations("nav"),
   ]);
 
-  const [world, roomsResult, participatedResult, canAdminResult, userWorlds, quota, categoriesResult, followedResult] =
+  // `getChatroomsNav`, `getIsWorldAdmin` et `getWorldsQuota` sont mémoïsés pour
+  // la requête : la page (`WorldHomeContent` / `ChatRoomContent`) réclame les
+  // mêmes données, elles ne sont donc plus chargées qu'une seule fois pour tout
+  // l'arbre au lieu d'une fois par composant.
+  const [world, allRooms, participatedResult, canAdmin, userWorlds, quota, categories, followedIds] =
     await Promise.all([
       getWorldById(worldId),
-      supabase.rpc("list_chatrooms_nav", { p_world_id: worldId }),
+      getChatroomsNav(worldId),
       userId
         ? supabase.rpc("list_participated_chatrooms", {
           p_world_id: worldId,
           p_limit: 20,
         })
         : Promise.resolve({ data: [] }),
-      userId
-        ? supabase.rpc("is_world_admin", { wid: worldId, uid: userId })
-        : Promise.resolve({ data: false }),
+      getIsWorldAdmin(worldId, userId),
       getUserWorlds(),
-      userId
-        ? getUserQuotaWithClient(supabase, userId, "worlds")
-        : Promise.resolve({ plan: "free" as const, owned: 0, quotaLimit: 1, quotaReached: false }),
-      supabase
-        .from("chatroom_categories")
-        .select("id, title, banner_url, icon_url, position")
-        .eq("world_id", worldId)
-        .order("position"),
-      userId
-        ? supabase
-          .from("chatroom_follows")
-          .select("chatroom_id")
-          .eq("user_id", userId)
-        : Promise.resolve({ data: [] }),
+      getWorldsQuota(),
+      getChatroomCategories(worldId),
+      getFollowedChatroomIds(),
     ]);
 
   if (!world) return null;
 
-  const allRooms = (roomsResult.data ?? []) as Room[];
   const participated = (participatedResult.data ?? []) as ParticipatedRoom[];
-  const canAdmin = !!canAdminResult.data;
-  const categories = (categoriesResult.data ?? []) as Category[];
-  const followedIds = ((followedResult.data ?? []) as { chatroom_id: string }[]).map((r) => r.chatroom_id);
 
   const hasCatalogue =
     featureFlags.world_catalogue &&
     (world.enable_inventory !== false || world.enable_skills !== false || world.enable_faceclaims !== false);
   const hasTimeline =
     featureFlags.world_timeline && !!world.timeline_enabled;
+  // Réglages par monde, indépendants des drapeaux globaux. `!== false` : la
+  // colonne peut ne pas avoir été chargée sur un objet partiel ; en base elle
+  // est NOT NULL DEFAULT true.
+  const hasWiki = world.enable_wiki !== false;
+  const hasMap = featureFlags.world_map && world.enable_map !== false;
 
   const worldBase = `/w/${worldId}`;
 
@@ -132,9 +110,11 @@ export default async function WorldSidebar({ worldId }: { worldId: string }) {
       <WorldSidebarNavLink href={`${worldBase}`} icon={<Home size={14} />} label={t("nav.home")} />
       <WorldSidebarNavLink href={`${worldBase}?view=members`} icon={<Users size={14} />} label={t("nav.members")} />
       <WorldSidebarNavLink href={`${worldBase}?view=personas`} icon={<Drama size={14} />} label={t("nav.personas")} />
-      <WorldSidebarNavLink href={`${worldBase}?view=wiki`} icon={<BookOpenText size={14} />} label={world.wiki_label || t("nav.wiki")} />
+      {hasWiki && (
+        <WorldSidebarNavLink href={`${worldBase}?view=wiki`} icon={<BookOpenText size={14} />} label={world.wiki_label || t("nav.wiki")} />
+      )}
       <WorldSidebarNavLink href={`${worldBase}?view=canvas`} icon={<Network size={14} />} label={t("nav.relations")} />
-      {featureFlags.world_map && (
+      {hasMap && (
         <WorldSidebarNavLink href={`${worldBase}?view=map`} icon={<MapIcon size={14} />} label={t("nav.map")} />
       )}
       {hasTimeline && (
@@ -165,7 +145,7 @@ export default async function WorldSidebar({ worldId }: { worldId: string }) {
       worldId={worldId}
       initialAll={allRooms}
       initialParticipated={participated}
-      initialFollowedIds={followedIds}
+      initialFollowedIds={[...followedIds]}
       categories={categories}
     />
   );

@@ -8,6 +8,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import { messageErreurAuth } from "@/lib/authErrors";
 
 export function LoginForm() {
     const t = useTranslations("auth");
@@ -45,9 +46,7 @@ export function LoginForm() {
             // Update this route to redirect to an authenticated route. The user already has an active session.
             router.push("/");
         } catch (error: unknown) {
-            setError(
-                error instanceof Error ? error.message : "An error occurred"
-            );
+            setError(messageErreurAuth(error, t));
         } finally {
             setIsLoading(false);
         }

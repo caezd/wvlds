@@ -51,19 +51,12 @@ export default function InvitePage() {
 
       window.history.replaceState(null, "", window.location.pathname);
 
-      const meta = data.session.user.user_metadata;
-      const worldId = meta?.invited_world_id as string | undefined;
-      const role = (meta?.invited_role as string | undefined) ?? "player";
-
-      if (worldId) {
-        await supabase
-          .from("world_members")
-          .upsert(
-            { world_id: worldId, user_id: data.session.user.id, role },
-            { onConflict: "world_id,user_id" }
-          );
-      }
-
+      // L'adhésion au monde ne se décide plus ici : ce bloc lisait le monde
+      // et le rôle dans `user_metadata`, que Supabase laisse l'utilisateur
+      // réécrire lui-même, et l'écriture dans `world_members` était de toute
+      // façon refusée par la RLS — silencieusement, l'erreur n'étant pas lue.
+      // L'invitation vit désormais en base (cf. app/actions/invite.ts) et
+      // s'accepte depuis les notifications.
       router.replace("/auth/update-password");
     };
 

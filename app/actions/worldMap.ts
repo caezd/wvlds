@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { ERR_NON_AUTHENTIFIE } from "@/lib/actionErrors";
 
 export type WorldMapData = {
   id: string;
@@ -48,7 +49,7 @@ export async function upsertWorldMap(
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) throw new Error("Non connecté.");
+  if (!user) throw new Error(ERR_NON_AUTHENTIFIE);
 
   const { data, error } = await supabase
     .from("world_maps")
@@ -73,7 +74,7 @@ export async function createMapPin(
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) throw new Error("Non connecté.");
+  if (!user) throw new Error(ERR_NON_AUTHENTIFIE);
 
   const { data, error } = await supabase
     .from("world_map_pins")
@@ -93,7 +94,7 @@ export async function updateMapPin(
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) throw new Error("Non connecté.");
+  if (!user) throw new Error(ERR_NON_AUTHENTIFIE);
 
   const { error } = await supabase
     .from("world_map_pins")
@@ -108,7 +109,7 @@ export async function deleteMapPin(pinId: string): Promise<void> {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) throw new Error("Non connecté.");
+  if (!user) throw new Error(ERR_NON_AUTHENTIFIE);
 
   const { error } = await supabase
     .from("world_map_pins")

@@ -116,9 +116,17 @@ export function PersonaSectionsTabs({
     [next[idx], next[target]] = [next[target], next[idx]];
     const withPos = next.map((s, i) => ({ ...s, position: i * 10 }));
     onSectionsChange(withPos);
-    await Promise.all(
+    // L'ordre était appliqué à l'écran sans que le résultat des écritures ne
+    // soit lu : un refus le laissait affiché jusqu'au rechargement, où il
+    // revenait en arrière sans explication.
+    const results = await Promise.all(
       withPos.map((s) => supabase.from("persona_sections").update({ position: s.position }).eq("id", s.id)),
     );
+    const failed = results.find((r) => r.error);
+    if (failed?.error) {
+      onSectionsChange(sections);
+      toast.error(failed.error.message);
+    }
   }
 
   async function handleDeleteSection() {
@@ -166,7 +174,7 @@ export function PersonaSectionsTabs({
                 {value === section.id && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button type="button" variant="ghost" size="icon" className="h-6 w-6 shrink-0">
+                      <Button type="button" variant="ghost" size="icon" className="h-6 w-6 shrink-0" aria-label={t("options")}>
                         <MoreHorizontal className="h-3.5 w-3.5" />
                       </Button>
                     </DropdownMenuTrigger>

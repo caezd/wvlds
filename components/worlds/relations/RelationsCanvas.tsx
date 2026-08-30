@@ -10,160 +10,20 @@ import { cn } from "@/lib/utils";
 import { getInitials } from "@/lib/textFormatting";
 import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// La géométrie du canevas — disposition des cartes et tracé des flèches — est
+// dans `./geometry`, sans dépendance à React : ce sont des fonctions pures,
+// testées directement. Les formes de données sont dans `./types`, et la ligne
+// d'une relation dans `./RelationRow`.
+import type { CRelType, CPersona, CMember, CGroup, CRelation, BlockPos } from "./types";
+import {
+  REL_W, CW, CH, BP, NC, BLOCK_W,
+  mid, blockH, cardTL, cardCtr, bezierD, bezierMidPt, splitBezierHalves,
+} from "./geometry";
+import { RelationRow } from "./RelationRow";
+import { useCanvasPanZoom } from "./useCanvasPanZoom";
 
-type CRelType = { id: string; name: string; color: string; dash: string; sort_index: number };
-type CPersona = { id: string; name: string; avatar_url: string | null; user_id: string };
-type CMember = { user_id: string; username: string | null; avatar_url: string | null };
-type CGroup = { id: string; name: string; color: string; sort_index: number };
-type CRelation = { id: string; from_persona_id: string; to_persona_id: string; type: string; label: string | null; description: string | null };
-type BlockPos = { x: number; y: number };
-
-const REL_W = 1.5;
+/** Type de relation de repli, quand une relation pointe un type disparu. */
 const FALLBACK_BASE = { id: "__fallback__", color: "#94a3b8", dash: "3 4", sort_index: 999 };
-
-// SVG marker id — uuid peut contenir des tirets, on les retire
-function mid(id: string) { return `arr-${id.replaceAll("-", "")}`; }
-
-// ─── Layout ───────────────────────────────────────────────────────────────────
-
-const CW = 88; const CH = 88; const CG = 6; const BP = 10; const HH = 42; const NC = 2;
-const BB = 2; // épaisseur de la bordure du bloc (border-2)
-const BLOCK_W = NC * CW + (NC - 1) * CG + BP * 2;
-
-function blockH(n: number) {
-  const rows = Math.max(1, Math.ceil(n / NC));
-  return HH + BP + rows * CH + (rows > 1 ? (rows - 1) * CG : 0) + BP;
-}
-
-// La grille a paddingTop:0 et le bloc a border-2 → y = BB+HH (pas de BP en haut)
-function cardTL(i: number) {
-  return { x: BB + BP + (i % NC) * (CW + CG), y: BB + HH + Math.floor(i / NC) * (CH + CG) };
-}
-
-function cardCtr(bx: number, by: number, i: number) {
-  const p = cardTL(i);
-  return { x: bx + p.x + CW / 2, y: by + p.y + CH / 2 };
-}
-
-// ─── Arrow math ───────────────────────────────────────────────────────────────
-
-function edgePoint(cx: number, cy: number, w: number, h: number, tx: number, ty: number) {
-  const dx = tx - cx, dy = ty - cy;
-  if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) return { x: cx, y: cy - h / 2, nx: 0, ny: -1 };
-  const hw = w / 2, hh = h / 2;
-  const sx = hw / Math.abs(dx), sy = hh / Math.abs(dy);
-  const s = Math.min(sx, sy);
-  const onV = s === sx;
-  return { x: cx + dx * s, y: cy + dy * s, nx: onV ? Math.sign(dx) : 0, ny: onV ? 0 : Math.sign(dy) };
-}
-
-function bezierD(ax: number, ay: number, bx: number, by: number) {
-  const A = edgePoint(ax, ay, CW, CH, bx, by);
-  const B = edgePoint(bx, by, CW, CH, ax, ay);
-  const ofs = Math.max(40, Math.hypot(B.x - A.x, B.y - A.y) * 0.38);
-  return `M ${A.x} ${A.y} C ${A.x + A.nx * ofs} ${A.y + A.ny * ofs} ${B.x + B.nx * ofs} ${B.y + B.ny * ofs} ${B.x} ${B.y}`;
-}
-
-function bezierMidPt(ax: number, ay: number, bx: number, by: number) {
-  const A = edgePoint(ax, ay, CW, CH, bx, by);
-  const B = edgePoint(bx, by, CW, CH, ax, ay);
-  const ofs = Math.max(40, Math.hypot(B.x - A.x, B.y - A.y) * 0.38);
-  const cx1 = A.x + A.nx * ofs, cy1 = A.y + A.ny * ofs;
-  const cx2 = B.x + B.nx * ofs, cy2 = B.y + B.ny * ofs;
-  return {
-    x: 0.125 * A.x + 0.375 * cx1 + 0.375 * cx2 + 0.125 * B.x,
-    y: 0.125 * A.y + 0.375 * cy1 + 0.375 * cy2 + 0.125 * B.y,
-  };
-}
-
-// Découpe un bezier cubique en deux demi-chemins à t=0.5 (De Casteljau)
-function splitBezierHalves(ax: number, ay: number, bx: number, by: number) {
-  const A = edgePoint(ax, ay, CW, CH, bx, by);
-  const B = edgePoint(bx, by, CW, CH, ax, ay);
-  const ofs = Math.max(40, Math.hypot(B.x - A.x, B.y - A.y) * 0.38);
-  const cx1 = A.x + A.nx * ofs, cy1 = A.y + A.ny * ofs;
-  const cx2 = B.x + B.nx * ofs, cy2 = B.y + B.ny * ofs;
-  const m1x = (A.x + cx1) / 2, m1y = (A.y + cy1) / 2;
-  const m2x = (cx1 + cx2) / 2, m2y = (cy1 + cy2) / 2;
-  const m3x = (cx2 + B.x) / 2, m3y = (cy2 + B.y) / 2;
-  const m4x = (m1x + m2x) / 2, m4y = (m1y + m2y) / 2;
-  const m5x = (m2x + m3x) / 2, m5y = (m2y + m3y) / 2;
-  const mx = (m4x + m5x) / 2, my = (m4y + m5y) / 2;
-  return {
-    dMidToA: `M ${mx} ${my} C ${m4x} ${m4y} ${m1x} ${m1y} ${A.x} ${A.y}`,
-    dMidToB: `M ${mx} ${my} C ${m5x} ${m5y} ${m3x} ${m3y} ${B.x} ${B.y}`,
-    mid: { x: mx, y: my },
-  };
-}
-
-// ─── RelationRow ──────────────────────────────────────────────────────────────
-
-function RelationRow({
-  rel, other, direction, canEdit, onDelete, onUpdateDesc, onHoverChange,
-}: {
-  rel: CRelation;
-  other: CPersona;
-  direction: "→" | "←";
-  canEdit: boolean;
-  onDelete: (id: string) => void;
-  onUpdateDesc: (id: string, desc: string) => void;
-  onHoverChange?: (id: string | null) => void;
-}) {
-  const t = useTranslations("relations");
-  const [editing, setEditing] = React.useState(false);
-  const [draft, setDraft] = React.useState(rel.description ?? "");
-
-  function save() {
-    setEditing(false);
-    if (draft !== (rel.description ?? "")) onUpdateDesc(rel.id, draft);
-  }
-
-  return (
-    <div
-      className="group/row rounded-xl border border-border bg-card p-2.5 space-y-1.5"
-      onMouseEnter={() => onHoverChange?.(rel.id)}
-      onMouseLeave={() => onHoverChange?.(null)}
-    >
-      <div className="flex items-center gap-2">
-        <span className="shrink-0 text-[11px] text-muted-foreground font-mono">{direction}</span>
-        {other.avatar_url
-          ? <Image src={other.avatar_url} alt={other.name} width={20} height={20} className="h-5 w-5 rounded-full object-cover shrink-0" />
-          : <div className="h-5 w-5 rounded-full bg-muted flex items-center justify-center text-[9px] font-bold shrink-0">{getInitials(other.name)}</div>
-        }
-        <span className="truncate text-[12px] font-medium flex-1">{other.name}</span>
-        {canEdit && (
-          <button onClick={() => onDelete(rel.id)} className="shrink-0 opacity-0 group-hover/row:opacity-100 text-muted-foreground hover:text-destructive transition-opacity">
-            <Trash2 className="h-3 w-3" />
-          </button>
-        )}
-      </div>
-      {editing ? (
-        <textarea
-          autoFocus
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onBlur={save}
-          onKeyDown={(e) => { if (e.key === "Escape") { setDraft(rel.description ?? ""); setEditing(false); } }}
-          placeholder="Description (markdown)…"
-          className="w-full resize-none rounded-lg border border-border bg-background px-2 py-1.5 text-[11px] outline-none focus:ring-1 focus:ring-ring"
-          rows={3}
-        />
-      ) : (
-        <div
-          onClick={() => canEdit && setEditing(true)}
-          className={cn(
-            "text-[11px] text-muted-foreground whitespace-pre-wrap leading-relaxed min-h-[20px]",
-            canEdit && "cursor-text hover:text-foreground transition-colors",
-            !rel.description && "italic opacity-50",
-          )}
-        >
-          {rel.description || (canEdit ? t("addDescription") : "")}
-        </div>
-      )}
-    </div>
-  );
-}
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -221,22 +81,16 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
   // Group picker
   const [openGroupPicker, setOpenGroupPicker] = React.useState<{ personaId: string; x: number; y: number } | null>(null);
 
-  // Canvas pan / zoom
-  const [pan, setPan] = React.useState({ x: 0, y: 0 });
-  const [scale, setScale] = React.useState(1);
-  const panRef = React.useRef({ x: 0, y: 0 });
-  const scaleRef = React.useRef(1);
-  panRef.current = pan;
-  scaleRef.current = scale;
+  // Bloc en cours de déplacement. Déclaré ici, avant le hook du canevas qui
+  // le consulte : plus bas, la référence tomberait dans sa zone morte.
+  const drag = React.useRef<{ uid: string; mx0: number; my0: number; x0: number; y0: number } | null>(null);
 
-  const outerRef = React.useRef<HTMLDivElement>(null); // viewport fixe
-  const canvasRef = React.useRef<HTMLDivElement>(null); // div transformée
-
-  // drag pan souris
-  const panDrag = React.useRef<{ startX: number; startY: number; panX0: number; panY0: number } | null>(null);
-  // pinch touch
-  const pinchRef = React.useRef<{ dist0: number; scale0: number; panX0: number; panY0: number; midX0: number; midY0: number } | null>(null);
-  const touchRef = React.useRef<{ startX: number; startY: number; panX0: number; panY0: number } | null>(null);
+  // Déplacement et zoom du canevas : molette, glisser, un doigt, pincement.
+  // Tout est dans `./useCanvasPanZoom`, avec son arithmétique dans `./panZoom`.
+  const {
+    pan, setPan, scale, setScale, scaleRef, outerRef, canvasRef,
+    onCanvasDown, onCanvasMove, onCanvasUp, onTouchStart, onTouchMove, onTouchEnd,
+  } = useCanvasPanZoom(() => drag.current !== null);
 
   // ── Load ──────────────────────────────────────────────────────────────────
 
@@ -333,89 +187,6 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
 
   React.useEffect(() => { setAsideTab("out"); }, [selectedPersonaId]);
 
-  // ── Canvas pan / zoom ─────────────────────────────────────────────────────
-
-  // Molette : zoom vers le curseur (listener non-passif obligatoire)
-  React.useEffect(() => {
-    const el = outerRef.current;
-    if (!el) return;
-    function onWheel(e: WheelEvent) {
-      e.preventDefault();
-      const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
-      const next = Math.max(0.15, Math.min(4, scaleRef.current * factor));
-      const rect = el!.getBoundingClientRect();
-      const cx = e.clientX - rect.left;
-      const cy = e.clientY - rect.top;
-      const ratio = next / scaleRef.current;
-      setScale(next);
-      setPan((p) => ({ x: cx - (cx - p.x) * ratio, y: cy - (cy - p.y) * ratio }));
-    }
-    el.addEventListener("wheel", onWheel, { passive: false });
-    return () => el.removeEventListener("wheel", onWheel);
-  }, []);
-
-  // Pan souris : pointerdown sur le fond du canvas (blocs stoppent la propagation)
-  function onCanvasDown(e: React.PointerEvent) {
-    if (e.button !== 0 || drag.current) return;
-    panDrag.current = { startX: e.clientX, startY: e.clientY, panX0: panRef.current.x, panY0: panRef.current.y };
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    (e.currentTarget as HTMLElement).style.cursor = "grabbing";
-  }
-  function onCanvasMove(e: React.PointerEvent) {
-    if (!panDrag.current) return;
-    setPan({ x: panDrag.current.panX0 + e.clientX - panDrag.current.startX, y: panDrag.current.panY0 + e.clientY - panDrag.current.startY });
-  }
-  function onCanvasUp(e: React.PointerEvent) {
-    panDrag.current = null;
-    (e.currentTarget as HTMLElement).style.cursor = "grab";
-  }
-
-  // Touch : 1 doigt = pan, 2 doigts = pinch
-  function onTouchStart(e: React.TouchEvent) {
-    if (e.touches.length === 1) {
-      touchRef.current = { startX: e.touches[0].clientX, startY: e.touches[0].clientY, panX0: panRef.current.x, panY0: panRef.current.y };
-      pinchRef.current = null;
-    } else if (e.touches.length === 2) {
-      const dx = e.touches[1].clientX - e.touches[0].clientX;
-      const dy = e.touches[1].clientY - e.touches[0].clientY;
-      pinchRef.current = {
-        dist0: Math.sqrt(dx * dx + dy * dy),
-        scale0: scaleRef.current,
-        panX0: panRef.current.x, panY0: panRef.current.y,
-        midX0: (e.touches[0].clientX + e.touches[1].clientX) / 2,
-        midY0: (e.touches[0].clientY + e.touches[1].clientY) / 2,
-      };
-      touchRef.current = null;
-    }
-  }
-  function onTouchMove(e: React.TouchEvent) {
-    e.preventDefault();
-    if (e.touches.length === 1 && touchRef.current) {
-      const dx = e.touches[0].clientX - touchRef.current.startX;
-      const dy = e.touches[0].clientY - touchRef.current.startY;
-      setPan({ x: touchRef.current.panX0 + dx, y: touchRef.current.panY0 + dy });
-    } else if (e.touches.length === 2 && pinchRef.current) {
-      const dx = e.touches[1].clientX - e.touches[0].clientX;
-      const dy = e.touches[1].clientY - e.touches[0].clientY;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      const next = Math.max(0.15, Math.min(4, pinchRef.current.scale0 * (dist / pinchRef.current.dist0)));
-      const rect = outerRef.current!.getBoundingClientRect();
-      const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
-      const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
-      const mid0X = pinchRef.current.midX0 - rect.left;
-      const mid0Y = pinchRef.current.midY0 - rect.top;
-      const ratio = next / pinchRef.current.scale0;
-      setScale(next);
-      setPan({ x: midX - (mid0X - pinchRef.current.panX0) * ratio, y: midY - (mid0Y - pinchRef.current.panY0) * ratio });
-    }
-  }
-  function onTouchEnd(e: React.TouchEvent) {
-    if (e.touches.length === 0) { touchRef.current = null; pinchRef.current = null; }
-    else if (e.touches.length === 1) {
-      pinchRef.current = null;
-      touchRef.current = { startX: e.touches[0].clientX, startY: e.touches[0].clientY, panX0: panRef.current.x, panY0: panRef.current.y };
-    }
-  }
 
   // ── Save block pos ────────────────────────────────────────────────────────
 
@@ -428,7 +199,6 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
 
   // ── Drag blocks ───────────────────────────────────────────────────────────
 
-  const drag = React.useRef<{ uid: string; mx0: number; my0: number; x0: number; y0: number } | null>(null);
 
   function onHdrDown(e: React.PointerEvent, uid: string) {
     if (uid !== userId && userId !== ownerId) return;
@@ -613,13 +383,22 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
 
   async function assignGroup(personaId: string, gid: string | null) {
     setOpenGroupPicker(null);
-    if (!gid) {
-      await supabase.from("persona_group_assignments").delete().eq("persona_id", personaId).eq("world_id", worldId);
-      setGroupByPersona((p) => { const n = new Map(p); n.delete(personaId); return n; });
-    } else {
-      await supabase.from("persona_group_assignments").upsert({ persona_id: personaId, world_id: worldId, group_id: gid });
-      setGroupByPersona((p) => new Map(p).set(personaId, gid));
+    // L'erreur d'écriture n'était pas lue : un refus laissait l'affichage
+    // montrer le nouveau groupe, qui disparaissait au rechargement suivant.
+    const { error } = !gid
+      ? await supabase.from("persona_group_assignments").delete().eq("persona_id", personaId).eq("world_id", worldId)
+      : await supabase.from("persona_group_assignments").upsert({ persona_id: personaId, world_id: worldId, group_id: gid });
+
+    if (error) {
+      toast.error(tCommon("saveError"), { description: error.message });
+      return;
     }
+
+    setGroupByPersona((p) => {
+      const n = new Map(p);
+      if (gid) n.set(personaId, gid); else n.delete(personaId);
+      return n;
+    });
   }
 
   // ── Arrow pair detection ──────────────────────────────────────────────────
@@ -774,7 +553,7 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
             {connecting && connectMode && (
               <span className="flex items-center gap-1.5 rounded-full bg-indigo-500/10 px-3 py-1 text-xs font-medium text-indigo-600 dark:text-indigo-400">
                 {t("clickAnotherCard")}
-                <button onClick={cancelConnect}><X className="h-3 w-3" /></button>
+                <button onClick={cancelConnect} aria-label={tCommon("cancel")}><X className="h-3 w-3" /></button>
               </span>
             )}
             <button
@@ -814,7 +593,7 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
                   return owner?.username ? <p className="text-[11px] text-muted-foreground">@{owner.username}</p> : null;
                 })()}
               </div>
-              <button onClick={() => setSelectedPersonaId(null)} className="shrink-0 text-muted-foreground hover:text-foreground">
+              <button onClick={() => setSelectedPersonaId(null)} className="shrink-0 text-muted-foreground hover:text-foreground" aria-label={tCommon("close")}>
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -969,6 +748,7 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
                                 <div className="absolute right-1 top-0 z-20">
                                   <button
                                     type="button"
+                                    aria-label={t("changeGroup")}
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       if (openGroupPicker?.personaId === p.id) { setOpenGroupPicker(null); return; }
@@ -1032,7 +812,7 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
                             <div className="flex items-center justify-center gap-1 rounded-full border border-border bg-background px-2 py-1 shadow-md">
                               <span className="text-[10px] font-semibold" style={{ color: meta.color }}>{meta.name}</span>
                               {(canAdmin || myPersonaIds.has(rel.from_persona_id)) && (
-                                <button onClick={() => void deleteRel(rel.id)} className="text-muted-foreground hover:text-destructive">
+                                <button onClick={() => void deleteRel(rel.id)} className="text-muted-foreground hover:text-destructive" aria-label={tCommon("delete")}>
                                   <Trash2 style={{ width: 10, height: 10 }} />
                                 </button>
                               )}
@@ -1069,7 +849,7 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
                             <div className="flex items-center justify-center gap-1 rounded-full border border-border bg-background px-2 py-1 shadow-md">
                               <span className="text-[10px] font-semibold" style={{ color: meta.color }}>{meta.name} ↔</span>
                               {(canAdmin || myPersonaIds.has(rel.from_persona_id)) && (
-                                <button onClick={() => void deleteRel(rel.id)} className="text-muted-foreground hover:text-destructive">
+                                <button onClick={() => void deleteRel(rel.id)} className="text-muted-foreground hover:text-destructive" aria-label={tCommon("delete")}>
                                   <Trash2 style={{ width: 10, height: 10 }} />
                                 </button>
                               )}
@@ -1112,14 +892,14 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
                             <div className="flex items-center justify-center gap-1 rounded-full border border-border bg-background px-2 py-1 shadow-md">
                               <span className="text-[10px] font-semibold" style={{ color: metaAB.color }}>{metaAB.name}</span>
                               {(canAdmin || myPersonaIds.has(relAB.from_persona_id)) && (
-                                <button onClick={() => void deleteRel(relAB.id)} className="text-muted-foreground hover:text-destructive">
+                                <button onClick={() => void deleteRel(relAB.id)} className="text-muted-foreground hover:text-destructive" aria-label={tCommon("delete")}>
                                   <Trash2 style={{ width: 10, height: 10 }} />
                                 </button>
                               )}
                               <span className="text-[10px] text-muted-foreground">·</span>
                               <span className="text-[10px] font-semibold" style={{ color: metaBA.color }}>{metaBA.name}</span>
                               {(canAdmin || myPersonaIds.has(relBA.from_persona_id)) && (
-                                <button onClick={() => void deleteRel(relBA.id)} className="text-muted-foreground hover:text-destructive">
+                                <button onClick={() => void deleteRel(relBA.id)} className="text-muted-foreground hover:text-destructive" aria-label={tCommon("delete")}>
                                   <Trash2 style={{ width: 10, height: 10 }} />
                                 </button>
                               )}
@@ -1209,12 +989,14 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
             <button
               type="button"
               onClick={() => setScale((s) => Math.min(4, s * 1.25))}
+              aria-label={tCommon("zoomIn")}
               onPointerDown={(e) => e.stopPropagation()}
               className="flex h-7 w-7 items-center justify-center rounded-lg border border-border bg-background text-sm shadow hover:bg-muted"
             >+</button>
             <button
               type="button"
               onClick={() => setScale((s) => Math.max(0.15, s / 1.25))}
+              aria-label={tCommon("zoomOut")}
               onPointerDown={(e) => e.stopPropagation()}
               className="flex h-7 w-7 items-center justify-center rounded-lg border border-border bg-background text-sm shadow hover:bg-muted"
             >−</button>
@@ -1409,7 +1191,7 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
         ))}
         {/* Instructions du canevas (clics souris) — sans objet sur mobile,
             qui a son propre flux (voir la liste + détail juste au-dessus). */}
-        <span className="ml-auto hidden text-[11px] text-muted-foreground/60 lg:inline">
+        <span className="ml-auto hidden text-[11px] text-muted-foreground lg:inline">
           {connectMode ? t("footerHintConnect") : t("footerHintView")}
         </span>
       </div>

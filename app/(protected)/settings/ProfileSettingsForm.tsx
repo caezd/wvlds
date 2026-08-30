@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
+import { messageErreurAction } from "@/lib/actionErrors";
 import { cn } from "@/lib/utils";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -24,6 +25,7 @@ export function ProfileSettingsForm({
 }) {
   const t = useTranslations("settings.profile");
   const tPronouns = useTranslations("pronouns");
+  const tCommun = useTranslations("common");
   const [isPending, startTransition] = useTransition();
 
   const [bio, setBio] = useState(initialBio);
@@ -49,7 +51,7 @@ export function ProfileSettingsForm({
     startTransition(async () => {
       const result = await updateProfileBioAndPronouns(bio, pronouns);
       if (result?.success) toast.success(t("saved"));
-      else if (result?.error) toast.error(result.error);
+      else if (result?.error) toast.error(messageErreurAction(result.error, tCommun));
     });
   }
 

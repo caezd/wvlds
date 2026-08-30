@@ -27,6 +27,10 @@ function ScrollArea({
         ref={viewportRef}
         onScroll={onScroll}
         data-slot="scroll-area-viewport"
+        // Une zone qui défile doit pouvoir recevoir le focus : sans cela, son
+        // contenu est hors d'atteinte pour qui navigue au clavier. Radix ne le
+        // pose pas de lui-même.
+        tabIndex={0}
         className={cn(
           "focus-visible:ring-ring/50 size-full rounded-[inherit] transition-[color,box-shadow] outline-hidden focus-visible:ring-[3px] focus-visible:outline-1",
           // Radix injecte un div interne en `display:table` pour mesurer le contenu,

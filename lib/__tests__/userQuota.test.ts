@@ -69,6 +69,38 @@ describe("getUserQuotaWithClient", () => {
     });
   });
 
+  describe("plan déjà connu (knownPlan)", () => {
+    it("n'interroge pas `profiles` quand le plan est fourni", async () => {
+      // Un seul résultat en file : le comptage. Si `profiles` était encore
+      // interrogé, il consommerait ce résultat et le compte serait faux.
+      const mock = createSupabaseMock({ results: [{ count: 3 }] });
+      const q = await getUserQuotaWithClient(mock.client as never, "u1", "worlds", "subscribed");
+
+      expect(mock.buildersFor("profiles")).toHaveLength(0);
+      expect(mock.from).toHaveBeenCalledTimes(1);
+      expect(mock.from).toHaveBeenCalledWith("worlds");
+      expect(q).toMatchObject({ plan: "subscribed", owned: 3, quotaLimit: Infinity, quotaReached: false });
+    });
+
+    it("applique la limite du plan fourni sans relire le profil", async () => {
+      const mock = createSupabaseMock({ results: [{ count: 1 }] });
+      const q = await getUserQuotaWithClient(mock.client as never, "u1", "worlds", "free");
+
+      expect(mock.buildersFor("profiles")).toHaveLength(0);
+      expect(q).toMatchObject({ plan: "free", owned: 1, quotaLimit: 1, quotaReached: true });
+    });
+
+    it("retombe sur la lecture du profil quand le plan n'est pas fourni", async () => {
+      const mock = createSupabaseMock({
+        results: [{ data: { plan: "lifetime" } }, { count: 999 }],
+      });
+      const q = await getUserQuotaWithClient(mock.client as never, "u1", "worlds");
+
+      expect(mock.buildersFor("profiles")).toHaveLength(1);
+      expect(q).toMatchObject({ plan: "lifetime", quotaLimit: Infinity });
+    });
+  });
+
   describe("plan lifetime", () => {
     it("worlds : illimité (Infinity), jamais atteint même à 999 mondes", async () => {
       const mock = createSupabaseMock({

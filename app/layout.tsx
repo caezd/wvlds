@@ -9,7 +9,9 @@ import AppProviders from "@/components/providers/AppProviders";
 import type { InitialUser } from "@/components/providers/CurrentUserProvider";
 import { asMessageFont, asMessageTextSize, asMessageTextAlign } from "@/lib/messagePreferences";
 import { getCurrentProfile } from "@/lib/currentRequest";
-import { getLocale } from "next-intl/server";
+import { getLocale, getMessages } from "next-intl/server";
+import { NextIntlClientProvider } from "next-intl";
+import { ROOT_PROVIDER_NAMESPACES, pickMessages } from "@/lib/clientMessages";
 
 const defaultUrl = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
@@ -17,7 +19,13 @@ const defaultUrl = process.env.VERCEL_URL
 
 export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
-  title: "WVLDS",
+  title: {
+    // Chaque page hérite du gabarit : sans lui, tous les onglets s'appelaient
+    // « WVLDS », y compris quand on en ouvre plusieurs sur des salons
+    // différents. `default` couvre les pages qui ne posent pas de titre.
+    default: "WVLDS",
+    template: "%s · WVLDS",
+  },
   description: "WVLDS — créez des mondes, incarnez vos personnages et écrivez vos histoires en temps réel.",
   appleWebApp: {
     capable: true,
@@ -75,12 +83,17 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const locale = await getLocale();
-
   // Identité résolue côté serveur : diffusée par contexte pour éviter que
   // chaque composant client refasse getUser() + select username au boot.
   // Profil mémoïsé pour la requête → partagé avec le layout protégé et le rail.
-  const profile = await getCurrentProfile();
+  //
+  // La locale (cookie/en-tête) et le profil (requête réseau) sont indépendants :
+  // les enchaîner faisait attendre le second pour rien.
+  const [locale, messages, profile] = await Promise.all([
+    getLocale(),
+    getMessages(),
+    getCurrentProfile(),
+  ]);
   const initialUser: InitialUser = profile
     ? {
         id: profile.id,
@@ -106,11 +119,22 @@ export default async function RootLayout({
           cacheOnNavigation
           reloadOnOnline
         >
+          {/* Les providers de la racine (présence, veille réseau et session)
+              affichent des messages traduits, et vivent AU-DESSUS du provider
+              du groupe (protected) : sans celui-ci, `useTranslations` n'y
+              trouve aucun contexte et le rendu casse. On ne remonte que les
+              deux namespaces qu'ils lisent — le tronc commun reste découpé
+              par segment, cf. lib/clientMessages. */}
+          <NextIntlClientProvider
+            locale={locale}
+            messages={pickMessages(messages, ROOT_PROVIDER_NAMESPACES)}
+          >
           <AppProviders initialUser={initialUser}>
             <div id="app-shell" className="h-full">
               {children}
             </div>
           </AppProviders>
+          </NextIntlClientProvider>
           <Toaster />
         </SerwistProvider>
       </body>

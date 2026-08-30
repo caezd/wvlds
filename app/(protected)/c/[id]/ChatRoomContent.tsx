@@ -5,6 +5,7 @@ import { decryptMessage } from "@/lib/crypto";
 import { aggregateChoiceVotes } from "@/lib/choiceVotes";
 import type { ChatMessageWithPersona, Persona, ChoiceVoteSummary } from "@/types/db";
 import { canMemberPost, canEditChatroom, canManageWorld } from "@/lib/worldPermissions";
+import { getChatroomsNav, getFollowedChatroomIds, type NavRoom } from "@/lib/currentRequest";
 import type { ChatroomWithWorld } from "./getChatroom";
 
 export default async function ChatRoomContent({
@@ -72,9 +73,8 @@ export default async function ChatRoomContent({
   // monde, et rôle de l'utilisateur dans le monde (si nécessaire).
   type ReactionRow = { message_id: number; emoji: string; user_id: string };
   type VoteRow = { message_id: number; option_id: string; user_id: string };
-  type NavRoom = { id: string; title: string | null; name: string | null; icon_url: string | null; last_message_at: string | null; unread_count: number };
 
-  const [reactionRows, voteRows, navResult, membership, followRow] = await Promise.all([
+  const [reactionRows, voteRows, navRooms, membership, followedIds, personaGroupColors, challengeBadges] = await Promise.all([
     (async (): Promise<ReactionRow[]> => {
       if (!messageIds.length) return [];
       const { data: rows } = await supabase
@@ -93,31 +93,10 @@ export default async function ChatRoomContent({
         .in("message_id", messageIds);
       return (rows ?? []) as VoteRow[];
     })(),
-    (async (): Promise<{ rooms: NavRoom[]; rpcFailed: boolean }> => {
-      if (!chatroom.world_id) return { rooms: [], rpcFailed: false };
-      const { data: navRooms, error: navErr } = await supabase.rpc(
-        "list_chatrooms_nav",
-        { p_world_id: chatroom.world_id },
-      );
-      if (!navErr && navRooms) return { rooms: navRooms as NavRoom[], rpcFailed: false };
-      // Fallback : requête directe si le RPC n'existe pas encore
-      const { data: fallback } = await supabase
-        .from(TABLE.CHATROOMS)
-        .select("id, title, name, icon_url, updated_at")
-        .eq("world_id", chatroom.world_id)
-        .order("updated_at", { ascending: false });
-      return {
-        rooms: (fallback ?? []).map((r) => ({
-          id: r.id,
-          title: r.title ?? null,
-          name: r.name ?? null,
-          icon_url: r.icon_url ?? null,
-          last_message_at: r.updated_at ?? null,
-          unread_count: 0,
-        })),
-        rpcFailed: true,
-      };
-    })(),
+    // Mémoïsé pour la requête et partagé avec `WorldSidebar` (monté par le
+    // layout) : c'est la requête la plus lourde du chemin chaud, elle était
+    // payée deux fois par rendu. Le repli défensif vit désormais dans le getter.
+    chatroom.world_id ? getChatroomsNav(chatroom.world_id) : Promise.resolve([] as NavRoom[]),
     (async (): Promise<{ role: string } | null> => {
       if (!needMembership) return null;
       const { data } = await supabase
@@ -128,12 +107,39 @@ export default async function ChatRoomContent({
         .maybeSingle();
       return data as { role: string } | null;
     })(),
-    supabase
-      .from("chatroom_follows")
-      .select("chatroom_id")
-      .eq("user_id", userId)
-      .eq("chatroom_id", id)
-      .maybeSingle(),
+    // Mémoïsé et partagé avec `WorldSidebar`, qui charge de toute façon la liste
+    // complète des salons suivis pour sa section « Suivi ».
+    getFollowedChatroomIds(),
+    // Couleurs de groupe des personas du monde. Chargées ici plutôt que dans un
+    // effet au montage : c'était un aller-retour réseau de plus après
+    // l'hydratation, pour une donnée que le serveur pouvait joindre au rendu.
+    (async (): Promise<Record<string, string>> => {
+      if (!chatroom.world_id) return {};
+      type AssignRow = { persona_id: string; group: { color: string } | null };
+      const { data } = await supabase
+        .from("persona_group_assignments")
+        .select("persona_id, group:group_id(color)")
+        .eq("world_id", chatroom.world_id);
+      const out: Record<string, string> = {};
+      for (const row of ((data ?? []) as unknown as AssignRow[])) {
+        if (row.group?.color) out[row.persona_id] = row.group.color;
+      }
+      return out;
+    })(),
+    // Badges « défi remporté » des messages affichés — même raison. L'effet
+    // client subsiste pour le Realtime et pour les pages d'historique.
+    (async (): Promise<[number, { title: string; description: string | null }][]> => {
+      if (!messageIds.length) return [];
+      type Row = { message_id: number; challenge: { title: string; description: string | null } | null };
+      const { data } = await supabase
+        .from(TABLE.CHALLENGE_ATTEMPTS)
+        .select("message_id, challenge:challenge_id(title, description)")
+        .in("message_id", messageIds)
+        .eq("status", "won");
+      return ((data ?? []) as unknown as Row[])
+        .filter((r) => r.challenge)
+        .map((r) => [Number(r.message_id), r.challenge!]);
+    })(),
   ]);
 
   const byMessage = new Map<
@@ -193,7 +199,7 @@ export default async function ChatRoomContent({
   const canPost = canMemberPost(role, isWorldOwner);
 
   // Chatrooms du même world (pour l'aside), déjà chargés ci-dessus.
-  const initialRoomsSafe = navResult.rooms;
+  const initialRoomsSafe = navRooms;
 
   return (
     <ChatRoomView
@@ -228,7 +234,9 @@ export default async function ChatRoomContent({
       canPost={canPost}
       initialChatrooms={initialRoomsSafe}
       chatroomKey={chatroomKey}
-      initialIsFollowed={!!followRow.data}
+      initialIsFollowed={followedIds.has(id)}
+      initialPersonaGroupColors={personaGroupColors}
+      initialChallengeBadges={challengeBadges}
     />
   );
 }

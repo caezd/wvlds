@@ -17,6 +17,7 @@ vi.mock("@/components/providers/FeatureFlagsProvider", () => ({
 }));
 vi.mock("@/components/providers/PresenceProvider", () => ({
   useGlobalPresence: () => ({ getUserPresence: () => "offline" }),
+  useUserPresence: () => "offline",
 }));
 vi.mock("@/hooks/useLongPress", () => ({
   useLongPress: () => ({}),

@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { FLAG_KEYS, type FlagKey } from "@/lib/featureFlags";
 import { FeatureSubGroup } from "../_components/FeatureSubGroup";
 import { getTranslations } from "next-intl/server";
+import { echecEnregistrement } from "@/lib/actionErrors";
 
 type FlagRow = {
   key: FlagKey;
@@ -63,10 +64,18 @@ const GROUPS: GroupDef[] = [
 async function toggleFlag(key: FlagKey, enabled: boolean) {
   "use server";
   const { supabase } = await requireAdmin();
-  await supabase
+  const { error } = await supabase
     .from("feature_flags")
     .update({ enabled, updated_at: new Date().toISOString() })
     .eq("key", key);
+
+  // Cette action est appelée par un `<form action={…}>` : elle ne peut rien
+  // renvoyer à l'écran. Sans lever, un échec passait totalement inaperçu —
+  // `revalidatePath` s'exécutait quand même et la page réaffichait l'ancienne
+  // valeur, laissant croire que le drapeau avait basculé. La limite d'erreur
+  // du segment protégé prend le relais.
+  if (error) throw new Error(echecEnregistrement(`toggleFlag(${key})`, error));
+
   revalidatePath("/admin/features");
   revalidatePath("/", "layout");
 }
@@ -89,7 +98,7 @@ function FlagRow({ flag, t }: { flag: FlagRow; t: TFn }) {
         {flag.description && (
           <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{flag.description}</p>
         )}
-        <p className="text-[0.65rem] text-muted-foreground/60 mt-1">
+        <p className="text-[0.65rem] text-muted-foreground mt-1">
           {t("features.editedAt", { date })}
         </p>
       </div>
@@ -154,7 +163,10 @@ export default async function AdminFeaturesPage() {
     .in("key", [...FLAG_KEYS]);
 
   if (error) {
-    return <div className="text-sm text-destructive">Erreur : {error.message}</div>;
+    // Pas `error.message` : c'est le texte brut de PostgreSQL, qui nomme la
+    // table et la règle. Il reste dans les journaux serveur.
+    console.error("[admin/features] chargement", error);
+    return <div className="text-sm text-destructive">{t("loadError")}</div>;
   }
 
   const byKey = Object.fromEntries((flags ?? []).map((f) => [f.key, f as FlagRow]));

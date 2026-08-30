@@ -5,7 +5,8 @@ import { createClient } from "@/lib/supabase/client";
 import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { decryptMessage, generateRoomKey } from "@/lib/crypto";
+import { amorcerCleDeSalon } from "@/lib/chatroomKeyBootstrap";
+import { decryptMessage } from "@/lib/crypto";
 import Link from "next/link";
 import { BarChart3, Globe, GlobeLock, Menu, MoreVertical, Pin, Search, Settings, Star } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -21,7 +22,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import ChatroomSettingsSheet from "@/components/chatrooms/settings/ChatroomSettingsSheet";
+// Panneaux pilotés par une prop `open` : montés en permanence mais affichés à
+// la demande. En `dynamic()` (comme ChatroomStatsSheet juste en dessous), leur
+// code sort du bundle initial du salon et n'est téléchargé qu'après hydratation
+// — ChatroomSettingsSheet fait à lui seul 630 lignes.
+const ChatroomSettingsSheet = dynamic(() => import("@/components/chatrooms/settings/ChatroomSettingsSheet"));
 const ChatroomStatsSheet = dynamic(() => import("@/components/chatrooms/settings/ChatroomStatsSheet"));
 import { ScrollAreaWithJumpToBottom } from "@/components/ScrollAreaWithJumpToBottom";
 import { ChatroomComposer } from "@/components/chatrooms/composer/ChatroomComposer";
@@ -33,7 +38,16 @@ import { ContentWarningBanner } from "@/components/chatrooms/composer/ContentWar
 import { PersonaProfileSheet } from "@/components/chatrooms/persona/PersonaProfileSheet";
 import { ChatroomsNavDropdown } from "@/components/chatrooms/settings/ChatroomsNavDropdown";
 import { WorldMembershipGuard } from "@/components/worlds/members/WorldMembershipGuard";
-import { type ChatroomNavItem } from "@/components/worlds/chatrooms/WorldChatroomsAside";
+
+/** Salon tel qu'affiché dans les listes de navigation (dropdown, aside). */
+export type ChatroomNavItem = {
+  id: string;
+  title: string | null;
+  name: string | null;
+  icon_url: string | null;
+  last_message_at: string | null;
+  unread_count: number;
+};
 
 import {
   TABLE,
@@ -42,22 +56,24 @@ import {
   CHAT_MESSAGES_PAGE_SIZE,
   LOAD_OLDER_THRESHOLD_PX,
 } from "@/lib/constants";
-import type { ChatMessageWithPersona, Persona, ReactionSummary, ChallengeBadge, ActiveDailyChallenge } from "@/types/db";
+import type { ChatMessageWithPersona, ChatMessageMeta, Persona, ReactionSummary, ChallengeBadge, ActiveDailyChallenge } from "@/types/db";
 import { validateChallenge } from "@/lib/validateChallenge";
 import { buildActiveChallenges, type DailyChallengeRow } from "@/lib/activeChallenges";
 import { useRealtimeChatSync } from "@/hooks/useRealtimeChatSync";
 import { usePresenceChannel } from "@/hooks/usePresenceChannel";
-import { useNotifications } from "@/components/providers/NotificationsProvider";
+import { useNotificationsActions } from "@/components/providers/NotificationsProvider";
 import { useGlobalPresence } from "@/components/providers/PresenceProvider";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import { useMobileSidebar } from "@/components/providers/MobileSidebarProvider";
 import { useChatPins } from "@/hooks/useChatPins";
+import { useMessagesEpingles } from "@/hooks/useMessagesEpingles";
 import { PinBar } from "@/components/chatrooms/message/PinBar";
 import { PinsSheet } from "@/components/chatrooms/message/PinsSheet";
-import { SearchCenter } from "@/components/chatrooms/search/SearchCenter";
+const SearchCenter = dynamic(() =>
+  import("@/components/chatrooms/search/SearchCenter").then((m) => m.SearchCenter),
+);
 
 export type { Persona, ChatMessageWithPersona, ReactionSummary } from "@/types/db";
-export type { ChatroomNavItem } from "@/components/worlds/chatrooms/WorldChatroomsAside";
 
 function ChatroomHeader({
   chat,
@@ -71,6 +87,7 @@ function ChatroomHeader({
   rightSlot?: React.ReactNode;
 }) {
   const t = useTranslations("chatrooms");
+  const tCommon = useTranslations("common");
   const world = chat?.worlds ?? null;
   const { setDrawerOpen } = useMobileSidebar();
 
@@ -83,7 +100,11 @@ function ChatroomHeader({
           <button
             type="button"
             onClick={() => setDrawerOpen(true)}
-            aria-label="Ouvrir le menu"
+            aria-label={tCommon("openMenu")}
+            // Même repère que le bouton équivalent d'AppShell : sur une page
+            // de salon, c'est celui-ci qui est rendu, l'en-tête générique
+            // étant masqué.
+            data-testid="open-mobile-menu"
             className="lg:hidden flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-hoverCard hover:text-foreground"
           >
             <Menu className="h-4 w-4" />
@@ -97,6 +118,7 @@ function ChatroomHeader({
                     <TooltipTrigger asChild>
                       <Link
                         href={`/w/${world.id}`}
+                        aria-label={t("backTo", { name: world.name })}
                         className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-hoverCard hover:text-foreground transition-colors"
                       >
                         {world.isShared
@@ -155,6 +177,8 @@ export default function ChatRoomView({
   initialChatrooms,
   chatroomKey: initialChatroomKey,
   initialIsFollowed,
+  initialPersonaGroupColors,
+  initialChallengeBadges,
 }: {
   chatId: string;
   initialChat: {
@@ -177,6 +201,10 @@ export default function ChatRoomView({
   initialChatrooms: ChatroomNavItem[];
   chatroomKey: string | null;
   initialIsFollowed: boolean;
+  /** Couleurs de groupe des personas, résolues côté serveur (cf. ChatRoomContent). */
+  initialPersonaGroupColors: Record<string, string>;
+  /** Badges « défi remporté » des messages initiaux, résolus côté serveur. */
+  initialChallengeBadges: [number, ChallengeBadge][];
 }) {
   const t = useTranslations("chatrooms");
   const tCommon = useTranslations("common");
@@ -184,7 +212,11 @@ export default function ChatRoomView({
   const reconnectEpoch = useReconnectEpoch();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { setActiveChat, markChatRead: markChatReadCtx } = useNotifications();
+  // Contexte des actions seules : ChatRoomView n'a besoin que de ces deux
+  // callbacks. Via `useNotifications()`, ce composant (le plus lourd de l'app)
+  // se re-rendait à chaque message reçu dans n'importe lequel de vos mondes,
+  // parce que la valeur du contexte complet porte aussi les compteurs.
+  const { setActiveChat, markChatRead: markChatReadCtx } = useNotificationsActions();
   const { post_message, quests } = useFeatureFlags();
   const { setActiveWorldId } = useMobileSidebar();
 
@@ -197,7 +229,14 @@ export default function ChatRoomView({
   async function handleToggleFollow() {
     const next = !isFollowed;
     setIsFollowed(next);
-    await toggleFollowChatroom(chatId, next);
+    const res = await toggleFollowChatroom(chatId, next);
+    if (!res.ok) {
+      // Rien n'a été enregistré : on remet l'étoile dans son état réel plutôt
+      // que de laisser croire à un suivi qui n'existe pas.
+      setIsFollowed(!next);
+      toast.error(tCommon("saveError"), { description: res.error });
+      return;
+    }
     router.refresh();
   }
 
@@ -207,7 +246,9 @@ export default function ChatRoomView({
 
   const [chat, setChat] = useState(initialChat);
   const [messages, setMessages] = useState(initialMessages);
-  const [challengeBadges, setChallengeBadges] = useState<Map<number, ChallengeBadge>>(new Map());
+  const [challengeBadges, setChallengeBadges] = useState<Map<number, ChallengeBadge>>(
+    () => new Map(initialChallengeBadges),
+  );
   const [activeChallenges, setActiveChallenges] = useState<ActiveDailyChallenge[]>([]);
   const wonChallengeIdsRef = useRef(new Set<string>());
 
@@ -220,7 +261,12 @@ export default function ChatRoomView({
   const [userId, setUserId] = useState<string | null>(selfId);
 
   // Couleur de groupe par persona_id (monde du chatroom)
-  const [personaGroupColors, setPersonaGroupColors] = useState<Map<string, string>>(new Map());
+  // Statiques pour la durée de la page : plus aucun code ne les met à jour
+  // depuis que le serveur les fournit — un état n'aurait plus de raison d'être.
+  const personaGroupColors = useMemo(
+    () => new Map(Object.entries(initialPersonaGroupColors)),
+    [initialPersonaGroupColors],
+  );
 
   // Signale le monde du chatroom courant pour le surlignage actif de
   // WorldsRail (le pathname `/c/[id]` seul ne le révèle pas).
@@ -229,23 +275,8 @@ export default function ChatRoomView({
     return () => setActiveWorldId(null);
   }, [chat.worlds?.id, setActiveWorldId]);
 
-  useEffect(() => {
-    const worldId = chat.worlds?.id;
-    if (!worldId) return;
-    void (async () => {
-      type AssignRow = { persona_id: string; group: { color: string } | null };
-      const { data } = await supabase
-        .from("persona_group_assignments")
-        .select("persona_id, group:group_id(color)")
-        .eq("world_id", worldId);
-      if (!data) return;
-      const map = new Map<string, string>();
-      for (const row of data as AssignRow[]) {
-        if (row.group?.color) map.set(row.persona_id, row.group.color);
-      }
-      setPersonaGroupColors(map);
-    })();
-  }, [chat.worlds?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Les couleurs de groupe arrivent en props (résolues côté serveur) : plus
+  // d'aller-retour réseau après l'hydratation pour cette donnée.
 
   /* challenge badges — charge + met à jour en Realtime */
   const loadChallengeBadges = useCallback(async (ids: number[]) => {
@@ -264,10 +295,11 @@ export default function ChatRoomView({
       }
       return next;
     });
-  }, [supabase]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [supabase]);
 
   useEffect(() => {
-    void loadChallengeBadges(initialMessages.map((m) => m.id));
+    // Les badges des messages initiaux viennent des props ; `loadChallengeBadges`
+    // ne sert plus qu'au Realtime ci-dessous et aux pages d'historique.
 
     const sub = supabase
       .channel(`challenge-badges-${chatId}`)
@@ -345,7 +377,7 @@ export default function ChatRoomView({
         }
       }
     },
-    [activeChallenges, supabase], // eslint-disable-line react-hooks/exhaustive-deps
+    [activeChallenges, supabase],
   );
 
   /* pagination : historique chargé à la demande en remontant */
@@ -397,7 +429,14 @@ export default function ChatRoomView({
     loadingOlderRef.current = false;
     setLoadingOlder(false);
     scrollAdjustRef.current = null;
-    setPinnedMessagesExtra([]);
+
+    // Ces deux-là manquaient : leur `useState` ne lit son prop qu'au montage,
+    // et cette vue n'est PAS remontée quand on passe d'un salon à l'autre
+    // (même position dans l'arbre, pas de `key`). En navigation client,
+    // l'étoile « suivi » restait donc celle du salon précédent, et les badges
+    // de défi gagné du nouveau salon n'apparaissaient qu'après rechargement.
+    setIsFollowed(initialIsFollowed);
+    setChallengeBadges(new Map(initialChallengeBadges));
 
     // Réinitialise la clé quand on change de chatroom
     roomKeyRef.current = initialChatroomKey;
@@ -419,79 +458,71 @@ export default function ChatRoomView({
   // Premier client à arriver gagne ; les suivants récupèrent la clé existante.
   useEffect(() => {
     if (roomKey) return;
-    async function bootstrap() {
-      const { data: existing } = await supabase
-        .from(TABLE.CHATROOM_KEYS)
-        .select("key_b64")
-        .eq("chatroom_id", chatId)
-        .maybeSingle();
-
-      if (existing) {
-        const k = (existing as unknown as { key_b64: string }).key_b64;
-        roomKeyRef.current = k;
-        setRoomKey(k);
-        return;
-      }
-
-      const key = await generateRoomKey();
-      const { error } = await supabase
-        .from(TABLE.CHATROOM_KEYS)
-        .insert({ chatroom_id: chatId, key_b64: key });
-
-      if (error) {
-        // Race condition : une autre session a inséré en premier
-        const { data: winner } = await supabase
-          .from(TABLE.CHATROOM_KEYS)
-          .select("key_b64")
-          .eq("chatroom_id", chatId)
-          .maybeSingle();
-        if (winner) {
-          const k = (winner as unknown as { key_b64: string }).key_b64;
-          roomKeyRef.current = k;
-          setRoomKey(k);
-        }
-      } else {
-        roomKeyRef.current = key;
-        setRoomKey(key);
-      }
-    }
-    void bootstrap();
+    // Garde d'annulation : cet amorçage est asynchrone et l'effet se rejoue à
+    // chaque changement de salon. Sans elle, une réponse lente venue du salon
+    // QUITTÉ écrasait la clé du salon courant.
+    //
+    // La conséquence dépasse l'affichage : `roomKey` alimente le composeur.
+    // Un message envoyé avec la clé d'un autre salon serait chiffré de travers
+    // et deviendrait illisible pour tout le monde, définitivement — l'auteur
+    // compris.
+    //
+    // La fenêtre est étroite (l'amorçage ne joue que pour un salon sans clé,
+    // donc fraîchement créé) mais le dégât est irréversible.
+    let annule = false;
+    void (async () => {
+      const cle = await amorcerCleDeSalon(supabase, chatId);
+      if (annule || !cle) return;
+      roomKeyRef.current = cle;
+      setRoomKey(cle);
+    })();
+    return () => {
+      annule = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chatId]);
+
+  // Horodatage du dernier message, lu par les écouteurs ci-dessous sans les
+  // faire dépendre de `messages` : l'effet dépendait de `messages.length`, donc
+  // chaque message reçu détachait puis rattachait les deux écouteurs, juste
+  // pour rafraîchir cette seule valeur.
+  const lastMessageAtRef = useRef<string | undefined>(undefined);
+  lastMessageAtRef.current = messages.at(-1)?.created_at;
 
   useEffect(() => {
     if (!userId) return;
 
-    const onFocus = () => void markChatRead(messages.at(-1)?.created_at);
+    const mark = () => void markChatRead(lastMessageAtRef.current);
     const onVis = () => {
-      if (document.visibilityState === "visible") {
-        void markChatRead(messages.at(-1)?.created_at);
-      }
+      if (document.visibilityState === "visible") mark();
     };
 
-    window.addEventListener("focus", onFocus);
+    window.addEventListener("focus", mark);
     document.addEventListener("visibilitychange", onVis);
 
     return () => {
-      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("focus", mark);
       document.removeEventListener("visibilitychange", onVis);
     };
-  }, [userId, chatId, messages.length]);
+  }, [userId, markChatRead]);
 
   /* scroll bottom behavior */
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const nearBottomRef = useRef(true);
 
-  function getViewport() {
+  // Stables (ils ne lisent qu'une ref) : sans `useCallback`, les inclure dans
+  // les dépendances des effets de scroll ci-dessous les aurait relancés à
+  // chaque rendu — d'où les `eslint-disable` qui les omettaient.
+  const getViewport = useCallback(() => {
     return scrollRef.current?.querySelector(
       "[data-radix-scroll-area-viewport]",
     ) as HTMLElement | null;
-  }
-  function scrollToBottom(behavior: ScrollBehavior = "auto") {
+  }, []);
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = "auto") => {
     const vp = getViewport();
     if (!vp) return;
     vp.scrollTo({ top: vp.scrollHeight, behavior });
-  }
+  }, [getViewport]);
   /* chargement des messages plus anciens (scroll vers le haut) */
   async function loadOlderMessages() {
     if (loadingOlderRef.current || !hasMoreRef.current) return;
@@ -599,7 +630,7 @@ export default function ChatRoomView({
     const vp = getViewport();
     if (!vp) return;
     vp.scrollTop = adjust.prevTop + (vp.scrollHeight - adjust.prevHeight);
-  }, [messages]);
+  }, [messages, getViewport]);
 
   // Si le contenu initial ne remplit pas la fenêtre, impossible de scroller :
   // on charge directement la page suivante
@@ -609,7 +640,7 @@ export default function ChatRoomView({
     if (vp.scrollHeight <= vp.clientHeight) {
       void loadOlderMessagesRef.current();
     }
-  }, [hasMore, messages.length]);
+  }, [hasMore, messages.length, getViewport]);
 
   // Suivre en temps réel si l'utilisateur est près du bas,
   // et charger l'historique quand il approche du haut
@@ -625,8 +656,7 @@ export default function ChatRoomView({
     };
     vp.addEventListener("scroll", onScroll, { passive: true });
     return () => vp.removeEventListener("scroll", onScroll);
-
-  }, []);
+  }, [getViewport]);
 
   // Canal par chatroom : typing + partage de persona
   const { emitTyping, typingLine, clearTyping } = usePresenceChannel({
@@ -639,19 +669,28 @@ export default function ChatRoomView({
   // Utilisateurs ayant explicitement choisi "invisible" ou "hors ligne" (appear_offline = true)
   // → pas de pastille ; les autres absents de onlineUsers reçoivent une pastille rouge
   const [invisibleUsers, setInvisibleUsers] = useState<Set<string>>(new Set());
+  // Clé stable = l'ensemble *distinct* des auteurs affichés. L'effet dépendait
+  // de `messages.length`, donc chaque message reçu (y compris les siens)
+  // relançait un `select profiles` sur jusqu'à 50 ids — une requête par message
+  // dans un salon actif. Ici il ne repart que si un auteur nouveau apparaît.
+  const authorIdsKey = useMemo(
+    () => [...new Set(messages.map((m) => m.author_id).filter(Boolean) as string[])].sort().join(","),
+    [messages],
+  );
   useEffect(() => {
-    const ids = [...new Set(messages.map((m) => m.author_id).filter(Boolean))] as string[];
-    if (ids.length === 0) return;
+    if (!authorIdsKey) return;
+    const ids = authorIdsKey.split(",");
+    let cancelled = false;
     supabase
       .from("profiles")
       .select("id, appear_offline")
       .in("id", ids)
       .then(({ data }: { data: { id: string; appear_offline: boolean }[] | null }) => {
-        if (!data) return;
+        if (cancelled || !data) return;
         setInvisibleUsers(new Set(data.filter((p) => p.appear_offline).map((p) => p.id)));
       });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [messages.length]);
+    return () => { cancelled = true; };
+  }, [authorIdsKey, supabase]);
 
   // Si l'utilisateur n'était pas présent côté serveur, on le récupère ici
   useEffect(() => {
@@ -664,7 +703,7 @@ export default function ChatRoomView({
   // Scroll initial
   useEffect(() => {
     scrollToBottom("auto");
-  }, []);
+  }, [scrollToBottom]);
 
   // Auto-scroll uniquement quand un nouveau message arrive en bas
   // (pas sur update/réactions, ni sur prépend de l'historique)
@@ -677,42 +716,16 @@ export default function ChatRoomView({
     if (nearBottomRef.current || isMyMessage(last, userId)) {
       scrollToBottom("smooth");
     }
-  }, [messages, userId]);
+  }, [messages, userId, scrollToBottom]);
 
   const { pins, pin, pinAnchor, unpin, updatePinLabel, pinByMessageId } = useChatPins(chatId);
 
   // Messages épinglés situés hors de la fenêtre de pagination chargée (historique
   // trop ancien) : récupérés à part pour que PinBar/PinsSheet affichent bien leur
   // contenu au lieu d'une carte vide.
-  const [pinnedMessagesExtra, setPinnedMessagesExtra] = useState<ChatMessageWithPersona[]>([]);
-  useEffect(() => {
-    const loadedIds = new Set(messages.map((m) => m.id));
-    const cachedIds = new Set(pinnedMessagesExtra.map((m) => m.id));
-    const missing = [...new Set(
-      pins
-        .map((p) => p.message_id)
-        .filter((id): id is number => id !== null && !loadedIds.has(id) && !cachedIds.has(id)),
-    )];
-    if (!missing.length) return;
-    void (async () => {
-      const { data } = await supabase
-        .from(TABLE.CHAT_MESSAGES)
-        .select(
-          "id, chat_id, content, author_id, created_at, metadata, visible_to, persona:personas(id, user_id, name, avatar_url, frame:avatar_frame_id(asset_url)), author:profiles(avatar_url, username)",
-        )
-        .in("id", missing);
-      if (!data) return;
-      const key = roomKeyRef.current;
-      const decrypted = await Promise.all(
-        (data as unknown as ChatMessageWithPersona[]).map(async (m) => ({
-          ...m,
-          content: key ? await decryptMessage(m.content ?? "", key) : (m.content ?? ""),
-        })),
-      );
-      setPinnedMessagesExtra((prev) => [...prev, ...decrypted]);
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pins, messages, roomKey, pinnedMessagesExtra]);
+  const pinnedMessagesExtra = useMessagesEpingles(
+    supabase, chatId, pins, messages, roomKeyRef, roomKey,
+  );
 
   // Messages disponibles pour l'affichage des épingles : la liste chargée
   // prévaut sur le cache (un message peut finir par charger via la pagination).
@@ -755,7 +768,6 @@ export default function ChatRoomView({
     } else {
       pendingScrollMessageIdRef.current = null;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages]);
 
   // Arrivée depuis le centre de recherche (autre salon) : /c/[id]?m=<messageId>
@@ -857,6 +869,42 @@ export default function ChatRoomView({
     );
   }, []);
 
+  // ── Stabilité des props de `ChatroomMessage` ────────────────────────
+  //
+  // Ce composant est enveloppé dans `memo`. Quatre props étaient pourtant des
+  // fonctions créées à l'intérieur de `renderMessage`, donc NEUVES à chaque
+  // rendu de cette vue : la comparaison de `memo` échouait toujours, et les
+  // vingt messages — avec leurs blocs, leur markdown et leurs réactions —
+  // étaient reconstruits à chaque arrivée d'état.
+  //
+  // Il en arrive beaucoup, et tardivement : la clé du salon, les épingles, les
+  // badges de défi, la présence. Mesuré sur un profil à 4× de ralentissement
+  // CPU, cela donnait sept tâches longues et 853 ms de fil principal bloqué
+  // APRÈS le chargement, dont une de 370 ms.
+  //
+  // Trois autres handlers étaient déjà stabilisés — le travail s'était arrêté
+  // en chemin.
+  const handlePin = useMemo(
+    () => (userId ? (id: number) => pin(id, userId) : undefined),
+    [pin, userId],
+  );
+  const handleUpdated = useCallback(
+    (id: number, content: string, metadata: ChatMessageMeta | null) => {
+      setMessages((prev) =>
+        prev.map((x) => (x.id === id ? { ...x, content, metadata } : x)),
+      );
+    },
+    [],
+  );
+  const handleRequestDelete = useCallback((id: number) => setPendingDeleteId(id), []);
+  const handleAnchorEdited = useCallback(
+    (messageId: number, label: string) => {
+      const pinEntry = pinByMessageId(messageId);
+      if (pinEntry) void updatePinLabel(pinEntry.id, label);
+    },
+    [pinByMessageId, updatePinLabel],
+  );
+
   const renderMessage = (m: ChatMessageWithPersona, smsFlags?: SmsRunFlags) => (
     <ChatroomMessage
       key={m.id}
@@ -869,7 +917,7 @@ export default function ChatRoomView({
       forceEdit={editMessageId === m.id}
       onForceEditConsumed={handleForceEditConsumed}
       pinId={pinByMessageId(m.id)?.id ?? null}
-      onPin={userId ? (id) => pin(id, userId) : undefined}
+      onPin={handlePin}
       onUnpin={unpin}
       challengeWon={challengeBadges.get(m.id) ?? null}
       smsSharpTop={smsFlags?.sharpTop}
@@ -877,18 +925,9 @@ export default function ChatRoomView({
       smsShowAvatar={smsFlags?.showAvatar}
       onReactionsUpdated={handleReactionsUpdated}
       onVotesUpdated={handleVotesUpdated}
-      onUpdated={(id, content, metadata) => {
-        setMessages((prev) =>
-          prev.map((x) =>
-            x.id === id ? { ...x, content, metadata } : x,
-          ),
-        );
-      }}
-      onRequestDelete={() => setPendingDeleteId(m.id)}
-      onAnchorEdited={(messageId, label) => {
-        const pinEntry = pinByMessageId(messageId);
-        if (pinEntry) void updatePinLabel(pinEntry.id, label);
-      }}
+      onUpdated={handleUpdated}
+      onRequestDelete={handleRequestDelete}
+      onAnchorEdited={handleAnchorEdited}
     />
   );
 
@@ -1114,12 +1153,12 @@ export default function ChatRoomView({
       <DeleteConfirmDialog
         open={pendingDeleteId !== null}
         onOpenChange={(open) => { if (!open) setPendingDeleteId(null); }}
-        description="Ce message sera supprimé définitivement."
+        description={t("messageDeleteDescription")}
         onConfirm={async () => {
           if (pendingDeleteId === null) return;
           const id = pendingDeleteId;
           const { error } = await supabase.from(TABLE.CHAT_MESSAGES).delete().eq("id", id);
-          if (error) toast.error("Impossible de supprimer le message : " + error.message);
+          if (error) toast.error(t("deleteMessageFailed"), { description: error.message });
           else {
             const remaining = messages.filter((x) => x.id !== id);
             setMessages(remaining);

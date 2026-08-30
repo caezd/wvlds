@@ -6,6 +6,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import { DELAY } from "@/lib/constants";
 import type { Persona } from "@/types/db";
+import { openRealtimeChannel } from "@/lib/realtimeChannel";
 
 export type PresenceMeta = {
   user_id: string;
@@ -78,12 +79,15 @@ export function usePresenceChannel({
       avatar_url: selfRef.current.avatarUrl,
     };
 
-    const channel = supabase.channel(`chat:${chatId}`, {
-      config: {
-        presence: { key: userId },
-        broadcast: { self: false },
-      },
-    });
+    // Le nom du canal est le POINT DE RENDEZ-VOUS entre navigateurs : tous
+    // les occupants de la salle doivent le partager, sinon chacun se retrouve
+    // seul dans son propre canal et la présence ne montre plus personne. Il
+    // reste donc stable, et c'est l'enchaînement ouverture/fermeture qui est
+    // sérialisé. Cf. lib/realtimeChannel.
+    const fermerCanal = openRealtimeChannel(
+      supabase,
+      `chat:${chatId}`,
+      (channel) => {
 
     channel.on("presence", { event: "sync" }, () => {
       setOnline(parsePresenceState(channel.presenceState()));
@@ -124,13 +128,22 @@ export function usePresenceChannel({
     });
 
     channelRef.current = channel;
+    return channel;
+      },
+      {
+        config: {
+          presence: { key: userId },
+          broadcast: { self: false },
+        },
+      },
+    );
 
     return () => {
-      if (channelRef.current) {
-        channelRef.current.untrack();
-        supabase.removeChannel(channelRef.current);
-        channelRef.current = null;
-      }
+      // `untrack()` retire notre présence de la salle avant la fermeture ;
+      // sans lui, les autres nous verraient encore le temps du prochain sync.
+      channelRef.current?.untrack();
+      channelRef.current = null;
+      fermerCanal();
     };
     // reconnectEpoch : force la recréation du canal après une coupure réseau
     // (voir useReconnectEpoch).

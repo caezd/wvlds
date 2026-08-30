@@ -7,10 +7,11 @@ import { supabaseThumb } from "@/lib/storage";
 import { toast } from "sonner";
 import {
   Drawer,
-  DrawerContent,
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
+import { SideSheetContent } from "@/components/ui/side-sheet";
+import { PersonaTimelineView } from "@/components/personas/PersonaTimelineView";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { TabBar, TabBarTrigger } from "@/components/ui/tab-bar";
 import {
@@ -29,6 +30,7 @@ import { formatLastSeen, cn } from "@/lib/utils";
 import { ImageGridView } from "@/components/personas/ImageGridView";
 import { TABLE } from "@/lib/constants";
 import { getInitials } from "@/lib/textFormatting";
+import { useTranslations } from "next-intl";
 
 export type FieldData = PersonaFieldData | null | undefined;
 
@@ -198,7 +200,7 @@ export function FieldView({ type, data }: { type: string; data: FieldData }) {
     const items: TimelineItem[] = data?.timelineItems ?? [];
     const visible = items.filter((it) => it.title);
     if (!visible.length) return null;
-    return <TriggerTimelineView items={visible} />;
+    return <PersonaTimelineView items={visible} />;
   }
   if (type === "dl") {
     const items: DlItem[] = data?.dlItems ?? [];
@@ -216,48 +218,6 @@ export function FieldView({ type, data }: { type: string; data: FieldData }) {
     );
   }
   return null;
-}
-
-function TriggerTimelineItemRow({ item, isLast }: { item: TimelineItem; isLast: boolean }) {
-  const [expanded, setExpanded] = React.useState(false);
-  return (
-    <div className="flex gap-3">
-      <div className="flex flex-col items-center">
-        <div className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary/50" />
-        {!isLast && <div className="flex-1 w-px bg-border mt-1" />}
-      </div>
-      <div className="flex-1 pb-3 min-w-0">
-        <div className="flex items-baseline gap-2">
-          {item.date && (
-            <span className="text-[0.65rem] text-muted-foreground shrink-0">{item.date}</span>
-          )}
-          <span className="text-sm font-medium leading-tight">{item.title}</span>
-          {item.description && (
-            <button
-              type="button"
-              onClick={() => setExpanded((v) => !v)}
-              className="ml-auto shrink-0 text-[0.65rem] text-muted-foreground hover:text-foreground transition-colors"
-            >
-              {expanded ? "Réduire" : "Voir"}
-            </button>
-          )}
-        </div>
-        {expanded && item.description && (
-          <p className="mt-1 text-xs text-muted-foreground leading-relaxed">{item.description}</p>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function TriggerTimelineView({ items }: { items: TimelineItem[] }) {
-  return (
-    <div>
-      {items.map((item, i) => (
-        <TriggerTimelineItemRow key={item.id} item={item} isLast={i === items.length - 1} />
-      ))}
-    </div>
-  );
 }
 
 /** Formule d'affichage de la ligne de présence — extraite pour rester
@@ -321,6 +281,7 @@ export function PersonaProfileBody({
   loading,
   headerAction,
 }: PersonaProfileBodyProps) {
+  const tCommon = useTranslations("common");
   const [bannerThumbFailed, setBannerThumbFailed] = React.useState(false);
   React.useEffect(() => {
     setBannerThumbFailed(false);
@@ -404,9 +365,9 @@ export function PersonaProfileBody({
                         onClick={async () => {
                           try {
                             await navigator.clipboard.writeText(dialogueColor);
-                            toast.success("Couleur copiée dans le presse-papier.");
+                            toast.success(tCommon("copyDialogueColorSuccess"));
                           } catch {
-                            toast.error("Impossible de copier la couleur.");
+                            toast.error(tCommon("copyClipboardError"));
                           }
                         }}
                         className="flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
@@ -451,7 +412,7 @@ export function PersonaProfileBody({
                 className="px-6 space-y-4 data-[state=inactive]:hidden"
               >
                 {s.fields.length === 0 ? (
-                  <p className="text-sm text-muted-foreground italic">Aucun contenu.</p>
+                  <p className="text-sm text-muted-foreground italic">{tCommon("noContent")}</p>
                 ) : (
                   s.fields.map((f) => (
                     <FieldView key={f.id} type={f.type} data={f.data} />
@@ -649,7 +610,7 @@ export function PersonaProfileSheetTrigger({
         TriggerButton
       )}
 
-      <DrawerContent className="inset-y-0 right-0 flex flex-col gap-0 border rounded-md bg-background text-foreground shadow-lg w-[min(calc(100%_-_var(--drawer-inset)*2),_460px)] p-0">
+      <SideSheetContent hideClose>
         <DrawerHeader className="sr-only">
           <DrawerTitle>{name ?? label ?? "Profil persona"}</DrawerTitle>
         </DrawerHeader>
@@ -673,7 +634,7 @@ export function PersonaProfileSheetTrigger({
             loading={loading}
           />
         </div>
-      </DrawerContent>
+      </SideSheetContent>
     </Drawer>
   );
 }

@@ -260,7 +260,7 @@ function ConversationRail({
               aria-label={isPinned ? t("unpin") : t("pin")}
               className={cn(
                 "absolute -bottom-2.5 left-1/2 -translate-x-1/2 flex h-5 w-5 items-center justify-center rounded-full border border-background transition-all",
-                "opacity-0 group-hover/conv:opacity-100",
+                "opacity-0 group-hover/conv:opacity-100 focus-within:opacity-100",
                 isPinned
                   ? "bg-accent text-accent-foreground"
                   : canPin
@@ -295,6 +295,7 @@ function ConversationRail({
 
 function NewConvSearch({ onSelect, onCancel }: { onSelect: (id: string) => void; onCancel: () => void }) {
   const t = useTranslations("dms");
+  const tCommon = useTranslations("common");
   const supabase = useMemo(() => createClient(), []);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<DmSearchUser[]>([]);
@@ -328,6 +329,7 @@ function NewConvSearch({ onSelect, onCancel }: { onSelect: (id: string) => void;
           className="h-9 w-full rounded-full bg-muted pl-8 pr-10 text-sm outline-none placeholder:text-muted-foreground"
         />
         <button
+          aria-label={tCommon("cancel")}
           onClick={onCancel}
           className="absolute right-2 top-1/2 -translate-y-1/2 flex h-5 w-5 items-center justify-center rounded-full text-muted-foreground hover:text-foreground"
         >
@@ -353,6 +355,7 @@ function NewConvSearch({ onSelect, onCancel }: { onSelect: (id: string) => void;
 
 function MessageSearch({ onSelectConv, onCancel }: { onSelectConv: (otherUserId: string) => void; onCancel: () => void }) {
   const t = useTranslations("dms");
+  const tCommon = useTranslations("common");
   const supabase = useMemo(() => createClient(), []);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<DmSearchMessage[]>([]);
@@ -384,6 +387,7 @@ function MessageSearch({ onSelectConv, onCancel }: { onSelectConv: (otherUserId:
           className="h-9 w-full rounded-full bg-muted pl-8 pr-10 text-sm outline-none placeholder:text-muted-foreground"
         />
         <button
+          aria-label={tCommon("cancel")}
           onClick={onCancel}
           className="absolute right-2 top-1/2 -translate-y-1/2 flex h-5 w-5 items-center justify-center rounded-full text-muted-foreground hover:text-foreground"
         >
@@ -423,7 +427,7 @@ function DayDivider({ date }: { date: Date }) {
   return (
     <div className="flex items-center gap-3 py-2">
       <div className="h-px flex-1 bg-border/30" />
-      <span className="shrink-0 text-[11px] text-muted-foreground/40">{label}</span>
+      <span className="shrink-0 text-[11px] text-muted-foreground">{label}</span>
       <div className="h-px flex-1 bg-border/30" />
     </div>
   );
@@ -514,7 +518,7 @@ export function MessageBubble({
               {content}
             </div>
             {isMine && (
-              <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover/msg:opacity-100">
+              <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover/msg:opacity-100 focus-within:opacity-100">
                 <button
                   onClick={startEdit}
                   aria-label={t("editMessage")}
@@ -696,7 +700,7 @@ function ConversationView({ conv, onBack: _onBack }: { conv: DmConversation; onB
 
           {messages.length === 0 && (
             <div className="flex flex-1 items-center justify-center">
-              <p className="text-xs text-muted-foreground/50">{t("startConversation")}</p>
+              <p className="text-xs text-muted-foreground">{t("startConversation")}</p>
             </div>
           )}
 
@@ -846,7 +850,7 @@ export function DmsPanelContent() {
 
       {!activeConv && !searching && conversations.length > 0 && (
         <div className="flex flex-1 items-center justify-center">
-          <p className="text-xs text-muted-foreground/50">{t("selectConversation")}</p>
+          <p className="text-xs text-muted-foreground">{t("selectConversation")}</p>
         </div>
       )}
     </div>

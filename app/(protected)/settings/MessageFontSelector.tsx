@@ -4,6 +4,7 @@ import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
+import { messageErreurAction } from "@/lib/actionErrors";
 import { cn } from "@/lib/utils";
 import { updateMessageFont } from "./actions";
 
@@ -11,6 +12,7 @@ const MESSAGE_FONTS = ["sans", "serif", "dyslexic"] as const;
 
 export function MessageFontSelector({ currentFont }: { currentFont: string }) {
   const t = useTranslations("settings");
+  const tCommun = useTranslations("common");
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
@@ -22,7 +24,7 @@ export function MessageFontSelector({ currentFont }: { currentFont: string }) {
         toast.success(t("fontSaved"));
         router.refresh();
       } else if (result?.error) {
-        toast.error(result.error);
+        toast.error(messageErreurAction(result.error, tCommun));
       }
     });
   }

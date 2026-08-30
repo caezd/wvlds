@@ -3,16 +3,15 @@
 import * as React from "react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Pencil, X } from "lucide-react";
+import { Loader2, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import {
   Drawer,
-  DrawerClose,
-  DrawerContent,
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
+import { SideSheetContent } from "@/components/ui/side-sheet";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,6 +29,8 @@ import {
 } from "@/app/actions/worldCatalog";
 import { fetchPersonaSections } from "@/lib/personaSections";
 import type { PersonaSectionWithFields } from "@/types/personas";
+import { useTranslations } from "next-intl";
+import { messageErreurAction } from "@/lib/actionErrors";
 
 /**
  * Réglage « Fiche de persona par défaut » d'un monde.
@@ -47,6 +48,8 @@ export function WorldPersonaTemplateSection({
   restrictInventory?: boolean;
   restrictSkills?: boolean;
 }) {
+  const t = useTranslations("worlds");
+  const tCommun = useTranslations("common");
   const supabase = React.useMemo(() => createClient(), []);
   const [templateId, setTemplateId] = React.useState<string | null>(null);
   const [loaded, setLoaded] = React.useState(false);
@@ -80,7 +83,7 @@ export function WorldPersonaTemplateSection({
     const res = await setWorldPersonaTemplate(worldId, true);
     setToggling(false);
     if (!res.ok) {
-      toast.error(res.error);
+      toast.error(messageErreurAction(res.error, tCommun));
       return;
     }
     setTemplateId(res.templateId ?? null);
@@ -92,7 +95,7 @@ export function WorldPersonaTemplateSection({
     const res = await setWorldPersonaTemplate(worldId, false);
     setToggling(false);
     if (!res.ok) {
-      toast.error(res.error);
+      toast.error(messageErreurAction(res.error, tCommun));
       return;
     }
     setTemplateId(null);
@@ -121,7 +124,7 @@ export function WorldPersonaTemplateSection({
       <div className="space-y-2">
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-0.5">
-            <p className="text-sm font-medium">Fiche par défaut</p>
+            <p className="text-sm font-medium">{t("defaultSheet")}</p>
             <p className="text-xs text-muted-foreground leading-snug">
               Chaque persona créé dans ce monde démarre avec une copie de
               cette fiche (sections et champs).
@@ -159,7 +162,7 @@ export function WorldPersonaTemplateSection({
       <AlertDialog open={confirmDisable} onOpenChange={setConfirmDisable}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Désactiver la fiche par défaut ?</AlertDialogTitle>
+            <AlertDialogTitle>{t("disableDefaultSheetTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
               La fiche modèle et tout son contenu seront supprimés
               définitivement. Les personas déjà créés ne sont pas modifiés.
@@ -176,15 +179,9 @@ export function WorldPersonaTemplateSection({
 
       {/* Éditeur de la fiche modèle */}
       <Drawer open={editorOpen} onOpenChange={setEditorOpen} swipeDirection="right">
-        <DrawerContent className="inset-y-0 right-0 flex flex-col gap-0 border rounded-md bg-background text-foreground shadow-lg p-0 w-[min(calc(100%_-_var(--drawer-inset)*2),_460px)]">
-          <DrawerClose
-            aria-label="Fermer"
-            className="absolute right-4 top-4 rounded-xs text-muted-foreground opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
-          >
-            <X className="size-4" />
-          </DrawerClose>
+        <SideSheetContent>
           <DrawerHeader>
-            <DrawerTitle>Fiche par défaut des personas</DrawerTitle>
+            <DrawerTitle>{t("defaultSheetPersonas")}</DrawerTitle>
           </DrawerHeader>
           <div className="min-h-0 flex-1 overflow-y-auto p-6 pt-2">
             {templateId && sections !== null ? (
@@ -204,7 +201,7 @@ export function WorldPersonaTemplateSection({
               </div>
             )}
           </div>
-        </DrawerContent>
+        </SideSheetContent>
       </Drawer>
     </div>
   );
