@@ -49,6 +49,23 @@ export async function deleteChatroomCategory(
 ) {
   const supabase = await createClient();
 
+  // La LIGNE d'abord, les fichiers ensuite.
+  //
+  // L'ordre inverse effaçait les images avant de savoir si la catégorie
+  // partirait vraiment. Une suppression refusée — la RLS réserve
+  // `chatroom_categories` aux éditeurs du monde — laissait alors la catégorie
+  // en place, mais dépouillée de sa bannière et de son icône, sans que rien ne
+  // le signale : à l'écran, une catégorie aux images cassées.
+  //
+  // Dans ce sens-ci, un échec du retrait des fichiers ne laisse que des
+  // fichiers orphelins dans l'espace de stockage — invisibles, et sans effet
+  // sur ce que voit l'utilisateur.
+  const { error } = await supabase
+    .from("chatroom_categories")
+    .delete()
+    .eq("id", id);
+  if (error) return { ok: false as const, error: error.message };
+
   const paths = [bannerUrl, iconUrl]
     .filter((url): url is string => !!url)
     .map((url) => {
@@ -66,11 +83,6 @@ export async function deleteChatroomCategory(
     .filter((path): path is string => !!path);
   if (paths.length) await supabase.storage.from("chatroom-categories").remove(paths);
 
-  const { error } = await supabase
-    .from("chatroom_categories")
-    .delete()
-    .eq("id", id);
-  if (error) return { ok: false as const, error: error.message };
   return { ok: true as const };
 }
 
