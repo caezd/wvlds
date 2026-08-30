@@ -55,7 +55,7 @@ describe("inviteUserToWorld", () => {
   it("refuse un appelant non authentifié", async () => {
     mockCaller(null, null);
     const res = await inviteUserToWorld("a@b.com", "w1", "player");
-    expect(res.error).toMatch(/authentifié/i);
+    expect(res.error).toBe("unauthenticated");
     expect(inviteUserByEmail).not.toHaveBeenCalled();
   });
 
@@ -67,7 +67,7 @@ describe("inviteUserToWorld", () => {
   it("refuse un appelant qui n'est membre d'aucun monde", async () => {
     mockCaller("u1", null);
     const res = await inviteUserToWorld("a@b.com", "w1", "admin");
-    expect(res.error).toMatch(/administrateur/i);
+    expect(res.error).toBe("forbidden");
     expect(inviteUserByEmail).not.toHaveBeenCalled();
   });
 
@@ -76,7 +76,7 @@ describe("inviteUserToWorld", () => {
     async (role) => {
       mockCaller("u1", role);
       const res = await inviteUserToWorld("a@b.com", "w1", "admin");
-      expect(res.error).toMatch(/administrateur/i);
+      expect(res.error).toBe("forbidden");
       expect(inviteUserByEmail).not.toHaveBeenCalled();
     },
   );
@@ -132,7 +132,7 @@ describe("inviteUserToWorld", () => {
     mockCaller("u1", "admin");
     inviteUserByEmail.mockResolvedValue({ data: { user: null }, error: null });
     const res = await inviteUserToWorld("a@b.com", "w1", "player");
-    expect(res.error).toMatch(/n'a pas pu être créé/i);
+    expect(res.error).toBe("saveFailed");
     expect(adminInsert).not.toHaveBeenCalled();
   });
 });

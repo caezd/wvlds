@@ -40,6 +40,7 @@ import {
 import { leaveWorld } from "@/app/actions/worlds";
 import { cn } from "@/lib/utils";
 import type { Quota } from "@/lib/userQuota";
+import { messageErreurAction } from "@/lib/actionErrors";
 
 type WorldRailItem = { id: string; name: string; icon_url: string | null; owner_id: string };
 
@@ -55,6 +56,7 @@ export function WorldsRail({
   const { public_worlds } = useFeatureFlags();
   const { userId: currentUserId } = useCurrentUser();
   const t = useTranslations("nav");
+  const tCommun = useTranslations("common");
   const tWorlds = useTranslations("worlds");
   const pathname = usePathname();
   const router = useRouter();
@@ -106,7 +108,7 @@ export function WorldsRail({
       const res = await leaveWorld(world.id);
       setPendingLeave(null);
       if (!res.ok) {
-        toast.error(res.error);
+        toast.error(messageErreurAction(res.error, tCommun));
         return;
       }
       toast.success(tWorlds("leftWorld", { name: world.name }));

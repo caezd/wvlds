@@ -78,7 +78,11 @@ describe("WorldHomeGridSettings — espacement de la grille", () => {
 
     await user.click(screen.getByRole("radio", { name: "Spacieux" }));
 
-    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("nope"));
+    // Le code renvoyé par l'action est traduit avant affichage : « nope »
+    // n'est pas un code connu, il retombe sur le message générique.
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith("L'enregistrement a échoué"),
+    );
     // Retombe sur la sélection d'avant l'échec.
     expect(screen.getByRole("radio", { name: "Confortable" })).toHaveAttribute("aria-checked", "true");
     expect(screen.getByRole("radio", { name: "Spacieux" })).toHaveAttribute("aria-checked", "false");

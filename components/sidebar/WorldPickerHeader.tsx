@@ -26,6 +26,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { messageErreurAction } from "@/lib/actionErrors";
 
 export type WorldItem = {
   id: string;
@@ -58,6 +59,7 @@ export function WorldPickerHeader({
 }) {
   const router = useRouter();
   const t = useTranslations("worlds");
+  const tCommun = useTranslations("common");
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const [pendingLeave, setPendingLeave] = useState<WorldItem | null>(null);
@@ -71,7 +73,7 @@ export function WorldPickerHeader({
       const res = await leaveWorld(world.id);
       setPendingLeave(null);
       if (!res.ok) {
-        toast.error(res.error);
+        toast.error(messageErreurAction(res.error, tCommun));
         return;
       }
       toast.success(t("leftWorld", { name: world.name }));

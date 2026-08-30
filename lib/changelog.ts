@@ -8,6 +8,13 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Correctif",
+    text: "Les messages d'erreur s'affichent enfin dans votre langue. Ils étaient écrits en français dans le code et présentés tels quels : une personne lisant l'application en anglais ou en espagnol recevait du français.
+Plus gênant encore, quand l'erreur venait de la base de données, c'est son message technique brut qui apparaissait — une phrase en anglais citant des noms de tables internes. Ces messages restent désormais côté serveur, où ils servent au diagnostic, et vous recevez une explication lisible.
+Certaines situations gagnent au passage un message propre : session expirée, quota de personnages atteint, nom déjà pris, droits insuffisants.",
+  },
+  {
+    date: "2026-08",
     tag: "Nouveauté",
     text: "La carte et le wiki d'un monde peuvent maintenant être désactivés, depuis Paramètres → Fonctions. Jusqu'ici ils apparaissaient dans tous les mondes, qu'ils servent ou non, là où l'inventaire, les compétences et la chronologie avaient déjà leur interrupteur.\nDésactiver retire la section de la navigation, et le bloc de raccourcis correspondant de la page d'accueil. Rien n'est supprimé : les pages et la carte sont conservées et réapparaissent telles quelles à la réactivation. Les mondes existants gardent les deux sections actives.",
   },

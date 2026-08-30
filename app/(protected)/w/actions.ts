@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { ERR_NON_AUTHENTIFIE } from "@/lib/actionErrors";
 
 type WorldPrefsInput = {
   main_expanded?: boolean;
@@ -47,7 +48,7 @@ export async function toggleFollowChatroom(
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "Non authentifié." };
+  if (!user) return { ok: false, error: ERR_NON_AUTHENTIFIE };
 
   const { error } = follow
     ? await supabase.from("chatroom_follows").upsert(

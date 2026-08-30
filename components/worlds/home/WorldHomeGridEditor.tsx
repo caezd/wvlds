@@ -40,6 +40,7 @@ import {
 import { WorldHomeHtmlBlockEditor } from "./blocks/WorldHomeHtmlBlockEditor";
 import { WorldHomeMarkdownBlockEditor } from "./blocks/WorldHomeMarkdownBlockEditor";
 import { WorldHomeBannerDialog } from "./blocks/WorldHomeBannerBlock";
+import { messageErreurAction } from "@/lib/actionErrors";
 
 /**
  * Destination d'un déplacement en cours. `asNewRow` distingue les deux
@@ -295,7 +296,7 @@ export function WorldHomeGridEditor({
       // Un rollback ne vaut que pour le dernier geste : revenir à `previous`
       // après un geste plus récent ramènerait un état déjà dépassé.
       if (isLatest) onItemsChange(previous);
-      toast.error(res.error);
+      toast.error(messageErreurAction(res.error, tCommon));
       return;
     }
     if (!isLatest) return;

@@ -18,6 +18,8 @@
  * où elle est utile, et ne remonte pas à l'écran, où elle ne l'est pas.
  */
 
+import { FREE_PERSONAS_PER_WORLD } from "@/lib/personaQuotaConstants";
+
 /** La session n'est plus valide. Seul cas où l'utilisateur peut agir. */
 export const ERR_NON_AUTHENTIFIE = "unauthenticated";
 
@@ -34,6 +36,34 @@ export const ERR_VALEUR_NON_SUPPORTEE = "unsupportedValue";
 export const ERR_ENREGISTREMENT = "saveFailed";
 
 /**
+ * L'objet visé n'existe pas, ou n'appartient pas à qui le demande.
+ *
+ * Les deux cas sont volontairement confondus : les distinguer révélerait
+ * l'existence d'un objet auquel on n'a pas accès.
+ */
+export const ERR_INTROUVABLE = "notFound";
+
+/** L'action demande un rôle que l'appelant n'a pas. */
+export const ERR_NON_AUTORISE = "forbidden";
+
+/** Étiquette de monde vide ou contenant autre chose que lettres et chiffres. */
+export const ERR_TAG_INVALIDE = "invalidTag";
+
+/** Le quota de personnages du plan gratuit est atteint pour ce monde. */
+export const ERR_QUOTA_PERSONAS = "personaQuotaReached";
+
+/** Un personnage du même nom existe déjà dans ce monde. */
+export const ERR_NOM_PERSONA_PRIS = "personaNameTaken";
+
+/**
+ * Le nom d'un personnage est hors des bornes acceptées.
+ *
+ * Celui-ci a son propre message : contrairement aux autres refus de validation,
+ * il survient au cours d'un usage normal et la personne peut y remédier.
+ */
+export const ERR_NOM_PERSONA = "personaNameLength";
+
+/**
  * Message à afficher pour un code d'erreur d'action.
  *
  * @param code ce que l'action a renvoyé — un code, ou n'importe quoi d'autre
@@ -41,8 +71,18 @@ export const ERR_ENREGISTREMENT = "saveFailed";
  */
 export function messageErreurAction(
   code: string | undefined | null,
-  t: (cle: string) => string,
+  t: (cle: string, valeurs?: Record<string, string | number | Date>) => string,
 ): string {
   if (code === ERR_NON_AUTHENTIFIE) return t("sessionExpired");
+  if (code === ERR_INTROUVABLE) return t("notFoundOrForbidden");
+  if (code === ERR_NOM_PERSONA) return t("personaNameLength");
+  if (code === ERR_NOM_PERSONA_PRIS) return t("personaNameTaken");
+  if (code === ERR_NON_AUTORISE) return t("forbidden");
+  if (code === ERR_TAG_INVALIDE) return t("invalidTag");
+  // Le seul message qui porte une valeur : la borne du plan gratuit, qui n'a
+  // aucune raison d'être recopiée dans les trois fichiers de traduction.
+  if (code === ERR_QUOTA_PERSONAS) {
+    return t("personaQuotaReached", { count: FREE_PERSONAS_PER_WORLD });
+  }
   return t("saveError");
 }

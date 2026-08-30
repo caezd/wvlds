@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import {
@@ -62,27 +62,66 @@ describe("messageErreurAction", () => {
   });
 });
 
-describe("les actions de réglages ne renvoient plus de français", () => {
-  it("aucune phrase française ne subsiste dans leurs retours d'erreur", () => {
-    // Contrôle de non-régression sur la tranche convertie. Les autres actions
-    // serveur — mesurées à 21 messages restants — ne sont pas encore traitées.
-    const src = readFileSync(
-      join(process.cwd(), "app", "(protected)", "settings", "actions.ts"),
-      "utf-8",
-    );
-    const litteraux = [...src.matchAll(/\berror:\s*"([^"]+)"/g)].map((m) => m[1]);
-    expect(litteraux, `retours en dur : ${litteraux.join(", ")}`).toEqual([]);
+describe("aucune action serveur ne renvoie de phrase française", () => {
+  /** Chemins des fichiers portant la directive `"use server"`. */
+  function actionsServeur(): string[] {
+    const trouves: string[] = [];
+    const parcourir = (dossier: string) => {
+      for (const e of readdirSync(dossier, { withFileTypes: true })) {
+        const chemin = join(dossier, e.name);
+        if (e.isDirectory()) {
+          if (e.name === "node_modules" || e.name === "__tests__") continue;
+          parcourir(chemin);
+          continue;
+        }
+        if (!/\.tsx?$/.test(e.name)) continue;
+        const src = readFileSync(chemin, "utf-8");
+        if (src.slice(0, 200).includes('"use server"')) trouves.push(chemin);
+      }
+    };
+    for (const d of ["app", "lib"]) {
+      const chemin = join(process.cwd(), d);
+      if (existsSync(chemin)) parcourir(chemin);
+    }
+    return trouves;
+  }
+
+  it("trouve bien les actions serveur", () => {
+    // Un contrôle qui n'analyserait aucun fichier passerait aussi.
+    expect(actionsServeur().length).toBeGreaterThan(5);
   });
 
-  it("chaque retour d'erreur passe par une constante", () => {
-    const src = readFileSync(
-      join(process.cwd(), "app", "(protected)", "settings", "actions.ts"),
-      "utf-8",
-    );
-    const retours = [...src.matchAll(/\berror:\s*(\w+)\s*\}/g)].map((m) => m[1]);
-    expect(retours.length).toBeGreaterThan(5);
-    for (const r of retours) {
-      expect(r, `retour inattendu : ${r}`).toMatch(/^ERR_/);
+  it("aucun retour `error:` n'est une phrase, seulement un code", () => {
+    // Les phrases françaises traversaient l'action jusqu'à une notification,
+    // en français pour tout le monde. Un code est traduit à l'affichage.
+    //
+    // La règle est simple à vérifier : un code est un identifiant, sans espace
+    // ni accent. Toute phrase en contient.
+    const fautifs: string[] = [];
+    for (const p of actionsServeur()) {
+      const src = readFileSync(p, "utf-8");
+      for (const m of src.matchAll(/error:[ ]*"([^"]{3,})"/g)) {
+        // Détection SANS caractère non-ASCII dans la source : une classe du
+        // genre `[À-ſ]` ne survit pas à la transformation du test, et le
+        // contrôle passait alors sur des phrases bien présentes — vérifié.
+        // Une capture qui franchit un saut de ligne n'est pas un message mais
+        // un artefact : la classe `[^"]` traverse les retours à la ligne.
+        if ([...m[1]].some((c) => c.charCodeAt(0) === 10)) continue;
+        const estUnePhrase =
+          [...m[1]].some((c) => c === " " || c.charCodeAt(0) > 127);
+        if (estUnePhrase) {
+          fautifs.push(`  ${p.slice(process.cwd().length + 1)} — "${m[1]}"`);
+        }
+      }
     }
+    expect(
+      fautifs,
+      fautifs.length
+        ? "Phrases renvoyées par une action serveur. Elles s'affichent en " +
+          "notification, dans cette langue, quelle que soit celle de la " +
+          "personne. Renvoyez un code de `lib/actionErrors.ts` : " +
+          fautifs.join(" | ")
+        : "",
+    ).toEqual([]);
   });
 });

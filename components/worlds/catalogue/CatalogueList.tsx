@@ -46,6 +46,7 @@ import { UNCAT, COL_PREFIX, groupByColumn, type CatalogType, type CatalogItem } 
 
 import { CategoryRowOverlay, ItemRowOverlay } from "./CataloguePieces";
 import { AddCategoryForm, DroppableColumn, SortableCategoryContainer, UncategorizedSection } from "./CatalogueSections";
+import { messageErreurAction } from "@/lib/actionErrors";
 
 // ── Catalogue list (main DnD logic) ──────────────────────────────────────────
 
@@ -128,11 +129,11 @@ export function CatalogueList({
     const payload = { name: data.name, description: data.description || undefined, icon: data.icon, category_id: categoryId };
     if (type === "inventory") {
       const res = await addWorldInventoryItem(worldId, payload);
-      if (!res.ok) { toast.error(res.error); return; }
+      if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
       setItems(prev => [...prev, { ...res.item, category_id: categoryId } as CatalogItem]);
     } else {
       const res = await addWorldSkill(worldId, payload);
-      if (!res.ok) { toast.error(res.error); return; }
+      if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
       setItems(prev => [...prev, { ...res.skill, category_id: categoryId } as CatalogItem]);
     }
     setAddingInCat(false);
@@ -141,10 +142,10 @@ export function CatalogueList({
   async function handleSaveItem(id: string, data: { name: string; description: string | null; icon: string | null }) {
     if (type === "inventory") {
       const res = await updateWorldInventoryItem(id, data);
-      if (!res.ok) { toast.error(res.error); return; }
+      if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
     } else {
       const res = await updateWorldSkill(id, data);
-      if (!res.ok) { toast.error(res.error); return; }
+      if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
     }
     setItems(prev => prev.map(i => i.id === id ? { ...i, ...data } : i));
     setEditingId(null);
@@ -153,10 +154,10 @@ export function CatalogueList({
   async function handleDeleteItem(id: string) {
     if (type === "inventory") {
       const res = await deleteWorldInventoryItem(id);
-      if (!res.ok) { toast.error(res.error); return; }
+      if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
     } else {
       const res = await deleteWorldSkill(id);
-      if (!res.ok) { toast.error(res.error); return; }
+      if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
     }
     setItems(prev => prev.filter(i => i.id !== id));
   }
@@ -166,21 +167,21 @@ export function CatalogueList({
   async function handleAddCategory(name: string, colIdx = 0) {
     const sortIdx = categories.filter(c => c.column_index === colIdx).length;
     const res = await addWorldCatalogCategory(worldId, type, name, { column_index: colIdx, sort_index: sortIdx });
-    if (!res.ok) { toast.error(res.error); return; }
+    if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
     setCategories(prev => [...prev, res.category]);
     setAddingCategoryInCol(false);
   }
 
   async function handleSaveCategory(id: string, name: string) {
     const res = await updateWorldCatalogCategory(id, { name });
-    if (!res.ok) { toast.error(res.error); return; }
+    if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
     setCategories(prev => prev.map(c => c.id === id ? { ...c, name } : c));
     setRenamingCatId(null);
   }
 
   async function handleDeleteCategory(id: string) {
     const res = await deleteWorldCatalogCategory(id);
-    if (!res.ok) { toast.error(res.error); return; }
+    if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
     setCategories(prev => prev.filter(c => c.id !== id));
     // ON DELETE SET NULL handles DB; mirror locally
     setItems(prev => prev.map(i => i.category_id === id ? { ...i, category_id: null } : i));

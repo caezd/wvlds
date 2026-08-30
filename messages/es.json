@@ -41,7 +41,13 @@
     "clickToPickFile": "haga clic para elegir un archivo",
     "orPasteUrl": "o pegue una URL directamente",
     "preview": "Vista previa",
-    "icon": "Icono"
+    "icon": "Icono",
+    "notFoundOrForbidden": "No se encuentra, o no tiene acceso.",
+    "personaNameLength": "El nombre debe tener entre 1 y 40 caracteres.",
+    "personaQuotaReached": "Límite alcanzado: {count} personajes por mundo en una cuenta gratuita.",
+    "personaNameTaken": "Ya existe un personaje con ese nombre en este mundo.",
+    "forbidden": "No tiene los permisos necesarios para esto.",
+    "invalidTag": "Una etiqueta solo puede contener letras y números."
   },
   "nav": {
     "profile": "Mi perfil",

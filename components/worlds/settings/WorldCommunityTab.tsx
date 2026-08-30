@@ -9,6 +9,7 @@ import { TabsContent } from "@/components/ui/tabs";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import type { World } from "@/types/worlds";
 import { LabelWithHelp } from "./LabelWithHelp";
@@ -20,14 +21,16 @@ type ProprietesOnglet = {
   persistField: PersistField;
 };
 
-import { Camera, Globe, GlobeLock, Palette, Plus, X } from "lucide-react";
+import { Camera, Globe, GlobeLock, Palette, Plus, ShieldAlert, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import {
+  setWorldAgeRestricted,
   setWorldAvatarType,
   getWorldTags,
   addWorldTag,
   removeWorldTag,
 } from "@/app/actions/worldCatalog";
+import { messageErreurAction } from "@/lib/actionErrors";
 
 /**
  * Onglet « Communauté » des réglages d'un monde : visibilité, types d'avatars
@@ -40,16 +43,29 @@ export function WorldCommunityTab({ world, form, persistField, onUpdated }: Prop
   onUpdated?: (world: World) => void;
 }) {
   const t = useTranslations("worlds");
+  const tCommun = useTranslations("common");
   const supabase = React.useMemo(() => createClient(), []);
 
     const [allowsRealAvatars, setAllowsRealAvatars] = React.useState(world.allows_real_avatars === true);
     const [allowsIllustratedAvatars, setAllowsIllustratedAvatars] = React.useState(world.allows_illustrated_avatars === true);
     const [togglingAvatarType, setTogglingAvatarType] = React.useState(false);
 
+    const [ageRestricted, setAgeRestricted] = React.useState(world.is_age_restricted === true);
+    const [togglingAgeRestricted, setTogglingAgeRestricted] = React.useState(false);
+
     const [tags, setTags] = React.useState<string[]>([]);
     const [newTag, setNewTag] = React.useState("");
     const [savingTag, setSavingTag] = React.useState(false);
     const [existingTags, setExistingTags] = React.useState<string[]>([]);
+
+    async function handleAgeRestrictedToggle(enabled: boolean) {
+        setTogglingAgeRestricted(true);
+        const res = await setWorldAgeRestricted(world.id, enabled);
+        setTogglingAgeRestricted(false);
+        if (!res.ok) { toast.error(messageErreurAction(res.error, tCommun)); return; }
+        setAgeRestricted(enabled);
+        onUpdated?.({ ...world, is_age_restricted: enabled } as World);
+    }
 
     async function handleAvatarTypeToggle(
         field: "allows_real_avatars" | "allows_illustrated_avatars",
@@ -58,7 +74,7 @@ export function WorldCommunityTab({ world, form, persistField, onUpdated }: Prop
         setTogglingAvatarType(true);
         const res = await setWorldAvatarType(world.id, field, enabled);
         setTogglingAvatarType(false);
-        if (!res.ok) { toast.error(res.error); return; }
+        if (!res.ok) { toast.error(messageErreurAction(res.error, tCommun)); return; }
         if (field === "allows_real_avatars") setAllowsRealAvatars(enabled);
         else setAllowsIllustratedAvatars(enabled);
         onUpdated?.({ ...world, [field]: enabled } as World);
@@ -70,7 +86,7 @@ export function WorldCommunityTab({ world, form, persistField, onUpdated }: Prop
         setSavingTag(true);
         const res = await addWorldTag(world.id, value);
         setSavingTag(false);
-        if (!res.ok) { toast.error(res.error); return; }
+        if (!res.ok) { toast.error(messageErreurAction(res.error, tCommun)); return; }
         setTags((prev) => (prev.includes(res.tag) ? prev : [...prev, res.tag]));
         setExistingTags((prev) => (prev.includes(res.tag) ? prev : [...prev, res.tag]));
         setNewTag("");
@@ -95,7 +111,7 @@ export function WorldCommunityTab({ world, form, persistField, onUpdated }: Prop
         setTags((prev) => prev.filter((t) => t !== tag));
         const res = await removeWorldTag(world.id, tag);
         if (!res.ok) {
-            toast.error(res.error);
+            toast.error(messageErreurAction(res.error, tCommun));
             setTags((prev) => [...prev, tag]);
         }
     }
@@ -317,6 +333,28 @@ export function WorldCommunityTab({ world, form, persistField, onUpdated }: Prop
                                                 Avatars illustrés
                                             </button>
                                         </div>
+                                    </div>
+                                </div>
+
+                                {/* -- Sécurité ---------------------------------- */}
+                                <div className="space-y-5 pt-2">
+                                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("tabSecurity")}</p>
+                                    <div className="flex items-start justify-between gap-4">
+                                        <div className="space-y-0.5">
+                                            <p className="flex items-center gap-1.5 text-sm font-medium">
+                                                <ShieldAlert className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                                                Monde réservé aux 18 ans et plus
+                                            </p>
+                                            <p className="text-xs text-muted-foreground leading-snug">
+                                                Les nouveaux membres devront confirmer avoir 18 ans ou plus avant de pouvoir rejoindre ce monde.
+                                            </p>
+                                        </div>
+                                        <Switch
+                                            checked={ageRestricted}
+                                            disabled={togglingAgeRestricted}
+                                            onCheckedChange={v => void handleAgeRestrictedToggle(v)}
+                                            className="shrink-0 mt-0.5"
+                                        />
                                     </div>
                                 </div>
                             </TabsContent>

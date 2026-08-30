@@ -30,6 +30,7 @@ import {
 import { fetchPersonaSections } from "@/lib/personaSections";
 import type { PersonaSectionWithFields } from "@/types/personas";
 import { useTranslations } from "next-intl";
+import { messageErreurAction } from "@/lib/actionErrors";
 
 /**
  * Réglage « Fiche de persona par défaut » d'un monde.
@@ -48,6 +49,7 @@ export function WorldPersonaTemplateSection({
   restrictSkills?: boolean;
 }) {
   const t = useTranslations("worlds");
+  const tCommun = useTranslations("common");
   const supabase = React.useMemo(() => createClient(), []);
   const [templateId, setTemplateId] = React.useState<string | null>(null);
   const [loaded, setLoaded] = React.useState(false);
@@ -81,7 +83,7 @@ export function WorldPersonaTemplateSection({
     const res = await setWorldPersonaTemplate(worldId, true);
     setToggling(false);
     if (!res.ok) {
-      toast.error(res.error);
+      toast.error(messageErreurAction(res.error, tCommun));
       return;
     }
     setTemplateId(res.templateId ?? null);
@@ -93,7 +95,7 @@ export function WorldPersonaTemplateSection({
     const res = await setWorldPersonaTemplate(worldId, false);
     setToggling(false);
     if (!res.ok) {
-      toast.error(res.error);
+      toast.error(messageErreurAction(res.error, tCommun));
       return;
     }
     setTemplateId(null);

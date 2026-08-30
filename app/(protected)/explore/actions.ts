@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { ERR_NON_AUTHENTIFIE } from "@/lib/actionErrors";
 
 export async function joinPublicWorld(
   worldId: string,
@@ -9,7 +10,7 @@ export async function joinPublicWorld(
 ): Promise<{ error?: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: "Non authentifié" };
+  if (!user) return { error: ERR_NON_AUTHENTIFIE };
 
   const { error } = await supabase.rpc("join_public_world", {
     p_world_id: worldId,

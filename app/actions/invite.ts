@@ -3,6 +3,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { getUserId } from "@/lib/auth";
+import { ERR_ENREGISTREMENT, ERR_NON_AUTHENTIFIE , ERR_NON_AUTORISE } from "@/lib/actionErrors";
 
 type Role = "admin" | "editor" | "player" | "viewer";
 
@@ -37,7 +38,7 @@ export async function inviteUserToWorld(
 ): Promise<{ error?: string }> {
   const supabase = await createClient();
   const userId = await getUserId(supabase);
-  if (!userId) return { error: "Non authentifié." };
+  if (!userId) return { error: ERR_NON_AUTHENTIFIE };
 
   // Lecture sous l'identité de l'appelant (donc sous RLS) : on ne peut pas
   // se déclarer administrateur d'un monde où l'on ne l'est pas.
@@ -50,7 +51,7 @@ export async function inviteUserToWorld(
 
   const callerRole = (membership as { role?: string } | null)?.role;
   if (callerRole !== "owner" && callerRole !== "admin") {
-    return { error: "Seul un administrateur du monde peut inviter." };
+    return { error: ERR_NON_AUTORISE };
   }
 
   const admin = createAdminClient();
@@ -66,7 +67,7 @@ export async function inviteUserToWorld(
   // invitation normale plutôt que de la faire transiter par le client.
   const inviteeId = (data as { user?: { id?: string } } | null)?.user?.id;
   if (!inviteeId) {
-    return { error: "Le compte invité n'a pas pu être créé." };
+    return { error: ERR_ENREGISTREMENT };
   }
 
   const { error: invErr } = await admin

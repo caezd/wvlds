@@ -20,6 +20,7 @@ import {
 } from "@/components/worlds/home/worldHomeGrid";
 import type { WorldInventoryItem, WorldSkill, WorldCatalogCategory, WorldTimelineConfig, WorldTag } from "@/types/worlds";
 import { clampDaysPerMonth } from "@/lib/worldTimeline";
+import { ERR_NON_AUTHENTIFIE, ERR_VALEUR_NON_SUPPORTEE , ERR_TAG_INVALIDE } from "@/lib/actionErrors";
 
 const MAX_WORLD_TAGS = 10;
 const MAX_TAG_LENGTH = 24;
@@ -75,7 +76,7 @@ export async function setWorldHomeShowStats(worldId: string, enabled: boolean) {
 /** Règle la gouttière de la grille de la page d'accueil — partagée par le
  *  rendu public et l'éditeur, voir HOME_GRID_GAP_PRESETS. */
 export async function setWorldHomeGridGap(worldId: string, gap: WorldHomeGridGap) {
-  if (!(gap in HOME_GRID_GAP_PRESETS)) return { ok: false as const, error: "Espacement invalide." };
+  if (!(gap in HOME_GRID_GAP_PRESETS)) return { ok: false as const, error: ERR_VALEUR_NON_SUPPORTEE };
   const supabase = await createClient();
   const { error } = await supabase.from("worlds").update({ home_grid_gap: gap }).eq("id", worldId);
   if (error) return { ok: false as const, error: error.message };
@@ -334,7 +335,7 @@ export async function setWorldPersonaTemplate(worldId: string, enabled: boolean)
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { ok: false as const, error: "Vous devez être connecté." };
+  if (!user) return { ok: false as const, error: ERR_NON_AUTHENTIFIE };
 
   const { data: existing } = await supabase
     .from("personas")
@@ -376,7 +377,7 @@ export async function setWorldAvatarType(
   field: "allows_real_avatars" | "allows_illustrated_avatars",
   enabled: boolean,
 ) {
-  if (!WORLD_AVATAR_TYPE_FIELDS.has(field)) return { ok: false as const, error: "Champ invalide." };
+  if (!WORLD_AVATAR_TYPE_FIELDS.has(field)) return { ok: false as const, error: ERR_VALEUR_NON_SUPPORTEE };
   const supabase = await createClient();
   const { error } = await supabase.from("worlds").update({ [field]: enabled }).eq("id", worldId);
   if (error) return { ok: false as const, error: error.message };
@@ -401,9 +402,9 @@ const TAG_FORMAT = /^[\p{L}\p{N}]+$/u;
 
 export async function addWorldTag(worldId: string, rawTag: string) {
   const tag = rawTag.trim().toLowerCase().slice(0, MAX_TAG_LENGTH);
-  if (!tag) return { ok: false as const, error: "Tag vide." };
+  if (!tag) return { ok: false as const, error: ERR_TAG_INVALIDE };
   if (!TAG_FORMAT.test(tag)) {
-    return { ok: false as const, error: "Un tag ne peut contenir que des lettres et des chiffres." };
+    return { ok: false as const, error: ERR_TAG_INVALIDE };
   }
 
   const supabase = await createClient();
@@ -426,7 +427,7 @@ export async function addWorldTag(worldId: string, rawTag: string) {
     // Déjà présent pour ce monde : idempotent plutôt qu'une erreur — l'appelant
     // récupère simplement le tag existant.
     if (error.code === "23505") return { ok: true as const, tag };
-    if (error.code === "23514") return { ok: false as const, error: "Format de tag invalide." };
+    if (error.code === "23514") return { ok: false as const, error: ERR_VALEUR_NON_SUPPORTEE };
     return { ok: false as const, error: error.message };
   }
   return { ok: true as const, tag };
@@ -555,7 +556,7 @@ function validateHomeGridItem(
 }
 
 export async function setWorldHomeGrid(worldId: string, items: unknown[]) {
-  if (!Array.isArray(items)) return { ok: false as const, error: "Grille invalide." };
+  if (!Array.isArray(items)) return { ok: false as const, error: ERR_VALEUR_NON_SUPPORTEE };
   if (items.length > MAX_HOME_GRID_ITEMS) {
     return { ok: false as const, error: `Maximum ${MAX_HOME_GRID_ITEMS} blocs.` };
   }
@@ -565,7 +566,7 @@ export async function setWorldHomeGrid(worldId: string, items: unknown[]) {
   const parsed: WorldHomeGridItem[] = [];
   for (const raw of items) {
     const item = validateHomeGridItem(raw, seenIds, seenWidgetIds);
-    if (!item) return { ok: false as const, error: "Un des blocs est invalide." };
+    if (!item) return { ok: false as const, error: ERR_VALEUR_NON_SUPPORTEE };
     parsed.push(item);
   }
   // Chaque bloc est valide pris isolément (bornes, largeur…), mais rien
@@ -577,7 +578,7 @@ export async function setWorldHomeGrid(worldId: string, items: unknown[]) {
   for (const row of toRows(parsed)) {
     for (let i = 1; i < row.length; i++) {
       if (row[i].x < row[i - 1].x + row[i - 1].w) {
-        return { ok: false as const, error: "Deux blocs se chevauchent sur la même ligne." };
+        return { ok: false as const, error: ERR_VALEUR_NON_SUPPORTEE };
       }
     }
   }

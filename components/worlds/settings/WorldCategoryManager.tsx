@@ -34,6 +34,7 @@ import {
   reorderChatroomCategories,
 } from "@/app/actions/chatroomCategories";
 import type { ChatroomCategory } from "@/types/worlds";
+import { messageErreurAction } from "@/lib/actionErrors";
 
 async function uploadCategoryImage(
   supabase: ReturnType<typeof createClient>,
@@ -70,6 +71,7 @@ function CategoryForm({
 }) {
   const tCatalogue = useTranslations("catalogue");
   const t = useTranslations("worlds");
+  const tCommon = useTranslations("common");
   const supabase = React.useMemo(() => createClient(), []);
   const [title, setTitle] = React.useState(initial?.title ?? "");
   const [description, setDescription] = React.useState(initial?.description ?? "");
@@ -116,7 +118,7 @@ function CategoryForm({
       const res = await updateChatroomCategory(initial.id, data);
       setSaving(false);
       if (!res.ok) {
-        toast.error(res.error);
+        toast.error(messageErreurAction(res.error, tCommon));
         return;
       }
       onSaved({ ...initial, ...data });
@@ -124,7 +126,7 @@ function CategoryForm({
       const res = await addChatroomCategory(worldId, data);
       setSaving(false);
       if (!res.ok) {
-        toast.error(res.error);
+        toast.error(messageErreurAction(res.error, tCommon));
         return;
       }
       onSaved(res.category);
@@ -293,6 +295,7 @@ export function WorldCategoryManager({
 }) {
   const supabase = React.useMemo(() => createClient(), []);
   const router = useRouter();
+  const tCommon = useTranslations("common");
   const [categories, setCategories] = React.useState<ChatroomCategory[] | null>(null);
   const [creating, setCreating] = React.useState(false);
   const [editingId, setEditingId] = React.useState<string | null>(null);
@@ -329,7 +332,7 @@ export function WorldCategoryManager({
   async function handleDelete(category: ChatroomCategory) {
     const res = await deleteChatroomCategory(category.id, category.banner_url, category.icon_url);
     if (!res.ok) {
-      toast.error(res.error);
+      toast.error(messageErreurAction(res.error, tCommon));
       return;
     }
     setCategories((prev) => prev?.filter((c) => c.id !== category.id) ?? null);
@@ -349,7 +352,7 @@ export function WorldCategoryManager({
     void (async () => {
       const res = await reorderChatroomCategories(reordered.map((c) => ({ id: c.id, position: c.position })));
       if (!res.ok) {
-        toast.error(res.error);
+        toast.error(messageErreurAction(res.error, tCommon));
         setCategories(previous);
         return;
       }

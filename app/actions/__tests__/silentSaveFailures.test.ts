@@ -74,7 +74,7 @@ describe("toggleFollowChatroom", () => {
     use(createSupabaseMock({ user: null }));
     expect(await toggleFollowChatroom("chat1", true)).toEqual({
       ok: false,
-      error: "Non authentifié.",
+      error: "unauthenticated",
     });
   });
 

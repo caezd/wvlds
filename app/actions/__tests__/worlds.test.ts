@@ -24,7 +24,7 @@ beforeEach(() => {
 describe("leaveWorld", () => {
     it("refuse si non connecté", async () => {
         use(createSupabaseMock({ user: null }));
-        expect(await leaveWorld("w1")).toEqual({ ok: false, error: "Non authentifié" });
+        expect(await leaveWorld("w1")).toEqual({ ok: false, error: "unauthenticated" });
     });
 
     it("supprime la ligne world_members de l'utilisateur courant", async () => {

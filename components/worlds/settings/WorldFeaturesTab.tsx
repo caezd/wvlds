@@ -20,7 +20,7 @@ type ProprietesOnglet = {
   persistField: PersistField;
 };
 
-import { Plus, ShieldAlert, Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,7 +35,6 @@ import {
   setWorldFeature,
   setWorldRestriction,
   setWorldFaceclaims,
-  setWorldAgeRestricted,
   setWorldTimeline,
 } from "@/app/actions/worldCatalog";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
@@ -47,6 +46,7 @@ import {
   REAL_DAYS_PER_MONTH,
   REAL_MONTH_NAMES,
 } from "@/lib/worldTimeline";
+import { messageErreurAction } from "@/lib/actionErrors";
 
 /**
  * Onglet « Fonctions » des réglages d'un monde : inventaire et compétences,
@@ -87,9 +87,6 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
     const [enableWiki, setEnableWiki] = React.useState(world.enable_wiki !== false);
     const [togglingWiki, setTogglingWiki] = React.useState(false);
 
-    const [ageRestricted, setAgeRestricted] = React.useState(world.is_age_restricted === true);
-    const [togglingAgeRestricted, setTogglingAgeRestricted] = React.useState(false);
-
     const defaultConfig: WorldTimelineConfig = {
         year_label: "an",
         era_name: null,
@@ -109,7 +106,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
         setTogglingEnable(true);
         const res = await setWorldFeature(world.id, `enable_${field}`, enabled);
         setTogglingEnable(false);
-        if (!res.ok) { toast.error(res.error); return; }
+        if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
         if (field === "inventory") {
             setEnableInventory(enabled);
             if (!enabled) setRestrictInventory(false);
@@ -132,7 +129,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
         setTogglingRestriction(true);
         const res = await setWorldRestriction(world.id, `restrict_${field}`, false);
         setTogglingRestriction(false);
-        if (!res.ok) { toast.error(res.error); return; }
+        if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
         if (field === "inventory") setRestrictInventory(false);
         else setRestrictSkills(false);
         onUpdated?.({ ...world, [`restrict_${field}`]: false } as World);
@@ -145,7 +142,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
         setPendingRestriction(null);
         const res = await setWorldRestriction(world.id, `restrict_${field}`, true);
         setTogglingRestriction(false);
-        if (!res.ok) { toast.error(res.error); return; }
+        if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
         if (field === "inventory") setRestrictInventory(true);
         else setRestrictSkills(true);
         onUpdated?.({ ...world, [`restrict_${field}`]: true } as World);
@@ -155,7 +152,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
         setTogglingFaceclaims(true);
         const res = await setWorldFaceclaims(world.id, enabled);
         setTogglingFaceclaims(false);
-        if (!res.ok) { toast.error(res.error); return; }
+        if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
         setEnableFaceclaims(enabled);
         onUpdated?.({ ...world, enable_faceclaims: enabled } as World);
     }
@@ -164,7 +161,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
         setTogglingMap(true);
         const res = await setWorldFeature(world.id, "enable_map", enabled);
         setTogglingMap(false);
-        if (!res.ok) { toast.error(res.error); return; }
+        if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
         setEnableMap(enabled);
         onUpdated?.({ ...world, enable_map: enabled } as World);
     }
@@ -173,18 +170,9 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
         setTogglingWiki(true);
         const res = await setWorldFeature(world.id, "enable_wiki", enabled);
         setTogglingWiki(false);
-        if (!res.ok) { toast.error(res.error); return; }
+        if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
         setEnableWiki(enabled);
         onUpdated?.({ ...world, enable_wiki: enabled } as World);
-    }
-
-    async function handleAgeRestrictedToggle(enabled: boolean) {
-        setTogglingAgeRestricted(true);
-        const res = await setWorldAgeRestricted(world.id, enabled);
-        setTogglingAgeRestricted(false);
-        if (!res.ok) { toast.error(res.error); return; }
-        setAgeRestricted(enabled);
-        onUpdated?.({ ...world, is_age_restricted: enabled } as World);
     }
 
 
@@ -192,7 +180,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
         setTogglingTimeline(true);
         const res = await setWorldTimeline(world.id, enabled, enabled ? timelineConfig : null);
         setTogglingTimeline(false);
-        if (!res.ok) { toast.error(res.error); return; }
+        if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
         setTimelineEnabled(enabled);
         if (!enabled) setTimelineConfig(defaultConfig);
         onUpdated?.({ ...world, timeline_enabled: enabled, timeline_config: enabled ? timelineConfig : null } as World);
@@ -202,7 +190,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
         const next = { ...timelineConfig, ...patch };
         setTimelineConfig(next);
         const res = await setWorldTimeline(world.id, timelineEnabled, next);
-        if (!res.ok) toast.error(res.error);
+        if (!res.ok) toast.error(messageErreurAction(res.error, tCommon));
         else onUpdated?.({ ...world, timeline_config: next } as World);
     }
 
@@ -361,28 +349,6 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                                             </FormItem>
                                         )}
                                     />
-                                </div>
-
-                                {/* -- Sécurité ---------------------------------- */}
-                                <div className="space-y-5 pt-2">
-                                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("tabSecurity")}</p>
-                                    <div className="flex items-start justify-between gap-4">
-                                        <div className="space-y-0.5">
-                                            <p className="flex items-center gap-1.5 text-sm font-medium">
-                                                <ShieldAlert className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                                                Monde réservé aux 18 ans et plus
-                                            </p>
-                                            <p className="text-xs text-muted-foreground leading-snug">
-                                                Les nouveaux membres devront confirmer avoir 18 ans ou plus avant de pouvoir rejoindre ce monde.
-                                            </p>
-                                        </div>
-                                        <Switch
-                                            checked={ageRestricted}
-                                            disabled={togglingAgeRestricted}
-                                            onCheckedChange={v => void handleAgeRestrictedToggle(v)}
-                                            className="shrink-0 mt-0.5"
-                                        />
-                                    </div>
                                 </div>
 
                                 {/* -- Fiche de persona par défaut -------------- */}
