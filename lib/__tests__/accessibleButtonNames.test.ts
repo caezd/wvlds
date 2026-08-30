@@ -3,12 +3,15 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 // ──────────────────────────────────────────────────────────────────────────
-// Tout bouton doit avoir un nom accessible.
+// Tout bouton et tout lien doit avoir un nom accessible.
 //
 // Vingt-trois boutons n'en avaient aucun : une icône lucide pour seul enfant,
 // ou rien du tout — une pastille de couleur, un interrupteur. Un lecteur
 // d'écran les annonce « bouton », sans plus. Supprimer un champ, changer une
 // couleur, monter d'un cran : rien ne disait lequel faisait quoi.
+//
+// Les liens ont été ajoutés ensuite, après qu'axe en eut trouvé un au rendu
+// que ce contrôle ne regardait pas : deux autres attendaient dans le code.
 //
 // La détection est volontairement PRUDENTE. Un composant maison peut rendre du
 // texte (`PinCard`, `DmAvatar`) et une image porteuse d'un `alt` nomme déjà le
@@ -145,7 +148,7 @@ export function aucunNomPossible(corps: string, icones: Set<string>): boolean {
   return !/[A-Za-zÀ-ÿ{]/.test(reste);
 }
 
-/** Un `<button>` écrit à l'intérieur d'un commentaire ne rend rien. */
+/** Un élément écrit à l'intérieur d'un commentaire ne rend rien. */
 function dansUnCommentaire(src: string, i: number): boolean {
   const debutLigne = src.lastIndexOf("\n", i) + 1;
   const avant = src.slice(debutLigne, i).trimStart();
@@ -168,14 +171,23 @@ function fichiersJsx(): string[] {
   return out;
 }
 
-/** Tous les boutons du dépôt, analysés une seule fois. */
+/**
+ * Balises analysées.
+ *
+ * Les LIENS comptent autant que les boutons : un lien à icône seule est
+ * annoncé « lien », sans plus. Deux avaient échappé au premier passage — la
+ * modification d'un article de boutique, le téléchargement d'une image en
+ * plein écran — et c'est axe, au rendu, qui avait signalé le troisième.
+ */
+const BALISES = ["button", "Button", "a", "Link"];
+
 function analyse(): { total: number; fautifs: string[] } {
   let total = 0;
   const fautifs: string[] = [];
   for (const p of fichiersJsx()) {
     const src = readFileSync(p, "utf-8");
     const icones = iconesLucide(src);
-    for (const balise of ["button", "Button"]) {
+    for (const balise of BALISES) {
       for (const el of elements(src, balise)) {
         if (dansUnCommentaire(src, el.index)) continue;
         total++;
@@ -192,11 +204,11 @@ function analyse(): { total: number; fautifs: string[] } {
   return { total, fautifs };
 }
 
-describe("tout bouton a un nom accessible", () => {
-  it("trouve bien les boutons du dépôt", () => {
+describe("tout bouton et tout lien a un nom accessible", () => {
+  it("trouve bien les boutons et les liens du dépôt", () => {
     // Garde-fou du garde-fou. Ce contrôle a DÉJÀ passé à vide une fois, faute
     // d'une classe de caractères écrite correctement : il ne trouvait alors
-    // aucun bouton et paraissait vert.
+    // aucun élément et paraissait vert.
     const { total } = analyse();
     expect(fichiersJsx().length).toBeGreaterThan(150);
     expect(total).toBeGreaterThan(300);
@@ -224,14 +236,14 @@ describe("tout bouton a un nom accessible", () => {
     expect(el.corps.trim()).toBe("<Plus />");
   });
 
-  it("aucun bouton n'est muet pour un lecteur d'écran", () => {
+  it("aucun bouton ni lien n'est muet pour un lecteur d'écran", () => {
     const { fautifs } = analyse();
     expect(
       fautifs,
       fautifs.length
-        ? "Boutons sans nom accessible : un lecteur d'écran les annonce " +
-          "« bouton », sans dire lequel. Ajoutez un `aria-label` traduit, ou " +
-          "un texte en `sr-only` : " + fautifs.join(" | ")
+        ? "Boutons ou liens sans nom accessible : un lecteur d'écran les " +
+          "annonce « bouton » ou « lien », sans dire lequel. Ajoutez un " +
+          "`aria-label` traduit, ou un texte en `sr-only` : " + fautifs.join(" | ")
         : "",
     ).toEqual([]);
   });

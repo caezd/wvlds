@@ -40,6 +40,7 @@ export function ImageLightbox({
         <a
           href={isSafeUrl(item.url) ? item.url : "#"}
           download={item.name}
+          aria-label={tCommon("download")}
           onClick={(e) => e.stopPropagation()}
           className="flex items-center justify-center size-9 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
         >

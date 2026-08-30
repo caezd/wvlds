@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Interface",
+    text: "Deux liens n'avaient pas de nom pour un lecteur d'écran : le bouton de modification d'un article de boutique, et le téléchargement d'une image affichée en plein écran. Tous deux n'étaient qu'une icône.\nLe contrôle automatique qui interdit ces oublis ne regardait que les boutons ; il couvre désormais aussi les liens.",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
     text: "Le petit texte gris clair est devenu lisible. Plusieurs libellés — noms de sections, compteurs, mentions sous les salons — étaient affichés à une opacité réduite qui les amenait à un contraste de 3.2 pour 1 sur le fond sombre, là où la norme d'accessibilité en demande 4.5.\nIls passent à l'opacité pleine. La teinte reste la même, seul le voile disparaît.",
   },
   {

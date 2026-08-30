@@ -58,7 +58,8 @@
     "zoomOut": "Alejar",
     "deleteConfirmTitle": "Confirmar la eliminación",
     "irreversible": "Esta acción es irreversible.",
-    "scrollableRegion": "Zona desplazable"
+    "scrollableRegion": "Zona desplazable",
+    "download": "Descargar"
   },
   "nav": {
     "profile": "Mi perfil",
@@ -755,7 +756,8 @@
       }
     },
     "editItem": "Editar el artículo",
-    "shopItemDelete": "Eliminar este artículo"
+    "shopItemDelete": "Eliminar este artículo",
+    "shopItemEdit": "Editar este artículo"
   },
   "chatrooms": {
     "newRoom": "Nueva sala",

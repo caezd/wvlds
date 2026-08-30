@@ -58,7 +58,8 @@
     "zoomOut": "Zoom out",
     "deleteConfirmTitle": "Confirm deletion",
     "irreversible": "This action cannot be undone.",
-    "scrollableRegion": "Scrollable region"
+    "scrollableRegion": "Scrollable region",
+    "download": "Download"
   },
   "nav": {
     "profile": "My profile",
@@ -755,7 +756,8 @@
       }
     },
     "editItem": "Edit the item",
-    "shopItemDelete": "Delete this item"
+    "shopItemDelete": "Delete this item",
+    "shopItemEdit": "Edit this item"
   },
   "chatrooms": {
     "newRoom": "New room",

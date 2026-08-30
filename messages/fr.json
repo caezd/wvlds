@@ -58,7 +58,8 @@
     "zoomOut": "Zoom arrière",
     "deleteConfirmTitle": "Confirmer la suppression",
     "irreversible": "Cette action est irréversible.",
-    "scrollableRegion": "Zone défilante"
+    "scrollableRegion": "Zone défilante",
+    "download": "Télécharger"
   },
   "nav": {
     "profile": "Mon profil",
@@ -755,7 +756,8 @@
       }
     },
     "editItem": "Modifier l'article",
-    "shopItemDelete": "Supprimer cet article"
+    "shopItemDelete": "Supprimer cet article",
+    "shopItemEdit": "Modifier cet article"
   },
   "chatrooms": {
     "newRoom": "Nouvelle salle",

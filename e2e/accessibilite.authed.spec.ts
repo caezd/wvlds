@@ -1,7 +1,7 @@
-import { test, expect, type Page } from "@playwright/test";
-import AxeBuilder from "@axe-core/playwright";
+import { test, expect } from "@playwright/test";
 
 import { trouverLienSalon } from "./decouverte";
+import { violations, rapport } from "./axe";
 
 // ──────────────────────────────────────────────────────────────────────────
 // Vérification d'accessibilité sur les pages réellement rendues.
@@ -29,42 +29,15 @@ import { trouverLienSalon } from "./decouverte";
 //     était hors d'atteinte au clavier.
 //
 // Vingt-deux nœuds fautifs, huit règles, aucune visible depuis le code seul.
+//
+// Le pendant sans session vit dans `accessibilite.spec.ts`.
 // ──────────────────────────────────────────────────────────────────────────
-
-/** Le corpus de règles WCAG 2.1 niveau A et AA. */
-const REGLES = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"];
-
-/**
- * Temps laissé au client pour se monter avant l'analyse.
- *
- * Même valeur, et même raison, que le balayage de routes : mesuré à ~2 s entre
- * `domcontentloaded` et la fin du montage, plus une marge. Analyser trop tôt
- * examinerait une page encore vide, ce qui passerait toujours.
- */
-const DELAI_MONTAGE_MS = 2_500;
 
 /** Routes simples, sans paramètre. */
 const ROUTES = ["/explore", "/p", "/settings", "/shop", "/changelog", "/quests"];
 
 /** Vues d'un monde : ce sont les écrans les plus riches de l'application. */
 const VUES = ["wiki", "canvas", "map", "members", "personas"];
-
-/** Analyse une page et rend une description lisible de chaque violation. */
-async function violations(page: Page, url: string): Promise<string[]> {
-  await page.goto(url, { waitUntil: "domcontentloaded" });
-  await page.waitForTimeout(DELAI_MONTAGE_MS);
-  const res = await new AxeBuilder({ page }).withTags(REGLES).analyze();
-  return res.violations.flatMap((v) =>
-    v.nodes.map((nd) => {
-      const d = (nd.any?.[0]?.data ?? {}) as Record<string, unknown>;
-      const chiffres =
-        d.contrastRatio !== undefined
-          ? ` (ratio ${d.contrastRatio}, attendu ${d.expectedContrastRatio})`
-          : "";
-      return `${url} — ${v.impact} — ${v.id}${chiffres} — ${(nd.html ?? "").slice(0, 120)}`;
-    }),
-  );
-}
 
 test.describe("accessibilité des pages rendues", () => {
   // Chaque page est un chargement complet ; même raison que le balayage de
@@ -76,26 +49,32 @@ test.describe("accessibilité des pages rendues", () => {
     const fautes: string[] = [];
     let analysees = 0;
 
+    // La découverte D'ABORD, et le monde qu'elle retient ensuite.
+    //
+    // L'ordre inverse rendait ce test instable : visiter les vues d'un monde
+    // quelconque fixe le cookie `last_world_id`, et `trouverLienSalon` part
+    // ensuite de `/`, qui y ramène. Si ce monde-là n'a pas de salon, la
+    // découverte devait se rabattre sur le sélecteur de mondes — et échouait
+    // parfois. Partir de la découverte donne un monde qui a forcément un
+    // salon, et supprime la seconde navigation vers `/`.
+    const salon = await trouverLienSalon(page);
+    expect(salon, "aucun salon accessible pour le compte de test").toBeTruthy();
+    // `trouverLienSalon` s'arrête SUR la page du monde qui porte ce salon.
+    const monde = new URL(page.url()).pathname;
+    expect(monde, "la découverte n'a pas abouti sur une page de monde").toMatch(/^\/w\//);
+
     for (const route of ROUTES) {
       fautes.push(...(await violations(page, route)));
       analysees++;
     }
 
-    // Un monde, puis ses vues : elles montent le canevas de relations, la
-    // carte, le wiki et le catalogue, soit les composants les plus lourds.
-    await page.goto("/", { waitUntil: "domcontentloaded" });
-    await page.waitForTimeout(DELAI_MONTAGE_MS);
-    const monde = await page.evaluate(
-      () => (document.querySelector('a[href^="/w/"]') as HTMLAnchorElement)?.getAttribute("href"),
-    );
-    expect(monde, "aucun monde accessible pour le compte de test").toBeTruthy();
-    for (const url of [monde!, ...VUES.map((v) => `${monde}?view=${v}`)]) {
+    // Le monde et ses vues : elles montent le canevas de relations, la carte,
+    // le wiki et le catalogue, soit les composants les plus lourds.
+    for (const url of [monde, ...VUES.map((v) => `${monde}?view=${v}`)]) {
       fautes.push(...(await violations(page, url)));
       analysees++;
     }
 
-    const salon = await trouverLienSalon(page);
-    expect(salon, "aucun salon accessible pour le compte de test").toBeTruthy();
     fautes.push(...(await violations(page, salon!)));
     analysees++;
 
@@ -103,13 +82,6 @@ test.describe("accessibilité des pages rendues", () => {
     // passerait aussi, et ne dirait rien.
     expect(analysees).toBe(ROUTES.length + VUES.length + 2);
 
-    expect(
-      fautes,
-      fautes.length
-        ? "Violations d'accessibilité sur les pages rendues :" +
-          String.fromCharCode(10) +
-          fautes.join(String.fromCharCode(10))
-        : "",
-    ).toEqual([]);
+    expect(fautes, rapport(fautes)).toEqual([]);
   });
 });
