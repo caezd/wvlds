@@ -79,6 +79,14 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
     const [enableFaceclaims, setEnableFaceclaims] = React.useState(world.enable_faceclaims !== false);
     const [togglingFaceclaims, setTogglingFaceclaims] = React.useState(false);
 
+    // `!== false` et non `=== true` : le monde reçu peut être un objet partiel
+    // où la colonne n'a pas été chargée. En base elle est NOT NULL DEFAULT true.
+    const [enableMap, setEnableMap] = React.useState(world.enable_map !== false);
+    const [togglingMap, setTogglingMap] = React.useState(false);
+
+    const [enableWiki, setEnableWiki] = React.useState(world.enable_wiki !== false);
+    const [togglingWiki, setTogglingWiki] = React.useState(false);
+
     const [ageRestricted, setAgeRestricted] = React.useState(world.is_age_restricted === true);
     const [togglingAgeRestricted, setTogglingAgeRestricted] = React.useState(false);
 
@@ -150,6 +158,24 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
         if (!res.ok) { toast.error(res.error); return; }
         setEnableFaceclaims(enabled);
         onUpdated?.({ ...world, enable_faceclaims: enabled } as World);
+    }
+
+    async function handleMapToggle(enabled: boolean) {
+        setTogglingMap(true);
+        const res = await setWorldFeature(world.id, "enable_map", enabled);
+        setTogglingMap(false);
+        if (!res.ok) { toast.error(res.error); return; }
+        setEnableMap(enabled);
+        onUpdated?.({ ...world, enable_map: enabled } as World);
+    }
+
+    async function handleWikiToggle(enabled: boolean) {
+        setTogglingWiki(true);
+        const res = await setWorldFeature(world.id, "enable_wiki", enabled);
+        setTogglingWiki(false);
+        if (!res.ok) { toast.error(res.error); return; }
+        setEnableWiki(enabled);
+        onUpdated?.({ ...world, enable_wiki: enabled } as World);
     }
 
     async function handleAgeRestrictedToggle(enabled: boolean) {
@@ -275,9 +301,42 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                                     </div>
                                 </div>
 
+                                {/* -- Carte ---------------------------------- */}
+                                <div className="space-y-3 pt-2">
+                                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("nav.map")}</p>
+                                    <div className="flex items-start justify-between gap-4">
+                                        <div className="space-y-0.5">
+                                            <p className="text-sm font-medium">{t("enableMap")}</p>
+                                            <p className="text-xs text-muted-foreground leading-snug">
+                                                {t("enableMapHelp")}
+                                            </p>
+                                        </div>
+                                        <Switch
+                                            checked={enableMap}
+                                            disabled={togglingMap}
+                                            onCheckedChange={v => void handleMapToggle(v)}
+                                            className="shrink-0 mt-0.5"
+                                        />
+                                    </div>
+                                </div>
+
                                 {/* -- Wiki ---------------------------------- */}
                                 <div className="space-y-3 pt-2">
                                     <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Wiki</p>
+                                    <div className="flex items-start justify-between gap-4">
+                                        <div className="space-y-0.5">
+                                            <p className="text-sm font-medium">{t("enableWiki")}</p>
+                                            <p className="text-xs text-muted-foreground leading-snug">
+                                                {t("enableWikiHelp")}
+                                            </p>
+                                        </div>
+                                        <Switch
+                                            checked={enableWiki}
+                                            disabled={togglingWiki}
+                                            onCheckedChange={v => void handleWikiToggle(v)}
+                                            className="shrink-0 mt-0.5"
+                                        />
+                                    </div>
                                     <FormField
                                         control={form.control}
                                         name="wiki_label"

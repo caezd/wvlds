@@ -24,17 +24,32 @@ import { clampDaysPerMonth } from "@/lib/worldTimeline";
 const MAX_WORLD_TAGS = 10;
 const MAX_TAG_LENGTH = 24;
 
+/** Sous-option à retomber quand on désactive la fonctionnalité principale. */
+const RESTRICTION_LIEE: Partial<Record<WorldFeatureField, string>> = {
+  enable_inventory: "restrict_inventory",
+  enable_skills: "restrict_skills",
+};
+
+export type WorldFeatureField =
+  | "enable_inventory"
+  | "enable_skills"
+  | "enable_map"
+  | "enable_wiki";
+
 export async function setWorldFeature(
   worldId: string,
-  field: "enable_inventory" | "enable_skills",
+  field: WorldFeatureField,
   enabled: boolean,
 ) {
   const supabase = await createClient();
   const updates: Record<string, boolean> = { [field]: enabled };
-  // Désactiver la fonctionnalité retire aussi la restriction (sous-option)
+  // Désactiver la fonctionnalité retire aussi sa restriction, quand elle en a
+  // une. La table est explicite : un `field === "enable_inventory" ? … : …`
+  // aurait retombé `restrict_skills` pour la carte et le wiki, qui n'ont
+  // aucune restriction.
   if (!enabled) {
-    const restrictField = field === "enable_inventory" ? "restrict_inventory" : "restrict_skills";
-    updates[restrictField] = false;
+    const restrictField = RESTRICTION_LIEE[field];
+    if (restrictField) updates[restrictField] = false;
   }
   const { error } = await supabase.from("worlds").update(updates).eq("id", worldId);
   if (error) return { ok: false as const, error: error.message };

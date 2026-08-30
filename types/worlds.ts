@@ -96,6 +96,10 @@ export type World = {
   enable_inventory?: boolean | null;
   enable_skills?: boolean | null;
   enable_faceclaims?: boolean | null;
+  /** Carte du monde. Absent = activée (défaut en base). */
+  enable_map?: boolean | null;
+  /** Wiki du monde. Absent = activé (défaut en base). */
+  enable_wiki?: boolean | null;
   restrict_inventory?: boolean | null;
   restrict_skills?: boolean | null;
   timeline_enabled?: boolean | null;

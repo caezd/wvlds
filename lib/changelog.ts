@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Nouveauté",
+    text: "La carte et le wiki d'un monde peuvent maintenant être désactivés, depuis Paramètres → Fonctions. Jusqu'ici ils apparaissaient dans tous les mondes, qu'ils servent ou non, là où l'inventaire, les compétences et la chronologie avaient déjà leur interrupteur.\nDésactiver retire la section de la navigation, et le bloc de raccourcis correspondant de la page d'accueil. Rien n'est supprimé : les pages et la carte sont conservées et réapparaissent telles quelles à la réactivation. Les mondes existants gardent les deux sections actives.",
+  },
+  {
+    date: "2026-08",
     tag: "Interface",
     text: "L'appui long fonctionne enfin de façon fiable sur téléphone. Il était abandonné au moindre mouvement du doigt — or un doigt posé sur un écran ne tient jamais parfaitement immobile : on appuyait, rien ne se passait, il fallait recommencer. Un léger tremblement est désormais toléré, alors qu'un vrai défilement continue d'annuler le geste.\nAutre correction du même endroit : appuyer longuement sur un message qui disparaissait entre-temps faisait vibrer le téléphone dans le vide.",
   },

@@ -75,6 +75,11 @@ export default async function WorldSidebar({ worldId }: { worldId: string }) {
     (world.enable_inventory !== false || world.enable_skills !== false || world.enable_faceclaims !== false);
   const hasTimeline =
     featureFlags.world_timeline && !!world.timeline_enabled;
+  // Réglages par monde, indépendants des drapeaux globaux. `!== false` : la
+  // colonne peut ne pas avoir été chargée sur un objet partiel ; en base elle
+  // est NOT NULL DEFAULT true.
+  const hasWiki = world.enable_wiki !== false;
+  const hasMap = featureFlags.world_map && world.enable_map !== false;
 
   const worldBase = `/w/${worldId}`;
 
@@ -105,9 +110,11 @@ export default async function WorldSidebar({ worldId }: { worldId: string }) {
       <WorldSidebarNavLink href={`${worldBase}`} icon={<Home size={14} />} label={t("nav.home")} />
       <WorldSidebarNavLink href={`${worldBase}?view=members`} icon={<Users size={14} />} label={t("nav.members")} />
       <WorldSidebarNavLink href={`${worldBase}?view=personas`} icon={<Drama size={14} />} label={t("nav.personas")} />
-      <WorldSidebarNavLink href={`${worldBase}?view=wiki`} icon={<BookOpenText size={14} />} label={world.wiki_label || t("nav.wiki")} />
+      {hasWiki && (
+        <WorldSidebarNavLink href={`${worldBase}?view=wiki`} icon={<BookOpenText size={14} />} label={world.wiki_label || t("nav.wiki")} />
+      )}
       <WorldSidebarNavLink href={`${worldBase}?view=canvas`} icon={<Network size={14} />} label={t("nav.relations")} />
-      {featureFlags.world_map && (
+      {hasMap && (
         <WorldSidebarNavLink href={`${worldBase}?view=map`} icon={<MapIcon size={14} />} label={t("nav.map")} />
       )}
       {hasTimeline && (

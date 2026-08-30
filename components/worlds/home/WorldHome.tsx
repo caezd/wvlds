@@ -127,7 +127,15 @@ export function WorldHome({
   // laissait la ligne vide et deux gouttières avant les blocs suivants.
   const gridItems = compactHomeGridRows(
     resolveWorldHomeGrid(world.home_grid, world.home_layout, world.announcement_html).filter(
-      (item) => item.widgetId !== "composer" || (canPost && create_chatroom),
+      (item) => {
+        if (item.widgetId === "composer") return canPost && create_chatroom;
+        // Un bloc qui renvoie vers une section désactivée n'a plus rien à
+        // montrer : ses liens retomberaient sur cette page. Le bloc n'est pas
+        // retiré de la grille enregistrée — réactiver la section le fait
+        // revenir à sa place.
+        if (item.widgetId === "wiki_shortcuts") return world.enable_wiki !== false;
+        return true;
+      },
     ),
   );
   const gridGap = resolveHomeGridGap(world.home_grid_gap);
@@ -151,8 +159,10 @@ export function WorldHome({
 
   const showCanvas = view === "canvas";
   const showCatalogue = view === "catalogue";
-  const showWiki = view === "wiki";
-  const showMap = view === "map";
+  // Masquer le lien ne suffit pas : `?view=wiki` reste tapable dans la barre
+  // d'adresse, et un lien partagé avant la désactivation continue de circuler.
+  const showWiki = view === "wiki" && world.enable_wiki !== false;
+  const showMap = view === "map" && world.enable_map !== false;
   const showTimeline = view === "timeline";
   const showMembers = view === "members";
   const showPersonas = view === "personas";

@@ -87,7 +87,7 @@ export const getWorldById = cache(async (worldId: string): Promise<WorldWithMemb
   const { data } = await supabase
     .from("worlds")
     .select(
-      "id, name, description, owner_id, banner_url, icon_url, color, visibility, restrict_inventory, restrict_skills, enable_inventory, enable_skills, enable_faceclaims, allows_real_avatars, allows_illustrated_avatars, timeline_enabled, timeline_config, is_age_restricted, wiki_label, home_layout, announcement_html, announcement_size, home_grid, home_body_color, home_panel_color, home_show_stats, home_grid_gap, world_members(user_id, role, age_confirmed_at)",
+      "id, name, description, owner_id, banner_url, icon_url, color, visibility, restrict_inventory, restrict_skills, enable_inventory, enable_skills, enable_faceclaims, enable_map, enable_wiki, allows_real_avatars, allows_illustrated_avatars, timeline_enabled, timeline_config, is_age_restricted, wiki_label, home_layout, announcement_html, announcement_size, home_grid, home_body_color, home_panel_color, home_show_stats, home_grid_gap, world_members(user_id, role, age_confirmed_at)",
     )
     .eq("id", worldId)
     .maybeSingle();

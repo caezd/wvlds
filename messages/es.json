@@ -452,7 +452,11 @@
     "tabCategories": "Categorías",
     "tabCommunity": "Comunidad",
     "tabSkills": "Habilidades",
-    "tabSecurity": "Seguridad"
+    "tabSecurity": "Seguridad",
+    "enableMap": "Activar el mapa",
+    "enableMapHelp": "Da acceso a un mapa del mundo donde situar lugares. Al desactivarlo desaparece de la navegación; no se borra nada.",
+    "enableWiki": "Activar el wiki",
+    "enableWikiHelp": "Da acceso a las páginas de enciclopedia del mundo. Al desactivarlo desaparece de la navegación; las páginas se conservan."
   },
   "auth": {
     "signin": "Iniciar sesión",

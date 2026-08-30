@@ -452,7 +452,11 @@
     "tabCategories": "Categories",
     "tabCommunity": "Community",
     "tabSkills": "Skills",
-    "tabSecurity": "Security"
+    "tabSecurity": "Security",
+    "enableMap": "Enable the map",
+    "enableMapHelp": "Gives access to a world map where locations can be placed. When disabled it leaves the navigation; nothing is deleted.",
+    "enableWiki": "Enable the wiki",
+    "enableWikiHelp": "Gives access to the world's encyclopedia pages. When disabled it leaves the navigation; the pages are kept."
   },
   "auth": {
     "signin": "Sign in",
