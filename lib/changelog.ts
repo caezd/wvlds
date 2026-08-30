@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Technique",
+    text: "Le centre de recherche garde en mémoire les clés des salons qu'il a déjà consultés, pour éviter de les redemander à chaque page de résultats. Ce cache n'a de sens que dans votre navigateur : sur un serveur, il serait partagé entre toutes les personnes connectées. Il refuse désormais explicitement de s'y exécuter.\nRien ne change à l'usage — il n'a jamais tourné ailleurs que chez vous. C'est un garde-fou contre une erreur future, posé après relecture du code de chiffrement.",
+  },
+  {
+    date: "2026-08",
     tag: "Correctif",
     text: "Les très longs messages partent enfin. Au-delà d'environ 125 000 caractères — ou seulement 31 000 s'il s'agit d'émoji, quatre fois plus lourds — le chiffrement du message échouait et l'envoi était refusé sans explication utile. Un simple collage suffisait à l'atteindre, la limite affichée étant de 200 000 caractères.\nRien ne change pour les messages ordinaires : le chiffrement lui-même est intact, seule sa dernière étape a été réécrite pour ne plus dépendre de la longueur.",
   },
