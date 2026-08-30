@@ -58,13 +58,16 @@ describe("MessageTextSizeSelector", () => {
   });
 
   it("affiche une erreur si l'enregistrement échoue", async () => {
-    updateMessageTextSize.mockResolvedValue({ error: "Taille non supportée" });
+    updateMessageTextSize.mockResolvedValue({ error: "unsupportedValue" });
     render(<MessageTextSizeSelector currentSize="base" />);
 
     fireEvent.click(screen.getByText("textSizeOptions.lg"));
 
     await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith("Taille non supportée");
+      // L'action renvoie désormais un CODE, pas une phrase française : c'est
+      // le client qui traduit. Un code inconnu — donc tout message brut de
+      // PostgreSQL — retombe sur ce même message générique.
+      expect(toast.error).toHaveBeenCalledWith("saveError");
     });
     expect(refresh).not.toHaveBeenCalled();
   });

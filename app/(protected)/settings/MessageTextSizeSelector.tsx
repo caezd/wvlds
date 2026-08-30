@@ -4,6 +4,7 @@ import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
+import { messageErreurAction } from "@/lib/actionErrors";
 import { cn } from "@/lib/utils";
 import { updateMessageTextSize } from "./actions";
 
@@ -17,6 +18,7 @@ const PREVIEW_TEXT_CLASS: Record<(typeof TEXT_SIZES)[number], string> = {
 
 export function MessageTextSizeSelector({ currentSize }: { currentSize: string }) {
   const t = useTranslations("settings");
+  const tCommun = useTranslations("common");
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
@@ -28,7 +30,7 @@ export function MessageTextSizeSelector({ currentSize }: { currentSize: string }
         toast.success(t("textSizeSaved"));
         router.refresh();
       } else if (result?.error) {
-        toast.error(result.error);
+        toast.error(messageErreurAction(result.error, tCommun));
       }
     });
   }

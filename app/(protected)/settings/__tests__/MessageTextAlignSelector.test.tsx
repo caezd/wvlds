@@ -61,13 +61,16 @@ describe("MessageTextAlignSelector", () => {
   });
 
   it("affiche une erreur si l'enregistrement échoue", async () => {
-    updateMessageTextAlign.mockResolvedValue({ error: "Alignement non supporté" });
+    updateMessageTextAlign.mockResolvedValue({ error: "unsupportedValue" });
     render(<MessageTextAlignSelector currentAlign="left" />);
 
     fireEvent.click(screen.getByText("textAlignOptions.justify"));
 
     await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith("Alignement non supporté");
+      // L'action renvoie désormais un CODE, pas une phrase française : c'est
+      // le client qui traduit. Un code inconnu — donc tout message brut de
+      // PostgreSQL — retombe sur ce même message générique.
+      expect(toast.error).toHaveBeenCalledWith("saveError");
     });
     expect(refresh).not.toHaveBeenCalled();
   });
