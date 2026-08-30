@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -14,7 +15,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { supabaseThumb } from "@/lib/storage";
-import { useNotifications } from "@/components/providers/NotificationsProvider";
+import { useNotifications, useNotificationsActions } from "@/components/providers/NotificationsProvider";
 import { usePushSubscription } from "@/hooks/usePushSubscription";
 import { WorldPreviewDialog } from "@/components/worlds/WorldPreviewDialog";
 import { AgeConfirmDialog } from "@/components/worlds/AgeConfirmDialog";
@@ -51,14 +52,16 @@ function WorldInviteCard({ notif, onMarkRead }: { notif: AppNotification; onMark
     const prefetchedData = notif.content
         ? { name: notif.content, icon_url: meta?.icon_url ?? null, banner_url: meta?.banner_url ?? null, description: meta?.description ?? null }
         : null;
-    const supabase = createClient(); // eslint-disable-line react-hooks/rules-of-hooks
+    const supabase = createClient();
     const [status, setStatus] = useState<"pending" | "accepted" | "declined" | "cancelled" | null>(null);
     const [ageRestricted, setAgeRestricted] = useState(false);
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [previewOpen, setPreviewOpen] = useState(false);
     const [acting, setActing] = useState(false);
     const router = useRouter();
-    const { closePanel } = useNotifications();
+    // Une seule action : le contexte d'actions suffit (jamais invalidé par un
+    // compteur qui bouge), et cette carte est rendue une fois par notification.
+    const { closePanel } = useNotificationsActions();
 
     useEffect(() => {
         if (!notif.world_id) return;
@@ -77,7 +80,7 @@ function WorldInviteCard({ notif, onMarkRead }: { notif: AppNotification; onMark
             .then(({ data }: { data: { is_age_restricted: boolean | null } | null }) => {
                 setAgeRestricted(!!data?.is_age_restricted);
             });
-    }, [notif.world_id, notif.recipient_id, supabase]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [notif.world_id, notif.recipient_id, supabase]);
 
     async function doAccept(ageConfirmed: boolean) {
         if (!notif.world_id || acting) return;
@@ -106,10 +109,17 @@ function WorldInviteCard({ notif, onMarkRead }: { notif: AppNotification; onMark
     async function decline() {
         if (!notif.world_id || acting) return;
         setActing(true);
-        await supabase.from(TABLE.WORLD_INVITATIONS)
+        const { error } = await supabase.from(TABLE.WORLD_INVITATIONS)
             .delete()
             .eq("world_id", notif.world_id)
             .eq("invitee_id", notif.recipient_id);
+        // Afficher « refusée » alors que l'invitation est toujours en base la
+        // fait réapparaître au rechargement, sans explication.
+        if (error) {
+            toast.error(error.message);
+            setActing(false);
+            return;
+        }
         setStatus("declined");
         onMarkRead(notif.id);
         setActing(false);
@@ -167,7 +177,7 @@ function WorldInviteCard({ notif, onMarkRead }: { notif: AppNotification; onMark
 function MaritalRequestCard({ notif, onMarkRead }: { notif: AppNotification; onMarkRead: (id: string) => void }) {
     const t = useTranslations("notifications");
     const requestId = notif.metadata?.request_id ?? null;
-    const supabase = createClient(); // eslint-disable-line react-hooks/rules-of-hooks
+    const supabase = createClient();
     const [status, setStatus] = useState<"pending" | "accepted" | "declined" | "expired" | null>(null);
     const [acting, setActing] = useState(false);
 
@@ -196,7 +206,14 @@ function MaritalRequestCard({ notif, onMarkRead }: { notif: AppNotification; onM
     async function decline() {
         if (!requestId || acting) return;
         setActing(true);
-        await supabase.from(TABLE.PERSONA_MARITAL_REQUESTS).delete().eq("id", requestId);
+        // Même défaut que le refus d'invitation de monde : annoncer
+        // « refusée » sans vérifier la fait réapparaître au rechargement.
+        const { error } = await supabase.from(TABLE.PERSONA_MARITAL_REQUESTS).delete().eq("id", requestId);
+        if (error) {
+            toast.error(error.message);
+            setActing(false);
+            return;
+        }
         setStatus("declined");
         onMarkRead(notif.id);
         setActing(false);
@@ -271,7 +288,7 @@ function NotificationItem({ notif, actorAvatarUrl, worldInfo, onRead, onClose, o
         <button
             onClick={e => { e.preventDefault(); e.stopPropagation(); onArchive(notif.id); }}
             aria-label={t("archive")}
-            className="absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded-full text-muted-foreground/40 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-muted hover:text-foreground"
+            className="absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded-full text-muted-foreground/40 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100 hover:bg-muted hover:text-foreground"
         >
             <X size={11} />
         </button>
@@ -383,7 +400,7 @@ export function NotificationInlinePanelContent() {
         return () => observer.disconnect();
     }, [hasMoreNotifs, loadingMore, loadMoreNotifs]);
 
-    const supabase = createClient(); // eslint-disable-line react-hooks/rules-of-hooks
+    const supabase = createClient();
     const [actorAvatars, setActorAvatars] = useState<Record<string, string | null>>({});
 
     useEffect(() => {
@@ -469,7 +486,7 @@ export function NotificationInlinePanelContent() {
                         </div>
                     )}
                     {!hasMoreNotifs && notifications.length > 0 && (
-                        <p className="py-2 text-center text-[11px] text-muted-foreground/40">{t("allLoaded")}</p>
+                        <p className="py-2 text-center text-[11px] text-muted-foreground">{t("allLoaded")}</p>
                     )}
                 </div>
             )}

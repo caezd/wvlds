@@ -151,12 +151,17 @@ describe("useRealtimeChatSync — cleanup et reconnexion", () => {
     expect(mock.removeChannel).toHaveBeenCalledTimes(1);
   });
 
-  it("recrée le canal après un retour de connexion réseau (reconnectEpoch)", () => {
+  it("recrée le canal après un retour de connexion réseau (reconnectEpoch)", async () => {
     const { mock } = setup();
     const before = mock.channels[0];
     expect(mock.channels).toHaveLength(1);
 
-    act(() => {
+    // `await` indispensable : la réouverture ATTEND la fermeture précédente.
+    // `removeChannel` est asynchrone dans supabase-js — le canal ne quitte le
+    // registre qu'après `unsubscribe()`. Sans cette attente, `channel(topic)`
+    // rend le MÊME canal et les nouveaux handlers s'ajoutent aux anciens.
+    // Cf. lib/realtimeChannel.
+    await act(async () => {
       window.dispatchEvent(new Event("online"));
     });
 
@@ -166,5 +171,27 @@ describe("useRealtimeChatSync — cleanup et reconnexion", () => {
     expect(mock.channels).toHaveLength(2);
     expect(mock.channels[1].name).toBe(before.name);
     expect(mock.channels[1]).not.toBe(before);
+  });
+
+  it("n'accumule pas les handlers d'une reconnexion à l'autre", async () => {
+    // C'est le préjudice concret, et il est silencieux : réutiliser le canal
+    // au lieu d'en ouvrir un neuf empile les bindings. Après N reconnexions,
+    // chaque message entrant serait traité N fois — messages dupliqués à
+    // l'écran, compteurs faussés. Aucune erreur n'apparaît pour autant.
+    const { mock } = setup();
+    const attendus = mock.channels[0].handlers.length;
+    expect(attendus).toBeGreaterThan(0);
+
+    for (let i = 0; i < 3; i++) {
+      await act(async () => {
+        window.dispatchEvent(new Event("online"));
+      });
+    }
+
+    // Un canal neuf par reconnexion, chacun avec le même jeu de handlers.
+    expect(mock.channels).toHaveLength(4);
+    for (const ch of mock.channels) {
+      expect(ch.handlers).toHaveLength(attendus);
+    }
   });
 });

@@ -20,6 +20,16 @@ export default serwist({
     // defaultCache (StaleWhileRevalidate) au premier usage réel.
     "**/avatar_parts/**",
     "**/rpg_icons/**",
+    // Même raisonnement : vignettes d'onglets du constructeur d'avatar
+    // (153 Ko) et cadres cosmétiques (248 Ko), inutiles tant qu'on
+    // n'ouvre pas le constructeur ou la boutique.
+    "**/avatar_tabs/**",
+    "**/frames/**",
+    // Images d'aperçu social : elles ne sont demandées que par les robots des
+    // réseaux sociaux, jamais par le navigateur d'un visiteur. Les précacher
+    // faisait télécharger 566 Ko à chaque première visite, pour rien.
+    "**/static/media/opengraph-image.*",
+    "**/static/media/twitter-image.*",
     // Sources brutes de next/font/local (app/layout.tsx) : jamais servies
     // directement, next/font les recopie hashées sous _next/static/media.
     // Les précacher échouait avec un 307 (redirigées vers /auth/login par le

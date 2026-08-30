@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { GameBlockSurface, GameBlockToolbar, GameBlockEditButton } from "./GameBlockShell";
+import { useTranslations } from "next-intl";
 
 export function HpDialog({
   onSend,
@@ -31,6 +32,7 @@ export function HpDialog({
   open?: boolean;
   onOpenChange?: (v: boolean) => void;
 }) {
+  const t = useTranslations("chatrooms");
   const [internalOpen, setInternalOpen] = useState(false);
   const open = controlledOpen ?? internalOpen;
   const setOpen = onOpenChange ?? setInternalOpen;
@@ -86,7 +88,7 @@ export function HpDialog({
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="ex. Gornak le Berserker"
+              placeholder={t("hpExampleName")}
               autoFocus
             />
           </div>

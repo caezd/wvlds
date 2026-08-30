@@ -1,6 +1,7 @@
 "use client";
 
 import { AvatarWithFrame } from "@/components/avatars/AvatarWithFrame";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Pencil, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -38,6 +39,7 @@ export function ChatroomMessageSms({
   onEdit: () => void;
   onRequestDelete?: () => void;
 }) {
+  const tCommon = useTranslations("common");
   const avatar = showAvatar ? (
     <AvatarWithFrame
       src={message.persona?.avatar_url ?? avatarSrc}
@@ -58,14 +60,14 @@ export function ChatroomMessageSms({
     >
       {mine ? (
         <>
-          <div className="flex items-center gap-0.5 opacity-0 group-hover/turn-messages:opacity-100 transition-opacity shrink-0">
+          <div className="flex items-center gap-0.5 opacity-0 group-hover/turn-messages:opacity-100 focus-within:opacity-100 transition-opacity shrink-0">
             <Button
               type="button"
               variant="ghost"
               size="icon"
               className="h-7 w-7"
               onClick={onEdit}
-              aria-label="Modifier"
+              aria-label={tCommon("edit")}
               title="Modifier"
             >
               <Pencil className="h-3.5 w-3.5" />
@@ -76,7 +78,7 @@ export function ChatroomMessageSms({
               size="icon"
               className="h-7 w-7 text-destructive hover:text-destructive"
               onClick={onRequestDelete}
-              aria-label="Supprimer"
+              aria-label={tCommon("delete")}
               title="Supprimer"
             >
               <Trash2 className="h-3.5 w-3.5" />

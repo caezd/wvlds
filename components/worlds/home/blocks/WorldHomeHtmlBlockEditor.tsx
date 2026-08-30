@@ -2,8 +2,9 @@
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
-import { Code2, X } from "lucide-react";
-import { Drawer, DrawerClose, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
+import { Code2 } from "lucide-react";
+import { Drawer, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
+import { SideSheetContent } from "@/components/ui/side-sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -59,13 +60,7 @@ export function WorldHomeHtmlBlockEditor({
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange} swipeDirection="right">
-      <DrawerContent className="inset-y-0 right-0 flex flex-col gap-0 border rounded-md bg-background text-foreground shadow-lg p-0 w-[min(calc(100%_-_var(--drawer-inset)*2),_460px)]">
-        <DrawerClose
-          aria-label={tCommon("close")}
-          className="absolute right-4 top-4 rounded-xs text-muted-foreground opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
-        >
-          <X className="size-4" />
-        </DrawerClose>
+      <SideSheetContent>
         <DrawerHeader className="border-b border-border-soft">
           <DrawerTitle className="flex items-center gap-2">
             <Code2 className="h-4 w-4" /> {t("home.grid.htmlBlockTitle")}
@@ -137,7 +132,7 @@ export function WorldHomeHtmlBlockEditor({
             {tCommon("save")}
           </Button>
         </DrawerFooter>
-      </DrawerContent>
+      </SideSheetContent>
     </Drawer>
   );
 }

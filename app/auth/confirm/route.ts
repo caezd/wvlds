@@ -14,26 +14,23 @@ export async function GET(request: NextRequest) {
   if (token_hash && type) {
     const supabase = await createClient();
 
-    const { data, error } = await supabase.auth.verifyOtp({
+    const { error } = await supabase.auth.verifyOtp({
       type,
       token_hash,
     });
     if (!error) {
-      // Invitation dans un monde : ajouter le membre avant de poursuivre
-      if (type === "invite" && data.user) {
-        const meta = data.user.user_metadata;
-        const worldId = meta?.invited_world_id as string | undefined;
-        const role = (meta?.invited_role as string | undefined) ?? "player";
-        if (worldId) {
-          await supabase
-            .from("world_members")
-            .upsert(
-              { world_id: worldId, user_id: data.user.id, role },
-              { onConflict: "world_id,user_id" }
-            );
-        }
-      }
-      // redirect user to specified redirect URL or root of app
+      // L'adhésion au monde ne se décide plus ici. Ce bloc lisait le monde et
+      // le rôle dans `user_metadata` pour écrire dans `world_members` — deux
+      // problèmes : Supabase laisse l'utilisateur réécrire ses propres
+      // métadonnées, et l'écriture était de toute façon refusée par la RLS
+      // (seul un administrateur du monde peut insérer un membre), sans que
+      // personne ne lise l'erreur. L'invité n'a donc jamais rejoint quoi que
+      // ce soit par ce chemin.
+      //
+      // L'invitation est désormais enregistrée en base au moment de l'envoi
+      // (cf. app/actions/invite.ts) ; l'invité la retrouve dans ses
+      // notifications et l'accepte via `accept_world_invitation`, qui applique
+      // la vérification d'âge et le rôle prévu.
       redirect(next);
     } else {
       // redirect the user to an error page with some instructions

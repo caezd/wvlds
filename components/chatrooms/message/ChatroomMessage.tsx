@@ -32,7 +32,7 @@ import type { ChallengeBadge, ChatMessageMeta } from "@/types/db";
 
 import { toast } from "sonner";
 
-import { useGlobalPresence } from "@/components/providers/PresenceProvider";
+import { useUserPresence } from "@/components/providers/PresenceProvider";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import { useLongPress } from "@/hooks/useLongPress";
 
@@ -110,7 +110,15 @@ function ChatroomMessage({
   invisibleUsers?: Set<string>;
   selfId: string | null;
   onUpdated?: (id: number, content: string, metadata: ChatMessageMeta | null) => void;
-  onRequestDelete?: () => void;
+  /**
+   * Reçoit l'identifiant du message, plutôt que d'être une fermeture sur
+   * lui : sans cela l'appelant devait créer une fonction par message à
+   * chaque rendu, ce qui annulait le `memo` de ce composant.
+   *
+   * Les composants enfants gardent leur `() => void` — la fermeture est
+   * construite ici, une fois, où elle ne coûte rien.
+   */
+  onRequestDelete?: (id: number) => void;
   onReactionsUpdated?: (id: number, reactions: ReactionSummary[]) => void;
   onVotesUpdated?: (id: number, votes: import("@/types/db").ChoiceVoteSummary[]) => void;
   chatroomKey?: string | null;
@@ -130,7 +138,10 @@ function ChatroomMessage({
 }) {
   const t = useTranslations("chatrooms");
   const supabase = useMemo(() => createClient(), []);
-  const { getUserPresence } = useGlobalPresence();
+  // Abonnement à la présence du seul auteur de ce message : une bulle ne se
+  // re-rend que si SON auteur change d'état, au lieu de re-rendre les ~50
+  // bulles affichées à chaque battement de présence de n'importe qui.
+  const authorPresence = useUserPresence(message.author_id);
 
   const block = parseChatBlock(message.content ?? "") as ChatBlock | null;
   const mine = isMyMessage(message, selfId);
@@ -139,7 +150,7 @@ function ChatroomMessage({
   const avatarSrc = playerAvatarSrc;
   const presenceState: "online" | "away" | "offline" | "invisible" = invisibleUsers?.has(message.author_id)
     ? "invisible"
-    : getUserPresence(message.author_id);
+    : authorPresence;
 
   const date = message.created_at;
 
@@ -185,6 +196,13 @@ function ChatroomMessage({
     onKeyDownEdit,
   } = useChatroomMessageEdit({ message, mine, selfId, online, chatroomKey, onUpdated, forceEdit, onForceEditConsumed });
 
+  // Les enfants attendent `() => void` : la fermeture sur l'identifiant se
+  // fait ici, à l'intérieur du composant mémorisé, où elle ne coûte rien.
+  const demanderSuppression = useCallback(
+    () => onRequestDelete?.(message.id),
+    [onRequestDelete, message.id],
+  );
+
   const frameUrl = message.persona?.frame?.asset_url ?? null;
 
   /* reactions */
@@ -192,7 +210,7 @@ function ChatroomMessage({
 
   async function toggleReaction(emoteKey: string) {
     if (!selfId) {
-      toast.error("Vous devez être connecté pour réagir.");
+      toast.error(t("mustBeSignedIn"));
       return;
     }
 
@@ -263,7 +281,7 @@ function ChatroomMessage({
         sharpBottom={smsSharpBottom ?? false}
         showAvatar={smsShowAvatar ?? true}
         onEdit={startEdit}
-        onRequestDelete={onRequestDelete}
+        onRequestDelete={demanderSuppression}
       />
     );
   }
@@ -311,7 +329,7 @@ function ChatroomMessage({
             pinId={pinId}
             onPin={onPin}
             onUnpin={onUnpin}
-            onRequestDelete={onRequestDelete}
+            onRequestDelete={demanderSuppression}
             startEdit={startEdit}
             cancelEdit={cancelEdit}
             save={save}
@@ -477,7 +495,7 @@ function ChatroomMessage({
         emojiPickerOpen={emojiPickerOpen}
         setEmojiPickerOpen={setEmojiPickerOpen}
         startEdit={startEdit}
-        onRequestDelete={onRequestDelete}
+        onRequestDelete={demanderSuppression}
         toggleReaction={toggleReaction}
       />
 

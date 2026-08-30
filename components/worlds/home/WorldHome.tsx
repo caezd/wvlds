@@ -1,6 +1,7 @@
 "use client";
 
 import { useLayoutEffect, useState } from "react";
+import { useResetOnKeyChange } from "@/hooks/useResetOnKeyChange";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -9,9 +10,12 @@ import { Globe, GlobeLock, Search, Star } from "lucide-react";
 
 import { WorldHeroCard } from "./WorldHeroCard";
 import { WorldHomeGridView } from "./WorldHomeGridView";
+import type { ChatroomCategory } from "@/lib/currentRequest";
+import type { RecentPersona } from "./widgets/WorldRecentPersonasWidget";
+import type { WikiPage } from "./widgets/WorldWikiShortcutsWidget";
 import { MobileDrawerOpenButton } from "@/components/sidebar/MobileDrawerOpenButton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import type { World, WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
+import type { World, WorldTimelineConfig, WorldHomeRoom as Room } from "@/types/worlds";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import { useMobileSidebar } from "@/components/providers/MobileSidebarProvider";
 import type { AsidePersona } from "@/components/personas/WorldPersonaAsideClient";
@@ -19,7 +23,10 @@ import { toggleWorldFavorite } from "@/app/(protected)/w/actions";
 import { cn } from "@/lib/utils";
 import { supabaseThumb } from "@/lib/storage";
 import { compactHomeGridRows, resolveHomeGridGap, resolveWorldHomeGrid } from "./worldHomeGrid";
-import { SearchCenter } from "@/components/chatrooms/search/SearchCenter";
+// Modale rarement ouverte : même traitement que les onglets ci-dessous.
+const SearchCenter = dynamic(() =>
+  import("@/components/chatrooms/search/SearchCenter").then((m) => m.SearchCenter),
+);
 
 // Onglets secondaires — un seul est actif à la fois, chargés à la demande
 // pour ne pas alourdir le bundle de la vue par défaut du monde.
@@ -37,18 +44,6 @@ type WorldPrefs = { main_expanded: boolean; is_favorite: boolean; wiki_sidebar_w
 
 type HeroWorld = World & { owner_id: string };
 
-type Room = {
-  id: string;
-  title: string | null;
-  name: string | null;
-  icon_url: string | null;
-  last_message_at: string | null;
-  last_poster_avatar_url?: string | null;
-  unread_count: number;
-  category_id?: string | null;
-  timeline_date?: WorldTimelineDate | null;
-};
-
 export function WorldHome({
   world,
   worldId,
@@ -58,6 +53,8 @@ export function WorldHome({
   canEditTabs,
   canPost,
   initialRooms,
+  initialCategories,
+  initialWidgetData = {},
   initialPersonas,
   initialPrefs,
   view,
@@ -72,6 +69,11 @@ export function WorldHome({
   canEditTabs: boolean;
   canPost: boolean;
   initialRooms: Room[];
+  /** Catégories chargées côté serveur, partagées avec WorldSidebar. */
+  initialCategories?: ChatroomCategory[];
+  /** Données des widgets d'accueil résolues côté serveur, quand le bloc est
+   *  présent dans la grille (cf. WorldHomeContent). */
+  initialWidgetData?: { recentPersonas?: RecentPersona[]; wikiPages?: WikiPage[] };
   initialPersonas: AsidePersona[];
   initialPrefs: WorldPrefs | null;
   view?: string;
@@ -106,6 +108,17 @@ export function WorldHome({
   const [isFavorite, setIsFavorite] = useState(initialPrefs?.is_favorite ?? false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(initialCategoryId ?? null);
+
+  // Passer d'un monde à l'autre depuis le rail est une navigation client :
+  // ce composant n'est pas remonté et ses états gardent la valeur du monde
+  // quitté. Sans ce resemis, l'étoile « favori » restait celle du monde
+  // précédent, et une catégorie sélectionnée continuait de filtrer la grille
+  // du nouveau monde alors que son identifiant n'y existe pas.
+  useResetOnKeyChange(worldId, () => {
+    setIsFavorite(initialPrefs?.is_favorite ?? false);
+    setSelectedCategoryId(initialCategoryId ?? null);
+  });
+
   // Le composer est retiré de la grille avant le calcul du layout (pas juste
   // au rendu) : sinon un visiteur sans droit de post verrait un trou vide à
   // la place du bloc plutôt qu'une grille recomposée sans lui. `compactHomeGridRows`
@@ -114,7 +127,15 @@ export function WorldHome({
   // laissait la ligne vide et deux gouttières avant les blocs suivants.
   const gridItems = compactHomeGridRows(
     resolveWorldHomeGrid(world.home_grid, world.home_layout, world.announcement_html).filter(
-      (item) => item.widgetId !== "composer" || (canPost && create_chatroom),
+      (item) => {
+        if (item.widgetId === "composer") return canPost && create_chatroom;
+        // Un bloc qui renvoie vers une section désactivée n'a plus rien à
+        // montrer : ses liens retomberaient sur cette page. Le bloc n'est pas
+        // retiré de la grille enregistrée — réactiver la section le fait
+        // revenir à sa place.
+        if (item.widgetId === "wiki_shortcuts") return world.enable_wiki !== false;
+        return true;
+      },
     ),
   );
   const gridGap = resolveHomeGridGap(world.home_grid_gap);
@@ -138,8 +159,10 @@ export function WorldHome({
 
   const showCanvas = view === "canvas";
   const showCatalogue = view === "catalogue";
-  const showWiki = view === "wiki";
-  const showMap = view === "map";
+  // Masquer le lien ne suffit pas : `?view=wiki` reste tapable dans la barre
+  // d'adresse, et un lien partagé avant la désactivation continue de circuler.
+  const showWiki = view === "wiki" && world.enable_wiki !== false;
+  const showMap = view === "map" && world.enable_map !== false;
   const showTimeline = view === "timeline";
   const showMembers = view === "members";
   const showPersonas = view === "personas";
@@ -347,6 +370,8 @@ export function WorldHome({
                   canCreateChatroom={create_chatroom}
                   timelineConfig={hasTimeline ? (world.timeline_config as WorldTimelineConfig) : undefined}
                   initialRooms={initialRooms}
+                  categories={initialCategories}
+                  widgetData={initialWidgetData}
                   selectedCategoryId={selectedCategoryId}
                   onSelectCategory={handleSelectCategory}
                   onWikiLink={(slug) => router.push(`${baseHref}?view=wiki&page=${encodeURIComponent(slug)}`)}

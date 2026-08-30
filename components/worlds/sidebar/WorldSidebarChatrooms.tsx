@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
+import { useResetOnKeyChange } from "@/hooks/useResetOnKeyChange";
+import { useWorldRooms, type WorldRoom } from "@/lib/worldRoomsStore";
 import { useNotifications } from "@/components/providers/NotificationsProvider";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -14,19 +14,8 @@ import { useGlobalPresence } from "@/components/providers/PresenceProvider";
 import { useTranslations } from "next-intl";
 import { CategoryAvatar } from "@/components/worlds/catalogue/CategoryAvatar";
 
-type Room = {
-  id: string;
-  title: string | null;
-  name: string | null;
-  icon_url: string | null;
-  last_message_at: string | null;
-  unread_count: number;
-  category_id: string | null;
-  last_poster_avatar_url: string | null;
-  last_poster_id: string | null;
-  participant_count: number;
-  second_poster_avatar_url: string | null;
-};
+// Forme partagée avec le store : une seule définition pour les deux.
+type Room = WorldRoom;
 
 type ParticipatedRoom = {
   id: string;
@@ -129,7 +118,7 @@ function RoomItem({
           {label}
         </p>
         {categoryName && (
-          <p className="flex items-center gap-1 text-[10px] text-muted-foreground/60 leading-tight">
+          <p className="flex items-center gap-1 text-[10px] text-muted-foreground leading-tight">
             <MessagesSquare size={9} className="shrink-0 opacity-70" />
             <span className="truncate">{categoryName}</span>
           </p>
@@ -160,9 +149,21 @@ export function WorldSidebarChatrooms({
   const t = useTranslations("worlds");
   const { roomUnread } = useNotifications();
   const pathname = usePathname();
-  const reconnectEpoch = useReconnectEpoch();
-  const [allRooms, setAllRooms] = useState<Room[]>(initialAll);
+  // Liste partagée : les deux instances de ce composant (aside desktop et
+  // tiroir mobile) lisent le même store, qui n'ouvre qu'un seul canal
+  // Realtime pour les deux. Cf. lib/worldRoomsStore.
+  const allRooms = useWorldRooms(worldId, initialAll);
+
   const [selectedCat, setSelectedCat] = useState<Category | null>(null);
+
+  // Passer d'un monde à l'autre ne remonte pas ce composant : sans ce
+  // resemis, la liste affichée reste celle du monde quitté, les props du
+  // nouveau monde étant purement ignorés. Cf. useResetOnKeyChange.
+  useResetOnKeyChange(worldId, () => {
+    // `allRooms` est resemé par le store lui-même ; seule la vue
+    // « catégorie » ouverte est un état propre à cette instance.
+    setSelectedCat(null);
+  });
 
   const activeChatroomId = pathname?.startsWith("/c/")
     ? pathname.split("/c/")[1]?.split("/")[0]
@@ -193,72 +194,6 @@ export function WorldSidebarChatrooms({
     }
   }
 
-  // Realtime: nouvelles chatrooms + mises à jour chatroom_summaries (avatar, last_message_at)
-  useEffect(() => {
-    const supabase = createClient();
-    const ch = supabase
-      .channel(`sidebar-rooms:${worldId}`)
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "chatrooms", filter: `world_id=eq.${worldId}` },
-        (payload: { new: Record<string, unknown> }) => {
-          const r = payload.new as {
-            id: string; title: string | null; name: string | null;
-            icon_url: string | null; last_message_at: string | null; category_id: string | null;
-          };
-          setAllRooms((prev) => {
-            if (prev.some((x) => x.id === r.id)) return prev;
-            return [...prev, { ...r, unread_count: 0, last_poster_avatar_url: null, last_poster_id: null, participant_count: 0, second_poster_avatar_url: null }].sort(
-              (a, b) => (b.last_message_at ?? "").localeCompare(a.last_message_at ?? ""),
-            );
-          });
-        },
-      )
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "chatroom_summaries" },
-        (payload: { new: Record<string, unknown> }) => {
-          const s = payload.new as {
-            chat_id: string;
-            last_message_at: string | null;
-            last_message_author_id: string | null;
-            last_message_persona_avatar_url: string | null;
-          };
-          setAllRooms((prev) => {
-            const updated = prev.map((r) =>
-              r.id === s.chat_id
-                ? {
-                  ...r,
-                  last_message_at: s.last_message_at,
-                  last_poster_id: s.last_message_author_id,
-                  last_poster_avatar_url: s.last_message_persona_avatar_url,
-                }
-                : r,
-            );
-            return updated.sort(
-              (a, b) => (b.last_message_at ?? "").localeCompare(a.last_message_at ?? ""),
-            );
-          });
-        },
-      )
-      .on(
-        "postgres_changes",
-        { event: "DELETE", schema: "public", table: "chatroom_summaries" },
-        (payload: { old: Record<string, unknown> }) => {
-          const chatId = (payload.old as { chat_id?: string }).chat_id;
-          if (!chatId) return;
-          setAllRooms((prev) =>
-            prev.map((r) =>
-              r.id === chatId
-                ? { ...r, last_poster_id: null, last_poster_avatar_url: null, last_message_at: null }
-                : r,
-            ),
-          );
-        },
-      )
-      .subscribe();
-    return () => { void supabase.removeChannel(ch); };
-  }, [worldId, reconnectEpoch]);
 
   // Vue catégorie (drill-down)
   if (selectedCat) {
@@ -280,7 +215,7 @@ export function WorldSidebarChatrooms({
             {selectedCat.title}
           </p>
           {catRooms.length === 0 ? (
-            <p className="px-2 py-1 text-xs text-muted-foreground/60">
+            <p className="px-2 py-1 text-xs text-muted-foreground">
               {t("sidebar.noChatroomsInCategory")}
             </p>
           ) : (
@@ -363,7 +298,7 @@ export function WorldSidebarChatrooms({
                     <p className="truncate text-sm font-medium text-foreground leading-tight">
                       {cat.title}
                     </p>
-                    <p className="text-[10px] text-muted-foreground/60 leading-tight">
+                    <p className="text-[10px] text-muted-foreground leading-tight">
                       {t("sidebar.subjects", { count: rooms.length })}
                     </p>
                   </div>
@@ -384,7 +319,7 @@ export function WorldSidebarChatrooms({
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="truncate text-sm font-medium text-foreground leading-tight">{t("sidebar.general")}</p>
-                  <p className="text-[10px] text-muted-foreground/60 leading-tight">
+                  <p className="text-[10px] text-muted-foreground leading-tight">
                     {t("sidebar.subjects", { count: uncategorized.length })}
                   </p>
                 </div>
@@ -395,7 +330,7 @@ export function WorldSidebarChatrooms({
               </button>
             )}
             {categories.length === 0 && uncategorized.length === 0 && (
-              <p className="px-2 py-1 text-xs text-muted-foreground/60">{t("sidebar.noChatrooms")}</p>
+              <p className="px-2 py-1 text-xs text-muted-foreground">{t("sidebar.noChatrooms")}</p>
             )}
           </div>
         </section>

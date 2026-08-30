@@ -41,6 +41,7 @@ export function ChoiceDialog({
   onOpenChange?: (v: boolean) => void;
 }) {
   const t = useTranslations("chatrooms");
+  const tCommon = useTranslations("common");
   const [internalOpen, setInternalOpen] = useState(false);
   const open = controlledOpen ?? internalOpen;
   const setOpen = onOpenChange ?? setInternalOpen;
@@ -131,6 +132,7 @@ export function ChoiceDialog({
                     onKeyDown={(e) => { if (e.key === "Enter") handleSend(); }}
                   />
                   <button
+                    aria-label={tCommon("remove")}
                     type="button"
                     onClick={() => removeOption(i)}
                     disabled={options.length <= MIN_OPTIONS}

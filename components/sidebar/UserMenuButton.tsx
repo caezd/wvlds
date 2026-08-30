@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
+import { detacherAppareilDuPush } from "@/lib/push";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -50,6 +51,7 @@ export function UserMenuButton({
   plan,
   variant = "full",
 }: UserMenuButtonProps) {
+  const tCommon = useTranslations("common");
   const router = useRouter();
   const supabase = createClient();
   const { status, setStatus } = useGlobalPresence();
@@ -68,6 +70,11 @@ export function UserMenuButton({
   const initials = (username || email).slice(0, 2).toUpperCase();
 
   async function handleSignOut() {
+    // AVANT `signOut` : la policy de suppression de `push_subscriptions` exige
+    // `user_id = auth.uid()`, il faut donc encore une session. Sans cela, le
+    // serveur continuerait d'envoyer les notifications de ce compte vers ce
+    // navigateur, y compris à la personne qui s'y connectera ensuite.
+    await detacherAppareilDuPush(supabase);
     await supabase.auth.signOut();
     router.push("/auth/login");
     router.refresh();
@@ -87,7 +94,7 @@ export function UserMenuButton({
         <DropdownMenuTrigger asChild>
           {variant === "compact" ? (
             <button
-              aria-label="Menu du compte"
+              aria-label={tCommon("accountMenu")}
               className="flex h-9 w-9 items-center justify-center outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-full"
             >
               <div className="relative shrink-0">

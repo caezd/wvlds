@@ -4,12 +4,10 @@ import { useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import {
   Drawer,
-  DrawerClose,
-  DrawerContent,
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { X } from "lucide-react";
+import { SideSheetContent } from "@/components/ui/side-sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,6 +16,7 @@ import { createPersona } from "@/app/(protected)/p/actions";
 import { createClient } from "@/lib/supabase/client";
 import { fetchPersonaSections } from "@/lib/personaSections";
 import type { PersonaSectionWithFields } from "@/types/personas";
+import { useTranslations } from "next-intl";
 
 export function PersonaCreateSheet({
   worldId,
@@ -30,6 +29,7 @@ export function PersonaCreateSheet({
   restrictInventory?: boolean;
   restrictSkills?: boolean;
 }) {
+  const t = useTranslations("personas");
   const [open, setOpen] = useState(false);
   const [phase, setPhase] = useState<"name" | "edit">("name");
   const [createdId, setCreatedId] = useState<string | null>(null);
@@ -82,20 +82,14 @@ export function PersonaCreateSheet({
           {trigger}
         </span>
       ) : (
-        <Button onClick={() => setOpen(true)}>Nouveau persona</Button>
+        <Button onClick={() => setOpen(true)}>{t("newPersona")}</Button>
       )}
 
       <Drawer open={open} onOpenChange={handleOpen} swipeDirection="right">
-        <DrawerContent className="inset-y-0 right-0 flex flex-col gap-0 border rounded-md bg-background text-foreground shadow-lg p-0 w-[min(calc(100%_-_var(--drawer-inset)*2),_460px)]">
-          <DrawerClose
-            aria-label="Fermer"
-            className="absolute right-4 top-4 z-10 rounded-xs text-muted-foreground opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
-          >
-            <X className="size-4" />
-          </DrawerClose>
+        <SideSheetContent closeClassName="z-10">
           <DrawerHeader className="sr-only">
             <DrawerTitle>
-              {phase === "name" ? "Nouveau persona" : `Éditer — ${createdName}`}
+              {phase === "name" ? t("newPersona") : `Éditer — ${createdName}`}
             </DrawerTitle>
           </DrawerHeader>
 
@@ -103,9 +97,9 @@ export function PersonaCreateSheet({
           {phase === "name" ? (
             <form onSubmit={handleCreate} className="flex flex-col gap-6 p-6">
               <div className="space-y-1">
-                <h2 className="text-xl font-semibold">Nouveau persona</h2>
+                <h2 className="text-xl font-semibold">{t("newPersona")}</h2>
                 <p className="text-sm text-muted-foreground">
-                  Donne un nom à ton personnage pour commencer. Tu pourras tout configurer ensuite.
+                  {t("newPersonaHint")}
                 </p>
               </div>
 
@@ -115,7 +109,7 @@ export function PersonaCreateSheet({
                   id="persona-name"
                   ref={nameRef}
                   autoFocus
-                  placeholder="Ex. Kaori, Lyra, Théo…"
+                  placeholder={t("namePlaceholderExample")}
                   maxLength={40}
                   required
                 />
@@ -144,7 +138,7 @@ export function PersonaCreateSheet({
             />
           ) : null}
           </div>
-        </DrawerContent>
+        </SideSheetContent>
       </Drawer>
     </>
   );

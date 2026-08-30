@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import Image from "next/image";
 import Link from "next/link";
 import { ChevronDown, ChevronRight, MessagesSquare } from "lucide-react";
@@ -57,6 +58,7 @@ export function ChatroomsNavDropdown({
   label: string;
   initialRooms?: NavRoom[];
 }) {
+  const t = useTranslations("chatrooms");
   const supabase = useMemo(() => createClient(), []);
   const { roomUnread } = useNotifications();
   const [rooms, setRooms] = useState<NavRoom[]>(initialRooms);
@@ -140,7 +142,7 @@ export function ChatroomsNavDropdown({
         <button
           type="button"
           className="flex min-w-0 min-h-9 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium hover:bg-hoverCard transition-colors"
-          aria-label="Conversations du monde"
+          aria-label={t("worldConversations")}
         >
           <span className="truncate">{label}</span>
           {totalUnread > 0 && (

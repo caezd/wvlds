@@ -18,6 +18,7 @@ import { X, Loader2, ImageIcon } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
+import { nomDeFichierPourType } from "@/lib/storagePaths";
 
 const BUCKET = "cosmetics";
 
@@ -50,6 +51,7 @@ function ImageUploader({
   initialUrl?: string | null;
   hint?: string;
 }) {
+  const tCommon = useTranslations("common");
   const t = useTranslations("admin");
   const supabase = createClient();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -71,9 +73,7 @@ function ImageUploader({
 
     setUploading(true);
     try {
-      // Nom unique basé sur timestamp + nom d'origine
-      const ext = file.name.split(".").pop() ?? "png";
-      const path = `${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+      const path = nomDeFichierPourType(file.type, "png");
 
       const { error: upErr } = await supabase.storage
         .from(BUCKET)
@@ -84,7 +84,9 @@ function ImageUploader({
       const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
       setUrl(data.publicUrl);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : t("shopForm.errorImageUpload"));
+      // Pas `e.message` : texte brut de PostgreSQL, il nomme table et policy.
+      console.error("[ShopItemForm] envoi d'image", e);
+      setError(t("shopForm.errorImageUpload"));
     } finally {
       setUploading(false);
     }
@@ -122,7 +124,7 @@ function ImageUploader({
             <div className="relative h-24 w-40">
               <Image
                 src={url}
-                alt="Aperçu"
+                alt={tCommon("preview")}
                 unoptimized
                 fill
                 sizes="160px"
@@ -136,7 +138,7 @@ function ImageUploader({
                 setUrl("");
               }}
               className="absolute right-2 top-2 rounded-full bg-background/80 p-0.5 text-muted-foreground hover:text-destructive"
-              aria-label="Supprimer"
+              aria-label={tCommon("delete")}
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -158,7 +160,7 @@ function ImageUploader({
 
       {/* Fallback URL manuelle */}
       <Input
-        placeholder="ou colle une URL directement"
+        placeholder={t("orPasteUrl")}
         value={url}
         onChange={(e) => setUrl(e.target.value)}
         className="text-xs"

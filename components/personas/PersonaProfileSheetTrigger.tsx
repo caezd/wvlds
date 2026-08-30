@@ -1,17 +1,17 @@
 "use client";
 
 import * as React from "react";
+import { PersonaTimelineView } from "@/components/personas/PersonaTimelineView";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { supabaseThumb } from "@/lib/storage";
 import { toast } from "sonner";
 import {
   Drawer,
-  DrawerClose,
-  DrawerContent,
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
+import { SideSheetContent } from "@/components/ui/side-sheet";
 import { Tabs, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { TabBar } from "@/components/ui/tab-bar";
 import {
@@ -22,7 +22,6 @@ import {
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import { AvatarWithFrame } from "@/components/avatars/AvatarWithFrame";
 import { PresenceDot } from "@/components/avatars/PresenceDot";
-import { X } from "lucide-react";
 import type { PersonaSection, PersonaSectionField, PersonaSectionWithFields, PersonaFieldData, InventoryItem, SkillItem, GaugeItem, TraitItem, TimelineItem, DlItem } from "@/types/personas";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useGlobalPresence } from "@/components/providers/PresenceProvider";
@@ -31,6 +30,7 @@ import { formatLastSeen, cn } from "@/lib/utils";
 import { ImageGridView } from "@/components/personas/ImageGridView";
 import { TABLE } from "@/lib/constants";
 import { getInitials } from "@/lib/textFormatting";
+import { useTranslations } from "next-intl";
 
 type FieldData = PersonaFieldData | null | undefined;
 
@@ -197,7 +197,7 @@ function FieldView({ type, data }: { type: string; data: FieldData }) {
     const items: TimelineItem[] = data?.timelineItems ?? [];
     const visible = items.filter((it) => it.title);
     if (!visible.length) return null;
-    return <TriggerTimelineView items={visible} />;
+    return <PersonaTimelineView items={visible} />;
   }
   if (type === "dl") {
     const items: DlItem[] = data?.dlItems ?? [];
@@ -217,48 +217,6 @@ function FieldView({ type, data }: { type: string; data: FieldData }) {
   return null;
 }
 
-function TriggerTimelineItemRow({ item, isLast }: { item: TimelineItem; isLast: boolean }) {
-  const [expanded, setExpanded] = React.useState(false);
-  return (
-    <div className="flex gap-3">
-      <div className="flex flex-col items-center">
-        <div className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary/50" />
-        {!isLast && <div className="flex-1 w-px bg-border mt-1" />}
-      </div>
-      <div className="flex-1 pb-3 min-w-0">
-        <div className="flex items-baseline gap-2">
-          {item.date && (
-            <span className="text-[0.65rem] text-muted-foreground shrink-0">{item.date}</span>
-          )}
-          <span className="text-sm font-medium leading-tight">{item.title}</span>
-          {item.description && (
-            <button
-              type="button"
-              onClick={() => setExpanded((v) => !v)}
-              className="ml-auto shrink-0 text-[0.65rem] text-muted-foreground hover:text-foreground transition-colors"
-            >
-              {expanded ? "Réduire" : "Voir"}
-            </button>
-          )}
-        </div>
-        {expanded && item.description && (
-          <p className="mt-1 text-xs text-muted-foreground leading-relaxed">{item.description}</p>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function TriggerTimelineView({ items }: { items: TimelineItem[] }) {
-  return (
-    <div>
-      {items.map((item, i) => (
-        <TriggerTimelineItemRow key={item.id} item={item} isLast={i === items.length - 1} />
-      ))}
-    </div>
-  );
-}
-
 export function PersonaProfileSheetTrigger({
   children,
   personaId,
@@ -274,6 +232,8 @@ export function PersonaProfileSheetTrigger({
   hoverPreview?: boolean;
   triggerClassName?: string;
 }) {
+  const t = useTranslations("personas");
+  const tCommon = useTranslations("common");
   const supabase = React.useMemo(() => createClient(), []);
   const { getUserPresence } = useGlobalPresence();
   const { userId: viewerId } = useCurrentUser();
@@ -450,13 +410,7 @@ export function PersonaProfileSheetTrigger({
         TriggerButton
       )}
 
-      <DrawerContent className="inset-y-0 right-0 flex flex-col gap-0 border rounded-md bg-background text-foreground shadow-lg w-[min(calc(100%_-_var(--drawer-inset)*2),_460px)] p-0">
-        <DrawerClose
-          aria-label="Fermer"
-          className="absolute right-4 top-4 z-10 rounded-xs text-muted-foreground opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
-        >
-          <X className="size-4" />
-        </DrawerClose>
+      <SideSheetContent closeClassName="z-10">
         <DrawerHeader className="sr-only">
           <DrawerTitle>{name ?? label ?? "Profil persona"}</DrawerTitle>
         </DrawerHeader>
@@ -552,7 +506,7 @@ export function PersonaProfileSheetTrigger({
                   className="px-4 space-y-4 data-[state=inactive]:hidden"
                 >
                   {s.fields.length === 0 ? (
-                    <p className="text-sm text-muted-foreground italic">Aucun contenu.</p>
+                    <p className="text-sm text-muted-foreground italic">{tCommon("noContent")}</p>
                   ) : (
                     s.fields.map((f) => (
                       <FieldView key={f.id} type={f.type} data={f.data} />
@@ -562,7 +516,7 @@ export function PersonaProfileSheetTrigger({
               ))}
             </Tabs>
           ) : !loading ? (
-            <p className="px-4 text-sm text-muted-foreground italic">Aucune section.</p>
+            <p className="px-4 text-sm text-muted-foreground italic">{t("noSection")}</p>
           ) : (
             <div className="px-4 space-y-2">
               {[1, 2, 3].map((i) => (
@@ -572,7 +526,7 @@ export function PersonaProfileSheetTrigger({
           )}
         </div>
         </div>
-      </DrawerContent>
+      </SideSheetContent>
     </Drawer>
   );
 }

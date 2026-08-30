@@ -4,6 +4,7 @@ import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
+import { messageErreurAction } from "@/lib/actionErrors";
 import { cn } from "@/lib/utils";
 import { updateMessageTextAlign } from "./actions";
 
@@ -11,6 +12,7 @@ const TEXT_ALIGNS = ["left", "justify"] as const;
 
 export function MessageTextAlignSelector({ currentAlign }: { currentAlign: string }) {
   const t = useTranslations("settings");
+  const tCommun = useTranslations("common");
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
@@ -22,7 +24,7 @@ export function MessageTextAlignSelector({ currentAlign }: { currentAlign: strin
         toast.success(t("textAlignSaved"));
         router.refresh();
       } else if (result?.error) {
-        toast.error(result.error);
+        toast.error(messageErreurAction(result.error, tCommun));
       }
     });
   }

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import type { DiceBlock } from "@/lib/chat-blocks";
 import { DiceBlockView } from "./DiceBlock";
 import { GameBlockToolbar } from "./GameBlockShell";
+import { useTranslations } from "next-intl";
 
 /**
  * Rendu d'un message « lancé de dé » : une ligne de tour (nom de l'auteur +
@@ -26,6 +27,7 @@ export function DiceMessageView({
   onEditLabel: (label: string) => void | Promise<void>;
   onDelete: () => void;
 }) {
+  const t = useTranslations("chatrooms");
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
 
@@ -62,7 +64,7 @@ export function DiceMessageView({
             variant="ghost"
             size="icon"
             className="h-7 w-7"
-            title="Modifier la description"
+            title={t("editDescription")}
             onClick={() => {
               setDraft(block.label ?? "");
               setEditing(true);

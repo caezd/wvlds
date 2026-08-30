@@ -1,0 +1,86 @@
+# ──────────────────────────────────────────────────────────────────────────
+# Vérifications automatiques à chaque poussée et à chaque pull request.
+#
+# Le dépôt n'en avait aucune : les 1 520 tests unitaires, le typage et le lint
+# ne tournaient que si quelqu'un y pensait, sur sa machine. Rien n'empêchait de
+# fusionner une branche rouge.
+#
+# Ce workflow ne demande AUCUN secret : lint, typage et tests unitaires sont
+# entièrement hors ligne (la suite remplace Supabase par un mock et
+# `vitest.config.ts` ne charge aucun `.env`). Il tourne donc tel quel, y compris
+# sur une pull request venue d'un fork.
+#
+# Ce qu'il ne couvre PAS, faute de secrets : `next build` et la suite E2E, qui
+# ont besoin des clés Supabase. Voir la fin du fichier pour les activer.
+# ──────────────────────────────────────────────────────────────────────────
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+# Une poussée annule la vérification encore en cours sur la même branche :
+# seul le dernier état compte, et cela évite d'empiler des exécutions.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verifications:
+    name: Lint, typage et tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          # Le lockfile est en version 9.0, produit par pnpm 10.
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      # `--frozen-lockfile` échoue si `package.json` et le lockfile divergent.
+      # C'est voulu : c'est exactement la dérive qui rend un build non
+      # reproductible.
+      - name: Installer les dépendances
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typage
+        run: pnpm exec tsc --noEmit
+
+      # `vitest run` sans `--maxWorkers` : la config plafonne déjà à 50 % des
+      # cœurs, ce qui vaut aussi pour une machine de CI plus modeste.
+      - name: Tests unitaires
+        run: pnpm test
+
+# ──────────────────────────────────────────────────────────────────────────
+# Pour aller plus loin : build et E2E
+#
+# Les deux exigent des secrets de dépôt (Settings → Secrets and variables →
+# Actions). Ajoutez au minimum NEXT_PUBLIC_SUPABASE_URL,
+# NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY et SUPABASE_SERVICE_ROLE_KEY, puis
+# E2E_EMAIL et E2E_PASSWORD pour les specs authentifiées.
+#
+# Pointez la suite sur un projet Supabase de TEST, pas sur la production : les
+# specs se connectent réellement et lisent des données.
+#
+# Lancez alors Playwright contre un serveur bâti et non contre `pnpm dev` —
+# `next dev` compile à la demande dans un seul processus et met des routes au
+# hasard en 500 dès qu'on parallélise :
+#
+#   pnpm build
+#   pnpm start -- -p 3100 &
+#   E2E_BASE_URL=http://localhost:3100 pnpm exec playwright test
+#
+# Mesuré le 2026-08-28 : 21 s en parallèle sur un build, contre 1 min 30 en
+# séquentiel sur `pnpm dev`. Voir `e2e/README.md`.
+# ──────────────────────────────────────────────────────────────────────────

@@ -9,6 +9,12 @@ import { MessageTextAlignSelector } from "./MessageTextAlignSelector";
 import { PatreonSection } from "./PatreonSection";
 import { isPatreonEnabled, getPatreonMinCents } from "@/lib/patreon/config";
 
+/** Titre d'onglet — sans lui la page héritait du « WVLDS » générique. */
+export async function generateMetadata() {
+  const t = await getTranslations("settings");
+  return { title: t("title") };
+}
+
 export default async function SettingsPage() {
   const [t, currentLocale] = await Promise.all([
     getTranslations("settings"),
@@ -19,35 +25,37 @@ export default async function SettingsPage() {
   // messageFont/messageTextSize viennent du profil mémoïsé de la requête
   // (déjà résolu par le layout racine) — seuls bio/pronouns manquent et
   // nécessitent encore une requête dédiée (colonnes absentes de CurrentProfile).
-  const userId = await getCurrentUserId();
-  const profile = await getCurrentProfile();
+  // Mémoïsés tous les deux pour la requête ; `getCurrentProfile` réutilise
+  // l'identité résolue par `getCurrentUserId`, aucun aller-retour en double.
+  const [userId, profile] = await Promise.all([getCurrentUserId(), getCurrentProfile()]);
 
-  let bio = "";
-  let pronouns: string[] = [];
   const messageFont = profile?.message_font ?? "sans";
   const messageTextSize = profile?.message_text_size ?? "base";
   const messageTextAlign = profile?.message_text_align ?? "left";
-  if (userId) {
-    const { data: extra } = await supabase
-      .from("profiles")
-      .select("bio,pronouns")
-      .eq("id", userId)
-      .maybeSingle();
-    bio = extra?.bio ?? "";
-    pronouns = extra?.pronouns ?? [];
-  }
-
-  // Statut Patreon (RLS : l'utilisateur ne lit que sa propre ligne, hors tokens).
   const patreonEnabled = isPatreonEnabled();
+
+  // Le complément de profil (bio, pronoms — colonnes absentes de
+  // `CurrentProfile`) et le statut Patreon ne dépendent que de `userId`, pas
+  // l'un de l'autre : ils étaient enchaînés en deux allers-retours successifs.
+  // RLS : l'utilisateur ne lit que sa propre ligne Patreon, hors tokens.
+  const [extraRes, patreonRes] = await Promise.all([
+    userId
+      ? supabase.from("profiles").select("bio,pronouns").eq("id", userId).maybeSingle()
+      : Promise.resolve({ data: null }),
+    patreonEnabled && userId
+      ? supabase.from("patreon_accounts").select("patron_status,entitled_cents").eq("user_id", userId).maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
+
+  const extra = extraRes.data as { bio?: string | null; pronouns?: string[] | null } | null;
+  const bio = extra?.bio ?? "";
+  const pronouns = extra?.pronouns ?? [];
+
   let patreonLinked = false;
   let patronStatus: string | null = null;
   let entitledCents = 0;
-  if (patreonEnabled && userId) {
-    const { data: patreon } = await supabase
-      .from("patreon_accounts")
-      .select("patron_status,entitled_cents")
-      .eq("user_id", userId)
-      .maybeSingle();
+  {
+    const patreon = patreonRes.data as { patron_status?: string | null; entitled_cents?: number | null } | null;
     if (patreon) {
       patreonLinked = true;
       patronStatus = patreon.patron_status ?? null;

@@ -27,13 +27,13 @@ describe("createPersona", () => {
   it("refuse si non connecté", async () => {
     use(createSupabaseMock({ user: null }));
     const res = await createPersona(null, fd({ name: "Aria" }));
-    expect(res).toEqual({ ok: false, error: expect.stringMatching(/connecté/i) });
+    expect(res).toEqual({ ok: false, error: "unauthenticated" });
   });
 
   it("refuse un nom vide", async () => {
     use(createSupabaseMock({ user: { id: "u1" } }));
     const res = await createPersona(null, fd({ name: "   " }));
-    expect(res).toMatchObject({ ok: false, error: expect.stringMatching(/1 et 40/) });
+    expect(res).toMatchObject({ ok: false, error: "personaNameLength" });
   });
 
   it("refuse un nom de plus de 40 caractères", async () => {
@@ -48,7 +48,7 @@ describe("createPersona", () => {
       results: [{ data: null, error: { code: "P0001", message: "raw" } }],
     }));
     const res = await createPersona(null, fd({ name: "Aria" }));
-    expect(res).toMatchObject({ ok: false, error: expect.stringMatching(/Limite atteinte/) });
+    expect(res).toMatchObject({ ok: false, error: "personaQuotaReached" });
   });
 
   it("crée le persona et retourne son id", async () => {
@@ -137,7 +137,7 @@ describe("deletePersona", () => {
       ],
     }));
     const res = await deletePersona("p1");
-    expect(res).toMatchObject({ ok: false, error: expect.stringMatching(/introuvable|autoris/i) });
+    expect(res).toMatchObject({ ok: false, error: "notFound" });
   });
 
   it("supprime avec succès", async () => {
@@ -162,7 +162,7 @@ describe("movePersona", () => {
   it("retourne une erreur si le persona est introuvable / non autorisé", async () => {
     use(createSupabaseMock({ user: { id: "u1" }, results: [{ data: null }] }));
     const res = await movePersona("p1", "w2");
-    expect(res).toMatchObject({ ok: false, error: expect.stringMatching(/introuvable|autoris/i) });
+    expect(res).toMatchObject({ ok: false, error: "notFound" });
   });
 
   it("ne fait rien si le persona est déjà dans le monde cible", async () => {
@@ -183,7 +183,7 @@ describe("movePersona", () => {
     mock.rpc.mockResolvedValue({ data: false, error: null });
     use(mock);
     const res = await movePersona("p1", "w2");
-    expect(res).toMatchObject({ ok: false, error: expect.stringMatching(/Limite atteinte/) });
+    expect(res).toMatchObject({ ok: false, error: "personaQuotaReached" });
   });
 
   it("déplace le persona vers le monde cible", async () => {
@@ -212,7 +212,7 @@ describe("movePersona", () => {
     mock.rpc.mockResolvedValue({ data: true, error: null });
     use(mock);
     const res = await movePersona("p1", "w2");
-    expect(res).toMatchObject({ ok: false, error: expect.stringMatching(/nom existe déjà/i) });
+    expect(res).toMatchObject({ ok: false, error: "personaNameTaken" });
   });
 
   it("déplace vers « sans monde » (world_id null)", async () => {
@@ -316,7 +316,7 @@ describe("duplicatePersona", () => {
   it("retourne une erreur si le persona est introuvable / non autorisé", async () => {
     use(createSupabaseMock({ user: { id: "u1" }, results: [{ data: null }] }));
     const res = await duplicatePersona("p1", "w2");
-    expect(res).toMatchObject({ ok: false, error: expect.stringMatching(/introuvable|autoris/i) });
+    expect(res).toMatchObject({ ok: false, error: "notFound" });
   });
 
   it("traduit l'erreur P0001 en message de quota", async () => {
@@ -328,7 +328,7 @@ describe("duplicatePersona", () => {
       ],
     }));
     const res = await duplicatePersona("p1", "w2");
-    expect(res).toMatchObject({ ok: false, error: expect.stringMatching(/Limite atteinte/) });
+    expect(res).toMatchObject({ ok: false, error: "personaQuotaReached" });
   });
 
   it("traduit l'erreur 23505 (nom déjà pris dans le monde cible)", async () => {
@@ -340,7 +340,7 @@ describe("duplicatePersona", () => {
       ],
     }));
     const res = await duplicatePersona("p1", "w2");
-    expect(res).toMatchObject({ ok: false, error: expect.stringMatching(/nom existe déjà/i) });
+    expect(res).toMatchObject({ ok: false, error: "personaNameTaken" });
   });
 
   it("copie la ligne persona vers le monde cible", async () => {

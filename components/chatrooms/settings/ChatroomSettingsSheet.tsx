@@ -13,13 +13,12 @@ import { cn } from "@/lib/utils";
 
 import {
   Drawer,
-  DrawerContent,
   DrawerHeader,
   DrawerTitle,
   DrawerTrigger,
   DrawerFooter,
-  DrawerClose,
 } from "@/components/ui/drawer";
+import { SideSheetContent } from "@/components/ui/side-sheet";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,7 +36,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ImagePickerCropField } from "@/components/ui/image-crop-picker";
-import { Loader2, Settings, ChevronDown, X } from "lucide-react";
+import { Loader2, Settings, ChevronDown } from "lucide-react";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Switch } from "@/components/ui/switch";
@@ -181,9 +180,11 @@ export default function ChatroomSettingsSheet({
       const field = kind === "icon" ? "icon_url" : "banner_url";
       form.setValue(field, url, { shouldDirty: true, shouldValidate: true });
       await persistField(field, url);
-      toast.success("Image enregistrée.");
+      toast.success(tCommon("imageSaved"));
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Téléversement impossible.");
+      // Pas `e.message` : texte brut de PostgreSQL, il nomme table et policy.
+      console.error("[ChatroomSettingsSheet] envoi d'image", e);
+      toast.error(tCommon("uploadError"));
     } finally {
       setUploading(null);
     }
@@ -209,7 +210,7 @@ export default function ChatroomSettingsSheet({
       .update({ [field]: clean })
       .eq("id", chatroom.id);
     if (error) { toast.error(error.message); return; }
-    toast.success("Modification enregistrée.");
+    toast.success(tCommon("changesSaved"));
     router.refresh();
   }
 
@@ -224,7 +225,7 @@ export default function ChatroomSettingsSheet({
     setSavingPin(false);
     if (error) { toast.error(error.message); return; }
     setMapPinId(pinId);
-    toast.success("Modification enregistrée.");
+    toast.success(tCommon("changesSaved"));
     router.refresh();
   }
 
@@ -239,7 +240,7 @@ export default function ChatroomSettingsSheet({
     setSavingCategory(false);
     if (error) { toast.error(error.message); return; }
     setCategoryId(catId);
-    toast.success("Modification enregistrée.");
+    toast.success(tCommon("changesSaved"));
     router.refresh();
   }
 
@@ -254,7 +255,7 @@ export default function ChatroomSettingsSheet({
     setSavingTimeline(false);
     if (error) { toast.error(error.message); return; }
     setTimelineDate(date);
-    toast.success("Modification enregistrée.");
+    toast.success(tCommon("changesSaved"));
     router.refresh();
   }
 
@@ -269,12 +270,14 @@ export default function ChatroomSettingsSheet({
       ]);
       const { error } = await supabase.from("chatrooms").delete().eq("id", chatroom.id);
       if (error) throw error;
-      toast.success("Salle supprimée.");
+      toast.success(t("roomDeleted"));
       setOpen(false);
       router.back();
       router.refresh();
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Suppression impossible.");
+      // Pas `e.message` : texte brut de PostgreSQL, il nomme table et policy.
+      console.error("[ChatroomSettingsSheet] suppression", e);
+      toast.error(t("deleteRoomFailed"));
     } finally {
       setDeleting(false);
     }
@@ -296,18 +299,7 @@ export default function ChatroomSettingsSheet({
         </Tooltip>
       )}
 
-      <DrawerContent
-        className={cn(
-          "inset-y-0 right-0 flex flex-col gap-0 border rounded-md bg-background text-foreground shadow-lg p-0",
-          "w-[min(calc(100%_-_var(--drawer-inset)*2),_360px)] touch:w-[min(calc(100%_-_var(--drawer-inset)*2),_460px)]",
-        )}
-      >
-        <DrawerClose
-          aria-label={tCommon("close")}
-          className="absolute right-4 top-4 rounded-xs text-muted-foreground opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
-        >
-          <X className="size-4" />
-        </DrawerClose>
+      <SideSheetContent width="chat">
         <DrawerHeader className="border-b border-border-soft px-4 py-3 sm:px-6 sm:py-4">
           <DrawerTitle>{t("settingsTitle")}</DrawerTitle>
         </DrawerHeader>
@@ -606,7 +598,7 @@ export default function ChatroomSettingsSheet({
 
             <DrawerFooter className="border-t border-border-soft px-4 py-3 sm:px-6 flex-row justify-start">
               <DeleteConfirmDialog
-                description="La salle et tous ses messages seront supprimés définitivement."
+                description={t("roomDeleteDescription")}
                 onConfirm={() => void handleDelete()}
                 trigger={
                   <Button
@@ -624,7 +616,7 @@ export default function ChatroomSettingsSheet({
             </DrawerFooter>
           </form>
         </Form>
-      </DrawerContent>
+      </SideSheetContent>
     </Drawer>
   );
 }

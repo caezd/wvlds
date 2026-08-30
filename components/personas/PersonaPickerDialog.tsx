@@ -234,38 +234,57 @@ export function PersonaPickerDialog({
     setOpen(false);
   }
 
-  // Contenu du trigger par défaut, partagé entre les deux variantes — seul
-  // l'élément « hôte » change (span cloné via `asChild`/`render`).
-  const defaultTriggerContent = (
-    <>
+  // ── Trigger par défaut ──────────────────────────────────────────────
+  //
+  // C'est le BOUTON qui déclenche, pas le `<span>` qui l'entoure.
+  //
+  // Auparavant l'hôte était ce span, avec le bouton imbriqué dedans. Le
+  // composant y posait `type="button"`, `aria-haspopup="dialog"` et
+  // `aria-expanded` — trois attributs qu'ARIA interdit sur un `<span>` sans
+  // rôle, et qui étaient donc simplement ignorés : rien n'annonçait que ce
+  // repère ouvre une fenêtre.
+  //
+  // Le span reste, purement décoratif : il ancre l'anneau de pulsation, qui ne
+  // peut pas vivre dans le bouton — celui-ci est en `overflow-hidden` pour
+  // rogner l'avatar, ce qui rognerait aussi l'anneau.
+  const contenuDuBouton = selected ? (
+    selected.avatar_url ? (
+      <PersonaAvatarThumb url={selected.avatar_url} name={selected.name} size={36} />
+    ) : (
+      <span className="h-full w-full grid place-items-center text-xs font-bold  text-muted-foreground">
+        {getInitials(selected.name)}
+      </span>
+    )
+  ) : (
+    <span className="h-full w-full grid place-items-center  text-muted-foreground bg-background hover:bg-muted border rounded-md">
+      <UserPlus size={16} />
+    </span>
+  );
+
+  /**
+   * Le bouton hôte.
+   *
+   * Base UI (`render`) veut un élément SANS enfants — il place les siens
+   * lui-même ; Radix (`asChild`) veut au contraire l'élément complet. D'où le
+   * paramètre plutôt que deux déclarations.
+   */
+  const boutonParDefaut = (enfants?: React.ReactNode) => (
+    <button
+      type="button"
+      aria-label={selected ? selected.name : t("pick")}
+      className="relative flex size-9 items-center justify-center rounded-md overflow-hidden shrink-0"
+    >
+      {enfants}
+    </button>
+  );
+
+  /** Enveloppe décorative : l'anneau de pulsation, puis le trigger réel. */
+  const avecAnneau = (declencheur: React.ReactNode) => (
+    <span className="relative inline-block shrink-0">
       {!selected && (
         <span className="absolute inset-0 rounded-md animate-ping pointer-events-none bg-primary/30 scale-65" />
       )}
-      <button
-        type="button"
-        aria-label={selected ? selected.name : t("pick")}
-        className="relative flex size-9 items-center justify-center rounded-md overflow-hidden shrink-0"
-      >
-        {selected ? (
-          selected.avatar_url ? (
-            <PersonaAvatarThumb url={selected.avatar_url} name={selected.name} size={36} />
-          ) : (
-            <span className="h-full w-full grid place-items-center text-xs font-bold  text-muted-foreground">
-              {getInitials(selected.name)}
-            </span>
-          )
-        ) : (
-          <span className="h-full w-full grid place-items-center  text-muted-foreground bg-background hover:bg-muted border rounded-md">
-            <UserPlus size={16} />
-          </span>
-        )}
-      </button>
-    </>
-  );
-
-  const triggerNode = trigger ?? (
-    <span className="relative inline-block shrink-0">
-      {defaultTriggerContent}
+      {declencheur}
     </span>
   );
 
@@ -298,15 +317,13 @@ export function PersonaPickerDialog({
   if (variant === "drawer") {
     return (
       <Drawer open={open} onOpenChange={setOpen} showSwipeHandle>
-        {/* `nativeButton={false}` : le trigger par défaut est un <span> (avec
-            le vrai bouton cliquable imbriqué dedans, pour l'anneau de pulsation
-            décoratif) — Base UI suppose sinon un <button> natif. */}
-        <DrawerTrigger
-          nativeButton={false}
-          render={trigger ?? <span className="relative inline-block shrink-0" />}
-        >
-          {trigger ? null : defaultTriggerContent}
-        </DrawerTrigger>
+        {trigger ? (
+          // Un trigger fourni par l'appelant n'est pas forcément un bouton
+          // natif — d'où `nativeButton={false}`.
+          <DrawerTrigger nativeButton={false} render={trigger} />
+        ) : (
+          avecAnneau(<DrawerTrigger render={boutonParDefaut()}>{contenuDuBouton}</DrawerTrigger>)
+        )}
         <DrawerContent className="h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] [--drawer-inset:8px]">
           <DrawerHeader>
             <DrawerTitle>{t("pick")}</DrawerTitle>
@@ -333,7 +350,13 @@ export function PersonaPickerDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>{triggerNode}</DialogTrigger>
+      {trigger ? (
+        <DialogTrigger asChild>{trigger}</DialogTrigger>
+      ) : (
+        avecAnneau(
+          <DialogTrigger asChild>{boutonParDefaut(contenuDuBouton)}</DialogTrigger>,
+        )
+      )}
 
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>

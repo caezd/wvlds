@@ -1,0 +1,61 @@
+-- ============================================================
+-- Migration 129 — Suppression de `world_member_reads`
+-- ============================================================
+-- Reliquat de l'ancien calcul des non-lus, remplacé le 2026-07-17 par
+-- `chatroom_reads`. Le DROP avait été laissé de côté en attendant que le
+-- nouveau client soit déployé partout ; il l'est.
+--
+-- État relevé avant suppression :
+--   lignes                 15, dernière écriture le 2026-07-17
+--   écrit par              plus rien (aucune occurrence dans le dépôt)
+--   référencé par          `get_world_unreads` uniquement
+--   contraintes entrantes  aucune
+--
+-- ── Le point délicat : `get_world_unreads` ───────────────────
+-- Cette fonction calcule `unread_rooms` — « salons créés depuis mon dernier
+-- passage » — par `LEFT JOIN world_member_reads`. Comme plus rien n'alimente
+-- la table depuis juillet, `wmr.last_seen_at` est NULL pour tout le monde :
+-- la fonction compte donc TOUS les salons créés par quelqu'un d'autre, sans
+-- que ce compteur puisse jamais redescendre. Elle ne renvoie plus une valeur
+-- juste, elle renvoie une valeur qui ne veut plus rien dire.
+--
+-- Elle n'est plus appelée nulle part : aucune fonction, aucun déclencheur,
+-- aucune vue ne la référence, et le dépôt ne la mentionne que dans un test
+-- qui vérifie justement que l'application ne l'appelle PLUS
+-- (`NotificationsProvider.test.tsx` : « le resync ne consulte plus
+-- get_world_unreads »). Les 3 692 appels visibles dans `pg_stat_statements`
+-- sont antérieurs à la bascule — ces statistiques cumulent depuis 82 jours.
+--
+-- On la supprime donc plutôt que de la réécrire : la remplacer supposerait de
+-- décider ce que « salon non vu » veut dire, alors que rien ne l'affiche.
+--
+-- ── Ce qui n'est PAS touché ──────────────────────────────────
+-- Les non-lus affichés aujourd'hui viennent de `chatroom_reads`, via
+-- `get_all_chatroom_unreads` et `get_chatroom_unreads`
+-- (`components/providers/NotificationsProvider.tsx`). Ni l'une ni l'autre ne
+-- lit `world_member_reads`, et le badge de monde est la somme des
+-- contributions par salon issues de cette même source.
+
+DROP FUNCTION IF EXISTS public.get_world_unreads();
+
+DROP TABLE IF EXISTS public.world_member_reads;
+
+-- ── VÉRIFICATION ─────────────────────────────────────────────
+-- SELECT count(*) FROM information_schema.tables
+--  WHERE table_schema='public' AND table_name='world_member_reads';   -- → 0
+-- SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+--  WHERE n.nspname='public' AND p.proname='get_world_unreads';        -- → 0
+-- Et les non-lus doivent continuer de fonctionner :
+-- SELECT * FROM get_all_chatroom_unreads();
+
+-- ── ROLLBACK ─────────────────────────────────────────────────
+-- La table était alimentée par du code retiré : la recréer ne restaure pas
+-- son contenu, et `get_world_unreads` recommencerait à compter faux.
+-- CREATE TABLE public.world_member_reads (
+--   world_id uuid NOT NULL REFERENCES public.worlds(id) ON DELETE CASCADE,
+--   user_id  uuid NOT NULL REFERENCES auth.users(id)   ON DELETE CASCADE,
+--   last_seen_at timestamptz NOT NULL DEFAULT now(),
+--   PRIMARY KEY (world_id, user_id)
+-- );
+-- CREATE INDEX idx_world_member_reads_user_world
+--   ON public.world_member_reads (user_id, world_id);

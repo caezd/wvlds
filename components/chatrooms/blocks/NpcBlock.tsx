@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { EmojiPickerButton } from "@/components/chatrooms/reactions/EmojiPickerButton";
 import { GameBlockSurface, GameBlockToolbar, GameBlockEditButton } from "./GameBlockShell";
+import { useTranslations } from "next-intl";
 
 export function NpcDialog({
   onSend,
@@ -30,6 +31,8 @@ export function NpcDialog({
   open?: boolean;
   onOpenChange?: (v: boolean) => void;
 }) {
+  const tCommon = useTranslations("common");
+  const t = useTranslations("chatrooms");
   const [internalOpen, setInternalOpen] = useState(false);
   const open = controlledOpen ?? internalOpen;
   const setOpen = onOpenChange ?? setInternalOpen;
@@ -74,7 +77,7 @@ export function NpcDialog({
         <div className="space-y-4">
           <div className="flex gap-3">
             <div className="space-y-1.5 w-16">
-              <Label className="text-xs text-muted-foreground">Icône</Label>
+              <Label className="text-xs text-muted-foreground">{tCommon("icon")}</Label>
               <EmojiPickerButton value={emoji} onChange={setEmoji} />
             </div>
             <div className="space-y-1.5 flex-1">
@@ -84,18 +87,18 @@ export function NpcDialog({
               <Input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Wyrm des Cendres"
+                placeholder={t("npcExampleTitle")}
                 autoFocus
                 onKeyDown={(e) => { if (e.key === "Enter") handleSend(); }}
               />
             </div>
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">Rôle (optionnel)</Label>
+            <Label className="text-xs text-muted-foreground">{t("npcRoleOptional")}</Label>
             <Input
               value={role}
               onChange={(e) => setRole(e.target.value)}
-              placeholder="ex. Gardien du donjon, Marchande…"
+              placeholder={t("npcRolePlaceholder")}
             />
           </div>
           <div className="space-y-1.5">

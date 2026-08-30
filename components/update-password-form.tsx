@@ -6,10 +6,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
+import { ERR_NON_AUTHENTIFIE, ERR_NOM_UTILISATEUR_PRIS } from "@/lib/actionErrors";
+import { messageErreurAuth } from "@/lib/authErrors";
 
 const USERNAME_RE = /^[A-Za-z0-9_]{3,32}$/;
 
 export function UpdatePasswordForm() {
+  const t = useTranslations("auth");
   const [username, setUsername] = useState("");
   const [needsUsername, setNeedsUsername] = useState(false);
   const [password, setPassword] = useState("");
@@ -40,15 +44,13 @@ export function UpdatePasswordForm() {
     setError(null);
 
     if (password !== confirm) {
-      setError("Les mots de passe ne correspondent pas.");
+      setError(t("errorPasswordsDoNotMatch"));
       return;
     }
 
     const trimmed = username.trim();
     if (needsUsername && !USERNAME_RE.test(trimmed)) {
-      setError(
-        "Le nom d'utilisateur doit contenir entre 3 et 32 caractères (lettres, chiffres, underscore)."
-      );
+      setError(t("errorUsernameFormat"));
       return;
     }
 
@@ -57,7 +59,7 @@ export function UpdatePasswordForm() {
     try {
       const { data: userData, error: userError } =
         await supabase.auth.getUser();
-      if (userError || !userData.user) throw new Error("Session expirée.");
+      if (userError || !userData.user) throw new Error(ERR_NON_AUTHENTIFIE);
 
       if (needsUsername) {
         const { error: profileError } = await supabase
@@ -66,7 +68,7 @@ export function UpdatePasswordForm() {
           .eq("id", userData.user.id);
         if (profileError) {
           if (/unique|duplicate/i.test(profileError.message)) {
-            throw new Error("Ce nom d'utilisateur est déjà pris.");
+            throw new Error(ERR_NOM_UTILISATEUR_PRIS);
           }
           throw profileError;
         }
@@ -77,7 +79,11 @@ export function UpdatePasswordForm() {
 
       router.push("/");
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : "Une erreur est survenue.");
+      // `throw error` plus haut jette une erreur Supabase, dont `.message`
+      // est le texte brut de PostgreSQL — il cite la table et la policy.
+      // `messageErreurAuth` ne reconnaît que des codes — ceux de Supabase et
+      // les nôtres ; tout le reste retombe sur un message générique traduit.
+      setError(messageErreurAuth(error, t));
     } finally {
       setIsLoading(false);
     }
@@ -113,7 +119,7 @@ export function UpdatePasswordForm() {
             </div>
           )}
           <div className="mb-6 flex gap-3 flex-col">
-            <Label htmlFor="password">Mot de passe</Label>
+            <Label htmlFor="password">{t("password")}</Label>
             <Input
               id="password"
               type="password"
@@ -125,7 +131,7 @@ export function UpdatePasswordForm() {
             />
           </div>
           <div className="mb-6 flex gap-3 flex-col">
-            <Label htmlFor="confirm">Confirmer le mot de passe</Label>
+            <Label htmlFor="confirm">{t("confirmPassword")}</Label>
             <Input
               id="confirm"
               type="password"

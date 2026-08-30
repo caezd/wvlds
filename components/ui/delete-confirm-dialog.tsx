@@ -11,13 +11,22 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { useTranslations } from "next-intl";
 
+/**
+ * Confirmation de suppression, partagée par dix-huit écrans.
+ *
+ * Les quatre libellés étaient des valeurs par défaut EN FRANÇAIS. Dix appels
+ * s'en remettent au titre et aux deux boutons : une personne lisant
+ * l'application en anglais ou en espagnol voyait « Confirmer la suppression »,
+ * « Annuler », « Supprimer ». Le repli est désormais traduit.
+ */
 export function DeleteConfirmDialog({
   trigger,
-  title = "Confirmer la suppression",
-  description = "Cette action est irréversible.",
-  cancelLabel = "Annuler",
-  confirmLabel = "Supprimer",
+  title,
+  description,
+  cancelLabel,
+  confirmLabel,
   onConfirm,
   open,
   onOpenChange,
@@ -32,21 +41,22 @@ export function DeleteConfirmDialog({
   open?: boolean;
   onOpenChange?: (v: boolean) => void;
 }) {
+  const t = useTranslations("common");
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       {trigger && <AlertDialogTrigger asChild>{trigger}</AlertDialogTrigger>}
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>{title}</AlertDialogTitle>
-          <AlertDialogDescription>{description}</AlertDialogDescription>
+          <AlertDialogTitle>{title ?? t("deleteConfirmTitle")}</AlertDialogTitle>
+          <AlertDialogDescription>{description ?? t("irreversible")}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>{cancelLabel}</AlertDialogCancel>
+          <AlertDialogCancel>{cancelLabel ?? t("cancel")}</AlertDialogCancel>
           <AlertDialogAction
             onClick={onConfirm}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
-            {confirmLabel}
+            {confirmLabel ?? t("delete")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

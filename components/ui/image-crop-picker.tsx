@@ -1,12 +1,29 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Cropper from "react-easy-crop";
-import type { Area } from "react-easy-crop";
+import dynamic from "next/dynamic";
+import type { Area, CropperProps } from "react-easy-crop";
 import { ZoomIn, ZoomOut, RotateCcw, Loader2, ImagePlus, Link as LinkIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
+
+// Le recadreur n'est monté qu'à l'ouverture d'un dialogue d'ajout d'image, mais
+// l'import statique le plaçait dans le bundle de tout écran qui importe ce
+// fichier — dont le composer, donc chaque salon. Même motif que
+// `emoji-picker-react` (cf. ChatReactionPicker / EmojiPickerButton).
+// `CropperProps` déclare obligatoires une douzaine de props (aspect, rotation,
+// minZoom, cropShape…) que la librairie remplit en réalité via ses
+// `defaultProps` — un détail que `dynamic()` n'expose plus au typage. D'où ce
+// cast : seules les props sans défaut restent requises. Sans effet à
+// l'exécution (React applique toujours les defaultProps sur `undefined`).
+const Cropper = dynamic(() => import("react-easy-crop"), {
+  ssr: false,
+  loading: () => <div className="h-full w-full animate-pulse bg-muted/30" />,
+}) as React.ComponentType<
+  Partial<CropperProps> & Pick<CropperProps, "image" | "crop" | "zoom" | "onCropChange">
+>;
 
 // ---------------------------------------------------------------------------
 // Utilitaire : découpe l'image sur canvas et retourne un Blob JPEG
@@ -181,6 +198,7 @@ export function ImageSourceStep({
   onSelect: (src: string) => void;
   disabled?: boolean;
 }) {
+  const t = useTranslations("common");
   const inputRef = useRef<HTMLInputElement>(null);
   const [url, setUrl] = useState("");
   const [checking, setChecking] = useState(false);
@@ -250,7 +268,7 @@ export function ImageSourceStep({
         <ImagePlus className="h-5 w-5 text-muted-foreground" />
         <p className="text-xs font-medium">
           Glissez-déposez ou collez (Ctrl+V) une image, ou{" "}
-          <span className="text-blue-400">cliquez pour choisir un fichier</span>
+          <span className="text-blue-400">{t("clickToPickFile")}</span>
         </p>
         <p className="text-[11px] text-muted-foreground">Taille max 5 Mo</p>
       </div>
@@ -382,7 +400,7 @@ export function ImagePickerCropField({
           arbitraire (recadrage depuis une URL) — aucun des deux n'est compatible avec next/image */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={previewSrc ?? undefined} alt={previewAlt} className="h-full w-full object-cover" draggable={false} />
-      <div className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition-opacity group-hover:bg-black/40 group-hover:opacity-100">
+      <div className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition-opacity group-hover:bg-black/40 group-hover:opacity-100 focus-within:opacity-100">
         {uploading
           ? <Loader2 className="h-5 w-5 animate-spin text-white" />
           : <span className="text-xs font-medium text-white">{changeLabel}</span>

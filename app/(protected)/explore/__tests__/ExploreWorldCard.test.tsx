@@ -93,6 +93,40 @@ describe("ExploreWorldCard", () => {
     await waitFor(() => expect(push).toHaveBeenCalledWith("/w/w1"));
   });
 
+  it("dimensionne la carte sur sa largeur (carrée) plutôt qu'en hauteur fixe", () => {
+    setup();
+    render(<ExploreWorldCard world={world} tags={["fantasy"]} />);
+
+    const card = screen.getByRole("button", { name: /avalonia/i });
+    expect(card.className).toContain("aspect-square");
+    expect(card.className).toContain("w-full");
+    expect(card.className).not.toContain("h-80");
+    // Aucune borne de hauteur : avec aspect-square elle se transférerait en
+    // borne de largeur et la carte ne remplirait plus sa colonne.
+    expect(card.className).not.toMatch(/(^|\s)(min|max)-h-/);
+  });
+
+  it("calcule la hauteur du hero au survol depuis la hauteur mesurée de la carte", () => {
+    const clientHeight = Object.getOwnPropertyDescriptor(Element.prototype, "clientHeight");
+    Object.defineProperty(Element.prototype, "clientHeight", {
+      configurable: true,
+      get: () => 240,
+    });
+    try {
+      setup();
+      render(<ExploreWorldCard world={world} tags={[]} />);
+
+      // 240 mesurés − 8 (p-1) = 232 de hauteur interne ; le panneau ne réclame
+      // que ses paddings (description vide sous jsdom) → hero = 232 − 30.
+      const card = screen.getByRole("button", { name: /avalonia/i });
+      expect(card.style.getPropertyValue("--card-inner-h")).toBe("232px");
+      expect(card.style.getPropertyValue("--hero-hover-h")).toBe("202px");
+    } finally {
+      if (clientHeight) Object.defineProperty(Element.prototype, "clientHeight", clientHeight);
+      else delete (Element.prototype as unknown as Record<string, unknown>).clientHeight;
+    }
+  });
+
   it("monde 18+ : ouvre la confirmation d'âge (date de naissance) et bloque la jointure tant qu'elle n'est pas validée", async () => {
     setup({ data: { message_count: 0, member_count: 0, persona_count: 0 }, error: null });
     joinPublicWorld.mockResolvedValue({});

@@ -9,7 +9,10 @@ import { WorldCategoryFolders } from "../chatrooms/WorldCategoryFolders";
 import { WorldTimelineShortcutsWidget } from "./widgets/WorldTimelineShortcutsWidget";
 import { WorldHomeBannerView } from "./blocks/WorldHomeBannerBlock";
 import { cn } from "@/lib/utils";
-import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
+import type { WorldTimelineConfig, WorldHomeRoom as Room } from "@/types/worlds";
+import type { ChatroomCategory } from "@/lib/currentRequest";
+import type { RecentPersona } from "./widgets/WorldRecentPersonasWidget";
+import type { WikiPage } from "./widgets/WorldWikiShortcutsWidget";
 import {
   DEFAULT_HOME_GRID_GAP,
   HOME_GRID_COLS,
@@ -23,17 +26,6 @@ const WorldMembersOnlineWidget = dynamic(() => import("./widgets/WorldMembersOnl
 const WorldWikiShortcutsWidget = dynamic(() => import("./widgets/WorldWikiShortcutsWidget").then((m) => m.WorldWikiShortcutsWidget));
 const WorldRecentPersonasWidget = dynamic(() => import("./widgets/WorldRecentPersonasWidget").then((m) => m.WorldRecentPersonasWidget));
 
-type Room = {
-  id: string;
-  title: string | null;
-  name: string | null;
-  icon_url: string | null;
-  last_message_at: string | null;
-  last_poster_avatar_url?: string | null;
-  unread_count: number;
-  category_id?: string | null;
-  timeline_date?: WorldTimelineDate | null;
-};
 
 /**
  * Rendu lecture seule de la grille de blocs de la page d'accueil — pure
@@ -61,6 +53,8 @@ export function WorldHomeGridView({
   canCreateChatroom,
   timelineConfig,
   initialRooms,
+  categories,
+  widgetData = {},
   selectedCategoryId,
   onSelectCategory,
   onWikiLink,
@@ -72,6 +66,13 @@ export function WorldHomeGridView({
   canCreateChatroom: boolean;
   timelineConfig?: WorldTimelineConfig;
   initialRooms: Room[];
+  /** Catégories chargées côté serveur (getChatroomCategories) — évite au bloc
+   *  « Catégories » de repartir d'un état vide puis de les refetcher. */
+  /** `undefined` se propage jusqu'au bloc « Catégories », qui distingue
+   *  « non fourni » de « aucune catégorie ». */
+  categories?: ChatroomCategory[];
+  /** Données des widgets résolues côté serveur. */
+  widgetData?: { recentPersonas?: RecentPersona[]; wikiPages?: WikiPage[] };
   selectedCategoryId: string | null;
   onSelectCategory: (categoryId: string | null) => void;
   onWikiLink?: (slug: string) => void;
@@ -101,6 +102,8 @@ export function WorldHomeGridView({
             canCreateChatroom,
             timelineConfig,
             initialRooms,
+            categories,
+            widgetData,
             selectedCategoryId,
             onSelectCategory,
             onWikiLink,
@@ -120,6 +123,8 @@ function renderBlock(
     canCreateChatroom: boolean;
     timelineConfig?: WorldTimelineConfig;
     initialRooms: Room[];
+    categories: ChatroomCategory[] | undefined;
+    widgetData: { recentPersonas?: RecentPersona[]; wikiPages?: WikiPage[] };
     selectedCategoryId: string | null;
     onSelectCategory: (categoryId: string | null) => void;
     onWikiLink?: (slug: string) => void;
@@ -158,6 +163,8 @@ function renderBlock(
           selectedCategoryId={ctx.selectedCategoryId}
           onSelectCategory={ctx.onSelectCategory}
           fullWidth={item.w >= HOME_GRID_COLS}
+          initialCategories={ctx.categories}
+          initialRooms={ctx.initialRooms}
         />
       );
     case "composer":
@@ -185,6 +192,7 @@ function renderBlock(
         <WorldWikiShortcutsWidget
           worldId={ctx.worldId}
           limit={widgetOptionValue("wiki_shortcuts", "limit", item.options)}
+          initialPages={ctx.widgetData.wikiPages}
         />
       );
     case "personas_recent":
@@ -192,6 +200,7 @@ function renderBlock(
         <WorldRecentPersonasWidget
           worldId={ctx.worldId}
           limit={widgetOptionValue("personas_recent", "limit", item.options)}
+          initialPersonas={ctx.widgetData.recentPersonas}
         />
       );
     case "timeline_shortcuts":

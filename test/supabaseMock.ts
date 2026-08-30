@@ -45,6 +45,21 @@ function makeBuilder(result: QueryResult): MockBuilder {
 // Reproduit `supabase.channel(name).on(...).subscribe(cb)`. Les handlers
 // `postgres_changes` / `presence` / `broadcast` sont enregistrés et peuvent être
 // déclenchés depuis un test via `channel.emit(predicate, payload)`.
+//
+// Deux comportements du vrai client sont reproduits ici, parce que leur absence
+// a laissé passer du code cassé :
+//
+//   1. `channel(name)` RENVOIE LE CANAL EXISTANT quand le nom est déjà connu.
+//      Le mock en créait un neuf à chaque appel, si bien qu'une collision de
+//      noms — deux composants souscrivant au même sujet — restait invisible.
+//   2. `.on()` LÈVE sur un canal déjà souscrit. C'est le message
+//      « cannot add `postgres_changes` callbacks … after `subscribe()` »
+//      apparu avec supabase-js 2.112 ; jusqu'en 2.79 les handlers étaient
+//      simplement ignorés, ce qui privait silencieusement de temps réel le
+//      second composant.
+//
+// Un test qui monte deux composants partageant un nom de canal doit échouer.
+// C'est le cas réel qui a fait planter l'ouverture du tiroir latéral, deux fois.
 
 export type RegisteredHandler = {
   type: string;
@@ -62,20 +77,34 @@ export type MockChannel = {
   untrack: ReturnType<typeof vi.fn>;
   send: ReturnType<typeof vi.fn>;
   presenceState: ReturnType<typeof vi.fn>;
+  /** Sort de l'état « joint », comme `leave()`. @internal */
+  __quitter: () => void;
   /** Déclenche tous les handlers correspondant au prédicat. */
   emit: (predicate: (h: RegisteredHandler) => boolean, payload: unknown) => void;
 };
 
 function makeChannel(name: string): MockChannel {
   const ch = { name, handlers: [], presence: {} } as unknown as MockChannel;
+  let souscrit = false;
   ch.on = vi.fn((type: string, config: Record<string, unknown>, handler: (p: unknown) => unknown) => {
+    if (souscrit) {
+      throw new Error(
+        `cannot add \`${type}\` callbacks for realtime:${name} after \`subscribe()\`.`,
+      );
+    }
     ch.handlers.push({ type, config, handler });
     return ch;
   });
   ch.subscribe = vi.fn((cb?: (status: string) => unknown) => {
+    souscrit = true;
     if (cb) cb("SUBSCRIBED");
     return ch;
   });
+  // `removeChannel` appelle `unsubscribe()` → `leave()`, qui fait sortir le
+  // canal de l'état « joint » SYNCHRONEMENT. `.on()` ne lève donc plus après
+  // ce point : ne pas le modéliser rendrait le mock plus strict que le vrai
+  // client et produirait de faux échecs.
+  ch.__quitter = () => { souscrit = false; };
   ch.track = vi.fn(() => Promise.resolve("ok"));
   ch.untrack = vi.fn(() => Promise.resolve("ok"));
   ch.send = vi.fn(() => Promise.resolve("ok"));
@@ -115,12 +144,29 @@ export function createSupabaseMock(opts: {
   }));
 
   const channels: MockChannel[] = [];
+  // Registre par nom, comme le vrai client : un nom déjà connu rend le canal
+  // existant au lieu d'en créer un neuf.
+  const parNom = new Map<string, MockChannel>();
   const channel = vi.fn((name: string) => {
+    const existant = parNom.get(name);
+    if (existant) return existant;
     const ch = makeChannel(name);
+    parNom.set(name, ch);
     channels.push(ch);
     return ch;
   });
-  const removeChannel = vi.fn();
+  const removeChannel = vi.fn((ch?: MockChannel) => {
+    // Asynchrone comme le vrai client : `removeChannel` attend `unsubscribe()`
+    // avant que le canal quitte le registre. Une réouverture SYNCHRONE du même
+    // nom retombe donc sur le canal encore souscrit — c'est précisément la
+    // fenêtre qui fait lever `.on()`. Une réouverture qui attend la fermeture
+    // obtient au contraire un canal neuf.
+    ch?.__quitter();
+    return Promise.resolve().then(() => {
+      if (ch && parNom.get(ch.name) === ch) parNom.delete(ch.name);
+      return "ok";
+    });
+  });
   const rpc = vi.fn().mockResolvedValue({ data: null, error: null });
 
   const onAuthStateChange = vi.fn(() => ({

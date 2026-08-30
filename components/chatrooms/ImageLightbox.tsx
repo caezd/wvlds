@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import Image from "next/image";
 import { createPortal } from "react-dom";
 import { X, Download } from "lucide-react";
@@ -16,6 +17,7 @@ export function ImageLightbox({
   initialIndex: number;
   onClose: () => void;
 }) {
+  const tCommon = useTranslations("common");
   const [current, setCurrent] = useState(initialIndex);
 
   useEffect(() => {
@@ -38,12 +40,14 @@ export function ImageLightbox({
         <a
           href={isSafeUrl(item.url) ? item.url : "#"}
           download={item.name}
+          aria-label={tCommon("download")}
           onClick={(e) => e.stopPropagation()}
           className="flex items-center justify-center size-9 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
         >
           <Download className="size-4" />
         </a>
         <button
+          aria-label={tCommon("close")}
           onClick={onClose}
           className="flex items-center justify-center size-9 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
         >

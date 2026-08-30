@@ -5,6 +5,12 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { SUPPORTED_LOCALES, type Locale } from "@/i18n/locales";
 import { sanitizePronouns } from "@/lib/pronouns";
+// Codes stables plutôt que phrases françaises : le client traduit.
+import {
+  ERR_NON_AUTHENTIFIE,
+  ERR_VALEUR_NON_SUPPORTEE,
+  ERR_ENREGISTREMENT,
+} from "@/lib/actionErrors";
 
 function isSupported(value: string): value is Locale {
   return SUPPORTED_LOCALES.includes(value as Locale);
@@ -17,7 +23,7 @@ const COOKIE_OPTIONS = {
 };
 
 export async function updateLocale(locale: string) {
-  if (!isSupported(locale)) return { error: "Locale non supportée" };
+  if (!isSupported(locale)) return { error: ERR_VALEUR_NON_SUPPORTEE };
 
   const cookieStore = await cookies();
   cookieStore.set("NEXT_LOCALE", locale, COOKIE_OPTIONS);
@@ -28,7 +34,11 @@ export async function updateLocale(locale: string) {
   } = await supabase.auth.getUser();
 
   if (user) {
-    await supabase.from("profiles").update({ locale }).eq("id", user.id);
+    // Le cookie est déjà posé, donc la langue change à l'écran quoi qu'il
+    // arrive — mais si la préférence n'atteint pas le profil, elle sera perdue
+    // à la prochaine session. On le dit plutôt que d'annoncer un succès.
+    const { error } = await supabase.from("profiles").update({ locale }).eq("id", user.id);
+    if (error) return { error: ERR_ENREGISTREMENT };
   }
 
   revalidatePath("/", "layout");
@@ -50,20 +60,20 @@ function isSupportedFont(value: string): value is MessageFont {
 }
 
 export async function updateMessageFont(font: string) {
-  if (!isSupportedFont(font)) return { error: "Police non supportée" };
+  if (!isSupportedFont(font)) return { error: ERR_VALEUR_NON_SUPPORTEE };
 
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { error: "Non authentifié" };
+  if (!user) return { error: ERR_NON_AUTHENTIFIE };
 
   const { error } = await supabase
     .from("profiles")
     .update({ message_font: font })
     .eq("id", user.id);
 
-  if (error) return { error: error.message ?? "Impossible d'enregistrer la police." };
+  if (error) return { error: ERR_ENREGISTREMENT };
 
   revalidatePath("/", "layout");
   return { success: true };
@@ -77,20 +87,20 @@ function isSupportedTextSize(value: string): value is MessageTextSize {
 }
 
 export async function updateMessageTextSize(size: string) {
-  if (!isSupportedTextSize(size)) return { error: "Taille non supportée" };
+  if (!isSupportedTextSize(size)) return { error: ERR_VALEUR_NON_SUPPORTEE };
 
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { error: "Non authentifié" };
+  if (!user) return { error: ERR_NON_AUTHENTIFIE };
 
   const { error } = await supabase
     .from("profiles")
     .update({ message_text_size: size })
     .eq("id", user.id);
 
-  if (error) return { error: error.message ?? "Impossible d'enregistrer la taille du texte." };
+  if (error) return { error: ERR_ENREGISTREMENT };
 
   revalidatePath("/", "layout");
   return { success: true };
@@ -104,20 +114,20 @@ function isSupportedTextAlign(value: string): value is MessageTextAlign {
 }
 
 export async function updateMessageTextAlign(align: string) {
-  if (!isSupportedTextAlign(align)) return { error: "Alignement non supporté" };
+  if (!isSupportedTextAlign(align)) return { error: ERR_VALEUR_NON_SUPPORTEE };
 
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { error: "Non authentifié" };
+  if (!user) return { error: ERR_NON_AUTHENTIFIE };
 
   const { error } = await supabase
     .from("profiles")
     .update({ message_text_align: align })
     .eq("id", user.id);
 
-  if (error) return { error: error.message ?? "Impossible d'enregistrer l'alignement du texte." };
+  if (error) return { error: ERR_ENREGISTREMENT };
 
   revalidatePath("/", "layout");
   return { success: true };
@@ -128,7 +138,7 @@ export async function updateProfileBioAndPronouns(bio: string, pronouns: string[
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { error: "Non authentifié" };
+  if (!user) return { error: ERR_NON_AUTHENTIFIE };
 
   const trimmedBio = bio.trim().slice(0, 500);
   const cleanPronouns = sanitizePronouns(pronouns);
@@ -138,7 +148,7 @@ export async function updateProfileBioAndPronouns(bio: string, pronouns: string[
     .update({ bio: trimmedBio || null, pronouns: cleanPronouns })
     .eq("id", user.id);
 
-  if (error) return { error: error.message ?? "Impossible d'enregistrer le profil." };
+  if (error) return { error: ERR_ENREGISTREMENT };
 
   revalidatePath("/settings");
   return { success: true };

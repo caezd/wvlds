@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 
 /**
  * Garde de membership : si l'utilisateur courant est retiré du monde
@@ -22,6 +23,7 @@ export function WorldMembershipGuard({
   worldId: string | null;
   selfId: string | null;
 }) {
+  const t = useTranslations("worlds");
   const router = useRouter();
   const reconnectEpoch = useReconnectEpoch();
 
@@ -40,7 +42,7 @@ export function WorldMembershipGuard({
             user_id?: string;
           } | null;
           if (old?.world_id === worldId && old?.user_id === selfId) {
-            toast.info("Tu as été retiré de ce monde.");
+            toast.info(t("removedFromWorld"));
             router.replace("/p");
             router.refresh();
           }
@@ -51,7 +53,7 @@ export function WorldMembershipGuard({
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [worldId, selfId, router, reconnectEpoch]);
+  }, [worldId, selfId, router, reconnectEpoch, t]);
 
   return null;
 }

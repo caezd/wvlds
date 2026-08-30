@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/admin";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { echecEnregistrement } from "@/lib/actionErrors";
 
 const ItemSchema = z.object({
   key:         z.string().trim().min(1).max(64).regex(/^[a-z0-9_-]+$/, "Clé : minuscules, chiffres, - ou _"),
@@ -24,7 +25,7 @@ export async function createItem(prevState: unknown, formData: FormData) {
   }
 
   const { error } = await supabase.from("cosmetic_items").insert(parsed.data);
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: echecEnregistrement("createItem", error) };
 
   revalidatePath("/admin/shop");
   redirect("/admin/shop");
@@ -43,20 +44,27 @@ export async function updateItem(id: string, prevState: unknown, formData: FormD
     .update({ ...parsed.data, updated_at: new Date().toISOString() })
     .eq("id", id);
 
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: echecEnregistrement("updateItem", error) };
 
   revalidatePath("/admin/shop");
   redirect("/admin/shop");
 }
 
+// Appelées depuis des `<form action={…}>`, sans retour possible vers l'écran :
+// on lève pour que l'échec soit visible (limite d'erreur du segment) plutôt que
+// de laisser `revalidatePath` réafficher l'état d'avant comme si de rien
+// n'était. `updateItem`, juste au-dessus, remonte bien son erreur — ces deux-là
+// étaient les exceptions.
 export async function toggleItem(id: string, active: boolean) {
   const { supabase } = await requireAdmin();
-  await supabase.from("cosmetic_items").update({ active }).eq("id", id);
+  const { error } = await supabase.from("cosmetic_items").update({ active }).eq("id", id);
+  if (error) throw new Error(echecEnregistrement("toggleItem", error));
   revalidatePath("/admin/shop");
 }
 
 export async function deleteItem(id: string) {
   const { supabase } = await requireAdmin();
-  await supabase.from("cosmetic_items").delete().eq("id", id);
+  const { error } = await supabase.from("cosmetic_items").delete().eq("id", id);
+  if (error) throw new Error(echecEnregistrement("deleteItem", error));
   revalidatePath("/admin/shop");
 }

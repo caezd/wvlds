@@ -53,7 +53,7 @@ export function FeatureSubGroup({
               {flag.description}
             </p>
           )}
-          <p className="text-[0.65rem] text-muted-foreground/60 mt-1">
+          <p className="text-[0.65rem] text-muted-foreground mt-1">
             Modifié le {date}
           </p>
         </div>

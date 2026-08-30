@@ -20,31 +20,47 @@ import {
 } from "@/components/worlds/home/worldHomeGrid";
 import type { WorldInventoryItem, WorldSkill, WorldCatalogCategory, WorldTimelineConfig, WorldTag } from "@/types/worlds";
 import { clampDaysPerMonth } from "@/lib/worldTimeline";
+import { ERR_NON_AUTHENTIFIE, ERR_VALEUR_NON_SUPPORTEE , ERR_TAG_INVALIDE, echecEnregistrement } from "@/lib/actionErrors";
 
 const MAX_WORLD_TAGS = 10;
 const MAX_TAG_LENGTH = 24;
 
+/** Sous-option à retomber quand on désactive la fonctionnalité principale. */
+const RESTRICTION_LIEE: Partial<Record<WorldFeatureField, string>> = {
+  enable_inventory: "restrict_inventory",
+  enable_skills: "restrict_skills",
+};
+
+export type WorldFeatureField =
+  | "enable_inventory"
+  | "enable_skills"
+  | "enable_map"
+  | "enable_wiki";
+
 export async function setWorldFeature(
   worldId: string,
-  field: "enable_inventory" | "enable_skills",
+  field: WorldFeatureField,
   enabled: boolean,
 ) {
   const supabase = await createClient();
   const updates: Record<string, boolean> = { [field]: enabled };
-  // Désactiver la fonctionnalité retire aussi la restriction (sous-option)
+  // Désactiver la fonctionnalité retire aussi sa restriction, quand elle en a
+  // une. La table est explicite : un `field === "enable_inventory" ? … : …`
+  // aurait retombé `restrict_skills` pour la carte et le wiki, qui n'ont
+  // aucune restriction.
   if (!enabled) {
-    const restrictField = field === "enable_inventory" ? "restrict_inventory" : "restrict_skills";
-    updates[restrictField] = false;
+    const restrictField = RESTRICTION_LIEE[field];
+    if (restrictField) updates[restrictField] = false;
   }
   const { error } = await supabase.from("worlds").update(updates).eq("id", worldId);
-  if (error) return { ok: false as const, error: error.message };
+  if (error) return { ok: false as const, error: echecEnregistrement("setWorldFeature", error) };
   return { ok: true as const };
 }
 
 export async function setWorldFaceclaims(worldId: string, enabled: boolean) {
   const supabase = await createClient();
   const { error } = await supabase.from("worlds").update({ enable_faceclaims: enabled }).eq("id", worldId);
-  if (error) return { ok: false as const, error: error.message };
+  if (error) return { ok: false as const, error: echecEnregistrement("setWorldFaceclaims", error) };
   return { ok: true as const };
 }
 
@@ -53,24 +69,24 @@ export async function setWorldFaceclaims(worldId: string, enabled: boolean) {
 export async function setWorldHomeShowStats(worldId: string, enabled: boolean) {
   const supabase = await createClient();
   const { error } = await supabase.from("worlds").update({ home_show_stats: enabled }).eq("id", worldId);
-  if (error) return { ok: false as const, error: error.message };
+  if (error) return { ok: false as const, error: echecEnregistrement("setWorldHomeShowStats", error) };
   return { ok: true as const };
 }
 
 /** Règle la gouttière de la grille de la page d'accueil — partagée par le
  *  rendu public et l'éditeur, voir HOME_GRID_GAP_PRESETS. */
 export async function setWorldHomeGridGap(worldId: string, gap: WorldHomeGridGap) {
-  if (!(gap in HOME_GRID_GAP_PRESETS)) return { ok: false as const, error: "Espacement invalide." };
+  if (!(gap in HOME_GRID_GAP_PRESETS)) return { ok: false as const, error: ERR_VALEUR_NON_SUPPORTEE };
   const supabase = await createClient();
   const { error } = await supabase.from("worlds").update({ home_grid_gap: gap }).eq("id", worldId);
-  if (error) return { ok: false as const, error: error.message };
+  if (error) return { ok: false as const, error: echecEnregistrement("setWorldHomeGridGap", error) };
   return { ok: true as const };
 }
 
 export async function setWorldAgeRestricted(worldId: string, enabled: boolean) {
   const supabase = await createClient();
   const { error } = await supabase.from("worlds").update({ is_age_restricted: enabled }).eq("id", worldId);
-  if (error) return { ok: false as const, error: error.message };
+  if (error) return { ok: false as const, error: echecEnregistrement("setWorldAgeRestricted", error) };
   // La personne qui active le réglage est déjà membre (owner/admin) — on la
   // considère comme ayant confirmé, pour ne pas se bloquer elle-même l'accès.
   // Le réglage lui-même a déjà été enregistré (ci-dessus) : un échec de cet
@@ -98,7 +114,7 @@ export async function setWorldRestriction(
     .update({ [field]: enabled })
     .eq("id", worldId);
 
-  if (error) return { ok: false as const, error: error.message };
+  if (error) return { ok: false as const, error: echecEnregistrement("setWorldRestriction", error) };
 
   if (enabled) {
     const dataKey = field === "restrict_inventory" ? "inventoryItems" : "skillItems";
@@ -120,11 +136,16 @@ export async function setWorldRestriction(
       const sectionIds = (sections ?? []).map((s: { id: string }) => s.id);
 
       if (sectionIds.length > 0) {
-        await supabase
+        // Purge secondaire : la restriction du monde est déjà enregistrée.
+        // Si elle échoue, des contenus d'inventaire ou de compétences
+        // subsistent dans les fiches — visible, donc à ne pas taire, mais pas
+        // de quoi annuler le changement de réglage lui-même.
+        const { error } = await supabase
           .from("persona_section_fields")
           .update({ data: { [dataKey]: [] } })
           .in("section_id", sectionIds)
           .eq("type", fieldType);
+        if (error) console.error("[setWorldRestriction] champs non purgés", error.message);
       }
     }
   }
@@ -144,7 +165,7 @@ export async function addWorldInventoryItem(
     .insert({ world_id: worldId, ...data })
     .select()
     .single();
-  if (error) return { ok: false as const, error: error.message };
+  if (error) return { ok: false as const, error: echecEnregistrement("addWorldInventoryItem", error) };
   return { ok: true as const, item: item as WorldInventoryItem };
 }
 
@@ -157,7 +178,7 @@ export async function updateWorldInventoryItem(
     .from("world_inventory_items")
     .update(data)
     .eq("id", id);
-  if (error) return { ok: false as const, error: error.message };
+  if (error) return { ok: false as const, error: echecEnregistrement("updateWorldInventoryItem", error) };
   return { ok: true as const };
 }
 
@@ -167,7 +188,7 @@ export async function deleteWorldInventoryItem(id: string) {
     .from("world_inventory_items")
     .delete()
     .eq("id", id);
-  if (error) return { ok: false as const, error: error.message };
+  if (error) return { ok: false as const, error: echecEnregistrement("deleteWorldInventoryItem", error) };
   return { ok: true as const };
 }
 
@@ -183,7 +204,7 @@ export async function addWorldSkill(
     .insert({ world_id: worldId, ...data })
     .select()
     .single();
-  if (error) return { ok: false as const, error: error.message };
+  if (error) return { ok: false as const, error: echecEnregistrement("addWorldSkill", error) };
   return { ok: true as const, skill: skill as WorldSkill };
 }
 
@@ -196,7 +217,7 @@ export async function updateWorldSkill(
     .from("world_skills")
     .update(data)
     .eq("id", id);
-  if (error) return { ok: false as const, error: error.message };
+  if (error) return { ok: false as const, error: echecEnregistrement("updateWorldSkill", error) };
   return { ok: true as const };
 }
 
@@ -206,7 +227,7 @@ export async function deleteWorldSkill(id: string) {
     .from("world_skills")
     .delete()
     .eq("id", id);
-  if (error) return { ok: false as const, error: error.message };
+  if (error) return { ok: false as const, error: echecEnregistrement("deleteWorldSkill", error) };
   return { ok: true as const };
 }
 
@@ -230,7 +251,7 @@ export async function addWorldCatalogCategory(
     })
     .select()
     .single();
-  if (error) return { ok: false as const, error: error.message };
+  if (error) return { ok: false as const, error: echecEnregistrement("addWorldCatalogCategory", error) };
   return { ok: true as const, category: category as WorldCatalogCategory };
 }
 
@@ -243,7 +264,7 @@ export async function updateWorldCatalogCategory(
     .from("world_catalog_categories")
     .update(data)
     .eq("id", id);
-  if (error) return { ok: false as const, error: error.message };
+  if (error) return { ok: false as const, error: echecEnregistrement("updateWorldCatalogCategory", error) };
   return { ok: true as const };
 }
 
@@ -253,19 +274,26 @@ export async function deleteWorldCatalogCategory(id: string) {
     .from("world_catalog_categories")
     .delete()
     .eq("id", id);
-  if (error) return { ok: false as const, error: error.message };
+  if (error) return { ok: false as const, error: echecEnregistrement("deleteWorldCatalogCategory", error) };
   return { ok: true as const };
 }
 
+// Ces deux actions renvoyaient `{ ok: true }` sans jamais regarder le résultat
+// des écritures. L'appelant réordonne de façon optimiste : un refus RLS ou une
+// panne réseau laissait donc l'utilisateur devant un ordre qui semblait
+// enregistré et disparaissait au rechargement suivant. Les autres actions du
+// fichier, elles, remontent bien leur erreur.
 export async function batchUpdateCatalogCategoryOrder(
   categories: { id: string; sort_index: number; column_index: number }[],
 ) {
   const supabase = await createClient();
-  await Promise.all(
+  const results = await Promise.all(
     categories.map(({ id, sort_index, column_index }) =>
       supabase.from("world_catalog_categories").update({ sort_index, column_index }).eq("id", id),
     ),
   );
+  const failed = results.find((r) => r.error);
+  if (failed?.error) return { ok: false as const, error: echecEnregistrement("batchUpdateCatalogCategoryOrder", failed.error) };
   return { ok: true as const };
 }
 
@@ -275,11 +303,13 @@ export async function batchUpdateCatalogItemOrder(
 ) {
   const supabase = await createClient();
   const table = tableType === "inventory" ? "world_inventory_items" : "world_skills";
-  await Promise.all(
+  const results = await Promise.all(
     items.map(({ id, sort_index, category_id }) =>
       supabase.from(table).update({ sort_index, category_id }).eq("id", id),
     ),
   );
+  const failed = results.find((r) => r.error);
+  if (failed?.error) return { ok: false as const, error: echecEnregistrement("batchUpdateCatalogItemOrder", failed.error) };
   return { ok: true as const };
 }
 
@@ -296,7 +326,7 @@ export async function getWorldPersonaTemplate(worldId: string) {
     .eq("world_id", worldId)
     .eq("is_template", true)
     .maybeSingle();
-  if (error) return { ok: false as const, error: error.message };
+  if (error) return { ok: false as const, error: echecEnregistrement("getWorldPersonaTemplate", error) };
   return { ok: true as const, templateId: (data?.id as string | undefined) ?? null };
 }
 
@@ -305,7 +335,7 @@ export async function setWorldPersonaTemplate(worldId: string, enabled: boolean)
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { ok: false as const, error: "Vous devez être connecté." };
+  if (!user) return { ok: false as const, error: ERR_NON_AUTHENTIFIE };
 
   const { data: existing } = await supabase
     .from("personas")
@@ -347,10 +377,10 @@ export async function setWorldAvatarType(
   field: "allows_real_avatars" | "allows_illustrated_avatars",
   enabled: boolean,
 ) {
-  if (!WORLD_AVATAR_TYPE_FIELDS.has(field)) return { ok: false as const, error: "Champ invalide." };
+  if (!WORLD_AVATAR_TYPE_FIELDS.has(field)) return { ok: false as const, error: ERR_VALEUR_NON_SUPPORTEE };
   const supabase = await createClient();
   const { error } = await supabase.from("worlds").update({ [field]: enabled }).eq("id", worldId);
-  if (error) return { ok: false as const, error: error.message };
+  if (error) return { ok: false as const, error: echecEnregistrement("setWorldAvatarType", error) };
   return { ok: true as const };
 }
 
@@ -361,7 +391,7 @@ export async function getWorldTags(worldId: string) {
     .select("id, world_id, tag, created_at")
     .eq("world_id", worldId)
     .order("created_at", { ascending: true });
-  if (error) return { ok: false as const, error: error.message };
+  if (error) return { ok: false as const, error: echecEnregistrement("getWorldTags", error) };
   return { ok: true as const, tags: (data ?? []) as WorldTag[] };
 }
 
@@ -372,9 +402,9 @@ const TAG_FORMAT = /^[\p{L}\p{N}]+$/u;
 
 export async function addWorldTag(worldId: string, rawTag: string) {
   const tag = rawTag.trim().toLowerCase().slice(0, MAX_TAG_LENGTH);
-  if (!tag) return { ok: false as const, error: "Tag vide." };
+  if (!tag) return { ok: false as const, error: ERR_TAG_INVALIDE };
   if (!TAG_FORMAT.test(tag)) {
-    return { ok: false as const, error: "Un tag ne peut contenir que des lettres et des chiffres." };
+    return { ok: false as const, error: ERR_TAG_INVALIDE };
   }
 
   const supabase = await createClient();
@@ -383,7 +413,7 @@ export async function addWorldTag(worldId: string, rawTag: string) {
     .from("world_tags")
     .select("id", { count: "exact", head: true })
     .eq("world_id", worldId);
-  if (countError) return { ok: false as const, error: countError.message };
+  if (countError) return { ok: false as const, error: echecEnregistrement("addWorldTag", countError) };
   if ((count ?? 0) >= MAX_WORLD_TAGS) {
     return { ok: false as const, error: `Maximum ${MAX_WORLD_TAGS} tags par monde.` };
   }
@@ -397,8 +427,8 @@ export async function addWorldTag(worldId: string, rawTag: string) {
     // Déjà présent pour ce monde : idempotent plutôt qu'une erreur — l'appelant
     // récupère simplement le tag existant.
     if (error.code === "23505") return { ok: true as const, tag };
-    if (error.code === "23514") return { ok: false as const, error: "Format de tag invalide." };
-    return { ok: false as const, error: error.message };
+    if (error.code === "23514") return { ok: false as const, error: ERR_VALEUR_NON_SUPPORTEE };
+    return { ok: false as const, error: echecEnregistrement("addWorldTag", error) };
   }
   return { ok: true as const, tag };
 }
@@ -410,7 +440,7 @@ export async function removeWorldTag(worldId: string, tag: string) {
     .delete()
     .eq("world_id", worldId)
     .eq("tag", tag);
-  if (error) return { ok: false as const, error: error.message };
+  if (error) return { ok: false as const, error: echecEnregistrement("removeWorldTag", error) };
   return { ok: true as const };
 }
 
@@ -431,7 +461,7 @@ export async function setWorldTimeline(
       : config;
   }
   const { error } = await supabase.from("worlds").update(updates).eq("id", worldId);
-  if (error) return { ok: false as const, error: error.message };
+  if (error) return { ok: false as const, error: echecEnregistrement("setWorldTimeline", error) };
   return { ok: true as const };
 }
 
@@ -526,7 +556,7 @@ function validateHomeGridItem(
 }
 
 export async function setWorldHomeGrid(worldId: string, items: unknown[]) {
-  if (!Array.isArray(items)) return { ok: false as const, error: "Grille invalide." };
+  if (!Array.isArray(items)) return { ok: false as const, error: ERR_VALEUR_NON_SUPPORTEE };
   if (items.length > MAX_HOME_GRID_ITEMS) {
     return { ok: false as const, error: `Maximum ${MAX_HOME_GRID_ITEMS} blocs.` };
   }
@@ -536,7 +566,7 @@ export async function setWorldHomeGrid(worldId: string, items: unknown[]) {
   const parsed: WorldHomeGridItem[] = [];
   for (const raw of items) {
     const item = validateHomeGridItem(raw, seenIds, seenWidgetIds);
-    if (!item) return { ok: false as const, error: "Un des blocs est invalide." };
+    if (!item) return { ok: false as const, error: ERR_VALEUR_NON_SUPPORTEE };
     parsed.push(item);
   }
   // Chaque bloc est valide pris isolément (bornes, largeur…), mais rien
@@ -548,7 +578,7 @@ export async function setWorldHomeGrid(worldId: string, items: unknown[]) {
   for (const row of toRows(parsed)) {
     for (let i = 1; i < row.length; i++) {
       if (row[i].x < row[i - 1].x + row[i - 1].w) {
-        return { ok: false as const, error: "Deux blocs se chevauchent sur la même ligne." };
+        return { ok: false as const, error: ERR_VALEUR_NON_SUPPORTEE };
       }
     }
   }
@@ -558,6 +588,6 @@ export async function setWorldHomeGrid(worldId: string, items: unknown[]) {
 
   const supabase = await createClient();
   const { error } = await supabase.from("worlds").update({ home_grid: validated }).eq("id", worldId);
-  if (error) return { ok: false as const, error: error.message };
+  if (error) return { ok: false as const, error: echecEnregistrement("setWorldHomeGrid", error) };
   return { ok: true as const, items: validated };
 }

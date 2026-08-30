@@ -26,6 +26,7 @@ import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { toast } from "sonner";
 import type { PersonaSectionWithFields } from "@/types/personas";
 import { SectionFieldsEditor } from "./SectionFieldsEditor";
+import { useTranslations } from "next-intl";
 
 type PersonaSectionsTabsProps = {
   personaId: string;
@@ -49,6 +50,7 @@ export function PersonaSectionsTabs({
   restrictSkills,
   isTemplate,
 }: PersonaSectionsTabsProps) {
+  const t = useTranslations("personas");
   const supabase = createClient();
 
   const [activeSectionId, setActiveSectionId] = useState<string | null>(
@@ -113,9 +115,17 @@ export function PersonaSectionsTabs({
     [next[idx], next[target]] = [next[target], next[idx]];
     const withPos = next.map((s, i) => ({ ...s, position: i * 10 }));
     onSectionsChange(withPos);
-    await Promise.all(
+    // L'ordre était appliqué à l'écran sans que le résultat des écritures ne
+    // soit lu : un refus le laissait affiché jusqu'au rechargement, où il
+    // revenait en arrière sans explication.
+    const results = await Promise.all(
       withPos.map((s) => supabase.from("persona_sections").update({ position: s.position }).eq("id", s.id)),
     );
+    const failed = results.find((r) => r.error);
+    if (failed?.error) {
+      onSectionsChange(sections);
+      toast.error(failed.error.message);
+    }
   }
 
   async function handleDeleteSection() {
@@ -165,7 +175,7 @@ export function PersonaSectionsTabs({
                 {value === section.id && (
                   <DropdownMenu key={`${section.id}-menu`}>
                     <DropdownMenuTrigger asChild>
-                      <Button type="button" variant="ghost" size="icon" className="h-6 w-6 shrink-0">
+                      <Button type="button" variant="ghost" size="icon" className="h-6 w-6 shrink-0" aria-label={t("sectionOptions")}>
                         <MoreHorizontal className="h-3.5 w-3.5" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -182,7 +192,7 @@ export function PersonaSectionsTabs({
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       {activeHasLockedFields ? (
-                        <DropdownMenuItem disabled title="Cette section contient des champs requis par la fiche du monde">
+                        <DropdownMenuItem disabled title={t("sectionRequiredByWorld")}>
                           <Lock className="mr-2 h-4 w-4" /> Requise par le monde
                         </DropdownMenuItem>
                       ) : (
@@ -192,7 +202,7 @@ export function PersonaSectionsTabs({
                               <Trash2 className="mr-2 h-4 w-4" /> Supprimer
                             </DropdownMenuItem>
                           }
-                          description="Cette section et tous ses champs seront supprimés définitivement."
+                          description={t("sectionDeleteDescription")}
                           onConfirm={handleDeleteSection}
                         />
                       )}
@@ -233,7 +243,7 @@ export function PersonaSectionsTabs({
           <form onSubmit={handleAddSection} className="grid gap-4">
             <div className="grid gap-3">
               <DialogTitle asChild>
-                <Label htmlFor="section-name">Nom de la section</Label>
+                <Label htmlFor="section-name">{t("sectionName")}</Label>
               </DialogTitle>
               <Input
                 id="section-name"
@@ -262,13 +272,13 @@ export function PersonaSectionsTabs({
           <form onSubmit={handleRenameSection} className="grid gap-4">
             <div className="grid gap-3">
               <DialogTitle asChild>
-                <Label htmlFor="rename-section">Renommer la section</Label>
+                <Label htmlFor="rename-section">{t("renameSection")}</Label>
               </DialogTitle>
               <Input
                 id="rename-section"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Nom de la section"
+                placeholder={t("sectionName")}
                 autoFocus
                 maxLength={60}
               />

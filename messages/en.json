@@ -3,16 +3,63 @@
     "save": "Save",
     "cancel": "Cancel",
     "delete": "Delete",
+    "remove": "Remove",
+    "add": "Add",
     "confirm": "Confirm",
     "loading": "Loading…",
     "error": "An error occurred",
+    "saveError": "Couldn't save your change",
     "success": "Success",
     "close": "Close",
     "edit": "Edit",
     "create": "Create",
     "search": "Search",
     "back": "Back",
-    "settings": "Settings"
+    "settings": "Settings",
+    "show": "Show",
+    "collapse": "Collapse",
+    "openMenu": "Open menu",
+    "accountMenu": "Account menu",
+    "copyCode": "Copy code",
+    "pickEmoji": "Pick an emoji",
+    "copy": "Copy",
+    "copied": "Copied",
+    "navigation": "Navigation",
+    "worldPreview": "World preview",
+    "offline": "No internet connection",
+    "offlineDescription": "Some features are unavailable.",
+    "connectionRestored": "Connection restored",
+    "sessionExpired": "Session expired",
+    "sessionExpiredDescription": "Reload the page to continue.",
+    "imageSaved": "Image saved.",
+    "changesSaved": "Change saved.",
+    "noData": "No data.",
+    "noContent": "No content.",
+    "uploadImageError": "Couldn't upload the image.",
+    "uploadBannerError": "Couldn't upload the banner.",
+    "editFailed": "Couldn't apply the change.",
+    "clickToPickFile": "click to pick a file",
+    "orPasteUrl": "or paste a URL directly",
+    "preview": "Preview",
+    "icon": "Icon",
+    "notFoundOrForbidden": "Not found, or you don't have access to it.",
+    "personaNameLength": "The name must be between 1 and 40 characters.",
+    "personaQuotaReached": "Limit reached: {count} characters per world on a free account.",
+    "personaNameTaken": "A character with this name already exists in this world.",
+    "forbidden": "You don't have the necessary permissions for this.",
+    "invalidTag": "A tag may only contain letters and digits.",
+    "dropToReplace": "Click or drop to replace",
+    "uploadError": "Upload failed. Please try again in a moment.",
+    "usernameTaken": "This username is already taken.",
+    "chooseColor": "Choose a colour",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "deleteConfirmTitle": "Confirm deletion",
+    "irreversible": "This action cannot be undone.",
+    "scrollableRegion": "Scrollable region",
+    "download": "Download"
   },
   "nav": {
     "profile": "My profile",
@@ -36,7 +83,8 @@
     "online": "Online",
     "offline": "Offline",
     "invisible": "Invisible",
-    "changeStatus": "Change status"
+    "changeStatus": "Change status",
+    "statusSaveFailed": "Couldn't save the status."
   },
   "settings": {
     "title": "Settings",
@@ -116,7 +164,8 @@
         "disconnected": "Patreon account unlinked.",
         "disconnectError": "Could not unlink the Patreon account."
       }
-    }
+    },
+    "languageLabel": "Interface language"
   },
   "pronouns": {
     "he_him": "He/Him",
@@ -129,7 +178,10 @@
   },
   "userProfile": {
     "title": "Player profile",
-    "memberSince": "Member since {date}"
+    "memberSince": "Member since {date}",
+    "avatarUpdated": "Avatar updated.",
+    "usernameUpdated": "Username updated.",
+    "clickToEditAvatar": "Click to change the avatar"
   },
   "notifications": {
     "title": "Notifications",
@@ -188,7 +240,8 @@
       "personaReplyManyNoContent": "<b>{actor}</b> replied <b>{count}</b> times",
       "maritalRequestMarried": "<b>{actor}</b> wants to marry their character to <b>{target}</b>",
       "maritalRequestRelationship": "<b>{actor}</b> wants to put their character in a relationship with <b>{target}</b>"
-    }
+    },
+    "back": "Back"
   },
   "dms": {
     "title": "Direct messages",
@@ -381,7 +434,61 @@
         "bannerButtonUrlPlaceholder": "https://…",
         "bannerButtonClear": "Remove"
       }
-    }
+    },
+    "namePlaceholder": "E.g. World of Veldis",
+    "descriptionPlaceholder": "Short description of the world…",
+    "restrictToCatalogue": "Restrict to the world catalogue",
+    "enableTimeline": "Enable the timeline",
+    "yearLabel": "Year label",
+    "eraSuffix": "Era / suffix",
+    "eraPlaceholder": "of Ashes",
+    "currentYear": "Current year",
+    "calendarMonths": "Calendar months",
+    "daysCount": "Number of days",
+    "monthNamePlaceholder": "Month name…",
+    "addTagPlaceholder": "Add a tag…",
+    "acceptedAvatarTypes": "Accepted avatar type",
+    "enableRestrictionTitle": "Enable the restriction?",
+    "roleChangeFailed": "Couldn't change the role.",
+    "memberRemoveFailed": "Couldn't remove the member.",
+    "inviteCancelFailed": "Couldn't cancel the invitation.",
+    "inviteSent": "Invitation sent",
+    "roleChanged": "Role changed",
+    "addMember": "Add a member",
+    "pickRole": "Pick a role",
+    "newWorld": "New world",
+    "categoryUploadWait": "Wait for the image upload to finish before saving.",
+    "removedFromWorld": "You have been removed from this world.",
+    "defaultSheet": "Default template",
+    "defaultSheetPersonas": "Default persona template",
+    "disableDefaultSheetTitle": "Disable the default template?",
+    "noOtherWorld": "No other world",
+    "noPersonaInWorld": "No persona in this world",
+    "timelineEmpty": "No conversation has been placed on the timeline yet.",
+    "role": "Role",
+    "roleEditor": "Editor",
+    "tabSettings": "Settings",
+    "tabCategories": "Categories",
+    "tabCommunity": "Community",
+    "tabSkills": "Skills",
+    "tabSecurity": "Security",
+    "enableMap": "Enable the map",
+    "enableMapHelp": "Gives access to a world map where locations can be placed. When disabled it leaves the navigation; nothing is deleted.",
+    "enableWiki": "Enable the wiki",
+    "enableWikiHelp": "Gives access to the world's encyclopedia pages. When disabled it leaves the navigation; the pages are kept.",
+    "publicWorldHelp": "A public world is open to every member of the platform",
+    "wikiLabelHelp": "Renames the wiki link in the world sidebar",
+    "nameHelp": "The name shown everywhere in the app",
+    "tagHelp": "Visible on the world map",
+    "iconHelp": "Shown in the sidebar and on the world map",
+    "bannerHelp": "Wide image shown at the top of the world page",
+    "restrictionPurgeInventory": "inventory items",
+    "restrictionPurgeSkills": "skills",
+    "restrictionPurgeDescription": "This will immediately erase all {items} of this world's personas. This cannot be undone.",
+    "restrictionPurgeConfirm": "Enable and purge",
+    "deleteFailed": "Could not delete the world.",
+    "addTag": "Add this tag",
+    "addMonthName": "Add this month name"
   },
   "auth": {
     "signin": "Sign in",
@@ -402,10 +509,25 @@
       "placeholder": "username",
       "helper": "This username will be visible to other members of your worlds. You can change it later from your profile.",
       "invalidError": "The username must be 3 to 32 characters long (letters, numbers, underscore).",
-      "takenError": "This username is already taken.",
       "continue": "Continue",
       "saving": "Saving…"
-    }
+    },
+    "confirmPassword": "Confirm password",
+    "checkInbox": "Check your inbox",
+    "checkInboxDescription": "A confirmation link has been sent to you. Click it to activate your account before signing in.",
+    "errorGeneric": "Sign-in failed. Please try again in a moment.",
+    "errorInvalidCredentials": "Incorrect email address or password.",
+    "errorEmailNotConfirmed": "Confirm your email address before signing in.",
+    "errorUserAlreadyExists": "An account already exists for this email address.",
+    "errorWeakPassword": "This password is too weak. Choose a longer one.",
+    "errorSamePassword": "The new password must differ from the old one.",
+    "errorTooManyRequests": "Too many attempts. Please wait a few minutes.",
+    "errorEmailInvalid": "This email address is not valid.",
+    "errorSignupDisabled": "Sign-ups are temporarily closed.",
+    "errorSessionExpired": "Your session has expired. Please sign in again.",
+    "errorPasswordsDoNotMatch": "The passwords do not match.",
+    "errorUsernameFormat": "The username must be 3 to 32 characters long (letters, digits, underscore).",
+    "errorUsernameTaken": "This username is already taken."
   },
   "explore": {
     "title": "Explore",
@@ -441,29 +563,6 @@
     "statsPersonas": "Personas",
     "statsDialogDescription": "Statistics and information about the world."
   },
-  "home": {
-    "title": "Worlds",
-    "myWorlds": "My worlds",
-    "sharedWithMe": "Shared with me",
-    "empty": "No worlds created yet.",
-    "planUnlimited": "{plan} plan — unlimited worlds",
-    "planUsage": "{owned, plural, one {# / {limit} world used} other {# / {limit} worlds used}}",
-    "quotaReached": "quota reached",
-    "quotaTooltip": "Quota reached — upgrade your plan",
-    "new": "New world",
-    "newQuotaMessage": "Your free quota is reached. Upgrade your plan to create more worlds.",
-    "newNameLabel": "World name",
-    "newNamePlaceholder": "E.g. Avalonia",
-    "newDescLabel": "Description",
-    "newDescPlaceholder": "Optional",
-    "newDialogDescription": "Form to create a new world.",
-    "newCreate": "Create",
-    "newCancel": "Cancel",
-    "sidebarTitle": "My worlds",
-    "sidebarMembers": "Members",
-    "sidebarWiki": "Wiki",
-    "sidebarRelations": "Relations"
-  },
   "personas": {
     "title": "Personas",
     "count": "{count, plural, one {# persona} other {# personas}}",
@@ -498,7 +597,47 @@
       "spouseNone": "None",
       "pendingRequest": "Awaiting confirmation from {name}",
       "cancelRequest": "Cancel"
-    }
+    },
+    "editAvatar": "Edit avatar",
+    "editBanner": "Edit banner",
+    "addImages": "Add images",
+    "deleteImage": "Delete image",
+    "deleteStat": "Delete stat",
+    "bannerTitle": "Character banner",
+    "currentBanner": "Current banner",
+    "noFrameOwned": "You don't own any frame. Buy one from the shop.",
+    "noFrame": "No frame",
+    "saveFailed": "Couldn't save.",
+    "requestFailed": "Couldn't send the request.",
+    "cancelFailed": "Couldn't cancel.",
+    "deleteFailed": "Couldn't delete.",
+    "namePlaceholder": "Character name",
+    "faceclaimHint": "Faceclaim: the actor or character the avatar is based on",
+    "markdownPlaceholder": "Write in markdown…",
+    "gaugeNamePlaceholder": "Gauge name",
+    "eraPlaceholder": "Era…",
+    "eventTitlePlaceholder": "Event title",
+    "noField": "No field yet. Add one to get started.",
+    "fieldRequiredByWorld": "Field required by the world's template",
+    "fieldRequiredLocked": "Field required by the world's template — cannot be removed",
+    "sectionRequiredByWorld": "This tab contains fields required by the world's template",
+    "sectionName": "Tab name",
+    "renameSection": "Rename the tab",
+    "newPersona": "New persona",
+    "namePlaceholderExample": "E.g. Kaori, Lyra, Theo…",
+    "yourPersona": "Your persona",
+    "noSection": "No tab.",
+    "tabCosmetics": "Cosmetics",
+    "tabBuilder": "Builder",
+    "editAction": "Edit",
+    "skillLabel": "skill",
+    "newPersonaHint": "Give your character a name to get started. You can configure everything afterwards.",
+    "bannerDeleteDescription": "This character's banner will be permanently deleted from storage.",
+    "avatarDeleteDescription": "This character's avatar will be permanently deleted from storage.",
+    "sectionDeleteDescription": "This section and all its fields will be permanently deleted.",
+    "fieldDeleteDescription": "This field and all its hosted images will be permanently deleted.",
+    "sectionOptions": "Section options",
+    "deleteField": "Delete the field"
   },
   "quests": {
     "title": "Daily quests",
@@ -533,7 +672,8 @@
     "searchPlaceholder": "Search",
     "buy": "Buy",
     "processing": "Processing…",
-    "owned": "Owned"
+    "owned": "Owned",
+    "purchaseError": "The purchase failed. Please try again in a moment."
   },
   "admin": {
     "title": "Admin dashboard",
@@ -614,7 +754,11 @@
         "worlds": "Worlds",
         "chatrooms": "Chatrooms"
       }
-    }
+    },
+    "editItem": "Edit the item",
+    "shopItemDelete": "Delete this item",
+    "shopItemEdit": "Edit this item",
+    "loadError": "Loading failed. The details are in the server logs."
   },
   "chatrooms": {
     "newRoom": "New room",
@@ -835,7 +979,39 @@
         "ellipsis": "Later…",
         "atmosphere": "Fine weather"
       }
-    }
+    },
+    "worldConversations": "World conversations",
+    "pickRoomFirst": "Pick a room first to upload an image.",
+    "pickRecipient": "Pick at least one recipient for the private note.",
+    "sendFailed": "Couldn't send.",
+    "noOtherParticipant": "No other participant in this room.",
+    "calloutPlaceholder": "Callout text…",
+    "npcExampleName": "Dungeon guard",
+    "messageExample": "How are you?",
+    "roomDeleted": "Room deleted.",
+    "voteFailed": "Couldn't vote.",
+    "mustBeSignedIn": "You must be signed in to react.",
+    "statsLoadFailed": "Couldn't load the statistics.",
+    "editDescription": "Edit the description",
+    "hpExampleName": "e.g. Gornak the Berserker",
+    "npcRoleOptional": "Role (optional)",
+    "npcExampleTitle": "Wyrm of Ashes",
+    "npcRolePlaceholder": "e.g. Dungeon keeper, Merchant…",
+    "deleteMessageFailed": "Couldn't delete the message.",
+    "loadMessageFailed": "Couldn't load the new message.",
+    "messageExampleReply": "Yes, and you?",
+    "messageExampleGreeting": "Hi!",
+    "dialogueSaidHe": "he said.",
+    "npcExampleAttack": "Attack",
+    "npcExampleGuard": "Guard",
+    "messageDeleteDescription": "This message will be permanently deleted.",
+    "bannerDeleteDescription": "The banner will be permanently deleted.",
+    "roomDeleteDescription": "The room and all its messages will be permanently deleted.",
+    "deleteRoomFailed": "Could not delete the room.",
+    "bannerDelete": "Delete the banner",
+    "blockEdit": "Edit the block",
+    "blockDelete": "Delete the block",
+    "blockDeleteDescription": "This element will be permanently deleted."
   },
   "changelog": {
     "title": "Changelog",
@@ -881,7 +1057,10 @@
       "dotted": "Dotted",
       "long": "Long",
       "mixed": "Mixed"
-    }
+    },
+    "changeGroup": "Change the group",
+    "addGroup": "Add this group",
+    "addRelType": "Add this relation type"
   },
   "wiki": {
     "changeIcon": "Change icon",
@@ -989,7 +1168,9 @@
       "solid": "Solid",
       "dashed": "Dashed",
       "dotted": "Dotted"
-    }
+    },
+    "toggleTransparent": "Transparent background",
+    "toggleBorder": "Border"
   },
   "iconPicker": {
     "chooseIcon": "Choose an icon",
@@ -1034,5 +1215,15 @@
     "title": "You're offline",
     "description": "Check your connection and try again.",
     "retry": "Try again"
+  },
+  "errorBoundary": {
+    "title": "Something went wrong",
+    "description": "An error occurred on our side. You can try again — if the problem persists, head back home.",
+    "retry": "Try again",
+    "home": "Back to home",
+    "notFoundCode": "Error 404",
+    "notFoundTitle": "Page not found",
+    "notFoundDescription": "Sorry, the page you are looking for does not exist or is no longer available.",
+    "notFoundHint": "Every world starts with a blank page. The one you were looking for seems to have vanished, but nothing stops you from creating a new one."
   }
 }

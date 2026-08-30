@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/lib/supabase/client";
+import { useTranslations } from "next-intl";
 
 export function CreateWorldDialog({
   disabled,
@@ -29,6 +30,7 @@ export function CreateWorldDialog({
   quotaLimit: number;
   trigger?: React.ReactNode;
 }) {
+  const t = useTranslations("worlds");
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
@@ -61,13 +63,13 @@ export function CreateWorldDialog({
       <DialogTrigger asChild>
         {trigger ?? (
           <Button variant="ghost" size="sm" disabled={disabled} className="w-full justify-start">
-            Nouveau monde
+            {t("newWorld")}
           </Button>
         )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Nouveau monde</DialogTitle>
+          <DialogTitle>{t("newWorld")}</DialogTitle>
         </DialogHeader>
         {plan === "free" && disabled ? (
           <div className="rounded-md bg-muted p-3 text-sm">
@@ -79,7 +81,7 @@ export function CreateWorldDialog({
             onSubmit={(e) => { e.preventDefault(); handleCreate(new FormData(e.currentTarget)); }}
           >
             <div className="grid gap-1.5">
-              <Label htmlFor="cwd-name">Nom du monde</Label>
+              <Label htmlFor="cwd-name">{t("name")}</Label>
               <Input id="cwd-name" name="name" placeholder="Ex. Avalonia" required />
             </div>
             <div className="grid gap-1.5">

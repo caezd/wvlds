@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
+import { ERR_NON_AUTHENTIFIE, echecEnregistrement } from "@/lib/actionErrors";
 
 /**
  * Retire l'utilisateur courant de world_members. La policy RLS
@@ -14,14 +15,14 @@ export async function leaveWorld(worldId: string) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { ok: false as const, error: "Non authentifié" };
+  if (!user) return { ok: false as const, error: ERR_NON_AUTHENTIFIE };
 
   const { error } = await supabase
     .from("world_members")
     .delete()
     .eq("world_id", worldId)
     .eq("user_id", user.id);
-  if (error) return { ok: false as const, error: error.message };
+  if (error) return { ok: false as const, error: echecEnregistrement("leaveWorld", error) };
 
   // Le cookie « dernier monde visité » pointerait sinon sur un monde qu'on
   // vient de quitter → 404 au prochain passage par /w (redirigé vers /).

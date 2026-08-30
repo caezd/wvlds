@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import Image from "next/image";
 import { Globe, GlobeLock } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -33,6 +34,7 @@ export function WorldPreviewDialog({
     fallbackName?: string | null;
     prefetchedData?: Omit<WorldPreview, "color" | "visibility"> | null;
 }) {
+  const tCommon = useTranslations("common");
     const supabase = useMemo(() => createClient(), []);
     const [world, setWorld] = useState<WorldPreview | null>(null);
 
@@ -55,7 +57,7 @@ export function WorldPreviewDialog({
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="p-0 overflow-hidden max-w-sm gap-0 border-border-soft">
-                <DialogTitle className="sr-only">{world?.name ?? "Aperçu du monde"}</DialogTitle>
+                <DialogTitle className="sr-only">{world?.name ?? tCommon("worldPreview")}</DialogTitle>
 
                 {/* Hero */}
                 <div

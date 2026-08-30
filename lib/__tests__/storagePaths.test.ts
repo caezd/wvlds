@@ -1,0 +1,97 @@
+import { describe, it, expect } from "vitest";
+
+import {
+  extensionDepuisLeType,
+  nomDeFichierUnique,
+  nomDeFichierPourType,
+} from "@/lib/storagePaths";
+
+// ──────────────────────────────────────────────────────────────────────────
+// Les sept espaces de stockage sont en lecture publique : un fichier est
+// accessible à qui connaît son URL. Le nom de fichier EST le secret.
+//
+// Six chemins de téléversement le tiraient de `Math.random().toString(36)` —
+// générateur non cryptographique, et longueur variable. Ces contrôles fixent
+// ce qu'on attend d'un nom : imprévisible, de forme constante, et muet sur le
+// fichier d'origine.
+// ──────────────────────────────────────────────────────────────────────────
+
+const FORME_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+describe("nomDeFichierUnique", () => {
+  it("produit un UUID suivi de l'extension", () => {
+    const nom = nomDeFichierUnique("webp");
+    const [base, ext] = [nom.slice(0, -5), nom.slice(-4)];
+    expect(base).toMatch(FORME_UUID);
+    expect(ext).toBe("webp");
+  });
+
+  it("ne répète jamais un nom", () => {
+    const noms = new Set(Array.from({ length: 500 }, () => nomDeFichierUnique("webp")));
+    expect(noms.size).toBe(500);
+  });
+
+  it("garde une longueur CONSTANTE", () => {
+    // C'est le reproche principal fait à `Math.random().toString(36).slice(2)` :
+    // `(0.5).toString(36)` vaut "0.i" et ne laisse qu'un caractère. Un nom court
+    // se devine.
+    const longueurs = new Set(
+      Array.from({ length: 500 }, () => nomDeFichierUnique("webp").length),
+    );
+    expect(longueurs.size).toBe(1);
+  });
+
+  it("assainit l'extension, qui finit dans un chemin", () => {
+    expect(nomDeFichierUnique(".PNG")).toMatch(/\.png$/);
+    expect(nomDeFichierUnique("../../evil")).toMatch(/\.evil$/);
+    expect(nomDeFichierUnique("jp g")).toMatch(/\.jpg$/);
+    // Rien d'exploitable ne subsiste : ni point, ni barre oblique.
+    expect(nomDeFichierUnique("../../x.sh").split("/")).toHaveLength(1);
+    expect(nomDeFichierUnique("a/b").match(/\./g)).toHaveLength(1);
+  });
+
+  it("se rabat sur une extension neutre quand il ne reste rien", () => {
+    expect(nomDeFichierUnique("...")).toMatch(/\.bin$/);
+    expect(nomDeFichierUnique("")).toMatch(/\.bin$/);
+  });
+});
+
+describe("extensionDepuisLeType", () => {
+  it("couvre les types acceptés par les espaces de stockage", () => {
+    // Relevé en base : webp, jpeg, png, gif et svg+xml, tous buckets confondus.
+    expect(extensionDepuisLeType("image/webp")).toBe("webp");
+    expect(extensionDepuisLeType("image/jpeg")).toBe("jpg");
+    expect(extensionDepuisLeType("image/png")).toBe("png");
+    expect(extensionDepuisLeType("image/gif")).toBe("gif");
+    expect(extensionDepuisLeType("image/svg+xml")).toBe("svg");
+  });
+
+  it("ignore les paramètres et la casse du type", () => {
+    expect(extensionDepuisLeType("IMAGE/JPEG")).toBe("jpg");
+    expect(extensionDepuisLeType("image/jpeg; charset=binary")).toBe("jpg");
+    expect(extensionDepuisLeType("  image/png  ")).toBe("png");
+  });
+
+  it("rend le repli pour un type inconnu ou absent", () => {
+    expect(extensionDepuisLeType("application/pdf")).toBe("bin");
+    expect(extensionDepuisLeType(undefined)).toBe("bin");
+    expect(extensionDepuisLeType("")).toBe("bin");
+    expect(extensionDepuisLeType("application/pdf", "png")).toBe("png");
+  });
+});
+
+describe("nomDeFichierPourType", () => {
+  it("déduit l'extension du contenu, pas du nom fourni", () => {
+    // Le cas concret : une image téléversée en `.png` passe par `toWebP`. Le
+    // contenu stocké est du WebP ; l'extension doit suivre le contenu.
+    expect(nomDeFichierPourType("image/webp")).toMatch(/\.webp$/);
+  });
+
+  it("ne laisse rien filtrer du fichier d'origine", () => {
+    // Un chemin de téléversement collait le nom d'origine à la fin. Il finit
+    // dans une URL publique, et un nom de fichier est une donnée personnelle.
+    const nom = nomDeFichierPourType("image/jpeg");
+    expect(nom.toLowerCase()).not.toContain("julie");
+    expect(nom).toMatch(new RegExp(`^${FORME_UUID.source.slice(1, -1)}\\.jpg$`));
+  });
+});

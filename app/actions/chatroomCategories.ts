@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import type { ChatroomCategory } from "@/types/worlds";
+import { echecEnregistrement } from "@/lib/actionErrors";
 
 export async function addChatroomCategory(
   worldId: string,
@@ -16,7 +17,7 @@ export async function addChatroomCategory(
     .order("position", { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (maxErr) return { ok: false as const, error: maxErr.message };
+  if (maxErr) return { ok: false as const, error: echecEnregistrement("addChatroomCategory", maxErr) };
 
   const position = (maxRow?.position ?? -1) + 1;
 
@@ -25,7 +26,7 @@ export async function addChatroomCategory(
     .insert({ world_id: worldId, position, ...data })
     .select()
     .single();
-  if (error) return { ok: false as const, error: error.message };
+  if (error) return { ok: false as const, error: echecEnregistrement("addChatroomCategory", error) };
   return { ok: true as const, category: category as ChatroomCategory };
 }
 
@@ -38,7 +39,7 @@ export async function updateChatroomCategory(
     .from("chatroom_categories")
     .update(data)
     .eq("id", id);
-  if (error) return { ok: false as const, error: error.message };
+  if (error) return { ok: false as const, error: echecEnregistrement("updateChatroomCategory", error) };
   return { ok: true as const };
 }
 
@@ -48,6 +49,23 @@ export async function deleteChatroomCategory(
   iconUrl?: string | null,
 ) {
   const supabase = await createClient();
+
+  // La LIGNE d'abord, les fichiers ensuite.
+  //
+  // L'ordre inverse effaçait les images avant de savoir si la catégorie
+  // partirait vraiment. Une suppression refusée — la RLS réserve
+  // `chatroom_categories` aux éditeurs du monde — laissait alors la catégorie
+  // en place, mais dépouillée de sa bannière et de son icône, sans que rien ne
+  // le signale : à l'écran, une catégorie aux images cassées.
+  //
+  // Dans ce sens-ci, un échec du retrait des fichiers ne laisse que des
+  // fichiers orphelins dans l'espace de stockage — invisibles, et sans effet
+  // sur ce que voit l'utilisateur.
+  const { error } = await supabase
+    .from("chatroom_categories")
+    .delete()
+    .eq("id", id);
+  if (error) return { ok: false as const, error: echecEnregistrement("deleteChatroomCategory", error) };
 
   const paths = [bannerUrl, iconUrl]
     .filter((url): url is string => !!url)
@@ -66,11 +84,6 @@ export async function deleteChatroomCategory(
     .filter((path): path is string => !!path);
   if (paths.length) await supabase.storage.from("chatroom-categories").remove(paths);
 
-  const { error } = await supabase
-    .from("chatroom_categories")
-    .delete()
-    .eq("id", id);
-  if (error) return { ok: false as const, error: error.message };
   return { ok: true as const };
 }
 
@@ -86,7 +99,7 @@ export async function reorderChatroomCategories(
   );
 
   const firstError = results.find((r) => r.error)?.error;
-  if (firstError) return { ok: false as const, error: firstError.message };
+  if (firstError) return { ok: false as const, error: echecEnregistrement("reorderChatroomCategories", firstError) };
 
   return { ok: true as const };
 }

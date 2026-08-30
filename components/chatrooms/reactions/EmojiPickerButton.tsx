@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, type CSSProperties } from "react";
+import { useState } from "react";
+import { useTranslations } from "next-intl";
+import { EMOJI_PICKER_THEME_VARS } from "./emojiPickerTheme";
 import dynamic from "next/dynamic";
 import { Smile } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -12,23 +14,6 @@ const EmojiNativePickerInner = dynamic(
   { ssr: false },
 );
 
-const eprThemeVars = {
-  "--epr-bg-color": "var(--popover)",
-  "--epr-category-label-bg-color": "var(--popover)",
-  "--epr-text-color": "var(--foreground)",
-  "--epr-hover-bg-color": "var(--accent)",
-  "--epr-focus-bg-color": "var(--accent)",
-  "--epr-highlight-color": "var(--primary)",
-  "--epr-picker-border-color": "var(--border)",
-  "--epr-search-border-color": "var(--border)",
-  "--epr-search-input-bg-color": "var(--input)",
-  "--epr-search-input-bg-color-active": "var(--input)",
-  "--epr-search-input-text-color": "var(--foreground)",
-  "--epr-search-input-placeholder-color": "var(--muted-foreground)",
-  "--epr-category-icon-active-color": "var(--primary)",
-  "--epr-active-skin-tone-indicator-border-color": "var(--primary)",
-  "--epr-picker-border-radius": "var(--radius)",
-} as unknown as CSSProperties;
 
 /**
  * Bouton qui ouvre un emoji picker et retourne l'emoji natif Unicode.
@@ -45,6 +30,7 @@ export function EmojiPickerButton({
   className?: string;
   emojiStyle?: "native" | "twitter";
 }) {
+  const tCommon = useTranslations("common");
   const [open, setOpen] = useState(false);
 
   return (
@@ -56,7 +42,7 @@ export function EmojiPickerButton({
             "flex h-9 w-full items-center justify-center rounded-md border border-input bg-transparent text-base shadow-xs transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
             className,
           )}
-          aria-label="Choisir un emoji"
+          aria-label={tCommon("pickEmoji")}
         >
           {value ? (
             emojiStyle === "twitter" ? (
@@ -71,7 +57,7 @@ export function EmojiPickerButton({
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0 border-0 bg-transparent shadow-none z-[200]" align="start">
         <div
-          style={eprThemeVars}
+          style={EMOJI_PICKER_THEME_VARS}
           onWheel={(e) => e.stopPropagation()}
           onTouchMove={(e) => e.stopPropagation()}
         >

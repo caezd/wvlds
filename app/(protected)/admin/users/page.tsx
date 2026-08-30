@@ -8,6 +8,7 @@ import { PlanSelect, PLANS } from "./PlanSelect";
 import { Badge } from "@/components/ui/badge";
 import { Hint } from "@/components/ui/hint";
 import { getPatreonMinCents } from "@/lib/patreon/config";
+import { echecEnregistrement } from "@/lib/actionErrors";
 
 async function toggleAdmin(userId: string, isAdmin: boolean) {
   "use server";
@@ -16,10 +17,14 @@ async function toggleAdmin(userId: string, isAdmin: boolean) {
   // par le service_role, qui contourne la RLS.
   await requireAdmin();
   const admin = createAdminClient();
-  await admin
+  const { error } = await admin
     .from("profiles")
     .update({ is_admin: isAdmin })
     .eq("id", userId);
+  // Accorder ou retirer le rôle admin sans le dire en cas d'échec est
+  // particulièrement trompeur : `revalidatePath` réaffiche l'ancien état et
+  // l'administrateur croit son action passée.
+  if (error) throw new Error(echecEnregistrement("setUserAdmin", error));
   revalidatePath("/admin/users");
 }
 
@@ -32,10 +37,11 @@ async function setUserPlan(userId: string, formData: FormData) {
   // Patreon n'écrase pas ce choix.
   await requireAdmin();
   const admin = createAdminClient();
-  await admin
+  const { error } = await admin
     .from("profiles")
     .update({ plan, patreon_managed: false })
     .eq("id", userId);
+  if (error) throw new Error(echecEnregistrement("setUserPlan", error));
   revalidatePath("/admin/users");
 }
 
@@ -52,7 +58,7 @@ export default async function AdminUsersPage() {
   if (error) {
     return (
       <div className="text-sm text-destructive">
-        Erreur : {error.message}
+        {t("loadError")}
       </div>
     );
   }

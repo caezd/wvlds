@@ -1,6 +1,7 @@
 "use client";
 
 import { Pencil, Trash2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { cn } from "@/lib/utils";
@@ -55,11 +56,13 @@ export function GameBlockEditButton({
   className,
   ...props
 }: React.ComponentProps<typeof Button>) {
+  const t = useTranslations("chatrooms");
   return (
     <Button
       variant="ghost"
       size="icon-sm"
       className={cn("h-6 w-6", className)}
+      aria-label={t("blockEdit")}
       {...props}
     >
       <Pencil className="h-3 w-3" />
@@ -71,7 +74,7 @@ export function GameBlockToolbar({
   mine,
   editDialog,
   onDelete,
-  deleteDescription = "Cet élément sera supprimé définitivement.",
+  deleteDescription,
   className,
 }: {
   mine: boolean;
@@ -82,12 +85,13 @@ export function GameBlockToolbar({
   /** Positionnement de la barre dans le bloc (ex. "shrink-0", "mt-2 justify-center"). */
   className?: string;
 }) {
+  const t = useTranslations("chatrooms");
   if (!mine || (!editDialog && !onDelete)) return null;
 
   return (
     <div
       className={cn(
-        "flex items-center gap-0.5 opacity-0 transition-opacity group-hover/gblock:opacity-100",
+        "flex items-center gap-0.5 opacity-0 transition-opacity group-hover/gblock:opacity-100 focus-within:opacity-100",
         className,
       )}
     >
@@ -99,11 +103,12 @@ export function GameBlockToolbar({
               variant="ghost"
               size="icon-sm"
               className="h-6 w-6 text-destructive hover:text-destructive"
+              aria-label={t("blockDelete")}
             >
               <Trash2 className="h-3 w-3" />
             </Button>
           }
-          description={deleteDescription}
+          description={deleteDescription ?? t("blockDeleteDescription")}
           onConfirm={onDelete}
         />
       )}

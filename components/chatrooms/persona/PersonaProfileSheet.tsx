@@ -1,23 +1,22 @@
 "use client";
 
 import { Fragment, useEffect, useMemo, useState } from "react";
+import { PersonaTimelineView } from "@/components/personas/PersonaTimelineView";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import {
   Drawer,
-  DrawerClose,
-  DrawerContent,
   DrawerHeader,
   DrawerTitle,
   DrawerDescription,
 } from "@/components/ui/drawer";
+import { SideSheetContent } from "@/components/ui/side-sheet";
 import { AvatarWithFrame } from "@/components/avatars/AvatarWithFrame";
 import { Tabs, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { TabBar } from "@/components/ui/tab-bar";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import type { Persona } from "@/types/db";
 import type { PersonaSection, PersonaSectionField, PersonaSectionWithFields, PersonaFieldData, InventoryItem, SkillItem, GaugeItem, TraitItem, TimelineItem, DlItem } from "@/types/personas";
-import { X } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useGlobalPresence } from "@/components/providers/PresenceProvider";
 import { formatLastSeen } from "@/lib/utils";
@@ -30,48 +29,6 @@ import { useTranslations } from "next-intl";
 import { Lock } from "lucide-react";
 
 // -- Timeline collapsible -------------------------------------
-function TimelineView({ items }: { items: TimelineItem[] }) {
-  return (
-    <div>
-      {items.map((item, i) => (
-        <TimelineItemRow key={item.id} item={item} isLast={i === items.length - 1} />
-      ))}
-    </div>
-  );
-}
-
-function TimelineItemRow({ item, isLast }: { item: TimelineItem; isLast: boolean }) {
-  const [expanded, setExpanded] = useState(false);
-  return (
-    <div className="flex gap-3">
-      <div className="flex flex-col items-center">
-        <div className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary/50" />
-        {!isLast && <div className="flex-1 w-px bg-border mt-1" />}
-      </div>
-      <div className="flex-1 pb-3 min-w-0">
-        <div className="flex items-baseline gap-2">
-          {item.date && (
-            <span className="text-[0.65rem] text-muted-foreground shrink-0">{item.date}</span>
-          )}
-          <span className="text-sm font-medium leading-tight">{item.title}</span>
-          {item.description && (
-            <button
-              type="button"
-              onClick={() => setExpanded((v) => !v)}
-              className="ml-auto shrink-0 text-[0.65rem] text-muted-foreground hover:text-foreground transition-colors"
-            >
-              {expanded ? "Réduire" : "Voir"}
-            </button>
-          )}
-        </div>
-        {expanded && item.description && (
-          <p className="mt-1 text-xs text-muted-foreground leading-relaxed">{item.description}</p>
-        )}
-      </div>
-    </div>
-  );
-}
-
 // -- Read-only field renderer ---------------------------------
 type FieldData = PersonaFieldData | null | undefined;
 
@@ -213,7 +170,7 @@ function FieldView({ type, data }: { type: string; data: FieldData }) {
     const items: TimelineItem[] = data?.timelineItems ?? [];
     const visible = items.filter((it) => it.title);
     if (!visible.length) return null;
-    return <TimelineView items={visible} />;
+    return <PersonaTimelineView items={visible} />;
   }
   if (type === "dl") {
     const items: DlItem[] = data?.dlItems ?? [];
@@ -406,15 +363,9 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
 
   return (
     <Drawer open={!!persona} onOpenChange={(o) => !o && onClose()} swipeDirection="right">
-      <DrawerContent className="inset-y-0 right-0 flex flex-col gap-0 border rounded-md bg-background text-foreground shadow-lg p-0 w-[min(calc(100%_-_var(--drawer-inset)*2),_380px)] touch:w-[min(calc(100%_-_var(--drawer-inset)*2),_440px)]">
+      <SideSheetContent closeClassName="z-10" width="persona">
         {persona && (
           <>
-            <DrawerClose
-              aria-label="Fermer"
-              className="absolute right-4 top-4 z-10 rounded-xs text-muted-foreground opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
-            >
-              <X className="size-4" />
-            </DrawerClose>
             <DrawerHeader className="sr-only">
               <DrawerTitle>{persona.name}</DrawerTitle>
               <DrawerDescription>{t("profileSheetDescription")}</DrawerDescription>
@@ -463,7 +414,7 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
                   </div>
                 )}
                 {persona.user_id === selfId && (
-                  <div className="text-xs text-muted-foreground">Votre persona</div>
+                  <div className="text-xs text-muted-foreground">{t("yourPersona")}</div>
                 )}
               </div>
               {onUsePersona && (
@@ -540,7 +491,7 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
             </div>
           </>
         )}
-      </DrawerContent>
+      </SideSheetContent>
     </Drawer>
   );
 }

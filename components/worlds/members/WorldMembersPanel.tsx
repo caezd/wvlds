@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { getLeadingLetter } from "@/lib/textFormatting";
 import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 import { useGlobalPresence } from "@/components/providers/PresenceProvider";
+import { fetchPersonasByMember } from "@/lib/worldMemberPersonas";
 
 const WorldInviteDialog = dynamic(() => import("./WorldInviteDialog").then((m) => m.WorldInviteDialog));
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -160,10 +161,10 @@ function RoleGroup({ role, members }: { role: string; members: Member[] }) {
         >
           <path d="M1 1l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
           {ROLE_LABEL[role] ?? role}
         </span>
-        <span className="text-[11px] text-muted-foreground/40">— {members.length}</span>
+        <span className="text-[11px] text-muted-foreground">— {members.length}</span>
       </summary>
       <div className="pb-1">
         {members.map((m) => (
@@ -228,36 +229,18 @@ export function WorldMembersPanel({
     const allRows = Array.from(memberMap.values());
     const allUserIds = allRows.map((r) => r.user_id);
 
-    const [{ data: profileRows }, { data: chatrooms }] = await Promise.all([
+    // La déduplication (membre, persona) est faite par Postgres — la requête
+    // `chatrooms` puis les 2000 `chat_messages` qu'elle servait à filtrer ne
+    // sont plus nécessaires (cf. lib/worldMemberPersonas.ts, migration 118).
+    const [{ data: profileRows }, personasByUser] = await Promise.all([
       supabase.from("profiles").select("id, username, avatar_url").in("id", allUserIds),
-      supabase.from("chatrooms").select("id").eq("world_id", worldId),
+      fetchPersonasByMember(supabase, worldId),
     ]);
 
     type ProfileRow = { id: string; username: string | null; avatar_url: string | null };
     const profileByUser = new Map<string, ProfileRow>(
       ((profileRows ?? []) as ProfileRow[]).map((p) => [p.id, p]),
     );
-
-    const chatroomIds = ((chatrooms ?? []) as Array<{ id: string }>).map((c) => c.id);
-    const personasByUser = new Map<string, PersonaInfo[]>();
-
-    if (chatroomIds.length > 0) {
-      const { data: msgRows } = await supabase
-        .from("chat_messages")
-        .select("author_id, persona:persona_id(id, name, avatar_url)")
-        .in("chat_id", chatroomIds)
-        .not("persona_id", "is", null)
-        .limit(2000);
-
-      for (const row of msgRows ?? []) {
-        const uid = row.author_id as string | null;
-        const p = row.persona as unknown as PersonaInfo | null;
-        if (!uid || !p?.id) continue;
-        if (!personasByUser.has(uid)) personasByUser.set(uid, []);
-        const list = personasByUser.get(uid)!;
-        if (!list.some((x) => x.id === p.id)) list.push({ id: p.id, name: p.name, avatar_url: p.avatar_url });
-      }
-    }
 
     const result: Member[] = allRows
       .map((row) => {

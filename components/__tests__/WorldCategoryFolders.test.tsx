@@ -238,3 +238,69 @@ describe("WorldCategoryFolders", () => {
     expect(card.className).not.toContain("sm:w-auto");
   });
 });
+
+// ── Amorçage depuis le serveur ───────────────────────────────────────────────
+//
+// `WorldHomeContent` fournit les catégories (getChatroomCategories, mémoïsé et
+// partagé avec WorldSidebar) pour que le bloc s'affiche au premier rendu.
+//
+// Le piège, signalé en revue : distinguer « non fourni » de « fourni, mais
+// vide ». Un monde sans aucune catégorie reçoit `[]` du serveur — le prendre
+// pour une absence relançait deux requêtes au montage, annulant tout l'intérêt
+// de l'amorçage. D'où `undefined` comme seule marque d'absence, préservée d'un
+// bout à l'autre de la chaîne de props.
+
+describe("WorldCategoryFolders — amorçage serveur", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("affiche les catégories initiales sans requête au montage", () => {
+    const m = createSupabaseMock({ results: [] });
+    vi.mocked(createClient).mockReturnValue(m.client as never);
+
+    render(
+      <WorldCategoryFolders
+        worldId="w1"
+        selectedCategoryId={null}
+        onSelectCategory={vi.fn()}
+        initialCategories={categories}
+        initialRooms={chatroomsByCategory}
+      />,
+    );
+
+    expect(screen.getByText("Annonces")).toBeInTheDocument();
+    expect(m.from).not.toHaveBeenCalled();
+  });
+
+  it("ne relance aucune requête quand le serveur renvoie une liste vide", () => {
+    const m = createSupabaseMock({ results: [] });
+    vi.mocked(createClient).mockReturnValue(m.client as never);
+
+    const { container } = render(
+      <WorldCategoryFolders
+        worldId="w1"
+        selectedCategoryId={null}
+        onSelectCategory={vi.fn()}
+        initialCategories={[]}
+        initialRooms={[]}
+      />,
+    );
+
+    // Aucune catégorie → le bloc ne rend rien, et surtout ne va rien chercher.
+    expect(container).toBeEmptyDOMElement();
+    expect(m.from).not.toHaveBeenCalled();
+  });
+
+  it("charge lui-même quand rien ne lui est fourni", async () => {
+    const m = createSupabaseMock({ results: [{ data: categories }, { data: chatroomsByCategory }] });
+    vi.mocked(createClient).mockReturnValue(m.client as never);
+
+    render(
+      <WorldCategoryFolders worldId="w1" selectedCategoryId={null} onSelectCategory={vi.fn()} />,
+    );
+
+    await act(async () => { await Promise.resolve(); });
+    expect(m.from).toHaveBeenCalledWith("chatroom_categories");
+  });
+});

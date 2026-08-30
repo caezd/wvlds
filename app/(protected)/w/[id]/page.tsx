@@ -7,6 +7,13 @@ import { notFound } from "next/navigation";
 import { PageSpinner } from "@/components/ui/page-spinner";
 import WorldHomeContent from "./WorldHomeContent";
 
+/** Titre d'onglet = nom du monde. `getWorldById` est mémoïsé : requête gratuite. */
+export async function generateMetadata({ params }: { params: { id: string } }) {
+  const { id } = await params;
+  const world = await getWorldById(id);
+  return world?.name ? { title: world.name } : {};
+}
+
 export default async function WorldPage({
   params,
   searchParams,

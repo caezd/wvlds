@@ -7,22 +7,24 @@ import type { Session } from "@supabase/supabase-js";
 import NotificationsProvider from "./NotificationsProvider";
 import PresenceProvider from "./PresenceProvider";
 import { CurrentUserProvider, type InitialUser } from "./CurrentUserProvider";
+import { useTranslations } from "next-intl";
 
 const OFFLINE_TOAST_ID = "network-offline";
 
 function NetworkStatusWatcher() {
+  const t = useTranslations("common");
   useEffect(() => {
     function onOffline() {
-      toast.warning("Pas de connexion internet", {
+      toast.warning(t("offline"), {
         id: OFFLINE_TOAST_ID,
-        description: "Certaines fonctionnalités sont indisponibles.",
+        description: t("offlineDescription"),
         duration: Infinity,
       });
     }
 
     function onOnline() {
       toast.dismiss(OFFLINE_TOAST_ID);
-      toast.success("Connexion rétablie");
+      toast.success(t("connectionRestored"));
     }
 
     window.addEventListener("offline", onOffline);
@@ -34,7 +36,7 @@ function NetworkStatusWatcher() {
       window.removeEventListener("offline", onOffline);
       window.removeEventListener("online", onOnline);
     };
-  }, []);
+  }, [t]);
 
   return null;
 }
@@ -42,6 +44,7 @@ function NetworkStatusWatcher() {
 const SESSION_TOAST_ID = "session-expired";
 
 function AuthErrorWatcher() {
+  const t = useTranslations("common");
   const pathname = usePathname();
 
   useEffect(() => {
@@ -54,9 +57,9 @@ function AuthErrorWatcher() {
       }
 
       if (event === "SIGNED_OUT" && !pathname.startsWith("/auth")) {
-        toast.error("Session expirée", {
+        toast.error(t("sessionExpired"), {
           id: SESSION_TOAST_ID,
-          description: "Rechargez la page pour continuer.",
+          description: t("sessionExpiredDescription"),
           duration: Infinity,
           action: {
             label: "Recharger",
@@ -66,7 +69,7 @@ function AuthErrorWatcher() {
       }
     });
     return () => subscription.unsubscribe();
-  }, [pathname]);
+  }, [pathname, t]);
 
   return null;
 }

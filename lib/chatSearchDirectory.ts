@@ -14,19 +14,55 @@ export type SearchAuthorOption =
   | { kind: "profile"; id: string; label: string; avatarUrl: string | null }
   | { kind: "persona"; id: string; label: string; sublabel: string | null; avatarUrl: string | null };
 
+/**
+ * Retire les diacritiques et la casse, pour comparer ce qui est SAISI à ce qui
+ * est affiché.
+ *
+ * Sans cela, taper « de:elodie » ne trouvait pas « Élodie » : le filtre se
+ * contentait de `toLowerCase()`, qui laisse les accents intacts. Sur une
+ * application très majoritairement francophone, c'est la moitié des prénoms qui
+ * échappent à la recherche dès qu'on ne les accentue pas en tapant.
+ */
+export function normaliserPourRecherche(texte: string): string {
+  return texte
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .trim();
+}
+
+/**
+ * Salons du monde, pour l'autocomplétion du filtre `dans:`.
+ *
+ * @param libelleParDefaut nom affiché pour un salon sans titre ; il apparaît
+ *   à l'écran, il doit donc être traduit par l'appelant
+ */
 export async function listWorldChatroomsForSearch(
   supabase: SupabaseClient,
   worldId: string,
+  libelleParDefaut: string,
 ): Promise<SearchChatroomOption[]> {
   const { data } = await supabase
     .from(TABLE.CHATROOMS)
     .select("id, title, name")
-    .eq("world_id", worldId)
-    .order("name", { ascending: true });
-  return (data ?? []).map((r) => ({
-    id: r.id as string,
-    label: ((r.title ?? r.name) as string | null)?.trim() || "Chatroom",
-  }));
+    .eq("world_id", worldId);
+
+  // Le tri se fait ICI, sur le libellé réellement affiché, et non côté base sur
+  // `name`. Les deux colonnes coexistent : `title` est ce que l'utilisateur
+  // nomme, `name` garde le plus souvent sa valeur par défaut. Relevé en base :
+  // les 34 salons portent le même `name`, tous avec un `title` distinct — trier
+  // dessus revenait à ne pas trier du tout, et la liste sortait dans un ordre
+  // arbitraire.
+  //
+  // `localeCompare` plutôt qu'une comparaison d'octets : « Élodie » se range
+  // entre « Elena » et « Emma », pas après « Zoé ». Locale du navigateur, donc
+  // celle de la personne qui lit.
+  return (data ?? [])
+    .map((r) => ({
+      id: r.id as string,
+      label: ((r.title ?? r.name) as string | null)?.trim() || libelleParDefaut,
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: "base", numeric: true }));
 }
 
 export async function listWorldAuthorsForSearch(
@@ -82,9 +118,18 @@ export async function listWorldAuthorsForSearch(
 }
 
 export function matchesAuthorQuery(option: SearchAuthorOption, query: string): boolean {
-  const q = query.trim().toLowerCase();
+  const q = normaliserPourRecherche(query);
   if (!q) return true;
-  if (option.label.toLowerCase().includes(q)) return true;
-  if (option.kind === "persona" && option.sublabel?.toLowerCase().includes(q)) return true;
+  if (normaliserPourRecherche(option.label).includes(q)) return true;
+  if (option.kind === "persona" && option.sublabel && normaliserPourRecherche(option.sublabel).includes(q)) {
+    return true;
+  }
   return false;
+}
+
+/** Même comparaison, pour l'autocomplétion des salons. */
+export function matchesChatroomQuery(option: SearchChatroomOption, query: string): boolean {
+  const q = normaliserPourRecherche(query);
+  if (!q) return true;
+  return normaliserPourRecherche(option.label).includes(q);
 }

@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { setWorldHomeGrid } from "@/app/actions/worldCatalog";
 import { createClient } from "@/lib/supabase/client";
 import { toWebP } from "@/lib/imageUtils";
+import { nomDeFichierUnique } from "@/lib/storagePaths";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import {
   DropdownMenu,
@@ -39,6 +40,7 @@ import {
 import { WorldHomeHtmlBlockEditor } from "./blocks/WorldHomeHtmlBlockEditor";
 import { WorldHomeMarkdownBlockEditor } from "./blocks/WorldHomeMarkdownBlockEditor";
 import { WorldHomeBannerDialog } from "./blocks/WorldHomeBannerBlock";
+import { messageErreurAction } from "@/lib/actionErrors";
 
 /**
  * Destination d'un déplacement en cours. `asNewRow` distingue les deux
@@ -259,7 +261,7 @@ export function WorldHomeGridEditor({
         return null;
       }
       const converted = await toWebP(file);
-      const path = `user-${user.id}/world-${worldId}/home-banner-${Date.now()}-${Math.random().toString(36).slice(2)}.webp`;
+      const path = `user-${user.id}/world-${worldId}/home-banner-${nomDeFichierUnique("webp")}`;
       const { error } = await supabase.storage
         .from("worlds")
         .upload(path, converted, { contentType: "image/webp" });
@@ -270,7 +272,9 @@ export function WorldHomeGridEditor({
       const { data } = supabase.storage.from("worlds").getPublicUrl(path);
       return data.publicUrl;
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : String(err));
+      // Pas `e.message` : texte brut de PostgreSQL, il nomme table et policy.
+      console.error("[WorldHomeGridEditor]", err);
+      toast.error(tCommon("saveError"));
       return null;
     }
   }
@@ -294,7 +298,7 @@ export function WorldHomeGridEditor({
       // Un rollback ne vaut que pour le dernier geste : revenir à `previous`
       // après un geste plus récent ramènerait un état déjà dépassé.
       if (isLatest) onItemsChange(previous);
-      toast.error(res.error);
+      toast.error(messageErreurAction(res.error, tCommon));
       return;
     }
     if (!isLatest) return;

@@ -11,6 +11,7 @@ import {
 import type { PersonaSectionWithFields } from "@/types/personas";
 import type { AvatarConfigV1 } from "./avatar/PersonaAvatarPicker";
 import type { MaritalStatus } from "@/types/db";
+import { useTranslations } from "next-intl";
 
 export type AsidePersona = {
   id: string;
@@ -48,6 +49,7 @@ export function WorldPersonaAsideClient({
   restrictSkills?: boolean;
   faceclaimsEnabled?: boolean;
 }) {
+  const t = useTranslations("personas");
   const cols = getGridCols(asideWidth);
   const sorted = [...personas].sort((a, b) =>
     (a.name ?? "").localeCompare(b.name ?? "", "fr", { sensitivity: "base" }),
@@ -72,7 +74,7 @@ export function WorldPersonaAsideClient({
               trigger={
                 <button
                   type="button"
-                  aria-label="Nouveau persona"
+                  aria-label={t("newPersona")}
                   className="flex h-6 w-6 items-center justify-center rounded-full border border-border-soft text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
                 >
                   <Plus className="h-3.5 w-3.5" />
@@ -80,7 +82,7 @@ export function WorldPersonaAsideClient({
               }
             />
           </TooltipTrigger>
-          <TooltipContent side="right" sideOffset={6}>Nouveau persona</TooltipContent>
+          <TooltipContent side="right" sideOffset={6}>{t("newPersona")}</TooltipContent>
         </Tooltip>
       </div>
 

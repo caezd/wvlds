@@ -2,15 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { X } from "lucide-react";
 import {
   Drawer,
-  DrawerContent,
   DrawerHeader,
   DrawerTitle,
-  DrawerClose,
   DrawerFooter,
 } from "@/components/ui/drawer";
+import { SideSheetContent } from "@/components/ui/side-sheet";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -22,7 +20,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
 import type { SearchAuthorOption, SearchChatroomOption } from "@/lib/chatSearchDirectory";
 import type { AuthorMode, SearchFilters } from "@/lib/chatSearch";
 
@@ -46,7 +43,6 @@ export function SearchFiltersDrawer({
   onApply: (next: SearchFilters) => void;
 }) {
   const t = useTranslations("chatrooms");
-  const tCommon = useTranslations("common");
   const [draft, setDraft] = useState<SearchFilters>(filters);
 
   useEffect(() => {
@@ -101,18 +97,7 @@ export function SearchFiltersDrawer({
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange} swipeDirection="right">
-      <DrawerContent
-        className={cn(
-          "inset-y-0 right-0 flex flex-col gap-0 border rounded-md bg-background text-foreground shadow-lg p-0",
-          "w-[min(calc(100%_-_var(--drawer-inset)*2),_420px)]",
-        )}
-      >
-        <DrawerClose
-          aria-label={tCommon("close")}
-          className="absolute right-4 top-4 rounded-xs text-muted-foreground opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
-        >
-          <X className="size-4" />
-        </DrawerClose>
+      <SideSheetContent width="filters">
         <DrawerHeader className="border-b border-border-soft px-6 py-4">
           <DrawerTitle>{t("search.filtersTitle")}</DrawerTitle>
         </DrawerHeader>
@@ -232,7 +217,7 @@ export function SearchFiltersDrawer({
             {t("search.applyFilters")}
           </Button>
         </DrawerFooter>
-      </DrawerContent>
+      </SideSheetContent>
     </Drawer>
   );
 }

@@ -3,16 +3,63 @@
     "save": "Guardar",
     "cancel": "Cancelar",
     "delete": "Eliminar",
+    "remove": "Quitar",
+    "add": "Añadir",
     "confirm": "Confirmar",
     "loading": "Cargando…",
     "error": "Ha ocurrido un error",
+    "saveError": "No se pudo guardar el cambio",
     "success": "Éxito",
     "close": "Cerrar",
     "edit": "Editar",
     "create": "Crear",
     "search": "Buscar",
     "back": "Volver",
-    "settings": "Ajustes"
+    "settings": "Ajustes",
+    "show": "Ver",
+    "collapse": "Contraer",
+    "openMenu": "Abrir el menú",
+    "accountMenu": "Menú de la cuenta",
+    "copyCode": "Copiar el código",
+    "pickEmoji": "Elegir un emoji",
+    "copy": "Copiar",
+    "copied": "Copiado",
+    "navigation": "Navegación",
+    "worldPreview": "Vista previa del mundo",
+    "offline": "Sin conexión a internet",
+    "offlineDescription": "Algunas funciones no están disponibles.",
+    "connectionRestored": "Conexión restablecida",
+    "sessionExpired": "Sesión caducada",
+    "sessionExpiredDescription": "Recargue la página para continuar.",
+    "imageSaved": "Imagen guardada.",
+    "changesSaved": "Cambio guardado.",
+    "noData": "Sin datos.",
+    "noContent": "Sin contenido.",
+    "uploadImageError": "No se pudo subir la imagen.",
+    "uploadBannerError": "No se pudo subir el estandarte.",
+    "editFailed": "No se pudo modificar.",
+    "clickToPickFile": "haga clic para elegir un archivo",
+    "orPasteUrl": "o pegue una URL directamente",
+    "preview": "Vista previa",
+    "icon": "Icono",
+    "notFoundOrForbidden": "No se encuentra, o no tiene acceso.",
+    "personaNameLength": "El nombre debe tener entre 1 y 40 caracteres.",
+    "personaQuotaReached": "Límite alcanzado: {count} personajes por mundo en una cuenta gratuita.",
+    "personaNameTaken": "Ya existe un personaje con ese nombre en este mundo.",
+    "forbidden": "No tiene los permisos necesarios para esto.",
+    "invalidTag": "Una etiqueta solo puede contener letras y números.",
+    "dropToReplace": "Haga clic o suelte para reemplazar",
+    "uploadError": "No se pudo subir. Inténtelo de nuevo en un momento.",
+    "usernameTaken": "Este nombre de usuario ya está en uso.",
+    "chooseColor": "Elegir un color",
+    "moveUp": "Mover hacia arriba",
+    "moveDown": "Mover hacia abajo",
+    "zoomIn": "Acercar",
+    "zoomOut": "Alejar",
+    "deleteConfirmTitle": "Confirmar la eliminación",
+    "irreversible": "Esta acción es irreversible.",
+    "scrollableRegion": "Zona desplazable",
+    "download": "Descargar"
   },
   "nav": {
     "profile": "Mi perfil",
@@ -36,7 +83,8 @@
     "online": "En línea",
     "offline": "Sin conexión",
     "invisible": "Invisible",
-    "changeStatus": "Cambiar estado"
+    "changeStatus": "Cambiar estado",
+    "statusSaveFailed": "No se pudo guardar el estado."
   },
   "settings": {
     "title": "Configuración",
@@ -116,7 +164,8 @@
         "disconnected": "Cuenta de Patreon desvinculada.",
         "disconnectError": "No se pudo desvincular la cuenta de Patreon."
       }
-    }
+    },
+    "languageLabel": "Idioma de la interfaz"
   },
   "pronouns": {
     "he_him": "Él/Él",
@@ -129,7 +178,10 @@
   },
   "userProfile": {
     "title": "Perfil del jugador",
-    "memberSince": "Miembro desde {date}"
+    "memberSince": "Miembro desde {date}",
+    "avatarUpdated": "Avatar actualizado.",
+    "usernameUpdated": "Nombre de usuario actualizado.",
+    "clickToEditAvatar": "Haga clic para cambiar el avatar"
   },
   "notifications": {
     "title": "Notificaciones",
@@ -188,7 +240,8 @@
       "personaReplyManyNoContent": "<b>{actor}</b> respondió <b>{count}</b> veces",
       "maritalRequestMarried": "<b>{actor}</b> quiere casar a su personaje con <b>{target}</b>",
       "maritalRequestRelationship": "<b>{actor}</b> quiere poner a su personaje en pareja con <b>{target}</b>"
-    }
+    },
+    "back": "Volver"
   },
   "dms": {
     "title": "Mensajes privados",
@@ -381,7 +434,61 @@
         "bannerButtonUrlPlaceholder": "https://…",
         "bannerButtonClear": "Quitar"
       }
-    }
+    },
+    "namePlaceholder": "Ej. Mundo de Veldis",
+    "descriptionPlaceholder": "Breve descripción del mundo…",
+    "restrictToCatalogue": "Restringir al catálogo del mundo",
+    "enableTimeline": "Activar la cronología",
+    "yearLabel": "Etiqueta del año",
+    "eraSuffix": "Era / sufijo",
+    "eraPlaceholder": "de las Cenizas",
+    "currentYear": "Año actual",
+    "calendarMonths": "Meses del calendario",
+    "daysCount": "Número de días",
+    "monthNamePlaceholder": "Nombre del mes…",
+    "addTagPlaceholder": "Añadir una etiqueta…",
+    "acceptedAvatarTypes": "Tipo de avatar admitido",
+    "enableRestrictionTitle": "¿Activar la restricción?",
+    "roleChangeFailed": "No se pudo cambiar el rol.",
+    "memberRemoveFailed": "No se pudo quitar al miembro.",
+    "inviteCancelFailed": "No se pudo cancelar la invitación.",
+    "inviteSent": "Invitación enviada",
+    "roleChanged": "Rol modificado",
+    "addMember": "Añadir un miembro",
+    "pickRole": "Elegir un rol",
+    "newWorld": "Nuevo mundo",
+    "categoryUploadWait": "Espere a que termine la subida de la imagen antes de guardar.",
+    "removedFromWorld": "Se le ha retirado de este mundo.",
+    "defaultSheet": "Ficha por defecto",
+    "defaultSheetPersonas": "Ficha por defecto de los personajes",
+    "disableDefaultSheetTitle": "¿Desactivar la ficha por defecto?",
+    "noOtherWorld": "Ningún otro mundo",
+    "noPersonaInWorld": "Ningún personaje en este mundo",
+    "timelineEmpty": "Ninguna conversación se ha situado aún en la cronología.",
+    "role": "Rol",
+    "roleEditor": "Editor",
+    "tabSettings": "Ajustes",
+    "tabCategories": "Categorías",
+    "tabCommunity": "Comunidad",
+    "tabSkills": "Habilidades",
+    "tabSecurity": "Seguridad",
+    "enableMap": "Activar el mapa",
+    "enableMapHelp": "Da acceso a un mapa del mundo donde situar lugares. Al desactivarlo desaparece de la navegación; no se borra nada.",
+    "enableWiki": "Activar el wiki",
+    "enableWikiHelp": "Da acceso a las páginas de enciclopedia del mundo. Al desactivarlo desaparece de la navegación; las páginas se conservan.",
+    "publicWorldHelp": "Un mundo público es accesible a todos los miembros de la plataforma",
+    "wikiLabelHelp": "Renombra el enlace del wiki en la barra lateral del mundo",
+    "nameHelp": "El nombre que se muestra en toda la aplicación",
+    "tagHelp": "Visible en el mapa del mundo",
+    "iconHelp": "Se muestra en la barra lateral y en el mapa del mundo",
+    "bannerHelp": "Imagen ancha que se muestra en la parte superior de la página del mundo",
+    "restrictionPurgeInventory": "objetos de inventario",
+    "restrictionPurgeSkills": "habilidades",
+    "restrictionPurgeDescription": "Esta acción borrará de inmediato todos los {items} de los personajes de este mundo. Es irreversible.",
+    "restrictionPurgeConfirm": "Activar y purgar",
+    "deleteFailed": "No se pudo eliminar el mundo.",
+    "addTag": "Añadir esta etiqueta",
+    "addMonthName": "Añadir este nombre de mes"
   },
   "auth": {
     "signin": "Iniciar sesión",
@@ -401,10 +508,26 @@
       "placeholder": "usuario",
       "helper": "Este nombre de usuario será visible para los demás miembros de sus mundos. Podrá cambiarlo más tarde desde su perfil.",
       "invalidError": "El nombre de usuario debe tener entre 3 y 32 caracteres (letras, números, guión bajo).",
-      "takenError": "Este nombre de usuario ya está en uso.",
       "continue": "Continuar",
-      "saving": "Guardando…"
-    }
+      "saving": "Guardando…",
+      "dialogDescription": "Elija un nombre de usuario para seguir usando la aplicación."
+    },
+    "confirmPassword": "Confirmar la contraseña",
+    "checkInbox": "Revise su correo",
+    "checkInboxDescription": "Le hemos enviado un enlace de confirmación. Haga clic en él para activar su cuenta antes de iniciar sesión.",
+    "errorGeneric": "No se pudo iniciar sesión. Inténtelo de nuevo en un momento.",
+    "errorInvalidCredentials": "Dirección de correo o contraseña incorrectos.",
+    "errorEmailNotConfirmed": "Confirme su dirección de correo antes de iniciar sesión.",
+    "errorUserAlreadyExists": "Ya existe una cuenta para esta dirección de correo.",
+    "errorWeakPassword": "Esta contraseña es demasiado débil. Elija una más larga.",
+    "errorSamePassword": "La nueva contraseña debe ser distinta de la anterior.",
+    "errorTooManyRequests": "Demasiados intentos. Espere unos minutos.",
+    "errorEmailInvalid": "Esta dirección de correo no es válida.",
+    "errorSignupDisabled": "Los registros están cerrados temporalmente.",
+    "errorSessionExpired": "Su sesión ha expirado. Vuelva a iniciar sesión.",
+    "errorPasswordsDoNotMatch": "Las contraseñas no coinciden.",
+    "errorUsernameFormat": "El nombre de usuario debe tener entre 3 y 32 caracteres (letras, dígitos, guion bajo).",
+    "errorUsernameTaken": "Este nombre de usuario ya está en uso."
   },
   "explore": {
     "title": "Explorar",
@@ -437,29 +560,8 @@
     "latestWorlds": "Últimos mundos creados",
     "statsMessages": "Mensajes",
     "statsMembers": "Miembros",
-    "statsPersonas": "Personajes"
-  },
-  "home": {
-    "title": "Mundos",
-    "myWorlds": "Mis mundos",
-    "sharedWithMe": "Compartidos conmigo",
-    "empty": "Ningún mundo creado por el momento.",
-    "planUnlimited": "Plan {plan} — mundos ilimitados",
-    "planUsage": "{owned, plural, one {# / {limit} mundo usado} other {# / {limit} mundos usados}}",
-    "quotaReached": "cuota alcanzada",
-    "quotaTooltip": "Cuota alcanzada — actualice su plan",
-    "new": "Nuevo mundo",
-    "newQuotaMessage": "Su cuota gratuita está agotada. Actualice su plan para crear más mundos.",
-    "newNameLabel": "Nombre del mundo",
-    "newNamePlaceholder": "Ej. Avalonia",
-    "newDescLabel": "Descripción",
-    "newDescPlaceholder": "Opcional",
-    "newCreate": "Crear",
-    "newCancel": "Cancelar",
-    "sidebarTitle": "Mis mundos",
-    "sidebarMembers": "Miembros",
-    "sidebarWiki": "Wiki",
-    "sidebarRelations": "Relaciones"
+    "statsPersonas": "Personajes",
+    "statsDialogDescription": "Estadísticas e información del mundo."
   },
   "personas": {
     "title": "Personajes",
@@ -494,7 +596,48 @@
       "spouseNone": "Ninguno",
       "pendingRequest": "Esperando confirmación de {name}",
       "cancelRequest": "Cancelar"
-    }
+    },
+    "editAvatar": "Editar el avatar",
+    "editBanner": "Editar el banner",
+    "addImages": "Añadir imágenes",
+    "deleteImage": "Eliminar la imagen",
+    "deleteStat": "Eliminar la estadística",
+    "bannerTitle": "Estandarte del personaje",
+    "currentBanner": "Estandarte actual",
+    "noFrameOwned": "No posee ningún marco. Compre uno en la tienda.",
+    "noFrame": "Sin marco",
+    "saveFailed": "No se pudo guardar.",
+    "requestFailed": "No se pudo enviar la solicitud.",
+    "cancelFailed": "No se pudo cancelar.",
+    "deleteFailed": "No se pudo eliminar.",
+    "namePlaceholder": "Nombre del personaje",
+    "faceclaimHint": "Faceclaim: el actor o personaje en el que se basa el avatar",
+    "markdownPlaceholder": "Escriba en markdown…",
+    "gaugeNamePlaceholder": "Nombre del indicador",
+    "eraPlaceholder": "Época…",
+    "eventTitlePlaceholder": "Título del evento",
+    "noField": "Ningún campo. Añada uno para empezar.",
+    "fieldRequiredByWorld": "Campo requerido por la ficha del mundo",
+    "fieldRequiredLocked": "Campo requerido por la ficha del mundo — no se puede eliminar",
+    "sectionRequiredByWorld": "Esta pestaña contiene campos requeridos por la ficha del mundo",
+    "sectionName": "Nombre de la pestaña",
+    "renameSection": "Renombrar la pestaña",
+    "newPersona": "Nuevo personaje",
+    "namePlaceholderExample": "Ej. Kaori, Lyra, Teo…",
+    "yourPersona": "Su personaje",
+    "noSection": "Ninguna pestaña.",
+    "profileSheetDescription": "Perfil detallado del personaje.",
+    "tabCosmetics": "Cosméticos",
+    "tabBuilder": "Generador",
+    "editAction": "Editar",
+    "skillLabel": "habilidad",
+    "newPersonaHint": "Dé un nombre a su personaje para empezar. Podrá configurarlo todo después.",
+    "bannerDeleteDescription": "El banner de este personaje se eliminará definitivamente del almacenamiento.",
+    "avatarDeleteDescription": "El avatar de este personaje se eliminará definitivamente del almacenamiento.",
+    "sectionDeleteDescription": "Esta sección y todos sus campos se eliminarán definitivamente.",
+    "fieldDeleteDescription": "Este campo y todas sus imágenes alojadas se eliminarán definitivamente.",
+    "sectionOptions": "Opciones de la sección",
+    "deleteField": "Eliminar el campo"
   },
   "quests": {
     "title": "Misiones del día",
@@ -529,7 +672,8 @@
     "searchPlaceholder": "Búsqueda",
     "buy": "Comprar",
     "processing": "Procesando…",
-    "owned": "Poseído"
+    "owned": "Poseído",
+    "purchaseError": "La compra falló. Inténtelo de nuevo en un momento."
   },
   "admin": {
     "title": "Panel de administración",
@@ -610,7 +754,11 @@
         "worlds": "Mundos",
         "chatrooms": "Salas de chat"
       }
-    }
+    },
+    "editItem": "Editar el artículo",
+    "shopItemDelete": "Eliminar este artículo",
+    "shopItemEdit": "Editar este artículo",
+    "loadError": "La carga falló. Los detalles están en los registros del servidor."
   },
   "chatrooms": {
     "newRoom": "Nueva sala",
@@ -831,7 +979,39 @@
         "ellipsis": "Más tarde…",
         "atmosphere": "Buen tiempo"
       }
-    }
+    },
+    "worldConversations": "Conversaciones del mundo",
+    "pickRoomFirst": "Seleccione primero una sala para subir una imagen.",
+    "pickRecipient": "Elija al menos un destinatario para la nota privada.",
+    "sendFailed": "No se pudo enviar.",
+    "noOtherParticipant": "Ningún otro participante en esta sala.",
+    "calloutPlaceholder": "Texto del recuadro…",
+    "npcExampleName": "Guardia de la mazmorra",
+    "messageExample": "¿Qué tal?",
+    "roomDeleted": "Sala eliminada.",
+    "voteFailed": "No se pudo votar.",
+    "mustBeSignedIn": "Debe iniciar sesión para reaccionar.",
+    "statsLoadFailed": "No se pudieron cargar las estadísticas.",
+    "editDescription": "Editar la descripción",
+    "hpExampleName": "ej. Gornak el Berserker",
+    "npcRoleOptional": "Rol (opcional)",
+    "npcExampleTitle": "Wyrm de las Cenizas",
+    "npcRolePlaceholder": "ej. Guardián de la mazmorra, Mercader…",
+    "deleteMessageFailed": "No se pudo eliminar el mensaje.",
+    "loadMessageFailed": "No se pudo cargar el nuevo mensaje.",
+    "messageExampleReply": "Sí, ¿y usted?",
+    "messageExampleGreeting": "¡Hola!",
+    "dialogueSaidHe": "dijo.",
+    "npcExampleAttack": "Ataque",
+    "npcExampleGuard": "Guardia",
+    "messageDeleteDescription": "Este mensaje se eliminará definitivamente.",
+    "bannerDeleteDescription": "El banner se eliminará definitivamente.",
+    "roomDeleteDescription": "La sala y todos sus mensajes se eliminarán definitivamente.",
+    "deleteRoomFailed": "No se pudo eliminar la sala.",
+    "bannerDelete": "Eliminar el banner",
+    "blockEdit": "Editar el bloque",
+    "blockDelete": "Eliminar el bloque",
+    "blockDeleteDescription": "Este elemento se eliminará definitivamente."
   },
   "changelog": {
     "title": "Historial de cambios",
@@ -877,7 +1057,10 @@
       "dotted": "Punteado",
       "long": "Largo",
       "mixed": "Mixto"
-    }
+    },
+    "changeGroup": "Cambiar el grupo",
+    "addGroup": "Añadir este grupo",
+    "addRelType": "Añadir este tipo de relación"
   },
   "wiki": {
     "changeIcon": "Cambiar icono",
@@ -985,7 +1168,9 @@
       "solid": "Lleno",
       "dashed": "Guiones",
       "dotted": "Punteado"
-    }
+    },
+    "toggleTransparent": "Fondo transparente",
+    "toggleBorder": "Borde"
   },
   "iconPicker": {
     "chooseIcon": "Elegir un icono",
@@ -1030,5 +1215,15 @@
     "title": "Está sin conexión",
     "description": "Compruebe su conexión e inténtelo de nuevo.",
     "retry": "Reintentar"
+  },
+  "errorBoundary": {
+    "title": "Se ha producido un error",
+    "description": "Algo ha fallado por nuestra parte. Puede volver a intentarlo — si el problema persiste, vuelva al inicio.",
+    "retry": "Reintentar",
+    "home": "Volver al inicio",
+    "notFoundCode": "Error 404",
+    "notFoundTitle": "Página no encontrada",
+    "notFoundDescription": "Lo sentimos, la página que busca no existe o ya no está disponible.",
+    "notFoundHint": "Todo mundo empieza con una página en blanco. La que buscaba parece haberse desvanecido, pero nada le impide crear una nueva."
   }
 }

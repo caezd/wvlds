@@ -3,29 +3,31 @@ import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import { getFeatureFlags } from "@/lib/featureFlags";
 import ShopGrid from "./ShopGrid";
+import type { ShopItem } from "./ShopGrid";
 import { getTranslations } from "next-intl/server";
 
-type ShopItem = {
-  id: string;
-  key: string;
-  name: string;
-  slot: "avatar_frame" | string;
-  price_coins: number;
-  asset_url: string;
-  preview_url: string | null;
-  active: boolean;
-  owned: boolean;
-  can_afford: boolean;
-  equipped: boolean;
-};
+
+/** Titre d'onglet — sans lui la page héritait du « WVLDS » générique. */
+export async function generateMetadata() {
+  const t = await getTranslations("shop");
+  return { title: t("title") };
+}
 
 export default async function ShopPage() {
-  const t = await getTranslations("shop");
-  const supabase = await createClient();
-  const flags = await getFeatureFlags(supabase);
+  const [t, supabase] = await Promise.all([getTranslations("shop"), createClient()]);
+
+  // Les trois appels suivants ne dépendent que du client Supabase, pas les uns
+  // des autres : ils étaient enchaînés en quatre allers-retours successifs.
+  // Le drapeau est vérifié après coup — charger le catalogue d'une boutique
+  // désactivée coûte une requête, la garder séquentielle en coûtait trois.
+  const [flags, itemsRes, balRes] = await Promise.all([
+    getFeatureFlags(supabase),
+    supabase.rpc("shop_list_items"),
+    supabase.from("gamification_balances").select("coins").single(),
+  ]);
   if (!flags.shop) notFound();
 
-  const { data: items, error: itemsErr } = await supabase.rpc("shop_list_items");
+  const { data: items, error: itemsErr } = itemsRes;
 
   // La boutique nécessite des RPCs et tables non encore provisionnés
   if (itemsErr) {
@@ -42,12 +44,7 @@ export default async function ShopPage() {
     );
   }
 
-  const { data: bal } = await supabase
-    .from("gamification_balances")
-    .select("coins")
-    .single();
-
-  const initialCoins = bal?.coins ?? 0;
+  const initialCoins = balRes.data?.coins ?? 0;
   const initialItems: ShopItem[] = (items ?? []) as ShopItem[];
 
   return (

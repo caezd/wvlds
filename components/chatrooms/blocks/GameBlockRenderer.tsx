@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { TABLE } from "@/lib/constants";
 import { encryptMessage } from "@/lib/crypto";
 import { toWebP } from "@/lib/imageUtils";
+import { nomDeFichierUnique } from "@/lib/storagePaths";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { applyOwnVote } from "@/lib/choiceVotes";
 import type { ChatBlock } from "@/lib/chat-blocks";
@@ -19,6 +20,7 @@ import { HpBlockView } from "./HpBlock";
 import { CalloutBlockView } from "./CalloutBlock";
 import { AnchorBlockView } from "./AnchorBlockView";
 import { ChoiceBlockView } from "./ChoiceBlock";
+import { useTranslations } from "next-intl";
 
 /**
  * Aiguilleur unique des blocs de jeu d'un message. Centralise la plomberie
@@ -48,6 +50,8 @@ export function GameBlockRenderer({
   votes?: ChoiceVoteSummary[];
   onVotesUpdated?: (messageId: number, votes: ChoiceVoteSummary[]) => void;
 }) {
+  const tCommon = useTranslations("common");
+  const tChatrooms = useTranslations("chatrooms");
   const supabase = useMemo(() => createClient(), []);
   const { userId } = useCurrentUser();
   const pendingIconMediaRef = useRef<{ url: string; name: string }[]>([]);
@@ -60,7 +64,7 @@ export function GameBlockRenderer({
       .update({ content: encrypted })
       .eq("id", message.id);
     if (error) {
-      toast.error("Impossible de modifier : " + error.message);
+      toast.error(tCommon("editFailed"), { description: error.message });
       return;
     }
     onUpdated?.(message.id, content, message.metadata ?? null);
@@ -93,7 +97,7 @@ export function GameBlockRenderer({
       .update({ content: encrypted, metadata: newMeta })
       .eq("id", message.id);
     if (error) {
-      toast.error("Impossible de modifier : " + error.message);
+      toast.error(tCommon("editFailed"), { description: error.message });
       return;
     }
     onUpdated?.(message.id, content, newMeta as ChatMessageMeta);
@@ -103,12 +107,12 @@ export function GameBlockRenderer({
   const uploadIconImage = message.chat_id
     ? async (file: File): Promise<string | null> => {
         const converted = await toWebP(file);
-        const path = `${message.chat_id}/${Date.now()}-${Math.random().toString(36).slice(2)}.webp`;
+        const path = `${message.chat_id}/${nomDeFichierUnique("webp")}`;
         const { error } = await supabase.storage
           .from("chat-media")
           .upload(path, converted, { contentType: "image/webp" });
         if (error) {
-          toast.error("Erreur upload image.", { description: error.message });
+          toast.error(tCommon("uploadImageError"), { description: error.message });
           return null;
         }
         const { data } = supabase.storage.from("chat-media").getPublicUrl(path);
@@ -133,7 +137,7 @@ export function GameBlockRenderer({
       { onConflict: "message_id,user_id" },
     );
     if (error) {
-      toast.error("Impossible de voter : " + error.message);
+      toast.error(tChatrooms("voteFailed"), { description: error.message });
       onVotesUpdated?.(message.id, previousVotes);
     }
   };

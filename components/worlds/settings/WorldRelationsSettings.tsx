@@ -27,6 +27,7 @@ function getDashOptions(t: ReturnType<typeof useTranslations<"relations">>): Das
 // Rendu inline (pas de portail) pour éviter que Radix Dialog interprète le
 // pointerdown sur le canvas HSV comme un clic hors du dialog.
 function ColorPickerButton({ color, onChange }: { color: string; onChange: (c: string) => void }) {
+  const tCommon = useTranslations("common");
   const [open, setOpen] = React.useState(false);
   const ref = React.useRef<HTMLDivElement>(null);
 
@@ -46,6 +47,7 @@ function ColorPickerButton({ color, onChange }: { color: string; onChange: (c: s
         onClick={() => setOpen((v) => !v)}
         className="h-8 w-8 shrink-0 rounded-md border border-border shadow-sm transition-shadow hover:ring-2 hover:ring-ring"
         style={{ backgroundColor: color }}
+        aria-label={tCommon("chooseColor")}
       />
       {open && (
         <div className="absolute left-0 top-full z-50 mt-1 w-[220px] rounded-lg border border-border bg-popover p-3 shadow-md">
@@ -207,14 +209,14 @@ export function WorldRelationsSettings({ worldId }: { worldId: string }) {
                   onKeyDown={(e) => { if (e.key === "Enter") void saveEditG(); }}
                   className="h-8 flex-1 text-[12px]" autoFocus />
                 <button onClick={() => void saveEditG()} className="text-xs font-medium text-primary hover:underline">OK</button>
-                <button onClick={() => setEditGId(null)} className="text-muted-foreground hover:text-foreground"><X className="h-3 w-3" /></button>
+                <button onClick={() => setEditGId(null)} className="text-muted-foreground hover:text-foreground" aria-label={tCommon("cancel")}><X className="h-3 w-3" /></button>
               </div>
             ) : (
               <div key={g.id} className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2">
                 <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: g.color }} />
                 <span className="flex-1 text-[13px] font-medium">{g.name}</span>
                 <button onClick={() => startEditG(g)} className="text-[11px] text-muted-foreground hover:text-foreground">{tCommon("edit")}</button>
-                <button onClick={() => void deleteGroup(g.id)} className="text-muted-foreground hover:text-destructive">
+                <button onClick={() => void deleteGroup(g.id)} className="text-muted-foreground hover:text-destructive" aria-label={tCommon("delete")}>
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
               </div>
@@ -226,7 +228,7 @@ export function WorldRelationsSettings({ worldId }: { worldId: string }) {
           <Input value={gName} onChange={(e) => setGName(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") void addGroup(); }}
             placeholder={t("groupNamePlaceholder")} className="h-8 flex-1 text-sm" />
-          <Button size="icon" className="h-8 w-8 shrink-0" onClick={() => void addGroup()}>
+          <Button size="icon" className="h-8 w-8 shrink-0" onClick={() => void addGroup()} aria-label={t("addGroup")}>
             <Plus className="h-3.5 w-3.5" />
           </Button>
         </div>
@@ -252,7 +254,7 @@ export function WorldRelationsSettings({ worldId }: { worldId: string }) {
                   ))}
                 </select>
                 <button onClick={() => void saveEditRt()} className="text-xs font-medium text-primary hover:underline">OK</button>
-                <button onClick={() => setEditRtId(null)} className="text-muted-foreground hover:text-foreground"><X className="h-3 w-3" /></button>
+                <button onClick={() => setEditRtId(null)} className="text-muted-foreground hover:text-foreground" aria-label={tCommon("cancel")}><X className="h-3 w-3" /></button>
               </div>
             ) : (
               <div key={rt.id} className="flex items-center gap-2.5 rounded-lg border border-border bg-card px-3 py-2">
@@ -261,7 +263,7 @@ export function WorldRelationsSettings({ worldId }: { worldId: string }) {
                 </svg>
                 <span className="flex-1 text-[13px] font-medium">{rt.name}</span>
                 <button onClick={() => startEditRt(rt)} className="text-[11px] text-muted-foreground hover:text-foreground">{tCommon("edit")}</button>
-                <button onClick={() => void deleteRelType(rt.id)} className="text-muted-foreground hover:text-destructive">
+                <button onClick={() => void deleteRelType(rt.id)} className="text-muted-foreground hover:text-destructive" aria-label={tCommon("delete")}>
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
               </div>
@@ -279,7 +281,7 @@ export function WorldRelationsSettings({ worldId }: { worldId: string }) {
               <option key={o.value} value={o.value}>{o.label}</option>
             ))}
           </select>
-          <Button size="icon" className="h-8 w-8 shrink-0" onClick={() => void addRelType()}>
+          <Button size="icon" className="h-8 w-8 shrink-0" onClick={() => void addRelType()} aria-label={t("addRelType")}>
             <Plus className="h-3.5 w-3.5" />
           </Button>
         </div>

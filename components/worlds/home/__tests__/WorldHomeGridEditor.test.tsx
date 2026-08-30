@@ -651,7 +651,7 @@ describe("WorldHomeGridEditor", () => {
   });
 
   it("annule le changement optimiste et affiche une erreur si la persistance échoue", async () => {
-    setWorldHomeGridMock.mockResolvedValue({ ok: false, error: "nope" });
+    setWorldHomeGridMock.mockResolvedValue({ ok: false, error: "saveFailed" });
     const user = userEvent.setup();
     render(<Harness initial={[CHATROOMS_ITEM]} />);
 
@@ -659,7 +659,9 @@ describe("WorldHomeGridEditor", () => {
     await user.click(screen.getByRole("menuitem", { name: "Catégories" }));
 
     await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith("nope");
+      // Le code renvoyé par l'action est traduit avant affichage : « nope »
+    // n'est pas un code connu, il retombe donc sur le message générique.
+    expect(toast.error).toHaveBeenCalledWith("L'enregistrement a échoué");
     });
     // Le widget ajouté de façon optimiste disparaît après le rollback.
     await waitFor(() => {

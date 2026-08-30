@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useMemo, useState } from "react";
 
 type Ctx = {
   mobileSidebar: React.ReactNode;
@@ -34,15 +34,23 @@ export function MobileSidebarProvider({ children }: { children: React.ReactNode 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [hideMobileHeader, setHideMobileHeader] = useState(false);
   const [activeWorldId, setActiveWorldId] = useState<string | null>(null);
+
+  // Sans `useMemo`, l'objet est recréé à chaque rendu du provider : tout rendu
+  // du parent invalidait le contexte et réveillait ses consommateurs, même
+  // quand aucune de ces quatre valeurs n'avait bougé. Les setters de `useState`
+  // sont déjà stables, seuls les états comptent en dépendances.
+  const value = useMemo<Ctx>(
+    () => ({
+      mobileSidebar, setMobileSidebar,
+      drawerOpen, setDrawerOpen,
+      hideMobileHeader, setHideMobileHeader,
+      activeWorldId, setActiveWorldId,
+    }),
+    [mobileSidebar, drawerOpen, hideMobileHeader, activeWorldId],
+  );
+
   return (
-    <MobileSidebarContext.Provider
-      value={{
-        mobileSidebar, setMobileSidebar,
-        drawerOpen, setDrawerOpen,
-        hideMobileHeader, setHideMobileHeader,
-        activeWorldId, setActiveWorldId,
-      }}
-    >
+    <MobileSidebarContext.Provider value={value}>
       {children}
     </MobileSidebarContext.Provider>
   );

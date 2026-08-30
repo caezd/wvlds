@@ -6,18 +6,18 @@ import { createClient } from "@/lib/supabase/client";
 import { toWebP } from "@/lib/imageUtils";
 import {
   Drawer,
-  DrawerClose,
-  DrawerContent,
   DrawerFooter,
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
+import { SideSheetContent } from "@/components/ui/side-sheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { KeyRound, Loader2, X } from "lucide-react";
+import { KeyRound, Loader2 } from "lucide-react";
 import { ImagePickerCropField } from "@/components/ui/image-crop-picker";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 
 export function UserProfileSheet({
   open,
@@ -34,6 +34,8 @@ export function UserProfileSheet({
   initialAvatarUrl: string | null;
   email: string;
 }) {
+  const t = useTranslations("userProfile");
+  const tCommon = useTranslations("common");
   const supabase = createClient();
   const router = useRouter();
 
@@ -65,7 +67,7 @@ export function UserProfileSheet({
         : error.message;
       toast.error(msg);
     } else {
-      toast.success("Pseudo mis à jour.");
+      toast.success(t("usernameUpdated"));
       router.refresh();
     }
   }
@@ -89,28 +91,24 @@ export function UserProfileSheet({
           .eq("id", userId);
         if (dbErr) throw dbErr;
         setAvatarUrl(displayUrl);
-        toast.success("Avatar mis à jour.");
+        toast.success(t("avatarUpdated"));
         router.refresh();
       } catch (e: unknown) {
-        toast.error(e instanceof Error ? e.message : "Erreur lors de l'upload.");
+        // Pas `e.message` : texte brut de PostgreSQL, il nomme table et policy.
+        console.error("[UserProfileSheet] envoi d'avatar", e);
+        toast.error(tCommon("uploadError"));
       } finally {
         setUploadingAvatar(false);
       }
     },
-    [userId, supabase, router],
+    [userId, supabase, router, t, tCommon],
   );
 
   const usernameChanged = username.trim() !== (initialUsername ?? "");
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange} swipeDirection="right">
-      <DrawerContent className="inset-y-0 right-0 flex flex-col gap-0 border rounded-md bg-background text-foreground shadow-lg p-0 w-[min(calc(100%_-_var(--drawer-inset)*2),_448px)]">
-        <DrawerClose
-          aria-label="Fermer"
-          className="absolute right-4 top-4 rounded-xs text-muted-foreground opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
-        >
-          <X className="size-4" />
-        </DrawerClose>
+      <SideSheetContent width="profile">
         <DrawerHeader className="px-6 py-5 border-b border-border-soft shrink-0">
           <DrawerTitle>Mon profil</DrawerTitle>
         </DrawerHeader>
@@ -139,7 +137,7 @@ export function UserProfileSheet({
                   </div>
                 )}
                 {avatarUrl && (
-                  <p className="text-xs text-muted-foreground">Cliquez pour modifier l&apos;avatar</p>
+                  <p className="text-xs text-muted-foreground">{t("clickToEditAvatar")}</p>
                 )}
               </div>
 
@@ -179,7 +177,7 @@ export function UserProfileSheet({
             Changer le mot de passe
           </Button>
         </DrawerFooter>
-      </DrawerContent>
+      </SideSheetContent>
     </Drawer>
   );
 }

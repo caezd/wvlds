@@ -4,7 +4,10 @@ import { canEditContent, canMemberPost } from "@/lib/worldPermissions";
 import { WorldHome } from "@/components/worlds/home/WorldHome";
 import type { AsidePersona } from "@/components/personas/WorldPersonaAsideClient";
 import { fetchSectionsByPersona } from "@/lib/personaSections";
-import type { WorldWithMembership } from "@/lib/currentRequest";
+import { getChatroomCategories, getChatroomsNav, getIsWorldAdmin, type WorldWithMembership } from "@/lib/currentRequest";
+import { resolveWorldHomeGrid, widgetOptionValue } from "@/components/worlds/home/worldHomeGrid";
+import type { RecentPersona } from "@/components/worlds/home/widgets/WorldRecentPersonasWidget";
+import type { WikiPage } from "@/components/worlds/home/widgets/WorldWikiShortcutsWidget";
 
 type NavRoom = {
   id: string;
@@ -43,12 +46,12 @@ export default async function WorldHomeContent({
   // Ces quatre chargements (nav, droits admin, préférences UI, personas) sont
   // indépendants les uns des autres → on les exécute en parallèle plutôt que
   // d'enchaîner quatre allers-retours réseau séquentiels.
-  const [initialRooms, canAdmin, worldPrefs, initialPersonas] = await Promise.all([
+  // `getChatroomsNav` et `getIsWorldAdmin` sont mémoïsés pour la requête et
+  // partagés avec `WorldSidebar`, monté par le layout : chacun ne part qu'une
+  // fois, quel que soit le nombre de composants qui le réclame.
+  const [initialRooms, canAdmin, worldPrefs, initialPersonas, initialCategories, widgetData] = await Promise.all([
     (async (): Promise<NavRoom[]> => {
-      const { data: navRooms } = await supabase.rpc("list_chatrooms_nav", {
-        p_world_id: worldId,
-      });
-      const rooms = (navRooms as NavRoom[] | null) ?? [];
+      const rooms = (await getChatroomsNav(worldId)) as NavRoom[];
       if (!world?.timeline_enabled || rooms.length === 0) return rooms;
       const roomIds = rooms.map((r) => r.id);
       const { data: timelineDates } = await supabase
@@ -59,13 +62,7 @@ export default async function WorldHomeContent({
       const dateMap = new Map(timelineDates.map((r) => [r.id, r.timeline_date as NavRoom["timeline_date"]]));
       return rooms.map((r) => ({ ...r, timeline_date: dateMap.get(r.id) ?? null }));
     })(),
-    (async (): Promise<boolean> => {
-      const { data } = await supabase.rpc("is_world_admin", {
-        wid: world.id,
-        uid: userId ?? null,
-      });
-      return !!data;
-    })(),
+    getIsWorldAdmin(world.id, userId ?? null),
     (async (): Promise<{
       main_expanded: boolean;
       is_favorite: boolean;
@@ -85,7 +82,12 @@ export default async function WorldHomeContent({
       } | null;
     })(),
     (async (): Promise<AsidePersona[]> => {
-      if (!userId) return [];
+      // Consommées uniquement par l'onglet « Personas » (cf. WorldHome).
+      // Sans ce garde, les trois requêtes ci-dessous (personas, puis sections,
+      // puis champs) partaient aussi pour l'accueil, le wiki, la carte, les
+      // membres… et leur résultat était jeté. Les `data` jsonb des champs
+      // peuvent être volumineux.
+      if (!userId || view !== "personas") return [];
       const { data: personaRows } = await supabase
         .from("personas")
         .select(
@@ -108,6 +110,46 @@ export default async function WorldHomeContent({
         sections: sectionsByPersona.get(p.id) ?? [],
       }));
     })(),
+    // Mémoïsé et partagé avec `WorldSidebar` : elles étaient chargées côté
+    // serveur pour la barre latérale, puis **à nouveau côté client** par le bloc
+    // « Catégories » de l'accueil, qui repartait d'un état vide.
+    getChatroomCategories(worldId),
+    // Données des widgets présents dans la grille — même motif : ils partaient
+    // d'un état vide et chargeaient au montage, donc s'affichaient vides le
+    // temps d'un aller-retour. On ne charge QUE les blocs réellement placés
+    // dans la grille de ce monde, avec la limite configurée sur le bloc.
+    (async (): Promise<{ recentPersonas?: RecentPersona[]; wikiPages?: WikiPage[] }> => {
+      const items = resolveWorldHomeGrid(world.home_grid, world.home_layout, world.announcement_html);
+      const personasItem = items.find((i) => i.widgetId === "personas_recent");
+      const wikiItem = items.find((i) => i.widgetId === "wiki_shortcuts");
+      if (!personasItem && !wikiItem) return {};
+
+      const [personas, pages] = await Promise.all([
+        personasItem
+          ? supabase
+            .from("personas")
+            .select("id, user_id, name, avatar_url, faceclaim, frame:avatar_frame_id(asset_url)")
+            .eq("world_id", worldId)
+            .eq("is_template", false)
+            .order("created_at", { ascending: false })
+            .limit(widgetOptionValue("personas_recent", "limit", personasItem.options))
+          : Promise.resolve({ data: null }),
+        wikiItem
+          ? supabase
+            .from("world_wiki_pages")
+            .select("id, title, slug, icon, updated_at")
+            .eq("world_id", worldId)
+            .eq("is_folder", false)
+            .order("updated_at", { ascending: false })
+            .limit(widgetOptionValue("wiki_shortcuts", "limit", wikiItem.options))
+          : Promise.resolve({ data: null }),
+      ]);
+
+      return {
+        ...(personasItem ? { recentPersonas: (personas.data ?? []) as unknown as RecentPersona[] } : {}),
+        ...(wikiItem ? { wikiPages: (pages.data ?? []) as unknown as WikiPage[] } : {}),
+      };
+    })(),
   ]);
 
   return (
@@ -120,6 +162,8 @@ export default async function WorldHomeContent({
       canEditTabs={canEditTabs}
       canPost={canPost}
       initialRooms={initialRooms}
+      initialCategories={initialCategories}
+      initialWidgetData={widgetData}
       initialPersonas={initialPersonas}
       initialPrefs={worldPrefs}
       view={view}

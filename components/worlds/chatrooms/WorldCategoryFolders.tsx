@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
+import { useResetOnKeyChange } from "@/hooks/useResetOnKeyChange";
 import { supabaseThumb } from "@/lib/storage";
 import { cn } from "@/lib/utils";
 
@@ -17,22 +18,57 @@ type Category = {
   position: number;
 };
 
+/** Compte les salons par catégorie. */
+function countByCategory(rooms: { category_id?: string | null }[]): Map<string, number> {
+  const next = new Map<string, number>();
+  for (const room of rooms) {
+    if (!room.category_id) continue;
+    next.set(room.category_id, (next.get(room.category_id) ?? 0) + 1);
+  }
+  return next;
+}
+
 export function WorldCategoryFolders({
   worldId,
   selectedCategoryId,
   onSelectCategory,
   fullWidth = false,
+  initialCategories,
+  initialRooms = [],
 }: {
   worldId: string;
   selectedCategoryId: string | null;
   onSelectCategory: (categoryId: string | null) => void;
   /** Le bloc occupe seul toute la largeur de sa ligne (ex: `item.w === HOME_GRID_COLS`) — étagère horizontale de cartes même en desktop, comme sur mobile (cf. WorldHomeGridView.tsx). */
   fullWidth?: boolean;
+  /** Catégories déjà chargées côté serveur (getChatroomCategories, mémoïsé et
+   *  partagé avec WorldSidebar). Sans elles, le bloc démarrait vide — donc
+   *  invisible (`categories.length === 0` rend `null`) — jusqu'au retour de son
+   *  propre fetch client.
+   *
+   *  `undefined` = non fourni, le bloc charge alors lui-même. Un tableau vide
+   *  est une réponse à part entière (« ce monde n'a aucune catégorie ») et ne
+   *  doit surtout pas déclencher de requête de repli. */
+  initialCategories?: Category[];
+  /** Salons déjà chargés côté serveur : les compteurs en sont dérivés
+   *  directement, au lieu d'un `select category_id from chatrooms` complet. */
+  initialRooms?: { category_id?: string | null }[];
 }) {
   const t = useTranslations("worlds");
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [counts, setCounts] = useState<Map<string, number>>(new Map());
+  const [categories, setCategories] = useState<Category[]>(initialCategories ?? []);
+  const [counts, setCounts] = useState<Map<string, number>>(() => countByCategory(initialRooms));
+
+  // Passer d'un monde à l'autre ne remonte pas ce composant : sans ce
+  // resemis, la liste affichée reste celle du monde quitté, les props du
+  // nouveau monde étant purement ignorés. Cf. useResetOnKeyChange.
+  useResetOnKeyChange(worldId, () => {
+    setCategories(initialCategories ?? []);
+    setCounts(countByCategory(initialRooms));
+  });
+
+
   const reconnectEpoch = useReconnectEpoch();
+  const hasServerCategories = initialCategories !== undefined;
 
   useEffect(() => {
     const supabase = createClient();
@@ -47,15 +83,12 @@ export function WorldCategoryFolders({
         supabase.from("chatrooms").select("category_id").eq("world_id", worldId),
       ]);
       setCategories((cats as Category[] | null) ?? []);
-      const next = new Map<string, number>();
-      for (const room of (rooms as { category_id: string | null }[] | null) ?? []) {
-        if (!room.category_id) continue;
-        next.set(room.category_id, (next.get(room.category_id) ?? 0) + 1);
-      }
-      setCounts(next);
+      setCounts(countByCategory((rooms as { category_id: string | null }[] | null) ?? []));
     };
 
-    void load();
+    // Pas de chargement au montage quand le serveur a déjà fourni les données :
+    // `load` ne sert plus qu'à rafraîchir sur événement Realtime.
+    if (!hasServerCategories) void load();
 
     const channel = supabase
       .channel(`world_category_folders:${worldId}`)
@@ -74,7 +107,7 @@ export function WorldCategoryFolders({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [worldId, reconnectEpoch]);
+  }, [worldId, reconnectEpoch, hasServerCategories]);
 
   if (categories.length === 0) return null;
 

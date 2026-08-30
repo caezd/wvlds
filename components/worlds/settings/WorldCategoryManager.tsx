@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { toWebP } from "@/lib/imageUtils";
@@ -33,6 +34,7 @@ import {
   reorderChatroomCategories,
 } from "@/app/actions/chatroomCategories";
 import type { ChatroomCategory } from "@/types/worlds";
+import { ERR_NON_AUTHENTIFIE, messageErreurAction } from "@/lib/actionErrors";
 
 async function uploadCategoryImage(
   supabase: ReturnType<typeof createClient>,
@@ -42,7 +44,7 @@ async function uploadCategoryImage(
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) throw new Error("Non connecté.");
+  if (!user) throw new Error(ERR_NON_AUTHENTIFIE);
   if (file.size > 5 * 1024 * 1024) throw new Error("Fichier trop volumineux (max 5 Mo).");
 
   const converted = await toWebP(file);
@@ -67,6 +69,9 @@ function CategoryForm({
   onCancel: () => void;
   onSaved: (category: ChatroomCategory) => void;
 }) {
+  const tCatalogue = useTranslations("catalogue");
+  const t = useTranslations("worlds");
+  const tCommon = useTranslations("common");
   const supabase = React.useMemo(() => createClient(), []);
   const [title, setTitle] = React.useState(initial?.title ?? "");
   const [description, setDescription] = React.useState(initial?.description ?? "");
@@ -86,7 +91,14 @@ function CategoryForm({
       );
       setImageUrl(url ?? "");
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Téléversement impossible.");
+      // Ne JAMAIS afficher `e.message` : un `throw error` Postgrest y met le
+      // message brut de PostgreSQL, qui cite la table et la policy.
+      console.error("[WorldCategoryManager] envoi d'image", e);
+      toast.error(
+          e instanceof Error && e.message === ERR_NON_AUTHENTIFIE
+              ? tCommon("sessionExpired")
+              : tCommon("uploadError"),
+      );
     } finally {
       setUploadingImage(false);
     }
@@ -99,7 +111,7 @@ function CategoryForm({
     // Un upload d'image en cours n'a pas encore mis à jour imageUrl —
     // enregistrer maintenant sauvegarderait silencieusement l'ancienne image.
     if (uploadingImage) {
-      toast.error("Attends la fin du téléversement de l'image avant d'enregistrer.");
+      toast.error(t("categoryUploadWait"));
       return;
     }
     setSaving(true);
@@ -113,7 +125,7 @@ function CategoryForm({
       const res = await updateChatroomCategory(initial.id, data);
       setSaving(false);
       if (!res.ok) {
-        toast.error(res.error);
+        toast.error(messageErreurAction(res.error, tCommon));
         return;
       }
       onSaved({ ...initial, ...data });
@@ -121,7 +133,7 @@ function CategoryForm({
       const res = await addChatroomCategory(worldId, data);
       setSaving(false);
       if (!res.ok) {
-        toast.error(res.error);
+        toast.error(messageErreurAction(res.error, tCommon));
         return;
       }
       onSaved(res.category);
@@ -139,7 +151,7 @@ function CategoryForm({
           uploading={uploadingImage}
           previewSrc={imageUrl || null}
           previewClassName="aspect-[4/3] w-full rounded-lg"
-          changeLabel="Cliquer ou déposer pour remplacer"
+          changeLabel={tCommon("dropToReplace")}
           onConfirm={handleImageConfirm}
         />
         {imageUrl && (
@@ -157,7 +169,7 @@ function CategoryForm({
         autoFocus
         value={title}
         onChange={(e) => setTitle(e.target.value)}
-        placeholder="Nom de la catégorie"
+        placeholder={tCatalogue("categoryNamePlaceholder")}
         maxLength={60}
       />
       <Textarea
@@ -197,6 +209,7 @@ function CategoryRow({
   onSaved: (category: ChatroomCategory) => void;
   onDelete: () => void;
 }) {
+  const tCommon = useTranslations("common");
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: category.id,
     disabled: !canEdit,
@@ -254,6 +267,7 @@ function CategoryRow({
         // au tap (même correctif que WorldHomeGridEditor.tsx).
         <div className="flex shrink-0 items-center gap-1">
           <button
+            aria-label={tCommon("edit")}
             type="button"
             onClick={onEdit}
             className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
@@ -265,6 +279,7 @@ function CategoryRow({
             onConfirm={onDelete}
             trigger={
               <button
+                aria-label={tCommon("delete")}
                 type="button"
                 className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
               >
@@ -287,6 +302,7 @@ export function WorldCategoryManager({
 }) {
   const supabase = React.useMemo(() => createClient(), []);
   const router = useRouter();
+  const tCommon = useTranslations("common");
   const [categories, setCategories] = React.useState<ChatroomCategory[] | null>(null);
   const [creating, setCreating] = React.useState(false);
   const [editingId, setEditingId] = React.useState<string | null>(null);
@@ -323,7 +339,7 @@ export function WorldCategoryManager({
   async function handleDelete(category: ChatroomCategory) {
     const res = await deleteChatroomCategory(category.id, category.banner_url, category.icon_url);
     if (!res.ok) {
-      toast.error(res.error);
+      toast.error(messageErreurAction(res.error, tCommon));
       return;
     }
     setCategories((prev) => prev?.filter((c) => c.id !== category.id) ?? null);
@@ -343,7 +359,7 @@ export function WorldCategoryManager({
     void (async () => {
       const res = await reorderChatroomCategories(reordered.map((c) => ({ id: c.id, position: c.position })));
       if (!res.ok) {
-        toast.error(res.error);
+        toast.error(messageErreurAction(res.error, tCommon));
         setCategories(previous);
         return;
       }

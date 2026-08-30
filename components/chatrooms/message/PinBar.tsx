@@ -66,7 +66,7 @@ export function PinCard({
           )}
         </div>
       </div>
-      <div className="text-[10px] text-muted-foreground/60 pl-8">
+      <div className="text-[10px] text-muted-foreground pl-8">
         <DateDisplay value={date} />
       </div>
     </div>
@@ -117,6 +117,10 @@ export function PinBar({
         className={cn(
           "pointer-events-auto absolute right-7 flex flex-col gap-2 w-56 max-h-[70vh] transition-all duration-200",
           hovered ? "opacity-100 translate-x-0" : "opacity-0 translate-x-2 pointer-events-none",
+          // Le panneau ne se révèle qu'au survol, mais ses boutons restent
+          // atteignables au Tab : sans ceci, on y entrait au clavier dans un
+          // panneau invisible et inerte.
+          "focus-within:pointer-events-auto focus-within:opacity-100 focus-within:translate-x-0",
         )}
       >
         <div ref={listRef} className="flex flex-col gap-1.5 overflow-y-auto max-h-[70vh] [scrollbar-width:thin] pr-1">
