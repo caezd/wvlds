@@ -47,6 +47,31 @@ export default defineConfig({
   // en 8 s isolément. Contre un serveur bâti, rien à compiler : on garde le
   // défaut, qui reste un vrai garde-fou contre un blocage.
   timeout: serveurDeDeveloppement ? 90_000 : 30_000,
+  // Troisième symptôme de la même famille, rencontré le 2026-08-30 : une
+  // route rend une erreur
+  //
+  //   Switched to client rendering because the server rendering errored:
+  //   Module […]/ShopGrid.tsx [app-ssr] was instantiated because it was
+  //   required from […]/w/[id]/page […] but the module factory is not
+  //   available.
+  //
+  // Le message accuse un cache navigateur périmé ou un service worker. Ce
+  // n'en est pas un : c'est le graphe de modules de Turbopack invalidé en
+  // cours d'exécution, qui fait référencer par une route un module compilé
+  // pour une autre. Il est apparu au fil des exécutions successives d'une
+  // suite devenue plus longue.
+  //
+  // Vérifié plutôt que supposé : la même suite passe 27/27 contre un build
+  // de production, trois exécutions consécutives. Si vous le rencontrez,
+  // relancez contre un serveur bâti plutôt que de chercher un défaut dans
+  // l'application :
+  //
+  //   pnpm exec next build && pnpm exec next start -p 3100
+  //   E2E_BASE_URL=http://localhost:3100 pnpm exec playwright test
+  //
+  // C'est au demeurant quatre fois plus rapide, et c'est la cible qu'utilise
+  // l'analyse d'accessibilité : le contraste et les identifiants ARIA d'un
+  // build de développement ne sont pas ceux que voient les utilisateurs.
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI ? "github" : "list",
