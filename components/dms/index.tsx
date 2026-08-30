@@ -700,7 +700,7 @@ function ConversationView({ conv, onBack: _onBack }: { conv: DmConversation; onB
 
           {messages.length === 0 && (
             <div className="flex flex-1 items-center justify-center">
-              <p className="text-xs text-muted-foreground/50">{t("startConversation")}</p>
+              <p className="text-xs text-muted-foreground">{t("startConversation")}</p>
             </div>
           )}
 
@@ -850,7 +850,7 @@ export function DmsPanelContent() {
 
       {!activeConv && !searching && conversations.length > 0 && (
         <div className="flex flex-1 items-center justify-center">
-          <p className="text-xs text-muted-foreground/50">{t("selectConversation")}</p>
+          <p className="text-xs text-muted-foreground">{t("selectConversation")}</p>
         </div>
       )}
     </div>

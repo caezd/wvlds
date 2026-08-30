@@ -37,7 +37,12 @@ import { violations, rapport } from "./axe";
 const ROUTES = ["/explore", "/p", "/settings", "/shop", "/changelog", "/quests"];
 
 /** Vues d'un monde : ce sont les écrans les plus riches de l'application. */
-const VUES = ["wiki", "canvas", "map", "members", "personas"];
+// `catalogue`, `timeline` et `settings` ont été ajoutées après coup : la
+// première y cachait deux textes sous 4.5:1. Les écrans d'administration,
+// mesurés propres, restent hors de ce balayage — la suite E2E ne tourne pas
+// en CI, faute de secrets, et sa durée se paie donc à chaque exécution
+// locale ; ils sont déjà visités par `routes.authed.spec.ts`.
+const VUES = ["wiki", "canvas", "map", "members", "personas", "catalogue", "timeline", "settings"];
 
 test.describe("accessibilité des pages rendues", () => {
   // Chaque page est un chargement complet ; même raison que le balayage de

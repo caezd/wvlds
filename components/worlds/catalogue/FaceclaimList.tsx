@@ -46,7 +46,7 @@ export function FaceclaimList({ worldId }: { worldId: string }) {
 
   if (rows.length === 0) {
     return (
-      <div className="py-10 text-center text-sm text-muted-foreground/60">
+      <div className="py-10 text-center text-sm text-muted-foreground">
         {t("emptyFaceclaims")}
       </div>
     );

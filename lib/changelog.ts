@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Interface",
+    text: "Cinq textes gris pâle de plus redeviennent lisibles : les messages « aucun élément » du catalogue, la mention sur les restrictions, et les deux invitations à démarrer une conversation privée. Ils descendaient jusqu'à 2,6 pour 1 de contraste, là où la norme en demande 4,5.\nIls ont été trouvés en élargissant la vérification automatique à trois écrans de monde qu'elle ne regardait pas encore.",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
     text: "Les commandes qui n'apparaissent qu'au survol se montrent enfin aussi quand on les atteint au clavier. Une trentaine d'entre elles — les actions d'un message, la suppression d'une bannière, les poignées des champs d'un personnage, les boutons d'une carte de monde — restaient parfaitement invisibles une fois sélectionnées à la tabulation.\nNaviguer sans souris revenait donc à avancer à l'aveugle : la commande répondait bien, mais rien à l'écran ne disait où l'on se trouvait.",
   },
   {

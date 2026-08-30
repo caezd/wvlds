@@ -93,7 +93,7 @@ export function WorldCatalogue({ worldId, canEdit, inventoryEnabled, inventoryRe
       {/* Footer: note when catalogue is not fully active */}
       {inactiveNote && (
         <div className="shrink-0 flex justify-end border-t border-border-soft px-4 py-2">
-          <span className="text-xs text-muted-foreground/50">{inactiveNote}</span>
+          <span className="text-xs text-muted-foreground">{inactiveNote}</span>
         </div>
       )}
     </div>

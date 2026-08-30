@@ -260,7 +260,7 @@ export function UncategorizedSection({
         </SortableContext>
 
         {!showHeader && items.length === 0 && !addingHere && !canEdit && (
-          <div className="py-10 text-center text-sm text-muted-foreground/60">
+          <div className="py-10 text-center text-sm text-muted-foreground">
             {type === "inventory" ? t("emptyInventory") : t("emptySkills")}
           </div>
         )}
