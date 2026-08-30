@@ -7,8 +7,8 @@ import { Drawer, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui
 import { SideSheetContent } from "@/components/ui/side-sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CodeEditor } from "@/components/ui/code-editor";
 import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import { cn } from "@/lib/utils";
 import {
@@ -129,14 +129,13 @@ export function WorldHomeMarkdownBlockEditor({
             <label htmlFor="home-block-markdown" className="text-sm font-medium text-foreground">
               {t("home.grid.markdownLabel")}
             </label>
-            <Textarea
+            <CodeEditor
               id="home-block-markdown"
+              language="markdown"
               value={content}
-              onChange={(e) => setContent(e.target.value)}
+              onChange={setContent}
               placeholder={t("home.grid.markdownPlaceholder")}
-              rows={12}
-              className="font-mono text-xs"
-              aria-invalid={tooLong}
+              ariaInvalid={tooLong}
             />
             <p className={cn("text-xs", tooLong ? "text-destructive" : "text-muted-foreground")}>
               {tooLong

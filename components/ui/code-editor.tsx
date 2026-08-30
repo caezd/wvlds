@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { CODE_THEME, getCodeHighlighter, type CodeLanguage } from "@/lib/codeHighlighter";
+import { highlightCode, type CodeLanguage } from "@/lib/codeHighlighter";
 
 /**
  * Champ de saisie de code coloré syntaxiquement.
@@ -44,9 +44,9 @@ export function CodeEditor({
     let annulé = false;
     void (async () => {
       try {
-        const hl = await getCodeHighlighter();
+        const html = await highlightCode(value, language);
         if (annulé) return;
-        setHighlighted(hl.codeToHtml(value, { lang: language, theme: CODE_THEME }));
+        setHighlighted(html);
       } catch {
         // Coloration indisponible (chargement du fragment en échec hors
         // ligne, grammaire refusée) : la couche de repli affiche le code tel
@@ -83,10 +83,9 @@ export function CodeEditor({
           ref={preRef as unknown as React.Ref<HTMLDivElement>}
           aria-hidden
           // Contenu produit par Shiki à partir du code saisi, qu'il échappe
-          // lui-même — ce n'est pas du balisage fourni par l'utilisateur. Ses
-          // couleurs sont des variables CSS de la palette de l'application
-          // (voir lib/codeHighlighter.ts et les `--shiki-*` de globals.css),
-          // fond compris : rien à neutraliser ici.
+          // lui-même — ce n'est pas du balisage fourni par l'utilisateur. Son
+          // fond est déjà transparent (voir highlightCode) : c'est celui du
+          // tiroir qui reste visible.
           className={cn(layer, "pointer-events-none [&_pre]:m-0 [&_pre]:whitespace-pre-wrap [&_pre]:break-words [&_code]:break-words")}
           dangerouslySetInnerHTML={{ __html: highlighted }}
         />

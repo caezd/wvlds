@@ -24,17 +24,24 @@ describe("CodeEditor", () => {
     expect(onChange).toHaveBeenCalledWith("a");
   });
 
-  // Le thème de Shiki n'émet aucune couleur figée : il ne pose que des
-  // variables CSS, définies par la palette de l'application (les `--shiki-*`
-  // de globals.css). C'est ce qui fait suivre la coloration au thème
-  // clair/sombre sans recolorer quoi que ce soit en JavaScript.
-  it("colore le code avec les variables CSS de la palette, sans couleur figée", async () => {
+  it("colore le code", async () => {
     render(<CodeEditor value="<p>Salut</p>" onChange={vi.fn()} language="html" />);
 
     await waitFor(() => expect(document.querySelector(".shiki")).toBeInTheDocument());
 
-    const coloré = document.querySelector(".shiki")!.outerHTML;
-    expect(coloré).toContain("var(--shiki-");
-    expect(coloré).not.toMatch(/color\s*:\s*#[0-9a-f]{3,8}/i);
+    // Des couleurs de texte sont bien posées, sur des fragments distincts.
+    expect(document.querySelectorAll(".shiki span[style*='color']").length).toBeGreaterThan(1);
+  });
+
+  // Le fond du thème est neutralisé à la génération (voir highlightCode) : le
+  // champ laisse voir celui du tiroir au lieu d'y découper un rectangle
+  // opaque.
+  it("ne peint aucun fond opaque par-dessus celui du tiroir", async () => {
+    render(<CodeEditor value="<p>Salut</p>" onChange={vi.fn()} language="html" />);
+
+    await waitFor(() => expect(document.querySelector(".shiki")).toBeInTheDocument());
+
+    const pre = document.querySelector(".shiki") as HTMLElement;
+    expect(pre.style.backgroundColor).toBe("transparent");
   });
 });

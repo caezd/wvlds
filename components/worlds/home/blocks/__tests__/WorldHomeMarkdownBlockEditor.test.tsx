@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { WorldHomeMarkdownBlockEditor } from "@/components/worlds/home/blocks/WorldHomeMarkdownBlockEditor";
 import { MAX_HOME_BLOCK_CONTENT_LENGTH, MIN_HOME_BLOCK_HEIGHT } from "@/components/worlds/home/worldHomeGrid";
@@ -130,6 +130,17 @@ describe("WorldHomeMarkdownBlockEditor", () => {
       />,
     );
     expect(screen.getByLabelText("Hauteur du bloc (px)")).toHaveValue(240);
+  });
+
+  // Même champ de saisie que le bloc HTML, pour ne pas avoir deux éditeurs
+  // de code différents selon le type de bloc.
+  it("le champ Markdown est un éditeur de code coloré", async () => {
+    render(
+      <WorldHomeMarkdownBlockEditor open onOpenChange={vi.fn()} initialContent="# Titre" onSave={vi.fn()} />,
+    );
+
+    await waitFor(() => expect(document.querySelector(".shiki")).toBeInTheDocument());
+    expect(screen.getByLabelText("Markdown")).toHaveValue("# Titre");
   });
 
   it("le bouton Annuler ferme le panneau sans appeler onSave", async () => {

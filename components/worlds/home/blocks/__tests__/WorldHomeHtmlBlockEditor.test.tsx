@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { WorldHomeHtmlBlockEditor } from "@/components/worlds/home/blocks/WorldHomeHtmlBlockEditor";
 import {
@@ -16,13 +16,17 @@ describe("WorldHomeHtmlBlockEditor", () => {
     expect(screen.getByDisplayValue("<p>x</p>")).toBeInTheDocument();
   });
 
+  // L'aperçu se cible par la classe de scope du bloc : depuis que le champ de
+  // saisie est coloré, le même texte apparaît aussi, découpé en fragments,
+  // dans la couche de coloration.
   it("affiche un aperçu du HTML saisi, tel qu'il sera réellement rendu", async () => {
     const user = userEvent.setup();
     render(<WorldHomeHtmlBlockEditor open onOpenChange={vi.fn()} onSave={vi.fn()} />);
 
     await user.type(screen.getByRole("textbox", { name: "HTML" }), "<p>Salut</p>");
 
-    expect(await screen.findByText("Salut")).toBeInTheDocument();
+    await waitFor(() => expect(document.querySelector(".wvlds-hb-preview")).toBeInTheDocument());
+    expect(document.querySelector(".wvlds-hb-preview")).toHaveTextContent("Salut");
     expect(document.querySelector("iframe")).toBeNull();
   });
 
@@ -30,15 +34,16 @@ describe("WorldHomeHtmlBlockEditor", () => {
   // disparaître est exactement ce qui ne sera pas affiché aux membres.
   it("l'aperçu montre le balisage assaini, pas la saisie brute", async () => {
     const user = userEvent.setup();
-    const { container } = render(<WorldHomeHtmlBlockEditor open onOpenChange={vi.fn()} onSave={vi.fn()} />);
+    render(<WorldHomeHtmlBlockEditor open onOpenChange={vi.fn()} onSave={vi.fn()} />);
 
     await user.type(
       screen.getByRole("textbox", { name: "HTML" }),
       "<p>Salut</p><script>alert(1)</script>",
     );
 
-    expect(await screen.findByText("Salut")).toBeInTheDocument();
-    expect(container.querySelector("script")).toBeNull();
+    await waitFor(() => expect(document.querySelector(".wvlds-hb-preview")).toBeInTheDocument());
+    expect(document.querySelector(".wvlds-hb-preview")).toHaveTextContent("Salut");
+    expect(document.querySelector("script")).toBeNull();
   });
 
   it("le CSS a son propre onglet, remonté séparément du balisage", async () => {
