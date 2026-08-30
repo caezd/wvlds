@@ -119,7 +119,7 @@ export function WorldHomeMarkdownBlockEditor({
               onChange={(e) => setHeight(e.target.value)}
               placeholder={t("home.grid.heightPlaceholder")}
             />
-            <p className="text-xs leading-snug text-muted-foreground">{t("home.grid.heightHelpMarkdown")}</p>
+            <p className="text-xs leading-snug text-muted-foreground">{t("home.grid.heightHelp")}</p>
             <p className="text-xs text-muted-foreground">
               {t("home.grid.options.range", { min: MIN_HOME_BLOCK_HEIGHT, max: MAX_HOME_BLOCK_HEIGHT })}
             </p>

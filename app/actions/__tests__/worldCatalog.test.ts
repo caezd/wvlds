@@ -30,6 +30,7 @@ import {
 import {
     HOME_GRID_COLS,
     MAX_HOME_BLOCK_CONTENT_LENGTH,
+    MAX_HOME_BLOCK_CSS_LENGTH,
     MAX_HOME_BLOCK_HEIGHT,
     MAX_HOME_GRID_ITEMS,
     MIN_HOME_BLOCK_HEIGHT,
@@ -673,6 +674,49 @@ describe("setWorldHomeGrid", () => {
         expect(res.ok).toBe(true);
         const written = mock.buildersFor("worlds")[0].update.mock.calls[0][0].home_grid;
         expect(written[0]).not.toHaveProperty("h");
+    });
+
+    it("enregistre la feuille de style d'un bloc html, débarrassée de ses espaces", async () => {
+        const mock = createSupabaseMock({ results: [{ error: null }] });
+        use(mock);
+        await setWorldHomeGrid("w1", [
+            { id: "a", type: "html", x: 0, y: 0, w: 12, html: "<p>x</p>", css: "  :scope { color: red; }  " },
+        ]);
+        const written = mock.buildersFor("worlds")[0].update.mock.calls[0][0].home_grid;
+        expect(written[0]).toMatchObject({ css: ":scope { color: red; }" });
+    });
+
+    it("n'écrit pas de css vide", async () => {
+        const mock = createSupabaseMock({ results: [{ error: null }] });
+        use(mock);
+        await setWorldHomeGrid("w1", [
+            { id: "a", type: "html", x: 0, y: 0, w: 12, html: "<p>x</p>", css: "   " },
+        ]);
+        const written = mock.buildersFor("worlds")[0].update.mock.calls[0][0].home_grid;
+        expect(written[0]).not.toHaveProperty("css");
+    });
+
+    it("refuse une feuille de style dépassant la limite, sans appeler Supabase", async () => {
+        const mock = createSupabaseMock();
+        use(mock);
+        const res = await setWorldHomeGrid("w1", [
+            {
+                id: "a", type: "html", x: 0, y: 0, w: 12, html: "<p>x</p>",
+                css: "a".repeat(MAX_HOME_BLOCK_CSS_LENGTH + 1),
+            },
+        ]);
+        expect(res.ok).toBe(false);
+        expect(mock.from).not.toHaveBeenCalled();
+    });
+
+    it("refuse un css qui n'est pas une chaîne, sans appeler Supabase", async () => {
+        const mock = createSupabaseMock();
+        use(mock);
+        const res = await setWorldHomeGrid("w1", [
+            { id: "a", type: "html", x: 0, y: 0, w: 12, html: "<p>x</p>", css: 42 },
+        ]);
+        expect(res.ok).toBe(false);
+        expect(mock.from).not.toHaveBeenCalled();
     });
 
     it("refuse une valeur qui n'est pas un tableau, sans appeler Supabase", async () => {

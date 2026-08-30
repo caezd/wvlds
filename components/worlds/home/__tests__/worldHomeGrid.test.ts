@@ -613,3 +613,30 @@ describe("resolveWorldHomeGrid — hauteur des blocs à contenu libre", () => {
     expect(resolveWorldHomeGrid(grid, null, null)[0]).not.toHaveProperty("h");
   });
 });
+
+describe("resolveWorldHomeGrid — feuille de style d'un bloc html", () => {
+  it("conserve le css d'un bloc html", () => {
+    const grid = [
+      { id: "a", type: "html", x: 0, y: 0, w: 12, html: "<p>x</p>", css: ":scope { color: red; }" },
+    ];
+    expect(resolveWorldHomeGrid(grid, null, null)[0]).toMatchObject({ css: ":scope { color: red; }" });
+  });
+
+  it("n'enregistre pas un css vide ou d'un autre type", () => {
+    const grid = [
+      { id: "a", type: "html", x: 0, y: 0, w: 12, html: "<p>x</p>", css: "   " },
+      { id: "b", type: "html", x: 0, y: 1, w: 12, html: "<p>y</p>", css: 42 },
+      { id: "c", type: "html", x: 0, y: 2, w: 12, html: "<p>z</p>" },
+    ];
+    for (const item of resolveWorldHomeGrid(grid, null, null)) {
+      expect(item).not.toHaveProperty("css");
+    }
+  });
+
+  // Le champ n'a de sens que pour le bloc html : le markdown n'a pas de
+  // feuille de style propre, il coule dans la typographie de la page.
+  it("ignore un css porté par un bloc markdown", () => {
+    const grid = [{ id: "a", type: "markdown", x: 0, y: 0, w: 12, content: "x", css: "p{}" }];
+    expect(resolveWorldHomeGrid(grid, null, null)[0]).not.toHaveProperty("css");
+  });
+});

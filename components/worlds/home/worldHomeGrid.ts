@@ -60,8 +60,15 @@ export type WorldHomeGridItem = {
   w: number;
   /** type === "widget" */
   widgetId?: WorldHomeWidgetId;
-  /** type === "html" — HTML/CSS libre, rendu dans une iframe sandboxée (pas de JS). */
+  /** type === "html" — balisage libre, assaini par liste blanche et rendu
+   *  dans la page (voir blocks/homeHtmlBlock.ts). */
   html?: string;
+  /** type === "html" — feuille de style du bloc, cloisonnée à son sous-arbre
+   *  par `@scope` au rendu. Séparée du balisage depuis que celui-ci est
+   *  assaini : une balise `<style>` au milieu du HTML n'y survivrait pas.
+   *  Les blocs antérieurs à ce champ gardent la leur dans `html` — elle est
+   *  hissée au rendu, cf. prepareHomeHtmlBlock. */
+  css?: string;
   /** type === "markdown" */
   content?: string;
   /** type === "html" | "markdown" — carte (bordure + fond) ou plein largeur
@@ -244,6 +251,9 @@ export const MIN_BLOCK_W = 2;
 /** Une ligne ne peut pas contenir plus de blocs que sa largeur ne permet, en
  *  respectant la largeur minimale de chacun. */
 export const MAX_BLOCKS_PER_ROW = Math.floor(HOME_GRID_COLS / MIN_BLOCK_W);
+/** Longueur maximale de la feuille de style d'un bloc html — même budget que
+ *  son balisage (voir MAX_HOME_BLOCK_CONTENT_LENGTH juste en dessous). */
+export const MAX_HOME_BLOCK_CSS_LENGTH = 20_000;
 /** Limite de taille du contenu HTML/Markdown libre d'un bloc — partagée
  *  entre les éditeurs de bloc (validation immédiate) et l'action serveur
  *  (source de vérité). Anciennement `MAX_ANNOUNCEMENT_HTML_LENGTH`. */
@@ -342,11 +352,12 @@ function sanitizeGridItem(
   if (r.type === "html") {
     if (typeof r.html !== "string" || r.widgetId !== undefined || r.content !== undefined) return null;
     seenIds.add(r.id);
+    const css = typeof r.css === "string" && r.css.trim() ? { css: r.css } : {};
     // Défaut "carte" (bordure + fond) : préserve l'apparence d'avant
     // l'introduction de ce réglage, où un bloc html était toujours ainsi.
     const card = r.card !== false;
     const h = sanitizeBlockHeight(r.h);
-    return { id: r.id, type: "html", x, y, w, html: r.html, card, ...(h ? { h } : {}), ...title };
+    return { id: r.id, type: "html", x, y, w, html: r.html, card, ...css, ...(h ? { h } : {}), ...title };
   }
 
   // markdown

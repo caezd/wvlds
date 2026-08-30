@@ -1,7 +1,6 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useTranslations } from "next-intl";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import { WorldChatComposer } from "../chatrooms/WorldChatComposer";
 import { WorldChatroomsGrid } from "../chatrooms/WorldChatroomsGrid";
@@ -25,6 +24,12 @@ import {
 const WorldMembersOnlineWidget = dynamic(() => import("./widgets/WorldMembersOnlineWidget").then((m) => m.WorldMembersOnlineWidget));
 const WorldWikiShortcutsWidget = dynamic(() => import("./widgets/WorldWikiShortcutsWidget").then((m) => m.WorldWikiShortcutsWidget));
 const WorldRecentPersonasWidget = dynamic(() => import("./widgets/WorldRecentPersonasWidget").then((m) => m.WorldRecentPersonasWidget));
+// Import paresseux : ce composant embarque l'analyseur HTML et l'assainisseur
+// du bloc libre (cf. blocks/homeHtmlBlock.ts). Une page d'accueil sans bloc
+// HTML — le cas courant — ne les télécharge donc jamais.
+const WorldHomeHtmlBlockView = dynamic(() =>
+  import("./blocks/WorldHomeHtmlBlockView").then((m) => m.WorldHomeHtmlBlockView),
+);
 
 
 /**
@@ -46,11 +51,13 @@ const WorldRecentPersonasWidget = dynamic(() => import("./widgets/WorldRecentPer
  * (beaucoup de salons) agrandit sa ligne au lieu de déborder sur les blocs
  * suivants, et la hauteur d'un widget n'a jamais à être devinée par l'admin.
  *
- * Seuls les blocs à contenu libre (html/markdown) peuvent porter une hauteur
- * explicite en pixels (`item.h`), que l'application ne saurait pas déduire
- * d'un contenu qu'elle ne produit pas — leur contenu défile alors à
- * l'intérieur du bloc. Cela ne change rien à la ligne : elle s'ajuste au plus
- * haut de ses blocs, comme toujours.
+ * Les blocs à contenu libre (html/markdown) peuvent porter une hauteur
+ * explicite en pixels (`item.h`) pour fixer leur encombrement — leur contenu
+ * défile alors à l'intérieur du bloc. C'est un choix de mise en page, pas une
+ * nécessité : depuis le rendu en ligne du bloc HTML (l'iframe a été retirée,
+ * voir blocks/WorldHomeHtmlBlockView.tsx), les deux types s'auto-dimensionnent
+ * aussi bien qu'un widget quand la hauteur est absente. Cela ne change rien à
+ * la ligne : elle s'ajuste au plus haut de ses blocs, comme toujours.
  */
 export function WorldHomeGridView({
   items,
@@ -85,7 +92,6 @@ export function WorldHomeGridView({
   /** Gouttière — même préréglage que l'éditeur admin, voir worldHomeGrid.ts. */
   gap?: WorldHomeGridGap;
 }) {
-  const t = useTranslations("worlds");
   const sorted = [...items].sort((a, b) => a.y - b.y || a.x - b.x);
 
   return (
@@ -113,7 +119,6 @@ export function WorldHomeGridView({
             selectedCategoryId,
             onSelectCategory,
             onWikiLink,
-            htmlBlockFallbackTitle: t("home.grid.htmlBlockTitle"),
           })}
         </div>
       ))}
@@ -134,7 +139,6 @@ function renderBlock(
     selectedCategoryId: string | null;
     onSelectCategory: (categoryId: string | null) => void;
     onWikiLink?: (slug: string) => void;
-    htmlBlockFallbackTitle: string;
   },
 ) {
   if (item.type === "banner") {
@@ -143,17 +147,12 @@ function renderBlock(
 
   if (item.type === "html") {
     return (
-      <iframe
-        sandbox=""
-        srcDoc={item.html ?? ""}
-        title={item.title || ctx.htmlBlockFallbackTitle}
-        // Sans hauteur explicite, `h-full` se résout en `auto` sur une ligne
-        // `min-content` : l'iframe retombe alors sur sa hauteur intrinsèque de
-        // 150 px, quel que soit son contenu (le navigateur ne mesure pas un
-        // document isolé par le bac à sable). D'où le réglage — le style en
-        // ligne l'emporte sur la classe quand il est présent.
-        style={item.h ? { height: item.h } : undefined}
-        className={cn("h-full w-full", item.card !== false && "rounded-lg border bg-background")}
+      <WorldHomeHtmlBlockView
+        id={item.id}
+        html={item.html ?? ""}
+        css={item.css}
+        card={item.card !== false}
+        height={item.h}
       />
     );
   }

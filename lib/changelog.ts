@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Mondes",
+    text: "Le bloc HTML de la page d’accueil d’un monde est repensé. Le balisage et la feuille de style ont chacun leur onglet, avec une coloration syntaxique aux couleurs de l’application, et l’aperçu montre désormais le rendu final exact.\nLe bloc n’est plus enfermé dans un cadre isolé : il s’affiche dans la page, hérite de ses polices et de ses couleurs, son fond est transparent, et sa hauteur suit son contenu au lieu d’être figée à 150 px. Le CSS que vous écrivez ne s’applique qu’à l’intérieur du bloc, jamais au reste de la page — « :scope » y désigne le bloc lui-même.\nAucun script ne peut s’exécuter pour autant : à l’affichage, seuls les balises et attributs d’une liste d’autorisation sont conservés ; scripts, cadres, formulaires et gestionnaires d’événements sont retirés. Vos blocs existants continuent de fonctionner, feuille de style comprise."
+  },
+  {
+    date: "2026-08",
+    tag: "Mondes",
     text: "Les blocs HTML et Markdown de la page d’accueil d’un monde acceptent désormais une hauteur, réglable dans le panneau d’édition du bloc. Un bloc HTML était jusqu’ici figé à 150 px — la hauteur par défaut d’un cadre HTML — sans aucun moyen d’y toucher. Laissez le champ vide pour retrouver le comportement d’avant : hauteur automatique pour le Markdown, hauteur par défaut pour le HTML. Avec une hauteur fixée, un contenu plus grand défile à l’intérieur du bloc. Les autres blocs (widgets, bannières) gardent leur hauteur automatique : leur contenu vient de l’application, qui sait le dimensionner."
   },
   {

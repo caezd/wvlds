@@ -157,36 +157,37 @@ describe("WorldHomeGridView", () => {
     expect(categoryFoldersProps).toHaveBeenCalledWith(expect.objectContaining({ fullWidth: true }));
   });
 
-  it("rend un bloc html dans une iframe sandboxée", () => {
+  it("rend un bloc html dans la page, sans iframe", async () => {
     render(
       <WorldHomeGridView
         {...baseProps([{ id: "a", type: "html", x: 0, y: 0, w: 12, html: "<p>Salut</p>" }])}
       />,
     );
-    const iframe = document.querySelector("iframe")!;
-    expect(iframe).toHaveAttribute("sandbox", "");
-    expect(iframe).toHaveAttribute("srcdoc", "<p>Salut</p>");
+    expect(await screen.findByText("Salut")).toBeInTheDocument();
+    expect(document.querySelector("iframe")).toBeNull();
   });
 
-  it("donne à l'iframe html le titre du bloc, pour l'accessibilité", () => {
-    render(
+  // Le bac à sable de l'iframe ayant disparu, c'est l'assainissement qui
+  // porte la garantie « aucun script » — jusque dans le rendu réel, pas
+  // seulement dans la fonction pure testée par homeHtmlBlock.test.ts.
+  it("ne laisse passer ni script ni gestionnaire d'événement dans un bloc html", async () => {
+    const { container } = render(
       <WorldHomeGridView
         {...baseProps([
-          { id: "a", type: "html", x: 0, y: 0, w: 12, html: "<p>Salut</p>", title: "Bandeau d'accueil" },
+          {
+            id: "a",
+            type: "html",
+            x: 0,
+            y: 0,
+            w: 12,
+            html: '<p>Salut</p><script>alert(1)</script><img src="https://x/y.png" onerror="alert(2)">',
+          },
         ])}
       />,
     );
-    expect(document.querySelector("iframe")).toHaveAttribute("title", "Bandeau d'accueil");
-  });
-
-  it("retombe sur un titre générique quand le bloc html n'a pas de titre", () => {
-    render(
-      <WorldHomeGridView
-        {...baseProps([{ id: "a", type: "html", x: 0, y: 0, w: 12, html: "<p>Salut</p>" }])}
-      />,
-    );
-    const iframe = document.querySelector("iframe")!;
-    expect(iframe.getAttribute("title")).toBeTruthy();
+    expect(await screen.findByText("Salut")).toBeInTheDocument();
+    expect(container.querySelector("script")).toBeNull();
+    expect(container.querySelector("img")?.getAttribute("onerror")).toBeNull();
   });
 
   it("laisse les lignes s'auto-dimensionner au contenu, sans overflow ni hauteur imposée", () => {
@@ -271,26 +272,28 @@ describe("WorldHomeGridView", () => {
     expect(markdownProps).toHaveBeenCalledWith(expect.objectContaining({ content: "# Titre", allowImages: true }));
   });
 
-  it("un bloc html en carte (défaut) a une bordure et un fond", () => {
-    render(
+  it("un bloc html en carte (défaut) a une bordure et un fond", async () => {
+    const { container } = render(
       <WorldHomeGridView
         {...baseProps([{ id: "a", type: "html", x: 0, y: 0, w: 12, html: "<p>x</p>", card: true }])}
       />,
     );
-    const iframe = document.querySelector("iframe")!;
-    expect(iframe.className).toContain("border");
-    expect(iframe.className).toContain("bg-background");
+    await screen.findByText("x");
+    const hôte = container.querySelector(".wvlds-hb-a")!;
+    expect(hôte.className).toContain("border");
+    expect(hôte.className).toContain("bg-background");
   });
 
-  it("un bloc html en plein largeur (card: false) n'a ni bordure ni fond", () => {
-    render(
+  it("un bloc html en plein largeur (card: false) n'a ni bordure ni fond", async () => {
+    const { container } = render(
       <WorldHomeGridView
         {...baseProps([{ id: "a", type: "html", x: 0, y: 0, w: 12, html: "<p>x</p>", card: false }])}
       />,
     );
-    const iframe = document.querySelector("iframe")!;
-    expect(iframe.className).not.toContain("border");
-    expect(iframe.className).not.toContain("bg-background");
+    await screen.findByText("x");
+    const hôte = container.querySelector(".wvlds-hb-a")!;
+    expect(hôte.className).not.toContain("border");
+    expect(hôte.className).not.toContain("bg-background");
   });
 
   it("un bloc markdown en plein largeur (défaut) n'est pas enveloppé dans une carte", () => {
@@ -359,22 +362,28 @@ describe("WorldHomeGridView", () => {
 });
 
 describe("WorldHomeGridView — hauteur des blocs à contenu libre", () => {
-  it("applique la hauteur réglée à l'iframe d'un bloc html", () => {
-    render(
+  it("applique la hauteur réglée au bloc html, qui fait défiler son surplus", async () => {
+    const { container } = render(
       <WorldHomeGridView
         {...baseProps([{ id: "a", type: "html", x: 0, y: 0, w: 12, html: "<p>x</p>", h: 320 }])}
       />,
     );
-    expect(document.querySelector("iframe")!.style.height).toBe("320px");
+    await screen.findByText("x");
+    const hôte = container.querySelector(".wvlds-hb-a") as HTMLElement;
+    expect(hôte.style.height).toBe("320px");
+    expect(hôte.className).toContain("overflow-y-auto");
   });
 
-  // Sans hauteur, l'iframe garde le rendu d'avant ce réglage (sa hauteur
-  // intrinsèque) : aucune grille existante ne doit bouger.
-  it("laisse l'iframe sans hauteur en ligne quand aucune n'est réglée", () => {
-    render(
+  // Sans hauteur, le bloc suit son contenu — ce que le rendu en ligne permet
+  // enfin, là où l'iframe retombait sur ses 150 px intrinsèques.
+  it("laisse le bloc html sans hauteur imposée quand aucune n'est réglée", async () => {
+    const { container } = render(
       <WorldHomeGridView {...baseProps([{ id: "a", type: "html", x: 0, y: 0, w: 12, html: "<p>x</p>" }])} />,
     );
-    expect(document.querySelector("iframe")!.style.height).toBe("");
+    await screen.findByText("x");
+    const hôte = container.querySelector(".wvlds-hb-a") as HTMLElement;
+    expect(hôte.style.height).toBe("");
+    expect(hôte.className).not.toContain("overflow-y-auto");
   });
 
   it("un bloc markdown avec hauteur fait défiler son surplus à l'intérieur", () => {

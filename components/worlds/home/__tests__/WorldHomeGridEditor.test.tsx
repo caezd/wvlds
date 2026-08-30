@@ -474,7 +474,7 @@ describe("WorldHomeGridEditor", () => {
 
     await user.click(screen.getByText("Ajouter un bloc"));
     await user.click(screen.getByRole("menuitem", { name: "Bloc HTML" }));
-    await user.type(screen.getByLabelText("HTML / CSS"), "<p>Salut</p>");
+    await user.type(screen.getByRole("textbox", { name: "HTML" }), "<p>Salut</p>");
     await user.click(screen.getByRole("button", { name: "Enregistrer" }));
 
     await waitFor(() => {
@@ -578,7 +578,7 @@ describe("WorldHomeGridEditor", () => {
     render(<Harness initial={[HTML_ITEM]} />);
 
     await user.click(screen.getByLabelText("Modifier le bloc"));
-    const field = screen.getByLabelText("HTML / CSS");
+    const field = screen.getByRole("textbox", { name: "HTML" });
     await user.clear(field);
     await user.type(field, "<p>y</p>");
     await user.click(screen.getByRole("button", { name: "Enregistrer" }));

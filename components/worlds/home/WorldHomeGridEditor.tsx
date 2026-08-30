@@ -477,27 +477,38 @@ export function WorldHomeGridEditor({
     void persist([...items, newItem]);
   }
 
-  /** `height` absent (champ vidé) retire la hauteur du bloc — comme un titre
-   *  vidé retire le titre, d'où le `undefined` explicite à l'édition. */
+  /** `height` et `css` absents (champs vidés) retirent la hauteur et la
+   *  feuille de style du bloc — comme un titre vidé retire le titre, d'où les
+   *  `undefined` explicites à l'édition. `css` ne concerne que les blocs html. */
   function saveBlock({
     content,
+    css,
     title,
     card,
     height,
     field,
   }: {
     content: string;
+    css?: string;
     title: string;
     card: boolean;
     height?: number;
     field: "html" | "content";
   }) {
     const trimmedTitle = title.trim();
+    const trimmedCss = css?.trim();
     const editing = editingBlock?.item;
     const next = editing
       ? items.map((i) =>
           i.id === editing.id
-            ? { ...i, [field]: content, card, title: trimmedTitle || undefined, h: height }
+            ? {
+                ...i,
+                [field]: content,
+                card,
+                title: trimmedTitle || undefined,
+                h: height,
+                ...(field === "html" ? { css: trimmedCss || undefined } : {}),
+              }
             : i,
         )
       : [
@@ -510,6 +521,7 @@ export function WorldHomeGridEditor({
             w: HOME_GRID_COLS,
             [field]: content,
             card,
+            ...(trimmedCss ? { css: trimmedCss } : {}),
             ...(height ? { h: height } : {}),
             ...(trimmedTitle ? { title: trimmedTitle } : {}),
           } as WorldHomeGridItem,
@@ -566,10 +578,13 @@ export function WorldHomeGridEditor({
         open={editingBlock?.type === "html"}
         onOpenChange={(open) => { if (!open) setEditingBlock(null); }}
         initialHtml={editingBlock?.item?.html}
+        initialCss={editingBlock?.item?.css}
         initialTitle={editingBlock?.item?.title}
         initialCard={editingBlock?.item?.card ?? true}
         initialHeight={editingBlock?.item?.h}
-        onSave={({ html, title, card, height }) => saveBlock({ content: html, title, card, height, field: "html" })}
+        onSave={({ html, css, title, card, height }) =>
+          saveBlock({ content: html, css, title, card, height, field: "html" })
+        }
       />
       <WorldHomeMarkdownBlockEditor
         open={editingBlock?.type === "markdown"}

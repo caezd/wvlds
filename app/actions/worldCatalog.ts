@@ -9,6 +9,7 @@ import {
   HOME_GRID_COLS,
   HOME_GRID_GAP_PRESETS,
   MAX_HOME_BLOCK_CONTENT_LENGTH,
+  MAX_HOME_BLOCK_CSS_LENGTH,
   MAX_HOME_BLOCK_TITLE_LENGTH,
   MAX_HOME_GRID_ITEMS,
   MAX_HOME_GRID_Y,
@@ -552,8 +553,16 @@ function validateHomeGridItem(
     if (typeof r.html !== "string" || r.widgetId !== undefined || r.content !== undefined) return null;
     const html = r.html.trim();
     if (html.length > MAX_HOME_BLOCK_CONTENT_LENGTH) return null;
+    // Feuille de style du bloc — optionnelle, et bornée comme son balisage.
+    // Elle n'est PAS assainie ici : le CSS n'exécute rien, et son cloisonnement
+    // (`@scope`) comme la neutralisation de `</` se font au rendu, seul
+    // endroit qui protège aussi le contenu déjà en base.
+    if (r.css !== undefined && typeof r.css !== "string") return null;
+    const rawCss = typeof r.css === "string" ? r.css.trim() : "";
+    if (rawCss.length > MAX_HOME_BLOCK_CSS_LENGTH) return null;
+    const css = rawCss ? { css: rawCss } : {};
     const card = r.card !== false;
-    return { id, type, x, y, w, html, card, ...h, ...title };
+    return { id, type, x, y, w, html, card, ...css, ...h, ...title };
   }
 
   // markdown
