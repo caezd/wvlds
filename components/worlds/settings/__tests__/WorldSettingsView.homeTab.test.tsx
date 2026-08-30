@@ -10,8 +10,11 @@ vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
 }));
+// `public_worlds` pilotable : l'onglet « Communauté » n'existe que s'il est
+// levé, et le contrôle des clés dupliquées a besoin des DEUX onglets montés.
+const drapeaux = { public_worlds: false, world_timeline: false };
 vi.mock("@/components/providers/FeatureFlagsProvider", () => ({
-  useFeatureFlags: () => ({ public_worlds: false, world_timeline: false }),
+  useFeatureFlags: () => drapeaux,
 }));
 vi.mock("@/components/worlds/settings/WorldPersonaTemplateSection", () => ({
   WorldPersonaTemplateSection: () => <div data-testid="persona-template-stub" />,
@@ -74,5 +77,31 @@ describe("WorldSettingsView — onglet « Page d'accueil »", () => {
     await user.click(screen.getByRole("tab", { name: "Page d'accueil" }));
 
     expect(screen.getByTestId("home-grid-settings-stub")).toHaveTextContent("w1");
+  });
+
+  it("ne rend aucun enfant avec une clé dupliquée", async () => {
+    // Régression du 2026-08-29 : la découpe par onglet avait donné la MÊME clé
+    // `world.id` à deux composants frères. React le signale par « two children
+    // with the same key » et s'autorise à en confondre ou en omettre un.
+    //
+    // Le balayage E2E ne pouvait pas l'attraper : il visite bien `?view=settings`,
+    // mais le compte de test n'est administrateur d'aucun monde, donc les
+    // onglets ne se montaient jamais.
+    const erreurs: string[] = [];
+    const espion = vi.spyOn(console, "error").mockImplementation((...args) => {
+      erreurs.push(args.map(String).join(" "));
+    });
+    drapeaux.public_worlds = true;
+    try {
+      setup();
+      render(<WorldSettingsView world={BASE_WORLD} />);
+      await screen.findByRole("tab", { name: "Page d'accueil" });
+    } finally {
+      espion.mockRestore();
+      drapeaux.public_worlds = false;
+    }
+
+    const cles = erreurs.filter((e) => /same key|unique/i.test(e));
+    expect(cles, cles.join(" | ")).toEqual([]);
   });
 });

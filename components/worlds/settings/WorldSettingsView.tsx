@@ -503,7 +503,12 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
 
                         {/* ── Fonctions ────────────────────────────────── */}
                         <WorldFeaturesTab
-                            key={world.id}
+                            // La clé sert à REMONTER l'onglet quand on change de
+                            // monde. Elle doit rester unique entre frères : les
+                            // deux onglets partageaient `world.id`, ce que React
+                            // signale par « two children with the same key », et
+                            // qui l'autorise à confondre ou omettre l'un des deux.
+                            key={`features-${world.id}`}
                             world={world}
                             form={form}
                             persistField={persistField}
@@ -520,7 +525,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                         {/* ── Communauté ───────────────────────────────── */}
                         {public_worlds && (
                             <WorldCommunityTab
-                                key={world.id}
+                                key={`community-${world.id}`}
                                 world={world}
                                 form={form}
                                 persistField={persistField}
