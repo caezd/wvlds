@@ -108,6 +108,7 @@ export default async function AdminShopPage() {
                         size="icon"
                         className="h-7 w-7 text-destructive hover:text-destructive"
                         type="submit"
+                        aria-label={t("shopItemDelete")}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>

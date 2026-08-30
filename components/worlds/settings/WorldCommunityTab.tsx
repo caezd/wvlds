@@ -265,6 +265,7 @@ export function WorldCommunityTab({ world, form, persistField, onUpdated }: Prop
                                                         variant="secondary"
                                                         size="sm"
                                                         disabled={!newTag.trim() || savingTag}
+                                                        aria-label={t("addTag")}
                                                         onClick={() => void handleAddTag()}
                                                     >
                                                         <Plus className="h-3.5 w-3.5" />

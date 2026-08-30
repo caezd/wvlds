@@ -50,7 +50,14 @@
     "invalidTag": "Une étiquette ne peut contenir que des lettres et des chiffres.",
     "dropToReplace": "Cliquer ou déposer pour remplacer",
     "uploadError": "Envoi impossible. Réessayez dans un instant.",
-    "usernameTaken": "Ce nom d'utilisateur est déjà pris."
+    "usernameTaken": "Ce nom d'utilisateur est déjà pris.",
+    "chooseColor": "Choisir une couleur",
+    "moveUp": "Déplacer vers le haut",
+    "moveDown": "Déplacer vers le bas",
+    "zoomIn": "Zoom avant",
+    "zoomOut": "Zoom arrière",
+    "deleteConfirmTitle": "Confirmer la suppression",
+    "irreversible": "Cette action est irréversible."
   },
   "nav": {
     "profile": "Mon profil",
@@ -476,7 +483,9 @@
     "restrictionPurgeSkills": "compétences",
     "restrictionPurgeDescription": "Cette action effacera immédiatement tous les {items} des personas de ce monde. Cette opération est irréversible.",
     "restrictionPurgeConfirm": "Activer et purger",
-    "deleteFailed": "Suppression du monde impossible."
+    "deleteFailed": "Suppression du monde impossible.",
+    "addTag": "Ajouter ce tag",
+    "addMonthName": "Ajouter ce nom de mois"
   },
   "auth": {
     "signin": "Connexion",
@@ -623,7 +632,9 @@
     "bannerDeleteDescription": "La bannière de ce personnage sera supprimée définitivement du stockage.",
     "avatarDeleteDescription": "L'avatar de ce personnage sera supprimé définitivement du stockage.",
     "sectionDeleteDescription": "Cette section et tous ses champs seront supprimés définitivement.",
-    "fieldDeleteDescription": "Ce champ et toutes ses images hébergées seront supprimés définitivement."
+    "fieldDeleteDescription": "Ce champ et toutes ses images hébergées seront supprimés définitivement.",
+    "sectionOptions": "Options de la section",
+    "deleteField": "Supprimer le champ"
   },
   "quests": {
     "title": "Quêtes du jour",
@@ -741,7 +752,8 @@
         "chatrooms": "Chatrooms"
       }
     },
-    "editItem": "Modifier l'article"
+    "editItem": "Modifier l'article",
+    "shopItemDelete": "Supprimer cet article"
   },
   "chatrooms": {
     "newRoom": "Nouvelle salle",
@@ -990,7 +1002,11 @@
     "messageDeleteDescription": "Ce message sera supprimé définitivement.",
     "bannerDeleteDescription": "La bannière sera supprimée définitivement.",
     "roomDeleteDescription": "La salle et tous ses messages seront supprimés définitivement.",
-    "deleteRoomFailed": "Suppression du salon impossible."
+    "deleteRoomFailed": "Suppression du salon impossible.",
+    "bannerDelete": "Supprimer la bannière",
+    "blockEdit": "Modifier le bloc",
+    "blockDelete": "Supprimer le bloc",
+    "blockDeleteDescription": "Cet élément sera supprimé définitivement."
   },
   "changelog": {
     "title": "Changelog",
@@ -1036,7 +1052,10 @@
       "dotted": "Pointillés",
       "long": "Long",
       "mixed": "Mixte"
-    }
+    },
+    "changeGroup": "Changer le groupe",
+    "addGroup": "Ajouter ce groupe",
+    "addRelType": "Ajouter ce type de relation"
   },
   "wiki": {
     "changeIcon": "Changer l'icône",
@@ -1144,7 +1163,9 @@
       "solid": "Plein",
       "dashed": "Tirets",
       "dotted": "Pointillés"
-    }
+    },
+    "toggleTransparent": "Fond transparent",
+    "toggleBorder": "Bordure"
   },
   "iconPicker": {
     "chooseIcon": "Choisir une icône",

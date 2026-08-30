@@ -536,6 +536,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                                                             variant="secondary"
                                                             size="sm"
                                                             disabled={!newMonthName.trim()}
+                                                            aria-label={t("addMonthName")}
                                                             onClick={() => {
                                                                 const next = [...timelineConfig.month_names, newMonthName.trim()];
                                                                 const nextDays = [...(timelineConfig.days_per_month ?? []), DEFAULT_DAYS_PER_MONTH];

@@ -27,6 +27,7 @@ function getDashOptions(t: ReturnType<typeof useTranslations<"relations">>): Das
 // Rendu inline (pas de portail) pour éviter que Radix Dialog interprète le
 // pointerdown sur le canvas HSV comme un clic hors du dialog.
 function ColorPickerButton({ color, onChange }: { color: string; onChange: (c: string) => void }) {
+  const tCommon = useTranslations("common");
   const [open, setOpen] = React.useState(false);
   const ref = React.useRef<HTMLDivElement>(null);
 
@@ -46,6 +47,7 @@ function ColorPickerButton({ color, onChange }: { color: string; onChange: (c: s
         onClick={() => setOpen((v) => !v)}
         className="h-8 w-8 shrink-0 rounded-md border border-border shadow-sm transition-shadow hover:ring-2 hover:ring-ring"
         style={{ backgroundColor: color }}
+        aria-label={tCommon("chooseColor")}
       />
       {open && (
         <div className="absolute left-0 top-full z-50 mt-1 w-[220px] rounded-lg border border-border bg-popover p-3 shadow-md">
@@ -226,7 +228,7 @@ export function WorldRelationsSettings({ worldId }: { worldId: string }) {
           <Input value={gName} onChange={(e) => setGName(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") void addGroup(); }}
             placeholder={t("groupNamePlaceholder")} className="h-8 flex-1 text-sm" />
-          <Button size="icon" className="h-8 w-8 shrink-0" onClick={() => void addGroup()}>
+          <Button size="icon" className="h-8 w-8 shrink-0" onClick={() => void addGroup()} aria-label={t("addGroup")}>
             <Plus className="h-3.5 w-3.5" />
           </Button>
         </div>
@@ -279,7 +281,7 @@ export function WorldRelationsSettings({ worldId }: { worldId: string }) {
               <option key={o.value} value={o.value}>{o.label}</option>
             ))}
           </select>
-          <Button size="icon" className="h-8 w-8 shrink-0" onClick={() => void addRelType()}>
+          <Button size="icon" className="h-8 w-8 shrink-0" onClick={() => void addRelType()} aria-label={t("addRelType")}>
             <Plus className="h-3.5 w-3.5" />
           </Button>
         </div>

@@ -720,6 +720,7 @@ export function CalloutDialog({
                               type="button"
                               className="h-5 w-5 shrink-0 rounded-sm border border-border/60 hover:ring-1 hover:ring-ring transition-shadow"
                               style={{ backgroundColor: gauge.color }}
+                              aria-label={tCommon("chooseColor")}
                             />
                           </PopoverTrigger>
                           <PopoverContent className="w-auto p-2 z-[200]" align="end">
@@ -729,6 +730,7 @@ export function CalloutDialog({
                                   key={c}
                                   type="button"
                                   onClick={() => updateGauge(i, { color: c })}
+                                  aria-label={`${tCommon("chooseColor")} ${c}`}
                                   className={cn(
                                     "h-5 w-5 rounded-sm border border-border/40 hover:ring-1 hover:ring-ring transition-shadow",
                                     gauge.color === c && "ring-2 ring-ring",

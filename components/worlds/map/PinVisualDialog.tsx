@@ -179,6 +179,7 @@ export function PinVisualDialog({
                   type="button"
                   role="switch"
                   aria-checked={noBg}
+                  aria-label={t("toggleTransparent")}
                   onClick={() => setNoBg((v) => !v)}
                   className={cn(
                     "relative inline-flex h-4 w-7 items-center rounded-full transition-colors",
@@ -213,6 +214,7 @@ export function PinVisualDialog({
                 type="button"
                 role="switch"
                 aria-checked={hasBorder}
+                aria-label={t("toggleBorder")}
                 onClick={() => setHasBorder((v) => !v)}
                 className={cn(
                   "relative inline-flex h-5 w-9 items-center rounded-full transition-colors",

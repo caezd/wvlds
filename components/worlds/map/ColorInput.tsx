@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 
 import { HsvColorPicker, BUBBLE_COLOR_PRESETS, type ColorPreset } from "@/components/ui/hsv-color-picker";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -16,6 +17,7 @@ export function ColorInput({
   onChange: (hex: string) => void;
   presets?: ColorPreset[];
 }) {
+  const t = useTranslations("common");
   return (
     <div className="flex items-center gap-2">
       <Popover>
@@ -24,6 +26,7 @@ export function ColorInput({
             type="button"
             className="h-7 w-7 shrink-0 rounded border border-input shadow-sm transition-shadow hover:ring-2 hover:ring-ring"
             style={{ backgroundColor: color }}
+            aria-label={t("chooseColor")}
           />
         </PopoverTrigger>
         <PopoverContent

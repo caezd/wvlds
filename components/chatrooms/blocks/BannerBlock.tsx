@@ -34,6 +34,7 @@ export function BannerBlockView({
                 variant="ghost"
                 size="icon-sm"
                 className="h-7 w-7 bg-background/80 backdrop-blur-sm text-destructive hover:text-destructive hover:bg-background/90"
+                aria-label={t("bannerDelete")}
               >
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>

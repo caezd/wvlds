@@ -8,6 +8,16 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Interface",
+    text: "Vingt-trois boutons n'avaient aucun nom pour un lecteur d'écran : une icône pour seul contenu, ou rien du tout — une pastille de couleur, un interrupteur. Ils étaient annoncés « bouton », sans plus. Supprimer un champ, monter une ligne d'un cran, changer une couleur, zoomer sur le canevas des relations : rien ne disait lequel faisait quoi.\nChacun porte désormais un libellé, traduit dans les trois langues.",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
+    text: "La fenêtre de confirmation de suppression s'affichait en français pour tout le monde. Son titre et ses deux boutons — « Annuler », « Supprimer » — étaient des valeurs par défaut écrites en dur, et dix des dix-huit écrans qui l'utilisent s'en remettaient à elles.\nIls suivent maintenant la langue choisie.",
+  },
+  {
+    date: "2026-08",
     tag: "Correctif",
     text: "Un message épinglé ancien ne peut plus apparaître dans le mauvais salon. La barre d'épingles va chercher séparément les messages trop vieux pour être déjà chargés ; en changeant de salon pendant cette recherche, la réponse arrivait après coup et son contenu était déchiffré avec la clé du nouveau salon.\nLe résultat : un message du salon précédent, illisible, épinglé là où il n'a rien à faire. La liste des épingles était déjà protégée contre ce décalage — c'est l'étape suivante qui ne l'était pas.",
   },

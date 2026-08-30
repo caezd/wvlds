@@ -748,6 +748,7 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
                                 <div className="absolute right-1 top-0 z-20">
                                   <button
                                     type="button"
+                                    aria-label={t("changeGroup")}
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       if (openGroupPicker?.personaId === p.id) { setOpenGroupPicker(null); return; }
@@ -988,12 +989,14 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
             <button
               type="button"
               onClick={() => setScale((s) => Math.min(4, s * 1.25))}
+              aria-label={tCommon("zoomIn")}
               onPointerDown={(e) => e.stopPropagation()}
               className="flex h-7 w-7 items-center justify-center rounded-lg border border-border bg-background text-sm shadow hover:bg-muted"
             >+</button>
             <button
               type="button"
               onClick={() => setScale((s) => Math.max(0.15, s / 1.25))}
+              aria-label={tCommon("zoomOut")}
               onPointerDown={(e) => e.stopPropagation()}
               className="flex h-7 w-7 items-center justify-center rounded-lg border border-border bg-background text-sm shadow hover:bg-muted"
             >−</button>

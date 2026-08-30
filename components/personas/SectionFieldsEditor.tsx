@@ -534,10 +534,10 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
 
                   {/* Actions flottantes */}
                   <div className="absolute right-1.5 top-1 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                    <Button variant="ghost" size="icon-sm" type="button" className="h-7 w-7" onClick={() => handleMoveField(field.id, "up")} disabled={isFirst}>
+                    <Button variant="ghost" size="icon-sm" type="button" className="h-7 w-7" onClick={() => handleMoveField(field.id, "up")} disabled={isFirst} aria-label={tCommon("moveUp")}>
                       <ArrowUp className="h-3.5 w-3.5" />
                     </Button>
-                    <Button variant="ghost" size="icon-sm" type="button" className="h-7 w-7" onClick={() => handleMoveField(field.id, "down")} disabled={isLast}>
+                    <Button variant="ghost" size="icon-sm" type="button" className="h-7 w-7" onClick={() => handleMoveField(field.id, "down")} disabled={isLast} aria-label={tCommon("moveDown")}>
                       <ArrowDown className="h-3.5 w-3.5" />
                     </Button>
                     {isTemplate && (
@@ -568,7 +568,7 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
                     ) : field.type === "image-grid" ? (
                       <DeleteConfirmDialog
                         trigger={
-                          <Button variant="ghost" size="icon-sm" type="button" className="h-7 w-7 text-muted-foreground hover:bg-destructive/10 hover:text-destructive">
+                          <Button variant="ghost" size="icon-sm" type="button" className="h-7 w-7 text-muted-foreground hover:bg-destructive/10 hover:text-destructive" aria-label={tPersonas("deleteField")}>
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         }
@@ -576,7 +576,7 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
                         onConfirm={() => handleDeleteField(field.id)}
                       />
                     ) : (
-                      <Button variant="ghost" size="icon-sm" type="button" className="h-7 w-7 text-muted-foreground hover:bg-destructive/10 hover:text-destructive" onClick={() => handleDeleteField(field.id)}>
+                      <Button variant="ghost" size="icon-sm" type="button" className="h-7 w-7 text-muted-foreground hover:bg-destructive/10 hover:text-destructive" onClick={() => handleDeleteField(field.id)} aria-label={tPersonas("deleteField")}>
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     )}

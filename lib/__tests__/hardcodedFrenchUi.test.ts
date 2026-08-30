@@ -151,6 +151,22 @@ describe("aucun texte français codé en dur dans l'interface", () => {
     ).toEqual([]);
   });
 
+  it("aucune valeur par défaut de paramètre n'est une phrase française", () => {
+    // `deleteDescription = "Cet élément sera supprimé définitivement."` : le
+    // texte n'était ni dans un attribut ni dans une exception, donc invisible
+    // pour les deux contrôles ci-dessus — et il s'affichait tel quel dans les
+    // trois langues, à chaque suppression d'un bloc de message.
+    const fautifs = releverPhrases(/^\s*\w+ = "([^"]{6,})",?\s*$/gm);
+    expect(
+      fautifs,
+      fautifs.length
+        ? "Valeur par défaut en français. Elle s'affiche quand l'appelant ne " +
+          "fournit rien, dans toutes les langues. Rendez le paramètre " +
+          "facultatif et traduisez le repli : " + fautifs.join(" | ")
+        : "",
+    ).toEqual([]);
+  });
+
   it("aucun `catch` n'affiche le message brut de l'erreur", () => {
     // `toast.error(e.message)` sur un `throw error` de Supabase affiche le
     // texte de PostgreSQL — « new row violates row-level security policy for

@@ -50,7 +50,14 @@
     "invalidTag": "A tag may only contain letters and digits.",
     "dropToReplace": "Click or drop to replace",
     "uploadError": "Upload failed. Please try again in a moment.",
-    "usernameTaken": "This username is already taken."
+    "usernameTaken": "This username is already taken.",
+    "chooseColor": "Choose a colour",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "deleteConfirmTitle": "Confirm deletion",
+    "irreversible": "This action cannot be undone."
   },
   "nav": {
     "profile": "My profile",
@@ -476,7 +483,9 @@
     "restrictionPurgeSkills": "skills",
     "restrictionPurgeDescription": "This will immediately erase all {items} of this world's personas. This cannot be undone.",
     "restrictionPurgeConfirm": "Enable and purge",
-    "deleteFailed": "Could not delete the world."
+    "deleteFailed": "Could not delete the world.",
+    "addTag": "Add this tag",
+    "addMonthName": "Add this month name"
   },
   "auth": {
     "signin": "Sign in",
@@ -623,7 +632,9 @@
     "bannerDeleteDescription": "This character's banner will be permanently deleted from storage.",
     "avatarDeleteDescription": "This character's avatar will be permanently deleted from storage.",
     "sectionDeleteDescription": "This section and all its fields will be permanently deleted.",
-    "fieldDeleteDescription": "This field and all its hosted images will be permanently deleted."
+    "fieldDeleteDescription": "This field and all its hosted images will be permanently deleted.",
+    "sectionOptions": "Section options",
+    "deleteField": "Delete the field"
   },
   "quests": {
     "title": "Daily quests",
@@ -741,7 +752,8 @@
         "chatrooms": "Chatrooms"
       }
     },
-    "editItem": "Edit the item"
+    "editItem": "Edit the item",
+    "shopItemDelete": "Delete this item"
   },
   "chatrooms": {
     "newRoom": "New room",
@@ -990,7 +1002,11 @@
     "messageDeleteDescription": "This message will be permanently deleted.",
     "bannerDeleteDescription": "The banner will be permanently deleted.",
     "roomDeleteDescription": "The room and all its messages will be permanently deleted.",
-    "deleteRoomFailed": "Could not delete the room."
+    "deleteRoomFailed": "Could not delete the room.",
+    "bannerDelete": "Delete the banner",
+    "blockEdit": "Edit the block",
+    "blockDelete": "Delete the block",
+    "blockDeleteDescription": "This element will be permanently deleted."
   },
   "changelog": {
     "title": "Changelog",
@@ -1036,7 +1052,10 @@
       "dotted": "Dotted",
       "long": "Long",
       "mixed": "Mixed"
-    }
+    },
+    "changeGroup": "Change the group",
+    "addGroup": "Add this group",
+    "addRelType": "Add this relation type"
   },
   "wiki": {
     "changeIcon": "Change icon",
@@ -1144,7 +1163,9 @@
       "solid": "Solid",
       "dashed": "Dashed",
       "dotted": "Dotted"
-    }
+    },
+    "toggleTransparent": "Transparent background",
+    "toggleBorder": "Border"
   },
   "iconPicker": {
     "chooseIcon": "Choose an icon",

@@ -175,7 +175,7 @@ export function PersonaSectionsTabs({
                 {value === section.id && (
                   <DropdownMenu key={`${section.id}-menu`}>
                     <DropdownMenuTrigger asChild>
-                      <Button type="button" variant="ghost" size="icon" className="h-6 w-6 shrink-0">
+                      <Button type="button" variant="ghost" size="icon" className="h-6 w-6 shrink-0" aria-label={t("sectionOptions")}>
                         <MoreHorizontal className="h-3.5 w-3.5" />
                       </Button>
                     </DropdownMenuTrigger>
