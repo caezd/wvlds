@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useState } from "react";
+import { useState } from "react";
 import { useResetOnKeyChange } from "@/hooks/useResetOnKeyChange";
 import dynamic from "next/dynamic";
 import Image from "next/image";
@@ -17,7 +17,6 @@ import { MobileDrawerOpenButton } from "@/components/sidebar/MobileDrawerOpenBut
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { World, WorldTimelineConfig, WorldHomeRoom as Room } from "@/types/worlds";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
-import { useMobileSidebar } from "@/components/providers/MobileSidebarProvider";
 import type { AsidePersona } from "@/components/personas/WorldPersonaAsideClient";
 import { toggleWorldFavorite } from "@/app/(protected)/w/actions";
 import { cn } from "@/lib/utils";
@@ -84,23 +83,6 @@ export function WorldHome({
   const router = useRouter();
   const t = useTranslations("worlds");
   const tChat = useTranslations("chatrooms");
-  const { setHideMobileHeader } = useMobileSidebar();
-
-  // La vue par défaut du monde a son propre bouton menu mobile, incrusté sur
-  // la bannière — la barre mobile générique de AppShell deviendrait redondante.
-  //
-  // `useLayoutEffect`, pas `useEffect` : AppShell.tsx masque cette barre
-  // (h-12, shrink-0) uniquement une fois `hideMobileHeader` passé à true, un
-  // rendu APRÈS le montage — avec `useEffect` (différé après la peinture du
-  // navigateur), la première image peinte montrait encore la barre, avant
-  // qu'une seconde image ne l'efface et n'étire le contenu dans l'espace
-  // libéré (et l'inverse en quittant Accueil) : un bond de layout visible à
-  // chaque bascule vers/depuis cette vue précisément. `useLayoutEffect`
-  // s'exécute avant la peinture, donc dans la même image que le montage.
-  useLayoutEffect(() => {
-    setHideMobileHeader(true);
-    return () => setHideMobileHeader(false);
-  }, [setHideMobileHeader]);
 
   const hasTimeline = world_timeline && !!world.timeline_enabled && !!world.timeline_config;
   const _hasCatalogue = world_catalogue && (!!(world.restrict_inventory || world.restrict_skills) || canEditTabs);

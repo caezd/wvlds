@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Correctif",
+    text: "L’accueil d’un monde clignotait au chargement sur mobile : une barre surmontée d’un bouton menu apparaissait en haut de l’écran, en double avec le bouton déjà incrusté sur la bannière, puis disparaissait une fois la page prête — tout le contenu remontant alors d’un cran. Cette barre ne s’affiche plus sur les pages d’un monde, et le bouton menu reste accessible pendant tout le chargement, à sa place définitive."
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
     text: "Les pastilles de présence affichaient tout le monde hors ligne, vous compris. Elles étaient bien alimentées — votre navigateur annonçait bien votre présence — mais rangées sous un identifiant tiré au hasard au lieu du vôtre : l'application cherchait donc quelqu'un qu'elle venait elle-même de classer ailleurs.\nEn cause, une option perdue à l'ouverture du canal temps réel. Elle n'était transmise que sur un chemin secondaire, emprunté seulement après une reconnexion réseau — ce qui explique que la présence semblait fonctionner par moments.",
   },
   {

@@ -33,14 +33,6 @@ const DmsPanelContent = dynamic(
   { ssr: false },
 );
 
-// Onglets secondaires d'un monde ayant leur propre header (avec bouton menu intégré).
-// Exporté : réutilisé par `w/[id]/loading.tsx` pour savoir, pendant le
-// chargement, si le futur contenu aura son propre bouton menu (auquel cas
-// il faut en afficher un de secours le temps que ce contenu monte).
-export const WORLD_PANEL_VIEWS = new Set([
-  "members", "personas", "wiki", "canvas", "catalogue", "map", "timeline", "settings",
-]);
-
 // ── Inner shell — consomme useDms() et useNotifications() ────────────────────
 
 function AppShellInner({
@@ -61,7 +53,7 @@ function AppShellInner({
   // n'utilise que ces deux valeurs. Via `useNotifications()`, il se re-rendait
   // à chaque message reçu dans n'importe lequel de vos mondes.
   const { panelOpen: notifOpen, closePanel: closeNotif } = useNotificationsPanel();
-  const { mobileSidebar, drawerOpen, setDrawerOpen, hideMobileHeader } = useMobileSidebar();
+  const { mobileSidebar, drawerOpen, setDrawerOpen } = useMobileSidebar();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
@@ -71,18 +63,25 @@ function AppShellInner({
   // la vue qu'on vient de sélectionner.
   useEffect(() => { setDrawerOpen(false); }, [pathname, searchParams, setDrawerOpen]);
 
-  const isWorldOrChat = (pathname?.startsWith("/w/") || pathname?.startsWith("/c/")) ?? false;
   // Les pages de chatroom affichent leur propre header (visible sur mobile
   // désormais) avec le bouton menu intégré en tête — la barre générique
   // ci-dessous serait redondante (cf. ChatroomHeader dans app/(protected)/c/[id]/view.tsx).
   const isChatRoute = pathname?.startsWith("/c/") ?? false;
-  // Idem pour les onglets secondaires d'un monde (membres, personas, wiki, …) :
-  // chacun a son propre header avec le bouton menu intégré (cf. WorldHome.tsx).
-  // Seule la vue par défaut (?view absent) n'en a pas et garde la barre générique.
-  const worldView = searchParams.get("view");
-  const hasWorldPanelHeader = (pathname?.startsWith("/w/") ?? false) && !!worldView && WORLD_PANEL_VIEWS.has(worldView);
+  // Idem pour *toutes* les vues d'un monde : les onglets secondaires (membres,
+  // personas, wiki, …) ont leur WorldPanelHeader, et la vue par défaut a son
+  // bouton menu incrusté sur la bannière (cf. WorldHome.tsx). Une valeur de
+  // `view` inconnue — ou une vue désactivée pour ce monde — retombe justement
+  // sur cette bannière : aucune URL sous /w/ ne se retrouve donc sans bouton.
+  //
+  // Cette condition se déduit de l'URL seule, volontairement. La vue par défaut
+  // passait auparavant par un état client (`hideMobileHeader`, posé au montage
+  // de WorldHome) : cet état arrivait trop tard — le rendu serveur, puis toute
+  // la durée du `loading.tsx`, peignaient la barre h-12 avant qu'elle ne
+  // disparaisse au montage, faisant remonter le contenu de 48 px d'un coup.
+  const isWorldRoute = pathname?.startsWith("/w/") ?? false;
   // L'Explorateur a lui aussi son propre WorldPanelHeader (cf. explore/page.tsx).
   const isExploreRoute = pathname?.startsWith("/explore") ?? false;
+  const isWorldOrChat = isWorldRoute || isChatRoute;
   const anyPanelOpen = notifOpen || dmsOpen;
 
   // Exclusivité mutuelle
@@ -165,7 +164,7 @@ function AppShellInner({
 
       {/* Contenu principal */}
       <section id="app-shell" className="relative flex min-h-0 max-w-full flex-1 flex-col">
-        <header className={cn("lg:hidden flex h-12 shrink-0 items-center p-2", (isChatRoute || hasWorldPanelHeader || isExploreRoute || hideMobileHeader) && "hidden")}>
+        <header className={cn("lg:hidden flex h-12 shrink-0 items-center p-2", (isChatRoute || isWorldRoute || isExploreRoute) && "hidden")}>
           <button
             type="button"
             onClick={() => setDrawerOpen(true)}
