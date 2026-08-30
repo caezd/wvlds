@@ -5,7 +5,8 @@ import { createClient } from "@/lib/supabase/client";
 import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { decryptMessage, generateRoomKey } from "@/lib/crypto";
+import { amorcerCleDeSalon } from "@/lib/chatroomKeyBootstrap";
+import { decryptMessage } from "@/lib/crypto";
 import Link from "next/link";
 import { BarChart3, Globe, GlobeLock, Menu, MoreVertical, Pin, Search, Settings, Star } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -456,43 +457,27 @@ export default function ChatRoomView({
   // Premier client à arriver gagne ; les suivants récupèrent la clé existante.
   useEffect(() => {
     if (roomKey) return;
-    async function bootstrap() {
-      const { data: existing } = await supabase
-        .from(TABLE.CHATROOM_KEYS)
-        .select("key_b64")
-        .eq("chatroom_id", chatId)
-        .maybeSingle();
-
-      if (existing) {
-        const k = (existing as unknown as { key_b64: string }).key_b64;
-        roomKeyRef.current = k;
-        setRoomKey(k);
-        return;
-      }
-
-      const key = await generateRoomKey();
-      const { error } = await supabase
-        .from(TABLE.CHATROOM_KEYS)
-        .insert({ chatroom_id: chatId, key_b64: key });
-
-      if (error) {
-        // Race condition : une autre session a inséré en premier
-        const { data: winner } = await supabase
-          .from(TABLE.CHATROOM_KEYS)
-          .select("key_b64")
-          .eq("chatroom_id", chatId)
-          .maybeSingle();
-        if (winner) {
-          const k = (winner as unknown as { key_b64: string }).key_b64;
-          roomKeyRef.current = k;
-          setRoomKey(k);
-        }
-      } else {
-        roomKeyRef.current = key;
-        setRoomKey(key);
-      }
-    }
-    void bootstrap();
+    // Garde d'annulation : cet amorçage est asynchrone et l'effet se rejoue à
+    // chaque changement de salon. Sans elle, une réponse lente venue du salon
+    // QUITTÉ écrasait la clé du salon courant.
+    //
+    // La conséquence dépasse l'affichage : `roomKey` alimente le composeur.
+    // Un message envoyé avec la clé d'un autre salon serait chiffré de travers
+    // et deviendrait illisible pour tout le monde, définitivement — l'auteur
+    // compris.
+    //
+    // La fenêtre est étroite (l'amorçage ne joue que pour un salon sans clé,
+    // donc fraîchement créé) mais le dégât est irréversible.
+    let annule = false;
+    void (async () => {
+      const cle = await amorcerCleDeSalon(supabase, chatId);
+      if (annule || !cle) return;
+      roomKeyRef.current = cle;
+      setRoomKey(cle);
+    })();
+    return () => {
+      annule = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chatId]);
 

@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Correctif",
+    text: "Changer de salon très vite juste après en avoir créé un ne peut plus abîmer les messages. La clé de chiffrement du salon quitté pouvait arriver en retard et remplacer celle du salon affiché : les messages devenaient illisibles, et surtout un message envoyé dans cet état l'aurait été avec la mauvaise clé — définitivement indéchiffrable, y compris pour son auteur.\nLa fenêtre était étroite — elle n'existait que pour un salon fraîchement créé, avant que sa clé ne soit posée — mais le dégât aurait été irréversible.",
+  },
+  {
+    date: "2026-08",
     tag: "Technique",
     text: "Le détail technique des erreurs de base de données ne quitte plus le serveur. Il n'était déjà plus affiché, mais il voyageait encore jusqu'à votre navigateur — lisible par qui inspecte le trafic, et citant les noms de tables et de règles internes.\nIl est désormais consigné côté serveur, où il sert au diagnostic, et seul un code franchit la frontière. Rien ne change à l'écran.",
   },
