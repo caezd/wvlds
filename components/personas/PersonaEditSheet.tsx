@@ -45,6 +45,7 @@ import { deletePersona } from "@/app/(protected)/p/actions";
 import { toast } from "sonner";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import { StoredImage } from "@/components/ui/stored-image";
+import { avatarThumbWidth } from "@/lib/storage";
 
 // ---------------------------------------------------------------------------
 // Sélection + recadrage d'une image (fichier, presse-papiers ou lien externe),
@@ -688,7 +689,7 @@ export function PersonaEditorContent({
                     garantit que les deux vues affichent la même image, et non
                     deux ré-encodages différents. */}
                 {avatarUrl ? (
-                  <StoredImage url={avatarUrl} width={128 * 3} className="object-cover" draggable={false} />
+                  <StoredImage url={avatarUrl} width={avatarThumbWidth(128)} className="object-cover" draggable={false} />
                 ) : (
                   <div className="h-full w-full grid place-items-center text-lg font-semibold text-muted-foreground">
                     {avatarFallback}
@@ -774,7 +775,7 @@ export function PersonaEditorContent({
             <div className="flex items-center gap-3">
               <div className="relative h-14 w-14 shrink-0 rounded-xl border bg-muted overflow-hidden lg:hidden">
                 {avatarUrl ? (
-                  <StoredImage url={avatarUrl} width={56 * 3} className="object-cover" draggable={false} />
+                  <StoredImage url={avatarUrl} width={avatarThumbWidth(56)} className="object-cover" draggable={false} />
                 ) : (
                   <div className="h-full w-full grid place-items-center text-sm font-semibold text-muted-foreground">
                     {avatarFallback}

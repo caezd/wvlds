@@ -12,6 +12,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import type { AsidePersona } from "./WorldPersonaAsideClient";
 import { useTranslations } from "next-intl";
 import { StoredImage } from "@/components/ui/stored-image";
+import { avatarThumbWidth } from "@/lib/storage";
 
 type OtherPersona = {
   id: string;
@@ -48,7 +49,7 @@ function OtherPersonaCard({ persona }: { persona: OtherPersona }) {
       {persona.avatar_url ? (
         <StoredImage
           url={persona.avatar_url}
-          width={160 * 3}
+          width={avatarThumbWidth(160)}
           alt={name}
           className="object-cover"
           draggable={false}

@@ -72,22 +72,28 @@ describe("StoredImage", () => {
     await waitFor(() => expect(img().getAttribute("src")).toBe(STOCKÉE));
   });
 
-  // Sans réinitialisation, une image remplacée hériterait du `loaded` de la
-  // précédente : elle apparaîtrait d'un coup, sans substitut ni fondu.
-  it("refait son fondu quand l'image change", async () => {
+  // Sans réinitialisation, une image remplacée hériterait de l'état de la
+  // précédente. On le vérifie par le repli plutôt que par l'opacité : celle-ci
+  // dépend du cycle de chargement d'une <img> réutilisée, que jsdom ne modélise
+  // pas — le test passerait alors sans rien prouver.
+  it("repart de zéro quand l'image change", async () => {
     const AUTRE = STOCKÉE.replace("p1", "p2");
     const { rerender } = render(<StoredImage url={STOCKÉE} width={384} />, { wrapper: Cadre });
 
-    fireEvent.load(img());
-    await waitFor(() => expect(img().className).toContain("opacity-100"));
+    // La vignette de la première échoue : on est retombé sur son URL d'origine.
+    fireEvent.error(img());
+    await waitFor(() => expect(img().getAttribute("src")).toBe(STOCKÉE));
 
     rerender(<StoredImage url={AUTRE} width={384} />);
 
-    expect(img().className).toContain("opacity-0");
+    // La suivante retente sa propre vignette au lieu d'hériter de cet échec,
+    // et son substitut est bien le sien.
+    expect(img().getAttribute("src")).toBe(supabaseThumb(AUTRE, 384));
     expect(screen.getByTestId("stored-image-blur").style.backgroundImage).toContain(
       supabaseTinyThumb(AUTRE)!,
     );
   });
+
   it("ne rend rien sans URL", () => {
     const { container } = render(<StoredImage url={null} width={384} />);
     expect(container).toBeEmptyDOMElement();

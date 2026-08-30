@@ -33,12 +33,15 @@ import { getInitials } from "@/lib/textFormatting";
 import { cn } from "@/lib/utils";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { getUsablePersonaIds } from "@/lib/personaEligibility";
+import { avatarThumbWidth } from "@/lib/storage";
 
 function PersonaAvatarThumb({ url, name, size }: { url: string; name: string; size: number }) {
-  // `size * 3` comme partout ailleurs : à `* 2`, cet avatar demandait une
-  // image plus petite que celle du même persona affichée sur sa fiche — le
-  // genre d'écart qui rend deux vues visiblement différentes.
-  return <StoredImage url={url} width={size * 3} alt={name} className="object-cover" draggable={false} />;
+  // Palier partagé plutôt que `size * 3` : c'est ce qui fait que le même
+  // persona affiché ici, sur sa carte ou dans sa fiche demande une seule et
+  // même image, déjà en cache dès la deuxième vue.
+  return (
+    <StoredImage url={url} width={avatarThumbWidth(size)} alt={name} className="object-cover" draggable={false} />
+  );
 }
 
 function PersonaRow({

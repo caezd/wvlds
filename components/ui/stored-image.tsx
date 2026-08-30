@@ -25,6 +25,21 @@ import { supabaseThumb, supabaseTinyThumb, TINY_THUMB_WIDTH } from "@/lib/storag
  * `overflow-hidden` (le flou est légèrement agrandi pour que ses bords, rendus
  * translucides par le filtre, restent hors du cadre).
  */
+/**
+ * URL déjà affichées au moins une fois dans cette page.
+ *
+ * Le cache du navigateur évite de RETÉLÉCHARGER l'image ; il ne dit pas à
+ * React qu'elle a déjà été vue. Sans cette mémoire, remonter un composant sur
+ * une image connue rejouerait son fondu depuis le substitut flou — un
+ * clignotement pour rien. Elle ne grandit que du nombre d'images distinctes
+ * réellement affichées, et disparaît au rechargement de la page.
+ *
+ * Elle ne sert qu'à ça : elle ne remplace pas le cache du navigateur, et ne
+ * peut rien pour deux vues qui demandent des largeurs différentes — c'est le
+ * rôle des paliers d'`avatarThumbWidth`.
+ */
+const dejaAffichées = new Set<string>();
+
 export function StoredImage({
   url,
   width,
@@ -71,12 +86,19 @@ export function StoredImage({
     setThumbFailed(false);
   }
 
+  const src = url
+    ? (thumbFailed ? url : (supabaseThumb(url, width, quality, height, resize) ?? url))
+    : "";
+
   // Une image déjà en cache peut être complète AVANT que React n'attache son
   // `onLoad` : sans cette vérification au montage, elle resterait
   // indéfiniment à `opacity: 0`.
-  const ref = React.useCallback((node: HTMLImageElement | null) => {
-    if (node?.complete) setLoaded(true);
-  }, []);
+  const ref = React.useCallback(
+    (node: HTMLImageElement | null) => {
+      if (node?.complete || (src && dejaAffichées.has(src))) setLoaded(true);
+    },
+    [src],
+  );
 
   const tiny = supabaseTinyThumb(
     url,
@@ -84,7 +106,6 @@ export function StoredImage({
   );
 
   if (!url) return null;
-  const src = thumbFailed ? url : (supabaseThumb(url, width, quality, height, resize) ?? url);
 
   return (
     <>
@@ -107,7 +128,7 @@ export function StoredImage({
         sizes={sizes}
         priority={priority}
         draggable={draggable}
-        onLoad={() => setLoaded(true)}
+        onLoad={() => { dejaAffichées.add(src); setLoaded(true); }}
         onError={() => setThumbFailed(true)}
         className={cn(
           "transition-opacity duration-500 motion-reduce:transition-none",

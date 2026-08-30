@@ -1,6 +1,7 @@
 "use client";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { StoredImage } from "@/components/ui/stored-image";
+import { avatarThumbWidth } from "@/lib/storage";
 import { cn } from "@/lib/utils";
 
 export function ChatroomAvatarWithPresence({
@@ -40,7 +41,7 @@ export function ChatroomAvatarWithPresence({
         <AvatarFallback>
           {(fallback ?? "?").slice(0, 1).toUpperCase()}
         </AvatarFallback>
-        <StoredImage url={url} width={size * 3} alt={alt ?? ""} className="object-cover" />
+        <StoredImage url={url} width={avatarThumbWidth(size)} alt={alt ?? ""} className="object-cover" />
       </Avatar>
 
       {presenceState === "online" && (

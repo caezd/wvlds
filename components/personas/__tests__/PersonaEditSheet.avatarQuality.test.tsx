@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render } from "@testing-library/react";
 import { createSupabaseMock } from "@/test/supabaseMock";
 import { createClient } from "@/lib/supabase/client";
-import { supabaseThumb } from "@/lib/storage";
+import { avatarThumbWidth, supabaseThumb } from "@/lib/storage";
 
 vi.mock("@/lib/supabase/client", () => ({ createClient: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
@@ -46,8 +46,8 @@ describe("PersonaEditorContent — qualité de l'avatar", () => {
       .find((s) => s.includes("/avatars/"));
 
     // `AvatarWithFrame` (utilisé par l'aperçu et la fiche publique) demande
-    // `size * 3` à la qualité par défaut : l'édition doit demander la même
+    // le palier correspondant à sa taille : l'édition doit demander la même
     // chose, pas seulement « quelque chose d'assez grand ».
-    expect(src).toBe(supabaseThumb(AVATAR, 128 * 3));
+    expect(src).toBe(supabaseThumb(AVATAR, avatarThumbWidth(128)));
   });
 });

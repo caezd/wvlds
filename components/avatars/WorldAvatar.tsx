@@ -1,5 +1,6 @@
 import { StoredImage } from "@/components/ui/stored-image";
 import { cn } from "@/lib/utils";
+import { avatarThumbWidth } from "@/lib/storage";
 
 const SIZES = {
   sm: { dim: "h-6 w-6", px: 24, text: "text-[10px]" },
@@ -33,7 +34,7 @@ export function WorldAvatar({
           il retombe alors sur la liste ENTIÈRE de ses largeurs, jusqu'à
           3840px. Demander d'agrandir une source de 96px jusque-là échoue
           purement et simplement (`naturalWidth: 0`, vérifié en direct). */}
-      <StoredImage url={world.icon_url} width={px * 3} quality={90} className="object-cover" />
+      <StoredImage url={world.icon_url} width={avatarThumbWidth(px)} quality={90} className="object-cover" />
     </span>
   ) : (
     <span className={cn("flex shrink-0 items-center justify-center rounded-lg font-semibold text-white bg-muted", dim, text, className)}>

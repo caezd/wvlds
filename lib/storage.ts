@@ -30,6 +30,28 @@ export function supabaseThumb(
   );
 }
 
+/**
+ * Deux paliers de largeur pour les avatars, au lieu d'une largeur calculée à
+ * partir de la taille d'affichage de chaque surface.
+ *
+ * Calculer `taille × 3` par surface produit une URL différente par vue — 384
+ * pour une fiche, 480 pour une grille, 600 pour une carte — donc un
+ * téléchargement par vue pour le MÊME avatar. Le cache du navigateur n'y peut
+ * rien : on ne lui redemande jamais la même URL. Deux paliers suffisent à ce
+ * que toutes les vues d'une même famille partagent leur image.
+ *
+ * Deux et pas un seul : servir 512 px à l'avatar de 32 px d'un message
+ * multiplierait par vingt le poids d'un fil de discussion. Le seuil est à
+ * 44 px CSS, soit 132 px sur un écran 3x — juste au-dessus du petit palier.
+ */
+export const AVATAR_THUMB_SMALL = 128;
+export const AVATAR_THUMB_LARGE = 512;
+
+/** Palier à demander pour un avatar affiché à `cssSize` pixels. */
+export function avatarThumbWidth(cssSize: number): number {
+  return cssSize <= 44 ? AVATAR_THUMB_SMALL : AVATAR_THUMB_LARGE;
+}
+
 /** Largeur de la vignette de substitution affichée floutée en attendant
  *  l'image réelle. Assez petite pour arriver en quelques centaines d'octets,
  *  assez grande pour restituer les masses de couleur de l'image. */

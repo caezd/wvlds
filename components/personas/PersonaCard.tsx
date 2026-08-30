@@ -7,6 +7,7 @@ import type { MaritalStatus } from "@/types/db";
 import { Pencil } from "lucide-react";
 import { getInitials } from "@/lib/textFormatting";
 import { StoredImage } from "@/components/ui/stored-image";
+import { avatarThumbWidth } from "@/lib/storage";
 
 type PersonaCardProps = {
   personaId: string;
@@ -66,7 +67,7 @@ export function PersonaCard({
           {avatarUrl ? (
             <StoredImage
               url={avatarUrl}
-              width={200 * 3}
+              width={avatarThumbWidth(200)}
               alt={personaName}
               className="object-cover"
               draggable={false}
