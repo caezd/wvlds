@@ -24,13 +24,16 @@ import { join } from "node:path";
  *
  * - `app/legal` : mentions légales, dont la traduction demande une relecture
  *   juridique et non une reformulation.
- * - `lib/patreon/client.ts` : erreurs de parsing d'une réponse d'API, qui
- *   restent côté serveur et ne sont jamais affichées.
+ * - `lib/patreon/*` : diagnostics d'intégration, qui restent côté serveur.
+ *   Vérifié plutôt que supposé : les trois appelants de `sync.ts` — l'action
+ *   de déliaison, le webhook et la redirection d'autorisation — attrapent
+ *   l'exception, la journalisent et rendent un message générique. Aucune de
+ *   ces phrases n'atteint un écran.
  * - `lib/changelog.ts` : le journal des versions, rédigé en français.
  */
 const EXEMPTS = [
   join("app", "legal"),
-  join("lib", "patreon", "client.ts"),
+  join("lib", "patreon"),
   join("lib", "changelog.ts"),
 ];
 
@@ -140,13 +143,47 @@ describe("aucun texte français codé en dur dans l'interface", () => {
 
   it("aucune exception ne porte de phrase française", () => {
     // `throw new Error("Non connecté.")` finissait dans un `toast.error(e.message)`.
-    const fautifs = releverPhrases(/new Error\(\s*"([^"]{6,})"/g);
+    //
+    // Les littéraux de gabarit comptent autant, et sont pires : ils servent
+    // justement à INTERPOLER le message brut de la base — `throw new
+    // Error(`Suppression impossible : ${error.message}`)`. Deux actions
+    // d'administration le faisaient, et la première version de ce contrôle,
+    // qui ne regardait que les guillemets droits, ne les voyait pas.
+    const fautifs = [
+      ...releverPhrases(/new Error\(\s*"([^"]{6,})"/g),
+      ...releverPhrases(/new Error\(\s*`([^`]{6,})`/g),
+    ];
     expect(
       fautifs,
       fautifs.length
         ? "Phrase française jetée en exception. Plusieurs `catch` affichent " +
           "`e.message` : elle atteint l'écran. Jetez un code de " +
           "`lib/actionErrors.ts` : " + fautifs.join(" | ")
+        : "",
+    ).toEqual([]);
+  });
+
+  it("aucune exception n'interpole le message brut d'une erreur", () => {
+    // Règle indépendante de la langue, et c'est le point : « Activation de
+    // l'article impossible : ${error.message} » ne compte pas assez de
+    // mots-outils pour être reconnue comme française, alors qu'elle fait
+    // exactement ce qu'on veut interdire — recopier le texte de PostgreSQL,
+    // qui nomme la table et la règle, dans une exception qui remonte.
+    const fautifs: string[] = [];
+    for (const p of fichiersSource()) {
+      const src = readFileSync(p, "utf-8");
+      for (const m of src.matchAll(/new Error\([^)]*\$\{[^}]*\.message\}/g)) {
+        const ligne = src.slice(0, m.index).split(String.fromCharCode(10)).length;
+        fautifs.push(`  ${p.slice(process.cwd().length + 1)}:${ligne}`);
+      }
+    }
+    expect(
+      fautifs,
+      fautifs.length
+        ? "Message brut d'une erreur recopié dans une exception. Il vient de " +
+          "PostgreSQL, cite le nom des tables et des règles, et remonte avec " +
+          "l'exception. Journalisez-le avec `echecEnregistrement(...)`, qui " +
+          "rend le code à jeter : " + fautifs.join(" | ")
         : "",
     ).toEqual([]);
   });
@@ -163,6 +200,30 @@ describe("aucun texte français codé en dur dans l'interface", () => {
         ? "Valeur par défaut en français. Elle s'affiche quand l'appelant ne " +
           "fournit rien, dans toutes les langues. Rendez le paramètre " +
           "facultatif et traduisez le repli : " + fautifs.join(" | ")
+        : "",
+    ).toEqual([]);
+  });
+
+  it("aucun JSX ne rend le message brut d'une erreur", () => {
+    // Trois pages d'administration affichaient « Erreur : {error.message} » —
+    // le texte de PostgreSQL, en anglais, nommant la table interrogée. Le
+    // public est restreint, mais le texte l'est aussi : il n'était traduit
+    // dans aucune langue, et la phrase qui l'introduisait était en dur.
+    const fautifs: string[] = [];
+    for (const p of fichiersSource()) {
+      if (!p.endsWith(".tsx")) continue;
+      const src = readFileSync(p, "utf-8");
+      for (const m of src.matchAll(/\{\s*\w+\.message\s*\}/g)) {
+        const ligne = src.slice(0, m.index).split(String.fromCharCode(10)).length;
+        fautifs.push(`  ${p.slice(process.cwd().length + 1)}:${ligne}`);
+      }
+    }
+    expect(
+      fautifs,
+      fautifs.length
+        ? "Message brut d'une erreur rendu à l'écran. Il vient de PostgreSQL " +
+          "et n'est traduit dans aucune langue. Journalisez-le et affichez un " +
+          "message traduit : " + fautifs.join(" | ")
         : "",
     ).toEqual([]);
   });

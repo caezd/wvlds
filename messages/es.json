@@ -757,7 +757,8 @@
     },
     "editItem": "Editar el artículo",
     "shopItemDelete": "Eliminar este artículo",
-    "shopItemEdit": "Editar este artículo"
+    "shopItemEdit": "Editar este artículo",
+    "loadError": "La carga falló. Los detalles están en los registros del servidor."
   },
   "chatrooms": {
     "newRoom": "Nueva sala",

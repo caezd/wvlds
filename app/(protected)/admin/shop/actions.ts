@@ -58,13 +58,13 @@ export async function updateItem(id: string, prevState: unknown, formData: FormD
 export async function toggleItem(id: string, active: boolean) {
   const { supabase } = await requireAdmin();
   const { error } = await supabase.from("cosmetic_items").update({ active }).eq("id", id);
-  if (error) throw new Error(`Activation de l'article impossible : ${error.message}`);
+  if (error) throw new Error(echecEnregistrement("toggleItem", error));
   revalidatePath("/admin/shop");
 }
 
 export async function deleteItem(id: string) {
   const { supabase } = await requireAdmin();
   const { error } = await supabase.from("cosmetic_items").delete().eq("id", id);
-  if (error) throw new Error(`Suppression de l'article impossible : ${error.message}`);
+  if (error) throw new Error(echecEnregistrement("deleteItem", error));
   revalidatePath("/admin/shop");
 }

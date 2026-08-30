@@ -757,7 +757,8 @@
     },
     "editItem": "Edit the item",
     "shopItemDelete": "Delete this item",
-    "shopItemEdit": "Edit this item"
+    "shopItemEdit": "Edit this item",
+    "loadError": "Loading failed. The details are in the server logs."
   },
   "chatrooms": {
     "newRoom": "New room",

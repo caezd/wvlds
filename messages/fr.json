@@ -757,7 +757,8 @@
     },
     "editItem": "Modifier l'article",
     "shopItemDelete": "Supprimer cet article",
-    "shopItemEdit": "Modifier cet article"
+    "shopItemEdit": "Modifier cet article",
+    "loadError": "Le chargement a échoué. Le détail est dans les journaux serveur."
   },
   "chatrooms": {
     "newRoom": "Nouvelle salle",

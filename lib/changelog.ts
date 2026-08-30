@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Technique",
+    text: "Les pages d'administration n'affichent plus le message technique de la base de données. Trois d'entre elles montraient « Erreur : » suivi du texte brut de PostgreSQL, en anglais, citant le nom de la table interrogée — et cinq actions le recopiaient dans l'erreur qu'elles levaient.\nLe détail reste dans les journaux serveur, où il sert au diagnostic, et l'écran affiche un message traduit.",
+  },
+  {
+    date: "2026-08",
+    tag: "Technique",
     text: "Un salon réagit un peu mieux pendant son chargement. Les vingt messages affichés étaient entièrement reconstruits à chaque information qui arrivait — la clé du salon, les épingles, les badges de défi, la présence des autres — alors qu'ils n'avaient pas changé.\nSur un téléphone de milieu de gamme, cela représentait environ 750 ms pendant lesquelles la page ne répondait pas, en six à-coups. Il en reste un peu moins de 660, en quatre. Le gain est modeste et honnêtement mesuré : c'est le rendu de la liste elle-même qui coûte, pas les recalculs inutiles qu'on vient de supprimer.",
   },
   {

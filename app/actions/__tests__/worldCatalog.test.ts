@@ -13,6 +13,7 @@ import {
     setWorldAgeRestricted,
     setWorldTimeline,
     setWorldPersonaTemplate,
+    getWorldPersonaTemplate,
     addWorldInventoryItem,
     updateWorldInventoryItem,
     deleteWorldInventoryItem,
@@ -228,6 +229,40 @@ describe("setWorldTimeline", () => {
 });
 
 // ── setWorldPersonaTemplate ───────────────────────────────────────────────────
+
+describe("getWorldPersonaTemplate", () => {
+    // La lecture qui décide de l'affichage : un `templateId` erroné enverrait
+    // l'éditeur de fiche par défaut sur le mauvais persona, ou l'ouvrirait
+    // alors qu'aucun modèle n'existe.
+
+    it("rend l'identifiant du modèle du monde visé", async () => {
+        const mock = createSupabaseMock({ results: [{ data: { id: "tpl1" } }] });
+        use(mock);
+
+        expect(await getWorldPersonaTemplate("w1")).toEqual({ ok: true, templateId: "tpl1" });
+
+        const b = mock.buildersFor("personas")[0];
+        expect(b.eq).toHaveBeenCalledWith("world_id", "w1");
+        // Sans ce filtre, le premier persona venu du monde passerait pour le
+        // modèle.
+        expect(b.eq).toHaveBeenCalledWith("is_template", true);
+    });
+
+    it("rend null, et non une erreur, quand le monde n'a pas de modèle", async () => {
+        // C'est le cas ordinaire : la plupart des mondes n'en ont pas.
+        use(createSupabaseMock({ results: [{ data: null }] }));
+        expect(await getWorldPersonaTemplate("w1")).toEqual({ ok: true, templateId: null });
+    });
+
+    it("rend un code, jamais le message de la base", async () => {
+        const brut = 'permission denied for table "personas"';
+        use(createSupabaseMock({ results: [{ data: null, error: { message: brut } }] }));
+
+        const res = await getWorldPersonaTemplate("w1");
+        expect(res).toEqual({ ok: false, error: "saveFailed" });
+        expect(JSON.stringify(res)).not.toContain("personas");
+    });
+});
 
 describe("setWorldPersonaTemplate", () => {
     it("refuse si non connecté", async () => {

@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { FLAG_KEYS, type FlagKey } from "@/lib/featureFlags";
 import { FeatureSubGroup } from "../_components/FeatureSubGroup";
 import { getTranslations } from "next-intl/server";
+import { echecEnregistrement } from "@/lib/actionErrors";
 
 type FlagRow = {
   key: FlagKey;
@@ -73,7 +74,7 @@ async function toggleFlag(key: FlagKey, enabled: boolean) {
   // `revalidatePath` s'exécutait quand même et la page réaffichait l'ancienne
   // valeur, laissant croire que le drapeau avait basculé. La limite d'erreur
   // du segment protégé prend le relais.
-  if (error) throw new Error(`Bascule du drapeau « ${key} » impossible : ${error.message}`);
+  if (error) throw new Error(echecEnregistrement(`toggleFlag(${key})`, error));
 
   revalidatePath("/admin/features");
   revalidatePath("/", "layout");
@@ -162,7 +163,10 @@ export default async function AdminFeaturesPage() {
     .in("key", [...FLAG_KEYS]);
 
   if (error) {
-    return <div className="text-sm text-destructive">Erreur : {error.message}</div>;
+    // Pas `error.message` : c'est le texte brut de PostgreSQL, qui nomme la
+    // table et la règle. Il reste dans les journaux serveur.
+    console.error("[admin/features] chargement", error);
+    return <div className="text-sm text-destructive">{t("loadError")}</div>;
   }
 
   const byKey = Object.fromEntries((flags ?? []).map((f) => [f.key, f as FlagRow]));

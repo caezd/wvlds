@@ -19,7 +19,7 @@ export default async function AdminShopPage() {
   if (error) {
     return (
       <div className="text-sm text-destructive">
-        Erreur de chargement : {error.message}
+        {t("loadError")}
       </div>
     );
   }
