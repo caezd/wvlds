@@ -76,7 +76,7 @@ export function UserProfileSheet({
     async (blob: Blob) => {
       setUploadingAvatar(true);
       try {
-        const rawFile = new File([blob], "image.jpg", { type: blob.type || "image/jpeg" });
+        const rawFile = new File([blob], "image.png", { type: blob.type || "image/png" });
         const file = await toWebP(rawFile);
         const path = `user-${userId}/profile.webp`;
         const { error: upErr } = await supabase.storage

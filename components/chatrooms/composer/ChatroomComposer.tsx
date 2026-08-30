@@ -343,7 +343,7 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
         if (!chatId) return;
         setBannerUploading(true);
         try {
-            const converted = await toWebP(new File([blob], "banner.jpg", { type: blob.type || "image/jpeg" }));
+            const converted = await toWebP(new File([blob], "banner.png", { type: blob.type || "image/png" }));
             const path = `${chatId}/${crypto.randomUUID()}.webp`;
             const { error } = await supabase.storage.from("chat-banners").upload(path, converted, { contentType: "image/webp" });
             if (error) { toast.error(tCommon("uploadBannerError"), { description: error.message }); return; }

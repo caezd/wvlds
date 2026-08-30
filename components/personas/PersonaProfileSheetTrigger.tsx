@@ -303,6 +303,8 @@ export function PersonaProfileBody({
               onError={() => setBannerThumbFailed(true)}
               alt=""
               fill
+              // Déjà dimensionnée par imgproxy — voir WorldAvatar.tsx.
+              unoptimized
               sizes="768px"
               className="object-cover"
               draggable={false}

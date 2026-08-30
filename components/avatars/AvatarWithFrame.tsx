@@ -28,7 +28,11 @@ export function AvatarWithFrame({
   return (
     <div className="relative" style={{ width: size, height: size }}>
       <ChatroomAvatarWithPresence
-        src={supabaseThumb(src, size * 2) ?? src ?? undefined}
+        // `size` est en pixels CSS : sur un écran 3x DPR, un avatar de 128
+        // occupe 384 pixels physiques. Demander `size * 2` revenait à faire
+        // étirer la source de 50 % — le même sous-dimensionnement que celui
+        // corrigé sur WorldAvatar (qui demandait `px * 1.5`).
+        src={supabaseThumb(src, size * 3) ?? src ?? undefined}
         alt={alt ?? "User"}
         fallback={fallback ?? "?"}
         presenceState={resolved}

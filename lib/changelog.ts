@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Correctif",
+    text: "Changer un avatar — ou n’importe quelle image recadrée dans l’application : bannière de persona, icône de monde, image de salon — dégradait sa qualité plus que nécessaire. Le recadrage était d’abord encodé en JPEG, puis recompressé en WebP : deux pertes successives, alors que la première ne servait à rien puisque le fichier était ré-encodé aussitôt. Le recadrage est désormais transmis sans perte jusqu’à la compression finale.\nLes avatars demandaient par ailleurs une image deux fois plus large que leur taille d’affichage, ce qui suffit sur un écran classique mais les faisait étirer de 50 % sur les écrans à forte densité — la plupart des téléphones. Ils demandent maintenant la taille qu’il faut.\nEnfin, l’avatar affiché dans l’éditeur de persona et celui de l’aperçu ne passaient pas par le même traitement d’image — deux compresseurs et deux réglages de qualité différents pour la même photo, d’où un écart visible entre les deux vues. Les deux demandent désormais exactement la même image."
+  },
+  {
+    date: "2026-08",
     tag: "Technique",
     text: "La copie dans le presse-papiers passe par un seul et même code. Copier le texte d’un message, son markdown ou une couleur de dialogue reposait sur quatre exemplaires du même bloc — trois copies littérales et un quatrième recopié à la main dans la fiche d’un personnage.\nLeurs quatre messages de confirmation étaient rangés parmi les traductions des salons, alors qu’une fiche de personnage s’en sert aussi ; ils rejoignent les libellés communs. Rien ne change à l’écran."
   },

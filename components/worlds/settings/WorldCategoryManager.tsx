@@ -87,7 +87,7 @@ function CategoryForm({
       const url = await uploadCategoryImage(
         supabase,
         worldId,
-        new File([blob], "category.jpg", { type: blob.type || "image/jpeg" }),
+        new File([blob], "category.png", { type: blob.type || "image/png" }),
       );
       setImageUrl(url ?? "");
     } catch (e: unknown) {

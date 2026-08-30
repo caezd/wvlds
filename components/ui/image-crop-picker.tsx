@@ -26,7 +26,14 @@ const Cropper = dynamic(() => import("react-easy-crop"), {
 >;
 
 // ---------------------------------------------------------------------------
-// Utilitaire : découpe l'image sur canvas et retourne un Blob JPEG
+// Utilitaire : découpe l'image sur canvas et retourne un Blob PNG
+//
+// PNG, donc sans perte, alors que le fichier finira compressé en WebP chez
+// l'appelant : ce blob n'est qu'un intermédiaire, que `toWebP` décode puis
+// ré-encode aussitôt. L'encoder d'abord en JPEG (ce que faisait ce code)
+// cuisait ses artefacts dans l'image AVANT la compression finale — deux
+// générations de perte au lieu d'une, pour un fichier de sortie identique.
+// La taille du PNG n'a pas d'importance : il ne quitte jamais le navigateur.
 //
 // Les sources distantes (lien externe) sont chargées avec crossOrigin pour
 // pouvoir être lues par le canvas ; ça échoue si l'hébergeur ne renvoie pas
@@ -52,7 +59,7 @@ export async function getCroppedImg(imageSrc: string, pixelCrop: Area): Promise<
       );
       canvas.toBlob(
         (blob) => { if (blob) resolve(blob); else reject(new Error("toBlob failed")); },
-        "image/jpeg", 0.92,
+        "image/png",
       );
     });
     image.addEventListener("error", () => reject(new Error("Impossible de charger l'image.")));
@@ -314,7 +321,7 @@ export function ImagePickerCropField({
 }: {
   aspect?: number;
   uploading?: boolean;
-  /** Reçoit le Blob JPEG déjà recadré ; au parent de convertir/uploader. */
+  /** Reçoit le Blob PNG déjà recadré ; au parent de convertir/uploader. */
   onConfirm: (blob: Blob) => void | Promise<void>;
   /** Image actuellement enregistrée, affichée en aperçu cliquable pour la remplacer. */
   previewSrc?: string | null;

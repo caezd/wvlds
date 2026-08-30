@@ -81,7 +81,7 @@ function StorageUploadTab({
     if (!userId) { setError("Non connecté."); return; }
     setUploading(true);
     setError(null);
-    const file = await toWebP(new File([blob], "image.jpg", { type: blob.type || "image/jpeg" }));
+    const file = await toWebP(new File([blob], "image.png", { type: blob.type || "image/png" }));
     const path = `user-${userId}/${subfolder}/${personaId}.webp`;
     const { error: upErr } = await supabase.storage
       .from("personas")
@@ -658,6 +658,12 @@ export function PersonaEditorContent({
                 onError={() => setBannerThumbFailed(true)}
                 alt=""
                 fill
+                // `unoptimized` : l'image est déjà dimensionnée par imgproxy
+                // ci-dessus. La repasser dans l'optimiseur de Next la
+                // ré-encode une seconde fois, et un `sizes` en px fixe le fait
+                // retomber sur la liste entière des largeurs configurées —
+                // même piège que celui documenté dans WorldAvatar.tsx.
+                unoptimized
                 sizes="(min-width: 1024px) 768px, 100vw"
                 className="object-cover"
                 draggable={false}
@@ -690,7 +696,20 @@ export function PersonaEditorContent({
                 title={tPersonas("editAvatar")}
               >
                 {avatarUrl ? (
-                  <Image src={avatarUrl} alt="" fill sizes="128px" className="object-cover" draggable={false} />
+                  <Image
+                    // Même source que l'aperçu (AvatarWithFrame demande
+                    // `supabaseThumb(src, size * 3)`) : sans ça, l'édition
+                    // passait l'URL brute dans l'optimiseur de Next — un autre
+                    // encodeur, une autre qualité (75 contre 80), donc une
+                    // image visiblement différente de celle du profil.
+                    src={supabaseThumb(avatarUrl, 128 * 3) ?? avatarUrl}
+                    alt=""
+                    fill
+                    unoptimized
+                    sizes="128px"
+                    className="object-cover"
+                    draggable={false}
+                  />
                 ) : (
                   <div className="h-full w-full grid place-items-center text-lg font-semibold text-muted-foreground">
                     {avatarFallback}
@@ -776,7 +795,15 @@ export function PersonaEditorContent({
             <div className="flex items-center gap-3">
               <div className="relative h-14 w-14 shrink-0 rounded-xl border bg-muted overflow-hidden lg:hidden">
                 {avatarUrl ? (
-                  <Image src={avatarUrl} alt="" fill sizes="56px" className="object-cover" draggable={false} />
+                  <Image
+                    src={supabaseThumb(avatarUrl, 56 * 3) ?? avatarUrl}
+                    alt=""
+                    fill
+                    unoptimized
+                    sizes="56px"
+                    className="object-cover"
+                    draggable={false}
+                  />
                 ) : (
                   <div className="h-full w-full grid place-items-center text-sm font-semibold text-muted-foreground">
                     {avatarFallback}
@@ -907,6 +934,7 @@ export function PersonaEditorContent({
                     onError={() => setBannerThumbFailed(true)}
                     alt=""
                     fill
+                    unoptimized
                     sizes="520px"
                     className="object-cover"
                     draggable={false}

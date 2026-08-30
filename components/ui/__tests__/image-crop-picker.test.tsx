@@ -18,7 +18,7 @@ function CropperStub({ onCropComplete }: { onCropComplete: (area: Area, pixels: 
 
 vi.mock("react-easy-crop", () => ({ default: CropperStub }));
 
-import { ImageCropPicker } from "@/components/ui/image-crop-picker";
+import { ImageCropPicker, getCroppedImg } from "@/components/ui/image-crop-picker";
 
 describe("ImageCropPicker — pas de soumission accidentelle du formulaire englobant", () => {
   it("confirmer le recadrage n'appelle pas onSubmit du <form> parent", async () => {
@@ -53,5 +53,32 @@ describe("ImageCropPicker — pas de soumission accidentelle du formulaire englo
 
     expect(onCancel).toHaveBeenCalledTimes(1);
     expect(onFormSubmit).not.toHaveBeenCalled();
+  });
+});
+
+describe("getCroppedImg — format du blob intermédiaire", () => {
+  // Ce blob ne quitte jamais le navigateur : `toWebP` le décode et le
+  // ré-encode aussitôt en WebP. L'encoder en JPEG cuisait ses artefacts dans
+  // l'image AVANT la compression finale — deux générations de perte au lieu
+  // d'une, pour un fichier de sortie de taille identique.
+  it("encode le recadrage sans perte, en PNG", async () => {
+    // jsdom ne charge aucune image et n'a pas de canvas : on simule les deux.
+    class ImageStub {
+      crossOrigin = "";
+      handlers: Record<string, () => void> = {};
+      addEventListener(type: string, cb: () => void) { this.handlers[type] = cb; }
+      set src(_v: string) { queueMicrotask(() => this.handlers.load?.()); }
+    }
+    vi.stubGlobal("Image", ImageStub);
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({ drawImage: vi.fn() } as never);
+    const toBlob = vi.fn((cb: (b: Blob) => void, type?: string) => cb(new Blob([], { type })));
+    HTMLCanvasElement.prototype.toBlob = toBlob as unknown as HTMLCanvasElement["toBlob"];
+
+    const blob = await getCroppedImg("blob:x", { x: 0, y: 0, width: 10, height: 10 });
+
+    expect(toBlob.mock.calls[0][1]).toBe("image/png");
+    expect(blob.type).toBe("image/png");
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
   });
 });
