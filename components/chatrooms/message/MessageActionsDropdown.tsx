@@ -60,7 +60,7 @@ export function MessageActionsDropdown({
           type="button"
           variant="ghost"
           size="icon"
-          className="h-7 rounded-md w-7 opacity-0 group-hover/turn-messages:opacity-100 transition-opacity"
+          className="h-7 rounded-md w-7 opacity-0 group-hover/turn-messages:opacity-100 focus-within:opacity-100 transition-opacity"
           aria-label={t("actions")}
           title={t("actions")}
         >

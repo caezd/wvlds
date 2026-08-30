@@ -65,7 +65,7 @@ function CodeBlock({ className, children, ...props }: React.ComponentProps<"code
       <button
         type="button"
         onClick={doCopy}
-        className="opacity-0 group-hover:opacity-100 transition-opacity text-xs absolute right-2 top-2 rounded-md border bg-background/80 px-2 py-1"
+        className="opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity text-xs absolute right-2 top-2 rounded-md border bg-background/80 px-2 py-1"
         aria-label={tCommon("copyCode")}
       >
         {copied ? tCommon("copied") : tCommon("copy")}

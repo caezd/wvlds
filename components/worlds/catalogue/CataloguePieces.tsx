@@ -262,7 +262,7 @@ export function SortableItemRow({
         )}
       </div>
       {canEdit && (
-        <div className="flex items-center gap-1 opacity-0 group-hover/item:opacity-100 transition-opacity shrink-0">
+        <div className="flex items-center gap-1 opacity-0 group-hover/item:opacity-100 focus-within:opacity-100 transition-opacity shrink-0">
           <button
             aria-label={tCommon("edit")}
             type="button"

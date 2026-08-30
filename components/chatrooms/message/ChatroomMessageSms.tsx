@@ -60,7 +60,7 @@ export function ChatroomMessageSms({
     >
       {mine ? (
         <>
-          <div className="flex items-center gap-0.5 opacity-0 group-hover/turn-messages:opacity-100 transition-opacity shrink-0">
+          <div className="flex items-center gap-0.5 opacity-0 group-hover/turn-messages:opacity-100 focus-within:opacity-100 transition-opacity shrink-0">
             <Button
               type="button"
               variant="ghost"

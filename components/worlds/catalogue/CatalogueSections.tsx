@@ -120,7 +120,7 @@ export function SortableCategoryContainer({
           <>
             <span className="flex-1 text-sm font-semibold text-foreground/70 truncate">{category.name}</span>
             {canEdit && (
-              <div className="flex items-center gap-1 opacity-0 group-hover/cat:opacity-100 transition-opacity shrink-0">
+              <div className="flex items-center gap-1 opacity-0 group-hover/cat:opacity-100 focus-within:opacity-100 transition-opacity shrink-0">
                 <button
                   aria-label={tCommon("edit")}
                   type="button"

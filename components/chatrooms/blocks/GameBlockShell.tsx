@@ -91,7 +91,7 @@ export function GameBlockToolbar({
   return (
     <div
       className={cn(
-        "flex items-center gap-0.5 opacity-0 transition-opacity group-hover/gblock:opacity-100",
+        "flex items-center gap-0.5 opacity-0 transition-opacity group-hover/gblock:opacity-100 focus-within:opacity-100",
         className,
       )}
     >

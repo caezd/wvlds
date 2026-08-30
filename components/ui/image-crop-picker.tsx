@@ -400,7 +400,7 @@ export function ImagePickerCropField({
           arbitraire (recadrage depuis une URL) — aucun des deux n'est compatible avec next/image */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={previewSrc ?? undefined} alt={previewAlt} className="h-full w-full object-cover" draggable={false} />
-      <div className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition-opacity group-hover:bg-black/40 group-hover:opacity-100">
+      <div className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition-opacity group-hover:bg-black/40 group-hover:opacity-100 focus-within:opacity-100">
         {uploading
           ? <Loader2 className="h-5 w-5 animate-spin text-white" />
           : <span className="text-xs font-medium text-white">{changeLabel}</span>

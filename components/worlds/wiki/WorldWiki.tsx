@@ -246,7 +246,7 @@ function SortableTreeNode({
               <button
                 type="button"
                 onClick={e => e.stopPropagation()}
-                className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-secondary hover:text-foreground"
+                className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted-foreground opacity-0 group-hover:opacity-100 focus-within:opacity-100 hover:bg-secondary hover:text-foreground"
                 aria-label={t("options")}
               >
                 <MoreHorizontal className="h-3.5 w-3.5" />

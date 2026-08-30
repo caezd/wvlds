@@ -81,7 +81,7 @@ export function SkillsField({
               aria-label={tCommon("remove")}
               type="button"
               onClick={() => removeItem(item.id)}
-              className="shrink-0 h-5 w-5 flex items-center justify-center rounded-full text-muted-foreground opacity-0 group-hover/skill:opacity-100 hover:text-destructive transition-opacity"
+              className="shrink-0 h-5 w-5 flex items-center justify-center rounded-full text-muted-foreground opacity-0 group-hover/skill:opacity-100 focus-within:opacity-100 hover:text-destructive transition-opacity"
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -124,7 +124,7 @@ export function SkillsField({
             aria-label={tCommon("remove")}
             type="button"
             onClick={() => removeItem(item.id)}
-            className="shrink-0 mt-2.5 h-5 w-5 flex items-center justify-center rounded-full text-muted-foreground opacity-0 group-hover/skill:opacity-100 hover:text-destructive transition-opacity"
+            className="shrink-0 mt-2.5 h-5 w-5 flex items-center justify-center rounded-full text-muted-foreground opacity-0 group-hover/skill:opacity-100 focus-within:opacity-100 hover:text-destructive transition-opacity"
           >
             <X className="h-3.5 w-3.5" />
           </button>

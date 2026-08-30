@@ -260,7 +260,7 @@ function ConversationRail({
               aria-label={isPinned ? t("unpin") : t("pin")}
               className={cn(
                 "absolute -bottom-2.5 left-1/2 -translate-x-1/2 flex h-5 w-5 items-center justify-center rounded-full border border-background transition-all",
-                "opacity-0 group-hover/conv:opacity-100",
+                "opacity-0 group-hover/conv:opacity-100 focus-within:opacity-100",
                 isPinned
                   ? "bg-accent text-accent-foreground"
                   : canPin
@@ -518,7 +518,7 @@ export function MessageBubble({
               {content}
             </div>
             {isMine && (
-              <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover/msg:opacity-100">
+              <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover/msg:opacity-100 focus-within:opacity-100">
                 <button
                   onClick={startEdit}
                   aria-label={t("editMessage")}

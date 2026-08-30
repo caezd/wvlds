@@ -572,7 +572,7 @@ export function PersonaEditorContent({
           ) : (
             <div className="h-full w-full bg-gradient-to-r from-muted/60 to-muted" />
           )}
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition bg-black/30 grid place-items-center">
+          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition bg-black/30 grid place-items-center">
             <span className="flex items-center gap-1.5 rounded-full bg-black/50 px-3 py-1.5 text-xs font-medium text-white">
               <Pencil className="h-3.5 w-3.5" />
               {bannerUrl ? "Modifier la bannière" : "Ajouter une bannière"}
@@ -597,7 +597,7 @@ export function PersonaEditorContent({
                   {avatarFallback}
                 </div>
               )}
-              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition bg-black/30 grid place-items-center">
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition bg-black/30 grid place-items-center">
                 <div className="text-xs text-white font-medium">Modifier</div>
               </div>
             </button>

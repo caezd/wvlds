@@ -8,6 +8,16 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Interface",
+    text: "Les commandes qui n'apparaissent qu'au survol se montrent enfin aussi quand on les atteint au clavier. Une trentaine d'entre elles — les actions d'un message, la suppression d'une bannière, les poignées des champs d'un personnage, les boutons d'une carte de monde — restaient parfaitement invisibles une fois sélectionnées à la tabulation.\nNaviguer sans souris revenait donc à avancer à l'aveugle : la commande répondait bien, mais rien à l'écran ne disait où l'on se trouvait.",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
+    text: "Les cartes de l'Explorateur gardent une forme carrée. Leur hauteur était figée à 320 pixels quelle que soit leur largeur : sur un écran étroit, où quatre colonnes se resserrent, elles devenaient de hautes vignettes en colonne ; sur un écran large, des bandeaux écrasés.\nLeur hauteur suit désormais leur largeur, et le bandeau conserve toujours la place de son en-tête — la mention 18+ et les types d'avatars autorisés.",
+  },
+  {
+    date: "2026-08",
     tag: "Technique",
     text: "Les pages d'administration n'affichent plus le message technique de la base de données. Trois d'entre elles montraient « Erreur : » suivi du texte brut de PostgreSQL, en anglais, citant le nom de la table interrogée — et cinq actions le recopiaient dans l'erreur qu'elles levaient.\nLe détail reste dans les journaux serveur, où il sert au diagnostic, et l'écran affiche un message traduit.",
   },

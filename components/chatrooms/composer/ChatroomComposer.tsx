@@ -702,7 +702,7 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
                                           aria-label={tCommon("remove")}
                                             type="button"
                                             onClick={() => setPendingMedia((prev) => prev.filter((_, j) => j !== i))}
-                                            className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover/thumb:opacity-100 transition-opacity"
+                                            className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover/thumb:opacity-100 focus-within:opacity-100 transition-opacity"
                                         >
                                             <X className="size-4 text-white" />
                                         </button>

@@ -419,7 +419,7 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           {trigger ?? (
-            <div className="cursor-pointer transition-opacity opacity-0 hover:opacity-100 group-hover/field:opacity-100 relative h-6 w-full flex justify-center before:absolute before:h-px before:w-full before:top-1/2 before:-translate-y-1/2 before:bg-border">
+            <div className="cursor-pointer transition-opacity opacity-0 hover:opacity-100 focus-within:opacity-100 group-hover/field:opacity-100 relative h-6 w-full flex justify-center before:absolute before:h-px before:w-full before:top-1/2 before:-translate-y-1/2 before:bg-border">
               <button className="w-4 h-4 bg-accent/50 text-primary rounded-full inline-flex items-center justify-center absolute top-1/2 -translate-y-1/2 z-10" aria-label={tCommon("add")}>
                 <Plus size={12} />
               </button>
@@ -533,7 +533,7 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
                   )}
 
                   {/* Actions flottantes */}
-                  <div className="absolute right-1.5 top-1 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                  <div className="absolute right-1.5 top-1 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity z-10">
                     <Button variant="ghost" size="icon-sm" type="button" className="h-7 w-7" onClick={() => handleMoveField(field.id, "up")} disabled={isFirst} aria-label={tCommon("moveUp")}>
                       <ArrowUp className="h-3.5 w-3.5" />
                     </Button>

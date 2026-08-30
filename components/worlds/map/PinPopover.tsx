@@ -182,7 +182,7 @@ export function PinPopover({
             <button
               type="button"
               onClick={() => bannerInputRef.current?.click()}
-              className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 hover:bg-black/40 hover:opacity-100 transition-all"
+              className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 hover:bg-black/40 hover:opacity-100 focus-within:opacity-100 transition-all"
             >
               {uploadingBanner ? (
                 <Loader2 className="h-5 w-5 text-white animate-spin" />

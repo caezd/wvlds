@@ -44,7 +44,7 @@ export function RelationRow({
         }
         <span className="truncate text-[12px] font-medium flex-1">{other.name}</span>
         {canEdit && (
-          <button onClick={() => onDelete(rel.id)} className="shrink-0 opacity-0 group-hover/row:opacity-100 text-muted-foreground hover:text-destructive transition-opacity" aria-label={tCommon("delete")}>
+          <button onClick={() => onDelete(rel.id)} className="shrink-0 opacity-0 group-hover/row:opacity-100 focus-within:opacity-100 text-muted-foreground hover:text-destructive transition-opacity" aria-label={tCommon("delete")}>
             <Trash2 className="h-3 w-3" />
           </button>
         )}

@@ -288,7 +288,7 @@ function NotificationItem({ notif, actorAvatarUrl, worldInfo, onRead, onClose, o
         <button
             onClick={e => { e.preventDefault(); e.stopPropagation(); onArchive(notif.id); }}
             aria-label={t("archive")}
-            className="absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded-full text-muted-foreground/40 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-muted hover:text-foreground"
+            className="absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded-full text-muted-foreground/40 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100 hover:bg-muted hover:text-foreground"
         >
             <X size={11} />
         </button>

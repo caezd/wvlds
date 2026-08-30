@@ -161,7 +161,7 @@ export function ExploreWorldCard({ world, tags }: { world: PublicWorld; tags: st
           <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden p-3">
             {/* Description : occupe l'espace restant, scrollable si trop longue.
                 Apparaît en fondu au survol (comme les tags, légèrement après). */}
-            <ScrollArea className="min-h-0 flex-1 opacity-0 transition-opacity delay-100 duration-300 ease-out group-hover:opacity-100">
+            <ScrollArea className="min-h-0 flex-1 opacity-0 transition-opacity delay-100 duration-300 ease-out group-hover:opacity-100 focus-within:opacity-100">
               <div ref={descRef}>
                 {world.description ? (
                   <p className="pr-2.5 text-xs leading-relaxed text-muted-foreground">
@@ -175,7 +175,7 @@ export function ExploreWorldCard({ world, tags }: { world: PublicWorld; tags: st
 
             {/* Tags : toujours en bas */}
             {tags.length > 0 && (
-              <div ref={tagsRef} className="flex shrink-0 flex-wrap gap-1 opacity-0 transition-opacity delay-200 duration-300 ease-out group-hover:opacity-100">
+              <div ref={tagsRef} className="flex shrink-0 flex-wrap gap-1 opacity-0 transition-opacity delay-200 duration-300 ease-out group-hover:opacity-100 focus-within:opacity-100">
                 {tags.map((tag) => (
                   <span
                     key={tag}

@@ -42,7 +42,7 @@ export function TraitsField({
             aria-label={tCommon("remove")}
             type="button"
             onClick={() => removeItem(item.id)}
-            className="shrink-0 text-muted-foreground opacity-0 group-hover/trait:opacity-100 hover:text-destructive transition-opacity"
+            className="shrink-0 text-muted-foreground opacity-0 group-hover/trait:opacity-100 focus-within:opacity-100 hover:text-destructive transition-opacity"
           >
             <X className="h-3 w-3" />
           </button>
