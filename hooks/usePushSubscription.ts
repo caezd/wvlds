@@ -25,11 +25,43 @@ export function usePushSubscription() {
     setSupported(ok);
     if (!ok) return;
     setPermission(Notification.permission);
-    navigator.serviceWorker.ready
-      .then((reg) => reg.pushManager.getSubscription())
-      .then((sub) => setIsSubscribed(!!sub))
-      .catch(() => {});
-  }, []);
+
+    // Un abonnement navigateur ne suffit pas à dire « activé ».
+    //
+    // Le point d'accès appartient au NAVIGATEUR et survit à un changement de
+    // compte ; la ligne serveur, elle, désigne une personne. Se contenter de
+    // `!!sub` affichait donc « activé » à quelqu'un qui venait de se connecter
+    // sur un appareil abonné par un autre — sans ligne à son nom, il
+    // n'attendait plus que des notifications qui ne viendraient jamais.
+    //
+    // On vérifie donc que la ligne est la NÔTRE. La policy de lecture le
+    // garantit déjà (`user_id = auth.uid()`), le filtre explicite ne fait que
+    // rendre l'intention lisible.
+    let annule = false;
+    void (async () => {
+      try {
+        const reg = await navigator.serviceWorker.ready;
+        const sub = await reg.pushManager.getSubscription();
+        if (annule) return;
+        if (!sub || !userId) {
+          setIsSubscribed(false);
+          return;
+        }
+        const { data } = await createClient()
+          .from(TABLE.PUSH_SUBSCRIPTIONS)
+          .select("endpoint")
+          .eq("endpoint", sub.endpoint)
+          .eq("user_id", userId)
+          .maybeSingle();
+        if (!annule) setIsSubscribed(!!data);
+      } catch {
+        if (!annule) setIsSubscribed(false);
+      }
+    })();
+    return () => {
+      annule = true;
+    };
+  }, [userId]);
 
   const subscribe = useCallback(async () => {
     if (!supported || !userId) return;

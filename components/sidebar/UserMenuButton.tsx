@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
+import { detacherAppareilDuPush } from "@/lib/push";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -69,6 +70,11 @@ export function UserMenuButton({
   const initials = (username || email).slice(0, 2).toUpperCase();
 
   async function handleSignOut() {
+    // AVANT `signOut` : la policy de suppression de `push_subscriptions` exige
+    // `user_id = auth.uid()`, il faut donc encore une session. Sans cela, le
+    // serveur continuerait d'envoyer les notifications de ce compte vers ce
+    // navigateur, y compris à la personne qui s'y connectera ensuite.
+    await detacherAppareilDuPush(supabase);
     await supabase.auth.signOut();
     router.push("/auth/login");
     router.refresh();

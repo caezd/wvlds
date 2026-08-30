@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Correctif",
+    text: "Se déconnecter coupe désormais les notifications sur cet appareil. Elles restaient rattachées au navigateur et non au compte : quelqu'un se connectant ensuite sur le même navigateur recevait les alertes de la personne précédente — titre et aperçu du message compris. Sur un ordinateur partagé, c'était une fuite réelle.\nDans le même esprit, le réglage n'affiche plus « activé » à quelqu'un qui vient de se connecter sur un appareil abonné par un autre : il indiquait une activation dont cette personne n'aurait jamais rien reçu.",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
     text: "La recherche ne bute plus sur les accents. Taper « de:elodie » ne trouvait pas Élodie, et « dans:foret » ignorait La Forêt Noire : la comparaison tenait compte des accents alors que personne ne les tape en cherchant.\nLa liste des salons proposée après « dans: » sortait par ailleurs dans un ordre arbitraire. Elle était triée sur un nom interne que tous les salons partagent, et non sur le titre affiché. Elle est désormais classée par ordre alphabétique, accents à leur place — Élodie entre Elena et Emma, plus après Zoé.",
   },
   {
