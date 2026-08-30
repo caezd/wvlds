@@ -99,7 +99,7 @@ export function PersonaCreateSheet({
               <div className="space-y-1">
                 <h2 className="text-xl font-semibold">{t("newPersona")}</h2>
                 <p className="text-sm text-muted-foreground">
-                  Donne un nom à ton personnage pour commencer. Tu pourras tout configurer ensuite.
+                  {t("newPersonaHint")}
                 </p>
               </div>
 

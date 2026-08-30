@@ -296,7 +296,7 @@ export function BlocksDropdown({
                     <div className="flex w-full items-center gap-3 rounded-xl border border-border-soft bg-card px-4 py-3">
                         <Dices className="h-5 w-5 shrink-0 text-primary" />
                         <div>
-                            <div className="text-[11px] text-muted-foreground">Attaque</div>
+                            <div className="text-[11px] text-muted-foreground">{tChatrooms("npcExampleAttack")}</div>
                             <div className="font-mono text-base font-semibold">2d6+3 = 12</div>
                         </div>
                     </div>
@@ -359,7 +359,7 @@ export function BlocksDropdown({
                 return (
                     <div className="w-full rounded-xl border border-border-soft bg-card px-4 py-3">
                         <div className="mb-1 flex justify-between text-xs">
-                            <span>Garde</span><span>24/40</span>
+                            <span>{tChatrooms("npcExampleGuard")}</span><span>24/40</span>
                         </div>
                         <div className="h-2 overflow-hidden rounded-full bg-muted">
                             <div className="h-full w-3/5 rounded-full bg-destructive" />
@@ -398,7 +398,7 @@ export function BlocksDropdown({
                                     >
                                         {text}
                                     </div>
-                                    {i === 0 && <span className="shrink-0 pb-1 text-xs italic text-muted-foreground">dit-il.</span>}
+                                    {i === 0 && <span className="shrink-0 pb-1 text-xs italic text-muted-foreground">{tChatrooms("dialogueSaidHe")}</span>}
                                 </div>
                             ))}
                         </div>
@@ -421,13 +421,13 @@ export function BlocksDropdown({
                 return (
                     <div className="flex w-full flex-col gap-1.5">
                         <div className="flex items-end justify-end gap-1.5">
-                            <div className="rounded-xl rounded-br-[3px] bg-primary/15 px-3 py-1.5 text-sm">Salut !</div>
+                            <div className="rounded-xl rounded-br-[3px] bg-primary/15 px-3 py-1.5 text-sm">{tChatrooms("messageExampleGreeting")}</div>
                         </div>
                         <div className="flex items-end justify-end gap-1.5">
                             <div className="rounded-xl rounded-tr-[3px] bg-primary/15 px-3 py-1.5 text-sm">{tChatrooms("messageExample")}</div>
                         </div>
                         <div className="flex items-end justify-start gap-1.5">
-                            <div className="rounded-xl rounded-tl-[3px] bg-muted px-3 py-1.5 text-sm">Oui, et toi ?</div>
+                            <div className="rounded-xl rounded-tl-[3px] bg-muted px-3 py-1.5 text-sm">{tChatrooms("messageExampleReply")}</div>
                         </div>
                     </div>
                 );
@@ -582,7 +582,7 @@ export function BlocksDropdown({
                                         >
                                             {text}
                                         </div>
-                                        {i === 0 && <span className="text-xs text-muted-foreground italic pb-1 shrink-0">dit-il.</span>}
+                                        {i === 0 && <span className="text-xs text-muted-foreground italic pb-1 shrink-0">{tChatrooms("dialogueSaidHe")}</span>}
                                     </div>
                                 ))}
                             </div>

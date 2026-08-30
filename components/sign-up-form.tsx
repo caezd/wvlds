@@ -8,6 +8,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { messageErreurAuth } from "@/lib/authErrors";
 
 export function SignUpForm() {
   const t = useTranslations("auth");
@@ -25,7 +26,7 @@ export function SignUpForm() {
     setError(null);
 
     if (password !== repeatPassword) {
-      setError("Les mots de passe ne correspondent pas.");
+      setError(t("errorPasswordsDoNotMatch"));
       setIsLoading(false);
       return;
     }
@@ -41,7 +42,7 @@ export function SignUpForm() {
       if (error) throw error;
       router.push("/auth/sign-up-success");
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : "Une erreur est survenue.");
+      setError(messageErreurAuth(error, t));
     } finally {
       setIsLoading(false);
     }

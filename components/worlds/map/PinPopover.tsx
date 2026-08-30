@@ -18,6 +18,7 @@ import { updateMapPin, type MapPin as MapPinType } from "@/app/actions/worldMap"
 
 import { PinVisualDialog } from "./PinVisualDialog";
 import type { PinPopoverPos } from "./types";
+import { ERR_NON_AUTHENTIFIE } from "@/lib/actionErrors";
 
 // Popover flottant (position: fixed, positionné au clic)
 export function PinPopover({
@@ -92,7 +93,7 @@ export function PinPopover({
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!user) throw new Error("Non connecté.");
+      if (!user) throw new Error(ERR_NON_AUTHENTIFIE);
 
       const converted = await toWebP(file, 1200);
       const path = `user-${userId}/world-${worldId}/pin-${pin.id}-${Date.now()}.webp`;

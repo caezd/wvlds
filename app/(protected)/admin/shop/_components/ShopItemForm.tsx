@@ -84,7 +84,9 @@ function ImageUploader({
       const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
       setUrl(data.publicUrl);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : t("shopForm.errorImageUpload"));
+      // Pas `e.message` : texte brut de PostgreSQL, il nomme table et policy.
+      console.error("[ShopItemForm] envoi d'image", e);
+      setError(t("shopForm.errorImageUpload"));
     } finally {
       setUploading(false);
     }

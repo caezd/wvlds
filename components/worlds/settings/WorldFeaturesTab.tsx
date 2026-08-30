@@ -331,7 +331,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                                         render={({ field }) => (
                                             <FormItem>
                                                 <FormLabel>
-                                                    <LabelWithHelp help="Renomme le lien du wiki dans la sidebar du monde">
+                                                    <LabelWithHelp help={t("wikiLabelHelp")}>
                                                         Nom du lien
                                                     </LabelWithHelp>
                                                 </FormLabel>
@@ -560,13 +560,15 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                     <AlertDialogHeader>
                         <AlertDialogTitle>{t("enableRestrictionTitle")}</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Cette action effacera immédiatement tous les {pendingRestriction === "inventory" ? "objets d'inventaire" : "compétences"} des personas de ce monde. Cette opération est irréversible.
+                            {t("restrictionPurgeDescription", {
+                                items: t(pendingRestriction === "inventory" ? "restrictionPurgeInventory" : "restrictionPurgeSkills"),
+                            })}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel>Annuler</AlertDialogCancel>
+                        <AlertDialogCancel>{tCommon("cancel")}</AlertDialogCancel>
                         <AlertDialogAction onClick={() => void confirmRestriction()}>
-                            Activer et purger
+                            {t("restrictionPurgeConfirm")}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

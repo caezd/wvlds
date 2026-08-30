@@ -71,7 +71,7 @@ export default async function NotFound() {
         style={STARRY_SKY}
       >
         <p className="max-w-md text-sm leading-relaxed text-white/90">
-          Chaque monde commence par une page blanche. Celui que tu cherchais semble s&apos;être évaporé, mais rien ne t&apos;empêche d&apos;en créer un nouveau.
+          {t("notFoundHint")}
         </p>
       </aside>
     </div>

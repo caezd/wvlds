@@ -151,7 +151,7 @@ export function WorldCommunityTab({ world, form, persistField, onUpdated }: Prop
                                         render={({ field }) => (
                                             <FormItem>
                                                 <FormLabel>
-                                                    <LabelWithHelp help="Un monde public est accessible à tous les membres de la plateforme">
+                                                    <LabelWithHelp help={t("publicWorldHelp")}>
                                                         Visibilité
                                                     </LabelWithHelp>
                                                 </FormLabel>

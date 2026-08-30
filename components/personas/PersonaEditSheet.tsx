@@ -161,7 +161,7 @@ function BannerSheet({
                   Supprimer la bannière
                 </Button>
               }
-              description="La bannière de ce personnage sera supprimée définitivement du stockage."
+              description={tPersonas("bannerDeleteDescription")}
               onConfirm={async () => {
                 const path = currentBannerUrl?.match(/\/object\/public\/personas\/([^?]+)/)?.[1];
                 // L'ordre compte : le fichier n'est effacé qu'une fois la
@@ -773,7 +773,7 @@ export function PersonaEditorContent({
                     Supprimer l&apos;avatar
                   </Button>
                 }
-                description="L'avatar de ce personnage sera supprimé définitivement du stockage."
+                description={tPersonas("avatarDeleteDescription")}
                 onConfirm={async () => {
                   const path = avatarUrl?.match(/\/object\/public\/personas\/([^?]+)/)?.[1];
                   // Même précaution que pour la bannière : on n'efface le

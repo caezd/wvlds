@@ -125,12 +125,14 @@ export default function ShopGrid({
         // Rollback
         setCoins(rollback.coins);
         setItems(rollback.items);
-        toast.error(e instanceof Error ? e.message : "Erreur lors de l’achat");
+        // Pas `e.message` : texte brut de PostgreSQL, il nomme table et policy.
+        console.error("[ShopGrid] achat", e);
+        toast.error(t("purchaseError"));
       } finally {
         markLoading(it.id, false);
       }
     },
-    [coins, items, loadingById, supabase, refetchShop],
+    [coins, items, loadingById, supabase, refetchShop, t],
   );
 
   return (

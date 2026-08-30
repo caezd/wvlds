@@ -82,6 +82,7 @@ const SETTINGS_TAB_TRIGGER_CLASS =
     "relative shrink-0 px-0.5 py-3 text-sm font-medium text-muted-foreground whitespace-nowrap transition-colors hover:text-foreground data-[state=active]:text-foreground data-[state=active]:shadow-[inset_0_-2px_0_0_var(--color-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50";
 
 import { LabelWithHelp } from "./LabelWithHelp";
+import { ERR_NON_AUTHENTIFIE } from "@/lib/actionErrors";
 import {
   worldSettingsSchema,
   truthyOrNull,
@@ -149,7 +150,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
         const {
             data: { user },
         } = await supabase.auth.getUser();
-        if (!user) throw new Error("Non connecté.");
+        if (!user) throw new Error(ERR_NON_AUTHENTIFIE);
         if (file.size > 5 * 1024 * 1024)
             throw new Error("Fichier trop volumineux (max 5 Mo).");
 
@@ -179,7 +180,14 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
             onUpdated?.({ ...world, [field]: url } as World);
             toast.success(tCommon("imageSaved"));
         } catch (e: unknown) {
-            toast.error(e instanceof Error ? e.message : "Téléversement impossible.");
+            // Ne JAMAIS afficher `e.message` : un `throw error` Postgrest y met
+            // le message brut de PostgreSQL, qui cite la table et la policy.
+            console.error("[WorldSettingsView] envoi d'image", e);
+            toast.error(
+                e instanceof Error && e.message === ERR_NON_AUTHENTIFIE
+                    ? tCommon("sessionExpired")
+                    : tCommon("uploadError"),
+            );
         } finally {
             setUploading(null);
         }
@@ -216,7 +224,9 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
             onUpdated?.({ ...world, [field]: clean } as World);
             toast.success(tCommon("changesSaved"));
         } catch (e: unknown) {
-            toast.error(e instanceof Error ? e.message : "Enregistrement impossible.");
+            // Pas `e.message` : texte brut de PostgreSQL, il nomme table et policy.
+            console.error("[WorldSettingsView] enregistrement", e);
+            toast.error(tCommon("saveError"));
         }
     }
 
@@ -237,7 +247,9 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
             router.push("/");
             router.refresh();
         } catch (e: unknown) {
-            toast.error(e instanceof Error ? e.message : "Suppression impossible.");
+            // Pas `e.message` : texte brut de PostgreSQL, il nomme table et policy.
+            console.error("[WorldSettingsView] suppression", e);
+            toast.error(t("deleteFailed"));
         } finally {
             setDeleting(false);
         }
@@ -291,7 +303,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>
-                                                <LabelWithHelp help="Le nom affiché partout dans l’app">
+                                                <LabelWithHelp help={t("nameHelp")}>
                                                     Nom du monde
                                                 </LabelWithHelp>
                                             </FormLabel>
@@ -318,7 +330,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>
-                                                <LabelWithHelp help="Visible sur la carte du monde">
+                                                <LabelWithHelp help={t("tagHelp")}>
                                                     Description
                                                 </LabelWithHelp>
                                             </FormLabel>
@@ -346,7 +358,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                     render={() => (
                                         <FormItem>
                                             <FormLabel>
-                                                <LabelWithHelp help="Affichée dans la sidebar et sur la carte du monde">
+                                                <LabelWithHelp help={t("iconHelp")}>
                                                     Icône du monde
                                                 </LabelWithHelp>
                                             </FormLabel>
@@ -450,7 +462,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                     render={() => (
                                         <FormItem>
                                             <FormLabel>
-                                                <LabelWithHelp help="Image large affichée en haut de la page du monde">
+                                                <LabelWithHelp help={t("bannerHelp")}>
                                                     Bannière
                                                 </LabelWithHelp>
                                             </FormLabel>
@@ -459,7 +471,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                                 uploading={uploading === "banner"}
                                                 previewSrc={bannerUrl || null}
                                                 previewClassName="aspect-[16/7] w-full rounded-2xl"
-                                                changeLabel="Cliquer ou déposer pour remplacer"
+                                                changeLabel={tCommon("dropToReplace")}
                                                 onConfirm={onBannerConfirm}
                                             />
                                             {bannerUrl && (

@@ -47,7 +47,10 @@
     "personaQuotaReached": "Limite atteinte : {count} personnages par monde sur un compte gratuit.",
     "personaNameTaken": "Un personnage portant ce nom existe déjà dans ce monde.",
     "forbidden": "Vous n'avez pas les droits nécessaires pour cela.",
-    "invalidTag": "Une étiquette ne peut contenir que des lettres et des chiffres."
+    "invalidTag": "Une étiquette ne peut contenir que des lettres et des chiffres.",
+    "dropToReplace": "Cliquer ou déposer pour remplacer",
+    "uploadError": "Envoi impossible. Réessayez dans un instant.",
+    "usernameTaken": "Ce nom d'utilisateur est déjà pris."
   },
   "nav": {
     "profile": "Mon profil",
@@ -462,7 +465,18 @@
     "enableMap": "Activer la carte",
     "enableMapHelp": "Donne accès à une carte du monde, sur laquelle placer des lieux. Désactivée, elle disparaît de la navigation ; rien n'est supprimé.",
     "enableWiki": "Activer le wiki",
-    "enableWikiHelp": "Donne accès aux pages d'encyclopédie du monde. Désactivé, il disparaît de la navigation ; les pages sont conservées."
+    "enableWikiHelp": "Donne accès aux pages d'encyclopédie du monde. Désactivé, il disparaît de la navigation ; les pages sont conservées.",
+    "publicWorldHelp": "Un monde public est accessible à tous les membres de la plateforme",
+    "wikiLabelHelp": "Renomme le lien du wiki dans la barre latérale du monde",
+    "nameHelp": "Le nom affiché partout dans l’application",
+    "tagHelp": "Visible sur la carte du monde",
+    "iconHelp": "Affichée dans la barre latérale et sur la carte du monde",
+    "bannerHelp": "Image large affichée en haut de la page du monde",
+    "restrictionPurgeInventory": "objets d'inventaire",
+    "restrictionPurgeSkills": "compétences",
+    "restrictionPurgeDescription": "Cette action effacera immédiatement tous les {items} des personas de ce monde. Cette opération est irréversible.",
+    "restrictionPurgeConfirm": "Activer et purger",
+    "deleteFailed": "Suppression du monde impossible."
   },
   "auth": {
     "signin": "Connexion",
@@ -483,13 +497,25 @@
       "placeholder": "pseudo",
       "helper": "Ce pseudo sera visible par les autres membres de vos mondes. Vous pourrez le modifier plus tard depuis votre profil.",
       "invalidError": "Le pseudo doit contenir entre 3 et 32 caractères (lettres, chiffres, underscore).",
-      "takenError": "Ce pseudo est déjà pris.",
       "continue": "Continuer",
       "saving": "Enregistrement…"
     },
     "confirmPassword": "Confirmer le mot de passe",
     "checkInbox": "Vérifiez votre boîte mail",
-    "checkInboxDescription": "Un lien de confirmation vous a été envoyé. Cliquez dessus pour activer votre compte avant de vous connecter."
+    "checkInboxDescription": "Un lien de confirmation vous a été envoyé. Cliquez dessus pour activer votre compte avant de vous connecter.",
+    "errorGeneric": "La connexion a échoué. Réessayez dans un instant.",
+    "errorInvalidCredentials": "Adresse email ou mot de passe incorrect.",
+    "errorEmailNotConfirmed": "Confirmez votre adresse email avant de vous connecter.",
+    "errorUserAlreadyExists": "Un compte existe déjà pour cette adresse email.",
+    "errorWeakPassword": "Ce mot de passe est trop faible. Choisissez-en un plus long.",
+    "errorSamePassword": "Le nouveau mot de passe doit être différent de l'ancien.",
+    "errorTooManyRequests": "Trop de tentatives. Patientez quelques minutes.",
+    "errorEmailInvalid": "Cette adresse email n'est pas valide.",
+    "errorSignupDisabled": "Les inscriptions sont momentanément fermées.",
+    "errorSessionExpired": "Votre session a expiré. Reconnectez-vous.",
+    "errorPasswordsDoNotMatch": "Les mots de passe ne correspondent pas.",
+    "errorUsernameFormat": "Le nom d'utilisateur doit contenir entre 3 et 32 caractères (lettres, chiffres, tiret bas).",
+    "errorUsernameTaken": "Ce nom d'utilisateur est déjà pris."
   },
   "explore": {
     "title": "Explorer",
@@ -592,7 +618,12 @@
     "tabCosmetics": "Cosmétiques",
     "tabBuilder": "Générateur",
     "editAction": "Éditer",
-    "skillLabel": "compétence"
+    "skillLabel": "compétence",
+    "newPersonaHint": "Donnez un nom à votre personnage pour commencer. Vous pourrez tout configurer ensuite.",
+    "bannerDeleteDescription": "La bannière de ce personnage sera supprimée définitivement du stockage.",
+    "avatarDeleteDescription": "L'avatar de ce personnage sera supprimé définitivement du stockage.",
+    "sectionDeleteDescription": "Cette section et tous ses champs seront supprimés définitivement.",
+    "fieldDeleteDescription": "Ce champ et toutes ses images hébergées seront supprimés définitivement."
   },
   "quests": {
     "title": "Quêtes du jour",
@@ -627,7 +658,8 @@
     "searchPlaceholder": "Recherche",
     "buy": "Acheter",
     "processing": "Traitement…",
-    "owned": "Possédé"
+    "owned": "Possédé",
+    "purchaseError": "L'achat a échoué. Réessayez dans un instant."
   },
   "admin": {
     "title": "Tableau de bord admin",
@@ -949,7 +981,16 @@
     "npcExampleTitle": "Wyrm des Cendres",
     "npcRolePlaceholder": "ex. Gardien du donjon, Marchande…",
     "deleteMessageFailed": "Suppression du message impossible.",
-    "loadMessageFailed": "Chargement du nouveau message impossible."
+    "loadMessageFailed": "Chargement du nouveau message impossible.",
+    "messageExampleReply": "Oui, et vous ?",
+    "messageExampleGreeting": "Salut !",
+    "dialogueSaidHe": "dit-il.",
+    "npcExampleAttack": "Attaque",
+    "npcExampleGuard": "Garde",
+    "messageDeleteDescription": "Ce message sera supprimé définitivement.",
+    "bannerDeleteDescription": "La bannière sera supprimée définitivement.",
+    "roomDeleteDescription": "La salle et tous ses messages seront supprimés définitivement.",
+    "deleteRoomFailed": "Suppression du salon impossible."
   },
   "changelog": {
     "title": "Changelog",
@@ -1156,6 +1197,7 @@
     "home": "Retour à l’accueil",
     "notFoundCode": "Erreur 404",
     "notFoundTitle": "Page introuvable",
-    "notFoundDescription": "Désolé, la page que vous cherchez n'existe pas ou n'est plus accessible."
+    "notFoundDescription": "Désolé, la page que vous cherchez n'existe pas ou n'est plus accessible.",
+    "notFoundHint": "Chaque monde commence par une page blanche. Celle que vous cherchiez semble s'être évaporée, mais rien ne vous empêche d'en créer une nouvelle."
   }
 }

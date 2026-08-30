@@ -272,7 +272,9 @@ export function WorldHomeGridEditor({
       const { data } = supabase.storage.from("worlds").getPublicUrl(path);
       return data.publicUrl;
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : String(err));
+      // Pas `e.message` : texte brut de PostgreSQL, il nomme table et policy.
+      console.error("[WorldHomeGridEditor]", err);
+      toast.error(tCommon("saveError"));
       return null;
     }
   }

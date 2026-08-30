@@ -35,6 +35,7 @@ export function UserProfileSheet({
   email: string;
 }) {
   const t = useTranslations("userProfile");
+  const tCommon = useTranslations("common");
   const supabase = createClient();
   const router = useRouter();
 
@@ -93,12 +94,14 @@ export function UserProfileSheet({
         toast.success(t("avatarUpdated"));
         router.refresh();
       } catch (e: unknown) {
-        toast.error(e instanceof Error ? e.message : "Erreur lors de l'upload.");
+        // Pas `e.message` : texte brut de PostgreSQL, il nomme table et policy.
+        console.error("[UserProfileSheet] envoi d'avatar", e);
+        toast.error(tCommon("uploadError"));
       } finally {
         setUploadingAvatar(false);
       }
     },
-    [userId, supabase, router, t],
+    [userId, supabase, router, t, tCommon],
   );
 
   const usernameChanged = username.trim() !== (initialUsername ?? "");

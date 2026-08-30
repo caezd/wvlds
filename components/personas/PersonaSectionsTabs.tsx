@@ -202,7 +202,7 @@ export function PersonaSectionsTabs({
                               <Trash2 className="mr-2 h-4 w-4" /> Supprimer
                             </DropdownMenuItem>
                           }
-                          description="Cette section et tous ses champs seront supprimés définitivement."
+                          description={t("sectionDeleteDescription")}
                           onConfirm={handleDeleteSection}
                         />
                       )}

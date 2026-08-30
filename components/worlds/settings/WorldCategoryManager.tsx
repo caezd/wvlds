@@ -34,7 +34,7 @@ import {
   reorderChatroomCategories,
 } from "@/app/actions/chatroomCategories";
 import type { ChatroomCategory } from "@/types/worlds";
-import { messageErreurAction } from "@/lib/actionErrors";
+import { ERR_NON_AUTHENTIFIE, messageErreurAction } from "@/lib/actionErrors";
 
 async function uploadCategoryImage(
   supabase: ReturnType<typeof createClient>,
@@ -44,7 +44,7 @@ async function uploadCategoryImage(
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) throw new Error("Non connecté.");
+  if (!user) throw new Error(ERR_NON_AUTHENTIFIE);
   if (file.size > 5 * 1024 * 1024) throw new Error("Fichier trop volumineux (max 5 Mo).");
 
   const converted = await toWebP(file);
@@ -91,7 +91,14 @@ function CategoryForm({
       );
       setImageUrl(url ?? "");
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Téléversement impossible.");
+      // Ne JAMAIS afficher `e.message` : un `throw error` Postgrest y met le
+      // message brut de PostgreSQL, qui cite la table et la policy.
+      console.error("[WorldCategoryManager] envoi d'image", e);
+      toast.error(
+          e instanceof Error && e.message === ERR_NON_AUTHENTIFIE
+              ? tCommon("sessionExpired")
+              : tCommon("uploadError"),
+      );
     } finally {
       setUploadingImage(false);
     }
@@ -144,7 +151,7 @@ function CategoryForm({
           uploading={uploadingImage}
           previewSrc={imageUrl || null}
           previewClassName="aspect-[4/3] w-full rounded-lg"
-          changeLabel="Cliquer ou déposer pour remplacer"
+          changeLabel={tCommon("dropToReplace")}
           onConfirm={handleImageConfirm}
         />
         {imageUrl && (

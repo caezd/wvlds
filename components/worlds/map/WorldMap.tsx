@@ -27,6 +27,7 @@ import { PinMarker } from "./PinMarker";
 import { PinPopover } from "./PinPopover";
 import { calcPopoverPos } from "./popoverPosition";
 import type { PinPopoverPos, PendingPin } from "./types";
+import { ERR_NON_AUTHENTIFIE } from "@/lib/actionErrors";
 
 // ── Main component ─────────────────────────────────────────────────
 
@@ -154,7 +155,7 @@ export function WorldMap({
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!user) throw new Error("Non connecté.");
+      if (!user) throw new Error(ERR_NON_AUTHENTIFIE);
 
       const converted = await toWebP(file, 4096);
       const path = `user-${userId}/world-${worldId}/map-${Date.now()}.webp`;

@@ -52,6 +52,9 @@ export const ERR_TAG_INVALIDE = "invalidTag";
 /** Le quota de personnages du plan gratuit est atteint pour ce monde. */
 export const ERR_QUOTA_PERSONAS = "personaQuotaReached";
 
+/** Le pseudo choisi est déjà porté par quelqu'un d'autre. */
+export const ERR_NOM_UTILISATEUR_PRIS = "usernameTaken";
+
 /** Un personnage du même nom existe déjà dans ce monde. */
 export const ERR_NOM_PERSONA_PRIS = "personaNameTaken";
 
@@ -98,6 +101,7 @@ export function messageErreurAction(
   if (code === ERR_INTROUVABLE) return t("notFoundOrForbidden");
   if (code === ERR_NOM_PERSONA) return t("personaNameLength");
   if (code === ERR_NOM_PERSONA_PRIS) return t("personaNameTaken");
+  if (code === ERR_NOM_UTILISATEUR_PRIS) return t("usernameTaken");
   if (code === ERR_NON_AUTORISE) return t("forbidden");
   if (code === ERR_TAG_INVALIDE) return t("invalidTag");
   // Le seul message qui porte une valeur : la borne du plan gratuit, qui n'a

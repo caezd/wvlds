@@ -1,4 +1,7 @@
+"use client";
+
 import { Trash2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { BannerBlock } from "@/lib/chat-blocks";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { Button } from "@/components/ui/button";
@@ -12,6 +15,7 @@ export function BannerBlockView({
   mine: boolean;
   onDelete?: () => void;
 }) {
+  const t = useTranslations("chatrooms");
   return (
     <div className="group/banner relative w-full py-2">
       {/* dimensions intrinsèques inconnues (non stockées) — laisser le navigateur dimensionner naturellement */}
@@ -34,7 +38,7 @@ export function BannerBlockView({
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>
             }
-            description="La bannière sera supprimée définitivement."
+            description={t("bannerDeleteDescription")}
             onConfirm={onDelete}
           />
         </div>

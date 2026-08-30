@@ -182,7 +182,9 @@ export default function ChatroomSettingsSheet({
       await persistField(field, url);
       toast.success(tCommon("imageSaved"));
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Téléversement impossible.");
+      // Pas `e.message` : texte brut de PostgreSQL, il nomme table et policy.
+      console.error("[ChatroomSettingsSheet] envoi d'image", e);
+      toast.error(tCommon("uploadError"));
     } finally {
       setUploading(null);
     }
@@ -273,7 +275,9 @@ export default function ChatroomSettingsSheet({
       router.back();
       router.refresh();
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Suppression impossible.");
+      // Pas `e.message` : texte brut de PostgreSQL, il nomme table et policy.
+      console.error("[ChatroomSettingsSheet] suppression", e);
+      toast.error(t("deleteRoomFailed"));
     } finally {
       setDeleting(false);
     }
@@ -594,7 +598,7 @@ export default function ChatroomSettingsSheet({
 
             <DrawerFooter className="border-t border-border-soft px-4 py-3 sm:px-6 flex-row justify-start">
               <DeleteConfirmDialog
-                description="La salle et tous ses messages seront supprimés définitivement."
+                description={t("roomDeleteDescription")}
                 onConfirm={() => void handleDelete()}
                 trigger={
                   <Button

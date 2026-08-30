@@ -572,7 +572,7 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         }
-                        description="Ce champ et toutes ses images hébergées seront supprimés définitivement."
+                        description={tPersonas("fieldDeleteDescription")}
                         onConfirm={() => handleDeleteField(field.id)}
                       />
                     ) : (

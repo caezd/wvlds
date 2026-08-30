@@ -47,7 +47,10 @@
     "personaQuotaReached": "Limit reached: {count} characters per world on a free account.",
     "personaNameTaken": "A character with this name already exists in this world.",
     "forbidden": "You don't have the necessary permissions for this.",
-    "invalidTag": "A tag may only contain letters and digits."
+    "invalidTag": "A tag may only contain letters and digits.",
+    "dropToReplace": "Click or drop to replace",
+    "uploadError": "Upload failed. Please try again in a moment.",
+    "usernameTaken": "This username is already taken."
   },
   "nav": {
     "profile": "My profile",
@@ -462,7 +465,18 @@
     "enableMap": "Enable the map",
     "enableMapHelp": "Gives access to a world map where locations can be placed. When disabled it leaves the navigation; nothing is deleted.",
     "enableWiki": "Enable the wiki",
-    "enableWikiHelp": "Gives access to the world's encyclopedia pages. When disabled it leaves the navigation; the pages are kept."
+    "enableWikiHelp": "Gives access to the world's encyclopedia pages. When disabled it leaves the navigation; the pages are kept.",
+    "publicWorldHelp": "A public world is open to every member of the platform",
+    "wikiLabelHelp": "Renames the wiki link in the world sidebar",
+    "nameHelp": "The name shown everywhere in the app",
+    "tagHelp": "Visible on the world map",
+    "iconHelp": "Shown in the sidebar and on the world map",
+    "bannerHelp": "Wide image shown at the top of the world page",
+    "restrictionPurgeInventory": "inventory items",
+    "restrictionPurgeSkills": "skills",
+    "restrictionPurgeDescription": "This will immediately erase all {items} of this world's personas. This cannot be undone.",
+    "restrictionPurgeConfirm": "Enable and purge",
+    "deleteFailed": "Could not delete the world."
   },
   "auth": {
     "signin": "Sign in",
@@ -483,13 +497,25 @@
       "placeholder": "username",
       "helper": "This username will be visible to other members of your worlds. You can change it later from your profile.",
       "invalidError": "The username must be 3 to 32 characters long (letters, numbers, underscore).",
-      "takenError": "This username is already taken.",
       "continue": "Continue",
       "saving": "Saving…"
     },
     "confirmPassword": "Confirm password",
     "checkInbox": "Check your inbox",
-    "checkInboxDescription": "A confirmation link has been sent to you. Click it to activate your account before signing in."
+    "checkInboxDescription": "A confirmation link has been sent to you. Click it to activate your account before signing in.",
+    "errorGeneric": "Sign-in failed. Please try again in a moment.",
+    "errorInvalidCredentials": "Incorrect email address or password.",
+    "errorEmailNotConfirmed": "Confirm your email address before signing in.",
+    "errorUserAlreadyExists": "An account already exists for this email address.",
+    "errorWeakPassword": "This password is too weak. Choose a longer one.",
+    "errorSamePassword": "The new password must differ from the old one.",
+    "errorTooManyRequests": "Too many attempts. Please wait a few minutes.",
+    "errorEmailInvalid": "This email address is not valid.",
+    "errorSignupDisabled": "Sign-ups are temporarily closed.",
+    "errorSessionExpired": "Your session has expired. Please sign in again.",
+    "errorPasswordsDoNotMatch": "The passwords do not match.",
+    "errorUsernameFormat": "The username must be 3 to 32 characters long (letters, digits, underscore).",
+    "errorUsernameTaken": "This username is already taken."
   },
   "explore": {
     "title": "Explore",
@@ -592,7 +618,12 @@
     "tabCosmetics": "Cosmetics",
     "tabBuilder": "Builder",
     "editAction": "Edit",
-    "skillLabel": "skill"
+    "skillLabel": "skill",
+    "newPersonaHint": "Give your character a name to get started. You can configure everything afterwards.",
+    "bannerDeleteDescription": "This character's banner will be permanently deleted from storage.",
+    "avatarDeleteDescription": "This character's avatar will be permanently deleted from storage.",
+    "sectionDeleteDescription": "This section and all its fields will be permanently deleted.",
+    "fieldDeleteDescription": "This field and all its hosted images will be permanently deleted."
   },
   "quests": {
     "title": "Daily quests",
@@ -627,7 +658,8 @@
     "searchPlaceholder": "Search",
     "buy": "Buy",
     "processing": "Processing…",
-    "owned": "Owned"
+    "owned": "Owned",
+    "purchaseError": "The purchase failed. Please try again in a moment."
   },
   "admin": {
     "title": "Admin dashboard",
@@ -949,7 +981,16 @@
     "npcExampleTitle": "Wyrm of Ashes",
     "npcRolePlaceholder": "e.g. Dungeon keeper, Merchant…",
     "deleteMessageFailed": "Couldn't delete the message.",
-    "loadMessageFailed": "Couldn't load the new message."
+    "loadMessageFailed": "Couldn't load the new message.",
+    "messageExampleReply": "Yes, and you?",
+    "messageExampleGreeting": "Hi!",
+    "dialogueSaidHe": "he said.",
+    "npcExampleAttack": "Attack",
+    "npcExampleGuard": "Guard",
+    "messageDeleteDescription": "This message will be permanently deleted.",
+    "bannerDeleteDescription": "The banner will be permanently deleted.",
+    "roomDeleteDescription": "The room and all its messages will be permanently deleted.",
+    "deleteRoomFailed": "Could not delete the room."
   },
   "changelog": {
     "title": "Changelog",
@@ -1156,6 +1197,7 @@
     "home": "Back to home",
     "notFoundCode": "Error 404",
     "notFoundTitle": "Page not found",
-    "notFoundDescription": "Sorry, the page you are looking for does not exist or is no longer available."
+    "notFoundDescription": "Sorry, the page you are looking for does not exist or is no longer available.",
+    "notFoundHint": "Every world starts with a blank page. The one you were looking for seems to have vanished, but nothing stops you from creating a new one."
   }
 }

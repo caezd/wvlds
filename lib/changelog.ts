@@ -9,6 +9,21 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Correctif",
+    text: "Les messages d'erreur de connexion et d'inscription s'affichent enfin dans votre langue. Ils venaient directement de notre fournisseur d'authentification et arrivaient donc toujours en anglais : « Invalid login credentials » au moment précis où vous aviez besoin d'être compris.\nMot de passe incorrect, adresse non confirmée, trop de tentatives, compte déjà existant, mot de passe trop faible : chacun a désormais son message, dans les trois langues.",
+  },
+  {
+    date: "2026-08",
+    tag: "Technique",
+    text: "Le message technique d'une erreur de base de données ne peut plus apparaître à l'écran. Il avait déjà été retiré des actions serveur, mais quatorze écrans l'affichaient encore directement en cas d'échec — envoi d'image, achat en boutique, suppression d'un salon ou d'un monde, changement de pseudo. Le texte montré était celui de PostgreSQL, en anglais, et il nommait les tables et les règles internes.\nIl est maintenant consigné côté serveur, où il sert au diagnostic, et vous recevez une explication lisible dans votre langue.",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
+    text: "Une trentaine de textes d'interface étaient restés écrits en français dans le code et s'affichaient tels quels quelle que soit la langue choisie : les bulles d'aide des paramètres d'un monde, les confirmations de suppression, la page « introuvable », les aperçus de blocs du compositeur.\nIls sont désormais traduits en français, anglais et espagnol. Trois d'entre eux tutoyaient, ce que le reste de l'application ne fait jamais.",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
     text: "Changer de salon très vite juste après en avoir créé un ne peut plus abîmer les messages. La clé de chiffrement du salon quitté pouvait arriver en retard et remplacer celle du salon affiché : les messages devenaient illisibles, et surtout un message envoyé dans cet état l'aurait été avec la mauvaise clé — définitivement indéchiffrable, y compris pour son auteur.\nLa fenêtre était étroite — elle n'existait que pour un salon fraîchement créé, avant que sa clé ne soit posée — mais le dégât aurait été irréversible.",
   },
   {

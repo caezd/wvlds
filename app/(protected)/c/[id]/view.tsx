@@ -1151,7 +1151,7 @@ export default function ChatRoomView({
       <DeleteConfirmDialog
         open={pendingDeleteId !== null}
         onOpenChange={(open) => { if (!open) setPendingDeleteId(null); }}
-        description="Ce message sera supprimé définitivement."
+        description={t("messageDeleteDescription")}
         onConfirm={async () => {
           if (pendingDeleteId === null) return;
           const id = pendingDeleteId;
