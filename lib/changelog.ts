@@ -9,9 +9,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Correctif",
-    text: "Les messages d'erreur s'affichent enfin dans votre langue. Ils étaient écrits en français dans le code et présentés tels quels : une personne lisant l'application en anglais ou en espagnol recevait du français.
-Plus gênant encore, quand l'erreur venait de la base de données, c'est son message technique brut qui apparaissait — une phrase en anglais citant des noms de tables internes. Ces messages restent désormais côté serveur, où ils servent au diagnostic, et vous recevez une explication lisible.
-Certaines situations gagnent au passage un message propre : session expirée, quota de personnages atteint, nom déjà pris, droits insuffisants.",
+    text: "Les messages d'erreur s'affichent enfin dans votre langue. Ils étaient écrits en français dans le code et présentés tels quels : une personne lisant l'application en anglais ou en espagnol recevait du français.\nPlus gênant encore, quand l'erreur venait de la base de données, c'est son message technique brut qui apparaissait — une phrase en anglais citant des noms de tables internes. Ces messages restent désormais côté serveur, où ils servent au diagnostic, et vous recevez une explication lisible.\nCertaines situations gagnent au passage un message propre : session expirée, quota de personnages atteint, nom déjà pris, droits insuffisants.",
   },
   {
     date: "2026-08",
