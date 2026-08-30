@@ -235,4 +235,41 @@ describe("TraitsField et DlField", () => {
     expect(screen.getByPlaceholderText("Titre")).toBeInTheDocument();
     expect(screen.getByPlaceholderText("Description")).toBeInTheDocument();
   });
+
+  // Régression : la description était un `<input>`, un contrôle mono-ligne.
+  // Un texte un peu long ne revenait donc pas à la ligne, il défilait
+  // horizontalement — illisible en édition, alors que la fiche l'affiche bien
+  // sur plusieurs lignes. Le type du contrôle EST le comportement ici : aucun
+  // réglage de style ne fait revenir un `<input>` à la ligne.
+  it("DlField saisit la description dans un contrôle multi-ligne", () => {
+    render(<DlField initialItems={[{ id: "a", label: "Taille", description: "" }]} onSave={vi.fn()} />);
+
+    expect(screen.getByPlaceholderText("Description").tagName).toBe("TEXTAREA");
+  });
+
+  // Régression : la description vivait dans une colonne dont la largeur était
+  // dictée par le plus long des titres — largement trop étroite dans un
+  // tiroir. Titre et description occupent maintenant chacun leur ligne, comme
+  // à l'affichage.
+  it("DlField place la description sous son titre, pas dans une colonne voisine", () => {
+    render(<DlField initialItems={[{ id: "a", label: "Taille", description: "x" }]} onSave={vi.fn()} />);
+
+    const titre = screen.getByPlaceholderText("Titre");
+    const description = screen.getByPlaceholderText("Description");
+    // La description n'est pas un frère direct du titre dans une grille :
+    // elle est dans le bloc qui suit, donc en dessous.
+    expect(titre.parentElement).toBe(description.closest("div")!.parentElement);
+    expect(titre.className).toContain("w-full");
+  });
+
+  it("DlField conserve les sauts de ligne d'une description", async () => {
+    const onSave = vi.fn();
+    render(<DlField initialItems={[{ id: "a", label: "Taille", description: "" }]} onSave={onSave} />);
+
+    await userEvent.type(screen.getByPlaceholderText("Description"), "2m10{enter}au garrot");
+
+    expect(onSave).toHaveBeenLastCalledWith([
+      expect.objectContaining({ description: "2m10\nau garrot" }),
+    ]);
+  });
 });

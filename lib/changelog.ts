@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Correctif",
+    text: "Dans l’éditeur d’un persona, la description d’une entrée de liste descriptive ne revenait pas à la ligne : un texte un peu long défilait horizontalement et devenait illisible, alors qu’il s’affiche bien sur plusieurs lignes dans la fiche. Le champ s’ajuste désormais à la hauteur de son contenu, et accepte les retours à la ligne — qui sont affichés tels quels sur la fiche.\nLes listes descriptives s’affichent aussi comme de vraies listes de définitions : le titre, puis sa description en dessous. La disposition en deux colonnes coinçait le texte dans une colonne dont la largeur dépendait du plus long des titres — largement trop étroite dans un panneau latéral."
+  },
+  {
+    date: "2026-08",
     tag: "Interface",
     text: "Les images ne surgissent plus sur un carré gris : bannières et icônes de monde, avatars et bannières de persona affichent d’abord une version minuscule et floutée d’elles-mêmes, sur laquelle l’image nette vient se fondre. Le substitut est la vraie image — mêmes couleurs, même composition — et non une couleur inventée, ce qui donne un aperçu fidèle dès les premiers instants du chargement."
   },

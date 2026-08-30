@@ -176,13 +176,21 @@ function FieldView({ type, data }: { type: string; data: FieldData }) {
     const items: DlItem[] = data?.dlItems ?? [];
     const visible = items.filter((it) => it.label || it.description);
     if (!visible.length) return null;
+    // Liste de définitions classique : chaque terme, puis sa description en
+    // dessous. La grille à deux colonnes d'avant imposait au texte une colonne
+    // dont la largeur dépendait du plus long des titres — largement trop
+    // étroite dans un tiroir.
+    //
+    // Les paires sont enveloppées dans un <div>, ce que la spec autorise
+    // explicitement à l'intérieur d'un <dl> : c'est ce qui permet d'espacer
+    // les entrées entre elles sans écarter un terme de sa propre description.
     return (
-      <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1.5 text-sm">
+      <dl className="space-y-3 text-sm">
         {visible.map((item) => (
-          <Fragment key={item.id}>
-            <dt className="text-left font-semibold">{item.label}</dt>
-            <dd className="text-muted-foreground">{item.description}</dd>
-          </Fragment>
+          <div key={item.id}>
+            <dt className="font-semibold">{item.label}</dt>
+            <dd className="whitespace-pre-line text-muted-foreground">{item.description}</dd>
+          </div>
         ))}
       </dl>
     );
