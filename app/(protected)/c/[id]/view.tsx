@@ -66,6 +66,7 @@ import { useGlobalPresence } from "@/components/providers/PresenceProvider";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import { useMobileSidebar } from "@/components/providers/MobileSidebarProvider";
 import { useChatPins } from "@/hooks/useChatPins";
+import { useMessagesEpingles } from "@/hooks/useMessagesEpingles";
 import { PinBar } from "@/components/chatrooms/message/PinBar";
 import { PinsSheet } from "@/components/chatrooms/message/PinsSheet";
 const SearchCenter = dynamic(() =>
@@ -427,7 +428,6 @@ export default function ChatRoomView({
     loadingOlderRef.current = false;
     setLoadingOlder(false);
     scrollAdjustRef.current = null;
-    setPinnedMessagesExtra([]);
 
     // Ces deux-là manquaient : leur `useState` ne lit son prop qu'au montage,
     // et cette vue n'est PAS remontée quand on passe d'un salon à l'autre
@@ -722,35 +722,9 @@ export default function ChatRoomView({
   // Messages épinglés situés hors de la fenêtre de pagination chargée (historique
   // trop ancien) : récupérés à part pour que PinBar/PinsSheet affichent bien leur
   // contenu au lieu d'une carte vide.
-  const [pinnedMessagesExtra, setPinnedMessagesExtra] = useState<ChatMessageWithPersona[]>([]);
-  useEffect(() => {
-    const loadedIds = new Set(messages.map((m) => m.id));
-    const cachedIds = new Set(pinnedMessagesExtra.map((m) => m.id));
-    const missing = [...new Set(
-      pins
-        .map((p) => p.message_id)
-        .filter((id): id is number => id !== null && !loadedIds.has(id) && !cachedIds.has(id)),
-    )];
-    if (!missing.length) return;
-    void (async () => {
-      const { data } = await supabase
-        .from(TABLE.CHAT_MESSAGES)
-        .select(
-          "id, chat_id, content, author_id, created_at, metadata, visible_to, persona:personas(id, user_id, name, avatar_url, frame:avatar_frame_id(asset_url)), author:profiles(avatar_url, username)",
-        )
-        .in("id", missing);
-      if (!data) return;
-      const key = roomKeyRef.current;
-      const decrypted = await Promise.all(
-        (data as unknown as ChatMessageWithPersona[]).map(async (m) => ({
-          ...m,
-          content: key ? await decryptMessage(m.content ?? "", key) : (m.content ?? ""),
-        })),
-      );
-      setPinnedMessagesExtra((prev) => [...prev, ...decrypted]);
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pins, messages, roomKey, pinnedMessagesExtra]);
+  const pinnedMessagesExtra = useMessagesEpingles(
+    supabase, chatId, pins, messages, roomKeyRef, roomKey,
+  );
 
   // Messages disponibles pour l'affichage des épingles : la liste chargée
   // prévaut sur le cache (un message peut finir par charger via la pagination).

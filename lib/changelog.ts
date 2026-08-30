@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Correctif",
+    text: "Un message épinglé ancien ne peut plus apparaître dans le mauvais salon. La barre d'épingles va chercher séparément les messages trop vieux pour être déjà chargés ; en changeant de salon pendant cette recherche, la réponse arrivait après coup et son contenu était déchiffré avec la clé du nouveau salon.\nLe résultat : un message du salon précédent, illisible, épinglé là où il n'a rien à faire. La liste des épingles était déjà protégée contre ce décalage — c'est l'étape suivante qui ne l'était pas.",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
     text: "Les messages d'erreur de connexion et d'inscription s'affichent enfin dans votre langue. Ils venaient directement de notre fournisseur d'authentification et arrivaient donc toujours en anglais : « Invalid login credentials » au moment précis où vous aviez besoin d'être compris.\nMot de passe incorrect, adresse non confirmée, trop de tentatives, compte déjà existant, mot de passe trop faible : chacun a désormais son message, dans les trois langues.",
   },
   {
