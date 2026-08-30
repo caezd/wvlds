@@ -21,7 +21,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { useGlobalPresence } from "@/components/providers/PresenceProvider";
 import { formatLastSeen } from "@/lib/utils";
 import { ImageGridView } from "@/components/personas/ImageGridView";
-import { supabaseThumb } from "@/lib/storage";
+import { StoredImage } from "@/components/ui/stored-image";
 import { getInitials } from "@/lib/textFormatting";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { getUsablePersonaIds } from "@/lib/personaEligibility";
@@ -241,12 +241,8 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [bannerUrl, setBannerUrl] = useState<string | null>(null);
-  const [bannerThumbFailed, setBannerThumbFailed] = useState(false);
   const [_frameUrl, setFrameUrl] = useState<string | null>(null);
 
-  useEffect(() => {
-    setBannerThumbFailed(false);
-  }, [bannerUrl]);
   const [ownerPresence, setOwnerPresence] = useState<{
     last_seen_at: string | null;
     appear_offline: boolean;
@@ -375,12 +371,10 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
             {/* -- Bannière -- */}
             {bannerUrl ? (
               <div className="relative h-34 w-full shrink-0">
-                <Image
-                  src={bannerThumbFailed ? bannerUrl : (supabaseThumb(bannerUrl, 920, 80, 272) ?? bannerUrl)}
-                  onError={() => setBannerThumbFailed(true)}
-                  alt=""
-                  fill
-                  sizes="440px"
+                <StoredImage
+                  url={bannerUrl}
+                  width={920}
+                  height={272}
                   className="object-cover"
                   draggable={false}
                 />

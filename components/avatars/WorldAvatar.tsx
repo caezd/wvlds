@@ -1,5 +1,4 @@
-import Image from "next/image";
-import { supabaseThumb } from "@/lib/storage";
+import { StoredImage } from "@/components/ui/stored-image";
 import { cn } from "@/lib/utils";
 
 const SIZES = {
@@ -22,27 +21,19 @@ export function WorldAvatar({
 
   return world.icon_url ? (
     <span className={cn(dim, "relative block rounded-lg overflow-hidden shrink-0", className)}>
-      <Image
-        // ×3 (pas ×1.5) : couvre les écrans 3x DPR (courants sur mobile) —
-        // en dessous, l'avatar reste net à 1x mais flou dès qu'il est
-        // affiché sur un écran haute densité, où `px` CSS ne correspond plus
-        // du tout au nombre de pixels physiques réellement affichés.
-        //
-        // `unoptimized` : l'image est déjà pré-dimensionnée par imgproxy
-        // (ci-dessus) — laisser Next la ré-optimiser est non seulement
-        // inutile, mais activement cassé ici. Un `sizes` en px fixe (sans
-        // unité `vw`) ne correspond à aucun des deux formats que Next sait
-        // reconnaître (ratio vw, ou largeur/hauteur explicites) : il retombe
-        // alors sur `allSizes`, la liste ENTIÈRE des largeurs configurées —
-        // jusqu'à 3840px. Demander à Next d'agrandir une source de 96px
-        // jusqu'à 3840px échoue purement et simplement (`naturalWidth: 0`,
-        // vérifié en direct), pas juste flou.
-        src={supabaseThumb(world.icon_url, px * 3, 90) ?? world.icon_url}
-        alt=""
-        fill
-        unoptimized
-        className="object-cover"
-      />
+      {/* ×3 (pas ×1.5) : couvre les écrans 3x DPR (courants sur mobile) — en
+          dessous, l'icône reste nette à 1x mais floue dès qu'elle est affichée
+          sur un écran haute densité, où `px` CSS ne correspond plus du tout au
+          nombre de pixels physiques réellement affichés.
+
+          `StoredImage` pose aussi le `unoptimized` qui va avec : l'image étant
+          déjà dimensionnée par imgproxy, la repasser dans l'optimiseur de Next
+          est non seulement inutile mais activement cassé — un `sizes` en px
+          fixe ne correspond à aucun des deux formats que Next sait reconnaître,
+          il retombe alors sur la liste ENTIÈRE de ses largeurs, jusqu'à
+          3840px. Demander d'agrandir une source de 96px jusque-là échoue
+          purement et simplement (`naturalWidth: 0`, vérifié en direct). */}
+      <StoredImage url={world.icon_url} width={px * 3} quality={90} className="object-cover" />
     </span>
   ) : (
     <span className={cn("flex shrink-0 items-center justify-center rounded-lg font-semibold text-white bg-muted", dim, text, className)}>

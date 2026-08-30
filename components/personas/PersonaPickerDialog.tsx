@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
-import { supabaseThumb } from "@/lib/storage";
+import { StoredImage } from "@/components/ui/stored-image";
 import type { Persona } from "@/types/db-chat";
 import {
   Dialog,
@@ -36,18 +35,10 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { getUsablePersonaIds } from "@/lib/personaEligibility";
 
 function PersonaAvatarThumb({ url, name, size }: { url: string; name: string; size: number }) {
-  const [thumbFailed, setThumbFailed] = useState(false);
-  return (
-    <Image
-      src={thumbFailed ? url : (supabaseThumb(url, size * 2) ?? url)}
-      onError={() => setThumbFailed(true)}
-      alt={name}
-      fill
-      sizes={`${size}px`}
-      className="object-cover"
-      draggable={false}
-    />
-  );
+  // `size * 3` comme partout ailleurs : à `* 2`, cet avatar demandait une
+  // image plus petite que celle du même persona affichée sur sa fiche — le
+  // genre d'écart qui rend deux vues visiblement différentes.
+  return <StoredImage url={url} width={size * 3} alt={name} className="object-cover" draggable={false} />;
 }
 
 function PersonaRow({

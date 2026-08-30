@@ -3,7 +3,6 @@
 import * as React from "react";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
-import { supabaseThumb } from "@/lib/storage";
 import { toast } from "sonner";
 import { copyToClipboard } from "@/lib/clipboard";
 import {
@@ -32,6 +31,7 @@ import { ImageGridView } from "@/components/personas/ImageGridView";
 import { TABLE } from "@/lib/constants";
 import { getInitials } from "@/lib/textFormatting";
 import { useTranslations } from "next-intl";
+import { StoredImage } from "@/components/ui/stored-image";
 
 export type FieldData = PersonaFieldData | null | undefined;
 
@@ -283,10 +283,6 @@ export function PersonaProfileBody({
   headerAction,
 }: PersonaProfileBodyProps) {
   const tCommon = useTranslations("common");
-  const [bannerThumbFailed, setBannerThumbFailed] = React.useState(false);
-  React.useEffect(() => {
-    setBannerThumbFailed(false);
-  }, [bannerUrl]);
 
   return (
     <div>
@@ -298,14 +294,10 @@ export function PersonaProfileBody({
             le drawer. */}
         {bannerUrl ? (
           <div className="relative h-34 w-full [--hero-fade-start:3rem] [mask-image:linear-gradient(to_bottom,black_var(--hero-fade-start),transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,black_var(--hero-fade-start),transparent_100%)]">
-            <Image
-              src={bannerThumbFailed ? bannerUrl : (supabaseThumb(bannerUrl, 920, 80, 272) ?? bannerUrl)}
-              onError={() => setBannerThumbFailed(true)}
-              alt=""
-              fill
-              // Déjà dimensionnée par imgproxy — voir WorldAvatar.tsx.
-              unoptimized
-              sizes="768px"
+            <StoredImage
+              url={bannerUrl}
+              width={920}
+              height={272}
               className="object-cover"
               draggable={false}
             />

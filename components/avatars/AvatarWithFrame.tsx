@@ -1,6 +1,5 @@
 import Image from "next/image";
 import { ChatroomAvatarWithPresence } from "../chatrooms/persona/ChatroomAvatarWithPresence";
-import { supabaseThumb } from "@/lib/storage";
 
 export function AvatarWithFrame({
   src,
@@ -28,11 +27,11 @@ export function AvatarWithFrame({
   return (
     <div className="relative" style={{ width: size, height: size }}>
       <ChatroomAvatarWithPresence
-        // `size` est en pixels CSS : sur un écran 3x DPR, un avatar de 128
-        // occupe 384 pixels physiques. Demander `size * 2` revenait à faire
-        // étirer la source de 50 % — le même sous-dimensionnement que celui
-        // corrigé sur WorldAvatar (qui demandait `px * 1.5`).
-        src={supabaseThumb(src, size * 3) ?? src ?? undefined}
+        // L'URL brute descend telle quelle : c'est `StoredImage` qui décide
+        // des tailles demandées, en un seul endroit (`size * 3` pour couvrir
+        // les écrans 3x DPR, où un avatar de 128 px CSS occupe 384 pixels
+        // physiques).
+        url={src}
         alt={alt ?? "User"}
         fallback={fallback ?? "?"}
         presenceState={resolved}

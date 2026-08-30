@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Interface",
+    text: "Les images ne surgissent plus sur un carré gris : bannières et icônes de monde, avatars et bannières de persona affichent d’abord une version minuscule et floutée d’elles-mêmes, sur laquelle l’image nette vient se fondre. Le substitut est la vraie image — mêmes couleurs, même composition — et non une couleur inventée, ce qui donne un aperçu fidèle dès les premiers instants du chargement."
+  },
+  {
+    date: "2026-08",
     tag: "Correctif",
     text: "Changer un avatar — ou n’importe quelle image recadrée dans l’application : bannière de persona, icône de monde, image de salon — dégradait sa qualité plus que nécessaire. Le recadrage était d’abord encodé en JPEG, puis recompressé en WebP : deux pertes successives, alors que la première ne servait à rien puisque le fichier était ré-encodé aussitôt. Le recadrage est désormais transmis sans perte jusqu’à la compression finale.\nLes avatars demandaient par ailleurs une image deux fois plus large que leur taille d’affichage, ce qui suffit sur un écran classique mais les faisait étirer de 50 % sur les écrans à forte densité — la plupart des téléphones. Ils demandent maintenant la taille qu’il faut.\nEnfin, l’avatar affiché dans l’éditeur de persona et celui de l’aperçu ne passaient pas par le même traitement d’image — deux compresseurs et deux réglages de qualité différents pour la même photo, d’où un écart visible entre les deux vues. Les deux demandent désormais exactement la même image."
   },

@@ -10,7 +10,7 @@ import {
     DialogContent,
     DialogTitle,
 } from "@/components/ui/dialog";
-import { supabaseThumb } from "@/lib/storage";
+import { StoredImage } from "@/components/ui/stored-image";
 
 type WorldPreview = {
     name: string;
@@ -68,11 +68,9 @@ export function WorldPreviewDialog({
                     }}
                 >
                     {world?.banner_url && (
-                        <Image
-                            src={supabaseThumb(world.banner_url, 600) ?? world.banner_url}
-                            alt=""
-                            fill
-                            sizes="384px"
+                        <StoredImage
+                            url={world.banner_url}
+                            width={384 * 3}
                             className="object-cover"
                         />
                     )}

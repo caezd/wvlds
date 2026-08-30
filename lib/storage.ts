@@ -30,6 +30,29 @@ export function supabaseThumb(
   );
 }
 
+/** Largeur de la vignette de substitution affichée floutée en attendant
+ *  l'image réelle. Assez petite pour arriver en quelques centaines d'octets,
+ *  assez grande pour restituer les masses de couleur de l'image. */
+export const TINY_THUMB_WIDTH = 16;
+
+/**
+ * Vignette minuscule d'une image stockée, ou `undefined` quand l'URL ne peut
+ * pas être transformée.
+ *
+ * `supabaseThumb` renvoie l'URL telle quelle dans deux cas : un PNG (imgproxy
+ * échoue sur certaines variantes) et une URL hors bucket public. S'en servir
+ * comme substitut téléchargerait alors l'image ENTIÈRE une seconde fois —
+ * l'exact inverse du but recherché. D'où la comparaison ci-dessous : pas de
+ * transformation, pas de substitut.
+ */
+export function supabaseTinyThumb(
+  url: string | null | undefined,
+  height?: number,
+): string | undefined {
+  const tiny = supabaseThumb(url, TINY_THUMB_WIDTH, 40, height);
+  return tiny && tiny !== url ? tiny : undefined;
+}
+
 /**
  * Retourne l'URL propre (sans param ?t=) pour stockage en DB.
  * Le param ?t= ne doit être utilisé qu'en mémoire pour invalider

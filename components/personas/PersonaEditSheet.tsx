@@ -7,7 +7,6 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
-import { supabaseThumb } from "@/lib/storage";
 import { toWebP } from "@/lib/imageUtils";
 import { initials } from "@/lib/persona-display";
 import { cn } from "@/lib/utils";
@@ -45,6 +44,7 @@ import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { deletePersona } from "@/app/(protected)/p/actions";
 import { toast } from "sonner";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
+import { StoredImage } from "@/components/ui/stored-image";
 
 // ---------------------------------------------------------------------------
 // Sélection + recadrage d'une image (fichier, presse-papiers ou lien externe),
@@ -542,11 +542,7 @@ export function PersonaEditorContent({
   const [bannerDialogOpen, setBannerDialogOpen] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(initialAvatarUrl ?? null);
   const [bannerUrl, setBannerUrl] = useState<string | null>(initialBannerUrl ?? null);
-  const [bannerThumbFailed, setBannerThumbFailed] = useState(false);
 
-  useEffect(() => {
-    setBannerThumbFailed(false);
-  }, [bannerUrl]);
   const [avatarConfig, setAvatarConfig] = useState<AvatarConfigV1 | null>(initialAvatarConfig ?? null);
   const [frameUrl, setFrameUrl] = useState<string | null>(initialFrameUrl ?? null);
   const { avatar_builder } = useFeatureFlags();
@@ -653,18 +649,10 @@ export function PersonaEditorContent({
             title={bannerUrl ? tPersonas("editBanner") : tPersonas("addBanner")}
           >
             {bannerUrl ? (
-              <Image
-                src={bannerThumbFailed ? bannerUrl : (supabaseThumb(bannerUrl, 920, 80, 272) ?? bannerUrl)}
-                onError={() => setBannerThumbFailed(true)}
-                alt=""
-                fill
-                // `unoptimized` : l'image est déjà dimensionnée par imgproxy
-                // ci-dessus. La repasser dans l'optimiseur de Next la
-                // ré-encode une seconde fois, et un `sizes` en px fixe le fait
-                // retomber sur la liste entière des largeurs configurées —
-                // même piège que celui documenté dans WorldAvatar.tsx.
-                unoptimized
-                sizes="(min-width: 1024px) 768px, 100vw"
+              <StoredImage
+                url={bannerUrl}
+                width={920}
+                height={272}
                 className="object-cover"
                 draggable={false}
               />
@@ -695,21 +683,12 @@ export function PersonaEditorContent({
                 aria-label={tPersonas("editAvatar")}
                 title={tPersonas("editAvatar")}
               >
+                {/* Même composant, donc mêmes tailles demandées, que l'aperçu
+                    et la fiche publique (AvatarWithFrame) : c'est ce qui
+                    garantit que les deux vues affichent la même image, et non
+                    deux ré-encodages différents. */}
                 {avatarUrl ? (
-                  <Image
-                    // Même source que l'aperçu (AvatarWithFrame demande
-                    // `supabaseThumb(src, size * 3)`) : sans ça, l'édition
-                    // passait l'URL brute dans l'optimiseur de Next — un autre
-                    // encodeur, une autre qualité (75 contre 80), donc une
-                    // image visiblement différente de celle du profil.
-                    src={supabaseThumb(avatarUrl, 128 * 3) ?? avatarUrl}
-                    alt=""
-                    fill
-                    unoptimized
-                    sizes="128px"
-                    className="object-cover"
-                    draggable={false}
-                  />
+                  <StoredImage url={avatarUrl} width={128 * 3} className="object-cover" draggable={false} />
                 ) : (
                   <div className="h-full w-full grid place-items-center text-lg font-semibold text-muted-foreground">
                     {avatarFallback}
@@ -795,15 +774,7 @@ export function PersonaEditorContent({
             <div className="flex items-center gap-3">
               <div className="relative h-14 w-14 shrink-0 rounded-xl border bg-muted overflow-hidden lg:hidden">
                 {avatarUrl ? (
-                  <Image
-                    src={supabaseThumb(avatarUrl, 56 * 3) ?? avatarUrl}
-                    alt=""
-                    fill
-                    unoptimized
-                    sizes="56px"
-                    className="object-cover"
-                    draggable={false}
-                  />
+                  <StoredImage url={avatarUrl} width={56 * 3} className="object-cover" draggable={false} />
                 ) : (
                   <div className="h-full w-full grid place-items-center text-sm font-semibold text-muted-foreground">
                     {avatarFallback}
@@ -929,13 +900,10 @@ export function PersonaEditorContent({
             <div className="flex w-full max-w-[520px] flex-col items-center gap-4">
               <div className="relative aspect-[460/136] w-full overflow-hidden rounded-xl bg-muted shadow-2xl">
                 {bannerUrl ? (
-                  <Image
-                    src={bannerThumbFailed ? bannerUrl : (supabaseThumb(bannerUrl, 1040, 80, 308) ?? bannerUrl)}
-                    onError={() => setBannerThumbFailed(true)}
-                    alt=""
-                    fill
-                    unoptimized
-                    sizes="520px"
+                  <StoredImage
+                    url={bannerUrl}
+                    width={1040}
+                    height={308}
                     className="object-cover"
                     draggable={false}
                   />
