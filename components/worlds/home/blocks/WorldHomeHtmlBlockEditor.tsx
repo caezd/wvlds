@@ -10,7 +10,13 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { MAX_HOME_BLOCK_CONTENT_LENGTH, MAX_HOME_BLOCK_TITLE_LENGTH } from "../worldHomeGrid";
+import {
+  MAX_HOME_BLOCK_CONTENT_LENGTH,
+  MAX_HOME_BLOCK_HEIGHT,
+  MAX_HOME_BLOCK_TITLE_LENGTH,
+  MIN_HOME_BLOCK_HEIGHT,
+  sanitizeBlockHeight,
+} from "../worldHomeGrid";
 
 /**
  * Édition du contenu d'un bloc HTML custom — HTML/CSS libre, jamais de JS
@@ -26,6 +32,7 @@ export function WorldHomeHtmlBlockEditor({
   initialHtml,
   initialTitle,
   initialCard = true,
+  initialHeight,
   onSave,
 }: {
   open: boolean;
@@ -34,28 +41,38 @@ export function WorldHomeHtmlBlockEditor({
   initialTitle?: string;
   /** Défaut true — un bloc html a toujours été rendu en carte avant ce réglage. */
   initialCard?: boolean;
-  onSave: (html: string, title: string, card: boolean) => void;
+  /** Hauteur fixe en pixels ; absente = hauteur par défaut de l'iframe. */
+  initialHeight?: number;
+  /** Charge utile nommée plutôt que quatre positions muettes — même forme que
+   *  `WorldHomeBannerDialog`. `height` absent signifie « hauteur automatique ». */
+  onSave: (block: { html: string; title: string; card: boolean; height?: number }) => void;
 }) {
   const t = useTranslations("worlds");
   const tCommon = useTranslations("common");
   const [html, setHtml] = React.useState(initialHtml ?? "");
   const [title, setTitle] = React.useState(initialTitle ?? "");
   const [card, setCard] = React.useState(initialCard);
+  // Saisie gardée en texte : un champ vidé doit rester vide (« automatique »)
+  // plutôt que de retomber sur un 0 que `number` imposerait.
+  const [height, setHeight] = React.useState(initialHeight ? String(initialHeight) : "");
 
   React.useEffect(() => {
     if (open) {
       setHtml(initialHtml ?? "");
       setTitle(initialTitle ?? "");
       setCard(initialCard);
+      setHeight(initialHeight ? String(initialHeight) : "");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, initialHtml, initialTitle]);
+  }, [open, initialHtml, initialTitle, initialHeight]);
 
   const tooLong = html.length > MAX_HOME_BLOCK_CONTENT_LENGTH;
 
   function handleSave() {
     if (tooLong || !html.trim()) return;
-    onSave(html, title, card);
+    // Même assainissement que la grille et le serveur : la saisie est bornée
+    // ici aussi, pour que l'admin voie tout de suite ce qui sera enregistré.
+    onSave({ html, title, card, height: sanitizeBlockHeight(Number(height.trim())) });
   }
 
   return (
@@ -88,6 +105,26 @@ export function WorldHomeHtmlBlockEditor({
               <p className="text-xs text-muted-foreground leading-snug">{t("home.grid.cardHelp")}</p>
             </div>
             <Switch checked={card} onCheckedChange={setCard} className="shrink-0" />
+          </div>
+
+          <div className="space-y-1.5">
+            <label htmlFor="home-block-html-height" className="text-sm font-medium text-foreground">
+              {t("home.grid.heightLabel")}
+            </label>
+            <Input
+              id="home-block-html-height"
+              type="number"
+              inputMode="numeric"
+              min={MIN_HOME_BLOCK_HEIGHT}
+              max={MAX_HOME_BLOCK_HEIGHT}
+              value={height}
+              onChange={(e) => setHeight(e.target.value)}
+              placeholder={t("home.grid.heightPlaceholder")}
+            />
+            <p className="text-xs leading-snug text-muted-foreground">{t("home.grid.heightHelpHtml")}</p>
+            <p className="text-xs text-muted-foreground">
+              {t("home.grid.options.range", { min: MIN_HOME_BLOCK_HEIGHT, max: MAX_HOME_BLOCK_HEIGHT })}
+            </p>
           </div>
 
           <div className="space-y-1.5">

@@ -44,7 +44,13 @@ const WorldRecentPersonasWidget = dynamic(() => import("./widgets/WorldRecentPer
  * occupe toujours exactement une ligne, dont la hauteur suit son contenu
  * réel. Aucun `overflow` de secours n'est donc nécessaire — un contenu long
  * (beaucoup de salons) agrandit sa ligne au lieu de déborder sur les blocs
- * suivants, et la hauteur n'a jamais à être devinée par l'admin.
+ * suivants, et la hauteur d'un widget n'a jamais à être devinée par l'admin.
+ *
+ * Seuls les blocs à contenu libre (html/markdown) peuvent porter une hauteur
+ * explicite en pixels (`item.h`), que l'application ne saurait pas déduire
+ * d'un contenu qu'elle ne produit pas — leur contenu défile alors à
+ * l'intérieur du bloc. Cela ne change rien à la ligne : elle s'ajuste au plus
+ * haut de ses blocs, comme toujours.
  */
 export function WorldHomeGridView({
   items,
@@ -141,6 +147,12 @@ function renderBlock(
         sandbox=""
         srcDoc={item.html ?? ""}
         title={item.title || ctx.htmlBlockFallbackTitle}
+        // Sans hauteur explicite, `h-full` se résout en `auto` sur une ligne
+        // `min-content` : l'iframe retombe alors sur sa hauteur intrinsèque de
+        // 150 px, quel que soit son contenu (le navigateur ne mesure pas un
+        // document isolé par le bac à sable). D'où le réglage — le style en
+        // ligne l'emporte sur la classe quand il est présent.
+        style={item.h ? { height: item.h } : undefined}
         className={cn("h-full w-full", item.card !== false && "rounded-lg border bg-background")}
       />
     );
@@ -148,10 +160,24 @@ function renderBlock(
 
   if (item.type === "markdown") {
     const content = <MarkdownRenderer content={item.content ?? ""} allowImages onWikiLink={ctx.onWikiLink} />;
-    return item.card ? (
-      <div className="rounded-lg border border-border-soft bg-card/40 p-4">{content}</div>
-    ) : (
-      content
+    // Hauteur fixée : le surplus défile dans le bloc plutôt que d'allonger la
+    // ligne — même parti-pris que l'option « lignes visibles » du widget
+    // salons. Sans hauteur, le rendu reste exactement celui d'avant ce
+    // réglage : pas de conteneur ajouté hors carte, pas d'`overflow`.
+    if (!item.h) {
+      return item.card ? (
+        <div className="rounded-lg border border-border-soft bg-card/40 p-4">{content}</div>
+      ) : (
+        content
+      );
+    }
+    return (
+      <div
+        style={{ height: item.h }}
+        className={cn("overflow-y-auto", item.card && "rounded-lg border border-border-soft bg-card/40 p-4")}
+      >
+        {content}
+      </div>
     );
   }
 

@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { WorldHomeMarkdownBlockEditor } from "@/components/worlds/home/blocks/WorldHomeMarkdownBlockEditor";
-import { MAX_HOME_BLOCK_CONTENT_LENGTH } from "@/components/worlds/home/worldHomeGrid";
+import { MAX_HOME_BLOCK_CONTENT_LENGTH, MIN_HOME_BLOCK_HEIGHT } from "@/components/worlds/home/worldHomeGrid";
 
 describe("WorldHomeMarkdownBlockEditor", () => {
   it("pré-remplit avec le contenu initial en édition", () => {
@@ -34,7 +34,7 @@ describe("WorldHomeMarkdownBlockEditor", () => {
     await user.type(screen.getByLabelText("Markdown"), "Salut");
     await user.click(screen.getByRole("button", { name: "Enregistrer" }));
 
-    expect(onSave).toHaveBeenCalledWith("Salut", "", false);
+    expect(onSave).toHaveBeenCalledWith({ content: "Salut", title: "", card: false, height: undefined });
   });
 
   it("remonte le titre saisi avec le contenu", async () => {
@@ -46,7 +46,7 @@ describe("WorldHomeMarkdownBlockEditor", () => {
     await user.type(screen.getByLabelText("Markdown"), "Salut");
     await user.click(screen.getByRole("button", { name: "Enregistrer" }));
 
-    expect(onSave).toHaveBeenCalledWith("Salut", "Intro", false);
+    expect(onSave).toHaveBeenCalledWith({ content: "Salut", title: "Intro", card: false, height: undefined });
   });
 
   it("pré-remplit le titre existant en édition", () => {
@@ -85,7 +85,7 @@ describe("WorldHomeMarkdownBlockEditor", () => {
     await user.type(screen.getByLabelText("Markdown"), "Salut");
     await user.click(screen.getByRole("button", { name: "Enregistrer" }));
 
-    expect(onSave).toHaveBeenCalledWith("Salut", "", true);
+    expect(onSave).toHaveBeenCalledWith({ content: "Salut", title: "", card: true, height: undefined });
   });
 
   it("pré-remplit l'état de la carte en édition", () => {
@@ -99,6 +99,37 @@ describe("WorldHomeMarkdownBlockEditor", () => {
       />,
     );
     expect(screen.getByRole("switch")).toBeChecked();
+  });
+
+  it("remonte la hauteur saisie, bornée", async () => {
+    const onSave = vi.fn();
+    const user = userEvent.setup();
+    render(<WorldHomeMarkdownBlockEditor open onOpenChange={vi.fn()} onSave={onSave} />);
+
+    await user.type(screen.getByLabelText("Hauteur du bloc (px)"), "400");
+    await user.type(screen.getByLabelText("Markdown"), "Salut");
+    await user.click(screen.getByRole("button", { name: "Enregistrer" }));
+
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ height: 400 }));
+
+    await user.clear(screen.getByLabelText("Hauteur du bloc (px)"));
+    await user.type(screen.getByLabelText("Hauteur du bloc (px)"), "5");
+    await user.click(screen.getByRole("button", { name: "Enregistrer" }));
+
+    expect(onSave).toHaveBeenLastCalledWith(expect.objectContaining({ height: MIN_HOME_BLOCK_HEIGHT }));
+  });
+
+  it("pré-remplit la hauteur existante en édition", () => {
+    render(
+      <WorldHomeMarkdownBlockEditor
+        open
+        onOpenChange={vi.fn()}
+        initialContent="Salut"
+        initialHeight={240}
+        onSave={vi.fn()}
+      />,
+    );
+    expect(screen.getByLabelText("Hauteur du bloc (px)")).toHaveValue(240);
   });
 
   it("le bouton Annuler ferme le panneau sans appeler onSave", async () => {

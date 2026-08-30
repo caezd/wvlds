@@ -477,12 +477,28 @@ export function WorldHomeGridEditor({
     void persist([...items, newItem]);
   }
 
-  function saveBlock(content: string, title: string, card: boolean, field: "html" | "content") {
+  /** `height` absent (champ vidé) retire la hauteur du bloc — comme un titre
+   *  vidé retire le titre, d'où le `undefined` explicite à l'édition. */
+  function saveBlock({
+    content,
+    title,
+    card,
+    height,
+    field,
+  }: {
+    content: string;
+    title: string;
+    card: boolean;
+    height?: number;
+    field: "html" | "content";
+  }) {
     const trimmedTitle = title.trim();
     const editing = editingBlock?.item;
     const next = editing
       ? items.map((i) =>
-          i.id === editing.id ? { ...i, [field]: content, card, title: trimmedTitle || undefined } : i,
+          i.id === editing.id
+            ? { ...i, [field]: content, card, title: trimmedTitle || undefined, h: height }
+            : i,
         )
       : [
           ...items,
@@ -494,6 +510,7 @@ export function WorldHomeGridEditor({
             w: HOME_GRID_COLS,
             [field]: content,
             card,
+            ...(height ? { h: height } : {}),
             ...(trimmedTitle ? { title: trimmedTitle } : {}),
           } as WorldHomeGridItem,
         ];
@@ -551,7 +568,8 @@ export function WorldHomeGridEditor({
         initialHtml={editingBlock?.item?.html}
         initialTitle={editingBlock?.item?.title}
         initialCard={editingBlock?.item?.card ?? true}
-        onSave={(html, title, card) => saveBlock(html, title, card, "html")}
+        initialHeight={editingBlock?.item?.h}
+        onSave={({ html, title, card, height }) => saveBlock({ content: html, title, card, height, field: "html" })}
       />
       <WorldHomeMarkdownBlockEditor
         open={editingBlock?.type === "markdown"}
@@ -559,7 +577,8 @@ export function WorldHomeGridEditor({
         initialContent={editingBlock?.item?.content}
         initialTitle={editingBlock?.item?.title}
         initialCard={editingBlock?.item?.card ?? false}
-        onSave={(content, title, card) => saveBlock(content, title, card, "content")}
+        initialHeight={editingBlock?.item?.h}
+        onSave={({ content, title, card, height }) => saveBlock({ content, title, card, height, field: "content" })}
       />
       <WorldHomeBannerDialog
         open={editingBlock?.type === "banner"}

@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Mondes",
+    text: "Les blocs HTML et Markdown de la page d’accueil d’un monde acceptent désormais une hauteur, réglable dans le panneau d’édition du bloc. Un bloc HTML était jusqu’ici figé à 150 px — la hauteur par défaut d’un cadre HTML — sans aucun moyen d’y toucher. Laissez le champ vide pour retrouver le comportement d’avant : hauteur automatique pour le Markdown, hauteur par défaut pour le HTML. Avec une hauteur fixée, un contenu plus grand défile à l’intérieur du bloc. Les autres blocs (widgets, bannières) gardent leur hauteur automatique : leur contenu vient de l’application, qui sait le dimensionner."
+  },
+  {
+    date: "2026-08",
     tag: "Correctif",
     text: "L’accueil d’un monde clignotait au chargement sur mobile : une barre surmontée d’un bouton menu apparaissait en haut de l’écran, en double avec le bouton déjà incrusté sur la bannière, puis disparaissait une fois la page prête — tout le contenu remontant alors d’un cran. Cette barre ne s’affiche plus sur les pages d’un monde, et le bouton menu reste accessible pendant tout le chargement, à sa place définitive."
   },

@@ -357,3 +357,52 @@ describe("WorldHomeGridView", () => {
     expect(testIds).toEqual(["categories", "chatrooms", "members_online"]);
   });
 });
+
+describe("WorldHomeGridView — hauteur des blocs à contenu libre", () => {
+  it("applique la hauteur réglée à l'iframe d'un bloc html", () => {
+    render(
+      <WorldHomeGridView
+        {...baseProps([{ id: "a", type: "html", x: 0, y: 0, w: 12, html: "<p>x</p>", h: 320 }])}
+      />,
+    );
+    expect(document.querySelector("iframe")!.style.height).toBe("320px");
+  });
+
+  // Sans hauteur, l'iframe garde le rendu d'avant ce réglage (sa hauteur
+  // intrinsèque) : aucune grille existante ne doit bouger.
+  it("laisse l'iframe sans hauteur en ligne quand aucune n'est réglée", () => {
+    render(
+      <WorldHomeGridView {...baseProps([{ id: "a", type: "html", x: 0, y: 0, w: 12, html: "<p>x</p>" }])} />,
+    );
+    expect(document.querySelector("iframe")!.style.height).toBe("");
+  });
+
+  it("un bloc markdown avec hauteur fait défiler son surplus à l'intérieur", () => {
+    render(
+      <WorldHomeGridView
+        {...baseProps([{ id: "a", type: "markdown", x: 0, y: 0, w: 12, content: "x", h: 240 }])}
+      />,
+    );
+    const conteneur = screen.getByTestId("markdown").parentElement!;
+    expect(conteneur.style.height).toBe("240px");
+    expect(conteneur.className).toContain("overflow-y-auto");
+  });
+
+  it("un bloc markdown avec hauteur ET carte garde le style de la carte", () => {
+    render(
+      <WorldHomeGridView
+        {...baseProps([{ id: "a", type: "markdown", x: 0, y: 0, w: 12, content: "x", card: true, h: 240 }])}
+      />,
+    );
+    const conteneur = screen.getByTestId("markdown").parentElement!;
+    expect(conteneur.className).toContain("overflow-y-auto");
+    expect(conteneur.className).toContain("border");
+  });
+
+  it("un bloc markdown sans hauteur n'ajoute aucun conteneur de défilement", () => {
+    render(
+      <WorldHomeGridView {...baseProps([{ id: "a", type: "markdown", x: 0, y: 0, w: 12, content: "x" }])} />,
+    );
+    expect(screen.getByTestId("markdown").parentElement!.className).not.toContain("overflow-y-auto");
+  });
+});

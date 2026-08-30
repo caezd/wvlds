@@ -13,6 +13,7 @@ import {
   MAX_HOME_GRID_ITEMS,
   MAX_HOME_GRID_Y,
   sanitizeBannerContent,
+  sanitizeBlockHeight,
   sanitizeWidgetOptions,
   toRows,
   type WorldHomeGridGap,
@@ -504,8 +505,9 @@ function validateHomeGridItem(
   if (!HOME_GRID_BLOCK_TYPES.has(r.type as string)) return null;
   const type = r.type as "widget" | "html" | "markdown" | "banner";
 
-  // Pas de hauteur : chaque bloc occupe une ligne qui s'auto-dimensionne à
-  // son contenu au rendu (voir worldHomeGrid.ts).
+  // Seuls x, y et w sont des unités de grille. La hauteur (`h`), réservée
+  // aux blocs à contenu libre, est en pixels et traitée plus bas — les autres
+  // blocs occupent une ligne qui s'auto-dimensionne (voir worldHomeGrid.ts).
   if (!isFiniteInt(r.x) || !isFiniteInt(r.y) || !isFiniteInt(r.w)) return null;
   const { x, y, w } = r as { x: number; y: number; w: number };
   if (x < 0 || y < 0 || y > MAX_HOME_GRID_Y || w < 2 || x + w > HOME_GRID_COLS) return null;
@@ -539,12 +541,19 @@ function validateHomeGridItem(
       ? { title: r.title.trim().slice(0, MAX_HOME_BLOCK_TITLE_LENGTH) }
       : {};
 
+  // Hauteur explicite optionnelle (html/markdown uniquement) : bornée plutôt
+  // que rejetée, comme les réglages de widget. Une valeur inexploitable
+  // retombe sur « automatique » au lieu d'invalider tout l'enregistrement —
+  // même tolérance que pour un `h` reçu sur un widget (voir plus haut).
+  const height = sanitizeBlockHeight(r.h);
+  const h = height ? { h: height } : {};
+
   if (type === "html") {
     if (typeof r.html !== "string" || r.widgetId !== undefined || r.content !== undefined) return null;
     const html = r.html.trim();
     if (html.length > MAX_HOME_BLOCK_CONTENT_LENGTH) return null;
     const card = r.card !== false;
-    return { id, type, x, y, w, html, card, ...title };
+    return { id, type, x, y, w, html, card, ...h, ...title };
   }
 
   // markdown
@@ -552,7 +561,7 @@ function validateHomeGridItem(
   const content = r.content.trim();
   if (content.length > MAX_HOME_BLOCK_CONTENT_LENGTH) return null;
   const card = r.card === true;
-  return { id, type, x, y, w, content, card, ...title };
+  return { id, type, x, y, w, content, card, ...h, ...title };
 }
 
 export async function setWorldHomeGrid(worldId: string, items: unknown[]) {
