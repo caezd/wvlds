@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Interface",
+    text: "L'appui long fonctionne enfin de façon fiable sur téléphone. Il était abandonné au moindre mouvement du doigt — or un doigt posé sur un écran ne tient jamais parfaitement immobile : on appuyait, rien ne se passait, il fallait recommencer. Un léger tremblement est désormais toléré, alors qu'un vrai défilement continue d'annuler le geste.\nAutre correction du même endroit : appuyer longuement sur un message qui disparaissait entre-temps faisait vibrer le téléphone dans le vide.",
+  },
+  {
+    date: "2026-08",
     tag: "Correctif",
     text: "Se déconnecter coupe désormais les notifications sur cet appareil. Elles restaient rattachées au navigateur et non au compte : quelqu'un se connectant ensuite sur le même navigateur recevait les alertes de la personne précédente — titre et aperçu du message compris. Sur un ordinateur partagé, c'était une fuite réelle.\nDans le même esprit, le réglage n'affiche plus « activé » à quelqu'un qui vient de se connecter sur un appareil abonné par un autre : il indiquait une activation dont cette personne n'aurait jamais rien reçu.",
   },

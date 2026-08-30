@@ -90,9 +90,11 @@ export function WorldsRail({
   function bindLongPress(world: WorldRailItem) {
     return {
       ...longPress,
-      onTouchStart: () => {
+      // L'événement est transmis : le hook y lit le point de départ du doigt,
+      // pour tolérer un micro-mouvement sans abandonner l'appui.
+      onTouchStart: (e: React.TouchEvent) => {
         pressedWorldRef.current = world;
-        longPress.onTouchStart();
+        longPress.onTouchStart(e);
       },
     };
   }
