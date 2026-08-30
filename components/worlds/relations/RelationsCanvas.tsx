@@ -1191,7 +1191,7 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
         ))}
         {/* Instructions du canevas (clics souris) — sans objet sur mobile,
             qui a son propre flux (voir la liste + détail juste au-dessus). */}
-        <span className="ml-auto hidden text-[11px] text-muted-foreground/60 lg:inline">
+        <span className="ml-auto hidden text-[11px] text-muted-foreground lg:inline">
           {connectMode ? t("footerHintConnect") : t("footerHintView")}
         </span>
       </div>

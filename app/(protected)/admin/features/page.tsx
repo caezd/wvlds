@@ -97,7 +97,7 @@ function FlagRow({ flag, t }: { flag: FlagRow; t: TFn }) {
         {flag.description && (
           <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{flag.description}</p>
         )}
-        <p className="text-[0.65rem] text-muted-foreground/60 mt-1">
+        <p className="text-[0.65rem] text-muted-foreground mt-1">
           {t("features.editedAt", { date })}
         </p>
       </div>

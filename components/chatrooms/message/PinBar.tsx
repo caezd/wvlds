@@ -66,7 +66,7 @@ export function PinCard({
           )}
         </div>
       </div>
-      <div className="text-[10px] text-muted-foreground/60 pl-8">
+      <div className="text-[10px] text-muted-foreground pl-8">
         <DateDisplay value={date} />
       </div>
     </div>

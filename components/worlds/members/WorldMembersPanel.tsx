@@ -161,10 +161,10 @@ function RoleGroup({ role, members }: { role: string; members: Member[] }) {
         >
           <path d="M1 1l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
           {ROLE_LABEL[role] ?? role}
         </span>
-        <span className="text-[11px] text-muted-foreground/40">— {members.length}</span>
+        <span className="text-[11px] text-muted-foreground">— {members.length}</span>
       </summary>
       <div className="pb-1">
         {members.map((m) => (

@@ -68,8 +68,22 @@ export function WorldsQuickAccess({
                 <Globe size={17} />
               </>
             );
+            // Le repère du monde courant n'est délibérément PAS un lien : il
+            // ne mène nulle part. Mais un `<div>` nu n'a pas de rôle, et ARIA
+            // y interdit `aria-label` comme `aria-current` — les deux étaient
+            // donc ignorés, et ce repère n'avait plus aucun nom pour un lecteur
+            // d'écran, ni rien qui signale qu'on y était déjà.
+            //
+            // `role="link"` + `aria-disabled` dit exactement cela : un lien,
+            // ici, désactivé.
             return isOnLastWorld ? (
-              <div aria-label={label} aria-current="page" className={cn(triggerClassName, "cursor-default")}>
+              <div
+                role="link"
+                aria-disabled="true"
+                aria-label={label}
+                aria-current="page"
+                className={cn(triggerClassName, "cursor-default")}
+              >
                 {content}
               </div>
             ) : (
@@ -94,7 +108,13 @@ export function WorldsQuickAccess({
               <Tooltip key={world.id}>
                 <TooltipTrigger asChild>
                   {isCurrent ? (
-                    <div aria-label={world.name} aria-current="page" className="flex h-9 w-9 cursor-default items-center justify-center rounded-xl">
+                    <div
+                      role="link"
+                      aria-disabled="true"
+                      aria-label={world.name}
+                      aria-current="page"
+                      className="flex h-9 w-9 cursor-default items-center justify-center rounded-xl"
+                    >
                       {avatar}
                     </div>
                   ) : (

@@ -57,7 +57,8 @@
     "zoomIn": "Zoom in",
     "zoomOut": "Zoom out",
     "deleteConfirmTitle": "Confirm deletion",
-    "irreversible": "This action cannot be undone."
+    "irreversible": "This action cannot be undone.",
+    "scrollableRegion": "Scrollable region"
   },
   "nav": {
     "profile": "My profile",
@@ -162,7 +163,8 @@
         "disconnected": "Patreon account unlinked.",
         "disconnectError": "Could not unlink the Patreon account."
       }
-    }
+    },
+    "languageLabel": "Interface language"
   },
   "pronouns": {
     "he_him": "He/Him",

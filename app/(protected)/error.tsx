@@ -50,7 +50,7 @@ export default function ProtectedError({
                 <p className="text-sm text-muted-foreground">{t("description")}</p>
                 {error.digest && (
                     // Permet de relier un rapport d'utilisateur aux logs serveur.
-                    <p className="pt-1 font-mono text-[0.7rem] text-muted-foreground/60">{error.digest}</p>
+                    <p className="pt-1 font-mono text-[0.7rem] text-muted-foreground">{error.digest}</p>
                 )}
             </div>
             <div className="flex items-center gap-2">

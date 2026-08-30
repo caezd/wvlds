@@ -180,7 +180,7 @@ export default async function QuestsPage() {
                   <ValidationHint validation={c.validation} t={t} />
                 </span>
                 {c.min_word_count > 0 && (
-                  <span className="ml-auto text-[0.65rem] text-muted-foreground/60 shrink-0">
+                  <span className="ml-auto text-[0.65rem] text-muted-foreground shrink-0">
                     min. {c.min_word_count} mots
                   </span>
                 )}
@@ -213,7 +213,7 @@ export default async function QuestsPage() {
                   {" · "}
                   <span className="text-foreground/80 font-medium">{e.challenge_title}</span>
                 </p>
-                <span className="text-[0.65rem] text-muted-foreground/60 shrink-0">
+                <span className="text-[0.65rem] text-muted-foreground shrink-0">
                   <DateDisplay value={e.won_at} />
                 </span>
               </div>

@@ -24,7 +24,7 @@ import { movePersona, duplicatePersona } from "@/app/(protected)/p/actions";
 import type { PersonaSectionWithFields } from "@/types/personas";
 import type { AvatarConfigV1 } from "./avatar/PersonaAvatarPicker";
 import type { MaritalStatus } from "@/types/db";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -111,7 +111,20 @@ function DraggablePersona({
   persona: PersonaItem;
   group?: PersonaWorldGroup;
 }) {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+  // `attributes` de dnd-kit n'est PAS repris, volontairement.
+  //
+  // Il pose `role="button"`, `tabIndex=0` et `aria-roledescription="draggable"`
+  // sur l'enveloppe de la carte. Or ce contexte n'a qu'un `PointerSensor` : le
+  // glisser au clavier n'existe pas. On annonçait donc à un lecteur d'écran une
+  // commande déplaçable qui ne répond à rien — et, l'enveloppe se déclarant
+  // bouton, les vrais liens et boutons de la carte se retrouvaient imbriqués
+  // dedans, ce qu'aucune technologie d'assistance ne sait restituer.
+  //
+  // Mieux vaut ne rien annoncer que d'annoncer faux. Ajouter un
+  // `KeyboardSensor` rendrait la promesse vraie ; c'est une fonctionnalité, pas
+  // un correctif, et elle demande de choisir comment se déplace le focus entre
+  // les groupes de mondes.
+  const { listeners, setNodeRef, isDragging } = useDraggable({
     id: persona.id,
     data: { persona, fromKey: keyFor(persona.world_id) },
   });
@@ -119,7 +132,6 @@ function DraggablePersona({
     <div
       ref={setNodeRef}
       {...listeners}
-      {...attributes}
       style={{ touchAction: "manipulation" }}
       className={cn(isDragging && "opacity-40")}
     >
@@ -243,110 +255,122 @@ export function PersonasView({
 
   return (
     <div className="space-y-6">
-      <Tabs value={view} onValueChange={(v) => setView(v as "worlds" | "alpha")}>
+      <Tabs
+        value={view}
+        onValueChange={(v) => setView(v as "worlds" | "alpha")}
+      >
         <TabsList>
           <TabsTrigger value="worlds">{t("viewByWorld")}</TabsTrigger>
           <TabsTrigger value="alpha">{t("viewAlphabetical")}</TabsTrigger>
         </TabsList>
-      </Tabs>
 
-      {view === "alpha" ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-          {alphabetical.personas.map((persona) => {
-            const group = alphabetical.groupByKey.get(keyFor(persona.world_id));
-            return (
-              <div key={persona.id} className="space-y-1.5">
-                <PersonaCardFor persona={persona} group={group} />
-                <p className="text-xs text-muted-foreground truncate px-1">
-                  {group?.worldName ?? t("noWorld")}
-                </p>
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-        <DndContext
-          sensors={sensors}
-          onDragStart={onDragStart}
-          onDragEnd={onDragEnd}
-          onDragCancel={() => setActivePersona(null)}
-        >
-          <div className="space-y-8">
-            {displayGroups.map((group) => (
-              <DroppableGroup
-                key={keyFor(group.worldId)}
-                groupKey={keyFor(group.worldId)}
-              >
-                <div className="flex items-center gap-2 mb-4">
-                  {group.worldId ? (
-                    <Link
-                      href={`/w/${group.worldId}`}
-                      className="text-base font-semibold hover:underline underline-offset-2"
-                    >
-                      {group.worldName}
-                    </Link>
-                  ) : (
-                    <h2 className="text-base font-semibold text-muted-foreground">
-                      {t("noWorld")}
-                    </h2>
-                  )}
-                  <span className="text-xs text-muted-foreground">
-                    {personaLimit != null
-                      ? `${group.personas.length} / ${personaLimit}`
-                      : group.personas.length}
-                  </span>
+        {/* Les deux vues sont les PANNEAUX de ces onglets, et pas un bloc rendu
+            à côté. Elles vivaient auparavant hors du `<Tabs>` : Radix posait
+            alors sur chaque onglet un `aria-controls` désignant un panneau
+            inexistant. Un lecteur d'écran annonçait des onglets sans rien à
+            quoi les relier. */}
+        <TabsContent value="alpha" className="mt-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            {alphabetical.personas.map((persona) => {
+              const group = alphabetical.groupByKey.get(
+                keyFor(persona.world_id),
+              );
+              return (
+                <div key={persona.id} className="space-y-1.5">
+                  <PersonaCardFor persona={persona} group={group} />
+                  <p className="text-xs text-muted-foreground truncate px-1">
+                    {group?.worldName ?? t("noWorld")}
+                  </p>
                 </div>
-
-                {group.personas.length === 0 ? (
-                  <div className="grid place-items-center rounded-2xl border border-dashed border-border py-8 text-sm text-muted-foreground">
-                    {t("dropHere")}
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                    {group.personas.map((persona) => (
-                      <DraggablePersona
-                        key={persona.id}
-                        persona={persona}
-                        group={group}
-                      />
-                    ))}
-                  </div>
-                )}
-              </DroppableGroup>
-            ))}
+              );
+            })}
           </div>
+        </TabsContent>
 
-          {/* L'overlay reprend la taille mesurée de la carte d'origine :
+        <TabsContent value="worlds" className="mt-6">
+          <DndContext
+            sensors={sensors}
+            onDragStart={onDragStart}
+            onDragEnd={onDragEnd}
+            onDragCancel={() => setActivePersona(null)}
+          >
+            <div className="space-y-8">
+              {displayGroups.map((group) => (
+                <DroppableGroup
+                  key={keyFor(group.worldId)}
+                  groupKey={keyFor(group.worldId)}
+                >
+                  <div className="flex items-center gap-2 mb-4">
+                    {group.worldId ? (
+                      <Link
+                        href={`/w/${group.worldId}`}
+                        className="text-base font-semibold hover:underline underline-offset-2"
+                      >
+                        {group.worldName}
+                      </Link>
+                    ) : (
+                      <h2 className="text-base font-semibold text-muted-foreground">
+                        {t("noWorld")}
+                      </h2>
+                    )}
+                    <span className="text-xs text-muted-foreground">
+                      {personaLimit != null
+                        ? `${group.personas.length} / ${personaLimit}`
+                        : group.personas.length}
+                    </span>
+                  </div>
+
+                  {group.personas.length === 0 ? (
+                    <div className="grid place-items-center rounded-2xl border border-dashed border-border py-8 text-sm text-muted-foreground">
+                      {t("dropHere")}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                      {group.personas.map((persona) => (
+                        <DraggablePersona
+                          key={persona.id}
+                          persona={persona}
+                          group={group}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </DroppableGroup>
+              ))}
+            </div>
+
+            {/* L'overlay reprend la taille mesurée de la carte d'origine :
               une réplique plein format suit le curseur, plus lisible pour
               viser la zone de dépôt. */}
-          <DragOverlay dropAnimation={null}>
-            {activePersona ? (
-              <div className="relative w-full aspect-square rounded-2xl overflow-hidden bg-muted shadow-xl ring-2 ring-primary/50">
-                {activePersona.avatar_url ? (
-                  <Image
-                    src={activePersona.avatar_url}
-                    alt=""
-                    fill
-                    sizes="200px"
-                    className="object-cover"
-                    draggable={false}
-                  />
-                ) : (
-                  <div className="absolute inset-0 grid place-items-center text-3xl font-bold text-muted-foreground select-none">
-                    {initials(activePersona.name ?? "Sans nom")}
+            <DragOverlay dropAnimation={null}>
+              {activePersona ? (
+                <div className="relative w-full aspect-square rounded-2xl overflow-hidden bg-muted shadow-xl ring-2 ring-primary/50">
+                  {activePersona.avatar_url ? (
+                    <Image
+                      src={activePersona.avatar_url}
+                      alt=""
+                      fill
+                      sizes="200px"
+                      className="object-cover"
+                      draggable={false}
+                    />
+                  ) : (
+                    <div className="absolute inset-0 grid place-items-center text-3xl font-bold text-muted-foreground select-none">
+                      {initials(activePersona.name ?? "Sans nom")}
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+                  <div className="absolute bottom-0 left-0 right-0 p-3">
+                    <span className="text-sm font-semibold text-white leading-tight line-clamp-2 text-left">
+                      {activePersona.name ?? "Sans nom"}
+                    </span>
                   </div>
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
-                <div className="absolute bottom-0 left-0 right-0 p-3">
-                  <span className="text-sm font-semibold text-white leading-tight line-clamp-2 text-left">
-                    {activePersona.name ?? "Sans nom"}
-                  </span>
                 </div>
-              </div>
-            ) : null}
-          </DragOverlay>
-        </DndContext>
-      )}
+              ) : null}
+            </DragOverlay>
+          </DndContext>
+        </TabsContent>
+      </Tabs>
 
       <AlertDialog
         open={pending !== null}
@@ -357,7 +381,9 @@ export function PersonasView({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {t("dropTitle", { name: displayedDrop?.persona.name ?? "Sans nom" })}
+              {t("dropTitle", {
+                name: displayedDrop?.persona.name ?? "Sans nom",
+              })}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {t(

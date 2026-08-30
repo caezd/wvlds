@@ -427,7 +427,7 @@ function DayDivider({ date }: { date: Date }) {
   return (
     <div className="flex items-center gap-3 py-2">
       <div className="h-px flex-1 bg-border/30" />
-      <span className="shrink-0 text-[11px] text-muted-foreground/40">{label}</span>
+      <span className="shrink-0 text-[11px] text-muted-foreground">{label}</span>
       <div className="h-px flex-1 bg-border/30" />
     </div>
   );

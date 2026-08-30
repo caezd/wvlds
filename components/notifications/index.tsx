@@ -486,7 +486,7 @@ export function NotificationInlinePanelContent() {
                         </div>
                     )}
                     {!hasMoreNotifs && notifications.length > 0 && (
-                        <p className="py-2 text-center text-[11px] text-muted-foreground/40">{t("allLoaded")}</p>
+                        <p className="py-2 text-center text-[11px] text-muted-foreground">{t("allLoaded")}</p>
                     )}
                 </div>
             )}

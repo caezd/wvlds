@@ -248,6 +248,11 @@ export function PinPopover({
             ref={bannerInputRef}
             type="file"
             accept="image/*"
+            // Déclenché par le bouton visible, jamais atteint au clavier :
+            // le laisser dans l'arbre d'accessibilité imposerait un libellé
+            // pour un champ que personne ne rencontre.
+            aria-hidden="true"
+            tabIndex={-1}
             className="sr-only"
             onChange={(e) => {
               const f = e.target.files?.[0];

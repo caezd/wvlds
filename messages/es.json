@@ -57,7 +57,8 @@
     "zoomIn": "Acercar",
     "zoomOut": "Alejar",
     "deleteConfirmTitle": "Confirmar la eliminación",
-    "irreversible": "Esta acción es irreversible."
+    "irreversible": "Esta acción es irreversible.",
+    "scrollableRegion": "Zona desplazable"
   },
   "nav": {
     "profile": "Mi perfil",
@@ -162,7 +163,8 @@
         "disconnected": "Cuenta de Patreon desvinculada.",
         "disconnectError": "No se pudo desvincular la cuenta de Patreon."
       }
-    }
+    },
+    "languageLabel": "Idioma de la interfaz"
   },
   "pronouns": {
     "he_him": "Él/Él",

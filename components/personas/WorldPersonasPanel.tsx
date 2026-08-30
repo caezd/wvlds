@@ -257,7 +257,7 @@ export function WorldPersonasPanel({
               <div className="space-y-5">
                 {otherGroups.map(([letter, list]) => (
                   <div key={letter}>
-                    <div className="px-0.5 pb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                    <div className="px-0.5 pb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                       {letter}
                     </div>
                     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">

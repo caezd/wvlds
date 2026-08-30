@@ -118,7 +118,7 @@ function RoomItem({
           {label}
         </p>
         {categoryName && (
-          <p className="flex items-center gap-1 text-[10px] text-muted-foreground/60 leading-tight">
+          <p className="flex items-center gap-1 text-[10px] text-muted-foreground leading-tight">
             <MessagesSquare size={9} className="shrink-0 opacity-70" />
             <span className="truncate">{categoryName}</span>
           </p>
@@ -215,7 +215,7 @@ export function WorldSidebarChatrooms({
             {selectedCat.title}
           </p>
           {catRooms.length === 0 ? (
-            <p className="px-2 py-1 text-xs text-muted-foreground/60">
+            <p className="px-2 py-1 text-xs text-muted-foreground">
               {t("sidebar.noChatroomsInCategory")}
             </p>
           ) : (
@@ -298,7 +298,7 @@ export function WorldSidebarChatrooms({
                     <p className="truncate text-sm font-medium text-foreground leading-tight">
                       {cat.title}
                     </p>
-                    <p className="text-[10px] text-muted-foreground/60 leading-tight">
+                    <p className="text-[10px] text-muted-foreground leading-tight">
                       {t("sidebar.subjects", { count: rooms.length })}
                     </p>
                   </div>
@@ -319,7 +319,7 @@ export function WorldSidebarChatrooms({
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="truncate text-sm font-medium text-foreground leading-tight">{t("sidebar.general")}</p>
-                  <p className="text-[10px] text-muted-foreground/60 leading-tight">
+                  <p className="text-[10px] text-muted-foreground leading-tight">
                     {t("sidebar.subjects", { count: uncategorized.length })}
                   </p>
                 </div>
@@ -330,7 +330,7 @@ export function WorldSidebarChatrooms({
               </button>
             )}
             {categories.length === 0 && uncategorized.length === 0 && (
-              <p className="px-2 py-1 text-xs text-muted-foreground/60">{t("sidebar.noChatrooms")}</p>
+              <p className="px-2 py-1 text-xs text-muted-foreground">{t("sidebar.noChatrooms")}</p>
             )}
           </div>
         </section>

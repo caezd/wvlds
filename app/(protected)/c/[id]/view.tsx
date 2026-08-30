@@ -118,6 +118,7 @@ function ChatroomHeader({
                     <TooltipTrigger asChild>
                       <Link
                         href={`/w/${world.id}`}
+                        aria-label={t("backTo", { name: world.name })}
                         className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-hoverCard hover:text-foreground transition-colors"
                       >
                         {world.isShared

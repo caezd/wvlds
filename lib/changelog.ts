@@ -9,6 +9,16 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Interface",
+    text: "Le petit texte gris clair est devenu lisible. Plusieurs libellés — noms de sections, compteurs, mentions sous les salons — étaient affichés à une opacité réduite qui les amenait à un contraste de 3.2 pour 1 sur le fond sombre, là où la norme d'accessibilité en demande 4.5.\nIls passent à l'opacité pleine. La teinte reste la même, seul le voile disparaît.",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
+    text: "La barre latérale des mondes annonce enfin correctement où vous êtes. Le repère du monde courant était un élément sans rôle, sur lequel son nom et l'indication « page actuelle » étaient purement ignorés : un lecteur d'écran ne lisait rien du tout à cet endroit.\nDans le même passage : les deux onglets de la page des personas pointaient vers un contenu qu'ils ne contenaient pas, les cartes de personas s'annonçaient déplaçables au clavier alors que ça n'existe pas, et les zones défilantes ne pouvaient pas recevoir le focus.",
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
     text: "Vingt-trois boutons n'avaient aucun nom pour un lecteur d'écran : une icône pour seul contenu, ou rien du tout — une pastille de couleur, un interrupteur. Ils étaient annoncés « bouton », sans plus. Supprimer un champ, monter une ligne d'un cran, changer une couleur, zoomer sur le canevas des relations : rien ne disait lequel faisait quoi.\nChacun porte désormais un libellé, traduit dans les trois langues.",
   },
   {

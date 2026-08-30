@@ -79,7 +79,7 @@ export function WorldRecentPersonasWidget({
 
   return (
     <div className="rounded-lg border p-3">
-      <p className="mb-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
+      <p className="mb-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         {t("home.widgets.personas_recent")}
       </p>
       <div className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-1">

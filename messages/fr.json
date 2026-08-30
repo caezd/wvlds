@@ -57,7 +57,8 @@
     "zoomIn": "Zoom avant",
     "zoomOut": "Zoom arrière",
     "deleteConfirmTitle": "Confirmer la suppression",
-    "irreversible": "Cette action est irréversible."
+    "irreversible": "Cette action est irréversible.",
+    "scrollableRegion": "Zone défilante"
   },
   "nav": {
     "profile": "Mon profil",
@@ -162,7 +163,8 @@
         "disconnected": "Compte Patreon délié.",
         "disconnectError": "Impossible de délier le compte Patreon."
       }
-    }
+    },
+    "languageLabel": "Langue de l'interface"
   },
   "pronouns": {
     "he_him": "Il/Lui",

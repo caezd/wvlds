@@ -149,7 +149,7 @@ export default function ShopGrid({
       {/* Filtres */}
       <div className="flex items-center justify-between gap-2">
         <Select value={slotFilter} onValueChange={setSlotFilter}>
-          <SelectTrigger className="w-44">
+          <SelectTrigger className="w-44" aria-label={t("filterType")}>
             <SelectValue placeholder={t("filterType")} />
           </SelectTrigger>
           <SelectContent>

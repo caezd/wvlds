@@ -57,7 +57,7 @@ export function InventoryField({
 
     return (
       <div className="space-y-2 pr-24">
-        <div className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/60 mb-1">
+        <div className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground mb-1">
           <Lock className="h-3 w-3" /> Inventaire du catalogue
         </div>
         {items.map((item) => (
