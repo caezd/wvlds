@@ -12,6 +12,42 @@ describe("crypto (AES-256-GCM)", () => {
     expect(decrypted).toBe(plaintext);
   });
 
+  it("chiffre un message très long sans déborder la pile", async () => {
+    // `toB64` passait tout le tableau d'octets en arguments à
+    // `String.fromCharCode`. Au-delà d'environ 125 000 octets, V8 lève
+    // `RangeError: Maximum call stack size exceeded` et le message ne part pas.
+    //
+    // Ce n'était pas hors d'atteinte : la base accepte 200 000 caractères
+    // (migration 126) et le composeur n'impose aucune limite — un collage
+    // suffit.
+    const key = await generateRoomKey();
+    const long = "a".repeat(150_000);
+
+    const encrypted = await encryptMessage(long, key);
+    expect(encrypted.startsWith("enc:")).toBe(true);
+    expect(await decryptMessage(encrypted, key)).toBe(long);
+  });
+
+  it("supporte aussi un long message en émoji, qui pèsent quatre octets", async () => {
+    // Le seuil se compte en OCTETS, pas en caractères : 40 000 émoji font
+    // 160 000 octets, bien au-delà du point de rupture.
+    const key = await generateRoomKey();
+    const long = "🎲".repeat(40_000);
+
+    const encrypted = await encryptMessage(long, key);
+    expect(await decryptMessage(encrypted, key)).toBe(long);
+  });
+
+  it("chiffre correctement autour de la taille d'un morceau d'encodage", async () => {
+    // L'encodage procède par tranches de 32 768 octets : les tailles voisines
+    // d'un multiple exact sont celles où une erreur de découpage se verrait.
+    const key = await generateRoomKey();
+    for (const taille of [32_767, 32_768, 32_769, 65_536, 98_304]) {
+      const texte = "x".repeat(taille);
+      expect(await decryptMessage(await encryptMessage(texte, key), key), `taille ${taille}`).toBe(texte);
+    }
+  });
+
   it("génère un IV aléatoire : deux chiffrements diffèrent", async () => {
     const key = await generateRoomKey();
     const a = await encryptMessage("identique", key);

@@ -97,8 +97,29 @@ export function __clearKeyCache(): void {
   keyCache.clear();
 }
 
+/**
+ * Encode en base64, par morceaux.
+ *
+ * `String.fromCharCode(...octets)` passe TOUT le tableau en arguments. Au-delà
+ * d'environ 125 000 octets, V8 lève `RangeError: Maximum call stack size
+ * exceeded` — et le message ne part pas.
+ *
+ * Ce n'était pas hors d'atteinte : la base accepte 200 000 caractères de
+ * contenu (migration 126), le composeur n'impose aucune limite, et un collage
+ * suffit. Le seuil tombe d'ailleurs à ~31 000 caractères en émoji, qui pèsent
+ * quatre octets chacun.
+ *
+ * 32 768 arguments par tour restent très en deçà de la limite du moteur, quelle
+ * que soit la pression sur la pile au moment de l'appel.
+ */
 function toB64(buffer: ArrayBuffer): string {
-  return btoa(String.fromCharCode(...new Uint8Array(buffer)));
+  const octets = new Uint8Array(buffer);
+  const MORCEAU = 0x8000;
+  let binaire = "";
+  for (let i = 0; i < octets.length; i += MORCEAU) {
+    binaire += String.fromCharCode(...octets.subarray(i, i + MORCEAU));
+  }
+  return btoa(binaire);
 }
 
 function fromB64(b64: string): ArrayBuffer {

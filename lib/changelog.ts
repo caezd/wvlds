@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Correctif",
+    text: "Les très longs messages partent enfin. Au-delà d'environ 125 000 caractères — ou seulement 31 000 s'il s'agit d'émoji, quatre fois plus lourds — le chiffrement du message échouait et l'envoi était refusé sans explication utile. Un simple collage suffisait à l'atteindre, la limite affichée étant de 200 000 caractères.\nRien ne change pour les messages ordinaires : le chiffrement lui-même est intact, seule sa dernière étape a été réécrite pour ne plus dépendre de la longueur.",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
     text: "Sur téléphone, la fiche d'un lieu de la carte s'ouvrait à moitié hors de l'écran — parfois presque entièrement, ne laissant qu'une vingtaine de pixels visibles sur trois cent quarante, bouton de fermeture compris. Elle se replace maintenant dans l'écran quelle que soit la largeur.\nLe défaut existait depuis le début : le calcul ramenait bien la fiche entre le haut et le bas de l'écran, mais avait été oublié pour la gauche et la droite.",
   },
   {
