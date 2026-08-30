@@ -106,8 +106,9 @@ export function SearchCenter({
     if (!open) return;
     const supabase = getSupabase();
     void listWorldAuthorsForSearch(supabase, worldId).then(setAuthors);
-    void listWorldChatroomsForSearch(supabase, worldId).then(setChatrooms);
-  }, [open, worldId]);
+    // Le libellé de repli est traduit ici : `lib/` n'a pas accès aux messages.
+    void listWorldChatroomsForSearch(supabase, worldId, t("newRoom")).then(setChatrooms);
+  }, [open, worldId, t]);
 
   useEffect(() => {
     if (!open) return;

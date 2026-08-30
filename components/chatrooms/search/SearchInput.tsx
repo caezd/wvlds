@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import {
   matchesAuthorQuery,
+  matchesChatroomQuery,
   type SearchAuthorOption,
   type SearchChatroomOption,
 } from "@/lib/chatSearchDirectory";
@@ -101,9 +102,9 @@ export function SearchInput({
   ].filter((o) => o.label.toLowerCase().includes(partialQuery.toLowerCase()));
 
   const authorOptions = authors.filter((a) => matchesAuthorQuery(a, partialQuery)).slice(0, 20);
-  const channelOptions = chatrooms
-    .filter((c) => c.label.toLowerCase().includes(partialQuery.toLowerCase()))
-    .slice(0, 20);
+  // Même comparaison que pour les auteurs : insensible aux accents, sinon
+  // « dans:foret » ne trouve pas « La Forêt Noire ».
+  const channelOptions = chatrooms.filter((c) => matchesChatroomQuery(c, partialQuery)).slice(0, 20);
   // Le motif "mot:texte" peut matcher une phrase tapée sans intention de
   // filtre (ex. "je suis dans:Paris") : n'autoriser Entrée à sélectionner
   // que s'il y a vraiment une suggestion correspondante à choisir, sinon
