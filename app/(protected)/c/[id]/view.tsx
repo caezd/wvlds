@@ -56,7 +56,7 @@ import {
   CHAT_MESSAGES_PAGE_SIZE,
   LOAD_OLDER_THRESHOLD_PX,
 } from "@/lib/constants";
-import type { ChatMessageWithPersona, Persona, ReactionSummary, ChallengeBadge, ActiveDailyChallenge } from "@/types/db";
+import type { ChatMessageWithPersona, ChatMessageMeta, Persona, ReactionSummary, ChallengeBadge, ActiveDailyChallenge } from "@/types/db";
 import { validateChallenge } from "@/lib/validateChallenge";
 import { buildActiveChallenges, type DailyChallengeRow } from "@/lib/activeChallenges";
 import { useRealtimeChatSync } from "@/hooks/useRealtimeChatSync";
@@ -869,6 +869,42 @@ export default function ChatRoomView({
     );
   }, []);
 
+  // ── Stabilité des props de `ChatroomMessage` ────────────────────────
+  //
+  // Ce composant est enveloppé dans `memo`. Quatre props étaient pourtant des
+  // fonctions créées à l'intérieur de `renderMessage`, donc NEUVES à chaque
+  // rendu de cette vue : la comparaison de `memo` échouait toujours, et les
+  // vingt messages — avec leurs blocs, leur markdown et leurs réactions —
+  // étaient reconstruits à chaque arrivée d'état.
+  //
+  // Il en arrive beaucoup, et tardivement : la clé du salon, les épingles, les
+  // badges de défi, la présence. Mesuré sur un profil à 4× de ralentissement
+  // CPU, cela donnait sept tâches longues et 853 ms de fil principal bloqué
+  // APRÈS le chargement, dont une de 370 ms.
+  //
+  // Trois autres handlers étaient déjà stabilisés — le travail s'était arrêté
+  // en chemin.
+  const handlePin = useMemo(
+    () => (userId ? (id: number) => pin(id, userId) : undefined),
+    [pin, userId],
+  );
+  const handleUpdated = useCallback(
+    (id: number, content: string, metadata: ChatMessageMeta | null) => {
+      setMessages((prev) =>
+        prev.map((x) => (x.id === id ? { ...x, content, metadata } : x)),
+      );
+    },
+    [],
+  );
+  const handleRequestDelete = useCallback((id: number) => setPendingDeleteId(id), []);
+  const handleAnchorEdited = useCallback(
+    (messageId: number, label: string) => {
+      const pinEntry = pinByMessageId(messageId);
+      if (pinEntry) void updatePinLabel(pinEntry.id, label);
+    },
+    [pinByMessageId, updatePinLabel],
+  );
+
   const renderMessage = (m: ChatMessageWithPersona, smsFlags?: SmsRunFlags) => (
     <ChatroomMessage
       key={m.id}
@@ -881,7 +917,7 @@ export default function ChatRoomView({
       forceEdit={editMessageId === m.id}
       onForceEditConsumed={handleForceEditConsumed}
       pinId={pinByMessageId(m.id)?.id ?? null}
-      onPin={userId ? (id) => pin(id, userId) : undefined}
+      onPin={handlePin}
       onUnpin={unpin}
       challengeWon={challengeBadges.get(m.id) ?? null}
       smsSharpTop={smsFlags?.sharpTop}
@@ -889,18 +925,9 @@ export default function ChatRoomView({
       smsShowAvatar={smsFlags?.showAvatar}
       onReactionsUpdated={handleReactionsUpdated}
       onVotesUpdated={handleVotesUpdated}
-      onUpdated={(id, content, metadata) => {
-        setMessages((prev) =>
-          prev.map((x) =>
-            x.id === id ? { ...x, content, metadata } : x,
-          ),
-        );
-      }}
-      onRequestDelete={() => setPendingDeleteId(m.id)}
-      onAnchorEdited={(messageId, label) => {
-        const pinEntry = pinByMessageId(messageId);
-        if (pinEntry) void updatePinLabel(pinEntry.id, label);
-      }}
+      onUpdated={handleUpdated}
+      onRequestDelete={handleRequestDelete}
+      onAnchorEdited={handleAnchorEdited}
     />
   );
 

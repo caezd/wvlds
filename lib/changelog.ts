@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Technique",
+    text: "Un salon réagit un peu mieux pendant son chargement. Les vingt messages affichés étaient entièrement reconstruits à chaque information qui arrivait — la clé du salon, les épingles, les badges de défi, la présence des autres — alors qu'ils n'avaient pas changé.\nSur un téléphone de milieu de gamme, cela représentait environ 750 ms pendant lesquelles la page ne répondait pas, en six à-coups. Il en reste un peu moins de 660, en quatre. Le gain est modeste et honnêtement mesuré : c'est le rendu de la liste elle-même qui coûte, pas les recalculs inutiles qu'on vient de supprimer.",
+  },
+  {
+    date: "2026-08",
     tag: "Interface",
     text: "Deux liens n'avaient pas de nom pour un lecteur d'écran : le bouton de modification d'un article de boutique, et le téléchargement d'une image affichée en plein écran. Tous deux n'étaient qu'une icône.\nLe contrôle automatique qui interdit ces oublis ne regardait que les boutons ; il couvre désormais aussi les liens.",
   },

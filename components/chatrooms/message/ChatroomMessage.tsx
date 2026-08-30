@@ -110,7 +110,15 @@ function ChatroomMessage({
   invisibleUsers?: Set<string>;
   selfId: string | null;
   onUpdated?: (id: number, content: string, metadata: ChatMessageMeta | null) => void;
-  onRequestDelete?: () => void;
+  /**
+   * Reçoit l'identifiant du message, plutôt que d'être une fermeture sur
+   * lui : sans cela l'appelant devait créer une fonction par message à
+   * chaque rendu, ce qui annulait le `memo` de ce composant.
+   *
+   * Les composants enfants gardent leur `() => void` — la fermeture est
+   * construite ici, une fois, où elle ne coûte rien.
+   */
+  onRequestDelete?: (id: number) => void;
   onReactionsUpdated?: (id: number, reactions: ReactionSummary[]) => void;
   onVotesUpdated?: (id: number, votes: import("@/types/db").ChoiceVoteSummary[]) => void;
   chatroomKey?: string | null;
@@ -187,6 +195,13 @@ function ChatroomMessage({
     save,
     onKeyDownEdit,
   } = useChatroomMessageEdit({ message, mine, selfId, online, chatroomKey, onUpdated, forceEdit, onForceEditConsumed });
+
+  // Les enfants attendent `() => void` : la fermeture sur l'identifiant se
+  // fait ici, à l'intérieur du composant mémorisé, où elle ne coûte rien.
+  const demanderSuppression = useCallback(
+    () => onRequestDelete?.(message.id),
+    [onRequestDelete, message.id],
+  );
 
   const frameUrl = message.persona?.frame?.asset_url ?? null;
 
@@ -266,7 +281,7 @@ function ChatroomMessage({
         sharpBottom={smsSharpBottom ?? false}
         showAvatar={smsShowAvatar ?? true}
         onEdit={startEdit}
-        onRequestDelete={onRequestDelete}
+        onRequestDelete={demanderSuppression}
       />
     );
   }
@@ -314,7 +329,7 @@ function ChatroomMessage({
             pinId={pinId}
             onPin={onPin}
             onUnpin={onUnpin}
-            onRequestDelete={onRequestDelete}
+            onRequestDelete={demanderSuppression}
             startEdit={startEdit}
             cancelEdit={cancelEdit}
             save={save}
@@ -480,7 +495,7 @@ function ChatroomMessage({
         emojiPickerOpen={emojiPickerOpen}
         setEmojiPickerOpen={setEmojiPickerOpen}
         startEdit={startEdit}
-        onRequestDelete={onRequestDelete}
+        onRequestDelete={demanderSuppression}
         toggleReaction={toggleReaction}
       />
 
