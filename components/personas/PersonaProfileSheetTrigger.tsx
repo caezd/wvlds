@@ -5,6 +5,7 @@ import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { supabaseThumb } from "@/lib/storage";
 import { toast } from "sonner";
+import { copyToClipboard } from "@/lib/clipboard";
 import {
   Drawer,
   DrawerHeader,
@@ -362,14 +363,13 @@ export function PersonaProfileBody({
                     <TooltipTrigger asChild>
                       <button
                         type="button"
-                        onClick={async () => {
-                          try {
-                            await navigator.clipboard.writeText(dialogueColor);
-                            toast.success(tCommon("copyDialogueColorSuccess"));
-                          } catch {
-                            toast.error(tCommon("copyClipboardError"));
-                          }
-                        }}
+                        onClick={() =>
+                          void copyToClipboard(
+                            dialogueColor,
+                            tCommon("copyDialogueColorSuccess"),
+                            tCommon("copyError"),
+                          )
+                        }
                         className="flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
                       >
                         <span

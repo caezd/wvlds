@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { toast } from "sonner";
+import { copyToClipboard } from "@/lib/clipboard";
 import { Button } from "@/components/ui/button";
 import { Pencil, Pin, PinOff, MoreHorizontal, Trash2, Copy, FileText, Code } from "lucide-react";
 import {
@@ -15,15 +15,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { markdownToPlainText } from "@/lib/markdownToPlainText";
-
-async function copyToClipboard(text: string, successMessage: string, errorMessage: string) {
-  try {
-    await navigator.clipboard.writeText(text);
-    toast.success(successMessage);
-  } catch {
-    toast.error(errorMessage);
-  }
-}
 
 /** Menu "…" des actions sur un message (copier / modifier / épingler / supprimer). */
 export function MessageActionsDropdown({
@@ -47,10 +38,10 @@ export function MessageActionsDropdown({
   const tCommon = useTranslations("common");
 
   function copyText() {
-    void copyToClipboard(markdownToPlainText(content), t("copyTextSuccess"), t("copyError"));
+    void copyToClipboard(markdownToPlainText(content), tCommon("copyTextSuccess"), tCommon("copyError"));
   }
   function copyMarkdown() {
-    void copyToClipboard(content, t("copyMarkdownSuccess"), t("copyError"));
+    void copyToClipboard(content, tCommon("copyMarkdownSuccess"), tCommon("copyError"));
   }
 
   return (

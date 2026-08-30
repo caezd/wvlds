@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Technique",
+    text: "La copie dans le presse-papiers passe par un seul et même code. Copier le texte d’un message, son markdown ou une couleur de dialogue reposait sur quatre exemplaires du même bloc — trois copies littérales et un quatrième recopié à la main dans la fiche d’un personnage.\nLeurs quatre messages de confirmation étaient rangés parmi les traductions des salons, alors qu’une fiche de personnage s’en sert aussi ; ils rejoignent les libellés communs. Rien ne change à l’écran."
+  },
+  {
+    date: "2026-08",
     tag: "Personas",
     text: "Les « sections » d'une fiche de persona s'appellent désormais des « onglets », ce qui correspond mieux à ce qu'on manipule à l'écran. Toute cette partie de l'éditeur est aussi traduite en anglais et en espagnol, alors qu'elle était restée en français.",
   },

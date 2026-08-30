@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { toast } from "sonner";
+import { copyToClipboard } from "@/lib/clipboard";
 import { MarkdownContent, proseClassName } from "@/components/MarkdownRenderer";
 import { parseDialogue } from "@/lib/dialogue-bubbles";
 import { ImageLightbox } from "../ImageLightbox";
@@ -15,15 +15,6 @@ import {
 import type { ChatMessageMeta, ChatMediaItem } from "@/types/db";
 import { cn, isSafeUrl } from "@/lib/utils";
 import { useCurrentUser } from "@/components/providers/CurrentUserProvider";
-
-async function copyDialogueColor(color: string, successMessage: string, errorMessage: string) {
-  try {
-    await navigator.clipboard.writeText(color);
-    toast.success(successMessage);
-  } catch {
-    toast.error(errorMessage);
-  }
-}
 
 export function ChatroomMessageBubble({
   persona: _persona,
@@ -46,6 +37,7 @@ export function ChatroomMessageBubble({
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const { messageFont, messageTextSize, messageTextAlign } = useCurrentUser();
   const t = useTranslations("chatrooms");
+  const tCommon = useTranslations("common");
 
   const media: ChatMediaItem[] = (message.metadata?.media ?? []).filter((m) => isSafeUrl(m.url));
 
@@ -122,7 +114,7 @@ export function ChatroomMessageBubble({
                 <ContextMenuTrigger asChild>{bubble}</ContextMenuTrigger>
                 <ContextMenuContent>
                   <ContextMenuItem
-                    onSelect={() => void copyDialogueColor(color, t("copyDialogueColorSuccess"), t("copyError"))}
+                    onSelect={() => void copyToClipboard(color, tCommon("copyDialogueColorSuccess"), tCommon("copyError"))}
                   >
                     {t("copyDialogueColor")}
                   </ContextMenuItem>

@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { Code, FileText, Pencil, Pipette, SmilePlus, Trash2 } from "lucide-react";
-import { toast } from "sonner";
+import { copyToClipboard } from "@/lib/clipboard";
 import {
   Drawer,
   DrawerContent,
@@ -12,15 +12,6 @@ import {
 } from "@/components/ui/drawer";
 import { ChatReactionPicker } from "../reactions/ChatReactionPicker";
 import { markdownToPlainText } from "@/lib/markdownToPlainText";
-
-async function copyToClipboard(text: string, successMessage: string, errorMessage: string) {
-  try {
-    await navigator.clipboard.writeText(text);
-    toast.success(successMessage);
-  } catch {
-    toast.error(errorMessage);
-  }
-}
 
 /** Drawers mobiles (long-press) : options du message, puis picker d'emoji. */
 export function ChatroomMessageMobileDrawers({
@@ -87,7 +78,7 @@ export function ChatroomMessageMobileDrawers({
               className="flex items-center gap-4 px-6 py-4 text-left text-base hover:bg-muted/50 transition-colors"
               onClick={() => {
                 setDrawerOpen(false);
-                void copyToClipboard(markdownToPlainText(content), t("copyTextSuccess"), t("copyError"));
+                void copyToClipboard(markdownToPlainText(content), tCommon("copyTextSuccess"), tCommon("copyError"));
               }}
             >
               <FileText className="h-5 w-5 shrink-0 text-muted-foreground" />
@@ -98,7 +89,7 @@ export function ChatroomMessageMobileDrawers({
               className="flex items-center gap-4 px-6 py-4 text-left text-base hover:bg-muted/50 transition-colors"
               onClick={() => {
                 setDrawerOpen(false);
-                void copyToClipboard(content, t("copyMarkdownSuccess"), t("copyError"));
+                void copyToClipboard(content, tCommon("copyMarkdownSuccess"), tCommon("copyError"));
               }}
             >
               <Code className="h-5 w-5 shrink-0 text-muted-foreground" />
@@ -110,7 +101,7 @@ export function ChatroomMessageMobileDrawers({
                 className="flex items-center gap-4 px-6 py-4 text-left text-base hover:bg-muted/50 transition-colors"
                 onClick={() => {
                   setDrawerOpen(false);
-                  void copyToClipboard(dialogueColor, t("copyDialogueColorSuccess"), t("copyError"));
+                  void copyToClipboard(dialogueColor, tCommon("copyDialogueColorSuccess"), tCommon("copyError"));
                 }}
               >
                 <Pipette className="h-5 w-5 shrink-0 text-muted-foreground" />
