@@ -8,6 +8,16 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Correctif",
+    text: "Les pastilles de présence affichaient tout le monde hors ligne, vous compris. Elles étaient bien alimentées — votre navigateur annonçait bien votre présence — mais rangées sous un identifiant tiré au hasard au lieu du vôtre : l'application cherchait donc quelqu'un qu'elle venait elle-même de classer ailleurs.\nEn cause, une option perdue à l'ouverture du canal temps réel. Elle n'était transmise que sur un chemin secondaire, emprunté seulement après une reconnexion réseau — ce qui explique que la présence semblait fonctionner par moments.",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
+    text: "Les avatars étaient annoncés par leur adresse web aux lecteurs d'écran, faute de texte alternatif. Ils sont désormais marqués décoratifs : le nom qu'ils accompagnent est déjà lu juste à côté, et l'entendre deux fois n'aide personne.",
+  },
+  {
+    date: "2026-08",
     tag: "Interface",
     text: "Cinq textes gris pâle de plus redeviennent lisibles : les messages « aucun élément » du catalogue, la mention sur les restrictions, et les deux invitations à démarrer une conversation privée. Ils descendaient jusqu'à 2,6 pour 1 de contraste, là où la norme en demande 4,5.\nIls ont été trouvés en élargissant la vérification automatique à trois écrans de monde qu'elle ne regardait pas encore.",
   },

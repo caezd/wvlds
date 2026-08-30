@@ -84,7 +84,7 @@ export function openRealtimeChannel(
         if (annule) return;
         canal = build(supabase.channel(topic, options));
       })
-    : ((canal = build(supabase.channel(topic))), Promise.resolve());
+    : ((canal = build(supabase.channel(topic, options))), Promise.resolve());
 
   return () => {
     annule = true;
