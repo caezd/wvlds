@@ -682,6 +682,18 @@ describe("WikiPageContent — ceinture de mise en forme", () => {
     expect(champ).toHaveValue("Un ***mot*** ici");
   });
 
+  it("pose un titre depuis le menu des titres", async () => {
+    // Le menu passe par Radix, qui rend le focus au déclencheur en se
+    // fermant : la sélection reposée doit survivre à ce retour.
+    renderEnEdition();
+    const champ = await champAvecMotSelectionne();
+
+    await userEvent.click(screen.getByRole("button", { name: "Titre" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: /Titre 2/ }));
+
+    await waitFor(() => expect(champ).toHaveValue("## Un mot ici"));
+  });
+
   it("répond aussi au raccourci clavier", async () => {
     renderEnEdition();
     const champ = await champAvecMotSelectionne();

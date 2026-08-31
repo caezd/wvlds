@@ -4,6 +4,7 @@ import * as React from "react";
 import { useTranslations } from "next-intl";
 import {
   Bold,
+  ChevronDown,
   Code,
   Heading1,
   Heading2,
@@ -14,8 +15,15 @@ import {
   ListOrdered,
   Quote,
   Strikethrough,
+  Type,
   Underline,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { libelleRaccourci, type NomFormat } from "@/lib/markdownFormatting";
 import { cn } from "@/lib/utils";
 
@@ -32,12 +40,16 @@ type Outil = {
  * L'ordre suit celui des barres d'outils usuelles — structure, puis caractère,
  * puis liens, puis blocs — pour que la main sache où aller sans lire.
  */
+const BOUTON =
+  "flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground";
+
+const TITRES: Outil[] = [
+  { nom: "h1", Icone: Heading1, cle: "formatHeading1" },
+  { nom: "h2", Icone: Heading2, cle: "formatHeading2" },
+  { nom: "h3", Icone: Heading3, cle: "formatHeading3" },
+];
+
 const GROUPES: Outil[][] = [
-  [
-    { nom: "h1", Icone: Heading1, cle: "formatHeading1" },
-    { nom: "h2", Icone: Heading2, cle: "formatHeading2" },
-    { nom: "h3", Icone: Heading3, cle: "formatHeading3" },
-  ],
   [
     { nom: "bold", Icone: Bold, cle: "formatBold" },
     { nom: "italic", Icone: Italic, cle: "formatItalic" },
@@ -86,9 +98,42 @@ export function WikiFormatToolbar({
         className,
       )}
     >
-      {GROUPES.map((groupe, i) => (
+      {/* Les trois niveaux de titre tiennent dans un menu : déployés, ils
+          pesaient un quart de la ceinture pour des gestes bien plus rares que
+          le gras ou le lien. Leurs raccourcis, eux, restent directs. */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            aria-label={t("formatHeading")}
+            title={t("formatHeading")}
+            onMouseDown={e => e.preventDefault()}
+            className={cn(BOUTON, "w-auto gap-0.5 px-1")}
+          >
+            <Type className="h-3.5 w-3.5" />
+            <ChevronDown className="h-3 w-3" />
+          </button>
+        </DropdownMenuTrigger>
+        {/* Sans cela, Radix rendrait le focus au déclencheur après la
+            fermeture, et écraserait la sélection qu'on vient de reposer. */}
+        <DropdownMenuContent align="start" onCloseAutoFocus={e => e.preventDefault()}>
+          {TITRES.map(({ nom, Icone, cle }) => (
+            <DropdownMenuItem key={nom} onSelect={() => onFormat(nom)}>
+              <Icone className="h-3.5 w-3.5" />
+              {t(cle)}
+              <span className="ml-auto pl-4 text-xs text-muted-foreground">
+                {libelleRaccourci(nom, mac)}
+              </span>
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      {/* Un filet ouvre chaque groupe : le menu des titres est lui-même le
+          premier groupe, il en mérite un derrière lui. */}
+      {GROUPES.map(groupe => (
         <React.Fragment key={groupe[0].nom}>
-          {i > 0 && <span aria-hidden className="mx-1 h-4 w-px shrink-0 bg-border" />}
+          <span aria-hidden className="mx-1 h-4 w-px shrink-0 bg-border" />
           {groupe.map(({ nom, Icone, cle }) => {
             const libelle = t(cle);
             return (
@@ -102,7 +147,7 @@ export function WikiFormatToolbar({
                 // avant même que l'action ne s'exécute.
                 onMouseDown={e => e.preventDefault()}
                 onClick={() => onFormat(nom)}
-                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground"
+                className={BOUTON}
               >
                 <Icone className="h-3.5 w-3.5" />
               </button>
