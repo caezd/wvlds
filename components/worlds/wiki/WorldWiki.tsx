@@ -941,35 +941,38 @@ export function WorldWiki({
           </nav>
         ) : null}
       </div>
-      <div className="flex shrink-0 items-center gap-1 border-t border-border-soft px-2 py-1.5">
-        {isEditMode && (
-          <>
-            <button
-              type="button"
-              onClick={() => setCreating({ parentId: null, isFolder: false })}
-              className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
-            >
-              <FilePlus className="h-3.5 w-3.5" /> {t("newPage")}
-            </button>
-            <button
-              type="button"
-              onClick={() => setCreating({ parentId: null, isFolder: true })}
-              className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
-            >
-              <FolderPlus className="h-3.5 w-3.5" /> {t("newFolder")}
-            </button>
-            <button
-              type="button"
-              onClick={() => setLexiconManagerOpen(true)}
-              aria-label={t("lexicon.manageButton")}
-              title={t("lexicon.manageButton")}
-              className="ml-auto flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
-            >
-              <Library className="h-3.5 w-3.5" />
-            </button>
-          </>
-        )}
-      </div>
+      {/* Monté seulement en écriture : hors de ce mode il ne restait qu'un
+          filet et une bande vide au bas de la colonne. */}
+      {isEditMode && (
+        <div
+          data-testid="wiki-nav-footer"
+          className="flex shrink-0 items-center gap-1 border-t border-border-soft px-2 py-1.5"
+        >
+          <button
+            type="button"
+            onClick={() => setCreating({ parentId: null, isFolder: false })}
+            className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
+          >
+            <FilePlus className="h-3.5 w-3.5" /> {t("newPage")}
+          </button>
+          <button
+            type="button"
+            onClick={() => setCreating({ parentId: null, isFolder: true })}
+            className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
+          >
+            <FolderPlus className="h-3.5 w-3.5" /> {t("newFolder")}
+          </button>
+          <button
+            type="button"
+            onClick={() => setLexiconManagerOpen(true)}
+            aria-label={t("lexicon.manageButton")}
+            title={t("lexicon.manageButton")}
+            className="ml-auto flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
+          >
+            <Library className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
     </>
   );
 

@@ -554,3 +554,30 @@ describe("WorldWiki — replier la colonne de navigation", () => {
     expect(screen.getByPlaceholderText("Rechercher dans le wiki…")).toBeInTheDocument();
   });
 });
+
+describe("WorldWiki — pied de la colonne de navigation", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("ne laisse pas de bande vide en lecture", async () => {
+    // Le pied ne porte que des commandes d'écriture : hors de ce mode, il ne
+    // restait qu'un filet et une bande vide au bas de la colonne.
+    setup();
+    render(<WorldWiki worldId="w1" canEdit />);
+
+    await dansLArbre("Accueil");
+    expect(screen.queryByTestId("wiki-nav-footer")).toBeNull();
+  });
+
+  it("le monte dès qu'on passe en modification", async () => {
+    setup();
+    const user = userEvent.setup();
+    render(<WorldWiki worldId="w1" canEdit />);
+
+    await activerModification(user);
+
+    const pied = await screen.findByTestId("wiki-nav-footer");
+    expect(within(pied).getByRole("button", { name: "Page" })).toBeTruthy();
+  });
+});
