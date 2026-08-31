@@ -98,9 +98,6 @@ describe("WikiAnnotationLayer — marquage des blocs", () => {
 
     const marque = container.querySelector<HTMLElement>('[data-annotation-ids~="a1"]');
     expect(marque).toBe(paragraphe(container, 1));
-    // Le compte alimente la pastille de fin de ligne, qui est du contenu
-    // généré : rien n'est ajouté au texte du bloc.
-    expect(marque!.dataset.annotationCount).toBe("1");
     expect(screen.getByTestId("prose").textContent).toBe(PREMIER + DEUXIEME + TROISIEME);
   });
 
@@ -159,8 +156,8 @@ describe("WikiAnnotationLayer — marquage des blocs", () => {
     expect(bloc.dataset.annotationResolved).toBeUndefined();
     // Un clic ouvre le fil qui attend une réponse, pas le plus ancien.
     expect(bloc.dataset.annotationId).toBe("a2");
-    // La pastille compte les deux : résolu ou non, la discussion a eu lieu.
-    expect(bloc.dataset.annotationCount).toBe("2");
+    // Un seul point en marge pour les deux fils : le panneau les liste.
+    expect(bloc.dataset.annotationDraft).toBeUndefined();
   });
 
   it("signale les commentaires dont le bloc a disparu", () => {

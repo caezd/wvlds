@@ -157,25 +157,21 @@ export function WikiAnnotationLayer({
     }
 
     for (const [index, fils] of parBloc) {
+      // Des attributs, et rien qu'eux : le point de marge se lit en CSS
+      // depuis `data-annotation-ids`. Une classe ajoutée à la main serait à la
+      // merci du prochain `className` que React réécrirait sur ce nœud.
       const el = blocs[index].el;
       el.dataset.annotationIds = fils.map(th => th.root.id).join(" ");
       // Le fil ouvert le plus ancien avant les autres : c'est celui qu'un clic
       // ouvre, et celui qui attend une réponse.
       const premierOuvert = fils.find(th => !th.root.resolved_at) ?? fils[0];
       el.dataset.annotationId = premierOuvert.root.id;
-      // Lu par la pastille de fin de ligne, en CSS : rien n'est inséré dans le
-      // rendu, le découpage en blocs n'a donc rien de plus à ignorer.
-      el.dataset.annotationCount = String(fils.length);
       if (fils.every(th => th.root.resolved_at)) el.dataset.annotationResolved = "true";
-      el.classList.add("wiki-annotation-block");
     }
 
     if (draftAnchor) {
       const index = resolveBlockAnchor(blocs, draftAnchor);
-      if (index !== null) {
-        blocs[index].el.dataset.annotationDraft = "true";
-        blocs[index].el.classList.add("wiki-annotation-block");
-      }
+      if (index !== null) blocs[index].el.dataset.annotationDraft = "true";
     }
 
     onDetachedChangeRef.current?.(detached);

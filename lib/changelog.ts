@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Wiki",
+    text: "Un bloc commenté se signale par un point de couleur dans la marge, à gauche du texte. Un clic dessus ouvre le fil correspondant. Il remplace le fond et le filet qui couraient sur toute la largeur du bloc, puis une pastille de fin de ligne qui se déplaçait avec le texte à chaque changement de largeur."
+  },
+  {
+    date: "2026-08",
+    tag: "Wiki",
     text: "Un commentaire de wiki vise désormais un bloc entier — un paragraphe, un élément de liste, une citation, un titre — au lieu d’une sélection de caractères. Survolez le bloc, un bouton apparaît en marge.\nLe gain est qu’il ne se perd plus : insérer un paragraphe au-dessus, ou déplacer celui qui est commenté, ne change le texte d’aucun autre bloc, et le commentaire reste où il doit. Une correction dans le bloc lui-même est également rattrapée ; seule une réécriture complète le détache encore, ce que le panneau annonce.\nLes commentaires écrits avant ce changement restent en place : ils se rattachent d’eux-mêmes au bloc qui les contenait."
   },
   {

@@ -489,68 +489,48 @@
    La classe est posée après le rendu par WikiAnnotationLayer, hors de React :
    sa mise en forme vit donc ici plutôt qu'en classes utilitaires.
 
-   Une pastille en bout de ligne, et rien d'autre : un fond ou un filet
-   couraient sur toute la largeur du bloc et pesaient bien plus lourd que ce
-   qu'ils avaient à dire. */
-.wiki-annotation-block {
+   Un point dans la marge, et rien d'autre : un fond ou un filet couraient sur
+   toute la largeur du bloc et pesaient bien plus lourd que ce qu'ils avaient à
+   dire ; une pastille en fin de contenu, elle, se déplaçait avec le texte. */
+[data-annotation-ids],
+[data-annotation-draft] {
+    position: relative;
     cursor: pointer;
 }
 
-/* Nombre de fils, en bout de derniere ligne du bloc.
+/* Un point dans la marge, a gauche du bloc.
+   Positionne absolument et non pose en fin de contenu : sa place ne depend
+   plus du retour a la ligne, qui se deplace a chaque changement de largeur —
+   ouverture de la colonne, apparition du sommaire.
    Contenu genere plutot qu'un noeud insere : la couche ne pose que des
    attributs sur le rendu de React, et le decoupage en blocs — qui lit le
-   texte des elements — n'a ainsi rien de plus a ignorer. */
-.wiki-annotation-block[data-annotation-count]::after,
-.wiki-annotation-block[data-annotation-draft]::after {
-    content: attr(data-annotation-count);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 1.25em;
-    margin-left: 0.45em;
-    padding: 0 0.35em;
+   texte des elements — n'a ainsi rien de plus a ignorer. Un clic dessus vise
+   le bloc, qui ouvre deja le fil correspondant. */
+[data-annotation-ids]::before,
+[data-annotation-draft]::before {
+    content: "";
+    position: absolute;
+    right: 100%;
+    margin-right: 0.5rem;
+    top: 0.5em;
+    width: 0.45rem;
+    height: 0.45rem;
     border-radius: 999px;
-    background-color: rgb(56 132 255 / 0.16);
-    color: rgb(37 99 235);
-    font-size: 0.7em;
-    font-weight: 600;
-    line-height: 1.7;
-    vertical-align: 0.15em;
-    transition: background-color 120ms ease;
+    background-color: var(--color-accent);
+    transition: background-color 120ms ease, box-shadow 120ms ease;
 }
 
-/* Bloc en attente de son premier message : rien a compter encore. Le
-   selecteur est joint a celui du compte ci-dessus, sinon la pastille du
-   brouillon n'heriterait d'aucune geometrie — seulement de son contenu. */
-.wiki-annotation-block[data-annotation-draft]::after {
-    content: "…";
-    background-color: rgb(56 132 255 / 0.12);
+/* Bloc en attente de son premier message : le point s'annonce sans s'affirmer. */
+[data-annotation-draft]::before {
+    background-color: color-mix(in oklab, var(--color-accent) 45%, transparent);
 }
 
-/* Fil resolu : la pastille reste — savoir qu'une discussion a eu lieu ici a de
-   la valeur — mais cesse d'appeler l'oeil. */
-.wiki-annotation-block[data-annotation-resolved]::after {
-    background-color: var(--secondary);
-    color: var(--muted-foreground);
+/* Fil resolu : le point reste — savoir qu'une discussion a eu lieu ici a de la
+   valeur — mais cesse d'appeler l'oeil. */
+[data-annotation-resolved]::before {
+    background-color: var(--color-border);
 }
 
-.wiki-annotation-block[data-annotation-active]::after {
-    background-color: rgb(37 99 235);
-    color: white;
-}
-
-/* Sur fond sombre, la meme teinte parait terne : on la remonte legerement
-   plutot que de changer de couleur. */
-.dark .wiki-annotation-block[data-annotation-count]::after {
-    background-color: rgb(96 165 250 / 0.22);
-    color: rgb(147 197 253);
-}
-
-.dark .wiki-annotation-block[data-annotation-draft]::after {
-    background-color: rgb(96 165 250 / 0.16);
-}
-
-.dark .wiki-annotation-block[data-annotation-active]::after {
-    background-color: rgb(96 165 250);
-    color: rgb(15 23 42);
+[data-annotation-active]::before {
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-accent) 25%, transparent);
 }
