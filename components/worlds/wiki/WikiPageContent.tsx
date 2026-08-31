@@ -634,7 +634,7 @@ export function WikiPageContent({
                 }}
               />
               {page.banner_url ? (
-                <div className="group/banniere relative overflow-hidden rounded-2xl">
+                <div className="group/banniere relative overflow-hidden rounded-lg">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={page.banner_url} alt="" className="h-40 w-full object-cover sm:h-56" />
                   <div className="absolute right-2 top-2 flex gap-1">
@@ -794,7 +794,7 @@ export function WikiPageContent({
               {/* La bannière traverse toute la rangée, sommaire compris : elle
                   ouvre la page, elle n'appartient pas à la colonne de texte. */}
               {page.banner_url && (
-                <div className="mb-6 overflow-hidden rounded-2xl">
+                <div className="mb-6 overflow-hidden rounded-lg">
                   {/* `<img>` et non `next/image` : l'URL vient du stockage du
                       monde, dont l'hôte n'est pas déclaré à l'optimiseur. */}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
