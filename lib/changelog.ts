@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Correctif",
+    text: "Passer le wiki en mode modification faisait disparaître la colonne des notes et des commentaires. C’est pourtant ce même mode qui autorise seul à ajouter ou modifier une fiche de note : il n’y avait donc plus aucun moyen d’y toucher. La colonne reste maintenant en place pendant qu’on édite l’article."
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
     text: "Réordonner une page du wiki par glisser-déposer échouait, avec un message d’erreur incompréhensible sur la sécurité des données. L’ordre revenait à sa place au rechargement suivant. C’était le cas pour tout le monde, propriétaire du monde compris, et depuis longtemps. Corrigé."
   },
   {

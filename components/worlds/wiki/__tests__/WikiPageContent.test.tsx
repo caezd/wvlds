@@ -578,3 +578,51 @@ describe("WikiPageContent — commentaires ancrés", () => {
     expect(screen.getByRole("textbox")).toBeTruthy();
   });
 });
+
+describe("WikiPageContent — colonne latérale en mode modification", () => {
+  function renderPage(isEditMode: boolean) {
+    const mock = createSupabaseMock({
+      results: [SANS_ANNOTATION, { data: { draft_content: "Texte en cours" }, error: null }],
+    });
+    render(
+      <WikiPageContent
+        worldId="w1"
+        panelWidth={320}
+        panelHandleProps={{}}
+        navCollapsed={false}
+        onExpandNav={vi.fn()}
+        onOpenTree={vi.fn()}
+        onRename={vi.fn()}
+        page={{ ...BASE_PAGE, content: "Un texte." }}
+        pages={[BASE_PAGE]}
+        canEdit
+        isEditMode={isEditMode}
+        supabase={mock.client as never}
+        ancestors={[]}
+        onPageUpdated={vi.fn()}
+        onNavigate={vi.fn()}
+        onExpandFolder={vi.fn()}
+      />,
+    );
+  }
+
+  it("garde les notes atteignables pendant qu'on édite l'article", async () => {
+    // Le mode modification ouvre l'éditeur ET conditionne seul l'ajout de
+    // fiches : si la colonne disparaît en édition, plus rien ne permet de les
+    // modifier. La vue d'édition sortait par un `return` anticipé, placé avant
+    // la colonne — d'où sa disparition.
+    ecranLarge();
+    renderPage(true);
+
+    expect(await screen.findByTestId("editor")).toBeTruthy();
+    expect(screen.getByTestId("panneau-notes")).toBeTruthy();
+  });
+
+  it("garde la colonne en lecture", async () => {
+    ecranLarge();
+    renderPage(false);
+
+    expect(await screen.findByTestId("panneau-notes")).toBeTruthy();
+    expect(screen.queryByTestId("editor")).toBeNull();
+  });
+});

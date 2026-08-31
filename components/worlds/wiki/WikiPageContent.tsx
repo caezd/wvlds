@@ -456,148 +456,147 @@ export function WikiPageContent({
     </div>
   );
 
-  if (editing) {
-    return (
+  return (
+    <div className="flex min-h-0 flex-1">
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         {bandeauCentral}
-        <div className="flex flex-1 flex-col gap-3 overflow-hidden p-6">
-        <div className="flex items-center gap-3">
-          {champTitre}
-          {draftBadge}
-          {restrictedBadge}
-          <button
-            type="button"
-            onClick={() => setShowPreview(v => !v)}
-            className={cn(
-              "flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-              showPreview
-                ? "border-primary/40 bg-primary/10 text-primary"
-                : "border-border-soft text-muted-foreground hover:bg-secondary hover:text-foreground",
-            )}
-          >
-            <Eye className="h-3 w-3" /> {t("preview")}
-          </button>
-        </div>
 
-        {loadingDraft ? (
-          <div className="flex flex-1 items-center justify-center">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-          </div>
-        ) : (
-          <div className={cn("min-h-0 flex-1", showPreview ? "flex gap-4" : "flex flex-col")}>
-            <div className={cn(
-              "rounded-2xl border border-border-soft p-4",
-              "flex flex-1 flex-col overflow-hidden",
-            )}>
-              <ParagraphBlockEditor
-                value={draft}
-                onChange={handleDraftChange}
-                placeholder={t("contentPlaceholder")}
-                submitOnEnter={false}
-                formatting
-                wrapperClassName="max-h-none flex-1 overflow-y-auto"
-                className="text-sm"
-              />
+        {/* Le panneau latéral vit HORS de cette bascule : le mode
+            modification, seul à rendre les notes modifiables, masquait
+            sinon la colonne où on les modifie. */}
+        {editing ? (
+          <div className="flex flex-1 flex-col gap-3 overflow-hidden p-6">
+            <div className="flex items-center gap-3">
+              {champTitre}
+              {draftBadge}
+              {restrictedBadge}
+              <button
+                type="button"
+                onClick={() => setShowPreview(v => !v)}
+                className={cn(
+                  "flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                  showPreview
+                    ? "border-primary/40 bg-primary/10 text-primary"
+                    : "border-border-soft text-muted-foreground hover:bg-secondary hover:text-foreground",
+                )}
+              >
+                <Eye className="h-3 w-3" /> {t("preview")}
+              </button>
             </div>
-            {showPreview && (
-              <div className="flex-1 overflow-y-auto rounded-2xl border border-border-soft p-4">
-                {draft.trim()
-                  ? (
+
+            {loadingDraft ? (
+              <div className="flex flex-1 items-center justify-center">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <div className={cn("min-h-0 flex-1", showPreview ? "flex gap-4" : "flex flex-col")}>
+                <div className={cn(
+                  "rounded-2xl border border-border-soft p-4",
+                  "flex flex-1 flex-col overflow-hidden",
+                )}>
+                  <ParagraphBlockEditor
+                    value={draft}
+                    onChange={handleDraftChange}
+                    placeholder={t("contentPlaceholder")}
+                    submitOnEnter={false}
+                    formatting
+                    wrapperClassName="max-h-none flex-1 overflow-y-auto"
+                    className="text-sm"
+                  />
+                </div>
+                {showPreview && (
+                  <div className="flex-1 overflow-y-auto rounded-2xl border border-border-soft p-4">
+                    {draft.trim()
+                      ? (
+                        <MarkdownRenderer
+                          content={resolveWikiLinks(draft, pages)}
+                          allowImages
+                          onWikiLink={onNavigate}
+                          className={WIKI_PROSE_HEADING_CLASSES}
+                          lexiconTerms={lexiconTerms}
+                        />
+                      )
+                      : <p className="text-sm italic text-muted-foreground">{t("nothingToPreview")}</p>
+                    }
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="flex shrink-0 items-center justify-between gap-2">
+              <span className="text-xs text-muted-foreground">
+                {lastAutosavedAt && t("draftSavedAt", {
+                  time: lastAutosavedAt.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }),
+                })}
+              </span>
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="sm" onClick={() => setHistoryOpen(true)}>
+                  <History className="mr-1 h-3.5 w-3.5" /> {t("versionHistory")}
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setEditing(false)} disabled={publishing}>
+                  {tCommon("cancel")}
+                </Button>
+                <Button size="sm" onClick={() => void publish()} disabled={publishing || loadingDraft}>
+                  {publishing && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
+                  {t("publish")}
+                </Button>
+              </div>
+            </div>
+
+            <WikiVersionHistoryPanel
+              open={historyOpen}
+              onOpenChange={setHistoryOpen}
+              pageId={page.id}
+              supabase={supabase}
+              onRestored={patch => {
+                setDraft(patch.content);
+                onPageUpdated({ id: page.id, ...patch });
+              }}
+            />
+            </div>
+        ) : (
+          <div className="min-w-0 flex-1 overflow-y-auto p-6">
+            <div className="mx-auto flex max-w-4xl gap-8">
+              <div className="min-w-0 max-w-2xl flex-1">
+                <div className="mb-6 flex items-start justify-between gap-4">
+                  <h1 className="flex flex-1 items-center gap-2 text-2xl font-semibold">
+                    {pageIcon}
+                    {page.title}
+                  </h1>
+                  <div className="flex shrink-0 items-center gap-2">
+                    {draftBadge}
+                    {restrictedBadge}
+                  </div>
+                </div>
+                {page.content?.trim() ? (
+                  <WikiAnnotationLayer
+                    contentKey={contentKey}
+                    threads={annotations.threads}
+                    active={activeAnnotation}
+                    draftAnchor={annotationDraft?.anchor ?? null}
+                    canComment={canAnnotate}
+                    onActivate={id => { if (id) openAnnotation(id, false); }}
+                    onDraft={startDraft}
+                    onDetachedChange={onDetachedChange}
+                  >
                     <MarkdownRenderer
-                      content={resolveWikiLinks(draft, pages)}
+                      content={resolvedContent}
                       allowImages
                       onWikiLink={onNavigate}
                       className={WIKI_PROSE_HEADING_CLASSES}
                       lexiconTerms={lexiconTerms}
                     />
-                  )
-                  : <p className="text-sm italic text-muted-foreground">{t("nothingToPreview")}</p>
-                }
+                  </WikiAnnotationLayer>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    {isEditMode ? t("pageEmptyEdit") : t("pageEmpty")}
+                  </p>
+                )}
               </div>
-            )}
+              <WikiTableOfContents headings={headings} />
+            </div>
           </div>
         )}
-
-        <div className="flex shrink-0 items-center justify-between gap-2">
-          <span className="text-xs text-muted-foreground">
-            {lastAutosavedAt && t("draftSavedAt", {
-              time: lastAutosavedAt.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }),
-            })}
-          </span>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={() => setHistoryOpen(true)}>
-              <History className="mr-1 h-3.5 w-3.5" /> {t("versionHistory")}
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => setEditing(false)} disabled={publishing}>
-              {tCommon("cancel")}
-            </Button>
-            <Button size="sm" onClick={() => void publish()} disabled={publishing || loadingDraft}>
-              {publishing && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
-              {t("publish")}
-            </Button>
-          </div>
-        </div>
-
-        <WikiVersionHistoryPanel
-          open={historyOpen}
-          onOpenChange={setHistoryOpen}
-          pageId={page.id}
-          supabase={supabase}
-          onRestored={patch => {
-            setDraft(patch.content);
-            onPageUpdated({ id: page.id, ...patch });
-          }}
-        />
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex min-h-0 flex-1">
-      <div className="flex min-w-0 flex-1 flex-col">
-        {bandeauCentral}
-        <div className="min-w-0 flex-1 overflow-y-auto p-6">
-        <div className="mx-auto flex max-w-4xl gap-8">
-          <div className="min-w-0 max-w-2xl flex-1">
-            <div className="mb-6 flex items-start justify-between gap-4">
-              <h1 className="flex flex-1 items-center gap-2 text-2xl font-semibold">
-                {pageIcon}
-                {page.title}
-              </h1>
-              <div className="flex shrink-0 items-center gap-2">
-                {draftBadge}
-                {restrictedBadge}
-              </div>
-            </div>
-            {page.content?.trim() ? (
-              <WikiAnnotationLayer
-                contentKey={contentKey}
-                threads={annotations.threads}
-                active={activeAnnotation}
-                draftAnchor={annotationDraft?.anchor ?? null}
-                canComment={canAnnotate}
-                onActivate={id => { if (id) openAnnotation(id, false); }}
-                onDraft={startDraft}
-                onDetachedChange={onDetachedChange}
-              >
-                <MarkdownRenderer
-                  content={resolvedContent}
-                  allowImages
-                  onWikiLink={onNavigate}
-                  className={WIKI_PROSE_HEADING_CLASSES}
-                  lexiconTerms={lexiconTerms}
-                />
-              </WikiAnnotationLayer>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                {isEditMode ? t("pageEmptyEdit") : t("pageEmpty")}
-              </p>
-            )}
-          </div>
-          <WikiTableOfContents headings={headings} />
-        </div>
-        </div>
       </div>
 
       {/* En colonne à partir de `xl` ; en dessous, la même chose en tiroir —
