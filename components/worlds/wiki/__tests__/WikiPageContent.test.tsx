@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createSupabaseMock } from "@/test/supabaseMock";
 
@@ -1031,13 +1031,27 @@ describe("WikiPageContent — bannière et description", () => {
     return { ...vue, mock };
   }
 
-  it("ouvre la page sur sa bannière, puis son chapeau", async () => {
+  it("pose le titre et le chapeau SUR la bannière", async () => {
     const { container } = renderPage(AVEC_CHAPEAU);
 
     await screen.findByTestId("markdown");
-    const image = container.querySelector("img");
-    expect(image?.getAttribute("src")).toBe("https://exemple.test/banniere.webp");
-    expect(screen.getByText("Une ville gouvernée par des machines.")).toBeTruthy();
+    const image = container.querySelector("img")!;
+    expect(image.getAttribute("src")).toBe("https://exemple.test/banniere.webp");
+
+    // Le titre partage le cadre de l'image, il ne la suit pas : c'est ce qui
+    // fait la différence entre un en-tête et une simple illustration.
+    const cadre = image.parentElement!;
+    expect(within(cadre).getByRole("heading", { name: "Accueil" })).toBeTruthy();
+    expect(within(cadre).getByText("Une ville gouvernée par des machines.")).toBeTruthy();
+  });
+
+  it("rend l'en-tête à la colonne de texte quand il n'y a pas de bannière", async () => {
+    const { container } = renderPage({ ...BASE_PAGE, content: "Un texte.", description: "Un chapeau." });
+
+    await screen.findByTestId("markdown");
+    expect(container.querySelector("img")).toBeNull();
+    expect(screen.getByRole("heading", { name: "Accueil" })).toBeTruthy();
+    expect(screen.getByText("Un chapeau.")).toBeTruthy();
   });
 
   it("n'affiche rien de tout cela quand la page n'en a pas", async () => {

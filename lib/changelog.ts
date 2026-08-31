@@ -9,7 +9,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Wiki",
-    text: "Une page de wiki peut désormais s’ouvrir sur une bannière et un chapeau. L’image traverse toute la largeur de l’article, sommaire compris ; l’icône de la page, son titre et la description viennent en dessous. La description est bornée à 255 caractères : c’est une phrase de présentation, pas un second article."
+    text: "Une page de wiki peut désormais s’ouvrir sur une bannière. L’icône, le titre et la description s’y posent par-dessus, sur un dégradé, comme l’accueil d’une documentation ; sans bannière, ils reprennent leur place au-dessus du texte. La description est bornée à 255 caractères : c’est une phrase de présentation, pas un second article."
   },
   {
     date: "2026-08",

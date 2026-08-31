@@ -484,9 +484,16 @@ export function WikiPageContent({
     quitterLaModification();
   }
 
-  const pageIcon = page.icon && VALID_LUCIDE_ICONS.has(page.icon)
-    ? <LazyLucideIcon name={page.icon} className="h-5 w-5 shrink-0 text-muted-foreground" />
-    : null;
+  /** Icône de la page. `surImage` : posée sur la bannière, elle s'éclaircit. */
+  const iconeDeLaPage = (surImage: boolean) =>
+    page.icon && VALID_LUCIDE_ICONS.has(page.icon)
+      ? (
+        <LazyLucideIcon
+          name={page.icon}
+          className={cn("h-5 w-5 shrink-0", surImage ? "text-white/90" : "text-muted-foreground")}
+        />
+      )
+      : null;
 
   const resolvedContent = React.useMemo(
     () => resolveWikiLinks(page.content ?? "", pages),
@@ -617,7 +624,7 @@ export function WikiPageContent({
           // largeur maximale de l'article et se centrent avec lui. Sans quoi
           // le markdown s'étirait sur toute la fenêtre, en lignes trop longues
           // pour l'œil, et changeait de largeur en passant à l'aperçu.
-          <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-3 overflow-hidden p-6">
+          <div className="mx-auto flex w-full flex-1 flex-col gap-3 overflow-hidden py-6 [--thread-content-max-width:40rem] lg:[--thread-content-max-width:48rem] max-w-(--thread-content-max-width) px-2 lg:px-4">
             {/* La bannière d'abord : c'est elle qui ouvre la page. */}
             <div className="shrink-0 px-3">
               <input
@@ -794,15 +801,35 @@ export function WikiPageContent({
               {/* La bannière traverse toute la rangée, sommaire compris : elle
                   ouvre la page, elle n'appartient pas à la colonne de texte. */}
               {page.banner_url && (
-                <div className="mb-6 overflow-hidden rounded-lg">
+                <div className="relative mb-6 overflow-hidden rounded-lg">
                   {/* `<img>` et non `next/image` : l'URL vient du stockage du
                       monde, dont l'hôte n'est pas déclaré à l'optimiseur. */}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={page.banner_url}
                     alt=""
-                    className="h-40 w-full object-cover sm:h-56"
+                    className="h-48 w-full object-cover sm:h-64"
                   />
+                  {/* Dégradé plutôt qu'un voile uniforme : le texte a besoin
+                      d'un fond sombre là où il se pose, et l'image de rester
+                      visible partout ailleurs. */}
+                  <div
+                    aria-hidden
+                    className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent"
+                  />
+                  <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-4 p-6">
+                    <div className="flex min-w-0 flex-col gap-1">
+                      {iconeDeLaPage(true)}
+                      <h1 className="text-2xl font-semibold text-white">{page.title}</h1>
+                      {page.description && (
+                        <p className="text-sm text-white/80">{page.description}</p>
+                      )}
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      {draftBadge}
+                      {restrictedBadge}
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -811,23 +838,30 @@ export function WikiPageContent({
                   surplus restait tout entier à droite et le texte se collait au
                   bord gauche — `mx-auto` centrait la rangée, pas son contenu. */}
               <div className="flex justify-center gap-8">
-                <div className="min-w-0 max-w-2xl flex-1">
+                {/* Même mesure que le contenu d'un salon : une ligne de
+                    texte se lit pareil qu'on soit dans un article ou dans une
+                    conversation, et la largeur ne se règle qu'à un endroit. */}
+                <div className="min-w-0 flex-1 [--thread-content-max-width:40rem] lg:[--thread-content-max-width:48rem] max-w-(--thread-content-max-width) px-2 lg:px-4">
                   {/* `pr-11` comme le corps de l'article : la marge des
                       commandes de commentaire, pour que les deux bords droits
                       coïncident. */}
-                  <div className="mb-6 flex items-start justify-between gap-4 pr-11">
-                    <div className="flex min-w-0 flex-1 flex-col items-start gap-2">
-                      {pageIcon}
-                      <h1 className="text-2xl font-semibold">{page.title}</h1>
-                      {page.description && (
-                        <p className="text-sm text-muted-foreground">{page.description}</p>
-                      )}
+                  {/* Sans bannière, l'en-tête reprend sa place dans la colonne
+                      de texte — il n'a plus d'image où se poser. */}
+                  {!page.banner_url && (
+                    <div className="mb-6 flex items-start justify-between gap-4 pr-11">
+                      <div className="flex min-w-0 flex-1 flex-col items-start gap-2">
+                        {iconeDeLaPage(false)}
+                        <h1 className="text-2xl font-semibold">{page.title}</h1>
+                        {page.description && (
+                          <p className="text-sm text-muted-foreground">{page.description}</p>
+                        )}
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2">
+                        {draftBadge}
+                        {restrictedBadge}
+                      </div>
                     </div>
-                    <div className="flex shrink-0 items-center gap-2">
-                      {draftBadge}
-                      {restrictedBadge}
-                    </div>
-                  </div>
+                  )}
                 {page.content?.trim() ? (
                   <WikiAnnotationLayer
                     contentKey={contentKey}
