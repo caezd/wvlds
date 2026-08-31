@@ -19,6 +19,30 @@ import { DB_TEXT_LIMITS } from "@/lib/textLimits";
 import { cn } from "@/lib/utils";
 import type { WikiPageNote } from "@/types/worlds";
 
+/**
+ * Échelle de texte du contenu d'une fiche.
+ *
+ * `MarkdownRenderer` monte en `prose-sm sm:prose-base` : au-delà de 640 px, le
+ * corps d'une fiche s'affichait donc à 16 px, plus GROS que le titre qui le
+ * surplombe (14 px) — et bien plus gros que tout ce qui l'entoure dans une
+ * colonne de 288 px. On redescend le corps à 12 px et on subordonne les titres
+ * markdown au titre de la fiche.
+ *
+ * Les sélecteurs visent les éléments (`[&_p]`) plutôt que le conteneur : les
+ * règles du plugin Typography sont enveloppées en `:where()`, de spécificité
+ * nulle, précisément pour rester surchargeables ainsi. Agir sur le conteneur
+ * reviendrait à disputer une classe à une autre classe, où seul l'ordre des
+ * déclarations trancherait.
+ */
+const NOTE_PROSE_CLASSES = cn(
+  "[&_p]:text-xs [&_li]:text-xs [&_blockquote]:text-xs",
+  "[&_td]:text-xs [&_th]:text-xs [&_code]:text-[11px]",
+  "[&_h1]:text-sm [&_h2]:text-xs [&_h3]:text-xs [&_h4]:text-xs [&_h5]:text-xs [&_h6]:text-xs",
+  "[&_h1]:font-semibold [&_h2]:font-semibold [&_h3]:font-semibold",
+  // À 12 px, les marges de `prose-base` laissent des trous : on resserre.
+  "[&_p]:my-1.5 [&_ul]:my-1.5 [&_ol]:my-1.5 [&_h1]:mt-2 [&_h1]:mb-1 [&_h2]:mt-2 [&_h2]:mb-1",
+);
+
 /** Identifiant de glissement d'une fiche — préfixé pour le distinguer d'une catégorie. */
 export const noteDragId = (id: string) => `note:${id}`;
 
@@ -170,7 +194,7 @@ export function WikiNoteCard({
       {expanded && (
         <div className="border-t border-border-soft px-2.5 py-2">
           {note.body.trim()
-            ? <MarkdownRenderer content={note.body} className="text-xs" />
+            ? <MarkdownRenderer content={note.body} className={NOTE_PROSE_CLASSES} />
             : <p className="text-xs italic text-muted-foreground">{t("emptyBody")}</p>}
         </div>
       )}
