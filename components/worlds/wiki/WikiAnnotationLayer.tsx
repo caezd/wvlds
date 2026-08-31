@@ -338,12 +338,11 @@ export function WikiAnnotationLayer({
               aria-label={t("title")}
               title={t("title")}
               className={cn(
-                "flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full px-1 text-[10px] font-medium",
+                "shrink-0 min-w-4 h-4 flex items-center justify-center rounded-full bg-accent text-accent-foreground text-[10px] font-bold px-0.5",
                 // Un fil résolu garde sa pastille — savoir qu'une discussion a
                 // eu lieu ici a de la valeur — mais cesse d'appeler l'œil.
-                commande.resolus
-                  ? "bg-secondary text-muted-foreground"
-                  : "bg-accent text-accent-foreground",
+                // Posé après le fond d'accent, que `cn` laisse remplacer.
+                commande.resolus && "bg-secondary text-muted-foreground",
                 active && commande.ids.includes(active.id) && "ring-2 ring-accent/40",
               )}
             >
