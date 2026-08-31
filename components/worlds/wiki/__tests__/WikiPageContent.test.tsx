@@ -79,6 +79,8 @@ const BASE_PAGE: WikiPage = {
   sort_index: 0,
   icon: null,
   is_restricted: false,
+  banner_url: null,
+  description: null,
   draft_updated_at: null,
   published_at: null,
 };
@@ -989,5 +991,92 @@ describe("WikiPageContent — compteurs du sous-en-tête", () => {
     await screen.findByTestId("markdown");
     const boutons = screen.getAllByText("Notes");
     expect(boutons[0].closest("button")!.textContent).toBe("Notes");
+  });
+});
+
+describe("WikiPageContent — bannière et description", () => {
+  const AVEC_CHAPEAU: WikiPage = {
+    ...BASE_PAGE,
+    content: "Un texte.",
+    banner_url: "https://exemple.test/banniere.webp",
+    description: "Une ville gouvernée par des machines.",
+  };
+
+  function renderPage(page: WikiPage, isEditMode = false) {
+    const mock = createSupabaseMock({
+      results: isEditMode
+        ? [SANS_ANNOTATION, { data: { draft_content: "Un texte." }, error: null }, { data: null, error: null }]
+        : [SANS_ANNOTATION],
+    });
+    const vue = render(
+      <WikiPageContent
+        worldId="w1"
+        panelWidth={320}
+        panelHandleProps={{}}
+        navCollapsed={false}
+        onExpandNav={vi.fn()}
+        onOpenTree={vi.fn()}
+        onExitEditMode={vi.fn()}
+        pageCount={3}
+        onRename={vi.fn()}
+        page={page}
+        pages={[page]}
+        canEdit
+        isEditMode={isEditMode}
+        supabase={mock.client as never}
+        onPageUpdated={vi.fn()}
+        onNavigate={vi.fn()}
+      />,
+    );
+    return { ...vue, mock };
+  }
+
+  it("ouvre la page sur sa bannière, puis son chapeau", async () => {
+    const { container } = renderPage(AVEC_CHAPEAU);
+
+    await screen.findByTestId("markdown");
+    const image = container.querySelector("img");
+    expect(image?.getAttribute("src")).toBe("https://exemple.test/banniere.webp");
+    expect(screen.getByText("Une ville gouvernée par des machines.")).toBeTruthy();
+  });
+
+  it("n'affiche rien de tout cela quand la page n'en a pas", async () => {
+    const { container } = renderPage({ ...BASE_PAGE, content: "Un texte." });
+
+    await screen.findByTestId("markdown");
+    expect(container.querySelector("img")).toBeNull();
+  });
+
+  it("propose d'ajouter une bannière en écriture, et de la retirer ensuite", async () => {
+    renderPage({ ...BASE_PAGE, content: "Un texte." }, true);
+    expect(await screen.findByRole("button", { name: /Ajouter une bannière/ })).toBeTruthy();
+
+    renderPage(AVEC_CHAPEAU, true);
+    expect(await screen.findByRole("button", { name: "Retirer la bannière" })).toBeTruthy();
+  });
+
+  it("borne le chapeau à 255 caractères", async () => {
+    // La borne vit aussi en base (migration 143) : celle-ci évite d'aller s'y
+    // faire refuser après coup.
+    renderPage(AVEC_CHAPEAU, true);
+
+    const champ = await screen.findByLabelText("Description de la page");
+    expect(champ.getAttribute("maxlength")).toBe("255");
+  });
+
+  it("enregistre le chapeau en quittant le champ", async () => {
+    const user = userEvent.setup();
+    const { mock } = renderPage(AVEC_CHAPEAU, true);
+
+    const champ = await screen.findByLabelText("Description de la page");
+    await user.clear(champ);
+    await user.type(champ, "Une autre phrase.");
+    await user.tab();
+
+    await waitFor(() => {
+      const ecritures = mock.buildersFor("world_wiki_pages")
+        .flatMap(b => b.update.mock.calls.map(c => c[0]));
+      expect(ecritures).toContainEqual({ description: "Une autre phrase." });
+    });
   });
 });

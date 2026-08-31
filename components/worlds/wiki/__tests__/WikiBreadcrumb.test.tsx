@@ -16,6 +16,8 @@ function makeFolder(id: string, title: string): WikiPage {
     sort_index: 0,
     icon: null,
     is_restricted: false,
+    banner_url: null,
+    description: null,
     draft_updated_at: null,
     published_at: null,
   };

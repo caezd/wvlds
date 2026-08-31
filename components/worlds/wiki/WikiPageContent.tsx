@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
-import { Eye, History, Loader2, Lock, PanelLeft, PanelRight, Pencil } from "lucide-react";
+import { Eye, History, ImagePlus, Loader2, Lock, PanelLeft, PanelRight, Pencil, Trash2 } from "lucide-react";
 import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
 import { LucideIconPicker, VALID_LUCIDE_ICONS } from "@/components/ui/LucideIconPicker";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,8 @@ import type { createClient } from "@/lib/supabase/client";
 import { resolveWikiLinks } from "@/lib/wikiLinks";
 import { extractHeadings } from "@/lib/wikiToc";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { toWebP } from "@/lib/imageUtils";
+import { nomDeFichierUnique } from "@/lib/storagePaths";
 import { MEDIA, useMediaQuery } from "@/hooks/useMediaQuery";
 import { useWikiAnnotations } from "@/hooks/useWikiAnnotations";
 import { useWikiPageNotes } from "@/hooks/useWikiPageNotes";
@@ -127,6 +129,9 @@ export function WikiPageContent({
   const [publishing, setPublishing] = React.useState(false);
   const [lastAutosavedAt, setLastAutosavedAt] = React.useState<Date | null>(null);
   const [historyOpen, setHistoryOpen] = React.useState(false);
+  const [bannerUploading, setBannerUploading] = React.useState(false);
+  const champBanniere = React.useRef<HTMLInputElement>(null);
+  const [description, setDescription] = React.useState(page.description ?? "");
 
   // Titre et icône, modifiables dans le corps plutôt que dans une ligne
   // d'arbre de deux cents pixels.
@@ -144,7 +149,7 @@ export function WikiPageContent({
     // `px-3` : le même retrait que celui du champ markdown, dont les deux
     // couches portent un `p-3`. Le titre tombe ainsi exactement sur la
     // première colonne du texte qu'il coiffe.
-    <div className="flex min-w-0 flex-1 flex-col items-start gap-1 px-3">
+    <div className="flex min-w-0 flex-1 items-center gap-2 px-3">
       <LucideIconPicker
         value={renameIcon}
         onChange={valeur => { setRenameIcon(valeur); onRename(renameTitle.trim() || page.title, valeur); }}
@@ -419,6 +424,44 @@ export function WikiPageContent({
     onExitEditMode();
   }
 
+  /** Écrit une colonne de la page, et tient l'état local à jour. */
+  async function enregistrerChamp(patch: Partial<WikiPage>) {
+    const { error } = await supabase.from("world_wiki_pages").update(patch).eq("id", page.id);
+    if (error) { toast.error(t("saveError"), { description: error.message }); return; }
+    onPageUpdated({ id: page.id, ...patch });
+  }
+
+  /**
+   * Téléverse la bannière dans le stockage du monde.
+   *
+   * Convertie en WebP comme les autres images du monde : une photo d'appareil
+   * pèse plusieurs mégaoctets, et cette image s'affiche à chaque ouverture de
+   * la page.
+   */
+  async function choisirBanniere(fichier: File) {
+    setBannerUploading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { toast.error(tCommon("uploadImageError")); return; }
+
+      const converti = await toWebP(fichier);
+      const chemin = `user-${user.id}/world-${worldId}/wiki-banner-${nomDeFichierUnique("webp")}`;
+      const { error } = await supabase.storage
+        .from("worlds")
+        .upload(chemin, converti, { contentType: "image/webp" });
+      if (error) { toast.error(error.message); return; }
+
+      const { data } = supabase.storage.from("worlds").getPublicUrl(chemin);
+      await enregistrerChamp({ banner_url: data.publicUrl });
+    } catch (err) {
+      // Pas `err.message` : texte brut de PostgreSQL, il nomme table et policy.
+      console.error("[WikiPageContent]", err);
+      toast.error(tCommon("uploadImageError"));
+    } finally {
+      setBannerUploading(false);
+    }
+  }
+
   async function publish() {
     if (autosaveTimeout.current) { clearTimeout(autosaveTimeout.current); autosaveTimeout.current = null; }
     dirtyRef.current = false;
@@ -575,11 +618,85 @@ export function WikiPageContent({
           // le markdown s'étirait sur toute la fenêtre, en lignes trop longues
           // pour l'œil, et changeait de largeur en passant à l'aperçu.
           <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-3 overflow-hidden p-6">
+            {/* La bannière d'abord : c'est elle qui ouvre la page. */}
+            <div className="shrink-0 px-3">
+              <input
+                ref={champBanniere}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={e => {
+                  const fichier = e.target.files?.[0];
+                  // Le champ est vidé pour que rechoisir le même fichier
+                  // déclenche bien un nouvel événement.
+                  e.target.value = "";
+                  if (fichier) void choisirBanniere(fichier);
+                }}
+              />
+              {page.banner_url ? (
+                <div className="group/banniere relative overflow-hidden rounded-2xl">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={page.banner_url} alt="" className="h-40 w-full object-cover sm:h-56" />
+                  <div className="absolute right-2 top-2 flex gap-1">
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => champBanniere.current?.click()}
+                      disabled={bannerUploading}
+                    >
+                      {bannerUploading
+                        ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        : <ImagePlus className="h-3.5 w-3.5" />}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      aria-label={t("removeBanner")}
+                      title={t("removeBanner")}
+                      onClick={() => void enregistrerChamp({ banner_url: null })}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => champBanniere.current?.click()}
+                  disabled={bannerUploading}
+                  className="-ml-2 text-muted-foreground"
+                >
+                  {bannerUploading
+                    ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+                    : <ImagePlus className="mr-1 h-3.5 w-3.5" />}
+                  {t("addBanner")}
+                </Button>
+              )}
+            </div>
+
             <div className="flex items-start gap-3">
               {champTitre}
               {draftBadge}
               {restrictedBadge}
             </div>
+
+            {/* Le chapeau, sous le titre comme il le sera en lecture. */}
+            <textarea
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              onBlur={() => {
+                const propre = description.trim();
+                if (propre !== (page.description ?? "")) {
+                  void enregistrerChamp({ description: propre || null });
+                }
+              }}
+              maxLength={DB_TEXT_LIMITS["world_wiki_pages.description"]}
+              placeholder={t("descriptionPlaceholder")}
+              aria-label={t("descriptionLabel")}
+              rows={2}
+              className="w-full shrink-0 resize-none bg-transparent px-3 text-sm text-muted-foreground outline-none"
+            />
 
             {loadingDraft ? (
               <div className="flex flex-1 items-center justify-center">
@@ -673,24 +790,44 @@ export function WikiPageContent({
             </div>
         ) : (
           <div className="min-w-0 flex-1 overflow-y-auto p-6">
-            {/* `justify-center` : la colonne de texte est plafonnée à
-                `max-w-2xl`, plus étroite que cette rangée. Sans lui, le
-                surplus restait tout entier à droite et le texte se collait au
-                bord gauche — `mx-auto` centrait la rangée, pas son contenu. */}
-            <div className="mx-auto flex max-w-4xl justify-center gap-8">
-              <div className="min-w-0 max-w-2xl flex-1">
-                {/* `pr-11` comme le corps de l'article : la marge des commandes
-                de commentaire, pour que les deux bords droits coïncident. */}
-            <div className="mb-6 flex items-start justify-between gap-4 pr-11">
-                  <h1 className="flex flex-1 items-center gap-2 text-2xl font-semibold">
-                    {pageIcon}
-                    {page.title}
-                  </h1>
-                  <div className="flex shrink-0 items-center gap-2">
-                    {draftBadge}
-                    {restrictedBadge}
-                  </div>
+            <div className="mx-auto w-full max-w-4xl">
+              {/* La bannière traverse toute la rangée, sommaire compris : elle
+                  ouvre la page, elle n'appartient pas à la colonne de texte. */}
+              {page.banner_url && (
+                <div className="mb-6 overflow-hidden rounded-2xl">
+                  {/* `<img>` et non `next/image` : l'URL vient du stockage du
+                      monde, dont l'hôte n'est pas déclaré à l'optimiseur. */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={page.banner_url}
+                    alt=""
+                    className="h-40 w-full object-cover sm:h-56"
+                  />
                 </div>
+              )}
+
+              {/* `justify-center` : la colonne de texte est plafonnée à
+                  `max-w-2xl`, plus étroite que cette rangée. Sans lui, le
+                  surplus restait tout entier à droite et le texte se collait au
+                  bord gauche — `mx-auto` centrait la rangée, pas son contenu. */}
+              <div className="flex justify-center gap-8">
+                <div className="min-w-0 max-w-2xl flex-1">
+                  {/* `pr-11` comme le corps de l'article : la marge des
+                      commandes de commentaire, pour que les deux bords droits
+                      coïncident. */}
+                  <div className="mb-6 flex items-start justify-between gap-4 pr-11">
+                    <div className="flex min-w-0 flex-1 flex-col items-start gap-2">
+                      {pageIcon}
+                      <h1 className="text-2xl font-semibold">{page.title}</h1>
+                      {page.description && (
+                        <p className="text-sm text-muted-foreground">{page.description}</p>
+                      )}
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      {draftBadge}
+                      {restrictedBadge}
+                    </div>
+                  </div>
                 {page.content?.trim() ? (
                   <WikiAnnotationLayer
                     contentKey={contentKey}
@@ -716,7 +853,8 @@ export function WikiPageContent({
                   </p>
                 )}
               </div>
-              <WikiTableOfContents headings={headings} />
+                <WikiTableOfContents headings={headings} />
+              </div>
             </div>
           </div>
         )}

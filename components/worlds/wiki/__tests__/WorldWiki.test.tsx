@@ -267,6 +267,8 @@ describe("WorldWiki — création depuis un modèle", () => {
       sort_index: 0,
       icon: "user-round",
       is_restricted: false,
+      banner_url: null,
+      description: null,
       draft_updated_at: "2026-01-01T00:00:00.000Z",
       published_at: null,
     };
@@ -478,6 +480,8 @@ describe("firstPageOf", () => {
       sort_index: 0,
       icon: null,
       is_restricted: false,
+      banner_url: null,
+      description: null,
       draft_updated_at: null,
       published_at: null,
       ...over,

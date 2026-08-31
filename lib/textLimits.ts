@@ -60,6 +60,8 @@ export const DB_TEXT_LIMITS = {
   "world_wiki_page_versions.title": 200,
   "world_wiki_pages.content": 200_000,
   "world_wiki_pages.title": 200,
+  // Un chapeau, pas un second article — voir migration 143.
+  "world_wiki_pages.description": 255,
   "worlds.announcement_html": 20_000,
   "worlds.description": 5_000,
   "worlds.name": 200,

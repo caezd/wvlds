@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Wiki",
+    text: "Une page de wiki peut désormais s’ouvrir sur une bannière et un chapeau. L’image traverse toute la largeur de l’article, sommaire compris ; l’icône de la page, son titre et la description viennent en dessous. La description est bornée à 255 caractères : c’est une phrase de présentation, pas un second article."
+  },
+  {
+    date: "2026-08",
+    tag: "Wiki",
     text: "L’éditeur d’article se remet d’aplomb pour les écrans étroits. L’aperçu remplace maintenant la saisie au lieu de la flanquer — deux colonnes côte à côte n’en faisaient aucune de lisible sur un téléphone. Les commandes d’aperçu et d’historique descendent à gauche du pied, laissant « Annuler » et « Publier » seuls à droite.\nLe titre perd son filet et son décalage : il commence exactement où commence le texte, l’icône de la page passant au-dessus, dans un cadre qui dit qu’on peut la changer."
   },
   {

@@ -83,6 +83,10 @@ export type WikiPage = {
   world_id: string;
   parent_id: string | null;
   title: string;
+  /** Image d'ouverture, pleine largeur au-dessus du titre (migration 143). */
+  banner_url: string | null;
+  /** Chapeau de la page, borné à 255 caractères (migration 143). */
+  description: string | null;
   slug: string;
   content: string | null;
   is_folder: boolean;
@@ -97,7 +101,8 @@ export type WikiPage = {
  *  ce champ n'est récupéré qu'à la demande (entrée en édition d'une page),
  *  pour ne jamais transférer de texte de brouillon à qui ne devrait pas l'avoir. */
 const WIKI_PAGE_COLUMNS =
-  "id, world_id, parent_id, title, slug, content, is_folder, sort_index, icon, is_restricted, draft_updated_at, published_at";
+  "id, world_id, parent_id, title, slug, content, is_folder, sort_index, icon, is_restricted, " +
+  "banner_url, description, draft_updated_at, published_at";
 
 /** Normalise pour une recherche insensible à la casse et aux diacritiques (sans slugifier les espaces). */
 function normalizeForSearch(input: string): string {
