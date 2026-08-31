@@ -1149,6 +1149,8 @@
       "replyPlaceholder": "Su respuesta…",
       "reply": "Responder",
       "threadActions": "Acciones del hilo",
+      "deleteTitle": "¿Eliminar esta anotación?",
+      "deleteDesc": "La anotación y sus respuestas se eliminarán definitivamente. Esta acción es irreversible.",
       "resolve": "Marcar como resuelto",
       "unresolve": "Reabrir",
       "resolved": "Resuelto",

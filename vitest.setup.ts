@@ -56,16 +56,30 @@ vi.mock("next-intl", async () => {
     const ns = (namespace ? getNested(frMsgs, namespace) : frMsgs) ?? {};
     const msgs = ns as Record<string, unknown>;
 
-    function t(key: string, values?: Record<string, unknown>): string {
+    // Une clé absente LÈVE, comme le vrai next-intl (MISSING_MESSAGE).
+    //
+    // Ce mock rendait auparavant la clé elle-même, en silence. Un composant
+    // qui demandait une traduction jamais écrite passait donc tous ses tests,
+    // et n'échouait qu'à l'écran — c'est arrivé sur le panneau d'annotations
+    // du wiki, dont deux libellés de dialogue manquaient aux trois locales
+    // sans qu'aucun des 2 000 tests ne bronche. Rendre l'absence bruyante ici
+    // la fait remonter au premier test qui rend le composant.
+    function exiger(key: string): string {
       const raw = getNested(msgs, key);
-      if (typeof raw !== "string") return key;
+      if (typeof raw !== "string") {
+        throw new Error(
+          `MISSING_MESSAGE: ${namespace ? `${namespace}.${key}` : key} absente de messages/fr.json`,
+        );
+      }
+      return raw;
+    }
+
+    function t(key: string, values?: Record<string, unknown>): string {
+      const raw = exiger(key);
       return values ? interpolate(raw, values) : raw;
     }
-    t.rich = (key: string, values?: Record<string, unknown>) => {
-      const raw = getNested(msgs, key);
-      if (typeof raw !== "string") return key;
-      return renderRich(raw, values ?? {});
-    };
+    t.rich = (key: string, values?: Record<string, unknown>) =>
+      renderRich(exiger(key), values ?? {});
     t.raw = (key: string) => getNested(msgs, key);
     t.has = (key: string) => getNested(msgs, key) !== undefined;
     t.markup = (key: string, values?: Record<string, unknown>) => t(key, values);

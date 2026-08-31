@@ -1149,6 +1149,8 @@
       "replyPlaceholder": "Your reply…",
       "reply": "Reply",
       "threadActions": "Thread actions",
+      "deleteTitle": "Delete this annotation?",
+      "deleteDesc": "The annotation and its replies will be permanently deleted. This action cannot be undone.",
       "resolve": "Mark as resolved",
       "unresolve": "Reopen",
       "resolved": "Resolved",
