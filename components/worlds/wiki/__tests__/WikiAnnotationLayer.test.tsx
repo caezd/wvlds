@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { WikiAnnotationLayer } from "@/components/worlds/wiki/WikiAnnotationLayer";
@@ -314,31 +314,35 @@ function auDoigt(oui: boolean) {
   })) as unknown as typeof window.matchMedia;
 }
 
-describe("WikiAnnotationLayer — sans survol", () => {
+describe("WikiAnnotationLayer — commandes de marge", () => {
   afterEach(() => auDoigt(false));
 
-  it("pose un bouton par bloc encore sans fil", async () => {
-    // Le survol n'existe pas au doigt : un bouton qui ne s'y montre qu'au
-    // survol est introuvable.
-    auDoigt(true);
-    renderLayer({ threads: [surBloc({ id: "a1", anchor_quote: DEUXIEME, anchor_start: 1 })] });
+  it("ne montre le bouton d'un bloc qu'à son survol", async () => {
+    // L'effacement passe par l'opacité et non par le montage : retirer le
+    // bouton du flux déplacerait la pastille voisine au gré du pointeur.
+    // jsdom ne calculant aucun style, la classe EST ce qui se vérifie ici.
+    auDoigt(false);
+    const { container } = renderLayer();
+    const boutons = await screen.findAllByRole("button", { name: "Commenter" });
+    expect(boutons.every(b => b.className.includes("opacity-0"))).toBe(true);
 
-    // Trois blocs, dont un déjà commenté : il porte son point, qui ouvre la
-    // discussion — ce serait deux commandes au même endroit.
-    await waitFor(() =>
-      expect(screen.getAllByRole("button", { name: "Commenter" })).toHaveLength(2),
-    );
+    fireEvent.mouseOver(paragraphe(container, 1));
+
+    expect(boutons[1].className).toContain("opacity-100");
+    expect(boutons[0].className).toContain("opacity-0");
   });
 
-  it("n'en pose aucun à qui ne peut pas commenter", async () => {
+  it("les montre tous là où le survol n'existe pas", async () => {
+    // Au doigt, un bouton qui attend un survol est introuvable.
     auDoigt(true);
-    renderLayer({ canComment: false });
+    renderLayer();
 
-    await waitFor(() => expect(screen.queryAllByRole("button", { name: "Commenter" })).toHaveLength(0));
+    const boutons = await screen.findAllByRole("button", { name: "Commenter" });
+    expect(boutons).toHaveLength(3);
+    expect(boutons.every(b => b.className.includes("opacity-100"))).toBe(true);
   });
 
-  it("ancre sur le bloc de son bouton", async () => {
-    auDoigt(true);
+  it("ancre sur le bloc de sa commande", async () => {
     const onDraft = vi.fn();
     renderLayer({ onDraft });
 
@@ -348,84 +352,38 @@ describe("WikiAnnotationLayer — sans survol", () => {
     expect(onDraft.mock.calls[0][0]).toMatchObject({ quote: DEUXIEME, index: 1 });
   });
 
-  it("ne double pas le bouton quand une tape émet un survol de compatibilité", async () => {
-    auDoigt(true);
-    const { container } = renderLayer();
-    await waitFor(() =>
-      expect(screen.getAllByRole("button", { name: "Commenter" })).toHaveLength(3),
-    );
-
-    fireEvent.mouseOver(paragraphe(container, 1));
-
-    expect(screen.getAllByRole("button", { name: "Commenter" })).toHaveLength(3);
-  });
-});
-
-describe("WikiAnnotationLayer — commenter un bloc", () => {
-  it("propose le bouton en regard du bloc survolé", async () => {
-    const { container } = renderLayer();
-    fireEvent.mouseOver(paragraphe(container, 1));
-
-    expect(await screen.findByRole("button", { name: "Commenter" })).toBeTruthy();
-  });
-
-  it("ancre sur le bloc survolé, voisins compris", async () => {
-    const onDraft = vi.fn();
-    const { container } = renderLayer({ onDraft });
-    fireEvent.mouseOver(paragraphe(container, 1));
-
-    await userEvent.click(await screen.findByRole("button", { name: "Commenter" }));
-
-    expect(onDraft).toHaveBeenCalledTimes(1);
-    expect(onDraft.mock.calls[0][0]).toEqual({
-      type: "p",
-      quote: DEUXIEME,
-      prefix: PREMIER,
-      suffix: TROISIEME,
-      index: 1,
+  it("montre le compte des fils à droite du bouton", async () => {
+    renderLayer({
+      threads: [
+        surBloc({ id: "a1", anchor_quote: DEUXIEME, anchor_start: 1 }),
+        surBloc({ id: "a2", anchor_quote: DEUXIEME, anchor_start: 1 }),
+      ],
     });
+
+    const pastille = await screen.findByRole("button", { name: "Commentaires" });
+    expect(pastille.textContent).toBe("2");
   });
 
-  it("reste atteignable quand le pointeur quitte le texte pour y aller", async () => {
-    // Le bouton était posé hors de la boîte de l'enveloppe : aller le cliquer
-    // en faisait sortir le pointeur, ce qui le démontait avant le clic.
-    const onDraft = vi.fn();
-    const { container } = renderLayer({ onDraft });
-    fireEvent.mouseOver(paragraphe(container, 1));
+  it("ouvre le fil au clic sur la pastille", async () => {
+    const onActivate = vi.fn();
+    renderLayer({
+      threads: [surBloc({ id: "a1", anchor_quote: DEUXIEME, anchor_start: 1 })],
+      onActivate,
+    });
 
-    const bouton = await screen.findByRole("button", { name: "Commenter" });
-    // Le texte et le bouton sont deux enfants distincts de l'enveloppe :
-    // passer de l'un à l'autre quitte le premier, jamais la seconde. C'est
-    // `relatedTarget` qui porte cette différence — sans lui, l'événement dit
-    // « sorti vers nulle part », ce qui est un tout autre geste.
-    fireEvent.mouseOut(screen.getByTestId("prose"), { relatedTarget: bouton });
-    expect(screen.getByRole("button", { name: "Commenter" })).toBe(bouton);
+    await userEvent.click(await screen.findByRole("button", { name: "Commentaires" }));
 
-    await userEvent.click(bouton);
-    expect(onDraft).toHaveBeenCalledTimes(1);
+    expect(onActivate).toHaveBeenCalledWith("a1");
   });
 
-  it("disparaît quand le pointeur quitte l'article", () => {
-    const { container } = renderLayer();
-    fireEvent.mouseOver(paragraphe(container, 1));
-    expect(screen.getByRole("button", { name: "Commenter" })).toBeTruthy();
+  it("laisse sa pastille à qui ne peut pas commenter, mais pas le bouton", async () => {
+    // Lire une discussion ne demande pas le droit d'en ouvrir une.
+    renderLayer({
+      canComment: false,
+      threads: [surBloc({ id: "a1", anchor_quote: DEUXIEME, anchor_start: 1 })],
+    });
 
-    fireEvent.mouseLeave(container.firstChild as HTMLElement);
-    expect(screen.queryByRole("button", { name: "Commenter" })).toBeNull();
-  });
-
-  it("ne propose rien hors d'un bloc", () => {
-    const { container } = renderLayer();
-    fireEvent.mouseOver(screen.getByTestId("prose"));
-
-    expect(screen.queryByRole("button", { name: "Commenter" })).toBeNull();
-    expect(container).toBeTruthy();
-  });
-
-  it("ne propose rien à qui ne peut pas commenter", () => {
-    const { container } = renderLayer({ canComment: false });
-    fireEvent.mouseOver(paragraphe(container, 1));
-
-    expect(screen.queryByRole("button", { name: "Commenter" })).toBeNull();
+    expect(await screen.findByRole("button", { name: "Commentaires" })).toBeTruthy();
+    expect(screen.queryAllByRole("button", { name: "Commenter" })).toHaveLength(0);
   });
 });

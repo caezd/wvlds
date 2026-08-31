@@ -84,23 +84,31 @@ export function WikiAnnotationLayer({
   const wrapperRef = React.useRef<HTMLDivElement>(null);
   const contentRef = React.useRef<HTMLDivElement>(null);
 
-  /** Bloc survolé : son index, et où poser le bouton en regard. */
-  const [survol, setSurvol] = React.useState<{ index: number; top: number } | null>(null);
+  /**
+   * Commandes de marge, une par bloc : commenter, et le compte de ses fils.
+   *
+   * Permanentes, et non dévoilées au survol — ce geste n'existe pas au doigt,
+   * et ce qui ne s'y montre pas y est introuvable. Une règle unique pour tous
+   * les pointeurs vaut mieux que deux comportements à tenir.
+   */
+  const [commandes, setCommandes] = React.useState<
+    { index: number; top: number; ids: string[]; resolus: boolean }[]
+  >([]);
+  const signatureCommandes = React.useRef<string | null>(null);
 
   /**
-   * Au doigt, il n'y a pas de survol : le bouton de commentaire de chaque bloc
-   * est donc posé en permanence, dans la marge, plutôt que d'attendre un geste
-   * qui n'arrivera jamais.
+   * Bloc sous le pointeur, dont le bouton se montre.
+   *
+   * Au doigt il n'y a pas de survol : les boutons y sont tous visibles, faute
+   * de quoi ils seraient introuvables.
    */
   const sansSurvol = useMediaQuery(MEDIA.pointeurGrossier);
-  const [boutonsFixes, setBoutonsFixes] = React.useState<{ index: number; top: number }[]>([]);
-  const signatureBoutons = React.useRef<string | null>(null);
+  const [survol, setSurvol] = React.useState<number | null>(null);
 
   // Les positions sont mesurées : un changement de largeur les déplace sans
   // qu'aucun rendu ne le signale.
   const [, setMesure] = React.useState(0);
   React.useEffect(() => {
-    if (!sansSurvol) return;
     const relever = () => setMesure(n => n + 1);
     window.addEventListener("resize", relever);
     window.addEventListener("orientationchange", relever);
@@ -108,7 +116,7 @@ export function WikiAnnotationLayer({
       window.removeEventListener("resize", relever);
       window.removeEventListener("orientationchange", relever);
     };
-  }, [sansSurvol]);
+  }, []);
 
   // Gardée dans une ref : la signaler ne doit pas faire partie des
   // dépendances de l'effet de marquage, qui se relancerait en boucle.
@@ -219,24 +227,27 @@ export function WikiAnnotationLayer({
       onDetachedChangeRef.current?.(detached);
     }
 
-    // Un bouton par bloc encore sans fil : celui qui en porte un a déjà son
-    // point, au même endroit, qui ouvre la discussion.
+    // Une commande par bloc, alignée sur sa première ligne. Un lecteur sans
+    // droit d'écriture ne voit que celles qui portent une discussion.
     const cadre = wrapperRef.current;
-    const fixes = sansSurvol && canComment && cadre
+    const suivantes = cadre
       ? blocs
-        .map((b, index) => ({ b, index }))
-        .filter(({ b }) => !b.el.dataset.annotationIds)
-        .map(({ b, index }) => ({
+        .map((b, index) => ({
           index,
           top: b.el.getBoundingClientRect().top - cadre.getBoundingClientRect().top,
+          ids: (b.el.dataset.annotationIds ?? "").split(" ").filter(Boolean),
+          resolus: b.el.dataset.annotationResolved === "true",
         }))
+        .filter(c => canComment || c.ids.length > 0)
       : [];
 
     // Même précaution : sans comparaison, chaque mesure relancerait un rendu.
-    const empreinte = fixes.map(f => `${f.index}:${Math.round(f.top)}`).join("|");
-    if (empreinte !== signatureBoutons.current) {
-      signatureBoutons.current = empreinte;
-      setBoutonsFixes(fixes);
+    const empreinte = suivantes
+      .map(c => `${c.index}:${Math.round(c.top)}:${c.ids.join(",")}:${c.resolus}`)
+      .join("|");
+    if (empreinte !== signatureCommandes.current) {
+      signatureCommandes.current = empreinte;
+      setCommandes(suivantes);
     }
   });
 
@@ -251,34 +262,11 @@ export function WikiAnnotationLayer({
     }
   }, [active]);
 
-  /** Suit le bloc sous le pointeur pour lui présenter le bouton. */
-  function surSurvol(e: React.MouseEvent<HTMLDivElement>) {
-    // Une tape émet un `mouseover` de compatibilité : le suivre poserait un
-    // second bouton par-dessus celui, permanent, de ce bloc.
-    if (!canComment || sansSurvol) return;
-    const root = contentRef.current;
-    const wrapper = wrapperRef.current;
-    if (!root || !wrapper) return;
-
-    const blocs = collectBlocks(root);
-    const index = blockIndexOfNode(blocs, e.target as Node);
-    if (index === -1) { setSurvol(null); return; }
-
-    // Sans mise en page mesurable — un environnement de test — le bouton se
-    // pose en haut du texte plutôt que de ne pas se poser du tout.
-    const el = blocs[index].el;
-    const top = typeof el.getBoundingClientRect === "function"
-      ? el.getBoundingClientRect().top - wrapper.getBoundingClientRect().top
-      : 0;
-    setSurvol({ index, top });
-  }
-
   function commenterLeBloc(index: number) {
     const root = contentRef.current;
     if (!root) return;
     const anchor = buildBlockAnchor(collectBlocks(root), index);
     if (anchor) onDraft(anchor);
-    setSurvol(null);
   }
 
   function surClic(e: React.MouseEvent<HTMLDivElement>) {
@@ -289,52 +277,73 @@ export function WikiAnnotationLayer({
   }
 
   return (
+    // `pr-11` réserve la marge droite : les commandes y vivent, et restent
+    // ainsi DANS la boîte de l'enveloppe. Posées en dehors, aller les cliquer
+    // en faisait sortir le pointeur, ce qui déclenchait le `mouseleave`
+    // ci-dessous et les démontait avant que le clic n'aboutisse.
     <div
       ref={wrapperRef}
-      className={cn("relative", className)}
+      className={cn("relative pr-11", className)}
       onMouseLeave={() => setSurvol(null)}
     >
       <div
         ref={contentRef}
         key={contentKey}
-        onMouseOver={surSurvol}
+        onMouseOver={e => {
+          if (sansSurvol) return;
+          const blocs = collectBlocks(e.currentTarget);
+          const index = blockIndexOfNode(blocs, e.target as Node);
+          setSurvol(index === -1 ? null : index);
+        }}
         onClick={surClic}
       >
         {children}
       </div>
 
-      {survol && (
-        // Au bout de la ligne, à droite, et surtout DANS la boîte de
-        // l'enveloppe : posé en dehors, aller le cliquer faisait sortir le
-        // pointeur, déclenchait le `mouseleave` ci-dessus, et le bouton
-        // disparaissait avant que le clic n'aboutisse.
-        <button
-          type="button"
-          onClick={() => commenterLeBloc(survol.index)}
-          aria-label={t("addComment")}
-          title={t("addComment")}
-          className="absolute right-0 flex h-6 w-6 items-center justify-center rounded-md bg-background text-muted-foreground shadow-sm ring-1 ring-border-soft hover:bg-secondary hover:text-foreground"
-          style={{ top: survol.top }}
+      {/* À droite du bloc, le bouton puis le compte. Le bouton garde sa place
+          même effacé : sinon la pastille se déplacerait au gré du survol. */}
+      {commandes.map(commande => (
+        <div
+          key={commande.index}
+          className="absolute right-0 flex items-center gap-0.5"
+          style={{ top: commande.top }}
         >
-          <MessageSquarePlus className="h-3.5 w-3.5" />
-        </button>
-      )}
-
-      {/* Au doigt : un bouton par bloc, dans la marge, du côté où le point
-          d'un bloc commenté se pose déjà — les deux ne coexistent jamais sur
-          un même bloc. `right-full` les met hors de la colonne de texte, dans
-          le remplissage de l'article, où ils ne recouvrent rien. */}
-      {boutonsFixes.map(bouton => (
-        <button
-          key={bouton.index}
-          type="button"
-          onClick={() => commenterLeBloc(bouton.index)}
-          aria-label={t("addComment")}
-          className="absolute right-full mr-0.5 flex h-5 w-5 items-center justify-center rounded-md text-muted-foreground/60 active:bg-secondary active:text-foreground"
-          style={{ top: bouton.top }}
-        >
-          <MessageSquarePlus className="h-3.5 w-3.5" />
-        </button>
+          {canComment && (
+            <button
+              type="button"
+              onClick={() => commenterLeBloc(commande.index)}
+              aria-label={t("addComment")}
+              title={t("addComment")}
+              className={cn(
+                "flex h-5 w-5 shrink-0 items-center justify-center rounded-md",
+                "text-muted-foreground transition-opacity hover:bg-secondary hover:text-foreground",
+                "focus-visible:opacity-100",
+                sansSurvol || survol === commande.index ? "opacity-100" : "opacity-0",
+              )}
+            >
+              <MessageSquarePlus className="h-3.5 w-3.5" />
+            </button>
+          )}
+          {commande.ids.length > 0 && (
+            <button
+              type="button"
+              onClick={() => onActivate(commande.ids[0])}
+              aria-label={t("title")}
+              title={t("title")}
+              className={cn(
+                "flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full px-1 text-[10px] font-medium",
+                // Un fil résolu garde sa pastille — savoir qu'une discussion a
+                // eu lieu ici a de la valeur — mais cesse d'appeler l'œil.
+                commande.resolus
+                  ? "bg-secondary text-muted-foreground"
+                  : "bg-accent text-accent-foreground",
+                active && commande.ids.includes(active.id) && "ring-2 ring-accent/40",
+              )}
+            >
+              {commande.ids.length}
+            </button>
+          )}
+        </div>
       ))}
     </div>
   );

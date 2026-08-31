@@ -607,9 +607,9 @@ describe("WikiPageContent — commentaires ancrés", () => {
     author: { id: "u1", username: "caedrik", avatar_url: null },
   };
 
-  /** Survole le paragraphe d'index donné, ce qui présente son bouton. */
-  function survolerParagraphe(container: HTMLElement, i: number) {
-    fireEvent.mouseOver(container.querySelectorAll("p")[i]);
+  /** La commande « Commenter » du bloc d'index donné, dans la marge. */
+  async function boutonDuBloc(i: number) {
+    return (await screen.findAllByRole("button", { name: "Commenter" }))[i];
   }
 
   it("lit les annotations avec la page, sans attendre l'ouverture du panneau", async () => {
@@ -677,13 +677,12 @@ describe("WikiPageContent — commentaires ancrés", () => {
     try {
       const mock = createSupabaseMock({ results: [{ data: [], error: null }] });
       const user = userEvent.setup();
-      const { container } = renderPage(mock);
+      renderPage(mock);
 
       await screen.findByTestId("markdown");
       expect(screen.queryByRole("complementary")).toBeNull();
 
-      survolerParagraphe(container, 1);
-      await user.click(await screen.findByRole("button", { name: "Commenter" }));
+      await user.click(await boutonDuBloc(1));
 
       expect(screen.getByRole("complementary", { name: "Commentaires" })).toBeTruthy();
     } finally {
@@ -691,15 +690,14 @@ describe("WikiPageContent — commentaires ancrés", () => {
     }
   });
 
-  it("ouvre la saisie sur le bloc survolé, texte à l'appui", async () => {
+  it("ouvre la saisie sur le bloc de sa commande, texte à l'appui", async () => {
     ecranLarge();
     const mock = createSupabaseMock({ results: [{ data: [], error: null }] });
     const user = userEvent.setup();
-    const { container } = renderPage(mock);
+    renderPage(mock);
 
     await screen.findByTestId("markdown");
-    survolerParagraphe(container, 1);
-    await user.click(await screen.findByRole("button", { name: "Commenter" }));
+    await user.click(await boutonDuBloc(1));
 
     // Le panneau s'ouvre de lui-même sur la saisie, et rappelle le bloc visé.
     const panel = screen.getByRole("complementary", { name: "Commentaires" });

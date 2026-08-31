@@ -658,7 +658,9 @@ export function WikiPageContent({
           <div className="min-w-0 flex-1 overflow-y-auto p-6">
             <div className="mx-auto flex max-w-4xl gap-8">
               <div className="min-w-0 max-w-2xl flex-1">
-                <div className="mb-6 flex items-start justify-between gap-4">
+                {/* `pr-11` comme le corps de l'article : la marge des commandes
+                de commentaire, pour que les deux bords droits coïncident. */}
+            <div className="mb-6 flex items-start justify-between gap-4 pr-11">
                   <h1 className="flex flex-1 items-center gap-2 text-2xl font-semibold">
                     {pageIcon}
                     {page.title}

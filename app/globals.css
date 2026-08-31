@@ -494,43 +494,12 @@
    dire ; une pastille en fin de contenu, elle, se déplaçait avec le texte. */
 [data-annotation-ids],
 [data-annotation-draft] {
-    position: relative;
     cursor: pointer;
 }
 
-/* Un point dans la marge, a gauche du bloc.
-   Positionne absolument et non pose en fin de contenu : sa place ne depend
-   plus du retour a la ligne, qui se deplace a chaque changement de largeur —
-   ouverture de la colonne, apparition du sommaire.
-   Contenu genere plutot qu'un noeud insere : la couche ne pose que des
-   attributs sur le rendu de React, et le decoupage en blocs — qui lit le
-   texte des elements — n'a ainsi rien de plus a ignorer. Un clic dessus vise
-   le bloc, qui ouvre deja le fil correspondant. */
-[data-annotation-ids]::before,
-[data-annotation-draft]::before {
-    content: "";
-    position: absolute;
-    right: 100%;
-    margin-right: 0.5rem;
-    top: 0.5em;
-    width: 0.45rem;
-    height: 0.45rem;
-    border-radius: 999px;
-    background-color: var(--color-accent);
-    transition: background-color 120ms ease, box-shadow 120ms ease;
-}
-
-/* Bloc en attente de son premier message : le point s'annonce sans s'affirmer. */
-[data-annotation-draft]::before {
-    background-color: color-mix(in oklab, var(--color-accent) 45%, transparent);
-}
-
-/* Fil resolu : le point reste — savoir qu'une discussion a eu lieu ici a de la
-   valeur — mais cesse d'appeler l'oeil. */
-[data-annotation-resolved]::before {
-    background-color: var(--color-border);
-}
-
-[data-annotation-active]::before {
-    box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-accent) 25%, transparent);
+/* Le bloc en cours de redaction se distingue le temps de la saisie : sa
+   pastille de marge n'existe pas encore, rien d'autre ne le designerait. */
+[data-annotation-draft] {
+    background-color: color-mix(in oklab, var(--color-accent) 8%, transparent);
+    border-radius: 4px;
 }

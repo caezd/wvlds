@@ -9,12 +9,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Wiki",
-    text: "Sur téléphone et sur tablette, chaque bloc d’un article porte en permanence son bouton de commentaire, dans la marge. Il n’apparaissait qu’au survol — geste qui n’existe pas au doigt, et qui le rendait donc introuvable."
-  },
-  {
-    date: "2026-08",
-    tag: "Wiki",
-    text: "Un bloc commenté se signale par un point de couleur dans la marge, à gauche du texte. Un clic dessus ouvre le fil correspondant. Il remplace le fond et le filet qui couraient sur toute la largeur du bloc, puis une pastille de fin de ligne qui se déplaçait avec le texte à chaque changement de largeur."
+    text: "Chaque bloc d’un article porte ses commandes de commentaire dans la marge droite : un bouton pour en ouvrir un, et une pastille avec le nombre de discussions déjà là, qu’un clic déplie. Sur ordinateur le bouton n’apparaît qu’au survol du bloc ; au doigt il reste visible, faute d’un survol qui le révélerait."
   },
   {
     date: "2026-08",
