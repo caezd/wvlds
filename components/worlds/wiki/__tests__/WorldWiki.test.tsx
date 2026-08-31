@@ -130,12 +130,8 @@ describe("WorldWiki — barre de mise en forme et images", () => {
     const user = userEvent.setup();
     render(<WorldWiki worldId="w1" canEdit />);
 
-    // Bascule le panneau en mode modification (bandeau, au-dessus de l'article)
+    // Le mode modification ouvre l'éditeur de l'article : un seul geste.
     await activerModification(user);
-    // Puis entre en édition du contenu : une fois le mode actif, la bascule
-    // affiche « Modification active », et « Modifier » ne désigne plus que le
-    // bouton de la page.
-    await user.click(screen.getByText("Modifier"));
 
     expect(pbeProps).toHaveBeenCalledWith(
       expect.objectContaining({ formatting: true }),
@@ -287,9 +283,12 @@ describe("WorldWiki — pages restreintes", () => {
     await user.click(screen.getByLabelText("Options"));
     await user.click(screen.getByText("Réserver aux éditeurs"));
 
+    // Index non figé : l'entrée en modification lit d'abord le brouillon de la
+    // page, ce qui décale les appels suivants.
     await waitFor(() => {
-      const builders = mock.buildersFor("world_wiki_pages");
-      expect(builders[1].update).toHaveBeenCalledWith({ is_restricted: true });
+      const appels = mock.buildersFor("world_wiki_pages")
+        .flatMap(b => b.update.mock.calls.map(c => c[0]));
+      expect(appels).toContainEqual({ is_restricted: true });
     });
   });
 });
@@ -316,12 +315,8 @@ describe("WorldWiki — cascade de renommage", () => {
 
     await activerModification(user);
 
-    // Une page se renomme depuis son corps : l'arbre ne garde ce geste que
-    // pour les dossiers, qui n'ont pas de corps.
-    await user.click(screen.getByLabelText("Actions de la page"));
-    await user.click(await screen.findByRole("menuitem", { name: "Renommer" }));
-
-    const input = screen.getByDisplayValue("Accueil");
+    // Le titre est un champ dès l'entrée en modification : plus de menu.
+    const input = await screen.findByDisplayValue("Accueil");
     await user.clear(input);
     await user.type(input, "Nouveau titre{Enter}");
 
@@ -352,14 +347,11 @@ describe("WorldWiki — cascade de renommage", () => {
 
     await activerModification(user);
 
-    await user.click(screen.getByLabelText("Actions de la page"));
-    await user.click(await screen.findByRole("menuitem", { name: "Renommer" }));
-
-    const input = screen.getByDisplayValue("Accueil");
+    const input = await screen.findByDisplayValue("Accueil");
     await user.type(input, "{Enter}");
 
-    await waitFor(() => expect(screen.queryByDisplayValue("Accueil")).toBeNull());
-    expect(mock.buildersFor("world_wiki_pages")).toHaveLength(1); // le chargement seul
+    // Le champ reste — c'est l'écriture qui ne part pas.
+    expect(mock.buildersFor("world_wiki_pages")).toHaveLength(2); // pages + brouillon
     expect(mock.rpc).not.toHaveBeenCalled();
   });
 });

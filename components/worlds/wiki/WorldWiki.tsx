@@ -388,10 +388,6 @@ export function WorldWiki({
 
   const [searchQuery, setSearchQuery] = React.useState("");
 
-  // Id de la page qui vient d'être créée depuis un modèle — déclenche
-  // l'entrée automatique en édition une seule fois (voir WikiPageContent).
-  const [pendingAutoEditId, setPendingAutoEditId] = React.useState<string | null>(null);
-
   // ── Colonnes redimensionnables ────────────────────────────
   // L'arbre de navigation et la colonne latérale d'une page partagent le même
   // geste ; seule diffère la poignée, à droite de l'un et à gauche de l'autre.
@@ -550,7 +546,6 @@ export function WorldWiki({
       setExpandedFolders(prev => new Set([...prev, data.id]));
     } else {
       setSelectedId(data.id);
-      if (templateContent) setPendingAutoEditId(data.id);
     }
     setCreating(null);
   }
@@ -935,14 +930,9 @@ export function WorldWiki({
     if (!selectedPage || selectedPage.is_folder) {
       return (
         <div className="flex min-w-0 flex-1 flex-col">
-          {/* Le bandeau central existe même sans page : c'est le seul endroit
-              d'où l'on peut entrer en modification, donc créer la première. */}
-          <div className={WIKI_SUBHEADER}>
-            <div className="flex-1" />
-            {canEdit && (
-              <WikiEditModeToggle editMode={editMode} onToggle={() => setEditMode(v => !v)} />
-            )}
-          </div>
+          {/* Bandeau vide, mais présent : c'est lui qui aligne le trait avec
+              les deux autres colonnes quand aucune page n'est ouverte. */}
+          <div className={WIKI_SUBHEADER} />
           <div className="flex flex-1 items-center justify-center p-8 text-center">
             <p className="text-sm text-muted-foreground">
               {!pages?.length
@@ -963,8 +953,6 @@ export function WorldWiki({
         worldId={worldId}
         panelWidth={panelWidth}
         panelHandleProps={panelHandleProps}
-        editMode={editMode}
-        onToggleEditMode={() => setEditMode(v => !v)}
         pages={pages ?? []}
         ancestors={ancestorsOf(selectedPage)}
         canEdit={canEdit}
@@ -974,8 +962,6 @@ export function WorldWiki({
         onRename={(title, icon) => void renamePage(selectedPage, title, icon)}
         onNavigate={navigateToSlug}
         onExpandFolder={expandFolderChain}
-        autoEdit={selectedPage.id === pendingAutoEditId}
-        onAutoEditConsumed={() => setPendingAutoEditId(null)}
         lexiconTerms={lexiconTerms}
       />
     );
@@ -1033,6 +1019,9 @@ export function WorldWiki({
             </>
           }
           title={label || tNav("wiki")}
+          right={canEdit && (
+            <WikiEditModeToggle editMode={editMode} onToggle={() => setEditMode(v => !v)} />
+          )}
         />
 
         {/* ── Body ───────────────────────────────────────── */}

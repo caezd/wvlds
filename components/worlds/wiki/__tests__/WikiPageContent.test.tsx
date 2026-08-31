@@ -86,14 +86,11 @@ describe("WikiPageContent — brouillon et publication", () => {
     const mock = createSupabaseMock({
       results: [SANS_ANNOTATION, { data: { draft_content: "Texte en cours" }, error: null }],
     });
-    const user = userEvent.setup();
     render(
       <WikiPageContent
         worldId="w1"
         panelWidth={320}
         panelHandleProps={{}}
-        editMode={true}
-        onToggleEditMode={vi.fn()}
         onRename={vi.fn()}
         page={BASE_PAGE}
         pages={[BASE_PAGE]}
@@ -107,8 +104,7 @@ describe("WikiPageContent — brouillon et publication", () => {
       />,
     );
 
-    await user.click(screen.getByText("Modifier"));
-
+    // Le mode modification ouvre l'éditeur : plus de second bouton à cliquer.
     expect(await screen.findByTestId("editor")).toHaveValue("Texte en cours");
   });
 
@@ -122,8 +118,6 @@ describe("WikiPageContent — brouillon et publication", () => {
         worldId="w1"
         panelWidth={320}
         panelHandleProps={{}}
-        editMode={true}
-        onToggleEditMode={vi.fn()}
         onRename={vi.fn()}
         page={BASE_PAGE}
         pages={[BASE_PAGE]}
@@ -137,7 +131,6 @@ describe("WikiPageContent — brouillon et publication", () => {
       />,
     );
 
-    await user.click(screen.getByText("Modifier"));
     await user.type(await screen.findByTestId("editor"), "Bonjour");
 
     // Un seul appel .from() jusqu'ici : le select("draft_content") d'entrée
@@ -160,8 +153,6 @@ describe("WikiPageContent — brouillon et publication", () => {
         worldId="w1"
         panelWidth={320}
         panelHandleProps={{}}
-        editMode={true}
-        onToggleEditMode={vi.fn()}
         onRename={vi.fn()}
         page={BASE_PAGE}
         pages={[BASE_PAGE]}
@@ -175,7 +166,6 @@ describe("WikiPageContent — brouillon et publication", () => {
       />,
     );
 
-    await user.click(screen.getByText("Modifier"));
     await user.type(await screen.findByTestId("editor"), "Bonjour monde");
 
     await waitFor(
@@ -207,8 +197,6 @@ describe("WikiPageContent — brouillon et publication", () => {
         worldId="w1"
         panelWidth={320}
         panelHandleProps={{}}
-        editMode={true}
-        onToggleEditMode={vi.fn()}
         onRename={vi.fn()}
         page={BASE_PAGE}
         pages={[BASE_PAGE]}
@@ -222,7 +210,6 @@ describe("WikiPageContent — brouillon et publication", () => {
       />,
     );
 
-    await user.click(screen.getByText("Modifier"));
     await screen.findByTestId("editor");
     await user.click(screen.getByText("Publier"));
 
@@ -252,8 +239,6 @@ describe("WikiPageContent — badge brouillon", () => {
         worldId="w1"
         panelWidth={320}
         panelHandleProps={{}}
-        editMode={false}
-        onToggleEditMode={vi.fn()}
         onRename={vi.fn()}
         page={page}
         pages={[page]}
@@ -282,8 +267,6 @@ describe("WikiPageContent — badge brouillon", () => {
         worldId="w1"
         panelWidth={320}
         panelHandleProps={{}}
-        editMode={false}
-        onToggleEditMode={vi.fn()}
         onRename={vi.fn()}
         page={page}
         pages={[page]}
@@ -312,8 +295,6 @@ describe("WikiPageContent — badge brouillon", () => {
         worldId="w1"
         panelWidth={320}
         panelHandleProps={{}}
-        editMode={false}
-        onToggleEditMode={vi.fn()}
         onRename={vi.fn()}
         page={page}
         pages={[page]}
@@ -339,8 +320,6 @@ describe("WikiPageContent — badge page restreinte", () => {
         worldId="w1"
         panelWidth={320}
         panelHandleProps={{}}
-        editMode={false}
-        onToggleEditMode={vi.fn()}
         onRename={vi.fn()}
         page={page}
         pages={[page]}
@@ -364,8 +343,6 @@ describe("WikiPageContent — badge page restreinte", () => {
         worldId="w1"
         panelWidth={320}
         panelHandleProps={{}}
-        editMode={false}
-        onToggleEditMode={vi.fn()}
         onRename={vi.fn()}
         page={page}
         pages={[page]}
@@ -396,8 +373,6 @@ describe("WikiPageContent — titre de la page", () => {
         worldId="w1"
         panelWidth={320}
         panelHandleProps={{}}
-        editMode
-        onToggleEditMode={vi.fn()}
         onRename={onRename}
         page={{ ...BASE_PAGE, content: "Publié" }}
         pages={[BASE_PAGE]}
@@ -411,7 +386,6 @@ describe("WikiPageContent — titre de la page", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "Modifier" }));
     const champ = await screen.findByDisplayValue("Accueil");
 
     await user.clear(champ);
@@ -432,8 +406,6 @@ describe("WikiPageContent — titre de la page", () => {
         worldId="w1"
         panelWidth={320}
         panelHandleProps={{}}
-        editMode
-        onToggleEditMode={vi.fn()}
         onRename={onRename}
         page={{ ...BASE_PAGE, content: "Publié" }}
         pages={[BASE_PAGE]}
@@ -447,7 +419,6 @@ describe("WikiPageContent — titre de la page", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "Modifier" }));
     await screen.findByDisplayValue("Accueil");
     await user.tab();
 
@@ -467,8 +438,6 @@ describe("WikiPageContent — commentaires ancrés", () => {
         worldId="w1"
         panelWidth={320}
         panelHandleProps={{}}
-        editMode={false}
-        onToggleEditMode={vi.fn()}
         onRename={vi.fn()}
         page={PAGE}
         pages={[PAGE]}

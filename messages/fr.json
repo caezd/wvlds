@@ -1100,7 +1100,6 @@
     "changeIcon": "Changer l'icône",
     "chooseIcon": "Choisir une icône",
     "options": "Options",
-    "pageActions": "Actions de la page",
     "addPage": "Ajouter une page",
     "rename": "Renommer",
     "renameCascadeUpdated": "{count, plural, one {# lien interne mis à jour} other {# liens internes mis à jour}} vers cette page ailleurs dans le wiki.",

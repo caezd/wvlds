@@ -2,17 +2,11 @@
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
-import { Eye, History, Loader2, Lock, MoreHorizontal, PanelRight, Pencil } from "lucide-react";
+import { Eye, History, Loader2, Lock, PanelRight, Pencil } from "lucide-react";
 import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
 import { LucideIconPicker, VALID_LUCIDE_ICONS } from "@/components/ui/LucideIconPicker";
 import { Button } from "@/components/ui/button";
 import { Drawer } from "@/components/ui/drawer";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { SideSheetContent } from "@/components/ui/side-sheet";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import { ParagraphBlockEditor } from "@/components/chatrooms/composer/ParagraphBlockEditor";
@@ -32,7 +26,6 @@ import { WikiAnnotationsPanel, type AnnotationDraft } from "./WikiAnnotationsPan
 import { WikiNotesPanel } from "./WikiNotesPanel";
 import { WikiSidePanel, type WikiSideTab } from "./WikiSidePanel";
 import { WikiBreadcrumb } from "./WikiBreadcrumb";
-import { WikiEditModeToggle } from "./WikiEditModeToggle";
 import { WIKI_SUBHEADER } from "./wikiSubHeader";
 import { WikiTableOfContents } from "./WikiTableOfContents";
 import { WikiVersionHistoryPanel } from "./WikiVersionHistoryPanel";
@@ -71,8 +64,6 @@ export function WikiPageContent({
   worldId,
   panelWidth,
   panelHandleProps,
-  editMode,
-  onToggleEditMode,
   onRename,
   pages,
   ancestors,
@@ -82,8 +73,6 @@ export function WikiPageContent({
   onPageUpdated,
   onNavigate,
   onExpandFolder,
-  autoEdit = false,
-  onAutoEditConsumed,
   lexiconTerms,
 }: {
   page: WikiPage;
@@ -93,10 +82,6 @@ export function WikiPageContent({
   panelWidth: number;
   /** Gestionnaires de la poignée de redimensionnement (voir useColumnResize). */
   panelHandleProps: React.ComponentProps<"div">;
-  /** Bascule du mode modification, remontée depuis WorldWiki : elle vit
-   *  désormais au centre du bandeau, au-dessus de l'article. */
-  editMode: boolean;
-  onToggleEditMode: () => void;
   /** Renomme la page (titre et icône) — la cascade des liens internes vers
    *  l'ancien titre est faite par l'appelant, voir `WorldWiki.renamePage`. */
   onRename: (title: string, icon: string) => void;
@@ -114,9 +99,6 @@ export function WikiPageContent({
   onNavigate: (slug: string) => void;
   /** Déplie un dossier ancêtre (et les siens) dans la sidebar, depuis le fil d'Ariane. */
   onExpandFolder: (folderId: string) => void;
-  /** Entre automatiquement en édition au montage (page tout juste créée depuis un modèle). */
-  autoEdit?: boolean;
-  onAutoEditConsumed?: () => void;
   /** Lexique du monde — surligné automatiquement dans le contenu rendu. */
   lexiconTerms?: WorldLexiconTerm[];
 }) {
@@ -132,9 +114,8 @@ export function WikiPageContent({
   const [lastAutosavedAt, setLastAutosavedAt] = React.useState<Date | null>(null);
   const [historyOpen, setHistoryOpen] = React.useState(false);
 
-  // Renommage depuis le corps : on modifie le titre là où on le lit, plutôt
-  // que dans une ligne d'arbre de deux cents pixels.
-  const [renaming, setRenaming] = React.useState(false);
+  // Titre et icône, modifiables dans le corps plutôt que dans une ligne
+  // d'arbre de deux cents pixels.
   const [renameTitle, setRenameTitle] = React.useState(page.title);
   const [renameIcon, setRenameIcon] = React.useState(page.icon ?? "");
 
@@ -165,8 +146,8 @@ export function WikiPageContent({
         onChange={e => setRenameTitle(e.target.value)}
         onBlur={validerRenommage}
         onKeyDown={e => {
-          if (e.key === "Enter") { e.preventDefault(); validerRenommage(); }
-          if (e.key === "Escape") { e.preventDefault(); setRenameTitle(page.title); setRenaming(false); }
+          if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); }
+          if (e.key === "Escape") { e.preventDefault(); setRenameTitle(page.title); }
         }}
         maxLength={DB_TEXT_LIMITS["world_wiki_pages.title"]}
         aria-label={t("pageTitlePlaceholder")}
@@ -175,14 +156,7 @@ export function WikiPageContent({
     </div>
   );
 
-  function commencerRenommage() {
-    setRenameTitle(page.title);
-    setRenameIcon(page.icon ?? "");
-    setRenaming(true);
-  }
-
   function validerRenommage() {
-    setRenaming(false);
     const propre = renameTitle.trim();
     if (propre && (propre !== page.title || renameIcon !== (page.icon ?? ""))) {
       onRename(propre, renameIcon);
@@ -271,20 +245,19 @@ export function WikiPageContent({
 
   // Sort du mode édition transitoire quand le panneau quitte le mode modification.
   React.useEffect(() => {
-    if (!isEditMode) {
+    if (isEditMode) {
+      // Le mode modification du wiki EST l'édition de l'article : demander un
+      // second bouton pour ouvrir l'éditeur revenait à faire dire deux fois la
+      // même chose. Vaut aussi au montage — changer de page en modification
+      // rouvre l'éditeur sur la nouvelle, y compris celle qu'on vient de créer
+      // depuis un modèle.
+      void startEditing();
+    } else {
       setEditing(false);
       setShowPreview(false);
     }
-  }, [isEditMode]);
-
-  // Page tout juste créée depuis un modèle : entre directement en édition.
-  React.useEffect(() => {
-    if (autoEdit && isEditMode) {
-      void startEditing();
-      onAutoEditConsumed?.();
-    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [isEditMode]);
 
   async function flushDraft(value: string) {
     const { error } = await supabase
@@ -399,15 +372,11 @@ export function WikiPageContent({
     </span>
   );
 
-  // Segment central du bandeau : d'où l'on vient, et de quoi passer en
-  // modification. Il coiffe la lecture comme l'édition, pour que le trait ne
-  // se déplace pas d'une vue à l'autre.
+  // Segment central du bandeau : d'où l'on vient. Il coiffe la lecture comme
+  // l'édition, pour que le trait ne se déplace pas d'une vue à l'autre.
   const bandeauCentral = (
     <div className={WIKI_SUBHEADER}>
-      <div className="min-w-0 flex-1">
-        <WikiBreadcrumb ancestors={ancestors} onExpandFolder={onExpandFolder} />
-      </div>
-      {canEdit && <WikiEditModeToggle editMode={editMode} onToggle={onToggleEditMode} />}
+      <WikiBreadcrumb ancestors={ancestors} onExpandFolder={onExpandFolder} />
     </div>
   );
 
@@ -516,14 +485,10 @@ export function WikiPageContent({
         <div className="mx-auto flex max-w-4xl gap-8">
           <div className="min-w-0 max-w-2xl flex-1">
             <div className="mb-6 flex items-start justify-between gap-4">
-              {renaming ? (
-                champTitre
-              ) : (
-                <h1 className="flex flex-1 items-center gap-2 text-2xl font-semibold">
-                  {pageIcon}
-                  {page.title}
-                </h1>
-              )}
+              <h1 className="flex flex-1 items-center gap-2 text-2xl font-semibold">
+                {pageIcon}
+                {page.title}
+              </h1>
               <div className="flex shrink-0 items-center gap-2">
                 {draftBadge}
                 {restrictedBadge}
@@ -541,33 +506,6 @@ export function WikiPageContent({
                     </span>
                   )}
                 </Button>
-                {isEditMode && !renaming && (
-                  <>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => void startEditing()}
-                    >
-                      <Pencil className="mr-1.5 h-3.5 w-3.5" /> {tCommon("edit")}
-                    </Button>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <button
-                          type="button"
-                          aria-label={t("pageActions")}
-                          className="shrink-0 rounded-md p-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
-                        >
-                          <MoreHorizontal className="h-4 w-4" />
-                        </button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onSelect={commencerRenommage}>
-                          <Pencil className="mr-2 h-3.5 w-3.5" /> {t("rename")}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </>
-                )}
               </div>
             </div>
             {page.content?.trim() ? (
