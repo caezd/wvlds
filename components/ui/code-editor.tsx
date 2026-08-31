@@ -61,6 +61,10 @@ export function CodeEditor({
    * un remplissage posé sur la zone de saisie et pas sur la couche colorée
    * décalerait le texte de l'une par rapport à l'autre. Sert à aligner le champ
    * sur le reste d'une page, comme dans l'éditeur d'article du wiki.
+   *
+   * Posé en dernier, il l'emporte donc sur les classes de ce composant : c'est
+   * ainsi qu'un champ sans cadre neutralise le halo de focus, lequel n'a de
+   * sens qu'autour d'un champ qui en a un.
    */
   layerClassName?: string;
 }) {
@@ -93,11 +97,9 @@ export function CodeEditor({
     pre.scrollLeft = event.currentTarget.scrollLeft;
   }
 
-  const layer = cn(
-    "absolute inset-0 m-0 overflow-auto rounded-md p-3 font-mono text-xs leading-relaxed",
-    "whitespace-pre-wrap break-words",
-    layerClassName,
-  );
+  const layer =
+    "absolute inset-0 m-0 overflow-auto rounded-md p-3 font-mono text-xs leading-relaxed " +
+    "whitespace-pre-wrap break-words";
 
   return (
     <div
@@ -117,11 +119,11 @@ export function CodeEditor({
           // lui-même — ce n'est pas du balisage fourni par l'utilisateur. Son
           // fond est déjà transparent (voir highlightCode) : c'est celui du
           // tiroir qui reste visible.
-          className={cn(layer, "pointer-events-none [&_pre]:m-0 [&_pre]:whitespace-pre-wrap [&_pre]:break-words [&_code]:break-words")}
+          className={cn(layer, "pointer-events-none [&_pre]:m-0 [&_pre]:whitespace-pre-wrap [&_pre]:break-words [&_code]:break-words", layerClassName)}
           dangerouslySetInnerHTML={{ __html: highlighted }}
         />
       ) : (
-        <pre ref={preRef} aria-hidden className={cn(layer, "pointer-events-none text-foreground")}>
+        <pre ref={preRef} aria-hidden className={cn(layer, "pointer-events-none text-foreground", layerClassName)}>
           {value}
         </pre>
       )}
@@ -141,6 +143,7 @@ export function CodeEditor({
           "resize-none border-0 bg-transparent text-transparent caret-foreground outline-none",
           "placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring",
           "selection:bg-primary/30 selection:text-transparent",
+          layerClassName,
         )}
       />
     </div>

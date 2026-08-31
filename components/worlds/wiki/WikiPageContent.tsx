@@ -785,7 +785,10 @@ export function WikiPageContent({
                   className="flex-1 rounded-none border-0"
                   // Le texte du champ s'aligne sur le titre et le chapeau : les
                   // deux couches reçoivent le même retrait, jamais une seule.
-                  layerClassName="px-4 lg:px-6"
+                  // Pas de halo de focus : il n'a de sens qu'autour d'un champ
+                  // encadré. Ici le champ EST la colonne de texte, et l'anneau
+                  // dessinait un grand rectangle arrondi autour de l'article.
+                  layerClassName="px-4 focus-visible:ring-0 lg:px-6"
                 />
                 )}
               </div>
