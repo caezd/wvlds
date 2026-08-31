@@ -376,7 +376,7 @@ describe("WikiPageContent — commentaires ancrés", () => {
     );
   });
 
-  it("compte les fils ouverts sur le bouton du panneau", async () => {
+  it("compte les fils ouverts sur l'onglet des commentaires", async () => {
     const mock = createSupabaseMock({
       results: [{
         data: [
@@ -388,18 +388,17 @@ describe("WikiPageContent — commentaires ancrés", () => {
     });
     renderPage(mock);
 
-    const bouton = await screen.findByRole("button", { name: /Commentaires/ });
-    await waitFor(() => expect(bouton.textContent).toContain("1"));
+    const onglet = await screen.findByRole("tab", { name: /Commentaires/ });
+    await waitFor(() => expect(onglet.textContent).toContain("1"));
   });
 
   it("surligne les passages annotés et ouvre le fil au clic", async () => {
     const mock = createSupabaseMock({
       results: [{ data: [ANNOTATION], error: null }],
     });
-    const user = userEvent.setup();
     const { container } = renderPage(mock);
 
-    await user.click(screen.getByRole("button", { name: /Commentaires/ }));
+    // La colonne est permanente : le fil est là sans qu'on ouvre quoi que ce soit.
     await waitFor(() => expect(screen.getByText("Qui les a créés ?")).toBeTruthy());
 
     const mark = container.querySelector<HTMLElement>('[data-annotation-id="a1"]');

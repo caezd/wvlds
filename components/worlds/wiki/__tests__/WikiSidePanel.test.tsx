@@ -6,19 +6,17 @@ import { WikiSidePanel } from "@/components/worlds/wiki/WikiSidePanel";
 
 function renderShell(props: Partial<React.ComponentProps<typeof WikiSidePanel>> = {}) {
   const onTabChange = vi.fn();
-  const onClose = vi.fn();
   const vue = render(
     <WikiSidePanel
       tab="comments"
       onTabChange={onTabChange}
-      onClose={onClose}
       openCommentCount={0}
       {...props}
     >
       <p>contenu du panneau</p>
     </WikiSidePanel>,
   );
-  return { ...vue, onTabChange, onClose };
+  return { ...vue, onTabChange };
 }
 
 describe("WikiSidePanel", () => {
@@ -54,17 +52,18 @@ describe("WikiSidePanel", () => {
     expect(screen.getByRole("complementary", { name: "Commentaires" })).toBeTruthy();
 
     rerender(
-      <WikiSidePanel tab="notes" onTabChange={vi.fn()} onClose={vi.fn()} openCommentCount={0}>
+      <WikiSidePanel tab="notes" onTabChange={vi.fn()} openCommentCount={0}>
         <p>contenu du panneau</p>
       </WikiSidePanel>,
     );
     expect(screen.getByRole("complementary", { name: "Notes" })).toBeTruthy();
   });
 
-  it("se ferme sur demande", async () => {
-    const { onClose } = renderShell();
-    await userEvent.click(screen.getByRole("button", { name: "Fermer" }));
-    expect(onClose).toHaveBeenCalled();
+  it("reste en place : rien ne la referme", () => {
+    // La colonne est permanente depuis qu'elle ne dépend plus d'un bouton
+    // d'en-tête, qui disputait sa place au titre de la page.
+    renderShell();
+    expect(screen.queryByRole("button", { name: "Fermer" })).toBeNull();
   });
 
   it("affiche le contenu qu'on lui confie", () => {

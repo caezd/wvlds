@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
-import { Eye, History, Loader2, Lock, MessagesSquare, Pencil, StickyNote } from "lucide-react";
+import { Eye, History, Loader2, Lock, Pencil } from "lucide-react";
 import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
 import { VALID_LUCIDE_ICONS } from "@/components/ui/LucideIconPicker";
 import { Button } from "@/components/ui/button";
@@ -94,7 +94,6 @@ export function WikiPageContent({
 }) {
   const t = useTranslations("wiki");
   const tCommon = useTranslations("common");
-  const tNotes = useTranslations("wiki.notes");
 
   const [editing, setEditing] = React.useState(false);
   const [loadingDraft, setLoadingDraft] = React.useState(false);
@@ -106,9 +105,7 @@ export function WikiPageContent({
 
   // ── Annotations ───────────────────────────────────────────
   const { userId } = useCurrentUser();
-  // Une seule colonne latérale, dont l'onglet dit ce qu'elle montre. `sideTab`
-  // survit à la fermeture : rouvrir le panneau ramène ce qu'on regardait.
-  const [sideOpen, setSideOpen] = React.useState(false);
+  // Une seule colonne latérale, permanente, dont l'onglet dit ce qu'elle montre.
   const [sideTab, setSideTab] = React.useState<WikiSideTab>("comments");
   const [activeAnnotation, setActiveAnnotation] = React.useState<ActiveAnnotation | null>(null);
   const [annotationDraft, setAnnotationDraft] = React.useState<AnnotationDraft | null>(null);
@@ -136,13 +133,11 @@ export function WikiPageContent({
   }, [page.id]);
 
   function openAnnotation(id: string, scrollIntoView: boolean) {
-    setSideOpen(true);
     setSideTab("comments");
     setActiveAnnotation({ id, scrollIntoView });
   }
 
   function startDraft(anchor: TextAnchor) {
-    setSideOpen(true);
     setSideTab("comments");
     setActiveAnnotation(null);
     setAnnotationDraft({ anchor });
@@ -407,22 +402,6 @@ export function WikiPageContent({
               <div className="flex shrink-0 items-center gap-2">
                 {draftBadge}
                 {restrictedBadge}
-                <Button
-                  variant={sideOpen ? "secondary" : "ghost"}
-                  size="sm"
-                  aria-pressed={sideOpen}
-                  onClick={() => setSideOpen(v => !v)}
-                >
-                  {sideTab === "notes"
-                    ? <StickyNote className="mr-1.5 h-3.5 w-3.5" />
-                    : <MessagesSquare className="mr-1.5 h-3.5 w-3.5" />}
-                  {sideTab === "notes" ? tNotes("title") : t("annotations.title")}
-                  {sideTab === "comments" && openAnnotationCount > 0 && (
-                    <span className="ml-1.5 rounded-full bg-primary/10 px-1.5 text-xs text-primary">
-                      {openAnnotationCount}
-                    </span>
-                  )}
-                </Button>
                 {isEditMode && (
                   <Button
                     variant="secondary"
@@ -463,13 +442,11 @@ export function WikiPageContent({
         </div>
       </div>
 
-      {sideOpen && (
-        <WikiSidePanel
-          tab={sideTab}
-          onTabChange={setSideTab}
-          onClose={() => setSideOpen(false)}
-          openCommentCount={openAnnotationCount}
-        >
+      <WikiSidePanel
+        tab={sideTab}
+        onTabChange={setSideTab}
+        openCommentCount={openAnnotationCount}
+      >
           {sideTab === "comments" ? (
             <WikiAnnotationsPanel
               threads={annotations.threads}
@@ -495,8 +472,7 @@ export function WikiPageContent({
               supabase={supabase}
             />
           )}
-        </WikiSidePanel>
-      )}
+      </WikiSidePanel>
     </div>
   );
 }

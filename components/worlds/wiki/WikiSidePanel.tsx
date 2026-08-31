@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
-import { MessagesSquare, StickyNote, X } from "lucide-react";
+import { MessagesSquare, StickyNote } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -17,24 +17,26 @@ export type WikiSideTab = "comments" | "notes";
  * étau dans une colonne étroite alors qu'on ne consulte, en pratique, que l'un
  * des deux à la fois. Ils partagent donc la même place, et l'onglet dit lequel
  * on regarde.
+ *
+ * La colonne est permanente : le bouton qui l'ouvrait vivait dans l'en-tête de
+ * la page, où il disputait sa place au titre dès que l'écran rétrécissait. Une
+ * colonne toujours là ne bouscule rien, et les onglets suffisent à choisir ce
+ * qu'on y lit.
  */
 export function WikiSidePanel({
   tab,
   onTabChange,
-  onClose,
   /** Fils de discussion ouverts — affiché sur l'onglet des commentaires. */
   openCommentCount,
   children,
 }: {
   tab: WikiSideTab;
   onTabChange: (tab: WikiSideTab) => void;
-  onClose: () => void;
   openCommentCount: number;
   children: React.ReactNode;
 }) {
   const tAnnotations = useTranslations("wiki.annotations");
   const tNotes = useTranslations("wiki.notes");
-  const tCommon = useTranslations("common");
 
   const onglets: { id: WikiSideTab; label: string; icon: React.ReactNode; count?: number }[] = [
     {
@@ -57,7 +59,7 @@ export function WikiSidePanel({
       aria-label={tab === "notes" ? tNotes("title") : tAnnotations("title")}
       className="flex h-full min-h-0 w-80 shrink-0 flex-col border-l border-border-soft"
     >
-      <div className="flex shrink-0 items-center gap-1 border-b border-border-soft px-2 py-1.5">
+      <div className="flex shrink-0 items-center border-b border-border-soft px-2 py-1.5">
         <div role="tablist" className="flex min-w-0 flex-1 items-center gap-0.5">
           {onglets.map(o => (
             <button
@@ -83,15 +85,6 @@ export function WikiSidePanel({
             </button>
           ))}
         </div>
-
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label={tCommon("close")}
-          className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
-        >
-          <X className="h-4 w-4" />
-        </button>
       </div>
 
       {children}
