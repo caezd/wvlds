@@ -111,7 +111,7 @@ export function WikiSidePanel({
               {o.icon}
               {o.label}
               {o.count ? (
-                <span className="rounded-full bg-primary/10 px-1.5 text-[10px] text-primary">
+                <span className="rounded-full bg-primary px-1.5 text-[10px] font-medium text-primary-foreground">
                   {o.count}
                 </span>
               ) : null}

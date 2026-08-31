@@ -56,7 +56,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { afterMenuClose } from "@/components/ui/after-menu-close";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
+import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 import { WIKI_SUBHEADER } from "./wikiSubHeader";
 import { WikiEditModeToggle } from "./WikiEditModeToggle";
@@ -882,12 +883,14 @@ export function WorldWiki({
 
   // Le même arbre sert la colonne de gauche et le tiroir mobile : les deux
   // doivent rester rigoureusement identiques, glisser-déposer compris.
-  const arbreDesPages = (
+  const arbreDesPages = (dansTiroir = false) => (
     <>
       {/* Segment gauche du bandeau : la recherche, et de quoi replier la
           colonne. Les commandes de création sont juste en dessous — à 208 px,
           la recherche et trois boutons ne tiennent pas sur une ligne. */}
-      <div className={WIKI_SUBHEADER}>
+      {/* Dans le tiroir, le trait du bandeau n'a plus rien à aligner : les
+          deux autres colonnes ne sont pas là. */}
+      <div className={cn(WIKI_SUBHEADER, dansTiroir && "shadow-none")}>
         <div className="min-w-0 flex-1">
           <WikiSearchBar
             query={searchQuery}
@@ -968,20 +971,18 @@ export function WorldWiki({
               type="button"
               onClick={() => setTreeOpen(true)}
               aria-label={t("openPages")}
-              title={t("openPages")}
-              className="shrink-0 rounded-md p-1 text-muted-foreground hover:bg-secondary hover:text-foreground lg:hidden"
+              className="flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium text-muted-foreground hover:bg-secondary hover:text-foreground lg:hidden"
             >
-              <PanelLeft className="h-4 w-4" />
+              <PanelLeft className="h-3.5 w-3.5" /> {t("pagesLabel")}
             </button>
             {navCollapsed && (
               <button
                 type="button"
                 onClick={() => replierNav(false)}
                 aria-label={t("expandPages")}
-                title={t("expandPages")}
-                className="hidden shrink-0 rounded-md p-1 text-muted-foreground hover:bg-secondary hover:text-foreground lg:block"
+                className="flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium text-muted-foreground hover:bg-secondary hover:text-foreground hidden lg:flex"
               >
-                <PanelLeft className="h-4 w-4" />
+                <PanelLeft className="h-3.5 w-3.5" /> {t("pagesLabel")}
               </button>
             )}
           </div>
@@ -1049,12 +1050,15 @@ export function WorldWiki({
       {/* Arbre des pages en tiroir, en dessous de `lg` */}
       <Drawer open={treeOpen} onOpenChange={setTreeOpen} swipeDirection="left">
         <DrawerContent className="inset-y-0 left-0 flex flex-col gap-0 rounded-md border bg-background p-0 text-foreground shadow-lg w-[min(calc(100%_-_var(--drawer-inset)*2),_320px)]">
-          <DrawerHeader className="border-b border-border-soft">
-            <DrawerTitle className="flex items-center gap-2 text-sm">
-              <BookOpenText className="h-4 w-4" /> {label || tNav("wiki")}
-            </DrawerTitle>
-          </DrawerHeader>
-          {arbreDesPages}
+          {/* Le tiroir n'affiche pas d'en-tête : il porte déjà le bandeau de
+              la colonne, avec sa recherche, et répéter le nom du wiki juste
+              sous celui de l'en-tête principal ne disait rien de plus. Le
+              titre reste, masqué : Radix l'exige pour nommer le dialogue aux
+              lecteurs d'écran. */}
+          <VisuallyHidden>
+            <DrawerTitle>{label || tNav("wiki")}</DrawerTitle>
+          </VisuallyHidden>
+          {arbreDesPages(true)}
         </DrawerContent>
       </Drawer>
 
@@ -1076,7 +1080,7 @@ export function WorldWiki({
               className="hidden shrink-0 flex-col border-r border-border-soft lg:flex"
               style={{ width: navWidth }}
             >
-              {arbreDesPages}
+              {arbreDesPages()}
             </div>
           )}
 

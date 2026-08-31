@@ -405,20 +405,18 @@ export function WikiPageContent({
         type="button"
         onClick={onOpenTree}
         aria-label={t("openPages")}
-        title={t("openPages")}
-        className="shrink-0 rounded-md p-1 text-muted-foreground hover:bg-secondary hover:text-foreground lg:hidden"
+        className="flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium text-muted-foreground hover:bg-secondary hover:text-foreground lg:hidden"
       >
-        <PanelLeft className="h-4 w-4" />
+        <PanelLeft className="h-3.5 w-3.5" /> {t("pagesLabel")}
       </button>
       {navCollapsed && (
         <button
           type="button"
           onClick={onExpandNav}
           aria-label={t("expandPages")}
-          title={t("expandPages")}
-          className="hidden shrink-0 rounded-md p-1 text-muted-foreground hover:bg-secondary hover:text-foreground lg:block"
+          className="flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium text-muted-foreground hover:bg-secondary hover:text-foreground hidden lg:flex"
         >
-          <PanelLeft className="h-4 w-4" />
+          <PanelLeft className="h-3.5 w-3.5" /> {t("pagesLabel")}
         </button>
       )}
       <div className="min-w-0 flex-1">
@@ -429,13 +427,12 @@ export function WikiPageContent({
       <button
         type="button"
         onClick={() => setSideDrawerOpen(true)}
-        aria-label={sideTab === "notes" ? tNotes("title") : t("annotations.title")}
-        title={sideTab === "notes" ? tNotes("title") : t("annotations.title")}
-        className="relative shrink-0 rounded-md p-1 text-muted-foreground hover:bg-secondary hover:text-foreground xl:hidden"
+        className="flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium text-muted-foreground hover:bg-secondary hover:text-foreground xl:hidden"
       >
-        <PanelRight className="h-4 w-4" />
+        <PanelRight className="h-3.5 w-3.5" />
+        {sideTab === "notes" ? tNotes("title") : t("annotations.title")}
         {openAnnotationCount > 0 && (
-          <span className="absolute -right-0.5 -top-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-primary px-1 text-[9px] font-medium text-primary-foreground">
+          <span className="rounded-full bg-primary px-1.5 text-[10px] font-medium text-primary-foreground">
             {openAnnotationCount}
           </span>
         )}
@@ -445,10 +442,15 @@ export function WikiPageContent({
           type="button"
           onClick={() => replierPanneau(false)}
           aria-label={t("openPanel")}
-          title={t("openPanel")}
-          className="hidden shrink-0 rounded-md p-1 text-muted-foreground hover:bg-secondary hover:text-foreground xl:block"
+          className="flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium text-muted-foreground hover:bg-secondary hover:text-foreground hidden xl:flex"
         >
-          <PanelRight className="h-4 w-4" />
+          <PanelRight className="h-3.5 w-3.5" />
+          {sideTab === "notes" ? tNotes("title") : t("annotations.title")}
+          {openAnnotationCount > 0 && (
+            <span className="rounded-full bg-primary px-1.5 text-[10px] font-medium text-primary-foreground">
+              {openAnnotationCount}
+            </span>
+          )}
         </button>
       )}
     </div>
