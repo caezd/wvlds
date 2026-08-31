@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Wiki",
+    text: "Une page de wiki s’annote. Sélectionnez un passage — un mot, une phrase, un paragraphe — et deux boutons apparaissent : « Commenter » ouvre une discussion visible de tous les membres qui voient la page, « Note » dépose un mémo de rédaction que seuls les éditeurs du monde lisent. Le passage est surligné dans le texte, et la colonne de droite réunit les deux dans une seule liste : on y répond, on filtre par nature, et on marque un fil comme résolu quand la question est tranchée. Un clic sur un surlignage amène son fil, un clic sur un fil ramène à son passage.\nLes annotations survivent à la réécriture de la page : elles retiennent l’extrait visé et son voisinage, et se replacent toutes seules quand le texte bouge autour. Quand un passage annoté disparaît pour de bon, son fil n’est pas raccroché au hasard — il passe en fin de liste, marqué « détachée », et reste lisible.\nLes commentaires arrivent en temps réel : deux personnes qui relisent la même page se voient écrire."
+  },
+  {
+    date: "2026-08",
     tag: "Personas",
     text: "Une fiche de personnage sans aucun onglet se contentait d’annoncer qu’elle était vide. Elle propose désormais trois noms courants — Informations, Apparence, Histoire — qui créent le premier onglet en un seul clic ; le nom se change ensuite d’un « Renommer ». Le bouton « Autre nom… » reste là pour partir d’une page blanche. Corrige au passage un échec de création qui ne laissait aucune trace à l’écran."
   },

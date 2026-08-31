@@ -127,7 +127,7 @@ function TermRow({
         <p className="truncate text-sm font-medium text-foreground">{term.term}</p>
         <p className="text-xs text-muted-foreground">{term.description}</p>
       </div>
-      <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+      <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
         <button
           type="button"
           onClick={onEdit}

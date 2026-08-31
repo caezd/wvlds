@@ -483,3 +483,76 @@
     }
 }
 
+
+/* ── Annotations du wiki ──────────────────────────────────────────────────
+   Passages commentés ou annotés d'une page. Les span sont posés après le
+   rendu par WikiAnnotationLayer, hors de React : leur mise en forme vit donc
+   ici plutôt qu'en classes utilitaires.
+
+   Le surlignage est un fond derrière du texte courant : les teintes restent
+   très diluées pour que le contraste du texte lui-même ne bouge pas, et le
+   repère principal est le soulignement, qui ne dépend pas de la couleur. */
+.wiki-annotation {
+    border-radius: 2px;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+    cursor: pointer;
+    transition: background-color 120ms ease;
+}
+
+.wiki-annotation[data-annotation-kind="comment"] {
+    background-color: rgb(56 132 255 / 0.14);
+    box-shadow: inset 0 -2px 0 rgb(56 132 255 / 0.55);
+}
+
+.wiki-annotation[data-annotation-kind="note"] {
+    background-color: rgb(251 191 36 / 0.18);
+    box-shadow: inset 0 -2px 0 rgb(251 191 36 / 0.65);
+}
+
+/* Sélection en attente de son premier message : le passage est déjà repéré,
+   sans préjuger de sa nature. */
+.wiki-annotation[data-annotation-draft] {
+    background-color: rgb(56 132 255 / 0.10);
+    box-shadow: inset 0 -2px 0 rgb(56 132 255 / 0.35);
+}
+
+/* Fil résolu : l'ancre reste visible — savoir qu'une discussion a eu lieu ici
+   a de la valeur — mais s'efface derrière le texte. */
+.wiki-annotation[data-annotation-resolved] {
+    background-color: transparent;
+    box-shadow: inset 0 -1px 0 var(--border);
+}
+
+.wiki-annotation[data-annotation-active] {
+    background-color: rgb(56 132 255 / 0.28);
+}
+
+.wiki-annotation[data-annotation-kind="note"][data-annotation-active] {
+    background-color: rgb(251 191 36 / 0.34);
+}
+
+/* Sur fond sombre, les mêmes teintes paraissent ternes : on les remonte
+   légèrement plutôt que de changer de couleur. */
+.dark .wiki-annotation[data-annotation-kind="comment"] {
+    background-color: rgb(96 165 250 / 0.20);
+    box-shadow: inset 0 -2px 0 rgb(96 165 250 / 0.6);
+}
+
+.dark .wiki-annotation[data-annotation-kind="note"] {
+    background-color: rgb(251 191 36 / 0.22);
+    box-shadow: inset 0 -2px 0 rgb(251 191 36 / 0.7);
+}
+
+.dark .wiki-annotation[data-annotation-draft] {
+    background-color: rgb(96 165 250 / 0.14);
+    box-shadow: inset 0 -2px 0 rgb(96 165 250 / 0.4);
+}
+
+.dark .wiki-annotation[data-annotation-active] {
+    background-color: rgb(96 165 250 / 0.36);
+}
+
+.dark .wiki-annotation[data-annotation-kind="note"][data-annotation-active] {
+    background-color: rgb(251 191 36 / 0.4);
+}

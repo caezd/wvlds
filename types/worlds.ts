@@ -157,3 +157,41 @@ export type WorldHomeRoom = {
   category_id?: string | null;
   timeline_date?: WorldTimelineDate | null;
 };
+
+/** Auteur d'une annotation, tel que joint depuis `profiles`. */
+export type WikiAnnotationAuthor = {
+  id: string;
+  username: string | null;
+  avatar_url: string | null;
+};
+
+/** Commentaire (fil de discussion) ou note de rédaction (éditeurs seuls). */
+export type WikiAnnotationKind = "comment" | "note";
+
+/**
+ * Annotation ancrée à un extrait d'une page de wiki — voir la migration 137 et
+ * `lib/wikiAnnotations.ts`. Les champs `anchor_*` ne sont remplis que sur la
+ * racine d'un fil ; une réponse (`parent_id` non nul) hérite de son ancre.
+ */
+export type WikiAnnotation = {
+  id: string;
+  page_id: string;
+  parent_id: string | null;
+  author_id: string;
+  kind: WikiAnnotationKind;
+  body: string;
+  anchor_quote: string | null;
+  anchor_prefix: string | null;
+  anchor_suffix: string | null;
+  anchor_start: number | null;
+  resolved_at: string | null;
+  resolved_by: string | null;
+  created_at: string;
+  author: WikiAnnotationAuthor | null;
+};
+
+/** Racine et ses réponses, dans l'ordre de publication. */
+export type WikiAnnotationThread = {
+  root: WikiAnnotation;
+  replies: WikiAnnotation[];
+};

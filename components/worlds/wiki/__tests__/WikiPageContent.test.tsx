@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createSupabaseMock } from "@/test/supabaseMock";
 
@@ -20,6 +20,12 @@ vi.mock("@/components/chatrooms/composer/ParagraphBlockEditor", () => ({
 
 vi.mock("@/components/MarkdownRenderer", () => ({
   default: ({ content }: { content: string }) => <div data-testid="markdown">{content}</div>,
+}));
+
+// Les annotations sont signées par leur auteur : sans utilisateur identifié,
+// la RLS refuse l'écriture et l'interface ne propose rien.
+vi.mock("@/components/providers/CurrentUserProvider", () => ({
+  useCurrentUser: () => ({ userId: "u1", username: "caedrik", avatarUrl: null }),
 }));
 
 import { WikiPageContent } from "@/components/worlds/wiki/WikiPageContent";
@@ -44,14 +50,20 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+// La page lit ses annotations au montage, avant toute action de l'utilisateur.
+// Le mock sert ses résultats dans l'ordre des appels à `.from()` : cette
+// réponse vide doit donc précéder celles que le test vise réellement.
+const SANS_ANNOTATION = { data: [], error: null };
+
 describe("WikiPageContent — brouillon et publication", () => {
   it("reprend le brouillon existant à l'entrée en édition", async () => {
     const mock = createSupabaseMock({
-      results: [{ data: { draft_content: "Texte en cours" }, error: null }],
+      results: [SANS_ANNOTATION, { data: { draft_content: "Texte en cours" }, error: null }],
     });
     const user = userEvent.setup();
     render(
       <WikiPageContent
+        worldId="w1"
         page={BASE_PAGE}
         pages={[BASE_PAGE]}
         canEdit
@@ -71,11 +83,12 @@ describe("WikiPageContent — brouillon et publication", () => {
 
   it("n'autosauvegarde pas immédiatement après la frappe", async () => {
     const mock = createSupabaseMock({
-      results: [{ data: { draft_content: "" }, error: null }],
+      results: [SANS_ANNOTATION, { data: { draft_content: "" }, error: null }],
     });
     const user = userEvent.setup();
     render(
       <WikiPageContent
+        worldId="w1"
         page={BASE_PAGE}
         pages={[BASE_PAGE]}
         canEdit
@@ -99,6 +112,7 @@ describe("WikiPageContent — brouillon et publication", () => {
   it("autosauvegarde le brouillon après le délai de debounce", async () => {
     const mock = createSupabaseMock({
       results: [
+        SANS_ANNOTATION,
         { data: { draft_content: "" }, error: null },
         { data: null, error: null },
       ],
@@ -107,6 +121,7 @@ describe("WikiPageContent — brouillon et publication", () => {
     const user = userEvent.setup();
     render(
       <WikiPageContent
+        worldId="w1"
         page={BASE_PAGE}
         pages={[BASE_PAGE]}
         canEdit
@@ -139,6 +154,7 @@ describe("WikiPageContent — brouillon et publication", () => {
   it("Publier copie le brouillon vers le contenu publié", async () => {
     const mock = createSupabaseMock({
       results: [
+        SANS_ANNOTATION,
         { data: { draft_content: "Brouillon prêt" }, error: null },
         { data: null, error: null },
       ],
@@ -147,6 +163,7 @@ describe("WikiPageContent — brouillon et publication", () => {
     const user = userEvent.setup();
     render(
       <WikiPageContent
+        worldId="w1"
         page={BASE_PAGE}
         pages={[BASE_PAGE]}
         canEdit
@@ -186,6 +203,7 @@ describe("WikiPageContent — badge brouillon", () => {
     };
     render(
       <WikiPageContent
+        worldId="w1"
         page={page}
         pages={[page]}
         canEdit
@@ -210,6 +228,7 @@ describe("WikiPageContent — badge brouillon", () => {
     };
     render(
       <WikiPageContent
+        worldId="w1"
         page={page}
         pages={[page]}
         canEdit={false}
@@ -234,6 +253,7 @@ describe("WikiPageContent — badge brouillon", () => {
     };
     render(
       <WikiPageContent
+        worldId="w1"
         page={page}
         pages={[page]}
         canEdit
@@ -255,6 +275,7 @@ describe("WikiPageContent — badge page restreinte", () => {
     const page: WikiPage = { ...BASE_PAGE, content: "Publié", is_restricted: true };
     render(
       <WikiPageContent
+        worldId="w1"
         page={page}
         pages={[page]}
         canEdit
@@ -274,6 +295,7 @@ describe("WikiPageContent — badge page restreinte", () => {
     const page: WikiPage = { ...BASE_PAGE, content: "Publié", is_restricted: false };
     render(
       <WikiPageContent
+        worldId="w1"
         page={page}
         pages={[page]}
         canEdit
@@ -286,5 +308,127 @@ describe("WikiPageContent — badge page restreinte", () => {
       />,
     );
     expect(screen.queryByText("Réservé aux éditeurs")).not.toBeInTheDocument();
+  });
+});
+
+describe("WikiPageContent — annotations", () => {
+  const PAGE: WikiPage = {
+    ...BASE_PAGE,
+    content: "Mara Kline observe la ville. Les Gardiens veillent sur Meridian.",
+  };
+
+  function renderPage(mock: ReturnType<typeof createSupabaseMock>, canEdit = true) {
+    return render(
+      <WikiPageContent
+        worldId="w1"
+        page={PAGE}
+        pages={[PAGE]}
+        canEdit={canEdit}
+        isEditMode={false}
+        supabase={mock.client as never}
+        ancestors={[]}
+        onPageUpdated={vi.fn()}
+        onNavigate={vi.fn()}
+        onExpandFolder={vi.fn()}
+      />,
+    );
+  }
+
+  const ANNOTATION = {
+    id: "a1",
+    page_id: "p1",
+    parent_id: null,
+    author_id: "u1",
+    kind: "comment",
+    body: "Qui les a créés ?",
+    anchor_quote: "Les Gardiens",
+    anchor_prefix: "Mara Kline observe la ville. ",
+    anchor_suffix: " veillent sur Meridian.",
+    anchor_start: 28,
+    resolved_at: null,
+    resolved_by: null,
+    created_at: "2026-08-01T10:00:00.000Z",
+    author: { id: "u1", username: "caedrik", avatar_url: null },
+  };
+
+  /** Sélectionne un passage dans le texte rendu, puis relâche la souris. */
+  function selectInProse(quote: string) {
+    const prose = screen.getByTestId("markdown");
+    const node = prose.firstChild as Text;
+    const start = node.nodeValue!.indexOf(quote);
+    const range = document.createRange();
+    range.setStart(node, start);
+    range.setEnd(node, start + quote.length);
+    const selection = window.getSelection()!;
+    selection.removeAllRanges();
+    selection.addRange(range);
+    fireEvent.mouseUp(prose);
+  }
+
+  it("lit les annotations avec la page, sans attendre l'ouverture du panneau", async () => {
+    // Les surlignages sont le seul indice qu'une page est commentée : les
+    // charger à la demande les rendrait invisibles à qui n'ouvre pas le
+    // panneau.
+    const mock = createSupabaseMock({ results: [{ data: [], error: null }] });
+    renderPage(mock);
+
+    await waitFor(() =>
+      expect(mock.client.from).toHaveBeenCalledWith("world_wiki_page_annotations"),
+    );
+  });
+
+  it("compte les fils ouverts sur le bouton du panneau", async () => {
+    const mock = createSupabaseMock({
+      results: [{
+        data: [
+          { ...ANNOTATION, id: "a1" },
+          { ...ANNOTATION, id: "a2", resolved_at: "2026-08-02T10:00:00.000Z", resolved_by: "u1" },
+        ],
+        error: null,
+      }],
+    });
+    renderPage(mock);
+
+    const bouton = await screen.findByRole("button", { name: /Annotations/ });
+    await waitFor(() => expect(bouton.textContent).toContain("1"));
+  });
+
+  it("surligne les passages annotés et ouvre le fil au clic", async () => {
+    const mock = createSupabaseMock({
+      results: [{ data: [ANNOTATION], error: null }],
+    });
+    const user = userEvent.setup();
+    const { container } = renderPage(mock);
+
+    await user.click(screen.getByRole("button", { name: /Annotations/ }));
+    await waitFor(() => expect(screen.getByText("Qui les a créés ?")).toBeTruthy());
+
+    const mark = container.querySelector<HTMLElement>('[data-annotation-id="a1"]');
+    expect(mark!.textContent).toBe("Les Gardiens");
+    // Le texte de la page reste intact malgré l'enveloppement.
+    expect(screen.getByTestId("markdown").textContent).toBe(PAGE.content);
+  });
+
+  it("ouvre la saisie sur le passage sélectionné, extrait à l'appui", async () => {
+    const mock = createSupabaseMock({ results: [{ data: [], error: null }] });
+    const user = userEvent.setup();
+    renderPage(mock);
+
+    selectInProse("Les Gardiens");
+    await user.click(await screen.findByRole("button", { name: "Commenter" }));
+
+    // Le panneau s'ouvre de lui-même sur la saisie, et rappelle l'extrait visé.
+    const panel = screen.getByRole("complementary", { name: "Annotations" });
+    expect(panel.textContent).toContain("Les Gardiens");
+    expect(screen.getByRole("textbox")).toBeTruthy();
+  });
+
+  it("ne propose la note qu'aux éditeurs", async () => {
+    const mock = createSupabaseMock({ results: [{ data: [], error: null }] });
+    renderPage(mock, false);
+
+    selectInProse("Meridian");
+    expect(await screen.findByRole("button", { name: "Commenter" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Note" })).toBeNull();
   });
 });

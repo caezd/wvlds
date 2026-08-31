@@ -212,6 +212,7 @@ describe("WorldWiki — création depuis un modèle", () => {
         { data: [], error: null }, // load() initial (pages)
         { data: [], error: null }, // load() initial (lexique)
         { data: insertedPage, error: null },
+        { data: [], error: null }, // annotations de la page, lues à son montage
         { data: { draft_content: templateContent }, error: null },
       ],
     });

@@ -843,6 +843,7 @@ export function WorldWiki({
       <WikiPageContent
         key={selectedPage.id}
         page={selectedPage}
+        worldId={worldId}
         pages={pages ?? []}
         ancestors={ancestorsOf(selectedPage)}
         canEdit={canEdit}

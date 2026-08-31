@@ -73,6 +73,11 @@ function CodeBlock({ className, children, ...props }: React.ComponentProps<"code
         onClick={doCopy}
         className="opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity text-xs absolute right-2 top-2 rounded-md border bg-background/80 px-2 py-1"
         aria-label={tCommon("copyCode")}
+        // Le libellé bascule « Copier » → « Copié » au clic. Sans cette
+        // marque, il compterait dans le texte de la page et décalerait d'un
+        // caractère toutes les annotations situées plus bas (voir
+        // lib/domTextOffsets.ts).
+        data-annotate-ignore
       >
         {copied ? tCommon("copied") : tCommon("copy")}
       </button>

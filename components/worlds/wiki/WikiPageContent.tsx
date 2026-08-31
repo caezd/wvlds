@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
-import { Eye, History, Loader2, Lock, Pencil } from "lucide-react";
+import { Eye, History, Loader2, Lock, MessagesSquare, Pencil } from "lucide-react";
 import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
 import { VALID_LUCIDE_ICONS } from "@/components/ui/LucideIconPicker";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,12 @@ import { cn } from "@/lib/utils";
 import type { createClient } from "@/lib/supabase/client";
 import { resolveWikiLinks } from "@/lib/wikiLinks";
 import { extractHeadings } from "@/lib/wikiToc";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useWikiAnnotations } from "@/hooks/useWikiAnnotations";
+import type { TextAnchor } from "@/lib/wikiAnnotations";
+import type { WikiAnnotation, WikiAnnotationKind } from "@/types/worlds";
+import { WikiAnnotationLayer, type ActiveAnnotation } from "./WikiAnnotationLayer";
+import { WikiAnnotationsPanel, type AnnotationDraft } from "./WikiAnnotationsPanel";
 import { WikiBreadcrumb } from "./WikiBreadcrumb";
 import { WikiTableOfContents } from "./WikiTableOfContents";
 import { WikiVersionHistoryPanel } from "./WikiVersionHistoryPanel";
@@ -48,6 +54,7 @@ function isDraftNewer(page: WikiPage): boolean {
 
 export function WikiPageContent({
   page,
+  worldId,
   pages,
   ancestors,
   canEdit,
@@ -61,6 +68,8 @@ export function WikiPageContent({
   lexiconTerms,
 }: {
   page: WikiPage;
+  /** Monde de la page — dénormalisé sur les annotations (voir migration 137). */
+  worldId: string;
   /** Toutes les pages du wiki — pour résoudre les liens internes `[[Titre]]`. */
   pages: WikiPage[];
   /** Dossiers ancêtres de la page, du plus ancien au plus proche (fil d'Ariane). */
@@ -91,6 +100,61 @@ export function WikiPageContent({
   const [publishing, setPublishing] = React.useState(false);
   const [lastAutosavedAt, setLastAutosavedAt] = React.useState<Date | null>(null);
   const [historyOpen, setHistoryOpen] = React.useState(false);
+
+  // ── Annotations ───────────────────────────────────────────
+  const { userId } = useCurrentUser();
+  const [annotationsOpen, setAnnotationsOpen] = React.useState(false);
+  const [activeAnnotation, setActiveAnnotation] = React.useState<ActiveAnnotation | null>(null);
+  const [annotationDraft, setAnnotationDraft] = React.useState<AnnotationDraft | null>(null);
+  const [detachedIds, setDetachedIds] = React.useState<Set<string>>(() => new Set());
+
+  const annotations = useWikiAnnotations({
+    pageId: page.id,
+    worldId,
+    userId,
+    supabase,
+    // Chargées avec la page, pas à l'ouverture du panneau : les surlignages
+    // sont le seul indice qu'une discussion existe. Attendre un clic sur
+    // « Annotations » pour les afficher rendrait invisible, à qui ne pense
+    // pas à ouvrir le panneau, tout ce que les autres ont écrit — y compris
+    // le compteur censé l'y inviter.
+    enabled: true,
+  });
+
+  // Le panneau se rouvre vide sur une autre page ; l'état transitoire doit
+  // suivre, sinon un fil sélectionné ici resterait « actif » là-bas.
+  React.useEffect(() => {
+    setActiveAnnotation(null);
+    setAnnotationDraft(null);
+    setDetachedIds(new Set());
+  }, [page.id]);
+
+  function openAnnotation(id: string, scrollIntoView: boolean) {
+    setAnnotationsOpen(true);
+    setActiveAnnotation({ id, scrollIntoView });
+  }
+
+  function startDraft(anchor: TextAnchor, kind: WikiAnnotationKind) {
+    setAnnotationsOpen(true);
+    setActiveAnnotation(null);
+    setAnnotationDraft({ anchor, kind });
+  }
+
+  async function createFromDraft(body: string) {
+    if (!annotationDraft) return;
+    const created = await annotations.createThread({ ...annotationDraft, body });
+    setAnnotationDraft(null);
+    if (created) setActiveAnnotation({ id: created.id, scrollIntoView: false });
+  }
+
+  // Le calcul vient d'un effet de mise en page ; ne remplacer l'ensemble que
+  // s'il a réellement changé évite un rendu de plus à chaque passage.
+  const onDetachedChange = React.useCallback((ids: string[]) => {
+    setDetachedIds(prev => {
+      if (prev.size === ids.length && ids.every(id => prev.has(id))) return prev;
+      return new Set(ids);
+    });
+  }, []);
 
   const draftRef = React.useRef(draft);
   draftRef.current = draft;
@@ -196,6 +260,18 @@ export function WikiPageContent({
   // les ids d'ancre du sommaire correspondent exactement à ceux posés par
   // MarkdownRenderer sur les titres (voir MarkdownRenderer.tsx).
   const headings = React.useMemo(() => extractHeadings(resolvedContent), [resolvedContent]);
+
+  // Identité du texte rendu : elle pilote le remontage de la couche
+  // d'annotations (voir WikiAnnotationLayer). Toute écriture du contenu passe
+  // par une publication, qui déplace `published_at` — inutile de hacher la
+  // page entière à chaque rendu pour s'en apercevoir.
+  const contentKey = `${page.id}|${page.published_at ?? ""}|${resolvedContent.length}`;
+
+  // Seul un membre identifié peut annoter : la RLS exige `author_id = auth.uid()`.
+  const canAnnotate = userId !== null;
+  const openAnnotationCount = annotations.threads.filter(
+    th => th.root.resolved_at === null,
+  ).length;
 
   const draftBadge = canEdit && isDraftNewer(page) && (
     <span className="shrink-0 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
@@ -310,45 +386,96 @@ export function WikiPageContent({
   }
 
   return (
-    <div className="flex-1 overflow-y-auto p-6">
-      <div className="mx-auto flex max-w-4xl gap-8">
-        <div className="min-w-0 max-w-2xl flex-1">
-          <WikiBreadcrumb ancestors={ancestors} onExpandFolder={onExpandFolder} />
-          <div className="mb-6 flex items-start justify-between gap-4">
-            <h1 className="flex flex-1 items-center gap-2 text-2xl font-semibold">
-              {pageIcon}
-              {page.title}
-            </h1>
-            <div className="flex shrink-0 items-center gap-2">
-              {draftBadge}
-              {restrictedBadge}
-              {isEditMode && (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => void startEditing()}
-                >
-                  <Pencil className="mr-1.5 h-3.5 w-3.5" /> {tCommon("edit")}
-                </Button>
-              )}
+    <div className="flex min-h-0 flex-1">
+      <div className="min-w-0 flex-1 overflow-y-auto p-6">
+        <div className="mx-auto flex max-w-4xl gap-8">
+          <div className="min-w-0 max-w-2xl flex-1">
+            <WikiBreadcrumb ancestors={ancestors} onExpandFolder={onExpandFolder} />
+            <div className="mb-6 flex items-start justify-between gap-4">
+              <h1 className="flex flex-1 items-center gap-2 text-2xl font-semibold">
+                {pageIcon}
+                {page.title}
+              </h1>
+              <div className="flex shrink-0 items-center gap-2">
+                {draftBadge}
+                {restrictedBadge}
+                {canAnnotate && (
+                  <Button
+                    variant={annotationsOpen ? "secondary" : "ghost"}
+                    size="sm"
+                    aria-pressed={annotationsOpen}
+                    onClick={() => setAnnotationsOpen(v => !v)}
+                  >
+                    <MessagesSquare className="mr-1.5 h-3.5 w-3.5" />
+                    {t("annotations.title")}
+                    {openAnnotationCount > 0 && (
+                      <span className="ml-1.5 rounded-full bg-primary/10 px-1.5 text-xs text-primary">
+                        {openAnnotationCount}
+                      </span>
+                    )}
+                  </Button>
+                )}
+                {isEditMode && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => void startEditing()}
+                  >
+                    <Pencil className="mr-1.5 h-3.5 w-3.5" /> {tCommon("edit")}
+                  </Button>
+                )}
+              </div>
             </div>
+            {page.content?.trim() ? (
+              <WikiAnnotationLayer
+                contentKey={contentKey}
+                threads={annotations.threads}
+                active={activeAnnotation}
+                draftAnchor={annotationDraft?.anchor ?? null}
+                canComment={canAnnotate}
+                canTakeNotes={canEdit}
+                onActivate={id => { if (id) openAnnotation(id, false); }}
+                onDraft={startDraft}
+                onDetachedChange={onDetachedChange}
+              >
+                <MarkdownRenderer
+                  content={resolvedContent}
+                  allowImages
+                  onWikiLink={onNavigate}
+                  className={WIKI_PROSE_HEADING_CLASSES}
+                  lexiconTerms={lexiconTerms}
+                />
+              </WikiAnnotationLayer>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                {isEditMode ? t("pageEmptyEdit") : t("pageEmpty")}
+              </p>
+            )}
           </div>
-          {page.content?.trim() ? (
-            <MarkdownRenderer
-              content={resolvedContent}
-              allowImages
-              onWikiLink={onNavigate}
-              className={WIKI_PROSE_HEADING_CLASSES}
-              lexiconTerms={lexiconTerms}
-            />
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              {isEditMode ? t("pageEmptyEdit") : t("pageEmpty")}
-            </p>
-          )}
+          <WikiTableOfContents headings={headings} />
         </div>
-        <WikiTableOfContents headings={headings} />
       </div>
+
+      {annotationsOpen && (
+        <WikiAnnotationsPanel
+          threads={annotations.threads}
+          detachedIds={detachedIds}
+          loading={annotations.loading}
+          pending={annotations.pending}
+          activeId={activeAnnotation?.id ?? null}
+          draft={annotationDraft}
+          currentUserId={userId}
+          canModerate={canEdit}
+          canTakeNotes={canEdit}
+          onActivate={id => openAnnotation(id, true)}
+          onCreate={body => void createFromDraft(body)}
+          onCancelDraft={() => setAnnotationDraft(null)}
+          onReply={(root: WikiAnnotation, body: string) => annotations.reply(root, body)}
+          onSetResolved={(root, resolved) => void annotations.setResolved(root, resolved)}
+          onDelete={annotation => void annotations.remove(annotation)}
+          onClose={() => setAnnotationsOpen(false)}
+        />
+      )}
     </div>
   );
 }
