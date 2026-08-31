@@ -25,6 +25,8 @@ import { WikiAnnotationsPanel, type AnnotationDraft } from "./WikiAnnotationsPan
 import { WikiNotesPanel } from "./WikiNotesPanel";
 import { WikiSidePanel, type WikiSideTab } from "./WikiSidePanel";
 import { WikiBreadcrumb } from "./WikiBreadcrumb";
+import { WikiEditModeToggle } from "./WikiEditModeToggle";
+import { WIKI_SUBHEADER } from "./wikiSubHeader";
 import { WikiTableOfContents } from "./WikiTableOfContents";
 import { WikiVersionHistoryPanel } from "./WikiVersionHistoryPanel";
 import type { WikiPage } from "./WorldWiki";
@@ -62,6 +64,8 @@ export function WikiPageContent({
   worldId,
   panelWidth,
   panelHandleProps,
+  editMode,
+  onToggleEditMode,
   pages,
   ancestors,
   canEdit,
@@ -81,6 +85,10 @@ export function WikiPageContent({
   panelWidth: number;
   /** Gestionnaires de la poignée de redimensionnement (voir useColumnResize). */
   panelHandleProps: React.ComponentProps<"div">;
+  /** Bascule du mode modification, remontée depuis WorldWiki : elle vit
+   *  désormais au centre du bandeau, au-dessus de l'article. */
+  editMode: boolean;
+  onToggleEditMode: () => void;
   /** Toutes les pages du wiki — pour résoudre les liens internes `[[Titre]]`. */
   pages: WikiPage[];
   /** Dossiers ancêtres de la page, du plus ancien au plus proche (fil d'Ariane). */
@@ -319,10 +327,23 @@ export function WikiPageContent({
     </span>
   );
 
+  // Segment central du bandeau : d'où l'on vient, et de quoi passer en
+  // modification. Il coiffe la lecture comme l'édition, pour que le trait ne
+  // se déplace pas d'une vue à l'autre.
+  const bandeauCentral = (
+    <div className={WIKI_SUBHEADER}>
+      <div className="min-w-0 flex-1">
+        <WikiBreadcrumb ancestors={ancestors} onExpandFolder={onExpandFolder} />
+      </div>
+      {canEdit && <WikiEditModeToggle editMode={editMode} onToggle={onToggleEditMode} />}
+    </div>
+  );
+
   if (editing) {
     return (
-      <div className="flex flex-1 flex-col gap-3 overflow-hidden p-6">
-        <WikiBreadcrumb ancestors={ancestors} onExpandFolder={onExpandFolder} />
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        {bandeauCentral}
+        <div className="flex flex-1 flex-col gap-3 overflow-hidden p-6">
         <div className="flex items-center gap-3">
           <h1 className="flex flex-1 items-center gap-2 truncate text-2xl font-semibold">
             {pageIcon}
@@ -413,16 +434,18 @@ export function WikiPageContent({
             onPageUpdated({ id: page.id, ...patch });
           }}
         />
+        </div>
       </div>
     );
   }
 
   return (
     <div className="flex min-h-0 flex-1">
-      <div className="min-w-0 flex-1 overflow-y-auto p-6">
+      <div className="flex min-w-0 flex-1 flex-col">
+        {bandeauCentral}
+        <div className="min-w-0 flex-1 overflow-y-auto p-6">
         <div className="mx-auto flex max-w-4xl gap-8">
           <div className="min-w-0 max-w-2xl flex-1">
-            <WikiBreadcrumb ancestors={ancestors} onExpandFolder={onExpandFolder} />
             <div className="mb-6 flex items-start justify-between gap-4">
               <h1 className="flex flex-1 items-center gap-2 text-2xl font-semibold">
                 {pageIcon}
@@ -482,6 +505,7 @@ export function WikiPageContent({
             )}
           </div>
           <WikiTableOfContents headings={headings} />
+        </div>
         </div>
       </div>
 

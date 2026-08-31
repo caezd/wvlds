@@ -57,6 +57,8 @@ import { afterMenuClose } from "@/components/ui/after-menu-close";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
+import { WIKI_SUBHEADER } from "./wikiSubHeader";
+import { WikiEditModeToggle } from "./WikiEditModeToggle";
 import { slugify } from "@/lib/slug";
 import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import { useColumnResize } from "@/hooks/useColumnResize";
@@ -861,6 +863,39 @@ export function WorldWiki({
   // doivent rester rigoureusement identiques, glisser-déposer compris.
   const arbreDesPages = (
     <>
+      {/* Segment gauche du bandeau — ce qui agit sur l'arbre lui-même. Rendu
+          même hors mode modification : c'est lui qui aligne le trait avec les
+          deux autres segments, qui ne disparaissent pas. */}
+      <div className={WIKI_SUBHEADER}>
+        {isEditMode && (
+          <>
+            <button
+              type="button"
+              onClick={() => setCreating({ parentId: null, isFolder: false })}
+              className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
+            >
+              <FilePlus className="h-3.5 w-3.5" /> {t("newPage")}
+            </button>
+            <button
+              type="button"
+              onClick={() => setCreating({ parentId: null, isFolder: true })}
+              className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
+            >
+              <FolderPlus className="h-3.5 w-3.5" /> {t("newFolder")}
+            </button>
+            <button
+              type="button"
+              onClick={() => setLexiconManagerOpen(true)}
+              aria-label={t("lexicon.manageButton")}
+              title={t("lexicon.manageButton")}
+              className="ml-auto flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
+            >
+              <Library className="h-3.5 w-3.5" />
+            </button>
+          </>
+        )}
+      </div>
+
       <WikiSearchBar
         query={searchQuery}
         onQueryChange={setSearchQuery}
@@ -890,14 +925,24 @@ export function WorldWiki({
   function renderContent() {
     if (!selectedPage || selectedPage.is_folder) {
       return (
-        <div className="flex flex-1 items-center justify-center p-8 text-center">
-          <p className="text-sm text-muted-foreground">
-            {!pages?.length
-              ? isEditMode
-                ? t("emptyEdit")
-                : t("emptyRead")
-              : t("selectPage")}
-          </p>
+        <div className="flex min-w-0 flex-1 flex-col">
+          {/* Le bandeau central existe même sans page : c'est le seul endroit
+              d'où l'on peut entrer en modification, donc créer la première. */}
+          <div className={WIKI_SUBHEADER}>
+            <div className="flex-1" />
+            {canEdit && (
+              <WikiEditModeToggle editMode={editMode} onToggle={() => setEditMode(v => !v)} />
+            )}
+          </div>
+          <div className="flex flex-1 items-center justify-center p-8 text-center">
+            <p className="text-sm text-muted-foreground">
+              {!pages?.length
+                ? isEditMode
+                  ? t("emptyEdit")
+                  : t("emptyRead")
+                : t("selectPage")}
+            </p>
+          </div>
         </div>
       );
     }
@@ -909,6 +954,8 @@ export function WorldWiki({
         worldId={worldId}
         panelWidth={panelWidth}
         panelHandleProps={panelHandleProps}
+        editMode={editMode}
+        onToggleEditMode={() => setEditMode(v => !v)}
         pages={pages ?? []}
         ancestors={ancestorsOf(selectedPage)}
         canEdit={canEdit}
@@ -976,50 +1023,7 @@ export function WorldWiki({
             </>
           }
           title={label || tNav("wiki")}
-          right={
-            canEdit && (
-              <button
-                type="button"
-                onClick={() => setEditMode(v => !v)}
-                className={cn(
-                  "flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-                  editMode
-                    ? "border-primary/40 bg-primary/10 text-primary"
-                    : "border-border-soft bg-background text-muted-foreground hover:bg-secondary hover:text-foreground",
-                )}
-              >
-                <Pencil className="h-3 w-3" />
-                {editMode ? t("editingActive") : tCommon("edit")}
-              </button>
-            )
-          }
-        >
-          {isEditMode && (
-            <div className="flex items-center gap-0.5">
-              <button
-                type="button"
-                onClick={() => setCreating({ parentId: null, isFolder: false })}
-                className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
-              >
-                <FilePlus className="h-3.5 w-3.5" /> {t("newPage")}
-              </button>
-              <button
-                type="button"
-                onClick={() => setCreating({ parentId: null, isFolder: true })}
-                className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
-              >
-                <FolderPlus className="h-3.5 w-3.5" /> {t("newFolder")}
-              </button>
-              <button
-                type="button"
-                onClick={() => setLexiconManagerOpen(true)}
-                className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
-              >
-                <Library className="h-3.5 w-3.5" /> {t("lexicon.manageButton")}
-              </button>
-            </div>
-          )}
-        </WorldPanelHeader>
+        />
 
         {/* ── Body ───────────────────────────────────────── */}
         <div className="flex min-h-0 flex-1">

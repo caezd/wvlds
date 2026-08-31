@@ -80,6 +80,23 @@ async function dansLArbre(titre: string) {
   return within(nav).getByText(titre);
 }
 
+/**
+ * Passe en mode modification.
+ *
+ * La bascule vit au-dessus de l'article, dans un bloc que le chargement des
+ * pages remplace : la chercher avant que l'arbre soit là revient à cliquer sur
+ * un bouton détaché du DOM entre la requête et le clic. On réessaie donc
+ * jusqu'à ce que le mode soit effectivement actif — ce qu'un être humain, qui
+ * ne clique pas plus vite que la page ne charge, obtient du premier coup.
+ */
+async function activerModification(user: ReturnType<typeof userEvent.setup>) {
+  await waitFor(async () => {
+    if (screen.queryByText("Modification active")) return;
+    await user.click(screen.getByText("Modifier"));
+    expect(screen.getByText("Modification active")).toBeInTheDocument();
+  });
+}
+
 function setup() {
   const mock = createSupabaseMock({ results: [{ data: [PAGE], error: null }] });
   vi.mocked(createClient).mockReturnValue(mock.client as never);
@@ -113,11 +130,11 @@ describe("WorldWiki — barre de mise en forme et images", () => {
     const user = userEvent.setup();
     render(<WorldWiki worldId="w1" canEdit />);
 
-    // Bascule le panneau en mode modification (bouton d'en-tête)
-    await user.click(screen.getByText("Modifier"));
-    // Sélectionne la page dans l'arbre
-    await user.click(await dansLArbre("Accueil"));
-    // Entre en édition du contenu de la page
+    // Bascule le panneau en mode modification (bandeau, au-dessus de l'article)
+    await activerModification(user);
+    // Puis entre en édition du contenu : une fois le mode actif, la bascule
+    // affiche « Modification active », et « Modifier » ne désigne plus que le
+    // bouton de la page.
     await user.click(screen.getByText("Modifier"));
 
     expect(pbeProps).toHaveBeenCalledWith(
@@ -240,7 +257,7 @@ describe("WorldWiki — création depuis un modèle", () => {
     const user = userEvent.setup();
     render(<WorldWiki worldId="w1" canEdit />);
 
-    await user.click(screen.getByText("Modifier"));
+    await activerModification(user);
     await user.click(screen.getByText("Page"));
 
     await user.click(screen.getByTitle("Modèle"));
@@ -265,8 +282,7 @@ describe("WorldWiki — pages restreintes", () => {
     const user = userEvent.setup();
     render(<WorldWiki worldId="w1" canEdit />);
 
-    await user.click(screen.getByText("Modifier"));
-    await dansLArbre("Accueil");
+    await activerModification(user);
 
     await user.click(screen.getByLabelText("Options"));
     await user.click(screen.getByText("Réserver aux éditeurs"));
@@ -298,8 +314,7 @@ describe("WorldWiki — cascade de renommage", () => {
     const user = userEvent.setup();
     render(<WorldWiki worldId="w1" canEdit />);
 
-    await user.click(screen.getByText("Modifier"));
-    await dansLArbre("Accueil");
+    await activerModification(user);
 
     await user.click(screen.getByLabelText("Options"));
     await user.click(screen.getByText("Renommer"));
@@ -330,8 +345,7 @@ describe("WorldWiki — cascade de renommage", () => {
     const user = userEvent.setup();
     render(<WorldWiki worldId="w1" canEdit />);
 
-    await user.click(screen.getByText("Modifier"));
-    await dansLArbre("Accueil");
+    await activerModification(user);
 
     await user.click(screen.getByLabelText("Options"));
     await user.click(screen.getByText("Renommer"));
@@ -498,7 +512,7 @@ describe("WorldWiki — suppression d'une page", () => {
     const user = userEvent.setup();
     render(<WorldWiki worldId="w1" canEdit />);
 
-    await user.click(screen.getByText("Modifier"));
+    await activerModification(user);
     const ligne = (await dansLArbre("Accueil")).closest("div")!;
     await user.click(within(ligne).getByRole("button", { name: "Options" }));
     await user.click(await screen.findByRole("menuitem", { name: "Supprimer" }));

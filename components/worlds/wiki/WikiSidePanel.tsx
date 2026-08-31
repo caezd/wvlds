@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { MessagesSquare, StickyNote } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { WIKI_SUBHEADER } from "./wikiSubHeader";
 
 /** Les deux contenus que la colonne latérale d'une page sait afficher. */
 export type WikiSideTab = "comments" | "notes";
@@ -84,7 +85,9 @@ export function WikiSidePanel({
           partagée (components/ui/tab-bar.tsx) : même technique d'ombre `inset`,
           qui reste DANS la boîte du bouton là où une bordure ou une marge
           négative en gonfleraient la hauteur. */}
-      <div className="flex shrink-0 items-center px-3 shadow-[inset_0_-1px_0_0_var(--color-border)]">
+      {/* Segment droit du bandeau : même hauteur et même trait que les deux
+          autres, pour qu'ils se lisent comme une seule ligne. */}
+      <div className={cn(WIKI_SUBHEADER, "px-3")}>
         <div role="tablist" className="flex min-w-0 flex-1 items-center gap-4">
           {onglets.map(o => (
             <button
