@@ -2,15 +2,22 @@
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
-import { Eye, History, Loader2, Lock, PanelRight, Pencil } from "lucide-react";
+import { Eye, History, Loader2, Lock, MoreHorizontal, PanelRight, Pencil } from "lucide-react";
 import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
-import { VALID_LUCIDE_ICONS } from "@/components/ui/LucideIconPicker";
+import { LucideIconPicker, VALID_LUCIDE_ICONS } from "@/components/ui/LucideIconPicker";
 import { Button } from "@/components/ui/button";
 import { Drawer } from "@/components/ui/drawer";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { SideSheetContent } from "@/components/ui/side-sheet";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import { ParagraphBlockEditor } from "@/components/chatrooms/composer/ParagraphBlockEditor";
 import { toast } from "sonner";
+import { DB_TEXT_LIMITS } from "@/lib/textLimits";
 import { cn } from "@/lib/utils";
 import type { createClient } from "@/lib/supabase/client";
 import { resolveWikiLinks } from "@/lib/wikiLinks";
@@ -66,6 +73,7 @@ export function WikiPageContent({
   panelHandleProps,
   editMode,
   onToggleEditMode,
+  onRename,
   pages,
   ancestors,
   canEdit,
@@ -89,6 +97,9 @@ export function WikiPageContent({
    *  désormais au centre du bandeau, au-dessus de l'article. */
   editMode: boolean;
   onToggleEditMode: () => void;
+  /** Renomme la page (titre et icône) — la cascade des liens internes vers
+   *  l'ancien titre est faite par l'appelant, voir `WorldWiki.renamePage`. */
+  onRename: (title: string, icon: string) => void;
   /** Toutes les pages du wiki — pour résoudre les liens internes `[[Titre]]`. */
   pages: WikiPage[];
   /** Dossiers ancêtres de la page, du plus ancien au plus proche (fil d'Ariane). */
@@ -120,6 +131,26 @@ export function WikiPageContent({
   const [publishing, setPublishing] = React.useState(false);
   const [lastAutosavedAt, setLastAutosavedAt] = React.useState<Date | null>(null);
   const [historyOpen, setHistoryOpen] = React.useState(false);
+
+  // Renommage depuis le corps : on modifie le titre là où on le lit, plutôt
+  // que dans une ligne d'arbre de deux cents pixels.
+  const [renaming, setRenaming] = React.useState(false);
+  const [renameTitle, setRenameTitle] = React.useState(page.title);
+  const [renameIcon, setRenameIcon] = React.useState(page.icon ?? "");
+
+  function commencerRenommage() {
+    setRenameTitle(page.title);
+    setRenameIcon(page.icon ?? "");
+    setRenaming(true);
+  }
+
+  function validerRenommage() {
+    setRenaming(false);
+    const propre = renameTitle.trim();
+    if (propre && (propre !== page.title || renameIcon !== (page.icon ?? ""))) {
+      onRename(propre, renameIcon);
+    }
+  }
 
   // ── Annotations ───────────────────────────────────────────
   const { userId } = useCurrentUser();
@@ -447,10 +478,43 @@ export function WikiPageContent({
         <div className="mx-auto flex max-w-4xl gap-8">
           <div className="min-w-0 max-w-2xl flex-1">
             <div className="mb-6 flex items-start justify-between gap-4">
-              <h1 className="flex flex-1 items-center gap-2 text-2xl font-semibold">
-                {pageIcon}
-                {page.title}
-              </h1>
+              {renaming ? (
+                <div className="flex flex-1 items-center gap-2">
+                  <LucideIconPicker
+                    value={renameIcon}
+                    onChange={setRenameIcon}
+                    trigger={
+                      <button
+                        type="button"
+                        title={t("changeIcon")}
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground"
+                      >
+                        {renameIcon && VALID_LUCIDE_ICONS.has(renameIcon)
+                          ? <LazyLucideIcon name={renameIcon} className="h-5 w-5" />
+                          : <Pencil className="h-4 w-4" />}
+                      </button>
+                    }
+                  />
+                  <input
+                    value={renameTitle}
+                    onChange={e => setRenameTitle(e.target.value)}
+                    onBlur={validerRenommage}
+                    onKeyDown={e => {
+                      if (e.key === "Enter") { e.preventDefault(); validerRenommage(); }
+                      if (e.key === "Escape") { e.preventDefault(); setRenaming(false); }
+                    }}
+                    maxLength={DB_TEXT_LIMITS["world_wiki_pages.title"]}
+                    autoFocus
+                    aria-label={t("pageTitlePlaceholder")}
+                    className="min-w-0 flex-1 border-b border-border bg-transparent text-2xl font-semibold outline-none focus:border-primary/50"
+                  />
+                </div>
+              ) : (
+                <h1 className="flex flex-1 items-center gap-2 text-2xl font-semibold">
+                  {pageIcon}
+                  {page.title}
+                </h1>
+              )}
               <div className="flex shrink-0 items-center gap-2">
                 {draftBadge}
                 {restrictedBadge}
@@ -468,14 +532,32 @@ export function WikiPageContent({
                     </span>
                   )}
                 </Button>
-                {isEditMode && (
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => void startEditing()}
-                  >
-                    <Pencil className="mr-1.5 h-3.5 w-3.5" /> {tCommon("edit")}
-                  </Button>
+                {isEditMode && !renaming && (
+                  <>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => void startEditing()}
+                    >
+                      <Pencil className="mr-1.5 h-3.5 w-3.5" /> {tCommon("edit")}
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button
+                          type="button"
+                          aria-label={t("pageActions")}
+                          className="shrink-0 rounded-md p-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onSelect={commencerRenommage}>
+                          <Pencil className="mr-2 h-3.5 w-3.5" /> {t("rename")}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </>
                 )}
               </div>
             </div>

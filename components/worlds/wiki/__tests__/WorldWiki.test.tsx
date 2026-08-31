@@ -316,8 +316,10 @@ describe("WorldWiki — cascade de renommage", () => {
 
     await activerModification(user);
 
-    await user.click(screen.getByLabelText("Options"));
-    await user.click(screen.getByText("Renommer"));
+    // Une page se renomme depuis son corps : l'arbre ne garde ce geste que
+    // pour les dossiers, qui n'ont pas de corps.
+    await user.click(screen.getByLabelText("Actions de la page"));
+    await user.click(await screen.findByRole("menuitem", { name: "Renommer" }));
 
     const input = screen.getByDisplayValue("Accueil");
     await user.clear(input);
@@ -332,12 +334,15 @@ describe("WorldWiki — cascade de renommage", () => {
     });
   });
 
-  it("ne déclenche pas de cascade quand seule l'icône change (titre inchangé)", async () => {
+  it("confirmer un renommage sans rien avoir changé n'écrit rien", async () => {
+    // L'ancien renommage, dans l'arbre, écrivait à chaque validation — même
+    // quand ni le titre ni l'icône n'avaient bougé. Le renommage depuis le
+    // corps se tait dans ce cas, et ne déclenche donc pas non plus la cascade
+    // des liens internes.
     const mock = createSupabaseMock({
       results: [
         { data: [PAGE], error: null }, // load() initial (pages)
         { data: [], error: null },     // load() initial (lexique)
-        { data: null, error: null },
       ],
     });
     vi.mocked(createClient).mockReturnValue(mock.client as never);
@@ -347,16 +352,14 @@ describe("WorldWiki — cascade de renommage", () => {
 
     await activerModification(user);
 
-    await user.click(screen.getByLabelText("Options"));
-    await user.click(screen.getByText("Renommer"));
+    await user.click(screen.getByLabelText("Actions de la page"));
+    await user.click(await screen.findByRole("menuitem", { name: "Renommer" }));
 
     const input = screen.getByDisplayValue("Accueil");
-    await user.type(input, "{Enter}"); // même titre, pas de changement
+    await user.type(input, "{Enter}");
 
-    await waitFor(() => {
-      const builders = mock.buildersFor("world_wiki_pages");
-      expect(builders[1].update).toHaveBeenCalledWith({ title: "Accueil", icon: null });
-    });
+    await waitFor(() => expect(screen.queryByDisplayValue("Accueil")).toBeNull());
+    expect(mock.buildersFor("world_wiki_pages")).toHaveLength(1); // le chargement seul
     expect(mock.rpc).not.toHaveBeenCalled();
   });
 });

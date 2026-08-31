@@ -302,9 +302,14 @@ function SortableTreeNode({
                   <DropdownMenuSeparator />
                 </>
               )}
-              <DropdownMenuItem onClick={e => { e.stopPropagation(); onStartRename(); }}>
-                <Pencil className="mr-2 h-4 w-4" /> {t("rename")}
-              </DropdownMenuItem>
+              {/* Une page se renomme depuis son propre corps, où l'on voit
+                  le titre qu'on change. Un dossier n'a pas de corps : il garde
+                  donc son renommage ici. */}
+              {page.is_folder && (
+                <DropdownMenuItem onClick={e => { e.stopPropagation(); onStartRename(); }}>
+                  <Pencil className="mr-2 h-4 w-4" /> {t("rename")}
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem onClick={e => { e.stopPropagation(); onToggleRestricted(); }}>
                 {page.is_restricted
                   ? <><LockOpen className="mr-2 h-4 w-4" /> {t("unmarkRestricted")}</>
@@ -838,7 +843,11 @@ export function WorldWiki({
               editMode={isEditMode}
               subtree={page.is_folder && isExpanded ? renderTree(page.id, depth + 1) : null}
               createInput={creating?.parentId === page.id ? renderCreateInput(page.id, depth + 1) : null}
-              onSelect={() => setSelectedId(page.id)}
+              // `selectPageById` et non `setSelectedId` : lui seul déplie les
+              // dossiers ancêtres et referme le tiroir mobile. Sans cela, sur
+              // téléphone, choisir une page la sélectionnait sous un tiroir
+              // resté ouvert — rien ne semblait se passer.
+              onSelect={() => selectPageById(page.id)}
               onToggleFolder={() => toggleFolder(page.id)}
               onStartRename={() => { setRenamingId(page.id); setRenameValue(page.title); setRenameIcon(page.icon ?? ""); }}
               onRenameChange={setRenameValue}
@@ -962,6 +971,7 @@ export function WorldWiki({
         isEditMode={isEditMode}
         supabase={supabase}
         onPageUpdated={onPageUpdated}
+        onRename={(title, icon) => void renamePage(selectedPage, title, icon)}
         onNavigate={navigateToSlug}
         onExpandFolder={expandFolderChain}
         autoEdit={selectedPage.id === pendingAutoEditId}

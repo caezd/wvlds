@@ -94,6 +94,7 @@ describe("WikiPageContent — brouillon et publication", () => {
         panelHandleProps={{}}
         editMode={true}
         onToggleEditMode={vi.fn()}
+        onRename={vi.fn()}
         page={BASE_PAGE}
         pages={[BASE_PAGE]}
         canEdit
@@ -123,6 +124,7 @@ describe("WikiPageContent — brouillon et publication", () => {
         panelHandleProps={{}}
         editMode={true}
         onToggleEditMode={vi.fn()}
+        onRename={vi.fn()}
         page={BASE_PAGE}
         pages={[BASE_PAGE]}
         canEdit
@@ -160,6 +162,7 @@ describe("WikiPageContent — brouillon et publication", () => {
         panelHandleProps={{}}
         editMode={true}
         onToggleEditMode={vi.fn()}
+        onRename={vi.fn()}
         page={BASE_PAGE}
         pages={[BASE_PAGE]}
         canEdit
@@ -206,6 +209,7 @@ describe("WikiPageContent — brouillon et publication", () => {
         panelHandleProps={{}}
         editMode={true}
         onToggleEditMode={vi.fn()}
+        onRename={vi.fn()}
         page={BASE_PAGE}
         pages={[BASE_PAGE]}
         canEdit
@@ -250,6 +254,7 @@ describe("WikiPageContent — badge brouillon", () => {
         panelHandleProps={{}}
         editMode={false}
         onToggleEditMode={vi.fn()}
+        onRename={vi.fn()}
         page={page}
         pages={[page]}
         canEdit
@@ -279,6 +284,7 @@ describe("WikiPageContent — badge brouillon", () => {
         panelHandleProps={{}}
         editMode={false}
         onToggleEditMode={vi.fn()}
+        onRename={vi.fn()}
         page={page}
         pages={[page]}
         canEdit={false}
@@ -308,6 +314,7 @@ describe("WikiPageContent — badge brouillon", () => {
         panelHandleProps={{}}
         editMode={false}
         onToggleEditMode={vi.fn()}
+        onRename={vi.fn()}
         page={page}
         pages={[page]}
         canEdit
@@ -334,6 +341,7 @@ describe("WikiPageContent — badge page restreinte", () => {
         panelHandleProps={{}}
         editMode={false}
         onToggleEditMode={vi.fn()}
+        onRename={vi.fn()}
         page={page}
         pages={[page]}
         canEdit
@@ -358,6 +366,7 @@ describe("WikiPageContent — badge page restreinte", () => {
         panelHandleProps={{}}
         editMode={false}
         onToggleEditMode={vi.fn()}
+        onRename={vi.fn()}
         page={page}
         pages={[page]}
         canEdit
@@ -387,6 +396,7 @@ describe("WikiPageContent — commentaires ancrés", () => {
         panelHandleProps={{}}
         editMode={false}
         onToggleEditMode={vi.fn()}
+        onRename={vi.fn()}
         page={PAGE}
         pages={[PAGE]}
         canEdit={canEdit}
