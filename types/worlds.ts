@@ -177,6 +177,14 @@ export type WikiAnnotation = {
   parent_id: string | null;
   author_id: string;
   body: string;
+  /**
+   * Type du bloc visé (`p`, `li`, `blockquote`, `h2`…) — voir migration 142.
+   *
+   * Renseigné, l'ancre porte sur un bloc et les quatre champs suivants
+   * décrivent ce bloc. Nul, c'est une ancre de sélection d'avant la
+   * migration : les mêmes champs décrivent alors un extrait de caractères.
+   */
+  anchor_block_type: string | null;
   anchor_quote: string | null;
   anchor_prefix: string | null;
   anchor_suffix: string | null;

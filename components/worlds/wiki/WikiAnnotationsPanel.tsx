@@ -5,14 +5,15 @@ import { useTranslations } from "next-intl";
 import { Loader2 } from "lucide-react";
 
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
-import { anchorPreview, type TextAnchor } from "@/lib/wikiAnnotations";
+import { anchorPreview } from "@/lib/wikiAnnotations";
+import type { BlockAnchor } from "@/lib/wikiBlockAnchors";
 import { cn } from "@/lib/utils";
 import type { WikiAnnotation, WikiAnnotationThread } from "@/types/worlds";
 
 import { WikiAnnotationComposer } from "./WikiAnnotationComposer";
 import { WikiAnnotationThreadCard } from "./WikiAnnotationThreadCard";
 
-export type AnnotationDraft = { anchor: TextAnchor };
+export type AnnotationDraft = { anchor: BlockAnchor };
 
 /** Colonne des commentaires ancrés d'une page, fil par fil. */
 export function WikiAnnotationsPanel({

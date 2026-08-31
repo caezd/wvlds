@@ -51,29 +51,6 @@ export type TextAnchor = {
 
 export type ResolvedRange = { start: number; end: number };
 
-/**
- * Construit l'ancre d'une sélection. Renvoie `null` si la sélection est vide,
- * blanche, ou plus longue que `ANCHOR_MAX_QUOTE_LENGTH`.
- */
-export function buildAnchor(text: string, start: number, end: number): TextAnchor | null {
-  if (!Number.isFinite(start) || !Number.isFinite(end)) return null;
-
-  const from = Math.max(0, Math.min(Math.trunc(start), Math.trunc(end)));
-  const to = Math.min(text.length, Math.max(Math.trunc(start), Math.trunc(end)));
-  if (to <= from) return null;
-
-  const quote = text.slice(from, to);
-  if (quote.trim() === "") return null;
-  if (quote.length > ANCHOR_MAX_QUOTE_LENGTH) return null;
-
-  return {
-    quote,
-    prefix: text.slice(Math.max(0, from - ANCHOR_CONTEXT_LENGTH), from),
-    suffix: text.slice(to, to + ANCHOR_CONTEXT_LENGTH),
-    start: from,
-  };
-}
-
 /** Longueur du plus long suffixe commun à `a` et `b`. */
 function commonSuffixLength(a: string, b: string): number {
   const max = Math.min(a.length, b.length);

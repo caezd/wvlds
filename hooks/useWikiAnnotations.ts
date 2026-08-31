@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import type { createClient } from "@/lib/supabase/client";
 import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import { openRealtimeChannel } from "@/lib/realtimeChannel";
-import type { TextAnchor } from "@/lib/wikiAnnotations";
+import type { BlockAnchor } from "@/lib/wikiBlockAnchors";
 import type { WikiAnnotation, WikiAnnotationThread } from "@/types/worlds";
 
 /**
@@ -18,12 +18,12 @@ import type { WikiAnnotation, WikiAnnotationThread } from "@/types/worlds";
  */
 const ANNOTATION_COLUMNS =
   "id, page_id, parent_id, author_id, body, " +
-  "anchor_quote, anchor_prefix, anchor_suffix, anchor_start, " +
+  "anchor_block_type, anchor_quote, anchor_prefix, anchor_suffix, anchor_start, " +
   "resolved_at, resolved_by, created_at, " +
   "author:author_id(id, username, avatar_url)";
 
 export type CreateThreadInput = {
-  anchor: TextAnchor;
+  anchor: BlockAnchor;
   body: string;
 };
 
@@ -159,10 +159,13 @@ export function useWikiAnnotations({
       insert({
         body: body.trim(),
         parent_id: null,
+        anchor_block_type: anchor.type,
         anchor_quote: anchor.quote,
         anchor_prefix: anchor.prefix,
         anchor_suffix: anchor.suffix,
-        anchor_start: anchor.start,
+        // Index du bloc, et non plus position en caractères — voir la
+        // migration 142 : la colonne est la même, l'unité a changé.
+        anchor_start: anchor.index,
       }),
     [insert],
   );

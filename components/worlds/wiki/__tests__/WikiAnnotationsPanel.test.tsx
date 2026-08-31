@@ -11,6 +11,7 @@ function annotation(over: Partial<WikiAnnotation> & { id: string }): WikiAnnotat
     parent_id: null,
     author_id: "u1",
     body: "Un commentaire",
+    anchor_block_type: "p",
     anchor_quote: "Les Gardiens",
     anchor_prefix: "",
     anchor_suffix: "",
@@ -119,14 +120,14 @@ describe("WikiAnnotationsPanel — fils résolus", () => {
 });
 
 describe("WikiAnnotationsPanel — écriture", () => {
-  it("compose la première annotation d'un passage sélectionné", async () => {
+  it("compose le premier commentaire d'un bloc", async () => {
     const { onCreate } = renderPanel({
       draft: {
-            anchor: { quote: "Les Gardiens", prefix: "", suffix: "", start: 0 },
+        anchor: { type: "p", quote: "Les Gardiens", prefix: "", suffix: "", index: 0 },
       },
     });
 
-    // L'extrait visé est rappelé au-dessus de la saisie.
+    // Le bloc visé est rappelé au-dessus de la saisie.
     expect(screen.getByText("Les Gardiens")).toBeTruthy();
     await userEvent.type(screen.getByRole("textbox"), "Qui les a créés ?");
     await userEvent.click(screen.getByRole("button", { name: "Commenter" }));
@@ -136,7 +137,7 @@ describe("WikiAnnotationsPanel — écriture", () => {
 
   it("refuse de publier un commentaire vide", () => {
     renderPanel({
-      draft: { anchor: { quote: "Meridian", prefix: "", suffix: "", start: 0 } },
+      draft: { anchor: { type: "p", quote: "Meridian", prefix: "", suffix: "", index: 0 } },
     });
     expect(screen.getByRole("button", { name: "Commenter" }).hasAttribute("disabled")).toBe(true);
   });

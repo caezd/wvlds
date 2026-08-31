@@ -11,6 +11,7 @@ function annotation(over: Partial<WikiAnnotation> & { id: string }): WikiAnnotat
     parent_id: null,
     author_id: "u1",
     body: "Un commentaire",
+    anchor_block_type: "p",
     anchor_quote: "Les Gardiens",
     anchor_prefix: "",
     anchor_suffix: "",
@@ -89,7 +90,7 @@ describe("useWikiAnnotations", () => {
 
     await act(async () => {
       await result.current.createThread({
-            anchor: { quote: "Les Gardiens", prefix: "avant ", suffix: " après", start: 28 },
+        anchor: { type: "p", quote: "Les Gardiens", prefix: "avant ", suffix: " après", index: 2 },
         body: "  Qui les a créés ?  ",
       });
     });
@@ -99,12 +100,15 @@ describe("useWikiAnnotations", () => {
       page_id: "p1",
       world_id: "w1",
       author_id: "u1",
-        parent_id: null,
+      parent_id: null,
       body: "Qui les a créés ?",
+      anchor_block_type: "p",
       anchor_quote: "Les Gardiens",
       anchor_prefix: "avant ",
       anchor_suffix: " après",
-      anchor_start: 28,
+      // `anchor_start` porte l'index du bloc depuis la migration 142 : la
+      // colonne est la même, l'unité a changé.
+      anchor_start: 2,
     });
     // La ligne rendue par la base rejoint l'état sans attendre le temps réel.
     expect(result.current.threads.map(t => t.root.id)).toContain("neuf");
@@ -200,7 +204,7 @@ describe("useWikiAnnotations", () => {
 
     await act(async () => {
       const created = await result.current.createThread({
-            anchor: { quote: "Les Gardiens", prefix: "", suffix: "", start: 0 },
+        anchor: { type: "p", quote: "Les Gardiens", prefix: "", suffix: "", index: 0 },
         body: "Tentative",
       });
       expect(created).toBeNull();

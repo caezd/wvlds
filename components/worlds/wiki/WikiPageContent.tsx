@@ -22,7 +22,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { MEDIA, useMediaQuery } from "@/hooks/useMediaQuery";
 import { useWikiAnnotations } from "@/hooks/useWikiAnnotations";
 import { useWikiPageNotes } from "@/hooks/useWikiPageNotes";
-import type { TextAnchor } from "@/lib/wikiAnnotations";
+import type { BlockAnchor } from "@/lib/wikiBlockAnchors";
 import type { WikiAnnotation } from "@/types/worlds";
 import { WikiAnnotationLayer, type ActiveAnnotation } from "./WikiAnnotationLayer";
 import { WikiAnnotationsPanel, type AnnotationDraft } from "./WikiAnnotationsPanel";
@@ -252,7 +252,7 @@ export function WikiPageContent({
     setActiveAnnotation({ id, scrollIntoView });
   }
 
-  function startDraft(anchor: TextAnchor) {
+  function startDraft(anchor: BlockAnchor) {
     setSideTab("comments");
     setSideDrawerOpen(true);
     setActiveAnnotation(null);

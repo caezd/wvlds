@@ -1,62 +1,30 @@
 import { describe, it, expect } from "vitest";
 import {
   ANCHOR_CONTEXT_LENGTH,
-  ANCHOR_MAX_QUOTE_LENGTH,
   anchorPreview,
-  buildAnchor,
   resolveAnchor,
   type TextAnchor,
 } from "@/lib/wikiAnnotations";
 
 const TEXT = "Mara Kline observe la ville. Les Gardiens veillent sur Meridian depuis neuf ans.";
 
-/** Ancre une sous-chaîne par son texte, comme le ferait une sélection à l'écran. */
+/**
+ * Ancre une sous-chaîne par son texte, telle que l'écrivait la sélection.
+ *
+ * L'application n'en crée plus — les commentaires visent un bloc depuis la
+ * migration 142 —, mais elle doit continuer à résoudre celles déjà en base.
+ */
 function anchorOf(text: string, quote: string, occurrence = 0): TextAnchor {
   let index = -1;
   for (let i = 0; i <= occurrence; i++) index = text.indexOf(quote, index + 1);
-  const anchor = buildAnchor(text, index, index + quote.length);
-  if (!anchor) throw new Error(`ancre impossible pour « ${quote} »`);
-  return anchor;
+  return {
+    quote,
+    prefix: text.slice(Math.max(0, index - ANCHOR_CONTEXT_LENGTH), index),
+    suffix: text.slice(index + quote.length, index + quote.length + ANCHOR_CONTEXT_LENGTH),
+    start: index,
+  };
 }
 
-describe("buildAnchor", () => {
-  it("mémorise l'extrait, son voisinage et sa position", () => {
-    const anchor = anchorOf(TEXT, "Les Gardiens");
-    expect(anchor.quote).toBe("Les Gardiens");
-    expect(anchor.start).toBe(TEXT.indexOf("Les Gardiens"));
-    expect(anchor.prefix).toBe("Mara Kline observe la ville. ");
-    expect(anchor.suffix).toBe(" veillent sur Meridian depuis neuf ans.");
-  });
-
-  it("borne le voisinage à ANCHOR_CONTEXT_LENGTH", () => {
-    const long = "a".repeat(200) + "CIBLE" + "b".repeat(200);
-    const anchor = anchorOf(long, "CIBLE");
-    expect(anchor.prefix).toHaveLength(ANCHOR_CONTEXT_LENGTH);
-    expect(anchor.suffix).toHaveLength(ANCHOR_CONTEXT_LENGTH);
-  });
-
-  it("accepte des bornes inversées", () => {
-    const start = TEXT.indexOf("Meridian");
-    expect(buildAnchor(TEXT, start + 8, start)?.quote).toBe("Meridian");
-  });
-
-  it("refuse une sélection vide ou uniquement blanche", () => {
-    expect(buildAnchor(TEXT, 5, 5)).toBeNull();
-    expect(buildAnchor("mot   mot", 3, 6)).toBeNull();
-  });
-
-  it("refuse une sélection plus longue que la limite", () => {
-    const huge = "x".repeat(ANCHOR_MAX_QUOTE_LENGTH + 1);
-    expect(buildAnchor(huge, 0, huge.length)).toBeNull();
-    expect(buildAnchor(huge, 0, ANCHOR_MAX_QUOTE_LENGTH)).not.toBeNull();
-  });
-
-  it("ne déborde pas des bornes du texte", () => {
-    const anchor = buildAnchor(TEXT, -10, 4);
-    expect(anchor?.quote).toBe("Mara");
-    expect(anchor?.prefix).toBe("");
-  });
-});
 
 describe("resolveAnchor", () => {
   it("retrouve l'extrait quand rien n'a bougé", () => {

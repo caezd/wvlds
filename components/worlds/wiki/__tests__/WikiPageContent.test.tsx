@@ -11,8 +11,15 @@ vi.mock("@/lib/codeHighlighter", () => ({
   preloadCodeHighlighter: () => () => {},
 }));
 
+// Le vrai rendu produit des paragraphes, et c'est sur eux que porte
+// l'ancrage : un simulacre qui rendrait tout le texte d'un bloc ne dirait
+// rien du comportement qu'on vérifie ici.
 vi.mock("@/components/MarkdownRenderer", () => ({
-  default: ({ content }: { content: string }) => <div data-testid="markdown">{content}</div>,
+  default: ({ content }: { content: string }) => (
+    <div data-testid="markdown">
+      {content.split(/\n{2,}/).map((para, i) => <p key={i}>{para}</p>)}
+    </div>
+  ),
 }));
 // Le panneau de notes est monté d'office depuis que la colonne s'ouvre sur son
 // onglet ; il lit ses propres tables et décalerait la file de résultats du
@@ -473,7 +480,7 @@ describe("WikiPageContent — titre de la page", () => {
 describe("WikiPageContent — commentaires ancrés", () => {
   const PAGE: WikiPage = {
     ...BASE_PAGE,
-    content: "Mara Kline observe la ville. Les Gardiens veillent sur Meridian.",
+    content: ["Mara Kline observe la ville.", "Les Gardiens veillent sur Meridian."].join("\n\n"),
   };
 
   function renderPage(mock: ReturnType<typeof createSupabaseMock>, canEdit = true) {
@@ -504,28 +511,20 @@ describe("WikiPageContent — commentaires ancrés", () => {
     parent_id: null,
     author_id: "u1",
     body: "Qui les a créés ?",
-    anchor_quote: "Les Gardiens",
-    anchor_prefix: "Mara Kline observe la ville. ",
-    anchor_suffix: " veillent sur Meridian.",
-    anchor_start: 28,
+    anchor_block_type: "p",
+    anchor_quote: "Les Gardiens veillent sur Meridian.",
+    anchor_prefix: "Mara Kline observe la ville.",
+    anchor_suffix: "",
+    anchor_start: 1,
     resolved_at: null,
     resolved_by: null,
     created_at: "2026-08-01T10:00:00.000Z",
     author: { id: "u1", username: "caedrik", avatar_url: null },
   };
 
-  /** Sélectionne un passage dans le texte rendu, puis relâche la souris. */
-  function selectInProse(quote: string) {
-    const prose = screen.getByTestId("markdown");
-    const node = prose.firstChild as Text;
-    const start = node.nodeValue!.indexOf(quote);
-    const range = document.createRange();
-    range.setStart(node, start);
-    range.setEnd(node, start + quote.length);
-    const selection = window.getSelection()!;
-    selection.removeAllRanges();
-    selection.addRange(range);
-    fireEvent.mouseUp(prose);
+  /** Survole le paragraphe d'index donné, ce qui présente son bouton. */
+  function survolerParagraphe(container: HTMLElement, i: number) {
+    fireEvent.mouseOver(container.querySelectorAll("p")[i]);
   }
 
   it("lit les annotations avec la page, sans attendre l'ouverture du panneau", async () => {
@@ -557,7 +556,7 @@ describe("WikiPageContent — commentaires ancrés", () => {
     await waitFor(() => expect(onglet.textContent).toContain("1"));
   });
 
-  it("surligne les passages annotés et ouvre le fil au clic", async () => {
+  it("marque le bloc commenté et ouvre le fil au clic", async () => {
     ecranLarge();
     const mock = createSupabaseMock({
       results: [{ data: [ANNOTATION], error: null }],
@@ -568,23 +567,25 @@ describe("WikiPageContent — commentaires ancrés", () => {
     await userEvent.click(await screen.findByRole("tab", { name: /Commentaires/ }));
     await waitFor(() => expect(screen.getByText("Qui les a créés ?")).toBeTruthy());
 
-    const mark = container.querySelector<HTMLElement>('[data-annotation-id="a1"]');
-    expect(mark!.textContent).toBe("Les Gardiens");
-    // Le texte de la page reste intact malgré l'enveloppement.
-    expect(screen.getByTestId("markdown").textContent).toBe(PAGE.content);
+    const marque = container.querySelector<HTMLElement>('[data-annotation-ids~="a1"]');
+    expect(marque).toBe(container.querySelectorAll("p")[1]);
+    // Le texte de la page reste intact : on ne pose que des attributs.
+    expect(marque!.textContent).toBe("Les Gardiens veillent sur Meridian.");
   });
 
-  it("ouvre la saisie sur le passage sélectionné, extrait à l'appui", async () => {
+  it("ouvre la saisie sur le bloc survolé, texte à l'appui", async () => {
+    ecranLarge();
     const mock = createSupabaseMock({ results: [{ data: [], error: null }] });
     const user = userEvent.setup();
-    renderPage(mock);
+    const { container } = renderPage(mock);
 
-    selectInProse("Les Gardiens");
+    await screen.findByTestId("markdown");
+    survolerParagraphe(container, 1);
     await user.click(await screen.findByRole("button", { name: "Commenter" }));
 
-    // Le panneau s'ouvre de lui-même sur la saisie, et rappelle l'extrait visé.
+    // Le panneau s'ouvre de lui-même sur la saisie, et rappelle le bloc visé.
     const panel = screen.getByRole("complementary", { name: "Commentaires" });
-    expect(panel.textContent).toContain("Les Gardiens");
+    expect(panel.textContent).toContain("Les Gardiens veillent sur Meridian.");
     expect(screen.getByRole("textbox")).toBeTruthy();
   });
 });

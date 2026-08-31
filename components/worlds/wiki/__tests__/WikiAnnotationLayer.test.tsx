@@ -1,22 +1,52 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { WikiAnnotationLayer } from "@/components/worlds/wiki/WikiAnnotationLayer";
 import type { WikiAnnotation, WikiAnnotationThread } from "@/types/worlds";
 
-const TEXT = "Mara Kline observe la ville. Les Gardiens veillent sur Meridian.";
+const PREMIER = "Mara Kline observe la ville.";
+const DEUXIEME = "Les Gardiens veillent sur Meridian.";
+const TROISIEME = "La nuit tombe sur le quartier haut.";
 
-function thread(over: Partial<WikiAnnotation> & { id: string; anchor_quote: string }): WikiAnnotationThread {
-  const start = TEXT.indexOf(over.anchor_quote);
+/** Fil ancré sur un bloc, à la façon dont l'écrit `useWikiAnnotations`. */
+function surBloc(
+  over: Partial<WikiAnnotation> & { id: string; anchor_quote: string; anchor_start: number },
+): WikiAnnotationThread {
   return {
     root: {
       page_id: "p1",
       parent_id: null,
       author_id: "u1",
       body: "Un commentaire",
-      anchor_prefix: TEXT.slice(Math.max(0, start - 40), start),
-      anchor_suffix: TEXT.slice(start + over.anchor_quote.length, start + over.anchor_quote.length + 40),
+      anchor_block_type: "p",
+      anchor_prefix: "",
+      anchor_suffix: "",
+      resolved_at: null,
+      resolved_by: null,
+      created_at: "2026-08-01T10:00:00.000Z",
+      author: { id: "u1", username: "caedrik", avatar_url: null },
+      ...over,
+    },
+    replies: [],
+  };
+}
+
+/** Fil d'avant la migration 142 : une ancre de caractères, sans type de bloc. */
+function surSelection(
+  over: Partial<WikiAnnotation> & { id: string; anchor_quote: string },
+): WikiAnnotationThread {
+  const texte = `${PREMIER}${DEUXIEME}${TROISIEME}`;
+  const start = texte.indexOf(over.anchor_quote);
+  return {
+    root: {
+      page_id: "p1",
+      parent_id: null,
+      author_id: "u1",
+      body: "Un commentaire",
+      anchor_block_type: null,
+      anchor_prefix: texte.slice(Math.max(0, start - 40), start),
+      anchor_suffix: texte.slice(start + over.anchor_quote.length).slice(0, 40),
       anchor_start: start,
       resolved_at: null,
       resolved_by: null,
@@ -26,6 +56,16 @@ function thread(over: Partial<WikiAnnotation> & { id: string; anchor_quote: stri
     },
     replies: [],
   };
+}
+
+function article() {
+  return (
+    <div data-testid="prose">
+      <p>{PREMIER}</p>
+      <p>{DEUXIEME}</p>
+      <p>{TROISIEME}</p>
+    </div>
+  );
 }
 
 function renderLayer(props: Partial<React.ComponentProps<typeof WikiAnnotationLayer>> = {}) {
@@ -40,67 +80,90 @@ function renderLayer(props: Partial<React.ComponentProps<typeof WikiAnnotationLa
       onDraft={vi.fn()}
       {...props}
     >
-      <p data-testid="prose">{TEXT}</p>
+      {article()}
     </WikiAnnotationLayer>,
   );
 }
 
-/** Sélectionne `quote` dans le texte rendu, comme le ferait un glissé souris. */
-function selectQuote(quote: string) {
-  const prose = screen.getByTestId("prose");
-  const node = prose.firstChild as Text;
-  const start = node.nodeValue!.indexOf(quote);
-  const range = document.createRange();
-  range.setStart(node, start);
-  range.setEnd(node, start + quote.length);
-  const selection = window.getSelection()!;
-  selection.removeAllRanges();
-  selection.addRange(range);
-  return prose;
+/** Le paragraphe d'index donné dans le rendu. */
+function paragraphe(container: HTMLElement, i: number): HTMLElement {
+  return container.querySelectorAll("p")[i] as HTMLElement;
 }
 
-beforeEach(() => {
-  window.getSelection()?.removeAllRanges();
-});
+describe("WikiAnnotationLayer — marquage des blocs", () => {
+  it("marque le bloc commenté sans toucher au texte", () => {
+    const { container } = renderLayer({
+      threads: [surBloc({ id: "a1", anchor_quote: DEUXIEME, anchor_start: 1 })],
+    });
 
-describe("WikiAnnotationLayer — surlignage", () => {
-  it("enveloppe le passage ancré sans altérer le texte de la page", () => {
-    const { container } = renderLayer({ threads: [thread({ id: "a1", anchor_quote: "Les Gardiens" })] });
+    const marque = container.querySelector<HTMLElement>('[data-annotation-ids~="a1"]');
+    expect(marque).toBe(paragraphe(container, 1));
+    expect(screen.getByTestId("prose").textContent).toBe(PREMIER + DEUXIEME + TROISIEME);
+  });
 
-    const mark = container.querySelector<HTMLElement>('[data-annotation-id="a1"]');
-    expect(mark).not.toBeNull();
-    expect(mark!.textContent).toBe("Les Gardiens");
-    expect(screen.getByTestId("prose").textContent).toBe(TEXT);
+  it("suit le bloc quand un paragraphe est inséré avant lui", () => {
+    // Le cas qui a motivé l'ancrage par bloc : l'index mémorisé ne vaut plus,
+    // mais le texte du bloc, lui, n'a pas bougé.
+    const { container } = render(
+      <WikiAnnotationLayer
+        contentKey="p1|v2"
+        threads={[surBloc({ id: "a1", anchor_quote: DEUXIEME, anchor_start: 1 })]}
+        active={null}
+        draftAnchor={null}
+        canComment
+        onActivate={vi.fn()}
+        onDraft={vi.fn()}
+      >
+        <div data-testid="prose">
+          <p>Un ajout en tête.</p>
+          <p>{PREMIER}</p>
+          <p>{DEUXIEME}</p>
+        </div>
+      </WikiAnnotationLayer>,
+    );
+
+    expect(container.querySelector('[data-annotation-ids~="a1"]')).toBe(paragraphe(container, 2));
   });
 
   it("marque un fil résolu", () => {
     const { container } = renderLayer({
-      threads: [thread({ id: "a1", anchor_quote: "Meridian", resolved_at: "2026-08-02T10:00:00.000Z" })],
+      threads: [surBloc({
+        id: "a1",
+        anchor_quote: DEUXIEME,
+        anchor_start: 1,
+        resolved_at: "2026-08-02T10:00:00.000Z",
+      })],
     });
-    expect(
-      container.querySelector<HTMLElement>('[data-annotation-id="a1"]')!.dataset.annotationResolved,
-    ).toBe("true");
+
+    expect(paragraphe(container, 1).dataset.annotationResolved).toBe("true");
   });
 
-  it("surligne deux passages qui se chevauchent sans décaler le texte", () => {
+  it("laisse un bloc ouvert tant qu'un seul de ses fils l'est", () => {
     const { container } = renderLayer({
       threads: [
-        thread({ id: "a1", anchor_quote: "Les Gardiens veillent" }),
-        thread({ id: "a2", anchor_quote: "veillent sur Meridian" }),
+        surBloc({
+          id: "a1",
+          anchor_quote: DEUXIEME,
+          anchor_start: 1,
+          resolved_at: "2026-08-02T10:00:00.000Z",
+        }),
+        surBloc({ id: "a2", anchor_quote: DEUXIEME, anchor_start: 1 }),
       ],
     });
 
-    expect(container.querySelector('[data-annotation-id="a1"]')).not.toBeNull();
-    expect(container.querySelector('[data-annotation-id="a2"]')).not.toBeNull();
-    expect(screen.getByTestId("prose").textContent).toBe(TEXT);
+    const bloc = paragraphe(container, 1);
+    expect(bloc.dataset.annotationIds).toBe("a1 a2");
+    expect(bloc.dataset.annotationResolved).toBeUndefined();
+    // Un clic ouvre le fil qui attend une réponse, pas le plus ancien.
+    expect(bloc.dataset.annotationId).toBe("a2");
   });
 
-  it("signale les annotations dont l'extrait a disparu du texte", () => {
+  it("signale les commentaires dont le bloc a disparu", () => {
     const onDetachedChange = vi.fn();
     renderLayer({
       threads: [
-        thread({ id: "a1", anchor_quote: "Les Gardiens" }),
-        thread({ id: "perdue", anchor_quote: "Les Sentinelles" }),
+        surBloc({ id: "a1", anchor_quote: DEUXIEME, anchor_start: 1 }),
+        surBloc({ id: "perdue", anchor_quote: "Un paragraphe effacé depuis.", anchor_start: 2 }),
       ],
       onDetachedChange,
     });
@@ -108,12 +171,10 @@ describe("WikiAnnotationLayer — surlignage", () => {
     expect(onDetachedChange).toHaveBeenCalledWith(["perdue"]);
   });
 
-  it("n'applique qu'une série de surlignages par rendu, même après un nouveau rendu du parent", () => {
-    const threads = [thread({ id: "a1", anchor_quote: "Les Gardiens" })];
+  it("ne marque qu'une fois, même après un nouveau rendu du parent", () => {
+    const threads = [surBloc({ id: "a1", anchor_quote: DEUXIEME, anchor_start: 1 })];
     const { container, rerender } = renderLayer({ threads });
 
-    // Nouveau rendu du parent, mêmes données : la couche ne doit pas
-    // superposer une seconde série de span sur le DOM déjà enveloppé.
     rerender(
       <WikiAnnotationLayer
         contentKey="p1|v1"
@@ -121,74 +182,98 @@ describe("WikiAnnotationLayer — surlignage", () => {
         active={null}
         draftAnchor={null}
         canComment
-          onActivate={vi.fn()}
+        onActivate={vi.fn()}
         onDraft={vi.fn()}
       >
-        <p data-testid="prose">{TEXT}</p>
+        {article()}
       </WikiAnnotationLayer>,
     );
 
-    expect(container.querySelectorAll('[data-annotation-id="a1"]')).toHaveLength(1);
-    expect(screen.getByTestId("prose").textContent).toBe(TEXT);
+    expect(container.querySelectorAll('[data-annotation-ids~="a1"]')).toHaveLength(1);
+    expect(screen.getByTestId("prose").textContent).toBe(PREMIER + DEUXIEME + TROISIEME);
   });
 
-  it("met en avant l'annotation courante", () => {
-    const th = thread({ id: "a1", anchor_quote: "Les Gardiens" });
+  it("met en avant le fil courant", () => {
     const { container } = renderLayer({
-      threads: [th],
+      threads: [surBloc({ id: "a1", anchor_quote: DEUXIEME, anchor_start: 1 })],
       active: { id: "a1", scrollIntoView: false },
     });
-    expect(
-      container.querySelector<HTMLElement>('[data-annotation-id="a1"]')!.dataset.annotationActive,
-    ).toBe("true");
+
+    expect(paragraphe(container, 1).dataset.annotationActive).toBe("true");
   });
 });
 
-describe("WikiAnnotationLayer — clic sur un passage annoté", () => {
+describe("WikiAnnotationLayer — commentaires d'avant l'ancrage par bloc", () => {
+  it("rattache une ancre de sélection au bloc qui la contient", () => {
+    // Aucune donnée n'a été convertie : ces commentaires se résolvent par leur
+    // extrait, puis remontent au bloc.
+    const { container } = renderLayer({
+      threads: [surSelection({ id: "vieux", anchor_quote: "Les Gardiens" })],
+    });
+
+    expect(container.querySelector('[data-annotation-ids~="vieux"]')).toBe(paragraphe(container, 1));
+  });
+
+  it("les détache quand leur extrait a disparu", () => {
+    const onDetachedChange = vi.fn();
+    renderLayer({
+      threads: [surSelection({ id: "vieux", anchor_quote: "Les Sentinelles" })],
+      onDetachedChange,
+    });
+
+    expect(onDetachedChange).toHaveBeenCalledWith(["vieux"]);
+  });
+});
+
+describe("WikiAnnotationLayer — clic sur un bloc commenté", () => {
   it("active le fil correspondant", async () => {
     const onActivate = vi.fn();
     const { container } = renderLayer({
-      threads: [thread({ id: "a1", anchor_quote: "Les Gardiens" })],
+      threads: [surBloc({ id: "a1", anchor_quote: DEUXIEME, anchor_start: 1 })],
       onActivate,
     });
 
-    await userEvent.click(container.querySelector('[data-annotation-id="a1"]')!);
+    await userEvent.click(paragraphe(container, 1));
     expect(onActivate).toHaveBeenCalledWith("a1");
   });
 });
 
-describe("WikiAnnotationLayer — sélection", () => {
-  it("propose de commenter le passage sélectionné", async () => {
-    renderLayer();
-    fireEvent.mouseUp(selectQuote("Les Gardiens"));
+describe("WikiAnnotationLayer — commenter un bloc", () => {
+  it("propose le bouton en regard du bloc survolé", async () => {
+    const { container } = renderLayer();
+    fireEvent.mouseOver(paragraphe(container, 1));
 
     expect(await screen.findByRole("button", { name: "Commenter" })).toBeTruthy();
   });
 
-  it("ancre la sélection sur l'extrait choisi", async () => {
+  it("ancre sur le bloc survolé, voisins compris", async () => {
     const onDraft = vi.fn();
-    renderLayer({ onDraft });
-    fireEvent.mouseUp(selectQuote("Les Gardiens"));
+    const { container } = renderLayer({ onDraft });
+    fireEvent.mouseOver(paragraphe(container, 1));
 
     await userEvent.click(await screen.findByRole("button", { name: "Commenter" }));
 
     expect(onDraft).toHaveBeenCalledTimes(1);
-    const [anchor] = onDraft.mock.calls[0];
-    expect(anchor.quote).toBe("Les Gardiens");
-    expect(anchor.start).toBe(TEXT.indexOf("Les Gardiens"));
-    expect(anchor.prefix).toBe("Mara Kline observe la ville. ");
+    expect(onDraft.mock.calls[0][0]).toEqual({
+      type: "p",
+      quote: DEUXIEME,
+      prefix: PREMIER,
+      suffix: TROISIEME,
+      index: 1,
+    });
   });
 
-  it("ne propose rien sur une sélection vide", () => {
-    renderLayer();
-    fireEvent.mouseUp(screen.getByTestId("prose"));
+  it("ne propose rien hors d'un bloc", () => {
+    const { container } = renderLayer();
+    fireEvent.mouseOver(screen.getByTestId("prose"));
 
     expect(screen.queryByRole("button", { name: "Commenter" })).toBeNull();
+    expect(container).toBeTruthy();
   });
 
-  it("ne propose rien à qui ne peut ni commenter ni annoter", () => {
-    renderLayer({ canComment: false });
-    fireEvent.mouseUp(selectQuote("Meridian"));
+  it("ne propose rien à qui ne peut pas commenter", () => {
+    const { container } = renderLayer({ canComment: false });
+    fireEvent.mouseOver(paragraphe(container, 1));
 
     expect(screen.queryByRole("button", { name: "Commenter" })).toBeNull();
   });
