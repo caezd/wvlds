@@ -656,7 +656,11 @@ export function WikiPageContent({
             </div>
         ) : (
           <div className="min-w-0 flex-1 overflow-y-auto p-6">
-            <div className="mx-auto flex max-w-4xl gap-8">
+            {/* `justify-center` : la colonne de texte est plafonnée à
+                `max-w-2xl`, plus étroite que cette rangée. Sans lui, le
+                surplus restait tout entier à droite et le texte se collait au
+                bord gauche — `mx-auto` centrait la rangée, pas son contenu. */}
+            <div className="mx-auto flex max-w-4xl justify-center gap-8">
               <div className="min-w-0 max-w-2xl flex-1">
                 {/* `pr-11` comme le corps de l'article : la marge des commandes
                 de commentaire, pour que les deux bords droits coïncident. */}
