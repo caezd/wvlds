@@ -195,6 +195,66 @@ describe("WikiAnnotationLayer — marquage des blocs", () => {
     expect(screen.getByTestId("prose").textContent).toBe(PREMIER + DEUXIEME + TROISIEME);
   });
 
+  it("garde ses marques quand React met le rendu à jour en place", async () => {
+    // La panne : la couche ne remarquait qu'au remontage, sur une `key` censée
+    // changer avec le texte. Or React met le rendu à jour EN PLACE dès que ses
+    // données bougent pour une autre raison — lexique chargé après coup, liste
+    // des pages rafraîchie, mise à jour temps réel. Les marques partaient avec
+    // les nœuds remplacés, et rien ne les reposait.
+    const threads = [surBloc({ id: "a1", anchor_quote: DEUXIEME, anchor_start: 1 })];
+    const { container, rerender } = renderLayer({ threads });
+    expect(container.querySelector('[data-annotation-ids~="a1"]')).toBe(paragraphe(container, 1));
+
+    // Même `contentKey`, mais un conteneur d'un autre type : React remplace
+    // tout le sous-arbre au lieu de le réconcilier. Les paragraphes sont donc
+    // des nœuds neufs, sans attribut — exactement ce que produit une
+    // reconstruction du rendu markdown.
+    rerender(
+      <WikiAnnotationLayer
+        contentKey="p1|v1"
+        threads={threads}
+        active={null}
+        draftAnchor={null}
+        canComment
+        onActivate={vi.fn()}
+        onDraft={vi.fn()}
+      >
+        <section data-testid="prose">
+          <p>{PREMIER}</p>
+          <p>{DEUXIEME}</p>
+          <p>{TROISIEME}</p>
+        </section>
+      </WikiAnnotationLayer>,
+    );
+
+    expect(container.querySelector('[data-annotation-ids~="a1"]')).toBe(paragraphe(container, 1));
+  });
+
+  it("efface la marque d'un fil qui n'est plus là", () => {
+    // Rejouer le marquage ne suffit pas : React garde souvent le même nœud,
+    // qui conserverait sa marque d'un rendu à l'autre.
+    const { container, rerender } = renderLayer({
+      threads: [surBloc({ id: "a1", anchor_quote: DEUXIEME, anchor_start: 1 })],
+    });
+    expect(paragraphe(container, 1).dataset.annotationIds).toBe("a1");
+
+    rerender(
+      <WikiAnnotationLayer
+        contentKey="p1|v1"
+        threads={[]}
+        active={null}
+        draftAnchor={null}
+        canComment
+        onActivate={vi.fn()}
+        onDraft={vi.fn()}
+      >
+        {article()}
+      </WikiAnnotationLayer>,
+    );
+
+    expect(paragraphe(container, 1).dataset.annotationIds).toBeUndefined();
+  });
+
   it("met en avant le fil courant", () => {
     const { container } = renderLayer({
       threads: [surBloc({ id: "a1", anchor_quote: DEUXIEME, anchor_start: 1 })],

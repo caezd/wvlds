@@ -32,10 +32,19 @@ export type ActiveAnnotation = { id: string; scrollIntoView: boolean };
  * ── Pourquoi manipuler le DOM plutôt que rendre des marques ──
  * Le découpage en blocs se lit sur le rendu, qui n'existe qu'une fois React
  * passé. On le laisse donc rendre le markdown comme d'habitude, puis on pose
- * des attributs sur les éléments concernés. C'est sûr parce que l'arbre est
- * **remonté** (`key`) dès que son texte ou l'ensemble des commentaires change,
- * jamais mis à jour en place — et parce qu'on n'ajoute ni ne retire aucun
- * nœud, seulement des attributs.
+ * des attributs sur les éléments concernés.
+ *
+ * Le marquage se refait à **chaque commit**, et commence par tout effacer.
+ * Une version antérieure ne le rejouait qu'au remontage de l'arbre, sur une
+ * `key` censée changer avec le texte : l'invariant était faux. React met le
+ * rendu à jour EN PLACE dès que ses données bougent pour une autre raison —
+ * lexique chargé après coup, liste des pages rafraîchie, mise à jour temps
+ * réel — et remplace alors des nœuds sans que la `key` bouge. Les marques
+ * disparaissaient, sans rien pour les reposer.
+ *
+ * Rejouer est sûr parce qu'on ne pose que des attributs : l'opération est
+ * idempotente. Elle ne l'était pas du temps où l'on enveloppait le texte dans
+ * des `<span>`, d'où la précaution d'alors.
  *
  * ── Les commentaires d'avant ──
  * Ceux écrits du temps de la sélection n'ont pas de type de bloc : on les
@@ -87,28 +96,24 @@ export function WikiAnnotationLayer({
     [threads],
   );
 
-  // Signature de l'ensemble commenté : deux rendus qui la partagent produisent
-  // exactement les mêmes marques, et n'ont donc pas à être remontés.
-  const anchorsKey = React.useMemo(
-    () => anchoredThreads
-      .map(th => `${th.root.id}:${th.root.resolved_at ? "r" : "o"}`)
-      .join("|"),
-    [anchoredThreads],
-  );
-  const draftKey = draftAnchor ? `${draftAnchor.type}:${draftAnchor.index}` : "";
+  /** Dernier ensemble détaché signalé — pour ne le redire qu'au changement. */
+  const detachesSignales = React.useRef<string | null>(null);
 
-  // L'effet doit s'exécuter une fois par arbre monté. Ses dépendances sont
-  // donc exactement les trois chaînes qui composent la `key` du conteneur —
-  // il se relance si et seulement si React vient de reconstruire le rendu.
-  // Les données sont lues à travers une ref plutôt que déclarées en
-  // dépendance : leur identité change à chaque rendu du parent, la `key` non.
-  const latest = React.useRef({ anchoredThreads, draftAnchor });
-  latest.current = { anchoredThreads, draftAnchor };
-
+  // Sans tableau de dépendances : le marquage suit chaque mise à jour du
+  // rendu, y compris celles que rien dans nos données n'annonce.
   React.useLayoutEffect(() => {
     const racine = contentRef.current;
     if (!racine) return;
-    const { anchoredThreads, draftAnchor } = latest.current;
+
+    // Table rase d'abord : un bloc dont le fil vient d'être supprimé garde
+    // sinon sa marque, React ayant pu conserver le même nœud.
+    for (const el of racine.querySelectorAll<HTMLElement>("[data-annotation-ids], [data-annotation-draft]")) {
+      delete el.dataset.annotationIds;
+      delete el.dataset.annotationId;
+      delete el.dataset.annotationResolved;
+      delete el.dataset.annotationActive;
+      delete el.dataset.annotationDraft;
+    }
 
     const blocs = collectBlocks(racine);
 
@@ -167,6 +172,11 @@ export function WikiAnnotationLayer({
       const premierOuvert = fils.find(th => !th.root.resolved_at) ?? fils[0];
       el.dataset.annotationId = premierOuvert.root.id;
       if (fils.every(th => th.root.resolved_at)) el.dataset.annotationResolved = "true";
+      // Posée ici et non dans un effet à part : celui-ci vient de l'effacer,
+      // et lui ne se rejoue pas à chaque commit.
+      if (active && fils.some(th => th.root.id === active.id)) {
+        el.dataset.annotationActive = "true";
+      }
     }
 
     if (draftAnchor) {
@@ -174,27 +184,25 @@ export function WikiAnnotationLayer({
       if (index !== null) blocs[index].el.dataset.annotationDraft = "true";
     }
 
-    onDetachedChangeRef.current?.(detached);
-  }, [contentKey, anchorsKey, draftKey]);
+    // L'effet se rejouant à chaque commit, redire un ensemble inchangé
+    // relancerait le parent, donc un commit, donc cet effet : sans fin.
+    const signature = detached.join("|");
+    if (signature !== detachesSignales.current) {
+      detachesSignales.current = signature;
+      onDetachedChangeRef.current?.(detached);
+    }
+  });
 
-  // Mise en avant du fil courant : un attribut posé sur les blocs déjà
-  // marqués, pour ne pas remonter tout le rendu à chaque clic.
+  // Amener le fil courant à l'écran — à son changement, pas à chaque commit.
   React.useLayoutEffect(() => {
     const root = contentRef.current;
     if (!root) return;
-    for (const el of root.querySelectorAll<HTMLElement>("[data-annotation-ids]")) {
-      const porte = active !== null
-        && (el.dataset.annotationIds ?? "").split(" ").includes(active.id);
-      if (porte) el.dataset.annotationActive = "true";
-      else delete el.dataset.annotationActive;
-    }
-
     if (active?.scrollIntoView) {
       root
         .querySelector(`[data-annotation-ids~="${active.id}"]`)
         ?.scrollIntoView({ block: "center", behavior: "smooth" });
     }
-  }, [active, contentKey, anchorsKey]);
+  }, [active]);
 
   /** Suit le bloc sous le pointeur pour lui présenter le bouton. */
   function surSurvol(e: React.MouseEvent<HTMLDivElement>) {
@@ -239,7 +247,7 @@ export function WikiAnnotationLayer({
     >
       <div
         ref={contentRef}
-        key={`${contentKey}|${anchorsKey}|${draftKey}`}
+        key={contentKey}
         onMouseOver={surSurvol}
         onClick={surClic}
       >
