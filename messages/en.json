@@ -1140,6 +1140,18 @@
     "markRestricted": "Restrict to editors",
     "unmarkRestricted": "Make visible to players",
     "restrictedBadge": "Editors only",
+    "lexicon": {
+      "manageButton": "Lexicon",
+      "title": "World lexicon",
+      "description": "Terms defined here are automatically highlighted throughout the wiki, with their description shown on click.",
+      "termPlaceholder": "Term…",
+      "descriptionPlaceholder": "Description…",
+      "addTerm": "Add a term",
+      "noTerms": "No terms yet.",
+      "duplicateTerm": "This term already exists in the lexicon.",
+      "deleteTitle": "Delete \"{term}\"?",
+      "deleteDesc": "This term will no longer be highlighted in the wiki. This action is irreversible."
+    },
     "templates": {
       "pickerLabel": "Template",
       "blank": "Blank",

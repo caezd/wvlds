@@ -209,7 +209,8 @@ describe("WorldWiki — création depuis un modèle", () => {
       "## Apparence\n\n## Personnalité\n\n## Histoire\n\n## Relations\n\n## Objectifs\n\n## Notes";
     const mock = createSupabaseMock({
       results: [
-        { data: [], error: null },
+        { data: [], error: null }, // load() initial (pages)
+        { data: [], error: null }, // load() initial (lexique)
         { data: insertedPage, error: null },
         { data: { draft_content: templateContent }, error: null },
       ],
@@ -265,7 +266,8 @@ describe("WorldWiki — cascade de renommage", () => {
   it("renommer une page déclenche la cascade des liens internes vers l'ancien titre", async () => {
     const mock = createSupabaseMock({
       results: [
-        { data: [PAGE], error: null }, // load() initial
+        { data: [PAGE], error: null }, // load() initial (pages)
+        { data: [], error: null },     // load() initial (lexique)
         { data: null, error: null },   // update du titre
         { data: [PAGE], error: null }, // load() de rafraîchissement après cascade
       ],
@@ -298,7 +300,8 @@ describe("WorldWiki — cascade de renommage", () => {
   it("ne déclenche pas de cascade quand seule l'icône change (titre inchangé)", async () => {
     const mock = createSupabaseMock({
       results: [
-        { data: [PAGE], error: null },
+        { data: [PAGE], error: null }, // load() initial (pages)
+        { data: [], error: null },     // load() initial (lexique)
         { data: null, error: null },
       ],
     });
@@ -354,6 +357,30 @@ describe("WorldWiki — sélection initiale via initialSlug (raccourci externe)"
 
     expect(await screen.findByText("Accueil")).toBeInTheDocument();
     expect(mdProps).not.toHaveBeenCalled();
+  });
+});
+
+describe("WorldWiki — lexique du monde", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("charge le lexique et le transmet à MarkdownRenderer", async () => {
+    const term = { id: "t1", world_id: "w1", term: "Dragon", description: "Une créature." };
+    const mock = createSupabaseMock({
+      results: [
+        { data: [PAGE], error: null }, // load() initial (pages)
+        { data: [term], error: null }, // load() initial (lexique)
+      ],
+    });
+    vi.mocked(createClient).mockReturnValue(mock.client as never);
+
+    render(<WorldWiki worldId="w1" canEdit={false} />);
+    await userEvent.click(await screen.findByText("Accueil"));
+
+    await waitFor(() => {
+      expect(mdProps).toHaveBeenCalledWith(expect.objectContaining({ lexiconTerms: [term] }));
+    });
   });
 });
 
