@@ -57,7 +57,7 @@ function renderPanel(props: Partial<React.ComponentProps<typeof WikiAnnotationsP
       draft={null}
       currentUserId="u1"
       canModerate
-      canTakeNotes
+      canWriteMemos
       {...handlers}
       {...props}
     />,
@@ -71,15 +71,15 @@ describe("WikiAnnotationsPanel — liste", () => {
     expect(screen.getByText(/Aucune annotation\./)).toBeTruthy();
   });
 
-  it("affiche commentaires et notes dans la même liste", () => {
+  it("affiche commentaires et mémos dans la même liste", () => {
     renderPanel({
       threads: [
         thread({ id: "a1", body: "Question d'un lecteur" }),
-        thread({ id: "a2", body: "Mémo de rédaction", kind: "note" }),
+        thread({ id: "a2", body: "Un mémo de rédaction", kind: "memo" }),
       ],
     });
     expect(screen.getByText("Question d'un lecteur")).toBeTruthy();
-    expect(screen.getByText("Mémo de rédaction")).toBeTruthy();
+    expect(screen.getByText("Un mémo de rédaction")).toBeTruthy();
   });
 
   it("classe les fils dans l'ordre du texte", () => {
@@ -145,28 +145,28 @@ describe("WikiAnnotationsPanel — filtres", () => {
     expect(screen.getByText("2")).toBeTruthy();
   });
 
-  it("restreint la liste aux notes", async () => {
+  it("restreint la liste aux mémos", async () => {
     renderPanel({
       threads: [
         thread({ id: "a1", body: "Un commentaire de lecteur" }),
-        thread({ id: "a2", body: "Une note d'éditeur", kind: "note" }),
+        thread({ id: "a2", body: "Un mémo d'éditeur", kind: "memo" }),
       ],
     });
 
-    await userEvent.click(screen.getByRole("button", { name: "Notes" }));
-    expect(screen.getByText("Une note d'éditeur")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "Mémos" }));
+    expect(screen.getByText("Un mémo d'éditeur")).toBeTruthy();
     expect(screen.queryByText("Un commentaire de lecteur")).toBeNull();
   });
 
-  it("ne propose pas le filtre des notes à qui ne peut pas en voir", () => {
-    renderPanel({ canTakeNotes: false });
-    expect(screen.queryByRole("button", { name: "Notes" })).toBeNull();
+  it("ne propose pas le filtre des mémos à qui ne peut pas en voir", () => {
+    renderPanel({ canWriteMemos: false });
+    expect(screen.queryByRole("button", { name: "Mémos" })).toBeNull();
     expect(screen.getByRole("button", { name: "Commentaires" })).toBeTruthy();
   });
 
   it("annonce qu'aucun fil ne correspond au filtre", async () => {
     renderPanel({ threads: [thread({ id: "a1", body: "Un commentaire" })] });
-    await userEvent.click(screen.getByRole("button", { name: "Notes" }));
+    await userEvent.click(screen.getByRole("button", { name: "Mémos" }));
     expect(screen.getByText("Aucune annotation ne correspond à ce filtre.")).toBeTruthy();
   });
 });
@@ -190,9 +190,9 @@ describe("WikiAnnotationsPanel — écriture", () => {
 
   it("refuse de publier une annotation vide", () => {
     renderPanel({
-      draft: { kind: "note", anchor: { quote: "Meridian", prefix: "", suffix: "", start: 0 } },
+      draft: { kind: "memo", anchor: { quote: "Meridian", prefix: "", suffix: "", start: 0 } },
     });
-    expect(screen.getByRole("button", { name: "Note" }).hasAttribute("disabled")).toBe(true);
+    expect(screen.getByRole("button", { name: "Mémo" }).hasAttribute("disabled")).toBe(true);
   });
 
   it("répond dans un fil existant", async () => {

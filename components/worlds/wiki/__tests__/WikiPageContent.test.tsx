@@ -423,12 +423,12 @@ describe("WikiPageContent — annotations", () => {
     expect(screen.getByRole("textbox")).toBeTruthy();
   });
 
-  it("ne propose la note qu'aux éditeurs", async () => {
+  it("ne propose le mémo qu'aux éditeurs", async () => {
     const mock = createSupabaseMock({ results: [{ data: [], error: null }] });
     renderPage(mock, false);
 
     selectInProse("Meridian");
     expect(await screen.findByRole("button", { name: "Commenter" })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Note" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Mémo" })).toBeNull();
   });
 });

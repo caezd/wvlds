@@ -505,7 +505,7 @@
     box-shadow: inset 0 -2px 0 rgb(56 132 255 / 0.55);
 }
 
-.wiki-annotation[data-annotation-kind="note"] {
+.wiki-annotation[data-annotation-kind="memo"] {
     background-color: rgb(251 191 36 / 0.18);
     box-shadow: inset 0 -2px 0 rgb(251 191 36 / 0.65);
 }
@@ -528,7 +528,7 @@
     background-color: rgb(56 132 255 / 0.28);
 }
 
-.wiki-annotation[data-annotation-kind="note"][data-annotation-active] {
+.wiki-annotation[data-annotation-kind="memo"][data-annotation-active] {
     background-color: rgb(251 191 36 / 0.34);
 }
 
@@ -539,7 +539,7 @@
     box-shadow: inset 0 -2px 0 rgb(96 165 250 / 0.6);
 }
 
-.dark .wiki-annotation[data-annotation-kind="note"] {
+.dark .wiki-annotation[data-annotation-kind="memo"] {
     background-color: rgb(251 191 36 / 0.22);
     box-shadow: inset 0 -2px 0 rgb(251 191 36 / 0.7);
 }
@@ -553,6 +553,6 @@
     background-color: rgb(96 165 250 / 0.36);
 }
 
-.dark .wiki-annotation[data-annotation-kind="note"][data-annotation-active] {
+.dark .wiki-annotation[data-annotation-kind="memo"][data-annotation-active] {
     background-color: rgb(251 191 36 / 0.4);
 }

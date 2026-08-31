@@ -37,7 +37,7 @@ function renderLayer(props: Partial<React.ComponentProps<typeof WikiAnnotationLa
       active={null}
       draftAnchor={null}
       canComment
-      canTakeNotes
+      canWriteMemos
       onActivate={vi.fn()}
       onDraft={vi.fn()}
       {...props}
@@ -77,11 +77,11 @@ describe("WikiAnnotationLayer — surlignage", () => {
 
   it("distingue une note d'un commentaire", () => {
     const { container } = renderLayer({
-      threads: [thread({ id: "a1", anchor_quote: "Meridian", kind: "note" })],
+      threads: [thread({ id: "a1", anchor_quote: "Meridian", kind: "memo" })],
     });
     expect(
       container.querySelector<HTMLElement>('[data-annotation-id="a1"]')!.dataset.annotationKind,
-    ).toBe("note");
+    ).toBe("memo");
   });
 
   it("marque un fil résolu", () => {
@@ -132,7 +132,7 @@ describe("WikiAnnotationLayer — surlignage", () => {
         active={null}
         draftAnchor={null}
         canComment
-        canTakeNotes
+        canWriteMemos
         onActivate={vi.fn()}
         onDraft={vi.fn()}
       >
@@ -175,7 +175,7 @@ describe("WikiAnnotationLayer — sélection", () => {
     fireEvent.mouseUp(selectQuote("Les Gardiens"));
 
     expect(await screen.findByRole("button", { name: "Commenter" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Note" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Mémo" })).toBeTruthy();
   });
 
   it("ancre la sélection sur l'extrait choisi", async () => {
@@ -193,12 +193,12 @@ describe("WikiAnnotationLayer — sélection", () => {
     expect(kind).toBe("comment");
   });
 
-  it("propose la note à l'éditeur seul", async () => {
-    renderLayer({ canTakeNotes: false });
+  it("propose le mémo à l'éditeur seul", async () => {
+    renderLayer({ canWriteMemos: false });
     fireEvent.mouseUp(selectQuote("Meridian"));
 
     expect(await screen.findByRole("button", { name: "Commenter" })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Note" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Mémo" })).toBeNull();
   });
 
   it("ne propose rien sur une sélection vide", () => {
@@ -209,7 +209,7 @@ describe("WikiAnnotationLayer — sélection", () => {
   });
 
   it("ne propose rien à qui ne peut ni commenter ni annoter", () => {
-    renderLayer({ canComment: false, canTakeNotes: false });
+    renderLayer({ canComment: false, canWriteMemos: false });
     fireEvent.mouseUp(selectQuote("Meridian"));
 
     expect(screen.queryByRole("button", { name: "Commenter" })).toBeNull();

@@ -165,8 +165,10 @@ export type WikiAnnotationAuthor = {
   avatar_url: string | null;
 };
 
-/** Commentaire (fil de discussion) ou note de rédaction (éditeurs seuls). */
-export type WikiAnnotationKind = "comment" | "note";
+/** Commentaire (fil de discussion) ou mémo de rédaction (éditeurs seuls).
+ *  À ne pas confondre avec les notes du panneau de page, qui ne sont pas
+ *  ancrées à un passage — voir `WikiPageNote`. */
+export type WikiAnnotationKind = "comment" | "memo";
 
 /**
  * Annotation ancrée à un extrait d'une page de wiki — voir la migration 137 et

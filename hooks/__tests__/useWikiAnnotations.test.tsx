@@ -114,9 +114,9 @@ describe("useWikiAnnotations", () => {
   });
 
   it("publie une réponse de la même nature que sa racine, et sans ancre", async () => {
-    const root = annotation({ id: "a1", kind: "note" });
+    const root = annotation({ id: "a1", kind: "memo" });
     const mock = createSupabaseMock({
-      results: [{ data: [root], error: null }, { data: annotation({ id: "r1", parent_id: "a1", kind: "note" }), error: null }],
+      results: [{ data: [root], error: null }, { data: annotation({ id: "r1", parent_id: "a1", kind: "memo" }), error: null }],
     });
     const { result } = renderHook(() =>
       useWikiAnnotations({ ...params, supabase: mock.client as never, enabled: true }),
@@ -126,7 +126,7 @@ describe("useWikiAnnotations", () => {
     await act(async () => { await result.current.reply(root, "D'accord."); });
 
     expect(mock.builders[1].builder.insert.mock.calls[0][0]).toMatchObject({
-      kind: "note",
+      kind: "memo",
       parent_id: "a1",
       body: "D'accord.",
     });

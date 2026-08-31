@@ -18,7 +18,7 @@ import { WikiAnnotationThreadCard } from "./WikiAnnotationThreadCard";
 
 export type AnnotationDraft = { anchor: TextAnchor; kind: WikiAnnotationKind };
 
-type Filter = "all" | "comment" | "note";
+type Filter = "all" | "comment" | "memo";
 
 /**
  * Colonne des annotations d'une page : commentaires et notes dans une seule
@@ -38,7 +38,7 @@ export function WikiAnnotationsPanel({
   draft,
   currentUserId,
   canModerate,
-  canTakeNotes,
+  canWriteMemos,
   onActivate,
   onCreate,
   onCancelDraft,
@@ -57,7 +57,7 @@ export function WikiAnnotationsPanel({
   draft: AnnotationDraft | null;
   currentUserId: string | null;
   canModerate: boolean;
-  canTakeNotes: boolean;
+  canWriteMemos: boolean;
   onActivate: (id: string) => void;
   onCreate: (body: string) => void;
   onCancelDraft: () => void;
@@ -100,7 +100,7 @@ export function WikiAnnotationsPanel({
   const filters: { id: Filter; label: string }[] = [
     { id: "all", label: t("filterAll") },
     { id: "comment", label: t("filterComments") },
-    ...(canTakeNotes ? [{ id: "note" as const, label: t("filterNotes") }] : []),
+    ...(canWriteMemos ? [{ id: "memo" as const, label: t("filterMemos") }] : []),
   ];
 
   return (
@@ -178,8 +178,8 @@ export function WikiAnnotationsPanel({
                 {anchorPreview(draft.anchor.quote)}
               </p>
               <WikiAnnotationComposer
-                placeholder={draft.kind === "note" ? t("notePlaceholder") : t("commentPlaceholder")}
-                submitLabel={draft.kind === "note" ? t("addNote") : t("addComment")}
+                placeholder={draft.kind === "memo" ? t("memoPlaceholder") : t("commentPlaceholder")}
+                submitLabel={draft.kind === "memo" ? t("addMemo") : t("addComment")}
                 pending={pending}
                 onCancel={onCancelDraft}
                 onSubmit={onCreate}

@@ -1143,9 +1143,9 @@
     "annotations": {
       "title": "Annotations",
       "addComment": "Comment",
-      "addNote": "Note",
+      "addMemo": "Memo",
       "commentPlaceholder": "Your comment on this passage…",
-      "notePlaceholder": "Your writing note…",
+      "memoPlaceholder": "Your writing memo…",
       "replyPlaceholder": "Your reply…",
       "reply": "Reply",
       "threadActions": "Thread actions",
@@ -1158,7 +1158,7 @@
       "detachedHint": "The annotated passage no longer exists in the page text. The annotation is still readable, but is no longer attached to anything.",
       "filterAll": "All",
       "filterComments": "Comments",
-      "filterNotes": "Notes",
+      "filterMemos": "Memos",
       "showResolved": "Resolved",
       "empty": "No annotations yet. Select a passage of the page to comment on it or attach a note.",
       "emptyFiltered": "No annotation matches this filter."

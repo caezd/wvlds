@@ -433,7 +433,7 @@ export function WikiPageContent({
                 active={activeAnnotation}
                 draftAnchor={annotationDraft?.anchor ?? null}
                 canComment={canAnnotate}
-                canTakeNotes={canEdit}
+                canWriteMemos={canEdit}
                 onActivate={id => { if (id) openAnnotation(id, false); }}
                 onDraft={startDraft}
                 onDetachedChange={onDetachedChange}
@@ -466,7 +466,7 @@ export function WikiPageContent({
           draft={annotationDraft}
           currentUserId={userId}
           canModerate={canEdit}
-          canTakeNotes={canEdit}
+          canWriteMemos={canEdit}
           onActivate={id => openAnnotation(id, true)}
           onCreate={body => void createFromDraft(body)}
           onCancelDraft={() => setAnnotationDraft(null)}

@@ -49,7 +49,7 @@ export function WikiAnnotationLayer({
   active,
   draftAnchor,
   canComment,
-  canTakeNotes,
+  canWriteMemos,
   onActivate,
   onDraft,
   onDetachedChange,
@@ -64,7 +64,7 @@ export function WikiAnnotationLayer({
   /** Sélection en cours d'annotation, surlignée en attendant la validation. */
   draftAnchor: TextAnchor | null;
   canComment: boolean;
-  canTakeNotes: boolean;
+  canWriteMemos: boolean;
   onActivate: (id: string | null) => void;
   onDraft: (anchor: TextAnchor, kind: WikiAnnotationKind) => void;
   /** Annotations dont l'extrait a disparu du texte — affichées à part. */
@@ -194,7 +194,7 @@ export function WikiAnnotationLayer({
     const root = contentRef.current;
     const wrapper = wrapperRef.current;
     if (!root || !wrapper) return;
-    if (!canComment && !canTakeNotes) return;
+    if (!canComment && !canWriteMemos) return;
 
     const selection = window.getSelection();
     if (!selection || selection.isCollapsed || selection.rangeCount === 0) {
@@ -275,13 +275,13 @@ export function WikiAnnotationLayer({
               <MessageSquarePlus className="h-3.5 w-3.5" /> {t("addComment")}
             </button>
           )}
-          {canTakeNotes && (
+          {canWriteMemos && (
             <button
               type="button"
-              onClick={() => startDraft("note")}
+              onClick={() => startDraft("memo")}
               className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium text-muted-foreground hover:bg-secondary hover:text-foreground"
             >
-              <StickyNote className="h-3.5 w-3.5" /> {t("addNote")}
+              <StickyNote className="h-3.5 w-3.5" /> {t("addMemo")}
             </button>
           )}
         </div>

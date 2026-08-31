@@ -1143,9 +1143,9 @@
     "annotations": {
       "title": "Anotaciones",
       "addComment": "Comentar",
-      "addNote": "Nota",
+      "addMemo": "Memo",
       "commentPlaceholder": "Su comentario sobre este pasaje…",
-      "notePlaceholder": "Su nota de redacción…",
+      "memoPlaceholder": "Su memo de redacción…",
       "replyPlaceholder": "Su respuesta…",
       "reply": "Responder",
       "threadActions": "Acciones del hilo",
@@ -1158,7 +1158,7 @@
       "detachedHint": "El pasaje anotado ya no existe en el texto de la página. La anotación sigue siendo legible, pero ya no está anclada a nada.",
       "filterAll": "Todo",
       "filterComments": "Comentarios",
-      "filterNotes": "Notas",
+      "filterMemos": "Memos",
       "showResolved": "Resueltos",
       "empty": "Aún no hay anotaciones. Seleccione un pasaje de la página para comentarlo o adjuntarle una nota.",
       "emptyFiltered": "Ninguna anotación coincide con este filtro."

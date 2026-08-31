@@ -1143,9 +1143,9 @@
     "annotations": {
       "title": "Annotations",
       "addComment": "Commenter",
-      "addNote": "Note",
+      "addMemo": "Mémo",
       "commentPlaceholder": "Votre commentaire sur ce passage…",
-      "notePlaceholder": "Votre note de rédaction…",
+      "memoPlaceholder": "Votre mémo de rédaction…",
       "replyPlaceholder": "Votre réponse…",
       "reply": "Répondre",
       "threadActions": "Actions du fil",
@@ -1158,7 +1158,7 @@
       "detachedHint": "Le passage annoté n'existe plus dans le texte de la page. L'annotation reste lisible, mais n'est plus rattachée à rien.",
       "filterAll": "Tout",
       "filterComments": "Commentaires",
-      "filterNotes": "Notes",
+      "filterMemos": "Mémos",
       "showResolved": "Résolus",
       "empty": "Aucune annotation. Sélectionnez un passage de la page pour le commenter ou y accrocher une note.",
       "emptyFiltered": "Aucune annotation ne correspond à ce filtre."
