@@ -747,6 +747,7 @@ export function WikiPageContent({
             onTabChange={setSideTab}
             openCommentCount={openAnnotationCount}
             width="100%"
+            dansTiroir
           >
             {sideTab === "comments" ? (
               <WikiAnnotationsPanel

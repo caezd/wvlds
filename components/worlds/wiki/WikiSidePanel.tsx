@@ -32,6 +32,7 @@ export function WikiSidePanel({
   width,
   handleProps,
   onCollapse,
+  dansTiroir = false,
   children,
 }: {
   tab: WikiSideTab;
@@ -47,6 +48,8 @@ export function WikiSidePanel({
   handleProps?: React.ComponentProps<"div">;
   /** Replie la colonne — absent dans le tiroir, qui se ferme autrement. */
   onCollapse?: () => void;
+  /** Monté dans un tiroir : il porte déjà ses propres bords. */
+  dansTiroir?: boolean;
   children: React.ReactNode;
 }) {
   const tAnnotations = useTranslations("wiki.annotations");
@@ -82,7 +85,13 @@ export function WikiSidePanel({
       // L'étiquette suit l'onglet : un lecteur d'écran doit entendre ce que la
       // colonne montre, pas le nom générique du meuble qui l'accueille.
       aria-label={tab === "notes" ? tNotes("title") : tAnnotations("title")}
-      className="flex h-full min-h-0 shrink-0 flex-col border-l border-border-soft"
+      className={cn(
+        "flex h-full min-h-0 shrink-0 flex-col",
+        // Le trait separe la colonne du texte de l'article. Dans le tiroir,
+        // il n'y a rien a separer : il ne restait qu'une bordure posee le long
+        // du bord, en double du sien.
+        !dansTiroir && "border-l border-border-soft",
+      )}
       style={{ width }}
     >
       {/* Soulignement plutôt que pastille pleine, comme la barre d'onglets
