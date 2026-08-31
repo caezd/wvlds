@@ -88,6 +88,30 @@ function normalizeForSearch(input: string): string {
   return input.toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "");
 }
 
+/**
+ * Première page du wiki dans l'ordre de lecture de l'arbre : on descend les
+ * racines par `sort_index`, en entrant dans chaque dossier avant de passer au
+ * suivant. Les dossiers eux-mêmes ne comptent pas — ils n'ont pas de contenu à
+ * afficher. Renvoie `null` sur un wiki qui n'a que des dossiers, ou rien.
+ */
+export function firstPageOf(pages: WikiPage[]): WikiPage | null {
+  const enfantsDe = (parentId: string | null) =>
+    pages
+      .filter(p => p.parent_id === parentId)
+      .sort((a, b) => a.sort_index - b.sort_index);
+
+  function descendre(parentId: string | null): WikiPage | null {
+    for (const page of enfantsDe(parentId)) {
+      if (!page.is_folder) return page;
+      const dedans = descendre(page.id);
+      if (dedans) return dedans;
+    }
+    return null;
+  }
+
+  return descendre(null);
+}
+
 // ── Nœud sortable ─────────────────────────────────────────────────────────────
 
 type SortableTreeNodeProps = {
@@ -440,6 +464,18 @@ export function WorldWiki({
     navigateToSlug(initialSlug);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialSlug, pages]);
+
+  // Arrivée sur le wiki sans destination : on ouvre la première page plutôt
+  // que d'accueillir sur un panneau vide. Une seule fois — sinon supprimer la
+  // page ouverte y ramènerait aussitôt, et l'on ne pourrait plus rien fermer.
+  const firstPageConsumedRef = React.useRef(false);
+  React.useEffect(() => {
+    if (firstPageConsumedRef.current || !pages || selectedId || initialSlug) return;
+    firstPageConsumedRef.current = true;
+    const premiere = firstPageOf(pages);
+    if (premiere) selectPageById(premiere.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pages, selectedId, initialSlug]);
 
   React.useEffect(() => {
     if (creating) {

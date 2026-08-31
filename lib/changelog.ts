@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Wiki",
+    text: "Le wiki d’un monde ouvre désormais sa première page dès qu’on y arrive, au lieu d’accueillir sur un panneau vide invitant à choisir dans la navigation. Les notes et les commentaires d’une page partagent par ailleurs une seule colonne, à droite du texte, avec deux onglets pour passer de l’un à l’autre : le bouton qui l’ouvrait disputait sa place au titre de la page sur les écrans étroits, la colonne est maintenant toujours là."
+  },
+  {
+    date: "2026-08",
+    tag: "Wiki",
     text: "Une page de wiki a maintenant ses notes : un panneau, à gauche du texte, où ranger tout ce qui accompagne l’article sans lui appartenir. Des catégories que vous nommez — vue d’ensemble, entités, relations, lieux, moments, ou les vôtres — et, dans chacune, des fiches à titre dépliable. Une page vide vous propose une ossature de départ en un clic.\nTout se réorganise à la main : les fiches se glissent d’une catégorie à l’autre ou changent d’ordre, les catégories elles-mêmes se déplacent, et chacune se replie — le pli est retenu d’une visite à l’autre, pour vous seul. Le contenu d’une fiche accepte le markdown, comme le reste du wiki.\nCes notes ne sont pas des commentaires : elles ne visent aucun passage précis, elles complètent l’article entier. Les membres qui voient la page les lisent ; les éditeurs du monde les écrivent."
   },
   {

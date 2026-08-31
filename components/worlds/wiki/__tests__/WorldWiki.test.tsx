@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createSupabaseMock } from "@/test/supabaseMock";
 import { createClient } from "@/lib/supabase/client";
@@ -23,7 +23,8 @@ vi.mock("@/components/MarkdownRenderer", () => ({
   },
 }));
 
-import { WorldWiki } from "@/components/worlds/wiki/WorldWiki";
+import { WorldWiki, firstPageOf } from "@/components/worlds/wiki/WorldWiki";
+import type { WikiPage } from "@/components/worlds/wiki/WorldWiki";
 
 const PAGE = {
   id: "p1",
@@ -61,6 +62,16 @@ const NESTED_PAGE = {
   icon: null,
 };
 
+/**
+ * Le titre d'une page dans l'arbre de navigation. Depuis que la première page
+ * s'ouvre d'office, le même texte apparaît aussi en titre du contenu : une
+ * requête par texte seul en trouverait deux.
+ */
+async function dansLArbre(titre: string) {
+  const nav = await screen.findByRole("navigation");
+  return within(nav).getByText(titre);
+}
+
 function setup() {
   const mock = createSupabaseMock({ results: [{ data: [PAGE], error: null }] });
   vi.mocked(createClient).mockReturnValue(mock.client as never);
@@ -82,7 +93,7 @@ describe("WorldWiki — barre de mise en forme et images", () => {
     setup();
     render(<WorldWiki worldId="w1" canEdit={false} />);
 
-    await userEvent.click(await screen.findByText("Accueil"));
+    await userEvent.click(await dansLArbre("Accueil"));
 
     expect(mdProps).toHaveBeenCalledWith(
       expect.objectContaining({ allowImages: true }),
@@ -97,7 +108,7 @@ describe("WorldWiki — barre de mise en forme et images", () => {
     // Bascule le panneau en mode modification (bouton d'en-tête)
     await user.click(screen.getByText("Modifier"));
     // Sélectionne la page dans l'arbre
-    await user.click(await screen.findByText("Accueil"));
+    await user.click(await dansLArbre("Accueil"));
     // Entre en édition du contenu de la page
     await user.click(screen.getByText("Modifier"));
 
@@ -117,7 +128,7 @@ describe("WorldWiki — recherche et fil d'Ariane", () => {
     const user = userEvent.setup();
     render(<WorldWiki worldId="w1" canEdit={false} />);
 
-    await screen.findByText("Accueil");
+    await dansLArbre("Accueil");
 
     await user.type(screen.getByPlaceholderText("Rechercher dans le wiki…"), "forêt");
     await user.click(await screen.findByText("La Forêt Noire"));
@@ -133,8 +144,8 @@ describe("WorldWiki — recherche et fil d'Ariane", () => {
     const user = userEvent.setup();
     render(<WorldWiki worldId="w1" canEdit={false} />);
 
-    await screen.findByText("Accueil");
-    await user.click(screen.getByText("Lieux")); // déplie le dossier
+    await dansLArbre("Accueil");
+    await user.click(await dansLArbre("Lieux")); // déplie le dossier
     await user.click(await screen.findByText("La Forêt Noire"));
 
     // Deux boutons portent ce nom : l'entrée de l'arbre et le fil d'Ariane.
@@ -156,7 +167,7 @@ describe("WorldWiki — recherche et fil d'Ariane", () => {
     const user = userEvent.setup();
     render(<WorldWiki worldId="w1" canEdit={false} />);
 
-    await screen.findByText("Accueil");
+    await dansLArbre("Accueil");
     const dossier = screen.getByRole("button", { name: "Lieux" });
 
     dossier.focus();
@@ -178,7 +189,7 @@ describe("WorldWiki — recherche et fil d'Ariane", () => {
     const user = userEvent.setup();
     render(<WorldWiki worldId="w1" canEdit={false} />);
 
-    await screen.findByText("Accueil");
+    await dansLArbre("Accueil");
     await user.click(screen.getByRole("button", { name: "Lieux" }));
 
     expect(await screen.findByText("La Forêt Noire")).toBeInTheDocument();
@@ -247,7 +258,7 @@ describe("WorldWiki — pages restreintes", () => {
     render(<WorldWiki worldId="w1" canEdit />);
 
     await user.click(screen.getByText("Modifier"));
-    await screen.findByText("Accueil");
+    await dansLArbre("Accueil");
 
     await user.click(screen.getByLabelText("Options"));
     await user.click(screen.getByText("Réserver aux éditeurs"));
@@ -280,7 +291,7 @@ describe("WorldWiki — cascade de renommage", () => {
     render(<WorldWiki worldId="w1" canEdit />);
 
     await user.click(screen.getByText("Modifier"));
-    await screen.findByText("Accueil");
+    await dansLArbre("Accueil");
 
     await user.click(screen.getByLabelText("Options"));
     await user.click(screen.getByText("Renommer"));
@@ -312,7 +323,7 @@ describe("WorldWiki — cascade de renommage", () => {
     render(<WorldWiki worldId="w1" canEdit />);
 
     await user.click(screen.getByText("Modifier"));
-    await screen.findByText("Accueil");
+    await dansLArbre("Accueil");
 
     await user.click(screen.getByLabelText("Options"));
     await user.click(screen.getByText("Renommer"));
@@ -356,7 +367,7 @@ describe("WorldWiki — sélection initiale via initialSlug (raccourci externe)"
     setup();
     render(<WorldWiki worldId="w1" canEdit={false} initialSlug="inexistant" />);
 
-    expect(await screen.findByText("Accueil")).toBeInTheDocument();
+    expect(await dansLArbre("Accueil")).toBeInTheDocument();
     expect(mdProps).not.toHaveBeenCalled();
   });
 });
@@ -377,7 +388,7 @@ describe("WorldWiki — lexique du monde", () => {
     vi.mocked(createClient).mockReturnValue(mock.client as never);
 
     render(<WorldWiki worldId="w1" canEdit={false} />);
-    await userEvent.click(await screen.findByText("Accueil"));
+    await userEvent.click(await dansLArbre("Accueil"));
 
     await waitFor(() => {
       expect(mdProps).toHaveBeenCalledWith(expect.objectContaining({ lexiconTerms: [term] }));
@@ -403,5 +414,63 @@ describe("WorldWiki — libellé personnalisé du panneau", () => {
 
     expect(screen.getByText("Compendium")).toBeInTheDocument();
     expect(screen.queryByText("Annexes")).not.toBeInTheDocument();
+  });
+});
+
+describe("firstPageOf", () => {
+  function page(over: Partial<WikiPage> & { id: string }): WikiPage {
+    return {
+      world_id: "w1",
+      parent_id: null,
+      title: over.id,
+      slug: over.id,
+      content: null,
+      is_folder: false,
+      sort_index: 0,
+      icon: null,
+      is_restricted: false,
+      draft_updated_at: null,
+      published_at: null,
+      ...over,
+    };
+  }
+
+  it("suit l'ordre de tri, pas l'ordre du tableau", () => {
+    const pages = [page({ id: "b", sort_index: 1 }), page({ id: "a", sort_index: 0 })];
+    expect(firstPageOf(pages)?.id).toBe("a");
+  });
+
+  it("entre dans un dossier plutôt que de l'ouvrir lui-même", () => {
+    const pages = [
+      page({ id: "dossier", is_folder: true, sort_index: 0 }),
+      page({ id: "dedans", parent_id: "dossier", sort_index: 0 }),
+      page({ id: "apres", sort_index: 1 }),
+    ];
+    expect(firstPageOf(pages)?.id).toBe("dedans");
+  });
+
+  it("passe au frère suivant quand le dossier est vide", () => {
+    const pages = [
+      page({ id: "vide", is_folder: true, sort_index: 0 }),
+      page({ id: "apres", sort_index: 1 }),
+    ];
+    expect(firstPageOf(pages)?.id).toBe("apres");
+  });
+
+  it("descend d'un dossier à l'autre", () => {
+    const pages = [
+      page({ id: "haut", is_folder: true, sort_index: 0 }),
+      page({ id: "bas", parent_id: "haut", is_folder: true, sort_index: 0 }),
+      page({ id: "fond", parent_id: "bas", sort_index: 0 }),
+    ];
+    expect(firstPageOf(pages)?.id).toBe("fond");
+  });
+
+  it("ne renvoie rien quand il n'y a que des dossiers", () => {
+    expect(firstPageOf([page({ id: "dossier", is_folder: true })])).toBeNull();
+  });
+
+  it("ne renvoie rien sur un wiki vide", () => {
+    expect(firstPageOf([])).toBeNull();
   });
 });
