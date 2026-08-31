@@ -28,6 +28,7 @@ export function CodeEditor({
   ariaInvalid,
   rows = 12,
   fill = false,
+  autoGrow = false,
   textareaRef,
   onKeyDown,
   ariaLabel,
@@ -44,6 +45,19 @@ export function CodeEditor({
   rows?: number;
   /** Occupe la hauteur offerte par le parent au lieu de la fixer sur `rows`. */
   fill?: boolean;
+  /**
+   * La hauteur suit le texte, qui ne défile donc plus dans le champ.
+   *
+   * Une troisième couche, en flux normal celle-là, porte le même texte et
+   * donne sa hauteur à la boîte ; les deux autres se superposent dessus comme
+   * d'habitude. C'est le seul moyen de faire grandir un `<textarea>` sans
+   * mesurer sa hauteur en JavaScript à chaque frappe — et sans le décalage
+   * d'une image de retard que cette mesure produit.
+   *
+   * Le défilement revient alors au parent, ce qui permet à un en-tête placé
+   * au-dessus du champ de défiler avec le texte plutôt que de rester figé.
+   */
+  autoGrow?: boolean;
   /**
    * Donne accès au champ de saisie.
    *
@@ -98,8 +112,9 @@ export function CodeEditor({
   }
 
   const layer =
-    "absolute inset-0 m-0 overflow-auto rounded-md p-3 font-mono text-xs leading-relaxed " +
-    "whitespace-pre-wrap break-words";
+    "absolute inset-0 m-0 rounded-md p-3 font-mono text-xs leading-relaxed " +
+    "whitespace-pre-wrap break-words " +
+    (autoGrow ? "overflow-hidden" : "overflow-auto");
 
   return (
     <div
@@ -109,8 +124,19 @@ export function CodeEditor({
         ariaInvalid && "border-destructive",
         className,
       )}
-      style={fill ? undefined : { height: `calc(${rows} * 1.625 * 0.75rem + 1.5rem)` }}
+      style={fill || autoGrow ? undefined : { height: `calc(${rows} * 1.625 * 0.75rem + 1.5rem)` }}
     >
+      {autoGrow && (
+        // La règle de la boîte : même texte, mêmes classes, mais en flux.
+        // Le saut de ligne final compte — sans lui, un texte qui s'achève par
+        // une ligne vide donnerait une boîte trop courte d'une ligne.
+        <pre
+          aria-hidden
+          className={cn(layer, "pointer-events-none static", highlighted && "invisible", layerClassName)}
+        >
+          {value + "\n"}
+        </pre>
+      )}
       {highlighted ? (
         <div
           ref={preRef as unknown as React.Ref<HTMLDivElement>}

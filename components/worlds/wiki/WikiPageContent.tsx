@@ -58,6 +58,15 @@ const WIKI_PROSE_HEADING_CLASSES = cn(
   "[&_h6]:text-sm [&_h6]:font-semibold [&_h6]:uppercase [&_h6]:tracking-wide [&_h6]:text-muted-foreground",
 );
 
+/**
+ * Bouton du pied de l'éditeur — la classe des pieds voisins (arbre des pages,
+ * panneau de notes), reprise telle quelle pour que les trois traits tombent sur
+ * la même ligne.
+ */
+const PIED_BOUTON =
+  "flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground " +
+  "hover:bg-secondary hover:text-foreground";
+
 function isDraftNewer(page: WikiPage): boolean {
   if (!page.draft_updated_at) return false;
   if (!page.published_at) return true;
@@ -621,14 +630,16 @@ export function WikiPageContent({
             modification, seul à rendre les notes modifiables, masquait
             sinon la colonne où on les modifie. */}
         {editing ? (
-          // Même gabarit qu'en lecture : titre, champ et pied partagent la
-          // largeur maximale de l'article et se centrent avec lui. Sans quoi
-          // le markdown s'étirait sur toute la fenêtre, en lignes trop longues
-          // pour l'œil, et changeait de largeur en passant à l'aperçu.
-          // Même colonne qu'en lecture, et le retrait descend sur les enfants :
-          // c'est ce qui laisse la bannière prendre toute la largeur pendant que
-          // le texte reste en retrait, comme sur la page publiée.
-          <div className="mx-auto flex w-full flex-1 flex-col gap-3 overflow-hidden py-6 [--thread-content-max-width:40rem] lg:[--thread-content-max-width:48rem] max-w-(--thread-content-max-width)">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+            {/* C'est le PANNEAU qui défile, pas la colonne centrée — la barre
+                se retrouve donc au même bord qu'en lecture. Tout ce qu'on écrit
+                défile ensemble, bannière comprise : elle fait partie de
+                l'article, pas du meuble. */}
+            <div className="min-w-0 flex-1 overflow-y-auto py-6">
+              {/* Même colonne qu'en lecture, et le retrait descend sur les
+                  enfants : c'est ce qui laisse la bannière prendre toute la
+                  largeur pendant que le texte reste en retrait. */}
+              <div className="mx-auto flex w-full flex-col gap-3 [--thread-content-max-width:40rem] lg:[--thread-content-max-width:48rem] max-w-(--thread-content-max-width)">
             {/* La bannière d'abord : c'est elle qui ouvre la page. */}
             <div className="shrink-0">
               <input
@@ -749,9 +760,9 @@ export function WikiPageContent({
               // L'aperçu prend TOUTE la place au lieu de partager la colonne :
               // côte à côte, deux colonnes sur un téléphone n'en font aucune de
               // lisible. On regarde le résultat, puis on revient écrire.
-              <div className="flex min-h-0 flex-1 flex-col">
+              <div className="flex flex-col">
                 {showPreview ? (
-                  <div className="min-h-0 flex-1 overflow-y-auto px-4 lg:px-6">
+                  <div className="px-4 lg:px-6">
                     {draft.trim()
                       ? (
                         <MarkdownRenderer
@@ -771,7 +782,7 @@ export function WikiPageContent({
                 // qu'un champ de texte enrichi ne sait pas montrer sans les
                 // trahir. L'aperçu dit le résultat.
                 <CodeEditor
-                  fill
+                  autoGrow
                   language="markdown"
                   value={draft}
                   onChange={handleDraftChange}
@@ -782,7 +793,7 @@ export function WikiPageContent({
                   // Sans cadre : le champ est la colonne de texte, pas un
                   // encadré posé dedans. Le halo de focus du `<textarea>`
                   // reste la seule marque, et suffit.
-                  className="flex-1 rounded-none border-0"
+                  className="rounded-none border-0"
                   // Le texte du champ s'aligne sur le titre et le chapeau : les
                   // deux couches reçoivent le même retrait, jamais une seule.
                   // Pas de halo de focus : il n'a de sens qu'autour d'un champ
@@ -793,36 +804,63 @@ export function WikiPageContent({
                 )}
               </div>
             )}
+              </div>
+            </div>
 
-            <div className="flex shrink-0 flex-wrap items-center gap-2">
-              {/* À gauche, ce qui accompagne l'écriture ; à droite, ce qui la
-                  termine. Sur écran étroit, les deux gestes décisifs restent
-                  ainsi près du pouce, du même côté. */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowPreview(v => !v)}
-                aria-pressed={showPreview}
-                className={cn(showPreview && "bg-secondary text-foreground")}
-              >
-                <Eye className="mr-1 h-3.5 w-3.5" /> {t("preview")}
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => setHistoryOpen(true)}>
-                <History className="mr-1 h-3.5 w-3.5" /> {t("versionHistory")}
-              </Button>
-              <span className="ml-auto text-xs text-muted-foreground">
-                {lastAutosavedAt && t("draftSavedAt", {
-                  time: lastAutosavedAt.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }),
-                })}
-              </span>
-              <div className="flex items-center gap-2">
-                <Button variant="ghost" size="sm" onClick={quitterLaModification} disabled={publishing}>
-                  {tCommon("cancel")}
-                </Button>
-                <Button size="sm" onClick={() => void publish()} disabled={publishing || loadingDraft}>
-                  {publishing && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
-                  {t("publish")}
-                </Button>
+            {/* Un pied à part, hors du défilement et barré d'un filet :
+                « Publier » reste atteignable quelle que soit la longueur du
+                texte, et le filet dit où finit l'article.
+
+                Boutons ordinaires et non le composant `Button` : celui-ci fixe
+                sa propre hauteur, qui décalait ce pied de quatre pixels par
+                rapport à ceux de l'arbre des pages et du panneau de notes. Les
+                trois traits doivent tomber sur la même ligne. */}
+            <div className="shrink-0 border-t border-border-soft py-1.5">
+              <div className="mx-auto flex w-full flex-wrap items-center gap-1 px-4 lg:px-6 [--thread-content-max-width:40rem] lg:[--thread-content-max-width:48rem] max-w-(--thread-content-max-width)">
+                {/* À gauche, ce qui accompagne l'écriture ; à droite, ce qui la
+                    termine. Sur écran étroit, les deux gestes décisifs restent
+                    ainsi près du pouce, du même côté. */}
+                <button
+                  type="button"
+                  onClick={() => setShowPreview(v => !v)}
+                  aria-pressed={showPreview}
+                  className={cn(PIED_BOUTON, showPreview && "bg-secondary text-foreground")}
+                >
+                  <Eye className="h-3.5 w-3.5" /> {t("preview")}
+                </button>
+                <button type="button" onClick={() => setHistoryOpen(true)} className={PIED_BOUTON}>
+                  <History className="h-3.5 w-3.5" /> {t("versionHistory")}
+                </button>
+                <span className="ml-auto text-xs text-muted-foreground">
+                  {lastAutosavedAt && t("draftSavedAt", {
+                    time: lastAutosavedAt.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }),
+                  })}
+                </span>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={quitterLaModification}
+                    disabled={publishing}
+                    className={cn(PIED_BOUTON, "disabled:opacity-50")}
+                  >
+                    {tCommon("cancel")}
+                  </button>
+                  {/* Le geste qui engage : mêmes mesures que ses voisins, mais
+                      il porte la couleur d'accent — c'est lui qu'on cherche. */}
+                  <button
+                    type="button"
+                    onClick={() => void publish()}
+                    disabled={publishing || loadingDraft}
+                    className={cn(
+                      PIED_BOUTON,
+                      "bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground",
+                      "disabled:opacity-50",
+                    )}
+                  >
+                    {publishing && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                    {t("publish")}
+                  </button>
+                </div>
               </div>
             </div>
 

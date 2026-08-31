@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Wiki",
+    text: "L’éditeur d’article défile d’un seul tenant : la hauteur du champ suit le texte, et c’est la page entière — bannière comprise — qui défile, au même endroit qu’en lecture. Les commandes descendent dans un pied à part, barré d’un filet aligné sur celui des colonnes voisines, pour que « Publier » reste atteignable quelle que soit la longueur de l’article."
+  },
+  {
+    date: "2026-08",
+    tag: "Wiki",
     text: "La bannière d’une page se recadre avant d’être envoyée : on choisit le cadrage et le zoom plutôt que de laisser le navigateur rogner la photo au hasard. En écriture, elle déborde du texte exactement comme sur la page publiée, pour qu’on voie ce qu’on obtiendra."
   },
   {
