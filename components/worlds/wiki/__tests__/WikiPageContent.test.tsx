@@ -382,6 +382,79 @@ describe("WikiPageContent — badge page restreinte", () => {
   });
 });
 
+describe("WikiPageContent — titre de la page", () => {
+  it("rend le titre modifiable d'emblée en modification de l'article", async () => {
+    // On y écrit déjà le corps : exiger un geste de plus pour le titre — un
+    // menu, une entrée « Renommer » — n'aurait servi à rien.
+    const mock = createSupabaseMock({
+      results: [SANS_ANNOTATION, { data: { draft_content: "Texte" }, error: null }],
+    });
+    const user = userEvent.setup();
+    const onRename = vi.fn();
+    render(
+      <WikiPageContent
+        worldId="w1"
+        panelWidth={320}
+        panelHandleProps={{}}
+        editMode
+        onToggleEditMode={vi.fn()}
+        onRename={onRename}
+        page={{ ...BASE_PAGE, content: "Publié" }}
+        pages={[BASE_PAGE]}
+        canEdit
+        isEditMode
+        supabase={mock.client as never}
+        ancestors={[]}
+        onPageUpdated={vi.fn()}
+        onNavigate={vi.fn()}
+        onExpandFolder={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Modifier" }));
+    const champ = await screen.findByDisplayValue("Accueil");
+
+    await user.clear(champ);
+    await user.type(champ, "Nouveau titre");
+    await user.tab();
+
+    expect(onRename).toHaveBeenCalledWith("Nouveau titre", "");
+  });
+
+  it("ne renomme pas quand le titre sort inchangé du champ", async () => {
+    const mock = createSupabaseMock({
+      results: [SANS_ANNOTATION, { data: { draft_content: "Texte" }, error: null }],
+    });
+    const user = userEvent.setup();
+    const onRename = vi.fn();
+    render(
+      <WikiPageContent
+        worldId="w1"
+        panelWidth={320}
+        panelHandleProps={{}}
+        editMode
+        onToggleEditMode={vi.fn()}
+        onRename={onRename}
+        page={{ ...BASE_PAGE, content: "Publié" }}
+        pages={[BASE_PAGE]}
+        canEdit
+        isEditMode
+        supabase={mock.client as never}
+        ancestors={[]}
+        onPageUpdated={vi.fn()}
+        onNavigate={vi.fn()}
+        onExpandFolder={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Modifier" }));
+    await screen.findByDisplayValue("Accueil");
+    await user.tab();
+
+    expect(onRename).not.toHaveBeenCalled();
+  });
+});
+
 describe("WikiPageContent — commentaires ancrés", () => {
   const PAGE: WikiPage = {
     ...BASE_PAGE,

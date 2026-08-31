@@ -138,6 +138,43 @@ export function WikiPageContent({
   const [renameTitle, setRenameTitle] = React.useState(page.title);
   const [renameIcon, setRenameIcon] = React.useState(page.icon ?? "");
 
+  /**
+   * Le titre en tant que champ. Servi sur demande en lecture (menu ⋯), et
+   * d'emblée en modification de l'article : on y écrit déjà le corps, exiger
+   * un geste de plus pour le titre n'aurait servi à rien.
+   */
+  const champTitre = (
+    <div className="flex min-w-0 flex-1 items-center gap-2">
+      <LucideIconPicker
+        value={renameIcon}
+        onChange={valeur => { setRenameIcon(valeur); onRename(renameTitle.trim() || page.title, valeur); }}
+        trigger={
+          <button
+            type="button"
+            title={t("changeIcon")}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground"
+          >
+            {renameIcon && VALID_LUCIDE_ICONS.has(renameIcon)
+              ? <LazyLucideIcon name={renameIcon} className="h-5 w-5" />
+              : <Pencil className="h-4 w-4" />}
+          </button>
+        }
+      />
+      <input
+        value={renameTitle}
+        onChange={e => setRenameTitle(e.target.value)}
+        onBlur={validerRenommage}
+        onKeyDown={e => {
+          if (e.key === "Enter") { e.preventDefault(); validerRenommage(); }
+          if (e.key === "Escape") { e.preventDefault(); setRenameTitle(page.title); setRenaming(false); }
+        }}
+        maxLength={DB_TEXT_LIMITS["world_wiki_pages.title"]}
+        aria-label={t("pageTitlePlaceholder")}
+        className="min-w-0 flex-1 border-b border-border bg-transparent text-2xl font-semibold outline-none focus:border-primary/50"
+      />
+    </div>
+  );
+
   function commencerRenommage() {
     setRenameTitle(page.title);
     setRenameIcon(page.icon ?? "");
@@ -280,6 +317,10 @@ export function WikiPageContent({
   }
 
   async function startEditing() {
+    // Le titre est modifiable d'emblée : son champ doit partir de la valeur
+    // courante, pas de celle d'un renommage abandonné plus tôt.
+    setRenameTitle(page.title);
+    setRenameIcon(page.icon ?? "");
     setEditing(true);
     setLoadingDraft(true);
     const { data, error } = await supabase
@@ -376,10 +417,7 @@ export function WikiPageContent({
         {bandeauCentral}
         <div className="flex flex-1 flex-col gap-3 overflow-hidden p-6">
         <div className="flex items-center gap-3">
-          <h1 className="flex flex-1 items-center gap-2 truncate text-2xl font-semibold">
-            {pageIcon}
-            {page.title}
-          </h1>
+          {champTitre}
           {draftBadge}
           {restrictedBadge}
           <button
@@ -479,36 +517,7 @@ export function WikiPageContent({
           <div className="min-w-0 max-w-2xl flex-1">
             <div className="mb-6 flex items-start justify-between gap-4">
               {renaming ? (
-                <div className="flex flex-1 items-center gap-2">
-                  <LucideIconPicker
-                    value={renameIcon}
-                    onChange={setRenameIcon}
-                    trigger={
-                      <button
-                        type="button"
-                        title={t("changeIcon")}
-                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground"
-                      >
-                        {renameIcon && VALID_LUCIDE_ICONS.has(renameIcon)
-                          ? <LazyLucideIcon name={renameIcon} className="h-5 w-5" />
-                          : <Pencil className="h-4 w-4" />}
-                      </button>
-                    }
-                  />
-                  <input
-                    value={renameTitle}
-                    onChange={e => setRenameTitle(e.target.value)}
-                    onBlur={validerRenommage}
-                    onKeyDown={e => {
-                      if (e.key === "Enter") { e.preventDefault(); validerRenommage(); }
-                      if (e.key === "Escape") { e.preventDefault(); setRenaming(false); }
-                    }}
-                    maxLength={DB_TEXT_LIMITS["world_wiki_pages.title"]}
-                    autoFocus
-                    aria-label={t("pageTitlePlaceholder")}
-                    className="min-w-0 flex-1 border-b border-border bg-transparent text-2xl font-semibold outline-none focus:border-primary/50"
-                  />
-                </div>
+                champTitre
               ) : (
                 <h1 className="flex flex-1 items-center gap-2 text-2xl font-semibold">
                   {pageIcon}
