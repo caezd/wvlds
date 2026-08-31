@@ -489,9 +489,10 @@
    La classe est posée après le rendu par WikiAnnotationLayer, hors de React :
    sa mise en forme vit donc ici plutôt qu'en classes utilitaires.
 
-   Un point dans la marge, et rien d'autre : un fond ou un filet couraient sur
-   toute la largeur du bloc et pesaient bien plus lourd que ce qu'ils avaient à
-   dire ; une pastille en fin de contenu, elle, se déplaçait avec le texte. */
+   Le bloc lui-même ne porte plus aucune marque : ce qui l'annonce est la
+   pastille de sa marge droite, rendue par React (voir WikiAnnotationLayer).
+   Un fond, un filet, ou un point posé dans le texte pesaient tous plus lourd
+   que ce qu'ils avaient à dire. */
 [data-annotation-ids],
 [data-annotation-draft] {
     cursor: pointer;
