@@ -500,7 +500,8 @@
    Contenu genere plutot qu'un noeud insere : la couche ne pose que des
    attributs sur le rendu de React, et le decoupage en blocs — qui lit le
    texte des elements — n'a ainsi rien de plus a ignorer. */
-.wiki-annotation-block[data-annotation-count]::after {
+.wiki-annotation-block[data-annotation-count]::after,
+.wiki-annotation-block[data-annotation-draft]::after {
     content: attr(data-annotation-count);
     display: inline-flex;
     align-items: center;
@@ -518,7 +519,9 @@
     transition: background-color 120ms ease;
 }
 
-/* Bloc en attente de son premier message : rien a compter encore. */
+/* Bloc en attente de son premier message : rien a compter encore. Le
+   selecteur est joint a celui du compte ci-dessus, sinon la pastille du
+   brouillon n'heriterait d'aucune geometrie — seulement de son contenu. */
 .wiki-annotation-block[data-annotation-draft]::after {
     content: "…";
     background-color: rgb(56 132 255 / 0.12);
