@@ -49,15 +49,15 @@ export function WikiSidePanel({
 
   const onglets: { id: WikiSideTab; label: string; icon: React.ReactNode; count?: number }[] = [
     {
+      id: "notes",
+      label: tNotes("title"),
+      icon: <StickyNote className="h-3.5 w-3.5" />,
+    },
+    {
       id: "comments",
       label: tAnnotations("title"),
       icon: <MessagesSquare className="h-3.5 w-3.5" />,
       count: openCommentCount,
-    },
-    {
-      id: "notes",
-      label: tNotes("title"),
-      icon: <StickyNote className="h-3.5 w-3.5" />,
     },
   ];
 
@@ -79,8 +79,12 @@ export function WikiSidePanel({
       className="flex h-full min-h-0 shrink-0 flex-col border-l border-border-soft"
       style={{ width }}
     >
-      <div className="flex shrink-0 items-center border-b border-border-soft px-2 py-1.5">
-        <div role="tablist" className="flex min-w-0 flex-1 items-center gap-0.5">
+      {/* Soulignement plutôt que pastille pleine, comme la barre d'onglets
+          partagée (components/ui/tab-bar.tsx) : même technique d'ombre `inset`,
+          qui reste DANS la boîte du bouton là où une bordure ou une marge
+          négative en gonfleraient la hauteur. */}
+      <div className="flex shrink-0 items-center px-3 shadow-[inset_0_-1px_0_0_var(--color-border)]">
+        <div role="tablist" className="flex min-w-0 flex-1 items-center gap-4">
           {onglets.map(o => (
             <button
               key={o.id}
@@ -89,10 +93,11 @@ export function WikiSidePanel({
               aria-selected={tab === o.id}
               onClick={() => onTabChange(o.id)}
               className={cn(
-                "flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium transition-colors",
+                "flex items-center gap-1.5 px-0.5 py-2 text-xs font-medium transition-colors",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
                 tab === o.id
-                  ? "bg-secondary text-foreground"
-                  : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground",
+                  ? "text-foreground shadow-[inset_0_-2px_0_0_var(--color-accent)]"
+                  : "text-muted-foreground hover:text-foreground",
               )}
             >
               {o.icon}

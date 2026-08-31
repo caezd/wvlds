@@ -30,6 +30,14 @@ describe("WikiSidePanel", () => {
     expect(commentaires.getAttribute("aria-selected")).toBe("false");
   });
 
+  it("présente les notes avant les commentaires", () => {
+    renderShell();
+    expect(screen.getAllByRole("tab").map(o => o.textContent?.trim())).toEqual([
+      "Notes",
+      "Commentaires",
+    ]);
+  });
+
   it("bascule d'un contenu à l'autre", async () => {
     const { onTabChange } = renderShell({ tab: "comments" });
 

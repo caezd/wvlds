@@ -112,7 +112,10 @@ export function WikiPageContent({
   // ── Annotations ───────────────────────────────────────────
   const { userId } = useCurrentUser();
   // Une seule colonne latérale, permanente, dont l'onglet dit ce qu'elle montre.
-  const [sideTab, setSideTab] = React.useState<WikiSideTab>("comments");
+  // Elle s'ouvre sur les notes — le premier onglet, et ce qui accompagne
+  // l'article ; commenter, lui, part d'une sélection dans le texte, qui bascule
+  // d'elle-même sur l'onglet des commentaires.
+  const [sideTab, setSideTab] = React.useState<WikiSideTab>("notes");
   const [activeAnnotation, setActiveAnnotation] = React.useState<ActiveAnnotation | null>(null);
   const [annotationDraft, setAnnotationDraft] = React.useState<AnnotationDraft | null>(null);
   const [detachedIds, setDetachedIds] = React.useState<Set<string>>(() => new Set());

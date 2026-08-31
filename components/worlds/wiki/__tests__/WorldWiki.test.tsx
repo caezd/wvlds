@@ -5,6 +5,14 @@ import { createSupabaseMock } from "@/test/supabaseMock";
 import { createClient } from "@/lib/supabase/client";
 
 vi.mock("@/lib/supabase/client", () => ({ createClient: vi.fn() }));
+// Le panneau de notes est monté d'office depuis que la colonne s'ouvre sur son
+// onglet ; il lit ses propres tables et décalerait la file de résultats du
+// mock. Ces tests portent sur le contenu de la page et ses commentaires : on
+// le remplace par un marqueur inerte (il a ses propres tests).
+vi.mock("@/components/worlds/wiki/WikiNotesPanel", () => ({
+  WikiNotesPanel: () => <div data-testid="panneau-notes" />,
+}));
+
 vi.mock("@/app/(protected)/w/actions", () => ({ saveWorldPrefs: vi.fn() }));
 
 const pbeProps = vi.fn();

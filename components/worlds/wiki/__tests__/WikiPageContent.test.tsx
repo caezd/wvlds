@@ -21,6 +21,14 @@ vi.mock("@/components/chatrooms/composer/ParagraphBlockEditor", () => ({
 vi.mock("@/components/MarkdownRenderer", () => ({
   default: ({ content }: { content: string }) => <div data-testid="markdown">{content}</div>,
 }));
+// Le panneau de notes est monté d'office depuis que la colonne s'ouvre sur son
+// onglet ; il lit ses propres tables et décalerait la file de résultats du
+// mock. Ces tests portent sur le contenu de la page et ses commentaires : on
+// le remplace par un marqueur inerte (il a ses propres tests).
+vi.mock("@/components/worlds/wiki/WikiNotesPanel", () => ({
+  WikiNotesPanel: () => <div data-testid="panneau-notes" />,
+}));
+
 
 // Les annotations sont signées par leur auteur : sans utilisateur identifié,
 // la RLS refuse l'écriture et l'interface ne propose rien.
@@ -418,7 +426,8 @@ describe("WikiPageContent — commentaires ancrés", () => {
     });
     const { container } = renderPage(mock);
 
-    // La colonne est permanente : le fil est là sans qu'on ouvre quoi que ce soit.
+    // La colonne s'ouvre sur les notes : on bascule sur les commentaires.
+    await userEvent.click(await screen.findByRole("tab", { name: /Commentaires/ }));
     await waitFor(() => expect(screen.getByText("Qui les a créés ?")).toBeTruthy());
 
     const mark = container.querySelector<HTMLElement>('[data-annotation-id="a1"]');
