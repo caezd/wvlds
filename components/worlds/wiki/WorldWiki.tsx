@@ -174,7 +174,10 @@ function SortableTreeNode({
   };
 
   return (
-    <div ref={setNodeRef} style={style}>
+    // `gap-1` ici comme sur les deux autres conteneurs de l'arbre : l'écart
+    // entre deux lignes doit être le même qu'elles soient sœurs, ou qu'un
+    // dossier sépare l'une de l'autre.
+    <div ref={setNodeRef} style={style} className="flex flex-col gap-1">
       <div
         className={cn(
           "group flex cursor-pointer select-none items-center gap-1.5 rounded-md py-1 text-sm",
@@ -331,7 +334,7 @@ function SortableTreeNode({
       </div>
 
       {page.is_folder && isExpanded && (
-        <div>
+        <div className="flex flex-col gap-1">
           {subtree}
           {createInput}
         </div>
@@ -928,7 +931,7 @@ export function WorldWiki({
             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
           </div>
         ) : searchQuery.trim() === "" ? (
-          <nav className="px-1">
+          <nav className="flex flex-col gap-1 px-1">
             <DndContext sensors={sensors} onDragEnd={onDragEnd}>
               {renderTree(null)}
             </DndContext>
