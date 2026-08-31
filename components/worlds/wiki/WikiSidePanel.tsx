@@ -92,7 +92,11 @@ export function WikiSidePanel({
       {/* Segment droit du bandeau : même hauteur et même trait que les deux
           autres, pour qu'ils se lisent comme une seule ligne. */}
       <div className={cn(WIKI_SUBHEADER, "px-3")}>
-        <div role="tablist" className="flex min-w-0 flex-1 items-center gap-4">
+        {/* Les onglets prennent toute la hauteur du bandeau, au lieu d'y être
+            centrés : c'est ce qui pose leur bord inférieur exactement sur le
+            trait du bandeau, et donc le soulignement de l'onglet actif dessus
+            plutôt qu'au-dessus de lui. */}
+        <div role="tablist" className="flex min-w-0 flex-1 items-stretch gap-4 self-stretch">
           {onglets.map(o => (
             <button
               key={o.id}
