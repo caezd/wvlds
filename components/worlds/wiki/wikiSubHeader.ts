@@ -26,3 +26,18 @@ export const WIKI_SUBHEADER =
  */
 export const WIKI_SUBHEADER_COUNT =
   "rounded-full bg-secondary px-1.5 text-[10px] font-medium text-muted-foreground";
+
+/**
+ * Pied d'une colonne du wiki — arbre des pages, panneau de notes, éditeur
+ * d'article, commentaires.
+ *
+ * Partagé et non recopié : les quatre pieds sont côte à côte à l'écran, et
+ * leurs traits doivent tomber sur la même ligne. Une valeur recopiée avait déjà
+ * dérivé de quatre pixels, ce qui se voit immédiatement.
+ */
+export const WIKI_FOOTER =
+  "flex shrink-0 items-center gap-1 border-t border-border-soft px-2 py-1.5";
+
+/** Bouton de ce pied — mêmes mesures partout, pour la même raison. */
+export const WIKI_FOOTER_BUTTON =
+  "flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground";

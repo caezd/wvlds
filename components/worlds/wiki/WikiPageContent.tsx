@@ -32,7 +32,7 @@ import { WikiAnnotationsPanel, type AnnotationDraft } from "./WikiAnnotationsPan
 import { WikiNotesPanel } from "./WikiNotesPanel";
 import { WikiSidePanel, type WikiSideTab } from "./WikiSidePanel";
 import { WikiFormatToolbar } from "./WikiFormatToolbar";
-import { WIKI_SUBHEADER, WIKI_SUBHEADER_COUNT } from "./wikiSubHeader";
+import { WIKI_FOOTER_BUTTON, WIKI_SUBHEADER, WIKI_SUBHEADER_COUNT } from "./wikiSubHeader";
 import { WikiVersionHistoryPanel } from "./WikiVersionHistoryPanel";
 import type { WikiPage } from "./WorldWiki";
 import type { WorldLexiconTerm } from "@/types/worlds";
@@ -57,15 +57,6 @@ const WIKI_PROSE_HEADING_CLASSES = cn(
   "[&_h5]:text-sm [&_h5]:font-semibold [&_h5]:uppercase [&_h5]:tracking-wide [&_h5]:text-muted-foreground",
   "[&_h6]:text-sm [&_h6]:font-semibold [&_h6]:uppercase [&_h6]:tracking-wide [&_h6]:text-muted-foreground",
 );
-
-/**
- * Bouton du pied de l'éditeur — la classe des pieds voisins (arbre des pages,
- * panneau de notes), reprise telle quelle pour que les trois traits tombent sur
- * la même ligne.
- */
-const PIED_BOUTON =
-  "flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground " +
-  "hover:bg-secondary hover:text-foreground";
 
 function isDraftNewer(page: WikiPage): boolean {
   if (!page.draft_updated_at) return false;
@@ -824,11 +815,11 @@ export function WikiPageContent({
                   type="button"
                   onClick={() => setShowPreview(v => !v)}
                   aria-pressed={showPreview}
-                  className={cn(PIED_BOUTON, showPreview && "bg-secondary text-foreground")}
+                  className={cn(WIKI_FOOTER_BUTTON, showPreview && "bg-secondary text-foreground")}
                 >
                   <Eye className="h-3.5 w-3.5" /> {t("preview")}
                 </button>
-                <button type="button" onClick={() => setHistoryOpen(true)} className={PIED_BOUTON}>
+                <button type="button" onClick={() => setHistoryOpen(true)} className={WIKI_FOOTER_BUTTON}>
                   <History className="h-3.5 w-3.5" /> {t("versionHistory")}
                 </button>
                 <span className="ml-auto text-xs text-muted-foreground">
@@ -841,7 +832,7 @@ export function WikiPageContent({
                     type="button"
                     onClick={quitterLaModification}
                     disabled={publishing}
-                    className={cn(PIED_BOUTON, "disabled:opacity-50")}
+                    className={cn(WIKI_FOOTER_BUTTON, "disabled:opacity-50")}
                   >
                     {tCommon("cancel")}
                   </button>
@@ -852,7 +843,7 @@ export function WikiPageContent({
                     onClick={() => void publish()}
                     disabled={publishing || loadingDraft}
                     className={cn(
-                      PIED_BOUTON,
+                      WIKI_FOOTER_BUTTON,
                       "bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground",
                       "disabled:opacity-50",
                     )}

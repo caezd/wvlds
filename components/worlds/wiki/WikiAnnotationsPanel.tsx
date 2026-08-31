@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import type { WikiAnnotation, WikiAnnotationThread } from "@/types/worlds";
 
 import { WikiAnnotationComposer } from "./WikiAnnotationComposer";
+import { WIKI_FOOTER, WIKI_FOOTER_BUTTON } from "./wikiSubHeader";
 import { WikiAnnotationThreadCard } from "./WikiAnnotationThreadCard";
 
 export type AnnotationDraft = { anchor: BlockAnchor };
@@ -88,22 +89,6 @@ export function WikiAnnotationsPanel({
       />
 
       <div className="flex min-h-0 flex-1 flex-col">
-        <div className="flex shrink-0 flex-wrap items-center gap-1 border-b border-border-soft px-2 py-1.5">
-          <button
-            type="button"
-            onClick={() => setShowResolved(v => !v)}
-            aria-pressed={showResolved}
-            className={cn(
-              "ml-auto rounded-full px-2 py-0.5 text-xs transition-colors",
-              showResolved
-                ? "bg-secondary font-medium text-foreground"
-                : "text-muted-foreground hover:bg-secondary hover:text-foreground",
-            )}
-          >
-            {t("showResolved")}
-          </button>
-        </div>
-
         <div className="min-h-0 flex-1 overflow-y-auto p-2">
           {draft && (
             <div className="mb-2 rounded-xl border border-primary/40 bg-primary/5 p-3">
@@ -149,6 +134,27 @@ export function WikiAnnotationsPanel({
               ))}
             </ul>
           )}
+        </div>
+
+        {/* En pied, comme les commandes de création de l'arbre des pages et du
+            panneau de notes : mêmes mesures, donc un trait sur la même ligne
+            que les leurs. Un filtre n'ouvre pas la lecture, il la referme —
+            sa place est en bas. */}
+        <div className={WIKI_FOOTER}>
+          {/* Le filtre actif se distingue d'un bouton au repos : sans cela,
+              rien ne dirait que la liste est restreinte. */}
+          <button
+            type="button"
+            onClick={() => setShowResolved(v => !v)}
+            aria-pressed={showResolved}
+            className={cn(
+              WIKI_FOOTER_BUTTON,
+              "transition-colors",
+              showResolved && "bg-secondary font-medium text-foreground",
+            )}
+          >
+            {t("showResolved")}
+          </button>
         </div>
       </div>
     </>

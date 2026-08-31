@@ -41,6 +41,7 @@ import { cn } from "@/lib/utils";
 import { useWikiPageNotes, type WikiNoteGroup } from "@/hooks/useWikiPageNotes";
 import type { WikiNoteCategory, WikiPageNote } from "@/types/worlds";
 import { WikiNoteCard, noteDragId } from "./WikiNoteCard";
+import { WIKI_FOOTER, WIKI_FOOTER_BUTTON } from "./wikiSubHeader";
 
 /**
  * Les catégories et les fiches vivent dans le même `DndContext` — on doit
@@ -83,10 +84,6 @@ const SUGGESTIONS = ["overview", "entities", "relationships", "places", "moments
 // ──────────────────────────────────────────────────────────────
 // Une catégorie et ses fiches
 // ──────────────────────────────────────────────────────────────
-/** Boutons du pied de colonne — mêmes mesures que sous l'arbre des pages. */
-const BOUTON_PIED =
-  "flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground";
-
 function CategorySection({
   group,
   canEdit,
@@ -538,7 +535,7 @@ export function WikiNotesPanel({
           création y ont une place fixe au lieu de flotter à la fin d'une
           liste dont la longueur varie. */}
       {isEditMode && !notes.loading && (
-        <div className="flex shrink-0 items-center gap-1 border-t border-border-soft px-2 py-1.5">
+        <div className={WIKI_FOOTER}>
           {notes.groups.length > 0 && (
             <button
               type="button"
@@ -549,7 +546,7 @@ export function WikiNotesPanel({
                 expandCategory(derniere);
                 setCategorieEnAjout(derniere);
               }}
-              className={BOUTON_PIED}
+              className={WIKI_FOOTER_BUTTON}
             >
               <FilePlus className="h-3.5 w-3.5" /> {t("noteLabel")}
             </button>
@@ -557,7 +554,7 @@ export function WikiNotesPanel({
           <button
             type="button"
             onClick={() => setCreatingCategory(true)}
-            className={BOUTON_PIED}
+            className={WIKI_FOOTER_BUTTON}
           >
             <FolderPlus className="h-3.5 w-3.5" /> {t("categoryLabel")}
           </button>

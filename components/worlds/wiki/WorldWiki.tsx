@@ -60,7 +60,7 @@ import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
-import { WIKI_SUBHEADER, WIKI_SUBHEADER_COUNT } from "./wikiSubHeader";
+import { WIKI_FOOTER, WIKI_FOOTER_BUTTON, WIKI_SUBHEADER, WIKI_SUBHEADER_COUNT } from "./wikiSubHeader";
 import { WikiEditModeToggle } from "./WikiEditModeToggle";
 import { slugify } from "@/lib/slug";
 import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
@@ -952,19 +952,19 @@ export function WorldWiki({
       {isEditMode && (
         <div
           data-testid="wiki-nav-footer"
-          className="flex shrink-0 items-center gap-1 border-t border-border-soft px-2 py-1.5"
+          className={WIKI_FOOTER}
         >
           <button
             type="button"
             onClick={() => setCreating({ parentId: null, isFolder: false })}
-            className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
+            className={WIKI_FOOTER_BUTTON}
           >
             <FilePlus className="h-3.5 w-3.5" /> {t("newPage")}
           </button>
           <button
             type="button"
             onClick={() => setCreating({ parentId: null, isFolder: true })}
-            className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
+            className={WIKI_FOOTER_BUTTON}
           >
             <FolderPlus className="h-3.5 w-3.5" /> {t("newFolder")}
           </button>
@@ -973,7 +973,7 @@ export function WorldWiki({
             onClick={() => setLexiconManagerOpen(true)}
             aria-label={t("lexicon.manageButton")}
             title={t("lexicon.manageButton")}
-            className="ml-auto flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
+            className={cn(WIKI_FOOTER_BUTTON, "ml-auto")}
           >
             <Library className="h-3.5 w-3.5" />
           </button>
