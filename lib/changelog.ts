@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Wiki",
+    text: "Le sommaire d’une page de wiki disparaît : l’article occupe désormais toute la colonne, à la même largeur qu’une conversation."
+  },
+  {
+    date: "2026-08",
+    tag: "Wiki",
     text: "Une page de wiki peut désormais s’ouvrir sur une bannière. L’icône, le titre et la description s’y posent par-dessus, sur un dégradé, comme l’accueil d’une documentation ; sans bannière, ils reprennent leur place au-dessus du texte. La description est bornée à 255 caractères : c’est une phrase de présentation, pas un second article."
   },
   {

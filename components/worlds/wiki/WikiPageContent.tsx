@@ -17,7 +17,6 @@ import { DB_TEXT_LIMITS } from "@/lib/textLimits";
 import { cn } from "@/lib/utils";
 import type { createClient } from "@/lib/supabase/client";
 import { resolveWikiLinks } from "@/lib/wikiLinks";
-import { extractHeadings } from "@/lib/wikiToc";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toWebP } from "@/lib/imageUtils";
 import { nomDeFichierUnique } from "@/lib/storagePaths";
@@ -32,7 +31,6 @@ import { WikiNotesPanel } from "./WikiNotesPanel";
 import { WikiSidePanel, type WikiSideTab } from "./WikiSidePanel";
 import { WikiFormatToolbar } from "./WikiFormatToolbar";
 import { WIKI_SUBHEADER, WIKI_SUBHEADER_COUNT } from "./wikiSubHeader";
-import { WikiTableOfContents } from "./WikiTableOfContents";
 import { WikiVersionHistoryPanel } from "./WikiVersionHistoryPanel";
 import type { WikiPage } from "./WorldWiki";
 import type { WorldLexiconTerm } from "@/types/worlds";
@@ -499,11 +497,6 @@ export function WikiPageContent({
     () => resolveWikiLinks(page.content ?? "", pages),
     [page.content, pages],
   );
-  // Extrait depuis le même texte que celui rendu (resolvedContent), pour que
-  // les ids d'ancre du sommaire correspondent exactement à ceux posés par
-  // MarkdownRenderer sur les titres (voir MarkdownRenderer.tsx).
-  const headings = React.useMemo(() => extractHeadings(resolvedContent), [resolvedContent]);
-
   // Identité du texte rendu : elle pilote le remontage de la couche
   // d'annotations (voir WikiAnnotationLayer). Toute écriture du contenu passe
   // par une publication, qui déplace `published_at` — inutile de hacher la
@@ -806,11 +799,9 @@ export function WikiPageContent({
               page.banner_url ? "pt-0 sm:pt-6" : "pt-6",
             )}
           >
-            {/* La colonne de l'article et son sommaire, centrés ensemble.
-                Bannière, titre et texte vivent dans la MÊME colonne : c'est ce
-                qui garantit leur alignement, quelle que soit la largeur. */}
-            <div className="mx-auto flex w-fit justify-center gap-8">
-              <div className="w-full min-w-0 [--thread-content-max-width:40rem] lg:[--thread-content-max-width:48rem] max-w-(--thread-content-max-width)">
+            {/* Bannière, titre et texte vivent dans la MÊME colonne : c'est
+                ce qui garantit leur alignement, quelle que soit la largeur. */}
+            <div className="mx-auto w-full min-w-0 [--thread-content-max-width:40rem] lg:[--thread-content-max-width:48rem] max-w-(--thread-content-max-width)">
                 {page.banner_url && (
                   <div className="relative mb-6 overflow-hidden sm:rounded-lg">
                     {/* `<img>` et non `next/image` : l'URL vient du stockage du
@@ -893,8 +884,6 @@ export function WikiPageContent({
                     {isEditMode ? t("pageEmptyEdit") : t("pageEmpty")}
                   </p>
                 )}
-              </div>
-                <WikiTableOfContents headings={headings} />
               </div>
             </div>
           </div>
