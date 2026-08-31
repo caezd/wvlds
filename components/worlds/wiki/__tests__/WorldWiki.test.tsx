@@ -474,3 +474,28 @@ describe("firstPageOf", () => {
     expect(firstPageOf([])).toBeNull();
   });
 });
+
+describe("WorldWiki — suppression d'une page", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    document.body.style.pointerEvents = "";
+  });
+
+  it("laisse l'application cliquable apres une suppression confirmee", async () => {
+    // Meme piege que sur les commentaires : le menu ⋯ et le dialogue de
+    // confirmation se chevauchent, et Radix rend `document.body` inerte tant
+    // qu'une couche modale vit. Si l'une disparait sans que son nettoyage
+    // passe, plus rien n'est cliquable dans l'application.
+    setup();
+    const user = userEvent.setup();
+    render(<WorldWiki worldId="w1" canEdit />);
+
+    await user.click(screen.getByText("Modifier"));
+    const ligne = (await dansLArbre("Accueil")).closest("div")!;
+    await user.click(within(ligne).getByRole("button", { name: "Options" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Supprimer" }));
+    await user.click(await screen.findByRole("button", { name: "Supprimer" }));
+
+    await waitFor(() => expect(document.body.style.pointerEvents).not.toBe("none"));
+  });
+});

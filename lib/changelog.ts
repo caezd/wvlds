@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Correctif",
+    text: "Confirmer la suppression d’un commentaire — ou d’une page — de wiki figeait toute l’application : plus aucun clic ne passait nulle part, il fallait recharger la page. Le menu ⋯ et la fenêtre de confirmation se chevauchaient, et le verrou que pose l’un des deux sur la page n’était jamais relâché. La confirmation s’ouvre désormais une fois le menu refermé."
+  },
+  {
+    date: "2026-08",
     tag: "Wiki",
     text: "Le wiki d’un monde ouvre désormais sa première page dès qu’on y arrive, au lieu d’accueillir sur un panneau vide invitant à choisir dans la navigation. Les notes et les commentaires d’une page partagent par ailleurs une seule colonne, à droite du texte, avec deux onglets pour passer de l’un à l’autre : le bouton qui l’ouvrait disputait sa place au titre de la page sur les écrans étroits, la colonne est maintenant toujours là."
   },

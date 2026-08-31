@@ -31,6 +31,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  afterMenuClose,
 } from "@/components/ui/dropdown-menu";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { DB_TEXT_LIMITS } from "@/lib/textLimits";
@@ -221,7 +222,7 @@ function CategorySection({
                 <DropdownMenuItem onSelect={() => setRenaming(true)}>
                   <Pencil className="mr-2 h-3.5 w-3.5" /> {t("renameCategory")}
                 </DropdownMenuItem>
-                <DropdownMenuItem onSelect={onDelete} className="text-destructive focus:text-destructive">
+                <DropdownMenuItem onSelect={afterMenuClose(onDelete)} className="text-destructive focus:text-destructive">
                   <Trash2 className="mr-2 h-3.5 w-3.5" /> {tCommon("delete")}
                 </DropdownMenuItem>
               </DropdownMenuContent>

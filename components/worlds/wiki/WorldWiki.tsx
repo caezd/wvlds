@@ -51,6 +51,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  afterMenuClose,
 } from "@/components/ui/dropdown-menu";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
@@ -300,7 +301,7 @@ function SortableTreeNode({
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                onClick={e => { e.stopPropagation(); onDelete(); }}
+                onClick={e => { e.stopPropagation(); afterMenuClose(onDelete)(); }}
                 className="text-destructive focus:text-destructive"
               >
                 <Trash2 className="mr-2 h-4 w-4" /> {tCommon("delete")}

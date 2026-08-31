@@ -11,6 +11,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  afterMenuClose,
 } from "@/components/ui/dropdown-menu";
 import { getLeadingLetter } from "@/lib/textFormatting";
 import { anchorPreview } from "@/lib/wikiAnnotations";
@@ -159,7 +160,7 @@ export function WikiAnnotationThreadCard({
             </DropdownMenuItem>
             {canDeleteRoot && (
               <DropdownMenuItem
-                onSelect={() => onDelete(root)}
+                onSelect={afterMenuClose(() => onDelete(root))}
                 disabled={pending}
                 className="text-destructive focus:text-destructive"
               >

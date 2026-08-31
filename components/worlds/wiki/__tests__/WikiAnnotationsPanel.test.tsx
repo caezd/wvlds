@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect, vi } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { WikiAnnotationsPanel } from "@/components/worlds/wiki/WikiAnnotationsPanel";
@@ -27,14 +27,9 @@ function thread(over: Partial<WikiAnnotation> & { id: string }, replies: WikiAnn
   return { root: annotation(over), replies };
 }
 
-// Radix verrouille `document.body` (`pointer-events: none`) tant qu'une
-// modale est ouverte, et ne le relâche qu'à la fermeture — que le démontage
-// brutal de RTL entre deux tests n'exécute pas. Sans ce nettoyage, le premier
-// test qui ouvre le dialogue de suppression rend le body inerte pour tous les
-// suivants.
-beforeEach(() => {
-  document.body.style.pointerEvents = "";
-});
+// Aucune remise à zéro de `document.body.style.pointerEvents` ici : ce verrou
+// de Radix ne doit plus fuir depuis `afterMenuClose`, et le remettre à zéro
+// d'office masquerait la régression que ce fichier surveille désormais.
 
 function renderPanel(props: Partial<React.ComponentProps<typeof WikiAnnotationsPanel>> = {}) {
   const handlers = {
@@ -189,6 +184,22 @@ describe("WikiAnnotationsPanel — écriture", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Supprimer" }));
     expect(onDelete).toHaveBeenCalledTimes(1);
     expect(onDelete.mock.calls[0][0].id).toBe("a1");
+  });
+
+  it("laisse l'application cliquable après une suppression confirmée", async () => {
+    // Radix rend `document.body` inerte (`pointer-events: none`) tant qu'une
+    // couche modale est ouverte, et le restaure à sa fermeture. Le menu ⋯ et
+    // le dialogue de confirmation se chevauchent ici : si l'un disparaît sans
+    // que son nettoyage passe, le body reste inerte et PLUS RIEN n'est
+    // cliquable dans l'application — signalé à l'usage.
+    const user = userEvent.setup();
+    renderPanel({ threads: [thread({ id: "a1" })] });
+
+    await user.click(screen.getByRole("button", { name: "Actions du fil" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Supprimer" }));
+    await user.click(await screen.findByRole("button", { name: "Supprimer" }));
+
+    await waitFor(() => expect(document.body.style.pointerEvents).not.toBe("none"));
   });
 
   it("ne propose pas de supprimer le fil d'un autre à un simple membre", async () => {

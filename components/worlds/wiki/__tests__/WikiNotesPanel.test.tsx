@@ -21,13 +21,10 @@ const NOTES = [
   { id: "n3", category_id: "c2", page_id: "p1", title: "Meridian", body: "La métropole.", sort_index: 0 },
 ];
 
-// Radix laisse `document.body` inerte entre deux tests quand une modale est
-// démontée brutalement — voir WikiAnnotationsPanel.test.tsx.
 beforeEach(() => {
-  document.body.style.pointerEvents = "";
   // `localStorage.clear` manque au localStorage de l'environnement de test :
-  // on retire la seule cle que le panneau ecrit.
-  try { localStorage.removeItem("wiki-notes-collapsed:p1"); } catch { /* rien a nettoyer */ }
+  // on retire la seule clé que le panneau écrit.
+  try { localStorage.removeItem("wiki-notes-collapsed:p1"); } catch { /* rien à nettoyer */ }
 });
 
 function renderPanel(

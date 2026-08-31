@@ -13,6 +13,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  afterMenuClose,
 } from "@/components/ui/dropdown-menu";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import { DB_TEXT_LIMITS } from "@/lib/textLimits";
@@ -183,7 +184,7 @@ export function WikiNoteCard({
               <DropdownMenuItem onSelect={startEditing}>
                 <Pencil className="mr-2 h-3.5 w-3.5" /> {tCommon("edit")}
               </DropdownMenuItem>
-              <DropdownMenuItem onSelect={onDelete} className="text-destructive focus:text-destructive">
+              <DropdownMenuItem onSelect={afterMenuClose(onDelete)} className="text-destructive focus:text-destructive">
                 <Trash2 className="mr-2 h-3.5 w-3.5" /> {tCommon("delete")}
               </DropdownMenuItem>
             </DropdownMenuContent>
