@@ -674,18 +674,24 @@ export function WikiPageContent({
                   </div>
                 </div>
               ) : (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => champBanniere.current?.click()}
-                  disabled={bannerUploading}
-                  className="-ml-2 text-muted-foreground"
-                >
-                  {bannerUploading
-                    ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
-                    : <ImagePlus className="mr-1 h-3.5 w-3.5" />}
-                  {t("addBanner")}
-                </Button>
+                // Le retrait du texte sur l'enveloppe, et le remplissage
+                // propre au bouton annulé (`px-2.5` en taille `sm` avec une
+                // icône) : son libellé tombe ainsi à l'aplomb du chapeau, là où
+                // se posera la bannière elle-même.
+                <div className="px-4 lg:px-6">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => champBanniere.current?.click()}
+                    disabled={bannerUploading}
+                    className="-ml-2.5 text-muted-foreground"
+                  >
+                    {bannerUploading
+                      ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+                      : <ImagePlus className="mr-1 h-3.5 w-3.5" />}
+                    {t("addBanner")}
+                  </Button>
+                </div>
               )}
             </div>
 
