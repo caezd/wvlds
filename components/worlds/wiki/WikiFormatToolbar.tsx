@@ -94,7 +94,15 @@ export function WikiFormatToolbar({
       role="toolbar"
       aria-label={t("formatToolbar")}
       className={cn(
-        "flex items-center justify-center gap-0.5 overflow-x-auto [scrollbar-width:none]",
+        // `min-w-0` : sans lui, un élément de flex refuse de descendre sous la
+        // largeur de son contenu. La ceinture imposait donc sa largeur au
+        // bandeau, qui l'imposait à la colonne — et le corps de l'article ne
+        // pouvait plus se réduire, jusqu'à déborder sur écran étroit.
+        "flex min-w-0 items-center gap-0.5 overflow-x-auto [scrollbar-width:none]",
+        // Centrée tant qu'elle tient, alignée à gauche dès qu'elle défile :
+        // `justify-center` sur un conteneur qui déborde rend son début
+        // inatteignable, le défilement ne pouvant pas remonter avant l'origine.
+        "justify-start min-[700px]:justify-center",
         className,
       )}
     >

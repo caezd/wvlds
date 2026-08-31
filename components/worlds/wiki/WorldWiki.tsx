@@ -1087,7 +1087,11 @@ export function WorldWiki({
         </DrawerContent>
       </Drawer>
 
-      <div className="flex h-full min-h-0 flex-1 flex-col">
+      {/* `min-w-0` : un élément de flex refuse par défaut de descendre sous la
+          largeur minimale de son contenu. Cette colonne restait donc à 532 px
+          dans un parent de 455, qui la rognait — l'article se retrouvait coupé
+          à droite sur écran étroit. */}
+      <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
         <WorldPanelHeader
           icon={<BookOpenText className="h-4 w-4 shrink-0 text-muted-foreground" />}
           title={label || tNav("wiki")}
@@ -1106,7 +1110,7 @@ export function WorldWiki({
         </WorldPanelHeader>
 
         {/* ── Body ───────────────────────────────────────── */}
-        <div className="flex min-h-0 flex-1">
+        <div className="flex min-h-0 min-w-0 flex-1">
           {/* Colonne de navigation — devient un tiroir en dessous de `lg`, où
               ses 208 px prenaient plus de la moitié d'un écran de téléphone. */}
           {!navCollapsed && (
@@ -1130,7 +1134,7 @@ export function WorldWiki({
           )}
 
           {/* Content area */}
-          <div className="flex min-h-0 flex-1">
+          <div className="flex min-h-0 min-w-0 flex-1">
             {renderContent()}
           </div>
         </div>

@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Correctif",
+    text: "Sur écran étroit, l’article d’une page de wiki était coupé sur sa droite en mode modification : la colonne refusait de se réduire sous la largeur de sa ceinture d’outils, et le texte débordait de la fenêtre. Il s’adapte maintenant à la largeur disponible, la ceinture défilant d’elle-même quand elle ne tient plus."
+  },
+  {
+    date: "2026-08",
     tag: "Wiki",
     text: "Chaque bloc d’un article porte ses commandes de commentaire dans la marge droite : un bouton pour en ouvrir un, et une pastille avec le nombre de discussions déjà là, qu’un clic déplie. Sur ordinateur le bouton n’apparaît qu’au survol du bloc ; au doigt il reste visible, faute d’un survol qui le révélerait."
   },
