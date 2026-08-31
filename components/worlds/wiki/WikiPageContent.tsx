@@ -20,6 +20,7 @@ import type { WikiAnnotation } from "@/types/worlds";
 import { WikiAnnotationLayer, type ActiveAnnotation } from "./WikiAnnotationLayer";
 import { WikiAnnotationsPanel, type AnnotationDraft } from "./WikiAnnotationsPanel";
 import { WikiNotesPanel } from "./WikiNotesPanel";
+import { WikiSidePanel, type WikiSideTab } from "./WikiSidePanel";
 import { WikiBreadcrumb } from "./WikiBreadcrumb";
 import { WikiTableOfContents } from "./WikiTableOfContents";
 import { WikiVersionHistoryPanel } from "./WikiVersionHistoryPanel";
@@ -105,8 +106,10 @@ export function WikiPageContent({
 
   // ── Annotations ───────────────────────────────────────────
   const { userId } = useCurrentUser();
-  const [annotationsOpen, setAnnotationsOpen] = React.useState(false);
-  const [notesOpen, setNotesOpen] = React.useState(false);
+  // Une seule colonne latérale, dont l'onglet dit ce qu'elle montre. `sideTab`
+  // survit à la fermeture : rouvrir le panneau ramène ce qu'on regardait.
+  const [sideOpen, setSideOpen] = React.useState(false);
+  const [sideTab, setSideTab] = React.useState<WikiSideTab>("comments");
   const [activeAnnotation, setActiveAnnotation] = React.useState<ActiveAnnotation | null>(null);
   const [annotationDraft, setAnnotationDraft] = React.useState<AnnotationDraft | null>(null);
   const [detachedIds, setDetachedIds] = React.useState<Set<string>>(() => new Set());
@@ -133,12 +136,14 @@ export function WikiPageContent({
   }, [page.id]);
 
   function openAnnotation(id: string, scrollIntoView: boolean) {
-    setAnnotationsOpen(true);
+    setSideOpen(true);
+    setSideTab("comments");
     setActiveAnnotation({ id, scrollIntoView });
   }
 
   function startDraft(anchor: TextAnchor) {
-    setAnnotationsOpen(true);
+    setSideOpen(true);
+    setSideTab("comments");
     setActiveAnnotation(null);
     setAnnotationDraft({ anchor });
   }
@@ -390,16 +395,6 @@ export function WikiPageContent({
 
   return (
     <div className="flex min-h-0 flex-1">
-      {notesOpen && (
-        <WikiNotesPanel
-          pageId={page.id}
-          worldId={worldId}
-          isEditMode={isEditMode}
-          supabase={supabase}
-          onClose={() => setNotesOpen(false)}
-        />
-      )}
-
       <div className="min-w-0 flex-1 overflow-y-auto p-6">
         <div className="mx-auto flex max-w-4xl gap-8">
           <div className="min-w-0 max-w-2xl flex-1">
@@ -413,30 +408,21 @@ export function WikiPageContent({
                 {draftBadge}
                 {restrictedBadge}
                 <Button
-                  variant={notesOpen ? "secondary" : "ghost"}
+                  variant={sideOpen ? "secondary" : "ghost"}
                   size="sm"
-                  aria-pressed={notesOpen}
-                  onClick={() => setNotesOpen(v => !v)}
+                  aria-pressed={sideOpen}
+                  onClick={() => setSideOpen(v => !v)}
                 >
-                  <StickyNote className="mr-1.5 h-3.5 w-3.5" />
-                  {tNotes("title")}
+                  {sideTab === "notes"
+                    ? <StickyNote className="mr-1.5 h-3.5 w-3.5" />
+                    : <MessagesSquare className="mr-1.5 h-3.5 w-3.5" />}
+                  {sideTab === "notes" ? tNotes("title") : t("annotations.title")}
+                  {sideTab === "comments" && openAnnotationCount > 0 && (
+                    <span className="ml-1.5 rounded-full bg-primary/10 px-1.5 text-xs text-primary">
+                      {openAnnotationCount}
+                    </span>
+                  )}
                 </Button>
-                {canAnnotate && (
-                  <Button
-                    variant={annotationsOpen ? "secondary" : "ghost"}
-                    size="sm"
-                    aria-pressed={annotationsOpen}
-                    onClick={() => setAnnotationsOpen(v => !v)}
-                  >
-                    <MessagesSquare className="mr-1.5 h-3.5 w-3.5" />
-                    {t("annotations.title")}
-                    {openAnnotationCount > 0 && (
-                      <span className="ml-1.5 rounded-full bg-primary/10 px-1.5 text-xs text-primary">
-                        {openAnnotationCount}
-                      </span>
-                    )}
-                  </Button>
-                )}
                 {isEditMode && (
                   <Button
                     variant="secondary"
@@ -477,24 +463,39 @@ export function WikiPageContent({
         </div>
       </div>
 
-      {annotationsOpen && (
-        <WikiAnnotationsPanel
-          threads={annotations.threads}
-          detachedIds={detachedIds}
-          loading={annotations.loading}
-          pending={annotations.pending}
-          activeId={activeAnnotation?.id ?? null}
-          draft={annotationDraft}
-          currentUserId={userId}
-          canModerate={canEdit}
-          onActivate={id => openAnnotation(id, true)}
-          onCreate={body => void createFromDraft(body)}
-          onCancelDraft={() => setAnnotationDraft(null)}
-          onReply={(root: WikiAnnotation, body: string) => annotations.reply(root, body)}
-          onSetResolved={(root, resolved) => void annotations.setResolved(root, resolved)}
-          onDelete={annotation => void annotations.remove(annotation)}
-          onClose={() => setAnnotationsOpen(false)}
-        />
+      {sideOpen && (
+        <WikiSidePanel
+          tab={sideTab}
+          onTabChange={setSideTab}
+          onClose={() => setSideOpen(false)}
+          openCommentCount={openAnnotationCount}
+        >
+          {sideTab === "comments" ? (
+            <WikiAnnotationsPanel
+              threads={annotations.threads}
+              detachedIds={detachedIds}
+              loading={annotations.loading}
+              pending={annotations.pending}
+              activeId={activeAnnotation?.id ?? null}
+              draft={annotationDraft}
+              currentUserId={userId}
+              canModerate={canEdit}
+              onActivate={id => openAnnotation(id, true)}
+              onCreate={body => void createFromDraft(body)}
+              onCancelDraft={() => setAnnotationDraft(null)}
+              onReply={(root: WikiAnnotation, body: string) => annotations.reply(root, body)}
+              onSetResolved={(root, resolved) => void annotations.setResolved(root, resolved)}
+              onDelete={annotation => void annotations.remove(annotation)}
+            />
+          ) : (
+            <WikiNotesPanel
+              pageId={page.id}
+              worldId={worldId}
+              isEditMode={isEditMode}
+              supabase={supabase}
+            />
+          )}
+        </WikiSidePanel>
       )}
     </div>
   );

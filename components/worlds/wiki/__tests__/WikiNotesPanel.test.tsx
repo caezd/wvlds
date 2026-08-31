@@ -35,17 +35,15 @@ function renderPanel(
   props: { isEditMode?: boolean } = {},
 ) {
   const mock = createSupabaseMock({ results });
-  const onClose = vi.fn();
   const vue = render(
     <WikiNotesPanel
       pageId="p1"
       worldId="w1"
       isEditMode={props.isEditMode ?? true}
       supabase={mock.client as never}
-      onClose={onClose}
     />,
   );
-  return { ...vue, mock, onClose };
+  return { ...vue, mock };
 }
 
 const CHARGEMENT = [{ data: CATEGORIES, error: null }, { data: NOTES, error: null }];
@@ -109,14 +107,6 @@ describe("WikiNotesPanel — lecture", () => {
     expect(screen.getByRole("button", { name: "+ Moments" })).toBeTruthy();
   });
 
-  it("se ferme sur demande", async () => {
-    const user = userEvent.setup();
-    const { onClose } = renderPanel(CHARGEMENT);
-
-    await screen.findByText("Entités");
-    await user.click(screen.getByRole("button", { name: "Fermer" }));
-    expect(onClose).toHaveBeenCalled();
-  });
 });
 
 describe("WikiNotesPanel — hors mode modification", () => {

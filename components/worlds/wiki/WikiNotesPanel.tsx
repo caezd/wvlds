@@ -9,9 +9,7 @@ import {
   MoreHorizontal,
   Pencil,
   Plus,
-  StickyNote,
   Trash2,
-  X,
 } from "lucide-react";
 import {
   DndContext,
@@ -304,7 +302,6 @@ export function WikiNotesPanel({
   worldId,
   isEditMode,
   supabase,
-  onClose,
 }: {
   pageId: string;
   worldId: string;
@@ -315,7 +312,6 @@ export function WikiNotesPanel({
    */
   isEditMode: boolean;
   supabase: ReturnType<typeof createClient>;
-  onClose: () => void;
 }) {
   const t = useTranslations("wiki.notes");
   const tCommon = useTranslations("common");
@@ -445,24 +441,7 @@ export function WikiNotesPanel({
         }}
       />
 
-      <aside
-        aria-label={t("title")}
-        className="flex h-full min-h-0 w-72 shrink-0 flex-col border-r border-border-soft"
-      >
-        <div className="flex shrink-0 items-center gap-2 border-b border-border-soft px-3 py-2">
-          <StickyNote className="h-4 w-4 shrink-0 text-muted-foreground" />
-          <h2 className="flex-1 truncate text-sm font-medium">{t("title")}</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label={tCommon("close")}
-            className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-
-        <div className="min-h-0 flex-1 overflow-y-auto p-2">
+      <div className="min-h-0 flex-1 overflow-y-auto p-2">
           {notes.loading ? (
             <div className="flex items-center justify-center p-6">
               <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
@@ -543,8 +522,7 @@ export function WikiNotesPanel({
               <Plus className="h-3.5 w-3.5" /> {t("addCategory")}
             </button>
           ))}
-        </div>
-      </aside>
+      </div>
     </>
   );
 }

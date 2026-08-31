@@ -121,17 +121,6 @@ describe("WikiAnnotationsPanel — fils résolus", () => {
     expect(screen.getByText("Encore ouvert")).toBeTruthy();
   });
 
-  it("ne compte que les fils ouverts dans le compteur d'en-tête", () => {
-    renderPanel({
-      threads: [
-        thread({ id: "a1" }),
-        thread({ id: "a2" }),
-        thread({ id: "a3", resolved_at: "2026-08-02T10:00:00.000Z", resolved_by: "u1" }),
-      ],
-    });
-    expect(screen.getByText("2")).toBeTruthy();
-  });
-
 });
 
 describe("WikiAnnotationsPanel — écriture", () => {
