@@ -1,7 +1,6 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useTranslations } from "next-intl";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import { WorldChatComposer } from "../chatrooms/WorldChatComposer";
 import { WorldChatroomsGrid } from "../chatrooms/WorldChatroomsGrid";
@@ -25,6 +24,12 @@ import {
 const WorldMembersOnlineWidget = dynamic(() => import("./widgets/WorldMembersOnlineWidget").then((m) => m.WorldMembersOnlineWidget));
 const WorldWikiShortcutsWidget = dynamic(() => import("./widgets/WorldWikiShortcutsWidget").then((m) => m.WorldWikiShortcutsWidget));
 const WorldRecentPersonasWidget = dynamic(() => import("./widgets/WorldRecentPersonasWidget").then((m) => m.WorldRecentPersonasWidget));
+// Import paresseux : ce composant embarque l'analyseur HTML et l'assainisseur
+// du bloc libre (cf. blocks/homeHtmlBlock.ts). Une page d'accueil sans bloc
+// HTML — le cas courant — ne les télécharge donc jamais.
+const WorldHomeHtmlBlockView = dynamic(() =>
+  import("./blocks/WorldHomeHtmlBlockView").then((m) => m.WorldHomeHtmlBlockView),
+);
 
 
 /**
@@ -44,7 +49,15 @@ const WorldRecentPersonasWidget = dynamic(() => import("./widgets/WorldRecentPer
  * occupe toujours exactement une ligne, dont la hauteur suit son contenu
  * réel. Aucun `overflow` de secours n'est donc nécessaire — un contenu long
  * (beaucoup de salons) agrandit sa ligne au lieu de déborder sur les blocs
- * suivants, et la hauteur n'a jamais à être devinée par l'admin.
+ * suivants, et la hauteur d'un widget n'a jamais à être devinée par l'admin.
+ *
+ * Les blocs à contenu libre (html/markdown) peuvent porter une hauteur
+ * explicite en pixels (`item.h`) pour fixer leur encombrement — leur contenu
+ * défile alors à l'intérieur du bloc. C'est un choix de mise en page, pas une
+ * nécessité : depuis le rendu en ligne du bloc HTML (l'iframe a été retirée,
+ * voir blocks/WorldHomeHtmlBlockView.tsx), les deux types s'auto-dimensionnent
+ * aussi bien qu'un widget quand la hauteur est absente. Cela ne change rien à
+ * la ligne : elle s'ajuste au plus haut de ses blocs, comme toujours.
  */
 export function WorldHomeGridView({
   items,
@@ -79,7 +92,6 @@ export function WorldHomeGridView({
   /** Gouttière — même préréglage que l'éditeur admin, voir worldHomeGrid.ts. */
   gap?: WorldHomeGridGap;
 }) {
-  const t = useTranslations("worlds");
   const sorted = [...items].sort((a, b) => a.y - b.y || a.x - b.x);
 
   return (
@@ -107,7 +119,6 @@ export function WorldHomeGridView({
             selectedCategoryId,
             onSelectCategory,
             onWikiLink,
-            htmlBlockFallbackTitle: t("home.grid.htmlBlockTitle"),
           })}
         </div>
       ))}
@@ -128,7 +139,6 @@ function renderBlock(
     selectedCategoryId: string | null;
     onSelectCategory: (categoryId: string | null) => void;
     onWikiLink?: (slug: string) => void;
-    htmlBlockFallbackTitle: string;
   },
 ) {
   if (item.type === "banner") {
@@ -137,21 +147,36 @@ function renderBlock(
 
   if (item.type === "html") {
     return (
-      <iframe
-        sandbox=""
-        srcDoc={item.html ?? ""}
-        title={item.title || ctx.htmlBlockFallbackTitle}
-        className={cn("h-full w-full", item.card !== false && "rounded-lg border bg-background")}
+      <WorldHomeHtmlBlockView
+        id={item.id}
+        html={item.html ?? ""}
+        css={item.css}
+        card={item.card !== false}
+        height={item.h}
       />
     );
   }
 
   if (item.type === "markdown") {
     const content = <MarkdownRenderer content={item.content ?? ""} allowImages onWikiLink={ctx.onWikiLink} />;
-    return item.card ? (
-      <div className="rounded-lg border border-border-soft bg-card/40 p-4">{content}</div>
-    ) : (
-      content
+    // Hauteur fixée : le surplus défile dans le bloc plutôt que d'allonger la
+    // ligne — même parti-pris que l'option « lignes visibles » du widget
+    // salons. Sans hauteur, le rendu reste exactement celui d'avant ce
+    // réglage : pas de conteneur ajouté hors carte, pas d'`overflow`.
+    if (!item.h) {
+      return item.card ? (
+        <div className="rounded-lg border border-border-soft bg-card/40 p-4">{content}</div>
+      ) : (
+        content
+      );
+    }
+    return (
+      <div
+        style={{ height: item.h }}
+        className={cn("overflow-y-auto", item.card && "rounded-lg border border-border-soft bg-card/40 p-4")}
+      >
+        {content}
+      </div>
     );
   }
 

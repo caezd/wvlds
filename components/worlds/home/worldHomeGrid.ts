@@ -11,12 +11,22 @@ import {
  * chaque bloc a une position (x, y) et une largeur (w, en colonnes),
  * librement déplaçable/redimensionnable par un admin.
  *
- * Pas de hauteur réglable (`h`) : chaque bloc occupe une seule ligne dont la
- * hauteur réelle s'ajuste automatiquement à son contenu (CSS `grid-auto-rows:
- * min-content`, voir WorldHomeGridView.tsx) — un contenu plus long qu'un
- * autre sur la même ligne ne peut donc jamais la faire déborder sur les
- * blocs suivants, sans avoir besoin d'un `overflow` de secours. Seule la
- * largeur reste au choix de l'admin, en glissant le bord droit d'un bloc
+ * Chaque bloc occupe une seule ligne, dont la hauteur s'ajuste par défaut à
+ * son contenu (CSS `grid-auto-rows: min-content`, voir WorldHomeGridView.tsx)
+ * — un contenu plus long qu'un autre sur la même ligne ne peut donc jamais la
+ * faire déborder sur les blocs suivants.
+ *
+ * Seuls les blocs à contenu libre (`html`, `markdown`) acceptent une hauteur
+ * explicite (`h`, en pixels) : leur contenu n'est pas produit par
+ * l'application, elle ne peut donc pas lui trouver une bonne hauteur toute
+ * seule. Le cas du HTML est le plus net — rendu dans une iframe, il retombe
+ * sinon sur la hauteur intrinsèque de celle-ci (150 px), quel que soit son
+ * contenu. Les widgets, eux, gardent leur hauteur automatique : leur contenu
+ * vient de l'application, qui sait le dimensionner (voir les options
+ * `visibleRows`/`limit` de WORLD_HOME_WIDGET_OPTIONS pour en borner la
+ * quantité).
+ *
+ * La largeur reste au choix de l'admin en glissant le bord droit d'un bloc
  * (voir le diviseur de WorldHomeGridEditor.tsx).
  */
 export type WorldHomeBlockType = "widget" | "html" | "markdown" | "banner";
@@ -50,8 +60,15 @@ export type WorldHomeGridItem = {
   w: number;
   /** type === "widget" */
   widgetId?: WorldHomeWidgetId;
-  /** type === "html" — HTML/CSS libre, rendu dans une iframe sandboxée (pas de JS). */
+  /** type === "html" — balisage libre, assaini par liste blanche et rendu
+   *  dans la page (voir blocks/homeHtmlBlock.ts). */
   html?: string;
+  /** type === "html" — feuille de style du bloc, cloisonnée à son sous-arbre
+   *  par `@scope` au rendu. Séparée du balisage depuis que celui-ci est
+   *  assaini : une balise `<style>` au milieu du HTML n'y survivrait pas.
+   *  Les blocs antérieurs à ce champ gardent la leur dans `html` — elle est
+   *  hissée au rendu, cf. prepareHomeHtmlBlock. */
+  css?: string;
   /** type === "markdown" */
   content?: string;
   /** type === "html" | "markdown" — carte (bordure + fond) ou plein largeur
@@ -61,6 +78,11 @@ export type WorldHomeGridItem = {
   card?: boolean;
   /** type === "banner" */
   banner?: WorldHomeBannerContent;
+  /** type === "html" | "markdown" — hauteur fixe du bloc, en pixels. Absent =
+   *  hauteur automatique : le markdown suit son contenu, l'iframe d'un bloc
+   *  html retombe sur ses 150 px intrinsèques. Un contenu plus long que la
+   *  hauteur fixée défile à l'intérieur du bloc (cf. WorldHomeGridView). */
+  h?: number;
   /** Titre libre d'un bloc html/markdown — sert à l'identifier dans l'éditeur
    *  (à défaut : « Bloc HTML »/« Bloc Markdown »). Purement descriptif, non
    *  affiché sur la page d'accueil. */
@@ -229,10 +251,40 @@ export const MIN_BLOCK_W = 2;
 /** Une ligne ne peut pas contenir plus de blocs que sa largeur ne permet, en
  *  respectant la largeur minimale de chacun. */
 export const MAX_BLOCKS_PER_ROW = Math.floor(HOME_GRID_COLS / MIN_BLOCK_W);
+/** Longueur maximale de la feuille de style d'un bloc html — même budget que
+ *  son balisage (voir MAX_HOME_BLOCK_CONTENT_LENGTH juste en dessous). */
+export const MAX_HOME_BLOCK_CSS_LENGTH = 20_000;
 /** Limite de taille du contenu HTML/Markdown libre d'un bloc — partagée
  *  entre les éditeurs de bloc (validation immédiate) et l'action serveur
  *  (source de vérité). Anciennement `MAX_ANNOUNCEMENT_HTML_LENGTH`. */
 export const MAX_HOME_BLOCK_CONTENT_LENGTH = 20_000;
+/**
+ * Bornes de la hauteur explicite d'un bloc html/markdown, en pixels —
+ * partagées par le champ de l'éditeur (bornes du champ), l'assainissement
+ * client (sanitizeGridItem) et la validation serveur (validateHomeGridItem),
+ * pour qu'elles ne soient déclarées qu'à un seul endroit.
+ */
+export const MIN_HOME_BLOCK_HEIGHT = 80;
+export const MAX_HOME_BLOCK_HEIGHT = 2000;
+
+/**
+ * Résout une hauteur brute vers une valeur stockable, ou `undefined` pour
+ * « automatique ».
+ *
+ * Une valeur non numérique, ou nulle/négative, vaut « automatique » : c'est
+ * ce que produit un champ vidé par l'admin. Une valeur positive mais hors
+ * bornes est en revanche ramenée dans les bornes plutôt qu'écartée — l'admin
+ * a exprimé une intention de taille, la trahir en repassant en automatique
+ * serait plus surprenant que la borner (même parti-pris que
+ * `sanitizeWidgetOptions`).
+ */
+export function sanitizeBlockHeight(raw: unknown): number | undefined {
+  if (typeof raw !== "number" || !Number.isFinite(raw)) return undefined;
+  const rounded = Math.round(raw);
+  if (rounded < 1) return undefined;
+  return Math.min(MAX_HOME_BLOCK_HEIGHT, Math.max(MIN_HOME_BLOCK_HEIGHT, rounded));
+}
+
 /** Nombre maximal de blocs dans la grille d'un monde. */
 export const MAX_HOME_GRID_ITEMS = 24;
 /** Borne haute de `y` — chaque bloc occupant une seule ligne, ce nombre est
@@ -300,10 +352,12 @@ function sanitizeGridItem(
   if (r.type === "html") {
     if (typeof r.html !== "string" || r.widgetId !== undefined || r.content !== undefined) return null;
     seenIds.add(r.id);
+    const css = typeof r.css === "string" && r.css.trim() ? { css: r.css } : {};
     // Défaut "carte" (bordure + fond) : préserve l'apparence d'avant
     // l'introduction de ce réglage, où un bloc html était toujours ainsi.
     const card = r.card !== false;
-    return { id: r.id, type: "html", x, y, w, html: r.html, card, ...title };
+    const h = sanitizeBlockHeight(r.h);
+    return { id: r.id, type: "html", x, y, w, html: r.html, card, ...css, ...(h ? { h } : {}), ...title };
   }
 
   // markdown
@@ -312,7 +366,8 @@ function sanitizeGridItem(
   // Défaut "plein largeur" : préserve l'apparence d'avant ce réglage, où un
   // bloc markdown n'avait jamais de carte.
   const card = r.card === true;
-  return { id: r.id, type: "markdown", x, y, w, content: r.content, card, ...title };
+  const h = sanitizeBlockHeight(r.h);
+  return { id: r.id, type: "markdown", x, y, w, content: r.content, card, ...(h ? { h } : {}), ...title };
 }
 
 /**

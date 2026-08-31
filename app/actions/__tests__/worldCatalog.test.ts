@@ -27,7 +27,14 @@ import {
     batchUpdateCatalogItemOrder,
     setWorldHomeGrid,
 } from "@/app/actions/worldCatalog";
-import { HOME_GRID_COLS, MAX_HOME_BLOCK_CONTENT_LENGTH, MAX_HOME_GRID_ITEMS } from "@/components/worlds/home/worldHomeGrid";
+import {
+    HOME_GRID_COLS,
+    MAX_HOME_BLOCK_CONTENT_LENGTH,
+    MAX_HOME_BLOCK_CSS_LENGTH,
+    MAX_HOME_BLOCK_HEIGHT,
+    MAX_HOME_GRID_ITEMS,
+    MIN_HOME_BLOCK_HEIGHT,
+} from "@/components/worlds/home/worldHomeGrid";
 import { createClient } from "@/lib/supabase/server";
 import { deletePersona } from "@/app/(protected)/p/actions";
 
@@ -624,6 +631,94 @@ describe("setWorldHomeGrid", () => {
         expect(written[1]).toMatchObject({ type: "markdown", content: "# x" });
     });
 
+    it("enregistre la hauteur d'un bloc html ou markdown", async () => {
+        const mock = createSupabaseMock({ results: [{ error: null }] });
+        use(mock);
+        await setWorldHomeGrid("w1", [
+            { id: "a", type: "html", x: 0, y: 0, w: 12, html: "<p>x</p>", h: 320 },
+            { id: "b", type: "markdown", x: 0, y: 1, w: 12, content: "x", h: 240 },
+        ]);
+        const written = mock.buildersFor("worlds")[0].update.mock.calls[0][0].home_grid;
+        expect(written[0]).toMatchObject({ type: "html", h: 320 });
+        expect(written[1]).toMatchObject({ type: "markdown", h: 240 });
+    });
+
+    it("borne une hauteur hors limites au lieu de rejeter le bloc", async () => {
+        const mock = createSupabaseMock({ results: [{ error: null }] });
+        use(mock);
+        await setWorldHomeGrid("w1", [
+            { id: "a", type: "html", x: 0, y: 0, w: 12, html: "<p>x</p>", h: 5 },
+            { id: "b", type: "html", x: 0, y: 1, w: 12, html: "<p>y</p>", h: 99_999 },
+        ]);
+        const written = mock.buildersFor("worlds")[0].update.mock.calls[0][0].home_grid;
+        expect(written[0]).toMatchObject({ h: MIN_HOME_BLOCK_HEIGHT });
+        expect(written[1]).toMatchObject({ h: MAX_HOME_BLOCK_HEIGHT });
+    });
+
+    it("n'écrit aucune hauteur quand le bloc n'en a pas", async () => {
+        const mock = createSupabaseMock({ results: [{ error: null }] });
+        use(mock);
+        await setWorldHomeGrid("w1", [{ id: "a", type: "markdown", x: 0, y: 0, w: 12, content: "x" }]);
+        const written = mock.buildersFor("worlds")[0].update.mock.calls[0][0].home_grid;
+        expect(written[0]).not.toHaveProperty("h");
+    });
+
+    // Même tolérance que ci-dessus : une hauteur inexploitable retombe sur
+    // « automatique » plutôt que de faire échouer toute la grille.
+    it("ignore une hauteur qui n'est pas un nombre", async () => {
+        const mock = createSupabaseMock({ results: [{ error: null }] });
+        use(mock);
+        const res = await setWorldHomeGrid("w1", [
+            { id: "a", type: "html", x: 0, y: 0, w: 12, html: "<p>x</p>", h: "320" },
+        ]);
+        expect(res.ok).toBe(true);
+        const written = mock.buildersFor("worlds")[0].update.mock.calls[0][0].home_grid;
+        expect(written[0]).not.toHaveProperty("h");
+    });
+
+    it("enregistre la feuille de style d'un bloc html, débarrassée de ses espaces", async () => {
+        const mock = createSupabaseMock({ results: [{ error: null }] });
+        use(mock);
+        await setWorldHomeGrid("w1", [
+            { id: "a", type: "html", x: 0, y: 0, w: 12, html: "<p>x</p>", css: "  :scope { color: red; }  " },
+        ]);
+        const written = mock.buildersFor("worlds")[0].update.mock.calls[0][0].home_grid;
+        expect(written[0]).toMatchObject({ css: ":scope { color: red; }" });
+    });
+
+    it("n'écrit pas de css vide", async () => {
+        const mock = createSupabaseMock({ results: [{ error: null }] });
+        use(mock);
+        await setWorldHomeGrid("w1", [
+            { id: "a", type: "html", x: 0, y: 0, w: 12, html: "<p>x</p>", css: "   " },
+        ]);
+        const written = mock.buildersFor("worlds")[0].update.mock.calls[0][0].home_grid;
+        expect(written[0]).not.toHaveProperty("css");
+    });
+
+    it("refuse une feuille de style dépassant la limite, sans appeler Supabase", async () => {
+        const mock = createSupabaseMock();
+        use(mock);
+        const res = await setWorldHomeGrid("w1", [
+            {
+                id: "a", type: "html", x: 0, y: 0, w: 12, html: "<p>x</p>",
+                css: "a".repeat(MAX_HOME_BLOCK_CSS_LENGTH + 1),
+            },
+        ]);
+        expect(res.ok).toBe(false);
+        expect(mock.from).not.toHaveBeenCalled();
+    });
+
+    it("refuse un css qui n'est pas une chaîne, sans appeler Supabase", async () => {
+        const mock = createSupabaseMock();
+        use(mock);
+        const res = await setWorldHomeGrid("w1", [
+            { id: "a", type: "html", x: 0, y: 0, w: 12, html: "<p>x</p>", css: 42 },
+        ]);
+        expect(res.ok).toBe(false);
+        expect(mock.from).not.toHaveBeenCalled();
+    });
+
     it("refuse une valeur qui n'est pas un tableau, sans appeler Supabase", async () => {
         const mock = createSupabaseMock();
         use(mock);
@@ -740,15 +835,22 @@ describe("setWorldHomeGrid", () => {
         expect(written.map((i: { y: number }) => i.y)).toEqual([0, 1]);
     });
 
-    it("ignore une hauteur envoyée par un client obsolète — pas de h enregistré", async () => {
+    // La hauteur explicite est réservée aux blocs à contenu libre : un widget
+    // ou une bannière se dimensionne sur un contenu que l'application produit
+    // elle-même. Une hauteur reçue là est ignorée plutôt que rejetée — rejeter
+    // ferait échouer toute la sauvegarde d'un onglet resté ouvert sur une
+    // version antérieure.
+    it("ignore une hauteur portée par un widget ou une bannière — pas de h enregistré", async () => {
         const mock = createSupabaseMock({ results: [{ error: null }] });
         use(mock);
         const res = await setWorldHomeGrid("w1", [
             { id: "a", type: "widget", x: 0, y: 0, w: 6, h: 7, widgetId: "chatrooms" },
+            { id: "b", type: "banner", x: 6, y: 0, w: 6, h: 320, banner: { title: "x" } },
         ]);
         expect(res.ok).toBe(true);
         const written = mock.buildersFor("worlds")[0].update.mock.calls[0][0].home_grid;
         expect(written[0]).not.toHaveProperty("h");
+        expect(written[1]).not.toHaveProperty("h");
     });
 
     it("refuse un contenu HTML dépassant la limite", async () => {

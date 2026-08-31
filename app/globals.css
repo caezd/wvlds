@@ -45,6 +45,7 @@
     /* Surfaces élevées custom (composer, hovers d'icônes) */
     --hover-400: #e9e9e9;
     --card-400: #ffffff;
+
 }
 
 .dark {
@@ -108,6 +109,24 @@
 
     --carbon-700: #232327;
     --carbon-800: #1B1B1D;
+
+}
+
+/* Enveloppe d'un bloc HTML libre de la page d'accueil d'un monde
+   (voir components/worlds/home/blocks/WorldHomeHtmlBlockView.tsx).
+
+   Le confinement remplace ce que garantissait l'iframe retirée : l'enveloppe
+   devient le bloc conteneur de ses descendants positionnés, si bien qu'un
+   `position: fixed` écrit dans le bloc se cale sur celui-ci au lieu de
+   recouvrir l'application, et rien n'en déborde au dessin.
+
+   Aucun `!important` : la garantie ne vient pas du poids de cette règle mais
+   du fait que cet élément est HORS du `@scope` de la feuille du bloc, donc
+   hors de portée de ses sélecteurs. Un `!important` ici ne ferait que déplacer
+   une surenchère de spécificité que l'auteur du bloc gagnerait de toute façon,
+   sa feuille étant injectée plus loin dans le document. */
+.wvlds-home-html-block {
+    contain: layout paint;
 }
 
 @theme {
