@@ -16,3 +16,13 @@
  */
 export const WIKI_SUBHEADER =
   "flex h-10 shrink-0 items-center gap-1 px-2 shadow-[inset_0_-1px_0_0_var(--color-border)]";
+
+/**
+ * Compteur posé sur un bouton du bandeau — nombre de pages, de fiches.
+ *
+ * Discret volontairement : il informe. La pastille pleine du bouton des
+ * commentaires, elle, signale des fils ouverts, c'est-à-dire quelque chose à
+ * faire — les deux ne doivent pas se confondre.
+ */
+export const WIKI_SUBHEADER_COUNT =
+  "rounded-full bg-secondary px-1.5 text-[10px] font-medium text-muted-foreground";

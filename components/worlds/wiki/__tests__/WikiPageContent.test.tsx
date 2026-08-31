@@ -18,6 +18,30 @@ vi.mock("@/components/MarkdownRenderer", () => ({
 // onglet ; il lit ses propres tables et décalerait la file de résultats du
 // mock. Ces tests portent sur le contenu de la page et ses commentaires : on
 // le remplace par un marqueur inerte (il a ses propres tests).
+// Les notes sont maintenant chargées par la page — pour annoncer leur nombre
+// même panneau fermé. Elles interrogent leurs propres tables et décaleraient
+// la file de résultats du mock, qui sert dans l'ordre des appels à `.from()`.
+// Ces tests portent sur l'article et ses commentaires : on neutralise.
+const etatNotes = vi.hoisted(() => ({ liste: [] as { id: string }[] }));
+vi.mock("@/hooks/useWikiPageNotes", () => ({
+  useWikiPageNotes: () => ({
+    categories: [],
+    notes: etatNotes.liste,
+    groups: [],
+    loading: false,
+    pending: false,
+    createCategory: vi.fn(),
+    renameCategory: vi.fn(),
+    deleteCategory: vi.fn(),
+    reorderCategories: vi.fn(),
+    createNote: vi.fn(),
+    updateNote: vi.fn(),
+    deleteNote: vi.fn(),
+    moveNote: vi.fn(),
+    reload: vi.fn(),
+  }),
+}));
+
 vi.mock("@/components/worlds/wiki/WikiNotesPanel", () => ({
   WikiNotesPanel: () => <div data-testid="panneau-notes" />,
 }));
@@ -92,6 +116,7 @@ describe("WikiPageContent — brouillon et publication", () => {
         navCollapsed={false}
         onExpandNav={vi.fn()}
         onOpenTree={vi.fn()}
+        pageCount={3}
         onRename={vi.fn()}
         page={BASE_PAGE}
         pages={[BASE_PAGE]}
@@ -122,6 +147,7 @@ describe("WikiPageContent — brouillon et publication", () => {
         navCollapsed={false}
         onExpandNav={vi.fn()}
         onOpenTree={vi.fn()}
+        pageCount={3}
         onRename={vi.fn()}
         page={BASE_PAGE}
         pages={[BASE_PAGE]}
@@ -160,6 +186,7 @@ describe("WikiPageContent — brouillon et publication", () => {
         navCollapsed={false}
         onExpandNav={vi.fn()}
         onOpenTree={vi.fn()}
+        pageCount={3}
         onRename={vi.fn()}
         page={BASE_PAGE}
         pages={[BASE_PAGE]}
@@ -207,6 +234,7 @@ describe("WikiPageContent — brouillon et publication", () => {
         navCollapsed={false}
         onExpandNav={vi.fn()}
         onOpenTree={vi.fn()}
+        pageCount={3}
         onRename={vi.fn()}
         page={BASE_PAGE}
         pages={[BASE_PAGE]}
@@ -252,6 +280,7 @@ describe("WikiPageContent — badge brouillon", () => {
         navCollapsed={false}
         onExpandNav={vi.fn()}
         onOpenTree={vi.fn()}
+        pageCount={3}
         onRename={vi.fn()}
         page={page}
         pages={[page]}
@@ -283,6 +312,7 @@ describe("WikiPageContent — badge brouillon", () => {
         navCollapsed={false}
         onExpandNav={vi.fn()}
         onOpenTree={vi.fn()}
+        pageCount={3}
         onRename={vi.fn()}
         page={page}
         pages={[page]}
@@ -314,6 +344,7 @@ describe("WikiPageContent — badge brouillon", () => {
         navCollapsed={false}
         onExpandNav={vi.fn()}
         onOpenTree={vi.fn()}
+        pageCount={3}
         onRename={vi.fn()}
         page={page}
         pages={[page]}
@@ -342,6 +373,7 @@ describe("WikiPageContent — badge page restreinte", () => {
         navCollapsed={false}
         onExpandNav={vi.fn()}
         onOpenTree={vi.fn()}
+        pageCount={3}
         onRename={vi.fn()}
         page={page}
         pages={[page]}
@@ -368,6 +400,7 @@ describe("WikiPageContent — badge page restreinte", () => {
         navCollapsed={false}
         onExpandNav={vi.fn()}
         onOpenTree={vi.fn()}
+        pageCount={3}
         onRename={vi.fn()}
         page={page}
         pages={[page]}
@@ -401,6 +434,7 @@ describe("WikiPageContent — titre de la page", () => {
         navCollapsed={false}
         onExpandNav={vi.fn()}
         onOpenTree={vi.fn()}
+        pageCount={3}
         onRename={onRename}
         page={{ ...BASE_PAGE, content: "Publié" }}
         pages={[BASE_PAGE]}
@@ -437,6 +471,7 @@ describe("WikiPageContent — titre de la page", () => {
         navCollapsed={false}
         onExpandNav={vi.fn()}
         onOpenTree={vi.fn()}
+        pageCount={3}
         onRename={onRename}
         page={{ ...BASE_PAGE, content: "Publié" }}
         pages={[BASE_PAGE]}
@@ -472,6 +507,7 @@ describe("WikiPageContent — commentaires ancrés", () => {
         navCollapsed={false}
         onExpandNav={vi.fn()}
         onOpenTree={vi.fn()}
+        pageCount={3}
         onRename={vi.fn()}
         page={PAGE}
         pages={[PAGE]}
@@ -590,6 +626,7 @@ describe("WikiPageContent — colonne latérale en mode modification", () => {
         navCollapsed={false}
         onExpandNav={vi.fn()}
         onOpenTree={vi.fn()}
+        pageCount={3}
         onRename={vi.fn()}
         page={{ ...BASE_PAGE, content: "Un texte." }}
         pages={[BASE_PAGE]}
@@ -638,6 +675,7 @@ describe("WikiPageContent — ceinture de mise en forme", () => {
         navCollapsed={false}
         onExpandNav={vi.fn()}
         onOpenTree={vi.fn()}
+        pageCount={3}
         onRename={vi.fn()}
         page={BASE_PAGE}
         pages={[BASE_PAGE]}
@@ -751,6 +789,7 @@ describe("WikiPageContent — ceinture de mise en forme", () => {
         navCollapsed={false}
         onExpandNav={vi.fn()}
         onOpenTree={vi.fn()}
+        pageCount={3}
         onRename={vi.fn()}
         page={{ ...BASE_PAGE, content: "Un texte." }}
         pages={[BASE_PAGE]}
@@ -766,5 +805,61 @@ describe("WikiPageContent — ceinture de mise en forme", () => {
 
     await screen.findByTestId("markdown");
     expect(screen.queryByRole("toolbar", { name: "Mise en forme" })).toBeNull();
+  });
+});
+
+describe("WikiPageContent — compteurs du sous-en-tête", () => {
+  function renderPage() {
+    const mock = createSupabaseMock({ results: [SANS_ANNOTATION] });
+    render(
+      <WikiPageContent
+        worldId="w1"
+        panelWidth={320}
+        panelHandleProps={{}}
+        navCollapsed={false}
+        onExpandNav={vi.fn()}
+        onOpenTree={vi.fn()}
+        pageCount={3}
+        onRename={vi.fn()}
+        page={{ ...BASE_PAGE, content: "Un texte." }}
+        pages={[BASE_PAGE]}
+        canEdit
+        isEditMode={false}
+        supabase={mock.client as never}
+        ancestors={[]}
+        onPageUpdated={vi.fn()}
+        onNavigate={vi.fn()}
+        onExpandFolder={vi.fn()}
+      />,
+    );
+  }
+
+  afterEach(() => {
+    etatNotes.liste = [];
+  });
+
+  it("annonce le nombre de pages sur le bouton qui ouvre l'arbre", async () => {
+    // Fermée, la colonne ne dit plus rien de ce qu'elle contient : le bouton
+    // le dit à sa place.
+    renderPage();
+
+    const bouton = await screen.findByRole("button", { name: "Ouvrir les pages" });
+    expect(bouton.textContent!.trim()).toBe("Pages3");
+  });
+
+  it("annonce le nombre de fiches sur le bouton des notes", async () => {
+    etatNotes.liste = [{ id: "n1" }, { id: "n2" }];
+    renderPage();
+
+    const boutons = await screen.findAllByText("Notes");
+    expect(boutons[0].closest("button")!.textContent).toBe("Notes2");
+  });
+
+  it("ne compte rien quand il n'y a rien à compter", async () => {
+    renderPage();
+
+    await screen.findByTestId("markdown");
+    const boutons = screen.getAllByText("Notes");
+    expect(boutons[0].closest("button")!.textContent).toBe("Notes");
   });
 });

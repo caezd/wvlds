@@ -21,6 +21,7 @@ import { extractHeadings } from "@/lib/wikiToc";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { MEDIA, useMediaQuery } from "@/hooks/useMediaQuery";
 import { useWikiAnnotations } from "@/hooks/useWikiAnnotations";
+import { useWikiPageNotes } from "@/hooks/useWikiPageNotes";
 import type { TextAnchor } from "@/lib/wikiAnnotations";
 import type { WikiAnnotation } from "@/types/worlds";
 import { WikiAnnotationLayer, type ActiveAnnotation } from "./WikiAnnotationLayer";
@@ -29,7 +30,7 @@ import { WikiNotesPanel } from "./WikiNotesPanel";
 import { WikiSidePanel, type WikiSideTab } from "./WikiSidePanel";
 import { WikiBreadcrumb } from "./WikiBreadcrumb";
 import { WikiFormatToolbar } from "./WikiFormatToolbar";
-import { WIKI_SUBHEADER } from "./wikiSubHeader";
+import { WIKI_SUBHEADER, WIKI_SUBHEADER_COUNT } from "./wikiSubHeader";
 import { WikiTableOfContents } from "./WikiTableOfContents";
 import { WikiVersionHistoryPanel } from "./WikiVersionHistoryPanel";
 import type { WikiPage } from "./WorldWiki";
@@ -70,6 +71,7 @@ export function WikiPageContent({
   navCollapsed,
   onExpandNav,
   onOpenTree,
+  pageCount,
   onRename,
   pages,
   ancestors,
@@ -93,6 +95,8 @@ export function WikiPageContent({
   onExpandNav: () => void;
   /** Ouvre l'arbre en tiroir — le geste équivalent en dessous de `lg`. */
   onOpenTree: () => void;
+  /** Nombre de pages du wiki, annoncé sur le bouton quand l'arbre est fermé. */
+  pageCount: number;
   /** Renomme la page (titre et icône) — la cascade des liens internes vers
    *  l'ancien titre est faite par l'appelant, voir `WorldWiki.renamePage`. */
   onRename: (title: string, icon: string) => void;
@@ -216,6 +220,17 @@ export function WikiPageContent({
   const [activeAnnotation, setActiveAnnotation] = React.useState<ActiveAnnotation | null>(null);
   const [annotationDraft, setAnnotationDraft] = React.useState<AnnotationDraft | null>(null);
   const [detachedIds, setDetachedIds] = React.useState<Set<string>>(() => new Set());
+
+  /**
+   * Notes de la page, chargées ici plutôt que dans le panneau.
+   *
+   * Le sous-en-tête annonce leur nombre quand la colonne est fermée — donc
+   * quand le panneau est démonté et ne peut rien charger. Une seule
+   * souscription temps réel en découle, là où la colonne et le tiroir
+   * pouvaient en ouvrir deux.
+   */
+  const notes = useWikiPageNotes({ pageId: page.id, worldId, supabase });
+  const nombreDeNotes = notes.notes?.length ?? 0;
 
   const annotations = useWikiAnnotations({
     pageId: page.id,
@@ -444,6 +459,28 @@ export function WikiPageContent({
 
   // Segment central du bandeau : d'où l'on vient. Il coiffe la lecture comme
   // l'édition, pour que le trait ne se déplace pas d'une vue à l'autre.
+  // Ce que le bouton cache, annoncé sur le bouton : il n'apparaît que quand la
+  // colonne est fermée, et rien d'autre ne dirait alors ce qu'elle contient.
+  const compteurDesPages = pageCount > 0 && (
+    <span className={WIKI_SUBHEADER_COUNT}>{pageCount}</span>
+  );
+
+  /**
+   * Compteur du bouton de la colonne latérale, accordé à son libellé.
+   *
+   * Deux natures, deux apparences : le nombre de fiches informe, tandis que
+   * les fils de discussion ouverts appellent une réponse — d'où la pastille
+   * pleine pour les seconds. Afficher les commentaires sous le mot « Notes »,
+   * ce qu'on faisait, ne disait rien de juste.
+   */
+  const compteurDeLaColonne = sideTab === "notes"
+    ? nombreDeNotes > 0 && <span className={WIKI_SUBHEADER_COUNT}>{nombreDeNotes}</span>
+    : openAnnotationCount > 0 && (
+      <span className="rounded-full bg-primary px-1.5 text-[10px] font-medium text-primary-foreground">
+        {openAnnotationCount}
+      </span>
+    );
+
   const bandeauCentral = (
     <div className={WIKI_SUBHEADER}>
       {/* Même place pour le même besoin — atteindre les pages : un tiroir en
@@ -455,6 +492,7 @@ export function WikiPageContent({
         className="flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium text-muted-foreground hover:bg-secondary hover:text-foreground lg:hidden"
       >
         <PanelLeft className="h-3.5 w-3.5" /> {t("pagesLabel")}
+        {compteurDesPages}
       </button>
       {navCollapsed && (
         <button
@@ -464,6 +502,7 @@ export function WikiPageContent({
           className="flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium text-muted-foreground hover:bg-secondary hover:text-foreground hidden lg:flex"
         >
           <PanelLeft className="h-3.5 w-3.5" /> {t("pagesLabel")}
+          {compteurDesPages}
         </button>
       )}
       {/* En écriture, la ceinture d'outils prend la place du fil d'Ariane : le
@@ -485,11 +524,7 @@ export function WikiPageContent({
       >
         <PanelRight className="h-3.5 w-3.5" />
         {sideTab === "notes" ? tNotes("title") : t("annotations.title")}
-        {openAnnotationCount > 0 && (
-          <span className="rounded-full bg-primary px-1.5 text-[10px] font-medium text-primary-foreground">
-            {openAnnotationCount}
-          </span>
-        )}
+        {compteurDeLaColonne}
       </button>
       {sideCollapsed && (
         <button
@@ -500,11 +535,7 @@ export function WikiPageContent({
         >
           <PanelRight className="h-3.5 w-3.5" />
           {sideTab === "notes" ? tNotes("title") : t("annotations.title")}
-          {openAnnotationCount > 0 && (
-            <span className="rounded-full bg-primary px-1.5 text-[10px] font-medium text-primary-foreground">
-              {openAnnotationCount}
-            </span>
-          )}
+          {compteurDeLaColonne}
         </button>
       )}
     </div>
@@ -687,12 +718,7 @@ export function WikiPageContent({
               onDelete={annotation => void annotations.remove(annotation)}
             />
           ) : (
-            <WikiNotesPanel
-              pageId={page.id}
-              worldId={worldId}
-              isEditMode={isEditMode}
-              supabase={supabase}
-            />
+            <WikiNotesPanel pageId={page.id} isEditMode={isEditMode} notes={notes} />
           )}
         </WikiSidePanel>
       )}
@@ -723,12 +749,7 @@ export function WikiPageContent({
                 onDelete={annotation => void annotations.remove(annotation)}
               />
             ) : (
-              <WikiNotesPanel
-                pageId={page.id}
-                worldId={worldId}
-                isEditMode={isEditMode}
-                supabase={supabase}
-              />
+              <WikiNotesPanel pageId={page.id} isEditMode={isEditMode} notes={notes} />
             )}
           </WikiSidePanel>
         </SideSheetContent>

@@ -22,6 +22,29 @@ vi.mock("@/lib/codeHighlighter", () => ({
   preloadCodeHighlighter: () => () => {},
 }));
 
+// Les notes sont maintenant chargées par la page — pour annoncer leur nombre
+// même panneau fermé. Elles interrogent leurs propres tables et décaleraient
+// la file de résultats du mock, qui sert dans l'ordre des appels à `.from()`.
+// Ces tests portent sur l'article et ses commentaires : on neutralise.
+vi.mock("@/hooks/useWikiPageNotes", () => ({
+  useWikiPageNotes: () => ({
+    categories: [],
+    notes: [],
+    groups: [],
+    loading: false,
+    pending: false,
+    createCategory: vi.fn(),
+    renameCategory: vi.fn(),
+    deleteCategory: vi.fn(),
+    reorderCategories: vi.fn(),
+    createNote: vi.fn(),
+    updateNote: vi.fn(),
+    deleteNote: vi.fn(),
+    moveNote: vi.fn(),
+    reload: vi.fn(),
+  }),
+}));
+
 const mdProps = vi.fn();
 vi.mock("@/components/MarkdownRenderer", () => ({
   default: (props: Record<string, unknown>) => {

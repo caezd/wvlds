@@ -9,6 +9,23 @@ vi.mock("@/components/MarkdownRenderer", () => ({
 }));
 
 import { WikiNotesPanel } from "@/components/worlds/wiki/WikiNotesPanel";
+import { useWikiPageNotes } from "@/hooks/useWikiPageNotes";
+
+/**
+ * Le panneau ne charge plus rien lui-même : la page tient cet état, pour
+ * pouvoir annoncer le nombre de fiches quand le panneau est fermé — donc
+ * démonté. Cet hôte joue ce rôle-là, et rien d'autre.
+ */
+function Hote({
+  isEditMode,
+  supabase,
+}: {
+  isEditMode: boolean;
+  supabase: Parameters<typeof useWikiPageNotes>[0]["supabase"];
+}) {
+  const notes = useWikiPageNotes({ pageId: "p1", worldId: "w1", supabase });
+  return <WikiNotesPanel pageId="p1" isEditMode={isEditMode} notes={notes} />;
+}
 
 const CATEGORIES = [
   { id: "c1", page_id: "p1", name: "Entités", sort_index: 0 },
@@ -33,12 +50,7 @@ function renderPanel(
 ) {
   const mock = createSupabaseMock({ results });
   const vue = render(
-    <WikiNotesPanel
-      pageId="p1"
-      worldId="w1"
-      isEditMode={props.isEditMode ?? true}
-      supabase={mock.client as never}
-    />,
+    <Hote isEditMode={props.isEditMode ?? true} supabase={mock.client as never} />,
   );
   return { ...vue, mock };
 }

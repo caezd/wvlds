@@ -59,7 +59,7 @@ import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
-import { WIKI_SUBHEADER } from "./wikiSubHeader";
+import { WIKI_SUBHEADER, WIKI_SUBHEADER_COUNT } from "./wikiSubHeader";
 import { WikiEditModeToggle } from "./WikiEditModeToggle";
 import { slugify } from "@/lib/slug";
 import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
@@ -976,6 +976,11 @@ export function WorldWiki({
     </>
   );
 
+  const pageCount = pages?.filter(p => !p.is_folder).length ?? 0;
+  const compteurDesPages = pageCount > 0 && (
+    <span className={WIKI_SUBHEADER_COUNT}>{pageCount}</span>
+  );
+
   // ── Content ──────────────────────────────────────────────────
   function renderContent() {
     if (!selectedPage || selectedPage.is_folder) {
@@ -991,6 +996,7 @@ export function WorldWiki({
               className="flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium text-muted-foreground hover:bg-secondary hover:text-foreground lg:hidden"
             >
               <PanelLeft className="h-3.5 w-3.5" /> {t("pagesLabel")}
+              {compteurDesPages}
             </button>
             {navCollapsed && (
               <button
@@ -1000,6 +1006,7 @@ export function WorldWiki({
                 className="flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium text-muted-foreground hover:bg-secondary hover:text-foreground hidden lg:flex"
               >
                 <PanelLeft className="h-3.5 w-3.5" /> {t("pagesLabel")}
+                {compteurDesPages}
               </button>
             )}
           </div>
@@ -1026,6 +1033,7 @@ export function WorldWiki({
         navCollapsed={navCollapsed}
         onExpandNav={() => replierNav(false)}
         onOpenTree={() => setTreeOpen(true)}
+        pageCount={pageCount}
         pages={pages ?? []}
         ancestors={ancestorsOf(selectedPage)}
         canEdit={canEdit}

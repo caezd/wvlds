@@ -38,7 +38,6 @@ import { afterMenuClose } from "@/components/ui/after-menu-close";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { DB_TEXT_LIMITS } from "@/lib/textLimits";
 import { cn } from "@/lib/utils";
-import type { createClient } from "@/lib/supabase/client";
 import { useWikiPageNotes, type WikiNoteGroup } from "@/hooks/useWikiPageNotes";
 import type { WikiNoteCategory, WikiPageNote } from "@/types/worlds";
 import { WikiNoteCard, noteDragId } from "./WikiNoteCard";
@@ -308,24 +307,28 @@ function CategorySection({
  */
 export function WikiNotesPanel({
   pageId,
-  worldId,
   isEditMode,
-  supabase,
+  notes,
 }: {
   pageId: string;
-  worldId: string;
   /**
    * Bascule « Modifier » du wiki, permission comprise — elle ne fait
    * qu'afficher les commandes, comme partout ailleurs dans le panneau. Le
    * droit d'écrire, lui, est tenu par la RLS (migration 139 : éditeurs seuls).
    */
   isEditMode: boolean;
-  supabase: ReturnType<typeof createClient>;
+  /**
+   * État des notes, tenu par la page.
+   *
+   * Le chargement vit chez elle et non ici : le sous-en-tête annonce le nombre
+   * de fiches quand ce panneau est fermé, donc démonté. Cela garantit aussi
+   * une seule souscription temps réel, là où colonne et tiroir pouvaient en
+   * ouvrir deux.
+   */
+  notes: ReturnType<typeof useWikiPageNotes>;
 }) {
   const t = useTranslations("wiki.notes");
   const tCommon = useTranslations("common");
-
-  const notes = useWikiPageNotes({ pageId, worldId, supabase });
 
   const [collapsed, setCollapsed] = React.useState<Set<string>>(() => new Set());
   const [expandedNotes, setExpandedNotes] = React.useState<Set<string>>(() => new Set());
