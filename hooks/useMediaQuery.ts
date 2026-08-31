@@ -34,4 +34,11 @@ export function useMediaQuery(query: string): boolean {
 export const MEDIA = {
   lg: "(min-width: 64rem)",
   xl: "(min-width: 80rem)",
+  /**
+   * Pointeur grossier — un doigt.
+   *
+   * Ce n'est pas une question de largeur mais de moyen : le survol n'y existe
+   * pas, et tout ce qu'on ne dévoile qu'au survol y est introuvable.
+   */
+  pointeurGrossier: "(pointer: coarse)",
 } as const;

@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, it, expect, vi, afterEach } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { WikiAnnotationLayer } from "@/components/worlds/wiki/WikiAnnotationLayer";
@@ -297,6 +297,67 @@ describe("WikiAnnotationLayer — clic sur un bloc commenté", () => {
 
     await userEvent.click(paragraphe(container, 1));
     expect(onActivate).toHaveBeenCalledWith("a1");
+  });
+});
+
+/** Fait répondre `matchMedia` comme un écran tactile, ou l'inverse. */
+function auDoigt(oui: boolean) {
+  window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+    matches: oui && query.includes("pointer: coarse"),
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })) as unknown as typeof window.matchMedia;
+}
+
+describe("WikiAnnotationLayer — sans survol", () => {
+  afterEach(() => auDoigt(false));
+
+  it("pose un bouton par bloc encore sans fil", async () => {
+    // Le survol n'existe pas au doigt : un bouton qui ne s'y montre qu'au
+    // survol est introuvable.
+    auDoigt(true);
+    renderLayer({ threads: [surBloc({ id: "a1", anchor_quote: DEUXIEME, anchor_start: 1 })] });
+
+    // Trois blocs, dont un déjà commenté : il porte son point, qui ouvre la
+    // discussion — ce serait deux commandes au même endroit.
+    await waitFor(() =>
+      expect(screen.getAllByRole("button", { name: "Commenter" })).toHaveLength(2),
+    );
+  });
+
+  it("n'en pose aucun à qui ne peut pas commenter", async () => {
+    auDoigt(true);
+    renderLayer({ canComment: false });
+
+    await waitFor(() => expect(screen.queryAllByRole("button", { name: "Commenter" })).toHaveLength(0));
+  });
+
+  it("ancre sur le bloc de son bouton", async () => {
+    auDoigt(true);
+    const onDraft = vi.fn();
+    renderLayer({ onDraft });
+
+    const boutons = await screen.findAllByRole("button", { name: "Commenter" });
+    await userEvent.click(boutons[1]);
+
+    expect(onDraft.mock.calls[0][0]).toMatchObject({ quote: DEUXIEME, index: 1 });
+  });
+
+  it("ne double pas le bouton quand une tape émet un survol de compatibilité", async () => {
+    auDoigt(true);
+    const { container } = renderLayer();
+    await waitFor(() =>
+      expect(screen.getAllByRole("button", { name: "Commenter" })).toHaveLength(3),
+    );
+
+    fireEvent.mouseOver(paragraphe(container, 1));
+
+    expect(screen.getAllByRole("button", { name: "Commenter" })).toHaveLength(3);
   });
 });
 

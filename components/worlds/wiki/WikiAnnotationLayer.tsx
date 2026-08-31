@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { MessageSquarePlus } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { MEDIA, useMediaQuery } from "@/hooks/useMediaQuery";
 import { blockIndexOfNode, collectBlocks } from "@/lib/domBlocks";
 import { getPlainText, slicesForOffsets } from "@/lib/domTextOffsets";
 import { resolveAnchor } from "@/lib/wikiAnnotations";
@@ -86,6 +87,29 @@ export function WikiAnnotationLayer({
   /** Bloc survolé : son index, et où poser le bouton en regard. */
   const [survol, setSurvol] = React.useState<{ index: number; top: number } | null>(null);
 
+  /**
+   * Au doigt, il n'y a pas de survol : le bouton de commentaire de chaque bloc
+   * est donc posé en permanence, dans la marge, plutôt que d'attendre un geste
+   * qui n'arrivera jamais.
+   */
+  const sansSurvol = useMediaQuery(MEDIA.pointeurGrossier);
+  const [boutonsFixes, setBoutonsFixes] = React.useState<{ index: number; top: number }[]>([]);
+  const signatureBoutons = React.useRef<string | null>(null);
+
+  // Les positions sont mesurées : un changement de largeur les déplace sans
+  // qu'aucun rendu ne le signale.
+  const [, setMesure] = React.useState(0);
+  React.useEffect(() => {
+    if (!sansSurvol) return;
+    const relever = () => setMesure(n => n + 1);
+    window.addEventListener("resize", relever);
+    window.addEventListener("orientationchange", relever);
+    return () => {
+      window.removeEventListener("resize", relever);
+      window.removeEventListener("orientationchange", relever);
+    };
+  }, [sansSurvol]);
+
   // Gardée dans une ref : la signaler ne doit pas faire partie des
   // dépendances de l'effet de marquage, qui se relancerait en boucle.
   const onDetachedChangeRef = React.useRef(onDetachedChange);
@@ -100,7 +124,10 @@ export function WikiAnnotationLayer({
   const detachesSignales = React.useRef<string | null>(null);
 
   // Sans tableau de dépendances : le marquage suit chaque mise à jour du
-  // rendu, y compris celles que rien dans nos données n'annonce.
+  // rendu, y compris celles que rien dans nos données n'annonce. Les deux
+  // écritures d'état qu'il contient sont gardées par une empreinte — sans
+  // changement réel, rien n'est écrit, donc aucune boucle.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   React.useLayoutEffect(() => {
     const racine = contentRef.current;
     if (!racine) return;
@@ -191,6 +218,26 @@ export function WikiAnnotationLayer({
       detachesSignales.current = signature;
       onDetachedChangeRef.current?.(detached);
     }
+
+    // Un bouton par bloc encore sans fil : celui qui en porte un a déjà son
+    // point, au même endroit, qui ouvre la discussion.
+    const cadre = wrapperRef.current;
+    const fixes = sansSurvol && canComment && cadre
+      ? blocs
+        .map((b, index) => ({ b, index }))
+        .filter(({ b }) => !b.el.dataset.annotationIds)
+        .map(({ b, index }) => ({
+          index,
+          top: b.el.getBoundingClientRect().top - cadre.getBoundingClientRect().top,
+        }))
+      : [];
+
+    // Même précaution : sans comparaison, chaque mesure relancerait un rendu.
+    const empreinte = fixes.map(f => `${f.index}:${Math.round(f.top)}`).join("|");
+    if (empreinte !== signatureBoutons.current) {
+      signatureBoutons.current = empreinte;
+      setBoutonsFixes(fixes);
+    }
   });
 
   // Amener le fil courant à l'écran — à son changement, pas à chaque commit.
@@ -206,7 +253,9 @@ export function WikiAnnotationLayer({
 
   /** Suit le bloc sous le pointeur pour lui présenter le bouton. */
   function surSurvol(e: React.MouseEvent<HTMLDivElement>) {
-    if (!canComment) return;
+    // Une tape émet un `mouseover` de compatibilité : le suivre poserait un
+    // second bouton par-dessus celui, permanent, de ce bloc.
+    if (!canComment || sansSurvol) return;
     const root = contentRef.current;
     const wrapper = wrapperRef.current;
     if (!root || !wrapper) return;
@@ -224,10 +273,10 @@ export function WikiAnnotationLayer({
     setSurvol({ index, top });
   }
 
-  function commenterLeBloc() {
+  function commenterLeBloc(index: number) {
     const root = contentRef.current;
-    if (!root || !survol) return;
-    const anchor = buildBlockAnchor(collectBlocks(root), survol.index);
+    if (!root) return;
+    const anchor = buildBlockAnchor(collectBlocks(root), index);
     if (anchor) onDraft(anchor);
     setSurvol(null);
   }
@@ -261,7 +310,7 @@ export function WikiAnnotationLayer({
         // disparaissait avant que le clic n'aboutisse.
         <button
           type="button"
-          onClick={commenterLeBloc}
+          onClick={() => commenterLeBloc(survol.index)}
           aria-label={t("addComment")}
           title={t("addComment")}
           className="absolute right-0 flex h-6 w-6 items-center justify-center rounded-md bg-background text-muted-foreground shadow-sm ring-1 ring-border-soft hover:bg-secondary hover:text-foreground"
@@ -270,6 +319,23 @@ export function WikiAnnotationLayer({
           <MessageSquarePlus className="h-3.5 w-3.5" />
         </button>
       )}
+
+      {/* Au doigt : un bouton par bloc, dans la marge, du côté où le point
+          d'un bloc commenté se pose déjà — les deux ne coexistent jamais sur
+          un même bloc. `right-full` les met hors de la colonne de texte, dans
+          le remplissage de l'article, où ils ne recouvrent rien. */}
+      {boutonsFixes.map(bouton => (
+        <button
+          key={bouton.index}
+          type="button"
+          onClick={() => commenterLeBloc(bouton.index)}
+          aria-label={t("addComment")}
+          className="absolute right-full mr-0.5 flex h-5 w-5 items-center justify-center rounded-md text-muted-foreground/60 active:bg-secondary active:text-foreground"
+          style={{ top: bouton.top }}
+        >
+          <MessageSquarePlus className="h-3.5 w-3.5" />
+        </button>
+      ))}
     </div>
   );
 }
