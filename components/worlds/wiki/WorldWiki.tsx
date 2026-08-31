@@ -964,6 +964,15 @@ export function WorldWiki({
           {/* Bandeau vide, mais présent : c'est lui qui aligne le trait avec
               les deux autres colonnes quand aucune page n'est ouverte. */}
           <div className={WIKI_SUBHEADER}>
+            <button
+              type="button"
+              onClick={() => setTreeOpen(true)}
+              aria-label={t("openPages")}
+              title={t("openPages")}
+              className="shrink-0 rounded-md p-1 text-muted-foreground hover:bg-secondary hover:text-foreground lg:hidden"
+            >
+              <PanelLeft className="h-4 w-4" />
+            </button>
             {navCollapsed && (
               <button
                 type="button"
@@ -998,6 +1007,7 @@ export function WorldWiki({
         panelHandleProps={panelHandleProps}
         navCollapsed={navCollapsed}
         onExpandNav={() => replierNav(false)}
+        onOpenTree={() => setTreeOpen(true)}
         pages={pages ?? []}
         ancestors={ancestorsOf(selectedPage)}
         canEdit={canEdit}
@@ -1050,19 +1060,7 @@ export function WorldWiki({
 
       <div className="flex h-full min-h-0 flex-1 flex-col">
         <WorldPanelHeader
-          icon={
-            <>
-              <button
-                type="button"
-                onClick={() => setTreeOpen(true)}
-                aria-label={t("openPages")}
-                className="-ml-1 shrink-0 rounded-md p-1 text-muted-foreground hover:bg-secondary hover:text-foreground lg:hidden"
-              >
-                <PanelLeft className="h-4 w-4" />
-              </button>
-              <BookOpenText className="hidden h-4 w-4 shrink-0 text-muted-foreground lg:block" />
-            </>
-          }
+          icon={<BookOpenText className="h-4 w-4 shrink-0 text-muted-foreground" />}
           title={label || tNav("wiki")}
           right={canEdit && (
             <WikiEditModeToggle editMode={editMode} onToggle={() => setEditMode(v => !v)} />

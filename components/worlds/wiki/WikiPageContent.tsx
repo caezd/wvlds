@@ -66,6 +66,7 @@ export function WikiPageContent({
   panelHandleProps,
   navCollapsed,
   onExpandNav,
+  onOpenTree,
   onRename,
   pages,
   ancestors,
@@ -87,6 +88,8 @@ export function WikiPageContent({
   /** Colonne de navigation repliée : son bouton de réouverture vient ici. */
   navCollapsed: boolean;
   onExpandNav: () => void;
+  /** Ouvre l'arbre en tiroir — le geste équivalent en dessous de `lg`. */
+  onOpenTree: () => void;
   /** Renomme la page (titre et icône) — la cascade des liens internes vers
    *  l'ancien titre est faite par l'appelant, voir `WorldWiki.renamePage`. */
   onRename: (title: string, icon: string) => void;
@@ -396,6 +399,17 @@ export function WikiPageContent({
   // l'édition, pour que le trait ne se déplace pas d'une vue à l'autre.
   const bandeauCentral = (
     <div className={WIKI_SUBHEADER}>
+      {/* Même place pour le même besoin — atteindre les pages : un tiroir en
+          dessous de `lg`, le dépliage de la colonne au-dessus. */}
+      <button
+        type="button"
+        onClick={onOpenTree}
+        aria-label={t("openPages")}
+        title={t("openPages")}
+        className="shrink-0 rounded-md p-1 text-muted-foreground hover:bg-secondary hover:text-foreground lg:hidden"
+      >
+        <PanelLeft className="h-4 w-4" />
+      </button>
       {navCollapsed && (
         <button
           type="button"
@@ -410,6 +424,22 @@ export function WikiPageContent({
       <div className="min-w-0 flex-1">
         <WikiBreadcrumb ancestors={ancestors} onExpandFolder={onExpandFolder} />
       </div>
+      {/* Symétrique du bouton des pages : le tiroir en dessous de `xl`, le
+          dépliage de la colonne au-dessus. */}
+      <button
+        type="button"
+        onClick={() => setSideDrawerOpen(true)}
+        aria-label={sideTab === "notes" ? tNotes("title") : t("annotations.title")}
+        title={sideTab === "notes" ? tNotes("title") : t("annotations.title")}
+        className="relative shrink-0 rounded-md p-1 text-muted-foreground hover:bg-secondary hover:text-foreground xl:hidden"
+      >
+        <PanelRight className="h-4 w-4" />
+        {openAnnotationCount > 0 && (
+          <span className="absolute -right-0.5 -top-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-primary px-1 text-[9px] font-medium text-primary-foreground">
+            {openAnnotationCount}
+          </span>
+        )}
+      </button>
       {sideCollapsed && (
         <button
           type="button"
@@ -536,20 +566,6 @@ export function WikiPageContent({
               <div className="flex shrink-0 items-center gap-2">
                 {draftBadge}
                 {restrictedBadge}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="xl:hidden"
-                  onClick={() => setSideDrawerOpen(true)}
-                >
-                  <PanelRight className="mr-1.5 h-3.5 w-3.5" />
-                  {sideTab === "notes" ? tNotes("title") : t("annotations.title")}
-                  {openAnnotationCount > 0 && (
-                    <span className="ml-1.5 rounded-full bg-primary/10 px-1.5 text-xs text-primary">
-                      {openAnnotationCount}
-                    </span>
-                  )}
-                </Button>
               </div>
             </div>
             {page.content?.trim() ? (
