@@ -41,6 +41,7 @@ import { WorldHomeHtmlBlockEditor } from "./blocks/WorldHomeHtmlBlockEditor";
 import { WorldHomeMarkdownBlockEditor } from "./blocks/WorldHomeMarkdownBlockEditor";
 import { WorldHomeBannerDialog } from "./blocks/WorldHomeBannerBlock";
 import { messageErreurAction } from "@/lib/actionErrors";
+import { preloadCodeHighlighter } from "@/lib/codeHighlighter";
 
 /**
  * Destination d'un déplacement en cours. `asNewRow` distingue les deux
@@ -244,6 +245,25 @@ export function WorldHomeGridEditor({
   >(null);
   const [confirmDelete, setConfirmDelete] = React.useState<WorldHomeGridItem | null>(null);
   const supabase = React.useMemo(() => createClient(), []);
+
+  // Le coloriseur des champs de code pèse quelques dizaines de kilooctets et
+  // n'est demandé qu'à l'ouverture d'un tiroir d'édition — soit à l'instant
+  // précis où l'on a besoin du résultat, d'où un champ affiché en texte brut
+  // le temps du transfert. On le lance dès que cet éditeur est à l'écran :
+  // quiconque arrive ici est sur le point d'éditer un bloc.
+  //
+  // Pendant un temps mort du navigateur, pour ne pas disputer la bande
+  // passante au rendu de la page elle-même.
+  React.useEffect(() => {
+    const idle = typeof window.requestIdleCallback === "function"
+      ? window.requestIdleCallback
+      : (cb: () => void) => window.setTimeout(cb, 200);
+    const annuler = typeof window.cancelIdleCallback === "function"
+      ? window.cancelIdleCallback
+      : window.clearTimeout;
+    const id = idle(() => preloadCodeHighlighter());
+    return () => annuler(id as number);
+  }, []);
 
   /** Image de fond d'un bloc bannière — bucket `worlds`, même stockage que la
    *  bannière/icône du monde (voir WorldSettingsView.tsx). La policy RLS

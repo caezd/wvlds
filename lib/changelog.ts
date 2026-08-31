@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Performance",
+    text: "Les champs de code de l’éditeur de blocs s’affichaient un instant en texte brut avant que la coloration n’apparaisse. Deux causes : la coloration n’était téléchargée qu’à l’ouverture du panneau — soit au moment précis où l’on en a besoin — et elle embarquait les trois langages alors qu’un onglet n’en emploie qu’un. Elle part désormais dès l’arrivée sur les réglages de la page d’accueil, pendant un temps mort du navigateur, et ne charge que le langage affiché."
+  },
+  {
+    date: "2026-08",
     tag: "Mondes",
     text: "Le bloc HTML de la page d’accueil d’un monde est repensé. Le balisage et la feuille de style ont chacun leur onglet, avec coloration syntaxique, et l’aperçu montre désormais le rendu final exact. Le bloc Markdown reçoit le même champ de saisie coloré.\nLe bloc n’est plus enfermé dans un cadre isolé : il s’affiche dans la page, hérite de ses polices et de ses couleurs, son fond est transparent, et sa hauteur suit son contenu au lieu d’être figée à 150 px. Le CSS que vous écrivez ne s’applique qu’à l’intérieur du bloc, jamais au reste de la page — « :scope » y désigne le bloc lui-même.\nAucun script ne peut s’exécuter pour autant : à l’affichage, seuls les balises et attributs d’une liste d’autorisation sont conservés ; scripts, cadres, formulaires et gestionnaires d’événements sont retirés. Vos blocs existants continuent de fonctionner, feuille de style comprise."
   },
