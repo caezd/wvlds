@@ -20,6 +20,7 @@ import {
   sanitizeBlockHeight,
 } from "../worldHomeGrid";
 import { WorldHomeHtmlBlockView } from "./WorldHomeHtmlBlockView";
+import { preloadCodeHighlighter } from "@/lib/codeHighlighter";
 
 /**
  * Exemples affichés dans les champs vides. Volontairement hors du catalogue de
@@ -95,6 +96,15 @@ export function WorldHomeHtmlBlockEditor({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, initialHtml, initialCss, initialTitle, initialHeight]);
+
+  // Radix ne monte le contenu d'un onglet qu'une fois celui-ci sélectionné :
+  // la grammaire CSS ne partirait donc qu'au clic sur l'onglet, avec l'attente
+  // que ça suppose. On la demande dès l'ouverture du tiroir, pendant que
+  // l'admin lit son balisage.
+  React.useEffect(() => {
+    if (!open) return;
+    return preloadCodeHighlighter("css");
+  }, [open]);
 
   const htmlTooLong = html.length > MAX_HOME_BLOCK_CONTENT_LENGTH;
   const cssTooLong = css.length > MAX_HOME_BLOCK_CSS_LENGTH;

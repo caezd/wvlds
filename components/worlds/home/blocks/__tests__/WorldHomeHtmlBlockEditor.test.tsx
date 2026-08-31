@@ -1,6 +1,14 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+// Seul `preloadCodeHighlighter` est remplacé : la coloration elle-même reste
+// la vraie, c'est elle que les autres tests de ce fichier observent.
+const préchargement = vi.hoisted(() => vi.fn(() => () => {}));
+vi.mock("@/lib/codeHighlighter", async (original) => ({
+  ...(await original<typeof import("@/lib/codeHighlighter")>()),
+  preloadCodeHighlighter: préchargement,
+}));
+
 import { WorldHomeHtmlBlockEditor } from "@/components/worlds/home/blocks/WorldHomeHtmlBlockEditor";
 import {
   MAX_HOME_BLOCK_CONTENT_LENGTH,
@@ -65,6 +73,16 @@ describe("WorldHomeHtmlBlockEditor", () => {
   // accolades sont des caractères spéciaux d'ICU — next-intl échouait à
   // analyser le message et affichait le chemin de la clé à la place du texte
   // (bug rapporté par l'utilisateur). Ils vivent désormais dans le composant.
+  // Radix ne monte le contenu d'un onglet qu'une fois celui-ci sélectionné :
+  // sans ce préchargement, la grammaire CSS ne partirait qu'au clic sur son
+  // onglet, avec l'attente que ça suppose.
+  it("demande la grammaire CSS dès l'ouverture, sans attendre le clic sur son onglet", () => {
+    préchargement.mockClear();
+    render(<WorldHomeHtmlBlockEditor open onOpenChange={vi.fn()} onSave={vi.fn()} />);
+
+    expect(préchargement).toHaveBeenCalledWith("css");
+  });
+
   it("affiche des exemples de code lisibles dans les champs vides", async () => {
     const user = userEvent.setup();
     render(<WorldHomeHtmlBlockEditor open onOpenChange={vi.fn()} onSave={vi.fn()} />);

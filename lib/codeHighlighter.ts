@@ -65,20 +65,41 @@ function chargerGrammaire(hl: HighlighterCore, lang: CodeLanguage): Promise<void
 }
 
 /**
- * Lance le téléchargement sans attendre le résultat.
+ * Lance le téléchargement d'un langage sans attendre le résultat, et rend de
+ * quoi l'annuler.
  *
- * Le fragment ne partait jusqu'ici qu'à l'ouverture du tiroir, c'est-à-dire au
- * moment précis où l'on a besoin du résultat : le champ s'affichait donc en
- * texte brut le temps du transfert. Appelé en amont — dès que l'éditeur de
- * grille est à l'écran — le transfert a lieu pendant que l'admin lit sa page,
- * et le champ est coloré dès son premier rendu.
+ * Le fragment ne partait jusqu'ici qu'au montage du champ, c'est-à-dire au
+ * moment précis où l'on a besoin du résultat : il s'affichait donc en texte
+ * brut le temps du transfert. Appelé en amont — dès que l'éditeur de grille est
+ * à l'écran, ou pour l'onglet CSS qui n'est pas encore monté — le transfert a
+ * lieu pendant que l'admin lit sa page.
+ *
+ * L'attente d'un temps mort du navigateur est faite ICI plutôt que chez les
+ * appelants : c'est une politique, pas un détail d'appel, et la réécrire à
+ * chaque endroit finirait par diverger. La valeur de retour se branche
+ * directement sur le nettoyage d'un `useEffect`.
  */
-export function preloadCodeHighlighter(lang: CodeLanguage = "html"): void {
-  void getCoeur()
-    .then((hl) => chargerGrammaire(hl, lang))
-    // Un préchargement qui échoue ne doit rien casser : le champ retombera sur
-    // sa couche de repli, et retentera son propre chargement.
-    .catch(() => {});
+export function preloadCodeHighlighter(lang: CodeLanguage = "html"): () => void {
+  if (typeof window === "undefined") return () => {};
+
+  const planifier: (cb: () => void) => number =
+    typeof window.requestIdleCallback === "function"
+      ? (cb) => window.requestIdleCallback(cb)
+      : (cb) => window.setTimeout(cb, 200);
+  const annuler: (id: number) => void =
+    typeof window.cancelIdleCallback === "function"
+      ? (id) => window.cancelIdleCallback(id)
+      : (id) => window.clearTimeout(id);
+
+  const id = planifier(() => {
+    void getCoeur()
+      .then((hl) => chargerGrammaire(hl, lang))
+      // Un préchargement qui échoue ne doit rien casser : le champ retombera
+      // sur sa couche de repli, et retentera son propre chargement.
+      .catch(() => {});
+  });
+
+  return () => annuler(id);
 }
 
 /**

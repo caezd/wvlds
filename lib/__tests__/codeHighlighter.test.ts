@@ -37,4 +37,13 @@ describe("highlightCode", () => {
     expect(() => preloadCodeHighlighter("css")).not.toThrow();
     expect(await highlightCode("a { color: red; }", "css")).toContain("shiki");
   });
+
+  // La valeur de retour se branche sur le nettoyage d'un `useEffect` : quitter
+  // l'écran avant que le temps mort n'arrive doit annuler la demande, pas
+  // lever.
+  it("le préchargement rend de quoi l'annuler", () => {
+    const annuler = preloadCodeHighlighter("markdown");
+    expect(typeof annuler).toBe("function");
+    expect(() => annuler()).not.toThrow();
+  });
 });
