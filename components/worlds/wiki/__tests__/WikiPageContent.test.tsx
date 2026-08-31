@@ -57,6 +57,24 @@ const BASE_PAGE: WikiPage = {
 afterEach(() => {
   vi.useRealTimers();
 });
+/**
+ * Fait croire à un écran large : sous jsdom, `matchMedia` répond toujours
+ * `false`, et la colonne latérale — montée seulement à partir de `xl` — serait
+ * absente de tous ces tests, qui portent sur la disposition de bureau.
+ */
+function ecranLarge(matches = true) {
+  window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+    matches: query.includes("80rem") ? matches : false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })) as unknown as typeof window.matchMedia;
+}
+
 
 // La page lit ses annotations au montage, avant toute action de l'utilisateur.
 // Le mock sert ses résultats dans l'ordre des appels à `.from()` : cette
@@ -405,6 +423,7 @@ describe("WikiPageContent — commentaires ancrés", () => {
   });
 
   it("compte les fils ouverts sur l'onglet des commentaires", async () => {
+    ecranLarge();
     const mock = createSupabaseMock({
       results: [{
         data: [
@@ -421,6 +440,7 @@ describe("WikiPageContent — commentaires ancrés", () => {
   });
 
   it("surligne les passages annotés et ouvre le fil au clic", async () => {
+    ecranLarge();
     const mock = createSupabaseMock({
       results: [{ data: [ANNOTATION], error: null }],
     });

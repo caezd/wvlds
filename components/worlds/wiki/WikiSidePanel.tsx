@@ -35,7 +35,8 @@ export function WikiSidePanel({
   tab: WikiSideTab;
   onTabChange: (tab: WikiSideTab) => void;
   openCommentCount: number;
-  width: number;
+  /** Largeur de la colonne, ou `"100%"` quand elle occupe un tiroir. */
+  width: number | string;
   /**
    * Gestionnaires de la poignée de redimensionnement. Absents hors mode
    * modification : la largeur se règle où le reste de la page se règle, comme

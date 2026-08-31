@@ -2,10 +2,12 @@
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
-import { Eye, History, Loader2, Lock, Pencil } from "lucide-react";
+import { Eye, History, Loader2, Lock, PanelRight, Pencil } from "lucide-react";
 import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
 import { VALID_LUCIDE_ICONS } from "@/components/ui/LucideIconPicker";
 import { Button } from "@/components/ui/button";
+import { Drawer } from "@/components/ui/drawer";
+import { SideSheetContent } from "@/components/ui/side-sheet";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import { ParagraphBlockEditor } from "@/components/chatrooms/composer/ParagraphBlockEditor";
 import { toast } from "sonner";
@@ -14,6 +16,7 @@ import type { createClient } from "@/lib/supabase/client";
 import { resolveWikiLinks } from "@/lib/wikiLinks";
 import { extractHeadings } from "@/lib/wikiToc";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { MEDIA, useMediaQuery } from "@/hooks/useMediaQuery";
 import { useWikiAnnotations } from "@/hooks/useWikiAnnotations";
 import type { TextAnchor } from "@/lib/wikiAnnotations";
 import type { WikiAnnotation } from "@/types/worlds";
@@ -100,6 +103,7 @@ export function WikiPageContent({
 }) {
   const t = useTranslations("wiki");
   const tCommon = useTranslations("common");
+  const tNotes = useTranslations("wiki.notes");
 
   const [editing, setEditing] = React.useState(false);
   const [loadingDraft, setLoadingDraft] = React.useState(false);
@@ -116,6 +120,20 @@ export function WikiPageContent({
   // l'article ; commenter, lui, part d'une sélection dans le texte, qui bascule
   // d'elle-même sur l'onglet des commentaires.
   const [sideTab, setSideTab] = React.useState<WikiSideTab>("notes");
+  /** La colonne passe en tiroir en dessous de `xl` — voir le rendu plus bas. */
+  const [sideDrawerOpen, setSideDrawerOpen] = React.useState(false);
+  // Un point de rupture lu en JS, et non une classe Tailwind : il faut que la
+  // colonne ne soit pas MONTÉE sous `xl`, pas seulement cachée. Deux panneaux
+  // de notes montés en même temps ouvrent deux fois le même canal Realtime, ce
+  // que supabase-js refuse — et le panneau caché interrogeait la base pour rien.
+  const colonneLaterale = useMediaQuery(MEDIA.xl);
+
+  // La colonne apparaît (élargissement, rotation d'une tablette) : le tiroir
+  // n'a plus lieu d'être, et le laisser « ouvert » le ferait resurgir tout
+  // seul au prochain rétrécissement.
+  React.useEffect(() => {
+    if (colonneLaterale) setSideDrawerOpen(false);
+  }, [colonneLaterale]);
   const [activeAnnotation, setActiveAnnotation] = React.useState<ActiveAnnotation | null>(null);
   const [annotationDraft, setAnnotationDraft] = React.useState<AnnotationDraft | null>(null);
   const [detachedIds, setDetachedIds] = React.useState<Set<string>>(() => new Set());
@@ -143,11 +161,13 @@ export function WikiPageContent({
 
   function openAnnotation(id: string, scrollIntoView: boolean) {
     setSideTab("comments");
+    setSideDrawerOpen(true);
     setActiveAnnotation({ id, scrollIntoView });
   }
 
   function startDraft(anchor: TextAnchor) {
     setSideTab("comments");
+    setSideDrawerOpen(true);
     setActiveAnnotation(null);
     setAnnotationDraft({ anchor });
   }
@@ -411,6 +431,20 @@ export function WikiPageContent({
               <div className="flex shrink-0 items-center gap-2">
                 {draftBadge}
                 {restrictedBadge}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="xl:hidden"
+                  onClick={() => setSideDrawerOpen(true)}
+                >
+                  <PanelRight className="mr-1.5 h-3.5 w-3.5" />
+                  {sideTab === "notes" ? tNotes("title") : t("annotations.title")}
+                  {openAnnotationCount > 0 && (
+                    <span className="ml-1.5 rounded-full bg-primary/10 px-1.5 text-xs text-primary">
+                      {openAnnotationCount}
+                    </span>
+                  )}
+                </Button>
                 {isEditMode && (
                   <Button
                     variant="secondary"
@@ -451,13 +485,17 @@ export function WikiPageContent({
         </div>
       </div>
 
-      <WikiSidePanel
-        tab={sideTab}
-        onTabChange={setSideTab}
-        openCommentCount={openAnnotationCount}
-        width={panelWidth}
-        handleProps={isEditMode ? panelHandleProps : undefined}
-      >
+      {/* En colonne à partir de `xl` ; en dessous, la même chose en tiroir —
+          à 1280 px la colonne ne laissait que 464 px au texte, à 375 px elle
+          était posée hors de l'écran, inatteignable. */}
+      {colonneLaterale && (
+        <WikiSidePanel
+          tab={sideTab}
+          onTabChange={setSideTab}
+          openCommentCount={openAnnotationCount}
+          width={panelWidth}
+          handleProps={isEditMode ? panelHandleProps : undefined}
+        >
           {sideTab === "comments" ? (
             <WikiAnnotationsPanel
               threads={annotations.threads}
@@ -483,7 +521,45 @@ export function WikiPageContent({
               supabase={supabase}
             />
           )}
-      </WikiSidePanel>
+        </WikiSidePanel>
+      )}
+
+      <Drawer open={sideDrawerOpen && !colonneLaterale} onOpenChange={setSideDrawerOpen} swipeDirection="right">
+        <SideSheetContent width="wide" hideClose>
+          <WikiSidePanel
+            tab={sideTab}
+            onTabChange={setSideTab}
+            openCommentCount={openAnnotationCount}
+            width="100%"
+          >
+            {sideTab === "comments" ? (
+              <WikiAnnotationsPanel
+                threads={annotations.threads}
+                detachedIds={detachedIds}
+                loading={annotations.loading}
+                pending={annotations.pending}
+                activeId={activeAnnotation?.id ?? null}
+                draft={annotationDraft}
+                currentUserId={userId}
+                canModerate={canEdit}
+                onActivate={id => openAnnotation(id, true)}
+                onCreate={body => void createFromDraft(body)}
+                onCancelDraft={() => setAnnotationDraft(null)}
+                onReply={(root: WikiAnnotation, body: string) => annotations.reply(root, body)}
+                onSetResolved={(root, resolved) => void annotations.setResolved(root, resolved)}
+                onDelete={annotation => void annotations.remove(annotation)}
+              />
+            ) : (
+              <WikiNotesPanel
+                pageId={page.id}
+                worldId={worldId}
+                isEditMode={isEditMode}
+                supabase={supabase}
+              />
+            )}
+          </WikiSidePanel>
+        </SideSheetContent>
+      </Drawer>
     </div>
   );
 }

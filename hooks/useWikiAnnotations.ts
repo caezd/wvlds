@@ -5,6 +5,7 @@ import { toast } from "sonner";
 
 import type { createClient } from "@/lib/supabase/client";
 import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
+import { openRealtimeChannel } from "@/lib/realtimeChannel";
 import type { TextAnchor } from "@/lib/wikiAnnotations";
 import type { WikiAnnotation, WikiAnnotationThread } from "@/types/worlds";
 
@@ -99,23 +100,25 @@ export function useWikiAnnotations({
     if (!enabled) return;
     void load();
 
-    const channel = supabase
-      .channel(`wiki_annotations:${pageId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "world_wiki_page_annotations",
-          filter: `page_id=eq.${pageId}`,
-        },
-        () => void load(),
-      )
-      .subscribe();
-
-    return () => {
-      void supabase.removeChannel(channel);
-    };
+    // Même précaution que pour les notes : la fermeture d'un canal est
+    // asynchrone, et rouvrir le même nom trop tôt retombe sur celui qui n'est
+    // pas encore parti (voir `lib/realtimeChannel.ts`).
+    return openRealtimeChannel(
+      supabase,
+      `wiki_annotations:${pageId}`,
+      channel => channel
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "world_wiki_page_annotations",
+            filter: `page_id=eq.${pageId}`,
+          },
+          () => void load(),
+        )
+        .subscribe(),
+    );
   }, [enabled, pageId, supabase, load, reconnectEpoch]);
 
   /** Insère la ligne rendue par la base, ou remplace celle du même id. */

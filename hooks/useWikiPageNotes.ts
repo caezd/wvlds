@@ -5,6 +5,7 @@ import { toast } from "sonner";
 
 import type { createClient } from "@/lib/supabase/client";
 import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
+import { openRealtimeChannel } from "@/lib/realtimeChannel";
 import type { WikiNoteCategory, WikiPageNote } from "@/types/worlds";
 
 const CATEGORY_COLUMNS = "id, page_id, name, sort_index";
@@ -139,33 +140,37 @@ export function useWikiPageNotes({
     if (!enabled) return;
     void load();
 
-    const channel = supabase
-      .channel(`wiki_page_notes:${pageId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "world_wiki_page_note_categories",
-          filter: `page_id=eq.${pageId}`,
-        },
-        () => void load(),
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "world_wiki_page_notes",
-          filter: `page_id=eq.${pageId}`,
-        },
-        () => void load(),
-      )
-      .subscribe();
-
-    return () => {
-      void supabase.removeChannel(channel);
-    };
+    // `openRealtimeChannel` plutôt que `supabase.channel` : le panneau change
+    // de place selon la largeur — colonne au-dessus de `xl`, tiroir en dessous
+    // — et un passage de l'un à l'autre referme puis rouvre un canal du même
+    // nom. `removeChannel` étant asynchrone, la réouverture retombait sur le
+    // canal encore joint, et `.on()` lève après `subscribe()`.
+    return openRealtimeChannel(
+      supabase,
+      `wiki_page_notes:${pageId}`,
+      channel => channel
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "world_wiki_page_note_categories",
+            filter: `page_id=eq.${pageId}`,
+          },
+          () => void load(),
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "world_wiki_page_notes",
+            filter: `page_id=eq.${pageId}`,
+          },
+          () => void load(),
+        )
+        .subscribe(),
+    );
   }, [enabled, pageId, supabase, load, reconnectEpoch]);
 
   /** Rejoue `revenir` et signale l'erreur si la base a refusé l'écriture. */

@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Wiki",
+    text: "Le wiki s’adapte enfin aux écrans étroits. Sur téléphone et sur tablette, l’arbre des pages et la colonne des notes et commentaires s’ouvrent en tiroirs depuis deux boutons, et l’article occupe toute la largeur : il passe de 116 à 327 pixels de texte sur un écran de 375.\nSur ordinateur aussi, le texte respirait mal : la colonne latérale et le sommaire, tous deux permanents, le réduisaient à 151 pixels sur un écran de 1280. Le sommaire ne réapparaît désormais qu’à partir de 1536 pixels, et la colonne à partir de 1280 — en dessous, elles cèdent la place au contenu plutôt que de l’étrangler."
+  },
+  {
+    date: "2026-08",
+    tag: "Wiki",
     text: "En mode modification, la colonne des commentaires et des notes d’une page de wiki se redimensionne à la poignée, comme l’arbre de navigation à gauche. Sa largeur est retenue pour chaque monde, et pour vous seul."
   },
   {

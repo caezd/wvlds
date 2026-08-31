@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { saveWorldPrefs } from "@/app/(protected)/w/actions";
 import {
   BookOpenText,
+  PanelLeft,
   Check,
   FileText,
   FilePlus,
@@ -54,6 +55,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { afterMenuClose } from "@/components/ui/after-menu-close";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 import { slugify } from "@/lib/slug";
 import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
@@ -365,6 +367,8 @@ export function WorldWiki({
   const [confirmDelete, setConfirmDelete] = React.useState<WikiPage | null>(null);
 
   const [lexiconManagerOpen, setLexiconManagerOpen] = React.useState(false);
+  /** Arbre des pages en tiroir, en dessous de `lg`. */
+  const [treeOpen, setTreeOpen] = React.useState(false);
 
   const [creating, setCreating] = React.useState<{ parentId: string | null; isFolder: boolean } | null>(null);
   const [createTitle, setCreateTitle] = React.useState("");
@@ -630,6 +634,9 @@ export function WorldWiki({
   function selectPageById(pageId: string) {
     const target = pages?.find(p => p.id === pageId);
     if (!target) return;
+    // Sur téléphone, l'arbre couvre l'article : le laisser ouvert cacherait la
+    // page qu'on vient de choisir.
+    setTreeOpen(false);
     const ids = ancestorIdsOf(target.id);
     if (ids.length) setExpandedFolders(prev => new Set([...prev, ...ids]));
     setSelectedId(target.id);
@@ -850,6 +857,35 @@ export function WorldWiki({
     );
   }
 
+  // Le même arbre sert la colonne de gauche et le tiroir mobile : les deux
+  // doivent rester rigoureusement identiques, glisser-déposer compris.
+  const arbreDesPages = (
+    <>
+      <WikiSearchBar
+        query={searchQuery}
+        onQueryChange={setSearchQuery}
+        results={searchResults}
+        onSelectResult={selectSearchResult}
+      />
+      <div className="flex-1 overflow-y-auto py-1.5">
+        {pages === null ? (
+          <div className="flex items-center justify-center p-6">
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          </div>
+        ) : searchQuery.trim() === "" ? (
+          <nav className="px-1">
+            <DndContext sensors={sensors} onDragEnd={onDragEnd}>
+              {renderTree(null)}
+            </DndContext>
+            {pages.length === 0 && !creating && (
+              <p className="px-2 py-1 text-xs italic text-muted-foreground">{t("noPages")}</p>
+            )}
+          </nav>
+        ) : null}
+      </div>
+    </>
+  );
+
   // ── Content ──────────────────────────────────────────────────
   function renderContent() {
     if (!selectedPage || selectedPage.is_folder) {
@@ -912,9 +948,33 @@ export function WorldWiki({
         terms={lexiconTerms}
       />
 
+      {/* Arbre des pages en tiroir, en dessous de `lg` */}
+      <Drawer open={treeOpen} onOpenChange={setTreeOpen} swipeDirection="left">
+        <DrawerContent className="inset-y-0 left-0 flex flex-col gap-0 rounded-md border bg-background p-0 text-foreground shadow-lg w-[min(calc(100%_-_var(--drawer-inset)*2),_320px)]">
+          <DrawerHeader className="border-b border-border-soft">
+            <DrawerTitle className="flex items-center gap-2 text-sm">
+              <BookOpenText className="h-4 w-4" /> {label || tNav("wiki")}
+            </DrawerTitle>
+          </DrawerHeader>
+          {arbreDesPages}
+        </DrawerContent>
+      </Drawer>
+
       <div className="flex h-full min-h-0 flex-1 flex-col">
         <WorldPanelHeader
-          icon={<BookOpenText className="h-4 w-4 shrink-0 text-muted-foreground" />}
+          icon={
+            <>
+              <button
+                type="button"
+                onClick={() => setTreeOpen(true)}
+                aria-label={t("openPages")}
+                className="-ml-1 shrink-0 rounded-md p-1 text-muted-foreground hover:bg-secondary hover:text-foreground lg:hidden"
+              >
+                <PanelLeft className="h-4 w-4" />
+              </button>
+              <BookOpenText className="hidden h-4 w-4 shrink-0 text-muted-foreground lg:block" />
+            </>
+          }
           title={label || tNav("wiki")}
           right={
             canEdit && (
@@ -963,36 +1023,20 @@ export function WorldWiki({
 
         {/* ── Body ───────────────────────────────────────── */}
         <div className="flex min-h-0 flex-1">
-          {/* Sidebar nav */}
-          <div className="flex shrink-0 flex-col border-r border-border-soft" style={{ width: navWidth }}>
-            <WikiSearchBar
-              query={searchQuery}
-              onQueryChange={setSearchQuery}
-              results={searchResults}
-              onSelectResult={selectSearchResult}
-            />
-            <div className="flex-1 overflow-y-auto py-1.5">
-              {pages === null ? (
-                <div className="flex items-center justify-center p-6">
-                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                </div>
-              ) : searchQuery.trim() === "" ? (
-                <nav className="px-1">
-                  <DndContext sensors={sensors} onDragEnd={onDragEnd}>
-                    {renderTree(null)}
-                  </DndContext>
-                  {pages.length === 0 && !creating && (
-                    <p className="px-2 py-1 text-xs italic text-muted-foreground">{t("noPages")}</p>
-                  )}
-                </nav>
-              ) : null}
-            </div>
+          {/* Colonne de navigation — devient un tiroir en dessous de `lg`, où
+              ses 208 px prenaient plus de la moitié d'un écran de téléphone. */}
+          <div
+            className="hidden shrink-0 flex-col border-r border-border-soft lg:flex"
+            style={{ width: navWidth }}
+          >
+            {arbreDesPages}
           </div>
 
-          {/* Handle de redimensionnement — visible uniquement en mode modification */}
+          {/* Handle de redimensionnement — en mode modification, et seulement
+              là où la colonne existe. */}
           {isEditMode && (
             <div
-              className="group relative w-2 shrink-0 cursor-col-resize select-none"
+              className="group relative hidden w-2 shrink-0 cursor-col-resize select-none lg:block"
               {...navHandleProps}
             >
               <div className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-border-soft transition-colors group-hover:bg-border" />
