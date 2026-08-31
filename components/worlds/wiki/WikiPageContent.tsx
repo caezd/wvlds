@@ -552,7 +552,10 @@ export function WikiPageContent({
                   onKeyDown={surToucheDuChamp}
                   placeholder={t("contentPlaceholder")}
                   ariaLabel={t("contentLabel")}
-                  className="flex-1 rounded-2xl border-border-soft"
+                  // Sans cadre : le champ est la colonne de texte, pas un
+                  // encadré posé dedans. Le halo de focus du `<textarea>`
+                  // reste la seule marque, et suffit.
+                  className="flex-1 rounded-none border-0"
                 />
                 {showPreview && (
                   <div className="flex-1 overflow-y-auto rounded-2xl border border-border-soft p-4">
