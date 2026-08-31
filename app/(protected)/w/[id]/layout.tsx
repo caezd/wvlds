@@ -45,6 +45,15 @@ export default async function WorldLayout({
     (world.owner_id === userId ? "owner" : null);
 
   if (!myRole) {
+    // Dire lequel des deux manque : l'identité (jeton expiré, session perdue)
+    // ou l'appartenance. Les deux rendaient le même 404 muet, impossible à
+    // distinguer depuis les journaux.
+    console.error(
+      "[WorldLayout] entrée refusée — monde %s, utilisateur %s, %d membre(s) lisible(s)",
+      id,
+      userId ?? "INCONNU (aucune identité dans le jeton)",
+      members.length,
+    );
     notFound();
   }
 

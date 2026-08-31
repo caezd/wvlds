@@ -82,15 +82,28 @@ export type WorldWithMembership = World & {
  * par `worldId` pour la durée de la requête — `/w/[id]` et `WorldSidebar`
  * la chargeaient chacun séparément avec un jeu de colonnes quasi identique.
  */
+/**
+ * Le monde et la liste de ses membres, pour décider qui entre.
+ *
+ * L'erreur est LUE, et pas seulement les données : sans cela, toute
+ * défaillance — jeton expiré, refus RLS, colonne renommée — se présentait à
+ * l'identique, en `null`, et l'appelant répondait 404. Un membre légitime se
+ * voyait donc refuser l'entrée sans que rien, nulle part, ne dise pourquoi.
+ * Le comportement ne change pas ; la trace, elle, existe enfin.
+ */
 export const getWorldById = cache(async (worldId: string): Promise<WorldWithMembership | null> => {
   const supabase = await createClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("worlds")
     .select(
       "id, name, description, owner_id, banner_url, icon_url, color, visibility, restrict_inventory, restrict_skills, enable_inventory, enable_skills, enable_faceclaims, enable_map, enable_wiki, allows_real_avatars, allows_illustrated_avatars, timeline_enabled, timeline_config, is_age_restricted, wiki_label, home_layout, announcement_html, announcement_size, home_grid, home_body_color, home_panel_color, home_show_stats, home_grid_gap, world_members(user_id, role, age_confirmed_at)",
     )
     .eq("id", worldId)
     .maybeSingle();
+
+  if (error) {
+    console.error("[getWorldById] lecture du monde %s refusée : %s", worldId, error.message);
+  }
   return (data as WorldWithMembership | null) ?? null;
 });
 
