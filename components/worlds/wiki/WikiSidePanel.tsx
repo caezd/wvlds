@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
-import { MessagesSquare, StickyNote } from "lucide-react";
+import { MessagesSquare, PanelRightClose, StickyNote } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { WIKI_SUBHEADER } from "./wikiSubHeader";
@@ -31,6 +31,7 @@ export function WikiSidePanel({
   openCommentCount,
   width,
   handleProps,
+  onCollapse,
   children,
 }: {
   tab: WikiSideTab;
@@ -44,10 +45,13 @@ export function WikiSidePanel({
    * pour l'arbre de navigation.
    */
   handleProps?: React.ComponentProps<"div">;
+  /** Replie la colonne — absent dans le tiroir, qui se ferme autrement. */
+  onCollapse?: () => void;
   children: React.ReactNode;
 }) {
   const tAnnotations = useTranslations("wiki.annotations");
   const tNotes = useTranslations("wiki.notes");
+  const tWiki = useTranslations("wiki");
 
   const onglets: { id: WikiSideTab; label: string; icon: React.ReactNode; count?: number }[] = [
     {
@@ -114,6 +118,17 @@ export function WikiSidePanel({
             </button>
           ))}
         </div>
+        {onCollapse && (
+          <button
+            type="button"
+            onClick={onCollapse}
+            aria-label={tWiki("collapsePanel")}
+            title={tWiki("collapsePanel")}
+            className="shrink-0 rounded-md p-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
+          >
+            <PanelRightClose className="h-4 w-4" />
+          </button>
+        )}
       </div>
 
       {children}

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
-import { Eye, History, Loader2, Lock, PanelRight, Pencil } from "lucide-react";
+import { Eye, History, Loader2, Lock, PanelLeft, PanelRight, Pencil } from "lucide-react";
 import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
 import { LucideIconPicker, VALID_LUCIDE_ICONS } from "@/components/ui/LucideIconPicker";
 import { Button } from "@/components/ui/button";
@@ -64,6 +64,8 @@ export function WikiPageContent({
   worldId,
   panelWidth,
   panelHandleProps,
+  navCollapsed,
+  onExpandNav,
   onRename,
   pages,
   ancestors,
@@ -82,6 +84,9 @@ export function WikiPageContent({
   panelWidth: number;
   /** Gestionnaires de la poignée de redimensionnement (voir useColumnResize). */
   panelHandleProps: React.ComponentProps<"div">;
+  /** Colonne de navigation repliée : son bouton de réouverture vient ici. */
+  navCollapsed: boolean;
+  onExpandNav: () => void;
   /** Renomme la page (titre et icône) — la cascade des liens internes vers
    *  l'ancien titre est faite par l'appelant, voir `WorldWiki.renamePage`. */
   onRename: (title: string, icon: string) => void;
@@ -177,6 +182,21 @@ export function WikiPageContent({
   // de notes montés en même temps ouvrent deux fois le même canal Realtime, ce
   // que supabase-js refuse — et le panneau caché interrogeait la base pour rien.
   const colonneLaterale = useMediaQuery(MEDIA.xl);
+
+  // Colonne latérale repliée — même confort local que pour la navigation.
+  const [sideCollapsed, setSideCollapsed] = React.useState(false);
+  React.useEffect(() => {
+    try {
+      setSideCollapsed(localStorage.getItem(`wiki-side-collapsed:${worldId}`) === "1");
+    } catch { /* mode privé : la colonne reste ouverte */ }
+  }, [worldId]);
+
+  function replierPanneau(replie: boolean) {
+    setSideCollapsed(replie);
+    try {
+      localStorage.setItem(`wiki-side-collapsed:${worldId}`, replie ? "1" : "0");
+    } catch { /* rien à retenir */ }
+  }
 
   // La colonne apparaît (élargissement, rotation d'une tablette) : le tiroir
   // n'a plus lieu d'être, et le laisser « ouvert » le ferait resurgir tout
@@ -376,7 +396,31 @@ export function WikiPageContent({
   // l'édition, pour que le trait ne se déplace pas d'une vue à l'autre.
   const bandeauCentral = (
     <div className={WIKI_SUBHEADER}>
-      <WikiBreadcrumb ancestors={ancestors} onExpandFolder={onExpandFolder} />
+      {navCollapsed && (
+        <button
+          type="button"
+          onClick={onExpandNav}
+          aria-label={t("expandPages")}
+          title={t("expandPages")}
+          className="hidden shrink-0 rounded-md p-1 text-muted-foreground hover:bg-secondary hover:text-foreground lg:block"
+        >
+          <PanelLeft className="h-4 w-4" />
+        </button>
+      )}
+      <div className="min-w-0 flex-1">
+        <WikiBreadcrumb ancestors={ancestors} onExpandFolder={onExpandFolder} />
+      </div>
+      {sideCollapsed && (
+        <button
+          type="button"
+          onClick={() => replierPanneau(false)}
+          aria-label={t("openPanel")}
+          title={t("openPanel")}
+          className="hidden shrink-0 rounded-md p-1 text-muted-foreground hover:bg-secondary hover:text-foreground xl:block"
+        >
+          <PanelRight className="h-4 w-4" />
+        </button>
+      )}
     </div>
   );
 
@@ -541,13 +585,14 @@ export function WikiPageContent({
       {/* En colonne à partir de `xl` ; en dessous, la même chose en tiroir —
           à 1280 px la colonne ne laissait que 464 px au texte, à 375 px elle
           était posée hors de l'écran, inatteignable. */}
-      {colonneLaterale && (
+      {colonneLaterale && !sideCollapsed && (
         <WikiSidePanel
           tab={sideTab}
           onTabChange={setSideTab}
           openCommentCount={openAnnotationCount}
           width={panelWidth}
           handleProps={isEditMode ? panelHandleProps : undefined}
+          onCollapse={() => replierPanneau(true)}
         >
           {sideTab === "comments" ? (
             <WikiAnnotationsPanel

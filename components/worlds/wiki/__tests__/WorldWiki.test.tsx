@@ -516,3 +516,29 @@ describe("WorldWiki — suppression d'une page", () => {
     await waitFor(() => expect(document.body.style.pointerEvents).not.toBe("none"));
   });
 });
+
+describe("WorldWiki — replier la colonne de navigation", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    try { localStorage.removeItem("wiki-nav-collapsed:w1"); } catch { /* rien */ }
+  });
+
+  it("replie la colonne et laisse de quoi la rouvrir", async () => {
+    setup();
+    const user = userEvent.setup();
+    render(<WorldWiki worldId="w1" canEdit={false} />);
+
+    await dansLArbre("Accueil");
+    expect(screen.getByPlaceholderText("Rechercher dans le wiki…")).toBeInTheDocument();
+
+    await user.click(screen.getByLabelText("Replier les pages"));
+
+    // La colonne part avec sa recherche ; le bouton de réouverture prend le
+    // relais dans le bandeau du milieu.
+    expect(screen.queryByPlaceholderText("Rechercher dans le wiki…")).toBeNull();
+    const rouvrir = screen.getByLabelText("Déplier les pages");
+
+    await user.click(rouvrir);
+    expect(screen.getByPlaceholderText("Rechercher dans le wiki…")).toBeInTheDocument();
+  });
+});

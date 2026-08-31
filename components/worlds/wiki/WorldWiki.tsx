@@ -7,6 +7,7 @@ import { saveWorldPrefs } from "@/app/(protected)/w/actions";
 import {
   BookOpenText,
   PanelLeft,
+  PanelLeftClose,
   Check,
   FileText,
   FilePlus,
@@ -376,6 +377,22 @@ export function WorldWiki({
   const [lexiconManagerOpen, setLexiconManagerOpen] = React.useState(false);
   /** Arbre des pages en tiroir, en dessous de `lg`. */
   const [treeOpen, setTreeOpen] = React.useState(false);
+
+  // Colonne de navigation repliée. Un confort de lecture propre à chacun : il
+  // vit en local, pas en base, comme le pli des catégories de notes.
+  const [navCollapsed, setNavCollapsed] = React.useState(false);
+  React.useEffect(() => {
+    try {
+      setNavCollapsed(localStorage.getItem(`wiki-nav-collapsed:${worldId}`) === "1");
+    } catch { /* mode privé : la colonne reste ouverte */ }
+  }, [worldId]);
+
+  function replierNav(replie: boolean) {
+    setNavCollapsed(replie);
+    try {
+      localStorage.setItem(`wiki-nav-collapsed:${worldId}`, replie ? "1" : "0");
+    } catch { /* rien à retenir, ce n'est pas grave */ }
+  }
 
   const [creating, setCreating] = React.useState<{ parentId: string | null; isFolder: boolean } | null>(null);
   const [createTitle, setCreateTitle] = React.useState("");
@@ -867,10 +884,30 @@ export function WorldWiki({
   // doivent rester rigoureusement identiques, glisser-déposer compris.
   const arbreDesPages = (
     <>
-      {/* Segment gauche du bandeau — ce qui agit sur l'arbre lui-même. Rendu
-          même hors mode modification : c'est lui qui aligne le trait avec les
-          deux autres segments, qui ne disparaissent pas. */}
+      {/* Segment gauche du bandeau : la recherche, et de quoi replier la
+          colonne. Les commandes de création sont juste en dessous — à 208 px,
+          la recherche et trois boutons ne tiennent pas sur une ligne. */}
       <div className={WIKI_SUBHEADER}>
+        <div className="min-w-0 flex-1">
+          <WikiSearchBar
+            query={searchQuery}
+            onQueryChange={setSearchQuery}
+            results={searchResults}
+            onSelectResult={selectSearchResult}
+          />
+        </div>
+        <button
+          type="button"
+          onClick={() => replierNav(true)}
+          aria-label={t("collapsePages")}
+          title={t("collapsePages")}
+          className="hidden shrink-0 rounded-md p-1 text-muted-foreground hover:bg-secondary hover:text-foreground lg:block"
+        >
+          <PanelLeftClose className="h-4 w-4" />
+        </button>
+      </div>
+
+      <div className="flex items-center gap-1 px-2 pt-1.5">
         {isEditMode && (
           <>
             <button
@@ -900,12 +937,6 @@ export function WorldWiki({
         )}
       </div>
 
-      <WikiSearchBar
-        query={searchQuery}
-        onQueryChange={setSearchQuery}
-        results={searchResults}
-        onSelectResult={selectSearchResult}
-      />
       <div className="flex-1 overflow-y-auto py-1.5">
         {pages === null ? (
           <div className="flex items-center justify-center p-6">
@@ -932,7 +963,19 @@ export function WorldWiki({
         <div className="flex min-w-0 flex-1 flex-col">
           {/* Bandeau vide, mais présent : c'est lui qui aligne le trait avec
               les deux autres colonnes quand aucune page n'est ouverte. */}
-          <div className={WIKI_SUBHEADER} />
+          <div className={WIKI_SUBHEADER}>
+            {navCollapsed && (
+              <button
+                type="button"
+                onClick={() => replierNav(false)}
+                aria-label={t("expandPages")}
+                title={t("expandPages")}
+                className="hidden shrink-0 rounded-md p-1 text-muted-foreground hover:bg-secondary hover:text-foreground lg:block"
+              >
+                <PanelLeft className="h-4 w-4" />
+              </button>
+            )}
+          </div>
           <div className="flex flex-1 items-center justify-center p-8 text-center">
             <p className="text-sm text-muted-foreground">
               {!pages?.length
@@ -953,6 +996,8 @@ export function WorldWiki({
         worldId={worldId}
         panelWidth={panelWidth}
         panelHandleProps={panelHandleProps}
+        navCollapsed={navCollapsed}
+        onExpandNav={() => replierNav(false)}
         pages={pages ?? []}
         ancestors={ancestorsOf(selectedPage)}
         canEdit={canEdit}
@@ -1028,16 +1073,18 @@ export function WorldWiki({
         <div className="flex min-h-0 flex-1">
           {/* Colonne de navigation — devient un tiroir en dessous de `lg`, où
               ses 208 px prenaient plus de la moitié d'un écran de téléphone. */}
-          <div
-            className="hidden shrink-0 flex-col border-r border-border-soft lg:flex"
-            style={{ width: navWidth }}
-          >
-            {arbreDesPages}
-          </div>
+          {!navCollapsed && (
+            <div
+              className="hidden shrink-0 flex-col border-r border-border-soft lg:flex"
+              style={{ width: navWidth }}
+            >
+              {arbreDesPages}
+            </div>
+          )}
 
           {/* Handle de redimensionnement — en mode modification, et seulement
               là où la colonne existe. */}
-          {isEditMode && (
+          {isEditMode && !navCollapsed && (
             <div
               className="group relative hidden w-2 shrink-0 cursor-col-resize select-none lg:block"
               {...navHandleProps}

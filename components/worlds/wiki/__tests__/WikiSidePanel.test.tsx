@@ -101,6 +101,27 @@ describe("WikiSidePanel", () => {
     expect(container.querySelector(".cursor-col-resize")).not.toBeNull();
   });
 
+  it("ne propose de replier que là où c'est possible", async () => {
+    // Dans le tiroir, la colonne n'a pas à se replier : elle se ferme.
+    const { rerender } = renderShell();
+    expect(screen.queryByRole("button", { name: "Replier le panneau" })).toBeNull();
+
+    const onCollapse = vi.fn();
+    rerender(
+      <WikiSidePanel
+        tab="notes"
+        onTabChange={vi.fn()}
+        openCommentCount={0}
+        width={320}
+        onCollapse={onCollapse}
+      >
+        <p>contenu du panneau</p>
+      </WikiSidePanel>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Replier le panneau" }));
+    expect(onCollapse).toHaveBeenCalled();
+  });
+
   it("affiche le contenu qu'on lui confie", () => {
     renderShell();
     expect(screen.getByText("contenu du panneau")).toBeTruthy();
