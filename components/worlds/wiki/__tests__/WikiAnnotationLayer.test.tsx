@@ -263,6 +263,34 @@ describe("WikiAnnotationLayer — commenter un bloc", () => {
     });
   });
 
+  it("reste atteignable quand le pointeur quitte le texte pour y aller", async () => {
+    // Le bouton était posé hors de la boîte de l'enveloppe : aller le cliquer
+    // en faisait sortir le pointeur, ce qui le démontait avant le clic.
+    const onDraft = vi.fn();
+    const { container } = renderLayer({ onDraft });
+    fireEvent.mouseOver(paragraphe(container, 1));
+
+    const bouton = await screen.findByRole("button", { name: "Commenter" });
+    // Le texte et le bouton sont deux enfants distincts de l'enveloppe :
+    // passer de l'un à l'autre quitte le premier, jamais la seconde. C'est
+    // `relatedTarget` qui porte cette différence — sans lui, l'événement dit
+    // « sorti vers nulle part », ce qui est un tout autre geste.
+    fireEvent.mouseOut(screen.getByTestId("prose"), { relatedTarget: bouton });
+    expect(screen.getByRole("button", { name: "Commenter" })).toBe(bouton);
+
+    await userEvent.click(bouton);
+    expect(onDraft).toHaveBeenCalledTimes(1);
+  });
+
+  it("disparaît quand le pointeur quitte l'article", () => {
+    const { container } = renderLayer();
+    fireEvent.mouseOver(paragraphe(container, 1));
+    expect(screen.getByRole("button", { name: "Commenter" })).toBeTruthy();
+
+    fireEvent.mouseLeave(container.firstChild as HTMLElement);
+    expect(screen.queryByRole("button", { name: "Commenter" })).toBeNull();
+  });
+
   it("ne propose rien hors d'un bloc", () => {
     const { container } = renderLayer();
     fireEvent.mouseOver(screen.getByTestId("prose"));

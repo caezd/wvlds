@@ -248,15 +248,16 @@ export function WikiAnnotationLayer({
       </div>
 
       {survol && (
-        // Dans la gouttière, à gauche du texte : 20 px de bouton dans les
-        // 24 px de remplissage de la colonne, donc jamais de débordement
-        // horizontal, quelle que soit la largeur de l'écran.
+        // Au bout de la ligne, à droite, et surtout DANS la boîte de
+        // l'enveloppe : posé en dehors, aller le cliquer faisait sortir le
+        // pointeur, déclenchait le `mouseleave` ci-dessus, et le bouton
+        // disparaissait avant que le clic n'aboutisse.
         <button
           type="button"
           onClick={commenterLeBloc}
           aria-label={t("addComment")}
           title={t("addComment")}
-          className="absolute -left-6 flex h-5 w-5 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground"
+          className="absolute right-0 flex h-6 w-6 items-center justify-center rounded-md bg-background text-muted-foreground shadow-sm ring-1 ring-border-soft hover:bg-secondary hover:text-foreground"
           style={{ top: survol.top }}
         >
           <MessageSquarePlus className="h-3.5 w-3.5" />
