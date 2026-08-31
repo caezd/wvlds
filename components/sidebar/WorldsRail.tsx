@@ -92,8 +92,9 @@ export function WorldsRail({
   function bindLongPress(world: WorldRailItem) {
     return {
       ...longPress,
-      // L'événement est transmis : le hook y lit le point de départ du doigt,
-      // pour tolérer un micro-mouvement sans abandonner l'appui.
+      // L'événement est transmis : le hook y lit le point de départ du doigt
+      // (tolérance de micro-mouvement) et vérifie que l'appui vient bien de cet
+      // élément et non d'un portail monté dessous.
       onTouchStart: (e: React.TouchEvent) => {
         pressedWorldRef.current = world;
         longPress.onTouchStart(e);

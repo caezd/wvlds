@@ -24,7 +24,13 @@ export function MarkdownTextField({
       }}
       submitOnEnter={false}
       placeholder={tPersonas("markdownPlaceholder")}
-      className="text-sm leading-relaxed font-mono pr-24"
+      className="text-xs sm:text-sm leading-relaxed font-mono pr-24"
+      // Le champ est un contentEditable : il grandit tout seul avec son
+      // contenu. Seul le `max-h-40` par défaut du wrapper le plafonnait et
+      // le faisait scroller — inadapté à une fiche, où le texte doit se lire
+      // d'un bloc (l'édition d'un message lève ce plafond de même, voir
+      // ChatroomMessage.tsx).
+      wrapperClassName="max-h-none"
     />
   );
 }

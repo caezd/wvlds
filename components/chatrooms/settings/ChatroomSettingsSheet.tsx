@@ -191,11 +191,11 @@ export default function ChatroomSettingsSheet({
   }
 
   async function onIconConfirm(blob: Blob) {
-    await uploadFile(new File([blob], "icon.jpg", { type: blob.type || "image/jpeg" }), "icon");
+    await uploadFile(new File([blob], "icon.png", { type: blob.type || "image/png" }), "icon");
   }
 
   async function onBannerConfirm(blob: Blob) {
-    await uploadFile(new File([blob], "banner.jpg", { type: blob.type || "image/jpeg" }), "banner");
+    await uploadFile(new File([blob], "banner.png", { type: blob.type || "image/png" }), "banner");
   }
 
   // ---------- persist ----------

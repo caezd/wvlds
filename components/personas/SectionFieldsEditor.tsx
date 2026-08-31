@@ -414,12 +414,29 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
   }
 
 
-  function AddFieldMenu({ insertAt, trigger }: { insertAt: number; trigger?: ReactNode }) {
+  function AddFieldMenu({
+    insertAt,
+    trigger,
+    alwaysVisible,
+  }: {
+    insertAt: number;
+    trigger?: ReactNode;
+    /** Onglet vide : ce séparateur est la seule affordance d'ajout, il ne
+     *  peut donc pas rester discret comme entre deux champs existants. */
+    alwaysVisible?: boolean;
+  }) {
     return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           {trigger ?? (
-            <div className="cursor-pointer transition-opacity opacity-0 hover:opacity-100 focus-within:opacity-100 group-hover/field:opacity-100 relative h-6 w-full flex justify-center before:absolute before:h-px before:w-full before:top-1/2 before:-translate-y-1/2 before:bg-border">
+            <div
+              className={cn(
+                "cursor-pointer transition-opacity relative h-6 w-full flex justify-center before:absolute before:h-px before:w-full before:top-1/2 before:-translate-y-1/2 before:bg-border",
+                alwaysVisible
+                  ? "opacity-100"
+                  : "opacity-100 sm:opacity-0 sm:hover:opacity-100 sm:focus-within:opacity-100 sm:group-hover/field:opacity-100",
+              )}
+            >
               <button className="w-4 h-4 bg-accent/50 text-primary rounded-full inline-flex items-center justify-center absolute top-1/2 -translate-y-1/2 z-10" aria-label={tCommon("add")}>
                 <Plus size={12} />
               </button>
@@ -500,16 +517,8 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
       {errorMessage && <p className="text-xs text-red-500 mb-2">{errorMessage}</p>}
 
       {fields.length === 0 ? (
-        <div className="py-4 space-y-3">
-          <p className="text-sm text-muted-foreground">{tPersonas("noField")}</p>
-          <AddFieldMenu
-            insertAt={0}
-            trigger={
-              <Button variant="outline" size="sm" type="button" className="w-full">
-                <Plus className="mr-2 h-4 w-4" /> Ajouter un champ
-              </Button>
-            }
-          />
+        <div className="py-4">
+          <AddFieldMenu insertAt={0} alwaysVisible />
         </div>
       ) : (
         <div className="space-y-0">
@@ -521,11 +530,11 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
 
             return (
               <div key={field.id} className="group/field">
-                <div className="group relative rounded-md border border-transparent py-1.5 px-2 hover:border-border-soft transition-colors">
+                <div className="group relative rounded-md border py-1.5 px-2 transition-colors sm:border-transparent sm:hover:border-border">
                   {/* Badge permanent : champ requis par la fiche du monde */}
                   {!isTemplate && field.locked && (
                     <span
-                      className="absolute right-2.5 top-2 text-muted-foreground/50 group-hover:opacity-0 transition-opacity z-10"
+                      className="absolute right-2.5 top-2 text-muted-foreground/50 opacity-0 transition-opacity z-10 sm:opacity-100 sm:group-hover:opacity-0"
                       title={tPersonas("fieldRequiredByWorld")}
                     >
                       <Lock className="h-3.5 w-3.5" />
@@ -533,7 +542,7 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
                   )}
 
                   {/* Actions flottantes */}
-                  <div className="absolute right-1.5 top-1 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity z-10">
+                  <div className="absolute right-1.5 top-1 flex items-center gap-0.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100 transition-opacity z-10">
                     <Button variant="ghost" size="icon-sm" type="button" className="h-7 w-7" onClick={() => handleMoveField(field.id, "up")} disabled={isFirst} aria-label={tCommon("moveUp")}>
                       <ArrowUp className="h-3.5 w-3.5" />
                     </Button>

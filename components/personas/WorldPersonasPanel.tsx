@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Image from "next/image";
 import { Drama, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { getInitials } from "@/lib/textFormatting";
@@ -12,6 +11,8 @@ import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { AsidePersona } from "./WorldPersonaAsideClient";
 import { useTranslations } from "next-intl";
+import { StoredImage } from "@/components/ui/stored-image";
+import { avatarThumbWidth } from "@/lib/storage";
 
 type OtherPersona = {
   id: string;
@@ -46,11 +47,10 @@ function OtherPersonaCard({ persona }: { persona: OtherPersona }) {
       triggerClassName="group relative block w-full aspect-square rounded-2xl overflow-hidden bg-muted shadow-sm hover:shadow-lg transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       {persona.avatar_url ? (
-        <Image
-          src={persona.avatar_url}
+        <StoredImage
+          url={persona.avatar_url}
+          width={avatarThumbWidth(160)}
           alt={name}
-          fill
-          sizes="(min-width: 1024px) 160px, 33vw"
           className="object-cover"
           draggable={false}
         />

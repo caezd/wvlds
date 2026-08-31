@@ -1,9 +1,17 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
+import { copyToClipboard } from "@/lib/clipboard";
 import { MarkdownContent, proseClassName } from "@/components/MarkdownRenderer";
 import { parseDialogue } from "@/lib/dialogue-bubbles";
 import { ImageLightbox } from "../ImageLightbox";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import type { ChatMessageMeta, ChatMediaItem } from "@/types/db";
 import { cn, isSafeUrl } from "@/lib/utils";
 import { useCurrentUser } from "@/components/providers/CurrentUserProvider";
@@ -13,15 +21,23 @@ export function ChatroomMessageBubble({
   message,
   isMine: _isMine,
   ignoreBubbles,
+  isMobile,
 }: {
   persona?: { user_id?: string | null; name?: string | null } | null;
   message: { content: string; metadata?: ChatMessageMeta | null };
   isMine: boolean;
   /** Ignore metadata.bubbles même si actif (utilisé par le rendu SMS, prioritaire). */
   ignoreBubbles?: boolean;
+  /** Sur mobile, le clic droit (menu contextuel) cède la place au long-press
+   *  déjà géré au niveau du message entier (ChatroomMessage.tsx) — évite que
+   *  les deux systèmes de détection de pression prolongée ne se disputent le
+   *  même geste sur la bulle. */
+  isMobile?: boolean;
 }) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const { messageFont, messageTextSize, messageTextAlign } = useCurrentUser();
+  const t = useTranslations("chatrooms");
+  const tCommon = useTranslations("common");
 
   const media: ChatMediaItem[] = (message.metadata?.media ?? []).filter((m) => isSafeUrl(m.url));
 
@@ -73,20 +89,40 @@ export function ChatroomMessageBubble({
           return part.text ? <MarkdownContent key={i} content={part.text} /> : null;
         }
         const color = part.color ?? message.metadata?.bubbleColor;
+        const bubble = (
+          <div
+            className={cn(
+              "relative rounded-xl rounded-tl-[3px] px-3 py-1.5 -ml-1.5 text-sm sm:text-base leading-snug max-w-prose",
+              !color && "bg-muted",
+              fontClass,
+              textSizeClass,
+              textAlignClass,
+            )}
+            style={color ? { backgroundColor: color + "33" } : undefined}
+          >
+            <MarkdownContent content={part.speech} />
+          </div>
+        );
         return (
           <div key={i} className="not-prose inline-flex items-end gap-2 flex-wrap">
-            <div
-              className={cn(
-                "relative rounded-xl rounded-tl-[3px] px-3 py-1.5 -ml-1.5 text-sm sm:text-base leading-snug max-w-prose",
-                !color && "bg-muted",
-                fontClass,
-                textSizeClass,
-                textAlignClass,
-              )}
-              style={color ? { backgroundColor: color + "33" } : undefined}
-            >
-              <MarkdownContent content={part.speech} />
-            </div>
+            {/* Clic droit desktop uniquement — sur mobile, le long-press du
+                message entier (ChatroomMessage.tsx) ouvre déjà un drawer
+                d'options incluant la copie de couleur, pas besoin d'un
+                second geste concurrent sur la bulle elle-même. */}
+            {color && !isMobile ? (
+              <ContextMenu>
+                <ContextMenuTrigger asChild>{bubble}</ContextMenuTrigger>
+                <ContextMenuContent>
+                  <ContextMenuItem
+                    onSelect={() => void copyToClipboard(color, tCommon("copyDialogueColorSuccess"), tCommon("copyError"))}
+                  >
+                    {t("copyDialogueColor")}
+                  </ContextMenuItem>
+                </ContextMenuContent>
+              </ContextMenu>
+            ) : (
+              bubble
+            )}
           </div>
         );
       })}

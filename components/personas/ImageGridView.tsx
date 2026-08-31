@@ -1,20 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import { ImageLightbox } from "@/components/chatrooms/ImageLightbox";
 import { supabaseThumb } from "@/lib/storage";
+import { resolvePersonaImageGrid, IMAGE_GRID_ROW_HEIGHT } from "./personaImageGrid";
+import type { PersonaGridImage } from "@/types/personas";
 import { cn } from "@/lib/utils";
-
-type GridImage = { id: string; url: string; caption?: string };
 
 function Thumb({
   img,
-  className,
   onClick,
 }: {
-  img: GridImage;
-  className?: string;
+  img: { url: string; caption?: string };
   onClick: () => void;
 }) {
   const [thumbFailed, setThumbFailed] = useState(false);
@@ -22,94 +19,73 @@ function Thumb({
     <button
       type="button"
       onClick={onClick}
-      className={cn("relative overflow-hidden focus:outline-none", className)}
+      className="block w-full overflow-hidden rounded-md focus:outline-none sm:h-full"
     >
-      <Image
+      {/* Dimensions intrinsèques inconnues (non stockées) — sous `sm`, la
+          largeur de la case reste son %age de grille habituel, mais la
+          hauteur suit la propre proportion de l'image, sans recadrage ni
+          marge (ni `cover`, ni `contain`). Dès `sm`, la grille en lignes
+          impose une hauteur commune par ligne : l'image y est alors
+          contenue en entier (jamais recadrée) via `object-contain`. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
         src={thumbFailed ? img.url : (supabaseThumb(img.url, 600) ?? img.url)}
         onError={() => setThumbFailed(true)}
         alt={img.caption ?? ""}
-        fill
-        sizes="(min-width: 1024px) 400px, 90vw"
-        className="object-cover transition-opacity hover:opacity-90"
         loading="lazy"
         draggable={false}
+        className="block h-auto w-full transition-opacity hover:opacity-90 sm:h-full sm:object-contain"
       />
     </button>
   );
 }
 
-export function ImageGridView({ images }: { images: GridImage[] }) {
+/**
+ * Rendu lecture seule de la grille d'images — pure grille CSS, aucun état de
+ * geste (voir ImageGridField dans SectionFieldsEditor.tsx pour l'édition) :
+ * même séparation édition/lecture que WorldHomeGridView.tsx, dont ce
+ * composant reprend la technique de positionnement (custom properties CSS
+ * `--gc`/`--gr`). Contrairement à WorldHomeGridView (qui replie tout sur une
+ * seule colonne sous `sm`), la grille à 6 colonnes reste active sur mobile :
+ * la largeur d'une image reste le même %age du panneau qu'en édition, seule
+ * sa hauteur devient naturelle (voir Thumb) au lieu d'une ligne à hauteur
+ * fixe. `grid-cols-6` est codé en dur comme dans
+ * worldHomeGrid.ts/WorldHomeGridEditor.tsx — une classe Tailwind générée
+ * dynamiquement à partir de IMAGE_GRID_COLS ne serait pas détectée par le
+ * scanner JIT de Tailwind.
+ */
+export function ImageGridView({ images }: { images: PersonaGridImage[] }) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
-  const n = images.length;
-  if (!n) return null;
+  const items = resolvePersonaImageGrid(images);
+  if (!items.length) return null;
 
-  const items = images.map((img) => ({ url: img.url, name: img.caption ?? "Image" }));
-  const open = (i: number) => setLightboxIndex(i);
-
-  let grid: React.ReactNode;
-
-  if (n === 1) {
-    grid = (
-      <div className="overflow-hidden rounded-md max-w-xs">
-        <Thumb img={images[0]}className="block w-full max-h-72" onClick={() => open(0)} />
-      </div>
-    );
-  } else if (n === 2) {
-    grid = (
-      <div className="grid grid-cols-2 gap-0.5 rounded-md overflow-hidden h-52">
-        {images.map((img, i) => (
-          <Thumb key={img.id} img={img}className="w-full h-full" onClick={() => open(i)} />
-        ))}
-      </div>
-    );
-  } else if (n === 3) {
-    grid = (
-      <div className="grid gap-0.5 rounded-md overflow-hidden h-52" style={{ gridTemplateColumns: "2fr 1fr" }}>
-        <Thumb img={images[0]}className="row-span-2 w-full h-full" onClick={() => open(0)} />
-        <Thumb img={images[1]}className="w-full h-full" onClick={() => open(1)} />
-        <Thumb img={images[2]}className="w-full h-full" onClick={() => open(2)} />
-      </div>
-    );
-  } else if (n === 4) {
-    grid = (
-      <div className="grid grid-cols-2 gap-0.5 rounded-md overflow-hidden">
-        {images.map((img, i) => (
-          <Thumb key={img.id} img={img}className="aspect-square w-full" onClick={() => open(i)} />
-        ))}
-      </div>
-    );
-  } else if (n === 5) {
-    grid = (
-      <div className="flex flex-col gap-0.5 rounded-md overflow-hidden">
-        <div className="grid grid-cols-2 gap-0.5 h-44">
-          {images.slice(0, 2).map((img, i) => (
-            <Thumb key={img.id} img={img}className="w-full h-full" onClick={() => open(i)} />
-          ))}
-        </div>
-        <div className="grid grid-cols-3 gap-0.5 h-32">
-          {images.slice(2, 5).map((img, i) => (
-            <Thumb key={img.id} img={img}className="w-full h-full" onClick={() => open(i + 2)} />
-          ))}
-        </div>
-      </div>
-    );
-  } else {
-    // 6+ : grille 3 colonnes
-    grid = (
-      <div className="grid grid-cols-3 gap-0.5 rounded-md overflow-hidden">
-        {images.map((img, i) => (
-          <Thumb key={img.id} img={img}className="aspect-square w-full" onClick={() => open(i)} />
-        ))}
-      </div>
-    );
-  }
+  const lightboxItems = items.map((img) => ({ url: img.url, name: img.caption ?? "Image" }));
 
   return (
     <>
-      {grid}
+      <div
+        className="grid grid-cols-6 gap-1"
+        style={{ "--row-h": `${IMAGE_GRID_ROW_HEIGHT}px` } as React.CSSProperties}
+      >
+        {items.map((item, i) => (
+          <div
+            key={item.id}
+            style={{
+              "--gc": `${item.x + 1} / span ${item.w}`,
+              "--gr": `${item.y + 1}`,
+            } as React.CSSProperties}
+            className={cn(
+              "min-w-0 overflow-hidden rounded-md [grid-column:var(--gc)] [grid-row:var(--gr)] sm:h-(--row-h)",
+              item.bg && "bg-muted",
+            )}
+          >
+            <Thumb img={item} onClick={() => setLightboxIndex(i)} />
+          </div>
+        ))}
+      </div>
       {lightboxIndex !== null && (
         <ImageLightbox
-          items={items}
+          items={lightboxItems}
           initialIndex={lightboxIndex}
           onClose={() => setLightboxIndex(null)}
         />

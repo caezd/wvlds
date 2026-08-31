@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
-import { supabaseThumb } from "@/lib/storage";
+import { StoredImage } from "@/components/ui/stored-image";
 import type { Persona } from "@/types/db-chat";
 import {
   Dialog,
@@ -34,19 +33,14 @@ import { getInitials } from "@/lib/textFormatting";
 import { cn } from "@/lib/utils";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { getUsablePersonaIds } from "@/lib/personaEligibility";
+import { avatarThumbWidth } from "@/lib/storage";
 
 function PersonaAvatarThumb({ url, name, size }: { url: string; name: string; size: number }) {
-  const [thumbFailed, setThumbFailed] = useState(false);
+  // Palier partagé plutôt que `size * 3` : c'est ce qui fait que le même
+  // persona affiché ici, sur sa carte ou dans sa fiche demande une seule et
+  // même image, déjà en cache dès la deuxième vue.
   return (
-    <Image
-      src={thumbFailed ? url : (supabaseThumb(url, size * 2) ?? url)}
-      onError={() => setThumbFailed(true)}
-      alt={name}
-      fill
-      sizes={`${size}px`}
-      className="object-cover"
-      draggable={false}
-    />
+    <StoredImage url={url} width={avatarThumbWidth(size)} alt={name} className="object-cover" draggable={false} />
   );
 }
 

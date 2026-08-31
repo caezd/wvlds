@@ -3,8 +3,8 @@
 
 import React, { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Tabs, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { TabBar } from "@/components/ui/tab-bar";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { TabBar, TabBarTrigger } from "@/components/ui/tab-bar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,12 +21,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Lock, MoreHorizontal, ChevronLeft, ChevronRight, Pencil, Trash2 } from "lucide-react";
+import { Layers, Lock, MoreHorizontal, ChevronLeft, ChevronRight, Pencil, Trash2 } from "lucide-react";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import type { PersonaSectionWithFields } from "@/types/personas";
 import { SectionFieldsEditor } from "./SectionFieldsEditor";
-import { useTranslations } from "next-intl";
+
+/** Noms proposés pour un premier onglet — traduits, et modifiables ensuite.
+ *  Le but n'est pas d'imposer une structure mais d'éviter la page blanche. */
+const TAB_SUGGESTIONS = ["identity", "appearance", "story"] as const;
 
 type PersonaSectionsTabsProps = {
   personaId: string;
@@ -50,8 +54,9 @@ export function PersonaSectionsTabs({
   restrictSkills,
   isTemplate,
 }: PersonaSectionsTabsProps) {
-  const t = useTranslations("personas");
   const supabase = createClient();
+  const t = useTranslations("personas.tabs");
+  const tCommon = useTranslations("common");
 
   const [activeSectionId, setActiveSectionId] = useState<string | null>(
     sections[0]?.id ?? null,
@@ -71,9 +76,10 @@ export function PersonaSectionsTabs({
     );
   }
 
-  async function handleAddSection(e: React.FormEvent) {
-    e.preventDefault();
-    const trimmed = name.trim();
+  /** Création d'un onglet, extraite du formulaire : l'état vide s'en sert
+   *  aussi pour créer en un clic depuis une suggestion. */
+  async function createSection(nom: string) {
+    const trimmed = nom.trim();
     if (!trimmed) return;
     setSaving(true);
     const lastPosition = sections.length ? sections[sections.length - 1].position : 0;
@@ -83,12 +89,19 @@ export function PersonaSectionsTabs({
       .select("id, persona_id, name, position")
       .single();
     setSaving(false);
-    if (error) { console.error(error); return; }
+    // Un échec ne laissait jusqu'ici qu'une trace en console : rien à l'écran,
+    // alors que renommer et supprimer signalent tous deux leur erreur.
+    if (error) { toast.error(error.message); return; }
     const newSection: PersonaSectionWithFields = { ...(data as PersonaSectionWithFields), fields: [] };
     onSectionsChange([...sections, newSection]);
     setActiveSectionId(newSection.id);
     setName("");
     setAddDialogOpen(false);
+  }
+
+  async function handleAddSection(e: React.FormEvent) {
+    e.preventDefault();
+    await createSection(name);
   }
 
   async function handleRenameSection(e: React.FormEvent) {
@@ -148,13 +161,37 @@ export function PersonaSectionsTabs({
   return (
     <>
       {!sections.length ? (
-        <div className="border rounded-md p-6 mx-4 mb-4 space-y-3">
-          <p className="text-sm text-muted-foreground">
-            Aucune section pour ce personnage.
-          </p>
-          <Button variant="outline" size="sm" onClick={() => { setName(""); setAddDialogOpen(true); }}>
-            + Créer une première section
-          </Button>
+        // Même forme que les autres états vides de l'application (bordure
+        // douce, centré, généreusement espacé) — celui-ci était le seul à
+        // s'aligner à gauche dans une boîte à bordure dure.
+        <div className="mx-4 mb-4 rounded-lg border border-border-soft p-8 text-center">
+          <Layers className="mx-auto h-8 w-8 text-muted-foreground/60" aria-hidden />
+          <p className="mt-3 text-sm font-medium text-foreground">{t("empty")}</p>
+
+          {/* Créer en un clic depuis une suggestion : devant une fiche vierge,
+              devoir inventer un nom avant même d'avoir vu à quoi sert un onglet
+              est une marche de plus. Le nom se change ensuite d'un « Renommer ». */}
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+            {TAB_SUGGESTIONS.map((clé) => (
+              <Button
+                key={clé}
+                variant="outline"
+                size="sm"
+                disabled={saving}
+                onClick={() => void createSection(t(`suggestions.${clé}`))}
+              >
+                + {t(`suggestions.${clé}`)}
+              </Button>
+            ))}
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={saving}
+              onClick={() => { setName(""); setAddDialogOpen(true); }}
+            >
+              {t("customName")}
+            </Button>
+          </div>
         </div>
       ) : (
         <Tabs
@@ -164,52 +201,52 @@ export function PersonaSectionsTabs({
         >
           <TabBar action={
             <Button type="button" variant="ghost" size="sm" onClick={() => { setName(""); setAddDialogOpen(true); }}>
-              + Ajouter une section
+              + {t("add")}
             </Button>
           }>
             {sections.map((section) => (
-              <React.Fragment key={section.id}>
-                <TabsTrigger value={section.id}>
+              <div key={section.id} className="flex shrink-0 items-center gap-1">
+                <TabBarTrigger value={section.id}>
                   {section.name}
-                </TabsTrigger>
+                </TabBarTrigger>
                 {value === section.id && (
-                  <DropdownMenu key={`${section.id}-menu`}>
+                  <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button type="button" variant="ghost" size="icon" className="h-6 w-6 shrink-0" aria-label={t("sectionOptions")}>
+                      <Button type="button" variant="ghost" size="icon" className="h-6 w-6 shrink-0" aria-label={t("options")}>
                         <MoreHorizontal className="h-3.5 w-3.5" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="start" className="w-44">
                       <DropdownMenuItem onClick={() => handleMoveSection("left")} disabled={activeIndex <= 0}>
-                        <ChevronLeft className="mr-2 h-4 w-4" /> Déplacer à gauche
+                        <ChevronLeft className="mr-2 h-4 w-4" /> {t("moveLeft")}
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => handleMoveSection("right")} disabled={activeIndex >= sections.length - 1}>
-                        <ChevronRight className="mr-2 h-4 w-4" /> Déplacer à droite
+                        <ChevronRight className="mr-2 h-4 w-4" /> {t("moveRight")}
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={() => { setName(sections.find((s) => s.id === value)?.name ?? ""); setRenameDialogOpen(true); }}>
-                        <Pencil className="mr-2 h-4 w-4" /> Renommer
+                        <Pencil className="mr-2 h-4 w-4" /> {t("rename")}
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       {activeHasLockedFields ? (
-                        <DropdownMenuItem disabled title={t("sectionRequiredByWorld")}>
-                          <Lock className="mr-2 h-4 w-4" /> Requise par le monde
+                        <DropdownMenuItem disabled title={t("lockedTitle")}>
+                          <Lock className="mr-2 h-4 w-4" /> {t("lockedLabel")}
                         </DropdownMenuItem>
                       ) : (
                         <DeleteConfirmDialog
                           trigger={
                             <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive">
-                              <Trash2 className="mr-2 h-4 w-4" /> Supprimer
+                              <Trash2 className="mr-2 h-4 w-4" /> {tCommon("delete")}
                             </DropdownMenuItem>
                           }
-                          description={t("sectionDeleteDescription")}
+                          description={t("deleteDescription")}
                           onConfirm={handleDeleteSection}
                         />
                       )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 )}
-              </React.Fragment>
+              </div>
             ))}
           </TabBar>
 
@@ -237,58 +274,58 @@ export function PersonaSectionsTabs({
         </Tabs>
       )}
 
-      {/* Dialog : ajouter une section */}
+      {/* Dialog : ajouter un onglet */}
       <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
         <DialogContent className="sm:max-w-sm">
           <form onSubmit={handleAddSection} className="grid gap-4">
             <div className="grid gap-3">
               <DialogTitle asChild>
-                <Label htmlFor="section-name">{t("sectionName")}</Label>
+                <Label htmlFor="section-name">{t("nameLabel")}</Label>
               </DialogTitle>
               <Input
                 id="section-name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Ex. Informations"
+                placeholder={t("namePlaceholder")}
                 autoFocus
                 maxLength={60}
               />
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setAddDialogOpen(false)}>
-                Annuler
+                {tCommon("cancel")}
               </Button>
               <Button type="submit" disabled={!name.trim() || saving}>
-                {saving ? "Création…" : "Créer"}
+                {saving ? t("creating") : tCommon("create")}
               </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
-      {/* Dialog : renommer une section */}
+      {/* Dialog : renommer un onglet */}
       <Dialog open={renameDialogOpen} onOpenChange={setRenameDialogOpen}>
         <DialogContent className="sm:max-w-sm">
           <form onSubmit={handleRenameSection} className="grid gap-4">
             <div className="grid gap-3">
               <DialogTitle asChild>
-                <Label htmlFor="rename-section">{t("renameSection")}</Label>
+                <Label htmlFor="rename-section">{t("renameTitle")}</Label>
               </DialogTitle>
               <Input
                 id="rename-section"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder={t("sectionName")}
+                placeholder={t("nameLabel")}
                 autoFocus
                 maxLength={60}
               />
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setRenameDialogOpen(false)}>
-                Annuler
+                {tCommon("cancel")}
               </Button>
               <Button type="submit" disabled={!name.trim() || saving}>
-                {saving ? "Enregistrement…" : "Renommer"}
+                {saving ? t("renaming") : t("rename")}
               </Button>
             </DialogFooter>
           </form>

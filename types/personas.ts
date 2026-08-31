@@ -8,11 +8,22 @@ export interface PersonaStat {
   unit?: string;
 }
 
-/** Une image dans un champ de type "image-grid". */
+/** Une image dans un champ de type "image-grid". `x`/`y`/`w` (position et
+ *  largeur en colonnes, voir components/personas/personaImageGrid.ts) sont
+ *  absents pour une image tout juste ajoutée — placée automatiquement au
+ *  prochain calcul de grille (`resolvePersonaImageGrid`) plutôt que d'exiger
+ *  une position dès l'upload. `bg` (fond derrière l'image, utile quand elle
+ *  ne remplit pas toute sa case en `object-contain`) est omis quand vrai —
+ *  c'est le comportement par défaut — et vaut `false` seulement s'il a été
+ *  désactivé. */
 export interface PersonaGridImage {
   id: string;
   url: string;
   caption?: string;
+  x?: number;
+  y?: number;
+  w?: number;
+  bg?: boolean;
 }
 
 /** Un item dans un champ de type "inventory". */

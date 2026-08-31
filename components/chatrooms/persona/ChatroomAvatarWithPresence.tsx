@@ -1,9 +1,11 @@
 "use client";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { StoredImage } from "@/components/ui/stored-image";
+import { avatarThumbWidth } from "@/lib/storage";
 import { cn } from "@/lib/utils";
 
 export function ChatroomAvatarWithPresence({
-  src,
+  url,
   alt,
   fallback,
   presenceState = "offline",
@@ -11,7 +13,9 @@ export function ChatroomAvatarWithPresence({
   rounded = true,
   className,
 }: {
-  src?: string | null;
+  /** URL telle qu'enregistrée en base : `StoredImage` en dérive lui-même la
+   *  vignette floutée et l'image finale (voir components/ui/stored-image.tsx). */
+  url?: string | null;
   alt?: string;
   fallback?: string;
   presenceState?: "online" | "away" | "offline" | "invisible";
@@ -32,10 +36,12 @@ export function ChatroomAvatarWithPresence({
         )}
         style={{ width: size, height: size }}
       >
-        <AvatarImage src={src ?? undefined} alt={alt ?? ""} />
+        {/* Le repli passe en premier : il reste dessous, visible tant qu'il
+            n'y a pas d'image — `StoredImage` ne rend rien sans URL. */}
         <AvatarFallback>
           {(fallback ?? "?").slice(0, 1).toUpperCase()}
         </AvatarFallback>
+        <StoredImage url={url} width={avatarThumbWidth(size)} alt={alt ?? ""} className="object-cover" />
       </Avatar>
 
       {presenceState === "online" && (

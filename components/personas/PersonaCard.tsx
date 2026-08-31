@@ -1,12 +1,13 @@
 "use client";
 
-import Image from "next/image";
 import { PersonaEditSheet } from "./PersonaEditSheet";
 import type { PersonaSectionWithFields } from "@/types/personas";
 import type { AvatarConfigV1 } from "./avatar/PersonaAvatarPicker";
 import type { MaritalStatus } from "@/types/db";
 import { Pencil } from "lucide-react";
 import { getInitials } from "@/lib/textFormatting";
+import { StoredImage } from "@/components/ui/stored-image";
+import { avatarThumbWidth } from "@/lib/storage";
 
 type PersonaCardProps = {
   personaId: string;
@@ -64,11 +65,10 @@ export function PersonaCard({
         <button className="group relative w-full aspect-square rounded-2xl overflow-hidden bg-muted shadow-sm hover:shadow-lg transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
           {/* Image / fallback */}
           {avatarUrl ? (
-            <Image
-              src={avatarUrl}
+            <StoredImage
+              url={avatarUrl}
+              width={avatarThumbWidth(200)}
               alt={personaName}
-              fill
-              sizes="(min-width: 1024px) 200px, 33vw"
               className="object-cover"
               draggable={false}
             />

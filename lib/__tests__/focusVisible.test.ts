@@ -30,8 +30,10 @@ import { join } from "node:path";
 /** Une révélation au survol : `hover:opacity-100`, avec ou sans groupe. */
 const REVELE_AU_SURVOL = /(?:group-)?hover(?:\/[\w-]+)?:opacity-100/;
 
-/** Une variante qui réagit au clavier. */
-const REVELE_AU_FOCUS = /focus(?:-within|-visible)?:opacity-100/;
+/** Une variante qui réagit au clavier, avec ou sans groupe — symétrique de
+ *  `REVELE_AU_SURVOL` : `group-focus-within/img:opacity-100` révèle bien la
+ *  tuile dès qu'une de ses commandes reçoit le focus. */
+const REVELE_AU_FOCUS = /(?:group-)?focus(?:-within|-visible)?(?:\/[\w-]+)?:opacity-100/;
 
 function fichiersJsx(): string[] {
   const out: string[] = [];
@@ -76,6 +78,7 @@ describe("les commandes révélées au survol le sont aussi au focus", () => {
     expect(REVELE_AU_SURVOL.test("opacity-0 hover:opacity-100")).toBe(true);
     expect(REVELE_AU_FOCUS.test("focus-within:opacity-100")).toBe(true);
     expect(REVELE_AU_FOCUS.test("focus-visible:opacity-100")).toBe(true);
+    expect(REVELE_AU_FOCUS.test("group-focus-within/img:opacity-100")).toBe(true);
     // `focus:` seul est accepté par le motif : sur une commande il suffit.
     // C'est sur un CONTENEUR qu'il ne sert à rien, et cela, seule la lecture
     // du code le dit — d'où la préférence documentée pour `focus-within`.

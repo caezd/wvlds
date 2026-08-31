@@ -86,6 +86,60 @@ describe("useLongPress", () => {
     expect(onLongPress).not.toHaveBeenCalled();
   });
 
+  it("ignore un appui venu d'un portail rendu sous l'élément", () => {
+    // Un drawer ouvert depuis cet élément sort du DOM par un portail, mais pas
+    // de l'arbre React : ses événements tactiles remontent quand même ici. On
+    // repart donc du DOM réel pour ne s'armer que sur un appui posé sur
+    // l'élément lui-même.
+    const hote = document.createElement("div");
+    const dehors = document.createElement("div");
+    document.body.append(hote, dehors);
+
+    const onLongPress = vi.fn();
+    const { result } = renderHook(() => useLongPress(onLongPress, 500));
+
+    act(() =>
+      result.current.onTouchStart({
+        ...toucher(100, 100),
+        currentTarget: hote,
+        target: dehors,
+      } as unknown as React.TouchEvent),
+    );
+    act(() => void vi.advanceTimersByTime(500));
+    expect(onLongPress).not.toHaveBeenCalled();
+
+    // Le même appui, posé DANS l'élément, s'arme normalement.
+    act(() =>
+      result.current.onTouchStart({
+        ...toucher(100, 100),
+        currentTarget: hote,
+        target: hote,
+      } as unknown as React.TouchEvent),
+    );
+    act(() => void vi.advanceTimersByTime(500));
+    expect(onLongPress).toHaveBeenCalledTimes(1);
+
+    hote.remove();
+    dehors.remove();
+  });
+
+  it("n'ouvre pas son menu si un drawer s'est ouvert pendant l'appui", () => {
+    // Cas restant : l'appui a bien commencé sur l'élément, mais a ouvert un
+    // drawer entre-temps (tap sur l'avatar, doigt encore posé).
+    const onLongPress = vi.fn();
+    const { result } = renderHook(() => useLongPress(onLongPress, 500));
+
+    act(() => result.current.onTouchStart(toucher(100, 100)));
+
+    const drawer = document.createElement("div");
+    drawer.setAttribute("data-slot", "drawer-viewport");
+    document.body.append(drawer);
+    act(() => void vi.advanceTimersByTime(500));
+    expect(onLongPress).not.toHaveBeenCalled();
+
+    drawer.remove();
+  });
+
   it("ne déclenche plus rien après démontage", () => {
     // Sans nettoyage, le minuteur survivait au composant : le rappel partait
     // dans le vide, et le téléphone vibrait pour un message disparu.

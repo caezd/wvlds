@@ -44,7 +44,7 @@ export function StatsField({
           <button
             type="button"
             onClick={() => removeStat(stat.id)}
-            className="absolute -right-1.5 -top-1.5 hidden h-4 w-4 items-center justify-center rounded-full bg-muted text-muted-foreground hover:bg-destructive/10 hover:text-destructive group-hover/stat:flex"
+            className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-muted text-muted-foreground hover:bg-destructive/10 hover:text-destructive sm:hidden sm:group-hover/stat:flex"
             aria-label={tPersonas("deleteStat")}
           >
             <X className="h-2.5 w-2.5" />

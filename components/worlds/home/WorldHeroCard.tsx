@@ -1,10 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Image from "next/image";
-
 import { type World } from "@/types/worlds";
-import { supabaseThumb } from "@/lib/storage";
+import { StoredImage } from "@/components/ui/stored-image";
 
 /**
  * Fond de la page d'accueil : image (ou couleur unie à défaut) en arrière-plan
@@ -23,12 +20,6 @@ import { supabaseThumb } from "@/lib/storage";
  * derrière, sans jamais avoir besoin de le connaître.
  */
 export function WorldHeroCard({ world }: { world: Pick<World, "banner_url" | "color"> }) {
-  const [bannerThumbFailed, setBannerThumbFailed] = useState(false);
-
-  useEffect(() => {
-    setBannerThumbFailed(false);
-  }, [world.banner_url]);
-
   return (
     <div
       aria-hidden
@@ -38,11 +29,11 @@ export function WorldHeroCard({ world }: { world: Pick<World, "banner_url" | "co
       }}
     >
       {world.banner_url ? (
-        <Image
-          src={bannerThumbFailed ? world.banner_url : (supabaseThumb(world.banner_url, 1920, 90, undefined, "cover") ?? world.banner_url)}
-          onError={() => setBannerThumbFailed(true)}
-          alt=""
-          fill
+        <StoredImage
+          url={world.banner_url}
+          width={1920}
+          quality={90}
+          resize="cover"
           sizes="100vw"
           className="object-cover"
           priority

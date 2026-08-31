@@ -12,8 +12,8 @@ import {
 } from "@/components/ui/drawer";
 import { SideSheetContent } from "@/components/ui/side-sheet";
 import { AvatarWithFrame } from "@/components/avatars/AvatarWithFrame";
-import { Tabs, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { TabBar } from "@/components/ui/tab-bar";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { TabBar, TabBarTrigger } from "@/components/ui/tab-bar";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import type { Persona } from "@/types/db";
 import type { PersonaSection, PersonaSectionField, PersonaSectionWithFields, PersonaFieldData, InventoryItem, SkillItem, GaugeItem, TraitItem, TimelineItem, DlItem } from "@/types/personas";
@@ -21,7 +21,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { useGlobalPresence } from "@/components/providers/PresenceProvider";
 import { formatLastSeen } from "@/lib/utils";
 import { ImageGridView } from "@/components/personas/ImageGridView";
-import { supabaseThumb } from "@/lib/storage";
+import { StoredImage } from "@/components/ui/stored-image";
 import { getInitials } from "@/lib/textFormatting";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { getUsablePersonaIds } from "@/lib/personaEligibility";
@@ -176,13 +176,21 @@ function FieldView({ type, data }: { type: string; data: FieldData }) {
     const items: DlItem[] = data?.dlItems ?? [];
     const visible = items.filter((it) => it.label || it.description);
     if (!visible.length) return null;
+    // Liste de définitions classique : chaque terme, puis sa description en
+    // dessous. La grille à deux colonnes d'avant imposait au texte une colonne
+    // dont la largeur dépendait du plus long des titres — largement trop
+    // étroite dans un tiroir.
+    //
+    // Les paires sont enveloppées dans un <div>, ce que la spec autorise
+    // explicitement à l'intérieur d'un <dl> : c'est ce qui permet d'espacer
+    // les entrées entre elles sans écarter un terme de sa propre description.
     return (
-      <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1.5 text-sm">
+      <dl className="space-y-3 text-sm">
         {visible.map((item) => (
-          <Fragment key={item.id}>
-            <dt className="text-left font-semibold">{item.label}</dt>
-            <dd className="text-muted-foreground">{item.description}</dd>
-          </Fragment>
+          <div key={item.id}>
+            <dt className="font-semibold">{item.label}</dt>
+            <dd className="whitespace-pre-line text-muted-foreground">{item.description}</dd>
+          </div>
         ))}
       </dl>
     );
@@ -241,12 +249,8 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [bannerUrl, setBannerUrl] = useState<string | null>(null);
-  const [bannerThumbFailed, setBannerThumbFailed] = useState(false);
   const [_frameUrl, setFrameUrl] = useState<string | null>(null);
 
-  useEffect(() => {
-    setBannerThumbFailed(false);
-  }, [bannerUrl]);
   const [ownerPresence, setOwnerPresence] = useState<{
     last_seen_at: string | null;
     appear_offline: boolean;
@@ -375,12 +379,10 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
             {/* -- Bannière -- */}
             {bannerUrl ? (
               <div className="relative h-34 w-full shrink-0">
-                <Image
-                  src={bannerThumbFailed ? bannerUrl : (supabaseThumb(bannerUrl, 880, 80, 272) ?? bannerUrl)}
-                  onError={() => setBannerThumbFailed(true)}
-                  alt=""
-                  fill
-                  sizes="440px"
+                <StoredImage
+                  url={bannerUrl}
+                  width={920}
+                  height={272}
                   className="object-cover"
                   draggable={false}
                 />
@@ -451,11 +453,11 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
                   value={activeTab ?? sections[0].id}
                   onValueChange={setActiveTab}
                 >
-                  <TabBar className="px-5">
+                  <TabBar listClassName="px-5">
                       {sections.map((s) => (
-                        <TabsTrigger key={s.id} value={s.id}>
+                        <TabBarTrigger key={s.id} value={s.id}>
                           {s.name}
-                        </TabsTrigger>
+                        </TabBarTrigger>
                       ))}
                   </TabBar>
 

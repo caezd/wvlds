@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Plus, X } from "lucide-react";
 
 import type { DlItem } from "@/types/personas";
+import { AutoResizeTextarea } from "@/components/ui/auto-resizable-textarea";
 import { makeItemId } from "./shared";
 
 export function DlField({
@@ -26,27 +27,39 @@ export function DlField({
 
   return (
     <div className="space-y-2 pr-24">
-      <div className="grid grid-cols-[max-content_1fr] gap-x-3 gap-y-2">
+      {/* Même disposition que l'affichage (voir PersonaProfileSheetTrigger) :
+          le titre, puis sa description en dessous. */}
+      <div className="space-y-3">
         {items.map((item) => (
-          <div key={item.id} className="group/dl contents">
+          <div key={item.id} className="group/dl">
             <input
               value={item.label}
               onChange={(e) => patch(item.id, "label", e.target.value)}
               placeholder="Titre"
-              className="min-w-[3rem] self-start bg-transparent text-sm font-semibold text-left outline-none placeholder:text-muted-foreground/40"
+              className="block w-full bg-transparent text-sm font-semibold text-left outline-none placeholder:text-muted-foreground/40"
             />
             <div className="flex items-start gap-2">
-              <input
+              {/* Une zone de texte, pas un `<input>` : un champ mono-ligne ne
+                  peut pas renvoyer son contenu à la ligne, il le fait défiler
+                  horizontalement — une description un peu longue devenait
+                  illisible, alors qu'elle s'affiche bien sur plusieurs lignes
+                  dans la fiche.
+
+                  `maxRows` généreux : la hauteur suit le contenu, comme à
+                  l'affichage, plutôt que de scroller à l'intérieur du champ. */}
+              <AutoResizeTextarea
                 value={item.description}
                 onChange={(e) => patch(item.id, "description", e.target.value)}
                 placeholder="Description"
-                className="flex-1 min-w-0 bg-transparent text-sm text-muted-foreground outline-none placeholder:text-muted-foreground/40"
+                minRows={1}
+                maxRows={20}
+                className="flex-1 min-w-0 resize-none bg-transparent text-sm text-muted-foreground outline-none placeholder:text-muted-foreground/40"
               />
               <button
                 aria-label={tCommon("remove")}
                 type="button"
                 onClick={() => removeItem(item.id)}
-                className="shrink-0 h-5 w-5 flex items-center justify-center rounded-full text-muted-foreground opacity-0 group-hover/dl:opacity-100 focus-within:opacity-100 hover:text-destructive transition-opacity"
+                className="shrink-0 h-5 w-5 flex items-center justify-center rounded-full text-muted-foreground opacity-100 sm:opacity-0 sm:group-hover/dl:opacity-100 sm:focus-within:opacity-100 hover:text-destructive transition-opacity"
               >
                 <X className="h-3.5 w-3.5" />
               </button>

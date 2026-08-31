@@ -67,7 +67,7 @@ export function GaugesField({
                   aria-label={tCommon("remove")}
                   type="button"
                   onClick={() => removeItem(item.id)}
-                  className="h-5 w-5 flex items-center justify-center rounded-full text-muted-foreground opacity-0 group-hover/gauge:opacity-100 focus-within:opacity-100 hover:text-destructive transition-opacity"
+                  className="h-5 w-5 flex items-center justify-center rounded-full text-muted-foreground opacity-100 sm:opacity-0 sm:group-hover/gauge:opacity-100 sm:focus-within:opacity-100 hover:text-destructive transition-opacity"
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>

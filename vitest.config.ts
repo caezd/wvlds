@@ -40,7 +40,8 @@ export default defineConfig({
     // n'apprend rien et coûte une relance.
     //
     // 15 s reste assez court pour attraper un vrai blocage : les tests les plus
-    // lents de la suite tournent en 1 à 3 s.
+    // lents de la suite tournent en 1 à 3 s (ChangelogFilters, WorldWiki :
+    // ~0,5–0,9 s isolés).
     testTimeout: 15_000,
     hookTimeout: 15_000,
     coverage: {

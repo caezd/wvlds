@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Personas",
+    text: "Une fiche de personnage sans aucun onglet se contentait d’annoncer qu’elle était vide. Elle propose désormais trois noms courants — Informations, Apparence, Histoire — qui créent le premier onglet en un seul clic ; le nom se change ensuite d’un « Renommer ». Le bouton « Autre nom… » reste là pour partir d’une page blanche. Corrige au passage un échec de création qui ne laissait aucune trace à l’écran."
+  },
+  {
+    date: "2026-08",
     tag: "Performance",
     text: "Les champs de code de l’éditeur de blocs s’affichaient un instant en texte brut avant que la coloration n’apparaisse. Deux causes : la coloration n’était téléchargée qu’à l’ouverture du panneau — soit au moment précis où l’on en a besoin — et elle embarquait les trois langages alors qu’un onglet n’en emploie qu’un. Elle part désormais dès l’arrivée sur les réglages de la page d’accueil, pendant un temps mort du navigateur, et ne charge que le langage affiché."
   },
@@ -25,6 +30,86 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-08",
     tag: "Correctif",
     text: "L’accueil d’un monde clignotait au chargement sur mobile : une barre surmontée d’un bouton menu apparaissait en haut de l’écran, en double avec le bouton déjà incrusté sur la bannière, puis disparaissait une fois la page prête — tout le contenu remontant alors d’un cran. Cette barre ne s’affiche plus sur les pages d’un monde, et le bouton menu reste accessible pendant tout le chargement, à sa place définitive."
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
+    text: "Dans l’éditeur d’un persona, la description d’une entrée de liste descriptive ne revenait pas à la ligne : un texte un peu long défilait horizontalement et devenait illisible, alors qu’il s’affiche bien sur plusieurs lignes dans la fiche. Le champ s’ajuste désormais à la hauteur de son contenu, et accepte les retours à la ligne — qui sont affichés tels quels sur la fiche.\nLes listes descriptives s’affichent aussi comme de vraies listes de définitions : le titre, puis sa description en dessous. La disposition en deux colonnes coinçait le texte dans une colonne dont la largeur dépendait du plus long des titres — largement trop étroite dans un panneau latéral."
+  },
+  {
+    date: "2026-08",
+    tag: "Interface",
+    text: "Les images ne surgissent plus sur un carré gris : bannières et icônes de monde, avatars et bannières de persona affichent d’abord une version minuscule et floutée d’elles-mêmes, sur laquelle l’image nette vient se fondre. Le substitut est la vraie image — mêmes couleurs, même composition — et non une couleur inventée, ce qui donne un aperçu fidèle dès les premiers instants du chargement."
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
+    text: "Changer un avatar — ou n’importe quelle image recadrée dans l’application : bannière de persona, icône de monde, image de salon — dégradait sa qualité plus que nécessaire. Le recadrage était d’abord encodé en JPEG, puis recompressé en WebP : deux pertes successives, alors que la première ne servait à rien puisque le fichier était ré-encodé aussitôt. Le recadrage est désormais transmis sans perte jusqu’à la compression finale.\nLes avatars demandaient par ailleurs une image deux fois plus large que leur taille d’affichage, ce qui suffit sur un écran classique mais les faisait étirer de 50 % sur les écrans à forte densité — la plupart des téléphones. Ils demandent maintenant la taille qu’il faut.\nEnfin, l’avatar affiché dans l’éditeur de persona et celui de l’aperçu ne passaient pas par le même traitement d’image — deux compresseurs et deux réglages de qualité différents pour la même photo, d’où un écart visible entre les deux vues. Les deux demandent désormais exactement la même image."
+  },
+  {
+    date: "2026-08",
+    tag: "Technique",
+    text: "La copie dans le presse-papiers passe par un seul et même code. Copier le texte d’un message, son markdown ou une couleur de dialogue reposait sur quatre exemplaires du même bloc — trois copies littérales et un quatrième recopié à la main dans la fiche d’un personnage.\nLeurs quatre messages de confirmation étaient rangés parmi les traductions des salons, alors qu’une fiche de personnage s’en sert aussi ; ils rejoignent les libellés communs. Rien ne change à l’écran."
+  },
+  {
+    date: "2026-08",
+    tag: "Personas",
+    text: "Les « sections » d'une fiche de persona s'appellent désormais des « onglets », ce qui correspond mieux à ce qu'on manipule à l'écran. Toute cette partie de l'éditeur est aussi traduite en anglais et en espagnol, alors qu'elle était restée en français.",
+  },
+  {
+    date: "2026-08",
+    tag: "Personas",
+    text: "Édition d'une fiche sur mobile : tous les boutons qui n'apparaissaient qu'au survol (monter, descendre, supprimer un champ, et les suppressions dans l'inventaire, les compétences, les jauges, les traits, la chronologie et les listes) sont désormais visibles en permanence — le survol n'existe pas au tactile. Le bloc de texte s'ajuste aussi à la hauteur de son contenu au lieu de scroller, et passe en plus petit sur mobile. Un onglet vide reprend enfin le séparateur « ⊕ » habituel pour ajouter un champ, au lieu d'un bouton et d'un message dédiés.",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
+    text: "La zone de recadrage d'une bannière de persona était bien plus large que la bannière une fois affichée : environ 38% de la largeur choisie était rognée silencieusement, sans que l'aperçu ne le montre. Le recadrage et ses aperçus correspondent désormais exactement aux proportions réelles.",
+  },
+  {
+    date: "2026-08",
+    tag: "Chatrooms",
+    text: "Clic droit (ou appui long sur mobile) sur une bulle de dialogue colorée dans une chatroom : « Copier la couleur de dialogue » copie son code hexadécimal. Corrige au passage un bug où ouvrir le profil d'un persona depuis un message pouvait faire surgir par erreur le menu d'options de ce message par-dessus — un appui long n'ouvre plus jamais son menu tant qu'un autre panneau est affiché.",
+  },
+  {
+    date: "2026-08",
+    tag: "Personas",
+    text: "La sheet d'un profil persona (ouverte depuis une chatroom ou ailleurs) perd elle aussi son bouton de fermeture (✕) — swiper ou cliquer en dehors suffit, comme pour la sheet d'édition.",
+  },
+  {
+    date: "2026-08",
+    tag: "Personas",
+    text: "Cliquer sur la pastille « Couleur de dialogue » d'une fiche persona (depuis une chatroom, ou en aperçu dans la sheet d'édition) copie son code hexadécimal dans le presse-papier.",
+  },
+  {
+    date: "2026-08",
+    tag: "Personas",
+    text: "La fiche d'un persona sans aucune section affiche désormais un profil vide (juste bannière/avatar/nom) plutôt que le message « Aucune section. ».",
+  },
+  {
+    date: "2026-08",
+    tag: "Personas",
+    text: "Les onglets d'un profil de persona (édition, aperçu, fiche publique) passent d'un style en pastille pleine à un soulignement, comme dans les paramètres d'un monde, et restent épinglés en haut du panneau une fois l'en-tête (bannière + avatar) défilé hors du cadre — la liste défile aussi horizontalement (comme les paramètres) au lieu de déborder, pour que le bouton « + Ajouter un onglet » reste toujours atteignable sur mobile. Dans l'éditeur, le bouton « ⋯ » (déplacer/renommer/supprimer un onglet) se rattache maintenant à son onglet plutôt que de flotter dans l'espacement entre onglets, et la bordure de chaque champ ainsi que le bouton d'ajout entre deux champs (masqués au survol seulement) restent visibles sur mobile, où il n'y a pas de survol.",
+  },
+  {
+    date: "2026-08",
+    tag: "Correctif",
+    text: "Changer la bannière d'un persona puis fermer/rouvrir sa fiche d'édition faisait disparaître le changement (la fiche se rouvrait avec l'ancienne bannière, jamais rafraîchie depuis le serveur) — contrairement à l'avatar, qui rafraîchissait déjà correctement. Corrigé.",
+  },
+  {
+    date: "2026-08",
+    tag: "Personas",
+    text: "Un bouton « Aperçu » (pastille superposée au coin de la bannière) dans la sheet d'édition d'un persona bascule vers le rendu exact de la fiche vue depuis une chatroom (même composant, même padding), sans quitter l'édition. Son avatar utilise désormais le même contour (`outline`, par-dessus l'image) que la fiche publique, au lieu d'une bordure qui la recadrait différemment. Le bouton de fermeture (✕) de ce drawer est retiré — swiper ou cliquer en dehors suffit.",
+  },
+  {
+    date: "2026-08",
+    tag: "Personas",
+    text: "Les images d'une section « Galerie » d'un profil de persona deviennent modulables : chaque image se redimensionne en glissant sa poignée en coin, jusqu'à occuper toute la largeur de sa ligne si elle est seule, et peut être déplacée (y compris recentrée sur sa propre ligne, sans perdre sa largeur) ou vers une autre ligne — un encadré affiche désormais l'emplacement exact où elle atterrira pendant le glissement. Un bouton par image permet d'afficher ou non un fond derrière elle. Les images sont affichées en entier plutôt que recadrées et gardent leurs propres proportions (hauteur naturelle) — y compris sur mobile, où leur largeur respecte le même %age de la grille qu'en édition, et où les boutons d'action restent visibles sans survol.",
+  },
+  {
+    date: "2026-08",
+    tag: "Personas",
+    text: "La fiche d'un persona affiche désormais sa couleur de dialogue quand elle est définie, et son cadre d'avatar équipé — chargé mais jamais affiché jusqu'ici. La bannière s'estompe aussi en fondu vers le bas plutôt que de s'arrêter net, comme sur la page d'accueil d'un monde.",
   },
   {
     date: "2026-08",
