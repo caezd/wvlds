@@ -67,11 +67,12 @@ export default async function WorldHomeContent({
       main_expanded: boolean;
       is_favorite: boolean;
       wiki_sidebar_width: number;
+      wiki_panel_width: number;
     } | null> => {
       if (!userId) return null;
       const { data } = await supabase
         .from("world_user_preferences")
-        .select("main_expanded, is_favorite, wiki_sidebar_width")
+        .select("main_expanded, is_favorite, wiki_sidebar_width, wiki_panel_width")
         .eq("world_id", worldId)
         .eq("user_id", userId)
         .maybeSingle();
@@ -79,6 +80,7 @@ export default async function WorldHomeContent({
         main_expanded: boolean;
         is_favorite: boolean;
         wiki_sidebar_width: number;
+        wiki_panel_width: number;
       } | null;
     })(),
     (async (): Promise<AsidePersona[]> => {

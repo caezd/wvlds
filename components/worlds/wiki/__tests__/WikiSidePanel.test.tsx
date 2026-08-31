@@ -11,6 +11,7 @@ function renderShell(props: Partial<React.ComponentProps<typeof WikiSidePanel>> 
       tab="comments"
       onTabChange={onTabChange}
       openCommentCount={0}
+      width={320}
       {...props}
     >
       <p>contenu du panneau</p>
@@ -52,7 +53,7 @@ describe("WikiSidePanel", () => {
     expect(screen.getByRole("complementary", { name: "Commentaires" })).toBeTruthy();
 
     rerender(
-      <WikiSidePanel tab="notes" onTabChange={vi.fn()} openCommentCount={0}>
+      <WikiSidePanel tab="notes" onTabChange={vi.fn()} openCommentCount={0} width={320}>
         <p>contenu du panneau</p>
       </WikiSidePanel>,
     );
@@ -64,6 +65,32 @@ describe("WikiSidePanel", () => {
     // d'en-tête, qui disputait sa place au titre de la page.
     renderShell();
     expect(screen.queryByRole("button", { name: "Fermer" })).toBeNull();
+  });
+
+  it("prend la largeur qu'on lui donne", () => {
+    const { container } = renderShell({ width: 420 });
+    const colonne = container.querySelector("aside")!;
+    expect(colonne.style.width).toBe("420px");
+  });
+
+  it("n'offre de poignée de redimensionnement qu'en mode modification", () => {
+    // Même règle que l'arbre de navigation : la largeur se règle là où le
+    // reste de la page se règle.
+    const { container, rerender } = renderShell();
+    expect(container.querySelector(".cursor-col-resize")).toBeNull();
+
+    rerender(
+      <WikiSidePanel
+        tab="comments"
+        onTabChange={vi.fn()}
+        openCommentCount={0}
+        width={320}
+        handleProps={{}}
+      >
+        <p>contenu du panneau</p>
+      </WikiSidePanel>,
+    );
+    expect(container.querySelector(".cursor-col-resize")).not.toBeNull();
   });
 
   it("affiche le contenu qu'on lui confie", () => {

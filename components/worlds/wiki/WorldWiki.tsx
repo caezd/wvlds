@@ -57,11 +57,19 @@ import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 import { slugify } from "@/lib/slug";
 import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
+import { useColumnResize } from "@/hooks/useColumnResize";
 import type { WorldLexiconTerm } from "@/types/worlds";
 
 const WIKI_NAV_MIN = 120;
 const WIKI_NAV_MAX = 360;
 const WIKI_NAV_DEFAULT = 208;
+
+// Bornes de la colonne latérale (commentaires et notes). Le plancher tient
+// compte de la barre d'onglets ; le plafond garde au texte de l'article de
+// quoi rester lisible.
+const WIKI_PANEL_MIN = 240;
+const WIKI_PANEL_MAX = 560;
+const WIKI_PANEL_DEFAULT = 320;
 
 export type WikiPage = {
   id: string;
@@ -327,12 +335,15 @@ export function WorldWiki({
   worldId,
   canEdit,
   initialSidebarWidth,
+  initialPanelWidth,
   label,
   initialSlug,
 }: {
   worldId: string;
   canEdit: boolean;
   initialSidebarWidth?: number;
+  /** Largeur retenue de la colonne latérale d'une page (migration 141). */
+  initialPanelWidth?: number;
   /** Libellé personnalisé du monde pour ce panneau (ex: "Compendium") — vide = libellé traduit par défaut. */
   label?: string | null;
   /** Slug à sélectionner à l'arrivée (ex: lien "raccourci" depuis l'accueil du monde). */
@@ -370,45 +381,24 @@ export function WorldWiki({
   // l'entrée automatique en édition une seule fois (voir WikiPageContent).
   const [pendingAutoEditId, setPendingAutoEditId] = React.useState<string | null>(null);
 
-  // ── Resize de la sidebar nav ──────────────────────────────
-  const [navWidth, setNavWidth] = React.useState(
-    initialSidebarWidth ?? WIKI_NAV_DEFAULT,
-  );
-  const isDraggingNav = React.useRef(false);
-  const navDragStartX = React.useRef(0);
-  const navDragStartWidth = React.useRef(0);
-  const navWidthRef = React.useRef(navWidth);
-  navWidthRef.current = navWidth;
-  const navSaveTimeout = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  // ── Colonnes redimensionnables ────────────────────────────
+  // L'arbre de navigation et la colonne latérale d'une page partagent le même
+  // geste ; seule diffère la poignée, à droite de l'un et à gauche de l'autre.
+  const { width: navWidth, handleProps: navHandleProps } = useColumnResize({
+    initialWidth: initialSidebarWidth ?? WIKI_NAV_DEFAULT,
+    min: WIKI_NAV_MIN,
+    max: WIKI_NAV_MAX,
+    side: "right",
+    onCommit: w => void saveWorldPrefs(worldId, { wiki_sidebar_width: w }),
+  });
 
-  function onNavResizeDown(e: React.PointerEvent<HTMLDivElement>) {
-    isDraggingNav.current = true;
-    navDragStartX.current = e.clientX;
-    navDragStartWidth.current = navWidthRef.current;
-    e.currentTarget.setPointerCapture(e.pointerId);
-  }
-
-  function onNavResizeMove(e: React.PointerEvent<HTMLDivElement>) {
-    if (!isDraggingNav.current) return;
-    const w = Math.min(WIKI_NAV_MAX, Math.max(WIKI_NAV_MIN,
-      navDragStartWidth.current + (e.clientX - navDragStartX.current),
-    ));
-    setNavWidth(w);
-  }
-
-  function onNavResizeUp(e: React.PointerEvent<HTMLDivElement>) {
-    if (!isDraggingNav.current) return;
-    isDraggingNav.current = false;
-    const w = Math.min(WIKI_NAV_MAX, Math.max(WIKI_NAV_MIN,
-      navDragStartWidth.current + (e.clientX - navDragStartX.current),
-    ));
-    setNavWidth(w);
-    if (navSaveTimeout.current) clearTimeout(navSaveTimeout.current);
-    navSaveTimeout.current = setTimeout(
-      () => void saveWorldPrefs(worldId, { wiki_sidebar_width: w }),
-      600,
-    );
-  }
+  const { width: panelWidth, handleProps: panelHandleProps } = useColumnResize({
+    initialWidth: initialPanelWidth ?? WIKI_PANEL_DEFAULT,
+    min: WIKI_PANEL_MIN,
+    max: WIKI_PANEL_MAX,
+    side: "left",
+    onCommit: w => void saveWorldPrefs(worldId, { wiki_panel_width: w }),
+  });
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -881,6 +871,8 @@ export function WorldWiki({
         key={selectedPage.id}
         page={selectedPage}
         worldId={worldId}
+        panelWidth={panelWidth}
+        panelHandleProps={panelHandleProps}
         pages={pages ?? []}
         ancestors={ancestorsOf(selectedPage)}
         canEdit={canEdit}
@@ -1001,10 +993,7 @@ export function WorldWiki({
           {isEditMode && (
             <div
               className="group relative w-2 shrink-0 cursor-col-resize select-none"
-              onPointerDown={onNavResizeDown}
-              onPointerMove={onNavResizeMove}
-              onPointerUp={onNavResizeUp}
-              onPointerCancel={onNavResizeUp}
+              {...navHandleProps}
             >
               <div className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-border-soft transition-colors group-hover:bg-border" />
             </div>

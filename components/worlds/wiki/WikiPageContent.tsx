@@ -57,6 +57,8 @@ function isDraftNewer(page: WikiPage): boolean {
 export function WikiPageContent({
   page,
   worldId,
+  panelWidth,
+  panelHandleProps,
   pages,
   ancestors,
   canEdit,
@@ -72,6 +74,10 @@ export function WikiPageContent({
   page: WikiPage;
   /** Monde de la page — dénormalisé sur les annotations (voir migration 137). */
   worldId: string;
+  /** Largeur de la colonne latérale, réglée depuis WorldWiki. */
+  panelWidth: number;
+  /** Gestionnaires de la poignée de redimensionnement (voir useColumnResize). */
+  panelHandleProps: React.ComponentProps<"div">;
   /** Toutes les pages du wiki — pour résoudre les liens internes `[[Titre]]`. */
   pages: WikiPage[];
   /** Dossiers ancêtres de la page, du plus ancien au plus proche (fil d'Ariane). */
@@ -446,6 +452,8 @@ export function WikiPageContent({
         tab={sideTab}
         onTabChange={setSideTab}
         openCommentCount={openAnnotationCount}
+        width={panelWidth}
+        handleProps={isEditMode ? panelHandleProps : undefined}
       >
           {sideTab === "comments" ? (
             <WikiAnnotationsPanel

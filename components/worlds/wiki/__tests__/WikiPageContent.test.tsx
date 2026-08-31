@@ -64,6 +64,8 @@ describe("WikiPageContent — brouillon et publication", () => {
     render(
       <WikiPageContent
         worldId="w1"
+        panelWidth={320}
+        panelHandleProps={{}}
         page={BASE_PAGE}
         pages={[BASE_PAGE]}
         canEdit
@@ -89,6 +91,8 @@ describe("WikiPageContent — brouillon et publication", () => {
     render(
       <WikiPageContent
         worldId="w1"
+        panelWidth={320}
+        panelHandleProps={{}}
         page={BASE_PAGE}
         pages={[BASE_PAGE]}
         canEdit
@@ -122,6 +126,8 @@ describe("WikiPageContent — brouillon et publication", () => {
     render(
       <WikiPageContent
         worldId="w1"
+        panelWidth={320}
+        panelHandleProps={{}}
         page={BASE_PAGE}
         pages={[BASE_PAGE]}
         canEdit
@@ -164,6 +170,8 @@ describe("WikiPageContent — brouillon et publication", () => {
     render(
       <WikiPageContent
         worldId="w1"
+        panelWidth={320}
+        panelHandleProps={{}}
         page={BASE_PAGE}
         pages={[BASE_PAGE]}
         canEdit
@@ -204,6 +212,8 @@ describe("WikiPageContent — badge brouillon", () => {
     render(
       <WikiPageContent
         worldId="w1"
+        panelWidth={320}
+        panelHandleProps={{}}
         page={page}
         pages={[page]}
         canEdit
@@ -229,6 +239,8 @@ describe("WikiPageContent — badge brouillon", () => {
     render(
       <WikiPageContent
         worldId="w1"
+        panelWidth={320}
+        panelHandleProps={{}}
         page={page}
         pages={[page]}
         canEdit={false}
@@ -254,6 +266,8 @@ describe("WikiPageContent — badge brouillon", () => {
     render(
       <WikiPageContent
         worldId="w1"
+        panelWidth={320}
+        panelHandleProps={{}}
         page={page}
         pages={[page]}
         canEdit
@@ -276,6 +290,8 @@ describe("WikiPageContent — badge page restreinte", () => {
     render(
       <WikiPageContent
         worldId="w1"
+        panelWidth={320}
+        panelHandleProps={{}}
         page={page}
         pages={[page]}
         canEdit
@@ -296,6 +312,8 @@ describe("WikiPageContent — badge page restreinte", () => {
     render(
       <WikiPageContent
         worldId="w1"
+        panelWidth={320}
+        panelHandleProps={{}}
         page={page}
         pages={[page]}
         canEdit
@@ -321,6 +339,8 @@ describe("WikiPageContent — commentaires ancrés", () => {
     return render(
       <WikiPageContent
         worldId="w1"
+        panelWidth={320}
+        panelHandleProps={{}}
         page={PAGE}
         pages={[PAGE]}
         canEdit={canEdit}

@@ -28,11 +28,20 @@ export function WikiSidePanel({
   onTabChange,
   /** Fils de discussion ouverts — affiché sur l'onglet des commentaires. */
   openCommentCount,
+  width,
+  handleProps,
   children,
 }: {
   tab: WikiSideTab;
   onTabChange: (tab: WikiSideTab) => void;
   openCommentCount: number;
+  width: number;
+  /**
+   * Gestionnaires de la poignée de redimensionnement. Absents hors mode
+   * modification : la largeur se règle où le reste de la page se règle, comme
+   * pour l'arbre de navigation.
+   */
+  handleProps?: React.ComponentProps<"div">;
   children: React.ReactNode;
 }) {
   const tAnnotations = useTranslations("wiki.annotations");
@@ -53,11 +62,22 @@ export function WikiSidePanel({
   ];
 
   return (
-    <aside
+    <>
+      {handleProps && (
+        <div
+          className="group relative w-2 shrink-0 cursor-col-resize select-none"
+          {...handleProps}
+        >
+          <div className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-border-soft transition-colors group-hover:bg-border" />
+        </div>
+      )}
+
+      <aside
       // L'étiquette suit l'onglet : un lecteur d'écran doit entendre ce que la
       // colonne montre, pas le nom générique du meuble qui l'accueille.
       aria-label={tab === "notes" ? tNotes("title") : tAnnotations("title")}
-      className="flex h-full min-h-0 w-80 shrink-0 flex-col border-l border-border-soft"
+      className="flex h-full min-h-0 shrink-0 flex-col border-l border-border-soft"
+      style={{ width }}
     >
       <div className="flex shrink-0 items-center border-b border-border-soft px-2 py-1.5">
         <div role="tablist" className="flex min-w-0 flex-1 items-center gap-0.5">
@@ -89,5 +109,6 @@ export function WikiSidePanel({
 
       {children}
     </aside>
+    </>
   );
 }

@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Wiki",
+    text: "En mode modification, la colonne des commentaires et des notes d’une page de wiki se redimensionne à la poignée, comme l’arbre de navigation à gauche. Sa largeur est retenue pour chaque monde, et pour vous seul."
+  },
+  {
+    date: "2026-08",
     tag: "Correctif",
     text: "Confirmer la suppression d’un commentaire — ou d’une page — de wiki figeait toute l’application : plus aucun clic ne passait nulle part, il fallait recharger la page. Le menu ⋯ et la fenêtre de confirmation se chevauchaient, et le verrou que pose l’un des deux sur la page n’était jamais relâché. La confirmation s’ouvre désormais une fois le menu refermé."
   },
