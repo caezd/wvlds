@@ -14,14 +14,16 @@ import type {
 
 /**
  * `profiles` est référencée deux fois par la table (`author_id` et
- * `resolved_by`) : sans le repère `!author_id`, PostgREST refuse l'imbrication
- * comme ambiguë.
+ * `resolved_by`) : nommer la table dans l'imbrication serait ambigu et
+ * PostgREST refuserait. On désigne donc la relation par sa colonne, comme
+ * `frame:avatar_frame_id(asset_url)` ailleurs dans le dépôt — sans ambiguïté
+ * possible, puisqu'une colonne ne porte qu'une clé étrangère.
  */
 const ANNOTATION_COLUMNS =
   "id, page_id, parent_id, author_id, kind, body, " +
   "anchor_quote, anchor_prefix, anchor_suffix, anchor_start, " +
   "resolved_at, resolved_by, created_at, " +
-  "author:profiles!author_id(id, username, avatar_url)";
+  "author:author_id(id, username, avatar_url)";
 
 export type CreateThreadInput = {
   kind: WikiAnnotationKind;
@@ -76,7 +78,8 @@ export function useWikiAnnotations({
   /** Utilisateur courant — auteur des annotations créées ici. */
   userId: string | null;
   supabase: ReturnType<typeof createClient>;
-  /** `false` tant que le panneau n'a jamais été ouvert : rien n'est chargé. */
+  /** `false` suspend lecture et abonnement — pour un appelant qui n'affiche
+   *  pas encore les annotations. */
   enabled?: boolean;
 }) {
   const [annotations, setAnnotations] = React.useState<WikiAnnotation[] | null>(null);
@@ -175,24 +178,6 @@ export function useWikiAnnotations({
     [insert],
   );
 
-  const updateBody = React.useCallback(
-    async (annotation: WikiAnnotation, body: string) => {
-      const trimmed = body.trim();
-      if (!trimmed || trimmed === annotation.body) return;
-      setPending(true);
-      const { data, error } = await supabase
-        .from("world_wiki_page_annotations")
-        .update({ body: trimmed })
-        .eq("id", annotation.id)
-        .select(ANNOTATION_COLUMNS)
-        .single();
-      setPending(false);
-      if (error) { toast.error(error.message); return; }
-      merge(data as unknown as WikiAnnotation);
-    },
-    [merge, supabase],
-  );
-
   const setResolved = React.useCallback(
     async (root: WikiAnnotation, resolved: boolean) => {
       if (!userId) return;
@@ -243,7 +228,6 @@ export function useWikiAnnotations({
     pending,
     createThread,
     reply,
-    updateBody,
     setResolved,
     remove,
     reload: load,
