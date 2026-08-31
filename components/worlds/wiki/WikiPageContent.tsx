@@ -830,7 +830,7 @@ export function WikiPageContent({
                     />
                     {/* Le même retrait que le corps de l'article, plus bas :
                         c'est lui qui met le titre à l'aplomb du texte. */}
-                    <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-4 px-2 pb-4 lg:px-4">
+                    <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-4 px-4 pb-4 lg:px-6">
                       <div className="flex min-w-0 flex-col gap-1">
                         {iconeDeLaPage(true)}
                         <h1 className="text-2xl font-semibold text-white">{page.title}</h1>
@@ -846,8 +846,10 @@ export function WikiPageContent({
                   </div>
                 )}
 
-                {/* Retrait du contenu d'un salon, comme sur la bannière. */}
-                <div className="px-2 lg:px-4">
+                {/* Retrait du contenu d'un salon, comme sur la bannière —
+                    les deux DOIVENT rester égaux, c'est ce qui aligne le titre
+                    posé sur l'image avec le texte qui la suit. */}
+                <div className="px-4 lg:px-6">
                   {/* Sans bannière, l'en-tête reprend sa place au-dessus du
                       texte — il n'a plus d'image où se poser. `pr-11` lui donne
                       la marge des commandes de commentaire, pour que les deux
