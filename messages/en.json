@@ -1120,6 +1120,7 @@
     "contentPlaceholder": "Content in Markdown…",
     "contentLabel": "Article content",
     "addBanner": "Add a banner",
+    "cropBanner": "Crop the banner",
     "removeBanner": "Remove banner",
     "descriptionLabel": "Page description",
     "descriptionPlaceholder": "A sentence to introduce the page…",

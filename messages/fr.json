@@ -1120,6 +1120,7 @@
     "contentPlaceholder": "Contenu en Markdown…",
     "contentLabel": "Contenu de l'article",
     "addBanner": "Ajouter une bannière",
+    "cropBanner": "Recadrer la bannière",
     "removeBanner": "Retirer la bannière",
     "descriptionLabel": "Description de la page",
     "descriptionPlaceholder": "Une phrase pour présenter la page…",

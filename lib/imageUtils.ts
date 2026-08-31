@@ -27,3 +27,46 @@ export async function blobToWebP(blob: Blob, name = "image", maxWidthOrHeight = 
   const file = new File([blob], `${name}.png`, { type: blob.type || "image/png" });
   return toWebP(file, maxWidthOrHeight);
 }
+
+/** Zone de découpe, en pixels de l'image d'origine — la forme que rend `react-easy-crop`. */
+export type ZoneDeDecoupe = { x: number; y: number; width: number; height: number };
+
+/**
+ * Découpe une image à la zone donnée, et rend le résultat en WebP.
+ *
+ * La zone est exprimée dans les pixels de l'image SOURCE, pas dans ceux de
+ * l'aperçu : c'est ce que rend `react-easy-crop`, et c'est ce qui permet de
+ * recadrer sans perdre la définition d'origine.
+ */
+export async function cropToWebP(
+  src: string,
+  zone: ZoneDeDecoupe,
+  name = "image",
+  maxWidthOrHeight = 2048,
+): Promise<File> {
+  const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const el = new Image();
+    el.onload = () => resolve(el);
+    el.onerror = () => reject(new Error("image illisible"));
+    // Une image d'un autre domaine salirait le canevas et rendrait `toBlob`
+    // inutilisable ; la source est ici un `data:` local, mais l'attribut ne
+    // coûte rien et couvre le jour où elle viendrait d'ailleurs.
+    el.crossOrigin = "anonymous";
+    el.src = src;
+  });
+
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(zone.width));
+  canvas.height = Math.max(1, Math.round(zone.height));
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("canevas indisponible");
+  ctx.drawImage(
+    image,
+    zone.x, zone.y, zone.width, zone.height,
+    0, 0, canvas.width, canvas.height,
+  );
+
+  const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, "image/png"));
+  if (!blob) throw new Error("découpe impossible");
+  return blobToWebP(blob, name, maxWidthOrHeight);
+}

@@ -32,6 +32,7 @@ export function CodeEditor({
   onKeyDown,
   ariaLabel,
   className,
+  layerClassName,
 }: {
   id?: string;
   value: string;
@@ -53,6 +54,15 @@ export function CodeEditor({
   onKeyDown?: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
   ariaLabel?: string;
   className?: string;
+  /**
+   * Ajouté aux DEUX couches — jamais à une seule.
+   *
+   * Elles doivent se superposer au pixel près (voir l'en-tête de ce fichier) :
+   * un remplissage posé sur la zone de saisie et pas sur la couche colorée
+   * décalerait le texte de l'une par rapport à l'autre. Sert à aligner le champ
+   * sur le reste d'une page, comme dans l'éditeur d'article du wiki.
+   */
+  layerClassName?: string;
 }) {
   const [highlighted, setHighlighted] = React.useState<string | null>(null);
   const preRef = React.useRef<HTMLPreElement>(null);
@@ -83,9 +93,11 @@ export function CodeEditor({
     pre.scrollLeft = event.currentTarget.scrollLeft;
   }
 
-  const layer =
-    "absolute inset-0 m-0 overflow-auto rounded-md p-3 font-mono text-xs leading-relaxed " +
-    "whitespace-pre-wrap break-words";
+  const layer = cn(
+    "absolute inset-0 m-0 overflow-auto rounded-md p-3 font-mono text-xs leading-relaxed",
+    "whitespace-pre-wrap break-words",
+    layerClassName,
+  );
 
   return (
     <div

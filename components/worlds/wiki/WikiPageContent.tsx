@@ -18,7 +18,9 @@ import { cn } from "@/lib/utils";
 import type { createClient } from "@/lib/supabase/client";
 import { resolveWikiLinks } from "@/lib/wikiLinks";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { toWebP } from "@/lib/imageUtils";
+import { cropToWebP, type ZoneDeDecoupe } from "@/lib/imageUtils";
+import { ImageCropPicker } from "@/components/ui/image-crop-picker";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { nomDeFichierUnique } from "@/lib/storagePaths";
 import { MEDIA, useMediaQuery } from "@/hooks/useMediaQuery";
 import { useWikiAnnotations } from "@/hooks/useWikiAnnotations";
@@ -128,6 +130,8 @@ export function WikiPageContent({
   const [lastAutosavedAt, setLastAutosavedAt] = React.useState<Date | null>(null);
   const [historyOpen, setHistoryOpen] = React.useState(false);
   const [bannerUploading, setBannerUploading] = React.useState(false);
+  /** Image choisie, en attente de recadrage — `null` quand aucun n'est en cours. */
+  const [banniereACadrer, setBanniereACadrer] = React.useState<string | null>(null);
   const champBanniere = React.useRef<HTMLInputElement>(null);
   const [description, setDescription] = React.useState(page.description ?? "");
 
@@ -147,7 +151,7 @@ export function WikiPageContent({
     // `px-3` : le même retrait que celui du champ markdown, dont les deux
     // couches portent un `p-3`. Le titre tombe ainsi exactement sur la
     // première colonne du texte qu'il coiffe.
-    <div className="flex min-w-0 flex-1 items-center gap-2 px-3">
+    <div className="flex min-w-0 flex-1 items-center gap-2 px-4 lg:px-6">
       <LucideIconPicker
         value={renameIcon}
         onChange={valeur => { setRenameIcon(valeur); onRename(renameTitle.trim() || page.title, valeur); }}
@@ -430,19 +434,22 @@ export function WikiPageContent({
   }
 
   /**
-   * Téléverse la bannière dans le stockage du monde.
+   * Recadre l'image choisie, puis la téléverse dans le stockage du monde.
    *
-   * Convertie en WebP comme les autres images du monde : une photo d'appareil
-   * pèse plusieurs mégaoctets, et cette image s'affiche à chaque ouverture de
-   * la page.
+   * Le recadrage se fait AVANT l'envoi : la bannière est un bandeau large, et
+   * une photo verticale y serait rognée par le navigateur sans que personne ne
+   * décide où. Convertie en WebP comme les autres images du monde — une photo
+   * d'appareil pèse plusieurs mégaoctets, et celle-ci s'affiche à chaque
+   * ouverture de la page.
    */
-  async function choisirBanniere(fichier: File) {
+  async function enregistrerBanniere(zone: ZoneDeDecoupe) {
+    if (!banniereACadrer) return;
     setBannerUploading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { toast.error(tCommon("uploadImageError")); return; }
 
-      const converti = await toWebP(fichier);
+      const converti = await cropToWebP(banniereACadrer, zone, "wiki-banner");
       const chemin = `user-${user.id}/world-${worldId}/wiki-banner-${nomDeFichierUnique("webp")}`;
       const { error } = await supabase.storage
         .from("worlds")
@@ -451,6 +458,7 @@ export function WikiPageContent({
 
       const { data } = supabase.storage.from("worlds").getPublicUrl(chemin);
       await enregistrerChamp({ banner_url: data.publicUrl });
+      setBanniereACadrer(null);
     } catch (err) {
       // Pas `err.message` : texte brut de PostgreSQL, il nomme table et policy.
       console.error("[WikiPageContent]", err);
@@ -617,9 +625,12 @@ export function WikiPageContent({
           // largeur maximale de l'article et se centrent avec lui. Sans quoi
           // le markdown s'étirait sur toute la fenêtre, en lignes trop longues
           // pour l'œil, et changeait de largeur en passant à l'aperçu.
-          <div className="mx-auto flex w-full flex-1 flex-col gap-3 overflow-hidden py-6 [--thread-content-max-width:40rem] lg:[--thread-content-max-width:48rem] max-w-(--thread-content-max-width) px-2 lg:px-4">
+          // Même colonne qu'en lecture, et le retrait descend sur les enfants :
+          // c'est ce qui laisse la bannière prendre toute la largeur pendant que
+          // le texte reste en retrait, comme sur la page publiée.
+          <div className="mx-auto flex w-full flex-1 flex-col gap-3 overflow-hidden py-6 [--thread-content-max-width:40rem] lg:[--thread-content-max-width:48rem] max-w-(--thread-content-max-width)">
             {/* La bannière d'abord : c'est elle qui ouvre la page. */}
-            <div className="shrink-0 px-3">
+            <div className="shrink-0">
               <input
                 ref={champBanniere}
                 type="file"
@@ -630,7 +641,10 @@ export function WikiPageContent({
                   // Le champ est vidé pour que rechoisir le même fichier
                   // déclenche bien un nouvel événement.
                   e.target.value = "";
-                  if (fichier) void choisirBanniere(fichier);
+                  if (!fichier) return;
+                  const lecteur = new FileReader();
+                  lecteur.onload = () => setBanniereACadrer(String(lecteur.result));
+                  lecteur.readAsDataURL(fichier);
                 }}
               />
               {page.banner_url ? (
@@ -681,6 +695,29 @@ export function WikiPageContent({
               {restrictedBadge}
             </div>
 
+            <Dialog
+              open={banniereACadrer !== null}
+              onOpenChange={ouvert => { if (!ouvert) setBanniereACadrer(null); }}
+            >
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>{t("cropBanner")}</DialogTitle>
+                </DialogHeader>
+                {banniereACadrer && (
+                  <ImageCropPicker
+                    src={banniereACadrer}
+                    // Le rapport du bandeau tel qu'il s'affiche : recadrer dans
+                    // un cadre d'une autre forme montrerait autre chose que ce
+                    // qu'on obtiendra.
+                    aspect={3}
+                    uploading={bannerUploading}
+                    onConfirm={zone => void enregistrerBanniere(zone)}
+                    onCancel={() => setBanniereACadrer(null)}
+                  />
+                )}
+              </DialogContent>
+            </Dialog>
+
             {/* Le chapeau, sous le titre comme il le sera en lecture. */}
             <textarea
               value={description}
@@ -695,7 +732,7 @@ export function WikiPageContent({
               placeholder={t("descriptionPlaceholder")}
               aria-label={t("descriptionLabel")}
               rows={2}
-              className="w-full shrink-0 resize-none bg-transparent px-3 text-sm text-muted-foreground outline-none"
+              className="w-full shrink-0 resize-none bg-transparent px-4 lg:px-6 text-sm text-muted-foreground outline-none"
             />
 
             {loadingDraft ? (
@@ -708,7 +745,7 @@ export function WikiPageContent({
               // lisible. On regarde le résultat, puis on revient écrire.
               <div className="flex min-h-0 flex-1 flex-col">
                 {showPreview ? (
-                  <div className="min-h-0 flex-1 overflow-y-auto">
+                  <div className="min-h-0 flex-1 overflow-y-auto px-4 lg:px-6">
                     {draft.trim()
                       ? (
                         <MarkdownRenderer
@@ -739,7 +776,10 @@ export function WikiPageContent({
                   // Sans cadre : le champ est la colonne de texte, pas un
                   // encadré posé dedans. Le halo de focus du `<textarea>`
                   // reste la seule marque, et suffit.
-                  className="flex-1 rounded-none border-0 p-0"
+                  className="flex-1 rounded-none border-0"
+                  // Le texte du champ s'aligne sur le titre et le chapeau : les
+                  // deux couches reçoivent le même retrait, jamais une seule.
+                  layerClassName="px-4 lg:px-6"
                 />
                 )}
               </div>

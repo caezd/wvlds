@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Wiki",
+    text: "La bannière d’une page se recadre avant d’être envoyée : on choisit le cadrage et le zoom plutôt que de laisser le navigateur rogner la photo au hasard. En écriture, elle déborde du texte exactement comme sur la page publiée, pour qu’on voie ce qu’on obtiendra."
+  },
+  {
+    date: "2026-08",
+    tag: "Wiki",
     text: "Le sommaire d’une page de wiki disparaît : l’article occupe désormais toute la colonne, à la même largeur qu’une conversation."
   },
   {

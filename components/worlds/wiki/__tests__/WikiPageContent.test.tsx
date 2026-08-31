@@ -1069,6 +1069,20 @@ describe("WikiPageContent — bannière et description", () => {
     expect(await screen.findByRole("button", { name: "Retirer la bannière" })).toBeTruthy();
   });
 
+  it("propose de recadrer avant d'envoyer, jamais d'envoyer tel quel", async () => {
+    // Une bannière est un bandeau très large : une photo verticale y serait
+    // rognée par le navigateur sans que personne ne décide où.
+    const user = userEvent.setup();
+    const { container } = renderPage({ ...BASE_PAGE, content: "Un texte." }, true);
+    await screen.findByRole("button", { name: /Ajouter une bannière/ });
+
+    const champ = container.querySelector('input[type="file"]') as HTMLInputElement;
+    await user.upload(champ, new File(["x"], "photo.png", { type: "image/png" }));
+
+    expect(await screen.findByRole("dialog")).toBeTruthy();
+    expect(screen.getByText("Recadrer la bannière")).toBeTruthy();
+  });
+
   it("borne le chapeau à 255 caractères", async () => {
     // La borne vit aussi en base (migration 143) : celle-ci évite d'aller s'y
     // faire refuser après coup.
