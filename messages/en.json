@@ -577,8 +577,13 @@
   "personas": {
     "tabs": {
       "add": "Add a tab",
-      "createFirst": "Create a first tab",
       "empty": "No tab for this character yet.",
+      "customName": "Another name…",
+      "suggestions": {
+        "identity": "Information",
+        "appearance": "Appearance",
+        "story": "Story"
+      },
       "moveLeft": "Left",
       "moveRight": "Right",
       "rename": "Rename",

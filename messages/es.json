@@ -577,8 +577,13 @@
   "personas": {
     "tabs": {
       "add": "Añadir una pestaña",
-      "createFirst": "Crear una primera pestaña",
       "empty": "Ninguna pestaña para este personaje.",
+      "customName": "Otro nombre…",
+      "suggestions": {
+        "identity": "Información",
+        "appearance": "Apariencia",
+        "story": "Historia"
+      },
       "moveLeft": "Izquierda",
       "moveRight": "Derecha",
       "rename": "Renombrar",

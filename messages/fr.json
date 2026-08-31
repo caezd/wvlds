@@ -577,8 +577,13 @@
   "personas": {
     "tabs": {
       "add": "Ajouter un onglet",
-      "createFirst": "Créer un premier onglet",
       "empty": "Aucun onglet pour ce personnage.",
+      "customName": "Autre nom…",
+      "suggestions": {
+        "identity": "Informations",
+        "appearance": "Apparence",
+        "story": "Histoire"
+      },
       "moveLeft": "Gauche",
       "moveRight": "Droite",
       "rename": "Renommer",

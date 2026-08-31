@@ -21,12 +21,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Lock, MoreHorizontal, ChevronLeft, ChevronRight, Pencil, Trash2 } from "lucide-react";
+import { Layers, Lock, MoreHorizontal, ChevronLeft, ChevronRight, Pencil, Trash2 } from "lucide-react";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import type { PersonaSectionWithFields } from "@/types/personas";
 import { SectionFieldsEditor } from "./SectionFieldsEditor";
+
+/** Noms proposés pour un premier onglet — traduits, et modifiables ensuite.
+ *  Le but n'est pas d'imposer une structure mais d'éviter la page blanche. */
+const TAB_SUGGESTIONS = ["identity", "appearance", "story"] as const;
 
 type PersonaSectionsTabsProps = {
   personaId: string;
@@ -72,9 +76,10 @@ export function PersonaSectionsTabs({
     );
   }
 
-  async function handleAddSection(e: React.FormEvent) {
-    e.preventDefault();
-    const trimmed = name.trim();
+  /** Création d'un onglet, extraite du formulaire : l'état vide s'en sert
+   *  aussi pour créer en un clic depuis une suggestion. */
+  async function createSection(nom: string) {
+    const trimmed = nom.trim();
     if (!trimmed) return;
     setSaving(true);
     const lastPosition = sections.length ? sections[sections.length - 1].position : 0;
@@ -84,12 +89,19 @@ export function PersonaSectionsTabs({
       .select("id, persona_id, name, position")
       .single();
     setSaving(false);
-    if (error) { console.error(error); return; }
+    // Un échec ne laissait jusqu'ici qu'une trace en console : rien à l'écran,
+    // alors que renommer et supprimer signalent tous deux leur erreur.
+    if (error) { toast.error(error.message); return; }
     const newSection: PersonaSectionWithFields = { ...(data as PersonaSectionWithFields), fields: [] };
     onSectionsChange([...sections, newSection]);
     setActiveSectionId(newSection.id);
     setName("");
     setAddDialogOpen(false);
+  }
+
+  async function handleAddSection(e: React.FormEvent) {
+    e.preventDefault();
+    await createSection(name);
   }
 
   async function handleRenameSection(e: React.FormEvent) {
@@ -149,11 +161,37 @@ export function PersonaSectionsTabs({
   return (
     <>
       {!sections.length ? (
-        <div className="border rounded-md p-6 mx-4 mb-4 space-y-3">
-          <p className="text-sm text-muted-foreground">{t("empty")}</p>
-          <Button variant="outline" size="sm" onClick={() => { setName(""); setAddDialogOpen(true); }}>
-            + {t("createFirst")}
-          </Button>
+        // Même forme que les autres états vides de l'application (bordure
+        // douce, centré, généreusement espacé) — celui-ci était le seul à
+        // s'aligner à gauche dans une boîte à bordure dure.
+        <div className="mx-4 mb-4 rounded-lg border border-border-soft p-8 text-center">
+          <Layers className="mx-auto h-8 w-8 text-muted-foreground/60" aria-hidden />
+          <p className="mt-3 text-sm font-medium text-foreground">{t("empty")}</p>
+
+          {/* Créer en un clic depuis une suggestion : devant une fiche vierge,
+              devoir inventer un nom avant même d'avoir vu à quoi sert un onglet
+              est une marche de plus. Le nom se change ensuite d'un « Renommer ». */}
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+            {TAB_SUGGESTIONS.map((clé) => (
+              <Button
+                key={clé}
+                variant="outline"
+                size="sm"
+                disabled={saving}
+                onClick={() => void createSection(t(`suggestions.${clé}`))}
+              >
+                + {t(`suggestions.${clé}`)}
+              </Button>
+            ))}
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={saving}
+              onClick={() => { setName(""); setAddDialogOpen(true); }}
+            >
+              {t("customName")}
+            </Button>
+          </div>
         </div>
       ) : (
         <Tabs

@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Personas",
+    text: "Une fiche de personnage sans aucun onglet se contentait d’annoncer qu’elle était vide. Elle propose désormais trois noms courants — Informations, Apparence, Histoire — qui créent le premier onglet en un seul clic ; le nom se change ensuite d’un « Renommer ». Le bouton « Autre nom… » reste là pour partir d’une page blanche. Corrige au passage un échec de création qui ne laissait aucune trace à l’écran."
+  },
+  {
+    date: "2026-08",
     tag: "Performance",
     text: "Les champs de code de l’éditeur de blocs s’affichaient un instant en texte brut avant que la coloration n’apparaisse. Deux causes : la coloration n’était téléchargée qu’à l’ouverture du panneau — soit au moment précis où l’on en a besoin — et elle embarquait les trois langages alors qu’un onglet n’en emploie qu’un. Elle part désormais dès l’arrivée sur les réglages de la page d’accueil, pendant un temps mort du navigateur, et ne charge que le langage affiché."
   },
