@@ -7,28 +7,14 @@ import { Loader2, MessagesSquare, X } from "lucide-react";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { anchorPreview, type TextAnchor } from "@/lib/wikiAnnotations";
 import { cn } from "@/lib/utils";
-import type {
-  WikiAnnotation,
-  WikiAnnotationKind,
-  WikiAnnotationThread,
-} from "@/types/worlds";
+import type { WikiAnnotation, WikiAnnotationThread } from "@/types/worlds";
 
 import { WikiAnnotationComposer } from "./WikiAnnotationComposer";
 import { WikiAnnotationThreadCard } from "./WikiAnnotationThreadCard";
 
-export type AnnotationDraft = { anchor: TextAnchor; kind: WikiAnnotationKind };
+export type AnnotationDraft = { anchor: TextAnchor };
 
-type Filter = "all" | "comment" | "memo";
-
-/**
- * Colonne des annotations d'une page : commentaires et notes dans une seule
- * liste, filtrable.
- *
- * Les deux natures partagent la colonne plutôt que deux onglets séparés parce
- * qu'elles parlent du même texte, souvent du même passage — une note de
- * rédaction et la question d'un lecteur sur le même paragraphe se lisent
- * ensemble. Le filtre reste là pour qui veut ne voir que l'un des deux.
- */
+/** Colonne des commentaires ancrés d'une page, fil par fil. */
 export function WikiAnnotationsPanel({
   threads,
   detachedIds,
@@ -38,7 +24,6 @@ export function WikiAnnotationsPanel({
   draft,
   currentUserId,
   canModerate,
-  canWriteMemos,
   onActivate,
   onCreate,
   onCancelDraft,
@@ -57,7 +42,6 @@ export function WikiAnnotationsPanel({
   draft: AnnotationDraft | null;
   currentUserId: string | null;
   canModerate: boolean;
-  canWriteMemos: boolean;
   onActivate: (id: string) => void;
   onCreate: (body: string) => void;
   onCancelDraft: () => void;
@@ -69,7 +53,6 @@ export function WikiAnnotationsPanel({
   const t = useTranslations("wiki.annotations");
   const tCommon = useTranslations("common");
 
-  const [filter, setFilter] = React.useState<Filter>("all");
   const [showResolved, setShowResolved] = React.useState(false);
   const [confirmDelete, setConfirmDelete] = React.useState<WikiAnnotation | null>(null);
 
@@ -79,11 +62,9 @@ export function WikiAnnotationsPanel({
   );
 
   const visible = React.useMemo(() => {
-    const kept = threads.filter(th => {
-      if (filter !== "all" && th.root.kind !== filter) return false;
-      if (!showResolved && th.root.resolved_at !== null) return false;
-      return true;
-    });
+    const kept = threads.filter(
+      th => showResolved || th.root.resolved_at === null,
+    );
 
     // Ordre de lecture : les fils suivent le texte de haut en bas. Ceux dont
     // l'ancre est perdue passent à la fin — leur position n'a plus de sens.
@@ -95,13 +76,7 @@ export function WikiAnnotationsPanel({
       if (byPosition !== 0) return byPosition;
       return a.root.created_at.localeCompare(b.root.created_at);
     });
-  }, [threads, filter, showResolved, detachedIds]);
-
-  const filters: { id: Filter; label: string }[] = [
-    { id: "all", label: t("filterAll") },
-    { id: "comment", label: t("filterComments") },
-    ...(canWriteMemos ? [{ id: "memo" as const, label: t("filterMemos") }] : []),
-  ];
+  }, [threads, showResolved, detachedIds]);
 
   return (
     <>
@@ -141,21 +116,6 @@ export function WikiAnnotationsPanel({
         </div>
 
         <div className="flex shrink-0 flex-wrap items-center gap-1 border-b border-border-soft px-2 py-1.5">
-          {filters.map(f => (
-            <button
-              key={f.id}
-              type="button"
-              onClick={() => setFilter(f.id)}
-              className={cn(
-                "rounded-full px-2 py-0.5 text-xs transition-colors",
-                filter === f.id
-                  ? "bg-primary/10 font-medium text-primary"
-                  : "text-muted-foreground hover:bg-secondary hover:text-foreground",
-              )}
-            >
-              {f.label}
-            </button>
-          ))}
           <button
             type="button"
             onClick={() => setShowResolved(v => !v)}
@@ -178,8 +138,8 @@ export function WikiAnnotationsPanel({
                 {anchorPreview(draft.anchor.quote)}
               </p>
               <WikiAnnotationComposer
-                placeholder={draft.kind === "memo" ? t("memoPlaceholder") : t("commentPlaceholder")}
-                submitLabel={draft.kind === "memo" ? t("addMemo") : t("addComment")}
+                placeholder={t("commentPlaceholder")}
+                submitLabel={t("addComment")}
                 pending={pending}
                 onCancel={onCancelDraft}
                 onSubmit={onCreate}

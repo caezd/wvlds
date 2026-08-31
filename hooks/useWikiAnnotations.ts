@@ -6,11 +6,7 @@ import { toast } from "sonner";
 import type { createClient } from "@/lib/supabase/client";
 import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import type { TextAnchor } from "@/lib/wikiAnnotations";
-import type {
-  WikiAnnotation,
-  WikiAnnotationKind,
-  WikiAnnotationThread,
-} from "@/types/worlds";
+import type { WikiAnnotation, WikiAnnotationThread } from "@/types/worlds";
 
 /**
  * `profiles` est référencée deux fois par la table (`author_id` et
@@ -20,13 +16,12 @@ import type {
  * possible, puisqu'une colonne ne porte qu'une clé étrangère.
  */
 const ANNOTATION_COLUMNS =
-  "id, page_id, parent_id, author_id, kind, body, " +
+  "id, page_id, parent_id, author_id, body, " +
   "anchor_quote, anchor_prefix, anchor_suffix, anchor_start, " +
   "resolved_at, resolved_by, created_at, " +
   "author:author_id(id, username, avatar_url)";
 
 export type CreateThreadInput = {
-  kind: WikiAnnotationKind;
   anchor: TextAnchor;
   body: string;
 };
@@ -157,9 +152,8 @@ export function useWikiAnnotations({
   );
 
   const createThread = React.useCallback(
-    ({ kind, anchor, body }: CreateThreadInput) =>
+    ({ anchor, body }: CreateThreadInput) =>
       insert({
-        kind,
         body: body.trim(),
         parent_id: null,
         anchor_quote: anchor.quote,
@@ -172,9 +166,7 @@ export function useWikiAnnotations({
 
   const reply = React.useCallback(
     (root: WikiAnnotation, body: string) =>
-      // La nature suit celle de la racine : répondre à une note ne doit pas
-      // publier un commentaire visible de tous les membres.
-      insert({ kind: root.kind, body: body.trim(), parent_id: root.id }),
+      insert({ body: body.trim(), parent_id: root.id }),
     [insert],
   );
 

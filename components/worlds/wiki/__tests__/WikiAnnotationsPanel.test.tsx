@@ -10,7 +10,6 @@ function annotation(over: Partial<WikiAnnotation> & { id: string }): WikiAnnotat
     page_id: "p1",
     parent_id: null,
     author_id: "u1",
-    kind: "comment",
     body: "Un commentaire",
     anchor_quote: "Les Gardiens",
     anchor_prefix: "",
@@ -57,7 +56,6 @@ function renderPanel(props: Partial<React.ComponentProps<typeof WikiAnnotationsP
       draft={null}
       currentUserId="u1"
       canModerate
-      canWriteMemos
       {...handlers}
       {...props}
     />,
@@ -66,20 +64,9 @@ function renderPanel(props: Partial<React.ComponentProps<typeof WikiAnnotationsP
 }
 
 describe("WikiAnnotationsPanel — liste", () => {
-  it("invite à sélectionner un passage quand la page n'a aucune annotation", () => {
+  it("invite à sélectionner un passage quand la page n'a aucun commentaire", () => {
     renderPanel();
-    expect(screen.getByText(/Aucune annotation\./)).toBeTruthy();
-  });
-
-  it("affiche commentaires et mémos dans la même liste", () => {
-    renderPanel({
-      threads: [
-        thread({ id: "a1", body: "Question d'un lecteur" }),
-        thread({ id: "a2", body: "Un mémo de rédaction", kind: "memo" }),
-      ],
-    });
-    expect(screen.getByText("Question d'un lecteur")).toBeTruthy();
-    expect(screen.getByText("Un mémo de rédaction")).toBeTruthy();
+    expect(screen.getByText(/Aucun commentaire\./)).toBeTruthy();
   });
 
   it("classe les fils dans l'ordre du texte", () => {
@@ -119,7 +106,7 @@ describe("WikiAnnotationsPanel — liste", () => {
   });
 });
 
-describe("WikiAnnotationsPanel — filtres", () => {
+describe("WikiAnnotationsPanel — fils résolus", () => {
   it("masque les fils résolus par défaut, et les révèle à la demande", async () => {
     renderPanel({
       threads: [
@@ -145,38 +132,13 @@ describe("WikiAnnotationsPanel — filtres", () => {
     expect(screen.getByText("2")).toBeTruthy();
   });
 
-  it("restreint la liste aux mémos", async () => {
-    renderPanel({
-      threads: [
-        thread({ id: "a1", body: "Un commentaire de lecteur" }),
-        thread({ id: "a2", body: "Un mémo d'éditeur", kind: "memo" }),
-      ],
-    });
-
-    await userEvent.click(screen.getByRole("button", { name: "Mémos" }));
-    expect(screen.getByText("Un mémo d'éditeur")).toBeTruthy();
-    expect(screen.queryByText("Un commentaire de lecteur")).toBeNull();
-  });
-
-  it("ne propose pas le filtre des mémos à qui ne peut pas en voir", () => {
-    renderPanel({ canWriteMemos: false });
-    expect(screen.queryByRole("button", { name: "Mémos" })).toBeNull();
-    expect(screen.getByRole("button", { name: "Commentaires" })).toBeTruthy();
-  });
-
-  it("annonce qu'aucun fil ne correspond au filtre", async () => {
-    renderPanel({ threads: [thread({ id: "a1", body: "Un commentaire" })] });
-    await userEvent.click(screen.getByRole("button", { name: "Mémos" }));
-    expect(screen.getByText("Aucune annotation ne correspond à ce filtre.")).toBeTruthy();
-  });
 });
 
 describe("WikiAnnotationsPanel — écriture", () => {
   it("compose la première annotation d'un passage sélectionné", async () => {
     const { onCreate } = renderPanel({
       draft: {
-        kind: "comment",
-        anchor: { quote: "Les Gardiens", prefix: "", suffix: "", start: 0 },
+            anchor: { quote: "Les Gardiens", prefix: "", suffix: "", start: 0 },
       },
     });
 
@@ -188,11 +150,11 @@ describe("WikiAnnotationsPanel — écriture", () => {
     expect(onCreate).toHaveBeenCalledWith("Qui les a créés ?");
   });
 
-  it("refuse de publier une annotation vide", () => {
+  it("refuse de publier un commentaire vide", () => {
     renderPanel({
-      draft: { kind: "memo", anchor: { quote: "Meridian", prefix: "", suffix: "", start: 0 } },
+      draft: { anchor: { quote: "Meridian", prefix: "", suffix: "", start: 0 } },
     });
-    expect(screen.getByRole("button", { name: "Mémo" }).hasAttribute("disabled")).toBe(true);
+    expect(screen.getByRole("button", { name: "Commenter" }).hasAttribute("disabled")).toBe(true);
   });
 
   it("répond dans un fil existant", async () => {

@@ -10,7 +10,6 @@ function annotation(over: Partial<WikiAnnotation> & { id: string }): WikiAnnotat
     page_id: "p1",
     parent_id: null,
     author_id: "u1",
-    kind: "comment",
     body: "Un commentaire",
     anchor_quote: "Les Gardiens",
     anchor_prefix: "",
@@ -90,8 +89,7 @@ describe("useWikiAnnotations", () => {
 
     await act(async () => {
       await result.current.createThread({
-        kind: "comment",
-        anchor: { quote: "Les Gardiens", prefix: "avant ", suffix: " après", start: 28 },
+            anchor: { quote: "Les Gardiens", prefix: "avant ", suffix: " après", start: 28 },
         body: "  Qui les a créés ?  ",
       });
     });
@@ -101,8 +99,7 @@ describe("useWikiAnnotations", () => {
       page_id: "p1",
       world_id: "w1",
       author_id: "u1",
-      kind: "comment",
-      parent_id: null,
+        parent_id: null,
       body: "Qui les a créés ?",
       anchor_quote: "Les Gardiens",
       anchor_prefix: "avant ",
@@ -114,9 +111,9 @@ describe("useWikiAnnotations", () => {
   });
 
   it("publie une réponse de la même nature que sa racine, et sans ancre", async () => {
-    const root = annotation({ id: "a1", kind: "memo" });
+    const root = annotation({ id: "a1" });
     const mock = createSupabaseMock({
-      results: [{ data: [root], error: null }, { data: annotation({ id: "r1", parent_id: "a1", kind: "memo" }), error: null }],
+      results: [{ data: [root], error: null }, { data: annotation({ id: "r1", parent_id: "a1" }), error: null }],
     });
     const { result } = renderHook(() =>
       useWikiAnnotations({ ...params, supabase: mock.client as never, enabled: true }),
@@ -126,7 +123,6 @@ describe("useWikiAnnotations", () => {
     await act(async () => { await result.current.reply(root, "D'accord."); });
 
     expect(mock.builders[1].builder.insert.mock.calls[0][0]).toMatchObject({
-      kind: "memo",
       parent_id: "a1",
       body: "D'accord.",
     });
@@ -204,8 +200,7 @@ describe("useWikiAnnotations", () => {
 
     await act(async () => {
       const created = await result.current.createThread({
-        kind: "comment",
-        anchor: { quote: "Les Gardiens", prefix: "", suffix: "", start: 0 },
+            anchor: { quote: "Les Gardiens", prefix: "", suffix: "", start: 0 },
         body: "Tentative",
       });
       expect(created).toBeNull();

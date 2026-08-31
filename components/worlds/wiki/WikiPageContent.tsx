@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
-import { Eye, History, Loader2, Lock, MessagesSquare, Pencil } from "lucide-react";
+import { Eye, History, Loader2, Lock, MessagesSquare, Pencil, StickyNote } from "lucide-react";
 import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
 import { VALID_LUCIDE_ICONS } from "@/components/ui/LucideIconPicker";
 import { Button } from "@/components/ui/button";
@@ -16,9 +16,10 @@ import { extractHeadings } from "@/lib/wikiToc";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useWikiAnnotations } from "@/hooks/useWikiAnnotations";
 import type { TextAnchor } from "@/lib/wikiAnnotations";
-import type { WikiAnnotation, WikiAnnotationKind } from "@/types/worlds";
+import type { WikiAnnotation } from "@/types/worlds";
 import { WikiAnnotationLayer, type ActiveAnnotation } from "./WikiAnnotationLayer";
 import { WikiAnnotationsPanel, type AnnotationDraft } from "./WikiAnnotationsPanel";
+import { WikiNotesPanel } from "./WikiNotesPanel";
 import { WikiBreadcrumb } from "./WikiBreadcrumb";
 import { WikiTableOfContents } from "./WikiTableOfContents";
 import { WikiVersionHistoryPanel } from "./WikiVersionHistoryPanel";
@@ -92,6 +93,7 @@ export function WikiPageContent({
 }) {
   const t = useTranslations("wiki");
   const tCommon = useTranslations("common");
+  const tNotes = useTranslations("wiki.notes");
 
   const [editing, setEditing] = React.useState(false);
   const [loadingDraft, setLoadingDraft] = React.useState(false);
@@ -104,6 +106,7 @@ export function WikiPageContent({
   // ── Annotations ───────────────────────────────────────────
   const { userId } = useCurrentUser();
   const [annotationsOpen, setAnnotationsOpen] = React.useState(false);
+  const [notesOpen, setNotesOpen] = React.useState(false);
   const [activeAnnotation, setActiveAnnotation] = React.useState<ActiveAnnotation | null>(null);
   const [annotationDraft, setAnnotationDraft] = React.useState<AnnotationDraft | null>(null);
   const [detachedIds, setDetachedIds] = React.useState<Set<string>>(() => new Set());
@@ -134,10 +137,10 @@ export function WikiPageContent({
     setActiveAnnotation({ id, scrollIntoView });
   }
 
-  function startDraft(anchor: TextAnchor, kind: WikiAnnotationKind) {
+  function startDraft(anchor: TextAnchor) {
     setAnnotationsOpen(true);
     setActiveAnnotation(null);
-    setAnnotationDraft({ anchor, kind });
+    setAnnotationDraft({ anchor });
   }
 
   async function createFromDraft(body: string) {
@@ -387,6 +390,16 @@ export function WikiPageContent({
 
   return (
     <div className="flex min-h-0 flex-1">
+      {notesOpen && (
+        <WikiNotesPanel
+          pageId={page.id}
+          worldId={worldId}
+          isEditMode={isEditMode}
+          supabase={supabase}
+          onClose={() => setNotesOpen(false)}
+        />
+      )}
+
       <div className="min-w-0 flex-1 overflow-y-auto p-6">
         <div className="mx-auto flex max-w-4xl gap-8">
           <div className="min-w-0 max-w-2xl flex-1">
@@ -399,6 +412,15 @@ export function WikiPageContent({
               <div className="flex shrink-0 items-center gap-2">
                 {draftBadge}
                 {restrictedBadge}
+                <Button
+                  variant={notesOpen ? "secondary" : "ghost"}
+                  size="sm"
+                  aria-pressed={notesOpen}
+                  onClick={() => setNotesOpen(v => !v)}
+                >
+                  <StickyNote className="mr-1.5 h-3.5 w-3.5" />
+                  {tNotes("title")}
+                </Button>
                 {canAnnotate && (
                   <Button
                     variant={annotationsOpen ? "secondary" : "ghost"}
@@ -433,7 +455,6 @@ export function WikiPageContent({
                 active={activeAnnotation}
                 draftAnchor={annotationDraft?.anchor ?? null}
                 canComment={canAnnotate}
-                canWriteMemos={canEdit}
                 onActivate={id => { if (id) openAnnotation(id, false); }}
                 onDraft={startDraft}
                 onDetachedChange={onDetachedChange}
@@ -466,7 +487,6 @@ export function WikiPageContent({
           draft={annotationDraft}
           currentUserId={userId}
           canModerate={canEdit}
-          canWriteMemos={canEdit}
           onActivate={id => openAnnotation(id, true)}
           onCreate={body => void createFromDraft(body)}
           onCancelDraft={() => setAnnotationDraft(null)}

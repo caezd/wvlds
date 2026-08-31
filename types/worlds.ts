@@ -165,14 +165,10 @@ export type WikiAnnotationAuthor = {
   avatar_url: string | null;
 };
 
-/** Commentaire (fil de discussion) ou mémo de rédaction (éditeurs seuls).
- *  À ne pas confondre avec les notes du panneau de page, qui ne sont pas
- *  ancrées à un passage — voir `WikiPageNote`. */
-export type WikiAnnotationKind = "comment" | "memo";
-
 /**
- * Annotation ancrée à un extrait d'une page de wiki — voir la migration 137 et
- * `lib/wikiAnnotations.ts`. Les champs `anchor_*` ne sont remplis que sur la
+ * Commentaire ancré à un extrait d'une page de wiki — voir les migrations 137
+ * et 140, et `lib/wikiAnnotations.ts`. À ne pas confondre avec les notes de
+ * page (`WikiPageNote`), qui ne sont ancrées à aucun passage. Les champs `anchor_*` ne sont remplis que sur la
  * racine d'un fil ; une réponse (`parent_id` non nul) hérite de son ancre.
  */
 export type WikiAnnotation = {
@@ -180,7 +176,6 @@ export type WikiAnnotation = {
   page_id: string;
   parent_id: string | null;
   author_id: string;
-  kind: WikiAnnotationKind;
   body: string;
   anchor_quote: string | null;
   anchor_prefix: string | null;
@@ -196,4 +191,28 @@ export type WikiAnnotation = {
 export type WikiAnnotationThread = {
   root: WikiAnnotation;
   replies: WikiAnnotation[];
+};
+
+/**
+ * Catégorie du panneau de notes d'une page de wiki (migration 139) — repliable
+ * et réordonnable, propre à sa page.
+ */
+export type WikiNoteCategory = {
+  id: string;
+  page_id: string;
+  name: string;
+  sort_index: number;
+};
+
+/**
+ * Fiche du panneau de notes : un titre, un corps en markdown, une catégorie.
+ * Contrairement à `WikiAnnotation`, elle n'est ancrée à aucun passage du texte.
+ */
+export type WikiPageNote = {
+  id: string;
+  category_id: string;
+  page_id: string;
+  title: string;
+  body: string;
+  sort_index: number;
 };

@@ -311,7 +311,7 @@ describe("WikiPageContent — badge page restreinte", () => {
   });
 });
 
-describe("WikiPageContent — annotations", () => {
+describe("WikiPageContent — commentaires ancrés", () => {
   const PAGE: WikiPage = {
     ...BASE_PAGE,
     content: "Mara Kline observe la ville. Les Gardiens veillent sur Meridian.",
@@ -339,7 +339,6 @@ describe("WikiPageContent — annotations", () => {
     page_id: "p1",
     parent_id: null,
     author_id: "u1",
-    kind: "comment",
     body: "Qui les a créés ?",
     anchor_quote: "Les Gardiens",
     anchor_prefix: "Mara Kline observe la ville. ",
@@ -389,7 +388,7 @@ describe("WikiPageContent — annotations", () => {
     });
     renderPage(mock);
 
-    const bouton = await screen.findByRole("button", { name: /Annotations/ });
+    const bouton = await screen.findByRole("button", { name: /Commentaires/ });
     await waitFor(() => expect(bouton.textContent).toContain("1"));
   });
 
@@ -400,7 +399,7 @@ describe("WikiPageContent — annotations", () => {
     const user = userEvent.setup();
     const { container } = renderPage(mock);
 
-    await user.click(screen.getByRole("button", { name: /Annotations/ }));
+    await user.click(screen.getByRole("button", { name: /Commentaires/ }));
     await waitFor(() => expect(screen.getByText("Qui les a créés ?")).toBeTruthy());
 
     const mark = container.querySelector<HTMLElement>('[data-annotation-id="a1"]');
@@ -418,17 +417,8 @@ describe("WikiPageContent — annotations", () => {
     await user.click(await screen.findByRole("button", { name: "Commenter" }));
 
     // Le panneau s'ouvre de lui-même sur la saisie, et rappelle l'extrait visé.
-    const panel = screen.getByRole("complementary", { name: "Annotations" });
+    const panel = screen.getByRole("complementary", { name: "Commentaires" });
     expect(panel.textContent).toContain("Les Gardiens");
     expect(screen.getByRole("textbox")).toBeTruthy();
-  });
-
-  it("ne propose le mémo qu'aux éditeurs", async () => {
-    const mock = createSupabaseMock({ results: [{ data: [], error: null }] });
-    renderPage(mock, false);
-
-    selectInProse("Meridian");
-    expect(await screen.findByRole("button", { name: "Commenter" })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Mémo" })).toBeNull();
   });
 });

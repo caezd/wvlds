@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
-import { MessageSquarePlus, StickyNote } from "lucide-react";
+import { MessageSquarePlus } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import {
@@ -16,7 +16,7 @@ import {
   resolveAnchor,
   type TextAnchor,
 } from "@/lib/wikiAnnotations";
-import type { WikiAnnotationKind, WikiAnnotationThread } from "@/types/worlds";
+import type { WikiAnnotationThread } from "@/types/worlds";
 
 /** Annotation mise en avant, et faut-il l'amener à l'écran. */
 export type ActiveAnnotation = { id: string; scrollIntoView: boolean };
@@ -49,7 +49,6 @@ export function WikiAnnotationLayer({
   active,
   draftAnchor,
   canComment,
-  canWriteMemos,
   onActivate,
   onDraft,
   onDetachedChange,
@@ -64,9 +63,8 @@ export function WikiAnnotationLayer({
   /** Sélection en cours d'annotation, surlignée en attendant la validation. */
   draftAnchor: TextAnchor | null;
   canComment: boolean;
-  canWriteMemos: boolean;
   onActivate: (id: string | null) => void;
-  onDraft: (anchor: TextAnchor, kind: WikiAnnotationKind) => void;
+  onDraft: (anchor: TextAnchor) => void;
   /** Annotations dont l'extrait a disparu du texte — affichées à part. */
   onDetachedChange?: (detachedIds: string[]) => void;
   className?: string;
@@ -93,7 +91,7 @@ export function WikiAnnotationLayer({
   // exactement les mêmes surlignages, et n'ont donc pas à être remontés.
   const anchorsKey = React.useMemo(
     () => anchoredThreads
-      .map(th => `${th.root.id}:${th.root.resolved_at ? "r" : "o"}:${th.root.kind}`)
+      .map(th => `${th.root.id}:${th.root.resolved_at ? "r" : "o"}`)
       .join("|"),
     [anchoredThreads],
   );
@@ -134,7 +132,6 @@ export function WikiAnnotationLayer({
     for (const { thread, range } of resolved) {
       wrapSlices(slicesForOffsets(root, range.start, range.end), span => {
         span.dataset.annotationId = thread.root.id;
-        span.dataset.annotationKind = thread.root.kind;
         if (thread.root.resolved_at) span.dataset.annotationResolved = "true";
         span.className = "wiki-annotation";
       });
@@ -194,7 +191,7 @@ export function WikiAnnotationLayer({
     const root = contentRef.current;
     const wrapper = wrapperRef.current;
     if (!root || !wrapper) return;
-    if (!canComment && !canWriteMemos) return;
+    if (!canComment) return;
 
     const selection = window.getSelection();
     if (!selection || selection.isCollapsed || selection.rangeCount === 0) {
@@ -231,9 +228,9 @@ export function WikiAnnotationLayer({
     });
   }
 
-  function startDraft(kind: WikiAnnotationKind) {
+  function startDraft() {
     if (!toolbar) return;
-    onDraft(toolbar.anchor, kind);
+    onDraft(toolbar.anchor);
     setToolbar(null);
     window.getSelection()?.removeAllRanges();
   }
@@ -266,24 +263,13 @@ export function WikiAnnotationLayer({
           // avant même que le clic n'aboutisse.
           onMouseDown={e => e.preventDefault()}
         >
-          {canComment && (
-            <button
-              type="button"
-              onClick={() => startDraft("comment")}
-              className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium text-muted-foreground hover:bg-secondary hover:text-foreground"
-            >
-              <MessageSquarePlus className="h-3.5 w-3.5" /> {t("addComment")}
-            </button>
-          )}
-          {canWriteMemos && (
-            <button
-              type="button"
-              onClick={() => startDraft("memo")}
-              className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium text-muted-foreground hover:bg-secondary hover:text-foreground"
-            >
-              <StickyNote className="h-3.5 w-3.5" /> {t("addMemo")}
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={startDraft}
+            className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium text-muted-foreground hover:bg-secondary hover:text-foreground"
+          >
+            <MessageSquarePlus className="h-3.5 w-3.5" /> {t("addComment")}
+          </button>
         </div>
       )}
     </div>

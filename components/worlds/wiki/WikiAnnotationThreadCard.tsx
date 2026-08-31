@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
-import { Check, MessageSquare, MoreHorizontal, StickyNote, Trash2, Undo2, Unlink } from "lucide-react";
+import { Check, MessageSquare, MoreHorizontal, Trash2, Undo2, Unlink } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -109,7 +109,6 @@ export function WikiAnnotationThreadCard({
 
   const { root, replies } = thread;
   const resolved = root.resolved_at !== null;
-  const isMemo = root.kind === "memo";
   const canDeleteRoot = canModerate || root.author_id === currentUserId;
 
   return (
@@ -122,9 +121,7 @@ export function WikiAnnotationThreadCard({
     >
       {/* En-tête : nature du fil, extrait ancré, actions */}
       <div className="mb-2 flex items-start gap-2">
-        {isMemo
-          ? <StickyNote className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-500" />
-          : <MessageSquare className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
+        <MessageSquare className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
 
         <button
           type="button"
