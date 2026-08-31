@@ -7,11 +7,17 @@ import { Drawer, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui
 import { SideSheetContent } from "@/components/ui/side-sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CodeEditor } from "@/components/ui/code-editor";
 import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import { cn } from "@/lib/utils";
-import { MAX_HOME_BLOCK_CONTENT_LENGTH, MAX_HOME_BLOCK_TITLE_LENGTH } from "../worldHomeGrid";
+import {
+  MAX_HOME_BLOCK_CONTENT_LENGTH,
+  MAX_HOME_BLOCK_HEIGHT,
+  MAX_HOME_BLOCK_TITLE_LENGTH,
+  MIN_HOME_BLOCK_HEIGHT,
+  sanitizeBlockHeight,
+} from "../worldHomeGrid";
 
 /**
  * Édition du contenu d'un bloc Markdown. Ne persiste rien elle-même : rend
@@ -24,6 +30,7 @@ export function WorldHomeMarkdownBlockEditor({
   initialContent,
   initialTitle,
   initialCard = false,
+  initialHeight,
   onSave,
 }: {
   open: boolean;
@@ -32,28 +39,38 @@ export function WorldHomeMarkdownBlockEditor({
   initialTitle?: string;
   /** Défaut false — un bloc markdown n'a jamais eu de carte avant ce réglage. */
   initialCard?: boolean;
-  onSave: (content: string, title: string, card: boolean) => void;
+  /** Hauteur fixe en pixels ; absente = le bloc suit son contenu. */
+  initialHeight?: number;
+  /** Charge utile nommée plutôt que quatre positions muettes — même forme que
+   *  `WorldHomeBannerDialog`. `height` absent signifie « hauteur automatique ». */
+  onSave: (block: { content: string; title: string; card: boolean; height?: number }) => void;
 }) {
   const t = useTranslations("worlds");
   const tCommon = useTranslations("common");
   const [content, setContent] = React.useState(initialContent ?? "");
   const [title, setTitle] = React.useState(initialTitle ?? "");
   const [card, setCard] = React.useState(initialCard);
+  // Saisie gardée en texte : un champ vidé doit rester vide (« automatique »)
+  // plutôt que de retomber sur un 0 que `number` imposerait.
+  const [height, setHeight] = React.useState(initialHeight ? String(initialHeight) : "");
 
   React.useEffect(() => {
     if (open) {
       setContent(initialContent ?? "");
       setTitle(initialTitle ?? "");
       setCard(initialCard);
+      setHeight(initialHeight ? String(initialHeight) : "");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, initialContent, initialTitle]);
+  }, [open, initialContent, initialTitle, initialHeight]);
 
   const tooLong = content.length > MAX_HOME_BLOCK_CONTENT_LENGTH;
 
   function handleSave() {
     if (tooLong || !content.trim()) return;
-    onSave(content, title, card);
+    // Même assainissement que la grille et le serveur : la saisie est bornée
+    // ici aussi, pour que l'admin voie tout de suite ce qui sera enregistré.
+    onSave({ content, title, card, height: sanitizeBlockHeight(Number(height.trim())) });
   }
 
   return (
@@ -89,17 +106,36 @@ export function WorldHomeMarkdownBlockEditor({
           </div>
 
           <div className="space-y-1.5">
+            <label htmlFor="home-block-markdown-height" className="text-sm font-medium text-foreground">
+              {t("home.grid.heightLabel")}
+            </label>
+            <Input
+              id="home-block-markdown-height"
+              type="number"
+              inputMode="numeric"
+              min={MIN_HOME_BLOCK_HEIGHT}
+              max={MAX_HOME_BLOCK_HEIGHT}
+              value={height}
+              onChange={(e) => setHeight(e.target.value)}
+              placeholder={t("home.grid.heightPlaceholder")}
+            />
+            <p className="text-xs leading-snug text-muted-foreground">{t("home.grid.heightHelp")}</p>
+            <p className="text-xs text-muted-foreground">
+              {t("home.grid.options.range", { min: MIN_HOME_BLOCK_HEIGHT, max: MAX_HOME_BLOCK_HEIGHT })}
+            </p>
+          </div>
+
+          <div className="space-y-1.5">
             <label htmlFor="home-block-markdown" className="text-sm font-medium text-foreground">
               {t("home.grid.markdownLabel")}
             </label>
-            <Textarea
+            <CodeEditor
               id="home-block-markdown"
+              language="markdown"
               value={content}
-              onChange={(e) => setContent(e.target.value)}
+              onChange={setContent}
               placeholder={t("home.grid.markdownPlaceholder")}
-              rows={12}
-              className="font-mono text-xs"
-              aria-invalid={tooLong}
+              ariaInvalid={tooLong}
             />
             <p className={cn("text-xs", tooLong ? "text-destructive" : "text-muted-foreground")}>
               {tooLong

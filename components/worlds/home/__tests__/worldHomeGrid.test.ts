@@ -7,13 +7,16 @@ import {
   HOME_GRID_COLS,
   HOME_GRID_GAP_PRESETS,
   MAX_BLOCKS_PER_ROW,
+  MAX_HOME_BLOCK_HEIGHT,
   MAX_HOME_GRID_ITEMS,
+  MIN_HOME_BLOCK_HEIGHT,
   moveBlock,
   resizeBlock,
   resolveHomeGridGap,
   resolveWorldHomeGrid,
   rowBoundaries,
   sanitizeBannerContent,
+  sanitizeBlockHeight,
   sanitizeWidgetOptions,
   widgetOptionValue,
   type WorldHomeGridItem,
@@ -545,5 +548,95 @@ describe("findLeftNeighbor", () => {
   it("ignore un bloc séparé par un espace vide", () => {
     const gapped = { ...left, id: "g", w: 4 };
     expect(findLeftNeighbor([gapped, right], right)).toBeNull();
+  });
+});
+
+describe("sanitizeBlockHeight", () => {
+  it("vaut « automatique » pour une valeur absente ou non numérique", () => {
+    expect(sanitizeBlockHeight(undefined)).toBeUndefined();
+    expect(sanitizeBlockHeight(null)).toBeUndefined();
+    expect(sanitizeBlockHeight("320")).toBeUndefined();
+    expect(sanitizeBlockHeight(Number.NaN)).toBeUndefined();
+    expect(sanitizeBlockHeight(Number.POSITIVE_INFINITY)).toBeUndefined();
+  });
+
+  // Un champ vidé arrive ici en 0 (Number("")) : c'est la façon dont l'admin
+  // demande le retour à la hauteur automatique, pas une hauteur minuscule.
+  it("vaut « automatique » pour zéro ou une valeur négative", () => {
+    expect(sanitizeBlockHeight(0)).toBeUndefined();
+    expect(sanitizeBlockHeight(-50)).toBeUndefined();
+  });
+
+  it("borne une valeur positive hors limites plutôt que de la ramener à « automatique »", () => {
+    expect(sanitizeBlockHeight(5)).toBe(MIN_HOME_BLOCK_HEIGHT);
+    expect(sanitizeBlockHeight(99_999)).toBe(MAX_HOME_BLOCK_HEIGHT);
+  });
+
+  it("arrondit une valeur décimale et laisse passer une valeur dans les bornes", () => {
+    expect(sanitizeBlockHeight(320)).toBe(320);
+    expect(sanitizeBlockHeight(320.6)).toBe(321);
+  });
+});
+
+describe("resolveWorldHomeGrid — hauteur des blocs à contenu libre", () => {
+  it("conserve la hauteur d'un bloc html et d'un bloc markdown", () => {
+    const grid = [
+      { id: "a", type: "html", x: 0, y: 0, w: 12, html: "<p>x</p>", card: true, h: 320 },
+      { id: "b", type: "markdown", x: 0, y: 1, w: 12, content: "x", card: false, h: 240 },
+    ];
+    const resolved = resolveWorldHomeGrid(grid, null, null);
+    expect(resolved[0]).toMatchObject({ id: "a", h: 320 });
+    expect(resolved[1]).toMatchObject({ id: "b", h: 240 });
+  });
+
+  it("borne une hauteur hors limites lue depuis la base", () => {
+    const grid = [{ id: "a", type: "html", x: 0, y: 0, w: 12, html: "<p>x</p>", h: 5 }];
+    expect(resolveWorldHomeGrid(grid, null, null)[0]).toMatchObject({ h: MIN_HOME_BLOCK_HEIGHT });
+  });
+
+  // Un widget ou une bannière se dimensionne sur un contenu que l'application
+  // produit elle-même : une hauteur imposée là n'aurait aucun sens, et une
+  // donnée forgée ne doit pas pouvoir en introduire une.
+  it("ignore une hauteur portée par un widget ou une bannière", () => {
+    const grid = [
+      { id: "a", type: "widget", x: 0, y: 0, w: 6, widgetId: "chatrooms", h: 320 },
+      { id: "b", type: "banner", x: 6, y: 0, w: 6, banner: { title: "Bienvenue" }, h: 320 },
+    ];
+    const resolved = resolveWorldHomeGrid(grid, null, null);
+    expect(resolved).toHaveLength(2);
+    expect(resolved[0]).not.toHaveProperty("h");
+    expect(resolved[1]).not.toHaveProperty("h");
+  });
+
+  it("n'ajoute aucune hauteur à un bloc qui n'en a pas", () => {
+    const grid = [{ id: "a", type: "markdown", x: 0, y: 0, w: 12, content: "x" }];
+    expect(resolveWorldHomeGrid(grid, null, null)[0]).not.toHaveProperty("h");
+  });
+});
+
+describe("resolveWorldHomeGrid — feuille de style d'un bloc html", () => {
+  it("conserve le css d'un bloc html", () => {
+    const grid = [
+      { id: "a", type: "html", x: 0, y: 0, w: 12, html: "<p>x</p>", css: ":scope { color: red; }" },
+    ];
+    expect(resolveWorldHomeGrid(grid, null, null)[0]).toMatchObject({ css: ":scope { color: red; }" });
+  });
+
+  it("n'enregistre pas un css vide ou d'un autre type", () => {
+    const grid = [
+      { id: "a", type: "html", x: 0, y: 0, w: 12, html: "<p>x</p>", css: "   " },
+      { id: "b", type: "html", x: 0, y: 1, w: 12, html: "<p>y</p>", css: 42 },
+      { id: "c", type: "html", x: 0, y: 2, w: 12, html: "<p>z</p>" },
+    ];
+    for (const item of resolveWorldHomeGrid(grid, null, null)) {
+      expect(item).not.toHaveProperty("css");
+    }
+  });
+
+  // Le champ n'a de sens que pour le bloc html : le markdown n'a pas de
+  // feuille de style propre, il coule dans la typographie de la page.
+  it("ignore un css porté par un bloc markdown", () => {
+    const grid = [{ id: "a", type: "markdown", x: 0, y: 0, w: 12, content: "x", css: "p{}" }];
+    expect(resolveWorldHomeGrid(grid, null, null)[0]).not.toHaveProperty("css");
   });
 });

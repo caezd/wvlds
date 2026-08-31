@@ -13,9 +13,10 @@ vi.mock("@/components/ui/drawer", () => ({
 }));
 
 const pathnameMock = vi.hoisted(() => ({ value: "/w/world-1" }));
+const searchParamsMock = vi.hoisted(() => ({ value: new URLSearchParams() }));
 vi.mock("next/navigation", () => ({
   usePathname: () => pathnameMock.value,
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => searchParamsMock.value,
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
 }));
 
@@ -60,34 +61,53 @@ const WORLDS = [
 
 beforeEach(() => {
   pathnameMock.value = "/w/world-1";
+  searchParamsMock.value = new URLSearchParams();
   notifPanelOpenMock.value = false;
   dmsPanelOpenMock.value = false;
   publicWorldsMock.value = false;
 });
 
-describe("AppShell — barre mobile générique vs header de chatroom", () => {
-  it("affiche le bouton menu générique sur une page non-chatroom (ex: monde)", () => {
-    pathnameMock.value = "/w/world-1";
+describe("AppShell — barre mobile générique vs pages à header propre", () => {
+  function renderShell() {
     render(
       <AppShell rail={<div>rail</div>}>
         <div>contenu</div>
       </AppShell>,
     );
-    const button = screen.getByLabelText("openMenu");
-    const header = button.closest("header");
-    expect(header).not.toHaveClass("hidden");
+    return screen.getByLabelText("openMenu").closest("header");
+  }
+
+  it("affiche le bouton menu générique sur une page sans header propre (ex: mes personas)", () => {
+    pathnameMock.value = "/p";
+    expect(renderShell()).not.toHaveClass("hidden");
   });
 
   it("masque la barre générique sur une page de chatroom — ChatroomHeader prend le relais avec son propre bouton menu", () => {
     pathnameMock.value = "/c/chat-1";
-    render(
-      <AppShell rail={<div>rail</div>}>
-        <div>contenu</div>
-      </AppShell>,
-    );
-    const button = screen.getByLabelText("openMenu");
-    const header = button.closest("header");
-    expect(header).toHaveClass("hidden");
+    expect(renderShell()).toHaveClass("hidden");
+  });
+
+  // Régression : la vue par défaut d'un monde passait par un état client posé
+  // au montage de WorldHome, donc absent du premier rendu — la barre h-12
+  // était peinte puis retirée, faisant remonter le contenu de 48 px. La
+  // décision doit se prendre dès le premier rendu, à partir de l'URL seule.
+  it("masque la barre générique dès le premier rendu sur la page d'accueil d'un monde (?view absent), qui a son bouton incrusté sur la bannière", () => {
+    pathnameMock.value = "/w/world-1";
+    expect(renderShell()).toHaveClass("hidden");
+  });
+
+  it("masque la barre générique sur un onglet secondaire d'un monde (WorldPanelHeader)", () => {
+    pathnameMock.value = "/w/world-1";
+    searchParamsMock.value = new URLSearchParams("view=members");
+    expect(renderShell()).toHaveClass("hidden");
+  });
+
+  // Une vue inconnue (ou désactivée pour ce monde) retombe sur la bannière
+  // d'accueil, qui porte elle aussi un bouton menu.
+  it("masque la barre générique même pour une valeur de `view` inconnue", () => {
+    pathnameMock.value = "/w/world-1";
+    searchParamsMock.value = new URLSearchParams("view=inconnu");
+    expect(renderShell()).toHaveClass("hidden");
   });
 });
 
