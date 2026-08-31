@@ -8,6 +8,16 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Wiki",
+    text: "L’article d’une page de wiki s’écrit désormais en markdown coloré, comme les blocs de la page d’accueil d’un monde : titres, liens et tableaux se voient tels qu’ils seront enregistrés, et l’aperçu à côté dit le résultat. L’ancien champ de texte enrichi masquait cette syntaxe sans savoir la rendre.\nUne ceinture d’outils s’installe dans le sous-en-tête, au-dessus du texte : titres, gras, italique, souligné, barré, code, lien, listes et citation. Chaque bouton a son raccourci — Ctrl+B, Ctrl+I, Ctrl+K et les autres —, indiqué au survol."
+  },
+  {
+    date: "2026-08",
+    tag: "Wiki",
+    text: "Les boutons de création du panneau de notes descendent en pied de colonne, à la place fixe qu’ont déjà ceux de l’arbre des pages, au lieu de flotter à la fin d’une liste dont la longueur change."
+  },
+  {
+    date: "2026-08",
     tag: "Correctif",
     text: "Passer le wiki en mode modification faisait disparaître la colonne des notes et des commentaires. C’est pourtant ce même mode qui autorise seul à ajouter ou modifier une fiche de note : il n’y avait donc plus aucun moyen d’y toucher. La colonne reste maintenant en place pendant qu’on édite l’article."
   },

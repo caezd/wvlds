@@ -111,7 +111,7 @@ describe("WikiNotesPanel — hors mode modification", () => {
     renderPanel(CHARGEMENT, { isEditMode: false });
 
     await screen.findByText("Entités");
-    expect(screen.queryByRole("button", { name: "Nouvelle catégorie" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Catégorie" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Actions de la catégorie" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Actions de la fiche" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Déplacer la fiche" })).toBeNull();
@@ -134,7 +134,7 @@ describe("WikiNotesPanel — écriture", () => {
     ]);
 
     await screen.findByText("Entités");
-    await user.click(screen.getByRole("button", { name: "Nouvelle catégorie" }));
+    await user.click(screen.getByRole("button", { name: "Catégorie" }));
     await user.type(screen.getByPlaceholderText("Nom de la catégorie…"), "Moments{Enter}");
 
     await waitFor(() =>
@@ -149,11 +149,10 @@ describe("WikiNotesPanel — écriture", () => {
       { data: { id: "n4", category_id: "c2", page_id: "p1", title: "Le Hub", body: "", sort_index: 1 }, error: null },
     ]);
 
-    // La catégorie « Lieux » porte deux commandes « Nouvelle fiche » — le +
-    // de son en-tête et le bouton sous ses fiches : on vise la sienne, pas
-    // celle de la catégorie voisine.
+    // Le « + » de l'en-tête d'une catégorie vise cette catégorie-là, sans
+    // équivoque possible avec sa voisine.
     const lieux = (await screen.findByText("Lieux")).closest("section")!;
-    await user.click(within(lieux).getAllByRole("button", { name: /Nouvelle fiche/ })[0]);
+    await user.click(within(lieux).getByRole("button", { name: "Nouvelle fiche" }));
     await user.type(screen.getByPlaceholderText("Titre de la fiche…"), "Le Hub{Enter}");
 
     await waitFor(() =>
@@ -244,5 +243,36 @@ describe("WikiNotesPanel — écriture", () => {
         sort_index: 0,
       }),
     );
+  });
+});
+
+describe("WikiNotesPanel — pied de colonne", () => {
+  it("le bouton « Fiche » vise la dernière catégorie", async () => {
+    // C'est celle qui borde le pied : cliquer juste en dessous d'elle doit
+    // écrire chez elle, pas remonter en haut du panneau.
+    const user = userEvent.setup();
+    const { mock } = renderPanel([
+      ...CHARGEMENT,
+      { data: { id: "n5", category_id: "c2", page_id: "p1", title: "Ajout", body: "", sort_index: 1 }, error: null },
+    ]);
+
+    await screen.findByText("Lieux");
+    await user.click(screen.getByRole("button", { name: "Fiche" }));
+    await user.type(screen.getByPlaceholderText("Titre de la fiche…"), "Ajout{Enter}");
+
+    await waitFor(() =>
+      expect(mock.builders[2].builder.insert.mock.calls[0][0]).toMatchObject({
+        category_id: "c2",
+        title: "Ajout",
+      }),
+    );
+  });
+
+  it("ne propose pas de fiche tant qu'aucune catégorie n'existe", async () => {
+    // Une fiche sans catégorie où la ranger n'a nulle part où aller.
+    renderPanel([{ data: [], error: null }, { data: [], error: null }]);
+
+    expect(await screen.findByRole("button", { name: "Catégorie" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Fiche" })).toBeNull();
   });
 });

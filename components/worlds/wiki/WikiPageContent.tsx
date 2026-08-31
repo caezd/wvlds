@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Drawer } from "@/components/ui/drawer";
 import { SideSheetContent } from "@/components/ui/side-sheet";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
-import { ParagraphBlockEditor } from "@/components/chatrooms/composer/ParagraphBlockEditor";
+import { CodeEditor } from "@/components/ui/code-editor";
+import { appliquerFormat, raccourciDe, type NomFormat } from "@/lib/markdownFormatting";
 import { toast } from "sonner";
 import { DB_TEXT_LIMITS } from "@/lib/textLimits";
 import { cn } from "@/lib/utils";
@@ -26,6 +27,7 @@ import { WikiAnnotationsPanel, type AnnotationDraft } from "./WikiAnnotationsPan
 import { WikiNotesPanel } from "./WikiNotesPanel";
 import { WikiSidePanel, type WikiSideTab } from "./WikiSidePanel";
 import { WikiBreadcrumb } from "./WikiBreadcrumb";
+import { WikiFormatToolbar } from "./WikiFormatToolbar";
 import { WIKI_SUBHEADER } from "./wikiSubHeader";
 import { WikiTableOfContents } from "./WikiTableOfContents";
 import { WikiVersionHistoryPanel } from "./WikiVersionHistoryPanel";
@@ -117,6 +119,9 @@ export function WikiPageContent({
   const [editing, setEditing] = React.useState(false);
   const [loadingDraft, setLoadingDraft] = React.useState(false);
   const [draft, setDraft] = React.useState("");
+  const champMarkdown = React.useRef<HTMLTextAreaElement>(null);
+  /** Sélection à reposer une fois la valeur mise en forme rendue. */
+  const [selectionAPoser, setSelectionAPoser] = React.useState<[number, number] | null>(null);
   const [showPreview, setShowPreview] = React.useState(false);
   const [publishing, setPublishing] = React.useState(false);
   const [lastAutosavedAt, setLastAutosavedAt] = React.useState<Date | null>(null);
@@ -305,6 +310,43 @@ export function WikiPageContent({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  React.useEffect(() => {
+    if (!selectionAPoser) return;
+    const champ = champMarkdown.current;
+    if (champ) {
+      champ.focus();
+      champ.setSelectionRange(selectionAPoser[0], selectionAPoser[1]);
+    }
+    setSelectionAPoser(null);
+  }, [selectionAPoser]);
+
+  /**
+   * Applique un format à la sélection du champ markdown.
+   *
+   * La sélection à reposer passe par un état plutôt que d'être écrite tout de
+   * suite : le champ est contrôlé par React, et l'écrire avant que la nouvelle
+   * valeur ne soit rendue la ferait écraser aussitôt.
+   */
+  function appliquerMiseEnForme(nom: NomFormat) {
+    const champ = champMarkdown.current;
+    if (!champ) return;
+
+    const suite = appliquerFormat(
+      { value: draft, start: champ.selectionStart, end: champ.selectionEnd },
+      nom,
+      tCommon("formatLinkText"),
+    );
+    handleDraftChange(suite.value);
+    setSelectionAPoser([suite.start, suite.end]);
+  }
+
+  function surToucheDuChamp(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    const nom = raccourciDe(e);
+    if (!nom) return;
+    e.preventDefault();
+    appliquerMiseEnForme(nom);
+  }
+
   function handleDraftChange(v: string) {
     setDraft(v);
     dirtyRef.current = true;
@@ -419,8 +461,15 @@ export function WikiPageContent({
           <PanelLeft className="h-3.5 w-3.5" /> {t("pagesLabel")}
         </button>
       )}
+      {/* En écriture, la ceinture d'outils prend la place du fil d'Ariane : le
+          chemin de la page reste lisible dans l'arbre à gauche, alors que les
+          outils n'ont pas d'autre logement à la largeur de la colonne. */}
       <div className="min-w-0 flex-1">
-        <WikiBreadcrumb ancestors={ancestors} onExpandFolder={onExpandFolder} />
+        {editing ? (
+          <WikiFormatToolbar onFormat={appliquerMiseEnForme} />
+        ) : (
+          <WikiBreadcrumb ancestors={ancestors} onExpandFolder={onExpandFolder} />
+        )}
       </div>
       {/* Symétrique du bouton des pages : le tiroir en dessous de `xl`, le
           dépliage de la colonne au-dessus. */}
@@ -490,20 +539,21 @@ export function WikiPageContent({
               </div>
             ) : (
               <div className={cn("min-h-0 flex-1", showPreview ? "flex gap-4" : "flex flex-col")}>
-                <div className={cn(
-                  "rounded-2xl border border-border-soft p-4",
-                  "flex flex-1 flex-col overflow-hidden",
-                )}>
-                  <ParagraphBlockEditor
-                    value={draft}
-                    onChange={handleDraftChange}
-                    placeholder={t("contentPlaceholder")}
-                    submitOnEnter={false}
-                    formatting
-                    wrapperClassName="max-h-none flex-1 overflow-y-auto"
-                    className="text-sm"
-                  />
-                </div>
+                {/* Le markdown se saisit tel quel, coloré : un article de wiki
+                    s'écrit avec des titres, des liens internes et des tableaux
+                    qu'un champ de texte enrichi ne sait pas montrer sans les
+                    trahir. L'aperçu, à côté, dit le résultat. */}
+                <CodeEditor
+                  fill
+                  language="markdown"
+                  value={draft}
+                  onChange={handleDraftChange}
+                  textareaRef={champMarkdown}
+                  onKeyDown={surToucheDuChamp}
+                  placeholder={t("contentPlaceholder")}
+                  ariaLabel={t("contentLabel")}
+                  className="flex-1 rounded-2xl border-border-soft"
+                />
                 {showPreview && (
                   <div className="flex-1 overflow-y-auto rounded-2xl border border-border-soft p-4">
                     {draft.trim()

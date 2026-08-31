@@ -15,12 +15,11 @@ vi.mock("@/components/worlds/wiki/WikiNotesPanel", () => ({
 
 vi.mock("@/app/(protected)/w/actions", () => ({ saveWorldPrefs: vi.fn() }));
 
-const pbeProps = vi.fn();
-vi.mock("@/components/chatrooms/composer/ParagraphBlockEditor", () => ({
-  ParagraphBlockEditor: (props: Record<string, unknown>) => {
-    pbeProps(props);
-    return <div data-testid="pbe" />;
-  },
+// Le champ de l'article est le vrai CodeEditor — un <textarea>. Seule sa
+// coloration est écartée : elle charge Shiki, hors sujet et lent ici.
+vi.mock("@/lib/codeHighlighter", () => ({
+  highlightCode: () => Promise.reject(new Error("coloration hors test")),
+  preloadCodeHighlighter: () => () => {},
 }));
 
 const mdProps = vi.fn();
@@ -125,7 +124,7 @@ describe("WorldWiki — barre de mise en forme et images", () => {
     );
   });
 
-  it("active la barre de mise en forme flottante en mode édition de page", async () => {
+  it("offre la ceinture de mise en forme dans le sous-en-tête en édition", async () => {
     setup();
     const user = userEvent.setup();
     render(<WorldWiki worldId="w1" canEdit />);
@@ -133,9 +132,23 @@ describe("WorldWiki — barre de mise en forme et images", () => {
     // Le mode modification ouvre l'éditeur de l'article : un seul geste.
     await activerModification(user);
 
-    expect(pbeProps).toHaveBeenCalledWith(
-      expect.objectContaining({ formatting: true }),
-    );
+    const ceinture = await screen.findByRole("toolbar", { name: "Mise en forme" });
+    expect(within(ceinture).getByRole("button", { name: "Gras" })).toBeTruthy();
+  });
+
+  it("écrit le markdown dans le champ, sans le passer par un éditeur enrichi", async () => {
+    setup();
+    const user = userEvent.setup();
+    render(<WorldWiki worldId="w1" canEdit />);
+
+    await activerModification(user);
+
+    const champ = await screen.findByLabelText("Contenu de l'article");
+    await user.clear(champ);
+    await user.type(champ, "Un **essai**");
+    // Le champ montre la syntaxe telle qu'elle sera enregistrée : c'est tout
+    // l'intérêt d'écrire dans la source plutôt que dans un rendu.
+    expect(champ).toHaveValue("Un **essai**");
   });
 });
 
@@ -261,8 +274,7 @@ describe("WorldWiki — création depuis un modèle", () => {
 
     await user.type(screen.getByPlaceholderText("Titre de la page…"), "Aria{Enter}");
 
-    expect(await screen.findByTestId("pbe")).toBeInTheDocument();
-    expect(pbeProps).toHaveBeenCalledWith(expect.objectContaining({ value: templateContent }));
+    expect(await screen.findByLabelText("Contenu de l'article")).toHaveValue(templateContent);
   });
 });
 

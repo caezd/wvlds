@@ -3,19 +3,12 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createSupabaseMock } from "@/test/supabaseMock";
 
-// ParagraphBlockEditor remplacé par un <textarea> contrôlé — mêmes raisons
-// que components/__tests__/ChatroomComposerDraft.test.tsx (manipulations
-// contenteditable non fiables sous jsdom).
-vi.mock("@/components/chatrooms/composer/ParagraphBlockEditor", () => ({
-  ParagraphBlockEditor: ({
-    value,
-    onChange,
-  }: {
-    value: string;
-    onChange: (v: string) => void;
-  }) => (
-    <textarea data-testid="editor" value={value} onChange={(e) => onChange(e.target.value)} />
-  ),
+// Le vrai CodeEditor est monté : c'est un <textarea>, donc sélection, curseur
+// et raccourcis y sont ceux du navigateur. Seule la coloration est écartée —
+// elle charge Shiki et ses grammaires, hors sujet ici et lente.
+vi.mock("@/lib/codeHighlighter", () => ({
+  highlightCode: () => Promise.reject(new Error("coloration hors test")),
+  preloadCodeHighlighter: () => () => {},
 }));
 
 vi.mock("@/components/MarkdownRenderer", () => ({
@@ -38,6 +31,11 @@ vi.mock("@/components/providers/CurrentUserProvider", () => ({
 
 import { WikiPageContent } from "@/components/worlds/wiki/WikiPageContent";
 import type { WikiPage } from "@/components/worlds/wiki/WorldWiki";
+
+/** Le champ markdown de l'article, désigné par son nom accessible. */
+function champArticle() {
+  return screen.findByLabelText("Contenu de l'article");
+}
 
 const BASE_PAGE: WikiPage = {
   id: "p1",
@@ -108,7 +106,7 @@ describe("WikiPageContent — brouillon et publication", () => {
     );
 
     // Le mode modification ouvre l'éditeur : plus de second bouton à cliquer.
-    expect(await screen.findByTestId("editor")).toHaveValue("Texte en cours");
+    expect(await champArticle()).toHaveValue("Texte en cours");
   });
 
   it("n'autosauvegarde pas immédiatement après la frappe", async () => {
@@ -137,7 +135,7 @@ describe("WikiPageContent — brouillon et publication", () => {
       />,
     );
 
-    await user.type(await screen.findByTestId("editor"), "Bonjour");
+    await user.type(await champArticle(), "Bonjour");
 
     // Un seul appel .from() jusqu'ici : le select("draft_content") d'entrée
     // en édition. Le debounce d'autosave (1.8s) n'a pas encore expiré.
@@ -175,7 +173,7 @@ describe("WikiPageContent — brouillon et publication", () => {
       />,
     );
 
-    await user.type(await screen.findByTestId("editor"), "Bonjour monde");
+    await user.type(await champArticle(), "Bonjour monde");
 
     await waitFor(
       () => {
@@ -222,7 +220,7 @@ describe("WikiPageContent — brouillon et publication", () => {
       />,
     );
 
-    await screen.findByTestId("editor");
+    await champArticle();
     await user.click(screen.getByText("Publier"));
 
     await waitFor(() => {
@@ -614,7 +612,7 @@ describe("WikiPageContent — colonne latérale en mode modification", () => {
     ecranLarge();
     renderPage(true);
 
-    expect(await screen.findByTestId("editor")).toBeTruthy();
+    expect(await champArticle()).toBeTruthy();
     expect(screen.getByTestId("panneau-notes")).toBeTruthy();
   });
 
@@ -623,6 +621,101 @@ describe("WikiPageContent — colonne latérale en mode modification", () => {
     renderPage(false);
 
     expect(await screen.findByTestId("panneau-notes")).toBeTruthy();
-    expect(screen.queryByTestId("editor")).toBeNull();
+    expect(screen.queryByLabelText("Contenu de l'article")).toBeNull();
+  });
+});
+
+describe("WikiPageContent — ceinture de mise en forme", () => {
+  function renderEnEdition() {
+    const mock = createSupabaseMock({
+      results: [SANS_ANNOTATION, { data: { draft_content: "Un mot ici" }, error: null }],
+    });
+    render(
+      <WikiPageContent
+        worldId="w1"
+        panelWidth={320}
+        panelHandleProps={{}}
+        navCollapsed={false}
+        onExpandNav={vi.fn()}
+        onOpenTree={vi.fn()}
+        onRename={vi.fn()}
+        page={BASE_PAGE}
+        pages={[BASE_PAGE]}
+        canEdit
+        isEditMode
+        supabase={mock.client as never}
+        ancestors={[]}
+        onPageUpdated={vi.fn()}
+        onNavigate={vi.fn()}
+        onExpandFolder={vi.fn()}
+      />,
+    );
+  }
+
+  /** Sélectionne « mot » dans « Un mot ici ». */
+  async function champAvecMotSelectionne() {
+    const champ = (await champArticle()) as HTMLTextAreaElement;
+    await waitFor(() => expect(champ).toHaveValue("Un mot ici"));
+    champ.focus();
+    champ.setSelectionRange(3, 6);
+    return champ;
+  }
+
+  it("met en gras la sélection depuis un bouton", async () => {
+    renderEnEdition();
+    const champ = await champAvecMotSelectionne();
+
+    await userEvent.click(screen.getByRole("button", { name: "Gras" }));
+
+    expect(champ).toHaveValue("Un **mot** ici");
+  });
+
+  it("laisse la sélection sur le mot, prête pour un second format", async () => {
+    // Sans cela, enchaîner gras puis italique appliquerait le second au vide.
+    renderEnEdition();
+    const champ = await champAvecMotSelectionne();
+
+    await userEvent.click(screen.getByRole("button", { name: "Gras" }));
+    await waitFor(() => expect(champ.selectionStart).toBe(5));
+    await userEvent.click(screen.getByRole("button", { name: "Italique" }));
+
+    expect(champ).toHaveValue("Un ***mot*** ici");
+  });
+
+  it("répond aussi au raccourci clavier", async () => {
+    renderEnEdition();
+    const champ = await champAvecMotSelectionne();
+
+    fireEvent.keyDown(champ, { key: "b", code: "KeyB", ctrlKey: true });
+
+    await waitFor(() => expect(champ).toHaveValue("Un **mot** ici"));
+  });
+
+  it("ne montre la ceinture qu'en écriture", async () => {
+    // En lecture, la place revient au fil d'Ariane.
+    const mock = createSupabaseMock({ results: [SANS_ANNOTATION] });
+    render(
+      <WikiPageContent
+        worldId="w1"
+        panelWidth={320}
+        panelHandleProps={{}}
+        navCollapsed={false}
+        onExpandNav={vi.fn()}
+        onOpenTree={vi.fn()}
+        onRename={vi.fn()}
+        page={{ ...BASE_PAGE, content: "Un texte." }}
+        pages={[BASE_PAGE]}
+        canEdit
+        isEditMode={false}
+        supabase={mock.client as never}
+        ancestors={[]}
+        onPageUpdated={vi.fn()}
+        onNavigate={vi.fn()}
+        onExpandFolder={vi.fn()}
+      />,
+    );
+
+    await screen.findByTestId("markdown");
+    expect(screen.queryByRole("toolbar", { name: "Mise en forme" })).toBeNull();
   });
 });

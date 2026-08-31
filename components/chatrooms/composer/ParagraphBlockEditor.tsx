@@ -124,6 +124,8 @@ export function ParagraphBlockEditor({
   disabled?: boolean;
 }) {
   const t = useTranslations("chatrooms");
+  // Les libellés de mise en forme sont partagés avec l'éditeur du wiki.
+  const tCommun = useTranslations("common");
   const editorRef = useRef<HTMLDivElement>(null);
   const [focused, setFocused] = useState(false);
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
@@ -618,8 +620,8 @@ export function ParagraphBlockEditor({
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                title={t("formatHeading")}
-                aria-label={t("formatHeading")}
+                title={tCommun("formatHeading")}
+                aria-label={tCommun("formatHeading")}
                 onMouseDown={(e) => { e.preventDefault(); saveSelection(); }}
                 className={toolbarButtonClass}
               >
@@ -629,22 +631,22 @@ export function ParagraphBlockEditor({
             <DropdownMenuContent align="start" onCloseAutoFocus={(e) => e.preventDefault()}>
               <DropdownMenuItem onSelect={() => applyHeading(1)}>
                 <Heading1 className="h-3.5 w-3.5" />
-                {t("formatHeading1")}
+                {tCommun("formatHeading1")}
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => applyHeading(2)}>
                 <Heading2 className="h-3.5 w-3.5" />
-                {t("formatHeading2")}
+                {tCommun("formatHeading2")}
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => applyHeading(3)}>
                 <Heading3 className="h-3.5 w-3.5" />
-                {t("formatHeading3")}
+                {tCommun("formatHeading3")}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           <button
             type="button"
-            title={t("formatBold")}
-            aria-label={t("formatBold")}
+            title={tCommun("formatBold")}
+            aria-label={tCommun("formatBold")}
             onMouseDown={(e) => { e.preventDefault(); applyWrap("**", "**"); }}
             className={toolbarButtonClass}
           >
@@ -652,8 +654,8 @@ export function ParagraphBlockEditor({
           </button>
           <button
             type="button"
-            title={t("formatItalic")}
-            aria-label={t("formatItalic")}
+            title={tCommun("formatItalic")}
+            aria-label={tCommun("formatItalic")}
             onMouseDown={(e) => { e.preventDefault(); applyWrap("*", "*"); }}
             className={toolbarButtonClass}
           >
@@ -661,8 +663,8 @@ export function ParagraphBlockEditor({
           </button>
           <button
             type="button"
-            title={t("formatStrikethrough")}
-            aria-label={t("formatStrikethrough")}
+            title={tCommun("formatStrikethrough")}
+            aria-label={tCommun("formatStrikethrough")}
             onMouseDown={(e) => { e.preventDefault(); applyWrap("~~", "~~"); }}
             className={toolbarButtonClass}
           >
@@ -670,8 +672,8 @@ export function ParagraphBlockEditor({
           </button>
           <button
             type="button"
-            title={t("formatUnderline")}
-            aria-label={t("formatUnderline")}
+            title={tCommun("formatUnderline")}
+            aria-label={tCommun("formatUnderline")}
             onMouseDown={(e) => { e.preventDefault(); applyWrap("++", "++"); }}
             className={toolbarButtonClass}
           >
@@ -679,8 +681,8 @@ export function ParagraphBlockEditor({
           </button>
           <button
             type="button"
-            title={t("formatList")}
-            aria-label={t("formatList")}
+            title={tCommun("formatList")}
+            aria-label={tCommun("formatList")}
             onMouseDown={(e) => { e.preventDefault(); applyList(); }}
             className={toolbarButtonClass}
           >
@@ -690,8 +692,8 @@ export function ParagraphBlockEditor({
             <PopoverTrigger asChild>
               <button
                 type="button"
-                title={t("formatColor")}
-                aria-label={t("formatColor")}
+                title={tCommun("formatColor")}
+                aria-label={tCommun("formatColor")}
                 // Ne pas appeler setColorPickerOpen(true) ici : PopoverTrigger
                 // gère déjà l'ouverture via son propre onClick (Radix), qui se
                 // déclenche juste après ce mousedown. L'appeler nous-mêmes en

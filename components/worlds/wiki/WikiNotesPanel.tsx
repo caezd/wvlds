@@ -8,6 +8,8 @@ import {
   Loader2,
   MoreHorizontal,
   Pencil,
+  FilePlus,
+  FolderPlus,
   Plus,
   Trash2,
 } from "lucide-react";
@@ -82,6 +84,10 @@ const SUGGESTIONS = ["overview", "entities", "relationships", "places", "moments
 // ──────────────────────────────────────────────────────────────
 // Une catégorie et ses fiches
 // ──────────────────────────────────────────────────────────────
+/** Boutons du pied de colonne — mêmes mesures que sous l'arbre des pages. */
+const BOUTON_PIED =
+  "flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground";
+
 function CategorySection({
   group,
   canEdit,
@@ -90,6 +96,8 @@ function CategorySection({
   pending,
   onToggleCollapsed,
   onExpand,
+  adding,
+  onAddingChange,
   onToggleNote,
   onRename,
   onDelete,
@@ -105,6 +113,14 @@ function CategorySection({
   onToggleCollapsed: () => void;
   /** Déplie sans replier — le « + » doit montrer la fiche qu'il crée. */
   onExpand: () => void;
+  /**
+   * Saisie d'une nouvelle fiche ouverte ici.
+   *
+   * Piloté par le panneau, et non gardé en local : le bouton du pied de
+   * colonne doit pouvoir l'ouvrir sur une catégorie qu'il ne contient pas.
+   */
+  adding: boolean;
+  onAddingChange: (adding: boolean) => void;
   onToggleNote: (id: string) => void;
   onRename: (name: string) => void;
   onDelete: () => void;
@@ -117,8 +133,8 @@ function CategorySection({
 
   const [renaming, setRenaming] = React.useState(false);
   const [name, setName] = React.useState(group.category.name);
-  const [adding, setAdding] = React.useState(false);
   const [newTitle, setNewTitle] = React.useState("");
+  const setAdding = onAddingChange;
 
   const { attributes, listeners, setNodeRef, transform, transition, isOver, isDragging } =
     useSortable({ id: categoryDragId(group.category.id), disabled: !canEdit || renaming });
@@ -271,15 +287,7 @@ function CategorySection({
               autoFocus
               disabled={pending}
             />
-          ) : (
-            <button
-              type="button"
-              onClick={() => setAdding(true)}
-              className="mt-1 flex w-full items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
-            >
-              <Plus className="h-3 w-3" /> {t("addNote")}
-            </button>
-          ))}
+          ) : null)}
         </div>
       )}
     </section>
@@ -325,6 +333,8 @@ export function WikiNotesPanel({
   const [categoryName, setCategoryName] = React.useState("");
   const [confirmCategory, setConfirmCategory] = React.useState<WikiNoteCategory | null>(null);
   const [confirmNote, setConfirmNote] = React.useState<WikiPageNote | null>(null);
+  /** Catégorie dont la saisie d'une nouvelle fiche est ouverte, s'il y en a une. */
+  const [categorieEnAjout, setCategorieEnAjout] = React.useState<string | null>(null);
 
   // Le pli est local à la personne : il ne passe pas par la base, et se relit
   // au changement de page.
@@ -464,6 +474,10 @@ export function WikiNotesPanel({
                       pending={notes.pending}
                       onToggleCollapsed={() => toggleCollapsed(group.category.id)}
                       onExpand={() => expandCategory(group.category.id)}
+                      adding={categorieEnAjout === group.category.id}
+                      onAddingChange={ouvert =>
+                        setCategorieEnAjout(ouvert ? group.category.id : null)
+                      }
                       onToggleNote={toggleNote}
                       onRename={name => void notes.renameCategory(group.category, name)}
                       onDelete={() => setConfirmCategory(group.category)}
@@ -499,7 +513,7 @@ export function WikiNotesPanel({
             </div>
           )}
 
-          {isEditMode && !notes.loading && (creatingCategory ? (
+          {isEditMode && !notes.loading && creatingCategory && (
             <input
               value={categoryName}
               onChange={e => setCategoryName(e.target.value)}
@@ -514,16 +528,38 @@ export function WikiNotesPanel({
               autoFocus
               disabled={notes.pending}
             />
-          ) : (
+          )}
+      </div>
+
+      {/* Pied de colonne, comme sous l'arbre des pages : les gestes de
+          création y ont une place fixe au lieu de flotter à la fin d'une
+          liste dont la longueur varie. */}
+      {isEditMode && !notes.loading && (
+        <div className="flex shrink-0 items-center gap-1 border-t border-border-soft px-2 py-1.5">
+          {notes.groups.length > 0 && (
             <button
               type="button"
-              onClick={() => setCreatingCategory(true)}
-              className="mt-2 flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
+              // La dernière catégorie plutôt que la première : c'est celle qui
+              // borde le pied, donc celle qu'on désigne en cliquant là.
+              onClick={() => {
+                const derniere = notes.groups[notes.groups.length - 1].category.id;
+                expandCategory(derniere);
+                setCategorieEnAjout(derniere);
+              }}
+              className={BOUTON_PIED}
             >
-              <Plus className="h-3.5 w-3.5" /> {t("addCategory")}
+              <FilePlus className="h-3.5 w-3.5" /> {t("noteLabel")}
             </button>
-          ))}
-      </div>
+          )}
+          <button
+            type="button"
+            onClick={() => setCreatingCategory(true)}
+            className={BOUTON_PIED}
+          >
+            <FolderPlus className="h-3.5 w-3.5" /> {t("categoryLabel")}
+          </button>
+        </div>
+      )}
     </>
   );
 }

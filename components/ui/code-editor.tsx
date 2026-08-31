@@ -27,6 +27,11 @@ export function CodeEditor({
   placeholder,
   ariaInvalid,
   rows = 12,
+  fill = false,
+  textareaRef,
+  onKeyDown,
+  ariaLabel,
+  className,
 }: {
   id?: string;
   value: string;
@@ -36,6 +41,18 @@ export function CodeEditor({
   ariaInvalid?: boolean;
   /** Hauteur du champ, en lignes — comme l'attribut `rows` d'un `<textarea>`. */
   rows?: number;
+  /** Occupe la hauteur offerte par le parent au lieu de la fixer sur `rows`. */
+  fill?: boolean;
+  /**
+   * Donne accès au champ de saisie.
+   *
+   * Nécessaire à qui écrit dans le texte à la place de l'utilisateur — une
+   * ceinture d'outils de mise en forme lit la sélection puis la repose.
+   */
+  textareaRef?: React.RefObject<HTMLTextAreaElement | null>;
+  onKeyDown?: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
+  ariaLabel?: string;
+  className?: string;
 }) {
   const [highlighted, setHighlighted] = React.useState<string | null>(null);
   const preRef = React.useRef<HTMLPreElement>(null);
@@ -74,9 +91,11 @@ export function CodeEditor({
     <div
       className={cn(
         "relative rounded-md border bg-transparent",
+        fill && "h-full",
         ariaInvalid && "border-destructive",
+        className,
       )}
-      style={{ height: `calc(${rows} * 1.625 * 0.75rem + 1.5rem)` }}
+      style={fill ? undefined : { height: `calc(${rows} * 1.625 * 0.75rem + 1.5rem)` }}
     >
       {highlighted ? (
         <div
@@ -96,10 +115,13 @@ export function CodeEditor({
       )}
       <textarea
         id={id}
+        ref={textareaRef}
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onKeyDown={onKeyDown}
         onScroll={syncScroll}
         placeholder={placeholder}
+        aria-label={ariaLabel}
         spellCheck={false}
         aria-invalid={ariaInvalid}
         className={cn(
