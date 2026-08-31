@@ -487,51 +487,67 @@
 /* ── Commentaires ancrés du wiki ──────────────────────────────────────────
    Blocs commentés d'une page — paragraphe, élément de liste, citation, titre.
    La classe est posée après le rendu par WikiAnnotationLayer, hors de React :
-   sa mise en forme vit donc ici plutôt qu'en classes utilitaires. */
+   sa mise en forme vit donc ici plutôt qu'en classes utilitaires.
+
+   Une pastille en bout de ligne, et rien d'autre : un fond ou un filet
+   couraient sur toute la largeur du bloc et pesaient bien plus lourd que ce
+   qu'ils avaient à dire. */
 .wiki-annotation-block {
     cursor: pointer;
-    border-radius: 4px;
-    /* Le repere principal est le filet vertical, qui ne depend pas de la
-       couleur ; le fond reste tres dilue pour ne pas toucher au contraste du
-       texte lui-meme. */
-    background-color: rgb(56 132 255 / 0.07);
-    box-shadow: inset 3px 0 0 rgb(56 132 255 / 0.55);
-    /* Le retrait compense le remplissage : le texte du bloc reste aligne sur
-       celui des blocs voisins, seul le filet deborde dans la gouttiere. */
-    padding-left: 0.75rem;
-    margin-left: -0.75rem;
+}
+
+/* Nombre de fils, en bout de derniere ligne du bloc.
+   Contenu genere plutot qu'un noeud insere : la couche ne pose que des
+   attributs sur le rendu de React, et le decoupage en blocs — qui lit le
+   texte des elements — n'a ainsi rien de plus a ignorer. */
+.wiki-annotation-block[data-annotation-count]::after {
+    content: attr(data-annotation-count);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.25em;
+    margin-left: 0.45em;
+    padding: 0 0.35em;
+    border-radius: 999px;
+    background-color: rgb(56 132 255 / 0.16);
+    color: rgb(37 99 235);
+    font-size: 0.7em;
+    font-weight: 600;
+    line-height: 1.7;
+    vertical-align: 0.15em;
     transition: background-color 120ms ease;
 }
 
-/* Bloc en attente de son premier message. */
-.wiki-annotation-block[data-annotation-draft] {
-    background-color: rgb(56 132 255 / 0.05);
-    box-shadow: inset 3px 0 0 rgb(56 132 255 / 0.35);
+/* Bloc en attente de son premier message : rien a compter encore. */
+.wiki-annotation-block[data-annotation-draft]::after {
+    content: "…";
+    background-color: rgb(56 132 255 / 0.12);
 }
 
-/* Fil resolu : la marque reste visible — savoir qu'une discussion a eu lieu
-   ici a de la valeur — mais s'efface derriere le texte. */
-.wiki-annotation-block[data-annotation-resolved] {
-    background-color: transparent;
-    box-shadow: inset 2px 0 0 var(--border);
+/* Fil resolu : la pastille reste — savoir qu'une discussion a eu lieu ici a de
+   la valeur — mais cesse d'appeler l'oeil. */
+.wiki-annotation-block[data-annotation-resolved]::after {
+    background-color: var(--secondary);
+    color: var(--muted-foreground);
 }
 
-.wiki-annotation-block[data-annotation-active] {
-    background-color: rgb(56 132 255 / 0.16);
+.wiki-annotation-block[data-annotation-active]::after {
+    background-color: rgb(37 99 235);
+    color: white;
 }
 
 /* Sur fond sombre, la meme teinte parait terne : on la remonte legerement
    plutot que de changer de couleur. */
-.dark .wiki-annotation-block {
-    background-color: rgb(96 165 250 / 0.10);
-    box-shadow: inset 3px 0 0 rgb(96 165 250 / 0.6);
-}
-
-.dark .wiki-annotation-block[data-annotation-draft] {
-    background-color: rgb(96 165 250 / 0.07);
-    box-shadow: inset 3px 0 0 rgb(96 165 250 / 0.4);
-}
-
-.dark .wiki-annotation-block[data-annotation-active] {
+.dark .wiki-annotation-block[data-annotation-count]::after {
     background-color: rgb(96 165 250 / 0.22);
+    color: rgb(147 197 253);
+}
+
+.dark .wiki-annotation-block[data-annotation-draft]::after {
+    background-color: rgb(96 165 250 / 0.16);
+}
+
+.dark .wiki-annotation-block[data-annotation-active]::after {
+    background-color: rgb(96 165 250);
+    color: rgb(15 23 42);
 }

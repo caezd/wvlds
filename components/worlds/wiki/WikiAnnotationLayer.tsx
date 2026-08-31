@@ -163,6 +163,9 @@ export function WikiAnnotationLayer({
       // ouvre, et celui qui attend une réponse.
       const premierOuvert = fils.find(th => !th.root.resolved_at) ?? fils[0];
       el.dataset.annotationId = premierOuvert.root.id;
+      // Lu par la pastille de fin de ligne, en CSS : rien n'est inséré dans le
+      // rendu, le découpage en blocs n'a donc rien de plus à ignorer.
+      el.dataset.annotationCount = String(fils.length);
       if (fils.every(th => th.root.resolved_at)) el.dataset.annotationResolved = "true";
       el.classList.add("wiki-annotation-block");
     }
