@@ -27,7 +27,10 @@ export function WikiSearchBar({
   const t = useTranslations("wiki");
 
   return (
-    <div className="border-b border-border-soft p-1.5">
+    // Ni bordure ni marge verticale : la barre vit maintenant dans le bandeau
+    // de la colonne, qui porte déjà le trait — et qui n'en porte pas dans le
+    // tiroir, où il n'y a rien à aligner.
+    <div className="relative">
       <div className="relative">
         <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
         <input
@@ -49,7 +52,7 @@ export function WikiSearchBar({
       </div>
 
       {results !== null && (
-        <div className="mt-1.5 max-h-64 overflow-y-auto">
+        <div className="absolute inset-x-0 top-full z-20 mt-1 max-h-64 overflow-y-auto rounded-md border border-border-soft bg-popover p-1 shadow-md">
           {results.length === 0 ? (
             <p className="px-1 py-1 text-xs italic text-muted-foreground">{t("searchNoResults")}</p>
           ) : (
