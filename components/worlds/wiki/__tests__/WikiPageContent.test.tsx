@@ -123,6 +123,7 @@ describe("WikiPageContent — brouillon et publication", () => {
         navCollapsed={false}
         onExpandNav={vi.fn()}
         onOpenTree={vi.fn()}
+        onExitEditMode={vi.fn()}
         pageCount={3}
         onRename={vi.fn()}
         page={BASE_PAGE}
@@ -152,6 +153,7 @@ describe("WikiPageContent — brouillon et publication", () => {
         navCollapsed={false}
         onExpandNav={vi.fn()}
         onOpenTree={vi.fn()}
+        onExitEditMode={vi.fn()}
         pageCount={3}
         onRename={vi.fn()}
         page={BASE_PAGE}
@@ -189,6 +191,7 @@ describe("WikiPageContent — brouillon et publication", () => {
         navCollapsed={false}
         onExpandNav={vi.fn()}
         onOpenTree={vi.fn()}
+        onExitEditMode={vi.fn()}
         pageCount={3}
         onRename={vi.fn()}
         page={BASE_PAGE}
@@ -235,6 +238,7 @@ describe("WikiPageContent — brouillon et publication", () => {
         navCollapsed={false}
         onExpandNav={vi.fn()}
         onOpenTree={vi.fn()}
+        onExitEditMode={vi.fn()}
         pageCount={3}
         onRename={vi.fn()}
         page={BASE_PAGE}
@@ -260,6 +264,79 @@ describe("WikiPageContent — brouillon et publication", () => {
       expect.objectContaining({ id: "p1", content: "Brouillon prêt" }),
     );
   });
+
+  it("relâche la bascule du wiki en publiant", async () => {
+    // Le mode modification EST l'édition de l'article : refermer l'éditeur en
+    // laissant la bascule allumée montrait la page en lecture sous un bouton
+    // « Modifier » actif, état d'où l'on ne sortait qu'en le basculant deux fois.
+    const onExitEditMode = vi.fn();
+    const mock = createSupabaseMock({
+      results: [
+        SANS_ANNOTATION,
+        { data: { draft_content: "Brouillon prêt" }, error: null },
+        { data: null, error: null },
+      ],
+    });
+    const user = userEvent.setup();
+    render(
+      <WikiPageContent
+        worldId="w1"
+        panelWidth={320}
+        panelHandleProps={{}}
+        navCollapsed={false}
+        onExpandNav={vi.fn()}
+        onOpenTree={vi.fn()}
+        onExitEditMode={onExitEditMode}
+        pageCount={3}
+        onRename={vi.fn()}
+        page={BASE_PAGE}
+        pages={[BASE_PAGE]}
+        canEdit
+        isEditMode
+        supabase={mock.client as never}
+        onPageUpdated={vi.fn()}
+        onNavigate={vi.fn()}
+      />,
+    );
+
+    await champArticle();
+    await user.click(screen.getByText("Publier"));
+
+    await waitFor(() => expect(onExitEditMode).toHaveBeenCalledTimes(1));
+  });
+
+  it("la relâche aussi quand on annule", async () => {
+    const onExitEditMode = vi.fn();
+    const mock = createSupabaseMock({
+      results: [SANS_ANNOTATION, { data: { draft_content: "Peu importe" }, error: null }],
+    });
+    const user = userEvent.setup();
+    render(
+      <WikiPageContent
+        worldId="w1"
+        panelWidth={320}
+        panelHandleProps={{}}
+        navCollapsed={false}
+        onExpandNav={vi.fn()}
+        onOpenTree={vi.fn()}
+        onExitEditMode={onExitEditMode}
+        pageCount={3}
+        onRename={vi.fn()}
+        page={BASE_PAGE}
+        pages={[BASE_PAGE]}
+        canEdit
+        isEditMode
+        supabase={mock.client as never}
+        onPageUpdated={vi.fn()}
+        onNavigate={vi.fn()}
+      />,
+    );
+
+    await champArticle();
+    await user.click(screen.getByText("Annuler"));
+
+    expect(onExitEditMode).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("WikiPageContent — badge brouillon", () => {
@@ -279,6 +356,7 @@ describe("WikiPageContent — badge brouillon", () => {
         navCollapsed={false}
         onExpandNav={vi.fn()}
         onOpenTree={vi.fn()}
+        onExitEditMode={vi.fn()}
         pageCount={3}
         onRename={vi.fn()}
         page={page}
@@ -309,6 +387,7 @@ describe("WikiPageContent — badge brouillon", () => {
         navCollapsed={false}
         onExpandNav={vi.fn()}
         onOpenTree={vi.fn()}
+        onExitEditMode={vi.fn()}
         pageCount={3}
         onRename={vi.fn()}
         page={page}
@@ -339,6 +418,7 @@ describe("WikiPageContent — badge brouillon", () => {
         navCollapsed={false}
         onExpandNav={vi.fn()}
         onOpenTree={vi.fn()}
+        onExitEditMode={vi.fn()}
         pageCount={3}
         onRename={vi.fn()}
         page={page}
@@ -366,6 +446,7 @@ describe("WikiPageContent — badge page restreinte", () => {
         navCollapsed={false}
         onExpandNav={vi.fn()}
         onOpenTree={vi.fn()}
+        onExitEditMode={vi.fn()}
         pageCount={3}
         onRename={vi.fn()}
         page={page}
@@ -391,6 +472,7 @@ describe("WikiPageContent — badge page restreinte", () => {
         navCollapsed={false}
         onExpandNav={vi.fn()}
         onOpenTree={vi.fn()}
+        onExitEditMode={vi.fn()}
         pageCount={3}
         onRename={vi.fn()}
         page={page}
@@ -423,6 +505,7 @@ describe("WikiPageContent — titre de la page", () => {
         navCollapsed={false}
         onExpandNav={vi.fn()}
         onOpenTree={vi.fn()}
+        onExitEditMode={vi.fn()}
         pageCount={3}
         onRename={onRename}
         page={{ ...BASE_PAGE, content: "Publié" }}
@@ -458,6 +541,7 @@ describe("WikiPageContent — titre de la page", () => {
         navCollapsed={false}
         onExpandNav={vi.fn()}
         onOpenTree={vi.fn()}
+        onExitEditMode={vi.fn()}
         pageCount={3}
         onRename={onRename}
         page={{ ...BASE_PAGE, content: "Publié" }}
@@ -492,6 +576,7 @@ describe("WikiPageContent — commentaires ancrés", () => {
         navCollapsed={false}
         onExpandNav={vi.fn()}
         onOpenTree={vi.fn()}
+        onExitEditMode={vi.fn()}
         pageCount={3}
         onRename={vi.fn()}
         page={PAGE}
@@ -573,6 +658,39 @@ describe("WikiPageContent — commentaires ancrés", () => {
     expect(marque!.textContent).toBe("Les Gardiens veillent sur Meridian.");
   });
 
+  it("déplie la colonne repliée pour montrer la saisie", async () => {
+    // Le tiroir seul ne suffisait pas : son ouverture est conditionnée à
+    // l'absence de colonne. À grande largeur, colonne repliée, la saisie
+    // s'ouvrait donc hors de vue.
+    ecranLarge();
+    // `localStorage` de l'environnement de test n'a pas de `setItem` : on
+    // fournit le magasin que la colonne interroge, plutôt que d'y écrire.
+    const vrai = Object.getOwnPropertyDescriptor(window, "localStorage");
+    Object.defineProperty(window, "localStorage", {
+      configurable: true,
+      value: {
+        getItem: (cle: string) => (cle === "wiki-side-collapsed:w1" ? "1" : null),
+        setItem: () => {},
+        removeItem: () => {},
+      },
+    });
+    try {
+      const mock = createSupabaseMock({ results: [{ data: [], error: null }] });
+      const user = userEvent.setup();
+      const { container } = renderPage(mock);
+
+      await screen.findByTestId("markdown");
+      expect(screen.queryByRole("complementary")).toBeNull();
+
+      survolerParagraphe(container, 1);
+      await user.click(await screen.findByRole("button", { name: "Commenter" }));
+
+      expect(screen.getByRole("complementary", { name: "Commentaires" })).toBeTruthy();
+    } finally {
+      if (vrai) Object.defineProperty(window, "localStorage", vrai);
+    }
+  });
+
   it("ouvre la saisie sur le bloc survolé, texte à l'appui", async () => {
     ecranLarge();
     const mock = createSupabaseMock({ results: [{ data: [], error: null }] });
@@ -603,6 +721,7 @@ describe("WikiPageContent — colonne latérale en mode modification", () => {
         navCollapsed={false}
         onExpandNav={vi.fn()}
         onOpenTree={vi.fn()}
+        onExitEditMode={vi.fn()}
         pageCount={3}
         onRename={vi.fn()}
         page={{ ...BASE_PAGE, content: "Un texte." }}
@@ -650,6 +769,7 @@ describe("WikiPageContent — ceinture de mise en forme", () => {
         navCollapsed={false}
         onExpandNav={vi.fn()}
         onOpenTree={vi.fn()}
+        onExitEditMode={vi.fn()}
         pageCount={3}
         onRename={vi.fn()}
         page={BASE_PAGE}
@@ -762,6 +882,7 @@ describe("WikiPageContent — ceinture de mise en forme", () => {
         navCollapsed={false}
         onExpandNav={vi.fn()}
         onOpenTree={vi.fn()}
+        onExitEditMode={vi.fn()}
         pageCount={3}
         onRename={vi.fn()}
         page={{ ...BASE_PAGE, content: "Un texte." }}
@@ -790,6 +911,7 @@ describe("WikiPageContent — compteurs du sous-en-tête", () => {
         navCollapsed={false}
         onExpandNav={vi.fn()}
         onOpenTree={vi.fn()}
+        onExitEditMode={vi.fn()}
         pageCount={3}
         onRename={vi.fn()}
         page={{ ...BASE_PAGE, content: "Un texte." }}

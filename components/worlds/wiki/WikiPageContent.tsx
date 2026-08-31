@@ -75,6 +75,7 @@ export function WikiPageContent({
   pages,
   canEdit,
   isEditMode,
+  onExitEditMode,
   supabase,
   onPageUpdated,
   onNavigate,
@@ -103,6 +104,8 @@ export function WikiPageContent({
   canEdit: boolean;
   /** Mode édition actif dans le panneau (bascule + permission). */
   isEditMode: boolean;
+  /** Éteint cette bascule — publier ou annuler doit la relâcher aussi. */
+  onExitEditMode: () => void;
   supabase: ReturnType<typeof createClient>;
   onPageUpdated: (patch: Partial<WikiPage> & { id: string }) => void;
   /** Navigue vers la page dont le slug est résolu depuis un lien interne. */
@@ -254,6 +257,11 @@ export function WikiPageContent({
 
   function startDraft(anchor: BlockAnchor) {
     setSideTab("comments");
+    // Ouvrir le panneau là où il vit : la colonne quand elle est repliée, le
+    // tiroir en dessous de `xl`. Le tiroir seul ne suffisait pas — son `open`
+    // est conditionné à l'absence de colonne, si bien qu'à grande largeur
+    // avec la colonne repliée, la saisie s'ouvrait hors de vue.
+    replierPanneau(false);
     setSideDrawerOpen(true);
     setActiveAnnotation(null);
     setAnnotationDraft({ anchor });
@@ -389,6 +397,19 @@ export function WikiPageContent({
     dirtyRef.current = false;
   }
 
+  /**
+   * Ferme l'éditeur ET la bascule du wiki.
+   *
+   * Les deux ne font qu'un depuis que le mode modification ouvre l'article :
+   * fermer l'un sans l'autre laissait la page en lecture et le bouton
+   * « Modifier » allumé, état d'où l'on ne ressortait qu'en le basculant deux
+   * fois.
+   */
+  function quitterLaModification() {
+    setEditing(false);
+    onExitEditMode();
+  }
+
   async function publish() {
     if (autosaveTimeout.current) { clearTimeout(autosaveTimeout.current); autosaveTimeout.current = null; }
     dirtyRef.current = false;
@@ -408,7 +429,7 @@ export function WikiPageContent({
     if (error) { toast.error(t("saveError"), { description: error.message }); return; }
     onPageUpdated({ id: page.id, content: draft, draft_updated_at: nowIso, published_at: nowIso });
     setLastAutosavedAt(new Date());
-    setEditing(false);
+    quitterLaModification();
   }
 
   const pageIcon = page.icon && VALID_LUCIDE_ICONS.has(page.icon)
@@ -612,7 +633,7 @@ export function WikiPageContent({
                 <Button variant="ghost" size="sm" onClick={() => setHistoryOpen(true)}>
                   <History className="mr-1 h-3.5 w-3.5" /> {t("versionHistory")}
                 </Button>
-                <Button variant="ghost" size="sm" onClick={() => setEditing(false)} disabled={publishing}>
+                <Button variant="ghost" size="sm" onClick={quitterLaModification} disabled={publishing}>
                   {tCommon("cancel")}
                 </Button>
                 <Button size="sm" onClick={() => void publish()} disabled={publishing || loadingDraft}>

@@ -1038,6 +1038,7 @@ export function WorldWiki({
         pages={pages ?? []}
         canEdit={canEdit}
         isEditMode={isEditMode}
+        onExitEditMode={() => setEditMode(false)}
         supabase={supabase}
         onPageUpdated={onPageUpdated}
         onRename={(title, icon) => void renamePage(selectedPage, title, icon)}
