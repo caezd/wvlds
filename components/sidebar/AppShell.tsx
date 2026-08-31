@@ -93,8 +93,11 @@ function AppShellInner({
     if (!open) { closeDms(); closeNotif(); }
   }
 
+  // Gouttière sur trois côtés seulement : le panneau principal n'a plus de
+  // bordure à gauche (voir le `<main>` plus bas), il vient donc s'appuyer
+  // contre la navigation au lieu de flotter à un pixel d'elle.
   return (
-    <div className="relative flex h-full w-full flex-row lg:p-2">
+    <div className="relative flex h-full w-full flex-row lg:py-2 lg:pr-2">
 
       {/* Rail permanent (desktop) */}
       <aside className="relative z-20 hidden w-14 shrink-0 rounded-lg lg:flex">
