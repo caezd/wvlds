@@ -178,7 +178,10 @@ function AppShellInner({
           </button>
         </header>
 
-        <main className="relative flex h-full w-full flex-1 overflow-hidden lg:border lg:bg-background lg:rounded-lg">
+        {/* `lg:border-l-0` : le bord gauche du panneau doublait la séparation déjà
+            portée par la navigation qui le précède. Les trois autres côtés restent —
+            ce sont eux qui détachent le panneau des bords de la fenêtre. */}
+        <main className="relative flex h-full w-full flex-1 overflow-hidden lg:border lg:border-l-0 lg:bg-background lg:rounded-lg">
           <div
             id="thread"
             className={cn(
