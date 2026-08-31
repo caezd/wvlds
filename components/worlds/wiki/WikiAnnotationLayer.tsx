@@ -318,8 +318,10 @@ export function WikiAnnotationLayer({
               aria-label={t("addComment")}
               title={t("addComment")}
               className={cn(
-                "flex h-5 w-5 shrink-0 items-center justify-center rounded-md",
-                "text-muted-foreground transition-opacity hover:bg-secondary hover:text-foreground",
+                // L'icône seule, sans fond ni cadre : la boîte reste, mais
+                // pour la surface de clic, pas pour se voir.
+                "flex h-5 w-5 shrink-0 items-center justify-center",
+                "text-muted-foreground transition-opacity hover:text-foreground",
                 // Il se montre aussi quand on le vise lui-même : effacé mais
                 // cliquable, il se laissait atteindre à l'aveugle. Le survol
                 // du bloc ne dit rien de celui de la marge, qui n'en fait
