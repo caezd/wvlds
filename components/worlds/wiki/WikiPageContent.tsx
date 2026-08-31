@@ -28,7 +28,6 @@ import { WikiAnnotationLayer, type ActiveAnnotation } from "./WikiAnnotationLaye
 import { WikiAnnotationsPanel, type AnnotationDraft } from "./WikiAnnotationsPanel";
 import { WikiNotesPanel } from "./WikiNotesPanel";
 import { WikiSidePanel, type WikiSideTab } from "./WikiSidePanel";
-import { WikiBreadcrumb } from "./WikiBreadcrumb";
 import { WikiFormatToolbar } from "./WikiFormatToolbar";
 import { WIKI_SUBHEADER, WIKI_SUBHEADER_COUNT } from "./wikiSubHeader";
 import { WikiTableOfContents } from "./WikiTableOfContents";
@@ -74,13 +73,11 @@ export function WikiPageContent({
   pageCount,
   onRename,
   pages,
-  ancestors,
   canEdit,
   isEditMode,
   supabase,
   onPageUpdated,
   onNavigate,
-  onExpandFolder,
   lexiconTerms,
 }: {
   page: WikiPage;
@@ -102,8 +99,6 @@ export function WikiPageContent({
   onRename: (title: string, icon: string) => void;
   /** Toutes les pages du wiki — pour résoudre les liens internes `[[Titre]]`. */
   pages: WikiPage[];
-  /** Dossiers ancêtres de la page, du plus ancien au plus proche (fil d'Ariane). */
-  ancestors: WikiPage[];
   /** Permission de l'utilisateur (owner/admin/editor) — indépendante du bascule de mode édition. */
   canEdit: boolean;
   /** Mode édition actif dans le panneau (bascule + permission). */
@@ -112,8 +107,6 @@ export function WikiPageContent({
   onPageUpdated: (patch: Partial<WikiPage> & { id: string }) => void;
   /** Navigue vers la page dont le slug est résolu depuis un lien interne. */
   onNavigate: (slug: string) => void;
-  /** Déplie un dossier ancêtre (et les siens) dans la sidebar, depuis le fil d'Ariane. */
-  onExpandFolder: (folderId: string) => void;
   /** Lexique du monde — surligné automatiquement dans le contenu rendu. */
   lexiconTerms?: WorldLexiconTerm[];
 }) {
@@ -505,15 +498,12 @@ export function WikiPageContent({
           {compteurDesPages}
         </button>
       )}
-      {/* En écriture, la ceinture d'outils prend la place du fil d'Ariane : le
-          chemin de la page reste lisible dans l'arbre à gauche, alors que les
-          outils n'ont pas d'autre logement à la largeur de la colonne. */}
+      {/* Le segment central ne porte plus que la ceinture d'outils : le fil
+          d'Ariane est monté dans l'en-tête principal, où il ne dispute plus
+          la place aux outils. Vide en lecture, le segment reste là — c'est lui
+          qui aligne le trait avec les deux colonnes voisines. */}
       <div className="min-w-0 flex-1">
-        {editing ? (
-          <WikiFormatToolbar onFormat={appliquerMiseEnForme} />
-        ) : (
-          <WikiBreadcrumb ancestors={ancestors} onExpandFolder={onExpandFolder} />
-        )}
+        {editing && <WikiFormatToolbar onFormat={appliquerMiseEnForme} />}
       </div>
       {/* Symétrique du bouton des pages : le tiroir en dessous de `xl`, le
           dépliage de la colonne au-dessus. */}

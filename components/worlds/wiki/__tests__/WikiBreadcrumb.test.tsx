@@ -38,6 +38,18 @@ describe("WikiBreadcrumb", () => {
     expect(buttons.map(b => b.textContent)).toEqual(["Lieux", "Villes"]);
   });
 
+  it("ouvre chaque segment d'une barre oblique, comme l'en-tête d'un salon", () => {
+    const { container } = render(
+      <WikiBreadcrumb
+        ancestors={[makeFolder("f1", "Lieux"), makeFolder("f2", "Villes")]}
+        onExpandFolder={vi.fn()}
+      />,
+    );
+    // Le fil suit le nom du wiki dans le même bandeau : sans séparateur en
+    // tête, « Annexes Lieux » se lirait comme un seul titre.
+    expect(container.textContent).toBe("/Lieux/Villes");
+  });
+
   it("déplie le dossier correspondant au clic d'un segment", async () => {
     const onExpandFolder = vi.fn();
     const user = userEvent.setup();

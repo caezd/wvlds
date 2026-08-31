@@ -42,6 +42,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { WikiPageContent } from "./WikiPageContent";
 import { WorldLexiconManager } from "./WorldLexiconManager";
+import { WikiBreadcrumb } from "./WikiBreadcrumb";
 import { WikiSearchBar, type WikiSearchResult } from "./WikiSearchBar";
 import { WikiTemplatePicker } from "./WikiTemplatePicker";
 import { WIKI_TEMPLATE_ICONS, type WikiTemplateId } from "@/lib/wikiTemplates";
@@ -1035,14 +1036,12 @@ export function WorldWiki({
         onOpenTree={() => setTreeOpen(true)}
         pageCount={pageCount}
         pages={pages ?? []}
-        ancestors={ancestorsOf(selectedPage)}
         canEdit={canEdit}
         isEditMode={isEditMode}
         supabase={supabase}
         onPageUpdated={onPageUpdated}
         onRename={(title, icon) => void renamePage(selectedPage, title, icon)}
         onNavigate={navigateToSlug}
-        onExpandFolder={expandFolderChain}
         lexiconTerms={lexiconTerms}
       />
     );
@@ -1094,7 +1093,16 @@ export function WorldWiki({
           right={canEdit && (
             <WikiEditModeToggle editMode={editMode} onToggle={() => setEditMode(v => !v)} />
           )}
-        />
+        >
+          {/* Le chemin de la page suit le nom du wiki, comme le nom d'un salon
+              suit celui de son monde : même geste, même lecture. */}
+          {selectedPage && (
+            <WikiBreadcrumb
+              ancestors={ancestorsOf(selectedPage)}
+              onExpandFolder={expandFolderChain}
+            />
+          )}
+        </WorldPanelHeader>
 
         {/* ── Body ───────────────────────────────────────── */}
         <div className="flex min-h-0 flex-1">

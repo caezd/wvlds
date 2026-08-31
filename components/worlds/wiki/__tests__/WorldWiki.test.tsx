@@ -196,7 +196,7 @@ describe("WorldWiki — recherche et fil d'Ariane", () => {
     expect(screen.getAllByText("Lieux").length).toBeGreaterThan(0);
   });
 
-  it("affiche le fil d'Ariane du dossier parent au-dessus du contenu", async () => {
+  it("affiche le fil d'Ariane du dossier parent dans l'en-tête principal", async () => {
     setupWithFolder();
     const user = userEvent.setup();
     render(<WorldWiki worldId="w1" canEdit={false} />);
@@ -205,14 +205,11 @@ describe("WorldWiki — recherche et fil d'Ariane", () => {
     await user.click(await dansLArbre("Lieux")); // déplie le dossier
     await user.click(await screen.findByText("La Forêt Noire"));
 
-    // Deux boutons portent ce nom : l'entrée de l'arbre et le fil d'Ariane.
-    // C'est voulu — le titre d'une page de l'arbre est devenu un vrai bouton,
-    // pour être atteignable au clavier. On vise donc explicitement celui du
-    // fil d'Ariane, seul objet de ce test : il n'annonce pas d'état déplié.
-    const boutons = screen.getAllByRole("button", { name: "Lieux" });
-    const filDAriane = boutons.filter((b) => !b.hasAttribute("aria-expanded"));
-    expect(filDAriane).toHaveLength(1);
-    expect(filDAriane[0]).toBeInTheDocument();
+    // Le chemin suit le nom du wiki dans le même bandeau, comme le nom d'un
+    // salon suit celui de son monde.
+    const enTete = screen.getByText("Annexes").closest("div")!;
+    const chemin = within(enTete).getByRole("navigation");
+    expect(within(chemin).getByRole("button", { name: "Lieux" })).toBeTruthy();
   });
 
   it("le titre d'une page est atteignable au clavier", async () => {

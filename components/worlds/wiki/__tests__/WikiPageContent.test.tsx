@@ -123,10 +123,8 @@ describe("WikiPageContent — brouillon et publication", () => {
         canEdit
         isEditMode
         supabase={mock.client as never}
-        ancestors={[]}
         onPageUpdated={vi.fn()}
         onNavigate={vi.fn()}
-        onExpandFolder={vi.fn()}
       />,
     );
 
@@ -154,10 +152,8 @@ describe("WikiPageContent — brouillon et publication", () => {
         canEdit
         isEditMode
         supabase={mock.client as never}
-        ancestors={[]}
         onPageUpdated={vi.fn()}
         onNavigate={vi.fn()}
-        onExpandFolder={vi.fn()}
       />,
     );
 
@@ -193,10 +189,8 @@ describe("WikiPageContent — brouillon et publication", () => {
         canEdit
         isEditMode
         supabase={mock.client as never}
-        ancestors={[]}
         onPageUpdated={onPageUpdated}
         onNavigate={vi.fn()}
-        onExpandFolder={vi.fn()}
       />,
     );
 
@@ -241,10 +235,8 @@ describe("WikiPageContent — brouillon et publication", () => {
         canEdit
         isEditMode
         supabase={mock.client as never}
-        ancestors={[]}
         onPageUpdated={onPageUpdated}
         onNavigate={vi.fn()}
-        onExpandFolder={vi.fn()}
       />,
     );
 
@@ -287,10 +279,8 @@ describe("WikiPageContent — badge brouillon", () => {
         canEdit
         isEditMode={false}
         supabase={mock.client as never}
-        ancestors={[]}
         onPageUpdated={vi.fn()}
         onNavigate={vi.fn()}
-        onExpandFolder={vi.fn()}
       />,
     );
     expect(screen.getByText("Brouillon")).toBeInTheDocument();
@@ -319,10 +309,8 @@ describe("WikiPageContent — badge brouillon", () => {
         canEdit={false}
         isEditMode={false}
         supabase={mock.client as never}
-        ancestors={[]}
         onPageUpdated={vi.fn()}
         onNavigate={vi.fn()}
-        onExpandFolder={vi.fn()}
       />,
     );
     expect(screen.queryByText("Brouillon")).not.toBeInTheDocument();
@@ -351,10 +339,8 @@ describe("WikiPageContent — badge brouillon", () => {
         canEdit
         isEditMode={false}
         supabase={mock.client as never}
-        ancestors={[]}
         onPageUpdated={vi.fn()}
         onNavigate={vi.fn()}
-        onExpandFolder={vi.fn()}
       />,
     );
     expect(screen.queryByText("Brouillon")).not.toBeInTheDocument();
@@ -380,10 +366,8 @@ describe("WikiPageContent — badge page restreinte", () => {
         canEdit
         isEditMode={false}
         supabase={mock.client as never}
-        ancestors={[]}
         onPageUpdated={vi.fn()}
         onNavigate={vi.fn()}
-        onExpandFolder={vi.fn()}
       />,
     );
     expect(screen.getByText("Réservé aux éditeurs")).toBeInTheDocument();
@@ -407,10 +391,8 @@ describe("WikiPageContent — badge page restreinte", () => {
         canEdit
         isEditMode={false}
         supabase={mock.client as never}
-        ancestors={[]}
         onPageUpdated={vi.fn()}
         onNavigate={vi.fn()}
-        onExpandFolder={vi.fn()}
       />,
     );
     expect(screen.queryByText("Réservé aux éditeurs")).not.toBeInTheDocument();
@@ -441,10 +423,8 @@ describe("WikiPageContent — titre de la page", () => {
         canEdit
         isEditMode
         supabase={mock.client as never}
-        ancestors={[]}
         onPageUpdated={vi.fn()}
         onNavigate={vi.fn()}
-        onExpandFolder={vi.fn()}
       />,
     );
 
@@ -478,10 +458,8 @@ describe("WikiPageContent — titre de la page", () => {
         canEdit
         isEditMode
         supabase={mock.client as never}
-        ancestors={[]}
         onPageUpdated={vi.fn()}
         onNavigate={vi.fn()}
-        onExpandFolder={vi.fn()}
       />,
     );
 
@@ -514,10 +492,8 @@ describe("WikiPageContent — commentaires ancrés", () => {
         canEdit={canEdit}
         isEditMode={false}
         supabase={mock.client as never}
-        ancestors={[]}
         onPageUpdated={vi.fn()}
         onNavigate={vi.fn()}
-        onExpandFolder={vi.fn()}
       />,
     );
   }
@@ -633,10 +609,8 @@ describe("WikiPageContent — colonne latérale en mode modification", () => {
         canEdit
         isEditMode={isEditMode}
         supabase={mock.client as never}
-        ancestors={[]}
         onPageUpdated={vi.fn()}
         onNavigate={vi.fn()}
-        onExpandFolder={vi.fn()}
       />,
     );
   }
@@ -682,10 +656,8 @@ describe("WikiPageContent — ceinture de mise en forme", () => {
         canEdit
         isEditMode
         supabase={mock.client as never}
-        ancestors={[]}
         onPageUpdated={vi.fn()}
         onNavigate={vi.fn()}
-        onExpandFolder={vi.fn()}
       />,
     );
   }
@@ -796,10 +768,8 @@ describe("WikiPageContent — ceinture de mise en forme", () => {
         canEdit
         isEditMode={false}
         supabase={mock.client as never}
-        ancestors={[]}
         onPageUpdated={vi.fn()}
         onNavigate={vi.fn()}
-        onExpandFolder={vi.fn()}
       />,
     );
 
@@ -826,10 +796,8 @@ describe("WikiPageContent — compteurs du sous-en-tête", () => {
         canEdit
         isEditMode={false}
         supabase={mock.client as never}
-        ancestors={[]}
         onPageUpdated={vi.fn()}
         onNavigate={vi.fn()}
-        onExpandFolder={vi.fn()}
       />,
     );
   }
