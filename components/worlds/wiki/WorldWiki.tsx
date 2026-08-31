@@ -910,7 +910,23 @@ export function WorldWiki({
         </button>
       </div>
 
-      <div className="flex items-center gap-1 px-2 pt-1.5">
+      <div className="flex-1 overflow-y-auto py-1.5">
+        {pages === null ? (
+          <div className="flex items-center justify-center p-6">
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          </div>
+        ) : searchQuery.trim() === "" ? (
+          <nav className="px-1">
+            <DndContext sensors={sensors} onDragEnd={onDragEnd}>
+              {renderTree(null)}
+            </DndContext>
+            {pages.length === 0 && !creating && (
+              <p className="px-2 py-1 text-xs italic text-muted-foreground">{t("noPages")}</p>
+            )}
+          </nav>
+        ) : null}
+      </div>
+      <div className="flex shrink-0 items-center gap-1 border-t border-border-soft px-2 py-1.5">
         {isEditMode && (
           <>
             <button
@@ -938,23 +954,6 @@ export function WorldWiki({
             </button>
           </>
         )}
-      </div>
-
-      <div className="flex-1 overflow-y-auto py-1.5">
-        {pages === null ? (
-          <div className="flex items-center justify-center p-6">
-            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-          </div>
-        ) : searchQuery.trim() === "" ? (
-          <nav className="px-1">
-            <DndContext sensors={sensors} onDragEnd={onDragEnd}>
-              {renderTree(null)}
-            </DndContext>
-            {pages.length === 0 && !creating && (
-              <p className="px-2 py-1 text-xs italic text-muted-foreground">{t("noPages")}</p>
-            )}
-          </nav>
-        ) : null}
       </div>
     </>
   );
