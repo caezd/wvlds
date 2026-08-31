@@ -279,7 +279,7 @@ describe("WorldHomeGridView", () => {
       />,
     );
     await screen.findByText("x");
-    const hôte = container.querySelector(".wvlds-hb-a")!;
+    const hôte = container.querySelector(".wvlds-home-html-block")!;
     expect(hôte.className).toContain("border");
     expect(hôte.className).toContain("bg-background");
   });
@@ -291,9 +291,28 @@ describe("WorldHomeGridView", () => {
       />,
     );
     await screen.findByText("x");
-    const hôte = container.querySelector(".wvlds-hb-a")!;
+    const hôte = container.querySelector(".wvlds-home-html-block")!;
     expect(hôte.className).not.toContain("border");
     expect(hôte.className).not.toContain("bg-background");
+  });
+
+  // L'enveloppe qui porte le confinement doit rester HORS du `@scope` de la
+  // feuille du bloc : c'est ce qui la met hors de portée de ses sélecteurs.
+  // Si la racine du scope et l'enveloppe redevenaient un seul élément, une
+  // règle `:scope { contain: none !important }` du bloc désactiverait le
+  // confinement et laisserait un `position: fixed` recouvrir l'application.
+  it("confine le bloc html depuis une enveloppe extérieure à son @scope", async () => {
+    const { container } = render(
+      <WorldHomeGridView
+        {...baseProps([{ id: "a", type: "html", x: 0, y: 0, w: 12, html: "<p>x</p>" }])}
+      />,
+    );
+    await screen.findByText("x");
+
+    const enveloppe = container.querySelector(".wvlds-home-html-block")!;
+    const racineDuScope = container.querySelector(".wvlds-hb-a")!;
+    expect(enveloppe.contains(racineDuScope)).toBe(true);
+    expect(enveloppe).not.toBe(racineDuScope);
   });
 
   it("un bloc markdown en plein largeur (défaut) n'est pas enveloppé dans une carte", () => {
@@ -369,7 +388,7 @@ describe("WorldHomeGridView — hauteur des blocs à contenu libre", () => {
       />,
     );
     await screen.findByText("x");
-    const hôte = container.querySelector(".wvlds-hb-a") as HTMLElement;
+    const hôte = container.querySelector(".wvlds-home-html-block") as HTMLElement;
     expect(hôte.style.height).toBe("320px");
     expect(hôte.className).toContain("overflow-y-auto");
   });
@@ -381,7 +400,7 @@ describe("WorldHomeGridView — hauteur des blocs à contenu libre", () => {
       <WorldHomeGridView {...baseProps([{ id: "a", type: "html", x: 0, y: 0, w: 12, html: "<p>x</p>" }])} />,
     );
     await screen.findByText("x");
-    const hôte = container.querySelector(".wvlds-hb-a") as HTMLElement;
+    const hôte = container.querySelector(".wvlds-home-html-block") as HTMLElement;
     expect(hôte.style.height).toBe("");
     expect(hôte.className).not.toContain("overflow-y-auto");
   });

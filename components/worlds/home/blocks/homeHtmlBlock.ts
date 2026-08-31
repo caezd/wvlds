@@ -113,6 +113,69 @@ export function neutralizeStyleClose(css: string): string {
 }
 
 /**
+ * Fin d'une chaîne CSS ouverte en `i`.
+ *
+ * Une chaîne se termine à son guillemet fermant, à la fin du texte — ou à un
+ * SAUT DE LIGNE, qui en fait une chaîne invalide (CSS Syntax, « consume a
+ * string token »). Ce dernier cas est le piège : un analyseur qui l'ignorerait
+ * laisserait un guillemet non refermé avaler le reste de la feuille, et donc
+ * les accolades que le navigateur, lui, compterait.
+ */
+function finDeChaîne(css: string, i: number): number {
+  const guillemet = css[i];
+  for (let j = i + 1; j < css.length; j++) {
+    const c = css[j];
+    if (c === "\\") { j++; continue; }
+    if (c === guillemet) return j + 1;
+    // Un saut de ligne termine une chaîne CSS (elle devient invalide).
+    // Comparé par code de caractère : ce fichier évite les séquences
+    // d'échappement là où elles ne sont pas nécessaires.
+    if (c.charCodeAt(0) === 10) return j;
+  }
+  return css.length;
+}
+
+/**
+ * Vrai si la feuille referme plus de blocs qu'elle n'en ouvre.
+ *
+ * C'est la seule façon de sortir du `@scope` construit plus bas : une accolade
+ * fermante en trop le referme, et tout ce qui suit est analysé au niveau de la
+ * feuille — donc appliqué à l'application entière. Le `}` final ajouté par
+ * `scopeBlockCss` refermerait obligeamment l'accolade laissée ouverte, si bien
+ * que la feuille resterait équilibrée et que rien ne trahirait la manœuvre.
+ *
+ * Les accolades sont ignorées dans les chaînes, les commentaires et les
+ * parenthèses (`url(a}b)` est un jeton d'URL, pas un bloc), et une séquence
+ * d'échappement fait sauter le caractère suivant — comme chez le navigateur.
+ *
+ * Une feuille qui laisse au contraire des blocs OUVERTS n'est pas un problème :
+ * la récupération d'erreur du navigateur les referme en fin de feuille, sans
+ * jamais remonter au-dessus du `@scope`.
+ */
+function referméTropDeBlocs(css: string): boolean {
+  let profondeur = 0;
+  let parenthèses = 0;
+
+  for (let i = 0; i < css.length; i++) {
+    const c = css[i];
+    if (c === "\\") { i++; continue; }
+    if (c === "/" && css[i + 1] === "*") {
+      const fin = css.indexOf("*/", i + 2);
+      i = fin < 0 ? css.length : fin + 1;
+      continue;
+    }
+    if (c === '"' || c === "'") { i = finDeChaîne(css, i) - 1; continue; }
+    if (c === "(") { parenthèses++; continue; }
+    if (c === ")") { parenthèses = Math.max(0, parenthèses - 1); continue; }
+    if (parenthèses > 0) continue;
+    if (c === "{") profondeur++;
+    else if (c === "}" && --profondeur < 0) return true;
+  }
+
+  return false;
+}
+
+/**
  * Enferme la feuille de style dans le sous-arbre du bloc via `@scope`, pour
  * qu'aucun sélecteur ne puisse atteindre le reste de l'application.
  *
@@ -128,6 +191,11 @@ export function neutralizeStyleClose(css: string): string {
 export function scopeBlockCss(css: string, scopeClass: string): string {
   const trimmed = css.trim();
   if (!trimmed) return "";
+  // Le cloisonnement repose entièrement sur le fait que la feuille reste DANS
+  // son bloc `@scope`. Une feuille qui en sort ne s'assainit pas règle par
+  // règle : on la refuse en entier, et le bloc s'affiche sans style plutôt que
+  // d'en imposer un à toute l'application.
+  if (referméTropDeBlocs(trimmed)) return "";
   return `@scope (.${scopeClass}) {\n${neutralizeStyleClose(trimmed)}\n}`;
 }
 
