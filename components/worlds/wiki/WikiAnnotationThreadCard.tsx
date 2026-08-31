@@ -11,8 +11,8 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  afterMenuClose,
 } from "@/components/ui/dropdown-menu";
+import { afterMenuClose } from "@/components/ui/after-menu-close";
 import { getLeadingLetter } from "@/lib/textFormatting";
 import { anchorPreview } from "@/lib/wikiAnnotations";
 import { cn } from "@/lib/utils";

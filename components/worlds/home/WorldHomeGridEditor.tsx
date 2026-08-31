@@ -16,6 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { afterMenuClose } from "@/components/ui/after-menu-close";
 import { cn } from "@/lib/utils";
 import { ALL_WORLD_HOME_WIDGETS, type WorldHomeWidgetId } from "./worldHomeWidgets";
 import { Input } from "@/components/ui/input";
@@ -845,15 +846,15 @@ export function WorldHomeGridEditor({
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
-            <DropdownMenuItem onClick={() => setEditingBlock({ type: "banner" })}>
+            <DropdownMenuItem onClick={afterMenuClose(() => setEditingBlock({ type: "banner" }))}>
               <ImageIcon className="mr-2 h-3.5 w-3.5" /> {t("home.grid.bannerBlockTitle")}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => setEditingBlock({ type: "html" })}>
+            <DropdownMenuItem onClick={afterMenuClose(() => setEditingBlock({ type: "html" }))}>
               <Code2 className="mr-2 h-3.5 w-3.5" /> {t("home.grid.htmlBlockTitle")}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => setEditingBlock({ type: "markdown" })}>
+            <DropdownMenuItem onClick={afterMenuClose(() => setEditingBlock({ type: "markdown" }))}>
               <FileText className="mr-2 h-3.5 w-3.5" /> {t("home.grid.markdownBlockTitle")}
             </DropdownMenuItem>
           </DropdownMenuContent>

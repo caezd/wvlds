@@ -16,6 +16,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { afterMenuClose } from "@/components/ui/after-menu-close";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ChevronsUpDown, Download, KeyRound, LogOut, Scale, ScrollText, Settings, UserRound } from "lucide-react";
 import { useGlobalPresence, type PresenceStatus } from "@/components/providers/PresenceProvider";
@@ -165,7 +166,7 @@ export function UserMenuButton({
 
           <DropdownMenuSeparator />
 
-          <DropdownMenuItem onClick={() => setProfileOpen(true)}>
+          <DropdownMenuItem onClick={afterMenuClose(() => setProfileOpen(true))}>
             <UserRound className="mr-2 size-4" />
             {tNav("profile")}
           </DropdownMenuItem>

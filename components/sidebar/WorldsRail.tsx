@@ -19,6 +19,7 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
+import { afterMenuClose } from "@/components/ui/after-menu-close";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Drawer,
@@ -198,7 +199,7 @@ export function WorldsRail({
                 <ContextMenuItem
                   variant="destructive"
                   disabled={!canLeave(world)}
-                  onSelect={() => setPendingLeave(world)}
+                  onSelect={afterMenuClose(() => setPendingLeave(world))}
                 >
                   <LogOut className="h-3.5 w-3.5" />
                   {tWorlds("leave")}

@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
+import { afterMenuClose } from "@/components/ui/after-menu-close";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   DropdownMenu,
@@ -1022,7 +1023,7 @@ export default function ChatRoomView({
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => setSearchOpen(true)}>
+                    <DropdownMenuItem onClick={afterMenuClose(() => setSearchOpen(true))}>
                       <Search className="mr-2 h-3.5 w-3.5" />
                       {t("search.title")}
                     </DropdownMenuItem>
@@ -1033,17 +1034,17 @@ export default function ChatRoomView({
                       </DropdownMenuItem>
                     )}
                     {canEdit && (
-                      <DropdownMenuItem onClick={() => setSettingsOpen(true)}>
+                      <DropdownMenuItem onClick={afterMenuClose(() => setSettingsOpen(true))}>
                         <Settings className="mr-2 h-3.5 w-3.5" />
                         {tCommon("settings")}
                       </DropdownMenuItem>
                     )}
-                    <DropdownMenuItem onClick={() => setStatsOpen(true)}>
+                    <DropdownMenuItem onClick={afterMenuClose(() => setStatsOpen(true))}>
                       <BarChart3 className="mr-2 h-3.5 w-3.5" />
                       {t("statsTitle")}
                     </DropdownMenuItem>
                     {pins.length > 0 && (
-                      <DropdownMenuItem onClick={() => setPinsOpen(true)}>
+                      <DropdownMenuItem onClick={afterMenuClose(() => setPinsOpen(true))}>
                         <Pin className="mr-2 h-3.5 w-3.5" />
                         {t("pinsTitle")}
                       </DropdownMenuItem>

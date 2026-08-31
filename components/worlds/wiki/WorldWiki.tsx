@@ -51,8 +51,8 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  afterMenuClose,
 } from "@/components/ui/dropdown-menu";
+import { afterMenuClose } from "@/components/ui/after-menu-close";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 import { slugify } from "@/lib/slug";
