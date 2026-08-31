@@ -796,57 +796,62 @@ export function WikiPageContent({
             />
             </div>
         ) : (
-          <div className="min-w-0 flex-1 overflow-y-auto p-6">
-            <div className="mx-auto w-full max-w-4xl">
-              {/* La bannière traverse toute la rangée, sommaire compris : elle
-                  ouvre la page, elle n'appartient pas à la colonne de texte. */}
-              {page.banner_url && (
-                <div className="relative mb-6 overflow-hidden rounded-lg">
-                  {/* `<img>` et non `next/image` : l'URL vient du stockage du
-                      monde, dont l'hôte n'est pas déclaré à l'optimiseur. */}
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={page.banner_url}
-                    alt=""
-                    className="h-48 w-full object-cover sm:h-64"
-                  />
-                  {/* Dégradé plutôt qu'un voile uniforme : le texte a besoin
-                      d'un fond sombre là où il se pose, et l'image de rester
-                      visible partout ailleurs. */}
-                  <div
-                    aria-hidden
-                    className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent"
-                  />
-                  <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-4 p-6">
-                    <div className="flex min-w-0 flex-col gap-1">
-                      {iconeDeLaPage(true)}
-                      <h1 className="text-2xl font-semibold text-white">{page.title}</h1>
-                      {page.description && (
-                        <p className="text-sm text-white/80">{page.description}</p>
-                      )}
-                    </div>
-                    <div className="flex shrink-0 items-center gap-2">
-                      {draftBadge}
-                      {restrictedBadge}
+          <div
+            className={cn(
+              "min-w-0 flex-1 overflow-y-auto pb-6",
+              // Une bannière pleine largeur touche le haut : la marge la
+              // décollerait du bandeau, et ce n'est plus une image posée dans
+              // la page mais son ouverture. Elle revient dès que la colonne
+              // cesse d'occuper toute la largeur.
+              page.banner_url ? "pt-0 sm:pt-6" : "pt-6",
+            )}
+          >
+            {/* La colonne de l'article et son sommaire, centrés ensemble.
+                Bannière, titre et texte vivent dans la MÊME colonne : c'est ce
+                qui garantit leur alignement, quelle que soit la largeur. */}
+            <div className="mx-auto flex w-fit justify-center gap-8">
+              <div className="w-full min-w-0 [--thread-content-max-width:40rem] lg:[--thread-content-max-width:48rem] max-w-(--thread-content-max-width)">
+                {page.banner_url && (
+                  <div className="relative mb-6 overflow-hidden sm:rounded-lg">
+                    {/* `<img>` et non `next/image` : l'URL vient du stockage du
+                        monde, dont l'hôte n'est pas déclaré à l'optimiseur. */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={page.banner_url}
+                      alt=""
+                      className="h-48 w-full object-cover sm:h-64"
+                    />
+                    {/* Dégradé plutôt qu'un voile uniforme : le texte a besoin
+                        d'un fond sombre là où il se pose, et l'image de rester
+                        visible partout ailleurs. */}
+                    <div
+                      aria-hidden
+                      className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent"
+                    />
+                    {/* Le même retrait que le corps de l'article, plus bas :
+                        c'est lui qui met le titre à l'aplomb du texte. */}
+                    <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-4 px-2 pb-4 lg:px-4">
+                      <div className="flex min-w-0 flex-col gap-1">
+                        {iconeDeLaPage(true)}
+                        <h1 className="text-2xl font-semibold text-white">{page.title}</h1>
+                        {page.description && (
+                          <p className="text-sm text-white/80">{page.description}</p>
+                        )}
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2">
+                        {draftBadge}
+                        {restrictedBadge}
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* `justify-center` : la colonne de texte est plafonnée à
-                  `max-w-2xl`, plus étroite que cette rangée. Sans lui, le
-                  surplus restait tout entier à droite et le texte se collait au
-                  bord gauche — `mx-auto` centrait la rangée, pas son contenu. */}
-              <div className="flex justify-center gap-8">
-                {/* Même mesure que le contenu d'un salon : une ligne de
-                    texte se lit pareil qu'on soit dans un article ou dans une
-                    conversation, et la largeur ne se règle qu'à un endroit. */}
-                <div className="min-w-0 flex-1 [--thread-content-max-width:40rem] lg:[--thread-content-max-width:48rem] max-w-(--thread-content-max-width) px-2 lg:px-4">
-                  {/* `pr-11` comme le corps de l'article : la marge des
-                      commandes de commentaire, pour que les deux bords droits
-                      coïncident. */}
-                  {/* Sans bannière, l'en-tête reprend sa place dans la colonne
-                      de texte — il n'a plus d'image où se poser. */}
+                {/* Retrait du contenu d'un salon, comme sur la bannière. */}
+                <div className="px-2 lg:px-4">
+                  {/* Sans bannière, l'en-tête reprend sa place au-dessus du
+                      texte — il n'a plus d'image où se poser. `pr-11` lui donne
+                      la marge des commandes de commentaire, pour que les deux
+                      bords droits coïncident. */}
                   {!page.banner_url && (
                     <div className="mb-6 flex items-start justify-between gap-4 pr-11">
                       <div className="flex min-w-0 flex-1 flex-col items-start gap-2">
