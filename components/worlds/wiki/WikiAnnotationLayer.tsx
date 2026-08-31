@@ -311,6 +311,24 @@ export function WikiAnnotationLayer({
           className="group absolute right-0 flex items-center gap-1 pt-1"
           style={{ top: commande.top }}
         >
+          {commande.ids.length > 0 && (
+            <button
+              type="button"
+              onClick={() => onActivate(commande.ids[0])}
+              aria-label={t("title")}
+              title={t("title")}
+              className={cn(
+                "shrink-0 min-w-4 h-4 flex items-center justify-center rounded-full bg-accent text-accent-foreground text-[10px] font-bold px-0.5",
+                // Un fil résolu garde sa pastille — savoir qu'une discussion a
+                // eu lieu ici a de la valeur — mais cesse d'appeler l'œil.
+                // Posé après le fond d'accent, que `cn` laisse remplacer.
+                commande.resolus && "bg-secondary text-muted-foreground",
+                active && commande.ids.includes(active.id) && "ring-2 ring-accent/40",
+              )}
+            >
+              {commande.ids.length}
+            </button>
+          )}
           {canComment && (
             <button
               type="button"
@@ -330,25 +348,7 @@ export function WikiAnnotationLayer({
                 sansSurvol || survol === commande.index ? "opacity-100" : "opacity-0",
               )}
             >
-              <MessageSquarePlus className="h-3.5 w-3.5" />
-            </button>
-          )}
-          {commande.ids.length > 0 && (
-            <button
-              type="button"
-              onClick={() => onActivate(commande.ids[0])}
-              aria-label={t("title")}
-              title={t("title")}
-              className={cn(
-                "shrink-0 min-w-4 h-4 flex items-center justify-center rounded-full bg-accent text-accent-foreground text-[10px] font-bold px-0.5",
-                // Un fil résolu garde sa pastille — savoir qu'une discussion a
-                // eu lieu ici a de la valeur — mais cesse d'appeler l'œil.
-                // Posé après le fond d'accent, que `cn` laisse remplacer.
-                commande.resolus && "bg-secondary text-muted-foreground",
-                active && commande.ids.includes(active.id) && "ring-2 ring-accent/40",
-              )}
-            >
-              {commande.ids.length}
+              <MessageSquarePlus className="h-4 w-4" />
             </button>
           )}
         </div>
