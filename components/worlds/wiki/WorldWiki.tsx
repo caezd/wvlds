@@ -759,13 +759,25 @@ export function WorldWiki({
       }) ?? null
     );
 
-    // Le résultat de l'écriture n'était pas lu : un refus laissait le nouvel
-    // ordre à l'écran, perdu au rechargement suivant. On rétablit l'ordre
-    // précédent plutôt que d'afficher un état que la base ne connaît pas.
-    void supabase.from("world_wiki_pages").upsert(updates).then(({ error }: { error: { message: string } | null }) => {
-      if (!error) return;
+    // Un `update` par ligne, et surtout PAS un `upsert` : PostgREST traduit
+    // l'upsert en `INSERT … ON CONFLICT`, si bien que la RLS évalue la policy
+    // d'INSERT sur une ligne où `world_id` est absent — donc nul. La
+    // vérification `is_world_editor(world_id, …)` échouait alors pour tout le
+    // monde, propriétaire compris, et réordonner une page répondait
+    // « new row violates row-level security policy ». L'UPDATE, lui, ne touche
+    // qu'à `sort_index` et laisse `world_id` en place.
+    //
+    // Le résultat de l'écriture est lu : un refus laissait sinon le nouvel
+    // ordre à l'écran, perdu au rechargement suivant.
+    void Promise.all(
+      updates.map(u =>
+        supabase.from("world_wiki_pages").update({ sort_index: u.sort_index }).eq("id", u.id),
+      ),
+    ).then((resultats: { error: { message: string } | null }[]) => {
+      const erreur = resultats.map(r => r.error).find(Boolean);
+      if (!erreur) return;
       setPages(previousPages);
-      toast.error(t("saveError"), { description: error.message });
+      toast.error(t("saveError"), { description: erreur.message });
     });
   }
 

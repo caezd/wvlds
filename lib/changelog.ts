@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Correctif",
+    text: "Réordonner une page du wiki par glisser-déposer échouait, avec un message d’erreur incompréhensible sur la sécurité des données. L’ordre revenait à sa place au rechargement suivant. C’était le cas pour tout le monde, propriétaire du monde compris, et depuis longtemps. Corrigé."
+  },
+  {
+    date: "2026-08",
     tag: "Wiki",
     text: "Le wiki s’adapte enfin aux écrans étroits. Sur téléphone et sur tablette, l’arbre des pages et la colonne des notes et commentaires s’ouvrent en tiroirs depuis deux boutons, et l’article occupe toute la largeur : il passe de 116 à 327 pixels de texte sur un écran de 375.\nSur ordinateur aussi, le texte respirait mal : la colonne latérale et le sommaire, tous deux permanents, le réduisaient à 151 pixels sur un écran de 1280. Le sommaire ne réapparaît désormais qu’à partir de 1536 pixels, et la colonne à partir de 1280 — en dessous, elles cèdent la place au contenu plutôt que de l’étrangler."
   },
