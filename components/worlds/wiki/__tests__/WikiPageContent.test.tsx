@@ -703,6 +703,43 @@ describe("WikiPageContent — ceinture de mise en forme", () => {
     await waitFor(() => expect(champ).toHaveValue("Un **mot** ici"));
   });
 
+  it("écrit par le navigateur quand il sait annuler, pas par l'état", async () => {
+    // La pile d'annulation native est vidée dès qu'on pose `value` sur le
+    // nœud : une mise en forme écrite par React ne serait pas défaisable au
+    // Ctrl+Z, ni ce qui a été tapé avant elle. On simule ici le navigateur —
+    // jsdom n'a pas `execCommand`.
+    const commandes: unknown[][] = [];
+    const poser = Object.getOwnPropertyDescriptor(
+      HTMLTextAreaElement.prototype,
+      "value",
+    )!.set!;
+    (document as unknown as { execCommand: unknown }).execCommand = (
+      ...args: unknown[]
+    ) => {
+      commandes.push(args);
+      const el = document.activeElement as HTMLTextAreaElement;
+      const insere = (args[2] as string | undefined) ?? "";
+      poser.call(
+        el,
+        el.value.slice(0, el.selectionStart) + insere + el.value.slice(el.selectionEnd),
+      );
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+      return true;
+    };
+
+    try {
+      renderEnEdition();
+      const champ = await champAvecMotSelectionne();
+
+      await userEvent.click(screen.getByRole("button", { name: "Gras" }));
+
+      expect(commandes).toEqual([["insertText", false, "**mot**"]]);
+      expect(champ).toHaveValue("Un **mot** ici");
+    } finally {
+      delete (document as { execCommand?: unknown }).execCommand;
+    }
+  });
+
   it("ne montre la ceinture qu'en écriture", async () => {
     // En lecture, la place revient au fil d'Ariane.
     const mock = createSupabaseMock({ results: [SANS_ANNOTATION] });

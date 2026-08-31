@@ -11,6 +11,7 @@ import { SideSheetContent } from "@/components/ui/side-sheet";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import { CodeEditor } from "@/components/ui/code-editor";
 import { appliquerFormat, raccourciDe, type NomFormat } from "@/lib/markdownFormatting";
+import { ecrireAvecAnnulation } from "@/lib/textareaEdit";
 import { toast } from "sonner";
 import { DB_TEXT_LIMITS } from "@/lib/textLimits";
 import { cn } from "@/lib/utils";
@@ -336,7 +337,11 @@ export function WikiPageContent({
       nom,
       tCommon("formatLinkText"),
     );
-    handleDraftChange(suite.value);
+
+    // L'écriture passe par le navigateur quand il le permet : la mise en forme
+    // rejoint alors sa pile d'annulation, et `onChange` nous rend la valeur.
+    // Sinon seulement, on l'écrit nous-mêmes.
+    if (!ecrireAvecAnnulation(champ, suite.value)) handleDraftChange(suite.value);
     setSelectionAPoser([suite.start, suite.end]);
   }
 

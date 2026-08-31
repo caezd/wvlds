@@ -211,6 +211,38 @@ export function appliquerFormat(
   return insererLien(champ, texteLien);
 }
 
+/**
+ * Plus petit remplacement qui mène de `ancien` à `nouveau` : le préfixe et le
+ * suffixe communs restent en place.
+ *
+ * Sert à ne toucher que ce qui change vraiment. Une entrée d'annulation qui
+ * porterait sur l'article entier ramènerait tout le texte d'un coup ; celle-ci
+ * ne porte que sur le passage mis en forme.
+ */
+export function differenceMinimale(
+  ancien: string,
+  nouveau: string,
+): { debut: number; fin: number; texte: string } {
+  const commun = Math.min(ancien.length, nouveau.length);
+
+  let debut = 0;
+  while (debut < commun && ancien[debut] === nouveau[debut]) debut++;
+
+  let queue = 0;
+  while (
+    queue < commun - debut &&
+    ancien[ancien.length - 1 - queue] === nouveau[nouveau.length - 1 - queue]
+  ) {
+    queue++;
+  }
+
+  return {
+    debut,
+    fin: ancien.length - queue,
+    texte: nouveau.slice(debut, nouveau.length - queue),
+  };
+}
+
 /** Description d'un raccourci, pour l'infobulle des boutons. */
 export type Raccourci = { touche: string; maj?: boolean };
 

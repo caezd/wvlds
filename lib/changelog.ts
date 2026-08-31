@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Wiki",
+    text: "Ctrl+Z défait une mise en forme dans l’éditeur d’article comme il défait une frappe, et l’historique de ce qui a été tapé avant survit à l’usage de la ceinture d’outils."
+  },
+  {
+    date: "2026-08",
+    tag: "Wiki",
     text: "L’article d’une page de wiki s’écrit désormais en markdown coloré, comme les blocs de la page d’accueil d’un monde : titres, liens et tableaux se voient tels qu’ils seront enregistrés, et l’aperçu à côté dit le résultat. L’ancien champ de texte enrichi masquait cette syntaxe sans savoir la rendre.\nUne ceinture d’outils s’installe dans le sous-en-tête, au-dessus du texte : titres, gras, italique, souligné, barré, code, lien, listes et citation. Chaque bouton a son raccourci — Ctrl+B, Ctrl+I, Ctrl+K et les autres —, indiqué au survol."
   },
   {
