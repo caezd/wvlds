@@ -308,7 +308,7 @@ export function WikiAnnotationLayer({
           // `pt-1` : le haut d'un bloc n'est pas le haut de sa première ligne,
           // que l'interligne décale vers le bas. Les commandes se posent donc
           // un cran plus bas pour tomber en face du texte.
-          className="absolute right-0 flex items-center gap-1 pt-1"
+          className="group absolute right-0 flex items-center gap-1 pt-1"
           style={{ top: commande.top }}
         >
           {canComment && (
@@ -320,7 +320,11 @@ export function WikiAnnotationLayer({
               className={cn(
                 "flex h-5 w-5 shrink-0 items-center justify-center rounded-md",
                 "text-muted-foreground transition-opacity hover:bg-secondary hover:text-foreground",
-                "focus-visible:opacity-100",
+                // Il se montre aussi quand on le vise lui-même : effacé mais
+                // cliquable, il se laissait atteindre à l'aveugle. Le survol
+                // du bloc ne dit rien de celui de la marge, qui n'en fait
+                // pas partie.
+                "focus-visible:opacity-100 group-hover:opacity-100",
                 sansSurvol || survol === commande.index ? "opacity-100" : "opacity-0",
               )}
             >
