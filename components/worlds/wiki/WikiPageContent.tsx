@@ -139,7 +139,12 @@ export function WikiPageContent({
    * un geste de plus pour le titre n'aurait servi à rien.
    */
   const champTitre = (
-    <div className="flex min-w-0 flex-1 items-center gap-2">
+    // L'icône passe au-dessus : à gauche, elle décalait le titre de trente
+    // pixels et le désalignait de tout le texte qui suit.
+    // `px-3` : le même retrait que celui du champ markdown, dont les deux
+    // couches portent un `p-3`. Le titre tombe ainsi exactement sur la
+    // première colonne du texte qu'il coiffe.
+    <div className="flex min-w-0 flex-1 flex-col items-start gap-1 px-3">
       <LucideIconPicker
         value={renameIcon}
         onChange={valeur => { setRenameIcon(valeur); onRename(renameTitle.trim() || page.title, valeur); }}
@@ -147,11 +152,13 @@ export function WikiPageContent({
           <button
             type="button"
             title={t("changeIcon")}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground"
+            // Encadrée : sans trait, une icône seule au-dessus du titre ne se
+            // lit pas comme une commande, et rien ne dit qu'on peut la changer.
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border-soft text-muted-foreground hover:bg-secondary hover:text-foreground"
           >
             {renameIcon && VALID_LUCIDE_ICONS.has(renameIcon)
-              ? <LazyLucideIcon name={renameIcon} className="h-5 w-5" />
-              : <Pencil className="h-4 w-4" />}
+              ? <LazyLucideIcon name={renameIcon} className="h-6 w-6" />
+              : <Pencil className="h-5 w-5" />}
           </button>
         }
       />
@@ -165,7 +172,9 @@ export function WikiPageContent({
         }}
         maxLength={DB_TEXT_LIMITS["world_wiki_pages.title"]}
         aria-label={t("pageTitlePlaceholder")}
-        className="min-w-0 flex-1 border-b border-border bg-transparent text-2xl font-semibold outline-none focus:border-primary/50"
+        // Ni filet ni retrait : le titre commence exactement où commence
+        // l'article, et le halo de focus suffit à dire que c'est un champ.
+        className="w-full min-w-0 bg-transparent text-2xl font-semibold outline-none"
       />
     </div>
   );
@@ -561,23 +570,15 @@ export function WikiPageContent({
             modification, seul à rendre les notes modifiables, masquait
             sinon la colonne où on les modifie. */}
         {editing ? (
-          <div className="flex flex-1 flex-col gap-3 overflow-hidden p-6">
-            <div className="flex items-center gap-3">
+          // Même gabarit qu'en lecture : titre, champ et pied partagent la
+          // largeur maximale de l'article et se centrent avec lui. Sans quoi
+          // le markdown s'étirait sur toute la fenêtre, en lignes trop longues
+          // pour l'œil, et changeait de largeur en passant à l'aperçu.
+          <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-3 overflow-hidden p-6">
+            <div className="flex items-start gap-3">
               {champTitre}
               {draftBadge}
               {restrictedBadge}
-              <button
-                type="button"
-                onClick={() => setShowPreview(v => !v)}
-                className={cn(
-                  "flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-                  showPreview
-                    ? "border-primary/40 bg-primary/10 text-primary"
-                    : "border-border-soft text-muted-foreground hover:bg-secondary hover:text-foreground",
-                )}
-              >
-                <Eye className="h-3 w-3" /> {t("preview")}
-              </button>
             </div>
 
             {loadingDraft ? (
@@ -585,27 +586,12 @@ export function WikiPageContent({
                 <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
               </div>
             ) : (
-              <div className={cn("min-h-0 flex-1", showPreview ? "flex gap-4" : "flex flex-col")}>
-                {/* Le markdown se saisit tel quel, coloré : un article de wiki
-                    s'écrit avec des titres, des liens internes et des tableaux
-                    qu'un champ de texte enrichi ne sait pas montrer sans les
-                    trahir. L'aperçu, à côté, dit le résultat. */}
-                <CodeEditor
-                  fill
-                  language="markdown"
-                  value={draft}
-                  onChange={handleDraftChange}
-                  textareaRef={champMarkdown}
-                  onKeyDown={surToucheDuChamp}
-                  placeholder={t("contentPlaceholder")}
-                  ariaLabel={t("contentLabel")}
-                  // Sans cadre : le champ est la colonne de texte, pas un
-                  // encadré posé dedans. Le halo de focus du `<textarea>`
-                  // reste la seule marque, et suffit.
-                  className="flex-1 rounded-none border-0"
-                />
-                {showPreview && (
-                  <div className="flex-1 overflow-y-auto rounded-2xl border border-border-soft p-4">
+              // L'aperçu prend TOUTE la place au lieu de partager la colonne :
+              // côte à côte, deux colonnes sur un téléphone n'en font aucune de
+              // lisible. On regarde le résultat, puis on revient écrire.
+              <div className="flex min-h-0 flex-1 flex-col">
+                {showPreview ? (
+                  <div className="min-h-0 flex-1 overflow-y-auto">
                     {draft.trim()
                       ? (
                         <MarkdownRenderer
@@ -619,20 +605,51 @@ export function WikiPageContent({
                       : <p className="text-sm italic text-muted-foreground">{t("nothingToPreview")}</p>
                     }
                   </div>
+                ) : (
+                // Le markdown se saisit tel quel, coloré : un article de wiki
+                // s'écrit avec des titres, des liens internes et des tableaux
+                // qu'un champ de texte enrichi ne sait pas montrer sans les
+                // trahir. L'aperçu dit le résultat.
+                <CodeEditor
+                  fill
+                  language="markdown"
+                  value={draft}
+                  onChange={handleDraftChange}
+                  textareaRef={champMarkdown}
+                  onKeyDown={surToucheDuChamp}
+                  placeholder={t("contentPlaceholder")}
+                  ariaLabel={t("contentLabel")}
+                  // Sans cadre : le champ est la colonne de texte, pas un
+                  // encadré posé dedans. Le halo de focus du `<textarea>`
+                  // reste la seule marque, et suffit.
+                  className="flex-1 rounded-none border-0 p-0"
+                />
                 )}
               </div>
             )}
 
-            <div className="flex shrink-0 items-center justify-between gap-2">
-              <span className="text-xs text-muted-foreground">
+            <div className="flex shrink-0 flex-wrap items-center gap-2">
+              {/* À gauche, ce qui accompagne l'écriture ; à droite, ce qui la
+                  termine. Sur écran étroit, les deux gestes décisifs restent
+                  ainsi près du pouce, du même côté. */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowPreview(v => !v)}
+                aria-pressed={showPreview}
+                className={cn(showPreview && "bg-secondary text-foreground")}
+              >
+                <Eye className="mr-1 h-3.5 w-3.5" /> {t("preview")}
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setHistoryOpen(true)}>
+                <History className="mr-1 h-3.5 w-3.5" /> {t("versionHistory")}
+              </Button>
+              <span className="ml-auto text-xs text-muted-foreground">
                 {lastAutosavedAt && t("draftSavedAt", {
                   time: lastAutosavedAt.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }),
                 })}
               </span>
               <div className="flex items-center gap-2">
-                <Button variant="ghost" size="sm" onClick={() => setHistoryOpen(true)}>
-                  <History className="mr-1 h-3.5 w-3.5" /> {t("versionHistory")}
-                </Button>
                 <Button variant="ghost" size="sm" onClick={quitterLaModification} disabled={publishing}>
                   {tCommon("cancel")}
                 </Button>

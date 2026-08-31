@@ -265,6 +265,45 @@ describe("WikiPageContent — brouillon et publication", () => {
     );
   });
 
+  it("l'aperçu remplace la saisie au lieu de la flanquer", async () => {
+    // Deux colonnes côte à côte n'en font aucune de lisible sur un téléphone :
+    // on regarde le résultat, puis on revient écrire.
+    const mock = createSupabaseMock({
+      results: [SANS_ANNOTATION, { data: { draft_content: "Un texte" }, error: null }],
+    });
+    const user = userEvent.setup();
+    render(
+      <WikiPageContent
+        worldId="w1"
+        panelWidth={320}
+        panelHandleProps={{}}
+        navCollapsed={false}
+        onExpandNav={vi.fn()}
+        onOpenTree={vi.fn()}
+        onExitEditMode={vi.fn()}
+        pageCount={3}
+        onRename={vi.fn()}
+        page={BASE_PAGE}
+        pages={[BASE_PAGE]}
+        canEdit
+        isEditMode
+        supabase={mock.client as never}
+        onPageUpdated={vi.fn()}
+        onNavigate={vi.fn()}
+      />,
+    );
+
+    await champArticle();
+    await user.click(screen.getByRole("button", { name: /Aperçu/ }));
+
+    expect(screen.getByTestId("markdown")).toBeTruthy();
+    expect(screen.queryByLabelText("Contenu de l'article")).toBeNull();
+
+    // Et l'on revient écrire par le même bouton.
+    await user.click(screen.getByRole("button", { name: /Aperçu/ }));
+    expect(await champArticle()).toBeTruthy();
+  });
+
   it("relâche la bascule du wiki en publiant", async () => {
     // Le mode modification EST l'édition de l'article : refermer l'éditeur en
     // laissant la bascule allumée montrait la page en lecture sous un bouton

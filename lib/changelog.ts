@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Wiki",
+    text: "L’éditeur d’article se remet d’aplomb pour les écrans étroits. L’aperçu remplace maintenant la saisie au lieu de la flanquer — deux colonnes côte à côte n’en faisaient aucune de lisible sur un téléphone. Les commandes d’aperçu et d’historique descendent à gauche du pied, laissant « Annuler » et « Publier » seuls à droite.\nLe titre perd son filet et son décalage : il commence exactement où commence le texte, l’icône de la page passant au-dessus, dans un cadre qui dit qu’on peut la changer."
+  },
+  {
+    date: "2026-08",
     tag: "Correctif",
     text: "Sur écran étroit, l’article d’une page de wiki était coupé sur sa droite en mode modification : la colonne refusait de se réduire sous la largeur de sa ceinture d’outils, et le texte débordait de la fenêtre. Il s’adapte maintenant à la largeur disponible, la ceinture défilant d’elle-même quand elle ne tient plus."
   },
