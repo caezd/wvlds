@@ -137,7 +137,7 @@ export function WikiNoteCard({
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className={cn(
-        "group/note rounded-lg border border-border-soft bg-background",
+        "rounded-lg border border-border-soft bg-background",
         isDragging && "opacity-50",
       )}
     >
@@ -148,7 +148,7 @@ export function WikiNoteCard({
             {...attributes}
             {...listeners}
             aria-label={t("reorder")}
-            className="shrink-0 cursor-grab text-muted-foreground/50 opacity-0 transition-opacity hover:text-foreground focus-visible:opacity-100 group-hover/note:opacity-100"
+            className="shrink-0 cursor-grab text-muted-foreground/50 hover:text-foreground"
           >
             <GripVertical className="h-3.5 w-3.5" />
           </button>
@@ -175,7 +175,7 @@ export function WikiNoteCard({
               <button
                 type="button"
                 aria-label={t("noteActions")}
-                className="shrink-0 rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:bg-secondary hover:text-foreground focus-visible:opacity-100 group-hover/note:opacity-100"
+                className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
               >
                 <MoreHorizontal className="h-3.5 w-3.5" />
               </button>

@@ -157,7 +157,7 @@ function CategorySection({
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className={cn(
-        "group/cat rounded-lg",
+        "rounded-lg",
         isDragging && "opacity-50",
         // Une fiche survole la catégorie : on montre qu'elle l'accueillera,
         // y compris quand elle est repliée et n'a donc rien à survoler.
@@ -171,7 +171,7 @@ function CategorySection({
             {...attributes}
             {...listeners}
             aria-label={t("reorderCategory")}
-            className="shrink-0 cursor-grab text-muted-foreground/50 opacity-0 transition-opacity hover:text-foreground focus-visible:opacity-100 group-hover/cat:opacity-100"
+            className="shrink-0 cursor-grab text-muted-foreground/50 hover:text-foreground"
           >
             <GripVertical className="h-3.5 w-3.5" />
           </button>
@@ -220,7 +220,7 @@ function CategorySection({
               type="button"
               onClick={() => { onExpand(); setAdding(true); }}
               aria-label={t("addNote")}
-              className="shrink-0 rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:bg-secondary hover:text-foreground focus-visible:opacity-100 group-hover/cat:opacity-100"
+              className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
             >
               <Plus className="h-3.5 w-3.5" />
             </button>
@@ -229,7 +229,7 @@ function CategorySection({
                 <button
                   type="button"
                   aria-label={t("categoryActions")}
-                  className="shrink-0 rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:bg-secondary hover:text-foreground focus-visible:opacity-100 group-hover/cat:opacity-100"
+                  className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
                 >
                   <MoreHorizontal className="h-3.5 w-3.5" />
                 </button>

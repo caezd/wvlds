@@ -180,7 +180,7 @@ function SortableTreeNode({
     <div ref={setNodeRef} style={style} className="flex flex-col gap-0.5">
       <div
         className={cn(
-          "group flex cursor-pointer select-none items-center gap-1.5 rounded-md py-1 text-sm",
+          "flex cursor-pointer select-none items-center gap-1.5 rounded-md py-1 text-sm",
           "hover:bg-secondary/60",
           isSelected && !page.is_folder && "bg-secondary font-medium text-foreground",
           isDropTarget && "ring-1 ring-inset ring-primary/50 bg-primary/5 text-foreground",
@@ -292,7 +292,7 @@ function SortableTreeNode({
               <button
                 type="button"
                 onClick={e => e.stopPropagation()}
-                className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted-foreground opacity-0 group-hover:opacity-100 focus-within:opacity-100 hover:bg-secondary hover:text-foreground"
+                className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-secondary hover:text-foreground"
                 aria-label={t("options")}
               >
                 <MoreHorizontal className="h-3.5 w-3.5" />
