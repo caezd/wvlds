@@ -305,7 +305,10 @@ export function WikiAnnotationLayer({
       {commandes.map(commande => (
         <div
           key={commande.index}
-          className="absolute right-0 flex items-center gap-0.5"
+          // `pt-1` : le haut d'un bloc n'est pas le haut de sa première ligne,
+          // que l'interligne décale vers le bas. Les commandes se posent donc
+          // un cran plus bas pour tomber en face du texte.
+          className="absolute right-0 flex items-center gap-0.5 pt-1"
           style={{ top: commande.top }}
         >
           {canComment && (
