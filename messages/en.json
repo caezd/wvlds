@@ -83,6 +83,7 @@
     "installApp": "Install app",
     "installInstructionsIOS": "Tap the Share button, then \"Add to Home Screen\".",
     "installInstructionsOther": "Open your browser menu (⋮), then \"Install app\".",
+    "bugReportsToTriage": "{count, plural, one {# report to triage} other {# reports to triage}}",
     "reportBug": "Report a problem"
   },
   "presence": {

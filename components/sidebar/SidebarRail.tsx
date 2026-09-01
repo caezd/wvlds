@@ -5,7 +5,7 @@ import { WorldsQuickAccess } from "./WorldsQuickAccess";
 import { NotificationBellButton } from "@/components/notifications";
 import { DmsToggleButton, PinnedDmAvatarsRail } from "@/components/dms";
 import { UserMenuButton } from "./UserMenuButton";
-import { getCachedFeatureFlags, getCurrentProfile, getCurrentAuth, getFavoriteWorlds } from "@/lib/currentRequest";
+import { getCachedFeatureFlags, getCurrentProfile, getCurrentAuth, getFavoriteWorlds, getNewBugReportCount } from "@/lib/currentRequest";
 import { SidebarLogo } from "./SidebarLogo";
 import { getTranslations } from "next-intl/server";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -27,6 +27,10 @@ export default async function SidebarRail() {
   const lastWorldId = cookieStore.get("last_world_id")?.value ?? null;
 
   const adminFlag = profile?.is_admin === true;
+  // Après `getCurrentProfile` et non dans le `Promise.all` ci-dessus : le
+  // comptage n'a de sens que pour un administrateur, et le demander pour tout
+  // le monde ajouterait une requête sur chaque page protégée.
+  const signalementsATrier = adminFlag ? await getNewBugReportCount() : 0;
   const profileData = profile
     ? { username: profile.username ?? null, plan: profile.plan ?? null, avatar_url: profile.avatar_url ?? null }
     : null;
@@ -65,7 +69,12 @@ export default async function SidebarRail() {
             </RailIcon>
           )}
           {adminFlag && (
-            <RailIcon href="/admin" label={t("admin")}>
+            <RailIcon
+              href="/admin"
+              label={t("admin")}
+              badge={signalementsATrier}
+              badgeLabel={t("bugReportsToTriage", { count: signalementsATrier })}
+            >
               <ShieldCheck size={17} />
             </RailIcon>
           )}

@@ -83,6 +83,7 @@
     "installApp": "Instalar la aplicación",
     "installInstructionsIOS": "Toque el botón Compartir y luego «A la pantalla de inicio».",
     "installInstructionsOther": "Abra el menú de su navegador (⋮) y luego «Instalar la aplicación».",
+    "bugReportsToTriage": "{count, plural, one {# informe por clasificar} other {# informes por clasificar}}",
     "reportBug": "Informar de un problema"
   },
   "presence": {

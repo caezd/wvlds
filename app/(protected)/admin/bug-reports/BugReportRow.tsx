@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -36,6 +37,7 @@ export function BugReportRow({
 }) {
   const t = useTranslations("admin.bugReports");
   const tCommon = useTranslations("common");
+  const router = useRouter();
   const [status, setStatus] = React.useState<BugReportStatus>(report.status);
   const [supprimé, setSupprimé] = React.useState(false);
 
@@ -50,7 +52,13 @@ export function BugReportRow({
       // base n'a pas accepté ferait croire au tri d'être fait.
       setStatus(précédent);
       toast.error(messageErreurAction(res.error, tCommon));
+      return;
     }
+    // La pastille du rail compte les signalements encore à trier, et elle est
+    // rendue par le layout, que `revalidatePath` sur cette page ne touche pas.
+    // Sans ce rafraîchissement, elle continuerait d'annoncer un tri à faire qui
+    // vient d'être fait.
+    router.refresh();
   }
 
   async function supprimer() {
@@ -60,6 +68,7 @@ export function BugReportRow({
       return;
     }
     setSupprimé(true);
+    router.refresh();
   }
 
   return (
