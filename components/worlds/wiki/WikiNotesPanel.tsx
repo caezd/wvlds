@@ -38,7 +38,12 @@ import { afterMenuClose } from "@/components/ui/after-menu-close";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { DB_TEXT_LIMITS } from "@/lib/textLimits";
 import { cn } from "@/lib/utils";
-import { coteDuTrait, useWikiPageNotes, type WikiNoteGroup } from "@/hooks/useWikiPageNotes";
+import {
+  coteDuTrait,
+  coteParRang,
+  useWikiPageNotes,
+  type WikiNoteGroup,
+} from "@/hooks/useWikiPageNotes";
 import { SANS_DEPLACEMENT } from "@/lib/dndTri";
 import type { WikiNoteCategory, WikiPageNote } from "@/types/worlds";
 import { WikiNoteCard, noteDragId } from "./WikiNoteCard";
@@ -100,6 +105,7 @@ function CategorySection({
   onDelete,
   onCreateNote,
   insertion,
+  insertionCategorie,
   onSaveNote,
   onDeleteNote,
 }: {
@@ -125,6 +131,8 @@ function CategorySection({
   onCreateNote: (title: string) => void;
   /** Fiche qui porte le trait de dépôt, et de quel côté. */
   insertion: { noteId: string; cote: "avant" | "apres" } | null;
+  /** Trait de dépôt de la catégorie elle-même, quand c'est elle qu'on déplace. */
+  insertionCategorie: "avant" | "apres" | null;
   onSaveNote: (note: WikiPageNote, patch: { title: string; body: string }) => void;
   onDeleteNote: (note: WikiPageNote) => void;
 }) {
@@ -157,13 +165,26 @@ function CategorySection({
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className={cn(
-        "rounded-lg",
+        "relative rounded-lg",
         isDragging && "opacity-50",
         // Une fiche survole la catégorie : on montre qu'elle l'accueillera,
-        // y compris quand elle est repliée et n'a donc rien à survoler.
-        isOver && "ring-1 ring-primary/40",
+        // y compris quand elle est repliée et n'a donc rien à survoler. Le
+        // cadre ne vaut que pour une fiche : quand c'est la catégorie qu'on
+        // déplace, le trait dit déjà où elle se pose.
+        isOver && !insertionCategorie && "ring-1 ring-primary/40",
       )}
     >
+      {/* Le même trait que pour les pages et les fiches : il dit OÙ la
+          catégorie se posera, là où le cadre dit DANS quoi une fiche ira. */}
+      {insertionCategorie && (
+        <span
+          aria-hidden
+          className={cn(
+            "pointer-events-none absolute inset-x-0 z-10 h-0.5 -translate-y-1/2 rounded-full bg-accent",
+            insertionCategorie === "avant" ? "top-0" : "top-full",
+          )}
+        />
+      )}
       <div className="flex items-center gap-1 px-1 py-1">
         {canEdit && (
           <button
@@ -401,6 +422,16 @@ export function WikiNotesPanel({
     return cote ? { noteId: cible, cote } : null;
   }, [survolGlisse, notes.notes]);
 
+  /** Catégorie qui porte le trait, quand c'est une catégorie qu'on déplace. */
+  const insertionCategorie = React.useMemo(() => {
+    if (!survolGlisse) return null;
+    const deplacee = categoryIdOf(survolGlisse.activeId);
+    const cible = categoryIdOf(survolGlisse.overId);
+    if (!deplacee || !cible) return null;
+    const cote = coteParRang(notes.groups.map(g => g.category.id), deplacee, cible);
+    return cote ? { categoryId: cible, cote } : null;
+  }, [survolGlisse, notes.groups]);
+
   function onDragOver({ active, over }: DragOverEvent) {
     setSurvolGlisse(over ? { activeId: String(active.id), overId: String(over.id) } : null);
   }
@@ -518,6 +549,11 @@ export function WikiNotesPanel({
                       onDelete={() => setConfirmCategory(group.category)}
                       onCreateNote={title => void notes.createNote(group.category.id, title)}
                       insertion={insertion}
+                      insertionCategorie={
+                        insertionCategorie?.categoryId === group.category.id
+                          ? insertionCategorie.cote
+                          : null
+                      }
                       onSaveNote={(note, patch) => void notes.updateNote(note, patch)}
                       onDeleteNote={setConfirmNote}
                     />

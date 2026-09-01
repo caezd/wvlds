@@ -52,6 +52,25 @@ export function groupNotesByCategory(
  * catégorie), et c'est celle qu'on peut vérifier sans monter d'interface.
  */
 /**
+ * De quel côté de la cible le trait se pose, dans une liste ordonnée.
+ *
+ * `arrayMove` et `planNoteMove` partagent la même sémantique : l'index visé est
+ * celui de la cible AVANT retrait de l'élément déplacé. Celui-ci venant
+ * d'au-dessus, son retrait remonte la cible d'un cran — il se pose donc APRÈS
+ * elle, et le trait doit le dire.
+ */
+export function coteParRang(
+  ordre: string[],
+  deplaceId: string,
+  cibleId: string,
+): "avant" | "apres" | null {
+  const de = ordre.indexOf(deplaceId);
+  const vers = ordre.indexOf(cibleId);
+  if (de === -1 || vers === -1 || de === vers) return null;
+  return de < vers ? "apres" : "avant";
+}
+
+/**
  * De quel côté de la fiche visée le trait de dépôt se pose.
  *
  * Déduit de la même règle que `planNoteMove`, et non d'une seconde qui lui

@@ -4,6 +4,7 @@ import { renderHook, waitFor, act } from "@testing-library/react";
 import { createSupabaseMock } from "@/test/supabaseMock";
 import {
   coteDuTrait,
+  coteParRang,
   groupNotesByCategory,
   planNoteMove,
   useWikiPageNotes,
@@ -228,6 +229,26 @@ describe("useWikiPageNotes", () => {
       "world_wiki_page_notes",
     ]);
     expect(mock.channels[0].handlers[0].config.filter).toBe("page_id=eq.p1");
+  });
+});
+
+describe("coteParRang", () => {
+  // L'ordre affiché des catégories ; `arrayMove` s'y applique tel quel.
+  const ordre = ["a", "b", "c"];
+
+  it("annonce sous la cible quand l'élément descend", () => {
+    // `arrayMove(ordre, 0, 2)` donne b, c, a : « a » atterrit APRÈS « c ».
+    expect(coteParRang(ordre, "a", "c")).toBe("apres");
+  });
+
+  it("annonce au-dessus quand il remonte", () => {
+    expect(coteParRang(ordre, "c", "a")).toBe("avant");
+  });
+
+  it("n'annonce rien sur soi-même ni sur un inconnu", () => {
+    expect(coteParRang(ordre, "b", "b")).toBeNull();
+    expect(coteParRang(ordre, "b", "z")).toBeNull();
+    expect(coteParRang(ordre, "z", "b")).toBeNull();
   });
 });
 

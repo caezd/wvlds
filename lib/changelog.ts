@@ -14,7 +14,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Wiki",
-    text: "Les fiches de notes annoncent elles aussi où elles se poseront pendant un glissé, par le même trait que l’arbre des pages."
+    text: "Les fiches de notes et leurs catégories annoncent elles aussi où elles se poseront pendant un glissé, par le même trait que l’arbre des pages."
   },
   {
     date: "2026-08",
