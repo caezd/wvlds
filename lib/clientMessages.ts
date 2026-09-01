@@ -51,6 +51,7 @@ export const ROUTE_SCOPED_NAMESPACES = [
     "admin",
     "settings",
     "shop",
+    "bugReport",
     // Onglets secondaires d'un monde : wiki, carte, relations, catalogue. Ils
     // ne sont montés que par `WorldHome` (donc `/w/[id]`) et par les réglages
     // de monde — jamais depuis un salon, dont la barre latérale se contente du

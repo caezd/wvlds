@@ -1,5 +1,6 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import {
+  isOwnAttachmentPath,
   BUG_REPORT_MAX_LENGTH,
   BUG_REPORT_URL_MAX_LENGTH,
   BUG_REPORT_USER_AGENT_MAX_LENGTH,
@@ -76,5 +77,37 @@ describe("captureBugReportContext", () => {
     const contexte = captureBugReportContext();
     expect(contexte.pageUrl).toHaveLength(BUG_REPORT_URL_MAX_LENGTH);
     expect(contexte.userAgent).toHaveLength(BUG_REPORT_USER_AGENT_MAX_LENGTH);
+  });
+});
+
+describe("isOwnAttachmentPath", () => {
+  // Le chemin arrive du client. Sans cette vérification, un rapport pourrait
+  // désigner le dépôt de quelqu'un d'autre — et le faire signer, la signature
+  // étant demandée au nom de l'administrateur qui le consulte, dont la policy
+  // de lecture couvre tout le bucket.
+  it("accepte un chemin sous le préfixe de son auteur", () => {
+    expect(isOwnAttachmentPath("user-u1/abc.webp", "u1")).toBe(true);
+  });
+
+  it("refuse le dépôt d'un autre compte", () => {
+    expect(isOwnAttachmentPath("user-u2/abc.webp", "u1")).toBe(false);
+    expect(isOwnAttachmentPath("abc.webp", "u1")).toBe(false);
+    expect(isOwnAttachmentPath("", "u1")).toBe(false);
+  });
+
+  // Un préfixe correct suivi d'une remontée de dossier ressortirait du dépôt
+  // de son auteur tout en satisfaisant le test le plus naïf.
+  it("refuse une remontée de dossier", () => {
+    expect(isOwnAttachmentPath("user-u1/../user-u2/abc.webp", "u1")).toBe(false);
+  });
+
+  // Le préfixe d'un autre compte peut commencer par celui-ci : « user-u1 » est
+  // un préfixe de « user-u10 ». La barre oblique est ce qui les sépare.
+  it("ne confond pas deux comptes dont l'un préfixe l'autre", () => {
+    expect(isOwnAttachmentPath("user-u10/abc.webp", "u1")).toBe(false);
+  });
+
+  it("refuse un chemin démesuré", () => {
+    expect(isOwnAttachmentPath("user-u1/" + "a".repeat(400), "u1")).toBe(false);
   });
 });

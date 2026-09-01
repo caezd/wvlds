@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -25,7 +26,14 @@ import { BUG_REPORT_STATUSES, type BugReport, type BugReportStatus } from "@/lib
  * la page, mais l'attendre laisserait le sélecteur figé sur l'ancienne valeur le
  * temps de l'aller-retour.
  */
-export function BugReportRow({ report }: { report: BugReport }) {
+export function BugReportRow({
+  report,
+  attachmentUrls = [],
+}: {
+  report: BugReport;
+  /** URL signées, calculées par la page : le bucket est privé. */
+  attachmentUrls?: string[];
+}) {
   const t = useTranslations("admin.bugReports");
   const tCommon = useTranslations("common");
   const [status, setStatus] = React.useState<BugReportStatus>(report.status);
@@ -91,6 +99,19 @@ export function BugReportRow({ report }: { report: BugReport }) {
           />
         </div>
       </div>
+
+      {attachmentUrls.length > 0 && (
+        <ul className="mt-3 flex flex-wrap gap-2">
+          {attachmentUrls.map((url) => (
+            <li key={url} className="relative h-24 w-24 overflow-hidden rounded-lg border">
+              {/* `unoptimized` : l'URL est signée et expire, la faire passer par
+                  l'optimiseur de Next la mettrait en cache au-delà de sa
+                  validité — et ferait échouer les visites suivantes. */}
+              <Image src={url} alt="" fill unoptimized className="object-cover" />
+            </li>
+          ))}
+        </ul>
+      )}
 
       <dl className="mt-3 space-y-0.5 text-xs text-muted-foreground">
         {report.page_url && (

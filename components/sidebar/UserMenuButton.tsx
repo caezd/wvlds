@@ -21,7 +21,6 @@ import { Bug, ChevronsUpDown, Download, KeyRound, LogOut, Scale, ScrollText, Set
 import { useGlobalPresence, type PresenceStatus } from "@/components/providers/PresenceProvider";
 import { cn } from "@/lib/utils";
 import { UserProfileSheet } from "./UserProfileSheet";
-import { BugReportDialog } from "@/components/support/BugReportDialog";
 import { useTranslations } from "next-intl";
 import { useInstallPrompt } from "@/hooks/useInstallPrompt";
 
@@ -57,7 +56,6 @@ export function UserMenuButton({
   const supabase = createClient();
   const { status, setStatus } = useGlobalPresence();
   const [profileOpen, setProfileOpen] = useState(false);
-  const [bugReportOpen, setBugReportOpen] = useState(false);
   const tPresence = useTranslations("presence");
   const tNav = useTranslations("nav");
   const { canInstall, installed, promptInstall } = useInstallPrompt();
@@ -84,7 +82,6 @@ export function UserMenuButton({
 
   return (
     <>
-      <BugReportDialog open={bugReportOpen} onOpenChange={setBugReportOpen} />
       <UserProfileSheet
         open={profileOpen}
         onOpenChange={setProfileOpen}
@@ -184,7 +181,7 @@ export function UserMenuButton({
             <ScrollText className="mr-2 size-4" />
             {tNav("changelog")}
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setBugReportOpen(true)}>
+          <DropdownMenuItem onClick={() => router.push("/bug-report")}>
             <Bug className="mr-2 size-4" />
             {tNav("reportBug")}
           </DropdownMenuItem>

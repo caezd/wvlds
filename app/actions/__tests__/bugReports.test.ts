@@ -86,6 +86,60 @@ describe("submitBugReport", () => {
   });
 });
 
+describe("submitBugReport — pièces jointes", () => {
+  it("enregistre les chemins déposés sous le préfixe de l'auteur", async () => {
+    const mock = connecté({ results: [{ error: null }] });
+    brancher(mock);
+
+    await submitBugReport({
+      description: "x",
+      attachments: ["user-u1/a.webp", "user-u1/b.webp"],
+    });
+
+    expect(mock.buildersFor("bug_reports")[0].insert).toHaveBeenCalledWith(
+      expect.objectContaining({ attachments: ["user-u1/a.webp", "user-u1/b.webp"] }),
+    );
+  });
+
+  // Le chemin vient du client : accepter celui d'un autre compte ferait signer
+  // son dépôt, la signature étant demandée au nom de l'administrateur qui
+  // consulte le rapport — dont la policy de lecture couvre tout le bucket.
+  it("refuse un chemin qui désigne le dépôt d'un autre compte", async () => {
+    const mock = connecté();
+    brancher(mock);
+
+    const res = await submitBugReport({ description: "x", attachments: ["user-u2/a.webp"] });
+
+    expect(res.ok).toBe(false);
+    expect(mock.from).not.toHaveBeenCalled();
+  });
+
+  it("refuse au-delà du nombre autorisé", async () => {
+    const mock = connecté();
+    brancher(mock);
+
+    const res = await submitBugReport({
+      description: "x",
+      attachments: ["user-u1/a.webp", "user-u1/b.webp", "user-u1/c.webp", "user-u1/d.webp"],
+    });
+
+    expect(res.ok).toBe(false);
+    expect(mock.from).not.toHaveBeenCalled();
+  });
+
+  it("accepte un rapport sans aucune image", async () => {
+    const mock = connecté({ results: [{ error: null }] });
+    brancher(mock);
+
+    const res = await submitBugReport({ description: "x" });
+
+    expect(res).toEqual({ ok: true });
+    expect(mock.buildersFor("bug_reports")[0].insert).toHaveBeenCalledWith(
+      expect.objectContaining({ attachments: [] }),
+    );
+  });
+});
+
 describe("setBugReportStatus", () => {
   it("change le statut pour un administrateur", async () => {
     vi.mocked(isAdmin).mockResolvedValue(true);

@@ -9,7 +9,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Nouveauté",
-    text: "« Signaler un problème » apparaît dans votre menu, sous le journal des modifications. Décrivez ce qui s’est passé, c’est tout : la page où vous étiez et votre navigateur sont joints automatiquement — ce sont les deux informations sans lesquelles un problème est rarement reproductible, et personne ne pense à les donner. Elles vous sont annoncées avant l’envoi.\nCôté administration, une file de tri rassemble les signalements et permet de suivre leur traitement."
+    text: "« Signaler un problème » apparaît dans votre menu, sous le journal des modifications. Il ouvre une page entière, pas une fenêtre : on y écrit à l’aise depuis un téléphone, sans qu’un geste de côté referme tout ce qu’on venait de taper.\nDécrivez ce qui s’est passé, joignez jusqu’à trois captures d’écran, c’est tout : la page où vous étiez et votre navigateur partent avec le rapport — ce sont les deux informations sans lesquelles un problème est rarement reproductible, et personne ne pense à les donner. Elles vous sont annoncées avant l’envoi, et vos captures ne sont lisibles que par vous et par l’équipe.\nLa même page récapitule vos signalements passés et où en est leur traitement.\nCôté administration, une file de tri les rassemble, captures comprises."
   },
 
   // ── 2026-08 ──────────────────────────────────────────────────────────────

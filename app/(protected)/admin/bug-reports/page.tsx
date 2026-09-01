@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 
 import { requireAdmin } from "@/lib/admin";
+import { signBugReportAttachments } from "@/lib/bugReportAttachments";
 import type { BugReport } from "@/lib/bugReports";
 import { BugReportRow } from "./BugReportRow";
 
@@ -23,11 +24,18 @@ export default async function BugReportsPage() {
 
   const { data } = await supabase
     .from("bug_reports")
-    .select("id, user_id, description, page_url, user_agent, app_version, status, admin_note, created_at")
+    .select("id, user_id, description, page_url, user_agent, app_version, status, admin_note, created_at, attachments")
     .order("created_at", { ascending: false })
     .limit(200);
 
   const reports = (data ?? []) as BugReport[];
+
+  // Signées en une fois pour toute la page : une requête par image serait un
+  // aller-retour par vignette.
+  const signées = await signBugReportAttachments(
+    supabase,
+    reports.flatMap((r) => r.attachments ?? []),
+  );
 
   return (
     <div className="space-y-6">
@@ -40,7 +48,13 @@ export default async function BugReportsPage() {
       ) : (
         <ul className="space-y-3">
           {reports.map((report) => (
-            <BugReportRow key={report.id} report={report} />
+            <BugReportRow
+              key={report.id}
+              report={report}
+              attachmentUrls={(report.attachments ?? [])
+                .map((chemin) => signées.get(chemin))
+                .filter((url): url is string => !!url)}
+            />
           ))}
         </ul>
       )}

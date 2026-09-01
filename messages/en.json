@@ -1288,6 +1288,16 @@
     "send": "Send",
     "sending": "Sending…",
     "sent": "Thank you, your report has been sent.",
-    "tooLong": "Maximum {max} characters."
+    "tooLong": "Maximum {max} characters.",
+    "imagesLabel": "Screenshots",
+    "imagesHint": "Up to {max} images, visible only to you and the team. A screenshot shows in an instant what a paragraph struggles to describe.",
+    "addImage": "Add an image",
+    "mine": "My reports",
+    "status": {
+      "new": "New",
+      "in_progress": "In progress",
+      "resolved": "Resolved",
+      "declined": "Declined"
+    }
   }
 }

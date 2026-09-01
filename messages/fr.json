@@ -1288,6 +1288,16 @@
     "send": "Envoyer",
     "sending": "Envoi…",
     "sent": "Merci, votre signalement est parti.",
-    "tooLong": "Maximum {max} caractères."
+    "tooLong": "Maximum {max} caractères.",
+    "imagesLabel": "Captures d’écran",
+    "imagesHint": "Jusqu’à {max} images, visibles de vous seul et de l’équipe. Une capture montre en un instant ce qu’un paragraphe peine à décrire.",
+    "addImage": "Ajouter une image",
+    "mine": "Mes signalements",
+    "status": {
+      "new": "Nouveau",
+      "in_progress": "En cours",
+      "resolved": "Résolu",
+      "declined": "Écarté"
+    }
   }
 }

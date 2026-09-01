@@ -6,9 +6,11 @@ import { createClient } from "@/lib/supabase/server";
 import { getUserId } from "@/lib/auth";
 import { isAdmin } from "@/lib/admin";
 import {
+  BUG_REPORT_MAX_ATTACHMENTS,
   BUG_REPORT_URL_MAX_LENGTH,
   BUG_REPORT_USER_AGENT_MAX_LENGTH,
   isBugReportStatus,
+  isOwnAttachmentPath,
   isValidBugReportDescription,
   type BugReportStatus,
 } from "@/lib/bugReports";
@@ -29,6 +31,8 @@ export async function submitBugReport(rapport: {
   description: string;
   pageUrl?: string;
   userAgent?: string;
+  /** Chemins déjà déposés dans le bucket, sous le préfixe de leur auteur. */
+  attachments?: string[];
 }) {
   if (!isValidBugReportDescription(rapport.description)) {
     return { ok: false as const, error: ERR_VALEUR_NON_SUPPORTEE };
@@ -38,6 +42,16 @@ export async function submitBugReport(rapport: {
   const userId = await getUserId(supabase);
   if (!userId) return { ok: false as const, error: ERR_NON_AUTHENTIFIE };
 
+  // Les chemins viennent du client. Sans cette vérification, un rapport
+  // pourrait désigner le dépôt de quelqu'un d'autre — et le faire signer, la
+  // signature étant demandée au nom de l'administrateur qui le consulte, dont
+  // la policy de lecture couvre tout le bucket.
+  const attachments = rapport.attachments ?? [];
+  const recevables =
+    attachments.length <= BUG_REPORT_MAX_ATTACHMENTS &&
+    attachments.every((chemin) => isOwnAttachmentPath(chemin, userId));
+  if (!recevables) return { ok: false as const, error: ERR_VALEUR_NON_SUPPORTEE };
+
   const { error } = await supabase.from("bug_reports").insert({
     user_id: userId,
     description: rapport.description.trim(),
@@ -46,6 +60,7 @@ export async function submitBugReport(rapport: {
     page_url: rapport.pageUrl?.slice(0, BUG_REPORT_URL_MAX_LENGTH) || null,
     user_agent: rapport.userAgent?.slice(0, BUG_REPORT_USER_AGENT_MAX_LENGTH) || null,
     app_version: process.env.NEXT_PUBLIC_APP_VERSION || null,
+    attachments,
   });
   if (error) return { ok: false as const, error: echecEnregistrement("submitBugReport", error) };
 

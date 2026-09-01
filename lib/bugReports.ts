@@ -16,6 +16,17 @@ export const BUG_REPORT_MAX_LENGTH = 4000;
 export const BUG_REPORT_URL_MAX_LENGTH = 2000;
 export const BUG_REPORT_USER_AGENT_MAX_LENGTH = 500;
 
+/** Trois pièces jointes au plus — miroir de la contrainte
+ *  `bug_reports_attachments_bounds` (migration 138). */
+export const BUG_REPORT_MAX_ATTACHMENTS = 3;
+
+/** Bucket PRIVÉ : une capture montre souvent autre chose que le bug. Les
+ *  images ne sortent que par une URL signée (voir lib/bugReportAttachments). */
+export const BUG_REPORT_BUCKET = "bug-reports";
+
+/** Types acceptés — ce qu'un navigateur produit d'une capture d'écran. */
+export const BUG_REPORT_IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"] as const;
+
 export const BUG_REPORT_STATUSES = ["new", "in_progress", "resolved", "declined"] as const;
 export type BugReportStatus = (typeof BUG_REPORT_STATUSES)[number];
 
@@ -24,6 +35,8 @@ export function isBugReportStatus(value: unknown): value is BugReportStatus {
 }
 
 export type BugReport = {
+  /** Chemins de stockage, jamais des URL : une URL signée expire. */
+  attachments: string[];
   id: string;
   user_id: string;
   description: string;
@@ -34,6 +47,18 @@ export type BugReport = {
   admin_note: string | null;
   created_at: string;
 };
+
+/**
+ * Les chemins recevables pour une pièce jointe.
+ *
+ * Le chemin arrive du client : il est vérifié contre le préfixe de son auteur
+ * avant d'être enregistré, faute de quoi un rapport pourrait référencer le
+ * dépôt de quelqu'un d'autre — et le faire signer, puisque la signature est
+ * demandée au nom de l'administrateur qui consulte.
+ */
+export function isOwnAttachmentPath(path: string, userId: string): boolean {
+  return path.startsWith(`user-${userId}/`) && path.length <= 300 && !path.includes("..");
+}
 
 /**
  * Un signalement vide n'en est pas un, et un signalement démesuré est refusé
