@@ -87,13 +87,24 @@ const BASE_PAGE: WikiPage = {
 
 afterEach(() => {
   vi.useRealTimers();
+  dispositionLarge = false;
 });
 /**
+ * Disposition de bureau : les deux colonnes tiennent.
+ *
+ * Ce n'est plus un point de rupture mais une mesure — `WorldWiki` observe la
+ * largeur de la zone et tranche — donc une propriété, que ces tests règlent
+ * ici. Elle vaut `false` par défaut, comme `matchMedia` sous jsdom, pour que
+ * les tests de la disposition étroite n'aient rien à dire.
+ */
+let dispositionLarge = false;
+
+/**
  * Fait croire à un écran large : sous jsdom, `matchMedia` répond toujours
- * `false`, et la colonne latérale — montée seulement à partir de `xl` — serait
- * absente de tous ces tests, qui portent sur la disposition de bureau.
+ * `false`, et les enfants qui l'interrogent verraient un téléphone.
  */
 function ecranLarge(matches = true) {
+  dispositionLarge = matches;
   window.matchMedia = vi.fn().mockImplementation((query: string) => ({
     matches: query.includes("80rem") ? matches : false,
     media: query,
@@ -121,6 +132,8 @@ describe("WikiPageContent — brouillon et publication", () => {
       <WikiPageContent
         worldId="w1"
         panelWidth={320}
+        colonneLaterale={dispositionLarge}
+        navEnColonne={dispositionLarge}
         panelHandleProps={{}}
         navCollapsed={false}
         onExpandNav={vi.fn()}
@@ -151,6 +164,8 @@ describe("WikiPageContent — brouillon et publication", () => {
       <WikiPageContent
         worldId="w1"
         panelWidth={320}
+        colonneLaterale={dispositionLarge}
+        navEnColonne={dispositionLarge}
         panelHandleProps={{}}
         navCollapsed={false}
         onExpandNav={vi.fn()}
@@ -189,6 +204,8 @@ describe("WikiPageContent — brouillon et publication", () => {
       <WikiPageContent
         worldId="w1"
         panelWidth={320}
+        colonneLaterale={dispositionLarge}
+        navEnColonne={dispositionLarge}
         panelHandleProps={{}}
         navCollapsed={false}
         onExpandNav={vi.fn()}
@@ -236,6 +253,8 @@ describe("WikiPageContent — brouillon et publication", () => {
       <WikiPageContent
         worldId="w1"
         panelWidth={320}
+        colonneLaterale={dispositionLarge}
+        navEnColonne={dispositionLarge}
         panelHandleProps={{}}
         navCollapsed={false}
         onExpandNav={vi.fn()}
@@ -278,6 +297,8 @@ describe("WikiPageContent — brouillon et publication", () => {
       <WikiPageContent
         worldId="w1"
         panelWidth={320}
+        colonneLaterale={dispositionLarge}
+        navEnColonne={dispositionLarge}
         panelHandleProps={{}}
         navCollapsed={false}
         onExpandNav={vi.fn()}
@@ -323,6 +344,8 @@ describe("WikiPageContent — brouillon et publication", () => {
       <WikiPageContent
         worldId="w1"
         panelWidth={320}
+        colonneLaterale={dispositionLarge}
+        navEnColonne={dispositionLarge}
         panelHandleProps={{}}
         navCollapsed={false}
         onExpandNav={vi.fn()}
@@ -356,6 +379,8 @@ describe("WikiPageContent — brouillon et publication", () => {
       <WikiPageContent
         worldId="w1"
         panelWidth={320}
+        colonneLaterale={dispositionLarge}
+        navEnColonne={dispositionLarge}
         panelHandleProps={{}}
         navCollapsed={false}
         onExpandNav={vi.fn()}
@@ -393,6 +418,8 @@ describe("WikiPageContent — badge brouillon", () => {
       <WikiPageContent
         worldId="w1"
         panelWidth={320}
+        colonneLaterale={dispositionLarge}
+        navEnColonne={dispositionLarge}
         panelHandleProps={{}}
         navCollapsed={false}
         onExpandNav={vi.fn()}
@@ -424,6 +451,8 @@ describe("WikiPageContent — badge brouillon", () => {
       <WikiPageContent
         worldId="w1"
         panelWidth={320}
+        colonneLaterale={dispositionLarge}
+        navEnColonne={dispositionLarge}
         panelHandleProps={{}}
         navCollapsed={false}
         onExpandNav={vi.fn()}
@@ -455,6 +484,8 @@ describe("WikiPageContent — badge brouillon", () => {
       <WikiPageContent
         worldId="w1"
         panelWidth={320}
+        colonneLaterale={dispositionLarge}
+        navEnColonne={dispositionLarge}
         panelHandleProps={{}}
         navCollapsed={false}
         onExpandNav={vi.fn()}
@@ -483,6 +514,8 @@ describe("WikiPageContent — badge page restreinte", () => {
       <WikiPageContent
         worldId="w1"
         panelWidth={320}
+        colonneLaterale={dispositionLarge}
+        navEnColonne={dispositionLarge}
         panelHandleProps={{}}
         navCollapsed={false}
         onExpandNav={vi.fn()}
@@ -509,6 +542,8 @@ describe("WikiPageContent — badge page restreinte", () => {
       <WikiPageContent
         worldId="w1"
         panelWidth={320}
+        colonneLaterale={dispositionLarge}
+        navEnColonne={dispositionLarge}
         panelHandleProps={{}}
         navCollapsed={false}
         onExpandNav={vi.fn()}
@@ -542,6 +577,8 @@ describe("WikiPageContent — titre de la page", () => {
       <WikiPageContent
         worldId="w1"
         panelWidth={320}
+        colonneLaterale={dispositionLarge}
+        navEnColonne={dispositionLarge}
         panelHandleProps={{}}
         navCollapsed={false}
         onExpandNav={vi.fn()}
@@ -578,6 +615,8 @@ describe("WikiPageContent — titre de la page", () => {
       <WikiPageContent
         worldId="w1"
         panelWidth={320}
+        colonneLaterale={dispositionLarge}
+        navEnColonne={dispositionLarge}
         panelHandleProps={{}}
         navCollapsed={false}
         onExpandNav={vi.fn()}
@@ -613,6 +652,8 @@ describe("WikiPageContent — commentaires ancrés", () => {
       <WikiPageContent
         worldId="w1"
         panelWidth={320}
+        colonneLaterale={dispositionLarge}
+        navEnColonne={dispositionLarge}
         panelHandleProps={{}}
         navCollapsed={false}
         onExpandNav={vi.fn()}
@@ -756,6 +797,8 @@ describe("WikiPageContent — colonne latérale en mode modification", () => {
       <WikiPageContent
         worldId="w1"
         panelWidth={320}
+        colonneLaterale={dispositionLarge}
+        navEnColonne={dispositionLarge}
         panelHandleProps={{}}
         navCollapsed={false}
         onExpandNav={vi.fn()}
@@ -804,6 +847,8 @@ describe("WikiPageContent — ceinture de mise en forme", () => {
       <WikiPageContent
         worldId="w1"
         panelWidth={320}
+        colonneLaterale={dispositionLarge}
+        navEnColonne={dispositionLarge}
         panelHandleProps={{}}
         navCollapsed={false}
         onExpandNav={vi.fn()}
@@ -917,6 +962,8 @@ describe("WikiPageContent — ceinture de mise en forme", () => {
       <WikiPageContent
         worldId="w1"
         panelWidth={320}
+        colonneLaterale={dispositionLarge}
+        navEnColonne={dispositionLarge}
         panelHandleProps={{}}
         navCollapsed={false}
         onExpandNav={vi.fn()}
@@ -946,6 +993,8 @@ describe("WikiPageContent — compteurs du sous-en-tête", () => {
       <WikiPageContent
         worldId="w1"
         panelWidth={320}
+        colonneLaterale={dispositionLarge}
+        navEnColonne={dispositionLarge}
         panelHandleProps={{}}
         navCollapsed={false}
         onExpandNav={vi.fn()}
@@ -1014,6 +1063,8 @@ describe("WikiPageContent — bannière et description", () => {
       <WikiPageContent
         worldId="w1"
         panelWidth={320}
+        colonneLaterale={dispositionLarge}
+        navEnColonne={dispositionLarge}
         panelHandleProps={{}}
         navCollapsed={false}
         onExpandNav={vi.fn()}

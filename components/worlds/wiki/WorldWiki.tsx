@@ -79,6 +79,8 @@ import { slugify } from "@/lib/slug";
 import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import { useColumnResize } from "@/hooks/useColumnResize";
 import { SANS_DEPLACEMENT } from "@/lib/dndTri";
+import { laColonneTient } from "@/lib/wikiSideColumn";
+import { MEDIA, useMediaQuery } from "@/hooks/useMediaQuery";
 import type { WorldLexiconTerm } from "@/types/worlds";
 
 const WIKI_NAV_MIN = 120;
@@ -478,7 +480,11 @@ export function WorldWiki({
   // ── Colonnes redimensionnables ────────────────────────────
   // L'arbre de navigation et la colonne latérale d'une page partagent le même
   // geste ; seule diffère la poignée, à droite de l'un et à gauche de l'autre.
-  const { width: navWidth, handleProps: navHandleProps } = useColumnResize({
+  const {
+    width: navWidth,
+    resizing: navResizing,
+    handleProps: navHandleProps,
+  } = useColumnResize({
     initialWidth: initialSidebarWidth ?? WIKI_NAV_DEFAULT,
     min: WIKI_NAV_MIN,
     max: WIKI_NAV_MAX,
@@ -486,13 +492,47 @@ export function WorldWiki({
     onCommit: w => void saveWorldPrefs(worldId, { wiki_sidebar_width: w }),
   });
 
-  const { width: panelWidth, handleProps: panelHandleProps } = useColumnResize({
+  const {
+    width: panelWidth,
+    resizing: panelResizing,
+    handleProps: panelHandleProps,
+  } = useColumnResize({
     initialWidth: initialPanelWidth ?? WIKI_PANEL_DEFAULT,
     min: WIKI_PANEL_MIN,
     max: WIKI_PANEL_MAX,
     side: "left",
     onCommit: w => void saveWorldPrefs(worldId, { wiki_panel_width: w }),
   });
+
+  /**
+   * Largeur du corps du wiki : les deux colonnes ET l'article.
+   *
+   * Mesurée plutôt que déduite d'un point de rupture — les deux colonnes se
+   * redimensionnent à la poignée, si bien que la place laissée au texte ne se
+   * lit pas dans la largeur de la fenêtre. Et mesurée ICI, au-dessus des deux :
+   * une zone prise à l'intérieur grandirait au départ d'une colonne, ce qui la
+   * ferait revenir, ce qui rétrécirait la zone.
+   */
+  const zoneRef = React.useRef<HTMLDivElement>(null);
+  const [largeurZone, setLargeurZone] = React.useState<number | null>(null);
+  React.useEffect(() => {
+    const zone = zoneRef.current;
+    if (!zone) return;
+    const observateur = new ResizeObserver(([entree]) => {
+      setLargeurZone(entree.contentRect.width);
+    });
+    observateur.observe(zone);
+    return () => observateur.disconnect();
+  }, []);
+
+  /** Le `rem` réel, que le lecteur peut avoir grossi dans son navigateur. */
+  const [rem, setRem] = React.useState(16);
+  React.useEffect(() => {
+    const taille = parseFloat(getComputedStyle(document.documentElement).fontSize);
+    if (Number.isFinite(taille) && taille > 0) setRem(taille);
+  }, []);
+
+  const grandEcran = useMediaQuery(MEDIA.lg);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -805,6 +845,35 @@ export function WorldWiki({
   const [survolGlisse, setSurvolGlisse] = React.useState<
     { activeId: string; overId: string; zone: Zone; viaBande: boolean } | null
   >(null);
+
+  /**
+   * Les deux colonnes se retirent l'une après l'autre, dans cet ordre.
+   *
+   * La colonne des notes part la première : elle accompagne l'article, quand
+   * l'arbre des pages est le seul chemin pour en changer. Chaque seuil se lit
+   * sur la MÊME zone et sur les largeurs configurées des deux colonnes, jamais
+   * sur ce qui est monté à l'instant — c'est ce qui rend la cascade monotone :
+   * en rétrécissant on ne fait que perdre des colonnes, jamais en retrouver.
+   *
+   * Le glissement d'une poignée suspend les deux décisions : élargir une
+   * colonne peut franchir un seuil, et la retirer sous le doigt laisserait le
+   * geste en suspens, la poignée démontée avant son `pointerup`.
+   */
+  const enRedimensionnement = navResizing || panelResizing;
+  const colonneNav = enRedimensionnement || laColonneTient({
+    largeurZone, largeurColonne: navWidth, grandEcran, rem, siInconnu: true,
+  });
+  const colonneLaterale = enRedimensionnement || laColonneTient({
+    largeurZone, largeurColonne: navWidth + panelWidth, grandEcran, rem,
+  });
+
+  // La colonne revient (élargissement, rotation d'une tablette) : le tiroir
+  // n'a plus lieu d'être, et le laisser « ouvert » le ferait resurgir tout
+  // seul au prochain rétrécissement. Le même garde existe pour la colonne
+  // latérale, dans `WikiPageContent`.
+  React.useEffect(() => {
+    if (colonneNav) setTreeOpen(false);
+  }, [colonneNav]);
 
   /** La page tenue par le curseur, s'il y en a une. */
   const pageGlissee = idGlisse ? pages?.find(p => p.id === idGlisse) ?? null : null;
@@ -1163,21 +1232,23 @@ export function WorldWiki({
           {/* Bandeau vide, mais présent : c'est lui qui aligne le trait avec
               les deux autres colonnes quand aucune page n'est ouverte. */}
           <div className={WIKI_SUBHEADER}>
-            <button
-              type="button"
-              onClick={() => setTreeOpen(true)}
-              aria-label={t("openPages")}
-              className="flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium text-muted-foreground hover:bg-secondary hover:text-foreground lg:hidden"
-            >
-              <PanelLeft className="h-3.5 w-3.5" /> {t("pagesLabel")}
-              {compteurDesPages}
-            </button>
-            {navCollapsed && (
+            {!colonneNav && (
+              <button
+                type="button"
+                onClick={() => setTreeOpen(true)}
+                aria-label={t("openPages")}
+                className="flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium text-muted-foreground hover:bg-secondary hover:text-foreground"
+              >
+                <PanelLeft className="h-3.5 w-3.5" /> {t("pagesLabel")}
+                {compteurDesPages}
+              </button>
+            )}
+            {colonneNav && navCollapsed && (
               <button
                 type="button"
                 onClick={() => replierNav(false)}
                 aria-label={t("expandPages")}
-                className="flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium text-muted-foreground hover:bg-secondary hover:text-foreground hidden lg:flex"
+                className="flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium text-muted-foreground"
               >
                 <PanelLeft className="h-3.5 w-3.5" /> {t("pagesLabel")}
                 {compteurDesPages}
@@ -1204,6 +1275,8 @@ export function WorldWiki({
         worldId={worldId}
         panelWidth={panelWidth}
         panelHandleProps={panelHandleProps}
+        colonneLaterale={colonneLaterale}
+        navEnColonne={colonneNav}
         navCollapsed={navCollapsed}
         onExpandNav={() => replierNav(false)}
         onOpenTree={() => setTreeOpen(true)}
@@ -1283,11 +1356,15 @@ export function WorldWiki({
         </WorldPanelHeader>
 
         {/* ── Body ───────────────────────────────────────── */}
-        <div className="flex min-h-0 min-w-0 flex-1">
-          {/* Colonne de navigation — devient un tiroir en dessous de `lg`, où
-              ses 208 px prenaient plus de la moitié d'un écran de téléphone. */}
-          {!navCollapsed && (
+        <div ref={zoneRef} className="flex min-h-0 min-w-0 flex-1">
+          {/* Colonne de navigation — elle passe en tiroir dès que ses 208 px
+              empêchent l'article d'atteindre sa mesure, la colonne des notes
+              étant déjà partie. */}
+          {colonneNav && !navCollapsed && (
             <div
+              // La classe `lg:` reste, en plancher : la mesure n'arrive qu'après
+              // le premier rendu, et sans elle la colonne clignoterait sur
+              // téléphone le temps d'une image.
               className="hidden shrink-0 flex-col border-r border-border-soft lg:flex"
               style={{ width: navWidth }}
             >

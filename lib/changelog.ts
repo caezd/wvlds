@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Wiki",
+    text: "Les deux colonnes du wiki se retirent maintenant quand elles empiètent sur le texte, et non plus à une largeur de fenêtre fixe qui ne savait rien d’elles. La colonne des notes part la première, l’arbre des pages ensuite ; chacune laisse à sa place le bouton qui la rouvre en tiroir. Comme les deux colonnes se redimensionnent à la poignée, le seuil se mesure plutôt qu’il ne se devine."
+  },
+  {
+    date: "2026-08",
     tag: "Correctif",
     text: "Sur téléphone, saisir la poignée d’une page ou d’une fiche du wiki refermait le tiroir au lieu de la déplacer : le balayage qui ferme le tiroir commence par le même appui que le glissé. Les poignées ne déclenchent plus ce balayage."
   },

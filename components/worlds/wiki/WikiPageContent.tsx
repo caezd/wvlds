@@ -23,7 +23,6 @@ import { cropToWebP, type ZoneDeDecoupe } from "@/lib/imageUtils";
 import { ImageCropPicker } from "@/components/ui/image-crop-picker";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { nomDeFichierUnique } from "@/lib/storagePaths";
-import { MEDIA, useMediaQuery } from "@/hooks/useMediaQuery";
 import { useWikiAnnotations } from "@/hooks/useWikiAnnotations";
 import { useWikiPageNotes } from "@/hooks/useWikiPageNotes";
 import type { BlockAnchor } from "@/lib/wikiBlockAnchors";
@@ -80,6 +79,8 @@ export function WikiPageContent({
   worldId,
   panelWidth,
   panelHandleProps,
+  colonneLaterale,
+  navEnColonne,
   navCollapsed,
   onExpandNav,
   onOpenTree,
@@ -99,6 +100,15 @@ export function WikiPageContent({
   worldId: string;
   /** Largeur de la colonne latérale, réglée depuis WorldWiki. */
   panelWidth: number;
+  /**
+   * La colonne latérale tient sans rogner sur le corps de l'article.
+   *
+   * Décidé par `WorldWiki`, qui seul voit la zone entière : mesurée ici, elle
+   * grandirait au départ de la colonne, ce qui la ferait revenir.
+   */
+  colonneLaterale: boolean;
+  /** L'arbre des pages est une colonne, et non un tiroir. */
+  navEnColonne: boolean;
   /** Gestionnaires de la poignée de redimensionnement (voir useColumnResize). */
   panelHandleProps: React.ComponentProps<"div">;
   /** Colonne de navigation repliée : son bouton de réouverture vient ici. */
@@ -211,13 +221,9 @@ export function WikiPageContent({
   // l'article ; commenter, lui, part d'une sélection dans le texte, qui bascule
   // d'elle-même sur l'onglet des commentaires.
   const [sideTab, setSideTab] = React.useState<WikiSideTab>("notes");
-  /** La colonne passe en tiroir en dessous de `xl` — voir le rendu plus bas. */
+  /** La colonne passe en tiroir quand elle ne tient plus — voir le rendu plus bas. */
   const [sideDrawerOpen, setSideDrawerOpen] = React.useState(false);
-  // Un point de rupture lu en JS, et non une classe Tailwind : il faut que la
-  // colonne ne soit pas MONTÉE sous `xl`, pas seulement cachée. Deux panneaux
-  // de notes montés en même temps ouvrent deux fois le même canal Realtime, ce
-  // que supabase-js refuse — et le panneau caché interrogeait la base pour rien.
-  const colonneLaterale = useMediaQuery(MEDIA.xl);
+
 
   // Colonne latérale repliée — même confort local que pour la navigation.
   const [sideCollapsed, setSideCollapsed] = React.useState(false);
@@ -568,18 +574,20 @@ export function WikiPageContent({
 
   const bandeauCentral = (
     <div className={WIKI_SUBHEADER}>
-      {/* Même place pour le même besoin — atteindre les pages : un tiroir en
-          dessous de `lg`, le dépliage de la colonne au-dessus. */}
-      <button
-        type="button"
-        onClick={onOpenTree}
-        aria-label={t("openPages")}
-        className="flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium text-muted-foreground hover:bg-secondary hover:text-foreground lg:hidden"
-      >
-        <PanelLeft className="h-3.5 w-3.5" /> {t("pagesLabel")}
-        {compteurDesPages}
-      </button>
-      {navCollapsed && (
+      {/* Même place pour le même besoin — atteindre les pages : le tiroir
+          quand la colonne ne tient pas, son dépliage quand elle tient. */}
+      {!navEnColonne && (
+        <button
+          type="button"
+          onClick={onOpenTree}
+          aria-label={t("openPages")}
+          className="flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium text-muted-foreground hover:bg-secondary hover:text-foreground"
+        >
+          <PanelLeft className="h-3.5 w-3.5" /> {t("pagesLabel")}
+          {compteurDesPages}
+        </button>
+      )}
+      {navEnColonne && navCollapsed && (
         <button
           type="button"
           onClick={onExpandNav}
@@ -597,23 +605,25 @@ export function WikiPageContent({
       <div className="min-w-0 flex-1">
         {editing && <WikiFormatToolbar onFormat={appliquerMiseEnForme} />}
       </div>
-      {/* Symétrique du bouton des pages : le tiroir en dessous de `xl`, le
-          dépliage de la colonne au-dessus. */}
-      <button
-        type="button"
-        onClick={() => setSideDrawerOpen(true)}
-        className="flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium text-muted-foreground hover:bg-secondary hover:text-foreground xl:hidden"
-      >
-        <PanelRight className="h-3.5 w-3.5" />
-        {sideTab === "notes" ? tNotes("title") : t("annotations.title")}
-        {compteurDeLaColonne}
-      </button>
-      {sideCollapsed && (
+      {/* Symétrique du bouton des pages : le tiroir quand la colonne ne
+          tient pas, son dépliage quand elle tient. */}
+      {!colonneLaterale && (
+        <button
+          type="button"
+          onClick={() => setSideDrawerOpen(true)}
+          className="flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium text-muted-foreground hover:bg-secondary hover:text-foreground"
+        >
+          <PanelRight className="h-3.5 w-3.5" />
+          {sideTab === "notes" ? tNotes("title") : t("annotations.title")}
+          {compteurDeLaColonne}
+        </button>
+      )}
+      {colonneLaterale && sideCollapsed && (
         <button
           type="button"
           onClick={() => replierPanneau(false)}
           aria-label={t("openPanel")}
-          className="flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium text-muted-foreground hover:bg-secondary hover:text-foreground hidden xl:flex"
+          className="flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium text-muted-foreground hover:bg-secondary hover:text-foreground"
         >
           <PanelRight className="h-3.5 w-3.5" />
           {sideTab === "notes" ? tNotes("title") : t("annotations.title")}
@@ -990,9 +1000,10 @@ export function WikiPageContent({
         )}
       </div>
 
-      {/* En colonne à partir de `xl` ; en dessous, la même chose en tiroir —
-          à 1280 px la colonne ne laissait que 464 px au texte, à 375 px elle
-          était posée hors de l'écran, inatteignable. */}
+      {/* En colonne tant que le corps de l'article garde sa pleine mesure ;
+          au-delà, la même chose en tiroir. Le seuil fixe d'avant (`xl`) ne
+          savait rien des colonnes voisines : à 1280 px celle-ci ne laissait
+          que 464 px au texte, et à 375 px elle était posée hors de l'écran. */}
       {colonneLaterale && !sideCollapsed && (
         <WikiSidePanel
           tab={sideTab}

@@ -35,6 +35,16 @@ export function useColumnResize({
   onCommit: (width: number) => void;
 }) {
   const [width, setWidth] = React.useState(initialWidth);
+  /**
+   * Doublon d'état de la ref ci-dessous, et il le faut.
+   *
+   * La ref sert aux gestionnaires, qui ne doivent pas provoquer de rendu à
+   * chaque pixel. Mais l'appelant, lui, a besoin de SAVOIR qu'un glissement
+   * est en cours — celui du wiki retire la colonne quand elle ne tient plus,
+   * et la retirer au milieu du geste démonterait la poignée sous le doigt :
+   * `terminer` ne serait jamais appelé, et la ref resterait à `true`.
+   */
+  const [resizing, setResizing] = React.useState(false);
 
   const dragging = React.useRef(false);
   const startX = React.useRef(0);
@@ -64,6 +74,7 @@ export function useColumnResize({
 
   function commencer(e: React.PointerEvent<HTMLDivElement>) {
     dragging.current = true;
+    setResizing(true);
     startX.current = e.clientX;
     startWidth.current = widthRef.current;
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -77,6 +88,7 @@ export function useColumnResize({
   function terminer(e: React.PointerEvent<HTMLDivElement>) {
     if (!dragging.current) return;
     dragging.current = false;
+    setResizing(false);
     const w = largeurPour(e.clientX);
     setWidth(w);
     if (saveTimeout.current) clearTimeout(saveTimeout.current);
@@ -94,5 +106,5 @@ export function useColumnResize({
     onPointerCancel: terminer,
   };
 
-  return { width, handleProps };
+  return { width, resizing, handleProps };
 }
