@@ -189,26 +189,26 @@ function SortableTreeNode({
     <div
       ref={setNodeRef}
       style={style}
-      className={cn(
-        "relative flex flex-col gap-0.5",
-        // L'espace s'ouvre du côté visé, et le trait s'y loge : les deux
-        // voisines s'écartent pour faire place, plutôt que de voir un trait se
-        // superposer à elles. La transition ne porte que sur la marge — animer
-        // `all` ferait aussi glisser le transform du glissé, qui a le sien.
-        "transition-[margin] duration-150 motion-reduce:transition-none",
-        insertion === "avant" && "mt-1",
-        insertion === "apres" && "mb-1",
-      )}
+      className="relative flex flex-col gap-0.5"
     >
       {/* Deux pixels d'accent entre deux lignes : il dit OÙ la page se posera,
-          là où le cadre d'un dossier dit DANS quoi. Posé en absolu pour ne pas
-          décaler l'arbre, et centré dans la marge qui vient de s'ouvrir. */}
+          là où le cadre d'un dossier dit DANS quoi.
+          
+          Aucune marge, aucune animation de mise en page ici : dnd-kit écarte
+          DÉJÀ les voisines en les translatant, et il le fait avec sa propre
+          durée. Une seconde animation sur la marge se battait avec la sienne —
+          d'où les à-coups — et, comme elle déplaçait la mise en page sous le
+          pointeur, elle changeait la ligne visée, donc sa propre place : le
+          trait clignotait entre deux positions sans jamais se poser.
+          
+          Le trait se contente donc de se poser dans l'écart que dnd-kit ouvre,
+          centré dessus. */}
       {insertion && (
         <span
           aria-hidden
           className={cn(
-            "pointer-events-none absolute inset-x-0 z-10 h-0.5 rounded-full bg-accent",
-            insertion === "avant" ? "-top-[3px]" : "-bottom-[3px]",
+            "pointer-events-none absolute inset-x-0 z-10 h-0.5 -translate-y-1/2 rounded-full bg-accent",
+            insertion === "avant" ? "top-0" : "top-full",
           )}
         />
       )}
