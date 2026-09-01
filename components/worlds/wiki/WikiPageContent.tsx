@@ -10,6 +10,7 @@ import { Drawer } from "@/components/ui/drawer";
 import { SideSheetContent } from "@/components/ui/side-sheet";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import { CodeEditor } from "@/components/ui/code-editor";
+import { StoredImage } from "@/components/ui/stored-image";
 import { appliquerFormat, raccourciDe, type NomFormat } from "@/lib/markdownFormatting";
 import { ecrireAvecAnnulation } from "@/lib/textareaEdit";
 import { toast } from "sonner";
@@ -57,6 +58,16 @@ const WIKI_PROSE_HEADING_CLASSES = cn(
   "[&_h5]:text-sm [&_h5]:font-semibold [&_h5]:uppercase [&_h5]:tracking-wide [&_h5]:text-muted-foreground",
   "[&_h6]:text-sm [&_h6]:font-semibold [&_h6]:uppercase [&_h6]:tracking-wide [&_h6]:text-muted-foreground",
 );
+
+/**
+ * Taille demandée pour la bannière, en pixels physiques.
+ *
+ * La colonne de l'article plafonne à 48 rem, soit 768 px : le double couvre les
+ * écrans à haute densité. La hauteur suit le rapport 3:1 du bandeau, celui-là
+ * même que propose le recadrage.
+ */
+const BANNIERE_LARGEUR = 1536;
+const BANNIERE_HAUTEUR = 512;
 
 function isDraftNewer(page: WikiPage): boolean {
   if (!page.draft_updated_at) return false;
@@ -650,9 +661,14 @@ export function WikiPageContent({
                 }}
               />
               {page.banner_url ? (
-                <div className="group/banniere relative overflow-hidden rounded-lg">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={page.banner_url} alt="" className="h-40 w-full object-cover sm:h-56" />
+                <div className="group/banniere relative h-40 overflow-hidden rounded-lg sm:h-56">
+                  <StoredImage
+                    url={page.banner_url}
+                    width={BANNIERE_LARGEUR}
+                    height={BANNIERE_HAUTEUR}
+                    resize="cover"
+                    className="object-cover"
+                  />
                   <div className="absolute right-2 top-2 flex gap-1">
                     <Button
                       size="sm"
@@ -880,15 +896,21 @@ export function WikiPageContent({
             {/* Bannière, titre et texte vivent dans la MÊME colonne : c'est
                 ce qui garantit leur alignement, quelle que soit la largeur. */}
             <div className="mx-auto w-full min-w-0 [--thread-content-max-width:40rem] lg:[--thread-content-max-width:48rem] max-w-(--thread-content-max-width)">
+                {/* La hauteur passe sur le cadre : `StoredImage` remplit son
+                    parent, qui doit donc la porter. */}
                 {page.banner_url && (
-                  <div className="relative mb-6 overflow-hidden sm:rounded-lg">
-                    {/* `<img>` et non `next/image` : l'URL vient du stockage du
-                        monde, dont l'hôte n'est pas déclaré à l'optimiseur. */}
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={page.banner_url}
-                      alt=""
-                      className="h-48 w-full object-cover sm:h-64"
+                  <div className="relative mb-6 h-48 overflow-hidden sm:h-64 sm:rounded-lg">
+                    {/* Chargement en deux temps, comme les avatars : une
+                        vignette de quelques pixels, floutée, tient la place —
+                        mêmes teintes, même composition — puis l'image se fond
+                        par-dessus. Une bannière pèse lourd et ouvre la page :
+                        c'est là que l'attente se voit le plus. */}
+                    <StoredImage
+                      url={page.banner_url}
+                      width={BANNIERE_LARGEUR}
+                      height={BANNIERE_HAUTEUR}
+                      resize="cover"
+                      className="object-cover"
                     />
                     {/* Dégradé plutôt qu'un voile uniforme : le texte a besoin
                         d'un fond sombre là où il se pose, et l'image de rester

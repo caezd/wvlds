@@ -998,7 +998,9 @@ describe("WikiPageContent — bannière et description", () => {
   const AVEC_CHAPEAU: WikiPage = {
     ...BASE_PAGE,
     content: "Un texte.",
-    banner_url: "https://exemple.test/banniere.webp",
+    // Forme d'une URL du stockage Supabase : c'est elle qui autorise la
+    // vignette floutée, `supabaseTinyThumb` ne sachant rien faire d'une autre.
+    banner_url: "https://exemple.test/storage/v1/object/public/worlds/banniere.webp",
     description: "Une ville gouvernée par des machines.",
   };
 
@@ -1036,13 +1038,22 @@ describe("WikiPageContent — bannière et description", () => {
 
     await screen.findByTestId("markdown");
     const image = container.querySelector("img")!;
-    expect(image.getAttribute("src")).toBe("https://exemple.test/banniere.webp");
+    expect(image.getAttribute("src")).toContain("banniere.webp");
 
     // Le titre partage le cadre de l'image, il ne la suit pas : c'est ce qui
     // fait la différence entre un en-tête et une simple illustration.
-    const cadre = image.parentElement!;
+    const cadre = image.closest("div")!;
     expect(within(cadre).getByRole("heading", { name: "Accueil" })).toBeTruthy();
     expect(within(cadre).getByText("Une ville gouvernée par des machines.")).toBeTruthy();
+  });
+
+  it("tient la place avec une vignette floutée le temps du chargement", async () => {
+    // Une bannière pèse lourd et ouvre la page : c'est là que l'attente se
+    // voit le plus. Le substitut est la vraie image, en quelques pixels.
+    const { container } = renderPage(AVEC_CHAPEAU);
+
+    await screen.findByTestId("markdown");
+    expect(container.querySelector('[data-testid="stored-image-blur"]')).not.toBeNull();
   });
 
   it("rend l'en-tête à la colonne de texte quand il n'y a pas de bannière", async () => {
