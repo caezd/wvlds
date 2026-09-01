@@ -3,8 +3,6 @@ import { renderHook, waitFor, act } from "@testing-library/react";
 
 import { createSupabaseMock } from "@/test/supabaseMock";
 import {
-  coteDuTrait,
-  coteParRang,
   groupNotesByCategory,
   planNoteMove,
   useWikiPageNotes,
@@ -229,65 +227,5 @@ describe("useWikiPageNotes", () => {
       "world_wiki_page_notes",
     ]);
     expect(mock.channels[0].handlers[0].config.filter).toBe("page_id=eq.p1");
-  });
-});
-
-describe("coteParRang", () => {
-  // L'ordre affiché des catégories ; `arrayMove` s'y applique tel quel.
-  const ordre = ["a", "b", "c"];
-
-  it("annonce sous la cible quand l'élément descend", () => {
-    // `arrayMove(ordre, 0, 2)` donne b, c, a : « a » atterrit APRÈS « c ».
-    expect(coteParRang(ordre, "a", "c")).toBe("apres");
-  });
-
-  it("annonce au-dessus quand il remonte", () => {
-    expect(coteParRang(ordre, "c", "a")).toBe("avant");
-  });
-
-  it("n'annonce rien sur soi-même ni sur un inconnu", () => {
-    expect(coteParRang(ordre, "b", "b")).toBeNull();
-    expect(coteParRang(ordre, "b", "z")).toBeNull();
-    expect(coteParRang(ordre, "z", "b")).toBeNull();
-  });
-});
-
-describe("coteDuTrait", () => {
-  const notes = [note("n1", "a", 0), note("n2", "a", 1), note("n3", "a", 2), note("n4", "b", 0)];
-
-  it("annonce sous la cible quand la fiche descend dans sa catégorie", () => {
-    // `planNoteMove` insère à l'index de la cible dans la liste AVANT retrait :
-    // la fiche partie d'au-dessus, la cible remonte d'un cran et la fiche se
-    // pose donc après elle.
-    expect(coteDuTrait(notes, "n1", "n3")).toBe("apres");
-  });
-
-  it("annonce au-dessus quand elle remonte", () => {
-    expect(coteDuTrait(notes, "n3", "n1")).toBe("avant");
-  });
-
-  it("annonce au-dessus quand elle vient d'une autre catégorie", () => {
-    expect(coteDuTrait(notes, "n4", "n2")).toBe("avant");
-  });
-
-  it("n'annonce rien sur elle-même ou sur une fiche inconnue", () => {
-    expect(coteDuTrait(notes, "n1", "n1")).toBeNull();
-    expect(coteDuTrait(notes, "n1", "fantome")).toBeNull();
-  });
-
-  it("annonce exactement ce que le déplacement fera", () => {
-    // L'invariant qui justifie de dériver le trait de la même règle.
-    const couples: [string, string][] = [["n1", "n3"], ["n3", "n1"], ["n4", "n2"], ["n1", "n2"]];
-    for (const [deplacee, cible] of couples) {
-      const cote = coteDuTrait(notes, deplacee, cible)!;
-      const categorie = notes.find(n => n.id === cible)!.category_id;
-      const liste = notes.filter(n => n.category_id === categorie).sort((a, b) => a.sort_index - b.sort_index);
-      const plan = planNoteMove(notes, deplacee, categorie, liste.findIndex(n => n.id === cible));
-
-      const ordre = apres(notes, plan).filter(l => l.startsWith(categorie + ":")).map(l => l.split(":")[1].split("@")[0]);
-      const rangDeplacee = ordre.indexOf(deplacee);
-      const rangCible = ordre.indexOf(cible);
-      expect(cote === "avant" ? rangDeplacee + 1 : rangDeplacee - 1).toBe(rangCible);
-    }
   });
 });

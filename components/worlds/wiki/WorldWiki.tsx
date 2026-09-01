@@ -152,8 +152,6 @@ type SortableTreeNodeProps = {
   createInput: React.ReactNode;
   /** Ce dossier va accueillir la page glissée. */
   estDossierCible: boolean;
-  /** Trait de dépôt à poser au-dessus ou au-dessous de cette ligne. */
-  insertion: "avant" | "apres" | null;
   onSelect: () => void;
   onToggleFolder: () => void;
   onStartRename: () => void;
@@ -168,7 +166,7 @@ type SortableTreeNodeProps = {
 
 function SortableTreeNode({
   page, depth, isSelected, isExpanded, isRenaming, renameValue, renameIcon,
-  editMode, subtree, createInput, insertion, estDossierCible,
+  editMode, subtree, createInput, estDossierCible,
   onSelect, onToggleFolder, onStartRename,
   onRenameChange, onRenameIconChange, onConfirmRename, onCancelRename,
   onDelete, onCreateInFolder, onToggleRestricted,
@@ -196,34 +194,8 @@ function SortableTreeNode({
     <div
       ref={setNodeRef}
       style={style}
-      className="relative flex flex-col gap-0.5"
+      className="flex flex-col gap-0.5"
     >
-      {/* Deux pixels d'accent entre deux lignes : il dit OÙ la page se posera,
-          là où le cadre d'un dossier dit DANS quoi.
-          
-          Aucune marge, aucune animation de mise en page ici : dnd-kit écarte
-          DÉJÀ les voisines en les translatant, et il le fait avec sa propre
-          durée. Une seconde animation sur la marge se battait avec la sienne —
-          d'où les à-coups — et, comme elle déplaçait la mise en page sous le
-          pointeur, elle changeait la ligne visée, donc sa propre place : le
-          trait clignotait entre deux positions sans jamais se poser.
-          
-          Le trait se contente donc de se poser dans l'écart que dnd-kit ouvre,
-          centré dessus. */}
-      {insertion && (
-        <span
-          aria-hidden
-          className={cn(
-            "pointer-events-none absolute z-10 h-0.5 -translate-y-1/2 rounded-full bg-accent",
-            insertion === "avant" ? "top-0" : "top-full",
-          )}
-          // Aligné sur le texte de la ligne visée, au même retrait que sa
-          // profondeur : traversant toute la colonne, le trait ne disait pas à
-          // QUEL niveau la page allait se poser — or c'est précisément ce que
-          // le glissé cherche à choisir.
-          style={{ left: `${0.5 + depth}rem`, right: "0.25rem" }}
-        />
-      )}
       <div
         className={cn(
           "flex cursor-pointer select-none items-center gap-1.5 rounded-md py-1 text-sm",
@@ -770,11 +742,6 @@ export function WorldWiki({
     { activeId: string; overId: string; zone: Zone } | null
   >(null);
 
-  /** Trait de dépôt courant — rien quand la page va ENTRER dans le dossier. */
-  const insertion = survolGlisse && survolGlisse.zone !== "dans"
-    ? { cibleId: survolGlisse.overId, cote: survolGlisse.zone }
-    : null;
-
   /** La page tenue par le curseur, s'il y en a une. */
   const pageGlissee = idGlisse ? pages?.find(p => p.id === idGlisse) ?? null : null;
 
@@ -956,7 +923,6 @@ export function WorldWiki({
               editMode={isEditMode}
               subtree={page.is_folder && isExpanded ? renderTree(page.id, depth + 1) : null}
               createInput={creating?.parentId === page.id ? renderCreateInput(page.id, depth + 1) : null}
-              insertion={insertion?.cibleId === page.id ? insertion.cote : null}
               // `selectPageById` et non `setSelectedId` : lui seul déplie les
               // dossiers ancêtres et referme le tiroir mobile. Sans cela, sur
               // téléphone, choisir une page la sélectionnait sous un tiroir

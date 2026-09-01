@@ -14,17 +14,12 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Wiki",
-    text: "Une page peut enfin être posée juste au-dessus ou juste au-dessous d’un dossier sans y entrer : la ligne d’un dossier se découpe en trois, ses bords pour passer devant ou derrière, son milieu pour entrer. Le trait de dépôt ou le cadre du dossier dit lequel des deux va se produire."
-  },
-  {
-    date: "2026-08",
-    tag: "Wiki",
-    text: "Les fiches de notes et leurs catégories annoncent elles aussi où elles se poseront pendant un glissé, par le même trait que l’arbre des pages."
+    text: "Une page peut enfin être posée juste au-dessus ou juste au-dessous d’un dossier sans y entrer : la ligne d’un dossier se découpe en trois, ses bords pour passer devant ou derrière, son milieu pour entrer. L’écart qui s’ouvre dans la liste, ou le cadre du dossier, dit lequel des deux va se produire."
   },
   {
     date: "2026-08",
     tag: "Correctif",
-    text: "Il était impossible de sortir une page d’un dossier du wiki en la glissant : le déplacement n’acceptait que deux gestes, entrer dans un dossier et réordonner entre voisines d’un même parent. Lâcher une page sur une autre la fait désormais venir à sa place, quel que soit le dossier d’où elle vient, et un trait annonce pendant le glissé où elle se posera. Un dossier ne peut par ailleurs plus être glissé dans son propre contenu, ce qui l’aurait fait disparaître de l’arbre avec tout ce qu’il contient."
+    text: "Il était impossible de sortir une page d’un dossier du wiki en la glissant : le déplacement n’acceptait que deux gestes, entrer dans un dossier et réordonner entre voisines d’un même parent. Lâcher une page sur une autre la fait désormais venir à sa place, quel que soit le dossier d’où elle vient, et la liste s’écarte pendant le glissé à l’endroit où elle se posera. Un dossier ne peut par ailleurs plus être glissé dans son propre contenu, ce qui l’aurait fait disparaître de l’arbre avec tout ce qu’il contient."
   },
   {
     date: "2026-08",

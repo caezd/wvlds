@@ -17,7 +17,6 @@ import {
   DndContext,
   DragOverlay,
   type DragEndEvent,
-  type DragOverEvent,
   type DragStartEvent,
   PointerSensor,
   useSensor,
@@ -41,12 +40,7 @@ import { afterMenuClose } from "@/components/ui/after-menu-close";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { DB_TEXT_LIMITS } from "@/lib/textLimits";
 import { cn } from "@/lib/utils";
-import {
-  coteDuTrait,
-  coteParRang,
-  useWikiPageNotes,
-  type WikiNoteGroup,
-} from "@/hooks/useWikiPageNotes";
+import { useWikiPageNotes, type WikiNoteGroup } from "@/hooks/useWikiPageNotes";
 import type { WikiNoteCategory, WikiPageNote } from "@/types/worlds";
 import { WikiNoteCard, noteDragId } from "./WikiNoteCard";
 import { WIKI_FOOTER, WIKI_FOOTER_BUTTON } from "./wikiSubHeader";
@@ -106,8 +100,7 @@ function CategorySection({
   onRename,
   onDelete,
   onCreateNote,
-  insertion,
-  insertionCategorie,
+  ficheEnGlisse,
   onSaveNote,
   onDeleteNote,
 }: {
@@ -131,10 +124,8 @@ function CategorySection({
   onRename: (name: string) => void;
   onDelete: () => void;
   onCreateNote: (title: string) => void;
-  /** Fiche qui porte le trait de dépôt, et de quel côté. */
-  insertion: { noteId: string; cote: "avant" | "apres" } | null;
-  /** Trait de dépôt de la catégorie elle-même, quand c'est elle qu'on déplace. */
-  insertionCategorie: "avant" | "apres" | null;
+  /** Une fiche est tenue par le curseur — une catégorie peut l'accueillir. */
+  ficheEnGlisse: boolean;
   onSaveNote: (note: WikiPageNote, patch: { title: string; body: string }) => void;
   onDeleteNote: (note: WikiPageNote) => void;
 }) {
@@ -167,26 +158,15 @@ function CategorySection({
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className={cn(
-        "relative rounded-lg",
+        "rounded-lg",
         isDragging && "opacity-50",
         // Une fiche survole la catégorie : on montre qu'elle l'accueillera,
         // y compris quand elle est repliée et n'a donc rien à survoler. Le
-        // cadre ne vaut que pour une fiche : quand c'est la catégorie qu'on
-        // déplace, le trait dit déjà où elle se pose.
-        isOver && !insertionCategorie && "ring-1 ring-primary/40",
+        // cadre ne vaut que pour une fiche : une catégorie glissée sur une
+        // autre se range à côté d'elle, jamais dedans.
+        isOver && ficheEnGlisse && "ring-1 ring-primary/40",
       )}
     >
-      {/* Le même trait que pour les pages et les fiches : il dit OÙ la
-          catégorie se posera, là où le cadre dit DANS quoi une fiche ira. */}
-      {insertionCategorie && (
-        <span
-          aria-hidden
-          className={cn(
-            "pointer-events-none absolute inset-x-0 z-10 h-0.5 -translate-y-1/2 rounded-full bg-accent",
-            insertionCategorie === "avant" ? "top-0" : "top-full",
-          )}
-        />
-      )}
       <div className="flex items-center gap-1 px-1 py-1">
         {canEdit && (
           <button
@@ -286,7 +266,6 @@ function CategorySection({
                   onToggleExpanded={() => onToggleNote(note.id)}
                   onSave={patch => onSaveNote(note, patch)}
                   onDelete={() => onDeleteNote(note)}
-                  insertion={insertion?.noteId === note.id ? insertion.cote : null}
                 />
               ))}
             </ul>
@@ -404,16 +383,6 @@ export function WikiNotesPanel({
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
   );
 
-  /**
-   * Couple survolé pendant un glissé — d'où se déduit le trait de dépôt.
-   *
-   * `onDragOver` est le seul événement qui suive le pointeur ; `onDragEnd`
-   * arrive trop tard pour annoncer quoi que ce soit.
-   */
-  const [survolGlisse, setSurvolGlisse] = React.useState<
-    { activeId: string; overId: string } | null
-  >(null);
-
   /** Fiche ou catégorie tenue par le curseur — c'est elle que l'aperçu montre. */
   const [idGlisse, setIdGlisse] = React.useState<string | null>(null);
 
@@ -424,42 +393,12 @@ export function WikiNotesPanel({
     ? (notes.notes ?? []).find(n => n.id === noteIdOf(idGlisse)) ?? null
     : null;
 
-  /** Trait de dépôt courant — rien pour une catégorie, qui a son propre cadre. */
-  const insertion = React.useMemo(() => {
-    if (!survolGlisse) return null;
-    const deplacee = noteIdOf(survolGlisse.activeId);
-    const cible = noteIdOf(survolGlisse.overId);
-    if (!deplacee || !cible) return null;
-    const cote = coteDuTrait(notes.notes ?? [], deplacee, cible);
-    return cote ? { noteId: cible, cote } : null;
-  }, [survolGlisse, notes.notes]);
-
-  /** Catégorie qui porte le trait, quand c'est une catégorie qu'on déplace. */
-  const insertionCategorie = React.useMemo(() => {
-    if (!survolGlisse) return null;
-    const deplacee = categoryIdOf(survolGlisse.activeId);
-    const cible = categoryIdOf(survolGlisse.overId);
-    if (!deplacee || !cible) return null;
-    const cote = coteParRang(notes.groups.map(g => g.category.id), deplacee, cible);
-    return cote ? { categoryId: cible, cote } : null;
-  }, [survolGlisse, notes.groups]);
-
   function onDragStart({ active }: DragStartEvent) {
     setIdGlisse(String(active.id));
   }
 
-  /** Fin d'un glissé, abouti ou non : plus d'aperçu, plus de trait. */
-  function finDuGlisse() {
-    setIdGlisse(null);
-    setSurvolGlisse(null);
-  }
-
-  function onDragOver({ active, over }: DragOverEvent) {
-    setSurvolGlisse(over ? { activeId: String(active.id), overId: String(over.id) } : null);
-  }
-
   function onDragEnd({ active, over }: DragEndEvent) {
-    finDuGlisse();
+    setIdGlisse(null);
     if (!over || active.id === over.id) return;
     const activeId = String(active.id);
     const overId = String(over.id);
@@ -544,9 +483,8 @@ export function WikiNotesPanel({
             <DndContext
               sensors={sensors}
               onDragStart={onDragStart}
-              onDragOver={onDragOver}
               onDragEnd={onDragEnd}
-              onDragCancel={finDuGlisse}
+              onDragCancel={() => setIdGlisse(null)}
             >
               <SortableContext
                 items={notes.groups.map(g => categoryDragId(g.category.id))}
@@ -571,12 +509,7 @@ export function WikiNotesPanel({
                       onRename={name => void notes.renameCategory(group.category, name)}
                       onDelete={() => setConfirmCategory(group.category)}
                       onCreateNote={title => void notes.createNote(group.category.id, title)}
-                      insertion={insertion}
-                      insertionCategorie={
-                        insertionCategorie?.categoryId === group.category.id
-                          ? insertionCategorie.cote
-                          : null
-                      }
+                      ficheEnGlisse={ficheGlissee !== null}
                       onSaveNote={(note, patch) => void notes.updateNote(note, patch)}
                       onDeleteNote={setConfirmNote}
                     />
