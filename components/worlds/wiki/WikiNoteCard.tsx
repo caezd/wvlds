@@ -17,6 +17,7 @@ import {
 import { afterMenuClose } from "@/components/ui/after-menu-close";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import { DB_TEXT_LIMITS } from "@/lib/textLimits";
+import { SANS_BALAYAGE } from "@/components/ui/drawer";
 import { cn } from "@/lib/utils";
 import type { WikiPageNote } from "@/types/worlds";
 
@@ -147,6 +148,7 @@ export function WikiNoteCard({
             type="button"
             {...attributes}
             {...listeners}
+            {...SANS_BALAYAGE}
             aria-label={t("reorder")}
             className="shrink-0 cursor-grab text-muted-foreground/50 hover:text-foreground"
           >

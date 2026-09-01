@@ -37,6 +37,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { afterMenuClose } from "@/components/ui/after-menu-close";
+import { SANS_BALAYAGE } from "@/components/ui/drawer";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { DB_TEXT_LIMITS } from "@/lib/textLimits";
 import { cn } from "@/lib/utils";
@@ -173,6 +174,7 @@ function CategorySection({
             type="button"
             {...attributes}
             {...listeners}
+            {...SANS_BALAYAGE}
             aria-label={t("reorderCategory")}
             className="shrink-0 cursor-grab text-muted-foreground/50 hover:text-foreground"
           >

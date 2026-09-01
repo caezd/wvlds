@@ -213,6 +213,18 @@ function DrawerDescription({
   )
 }
 
+/**
+ * À poser sur ce qui se saisit à l'intérieur d'un tiroir — une poignée de
+ * glissé, un curseur.
+ *
+ * Le tiroir se ferme au balayage, et le balayage commence par le même appui
+ * que le glissé : saisir la poignée d'une page emportait le tiroir entier.
+ * Base UI consulte cet attribut sur l'élément sous le doigt au tout premier
+ * contact (`closest`), et renonce alors à son geste — celui de dnd-kit reste
+ * seul en lice.
+ */
+export const SANS_BALAYAGE = { "data-base-ui-swipe-ignore": "" } as const
+
 export {
   Drawer,
   DrawerPortal,

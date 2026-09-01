@@ -63,7 +63,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { afterMenuClose } from "@/components/ui/after-menu-close";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
-import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
+import { Drawer, DrawerContent, DrawerTitle, SANS_BALAYAGE } from "@/components/ui/drawer";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 import { WIKI_FOOTER, WIKI_FOOTER_BUTTON, WIKI_SUBHEADER, WIKI_SUBHEADER_COUNT } from "./wikiSubHeader";
@@ -220,6 +220,7 @@ function SortableTreeNode({
           <span
             {...attributes}
             {...listeners}
+            {...SANS_BALAYAGE}
             className="flex shrink-0 cursor-grab items-center text-muted-foreground/30 transition-colors hover:text-muted-foreground/60 active:cursor-grabbing"
             onClick={e => e.stopPropagation()}
           >

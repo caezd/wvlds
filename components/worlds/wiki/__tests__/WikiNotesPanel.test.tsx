@@ -138,6 +138,20 @@ describe("WikiNotesPanel — hors mode modification", () => {
 });
 
 describe("WikiNotesPanel — écriture", () => {
+  it("empêche les poignées de fermer le tiroir qui les porte", async () => {
+    // Sur téléphone, le panneau vit dans un tiroir qui se ferme au balayage —
+    // lequel commence par le même appui que le glissé. Sans cette marque, Base
+    // UI emportait le tiroir entier dès qu'on saisissait une poignée.
+    renderPanel(CHARGEMENT);
+    await screen.findByText("Entités");
+
+    for (const nom of ["Déplacer la catégorie", "Déplacer la fiche"]) {
+      for (const poignee of screen.getAllByRole("button", { name: nom })) {
+        expect(poignee).toHaveAttribute("data-base-ui-swipe-ignore");
+      }
+    }
+  });
+
   it("crée une catégorie", async () => {
     const user = userEvent.setup();
     const { mock } = renderPanel([

@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Correctif",
+    text: "Sur téléphone, saisir la poignée d’une page ou d’une fiche du wiki refermait le tiroir au lieu de la déplacer : le balayage qui ferme le tiroir commence par le même appui que le glissé. Les poignées ne déclenchent plus ce balayage."
+  },
+  {
+    date: "2026-08",
     tag: "Wiki",
     text: "Glisser une page, une fiche ou une catégorie du wiki se voit mieux : ce qu’on tient suit le curseur dans un aperçu flottant, et la liste s’écarte pour ouvrir le logement où il se posera. Le logement ne s’ouvre pas quand la page vise le milieu d’un dossier — c’est qu’elle va y entrer, et le cadre du dossier le dit déjà."
   },
