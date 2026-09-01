@@ -16,16 +16,29 @@ ALTER TABLE public.bug_reports
 
 -- Trois pièces au plus, et des chemins de longueur raisonnable : la colonne
 -- est alimentée par le client, comme le reste de la table (migration 137).
+--
+-- Passe par une fonction parce qu'une contrainte CHECK n'accepte pas de
+-- sous-requête, et que borner CHAQUE élément d'un tableau en demande une
+-- (« unnest »). Le corps de la fonction, lui, a le droit d'en contenir.
+CREATE OR REPLACE FUNCTION public.bug_report_attachments_ok(chemins TEXT[])
+RETURNS boolean
+LANGUAGE sql
+IMMUTABLE
+PARALLEL SAFE
+SET search_path = pg_catalog
+AS $$
+  SELECT coalesce(array_length(chemins, 1), 0) <= 3
+     AND NOT EXISTS (
+       SELECT 1 FROM unnest(coalesce(chemins, ARRAY[]::text[])) AS chemin
+       WHERE char_length(chemin) > 300 OR char_length(chemin) = 0
+     );
+$$;
+
 ALTER TABLE public.bug_reports
   DROP CONSTRAINT IF EXISTS bug_reports_attachments_bounds;
 ALTER TABLE public.bug_reports
-  ADD CONSTRAINT bug_reports_attachments_bounds CHECK (
-    coalesce(array_length(attachments, 1), 0) <= 3
-    AND NOT EXISTS (
-      SELECT 1 FROM unnest(attachments) AS chemin
-      WHERE char_length(chemin) > 300 OR char_length(chemin) = 0
-    )
-  );
+  ADD CONSTRAINT bug_reports_attachments_bounds
+  CHECK (public.bug_report_attachments_ok(attachments));
 
 -- ── Bucket privé ────────────────────────────────────────────────────────────
 INSERT INTO storage.buckets (id, name, public)
