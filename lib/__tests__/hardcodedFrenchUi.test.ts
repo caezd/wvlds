@@ -209,9 +209,21 @@ describe("aucun texte français codé en dur dans l'interface", () => {
     // le texte de PostgreSQL, en anglais, nommant la table interrogée. Le
     // public est restreint, mais le texte l'est aussi : il n'était traduit
     // dans aucune langue, et la phrase qui l'introduisait était en dur.
+    // Deux écrans affichent volontairement un message brut, et c'est tout leur
+    // objet : le signalement de bug montre à son auteur les erreurs relevées
+    // par SON navigateur avant de les joindre — les cacher reviendrait à les
+    // envoyer sans qu'il les ait lues — et la file de tri les rend à
+    // l'administrateur qui doit les lire. Ce n'est pas du texte d'interface
+    // laissé sans traduction, c'est la donnée elle-même, rendue en chasse fixe.
+    const MESSAGES_BRUTS_ASSUMES = [
+      join("components", "support", "BugReportForm.tsx"),
+      join("admin", "bug-reports", "BugReportRow.tsx"),
+    ];
+
     const fautifs: string[] = [];
     for (const p of fichiersSource()) {
       if (!p.endsWith(".tsx")) continue;
+      if (MESSAGES_BRUTS_ASSUMES.some((x) => p.endsWith(x))) continue;
       const src = readFileSync(p, "utf-8");
       for (const m of src.matchAll(/\{\s*\w+\.message\s*\}/g)) {
         const ligne = src.slice(0, m.index).split(String.fromCharCode(10)).length;

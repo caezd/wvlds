@@ -806,6 +806,7 @@
         "declined": "Declined"
       },
       "statusLabel": "Status",
+      "clientErrors": "{count, plural, one {# browser error} other {# browser errors}}",
       "page": "Page",
       "browser": "Browser",
       "version": "Version",
@@ -1286,6 +1287,7 @@
     "descriptionPlaceholder": "I clicked on… and…",
     "attached": "Your browser is attached automatically: without it, some problems are impossible to track down.",
     "reportedPage": "Page reported:",
+    "attachErrors": "Attach the {count, plural, one {# error} other {# errors}} your browser recorded. They often say what a description cannot.",
     "noReportedPage": "No page accompanies this report: say in your message where the problem happened.",
     "send": "Send",
     "sending": "Sending…",

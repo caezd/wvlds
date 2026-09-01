@@ -1,3 +1,5 @@
+import type { ErreurClient } from "./clientErrorLog";
+
 /**
  * Rapports de bug — constantes et validation, partagées par le formulaire, par
  * l'action serveur et par la page de tri.
@@ -37,6 +39,8 @@ export function isBugReportStatus(value: unknown): value is BugReportStatus {
 export type BugReport = {
   /** Chemins de stockage, jamais des URL : une URL signée expire. */
   attachments: string[];
+  /** Les dernières erreurs du navigateur (voir lib/clientErrorLog). */
+  client_errors: ErreurClient[];
   id: string;
   user_id: string;
   description: string;

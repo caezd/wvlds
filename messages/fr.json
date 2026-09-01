@@ -806,6 +806,7 @@
         "declined": "Écarté"
       },
       "statusLabel": "Statut",
+      "clientErrors": "{count, plural, one {# erreur du navigateur} other {# erreurs du navigateur}}",
       "page": "Page",
       "browser": "Navigateur",
       "version": "Version",
@@ -1286,6 +1287,7 @@
     "descriptionPlaceholder": "J’ai cliqué sur… et…",
     "attached": "Votre navigateur est joint automatiquement : sans lui, certains problèmes restent introuvables.",
     "reportedPage": "Page signalée :",
+    "attachErrors": "Joindre les {count, plural, one {# erreur relevée} other {# erreurs relevées}} par votre navigateur. Elles disent souvent ce qu’une description ne peut pas dire.",
     "noReportedPage": "Aucune page n’accompagne ce signalement : précisez dans votre message où le problème s’est produit.",
     "send": "Envoyer",
     "sending": "Envoi…",

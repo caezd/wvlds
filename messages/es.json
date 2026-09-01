@@ -806,6 +806,7 @@
         "declined": "Descartado"
       },
       "statusLabel": "Estado",
+      "clientErrors": "{count, plural, one {# error del navegador} other {# errores del navegador}}",
       "page": "Página",
       "browser": "Navegador",
       "version": "Versión",
@@ -1286,6 +1287,7 @@
     "descriptionPlaceholder": "Hice clic en… y…",
     "attached": "Su navegador se adjunta automáticamente: sin él, algunos problemas resultan imposibles de localizar.",
     "reportedPage": "Página señalada:",
+    "attachErrors": "Adjuntar {count, plural, one {el # error registrado} other {los # errores registrados}} por su navegador. Suelen decir lo que una descripción no puede.",
     "noReportedPage": "Ninguna página acompaña este informe: indique en su mensaje dónde se produjo el problema.",
     "send": "Enviar",
     "sending": "Enviando…",

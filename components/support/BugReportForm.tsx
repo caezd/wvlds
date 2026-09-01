@@ -8,6 +8,7 @@ import { ImagePlus, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { AutoResizeTextarea } from "@/components/ui/auto-resizable-textarea";
 import { cn } from "@/lib/utils";
@@ -23,6 +24,11 @@ import {
   BUG_REPORT_MAX_LENGTH,
   bugReportContext,
 } from "@/lib/bugReports";
+import {
+  lireErreursClient,
+  oublierErreursClient,
+  type ErreurClient,
+} from "@/lib/clientErrorLog";
 
 type Jointe = { fichier: File; aperçu: string };
 
@@ -61,6 +67,13 @@ export function BugReportForm({
   const [jointes, setJointes] = React.useState<Jointe[]>([]);
   const [envoi, setEnvoi] = React.useState(false);
   const inputRef = React.useRef<HTMLInputElement>(null);
+
+  // Le journal vit dans `sessionStorage`, hors d'atteinte du rendu serveur : le
+  // lire à l'affichage plutôt qu'à l'initialisation de l'état évite que le
+  // premier rendu client diffère de celui du serveur.
+  const [erreurs, setErreurs] = React.useState<ErreurClient[]>([]);
+  const [joindreErreurs, setJoindreErreurs] = React.useState(true);
+  React.useEffect(() => setErreurs(lireErreursClient()), []);
 
   // Les aperçus sont des URL d'objet : sans révocation, chaque image choisie
   // laisse un blob en mémoire jusqu'au rechargement de la page.
@@ -130,6 +143,7 @@ export function BugReportForm({
     const res = await submitBugReport({
       description,
       attachments: chemins,
+      clientErrors: joindreErreurs ? erreurs : [],
       ...bugReportContext(pageSignalee),
     });
     setEnvoi(false);
@@ -141,6 +155,10 @@ export function BugReportForm({
     setDescription("");
     jointes.forEach((j) => URL.revokeObjectURL(j.aperçu));
     setJointes([]);
+    // Vidé une fois parti : sans ça, un second signalement emporterait de
+    // nouveau les erreurs du premier, et l'on croirait à une récidive.
+    oublierErreursClient();
+    setErreurs([]);
     toast.success(t("sent"));
     // La liste « mes signalements » est rendue côté serveur : sans ce
     // rafraîchissement, le rapport qu'on vient d'envoyer n'y apparaîtrait pas.
@@ -215,6 +233,39 @@ export function BugReportForm({
           {t("addImage")}
         </Button>
       </div>
+
+      {/* Le journal d'erreurs est MONTRÉ, jamais seulement annoncé : une pile
+          d'appels contient des adresses de pages, parfois un fragment de ce qui
+          était à l'écran. On ne joint pas ça au nom de quelqu'un sans qu'il
+          l'ait lu, ni sans qu'il puisse s'y opposer. */}
+      {erreurs.length > 0 && (
+        <div className="space-y-2 rounded-lg border border-border-soft p-3">
+          <div className="flex items-start gap-2">
+            <Checkbox
+              id="bug-report-errors"
+              checked={joindreErreurs}
+              onCheckedChange={(v) => setJoindreErreurs(v === true)}
+              className="mt-0.5"
+            />
+            <Label htmlFor="bug-report-errors" className="text-sm font-normal leading-snug">
+              {t("attachErrors", { count: erreurs.length })}
+            </Label>
+          </div>
+
+          <ul className="max-h-48 space-y-1.5 overflow-y-auto">
+            {erreurs.map((e) => (
+              <li key={`${e.at}-${e.message}`} className="text-xs leading-snug">
+                <p className="break-words font-mono text-muted-foreground">{e.message}</p>
+                {e.source && (
+                  <p className="break-all font-mono text-[0.65rem] text-muted-foreground/70">
+                    {e.source}
+                  </p>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Ce qui part avec le rapport, dit avant l'envoi — et la page nommée
           plutôt qu'annoncée : c'est le seul moyen de voir qu'on signale la

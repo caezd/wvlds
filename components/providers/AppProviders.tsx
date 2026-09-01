@@ -7,6 +7,7 @@ import type { Session } from "@supabase/supabase-js";
 import NotificationsProvider from "./NotificationsProvider";
 import PresenceProvider from "./PresenceProvider";
 import { CurrentUserProvider, type InitialUser } from "./CurrentUserProvider";
+import { ClientErrorRecorder } from "@/components/support/ClientErrorRecorder";
 import { useTranslations } from "next-intl";
 
 const OFFLINE_TOAST_ID = "network-offline";
@@ -87,6 +88,11 @@ export default function AppProviders({
         <NotificationsProvider>
           <NetworkStatusWatcher />
           <AuthErrorWatcher />
+          {/* Retient les dernières erreurs du navigateur pour qu'un signalement
+              puisse les emporter. Ici plutôt que dans le groupe protégé : une
+              erreur qui empêche de se connecter est celle qu'on ne saurait pas
+              décrire autrement. */}
+          <ClientErrorRecorder />
           {children}
         </NotificationsProvider>
       </PresenceProvider>

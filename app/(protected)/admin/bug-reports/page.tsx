@@ -24,7 +24,9 @@ export default async function BugReportsPage() {
 
   const { data } = await supabase
     .from("bug_reports")
-    .select("id, user_id, description, page_url, user_agent, app_version, status, admin_note, created_at, attachments")
+    .select(
+      "id, user_id, description, page_url, user_agent, app_version, status, admin_note, created_at, attachments, client_errors",
+    )
     .order("created_at", { ascending: false })
     .limit(200);
 

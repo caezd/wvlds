@@ -14,6 +14,7 @@ import {
   isValidBugReportDescription,
   type BugReportStatus,
 } from "@/lib/bugReports";
+import { normaliserJournalClient } from "@/lib/clientErrorLog";
 import {
   ERR_NON_AUTHENTIFIE,
   ERR_VALEUR_NON_SUPPORTEE,
@@ -33,6 +34,8 @@ export async function submitBugReport(rapport: {
   userAgent?: string;
   /** Chemins déjà déposés dans le bucket, sous le préfixe de leur auteur. */
   attachments?: string[];
+  /** Dernières erreurs du navigateur, si l'auteur les joint. */
+  clientErrors?: unknown;
 }) {
   if (!isValidBugReportDescription(rapport.description)) {
     return { ok: false as const, error: ERR_VALEUR_NON_SUPPORTEE };
@@ -61,6 +64,11 @@ export async function submitBugReport(rapport: {
     user_agent: rapport.userAgent?.slice(0, BUG_REPORT_USER_AGENT_MAX_LENGTH) || null,
     app_version: process.env.NEXT_PUBLIC_APP_VERSION || null,
     attachments,
+    // Renormalisé ici : le journal traverse le réseau, et une entrée malformée
+    // ferait rejeter toute la ligne par la contrainte de la migration 139. Il
+    // est borné plutôt que refusé — perdre un rapport à cause de sa pile
+    // reviendrait à perdre la seule chose que son auteur ait écrite.
+    client_errors: normaliserJournalClient(rapport.clientErrors),
   });
   if (error) return { ok: false as const, error: echecEnregistrement("submitBugReport", error) };
 

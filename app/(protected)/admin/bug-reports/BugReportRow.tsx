@@ -113,6 +113,32 @@ export function BugReportRow({
         </ul>
       )}
 
+      {/* Replié : c'est la partie la plus longue d'un rapport et la plus rarement
+          nécessaire — mais quand elle l'est, c'est elle qui dit tout. */}
+      {report.client_errors?.length > 0 && (
+        <details className="mt-3">
+          <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
+            {t("clientErrors", { count: report.client_errors.length })}
+          </summary>
+          <ul className="mt-2 space-y-2">
+            {report.client_errors.map((e, i) => (
+              <li key={`${e.at}-${i}`} className="rounded-md bg-muted/50 p-2 text-xs">
+                <p className="font-mono text-[0.65rem] text-muted-foreground">
+                  {new Date(e.at).toLocaleString()} · {e.kind}
+                  {e.source ? ` · ${e.source}` : ""}
+                </p>
+                <p className="mt-0.5 break-words font-mono">{e.message}</p>
+                {e.stack && (
+                  <pre className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap break-all font-mono text-[0.65rem] text-muted-foreground">
+                    {e.stack}
+                  </pre>
+                )}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+
       <dl className="mt-3 space-y-0.5 text-xs text-muted-foreground">
         {report.page_url && (
           <div>

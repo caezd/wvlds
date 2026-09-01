@@ -140,6 +140,65 @@ describe("submitBugReport — pièces jointes", () => {
   });
 });
 
+describe("submitBugReport — journal d'erreurs", () => {
+  const erreur = (message: string) => ({
+    at: "2026-09-01T10:00:00.000Z",
+    kind: "uncaught",
+    message,
+  });
+
+  it("enregistre le journal reçu", async () => {
+    const mock = connecté({ results: [{ error: null }] });
+    brancher(mock);
+
+    await submitBugReport({ description: "x", clientErrors: [erreur("boum")] });
+
+    const écrit = mock.buildersFor("bug_reports")[0].insert.mock.calls[0][0];
+    expect(écrit.client_errors).toHaveLength(1);
+    expect(écrit.client_errors[0].message).toBe("boum");
+  });
+
+  // Le journal traverse le réseau : une entrée malformée ferait rejeter toute
+  // la ligne par la contrainte de la migration 139. Il est donc borné plutôt
+  // que refusé — perdre un rapport à cause de sa pile reviendrait à perdre la
+  // seule chose que son auteur ait écrite.
+  it("écarte ce qui est irrecevable sans perdre le signalement", async () => {
+    const mock = connecté({ results: [{ error: null }] });
+    brancher(mock);
+
+    const res = await submitBugReport({
+      description: "x",
+      clientErrors: [erreur("bon"), null, "boum", { message: "" }],
+    });
+
+    expect(res).toEqual({ ok: true });
+    const écrit = mock.buildersFor("bug_reports")[0].insert.mock.calls[0][0];
+    expect(écrit.client_errors).toHaveLength(1);
+  });
+
+  it("borne un journal démesuré au lieu de le laisser passer", async () => {
+    const mock = connecté({ results: [{ error: null }] });
+    brancher(mock);
+
+    await submitBugReport({
+      description: "x",
+      clientErrors: Array.from({ length: 50 }, (_, i) => erreur(`erreur ${i}`)),
+    });
+
+    const écrit = mock.buildersFor("bug_reports")[0].insert.mock.calls[0][0];
+    expect(écrit.client_errors).toHaveLength(10);
+  });
+
+  it("écrit un journal vide quand aucun n'accompagne le rapport", async () => {
+    const mock = connecté({ results: [{ error: null }] });
+    brancher(mock);
+
+    await submitBugReport({ description: "x" });
+
+    expect(mock.buildersFor("bug_reports")[0].insert.mock.calls[0][0].client_errors).toEqual([]);
+  });
+});
+
 describe("setBugReportStatus", () => {
   it("change le statut pour un administrateur", async () => {
     vi.mocked(isAdmin).mockResolvedValue(true);
@@ -186,4 +245,5 @@ describe("deleteBugReport", () => {
     expect((await deleteBugReport("r1")).ok).toBe(false);
     expect(mock.from).not.toHaveBeenCalled();
   });
+
 });

@@ -23,10 +23,12 @@ vi.mock("@/lib/supabase/client", () => ({
 }));
 
 import { BugReportForm } from "@/components/support/BugReportForm";
+import { enregistrerErreurClient, lireErreursClient, oublierErreursClient } from "@/lib/clientErrorLog";
 
 const CHAMP = { name: "Que s’est-il passé ?" };
 
 beforeEach(() => {
+  oublierErreursClient();
   vi.clearAllMocks();
   envoyer.mockResolvedValue({ ok: true });
   déposer.mockResolvedValue({ error: null });
@@ -107,6 +109,67 @@ describe("BugReportForm", () => {
 
     await waitFor(() => expect(toastErreur).toHaveBeenCalled());
     expect(envoyer).not.toHaveBeenCalled();
+  });
+
+  describe("journal d'erreurs", () => {
+    const boum = () =>
+      enregistrerErreurClient({
+        at: "2026-09-01T10:00:00.000Z",
+        kind: "uncaught",
+        message: "Cannot read properties of undefined",
+        source: "app.js:42",
+      });
+
+    // Une pile d'appels contient des adresses de pages, parfois un fragment de
+    // ce qui était à l'écran. On ne joint pas ça au nom de quelqu'un sans qu'il
+    // l'ait lu — l'annoncer sans le montrer serait le défaut qu'on vient de
+    // corriger sur la page signalée.
+    it("montre les erreurs relevées, et les joint", async () => {
+      boum();
+      const user = userEvent.setup();
+      render(<BugReportForm />);
+
+      expect(await screen.findByText("Cannot read properties of undefined")).toBeInTheDocument();
+      expect(screen.getByText("app.js:42")).toBeInTheDocument();
+
+      await user.type(screen.getByRole("textbox", CHAMP), "x");
+      await user.click(screen.getByRole("button", { name: "Envoyer" }));
+
+      await waitFor(() => expect(envoyer).toHaveBeenCalled());
+      expect(envoyer.mock.calls[0][0].clientErrors).toHaveLength(1);
+    });
+
+    it("ne joint rien quand on le refuse", async () => {
+      boum();
+      const user = userEvent.setup();
+      render(<BugReportForm />);
+
+      await user.click(await screen.findByRole("checkbox"));
+      await user.type(screen.getByRole("textbox", CHAMP), "x");
+      await user.click(screen.getByRole("button", { name: "Envoyer" }));
+
+      await waitFor(() => expect(envoyer).toHaveBeenCalled());
+      expect(envoyer.mock.calls[0][0].clientErrors).toEqual([]);
+    });
+
+    it("n'affiche aucun bloc quand rien n'a échoué", () => {
+      render(<BugReportForm />);
+
+      expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    });
+
+    // Sans ça, un second signalement emporterait de nouveau les erreurs du
+    // premier, et l'on croirait à une récidive.
+    it("oublie les erreurs une fois le rapport parti", async () => {
+      boum();
+      const user = userEvent.setup();
+      render(<BugReportForm />);
+
+      await user.type(screen.getByRole("textbox", CHAMP), "x");
+      await user.click(screen.getByRole("button", { name: "Envoyer" }));
+
+      await waitFor(() => expect(lireErreursClient()).toEqual([]));
+    });
   });
 
   // Ce qui part avec le rapport doit être dit avant l'envoi, pas découvert
