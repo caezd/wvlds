@@ -86,9 +86,12 @@ export function ImageLightbox({
                 i === current ? "border-white" : "border-transparent opacity-50 hover:opacity-80",
               )}
             >
+              {/* Carrée : la hauteur est demandée autant que la largeur,
+                  sinon imgproxy garde le rapport d'origine. */}
               <StoredImage
                 url={it.url}
                 width={AVATAR_THUMB_SMALL}
+                height={AVATAR_THUMB_SMALL}
                 resize="cover"
                 sizes="64px"
                 className="object-cover"

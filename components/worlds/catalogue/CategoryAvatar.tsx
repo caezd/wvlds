@@ -32,9 +32,15 @@ export function CategoryAvatar({
         // Chargement en deux temps, comme les avatars : une vignette floutée
         // tient la place, l'image se fond par-dessus. Le petit palier suffit —
         // ces icônes ne dépassent pas quelques dizaines de pixels.
+        //
+        // `height` autant que `width` : sans hauteur, imgproxy garde le rapport
+        // d'origine et rend par exemple du 128 × 344 pour une case carrée de
+        // 36 px — trois cents pixels téléchargés pour rien, et un recadrage
+        // laissé au navigateur.
         <StoredImage
           url={src}
           width={AVATAR_THUMB_SMALL}
+          height={AVATAR_THUMB_SMALL}
           resize="cover"
           sizes="48px"
           className="object-cover"

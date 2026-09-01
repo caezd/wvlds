@@ -1,10 +1,10 @@
 "use client";
 
 import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import Image from "next/image";
+import { StoredImage } from "@/components/ui/stored-image";
+import { avatarThumbWidth } from "@/lib/storage";
 import { Ban, Loader2, Mail, Pencil, Pin, PinOff, Plus, Search, Trash2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { supabaseThumb } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/client";
 import { RPC } from "@/lib/constants";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -31,18 +31,24 @@ function DmAvatar({
   className?: string;
   isActive?: boolean;
 }) {
-  const thumb = src ? (supabaseThumb(src, size * 2) ?? src) : null;
   return (
     <span
       className={cn(
-        "flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted font-semibold text-muted-foreground",
+        "relative flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted font-semibold text-muted-foreground",
         isActive && "ring-2 ring-accent ring-offset-2 ring-offset-background",
         className,
       )}
       style={{ width: size, height: size, fontSize: size * 0.38 }}
     >
-      {thumb
-        ? <Image src={thumb} alt="" width={size} height={size} className="h-full w-full object-cover" />
+      {src
+        // L'URL brute : c'est `StoredImage` qui décide des tailles demandées.
+        ? <StoredImage
+            url={src}
+            width={avatarThumbWidth(size)}
+            height={avatarThumbWidth(size)}
+            resize="cover"
+            className="object-cover"
+          />
         : (fallback[0] ?? "?").toUpperCase()
       }
     </span>
