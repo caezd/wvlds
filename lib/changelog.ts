@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Wiki",
+    text: "Les fiches de notes annoncent elles aussi où elles se poseront pendant un glissé, par le même trait que l’arbre des pages."
+  },
+  {
+    date: "2026-08",
     tag: "Correctif",
     text: "Il était impossible de sortir une page d’un dossier du wiki en la glissant : le déplacement n’acceptait que deux gestes, entrer dans un dossier et réordonner entre voisines d’un même parent. Lâcher une page sur une autre la fait désormais venir à sa place, quel que soit le dossier d’où elle vient, et un trait annonce pendant le glissé où elle se posera. Un dossier ne peut par ailleurs plus être glissé dans son propre contenu, ce qui l’aurait fait disparaître de l’arbre avec tout ce qu’il contient."
   },

@@ -51,6 +51,29 @@ export function groupNotesByCategory(
  * glisser-déposer (deux listes à renuméroter quand la fiche change de
  * catégorie), et c'est celle qu'on peut vérifier sans monter d'interface.
  */
+/**
+ * De quel côté de la fiche visée le trait de dépôt se pose.
+ *
+ * Déduit de la même règle que `planNoteMove`, et non d'une seconde qui lui
+ * ressemblerait : `toIndex` est l'index de la cible dans la liste AVANT retrait
+ * de la fiche déplacée. Quand celle-ci vient d'au-dessus dans la même
+ * catégorie, son retrait remonte la cible d'un cran — la fiche se pose donc
+ * APRÈS elle, et le trait doit le dire.
+ */
+export function coteDuTrait(
+  notes: WikiPageNote[],
+  noteId: string,
+  cibleId: string,
+): "avant" | "apres" | null {
+  if (noteId === cibleId) return null;
+  const deplacee = notes.find((n) => n.id === noteId);
+  const cible = notes.find((n) => n.id === cibleId);
+  if (!deplacee || !cible) return null;
+
+  if (deplacee.category_id !== cible.category_id) return "avant";
+  return deplacee.sort_index < cible.sort_index ? "apres" : "avant";
+}
+
 export function planNoteMove(
   notes: WikiPageNote[],
   noteId: string,

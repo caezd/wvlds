@@ -58,6 +58,7 @@ export function WikiNoteCard({
   onToggleExpanded,
   onSave,
   onDelete,
+  insertion,
 }: {
   note: WikiPageNote;
   canEdit: boolean;
@@ -65,6 +66,8 @@ export function WikiNoteCard({
   onToggleExpanded: () => void;
   onSave: (patch: { title: string; body: string }) => void;
   onDelete: () => void;
+  /** Trait de dépôt à poser au-dessus ou au-dessous de cette fiche. */
+  insertion?: "avant" | "apres" | null;
 }) {
   const t = useTranslations("wiki.notes");
   const tCommon = useTranslations("common");
@@ -137,10 +140,22 @@ export function WikiNoteCard({
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className={cn(
-        "rounded-lg border border-border-soft bg-background",
+        "relative rounded-lg border border-border-soft bg-background",
         isDragging && "opacity-50",
       )}
     >
+      {/* Le trait se pose dans l'écart que dnd-kit ouvre en écartant les
+          voisines, centré dessus. Aucune marge ajoutée ici : une seconde
+          animation sur le même écart se battrait avec la sienne. */}
+      {insertion && (
+        <span
+          aria-hidden
+          className={cn(
+            "pointer-events-none absolute inset-x-0 z-10 h-0.5 -translate-y-1/2 rounded-full bg-accent",
+            insertion === "avant" ? "top-0" : "top-full",
+          )}
+        />
+      )}
       <div className="flex items-center gap-1 px-1.5 py-1.5">
         {canEdit && (
           <button

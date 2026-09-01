@@ -16,6 +16,7 @@ import {
 import {
   DndContext,
   type DragEndEvent,
+  type DragOverEvent,
   PointerSensor,
   useSensor,
   useSensors,
@@ -38,7 +39,7 @@ import { afterMenuClose } from "@/components/ui/after-menu-close";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { DB_TEXT_LIMITS } from "@/lib/textLimits";
 import { cn } from "@/lib/utils";
-import { useWikiPageNotes, type WikiNoteGroup } from "@/hooks/useWikiPageNotes";
+import { coteDuTrait, useWikiPageNotes, type WikiNoteGroup } from "@/hooks/useWikiPageNotes";
 import type { WikiNoteCategory, WikiPageNote } from "@/types/worlds";
 import { WikiNoteCard, noteDragId } from "./WikiNoteCard";
 import { WIKI_FOOTER, WIKI_FOOTER_BUTTON } from "./wikiSubHeader";
@@ -98,6 +99,7 @@ function CategorySection({
   onRename,
   onDelete,
   onCreateNote,
+  insertion,
   onSaveNote,
   onDeleteNote,
 }: {
@@ -121,6 +123,8 @@ function CategorySection({
   onRename: (name: string) => void;
   onDelete: () => void;
   onCreateNote: (title: string) => void;
+  /** Fiche qui porte le trait de dépôt, et de quel côté. */
+  insertion: { noteId: string; cote: "avant" | "apres" } | null;
   onSaveNote: (note: WikiPageNote, patch: { title: string; body: string }) => void;
   onDeleteNote: (note: WikiPageNote) => void;
 }) {
@@ -259,6 +263,7 @@ function CategorySection({
                   onToggleExpanded={() => onToggleNote(note.id)}
                   onSave={patch => onSaveNote(note, patch)}
                   onDelete={() => onDeleteNote(note)}
+                  insertion={insertion?.noteId === note.id ? insertion.cote : null}
                 />
               ))}
             </ul>
@@ -376,7 +381,32 @@ export function WikiNotesPanel({
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
   );
 
+  /**
+   * Couple survolé pendant un glissé — d'où se déduit le trait de dépôt.
+   *
+   * `onDragOver` est le seul événement qui suive le pointeur ; `onDragEnd`
+   * arrive trop tard pour annoncer quoi que ce soit.
+   */
+  const [survolGlisse, setSurvolGlisse] = React.useState<
+    { activeId: string; overId: string } | null
+  >(null);
+
+  /** Trait de dépôt courant — rien pour une catégorie, qui a son propre cadre. */
+  const insertion = React.useMemo(() => {
+    if (!survolGlisse) return null;
+    const deplacee = noteIdOf(survolGlisse.activeId);
+    const cible = noteIdOf(survolGlisse.overId);
+    if (!deplacee || !cible) return null;
+    const cote = coteDuTrait(notes.notes ?? [], deplacee, cible);
+    return cote ? { noteId: cible, cote } : null;
+  }, [survolGlisse, notes.notes]);
+
+  function onDragOver({ active, over }: DragOverEvent) {
+    setSurvolGlisse(over ? { activeId: String(active.id), overId: String(over.id) } : null);
+  }
+
   function onDragEnd({ active, over }: DragEndEvent) {
+    setSurvolGlisse(null);
     if (!over || active.id === over.id) return;
     const activeId = String(active.id);
     const overId = String(over.id);
@@ -458,7 +488,12 @@ export function WikiNotesPanel({
               <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
             </div>
           ) : (
-            <DndContext sensors={sensors} onDragEnd={onDragEnd}>
+            <DndContext
+              sensors={sensors}
+              onDragOver={onDragOver}
+              onDragEnd={onDragEnd}
+              onDragCancel={() => setSurvolGlisse(null)}
+            >
               <SortableContext
                 items={notes.groups.map(g => categoryDragId(g.category.id))}
                 strategy={verticalListSortingStrategy}
@@ -482,6 +517,7 @@ export function WikiNotesPanel({
                       onRename={name => void notes.renameCategory(group.category, name)}
                       onDelete={() => setConfirmCategory(group.category)}
                       onCreateNote={title => void notes.createNote(group.category.id, title)}
+                      insertion={insertion}
                       onSaveNote={(note, patch) => void notes.updateNote(note, patch)}
                       onDeleteNote={setConfirmNote}
                     />
