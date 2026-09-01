@@ -32,7 +32,23 @@ export const DELAI_MONTAGE_MS = 2_500;
  */
 export async function violations(page: Page, url: string): Promise<string[]> {
   await page.goto(url, { waitUntil: "domcontentloaded" });
-  await page.waitForTimeout(DELAI_MONTAGE_MS);
+
+  // Certaines routes redirigent, parfois en chaîne : `/quests` renvoie à `/`
+  // quand son drapeau est baissé, et `/` mène ensuite à un monde. Attendre une
+  // seule fois le montage laissait le délai s'écouler sur une page
+  // intermédiaire — axe voyait alors son contexte d'exécution disparaître en
+  // pleine analyse (« Execution context was destroyed »), au hasard du minutage.
+  //
+  // On redonne donc son délai à toute page qui a navigué pendant le précédent :
+  // ce qui est mesuré est la page d'arrivée, montée, et non une étape du
+  // chemin. Trois tours suffisent — aucune route n'enchaîne plus de deux
+  // redirections.
+  for (let tour = 0; tour < 3; tour++) {
+    const avant = page.url();
+    await page.waitForTimeout(DELAI_MONTAGE_MS);
+    if (page.url() === avant) break;
+  }
+
   const res = await new AxeBuilder({ page }).withTags(REGLES).analyze();
   return res.violations.flatMap((v) =>
     v.nodes.map((nd) => {
