@@ -246,4 +246,47 @@ describe("deleteBugReport", () => {
     expect(mock.from).not.toHaveBeenCalled();
   });
 
+  // Sans ça, les captures resteraient dans le bucket sans que rien ne les
+  // désigne plus : injoignables par l'application, mais conservées — alors que
+  // ce sont des données personnelles que la suppression était censée effacer.
+  it("supprime les captures avec le rapport", async () => {
+    vi.mocked(isAdmin).mockResolvedValue(true);
+    const mock = createSupabaseMock({
+      results: [{ data: { attachments: ["user-u1/a.webp", "user-u1/b.webp"] }, error: null }, { error: null }],
+    });
+    brancher(mock);
+
+    const res = await deleteBugReport("r1");
+
+    expect(res).toEqual({ ok: true });
+    expect(mock.storageRemove).toHaveBeenCalledWith(["user-u1/a.webp", "user-u1/b.webp"]);
+  });
+
+  // L'ordre importe : supprimer la ligne d'abord perdrait les chemins, et
+  // personne ne saurait plus quoi nettoyer.
+  it("garde le rapport si ses captures n'ont pas pu être supprimées", async () => {
+    vi.mocked(isAdmin).mockResolvedValue(true);
+    const mock = createSupabaseMock({
+      results: [{ data: { attachments: ["user-u1/a.webp"] }, error: null }],
+      storageRemoveResult: { error: { message: "refusé" } },
+    } as never);
+    brancher(mock);
+
+    const res = await deleteBugReport("r1");
+
+    expect(res.ok).toBe(false);
+    expect(mock.buildersFor("bug_reports")[0].delete).not.toHaveBeenCalled();
+  });
+
+  it("ne demande aucune suppression de fichier pour un rapport sans capture", async () => {
+    vi.mocked(isAdmin).mockResolvedValue(true);
+    const mock = createSupabaseMock({
+      results: [{ data: { attachments: [] }, error: null }, { error: null }],
+    });
+    brancher(mock);
+
+    expect((await deleteBugReport("r1")).ok).toBe(true);
+    expect(mock.storageRemove).not.toHaveBeenCalled();
+  });
+
 });

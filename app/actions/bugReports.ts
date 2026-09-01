@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getUserId } from "@/lib/auth";
 import { isAdmin } from "@/lib/admin";
 import {
+  BUG_REPORT_BUCKET,
   BUG_REPORT_MAX_ATTACHMENTS,
   BUG_REPORT_URL_MAX_LENGTH,
   BUG_REPORT_USER_AGENT_MAX_LENGTH,
@@ -98,11 +99,37 @@ export async function setBugReportStatus(reportId: string, status: BugReportStat
   return { ok: true as const };
 }
 
-/** Supprime un signalement — réservé aux administrateurs, comme le statut. */
+/**
+ * Supprime un signalement — réservé aux administrateurs, comme le statut.
+ *
+ * Les captures partent avec lui. Supprimer la seule ligne les laisserait dans
+ * le bucket sans que rien ne les désigne plus : injoignables par l'application,
+ * mais conservées — et ce sont des captures d'écran, donc souvent des données
+ * personnelles que la suppression du rapport était censée effacer.
+ *
+ * Les fichiers d'abord, la ligne ensuite : l'ordre inverse perdrait les chemins
+ * en cas d'échec, et personne ne saurait plus quoi nettoyer.
+ */
 export async function deleteBugReport(reportId: string) {
   if (!(await isAdmin())) return { ok: false as const, error: ERR_NON_AUTHENTIFIE };
 
   const supabase = await createClient();
+
+  const { data: rapport } = await supabase
+    .from("bug_reports")
+    .select("attachments")
+    .eq("id", reportId)
+    .maybeSingle();
+
+  const chemins = (rapport?.attachments ?? []) as string[];
+  if (chemins.length > 0) {
+    const { error } = await supabase.storage.from(BUG_REPORT_BUCKET).remove(chemins);
+    // Un fichier déjà absent ne doit pas retenir la suppression du rapport :
+    // c'est l'état recherché. On s'arrête en revanche sur un refus, sans quoi
+    // la ligne disparaîtrait en laissant ses images derrière elle.
+    if (error) return { ok: false as const, error: echecEnregistrement("deleteBugReport", error) };
+  }
+
   const { error } = await supabase.from("bug_reports").delete().eq("id", reportId);
   if (error) return { ok: false as const, error: echecEnregistrement("deleteBugReport", error) };
 
