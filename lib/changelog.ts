@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",
+    tag: "Correctif",
+    text: "Il était impossible de sortir une page d’un dossier du wiki en la glissant : le déplacement n’acceptait que deux gestes, entrer dans un dossier et réordonner entre voisines d’un même parent. Lâcher une page sur une autre la fait désormais venir à sa place, quel que soit le dossier d’où elle vient. Un dossier ne peut par ailleurs plus être glissé dans son propre contenu, ce qui l’aurait fait disparaître de l’arbre avec tout ce qu’il contient."
+  },
+  {
+    date: "2026-08",
     tag: "Wiki",
     text: "L’éditeur d’article défile d’un seul tenant : la hauteur du champ suit le texte, et c’est la page entière — bannière comprise — qui défile, au même endroit qu’en lecture. Les commandes descendent dans un pied à part, barré d’un filet aligné sur celui des colonnes voisines, pour que « Publier » reste atteignable quelle que soit la longueur de l’article."
   },

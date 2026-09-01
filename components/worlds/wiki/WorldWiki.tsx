@@ -35,7 +35,6 @@ import {
 import { LucideIconPicker, VALID_LUCIDE_ICONS } from "@/components/ui/LucideIconPicker";
 import {
   SortableContext,
-  arrayMove,
   useSortable,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
@@ -62,6 +61,7 @@ import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 import { WIKI_FOOTER, WIKI_FOOTER_BUTTON, WIKI_SUBHEADER, WIKI_SUBHEADER_COUNT } from "./wikiSubHeader";
 import { WikiEditModeToggle } from "./WikiEditModeToggle";
+import { planifierDeplacement } from "@/lib/wikiTreeMove";
 import { slugify } from "@/lib/slug";
 import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import { useColumnResize } from "@/hooks/useColumnResize";
@@ -717,56 +717,24 @@ export function WorldWiki({
 
   // ── DnD ──────────────────────────────────────────────────────
   function onDragEnd({ active, over }: DragEndEvent) {
-    if (!over || active.id === over.id || !pages) return;
+    if (!over || !pages) return;
+
+    const ecritures = planifierDeplacement(pages, String(active.id), String(over.id));
+    if (!ecritures || ecritures.length === 0) return;
+
     // Ordre d'origine, pour le rétablir si l'écriture est refusée.
     const previousPages = pages;
 
-    const activePage = pages.find(p => p.id === active.id);
-    const overPage = pages.find(p => p.id === over.id);
-    if (!activePage || !overPage) return;
-
-    // ── Dépôt dans un dossier (devient enfant) ────────────────
-    if (overPage.is_folder && overPage.id !== activePage.parent_id) {
-      const sort_index = childrenOf(overPage.id).length;
-      setPages(prev =>
-        prev?.map(p => p.id === activePage.id
-          ? { ...p, parent_id: overPage.id, sort_index }
-          : p
-        ) ?? null
-      );
-      setExpandedFolders(prev => new Set([...prev, overPage.id]));
-      // Même précaution que pour le réordonnancement : sans lire l'erreur, la
-      // page paraissait rangée dans le dossier et en ressortait au
-      // rechargement suivant.
-      void supabase
-        .from("world_wiki_pages")
-        .update({ parent_id: overPage.id, sort_index })
-        .eq("id", activePage.id)
-        .then(({ error }: { error: { message: string } | null }) => {
-          if (!error) return;
-          setPages(previousPages);
-          toast.error(t("saveError"), { description: error.message });
-        });
-      return;
-    }
-
-    // ── Réordonnancement entre pairs (même parent) ────────────
-    if (activePage.parent_id !== overPage.parent_id) return;
-
-    const siblings = childrenOf(activePage.parent_id);
-    const oldIdx = siblings.findIndex(p => p.id === activePage.id);
-    const newIdx = siblings.findIndex(p => p.id === overPage.id);
-    if (oldIdx === -1 || newIdx === -1) return;
-
-    const reordered = arrayMove(siblings, oldIdx, newIdx);
-    const updates = reordered.map((p, i) => ({ id: p.id, sort_index: i }));
-
     setPages(prev =>
       prev?.map(p => {
-        const u = updates.find(u => u.id === p.id);
-        return u ? { ...p, sort_index: u.sort_index } : p;
-      }) ?? null
+        const e = ecritures.find(e => e.id === p.id);
+        return e ? { ...p, parent_id: e.parent_id, sort_index: e.sort_index } : p;
+      }) ?? null,
     );
+
+    // Le dossier d'accueil s'ouvre : sans cela, la page semblerait disparaître.
+    const entree = ecritures.find(e => e.id === active.id)?.parent_id;
+    if (entree) setExpandedFolders(prev => new Set([...prev, entree]));
 
     // Un `update` par ligne, et surtout PAS un `upsert` : PostgREST traduit
     // l'upsert en `INSERT … ON CONFLICT`, si bien que la RLS évalue la policy
@@ -774,13 +742,16 @@ export function WorldWiki({
     // vérification `is_world_editor(world_id, …)` échouait alors pour tout le
     // monde, propriétaire compris, et réordonner une page répondait
     // « new row violates row-level security policy ». L'UPDATE, lui, ne touche
-    // qu'à `sort_index` et laisse `world_id` en place.
+    // qu'aux colonnes visées et laisse `world_id` en place.
     //
     // Le résultat de l'écriture est lu : un refus laissait sinon le nouvel
     // ordre à l'écran, perdu au rechargement suivant.
     void Promise.all(
-      updates.map(u =>
-        supabase.from("world_wiki_pages").update({ sort_index: u.sort_index }).eq("id", u.id),
+      ecritures.map(e =>
+        supabase
+          .from("world_wiki_pages")
+          .update({ parent_id: e.parent_id, sort_index: e.sort_index })
+          .eq("id", e.id),
       ),
     ).then((resultats: { error: { message: string } | null }[]) => {
       const erreur = resultats.map(r => r.error).find(Boolean);
