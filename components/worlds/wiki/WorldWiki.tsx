@@ -147,6 +147,8 @@ type SortableTreeNodeProps = {
   editMode: boolean;
   subtree: React.ReactNode;
   createInput: React.ReactNode;
+  /** Écart entre lignes voisines — élargi le temps d'un glissé. */
+  ecartDesLignes: string;
   /** Trait de dépôt à poser au-dessus ou au-dessous de cette ligne. */
   insertion: "avant" | "apres" | null;
   onSelect: () => void;
@@ -163,7 +165,8 @@ type SortableTreeNodeProps = {
 
 function SortableTreeNode({
   page, depth, isSelected, isExpanded, isRenaming, renameValue, renameIcon,
-  editMode, subtree, createInput, insertion, onSelect, onToggleFolder, onStartRename,
+  editMode, subtree, createInput, insertion, ecartDesLignes, onSelect, onToggleFolder,
+  onStartRename,
   onRenameChange, onRenameIconChange, onConfirmRename, onCancelRename,
   onDelete, onCreateInFolder, onToggleRestricted,
 }: SortableTreeNodeProps) {
@@ -373,7 +376,7 @@ function SortableTreeNode({
       </div>
 
       {page.is_folder && isExpanded && (
-        <div className="flex flex-col gap-0.5">
+        <div className={cn("flex flex-col", ecartDesLignes)}>
           {subtree}
           {createInput}
         </div>
@@ -759,16 +762,37 @@ export function WorldWiki({
     { activeId: string; overId: string } | null
   >(null);
 
+  /**
+   * Un glissé est en cours — l'arbre s'aère pour loger le trait de dépôt.
+   *
+   * État distinct du survol : celui-ci retombe à `null` dès que le pointeur
+   * passe entre deux lignes, et l'espace se refermerait par à-coups. Ouvert au
+   * premier geste, fermé au dernier, il ne bouge pas entre les deux.
+   */
+  const [glisseEnCours, setGlisseEnCours] = React.useState(false);
+
+  /** Écart entre lignes voisines : deux pixels au repos, huit pendant un glissé. */
+  const ecartDesLignes = glisseEnCours ? "gap-2" : "gap-0.5";
+
   const insertion = survolGlisse && pages
     ? indicateurDInsertion(pages, survolGlisse.activeId, survolGlisse.overId)
     : null;
+
+  function onDragStart() {
+    setGlisseEnCours(true);
+  }
+
+  function finDuGlisse() {
+    setGlisseEnCours(false);
+    setSurvolGlisse(null);
+  }
 
   function onDragOver({ active, over }: DragOverEvent) {
     setSurvolGlisse(over ? { activeId: String(active.id), overId: String(over.id) } : null);
   }
 
   function onDragEnd({ active, over }: DragEndEvent) {
-    setSurvolGlisse(null);
+    finDuGlisse();
     if (!over || !pages) return;
 
     const ecritures = planifierDeplacement(pages, String(active.id), String(over.id));
@@ -899,6 +923,7 @@ export function WorldWiki({
               renameIcon={renameIcon}
               editMode={isEditMode}
               subtree={page.is_folder && isExpanded ? renderTree(page.id, depth + 1) : null}
+              ecartDesLignes={ecartDesLignes}
               createInput={creating?.parentId === page.id ? renderCreateInput(page.id, depth + 1) : null}
               insertion={insertion?.cibleId === page.id ? insertion.cote : null}
               // `selectPageById` et non `setSelectedId` : lui seul déplie les
@@ -961,12 +986,13 @@ export function WorldWiki({
             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
           </div>
         ) : searchQuery.trim() === "" ? (
-          <nav className="flex flex-col gap-0.5 px-1">
+          <nav className={cn("flex flex-col px-1", ecartDesLignes)}>
             <DndContext
               sensors={sensors}
+              onDragStart={onDragStart}
               onDragOver={onDragOver}
               onDragEnd={onDragEnd}
-              onDragCancel={() => setSurvolGlisse(null)}
+              onDragCancel={finDuGlisse}
             >
               {renderTree(null)}
             </DndContext>
