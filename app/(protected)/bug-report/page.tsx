@@ -4,7 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { getUserId } from "@/lib/auth";
 import { signBugReportAttachments } from "@/lib/bugReportAttachments";
-import { pageSignaleeDepuis, type BugReport } from "@/lib/bugReports";
+import { pageSignaleeDepuis, type BugReportStatus } from "@/lib/bugReports";
 import { BugReportForm } from "@/components/support/BugReportForm";
 
 export async function generateMetadata() {
@@ -35,18 +35,24 @@ export default async function BugReportPage({
   const userId = await getUserId(supabase);
   const pageSignalee = pageSignaleeDepuis((await searchParams).from);
 
+  // Seulement ce qui est affiché. La ligne entière emporterait le journal
+  // d'erreurs — jusqu'à 25 Ko par signalement (migration 139) — dans le flux
+  // RSC de chaque visite, pour des données que cette page ne rend jamais.
   const { data } = userId
     ? await supabase
         .from("bug_reports")
-        .select(
-          "id, user_id, description, page_url, user_agent, app_version, status, admin_note, created_at, attachments, client_errors",
-        )
+        .select("id, description, status, attachments")
         .eq("user_id", userId)
         .order("created_at", { ascending: false })
         .limit(20)
     : { data: null };
 
-  const reports = (data ?? []) as BugReport[];
+  const reports = (data ?? []) as {
+    id: string;
+    description: string;
+    status: BugReportStatus;
+    attachments: string[] | null;
+  }[];
   const signées = await signBugReportAttachments(
     supabase,
     reports.flatMap((r) => r.attachments ?? []),
