@@ -186,16 +186,29 @@ function SortableTreeNode({
     // `gap-0.5` ici comme sur les deux autres conteneurs de l'arbre : l'écart
     // entre deux lignes doit être le même qu'elles soient sœurs, ou qu'un
     // dossier sépare l'une de l'autre.
-    <div ref={setNodeRef} style={style} className="relative flex flex-col gap-0.5">
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        "relative flex flex-col gap-0.5",
+        // L'espace s'ouvre du côté visé, et le trait s'y loge : les deux
+        // voisines s'écartent pour faire place, plutôt que de voir un trait se
+        // superposer à elles. La transition ne porte que sur la marge — animer
+        // `all` ferait aussi glisser le transform du glissé, qui a le sien.
+        "transition-[margin] duration-150 motion-reduce:transition-none",
+        insertion === "avant" && "mt-1",
+        insertion === "apres" && "mb-1",
+      )}
+    >
       {/* Deux pixels d'accent entre deux lignes : il dit OÙ la page se posera,
           là où le cadre d'un dossier dit DANS quoi. Posé en absolu pour ne pas
-          décaler l'arbre au passage du pointeur. */}
+          décaler l'arbre, et centré dans la marge qui vient de s'ouvrir. */}
       {insertion && (
         <span
           aria-hidden
           className={cn(
             "pointer-events-none absolute inset-x-0 z-10 h-0.5 rounded-full bg-accent",
-            insertion === "avant" ? "-top-px" : "-bottom-px",
+            insertion === "avant" ? "-top-[3px]" : "-bottom-[3px]",
           )}
         />
       )}
