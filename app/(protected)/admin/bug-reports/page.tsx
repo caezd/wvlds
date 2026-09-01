@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/admin";
 import { signBugReportAttachments } from "@/lib/bugReportAttachments";
 import type { BugReport } from "@/lib/bugReports";
 import { BugReportRow } from "./BugReportRow";
+import { CleanAttachmentsButton } from "./CleanAttachmentsButton";
 
 /**
  * File de tri des signalements.
@@ -41,7 +42,10 @@ export default async function BugReportsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">{t("title")}</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold">{t("title")}</h1>
+        <CleanAttachmentsButton />
+      </div>
 
       {reports.length === 0 ? (
         <div className="rounded-lg border border-border-soft p-8 text-center text-sm text-muted-foreground">

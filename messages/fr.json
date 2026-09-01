@@ -48,6 +48,7 @@
     "icon": "Icône",
     "notFoundOrForbidden": "Introuvable, ou vous n'y avez pas accès.",
     "personaNameLength": "Le nom doit contenir entre 1 et 40 caractères.",
+    "bugReportRateLimit": "Vous avez envoyé beaucoup de signalements coup sur coup. Réessayez dans une heure — les précédents sont bien arrivés.",
     "personaQuotaReached": "Limite atteinte : {count} personnages par monde sur un compte gratuit.",
     "personaNameTaken": "Un personnage portant ce nom existe déjà dans ce monde.",
     "forbidden": "Vous n'avez pas les droits nécessaires pour cela.",
@@ -806,6 +807,9 @@
         "declined": "Écarté"
       },
       "statusLabel": "Statut",
+      "clean": "Nettoyer les images orphelines",
+      "cleaning": "Nettoyage…",
+      "cleaned": "{count, plural, =0 {Aucune image orpheline à supprimer.} one {# image orpheline supprimée.} other {# images orphelines supprimées.}}",
       "clientErrors": "{count, plural, one {# erreur du navigateur} other {# erreurs du navigateur}}",
       "page": "Page",
       "browser": "Navigateur",

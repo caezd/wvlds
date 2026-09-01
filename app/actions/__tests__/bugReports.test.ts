@@ -2,7 +2,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createSupabaseMock } from "@/test/supabaseMock";
 import { createClient } from "@/lib/supabase/server";
 import { isAdmin } from "@/lib/admin";
-import { deleteBugReport, setBugReportStatus, submitBugReport } from "@/app/actions/bugReports";
+import {
+  cleanBugReportAttachments,
+  deleteBugReport,
+  setBugReportStatus,
+  submitBugReport,
+} from "@/app/actions/bugReports";
 import { BUG_REPORT_MAX_LENGTH, BUG_REPORT_URL_MAX_LENGTH } from "@/lib/bugReports";
 
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
@@ -196,6 +201,66 @@ describe("submitBugReport — journal d'erreurs", () => {
     await submitBugReport({ description: "x" });
 
     expect(mock.buildersFor("bug_reports")[0].insert.mock.calls[0][0].client_errors).toEqual([]);
+  });
+});
+
+describe("submitBugReport — plafond horaire", () => {
+  // Le plafond est tenu par la policy d'insertion (migration 140). On le
+  // vérifie AUSSI ici pour que le refus arrive traduit : la RLS, elle, échoue
+  // par un message de PostgreSQL que le formulaire afficherait tel quel.
+  it("refuse au-delà du plafond, sans rien écrire", async () => {
+    const mock = connecté();
+    mock.rpc.mockResolvedValue({ data: 5, error: null });
+    brancher(mock);
+
+    const res = await submitBugReport({ description: "x" });
+
+    expect(res).toEqual({ ok: false, error: "bugReportRateLimit" });
+    expect(mock.buildersFor("bug_reports")).toHaveLength(0);
+  });
+
+  it("laisse passer en deçà", async () => {
+    const mock = connecté({ results: [{ error: null }] });
+    mock.rpc.mockResolvedValue({ data: 4, error: null });
+    brancher(mock);
+
+    expect((await submitBugReport({ description: "x" })).ok).toBe(true);
+  });
+});
+
+describe("cleanBugReportAttachments", () => {
+  it("refuse un non-administrateur, sans rien lire ni supprimer", async () => {
+    vi.mocked(isAdmin).mockResolvedValue(false);
+    const mock = createSupabaseMock();
+    brancher(mock);
+
+    expect((await cleanBugReportAttachments()).ok).toBe(false);
+    expect(mock.rpc).not.toHaveBeenCalled();
+    expect(mock.storageRemove).not.toHaveBeenCalled();
+  });
+
+  // La suppression passe par l'API de stockage : effacer la ligne de
+  // « storage.objects » laisserait l'octet dans le stockage d'objets.
+  it("supprime les images que la base a désignées", async () => {
+    vi.mocked(isAdmin).mockResolvedValue(true);
+    const mock = createSupabaseMock();
+    mock.rpc.mockResolvedValue({ data: ["user-u1/a.webp", "user-u2/b.webp"], error: null });
+    brancher(mock);
+
+    const res = await cleanBugReportAttachments();
+
+    expect(res).toEqual({ ok: true, removed: 2 });
+    expect(mock.storageRemove).toHaveBeenCalledWith(["user-u1/a.webp", "user-u2/b.webp"]);
+  });
+
+  it("ne demande aucune suppression quand rien n'est orphelin", async () => {
+    vi.mocked(isAdmin).mockResolvedValue(true);
+    const mock = createSupabaseMock();
+    mock.rpc.mockResolvedValue({ data: [], error: null });
+    brancher(mock);
+
+    expect(await cleanBugReportAttachments()).toEqual({ ok: true, removed: 0 });
+    expect(mock.storageRemove).not.toHaveBeenCalled();
   });
 });
 

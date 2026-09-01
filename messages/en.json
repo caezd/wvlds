@@ -48,6 +48,7 @@
     "icon": "Icon",
     "notFoundOrForbidden": "Not found, or you don't have access to it.",
     "personaNameLength": "The name must be between 1 and 40 characters.",
+    "bugReportRateLimit": "You have sent a lot of reports in a row. Try again in an hour — the earlier ones did go through.",
     "personaQuotaReached": "Limit reached: {count} characters per world on a free account.",
     "personaNameTaken": "A character with this name already exists in this world.",
     "forbidden": "You don't have the necessary permissions for this.",
@@ -806,6 +807,9 @@
         "declined": "Declined"
       },
       "statusLabel": "Status",
+      "clean": "Clean up orphaned images",
+      "cleaning": "Cleaning up…",
+      "cleaned": "{count, plural, =0 {No orphaned image to remove.} one {# orphaned image removed.} other {# orphaned images removed.}}",
       "clientErrors": "{count, plural, one {# browser error} other {# browser errors}}",
       "page": "Page",
       "browser": "Browser",

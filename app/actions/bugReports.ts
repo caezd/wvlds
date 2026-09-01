@@ -8,6 +8,7 @@ import { isAdmin } from "@/lib/admin";
 import {
   BUG_REPORT_BUCKET,
   BUG_REPORT_MAX_ATTACHMENTS,
+  BUG_REPORT_MAX_PER_HOUR,
   BUG_REPORT_URL_MAX_LENGTH,
   BUG_REPORT_USER_AGENT_MAX_LENGTH,
   isBugReportStatus,
@@ -18,6 +19,7 @@ import {
 import { normaliserJournalClient } from "@/lib/clientErrorLog";
 import {
   ERR_NON_AUTHENTIFIE,
+  ERR_RYTHME_SIGNALEMENTS,
   ERR_VALEUR_NON_SUPPORTEE,
   echecEnregistrement,
 } from "@/lib/actionErrors";
@@ -55,6 +57,19 @@ export async function submitBugReport(rapport: {
     attachments.length <= BUG_REPORT_MAX_ATTACHMENTS &&
     attachments.every((chemin) => isOwnAttachmentPath(chemin, userId));
   if (!recevables) return { ok: false as const, error: ERR_VALEUR_NON_SUPPORTEE };
+
+  // Le plafond horaire est d'abord tenu par la policy d'insertion (migration
+  // 140). On le vérifie ici pour que le refus arrive traduit : la RLS, elle,
+  // échoue par un message de PostgreSQL que le formulaire afficherait tel quel.
+  //
+  // Un comptage indisponible laisse donc passer, à dessein : ce contrôle sert
+  // la formulation du refus, pas le refus lui-même — que la policy prononce de
+  // toute façon. Refuser ici sur une panne de lecture perdrait un signalement
+  // légitime pour rien.
+  const { data: recents } = await supabase.rpc("bug_reports_recent_count", { uid: userId });
+  if (typeof recents === "number" && recents >= BUG_REPORT_MAX_PER_HOUR) {
+    return { ok: false as const, error: ERR_RYTHME_SIGNALEMENTS };
+  }
 
   const { error } = await supabase.from("bug_reports").insert({
     user_id: userId,
@@ -97,6 +112,43 @@ export async function setBugReportStatus(reportId: string, status: BugReportStat
 
   revalidatePath("/admin/bug-reports");
   return { ok: true as const };
+}
+
+/**
+ * Supprime les images déposées qui n'ont jamais accompagné de rapport.
+ *
+ * Une image part vers le stockage AVANT le rapport : qui change d'avis, ou dont
+ * l'envoi échoue, laisse un fichier que plus rien ne désigne. Le nettoyage fait
+ * à la suppression d'un rapport ne les couvre pas — ils n'ont jamais appartenu
+ * à aucun.
+ *
+ * L'identification est faite en base (migration 140) : un objet du bucket dont
+ * le chemin n'apparaît dans les `attachments` d'aucun rapport, et déposé il y a
+ * plus d'un jour. Ce délai de grâce est ce qui la rend sûre — sans lui, on
+ * supprimerait les images d'un formulaire encore en train d'être rempli.
+ *
+ * La suppression, elle, passe par l'API de stockage : effacer la ligne de
+ * `storage.objects` laisserait l'octet dans le stockage d'objets.
+ */
+export async function cleanBugReportAttachments() {
+  if (!(await isAdmin())) return { ok: false as const, error: ERR_NON_AUTHENTIFIE };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("orphan_bug_report_attachments");
+  if (error) return { ok: false as const, error: echecEnregistrement("cleanBugReportAttachments", error) };
+
+  const chemins = (data ?? []) as string[];
+  if (chemins.length === 0) return { ok: true as const, removed: 0 };
+
+  const { error: erreurStockage } = await supabase.storage
+    .from(BUG_REPORT_BUCKET)
+    .remove(chemins);
+  if (erreurStockage) {
+    return { ok: false as const, error: echecEnregistrement("cleanBugReportAttachments", erreurStockage) };
+  }
+
+  revalidatePath("/admin/bug-reports");
+  return { ok: true as const, removed: chemins.length };
 }
 
 /**

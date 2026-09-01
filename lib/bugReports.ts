@@ -22,6 +22,12 @@ export const BUG_REPORT_USER_AGENT_MAX_LENGTH = 500;
  *  `bug_reports_attachments_bounds` (migration 138). */
 export const BUG_REPORT_MAX_ATTACHMENTS = 3;
 
+/** Miroir des plafonds horaires posés par les policies de la migration 140.
+ *  Vérifiés aussi côté action : la RLS refuserait par un message de PostgreSQL
+ *  que l'appelant afficherait tel quel, alors qu'un refus mérite un code
+ *  traduit — la policy reste le filet en dessous. */
+export const BUG_REPORT_MAX_PER_HOUR = 5;
+
 /** Bucket PRIVÉ : une capture montre souvent autre chose que le bug. Les
  *  images ne sortent que par une URL signée (voir lib/bugReportAttachments). */
 export const BUG_REPORT_BUCKET = "bug-reports";
