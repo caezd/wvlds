@@ -25,7 +25,6 @@ import {
   SortableContext,
   arrayMove,
   useSortable,
-  verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
@@ -40,6 +39,7 @@ import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { DB_TEXT_LIMITS } from "@/lib/textLimits";
 import { cn } from "@/lib/utils";
 import { coteDuTrait, useWikiPageNotes, type WikiNoteGroup } from "@/hooks/useWikiPageNotes";
+import { SANS_DEPLACEMENT } from "@/lib/dndTri";
 import type { WikiNoteCategory, WikiPageNote } from "@/types/worlds";
 import { WikiNoteCard, noteDragId } from "./WikiNoteCard";
 import { WIKI_FOOTER, WIKI_FOOTER_BUTTON } from "./wikiSubHeader";
@@ -100,6 +100,7 @@ function CategorySection({
   onDelete,
   onCreateNote,
   insertion,
+  glisseEnCours,
   onSaveNote,
   onDeleteNote,
 }: {
@@ -125,6 +126,8 @@ function CategorySection({
   onCreateNote: (title: string) => void;
   /** Fiche qui porte le trait de dépôt, et de quel côté. */
   insertion: { noteId: string; cote: "avant" | "apres" } | null;
+  /** Un glissé est en cours : la liste s'aère pour loger le trait. */
+  glisseEnCours: boolean;
   onSaveNote: (note: WikiPageNote, patch: { title: string; body: string }) => void;
   onDeleteNote: (note: WikiPageNote) => void;
 }) {
@@ -251,9 +254,11 @@ function CategorySection({
         <div className="pl-2">
           <SortableContext
             items={group.notes.map(n => noteDragId(n.id))}
-            strategy={verticalListSortingStrategy}
+            strategy={SANS_DEPLACEMENT}
           >
-            <ul className="space-y-1">
+            {/* Le même écart que l'arbre des pages : dix pixels le temps du
+                geste — le trait de deux, et quatre de chaque côté. */}
+            <ul className={cn("flex flex-col", glisseEnCours ? "gap-2.5" : "gap-1")}>
               {group.notes.map(note => (
                 <WikiNoteCard
                   key={note.id}
@@ -391,6 +396,14 @@ export function WikiNotesPanel({
     { activeId: string; overId: string } | null
   >(null);
 
+  /**
+   * Un glissé est en cours — la liste s'aère pour loger le trait de dépôt.
+   *
+   * État distinct du survol : celui-ci retombe à `null` dès que le pointeur
+   * passe entre deux fiches, et l'espace se refermerait par à-coups.
+   */
+  const [glisseEnCours, setGlisseEnCours] = React.useState(false);
+
   /** Trait de dépôt courant — rien pour une catégorie, qui a son propre cadre. */
   const insertion = React.useMemo(() => {
     if (!survolGlisse) return null;
@@ -401,12 +414,17 @@ export function WikiNotesPanel({
     return cote ? { noteId: cible, cote } : null;
   }, [survolGlisse, notes.notes]);
 
+  function finDuGlisse() {
+    setGlisseEnCours(false);
+    setSurvolGlisse(null);
+  }
+
   function onDragOver({ active, over }: DragOverEvent) {
     setSurvolGlisse(over ? { activeId: String(active.id), overId: String(over.id) } : null);
   }
 
   function onDragEnd({ active, over }: DragEndEvent) {
-    setSurvolGlisse(null);
+    finDuGlisse();
     if (!over || active.id === over.id) return;
     const activeId = String(active.id);
     const overId = String(over.id);
@@ -490,13 +508,14 @@ export function WikiNotesPanel({
           ) : (
             <DndContext
               sensors={sensors}
+              onDragStart={() => setGlisseEnCours(true)}
               onDragOver={onDragOver}
               onDragEnd={onDragEnd}
-              onDragCancel={() => setSurvolGlisse(null)}
+              onDragCancel={finDuGlisse}
             >
               <SortableContext
                 items={notes.groups.map(g => categoryDragId(g.category.id))}
-                strategy={verticalListSortingStrategy}
+                strategy={SANS_DEPLACEMENT}
               >
                 <div className="space-y-1">
                   {notes.groups.map(group => (
@@ -518,6 +537,7 @@ export function WikiNotesPanel({
                       onDelete={() => setConfirmCategory(group.category)}
                       onCreateNote={title => void notes.createNote(group.category.id, title)}
                       insertion={insertion}
+                      glisseEnCours={glisseEnCours}
                       onSaveNote={(note, patch) => void notes.updateNote(note, patch)}
                       onDeleteNote={setConfirmNote}
                     />

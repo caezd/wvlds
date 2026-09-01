@@ -37,7 +37,6 @@ import { LucideIconPicker, VALID_LUCIDE_ICONS } from "@/components/ui/LucideIcon
 import {
   SortableContext,
   useSortable,
-  verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { WikiPageContent } from "./WikiPageContent";
@@ -66,6 +65,7 @@ import { indicateurDInsertion, planifierDeplacement } from "@/lib/wikiTreeMove";
 import { slugify } from "@/lib/slug";
 import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import { useColumnResize } from "@/hooks/useColumnResize";
+import { SANS_DEPLACEMENT } from "@/lib/dndTri";
 import type { WorldLexiconTerm } from "@/types/worlds";
 
 const WIKI_NAV_MIN = 120;
@@ -771,8 +771,11 @@ export function WorldWiki({
    */
   const [glisseEnCours, setGlisseEnCours] = React.useState(false);
 
-  /** Écart entre lignes voisines : deux pixels au repos, huit pendant un glissé. */
-  const ecartDesLignes = glisseEnCours ? "gap-2" : "gap-0.5";
+  /**
+   * Écart entre lignes voisines : deux pixels au repos, dix pendant un glissé —
+   * le trait de deux pixels, et quatre de chaque côté.
+   */
+  const ecartDesLignes = glisseEnCours ? "gap-2.5" : "gap-0.5";
 
   const insertion = survolGlisse && pages
     ? indicateurDInsertion(pages, survolGlisse.activeId, survolGlisse.overId)
@@ -908,7 +911,7 @@ export function WorldWiki({
     const children = childrenOf(parentId);
 
     return (
-      <SortableContext items={children.map(c => c.id)} strategy={verticalListSortingStrategy}>
+      <SortableContext items={children.map(c => c.id)} strategy={SANS_DEPLACEMENT}>
         {children.map(page => {
           const isExpanded = expandedFolders.has(page.id);
           return (
