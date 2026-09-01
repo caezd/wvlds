@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import Image from "next/image";
+import { StoredImage } from "@/components/ui/stored-image";
+import { AVATAR_THUMB_SMALL } from "@/lib/storage";
 import { createPortal } from "react-dom";
 import { X, Download } from "lucide-react";
 import { cn, isSafeUrl } from "@/lib/utils";
@@ -57,12 +58,14 @@ export function ImageLightbox({
 
       {/* Image principale */}
       <div className="relative flex-1 p-16">
-        <Image
+        {/* Chargement en deux temps : c'est ici que l'attente pèse le plus,
+            une image de visionneuse arrivant en pleine résolution. La vignette
+            floutée en tient la place — mêmes teintes, même composition. */}
+        <StoredImage
           key={current}
-          src={item.url}
-          alt={item.name}
-          onClick={(e) => e.stopPropagation()}
-          fill
+          url={item.url}
+          onClick={e => e.stopPropagation()}
+          width={2048}
           sizes="100vw"
           className="rounded-xl object-contain select-none"
         />
@@ -83,7 +86,13 @@ export function ImageLightbox({
                 i === current ? "border-white" : "border-transparent opacity-50 hover:opacity-80",
               )}
             >
-              <Image src={it.url} alt={it.name} fill sizes="64px" className="object-cover" />
+              <StoredImage
+                url={it.url}
+                width={AVATAR_THUMB_SMALL}
+                resize="cover"
+                sizes="64px"
+                className="object-cover"
+              />
             </button>
           ))}
         </div>

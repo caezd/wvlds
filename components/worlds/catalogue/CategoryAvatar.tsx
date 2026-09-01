@@ -1,4 +1,5 @@
-import Image from "next/image";
+import { StoredImage } from "@/components/ui/stored-image";
+import { AVATAR_THUMB_SMALL } from "@/lib/storage";
 import { cn } from "@/lib/utils";
 
 /**
@@ -28,7 +29,16 @@ export function CategoryAvatar({
       )}
     >
       {src ? (
-        <Image src={src} alt="" fill sizes="48px" className="object-cover" />
+        // Chargement en deux temps, comme les avatars : une vignette floutée
+        // tient la place, l'image se fond par-dessus. Le petit palier suffit —
+        // ces icônes ne dépassent pas quelques dizaines de pixels.
+        <StoredImage
+          url={src}
+          width={AVATAR_THUMB_SMALL}
+          resize="cover"
+          sizes="48px"
+          className="object-cover"
+        />
       ) : (
         <span className={cn("font-medium text-muted-foreground", letterClassName)}>
           {title[0]?.toUpperCase()}

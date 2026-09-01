@@ -51,6 +51,7 @@ export function StoredImage({
   sizes,
   priority,
   draggable,
+  onClick,
 }: {
   /** URL telle qu'enregistrée en base — surtout pas déjà passée par `supabaseThumb`. */
   url: string | null | undefined;
@@ -67,6 +68,8 @@ export function StoredImage({
   sizes?: string;
   priority?: boolean;
   draggable?: boolean;
+  /** Transmis à l'image — une visionneuse arrête ainsi la propagation du clic. */
+  onClick?: React.MouseEventHandler<HTMLImageElement>;
 }) {
   const [loaded, setLoaded] = React.useState(false);
   // Repli partagé plutôt que redéclaré à chaque appel : imgproxy échoue sur
@@ -128,6 +131,7 @@ export function StoredImage({
         sizes={sizes}
         priority={priority}
         draggable={draggable}
+        onClick={onClick}
         onLoad={() => { dejaAffichées.add(src); setLoaded(true); }}
         onError={() => setThumbFailed(true)}
         className={cn(
