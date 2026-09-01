@@ -1,10 +1,10 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import {
+  bugReportContext,
   isOwnAttachmentPath,
+  pageSignaleeDepuis,
   BUG_REPORT_MAX_LENGTH,
-  BUG_REPORT_URL_MAX_LENGTH,
   BUG_REPORT_USER_AGENT_MAX_LENGTH,
-  captureBugReportContext,
   isBugReportStatus,
   isValidBugReportDescription,
 } from "@/lib/bugReports";
@@ -53,30 +53,57 @@ describe("isBugReportStatus", () => {
   });
 });
 
-describe("captureBugReportContext", () => {
-  it("relève la page courante et le navigateur", () => {
-    vi.stubGlobal("window", {
-      location: { href: "https://exemple.fr/w/123?view=members" },
-      navigator: { userAgent: "Mozilla/5.0 (test)" },
-    });
+describe("pageSignaleeDepuis", () => {
+  it("accepte un chemin de l'application", () => {
+    expect(pageSignaleeDepuis("/w/123?view=members")).toBe("/w/123?view=members");
+  });
 
-    expect(captureBugReportContext()).toEqual({
-      pageUrl: "https://exemple.fr/w/123?view=members",
+  // Le formulaire AFFICHE cette valeur comme étant la page signalée. Un lien
+  // piégé pourrait donc lui faire annoncer une adresse qui n'est pas la nôtre —
+  // « //ailleurs.fr » étant lu par les navigateurs comme un autre domaine, et
+  // « /\ailleurs.fr » de même par certains.
+  it("refuse tout ce qui n'est pas un chemin de l'application", () => {
+    expect(pageSignaleeDepuis("https://ailleurs.fr/")).toBeNull();
+    expect(pageSignaleeDepuis("//ailleurs.fr/")).toBeNull();
+    expect(pageSignaleeDepuis("/" + String.fromCharCode(92) + "ailleurs.fr")).toBeNull();
+    expect(pageSignaleeDepuis("javascript:alert(1)")).toBeNull();
+    expect(pageSignaleeDepuis("w/123")).toBeNull();
+  });
+
+  it("refuse une absence comme un chemin démesuré", () => {
+    expect(pageSignaleeDepuis(undefined)).toBeNull();
+    expect(pageSignaleeDepuis("")).toBeNull();
+    expect(pageSignaleeDepuis(42)).toBeNull();
+    expect(pageSignaleeDepuis("/" + "a".repeat(500))).toBeNull();
+  });
+});
+
+describe("bugReportContext", () => {
+  it("joint la page reçue et le navigateur", () => {
+    vi.stubGlobal("window", { navigator: { userAgent: "Mozilla/5.0 (test)" } });
+
+    expect(bugReportContext("/w/123?view=members")).toEqual({
+      pageUrl: "/w/123?view=members",
       userAgent: "Mozilla/5.0 (test)",
     });
   });
 
-  // Ces deux valeurs viennent du poste client : un navigateur bavard ferait
-  // sinon rejeter toute la ligne par la contrainte de longueur en base.
-  it("borne ce que rapporte le navigateur", () => {
-    vi.stubGlobal("window", {
-      location: { href: "https://exemple.fr/" + "a".repeat(5000) },
-      navigator: { userAgent: "u".repeat(5000) },
-    });
+  // Le formulaire a sa propre page : relever « window.location » n'y
+  // rapporterait que « /bug-report ». Sans page connue, mieux vaut un champ
+  // vide qu'une réponse fausse dans la file de tri.
+  it("ne joint aucune page quand on ignore d'où vient l'auteur", () => {
+    vi.stubGlobal("window", { navigator: { userAgent: "Mozilla/5.0 (test)" } });
 
-    const contexte = captureBugReportContext();
-    expect(contexte.pageUrl).toHaveLength(BUG_REPORT_URL_MAX_LENGTH);
-    expect(contexte.userAgent).toHaveLength(BUG_REPORT_USER_AGENT_MAX_LENGTH);
+    expect(bugReportContext(null).pageUrl).toBe("");
+    expect(bugReportContext().pageUrl).toBe("");
+  });
+
+  // La valeur vient du poste client : un navigateur bavard ferait sinon
+  // rejeter toute la ligne par la contrainte de longueur en base.
+  it("borne ce que rapporte le navigateur", () => {
+    vi.stubGlobal("window", { navigator: { userAgent: "u".repeat(5000) } });
+
+    expect(bugReportContext("/x").userAgent).toHaveLength(BUG_REPORT_USER_AGENT_MAX_LENGTH);
   });
 });
 

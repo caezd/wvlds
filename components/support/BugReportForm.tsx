@@ -21,7 +21,7 @@ import {
   BUG_REPORT_IMAGE_TYPES,
   BUG_REPORT_MAX_ATTACHMENTS,
   BUG_REPORT_MAX_LENGTH,
-  captureBugReportContext,
+  bugReportContext,
 } from "@/lib/bugReports";
 
 type Jointe = { fichier: File; aperçu: string };
@@ -39,7 +39,19 @@ type Jointe = { fichier: File; aperçu: string };
  * privé : le serveur n'a jamais à relayer les octets, et une image déposée
  * reste illisible sans URL signée.
  */
-export function BugReportForm() {
+export function BugReportForm({
+  pageSignalee,
+}: {
+  /**
+   * La page d'où l'on vient, retenue par le menu au moment où on l'a quittée.
+   *
+   * Le formulaire ne peut pas la deviner : sur une page dédiée,
+   * `window.location` ne désigne plus que le formulaire lui-même. Elle vaut
+   * donc `null` pour qui arrive ici directement — auquel cas rien n'est joint
+   * plutôt qu'une page fausse.
+   */
+  pageSignalee?: string | null;
+}) {
   const t = useTranslations("bugReport");
   const tCommon = useTranslations("common");
   const router = useRouter();
@@ -118,7 +130,7 @@ export function BugReportForm() {
     const res = await submitBugReport({
       description,
       attachments: chemins,
-      ...captureBugReportContext(),
+      ...bugReportContext(pageSignalee),
     });
     setEnvoi(false);
     if (!res.ok) {
@@ -204,8 +216,19 @@ export function BugReportForm() {
         </Button>
       </div>
 
-      {/* Ce qui part avec le rapport, dit avant l'envoi. */}
-      <p className="text-xs leading-snug text-muted-foreground">{t("attached")}</p>
+      {/* Ce qui part avec le rapport, dit avant l'envoi — et la page nommée
+          plutôt qu'annoncée : c'est le seul moyen de voir qu'on signale la
+          bonne, ou qu'aucune n'accompagne le message. */}
+      <div className="space-y-1 text-xs leading-snug text-muted-foreground">
+        {pageSignalee ? (
+          <p>
+            {t("reportedPage")} <code className="break-all font-mono">{pageSignalee}</code>
+          </p>
+        ) : (
+          <p>{t("noReportedPage")}</p>
+        )}
+        <p>{t("attached")}</p>
+      </div>
 
       <Button type="submit" disabled={!envoyable}>
         {envoi ? t("sending") : t("send")}

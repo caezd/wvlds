@@ -4,7 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { getUserId } from "@/lib/auth";
 import { signBugReportAttachments } from "@/lib/bugReportAttachments";
-import type { BugReport } from "@/lib/bugReports";
+import { pageSignaleeDepuis, type BugReport } from "@/lib/bugReports";
 import { BugReportForm } from "@/components/support/BugReportForm";
 
 export async function generateMetadata() {
@@ -24,10 +24,16 @@ export async function generateMetadata() {
  * On filtre malgré tout sur `user_id`, pour qu'un administrateur voie ICI ses
  * propres signalements et non la file entière, qui a sa page.
  */
-export default async function BugReportPage() {
+export default async function BugReportPage({
+  searchParams,
+}: {
+  /** `?from=` : la page d'où le menu nous a amenés (voir pageSignaleeDepuis). */
+  searchParams: Promise<{ from?: string }>;
+}) {
   const t = await getTranslations("bugReport");
   const supabase = await createClient();
   const userId = await getUserId(supabase);
+  const pageSignalee = pageSignaleeDepuis((await searchParams).from);
 
   const { data } = userId
     ? await supabase
@@ -51,7 +57,7 @@ export default async function BugReportPage() {
         <p className="text-sm text-muted-foreground">{t("intro")}</p>
       </header>
 
-      <BugReportForm />
+      <BugReportForm pageSignalee={pageSignalee} />
 
       {reports.length > 0 && (
         <section className="space-y-3">

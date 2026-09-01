@@ -71,18 +71,50 @@ export function isValidBugReportDescription(description: string): boolean {
   return texte.length > 0 && texte.length <= BUG_REPORT_MAX_LENGTH;
 }
 
+/** Longueur au-delà de laquelle un chemin d'application n'en est plus un. */
+const PAGE_SIGNALEE_MAX_LENGTH = 500;
+
 /**
- * Contexte capturé à l'envoi — jamais saisi.
+ * La page que le signalement dit concerner, telle qu'elle arrive dans l'URL du
+ * formulaire.
+ *
+ * Elle est passée en paramètre parce que le formulaire a sa propre page : y
+ * relever `window.location` ne rapporterait plus que « /bug-report ». C'est le
+ * menu qui retient d'où l'on part, au moment où on le quitte.
+ *
+ * N'accepte qu'un chemin de l'application. Une URL absolue — ou un chemin
+ * « //ailleurs », que les navigateurs lisent comme un autre domaine — ferait
+ * annoncer au formulaire une page qui n'est pas la nôtre, et il suffirait d'un
+ * lien piégé pour la lui faire afficher.
+ */
+export function pageSignaleeDepuis(valeur: unknown): string | null {
+  if (typeof valeur !== "string" || valeur.length === 0) return null;
+  if (valeur.length > PAGE_SIGNALEE_MAX_LENGTH) return null;
+  if (valeur[0] !== "/" || valeur[1] === "/" || valeur[1] === "\\") return null;
+  return valeur;
+}
+
+/**
+ * Contexte joint à l'envoi — jamais saisi.
  *
  * Ce sont les deux informations qui rendent un rapport exploitable et qu'un
  * utilisateur ne pense jamais à donner : sur quelle page il était, et avec quel
  * navigateur. Bornées ici pour ne pas dépendre de ce que renvoie le poste
  * client.
+ *
+ * Sans page connue, le champ part vide plutôt que rempli du formulaire
+ * lui-même : « /bug-report » dans la file de tri serait pire qu'une absence,
+ * puisqu'il se lirait comme une réponse.
  */
-export function captureBugReportContext(): { pageUrl: string; userAgent: string } {
-  if (typeof window === "undefined") return { pageUrl: "", userAgent: "" };
+export function bugReportContext(pageSignalee?: string | null): {
+  pageUrl: string;
+  userAgent: string;
+} {
   return {
-    pageUrl: window.location.href.slice(0, BUG_REPORT_URL_MAX_LENGTH),
-    userAgent: window.navigator.userAgent.slice(0, BUG_REPORT_USER_AGENT_MAX_LENGTH),
+    pageUrl: (pageSignalee ?? "").slice(0, BUG_REPORT_URL_MAX_LENGTH),
+    userAgent:
+      typeof window === "undefined"
+        ? ""
+        : window.navigator.userAgent.slice(0, BUG_REPORT_USER_AGENT_MAX_LENGTH),
   };
 }

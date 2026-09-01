@@ -43,9 +43,11 @@ describe("BugReportForm", () => {
     expect(screen.getByRole("button", { name: "Envoyer" })).toBeDisabled();
   });
 
-  it("joint la page courante et le navigateur", async () => {
+// La page vient du menu, pas de `window.location` : le formulaire a sa propre
+  // page, et s'y fier ne rapporterait que « /bug-report ».
+  it("joint la page reçue et le navigateur", async () => {
     const user = userEvent.setup();
-    render(<BugReportForm />);
+    render(<BugReportForm pageSignalee="/w/123?view=members" />);
 
     await user.type(screen.getByRole("textbox", CHAMP), "Le bouton ne répond pas");
     await user.click(screen.getByRole("button", { name: "Envoyer" }));
@@ -54,12 +56,23 @@ describe("BugReportForm", () => {
       expect(envoyer).toHaveBeenCalledWith(
         expect.objectContaining({
           description: "Le bouton ne répond pas",
-          pageUrl: window.location.href,
+          pageUrl: "/w/123?view=members",
           userAgent: window.navigator.userAgent,
           attachments: [],
         }),
       ),
     );
+  });
+
+  it("n'invente aucune page quand on ignore d'où vient l'auteur", async () => {
+    const user = userEvent.setup();
+    render(<BugReportForm />);
+
+    await user.type(screen.getByRole("textbox", CHAMP), "x");
+    await user.click(screen.getByRole("button", { name: "Envoyer" }));
+
+    await waitFor(() => expect(envoyer).toHaveBeenCalled());
+    expect(envoyer.mock.calls[0][0].pageUrl).toBe("");
   });
 
   // Les images partent vers le stockage AVANT le rapport, et seuls leurs
@@ -97,10 +110,19 @@ describe("BugReportForm", () => {
   });
 
   // Ce qui part avec le rapport doit être dit avant l'envoi, pas découvert
-  // après : la page et le navigateur sont des données personnelles.
-  it("annonce ce qui est joint automatiquement", () => {
+  // après : la page et le navigateur sont des données personnelles. Et la page
+  // est NOMMÉE plutôt qu'annoncée — l'annoncer sans la montrer était justement
+  // ce qui rendait la phrase fausse une fois le formulaire sorti du modal.
+  it("nomme la page signalée", () => {
+    render(<BugReportForm pageSignalee="/w/123?view=members" />);
+
+    expect(screen.getByText("/w/123?view=members")).toBeInTheDocument();
+    expect(screen.getByText(/navigateur est joint/)).toBeInTheDocument();
+  });
+
+  it("dit qu'aucune page n'accompagne le signalement, plutôt que d'en taire l'absence", () => {
     render(<BugReportForm />);
 
-    expect(screen.getByText(/joints automatiquement/)).toBeInTheDocument();
+    expect(screen.getByText(/Aucune page/)).toBeInTheDocument();
   });
 });

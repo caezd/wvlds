@@ -181,7 +181,17 @@ export function UserMenuButton({
             <ScrollText className="mr-2 size-4" />
             {tNav("changelog")}
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => router.push("/bug-report")}>
+          {/* La page qu'on quitte est celle qu'on vient signaler : une fois sur
+              le formulaire, `window.location` ne désigne plus que lui. Ce menu
+              est le dernier endroit à savoir d'où l'on part. */}
+          <DropdownMenuItem
+            onClick={() =>
+              router.push(
+                "/bug-report?from=" +
+                  encodeURIComponent(window.location.pathname + window.location.search),
+              )
+            }
+          >
             <Bug className="mr-2 size-4" />
             {tNav("reportBug")}
           </DropdownMenuItem>
