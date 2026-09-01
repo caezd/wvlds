@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
   estDansLeSousArbre,
-  indicateurDInsertion,
   planifierDeplacement,
+  zoneVisee,
   type NoeudArbre,
 } from "@/lib/wikiTreeMove";
 
@@ -37,10 +37,34 @@ const WIKI = arbre(
   ["Ville", "Lieux"],
 );
 
+describe("zoneVisee", () => {
+  it("réserve les bords d'un dossier au passage devant ou derrière", () => {
+    // Le geste qui manquait : poser une page juste au-dessus ou au-dessous
+    // d'un dossier sans qu'elle y entre.
+    expect(zoneVisee(0.1, true)).toBe("avant");
+    expect(zoneVisee(0.9, true)).toBe("apres");
+  });
+
+  it("garde le milieu d'un dossier pour y entrer", () => {
+    expect(zoneVisee(0.3, true)).toBe("dans");
+    expect(zoneVisee(0.5, true)).toBe("dans");
+    expect(zoneVisee(0.7, true)).toBe("dans");
+  });
+
+  it("coupe une page en deux — elle n'accueille rien", () => {
+    expect(zoneVisee(0.49, false)).toBe("avant");
+    expect(zoneVisee(0.51, false)).toBe("apres");
+  });
+
+  it("tient les débordements : la page glissée dépasse la ligne visée", () => {
+    expect(zoneVisee(-2, true)).toBe("avant");
+    expect(zoneVisee(3, true)).toBe("apres");
+  });
+});
+
 describe("planifierDeplacement — sortir d'un dossier", () => {
-  it("fait remonter une page lâchée sur une page racine", () => {
-    // Le geste qui manquait : aucun moyen de ressortir une page d'un dossier.
-    expect(planifierDeplacement(WIKI, "Forêt", "Accueil")).toEqual([
+  it("fait remonter une page posée devant une page racine", () => {
+    expect(planifierDeplacement(WIKI, "Forêt", "Accueil", "avant")).toEqual([
       { id: "Forêt", parent_id: null, sort_index: 0 },
       { id: "Accueil", parent_id: null, sort_index: 1 },
       { id: "Lieux", parent_id: null, sort_index: 2 },
@@ -48,42 +72,52 @@ describe("planifierDeplacement — sortir d'un dossier", () => {
     ]);
   });
 
-  it("la place à l'endroit visé, pas à la fin", () => {
-    const plan = planifierDeplacement(WIKI, "Ville", "Annexe")!;
-    expect(plan.find(e => e.id === "Ville")).toEqual({
-      id: "Ville", parent_id: null, sort_index: 2,
+  it("la fait sortir par le bord d'un dossier, sans y entrer", () => {
+    // Posée sur le quart haut de « Lieux » : elle passe DEVANT le dossier.
+    expect(planifierDeplacement(WIKI, "Forêt", "Lieux", "avant")).toEqual([
+      { id: "Forêt", parent_id: null, sort_index: 1 },
+      { id: "Lieux", parent_id: null, sort_index: 2 },
+      { id: "Annexe", parent_id: null, sort_index: 3 },
+    ]);
+  });
+
+  it("ou par le bord bas, derrière lui", () => {
+    const plan = planifierDeplacement(WIKI, "Forêt", "Lieux", "apres")!;
+    expect(plan.find(e => e.id === "Forêt")).toEqual({
+      id: "Forêt", parent_id: null, sort_index: 2,
     });
   });
 });
 
 describe("planifierDeplacement — entrer dans un dossier", () => {
   it("dépose en dernier dans le dossier visé", () => {
-    expect(planifierDeplacement(WIKI, "Accueil", "Lieux")).toEqual([
+    expect(planifierDeplacement(WIKI, "Accueil", "Lieux", "dans")).toEqual([
       { id: "Accueil", parent_id: "Lieux", sort_index: 2 },
     ]);
   });
 
   it("ne fait rien quand la page y est déjà", () => {
-    // Lâcher « Forêt » sur son propre dossier n'a rien à changer.
-    expect(planifierDeplacement(WIKI, "Forêt", "Lieux")).toEqual([
-      { id: "Forêt", parent_id: null, sort_index: 1 },
-      { id: "Lieux", parent_id: null, sort_index: 2 },
-      { id: "Annexe", parent_id: null, sort_index: 3 },
-    ]);
+    expect(planifierDeplacement(WIKI, "Forêt", "Lieux", "dans")).toBeNull();
+  });
+
+  it("refuse d'entrer dans une page", () => {
+    // La zone « dans » ne se produit pas sur une page, mais rien ne doit
+    // dépendre de ce que l'appelant sait le prévenir.
+    expect(planifierDeplacement(WIKI, "Accueil", "Annexe", "dans")).toBeNull();
   });
 });
 
 describe("planifierDeplacement — réordonner entre pairs", () => {
-  it("descend une page dans sa propre liste", () => {
-    expect(planifierDeplacement(WIKI, "Accueil", "Annexe")).toEqual([
+  it("pose une page derrière une autre de sa liste", () => {
+    expect(planifierDeplacement(WIKI, "Accueil", "Annexe", "apres")).toEqual([
       { id: "Lieux", parent_id: null, sort_index: 0 },
       { id: "Annexe", parent_id: null, sort_index: 1 },
       { id: "Accueil", parent_id: null, sort_index: 2 },
     ]);
   });
 
-  it("remonte une page dans sa propre liste", () => {
-    expect(planifierDeplacement(WIKI, "Annexe", "Accueil")).toEqual([
+  it("ou devant", () => {
+    expect(planifierDeplacement(WIKI, "Annexe", "Accueil", "avant")).toEqual([
       { id: "Annexe", parent_id: null, sort_index: 0 },
       { id: "Accueil", parent_id: null, sort_index: 1 },
       { id: "Lieux", parent_id: null, sort_index: 2 },
@@ -91,36 +125,41 @@ describe("planifierDeplacement — réordonner entre pairs", () => {
   });
 
   it("réordonne à l'intérieur d'un dossier", () => {
-    expect(planifierDeplacement(WIKI, "Ville", "Forêt")).toEqual([
+    expect(planifierDeplacement(WIKI, "Ville", "Forêt", "avant")).toEqual([
       { id: "Ville", parent_id: "Lieux", sort_index: 0 },
       { id: "Forêt", parent_id: "Lieux", sort_index: 1 },
     ]);
+  });
+
+  it("n'écrit rien quand la page est déjà à sa place", () => {
+    expect(planifierDeplacement(WIKI, "Accueil", "Lieux", "avant")).toEqual([]);
   });
 });
 
 describe("planifierDeplacement — gestes sans effet", () => {
   it("ignore un dépôt sur soi-même", () => {
-    expect(planifierDeplacement(WIKI, "Accueil", "Accueil")).toBeNull();
+    expect(planifierDeplacement(WIKI, "Accueil", "Accueil", "avant")).toBeNull();
   });
 
   it("ignore une page inconnue", () => {
-    expect(planifierDeplacement(WIKI, "Fantôme", "Accueil")).toBeNull();
+    expect(planifierDeplacement(WIKI, "Fantôme", "Accueil", "avant")).toBeNull();
   });
 
   it("refuse de mettre un dossier dans sa propre descendance", () => {
     // Sans cette garde, « Lieux » deviendrait l'enfant de sa propre fille :
     // plus aucun chemin depuis la racine n'y mènerait, et le sous-arbre entier
     // disparaîtrait de l'écran sans être supprimé.
-    expect(planifierDeplacement(WIKI, "Lieux", "Forêt")).toBeNull();
+    expect(planifierDeplacement(WIKI, "Lieux", "Forêt", "avant")).toBeNull();
+    expect(planifierDeplacement(WIKI, "Lieux", "Forêt", "apres")).toBeNull();
   });
 
-  it("refuse aussi le dépôt sur un dossier de sa descendance", () => {
+  it("refuse aussi d'entrer dans un dossier de sa descendance", () => {
     const profond = arbre(
       ["d:Racine", null],
       ["d:Milieu", "Racine"],
       ["Feuille", "Milieu"],
     );
-    expect(planifierDeplacement(profond, "Racine", "Milieu")).toBeNull();
+    expect(planifierDeplacement(profond, "Racine", "Milieu", "dans")).toBeNull();
   });
 });
 
@@ -139,62 +178,5 @@ describe("estDansLeSousArbre", () => {
       { id: "b", parent_id: "a", is_folder: true, sort_index: 0 },
     ];
     expect(estDansLeSousArbre(boucle, "z", "a")).toBe(false);
-  });
-});
-
-describe("indicateurDInsertion", () => {
-  it("annonce le trait au-dessus quand la page remonte", () => {
-    expect(indicateurDInsertion(WIKI, "Annexe", "Accueil")).toEqual({
-      cibleId: "Accueil", cote: "avant",
-    });
-  });
-
-  it("l'annonce au-dessous quand elle descend dans sa propre liste", () => {
-    // La page occupera la place visée APRÈS son retrait : le trait doit se
-    // poser sous la cible, sans quoi il montrerait un cran trop haut.
-    expect(indicateurDInsertion(WIKI, "Accueil", "Annexe")).toEqual({
-      cibleId: "Annexe", cote: "apres",
-    });
-  });
-
-  it("annonce au-dessus quand la page vient d'ailleurs", () => {
-    expect(indicateurDInsertion(WIKI, "Forêt", "Annexe")).toEqual({
-      cibleId: "Annexe", cote: "avant",
-    });
-  });
-
-  it("n'annonce rien sur un dossier — le cadre s'en charge", () => {
-    expect(indicateurDInsertion(WIKI, "Accueil", "Lieux")).toBeNull();
-  });
-
-  it("n'annonce rien pour un geste que le déplacement refuserait", () => {
-    expect(indicateurDInsertion(WIKI, "Lieux", "Forêt")).toBeNull();
-  });
-
-  it("annonce exactement ce que l'écriture fera", () => {
-    // L'invariant qui justifie de partager le calcul : un trait qui montrerait
-    // autre chose que le résultat serait pire que pas de trait du tout.
-    const couples: [string, string][] = [
-      ["Accueil", "Annexe"], ["Annexe", "Accueil"],
-      ["Forêt", "Accueil"], ["Ville", "Annexe"], ["Ville", "Forêt"],
-    ];
-    for (const [actif, cible] of couples) {
-      const trait = indicateurDInsertion(WIKI, actif, cible)!;
-      const ecritures = planifierDeplacement(WIKI, actif, cible)!;
-
-      const parentCible = WIKI.find(p => p.id === cible)!.parent_id;
-      const apres = WIKI
-        .map(p => {
-          const e = ecritures.find(e => e.id === p.id);
-          return e ? { ...p, parent_id: e.parent_id, sort_index: e.sort_index } : p;
-        })
-        .filter(p => p.parent_id === parentCible)
-        .sort((a, b) => a.sort_index - b.sort_index)
-        .map(p => p.id);
-
-      const rangDeplace = apres.indexOf(actif);
-      const rangCible = apres.indexOf(cible);
-      expect(trait.cote === "avant" ? rangDeplace + 1 : rangDeplace - 1).toBe(rangCible);
-    }
   });
 });

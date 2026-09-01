@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Wiki",
+    text: "Une page peut enfin être posée juste au-dessus ou juste au-dessous d’un dossier sans y entrer : la ligne d’un dossier se découpe en trois, ses bords pour passer devant ou derrière, son milieu pour entrer. Le trait de dépôt ou le cadre du dossier dit lequel des deux va se produire."
+  },
+  {
+    date: "2026-08",
+    tag: "Wiki",
     text: "Les fiches de notes annoncent elles aussi où elles se poseront pendant un glissé, par le même trait que l’arbre des pages."
   },
   {

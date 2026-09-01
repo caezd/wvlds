@@ -1,17 +1,16 @@
 /**
  * Déplacements dans l'arbre des pages d'un wiki, en pur calcul.
  *
- * Le glisser-déposer produit deux gestes distincts, que l'interface ne
- * distingue pas mais que la donnée, elle, doit distinguer :
+ * ── Trois zones par ligne, et non une ──
+ * Une ligne de dossier signifiait « dedans » sur toute sa hauteur : impossible
+ * de poser une page juste au-dessus ou juste au-dessous d'un dossier sans
+ * qu'elle y entre. La ligne se découpe donc en trois — le quart haut pour
+ * passer devant, le quart bas pour passer derrière, la moitié du milieu pour
+ * entrer. Une page, elle, n'a que deux zones : elle n'accueille rien.
  *
- *  - **déposer SUR un dossier** : la page y entre, en dernier ;
- *  - **déposer SUR une page** : la page vient prendre sa place, et adopte au
- *    passage le parent de celle-ci — c'est ainsi qu'on ressort une page d'un
- *    dossier, en la lâchant sur une page du niveau visé.
- *
- * Sortir d'un dossier était impossible : le réordonnancement refusait tout
- * couple de parents différents, et le dépôt sur dossier ne savait que faire
- * entrer. Il ne restait aucun geste pour faire sortir.
+ * C'est la position du pointeur dans la ligne qui décide, et non la direction
+ * du geste : le trait affiché et l'écriture obéissent ainsi à la même donnée,
+ * celle que l'utilisateur voit.
  */
 
 /** Ce dont un déplacement a besoin de savoir sur une page. */
@@ -28,6 +27,26 @@ export type EcritureDeplacement = {
   parent_id: string | null;
   sort_index: number;
 };
+
+/** Où la page se posera par rapport à la ligne survolée. */
+export type Zone = "avant" | "apres" | "dans";
+
+/** Part de la hauteur d'un dossier réservée à ses bords. */
+const BORD_DOSSIER = 0.25;
+
+/**
+ * Zone visée d'après la position du pointeur dans la ligne survolée.
+ *
+ * `ratio` vaut 0 au sommet de la ligne et 1 à son pied. Il n'est pas borné par
+ * l'appelant : la page glissée est plus haute qu'une ligne, son centre sort
+ * donc régulièrement de la cible.
+ */
+export function zoneVisee(ratio: number, cibleEstDossier: boolean): Zone {
+  if (!cibleEstDossier) return ratio < 0.5 ? "avant" : "apres";
+  if (ratio < BORD_DOSSIER) return "avant";
+  if (ratio > 1 - BORD_DOSSIER) return "apres";
+  return "dans";
+}
 
 /** Enfants directs, dans l'ordre d'affichage. */
 function enfantsDe(pages: NoeudArbre[], parentId: string | null): NoeudArbre[] {
@@ -69,6 +88,7 @@ export function planifierDeplacement(
   pages: NoeudArbre[],
   activeId: string,
   overId: string,
+  zone: Zone,
 ): EcritureDeplacement[] | null {
   if (activeId === overId) return null;
 
@@ -76,9 +96,11 @@ export function planifierDeplacement(
   const over = pages.find(p => p.id === overId);
   if (!active || !over) return null;
 
-  // ── Déposer SUR un dossier : y entrer, en dernier ────────────────────
-  if (over.is_folder && over.id !== active.parent_id) {
+  // ── Entrer dans un dossier : s'y poser en dernier ────────────────────
+  if (zone === "dans") {
+    if (!over.is_folder) return null;
     if (estDansLeSousArbre(pages, active.id, over.id)) return null;
+    if (over.id === active.parent_id) return null;
     return [{
       id: active.id,
       parent_id: over.id,
@@ -86,16 +108,15 @@ export function planifierDeplacement(
     }];
   }
 
-  // ── Déposer SUR une page : prendre sa place, chez son parent ─────────
-  const insertion = indicateurDInsertion(pages, activeId, overId);
-  if (!insertion) return null;
-
+  // ── Se poser devant ou derrière la ligne visée, chez son parent ──────
   const parentCible = over.parent_id;
+  if (estDansLeSousArbre(pages, active.id, parentCible)) return null;
+
   const arrivee = enfantsDe(pages, parentCible).filter(p => p.id !== active.id);
   const place = arrivee.findIndex(p => p.id === over.id);
   if (place === -1) return null;
 
-  arrivee.splice(insertion.cote === "apres" ? place + 1 : place, 0, {
+  arrivee.splice(zone === "apres" ? place + 1 : place, 0, {
     ...active,
     parent_id: parentCible,
   });
@@ -107,42 +128,4 @@ export function planifierDeplacement(
       const avant = pages.find(p => p.id === e.id)!;
       return avant.parent_id !== e.parent_id || avant.sort_index !== e.sort_index;
     });
-}
-
-/** Où le trait de dépôt se pose, ou `null` quand il n'y a pas lieu d'en poser. */
-export type Insertion = { cibleId: string; cote: "avant" | "apres" };
-
-/**
- * Trait qui annonce où la page va se poser.
- *
- * Rendu par le même calcul que `planifierDeplacement`, et non par un second
- * qui lui ressemblerait : un indicateur qui annoncerait autre chose que ce qui
- * va se produire serait pire que pas d'indicateur du tout.
- *
- * `null` sur un dépôt dans un dossier — ce geste-là se signale par le cadre du
- * dossier, pas par un trait entre deux lignes.
- */
-export function indicateurDInsertion(
-  pages: NoeudArbre[],
-  activeId: string,
-  overId: string,
-): Insertion | null {
-  if (activeId === overId) return null;
-
-  const active = pages.find(p => p.id === activeId);
-  const over = pages.find(p => p.id === overId);
-  if (!active || !over) return null;
-
-  if (over.is_folder && over.id !== active.parent_id) return null;
-  if (estDansLeSousArbre(pages, active.id, over.parent_id)) return null;
-
-  const voisins = enfantsDe(pages, over.parent_id);
-  const place = voisins.findIndex(p => p.id === over.id);
-  if (place === -1) return null;
-
-  // Descendre dans sa propre liste : la page occupera la place visée APRÈS son
-  // retrait, le trait se pose donc sous la cible et non au-dessus.
-  const depart = voisins.findIndex(p => p.id === active.id);
-  const descend = depart !== -1 && depart < place;
-  return { cibleId: over.id, cote: descend ? "apres" : "avant" };
 }

@@ -28,7 +28,7 @@ import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
 import {
   DndContext,
   type DragEndEvent,
-  type DragOverEvent,
+  type DragMoveEvent,
   PointerSensor,
   useSensor,
   useSensors,
@@ -61,7 +61,7 @@ import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 import { WIKI_FOOTER, WIKI_FOOTER_BUTTON, WIKI_SUBHEADER, WIKI_SUBHEADER_COUNT } from "./wikiSubHeader";
 import { WikiEditModeToggle } from "./WikiEditModeToggle";
-import { indicateurDInsertion, planifierDeplacement } from "@/lib/wikiTreeMove";
+import { planifierDeplacement, zoneVisee, type Zone } from "@/lib/wikiTreeMove";
 import { slugify } from "@/lib/slug";
 import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import { useColumnResize } from "@/hooks/useColumnResize";
@@ -149,6 +149,8 @@ type SortableTreeNodeProps = {
   createInput: React.ReactNode;
   /** Écart entre lignes voisines — élargi le temps d'un glissé. */
   ecartDesLignes: string;
+  /** Ce dossier va accueillir la page glissée. */
+  estDossierCible: boolean;
   /** Trait de dépôt à poser au-dessus ou au-dessous de cette ligne. */
   insertion: "avant" | "apres" | null;
   onSelect: () => void;
@@ -165,18 +167,19 @@ type SortableTreeNodeProps = {
 
 function SortableTreeNode({
   page, depth, isSelected, isExpanded, isRenaming, renameValue, renameIcon,
-  editMode, subtree, createInput, insertion, ecartDesLignes, onSelect, onToggleFolder,
-  onStartRename,
+  editMode, subtree, createInput, insertion, ecartDesLignes, estDossierCible,
+  onSelect, onToggleFolder, onStartRename,
   onRenameChange, onRenameIconChange, onConfirmRename, onCancelRename,
   onDelete, onCreateInFolder, onToggleRestricted,
 }: SortableTreeNodeProps) {
   const t = useTranslations("wiki");
   const tCommon = useTranslations("common");
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver } =
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: page.id, disabled: !editMode });
 
-  // isOver natif de useSortable — vrai quand un élément est glissé sur ce nœud
-  const isDropTarget = isOver && page.is_folder;
+  // La ZONE et non le simple survol : le pointeur peut être sur la ligne d'un
+  // dossier sans y entrer, quand il en vise le bord haut ou bas.
+  const isDropTarget = estDossierCible;
 
   // Dossier cible : on neutralise le transform (pas de déplacement de tri)
   const style: React.CSSProperties = {
@@ -753,13 +756,14 @@ export function WorldWiki({
 
   // ── DnD ──────────────────────────────────────────────────────
   /**
-   * Couple survolé pendant un glissé — d'où se déduit le trait de dépôt.
+   * Ligne survolée pendant un glissé, et zone visée dans cette ligne.
    *
-   * `onDragOver` est le seul événement qui suive le pointeur ; `onDragEnd`
-   * arrive trop tard pour annoncer quoi que ce soit.
+   * `onDragMove` et non `onDragOver` : le second ne se déclenche qu'au
+   * changement de cible, or la zone change SANS que la cible change — c'est
+   * tout l'intérêt de découper la ligne.
    */
   const [survolGlisse, setSurvolGlisse] = React.useState<
-    { activeId: string; overId: string } | null
+    { activeId: string; overId: string; zone: Zone } | null
   >(null);
 
   /**
@@ -777,9 +781,13 @@ export function WorldWiki({
    */
   const ecartDesLignes = glisseEnCours ? "gap-2.5" : "gap-0.5";
 
-  const insertion = survolGlisse && pages
-    ? indicateurDInsertion(pages, survolGlisse.activeId, survolGlisse.overId)
+  /** Trait de dépôt courant — rien quand la page va ENTRER dans le dossier. */
+  const insertion = survolGlisse && survolGlisse.zone !== "dans"
+    ? { cibleId: survolGlisse.overId, cote: survolGlisse.zone }
     : null;
+
+  /** Dossier qui va accueillir la page — c'est lui qui prend le cadre. */
+  const dossierCible = survolGlisse?.zone === "dans" ? survolGlisse.overId : null;
 
   function onDragStart() {
     setGlisseEnCours(true);
@@ -790,15 +798,35 @@ export function WorldWiki({
     setSurvolGlisse(null);
   }
 
-  function onDragOver({ active, over }: DragOverEvent) {
-    setSurvolGlisse(over ? { activeId: String(active.id), overId: String(over.id) } : null);
+  function onDragMove({ active, over }: DragMoveEvent) {
+    if (!over || !pages) { setSurvolGlisse(null); return; }
+
+    const cible = pages.find(p => p.id === over.id);
+    // Le centre de la page glissée, rapporté à la hauteur de la ligne visée :
+    // 0 à son sommet, 1 à son pied. Il sort de cet intervalle dès que la page
+    // glissée dépasse la ligne — `zoneVisee` s'en accommode.
+    const boite = active.rect.current.translated;
+    const ratio = boite && over.rect.height > 0
+      ? (boite.top + boite.height / 2 - over.rect.top) / over.rect.height
+      : 0.5;
+
+    setSurvolGlisse({
+      activeId: String(active.id),
+      overId: String(over.id),
+      zone: zoneVisee(ratio, cible?.is_folder ?? false),
+    });
   }
 
   function onDragEnd({ active, over }: DragEndEvent) {
     finDuGlisse();
     if (!over || !pages) return;
 
-    const ecritures = planifierDeplacement(pages, String(active.id), String(over.id));
+    const ecritures = planifierDeplacement(
+      pages,
+      String(active.id),
+      String(over.id),
+      survolGlisse?.zone ?? "avant",
+    );
     if (!ecritures || ecritures.length === 0) return;
 
     // Ordre d'origine, pour le rétablir si l'écriture est refusée.
@@ -933,6 +961,7 @@ export function WorldWiki({
               // dossiers ancêtres et referme le tiroir mobile. Sans cela, sur
               // téléphone, choisir une page la sélectionnait sous un tiroir
               // resté ouvert — rien ne semblait se passer.
+              estDossierCible={dossierCible === page.id}
               onSelect={() => selectPageById(page.id)}
               onToggleFolder={() => toggleFolder(page.id)}
               onStartRename={() => { setRenamingId(page.id); setRenameValue(page.title); setRenameIcon(page.icon ?? ""); }}
@@ -993,7 +1022,7 @@ export function WorldWiki({
             <DndContext
               sensors={sensors}
               onDragStart={onDragStart}
-              onDragOver={onDragOver}
+              onDragMove={onDragMove}
               onDragEnd={onDragEnd}
               onDragCancel={finDuGlisse}
             >
