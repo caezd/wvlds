@@ -374,13 +374,15 @@ function SortableTreeNode({
 /**
  * Bande de dépôt posée sous le contenu d'un dossier : « à côté de lui ».
  *
- * Sans elle, une page ne peut pas sortir par le bas. La boîte du dossier
- * englobe son contenu ; sa bande basse tombe donc sur ses enfants, et tout ce
- * qu'on y lâche atterrit DEDANS. Cette bande-ci est hors de cette boîte : c'est
- * le seul endroit d'où l'on puisse viser l'après.
+ * Sans elle, une page ne peut pas sortir par le bas d'un dossier qui ferme sa
+ * liste. La boîte du dossier englobe son contenu ; sa bande basse tombe donc
+ * sur ses enfants, et tout ce qu'on y lâche atterrit DEDANS. Cette bande-ci est
+ * hors de cette boîte : c'est le seul endroit d'où l'on puisse viser l'après.
  *
- * Elle n'existe qu'en écriture — hors de ce mode, rien ne se glisse et elle ne
- * serait qu'un blanc de plus dans la colonne.
+ * Un dossier suivi d'une autre ligne n'en a pas besoin — le sommet de cette
+ * ligne dit déjà « après lui » — et n'en reçoit pas : ce serait un blanc de
+ * plus dans la colonne. Elle n'existe pas davantage hors du mode écriture,
+ * où rien ne se glisse.
  */
 function ZoneApresDossier({
   pageId, depth, active,
@@ -984,7 +986,7 @@ export function WorldWiki({
         // du dossier dément.
         strategy={dossierCible ? SANS_DEPLACEMENT : verticalListSortingStrategy}
       >
-        {children.map(page => {
+        {children.map((page, rang) => {
           const isExpanded = expandedFolders.has(page.id);
           const ligne = (
             <SortableTreeNode
@@ -1019,7 +1021,11 @@ export function WorldWiki({
               onToggleRestricted={() => void toggleRestricted(page)}
             />
           );
-          if (!isEditMode || !page.is_folder) return ligne;
+          // La bande ne s'ouvre que sous le DERNIER dossier d'une liste :
+          // ailleurs, le sommet de la ligne suivante dit déjà « après ce
+          // dossier », et la bande n'ajouterait qu'un blanc dans la colonne.
+          const dernier = rang === children.length - 1;
+          if (!isEditMode || !page.is_folder || !dernier) return ligne;
           return (
             <React.Fragment key={page.id}>
               {ligne}

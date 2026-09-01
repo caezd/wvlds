@@ -14,7 +14,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Wiki",
-    text: "Une page peut enfin être posée juste au-dessus ou juste au-dessous d’un dossier sans y entrer : la ligne d’un dossier se découpe en trois, ses bords pour passer devant ou derrière, son milieu pour entrer. Un dossier déplié reçoit en plus une bande sous son contenu — c’est là qu’on vise pour se ranger après lui, le bas de sa ligne appartenant à ses enfants. L’écart qui s’ouvre dans la liste, le cadre du dossier ou la bande allumée dit lequel des trois va se produire."
+    text: "Une page peut enfin être posée juste au-dessus ou juste au-dessous d’un dossier sans y entrer : la ligne d’un dossier se découpe en trois, ses bords pour passer devant ou derrière, son milieu pour entrer. Un dossier qui ferme sa liste reçoit en plus une bande sous son contenu — c’est là qu’on vise pour se ranger après lui, le bas de sa ligne appartenant à ses enfants ; ailleurs, le sommet de la ligne suivante le dit déjà. L’écart qui s’ouvre dans la liste, le cadre du dossier ou la bande allumée dit lequel des trois va se produire."
   },
   {
     date: "2026-08",
