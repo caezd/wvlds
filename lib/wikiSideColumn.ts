@@ -32,28 +32,29 @@ export function mesurePleineDuCorps(grandEcran: boolean, rem: number): number {
  * La colonne tient-elle sans rogner sur le corps de l'article ?
  *
  * `largeurZone` vaut `null` tant que rien n'est mesuré — au rendu serveur, et
- * jusqu'au premier passage de l'observateur. `siInconnu` dit alors de quel
- * côté se tromper, et les deux colonnes ne répondent pas pareil :
+ * jusqu'au premier passage de l'observateur. On répond alors « non » pour les
+ * deux colonnes : mieux vaut les voir arriver que partir, et la colonne des
+ * notes ne peut de toute façon pas se permettre d'être montée pour rien —
+ * deux panneaux ouvrent deux fois le même canal Realtime, ce que supabase-js
+ * refuse.
  *
- * - la colonne des notes prend `false`. La monter pour la retirer ouvrirait
- *   deux fois le même canal Realtime, ce que supabase-js refuse.
- * - l'arbre des pages prend `true`. Il n'ouvre aucun canal, et une classe
- *   `lg:` lui sert de plancher : sur téléphone il reste caché de toute façon,
- *   sans clignoter le temps d'une image.
+ * Aucune classe `lg:` ne double cette règle. Un plancher CSS a existé, pour
+ * éviter que l'arbre des pages ne clignote sur téléphone avant la mesure : il
+ * contredisait la mesure sur toute une bande de largeurs, où la règle disait
+ * « en colonne » — donc pas de bouton de tiroir — pendant que le CSS la
+ * cachait. Ni colonne ni bouton.
  */
 export function laColonneTient({
   largeurZone,
   largeurColonne,
   grandEcran,
   rem,
-  siInconnu = false,
 }: {
   largeurZone: number | null;
   largeurColonne: number;
   grandEcran: boolean;
   rem: number;
-  siInconnu?: boolean;
 }): boolean {
-  if (largeurZone === null) return siInconnu;
+  if (largeurZone === null) return false;
   return largeurZone - largeurColonne >= mesurePleineDuCorps(grandEcran, rem);
 }

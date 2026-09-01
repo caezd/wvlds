@@ -11,7 +11,7 @@ const NOTES = 320;
 function colonnes(largeurZone: number | null) {
   const commun = { largeurZone, grandEcran: true, rem: REM };
   return {
-    pages: laColonneTient({ ...commun, largeurColonne: NAV, siInconnu: true }),
+    pages: laColonneTient({ ...commun, largeurColonne: NAV }),
     notes: laColonneTient({ ...commun, largeurColonne: NAV + NOTES }),
   };
 }
@@ -61,9 +61,9 @@ describe("la cascade des deux colonnes", () => {
 });
 
 describe("laColonneTient — avant toute mesure", () => {
-  it("se tait dans le sens que l'appelant lui donne", () => {
-    // Les notes n'osent pas : deux panneaux montés ouvriraient deux fois le
-    // même canal Realtime. L'arbre des pages, lui, n'en ouvre aucun.
-    expect(colonnes(null)).toEqual({ pages: true, notes: false });
+  it("n'ose aucune colonne", () => {
+    // Mieux vaut les voir arriver que partir — et deux panneaux de notes
+    // montés ouvriraient deux fois le même canal Realtime.
+    expect(colonnes(null)).toEqual({ pages: false, notes: false });
   });
 });

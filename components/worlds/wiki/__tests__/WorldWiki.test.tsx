@@ -93,6 +93,29 @@ const NESTED_PAGE = {
 };
 
 /**
+ * Une fenêtre assez large pour les deux colonnes.
+ *
+ * Le wiki ne les monte que si la zone mesurée laisse à l'article sa pleine
+ * mesure. Sous jsdom rien n'a de taille et l'observateur de `vitest.setup.ts`
+ * ne rappelle jamais : sans ce souffleur, l'arbre de navigation serait absent
+ * de tous ces tests, qui portent sur la disposition de bureau.
+ */
+const LARGEUR_ZONE = 1600;
+beforeEach(() => {
+  window.ResizeObserver = class {
+    constructor(private rappel: ResizeObserverCallback) {}
+    observe(cible: Element) {
+      this.rappel(
+        [{ target: cible, contentRect: { width: LARGEUR_ZONE } } as unknown as ResizeObserverEntry],
+        this as unknown as ResizeObserver,
+      );
+    }
+    unobserve() {}
+    disconnect() {}
+  } as unknown as typeof ResizeObserver;
+});
+
+/**
  * Le titre d'une page dans l'arbre de navigation. Depuis que la première page
  * s'ouvre d'office, le même texte apparaît aussi en titre du contenu : une
  * requête par texte seul en trouverait deux.

@@ -861,7 +861,7 @@ export function WorldWiki({
    */
   const enRedimensionnement = navResizing || panelResizing;
   const colonneNav = enRedimensionnement || laColonneTient({
-    largeurZone, largeurColonne: navWidth, grandEcran, rem, siInconnu: true,
+    largeurZone, largeurColonne: navWidth, grandEcran, rem,
   });
   const colonneLaterale = enRedimensionnement || laColonneTient({
     largeurZone, largeurColonne: navWidth + panelWidth, grandEcran, rem,
@@ -1362,10 +1362,7 @@ export function WorldWiki({
               étant déjà partie. */}
           {colonneNav && !navCollapsed && (
             <div
-              // La classe `lg:` reste, en plancher : la mesure n'arrive qu'après
-              // le premier rendu, et sans elle la colonne clignoterait sur
-              // téléphone le temps d'une image.
-              className="hidden shrink-0 flex-col border-r border-border-soft lg:flex"
+              className="flex shrink-0 flex-col border-r border-border-soft"
               style={{ width: navWidth }}
             >
               {arbreDesPages()}
