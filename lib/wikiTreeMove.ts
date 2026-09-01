@@ -4,13 +4,21 @@
  * ── Trois zones par ligne, et non une ──
  * Une ligne de dossier signifiait « dedans » sur toute sa hauteur : impossible
  * de poser une page juste au-dessus ou juste au-dessous d'un dossier sans
- * qu'elle y entre. La ligne se découpe donc en trois — le quart haut pour
- * passer devant, le quart bas pour passer derrière, la moitié du milieu pour
+ * qu'elle y entre. La ligne se découpe donc en trois — une bande au sommet
+ * pour passer devant, une au pied pour passer derrière, tout le reste pour
  * entrer. Une page, elle, n'a que deux zones : elle n'accueille rien.
  *
- * C'est la position du pointeur dans la ligne qui décide, et non la direction
- * du geste : le trait affiché et l'écriture obéissent ainsi à la même donnée,
- * celle que l'utilisateur voit.
+ * ── En pixels, et non en fractions ──
+ * Les bandes valaient le quart de la hauteur survolée. Or la boîte d'un
+ * dossier déplié contient tout son contenu : son quart bas tombait vingt
+ * lignes plus bas que son intitulé, hors d'atteinte. Une bande de huit pixels
+ * garde la même taille quelle que soit la boîte — et c'est la bande « après »
+ * d'un dossier déplié, inatteignable par construction, que remplace la zone
+ * dédiée posée sous son contenu.
+ *
+ * C'est la position du pointeur qui décide, et non la direction du geste :
+ * l'écart montré et l'écriture obéissent ainsi à la même donnée, celle que
+ * l'utilisateur voit.
  */
 
 /** Ce dont un déplacement a besoin de savoir sur une page. */
@@ -31,22 +39,34 @@ export type EcritureDeplacement = {
 /** Où la page se posera par rapport à la ligne survolée. */
 export type Zone = "avant" | "apres" | "dans";
 
-/** Part de la hauteur d'un dossier réservée à ses bords. */
-const BORD_DOSSIER = 0.25;
+/** Hauteur des bandes « devant » et « derrière » d'un dossier, en pixels. */
+export const BANDE_BORD = 8;
 
 /**
- * Zone visée d'après la position du pointeur dans la ligne survolée.
+ * Zone visée d'après la position du pointeur dans la boîte survolée.
  *
- * `ratio` vaut 0 au sommet de la ligne et 1 à son pied. Il n'est pas borné par
- * l'appelant : la page glissée est plus haute qu'une ligne, son centre sort
- * donc régulièrement de la cible.
+ * `y` se compte depuis le sommet de la boîte. Il n'est pas borné par
+ * l'appelant : le pointeur sort de la cible entre deux mesures.
  */
-export function zoneVisee(ratio: number, cibleEstDossier: boolean): Zone {
-  if (!cibleEstDossier) return ratio < 0.5 ? "avant" : "apres";
-  if (ratio < BORD_DOSSIER) return "avant";
-  if (ratio > 1 - BORD_DOSSIER) return "apres";
+export function zoneVisee(y: number, hauteur: number, cibleEstDossier: boolean): Zone {
+  if (!cibleEstDossier) return y < hauteur / 2 ? "avant" : "apres";
+  if (y < BANDE_BORD) return "avant";
+  if (y > hauteur - BANDE_BORD) return "apres";
   return "dans";
 }
+
+/**
+ * La bande posée sous le contenu d'un dossier déplié, et qui vaut « après lui ».
+ *
+ * Elle a son propre identifiant de dépôt : la boîte du dossier englobe son
+ * contenu, une page lâchée au bas de cette boîte tombe donc sur le dernier
+ * enfant — c'est-à-dire DANS le dossier. La bande est en dehors de cette
+ * boîte, elle seule peut dire « à côté ».
+ */
+const PREFIXE_APRES = "apres:";
+export const idZoneApres = (pageId: string) => `${PREFIXE_APRES}${pageId}`;
+export const pageDeZoneApres = (dropId: string) =>
+  dropId.startsWith(PREFIXE_APRES) ? dropId.slice(PREFIXE_APRES.length) : null;
 
 /** Enfants directs, dans l'ordre d'affichage. */
 function enfantsDe(pages: NoeudArbre[], parentId: string | null): NoeudArbre[] {

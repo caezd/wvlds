@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
   estDansLeSousArbre,
+  idZoneApres,
+  pageDeZoneApres,
   planifierDeplacement,
   zoneVisee,
   type NoeudArbre,
@@ -37,28 +39,51 @@ const WIKI = arbre(
   ["Ville", "Lieux"],
 );
 
+/** Hauteur d'une ligne de l'arbre, en pixels. */
+const LIGNE = 28;
+
 describe("zoneVisee", () => {
   it("réserve les bords d'un dossier au passage devant ou derrière", () => {
     // Le geste qui manquait : poser une page juste au-dessus ou au-dessous
     // d'un dossier sans qu'elle y entre.
-    expect(zoneVisee(0.1, true)).toBe("avant");
-    expect(zoneVisee(0.9, true)).toBe("apres");
+    expect(zoneVisee(3, LIGNE, true)).toBe("avant");
+    expect(zoneVisee(25, LIGNE, true)).toBe("apres");
   });
 
   it("garde le milieu d'un dossier pour y entrer", () => {
-    expect(zoneVisee(0.3, true)).toBe("dans");
-    expect(zoneVisee(0.5, true)).toBe("dans");
-    expect(zoneVisee(0.7, true)).toBe("dans");
+    expect(zoneVisee(9, LIGNE, true)).toBe("dans");
+    expect(zoneVisee(14, LIGNE, true)).toBe("dans");
+    expect(zoneVisee(19, LIGNE, true)).toBe("dans");
+  });
+
+  it("garde ses bandes à huit pixels, si haute que soit la boîte", () => {
+    // La boîte d'un dossier déplié contient tout son contenu. Une bande en
+    // fraction de hauteur y tombait vingt lignes plus bas que l'intitulé : le
+    // dossier n'était plus atteignable que par ses enfants.
+    const DEPLIE = 400;
+    expect(zoneVisee(4, DEPLIE, true)).toBe("avant");
+    expect(zoneVisee(20, DEPLIE, true)).toBe("dans");
+    expect(zoneVisee(100, DEPLIE, true)).toBe("dans");
   });
 
   it("coupe une page en deux — elle n'accueille rien", () => {
-    expect(zoneVisee(0.49, false)).toBe("avant");
-    expect(zoneVisee(0.51, false)).toBe("apres");
+    expect(zoneVisee(13, LIGNE, false)).toBe("avant");
+    expect(zoneVisee(15, LIGNE, false)).toBe("apres");
   });
 
-  it("tient les débordements : la page glissée dépasse la ligne visée", () => {
-    expect(zoneVisee(-2, true)).toBe("avant");
-    expect(zoneVisee(3, true)).toBe("apres");
+  it("tient les débordements : le pointeur sort de la boîte visée", () => {
+    expect(zoneVisee(-20, LIGNE, true)).toBe("avant");
+    expect(zoneVisee(60, LIGNE, true)).toBe("apres");
+  });
+});
+
+describe("la bande « après un dossier »", () => {
+  it("se reconnaît à son identifiant, et rend le dossier visé", () => {
+    expect(pageDeZoneApres(idZoneApres("Lieux"))).toBe("Lieux");
+  });
+
+  it("ne se confond pas avec l'identifiant d'une page", () => {
+    expect(pageDeZoneApres("Lieux")).toBeNull();
   });
 });
 

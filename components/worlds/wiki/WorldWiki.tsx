@@ -28,10 +28,14 @@ import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
 import {
   DndContext,
   DragOverlay,
+  type CollisionDetection,
   type DragEndEvent,
   type DragMoveEvent,
   type DragStartEvent,
   PointerSensor,
+  pointerWithin,
+  rectIntersection,
+  useDroppable,
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
@@ -64,7 +68,13 @@ import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 import { WIKI_FOOTER, WIKI_FOOTER_BUTTON, WIKI_SUBHEADER, WIKI_SUBHEADER_COUNT } from "./wikiSubHeader";
 import { WikiEditModeToggle } from "./WikiEditModeToggle";
-import { planifierDeplacement, zoneVisee, type Zone } from "@/lib/wikiTreeMove";
+import {
+  idZoneApres,
+  pageDeZoneApres,
+  planifierDeplacement,
+  zoneVisee,
+  type Zone,
+} from "@/lib/wikiTreeMove";
 import { slugify } from "@/lib/slug";
 import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import { useColumnResize } from "@/hooks/useColumnResize";
@@ -361,6 +371,41 @@ function SortableTreeNode({
   );
 }
 
+/**
+ * Bande de dépôt posée sous le contenu d'un dossier : « à côté de lui ».
+ *
+ * Sans elle, une page ne peut pas sortir par le bas. La boîte du dossier
+ * englobe son contenu ; sa bande basse tombe donc sur ses enfants, et tout ce
+ * qu'on y lâche atterrit DEDANS. Cette bande-ci est hors de cette boîte : c'est
+ * le seul endroit d'où l'on puisse viser l'après.
+ *
+ * Elle n'existe qu'en écriture — hors de ce mode, rien ne se glisse et elle ne
+ * serait qu'un blanc de plus dans la colonne.
+ */
+function ZoneApresDossier({
+  pageId, depth, active,
+}: { pageId: string; depth: number; active: boolean }) {
+  const { setNodeRef } = useDroppable({ id: idZoneApres(pageId) });
+
+  return (
+    <div
+      ref={setNodeRef}
+      aria-hidden
+      className="h-2 shrink-0 py-0.5"
+      style={{ paddingLeft: `${0.5 + depth}rem`, paddingRight: "0.25rem" }}
+    >
+      {/* Le même vocabulaire que le cadre d'un dossier : la cible s'allume,
+          elle ne dessine pas un trait entre deux lignes. */}
+      <div
+        className={cn(
+          "h-full rounded-full transition-colors",
+          active && "bg-primary/40",
+        )}
+      />
+    </div>
+  );
+}
+
 // ── WorldWiki ─────────────────────────────────────────────────────────────────
 
 export function WorldWiki({
@@ -449,6 +494,22 @@ export function WorldWiki({
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
   );
+
+  /**
+   * La boîte qui CONTIENT le pointeur, et non celle qu'on recouvre le mieux.
+   *
+   * `rectIntersection`, la détection par défaut, classe les cibles par aire
+   * commune rapportée à leur union. Un dossier déplié, dont la boîte englobe
+   * tout son contenu, y perd toujours contre ses propres enfants : viser son
+   * intitulé désignait un enfant, et le dossier lui-même était hors d'atteinte.
+   *
+   * Le repli garde l'ancienne détection pour les instants où le pointeur ne
+   * survole plus rien — sous la dernière ligne, dans la marge de la colonne.
+   */
+  const detection = React.useCallback<CollisionDetection>(args => {
+    const sousLePointeur = pointerWithin(args);
+    return sousLePointeur.length > 0 ? sousLePointeur : rectIntersection(args);
+  }, []);
 
   /** Page en cours de glissé — c'est elle que l'aperçu flottant montre. */
   const [idGlisse, setIdGlisse] = React.useState<string | null>(null);
@@ -739,7 +800,7 @@ export function WorldWiki({
    * tout l'intérêt de découper la ligne.
    */
   const [survolGlisse, setSurvolGlisse] = React.useState<
-    { activeId: string; overId: string; zone: Zone } | null
+    { activeId: string; overId: string; zone: Zone; viaBande: boolean } | null
   >(null);
 
   /** La page tenue par le curseur, s'il y en a une. */
@@ -747,6 +808,9 @@ export function WorldWiki({
 
   /** Dossier qui va accueillir la page — c'est lui qui prend le cadre. */
   const dossierCible = survolGlisse?.zone === "dans" ? survolGlisse.overId : null;
+
+  /** Bande allumée : la page se posera sous le contenu de ce dossier. */
+  const bandeCible = survolGlisse?.viaBande ? survolGlisse.overId : null;
 
   function onDragStart({ active }: DragStartEvent) {
     setIdGlisse(String(active.id));
@@ -758,22 +822,32 @@ export function WorldWiki({
     setSurvolGlisse(null);
   }
 
-  function onDragMove({ active, over }: DragMoveEvent) {
+  function onDragMove({ active, over, delta, activatorEvent }: DragMoveEvent) {
     if (!over || !pages) { setSurvolGlisse(null); return; }
+    const activeId = String(active.id);
+
+    // La bande sous un dossier ne se découpe pas : elle vaut « après lui ».
+    const dossierDeLaBande = pageDeZoneApres(String(over.id));
+    if (dossierDeLaBande) {
+      setSurvolGlisse({ activeId, overId: dossierDeLaBande, zone: "apres", viaBande: true });
+      return;
+    }
+
+    // Le pointeur lui-même, et non le centre de la page glissée : c'est lui qui
+    // a désigné la cible, les deux doivent donc lire la même position. Il se
+    // reconstruit du point de départ plus le déplacement — dnd-kit ne le donne
+    // pas autrement.
+    const depart = activatorEvent as { clientY?: number };
+    const y = typeof depart.clientY === "number"
+      ? depart.clientY + delta.y - over.rect.top
+      : over.rect.height / 2;
 
     const cible = pages.find(p => p.id === over.id);
-    // Le centre de la page glissée, rapporté à la hauteur de la ligne visée :
-    // 0 à son sommet, 1 à son pied. Il sort de cet intervalle dès que la page
-    // glissée dépasse la ligne — `zoneVisee` s'en accommode.
-    const boite = active.rect.current.translated;
-    const ratio = boite && over.rect.height > 0
-      ? (boite.top + boite.height / 2 - over.rect.top) / over.rect.height
-      : 0.5;
-
     setSurvolGlisse({
-      activeId: String(active.id),
+      activeId,
       overId: String(over.id),
-      zone: zoneVisee(ratio, cible?.is_folder ?? false),
+      zone: zoneVisee(y, over.rect.height, cible?.is_folder ?? false),
+      viaBande: false,
     });
   }
 
@@ -781,10 +855,12 @@ export function WorldWiki({
     finDuGlisse();
     if (!over || !pages) return;
 
+    // La cible vient du survol et non de `over` : lui seul a résolu la bande
+    // « après » en son dossier. Les deux se valent partout ailleurs.
     const ecritures = planifierDeplacement(
       pages,
       String(active.id),
-      String(over.id),
+      survolGlisse?.overId ?? String(over.id),
       survolGlisse?.zone ?? "avant",
     );
     if (!ecritures || ecritures.length === 0) return;
@@ -910,7 +986,7 @@ export function WorldWiki({
       >
         {children.map(page => {
           const isExpanded = expandedFolders.has(page.id);
-          return (
+          const ligne = (
             <SortableTreeNode
               key={page.id}
               page={page}
@@ -942,6 +1018,17 @@ export function WorldWiki({
               }}
               onToggleRestricted={() => void toggleRestricted(page)}
             />
+          );
+          if (!isEditMode || !page.is_folder) return ligne;
+          return (
+            <React.Fragment key={page.id}>
+              {ligne}
+              <ZoneApresDossier
+                pageId={page.id}
+                depth={depth}
+                active={bandeCible === page.id}
+              />
+            </React.Fragment>
           );
         })}
         {creating?.parentId === parentId && parentId === null && renderCreateInput(null, depth)}
@@ -987,6 +1074,7 @@ export function WorldWiki({
           <nav className="flex flex-col gap-0.5 px-1">
             <DndContext
               sensors={sensors}
+              collisionDetection={detection}
               onDragStart={onDragStart}
               onDragMove={onDragMove}
               onDragEnd={onDragEnd}
