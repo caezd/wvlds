@@ -28,6 +28,7 @@ import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
 import {
   DndContext,
   type DragEndEvent,
+  type DragOverEvent,
   PointerSensor,
   useSensor,
   useSensors,
@@ -61,7 +62,7 @@ import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 import { WIKI_FOOTER, WIKI_FOOTER_BUTTON, WIKI_SUBHEADER, WIKI_SUBHEADER_COUNT } from "./wikiSubHeader";
 import { WikiEditModeToggle } from "./WikiEditModeToggle";
-import { planifierDeplacement } from "@/lib/wikiTreeMove";
+import { indicateurDInsertion, planifierDeplacement } from "@/lib/wikiTreeMove";
 import { slugify } from "@/lib/slug";
 import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import { useColumnResize } from "@/hooks/useColumnResize";
@@ -146,6 +147,8 @@ type SortableTreeNodeProps = {
   editMode: boolean;
   subtree: React.ReactNode;
   createInput: React.ReactNode;
+  /** Trait de dépôt à poser au-dessus ou au-dessous de cette ligne. */
+  insertion: "avant" | "apres" | null;
   onSelect: () => void;
   onToggleFolder: () => void;
   onStartRename: () => void;
@@ -160,7 +163,7 @@ type SortableTreeNodeProps = {
 
 function SortableTreeNode({
   page, depth, isSelected, isExpanded, isRenaming, renameValue, renameIcon,
-  editMode, subtree, createInput, onSelect, onToggleFolder, onStartRename,
+  editMode, subtree, createInput, insertion, onSelect, onToggleFolder, onStartRename,
   onRenameChange, onRenameIconChange, onConfirmRename, onCancelRename,
   onDelete, onCreateInFolder, onToggleRestricted,
 }: SortableTreeNodeProps) {
@@ -183,7 +186,19 @@ function SortableTreeNode({
     // `gap-0.5` ici comme sur les deux autres conteneurs de l'arbre : l'écart
     // entre deux lignes doit être le même qu'elles soient sœurs, ou qu'un
     // dossier sépare l'une de l'autre.
-    <div ref={setNodeRef} style={style} className="flex flex-col gap-0.5">
+    <div ref={setNodeRef} style={style} className="relative flex flex-col gap-0.5">
+      {/* Deux pixels d'accent entre deux lignes : il dit OÙ la page se posera,
+          là où le cadre d'un dossier dit DANS quoi. Posé en absolu pour ne pas
+          décaler l'arbre au passage du pointeur. */}
+      {insertion && (
+        <span
+          aria-hidden
+          className={cn(
+            "pointer-events-none absolute inset-x-0 z-10 h-0.5 rounded-full bg-accent",
+            insertion === "avant" ? "-top-px" : "-bottom-px",
+          )}
+        />
+      )}
       <div
         className={cn(
           "flex cursor-pointer select-none items-center gap-1.5 rounded-md py-1 text-sm",
@@ -716,7 +731,26 @@ export function WorldWiki({
   }, [searchQuery, pages]);
 
   // ── DnD ──────────────────────────────────────────────────────
+  /**
+   * Couple survolé pendant un glissé — d'où se déduit le trait de dépôt.
+   *
+   * `onDragOver` est le seul événement qui suive le pointeur ; `onDragEnd`
+   * arrive trop tard pour annoncer quoi que ce soit.
+   */
+  const [survolGlisse, setSurvolGlisse] = React.useState<
+    { activeId: string; overId: string } | null
+  >(null);
+
+  const insertion = survolGlisse && pages
+    ? indicateurDInsertion(pages, survolGlisse.activeId, survolGlisse.overId)
+    : null;
+
+  function onDragOver({ active, over }: DragOverEvent) {
+    setSurvolGlisse(over ? { activeId: String(active.id), overId: String(over.id) } : null);
+  }
+
   function onDragEnd({ active, over }: DragEndEvent) {
+    setSurvolGlisse(null);
     if (!over || !pages) return;
 
     const ecritures = planifierDeplacement(pages, String(active.id), String(over.id));
@@ -848,6 +882,7 @@ export function WorldWiki({
               editMode={isEditMode}
               subtree={page.is_folder && isExpanded ? renderTree(page.id, depth + 1) : null}
               createInput={creating?.parentId === page.id ? renderCreateInput(page.id, depth + 1) : null}
+              insertion={insertion?.cibleId === page.id ? insertion.cote : null}
               // `selectPageById` et non `setSelectedId` : lui seul déplie les
               // dossiers ancêtres et referme le tiroir mobile. Sans cela, sur
               // téléphone, choisir une page la sélectionnait sous un tiroir
@@ -909,7 +944,12 @@ export function WorldWiki({
           </div>
         ) : searchQuery.trim() === "" ? (
           <nav className="flex flex-col gap-0.5 px-1">
-            <DndContext sensors={sensors} onDragEnd={onDragEnd}>
+            <DndContext
+              sensors={sensors}
+              onDragOver={onDragOver}
+              onDragEnd={onDragEnd}
+              onDragCancel={() => setSurvolGlisse(null)}
+            >
               {renderTree(null)}
             </DndContext>
             {pages.length === 0 && !creating && (

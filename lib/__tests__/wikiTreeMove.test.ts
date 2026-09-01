@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   estDansLeSousArbre,
+  indicateurDInsertion,
   planifierDeplacement,
   type NoeudArbre,
 } from "@/lib/wikiTreeMove";
@@ -138,5 +139,62 @@ describe("estDansLeSousArbre", () => {
       { id: "b", parent_id: "a", is_folder: true, sort_index: 0 },
     ];
     expect(estDansLeSousArbre(boucle, "z", "a")).toBe(false);
+  });
+});
+
+describe("indicateurDInsertion", () => {
+  it("annonce le trait au-dessus quand la page remonte", () => {
+    expect(indicateurDInsertion(WIKI, "Annexe", "Accueil")).toEqual({
+      cibleId: "Accueil", cote: "avant",
+    });
+  });
+
+  it("l'annonce au-dessous quand elle descend dans sa propre liste", () => {
+    // La page occupera la place visée APRÈS son retrait : le trait doit se
+    // poser sous la cible, sans quoi il montrerait un cran trop haut.
+    expect(indicateurDInsertion(WIKI, "Accueil", "Annexe")).toEqual({
+      cibleId: "Annexe", cote: "apres",
+    });
+  });
+
+  it("annonce au-dessus quand la page vient d'ailleurs", () => {
+    expect(indicateurDInsertion(WIKI, "Forêt", "Annexe")).toEqual({
+      cibleId: "Annexe", cote: "avant",
+    });
+  });
+
+  it("n'annonce rien sur un dossier — le cadre s'en charge", () => {
+    expect(indicateurDInsertion(WIKI, "Accueil", "Lieux")).toBeNull();
+  });
+
+  it("n'annonce rien pour un geste que le déplacement refuserait", () => {
+    expect(indicateurDInsertion(WIKI, "Lieux", "Forêt")).toBeNull();
+  });
+
+  it("annonce exactement ce que l'écriture fera", () => {
+    // L'invariant qui justifie de partager le calcul : un trait qui montrerait
+    // autre chose que le résultat serait pire que pas de trait du tout.
+    const couples: [string, string][] = [
+      ["Accueil", "Annexe"], ["Annexe", "Accueil"],
+      ["Forêt", "Accueil"], ["Ville", "Annexe"], ["Ville", "Forêt"],
+    ];
+    for (const [actif, cible] of couples) {
+      const trait = indicateurDInsertion(WIKI, actif, cible)!;
+      const ecritures = planifierDeplacement(WIKI, actif, cible)!;
+
+      const parentCible = WIKI.find(p => p.id === cible)!.parent_id;
+      const apres = WIKI
+        .map(p => {
+          const e = ecritures.find(e => e.id === p.id);
+          return e ? { ...p, parent_id: e.parent_id, sort_index: e.sort_index } : p;
+        })
+        .filter(p => p.parent_id === parentCible)
+        .sort((a, b) => a.sort_index - b.sort_index)
+        .map(p => p.id);
+
+      const rangDeplace = apres.indexOf(actif);
+      const rangCible = apres.indexOf(cible);
+      expect(trait.cote === "avant" ? rangDeplace + 1 : rangDeplace - 1).toBe(rangCible);
+    }
   });
 });

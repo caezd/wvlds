@@ -87,22 +87,18 @@ export function planifierDeplacement(
   }
 
   // ── Déposer SUR une page : prendre sa place, chez son parent ─────────
-  const parentCible = over.parent_id;
-  if (estDansLeSousArbre(pages, active.id, parentCible)) return null;
+  const insertion = indicateurDInsertion(pages, activeId, overId);
+  if (!insertion) return null;
 
+  const parentCible = over.parent_id;
   const arrivee = enfantsDe(pages, parentCible).filter(p => p.id !== active.id);
   const place = arrivee.findIndex(p => p.id === over.id);
   if (place === -1) return null;
 
-  // Descendre dans sa propre liste : la place visée est celle que la page
-  // occupera APRÈS son retrait, d'où l'insertion après la cible.
-  const memeListe = active.parent_id === parentCible;
-  const depart = memeListe
-    ? enfantsDe(pages, parentCible).findIndex(p => p.id === active.id)
-    : -1;
-  const index = memeListe && depart < place ? place + 1 : place;
-
-  arrivee.splice(index, 0, { ...active, parent_id: parentCible });
+  arrivee.splice(insertion.cote === "apres" ? place + 1 : place, 0, {
+    ...active,
+    parent_id: parentCible,
+  });
 
   return arrivee
     .map((p, i) => ({ id: p.id, parent_id: parentCible, sort_index: i }))
@@ -111,4 +107,42 @@ export function planifierDeplacement(
       const avant = pages.find(p => p.id === e.id)!;
       return avant.parent_id !== e.parent_id || avant.sort_index !== e.sort_index;
     });
+}
+
+/** Où le trait de dépôt se pose, ou `null` quand il n'y a pas lieu d'en poser. */
+export type Insertion = { cibleId: string; cote: "avant" | "apres" };
+
+/**
+ * Trait qui annonce où la page va se poser.
+ *
+ * Rendu par le même calcul que `planifierDeplacement`, et non par un second
+ * qui lui ressemblerait : un indicateur qui annoncerait autre chose que ce qui
+ * va se produire serait pire que pas d'indicateur du tout.
+ *
+ * `null` sur un dépôt dans un dossier — ce geste-là se signale par le cadre du
+ * dossier, pas par un trait entre deux lignes.
+ */
+export function indicateurDInsertion(
+  pages: NoeudArbre[],
+  activeId: string,
+  overId: string,
+): Insertion | null {
+  if (activeId === overId) return null;
+
+  const active = pages.find(p => p.id === activeId);
+  const over = pages.find(p => p.id === overId);
+  if (!active || !over) return null;
+
+  if (over.is_folder && over.id !== active.parent_id) return null;
+  if (estDansLeSousArbre(pages, active.id, over.parent_id)) return null;
+
+  const voisins = enfantsDe(pages, over.parent_id);
+  const place = voisins.findIndex(p => p.id === over.id);
+  if (place === -1) return null;
+
+  // Descendre dans sa propre liste : la page occupera la place visée APRÈS son
+  // retrait, le trait se pose donc sous la cible et non au-dessus.
+  const depart = voisins.findIndex(p => p.id === active.id);
+  const descend = depart !== -1 && depart < place;
+  return { cibleId: over.id, cote: descend ? "apres" : "avant" };
 }
