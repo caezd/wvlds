@@ -15,8 +15,10 @@ import {
 } from "lucide-react";
 import {
   DndContext,
+  DragOverlay,
   type DragEndEvent,
   type DragOverEvent,
+  type DragStartEvent,
   PointerSensor,
   useSensor,
   useSensors,
@@ -25,6 +27,7 @@ import {
   SortableContext,
   arrayMove,
   useSortable,
+  verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
@@ -44,7 +47,6 @@ import {
   useWikiPageNotes,
   type WikiNoteGroup,
 } from "@/hooks/useWikiPageNotes";
-import { SANS_DEPLACEMENT } from "@/lib/dndTri";
 import type { WikiNoteCategory, WikiPageNote } from "@/types/worlds";
 import { WikiNoteCard, noteDragId } from "./WikiNoteCard";
 import { WIKI_FOOTER, WIKI_FOOTER_BUTTON } from "./wikiSubHeader";
@@ -272,7 +274,7 @@ function CategorySection({
         <div className="pl-2">
           <SortableContext
             items={group.notes.map(n => noteDragId(n.id))}
-            strategy={SANS_DEPLACEMENT}
+            strategy={verticalListSortingStrategy}
           >
             <ul className="space-y-1">
               {group.notes.map(note => (
@@ -412,6 +414,16 @@ export function WikiNotesPanel({
     { activeId: string; overId: string } | null
   >(null);
 
+  /** Fiche ou catégorie tenue par le curseur — c'est elle que l'aperçu montre. */
+  const [idGlisse, setIdGlisse] = React.useState<string | null>(null);
+
+  const categorieGlissee = idGlisse
+    ? notes.groups.find(g => g.category.id === categoryIdOf(idGlisse))?.category ?? null
+    : null;
+  const ficheGlissee = idGlisse
+    ? (notes.notes ?? []).find(n => n.id === noteIdOf(idGlisse)) ?? null
+    : null;
+
   /** Trait de dépôt courant — rien pour une catégorie, qui a son propre cadre. */
   const insertion = React.useMemo(() => {
     if (!survolGlisse) return null;
@@ -432,12 +444,22 @@ export function WikiNotesPanel({
     return cote ? { categoryId: cible, cote } : null;
   }, [survolGlisse, notes.groups]);
 
+  function onDragStart({ active }: DragStartEvent) {
+    setIdGlisse(String(active.id));
+  }
+
+  /** Fin d'un glissé, abouti ou non : plus d'aperçu, plus de trait. */
+  function finDuGlisse() {
+    setIdGlisse(null);
+    setSurvolGlisse(null);
+  }
+
   function onDragOver({ active, over }: DragOverEvent) {
     setSurvolGlisse(over ? { activeId: String(active.id), overId: String(over.id) } : null);
   }
 
   function onDragEnd({ active, over }: DragEndEvent) {
-    setSurvolGlisse(null);
+    finDuGlisse();
     if (!over || active.id === over.id) return;
     const activeId = String(active.id);
     const overId = String(over.id);
@@ -521,13 +543,14 @@ export function WikiNotesPanel({
           ) : (
             <DndContext
               sensors={sensors}
+              onDragStart={onDragStart}
               onDragOver={onDragOver}
               onDragEnd={onDragEnd}
-              onDragCancel={() => setSurvolGlisse(null)}
+              onDragCancel={finDuGlisse}
             >
               <SortableContext
                 items={notes.groups.map(g => categoryDragId(g.category.id))}
-                strategy={SANS_DEPLACEMENT}
+                strategy={verticalListSortingStrategy}
               >
                 <div className="space-y-1">
                   {notes.groups.map(group => (
@@ -560,6 +583,20 @@ export function WikiNotesPanel({
                   ))}
                 </div>
               </SortableContext>
+              {/* Le même aperçu que l'arbre des pages : ce qu'on tient suit le
+                  curseur, pendant que la place laissée libre s'ouvre dans la
+                  liste. Une fiche dépliée ou une catégorie entière n'y tient
+                  que par son intitulé — le reste encombrerait la colonne. */}
+              <DragOverlay>
+                {(categorieGlissee ?? ficheGlissee) && (
+                  <div className="flex items-center gap-1.5 rounded-md border border-border bg-popover px-2 py-1 text-sm shadow-lg">
+                    <GripVertical className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50" />
+                    <span className="truncate">
+                      {categorieGlissee?.name ?? ficheGlissee?.title}
+                    </span>
+                  </div>
+                )}
+              </DragOverlay>
             </DndContext>
           )}
 

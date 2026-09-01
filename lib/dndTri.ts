@@ -3,12 +3,10 @@ import type { SortingStrategy } from "@dnd-kit/sortable";
 /**
  * Les voisines ne bougent pas pendant un glissé.
  *
- * `verticalListSortingStrategy` les translate pour montrer où l'élément se
- * posera — un aperçu. Les listes du wiki affichent déjà un trait de dépôt, qui
- * le dit mieux : lui sait annoncer un changement de dossier ou de catégorie, ce
- * qu'un simple décalage vertical ne peut pas exprimer.
- *
- * Les deux ensemble ouvraient un espace de deux lignes là où il en fallait un
- * de quelques pixels — l'écart de la liste, plus celui que dnd-kit ménageait.
+ * `verticalListSortingStrategy` les translate pour ouvrir le logement où
+ * l'élément se posera. C'est ce qu'on veut presque partout — mais pas quand la
+ * page vise le milieu d'un dossier : elle va y ENTRER, donc n'ouvrir aucun
+ * logement entre deux lignes. Écarter les voisines promettrait alors une place
+ * que le cadre du dossier dément dans le même instant.
  */
 export const SANS_DEPLACEMENT: SortingStrategy = () => null;

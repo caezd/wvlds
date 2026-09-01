@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-08",
     tag: "Wiki",
+    text: "Glisser une page, une fiche ou une catégorie du wiki se voit mieux : ce qu’on tient suit le curseur dans un aperçu flottant, et la liste s’écarte pour ouvrir le logement où il se posera. Le logement ne s’ouvre pas quand la page vise le milieu d’un dossier — c’est qu’elle va y entrer, et le cadre du dossier le dit déjà."
+  },
+  {
+    date: "2026-08",
+    tag: "Wiki",
     text: "Une page peut enfin être posée juste au-dessus ou juste au-dessous d’un dossier sans y entrer : la ligne d’un dossier se découpe en trois, ses bords pour passer devant ou derrière, son milieu pour entrer. Le trait de dépôt ou le cadre du dossier dit lequel des deux va se produire."
   },
   {

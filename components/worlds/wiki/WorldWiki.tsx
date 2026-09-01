@@ -27,8 +27,10 @@ import {
 import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
 import {
   DndContext,
+  DragOverlay,
   type DragEndEvent,
   type DragMoveEvent,
+  type DragStartEvent,
   PointerSensor,
   useSensor,
   useSensors,
@@ -37,6 +39,7 @@ import { LucideIconPicker, VALID_LUCIDE_ICONS } from "@/components/ui/LucideIcon
 import {
   SortableContext,
   useSortable,
+  verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { WikiPageContent } from "./WikiPageContent";
@@ -475,6 +478,9 @@ export function WorldWiki({
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
   );
 
+  /** Page en cours de glissé — c'est elle que l'aperçu flottant montre. */
+  const [idGlisse, setIdGlisse] = React.useState<string | null>(null);
+
   // ── Load ──────────────────────────────────────────────────────
   async function load() {
     const { data, error } = await supabase
@@ -769,8 +775,21 @@ export function WorldWiki({
     ? { cibleId: survolGlisse.overId, cote: survolGlisse.zone }
     : null;
 
+  /** La page tenue par le curseur, s'il y en a une. */
+  const pageGlissee = idGlisse ? pages?.find(p => p.id === idGlisse) ?? null : null;
+
   /** Dossier qui va accueillir la page — c'est lui qui prend le cadre. */
   const dossierCible = survolGlisse?.zone === "dans" ? survolGlisse.overId : null;
+
+  function onDragStart({ active }: DragStartEvent) {
+    setIdGlisse(String(active.id));
+  }
+
+  /** Fin d'un glissé, abouti ou non : plus d'aperçu, plus de trait. */
+  function finDuGlisse() {
+    setIdGlisse(null);
+    setSurvolGlisse(null);
+  }
 
   function onDragMove({ active, over }: DragMoveEvent) {
     if (!over || !pages) { setSurvolGlisse(null); return; }
@@ -792,7 +811,7 @@ export function WorldWiki({
   }
 
   function onDragEnd({ active, over }: DragEndEvent) {
-    setSurvolGlisse(null);
+    finDuGlisse();
     if (!over || !pages) return;
 
     const ecritures = planifierDeplacement(
@@ -913,7 +932,15 @@ export function WorldWiki({
     const children = childrenOf(parentId);
 
     return (
-      <SortableContext items={children.map(c => c.id)} strategy={SANS_DEPLACEMENT}>
+      <SortableContext
+        items={children.map(c => c.id)}
+        // Les voisines s'écartent pour montrer le logement qui s'ouvre — mais
+        // seulement quand la page va s'insérer ENTRE deux lignes. Visant le
+        // milieu d'un dossier, elle n'ouvre aucun logement : la liste doit
+        // rester immobile, sans quoi elle promettrait une place que le cadre
+        // du dossier dément.
+        strategy={dossierCible ? SANS_DEPLACEMENT : verticalListSortingStrategy}
+      >
         {children.map(page => {
           const isExpanded = expandedFolders.has(page.id);
           return (
@@ -994,11 +1021,32 @@ export function WorldWiki({
           <nav className="flex flex-col gap-0.5 px-1">
             <DndContext
               sensors={sensors}
+              onDragStart={onDragStart}
               onDragMove={onDragMove}
               onDragEnd={onDragEnd}
-              onDragCancel={() => setSurvolGlisse(null)}
+              onDragCancel={finDuGlisse}
             >
               {renderTree(null)}
+              {/* L'aperçu suit le curseur pendant que la ligne d'origine, elle,
+                  glisse vers le logement qui l'attend : on voit à la fois ce
+                  qu'on tient et où ça se posera. Un dossier n'y montre que sa
+                  propre ligne — traîner son contenu entier masquerait la
+                  colonne. */}
+              <DragOverlay>
+                {pageGlissee && (
+                  <div className="flex items-center gap-1.5 rounded-md border border-border bg-popover px-2 py-1 text-sm shadow-lg">
+                    <GripVertical className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50" />
+                    {pageGlissee.icon && VALID_LUCIDE_ICONS.has(pageGlissee.icon) ? (
+                      <LazyLucideIcon name={pageGlissee.icon} className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    ) : pageGlissee.is_folder ? (
+                      <Folder className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    ) : (
+                      <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    )}
+                    <span className="truncate">{pageGlissee.title}</span>
+                  </div>
+                )}
+              </DragOverlay>
             </DndContext>
             {pages.length === 0 && !creating && (
               <p className="px-2 py-1 text-xs italic text-muted-foreground">{t("noPages")}</p>
