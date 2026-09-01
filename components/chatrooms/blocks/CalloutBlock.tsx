@@ -28,7 +28,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { HsvColorPicker, ACCENT_COLOR_PRESETS } from "@/components/ui/hsv-color-picker";
 import { cn } from "@/lib/utils";
-import Image from "next/image";
+import { StoredImage } from "@/components/ui/stored-image";
+import { AVATAR_THUMB_SMALL } from "@/lib/storage";
 import { EmojiPickerButton } from "@/components/chatrooms/reactions/EmojiPickerButton";
 import { ReactionEmoji } from "@/components/chatrooms/reactions/ReactionEmoji";
 import { GameBlockSurface, GameBlockToolbar, GameBlockEditButton } from "./GameBlockShell";
@@ -73,13 +74,17 @@ function renderIcon(
   if (iconKind === "image") {
     if (!iconImage) return null;
     return (
-      <Image
-        src={iconImage}
-        alt=""
-        width={sizePx}
-        height={sizePx}
-        className={cn(size, "shrink-0 rounded-sm object-cover")}
-      />
+      // Enveloppée : `StoredImage` remplit son parent, qui doit donc porter
+      // la taille et être positionné.
+      <span className={cn(size, "relative shrink-0 overflow-hidden rounded-sm")}>
+        <StoredImage
+          url={iconImage}
+          width={sizePx * 4}
+          height={sizePx * 4}
+          resize="cover"
+          className="object-cover"
+        />
+      </span>
     );
   }
   if (!icon) return null;
@@ -527,7 +532,15 @@ export function CalloutDialog({
                     {iconImageUploading ? (
                       <Loader2 className="h-4 w-4 animate-spin shrink-0 text-muted-foreground" />
                     ) : hasIconImage ? (
-                      <Image src={iconImageUrl} alt="" width={20} height={20} className="h-5 w-5 rounded-sm object-cover shrink-0" />
+                      <span className="relative h-5 w-5 shrink-0 overflow-hidden rounded-sm">
+                        <StoredImage
+                          url={iconImageUrl}
+                          width={AVATAR_THUMB_SMALL}
+                          height={AVATAR_THUMB_SMALL}
+                          resize="cover"
+                          className="object-cover"
+                        />
+                      </span>
                     ) : (
                       <ImagePlus className="h-4 w-4 shrink-0 text-muted-foreground" />
                     )}

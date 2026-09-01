@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useRef, useState, useTransition } from "react";
-import Image from "next/image";
+import { StoredImage } from "@/components/ui/stored-image";
+import { AVATAR_THUMB_LARGE } from "@/lib/storage";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -346,10 +347,11 @@ export function PersonasView({
               {activePersona ? (
                 <div className="relative w-full aspect-square rounded-2xl overflow-hidden bg-muted shadow-xl ring-2 ring-primary/50">
                   {activePersona.avatar_url ? (
-                    <Image
-                      src={activePersona.avatar_url}
-                      alt=""
-                      fill
+                    <StoredImage
+                      url={activePersona.avatar_url}
+                      width={AVATAR_THUMB_LARGE}
+                      height={AVATAR_THUMB_LARGE}
+                      resize="cover"
                       sizes="200px"
                       className="object-cover"
                       draggable={false}
