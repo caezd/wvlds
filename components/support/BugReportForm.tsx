@@ -30,7 +30,19 @@ import {
   type ErreurClient,
 } from "@/lib/clientErrorLog";
 
-type Jointe = { fichier: File; aperçu: string };
+type Jointe = {
+  aperçu: string;
+  /**
+   * La conversion, lancée dès la sélection.
+   *
+   * On garde la promesse plutôt que son résultat : l'attendre à l'envoi coûte
+   * alors zéro si elle est finie — ce qui est le cas dès qu'on a pris le temps
+   * d'écrire une phrase — et seulement le reste sinon. La faire au clic
+   * ajoutait trois conversions à l'attente, sur un formulaire pensé pour le
+   * téléphone.
+   */
+  conversion: Promise<File>;
+};
 
 /**
  * Formulaire de signalement — une page, pas un modal.
@@ -86,12 +98,25 @@ export function BugReportForm({
   const envoyable = description.trim().length > 0 && !tropLong && !envoi;
   const placeRestante = BUG_REPORT_MAX_ATTACHMENTS - jointes.length;
 
+  /**
+   * Convertit sans jamais échouer : le fichier d'origine est déjà d'un type
+   * accepté par le bucket (migration 140). Une conversion ratée ne doit pas
+   * coûter son signalement à quelqu'un — ni, en remontant, laisser `envoi`
+   * bloqué sur une exception que personne ne rattrape.
+   */
+  function convertir(fichier: File): Promise<File> {
+    return toWebP(fichier).catch(() => fichier);
+  }
+
   function ajouterFichiers(fichiers: FileList | null) {
     if (!fichiers) return;
     const images = [...fichiers]
       .filter((f) => (BUG_REPORT_IMAGE_TYPES as readonly string[]).includes(f.type))
       .slice(0, placeRestante);
-    setJointes((prev) => [...prev, ...images.map((f) => ({ fichier: f, aperçu: URL.createObjectURL(f) }))]);
+    setJointes((prev) => [
+      ...prev,
+      ...images.map((f) => ({ aperçu: URL.createObjectURL(f), conversion: convertir(f) })),
+    ]);
     // Sans ça, rechoisir le même fichier après l'avoir retiré n'émet aucun
     // `change` — la valeur de l'input n'ayant pas varié.
     if (inputRef.current) inputRef.current.value = "";
@@ -104,21 +129,33 @@ export function BugReportForm({
     });
   }
 
+  /**
+   * Dépose les images et rend leurs chemins, ou rien si l'une a échoué.
+   *
+   * En parallèle : trois dépôts enchaînés, c'était trois allers-retours l'un
+   * après l'autre pendant que le bouton restait figé. Un dépôt raté annule
+   * l'envoi — un rapport ne doit pas référencer une image absente — et ceux qui
+   * ont abouti deviennent des orphelins, que le nettoyage de la file de tri
+   * ramasse.
+   */
   async function déposerImages(userId: string): Promise<string[] | null> {
-    const chemins: string[] = [];
-    for (const { fichier } of jointes) {
-      const converti = await toWebP(fichier);
-      const chemin = `user-${userId}/${nomDeFichierPourType(converti.type)}`;
-      const { error } = await supabase.storage
-        .from(BUG_REPORT_BUCKET)
-        .upload(chemin, converti, { contentType: converti.type });
-      if (error) {
-        toast.error(error.message);
-        return null;
-      }
-      chemins.push(chemin);
+    const dépôts = await Promise.all(
+      jointes.map(async ({ conversion }) => {
+        const converti = await conversion;
+        const chemin = `user-${userId}/${nomDeFichierPourType(converti.type)}`;
+        const { error } = await supabase.storage
+          .from(BUG_REPORT_BUCKET)
+          .upload(chemin, converti, { contentType: converti.type });
+        return { chemin, error };
+      }),
+    );
+
+    const raté = dépôts.find((d) => d.error);
+    if (raté) {
+      toast.error(raté.error!.message);
+      return null;
     }
-    return chemins;
+    return dépôts.map((d) => d.chemin);
   }
 
   async function handleSubmit(e: React.FormEvent) {

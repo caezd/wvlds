@@ -24,6 +24,7 @@ vi.mock("@/lib/supabase/client", () => ({
 
 import { BugReportForm } from "@/components/support/BugReportForm";
 import { enregistrerErreurClient, lireErreursClient, oublierErreursClient } from "@/lib/clientErrorLog";
+import { toWebP } from "@/lib/imageUtils";
 
 const CHAMP = { name: "Que s’est-il passé ?" };
 
@@ -94,6 +95,49 @@ describe("BugReportForm", () => {
     const envoyé = envoyer.mock.calls[0][0];
     expect(envoyé.attachments).toHaveLength(1);
     expect(envoyé.attachments[0]).toMatch(/^user-u1\//);
+  });
+
+  // Trois dépôts enchaînés, c'était trois allers-retours l'un après l'autre
+  // pendant que le bouton restait figé — sur un formulaire pensé pour le
+  // téléphone.
+  it("dépose les images en parallèle plutôt qu'à la file", async () => {
+    let simultanés = 0;
+    let maximum = 0;
+    déposer.mockImplementation(async () => {
+      maximum = Math.max(maximum, ++simultanés);
+      await new Promise((r) => setTimeout(r, 5));
+      simultanés--;
+      return { error: null };
+    });
+
+    const user = userEvent.setup();
+    render(<BugReportForm />);
+
+    await user.upload(screen.getByLabelText("Captures d’écran", { selector: "input" }), [
+      image("un.png"),
+      image("deux.png"),
+      image("trois.png"),
+    ]);
+    await user.type(screen.getByRole("textbox", CHAMP), "x");
+    await user.click(screen.getByRole("button", { name: "Envoyer" }));
+
+    await waitFor(() => expect(envoyer).toHaveBeenCalled());
+    expect(maximum).toBe(3);
+  });
+
+  // Le fichier d'origine est déjà d'un type accepté par le bucket : une
+  // conversion ratée ne doit pas coûter son signalement à quelqu'un.
+  it("dépose l'image d'origine quand la conversion échoue", async () => {
+    vi.mocked(toWebP).mockRejectedValueOnce(new Error("canvas indisponible"));
+    const user = userEvent.setup();
+    render(<BugReportForm />);
+
+    await user.upload(screen.getByLabelText("Captures d’écran", { selector: "input" }), image());
+    await user.type(screen.getByRole("textbox", CHAMP), "x");
+    await user.click(screen.getByRole("button", { name: "Envoyer" }));
+
+    await waitFor(() => expect(envoyer).toHaveBeenCalled());
+    expect(envoyer.mock.calls[0][0].attachments).toHaveLength(1);
   });
 
   // Un dépôt qui échoue ne doit pas laisser partir un rapport qui référencerait
