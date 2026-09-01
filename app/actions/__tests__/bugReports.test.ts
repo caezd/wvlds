@@ -5,10 +5,15 @@ import { isAdmin } from "@/lib/admin";
 import {
   cleanBugReportAttachments,
   deleteBugReport,
+  setBugReportNote,
   setBugReportStatus,
   submitBugReport,
 } from "@/app/actions/bugReports";
-import { BUG_REPORT_MAX_LENGTH, BUG_REPORT_URL_MAX_LENGTH } from "@/lib/bugReports";
+import {
+  BUG_REPORT_MAX_LENGTH,
+  BUG_REPORT_NOTE_MAX_LENGTH,
+  BUG_REPORT_URL_MAX_LENGTH,
+} from "@/lib/bugReports";
 
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
 vi.mock("@/lib/admin", () => ({ isAdmin: vi.fn() }));
@@ -225,6 +230,54 @@ describe("submitBugReport — plafond horaire", () => {
     brancher(mock);
 
     expect((await submitBugReport({ description: "x" })).ok).toBe(true);
+  });
+});
+
+describe("setBugReportNote", () => {
+  // La note dit ce qui a été fait d'un rapport. La policy d'UPDATE la réserve
+  // déjà aux administrateurs, mais elle refuserait par un message de PostgreSQL
+  // que l'appelant afficherait tel quel.
+  it("refuse un non-administrateur, sans appeler Supabase", async () => {
+    vi.mocked(isAdmin).mockResolvedValue(false);
+    const mock = createSupabaseMock();
+    brancher(mock);
+
+    expect((await setBugReportNote("r1", "vu")).ok).toBe(false);
+    expect(mock.from).not.toHaveBeenCalled();
+  });
+
+  it("enregistre la note débarrassée de ses espaces", async () => {
+    vi.mocked(isAdmin).mockResolvedValue(true);
+    const mock = createSupabaseMock({ results: [{ error: null }] });
+    brancher(mock);
+
+    expect(await setBugReportNote("r1", "  corrigé en 140  ")).toEqual({ ok: true });
+    expect(mock.buildersFor("bug_reports")[0].update).toHaveBeenCalledWith({
+      admin_note: "corrigé en 140",
+    });
+  });
+
+  // La colonne accepte NULL, et « pas de note » se lit mieux qu'une note vide.
+  it("vide la note plutôt que d'y écrire une chaîne creuse", async () => {
+    vi.mocked(isAdmin).mockResolvedValue(true);
+    const mock = createSupabaseMock({ results: [{ error: null }] });
+    brancher(mock);
+
+    await setBugReportNote("r1", "   ");
+
+    expect(mock.buildersFor("bug_reports")[0].update).toHaveBeenCalledWith({ admin_note: null });
+  });
+
+  // La contrainte en base rejetterait la ligne par une erreur brute.
+  it("refuse une note démesurée", async () => {
+    vi.mocked(isAdmin).mockResolvedValue(true);
+    const mock = createSupabaseMock();
+    brancher(mock);
+
+    const res = await setBugReportNote("r1", "n".repeat(BUG_REPORT_NOTE_MAX_LENGTH + 1));
+
+    expect(res.ok).toBe(false);
+    expect(mock.from).not.toHaveBeenCalled();
   });
 });
 

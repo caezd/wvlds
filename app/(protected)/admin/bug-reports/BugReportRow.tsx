@@ -15,9 +15,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { deleteBugReport, setBugReportStatus } from "@/app/actions/bugReports";
+import { AutoResizeTextarea } from "@/components/ui/auto-resizable-textarea";
+import { deleteBugReport, setBugReportNote, setBugReportStatus } from "@/app/actions/bugReports";
 import { messageErreurAction } from "@/lib/actionErrors";
-import { BUG_REPORT_STATUSES, type BugReport, type BugReportStatus } from "@/lib/bugReports";
+import {
+  BUG_REPORT_NOTE_MAX_LENGTH,
+  BUG_REPORT_STATUSES,
+  type BugReport,
+  type BugReportStatus,
+} from "@/lib/bugReports";
 
 /**
  * Une ligne de la file de tri.
@@ -39,6 +45,7 @@ export function BugReportRow({
   const tCommon = useTranslations("common");
   const router = useRouter();
   const [status, setStatus] = React.useState<BugReportStatus>(report.status);
+  const [note, setNote] = React.useState(report.admin_note ?? "");
   const [supprimé, setSupprimé] = React.useState(false);
 
   if (supprimé) return null;
@@ -59,6 +66,19 @@ export function BugReportRow({
     // Sans ce rafraîchissement, elle continuerait d'annoncer un tri à faire qui
     // vient d'être fait.
     router.refresh();
+  }
+
+  /**
+   * Enregistrée à la sortie du champ, et seulement si elle a changé.
+   *
+   * Écrire à chaque frappe ferait une requête par caractère ; un bouton
+   * « Enregistrer » se ferait oublier au moment où l'on passe au signalement
+   * suivant, c'est-à-dire toujours.
+   */
+  async function enregistrerNote() {
+    if (note.trim() === (report.admin_note ?? "").trim()) return;
+    const res = await setBugReportNote(report.id, note);
+    if (!res.ok) toast.error(messageErreurAction(res.error, tCommon));
   }
 
   async function supprimer() {
@@ -147,6 +167,20 @@ export function BugReportRow({
           </ul>
         </details>
       )}
+
+      <div className="mt-3">
+        <AutoResizeTextarea
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          onBlur={() => void enregistrerNote()}
+          placeholder={t("notePlaceholder")}
+          aria-label={t("noteLabel")}
+          maxLength={BUG_REPORT_NOTE_MAX_LENGTH}
+          minRows={1}
+          maxRows={8}
+          className="w-full resize-none rounded-md border border-border-soft bg-transparent p-2 text-xs outline-none placeholder:text-muted-foreground/60 focus:border-border"
+        />
+      </div>
 
       <dl className="mt-3 space-y-0.5 text-xs text-muted-foreground">
         {report.page_url && (

@@ -28,6 +28,10 @@ export const BUG_REPORT_MAX_ATTACHMENTS = 3;
  *  traduit — la policy reste le filet en dessous. */
 export const BUG_REPORT_MAX_PER_HOUR = 5;
 
+/** Longueur de la note de traitement — miroir de la contrainte en base
+ *  (`bug_reports_admin_note_length`, migration 137). */
+export const BUG_REPORT_NOTE_MAX_LENGTH = 4000;
+
 /** Bucket PRIVÉ : une capture montre souvent autre chose que le bug. Les
  *  images ne sortent que par une URL signée (voir lib/bugReportAttachments). */
 export const BUG_REPORT_BUCKET = "bug-reports";

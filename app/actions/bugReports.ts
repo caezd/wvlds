@@ -9,6 +9,7 @@ import {
   BUG_REPORT_BUCKET,
   BUG_REPORT_MAX_ATTACHMENTS,
   BUG_REPORT_MAX_PER_HOUR,
+  BUG_REPORT_NOTE_MAX_LENGTH,
   BUG_REPORT_URL_MAX_LENGTH,
   BUG_REPORT_USER_AGENT_MAX_LENGTH,
   isBugReportStatus,
@@ -109,6 +110,35 @@ export async function setBugReportStatus(reportId: string, status: BugReportStat
   const supabase = await createClient();
   const { error } = await supabase.from("bug_reports").update({ status }).eq("id", reportId);
   if (error) return { ok: false as const, error: echecEnregistrement("setBugReportStatus", error) };
+
+  revalidatePath("/admin/bug-reports");
+  return { ok: true as const };
+}
+
+/**
+ * Écrit la note de traitement d'un signalement.
+ *
+ * La colonne existait depuis la migration 137 sans que rien ne l'écrive : elle
+ * voyageait jusqu'au client et ne s'affichait nulle part. C'est la trace de ce
+ * qui a été fait d'un rapport — pourquoi il a été écarté, ce qui le corrige —
+ * et elle ne quitte jamais l'administration : la policy d'UPDATE la réserve aux
+ * administrateurs, et son auteur ne la lit pas.
+ */
+export async function setBugReportNote(reportId: string, note: string) {
+  if (!(await isAdmin())) return { ok: false as const, error: ERR_NON_AUTHENTIFIE };
+  if (note.length > BUG_REPORT_NOTE_MAX_LENGTH) {
+    return { ok: false as const, error: ERR_VALEUR_NON_SUPPORTEE };
+  }
+
+  const supabase = await createClient();
+  // Vidée plutôt que remplie d'une chaîne creuse : la colonne accepte NULL, et
+  // « pas de note » se lit mieux qu'une note vide.
+  const valeur = note.trim();
+  const { error } = await supabase
+    .from("bug_reports")
+    .update({ admin_note: valeur.length > 0 ? valeur : null })
+    .eq("id", reportId);
+  if (error) return { ok: false as const, error: echecEnregistrement("setBugReportNote", error) };
 
   revalidatePath("/admin/bug-reports");
   return { ok: true as const };
