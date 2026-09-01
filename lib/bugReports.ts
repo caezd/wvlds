@@ -1,0 +1,63 @@
+/**
+ * Rapports de bug — constantes et validation, partagées par le formulaire, par
+ * l'action serveur et par la page de tri.
+ *
+ * Elles vivent ici et non dans `app/actions/bugReports.ts` : un module
+ * `"use server"` ne peut exporter que des fonctions asynchrones. C'est la même
+ * séparation que `worldHomeGrid.ts` pour les actions de monde.
+ */
+
+/** Longueur maximale d'un signalement — miroir de la contrainte en base
+ *  (`bug_reports_description_length`, migration 137). */
+export const BUG_REPORT_MAX_LENGTH = 4000;
+
+/** Longueurs des informations capturées automatiquement, bornées comme en base
+ *  plutôt que laissées à la merci d'un navigateur bavard. */
+export const BUG_REPORT_URL_MAX_LENGTH = 2000;
+export const BUG_REPORT_USER_AGENT_MAX_LENGTH = 500;
+
+export const BUG_REPORT_STATUSES = ["new", "in_progress", "resolved", "declined"] as const;
+export type BugReportStatus = (typeof BUG_REPORT_STATUSES)[number];
+
+export function isBugReportStatus(value: unknown): value is BugReportStatus {
+  return typeof value === "string" && (BUG_REPORT_STATUSES as readonly string[]).includes(value);
+}
+
+export type BugReport = {
+  id: string;
+  user_id: string;
+  description: string;
+  page_url: string | null;
+  user_agent: string | null;
+  app_version: string | null;
+  status: BugReportStatus;
+  admin_note: string | null;
+  created_at: string;
+};
+
+/**
+ * Un signalement vide n'en est pas un, et un signalement démesuré est refusé
+ * plutôt que tronqué : tronquer couperait le texte au milieu d'une phrase sans
+ * que son auteur le sache, alors que le compteur du formulaire l'avertit avant
+ * l'envoi.
+ */
+export function isValidBugReportDescription(description: string): boolean {
+  const texte = description.trim();
+  return texte.length > 0 && texte.length <= BUG_REPORT_MAX_LENGTH;
+}
+
+/**
+ * Contexte capturé à l'envoi — jamais saisi.
+ *
+ * Ce sont les deux informations qui rendent un rapport exploitable et qu'un
+ * utilisateur ne pense jamais à donner : sur quelle page il était, et avec quel
+ * navigateur. Bornées ici pour ne pas dépendre de ce que renvoie le poste
+ * client.
+ */
+export function captureBugReportContext(): { pageUrl: string; userAgent: string } {
+  if (typeof window === "undefined") return { pageUrl: "", userAgent: "" };
+  return {
+    pageUrl: window.location.href.slice(0, BUG_REPORT_URL_MAX_LENGTH),
+    userAgent: window.navigator.userAgent.slice(0, BUG_REPORT_USER_AGENT_MAX_LENGTH),
+  };
+}

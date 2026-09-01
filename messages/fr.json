@@ -81,7 +81,8 @@
     "admin": "Administration",
     "installApp": "Installer l'application",
     "installInstructionsIOS": "Appuyez sur le bouton Partager, puis « Sur l'écran d'accueil ».",
-    "installInstructionsOther": "Ouvrez le menu de votre navigateur (⋮), puis « Installer l'application »."
+    "installInstructionsOther": "Ouvrez le menu de votre navigateur (⋮), puis « Installer l'application ».",
+    "reportBug": "Signaler un problème"
   },
   "presence": {
     "online": "En ligne",
@@ -794,7 +795,25 @@
     "editItem": "Modifier l'article",
     "shopItemDelete": "Supprimer cet article",
     "shopItemEdit": "Modifier cet article",
-    "loadError": "Le chargement a échoué. Le détail est dans les journaux serveur."
+    "loadError": "Le chargement a échoué. Le détail est dans les journaux serveur.",
+    "bugReports": {
+      "title": "Signalements",
+      "empty": "Aucun signalement.",
+      "status": {
+        "new": "Nouveau",
+        "in_progress": "En cours",
+        "resolved": "Résolu",
+        "declined": "Écarté"
+      },
+      "statusLabel": "Statut",
+      "page": "Page",
+      "browser": "Navigateur",
+      "version": "Version",
+      "deleteTitle": "Supprimer ce signalement ?",
+      "deleteDescription": "Il sera supprimé définitivement."
+    },
+    "bugReportsCard": "Signalements",
+    "bugReportsCardDesc": "Les problèmes remontés par les utilisateurs"
   },
   "chatrooms": {
     "newRoom": "Nouvelle salle",
@@ -1259,5 +1278,16 @@
     "notFoundTitle": "Page introuvable",
     "notFoundDescription": "Désolé, la page que vous cherchez n'existe pas ou n'est plus accessible.",
     "notFoundHint": "Chaque monde commence par une page blanche. Celle que vous cherchiez semble s'être évaporée, mais rien ne vous empêche d'en créer une nouvelle."
+  },
+  "bugReport": {
+    "title": "Signaler un problème",
+    "intro": "Décrivez ce que vous faisiez et ce qui s’est passé. Plus c’est précis, plus c’est réparable.",
+    "descriptionLabel": "Que s’est-il passé ?",
+    "descriptionPlaceholder": "J’ai cliqué sur… et…",
+    "attached": "La page où vous êtes et votre navigateur sont joints automatiquement : sans eux, un problème est rarement reproductible.",
+    "send": "Envoyer",
+    "sending": "Envoi…",
+    "sent": "Merci, votre signalement est parti.",
+    "tooLong": "Maximum {max} caractères."
   }
 }

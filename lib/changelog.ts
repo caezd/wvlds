@@ -5,6 +5,13 @@ export type ChangelogEntry = {
 };
 
 export const CHANGELOG: ChangelogEntry[] = [
+  // ── 2026-09 ──────────────────────────────────────────────────────────────
+  {
+    date: "2026-09",
+    tag: "Nouveauté",
+    text: "« Signaler un problème » apparaît dans votre menu, sous le journal des modifications. Décrivez ce qui s’est passé, c’est tout : la page où vous étiez et votre navigateur sont joints automatiquement — ce sont les deux informations sans lesquelles un problème est rarement reproductible, et personne ne pense à les donner. Elles vous sont annoncées avant l’envoi.\nCôté administration, une file de tri rassemble les signalements et permet de suivre leur traitement."
+  },
+
   // ── 2026-08 ──────────────────────────────────────────────────────────────
   {
     date: "2026-08",

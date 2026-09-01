@@ -81,7 +81,8 @@
     "admin": "Administration",
     "installApp": "Install app",
     "installInstructionsIOS": "Tap the Share button, then \"Add to Home Screen\".",
-    "installInstructionsOther": "Open your browser menu (⋮), then \"Install app\"."
+    "installInstructionsOther": "Open your browser menu (⋮), then \"Install app\".",
+    "reportBug": "Report a problem"
   },
   "presence": {
     "online": "Online",
@@ -794,7 +795,25 @@
     "editItem": "Edit the item",
     "shopItemDelete": "Delete this item",
     "shopItemEdit": "Edit this item",
-    "loadError": "Loading failed. The details are in the server logs."
+    "loadError": "Loading failed. The details are in the server logs.",
+    "bugReports": {
+      "title": "Reports",
+      "empty": "No reports.",
+      "status": {
+        "new": "New",
+        "in_progress": "In progress",
+        "resolved": "Resolved",
+        "declined": "Declined"
+      },
+      "statusLabel": "Status",
+      "page": "Page",
+      "browser": "Browser",
+      "version": "Version",
+      "deleteTitle": "Delete this report?",
+      "deleteDescription": "It will be permanently deleted."
+    },
+    "bugReportsCard": "Reports",
+    "bugReportsCardDesc": "Problems reported by users"
   },
   "chatrooms": {
     "newRoom": "New room",
@@ -1259,5 +1278,16 @@
     "notFoundTitle": "Page not found",
     "notFoundDescription": "Sorry, the page you are looking for does not exist or is no longer available.",
     "notFoundHint": "Every world starts with a blank page. The one you were looking for seems to have vanished, but nothing stops you from creating a new one."
+  },
+  "bugReport": {
+    "title": "Report a problem",
+    "intro": "Describe what you were doing and what happened. The more precise, the more fixable.",
+    "descriptionLabel": "What happened?",
+    "descriptionPlaceholder": "I clicked on… and…",
+    "attached": "The page you are on and your browser are attached automatically: without them, a problem is rarely reproducible.",
+    "send": "Send",
+    "sending": "Sending…",
+    "sent": "Thank you, your report has been sent.",
+    "tooLong": "Maximum {max} characters."
   }
 }

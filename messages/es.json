@@ -81,7 +81,8 @@
     "admin": "Administración",
     "installApp": "Instalar la aplicación",
     "installInstructionsIOS": "Toque el botón Compartir y luego «A la pantalla de inicio».",
-    "installInstructionsOther": "Abra el menú de su navegador (⋮) y luego «Instalar la aplicación»."
+    "installInstructionsOther": "Abra el menú de su navegador (⋮) y luego «Instalar la aplicación».",
+    "reportBug": "Informar de un problema"
   },
   "presence": {
     "online": "En línea",
@@ -794,7 +795,25 @@
     "editItem": "Editar el artículo",
     "shopItemDelete": "Eliminar este artículo",
     "shopItemEdit": "Editar este artículo",
-    "loadError": "La carga falló. Los detalles están en los registros del servidor."
+    "loadError": "La carga falló. Los detalles están en los registros del servidor.",
+    "bugReports": {
+      "title": "Informes",
+      "empty": "Ningún informe.",
+      "status": {
+        "new": "Nuevo",
+        "in_progress": "En curso",
+        "resolved": "Resuelto",
+        "declined": "Descartado"
+      },
+      "statusLabel": "Estado",
+      "page": "Página",
+      "browser": "Navegador",
+      "version": "Versión",
+      "deleteTitle": "¿Eliminar este informe?",
+      "deleteDescription": "Se eliminará definitivamente."
+    },
+    "bugReportsCard": "Informes",
+    "bugReportsCardDesc": "Problemas notificados por los usuarios"
   },
   "chatrooms": {
     "newRoom": "Nueva sala",
@@ -1259,5 +1278,16 @@
     "notFoundTitle": "Página no encontrada",
     "notFoundDescription": "Lo sentimos, la página que busca no existe o ya no está disponible.",
     "notFoundHint": "Todo mundo empieza con una página en blanco. La que buscaba parece haberse desvanecido, pero nada le impide crear una nueva."
+  },
+  "bugReport": {
+    "title": "Informar de un problema",
+    "intro": "Describa lo que estaba haciendo y lo que ocurrió. Cuanto más preciso, más reparable.",
+    "descriptionLabel": "¿Qué ocurrió?",
+    "descriptionPlaceholder": "Hice clic en… y…",
+    "attached": "La página en la que se encuentra y su navegador se adjuntan automáticamente: sin ellos, un problema rara vez es reproducible.",
+    "send": "Enviar",
+    "sending": "Enviando…",
+    "sent": "Gracias, su informe se ha enviado.",
+    "tooLong": "Máximo {max} caracteres."
   }
 }

@@ -13,6 +13,13 @@ try {
 }
 
 const nextConfig: NextConfig = {
+  // Version déployée, jointe aux signalements de bug (voir lib/bugReports.ts).
+  // Sans elle, un rapport ne dit pas CONTRE QUOI il a été écrit — et une
+  // version déployée depuis peut avoir déjà corrigé le problème. Vercel expose
+  // le SHA du commit déployé ; en local il n'y en a pas.
+  env: {
+    NEXT_PUBLIC_APP_VERSION: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? "dev",
+  },
   turbopack: {
     // pnpm virtual store requires explicit root for module resolution
     root: __dirname,
