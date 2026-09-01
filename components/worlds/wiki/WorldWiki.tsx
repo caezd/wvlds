@@ -207,9 +207,14 @@ function SortableTreeNode({
         <span
           aria-hidden
           className={cn(
-            "pointer-events-none absolute inset-x-0 z-10 h-0.5 -translate-y-1/2 rounded-full bg-accent",
+            "pointer-events-none absolute z-10 h-0.5 -translate-y-1/2 rounded-full bg-accent",
             insertion === "avant" ? "top-0" : "top-full",
           )}
+          // Aligné sur le texte de la ligne visée, au même retrait que sa
+          // profondeur : traversant toute la colonne, le trait ne disait pas à
+          // QUEL niveau la page allait se poser — or c'est précisément ce que
+          // le glissé cherche à choisir.
+          style={{ left: `${0.5 + depth}rem`, right: "0.25rem" }}
         />
       )}
       <div
