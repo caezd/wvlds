@@ -324,7 +324,7 @@ export function WikiPageContent({
   // introuvable jusqu'au prochain chargement du wiki.
   const notesSignature = (notes.notes ?? [])
     .map(n => `${n.id}:${n.title}:${n.body}`)
-    .join(" ");
+    .join("|");
   React.useEffect(() => {
     if (notes.loading) return;
     onNotesLoaded(page.id, notes.notes ?? []);
