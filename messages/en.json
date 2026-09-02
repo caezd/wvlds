@@ -1318,6 +1318,9 @@
     "descPlaceholder": "Location description…",
     "noDescription": "No description.",
     "addDescriptionHint": "Click « Edit » to add a description.",
+    "wikiPage": "Wiki page",
+    "noWikiPage": "No page",
+    "openWikiPage": "Open the wiki page",
     "borderStyles": {
       "solid": "Solid",
       "dashed": "Dashed",

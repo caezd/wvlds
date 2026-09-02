@@ -24,6 +24,8 @@ export type MapPin = {
   border_color: string | null;
   border_style: string;
   sort_index: number;
+  /** La page du wiki que ce lieu raconte — voir migration 150. */
+  wiki_page_id: string | null;
 };
 
 export async function getWorldMap(
@@ -88,7 +90,7 @@ export async function createMapPin(
 
 export async function updateMapPin(
   pinId: string,
-  patch: Partial<Pick<MapPin, "x" | "y" | "title" | "description" | "banner_url" | "color" | "icon" | "icon_color" | "border_color" | "border_style">>,
+  patch: Partial<Pick<MapPin, "x" | "y" | "title" | "description" | "banner_url" | "color" | "icon" | "icon_color" | "border_color" | "border_style" | "wiki_page_id">>,
 ): Promise<void> {
   const supabase = await createClient();
   const {

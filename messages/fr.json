@@ -1318,6 +1318,9 @@
     "descPlaceholder": "Description du lieu…",
     "noDescription": "Aucune description.",
     "addDescriptionHint": "Cliquer « Modifier » pour ajouter une description.",
+    "wikiPage": "Page du wiki",
+    "noWikiPage": "Aucune page",
+    "openWikiPage": "Ouvrir la page du wiki",
     "borderStyles": {
       "solid": "Plein",
       "dashed": "Tirets",

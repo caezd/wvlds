@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-09 ──────────────────────────────────────────────────────────────
   {
     date: "2026-09",
+    tag: "Carte",
+    text: "Une épingle de la carte peut renvoyer à une page du wiki : on la choisit en modifiant l’épingle, et un bouton l’ouvre depuis la carte."
+  },
+  {
+    date: "2026-09",
     tag: "Salons",
     text: "Un lien « [[Page]] » écrit dans un message ouvre la page du wiki du monde."
   },

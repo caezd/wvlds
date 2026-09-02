@@ -3,8 +3,10 @@
 import * as React from "react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Check, ImagePlus, Loader2, Pencil, Trash2, Upload, X } from "lucide-react";
+import {
+  BookOpenText, Check, ImagePlus, Loader2, Pencil, Trash2, Upload, X } from "lucide-react";
 
 import { toWebP } from "@/lib/imageUtils";
 import { supabaseThumb } from "@/lib/storage";
@@ -45,6 +47,34 @@ export function PinPopover({
   const supabase = createClient();
 
   const [editing, setEditing] = React.useState(false);
+  const router = useRouter();
+
+  /**
+   * La page du wiki que ce lieu raconte.
+   *
+   * La carte est l'index géographique du monde et le wiki en est le texte ;
+   * rien ne les reliait. Les pages se lisent à l'ouverture de la popover —
+   * titres seulement — pour proposer le choix en écriture et nommer le lien
+   * en lecture.
+   */
+  const [wikiPageId, setWikiPageId] = React.useState<string | null>(pin.wiki_page_id ?? null);
+  const [wikiPages, setWikiPages] = React.useState<{ id: string; title: string; slug: string }[]>([]);
+  React.useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const { data } = await supabase
+        .from("world_wiki_pages")
+        .select("id, title, slug")
+        .eq("world_id", worldId)
+        .eq("is_folder", false)
+        .is("deleted_at", null)
+        .order("title");
+      if (!cancelled) setWikiPages((data ?? []) as { id: string; title: string; slug: string }[]);
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [worldId]);
+  const linkedPage = wikiPages.find(p => p.id === (pin.wiki_page_id ?? null)) ?? null;
   const [title, setTitle] = React.useState(pin.title);
   const [description, setDescription] = React.useState(pin.description ?? "");
   const [uploadingBanner, setUploadingBanner] = React.useState(false);
@@ -58,6 +88,7 @@ export function PinPopover({
     if (!editing) {
       setTitle(pin.title);
       setDescription(pin.description ?? "");
+      setWikiPageId(pin.wiki_page_id ?? null);
     }
   }, [pin, editing]);
 
@@ -68,8 +99,9 @@ export function PinPopover({
       await updateMapPin(pin.id, {
         title: title.trim(),
         description: description || null,
+        wiki_page_id: wikiPageId,
       });
-      onUpdated({ ...pin, title: title.trim(), description: description || null });
+      onUpdated({ ...pin, title: title.trim(), description: description || null, wiki_page_id: wikiPageId });
       setEditing(false);
       toast.success(t("pinUpdated"));
     } catch {
@@ -277,6 +309,31 @@ export function PinPopover({
             <h3 className="text-base font-semibold leading-snug">{pin.title}</h3>
           )}
 
+          {/* Page du wiki : à choisir en écriture, à ouvrir en lecture. */}
+          {editing ? (
+            <label className="flex flex-col gap-1 text-xs text-muted-foreground">
+              {t("wikiPage")}
+              <select
+                value={wikiPageId ?? ""}
+                onChange={e => setWikiPageId(e.target.value || null)}
+                className="rounded-md border border-border bg-background px-2 py-1.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="">{t("noWikiPage")}</option>
+                {wikiPages.map(p => (
+                  <option key={p.id} value={p.id}>{p.title}</option>
+                ))}
+              </select>
+            </label>
+          ) : linkedPage ? (
+            <button
+              type="button"
+              onClick={() => router.push(`/w/${worldId}?view=wiki&page=${encodeURIComponent(linkedPage.slug)}`)}
+              className="flex w-fit items-center gap-1.5 rounded-md border border-border-soft px-2 py-1 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
+            >
+              <BookOpenText className="h-3.5 w-3.5" /> {t("openWikiPage")} : {linkedPage.title}
+            </button>
+          ) : null}
+
           {/* Description */}
           <div className="max-h-48 overflow-y-auto">
             {editing ? (
@@ -313,6 +370,7 @@ export function PinPopover({
                     onClick={() => {
                       setTitle(pin.title);
                       setDescription(pin.description ?? "");
+      setWikiPageId(pin.wiki_page_id ?? null);
                       setEditing(false);
                     }}
                   >

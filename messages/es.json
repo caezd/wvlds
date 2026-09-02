@@ -1318,6 +1318,9 @@
     "descPlaceholder": "Descripción del lugar…",
     "noDescription": "Sin descripción.",
     "addDescriptionHint": "Haga clic en « Editar » para añadir una descripción.",
+    "wikiPage": "Página del wiki",
+    "noWikiPage": "Ninguna página",
+    "openWikiPage": "Abrir la página del wiki",
     "borderStyles": {
       "solid": "Lleno",
       "dashed": "Guiones",
