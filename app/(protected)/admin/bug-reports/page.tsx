@@ -31,7 +31,7 @@ const PAR_PAGE = 25;
  * dehors de cette page ne rapporte les signalements de tout le monde.
  *
  * Le filtre par statut sert enfin l'index `(status, created_at DESC)` posé par
- * la migration 137, qu'aucune requête n'utilisait jusqu'ici.
+ * la migration 144, qu'aucune requête n'utilisait jusqu'ici.
  */
 export default async function BugReportsPage({
   searchParams,

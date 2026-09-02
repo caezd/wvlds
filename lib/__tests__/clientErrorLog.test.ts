@@ -56,7 +56,7 @@ describe("enregistrerErreurClient", () => {
 
   // La pile d'une erreur minifiée peut faire plusieurs milliers de caractères :
   // sans borne, le journal pèserait plus lourd que le signalement, et la
-  // contrainte de la migration 139 rejetterait toute la ligne.
+  // contrainte de la migration 146 rejetterait toute la ligne.
   it("borne message et pile", () => {
     enregistrerErreurClient(erreur("m".repeat(5000), { stack: "s".repeat(9000) }));
 

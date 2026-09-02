@@ -100,7 +100,7 @@ export function BugReportForm({
 
   /**
    * Convertit sans jamais échouer : le fichier d'origine est déjà d'un type
-   * accepté par le bucket (migration 140). Une conversion ratée ne doit pas
+   * accepté par le bucket (migration 147). Une conversion ratée ne doit pas
    * coûter son signalement à quelqu'un — ni, en remontant, laisser `envoi`
    * bloqué sur une exception que personne ne rattrape.
    */

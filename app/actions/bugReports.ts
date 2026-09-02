@@ -29,7 +29,7 @@ import {
  * Dépose un signalement.
  *
  * `status` et `admin_note` ne sont volontairement pas acceptés : la policy
- * d'insertion les contraint déjà à leur valeur d'ouverture (migration 137), et
+ * d'insertion les contraint déjà à leur valeur d'ouverture (migration 144), et
  * ne pas les exposer ici évite d'avoir à s'en souvenir.
  */
 export async function submitBugReport(rapport: {
@@ -82,7 +82,7 @@ export async function submitBugReport(rapport: {
     app_version: process.env.NEXT_PUBLIC_APP_VERSION || null,
     attachments,
     // Renormalisé ici : le journal traverse le réseau, et une entrée malformée
-    // ferait rejeter toute la ligne par la contrainte de la migration 139. Il
+    // ferait rejeter toute la ligne par la contrainte de la migration 146. Il
     // est borné plutôt que refusé — perdre un rapport à cause de sa pile
     // reviendrait à perdre la seule chose que son auteur ait écrite.
     client_errors: normaliserJournalClient(rapport.clientErrors),
@@ -118,7 +118,7 @@ export async function setBugReportStatus(reportId: string, status: BugReportStat
 /**
  * Écrit la note de traitement d'un signalement.
  *
- * La colonne existait depuis la migration 137 sans que rien ne l'écrive : elle
+ * La colonne existait depuis la migration 144 sans que rien ne l'écrive : elle
  * voyageait jusqu'au client et ne s'affichait nulle part. C'est la trace de ce
  * qui a été fait d'un rapport — pourquoi il a été écarté, ce qui le corrige —
  * et elle ne quitte jamais l'administration : la policy d'UPDATE la réserve aux
@@ -152,7 +152,7 @@ export async function setBugReportNote(reportId: string, note: string) {
  * à la suppression d'un rapport ne les couvre pas — ils n'ont jamais appartenu
  * à aucun.
  *
- * L'identification est faite en base (migration 140) : un objet du bucket dont
+ * L'identification est faite en base (migration 147) : un objet du bucket dont
  * le chemin n'apparaît dans les `attachments` d'aucun rapport, et déposé il y a
  * plus d'un jour. Ce délai de grâce est ce qui la rend sûre — sans lui, on
  * supprimerait les images d'un formulaire encore en train d'être rempli.

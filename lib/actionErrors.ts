@@ -52,7 +52,7 @@ export const ERR_TAG_INVALIDE = "invalidTag";
 /** Le quota de personnages du plan gratuit est atteint pour ce monde. */
 export const ERR_QUOTA_PERSONAS = "personaQuotaReached";
 
-/** Trop de signalements déposés dans l'heure — voir la migration 140. */
+/** Trop de signalements déposés dans l'heure — voir la migration 147. */
 export const ERR_RYTHME_SIGNALEMENTS = "bugReportRateLimit";
 
 /** Le pseudo choisi est déjà porté par quelqu'un d'autre. */

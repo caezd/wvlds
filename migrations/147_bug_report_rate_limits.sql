@@ -1,7 +1,7 @@
 -- ============================================================
--- Migration 140 — Garde-fous des signalements de bug
+-- Migration 147 — Garde-fous des signalements de bug
 -- ============================================================
--- La migration 138 a créé le bucket `bug-reports` sans borne, alors que les
+-- La migration 145 a créé le bucket `bug-reports` sans borne, alors que les
 -- sept autres buckets du projet en posent deux. Le dépôt se faisant du
 -- navigateur DIRECTEMENT vers le stockage — c'est ce qui permet au bucket
 -- d'être privé sans que le serveur relaie les octets —, la liste de types du
