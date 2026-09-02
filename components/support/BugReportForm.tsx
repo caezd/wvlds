@@ -304,20 +304,6 @@ export function BugReportForm({
         </div>
       )}
 
-      {/* Ce qui part avec le rapport, dit avant l'envoi — et la page nommée
-          plutôt qu'annoncée : c'est le seul moyen de voir qu'on signale la
-          bonne, ou qu'aucune n'accompagne le message. */}
-      <div className="space-y-1 text-xs leading-snug text-muted-foreground">
-        {pageSignalee ? (
-          <p>
-            {t("reportedPage")} <code className="break-all font-mono">{pageSignalee}</code>
-          </p>
-        ) : (
-          <p>{t("noReportedPage")}</p>
-        )}
-        <p>{t("attached")}</p>
-      </div>
-
       <Button type="submit" disabled={!envoyable}>
         {envoi ? t("sending") : t("send")}
       </Button>

@@ -60,10 +60,7 @@ export default async function BugReportPage({
 
   return (
     <div className="mx-auto w-full max-w-2xl space-y-8 p-6">
-      <header className="space-y-1.5">
-        <h1 className="text-2xl font-bold">{t("title")}</h1>
-        <p className="text-sm text-muted-foreground">{t("intro")}</p>
-      </header>
+      <h1 className="text-2xl font-bold">{t("title")}</h1>
 
       <BugReportForm pageSignalee={pageSignalee} />
 

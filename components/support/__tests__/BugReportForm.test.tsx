@@ -26,7 +26,7 @@ import { BugReportForm } from "@/components/support/BugReportForm";
 import { enregistrerErreurClient, lireErreursClient, oublierErreursClient } from "@/lib/clientErrorLog";
 import { toWebP } from "@/lib/imageUtils";
 
-const CHAMP = { name: "Que s’est-il passé ?" };
+const CHAMP = { name: "Description" };
 
 beforeEach(() => {
   oublierErreursClient();
@@ -216,20 +216,4 @@ describe("BugReportForm", () => {
     });
   });
 
-  // Ce qui part avec le rapport doit être dit avant l'envoi, pas découvert
-  // après : la page et le navigateur sont des données personnelles. Et la page
-  // est NOMMÉE plutôt qu'annoncée — l'annoncer sans la montrer était justement
-  // ce qui rendait la phrase fausse une fois le formulaire sorti du modal.
-  it("nomme la page signalée", () => {
-    render(<BugReportForm pageSignalee="/w/123?view=members" />);
-
-    expect(screen.getByText("/w/123?view=members")).toBeInTheDocument();
-    expect(screen.getByText(/navigateur est joint/)).toBeInTheDocument();
-  });
-
-  it("dit qu'aucune page n'accompagne le signalement, plutôt que d'en taire l'absence", () => {
-    render(<BugReportForm />);
-
-    expect(screen.getByText(/Aucune page/)).toBeInTheDocument();
-  });
 });
