@@ -152,6 +152,10 @@ const ROUTES = [
   "/changelog",
   "/quests",
   "/legal",
+  // Son layout de segment monte son propre `NextIntlClientProvider` : c'est
+  // exactement la construction qui avait abattu l'application le 2026-08-28, et
+  // que les tests unitaires ne peuvent pas voir.
+  "/bug-report",
   // Écartent un compte ordinaire par une redirection — ce qui est justement le
   // comportement à vérifier : elles ne doivent pas exploser.
   "/admin",
@@ -159,6 +163,7 @@ const ROUTES = [
   "/admin/shop",
   "/admin/users",
   "/admin/translations",
+  "/admin/bug-reports",
 ];
 
 test.describe("Toutes les routes connectées rendent", () => {

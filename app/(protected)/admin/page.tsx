@@ -1,6 +1,6 @@
 import { requireAdmin } from "@/lib/admin";
 import Link from "next/link";
-import { ShoppingBag, Users, ToggleLeft, Languages } from "lucide-react";
+import { ShoppingBag, Users, ToggleLeft, Languages, Bug } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
 /** Titre d'onglet — sans lui la page héritait du « WVLDS » générique. */
@@ -18,6 +18,19 @@ export default async function AdminDashboard() {
       <h1 className="text-2xl font-bold">{t("title")}</h1>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <Link
+          href="/admin/bug-reports"
+          className="flex items-center gap-4 rounded-xl border border-border-soft p-5 hover:bg-muted transition-colors"
+        >
+          <Bug className="h-8 w-8 text-muted-foreground" />
+          <div>
+            <div className="font-semibold">{t("bugReportsCard")}</div>
+            <div className="text-sm text-muted-foreground">
+              {t("bugReportsCardDesc")}
+            </div>
+          </div>
+        </Link>
+
         <Link
           href="/admin/shop"
           className="flex items-center gap-4 rounded-xl border border-border-soft p-5 hover:bg-muted transition-colors"

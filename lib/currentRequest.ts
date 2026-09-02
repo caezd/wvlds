@@ -276,3 +276,26 @@ export const getFavoriteWorlds = cache(async (limit?: number): Promise<FavoriteW
   const { data } = await query;
   return (data ?? []).map(({ id, name, icon_url }) => ({ id, name, icon_url }));
 });
+
+/**
+ * Nombre de signalements de bug encore à trier.
+ *
+ * Sert la pastille du rail. L'appelant DOIT être administrateur : la policy de
+ * lecture de `bug_reports` rend à chacun ses propres signalements, si bien
+ * qu'un compte ordinaire compterait les siens et verrait une pastille sur un
+ * panneau auquel il n'a pas accès.
+ *
+ * `head: true` : seul le compte revient, jamais les signalements — la pastille
+ * n'a pas besoin de leur contenu, et ce contenu voyagerait sur chaque page.
+ */
+export const getNewBugReportCount = cache(async (): Promise<number> => {
+  const profile = await getCurrentProfile();
+  if (profile?.is_admin !== true) return 0;
+
+  const supabase = await createClient();
+  const { count } = await supabase
+    .from("bug_reports")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "new");
+  return count ?? 0;
+});

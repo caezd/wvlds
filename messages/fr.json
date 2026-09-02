@@ -48,6 +48,7 @@
     "icon": "Icône",
     "notFoundOrForbidden": "Introuvable, ou vous n'y avez pas accès.",
     "personaNameLength": "Le nom doit contenir entre 1 et 40 caractères.",
+    "bugReportRateLimit": "Vous avez envoyé beaucoup de signalements coup sur coup. Réessayez dans une heure — les précédents sont bien arrivés.",
     "personaQuotaReached": "Limite atteinte : {count} personnages par monde sur un compte gratuit.",
     "personaNameTaken": "Un personnage portant ce nom existe déjà dans ce monde.",
     "forbidden": "Vous n'avez pas les droits nécessaires pour cela.",
@@ -81,7 +82,9 @@
     "admin": "Administration",
     "installApp": "Installer l'application",
     "installInstructionsIOS": "Appuyez sur le bouton Partager, puis « Sur l'écran d'accueil ».",
-    "installInstructionsOther": "Ouvrez le menu de votre navigateur (⋮), puis « Installer l'application »."
+    "installInstructionsOther": "Ouvrez le menu de votre navigateur (⋮), puis « Installer l'application ».",
+    "bugReportsToTriage": "{count, plural, one {# signalement à trier} other {# signalements à trier}}",
+    "reportBug": "Signaler un problème"
   },
   "presence": {
     "online": "En ligne",
@@ -794,7 +797,34 @@
     "editItem": "Modifier l'article",
     "shopItemDelete": "Supprimer cet article",
     "shopItemEdit": "Modifier cet article",
-    "loadError": "Le chargement a échoué. Le détail est dans les journaux serveur."
+    "loadError": "Le chargement a échoué. Le détail est dans les journaux serveur.",
+    "bugReports": {
+      "title": "Signalements",
+      "empty": "Aucun signalement.",
+      "status": {
+        "new": "Nouveau",
+        "in_progress": "En cours",
+        "resolved": "Résolu",
+        "declined": "Écarté"
+      },
+      "statusLabel": "Statut",
+      "clean": "Nettoyer les images orphelines",
+      "cleaning": "Nettoyage…",
+      "cleaned": "{count, plural, =0 {Aucune image orpheline à supprimer.} one {# image orpheline supprimée.} other {# images orphelines supprimées.}}",
+      "filterAll": "Tous",
+      "previous": "Précédent",
+      "next": "Suivant",
+      "noteLabel": "Note de traitement",
+      "notePlaceholder": "Note de traitement — ce qui a été fait, ou pourquoi ce signalement a été écarté.",
+      "clientErrors": "{count, plural, one {# erreur du navigateur} other {# erreurs du navigateur}}",
+      "page": "Page",
+      "browser": "Navigateur",
+      "version": "Version",
+      "deleteTitle": "Supprimer ce signalement ?",
+      "deleteDescription": "Il sera supprimé définitivement."
+    },
+    "bugReportsCard": "Signalements",
+    "bugReportsCardDesc": "Les problèmes remontés par les utilisateurs"
   },
   "chatrooms": {
     "newRoom": "Nouvelle salle",
@@ -1259,5 +1289,25 @@
     "notFoundTitle": "Page introuvable",
     "notFoundDescription": "Désolé, la page que vous cherchez n'existe pas ou n'est plus accessible.",
     "notFoundHint": "Chaque monde commence par une page blanche. Celle que vous cherchiez semble s'être évaporée, mais rien ne vous empêche d'en créer une nouvelle."
+  },
+  "bugReport": {
+    "title": "Signaler un problème",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "Ce que vous faisiez, ce qui s’est passé.",
+    "attachErrors": "Joindre {count, plural, one {# erreur relevée} other {# erreurs relevées}} par le navigateur.",
+    "send": "Envoyer",
+    "sending": "Envoi…",
+    "sent": "Signalement envoyé.",
+    "tooLong": "Maximum {max} caractères.",
+    "imagesLabel": "Captures d’écran",
+    "imagesHint": "{max} images maximum.",
+    "addImage": "Ajouter une image",
+    "mine": "Mes signalements",
+    "status": {
+      "new": "Nouveau",
+      "in_progress": "En cours",
+      "resolved": "Résolu",
+      "declined": "Écarté"
+    }
   }
 }
