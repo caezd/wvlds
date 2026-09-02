@@ -82,7 +82,6 @@ function saveCollapsed(pageId: string, ids: Set<string>) {
 }
 
 /** Ossature proposée quand la page n'a encore aucune catégorie. */
-const SUGGESTIONS = ["overview", "entities", "relationships", "places", "moments"] as const;
 
 // ──────────────────────────────────────────────────────────────
 // Une catégorie et ses fiches
@@ -537,23 +536,7 @@ export function WikiNotesPanel({
 
           {vide && (
             <div className="px-1 py-3">
-              <p className="mb-2 text-xs text-muted-foreground">
-                {isEditMode ? t("emptyEdit") : t("emptyRead")}
-              </p>
-              {isEditMode && (
-                <div className="flex flex-wrap gap-1">
-                  {SUGGESTIONS.map(id => (
-                    <button
-                      key={id}
-                      type="button"
-                      onClick={() => void notes.createCategory(t(`suggestions.${id}`))}
-                      className="rounded-full border border-border-soft px-2 py-0.5 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
-                    >
-                      + {t(`suggestions.${id}`)}
-                    </button>
-                  ))}
-                </div>
-              )}
+              <p className="text-xs text-muted-foreground">{t("empty")}</p>
             </div>
           )}
 

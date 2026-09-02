@@ -1226,15 +1226,7 @@
       "deleteNoteDesc": "Esta ficha se eliminará definitivamente. Esta acción es irreversible.",
       "emptyBody": "Ficha sin contenido.",
       "emptyCategory": "Ninguna ficha.",
-      "emptyEdit": "Ninguna nota en esta página. Cree una categoría o parta de una estructura:",
-      "emptyRead": "Ninguna nota en esta página.",
-      "suggestions": {
-        "overview": "Visión general",
-        "entities": "Entidades",
-        "relationships": "Relaciones",
-        "places": "Lugares",
-        "moments": "Momentos"
-      }
+      "empty": "Ninguna nota en esta página."
     },
     "lexicon": {
       "manageButton": "Léxico",

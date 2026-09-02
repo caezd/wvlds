@@ -108,12 +108,12 @@ describe("WikiNotesPanel — lecture", () => {
     expect(screen.getByText("Meridian")).toBeTruthy();
   });
 
-  it("propose une ossature quand la page n'a aucune note", async () => {
+  // Le panneau annonce son vide plutôt que de n'afficher rien du tout : une
+  // colonne blanche se lit comme un chargement qui n'aboutit pas.
+  it("annonce qu'une page n'a aucune note", async () => {
     renderPanel([{ data: [], error: null }, { data: [], error: null }]);
 
-    expect(await screen.findByRole("button", { name: "+ Vue d'ensemble" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "+ Entités" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "+ Moments" })).toBeTruthy();
+    expect(await screen.findByText("Aucune note pour cette page.")).toBeTruthy();
   });
 
 });
@@ -254,22 +254,6 @@ describe("WikiNotesPanel — écriture", () => {
     await waitFor(() => expect(mock.builders[2].builder.delete).toHaveBeenCalled());
   });
 
-  it("crée la catégorie suggérée d'un clic", async () => {
-    const user = userEvent.setup();
-    const { mock } = renderPanel([
-      { data: [], error: null },
-      { data: [], error: null },
-      { data: { id: "c1", page_id: "p1", name: "Entités", sort_index: 0 }, error: null },
-    ]);
-
-    await user.click(await screen.findByRole("button", { name: "+ Entités" }));
-    await waitFor(() =>
-      expect(mock.builders[2].builder.insert.mock.calls[0][0]).toMatchObject({
-        name: "Entités",
-        sort_index: 0,
-      }),
-    );
-  });
 });
 
 describe("WikiNotesPanel — pied de colonne", () => {

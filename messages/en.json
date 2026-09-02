@@ -1226,15 +1226,7 @@
       "deleteNoteDesc": "This card will be permanently deleted. This action cannot be undone.",
       "emptyBody": "Empty card.",
       "emptyCategory": "No cards.",
-      "emptyEdit": "No notes on this page yet. Create a category, or start from an outline:",
-      "emptyRead": "No notes on this page.",
-      "suggestions": {
-        "overview": "Overview",
-        "entities": "Entities",
-        "relationships": "Relationships",
-        "places": "Places",
-        "moments": "Moments"
-      }
+      "empty": "No notes on this page."
     },
     "lexicon": {
       "manageButton": "Lexicon",

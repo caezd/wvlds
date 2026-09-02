@@ -1226,15 +1226,7 @@
       "deleteNoteDesc": "Cette fiche sera supprimée définitivement. Cette action est irréversible.",
       "emptyBody": "Fiche sans contenu.",
       "emptyCategory": "Aucune fiche.",
-      "emptyEdit": "Aucune note pour cette page. Créez une catégorie, ou partez d'une ossature :",
-      "emptyRead": "Aucune note pour cette page.",
-      "suggestions": {
-        "overview": "Vue d'ensemble",
-        "entities": "Entités",
-        "relationships": "Relations",
-        "places": "Lieux",
-        "moments": "Moments"
-      }
+      "empty": "Aucune note pour cette page."
     },
     "lexicon": {
       "manageButton": "Lexique",
