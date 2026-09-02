@@ -189,6 +189,56 @@ describe("WikiNotesPanel — écriture", () => {
     );
   });
 
+  it("descend une fiche depuis son menu, sans souris", async () => {
+    // Le glisser-déposer était le seul chemin vers l'ordre des fiches, et il
+    // demande un pointeur : au clavier, le panneau était figé.
+    const user = userEvent.setup();
+    const { mock } = renderPanel([...CHARGEMENT, { data: null, error: null }, { data: null, error: null }]);
+
+    await screen.findByText("Mara Kline");
+    const fiche = screen.getByText("Mara Kline").closest("li")!;
+    await user.click(within(fiche).getByRole("button", { name: "Actions de la fiche" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Descendre" }));
+
+    // « Mara Kline » passe derrière « Les Gardiens » : les deux rangs s'échangent.
+    await waitFor(() => {
+      const writes = mock.builders.flatMap(b => b.builder.update.mock.calls.map(c => c[0]));
+      expect(writes).toContainEqual(expect.objectContaining({ sort_index: 1 }));
+      expect(writes).toContainEqual(expect.objectContaining({ sort_index: 0 }));
+    });
+  });
+
+  it("ne propose que les déplacements qui ont un sens", async () => {
+    const user = userEvent.setup();
+    renderPanel([...CHARGEMENT]);
+
+    await screen.findByText("Mara Kline");
+    const fiche = screen.getByText("Mara Kline").closest("li")!;
+    await user.click(within(fiche).getByRole("button", { name: "Actions de la fiche" }));
+
+    // Première de sa catégorie, dans la première catégorie : ni monter, ni
+    // catégorie précédente.
+    await screen.findByRole("menuitem", { name: "Descendre" });
+    expect(screen.queryByRole("menuitem", { name: "Monter" })).toBeNull();
+    expect(screen.queryByRole("menuitem", { name: "Vers la catégorie précédente" })).toBeNull();
+    expect(screen.getByRole("menuitem", { name: "Vers la catégorie suivante" })).toBeInTheDocument();
+  });
+
+  it("descend une catégorie depuis son menu", async () => {
+    const user = userEvent.setup();
+    const { mock } = renderPanel([...CHARGEMENT, { data: null, error: null }, { data: null, error: null }]);
+
+    await screen.findByText("Entités");
+    const section = screen.getByText("Entités").closest("section")!;
+    await user.click(within(section).getByRole("button", { name: /Actions de la catégorie|Options/ }));
+    await user.click(await screen.findByRole("menuitem", { name: "Descendre" }));
+
+    await waitFor(() => {
+      const writes = mock.builders.flatMap(b => b.builder.update.mock.calls.map(c => c[0]));
+      expect(writes.length).toBeGreaterThan(0);
+    });
+  });
+
   it("modifie le titre et le contenu d'une fiche", async () => {
     const user = userEvent.setup();
     const { mock } = renderPanel([...CHARGEMENT, { data: null, error: null }]);

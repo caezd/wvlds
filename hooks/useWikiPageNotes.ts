@@ -51,6 +51,77 @@ export function groupNotesByCategory(
  * glisser-déposer (deux listes à renuméroter quand la fiche change de
  * catégorie), et c'est celle qu'on peut vérifier sans monter d'interface.
  */
+/** Déplacement d'un cran d'une fiche, tel qu'un menu peut le proposer. */
+export type NoteMoveCommand = "up" | "down" | "previousCategory" | "nextCategory";
+
+/**
+ * Déplacements praticables sur une fiche, sans souris.
+ *
+ * Le glisser-déposer était le seul chemin vers l'ordre des fiches, et il
+ * demande un pointeur. Chaque commande rend la catégorie et l'index que
+ * `moveNote` attend — la même règle que le geste, donc le même résultat.
+ *
+ * `toIndex` est l'index de la cible dans sa liste AVANT retrait de la fiche
+ * déplacée (voir `planNoteMove`) : venant d'au-dessus, la fiche se pose après
+ * la cible ; venant d'en dessous, avant. C'est exactement « descendre » et
+ * « monter » d'un cran.
+ */
+export function noteKeyboardMoves(
+  groups: WikiNoteGroup[],
+  noteId: string,
+): Partial<Record<NoteMoveCommand, { toCategoryId: string; toIndex: number }>> {
+  const at = groups.findIndex(g => g.notes.some(n => n.id === noteId));
+  if (at === -1) return {};
+  const group = groups[at];
+  const rank = group.notes.findIndex(n => n.id === noteId);
+  const previous = groups[at - 1];
+  const next = groups[at + 1];
+
+  return {
+    ...(rank > 0 && { up: { toCategoryId: group.category.id, toIndex: rank - 1 } }),
+    ...(rank < group.notes.length - 1 && {
+      down: { toCategoryId: group.category.id, toIndex: rank + 1 },
+    }),
+    // Changer de catégorie, c'est se ranger en dernier dans la voisine : là
+    // où le regard s'attend à retrouver ce qu'on vient d'y envoyer.
+    ...(previous && {
+      previousCategory: { toCategoryId: previous.category.id, toIndex: previous.notes.length },
+    }),
+    ...(next && {
+      nextCategory: { toCategoryId: next.category.id, toIndex: next.notes.length },
+    }),
+  };
+}
+
+/** Déplacement d'un cran d'une catégorie parmi ses voisines. */
+export type CategoryMoveCommand = "up" | "down";
+
+/**
+ * Déplacements praticables sur une catégorie, sans souris.
+ *
+ * Rend l'ordre complet qui en résulte : c'est ce que `reorderCategories`
+ * écrit, et ce que le glissé lui donne aussi.
+ */
+export function categoryKeyboardMoves(
+  groups: WikiNoteGroup[],
+  categoryId: string,
+): Partial<Record<CategoryMoveCommand, WikiNoteCategory[]>> {
+  const list = groups.map(g => g.category);
+  const rank = list.findIndex(c => c.id === categoryId);
+  if (rank === -1) return {};
+
+  const swapped = (a: number, b: number) => {
+    const next = [...list];
+    [next[a], next[b]] = [next[b], next[a]];
+    return next;
+  };
+
+  return {
+    ...(rank > 0 && { up: swapped(rank, rank - 1) }),
+    ...(rank < list.length - 1 && { down: swapped(rank, rank + 1) }),
+  };
+}
+
 export function planNoteMove(
   notes: WikiPageNote[],
   noteId: string,

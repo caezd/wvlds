@@ -3,6 +3,8 @@
 import * as React from "react";
 import { useTranslations } from "next-intl";
 import {
+  ArrowDown,
+  ArrowUp,
   ChevronRight,
   GripVertical,
   Loader2,
@@ -41,7 +43,14 @@ import { SANS_BALAYAGE } from "@/components/ui/drawer";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { DB_TEXT_LIMITS } from "@/lib/textLimits";
 import { cn } from "@/lib/utils";
-import { useWikiPageNotes, type WikiNoteGroup } from "@/hooks/useWikiPageNotes";
+import {
+  categoryKeyboardMoves,
+  noteKeyboardMoves,
+  useWikiPageNotes,
+  type CategoryMoveCommand,
+  type NoteMoveCommand,
+  type WikiNoteGroup,
+} from "@/hooks/useWikiPageNotes";
 import type { WikiNoteCategory, WikiPageNote } from "@/types/worlds";
 import { WikiNoteCard, noteDragId } from "./WikiNoteCard";
 import { WIKI_FOOTER, WIKI_FOOTER_BUTTON } from "./wikiSubHeader";
@@ -103,6 +112,10 @@ function CategorySection({
   ficheEnGlisse,
   onSaveNote,
   onDeleteNote,
+  categoryMoves,
+  onMoveCategory,
+  noteMovesOf,
+  onMoveNote,
 }: {
   group: WikiNoteGroup;
   canEdit: boolean;
@@ -128,8 +141,14 @@ function CategorySection({
   ficheEnGlisse: boolean;
   onSaveNote: (note: WikiPageNote, patch: { title: string; body: string }) => void;
   onDeleteNote: (note: WikiPageNote) => void;
+  /** Déplacements sans souris de la catégorie, et de ses fiches. */
+  categoryMoves: Partial<Record<CategoryMoveCommand, unknown>>;
+  onMoveCategory: (command: CategoryMoveCommand) => void;
+  noteMovesOf: (noteId: string) => Partial<Record<NoteMoveCommand, unknown>>;
+  onMoveNote: (noteId: string, command: NoteMoveCommand) => void;
 }) {
   const t = useTranslations("wiki.notes");
+  const tWiki = useTranslations("wiki");
   const tCommon = useTranslations("common");
 
   const [renaming, setRenaming] = React.useState(false);
@@ -242,6 +261,16 @@ function CategorySection({
                 <DropdownMenuItem onSelect={() => setRenaming(true)}>
                   <Pencil className="mr-2 h-3.5 w-3.5" /> {t("renameCategory")}
                 </DropdownMenuItem>
+                {Boolean(categoryMoves.up) && (
+                  <DropdownMenuItem onSelect={() => onMoveCategory("up")}>
+                    <ArrowUp className="mr-2 h-3.5 w-3.5" /> {tWiki("moveUp")}
+                  </DropdownMenuItem>
+                )}
+                {Boolean(categoryMoves.down) && (
+                  <DropdownMenuItem onSelect={() => onMoveCategory("down")}>
+                    <ArrowDown className="mr-2 h-3.5 w-3.5" /> {tWiki("moveDown")}
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem onSelect={afterMenuClose(onDelete)} className="text-destructive focus:text-destructive">
                   <Trash2 className="mr-2 h-3.5 w-3.5" /> {tCommon("delete")}
                 </DropdownMenuItem>
@@ -267,6 +296,8 @@ function CategorySection({
                   onToggleExpanded={() => onToggleNote(note.id)}
                   onSave={patch => onSaveNote(note, patch)}
                   onDelete={() => onDeleteNote(note)}
+                  moves={noteMovesOf(note.id)}
+                  onMove={command => onMoveNote(note.id, command)}
                 />
               ))}
             </ul>
@@ -541,6 +572,16 @@ export function WikiNotesPanel({
                       ficheEnGlisse={ficheGlissee !== null}
                       onSaveNote={(note, patch) => void notes.updateNote(note, patch)}
                       onDeleteNote={setConfirmNote}
+                      categoryMoves={categoryKeyboardMoves(notes.groups, group.category.id)}
+                      onMoveCategory={command => {
+                        const order = categoryKeyboardMoves(notes.groups, group.category.id)[command];
+                        if (order) void notes.reorderCategories(order);
+                      }}
+                      noteMovesOf={noteId => noteKeyboardMoves(notes.groups, noteId)}
+                      onMoveNote={(noteId, command) => {
+                        const to = noteKeyboardMoves(notes.groups, noteId)[command];
+                        if (to) void notes.moveNote(noteId, to.toCategoryId, to.toIndex);
+                      }}
                     />
                   ))}
                 </div>

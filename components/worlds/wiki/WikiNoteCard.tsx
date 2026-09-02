@@ -2,8 +2,13 @@
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
-import { ChevronRight, GripVertical, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowDownToLine,
+  ArrowUp,
+  ArrowUpToLine, ChevronRight, GripVertical, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { useSortable } from "@dnd-kit/sortable";
+import type { NoteMoveCommand } from "@/hooks/useWikiPageNotes";
 import { CSS } from "@dnd-kit/utilities";
 
 import { Button } from "@/components/ui/button";
@@ -12,6 +17,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { afterMenuClose } from "@/components/ui/after-menu-close";
@@ -48,6 +54,19 @@ const NOTE_PROSE_CLASSES = cn(
 /** Identifiant de glissement d'une fiche — préfixé pour le distinguer d'une catégorie. */
 export const noteDragId = (id: string) => `note:${id}`;
 
+/** Ordre d'affichage : le cran vertical d'abord, le saut de catégorie ensuite. */
+const NOTE_MOVE_ORDER: NoteMoveCommand[] = ["up", "down", "previousCategory", "nextCategory"];
+
+const NOTE_MOVE_LABEL: Record<
+  NoteMoveCommand,
+  { Icon: React.ComponentType<{ className?: string }>; key: string }
+> = {
+  up: { Icon: ArrowUp, key: "moveUp" },
+  down: { Icon: ArrowDown, key: "moveDown" },
+  previousCategory: { Icon: ArrowUpToLine, key: "moveToPreviousCategory" },
+  nextCategory: { Icon: ArrowDownToLine, key: "moveToNextCategory" },
+};
+
 /**
  * Une fiche du panneau de notes : un titre qui déplie son contenu, et, en mode
  * modification, une poignée de déplacement et un menu.
@@ -59,6 +78,8 @@ export function WikiNoteCard({
   onToggleExpanded,
   onSave,
   onDelete,
+  moves = {},
+  onMove,
 }: {
   note: WikiPageNote;
   canEdit: boolean;
@@ -66,8 +87,12 @@ export function WikiNoteCard({
   onToggleExpanded: () => void;
   onSave: (patch: { title: string; body: string }) => void;
   onDelete: () => void;
+  /** Déplacements praticables sans souris, et de quoi les demander. */
+  moves?: Partial<Record<NoteMoveCommand, unknown>>;
+  onMove?: (command: NoteMoveCommand) => void;
 }) {
   const t = useTranslations("wiki.notes");
+  const tWiki = useTranslations("wiki");
   const tCommon = useTranslations("common");
 
   const [editing, setEditing] = React.useState(false);
@@ -188,6 +213,22 @@ export function WikiNoteCard({
               <DropdownMenuItem onSelect={startEditing}>
                 <Pencil className="mr-2 h-3.5 w-3.5" /> {tCommon("edit")}
               </DropdownMenuItem>
+              {/* Réordonner sans souris — le glissé demande un pointeur. Seules
+                  les commandes qui ont un sens ici sont montrées. */}
+              {onMove && NOTE_MOVE_ORDER.some(c => moves[c]) && (
+                <>
+                  <DropdownMenuSeparator />
+                  {NOTE_MOVE_ORDER.filter(c => moves[c]).map(command => {
+                    const { Icon, key } = NOTE_MOVE_LABEL[command];
+                    return (
+                      <DropdownMenuItem key={command} onSelect={() => onMove(command)}>
+                        <Icon className="mr-2 h-3.5 w-3.5" /> {tWiki(key)}
+                      </DropdownMenuItem>
+                    );
+                  })}
+                  <DropdownMenuSeparator />
+                </>
+              )}
               <DropdownMenuItem onSelect={afterMenuClose(onDelete)} className="text-destructive focus:text-destructive">
                 <Trash2 className="mr-2 h-3.5 w-3.5" /> {tCommon("delete")}
               </DropdownMenuItem>

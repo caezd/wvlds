@@ -1142,6 +1142,8 @@
     "moveDown": "Descendre",
     "moveIn": "Ranger dans le dossier",
     "moveOut": "Sortir du dossier",
+    "moveToPreviousCategory": "Vers la catégorie précédente",
+    "moveToNextCategory": "Vers la catégorie suivante",
     "renameCascadeUpdated": "{count, plural, one {# lien interne mis à jour} other {# liens internes mis à jour}} vers cette page ailleurs dans le wiki.",
     "deleted": "Supprimé.",
     "trash": "Corbeille",

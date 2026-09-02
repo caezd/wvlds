@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Wiki",
+    text: "Les pages, les fiches de notes et leurs catégories se réordonnent aussi depuis leur menu, sans souris."
+  },
+  {
+    date: "2026-09",
+    tag: "Wiki",
     text: "Une page supprimée part dans une corbeille, avec ses fiches, ses commentaires et ses images. Un éditeur la restaure ou l’efface pour de bon ; elle est retirée d’elle-même après trente jours.",
   },
   {

@@ -3,7 +3,9 @@ import { renderHook, waitFor, act } from "@testing-library/react";
 
 import { createSupabaseMock } from "@/test/supabaseMock";
 import {
+  categoryKeyboardMoves,
   groupNotesByCategory,
+  noteKeyboardMoves,
   planNoteMove,
   useWikiPageNotes,
 } from "@/hooks/useWikiPageNotes";
@@ -227,5 +229,59 @@ describe("useWikiPageNotes", () => {
       "world_wiki_page_notes",
     ]);
     expect(mock.channels[0].handlers[0].config.filter).toBe("page_id=eq.p1");
+  });
+});
+
+describe("noteKeyboardMoves", () => {
+  // Le glisser-déposer était le seul chemin vers l'ordre des fiches, et il
+  // demande un pointeur : au clavier, le panneau était figé.
+  const groups = groupNotesByCategory(
+    [cat("a", 0), cat("b", 1)],
+    [note("a1", "a", 0), note("a2", "a", 1), note("b1", "b", 0)],
+  );
+
+  it("propose de descendre la première fiche, pas de monter", () => {
+    const moves = noteKeyboardMoves(groups, "a1");
+    expect(moves.up).toBeUndefined();
+    expect(moves.down).toEqual({ toCategoryId: "a", toIndex: 1 });
+  });
+
+  it("propose de monter la dernière, pas de descendre", () => {
+    const moves = noteKeyboardMoves(groups, "a2");
+    expect(moves.up).toEqual({ toCategoryId: "a", toIndex: 0 });
+    expect(moves.down).toBeUndefined();
+  });
+
+  it("envoie en dernier dans la catégorie voisine", () => {
+    expect(noteKeyboardMoves(groups, "a1").nextCategory).toEqual({ toCategoryId: "b", toIndex: 1 });
+    expect(noteKeyboardMoves(groups, "b1").previousCategory).toEqual({ toCategoryId: "a", toIndex: 2 });
+    expect(noteKeyboardMoves(groups, "a1").previousCategory).toBeUndefined();
+  });
+
+  it("rend des cibles que planNoteMove sait exécuter comme un cran", () => {
+    // « Descendre » depuis a1 doit poser a1 après a2 — la même règle que le
+    // glissé, où l'index vaut avant retrait.
+    const notes = [note("a1", "a", 0), note("a2", "a", 1), note("b1", "b", 0)];
+    const { toCategoryId, toIndex } = noteKeyboardMoves(groups, "a1").down!;
+    expect(apres(notes, planNoteMove(notes, "a1", toCategoryId, toIndex)))
+      .toEqual(["a:a2@0", "a:a1@1", "b:b1@0"]);
+  });
+
+  it("ne propose rien d'une fiche inconnue", () => {
+    expect(noteKeyboardMoves(groups, "zzz")).toEqual({});
+  });
+});
+
+describe("categoryKeyboardMoves", () => {
+  const groups = groupNotesByCategory([cat("a", 0), cat("b", 1), cat("c", 2)], []);
+
+  it("échange avec la voisine, et rend l'ordre entier", () => {
+    expect(categoryKeyboardMoves(groups, "b").up?.map(c => c.id)).toEqual(["b", "a", "c"]);
+    expect(categoryKeyboardMoves(groups, "b").down?.map(c => c.id)).toEqual(["a", "c", "b"]);
+  });
+
+  it("ne propose que ce qui a un sens aux extrémités", () => {
+    expect(categoryKeyboardMoves(groups, "a").up).toBeUndefined();
+    expect(categoryKeyboardMoves(groups, "c").down).toBeUndefined();
   });
 });
