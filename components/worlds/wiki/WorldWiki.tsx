@@ -81,6 +81,7 @@ import { useColumnResize } from "@/hooks/useColumnResize";
 import { SANS_DEPLACEMENT } from "@/lib/dndTri";
 import { laColonneTient } from "@/lib/wikiSideColumn";
 import { normaliserPourRecherche } from "@/lib/wikiLinkSuggest";
+import { BUCKET_WIKI, prefixeImagesWiki } from "@/lib/storagePaths";
 import { MEDIA, useMediaQuery } from "@/hooks/useMediaQuery";
 import type { WorldLexiconTerm } from "@/types/worlds";
 
@@ -732,6 +733,33 @@ export function WorldWiki({
     setPages(prev => prev?.map(p => p.id === page.id ? { ...p, is_restricted } : p) ?? null);
   }
 
+  /**
+   * Efface les images des pages supprimées.
+   *
+   * Le dossier d'une page est son unité de ménage (voir migration 148) : il
+   * suffit de le vider. Sans cela les fichiers restaient à jamais, payés et
+   * invisibles, puisque plus rien ne disait à quelle page ils avaient servi.
+   *
+   * Un échec ne remonte pas à l'utilisateur : la page EST supprimée, et
+   * annoncer un échec pour des fichiers qu'il ne voit pas ne l'aiderait en
+   * rien. Il part au journal, où un ménage ultérieur pourra le rattraper —
+   * le rangement par préfixe est fait pour ça.
+   */
+  async function effacerLesImages(ids: string[]) {
+    const chemins: string[] = [];
+    for (const id of ids) {
+      const dossier = prefixeImagesWiki(worldId, id);
+      // Mille suffit très largement pour une page ; au-delà, un balayage du
+      // préfixe reprendra ce qui reste.
+      const { data } = await supabase.storage.from(BUCKET_WIKI).list(dossier, { limit: 1000 });
+      for (const fichier of data ?? []) chemins.push(`${dossier}/${fichier.name}`);
+    }
+    if (chemins.length === 0) return;
+
+    const { error } = await supabase.storage.from(BUCKET_WIKI).remove(chemins);
+    if (error) console.error("[WorldWiki] images du wiki", error);
+  }
+
   async function deletePage(page: WikiPage) {
     const { error } = await supabase
       .from("world_wiki_pages")
@@ -748,6 +776,11 @@ export function WorldWiki({
 
     setPages(prev => prev?.filter(p => !toDelete.has(p.id)) ?? null);
     if (selectedId && toDelete.has(selectedId)) setSelectedId(null);
+    // Après la suppression en base, et sans l'attendre : l'utilisateur n'a pas
+    // à patienter pour un ménage qui ne le regarde pas. La policy de
+    // suppression ne dépend pas de la page — elle vient de disparaître — mais
+    // du monde, qui, lui, est toujours là.
+    void effacerLesImages([...toDelete]);
     toast.success(t("deleted"));
   }
 

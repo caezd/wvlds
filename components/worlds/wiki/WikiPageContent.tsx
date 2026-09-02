@@ -27,7 +27,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { cropToWebP, premiereImage, toWebP, type ZoneDeDecoupe } from "@/lib/imageUtils";
 import { ImageCropPicker } from "@/components/ui/image-crop-picker";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { nomDeFichierUnique } from "@/lib/storagePaths";
+import { BUCKET_WIKI, cheminImageWiki } from "@/lib/storagePaths";
 import { useWikiAnnotations } from "@/hooks/useWikiAnnotations";
 import { useWikiPageNotes } from "@/hooks/useWikiPageNotes";
 import type { BlockAnchor } from "@/lib/wikiBlockAnchors";
@@ -540,13 +540,13 @@ export function WikiPageContent({
       if (!user) { toast.error(tCommon("uploadImageError")); return; }
 
       const converti = await toWebP(fichier);
-      const chemin = `user-${user.id}/world-${worldId}/wiki-${nomDeFichierUnique("webp")}`;
+      const chemin = cheminImageWiki(worldId, page.id, "image/webp");
       const { error } = await supabase.storage
-        .from("worlds")
+        .from(BUCKET_WIKI)
         .upload(chemin, converti, { contentType: "image/webp" });
       if (error) { toast.error(error.message); return; }
 
-      const { data } = supabase.storage.from("worlds").getPublicUrl(chemin);
+      const { data } = supabase.storage.from(BUCKET_WIKI).getPublicUrl(chemin);
       const balise = `![](${data.publicUrl})`;
       const valeur = champ.value.slice(0, position) + balise + champ.value.slice(position);
       if (!ecrireAvecAnnulation(champ, valeur)) handleDraftChange(valeur);
@@ -641,13 +641,13 @@ export function WikiPageContent({
       if (!user) { toast.error(tCommon("uploadImageError")); return; }
 
       const converti = await cropToWebP(banniereACadrer, zone, "wiki-banner");
-      const chemin = `user-${user.id}/world-${worldId}/wiki-banner-${nomDeFichierUnique("webp")}`;
+      const chemin = cheminImageWiki(worldId, page.id, "image/webp");
       const { error } = await supabase.storage
-        .from("worlds")
+        .from(BUCKET_WIKI)
         .upload(chemin, converti, { contentType: "image/webp" });
       if (error) { toast.error(error.message); return; }
 
-      const { data } = supabase.storage.from("worlds").getPublicUrl(chemin);
+      const { data } = supabase.storage.from(BUCKET_WIKI).getPublicUrl(chemin);
       await enregistrerChamp({ banner_url: data.publicUrl });
       setBanniereACadrer(null);
     } catch (err) {

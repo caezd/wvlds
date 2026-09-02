@@ -574,6 +574,37 @@ describe("WorldWiki — suppression d'une page", () => {
 
     await waitFor(() => expect(document.body.style.pointerEvents).not.toBe("none"));
   });
+
+  it("emporte les images du dossier de la page supprimée", async () => {
+    // Le rangement par `world-<id>/page-<id>/` n'a d'intérêt que si quelqu'un
+    // s'en sert : c'est ici que la suppression devient possible. Sans cela les
+    // fichiers restaient à jamais, payés et introuvables.
+    const mock = createSupabaseMock({
+      results: [{ data: [PAGE, FOLDER, NESTED_PAGE], error: null }],
+      storageListResult: [{ name: "aa.webp" }],
+    });
+    vi.mocked(createClient).mockReturnValue(mock.client as never);
+    const user = userEvent.setup();
+    render(<WorldWiki worldId="w1" canEdit />);
+
+    await activerModification(user);
+    const ligne = (await dansLArbre("Lieux")).closest("div")!;
+    await user.click(within(ligne).getByRole("button", { name: "Options" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Supprimer" }));
+    await user.click(await screen.findByRole("button", { name: "Supprimer" }));
+
+    // Le dossier ET celui de la page qu'il contient : supprimer un dossier
+    // emporte sa descendance, donc les images de toute la descendance.
+    await waitFor(() => expect(mock.storageList).toHaveBeenCalledTimes(2));
+    expect(mock.storageList.mock.calls.map(([dossier]) => dossier)).toEqual([
+      "world-w1/page-f1",
+      "world-w1/page-p2",
+    ]);
+    expect(mock.storageRemove).toHaveBeenCalledWith([
+      "world-w1/page-f1/aa.webp",
+      "world-w1/page-p2/aa.webp",
+    ]);
+  });
 });
 
 describe("WorldWiki — replier la colonne de navigation", () => {

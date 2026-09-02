@@ -66,6 +66,29 @@ export function nomDeFichierUnique(extension: string): string {
   return `${crypto.randomUUID()}.${propre}`;
 }
 
+/** Espace de stockage des images du wiki — voir migration 148. */
+export const BUCKET_WIKI = "wiki";
+
+/**
+ * Dossier des images d'une page de wiki.
+ *
+ * Rangé par monde puis par page, et non par compte comme le reste du bucket
+ * `worlds`. C'est la page qui possède ses images : ranger par rédacteur les
+ * éparpillait dans autant de dossiers qu'il y avait de contributeurs, et plus
+ * rien ne disait ce qui appartenait à une page supprimée.
+ *
+ * Ce dossier est donc l'unité de ménage : effacer une page, c'est vider un
+ * préfixe.
+ */
+export function prefixeImagesWiki(worldId: string, pageId: string): string {
+  return `world-${worldId}/page-${pageId}`;
+}
+
+/** Chemin complet d'une image de page, nom de fichier compris. */
+export function cheminImageWiki(worldId: string, pageId: string, type?: string): string {
+  return `${prefixeImagesWiki(worldId, pageId)}/${nomDeFichierPourType(type)}`;
+}
+
 /** Nom de fichier unique dont l'extension est déduite du type MIME du contenu. */
 export function nomDeFichierPourType(type: string | undefined, defaut = "webp"): string {
   return nomDeFichierUnique(extensionDepuisLeType(type, defaut));

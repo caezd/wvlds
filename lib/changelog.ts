@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Wiki",
+    text: "Les images d’un article sont désormais rangées par monde et par page, dans leur propre espace de stockage : supprimer une page emporte ses illustrations. Elles partaient jusqu’ici dans le dossier du compte qui les avait envoyées, éparpillées entre tous les rédacteurs — plus rien ne disait à quelle page elles servaient, et un propriétaire de monde ne pouvait même pas effacer celles des autres."
+  },
+  {
+    date: "2026-09",
+    tag: "Wiki",
     text: "Une image se colle ou se dépose directement dans un article du wiki : elle est envoyée, allégée, et écrite à l’endroit du curseur. Il fallait jusqu’ici l’héberger ailleurs et taper son adresse à la main — seule la bannière savait recevoir un fichier."
   },
   {
