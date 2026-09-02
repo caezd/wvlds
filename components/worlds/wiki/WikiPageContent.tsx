@@ -37,6 +37,13 @@ import { WikiAnnotationsPanel, type AnnotationDraft } from "./WikiAnnotationsPan
 import { WikiNotesPanel } from "./WikiNotesPanel";
 import { WikiSidePanel, type WikiSideTab } from "./WikiSidePanel";
 import { WikiFormatToolbar } from "./WikiFormatToolbar";
+import { WikiLinkSuggest } from "./WikiLinkSuggest";
+import { positionDuCurseur, type PositionCurseur } from "@/lib/caretPosition";
+import {
+  completerLien,
+  lienEnCours,
+  pagesProposees,
+} from "@/lib/wikiLinkSuggest";
 import { WIKI_FOOTER_BUTTON, WIKI_SUBHEADER, WIKI_SUBHEADER_COUNT } from "./wikiSubHeader";
 import { WikiVersionHistoryPanel } from "./WikiVersionHistoryPanel";
 import type { WikiPage } from "./WorldWiki";
@@ -160,6 +167,21 @@ export function WikiPageContent({
   function oublierLaSelection() {
     derniereSelection.current = [0, 0];
   }
+
+  /**
+   * Pages proposées pour le `[[…]]` en cours d'écriture.
+   *
+   * `null` la plupart du temps : la liste n'existe que tant qu'un lien s'écrit
+   * et qu'au moins une page correspond.
+   */
+  const [suggestion, setSuggestion] = React.useState<{
+    /** Index du premier caractère du titre dans le brouillon. */
+    debut: number;
+    pages: WikiPage[];
+    /** Rang mis en avant, celui qu'Entrée choisira. */
+    rang: number;
+    position: PositionCurseur;
+  } | null>(null);
   /** Sélection à reposer une fois la valeur mise en forme rendue. */
   const [selectionAPoser, setSelectionAPoser] = React.useState<[number, number] | null>(null);
   const [showPreview, setShowPreview] = React.useState(false);
@@ -419,7 +441,73 @@ export function WikiPageContent({
     setSelectionAPoser([suite.start, suite.end]);
   }
 
+  /**
+   * Recalcule ce qu'il y a à proposer, d'après le champ tel qu'il est.
+   *
+   * Lu sur le DOM et non sur `draft` : appelée depuis `onChange`, elle
+   * précède le rendu que cette frappe déclenchera, et l'état porte encore le
+   * texte d'avant.
+   */
+  function majSuggestion() {
+    const champ = champMarkdown.current;
+    if (!champ) return;
+
+    const lien = lienEnCours(champ.value, champ.selectionStart);
+    const trouvees = lien ? pagesProposees(pages, lien.requete) : [];
+    if (!lien || trouvees.length === 0) {
+      setSuggestion(null);
+      return;
+    }
+
+    setSuggestion({
+      debut: lien.debut,
+      pages: trouvees,
+      // Remis à la première à chaque frappe : la liste vient de changer, et
+      // garder un rang qui désignait une autre page tromperait.
+      rang: 0,
+      position: positionDuCurseur(champ, champ.selectionStart),
+    });
+  }
+
+  /** Écrit le titre choisi à la place de ce qui était tapé. */
+  function accepterSuggestion(page: WikiPage) {
+    const champ = champMarkdown.current;
+    if (!champ || !suggestion) return;
+
+    const { value, curseur } = completerLien(
+      champ.value,
+      suggestion.debut,
+      champ.selectionStart,
+      page.title,
+    );
+    if (!ecrireAvecAnnulation(champ, value)) handleDraftChange(value);
+    setSelectionAPoser([curseur, curseur]);
+    setSuggestion(null);
+  }
+
   function surToucheDuChamp(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    // La liste passe avant les raccourcis : tant qu'elle est ouverte, les
+    // flèches et Entrée lui appartiennent.
+    if (suggestion) {
+      const n = suggestion.pages.length;
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        e.preventDefault();
+        const pas = e.key === "ArrowDown" ? 1 : n - 1;
+        setSuggestion({ ...suggestion, rang: (suggestion.rang + pas) % n });
+        return;
+      }
+      if (e.key === "Enter" || e.key === "Tab") {
+        e.preventDefault();
+        accepterSuggestion(suggestion.pages[suggestion.rang]);
+        return;
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setSuggestion(null);
+        return;
+      }
+    }
+
     const nom = raccourciDe(e);
     if (!nom) return;
     e.preventDefault();
@@ -823,11 +911,12 @@ export function WikiPageContent({
                 // s'écrit avec des titres, des liens internes et des tableaux
                 // qu'un champ de texte enrichi ne sait pas montrer sans les
                 // trahir. L'aperçu dit le résultat.
+                <div className="relative">
                 <CodeEditor
                   autoGrow
                   language="markdown"
                   value={draft}
-                  onChange={handleDraftChange}
+                  onChange={v => { handleDraftChange(v); majSuggestion(); }}
                   textareaRef={champMarkdown}
                   onKeyDown={e => {
                     // Une frappe ordinaire va déplacer le curseur : ce qui
@@ -838,6 +927,7 @@ export function WikiPageContent({
                   }}
                   onMouseDown={oublierLaSelection}
                   onSelect={e => {
+                    majSuggestion();
                     const c = e.currentTarget;
                     // Seule une VRAIE sélection est retenue. Le repli du
                     // curseur arrive par ce même événement, y compris quand
@@ -860,6 +950,16 @@ export function WikiPageContent({
                   // dessinait un grand rectangle arrondi autour de l'article.
                   layerClassName="px-4 focus-visible:ring-0 lg:px-6"
                 />
+                {suggestion && (
+                  <WikiLinkSuggest
+                    pages={suggestion.pages}
+                    actif={suggestion.rang}
+                    position={suggestion.position}
+                    onChoisir={accepterSuggestion}
+                    onSurvoler={rang => setSuggestion({ ...suggestion, rang })}
+                  />
+                )}
+                </div>
                 )}
               </div>
             )}

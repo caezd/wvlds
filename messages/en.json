@@ -1177,6 +1177,7 @@
     "searchPlaceholder": "Search the wiki…",
     "clearSearch": "Clear search",
     "searchNoResults": "No results.",
+    "linkSuggestLabel": "Pages to link",
     "tocTitle": "Contents",
     "versionHistory": "History",
     "restore": "Restore",

@@ -838,6 +838,113 @@ describe("WikiPageContent — colonne latérale en mode modification", () => {
   });
 });
 
+describe("WikiPageContent — autocomplétion des liens internes", () => {
+  const ARKHAM: WikiPage = { ...BASE_PAGE, id: "p2", title: "Arkham", slug: "arkham" };
+  const ASILE: WikiPage = { ...BASE_PAGE, id: "p3", title: "Arkham Asylum", slug: "asile" };
+
+  function renderEnEdition(brouillon = "On va à ") {
+    const mock = createSupabaseMock({
+      results: [SANS_ANNOTATION, { data: { draft_content: brouillon }, error: null }],
+    });
+    render(
+      <WikiPageContent
+        worldId="w1"
+        panelWidth={320}
+        colonneLaterale={dispositionLarge}
+        navEnColonne={dispositionLarge}
+        panelHandleProps={{}}
+        navCollapsed={false}
+        onExpandNav={vi.fn()}
+        onOpenTree={vi.fn()}
+        onExitEditMode={vi.fn()}
+        pageCount={3}
+        onRename={vi.fn()}
+        page={BASE_PAGE}
+        pages={[BASE_PAGE, ARKHAM, ASILE]}
+        canEdit
+        isEditMode
+        supabase={mock.client as never}
+        onPageUpdated={vi.fn()}
+        onNavigate={vi.fn()}
+      />,
+    );
+  }
+
+  /**
+   * Place le curseur au bout du brouillon et y tape `saisie`, telle quelle.
+   *
+   * `userEvent` réserve `[` et `{` à ses descripteurs de touches — un `[[`
+   * tapé naïvement n'arrive jamais dans le champ. Les doubler les rend
+   * littéraux, et le test peut s'écrire comme on parle.
+   */
+  async function taper(saisie: string) {
+    const champ = (await champArticle()) as HTMLTextAreaElement;
+    await waitFor(() => expect(champ).toHaveValue("On va à "));
+    champ.focus();
+    champ.setSelectionRange(champ.value.length, champ.value.length);
+    await userEvent.type(champ, saisie.replace(/[[{]/g, c => c + c));
+    return champ;
+  }
+
+  it("propose les pages dès qu'un lien s'ouvre", async () => {
+    renderEnEdition();
+    await taper("[[Ark");
+
+    const proposees = await screen.findAllByRole("option");
+    expect(proposees.map(o => o.textContent)).toEqual(["Arkham", "Arkham Asylum"]);
+  });
+
+  it("écrit le titre choisi et ferme le lien sur Entrée", async () => {
+    renderEnEdition();
+    const champ = await taper("[[Ark");
+    await screen.findAllByRole("option");
+
+    await userEvent.keyboard("{Enter}");
+
+    expect(champ).toHaveValue("On va à [[Arkham]]");
+  });
+
+  it("les flèches changent la page retenue", async () => {
+    renderEnEdition();
+    const champ = await taper("[[Ark");
+    await screen.findAllByRole("option");
+
+    await userEvent.keyboard("{ArrowDown}{Enter}");
+
+    expect(champ).toHaveValue("On va à [[Arkham Asylum]]");
+  });
+
+  it("Échap referme la liste sans rien écrire", async () => {
+    renderEnEdition();
+    const champ = await taper("[[Ark");
+    await screen.findAllByRole("option");
+
+    await userEvent.keyboard("{Escape}");
+
+    expect(screen.queryByRole("option")).toBeNull();
+    expect(champ).toHaveValue("On va à [[Ark");
+  });
+
+  it("se referme quand plus aucune page ne correspond", async () => {
+    renderEnEdition();
+    await taper("[[Zzz");
+
+    expect(screen.queryByRole("option")).toBeNull();
+  });
+
+  it("laisse Entrée à la ligne quand aucune liste n'est ouverte", async () => {
+    // La liste s'approprie Entrée : elle ne doit le faire QUE tant qu'elle est
+    // là, sinon on ne peut plus passer à la ligne.
+    renderEnEdition();
+    const champ = await taper("Arkham");
+
+    await userEvent.keyboard("{Enter}");
+
+    expect(champ).toHaveValue(`On va à Arkham
+`);
+  });
+});
+
 describe("WikiPageContent — ceinture de mise en forme", () => {
   function renderEnEdition() {
     const mock = createSupabaseMock({

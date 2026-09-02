@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-09 ──────────────────────────────────────────────────────────────
   {
     date: "2026-09",
+    tag: "Wiki",
+    text: "Écrire « [[ » dans un article propose maintenant les pages du monde au fil de la frappe : on choisit aux flèches, Entrée écrit le titre et ferme le lien. Il fallait auparavant connaître le titre exact et le taper sans faute, ce qui coûtait un aller-retour dans l’arbre — et on remettait le lien à plus tard."
+  },
+  {
+    date: "2026-09",
     tag: "Correctif",
     text: "La barre d’outils du wiki encadre à nouveau le texte choisi. Elle relisait la sélection au moment du clic, or celle-ci ne survit pas toujours jusque-là : les marqueurs se posaient alors sur le vide, en tête d’article. Elle retient désormais la sélection au moment où elle se fait. Deuxième correctif au passage : un mot choisi d’un double-clic emporte l’espace qui le suit, et « **mot ** » n’est pas du gras — les espaces restent maintenant à l’extérieur des marqueurs."
   },

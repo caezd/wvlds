@@ -1177,6 +1177,7 @@
     "searchPlaceholder": "Rechercher dans le wiki…",
     "clearSearch": "Effacer la recherche",
     "searchNoResults": "Aucun résultat.",
+    "linkSuggestLabel": "Pages à lier",
     "tocTitle": "Sommaire",
     "versionHistory": "Historique",
     "restore": "Restaurer",

@@ -80,6 +80,7 @@ import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import { useColumnResize } from "@/hooks/useColumnResize";
 import { SANS_DEPLACEMENT } from "@/lib/dndTri";
 import { laColonneTient } from "@/lib/wikiSideColumn";
+import { normaliserPourRecherche } from "@/lib/wikiLinkSuggest";
 import { MEDIA, useMediaQuery } from "@/hooks/useMediaQuery";
 import type { WorldLexiconTerm } from "@/types/worlds";
 
@@ -119,11 +120,6 @@ export type WikiPage = {
 const WIKI_PAGE_COLUMNS =
   "id, world_id, parent_id, title, slug, content, is_folder, sort_index, icon, is_restricted, " +
   "banner_url, description, draft_updated_at, published_at";
-
-/** Normalise pour une recherche insensible à la casse et aux diacritiques (sans slugifier les espaces). */
-function normalizeForSearch(input: string): string {
-  return input.toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "");
-}
 
 /**
  * Première page du wiki dans l'ordre de lecture de l'arbre : on descend les
@@ -807,14 +803,14 @@ export function WorldWiki({
   }
 
   const searchResults = React.useMemo<WikiSearchResult[] | null>(() => {
-    const q = normalizeForSearch(searchQuery.trim());
+    const q = normaliserPourRecherche(searchQuery.trim());
     if (!q) return null;
 
     return (pages ?? [])
       .filter(p => !p.is_folder)
       .map((p): WikiSearchResult | null => {
-        const titleMatch = normalizeForSearch(p.title).includes(q);
-        const contentNorm = p.content ? normalizeForSearch(p.content) : "";
+        const titleMatch = normaliserPourRecherche(p.title).includes(q);
+        const contentNorm = p.content ? normaliserPourRecherche(p.content) : "";
         const contentIdx = contentNorm.indexOf(q);
         if (!titleMatch && contentIdx === -1) return null;
 
