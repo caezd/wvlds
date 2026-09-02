@@ -30,11 +30,18 @@ function clientFactice(erreur: { message: string } | null = null) {
   return { client, suppressions };
 }
 
-/** Simule un navigateur abonné (ou non) aux notifications poussées. */
+/**
+ * Simule un navigateur abonné (ou non) aux notifications poussées.
+ *
+ * `ready` est une promesse qui ne se résout JAMAIS, comme dans un navigateur
+ * sans service worker enregistré. Toute attente sur elle bloquerait le test :
+ * c'est ce qui fait de ce faux navigateur un garde-fou, et non un décor.
+ */
 function simulerNavigateur(sub: { endpoint: string; unsubscribe: () => Promise<boolean> } | null) {
   vi.stubGlobal("navigator", {
     serviceWorker: {
-      ready: Promise.resolve({ pushManager: { getSubscription: async () => sub } }),
+      ready: new Promise(() => {}),
+      getRegistration: async () => ({ pushManager: { getSubscription: async () => sub } }),
     },
   });
   vi.stubGlobal("window", { PushManager: function () {} });
@@ -89,12 +96,57 @@ describe("detacherAppareilDuPush", () => {
 
   it("ne lève pas non plus si le navigateur rejette", async () => {
     vi.stubGlobal("navigator", {
-      serviceWorker: { ready: Promise.reject(new Error("pas de service worker")) },
+      serviceWorker: {
+        ready: new Promise(() => {}),
+        getRegistration: async () => { throw new Error("pas de service worker"); },
+      },
     });
     vi.stubGlobal("window", { PushManager: function () {} });
     const { client } = clientFactice();
 
     await expect(detacherAppareilDuPush(client)).resolves.toBeUndefined();
+  });
+
+  it("rend la main quand AUCUN service worker n'est enregistré", async () => {
+    // Le défaut qui cassait la déconnexion : `serviceWorker.ready` ne se
+    // résout qu'au moment où un service worker prend le contrôle, et attend
+    // pour toujours quand il n'y en a pas — ce qui est le cas en
+    // développement, serwist y étant désactivé. Le bouton ne faisait rien,
+    // sans erreur ni message.
+    vi.stubGlobal("navigator", {
+      serviceWorker: {
+        ready: new Promise(() => {}),
+        getRegistration: async () => undefined,
+      },
+    });
+    vi.stubGlobal("window", { PushManager: function () {} });
+    const { client, suppressions } = clientFactice();
+
+    await expect(detacherAppareilDuPush(client)).resolves.toBeUndefined();
+    expect(suppressions).toEqual([]);
+  });
+
+  it("ne retient pas la déconnexion quand le ménage traîne", async () => {
+    // Le désabonnement est utile, jamais au point de garder quelqu'un dans son
+    // compte : au-delà du délai, on passe outre et la ligne subsiste.
+    vi.useFakeTimers();
+    try {
+      vi.stubGlobal("navigator", {
+        serviceWorker: {
+          ready: new Promise(() => {}),
+          getRegistration: () => new Promise(() => {}),
+        },
+      });
+      vi.stubGlobal("window", { PushManager: function () {} });
+      const { client } = clientFactice();
+
+      const fini = detacherAppareilDuPush(client);
+      await vi.advanceTimersByTimeAsync(3000);
+
+      await expect(fini).resolves.toBeUndefined();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

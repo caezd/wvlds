@@ -16,11 +16,32 @@ import { TABLE } from "@/lib/constants";
  * À appeler AVANT `auth.signOut()` : la policy de suppression exige
  * `user_id = auth.uid()`, et la session est nécessaire pour l'satisfaire.
  *
- * Ne lève jamais : une déconnexion ne doit pas échouer parce qu'un
- * désabonnement a échoué. Au pire la ligne subsiste, ce qui est l'état
- * d'avant ce correctif.
+ * Ne lève jamais, et n'attend jamais longtemps : une déconnexion ne doit pas
+ * échouer — ni rester en suspens — parce qu'un désabonnement a échoué. Au pire
+ * la ligne subsiste, ce qui est l'état d'avant ce correctif.
  */
 export async function detacherAppareilDuPush(supabase: SupabaseClient): Promise<void> {
+  let minuteur: ReturnType<typeof setTimeout> | undefined;
+  const echeance = new Promise<void>(resolve => {
+    minuteur = setTimeout(resolve, DELAI_MAX_MS);
+  });
+
+  try {
+    await Promise.race([detacher(supabase), echeance]);
+  } finally {
+    clearTimeout(minuteur);
+  }
+}
+
+/**
+ * Au-delà, la déconnexion passe outre.
+ *
+ * Ce ménage est utile, jamais au point de retenir quelqu'un qui veut quitter
+ * son compte. Un réseau qui traîne ne doit pas le prendre en otage.
+ */
+const DELAI_MAX_MS = 3000;
+
+async function detacher(supabase: SupabaseClient): Promise<void> {
   try {
     if (
       typeof window === "undefined" ||
@@ -29,7 +50,16 @@ export async function detacherAppareilDuPush(supabase: SupabaseClient): Promise<
     ) {
       return;
     }
-    const reg = await navigator.serviceWorker.ready;
+    // `getRegistration()` et NON `serviceWorker.ready` : cette dernière ne se
+    // résout QU'AU MOMENT où un service worker prend le contrôle de la page,
+    // et reste en suspens pour toujours quand il n'y en a aucun. C'est le cas
+    // en développement, où serwist est désactivé (voir `app/layout.tsx`) : la
+    // déconnexion attendait cette promesse et ne partait jamais, sans erreur
+    // ni message. `getRegistration()` tranche tout de suite, et rend
+    // `undefined` quand il n'y a rien.
+    const reg = await navigator.serviceWorker.getRegistration();
+    if (!reg) return;
+
     const sub = await reg.pushManager.getSubscription();
     if (!sub) return;
 

@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-09 ──────────────────────────────────────────────────────────────
   {
     date: "2026-09",
+    tag: "Correctif",
+    text: "Le bouton de déconnexion pouvait ne rien faire du tout, sans message ni erreur. Avant de quitter un compte, l’application détache l’appareil des notifications poussées — et elle attendait pour cela un service worker qui ne vient jamais dans un navigateur qui n’en a pas, comme en navigation privée. Ce ménage a maintenant un délai, au-delà duquel la déconnexion passe outre."
+  },
+  {
+    date: "2026-09",
     tag: "Wiki",
     text: "Les images d’un article sont désormais rangées par monde et par page, dans leur propre espace de stockage : supprimer une page emporte ses illustrations. Elles partaient jusqu’ici dans le dossier du compte qui les avait envoyées, éparpillées entre tous les rédacteurs — plus rien ne disait à quelle page elles servaient, et un propriétaire de monde ne pouvait même pas effacer celles des autres."
   },
