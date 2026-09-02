@@ -537,11 +537,14 @@ export function WikiPageContent({
       }));
     }
 
-    // Une section n'a de sens que dans une page nommée en entier : tant que le
-    // titre est ambigu, on ne sait pas de quelles sections on parle.
-    const cible = pages.find(
-      p => !p.is_folder && p.title.toLowerCase() === title.toLowerCase(),
-    );
+    // Une section n'a de sens que dans une page nommée en entier. Le titre
+    // écrit à la lettre l'emporte sur ses homonymes — la règle du résolveur —
+    // sans quoi la liste proposerait les sections d'une autre page « test »,
+    // et le lien écrit ne mènerait nulle part.
+    const candidates = pages.filter(p => !p.is_folder);
+    const cible =
+      candidates.find(p => p.title === title) ??
+      candidates.find(p => p.title.toLowerCase() === title.toLowerCase());
     if (!cible) return [];
 
     return suggestedSections(extractHeadings(cible.content ?? ""), section).map(h => ({

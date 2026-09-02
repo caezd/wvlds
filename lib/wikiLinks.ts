@@ -6,7 +6,12 @@ import { slugify } from "@/lib/slug";
 const INLINE_CODE_RE = /(`+)[^\n]*?\1/g;
 const WIKI_LINK_RE = /\[\[([^\]\n]+)\]\]/g;
 
-export type WikiLinkTarget = { title: string; slug: string };
+export type WikiLinkTarget = {
+  title: string;
+  slug: string;
+  /** Un dossier ne s'ouvre pas : il n'est jamais la cible d'un lien. */
+  is_folder?: boolean;
+};
 
 function transformSegment(segment: string, bySlug: Map<string, string>): string {
   return segment.replace(WIKI_LINK_RE, (match, rawTitle: string) => {
@@ -54,15 +59,33 @@ export function resolveWikiLinks(markdown: string, pages: WikiLinkTarget[]): str
   // même titre (le dédoublonnage à la création ne renomme que le slug, pas
   // le titre). Un titre ambigu doit rester "non résolu" (lien cassé) plutôt
   // que de pointer arbitrairement vers l'une des deux pages homonymes.
-  const counts = new Map<string, number>();
-  for (const p of pages) {
+  //
+  // Deux égards avant de déclarer l'ambiguïté :
+  // - les dossiers ne comptent pas. Un lien ne peut pas en ouvrir un, et un
+  //   dossier « Test » à côté d'une page « Test » ne rend pas la page
+  //   introuvable pour autant.
+  // - le titre écrit À LA LETTRE l'emporte. « Test » et « test » sont deux
+  //   pages différentes : qui écrit `[[Test]]` désigne la première, et
+  //   l'autocomplétion écrit justement le titre exact. Ce n'est qu'à défaut
+  //   d'une correspondance exacte unique qu'on compare sans la casse.
+  const candidates = pages.filter(p => !p.is_folder);
+
+  const exact = new Map<string, number>();
+  const loose = new Map<string, number>();
+  for (const p of candidates) {
+    exact.set(p.title, (exact.get(p.title) ?? 0) + 1);
     const key = p.title.toLowerCase();
-    counts.set(key, (counts.get(key) ?? 0) + 1);
+    loose.set(key, (loose.get(key) ?? 0) + 1);
   }
+
   const bySlug = new Map<string, string>();
-  for (const p of pages) {
+  for (const p of candidates) {
     const key = p.title.toLowerCase();
-    if (counts.get(key) === 1) bySlug.set(key, p.slug);
+    if (loose.get(key) === 1) bySlug.set(key, p.slug);
+  }
+  // L'exact passe en second pour avoir le dernier mot sur la même clé.
+  for (const p of candidates) {
+    if (exact.get(p.title) === 1) bySlug.set(p.title.toLowerCase(), p.slug);
   }
   const lines = (markdown ?? "").replace(/\r\n/g, "\n").split("\n");
   const fenceTracker = createFenceTracker();

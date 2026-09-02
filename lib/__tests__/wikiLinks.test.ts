@@ -82,3 +82,39 @@ describe("resolveWikiLinks — sections", () => {
     expect(resolveWikiLinks("[[Arkham]]", PAGES)).toBe("[Arkham](wiki:arkham)");
   });
 });
+
+describe("resolveWikiLinks — homonymes", () => {
+  it("laisse un titre vraiment ambigu non résolu", () => {
+    // Deux pages « Test » à l'identique : pointer l'une des deux au hasard
+    // serait pire qu'un lien cassé, qui se voit.
+    const pages = [{ title: "Test", slug: "test" }, { title: "Test", slug: "test-2" }];
+    expect(resolveWikiLinks("[[Test]]", pages)).toBe("[Test](wiki:)");
+  });
+
+  it("donne le dernier mot au titre écrit à la lettre", () => {
+    // Le cas rencontré : « test », « Test » et un dossier « test » dans le même
+    // monde. `[[Test]]` désigne sans équivoque la page « Test » — c'est
+    // d'ailleurs ce que l'autocomplétion a écrit.
+    const pages = [
+      { title: "test", slug: "test-2" },
+      { title: "Test", slug: "test" },
+      { title: "test", slug: "test-3", is_folder: true },
+    ];
+    expect(resolveWikiLinks("[[Test]]", pages)).toBe("[Test](wiki:test)");
+    expect(resolveWikiLinks("[[Test#Description]]", pages))
+      .toBe("[Test#Description](wiki:test#description)");
+  });
+
+  it("ne laisse pas un dossier rendre une page introuvable", () => {
+    const pages = [
+      { title: "Lieux", slug: "lieux", is_folder: true },
+      { title: "lieux", slug: "lieux-2" },
+    ];
+    expect(resolveWikiLinks("[[Lieux]]", pages)).toBe("[Lieux](wiki:lieux-2)");
+  });
+
+  it("compare sans la casse quand une seule page porte ce titre", () => {
+    const pages = [{ title: "Arkham", slug: "arkham" }];
+    expect(resolveWikiLinks("[[arkham]]", pages)).toBe("[arkham](wiki:arkham)");
+  });
+});
