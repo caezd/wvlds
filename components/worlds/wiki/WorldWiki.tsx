@@ -870,9 +870,23 @@ export function WorldWiki({
   }
 
   /** Navigue vers la page ciblée par un lien interne `[[Titre]]`. */
-  function navigateToSlug(slug: string) {
-    const target = pages?.find(p => p.slug === slug);
-    if (target) selectPageById(target.id);
+  /**
+   * Section visée par le dernier lien suivi, en attente d'être atteinte.
+   *
+   * Le défilement ne peut pas avoir lieu ici : la page visée n'est pas encore
+   * rendue au moment du clic. C'est `WikiPageContent` qui s'en charge, une fois
+   * l'article à l'écran, et qui rend la main.
+   */
+  const [pendingAnchor, setPendingAnchor] = React.useState<string | null>(null);
+
+  function navigateToSlug(slug: string, anchor?: string) {
+    // Sans slug, le lien reste dans la page ouverte : il n'y a rien à charger.
+    if (slug) {
+      const target = pages?.find(p => p.slug === slug);
+      if (!target) return;
+      selectPageById(target.id);
+    }
+    if (anchor) setPendingAnchor(anchor);
   }
 
   function selectSearchResult(pageId: string) {
@@ -1390,6 +1404,8 @@ export function WorldWiki({
         onPageUpdated={onPageUpdated}
         onRename={(title, icon) => void renamePage(selectedPage, title, icon)}
         onNavigate={navigateToSlug}
+        pendingAnchor={pendingAnchor}
+        onAnchorReached={() => setPendingAnchor(null)}
         lexiconTerms={lexiconTerms}
       />
     );

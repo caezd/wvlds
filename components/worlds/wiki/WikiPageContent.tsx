@@ -39,6 +39,8 @@ import { WikiSidePanel, type WikiSideTab } from "./WikiSidePanel";
 import { WikiFormatToolbar } from "./WikiFormatToolbar";
 import { WikiLinkSuggest } from "./WikiLinkSuggest";
 import { linkPreview } from "@/lib/wikiLinkPreview";
+import { extractImages } from "@/lib/wikiImages";
+import { ImageLightbox } from "@/components/chatrooms/ImageLightbox";
 import { getCaretPosition, type CaretPosition } from "@/lib/caretPosition";
 import {
   completeLink,
@@ -106,6 +108,8 @@ export function WikiPageContent({
   supabase,
   onPageUpdated,
   onNavigate,
+  pendingAnchor,
+  onAnchorReached,
   lexiconTerms,
 }: {
   page: WikiPage;
@@ -145,7 +149,10 @@ export function WikiPageContent({
   supabase: ReturnType<typeof createClient>;
   onPageUpdated: (patch: Partial<WikiPage> & { id: string }) => void;
   /** Navigue vers la page dont le slug est résolu depuis un lien interne. */
-  onNavigate: (slug: string) => void;
+  onNavigate: (slug: string, anchor?: string) => void;
+  /** Section à rejoindre dès que l'article est à l'écran — voir `WorldWiki`. */
+  pendingAnchor: string | null;
+  onAnchorReached: () => void;
   /** Lexique du monde — surligné automatiquement dans le contenu rendu. */
   lexiconTerms?: WorldLexiconTerm[];
 }) {
@@ -567,6 +574,31 @@ export function WikiPageContent({
    * Mémorisé sur `pages` : la fonction est passée à chaque lien de l'article,
    * et une identité neuve à chaque rendu ferait remonter tout le markdown.
    */
+  /**
+   * Images de l'article publié, pour la visionneuse.
+   *
+   * Tirées du markdown et non du rendu : cliquer une image doit ouvrir
+   * celle-là, mais on veut ensuite passer aux suivantes — et chaque `<img>`
+   * rendue s'ignore l'une l'autre.
+   */
+  const articleImages = React.useMemo(
+    () => extractImages(page.content ?? ""),
+    [page.content],
+  );
+  const [openImage, setOpenImage] = React.useState<number | null>(null);
+
+  /** Rejoint la section visée par un lien, une fois l'article à l'écran. */
+  React.useEffect(() => {
+    if (!pendingAnchor || editing) return;
+    // La main est rendue même quand la section reste introuvable : sinon
+    // l'ancre guetterait indéfiniment un titre que cette page n'a pas.
+    document.getElementById(pendingAnchor)?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+    onAnchorReached();
+  }, [pendingAnchor, editing, page.id, onAnchorReached]);
+
   const linkPreviewOf = React.useCallback(
     (slug: string) => linkPreview(pages, slug),
     [pages],
@@ -973,6 +1005,10 @@ export function WikiPageContent({
                           allowImages
                           onWikiLink={onNavigate}
                           wikiPreview={linkPreviewOf}
+                          onImageOpen={url => {
+                            const index = articleImages.findIndex(image => image.url === url);
+                            setOpenImage(index === -1 ? 0 : index);
+                          }}
                           className={WIKI_PROSE_HEADING_CLASSES}
                           lexiconTerms={lexiconTerms}
                         />
@@ -1210,6 +1246,10 @@ export function WikiPageContent({
                       allowImages
                       onWikiLink={onNavigate}
                       wikiPreview={linkPreviewOf}
+                      onImageOpen={url => {
+                        const index = articleImages.findIndex(image => image.url === url);
+                        setOpenImage(index === -1 ? 0 : index);
+                      }}
                       className={WIKI_PROSE_HEADING_CLASSES}
                       lexiconTerms={lexiconTerms}
                     />
@@ -1259,6 +1299,19 @@ export function WikiPageContent({
             <WikiNotesPanel pageId={page.id} isEditMode={isEditMode} notes={notes} />
           )}
         </WikiSidePanel>
+      )}
+
+      {openImage !== null && (
+        // La visionneuse des salons, telle quelle : mêmes gestes, mêmes
+        // touches, et le passage d'une image à l'autre déjà écrit.
+        <ImageLightbox
+          items={articleImages.map(image => ({
+            url: image.url,
+            name: image.alt || t("contentLabel"),
+          }))}
+          initialIndex={openImage}
+          onClose={() => setOpenImage(null)}
+        />
       )}
 
       <Drawer open={sideDrawerOpen && !colonneLaterale} onOpenChange={setSideDrawerOpen} swipeDirection="right">

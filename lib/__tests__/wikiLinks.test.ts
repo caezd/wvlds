@@ -56,3 +56,29 @@ describe("resolveWikiLinks", () => {
     expect(resolveWikiLinks("[[Aria]]", pagesWithDuplicateTitle)).toBe("[Aria](wiki:)");
   });
 });
+
+describe("resolveWikiLinks — sections", () => {
+  const PAGES = [{ title: "Arkham", slug: "arkham" }];
+
+  it("vise une section de la page ciblée", () => {
+    // Les titres portent déjà un `id` (voir `extractHeadings`) : il ne manquait
+    // qu'une syntaxe pour s'en servir.
+    expect(resolveWikiLinks("[[Arkham#Le port]]", PAGES))
+      .toBe("[Arkham#Le port](wiki:arkham#le-port)");
+  });
+
+  it("reste dans la page courante quand le titre manque", () => {
+    expect(resolveWikiLinks("[[#Le port]]", PAGES))
+      .toBe("[Le port](wiki:#le-port)");
+  });
+
+  it("ne pose pas d'ancre sur une page introuvable", () => {
+    // Le lien est déjà cassé : une ancre n'y ajouterait qu'une fausse piste.
+    expect(resolveWikiLinks("[[Innsmouth#Le port]]", PAGES))
+      .toBe("[Innsmouth#Le port](wiki:)");
+  });
+
+  it("laisse intact un lien sans section", () => {
+    expect(resolveWikiLinks("[[Arkham]]", PAGES)).toBe("[Arkham](wiki:arkham)");
+  });
+});

@@ -32,13 +32,15 @@ type Props = {
   /** Gère les liens internes `[texte](wiki:slug)` (voir lib/wikiLinks.ts) — si
    *  absent, ces liens sont rendus visuellement cassés plutôt que cliquables
    *  (contexte hors wiki, ex: un `wiki:` tapé à la main dans un message). */
-  onWikiLink?: (slug: string) => void;
+  onWikiLink?: (slug: string, anchor?: string) => void;
   /** Lexique du monde (voir lib/lexiconHighlight.ts) — absent = pas de
    *  surlignage. Réservé aux pages du wiki, jamais aux messages de chat. */
   lexiconTerms?: WorldLexiconTerm[];
   /** Ce qu'il y a à montrer d'une page visée, au survol de son lien — voir
    *  `lib/wikiApercu.ts`. Absent, ou rendant `null`, le lien reste nu. */
   wikiPreview?: (slug: string) => LinkPreview | null;
+  /** Ouvre l'image en grand. Absent, elle reste une simple illustration. */
+  onImageOpen?: (url: string) => void;
 };
 
 function extractText(node: React.ReactNode): string {
@@ -264,7 +266,8 @@ export function MarkdownContent({
   onWikiLink,
   lexiconTerms,
   wikiPreview,
-}: Pick<Props, "content" | "allowImages" | "isMine" | "onWikiLink" | "lexiconTerms" | "wikiPreview">) {
+  onImageOpen,
+}: Pick<Props, "content" | "allowImages" | "isMine" | "onWikiLink" | "lexiconTerms" | "wikiPreview" | "onImageOpen">) {
   const schema = useMemo(() => {
     return {
       ...defaultSchema,
@@ -348,7 +351,7 @@ export function MarkdownContent({
 
     img({ src, alt }) {
       if (allowImages) {
-        return (
+        const image = (
           // URL arbitraire saisie par l'utilisateur dans le markdown — domaine inconnu,
           // ne peut pas passer par l'optimiseur next/image (remotePatterns fermé par design)
           // eslint-disable-next-line @next/next/no-img-element
@@ -358,6 +361,19 @@ export function MarkdownContent({
             loading="lazy"
             className="max-w-full rounded-md border"
           />
+        );
+        if (!onImageOpen) return image;
+        return (
+          // Un bouton et non un `onClick` posé sur l'image : la visionneuse
+          // doit s'ouvrir au clavier comme au clic, et une image seule n'est
+          // pas atteignable à la tabulation.
+          <button
+            type="button"
+            onClick={() => onImageOpen(String(src))}
+            className="block cursor-zoom-in"
+          >
+            {image}
+          </button>
         );
       }
       return (
@@ -421,8 +437,14 @@ export function MarkdownContent({
         );
       }
       if (hrefStr.startsWith("wiki:")) {
-        const slug = hrefStr.slice("wiki:".length);
-        if (!slug || !onWikiLink) {
+        // `wiki:slug#section` vise une section ; `wiki:#section` reste dans la
+        // page courante, où il n'y a rien à charger avant de défiler.
+        const cible = hrefStr.slice("wiki:".length);
+        const diese = cible.indexOf("#");
+        const slug = diese === -1 ? cible : cible.slice(0, diese);
+        const anchor = diese === -1 ? "" : cible.slice(diese + 1);
+
+        if ((!slug && !anchor) || !onWikiLink) {
           return (
             <span className="cursor-not-allowed text-destructive underline decoration-dashed decoration-destructive/60">
               {children}
@@ -432,7 +454,7 @@ export function MarkdownContent({
         const lien = (
           <button
             type="button"
-            onClick={() => onWikiLink(slug)}
+            onClick={() => onWikiLink(slug, anchor || undefined)}
             className="underline decoration-dotted underline-offset-2 hover:opacity-80"
           >
             {children}
@@ -542,6 +564,7 @@ export default function MarkdownRenderer({
   onWikiLink,
   lexiconTerms,
   wikiPreview,
+  onImageOpen,
 }: Props) {
   return (
     <div className={proseClassName(proseSize, className)}>
@@ -552,6 +575,7 @@ export default function MarkdownRenderer({
         onWikiLink={onWikiLink}
         lexiconTerms={lexiconTerms}
         wikiPreview={wikiPreview}
+        onImageOpen={onImageOpen}
       />
     </div>
   );

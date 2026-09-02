@@ -9,6 +9,16 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Wiki",
+    text: "Un lien interne peut viser une section : « [[Arkham#Le port]] » ouvre la page ET s’y rend, « [[#Le port]] » reste dans la page courante. Les titres portaient déjà l’identifiant qu’il fallait — il ne manquait que la syntaxe pour s’en servir."
+  },
+  {
+    date: "2026-09",
+    tag: "Wiki",
+    text: "Cliquer une image dans un article l’ouvre en grand, avec la même visionneuse que les salons : on passe d’une image à l’autre sans refermer. Elle restait jusqu’ici figée à la largeur de la colonne."
+  },
+  {
+    date: "2026-09",
+    tag: "Wiki",
     text: "Survoler un lien interne montre où il mène : l’icône, le chapeau et la bannière de la page visée. Rien de nouveau à renseigner — ces trois champs existaient déjà et ne servaient qu’en tête d’article."
   },
   {

@@ -1,4 +1,5 @@
 import { createFenceTracker } from "@/lib/textStyledSpans";
+import { slugify } from "@/lib/slug";
 
 // Un extrait de code inline (`...`, ``...``, …) — un `[[Titre]]` tapé pour
 // documenter la syntaxe dans un bloc de code ne doit jamais être résolu.
@@ -9,12 +10,23 @@ export type WikiLinkTarget = { title: string; slug: string };
 
 function transformSegment(segment: string, bySlug: Map<string, string>): string {
   return segment.replace(WIKI_LINK_RE, (match, rawTitle: string) => {
-    const title = rawTitle.trim();
-    if (!title) return match;
+    // `[[Titre#Section]]` vise une section de la page. Les titres portent déjà
+    // un `id` (voir `extractHeadings`, même algorithme que MarkdownRenderer) :
+    // il ne manquait qu'une syntaxe pour s'en servir.
+    const diese = rawTitle.indexOf("#");
+    const title = (diese === -1 ? rawTitle : rawTitle.slice(0, diese)).trim();
+    const section = diese === -1 ? "" : rawTitle.slice(diese + 1).trim();
+
+    // `[[#Section]]` sans titre reste dans la page courante.
+    if (!title) {
+      return section ? `[${section}](wiki:#${slugify(section)})` : match;
+    }
+
     const slug = bySlug.get(title.toLowerCase());
     // Slug vide = page introuvable — rendu visuellement cassé par
     // MarkdownRenderer plutôt qu'un lien mort silencieux (voir composant `a`).
-    return `[${title}](wiki:${slug ?? ""})`;
+    const ancre = section ? `#${slugify(section)}` : "";
+    return `[${rawTitle.trim()}](wiki:${slug ?? ""}${slug ? ancre : ""})`;
   });
 }
 

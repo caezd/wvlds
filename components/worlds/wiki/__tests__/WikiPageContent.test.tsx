@@ -156,6 +156,8 @@ describe("WikiPageContent — brouillon et publication", () => {
         supabase={mock.client as never}
         onPageUpdated={vi.fn()}
         onNavigate={vi.fn()}
+        pendingAnchor={null}
+        onAnchorReached={vi.fn()}
       />,
     );
 
@@ -188,6 +190,8 @@ describe("WikiPageContent — brouillon et publication", () => {
         supabase={mock.client as never}
         onPageUpdated={vi.fn()}
         onNavigate={vi.fn()}
+        pendingAnchor={null}
+        onAnchorReached={vi.fn()}
       />,
     );
 
@@ -228,6 +232,8 @@ describe("WikiPageContent — brouillon et publication", () => {
         supabase={mock.client as never}
         onPageUpdated={onPageUpdated}
         onNavigate={vi.fn()}
+        pendingAnchor={null}
+        onAnchorReached={vi.fn()}
       />,
     );
 
@@ -277,6 +283,8 @@ describe("WikiPageContent — brouillon et publication", () => {
         supabase={mock.client as never}
         onPageUpdated={onPageUpdated}
         onNavigate={vi.fn()}
+        pendingAnchor={null}
+        onAnchorReached={vi.fn()}
       />,
     );
 
@@ -321,6 +329,8 @@ describe("WikiPageContent — brouillon et publication", () => {
         supabase={mock.client as never}
         onPageUpdated={vi.fn()}
         onNavigate={vi.fn()}
+        pendingAnchor={null}
+        onAnchorReached={vi.fn()}
       />,
     );
 
@@ -368,6 +378,8 @@ describe("WikiPageContent — brouillon et publication", () => {
         supabase={mock.client as never}
         onPageUpdated={vi.fn()}
         onNavigate={vi.fn()}
+        pendingAnchor={null}
+        onAnchorReached={vi.fn()}
       />,
     );
 
@@ -403,6 +415,8 @@ describe("WikiPageContent — brouillon et publication", () => {
         supabase={mock.client as never}
         onPageUpdated={vi.fn()}
         onNavigate={vi.fn()}
+        pendingAnchor={null}
+        onAnchorReached={vi.fn()}
       />,
     );
 
@@ -442,6 +456,8 @@ describe("WikiPageContent — badge brouillon", () => {
         supabase={mock.client as never}
         onPageUpdated={vi.fn()}
         onNavigate={vi.fn()}
+        pendingAnchor={null}
+        onAnchorReached={vi.fn()}
       />,
     );
     expect(screen.getByText("Brouillon")).toBeInTheDocument();
@@ -475,6 +491,8 @@ describe("WikiPageContent — badge brouillon", () => {
         supabase={mock.client as never}
         onPageUpdated={vi.fn()}
         onNavigate={vi.fn()}
+        pendingAnchor={null}
+        onAnchorReached={vi.fn()}
       />,
     );
     expect(screen.queryByText("Brouillon")).not.toBeInTheDocument();
@@ -508,6 +526,8 @@ describe("WikiPageContent — badge brouillon", () => {
         supabase={mock.client as never}
         onPageUpdated={vi.fn()}
         onNavigate={vi.fn()}
+        pendingAnchor={null}
+        onAnchorReached={vi.fn()}
       />,
     );
     expect(screen.queryByText("Brouillon")).not.toBeInTheDocument();
@@ -538,6 +558,8 @@ describe("WikiPageContent — badge page restreinte", () => {
         supabase={mock.client as never}
         onPageUpdated={vi.fn()}
         onNavigate={vi.fn()}
+        pendingAnchor={null}
+        onAnchorReached={vi.fn()}
       />,
     );
     expect(screen.getByText("Réservé aux éditeurs")).toBeInTheDocument();
@@ -566,6 +588,8 @@ describe("WikiPageContent — badge page restreinte", () => {
         supabase={mock.client as never}
         onPageUpdated={vi.fn()}
         onNavigate={vi.fn()}
+        pendingAnchor={null}
+        onAnchorReached={vi.fn()}
       />,
     );
     expect(screen.queryByText("Réservé aux éditeurs")).not.toBeInTheDocument();
@@ -601,6 +625,8 @@ describe("WikiPageContent — titre de la page", () => {
         supabase={mock.client as never}
         onPageUpdated={vi.fn()}
         onNavigate={vi.fn()}
+        pendingAnchor={null}
+        onAnchorReached={vi.fn()}
       />,
     );
 
@@ -639,6 +665,8 @@ describe("WikiPageContent — titre de la page", () => {
         supabase={mock.client as never}
         onPageUpdated={vi.fn()}
         onNavigate={vi.fn()}
+        pendingAnchor={null}
+        onAnchorReached={vi.fn()}
       />,
     );
 
@@ -676,6 +704,8 @@ describe("WikiPageContent — commentaires ancrés", () => {
         supabase={mock.client as never}
         onPageUpdated={vi.fn()}
         onNavigate={vi.fn()}
+        pendingAnchor={null}
+        onAnchorReached={vi.fn()}
       />,
     );
   }
@@ -821,6 +851,8 @@ describe("WikiPageContent — colonne latérale en mode modification", () => {
         supabase={mock.client as never}
         onPageUpdated={vi.fn()}
         onNavigate={vi.fn()}
+        pendingAnchor={null}
+        onAnchorReached={vi.fn()}
       />,
     );
   }
@@ -874,6 +906,8 @@ describe("WikiPageContent — images collées dans l'article", () => {
         supabase={mock.client as never}
         onPageUpdated={vi.fn()}
         onNavigate={vi.fn()}
+        pendingAnchor={null}
+        onAnchorReached={vi.fn()}
       />,
     );
   }
@@ -949,6 +983,8 @@ describe("WikiPageContent — autocomplétion des liens internes", () => {
         supabase={mock.client as never}
         onPageUpdated={vi.fn()}
         onNavigate={vi.fn()}
+        pendingAnchor={null}
+        onAnchorReached={vi.fn()}
       />,
     );
   }
@@ -1053,6 +1089,8 @@ describe("WikiPageContent — ceinture de mise en forme", () => {
         supabase={mock.client as never}
         onPageUpdated={vi.fn()}
         onNavigate={vi.fn()}
+        pendingAnchor={null}
+        onAnchorReached={vi.fn()}
       />,
     );
   }
@@ -1222,6 +1260,8 @@ describe("WikiPageContent — ceinture de mise en forme", () => {
         supabase={mock.client as never}
         onPageUpdated={vi.fn()}
         onNavigate={vi.fn()}
+        pendingAnchor={null}
+        onAnchorReached={vi.fn()}
       />,
     );
 
@@ -1253,6 +1293,8 @@ describe("WikiPageContent — compteurs du sous-en-tête", () => {
         supabase={mock.client as never}
         onPageUpdated={vi.fn()}
         onNavigate={vi.fn()}
+        pendingAnchor={null}
+        onAnchorReached={vi.fn()}
       />,
     );
   }
@@ -1323,6 +1365,8 @@ describe("WikiPageContent — bannière et description", () => {
         supabase={mock.client as never}
         onPageUpdated={vi.fn()}
         onNavigate={vi.fn()}
+        pendingAnchor={null}
+        onAnchorReached={vi.fn()}
       />,
     );
     return { ...vue, mock };
