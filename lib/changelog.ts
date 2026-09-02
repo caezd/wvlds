@@ -8,6 +8,16 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-09 ──────────────────────────────────────────────────────────────
   {
     date: "2026-09",
+    tag: "Salons",
+    text: "Un lien « [[Page]] » écrit dans un message ouvre la page du wiki du monde."
+  },
+  {
+    date: "2026-09",
+    tag: "Salons",
+    text: "Le centre de recherche fouille aussi le wiki du monde : les pages et fiches trouvées s’affichent avant les messages."
+  },
+  {
+    date: "2026-09",
     tag: "Wiki",
     text: "Les pages, les fiches de notes et leurs catégories se réordonnent aussi depuis leur menu, sans souris."
   },

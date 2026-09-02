@@ -1001,7 +1001,8 @@
       "filterYes": "Sí",
       "filterNo": "No",
       "clearFilters": "Borrar filtros",
-      "applyFilters": "Aplicar filtros"
+      "applyFilters": "Aplicar filtros",
+      "wikiResults": "En el wiki"
     },
     "callout": {
       "title": "Recuadro",

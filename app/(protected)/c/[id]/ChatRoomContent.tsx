@@ -7,6 +7,7 @@ import type { ChatMessageWithPersona, Persona, ChoiceVoteSummary } from "@/types
 import { canMemberPost, canEditChatroom, canManageWorld } from "@/lib/worldPermissions";
 import { getChatroomsNav, getFollowedChatroomIds, type NavRoom } from "@/lib/currentRequest";
 import type { ChatroomWithWorld } from "./getChatroom";
+import { WikiLinkProvider } from "@/components/worlds/wiki/WikiLinkContext";
 
 export default async function ChatRoomContent({
   id,
@@ -202,6 +203,9 @@ export default async function ChatRoomContent({
   const initialRoomsSafe = navRooms;
 
   return (
+    // Les `[[liens]]` d'un message mènent au wiki du monde — sans monde,
+    // ils restent visiblement cassés, comme avant.
+    <WikiLinkProvider worldId={chatroom.world_id ?? ""}>
     <ChatRoomView
       chatId={id}
       initialChat={{
@@ -238,5 +242,6 @@ export default async function ChatRoomContent({
       initialPersonaGroupColors={personaGroupColors}
       initialChallengeBadges={challengeBadges}
     />
+    </WikiLinkProvider>
   );
 }

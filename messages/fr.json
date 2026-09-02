@@ -1001,7 +1001,8 @@
       "filterYes": "Oui",
       "filterNo": "Non",
       "clearFilters": "Effacer les filtres",
-      "applyFilters": "Appliquer les filtres"
+      "applyFilters": "Appliquer les filtres",
+      "wikiResults": "Dans le wiki"
     },
     "callout": {
       "title": "Encadré",

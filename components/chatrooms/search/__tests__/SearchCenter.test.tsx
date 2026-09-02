@@ -37,6 +37,14 @@ vi.mock("@/lib/chatSearchDirectory", async (importOriginal) => {
 });
 
 const searchMock = vi.hoisted(() => vi.fn());
+// Le wiki se lit par un client que ces tests ne montent pas : un index vide
+// suffit, la recherche des messages est le sujet.
+const wikiLoadMock = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/wikiSearch", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/wikiSearch")>()),
+  loadWorldWikiForSearch: wikiLoadMock,
+}));
+
 vi.mock("@/lib/chatSearch", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/chatSearch")>();
   return { ...actual, searchChatMessages: searchMock };
@@ -73,6 +81,8 @@ beforeEach(() => {
   pushMock.mockReset();
   searchMock.mockReset();
   searchMock.mockResolvedValue(resultPage());
+  wikiLoadMock.mockReset();
+  wikiLoadMock.mockResolvedValue({ index: { pages: [], notes: [] }, pagesById: new Map() });
 });
 
 describe("SearchCenter", () => {
@@ -112,6 +122,30 @@ describe("SearchCenter", () => {
     );
     // L'auteur est résolu via la persona (personaId prioritaire sur authorId).
     expect(screen.getByText("kael")).toBeInTheDocument();
+  });
+
+  it("montre les pages du wiki qui répondent, avant les messages", async () => {
+    // Le centre ne fouillait que les messages : depuis un salon, le wiki était
+    // invisible.
+    const { buildSearchIndex } = await vi.importActual<typeof import("@/lib/wikiSearch")>("@/lib/wikiSearch");
+    wikiLoadMock.mockResolvedValue({
+      index: buildSearchIndex(
+        [{ id: "p1", title: "Arkham", content: "Le mot recherché s'y trouve.", is_folder: false }],
+        [],
+      ),
+      pagesById: new Map([["p1", { title: "Arkham", slug: "arkham" }]]),
+    });
+    render(<SearchCenter worldId="w1" open onOpenChange={() => {}} />);
+
+    const input = await screen.findByPlaceholderText("Rechercher…");
+    await userEvent.type(input, "dans:gén");
+    await userEvent.click(await screen.findByText("# général"));
+    await userEvent.type(input, "recherché{Enter}");
+
+    await screen.findByText("Dans le wiki");
+    await userEvent.click(screen.getByRole("button", { name: /Arkham/ }));
+
+    expect(pushMock).toHaveBeenCalledWith("/w/w1?view=wiki&page=arkham");
   });
 
   it("ignore la réponse d'une recherche devenue obsolète", async () => {

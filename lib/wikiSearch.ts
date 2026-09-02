@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { normalizeForSearch } from "@/lib/wikiLinkSuggest";
 
 /**
@@ -146,4 +147,36 @@ export function searchWiki(index: WikiSearchIndex, query: string): WikiSearchHit
   }
 
   return [...byTitle, ...byBody];
+}
+
+/** Ce que le centre de recherche a besoin de savoir d'une page trouvée. */
+export type WikiSearchPage = { title: string; slug: string };
+
+/**
+ * Le wiki d'un monde, lu et indexé pour une recherche hors du wiki.
+ *
+ * Ici et non dans le composant, comme `chatSearchDirectory` : c'est ce qui
+ * permet aux tests du centre de recherche de le remplacer sans monter de
+ * client. Pages vivantes seulement — la RLS cache déjà les brouillons et les
+ * pages restreintes à qui n'y a pas droit.
+ */
+export async function loadWorldWikiForSearch(
+  supabase: SupabaseClient,
+  worldId: string,
+): Promise<{ index: WikiSearchIndex; pagesById: Map<string, WikiSearchPage> }> {
+  const [pagesRes, notesRes] = await Promise.all([
+    supabase
+      .from("world_wiki_pages")
+      .select("id, title, slug, content, is_folder")
+      .eq("world_id", worldId)
+      .is("deleted_at", null),
+    supabase.from("world_wiki_page_notes").select("id, page_id, title, body").eq("world_id", worldId),
+  ]);
+
+  type PageRow = SearchablePage & { slug: string };
+  const pages = (pagesRes.data ?? []) as PageRow[];
+  return {
+    index: buildSearchIndex(pages, (notesRes.data ?? []) as SearchableNote[]),
+    pagesById: new Map(pages.map(p => [p.id, { title: p.title, slug: p.slug }])),
+  };
 }

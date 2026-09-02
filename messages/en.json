@@ -1001,7 +1001,8 @@
       "filterYes": "Yes",
       "filterNo": "No",
       "clearFilters": "Clear filters",
-      "applyFilters": "Apply filters"
+      "applyFilters": "Apply filters",
+      "wikiResults": "In the wiki"
     },
     "callout": {
       "title": "Callout",
