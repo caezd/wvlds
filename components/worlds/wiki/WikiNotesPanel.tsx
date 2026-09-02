@@ -314,8 +314,13 @@ export function WikiNotesPanel({
   pageId,
   isEditMode,
   notes,
+  noteToOpen = null,
+  onNoteOpened,
 }: {
   pageId: string;
+  /** Fiche que la recherche a trouvée : on la déplie et on s'y rend. */
+  noteToOpen?: string | null;
+  onNoteOpened?: () => void;
   /**
    * Bascule « Modifier » du wiki, permission comprise — elle ne fait
    * qu'afficher les commandes, comme partout ailleurs dans le panneau. Le
@@ -336,6 +341,29 @@ export function WikiNotesPanel({
   const tCommon = useTranslations("common");
 
   const [collapsed, setCollapsed] = React.useState<Set<string>>(() => new Set());
+
+  /**
+   * Ouvre la fiche que la recherche a trouvée.
+   *
+   * Sa catégorie peut être repliée et la fiche fermée : la trouver ne sert à
+   * rien si elle reste cachée derrière deux clics.
+   */
+  React.useEffect(() => {
+    if (!noteToOpen) return;
+    const groupe = notes.groups.find(g => g.notes.some(n => n.id === noteToOpen));
+    // Les fiches ne sont peut-être pas encore là : on réessaiera au prochain
+    // rendu plutôt que de rendre la main sur une page vide.
+    if (!groupe) return;
+
+    setCollapsed(prev => {
+      const suite = new Set(prev);
+      suite.delete(groupe.category.id);
+      return suite;
+    });
+    setExpandedNotes(prev => new Set([...prev, noteToOpen]));
+    document.getElementById(`note-${noteToOpen}`)?.scrollIntoView({ block: "center" });
+    onNoteOpened?.();
+  }, [noteToOpen, notes.groups, onNoteOpened]);
   const [expandedNotes, setExpandedNotes] = React.useState<Set<string>>(() => new Set());
   const [creatingCategory, setCreatingCategory] = React.useState(false);
   const [categoryName, setCategoryName] = React.useState("");

@@ -135,6 +135,8 @@ export function WikiNoteCard({
 
   return (
     <li
+      // La recherche conduit jusqu'ici : elle a besoin d'un point où viser.
+      id={`note-${note.id}`}
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className={cn(

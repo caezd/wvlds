@@ -158,6 +158,9 @@ describe("WikiPageContent — brouillon et publication", () => {
         onNavigate={vi.fn()}
         pendingAnchor={null}
         onAnchorReached={vi.fn()}
+        noteToOpen={null}
+        onNoteOpened={vi.fn()}
+        onNotesLoaded={vi.fn()}
       />,
     );
 
@@ -192,6 +195,9 @@ describe("WikiPageContent — brouillon et publication", () => {
         onNavigate={vi.fn()}
         pendingAnchor={null}
         onAnchorReached={vi.fn()}
+        noteToOpen={null}
+        onNoteOpened={vi.fn()}
+        onNotesLoaded={vi.fn()}
       />,
     );
 
@@ -234,6 +240,9 @@ describe("WikiPageContent — brouillon et publication", () => {
         onNavigate={vi.fn()}
         pendingAnchor={null}
         onAnchorReached={vi.fn()}
+        noteToOpen={null}
+        onNoteOpened={vi.fn()}
+        onNotesLoaded={vi.fn()}
       />,
     );
 
@@ -285,6 +294,9 @@ describe("WikiPageContent — brouillon et publication", () => {
         onNavigate={vi.fn()}
         pendingAnchor={null}
         onAnchorReached={vi.fn()}
+        noteToOpen={null}
+        onNoteOpened={vi.fn()}
+        onNotesLoaded={vi.fn()}
       />,
     );
 
@@ -331,6 +343,9 @@ describe("WikiPageContent — brouillon et publication", () => {
         onNavigate={vi.fn()}
         pendingAnchor={null}
         onAnchorReached={vi.fn()}
+        noteToOpen={null}
+        onNoteOpened={vi.fn()}
+        onNotesLoaded={vi.fn()}
       />,
     );
 
@@ -380,6 +395,9 @@ describe("WikiPageContent — brouillon et publication", () => {
         onNavigate={vi.fn()}
         pendingAnchor={null}
         onAnchorReached={vi.fn()}
+        noteToOpen={null}
+        onNoteOpened={vi.fn()}
+        onNotesLoaded={vi.fn()}
       />,
     );
 
@@ -417,6 +435,9 @@ describe("WikiPageContent — brouillon et publication", () => {
         onNavigate={vi.fn()}
         pendingAnchor={null}
         onAnchorReached={vi.fn()}
+        noteToOpen={null}
+        onNoteOpened={vi.fn()}
+        onNotesLoaded={vi.fn()}
       />,
     );
 
@@ -458,6 +479,9 @@ describe("WikiPageContent — badge brouillon", () => {
         onNavigate={vi.fn()}
         pendingAnchor={null}
         onAnchorReached={vi.fn()}
+        noteToOpen={null}
+        onNoteOpened={vi.fn()}
+        onNotesLoaded={vi.fn()}
       />,
     );
     expect(screen.getByText("Brouillon")).toBeInTheDocument();
@@ -493,6 +517,9 @@ describe("WikiPageContent — badge brouillon", () => {
         onNavigate={vi.fn()}
         pendingAnchor={null}
         onAnchorReached={vi.fn()}
+        noteToOpen={null}
+        onNoteOpened={vi.fn()}
+        onNotesLoaded={vi.fn()}
       />,
     );
     expect(screen.queryByText("Brouillon")).not.toBeInTheDocument();
@@ -528,6 +555,9 @@ describe("WikiPageContent — badge brouillon", () => {
         onNavigate={vi.fn()}
         pendingAnchor={null}
         onAnchorReached={vi.fn()}
+        noteToOpen={null}
+        onNoteOpened={vi.fn()}
+        onNotesLoaded={vi.fn()}
       />,
     );
     expect(screen.queryByText("Brouillon")).not.toBeInTheDocument();
@@ -560,6 +590,9 @@ describe("WikiPageContent — badge page restreinte", () => {
         onNavigate={vi.fn()}
         pendingAnchor={null}
         onAnchorReached={vi.fn()}
+        noteToOpen={null}
+        onNoteOpened={vi.fn()}
+        onNotesLoaded={vi.fn()}
       />,
     );
     expect(screen.getByText("Réservé aux éditeurs")).toBeInTheDocument();
@@ -590,6 +623,9 @@ describe("WikiPageContent — badge page restreinte", () => {
         onNavigate={vi.fn()}
         pendingAnchor={null}
         onAnchorReached={vi.fn()}
+        noteToOpen={null}
+        onNoteOpened={vi.fn()}
+        onNotesLoaded={vi.fn()}
       />,
     );
     expect(screen.queryByText("Réservé aux éditeurs")).not.toBeInTheDocument();
@@ -627,6 +663,9 @@ describe("WikiPageContent — titre de la page", () => {
         onNavigate={vi.fn()}
         pendingAnchor={null}
         onAnchorReached={vi.fn()}
+        noteToOpen={null}
+        onNoteOpened={vi.fn()}
+        onNotesLoaded={vi.fn()}
       />,
     );
 
@@ -667,6 +706,9 @@ describe("WikiPageContent — titre de la page", () => {
         onNavigate={vi.fn()}
         pendingAnchor={null}
         onAnchorReached={vi.fn()}
+        noteToOpen={null}
+        onNoteOpened={vi.fn()}
+        onNotesLoaded={vi.fn()}
       />,
     );
 
@@ -706,6 +748,9 @@ describe("WikiPageContent — commentaires ancrés", () => {
         onNavigate={vi.fn()}
         pendingAnchor={null}
         onAnchorReached={vi.fn()}
+        noteToOpen={null}
+        onNoteOpened={vi.fn()}
+        onNotesLoaded={vi.fn()}
       />,
     );
   }
@@ -853,6 +898,9 @@ describe("WikiPageContent — colonne latérale en mode modification", () => {
         onNavigate={vi.fn()}
         pendingAnchor={null}
         onAnchorReached={vi.fn()}
+        noteToOpen={null}
+        onNoteOpened={vi.fn()}
+        onNotesLoaded={vi.fn()}
       />,
     );
   }
@@ -908,6 +956,9 @@ describe("WikiPageContent — images collées dans l'article", () => {
         onNavigate={vi.fn()}
         pendingAnchor={null}
         onAnchorReached={vi.fn()}
+        noteToOpen={null}
+        onNoteOpened={vi.fn()}
+        onNotesLoaded={vi.fn()}
       />,
     );
   }
@@ -988,6 +1039,9 @@ describe("WikiPageContent — autocomplétion des liens internes", () => {
         onNavigate={vi.fn()}
         pendingAnchor={null}
         onAnchorReached={vi.fn()}
+        noteToOpen={null}
+        onNoteOpened={vi.fn()}
+        onNotesLoaded={vi.fn()}
       />,
     );
   }
@@ -1115,6 +1169,9 @@ describe("WikiPageContent — ceinture de mise en forme", () => {
         onNavigate={vi.fn()}
         pendingAnchor={null}
         onAnchorReached={vi.fn()}
+        noteToOpen={null}
+        onNoteOpened={vi.fn()}
+        onNotesLoaded={vi.fn()}
       />,
     );
   }
@@ -1286,6 +1343,9 @@ describe("WikiPageContent — ceinture de mise en forme", () => {
         onNavigate={vi.fn()}
         pendingAnchor={null}
         onAnchorReached={vi.fn()}
+        noteToOpen={null}
+        onNoteOpened={vi.fn()}
+        onNotesLoaded={vi.fn()}
       />,
     );
 
@@ -1319,6 +1379,9 @@ describe("WikiPageContent — compteurs du sous-en-tête", () => {
         onNavigate={vi.fn()}
         pendingAnchor={null}
         onAnchorReached={vi.fn()}
+        noteToOpen={null}
+        onNoteOpened={vi.fn()}
+        onNotesLoaded={vi.fn()}
       />,
     );
   }
@@ -1391,6 +1454,9 @@ describe("WikiPageContent — bannière et description", () => {
         onNavigate={vi.fn()}
         pendingAnchor={null}
         onAnchorReached={vi.fn()}
+        noteToOpen={null}
+        onNoteOpened={vi.fn()}
+        onNotesLoaded={vi.fn()}
       />,
     );
     return { ...vue, mock };

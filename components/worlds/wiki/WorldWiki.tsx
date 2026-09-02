@@ -86,7 +86,7 @@ import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import { useColumnResize } from "@/hooks/useColumnResize";
 import { NO_DISPLACEMENT } from "@/lib/dndSort";
 import { columnFits } from "@/lib/wikiSideColumn";
-import { normalizeForSearch } from "@/lib/wikiLinkSuggest";
+import { searchWiki, type SearchableNote } from "@/lib/wikiSearch";
 import { WIKI_BUCKET, wikiImagePrefix } from "@/lib/storagePaths";
 import { MEDIA, useMediaQuery } from "@/hooks/useMediaQuery";
 import type { WorldLexiconTerm } from "@/types/worlds";
@@ -610,7 +610,42 @@ export function WorldWiki({
     setPages(data as WikiPage[]);
   }
 
-  React.useEffect(() => { void load(); }, [worldId]); // eslint-disable-line react-hooks/exhaustive-deps
+  /**
+   * Fiches de notes du monde entier, pour que la recherche les voie.
+   *
+   * Chargées ici et non page par page : chercher n'a de sens qu'à travers
+   * tout le wiki, et le panneau, lui, ne connaît que la page ouverte. Un seul
+   * appel, dans l'esprit du reste — les pages arrivent déjà avec leur contenu.
+   *
+   * Un échec ne dit rien à l'utilisateur : la recherche reste utilisable sur
+   * les pages, et une alerte pour une fonction qu'on n'a pas encore demandée
+   * ne l'aiderait pas.
+   */
+  const [notes, setNotes] = React.useState<SearchableNote[]>([]);
+
+  async function loadNotes() {
+    const { data, error } = await supabase
+      .from("world_wiki_page_notes")
+      .select("id, page_id, title, body")
+      .eq("world_id", worldId);
+    if (error) { console.error("[WorldWiki] fiches", error); return; }
+    setNotes((data ?? []) as SearchableNote[]);
+  }
+
+  React.useEffect(() => {
+    void load();
+    void loadNotes();
+  }, [worldId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /**
+   * Les fiches de la page ouverte, telles que son panneau les tient.
+   *
+   * Lui seul les suit en temps réel : sans ce renvoi, une fiche qu'on vient
+   * d'écrire resterait introuvable jusqu'au prochain chargement du wiki.
+   */
+  function onOpenPageNotes(pageId: string, fresh: SearchableNote[]) {
+    setNotes(prev => [...prev.filter(n => n.page_id !== pageId), ...fresh]);
+  }
 
   // ── Lexique ───────────────────────────────────────────────────
   React.useEffect(() => {
@@ -945,38 +980,38 @@ export function WorldWiki({
     }
   }
 
-  function selectSearchResult(pageId: string) {
-    selectPageById(pageId);
+  /**
+   * Fiche à ouvrir en arrivant sur sa page.
+   *
+   * La recherche trouve une fiche ; encore faut-il qu'elle conduise jusqu'à
+   * elle. Sans cela on atterrissait sur la page, colonne fermée ou sur le
+   * mauvais onglet, à rouvrir soi-même ce qu'on venait de trouver.
+   */
+  const [noteToOpen, setNoteToOpen] = React.useState<{ pageId: string; noteId: string } | null>(null);
+
+  function selectSearchResult(result: WikiSearchResult) {
+    selectPageById(result.page.id);
+    setNoteToOpen(result.note ? { pageId: result.page.id, noteId: result.note.id } : null);
     setSearchQuery("");
   }
 
   const searchResults = React.useMemo<WikiSearchResult[] | null>(() => {
-    const q = normalizeForSearch(searchQuery.trim());
-    if (!q) return null;
+    if (!searchQuery.trim()) return null;
 
-    return (pages ?? [])
-      .filter(p => !p.is_folder)
-      .map((p): WikiSearchResult | null => {
-        const titleMatch = normalizeForSearch(p.title).includes(q);
-        const contentNorm = p.content ? normalizeForSearch(p.content) : "";
-        const contentIdx = contentNorm.indexOf(q);
-        if (!titleMatch && contentIdx === -1) return null;
-
-        let excerpt = "";
-        if (!titleMatch && contentIdx !== -1 && p.content) {
-          const start = Math.max(0, contentIdx - 30);
-          excerpt = (start > 0 ? "…" : "") + p.content.slice(start, start + 90).trim() + "…";
-        }
-
+    return searchWiki(pages ?? [], notes, searchQuery)
+      .map((hit): WikiSearchResult | null => {
+        const page = pages?.find(p => p.id === hit.pageId);
+        if (!page) return null;
         return {
-          page: p,
-          path: ancestorsOf(p).map(a => a.title).join(" / "),
-          excerpt,
+          page,
+          path: ancestorsOf(page).map(a => a.title).join(" / "),
+          excerpt: hit.excerpt,
+          note: hit.note,
         };
       })
       .filter((r): r is WikiSearchResult => r !== null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery, pages]);
+  }, [searchQuery, pages, notes]);
 
   // ── DnD ──────────────────────────────────────────────────────
   /**
@@ -1460,6 +1495,9 @@ export function WorldWiki({
         onPageUpdated={onPageUpdated}
         onRename={(title, icon) => void renamePage(selectedPage, title, icon)}
         onNavigate={navigateToSlug}
+        noteToOpen={noteToOpen?.pageId === selectedPage.id ? noteToOpen.noteId : null}
+        onNoteOpened={() => setNoteToOpen(null)}
+        onNotesLoaded={onOpenPageNotes}
         pendingAnchor={pendingAnchor}
         onAnchorReached={() => setPendingAnchor(null)}
         lexiconTerms={lexiconTerms}

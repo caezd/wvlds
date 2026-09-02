@@ -111,6 +111,9 @@ export function WikiPageContent({
   supabase,
   onPageUpdated,
   onNavigate,
+  noteToOpen,
+  onNoteOpened,
+  onNotesLoaded,
   pendingAnchor,
   onAnchorReached,
   lexiconTerms,
@@ -153,6 +156,11 @@ export function WikiPageContent({
   onPageUpdated: (patch: Partial<WikiPage> & { id: string }) => void;
   /** Navigue vers la page dont le slug est résolu depuis un lien interne. */
   onNavigate: (slug: string, anchor?: string) => void;
+  /** Fiche à ouvrir en arrivant — la recherche a trouvé dedans. */
+  noteToOpen: string | null;
+  onNoteOpened: () => void;
+  /** Renvoie les fiches de la page ouverte, que seul ce panneau suit en direct. */
+  onNotesLoaded: (pageId: string, notes: { id: string; page_id: string; title: string; body: string }[]) => void;
   /** Section à rejoindre dès que l'article est à l'écran — voir `WorldWiki`. */
   pendingAnchor: string | null;
   onAnchorReached: () => void;
@@ -310,6 +318,33 @@ export function WikiPageContent({
    * pouvaient en ouvrir deux.
    */
   const notes = useWikiPageNotes({ pageId: page.id, worldId, supabase });
+
+  // Le panneau suit ses fiches en temps réel ; la recherche, elle, les a
+  // chargées une fois. Sans ce renvoi, une fiche qu'on vient d'écrire resterait
+  // introuvable jusqu'au prochain chargement du wiki.
+  const notesSignature = (notes.notes ?? [])
+    .map(n => `${n.id}:${n.title}:${n.body}`)
+    .join(" ");
+  React.useEffect(() => {
+    if (notes.loading) return;
+    onNotesLoaded(page.id, notes.notes ?? []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [notesSignature, notes.loading, page.id]);
+
+  /**
+   * Conduit jusqu'à la fiche trouvée par la recherche.
+   *
+   * L'ouvrir ne suffit pas : la colonne peut être repliée, en tiroir, ou sur
+   * l'onglet des commentaires. On atterrissait alors sur la bonne page en
+   * ayant à rouvrir soi-même ce qu'on venait de trouver.
+   */
+  React.useEffect(() => {
+    if (!noteToOpen) return;
+    setSideTab("notes");
+    if (colonneLaterale) replierPanneau(false);
+    else setSideDrawerOpen(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [noteToOpen, colonneLaterale]);
   const nombreDeNotes = notes.notes?.length ?? 0;
 
   const annotations = useWikiAnnotations({
@@ -1335,7 +1370,13 @@ export function WikiPageContent({
               onDelete={annotation => void annotations.remove(annotation)}
             />
           ) : (
-            <WikiNotesPanel pageId={page.id} isEditMode={isEditMode} notes={notes} />
+            <WikiNotesPanel
+              pageId={page.id}
+              isEditMode={isEditMode}
+              notes={notes}
+              noteToOpen={noteToOpen}
+              onNoteOpened={onNoteOpened}
+            />
           )}
         </WikiSidePanel>
       )}
@@ -1380,7 +1421,13 @@ export function WikiPageContent({
                 onDelete={annotation => void annotations.remove(annotation)}
               />
             ) : (
-              <WikiNotesPanel pageId={page.id} isEditMode={isEditMode} notes={notes} />
+              <WikiNotesPanel
+                pageId={page.id}
+                isEditMode={isEditMode}
+                notes={notes}
+                noteToOpen={noteToOpen}
+                onNoteOpened={onNoteOpened}
+              />
             )}
           </WikiSidePanel>
         </SideSheetContent>

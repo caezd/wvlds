@@ -300,6 +300,7 @@ describe("WorldWiki — création depuis un modèle", () => {
     const mock = createSupabaseMock({
       results: [
         { data: [], error: null }, // load() initial (pages)
+        { data: [], error: null },     // fiches de notes du monde
         { data: [], error: null }, // load() initial (lexique)
         { data: insertedPage, error: null },
         { data: [], error: null }, // annotations de la page, lues à son montage
@@ -404,6 +405,7 @@ describe("WorldWiki — cascade de renommage", () => {
     const mock = createSupabaseMock({
       results: [
         { data: [PAGE], error: null }, // load() initial (pages)
+        { data: [], error: null },     // fiches de notes du monde
         { data: [], error: null },     // load() initial (lexique)
         { data: null, error: null },   // update du titre
         { data: [PAGE], error: null }, // load() de rafraîchissement après cascade
@@ -439,6 +441,7 @@ describe("WorldWiki — cascade de renommage", () => {
     const mock = createSupabaseMock({
       results: [
         { data: [PAGE], error: null }, // load() initial (pages)
+        { data: [], error: null },     // fiches de notes du monde
         { data: [], error: null },     // load() initial (lexique)
       ],
     });
@@ -501,6 +504,7 @@ describe("WorldWiki — lexique du monde", () => {
     const mock = createSupabaseMock({
       results: [
         { data: [PAGE], error: null }, // load() initial (pages)
+        { data: [], error: null },     // fiches de notes du monde
         { data: [term], error: null }, // load() initial (lexique)
       ],
     });

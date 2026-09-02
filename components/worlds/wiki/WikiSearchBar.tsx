@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { FileText, Search, X } from "lucide-react";
+import { FileText, NotebookText, Search, X } from "lucide-react";
 import type { WikiPage } from "./WorldWiki";
 
 export type WikiSearchResult = {
@@ -10,6 +10,14 @@ export type WikiSearchResult = {
   path: string;
   /** Extrait du contenu autour du terme recherché (vide si le titre seul correspond). */
   excerpt: string;
+  /**
+   * Fiche de notes trouvée, quand la correspondance ne vient pas de la page.
+   *
+   * C'est elle qu'on nomme alors, et la page devient le chemin pour y aller —
+   * annoncer « Le Hub central » à qui a cherché « clé rouillée » ne dirait pas
+   * ce qui a été trouvé.
+   */
+  note: { id: string; title: string } | null;
 };
 
 export function WikiSearchBar({
@@ -22,7 +30,7 @@ export function WikiSearchBar({
   onQueryChange: (v: string) => void;
   /** `null` = pas de recherche active (arbre affiché à la place). */
   results: WikiSearchResult[] | null;
-  onSelectResult: (pageId: string) => void;
+  onSelectResult: (result: WikiSearchResult) => void;
 }) {
   const t = useTranslations("wiki");
 
@@ -58,16 +66,27 @@ export function WikiSearchBar({
           ) : (
             results.map(r => (
               <button
-                key={r.page.id}
+                key={r.note ? r.note.id : r.page.id}
                 type="button"
-                onClick={() => onSelectResult(r.page.id)}
+                onClick={() => onSelectResult(r)}
                 className="flex w-full flex-col items-start gap-0.5 rounded-md px-2 py-1.5 text-left hover:bg-secondary"
               >
+                {/* Une fiche se nomme elle-même, et la page devient le chemin
+                    pour y aller : annoncer « Le Hub central » à qui a cherché
+                    « clé rouillée » ne dirait pas ce qui a été trouvé. */}
                 <span className="flex items-center gap-1.5 text-sm">
-                  <FileText className="h-3 w-3 shrink-0 text-muted-foreground" />
-                  {r.page.title}
+                  {r.note ? (
+                    <NotebookText className="h-3 w-3 shrink-0 text-muted-foreground" />
+                  ) : (
+                    <FileText className="h-3 w-3 shrink-0 text-muted-foreground" />
+                  )}
+                  {r.note ? r.note.title : r.page.title}
                 </span>
-                {r.path && <span className="text-xs text-muted-foreground">{r.path}</span>}
+                {(r.note || r.path) && (
+                  <span className="text-xs text-muted-foreground">
+                    {[r.path, r.note ? r.page.title : null].filter(Boolean).join(" / ")}
+                  </span>
+                )}
                 {r.excerpt && (
                   <span className="line-clamp-1 text-xs text-muted-foreground/80">{r.excerpt}</span>
                 )}

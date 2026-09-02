@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Wiki",
+    text: "La recherche du wiki fouille maintenant les fiches de notes, et pas seulement les articles. Une fiche trouvée se nomme elle-même, la page devient le chemin pour y aller, et la choisir ouvre la colonne sur la bonne fiche, dépliée. Tout ce qu’on rangeait dans cette colonne était jusqu’ici introuvable."
+  },
+  {
+    date: "2026-09",
+    tag: "Wiki",
     text: "L’adresse suit maintenant la page qu’on lit : le lien se copie et se partage, le bouton Précédent revient à la page d’avant au lieu de quitter le wiki, et un rafraîchissement rouvre là où l’on était. Suivre un lien de section l’inscrit aussi dans l’adresse."
   },
   {
