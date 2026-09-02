@@ -102,6 +102,37 @@ describe("completeLink", () => {
     });
   });
 
+  it("remplace la sélection entière, pas seulement ce qui la précède", () => {
+    // Le cas rencontré : « Personality » sélectionné dans un lien fermé, et
+    // « History » choisi dans la liste. Le résultat était
+    // `[[test#History]]Personality]]`.
+    const text = "On va à [[test#Personality]] ce soir";
+    const start = "On va à [[".length;
+    const selStart = "On va à [[test#".length;
+    const selEnd = "On va à [[test#Personality".length;
+    expect(completeLink(text, start, selStart, "test#History", selEnd)).toEqual({
+      value: "On va à [[test#History]] ce soir",
+      caret: start + "test#History".length + 2,
+    });
+  });
+
+  it("remplace aussi ce qui reste du lien à droite d'un curseur sans sélection", () => {
+    // Curseur au milieu de « Perso|nality » : la fin du mot fait encore partie
+    // du lien, elle doit partir avec le reste.
+    const text = "On va à [[test#Personality]] ce soir";
+    const start = "On va à [[".length;
+    const caret = "On va à [[test#Perso".length;
+    expect(completeLink(text, start, caret, "test#History").value)
+      .toBe("On va à [[test#History]] ce soir");
+  });
+
+  it("ne mange pas un lien voisin", () => {
+    // Après le curseur vient d'abord un `[[` : le lien en cours n'est pas
+    // fermé, le suivant n'est pas à lui.
+    const text = "[[Ark et [[Autre]]";
+    expect(completeLink(text, 2, 5, "Arkham").value).toBe("[[Arkham]] et [[Autre]]");
+  });
+
   it("ne double pas un `]]` déjà là", () => {
     // On complète souvent au milieu d'un lien déjà fermé.
     const { text, position } = caret("On va à [[Ark|]] ce soir");

@@ -84,19 +84,35 @@ export function suggestedPages<T extends { title: string; is_folder: boolean }>(
 /**
  * Texte et curseur après avoir accepté un titre.
  *
- * Le `]]` fermant n'est posé que s'il manque : on complète souvent au milieu
- * d'un lien déjà fermé, et le doubler laisserait `[[Titre]]]]`.
+ * Ce qui est remplacé va de `start` jusqu'à la FIN du lien quand il est déjà
+ * fermé — pas seulement jusqu'au curseur. Sélectionner « Personality » dans
+ * `[[test#Personality]]` et choisir « History » donnait
+ * `[[test#History]]Personality]]` : le remplacement s'arrêtait au début de la
+ * sélection, puis posait un second `]]`. Le reste du lien est ce qu'on veut
+ * remplacer, qu'il soit sélectionné, à droite du curseur, ou les deux.
+ *
+ * Le `]]` fermant n'est posé que s'il manque : le doubler laisserait
+ * `[[Titre]]]]`.
  */
 export function completeLink(
   text: string,
   start: number,
   caret: number,
   title: string,
+  selectionEnd: number = caret,
 ): { value: string; caret: number } {
-  const alreadyClosed = text.startsWith("]]", caret);
+  // Le lien est-il déjà fermé sur cette ligne, sans autre crochet entre-temps ?
+  // Alors tout ce qui va jusqu'à ce `]]` appartient au lien.
+  const lineEnd = text.indexOf("\n", selectionEnd);
+  const line = text.slice(selectionEnd, lineEnd === -1 ? text.length : lineEnd);
+  const closing = line.search(/[[\]]/);
+  const closesHere = closing !== -1 && line.startsWith("]]", closing);
+
+  const end = closesHere ? selectionEnd + closing : selectionEnd;
+  const alreadyClosed = text.startsWith("]]", end);
 
   return {
-    value: text.slice(0, start) + title + (alreadyClosed ? "" : "]]") + text.slice(caret),
+    value: text.slice(0, start) + title + (alreadyClosed ? "" : "]]") + text.slice(end),
     // Après le `]]`, qu'il vienne d'être posé ou qu'il fût déjà là : on
     // continue d'écrire la phrase, pas le lien.
     caret: start + title.length + 2,

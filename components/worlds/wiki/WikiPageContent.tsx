@@ -566,6 +566,7 @@ export function WikiPageContent({
       suggestion.start,
       champ.selectionStart,
       item.insert,
+      champ.selectionEnd,
     );
     if (!ecrireAvecAnnulation(champ, value)) handleDraftChange(value);
     setSelectionAPoser([caret, caret]);
