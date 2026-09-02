@@ -14,6 +14,11 @@ import { transformStyledSpans, createFenceTracker } from "@/lib/textStyledSpans"
 import { highlightLexiconTerms } from "@/lib/lexiconHighlight";
 import { extractHeadings } from "@/lib/wikiToc";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
+import { StoredImage } from "@/components/ui/stored-image";
+import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
+import { VALID_LUCIDE_ICONS } from "@/components/ui/LucideIconPicker";
+import type { ApercuPage } from "@/lib/wikiApercu";
 import type { WorldLexiconTerm } from "@/types/worlds";
 
 type Props = {
@@ -31,6 +36,9 @@ type Props = {
   /** Lexique du monde (voir lib/lexiconHighlight.ts) — absent = pas de
    *  surlignage. Réservé aux pages du wiki, jamais aux messages de chat. */
   lexiconTerms?: WorldLexiconTerm[];
+  /** Ce qu'il y a à montrer d'une page visée, au survol de son lien — voir
+   *  `lib/wikiApercu.ts`. Absent, ou rendant `null`, le lien reste nu. */
+  apercuWiki?: (slug: string) => ApercuPage | null;
 };
 
 function extractText(node: React.ReactNode): string {
@@ -255,7 +263,8 @@ export function MarkdownContent({
   isMine = false,
   onWikiLink,
   lexiconTerms,
-}: Pick<Props, "content" | "allowImages" | "isMine" | "onWikiLink" | "lexiconTerms">) {
+  apercuWiki,
+}: Pick<Props, "content" | "allowImages" | "isMine" | "onWikiLink" | "lexiconTerms" | "apercuWiki">) {
   const schema = useMemo(() => {
     return {
       ...defaultSchema,
@@ -420,7 +429,7 @@ export function MarkdownContent({
             </span>
           );
         }
-        return (
+        const lien = (
           <button
             type="button"
             onClick={() => onWikiLink(slug)}
@@ -428,6 +437,46 @@ export function MarkdownContent({
           >
             {children}
           </button>
+        );
+
+        const apercu = apercuWiki?.(slug) ?? null;
+        // Rien à montrer : le lien reste nu. Une carte qui n'apprendrait que
+        // le titre déjà écrit dans le lien vaut moins que pas de carte.
+        if (!apercu) return lien;
+
+        return (
+          <HoverCard openDelay={400} closeDelay={100}>
+            <HoverCardTrigger asChild>{lien}</HoverCardTrigger>
+            {/* `not-prose` : la carte vit dans un article, dont les règles
+                typographiques donneraient à ses paragraphes les marges d'un
+                corps de texte. */}
+            <HoverCardContent className="not-prose w-72 overflow-hidden p-0">
+              {apercu.bannerUrl && (
+                <div className="relative h-24 w-full bg-secondary">
+                  <StoredImage
+                    url={apercu.bannerUrl}
+                    width={864}
+                    height={288}
+                    resize="cover"
+                    className="object-cover"
+                  />
+                </div>
+              )}
+              <div className="p-3">
+                <p className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+                  {apercu.icon && VALID_LUCIDE_ICONS.has(apercu.icon) && (
+                    <LazyLucideIcon name={apercu.icon} className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  )}
+                  <span className="truncate">{apercu.title}</span>
+                </p>
+                {apercu.description && (
+                  <p className="mt-1 line-clamp-3 text-xs text-muted-foreground">
+                    {apercu.description}
+                  </p>
+                )}
+              </div>
+            </HoverCardContent>
+          </HoverCard>
         );
       }
       return (
@@ -492,6 +541,7 @@ export default function MarkdownRenderer({
   isMine = false,
   onWikiLink,
   lexiconTerms,
+  apercuWiki,
 }: Props) {
   return (
     <div className={proseClassName(proseSize, className)}>
@@ -501,6 +551,7 @@ export default function MarkdownRenderer({
         isMine={isMine}
         onWikiLink={onWikiLink}
         lexiconTerms={lexiconTerms}
+        apercuWiki={apercuWiki}
       />
     </div>
   );

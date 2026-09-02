@@ -348,6 +348,51 @@ describe("WorldWiki — pages restreintes", () => {
       expect(appels).toContainEqual({ is_restricted: true });
     });
   });
+
+  it("réordonne une page depuis le menu ⋯, sans souris", async () => {
+    // Le glisser-déposer était le seul chemin vers l'ordre des pages, et il
+    // demande un pointeur : au clavier, l'arbre était figé.
+    const mock = createSupabaseMock({
+      results: [{ data: [PAGE, FOLDER, NESTED_PAGE], error: null }],
+    });
+    vi.mocked(createClient).mockReturnValue(mock.client as never);
+
+    const user = userEvent.setup();
+    render(<WorldWiki worldId="w1" canEdit />);
+
+    await activerModification(user);
+    const ligne = (await dansLArbre("Accueil")).closest("div")!;
+    await user.click(within(ligne).getByRole("button", { name: "Options" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Descendre" }));
+
+    // « Accueil » passe derrière « Lieux » : les deux rangs s'échangent.
+    await waitFor(() => {
+      const appels = mock.buildersFor("world_wiki_pages")
+        .flatMap(b => b.update.mock.calls.map(c => c[0]));
+      expect(appels).toContainEqual({ parent_id: null, sort_index: 1 });
+      expect(appels).toContainEqual({ parent_id: null, sort_index: 0 });
+    });
+  });
+
+  it("ne propose que les déplacements qui ont un sens", async () => {
+    // Proposer « Monter » à la première page de sa liste ne ferait qu'un clic
+    // sans effet ; « Sortir » n'a rien à dire à une page déjà à la racine.
+    const mock = createSupabaseMock({
+      results: [{ data: [PAGE, FOLDER, NESTED_PAGE], error: null }],
+    });
+    vi.mocked(createClient).mockReturnValue(mock.client as never);
+
+    const user = userEvent.setup();
+    render(<WorldWiki worldId="w1" canEdit />);
+
+    await activerModification(user);
+    const ligne = (await dansLArbre("Accueil")).closest("div")!;
+    await user.click(within(ligne).getByRole("button", { name: "Options" }));
+
+    await screen.findByRole("menuitem", { name: "Descendre" });
+    expect(screen.queryByRole("menuitem", { name: "Monter" })).toBeNull();
+    expect(screen.queryByRole("menuitem", { name: "Sortir du dossier" })).toBeNull();
+  });
 });
 
 describe("WorldWiki — cascade de renommage", () => {

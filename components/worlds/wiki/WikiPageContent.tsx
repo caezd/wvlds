@@ -38,6 +38,7 @@ import { WikiNotesPanel } from "./WikiNotesPanel";
 import { WikiSidePanel, type WikiSideTab } from "./WikiSidePanel";
 import { WikiFormatToolbar } from "./WikiFormatToolbar";
 import { WikiLinkSuggest } from "./WikiLinkSuggest";
+import { apercuDeLaPage } from "@/lib/wikiApercu";
 import { positionDuCurseur, type PositionCurseur } from "@/lib/caretPosition";
 import {
   completerLien,
@@ -560,6 +561,17 @@ export function WikiPageContent({
     }
   }
 
+  /**
+   * Ce qu'il y a à montrer d'une page visée, au survol de son lien.
+   *
+   * Mémorisé sur `pages` : la fonction est passée à chaque lien de l'article,
+   * et une identité neuve à chaque rendu ferait remonter tout le markdown.
+   */
+  const apercuDuLien = React.useCallback(
+    (slug: string) => apercuDeLaPage(pages, slug),
+    [pages],
+  );
+
   /** Reprend une image du presse-papiers ou d'un dépôt, et laisse passer le reste. */
   function surImageRecue(
     e: React.ClipboardEvent<HTMLTextAreaElement> | React.DragEvent<HTMLTextAreaElement>,
@@ -960,6 +972,7 @@ export function WikiPageContent({
                           content={resolveWikiLinks(draft, pages)}
                           allowImages
                           onWikiLink={onNavigate}
+                          apercuWiki={apercuDuLien}
                           className={WIKI_PROSE_HEADING_CLASSES}
                           lexiconTerms={lexiconTerms}
                         />
@@ -1196,6 +1209,7 @@ export function WikiPageContent({
                       content={resolvedContent}
                       allowImages
                       onWikiLink={onNavigate}
+                      apercuWiki={apercuDuLien}
                       className={WIKI_PROSE_HEADING_CLASSES}
                       lexiconTerms={lexiconTerms}
                     />

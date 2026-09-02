@@ -8,6 +8,16 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-09 ──────────────────────────────────────────────────────────────
   {
     date: "2026-09",
+    tag: "Wiki",
+    text: "Survoler un lien interne montre où il mène : l’icône, le chapeau et la bannière de la page visée. Rien de nouveau à renseigner — ces trois champs existaient déjà et ne servaient qu’en tête d’article."
+  },
+  {
+    date: "2026-09",
+    tag: "Wiki",
+    text: "Réordonner les pages ne demande plus de souris : le menu ⋯ d’une page propose de la monter, de la descendre, de la ranger dans le dossier au-dessus ou de l’en sortir. Le glisser-déposer était jusqu’ici le seul chemin vers l’ordre des pages, et il exige un pointeur."
+  },
+  {
+    date: "2026-09",
     tag: "Correctif",
     text: "Se déconnecter affichait « Session expirée — rechargez la page », un message destiné aux sessions perdues, qui suivait ensuite jusqu’à la page de connexion. L’application ne distinguait pas un départ voulu d’un jeton expiré : les deux produisent le même événement. Elle le sait maintenant, et se tait quand c’est vous qui partez."
   },

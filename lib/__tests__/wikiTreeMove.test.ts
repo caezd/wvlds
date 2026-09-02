@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  deplacementsAuClavier,
   estDansLeSousArbre,
   idZoneApres,
   pageDeZoneApres,
@@ -203,5 +204,61 @@ describe("estDansLeSousArbre", () => {
       { id: "b", parent_id: "a", is_folder: true, sort_index: 0 },
     ];
     expect(estDansLeSousArbre(boucle, "z", "a")).toBe(false);
+  });
+});
+
+describe("deplacementsAuClavier", () => {
+  // Le glisser-déposer était le seul chemin vers l'ordre des pages, et il
+  // demande un pointeur : au clavier, l'arbre était figé. Ces commandes
+  // couvrent les mêmes déplacements, un cran à la fois.
+
+  it("propose de descendre la première page, pas de monter", () => {
+    expect(deplacementsAuClavier(WIKI, "Accueil")).toEqual({
+      descendre: { cibleId: "Lieux", zone: "apres" },
+    });
+  });
+
+  it("propose de monter la dernière, pas de descendre", () => {
+    expect(deplacementsAuClavier(WIKI, "Annexe")).toEqual({
+      monter: { cibleId: "Lieux", zone: "avant" },
+      entrer: { cibleId: "Lieux", zone: "dans" },
+    });
+  });
+
+  it("propose d'entrer dans le dossier qu'on a juste au-dessus", () => {
+    // « Annexe » suit « Lieux » : c'est ce dossier-là qu'elle peut rejoindre.
+    expect(deplacementsAuClavier(WIKI, "Annexe").entrer).toEqual({
+      cibleId: "Lieux",
+      zone: "dans",
+    });
+  });
+
+  it("n'entre pas dans une page, qui n'accueille rien", () => {
+    expect(deplacementsAuClavier(WIKI, "Lieux").entrer).toBeUndefined();
+  });
+
+  it("propose de sortir à qui est dans un dossier", () => {
+    expect(deplacementsAuClavier(WIKI, "Forêt").sortir).toEqual({
+      cibleId: "Lieux",
+      zone: "apres",
+    });
+  });
+
+  it("ne propose pas de sortir à qui est déjà à la racine", () => {
+    expect(deplacementsAuClavier(WIKI, "Accueil").sortir).toBeUndefined();
+  });
+
+  it("ne propose rien d'une page inconnue", () => {
+    expect(deplacementsAuClavier(WIKI, "Fantôme")).toEqual({});
+  });
+
+  it("rend des cibles que `planifierDeplacement` sait exécuter", () => {
+    // Les deux chemins — le geste et le menu — passent par la même règle :
+    // ce que la commande annonce doit produire une écriture, pas un refus.
+    for (const [nom, vise] of Object.entries(deplacementsAuClavier(WIKI, "Annexe"))) {
+      const plan = planifierDeplacement(WIKI, "Annexe", vise.cibleId, vise.zone);
+      expect(plan, nom).not.toBeNull();
+      expect(plan!.length, nom).toBeGreaterThan(0);
+    }
   });
 });

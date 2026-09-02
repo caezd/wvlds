@@ -97,6 +97,46 @@ export function estDansLeSousArbre(
   return false;
 }
 
+/** Déplacement d'un cran, tel qu'un menu peut le proposer. */
+export type CommandeDeplacement = "monter" | "descendre" | "sortir" | "entrer";
+
+/**
+ * Déplacements praticables sur cette page, sans souris.
+ *
+ * Le glisser-déposer est le seul chemin vers l'ordre des pages, et il demande
+ * un pointeur : au clavier, à la voix, ou sur un écran tactile où le geste
+ * échoue, l'arbre est figé. Ces quatre commandes couvrent les mêmes
+ * déplacements, un cran à la fois, et rendent chacune la cible et la zone que
+ * `planifierDeplacement` attend — la même règle sert donc les deux chemins.
+ *
+ * Une commande absente de la réponse n'a pas de sens ici : rien au-dessus,
+ * rien en dessous, pas de dossier où entrer, pas de parent d'où sortir.
+ */
+export function deplacementsAuClavier(
+  pages: NoeudArbre[],
+  pageId: string,
+): Partial<Record<CommandeDeplacement, { cibleId: string; zone: Zone }>> {
+  const page = pages.find(p => p.id === pageId);
+  if (!page) return {};
+
+  const fratrie = enfantsDe(pages, page.parent_id);
+  const rang = fratrie.findIndex(p => p.id === pageId);
+  const precedente = rang > 0 ? fratrie[rang - 1] : null;
+  const suivante = rang !== -1 && rang < fratrie.length - 1 ? fratrie[rang + 1] : null;
+
+  return {
+    ...(precedente && { monter: { cibleId: precedente.id, zone: "avant" as const } }),
+    ...(suivante && { descendre: { cibleId: suivante.id, zone: "apres" as const } }),
+    // Sortir, c'est se poser juste après le dossier qui nous contenait — là où
+    // le regard s'attend à retrouver ce qu'on vient d'en tirer.
+    ...(page.parent_id && { sortir: { cibleId: page.parent_id, zone: "apres" as const } }),
+    // Entrer, c'est rejoindre le dossier qu'on a juste au-dessus. Le suivant
+    // ferait aussi bien, mais il faut choisir : celui d'au-dessus se lit dans
+    // le sens de la lecture, et c'est celui qu'on vient de dépasser.
+    ...(precedente?.is_folder && { entrer: { cibleId: precedente.id, zone: "dans" as const } }),
+  };
+}
+
 /**
  * Écritures d'un glisser-déposer, ou `null` quand le geste ne change rien.
  *

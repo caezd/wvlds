@@ -5,7 +5,11 @@ import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { saveWorldPrefs } from "@/app/(protected)/w/actions";
 import {
+  ArrowDown,
+  ArrowLeft,
+  ArrowUp,
   BookOpenText,
+  FolderInput,
   PanelLeft,
   PanelLeftClose,
   Check,
@@ -69,10 +73,12 @@ import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 import { WIKI_FOOTER, WIKI_FOOTER_BUTTON, WIKI_SUBHEADER, WIKI_SUBHEADER_COUNT } from "./wikiSubHeader";
 import { WikiEditModeToggle } from "./WikiEditModeToggle";
 import {
+  deplacementsAuClavier,
   idZoneApres,
   pageDeZoneApres,
   planifierDeplacement,
   zoneVisee,
+  type CommandeDeplacement,
   type Zone,
 } from "@/lib/wikiTreeMove";
 import { slugify } from "@/lib/slug";
@@ -161,6 +167,9 @@ type SortableTreeNodeProps = {
   createInput: React.ReactNode;
   /** Ce dossier va accueillir la page glissée. */
   estDossierCible: boolean;
+  /** Déplacements praticables sans souris, et de quoi les demander. */
+  deplacements: Partial<Record<CommandeDeplacement, unknown>>;
+  onDeplacer: (commande: CommandeDeplacement) => void;
   onSelect: () => void;
   onToggleFolder: () => void;
   onStartRename: () => void;
@@ -173,9 +182,24 @@ type SortableTreeNodeProps = {
   onToggleRestricted: () => void;
 };
 
+/** Ordre d'affichage : les deux verticaux d'abord, les deux latéraux ensuite. */
+const ORDRE_DES_DEPLACEMENTS: CommandeDeplacement[] = [
+  "monter", "descendre", "entrer", "sortir",
+];
+
+const LIBELLE_DEPLACEMENT: Record<
+  CommandeDeplacement,
+  { Icone: React.ComponentType<{ className?: string }>; cle: string }
+> = {
+  monter: { Icone: ArrowUp, cle: "moveUp" },
+  descendre: { Icone: ArrowDown, cle: "moveDown" },
+  entrer: { Icone: FolderInput, cle: "moveIn" },
+  sortir: { Icone: ArrowLeft, cle: "moveOut" },
+};
+
 function SortableTreeNode({
   page, depth, isSelected, isExpanded, isRenaming, renameValue, renameIcon,
-  editMode, subtree, createInput, estDossierCible,
+  editMode, subtree, createInput, estDossierCible, deplacements, onDeplacer,
   onSelect, onToggleFolder, onStartRename,
   onRenameChange, onRenameIconChange, onConfirmRename, onCancelRename,
   onDelete, onCreateInFolder, onToggleRestricted,
@@ -342,6 +366,27 @@ function SortableTreeNode({
                 <DropdownMenuItem onClick={e => { e.stopPropagation(); onStartRename(); }}>
                   <Pencil className="mr-2 h-4 w-4" /> {t("rename")}
                 </DropdownMenuItem>
+              )}
+              {/* Réordonner sans souris. Le glisser-déposer était le seul
+                  chemin vers l'ordre des pages, et il demande un pointeur :
+                  au clavier, l'arbre était figé. Seules les commandes qui ont
+                  un sens ici sont montrées — proposer « Monter » à la première
+                  page de sa liste ne ferait qu'un clic sans effet. */}
+              {ORDRE_DES_DEPLACEMENTS.some(c => deplacements[c]) && (
+                <>
+                  {ORDRE_DES_DEPLACEMENTS.filter(c => deplacements[c]).map(commande => {
+                    const { Icone, cle } = LIBELLE_DEPLACEMENT[commande];
+                    return (
+                      <DropdownMenuItem
+                        key={commande}
+                        onClick={e => { e.stopPropagation(); onDeplacer(commande); }}
+                      >
+                        <Icone className="mr-2 h-4 w-4" /> {t(cle)}
+                      </DropdownMenuItem>
+                    );
+                  })}
+                  <DropdownMenuSeparator />
+                </>
               )}
               <DropdownMenuItem onClick={e => { e.stopPropagation(); onToggleRestricted(); }}>
                 {page.is_restricted
@@ -964,7 +1009,21 @@ export function WorldWiki({
       survolGlisse?.overId ?? String(over.id),
       survolGlisse?.zone ?? "avant",
     );
-    if (!ecritures || ecritures.length === 0) return;
+    appliquerDeplacement(ecritures, String(active.id));
+  }
+
+  /**
+   * Écrit un déplacement, d'où qu'il vienne — glissé ou commande de menu.
+   *
+   * Le geste et le menu produisent les mêmes écritures : partager ce chemin
+   * garantit qu'ils se comportent pareil, jusqu'au retour en arrière quand la
+   * base refuse.
+   */
+  function appliquerDeplacement(
+    ecritures: ReturnType<typeof planifierDeplacement>,
+    pageId: string,
+  ) {
+    if (!ecritures || ecritures.length === 0 || !pages) return;
 
     // Ordre d'origine, pour le rétablir si l'écriture est refusée.
     const previousPages = pages;
@@ -977,7 +1036,7 @@ export function WorldWiki({
     );
 
     // Le dossier d'accueil s'ouvre : sans cela, la page semblerait disparaître.
-    const entree = ecritures.find(e => e.id === active.id)?.parent_id;
+    const entree = ecritures.find(e => e.id === pageId)?.parent_id;
     if (entree) setExpandedFolders(prev => new Set([...prev, entree]));
 
     // Un `update` par ligne, et surtout PAS un `upsert` : PostgREST traduit
@@ -1003,6 +1062,17 @@ export function WorldWiki({
       setPages(previousPages);
       toast.error(t("saveError"), { description: erreur.message });
     });
+  }
+
+  /** Déplace une page d'un cran, sans souris — voir `deplacementsAuClavier`. */
+  function deplacerAuClavier(pageId: string, commande: CommandeDeplacement) {
+    if (!pages) return;
+    const vise = deplacementsAuClavier(pages, pageId)[commande];
+    if (!vise) return;
+    appliquerDeplacement(
+      planifierDeplacement(pages, pageId, vise.cibleId, vise.zone),
+      pageId,
+    );
   }
 
   const selectedPage = pages?.find(p => p.id === selectedId) ?? null;
@@ -1105,6 +1175,8 @@ export function WorldWiki({
               // téléphone, choisir une page la sélectionnait sous un tiroir
               // resté ouvert — rien ne semblait se passer.
               estDossierCible={dossierCible === page.id}
+              deplacements={deplacementsAuClavier(pages ?? [], page.id)}
+              onDeplacer={commande => deplacerAuClavier(page.id, commande)}
               onSelect={() => selectPageById(page.id)}
               onToggleFolder={() => toggleFolder(page.id)}
               onStartRename={() => { setRenamingId(page.id); setRenameValue(page.title); setRenameIcon(page.icon ?? ""); }}
