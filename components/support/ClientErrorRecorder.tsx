@@ -20,6 +20,53 @@ function estExploitable(message: string): boolean {
   return message.trim().length > 0 && !BRUIT.test(message);
 }
 
+function enTexte(valeur: unknown): string {
+  if (typeof valeur === "string") return valeur;
+  try {
+    return JSON.stringify(valeur) ?? String(valeur);
+  } catch {
+    return String(valeur);
+  }
+}
+
+/**
+ * Applique les directives de format de la console au premier argument.
+ *
+ * `console.error` n'est pas une simple concaténation : React et Next
+ * journalisent sous la forme `console.error("%c%s%c ...", css, préfixe, css)`.
+ * Coller les arguments bout à bout donnait des lignes comme
+ * « %c%s%c background: #e6e6e6;… Server MISSING_MESSAGE: … » — le style de la
+ * console noyant le seul texte qui compte.
+ *
+ * `%c` consomme son argument et n'affiche rien : c'est du style, pas du
+ * contenu. Les autres directives substituent le leur. Ce qui reste après la
+ * dernière est rendu tel quel, comme le ferait une console.
+ */
+function appliquerDirectives(args: unknown[]): unknown[] {
+  const [premier, ...reste] = args;
+  if (typeof premier !== "string" || !/%[csdifoO]/.test(premier)) return args;
+
+  const restants = [...reste];
+  const texte = premier.replace(/%([%csdifoO])/g, (entier, directive: string) => {
+    if (directive === "%") return "%";
+    if (restants.length === 0) return entier;
+    const valeur = restants.shift();
+    switch (directive) {
+      case "c":
+        return "";
+      case "d":
+      case "i":
+        return String(Math.trunc(Number(valeur)));
+      case "f":
+        return String(Number(valeur));
+      default:
+        return enTexte(valeur);
+    }
+  });
+
+  return [texte.trim(), ...restants];
+}
+
 /**
  * Met bout à bout ce qui a été passé à `console.error`.
  *
@@ -28,19 +75,14 @@ function estExploitable(message: string): boolean {
  */
 function decrire(args: unknown[]): { message: string; stack?: string } {
   let stack: string | undefined;
-  const morceaux = args.map((arg) => {
+  const morceaux = appliquerDirectives(args).map((arg) => {
     if (arg instanceof Error) {
       stack ??= arg.stack;
       return arg.message;
     }
-    if (typeof arg === "string") return arg;
-    try {
-      return JSON.stringify(arg);
-    } catch {
-      return String(arg);
-    }
+    return enTexte(arg);
   });
-  return { message: morceaux.join(" ").slice(0, CLIENT_ERROR_MESSAGE_MAX), stack };
+  return { message: morceaux.join(" ").trim().slice(0, CLIENT_ERROR_MESSAGE_MAX), stack };
 }
 
 /**
@@ -52,9 +94,50 @@ function decrire(args: unknown[]): { message: string; stack?: string } {
  */
 let consoleDetournee = false;
 
+/**
+ * Cadres qui appartiennent au framework et non à l'application.
+ *
+ * Volontairement basé sur les BIBLIOTHÈQUES et non sur `.next` : le chemin le
+ * plus utile d'une erreur de rendu ressemble à
+ * `SidebarRail@about://React/Server/…/.next/server/chunks/…`, et écarter tout
+ * ce qui contient `.next` jetterait justement la ligne qu'on cherche.
+ */
+const CADRE_FRAMEWORK =
+  /react-server-dom|react-dom|react-refresh|next_dist_|\/node_modules\/|scheduler\.|@swc\//i;
+
+/** Au-delà, on ne lit plus : les premiers cadres portent l'information. */
+const CADRES_GARDES = 12;
+
+const estCadre = (ligne: string) => ligne.includes("@") || /^\s*at\s/.test(ligne);
+
+/**
+ * Retire de la pile les cadres internes du framework.
+ *
+ * Une erreur de rendu produit une vingtaine de lignes de `parseModelString`,
+ * `initializeModelChunk` et consorts pour un seul cadre applicatif. Le journal
+ * sert à comprendre un signalement : noyer la ligne utile sous la mécanique de
+ * React revient à ne rien journaliser.
+ *
+ * Une pile entièrement composée de cadres internes est gardée telle quelle —
+ * une pile illisible reste plus utile que pas de pile du tout.
+ */
+function nettoyerPile(stack: string | undefined): string | undefined {
+  if (!stack) return undefined;
+  const lignes = stack.split("\n");
+  const gardées = lignes.filter((l) => !estCadre(l) || !CADRE_FRAMEWORK.test(l));
+  const utiles = gardées.some(estCadre) ? gardées : lignes;
+  return utiles.slice(0, CADRES_GARDES).join("\n");
+}
+
 function noter(kind: ClientErrorKind, message: string, extra?: { source?: string; stack?: string }) {
   if (!estExploitable(message)) return;
-  enregistrerErreurClient({ at: new Date().toISOString(), kind, message, ...extra });
+  enregistrerErreurClient({
+    at: new Date().toISOString(),
+    kind,
+    message,
+    ...extra,
+    stack: nettoyerPile(extra?.stack),
+  });
 }
 
 /**
