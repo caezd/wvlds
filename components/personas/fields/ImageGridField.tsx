@@ -3,11 +3,10 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import type * as React from "react";
 import { useTranslations } from "next-intl";
-import Image from "next/image";
+import { StoredImage } from "@/components/ui/stored-image";
 import { Expand, GripVertical, Loader2, MoveHorizontal, Plus, Square, SquareDashed, X } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/client";
-import { supabaseThumb } from "@/lib/storage";
 import { toWebP } from "@/lib/imageUtils";
 import { nomDeFichierPourType } from "@/lib/storagePaths";
 import { cn } from "@/lib/utils";
@@ -26,19 +25,13 @@ import {
 } from "../personaImageGrid";
 
 function GridImageThumb({ url }: { url: string }) {
-  const [thumbFailed, setThumbFailed] = useState(false);
-  return (
-    <Image
-      src={thumbFailed ? url : (supabaseThumb(url, 300) ?? url)}
-      onError={() => setThumbFailed(true)}
-      alt=""
-      fill
-      sizes="120px"
-      className="object-contain"
-      loading="lazy"
-      draggable={false}
-    />
-  );
+  // `StoredImage` prend l'URL d'origine et gère lui-même vignette floutée,
+  // repli en cas d'échec d'imgproxy et fondu — ce que cette fonction faisait à
+  // la main, sans le substitut.
+  //
+  // Pas de `height` : la case garde le rapport de l'image (`object-contain`),
+  // en demander une la recadrerait.
+  return <StoredImage url={url} width={300} sizes="120px" className="object-contain" draggable={false} />;
 }
 
 /** Largeur de CONTENU du conteneur (hors `border`/`padding`) — voir le même

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, act } from "@testing-library/react";
+import { render, screen, fireEvent, act, waitFor } from "@testing-library/react";
 import { WorldsRail } from "@/components/sidebar/WorldsRail";
 
 const worldUnreadMock = vi.hoisted(() => ({ value: {} as Record<string, number> }));
@@ -219,11 +219,18 @@ describe("WorldsRail — quitter un monde", () => {
     fireEvent.contextMenu(screen.getByLabelText("Final Cocktasy"));
     fireEvent.click(screen.getByText("leave"));
 
-    expect(screen.getByText("leaveConfirmTitle")).toBeInTheDocument();
+    // La confirmation s'ouvre une fois le menu contextuel refermé (voir
+    // `afterMenuClose`) : elle n'est donc pas là au tick suivant le clic.
+    expect(await screen.findByText("leaveConfirmTitle")).toBeInTheDocument();
 
     await act(async () => {
       fireEvent.click(screen.getByText("leaveConfirmContinue"));
     });
+
+    // Radix rend `document.body` inerte tant qu'une couche modale vit ; le
+    // menu contextuel et la confirmation se chevauchent. Sans `afterMenuClose`,
+    // le verrou reste posé et plus rien n'est cliquable (voir ce module).
+    await waitFor(() => expect(document.body.style.pointerEvents).not.toBe("none"));
 
     expect(leaveWorldMock).toHaveBeenCalledWith("world-1");
   });

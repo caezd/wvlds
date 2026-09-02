@@ -16,6 +16,7 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
+import { afterMenuClose } from "@/components/ui/after-menu-close";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -158,7 +159,7 @@ export function WorldPickerHeader({
                       <ContextMenuContent>
                         <ContextMenuItem
                           variant="destructive"
-                          onSelect={() => { setPendingLeave(w); setOpen(false); }}
+                          onSelect={afterMenuClose(() => { setPendingLeave(w); setOpen(false); })}
                         >
                           <LogOut className="h-3.5 w-3.5" />
                           {t("leave")}
@@ -245,7 +246,7 @@ export function WorldPickerHeader({
               <ContextMenuContent>
                 <ContextMenuItem
                   variant="destructive"
-                  onSelect={() => { setPendingLeave(currentWorld); setOpen(false); }}
+                  onSelect={afterMenuClose(() => { setPendingLeave(currentWorld); setOpen(false); })}
                 >
                   <LogOut className="h-3.5 w-3.5" />
                   {t("leave")}

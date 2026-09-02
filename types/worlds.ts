@@ -85,6 +85,13 @@ export interface WorldTag {
   created_at: string;
 }
 
+export interface WorldLexiconTerm {
+  id: string;
+  world_id: string;
+  term: string;
+  description: string;
+}
+
 export type World = {
   id: string;
   name: string;
@@ -149,4 +156,71 @@ export type WorldHomeRoom = {
   unread_count: number;
   category_id?: string | null;
   timeline_date?: WorldTimelineDate | null;
+};
+
+/** Auteur d'une annotation, tel que joint depuis `profiles`. */
+export type WikiAnnotationAuthor = {
+  id: string;
+  username: string | null;
+  avatar_url: string | null;
+};
+
+/**
+ * Commentaire ancré à un extrait d'une page de wiki — voir les migrations 137
+ * et 140, et `lib/wikiAnnotations.ts`. À ne pas confondre avec les notes de
+ * page (`WikiPageNote`), qui ne sont ancrées à aucun passage. Les champs `anchor_*` ne sont remplis que sur la
+ * racine d'un fil ; une réponse (`parent_id` non nul) hérite de son ancre.
+ */
+export type WikiAnnotation = {
+  id: string;
+  page_id: string;
+  parent_id: string | null;
+  author_id: string;
+  body: string;
+  /**
+   * Type du bloc visé (`p`, `li`, `blockquote`, `h2`…) — voir migration 142.
+   *
+   * Renseigné, l'ancre porte sur un bloc et les quatre champs suivants
+   * décrivent ce bloc. Nul, c'est une ancre de sélection d'avant la
+   * migration : les mêmes champs décrivent alors un extrait de caractères.
+   */
+  anchor_block_type: string | null;
+  anchor_quote: string | null;
+  anchor_prefix: string | null;
+  anchor_suffix: string | null;
+  anchor_start: number | null;
+  resolved_at: string | null;
+  resolved_by: string | null;
+  created_at: string;
+  author: WikiAnnotationAuthor | null;
+};
+
+/** Racine et ses réponses, dans l'ordre de publication. */
+export type WikiAnnotationThread = {
+  root: WikiAnnotation;
+  replies: WikiAnnotation[];
+};
+
+/**
+ * Catégorie du panneau de notes d'une page de wiki (migration 139) — repliable
+ * et réordonnable, propre à sa page.
+ */
+export type WikiNoteCategory = {
+  id: string;
+  page_id: string;
+  name: string;
+  sort_index: number;
+};
+
+/**
+ * Fiche du panneau de notes : un titre, un corps en markdown, une catégorie.
+ * Contrairement à `WikiAnnotation`, elle n'est ancrée à aucun passage du texte.
+ */
+export type WikiPageNote = {
+  id: string;
+  category_id: string;
+  page_id: string;
+  title: string;
+  body: string;
+  sort_index: number;
 };

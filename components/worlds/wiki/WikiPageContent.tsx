@@ -2,21 +2,58 @@
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
-import { Eye, History, Loader2, Lock, Pencil } from "lucide-react";
+import { Eye, History, ImagePlus, Loader2, Lock, PanelLeft, PanelRight, Pencil, Trash2 } from "lucide-react";
 import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
-import { VALID_LUCIDE_ICONS } from "@/components/ui/LucideIconPicker";
+import { LucideIconPicker, VALID_LUCIDE_ICONS } from "@/components/ui/LucideIconPicker";
 import { Button } from "@/components/ui/button";
+import { Drawer } from "@/components/ui/drawer";
+import { SideSheetContent } from "@/components/ui/side-sheet";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
-import { ParagraphBlockEditor } from "@/components/chatrooms/composer/ParagraphBlockEditor";
+import { CodeEditor } from "@/components/ui/code-editor";
+import { StoredImage } from "@/components/ui/stored-image";
+import {
+  appliquerFormat,
+  raccourciDe,
+  keptSelection,
+  type NomFormat,
+} from "@/lib/markdownFormatting";
+import { ecrireAvecAnnulation } from "@/lib/textareaEdit";
 import { toast } from "sonner";
+import { DB_TEXT_LIMITS } from "@/lib/textLimits";
 import { cn } from "@/lib/utils";
 import type { createClient } from "@/lib/supabase/client";
 import { resolveWikiLinks } from "@/lib/wikiLinks";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { cropToWebP, firstImage, toWebP, type ZoneDeDecoupe } from "@/lib/imageUtils";
+import { ImageCropPicker } from "@/components/ui/image-crop-picker";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { WIKI_BUCKET, wikiImagePath } from "@/lib/storagePaths";
+import { useWikiAnnotations } from "@/hooks/useWikiAnnotations";
+import { useWikiPageNotes } from "@/hooks/useWikiPageNotes";
+import type { BlockAnchor } from "@/lib/wikiBlockAnchors";
+import type { WikiAnnotation } from "@/types/worlds";
+import { WikiAnnotationLayer, type ActiveAnnotation } from "./WikiAnnotationLayer";
+import { WikiAnnotationsPanel, type AnnotationDraft } from "./WikiAnnotationsPanel";
+import { WikiNotesPanel } from "./WikiNotesPanel";
+import { WikiSidePanel, type WikiSideTab } from "./WikiSidePanel";
+import { WikiFormatToolbar } from "./WikiFormatToolbar";
+import { WikiLinkSuggest, type LinkSuggestion } from "./WikiLinkSuggest";
+import { linkPreview } from "@/lib/wikiLinkPreview";
+import { extractImages } from "@/lib/wikiImages";
+import { ImageLightbox } from "@/components/chatrooms/ImageLightbox";
+import { getCaretPosition, type CaretPosition } from "@/lib/caretPosition";
+import {
+  completeLink,
+  openLinkAt,
+  splitLinkQuery,
+  suggestedPages,
+  suggestedSections,
+} from "@/lib/wikiLinkSuggest";
 import { extractHeadings } from "@/lib/wikiToc";
-import { WikiBreadcrumb } from "./WikiBreadcrumb";
-import { WikiTableOfContents } from "./WikiTableOfContents";
+import { WIKI_FOOTER_BUTTON, WIKI_SUBHEADER, WIKI_SUBHEADER_COUNT } from "./wikiSubHeader";
 import { WikiVersionHistoryPanel } from "./WikiVersionHistoryPanel";
 import type { WikiPage } from "./WorldWiki";
+import type { WorldLexiconTerm } from "@/types/worlds";
 
 /** Délai d'autosauvegarde du brouillon après la dernière frappe. */
 const WIKI_AUTOSAVE_DELAY = 1800;
@@ -39,6 +76,16 @@ const WIKI_PROSE_HEADING_CLASSES = cn(
   "[&_h6]:text-sm [&_h6]:font-semibold [&_h6]:uppercase [&_h6]:tracking-wide [&_h6]:text-muted-foreground",
 );
 
+/**
+ * Taille demandée pour la bannière, en pixels physiques.
+ *
+ * La colonne de l'article plafonne à 48 rem, soit 768 px : le double couvre les
+ * écrans à haute densité. La hauteur suit le rapport 3:1 du bandeau, celui-là
+ * même que propose le recadrage.
+ */
+const BANNIERE_LARGEUR = 1536;
+const BANNIERE_HAUTEUR = 512;
+
 function isDraftNewer(page: WikiPage): boolean {
   if (!page.draft_updated_at) return false;
   if (!page.published_at) return true;
@@ -47,46 +94,313 @@ function isDraftNewer(page: WikiPage): boolean {
 
 export function WikiPageContent({
   page,
+  worldId,
+  panelWidth,
+  panelHandleProps,
+  colonneLaterale,
+  navEnColonne,
+  navCollapsed,
+  onExpandNav,
+  onOpenTree,
+  pageCount,
+  onRename,
   pages,
-  ancestors,
   canEdit,
   isEditMode,
+  onExitEditMode,
   supabase,
   onPageUpdated,
   onNavigate,
-  onExpandFolder,
-  autoEdit = false,
-  onAutoEditConsumed,
+  noteToOpen,
+  onNoteOpened,
+  onNotesLoaded,
+  pendingAnchor,
+  onAnchorReached,
+  lexiconTerms,
 }: {
   page: WikiPage;
+  /** Monde de la page — dénormalisé sur les annotations (voir migration 137). */
+  worldId: string;
+  /** Largeur de la colonne latérale, réglée depuis WorldWiki. */
+  panelWidth: number;
+  /**
+   * La colonne latérale tient sans rogner sur le corps de l'article.
+   *
+   * Décidé par `WorldWiki`, qui seul voit la zone entière : mesurée ici, elle
+   * grandirait au départ de la colonne, ce qui la ferait revenir.
+   */
+  colonneLaterale: boolean;
+  /** L'arbre des pages est une colonne, et non un tiroir. */
+  navEnColonne: boolean;
+  /** Gestionnaires de la poignée de redimensionnement (voir useColumnResize). */
+  panelHandleProps: React.ComponentProps<"div">;
+  /** Colonne de navigation repliée : son bouton de réouverture vient ici. */
+  navCollapsed: boolean;
+  onExpandNav: () => void;
+  /** Ouvre l'arbre en tiroir — le geste équivalent en dessous de `lg`. */
+  onOpenTree: () => void;
+  /** Nombre de pages du wiki, annoncé sur le bouton quand l'arbre est fermé. */
+  pageCount: number;
+  /** Renomme la page (titre et icône) — la cascade des liens internes vers
+   *  l'ancien titre est faite par l'appelant, voir `WorldWiki.renamePage`. */
+  onRename: (title: string, icon: string) => void;
   /** Toutes les pages du wiki — pour résoudre les liens internes `[[Titre]]`. */
   pages: WikiPage[];
-  /** Dossiers ancêtres de la page, du plus ancien au plus proche (fil d'Ariane). */
-  ancestors: WikiPage[];
   /** Permission de l'utilisateur (owner/admin/editor) — indépendante du bascule de mode édition. */
   canEdit: boolean;
   /** Mode édition actif dans le panneau (bascule + permission). */
   isEditMode: boolean;
+  /** Éteint cette bascule — publier ou annuler doit la relâcher aussi. */
+  onExitEditMode: () => void;
   supabase: ReturnType<typeof createClient>;
   onPageUpdated: (patch: Partial<WikiPage> & { id: string }) => void;
   /** Navigue vers la page dont le slug est résolu depuis un lien interne. */
-  onNavigate: (slug: string) => void;
-  /** Déplie un dossier ancêtre (et les siens) dans la sidebar, depuis le fil d'Ariane. */
-  onExpandFolder: (folderId: string) => void;
-  /** Entre automatiquement en édition au montage (page tout juste créée depuis un modèle). */
-  autoEdit?: boolean;
-  onAutoEditConsumed?: () => void;
+  onNavigate: (slug: string, anchor?: string) => void;
+  /** Fiche à ouvrir en arrivant — la recherche a trouvé dedans. */
+  noteToOpen: string | null;
+  onNoteOpened: () => void;
+  /** Renvoie les fiches de la page ouverte, que seul ce panneau suit en direct. */
+  onNotesLoaded: (pageId: string, notes: { id: string; page_id: string; title: string; body: string }[]) => void;
+  /** Section à rejoindre dès que l'article est à l'écran — voir `WorldWiki`. */
+  pendingAnchor: string | null;
+  onAnchorReached: () => void;
+  /** Lexique du monde — surligné automatiquement dans le contenu rendu. */
+  lexiconTerms?: WorldLexiconTerm[];
 }) {
   const t = useTranslations("wiki");
   const tCommon = useTranslations("common");
+  const tNotes = useTranslations("wiki.notes");
 
   const [editing, setEditing] = React.useState(false);
   const [loadingDraft, setLoadingDraft] = React.useState(false);
   const [draft, setDraft] = React.useState("");
+  const champMarkdown = React.useRef<HTMLTextAreaElement>(null);
+  /**
+   * Dernière sélection faite par l'utilisateur dans le champ.
+   *
+   * Retenue au fil du geste plutôt que relue au moment d'agir : voir
+   * `keptSelection`.
+   */
+  const derniereSelection = React.useRef<[number, number]>([0, 0]);
+  /** L'utilisateur reprend la main sur la sélection : la retenue est caduque. */
+  function oublierLaSelection() {
+    derniereSelection.current = [0, 0];
+  }
+
+  /**
+   * Pages proposées pour le `[[…]]` en cours d'écriture.
+   *
+   * `null` la plupart du temps : la liste n'existe que tant qu'un lien s'écrit
+   * et qu'au moins une page correspond.
+   */
+  const [suggestion, setSuggestion] = React.useState<{
+    /** Index du premier caractère du titre dans le brouillon. */
+    start: number;
+    items: LinkSuggestion[];
+    /** Rang mis en avant, celui qu'Entrée choisira. */
+    active: number;
+    position: CaretPosition;
+  } | null>(null);
+  /** Sélection à reposer une fois la valeur mise en forme rendue. */
+  const [selectionAPoser, setSelectionAPoser] = React.useState<[number, number] | null>(null);
   const [showPreview, setShowPreview] = React.useState(false);
   const [publishing, setPublishing] = React.useState(false);
   const [lastAutosavedAt, setLastAutosavedAt] = React.useState<Date | null>(null);
   const [historyOpen, setHistoryOpen] = React.useState(false);
+  const [bannerUploading, setBannerUploading] = React.useState(false);
+  /** Une image collée ou déposée est en cours d'envoi. */
+  const [imageEnEnvoi, setImageEnEnvoi] = React.useState(false);
+  /** Image choisie, en attente de recadrage — `null` quand aucun n'est en cours. */
+  const [banniereACadrer, setBanniereACadrer] = React.useState<string | null>(null);
+  const champBanniere = React.useRef<HTMLInputElement>(null);
+  const [description, setDescription] = React.useState(page.description ?? "");
+
+  // Titre et icône, modifiables dans le corps plutôt que dans une ligne
+  // d'arbre de deux cents pixels.
+  const [renameTitle, setRenameTitle] = React.useState(page.title);
+  const [renameIcon, setRenameIcon] = React.useState(page.icon ?? "");
+
+  /**
+   * Le titre en tant que champ. Servi sur demande en lecture (menu ⋯), et
+   * d'emblée en modification de l'article : on y écrit déjà le corps, exiger
+   * un geste de plus pour le titre n'aurait servi à rien.
+   */
+  const champTitre = (
+    // L'icône passe au-dessus : à gauche, elle décalait le titre de trente
+    // pixels et le désalignait de tout le texte qui suit.
+    // `px-3` : le même retrait que celui du champ markdown, dont les deux
+    // couches portent un `p-3`. Le titre tombe ainsi exactement sur la
+    // première colonne du texte qu'il coiffe.
+    <div className="flex min-w-0 flex-1 items-center gap-2 px-4 lg:px-6">
+      <LucideIconPicker
+        value={renameIcon}
+        onChange={valeur => { setRenameIcon(valeur); onRename(renameTitle.trim() || page.title, valeur); }}
+        trigger={
+          <button
+            type="button"
+            title={t("changeIcon")}
+            // Encadrée : sans trait, une icône seule au-dessus du titre ne se
+            // lit pas comme une commande, et rien ne dit qu'on peut la changer.
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border-soft text-muted-foreground hover:bg-secondary hover:text-foreground"
+          >
+            {renameIcon && VALID_LUCIDE_ICONS.has(renameIcon)
+              ? <LazyLucideIcon name={renameIcon} className="h-6 w-6" />
+              : <Pencil className="h-5 w-5" />}
+          </button>
+        }
+      />
+      <input
+        value={renameTitle}
+        onChange={e => setRenameTitle(e.target.value)}
+        onBlur={validerRenommage}
+        onKeyDown={e => {
+          if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); }
+          if (e.key === "Escape") { e.preventDefault(); setRenameTitle(page.title); }
+        }}
+        maxLength={DB_TEXT_LIMITS["world_wiki_pages.title"]}
+        aria-label={t("pageTitlePlaceholder")}
+        // Ni filet ni retrait : le titre commence exactement où commence
+        // l'article, et le halo de focus suffit à dire que c'est un champ.
+        className="w-full min-w-0 bg-transparent text-2xl font-semibold outline-none"
+      />
+    </div>
+  );
+
+  function validerRenommage() {
+    const propre = renameTitle.trim();
+    if (propre && (propre !== page.title || renameIcon !== (page.icon ?? ""))) {
+      onRename(propre, renameIcon);
+    }
+  }
+
+  // ── Annotations ───────────────────────────────────────────
+  const { userId } = useCurrentUser();
+  // Une seule colonne latérale, permanente, dont l'onglet dit ce qu'elle montre.
+  // Elle s'ouvre sur les notes — le premier onglet, et ce qui accompagne
+  // l'article ; commenter, lui, part d'une sélection dans le texte, qui bascule
+  // d'elle-même sur l'onglet des commentaires.
+  const [sideTab, setSideTab] = React.useState<WikiSideTab>("notes");
+  /** La colonne passe en tiroir quand elle ne tient plus — voir le rendu plus bas. */
+  const [sideDrawerOpen, setSideDrawerOpen] = React.useState(false);
+
+
+  // Colonne latérale repliée — même confort local que pour la navigation.
+  const [sideCollapsed, setSideCollapsed] = React.useState(false);
+  React.useEffect(() => {
+    try {
+      setSideCollapsed(localStorage.getItem(`wiki-side-collapsed:${worldId}`) === "1");
+    } catch { /* mode privé : la colonne reste ouverte */ }
+  }, [worldId]);
+
+  function replierPanneau(replie: boolean) {
+    setSideCollapsed(replie);
+    try {
+      localStorage.setItem(`wiki-side-collapsed:${worldId}`, replie ? "1" : "0");
+    } catch { /* rien à retenir */ }
+  }
+
+  // La colonne apparaît (élargissement, rotation d'une tablette) : le tiroir
+  // n'a plus lieu d'être, et le laisser « ouvert » le ferait resurgir tout
+  // seul au prochain rétrécissement.
+  React.useEffect(() => {
+    if (colonneLaterale) setSideDrawerOpen(false);
+  }, [colonneLaterale]);
+  const [activeAnnotation, setActiveAnnotation] = React.useState<ActiveAnnotation | null>(null);
+  const [annotationDraft, setAnnotationDraft] = React.useState<AnnotationDraft | null>(null);
+  const [detachedIds, setDetachedIds] = React.useState<Set<string>>(() => new Set());
+
+  /**
+   * Notes de la page, chargées ici plutôt que dans le panneau.
+   *
+   * Le sous-en-tête annonce leur nombre quand la colonne est fermée — donc
+   * quand le panneau est démonté et ne peut rien charger. Une seule
+   * souscription temps réel en découle, là où la colonne et le tiroir
+   * pouvaient en ouvrir deux.
+   */
+  const notes = useWikiPageNotes({ pageId: page.id, worldId, supabase });
+
+  // Le panneau suit ses fiches en temps réel ; la recherche, elle, les a
+  // chargées une fois. Sans ce renvoi, une fiche qu'on vient d'écrire resterait
+  // introuvable jusqu'au prochain chargement du wiki.
+  const notesSignature = (notes.notes ?? [])
+    .map(n => `${n.id}:${n.title}:${n.body}`)
+    .join("|");
+  React.useEffect(() => {
+    if (notes.loading) return;
+    onNotesLoaded(page.id, notes.notes ?? []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [notesSignature, notes.loading, page.id]);
+
+  /**
+   * Conduit jusqu'à la fiche trouvée par la recherche.
+   *
+   * L'ouvrir ne suffit pas : la colonne peut être repliée, en tiroir, ou sur
+   * l'onglet des commentaires. On atterrissait alors sur la bonne page en
+   * ayant à rouvrir soi-même ce qu'on venait de trouver.
+   */
+  React.useEffect(() => {
+    if (!noteToOpen) return;
+    setSideTab("notes");
+    if (colonneLaterale) replierPanneau(false);
+    else setSideDrawerOpen(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [noteToOpen, colonneLaterale]);
+  const nombreDeNotes = notes.notes?.length ?? 0;
+
+  const annotations = useWikiAnnotations({
+    pageId: page.id,
+    worldId,
+    userId,
+    supabase,
+    // Chargées avec la page, pas à l'ouverture du panneau : les surlignages
+    // sont le seul indice qu'une discussion existe. Attendre un clic sur
+    // « Annotations » pour les afficher rendrait invisible, à qui ne pense
+    // pas à ouvrir le panneau, tout ce que les autres ont écrit — y compris
+    // le compteur censé l'y inviter.
+    enabled: true,
+  });
+
+  // Le panneau se rouvre vide sur une autre page ; l'état transitoire doit
+  // suivre, sinon un fil sélectionné ici resterait « actif » là-bas.
+  React.useEffect(() => {
+    setActiveAnnotation(null);
+    setAnnotationDraft(null);
+    setDetachedIds(new Set());
+  }, [page.id]);
+
+  function openAnnotation(id: string, scrollIntoView: boolean) {
+    setSideTab("comments");
+    setSideDrawerOpen(true);
+    setActiveAnnotation({ id, scrollIntoView });
+  }
+
+  function startDraft(anchor: BlockAnchor) {
+    setSideTab("comments");
+    // Ouvrir le panneau là où il vit : la colonne quand elle est repliée, le
+    // tiroir en dessous de `xl`. Le tiroir seul ne suffisait pas — son `open`
+    // est conditionné à l'absence de colonne, si bien qu'à grande largeur
+    // avec la colonne repliée, la saisie s'ouvrait hors de vue.
+    replierPanneau(false);
+    setSideDrawerOpen(true);
+    setActiveAnnotation(null);
+    setAnnotationDraft({ anchor });
+  }
+
+  async function createFromDraft(body: string) {
+    if (!annotationDraft) return;
+    const created = await annotations.createThread({ ...annotationDraft, body });
+    setAnnotationDraft(null);
+    if (created) setActiveAnnotation({ id: created.id, scrollIntoView: false });
+  }
+
+  // Le calcul vient d'un effet de mise en page ; ne remplacer l'ensemble que
+  // s'il a réellement changé évite un rendu de plus à chaque passage.
+  const onDetachedChange = React.useCallback((ids: string[]) => {
+    setDetachedIds(prev => {
+      if (prev.size === ids.length && ids.every(id => prev.has(id))) return prev;
+      return new Set(ids);
+    });
+  }, []);
 
   const draftRef = React.useRef(draft);
   draftRef.current = draft;
@@ -95,20 +409,19 @@ export function WikiPageContent({
 
   // Sort du mode édition transitoire quand le panneau quitte le mode modification.
   React.useEffect(() => {
-    if (!isEditMode) {
+    if (isEditMode) {
+      // Le mode modification du wiki EST l'édition de l'article : demander un
+      // second bouton pour ouvrir l'éditeur revenait à faire dire deux fois la
+      // même chose. Vaut aussi au montage — changer de page en modification
+      // rouvre l'éditeur sur la nouvelle, y compris celle qu'on vient de créer
+      // depuis un modèle.
+      void startEditing();
+    } else {
       setEditing(false);
       setShowPreview(false);
     }
-  }, [isEditMode]);
-
-  // Page tout juste créée depuis un modèle : entre directement en édition.
-  React.useEffect(() => {
-    if (autoEdit && isEditMode) {
-      void startEditing();
-      onAutoEditConsumed?.();
-    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [isEditMode]);
 
   async function flushDraft(value: string) {
     const { error } = await supabase
@@ -133,6 +446,257 @@ export function WikiPageContent({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  React.useEffect(() => {
+    if (!selectionAPoser) return;
+    const champ = champMarkdown.current;
+    if (champ) {
+      champ.focus();
+      champ.setSelectionRange(selectionAPoser[0], selectionAPoser[1]);
+    }
+    setSelectionAPoser(null);
+  }, [selectionAPoser]);
+
+  /**
+   * Applique un format à la sélection du champ markdown.
+   *
+   * La sélection à reposer passe par un état plutôt que d'être écrite tout de
+   * suite : le champ est contrôlé par React, et l'écrire avant que la nouvelle
+   * valeur ne soit rendue la ferait écraser aussitôt.
+   */
+  function appliquerMiseEnForme(nom: NomFormat) {
+    const champ = champMarkdown.current;
+    if (!champ) return;
+
+    const [start, end] = keptSelection(
+      [champ.selectionStart, champ.selectionEnd],
+      derniereSelection.current,
+      draft.length,
+    );
+
+    const suite = appliquerFormat(
+      { value: draft, start, end },
+      nom,
+      tCommon("formatLinkText"),
+    );
+
+    // L'écriture passe par le navigateur quand il le permet : la mise en forme
+    // rejoint alors sa pile d'annulation, et `onChange` nous rend la valeur.
+    // Sinon seulement, on l'écrit nous-mêmes.
+    if (!ecrireAvecAnnulation(champ, suite.value)) handleDraftChange(suite.value);
+    // Retenue tout de suite : enchaîner deux formats ne doit pas dépendre de
+    // l'événement `select` que la repose déclenchera peut-être.
+    derniereSelection.current = [suite.start, suite.end];
+    setSelectionAPoser([suite.start, suite.end]);
+  }
+
+  /**
+   * Recalcule ce qu'il y a à proposer, d'après le champ tel qu'il est.
+   *
+   * Lu sur le DOM et non sur `draft` : appelée depuis `onChange`, elle
+   * précède le rendu que cette frappe déclenchera, et l'état porte encore le
+   * texte d'avant.
+   */
+  function majSuggestion() {
+    const champ = champMarkdown.current;
+    if (!champ) return;
+
+    const lien = openLinkAt(champ.value, champ.selectionStart);
+    if (!lien) { setSuggestion(null); return; }
+
+    const items = linkSuggestions(lien.query);
+    if (items.length === 0) { setSuggestion(null); return; }
+
+    setSuggestion({
+      start: lien.start,
+      items,
+      // Remis à la première à chaque frappe : la liste vient de changer, et
+      // garder un rang qui désignait autre chose tromperait.
+      active: 0,
+      position: getCaretPosition(champ, champ.selectionStart),
+    });
+  }
+
+  /**
+   * Ce qu'il y a à proposer pour ce qui est tapé entre les crochets.
+   *
+   * Un `#` change de registre : la page est choisie, on cherche désormais une
+   * de ses sections. Sans cela il fallait connaître le titre exact et
+   * l'orthographier juste — précisément ce que la liste avait supprimé pour
+   * les pages.
+   */
+  function linkSuggestions(query: string): LinkSuggestion[] {
+    const { title, section } = splitLinkQuery(query);
+
+    if (section === null) {
+      return suggestedPages(pages, title).map(p => ({
+        id: p.id,
+        label: p.title,
+        icon: p.icon,
+        insert: p.title,
+        isSection: false,
+      }));
+    }
+
+    // Une section n'a de sens que dans une page nommée en entier. Le titre
+    // écrit à la lettre l'emporte sur ses homonymes — la règle du résolveur —
+    // sans quoi la liste proposerait les sections d'une autre page « test »,
+    // et le lien écrit ne mènerait nulle part.
+    const candidates = pages.filter(p => !p.is_folder);
+    const cible =
+      candidates.find(p => p.title === title) ??
+      candidates.find(p => p.title.toLowerCase() === title.toLowerCase());
+    if (!cible) return [];
+
+    return suggestedSections(extractHeadings(cible.content ?? ""), section).map(h => ({
+      id: `${cible.slug}#${h.id}`,
+      label: h.text,
+      icon: null,
+      insert: `${cible.title}#${h.text}`,
+      isSection: true,
+    }));
+  }
+
+  /** Écrit la proposition choisie à la place de ce qui était tapé. */
+  function accepterSuggestion(item: LinkSuggestion) {
+    const champ = champMarkdown.current;
+    if (!champ || !suggestion) return;
+
+    const { value, caret } = completeLink(
+      champ.value,
+      suggestion.start,
+      champ.selectionStart,
+      item.insert,
+      champ.selectionEnd,
+    );
+    if (!ecrireAvecAnnulation(champ, value)) handleDraftChange(value);
+    setSelectionAPoser([caret, caret]);
+    setSuggestion(null);
+  }
+
+  function surToucheDuChamp(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    // La liste passe avant les raccourcis : tant qu'elle est ouverte, les
+    // flèches et Entrée lui appartiennent.
+    if (suggestion) {
+      const n = suggestion.items.length;
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        e.preventDefault();
+        const pas = e.key === "ArrowDown" ? 1 : n - 1;
+        setSuggestion({ ...suggestion, active: (suggestion.active + pas) % n });
+        return;
+      }
+      if (e.key === "Enter" || e.key === "Tab") {
+        e.preventDefault();
+        accepterSuggestion(suggestion.items[suggestion.active]);
+        return;
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setSuggestion(null);
+        return;
+      }
+    }
+
+    const nom = raccourciDe(e);
+    if (!nom) return;
+    e.preventDefault();
+    appliquerMiseEnForme(nom);
+  }
+
+  /**
+   * Envoie une image et l'écrit dans l'article, là où elle a été déposée.
+   *
+   * Il fallait jusqu'ici héberger l'image ailleurs et taper son adresse à la
+   * main : le seul téléversement du wiki était celui de la bannière. Or une
+   * capture d'écran collée est le geste naturel — le composeur de salon le
+   * fait déjà.
+   *
+   * La position est prise AVANT l'envoi : c'est là que l'utilisateur a visé.
+   * Si le texte a changé entre-temps, l'image atterrit au même rang de
+   * caractères, ce qui peut la décaler de ce qu'on a tapé dans l'intervalle —
+   * un jeton temporaire corrigerait cela, au prix d'une entrée d'annulation
+   * qui ne voudrait rien dire.
+   */
+  async function insererImage(fichier: File, position: number) {
+    const champ = champMarkdown.current;
+    if (!champ) return;
+
+    setImageEnEnvoi(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { toast.error(tCommon("uploadImageError")); return; }
+
+      const converti = await toWebP(fichier);
+      const chemin = wikiImagePath(worldId, page.id, "image/webp");
+      const { error } = await supabase.storage
+        .from(WIKI_BUCKET)
+        .upload(chemin, converti, { contentType: "image/webp" });
+      if (error) { toast.error(error.message); return; }
+
+      const { data } = supabase.storage.from(WIKI_BUCKET).getPublicUrl(chemin);
+      const balise = `![](${data.publicUrl})`;
+      const valeur = champ.value.slice(0, position) + balise + champ.value.slice(position);
+      if (!ecrireAvecAnnulation(champ, valeur)) handleDraftChange(valeur);
+      setSelectionAPoser([position + balise.length, position + balise.length]);
+    } catch (err) {
+      // Pas `err.message` : texte brut de PostgreSQL, il nomme table et policy.
+      console.error("[WikiPageContent]", err);
+      toast.error(tCommon("uploadImageError"));
+    } finally {
+      setImageEnEnvoi(false);
+    }
+  }
+
+  /**
+   * Ce qu'il y a à montrer d'une page visée, au survol de son lien.
+   *
+   * Mémorisé sur `pages` : la fonction est passée à chaque lien de l'article,
+   * et une identité neuve à chaque rendu ferait remonter tout le markdown.
+   */
+  /**
+   * Images de l'article publié, pour la visionneuse.
+   *
+   * Tirées du markdown et non du rendu : cliquer une image doit ouvrir
+   * celle-là, mais on veut ensuite passer aux suivantes — et chaque `<img>`
+   * rendue s'ignore l'une l'autre.
+   */
+  const articleImages = React.useMemo(
+    () => extractImages(page.content ?? ""),
+    [page.content],
+  );
+  const [openImage, setOpenImage] = React.useState<number | null>(null);
+
+  /** Rejoint la section visée par un lien, une fois l'article à l'écran. */
+  React.useEffect(() => {
+    if (!pendingAnchor || editing) return;
+    // La main est rendue même quand la section reste introuvable : sinon
+    // l'ancre guetterait indéfiniment un titre que cette page n'a pas.
+    document.getElementById(pendingAnchor)?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+    onAnchorReached();
+  }, [pendingAnchor, editing, page.id, onAnchorReached]);
+
+  const linkPreviewOf = React.useCallback(
+    (slug: string) => linkPreview(pages, slug),
+    [pages],
+  );
+
+  /** Reprend une image du presse-papiers ou d'un dépôt, et laisse passer le reste. */
+  function surImageRecue(
+    e: React.ClipboardEvent<HTMLTextAreaElement> | React.DragEvent<HTMLTextAreaElement>,
+    source: DataTransfer | null,
+  ) {
+    const fichier = firstImage(source);
+    // Rien d'autre n'est intercepté : coller du texte, déposer une sélection,
+    // tout cela reste au navigateur, qui le fait mieux.
+    if (!fichier) return;
+    e.preventDefault();
+    // Au dépôt, le navigateur a posé le curseur sous le pointeur pendant le
+    // survol : le lire maintenant donne l'endroit visé.
+    void insererImage(fichier, e.currentTarget.selectionStart);
+  }
+
   function handleDraftChange(v: string) {
     setDraft(v);
     dirtyRef.current = true;
@@ -141,6 +705,10 @@ export function WikiPageContent({
   }
 
   async function startEditing() {
+    // Le titre est modifiable d'emblée : son champ doit partir de la valeur
+    // courante, pas de celle d'un renommage abandonné plus tôt.
+    setRenameTitle(page.title);
+    setRenameIcon(page.icon ?? "");
     setEditing(true);
     setLoadingDraft(true);
     const { data, error } = await supabase
@@ -156,6 +724,61 @@ export function WikiPageContent({
     }
     setDraft((data?.draft_content as string | null) ?? page.content ?? "");
     dirtyRef.current = false;
+  }
+
+  /**
+   * Ferme l'éditeur ET la bascule du wiki.
+   *
+   * Les deux ne font qu'un depuis que le mode modification ouvre l'article :
+   * fermer l'un sans l'autre laissait la page en lecture et le bouton
+   * « Modifier » allumé, état d'où l'on ne ressortait qu'en le basculant deux
+   * fois.
+   */
+  function quitterLaModification() {
+    setEditing(false);
+    onExitEditMode();
+  }
+
+  /** Écrit une colonne de la page, et tient l'état local à jour. */
+  async function enregistrerChamp(patch: Partial<WikiPage>) {
+    const { error } = await supabase.from("world_wiki_pages").update(patch).eq("id", page.id);
+    if (error) { toast.error(t("saveError"), { description: error.message }); return; }
+    onPageUpdated({ id: page.id, ...patch });
+  }
+
+  /**
+   * Recadre l'image choisie, puis la téléverse dans le stockage du monde.
+   *
+   * Le recadrage se fait AVANT l'envoi : la bannière est un bandeau large, et
+   * une photo verticale y serait rognée par le navigateur sans que personne ne
+   * décide où. Convertie en WebP comme les autres images du monde — une photo
+   * d'appareil pèse plusieurs mégaoctets, et celle-ci s'affiche à chaque
+   * ouverture de la page.
+   */
+  async function enregistrerBanniere(zone: ZoneDeDecoupe) {
+    if (!banniereACadrer) return;
+    setBannerUploading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { toast.error(tCommon("uploadImageError")); return; }
+
+      const converti = await cropToWebP(banniereACadrer, zone, "wiki-banner");
+      const chemin = wikiImagePath(worldId, page.id, "image/webp");
+      const { error } = await supabase.storage
+        .from(WIKI_BUCKET)
+        .upload(chemin, converti, { contentType: "image/webp" });
+      if (error) { toast.error(error.message); return; }
+
+      const { data } = supabase.storage.from(WIKI_BUCKET).getPublicUrl(chemin);
+      await enregistrerChamp({ banner_url: data.publicUrl });
+      setBanniereACadrer(null);
+    } catch (err) {
+      // Pas `err.message` : texte brut de PostgreSQL, il nomme table et policy.
+      console.error("[WikiPageContent]", err);
+      toast.error(tCommon("uploadImageError"));
+    } finally {
+      setBannerUploading(false);
+    }
   }
 
   async function publish() {
@@ -177,21 +800,35 @@ export function WikiPageContent({
     if (error) { toast.error(t("saveError"), { description: error.message }); return; }
     onPageUpdated({ id: page.id, content: draft, draft_updated_at: nowIso, published_at: nowIso });
     setLastAutosavedAt(new Date());
-    setEditing(false);
+    quitterLaModification();
   }
 
-  const pageIcon = page.icon && VALID_LUCIDE_ICONS.has(page.icon)
-    ? <LazyLucideIcon name={page.icon} className="h-5 w-5 shrink-0 text-muted-foreground" />
-    : null;
+  /** Icône de la page. `surImage` : posée sur la bannière, elle s'éclaircit. */
+  const iconeDeLaPage = (surImage: boolean) =>
+    page.icon && VALID_LUCIDE_ICONS.has(page.icon)
+      ? (
+        <LazyLucideIcon
+          name={page.icon}
+          className={cn("h-5 w-5 shrink-0", surImage ? "text-white/90" : "text-muted-foreground")}
+        />
+      )
+      : null;
 
   const resolvedContent = React.useMemo(
     () => resolveWikiLinks(page.content ?? "", pages),
     [page.content, pages],
   );
-  // Extrait depuis le même texte que celui rendu (resolvedContent), pour que
-  // les ids d'ancre du sommaire correspondent exactement à ceux posés par
-  // MarkdownRenderer sur les titres (voir MarkdownRenderer.tsx).
-  const headings = React.useMemo(() => extractHeadings(resolvedContent), [resolvedContent]);
+  // Identité du texte rendu : elle pilote le remontage de la couche
+  // d'annotations (voir WikiAnnotationLayer). Toute écriture du contenu passe
+  // par une publication, qui déplace `published_at` — inutile de hacher la
+  // page entière à chaque rendu pour s'en apercevoir.
+  const contentKey = `${page.id}|${page.published_at ?? ""}|${resolvedContent.length}`;
+
+  // Seul un membre identifié peut annoter : la RLS exige `author_id = auth.uid()`.
+  const canAnnotate = userId !== null;
+  const openAnnotationCount = annotations.threads.filter(
+    th => th.root.resolved_at === null,
+  ).length;
 
   const draftBadge = canEdit && isDraftNewer(page) && (
     <span className="shrink-0 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
@@ -207,142 +844,598 @@ export function WikiPageContent({
     </span>
   );
 
-  if (editing) {
-    return (
-      <div className="flex flex-1 flex-col gap-3 overflow-hidden p-6">
-        <WikiBreadcrumb ancestors={ancestors} onExpandFolder={onExpandFolder} />
-        <div className="flex items-center gap-3">
-          <h1 className="flex flex-1 items-center gap-2 truncate text-2xl font-semibold">
-            {pageIcon}
-            {page.title}
-          </h1>
-          {draftBadge}
-          {restrictedBadge}
-          <button
-            type="button"
-            onClick={() => setShowPreview(v => !v)}
-            className={cn(
-              "flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-              showPreview
-                ? "border-primary/40 bg-primary/10 text-primary"
-                : "border-border-soft text-muted-foreground hover:bg-secondary hover:text-foreground",
-            )}
-          >
-            <Eye className="h-3 w-3" /> {t("preview")}
-          </button>
-        </div>
+  // Segment central du bandeau : d'où l'on vient. Il coiffe la lecture comme
+  // l'édition, pour que le trait ne se déplace pas d'une vue à l'autre.
+  // Ce que le bouton cache, annoncé sur le bouton : il n'apparaît que quand la
+  // colonne est fermée, et rien d'autre ne dirait alors ce qu'elle contient.
+  const compteurDesPages = pageCount > 0 && (
+    <span className={WIKI_SUBHEADER_COUNT}>{pageCount}</span>
+  );
 
-        {loadingDraft ? (
-          <div className="flex flex-1 items-center justify-center">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-          </div>
-        ) : (
-          <div className={cn("min-h-0 flex-1", showPreview ? "flex gap-4" : "flex flex-col")}>
-            <div className={cn(
-              "rounded-2xl border border-border-soft p-4",
-              "flex flex-1 flex-col overflow-hidden",
-            )}>
-              <ParagraphBlockEditor
-                value={draft}
-                onChange={handleDraftChange}
-                placeholder={t("contentPlaceholder")}
-                submitOnEnter={false}
-                formatting
-                wrapperClassName="max-h-none flex-1 overflow-y-auto"
-                className="text-sm"
-              />
-            </div>
-            {showPreview && (
-              <div className="flex-1 overflow-y-auto rounded-2xl border border-border-soft p-4">
-                {draft.trim()
-                  ? (
-                    <MarkdownRenderer
-                      content={resolveWikiLinks(draft, pages)}
-                      allowImages
-                      onWikiLink={onNavigate}
-                      className={WIKI_PROSE_HEADING_CLASSES}
-                    />
-                  )
-                  : <p className="text-sm italic text-muted-foreground">{t("nothingToPreview")}</p>
-                }
-              </div>
-            )}
-          </div>
-        )}
-
-        <div className="flex shrink-0 items-center justify-between gap-2">
-          <span className="text-xs text-muted-foreground">
-            {lastAutosavedAt && t("draftSavedAt", {
-              time: lastAutosavedAt.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }),
-            })}
-          </span>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={() => setHistoryOpen(true)}>
-              <History className="mr-1 h-3.5 w-3.5" /> {t("versionHistory")}
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => setEditing(false)} disabled={publishing}>
-              {tCommon("cancel")}
-            </Button>
-            <Button size="sm" onClick={() => void publish()} disabled={publishing || loadingDraft}>
-              {publishing && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
-              {t("publish")}
-            </Button>
-          </div>
-        </div>
-
-        <WikiVersionHistoryPanel
-          open={historyOpen}
-          onOpenChange={setHistoryOpen}
-          pageId={page.id}
-          supabase={supabase}
-          onRestored={patch => {
-            setDraft(patch.content);
-            onPageUpdated({ id: page.id, ...patch });
-          }}
-        />
-      </div>
+  /**
+   * Compteur du bouton de la colonne latérale, accordé à son libellé.
+   *
+   * Deux natures, deux apparences : le nombre de fiches informe, tandis que
+   * les fils de discussion ouverts appellent une réponse — d'où la pastille
+   * pleine pour les seconds. Afficher les commentaires sous le mot « Notes »,
+   * ce qu'on faisait, ne disait rien de juste.
+   */
+  const compteurDeLaColonne = sideTab === "notes"
+    ? nombreDeNotes > 0 && <span className={WIKI_SUBHEADER_COUNT}>{nombreDeNotes}</span>
+    : openAnnotationCount > 0 && (
+      <span className="rounded-full bg-primary px-1.5 text-[10px] font-medium text-primary-foreground">
+        {openAnnotationCount}
+      </span>
     );
-  }
+
+  const bandeauCentral = (
+    <div className={WIKI_SUBHEADER}>
+      {/* Même place pour le même besoin — atteindre les pages : le tiroir
+          quand la colonne ne tient pas, son dépliage quand elle tient. */}
+      {!navEnColonne && (
+        <button
+          type="button"
+          onClick={onOpenTree}
+          aria-label={t("openPages")}
+          className="flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium text-muted-foreground hover:bg-secondary hover:text-foreground"
+        >
+          <PanelLeft className="h-3.5 w-3.5" /> {t("pagesLabel")}
+          {compteurDesPages}
+        </button>
+      )}
+      {navEnColonne && navCollapsed && (
+        <button
+          type="button"
+          onClick={onExpandNav}
+          aria-label={t("expandPages")}
+          className="flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium text-muted-foreground hover:bg-secondary hover:text-foreground hidden lg:flex"
+        >
+          <PanelLeft className="h-3.5 w-3.5" /> {t("pagesLabel")}
+          {compteurDesPages}
+        </button>
+      )}
+      {/* Le segment central ne porte plus que la ceinture d'outils : le fil
+          d'Ariane est monté dans l'en-tête principal, où il ne dispute plus
+          la place aux outils. Vide en lecture, le segment reste là — c'est lui
+          qui aligne le trait avec les deux colonnes voisines. */}
+      <div className="min-w-0 flex-1">
+        {editing && <WikiFormatToolbar onFormat={appliquerMiseEnForme} />}
+      </div>
+      {/* Symétrique du bouton des pages : le tiroir quand la colonne ne
+          tient pas, son dépliage quand elle tient. */}
+      {!colonneLaterale && (
+        <button
+          type="button"
+          onClick={() => setSideDrawerOpen(true)}
+          className="flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium text-muted-foreground hover:bg-secondary hover:text-foreground"
+        >
+          <PanelRight className="h-3.5 w-3.5" />
+          {sideTab === "notes" ? tNotes("title") : t("annotations.title")}
+          {compteurDeLaColonne}
+        </button>
+      )}
+      {colonneLaterale && sideCollapsed && (
+        <button
+          type="button"
+          onClick={() => replierPanneau(false)}
+          aria-label={t("openPanel")}
+          className="flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium text-muted-foreground hover:bg-secondary hover:text-foreground"
+        >
+          <PanelRight className="h-3.5 w-3.5" />
+          {sideTab === "notes" ? tNotes("title") : t("annotations.title")}
+          {compteurDeLaColonne}
+        </button>
+      )}
+    </div>
+  );
 
   return (
-    <div className="flex-1 overflow-y-auto p-6">
-      <div className="mx-auto flex max-w-4xl gap-8">
-        <div className="min-w-0 max-w-2xl flex-1">
-          <WikiBreadcrumb ancestors={ancestors} onExpandFolder={onExpandFolder} />
-          <div className="mb-6 flex items-start justify-between gap-4">
-            <h1 className="flex flex-1 items-center gap-2 text-2xl font-semibold">
-              {pageIcon}
-              {page.title}
-            </h1>
-            <div className="flex shrink-0 items-center gap-2">
-              {draftBadge}
-              {restrictedBadge}
-              {isEditMode && (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => void startEditing()}
-                >
-                  <Pencil className="mr-1.5 h-3.5 w-3.5" /> {tCommon("edit")}
-                </Button>
+    <div className="flex min-h-0 min-w-0 flex-1">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        {bandeauCentral}
+
+        {/* Le panneau latéral vit HORS de cette bascule : le mode
+            modification, seul à rendre les notes modifiables, masquait
+            sinon la colonne où on les modifie. */}
+        {editing ? (
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+            {/* C'est le PANNEAU qui défile, pas la colonne centrée — la barre
+                se retrouve donc au même bord qu'en lecture. Tout ce qu'on écrit
+                défile ensemble, bannière comprise : elle fait partie de
+                l'article, pas du meuble. */}
+            <div className="min-w-0 flex-1 overflow-y-auto py-6">
+              {/* Même colonne qu'en lecture, et le retrait descend sur les
+                  enfants : c'est ce qui laisse la bannière prendre toute la
+                  largeur pendant que le texte reste en retrait. */}
+              <div className="mx-auto flex w-full flex-col gap-3 [--thread-content-max-width:40rem] lg:[--thread-content-max-width:48rem] max-w-(--thread-content-max-width)">
+            {/* La bannière d'abord : c'est elle qui ouvre la page. */}
+            <div className="shrink-0">
+              <input
+                ref={champBanniere}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={e => {
+                  const fichier = e.target.files?.[0];
+                  // Le champ est vidé pour que rechoisir le même fichier
+                  // déclenche bien un nouvel événement.
+                  e.target.value = "";
+                  if (!fichier) return;
+                  const lecteur = new FileReader();
+                  lecteur.onload = () => setBanniereACadrer(String(lecteur.result));
+                  lecteur.readAsDataURL(fichier);
+                }}
+              />
+              {page.banner_url ? (
+                <div className="group/banniere relative h-40 overflow-hidden rounded-lg sm:h-56">
+                  <StoredImage
+                    url={page.banner_url}
+                    width={BANNIERE_LARGEUR}
+                    height={BANNIERE_HAUTEUR}
+                    resize="cover"
+                    className="object-cover"
+                  />
+                  <div className="absolute right-2 top-2 flex gap-1">
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => champBanniere.current?.click()}
+                      disabled={bannerUploading}
+                    >
+                      {bannerUploading
+                        ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        : <ImagePlus className="h-3.5 w-3.5" />}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      aria-label={t("removeBanner")}
+                      title={t("removeBanner")}
+                      onClick={() => void enregistrerChamp({ banner_url: null })}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                // Le retrait du texte sur l'enveloppe, et le remplissage
+                // propre au bouton annulé (`px-2.5` en taille `sm` avec une
+                // icône) : son libellé tombe ainsi à l'aplomb du chapeau, là où
+                // se posera la bannière elle-même.
+                <div className="px-4 lg:px-6">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => champBanniere.current?.click()}
+                    disabled={bannerUploading}
+                    className="-ml-2.5 text-muted-foreground"
+                  >
+                    {bannerUploading
+                      ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+                      : <ImagePlus className="mr-1 h-3.5 w-3.5" />}
+                    {t("addBanner")}
+                  </Button>
+                </div>
               )}
             </div>
+
+            <div className="flex items-start gap-3">
+              {champTitre}
+              {draftBadge}
+              {restrictedBadge}
+            </div>
+
+            <Dialog
+              open={banniereACadrer !== null}
+              onOpenChange={ouvert => { if (!ouvert) setBanniereACadrer(null); }}
+            >
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>{t("cropBanner")}</DialogTitle>
+                </DialogHeader>
+                {banniereACadrer && (
+                  <ImageCropPicker
+                    src={banniereACadrer}
+                    // Le rapport du bandeau tel qu'il s'affiche : recadrer dans
+                    // un cadre d'une autre forme montrerait autre chose que ce
+                    // qu'on obtiendra.
+                    aspect={3}
+                    uploading={bannerUploading}
+                    onConfirm={zone => void enregistrerBanniere(zone)}
+                    onCancel={() => setBanniereACadrer(null)}
+                  />
+                )}
+              </DialogContent>
+            </Dialog>
+
+            {/* Le chapeau, sous le titre comme il le sera en lecture. */}
+            <textarea
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              onBlur={() => {
+                const propre = description.trim();
+                if (propre !== (page.description ?? "")) {
+                  void enregistrerChamp({ description: propre || null });
+                }
+              }}
+              maxLength={DB_TEXT_LIMITS["world_wiki_pages.description"]}
+              placeholder={t("descriptionPlaceholder")}
+              aria-label={t("descriptionLabel")}
+              rows={2}
+              className="w-full shrink-0 resize-none bg-transparent px-4 lg:px-6 text-sm text-muted-foreground outline-none"
+            />
+
+            {loadingDraft ? (
+              <div className="flex flex-1 items-center justify-center">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              // L'aperçu prend TOUTE la place au lieu de partager la colonne :
+              // côte à côte, deux colonnes sur un téléphone n'en font aucune de
+              // lisible. On regarde le résultat, puis on revient écrire.
+              <div className="flex flex-col">
+                {showPreview ? (
+                  <div className="px-4 lg:px-6">
+                    {draft.trim()
+                      ? (
+                        <MarkdownRenderer
+                          content={resolveWikiLinks(draft, pages)}
+                          allowImages
+                          onWikiLink={onNavigate}
+                          wikiPreview={linkPreviewOf}
+                          onImageOpen={url => {
+                            const index = articleImages.findIndex(image => image.url === url);
+                            setOpenImage(index === -1 ? 0 : index);
+                          }}
+                          className={WIKI_PROSE_HEADING_CLASSES}
+                          lexiconTerms={lexiconTerms}
+                        />
+                      )
+                      : <p className="text-sm italic text-muted-foreground">{t("nothingToPreview")}</p>
+                    }
+                  </div>
+                ) : (
+                // Le markdown se saisit tel quel, coloré : un article de wiki
+                // s'écrit avec des titres, des liens internes et des tableaux
+                // qu'un champ de texte enrichi ne sait pas montrer sans les
+                // trahir. L'aperçu dit le résultat.
+                <div className="relative">
+                <CodeEditor
+                  autoGrow
+                  language="markdown"
+                  value={draft}
+                  onChange={v => { handleDraftChange(v); majSuggestion(); }}
+                  textareaRef={champMarkdown}
+                  onKeyDown={e => {
+                    // Une frappe ordinaire va déplacer le curseur : ce qui
+                    // était retenu n'a plus cours. Un raccourci, lui, agit SUR
+                    // la sélection retenue et doit la trouver intacte.
+                    if (!e.ctrlKey && !e.metaKey) oublierLaSelection();
+                    surToucheDuChamp(e);
+                  }}
+                  onMouseDown={oublierLaSelection}
+                  onPaste={e => surImageRecue(e, e.clipboardData)}
+                  onDrop={e => surImageRecue(e, e.dataTransfer)}
+                  onSelect={e => {
+                    majSuggestion();
+                    const c = e.currentTarget;
+                    // Seule une VRAIE sélection est retenue. Le repli du
+                    // curseur arrive par ce même événement, y compris quand
+                    // l'utilisateur n'y est pour rien — le retenir effacerait
+                    // le geste qu'on cherche justement à garder.
+                    if (c.selectionStart !== c.selectionEnd) {
+                      derniereSelection.current = [c.selectionStart, c.selectionEnd];
+                    }
+                  }}
+                  placeholder={t("contentPlaceholder")}
+                  ariaLabel={t("contentLabel")}
+                  // Sans cadre : le champ est la colonne de texte, pas un
+                  // encadré posé dedans. Le halo de focus du `<textarea>`
+                  // reste la seule marque, et suffit.
+                  className="rounded-none border-0"
+                  // Le texte du champ s'aligne sur le titre et le chapeau : les
+                  // deux couches reçoivent le même retrait, jamais une seule.
+                  // Pas de halo de focus : il n'a de sens qu'autour d'un champ
+                  // encadré. Ici le champ EST la colonne de texte, et l'anneau
+                  // dessinait un grand rectangle arrondi autour de l'article.
+                  layerClassName="px-4 focus-visible:ring-0 lg:px-6"
+                />
+                {imageEnEnvoi && (
+                  <div className="pointer-events-none absolute right-4 top-2 z-30 flex items-center gap-1.5 rounded-md border border-border-soft bg-popover px-2 py-1 text-xs text-muted-foreground shadow-sm lg:right-6">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    {t("imageUploading")}
+                  </div>
+                )}
+                {suggestion && (
+                  <WikiLinkSuggest
+                    items={suggestion.items}
+                    active={suggestion.active}
+                    position={suggestion.position}
+                    onChoose={accepterSuggestion}
+                    onHover={active => setSuggestion({ ...suggestion, active })}
+                  />
+                )}
+                </div>
+                )}
+              </div>
+            )}
+              </div>
+            </div>
+
+            {/* Un pied à part, hors du défilement et barré d'un filet :
+                « Publier » reste atteignable quelle que soit la longueur du
+                texte, et le filet dit où finit l'article.
+
+                Boutons ordinaires et non le composant `Button` : celui-ci fixe
+                sa propre hauteur, qui décalait ce pied de quatre pixels par
+                rapport à ceux de l'arbre des pages et du panneau de notes. Les
+                trois traits doivent tomber sur la même ligne. */}
+            <div className="shrink-0 border-t border-border-soft py-1.5">
+              <div className="mx-auto flex w-full flex-wrap items-center gap-1 px-4 lg:px-6 [--thread-content-max-width:40rem] lg:[--thread-content-max-width:48rem] max-w-(--thread-content-max-width)">
+                {/* À gauche, ce qui accompagne l'écriture ; à droite, ce qui la
+                    termine. Sur écran étroit, les deux gestes décisifs restent
+                    ainsi près du pouce, du même côté. */}
+                <button
+                  type="button"
+                  onClick={() => setShowPreview(v => !v)}
+                  aria-pressed={showPreview}
+                  className={cn(WIKI_FOOTER_BUTTON, showPreview && "bg-secondary text-foreground")}
+                >
+                  <Eye className="h-3.5 w-3.5" /> {t("preview")}
+                </button>
+                <button type="button" onClick={() => setHistoryOpen(true)} className={WIKI_FOOTER_BUTTON}>
+                  <History className="h-3.5 w-3.5" /> {t("versionHistory")}
+                </button>
+                <span className="ml-auto text-xs text-muted-foreground">
+                  {lastAutosavedAt && t("draftSavedAt", {
+                    time: lastAutosavedAt.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }),
+                  })}
+                </span>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={quitterLaModification}
+                    disabled={publishing}
+                    className={cn(WIKI_FOOTER_BUTTON, "disabled:opacity-50")}
+                  >
+                    {tCommon("cancel")}
+                  </button>
+                  {/* Le geste qui engage : mêmes mesures que ses voisins, mais
+                      il porte la couleur d'accent — c'est lui qu'on cherche. */}
+                  <button
+                    type="button"
+                    onClick={() => void publish()}
+                    disabled={publishing || loadingDraft}
+                    className={cn(
+                      WIKI_FOOTER_BUTTON,
+                      "bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground",
+                      "disabled:opacity-50",
+                    )}
+                  >
+                    {publishing && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                    {t("publish")}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <WikiVersionHistoryPanel
+              open={historyOpen}
+              onOpenChange={setHistoryOpen}
+              pageId={page.id}
+              supabase={supabase}
+              onRestored={patch => {
+                setDraft(patch.content);
+                onPageUpdated({ id: page.id, ...patch });
+              }}
+            />
+            </div>
+        ) : (
+          <div
+            className={cn(
+              "min-w-0 flex-1 overflow-y-auto pb-6",
+              // Une bannière pleine largeur touche le haut : la marge la
+              // décollerait du bandeau, et ce n'est plus une image posée dans
+              // la page mais son ouverture. Elle revient dès que la colonne
+              // cesse d'occuper toute la largeur.
+              page.banner_url ? "pt-0 sm:pt-6" : "pt-6",
+            )}
+          >
+            {/* Bannière, titre et texte vivent dans la MÊME colonne : c'est
+                ce qui garantit leur alignement, quelle que soit la largeur. */}
+            <div className="mx-auto w-full min-w-0 [--thread-content-max-width:40rem] lg:[--thread-content-max-width:48rem] max-w-(--thread-content-max-width)">
+                {/* La hauteur passe sur le cadre : `StoredImage` remplit son
+                    parent, qui doit donc la porter. */}
+                {page.banner_url && (
+                  <div className="relative mb-6 h-48 overflow-hidden sm:h-64 sm:rounded-lg">
+                    {/* Chargement en deux temps, comme les avatars : une
+                        vignette de quelques pixels, floutée, tient la place —
+                        mêmes teintes, même composition — puis l'image se fond
+                        par-dessus. Une bannière pèse lourd et ouvre la page :
+                        c'est là que l'attente se voit le plus. */}
+                    <StoredImage
+                      url={page.banner_url}
+                      width={BANNIERE_LARGEUR}
+                      height={BANNIERE_HAUTEUR}
+                      resize="cover"
+                      className="object-cover"
+                    />
+                    {/* Dégradé plutôt qu'un voile uniforme : le texte a besoin
+                        d'un fond sombre là où il se pose, et l'image de rester
+                        visible partout ailleurs. */}
+                    <div
+                      aria-hidden
+                      className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent"
+                    />
+                    {/* Le même retrait que le corps de l'article, plus bas :
+                        c'est lui qui met le titre à l'aplomb du texte. */}
+                    <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-4 px-4 pb-4 lg:px-6">
+                      <div className="flex min-w-0 flex-col gap-1">
+                        {iconeDeLaPage(true)}
+                        <h1 className="text-2xl font-semibold text-white">{page.title}</h1>
+                        {page.description && (
+                          <p className="text-sm text-white/80">{page.description}</p>
+                        )}
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2">
+                        {draftBadge}
+                        {restrictedBadge}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Retrait du contenu d'un salon, comme sur la bannière —
+                    les deux DOIVENT rester égaux, c'est ce qui aligne le titre
+                    posé sur l'image avec le texte qui la suit. */}
+                <div className="px-4 lg:px-6">
+                  {/* Sans bannière, l'en-tête reprend sa place au-dessus du
+                      texte — il n'a plus d'image où se poser. `pr-11` lui donne
+                      la marge des commandes de commentaire, pour que les deux
+                      bords droits coïncident. */}
+                  {!page.banner_url && (
+                    <div className="mb-6 flex items-start justify-between gap-4 pr-11">
+                      <div className="flex min-w-0 flex-1 flex-col items-start gap-2">
+                        {iconeDeLaPage(false)}
+                        <h1 className="text-2xl font-semibold">{page.title}</h1>
+                        {page.description && (
+                          <p className="text-sm text-muted-foreground">{page.description}</p>
+                        )}
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2">
+                        {draftBadge}
+                        {restrictedBadge}
+                      </div>
+                    </div>
+                  )}
+                {page.content?.trim() ? (
+                  <WikiAnnotationLayer
+                    contentKey={contentKey}
+                    threads={annotations.threads}
+                    active={activeAnnotation}
+                    draftAnchor={annotationDraft?.anchor ?? null}
+                    canComment={canAnnotate}
+                    onActivate={id => { if (id) openAnnotation(id, false); }}
+                    onDraft={startDraft}
+                    onDetachedChange={onDetachedChange}
+                  >
+                    <MarkdownRenderer
+                      content={resolvedContent}
+                      allowImages
+                      onWikiLink={onNavigate}
+                      wikiPreview={linkPreviewOf}
+                      onImageOpen={url => {
+                        const index = articleImages.findIndex(image => image.url === url);
+                        setOpenImage(index === -1 ? 0 : index);
+                      }}
+                      className={WIKI_PROSE_HEADING_CLASSES}
+                      lexiconTerms={lexiconTerms}
+                    />
+                  </WikiAnnotationLayer>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    {isEditMode ? t("pageEmptyEdit") : t("pageEmpty")}
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
-          {page.content?.trim() ? (
-            <MarkdownRenderer
-              content={resolvedContent}
-              allowImages
-              onWikiLink={onNavigate}
-              className={WIKI_PROSE_HEADING_CLASSES}
+        )}
+      </div>
+
+      {/* En colonne tant que le corps de l'article garde sa pleine mesure ;
+          au-delà, la même chose en tiroir. Le seuil fixe d'avant (`xl`) ne
+          savait rien des colonnes voisines : à 1280 px celle-ci ne laissait
+          que 464 px au texte, et à 375 px elle était posée hors de l'écran. */}
+      {colonneLaterale && !sideCollapsed && (
+        <WikiSidePanel
+          tab={sideTab}
+          onTabChange={setSideTab}
+          openCommentCount={openAnnotationCount}
+          width={panelWidth}
+          handleProps={isEditMode ? panelHandleProps : undefined}
+          onCollapse={() => replierPanneau(true)}
+        >
+          {sideTab === "comments" ? (
+            <WikiAnnotationsPanel
+              threads={annotations.threads}
+              detachedIds={detachedIds}
+              loading={annotations.loading}
+              pending={annotations.pending}
+              activeId={activeAnnotation?.id ?? null}
+              draft={annotationDraft}
+              currentUserId={userId}
+              canModerate={canEdit}
+              onActivate={id => openAnnotation(id, true)}
+              onCreate={body => void createFromDraft(body)}
+              onCancelDraft={() => setAnnotationDraft(null)}
+              onReply={(root: WikiAnnotation, body: string) => annotations.reply(root, body)}
+              onSetResolved={(root, resolved) => void annotations.setResolved(root, resolved)}
+              onDelete={annotation => void annotations.remove(annotation)}
             />
           ) : (
-            <p className="text-sm text-muted-foreground">
-              {isEditMode ? t("pageEmptyEdit") : t("pageEmpty")}
-            </p>
+            <WikiNotesPanel
+              pageId={page.id}
+              isEditMode={isEditMode}
+              notes={notes}
+              noteToOpen={noteToOpen}
+              onNoteOpened={onNoteOpened}
+            />
           )}
-        </div>
-        <WikiTableOfContents headings={headings} />
-      </div>
+        </WikiSidePanel>
+      )}
+
+      {openImage !== null && (
+        // La visionneuse des salons, telle quelle : mêmes gestes, mêmes
+        // touches, et le passage d'une image à l'autre déjà écrit.
+        <ImageLightbox
+          items={articleImages.map(image => ({
+            url: image.url,
+            name: image.alt || t("contentLabel"),
+          }))}
+          initialIndex={openImage}
+          onClose={() => setOpenImage(null)}
+        />
+      )}
+
+      <Drawer open={sideDrawerOpen && !colonneLaterale} onOpenChange={setSideDrawerOpen} swipeDirection="right">
+        <SideSheetContent width="wide" hideClose>
+          <WikiSidePanel
+            tab={sideTab}
+            onTabChange={setSideTab}
+            openCommentCount={openAnnotationCount}
+            width="100%"
+            dansTiroir
+          >
+            {sideTab === "comments" ? (
+              <WikiAnnotationsPanel
+                threads={annotations.threads}
+                detachedIds={detachedIds}
+                loading={annotations.loading}
+                pending={annotations.pending}
+                activeId={activeAnnotation?.id ?? null}
+                draft={annotationDraft}
+                currentUserId={userId}
+                canModerate={canEdit}
+                onActivate={id => openAnnotation(id, true)}
+                onCreate={body => void createFromDraft(body)}
+                onCancelDraft={() => setAnnotationDraft(null)}
+                onReply={(root: WikiAnnotation, body: string) => annotations.reply(root, body)}
+                onSetResolved={(root, resolved) => void annotations.setResolved(root, resolved)}
+                onDelete={annotation => void annotations.remove(annotation)}
+              />
+            ) : (
+              <WikiNotesPanel
+                pageId={page.id}
+                isEditMode={isEditMode}
+                notes={notes}
+                noteToOpen={noteToOpen}
+                onNoteOpened={onNoteOpened}
+              />
+            )}
+          </WikiSidePanel>
+        </SideSheetContent>
+      </Drawer>
     </div>
   );
 }

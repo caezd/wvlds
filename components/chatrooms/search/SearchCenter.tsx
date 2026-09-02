@@ -29,6 +29,14 @@ import {
 import { SearchInput } from "./SearchInput";
 import { SearchFiltersDrawer } from "./SearchFiltersDrawer";
 import { SearchResultsList } from "./SearchResultsList";
+import { SearchWikiResults } from "./SearchWikiResults";
+import {
+  loadWorldWikiForSearch,
+  searchWiki,
+  type WikiSearchHit,
+  type WikiSearchIndex,
+  type WikiSearchPage,
+} from "@/lib/wikiSearch";
 import type { SearchToken } from "./types";
 
 // Seule source de vérité pour le passage token <-> filtre (utilisée par
@@ -97,6 +105,17 @@ export function SearchCenter({
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [needFilterWarning, setNeedFilterWarning] = useState(false);
 
+  /**
+   * Le wiki du monde, indexé pour la recherche libre.
+   *
+   * Lu à l'ouverture, comme les auteurs et les salons : le centre ne fouillait
+   * que les messages, et depuis un salon le wiki était invisible. La recherche
+   * elle-même est celle du wiki (`lib/wikiSearch.ts`), pure et sans réseau.
+   */
+  const wikiRef = useRef<{ index: WikiSearchIndex; pagesById: Map<string, WikiSearchPage> } | null>(null);
+  const [wikiHits, setWikiHits] = useState<WikiSearchHit[]>([]);
+  const [wikiPages, setWikiPages] = useState<Map<string, WikiSearchPage>>(() => new Map());
+
   const [cursorForCurrentPage, setCursorForCurrentPage] = useState<SearchCursor>(null);
   const [nextCursor, setNextCursor] = useState<SearchCursor>(null);
   const [hasMore, setHasMore] = useState(false);
@@ -108,6 +127,10 @@ export function SearchCenter({
     void listWorldAuthorsForSearch(supabase, worldId).then(setAuthors);
     // Le libellé de repli est traduit ici : `lib/` n'a pas accès aux messages.
     void listWorldChatroomsForSearch(supabase, worldId, t("newRoom")).then(setChatrooms);
+
+    // Dans une ref, sans rendu : l'index ne sert qu'au moment de chercher, et
+    // un rendu de plus à l'ouverture dérangeait la saisie en cours.
+    void loadWorldWikiForSearch(supabase, worldId).then(wiki => { wikiRef.current = wiki; });
   }, [open, worldId, t]);
 
   useEffect(() => {
@@ -131,6 +154,13 @@ export function SearchCenter({
       const page = await searchChatMessages(getSupabase(), worldId, nextFilters, cursor);
       if (searchRequestIdRef.current !== requestId) return;
       setResults(page.results);
+      // Pas de curseur ni d'aller-retour pour le wiki : il tient en mémoire,
+      // ses résultats se posent avec ceux des messages.
+      // `nextFilters.freeText`, et non l'état : la recherche part dans le même
+      // tour que la saisie, l'état porte encore le texte d'avant.
+      const wiki = wikiRef.current;
+      setWikiHits(wiki ? searchWiki(wiki.index, nextFilters.freeText ?? "") : []);
+      setWikiPages(wiki?.pagesById ?? new Map());
       setHistory((h) => (pushHistory ? [...h, cursorForCurrentPage] : h));
       setCursorForCurrentPage(cursor);
       setNextCursor(page.nextCursor);
@@ -202,6 +232,11 @@ export function SearchCenter({
     router.push(`/c/${chatId}?m=${messageId}`);
   }
 
+  function selectWikiPage(slug: string) {
+    onOpenChange(false);
+    router.push(`/w/${worldId}?view=wiki&page=${encodeURIComponent(slug)}`);
+  }
+
   return (
     <>
       <Drawer open={open} onOpenChange={onOpenChange} swipeDirection="right">
@@ -241,6 +276,8 @@ export function SearchCenter({
 
           <div className="flex-1 overflow-y-auto p-4">
             {hasSearched && (
+              <>
+              <SearchWikiResults hits={wikiHits} pagesById={wikiPages} onSelect={selectWikiPage} />
               <SearchResultsList
                 results={results}
                 authors={authors}
@@ -253,6 +290,7 @@ export function SearchCenter({
                 onPrev={goPrev}
                 onSelectMessage={selectMessage}
               />
+              </>
             )}
           </div>
         </SideSheetContent>

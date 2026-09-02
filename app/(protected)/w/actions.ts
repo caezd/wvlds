@@ -8,6 +8,7 @@ type WorldPrefsInput = {
   main_expanded?: boolean;
   is_favorite?: boolean;
   wiki_sidebar_width?: number;
+  wiki_panel_width?: number;
 };
 
 export async function saveWorldPrefs(

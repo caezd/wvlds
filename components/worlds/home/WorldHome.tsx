@@ -39,7 +39,12 @@ const WorldMembersPanel = dynamic(() => import("../members/WorldMembersPanel").t
 const WorldPersonasPanel = dynamic(() => import("@/components/personas/WorldPersonasPanel").then((m) => m.WorldPersonasPanel));
 const WorldStatsWidget = dynamic(() => import("./widgets/WorldStatsWidget").then((m) => m.WorldStatsWidget));
 
-type WorldPrefs = { main_expanded: boolean; is_favorite: boolean; wiki_sidebar_width?: number };
+type WorldPrefs = {
+  main_expanded: boolean;
+  is_favorite: boolean;
+  wiki_sidebar_width?: number;
+  wiki_panel_width?: number;
+};
 
 type HeroWorld = World & { owner_id: string };
 
@@ -198,6 +203,7 @@ export function WorldHome({
             worldId={worldId}
             canEdit={canEditTabs}
             initialSidebarWidth={initialPrefs?.wiki_sidebar_width}
+            initialPanelWidth={initialPrefs?.wiki_panel_width}
             label={world.wiki_label}
             initialSlug={initialWikiSlug}
           />

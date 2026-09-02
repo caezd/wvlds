@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import Image from "next/image";
+import { StoredImage } from "@/components/ui/stored-image";
+import { AVATAR_THUMB_SMALL } from "@/lib/storage";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -14,7 +15,6 @@ import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
-import { supabaseThumb } from "@/lib/storage";
 import { useNotifications, useNotificationsActions } from "@/components/providers/NotificationsProvider";
 import { usePushSubscription } from "@/hooks/usePushSubscription";
 import { WorldPreviewDialog } from "@/components/worlds/WorldPreviewDialog";
@@ -133,9 +133,9 @@ function WorldInviteCard({ notif, onMarkRead }: { notif: AppNotification; onMark
     return (
         <>
             <div className="mt-2.5 flex items-center gap-3 min-w-0">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted min-w-0">
+                <span className="relative flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted min-w-0">
                     {worldIconUrl
-                        ? <Image src={worldIconUrl} alt="" width={24} height={24} className="h-full w-full object-cover" />
+                        ? <StoredImage url={worldIconUrl} width={AVATAR_THUMB_SMALL} height={AVATAR_THUMB_SMALL} resize="cover" className="object-cover" />
                         : <Globe size={14} className="text-muted-foreground" />
                     }
                 </span>
@@ -245,9 +245,19 @@ function NotifAvatar({ avatarUrl, actorName, type, isUnread: _isUnread }: {
     type: NotificationType;
     isUnread: boolean;
 }) {
-    const thumb = avatarUrl ? supabaseThumb(avatarUrl, 56) ?? avatarUrl : null;
-    if (thumb) {
-        return <Image src={thumb} alt={actorName ?? ""} width={28} height={28} className="h-7 w-7 shrink-0 rounded-full object-cover" />;
+    if (avatarUrl) {
+        return (
+            <span className="relative h-7 w-7 shrink-0 overflow-hidden rounded-full">
+                <StoredImage
+                    url={avatarUrl}
+                    width={AVATAR_THUMB_SMALL}
+                    height={AVATAR_THUMB_SMALL}
+                    resize="cover"
+                    alt={actorName ?? ""}
+                    className="object-cover"
+                />
+            </span>
+        );
     }
     const letter = actorName ? actorName[0].toUpperCase() : null;
     if (letter) {

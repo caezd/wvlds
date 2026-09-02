@@ -23,7 +23,7 @@ export type SearchAuthorOption =
  * application très majoritairement francophone, c'est la moitié des prénoms qui
  * échappent à la recherche dès qu'on ne les accentue pas en tapant.
  */
-export function normaliserPourRecherche(texte: string): string {
+export function normalizeForSearch(texte: string): string {
   return texte
     .normalize("NFD")
     .replace(/\p{Diacritic}/gu, "")
@@ -118,10 +118,10 @@ export async function listWorldAuthorsForSearch(
 }
 
 export function matchesAuthorQuery(option: SearchAuthorOption, query: string): boolean {
-  const q = normaliserPourRecherche(query);
+  const q = normalizeForSearch(query);
   if (!q) return true;
-  if (normaliserPourRecherche(option.label).includes(q)) return true;
-  if (option.kind === "persona" && option.sublabel && normaliserPourRecherche(option.sublabel).includes(q)) {
+  if (normalizeForSearch(option.label).includes(q)) return true;
+  if (option.kind === "persona" && option.sublabel && normalizeForSearch(option.sublabel).includes(q)) {
     return true;
   }
   return false;
@@ -129,7 +129,7 @@ export function matchesAuthorQuery(option: SearchAuthorOption, query: string): b
 
 /** Même comparaison, pour l'autocomplétion des salons. */
 export function matchesChatroomQuery(option: SearchChatroomOption, query: string): boolean {
-  const q = normaliserPourRecherche(query);
+  const q = normalizeForSearch(query);
   if (!q) return true;
-  return normaliserPourRecherche(option.label).includes(q);
+  return normalizeForSearch(option.label).includes(q);
 }

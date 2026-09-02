@@ -15,6 +15,7 @@ import {
 import type { ChatMessageMeta, ChatMediaItem } from "@/types/db";
 import { cn, isSafeUrl } from "@/lib/utils";
 import { useCurrentUser } from "@/components/providers/CurrentUserProvider";
+import { useWikiLinks } from "@/components/worlds/wiki/WikiLinkContext";
 
 export function ChatroomMessageBubble({
   persona: _persona,
@@ -34,6 +35,11 @@ export function ChatroomMessageBubble({
    *  même geste sur la bulle. */
   isMobile?: boolean;
 }) {
+  // Hors du wiki, un `[[lien]]` vaut ce que le monde en sait — voir
+  // WikiLinkContext. Sans fournisseur, il reste visiblement cassé.
+  const wikiLinks = useWikiLinks();
+  const wiki = (markdown: string) => (wikiLinks ? wikiLinks.resolve(markdown) : markdown);
+
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const { messageFont, messageTextSize, messageTextAlign } = useCurrentUser();
   const t = useTranslations("chatrooms");
@@ -86,7 +92,7 @@ export function ChatroomMessageBubble({
     <div className={cn(proseClass)}>
       {parseDialogue(message.content).map((part, i) => {
         if (part.kind === "prose") {
-          return part.text ? <MarkdownContent key={i} content={part.text} /> : null;
+          return part.text ? <MarkdownContent key={i} content={wiki(part.text)} onWikiLink={wikiLinks?.onWikiLink} /> : null;
         }
         const color = part.color ?? message.metadata?.bubbleColor;
         const bubble = (
@@ -100,7 +106,7 @@ export function ChatroomMessageBubble({
             )}
             style={color ? { backgroundColor: color + "33" } : undefined}
           >
-            <MarkdownContent content={part.speech} />
+            <MarkdownContent content={wiki(part.speech)} onWikiLink={wikiLinks?.onWikiLink} />
           </div>
         );
         return (
@@ -129,7 +135,7 @@ export function ChatroomMessageBubble({
     </div>
   ) : message.content ? (
     <div className={proseClass}>
-      <MarkdownContent content={message.content} />
+      <MarkdownContent content={wiki(message.content)} onWikiLink={wikiLinks?.onWikiLink} />
     </div>
   ) : null;
 

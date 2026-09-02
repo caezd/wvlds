@@ -11,7 +11,15 @@ import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 
 import { cn } from "@/lib/utils";
 import { transformStyledSpans, createFenceTracker } from "@/lib/textStyledSpans";
+import { highlightLexiconTerms } from "@/lib/lexiconHighlight";
 import { extractHeadings } from "@/lib/wikiToc";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
+import { StoredImage } from "@/components/ui/stored-image";
+import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
+import { VALID_LUCIDE_ICONS } from "@/components/ui/LucideIconPicker";
+import type { LinkPreview } from "@/lib/wikiLinkPreview";
+import type { WorldLexiconTerm } from "@/types/worlds";
 
 type Props = {
   content: string;
@@ -24,7 +32,15 @@ type Props = {
   /** Gère les liens internes `[texte](wiki:slug)` (voir lib/wikiLinks.ts) — si
    *  absent, ces liens sont rendus visuellement cassés plutôt que cliquables
    *  (contexte hors wiki, ex: un `wiki:` tapé à la main dans un message). */
-  onWikiLink?: (slug: string) => void;
+  onWikiLink?: (slug: string, anchor?: string) => void;
+  /** Lexique du monde (voir lib/lexiconHighlight.ts) — absent = pas de
+   *  surlignage. Réservé aux pages du wiki, jamais aux messages de chat. */
+  lexiconTerms?: WorldLexiconTerm[];
+  /** Ce qu'il y a à montrer d'une page visée, au survol de son lien — voir
+   *  `lib/wikiApercu.ts`. Absent, ou rendant `null`, le lien reste nu. */
+  wikiPreview?: (slug: string) => LinkPreview | null;
+  /** Ouvre l'image en grand. Absent, elle reste une simple illustration. */
+  onImageOpen?: (url: string) => void;
 };
 
 function extractText(node: React.ReactNode): string {
@@ -67,6 +83,11 @@ function CodeBlock({ className, children, ...props }: React.ComponentProps<"code
         onClick={doCopy}
         className="opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity text-xs absolute right-2 top-2 rounded-md border bg-background/80 px-2 py-1"
         aria-label={tCommon("copyCode")}
+        // Le libellé bascule « Copier » → « Copié » au clic. Sans cette
+        // marque, il compterait dans le texte de la page et décalerait d'un
+        // caractère toutes les annotations situées plus bas (voir
+        // lib/domTextOffsets.ts).
+        data-annotate-ignore
       >
         {copied ? tCommon("copied") : tCommon("copy")}
       </button>
@@ -95,6 +116,7 @@ function urlTransform(url: string): string {
   if (url.startsWith("color:") && COLOR_HEX_RE.test(url.slice("color:".length))) return url;
   if (url === "underline:") return url;
   if (url.startsWith("wiki:")) return url;
+  if (url.startsWith("lexicon:")) return url;
   return defaultUrlTransform(url);
 }
 
@@ -242,7 +264,10 @@ export function MarkdownContent({
   allowImages = false,
   isMine = false,
   onWikiLink,
-}: Pick<Props, "content" | "allowImages" | "isMine" | "onWikiLink">) {
+  lexiconTerms,
+  wikiPreview,
+  onImageOpen,
+}: Pick<Props, "content" | "allowImages" | "isMine" | "onWikiLink" | "lexiconTerms" | "wikiPreview" | "onImageOpen">) {
   const schema = useMemo(() => {
     return {
       ...defaultSchema,
@@ -261,15 +286,17 @@ export function MarkdownContent({
       // (voir lib/textStyledSpans.ts) à travers les deux filtres.
       protocols: {
         ...defaultSchema.protocols,
-        href: [...(defaultSchema.protocols?.href ?? []), "color", "underline", "wiki"],
+        href: [...(defaultSchema.protocols?.href ?? []), "color", "underline", "wiki", "lexicon"],
       },
     } as Parameters<typeof rehypeSanitize>[0];
   }, []);
 
-  const normalized = useMemo(
-    () => transformAngleCallouts(transformStyledSpans(content)),
-    [content],
-  );
+  const normalized = useMemo(() => {
+    const withLexicon = lexiconTerms?.length
+      ? highlightLexiconTerms(content, lexiconTerms)
+      : content;
+    return transformAngleCallouts(transformStyledSpans(withLexicon));
+  }, [content, lexiconTerms]);
 
   // Ids d'ancre posés sur les titres (h1-h6), pour le sommaire du wiki
   // (lib/wikiToc.ts::extractHeadings, appelé côté appelant sur ce même
@@ -281,6 +308,12 @@ export function MarkdownContent({
   headingsRef.current = useMemo(() => extractHeadings(content), [content]);
   const headingIndexRef = useRef(0);
   headingIndexRef.current = 0;
+
+  const lexiconById = useMemo(() => {
+    const map = new Map<string, WorldLexiconTerm>();
+    for (const t of lexiconTerms ?? []) map.set(t.id, t);
+    return map;
+  }, [lexiconTerms]);
 
   function headingComponent(Tag: "h1" | "h2" | "h3" | "h4" | "h5" | "h6") {
     return function Heading({ children }: { children?: React.ReactNode }) {
@@ -318,7 +351,7 @@ export function MarkdownContent({
 
     img({ src, alt }) {
       if (allowImages) {
-        return (
+        const image = (
           // URL arbitraire saisie par l'utilisateur dans le markdown — domaine inconnu,
           // ne peut pas passer par l'optimiseur next/image (remotePatterns fermé par design)
           // eslint-disable-next-line @next/next/no-img-element
@@ -328,6 +361,19 @@ export function MarkdownContent({
             loading="lazy"
             className="max-w-full rounded-md border"
           />
+        );
+        if (!onImageOpen) return image;
+        return (
+          // Un bouton et non un `onClick` posé sur l'image : la visionneuse
+          // doit s'ouvrir au clavier comme au clic, et une image seule n'est
+          // pas atteignable à la tabulation.
+          <button
+            type="button"
+            onClick={() => onImageOpen(String(src))}
+            className="block cursor-zoom-in"
+          >
+            {image}
+          </button>
         );
       }
       return (
@@ -368,23 +414,91 @@ export function MarkdownContent({
         if (hrefStr === "underline:") return <span className="underline">{children}</span>;
         return <>{children}</>;
       }
+      if (hrefStr.startsWith("lexicon:")) {
+        const termId = hrefStr.slice("lexicon:".length);
+        const term = lexiconById.get(termId);
+        // Terme supprimé depuis le rendu du texte source : reste du texte simple.
+        if (!term) return <>{children}</>;
+        return (
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                className="rounded-sm px-0.5 underline decoration-dotted decoration-primary/60 underline-offset-2 hover:bg-primary/10"
+              >
+                {children}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-72 text-sm">
+              <p className="font-semibold text-foreground">{term.term}</p>
+              <p className="mt-1 text-muted-foreground">{term.description}</p>
+            </PopoverContent>
+          </Popover>
+        );
+      }
       if (hrefStr.startsWith("wiki:")) {
-        const slug = hrefStr.slice("wiki:".length);
-        if (!slug || !onWikiLink) {
+        // `wiki:slug#section` vise une section ; `wiki:#section` reste dans la
+        // page courante, où il n'y a rien à charger avant de défiler.
+        const cible = hrefStr.slice("wiki:".length);
+        const diese = cible.indexOf("#");
+        const slug = diese === -1 ? cible : cible.slice(0, diese);
+        const anchor = diese === -1 ? "" : cible.slice(diese + 1);
+
+        if ((!slug && !anchor) || !onWikiLink) {
           return (
             <span className="cursor-not-allowed text-destructive underline decoration-dashed decoration-destructive/60">
               {children}
             </span>
           );
         }
-        return (
+        const lien = (
           <button
             type="button"
-            onClick={() => onWikiLink(slug)}
+            onClick={() => onWikiLink(slug, anchor || undefined)}
             className="underline decoration-dotted underline-offset-2 hover:opacity-80"
           >
             {children}
           </button>
+        );
+
+        const apercu = wikiPreview?.(slug) ?? null;
+        // Rien à montrer : le lien reste nu. Une carte qui n'apprendrait que
+        // le titre déjà écrit dans le lien vaut moins que pas de carte.
+        if (!apercu) return lien;
+
+        return (
+          <HoverCard openDelay={400} closeDelay={100}>
+            <HoverCardTrigger asChild>{lien}</HoverCardTrigger>
+            {/* `not-prose` : la carte vit dans un article, dont les règles
+                typographiques donneraient à ses paragraphes les marges d'un
+                corps de texte. */}
+            <HoverCardContent className="not-prose w-72 overflow-hidden p-0">
+              {apercu.bannerUrl && (
+                <div className="relative h-24 w-full bg-secondary">
+                  <StoredImage
+                    url={apercu.bannerUrl}
+                    width={864}
+                    height={288}
+                    resize="cover"
+                    className="object-cover"
+                  />
+                </div>
+              )}
+              <div className="p-3">
+                <p className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+                  {apercu.icon && VALID_LUCIDE_ICONS.has(apercu.icon) && (
+                    <LazyLucideIcon name={apercu.icon} className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  )}
+                  <span className="truncate">{apercu.title}</span>
+                </p>
+                {apercu.description && (
+                  <p className="mt-1 line-clamp-3 text-xs text-muted-foreground">
+                    {apercu.description}
+                  </p>
+                )}
+              </div>
+            </HoverCardContent>
+          </HoverCard>
         );
       }
       return (
@@ -448,10 +562,21 @@ export default function MarkdownRenderer({
   allowImages = false,
   isMine = false,
   onWikiLink,
+  lexiconTerms,
+  wikiPreview,
+  onImageOpen,
 }: Props) {
   return (
     <div className={proseClassName(proseSize, className)}>
-      <MarkdownContent content={content} allowImages={allowImages} isMine={isMine} onWikiLink={onWikiLink} />
+      <MarkdownContent
+        content={content}
+        allowImages={allowImages}
+        isMine={isMine}
+        onWikiLink={onWikiLink}
+        lexiconTerms={lexiconTerms}
+        wikiPreview={wikiPreview}
+        onImageOpen={onImageOpen}
+      />
     </div>
   );
 }

@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import Image from "next/image";
+import { StoredImage } from "@/components/ui/stored-image";
+import { AVATAR_THUMB_SMALL } from "@/lib/storage";
 import Link from "next/link";
 import { ChevronDown, ChevronRight, MessagesSquare } from "lucide-react";
 import {
@@ -189,17 +190,18 @@ export function ChatroomsNavDropdown({
                 <span className="relative shrink-0">
                   <span
                     className={cn(
-                      "flex h-9 w-9 items-center justify-center overflow-hidden rounded-full",
+                      "relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-full",
                       !room.icon_url && "bg-card-400",
                     )}
                   >
                     {room.icon_url ? (
-                      <Image
-                        src={room.icon_url}
-                        alt=""
-                        width={36}
-                        height={36}
-                        className="h-full w-full object-cover"
+                      <StoredImage
+                        url={room.icon_url}
+                        width={AVATAR_THUMB_SMALL}
+                        height={AVATAR_THUMB_SMALL}
+                        resize="cover"
+                        sizes="36px"
+                        className="object-cover"
                       />
                     ) : (
                       <MessagesSquare className="h-4 w-4 text-muted-foreground" />

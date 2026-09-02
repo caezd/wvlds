@@ -483,3 +483,24 @@
     }
 }
 
+
+/* ── Commentaires ancrés du wiki ──────────────────────────────────────────
+   Blocs commentés d'une page — paragraphe, élément de liste, citation, titre.
+   La classe est posée après le rendu par WikiAnnotationLayer, hors de React :
+   sa mise en forme vit donc ici plutôt qu'en classes utilitaires.
+
+   Le bloc lui-même ne porte plus aucune marque : ce qui l'annonce est la
+   pastille de sa marge droite, rendue par React (voir WikiAnnotationLayer).
+   Un fond, un filet, ou un point posé dans le texte pesaient tous plus lourd
+   que ce qu'ils avaient à dire. */
+[data-annotation-ids],
+[data-annotation-draft] {
+    cursor: pointer;
+}
+
+/* Le bloc en cours de redaction se distingue le temps de la saisie : sa
+   pastille de marge n'existe pas encore, rien d'autre ne le designerait. */
+[data-annotation-draft] {
+    background-color: color-mix(in oklab, var(--color-accent) 8%, transparent);
+    border-radius: 4px;
+}

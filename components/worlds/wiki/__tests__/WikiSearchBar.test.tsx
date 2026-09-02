@@ -16,8 +16,11 @@ function makePage(id: string, title: string): WikiPage {
     sort_index: 0,
     icon: null,
     is_restricted: false,
+    banner_url: null,
+    description: null,
     draft_updated_at: null,
     published_at: null,
+  deleted_at: null,
   };
 }
 
@@ -38,7 +41,7 @@ describe("WikiSearchBar", () => {
 
   it("affiche les résultats avec titre, chemin et extrait", () => {
     const results: WikiSearchResult[] = [
-      { page: makePage("p1", "La Forêt Noire"), path: "Lieux", excerpt: "…une forêt sombre…" },
+      { page: makePage("p1", "La Forêt Noire"), path: "Lieux", note: null, excerpt: "…une forêt sombre…" },
     ];
     render(
       <WikiSearchBar query="forêt" onQueryChange={vi.fn()} results={results} onSelectResult={vi.fn()} />,
@@ -51,14 +54,18 @@ describe("WikiSearchBar", () => {
   it("sélectionne un résultat au clic", async () => {
     const onSelectResult = vi.fn();
     const results: WikiSearchResult[] = [
-      { page: makePage("p1", "Accueil"), path: "", excerpt: "" },
+      { page: makePage("p1", "Accueil"), path: "", note: null, excerpt: "" },
     ];
     const user = userEvent.setup();
     render(
       <WikiSearchBar query="acc" onQueryChange={vi.fn()} results={results} onSelectResult={onSelectResult} />,
     );
     await user.click(screen.getByText("Accueil"));
-    expect(onSelectResult).toHaveBeenCalledWith("p1");
+    // Le résultat entier, et non son seul identifiant : une fiche doit
+    // pouvoir dire qu'elle est une fiche.
+    expect(onSelectResult).toHaveBeenCalledWith(
+      expect.objectContaining({ page: expect.objectContaining({ id: "p1" }) }),
+    );
   });
 
   it("efface la recherche via le bouton X", async () => {

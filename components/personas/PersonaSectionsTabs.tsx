@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Layers, Lock, MoreHorizontal, ChevronLeft, ChevronRight, Pencil, Trash2 } from "lucide-react";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
+import { afterMenuClose } from "@/components/ui/after-menu-close";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import type { PersonaSectionWithFields } from "@/types/personas";
@@ -224,7 +225,7 @@ export function PersonaSectionsTabs({
                         <ChevronRight className="mr-2 h-4 w-4" /> {t("moveRight")}
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => { setName(sections.find((s) => s.id === value)?.name ?? ""); setRenameDialogOpen(true); }}>
+                      <DropdownMenuItem onClick={afterMenuClose(() => { setName(sections.find((s) => s.id === value)?.name ?? ""); setRenameDialogOpen(true); })}>
                         <Pencil className="mr-2 h-4 w-4" /> {t("rename")}
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />

@@ -1,0 +1,97 @@
+import { describe, it, expect } from "vitest";
+import {
+  ANCHOR_CONTEXT_LENGTH,
+  anchorPreview,
+  resolveAnchor,
+  type TextAnchor,
+} from "@/lib/wikiAnnotations";
+
+const TEXT = "Mara Kline observe la ville. Les Gardiens veillent sur Meridian depuis neuf ans.";
+
+/**
+ * Ancre une sous-chaîne par son texte, telle que l'écrivait la sélection.
+ *
+ * L'application n'en crée plus — les commentaires visent un bloc depuis la
+ * migration 142 —, mais elle doit continuer à résoudre celles déjà en base.
+ */
+function anchorOf(text: string, quote: string, occurrence = 0): TextAnchor {
+  let index = -1;
+  for (let i = 0; i <= occurrence; i++) index = text.indexOf(quote, index + 1);
+  return {
+    quote,
+    prefix: text.slice(Math.max(0, index - ANCHOR_CONTEXT_LENGTH), index),
+    suffix: text.slice(index + quote.length, index + quote.length + ANCHOR_CONTEXT_LENGTH),
+    start: index,
+  };
+}
+
+
+describe("resolveAnchor", () => {
+  it("retrouve l'extrait quand rien n'a bougé", () => {
+    const anchor = anchorOf(TEXT, "Les Gardiens");
+    expect(resolveAnchor(TEXT, anchor)).toEqual({
+      start: TEXT.indexOf("Les Gardiens"),
+      end: TEXT.indexOf("Les Gardiens") + "Les Gardiens".length,
+    });
+  });
+
+  it("suit l'extrait quand du texte est inséré avant", () => {
+    const anchor = anchorOf(TEXT, "Les Gardiens");
+    const edited = "Chapitre premier.\n\n" + TEXT;
+    const range = resolveAnchor(edited, anchor);
+    expect(range).not.toBeNull();
+    expect(edited.slice(range!.start, range!.end)).toBe("Les Gardiens");
+    expect(range!.start).toBe(edited.indexOf("Les Gardiens"));
+  });
+
+  it("suit l'extrait quand du texte est supprimé avant", () => {
+    const anchor = anchorOf(TEXT, "Meridian");
+    const edited = TEXT.replace("Mara Kline observe la ville. ", "");
+    const range = resolveAnchor(edited, anchor);
+    expect(edited.slice(range!.start, range!.end)).toBe("Meridian");
+  });
+
+  it("choisit l'occurrence dont le voisinage correspond, pas la première venue", () => {
+    const text = "Le mur est haut. Le mur est bas. Le mur est vieux.";
+    const anchor = anchorOf(text, "Le mur", 2); // celui de « vieux »
+    const edited = "Prologue. " + text;
+    const range = resolveAnchor(edited, anchor);
+    expect(edited.slice(range!.start, range!.start + 20)).toBe("Le mur est vieux.");
+  });
+
+  it("départage deux occurrences au voisinage identique par la position d'origine", () => {
+    const repeated = "ligne\n".repeat(6);
+    const anchor = anchorOf(repeated, "ligne", 4);
+    const range = resolveAnchor(repeated, anchor);
+    expect(range!.start).toBe(anchor.start);
+  });
+
+  it("déclare l'annotation détachée quand l'extrait a disparu", () => {
+    const anchor = anchorOf(TEXT, "Les Gardiens");
+    expect(resolveAnchor(TEXT.replace("Les Gardiens", "Les Sentinelles"), anchor)).toBeNull();
+  });
+
+  it("ne se fie pas à une position devenue hors du texte", () => {
+    const anchor = anchorOf(TEXT, "Meridian");
+    const shorter = "Meridian.";
+    expect(resolveAnchor(shorter, anchor)).toEqual({ start: 0, end: 8 });
+  });
+
+  it("renvoie null sur une ancre sans extrait", () => {
+    expect(resolveAnchor(TEXT, { quote: "", prefix: "", suffix: "", start: 0 })).toBeNull();
+  });
+});
+
+describe("anchorPreview", () => {
+  it("laisse intact un extrait court", () => {
+    expect(anchorPreview("Les Gardiens")).toBe("Les Gardiens");
+  });
+
+  it("coupe au milieu pour garder le début et la fin", () => {
+    const preview = anchorPreview("a".repeat(80) + "b".repeat(80), 41);
+    expect(preview.startsWith("a".repeat(20))).toBe(true);
+    expect(preview.endsWith("b".repeat(20))).toBe(true);
+    expect(preview).toContain("…");
+    expect(preview.length).toBeLessThanOrEqual(41);
+  });
+});

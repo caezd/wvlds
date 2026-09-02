@@ -45,3 +45,36 @@ describe("CodeEditor", () => {
     expect(pre.style.backgroundColor).toBe("transparent");
   });
 });
+
+describe("CodeEditor — hauteur qui suit le texte", () => {
+  it("porte le texte dans une couche en flux, qui donne la hauteur", () => {
+    const { container } = render(
+      <CodeEditor autoGrow value={"un\ndeux"} onChange={vi.fn()} language="markdown" />,
+    );
+
+    // Trois couches : la règle en flux, et les deux superposées.
+    const regle = container.querySelector("pre.static");
+    expect(regle).not.toBeNull();
+    expect(getComputedStyle(regle!).position).not.toBe("absolute");
+  });
+
+  it("ajoute le saut de ligne final que le navigateur avale", () => {
+    // Sans lui, un texte qui s'achève par une ligne vide donnerait une boîte
+    // trop courte d'une ligne, et la dernière ligne saisie passerait sous le
+    // bord.
+    const { container } = render(
+      <CodeEditor autoGrow value={"une ligne"} onChange={vi.fn()} language="markdown" />,
+    );
+
+    expect(container.querySelector("pre.static")!.textContent).toBe("une ligne\n");
+  });
+
+  it("ne fixe aucune hauteur au conteneur", () => {
+    const { container } = render(
+      <CodeEditor autoGrow rows={12} value="x" onChange={vi.fn()} language="markdown" />,
+    );
+
+    // `rows` ne s'applique plus : c'est le texte qui commande.
+    expect((container.firstChild as HTMLElement).style.height).toBe("");
+  });
+});

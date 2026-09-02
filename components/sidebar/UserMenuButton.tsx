@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { detacherAppareilDuPush } from "@/lib/push";
+import { announceSignOut } from "@/lib/intentionalSignOut";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,6 +17,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { afterMenuClose } from "@/components/ui/after-menu-close";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Bug, ChevronsUpDown, Download, KeyRound, LogOut, Scale, ScrollText, Settings, UserRound } from "lucide-react";
 import { useGlobalPresence, type PresenceStatus } from "@/components/providers/PresenceProvider";
@@ -75,6 +77,10 @@ export function UserMenuButton({
     // serveur continuerait d'envoyer les notifications de ce compte vers ce
     // navigateur, y compris à la personne qui s'y connectera ensuite.
     await detacherAppareilDuPush(supabase);
+    // AVANT `signOut`, qui émet l'événement aussitôt : sans cela, le
+    // surveillant de session prendrait ce départ voulu pour une session
+    // perdue et annoncerait « Session expirée » à qui vient de partir.
+    announceSignOut();
     await supabase.auth.signOut();
     router.push("/auth/login");
     router.refresh();
@@ -165,7 +171,7 @@ export function UserMenuButton({
 
           <DropdownMenuSeparator />
 
-          <DropdownMenuItem onClick={() => setProfileOpen(true)}>
+          <DropdownMenuItem onClick={afterMenuClose(() => setProfileOpen(true))}>
             <UserRound className="mr-2 size-4" />
             {tNav("profile")}
           </DropdownMenuItem>

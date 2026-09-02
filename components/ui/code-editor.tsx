@@ -27,6 +27,17 @@ export function CodeEditor({
   placeholder,
   ariaInvalid,
   rows = 12,
+  fill = false,
+  autoGrow = false,
+  textareaRef,
+  onKeyDown,
+  onSelect,
+  onMouseDown,
+  onPaste,
+  onDrop,
+  ariaLabel,
+  className,
+  layerClassName,
 }: {
   id?: string;
   value: string;
@@ -36,6 +47,57 @@ export function CodeEditor({
   ariaInvalid?: boolean;
   /** Hauteur du champ, en lignes — comme l'attribut `rows` d'un `<textarea>`. */
   rows?: number;
+  /** Occupe la hauteur offerte par le parent au lieu de la fixer sur `rows`. */
+  fill?: boolean;
+  /**
+   * La hauteur suit le texte, qui ne défile donc plus dans le champ.
+   *
+   * Une troisième couche, en flux normal celle-là, porte le même texte et
+   * donne sa hauteur à la boîte ; les deux autres se superposent dessus comme
+   * d'habitude. C'est le seul moyen de faire grandir un `<textarea>` sans
+   * mesurer sa hauteur en JavaScript à chaque frappe — et sans le décalage
+   * d'une image de retard que cette mesure produit.
+   *
+   * Le défilement revient alors au parent, ce qui permet à un en-tête placé
+   * au-dessus du champ de défiler avec le texte plutôt que de rester figé.
+   */
+  autoGrow?: boolean;
+  /**
+   * Donne accès au champ de saisie.
+   *
+   * Nécessaire à qui écrit dans le texte à la place de l'utilisateur — une
+   * ceinture d'outils de mise en forme lit la sélection puis la repose.
+   */
+  textareaRef?: React.RefObject<HTMLTextAreaElement | null>;
+  onKeyDown?: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
+  /**
+   * La sélection a bougé.
+   *
+   * À qui écrit à la place de l'utilisateur : lire `selectionStart` au moment
+   * d'agir suppose que la sélection a survécu jusque-là, ce qui n'est pas
+   * garanti — mieux vaut la retenir quand elle se fait.
+   */
+  onSelect?: (e: React.SyntheticEvent<HTMLTextAreaElement>) => void;
+  /** Le pointeur se pose dans le champ — l'utilisateur va choisir lui-même. */
+  onMouseDown?: (e: React.MouseEvent<HTMLTextAreaElement>) => void;
+  /** Quelque chose arrive du presse-papiers, qui n'est pas forcément du texte. */
+  onPaste?: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
+  onDrop?: (e: React.DragEvent<HTMLTextAreaElement>) => void;
+  ariaLabel?: string;
+  className?: string;
+  /**
+   * Ajouté aux DEUX couches — jamais à une seule.
+   *
+   * Elles doivent se superposer au pixel près (voir l'en-tête de ce fichier) :
+   * un remplissage posé sur la zone de saisie et pas sur la couche colorée
+   * décalerait le texte de l'une par rapport à l'autre. Sert à aligner le champ
+   * sur le reste d'une page, comme dans l'éditeur d'article du wiki.
+   *
+   * Posé en dernier, il l'emporte donc sur les classes de ce composant : c'est
+   * ainsi qu'un champ sans cadre neutralise le halo de focus, lequel n'a de
+   * sens qu'autour d'un champ qui en a un.
+   */
+  layerClassName?: string;
 }) {
   const [highlighted, setHighlighted] = React.useState<string | null>(null);
   const preRef = React.useRef<HTMLPreElement>(null);
@@ -67,17 +129,31 @@ export function CodeEditor({
   }
 
   const layer =
-    "absolute inset-0 m-0 overflow-auto rounded-md p-3 font-mono text-xs leading-relaxed " +
-    "whitespace-pre-wrap break-words";
+    "absolute inset-0 m-0 rounded-md p-3 font-mono text-xs leading-relaxed " +
+    "whitespace-pre-wrap break-words " +
+    (autoGrow ? "overflow-hidden" : "overflow-auto");
 
   return (
     <div
       className={cn(
         "relative rounded-md border bg-transparent",
+        fill && "h-full",
         ariaInvalid && "border-destructive",
+        className,
       )}
-      style={{ height: `calc(${rows} * 1.625 * 0.75rem + 1.5rem)` }}
+      style={fill || autoGrow ? undefined : { height: `calc(${rows} * 1.625 * 0.75rem + 1.5rem)` }}
     >
+      {autoGrow && (
+        // La règle de la boîte : même texte, mêmes classes, mais en flux.
+        // Le saut de ligne final compte — sans lui, un texte qui s'achève par
+        // une ligne vide donnerait une boîte trop courte d'une ligne.
+        <pre
+          aria-hidden
+          className={cn(layer, "pointer-events-none static", highlighted && "invisible", layerClassName)}
+        >
+          {value + "\n"}
+        </pre>
+      )}
       {highlighted ? (
         <div
           ref={preRef as unknown as React.Ref<HTMLDivElement>}
@@ -86,20 +162,27 @@ export function CodeEditor({
           // lui-même — ce n'est pas du balisage fourni par l'utilisateur. Son
           // fond est déjà transparent (voir highlightCode) : c'est celui du
           // tiroir qui reste visible.
-          className={cn(layer, "pointer-events-none [&_pre]:m-0 [&_pre]:whitespace-pre-wrap [&_pre]:break-words [&_code]:break-words")}
+          className={cn(layer, "pointer-events-none [&_pre]:m-0 [&_pre]:whitespace-pre-wrap [&_pre]:break-words [&_code]:break-words", layerClassName)}
           dangerouslySetInnerHTML={{ __html: highlighted }}
         />
       ) : (
-        <pre ref={preRef} aria-hidden className={cn(layer, "pointer-events-none text-foreground")}>
+        <pre ref={preRef} aria-hidden className={cn(layer, "pointer-events-none text-foreground", layerClassName)}>
           {value}
         </pre>
       )}
       <textarea
         id={id}
+        ref={textareaRef}
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onKeyDown={onKeyDown}
+        onSelect={onSelect}
+        onMouseDown={onMouseDown}
+        onPaste={onPaste}
+        onDrop={onDrop}
         onScroll={syncScroll}
         placeholder={placeholder}
+        aria-label={ariaLabel}
         spellCheck={false}
         aria-invalid={ariaInvalid}
         className={cn(
@@ -107,6 +190,7 @@ export function CodeEditor({
           "resize-none border-0 bg-transparent text-transparent caret-foreground outline-none",
           "placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring",
           "selection:bg-primary/30 selection:text-transparent",
+          layerClassName,
         )}
       />
     </div>

@@ -14,6 +14,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { afterMenuClose } from "@/components/ui/after-menu-close";
 import { markdownToPlainText } from "@/lib/markdownToPlainText";
 
 /** Menu "…" des actions sur un message (copier / modifier / épingler / supprimer). */
@@ -98,7 +99,7 @@ export function MessageActionsDropdown({
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="text-destructive focus:text-destructive"
-              onClick={onRequestDelete}
+              onClick={onRequestDelete && afterMenuClose(onRequestDelete)}
             >
               <Trash2 className="mr-2 h-3.5 w-3.5" />
               {tCommon("delete")}
