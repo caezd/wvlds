@@ -79,10 +79,33 @@ function estEnveloppee(v: string, start: number, end: number, marqueur: string):
   );
 }
 
+/**
+ * Rétrécit la sélection sur son texte utile.
+ *
+ * Un double-clic sur un mot emporte l'espace qui le suit — c'est le
+ * comportement de tous les navigateurs. Or `**mot **` n'est pas du gras :
+ * CommonMark refuse un délimiteur fermant précédé d'une espace, et laisse
+ * alors les étoiles en toutes lettres. Le geste le plus courant qui soit —
+ * double-cliquer un mot, cliquer « Gras » — ne produisait donc rien, et
+ * paraissait ignorer la sélection.
+ *
+ * Les espaces restent à l'extérieur des marqueurs. Une sélection qui n'est QUE
+ * de l'espace n'a pas de texte utile : on la laisse telle quelle plutôt que de
+ * la réduire à un point.
+ */
+function sansLesBords(v: string, start: number, end: number): [number, number] {
+  let debut = start;
+  let fin = end;
+  while (debut < fin && /\s/.test(v[debut])) debut++;
+  while (fin > debut && /\s/.test(v[fin - 1])) fin--;
+  return debut === fin ? [start, end] : [debut, fin];
+}
+
 /** Pose le marqueur autour de la sélection, ou le retire s'il y est déjà. */
 export function basculerEnveloppe(champ: ChampTexte, marqueur: string): ChampTexte {
-  const { value, start, end } = champ;
+  const { value } = champ;
   const n = marqueur.length;
+  const [start, end] = sansLesBords(value, champ.start, champ.end);
 
   if (estEnveloppee(value, start, end, marqueur)) {
     return {
@@ -179,7 +202,10 @@ export function basculerListeNumerotee(champ: ChampTexte): ChampTexte {
  * était sélectionné, le texte quand il ne l'était pas.
  */
 export function insererLien(champ: ChampTexte, texteParDefaut: string): ChampTexte {
-  const { value, start, end } = champ;
+  const { value } = champ;
+  // Même égard qu'aux enveloppes : l'espace emporté par un double-clic reste
+  // hors du libellé, où il ne ferait qu'allonger la zone cliquable.
+  const [start, end] = sansLesBords(value, champ.start, champ.end);
   const vide = start === end;
   const texte = vide ? texteParDefaut : value.slice(start, end);
 

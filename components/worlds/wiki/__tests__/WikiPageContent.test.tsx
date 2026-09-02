@@ -885,6 +885,22 @@ describe("WikiPageContent — ceinture de mise en forme", () => {
     expect(champ).toHaveValue("Un **mot** ici");
   });
 
+  it("laisse dehors l'espace emporté par un double-clic", async () => {
+    // Le geste le plus courant : double-cliquer un mot — ce qui sélectionne
+    // l'espace qui le suit — puis cliquer « Gras ». `**mot **` n'étant pas du
+    // gras pour CommonMark, les étoiles restaient affichées telles quelles et
+    // rien ne changeait à l'écran.
+    renderEnEdition();
+    const champ = (await champArticle()) as HTMLTextAreaElement;
+    await waitFor(() => expect(champ).toHaveValue("Un mot ici"));
+    champ.focus();
+    champ.setSelectionRange(3, 7);
+
+    await userEvent.click(screen.getByRole("button", { name: "Gras" }));
+
+    expect(champ).toHaveValue("Un **mot** ici");
+  });
+
   it("laisse la sélection sur le mot, prête pour un second format", async () => {
     // Sans cela, enchaîner gras puis italique appliquerait le second au vide.
     renderEnEdition();

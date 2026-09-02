@@ -37,6 +37,29 @@ describe("basculerEnveloppe", () => {
     expect(rendu(basculerEnveloppe(champ("un «mot» ici"), "**"))).toBe("un **«mot»** ici");
   });
 
+  it("laisse dehors l'espace qu'un double-clic emporte", () => {
+    // Double-cliquer un mot sélectionne l'espace qui le suit, dans tous les
+    // navigateurs. `**mot **` n'est pas du gras — CommonMark refuse un
+    // délimiteur fermant précédé d'une espace — et les étoiles restaient
+    // affichées telles quelles : le geste le plus courant ne donnait rien.
+    expect(rendu(basculerEnveloppe(champ("un «mot »ici"), "**"))).toBe("un **«mot»** ici");
+  });
+
+  it("laisse dehors l'espace de tête aussi", () => {
+    expect(rendu(basculerEnveloppe(champ("un« mot» ici"), "**"))).toBe("un **«mot»** ici");
+  });
+
+  it("dénude un passage sélectionné avec ses marqueurs et une espace", () => {
+    // Sans le rétrécissement, l'espace finale empêchait de reconnaître les
+    // marqueurs embrassés : on en ajoutait une seconde paire au lieu de les
+    // retirer.
+    expect(rendu(basculerEnveloppe(champ("un «**mot** »ici"), "**"))).toBe("un «mot» ici");
+  });
+
+  it("ne réduit pas à rien une sélection toute blanche", () => {
+    expect(rendu(basculerEnveloppe(champ("un« »mot"), "**"))).toBe("un**« »**mot");
+  });
+
   it("retire les marqueurs déjà posés autour", () => {
     expect(rendu(basculerEnveloppe(champ("un **«mot»** ici"), "**"))).toBe("un «mot» ici");
   });
@@ -103,6 +126,10 @@ describe("basculerListeNumerotee", () => {
 });
 
 describe("insererLien", () => {
+  it("laisse dehors l'espace qu'un double-clic emporte", () => {
+    expect(rendu(insererLien(champ("un «mot »ici"), "texte"))).toBe("un [mot](«») ici");
+  });
+
   it("met le curseur sur l'adresse quand le texte est sélectionné", () => {
     expect(rendu(insererLien(champ("voir «ici»"), "texte"))).toBe("voir [ici](«»)");
   });

@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-09 ──────────────────────────────────────────────────────────────
   {
     date: "2026-09",
+    tag: "Correctif",
+    text: "Mettre un mot en gras, en italique ou en souligné depuis la barre d’outils du wiki ne donnait rien quand on l’avait choisi d’un double-clic : ce geste emporte l’espace qui suit le mot, et « **mot ** » n’est pas du gras — les étoiles restaient affichées telles quelles. Les espaces sélectionnées restent désormais à l’extérieur des marqueurs."
+  },
+  {
+    date: "2026-09",
     tag: "Nouveauté",
     text: "« Signaler un problème » apparaît dans votre menu, sous le journal des modifications. Il ouvre une page entière, pas une fenêtre : on y écrit à l’aise depuis un téléphone, sans qu’un geste de côté referme tout ce qu’on venait de taper.\nDécrivez ce qui s’est passé, joignez jusqu’à trois captures d’écran, c’est tout : la page où vous étiez et votre navigateur partent avec le rapport — ce sont les deux informations sans lesquelles un problème est rarement reproductible, et personne ne pense à les donner. Vos captures ne sont lisibles que par vous et par l’équipe.\nQuand quelque chose a réellement planté, votre navigateur en garde la trace : le formulaire vous la montre et vous propose de la joindre. C’est souvent ce qui permet de réparer, et c’est exactement ce qu’une description ne peut pas dire — vous restez libre de ne pas l’envoyer.\nVos captures sont limitées à 5 Mo et aux formats d’image courants, et un même compte ne peut plus envoyer qu’une poignée de signalements par heure — de quoi ne jamais gêner quelqu’un de bonne foi, mais assez pour que le service ne puisse pas être noyé.\nLa même page récapitule vos signalements passés et où en est leur traitement.\nCôté administration, une file de tri les rassemble, captures comprises, une pastille sur l’accès au panneau annonce ce qu’il reste à trier, et chaque signalement se filtre par statut et porte une note de traitement."
   },
