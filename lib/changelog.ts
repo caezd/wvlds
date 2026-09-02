@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Correctif",
+    text: "Se déconnecter affichait « Session expirée — rechargez la page », un message destiné aux sessions perdues, qui suivait ensuite jusqu’à la page de connexion. L’application ne distinguait pas un départ voulu d’un jeton expiré : les deux produisent le même événement. Elle le sait maintenant, et se tait quand c’est vous qui partez."
+  },
+  {
+    date: "2026-09",
+    tag: "Correctif",
     text: "Le bouton de déconnexion pouvait ne rien faire du tout, sans message ni erreur. Avant de quitter un compte, l’application détache l’appareil des notifications poussées — et elle attendait pour cela un service worker qui ne vient jamais dans un navigateur qui n’en a pas, comme en navigation privée. Ce ménage a maintenant un délai, au-delà duquel la déconnexion passe outre."
   },
   {

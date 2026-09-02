@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { detacherAppareilDuPush } from "@/lib/push";
+import { annoncerDeconnexion } from "@/lib/deconnexionVoulue";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -76,6 +77,10 @@ export function UserMenuButton({
     // serveur continuerait d'envoyer les notifications de ce compte vers ce
     // navigateur, y compris à la personne qui s'y connectera ensuite.
     await detacherAppareilDuPush(supabase);
+    // AVANT `signOut`, qui émet l'événement aussitôt : sans cela, le
+    // surveillant de session prendrait ce départ voulu pour une session
+    // perdue et annoncerait « Session expirée » à qui vient de partir.
+    annoncerDeconnexion();
     await supabase.auth.signOut();
     router.push("/auth/login");
     router.refresh();
