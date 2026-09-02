@@ -34,7 +34,7 @@ import { violations, rapport } from "./axe";
 // ──────────────────────────────────────────────────────────────────────────
 
 /** Routes simples, sans paramètre. */
-const ROUTES = ["/explore", "/p", "/settings", "/shop", "/changelog", "/quests"];
+const ROUTES = ["/explore", "/p", "/settings", "/shop", "/changelog", "/quests", "/bug-report"];
 
 /** Vues d'un monde : ce sont les écrans les plus riches de l'application. */
 // `catalogue`, `timeline` et `settings` ont été ajoutées après coup : la

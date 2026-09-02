@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { afterMenuClose } from "@/components/ui/after-menu-close";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ChevronsUpDown, Download, KeyRound, LogOut, Scale, ScrollText, Settings, UserRound } from "lucide-react";
+import { Bug, ChevronsUpDown, Download, KeyRound, LogOut, Scale, ScrollText, Settings, UserRound } from "lucide-react";
 import { useGlobalPresence, type PresenceStatus } from "@/components/providers/PresenceProvider";
 import { cn } from "@/lib/utils";
 import { UserProfileSheet } from "./UserProfileSheet";
@@ -181,6 +181,20 @@ export function UserMenuButton({
           <DropdownMenuItem onClick={() => router.push("/changelog")}>
             <ScrollText className="mr-2 size-4" />
             {tNav("changelog")}
+          </DropdownMenuItem>
+          {/* La page qu'on quitte est celle qu'on vient signaler : une fois sur
+              le formulaire, `window.location` ne désigne plus que lui. Ce menu
+              est le dernier endroit à savoir d'où l'on part. */}
+          <DropdownMenuItem
+            onClick={() =>
+              router.push(
+                "/bug-report?from=" +
+                  encodeURIComponent(window.location.pathname + window.location.search),
+              )
+            }
+          >
+            <Bug className="mr-2 size-4" />
+            {tNav("reportBug")}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => router.push("/legal")}>
             <Scale className="mr-2 size-4" />

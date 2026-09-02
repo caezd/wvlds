@@ -48,6 +48,7 @@
     "icon": "Icono",
     "notFoundOrForbidden": "No se encuentra, o no tiene acceso.",
     "personaNameLength": "El nombre debe tener entre 1 y 40 caracteres.",
+    "bugReportRateLimit": "Ha enviado muchos informes seguidos. Inténtelo de nuevo dentro de una hora; los anteriores sí han llegado.",
     "personaQuotaReached": "Límite alcanzado: {count} personajes por mundo en una cuenta gratuita.",
     "personaNameTaken": "Ya existe un personaje con ese nombre en este mundo.",
     "forbidden": "No tiene los permisos necesarios para esto.",
@@ -97,7 +98,9 @@
     "admin": "Administración",
     "installApp": "Instalar la aplicación",
     "installInstructionsIOS": "Toque el botón Compartir y luego «A la pantalla de inicio».",
-    "installInstructionsOther": "Abra el menú de su navegador (⋮) y luego «Instalar la aplicación»."
+    "installInstructionsOther": "Abra el menú de su navegador (⋮) y luego «Instalar la aplicación».",
+    "bugReportsToTriage": "{count, plural, one {# informe por clasificar} other {# informes por clasificar}}",
+    "reportBug": "Informar de un problema"
   },
   "presence": {
     "online": "En línea",
@@ -810,7 +813,34 @@
     "editItem": "Editar el artículo",
     "shopItemDelete": "Eliminar este artículo",
     "shopItemEdit": "Editar este artículo",
-    "loadError": "La carga falló. Los detalles están en los registros del servidor."
+    "loadError": "La carga falló. Los detalles están en los registros del servidor.",
+    "bugReports": {
+      "title": "Informes",
+      "empty": "Ningún informe.",
+      "status": {
+        "new": "Nuevo",
+        "in_progress": "En curso",
+        "resolved": "Resuelto",
+        "declined": "Descartado"
+      },
+      "statusLabel": "Estado",
+      "clean": "Limpiar las imágenes huérfanas",
+      "cleaning": "Limpiando…",
+      "cleaned": "{count, plural, =0 {Ninguna imagen huérfana que eliminar.} one {# imagen huérfana eliminada.} other {# imágenes huérfanas eliminadas.}}",
+      "filterAll": "Todos",
+      "previous": "Anterior",
+      "next": "Siguiente",
+      "noteLabel": "Nota de tratamiento",
+      "notePlaceholder": "Nota de tratamiento: qué se ha hecho, o por qué se ha descartado este informe.",
+      "clientErrors": "{count, plural, one {# error del navegador} other {# errores del navegador}}",
+      "page": "Página",
+      "browser": "Navegador",
+      "version": "Versión",
+      "deleteTitle": "¿Eliminar este informe?",
+      "deleteDescription": "Se eliminará definitivamente."
+    },
+    "bugReportsCard": "Informes",
+    "bugReportsCardDesc": "Problemas notificados por los usuarios"
   },
   "chatrooms": {
     "newRoom": "Nueva sala",
@@ -1337,5 +1367,25 @@
     "notFoundTitle": "Página no encontrada",
     "notFoundDescription": "Lo sentimos, la página que busca no existe o ya no está disponible.",
     "notFoundHint": "Todo mundo empieza con una página en blanco. La que buscaba parece haberse desvanecido, pero nada le impide crear una nueva."
+  },
+  "bugReport": {
+    "title": "Informar de un problema",
+    "descriptionLabel": "Descripción",
+    "descriptionPlaceholder": "Lo que estaba haciendo, lo que ocurrió.",
+    "attachErrors": "Adjuntar {count, plural, one {# error registrado} other {# errores registrados}} por el navegador.",
+    "send": "Enviar",
+    "sending": "Enviando…",
+    "sent": "Informe enviado.",
+    "tooLong": "Máximo {max} caracteres.",
+    "imagesLabel": "Capturas de pantalla",
+    "imagesHint": "{max} imágenes como máximo.",
+    "addImage": "Añadir una imagen",
+    "mine": "Mis informes",
+    "status": {
+      "new": "Nuevo",
+      "in_progress": "En curso",
+      "resolved": "Resuelto",
+      "declined": "Descartado"
+    }
   }
 }
