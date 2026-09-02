@@ -8,8 +8,16 @@ import { normalizeForSearch } from "@/lib/wikiLinkSuggest";
  * réplique — restait introuvable : une note qu'on ne retrouve pas est une note
  * perdue.
  *
- * Le calcul est pur et sans réseau, comme il l'était : le wiki tient déjà
- * toutes ses pages en mémoire, les fiches les rejoignent.
+ * ── L'index se construit une fois, la recherche le lit ──
+ * Normaliser un texte — décomposition NFD, puis une expression sur chaque
+ * diacritique — coûte bien plus que d'y chercher une sous-chaîne. La première
+ * version le refaisait sur le contenu de CHAQUE page et le corps de CHAQUE
+ * fiche à chaque caractère tapé : plusieurs centaines de kilo-octets retraités
+ * par touche sur un monde fourni. Le texte ne change pas entre deux frappes ;
+ * on le normalise donc quand il change, et seule la requête l'est ensuite.
+ *
+ * Le calcul reste pur et sans réseau : le wiki tient déjà toutes ses pages en
+ * mémoire, les fiches les rejoignent.
  */
 
 export type SearchablePage = {
@@ -26,6 +34,27 @@ export type SearchableNote = {
   body: string;
 };
 
+type IndexedPage = {
+  id: string;
+  content: string;
+  normalizedTitle: string;
+  normalizedContent: string;
+};
+
+type IndexedNote = {
+  id: string;
+  pageId: string;
+  title: string;
+  body: string;
+  normalizedTitle: string;
+  normalizedBody: string;
+};
+
+export type WikiSearchIndex = {
+  pages: IndexedPage[];
+  notes: IndexedNote[];
+};
+
 export type WikiSearchHit = {
   pageId: string;
   /** La fiche trouvée, quand la correspondance vient d'une note. */
@@ -38,6 +67,42 @@ export type WikiSearchHit = {
 const BEFORE = 30;
 const WINDOW = 90;
 
+/**
+ * Prépare pages et fiches à la recherche. À refaire quand elles changent,
+ * jamais quand la requête change.
+ *
+ * Les dossiers en sont écartés d'emblée : ils n'ont rien à ouvrir.
+ */
+export function buildSearchIndex(
+  pages: SearchablePage[],
+  notes: SearchableNote[],
+): WikiSearchIndex {
+  return {
+    pages: pages
+      .filter(p => !p.is_folder)
+      .map(p => ({
+        id: p.id,
+        content: p.content ?? "",
+        normalizedTitle: normalizeForSearch(p.title),
+        normalizedContent: normalizeForSearch(p.content ?? ""),
+      })),
+    notes: notes.map(n => ({
+      id: n.id,
+      pageId: n.page_id,
+      title: n.title,
+      body: n.body,
+      normalizedTitle: normalizeForSearch(n.title),
+      normalizedBody: normalizeForSearch(n.body),
+    })),
+  };
+}
+
+/**
+ * L'extrait se prend dans le texte d'origine, à l'index trouvé dans le texte
+ * normalisé. Les deux coïncident tant que la normalisation ne change pas la
+ * longueur — c'est le cas : elle abaisse la casse et retire des diacritiques
+ * décomposés, sans insérer ni fusionner de caractère de base.
+ */
 function excerptAround(text: string, at: number): string {
   const start = Math.max(0, at - BEFORE);
   return (start > 0 ? "…" : "") + text.slice(start, start + WINDOW).trim() + "…";
@@ -51,40 +116,34 @@ function excerptAround(text: string, at: number): string {
  * qui en parle. À rang égal, l'ordre de l'arbre puis celui des fiches
  * l'emportent — c'est celui qu'on a sous les yeux.
  */
-export function searchWiki(
-  pages: SearchablePage[],
-  notes: SearchableNote[],
-  query: string,
-): WikiSearchHit[] {
+export function searchWiki(index: WikiSearchIndex, query: string): WikiSearchHit[] {
   const q = normalizeForSearch(query.trim());
   if (!q) return [];
 
-  const parTitre: WikiSearchHit[] = [];
-  const parCorps: WikiSearchHit[] = [];
+  const byTitle: WikiSearchHit[] = [];
+  const byBody: WikiSearchHit[] = [];
 
-  for (const page of pages) {
-    if (page.is_folder) continue;
-
-    if (normalizeForSearch(page.title).includes(q)) {
-      parTitre.push({ pageId: page.id, note: null, excerpt: "" });
+  for (const page of index.pages) {
+    if (page.normalizedTitle.includes(q)) {
+      byTitle.push({ pageId: page.id, note: null, excerpt: "" });
       continue;
     }
-    const at = page.content ? normalizeForSearch(page.content).indexOf(q) : -1;
-    if (at !== -1 && page.content) {
-      parCorps.push({ pageId: page.id, note: null, excerpt: excerptAround(page.content, at) });
+    const at = page.normalizedContent.indexOf(q);
+    if (at !== -1) {
+      byBody.push({ pageId: page.id, note: null, excerpt: excerptAround(page.content, at) });
     }
   }
 
-  for (const note of notes) {
-    const entete = { pageId: note.page_id, note: { id: note.id, title: note.title } };
+  for (const note of index.notes) {
+    const head = { pageId: note.pageId, note: { id: note.id, title: note.title } };
 
-    if (normalizeForSearch(note.title).includes(q)) {
-      parTitre.push({ ...entete, excerpt: "" });
+    if (note.normalizedTitle.includes(q)) {
+      byTitle.push({ ...head, excerpt: "" });
       continue;
     }
-    const at = normalizeForSearch(note.body).indexOf(q);
-    if (at !== -1) parCorps.push({ ...entete, excerpt: excerptAround(note.body, at) });
+    const at = note.normalizedBody.indexOf(q);
+    if (at !== -1) byBody.push({ ...head, excerpt: excerptAround(note.body, at) });
   }
 
-  return [...parTitre, ...parCorps];
+  return [...byTitle, ...byBody];
 }

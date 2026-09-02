@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-09 ──────────────────────────────────────────────────────────────
   {
     date: "2026-09",
+    tag: "Performance",
+    text: "La recherche du wiki répond au rythme de la frappe, même sur un monde fourni : elle retraitait tout le texte des pages et des fiches à chaque lettre tapée, elle le prépare maintenant une fois et ne retraite que ce qu’on tape. Mesuré sur trois cents pages et neuf cents fiches : de 36 ms à 0,1 ms par frappe. L’arbre des pages se construit aussi sans repasser sur toutes les pages pour chacune."
+  },
+  {
+    date: "2026-09",
     tag: "Wiki",
     text: "La recherche du wiki fouille maintenant les fiches de notes, et pas seulement les articles. Une fiche trouvée se nomme elle-même, la page devient le chemin pour y aller, et la choisir ouvre la colonne sur la bonne fiche, dépliée. Tout ce qu’on rangeait dans cette colonne était jusqu’ici introuvable."
   },

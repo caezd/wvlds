@@ -86,7 +86,7 @@ import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import { useColumnResize } from "@/hooks/useColumnResize";
 import { NO_DISPLACEMENT } from "@/lib/dndSort";
 import { columnFits } from "@/lib/wikiSideColumn";
-import { searchWiki, type SearchableNote } from "@/lib/wikiSearch";
+import { buildSearchIndex, searchWiki, type SearchableNote } from "@/lib/wikiSearch";
 import { WIKI_BUCKET, wikiImagePrefix } from "@/lib/storagePaths";
 import { MEDIA, useMediaQuery } from "@/hooks/useMediaQuery";
 import type { WorldLexiconTerm } from "@/types/worlds";
@@ -721,10 +721,31 @@ export function WorldWiki({
   }, [editMode]);
 
   // ── Helpers ──────────────────────────────────────────────────
+  /**
+   * Les pages par identifiant, et les enfants par parent, déjà triés.
+   *
+   * L'arbre se rendait en O(n²) : chaque nœud filtrait le tableau entier pour
+   * trouver ses enfants, et chaque fil d'Ariane le parcourait à chaque marche.
+   * Invisible à cinquante pages, pas à cinq cents. Les deux index se calculent
+   * une fois par changement de `pages`, et chaque lecture devient directe.
+   */
+  const pageById = React.useMemo(
+    () => new Map((pages ?? []).map(p => [p.id, p])),
+    [pages],
+  );
+  const childrenByParent = React.useMemo(() => {
+    const map = new Map<string | null, WikiPage[]>();
+    for (const p of pages ?? []) {
+      const siblings = map.get(p.parent_id) ?? [];
+      siblings.push(p);
+      map.set(p.parent_id, siblings);
+    }
+    for (const siblings of map.values()) siblings.sort((a, b) => a.sort_index - b.sort_index);
+    return map;
+  }, [pages]);
+
   function childrenOf(parentId: string | null): WikiPage[] {
-    return (pages ?? [])
-      .filter(p => p.parent_id === parentId)
-      .sort((a, b) => a.sort_index - b.sort_index);
+    return childrenByParent.get(parentId) ?? [];
   }
 
   function toggleFolder(id: string) {
@@ -876,10 +897,12 @@ export function WorldWiki({
   /** Ids des dossiers ancêtres d'une page, du plus proche au plus ancien. */
   function ancestorIdsOf(pageId: string): string[] {
     const ids: string[] = [];
-    let parentId = pages?.find(p => p.id === pageId)?.parent_id ?? null;
-    while (parentId) {
+    let parentId = pageById.get(pageId)?.parent_id ?? null;
+    // Borné par le nombre de pages : un arbre incohérent le temps d'un rendu ne
+    // doit pas faire tourner cette remontée sans fin.
+    while (parentId && ids.length <= pageById.size) {
       ids.push(parentId);
-      parentId = pages?.find(p => p.id === parentId)?.parent_id ?? null;
+      parentId = pageById.get(parentId)?.parent_id ?? null;
     }
     return ids;
   }
@@ -888,7 +911,7 @@ export function WorldWiki({
   function ancestorsOf(page: WikiPage): WikiPage[] {
     return ancestorIdsOf(page.id)
       .reverse()
-      .map(id => pages?.find(p => p.id === id))
+      .map(id => pageById.get(id))
       .filter((p): p is WikiPage => !!p);
   }
 
@@ -995,12 +1018,19 @@ export function WorldWiki({
     setSearchQuery("");
   }
 
+  // Normalisé une fois par changement de pages ou de fiches — jamais par
+  // frappe. Voir `lib/wikiSearch.ts`.
+  const searchIndex = React.useMemo(
+    () => buildSearchIndex(pages ?? [], notes),
+    [pages, notes],
+  );
+
   const searchResults = React.useMemo<WikiSearchResult[] | null>(() => {
     if (!searchQuery.trim()) return null;
 
-    return searchWiki(pages ?? [], notes, searchQuery)
+    return searchWiki(searchIndex, searchQuery)
       .map((hit): WikiSearchResult | null => {
-        const page = pages?.find(p => p.id === hit.pageId);
+        const page = pageById.get(hit.pageId);
         if (!page) return null;
         return {
           page,
@@ -1011,7 +1041,7 @@ export function WorldWiki({
       })
       .filter((r): r is WikiSearchResult => r !== null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery, pages, notes]);
+  }, [searchQuery, searchIndex, pageById]);
 
   // ── DnD ──────────────────────────────────────────────────────
   /**
