@@ -31,6 +31,8 @@ export function CodeEditor({
   autoGrow = false,
   textareaRef,
   onKeyDown,
+  onSelect,
+  onMouseDown,
   ariaLabel,
   className,
   layerClassName,
@@ -66,6 +68,16 @@ export function CodeEditor({
    */
   textareaRef?: React.RefObject<HTMLTextAreaElement | null>;
   onKeyDown?: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
+  /**
+   * La sélection a bougé.
+   *
+   * À qui écrit à la place de l'utilisateur : lire `selectionStart` au moment
+   * d'agir suppose que la sélection a survécu jusque-là, ce qui n'est pas
+   * garanti — mieux vaut la retenir quand elle se fait.
+   */
+  onSelect?: (e: React.SyntheticEvent<HTMLTextAreaElement>) => void;
+  /** Le pointeur se pose dans le champ — l'utilisateur va choisir lui-même. */
+  onMouseDown?: (e: React.MouseEvent<HTMLTextAreaElement>) => void;
   ariaLabel?: string;
   className?: string;
   /**
@@ -159,6 +171,8 @@ export function CodeEditor({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={onKeyDown}
+        onSelect={onSelect}
+        onMouseDown={onMouseDown}
         onScroll={syncScroll}
         placeholder={placeholder}
         aria-label={ariaLabel}

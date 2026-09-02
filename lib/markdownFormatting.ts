@@ -101,6 +101,32 @@ function sansLesBords(v: string, start: number, end: number): [number, number] {
   return debut === fin ? [start, end] : [debut, fin];
 }
 
+/**
+ * Sélection sur laquelle agir : celle que porte le champ, ou la dernière
+ * retenue quand le champ n'en a plus.
+ *
+ * Lire `selectionStart` au moment d'agir suppose que la sélection a survécu
+ * depuis le geste de l'utilisateur jusqu'au clic sur le bouton. Elle ne
+ * survit pas toujours : il suffit que quelque chose réécrive la valeur du
+ * champ entre les deux pour que le navigateur replie le curseur, sans que
+ * l'événement `select` en dise rien — et la mise en forme encadrait alors le
+ * vide.
+ *
+ * La dernière sélection retenue, elle, vient de l'utilisateur. On ne s'en sert
+ * que si elle tient encore dans le texte : une sélection d'un texte plus long
+ * n'a plus de sens ici.
+ */
+export function selectionRetenue(
+  duChamp: [number, number],
+  derniere: [number, number],
+  longueur: number,
+): [number, number] {
+  if (duChamp[0] !== duChamp[1]) return duChamp;
+
+  const [debut, fin] = derniere;
+  return debut !== fin && debut >= 0 && fin <= longueur ? derniere : duChamp;
+}
+
 /** Pose le marqueur autour de la sélection, ou le retire s'il y est déjà. */
 export function basculerEnveloppe(champ: ChampTexte, marqueur: string): ChampTexte {
   const { value } = champ;

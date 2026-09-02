@@ -901,6 +901,44 @@ describe("WikiPageContent — ceinture de mise en forme", () => {
     expect(champ).toHaveValue("Un **mot** ici");
   });
 
+  it("garde la sélection même si le champ l'a repliée entre-temps", async () => {
+    // Entre le geste de l'utilisateur et le clic sur le bouton, il suffit que
+    // quelque chose réécrive la valeur du champ pour que le navigateur replie
+    // le curseur — sans que `select` en dise rien. La ceinture encadrait alors
+    // le vide au lieu du texte choisi.
+    renderEnEdition();
+    const champ = (await champArticle()) as HTMLTextAreaElement;
+    await waitFor(() => expect(champ).toHaveValue("Un mot ici"));
+    champ.focus();
+    champ.setSelectionRange(3, 6);
+    fireEvent.select(champ);
+    // Le repliement, tel que le navigateur le produit : sans événement.
+    champ.selectionStart = 0;
+    champ.selectionEnd = 0;
+
+    await userEvent.click(screen.getByRole("button", { name: "Gras" }));
+
+    expect(champ).toHaveValue("Un **mot** ici");
+  });
+
+  it("oublie la sélection dès que l'utilisateur repose son curseur", async () => {
+    // Le revers de la retenue : reposer le curseur ailleurs doit compter. Sans
+    // cela, la ceinture irait rhabiller un mot que l'utilisateur a quitté.
+    renderEnEdition();
+    const champ = (await champArticle()) as HTMLTextAreaElement;
+    await waitFor(() => expect(champ).toHaveValue("Un mot ici"));
+    champ.focus();
+    champ.setSelectionRange(3, 6);
+    fireEvent.select(champ);
+
+    fireEvent.mouseDown(champ);
+    champ.setSelectionRange(10, 10);
+    fireEvent.select(champ);
+    await userEvent.click(screen.getByRole("button", { name: "Gras" }));
+
+    expect(champ).toHaveValue("Un mot ici****");
+  });
+
   it("laisse la sélection sur le mot, prête pour un second format", async () => {
     // Sans cela, enchaîner gras puis italique appliquerait le second au vide.
     renderEnEdition();

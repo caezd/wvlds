@@ -11,7 +11,12 @@ import { SideSheetContent } from "@/components/ui/side-sheet";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import { CodeEditor } from "@/components/ui/code-editor";
 import { StoredImage } from "@/components/ui/stored-image";
-import { appliquerFormat, raccourciDe, type NomFormat } from "@/lib/markdownFormatting";
+import {
+  appliquerFormat,
+  raccourciDe,
+  selectionRetenue,
+  type NomFormat,
+} from "@/lib/markdownFormatting";
 import { ecrireAvecAnnulation } from "@/lib/textareaEdit";
 import { toast } from "sonner";
 import { DB_TEXT_LIMITS } from "@/lib/textLimits";
@@ -144,6 +149,17 @@ export function WikiPageContent({
   const [loadingDraft, setLoadingDraft] = React.useState(false);
   const [draft, setDraft] = React.useState("");
   const champMarkdown = React.useRef<HTMLTextAreaElement>(null);
+  /**
+   * Dernière sélection faite par l'utilisateur dans le champ.
+   *
+   * Retenue au fil du geste plutôt que relue au moment d'agir : voir
+   * `selectionRetenue`.
+   */
+  const derniereSelection = React.useRef<[number, number]>([0, 0]);
+  /** L'utilisateur reprend la main sur la sélection : la retenue est caduque. */
+  function oublierLaSelection() {
+    derniereSelection.current = [0, 0];
+  }
   /** Sélection à reposer une fois la valeur mise en forme rendue. */
   const [selectionAPoser, setSelectionAPoser] = React.useState<[number, number] | null>(null);
   const [showPreview, setShowPreview] = React.useState(false);
@@ -381,8 +397,14 @@ export function WikiPageContent({
     const champ = champMarkdown.current;
     if (!champ) return;
 
+    const [start, end] = selectionRetenue(
+      [champ.selectionStart, champ.selectionEnd],
+      derniereSelection.current,
+      draft.length,
+    );
+
     const suite = appliquerFormat(
-      { value: draft, start: champ.selectionStart, end: champ.selectionEnd },
+      { value: draft, start, end },
       nom,
       tCommon("formatLinkText"),
     );
@@ -391,6 +413,9 @@ export function WikiPageContent({
     // rejoint alors sa pile d'annulation, et `onChange` nous rend la valeur.
     // Sinon seulement, on l'écrit nous-mêmes.
     if (!ecrireAvecAnnulation(champ, suite.value)) handleDraftChange(suite.value);
+    // Retenue tout de suite : enchaîner deux formats ne doit pas dépendre de
+    // l'événement `select` que la repose déclenchera peut-être.
+    derniereSelection.current = [suite.start, suite.end];
     setSelectionAPoser([suite.start, suite.end]);
   }
 
@@ -804,7 +829,24 @@ export function WikiPageContent({
                   value={draft}
                   onChange={handleDraftChange}
                   textareaRef={champMarkdown}
-                  onKeyDown={surToucheDuChamp}
+                  onKeyDown={e => {
+                    // Une frappe ordinaire va déplacer le curseur : ce qui
+                    // était retenu n'a plus cours. Un raccourci, lui, agit SUR
+                    // la sélection retenue et doit la trouver intacte.
+                    if (!e.ctrlKey && !e.metaKey) oublierLaSelection();
+                    surToucheDuChamp(e);
+                  }}
+                  onMouseDown={oublierLaSelection}
+                  onSelect={e => {
+                    const c = e.currentTarget;
+                    // Seule une VRAIE sélection est retenue. Le repli du
+                    // curseur arrive par ce même événement, y compris quand
+                    // l'utilisateur n'y est pour rien — le retenir effacerait
+                    // le geste qu'on cherche justement à garder.
+                    if (c.selectionStart !== c.selectionEnd) {
+                      derniereSelection.current = [c.selectionStart, c.selectionEnd];
+                    }
+                  }}
                   placeholder={t("contentPlaceholder")}
                   ariaLabel={t("contentLabel")}
                   // Sans cadre : le champ est la colonne de texte, pas un

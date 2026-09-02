@@ -9,7 +9,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Correctif",
-    text: "Mettre un mot en gras, en italique ou en souligné depuis la barre d’outils du wiki ne donnait rien quand on l’avait choisi d’un double-clic : ce geste emporte l’espace qui suit le mot, et « **mot ** » n’est pas du gras — les étoiles restaient affichées telles quelles. Les espaces sélectionnées restent désormais à l’extérieur des marqueurs."
+    text: "La barre d’outils du wiki encadre à nouveau le texte choisi. Elle relisait la sélection au moment du clic, or celle-ci ne survit pas toujours jusque-là : les marqueurs se posaient alors sur le vide, en tête d’article. Elle retient désormais la sélection au moment où elle se fait. Deuxième correctif au passage : un mot choisi d’un double-clic emporte l’espace qui le suit, et « **mot ** » n’est pas du gras — les espaces restent maintenant à l’extérieur des marqueurs."
   },
   {
     date: "2026-09",
