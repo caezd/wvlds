@@ -10,6 +10,7 @@ import {
   ArrowUp,
   BookOpenText,
   FolderInput,
+  History,
   PanelLeft,
   PanelLeftClose,
   Check,
@@ -54,6 +55,8 @@ import { WikiPageContent } from "./WikiPageContent";
 import { WorldLexiconManager } from "./WorldLexiconManager";
 import { WikiBreadcrumb } from "./WikiBreadcrumb";
 import { WikiSearchBar, type WikiSearchResult } from "./WikiSearchBar";
+import { WikiTrashDialog } from "./WikiTrashDialog";
+import { WikiRecentList } from "./WikiRecentList";
 import { WikiTemplatePicker } from "./WikiTemplatePicker";
 import { WIKI_TEMPLATE_ICONS, type WikiTemplateId } from "@/lib/wikiTemplates";
 import { toast } from "sonner";
@@ -73,6 +76,7 @@ import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 import { WIKI_FOOTER, WIKI_FOOTER_BUTTON, WIKI_SUBHEADER, WIKI_SUBHEADER_COUNT } from "./wikiSubHeader";
 import { WikiEditModeToggle } from "./WikiEditModeToggle";
 import {
+  descendantIds,
   keyboardMoves,
   afterZoneId,
   pageOfAfterZone,
@@ -119,6 +123,8 @@ export type WikiPage = {
   is_restricted: boolean;
   draft_updated_at: string | null;
   published_at: string | null;
+  /** Posée à la suppression ; la page attend alors dans la corbeille. */
+  deleted_at: string | null;
 };
 
 /** Colonnes chargées en masse — exclut volontairement `draft_content` :
@@ -126,7 +132,7 @@ export type WikiPage = {
  *  pour ne jamais transférer de texte de brouillon à qui ne devrait pas l'avoir. */
 const WIKI_PAGE_COLUMNS =
   "id, world_id, parent_id, title, slug, content, is_folder, sort_index, icon, is_restricted, " +
-  "banner_url, description, draft_updated_at, published_at";
+  "banner_url, description, draft_updated_at, published_at, deleted_at";
 
 /**
  * Première page du wiki dans l'ordre de lecture de l'arbre : on descend les
@@ -491,6 +497,8 @@ export function WorldWiki({
   const [lexiconManagerOpen, setLexiconManagerOpen] = React.useState(false);
   /** Arbre des pages en tiroir, en dessous de `lg`. */
   const [treeOpen, setTreeOpen] = React.useState(false);
+  /** La liste des modifications récentes prend la place de l'arbre. */
+  const [recentOpen, setRecentOpen] = React.useState(false);
 
   // Colonne de navigation repliée. Un confort de lecture propre à chacun : il
   // vit en local, pas en base, comme le pli des catégories de notes.
@@ -605,9 +613,87 @@ export function WorldWiki({
       .from("world_wiki_pages")
       .select(WIKI_PAGE_COLUMNS)
       .eq("world_id", worldId)
+      // La corbeille se lit à part : une page supprimée n'a rien à faire dans
+      // l'arbre, ni dans la recherche, ni au bout d'un lien.
+      .is("deleted_at", null)
       .order("sort_index", { ascending: true });
     if (error) { toast.error(error.message); return; }
     setPages(data as WikiPage[]);
+  }
+
+  // ── Corbeille ─────────────────────────────────────────────────
+  /**
+   * Pages supprimées, lues à l'ouverture de la corbeille seulement.
+   *
+   * Un lecteur n'a pas le droit de les voir (migration 149) et un éditeur n'en
+   * a besoin qu'en l'ouvrant : les charger avec l'arbre coûterait une requête
+   * à chaque visite pour un tiroir qu'on ouvre rarement.
+   */
+  const [trash, setTrash] = React.useState<WikiPage[]>([]);
+  const [trashOpen, setTrashOpen] = React.useState(false);
+
+  async function openTrash() {
+    const { data, error } = await supabase
+      .from("world_wiki_pages")
+      .select(WIKI_PAGE_COLUMNS)
+      .eq("world_id", worldId)
+      .not("deleted_at", "is", null)
+      .order("deleted_at", { ascending: false });
+    if (error) { toast.error(error.message); return; }
+    setTrash((data ?? []) as WikiPage[]);
+    setTrashOpen(true);
+  }
+
+  /**
+   * Ramène une page de la corbeille, avec ce qu'elle contenait.
+   *
+   * Son parent a pu être supprimé ou effacé entre-temps : elle remonte alors
+   * à la racine, où elle est atteignable. Ses propres enfants la suivent tels
+   * quels — ils sont restaurés avec elle.
+   */
+  async function restorePage(page: WikiPage) {
+    const ids = descendantIds(trash, page.id);
+    const orphaned =
+      page.parent_id !== null && !(pages ?? []).some(p => p.id === page.parent_id);
+    const results = await Promise.all(
+      ids.map(id =>
+        supabase
+          .from("world_wiki_pages")
+          .update({
+            deleted_at: null,
+            ...(id === page.id && orphaned ? { parent_id: null } : {}),
+          })
+          .eq("id", id),
+      ),
+    );
+    const failure = results.map(r => r.error).find(Boolean);
+    if (failure) { toast.error(failure.message); return; }
+
+    const back = trash
+      .filter(p => ids.includes(p.id))
+      .map(p => ({
+        ...p,
+        deleted_at: null,
+        parent_id: p.id === page.id && orphaned ? null : p.parent_id,
+      }));
+    setTrash(prev => prev.filter(p => !ids.includes(p.id)));
+    setPages(prev => [...(prev ?? []), ...back]);
+    toast.success(t("restored"));
+  }
+
+  /**
+   * Efface pour de bon : la ligne, ses satellites en cascade, et ses images.
+   *
+   * C'est le seul chemin qui vide le dossier d'images correctement — la purge
+   * automatique (migration 149) laisse volontairement les pages qui en ont.
+   */
+  async function deleteForever(page: WikiPage) {
+    const ids = descendantIds(trash, page.id);
+    const { error } = await supabase.from("world_wiki_pages").delete().eq("id", page.id);
+    if (error) { toast.error(error.message); return; }
+    setTrash(prev => prev.filter(p => !ids.includes(p.id)));
+    void effacerLesImages(ids);
+    toast.success(t("deleted"));
   }
 
   /**
@@ -768,7 +854,14 @@ export function WorldWiki({
     const sort_index = siblings.length;
 
     let slug = slugify(title);
-    const existingSlugs = new Set((pages ?? []).map(p => p.slug));
+    // Lus en base et non dans `pages` : une page de la corbeille garde son
+    // slug, et l'index unique (world_id, slug) ne sait pas qu'elle est
+    // supprimée. Un éditeur voit ces lignes-là, la lecture les inclut donc.
+    const { data: taken } = await supabase
+      .from("world_wiki_pages")
+      .select("slug")
+      .eq("world_id", worldId);
+    const existingSlugs = new Set(((taken ?? []) as { slug: string }[]).map(p => p.slug));
     if (existingSlugs.has(slug)) {
       let n = 2;
       while (existingSlugs.has(`${slug}-${n}`)) n++;
@@ -866,28 +959,32 @@ export function WorldWiki({
     if (error) console.error("[WorldWiki] images du wiki", error);
   }
 
+  /**
+   * Envoie une page à la corbeille, avec toute sa descendance.
+   *
+   * Marquée et non retirée : fiches, commentaires et images restent en place,
+   * intacts, jusqu'à ce qu'un éditeur la restaure ou l'efface pour de bon.
+   * Supprimer un dossier de trente pages par erreur était sans retour ; il ne
+   * l'est plus.
+   */
   async function deletePage(page: WikiPage) {
-    const { error } = await supabase
-      .from("world_wiki_pages")
-      .delete()
-      .eq("id", page.id);
-    if (error) { toast.error(error.message); return; }
+    if (!pages) return;
+    const ids = descendantIds(pages, page.id);
+    const now = new Date().toISOString();
 
-    const toDelete = new Set<string>();
-    function collect(id: string) {
-      toDelete.add(id);
-      (pages ?? []).filter(p => p.parent_id === id).forEach(p => collect(p.id));
-    }
-    collect(page.id);
+    const results = await Promise.all(
+      ids.map(id =>
+        supabase.from("world_wiki_pages").update({ deleted_at: now }).eq("id", id),
+      ),
+    );
+    const failure = results.map(r => r.error).find(Boolean);
+    if (failure) { toast.error(failure.message); return; }
 
-    setPages(prev => prev?.filter(p => !toDelete.has(p.id)) ?? null);
-    if (selectedId && toDelete.has(selectedId)) setSelectedId(null);
-    // Après la suppression en base, et sans l'attendre : l'utilisateur n'a pas
-    // à patienter pour un ménage qui ne le regarde pas. La policy de
-    // suppression ne dépend pas de la page — elle vient de disparaître — mais
-    // du monde, qui, lui, est toujours là.
-    void effacerLesImages([...toDelete]);
-    toast.success(t("deleted"));
+    const gone = pages.filter(p => ids.includes(p.id)).map(p => ({ ...p, deleted_at: now }));
+    setPages(prev => prev?.filter(p => !ids.includes(p.id)) ?? null);
+    setTrash(prev => [...gone, ...prev]);
+    if (selectedId && ids.includes(selectedId)) setSelectedId(null);
+    toast.success(t("movedToTrash"));
   }
 
   function onPageUpdated(patch: Partial<WikiPage> & { id: string }) {
@@ -1368,6 +1465,19 @@ export function WorldWiki({
         </div>
         <button
           type="button"
+          onClick={() => setRecentOpen(v => !v)}
+          aria-label={recentOpen ? t("showTree") : t("recentPages")}
+          title={recentOpen ? t("showTree") : t("recentPages")}
+          aria-pressed={recentOpen}
+          className={cn(
+            "shrink-0 rounded-md p-1 text-muted-foreground hover:bg-secondary hover:text-foreground",
+            recentOpen && "bg-secondary text-foreground",
+          )}
+        >
+          <History className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
           onClick={() => replierNav(true)}
           aria-label={t("collapsePages")}
           title={t("collapsePages")}
@@ -1382,7 +1492,14 @@ export function WorldWiki({
           <div className="flex items-center justify-center p-6">
             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
           </div>
-        ) : searchQuery.trim() === "" ? (
+        ) : searchQuery.trim() !== "" ? null : recentOpen ? (
+          <WikiRecentList
+            pages={pages}
+            editor={canEdit}
+            selectedId={selectedId}
+            onSelect={selectPageById}
+          />
+        ) : (
           <nav className="flex flex-col gap-0.5 px-1">
             <DndContext
               sensors={sensors}
@@ -1418,7 +1535,7 @@ export function WorldWiki({
               <p className="px-2 py-1 text-xs italic text-muted-foreground">{t("noPages")}</p>
             )}
           </nav>
-        ) : null}
+        )}
       </div>
       {/* Monté seulement en écriture : hors de ce mode il ne restait qu'un
           filet et une bande vide au bas de la colonne. */}
@@ -1449,6 +1566,15 @@ export function WorldWiki({
             className={cn(WIKI_FOOTER_BUTTON, "ml-auto")}
           >
             <Library className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => void openTrash()}
+            aria-label={t("trash")}
+            title={t("trash")}
+            className={WIKI_FOOTER_BUTTON}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
           </button>
         </div>
       )}
@@ -1549,6 +1675,14 @@ export function WorldWiki({
           if (confirmDelete) void deletePage(confirmDelete);
           setConfirmDelete(null);
         }}
+      />
+
+      <WikiTrashDialog
+        open={trashOpen}
+        onOpenChange={setTrashOpen}
+        pages={trash}
+        onRestore={page => void restorePage(page)}
+        onDeleteForever={page => void deleteForever(page)}
       />
 
       <WorldLexiconManager

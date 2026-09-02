@@ -91,6 +91,7 @@ const BASE_PAGE: WikiPage = {
   description: null,
   draft_updated_at: null,
   published_at: null,
+  deleted_at: null,
 };
 
 afterEach(() => {

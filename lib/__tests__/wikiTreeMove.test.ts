@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  descendantIds,
   keyboardMoves,
   isInSubtree,
   afterZoneId,
@@ -260,5 +261,25 @@ describe("keyboardMoves", () => {
       expect(plan, nom).not.toBeNull();
       expect(plan!.length, nom).toBeGreaterThan(0);
     }
+  });
+});
+
+describe("descendantIds", () => {
+  it("rend la page d'abord, puis toute sa descendance", () => {
+    // Supprimer un dossier emporte ce qu'il contient ; le restaurer doit
+    // ramener la même chose.
+    expect(descendantIds(WIKI, "Lieux")).toEqual(["Lieux", "Forêt", "Ville"]);
+  });
+
+  it("ne rend qu'elle-même pour une page sans enfant", () => {
+    expect(descendantIds(WIKI, "Accueil")).toEqual(["Accueil"]);
+  });
+
+  it("s'arrête devant une boucle de parenté", () => {
+    const loop: TreeNode[] = [
+      { id: "a", parent_id: "b", is_folder: true, sort_index: 0 },
+      { id: "b", parent_id: "a", is_folder: true, sort_index: 0 },
+    ];
+    expect(descendantIds(loop, "a").length).toBeLessThanOrEqual(3);
   });
 });

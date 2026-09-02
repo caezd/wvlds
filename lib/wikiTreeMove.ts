@@ -138,6 +138,25 @@ export function keyboardMoves(
 }
 
 /**
+ * La page et toute sa descendance, la page d'abord.
+ *
+ * Supprimer un dossier emporte ce qu'il contient ; le restaurer doit ramener
+ * la même chose. Les deux gestes ont besoin de la même liste.
+ */
+export function descendantIds(pages: TreeNode[], rootId: string): string[] {
+  const ids: string[] = [];
+  const queue = [rootId];
+  // Borné par le nombre de pages : un arbre incohérent le temps d'un rendu ne
+  // doit pas faire tourner ce parcours sans fin.
+  while (queue.length && ids.length <= pages.length) {
+    const id = queue.shift()!;
+    ids.push(id);
+    for (const p of pages) if (p.parent_id === id) queue.push(p.id);
+  }
+  return ids;
+}
+
+/**
  * Écritures d'un glisser-déposer, ou `null` quand le geste ne change rien.
  *
  * Ne renumérote que la liste d'arrivée. Celle de départ garde un trou dans ses

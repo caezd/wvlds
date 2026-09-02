@@ -294,6 +294,7 @@ describe("WorldWiki — création depuis un modèle", () => {
       description: null,
       draft_updated_at: "2026-01-01T00:00:00.000Z",
       published_at: null,
+  deleted_at: null,
     };
     const templateContent =
       "## Apparence\n\n## Personnalité\n\n## Histoire\n\n## Relations\n\n## Objectifs\n\n## Notes";
@@ -302,6 +303,7 @@ describe("WorldWiki — création depuis un modèle", () => {
         { data: [], error: null }, // load() initial (pages)
         { data: [], error: null },     // fiches de notes du monde
         { data: [], error: null }, // load() initial (lexique)
+        { data: [], error: null }, // slugs du monde, lus avant d'insérer
         { data: insertedPage, error: null },
         { data: [], error: null }, // annotations de la page, lues à son montage
         { data: { draft_content: templateContent }, error: null },
@@ -556,6 +558,7 @@ describe("firstPageOf", () => {
       description: null,
       draft_updated_at: null,
       published_at: null,
+  deleted_at: null,
       ...over,
     };
   }
@@ -661,13 +664,12 @@ describe("WorldWiki — suppression d'une page", () => {
     await waitFor(() => expect(document.body.style.pointerEvents).not.toBe("none"));
   });
 
-  it("emporte les images du dossier de la page supprimée", async () => {
-    // Le rangement par `world-<id>/page-<id>/` n'a d'intérêt que si quelqu'un
-    // s'en sert : c'est ici que la suppression devient possible. Sans cela les
-    // fichiers restaient à jamais, payés et introuvables.
+  it("envoie la page à la corbeille au lieu de l'effacer", async () => {
+    // Supprimer était sans retour : ligne effacée, cascade sur la descendance,
+    // et depuis peu le dossier d'images vidé dans la foulée. La page est
+    // désormais MARQUÉE, avec toute sa descendance, et rien n'est détruit.
     const mock = createSupabaseMock({
       results: [{ data: [PAGE, FOLDER, NESTED_PAGE], error: null }],
-      storageListResult: [{ name: "aa.webp" }],
     });
     vi.mocked(createClient).mockReturnValue(mock.client as never);
     const user = userEvent.setup();
@@ -679,8 +681,45 @@ describe("WorldWiki — suppression d'une page", () => {
     await user.click(await screen.findByRole("menuitem", { name: "Supprimer" }));
     await user.click(await screen.findByRole("button", { name: "Supprimer" }));
 
-    // Le dossier ET celui de la page qu'il contient : supprimer un dossier
-    // emporte sa descendance, donc les images de toute la descendance.
+    await waitFor(() => {
+      const marquees = mock.buildersFor("world_wiki_pages")
+        .flatMap(b => b.update.mock.calls.map(c => c[0]))
+        .filter(patch => "deleted_at" in patch);
+      // Le dossier ET la page qu'il contient.
+      expect(marquees).toHaveLength(2);
+    });
+    expect(mock.buildersFor("world_wiki_pages").some(b => b.delete.mock.calls.length > 0))
+      .toBe(false);
+    expect(mock.storageRemove).not.toHaveBeenCalled();
+    // L'arbre ne la montre plus.
+    expect(screen.queryByText("Lieux")).toBeNull();
+  });
+
+  it("efface pour de bon depuis la corbeille, images comprises", async () => {
+    // C'est le seul chemin qui vide le dossier d'images correctement : la
+    // purge automatique laisse volontairement les pages qui en ont.
+    const supprimee = { ...FOLDER, deleted_at: "2026-09-01T00:00:00.000Z" };
+    const mock = createSupabaseMock({
+      results: [
+        { data: [], error: null },          // load() initial : aucune page vivante
+        { data: [], error: null },          // fiches de notes du monde
+        { data: [], error: null },          // lexique
+        { data: [supprimee, { ...NESTED_PAGE, deleted_at: supprimee.deleted_at }], error: null }, // la corbeille
+        { data: null, error: null },        // l'effacement
+      ],
+      storageListResult: [{ name: "aa.webp" }],
+    });
+    vi.mocked(createClient).mockReturnValue(mock.client as never);
+    const user = userEvent.setup();
+    render(<WorldWiki worldId="w1" canEdit />);
+
+    await activerModification(user);
+    await user.click(screen.getByRole("button", { name: "Corbeille" }));
+    await user.click(await screen.findByRole("button", { name: /Supprimer définitivement — Lieux/ }));
+    await user.click(await screen.findByRole("button", { name: "Supprimer définitivement" }));
+
+    // Le dossier ET la page qu'il contenait : effacer un dossier emporte sa
+    // descendance, donc les images de toute la descendance.
     await waitFor(() => expect(mock.storageList).toHaveBeenCalledTimes(2));
     expect(mock.storageList.mock.calls.map(([dossier]) => dossier)).toEqual([
       "world-w1/page-f1",
@@ -690,6 +729,34 @@ describe("WorldWiki — suppression d'une page", () => {
       "world-w1/page-f1/aa.webp",
       "world-w1/page-p2/aa.webp",
     ]);
+  });
+
+  it("restaure une page de la corbeille dans l'arbre", async () => {
+    const supprimee = { ...PAGE, deleted_at: "2026-09-01T00:00:00.000Z" };
+    const mock = createSupabaseMock({
+      results: [
+        { data: [FOLDER], error: null },    // load() initial (pages)
+        { data: [], error: null },          // fiches de notes du monde
+        { data: [], error: null },          // lexique
+        { data: [supprimee], error: null }, // la corbeille
+        { data: null, error: null },        // la restauration
+      ],
+    });
+    vi.mocked(createClient).mockReturnValue(mock.client as never);
+    const user = userEvent.setup();
+    render(<WorldWiki worldId="w1" canEdit />);
+
+    await activerModification(user);
+    await user.click(screen.getByRole("button", { name: "Corbeille" }));
+    await user.click(await screen.findByRole("button", { name: /Restaurer — Accueil/ }));
+
+    await waitFor(() => {
+      const patch = mock.buildersFor("world_wiki_pages")
+        .flatMap(b => b.update.mock.calls.map(c => c[0]))
+        .find(p => "deleted_at" in p);
+      expect(patch).toEqual({ deleted_at: null });
+    });
+    expect(await dansLArbre("Accueil")).toBeInTheDocument();
   });
 });
 

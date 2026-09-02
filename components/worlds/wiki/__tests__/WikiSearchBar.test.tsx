@@ -20,6 +20,7 @@ function makePage(id: string, title: string): WikiPage {
     description: null,
     draft_updated_at: null,
     published_at: null,
+  deleted_at: null,
   };
 }
 

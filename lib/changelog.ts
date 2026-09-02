@@ -8,6 +8,16 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-09 ──────────────────────────────────────────────────────────────
   {
     date: "2026-09",
+    tag: "Wiki",
+    text: "Supprimer une page du wiki n’est plus sans retour : elle part dans une corbeille, avec ses fiches, ses commentaires et ses images, d’où un éditeur la restaure ou l’efface pour de bon. Les lecteurs ne la voient plus nulle part. Trente jours plus tard, elle est retirée d’elle-même."
+  },
+  {
+    date: "2026-09",
+    tag: "Wiki",
+    text: "Un bouton de la colonne des pages montre les modifications récentes, de la plus fraîche à la plus ancienne. Un éditeur y voit aussi les brouillons qui attendent d’être publiés ; un lecteur, ce qui a été publié."
+  },
+  {
+    date: "2026-09",
     tag: "Performance",
     text: "La recherche du wiki répond au rythme de la frappe, même sur un monde fourni : elle retraitait tout le texte des pages et des fiches à chaque lettre tapée, elle le prépare maintenant une fois et ne retraite que ce qu’on tape. Mesuré sur trois cents pages et neuf cents fiches : de 36 ms à 0,1 ms par frappe. L’arbre des pages se construit aussi sans repasser sur toutes les pages pour chacune."
   },
