@@ -1,5 +1,5 @@
 -- ============================================================
--- Migration 139 — Journal d'erreurs joint aux rapports de bug
+-- Migration 146 — Journal d'erreurs joint aux rapports de bug
 -- ============================================================
 -- Un signalement dit « ça a planté » ; ce journal dit quoi. Les deux frontières
 -- d'erreur de l'application affichent l'incident puis l'oublient, et le
@@ -14,7 +14,7 @@ ALTER TABLE public.bug_reports
   ADD COLUMN IF NOT EXISTS client_errors JSONB NOT NULL DEFAULT '[]'::jsonb;
 
 -- Le journal est alimenté par le client, comme le reste de la table. Trois
--- bornes, dont aucune n'exige de sous-requête (voir migration 138) : c'est bien
+-- bornes, dont aucune n'exige de sous-requête (voir migration 145) : c'est bien
 -- un tableau, il ne dépasse pas dix entrées, et son poids total reste celui
 -- d'un contexte — pas d'une pièce jointe déguisée.
 ALTER TABLE public.bug_reports

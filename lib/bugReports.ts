@@ -10,7 +10,7 @@ import type { ErreurClient } from "./clientErrorLog";
  */
 
 /** Longueur maximale d'un signalement — miroir de la contrainte en base
- *  (`bug_reports_description_length`, migration 137). */
+ *  (`bug_reports_description_length`, migration 144). */
 export const BUG_REPORT_MAX_LENGTH = 4000;
 
 /** Longueurs des informations capturées automatiquement, bornées comme en base
@@ -19,17 +19,17 @@ export const BUG_REPORT_URL_MAX_LENGTH = 2000;
 export const BUG_REPORT_USER_AGENT_MAX_LENGTH = 500;
 
 /** Trois pièces jointes au plus — miroir de la contrainte
- *  `bug_reports_attachments_bounds` (migration 138). */
+ *  `bug_reports_attachments_bounds` (migration 145). */
 export const BUG_REPORT_MAX_ATTACHMENTS = 3;
 
-/** Miroir des plafonds horaires posés par les policies de la migration 140.
+/** Miroir des plafonds horaires posés par les policies de la migration 147.
  *  Vérifiés aussi côté action : la RLS refuserait par un message de PostgreSQL
  *  que l'appelant afficherait tel quel, alors qu'un refus mérite un code
  *  traduit — la policy reste le filet en dessous. */
 export const BUG_REPORT_MAX_PER_HOUR = 5;
 
 /** Longueur de la note de traitement — miroir de la contrainte en base
- *  (`bug_reports_admin_note_length`, migration 137). */
+ *  (`bug_reports_admin_note_length`, migration 144). */
 export const BUG_REPORT_NOTE_MAX_LENGTH = 4000;
 
 /** Bucket PRIVÉ : une capture montre souvent autre chose que le bug. Les

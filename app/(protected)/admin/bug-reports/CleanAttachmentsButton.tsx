@@ -14,7 +14,7 @@ import { messageErreurAction } from "@/lib/actionErrors";
  *
  * Déclenché à la main plutôt que périodiquement : un nettoyage automatique
  * demanderait une tâche planifiée, donc une décision d'infrastructure. Le
- * plafond horaire de la migration 140 borne déjà l'accumulation, et rien ne
+ * plafond horaire de la migration 147 borne déjà l'accumulation, et rien ne
  * presse — ces fichiers ne coûtent que de l'espace.
  */
 export function CleanAttachmentsButton() {

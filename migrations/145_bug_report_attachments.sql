@@ -1,5 +1,5 @@
 -- ============================================================
--- Migration 138 — Pièces jointes des rapports de bug
+-- Migration 145 — Pièces jointes des rapports de bug
 -- ============================================================
 -- Une capture d'écran vaut souvent mieux qu'un paragraphe. Elle montre aussi
 -- souvent autre chose que le bug : des messages, le profil d'un tiers, une
@@ -15,7 +15,7 @@ ALTER TABLE public.bug_reports
   ADD COLUMN IF NOT EXISTS attachments TEXT[] NOT NULL DEFAULT '{}';
 
 -- Trois pièces au plus, et des chemins de longueur raisonnable : la colonne
--- est alimentée par le client, comme le reste de la table (migration 137).
+-- est alimentée par le client, comme le reste de la table (migration 144).
 --
 -- Passe par une fonction parce qu'une contrainte CHECK n'accepte pas de
 -- sous-requête, et que borner CHAQUE élément d'un tableau en demande une

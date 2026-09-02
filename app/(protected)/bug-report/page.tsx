@@ -36,7 +36,7 @@ export default async function BugReportPage({
   const pageSignalee = pageSignaleeDepuis((await searchParams).from);
 
   // Seulement ce qui est affiché. La ligne entière emporterait le journal
-  // d'erreurs — jusqu'à 25 Ko par signalement (migration 139) — dans le flux
+  // d'erreurs — jusqu'à 25 Ko par signalement (migration 146) — dans le flux
   // RSC de chaque visite, pour des données que cette page ne rend jamais.
   const { data } = userId
     ? await supabase
