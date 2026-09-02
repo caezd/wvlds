@@ -294,7 +294,9 @@ export function BugReportForm({
               <li key={`${e.at}-${e.message}`} className="text-xs leading-snug">
                 <p className="break-words font-mono text-muted-foreground">{e.message}</p>
                 {e.source && (
-                  <p className="break-all font-mono text-[0.65rem] text-muted-foreground/70">
+                  // Pas d'opacité sur ce texte : à cette taille, « /70 » le
+                  // ramenait à 3,87:1 là où WCAG AA en demande 4,5.
+                  <p className="break-all font-mono text-[0.65rem] text-muted-foreground">
                     {e.source}
                   </p>
                 )}
