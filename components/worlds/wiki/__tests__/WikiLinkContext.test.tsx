@@ -24,15 +24,9 @@ vi.mock("@/components/providers/CurrentUserProvider", () => ({
 
 const PAGES = [{ title: "Arkham", slug: "arkham", is_folder: false }];
 
+/** Le strict nécessaire à une bulle : son texte, et à qui elle est. */
 function message(content: string) {
-  return {
-    id: 1,
-    content,
-    metadata: null,
-    created_at: "2026-09-01T00:00:00Z",
-    author_id: "u1",
-    persona_id: null,
-  };
+  return { content, metadata: null };
 }
 
 beforeEach(() => {
@@ -45,7 +39,7 @@ describe("WikiLinkProvider", () => {
   it("rend un [[lien]] de message cliquable, et l'ouvre dans le wiki du monde", async () => {
     render(
       <WikiLinkProvider worldId="w1">
-        <ChatroomMessageBubble message={message("Vous entrez dans [[Arkham]].") as never} />
+        <ChatroomMessageBubble message={message("Vous entrez dans [[Arkham]].")} isMine={false} />
       </WikiLinkProvider>,
     );
 
@@ -58,7 +52,7 @@ describe("WikiLinkProvider", () => {
   it("laisse un lien cassé quand la page n'existe pas dans ce monde", async () => {
     render(
       <WikiLinkProvider worldId="w1">
-        <ChatroomMessageBubble message={message("Vers [[Innsmouth]].") as never} />
+        <ChatroomMessageBubble message={message("Vers [[Innsmouth]].")} isMine={false} />
       </WikiLinkProvider>,
     );
 
@@ -69,7 +63,7 @@ describe("WikiLinkProvider", () => {
   });
 
   it("sans fournisseur, un [[lien]] reste cassé plutôt que de mener nulle part", () => {
-    render(<ChatroomMessageBubble message={message("Vers [[Arkham]].") as never} />);
+    render(<ChatroomMessageBubble message={message("Vers [[Arkham]].")} isMine={false} />);
 
     // Le markdown brut n'est pas résolu : les crochets restent tels quels.
     expect(screen.getByText(/\[\[Arkham\]\]/)).toBeInTheDocument();
