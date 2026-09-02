@@ -29,6 +29,26 @@ export async function blobToWebP(blob: Blob, name = "image", maxWidthOrHeight = 
 }
 
 /** Zone de découpe, en pixels de l'image d'origine — la forme que rend `react-easy-crop`. */
+/**
+ * Première image d'un presse-papiers ou d'un dépôt, s'il y en a une.
+ *
+ * Deux chemins parce que les navigateurs ne s'accordent pas : une capture
+ * d'écran collée arrive dans `items` sans jamais passer par `files`, tandis
+ * qu'un fichier déposé depuis l'explorateur peuple les deux. On regarde donc
+ * `items` d'abord, `files` ensuite.
+ */
+export function premiereImage(source: DataTransfer | null): File | null {
+  if (!source) return null;
+
+  const parItems = Array.from(source.items ?? []).find(
+    (i) => i.kind === "file" && i.type.startsWith("image/"),
+  );
+  const fichier = parItems?.getAsFile() ?? null;
+  if (fichier) return fichier;
+
+  return Array.from(source.files ?? []).find((f) => f.type.startsWith("image/")) ?? null;
+}
+
 export type ZoneDeDecoupe = { x: number; y: number; width: number; height: number };
 
 /**

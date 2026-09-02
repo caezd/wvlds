@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Wiki",
+    text: "Une image se colle ou se dépose directement dans un article du wiki : elle est envoyée, allégée, et écrite à l’endroit du curseur. Il fallait jusqu’ici l’héberger ailleurs et taper son adresse à la main — seule la bannière savait recevoir un fichier."
+  },
+  {
+    date: "2026-09",
+    tag: "Wiki",
     text: "Écrire « [[ » dans un article propose maintenant les pages du monde au fil de la frappe : on choisit aux flèches, Entrée écrit le titre et ferme le lien. Il fallait auparavant connaître le titre exact et le taper sans faute, ce qui coûtait un aller-retour dans l’arbre — et on remettait le lien à plus tard."
   },
   {

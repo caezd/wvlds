@@ -24,7 +24,7 @@ import { cn } from "@/lib/utils";
 import type { createClient } from "@/lib/supabase/client";
 import { resolveWikiLinks } from "@/lib/wikiLinks";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { cropToWebP, type ZoneDeDecoupe } from "@/lib/imageUtils";
+import { cropToWebP, premiereImage, toWebP, type ZoneDeDecoupe } from "@/lib/imageUtils";
 import { ImageCropPicker } from "@/components/ui/image-crop-picker";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { nomDeFichierUnique } from "@/lib/storagePaths";
@@ -189,6 +189,8 @@ export function WikiPageContent({
   const [lastAutosavedAt, setLastAutosavedAt] = React.useState<Date | null>(null);
   const [historyOpen, setHistoryOpen] = React.useState(false);
   const [bannerUploading, setBannerUploading] = React.useState(false);
+  /** Une image collée ou déposée est en cours d'envoi. */
+  const [imageEnEnvoi, setImageEnEnvoi] = React.useState(false);
   /** Image choisie, en attente de recadrage — `null` quand aucun n'est en cours. */
   const [banniereACadrer, setBanniereACadrer] = React.useState<string | null>(null);
   const champBanniere = React.useRef<HTMLInputElement>(null);
@@ -512,6 +514,65 @@ export function WikiPageContent({
     if (!nom) return;
     e.preventDefault();
     appliquerMiseEnForme(nom);
+  }
+
+  /**
+   * Envoie une image et l'écrit dans l'article, là où elle a été déposée.
+   *
+   * Il fallait jusqu'ici héberger l'image ailleurs et taper son adresse à la
+   * main : le seul téléversement du wiki était celui de la bannière. Or une
+   * capture d'écran collée est le geste naturel — le composeur de salon le
+   * fait déjà.
+   *
+   * La position est prise AVANT l'envoi : c'est là que l'utilisateur a visé.
+   * Si le texte a changé entre-temps, l'image atterrit au même rang de
+   * caractères, ce qui peut la décaler de ce qu'on a tapé dans l'intervalle —
+   * un jeton temporaire corrigerait cela, au prix d'une entrée d'annulation
+   * qui ne voudrait rien dire.
+   */
+  async function insererImage(fichier: File, position: number) {
+    const champ = champMarkdown.current;
+    if (!champ) return;
+
+    setImageEnEnvoi(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { toast.error(tCommon("uploadImageError")); return; }
+
+      const converti = await toWebP(fichier);
+      const chemin = `user-${user.id}/world-${worldId}/wiki-${nomDeFichierUnique("webp")}`;
+      const { error } = await supabase.storage
+        .from("worlds")
+        .upload(chemin, converti, { contentType: "image/webp" });
+      if (error) { toast.error(error.message); return; }
+
+      const { data } = supabase.storage.from("worlds").getPublicUrl(chemin);
+      const balise = `![](${data.publicUrl})`;
+      const valeur = champ.value.slice(0, position) + balise + champ.value.slice(position);
+      if (!ecrireAvecAnnulation(champ, valeur)) handleDraftChange(valeur);
+      setSelectionAPoser([position + balise.length, position + balise.length]);
+    } catch (err) {
+      // Pas `err.message` : texte brut de PostgreSQL, il nomme table et policy.
+      console.error("[WikiPageContent]", err);
+      toast.error(tCommon("uploadImageError"));
+    } finally {
+      setImageEnEnvoi(false);
+    }
+  }
+
+  /** Reprend une image du presse-papiers ou d'un dépôt, et laisse passer le reste. */
+  function surImageRecue(
+    e: React.ClipboardEvent<HTMLTextAreaElement> | React.DragEvent<HTMLTextAreaElement>,
+    source: DataTransfer | null,
+  ) {
+    const fichier = premiereImage(source);
+    // Rien d'autre n'est intercepté : coller du texte, déposer une sélection,
+    // tout cela reste au navigateur, qui le fait mieux.
+    if (!fichier) return;
+    e.preventDefault();
+    // Au dépôt, le navigateur a posé le curseur sous le pointeur pendant le
+    // survol : le lire maintenant donne l'endroit visé.
+    void insererImage(fichier, e.currentTarget.selectionStart);
   }
 
   function handleDraftChange(v: string) {
@@ -926,6 +987,8 @@ export function WikiPageContent({
                     surToucheDuChamp(e);
                   }}
                   onMouseDown={oublierLaSelection}
+                  onPaste={e => surImageRecue(e, e.clipboardData)}
+                  onDrop={e => surImageRecue(e, e.dataTransfer)}
                   onSelect={e => {
                     majSuggestion();
                     const c = e.currentTarget;
@@ -950,6 +1013,12 @@ export function WikiPageContent({
                   // dessinait un grand rectangle arrondi autour de l'article.
                   layerClassName="px-4 focus-visible:ring-0 lg:px-6"
                 />
+                {imageEnEnvoi && (
+                  <div className="pointer-events-none absolute right-4 top-2 z-30 flex items-center gap-1.5 rounded-md border border-border-soft bg-popover px-2 py-1 text-xs text-muted-foreground shadow-sm lg:right-6">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    {t("imageUploading")}
+                  </div>
+                )}
                 {suggestion && (
                   <WikiLinkSuggest
                     pages={suggestion.pages}

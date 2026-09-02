@@ -33,6 +33,8 @@ export function CodeEditor({
   onKeyDown,
   onSelect,
   onMouseDown,
+  onPaste,
+  onDrop,
   ariaLabel,
   className,
   layerClassName,
@@ -78,6 +80,9 @@ export function CodeEditor({
   onSelect?: (e: React.SyntheticEvent<HTMLTextAreaElement>) => void;
   /** Le pointeur se pose dans le champ — l'utilisateur va choisir lui-même. */
   onMouseDown?: (e: React.MouseEvent<HTMLTextAreaElement>) => void;
+  /** Quelque chose arrive du presse-papiers, qui n'est pas forcément du texte. */
+  onPaste?: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
+  onDrop?: (e: React.DragEvent<HTMLTextAreaElement>) => void;
   ariaLabel?: string;
   className?: string;
   /**
@@ -173,6 +178,8 @@ export function CodeEditor({
         onKeyDown={onKeyDown}
         onSelect={onSelect}
         onMouseDown={onMouseDown}
+        onPaste={onPaste}
+        onDrop={onDrop}
         onScroll={syncScroll}
         placeholder={placeholder}
         aria-label={ariaLabel}

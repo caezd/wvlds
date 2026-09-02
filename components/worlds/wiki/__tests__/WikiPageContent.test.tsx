@@ -1,7 +1,15 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { createEvent, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createSupabaseMock } from "@/test/supabaseMock";
+
+// Le canevas n'existe pas sous jsdom, et la conversion en WebP n'est pas le
+// sujet : le reste du module — dont `premiereImage`, qui EST le sujet — passe
+// tel quel.
+vi.mock("@/lib/imageUtils", async importOriginal => ({
+  ...(await importOriginal<typeof import("@/lib/imageUtils")>()),
+  toWebP: async (fichier: File) => fichier,
+}));
 
 // Le vrai CodeEditor est monté : c'est un <textarea>, donc sélection, curseur
 // et raccourcis y sont ceux du navigateur. Seule la coloration est écartée —
@@ -837,6 +845,81 @@ describe("WikiPageContent — colonne latérale en mode modification", () => {
     expect(screen.queryByLabelText("Contenu de l'article")).toBeNull();
   });
 });
+
+describe("WikiPageContent — images collées dans l'article", () => {
+  function renderEnEdition() {
+    const mock = createSupabaseMock({
+      // Sans utilisateur, le chemin de stockage n'a pas de dossier où écrire
+      // et l'envoi s'arrête avant d'avoir commencé.
+      user: { id: "u1" },
+      results: [SANS_ANNOTATION, { data: { draft_content: "Voici " }, error: null }],
+    });
+    render(
+      <WikiPageContent
+        worldId="w1"
+        panelWidth={320}
+        colonneLaterale={dispositionLarge}
+        navEnColonne={dispositionLarge}
+        panelHandleProps={{}}
+        navCollapsed={false}
+        onExpandNav={vi.fn()}
+        onOpenTree={vi.fn()}
+        onExitEditMode={vi.fn()}
+        pageCount={1}
+        onRename={vi.fn()}
+        page={BASE_PAGE}
+        pages={[BASE_PAGE]}
+        canEdit
+        isEditMode
+        supabase={mock.client as never}
+        onPageUpdated={vi.fn()}
+        onNavigate={vi.fn()}
+      />,
+    );
+  }
+
+  /** Un presse-papiers qui porte une image, comme après une capture d'écran. */
+  function pressePapiersAvecImage() {
+    const image = new File(["x"], "capture.png", { type: "image/png" });
+    return {
+      items: [{ kind: "file", type: "image/png", getAsFile: () => image }],
+      files: [image],
+    };
+  }
+
+  async function champPret() {
+    const champ = (await champArticle()) as HTMLTextAreaElement;
+    await waitFor(() => expect(champ).toHaveValue("Voici "));
+    champ.focus();
+    champ.setSelectionRange(champ.value.length, champ.value.length);
+    return champ;
+  }
+
+  it("envoie l'image et l'écrit à l'endroit du curseur", async () => {
+    renderEnEdition();
+    const champ = await champPret();
+
+    fireEvent.paste(champ, { clipboardData: pressePapiersAvecImage() });
+
+    await waitFor(() => expect(champ.value).toMatch(MARKDOWN_IMAGE));
+  });
+
+  it("laisse passer un collage qui n'est pas une image", async () => {
+    // Coller du texte doit rester l'affaire du navigateur : l'intercepter,
+    // c'est le casser.
+    renderEnEdition();
+    const champ = await champPret();
+
+    const evenement = createEvent.paste(champ, {
+      clipboardData: { items: [{ kind: "string", type: "text/plain" }], files: [] },
+    });
+    fireEvent(champ, evenement);
+
+    expect(evenement.defaultPrevented).toBe(false);
+  });
+});
+
+const MARKDOWN_IMAGE = new RegExp(String.raw`^Voici !\[\]\(https://\S+\)$`);
 
 describe("WikiPageContent — autocomplétion des liens internes", () => {
   const ARKHAM: WikiPage = { ...BASE_PAGE, id: "p2", title: "Arkham", slug: "arkham" };
