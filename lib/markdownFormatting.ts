@@ -93,7 +93,7 @@ function estEnveloppee(v: string, start: number, end: number, marqueur: string):
  * de l'espace n'a pas de texte utile : on la laisse telle quelle plutôt que de
  * la réduire à un point.
  */
-function sansLesBords(v: string, start: number, end: number): [number, number] {
+function withoutEdges(v: string, start: number, end: number): [number, number] {
   let debut = start;
   let fin = end;
   while (debut < fin && /\s/.test(v[debut])) debut++;
@@ -116,22 +116,22 @@ function sansLesBords(v: string, start: number, end: number): [number, number] {
  * que si elle tient encore dans le texte : une sélection d'un texte plus long
  * n'a plus de sens ici.
  */
-export function selectionRetenue(
-  duChamp: [number, number],
+export function keptSelection(
+  fromField: [number, number],
   derniere: [number, number],
   longueur: number,
 ): [number, number] {
-  if (duChamp[0] !== duChamp[1]) return duChamp;
+  if (fromField[0] !== fromField[1]) return fromField;
 
   const [debut, fin] = derniere;
-  return debut !== fin && debut >= 0 && fin <= longueur ? derniere : duChamp;
+  return debut !== fin && debut >= 0 && fin <= longueur ? derniere : fromField;
 }
 
 /** Pose le marqueur autour de la sélection, ou le retire s'il y est déjà. */
 export function basculerEnveloppe(champ: ChampTexte, marqueur: string): ChampTexte {
   const { value } = champ;
   const n = marqueur.length;
-  const [start, end] = sansLesBords(value, champ.start, champ.end);
+  const [start, end] = withoutEdges(value, champ.start, champ.end);
 
   if (estEnveloppee(value, start, end, marqueur)) {
     return {
@@ -231,7 +231,7 @@ export function insererLien(champ: ChampTexte, texteParDefaut: string): ChampTex
   const { value } = champ;
   // Même égard qu'aux enveloppes : l'espace emporté par un double-clic reste
   // hors du libellé, où il ne ferait qu'allonger la zone cliquable.
-  const [start, end] = sansLesBords(value, champ.start, champ.end);
+  const [start, end] = withoutEdges(value, champ.start, champ.end);
   const vide = start === end;
   const texte = vide ? texteParDefaut : value.slice(start, end);
 

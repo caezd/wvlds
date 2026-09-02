@@ -5,7 +5,7 @@ import {
   listWorldChatroomsForSearch,
   matchesAuthorQuery,
   matchesChatroomQuery,
-  normaliserPourRecherche,
+  normalizeForSearch,
   type SearchAuthorOption,
 } from "@/lib/chatSearchDirectory";
 
@@ -40,15 +40,15 @@ const persona = (label: string, sublabel: string | null = null): SearchAuthorOpt
   avatarUrl: null,
 });
 
-describe("normaliserPourRecherche", () => {
+describe("normalizeForSearch", () => {
   it("retire accents et casse", () => {
-    expect(normaliserPourRecherche("Élodie")).toBe("elodie");
-    expect(normaliserPourRecherche("  FORÊT  ")).toBe("foret");
-    expect(normaliserPourRecherche("Ça Ira")).toBe("ca ira");
+    expect(normalizeForSearch("Élodie")).toBe("elodie");
+    expect(normalizeForSearch("  FORÊT  ")).toBe("foret");
+    expect(normalizeForSearch("Ça Ira")).toBe("ca ira");
   });
 
   it("laisse intact ce qui n'a pas d'accent", () => {
-    expect(normaliserPourRecherche("Zoe")).toBe("zoe");
+    expect(normalizeForSearch("Zoe")).toBe("zoe");
   });
 });
 

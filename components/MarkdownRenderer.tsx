@@ -18,7 +18,7 @@ import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/h
 import { StoredImage } from "@/components/ui/stored-image";
 import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
 import { VALID_LUCIDE_ICONS } from "@/components/ui/LucideIconPicker";
-import type { ApercuPage } from "@/lib/wikiApercu";
+import type { LinkPreview } from "@/lib/wikiLinkPreview";
 import type { WorldLexiconTerm } from "@/types/worlds";
 
 type Props = {
@@ -38,7 +38,7 @@ type Props = {
   lexiconTerms?: WorldLexiconTerm[];
   /** Ce qu'il y a à montrer d'une page visée, au survol de son lien — voir
    *  `lib/wikiApercu.ts`. Absent, ou rendant `null`, le lien reste nu. */
-  apercuWiki?: (slug: string) => ApercuPage | null;
+  wikiPreview?: (slug: string) => LinkPreview | null;
 };
 
 function extractText(node: React.ReactNode): string {
@@ -263,8 +263,8 @@ export function MarkdownContent({
   isMine = false,
   onWikiLink,
   lexiconTerms,
-  apercuWiki,
-}: Pick<Props, "content" | "allowImages" | "isMine" | "onWikiLink" | "lexiconTerms" | "apercuWiki">) {
+  wikiPreview,
+}: Pick<Props, "content" | "allowImages" | "isMine" | "onWikiLink" | "lexiconTerms" | "wikiPreview">) {
   const schema = useMemo(() => {
     return {
       ...defaultSchema,
@@ -439,7 +439,7 @@ export function MarkdownContent({
           </button>
         );
 
-        const apercu = apercuWiki?.(slug) ?? null;
+        const apercu = wikiPreview?.(slug) ?? null;
         // Rien à montrer : le lien reste nu. Une carte qui n'apprendrait que
         // le titre déjà écrit dans le lien vaut moins que pas de carte.
         if (!apercu) return lien;
@@ -541,7 +541,7 @@ export default function MarkdownRenderer({
   isMine = false,
   onWikiLink,
   lexiconTerms,
-  apercuWiki,
+  wikiPreview,
 }: Props) {
   return (
     <div className={proseClassName(proseSize, className)}>
@@ -551,7 +551,7 @@ export default function MarkdownRenderer({
         isMine={isMine}
         onWikiLink={onWikiLink}
         lexiconTerms={lexiconTerms}
-        apercuWiki={apercuWiki}
+        wikiPreview={wikiPreview}
       />
     </div>
   );

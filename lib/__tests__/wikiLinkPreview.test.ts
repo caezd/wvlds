@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
 
-import { apercuDeLaPage, type PageApercevable } from "@/lib/wikiApercu";
+import { linkPreview, type PreviewablePage } from "@/lib/wikiLinkPreview";
 
-function page(p: Partial<PageApercevable> & { slug: string }): PageApercevable {
+function page(p: Partial<PreviewablePage> & { slug: string }): PreviewablePage {
   return {
     title: p.slug,
     icon: null,
@@ -21,9 +21,9 @@ const PAGES = [
   page({ slug: "lieux", title: "Lieux", description: "Un dossier.", is_folder: true }),
 ];
 
-describe("apercuDeLaPage", () => {
+describe("linkPreview", () => {
   it("rend le chapeau de la page visée", () => {
-    expect(apercuDeLaPage(PAGES, "arkham")).toEqual({
+    expect(linkPreview(PAGES, "arkham")).toEqual({
       title: "Arkham",
       icon: null,
       description: "Une ville du Massachusetts.",
@@ -32,27 +32,27 @@ describe("apercuDeLaPage", () => {
   });
 
   it("suffit d'une bannière, sans chapeau", () => {
-    expect(apercuDeLaPage(PAGES, "asile")?.bannerUrl).toBe("https://x.test/asile.webp");
+    expect(linkPreview(PAGES, "asile")?.bannerUrl).toBe("https://x.test/asile.webp");
   });
 
   it("ne montre rien d'une page qui n'a rien à montrer", () => {
     // La carte ne dirait que le titre, c'est-à-dire le texte du lien qu'on est
     // en train de survoler : une fenêtre qui s'ouvre pour ne rien apprendre
     // vaut moins que pas de fenêtre.
-    expect(apercuDeLaPage(PAGES, "nue")).toBeNull();
+    expect(linkPreview(PAGES, "nue")).toBeNull();
   });
 
   it("ne prend pas des espaces pour un chapeau", () => {
-    expect(apercuDeLaPage(PAGES, "blancs")).toBeNull();
+    expect(linkPreview(PAGES, "blancs")).toBeNull();
   });
 
   it("ignore les dossiers, où aucun lien ne mène", () => {
-    expect(apercuDeLaPage(PAGES, "lieux")).toBeNull();
+    expect(linkPreview(PAGES, "lieux")).toBeNull();
   });
 
   it("ne montre rien d'une page introuvable", () => {
     // Le lien est déjà rendu comme cassé : une carte vide n'ajouterait qu'une
     // hésitation.
-    expect(apercuDeLaPage(PAGES, "fantome")).toBeNull();
+    expect(linkPreview(PAGES, "fantome")).toBeNull();
   });
 });

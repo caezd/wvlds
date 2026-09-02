@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render } from "@testing-library/react";
 
 import { AuthErrorWatcher } from "@/components/providers/AuthErrorWatcher";
-import { annoncerDeconnexion, consommerDeconnexionAnnoncee } from "@/lib/deconnexionVoulue";
+import { announceSignOut, consumeAnnouncedSignOut } from "@/lib/intentionalSignOut";
 
 // ──────────────────────────────────────────────────────────────────────────
 // `onAuthStateChange` émet `SIGNED_OUT` aussi bien quand la personne clique
@@ -41,11 +41,11 @@ vi.mock("@/lib/supabase/client", () => ({
 beforeEach(() => {
   vi.clearAllMocks();
   chemin.valeur = "/w/monde-1";
-  consommerDeconnexionAnnoncee();
+  consumeAnnouncedSignOut();
 });
 
 afterEach(() => {
-  consommerDeconnexionAnnoncee();
+  consumeAnnouncedSignOut();
 });
 
 function monter() {
@@ -69,7 +69,7 @@ describe("AuthErrorWatcher", () => {
     // Le défaut visible : on cliquait « Se déconnecter » et l'application
     // répondait « Session expirée, rechargez la page ».
     const emettre = monter();
-    annoncerDeconnexion();
+    announceSignOut();
 
     emettre("SIGNED_OUT");
 
@@ -80,7 +80,7 @@ describe("AuthErrorWatcher", () => {
     // Le drapeau ne vaut que pour un événement : le laisser en place
     // masquerait l'expiration qu'il faut vraiment annoncer.
     const emettre = monter();
-    annoncerDeconnexion();
+    announceSignOut();
     emettre("SIGNED_OUT");
 
     emettre("SIGNED_OUT");

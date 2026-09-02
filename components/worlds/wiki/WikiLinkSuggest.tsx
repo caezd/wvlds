@@ -7,7 +7,7 @@ import { FileText } from "lucide-react";
 import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
 import { VALID_LUCIDE_ICONS } from "@/components/ui/LucideIconPicker";
 import { cn } from "@/lib/utils";
-import type { PositionCurseur } from "@/lib/caretPosition";
+import type { CaretPosition } from "@/lib/caretPosition";
 import type { WikiPage } from "./WorldWiki";
 
 /**
@@ -28,7 +28,7 @@ export function WikiLinkSuggest({
   pages: WikiPage[];
   /** Rang de la proposition mise en avant, celle qu'Entrée choisira. */
   actif: number;
-  position: PositionCurseur;
+  position: CaretPosition;
   onChoisir: (page: WikiPage) => void;
   onSurvoler: (rang: number) => void;
 }) {
@@ -42,7 +42,7 @@ export function WikiLinkSuggest({
       style={{
         // Sous la ligne, jamais dessus : elle cacherait ce qu'on vient
         // d'écrire, c'est-à-dire ce qui filtre la liste.
-        top: position.top + position.hauteurLigne,
+        top: position.top + position.lineHeight,
         left: position.left,
       }}
     >

@@ -17,16 +17,16 @@
  */
 
 /** Au-delà, on considère que le `SIGNED_OUT` attendu ne viendra plus. */
-const OUBLI_MS = 10_000;
+const FORGET_MS = 10_000;
 
-let annoncee = false;
-let minuteur: ReturnType<typeof setTimeout> | null = null;
+let announced = false;
+let timer: ReturnType<typeof setTimeout> | null = null;
 
 /** À appeler juste avant `auth.signOut()`. */
-export function annoncerDeconnexion(): void {
-  annoncee = true;
-  if (minuteur) clearTimeout(minuteur);
-  minuteur = setTimeout(oublier, OUBLI_MS);
+export function announceSignOut(): void {
+  announced = true;
+  if (timer) clearTimeout(timer);
+  timer = setTimeout(forget, FORGET_MS);
 }
 
 /**
@@ -35,14 +35,14 @@ export function annoncerDeconnexion(): void {
  * Consomme la réponse : un second `SIGNED_OUT`, lui, sera bien une session
  * perdue.
  */
-export function consommerDeconnexionAnnoncee(): boolean {
-  const reponse = annoncee;
-  oublier();
-  return reponse;
+export function consumeAnnouncedSignOut(): boolean {
+  const answer = announced;
+  forget();
+  return answer;
 }
 
-function oublier(): void {
-  annoncee = false;
-  if (minuteur) clearTimeout(minuteur);
-  minuteur = null;
+function forget(): void {
+  announced = false;
+  if (timer) clearTimeout(timer);
+  timer = null;
 }

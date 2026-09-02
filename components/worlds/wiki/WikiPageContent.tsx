@@ -14,7 +14,7 @@ import { StoredImage } from "@/components/ui/stored-image";
 import {
   appliquerFormat,
   raccourciDe,
-  selectionRetenue,
+  keptSelection,
   type NomFormat,
 } from "@/lib/markdownFormatting";
 import { ecrireAvecAnnulation } from "@/lib/textareaEdit";
@@ -24,10 +24,10 @@ import { cn } from "@/lib/utils";
 import type { createClient } from "@/lib/supabase/client";
 import { resolveWikiLinks } from "@/lib/wikiLinks";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { cropToWebP, premiereImage, toWebP, type ZoneDeDecoupe } from "@/lib/imageUtils";
+import { cropToWebP, firstImage, toWebP, type ZoneDeDecoupe } from "@/lib/imageUtils";
 import { ImageCropPicker } from "@/components/ui/image-crop-picker";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { BUCKET_WIKI, cheminImageWiki } from "@/lib/storagePaths";
+import { WIKI_BUCKET, wikiImagePath } from "@/lib/storagePaths";
 import { useWikiAnnotations } from "@/hooks/useWikiAnnotations";
 import { useWikiPageNotes } from "@/hooks/useWikiPageNotes";
 import type { BlockAnchor } from "@/lib/wikiBlockAnchors";
@@ -38,12 +38,12 @@ import { WikiNotesPanel } from "./WikiNotesPanel";
 import { WikiSidePanel, type WikiSideTab } from "./WikiSidePanel";
 import { WikiFormatToolbar } from "./WikiFormatToolbar";
 import { WikiLinkSuggest } from "./WikiLinkSuggest";
-import { apercuDeLaPage } from "@/lib/wikiApercu";
-import { positionDuCurseur, type PositionCurseur } from "@/lib/caretPosition";
+import { linkPreview } from "@/lib/wikiLinkPreview";
+import { getCaretPosition, type CaretPosition } from "@/lib/caretPosition";
 import {
-  completerLien,
-  lienEnCours,
-  pagesProposees,
+  completeLink,
+  openLinkAt,
+  suggestedPages,
 } from "@/lib/wikiLinkSuggest";
 import { WIKI_FOOTER_BUTTON, WIKI_SUBHEADER, WIKI_SUBHEADER_COUNT } from "./wikiSubHeader";
 import { WikiVersionHistoryPanel } from "./WikiVersionHistoryPanel";
@@ -161,7 +161,7 @@ export function WikiPageContent({
    * Dernière sélection faite par l'utilisateur dans le champ.
    *
    * Retenue au fil du geste plutôt que relue au moment d'agir : voir
-   * `selectionRetenue`.
+   * `keptSelection`.
    */
   const derniereSelection = React.useRef<[number, number]>([0, 0]);
   /** L'utilisateur reprend la main sur la sélection : la retenue est caduque. */
@@ -181,7 +181,7 @@ export function WikiPageContent({
     pages: WikiPage[];
     /** Rang mis en avant, celui qu'Entrée choisira. */
     rang: number;
-    position: PositionCurseur;
+    position: CaretPosition;
   } | null>(null);
   /** Sélection à reposer une fois la valeur mise en forme rendue. */
   const [selectionAPoser, setSelectionAPoser] = React.useState<[number, number] | null>(null);
@@ -422,7 +422,7 @@ export function WikiPageContent({
     const champ = champMarkdown.current;
     if (!champ) return;
 
-    const [start, end] = selectionRetenue(
+    const [start, end] = keptSelection(
       [champ.selectionStart, champ.selectionEnd],
       derniereSelection.current,
       draft.length,
@@ -455,20 +455,20 @@ export function WikiPageContent({
     const champ = champMarkdown.current;
     if (!champ) return;
 
-    const lien = lienEnCours(champ.value, champ.selectionStart);
-    const trouvees = lien ? pagesProposees(pages, lien.requete) : [];
+    const lien = openLinkAt(champ.value, champ.selectionStart);
+    const trouvees = lien ? suggestedPages(pages, lien.query) : [];
     if (!lien || trouvees.length === 0) {
       setSuggestion(null);
       return;
     }
 
     setSuggestion({
-      debut: lien.debut,
+      debut: lien.start,
       pages: trouvees,
       // Remis à la première à chaque frappe : la liste vient de changer, et
       // garder un rang qui désignait une autre page tromperait.
       rang: 0,
-      position: positionDuCurseur(champ, champ.selectionStart),
+      position: getCaretPosition(champ, champ.selectionStart),
     });
   }
 
@@ -477,14 +477,14 @@ export function WikiPageContent({
     const champ = champMarkdown.current;
     if (!champ || !suggestion) return;
 
-    const { value, curseur } = completerLien(
+    const { value, caret } = completeLink(
       champ.value,
       suggestion.debut,
       champ.selectionStart,
       page.title,
     );
     if (!ecrireAvecAnnulation(champ, value)) handleDraftChange(value);
-    setSelectionAPoser([curseur, curseur]);
+    setSelectionAPoser([caret, caret]);
     setSuggestion(null);
   }
 
@@ -541,13 +541,13 @@ export function WikiPageContent({
       if (!user) { toast.error(tCommon("uploadImageError")); return; }
 
       const converti = await toWebP(fichier);
-      const chemin = cheminImageWiki(worldId, page.id, "image/webp");
+      const chemin = wikiImagePath(worldId, page.id, "image/webp");
       const { error } = await supabase.storage
-        .from(BUCKET_WIKI)
+        .from(WIKI_BUCKET)
         .upload(chemin, converti, { contentType: "image/webp" });
       if (error) { toast.error(error.message); return; }
 
-      const { data } = supabase.storage.from(BUCKET_WIKI).getPublicUrl(chemin);
+      const { data } = supabase.storage.from(WIKI_BUCKET).getPublicUrl(chemin);
       const balise = `![](${data.publicUrl})`;
       const valeur = champ.value.slice(0, position) + balise + champ.value.slice(position);
       if (!ecrireAvecAnnulation(champ, valeur)) handleDraftChange(valeur);
@@ -567,8 +567,8 @@ export function WikiPageContent({
    * Mémorisé sur `pages` : la fonction est passée à chaque lien de l'article,
    * et une identité neuve à chaque rendu ferait remonter tout le markdown.
    */
-  const apercuDuLien = React.useCallback(
-    (slug: string) => apercuDeLaPage(pages, slug),
+  const linkPreviewOf = React.useCallback(
+    (slug: string) => linkPreview(pages, slug),
     [pages],
   );
 
@@ -577,7 +577,7 @@ export function WikiPageContent({
     e: React.ClipboardEvent<HTMLTextAreaElement> | React.DragEvent<HTMLTextAreaElement>,
     source: DataTransfer | null,
   ) {
-    const fichier = premiereImage(source);
+    const fichier = firstImage(source);
     // Rien d'autre n'est intercepté : coller du texte, déposer une sélection,
     // tout cela reste au navigateur, qui le fait mieux.
     if (!fichier) return;
@@ -653,13 +653,13 @@ export function WikiPageContent({
       if (!user) { toast.error(tCommon("uploadImageError")); return; }
 
       const converti = await cropToWebP(banniereACadrer, zone, "wiki-banner");
-      const chemin = cheminImageWiki(worldId, page.id, "image/webp");
+      const chemin = wikiImagePath(worldId, page.id, "image/webp");
       const { error } = await supabase.storage
-        .from(BUCKET_WIKI)
+        .from(WIKI_BUCKET)
         .upload(chemin, converti, { contentType: "image/webp" });
       if (error) { toast.error(error.message); return; }
 
-      const { data } = supabase.storage.from(BUCKET_WIKI).getPublicUrl(chemin);
+      const { data } = supabase.storage.from(WIKI_BUCKET).getPublicUrl(chemin);
       await enregistrerChamp({ banner_url: data.publicUrl });
       setBanniereACadrer(null);
     } catch (err) {
@@ -972,7 +972,7 @@ export function WikiPageContent({
                           content={resolveWikiLinks(draft, pages)}
                           allowImages
                           onWikiLink={onNavigate}
-                          apercuWiki={apercuDuLien}
+                          wikiPreview={linkPreviewOf}
                           className={WIKI_PROSE_HEADING_CLASSES}
                           lexiconTerms={lexiconTerms}
                         />
@@ -1209,7 +1209,7 @@ export function WikiPageContent({
                       content={resolvedContent}
                       allowImages
                       onWikiLink={onNavigate}
-                      apercuWiki={apercuDuLien}
+                      wikiPreview={linkPreviewOf}
                       className={WIKI_PROSE_HEADING_CLASSES}
                       lexiconTerms={lexiconTerms}
                     />

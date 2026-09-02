@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { createSupabaseMock } from "@/test/supabaseMock";
 
 // Le canevas n'existe pas sous jsdom, et la conversion en WebP n'est pas le
-// sujet : le reste du module — dont `premiereImage`, qui EST le sujet — passe
+// sujet : le reste du module — dont `firstImage`, qui EST le sujet — passe
 // tel quel.
 vi.mock("@/lib/imageUtils", async importOriginal => ({
   ...(await importOriginal<typeof import("@/lib/imageUtils")>()),

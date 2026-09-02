@@ -7,7 +7,7 @@ import {
   insererLien,
   libelleRaccourci,
   raccourciDe,
-  selectionRetenue,
+  keptSelection,
   type ChampTexte,
 } from "@/lib/markdownFormatting";
 
@@ -33,24 +33,24 @@ const touche = (o: Partial<Parameters<typeof raccourciDe>[0]>) => ({
   ...o,
 });
 
-describe("selectionRetenue", () => {
+describe("keptSelection", () => {
   it("suit le champ quand il porte une vraie sélection", () => {
-    expect(selectionRetenue([3, 6], [0, 2], 10)).toEqual([3, 6]);
+    expect(keptSelection([3, 6], [0, 2], 10)).toEqual([3, 6]);
   });
 
   it("reprend la dernière retenue quand le champ n'a plus qu'un curseur", () => {
     // Le cas qui casse tout : quelque chose replie le curseur entre le geste
     // de l'utilisateur et le clic sur le bouton, et la mise en forme
     // encadrerait le vide.
-    expect(selectionRetenue([0, 0], [3, 6], 10)).toEqual([3, 6]);
+    expect(keptSelection([0, 0], [3, 6], 10)).toEqual([3, 6]);
   });
 
   it("ignore une retenue qui ne tient plus dans le texte", () => {
-    expect(selectionRetenue([2, 2], [3, 20], 10)).toEqual([2, 2]);
+    expect(keptSelection([2, 2], [3, 20], 10)).toEqual([2, 2]);
   });
 
   it("ignore une retenue elle-même repliée", () => {
-    expect(selectionRetenue([4, 4], [3, 3], 10)).toEqual([4, 4]);
+    expect(keptSelection([4, 4], [3, 3], 10)).toEqual([4, 4]);
   });
 });
 

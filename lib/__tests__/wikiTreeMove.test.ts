@@ -1,16 +1,16 @@
 import { describe, it, expect } from "vitest";
 import {
-  deplacementsAuClavier,
-  estDansLeSousArbre,
-  idZoneApres,
-  pageDeZoneApres,
-  planifierDeplacement,
-  zoneVisee,
-  type NoeudArbre,
+  keyboardMoves,
+  isInSubtree,
+  afterZoneId,
+  pageOfAfterZone,
+  planMove,
+  targetZone,
+  type TreeNode,
 } from "@/lib/wikiTreeMove";
 
 /** `d:` préfixe un dossier. Le parent est donné, l'ordre suit la déclaration. */
-function arbre(...lignes: [string, string | null][]): NoeudArbre[] {
+function arbre(...lignes: [string, string | null][]): TreeNode[] {
   const compteurs = new Map<string | null, number>();
   return lignes.map(([nom, parent]) => {
     const rang = compteurs.get(parent) ?? 0;
@@ -43,18 +43,18 @@ const WIKI = arbre(
 /** Hauteur d'une ligne de l'arbre, en pixels. */
 const LIGNE = 28;
 
-describe("zoneVisee", () => {
+describe("targetZone", () => {
   it("réserve les bords d'un dossier au passage devant ou derrière", () => {
     // Le geste qui manquait : poser une page juste au-dessus ou au-dessous
     // d'un dossier sans qu'elle y entre.
-    expect(zoneVisee(3, LIGNE, true)).toBe("avant");
-    expect(zoneVisee(25, LIGNE, true)).toBe("apres");
+    expect(targetZone(3, LIGNE, true)).toBe("before");
+    expect(targetZone(25, LIGNE, true)).toBe("after");
   });
 
   it("garde le milieu d'un dossier pour y entrer", () => {
-    expect(zoneVisee(9, LIGNE, true)).toBe("dans");
-    expect(zoneVisee(14, LIGNE, true)).toBe("dans");
-    expect(zoneVisee(19, LIGNE, true)).toBe("dans");
+    expect(targetZone(9, LIGNE, true)).toBe("inside");
+    expect(targetZone(14, LIGNE, true)).toBe("inside");
+    expect(targetZone(19, LIGNE, true)).toBe("inside");
   });
 
   it("garde ses bandes à huit pixels, si haute que soit la boîte", () => {
@@ -62,35 +62,35 @@ describe("zoneVisee", () => {
     // fraction de hauteur y tombait vingt lignes plus bas que l'intitulé : le
     // dossier n'était plus atteignable que par ses enfants.
     const DEPLIE = 400;
-    expect(zoneVisee(4, DEPLIE, true)).toBe("avant");
-    expect(zoneVisee(20, DEPLIE, true)).toBe("dans");
-    expect(zoneVisee(100, DEPLIE, true)).toBe("dans");
+    expect(targetZone(4, DEPLIE, true)).toBe("before");
+    expect(targetZone(20, DEPLIE, true)).toBe("inside");
+    expect(targetZone(100, DEPLIE, true)).toBe("inside");
   });
 
   it("coupe une page en deux — elle n'accueille rien", () => {
-    expect(zoneVisee(13, LIGNE, false)).toBe("avant");
-    expect(zoneVisee(15, LIGNE, false)).toBe("apres");
+    expect(targetZone(13, LIGNE, false)).toBe("before");
+    expect(targetZone(15, LIGNE, false)).toBe("after");
   });
 
   it("tient les débordements : le pointeur sort de la boîte visée", () => {
-    expect(zoneVisee(-20, LIGNE, true)).toBe("avant");
-    expect(zoneVisee(60, LIGNE, true)).toBe("apres");
+    expect(targetZone(-20, LIGNE, true)).toBe("before");
+    expect(targetZone(60, LIGNE, true)).toBe("after");
   });
 });
 
 describe("la bande « après un dossier »", () => {
   it("se reconnaît à son identifiant, et rend le dossier visé", () => {
-    expect(pageDeZoneApres(idZoneApres("Lieux"))).toBe("Lieux");
+    expect(pageOfAfterZone(afterZoneId("Lieux"))).toBe("Lieux");
   });
 
   it("ne se confond pas avec l'identifiant d'une page", () => {
-    expect(pageDeZoneApres("Lieux")).toBeNull();
+    expect(pageOfAfterZone("Lieux")).toBeNull();
   });
 });
 
-describe("planifierDeplacement — sortir d'un dossier", () => {
+describe("planMove — sortir d'un dossier", () => {
   it("fait remonter une page posée devant une page racine", () => {
-    expect(planifierDeplacement(WIKI, "Forêt", "Accueil", "avant")).toEqual([
+    expect(planMove(WIKI, "Forêt", "Accueil", "before")).toEqual([
       { id: "Forêt", parent_id: null, sort_index: 0 },
       { id: "Accueil", parent_id: null, sort_index: 1 },
       { id: "Lieux", parent_id: null, sort_index: 2 },
@@ -100,7 +100,7 @@ describe("planifierDeplacement — sortir d'un dossier", () => {
 
   it("la fait sortir par le bord d'un dossier, sans y entrer", () => {
     // Posée sur le quart haut de « Lieux » : elle passe DEVANT le dossier.
-    expect(planifierDeplacement(WIKI, "Forêt", "Lieux", "avant")).toEqual([
+    expect(planMove(WIKI, "Forêt", "Lieux", "before")).toEqual([
       { id: "Forêt", parent_id: null, sort_index: 1 },
       { id: "Lieux", parent_id: null, sort_index: 2 },
       { id: "Annexe", parent_id: null, sort_index: 3 },
@@ -108,34 +108,34 @@ describe("planifierDeplacement — sortir d'un dossier", () => {
   });
 
   it("ou par le bord bas, derrière lui", () => {
-    const plan = planifierDeplacement(WIKI, "Forêt", "Lieux", "apres")!;
+    const plan = planMove(WIKI, "Forêt", "Lieux", "after")!;
     expect(plan.find(e => e.id === "Forêt")).toEqual({
       id: "Forêt", parent_id: null, sort_index: 2,
     });
   });
 });
 
-describe("planifierDeplacement — entrer dans un dossier", () => {
+describe("planMove — entrer dans un dossier", () => {
   it("dépose en dernier dans le dossier visé", () => {
-    expect(planifierDeplacement(WIKI, "Accueil", "Lieux", "dans")).toEqual([
+    expect(planMove(WIKI, "Accueil", "Lieux", "inside")).toEqual([
       { id: "Accueil", parent_id: "Lieux", sort_index: 2 },
     ]);
   });
 
   it("ne fait rien quand la page y est déjà", () => {
-    expect(planifierDeplacement(WIKI, "Forêt", "Lieux", "dans")).toBeNull();
+    expect(planMove(WIKI, "Forêt", "Lieux", "inside")).toBeNull();
   });
 
   it("refuse d'entrer dans une page", () => {
     // La zone « dans » ne se produit pas sur une page, mais rien ne doit
     // dépendre de ce que l'appelant sait le prévenir.
-    expect(planifierDeplacement(WIKI, "Accueil", "Annexe", "dans")).toBeNull();
+    expect(planMove(WIKI, "Accueil", "Annexe", "inside")).toBeNull();
   });
 });
 
-describe("planifierDeplacement — réordonner entre pairs", () => {
+describe("planMove — réordonner entre pairs", () => {
   it("pose une page derrière une autre de sa liste", () => {
-    expect(planifierDeplacement(WIKI, "Accueil", "Annexe", "apres")).toEqual([
+    expect(planMove(WIKI, "Accueil", "Annexe", "after")).toEqual([
       { id: "Lieux", parent_id: null, sort_index: 0 },
       { id: "Annexe", parent_id: null, sort_index: 1 },
       { id: "Accueil", parent_id: null, sort_index: 2 },
@@ -143,7 +143,7 @@ describe("planifierDeplacement — réordonner entre pairs", () => {
   });
 
   it("ou devant", () => {
-    expect(planifierDeplacement(WIKI, "Annexe", "Accueil", "avant")).toEqual([
+    expect(planMove(WIKI, "Annexe", "Accueil", "before")).toEqual([
       { id: "Annexe", parent_id: null, sort_index: 0 },
       { id: "Accueil", parent_id: null, sort_index: 1 },
       { id: "Lieux", parent_id: null, sort_index: 2 },
@@ -151,32 +151,32 @@ describe("planifierDeplacement — réordonner entre pairs", () => {
   });
 
   it("réordonne à l'intérieur d'un dossier", () => {
-    expect(planifierDeplacement(WIKI, "Ville", "Forêt", "avant")).toEqual([
+    expect(planMove(WIKI, "Ville", "Forêt", "before")).toEqual([
       { id: "Ville", parent_id: "Lieux", sort_index: 0 },
       { id: "Forêt", parent_id: "Lieux", sort_index: 1 },
     ]);
   });
 
   it("n'écrit rien quand la page est déjà à sa place", () => {
-    expect(planifierDeplacement(WIKI, "Accueil", "Lieux", "avant")).toEqual([]);
+    expect(planMove(WIKI, "Accueil", "Lieux", "before")).toEqual([]);
   });
 });
 
-describe("planifierDeplacement — gestes sans effet", () => {
+describe("planMove — gestes sans effet", () => {
   it("ignore un dépôt sur soi-même", () => {
-    expect(planifierDeplacement(WIKI, "Accueil", "Accueil", "avant")).toBeNull();
+    expect(planMove(WIKI, "Accueil", "Accueil", "before")).toBeNull();
   });
 
   it("ignore une page inconnue", () => {
-    expect(planifierDeplacement(WIKI, "Fantôme", "Accueil", "avant")).toBeNull();
+    expect(planMove(WIKI, "Fantôme", "Accueil", "before")).toBeNull();
   });
 
   it("refuse de mettre un dossier dans sa propre descendance", () => {
     // Sans cette garde, « Lieux » deviendrait l'enfant de sa propre fille :
     // plus aucun chemin depuis la racine n'y mènerait, et le sous-arbre entier
     // disparaîtrait de l'écran sans être supprimé.
-    expect(planifierDeplacement(WIKI, "Lieux", "Forêt", "avant")).toBeNull();
-    expect(planifierDeplacement(WIKI, "Lieux", "Forêt", "apres")).toBeNull();
+    expect(planMove(WIKI, "Lieux", "Forêt", "before")).toBeNull();
+    expect(planMove(WIKI, "Lieux", "Forêt", "after")).toBeNull();
   });
 
   it("refuse aussi d'entrer dans un dossier de sa descendance", () => {
@@ -185,78 +185,78 @@ describe("planifierDeplacement — gestes sans effet", () => {
       ["d:Milieu", "Racine"],
       ["Feuille", "Milieu"],
     );
-    expect(planifierDeplacement(profond, "Racine", "Milieu", "dans")).toBeNull();
+    expect(planMove(profond, "Racine", "Milieu", "inside")).toBeNull();
   });
 });
 
-describe("estDansLeSousArbre", () => {
+describe("isInSubtree", () => {
   it("reconnaît un descendant, direct ou lointain", () => {
-    expect(estDansLeSousArbre(WIKI, "Lieux", "Forêt")).toBe(true);
-    expect(estDansLeSousArbre(WIKI, "Lieux", "Lieux")).toBe(true);
-    expect(estDansLeSousArbre(WIKI, "Lieux", "Accueil")).toBe(false);
-    expect(estDansLeSousArbre(WIKI, "Lieux", null)).toBe(false);
+    expect(isInSubtree(WIKI, "Lieux", "Forêt")).toBe(true);
+    expect(isInSubtree(WIKI, "Lieux", "Lieux")).toBe(true);
+    expect(isInSubtree(WIKI, "Lieux", "Accueil")).toBe(false);
+    expect(isInSubtree(WIKI, "Lieux", null)).toBe(false);
   });
 
   it("s'arrête devant une boucle de parenté", () => {
     // Un arbre incohérent ne doit pas faire tourner la recherche sans fin.
-    const boucle: NoeudArbre[] = [
+    const boucle: TreeNode[] = [
       { id: "a", parent_id: "b", is_folder: true, sort_index: 0 },
       { id: "b", parent_id: "a", is_folder: true, sort_index: 0 },
     ];
-    expect(estDansLeSousArbre(boucle, "z", "a")).toBe(false);
+    expect(isInSubtree(boucle, "z", "a")).toBe(false);
   });
 });
 
-describe("deplacementsAuClavier", () => {
+describe("keyboardMoves", () => {
   // Le glisser-déposer était le seul chemin vers l'ordre des pages, et il
   // demande un pointeur : au clavier, l'arbre était figé. Ces commandes
   // couvrent les mêmes déplacements, un cran à la fois.
 
   it("propose de descendre la première page, pas de monter", () => {
-    expect(deplacementsAuClavier(WIKI, "Accueil")).toEqual({
-      descendre: { cibleId: "Lieux", zone: "apres" },
+    expect(keyboardMoves(WIKI, "Accueil")).toEqual({
+      descendre: { targetId: "Lieux", zone: "after" },
     });
   });
 
   it("propose de monter la dernière, pas de descendre", () => {
-    expect(deplacementsAuClavier(WIKI, "Annexe")).toEqual({
-      monter: { cibleId: "Lieux", zone: "avant" },
-      entrer: { cibleId: "Lieux", zone: "dans" },
+    expect(keyboardMoves(WIKI, "Annexe")).toEqual({
+      monter: { targetId: "Lieux", zone: "before" },
+      entrer: { targetId: "Lieux", zone: "inside" },
     });
   });
 
   it("propose d'entrer dans le dossier qu'on a juste au-dessus", () => {
     // « Annexe » suit « Lieux » : c'est ce dossier-là qu'elle peut rejoindre.
-    expect(deplacementsAuClavier(WIKI, "Annexe").entrer).toEqual({
-      cibleId: "Lieux",
-      zone: "dans",
+    expect(keyboardMoves(WIKI, "Annexe").entrer).toEqual({
+      targetId: "Lieux",
+      zone: "inside",
     });
   });
 
   it("n'entre pas dans une page, qui n'accueille rien", () => {
-    expect(deplacementsAuClavier(WIKI, "Lieux").entrer).toBeUndefined();
+    expect(keyboardMoves(WIKI, "Lieux").entrer).toBeUndefined();
   });
 
   it("propose de sortir à qui est dans un dossier", () => {
-    expect(deplacementsAuClavier(WIKI, "Forêt").sortir).toEqual({
-      cibleId: "Lieux",
-      zone: "apres",
+    expect(keyboardMoves(WIKI, "Forêt").sortir).toEqual({
+      targetId: "Lieux",
+      zone: "after",
     });
   });
 
   it("ne propose pas de sortir à qui est déjà à la racine", () => {
-    expect(deplacementsAuClavier(WIKI, "Accueil").sortir).toBeUndefined();
+    expect(keyboardMoves(WIKI, "Accueil").sortir).toBeUndefined();
   });
 
   it("ne propose rien d'une page inconnue", () => {
-    expect(deplacementsAuClavier(WIKI, "Fantôme")).toEqual({});
+    expect(keyboardMoves(WIKI, "Fantôme")).toEqual({});
   });
 
-  it("rend des cibles que `planifierDeplacement` sait exécuter", () => {
+  it("rend des cibles que `planMove` sait exécuter", () => {
     // Les deux chemins — le geste et le menu — passent par la même règle :
     // ce que la commande annonce doit produire une écriture, pas un refus.
-    for (const [nom, vise] of Object.entries(deplacementsAuClavier(WIKI, "Annexe"))) {
-      const plan = planifierDeplacement(WIKI, "Annexe", vise.cibleId, vise.zone);
+    for (const [nom, vise] of Object.entries(keyboardMoves(WIKI, "Annexe"))) {
+      const plan = planMove(WIKI, "Annexe", vise.targetId, vise.zone);
       expect(plan, nom).not.toBeNull();
       expect(plan!.length, nom).toBeGreaterThan(0);
     }

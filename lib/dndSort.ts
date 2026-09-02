@@ -9,4 +9,4 @@ import type { SortingStrategy } from "@dnd-kit/sortable";
  * logement entre deux lignes. Écarter les voisines promettrait alors une place
  * que le cadre du dossier dément dans le même instant.
  */
-export const SANS_DEPLACEMENT: SortingStrategy = () => null;
+export const NO_DISPLACEMENT: SortingStrategy = () => null;

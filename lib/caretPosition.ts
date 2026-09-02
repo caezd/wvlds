@@ -17,7 +17,7 @@
  * gouttière oubliée, et la liste se pose une ligne trop haut ou vingt pixels
  * trop à gauche.
  */
-const PROPRIETES = [
+const PROPERTIES = [
   "box-sizing",
   "border-bottom-width",
   "border-left-width",
@@ -41,46 +41,46 @@ const PROPRIETES = [
   "word-spacing",
 ] as const;
 
-export type PositionCurseur = {
+export type CaretPosition = {
   /** Depuis le haut de la boîte du champ, défilement déduit. */
   top: number;
   /** Depuis la gauche de la boîte du champ. */
   left: number;
   /** Hauteur d'une ligne — de quoi poser quelque chose SOUS le curseur. */
-  hauteurLigne: number;
+  lineHeight: number;
 };
 
-export function positionDuCurseur(
-  champ: HTMLTextAreaElement,
+export function getCaretPosition(
+  field: HTMLTextAreaElement,
   index: number,
-): PositionCurseur {
-  const style = getComputedStyle(champ);
+): CaretPosition {
+  const style = getComputedStyle(field);
 
-  const miroir = document.createElement("div");
-  for (const p of PROPRIETES) miroir.style.setProperty(p, style.getPropertyValue(p));
+  const mirror = document.createElement("div");
+  for (const p of PROPERTIES) mirror.style.setProperty(p, style.getPropertyValue(p));
   // Hors du flux et hors de vue : le miroir ne doit rien déplacer ni rien
   // montrer, seulement se faire mesurer.
-  miroir.style.position = "absolute";
-  miroir.style.top = "0";
-  miroir.style.left = "0";
-  miroir.style.visibility = "hidden";
-  miroir.style.whiteSpace = "pre-wrap";
-  miroir.style.overflowWrap = "break-word";
-  miroir.style.width = `${champ.clientWidth}px`;
-  miroir.textContent = champ.value.slice(0, index);
+  mirror.style.position = "absolute";
+  mirror.style.top = "0";
+  mirror.style.left = "0";
+  mirror.style.visibility = "hidden";
+  mirror.style.whiteSpace = "pre-wrap";
+  mirror.style.overflowWrap = "break-word";
+  mirror.style.width = `${field.clientWidth}px`;
+  mirror.textContent = field.value.slice(0, index);
 
   // La suite du texte va dans un repère : c'est SA position qui nous
   // intéresse. Elle doit être non vide, sans quoi elle n'occupe aucune place
   // et le navigateur n'a rien à mesurer.
-  const repere = document.createElement("span");
-  repere.textContent = champ.value.slice(index) || ".";
-  miroir.appendChild(repere);
+  const marker = document.createElement("span");
+  marker.textContent = field.value.slice(index) || ".";
+  mirror.appendChild(marker);
 
-  document.body.appendChild(miroir);
-  const top = repere.offsetTop;
-  const left = repere.offsetLeft;
-  const hauteurLigne = parseFloat(style.lineHeight) || repere.offsetHeight;
-  miroir.remove();
+  document.body.appendChild(mirror);
+  const top = marker.offsetTop;
+  const left = marker.offsetLeft;
+  const lineHeight = parseFloat(style.lineHeight) || marker.offsetHeight;
+  mirror.remove();
 
-  return { top: top - champ.scrollTop, left: left - champ.scrollLeft, hauteurLigne };
+  return { top: top - field.scrollTop, left: left - field.scrollLeft, lineHeight };
 }

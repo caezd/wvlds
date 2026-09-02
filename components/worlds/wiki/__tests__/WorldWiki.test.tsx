@@ -565,7 +565,7 @@ describe("firstPageOf", () => {
     const pages = [
       page({ id: "dossier", is_folder: true, sort_index: 0 }),
       page({ id: "dedans", parent_id: "dossier", sort_index: 0 }),
-      page({ id: "apres", sort_index: 1 }),
+      page({ id: "after", sort_index: 1 }),
     ];
     expect(firstPageOf(pages)?.id).toBe("dedans");
   });
@@ -573,9 +573,9 @@ describe("firstPageOf", () => {
   it("passe au frère suivant quand le dossier est vide", () => {
     const pages = [
       page({ id: "vide", is_folder: true, sort_index: 0 }),
-      page({ id: "apres", sort_index: 1 }),
+      page({ id: "after", sort_index: 1 }),
     ];
-    expect(firstPageOf(pages)?.id).toBe("apres");
+    expect(firstPageOf(pages)?.id).toBe("after");
   });
 
   it("descend d'un dossier à l'autre", () => {

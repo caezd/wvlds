@@ -21,15 +21,15 @@ import { TABLE } from "@/lib/constants";
  * la ligne subsiste, ce qui est l'état d'avant ce correctif.
  */
 export async function detacherAppareilDuPush(supabase: SupabaseClient): Promise<void> {
-  let minuteur: ReturnType<typeof setTimeout> | undefined;
-  const echeance = new Promise<void>(resolve => {
-    minuteur = setTimeout(resolve, DELAI_MAX_MS);
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<void>(resolve => {
+    timer = setTimeout(resolve, MAX_WAIT_MS);
   });
 
   try {
-    await Promise.race([detacher(supabase), echeance]);
+    await Promise.race([detach(supabase), deadline]);
   } finally {
-    clearTimeout(minuteur);
+    clearTimeout(timer);
   }
 }
 
@@ -39,9 +39,9 @@ export async function detacherAppareilDuPush(supabase: SupabaseClient): Promise<
  * Ce ménage est utile, jamais au point de retenir quelqu'un qui veut quitter
  * son compte. Un réseau qui traîne ne doit pas le prendre en otage.
  */
-const DELAI_MAX_MS = 3000;
+const MAX_WAIT_MS = 3000;
 
-async function detacher(supabase: SupabaseClient): Promise<void> {
+async function detach(supabase: SupabaseClient): Promise<void> {
   try {
     if (
       typeof window === "undefined" ||

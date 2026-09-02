@@ -14,18 +14,18 @@
  */
 
 /** Normalise pour une comparaison insensible à la casse et aux diacritiques. */
-export function normaliserPourRecherche(input: string): string {
+export function normalizeForSearch(input: string): string {
   return input.toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "");
 }
 
-export type LienEnCours = {
+export type OpenLink = {
   /** Index du premier caractère du titre, juste après `[[`. */
-  debut: number;
+  start: number;
   /** Ce qui a été tapé depuis. */
-  requete: string;
+  query: string;
 };
 
-const OUVERTURE = "[[";
+const OPENING = "[[";
 
 /**
  * Plus long titre qu'on accepte de considérer comme en cours de frappe.
@@ -33,7 +33,7 @@ const OUVERTURE = "[[";
  * Au-delà, ce `[[` traîne depuis longtemps sur la ligne et n'est plus celui
  * qu'on écrit : mieux vaut ne rien proposer que de suivre un faux départ.
  */
-const TITRE_MAX = 80;
+const MAX_TITLE = 80;
 
 /**
  * Le `[[` ouvert avant le curseur, et ce qui a été tapé depuis — ou `null`.
@@ -42,19 +42,19 @@ const TITRE_MAX = 80;
  * s'écrit pas sur deux lignes, et remonter tout le document ferait s'ouvrir la
  * liste au moindre crochet oublié plus haut.
  */
-export function lienEnCours(texte: string, curseur: number): LienEnCours | null {
-  const debutDeLigne = texte.lastIndexOf("\n", curseur - 1) + 1;
-  const avant = texte.slice(debutDeLigne, curseur);
+export function openLinkAt(text: string, caret: number): OpenLink | null {
+  const lineStart = text.lastIndexOf("\n", caret - 1) + 1;
+  const before = text.slice(lineStart, caret);
 
-  const ouverture = avant.lastIndexOf(OUVERTURE);
-  if (ouverture === -1) return null;
+  const opening = before.lastIndexOf(OPENING);
+  if (opening === -1) return null;
 
-  const requete = avant.slice(ouverture + OUVERTURE.length);
+  const query = before.slice(opening + OPENING.length);
   // Un crochet dans la requête, ouvrant ou fermant, dit que ce `[[` n'est plus
   // celui qu'on est en train d'écrire.
-  if (requete.length > TITRE_MAX || /[[\]]/.test(requete)) return null;
+  if (query.length > MAX_TITLE || /[[\]]/.test(query)) return null;
 
-  return { debut: debutDeLigne + ouverture + OUVERTURE.length, requete };
+  return { start: lineStart + opening + OPENING.length, query };
 }
 
 /**
@@ -65,18 +65,18 @@ export function lienEnCours(texte: string, curseur: number): LienEnCours | null 
  * devant un titre qui le contient au milieu, et à égalité le plus court gagne
  * — c'est presque toujours celui qu'on visait.
  */
-export function pagesProposees<T extends { title: string; is_folder: boolean }>(
+export function suggestedPages<T extends { title: string; is_folder: boolean }>(
   pages: T[],
-  requete: string,
+  query: string,
   max = 8,
 ): T[] {
-  const q = normaliserPourRecherche(requete.trim());
+  const q = normalizeForSearch(query.trim());
 
   return pages
     .filter(p => !p.is_folder)
-    .map(p => ({ page: p, place: normaliserPourRecherche(p.title).indexOf(q) }))
-    .filter(({ place }) => place !== -1)
-    .sort((a, b) => a.place - b.place || a.page.title.localeCompare(b.page.title))
+    .map(p => ({ page: p, at: normalizeForSearch(p.title).indexOf(q) }))
+    .filter(({ at }) => at !== -1)
+    .sort((a, b) => a.at - b.at || a.page.title.localeCompare(b.page.title))
     .slice(0, max)
     .map(({ page }) => page);
 }
@@ -87,18 +87,18 @@ export function pagesProposees<T extends { title: string; is_folder: boolean }>(
  * Le `]]` fermant n'est posé que s'il manque : on complète souvent au milieu
  * d'un lien déjà fermé, et le doubler laisserait `[[Titre]]]]`.
  */
-export function completerLien(
-  texte: string,
-  debut: number,
-  curseur: number,
-  titre: string,
-): { value: string; curseur: number } {
-  const dejaFerme = texte.startsWith("]]", curseur);
+export function completeLink(
+  text: string,
+  start: number,
+  caret: number,
+  title: string,
+): { value: string; caret: number } {
+  const alreadyClosed = text.startsWith("]]", caret);
 
   return {
-    value: texte.slice(0, debut) + titre + (dejaFerme ? "" : "]]") + texte.slice(curseur),
+    value: text.slice(0, start) + title + (alreadyClosed ? "" : "]]") + text.slice(caret),
     // Après le `]]`, qu'il vienne d'être posé ou qu'il fût déjà là : on
     // continue d'écrire la phrase, pas le lien.
-    curseur: debut + titre.length + 2,
+    caret: start + title.length + 2,
   };
 }

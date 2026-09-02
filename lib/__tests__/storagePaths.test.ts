@@ -1,11 +1,11 @@
 import { describe, it, expect } from "vitest";
 
 import {
-  cheminImageWiki,
+  wikiImagePath,
   extensionDepuisLeType,
   nomDeFichierUnique,
   nomDeFichierPourType,
-  prefixeImagesWiki,
+  wikiImagePrefix,
 } from "@/lib/storagePaths";
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -107,23 +107,23 @@ describe("nomDeFichierPourType", () => {
 const MONDE = "11111111-1111-4111-8111-111111111111";
 const PAGE = "22222222-2222-4222-8222-222222222222";
 
-describe("prefixeImagesWiki", () => {
+describe("wikiImagePrefix", () => {
   it("range par monde, puis par page", () => {
-    expect(prefixeImagesWiki(MONDE, PAGE)).toBe(`world-${MONDE}/page-${PAGE}`);
+    expect(wikiImagePrefix(MONDE, PAGE)).toBe(`world-${MONDE}/page-${PAGE}`);
   });
 
   it("donne à deux pages du même monde deux dossiers distincts", () => {
     // C'est toute la raison d'être de ce rangement : supprimer une page ne
     // doit emporter que ses images.
     const autre = "33333333-3333-4333-8333-333333333333";
-    expect(prefixeImagesWiki(MONDE, PAGE)).not.toBe(prefixeImagesWiki(MONDE, autre));
+    expect(wikiImagePrefix(MONDE, PAGE)).not.toBe(wikiImagePrefix(MONDE, autre));
   });
 });
 
-describe("cheminImageWiki", () => {
+describe("wikiImagePath", () => {
   it("pose le fichier dans le dossier de sa page", () => {
-    const chemin = cheminImageWiki(MONDE, PAGE, "image/webp");
-    expect(chemin.startsWith(`${prefixeImagesWiki(MONDE, PAGE)}/`)).toBe(true);
+    const chemin = wikiImagePath(MONDE, PAGE, "image/webp");
+    expect(chemin.startsWith(`${wikiImagePrefix(MONDE, PAGE)}/`)).toBe(true);
     expect(chemin.endsWith(".webp")).toBe(true);
   });
 
@@ -131,11 +131,11 @@ describe("cheminImageWiki", () => {
     const motif = new RegExp(
       String.raw`^world-[0-9a-fA-F-]{36}/page-[0-9a-fA-F-]{36}/[0-9a-fA-F-]{36}\.webp$`,
     );
-    expect(cheminImageWiki(MONDE, PAGE, "image/webp")).toMatch(motif);
+    expect(wikiImagePath(MONDE, PAGE, "image/webp")).toMatch(motif);
   });
 
   it("ne garde rien du fichier d'origine, pas même deux fois le même nom", () => {
-    expect(cheminImageWiki(MONDE, PAGE, "image/webp"))
-      .not.toBe(cheminImageWiki(MONDE, PAGE, "image/webp"));
+    expect(wikiImagePath(MONDE, PAGE, "image/webp"))
+      .not.toBe(wikiImagePath(MONDE, PAGE, "image/webp"));
   });
 });

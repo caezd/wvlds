@@ -1,20 +1,20 @@
 import { describe, it, expect } from "vitest";
 
 import {
-  completerLien,
-  lienEnCours,
-  normaliserPourRecherche,
-  pagesProposees,
+  completeLink,
+  openLinkAt,
+  normalizeForSearch,
+  suggestedPages,
 } from "@/lib/wikiLinkSuggest";
 
 /** `|` marque le curseur : plus lisible qu'un indice à compter. */
-function curseur(marque: string) {
-  return { texte: marque.replace("|", ""), position: marque.indexOf("|") };
+function caret(marked: string) {
+  return { text: marked.replace("|", ""), position: marked.indexOf("|") };
 }
 
-function enCours(marque: string) {
-  const { texte, position } = curseur(marque);
-  return lienEnCours(texte, position);
+function enCours(marked: string) {
+  const { text, position } = caret(marked);
+  return openLinkAt(text, position);
 }
 
 function page(title: string, is_folder = false) {
@@ -29,13 +29,13 @@ const PAGES = [
   page("Élévation"),
 ];
 
-describe("lienEnCours", () => {
+describe("openLinkAt", () => {
   it("repère le titre en train de s'écrire", () => {
-    expect(enCours("On va à [[Ark|")).toEqual({ debut: 10, requete: "Ark" });
+    expect(enCours("On va à [[Ark|")).toEqual({ start: 10, query: "Ark" });
   });
 
   it("s'ouvre dès les deux crochets, sans rien de tapé", () => {
-    expect(enCours("On va à [[|")).toEqual({ debut: 10, requete: "" });
+    expect(enCours("On va à [[|")).toEqual({ start: 10, query: "" });
   });
 
   it("ne voit rien sans crochets", () => {
@@ -47,7 +47,7 @@ describe("lienEnCours", () => {
   });
 
   it("suit le dernier crochet ouvert quand il y en a deux", () => {
-    expect(enCours("De [[Arkham]] à [[Inn|")).toEqual({ debut: 18, requete: "Inn" });
+    expect(enCours("De [[Arkham]] à [[Inn|")).toEqual({ start: 18, query: "Inn" });
   });
 
   it("ne franchit pas le début de ligne", () => {
@@ -61,24 +61,24 @@ describe("lienEnCours", () => {
   });
 });
 
-describe("pagesProposees", () => {
+describe("suggestedPages", () => {
   it("propose ce qui commence par la requête, avant ce qui la contient", () => {
-    expect(pagesProposees(PAGES, "ark").map(p => p.title)).toEqual([
+    expect(suggestedPages(PAGES, "ark").map(p => p.title)).toEqual([
       "Arkham",
       "Arkham Asylum",
     ]);
   });
 
   it("ignore la casse et les accents", () => {
-    expect(pagesProposees(PAGES, "eleva").map(p => p.title)).toEqual(["Élévation"]);
+    expect(suggestedPages(PAGES, "eleva").map(p => p.title)).toEqual(["Élévation"]);
   });
 
   it("écarte les dossiers : un lien vers un dossier ne mène à rien", () => {
-    expect(pagesProposees(PAGES, "lieu")).toEqual([]);
+    expect(suggestedPages(PAGES, "lieu")).toEqual([]);
   });
 
   it("propose tout, en ordre, quand rien n'est encore tapé", () => {
-    expect(pagesProposees(PAGES, "").map(p => p.title)).toEqual([
+    expect(suggestedPages(PAGES, "").map(p => p.title)).toEqual([
       "Arkham",
       "Arkham Asylum",
       "Élévation",
@@ -87,31 +87,31 @@ describe("pagesProposees", () => {
   });
 
   it("s'arrête au nombre demandé", () => {
-    expect(pagesProposees(PAGES, "", 2)).toHaveLength(2);
+    expect(suggestedPages(PAGES, "", 2)).toHaveLength(2);
   });
 });
 
-describe("completerLien", () => {
+describe("completeLink", () => {
   it("écrit le titre choisi et ferme le lien", () => {
-    const { texte, position } = curseur("On va à [[Ark|");
-    expect(completerLien(texte, 10, position, "Arkham")).toEqual({
+    const { text, position } = caret("On va à [[Ark|");
+    expect(completeLink(text, 10, position, "Arkham")).toEqual({
       value: "On va à [[Arkham]]",
-      curseur: 18,
+      caret: 18,
     });
   });
 
   it("ne double pas un `]]` déjà là", () => {
     // On complète souvent au milieu d'un lien déjà fermé.
-    const { texte, position } = curseur("On va à [[Ark|]] ce soir");
-    expect(completerLien(texte, 10, position, "Arkham")).toEqual({
+    const { text, position } = caret("On va à [[Ark|]] ce soir");
+    expect(completeLink(text, 10, position, "Arkham")).toEqual({
       value: "On va à [[Arkham]] ce soir",
-      curseur: 18,
+      caret: 18,
     });
   });
 });
 
-describe("normaliserPourRecherche", () => {
+describe("normalizeForSearch", () => {
   it("abaisse la casse et retire les diacritiques", () => {
-    expect(normaliserPourRecherche("Élévation")).toBe("elevation");
+    expect(normalizeForSearch("Élévation")).toBe("elevation");
   });
 });

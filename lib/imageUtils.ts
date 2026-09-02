@@ -37,14 +37,14 @@ export async function blobToWebP(blob: Blob, name = "image", maxWidthOrHeight = 
  * qu'un fichier déposé depuis l'explorateur peuple les deux. On regarde donc
  * `items` d'abord, `files` ensuite.
  */
-export function premiereImage(source: DataTransfer | null): File | null {
+export function firstImage(source: DataTransfer | null): File | null {
   if (!source) return null;
 
-  const parItems = Array.from(source.items ?? []).find(
+  const fromItems = Array.from(source.items ?? []).find(
     (i) => i.kind === "file" && i.type.startsWith("image/"),
   );
-  const fichier = parItems?.getAsFile() ?? null;
-  if (fichier) return fichier;
+  const file = fromItems?.getAsFile() ?? null;
+  if (file) return file;
 
   return Array.from(source.files ?? []).find((f) => f.type.startsWith("image/")) ?? null;
 }

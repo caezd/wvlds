@@ -73,21 +73,21 @@ import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 import { WIKI_FOOTER, WIKI_FOOTER_BUTTON, WIKI_SUBHEADER, WIKI_SUBHEADER_COUNT } from "./wikiSubHeader";
 import { WikiEditModeToggle } from "./WikiEditModeToggle";
 import {
-  deplacementsAuClavier,
-  idZoneApres,
-  pageDeZoneApres,
-  planifierDeplacement,
-  zoneVisee,
-  type CommandeDeplacement,
+  keyboardMoves,
+  afterZoneId,
+  pageOfAfterZone,
+  planMove,
+  targetZone,
+  type MoveCommand,
   type Zone,
 } from "@/lib/wikiTreeMove";
 import { slugify } from "@/lib/slug";
 import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import { useColumnResize } from "@/hooks/useColumnResize";
-import { SANS_DEPLACEMENT } from "@/lib/dndTri";
-import { laColonneTient } from "@/lib/wikiSideColumn";
-import { normaliserPourRecherche } from "@/lib/wikiLinkSuggest";
-import { BUCKET_WIKI, prefixeImagesWiki } from "@/lib/storagePaths";
+import { NO_DISPLACEMENT } from "@/lib/dndSort";
+import { columnFits } from "@/lib/wikiSideColumn";
+import { normalizeForSearch } from "@/lib/wikiLinkSuggest";
+import { WIKI_BUCKET, wikiImagePrefix } from "@/lib/storagePaths";
 import { MEDIA, useMediaQuery } from "@/hooks/useMediaQuery";
 import type { WorldLexiconTerm } from "@/types/worlds";
 
@@ -135,13 +135,13 @@ const WIKI_PAGE_COLUMNS =
  * afficher. Renvoie `null` sur un wiki qui n'a que des dossiers, ou rien.
  */
 export function firstPageOf(pages: WikiPage[]): WikiPage | null {
-  const enfantsDe = (parentId: string | null) =>
+  const childrenOfNode = (parentId: string | null) =>
     pages
       .filter(p => p.parent_id === parentId)
       .sort((a, b) => a.sort_index - b.sort_index);
 
   function descendre(parentId: string | null): WikiPage | null {
-    for (const page of enfantsDe(parentId)) {
+    for (const page of childrenOfNode(parentId)) {
       if (!page.is_folder) return page;
       const dedans = descendre(page.id);
       if (dedans) return dedans;
@@ -168,8 +168,8 @@ type SortableTreeNodeProps = {
   /** Ce dossier va accueillir la page glissée. */
   estDossierCible: boolean;
   /** Déplacements praticables sans souris, et de quoi les demander. */
-  deplacements: Partial<Record<CommandeDeplacement, unknown>>;
-  onDeplacer: (commande: CommandeDeplacement) => void;
+  deplacements: Partial<Record<MoveCommand, unknown>>;
+  onDeplacer: (commande: MoveCommand) => void;
   onSelect: () => void;
   onToggleFolder: () => void;
   onStartRename: () => void;
@@ -183,12 +183,12 @@ type SortableTreeNodeProps = {
 };
 
 /** Ordre d'affichage : les deux verticaux d'abord, les deux latéraux ensuite. */
-const ORDRE_DES_DEPLACEMENTS: CommandeDeplacement[] = [
+const ORDRE_DES_DEPLACEMENTS: MoveCommand[] = [
   "monter", "descendre", "entrer", "sortir",
 ];
 
 const LIBELLE_DEPLACEMENT: Record<
-  CommandeDeplacement,
+  MoveCommand,
   { Icone: React.ComponentType<{ className?: string }>; cle: string }
 > = {
   monter: { Icone: ArrowUp, cle: "moveUp" },
@@ -432,7 +432,7 @@ function SortableTreeNode({
 function ZoneApresDossier({
   pageId, depth, active,
 }: { pageId: string; depth: number; active: boolean }) {
-  const { setNodeRef } = useDroppable({ id: idZoneApres(pageId) });
+  const { setNodeRef } = useDroppable({ id: afterZoneId(pageId) });
 
   return (
     <div
@@ -556,7 +556,7 @@ export function WorldWiki({
    * ferait revenir, ce qui rétrécirait la zone.
    */
   const zoneRef = React.useRef<HTMLDivElement>(null);
-  const [largeurZone, setLargeurZone] = React.useState<number | null>(null);
+  const [zoneWidth, setLargeurZone] = React.useState<number | null>(null);
   React.useEffect(() => {
     const zone = zoneRef.current;
     if (!zone) return;
@@ -574,7 +574,7 @@ export function WorldWiki({
     if (Number.isFinite(taille) && taille > 0) setRem(taille);
   }, []);
 
-  const grandEcran = useMediaQuery(MEDIA.lg);
+  const largeScreen = useMediaQuery(MEDIA.lg);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -793,15 +793,15 @@ export function WorldWiki({
   async function effacerLesImages(ids: string[]) {
     const chemins: string[] = [];
     for (const id of ids) {
-      const dossier = prefixeImagesWiki(worldId, id);
+      const dossier = wikiImagePrefix(worldId, id);
       // Mille suffit très largement pour une page ; au-delà, un balayage du
       // préfixe reprendra ce qui reste.
-      const { data } = await supabase.storage.from(BUCKET_WIKI).list(dossier, { limit: 1000 });
+      const { data } = await supabase.storage.from(WIKI_BUCKET).list(dossier, { limit: 1000 });
       for (const fichier of data ?? []) chemins.push(`${dossier}/${fichier.name}`);
     }
     if (chemins.length === 0) return;
 
-    const { error } = await supabase.storage.from(BUCKET_WIKI).remove(chemins);
+    const { error } = await supabase.storage.from(WIKI_BUCKET).remove(chemins);
     if (error) console.error("[WorldWiki] images du wiki", error);
   }
 
@@ -881,14 +881,14 @@ export function WorldWiki({
   }
 
   const searchResults = React.useMemo<WikiSearchResult[] | null>(() => {
-    const q = normaliserPourRecherche(searchQuery.trim());
+    const q = normalizeForSearch(searchQuery.trim());
     if (!q) return null;
 
     return (pages ?? [])
       .filter(p => !p.is_folder)
       .map((p): WikiSearchResult | null => {
-        const titleMatch = normaliserPourRecherche(p.title).includes(q);
-        const contentNorm = p.content ? normaliserPourRecherche(p.content) : "";
+        const titleMatch = normalizeForSearch(p.title).includes(q);
+        const contentNorm = p.content ? normalizeForSearch(p.content) : "";
         const contentIdx = contentNorm.indexOf(q);
         if (!titleMatch && contentIdx === -1) return null;
 
@@ -934,11 +934,11 @@ export function WorldWiki({
    * geste en suspens, la poignée démontée avant son `pointerup`.
    */
   const enRedimensionnement = navResizing || panelResizing;
-  const colonneNav = enRedimensionnement || laColonneTient({
-    largeurZone, largeurColonne: navWidth, grandEcran, rem,
+  const colonneNav = enRedimensionnement || columnFits({
+    zoneWidth, columnWidth: navWidth, largeScreen, rem,
   });
-  const colonneLaterale = enRedimensionnement || laColonneTient({
-    largeurZone, largeurColonne: navWidth + panelWidth, grandEcran, rem,
+  const colonneLaterale = enRedimensionnement || columnFits({
+    zoneWidth, columnWidth: navWidth + panelWidth, largeScreen, rem,
   });
 
   // La colonne revient (élargissement, rotation d'une tablette) : le tiroir
@@ -953,7 +953,7 @@ export function WorldWiki({
   const pageGlissee = idGlisse ? pages?.find(p => p.id === idGlisse) ?? null : null;
 
   /** Dossier qui va accueillir la page — c'est lui qui prend le cadre. */
-  const dossierCible = survolGlisse?.zone === "dans" ? survolGlisse.overId : null;
+  const dossierCible = survolGlisse?.zone === "inside" ? survolGlisse.overId : null;
 
   /** Bande allumée : la page se posera sous le contenu de ce dossier. */
   const bandeCible = survolGlisse?.viaBande ? survolGlisse.overId : null;
@@ -973,9 +973,9 @@ export function WorldWiki({
     const activeId = String(active.id);
 
     // La bande sous un dossier ne se découpe pas : elle vaut « après lui ».
-    const dossierDeLaBande = pageDeZoneApres(String(over.id));
+    const dossierDeLaBande = pageOfAfterZone(String(over.id));
     if (dossierDeLaBande) {
-      setSurvolGlisse({ activeId, overId: dossierDeLaBande, zone: "apres", viaBande: true });
+      setSurvolGlisse({ activeId, overId: dossierDeLaBande, zone: "after", viaBande: true });
       return;
     }
 
@@ -992,7 +992,7 @@ export function WorldWiki({
     setSurvolGlisse({
       activeId,
       overId: String(over.id),
-      zone: zoneVisee(y, over.rect.height, cible?.is_folder ?? false),
+      zone: targetZone(y, over.rect.height, cible?.is_folder ?? false),
       viaBande: false,
     });
   }
@@ -1003,11 +1003,11 @@ export function WorldWiki({
 
     // La cible vient du survol et non de `over` : lui seul a résolu la bande
     // « après » en son dossier. Les deux se valent partout ailleurs.
-    const ecritures = planifierDeplacement(
+    const ecritures = planMove(
       pages,
       String(active.id),
       survolGlisse?.overId ?? String(over.id),
-      survolGlisse?.zone ?? "avant",
+      survolGlisse?.zone ?? "before",
     );
     appliquerDeplacement(ecritures, String(active.id));
   }
@@ -1020,7 +1020,7 @@ export function WorldWiki({
    * base refuse.
    */
   function appliquerDeplacement(
-    ecritures: ReturnType<typeof planifierDeplacement>,
+    ecritures: ReturnType<typeof planMove>,
     pageId: string,
   ) {
     if (!ecritures || ecritures.length === 0 || !pages) return;
@@ -1064,13 +1064,13 @@ export function WorldWiki({
     });
   }
 
-  /** Déplace une page d'un cran, sans souris — voir `deplacementsAuClavier`. */
-  function deplacerAuClavier(pageId: string, commande: CommandeDeplacement) {
+  /** Déplace une page d'un cran, sans souris — voir `keyboardMoves`. */
+  function deplacerAuClavier(pageId: string, commande: MoveCommand) {
     if (!pages) return;
-    const vise = deplacementsAuClavier(pages, pageId)[commande];
+    const vise = keyboardMoves(pages, pageId)[commande];
     if (!vise) return;
     appliquerDeplacement(
-      planifierDeplacement(pages, pageId, vise.cibleId, vise.zone),
+      planMove(pages, pageId, vise.targetId, vise.zone),
       pageId,
     );
   }
@@ -1153,7 +1153,7 @@ export function WorldWiki({
         // milieu d'un dossier, elle n'ouvre aucun logement : la liste doit
         // rester immobile, sans quoi elle promettrait une place que le cadre
         // du dossier dément.
-        strategy={dossierCible ? SANS_DEPLACEMENT : verticalListSortingStrategy}
+        strategy={dossierCible ? NO_DISPLACEMENT : verticalListSortingStrategy}
       >
         {children.map((page, rang) => {
           const isExpanded = expandedFolders.has(page.id);
@@ -1175,7 +1175,7 @@ export function WorldWiki({
               // téléphone, choisir une page la sélectionnait sous un tiroir
               // resté ouvert — rien ne semblait se passer.
               estDossierCible={dossierCible === page.id}
-              deplacements={deplacementsAuClavier(pages ?? [], page.id)}
+              deplacements={keyboardMoves(pages ?? [], page.id)}
               onDeplacer={commande => deplacerAuClavier(page.id, commande)}
               onSelect={() => selectPageById(page.id)}
               onToggleFolder={() => toggleFolder(page.id)}

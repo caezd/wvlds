@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import { premiereImage } from "@/lib/imageUtils";
+import { firstImage } from "@/lib/imageUtils";
 
 /** Un `DataTransfer` de façade : jsdom n'en fabrique pas de complet. */
 function transfert({
@@ -23,14 +23,14 @@ function transfert({
 const IMAGE = new File(["x"], "capture.png", { type: "image/png" });
 const TEXTE = new File(["x"], "notes.txt", { type: "text/plain" });
 
-describe("premiereImage", () => {
+describe("firstImage", () => {
   it("trouve une capture collée, qui ne passe que par `items`", () => {
     const source = transfert({ items: [{ kind: "file", type: "image/png", fichier: IMAGE }] });
-    expect(premiereImage(source)).toBe(IMAGE);
+    expect(firstImage(source)).toBe(IMAGE);
   });
 
   it("trouve un fichier déposé, qui ne passe que par `files`", () => {
-    expect(premiereImage(transfert({ files: [IMAGE] }))).toBe(IMAGE);
+    expect(firstImage(transfert({ files: [IMAGE] }))).toBe(IMAGE);
   });
 
   it("ignore le texte collé — le navigateur le colle mieux que nous", () => {
@@ -38,17 +38,17 @@ describe("premiereImage", () => {
       items: [{ kind: "string", type: "text/plain" }],
       files: [TEXTE],
     });
-    expect(premiereImage(source)).toBeNull();
+    expect(firstImage(source)).toBeNull();
   });
 
   it("ne se laisse pas prendre par un `items` d'image sans fichier derrière", () => {
     // Safari annonce parfois le type sans donner le fichier : on retombe alors
     // sur `files`, et sur rien du tout s'il est vide.
     const source = transfert({ items: [{ kind: "file", type: "image/png" }] });
-    expect(premiereImage(source)).toBeNull();
+    expect(firstImage(source)).toBeNull();
   });
 
   it("supporte l'absence de source", () => {
-    expect(premiereImage(null)).toBeNull();
+    expect(firstImage(null)).toBeNull();
   });
 });

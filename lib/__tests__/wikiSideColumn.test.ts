@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import { laColonneTient, mesurePleineDuCorps } from "@/lib/wikiSideColumn";
+import { columnFits, fullBodyMeasure } from "@/lib/wikiSideColumn";
 
 const REM = 16;
 /** Largeurs configurées des deux colonnes du wiki. */
@@ -8,29 +8,29 @@ const NAV = 208;
 const NOTES = 320;
 
 /** Les deux seuils du wiki, lus sur la même zone — voir `WorldWiki`. */
-function colonnes(largeurZone: number | null) {
-  const commun = { largeurZone, grandEcran: true, rem: REM };
+function colonnes(zoneWidth: number | null) {
+  const commun = { zoneWidth, largeScreen: true, rem: REM };
   return {
-    pages: laColonneTient({ ...commun, largeurColonne: NAV }),
-    notes: laColonneTient({ ...commun, largeurColonne: NAV + NOTES }),
+    pages: columnFits({ ...commun, columnWidth: NAV }),
+    notes: columnFits({ ...commun, columnWidth: NAV + NOTES }),
   };
 }
 
-describe("mesurePleineDuCorps", () => {
+describe("fullBodyMeasure", () => {
   it("compte le corps et ses deux gouttières", () => {
     // 48 rem de texte, plus `px-4` de chaque côté.
-    expect(mesurePleineDuCorps(true, REM)).toBe((48 + 2) * REM);
+    expect(fullBodyMeasure(true, REM)).toBe((48 + 2) * REM);
     // 40 rem et `px-2` en dessous de `lg`.
-    expect(mesurePleineDuCorps(false, REM)).toBe((40 + 1) * REM);
+    expect(fullBodyMeasure(false, REM)).toBe((40 + 1) * REM);
   });
 
   it("suit le `rem` du lecteur, qui peut l'avoir grossi", () => {
-    expect(mesurePleineDuCorps(true, 20)).toBe((48 + 2) * 20);
+    expect(fullBodyMeasure(true, 20)).toBe((48 + 2) * 20);
   });
 });
 
 describe("la cascade des deux colonnes", () => {
-  const MESURE = mesurePleineDuCorps(true, REM); // 800
+  const MESURE = fullBodyMeasure(true, REM); // 800
 
   it("garde les deux tant que le corps a sa mesure", () => {
     expect(colonnes(MESURE + NAV + NOTES)).toEqual({ pages: true, notes: true });
@@ -60,7 +60,7 @@ describe("la cascade des deux colonnes", () => {
   });
 });
 
-describe("laColonneTient — avant toute mesure", () => {
+describe("columnFits — avant toute mesure", () => {
   it("n'ose aucune colonne", () => {
     // Mieux vaut les voir arriver que partir — et deux panneaux de notes
     // montés ouvriraient deux fois le même canal Realtime.

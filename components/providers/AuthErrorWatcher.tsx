@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import type { Session } from "@supabase/supabase-js";
 
 import { createClient } from "@/lib/supabase/client";
-import { consommerDeconnexionAnnoncee } from "@/lib/deconnexionVoulue";
+import { consumeAnnouncedSignOut } from "@/lib/intentionalSignOut";
 
 /**
  * Annonce la perte de session, et elle seule.
@@ -36,7 +36,7 @@ export function AuthErrorWatcher() {
         // Consommé quoi qu'il arrive : le drapeau ne vaut que pour CE
         // `SIGNED_OUT`, et le laisser en place masquerait la prochaine
         // expiration — celle qu'il faut vraiment annoncer.
-        const voulue = consommerDeconnexionAnnoncee();
+        const voulue = consumeAnnouncedSignOut();
         if (voulue || pathname.startsWith("/auth")) return;
 
         toast.error(t("sessionExpired"), {

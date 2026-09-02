@@ -8,7 +8,7 @@
  */
 
 /** Ce qu'un aperçu a besoin de savoir d'une page. */
-export type PageApercevable = {
+export type PreviewablePage = {
   slug: string;
   title: string;
   icon: string | null;
@@ -17,7 +17,7 @@ export type PageApercevable = {
   is_folder: boolean;
 };
 
-export type ApercuPage = {
+export type LinkPreview = {
   title: string;
   icon: string | null;
   description: string | null;
@@ -35,10 +35,10 @@ export type ApercuPage = {
  *   c'est-à-dire le texte du lien qu'on est en train de survoler : une fenêtre
  *   qui s'ouvre pour ne rien apprendre est pire que pas de fenêtre du tout.
  */
-export function apercuDeLaPage(
-  pages: PageApercevable[],
+export function linkPreview(
+  pages: PreviewablePage[],
   slug: string,
-): ApercuPage | null {
+): LinkPreview | null {
   const page = pages.find(p => p.slug === slug && !p.is_folder);
   if (!page) return null;
 

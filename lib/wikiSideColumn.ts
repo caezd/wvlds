@@ -17,21 +17,21 @@
  */
 
 /** Mesure maximale du corps d'un article, en rem — celle d'un salon. */
-const CORPS_REM = { etroit: 40, large: 48 } as const;
+const BODY_REM = { etroit: 40, large: 48 } as const;
 
 /** Gouttière du corps, de chaque côté : `px-2`, puis `px-4` à partir de `lg`. */
-const GOUTTIERE_REM = { etroit: 0.5, large: 1 } as const;
+const GUTTER_REM = { etroit: 0.5, large: 1 } as const;
 
 /** Place qu'il faut au corps pour être à sa pleine mesure, gouttières comprises. */
-export function mesurePleineDuCorps(grandEcran: boolean, rem: number): number {
-  const cle = grandEcran ? "large" : "etroit";
-  return (CORPS_REM[cle] + GOUTTIERE_REM[cle] * 2) * rem;
+export function fullBodyMeasure(largeScreen: boolean, rem: number): number {
+  const cle = largeScreen ? "large" : "etroit";
+  return (BODY_REM[cle] + GUTTER_REM[cle] * 2) * rem;
 }
 
 /**
  * La colonne tient-elle sans rogner sur le corps de l'article ?
  *
- * `largeurZone` vaut `null` tant que rien n'est mesuré — au rendu serveur, et
+ * `zoneWidth` vaut `null` tant que rien n'est mesuré — au rendu serveur, et
  * jusqu'au premier passage de l'observateur. On répond alors « non » pour les
  * deux colonnes : mieux vaut les voir arriver que partir, et la colonne des
  * notes ne peut de toute façon pas se permettre d'être montée pour rien —
@@ -44,17 +44,17 @@ export function mesurePleineDuCorps(grandEcran: boolean, rem: number): number {
  * « en colonne » — donc pas de bouton de tiroir — pendant que le CSS la
  * cachait. Ni colonne ni bouton.
  */
-export function laColonneTient({
-  largeurZone,
-  largeurColonne,
-  grandEcran,
+export function columnFits({
+  zoneWidth,
+  columnWidth,
+  largeScreen,
   rem,
 }: {
-  largeurZone: number | null;
-  largeurColonne: number;
-  grandEcran: boolean;
+  zoneWidth: number | null;
+  columnWidth: number;
+  largeScreen: boolean;
   rem: number;
 }): boolean {
-  if (largeurZone === null) return false;
-  return largeurZone - largeurColonne >= mesurePleineDuCorps(grandEcran, rem);
+  if (zoneWidth === null) return false;
+  return zoneWidth - columnWidth >= fullBodyMeasure(largeScreen, rem);
 }
