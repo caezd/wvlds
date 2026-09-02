@@ -659,7 +659,7 @@ describe("WorldWiki — suppression d'une page", () => {
     const ligne = (await dansLArbre("Accueil")).closest("div")!;
     await user.click(within(ligne).getByRole("button", { name: "Options" }));
     await user.click(await screen.findByRole("menuitem", { name: "Supprimer" }));
-    await user.click(await screen.findByRole("button", { name: "Supprimer" }));
+    await user.click(await screen.findByRole("button", { name: "Envoyer à la corbeille" }));
 
     await waitFor(() => expect(document.body.style.pointerEvents).not.toBe("none"));
   });
@@ -679,7 +679,7 @@ describe("WorldWiki — suppression d'une page", () => {
     const ligne = (await dansLArbre("Lieux")).closest("div")!;
     await user.click(within(ligne).getByRole("button", { name: "Options" }));
     await user.click(await screen.findByRole("menuitem", { name: "Supprimer" }));
-    await user.click(await screen.findByRole("button", { name: "Supprimer" }));
+    await user.click(await screen.findByRole("button", { name: "Envoyer à la corbeille" }));
 
     await waitFor(() => {
       const marquees = mock.buildersFor("world_wiki_pages")

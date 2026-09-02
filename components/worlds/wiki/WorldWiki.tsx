@@ -1668,9 +1668,12 @@ export function WorldWiki({
         open={!!confirmDelete}
         onOpenChange={open => { if (!open) setConfirmDelete(null); }}
         title={t("deleteTitle", { title: confirmDelete?.title ?? "" })}
-        description={`${confirmDelete?.is_folder ? t("deleteFolderDesc") : t("deletePageDesc")} ${t("deleteIrreversible")}`}
+        // Le geste n'est plus irréversible : le dialogue dit où la page va, et
+        // le bouton le nomme — « Supprimer » aurait laissé croire à l'ancien
+        // sort, que seule la corbeille réserve encore.
+        description={confirmDelete?.is_folder ? t("deleteFolderDesc") : t("deletePageDesc")}
         cancelLabel={tCommon("cancel")}
-        confirmLabel={tCommon("delete")}
+        confirmLabel={t("sendToTrash")}
         onConfirm={() => {
           if (confirmDelete) void deletePage(confirmDelete);
           setConfirmDelete(null);
