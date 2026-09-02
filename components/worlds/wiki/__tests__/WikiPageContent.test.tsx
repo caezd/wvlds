@@ -956,7 +956,10 @@ describe("WikiPageContent — images collées dans l'article", () => {
 const MARKDOWN_IMAGE = new RegExp(String.raw`^Voici !\[\]\(https://\S+\)$`);
 
 describe("WikiPageContent — autocomplétion des liens internes", () => {
-  const ARKHAM: WikiPage = { ...BASE_PAGE, id: "p2", title: "Arkham", slug: "arkham" };
+  const ARKHAM: WikiPage = {
+    ...BASE_PAGE, id: "p2", title: "Arkham", slug: "arkham",
+    content: ["## Le port", "", "## Les ruelles"].join("\n"),
+  };
   const ASILE: WikiPage = { ...BASE_PAGE, id: "p3", title: "Arkham Asylum", slug: "asile" };
 
   function renderEnEdition(brouillon = "On va à ") {
@@ -1011,6 +1014,27 @@ describe("WikiPageContent — autocomplétion des liens internes", () => {
 
     const proposees = await screen.findAllByRole("option");
     expect(proposees.map(o => o.textContent)).toEqual(["Arkham", "Arkham Asylum"]);
+  });
+
+  it("propose les sections de la page dès le `#`", async () => {
+    // Sans cela il fallait connaître le titre exact de la section et
+    // l'orthographier juste — ce que la liste avait justement supprimé pour
+    // les pages.
+    renderEnEdition();
+    await taper("[[Arkham#");
+
+    const proposees = await screen.findAllByRole("option");
+    expect(proposees.map(o => o.textContent)).toEqual(["Le port", "Les ruelles"]);
+  });
+
+  it("écrit la page ET sa section quand on en choisit une", async () => {
+    renderEnEdition();
+    const champ = await taper("[[Arkham#ruel");
+    await screen.findAllByRole("option");
+
+    await userEvent.keyboard("{Enter}");
+
+    expect(champ).toHaveValue("On va à [[Arkham#Les ruelles]]");
   });
 
   it("écrit le titre choisi et ferme le lien sur Entrée", async () => {

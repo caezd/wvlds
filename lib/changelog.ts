@@ -9,6 +9,16 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Wiki",
+    text: "L’adresse suit maintenant la page qu’on lit : le lien se copie et se partage, le bouton Précédent revient à la page d’avant au lieu de quitter le wiki, et un rafraîchissement rouvre là où l’on était. Suivre un lien de section l’inscrit aussi dans l’adresse."
+  },
+  {
+    date: "2026-09",
+    tag: "Wiki",
+    text: "Taper « # » après un titre de page propose ses sections : on choisit dans la liste plutôt que d’avoir à connaître l’intitulé exact et à l’orthographier juste."
+  },
+  {
+    date: "2026-09",
+    tag: "Wiki",
     text: "Un lien interne peut viser une section : « [[Arkham#Le port]] » ouvre la page ET s’y rend, « [[#Le port]] » reste dans la page courante. Les titres portaient déjà l’identifiant qu’il fallait — il ne manquait que la syntaxe pour s’en servir."
   },
   {

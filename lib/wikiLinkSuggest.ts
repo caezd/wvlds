@@ -102,3 +102,37 @@ export function completeLink(
     caret: start + title.length + 2,
   };
 }
+
+/**
+ * Sépare « Titre#Section » de « Titre ».
+ *
+ * `section` vaut `null` tant qu'aucun `#` n'est tapé — c'est ce qui distingue
+ * « je cherche une page » de « j'ai ma page, je cherche sa section ».
+ */
+export function splitLinkQuery(query: string): { title: string; section: string | null } {
+  const hash = query.indexOf("#");
+  if (hash === -1) return { title: query, section: null };
+  return { title: query.slice(0, hash).trim(), section: query.slice(hash + 1) };
+}
+
+/**
+ * Sections d'une page proposées pour ce début de titre.
+ *
+ * À pertinence égale, l'ordre du document l'emporte : c'est celui que
+ * l'auteur a en tête quand il pense « la troisième section », alors qu'un
+ * classement alphabétique ne correspond à rien de ce qu'il voit.
+ */
+export function suggestedSections<T extends { text: string }>(
+  headings: T[],
+  query: string,
+  max = 8,
+): T[] {
+  const q = normalizeForSearch(query.trim());
+
+  return headings
+    .map((heading, rank) => ({ heading, rank, at: normalizeForSearch(heading.text).indexOf(q) }))
+    .filter(({ at }) => at !== -1)
+    .sort((a, b) => a.at - b.at || a.rank - b.rank)
+    .slice(0, max)
+    .map(({ heading }) => heading);
+}

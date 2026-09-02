@@ -596,6 +596,43 @@ describe("firstPageOf", () => {
   });
 });
 
+describe("WorldWiki — l'adresse suit la page ouverte", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    window.history.replaceState(null, "", "/w/w1?view=wiki");
+  });
+
+  it("écrit la page choisie dans l'adresse", async () => {
+    // Le wiki n'y touchait pas : on ne pouvait pas partager ce qu'on lisait,
+    // et le bouton Précédent sortait du wiki d'un bond.
+    setupWithFolder();
+    const user = userEvent.setup();
+    render(<WorldWiki worldId="w1" canEdit={false} />);
+
+    await user.click(await dansLArbre("Accueil"));
+
+    await waitFor(() =>
+      expect(new URLSearchParams(window.location.search).get("page")).toBe("accueil"),
+    );
+  });
+
+  it("rouvre la page que le bouton Précédent désigne", async () => {
+    setupWithFolder();
+    const user = userEvent.setup();
+    render(<WorldWiki worldId="w1" canEdit={false} />);
+
+    await user.click(await dansLArbre("Accueil"));
+    // Le retour en arrière, tel que le navigateur le produit : l'adresse
+    // change, puis `popstate` prévient.
+    window.history.replaceState(null, "", "/w/w1?view=wiki&page=lieux");
+    window.dispatchEvent(new PopStateEvent("popstate"));
+
+    await waitFor(() =>
+      expect(new URLSearchParams(window.location.search).get("page")).toBe("lieux"),
+    );
+  });
+});
+
 describe("WorldWiki — suppression d'une page", () => {
   beforeEach(() => {
     vi.clearAllMocks();

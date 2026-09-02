@@ -647,7 +647,10 @@ export function WorldWiki({
   React.useEffect(() => {
     if (!initialSlug || initialSlugConsumedRef.current || !pages) return;
     initialSlugConsumedRef.current = true;
-    navigateToSlug(initialSlug);
+    // `replace` : cette page vient de l'adresse, elle ne mérite pas une
+    // seconde entrée d'historique par-dessus celle qui l'a amenée.
+    const cible = pages.find(p => p.slug === initialSlug);
+    if (cible) selectPageById(cible.id, "replace");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialSlug, pages]);
 
@@ -659,7 +662,9 @@ export function WorldWiki({
     if (firstPageConsumedRef.current || !pages || selectedId || initialSlug) return;
     firstPageConsumedRef.current = true;
     const premiere = firstPageOf(pages);
-    if (premiere) selectPageById(premiere.id);
+    // `replace` aussi : personne n'a demandé cette page, revenir en arrière
+    // doit ramener d'où l'on vient, pas à un panneau vide.
+    if (premiere) selectPageById(premiere.id, "replace");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pages, selectedId, initialSlug]);
 
@@ -853,7 +858,34 @@ export function WorldWiki({
   }
 
   /** Sélectionne une page et déplie tous ses dossiers ancêtres dans la sidebar. */
-  function selectPageById(pageId: string) {
+  /**
+   * Écrit dans l'adresse la page ouverte.
+   *
+   * Le wiki n'y touchait pas : `?page=slug` servait à l'arrivée, puis
+   * l'adresse se figeait. On ne pouvait donc pas partager ce qu'on avait sous
+   * les yeux, le bouton Précédent sortait du wiki d'un coup, et un
+   * rafraîchissement ramenait au point de départ.
+   *
+   * `history` plutôt que le routeur de Next : changer un paramètre par
+   * `router.push` refait un aller-retour serveur pour un état que le client
+   * détient déjà. Next prend en charge cet écrit superficiel.
+   */
+  function writeUrl(slug: string, anchor: string | null, mode: "push" | "replace") {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    url.searchParams.set("view", "wiki");
+    url.searchParams.set("page", slug);
+    url.hash = anchor ? `#${anchor}` : "";
+    window.history[mode === "push" ? "pushState" : "replaceState"](null, "", url.toString());
+  }
+
+  /**
+   * @param history `replace` pour une ouverture que l'utilisateur n'a pas
+   *   demandée — la première page à l'arrivée, ou le slug reçu en paramètre :
+   *   elles ne méritent pas leur propre entrée dans l'historique. `none` quand
+   *   c'est justement l'historique qui nous ramène ici.
+   */
+  function selectPageById(pageId: string, history: "push" | "replace" | "none" = "push") {
     const target = pages?.find(p => p.id === pageId);
     if (!target) return;
     // Sur téléphone, l'arbre couvre l'article : le laisser ouvert cacherait la
@@ -862,7 +894,27 @@ export function WorldWiki({
     const ids = ancestorIdsOf(target.id);
     if (ids.length) setExpandedFolders(prev => new Set([...prev, ...ids]));
     setSelectedId(target.id);
+    if (history !== "none") writeUrl(target.slug, null, history);
   }
+
+  /**
+   * Le bouton Précédent rouvre la page qu'il désigne.
+   *
+   * Sans cela, il quittait le wiki d'un bond, quel que soit le nombre de pages
+   * parcourues — l'adresse n'ayant jamais bougé, il n'y avait rien entre.
+   */
+  React.useEffect(() => {
+    function onPopState() {
+      const slug = new URLSearchParams(window.location.search).get("page");
+      const target = slug ? pages?.find(p => p.slug === slug) : null;
+      if (target) selectPageById(target.id, "none");
+      const anchor = window.location.hash.slice(1);
+      if (anchor) setPendingAnchor(decodeURIComponent(anchor));
+    }
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pages]);
 
   /** Déplie un dossier (et ses propres ancêtres) sans changer la sélection — utilisé par le fil d'Ariane. */
   function expandFolderChain(folderId: string) {
@@ -886,7 +938,11 @@ export function WorldWiki({
       if (!target) return;
       selectPageById(target.id);
     }
-    if (anchor) setPendingAnchor(anchor);
+    if (anchor) {
+      setPendingAnchor(anchor);
+      const cible = slug ? pages?.find(p => p.slug === slug) : selectedPage;
+      if (cible) writeUrl(cible.slug, anchor, "push");
+    }
   }
 
   function selectSearchResult(pageId: string) {

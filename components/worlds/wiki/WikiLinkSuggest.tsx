@@ -1,17 +1,27 @@
 "use client";
 
-import * as React from "react";
 import { useTranslations } from "next-intl";
-import { FileText } from "lucide-react";
+import { FileText, Hash } from "lucide-react";
 
 import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
 import { VALID_LUCIDE_ICONS } from "@/components/ui/LucideIconPicker";
 import { cn } from "@/lib/utils";
 import type { CaretPosition } from "@/lib/caretPosition";
-import type { WikiPage } from "./WorldWiki";
+
+/** Une proposition, page ou section, telle que la liste l'affiche. */
+export type LinkSuggestion = {
+  /** Clé de rendu : l'identifiant d'une page, ou son slug plus l'ancre. */
+  id: string;
+  label: string;
+  icon: string | null;
+  /** Ce qui s'écrira entre les crochets. */
+  insert: string;
+  /** Une section se montre autrement d'une page — le repère n'est pas le même. */
+  isSection: boolean;
+};
 
 /**
- * Liste des pages proposées pendant qu'on écrit un lien `[[…]]`.
+ * Liste des propositions pendant qu'on écrit un lien `[[…]]`.
  *
  * Posée sous la ligne en cours, et non dans un coin : c'est là que l'œil est
  * déjà. Elle ne prend jamais le focus — le champ le garde, sinon la frappe
@@ -19,18 +29,18 @@ import type { WikiPage } from "./WorldWiki";
  * et le `onMouseDown` retenu sur chaque entrée.
  */
 export function WikiLinkSuggest({
-  pages,
-  actif,
+  items,
+  active,
   position,
-  onChoisir,
-  onSurvoler,
+  onChoose,
+  onHover,
 }: {
-  pages: WikiPage[];
+  items: LinkSuggestion[];
   /** Rang de la proposition mise en avant, celle qu'Entrée choisira. */
-  actif: number;
+  active: number;
   position: CaretPosition;
-  onChoisir: (page: WikiPage) => void;
-  onSurvoler: (rang: number) => void;
+  onChoose: (item: LinkSuggestion) => void;
+  onHover: (rank: number) => void;
 }) {
   const t = useTranslations("wiki");
 
@@ -46,28 +56,30 @@ export function WikiLinkSuggest({
         left: position.left,
       }}
     >
-      {pages.map((page, rang) => (
+      {items.map((item, rank) => (
         <button
-          key={page.id}
+          key={item.id}
           type="button"
           role="option"
-          aria-selected={rang === actif}
+          aria-selected={rank === active}
           // Le champ garde le focus, donc son curseur : c'est lui qui dit où
           // le lien s'écrit.
           onMouseDown={e => e.preventDefault()}
-          onClick={() => onChoisir(page)}
-          onMouseEnter={() => onSurvoler(rang)}
+          onClick={() => onChoose(item)}
+          onMouseEnter={() => onHover(rank)}
           className={cn(
             "flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-left text-sm",
-            rang === actif ? "bg-secondary text-foreground" : "text-muted-foreground",
+            rank === active ? "bg-secondary text-foreground" : "text-muted-foreground",
           )}
         >
-          {page.icon && VALID_LUCIDE_ICONS.has(page.icon) ? (
-            <LazyLucideIcon name={page.icon} className="h-3 w-3 shrink-0" />
+          {item.isSection ? (
+            <Hash className="h-3 w-3 shrink-0" />
+          ) : item.icon && VALID_LUCIDE_ICONS.has(item.icon) ? (
+            <LazyLucideIcon name={item.icon} className="h-3 w-3 shrink-0" />
           ) : (
             <FileText className="h-3 w-3 shrink-0" />
           )}
-          <span className="truncate">{page.title}</span>
+          <span className="truncate">{item.label}</span>
         </button>
       ))}
     </div>

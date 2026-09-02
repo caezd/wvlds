@@ -37,7 +37,7 @@ import { WikiAnnotationsPanel, type AnnotationDraft } from "./WikiAnnotationsPan
 import { WikiNotesPanel } from "./WikiNotesPanel";
 import { WikiSidePanel, type WikiSideTab } from "./WikiSidePanel";
 import { WikiFormatToolbar } from "./WikiFormatToolbar";
-import { WikiLinkSuggest } from "./WikiLinkSuggest";
+import { WikiLinkSuggest, type LinkSuggestion } from "./WikiLinkSuggest";
 import { linkPreview } from "@/lib/wikiLinkPreview";
 import { extractImages } from "@/lib/wikiImages";
 import { ImageLightbox } from "@/components/chatrooms/ImageLightbox";
@@ -45,8 +45,11 @@ import { getCaretPosition, type CaretPosition } from "@/lib/caretPosition";
 import {
   completeLink,
   openLinkAt,
+  splitLinkQuery,
   suggestedPages,
+  suggestedSections,
 } from "@/lib/wikiLinkSuggest";
+import { extractHeadings } from "@/lib/wikiToc";
 import { WIKI_FOOTER_BUTTON, WIKI_SUBHEADER, WIKI_SUBHEADER_COUNT } from "./wikiSubHeader";
 import { WikiVersionHistoryPanel } from "./WikiVersionHistoryPanel";
 import type { WikiPage } from "./WorldWiki";
@@ -184,10 +187,10 @@ export function WikiPageContent({
    */
   const [suggestion, setSuggestion] = React.useState<{
     /** Index du premier caractère du titre dans le brouillon. */
-    debut: number;
-    pages: WikiPage[];
+    start: number;
+    items: LinkSuggestion[];
     /** Rang mis en avant, celui qu'Entrée choisira. */
-    rang: number;
+    active: number;
     position: CaretPosition;
   } | null>(null);
   /** Sélection à reposer une fois la valeur mise en forme rendue. */
@@ -463,32 +466,68 @@ export function WikiPageContent({
     if (!champ) return;
 
     const lien = openLinkAt(champ.value, champ.selectionStart);
-    const trouvees = lien ? suggestedPages(pages, lien.query) : [];
-    if (!lien || trouvees.length === 0) {
-      setSuggestion(null);
-      return;
-    }
+    if (!lien) { setSuggestion(null); return; }
+
+    const items = linkSuggestions(lien.query);
+    if (items.length === 0) { setSuggestion(null); return; }
 
     setSuggestion({
-      debut: lien.start,
-      pages: trouvees,
+      start: lien.start,
+      items,
       // Remis à la première à chaque frappe : la liste vient de changer, et
-      // garder un rang qui désignait une autre page tromperait.
-      rang: 0,
+      // garder un rang qui désignait autre chose tromperait.
+      active: 0,
       position: getCaretPosition(champ, champ.selectionStart),
     });
   }
 
-  /** Écrit le titre choisi à la place de ce qui était tapé. */
-  function accepterSuggestion(page: WikiPage) {
+  /**
+   * Ce qu'il y a à proposer pour ce qui est tapé entre les crochets.
+   *
+   * Un `#` change de registre : la page est choisie, on cherche désormais une
+   * de ses sections. Sans cela il fallait connaître le titre exact et
+   * l'orthographier juste — précisément ce que la liste avait supprimé pour
+   * les pages.
+   */
+  function linkSuggestions(query: string): LinkSuggestion[] {
+    const { title, section } = splitLinkQuery(query);
+
+    if (section === null) {
+      return suggestedPages(pages, title).map(p => ({
+        id: p.id,
+        label: p.title,
+        icon: p.icon,
+        insert: p.title,
+        isSection: false,
+      }));
+    }
+
+    // Une section n'a de sens que dans une page nommée en entier : tant que le
+    // titre est ambigu, on ne sait pas de quelles sections on parle.
+    const cible = pages.find(
+      p => !p.is_folder && p.title.toLowerCase() === title.toLowerCase(),
+    );
+    if (!cible) return [];
+
+    return suggestedSections(extractHeadings(cible.content ?? ""), section).map(h => ({
+      id: `${cible.slug}#${h.id}`,
+      label: h.text,
+      icon: null,
+      insert: `${cible.title}#${h.text}`,
+      isSection: true,
+    }));
+  }
+
+  /** Écrit la proposition choisie à la place de ce qui était tapé. */
+  function accepterSuggestion(item: LinkSuggestion) {
     const champ = champMarkdown.current;
     if (!champ || !suggestion) return;
 
     const { value, caret } = completeLink(
       champ.value,
-      suggestion.debut,
+      suggestion.start,
       champ.selectionStart,
-      page.title,
+      item.insert,
     );
     if (!ecrireAvecAnnulation(champ, value)) handleDraftChange(value);
     setSelectionAPoser([caret, caret]);
@@ -499,16 +538,16 @@ export function WikiPageContent({
     // La liste passe avant les raccourcis : tant qu'elle est ouverte, les
     // flèches et Entrée lui appartiennent.
     if (suggestion) {
-      const n = suggestion.pages.length;
+      const n = suggestion.items.length;
       if (e.key === "ArrowDown" || e.key === "ArrowUp") {
         e.preventDefault();
         const pas = e.key === "ArrowDown" ? 1 : n - 1;
-        setSuggestion({ ...suggestion, rang: (suggestion.rang + pas) % n });
+        setSuggestion({ ...suggestion, active: (suggestion.active + pas) % n });
         return;
       }
       if (e.key === "Enter" || e.key === "Tab") {
         e.preventDefault();
-        accepterSuggestion(suggestion.pages[suggestion.rang]);
+        accepterSuggestion(suggestion.items[suggestion.active]);
         return;
       }
       if (e.key === "Escape") {
@@ -1070,11 +1109,11 @@ export function WikiPageContent({
                 )}
                 {suggestion && (
                   <WikiLinkSuggest
-                    pages={suggestion.pages}
-                    actif={suggestion.rang}
+                    items={suggestion.items}
+                    active={suggestion.active}
                     position={suggestion.position}
-                    onChoisir={accepterSuggestion}
-                    onSurvoler={rang => setSuggestion({ ...suggestion, rang })}
+                    onChoose={accepterSuggestion}
+                    onHover={active => setSuggestion({ ...suggestion, active })}
                   />
                 )}
                 </div>

@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest";
 
 import {
   completeLink,
+  splitLinkQuery,
+  suggestedSections,
   openLinkAt,
   normalizeForSearch,
   suggestedPages,
@@ -113,5 +115,50 @@ describe("completeLink", () => {
 describe("normalizeForSearch", () => {
   it("abaisse la casse et retire les diacritiques", () => {
     expect(normalizeForSearch("Élévation")).toBe("elevation");
+  });
+});
+
+describe("splitLinkQuery", () => {
+  it("laisse la section à `null` tant qu'aucun `#` n'est tapé", () => {
+    // C'est ce qui distingue « je cherche une page » de « j'ai ma page, je
+    // cherche sa section ».
+    expect(splitLinkQuery("Ark")).toEqual({ title: "Ark", section: null });
+  });
+
+  it("sépare la page de sa section", () => {
+    expect(splitLinkQuery("Arkham#Le po")).toEqual({ title: "Arkham", section: "Le po" });
+  });
+
+  it("ouvre les sections dès le `#`, avant qu'on ait rien tapé", () => {
+    expect(splitLinkQuery("Arkham#")).toEqual({ title: "Arkham", section: "" });
+  });
+});
+
+describe("suggestedSections", () => {
+  const TITRES = [
+    { text: "Le port" },
+    { text: "Les ruelles" },
+    { text: "Le port de nuit" },
+  ];
+
+  it("garde l'ordre du document à pertinence égale", () => {
+    // C'est l'ordre que l'auteur a en tête ; l'alphabet ne correspond à rien
+    // de ce qu'il voit.
+    expect(suggestedSections(TITRES, "le").map(h => h.text)).toEqual([
+      "Le port",
+      "Les ruelles",
+      "Le port de nuit",
+    ]);
+  });
+
+  it("place devant ce qui COMMENCE par la requête", () => {
+    expect(suggestedSections(TITRES, "port").map(h => h.text)).toEqual([
+      "Le port",
+      "Le port de nuit",
+    ]);
+  });
+
+  it("propose tout dès le `#`", () => {
+    expect(suggestedSections(TITRES, "")).toHaveLength(3);
   });
 });
