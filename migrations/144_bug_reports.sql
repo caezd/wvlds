@@ -1,5 +1,5 @@
 -- ============================================================
--- Migration 137 — Rapports de bug
+-- Migration 144 — Rapports de bug
 -- ============================================================
 -- Un utilisateur signale un problème depuis son menu ; un administrateur les
 -- trie depuis la zone admin. La table est donc lue par deux publics aux droits

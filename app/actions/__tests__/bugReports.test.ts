@@ -53,7 +53,7 @@ describe("submitBugReport", () => {
   });
 
   // `status` et `admin_note` sont réservés au tri : ne pas les accepter ici
-  // double la policy d'insertion, qui les contraint déjà (migration 137).
+  // double la policy d'insertion, qui les contraint déjà (migration 144).
   it("n'écrit ni statut ni note de traitement", async () => {
     const mock = connecté({ results: [{ error: null }] });
     brancher(mock);
@@ -169,7 +169,7 @@ describe("submitBugReport — journal d'erreurs", () => {
   });
 
   // Le journal traverse le réseau : une entrée malformée ferait rejeter toute
-  // la ligne par la contrainte de la migration 139. Il est donc borné plutôt
+  // la ligne par la contrainte de la migration 146. Il est donc borné plutôt
   // que refusé — perdre un rapport à cause de sa pile reviendrait à perdre la
   // seule chose que son auteur ait écrite.
   it("écarte ce qui est irrecevable sans perdre le signalement", async () => {
@@ -210,7 +210,7 @@ describe("submitBugReport — journal d'erreurs", () => {
 });
 
 describe("submitBugReport — plafond horaire", () => {
-  // Le plafond est tenu par la policy d'insertion (migration 140). On le
+  // Le plafond est tenu par la policy d'insertion (migration 147). On le
   // vérifie AUSSI ici pour que le refus arrive traduit : la RLS, elle, échoue
   // par un message de PostgreSQL que le formulaire afficherait tel quel.
   it("refuse au-delà du plafond, sans rien écrire", async () => {
