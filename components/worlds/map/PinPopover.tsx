@@ -18,14 +18,19 @@ import { ParagraphBlockEditor } from "@/components/chatrooms/composer/ParagraphB
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { updateMapPin, type MapPin as MapPinType } from "@/app/actions/worldMap";
 
+import { cn } from "@/lib/utils";
+import { FLECHE } from "./popoverPosition";
 import { PinVisualDialog } from "./PinVisualDialog";
-import type { PinPopoverPos } from "./types";
+import type { PinPopoverPos, WikiPageOption } from "./types";
 import { ERR_NON_AUTHENTIFIE } from "@/lib/actionErrors";
 
-// Popover flottant (position: fixed, positionné au clic)
+// Panneau flottant (position: fixed), ancré sur l'épingle et non sur le clic :
+// `WorldMap` le suit pendant les déplacements de la carte.
 export function PinPopover({
   pin,
   pos,
+  panelRef,
+  wikiPages,
   isEditMode,
   userId,
   worldId,
@@ -35,6 +40,11 @@ export function PinPopover({
 }: {
   pin: MapPinType;
   pos: PinPopoverPos;
+  /** Le panneau suit son épingle : `WorldMap` écrit sa position pendant les
+   *  gestes, sans repasser par un rendu React. */
+  panelRef?: React.RefObject<HTMLDivElement | null>;
+  /** Pages du wiki du monde, chargées une seule fois par `WorldMap`. */
+  wikiPages: WikiPageOption[];
   isEditMode: boolean;
   userId: string;
   worldId: string;
@@ -53,27 +63,11 @@ export function PinPopover({
    * La page du wiki que ce lieu raconte.
    *
    * La carte est l'index géographique du monde et le wiki en est le texte ;
-   * rien ne les reliait. Les pages se lisent à l'ouverture de la popover —
-   * titres seulement — pour proposer le choix en écriture et nommer le lien
-   * en lecture.
+   * rien ne les reliait. Les titres des pages viennent de `WorldMap`, qui les
+   * charge une fois pour toutes : chaque panneau les rechargeait pour lui-même,
+   * soit une requête par ouverture d'épingle pour un résultat identique.
    */
   const [wikiPageId, setWikiPageId] = React.useState<string | null>(pin.wiki_page_id ?? null);
-  const [wikiPages, setWikiPages] = React.useState<{ id: string; title: string; slug: string }[]>([]);
-  React.useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      const { data } = await supabase
-        .from("world_wiki_pages")
-        .select("id, title, slug")
-        .eq("world_id", worldId)
-        .eq("is_folder", false)
-        .is("deleted_at", null)
-        .order("title");
-      if (!cancelled) setWikiPages((data ?? []) as { id: string; title: string; slug: string }[]);
-    })();
-    return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [worldId]);
   const linkedPage = wikiPages.find(p => p.id === (pin.wiki_page_id ?? null)) ?? null;
   const [title, setTitle] = React.useState(pin.title);
   const [description, setDescription] = React.useState(pin.description ?? "");
@@ -178,10 +172,30 @@ export function PinPopover({
       )}
 
       <div
-        className="fixed z-50 w-[340px] overflow-hidden rounded-xl border border-border bg-background shadow-2xl"
+        ref={panelRef}
+        className="fixed z-50 w-[340px]"
         style={{ left: pos.left, top: pos.top }}
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Flèche vers l'épingle.
+            Posée DERRIÈRE la carte (`-z-10`) : seule sa moitié saillante se
+            voit, l'autre disparaît sous le fond opaque du panneau, et les deux
+            bordures visibles prolongent celle de la carte sans la barrer.
+            `data-placement` plutôt qu'une classe calculée : `paint()` la fait
+            basculer pendant les gestes, sans repasser par un rendu React. */}
+        <span
+          aria-hidden
+          data-pin-caret
+          data-placement={pos.placement}
+          style={{ left: pos.arrowLeft - FLECHE / 2 }}
+          className={cn(
+            "absolute -z-10 h-3 w-3 rotate-45 border-border bg-background",
+            "data-[placement=above]:-bottom-1.5 data-[placement=above]:border-r data-[placement=above]:border-b",
+            "data-[placement=below]:-top-1.5 data-[placement=below]:border-l data-[placement=below]:border-t",
+          )}
+        />
+
+        <div className="overflow-hidden rounded-xl border border-border bg-background shadow-2xl">
         {/* ── Bannière ─────────────────────────────────── */}
         <div className="relative h-32 w-full overflow-hidden bg-gradient-to-br from-primary/20 to-primary/5">
           {bannerSrc ? (
@@ -370,7 +384,7 @@ export function PinPopover({
                     onClick={() => {
                       setTitle(pin.title);
                       setDescription(pin.description ?? "");
-      setWikiPageId(pin.wiki_page_id ?? null);
+                      setWikiPageId(pin.wiki_page_id ?? null);
                       setEditing(false);
                     }}
                   >
@@ -396,6 +410,7 @@ export function PinPopover({
               )}
             </div>
           )}
+        </div>
         </div>
       </div>
     </>

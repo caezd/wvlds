@@ -18,6 +18,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import type { World, WorldTimelineConfig, WorldHomeRoom as Room } from "@/types/worlds";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import type { AsidePersona } from "@/components/personas/WorldPersonaAsideClient";
+import type { InitialWorldMap } from "../map/WorldMap";
 import { toggleWorldFavorite } from "@/app/(protected)/w/actions";
 import { cn } from "@/lib/utils";
 import { supabaseThumb } from "@/lib/storage";
@@ -59,6 +60,7 @@ export function WorldHome({
   initialRooms,
   initialCategories,
   initialWidgetData = {},
+  initialMap,
   initialPersonas,
   initialPrefs,
   view,
@@ -78,6 +80,8 @@ export function WorldHome({
   /** Données des widgets d'accueil résolues côté serveur, quand le bloc est
    *  présent dans la grille (cf. WorldHomeContent). */
   initialWidgetData?: { recentPersonas?: RecentPersona[]; wikiPages?: WikiPage[] };
+  /** Carte et épingles résolues côté serveur quand `view === "map"`. */
+  initialMap?: InitialWorldMap | null;
   initialPersonas: AsidePersona[];
   initialPrefs: WorldPrefs | null;
   view?: string;
@@ -212,6 +216,7 @@ export function WorldHome({
             worldId={worldId}
             userId={userId ?? ""}
             canEdit={canEditTabs}
+            initialMap={initialMap}
           />
         ) : showTimeline && hasTimeline ? (
           <WorldTimeline

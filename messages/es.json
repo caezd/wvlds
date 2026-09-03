@@ -1282,6 +1282,7 @@
     }
   },
   "map": {
+    "mapLabel": "Nombre del mapa",
     "title": "Mapa",
     "mapAlt": "Mapa del mundo",
     "editingActive": "Edición activa",

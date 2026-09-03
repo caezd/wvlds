@@ -55,6 +55,7 @@ export const RPC = {
 export const channel = {
   userMessages: (userId: string) => `msgs:${userId}`,
   worldRooms: (wid: string) => `w:${wid}:rooms`,
+  worldMap: (wid: string) => `w:${wid}:map`,
   chatPresence: (chatId: string) => `chat:${chatId}`,
   chatMessages: (chatId: string) => `chat-${chatId}`,
   chatPins: (chatId: string) => `chat-pins-${chatId}`,

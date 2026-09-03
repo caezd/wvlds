@@ -9,6 +9,46 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Carte",
+    text: "La carte remplit toujours son cadre, quelle que soit la forme de l’écran : plus de bandes vides autour, et le zoom va jusqu’à 6×.",
+  },
+  {
+    date: "2026-09",
+    tag: "Carte",
+    text: "Le panneau d’un lieu s’ouvre au-dessus de son épingle — en dessous s’il n’y a pas la place — avec une flèche qui la désigne.",
+  },
+  {
+    date: "2026-09",
+    tag: "Carte",
+    text: "Les lieux de la carte s’atteignent au clavier : tabulation pour les parcourir, Entrée pour ouvrir, Échap pour refermer.",
+  },
+  {
+    date: "2026-09",
+    tag: "Carte",
+    text: "Le pincement à deux doigts agrandit la carte sur mobile, et la déplacer ne fait plus défiler la page.",
+  },
+  {
+    date: "2026-09",
+    tag: "Carte",
+    text: "Le panneau d’un lieu suit son épingle quand on déplace ou agrandit la carte.",
+  },
+  {
+    date: "2026-09",
+    tag: "Carte",
+    text: "Le nom de la carte se modifie depuis son en-tête, comme celui du wiki.",
+  },
+  {
+    date: "2026-09",
+    tag: "Carte",
+    text: "Une épingle que l’on vient de poser n’apparaît plus en double.",
+  },
+  {
+    date: "2026-09",
+    tag: "Performance",
+    text: "La carte d’un monde s’ouvre sans attente et reste fluide sous le zoom, même chargée d’épingles.",
+  },
+  {
+    date: "2026-09",
+    tag: "Carte",
     text: "Une épingle de la carte peut renvoyer à une page du wiki : on la choisit en modifiant l’épingle, et un bouton l’ouvre depuis la carte."
   },
   {

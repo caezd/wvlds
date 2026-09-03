@@ -1282,6 +1282,7 @@
     }
   },
   "map": {
+    "mapLabel": "Map name",
     "title": "Map",
     "mapAlt": "World map",
     "editingActive": "Editing active",

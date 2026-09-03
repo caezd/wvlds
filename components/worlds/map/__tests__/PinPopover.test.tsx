@@ -6,6 +6,8 @@ import { createSupabaseMock } from "@/test/supabaseMock";
 import { createClient } from "@/lib/supabase/client";
 import { PinPopover } from "@/components/worlds/map/PinPopover";
 import type { MapPin } from "@/app/actions/worldMap";
+import type { PinPopoverPos } from "@/components/worlds/map/types";
+import { makePin, WIKI_PAGES } from "./fixtures";
 
 // ──────────────────────────────────────────────────────────────────────────
 // La carte est l'index géographique d'un monde, et le wiki en est le texte :
@@ -32,39 +34,15 @@ vi.mock("@/components/chatrooms/composer/ParagraphBlockEditor", () => ({
   ),
 }));
 
-const PAGES = [
-  { id: "p1", title: "Arkham", slug: "arkham" },
-  { id: "p2", title: "Innsmouth", slug: "innsmouth" },
-];
-
-function pin(overrides: Partial<MapPin> = {}): MapPin {
-  return {
-    id: "pin1",
-    world_id: "w1",
-    x: 50,
-    y: 50,
-    title: "Le port",
-    description: null,
-    banner_url: null,
-    color: "#6366f1",
-    icon: "map-pin",
-    icon_color: "#ffffff",
-    border_color: null,
-    border_style: "none",
-    sort_index: 0,
-    wiki_page_id: null,
-    ...overrides,
-  };
-}
-
-function monter(p: MapPin, isEditMode = false) {
-  const mock = createSupabaseMock({ results: [{ data: PAGES, error: null }] });
+function monter(p: MapPin, isEditMode = false, pos: PinPopoverPos = { left: 100, top: 100, placement: "above", arrowLeft: 170 }) {
+  const mock = createSupabaseMock();
   vi.mocked(createClient).mockReturnValue(mock.client as never);
   const onUpdated = vi.fn();
   render(
     <PinPopover
       pin={p}
-      pos={{ left: 100, top: 100 }}
+      pos={pos}
+      wikiPages={WIKI_PAGES}
       isEditMode={isEditMode}
       userId="u1"
       worldId="w1"
@@ -83,7 +61,7 @@ beforeEach(() => {
 
 describe("PinPopover — page du wiki", () => {
   it("ouvre la page liée depuis l'épingle", async () => {
-    monter(pin({ wiki_page_id: "p1" }));
+    monter(makePin({ wiki_page_id: "p1" }));
 
     const lien = await screen.findByRole("button", { name: /Ouvrir la page du wiki : Arkham/ });
     await userEvent.click(lien);
@@ -92,7 +70,7 @@ describe("PinPopover — page du wiki", () => {
   });
 
   it("associe une page en modifiant l'épingle", async () => {
-    const { onUpdated } = monter(pin(), true);
+    const { onUpdated } = monter(makePin(), true);
 
     await userEvent.click(await screen.findByRole("button", { name: "Modifier" }));
     await userEvent.selectOptions(screen.getByRole("combobox", { name: "Page du wiki" }), "p2");
@@ -103,10 +81,30 @@ describe("PinPopover — page du wiki", () => {
   });
 
   it("ne montre aucun lien quand l'épingle n'a pas de page", async () => {
-    monter(pin());
+    monter(makePin());
 
     // Les pages arrivent ; rien n'est lié.
     await screen.findByText("Le port");
     expect(screen.queryByRole("button", { name: /Ouvrir la page du wiki/ })).toBeNull();
+  });
+});
+
+describe("PinPopover — flèche vers l'épingle", () => {
+  it("pointe vers le bas quand le panneau est au-dessus", () => {
+    monter(makePin());
+
+    const fleche = document.querySelector("[data-pin-caret]") as HTMLElement;
+    expect(fleche).not.toBeNull();
+    expect(fleche.dataset.placement).toBe("above");
+    // Centrée sur l'abscisse rendue par `calcPopoverPos`, à un demi-côté près.
+    expect(fleche.style.left).toBe("164px");
+  });
+
+  it("pointe vers le haut quand le panneau est en dessous", () => {
+    monter(makePin(), false, { left: 100, top: 400, placement: "below", arrowLeft: 40 });
+
+    const fleche = document.querySelector("[data-pin-caret]") as HTMLElement;
+    expect(fleche.dataset.placement).toBe("below");
+    expect(fleche.style.left).toBe("34px");
   });
 });
