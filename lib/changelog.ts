@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-09 ──────────────────────────────────────────────────────────────
   {
     date: "2026-09",
+    tag: "Wiki",
+    text: "La page d’un lieu mène à sa position sur la carte, quand une épingle la raconte.",
+  },
+  {
+    date: "2026-09",
     tag: "Carte",
     text: "Une liste des lieux s’ouvre depuis l’en-tête. Sa recherche traverse toutes les cartes du monde, et choisir un lieu y mène — la carte se centre dessus.",
   },

@@ -35,6 +35,7 @@ import type { WikiAnnotation } from "@/types/worlds";
 import { WikiAnnotationLayer, type ActiveAnnotation } from "./WikiAnnotationLayer";
 import { WikiAnnotationsPanel, type AnnotationDraft } from "./WikiAnnotationsPanel";
 import { WikiNotesPanel } from "./WikiNotesPanel";
+import { WikiPageMapLink } from "./WikiPageMapLink";
 import { WikiSidePanel, type WikiSideTab } from "./WikiSidePanel";
 import { WikiFormatToolbar } from "./WikiFormatToolbar";
 import { WikiLinkSuggest, type LinkSuggestion } from "./WikiLinkSuggest";
@@ -1308,6 +1309,10 @@ export function WikiPageContent({
                       </div>
                     </div>
                   )}
+                  {/* Le chemin inverse du lien posé sur une épingle : la page
+                      d'un lieu mène à sa position sur la carte. */}
+                  <WikiPageMapLink worldId={worldId} pageId={page.id} />
+
                 {page.content?.trim() ? (
                   <WikiAnnotationLayer
                     contentKey={contentKey}

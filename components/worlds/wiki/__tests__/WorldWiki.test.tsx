@@ -4,6 +4,13 @@ import userEvent from "@testing-library/user-event";
 import { createSupabaseMock } from "@/test/supabaseMock";
 import { createClient } from "@/lib/supabase/client";
 
+// L'article propose « Voir sur la carte » quand une épingle le désigne : ce
+// lien a besoin du routeur, et du drapeau qui gouverne la carte.
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+vi.mock("@/components/providers/FeatureFlagsProvider", () => ({
+  useFeatureFlags: () => ({ world_map: false }),
+}));
+
 vi.mock("@/lib/supabase/client", () => ({ createClient: vi.fn() }));
 // Le panneau de notes est monté d'office depuis que la colonne s'ouvre sur son
 // onglet ; il lit ses propres tables et décalerait la file de résultats du

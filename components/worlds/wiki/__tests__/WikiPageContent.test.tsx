@@ -64,6 +64,13 @@ vi.mock("@/components/worlds/wiki/WikiNotesPanel", () => ({
 
 // Les annotations sont signées par leur auteur : sans utilisateur identifié,
 // la RLS refuse l'écriture et l'interface ne propose rien.
+// L'article propose désormais « Voir sur la carte » quand une épingle le
+// désigne : ce lien a besoin du routeur, et du drapeau qui gouverne la carte.
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+vi.mock("@/components/providers/FeatureFlagsProvider", () => ({
+  useFeatureFlags: () => ({ world_map: false }),
+}));
+
 vi.mock("@/components/providers/CurrentUserProvider", () => ({
   useCurrentUser: () => ({ userId: "u1", username: "caedrik", avatarUrl: null }),
 }));

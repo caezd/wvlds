@@ -1282,6 +1282,7 @@
     }
   },
   "map": {
+    "seeOnMap": "Ver en el mapa",
     "roomsAtPlace": "Lo que ocurre aquí",
     "places": "Lugares",
     "searchPlaces": "Buscar un lugar",

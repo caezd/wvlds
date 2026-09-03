@@ -1282,6 +1282,7 @@
     }
   },
   "map": {
+    "seeOnMap": "Voir sur la carte",
     "roomsAtPlace": "Ce qui s’y joue",
     "places": "Lieux",
     "searchPlaces": "Rechercher un lieu",
