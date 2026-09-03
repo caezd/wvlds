@@ -399,22 +399,32 @@ export function WorldMap({
     syncPopoverPos();
   }, [baseSize.width, baseSize.height, bounds, requestWidthTier, schedulePaint, syncPopoverPos]);
 
-  // Le cadre change de taille (fenêtre, tiroir latéral) : les bornes du
-  // déplacement changent avec lui, et le panneau ouvert doit suivre.
-  React.useEffect(() => {
-    function onResize() {
-      measure();
-      const b = bounds();
-      if (b) {
-        const { scale, x, y } = transformRef.current;
-        transformRef.current = { scale, ...clampOffset(x, y, scale, b) };
-      }
-      schedulePaint();
-      syncPopoverPos();
+  /**
+   * Le cadre a changé de taille : fenêtre redimensionnée, tiroir latéral,
+   * panneau des lieux ouvert ou fermé à sa gauche.
+   *
+   * On re-borne ICI plutôt que de s'en remettre à l'effet qui surveille la
+   * taille ajustée de la carte, car celle-ci peut fort bien ne pas bouger : une
+   * carte commandée par sa hauteur garde ses dimensions quand le cadre
+   * s'élargit. L'effet ne se déclenche alors pas, et la carte resterait décalée
+   * de la largeur gagnée — avec le panneau du lieu ouvert, planté à côté de son
+   * épingle.
+   */
+  const handleFrameResized = React.useCallback(() => {
+    measure();
+    const b = bounds();
+    if (b) {
+      const { scale, x, y } = transformRef.current;
+      transformRef.current = { scale, ...clampOffset(x, y, scale, b) };
     }
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
+    schedulePaint();
+    syncPopoverPos();
   }, [bounds, measure, schedulePaint, syncPopoverPos]);
+
+  React.useEffect(() => {
+    window.addEventListener("resize", handleFrameResized);
+    return () => window.removeEventListener("resize", handleFrameResized);
+  }, [handleFrameResized]);
 
   // ── Chargement initial ────────────────────────────────────────
   React.useEffect(() => {
@@ -695,7 +705,9 @@ export function WorldMap({
     // latéral, rotation d'un téléphone, panneau du wiki tiré. `ResizeObserver`
     // le voit, l'événement `resize` de la fenêtre non.
     const observer =
-      typeof ResizeObserver === "undefined" ? null : new ResizeObserver(() => measure());
+      typeof ResizeObserver === "undefined"
+        ? null
+        : new ResizeObserver(() => handleFrameResized());
     observer?.observe(node);
     measure();
 
@@ -703,7 +715,7 @@ export function WorldMap({
       node.removeEventListener("wheel", onWheel);
       observer?.disconnect();
     };
-  }, [bounds, measure, setTransform, syncPopoverPos]);
+  }, [bounds, handleFrameResized, measure, setTransform, syncPopoverPos]);
 
   /**
    * Ref de l'image, doublée d'un contrôle de `complete`.

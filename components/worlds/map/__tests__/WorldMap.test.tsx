@@ -334,15 +334,40 @@ describe("WorldMap — plusieurs cartes", () => {
 
 // jsdom ne met rien en page : sans ces mesures, la carte reste à zéro et rien
 // de ce qui dépend de sa taille ne peut s'observer.
+/** Dimensions du cadre, modifiables en cours de test. */
+const cadre = { width: 800, height: 600 };
+
+/** Rappels des `ResizeObserver` en vie — jsdom n'en fournit aucun. */
+let redimensionnements: (() => void)[] = [];
+
+class FauxResizeObserver {
+  constructor(private rappel: () => void) { redimensionnements.push(rappel); }
+  observe() {}
+  disconnect() { redimensionnements = redimensionnements.filter((r) => r !== this.rappel); }
+}
+
+/** Rejoue ce que le navigateur ferait après un changement de taille du cadre. */
+function redimensionnerLeCadre(width: number, height = cadre.height) {
+  cadre.width = width;
+  cadre.height = height;
+  act(() => { redimensionnements.forEach((r) => r()); });
+}
+
 function simulerMiseEnPage() {
-  Object.defineProperty(HTMLElement.prototype, "clientWidth", { configurable: true, value: 800 });
-  Object.defineProperty(HTMLElement.prototype, "clientHeight", { configurable: true, value: 600 });
+  cadre.width = 800;
+  cadre.height = 600;
+  redimensionnements = [];
+  (globalThis as unknown as { ResizeObserver: unknown }).ResizeObserver = FauxResizeObserver;
+  Object.defineProperty(HTMLElement.prototype, "clientWidth", { configurable: true, get: () => cadre.width });
+  Object.defineProperty(HTMLElement.prototype, "clientHeight", { configurable: true, get: () => cadre.height });
   Object.defineProperty(HTMLImageElement.prototype, "complete", { configurable: true, value: true });
   Object.defineProperty(HTMLImageElement.prototype, "naturalWidth", { configurable: true, value: 2000 });
   Object.defineProperty(HTMLImageElement.prototype, "naturalHeight", { configurable: true, value: 1000 });
 }
 
 function restaurerMiseEnPage() {
+  redimensionnements = [];
+  delete (globalThis as unknown as { ResizeObserver?: unknown }).ResizeObserver;
   for (const prop of ["clientWidth", "clientHeight"]) {
     delete (HTMLElement.prototype as unknown as Record<string, unknown>)[prop];
   }
@@ -434,5 +459,42 @@ describe("WorldMap — la liste des lieux", () => {
     await userEvent.click(screen.getByRole("button", { name: /La salle du trône/ }));
 
     expect(await screen.findByTestId("pin-popover")).toHaveTextContent("La salle du trône");
+  });
+});
+
+describe("WorldMap — le cadre change de largeur", () => {
+  beforeEach(simulerMiseEnPage);
+  afterEach(restaurerMiseEnPage);
+
+  it("recadre la carte quand sa taille ajustée, elle, ne bouge pas", async () => {
+    // Le cas signalé : fermer le panneau des lieux élargit le cadre. Une carte
+    // 2:1 dans un cadre 800×600 est commandée par la HAUTEUR — elle mesure
+    // 1200×600 —, et l'élargir jusqu'à 1200 ne change donc pas sa taille d'un
+    // pixel. L'effet qui surveille cette taille ne se déclenche pas, et sans
+    // rattrapage la carte restait décalée de 200 px, panneau de lieu compris.
+    monter({ maps: [makeMap()], pins: [makePin()] });
+    const enveloppe = screen.getByAltText("Carte du monde").parentElement!;
+
+    await waitFor(() => expect(enveloppe.style.transform).toBe("translate(-200px, 0px) scale(1)"));
+    const tailleAvant = enveloppe.style.width;
+
+    redimensionnerLeCadre(1200);
+
+    // La carte fait toujours 1200 de large ; c'est le cadre qui l'a rejointe,
+    // et elle doit s'y recentrer.
+    await waitFor(() => expect(enveloppe.style.transform).toBe("translate(0px, 0px) scale(1)"));
+    expect(enveloppe.style.width).toBe(tailleAvant);
+  });
+
+  it("suit aussi quand la taille ajustée change", async () => {
+    monter({ maps: [makeMap()], pins: [makePin()] });
+    const enveloppe = screen.getByAltText("Carte du monde").parentElement!;
+
+    await waitFor(() => expect(enveloppe.style.width).toBe("1200px"));
+
+    // Cadre plus haut : la largeur commande désormais, et la carte grandit.
+    redimensionnerLeCadre(1600, 600);
+
+    await waitFor(() => expect(enveloppe.style.width).toBe("1600px"));
   });
 });
