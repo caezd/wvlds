@@ -21,14 +21,16 @@ import { makeMap, makePin } from "./fixtures";
 
 vi.mock("@/lib/supabase/client", () => ({ createClient: vi.fn() }));
 
-const getWorldMap = vi.hoisted(() => vi.fn());
+const getWorldMaps = vi.hoisted(() => vi.fn());
 vi.mock("@/app/actions/worldMap", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/app/actions/worldMap")>()),
-  getWorldMap,
+  getWorldMaps,
   createMapPin: vi.fn(),
   updateMapPin: vi.fn(async () => {}),
   deleteMapPin: vi.fn(async () => {}),
-  upsertWorldMap: vi.fn(),
+  createWorldMap: vi.fn(),
+  updateWorldMap: vi.fn(),
+  deleteWorldMap: vi.fn(async () => {}),
 }));
 
 // Le panneau d'un lieu tire tout l'éditeur de paragraphe et le rendu Markdown :
@@ -41,7 +43,7 @@ vi.mock("@/components/worlds/map/PinPopover", () => ({
 
 const CANAL = "w:w1:map";
 
-type CarteInitiale = { map: ReturnType<typeof makeMap> | null; pins: ReturnType<typeof makePin>[] } | null;
+type CarteInitiale = { maps: ReturnType<typeof makeMap>[]; pins: ReturnType<typeof makePin>[] } | null;
 
 function monter(initialMap: CarteInitiale, worldId = "w1", strict = false) {
   const mock = createSupabaseMock({ user: { id: "u1" } });
@@ -72,24 +74,24 @@ beforeEach(() => {
 
 describe("WorldMap — données servies par le serveur", () => {
   it("affiche la carte sans rien redemander", () => {
-    monter({ map: makeMap(), pins: [makePin()] });
+    monter({ maps: [makeMap()], pins: [makePin()] });
 
-    expect(getWorldMap).not.toHaveBeenCalled();
+    expect(getWorldMaps).not.toHaveBeenCalled();
     expect(screen.getByRole("button", { name: "Le port" })).toBeInTheDocument();
   });
 
   it("charge la carte elle-même quand l'onglet s'ouvre côté client", async () => {
-    getWorldMap.mockResolvedValue({ map: makeMap(), pins: [makePin()] });
+    getWorldMaps.mockResolvedValue({ maps: [makeMap()], pins: [makePin()] });
     monter(null);
 
-    expect(getWorldMap).toHaveBeenCalledWith("w1");
+    expect(getWorldMaps).toHaveBeenCalledWith("w1");
     expect(await screen.findByRole("button", { name: "Le port" })).toBeInTheDocument();
   });
 });
 
 describe("WorldMap — temps réel", () => {
   it("ne pose pas deux fois l'épingle que l'on vient de créer", () => {
-    const { mock } = monter({ map: makeMap(), pins: [makePin()] });
+    const { mock } = monter({ maps: [makeMap()], pins: [makePin()] });
 
     // L'écho de notre propre INSERT, tel que Postgres le renvoie.
     emettre(mock, { eventType: "INSERT", new: makePin() });
@@ -98,7 +100,7 @@ describe("WorldMap — temps réel", () => {
   });
 
   it("pose l'épingle créée par quelqu'un d'autre", () => {
-    const { mock } = monter({ map: makeMap(), pins: [makePin()] });
+    const { mock } = monter({ maps: [makeMap()], pins: [makePin()] });
 
     emettre(mock, { eventType: "INSERT", new: makePin({ id: "pin2", title: "La tour" }) });
 
@@ -107,7 +109,7 @@ describe("WorldMap — temps réel", () => {
   });
 
   it("retire l'épingle supprimée ailleurs", () => {
-    const { mock } = monter({ map: makeMap(), pins: [makePin()] });
+    const { mock } = monter({ maps: [makeMap()], pins: [makePin()] });
 
     emettre(mock, { eventType: "DELETE", old: { id: "pin1" } });
 
@@ -118,7 +120,7 @@ describe("WorldMap — temps réel", () => {
 describe("WorldMap — pages du wiki", () => {
   it("ne les lit qu'une fois, quel que soit le nombre de lieux ouverts", async () => {
     const { mock } = monter({
-      map: makeMap(),
+      maps: [makeMap()],
       pins: [makePin(), makePin({ id: "pin2", title: "La tour" })],
     });
 
@@ -130,7 +132,7 @@ describe("WorldMap — pages du wiki", () => {
   });
 
   it("ne les lit pas tant qu'aucun lieu n'est ouvert", () => {
-    const { mock } = monter({ map: makeMap(), pins: [makePin()] });
+    const { mock } = monter({ maps: [makeMap()], pins: [makePin()] });
 
     expect(mock.builders.filter((b) => b.table === "world_wiki_pages")).toHaveLength(0);
   });
@@ -138,13 +140,13 @@ describe("WorldMap — pages du wiki", () => {
 
 describe("WorldMap — changement de monde", () => {
   it("montre la carte du monde où l'on arrive", () => {
-    const { changerDeMonde } = monter({ map: makeMap(), pins: [makePin()] });
+    const { changerDeMonde } = monter({ maps: [makeMap()], pins: [makePin()] });
 
     // Naviguer d'un monde à l'autre ne remonte pas le composant : ses états
     // garderaient la carte du monde quitté.
     changerDeMonde("w2", {
-      map: makeMap({ world_id: "w2" }),
-      pins: [makePin({ id: "pin9", world_id: "w2", title: "Le donjon" })],
+      maps: [makeMap({ id: "map2", world_id: "w2" })],
+      pins: [makePin({ id: "pin9", world_id: "w2", map_id: "map2", title: "Le donjon" })],
     });
 
     expect(screen.queryByRole("button", { name: "Le port" })).toBeNull();
@@ -161,7 +163,7 @@ describe("WorldMap — molette", () => {
   }
 
   it("agrandit la carte au cran de molette", async () => {
-    monter({ map: makeMap(), pins: [makePin()] });
+    monter({ maps: [makeMap()], pins: [makePin()] });
     const { cadre, enveloppe } = elements();
 
     cadre.dispatchEvent(new WheelEvent("wheel", { deltaY: -100, bubbles: true, cancelable: true }));
@@ -170,7 +172,7 @@ describe("WorldMap — molette", () => {
   });
 
   it("réduit jusqu'à l'échelle 1 et pas en deçà", async () => {
-    monter({ map: makeMap(), pins: [makePin()] });
+    monter({ maps: [makeMap()], pins: [makePin()] });
     const { cadre, enveloppe } = elements();
 
     for (let i = 0; i < 3; i++) {
@@ -185,7 +187,7 @@ describe("WorldMap — molette", () => {
   });
 
   it("remet les épingles d'aplomb par la variable CSS", async () => {
-    monter({ map: makeMap(), pins: [makePin()] });
+    monter({ maps: [makeMap()], pins: [makePin()] });
     const { cadre, enveloppe } = elements();
 
     cadre.dispatchEvent(new WheelEvent("wheel", { deltaY: -100, bubbles: true, cancelable: true }));
@@ -197,7 +199,7 @@ describe("WorldMap — molette", () => {
   });
 
   it("annule le défilement de la page", () => {
-    monter({ map: makeMap(), pins: [makePin()] });
+    monter({ maps: [makeMap()], pins: [makePin()] });
     const { cadre } = elements();
 
     const evenement = new WheelEvent("wheel", { deltaY: -100, bubbles: true, cancelable: true });
@@ -213,7 +215,7 @@ describe("WorldMap — sous le mode strict de React", () => {
   // exactement ce parcours qui a tué le zoom en vrai navigateur alors que tous
   // les tests passaient — ceux-ci ne rendaient pas en mode strict.
   it("agrandit toujours à la molette après le double montage", async () => {
-    monter({ map: makeMap(), pins: [makePin()] }, "w1", true);
+    monter({ maps: [makeMap()], pins: [makePin()] }, "w1", true);
 
     const image = screen.getByAltText("Carte du monde");
     const enveloppe = image.parentElement!;
@@ -246,7 +248,7 @@ describe("WorldMap — ajustement de la carte au cadre", () => {
   });
 
   it("pose la carte à la plus petite taille qui couvre le cadre", () => {
-    monter({ map: makeMap(), pins: [makePin()] });
+    monter({ maps: [makeMap()], pins: [makePin()] });
     const enveloppe = screen.getByAltText("Carte du monde").parentElement!;
 
     // 2000×1000 dans 800×600 : la hauteur commande, la largeur déborde.
@@ -255,7 +257,7 @@ describe("WorldMap — ajustement de la carte au cadre", () => {
   });
 
   it("ouvre sur le centre de la carte, sans bande vide", async () => {
-    monter({ map: makeMap(), pins: [makePin()] });
+    monter({ maps: [makeMap()], pins: [makePin()] });
     const enveloppe = screen.getByAltText("Carte du monde").parentElement!;
 
     // 1200 px de large dans un cadre de 800 : 400 débordent, 200 de chaque côté.
@@ -265,7 +267,7 @@ describe("WorldMap — ajustement de la carte au cadre", () => {
   });
 
   it("ne dézoome jamais en deçà du cadre", async () => {
-    monter({ map: makeMap(), pins: [makePin()] });
+    monter({ maps: [makeMap()], pins: [makePin()] });
     const enveloppe = screen.getByAltText("Carte du monde").parentElement!;
     const cadre = enveloppe.parentElement!;
 
@@ -280,5 +282,59 @@ describe("WorldMap — ajustement de la carte au cadre", () => {
     await waitFor(() =>
       expect(enveloppe.style.transform).toBe("translate(-200px, 0px) scale(1)"),
     );
+  });
+});
+
+describe("WorldMap — plusieurs cartes", () => {
+  const DEUX_CARTES = {
+    maps: [makeMap(), makeMap({ id: "map2", label: "Le donjon", sort_index: 1 })],
+    pins: [makePin(), makePin({ id: "pin2", map_id: "map2", title: "La salle du trône" })],
+  };
+
+  it("garde la barre d'onglets cachée quand il n'y a qu'une carte", () => {
+    monter({ maps: [makeMap()], pins: [makePin()] });
+    expect(screen.queryByRole("tablist")).toBeNull();
+  });
+
+  it("montre un onglet par carte, et les lieux de la carte affichée", () => {
+    monter(DEUX_CARTES);
+
+    expect(screen.getAllByRole("tab")).toHaveLength(2);
+    expect(screen.getByRole("button", { name: "Le port" })).toBeInTheDocument();
+    // Le lieu de l'autre carte ne déborde pas sur celle-ci — c'est tout l'objet
+    // de `map_id` (migration 151).
+    expect(screen.queryByRole("button", { name: "La salle du trône" })).toBeNull();
+  });
+
+  it("change de carte sans repartir chercher les épingles", async () => {
+    const { mock } = monter(DEUX_CARTES);
+
+    await userEvent.click(screen.getByRole("tab", { name: "Le donjon" }));
+
+    expect(screen.getByRole("button", { name: "La salle du trône" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Le port" })).toBeNull();
+    // Toutes les épingles ont été chargées d'un bloc : changer d'onglet ne
+    // déclenche aucune requête.
+    expect(mock.builders.filter((b) => b.table === "world_map_pins")).toHaveLength(0);
+  });
+
+  it("ouvre la barre en mode édition, même pour une carte seule", async () => {
+    monter({ maps: [makeMap()], pins: [] });
+
+    await userEvent.click(screen.getByRole("button", { name: "Modifier" }));
+
+    // C'est là que se trouve le bouton d'ajout : sans la barre, impossible de
+    // créer une deuxième carte.
+    expect(screen.getByRole("tablist")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Ajouter une carte" })).toBeInTheDocument();
+  });
+
+  it("ne montre pas d'onglets à un monde sans carte", async () => {
+    monter({ maps: [], pins: [] });
+
+    await userEvent.click(screen.getByRole("button", { name: "Modifier" }));
+
+    expect(screen.queryByRole("tablist")).toBeNull();
+    expect(screen.getByText("Aucune carte configurée pour ce monde.")).toBeInTheDocument();
   });
 });

@@ -88,6 +88,16 @@ export const PRESENCE = {
   REFRESH_MS: 30_000,
 } as const;
 
+// --- Cartes d'un monde --------------------------------------------------------
+/**
+ * Plafond souple : le bouton d'ajout se désactive au-delà.
+ *
+ * Rien ne le fait respecter en base — la contrainte serait une politique RLS de
+ * plus à maintenir pour un abus qui ne s'est jamais produit. Dix cartes
+ * couvrent largement un monde, et chacune porte une image de 20 Mo au maximum.
+ */
+export const MAX_MAPS_PER_WORLD = 10;
+
 // --- UI thresholds ------------------------------------------------------------
 export const SCROLL_THRESHOLD_PX = 96;
 

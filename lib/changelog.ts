@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Carte",
+    text: "Un monde peut avoir plusieurs cartes — le continent, la capitale, un donjon — présentées en onglets. Avec une seule, rien ne change : elle occupe tout le cadre.",
+  },
+  {
+    date: "2026-09",
+    tag: "Carte",
     text: "La carte remplit toujours son cadre, quelle que soit la forme de l’écran : plus de bandes vides autour, et le zoom va jusqu’à 6×.",
   },
   {

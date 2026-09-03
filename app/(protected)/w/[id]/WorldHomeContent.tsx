@@ -5,7 +5,7 @@ import { WorldHome } from "@/components/worlds/home/WorldHome";
 import type { AsidePersona } from "@/components/personas/WorldPersonaAsideClient";
 import { fetchSectionsByPersona } from "@/lib/personaSections";
 import { getChatroomCategories, getChatroomsNav, getIsWorldAdmin, type WorldWithMembership } from "@/lib/currentRequest";
-import { getWorldMap } from "@/app/actions/worldMap";
+import { getWorldMaps } from "@/app/actions/worldMap";
 import type { InitialWorldMap } from "@/components/worlds/map/WorldMap";
 import { resolveWorldHomeGrid, widgetOptionValue } from "@/components/worlds/home/worldHomeGrid";
 import type { RecentPersona } from "@/components/worlds/home/widgets/WorldRecentPersonasWidget";
@@ -154,7 +154,7 @@ export default async function WorldHomeContent({
         ...(wikiItem ? { wikiPages: (pages.data ?? []) as unknown as WikiPage[] } : {}),
       };
     })(),
-    // Carte et épingles — comme les personas ci-dessus, uniquement quand c'est
+    // Cartes et épingles — comme les personas ci-dessus, uniquement quand c'est
     // l'onglet demandé. `WorldMap` les chargeait lui-même au montage : chunk
     // dynamique, puis hydratation, puis aller-retour, et un sablier pendant
     // tout ce temps alors que le serveur avait la réponse sous la main.
@@ -162,7 +162,7 @@ export default async function WorldHomeContent({
       // Un monde qui a désactivé sa carte n'ouvre jamais cet onglet : la
       // requête ne servirait à rien.
       if (view !== "map" || world.enable_map === false) return null;
-      return getWorldMap(worldId);
+      return getWorldMaps(worldId);
     })(),
   ]);
 

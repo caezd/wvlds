@@ -1282,6 +1282,16 @@
     }
   },
   "map": {
+    "addMap": "Add a map",
+    "newMapName": "New map",
+    "deleteMap": "Delete this map",
+    "deleteMapTitle": "Delete “{label}”?",
+    "deleteMapDesc": "This map and all its locations will be permanently deleted.",
+    "mapsTablist": "World maps",
+    "createMapError": "Could not create the map.",
+    "deleteMapError": "Could not delete the map.",
+    "mapDeleted": "Map deleted.",
+    "maxMapsReached": "Ten maps per world at most.",
     "mapLabel": "Map name",
     "title": "Map",
     "mapAlt": "World map",

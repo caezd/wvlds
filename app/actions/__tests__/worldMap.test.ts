@@ -4,8 +4,10 @@ import { createSupabaseMock } from "@/test/supabaseMock";
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
 
 import {
-  getWorldMap,
-  upsertWorldMap,
+  getWorldMaps,
+  createWorldMap,
+  updateWorldMap,
+  deleteWorldMap,
   createMapPin,
   updateMapPin,
   deleteMapPin,
@@ -18,28 +20,33 @@ const use = (mock: ReturnType<typeof createSupabaseMock>) =>
 
 beforeEach(() => vi.clearAllMocks());
 
-describe("getWorldMap", () => {
-  it("retourne la carte et les pins, avec fallbacks vides", async () => {
-    const map = { id: "m1", world_id: "w1", image_url: null, label: "Carte" };
-    const pins = [{ id: "p1", world_id: "w1", title: "Donjon" }];
-    use(createSupabaseMock({ results: [{ data: map }, { data: pins }] }));
-    const res = await getWorldMap("w1");
-    expect(res.map).toEqual(map);
+describe("getWorldMaps", () => {
+  it("retourne les cartes et les pins, avec fallbacks vides", async () => {
+    const maps = [
+      { id: "m1", world_id: "w1", image_url: null, label: "Continent", sort_index: 0 },
+      { id: "m2", world_id: "w1", image_url: null, label: "Donjon", sort_index: 1 },
+    ];
+    const pins = [{ id: "p1", world_id: "w1", map_id: "m1", title: "Port" }];
+    use(createSupabaseMock({ results: [{ data: maps }, { data: pins }] }));
+    const res = await getWorldMaps("w1");
+    expect(res.maps).toEqual(maps);
     expect(res.pins).toEqual(pins);
   });
 
-  it("retourne map=null et pins=[] quand rien n'existe", async () => {
+  it("retourne des listes vides quand rien n'existe", async () => {
     use(createSupabaseMock({ results: [{ data: null }, { data: null }] }));
-    const res = await getWorldMap("w1");
-    expect(res.map).toBeNull();
+    const res = await getWorldMaps("w1");
+    expect(res.maps).toEqual([]);
     expect(res.pins).toEqual([]);
   });
 });
 
 describe("mutations carte — garde d'authentification", () => {
   it.each([
-    ["upsertWorldMap", () => upsertWorldMap("w1", { label: "x" })],
-    ["createMapPin", () => createMapPin("w1", 1, 2, "Pin")],
+    ["createWorldMap", () => createWorldMap("w1", { label: "x" })],
+    ["updateWorldMap", () => updateWorldMap("m1", { label: "x" })],
+    ["deleteWorldMap", () => deleteWorldMap("m1")],
+    ["createMapPin", () => createMapPin("w1", "m1", 1, 2, "Pin")],
     ["updateMapPin", () => updateMapPin("p1", { title: "x" })],
     ["deleteMapPin", () => deleteMapPin("p1")],
   ])("%s lève si non connecté", async (_name, fn) => {
@@ -53,13 +60,16 @@ describe("mutations carte — garde d'authentification", () => {
 
 describe("createMapPin", () => {
   it("insère le pin avec les bonnes coordonnées et retourne la donnée", async () => {
-    const pin = { id: "p1", world_id: "w1", x: 10, y: 20, title: "Donjon" };
+    const pin = { id: "p1", world_id: "w1", map_id: "m1", x: 10, y: 20, title: "Donjon" };
     const mock = createSupabaseMock({ user: { id: "u1" }, results: [{ data: pin }] });
     use(mock);
-    const res = await createMapPin("w1", 10, 20, "Donjon");
+    const res = await createMapPin("w1", "m1", 10, 20, "Donjon");
     expect(res).toEqual(pin);
+    // `map_id` et non le seul `world_id` : sans lui, le lieu s'afficherait sur
+    // toutes les cartes du monde (cf. migration 151).
     expect(mock.buildersFor("world_map_pins")[0].insert).toHaveBeenCalledWith({
       world_id: "w1",
+      map_id: "m1",
       x: 10,
       y: 20,
       title: "Donjon",
@@ -68,7 +78,7 @@ describe("createMapPin", () => {
 
   it("propage l'erreur Supabase", async () => {
     use(createSupabaseMock({ user: { id: "u1" }, results: [{ error: { message: "rls" } }] }));
-    await expect(createMapPin("w1", 0, 0, "x")).rejects.toThrow("rls");
+    await expect(createMapPin("w1", "m1", 0, 0, "x")).rejects.toThrow("rls");
   });
 });
 
@@ -83,23 +93,61 @@ describe("deleteMapPin", () => {
   });
 });
 
-describe("upsertWorldMap", () => {
-  it("upsert la carte avec le patch et retourne la donnée", async () => {
-    const map = { id: "m1", world_id: "w1", image_url: "https://img.test/x.jpg", label: "Monde" };
+describe("createWorldMap", () => {
+  it("insère une carte de plus dans le monde", async () => {
+    // Un monde peut désormais en avoir plusieurs : c'est une insertion, et non
+    // plus un upsert sur `world_id` — celui-ci écrasait l'unique carte.
+    const map = { id: "m2", world_id: "w1", image_url: null, label: "Donjon", sort_index: 1 };
     const mock = createSupabaseMock({ user: { id: "u1" }, results: [{ data: map }] });
     use(mock);
-    const res = await upsertWorldMap("w1", { image_url: "https://img.test/x.jpg", label: "Monde" });
+    const res = await createWorldMap("w1", { label: "Donjon", sort_index: 1 });
     expect(res).toEqual(map);
-    const b = mock.buildersFor("world_maps")[0];
-    expect(b.upsert).toHaveBeenCalledWith(
-      expect.objectContaining({ world_id: "w1", image_url: "https://img.test/x.jpg", label: "Monde" }),
-      { onConflict: "world_id" },
-    );
+    expect(mock.buildersFor("world_maps")[0].insert).toHaveBeenCalledWith({
+      world_id: "w1",
+      label: "Donjon",
+      sort_index: 1,
+    });
   });
 
   it("propage l'erreur Supabase", async () => {
     use(createSupabaseMock({ user: { id: "u1" }, results: [{ error: { message: "rls" } }] }));
-    await expect(upsertWorldMap("w1", {})).rejects.toThrow("rls");
+    await expect(createWorldMap("w1", {})).rejects.toThrow("rls");
+  });
+});
+
+describe("updateWorldMap", () => {
+  it("met à jour la carte visée, et elle seule", async () => {
+    const map = { id: "m1", world_id: "w1", image_url: "https://img.test/x.jpg", label: "Monde", sort_index: 0 };
+    const mock = createSupabaseMock({ user: { id: "u1" }, results: [{ data: map }] });
+    use(mock);
+    const res = await updateWorldMap("m1", { image_url: "https://img.test/x.jpg" });
+    expect(res).toEqual(map);
+    const b = mock.buildersFor("world_maps")[0];
+    expect(b.update).toHaveBeenCalledWith(
+      expect.objectContaining({ image_url: "https://img.test/x.jpg" }),
+    );
+    expect(b.eq).toHaveBeenCalledWith("id", "m1");
+  });
+
+  it("propage l'erreur Supabase", async () => {
+    use(createSupabaseMock({ user: { id: "u1" }, results: [{ error: { message: "rls" } }] }));
+    await expect(updateWorldMap("m1", {})).rejects.toThrow("rls");
+  });
+});
+
+describe("deleteWorldMap", () => {
+  it("supprime la carte par id", async () => {
+    const mock = createSupabaseMock({ user: { id: "u1" }, results: [{ error: null }] });
+    use(mock);
+    await deleteWorldMap("m1");
+    const b = mock.buildersFor("world_maps")[0];
+    expect(b.delete).toHaveBeenCalled();
+    expect(b.eq).toHaveBeenCalledWith("id", "m1");
+  });
+
+  it("propage l'erreur Supabase", async () => {
+    use(createSupabaseMock({ user: { id: "u1" }, results: [{ error: { message: "rls" } }] }));
+    await expect(deleteWorldMap("m1")).rejects.toThrow("rls");
   });
 });
 

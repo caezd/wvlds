@@ -7,7 +7,7 @@ import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import { useResetOnKeyChange } from "@/hooks/useResetOnKeyChange";
 // `Map` est renommée : l'icône masquait le `Map` natif, dont le suivi des
 // pointeurs (pincement) a besoin.
-import { Check, Loader2, Map as MapIcon, MapPin, Pencil, Plus, Upload, X } from "lucide-react";
+import { Check, Loader2, Map as MapIcon, MapPin, Pencil, Plus, Trash2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { cn } from "@/lib/utils";
@@ -18,10 +18,12 @@ import { supabaseThumb } from "@/lib/storage";
 import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 import {
   createMapPin,
+  createWorldMap,
   deleteMapPin,
-  getWorldMap,
+  deleteWorldMap,
+  getWorldMaps,
   updateMapPin,
-  upsertWorldMap,
+  updateWorldMap,
   type MapPin as MapPinType,
   type WorldMapData,
 } from "@/app/actions/worldMap";
@@ -29,6 +31,8 @@ import {
 // Les quatre pièces de l'interface d'un point — marqueur, panneau flottant,
 // dialogue d'apparence, sélecteur de couleur — vivent à côté. Ce fichier ne
 // garde que la carte elle-même : chargement, image de fond, pose des points.
+import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
+import { MAP_PANEL_ID, MapTabs, mapTabId } from "./MapTabs";
 import { PinMarker } from "./PinMarker";
 import { PinPopover } from "./PinPopover";
 import { FLECHE, calcPopoverPos, pinAnchor } from "./popoverPosition";
@@ -67,8 +71,8 @@ const IDENTITY: MapTransform = { scale: 1, x: 0, y: 0 };
 /** Écart au-delà duquel un geste est un déplacement, et non un clic. */
 const DRAG_THRESHOLD_PX = 4;
 
-/** Carte et épingles résolues côté serveur, quand l'onglet est ouvert d'emblée. */
-export type InitialWorldMap = { map: WorldMapData | null; pins: MapPinType[] };
+/** Cartes et épingles résolues côté serveur, quand l'onglet est ouvert d'emblée. */
+export type InitialWorldMap = { maps: WorldMapData[]; pins: MapPinType[] };
 
 // ── Main component ─────────────────────────────────────────────────
 
@@ -93,8 +97,22 @@ export function WorldMap({
   const supabase = createClient();
   const reconnectEpoch = useReconnectEpoch();
 
-  const [mapData, setMapData] = React.useState<WorldMapData | null>(initialMap?.map ?? null);
+  // Toutes les cartes du monde, et toutes leurs épingles. Les épingles sont
+  // gardées d'un bloc plutôt que rechargées à chaque onglet : passer de l'une à
+  // l'autre est alors instantané.
+  const [maps, setMaps] = React.useState<WorldMapData[]>(initialMap?.maps ?? []);
+  const [activeMapId, setActiveMapId] = React.useState<string | null>(initialMap?.maps?.[0]?.id ?? null);
   const [pins, setPins] = React.useState<MapPinType[]>(initialMap?.pins ?? []);
+  const [creatingMap, setCreatingMap] = React.useState(false);
+  const [confirmDeleteMap, setConfirmDeleteMap] = React.useState(false);
+
+  // Une carte disparue (supprimée ailleurs) laisserait l'onglet actif dans le
+  // vide : on retombe alors sur la première.
+  const activeMap = maps.find((m) => m.id === activeMapId) ?? maps[0] ?? null;
+  const visiblePins = React.useMemo(
+    () => pins.filter((p) => p.map_id === activeMap?.id),
+    [pins, activeMap?.id],
+  );
   const [loading, setLoading] = React.useState(!initialMap);
   const [editMode, setEditMode] = React.useState(false);
 
@@ -130,8 +148,8 @@ export function WorldMap({
   const rafRef = React.useRef<number | null>(null);
   const selectedPinRef = React.useRef<MapPinType | null>(null);
   selectedPinRef.current = selectedPin;
-  const mapDataRef = React.useRef<WorldMapData | null>(mapData);
-  mapDataRef.current = mapData;
+  const activeMapRef = React.useRef<WorldMapData | null>(activeMap);
+  activeMapRef.current = activeMap;
   const fullResolutionAskedRef = React.useRef(false);
   /** La vue par défaut n'est posée qu'une fois par carte. */
   const initialViewDoneRef = React.useRef(false);
@@ -285,7 +303,7 @@ export function WorldMap({
    * d'être téléchargé.
    */
   const requestFullResolution = React.useCallback((scale: number) => {
-    const url = mapDataRef.current?.image_url;
+    const url = activeMapRef.current?.image_url;
     if (fullResolutionAskedRef.current || !url) return;
     if (baseSizeRef.current.width * scale <= MAP_THUMB_WIDTH) return;
     fullResolutionAskedRef.current = true;
@@ -312,11 +330,13 @@ export function WorldMap({
   // l'image déjà en cache a donc livré ses dimensions et le cadre a été mesuré
   // AVANT que cet effet ne parte. Le laisser s'exécuter là effaçait cette
   // mesure, et la carte restait à zéro faute d'un second déclencheur.
-  const lastImageUrlRef = React.useRef(mapData?.image_url ?? null);
+  // La clé mêle la carte et son image : changer d'onglet remet la vue à plat,
+  // et remplacer l'image d'une carte aussi.
+  const viewKey = `${activeMap?.id ?? ""}:${activeMap?.image_url ?? ""}`;
+  const lastViewKeyRef = React.useRef(viewKey);
   React.useEffect(() => {
-    const url = mapData?.image_url ?? null;
-    if (lastImageUrlRef.current === url) return;
-    lastImageUrlRef.current = url;
+    if (lastViewKeyRef.current === viewKey) return;
+    lastViewKeyRef.current = viewKey;
 
     transformRef.current = IDENTITY;
     fullResolutionAskedRef.current = false;
@@ -326,7 +346,7 @@ export function WorldMap({
     setFullResolution(false);
     setImageLoaded(false);
     schedulePaint();
-  }, [mapData?.image_url, schedulePaint]);
+  }, [viewKey, schedulePaint]);
 
   // React attache les refs des enfants avant celles de leurs parents : quand
   // l'image en cache signale ses dimensions, le cadre n'est pas encore connu et
@@ -379,9 +399,10 @@ export function WorldMap({
     let cancelled = false;
     (async () => {
       try {
-        const { map, pins: p } = await getWorldMap(worldId);
+        const { maps: m, pins: p } = await getWorldMaps(worldId);
         if (!cancelled) {
-          setMapData(map);
+          setMaps(m);
+          setActiveMapId((prev) => prev ?? m[0]?.id ?? null);
           setPins(p);
         }
       } finally {
@@ -422,9 +443,20 @@ export function WorldMap({
         )
         .on(
           "postgres_changes",
-          { event: "UPDATE", schema: "public", table: "world_maps", filter: `world_id=eq.${worldId}` },
+          { event: "*", schema: "public", table: "world_maps", filter: `world_id=eq.${worldId}` },
           (payload: RT) => {
-            setMapData(payload.new as WorldMapData);
+            if (payload.eventType === "DELETE") {
+              const id = (payload.old as { id: string }).id;
+              setMaps((prev) => prev.filter((m) => m.id !== id));
+              setPins((prev) => prev.filter((p) => p.map_id !== id));
+              return;
+            }
+            const carte = payload.new as WorldMapData;
+            setMaps((prev) =>
+              prev.some((m) => m.id === carte.id)
+                ? prev.map((m) => (m.id === carte.id ? carte : m))
+                : [...prev, carte],
+            );
           },
         )
         .subscribe(),
@@ -454,7 +486,8 @@ export function WorldMap({
   // lui, ne repart plus quand le serveur a déjà fourni les données — d'où ce
   // resemis explicite.
   useResetOnKeyChange(worldId, () => {
-    setMapData(initialMap?.map ?? null);
+    setMaps(initialMap?.maps ?? []);
+    setActiveMapId(initialMap?.maps?.[0]?.id ?? null);
     setPins(initialMap?.pins ?? []);
     setLoading(!initialMap);
     setSelectedPin(null);
@@ -469,19 +502,66 @@ export function WorldMap({
   // La colonne `label` existait depuis la première migration sans que rien ne
   // l'écrive ni ne l'affiche : chaque monde avait donc « Carte » pour titre,
   // là où le wiki, lui, se laisse renommer.
-  const mapLabel = mapData?.label?.trim() || t("title");
-  const [labelDraft, setLabelDraft] = React.useState(mapData?.label ?? "");
-  React.useEffect(() => { setLabelDraft(mapData?.label ?? ""); }, [mapData?.label]);
+  const mapLabel = activeMap?.label?.trim() || t("title");
+  const [labelDraft, setLabelDraft] = React.useState(activeMap?.label ?? "");
+  React.useEffect(() => { setLabelDraft(activeMap?.label ?? ""); }, [activeMap?.id, activeMap?.label]);
+
+  /** Remplace une carte dans la liste, ou l'y ajoute si elle est nouvelle. */
+  function mergeMap(prev: WorldMapData[], carte: WorldMapData): WorldMapData[] {
+    return prev.some((m) => m.id === carte.id)
+      ? prev.map((m) => (m.id === carte.id ? carte : m))
+      : [...prev, carte];
+  }
 
   async function handleLabelCommit() {
     const value = labelDraft.trim();
-    if (!mapData || value === (mapData.label ?? "")) return;
+    if (!activeMap || value === (activeMap.label ?? "")) return;
     try {
-      const updated = await upsertWorldMap(worldId, { label: value || t("title") });
-      setMapData(updated);
+      const updated = await updateWorldMap(activeMap.id, { label: value || t("title") });
+      setMaps((prev) => mergeMap(prev, updated));
     } catch {
       toast.error(t("saveError"));
-      setLabelDraft(mapData.label ?? "");
+      setLabelDraft(activeMap.label ?? "");
+    }
+  }
+
+  // ── Ajouter et supprimer une carte ────────────────────────────
+  async function handleAddMap() {
+    if (creatingMap) return;
+    setCreatingMap(true);
+    try {
+      const carte = await createWorldMap(worldId, {
+        label: t("newMapName"),
+        sort_index: maps.length,
+      });
+      setMaps((prev) => mergeMap(prev, carte));
+      // On bascule dessus : la nouvelle carte s'ouvre sur son état vide, où
+      // l'on importe son image.
+      setActiveMapId(carte.id);
+      closePopover();
+      setPendingPin(null);
+    } catch {
+      toast.error(t("createMapError"));
+    } finally {
+      setCreatingMap(false);
+    }
+  }
+
+  async function handleDeleteMap() {
+    if (!activeMap) return;
+    const id = activeMap.id;
+    try {
+      await deleteWorldMap(id);
+      setMaps((prev) => prev.filter((m) => m.id !== id));
+      // Les épingles de la carte partent avec elle en base (`ON DELETE
+      // CASCADE`) ; on les retire ici sans attendre l'écho du temps réel.
+      setPins((prev) => prev.filter((p) => p.map_id !== id));
+      setActiveMapId((prev) => (prev === id ? null : prev));
+      closePopover();
+      setPendingPin(null);
+      toast.success(t("mapDeleted"));
+    } catch {
+      toast.error(t("deleteMapError"));
     }
   }
 
@@ -511,8 +591,12 @@ export function WorldMap({
       if (upErr) throw upErr;
 
       const image_url = supabase.storage.from("worlds").getPublicUrl(path).data.publicUrl;
-      const updated = await upsertWorldMap(worldId, { image_url });
-      setMapData(updated);
+      // Première image d'un monde qui n'avait aucune carte : elle en crée une.
+      const updated = activeMap
+        ? await updateWorldMap(activeMap.id, { image_url })
+        : await createWorldMap(worldId, { image_url, label: t("title") });
+      setMaps((prev) => mergeMap(prev, updated));
+      setActiveMapId(updated.id);
       toast.success(t("mapUpdated"));
     } catch {
       toast.error(t("uploadError"));
@@ -739,10 +823,10 @@ export function WorldMap({
   }
 
   async function handleCreatePin() {
-    if (!pendingPin || !pendingPin.title.trim() || creatingPin) return;
+    if (!pendingPin || !pendingPin.title.trim() || creatingPin || !activeMap) return;
     setCreatingPin(true);
     try {
-      const pin = await createMapPin(worldId, pendingPin.x, pendingPin.y, pendingPin.title.trim());
+      const pin = await createMapPin(worldId, activeMap.id, pendingPin.x, pendingPin.y, pendingPin.title.trim());
       setPins((prev) => mergePin(prev, pin));
       setPendingPin(null);
       openPopover(pin);
@@ -795,10 +879,10 @@ export function WorldMap({
     );
   }
 
-  const imageSrc = mapData?.image_url
+  const imageSrc = activeMap?.image_url
     ? (fullResolution
-        ? mapData.image_url
-        : supabaseThumb(mapData.image_url, MAP_THUMB_WIDTH) ?? mapData.image_url)
+        ? activeMap.image_url
+        : supabaseThumb(activeMap.image_url, MAP_THUMB_WIDTH) ?? activeMap.image_url)
     : null;
 
   return (
@@ -812,7 +896,7 @@ export function WorldMap({
       <WorldPanelHeader
         icon={<MapIcon className="h-4 w-4 shrink-0 text-muted-foreground" />}
         title={
-          isEditMode && mapData ? (
+          isEditMode && activeMap ? (
             <input
               value={labelDraft}
               aria-label={t("mapLabel")}
@@ -823,7 +907,7 @@ export function WorldMap({
               onKeyDown={(e) => {
                 if (e.key === "Enter") e.currentTarget.blur();
                 if (e.key === "Escape") {
-                  setLabelDraft(mapData.label ?? "");
+                  setLabelDraft(activeMap.label ?? "");
                   e.currentTarget.blur();
                 }
               }}
@@ -851,7 +935,7 @@ export function WorldMap({
           )
         }
       >
-        {canEdit && isEditMode && mapData?.image_url && (
+        {canEdit && isEditMode && activeMap?.image_url && (
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); mapFileInputRef.current?.click(); }}
@@ -865,7 +949,31 @@ export function WorldMap({
             {t("changeMap")}
           </button>
         )}
+        {canEdit && isEditMode && activeMap && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setConfirmDeleteMap(true); }}
+            className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            {t("deleteMap")}
+          </button>
+        )}
       </WorldPanelHeader>
+
+      {/* Onglets : cachés tant qu'il n'y a qu'une carte à montrer, pour lui
+          laisser tout le cadre. En édition ils paraissent dès la première —
+          c'est là qu'on en ajoute une deuxième. */}
+      {(maps.length > 1 || (isEditMode && maps.length > 0)) && (
+        <MapTabs
+          maps={maps}
+          activeId={activeMap?.id ?? null}
+          isEditMode={isEditMode}
+          creating={creatingMap}
+          onSelect={(id) => { setActiveMapId(id); closePopover(); setPendingPin(null); }}
+          onAdd={() => void handleAddMap()}
+        />
+      )}
 
       {/* ── Corps ──────────────────────────────────────────────── */}
       <div className="relative flex min-h-0 flex-1 overflow-hidden">
@@ -894,6 +1002,9 @@ export function WorldMap({
           /* ── Carte avec image ────────────────────────────────── */
           <div
             ref={containerCallbackRef}
+            id={MAP_PANEL_ID}
+            role={maps.length > 1 ? "tabpanel" : undefined}
+            aria-labelledby={maps.length > 1 && activeMap ? mapTabId(activeMap.id) : undefined}
             // `touch-none` : sans lui, le navigateur s'attribue le geste pour
             // faire défiler la page, et le déplacement de la carte s'interrompt
             // au premier pixel. Le pincement à deux doigts en dépend aussi.
@@ -949,8 +1060,8 @@ export function WorldMap({
                 style={{ userSelect: "none" }}
               />
 
-              {/* Pins existants */}
-              {pins.map((pin) => (
+              {/* Pins existants — ceux de la carte affichée */}
+              {visiblePins.map((pin) => (
                 <PinMarker
                   key={pin.id}
                   pin={pin}
@@ -1048,6 +1159,18 @@ export function WorldMap({
             setSelectedPin(updated);
           }}
           onDelete={() => void handleDeletePin(selectedPin)}
+        />
+      )}
+
+      {activeMap && (
+        <DeleteConfirmDialog
+          open={confirmDeleteMap}
+          onOpenChange={setConfirmDeleteMap}
+          title={t("deleteMapTitle", { label: mapLabel })}
+          description={t("deleteMapDesc")}
+          cancelLabel={tCommon("cancel")}
+          confirmLabel={tCommon("delete")}
+          onConfirm={() => { setConfirmDeleteMap(false); void handleDeleteMap(); }}
         />
       )}
 

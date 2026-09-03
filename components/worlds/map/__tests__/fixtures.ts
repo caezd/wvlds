@@ -6,6 +6,7 @@ export function makePin(overrides: Partial<MapPin> = {}): MapPin {
   return {
     id: "pin1",
     world_id: "w1",
+    map_id: "map1",
     x: 50,
     y: 50,
     title: "Le port",
@@ -28,6 +29,7 @@ export function makeMap(overrides: Partial<WorldMapData> = {}): WorldMapData {
     world_id: "w1",
     image_url: "https://x.supabase.co/storage/v1/object/public/worlds/w1/map.webp",
     label: "Carte",
+    sort_index: 0,
     ...overrides,
   };
 }

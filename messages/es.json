@@ -1282,6 +1282,16 @@
     }
   },
   "map": {
+    "addMap": "Añadir un mapa",
+    "newMapName": "Nuevo mapa",
+    "deleteMap": "Eliminar este mapa",
+    "deleteMapTitle": "¿Eliminar «{label}»?",
+    "deleteMapDesc": "Este mapa y todos sus lugares se eliminarán definitivamente.",
+    "mapsTablist": "Mapas del mundo",
+    "createMapError": "No se ha podido crear el mapa.",
+    "deleteMapError": "No se ha podido eliminar el mapa.",
+    "mapDeleted": "Mapa eliminado.",
+    "maxMapsReached": "Diez mapas por mundo como máximo.",
     "mapLabel": "Nombre del mapa",
     "title": "Mapa",
     "mapAlt": "Mapa del mundo",

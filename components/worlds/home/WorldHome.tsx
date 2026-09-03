@@ -80,7 +80,7 @@ export function WorldHome({
   /** Données des widgets d'accueil résolues côté serveur, quand le bloc est
    *  présent dans la grille (cf. WorldHomeContent). */
   initialWidgetData?: { recentPersonas?: RecentPersona[]; wikiPages?: WikiPage[] };
-  /** Carte et épingles résolues côté serveur quand `view === "map"`. */
+  /** Cartes et épingles résolues côté serveur quand `view === "map"`. */
   initialMap?: InitialWorldMap | null;
   initialPersonas: AsidePersona[];
   initialPrefs: WorldPrefs | null;
