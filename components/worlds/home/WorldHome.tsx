@@ -66,6 +66,8 @@ export function WorldHome({
   view,
   initialCategoryId,
   initialWikiSlug,
+  initialMapId,
+  initialPinId,
 }: {
   world: HeroWorld;
   worldId: string;
@@ -87,6 +89,9 @@ export function WorldHome({
   view?: string;
   initialCategoryId?: string | null;
   initialWikiSlug?: string | null;
+  /** Carte et lieu à ouvrir, lus dans l'adresse (`?map=…&pin=…`). */
+  initialMapId?: string | null;
+  initialPinId?: string | null;
 }) {
   const { create_chatroom, world_map, world_catalogue, world_timeline } = useFeatureFlags();
   const router = useRouter();
@@ -214,9 +219,10 @@ export function WorldHome({
         ) : showMap && world_map ? (
           <WorldMap
             worldId={worldId}
-            userId={userId ?? ""}
             canEdit={canEditTabs}
             initialMap={initialMap}
+            initialMapId={initialMapId}
+            initialPinId={initialPinId}
           />
         ) : showTimeline && hasTimeline ? (
           <WorldTimeline

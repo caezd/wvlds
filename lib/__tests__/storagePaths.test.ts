@@ -6,6 +6,10 @@ import {
   nomDeFichierUnique,
   nomDeFichierPourType,
   wikiImagePrefix,
+  mapImagePath,
+  mapImagePrefix,
+  pinBannerPath,
+  pinBannerPrefix,
 } from "@/lib/storagePaths";
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -137,5 +141,36 @@ describe("wikiImagePath", () => {
   it("ne garde rien du fichier d'origine, pas même deux fois le même nom", () => {
     expect(wikiImagePath(MONDE, PAGE, "image/webp"))
       .not.toBe(wikiImagePath(MONDE, PAGE, "image/webp"));
+  });
+});
+
+describe("chemins des cartes et des lieux", () => {
+  it("range l'image sous le préfixe de sa carte", () => {
+    const chemin = mapImagePath("w1", "m1", "image/webp");
+    expect(chemin.startsWith(mapImagePrefix("w1", "m1") + "/")).toBe(true);
+    expect(chemin.endsWith(".webp")).toBe(true);
+  });
+
+  it("range la bannière sous le préfixe de son lieu", () => {
+    const chemin = pinBannerPath("w1", "p1", "image/webp");
+    expect(chemin.startsWith(pinBannerPrefix("w1", "p1") + "/")).toBe(true);
+  });
+
+  it("ne classe plus par téléverseur", () => {
+    // L'ancien rangement — `user-<id>/world-<id>/…` — éparpillait les images
+    // d'une même carte dans autant de dossiers qu'il y avait d'éditeurs.
+    expect(mapImagePrefix("w1", "m1")).toBe("world-w1/map-m1");
+    expect(pinBannerPrefix("w1", "p1")).toBe("world-w1/pin-p1");
+  });
+
+  it("tire un nom imprévisible, jamais deux fois le même", () => {
+    // Ces espaces sont en lecture publique : le nom du fichier tient lieu de
+    // secret. `map-${Date.now()}.webp` se devinait — treize chiffres dont on
+    // connaît l'ordre de grandeur.
+    const noms = new Set(
+      Array.from({ length: 50 }, () => mapImagePath("w1", "m1", "image/webp")),
+    );
+    expect(noms.size).toBe(50);
+    for (const nom of noms) expect(nom).not.toMatch(/\d{13}/);
   });
 });

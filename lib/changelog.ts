@@ -9,6 +9,16 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Carte",
+    text: "L’adresse suit la carte ouverte et le lieu consulté : le lien se partage, le bouton Précédent revient à la carte d’avant, et un rafraîchissement rouvre au même endroit.",
+  },
+  {
+    date: "2026-09",
+    tag: "Performance",
+    text: "La carte gagne en netteté par paliers à mesure qu’on zoome, au lieu de télécharger l’image d’origine d’un coup.",
+  },
+  {
+    date: "2026-09",
+    tag: "Carte",
     text: "Un monde peut avoir plusieurs cartes — le continent, la capitale, un donjon — présentées en onglets. Avec une seule, rien ne change : elle occupe tout le cadre.",
   },
   {

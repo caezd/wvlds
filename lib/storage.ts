@@ -76,6 +76,48 @@ export function supabaseTinyThumb(
 }
 
 /**
+ * Palier de largeur à demander pour une image affichée à `displayedWidth`.
+ *
+ * Rend le plus petit palier qui suffise, ou `null` quand aucun ne suffit — il
+ * faut alors l'original. Des paliers, et non la largeur exacte : celle-ci
+ * diffère à chaque écran et à chaque cran de zoom, donc une URL par visiteur,
+ * donc un téléchargement par visiteur. Le cache du navigateur ne peut rien pour
+ * une image qu'on ne lui redemande jamais à l'identique.
+ */
+export function widthTierFor(displayedWidth: number, tiers: number[]): number | null {
+  for (const tier of tiers) if (displayedWidth <= tier) return tier;
+  return null;
+}
+
+/**
+ * Chemin d'un objet dans son bucket, à partir de son URL publique.
+ *
+ * Sert au ménage : ce que l'application garde d'un fichier téléversé, c'est son
+ * URL, pas son chemin. Sans ce chemin, `storage.remove()` n'a rien à effacer et
+ * les images des cartes et des lieux supprimés s'entassent indéfiniment.
+ *
+ * Rend `null` plutôt qu'une chaîne douteuse quand l'URL ne vient pas du bucket
+ * attendu : mieux vaut ne rien supprimer que supprimer au hasard.
+ */
+export function storagePathFromUrl(
+  url: string | null | undefined,
+  bucket: string,
+): string | null {
+  if (!url) return null;
+  const marqueur = `/storage/v1/object/public/${bucket}/`;
+  const i = url.indexOf(marqueur);
+  if (i < 0) return null;
+  const chemin = url.slice(i + marqueur.length).split("?")[0];
+  if (!chemin) return null;
+  // Les chemins voyagent encodés dans une URL ; `remove()` les attend bruts.
+  try {
+    return decodeURIComponent(chemin);
+  } catch {
+    return chemin;
+  }
+}
+
+/**
  * Retourne l'URL propre (sans param ?t=) pour stockage en DB.
  * Le param ?t= ne doit être utilisé qu'en mémoire pour invalider
  * le cache navigateur immédiatement après un upload.

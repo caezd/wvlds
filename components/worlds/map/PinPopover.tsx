@@ -10,6 +10,7 @@ import {
 
 import { toWebP } from "@/lib/imageUtils";
 import { supabaseThumb } from "@/lib/storage";
+import { pinBannerPath } from "@/lib/storagePaths";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
@@ -32,7 +33,6 @@ export function PinPopover({
   panelRef,
   wikiPages,
   isEditMode,
-  userId,
   worldId,
   onClose,
   onUpdated,
@@ -46,7 +46,6 @@ export function PinPopover({
   /** Pages du wiki du monde, chargées une seule fois par `WorldMap`. */
   wikiPages: WikiPageOption[];
   isEditMode: boolean;
-  userId: string;
   worldId: string;
   onClose: () => void;
   onUpdated: (updated: MapPinType) => void;
@@ -122,7 +121,10 @@ export function PinPopover({
       if (!user) throw new Error(ERR_NON_AUTHENTIFIE);
 
       const converted = await toWebP(file, 1200);
-      const path = `user-${userId}/world-${worldId}/pin-${pin.id}-${Date.now()}.webp`;
+      // Rangée sous le préfixe du lieu : supprimer le lieu, c'est vider ce
+      // dossier. Le nom du fichier est tiré au sort — ces espaces sont en
+      // lecture publique, et un horodatage se devine (cf. `lib/storagePaths.ts`).
+      const path = pinBannerPath(worldId, pin.id, converted.type);
 
       const { error: upErr } = await supabase.storage
         .from("worlds")

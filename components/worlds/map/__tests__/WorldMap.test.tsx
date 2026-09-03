@@ -45,16 +45,23 @@ const CANAL = "w:w1:map";
 
 type CarteInitiale = { maps: ReturnType<typeof makeMap>[]; pins: ReturnType<typeof makePin>[] } | null;
 
-function monter(initialMap: CarteInitiale, worldId = "w1", strict = false) {
+function monter(
+  initialMap: CarteInitiale,
+  worldId = "w1",
+  strict = false,
+  adresse: { initialMapId?: string; initialPinId?: string } = {},
+) {
   const mock = createSupabaseMock({ user: { id: "u1" } });
   vi.mocked(createClient).mockReturnValue(mock.client as never);
-  const carte = <WorldMap worldId={worldId} userId="u1" canEdit initialMap={initialMap} />;
+  const carte = (
+    <WorldMap worldId={worldId} canEdit initialMap={initialMap} {...adresse} />
+  );
   const { rerender } = render(strict ? <StrictMode>{carte}</StrictMode> : carte);
   return {
     mock,
     /** Rejoue le rendu avec un autre monde, comme une navigation client. */
     changerDeMonde: (id: string, carte: CarteInitiale) =>
-      rerender(<WorldMap worldId={id} userId="u1" canEdit initialMap={carte} />),
+      rerender(<WorldMap worldId={id} canEdit initialMap={carte} />),
   };
 }
 
@@ -230,22 +237,8 @@ describe("WorldMap — sous le mode strict de React", () => {
 describe("WorldMap — ajustement de la carte au cadre", () => {
   // jsdom ne met rien en page : on lui souffle les mesures dont dépend
   // l'ajustement — un cadre de 800×600 et une carte 2:1.
-  beforeEach(() => {
-    Object.defineProperty(HTMLElement.prototype, "clientWidth", { configurable: true, value: 800 });
-    Object.defineProperty(HTMLElement.prototype, "clientHeight", { configurable: true, value: 600 });
-    Object.defineProperty(HTMLImageElement.prototype, "complete", { configurable: true, value: true });
-    Object.defineProperty(HTMLImageElement.prototype, "naturalWidth", { configurable: true, value: 2000 });
-    Object.defineProperty(HTMLImageElement.prototype, "naturalHeight", { configurable: true, value: 1000 });
-  });
-
-  afterEach(() => {
-    for (const prop of ["clientWidth", "clientHeight"]) {
-      delete (HTMLElement.prototype as unknown as Record<string, unknown>)[prop];
-    }
-    for (const prop of ["complete", "naturalWidth", "naturalHeight"]) {
-      delete (HTMLImageElement.prototype as unknown as Record<string, unknown>)[prop];
-    }
-  });
+  beforeEach(simulerMiseEnPage);
+  afterEach(restaurerMiseEnPage);
 
   it("pose la carte à la plus petite taille qui couvre le cadre", () => {
     monter({ maps: [makeMap()], pins: [makePin()] });
@@ -336,5 +329,80 @@ describe("WorldMap — plusieurs cartes", () => {
 
     expect(screen.queryByRole("tablist")).toBeNull();
     expect(screen.getByText("Aucune carte configurée pour ce monde.")).toBeInTheDocument();
+  });
+});
+
+// jsdom ne met rien en page : sans ces mesures, la carte reste à zéro et rien
+// de ce qui dépend de sa taille ne peut s'observer.
+function simulerMiseEnPage() {
+  Object.defineProperty(HTMLElement.prototype, "clientWidth", { configurable: true, value: 800 });
+  Object.defineProperty(HTMLElement.prototype, "clientHeight", { configurable: true, value: 600 });
+  Object.defineProperty(HTMLImageElement.prototype, "complete", { configurable: true, value: true });
+  Object.defineProperty(HTMLImageElement.prototype, "naturalWidth", { configurable: true, value: 2000 });
+  Object.defineProperty(HTMLImageElement.prototype, "naturalHeight", { configurable: true, value: 1000 });
+}
+
+function restaurerMiseEnPage() {
+  for (const prop of ["clientWidth", "clientHeight"]) {
+    delete (HTMLElement.prototype as unknown as Record<string, unknown>)[prop];
+  }
+  for (const prop of ["complete", "naturalWidth", "naturalHeight"]) {
+    delete (HTMLImageElement.prototype as unknown as Record<string, unknown>)[prop];
+  }
+}
+
+describe("WorldMap — l'adresse suit ce qu'on regarde", () => {
+  const DEUX_CARTES = {
+    maps: [makeMap(), makeMap({ id: "map2", label: "Le donjon", sort_index: 1 })],
+    pins: [makePin(), makePin({ id: "pin2", map_id: "map2", title: "La salle du trône" })],
+  };
+
+  const parametres = () => new URLSearchParams(window.location.search);
+
+  beforeEach(() => {
+    simulerMiseEnPage();
+    window.history.replaceState(null, "", "/w/w1?view=map");
+  });
+  afterEach(restaurerMiseEnPage);
+
+  it("écrit la carte ouverte", async () => {
+    // Sans cela, un rafraîchissement ramenait à la première carte du monde, et
+    // le lien partagé n'ouvrait pas ce qu'on avait sous les yeux.
+    monter(DEUX_CARTES);
+
+    await userEvent.click(screen.getByRole("tab", { name: "Le donjon" }));
+
+    expect(parametres().get("map")).toBe("map2");
+  });
+
+  it("écrit le lieu consulté, et l'efface à la fermeture", async () => {
+    monter(DEUX_CARTES);
+
+    await userEvent.click(screen.getByRole("button", { name: "Le port" }));
+    expect(parametres().get("pin")).toBe("pin1");
+    expect(parametres().get("map")).toBe("map1");
+
+    await userEvent.keyboard("{Escape}");
+    expect(parametres().get("pin")).toBeNull();
+  });
+
+  it("ouvre la carte que l'adresse désigne", () => {
+    monter(DEUX_CARTES, "w1", false, { initialMapId: "map2" });
+
+    expect(screen.getByRole("button", { name: "La salle du trône" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Le port" })).toBeNull();
+  });
+
+  it("ouvre le lieu que l'adresse désigne, sur sa propre carte", async () => {
+    monter(DEUX_CARTES, "w1", false, { initialPinId: "pin2" });
+
+    // Le lieu vit sur la seconde carte : c'est elle qui s'ouvre.
+    expect(await screen.findByTestId("pin-popover")).toHaveTextContent("La salle du trône");
+  });
+
+  it("retombe sur la première carte quand l'adresse désigne l'inconnu", () => {
+    monter(DEUX_CARTES, "w1", false, { initialMapId: "carte-effacée" });
+
+    expect(screen.getByRole("button", { name: "Le port" })).toBeInTheDocument();
   });
 });

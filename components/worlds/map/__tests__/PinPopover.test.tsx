@@ -44,7 +44,6 @@ function monter(p: MapPin, isEditMode = false, pos: PinPopoverPos = { left: 100,
       pos={pos}
       wikiPages={WIKI_PAGES}
       isEditMode={isEditMode}
-      userId="u1"
       worldId="w1"
       onClose={vi.fn()}
       onUpdated={onUpdated}

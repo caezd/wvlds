@@ -93,3 +93,37 @@ export function wikiImagePath(worldId: string, pageId: string, type?: string): s
 export function nomDeFichierPourType(type: string | undefined, defaut = "webp"): string {
   return nomDeFichierUnique(extensionDepuisLeType(type, defaut));
 }
+
+/**
+ * Dossier des images d'une carte de monde, dans le bucket `worlds`.
+ *
+ * Rangé par monde puis par carte, comme les images du wiki le sont par page, et
+ * pour la même raison : le dossier est l'unité de ménage. Supprimer une carte,
+ * c'est vider un préfixe.
+ *
+ * Le rangement précédent — `user-<id>/world-<id>/map-<horodatage>.webp` — avait
+ * deux défauts. Il classait par TÉLÉVERSEUR, si bien qu'une carte reprise par
+ * un second éditeur laissait ses images dans deux dossiers et que plus rien ne
+ * disait ce qui appartenait à quoi. Et son nom de fichier était devinable :
+ * `Date.now()` est un entier de treize chiffres dont on connaît l'ordre de
+ * grandeur, alors que ces espaces sont en lecture publique et que le nom y tient
+ * lieu de secret — c'est tout l'objet de ce module.
+ */
+export function mapImagePrefix(worldId: string, mapId: string): string {
+  return `world-${worldId}/map-${mapId}`;
+}
+
+/** Chemin complet de l'image d'une carte, nom de fichier compris. */
+export function mapImagePath(worldId: string, mapId: string, type?: string): string {
+  return `${mapImagePrefix(worldId, mapId)}/${nomDeFichierPourType(type)}`;
+}
+
+/** Dossier des bannières d'un lieu de carte. Même unité de ménage. */
+export function pinBannerPrefix(worldId: string, pinId: string): string {
+  return `world-${worldId}/pin-${pinId}`;
+}
+
+/** Chemin complet de la bannière d'un lieu. */
+export function pinBannerPath(worldId: string, pinId: string, type?: string): string {
+  return `${pinBannerPrefix(worldId, pinId)}/${nomDeFichierPourType(type)}`;
+}

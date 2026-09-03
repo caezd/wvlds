@@ -30,6 +30,8 @@ export default async function WorldHomeContent({
   view,
   initialCategoryId,
   initialWikiSlug,
+  initialMapId,
+  initialPinId,
 }: {
   world: WorldWithMembership;
   worldId: string;
@@ -37,6 +39,8 @@ export default async function WorldHomeContent({
   view?: string;
   initialCategoryId: string | null;
   initialWikiSlug?: string | null;
+  initialMapId?: string | null;
+  initialPinId?: string | null;
 }) {
   const supabase = await createClient();
   const userId = await getUserId(supabase);
@@ -184,6 +188,8 @@ export default async function WorldHomeContent({
       view={view}
       initialCategoryId={initialCategoryId}
       initialWikiSlug={initialWikiSlug}
+      initialMapId={initialMapId}
+      initialPinId={initialPinId}
     />
   );
 }

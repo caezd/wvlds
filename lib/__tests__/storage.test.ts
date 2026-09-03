@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { supabaseThumb, cleanStorageUrl, avatarThumbWidth, AVATAR_THUMB_SMALL, AVATAR_THUMB_LARGE } from "@/lib/storage";
+import { supabaseThumb, cleanStorageUrl, avatarThumbWidth, AVATAR_THUMB_SMALL, AVATAR_THUMB_LARGE, storagePathFromUrl, widthTierFor } from "@/lib/storage";
 
 const PUBLIC = "https://x.supabase.co/storage/v1/object/public/bucket/img.jpg";
 const RENDER = "https://x.supabase.co/storage/v1/render/image/public/bucket/img.jpg";
@@ -72,5 +72,55 @@ describe("avatarThumbWidth", () => {
     // Le seuil est à 44 px CSS, soit 132 px physiques sur un écran 3x.
     expect(avatarThumbWidth(44)).toBeGreaterThanOrEqual(44 * 2.9);
     expect(avatarThumbWidth(160)).toBeGreaterThanOrEqual(160 * 3);
+  });
+});
+
+describe("storagePathFromUrl", () => {
+  // Sans ce chemin, `storage.remove()` n'a rien à effacer : ce que
+  // l'application garde d'un fichier, c'est son URL.
+  const BASE = "https://x.supabase.co/storage/v1/object/public";
+
+  it("retrouve le chemin dans son bucket", () => {
+    expect(storagePathFromUrl(`${BASE}/worlds/world-w1/map-m1/abc.webp`, "worlds"))
+      .toBe("world-w1/map-m1/abc.webp");
+  });
+
+  it("ignore le paramètre anti-cache", () => {
+    expect(storagePathFromUrl(`${BASE}/worlds/a/b.webp?t=1699999`, "worlds")).toBe("a/b.webp");
+  });
+
+  it("décode ce que l'URL avait encodé", () => {
+    expect(storagePathFromUrl(`${BASE}/worlds/a/mon%20plan.webp`, "worlds")).toBe("a/mon plan.webp");
+  });
+
+  it("ne rend rien pour une URL d'un autre bucket", () => {
+    // Mieux vaut ne rien supprimer que supprimer au hasard.
+    expect(storagePathFromUrl(`${BASE}/personas/a/b.webp`, "worlds")).toBeNull();
+    expect(storagePathFromUrl("https://ailleurs.test/a/b.webp", "worlds")).toBeNull();
+    expect(storagePathFromUrl(null, "worlds")).toBeNull();
+    expect(storagePathFromUrl(`${BASE}/worlds/`, "worlds")).toBeNull();
+  });
+});
+
+describe("widthTierFor", () => {
+  const PALIERS = [1600, 2560];
+
+  it("rend le plus petit palier qui suffise", () => {
+    expect(widthTierFor(800, PALIERS)).toBe(1600);
+    expect(widthTierFor(1600, PALIERS)).toBe(1600);
+    expect(widthTierFor(1601, PALIERS)).toBe(2560);
+  });
+
+  it("rend null quand aucun palier ne suffit : c'est l'original qu'il faut", () => {
+    expect(widthTierFor(3000, PALIERS)).toBeNull();
+  });
+
+  it("ne rend jamais un palier plus petit que l'affichage", () => {
+    // La promesse qui compte : servir moins de pixels que la surface affichée,
+    // c'est afficher du flou.
+    for (let largeur = 1; largeur <= 4000; largeur += 37) {
+      const palier = widthTierFor(largeur, PALIERS);
+      if (palier !== null) expect(palier).toBeGreaterThanOrEqual(largeur);
+    }
   });
 });

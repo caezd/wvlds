@@ -19,7 +19,7 @@ export default async function WorldPage({
   searchParams,
 }: {
   params: { id: string };
-  searchParams?: { view?: string; category?: string; page?: string };
+  searchParams?: { view?: string; category?: string; page?: string; map?: string; pin?: string };
 }) {
   const { id } = await params;
   const supabase = await createClient();
@@ -49,6 +49,8 @@ export default async function WorldPage({
   const view = resolvedSearchParams?.view;
   const initialCategoryId = resolvedSearchParams?.category ?? null;
   const initialWikiSlug = resolvedSearchParams?.page ?? null;
+  const initialMapId = resolvedSearchParams?.map ?? null;
+  const initialPinId = resolvedSearchParams?.pin ?? null;
 
   return (
     <Suspense fallback={<PageSpinner />}>
@@ -59,6 +61,8 @@ export default async function WorldPage({
         view={view}
         initialCategoryId={initialCategoryId}
         initialWikiSlug={initialWikiSlug}
+        initialMapId={initialMapId}
+        initialPinId={initialPinId}
       />
     </Suspense>
   );

@@ -14,7 +14,8 @@ import { cn } from "@/lib/utils";
 import { channel } from "@/lib/constants";
 import { openRealtimeChannel } from "@/lib/realtimeChannel";
 import { toWebP } from "@/lib/imageUtils";
-import { supabaseThumb } from "@/lib/storage";
+import { supabaseThumb, widthTierFor } from "@/lib/storage";
+import { mapImagePath } from "@/lib/storagePaths";
 import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 import {
   createMapPin,
@@ -53,18 +54,19 @@ import type { PinPopoverPos, PendingPin, WikiPageOption } from "./types";
 import { ERR_NON_AUTHENTIFIE } from "@/lib/actionErrors";
 
 /**
- * Largeur servie pour l'affichage nominal de la carte.
+ * Largeurs servies pour la carte, par ordre croissant.
  *
- * Un palier unique, et non la largeur mesurée du cadre : celle-ci diffère à
- * chaque écran, donc une URL par visiteur, donc un téléchargement par visiteur
- * — le cache du navigateur ne peut rien pour une image qu'on ne lui redemande
- * jamais à l'identique. Même raisonnement que les paliers d'avatars
- * (`AVATAR_THUMB_SMALL`/`LARGE` dans `lib/storage.ts`).
+ * Des paliers plutôt que la largeur mesurée : celle-ci diffère à chaque écran
+ * et à chaque cran de zoom, donc une URL par visiteur, donc un téléchargement
+ * par visiteur — même raisonnement que les paliers d'avatars dans
+ * `lib/storage.ts`.
  *
- * L'original, lui, peut peser jusqu'à 4096 px de large : il n'est demandé qu'au
- * premier agrandissement, quand ses pixels servent enfin à quelque chose.
+ * Deux paliers et non un seul. Le premier couvre l'affichage courant, jusqu'à
+ * un écran large. Le second évite de sauter directement à l'original — qui
+ * peut faire 4096 px pour trois fois le poids — dès qu'on entre un peu dans la
+ * carte. L'original ne vient qu'au-delà, quand ses pixels servent enfin.
  */
-const MAP_THUMB_WIDTH = 1600;
+const MAP_WIDTH_TIERS = [1600, 2560];
 
 const IDENTITY: MapTransform = { scale: 1, x: 0, y: 0 };
 
@@ -78,12 +80,12 @@ export type InitialWorldMap = { maps: WorldMapData[]; pins: MapPinType[] };
 
 export function WorldMap({
   worldId,
-  userId,
   canEdit,
   initialMap,
+  initialMapId,
+  initialPinId,
 }: {
   worldId: string;
-  userId: string;
   canEdit: boolean;
   /**
    * Carte et épingles déjà chargées par le rendu serveur. Absentes quand
@@ -91,6 +93,9 @@ export function WorldMap({
    * lui-même.
    */
   initialMap?: InitialWorldMap | null;
+  /** Carte et lieu demandés par l'adresse (`?map=…&pin=…`). */
+  initialMapId?: string | null;
+  initialPinId?: string | null;
 }) {
   const t = useTranslations("map");
   const tCommon = useTranslations("common");
@@ -101,7 +106,9 @@ export function WorldMap({
   // gardées d'un bloc plutôt que rechargées à chaque onglet : passer de l'une à
   // l'autre est alors instantané.
   const [maps, setMaps] = React.useState<WorldMapData[]>(initialMap?.maps ?? []);
-  const [activeMapId, setActiveMapId] = React.useState<string | null>(initialMap?.maps?.[0]?.id ?? null);
+  const [activeMapId, setActiveMapId] = React.useState<string | null>(
+    initialMapId ?? initialMap?.maps?.[0]?.id ?? null,
+  );
   const [pins, setPins] = React.useState<MapPinType[]>(initialMap?.pins ?? []);
   const [creatingMap, setCreatingMap] = React.useState(false);
   const [confirmDeleteMap, setConfirmDeleteMap] = React.useState(false);
@@ -124,7 +131,8 @@ export function WorldMap({
 
   const [uploadingMap, setUploadingMap] = React.useState(false);
   const [imageLoaded, setImageLoaded] = React.useState(false);
-  const [fullResolution, setFullResolution] = React.useState(false);
+  /** Palier de largeur affiché ; `null` désigne l'original. */
+  const [widthTier, setWidthTier] = React.useState<number | null>(MAP_WIDTH_TIERS[0]);
 
   const [isPanning, setIsPanning] = React.useState(false);
 
@@ -150,7 +158,8 @@ export function WorldMap({
   selectedPinRef.current = selectedPin;
   const activeMapRef = React.useRef<WorldMapData | null>(activeMap);
   activeMapRef.current = activeMap;
-  const fullResolutionAskedRef = React.useRef(false);
+  const widthTierRef = React.useRef<number | null>(MAP_WIDTH_TIERS[0]);
+  widthTierRef.current = widthTier;
   /** La vue par défaut n'est posée qu'une fois par carte. */
   const initialViewDoneRef = React.useRef(false);
 
@@ -294,34 +303,44 @@ export function WorldMap({
   }, []);
 
   /**
-   * L'original remplace la vignette dès que la carte est affichée plus grande
-   * qu'elle, et une seule fois.
+   * Monte d'un palier quand la carte est affichée plus grande que le palier
+   * courant. On ne redescend jamais : l'image plus fine est déjà téléchargée,
+   * la reperdre au premier dézoom ne gagnerait rien et ferait clignoter.
    *
-   * Le seuil est la taille RÉELLEMENT affichée, pas le simple fait d'avoir
-   * zoomé : sur un téléphone, la vue par défaut tient largement dans la
-   * vignette, et l'original — jusqu'à 4096 px de large — n'a aucune raison
-   * d'être téléchargé.
+   * Le seuil est la taille RÉELLEMENT affichée, et non le simple fait d'avoir
+   * zoomé : sur un téléphone, la vue par défaut tient largement dans le premier
+   * palier, et l'original — jusqu'à 4096 px de large — n'a aucune raison d'être
+   * téléchargé.
    */
-  const requestFullResolution = React.useCallback((scale: number) => {
+  const requestWidthTier = React.useCallback((scale: number) => {
     const url = activeMapRef.current?.image_url;
-    if (fullResolutionAskedRef.current || !url) return;
-    if (baseSizeRef.current.width * scale <= MAP_THUMB_WIDTH) return;
-    fullResolutionAskedRef.current = true;
-    // Préchargé hors écran : l'échange de `src` se fait alors sur une image
+    const courant = widthTierRef.current;
+    // `null` est déjà le plus haut palier : rien au-dessus de l'original.
+    if (!url || courant === null) return;
+
+    const besoin = widthTierFor(baseSizeRef.current.width * scale, MAP_WIDTH_TIERS);
+    if (besoin !== null && besoin <= courant) return;
+
+    // Retenu tout de suite : sans quoi chaque cran de molette relancerait le
+    // même préchargement.
+    widthTierRef.current = besoin;
+    const cible = besoin === null ? url : (supabaseThumb(url, besoin) ?? url);
+
+    // Préchargée hors écran : l'échange de `src` se fait alors sur une image
     // déjà en cache, sans le blanc d'un rechargement.
     const preload = new window.Image();
-    preload.onload = () => setFullResolution(true);
-    preload.src = url;
+    preload.onload = () => setWidthTier(besoin);
+    preload.src = cible;
   }, []);
 
   const setTransform = React.useCallback(
     (next: MapTransform) => {
       if (next === transformRef.current) return;
       transformRef.current = next;
-      requestFullResolution(next.scale);
+      requestWidthTier(next.scale);
       schedulePaint();
     },
-    [requestFullResolution, schedulePaint],
+    [requestWidthTier, schedulePaint],
   );
 
   // Retour à l'échelle 1 quand l'image change — et SEULEMENT alors.
@@ -339,11 +358,11 @@ export function WorldMap({
     lastViewKeyRef.current = viewKey;
 
     transformRef.current = IDENTITY;
-    fullResolutionAskedRef.current = false;
     initialViewDoneRef.current = false;
     naturalRef.current = null;
     setBaseSize({ width: 0, height: 0 });
-    setFullResolution(false);
+    widthTierRef.current = MAP_WIDTH_TIERS[0];
+    setWidthTier(MAP_WIDTH_TIERS[0]);
     setImageLoaded(false);
     schedulePaint();
   }, [viewKey, schedulePaint]);
@@ -370,11 +389,11 @@ export function WorldMap({
     } else {
       initialViewDoneRef.current = true;
       transformRef.current = initialTransform(b);
-      requestFullResolution(transformRef.current.scale);
+      requestWidthTier(transformRef.current.scale);
     }
     schedulePaint();
     syncPopoverPos();
-  }, [baseSize.width, baseSize.height, bounds, requestFullResolution, schedulePaint, syncPopoverPos]);
+  }, [baseSize.width, baseSize.height, bounds, requestWidthTier, schedulePaint, syncPopoverPos]);
 
   // Le cadre change de taille (fenêtre, tiroir latéral) : les bornes du
   // déplacement changent avec lui, et le panneau ouvert doit suivre.
@@ -402,7 +421,7 @@ export function WorldMap({
         const { maps: m, pins: p } = await getWorldMaps(worldId);
         if (!cancelled) {
           setMaps(m);
-          setActiveMapId((prev) => prev ?? m[0]?.id ?? null);
+          setActiveMapId((prev) => prev ?? initialMapId ?? m[0]?.id ?? null);
           setPins(p);
         }
       } finally {
@@ -583,7 +602,12 @@ export function WorldMap({
       if (!user) throw new Error(ERR_NON_AUTHENTIFIE);
 
       const converted = await toWebP(file, 4096);
-      const path = `user-${userId}/world-${worldId}/map-${Date.now()}.webp`;
+
+      // La carte d'abord, l'image ensuite : le fichier est rangé sous le
+      // préfixe de SA carte, ce qui en fait l'unité de ménage. Un monde qui
+      // n'avait aucune carte en reçoit une à l'occasion de sa première image.
+      const carte = activeMap ?? (await createWorldMap(worldId, { label: t("title") }));
+      const path = mapImagePath(worldId, carte.id, converted.type);
 
       const { error: upErr } = await supabase.storage
         .from("worlds")
@@ -591,10 +615,7 @@ export function WorldMap({
       if (upErr) throw upErr;
 
       const image_url = supabase.storage.from("worlds").getPublicUrl(path).data.publicUrl;
-      // Première image d'un monde qui n'avait aucune carte : elle en crée une.
-      const updated = activeMap
-        ? await updateWorldMap(activeMap.id, { image_url })
-        : await createWorldMap(worldId, { image_url, label: t("title") });
+      const updated = await updateWorldMap(carte.id, { image_url });
       setMaps((prev) => mergeMap(prev, updated));
       setActiveMapId(updated.id);
       toast.success(t("mapUpdated"));
@@ -773,10 +794,40 @@ export function WorldMap({
     setPendingPin({ x, y, title: "" });
   }
 
-  function closePopover(refocusPin = false) {
+  /**
+   * Écrit dans l'adresse la carte ouverte et le lieu consulté.
+   *
+   * Rien n'y était écrit : on ne pouvait pas partager ce qu'on avait sous les
+   * yeux, et un rafraîchissement ramenait à la première carte du monde.
+   *
+   * `history` plutôt que le routeur de Next : changer un paramètre par
+   * `router.push` refait un aller-retour serveur pour un état que le client
+   * détient déjà.
+   *
+   * Changer de carte est une navigation — le bouton Précédent doit y ramener,
+   * donc `push`. Ouvrir un lieu n'en est pas une : c'est un panneau posé
+   * par-dessus, et lui donner une entrée d'historique par clic rendrait le
+   * bouton Précédent inutilisable. D'où `replace`.
+   */
+  const writeUrl = React.useCallback(
+    (mapId: string | null, pinId: string | null, mode: "push" | "replace") => {
+      if (typeof window === "undefined") return;
+      const url = new URL(window.location.href);
+      url.searchParams.set("view", "map");
+      if (mapId) url.searchParams.set("map", mapId);
+      else url.searchParams.delete("map");
+      if (pinId) url.searchParams.set("pin", pinId);
+      else url.searchParams.delete("pin");
+      window.history[mode === "push" ? "pushState" : "replaceState"](null, "", url.toString());
+    },
+    [],
+  );
+
+  const closePopover = React.useCallback((refocusPin = false) => {
     const id = selectedPinRef.current?.id;
     setSelectedPin(null);
     setPopoverPos(null);
+    if (id) writeUrl(activeMapRef.current?.id ?? null, null, "replace");
     // Fermé au clavier, le panneau renverrait sinon le focus au début du
     // document, et le lieu que l'on venait de lire serait à retrouver.
     if (refocusPin && id) {
@@ -784,7 +835,7 @@ export function WorldMap({
         document.querySelector<HTMLElement>(`[data-pin-id="${id}"]`)?.focus();
       });
     }
-  }
+  }, [writeUrl]);
 
   // Échap ferme le panneau ouvert. Le garde sur `defaultPrevented` laisse la
   // main aux boîtes de dialogue empilées par-dessus (apparence de l'épingle,
@@ -797,7 +848,7 @@ export function WorldMap({
     }
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [selectedPin]);
+  }, [selectedPin, closePopover]);
 
   // Le panneau vient d'apparaître : sa hauteur réelle n'était pas connue quand
   // on l'a placé. On le repositionne avant la peinture — un effet de mise en
@@ -815,12 +866,53 @@ export function WorldMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPin?.id]);
 
-  function openPopover(pin: MapPinType) {
+  function openPopover(pin: MapPinType, writeHistory = true) {
     loadWikiPages();
     setSelectedPin(pin);
     setPopoverPos(popoverPosFor(pin));
     setPendingPin(null);
+    if (writeHistory) writeUrl(pin.map_id, pin.id, "replace");
   }
+
+  function selectMap(mapId: string, writeHistory = true) {
+    setActiveMapId(mapId);
+    closePopover();
+    setPendingPin(null);
+    if (writeHistory) writeUrl(mapId, null, "push");
+  }
+
+  // Le lieu demandé par l'adresse, ouvert une fois — et une seule.
+  //
+  // On attend que la carte soit mesurée : le panneau se place d'après le
+  // rectangle de l'image, qui ne vaut rien avant qu'elle ne soit posée.
+  const initialPinConsumedRef = React.useRef(false);
+  React.useEffect(() => {
+    if (initialPinConsumedRef.current || !initialPinId || !baseSize.width) return;
+    const pin = pins.find((p) => p.id === initialPinId);
+    if (!pin) return;
+    initialPinConsumedRef.current = true;
+    if (pin.map_id !== activeMapRef.current?.id) setActiveMapId(pin.map_id);
+    openPopover(pin, false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialPinId, pins, baseSize.width]);
+
+  // Le bouton Précédent ramène à la carte, et au lieu, qu'on regardait.
+  const pinsRef = React.useRef(pins);
+  pinsRef.current = pins;
+  React.useEffect(() => {
+    function onPopState() {
+      const params = new URLSearchParams(window.location.search);
+      const mapId = params.get("map");
+      if (mapId) setActiveMapId(mapId);
+      const pinId = params.get("pin");
+      const pin = pinId ? pinsRef.current.find((p) => p.id === pinId) : null;
+      if (pin) openPopover(pin, false);
+      else closePopover();
+    }
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function handleCreatePin() {
     if (!pendingPin || !pendingPin.title.trim() || creatingPin || !activeMap) return;
@@ -880,9 +972,9 @@ export function WorldMap({
   }
 
   const imageSrc = activeMap?.image_url
-    ? (fullResolution
+    ? (widthTier === null
         ? activeMap.image_url
-        : supabaseThumb(activeMap.image_url, MAP_THUMB_WIDTH) ?? activeMap.image_url)
+        : supabaseThumb(activeMap.image_url, widthTier) ?? activeMap.image_url)
     : null;
 
   return (
@@ -970,7 +1062,7 @@ export function WorldMap({
           activeId={activeMap?.id ?? null}
           isEditMode={isEditMode}
           creating={creatingMap}
-          onSelect={(id) => { setActiveMapId(id); closePopover(); setPendingPin(null); }}
+          onSelect={(id) => selectMap(id)}
           onAdd={() => void handleAddMap()}
         />
       )}
@@ -1151,7 +1243,6 @@ export function WorldMap({
           panelRef={popoverPanelRef}
           wikiPages={wikiPages}
           isEditMode={isEditMode}
-          userId={userId}
           worldId={worldId}
           onClose={closePopover}
           onUpdated={(updated) => {
