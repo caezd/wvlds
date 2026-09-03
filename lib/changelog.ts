@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-09 ──────────────────────────────────────────────────────────────
   {
     date: "2026-09",
+    tag: "Carte",
+    text: "La carte se tient mieux sur téléphone : la liste des lieux s’y pose par-dessus plutôt que de rogner l’écran, l’en-tête garde ses commandes, et les épingles sont plus faciles à viser du doigt.",
+  },
+  {
+    date: "2026-09",
     tag: "Wiki",
     text: "La page d’un lieu mène à sa position sur la carte, quand une épingle la raconte.",
   },

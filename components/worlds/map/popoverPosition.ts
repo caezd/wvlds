@@ -33,6 +33,18 @@ export const FLECHE = 12;
 const MARGE_FLECHE = FLECHE;
 
 /**
+ * Largeur réellement occupée par le panneau.
+ *
+ * Il mesure 340 px, ce qui déborde d'un téléphone étroit : sur 320 px d'écran,
+ * il ne restait pas de quoi le poser entre les marges, et on le collait au bord
+ * gauche en le laissant sortir à droite. Il se resserre désormais — la feuille
+ * de style applique exactement le même calcul, `min(340px, 100vw - 24px)`.
+ */
+export function largeurPanneau(largeurEcran: number): number {
+  return Math.min(CARTE_L, Math.max(0, largeurEcran - 2 * MARGE));
+}
+
+/**
  * Place le panneau d'un point AU-DESSUS de son épingle, ou en dessous à défaut
  * de place, centré sur elle.
  *
@@ -76,20 +88,18 @@ export function calcPopoverPos(
     ),
   );
 
-  // Centré sur l'épingle, puis ramené DANS l'écran.
-  //
-  // `Math.max` en dernier : sur un écran plus étroit que le panneau lui-même,
-  // aucune position ne le contient, et l'on préfère alors coller au bord
-  // GAUCHE. Le panneau déborde à droite, mais son début reste lisible.
+  // Centré sur l'épingle, puis ramené DANS l'écran. Le panneau se resserrant
+  // sur un écran étroit, il y tient toujours entier.
+  const largeur = largeurPanneau(viewport.largeur);
   const left = Math.max(
     MARGE,
-    Math.min(anchorX - CARTE_L / 2, viewport.largeur - CARTE_L - MARGE),
+    Math.min(anchorX - largeur / 2, viewport.largeur - largeur - MARGE),
   );
 
-  const arrowLeft = Math.max(
-    MARGE_FLECHE,
-    Math.min(anchorX - left, CARTE_L - MARGE_FLECHE),
-  );
+  // La flèche reste dans le panneau, angles arrondis compris — et le panneau
+  // peut être plus étroit que deux fois cette marge sur un très petit écran.
+  const marge = Math.min(MARGE_FLECHE, largeur / 2);
+  const arrowLeft = Math.max(marge, Math.min(anchorX - left, largeur - marge));
 
   return { left, top, placement: auDessus ? "above" : "below", arrowLeft };
 }

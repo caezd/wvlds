@@ -122,6 +122,10 @@ export const PinMarker = React.memo(function PinMarker({
         className={cn(
           "relative flex h-8 w-8 items-center justify-center rounded-full shadow-md transition-transform",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2",
+          // 32 px de marqueur, c'est petit pour un doigt. La zone sensible
+          // s'étend sans que le marqueur grossisse : la carte garde son
+          // apparence, le pouce gagne 12 px de chaque côté.
+          "touch:after:absolute touch:after:-inset-1.5 touch:after:content-['']",
           isEditMode && !isDragging && "cursor-grab",
           isDragging && "cursor-grabbing",
           !isDragging && "hover:scale-110",

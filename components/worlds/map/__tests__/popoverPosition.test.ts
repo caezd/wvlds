@@ -8,6 +8,7 @@ import {
   MARGE,
   ECART_EPINGLE,
   FLECHE,
+  largeurPanneau,
 } from "../popoverPosition";
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -119,6 +120,25 @@ describe("calcPopoverPos — cadrage", () => {
           visible,
           `écran ${largeur}px, épingle x=${x} : ${visible}px visibles sur ${CARTE_L}`,
         ).toBeGreaterThanOrEqual(Math.min(CARTE_L, largeur - 2 * MARGE));
+      }
+    }
+  });
+
+  it("tient entier sur un téléphone, en se resserrant", () => {
+    // Il mesurait 340 px quoi qu'il arrive : sur 320 px d'écran, on le collait
+    // au bord gauche en le laissant sortir à droite. Il s'ajuste désormais, et
+    // la flèche reste dedans.
+    for (const largeur of [430, 390, 375, 320]) {
+      const ecran = { largeur, hauteur: 844 };
+      const panneau = largeurPanneau(largeur);
+      expect(panneau).toBeLessThanOrEqual(largeur - 2 * MARGE);
+
+      for (let x = 0; x <= largeur; x += 10) {
+        const { left, arrowLeft } = calcPopoverPos(x, 400, ecran);
+        expect(left, `écran ${largeur}, épingle x=${x}`).toBeGreaterThanOrEqual(MARGE);
+        expect(left + panneau).toBeLessThanOrEqual(largeur - MARGE + 1e-9);
+        expect(arrowLeft).toBeGreaterThanOrEqual(0);
+        expect(arrowLeft).toBeLessThanOrEqual(panneau);
       }
     }
   });

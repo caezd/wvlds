@@ -888,14 +888,18 @@ export function WorldMap({
   // main aux boîtes de dialogue empilées par-dessus (apparence de l'épingle,
   // confirmation de suppression) : elles se ferment les premières.
   React.useEffect(() => {
-    if (!selectedPin) return;
+    if (!selectedPin && !placesOpen) return;
     function onKeyDown(e: KeyboardEvent) {
       if (e.key !== "Escape" || e.defaultPrevented) return;
-      closePopover(true);
+      // Un cran à la fois : le panneau d'un lieu d'abord, la liste ensuite.
+      // Sur un téléphone, celle-ci recouvre la carte, et Échap est le geste
+      // qu'on tente pour s'en défaire.
+      if (selectedPin) closePopover(true);
+      else setPlacesOpen(false);
     }
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [selectedPin, closePopover]);
+  }, [selectedPin, placesOpen, closePopover]);
 
   // Le panneau vient d'apparaître : sa hauteur réelle n'était pas connue quand
   // on l'a placé. On le repositionne avant la peinture — un effet de mise en
@@ -1081,7 +1085,7 @@ export function WorldMap({
                   e.currentTarget.blur();
                 }
               }}
-              className="w-40 rounded-md border border-border-soft bg-background px-2 py-0.5 text-sm font-semibold outline-none focus:ring-2 focus:ring-primary"
+              className="w-28 rounded-md border border-border-soft bg-background px-2 py-0.5 text-sm font-semibold outline-none focus:ring-2 focus:ring-primary sm:w-40"
             />
           ) : (
             mapLabel
@@ -1091,16 +1095,20 @@ export function WorldMap({
           canEdit && (
             <button
               type="button"
+              aria-label={isEditMode ? t("editingActive") : tCommon("edit")}
+              aria-pressed={isEditMode}
               onClick={(e) => { e.stopPropagation(); setEditMode((v) => !v); closePopover(); setPendingPin(null); }}
               className={cn(
-                "flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                "flex items-center gap-1.5 rounded-full border px-2 py-1 text-xs font-medium transition-colors sm:px-3",
                 isEditMode
                   ? "border-primary/40 bg-primary/10 text-primary"
                   : "border-border-soft bg-background text-muted-foreground hover:bg-secondary hover:text-foreground",
               )}
             >
               <Pencil className="h-3 w-3" />
-              {isEditMode ? t("editingActive") : tCommon("edit")}
+              <span className="hidden sm:inline">
+                {isEditMode ? t("editingActive") : tCommon("edit")}
+              </span>
             </button>
           )
         }
@@ -1119,12 +1127,13 @@ export function WorldMap({
             )}
           >
             <List className="h-3.5 w-3.5" />
-            {t("places")}
+            <span className="hidden sm:inline">{t("places")}</span>
           </button>
         )}
         {canEdit && isEditMode && activeMap?.image_url && (
           <button
             type="button"
+            aria-label={t("changeMap")}
             onClick={(e) => { e.stopPropagation(); mapFileInputRef.current?.click(); }}
             className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
           >
@@ -1133,17 +1142,18 @@ export function WorldMap({
             ) : (
               <Upload className="h-3.5 w-3.5" />
             )}
-            {t("changeMap")}
+            <span className="hidden sm:inline">{t("changeMap")}</span>
           </button>
         )}
         {canEdit && isEditMode && activeMap && (
           <button
             type="button"
+            aria-label={t("deleteMap")}
             onClick={(e) => { e.stopPropagation(); setConfirmDeleteMap(true); }}
             className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
           >
             <Trash2 className="h-3.5 w-3.5" />
-            {t("deleteMap")}
+            <span className="hidden sm:inline">{t("deleteMap")}</span>
           </button>
         )}
       </WorldPanelHeader>

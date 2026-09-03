@@ -203,7 +203,9 @@ export function PinPopover({
 
       <div
         ref={panelRef}
-        className="fixed z-50 w-[340px]"
+        // Même calcul que `largeurPanneau` : 340 px déborderaient d'un
+        // téléphone étroit, et le placement compte sur cette largeur-là.
+        className="fixed z-50 w-[min(340px,calc(100vw-24px))]"
         style={{ left: pos.left, top: pos.top }}
         onClick={(e) => e.stopPropagation()}
       >

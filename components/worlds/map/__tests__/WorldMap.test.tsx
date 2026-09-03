@@ -1,6 +1,6 @@
 import { StrictMode } from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { createSupabaseMock, type SupabaseMock } from "@/test/supabaseMock";
@@ -496,5 +496,46 @@ describe("WorldMap — le cadre change de largeur", () => {
     redimensionnerLeCadre(1600, 600);
 
     await waitFor(() => expect(enveloppe.style.width).toBe("1600px"));
+  });
+});
+
+describe("WorldMap — Échap sur petit écran", () => {
+  const DEUX = {
+    maps: [makeMap()],
+    pins: [makePin()],
+  };
+
+  beforeEach(simulerMiseEnPage);
+  afterEach(restaurerMiseEnPage);
+
+  it("referme la liste des lieux", async () => {
+    // Elle recouvre la carte sur un téléphone : Échap est le geste qu'on tente
+    // pour s'en défaire.
+    monter(DEUX);
+    await userEvent.click(screen.getByRole("button", { name: "Afficher les lieux" }));
+    expect(screen.getByRole("complementary", { name: "Lieux" })).toBeInTheDocument();
+
+    await userEvent.keyboard("{Escape}");
+
+    expect(screen.queryByRole("complementary", { name: "Lieux" })).toBeNull();
+  });
+
+  it("referme d'abord le lieu ouvert, la liste ensuite", async () => {
+    // Un cran à la fois : refermer les deux d'un coup ferait perdre la liste à
+    // qui voulait seulement quitter un lieu.
+    monter(DEUX);
+    await userEvent.click(screen.getByRole("button", { name: "Afficher les lieux" }));
+    // Depuis la liste : le lieu porte aussi un marqueur sur la carte, et les
+    // deux répondent au même nom.
+    const liste = screen.getByRole("complementary", { name: "Lieux" });
+    await userEvent.click(within(liste).getByRole("button", { name: /Le port/ }));
+    expect(screen.getByTestId("pin-popover")).toBeInTheDocument();
+
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByTestId("pin-popover")).toBeNull();
+    expect(screen.getByRole("complementary", { name: "Lieux" })).toBeInTheDocument();
+
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByRole("complementary", { name: "Lieux" })).toBeNull();
   });
 });

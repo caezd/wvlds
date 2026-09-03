@@ -61,10 +61,27 @@ export function MapPlacesPanel({
   const rienDuTout = surCetteCarte.length === 0 && parCarte.length === 0;
 
   return (
+    <>
+      {/* Voile de fermeture, sur petit écran seulement : le panneau y recouvre
+          la carte, et l'on doit pouvoir la retrouver d'un geste. */}
+      <div
+        aria-hidden
+        data-testid="places-backdrop"
+        onClick={(e) => { e.stopPropagation(); onClose(); }}
+        className="absolute inset-0 z-20 bg-black/40 lg:hidden"
+      />
+
     <aside
       aria-label={t("places")}
       onClick={(e) => e.stopPropagation()}
-      className="flex w-60 shrink-0 flex-col border-r border-border-soft bg-background"
+      className={cn(
+        "flex flex-col bg-background",
+        // Sur un téléphone, une colonne de 240 px prise sur 390 ne laisse
+        // presque rien à la carte : le panneau se pose donc PAR-DESSUS elle,
+        // et redevient une colonne dès qu'il y a la place.
+        "absolute inset-y-0 left-0 z-30 w-[min(18rem,85vw)] border-r border-border-soft shadow-xl",
+        "lg:relative lg:z-auto lg:w-60 lg:shrink-0 lg:shadow-none",
+      )}
     >
       <div className="flex items-center gap-1 border-b border-border-soft px-2 py-1.5">
         <div className="relative flex-1">
@@ -127,6 +144,7 @@ export function MapPlacesPanel({
 
       <span className="sr-only">{tCommon("close")}</span>
     </aside>
+    </>
   );
 }
 
