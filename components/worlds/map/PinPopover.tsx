@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
-  BookOpenText, Check, ImagePlus, Loader2, Map as MapIcon, Pencil, Trash2, Upload, X } from "lucide-react";
+  BookOpenText, Check, ImagePlus, Loader2, Map as MapIcon, MessagesSquare, Pencil, Trash2, Upload, X } from "lucide-react";
 
 import { toWebP } from "@/lib/imageUtils";
 import { supabaseThumb } from "@/lib/storage";
@@ -22,7 +22,7 @@ import { updateMapPin, type MapPin as MapPinType, type WorldMapData } from "@/ap
 import { cn } from "@/lib/utils";
 import { FLECHE } from "./popoverPosition";
 import { PinVisualDialog } from "./PinVisualDialog";
-import type { PinPopoverPos, WikiPageOption } from "./types";
+import type { PinPopoverPos, PinRoom, WikiPageOption } from "./types";
 import { ERR_NON_AUTHENTIFIE } from "@/lib/actionErrors";
 
 // Panneau flottant (position: fixed), ancré sur l'épingle et non sur le clic :
@@ -32,6 +32,7 @@ export function PinPopover({
   pos,
   panelRef,
   wikiPages,
+  rooms,
   maps,
   isEditMode,
   worldId,
@@ -47,6 +48,8 @@ export function PinPopover({
   panelRef?: React.RefObject<HTMLDivElement | null>;
   /** Pages du wiki du monde, chargées une seule fois par `WorldMap`. */
   wikiPages: WikiPageOption[];
+  /** Salons rattachés à CE lieu — le filtrage est fait par `WorldMap`. */
+  rooms: PinRoom[];
   /** Cartes du monde, pour choisir celle que ce lieu ouvre. */
   maps: WorldMapData[];
   isEditMode: boolean;
@@ -401,6 +404,27 @@ export function PinPopover({
               <MapIcon className="h-3.5 w-3.5" /> {t("openTargetMap")} : {linkedMap.label?.trim() || t("title")}
             </button>
           ) : null}
+
+          {/* Ce qui se joue ici. Le lien `chatrooms.map_pin_id` existait déjà :
+              seul le sens carte → salons manquait. */}
+          {!editing && rooms.length > 0 && (
+            <div className="flex flex-col gap-1">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                {t("roomsAtPlace")}
+              </p>
+              {rooms.map(salon => (
+                <button
+                  key={salon.id}
+                  type="button"
+                  onClick={() => router.push(`/c/${salon.id}`)}
+                  className="flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-left text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
+                >
+                  <MessagesSquare className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">{salon.title || salon.name}</span>
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Description */}
           <div className="max-h-48 overflow-y-auto">

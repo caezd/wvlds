@@ -7,7 +7,7 @@ import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import { useResetOnKeyChange } from "@/hooks/useResetOnKeyChange";
 // `Map` est renommée : l'icône masquait le `Map` natif, dont le suivi des
 // pointeurs (pincement) a besoin.
-import { Check, Loader2, Map as MapIcon, MapPin, Pencil, Plus, Trash2, Upload, X } from "lucide-react";
+import { Check, List, Loader2, Map as MapIcon, MapPin, Pencil, Plus, Trash2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { cn } from "@/lib/utils";
@@ -35,11 +35,13 @@ import {
 // garde que la carte elle-même : chargement, image de fond, pose des points.
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { MAP_PANEL_ID, MapTabs, mapTabId } from "./MapTabs";
+import { MapPlacesPanel } from "./MapPlacesPanel";
 import { PinMarker } from "./PinMarker";
 import { PinPopover } from "./PinPopover";
 import { FLECHE, calcPopoverPos, pinAnchor } from "./popoverPosition";
 import {
   applyZoom,
+  centerOn,
   clampOffset,
   coverSize,
   initialTransform,
@@ -51,7 +53,7 @@ import {
   type MapTransform,
   type Point,
 } from "./zoom";
-import type { PinPopoverPos, PendingPin, WikiPageOption } from "./types";
+import type { PinPopoverPos, PendingPin, PinRoom, WikiPageOption } from "./types";
 import { ERR_NON_AUTHENTIFIE } from "@/lib/actionErrors";
 
 /**
@@ -112,6 +114,7 @@ export function WorldMap({
   );
   const [pins, setPins] = React.useState<MapPinType[]>(initialMap?.pins ?? []);
   const [creatingMap, setCreatingMap] = React.useState(false);
+  const [placesOpen, setPlacesOpen] = React.useState(false);
   const [confirmDeleteMap, setConfirmDeleteMap] = React.useState(false);
 
   // Une carte disparue (supprimée ailleurs) laisserait l'onglet actif dans le
@@ -484,12 +487,17 @@ export function WorldMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [worldId, reconnectEpoch]);
 
-  // ── Pages du wiki, chargées une fois pour tous les panneaux ────
+  // ── Ce dont les panneaux ont besoin, chargé une fois pour tous ──
+  //
+  // Pages du wiki et salons situés : deux listes du monde entier, lues à la
+  // première ouverture d'un lieu et partagées ensuite. Chaque panneau les
+  // rechargeait pour lui-même, soit deux requêtes par clic sur une épingle.
   const [wikiPages, setWikiPages] = React.useState<WikiPageOption[]>([]);
-  const wikiPagesAskedRef = React.useRef(false);
-  const loadWikiPages = React.useCallback(() => {
-    if (wikiPagesAskedRef.current) return;
-    wikiPagesAskedRef.current = true;
+  const [pinRooms, setPinRooms] = React.useState<PinRoom[]>([]);
+  const popoverDataAskedRef = React.useRef(false);
+  const loadPopoverData = React.useCallback(() => {
+    if (popoverDataAskedRef.current) return;
+    popoverDataAskedRef.current = true;
     void supabase
       .from("world_wiki_pages")
       .select("id, title, slug")
@@ -498,6 +506,12 @@ export function WorldMap({
       .is("deleted_at", null)
       .order("title")
       .then(({ data }: { data: WikiPageOption[] | null }) => setWikiPages(data ?? []));
+    void supabase
+      .from("chatrooms")
+      .select("id, title, name, map_pin_id")
+      .eq("world_id", worldId)
+      .not("map_pin_id", "is", null)
+      .then(({ data }: { data: PinRoom[] | null }) => setPinRooms(data ?? []));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [worldId]);
 
@@ -515,7 +529,8 @@ export function WorldMap({
     setPendingPin(null);
     setEditMode(false);
     setWikiPages([]);
-    wikiPagesAskedRef.current = false;
+    setPinRooms([]);
+    popoverDataAskedRef.current = false;
   });
 
   // ── Libellé de la carte ───────────────────────────────────────
@@ -887,7 +902,7 @@ export function WorldMap({
   }, [selectedPin?.id]);
 
   function openPopover(pin: MapPinType, writeHistory = true) {
-    loadWikiPages();
+    loadPopoverData();
     setSelectedPin(pin);
     setPopoverPos(popoverPosFor(pin));
     setPendingPin(null);
@@ -901,20 +916,51 @@ export function WorldMap({
     if (writeHistory) writeUrl(mapId, null, "push");
   }
 
-  // Le lieu demandé par l'adresse, ouvert une fois — et une seule.
-  //
-  // On attend que la carte soit mesurée : le panneau se place d'après le
-  // rectangle de l'image, qui ne vaut rien avant qu'elle ne soit posée.
-  const initialPinConsumedRef = React.useRef(false);
+  /** Amène un lieu au centre du cadre, à échelle inchangée. */
+  function centerOnPin(pin: MapPinType) {
+    const b = bounds();
+    if (!b) return;
+    transformRef.current = centerOn(b, transformRef.current.scale, { x: pin.x, y: pin.y });
+    schedulePaint();
+  }
+
+  /**
+   * Va au lieu demandé — depuis la liste, ou depuis l'adresse.
+   *
+   * Sur une autre carte, le voyage se fait en deux temps : on bascule d'abord,
+   * puis on centre quand la nouvelle carte est mesurée. Centrer tout de suite
+   * se ferait sur les dimensions de la carte qu'on vient de quitter.
+   */
+  const pendingFocusRef = React.useRef<string | null>(initialPinId ?? null);
+  function focusPin(pin: MapPinType) {
+    if (pin.map_id !== activeMapRef.current?.id) {
+      pendingFocusRef.current = pin.id;
+      setActiveMapId(pin.map_id);
+      closePopover();
+      writeUrl(pin.map_id, pin.id, "push");
+      return;
+    }
+    centerOnPin(pin);
+    openPopover(pin);
+  }
+
   React.useEffect(() => {
-    if (initialPinConsumedRef.current || !initialPinId || !baseSize.width) return;
-    const pin = pins.find((p) => p.id === initialPinId);
+    const attendu = pendingFocusRef.current;
+    if (!attendu || !baseSize.width) return;
+    const pin = pins.find((p) => p.id === attendu);
     if (!pin) return;
-    initialPinConsumedRef.current = true;
-    if (pin.map_id !== activeMapRef.current?.id) setActiveMapId(pin.map_id);
+    // Le lieu vit sur une autre carte — c'est le cas d'une adresse qui le
+    // désigne directement : on bascule, et l'on repassera par ici une fois la
+    // nouvelle carte mesurée.
+    if (pin.map_id !== activeMap?.id) {
+      setActiveMapId(pin.map_id);
+      return;
+    }
+    pendingFocusRef.current = null;
+    centerOnPin(pin);
     openPopover(pin, false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialPinId, pins, baseSize.width]);
+  }, [baseSize.width, activeMap?.id, pins]);
 
   // Le bouton Précédent ramène à la carte, et au lieu, qu'on regardait.
   const pinsRef = React.useRef(pins);
@@ -1047,6 +1093,23 @@ export function WorldMap({
           )
         }
       >
+        {activeMap?.image_url && (
+          <button
+            type="button"
+            aria-label={placesOpen ? t("hidePlaces") : t("showPlaces")}
+            aria-pressed={placesOpen}
+            onClick={(e) => { e.stopPropagation(); setPlacesOpen((v) => !v); }}
+            className={cn(
+              "flex items-center gap-1.5 rounded-md px-2 py-1 text-xs transition-colors",
+              placesOpen
+                ? "bg-secondary text-foreground"
+                : "text-muted-foreground hover:bg-secondary hover:text-foreground",
+            )}
+          >
+            <List className="h-3.5 w-3.5" />
+            {t("places")}
+          </button>
+        )}
         {canEdit && isEditMode && activeMap?.image_url && (
           <button
             type="button"
@@ -1090,6 +1153,17 @@ export function WorldMap({
 
       {/* ── Corps ──────────────────────────────────────────────── */}
       <div className="relative flex min-h-0 flex-1 overflow-hidden">
+
+        {placesOpen && imageSrc && (
+          <MapPlacesPanel
+            maps={maps}
+            pins={pins}
+            activeMapId={activeMap?.id ?? null}
+            selectedPinId={selectedPin?.id ?? null}
+            onSelect={focusPin}
+            onClose={() => setPlacesOpen(false)}
+          />
+        )}
 
         {!imageSrc ? (
           /* ── État vide ───────────────────────────────────────── */
@@ -1263,6 +1337,7 @@ export function WorldMap({
           pos={popoverPos}
           panelRef={popoverPanelRef}
           wikiPages={wikiPages}
+          rooms={pinRooms.filter((r) => r.map_pin_id === selectedPin.id)}
           maps={maps}
           isEditMode={isEditMode}
           worldId={worldId}

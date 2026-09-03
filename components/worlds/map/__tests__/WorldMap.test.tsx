@@ -406,3 +406,33 @@ describe("WorldMap — l'adresse suit ce qu'on regarde", () => {
     expect(screen.getByRole("button", { name: "Le port" })).toBeInTheDocument();
   });
 });
+
+describe("WorldMap — la liste des lieux", () => {
+  const DEUX_CARTES = {
+    maps: [makeMap(), makeMap({ id: "map2", label: "Le donjon", sort_index: 1 })],
+    pins: [makePin(), makePin({ id: "pin2", map_id: "map2", title: "La salle du trône" })],
+  };
+
+  beforeEach(simulerMiseEnPage);
+  afterEach(restaurerMiseEnPage);
+
+  it("s'ouvre depuis l'en-tête", async () => {
+    monter(DEUX_CARTES);
+
+    await userEvent.click(screen.getByRole("button", { name: "Afficher les lieux" }));
+
+    expect(screen.getByRole("complementary", { name: "Lieux" })).toBeInTheDocument();
+  });
+
+  it("mène au lieu choisi, même sur une autre carte", async () => {
+    // C'est la réponse à « où est ce lieu, déjà ? » : la recherche traverse
+    // les cartes, et le choix bascule sur la bonne.
+    monter(DEUX_CARTES);
+
+    await userEvent.click(screen.getByRole("button", { name: "Afficher les lieux" }));
+    await userEvent.type(screen.getByRole("textbox", { name: "Rechercher un lieu" }), "trône");
+    await userEvent.click(screen.getByRole("button", { name: /La salle du trône/ }));
+
+    expect(await screen.findByTestId("pin-popover")).toHaveTextContent("La salle du trône");
+  });
+});

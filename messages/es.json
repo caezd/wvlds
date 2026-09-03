@@ -1282,6 +1282,14 @@
     }
   },
   "map": {
+    "roomsAtPlace": "Lo que ocurre aquí",
+    "places": "Lugares",
+    "searchPlaces": "Buscar un lugar",
+    "noPlaces": "Ningún lugar en este mapa.",
+    "noPlaceFound": "Ningún lugar coincide.",
+    "showPlaces": "Mostrar los lugares",
+    "hidePlaces": "Ocultar los lugares",
+    "onOtherMaps": "En otros mapas",
     "reorderMap": "Mover el mapa {label}",
     "targetMap": "Mapa vinculado",
     "noTargetMap": "Ningún mapa",

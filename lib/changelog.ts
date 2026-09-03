@@ -9,6 +9,16 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Carte",
+    text: "Une liste des lieux s’ouvre depuis l’en-tête. Sa recherche traverse toutes les cartes du monde, et choisir un lieu y mène — la carte se centre dessus.",
+  },
+  {
+    date: "2026-09",
+    tag: "Carte",
+    text: "Le panneau d’un lieu liste les salons qui s’y jouent.",
+  },
+  {
+    date: "2026-09",
+    tag: "Carte",
     text: "Une épingle peut ouvrir une autre carte : le lieu « Capitale » posé sur le continent mène au plan de la ville. Un repère signale les lieux qui mènent ailleurs.",
   },
   {

@@ -8,6 +8,7 @@ import {
   clampOffset,
   coverSize,
   clampScale,
+  centerOn,
   distance,
   initialTransform,
   midpoint,
@@ -301,5 +302,52 @@ describe("initialTransform", () => {
   it("rend une vue neutre tant que la carte n'est pas mesurée", () => {
     expect(initialTransform({ containerWidth: 800, containerHeight: 600, imageWidth: 0, imageHeight: 0 }))
       .toEqual({ scale: 1, x: 0, y: 0 });
+  });
+});
+
+describe("centerOn", () => {
+  // Carte couvrante : 1200×600 dans un cadre de 800×600.
+  const BORNES: MapBounds = {
+    containerWidth: 800,
+    containerHeight: 600,
+    imageWidth: 1200,
+    imageHeight: 600,
+  };
+
+  it("amène le point visé au centre du cadre", () => {
+    // À l'échelle 2, la carte fait 2400 px : un lieu au quart de sa largeur
+    // peut être amené au milieu du cadre sans découvrir de vide.
+    const t = centerOn(BORNES, 2, { x: 25, y: 50 });
+
+    expect(t.x + 0.25 * BORNES.imageWidth * 2).toBeCloseTo(BORNES.containerWidth / 2, 6);
+    expect(t.y + 0.5 * BORNES.imageHeight * 2).toBeCloseTo(BORNES.containerHeight / 2, 6);
+  });
+
+  it("garde l'échelle telle quelle", () => {
+    expect(centerOn(BORNES, 2.5, { x: 10, y: 10 }).scale).toBe(2.5);
+  });
+
+  it("ne découvre pas le fond pour un lieu au bord", () => {
+    // Un lieu contre le bord ouest ne peut pas être tout à fait centré : le
+    // faire glisser jusque-là laisserait voir le vide derrière la carte.
+    const t = centerOn(BORNES, 1, { x: 0, y: 50 });
+    expect(t.x).toBe(0);
+  });
+
+  it("ne laisse jamais de vide, où que soit le lieu", () => {
+    const fautifs: string[] = [];
+    for (let x = 0; x <= 100; x += 5) {
+      for (let y = 0; y <= 100; y += 5) {
+        for (const echelle of [1, 1.7, 3]) {
+          const t = centerOn(BORNES, echelle, { x, y });
+          const droite = t.x + BORNES.imageWidth * echelle;
+          const bas = t.y + BORNES.imageHeight * echelle;
+          if (t.x > 1e-6 || t.y > 1e-6 || droite < BORNES.containerWidth - 1e-6 || bas < BORNES.containerHeight - 1e-6) {
+            fautifs.push(`(${x}%,${y}%) ×${echelle}`);
+          }
+        }
+      }
+    }
+    expect(fautifs, fautifs.slice(0, 3).join(" ; ")).toEqual([]);
   });
 });

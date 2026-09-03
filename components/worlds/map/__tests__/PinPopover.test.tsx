@@ -6,7 +6,7 @@ import { createSupabaseMock } from "@/test/supabaseMock";
 import { createClient } from "@/lib/supabase/client";
 import { PinPopover } from "@/components/worlds/map/PinPopover";
 import type { MapPin } from "@/app/actions/worldMap";
-import type { PinPopoverPos } from "@/components/worlds/map/types";
+import type { PinPopoverPos, PinRoom } from "@/components/worlds/map/types";
 import { makeMap, makePin, WIKI_PAGES } from "./fixtures";
 
 /** Deux cartes : celle du lieu, et celle qu'il peut ouvrir. */
@@ -37,7 +37,12 @@ vi.mock("@/components/chatrooms/composer/ParagraphBlockEditor", () => ({
   ),
 }));
 
-function monter(p: MapPin, isEditMode = false, pos: PinPopoverPos = { left: 100, top: 100, placement: "above", arrowLeft: 170 }) {
+function monter(
+  p: MapPin,
+  isEditMode = false,
+  pos: PinPopoverPos = { left: 100, top: 100, placement: "above", arrowLeft: 170 },
+  rooms: PinRoom[] = [],
+) {
   const mock = createSupabaseMock();
   vi.mocked(createClient).mockReturnValue(mock.client as never);
   const onUpdated = vi.fn();
@@ -47,6 +52,7 @@ function monter(p: MapPin, isEditMode = false, pos: PinPopoverPos = { left: 100,
       pin={p}
       pos={pos}
       wikiPages={WIKI_PAGES}
+      rooms={rooms}
       maps={CARTES}
       isEditMode={isEditMode}
       worldId="w1"
@@ -150,5 +156,34 @@ describe("PinPopover — carte liée", () => {
   it("ne montre aucun lien quand le lieu ne mène nulle part", () => {
     monter(makePin());
     expect(screen.queryByRole("button", { name: /Ouvrir la carte/ })).toBeNull();
+  });
+});
+
+describe("PinPopover — ce qui se joue ici", () => {
+  const SALONS: PinRoom[] = [
+    { id: "c1", title: "La taverne du port", name: null, map_pin_id: "pin1" },
+    { id: "c2", title: null, name: "Les quais", map_pin_id: "pin1" },
+  ];
+
+  it("liste les salons rattachés au lieu", () => {
+    // Le lien existait en base depuis qu'un salon peut se situer sur la carte ;
+    // seul le sens carte → salons manquait.
+    monter(makePin(), false, undefined, SALONS);
+
+    expect(screen.getByRole("button", { name: /La taverne du port/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Les quais/ })).toBeInTheDocument();
+  });
+
+  it("ouvre le salon choisi", async () => {
+    monter(makePin(), false, undefined, SALONS);
+
+    await userEvent.click(screen.getByRole("button", { name: /La taverne du port/ }));
+
+    expect(pushMock).toHaveBeenCalledWith("/c/c1");
+  });
+
+  it("ne montre rien quand aucun salon ne s'y joue", () => {
+    monter(makePin());
+    expect(screen.queryByText("Ce qui s’y joue")).toBeNull();
   });
 });

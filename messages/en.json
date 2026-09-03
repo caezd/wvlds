@@ -1282,6 +1282,14 @@
     }
   },
   "map": {
+    "roomsAtPlace": "What happens here",
+    "places": "Places",
+    "searchPlaces": "Search for a place",
+    "noPlaces": "No place on this map.",
+    "noPlaceFound": "No matching place.",
+    "showPlaces": "Show places",
+    "hidePlaces": "Hide places",
+    "onOtherMaps": "On other maps",
     "reorderMap": "Move the {label} map",
     "targetMap": "Linked map",
     "noTargetMap": "No map",

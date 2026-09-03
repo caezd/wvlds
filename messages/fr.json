@@ -1282,6 +1282,14 @@
     }
   },
   "map": {
+    "roomsAtPlace": "Ce qui s’y joue",
+    "places": "Lieux",
+    "searchPlaces": "Rechercher un lieu",
+    "noPlaces": "Aucun lieu sur cette carte.",
+    "noPlaceFound": "Aucun lieu ne correspond.",
+    "showPlaces": "Afficher les lieux",
+    "hidePlaces": "Masquer les lieux",
+    "onOtherMaps": "Sur d’autres cartes",
     "reorderMap": "Déplacer la carte {label}",
     "targetMap": "Carte liée",
     "noTargetMap": "Aucune carte",

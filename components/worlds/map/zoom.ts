@@ -179,6 +179,23 @@ export function pinchScale(
   return clampScale((startScale * currentDistance) / startDistance);
 }
 
+/**
+ * Transformation qui amène un point de la carte au centre du cadre, à échelle
+ * inchangée.
+ *
+ * Sert à « aller à ce lieu » : trouver une épingle dans une liste ne sert à
+ * rien si l'on doit ensuite la chercher des yeux. Le bornage s'applique — un
+ * lieu près d'un bord ne se centre pas tout à fait, sous peine de découvrir le
+ * fond derrière la carte.
+ *
+ * @param point position dans la carte, en pourcentage de ses dimensions
+ */
+export function centerOn(bounds: MapBounds, scale: number, point: Point): MapTransform {
+  const x = bounds.containerWidth / 2 - (point.x / 100) * bounds.imageWidth * scale;
+  const y = bounds.containerHeight / 2 - (point.y / 100) * bounds.imageHeight * scale;
+  return { scale, ...clampOffset(x, y, scale, bounds) };
+}
+
 export function distance(a: Point, b: Point): number {
   return Math.hypot(b.x - a.x, b.y - a.y);
 }
