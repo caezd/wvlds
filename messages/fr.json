@@ -1282,6 +1282,11 @@
     }
   },
   "map": {
+    "reorderMap": "Déplacer la carte {label}",
+    "targetMap": "Carte liée",
+    "noTargetMap": "Aucune carte",
+    "openTargetMap": "Ouvrir la carte",
+    "leadsToMap": "Ce lieu mène à une autre carte",
     "addMap": "Ajouter une carte",
     "newMapName": "Nouvelle carte",
     "deleteMap": "Supprimer cette carte",

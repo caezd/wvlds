@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
-  BookOpenText, Check, ImagePlus, Loader2, Pencil, Trash2, Upload, X } from "lucide-react";
+  BookOpenText, Check, ImagePlus, Loader2, Map as MapIcon, Pencil, Trash2, Upload, X } from "lucide-react";
 
 import { toWebP } from "@/lib/imageUtils";
 import { supabaseThumb } from "@/lib/storage";
@@ -17,7 +17,7 @@ import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import { ParagraphBlockEditor } from "@/components/chatrooms/composer/ParagraphBlockEditor";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
-import { updateMapPin, type MapPin as MapPinType } from "@/app/actions/worldMap";
+import { updateMapPin, type MapPin as MapPinType, type WorldMapData } from "@/app/actions/worldMap";
 
 import { cn } from "@/lib/utils";
 import { FLECHE } from "./popoverPosition";
@@ -32,9 +32,11 @@ export function PinPopover({
   pos,
   panelRef,
   wikiPages,
+  maps,
   isEditMode,
   worldId,
   onClose,
+  onOpenMap,
   onUpdated,
   onDelete,
 }: {
@@ -45,11 +47,15 @@ export function PinPopover({
   panelRef?: React.RefObject<HTMLDivElement | null>;
   /** Pages du wiki du monde, chargées une seule fois par `WorldMap`. */
   wikiPages: WikiPageOption[];
+  /** Cartes du monde, pour choisir celle que ce lieu ouvre. */
+  maps: WorldMapData[];
   isEditMode: boolean;
   worldId: string;
   onClose: () => void;
   onUpdated: (updated: MapPinType) => void;
   onDelete: () => void;
+  /** Bascule sur la carte que ce lieu ouvre. */
+  onOpenMap: (mapId: string) => void;
 }) {
   const t = useTranslations("map");
   const tCommon = useTranslations("common");
@@ -68,6 +74,17 @@ export function PinPopover({
    */
   const [wikiPageId, setWikiPageId] = React.useState<string | null>(pin.wiki_page_id ?? null);
   const linkedPage = wikiPages.find(p => p.id === (pin.wiki_page_id ?? null)) ?? null;
+
+  /**
+   * La carte que ce lieu ouvre — l'épingle « Capitale » du continent mène au
+   * plan de la capitale.
+   *
+   * Sa propre carte est écartée du choix : le lien y serait un bouton qui ne va
+   * nulle part. La base l'interdit d'ailleurs (migration 153).
+   */
+  const [targetMapId, setTargetMapId] = React.useState<string | null>(pin.target_map_id ?? null);
+  const cartesChoisissables = maps.filter(m => m.id !== pin.map_id);
+  const linkedMap = maps.find(m => m.id === (pin.target_map_id ?? null)) ?? null;
   const [title, setTitle] = React.useState(pin.title);
   const [description, setDescription] = React.useState(pin.description ?? "");
   const [uploadingBanner, setUploadingBanner] = React.useState(false);
@@ -82,6 +99,7 @@ export function PinPopover({
       setTitle(pin.title);
       setDescription(pin.description ?? "");
       setWikiPageId(pin.wiki_page_id ?? null);
+      setTargetMapId(pin.target_map_id ?? null);
     }
   }, [pin, editing]);
 
@@ -93,8 +111,15 @@ export function PinPopover({
         title: title.trim(),
         description: description || null,
         wiki_page_id: wikiPageId,
+        target_map_id: targetMapId,
       });
-      onUpdated({ ...pin, title: title.trim(), description: description || null, wiki_page_id: wikiPageId });
+      onUpdated({
+        ...pin,
+        title: title.trim(),
+        description: description || null,
+        wiki_page_id: wikiPageId,
+        target_map_id: targetMapId,
+      });
       setEditing(false);
       toast.success(t("pinUpdated"));
     } catch {
@@ -350,6 +375,33 @@ export function PinPopover({
             </button>
           ) : null}
 
+          {/* Carte liée : à choisir en écriture, à ouvrir en lecture. */}
+          {editing ? (
+            cartesChoisissables.length > 0 && (
+              <label className="flex flex-col gap-1 text-xs text-muted-foreground">
+                {t("targetMap")}
+                <select
+                  value={targetMapId ?? ""}
+                  onChange={e => setTargetMapId(e.target.value || null)}
+                  className="rounded-md border border-border bg-background px-2 py-1.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <option value="">{t("noTargetMap")}</option>
+                  {cartesChoisissables.map(m => (
+                    <option key={m.id} value={m.id}>{m.label?.trim() || t("title")}</option>
+                  ))}
+                </select>
+              </label>
+            )
+          ) : linkedMap ? (
+            <button
+              type="button"
+              onClick={() => onOpenMap(linkedMap.id)}
+              className="flex w-fit items-center gap-1.5 rounded-md border border-border-soft px-2 py-1 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
+            >
+              <MapIcon className="h-3.5 w-3.5" /> {t("openTargetMap")} : {linkedMap.label?.trim() || t("title")}
+            </button>
+          ) : null}
+
           {/* Description */}
           <div className="max-h-48 overflow-y-auto">
             {editing ? (
@@ -387,6 +439,7 @@ export function PinPopover({
                       setTitle(pin.title);
                       setDescription(pin.description ?? "");
                       setWikiPageId(pin.wiki_page_id ?? null);
+                      setTargetMapId(pin.target_map_id ?? null);
                       setEditing(false);
                     }}
                   >

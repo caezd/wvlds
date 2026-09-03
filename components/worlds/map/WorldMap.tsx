@@ -23,6 +23,7 @@ import {
   deleteMapPin,
   deleteWorldMap,
   getWorldMaps,
+  reorderWorldMaps,
   updateMapPin,
   updateWorldMap,
   type MapPin as MapPinType,
@@ -566,6 +567,25 @@ export function WorldMap({
     }
   }
 
+  async function handleReorderMaps(orderedIds: string[]) {
+    const avant = maps;
+    // Optimiste : les onglets suivent le doigt, sans attendre le serveur.
+    const parId = new Map(avant.map((m) => [m.id, m]));
+    const apres = orderedIds
+      .map((id, index) => {
+        const carte = parId.get(id);
+        return carte ? { ...carte, sort_index: index } : null;
+      })
+      .filter((m): m is WorldMapData => m !== null);
+    setMaps(apres);
+    try {
+      await reorderWorldMaps(orderedIds);
+    } catch {
+      toast.error(t("saveError"));
+      setMaps(avant);
+    }
+  }
+
   async function handleDeleteMap() {
     if (!activeMap) return;
     const id = activeMap.id;
@@ -1064,6 +1084,7 @@ export function WorldMap({
           creating={creatingMap}
           onSelect={(id) => selectMap(id)}
           onAdd={() => void handleAddMap()}
+          onReorder={(ids) => void handleReorderMaps(ids)}
         />
       )}
 
@@ -1242,6 +1263,7 @@ export function WorldMap({
           pos={popoverPos}
           panelRef={popoverPanelRef}
           wikiPages={wikiPages}
+          maps={maps}
           isEditMode={isEditMode}
           worldId={worldId}
           onClose={closePopover}
@@ -1250,6 +1272,7 @@ export function WorldMap({
             setSelectedPin(updated);
           }}
           onDelete={() => void handleDeletePin(selectedPin)}
+          onOpenMap={(mapId) => selectMap(mapId)}
         />
       )}
 

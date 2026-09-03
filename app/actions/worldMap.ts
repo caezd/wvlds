@@ -36,6 +36,8 @@ export type MapPin = {
   sort_index: number;
   /** La page du wiki que ce lieu raconte — voir migration 150. */
   wiki_page_id: string | null;
+  /** La carte que ce lieu ouvre — voir migration 153. */
+  target_map_id: string | null;
 };
 
 /**
@@ -125,6 +127,29 @@ export async function updateWorldMap(
 }
 
 /**
+ * Fixe l'ordre des onglets, du premier au dernier.
+ *
+ * Une mise à jour par carte plutôt qu'un `upsert` en lot : PostgREST traduit
+ * l'upsert en `INSERT … ON CONFLICT`, ce qui ferait évaluer à la RLS une
+ * policy d'INSERT sur des lignes partielles — le piège documenté dans
+ * `components/worlds/wiki/pasDUpsert.test.ts`. À dix cartes au plus, la boucle
+ * ne coûte rien.
+ */
+export async function reorderWorldMaps(orderedIds: string[]): Promise<void> {
+  const supabase = await createClient();
+  await requireUser(supabase);
+
+  const horodatage = new Date().toISOString();
+  for (const [index, id] of orderedIds.entries()) {
+    const { error } = await supabase
+      .from("world_maps")
+      .update({ sort_index: index, updated_at: horodatage })
+      .eq("id", id);
+    if (error) throw new Error(error.message);
+  }
+}
+
+/**
  * Supprime une carte ; ses épingles suivent (`ON DELETE CASCADE`).
  *
  * Les fichiers, eux, ne suivent personne : `CASCADE` ne parle qu'à Postgres. On
@@ -194,7 +219,7 @@ export async function createMapPin(
 
 export async function updateMapPin(
   pinId: string,
-  patch: Partial<Pick<MapPin, "x" | "y" | "title" | "description" | "banner_url" | "color" | "icon" | "icon_color" | "border_color" | "border_style" | "wiki_page_id">>,
+  patch: Partial<Pick<MapPin, "x" | "y" | "title" | "description" | "banner_url" | "color" | "icon" | "icon_color" | "border_color" | "border_style" | "wiki_page_id" | "target_map_id">>,
 ): Promise<void> {
   const supabase = await createClient();
   await requireUser(supabase);

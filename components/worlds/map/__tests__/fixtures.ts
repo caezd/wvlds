@@ -19,6 +19,7 @@ export function makePin(overrides: Partial<MapPin> = {}): MapPin {
     border_style: "none",
     sort_index: 0,
     wiki_page_id: null,
+    target_map_id: null,
     ...overrides,
   };
 }

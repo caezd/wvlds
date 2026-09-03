@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
-import { X } from "lucide-react";
+import { Layers, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
@@ -148,6 +148,18 @@ export const PinMarker = React.memo(function PinMarker({
           />
         )}
       </button>
+
+      {/* Un lieu qui ouvre une autre carte le dit : sans repère, personne ne
+          va cliquer pour vérifier. */}
+      {pin.target_map_id && !isDragging && (
+        <span
+          aria-hidden
+          title={t("leadsToMap")}
+          className="pointer-events-none absolute -bottom-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-background text-foreground shadow"
+        >
+          <Layers className="h-2.5 w-2.5" />
+        </span>
+      )}
 
       {/* Label au survol ou au focus clavier */}
       {!isDragging && (

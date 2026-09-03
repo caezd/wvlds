@@ -30,6 +30,7 @@ function monter({
 } = {}) {
   const onSelect = vi.fn();
   const onAdd = vi.fn();
+  const onReorder = vi.fn();
   render(
     <MapTabs
       maps={maps}
@@ -38,9 +39,10 @@ function monter({
       creating={creating}
       onSelect={onSelect}
       onAdd={onAdd}
+      onReorder={onReorder}
     />,
   );
-  return { onSelect, onAdd };
+  return { onSelect, onAdd, onReorder };
 }
 
 beforeEach(() => vi.clearAllMocks());
@@ -133,5 +135,32 @@ describe("MapTabs — ajout", () => {
   it("patiente pendant la création", () => {
     monter({ isEditMode: true, creating: true });
     expect(screen.getByRole("button", { name: "Ajouter une carte" })).toBeDisabled();
+  });
+});
+
+describe("MapTabs — réordonnancement", () => {
+  it("ne montre les poignées qu'en mode édition", () => {
+    monter();
+    expect(screen.queryByRole("button", { name: /Déplacer la carte/ })).toBeNull();
+
+    monter({ isEditMode: true });
+    expect(screen.getAllByRole("button", { name: /Déplacer la carte/ })).toHaveLength(3);
+  });
+
+  it("nomme chaque poignée par sa carte", () => {
+    monter({ isEditMode: true });
+    expect(screen.getByRole("button", { name: "Déplacer la carte Capitale" })).toBeInTheDocument();
+  });
+
+  it("laisse les flèches aux onglets, pas aux poignées", async () => {
+    // Les deux se disputeraient les mêmes touches : `@dnd-kit` saisit à
+    // l'Espace et déplace aux flèches, l'onglet s'active à l'Espace et passe au
+    // suivant aux flèches. La poignée est là pour les départager.
+    const { onSelect } = monter({ isEditMode: true, activeId: "m1" });
+
+    screen.getByRole("button", { name: "Déplacer la carte Continent" }).focus();
+    await userEvent.keyboard("{ArrowRight}");
+
+    expect(onSelect).not.toHaveBeenCalled();
   });
 });

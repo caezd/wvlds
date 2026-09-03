@@ -1282,6 +1282,11 @@
     }
   },
   "map": {
+    "reorderMap": "Move the {label} map",
+    "targetMap": "Linked map",
+    "noTargetMap": "No map",
+    "openTargetMap": "Open map",
+    "leadsToMap": "This place leads to another map",
     "addMap": "Add a map",
     "newMapName": "New map",
     "deleteMap": "Delete this map",

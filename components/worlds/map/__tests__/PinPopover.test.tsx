@@ -7,7 +7,10 @@ import { createClient } from "@/lib/supabase/client";
 import { PinPopover } from "@/components/worlds/map/PinPopover";
 import type { MapPin } from "@/app/actions/worldMap";
 import type { PinPopoverPos } from "@/components/worlds/map/types";
-import { makePin, WIKI_PAGES } from "./fixtures";
+import { makeMap, makePin, WIKI_PAGES } from "./fixtures";
+
+/** Deux cartes : celle du lieu, et celle qu'il peut ouvrir. */
+const CARTES = [makeMap(), makeMap({ id: "map2", label: "Le donjon", sort_index: 1 })];
 
 // ──────────────────────────────────────────────────────────────────────────
 // La carte est l'index géographique d'un monde, et le wiki en est le texte :
@@ -38,19 +41,22 @@ function monter(p: MapPin, isEditMode = false, pos: PinPopoverPos = { left: 100,
   const mock = createSupabaseMock();
   vi.mocked(createClient).mockReturnValue(mock.client as never);
   const onUpdated = vi.fn();
+  const onOpenMap = vi.fn();
   render(
     <PinPopover
       pin={p}
       pos={pos}
       wikiPages={WIKI_PAGES}
+      maps={CARTES}
       isEditMode={isEditMode}
       worldId="w1"
       onClose={vi.fn()}
       onUpdated={onUpdated}
       onDelete={vi.fn()}
+      onOpenMap={onOpenMap}
     />,
   );
-  return { onUpdated };
+  return { onUpdated, onOpenMap };
 }
 
 beforeEach(() => {
@@ -105,5 +111,44 @@ describe("PinPopover — flèche vers l'épingle", () => {
     const fleche = document.querySelector("[data-pin-caret]") as HTMLElement;
     expect(fleche.dataset.placement).toBe("below");
     expect(fleche.style.left).toBe("34px");
+  });
+});
+
+describe("PinPopover — carte liée", () => {
+  it("ouvre la carte que le lieu désigne", async () => {
+    const { onOpenMap } = monter(makePin({ target_map_id: "map2" }));
+
+    await userEvent.click(screen.getByRole("button", { name: /Ouvrir la carte : Le donjon/ }));
+
+    expect(onOpenMap).toHaveBeenCalledWith("map2");
+  });
+
+  it("associe une carte en modifiant le lieu", async () => {
+    const { onUpdated } = monter(makePin(), true);
+
+    await userEvent.click(await screen.findByRole("button", { name: "Modifier" }));
+    await userEvent.selectOptions(screen.getByRole("combobox", { name: "Carte liée" }), "map2");
+    await userEvent.click(screen.getByRole("button", { name: "Enregistrer" }));
+
+    expect(updateMapPin).toHaveBeenCalledWith("pin1", expect.objectContaining({ target_map_id: "map2" }));
+    expect(onUpdated).toHaveBeenCalledWith(expect.objectContaining({ target_map_id: "map2" }));
+  });
+
+  it("ne propose pas au lieu d'ouvrir sa propre carte", async () => {
+    // Le lien y serait un bouton qui ne va nulle part — et la base l'interdit.
+    monter(makePin(), true);
+
+    await userEvent.click(await screen.findByRole("button", { name: "Modifier" }));
+    const choix = screen.getByRole("combobox", { name: "Carte liée" });
+
+    expect([...choix.querySelectorAll("option")].map(o => o.textContent)).toEqual([
+      "Aucune carte",
+      "Le donjon",
+    ]);
+  });
+
+  it("ne montre aucun lien quand le lieu ne mène nulle part", () => {
+    monter(makePin());
+    expect(screen.queryByRole("button", { name: /Ouvrir la carte/ })).toBeNull();
   });
 });

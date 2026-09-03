@@ -93,3 +93,17 @@ describe("PinMarker — bouton de suppression", () => {
     expect(screen.queryByRole("button", { name: "Supprimer ce pin" })).toBeNull();
   });
 });
+
+describe("PinMarker — lieu qui mène ailleurs", () => {
+  it("le signale d'un repère", () => {
+    // Sans repère, personne ne clique pour vérifier si un lieu ouvre une autre
+    // carte.
+    monter({ pin: makePin({ target_map_id: "map2" }) });
+    expect(document.querySelector('[title="Ce lieu mène à une autre carte"]')).not.toBeNull();
+  });
+
+  it("ne met aucun repère à un lieu ordinaire", () => {
+    monter();
+    expect(document.querySelector('[title="Ce lieu mène à une autre carte"]')).toBeNull();
+  });
+});

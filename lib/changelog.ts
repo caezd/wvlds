@@ -9,6 +9,16 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Carte",
+    text: "Une épingle peut ouvrir une autre carte : le lieu « Capitale » posé sur le continent mène au plan de la ville. Un repère signale les lieux qui mènent ailleurs.",
+  },
+  {
+    date: "2026-09",
+    tag: "Carte",
+    text: "Les onglets des cartes se réordonnent par glisser-déposer, à la souris comme au clavier.",
+  },
+  {
+    date: "2026-09",
+    tag: "Carte",
     text: "L’adresse suit la carte ouverte et le lieu consulté : le lien se partage, le bouton Précédent revient à la carte d’avant, et un rafraîchissement rouvre au même endroit.",
   },
   {
