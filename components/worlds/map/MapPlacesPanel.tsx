@@ -5,8 +5,20 @@ import { useTranslations } from "next-intl";
 import { Search, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { Drawer, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
+import { SideSheetContent } from "@/components/ui/side-sheet";
 import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
 import type { MapPin, WorldMapData } from "@/app/actions/worldMap";
+
+type PlacesProps = {
+  maps: WorldMapData[];
+  /** Toutes les épingles du monde, cartes confondues. */
+  pins: MapPin[];
+  activeMapId: string | null;
+  selectedPinId: string | null;
+  onSelect: (pin: MapPin) => void;
+  onClose: () => void;
+};
 
 /**
  * La liste des lieux d'un monde, avec recherche.
@@ -19,35 +31,75 @@ import type { MapPin, WorldMapData } from "@/app/actions/worldMap";
  * C'est aussi la réponse au parcours au clavier : cinquante épingles, c'est
  * cinquante tabulations avant de sortir de la carte. Ici, la liste est un
  * chemin court et ordonné vers n'importe lequel d'entre eux.
+ *
+ * ── Deux coques, un seul corps ───────────────────────────────
+ * En COLONNE quand l'écran est large : elle reste ouverte pendant qu'on clique
+ * les épingles, ce qu'un panneau modal interdirait.
+ *
+ * En TIROIR sous `lg`, où une colonne de 240 px prise sur 390 ne laisserait
+ * presque rien à la carte. Le tiroir du dépôt apporte au passage ce qu'un
+ * panneau posé à la main n'avait pas : piège à focus, défilement de la page
+ * bloqué, `aria-modal`, fermeture au balayage et à Échap.
  */
-export function MapPlacesPanel({
+export function MapPlacesPanel(props: PlacesProps) {
+  const t = useTranslations("map");
+  return (
+    <aside
+      aria-label={t("places")}
+      onClick={(e) => e.stopPropagation()}
+      className="flex w-60 shrink-0 flex-col border-r border-border-soft bg-background"
+    >
+      <PlacesBody {...props} withClose />
+    </aside>
+  );
+}
+
+/** La même liste, en tiroir — sur les écrans où la colonne ne tient pas. */
+export function MapPlacesDrawer({ open, ...props }: PlacesProps & { open: boolean }) {
+  const t = useTranslations("map");
+  return (
+    <Drawer
+      open={open}
+      onOpenChange={(ouvert) => { if (!ouvert) props.onClose(); }}
+      swipeDirection="right"
+    >
+      <SideSheetContent width="compact">
+        <DrawerHeader className="border-b border-border-soft px-4 py-3">
+          <DrawerTitle>{t("places")}</DrawerTitle>
+        </DrawerHeader>
+        {/* Le clic ne doit pas remonter jusqu'à la carte, qui referme le
+            panneau d'un lieu sur tout clic hors de lui. */}
+        <div onClick={(e) => e.stopPropagation()} className="flex min-h-0 flex-1 flex-col">
+          <PlacesBody {...props} />
+        </div>
+      </SideSheetContent>
+    </Drawer>
+  );
+}
+
+/**
+ * Recherche et liste. La coque n'en sait rien — ce que l'on tape ici ne
+ * regarde ni la colonne, ni le tiroir, ni `WorldMap`.
+ *
+ * @param withClose la colonne porte sa propre croix ; le tiroir a la sienne.
+ */
+function PlacesBody({
   maps,
   pins,
   activeMapId,
   selectedPinId,
   onSelect,
   onClose,
-}: {
-  maps: WorldMapData[];
-  /** Toutes les épingles du monde, cartes confondues. */
-  pins: MapPin[];
-  activeMapId: string | null;
-  selectedPinId: string | null;
-  onSelect: (pin: MapPin) => void;
-  onClose: () => void;
-}) {
+  withClose = false,
+}: PlacesProps & { withClose?: boolean }) {
   const t = useTranslations("map");
-  const tCommon = useTranslations("common");
   const [query, setQuery] = React.useState("");
 
   const requete = query.trim().toLowerCase();
-  const correspond = React.useCallback(
-    (p: MapPin) =>
-      !requete ||
-      p.title.toLowerCase().includes(requete) ||
-      (p.description ?? "").toLowerCase().includes(requete),
-    [requete],
-  );
+  const correspond = (p: MapPin) =>
+    !requete ||
+    p.title.toLowerCase().includes(requete) ||
+    (p.description ?? "").toLowerCase().includes(requete);
 
   const surCetteCarte = pins.filter((p) => p.map_id === activeMapId && correspond(p));
   // Les autres cartes n'apparaissent qu'en cherchant : sans recherche, la liste
@@ -62,27 +114,6 @@ export function MapPlacesPanel({
 
   return (
     <>
-      {/* Voile de fermeture, sur petit écran seulement : le panneau y recouvre
-          la carte, et l'on doit pouvoir la retrouver d'un geste. */}
-      <div
-        aria-hidden
-        data-testid="places-backdrop"
-        onClick={(e) => { e.stopPropagation(); onClose(); }}
-        className="absolute inset-0 z-20 bg-black/40 lg:hidden"
-      />
-
-    <aside
-      aria-label={t("places")}
-      onClick={(e) => e.stopPropagation()}
-      className={cn(
-        "flex flex-col bg-background",
-        // Sur un téléphone, une colonne de 240 px prise sur 390 ne laisse
-        // presque rien à la carte : le panneau se pose donc PAR-DESSUS elle,
-        // et redevient une colonne dès qu'il y a la place.
-        "absolute inset-y-0 left-0 z-30 w-[min(18rem,85vw)] border-r border-border-soft shadow-xl",
-        "lg:relative lg:z-auto lg:w-60 lg:shrink-0 lg:shadow-none",
-      )}
-    >
       <div className="flex items-center gap-1 border-b border-border-soft px-2 py-1.5">
         <div className="relative flex-1">
           <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
@@ -94,14 +125,16 @@ export function MapPlacesPanel({
             className="w-full rounded-md border border-border bg-background py-1 pl-7 pr-2 text-xs outline-none focus:ring-2 focus:ring-primary"
           />
         </div>
-        <button
-          type="button"
-          aria-label={t("hidePlaces")}
-          onClick={onClose}
-          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground"
-        >
-          <X className="h-3.5 w-3.5" />
-        </button>
+        {withClose && (
+          <button
+            type="button"
+            aria-label={t("hidePlaces")}
+            onClick={onClose}
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        )}
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto p-1">
@@ -112,12 +145,7 @@ export function MapPlacesPanel({
         )}
 
         {surCetteCarte.map((pin) => (
-          <PlaceButton
-            key={pin.id}
-            pin={pin}
-            selected={pin.id === selectedPinId}
-            onSelect={onSelect}
-          />
+          <PlaceButton key={pin.id} pin={pin} selected={pin.id === selectedPinId} onSelect={onSelect} />
         ))}
 
         {parCarte.length > 0 && (
@@ -131,19 +159,11 @@ export function MapPlacesPanel({
               {carte.label?.trim() || t("title")}
             </p>
             {lieux.map((pin) => (
-              <PlaceButton
-                key={pin.id}
-                pin={pin}
-                selected={pin.id === selectedPinId}
-                onSelect={onSelect}
-              />
+              <PlaceButton key={pin.id} pin={pin} selected={pin.id === selectedPinId} onSelect={onSelect} />
             ))}
           </div>
         ))}
       </div>
-
-      <span className="sr-only">{tCommon("close")}</span>
-    </aside>
     </>
   );
 }

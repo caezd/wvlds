@@ -9,7 +9,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Carte",
-    text: "La carte se tient mieux sur téléphone : la liste des lieux s’y pose par-dessus plutôt que de rogner l’écran, l’en-tête garde ses commandes, et les épingles sont plus faciles à viser du doigt.",
+    text: "La carte se tient mieux sur téléphone : la liste des lieux s’y ouvre en tiroir, qu’on referme d’un balayage, l’en-tête garde ses commandes, et les épingles sont plus faciles à viser du doigt.",
   },
   {
     date: "2026-09",

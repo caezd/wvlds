@@ -121,15 +121,3 @@ describe("MapPlacesPanel — la recherche", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 });
-
-describe("MapPlacesPanel — petit écran", () => {
-  it("se referme d'un geste sur le voile", async () => {
-    // Sur un téléphone, le panneau recouvre la carte : il faut pouvoir la
-    // retrouver sans viser la petite croix.
-    const { onClose } = monter();
-
-    await userEvent.click(screen.getByTestId("places-backdrop"));
-
-    expect(onClose).toHaveBeenCalledTimes(1);
-  });
-});

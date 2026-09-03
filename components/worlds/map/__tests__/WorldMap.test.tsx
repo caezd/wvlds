@@ -6,6 +6,7 @@ import userEvent from "@testing-library/user-event";
 import { createSupabaseMock, type SupabaseMock } from "@/test/supabaseMock";
 import { createClient } from "@/lib/supabase/client";
 import { WorldMap } from "@/components/worlds/map/WorldMap";
+import { MEDIA } from "@/hooks/useMediaQuery";
 import { makeMap, makePin } from "./fixtures";
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -334,6 +335,28 @@ describe("WorldMap — plusieurs cartes", () => {
 
 // jsdom ne met rien en page : sans ces mesures, la carte reste à zéro et rien
 // de ce qui dépend de sa taille ne peut s'observer.
+/**
+ * Écran large : la liste des lieux s'y montre en colonne. Par défaut, le stub
+ * de `matchMedia` ne satisfait aucune requête — c'est donc le tiroir qui rend,
+ * comme sur un téléphone.
+ */
+const vraiMatchMedia = window.matchMedia;
+function simulerGrandEcran() {
+  window.matchMedia = ((query: string) => ({
+    matches: query === MEDIA.lg,
+    media: query,
+    onchange: null,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    addListener: () => {},
+    removeListener: () => {},
+    dispatchEvent: () => false,
+  })) as unknown as typeof window.matchMedia;
+}
+function restaurerEcran() {
+  window.matchMedia = vraiMatchMedia;
+}
+
 /** Dimensions du cadre, modifiables en cours de test. */
 const cadre = { width: 800, height: 600 };
 
@@ -432,14 +455,14 @@ describe("WorldMap — l'adresse suit ce qu'on regarde", () => {
   });
 });
 
-describe("WorldMap — la liste des lieux", () => {
+describe("WorldMap — la liste des lieux, en colonne", () => {
   const DEUX_CARTES = {
     maps: [makeMap(), makeMap({ id: "map2", label: "Le donjon", sort_index: 1 })],
     pins: [makePin(), makePin({ id: "pin2", map_id: "map2", title: "La salle du trône" })],
   };
 
-  beforeEach(simulerMiseEnPage);
-  afterEach(restaurerMiseEnPage);
+  beforeEach(() => { simulerMiseEnPage(); simulerGrandEcran(); });
+  afterEach(() => { restaurerMiseEnPage(); restaurerEcran(); });
 
   it("s'ouvre depuis l'en-tête", async () => {
     monter(DEUX_CARTES);
@@ -499,18 +522,18 @@ describe("WorldMap — le cadre change de largeur", () => {
   });
 });
 
-describe("WorldMap — Échap sur petit écran", () => {
+describe("WorldMap — Échap", () => {
   const DEUX = {
     maps: [makeMap()],
     pins: [makePin()],
   };
 
-  beforeEach(simulerMiseEnPage);
-  afterEach(restaurerMiseEnPage);
+  beforeEach(() => { simulerMiseEnPage(); simulerGrandEcran(); });
+  afterEach(() => { restaurerMiseEnPage(); restaurerEcran(); });
 
-  it("referme la liste des lieux", async () => {
-    // Elle recouvre la carte sur un téléphone : Échap est le geste qu'on tente
-    // pour s'en défaire.
+  it("referme la colonne des lieux", async () => {
+    // Le tiroir, lui, s'en charge tout seul — c'est l'un des services qu'on
+    // vient chercher en l'employant.
     monter(DEUX);
     await userEvent.click(screen.getByRole("button", { name: "Afficher les lieux" }));
     expect(screen.getByRole("complementary", { name: "Lieux" })).toBeInTheDocument();
@@ -537,5 +560,40 @@ describe("WorldMap — Échap sur petit écran", () => {
 
     await userEvent.keyboard("{Escape}");
     expect(screen.queryByRole("complementary", { name: "Lieux" })).toBeNull();
+  });
+});
+
+describe("WorldMap — la liste des lieux, en tiroir", () => {
+  const DEUX_CARTES = {
+    maps: [makeMap(), makeMap({ id: "map2", label: "Le donjon", sort_index: 1 })],
+    pins: [makePin(), makePin({ id: "pin2", map_id: "map2", title: "La salle du trône" })],
+  };
+
+  // Pas de `simulerGrandEcran` : c'est le cas du téléphone.
+  beforeEach(simulerMiseEnPage);
+  afterEach(restaurerMiseEnPage);
+
+  it("s'ouvre en tiroir quand la colonne ne tiendrait pas", async () => {
+    monter(DEUX_CARTES);
+
+    await userEvent.click(screen.getByRole("button", { name: "Afficher les lieux" }));
+
+    // Un dialogue, et non une colonne : le tiroir apporte le piège à focus et
+    // le blocage du défilement qu'un panneau posé à la main n'avait pas.
+    expect(await screen.findByRole("dialog", { name: "Lieux" })).toBeInTheDocument();
+    expect(screen.queryByRole("complementary", { name: "Lieux" })).toBeNull();
+  });
+
+  it("se referme dès qu'on choisit un lieu", async () => {
+    // Il recouvre la carte : le garder ouvert cacherait le lieu qu'on vient de
+    // demander à voir.
+    monter(DEUX_CARTES);
+    await userEvent.click(screen.getByRole("button", { name: "Afficher les lieux" }));
+
+    const tiroir = await screen.findByRole("dialog", { name: "Lieux" });
+    await userEvent.click(within(tiroir).getByRole("button", { name: /Le port/ }));
+
+    expect(await screen.findByTestId("pin-popover")).toHaveTextContent("Le port");
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Lieux" })).toBeNull());
   });
 });

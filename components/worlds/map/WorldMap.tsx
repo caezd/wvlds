@@ -4,6 +4,7 @@ import * as React from "react";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
+import { MEDIA, useMediaQuery } from "@/hooks/useMediaQuery";
 import { useResetOnKeyChange } from "@/hooks/useResetOnKeyChange";
 // `Map` est renommée : l'icône masquait le `Map` natif, dont le suivi des
 // pointeurs (pincement) a besoin.
@@ -35,7 +36,7 @@ import {
 // garde que la carte elle-même : chargement, image de fond, pose des points.
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { MAP_PANEL_ID, MapTabs, mapTabId } from "./MapTabs";
-import { MapPlacesPanel } from "./MapPlacesPanel";
+import { MapPlacesDrawer, MapPlacesPanel } from "./MapPlacesPanel";
 import { PinMarker } from "./PinMarker";
 import { PinPopover } from "./PinPopover";
 import { FLECHE, calcPopoverPos, pinAnchor } from "./popoverPosition";
@@ -115,6 +116,11 @@ export function WorldMap({
   const [pins, setPins] = React.useState<MapPinType[]>(initialMap?.pins ?? []);
   const [creatingMap, setCreatingMap] = React.useState(false);
   const [placesOpen, setPlacesOpen] = React.useState(false);
+  // La liste des lieux est une colonne quand la place le permet, un tiroir
+  // sinon. C'est un MONTAGE différent et non un simple masquage : une classe
+  // Tailwind laisserait les deux coques dans l'arbre, avec deux champs de
+  // recherche pour un seul panneau.
+  const grandEcran = useMediaQuery(MEDIA.lg);
   const [confirmDeleteMap, setConfirmDeleteMap] = React.useState(false);
 
   // Une carte disparue (supprimée ailleurs) laisserait l'onglet actif dans le
@@ -895,11 +901,11 @@ export function WorldMap({
       // Sur un téléphone, celle-ci recouvre la carte, et Échap est le geste
       // qu'on tente pour s'en défaire.
       if (selectedPin) closePopover(true);
-      else setPlacesOpen(false);
+      else if (grandEcran) setPlacesOpen(false);
     }
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [selectedPin, placesOpen, closePopover]);
+  }, [selectedPin, placesOpen, grandEcran, closePopover]);
 
   // Le panneau vient d'apparaître : sa hauteur réelle n'était pas connue quand
   // on l'a placé. On le repositionne avant la peinture — un effet de mise en
@@ -958,6 +964,9 @@ export function WorldMap({
     }
     centerOnPin(pin);
     openPopover(pin);
+    // Le tiroir recouvre la carte : le refermer est le seul moyen de voir le
+    // lieu qu'on vient de choisir.
+    if (!grandEcran) setPlacesOpen(false);
   }
 
   React.useEffect(() => {
@@ -1176,8 +1185,19 @@ export function WorldMap({
       {/* ── Corps ──────────────────────────────────────────────── */}
       <div className="relative flex min-h-0 flex-1 overflow-hidden">
 
-        {placesOpen && imageSrc && (
+        {placesOpen && imageSrc && grandEcran && (
           <MapPlacesPanel
+            maps={maps}
+            pins={pins}
+            activeMapId={activeMap?.id ?? null}
+            selectedPinId={selectedPin?.id ?? null}
+            onSelect={focusPin}
+            onClose={() => setPlacesOpen(false)}
+          />
+        )}
+        {imageSrc && !grandEcran && (
+          <MapPlacesDrawer
+            open={placesOpen}
             maps={maps}
             pins={pins}
             activeMapId={activeMap?.id ?? null}
