@@ -57,6 +57,7 @@ describe("PinMarker — accès au clavier", () => {
     await userEvent.tab();
     await userEvent.keyboard("{Enter}");
     expect(onPinClick).toHaveBeenCalledTimes(1);
+    expect(onPinClick).toHaveBeenCalledWith(expect.objectContaining({ id: "pin1" }));
   });
 
   it("s'ouvre à la barre d'espace", async () => {

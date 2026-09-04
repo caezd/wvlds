@@ -15,6 +15,10 @@ import { type MapPin as MapPinType } from "@/app/actions/worldMap";
  * d'aplomb quand la carte est agrandie passe par la variable CSS
  * `--pin-inv-scale`, posée sur le cadre par `WorldMap`. Chaque cran de zoom
  * re-rendait auparavant les N marqueurs de la carte, icône comprise.
+ *
+ * Les rappels reçoivent l'épingle en argument, au lieu d'être fermés sur elle
+ * par l'appelant : c'est la condition pour qu'ils gardent leur identité d'un
+ * rendu à l'autre — et donc pour que la mémoïsation serve à quelque chose.
  */
 export const PinMarker = React.memo(function PinMarker({
   pin,
@@ -29,9 +33,9 @@ export const PinMarker = React.memo(function PinMarker({
   isSelected: boolean;
   isEditMode: boolean;
   imgRef: React.RefObject<HTMLImageElement | null>;
-  onPinClick: () => void;
-  onDelete: () => void;
-  onMoved: (x: number, y: number) => void;
+  onPinClick: (pin: MapPinType) => void;
+  onDelete: (pin: MapPinType) => void;
+  onMoved: (pin: MapPinType, x: number, y: number) => void;
 }) {
   const t = useTranslations("map");
   const [localX, setLocalX] = React.useState(pin.x);
@@ -78,7 +82,7 @@ export const PinMarker = React.memo(function PinMarker({
     dragStart.current = null;
     didDrag.current = false;
     setIsDragging(false);
-    if (wasDrag && isEditMode) onMoved(localX, localY);
+    if (wasDrag && isEditMode) onMoved(pin, localX, localY);
     // Le `click` qui suit est consommé par `handleClick`.
     suppressClick.current = wasDrag;
   }
@@ -90,7 +94,7 @@ export const PinMarker = React.memo(function PinMarker({
   function handleClick(e: React.MouseEvent) {
     e.stopPropagation(); // empêche handleContainerClick
     if (suppressClick.current) { suppressClick.current = false; return; }
-    onPinClick();
+    onPinClick(pin);
   }
 
   return (
@@ -180,7 +184,7 @@ export const PinMarker = React.memo(function PinMarker({
           type="button"
           aria-label={t("deletePin")}
           onPointerDown={(e) => e.stopPropagation()}
-          onClick={(e) => { e.stopPropagation(); onDelete(); }}
+          onClick={(e) => { e.stopPropagation(); onDelete(pin); }}
           className="absolute -right-2 -top-2 hidden h-5 w-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow group-hover:flex group-focus-within:flex focus-visible:flex"
         >
           <X className="h-3 w-3" />

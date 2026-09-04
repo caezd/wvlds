@@ -42,6 +42,14 @@ vi.mock("@/components/worlds/map/PinPopover", () => ({
   ),
 }));
 
+// L'icône est le seul enfant qu'un marqueur rende à chaque fois : compter ses
+// rendus, c'est compter ceux des marqueurs — et donc savoir si `React.memo`
+// sert à quelque chose ou n'est qu'une décoration.
+const iconRenders = vi.hoisted(() => ({ count: 0 }));
+vi.mock("@/components/ui/LazyLucideIcon", () => ({
+  LazyLucideIcon: () => { iconRenders.count += 1; return null; },
+}));
+
 const CANAL = "w:w1:map";
 
 type CarteInitiale = { maps: ReturnType<typeof makeMap>[]; pins: ReturnType<typeof makePin>[] } | null;
@@ -595,5 +603,33 @@ describe("WorldMap — la liste des lieux, en tiroir", () => {
 
     expect(await screen.findByTestId("pin-popover")).toHaveTextContent("Le port");
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "Lieux" })).toBeNull());
+  });
+});
+
+describe("WorldMap — les marqueurs ne se re-rendent pas pour rien", () => {
+  it("laisse les marqueurs tranquilles quand seul l'état de la carte change", () => {
+    // `PinMarker` est mémoïsé, mais la mémoïsation ne vaut que si ses props
+    // gardent leur identité. Une fermeture neuve par marqueur et par rendu
+    // (`onPinClick={() => …}`) la rendait inopérante : chaque changement d'état
+    // de la carte re-rendait les N marqueurs, icône comprise, exactement comme
+    // sans `memo`.
+    const { mock } = monter({
+      maps: [makeMap()],
+      pins: [makePin(), makePin({ id: "pin2", title: "La tour" })],
+    });
+    const avant = iconRenders.count;
+    expect(avant).toBeGreaterThan(0);
+
+    // Un changement qui ne concerne aucune épingle : le libellé de la carte,
+    // mis à jour par le temps réel.
+    act(() => {
+      mock.channelNamed(CANAL)?.emit(
+        (h) => h.type === "postgres_changes" && (h.config as { table?: string }).table === "world_maps",
+        { eventType: "UPDATE", new: makeMap({ label: "Hadea, renommée" }) },
+      );
+    });
+
+    expect(screen.getByText("Hadea, renommée")).toBeInTheDocument();
+    expect(iconRenders.count).toBe(avant);
   });
 });
