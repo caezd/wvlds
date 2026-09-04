@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Carte",
+    text: "Les lieux dans le temps : dans un monde à chronologie, un lieu prend une date de fondation et de disparition, et la carte affiche une époque — ce qui n’existe pas alors s’estompe.",
+  },
+  {
+    date: "2026-09",
+    tag: "Carte",
     text: "Une règle pour mesurer les distances sur la carte : deux clics, ou deux lieux. En édition, déclarer ce que fait une distance connue règle l’échelle ; une barre d’échelle apparaît alors dans le coin, et le panneau d’un lieu dit à quelle distance il est du précédent.",
   },
   {

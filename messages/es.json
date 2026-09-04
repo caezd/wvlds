@@ -1289,6 +1289,14 @@
     }
   },
   "map": {
+    "epoch": "Época mostrada",
+    "allTimes": "Todas las épocas",
+    "outOfTime": "No existe en esta época",
+    "existsFrom": "Existe desde",
+    "existsUntil": "Existe hasta",
+    "existsBetween": "De {from} a {until}",
+    "existsSince": "Desde {from}",
+    "existsTill": "Hasta {until}",
     "measure": "Medir una distancia",
     "measureHint": "Haga clic en un segundo punto",
     "noScale": "Escala no definida",

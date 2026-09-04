@@ -823,3 +823,55 @@ describe("WorldMap — la barre d'échelle", () => {
     expect(screen.queryByRole("img", { name: /Échelle/ })).toBeNull();
   });
 });
+
+describe("WorldMap — l'époque affichée", () => {
+  const CHRONO = { year_label: "An", era_name: null, month_names: [], current_year: 1000, current_month: null };
+  const RUINE = makePin({ id: "pin1", title: "La ruine", exists_until: { year: 900, month: null, day: null } });
+  const VILLE = makePin({ id: "pin2", title: "La ville", exists_from: { year: 1200, month: null, day: null }, x: 20 });
+  const TOUJOURS = makePin({ id: "pin3", title: "Le port", x: 80 });
+
+  function monterAvecChrono() {
+    const mock = createSupabaseMock({ user: { id: "u1" } });
+    vi.mocked(createClient).mockReturnValue(mock.client as never);
+    render(
+      <WorldMap
+        worldId="w1"
+        canEdit
+        timelineConfig={CHRONO}
+        initialMap={{ maps: [makeMap()], pins: [RUINE, VILLE, TOUJOURS], personas: [] }}
+      />,
+    );
+  }
+
+  function estompes() {
+    return [...document.querySelectorAll("[data-out-of-time]")].map((n) => n.querySelector("button")?.getAttribute("aria-label"));
+  }
+
+  it("ouvre sur l'année courante du monde, et estompe ce qui n'y est pas", () => {
+    monterAvecChrono();
+    expect(screen.getByRole("spinbutton", { name: "Époque affichée" })).toHaveValue(1000);
+    // En l'an 1000 : la ruine n'est plus, la ville n'est pas encore.
+    expect(estompes()).toEqual(["La ruine", "La ville"]);
+  });
+
+  it("suit l'année qu'on tape", async () => {
+    monterAvecChrono();
+    const annee = screen.getByRole("spinbutton", { name: "Époque affichée" });
+    await userEvent.clear(annee);
+    await userEvent.type(annee, "1250");
+    expect(estompes()).toEqual(["La ruine"]);
+  });
+
+  it("« Toutes les époques » montre tout", async () => {
+    monterAvecChrono();
+    await userEvent.click(screen.getByRole("button", { name: "Toutes les époques" }));
+    expect(estompes()).toEqual([]);
+    expect(screen.getByRole("button", { name: "Toutes les époques" })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("n'offre pas d'époque à un monde sans chronologie", () => {
+    monter({ maps: [makeMap()], pins: [RUINE] });
+    expect(screen.queryByRole("spinbutton", { name: "Époque affichée" })).toBeNull();
+    expect(estompes()).toEqual([]);
+  });
+});

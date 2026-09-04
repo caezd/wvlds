@@ -229,6 +229,7 @@ export function WorldHome({
             initialMap={initialMap}
             initialMapId={initialMapId}
             initialPinId={initialPinId}
+            timelineConfig={hasTimeline ? (world.timeline_config as WorldTimelineConfig) : null}
           />
         ) : showTimeline && hasTimeline ? (
           <WorldTimeline

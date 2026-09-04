@@ -32,6 +32,7 @@ export const PinMarker = React.memo(function PinMarker({
   isEditMode,
   imgRef,
   presentPersonas = NOBODY,
+  outOfTime = false,
   onPinClick,
   onDelete,
   onMoved,
@@ -42,6 +43,8 @@ export const PinMarker = React.memo(function PinMarker({
   imgRef: React.RefObject<HTMLImageElement | null>;
   /** Les personas qui se trouvent ici — voir migration 154. */
   presentPersonas?: MapPersona[];
+  /** Le lieu n'existe pas à l'époque affichée — voir migration 156. */
+  outOfTime?: boolean;
   onPinClick: (pin: MapPinType) => void;
   onDelete: (pin: MapPinType) => void;
   onMoved: (pin: MapPinType, x: number, y: number) => void;
@@ -108,7 +111,11 @@ export const PinMarker = React.memo(function PinMarker({
 
   return (
     <div
-      className={cn("absolute group", isDragging ? "z-30" : "z-10")}
+      data-out-of-time={outOfTime || undefined}
+      title={outOfTime ? t("outOfTime") : undefined}
+      // Estompé, pas caché : on voit qu'un lieu a existé, ou existera — et
+      // l'éditeur peut toujours l'ouvrir pour corriger ses dates.
+      className={cn("absolute group", isDragging ? "z-30" : "z-10", outOfTime && "opacity-30 grayscale")}
       style={{
         left: `${localX}%`,
         top: `${localY}%`,

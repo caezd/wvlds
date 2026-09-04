@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
-  BookOpenText, Check, ImagePlus, Loader2, LogOut, Map as MapIcon, MessagesSquare, Pencil, Play, Ruler, Trash2, Upload, X } from "lucide-react";
+  BookOpenText, Check, Clock, ImagePlus, Loader2, LogOut, Map as MapIcon, MessagesSquare, Pencil, Play, Ruler, Trash2, Upload, X } from "lucide-react";
 
 import { toWebP } from "@/lib/imageUtils";
 import { supabaseThumb } from "@/lib/storage";
@@ -19,6 +19,9 @@ import { ParagraphBlockEditor } from "@/components/chatrooms/composer/ParagraphB
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { updateMapPin, type MapPersona, type MapPin as MapPinType, type WorldMapData } from "@/app/actions/worldMap";
 import { AvatarWithFrame } from "@/components/avatars/AvatarWithFrame";
+import { TimelineDateFields } from "@/components/worlds/timeline/TimelineDateFields";
+import { formatTimelineLabel } from "@/lib/worldTimeline";
+import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
 
 import { cn } from "@/lib/utils";
 import { FLECHE } from "./popoverPosition";
@@ -38,6 +41,7 @@ export function PinPopover({
   personasHere,
   myPersonas,
   distanceFrom = null,
+  timelineConfig = null,
   isEditMode,
   canPost = false,
   worldId,
@@ -64,6 +68,8 @@ export function PinPopover({
   myPersonas: MapPersona[];
   /** La distance au lieu ouvert juste avant, quand la carte a une échelle. */
   distanceFrom?: { title: string; distance: string } | null;
+  /** La chronologie du monde, quand il en a une : les lieux prennent des dates. */
+  timelineConfig?: WorldTimelineConfig | null;
   isEditMode: boolean;
   /** Peut ouvrir un salon : montre « Jouer ici ». */
   canPost?: boolean;
@@ -81,6 +87,8 @@ export function PinPopover({
   const supabase = createClient();
 
   const [editing, setEditing] = React.useState(false);
+  const [existsFrom, setExistsFrom] = React.useState<WorldTimelineDate | null>(pin.exists_from ?? null);
+  const [existsUntil, setExistsUntil] = React.useState<WorldTimelineDate | null>(pin.exists_until ?? null);
   const router = useRouter();
 
   /**
@@ -119,6 +127,8 @@ export function PinPopover({
       setDescription(pin.description ?? "");
       setWikiPageId(pin.wiki_page_id ?? null);
       setTargetMapId(pin.target_map_id ?? null);
+      setExistsFrom(pin.exists_from ?? null);
+      setExistsUntil(pin.exists_until ?? null);
     }
   }, [pin, editing]);
 
@@ -126,19 +136,16 @@ export function PinPopover({
     if (!title.trim()) return;
     setSaving(true);
     try {
-      await updateMapPin(pin.id, {
+      const champs = {
         title: title.trim(),
         description: description || null,
         wiki_page_id: wikiPageId,
         target_map_id: targetMapId,
-      });
-      onUpdated({
-        ...pin,
-        title: title.trim(),
-        description: description || null,
-        wiki_page_id: wikiPageId,
-        target_map_id: targetMapId,
-      });
+        exists_from: existsFrom,
+        exists_until: existsUntil,
+      };
+      await updateMapPin(pin.id, champs);
+      onUpdated({ ...pin, ...champs });
       setEditing(false);
       toast.success(t("pinUpdated"));
     } catch {
@@ -423,6 +430,27 @@ export function PinPopover({
             </button>
           ) : null}
 
+          {/* Depuis quand, jusqu'à quand. En édition, deux dates ; en lecture,
+              une ligne — ou rien, pour un lieu de toujours. */}
+          {timelineConfig && editing && (
+            <div className="flex flex-col gap-1.5">
+              <TimelineDateFields label={t("existsFrom")} value={existsFrom} onChange={setExistsFrom} config={timelineConfig} />
+              <TimelineDateFields label={t("existsUntil")} value={existsUntil} onChange={setExistsUntil} config={timelineConfig} />
+            </div>
+          )}
+          {timelineConfig && !editing && (pin.exists_from || pin.exists_until) && (
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Clock className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">
+                {pin.exists_from && pin.exists_until
+                  ? t("existsBetween", { from: formatTimelineLabel(timelineConfig, pin.exists_from), until: formatTimelineLabel(timelineConfig, pin.exists_until) })
+                  : pin.exists_from
+                    ? t("existsSince", { from: formatTimelineLabel(timelineConfig, pin.exists_from) })
+                    : t("existsTill", { until: formatTimelineLabel(timelineConfig, pin.exists_until!) })}
+              </span>
+            </p>
+          )}
+
           {/* « C'est loin ? » — d'un lieu à l'autre, dès que la carte a une échelle. */}
           {!editing && distanceFrom && (
             <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -545,6 +573,8 @@ export function PinPopover({
                       setDescription(pin.description ?? "");
                       setWikiPageId(pin.wiki_page_id ?? null);
                       setTargetMapId(pin.target_map_id ?? null);
+                      setExistsFrom(pin.exists_from ?? null);
+                      setExistsUntil(pin.exists_until ?? null);
                       setEditing(false);
                     }}
                   >

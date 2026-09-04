@@ -20,6 +20,8 @@ export function makePin(overrides: Partial<MapPin> = {}): MapPin {
     sort_index: 0,
     wiki_page_id: null,
     target_map_id: null,
+    exists_from: null,
+    exists_until: null,
     ...overrides,
   };
 }
