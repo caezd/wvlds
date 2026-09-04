@@ -4,9 +4,11 @@ import { createSupabaseMock } from "@/test/supabaseMock";
 import {
   buildSearchIndex,
   loadWorldWikiForSearch,
+  searchPins,
   searchWiki,
   type SearchableNote,
   type SearchablePage,
+  type SearchablePin,
 } from "@/lib/wikiSearch";
 
 const PAGES: SearchablePage[] = [
@@ -20,7 +22,12 @@ const NOTES: SearchableNote[] = [
   { id: "n2", page_id: "p2", title: "Rumeurs", body: "On parle d'une clé au fond du port." },
 ];
 
-const INDEX = buildSearchIndex(PAGES, NOTES);
+const PINS: SearchablePin[] = [
+  { id: "pin1", map_id: "m1", title: "Le port d'Arkham", description: "Des quais brumeux." },
+  { id: "pin2", map_id: "m2", title: "La tour", description: "On y entend le port la nuit." },
+];
+
+const INDEX = buildSearchIndex(PAGES, NOTES, PINS);
 
 describe("searchWiki", () => {
   it("trouve une fiche par son titre, et dit de quelle page elle vient", () => {
@@ -100,7 +107,33 @@ describe("loadWorldWikiForSearch", () => {
   it("supporte un monde sans wiki", async () => {
     const mock = createSupabaseMock({ results: [{ data: null, error: null }, { data: null, error: null }] });
     const { index, pagesById } = await loadWorldWikiForSearch(mock.client as never, "w1");
-    expect(index).toEqual({ pages: [], notes: [] });
+    expect(index).toEqual({ pages: [], notes: [], pins: [] });
     expect(pagesById.size).toBe(0);
+  });
+});
+
+describe("searchPins", () => {
+  it("trouve un lieu par son titre, puis par sa description", () => {
+    // La carte restait muette dans la recherche : un lieu ne se retrouvait
+    // qu'en la promenant à l'œil.
+    expect(searchPins(INDEX, "port").map(h => [h.pinId, h.excerpt === ""])).toEqual([
+      ["pin1", true],   // le titre suffit
+      ["pin2", false],  // trouvé dans la description, avec un extrait
+    ]);
+  });
+
+  it("dit sur quelle carte ouvrir le lieu", () => {
+    expect(searchPins(INDEX, "tour")[0]).toMatchObject({ pinId: "pin2", mapId: "m2", title: "La tour" });
+  });
+
+  it("ne rend rien sans requête, ni sans lieu", () => {
+    expect(searchPins(INDEX, "  ")).toEqual([]);
+    expect(searchPins(buildSearchIndex(PAGES, NOTES), "port")).toEqual([]);
+  });
+
+  it("ne touche pas aux résultats du wiki", () => {
+    // Une fonction à part : un lieu ne s'ouvre pas comme une page. Les
+    // résultats du wiki sont les mêmes que l'index porte des lieux ou non.
+    expect(searchWiki(INDEX, "port")).toEqual(searchWiki(buildSearchIndex(PAGES, NOTES), "port"));
   });
 });

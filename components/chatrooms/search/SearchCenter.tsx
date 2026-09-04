@@ -30,9 +30,12 @@ import { SearchInput } from "./SearchInput";
 import { SearchFiltersDrawer } from "./SearchFiltersDrawer";
 import { SearchResultsList } from "./SearchResultsList";
 import { SearchWikiResults } from "./SearchWikiResults";
+import { SearchMapResults } from "./SearchMapResults";
 import {
   loadWorldWikiForSearch,
+  searchPins,
   searchWiki,
+  type PinSearchHit,
   type WikiSearchHit,
   type WikiSearchIndex,
   type WikiSearchPage,
@@ -114,6 +117,7 @@ export function SearchCenter({
    */
   const wikiRef = useRef<{ index: WikiSearchIndex; pagesById: Map<string, WikiSearchPage> } | null>(null);
   const [wikiHits, setWikiHits] = useState<WikiSearchHit[]>([]);
+  const [pinHits, setPinHits] = useState<PinSearchHit[]>([]);
   const [wikiPages, setWikiPages] = useState<Map<string, WikiSearchPage>>(() => new Map());
 
   const [cursorForCurrentPage, setCursorForCurrentPage] = useState<SearchCursor>(null);
@@ -160,6 +164,7 @@ export function SearchCenter({
       // tour que la saisie, l'état porte encore le texte d'avant.
       const wiki = wikiRef.current;
       setWikiHits(wiki ? searchWiki(wiki.index, nextFilters.freeText ?? "") : []);
+      setPinHits(wiki ? searchPins(wiki.index, nextFilters.freeText ?? "") : []);
       setWikiPages(wiki?.pagesById ?? new Map());
       setHistory((h) => (pushHistory ? [...h, cursorForCurrentPage] : h));
       setCursorForCurrentPage(cursor);
@@ -237,6 +242,12 @@ export function SearchCenter({
     router.push(`/w/${worldId}?view=wiki&page=${encodeURIComponent(slug)}`);
   }
 
+  function selectPin(hit: PinSearchHit) {
+    onOpenChange(false);
+    // La carte ET l'épingle : l'adresse sait ouvrir un lieu précis.
+    router.push(`/w/${worldId}?view=map&map=${hit.mapId}&pin=${hit.pinId}`);
+  }
+
   return (
     <>
       <Drawer open={open} onOpenChange={onOpenChange} swipeDirection="right">
@@ -278,6 +289,7 @@ export function SearchCenter({
             {hasSearched && (
               <>
               <SearchWikiResults hits={wikiHits} pagesById={wikiPages} onSelect={selectWikiPage} />
+              <SearchMapResults hits={pinHits} onSelect={selectPin} />
               <SearchResultsList
                 results={results}
                 authors={authors}

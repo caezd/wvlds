@@ -61,9 +61,17 @@ function randomTitle() {
 export function WorldChatComposer({
   worldId,
   timelineConfig,
+  initialMapPinId,
 }: {
   worldId: string;
   timelineConfig?: WorldTimelineConfig | null;
+  /**
+   * Lieu de la carte sur lequel ouvrir le composeur dès l'arrivée — « Jouer
+   * ici » depuis le panneau d'un lieu. Le composeur s'ouvre de lui-même,
+   * situé, et efface le paramètre de l'adresse pour qu'un rafraîchissement ne
+   * le rouvre pas.
+   */
+  initialMapPinId?: string | null;
 }) {
   const t = useTranslations("worlds");
   const router = useRouter();
@@ -122,6 +130,15 @@ export function WorldChatComposer({
     setHasContent(false);
     setOpen(true);
   }
+
+  useEffect(() => {
+    if (!initialMapPinId) return;
+    setMapPinId(initialMapPinId);
+    openDialog();
+    const url = new URL(window.location.href);
+    url.searchParams.delete("play");
+    window.history.replaceState(null, "", url.toString());
+  }, [initialMapPinId]);
 
   function requestClose() {
     if (hasContent) {

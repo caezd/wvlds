@@ -216,3 +216,27 @@ describe("SearchCenter", () => {
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 });
+
+describe("SearchCenter — les lieux de la carte", () => {
+  it("montre les lieux qui répondent, et ouvre la carte dessus", async () => {
+    const { buildSearchIndex } = await vi.importActual<typeof import("@/lib/wikiSearch")>("@/lib/wikiSearch");
+    wikiLoadMock.mockResolvedValue({
+      index: buildSearchIndex([], [], [
+        { id: "pin1", map_id: "m1", title: "Le port recherché", description: null },
+      ]),
+      pagesById: new Map(),
+    });
+    render(<SearchCenter worldId="w1" open onOpenChange={() => {}} />);
+
+    const input = await screen.findByPlaceholderText("Rechercher…");
+    await userEvent.type(input, "dans:gén");
+    await userEvent.click(await screen.findByText("# général"));
+    await userEvent.type(input, "recherché{Enter}");
+
+    await screen.findByText("Sur la carte");
+    await userEvent.click(screen.getByRole("button", { name: /Le port recherché/ }));
+
+    // La carte ET l'épingle : l'adresse sait ouvrir un lieu précis.
+    expect(pushMock).toHaveBeenCalledWith("/w/w1?view=map&map=m1&pin=pin1");
+  });
+});

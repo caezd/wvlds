@@ -13,6 +13,7 @@ import { WorldHomeGridView } from "./WorldHomeGridView";
 import type { ChatroomCategory } from "@/lib/currentRequest";
 import type { RecentPersona } from "./widgets/WorldRecentPersonasWidget";
 import type { WikiPage } from "./widgets/WorldWikiShortcutsWidget";
+import type { MapWidgetMap } from "./widgets/WorldMapWidget";
 import { MobileDrawerOpenButton } from "@/components/sidebar/MobileDrawerOpenButton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { World, WorldTimelineConfig, WorldHomeRoom as Room } from "@/types/worlds";
@@ -68,6 +69,7 @@ export function WorldHome({
   initialWikiSlug,
   initialMapId,
   initialPinId,
+  initialPlayPinId,
 }: {
   world: HeroWorld;
   worldId: string;
@@ -81,7 +83,7 @@ export function WorldHome({
   initialCategories?: ChatroomCategory[];
   /** Données des widgets d'accueil résolues côté serveur, quand le bloc est
    *  présent dans la grille (cf. WorldHomeContent). */
-  initialWidgetData?: { recentPersonas?: RecentPersona[]; wikiPages?: WikiPage[] };
+  initialWidgetData?: { recentPersonas?: RecentPersona[]; wikiPages?: WikiPage[]; maps?: MapWidgetMap[] };
   /** Cartes et épingles résolues côté serveur quand `view === "map"`. */
   initialMap?: InitialWorldMap | null;
   initialPersonas: AsidePersona[];
@@ -92,6 +94,8 @@ export function WorldHome({
   /** Carte et lieu à ouvrir, lus dans l'adresse (`?map=…&pin=…`). */
   initialMapId?: string | null;
   initialPinId?: string | null;
+  /** Lieu sur lequel ouvrir le composeur d'emblée (`?play=…`, depuis la carte). */
+  initialPlayPinId?: string | null;
 }) {
   const { create_chatroom, world_map, world_catalogue, world_timeline } = useFeatureFlags();
   const router = useRouter();
@@ -130,6 +134,7 @@ export function WorldHome({
         // retiré de la grille enregistrée — réactiver la section le fait
         // revenir à sa place.
         if (item.widgetId === "wiki_shortcuts") return world.enable_wiki !== false;
+        if (item.widgetId === "map") return world_map && world.enable_map !== false;
         return true;
       },
     ),
@@ -220,6 +225,7 @@ export function WorldHome({
           <WorldMap
             worldId={worldId}
             canEdit={canEditTabs}
+            canPost={canPost && create_chatroom}
             initialMap={initialMap}
             initialMapId={initialMapId}
             initialPinId={initialPinId}
@@ -371,6 +377,7 @@ export function WorldHome({
                   initialRooms={initialRooms}
                   categories={initialCategories}
                   widgetData={initialWidgetData}
+                  initialComposerPinId={initialPlayPinId}
                   selectedCategoryId={selectedCategoryId}
                   onSelectCategory={handleSelectCategory}
                   onWikiLink={(slug) => router.push(`${baseHref}?view=wiki&page=${encodeURIComponent(slug)}`)}

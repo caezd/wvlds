@@ -387,7 +387,8 @@
         "announcement": "Anuncio",
         "wiki_shortcuts": "Accesos directos del wiki",
         "personas_recent": "Personajes recientes",
-        "timeline_shortcuts": "Accesos directos de la línea de tiempo"
+        "timeline_shortcuts": "Accesos directos de la línea de tiempo",
+        "map": "Mapa"
       },
       "onlineCount": "{count, plural, one {# miembro en línea} other {# miembros en línea}}",
       "noneOnline": "Nadie en línea por ahora",
@@ -1002,7 +1003,8 @@
       "filterNo": "No",
       "clearFilters": "Borrar filtros",
       "applyFilters": "Aplicar filtros",
-      "wikiResults": "En el wiki"
+      "wikiResults": "En el wiki",
+      "mapResults": "En el mapa"
     },
     "callout": {
       "title": "Recuadro",
@@ -1282,6 +1284,8 @@
     }
   },
   "map": {
+    "widgetPlaces": "{count, plural, =0 {Ningún lugar} one {# lugar} other {# lugares}}",
+    "playHere": "Jugar aquí",
     "seeOnMap": "Ver en el mapa",
     "roomsAtPlace": "Lo que ocurre aquí",
     "places": "Lugares",

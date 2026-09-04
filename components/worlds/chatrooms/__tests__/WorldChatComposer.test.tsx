@@ -73,3 +73,24 @@ describe("WorldChatComposer — Dialog (desktop) vs Drawer (mobile)", () => {
     expect(document.querySelector('[data-slot="dialog-content"]')).not.toBeInTheDocument();
   });
 });
+
+describe("WorldChatComposer — « Jouer ici » depuis la carte", () => {
+  it("s'ouvre de lui-même, situé sur le lieu demandé", async () => {
+    mockCoarsePointer(false);
+    window.history.replaceState(null, "", "/w/w1?play=pin1");
+
+    render(<WorldChatComposer worldId="w1" initialMapPinId="pin1" />);
+
+    // Sans un clic : c'est tout l'objet du paramètre.
+    expect(await screen.findByTestId("composer-stub")).toBeInTheDocument();
+    // Et le paramètre est effacé : un rafraîchissement ne rouvrirait pas le
+    // composeur sur un lieu qu'on a peut-être déjà quitté.
+    expect(new URLSearchParams(window.location.search).get("play")).toBeNull();
+  });
+
+  it("reste fermé sans lieu demandé", () => {
+    mockCoarsePointer(false);
+    render(<WorldChatComposer worldId="w1" />);
+    expect(screen.queryByTestId("composer-stub")).toBeNull();
+  });
+});

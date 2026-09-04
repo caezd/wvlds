@@ -52,12 +52,15 @@ export type InitialWorldMap = { maps: WorldMapData[]; pins: MapPinType[] };
 export function WorldMap({
   worldId,
   canEdit,
+  canPost = false,
   initialMap,
   initialMapId,
   initialPinId,
 }: {
   worldId: string;
   canEdit: boolean;
+  /** Peut ouvrir un salon — condition du bouton « Jouer ici » d'un lieu. */
+  canPost?: boolean;
   /**
    * Carte et épingles déjà chargées par le rendu serveur. Absentes quand
    * l'onglet est ouvert depuis le client : le composant les charge alors
@@ -981,6 +984,7 @@ export function WorldMap({
           rooms={pinRooms.filter((r) => r.map_pin_id === selectedPin.id)}
           maps={maps}
           isEditMode={isEditMode}
+          canPost={canPost}
           worldId={worldId}
           onClose={closePopover}
           onUpdated={(updated) => {

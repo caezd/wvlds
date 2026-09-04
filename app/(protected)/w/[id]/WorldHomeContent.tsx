@@ -10,6 +10,7 @@ import type { InitialWorldMap } from "@/components/worlds/map/WorldMap";
 import { resolveWorldHomeGrid, widgetOptionValue } from "@/components/worlds/home/worldHomeGrid";
 import type { RecentPersona } from "@/components/worlds/home/widgets/WorldRecentPersonasWidget";
 import type { WikiPage } from "@/components/worlds/home/widgets/WorldWikiShortcutsWidget";
+import { loadMapWidgetData, type MapWidgetMap } from "@/components/worlds/home/widgets/WorldMapWidget";
 
 type NavRoom = {
   id: string;
@@ -32,6 +33,7 @@ export default async function WorldHomeContent({
   initialWikiSlug,
   initialMapId,
   initialPinId,
+  initialPlayPinId,
 }: {
   world: WorldWithMembership;
   worldId: string;
@@ -41,6 +43,7 @@ export default async function WorldHomeContent({
   initialWikiSlug?: string | null;
   initialMapId?: string | null;
   initialPinId?: string | null;
+  initialPlayPinId?: string | null;
 }) {
   const supabase = await createClient();
   const userId = await getUserId(supabase);
@@ -126,13 +129,16 @@ export default async function WorldHomeContent({
     // d'un état vide et chargeaient au montage, donc s'affichaient vides le
     // temps d'un aller-retour. On ne charge QUE les blocs réellement placés
     // dans la grille de ce monde, avec la limite configurée sur le bloc.
-    (async (): Promise<{ recentPersonas?: RecentPersona[]; wikiPages?: WikiPage[] }> => {
+    (async (): Promise<{ recentPersonas?: RecentPersona[]; wikiPages?: WikiPage[]; maps?: MapWidgetMap[] }> => {
       const items = resolveWorldHomeGrid(world.home_grid, world.home_layout, world.announcement_html);
       const personasItem = items.find((i) => i.widgetId === "personas_recent");
       const wikiItem = items.find((i) => i.widgetId === "wiki_shortcuts");
-      if (!personasItem && !wikiItem) return {};
+      // Le bloc « Carte » ne se charge pas pour un monde qui a coupé sa carte :
+      // `WorldHome` ne le rendrait pas.
+      const mapItem = world.enable_map !== false ? items.find((i) => i.widgetId === "map") : undefined;
+      if (!personasItem && !wikiItem && !mapItem) return {};
 
-      const [personas, pages] = await Promise.all([
+      const [personas, pages, maps] = await Promise.all([
         personasItem
           ? supabase
             .from("personas")
@@ -151,11 +157,13 @@ export default async function WorldHomeContent({
             .order("updated_at", { ascending: false })
             .limit(widgetOptionValue("wiki_shortcuts", "limit", wikiItem.options))
           : Promise.resolve({ data: null }),
+        mapItem ? loadMapWidgetData(supabase, worldId) : Promise.resolve(undefined),
       ]);
 
       return {
         ...(personasItem ? { recentPersonas: (personas.data ?? []) as unknown as RecentPersona[] } : {}),
         ...(wikiItem ? { wikiPages: (pages.data ?? []) as unknown as WikiPage[] } : {}),
+        ...(maps ? { maps } : {}),
       };
     })(),
     // Cartes et épingles — comme les personas ci-dessus, uniquement quand c'est
@@ -190,6 +198,7 @@ export default async function WorldHomeContent({
       initialWikiSlug={initialWikiSlug}
       initialMapId={initialMapId}
       initialPinId={initialPinId}
+      initialPlayPinId={initialPlayPinId}
     />
   );
 }

@@ -387,7 +387,8 @@
         "announcement": "Annonce",
         "wiki_shortcuts": "Raccourcis wiki",
         "personas_recent": "Personas récents",
-        "timeline_shortcuts": "Raccourcis chronologie"
+        "timeline_shortcuts": "Raccourcis chronologie",
+        "map": "Carte"
       },
       "onlineCount": "{count, plural, one {# membre en ligne} other {# membres en ligne}}",
       "noneOnline": "Personne en ligne pour le moment",
@@ -1002,7 +1003,8 @@
       "filterNo": "Non",
       "clearFilters": "Effacer les filtres",
       "applyFilters": "Appliquer les filtres",
-      "wikiResults": "Dans le wiki"
+      "wikiResults": "Dans le wiki",
+      "mapResults": "Sur la carte"
     },
     "callout": {
       "title": "Encadré",
@@ -1282,6 +1284,8 @@
     }
   },
   "map": {
+    "widgetPlaces": "{count, plural, =0 {Aucun lieu} one {# lieu} other {# lieux}}",
+    "playHere": "Jouer ici",
     "seeOnMap": "Voir sur la carte",
     "roomsAtPlace": "Ce qui s’y joue",
     "places": "Lieux",

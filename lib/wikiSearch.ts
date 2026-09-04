@@ -35,6 +35,22 @@ export type SearchableNote = {
   body: string;
 };
 
+export type SearchablePin = {
+  id: string;
+  map_id: string;
+  title: string;
+  description: string | null;
+};
+
+type IndexedPin = {
+  id: string;
+  mapId: string;
+  title: string;
+  description: string;
+  normalizedTitle: string;
+  normalizedDescription: string;
+};
+
 type IndexedPage = {
   id: string;
   content: string;
@@ -54,6 +70,16 @@ type IndexedNote = {
 export type WikiSearchIndex = {
   pages: IndexedPage[];
   notes: IndexedNote[];
+  /** Les lieux de la carte — l'index est celui de tout le monde, pas du seul wiki. */
+  pins: IndexedPin[];
+};
+
+export type PinSearchHit = {
+  pinId: string;
+  mapId: string;
+  title: string;
+  /** Extrait de la description autour du terme — vide quand le titre suffit. */
+  excerpt: string;
 };
 
 export type WikiSearchHit = {
@@ -77,8 +103,17 @@ const WINDOW = 90;
 export function buildSearchIndex(
   pages: SearchablePage[],
   notes: SearchableNote[],
+  pins: SearchablePin[] = [],
 ): WikiSearchIndex {
   return {
+    pins: pins.map(p => ({
+      id: p.id,
+      mapId: p.map_id,
+      title: p.title,
+      description: p.description ?? "",
+      normalizedTitle: normalizeForSearch(p.title),
+      normalizedDescription: normalizeForSearch(p.description ?? ""),
+    })),
     pages: pages
       .filter(p => !p.is_folder)
       .map(p => ({
@@ -149,6 +184,34 @@ export function searchWiki(index: WikiSearchIndex, query: string): WikiSearchHit
   return [...byTitle, ...byBody];
 }
 
+/**
+ * Les lieux de la carte qui répondent à la requête — titres devant, comme
+ * pour les pages, et pour la même raison.
+ *
+ * Une fonction à part plutôt qu'un troisième type de résultat dans
+ * `searchWiki` : un lieu ne s'ouvre pas comme une page, et le mélanger aux
+ * résultats du wiki obligerait chaque lecteur à trier ce qu'il reçoit.
+ */
+export function searchPins(index: WikiSearchIndex, query: string): PinSearchHit[] {
+  const q = normalizeForSearch(query.trim());
+  if (!q) return [];
+
+  const byTitle: PinSearchHit[] = [];
+  const byBody: PinSearchHit[] = [];
+  // `?? []` : un index bâti avant que les lieux ne le rejoignent n'a pas de
+  // clé `pins`, et une recherche ne doit pas planter pour ça.
+  for (const pin of index.pins ?? []) {
+    const head = { pinId: pin.id, mapId: pin.mapId, title: pin.title };
+    if (pin.normalizedTitle.includes(q)) {
+      byTitle.push({ ...head, excerpt: "" });
+      continue;
+    }
+    const at = pin.normalizedDescription.indexOf(q);
+    if (at !== -1) byBody.push({ ...head, excerpt: excerptAround(pin.description, at) });
+  }
+  return [...byTitle, ...byBody];
+}
+
 /** Ce que le centre de recherche a besoin de savoir d'une page trouvée. */
 export type WikiSearchPage = { title: string; slug: string };
 
@@ -164,19 +227,26 @@ export async function loadWorldWikiForSearch(
   supabase: SupabaseClient,
   worldId: string,
 ): Promise<{ index: WikiSearchIndex; pagesById: Map<string, WikiSearchPage> }> {
-  const [pagesRes, notesRes] = await Promise.all([
+  // Les lieux de la carte rejoignent l'index : la RLS n'en rend que ce que le
+  // lecteur a le droit de voir, comme pour les pages.
+  const [pagesRes, notesRes, pinsRes] = await Promise.all([
     supabase
       .from("world_wiki_pages")
       .select("id, title, slug, content, is_folder")
       .eq("world_id", worldId)
       .is("deleted_at", null),
     supabase.from("world_wiki_page_notes").select("id, page_id, title, body").eq("world_id", worldId),
+    supabase.from("world_map_pins").select("id, map_id, title, description").eq("world_id", worldId),
   ]);
 
   type PageRow = SearchablePage & { slug: string };
   const pages = (pagesRes.data ?? []) as PageRow[];
   return {
-    index: buildSearchIndex(pages, (notesRes.data ?? []) as SearchableNote[]),
+    index: buildSearchIndex(
+      pages,
+      (notesRes.data ?? []) as SearchableNote[],
+      (pinsRes.data ?? []) as SearchablePin[],
+    ),
     pagesById: new Map(pages.map(p => [p.id, { title: p.title, slug: p.slug }])),
   };
 }
