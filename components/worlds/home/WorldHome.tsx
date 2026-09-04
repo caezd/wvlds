@@ -18,6 +18,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import type { World, WorldTimelineConfig, WorldHomeRoom as Room } from "@/types/worlds";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import type { AsidePersona } from "@/components/personas/WorldPersonaAsideClient";
+import type { InitialWorldMap } from "../map/WorldMap";
 import { toggleWorldFavorite } from "@/app/(protected)/w/actions";
 import { cn } from "@/lib/utils";
 import { supabaseThumb } from "@/lib/storage";
@@ -59,11 +60,14 @@ export function WorldHome({
   initialRooms,
   initialCategories,
   initialWidgetData = {},
+  initialMap,
   initialPersonas,
   initialPrefs,
   view,
   initialCategoryId,
   initialWikiSlug,
+  initialMapId,
+  initialPinId,
 }: {
   world: HeroWorld;
   worldId: string;
@@ -78,11 +82,16 @@ export function WorldHome({
   /** Données des widgets d'accueil résolues côté serveur, quand le bloc est
    *  présent dans la grille (cf. WorldHomeContent). */
   initialWidgetData?: { recentPersonas?: RecentPersona[]; wikiPages?: WikiPage[] };
+  /** Cartes et épingles résolues côté serveur quand `view === "map"`. */
+  initialMap?: InitialWorldMap | null;
   initialPersonas: AsidePersona[];
   initialPrefs: WorldPrefs | null;
   view?: string;
   initialCategoryId?: string | null;
   initialWikiSlug?: string | null;
+  /** Carte et lieu à ouvrir, lus dans l'adresse (`?map=…&pin=…`). */
+  initialMapId?: string | null;
+  initialPinId?: string | null;
 }) {
   const { create_chatroom, world_map, world_catalogue, world_timeline } = useFeatureFlags();
   const router = useRouter();
@@ -210,8 +219,10 @@ export function WorldHome({
         ) : showMap && world_map ? (
           <WorldMap
             worldId={worldId}
-            userId={userId ?? ""}
             canEdit={canEditTabs}
+            initialMap={initialMap}
+            initialMapId={initialMapId}
+            initialPinId={initialPinId}
           />
         ) : showTimeline && hasTimeline ? (
           <WorldTimeline

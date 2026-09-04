@@ -6,6 +6,11 @@ import { createSupabaseMock } from "@/test/supabaseMock";
 import { createClient } from "@/lib/supabase/client";
 import { PinPopover } from "@/components/worlds/map/PinPopover";
 import type { MapPin } from "@/app/actions/worldMap";
+import type { PinPopoverPos, PinRoom } from "@/components/worlds/map/types";
+import { makeMap, makePin, WIKI_PAGES } from "./fixtures";
+
+/** Deux cartes : celle du lieu, et celle qu'il peut ouvrir. */
+const CARTES = [makeMap(), makeMap({ id: "map2", label: "Le donjon", sort_index: 1 })];
 
 // ──────────────────────────────────────────────────────────────────────────
 // La carte est l'index géographique d'un monde, et le wiki en est le texte :
@@ -32,48 +37,32 @@ vi.mock("@/components/chatrooms/composer/ParagraphBlockEditor", () => ({
   ),
 }));
 
-const PAGES = [
-  { id: "p1", title: "Arkham", slug: "arkham" },
-  { id: "p2", title: "Innsmouth", slug: "innsmouth" },
-];
-
-function pin(overrides: Partial<MapPin> = {}): MapPin {
-  return {
-    id: "pin1",
-    world_id: "w1",
-    x: 50,
-    y: 50,
-    title: "Le port",
-    description: null,
-    banner_url: null,
-    color: "#6366f1",
-    icon: "map-pin",
-    icon_color: "#ffffff",
-    border_color: null,
-    border_style: "none",
-    sort_index: 0,
-    wiki_page_id: null,
-    ...overrides,
-  };
-}
-
-function monter(p: MapPin, isEditMode = false) {
-  const mock = createSupabaseMock({ results: [{ data: PAGES, error: null }] });
+function monter(
+  p: MapPin,
+  isEditMode = false,
+  pos: PinPopoverPos = { left: 100, top: 100, placement: "above", arrowLeft: 170 },
+  rooms: PinRoom[] = [],
+) {
+  const mock = createSupabaseMock();
   vi.mocked(createClient).mockReturnValue(mock.client as never);
   const onUpdated = vi.fn();
+  const onOpenMap = vi.fn();
   render(
     <PinPopover
       pin={p}
-      pos={{ left: 100, top: 100 }}
+      pos={pos}
+      wikiPages={WIKI_PAGES}
+      rooms={rooms}
+      maps={CARTES}
       isEditMode={isEditMode}
-      userId="u1"
       worldId="w1"
       onClose={vi.fn()}
       onUpdated={onUpdated}
       onDelete={vi.fn()}
+      onOpenMap={onOpenMap}
     />,
   );
-  return { onUpdated };
+  return { onUpdated, onOpenMap };
 }
 
 beforeEach(() => {
@@ -83,7 +72,7 @@ beforeEach(() => {
 
 describe("PinPopover — page du wiki", () => {
   it("ouvre la page liée depuis l'épingle", async () => {
-    monter(pin({ wiki_page_id: "p1" }));
+    monter(makePin({ wiki_page_id: "p1" }));
 
     const lien = await screen.findByRole("button", { name: /Ouvrir la page du wiki : Arkham/ });
     await userEvent.click(lien);
@@ -92,7 +81,7 @@ describe("PinPopover — page du wiki", () => {
   });
 
   it("associe une page en modifiant l'épingle", async () => {
-    const { onUpdated } = monter(pin(), true);
+    const { onUpdated } = monter(makePin(), true);
 
     await userEvent.click(await screen.findByRole("button", { name: "Modifier" }));
     await userEvent.selectOptions(screen.getByRole("combobox", { name: "Page du wiki" }), "p2");
@@ -103,10 +92,98 @@ describe("PinPopover — page du wiki", () => {
   });
 
   it("ne montre aucun lien quand l'épingle n'a pas de page", async () => {
-    monter(pin());
+    monter(makePin());
 
     // Les pages arrivent ; rien n'est lié.
     await screen.findByText("Le port");
     expect(screen.queryByRole("button", { name: /Ouvrir la page du wiki/ })).toBeNull();
+  });
+});
+
+describe("PinPopover — flèche vers l'épingle", () => {
+  it("pointe vers le bas quand le panneau est au-dessus", () => {
+    monter(makePin());
+
+    const fleche = document.querySelector("[data-pin-caret]") as HTMLElement;
+    expect(fleche).not.toBeNull();
+    expect(fleche.dataset.placement).toBe("above");
+    // Centrée sur l'abscisse rendue par `calcPopoverPos`, à un demi-côté près.
+    expect(fleche.style.left).toBe("164px");
+  });
+
+  it("pointe vers le haut quand le panneau est en dessous", () => {
+    monter(makePin(), false, { left: 100, top: 400, placement: "below", arrowLeft: 40 });
+
+    const fleche = document.querySelector("[data-pin-caret]") as HTMLElement;
+    expect(fleche.dataset.placement).toBe("below");
+    expect(fleche.style.left).toBe("34px");
+  });
+});
+
+describe("PinPopover — carte liée", () => {
+  it("ouvre la carte que le lieu désigne", async () => {
+    const { onOpenMap } = monter(makePin({ target_map_id: "map2" }));
+
+    await userEvent.click(screen.getByRole("button", { name: /Ouvrir la carte : Le donjon/ }));
+
+    expect(onOpenMap).toHaveBeenCalledWith("map2");
+  });
+
+  it("associe une carte en modifiant le lieu", async () => {
+    const { onUpdated } = monter(makePin(), true);
+
+    await userEvent.click(await screen.findByRole("button", { name: "Modifier" }));
+    await userEvent.selectOptions(screen.getByRole("combobox", { name: "Carte liée" }), "map2");
+    await userEvent.click(screen.getByRole("button", { name: "Enregistrer" }));
+
+    expect(updateMapPin).toHaveBeenCalledWith("pin1", expect.objectContaining({ target_map_id: "map2" }));
+    expect(onUpdated).toHaveBeenCalledWith(expect.objectContaining({ target_map_id: "map2" }));
+  });
+
+  it("ne propose pas au lieu d'ouvrir sa propre carte", async () => {
+    // Le lien y serait un bouton qui ne va nulle part — et la base l'interdit.
+    monter(makePin(), true);
+
+    await userEvent.click(await screen.findByRole("button", { name: "Modifier" }));
+    const choix = screen.getByRole("combobox", { name: "Carte liée" });
+
+    expect([...choix.querySelectorAll("option")].map(o => o.textContent)).toEqual([
+      "Aucune carte",
+      "Le donjon",
+    ]);
+  });
+
+  it("ne montre aucun lien quand le lieu ne mène nulle part", () => {
+    monter(makePin());
+    expect(screen.queryByRole("button", { name: /Ouvrir la carte/ })).toBeNull();
+  });
+});
+
+describe("PinPopover — ce qui se joue ici", () => {
+  const SALONS: PinRoom[] = [
+    { id: "c1", title: "La taverne du port", name: null, map_pin_id: "pin1" },
+    { id: "c2", title: null, name: "Les quais", map_pin_id: "pin1" },
+  ];
+
+  it("liste les salons rattachés au lieu", () => {
+    // Le lien existait en base depuis qu'un salon peut se situer sur la carte ;
+    // seul le sens carte → salons manquait.
+    monter(makePin(), false, undefined, SALONS);
+
+    expect(screen.getByRole("button", { name: /La taverne du port/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Les quais/ })).toBeInTheDocument();
+  });
+
+  it("ouvre le salon choisi", async () => {
+    monter(makePin(), false, undefined, SALONS);
+
+    await userEvent.click(screen.getByRole("button", { name: /La taverne du port/ }));
+
+    expect(pushMock).toHaveBeenCalledWith("/c/c1");
+  });
+
+  it("ne montre rien quand aucun salon ne s'y joue", () => {
+    monter(makePin());
+    expect(screen.queryByText("Ce qui s’y joue")).toBeNull();
   });
 });

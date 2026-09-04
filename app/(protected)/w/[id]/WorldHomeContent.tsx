@@ -5,6 +5,8 @@ import { WorldHome } from "@/components/worlds/home/WorldHome";
 import type { AsidePersona } from "@/components/personas/WorldPersonaAsideClient";
 import { fetchSectionsByPersona } from "@/lib/personaSections";
 import { getChatroomCategories, getChatroomsNav, getIsWorldAdmin, type WorldWithMembership } from "@/lib/currentRequest";
+import { getWorldMaps } from "@/app/actions/worldMap";
+import type { InitialWorldMap } from "@/components/worlds/map/WorldMap";
 import { resolveWorldHomeGrid, widgetOptionValue } from "@/components/worlds/home/worldHomeGrid";
 import type { RecentPersona } from "@/components/worlds/home/widgets/WorldRecentPersonasWidget";
 import type { WikiPage } from "@/components/worlds/home/widgets/WorldWikiShortcutsWidget";
@@ -28,6 +30,8 @@ export default async function WorldHomeContent({
   view,
   initialCategoryId,
   initialWikiSlug,
+  initialMapId,
+  initialPinId,
 }: {
   world: WorldWithMembership;
   worldId: string;
@@ -35,6 +39,8 @@ export default async function WorldHomeContent({
   view?: string;
   initialCategoryId: string | null;
   initialWikiSlug?: string | null;
+  initialMapId?: string | null;
+  initialPinId?: string | null;
 }) {
   const supabase = await createClient();
   const userId = await getUserId(supabase);
@@ -49,7 +55,7 @@ export default async function WorldHomeContent({
   // `getChatroomsNav` et `getIsWorldAdmin` sont mémoïsés pour la requête et
   // partagés avec `WorldSidebar`, monté par le layout : chacun ne part qu'une
   // fois, quel que soit le nombre de composants qui le réclame.
-  const [initialRooms, canAdmin, worldPrefs, initialPersonas, initialCategories, widgetData] = await Promise.all([
+  const [initialRooms, canAdmin, worldPrefs, initialPersonas, initialCategories, widgetData, initialMap] = await Promise.all([
     (async (): Promise<NavRoom[]> => {
       const rooms = (await getChatroomsNav(worldId)) as NavRoom[];
       if (!world?.timeline_enabled || rooms.length === 0) return rooms;
@@ -152,6 +158,16 @@ export default async function WorldHomeContent({
         ...(wikiItem ? { wikiPages: (pages.data ?? []) as unknown as WikiPage[] } : {}),
       };
     })(),
+    // Cartes et épingles — comme les personas ci-dessus, uniquement quand c'est
+    // l'onglet demandé. `WorldMap` les chargeait lui-même au montage : chunk
+    // dynamique, puis hydratation, puis aller-retour, et un sablier pendant
+    // tout ce temps alors que le serveur avait la réponse sous la main.
+    (async (): Promise<InitialWorldMap | null> => {
+      // Un monde qui a désactivé sa carte n'ouvre jamais cet onglet : la
+      // requête ne servirait à rien.
+      if (view !== "map" || world.enable_map === false) return null;
+      return getWorldMaps(worldId);
+    })(),
   ]);
 
   return (
@@ -166,11 +182,14 @@ export default async function WorldHomeContent({
       initialRooms={initialRooms}
       initialCategories={initialCategories}
       initialWidgetData={widgetData}
+      initialMap={initialMap}
       initialPersonas={initialPersonas}
       initialPrefs={worldPrefs}
       view={view}
       initialCategoryId={initialCategoryId}
       initialWikiSlug={initialWikiSlug}
+      initialMapId={initialMapId}
+      initialPinId={initialPinId}
     />
   );
 }

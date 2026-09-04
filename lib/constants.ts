@@ -55,6 +55,7 @@ export const RPC = {
 export const channel = {
   userMessages: (userId: string) => `msgs:${userId}`,
   worldRooms: (wid: string) => `w:${wid}:rooms`,
+  worldMap: (wid: string) => `w:${wid}:map`,
   chatPresence: (chatId: string) => `chat:${chatId}`,
   chatMessages: (chatId: string) => `chat-${chatId}`,
   chatPins: (chatId: string) => `chat-pins-${chatId}`,
@@ -86,6 +87,16 @@ export const PRESENCE = {
   // Fréquence de recalcul local de la liste des utilisateurs en ligne
   REFRESH_MS: 30_000,
 } as const;
+
+// --- Cartes d'un monde --------------------------------------------------------
+/**
+ * Plafond souple : le bouton d'ajout se désactive au-delà.
+ *
+ * Rien ne le fait respecter en base — la contrainte serait une politique RLS de
+ * plus à maintenir pour un abus qui ne s'est jamais produit. Dix cartes
+ * couvrent largement un monde, et chacune porte une image de 20 Mo au maximum.
+ */
+export const MAX_MAPS_PER_WORLD = 10;
 
 // --- UI thresholds ------------------------------------------------------------
 export const SCROLL_THRESHOLD_PX = 96;

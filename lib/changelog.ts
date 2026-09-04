@@ -9,6 +9,91 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Carte",
+    text: "La carte se tient mieux sur téléphone : la liste des lieux s’y ouvre en tiroir, qu’on referme d’un balayage, l’en-tête garde ses commandes, et les épingles sont plus faciles à viser du doigt.",
+  },
+  {
+    date: "2026-09",
+    tag: "Wiki",
+    text: "La page d’un lieu mène à sa position sur la carte, quand une épingle la raconte.",
+  },
+  {
+    date: "2026-09",
+    tag: "Carte",
+    text: "Une liste des lieux s’ouvre depuis l’en-tête. Sa recherche traverse toutes les cartes du monde, et choisir un lieu y mène — la carte se centre dessus.",
+  },
+  {
+    date: "2026-09",
+    tag: "Carte",
+    text: "Le panneau d’un lieu liste les salons qui s’y jouent.",
+  },
+  {
+    date: "2026-09",
+    tag: "Carte",
+    text: "Une épingle peut ouvrir une autre carte : le lieu « Capitale » posé sur le continent mène au plan de la ville. Un repère signale les lieux qui mènent ailleurs.",
+  },
+  {
+    date: "2026-09",
+    tag: "Carte",
+    text: "Les onglets des cartes se réordonnent par glisser-déposer, à la souris comme au clavier.",
+  },
+  {
+    date: "2026-09",
+    tag: "Carte",
+    text: "L’adresse suit la carte ouverte et le lieu consulté : le lien se partage, le bouton Précédent revient à la carte d’avant, et un rafraîchissement rouvre au même endroit.",
+  },
+  {
+    date: "2026-09",
+    tag: "Performance",
+    text: "La carte gagne en netteté par paliers à mesure qu’on zoome, au lieu de télécharger l’image d’origine d’un coup.",
+  },
+  {
+    date: "2026-09",
+    tag: "Carte",
+    text: "Un monde peut avoir plusieurs cartes — le continent, la capitale, un donjon — présentées en onglets. Avec une seule, rien ne change : elle occupe tout le cadre.",
+  },
+  {
+    date: "2026-09",
+    tag: "Carte",
+    text: "La carte remplit toujours son cadre, quelle que soit la forme de l’écran : plus de bandes vides autour, et le zoom va jusqu’à 6×.",
+  },
+  {
+    date: "2026-09",
+    tag: "Carte",
+    text: "Le panneau d’un lieu s’ouvre au-dessus de son épingle — en dessous s’il n’y a pas la place — avec une flèche qui la désigne.",
+  },
+  {
+    date: "2026-09",
+    tag: "Carte",
+    text: "Les lieux de la carte s’atteignent au clavier : tabulation pour les parcourir, Entrée pour ouvrir, Échap pour refermer.",
+  },
+  {
+    date: "2026-09",
+    tag: "Carte",
+    text: "Le pincement à deux doigts agrandit la carte sur mobile, et la déplacer ne fait plus défiler la page.",
+  },
+  {
+    date: "2026-09",
+    tag: "Carte",
+    text: "Le panneau d’un lieu suit son épingle quand on déplace ou agrandit la carte.",
+  },
+  {
+    date: "2026-09",
+    tag: "Carte",
+    text: "Le nom de la carte se modifie depuis son en-tête, comme celui du wiki.",
+  },
+  {
+    date: "2026-09",
+    tag: "Carte",
+    text: "Une épingle que l’on vient de poser n’apparaît plus en double.",
+  },
+  {
+    date: "2026-09",
+    tag: "Performance",
+    text: "La carte d’un monde s’ouvre sans attente et reste fluide sous le zoom, même chargée d’épingles.",
+  },
+  {
+    date: "2026-09",
+    tag: "Carte",
     text: "Une épingle de la carte peut renvoyer à une page du wiki : on la choisit en modifiant l’épingle, et un bouton l’ouvre depuis la carte."
   },
   {

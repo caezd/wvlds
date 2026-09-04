@@ -1,47 +1,105 @@
 import type { PinPopoverPos } from "./types";
 
+/**
+ * Point d'ancrage à l'écran d'une épingle, d'après le rectangle occupé par la
+ * carte.
+ *
+ * Le panneau se posait à l'endroit du CLIC, une fois pour toutes : déplacer ou
+ * agrandir la carte ensuite le laissait sur place, à désigner un lieu qui
+ * n'était plus dessous. Ancré sur l'épingle, il la suit — le rectangle mesuré
+ * tenant déjà compte du déplacement et de l'échelle.
+ */
+export function pinAnchor(
+  rect: { left: number; top: number; width: number; height: number },
+  pin: { x: number; y: number },
+): { x: number; y: number } {
+  return {
+    x: rect.left + (pin.x / 100) * rect.width,
+    y: rect.top + (pin.y / 100) * rect.height,
+  };
+}
+
 /** Encombrement du panneau flottant d'un point, et marge minimale au bord. */
 export const CARTE_L = 340;
+/** Hauteur supposée tant que le panneau n'est pas monté et mesurable. */
 export const CARTE_H = 460;
 export const MARGE = 12;
 
+/** Distance entre l'épingle et le bord du panneau — la flèche s'y loge. */
+export const ECART_EPINGLE = 14;
+/** Côté de la flèche (un carré pivoté d'un quart de tour). */
+export const FLECHE = 12;
+/** Distance minimale entre la flèche et un angle arrondi du panneau. */
+const MARGE_FLECHE = FLECHE;
+
 /**
- * Place le panneau d'un point à côté du clic, sans le laisser sortir de l'écran.
+ * Largeur réellement occupée par le panneau.
  *
- * À droite du curseur par défaut ; à gauche s'il déborderait. Verticalement
- * centré sur le clic, puis ramené entre les bords.
+ * Il mesure 340 px, ce qui déborde d'un téléphone étroit : sur 320 px d'écran,
+ * il ne restait pas de quoi le poser entre les marges, et on le collait au bord
+ * gauche en le laissant sortir à droite. Il se resserre désormais — la feuille
+ * de style applique exactement le même calcul, `min(340px, 100vw - 24px)`.
+ */
+export function largeurPanneau(largeurEcran: number): number {
+  return Math.min(CARTE_L, Math.max(0, largeurEcran - 2 * MARGE));
+}
+
+/**
+ * Place le panneau d'un point AU-DESSUS de son épingle, ou en dessous à défaut
+ * de place, centré sur elle.
  *
- * Le viewport est un paramètre plutôt qu'une lecture directe de `window` : la
- * fonction devient pure, donc vérifiable sans navigateur — voir
- * `__tests__/popoverPosition.test.ts`.
+ * Il se posait auparavant sur le côté, à hauteur du clic : rien ne le reliait
+ * visuellement au lieu qu'il décrit, et sur un écran étroit il recouvrait la
+ * moitié de la carte sans qu'on sache de quelle épingle il parlait. Au-dessus,
+ * flèche pointée vers le bas, le lien se lit d'un coup d'œil.
+ *
+ * `arrowLeft` est rendu séparément parce que le panneau, lui, se recale pour
+ * rester à l'écran : près d'un bord, il glisse alors que l'épingle ne bouge pas,
+ * et la flèche doit suivre l'épingle, pas le panneau.
+ *
+ * Le viewport et la hauteur du panneau sont des paramètres plutôt que des
+ * lectures de `window` et du DOM : la fonction reste pure, donc vérifiable sans
+ * navigateur — voir `__tests__/popoverPosition.test.ts`.
  */
 export function calcPopoverPos(
-  clientX: number,
-  clientY: number,
+  anchorX: number,
+  anchorY: number,
   viewport: { largeur: number; hauteur: number } = {
     largeur: window.innerWidth,
     hauteur: window.innerHeight,
   },
+  panelHeight: number = CARTE_H,
 ): PinPopoverPos {
-  let left = clientX + 16;
-  if (left + CARTE_L > viewport.largeur - MARGE) left = clientX - CARTE_L - 16;
+  const requis = panelHeight + ECART_EPINGLE;
+  const placeAuDessus = anchorY - MARGE;
+  const placeEnDessous = viewport.hauteur - anchorY - MARGE;
 
-  // Ramener DANS l'écran après la bascule.
-  //
-  // Ce bornage manquait, alors que son équivalent vertical était bien là. Sur
-  // un écran étroit, la bascule à gauche donnait un `left` négatif : mesuré sur
-  // 375 px de large, un clic à x=40 ne laissait que 24 pixels du panneau sur
-  // 340 à l'écran. Autant dire invisible — et son bouton de fermeture avec.
-  //
-  // `Math.max` en dernier : sur un écran plus étroit que le panneau lui-même,
-  // aucune position ne le contient, et l'on préfère alors coller au bord
-  // GAUCHE. Le panneau déborde à droite, mais son début reste lisible.
-  left = Math.max(MARGE, Math.min(left, viewport.largeur - CARTE_L - MARGE));
+  // Au-dessus par défaut : l'épingle est ainsi montrée par la flèche sans que
+  // le panneau ne recouvre le nom affiché sous le marqueur. On bascule si la
+  // place manque — et, quand elle manque des deux côtés, on garde le côté le
+  // plus dégagé plutôt que de trancher au hasard.
+  const auDessus = placeAuDessus >= requis || placeAuDessus >= placeEnDessous;
 
   const top = Math.max(
     MARGE,
-    Math.min(clientY - CARTE_H / 2, viewport.hauteur - CARTE_H - MARGE),
+    Math.min(
+      auDessus ? anchorY - ECART_EPINGLE - panelHeight : anchorY + ECART_EPINGLE,
+      viewport.hauteur - panelHeight - MARGE,
+    ),
   );
 
-  return { left, top };
+  // Centré sur l'épingle, puis ramené DANS l'écran. Le panneau se resserrant
+  // sur un écran étroit, il y tient toujours entier.
+  const largeur = largeurPanneau(viewport.largeur);
+  const left = Math.max(
+    MARGE,
+    Math.min(anchorX - largeur / 2, viewport.largeur - largeur - MARGE),
+  );
+
+  // La flèche reste dans le panneau, angles arrondis compris — et le panneau
+  // peut être plus étroit que deux fois cette marge sur un très petit écran.
+  const marge = Math.min(MARGE_FLECHE, largeur / 2);
+  const arrowLeft = Math.max(marge, Math.min(anchorX - left, largeur - marge));
+
+  return { left, top, placement: auDessus ? "above" : "below", arrowLeft };
 }

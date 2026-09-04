@@ -4,141 +4,543 @@ import * as React from "react";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
-import { Check, Loader2, Map, MapPin, Pencil, Plus, Upload, X } from "lucide-react";
+import { MEDIA, useMediaQuery } from "@/hooks/useMediaQuery";
+import { useResetOnKeyChange } from "@/hooks/useResetOnKeyChange";
+import { useMapViewport } from "@/hooks/useMapViewport";
+// `Map` est renommée : l'icône masquait le `Map` natif.
+import { Check, List, Loader2, Map as MapIcon, MapPin, Pencil, Plus, Trash2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { cn } from "@/lib/utils";
+import { channel } from "@/lib/constants";
+import { openRealtimeChannel } from "@/lib/realtimeChannel";
 import { toWebP } from "@/lib/imageUtils";
+import { mapImagePath } from "@/lib/storagePaths";
 import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 import {
   createMapPin,
+  createWorldMap,
   deleteMapPin,
-  getWorldMap,
+  deleteWorldMap,
+  getWorldMaps,
+  reorderWorldMaps,
   updateMapPin,
-  upsertWorldMap,
+  updateWorldMap,
   type MapPin as MapPinType,
   type WorldMapData,
 } from "@/app/actions/worldMap";
 
-// Les quatre pièces de l'interface d'un point — marqueur, panneau flottant,
-// dialogue d'apparence, sélecteur de couleur — vivent à côté. Ce fichier ne
-// garde que la carte elle-même : chargement, image de fond, pose des points.
+// Les pièces de l'interface d'un point — marqueur, panneau flottant, dialogue
+// d'apparence, sélecteur de couleur — vivent à côté, comme les onglets et la
+// liste des lieux. La vue elle-même (mesure, transformation, gestes, paliers
+// d'image) est dans `useMapViewport`. Ce fichier ne garde que ce qui relie
+// tout cela : les données, le temps réel, l'adresse, et l'assemblage.
+import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
+import { MAP_PANEL_ID, MapTabs, mapTabId } from "./MapTabs";
+import { MapPlacesDrawer, MapPlacesPanel } from "./MapPlacesPanel";
 import { PinMarker } from "./PinMarker";
 import { PinPopover } from "./PinPopover";
-import { calcPopoverPos } from "./popoverPosition";
-import type { PinPopoverPos, PendingPin } from "./types";
+import { FLECHE, calcPopoverPos, pinAnchor } from "./popoverPosition";
+import type { PinPopoverPos, PendingPin, PinRoom, WikiPageOption } from "./types";
 import { ERR_NON_AUTHENTIFIE } from "@/lib/actionErrors";
+
+/** Cartes et épingles résolues côté serveur, quand l'onglet est ouvert d'emblée. */
+export type InitialWorldMap = { maps: WorldMapData[]; pins: MapPinType[] };
 
 // ── Main component ─────────────────────────────────────────────────
 
 export function WorldMap({
   worldId,
-  userId,
   canEdit,
+  initialMap,
+  initialMapId,
+  initialPinId,
 }: {
   worldId: string;
-  userId: string;
   canEdit: boolean;
+  /**
+   * Carte et épingles déjà chargées par le rendu serveur. Absentes quand
+   * l'onglet est ouvert depuis le client : le composant les charge alors
+   * lui-même.
+   */
+  initialMap?: InitialWorldMap | null;
+  /** Carte et lieu demandés par l'adresse (`?map=…&pin=…`). */
+  initialMapId?: string | null;
+  initialPinId?: string | null;
 }) {
   const t = useTranslations("map");
   const tCommon = useTranslations("common");
+  // Les rappels passés aux marqueurs doivent garder leur identité, et `t` n'y
+  // est pour rien : rien ne garantit la sienne d'un rendu à l'autre — le mock
+  // de test en rend d'ailleurs une neuve à chaque fois. Ils la lisent donc au
+  // moment de s'en servir, sans en dépendre.
+  const tRef = React.useRef(t);
+  tRef.current = t;
   const supabase = createClient();
   const reconnectEpoch = useReconnectEpoch();
 
-  const [mapData, setMapData] = React.useState<WorldMapData | null>(null);
-  const [pins, setPins] = React.useState<MapPinType[]>([]);
-  const [loading, setLoading] = React.useState(true);
+  // Toutes les cartes du monde, et toutes leurs épingles. Les épingles sont
+  // gardées d'un bloc plutôt que rechargées à chaque onglet : passer de l'une à
+  // l'autre est alors instantané.
+  const [maps, setMaps] = React.useState<WorldMapData[]>(initialMap?.maps ?? []);
+  const [activeMapId, setActiveMapId] = React.useState<string | null>(
+    initialMapId ?? initialMap?.maps?.[0]?.id ?? null,
+  );
+  const [pins, setPins] = React.useState<MapPinType[]>(initialMap?.pins ?? []);
+  const [loading, setLoading] = React.useState(!initialMap);
   const [editMode, setEditMode] = React.useState(false);
+  const isEditMode = canEdit && editMode;
+
+  const [creatingMap, setCreatingMap] = React.useState(false);
+  const [confirmDeleteMap, setConfirmDeleteMap] = React.useState(false);
+  const [uploadingMap, setUploadingMap] = React.useState(false);
+
+  const [placesOpen, setPlacesOpen] = React.useState(false);
+  // La liste des lieux est une colonne quand la place le permet, un tiroir
+  // sinon. C'est un MONTAGE différent et non un simple masquage : une classe
+  // Tailwind laisserait les deux coques dans l'arbre, avec deux champs de
+  // recherche pour un seul panneau.
+  const grandEcran = useMediaQuery(MEDIA.lg);
 
   const [selectedPin, setSelectedPin] = React.useState<MapPinType | null>(null);
   const [popoverPos, setPopoverPos] = React.useState<PinPopoverPos | null>(null);
-
   const [pendingPin, setPendingPin] = React.useState<PendingPin | null>(null);
   const [creatingPin, setCreatingPin] = React.useState(false);
 
-  const [uploadingMap, setUploadingMap] = React.useState(false);
-
-  // ── Pan + zoom state ─────────────────────────────────────────
-  const [scale, setScale] = React.useState(1);
-  const [offsetX, setOffsetX] = React.useState(0);
-  const [offsetY, setOffsetY] = React.useState(0);
-  const [isPanning, setIsPanning] = React.useState(false);
-  const panStart = React.useRef<{
-    clientX: number; clientY: number;
-    startOffsetX: number; startOffsetY: number;
-  } | null>(null);
-  const didPan = React.useRef(false);
-
-  // Refs pour le wheel handler non-passif (évite les stale closures)
-  const scaleRef = React.useRef(scale);
-  scaleRef.current = scale;
-  const offsetXRef = React.useRef(offsetX);
-  offsetXRef.current = offsetX;
-  const offsetYRef = React.useRef(offsetY);
-  offsetYRef.current = offsetY;
-
   const mapFileInputRef = React.useRef<HTMLInputElement>(null);
-  const imageRef = React.useRef<HTMLImageElement>(null);
-  const containerRef = React.useRef<HTMLDivElement | null>(null);
-  const wheelCleanupRef = React.useRef<(() => void) | null>(null);
+  const popoverPanelRef = React.useRef<HTMLDivElement | null>(null);
 
-  const isEditMode = canEdit && editMode;
+  // Une carte disparue (supprimée ailleurs) laisserait l'onglet actif dans le
+  // vide : on retombe alors sur la première.
+  const activeMap = maps.find((m) => m.id === activeMapId) ?? maps[0] ?? null;
+  const visiblePins = React.useMemo(
+    () => pins.filter((p) => p.map_id === activeMap?.id),
+    [pins, activeMap?.id],
+  );
 
-  // Reset pan/zoom quand l'image change
-  React.useEffect(() => { setScale(1); setOffsetX(0); setOffsetY(0); }, [mapData?.image_url]);
+  // Miroirs en ref de ce que les rappels stables doivent lire à jour : ils
+  // gardent ainsi leur identité, et `React.memo` sur les marqueurs a un sens.
+  const selectedPinRef = React.useRef<MapPinType | null>(null);
+  selectedPinRef.current = selectedPin;
+  const activeMapRef = React.useRef<WorldMapData | null>(activeMap);
+  activeMapRef.current = activeMap;
+  const pinsRef = React.useRef(pins);
+  pinsRef.current = pins;
+
+  // ── Le panneau d'un lieu suit son épingle ─────────────────────
+  const viewport = useMapViewport({
+    imageUrl: activeMap?.image_url ?? null,
+    // La clé mêle la carte et son image : changer d'onglet remet la vue à
+    // plat, et remplacer l'image d'une carte aussi.
+    viewKey: `${activeMap?.id ?? ""}:${activeMap?.image_url ?? ""}`,
+    idleCursor: isEditMode ? "crosshair" : "grab",
+    onPaint: () => repositionPopoverPanel(),
+    onSettle: () => syncPopoverPos(),
+  });
+  const { imageRef, baseSize, centerOnPoint } = viewport;
+
+  /** Position à l'écran du panneau d'une épingle, ancrée sur l'épingle elle-même. */
+  const popoverPosFor = React.useCallback((pin: MapPinType): PinPopoverPos | null => {
+    const img = imageRef.current;
+    if (!img) return null;
+    // Le rectangle mesuré tient déjà compte de la transformation du parent.
+    const ancre = pinAnchor(img.getBoundingClientRect(), pin);
+    // Hauteur réelle du panneau dès qu'il est monté : un panneau sans bannière
+    // ni description fait la moitié de la hauteur supposée, et se poserait
+    // loin au-dessus de son épingle.
+    const hauteur = popoverPanelRef.current?.offsetHeight || undefined;
+    return calcPopoverPos(ancre.x, ancre.y, undefined, hauteur);
+  }, [imageRef]);
+
+  /**
+   * Replace le panneau ouvert sur le DOM, dans la même image que la carte.
+   *
+   * Il était posé une fois pour toutes à l'endroit du clic, et le moindre
+   * déplacement de la carte le laissait en plan, désigner un lieu qui n'était
+   * plus là.
+   */
+  function repositionPopoverPanel() {
+    const panel = popoverPanelRef.current;
+    const pin = selectedPinRef.current;
+    if (!panel || !pin) return;
+    const pos = popoverPosFor(pin);
+    if (!pos) return;
+    panel.style.left = `${pos.left}px`;
+    panel.style.top = `${pos.top}px`;
+    const caret = panel.querySelector<HTMLElement>("[data-pin-caret]");
+    if (caret) {
+      caret.style.left = `${pos.arrowLeft - FLECHE / 2}px`;
+      caret.dataset.placement = pos.placement;
+    }
+  }
+
+  /**
+   * Recopie dans l'état React la position que le geste vient d'écrire sur le
+   * DOM. Sans ce rattrapage, le premier rendu venu — un survol, une mise à jour
+   * temps réel — replacerait le panneau là où il était au début du geste.
+   */
+  const popoverSyncRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const syncPopoverPos = React.useCallback(() => {
+    if (popoverSyncRef.current) clearTimeout(popoverSyncRef.current);
+    popoverSyncRef.current = setTimeout(() => {
+      const pin = selectedPinRef.current;
+      if (!pin) return;
+      const pos = popoverPosFor(pin);
+      if (pos) setPopoverPos(pos);
+    }, 120);
+  }, [popoverPosFor]);
+
+  React.useEffect(() => () => {
+    if (popoverSyncRef.current) {
+      clearTimeout(popoverSyncRef.current);
+      popoverSyncRef.current = null;
+    }
+  }, []);
 
   // ── Chargement initial ────────────────────────────────────────
   React.useEffect(() => {
+    if (initialMap) return;
     let cancelled = false;
     (async () => {
       try {
-        const { map, pins: p } = await getWorldMap(worldId);
+        const { maps: m, pins: p } = await getWorldMaps(worldId);
         if (!cancelled) {
-          setMapData(map);
+          setMaps(m);
+          setActiveMapId((prev) => prev ?? initialMapId ?? m[0]?.id ?? null);
           setPins(p);
         }
       } finally {
         if (!cancelled) setLoading(false);
       }
     })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [worldId]);
 
+  // ── Temps réel ────────────────────────────────────────────────
+  React.useEffect(() => {
     type RT = { eventType: string; new: Record<string, unknown>; old: Record<string, unknown> };
 
-    // Realtime subscriptions
-    const channel = supabase
-      .channel(`world-map-${worldId}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "world_map_pins", filter: `world_id=eq.${worldId}` },
-        (payload: RT) => {
-          if (payload.eventType === "INSERT") {
-            setPins((prev) => [...prev, payload.new as MapPinType]);
-          } else if (payload.eventType === "UPDATE") {
-            const updated = payload.new as MapPinType;
-            setPins((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
-            setSelectedPin((prev) => (prev?.id === updated.id ? updated : prev));
-          } else if (payload.eventType === "DELETE") {
-            const id = (payload.old as { id: string }).id;
-            setPins((prev) => prev.filter((p) => p.id !== id));
-            setSelectedPin((prev) => (prev?.id === id ? null : prev));
-          }
-        },
-      )
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "world_maps", filter: `world_id=eq.${worldId}` },
-        (payload: RT) => {
-          setMapData(payload.new as WorldMapData);
-        },
-      )
-      .subscribe();
-
-    return () => {
-      cancelled = true;
-      void supabase.removeChannel(channel);
-    };
+    return openRealtimeChannel(supabase, channel.worldMap(worldId), (ch) =>
+      ch
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "world_map_pins", filter: `world_id=eq.${worldId}` },
+          (payload: RT) => {
+            if (payload.eventType === "INSERT") {
+              // Fusion plutôt qu'ajout : Postgres nous renvoie AUSSI les
+              // épingles que l'on vient de créer soi-même, déjà posées à
+              // l'écran sans attendre le serveur. Les ajouter en aveugle
+              // faisait apparaître le lieu en double, avec deux fois la même
+              // clé React.
+              setPins((prev) => mergeById(prev, payload.new as MapPinType));
+            } else if (payload.eventType === "UPDATE") {
+              const updated = payload.new as MapPinType;
+              setPins((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+              setSelectedPin((prev) => (prev?.id === updated.id ? updated : prev));
+            } else if (payload.eventType === "DELETE") {
+              const id = (payload.old as { id: string }).id;
+              setPins((prev) => prev.filter((p) => p.id !== id));
+              setSelectedPin((prev) => (prev?.id === id ? null : prev));
+            }
+          },
+        )
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "world_maps", filter: `world_id=eq.${worldId}` },
+          (payload: RT) => {
+            if (payload.eventType === "DELETE") {
+              const id = (payload.old as { id: string }).id;
+              setMaps((prev) => prev.filter((m) => m.id !== id));
+              setPins((prev) => prev.filter((p) => p.map_id !== id));
+              return;
+            }
+            setMaps((prev) => mergeById(prev, payload.new as WorldMapData));
+          },
+        )
+        .subscribe(),
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [worldId, reconnectEpoch]);
+
+  // ── Ce dont les panneaux ont besoin, chargé une fois pour tous ──
+  //
+  // Pages du wiki et salons situés : deux listes du monde entier, lues à la
+  // première ouverture d'un lieu et partagées ensuite. Chaque panneau les
+  // rechargeait pour lui-même, soit deux requêtes par clic sur une épingle.
+  const [wikiPages, setWikiPages] = React.useState<WikiPageOption[]>([]);
+  const [pinRooms, setPinRooms] = React.useState<PinRoom[]>([]);
+  const popoverDataAskedRef = React.useRef(false);
+  const loadPopoverData = React.useCallback(() => {
+    if (popoverDataAskedRef.current) return;
+    popoverDataAskedRef.current = true;
+    void supabase
+      .from("world_wiki_pages")
+      .select("id, title, slug")
+      .eq("world_id", worldId)
+      .eq("is_folder", false)
+      .is("deleted_at", null)
+      .order("title")
+      .then(({ data }: { data: WikiPageOption[] | null }) => setWikiPages(data ?? []));
+    void supabase
+      .from("chatrooms")
+      .select("id, title, name, map_pin_id")
+      .eq("world_id", worldId)
+      .not("map_pin_id", "is", null)
+      .then(({ data }: { data: PinRoom[] | null }) => setPinRooms(data ?? []));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [worldId]);
+
+  // ── L'adresse suit ce qu'on regarde ───────────────────────────
+  /**
+   * Écrit dans l'adresse la carte ouverte et le lieu consulté.
+   *
+   * Rien n'y était écrit : on ne pouvait pas partager ce qu'on avait sous les
+   * yeux, et un rafraîchissement ramenait à la première carte du monde.
+   *
+   * `history` plutôt que le routeur de Next : changer un paramètre par
+   * `router.push` refait un aller-retour serveur pour un état que le client
+   * détient déjà.
+   *
+   * Changer de carte est une navigation — le bouton Précédent doit y ramener,
+   * donc `push`. Ouvrir un lieu n'en est pas une : c'est un panneau posé
+   * par-dessus, et lui donner une entrée d'historique par clic rendrait le
+   * bouton Précédent inutilisable. D'où `replace`.
+   */
+  const writeUrl = React.useCallback(
+    (mapId: string | null, pinId: string | null, mode: "push" | "replace") => {
+      if (typeof window === "undefined") return;
+      const url = new URL(window.location.href);
+      url.searchParams.set("view", "map");
+      if (mapId) url.searchParams.set("map", mapId);
+      else url.searchParams.delete("map");
+      if (pinId) url.searchParams.set("pin", pinId);
+      else url.searchParams.delete("pin");
+      window.history[mode === "push" ? "pushState" : "replaceState"](null, "", url.toString());
+    },
+    [],
+  );
+
+  // ── Ouvrir et fermer le panneau d'un lieu ─────────────────────
+  const closePopover = React.useCallback((refocusPin = false) => {
+    const id = selectedPinRef.current?.id;
+    setSelectedPin(null);
+    setPopoverPos(null);
+    if (id) writeUrl(activeMapRef.current?.id ?? null, null, "replace");
+    // Fermé au clavier, le panneau renverrait sinon le focus au début du
+    // document, et le lieu que l'on venait de lire serait à retrouver.
+    if (refocusPin && id) {
+      requestAnimationFrame(() => {
+        document.querySelector<HTMLElement>(`[data-pin-id="${id}"]`)?.focus();
+      });
+    }
+  }, [writeUrl]);
+
+  const openPopover = React.useCallback((pin: MapPinType, writeHistory = true) => {
+    loadPopoverData();
+    setSelectedPin(pin);
+    setPopoverPos(popoverPosFor(pin));
+    setPendingPin(null);
+    if (writeHistory) writeUrl(pin.map_id, pin.id, "replace");
+  }, [loadPopoverData, popoverPosFor, writeUrl]);
+
+  const selectMap = React.useCallback((mapId: string | null, mode: "push" | "replace" = "push") => {
+    setActiveMapId(mapId);
+    closePopover();
+    setPendingPin(null);
+    writeUrl(mapId, null, mode);
+  }, [closePopover, writeUrl]);
+
+  // Échap ferme le panneau ouvert. Le garde sur `defaultPrevented` laisse la
+  // main aux boîtes de dialogue empilées par-dessus (apparence de l'épingle,
+  // confirmation de suppression) : elles se ferment les premières.
+  React.useEffect(() => {
+    if (!selectedPin && !placesOpen) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key !== "Escape" || e.defaultPrevented) return;
+      // Un cran à la fois : le panneau d'un lieu d'abord, la colonne ensuite.
+      // Le tiroir, lui, s'en charge tout seul.
+      if (selectedPin) closePopover(true);
+      else if (grandEcran) setPlacesOpen(false);
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [selectedPin, placesOpen, grandEcran, closePopover]);
+
+  // Le panneau vient d'apparaître : sa hauteur réelle n'était pas connue quand
+  // on l'a placé. On le repositionne avant la peinture — un effet de mise en
+  // page, donc sans le voir sauter.
+  React.useLayoutEffect(() => {
+    const pin = selectedPinRef.current;
+    if (!pin || !popoverPanelRef.current) return;
+    const pos = popoverPosFor(pin);
+    if (!pos) return;
+    setPopoverPos((prev) =>
+      prev && prev.top === pos.top && prev.left === pos.left && prev.placement === pos.placement
+        ? prev
+        : pos,
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedPin?.id]);
+
+  // ── Aller à un lieu ───────────────────────────────────────────
+  /**
+   * Va au lieu demandé — depuis la liste, ou depuis l'adresse.
+   *
+   * Sur une autre carte, le voyage se fait en deux temps : on bascule d'abord,
+   * puis on centre quand la nouvelle carte est mesurée. Centrer tout de suite
+   * se ferait sur les dimensions de la carte qu'on vient de quitter.
+   */
+  const pendingFocusRef = React.useRef<string | null>(initialPinId ?? null);
+  const focusPin = React.useCallback((pin: MapPinType) => {
+    if (pin.map_id !== activeMapRef.current?.id) {
+      pendingFocusRef.current = pin.id;
+      setActiveMapId(pin.map_id);
+      closePopover();
+      writeUrl(pin.map_id, pin.id, "push");
+      return;
+    }
+    centerOnPoint({ x: pin.x, y: pin.y });
+    openPopover(pin);
+    // Le tiroir recouvre la carte : le refermer est le seul moyen de voir le
+    // lieu qu'on vient de choisir.
+    if (!grandEcran) setPlacesOpen(false);
+  }, [centerOnPoint, closePopover, grandEcran, openPopover, writeUrl]);
+
+  React.useEffect(() => {
+    const attendu = pendingFocusRef.current;
+    if (!attendu || !baseSize.width) return;
+    const pin = pins.find((p) => p.id === attendu);
+    if (!pin) return;
+    // Le lieu vit sur une autre carte — c'est le cas d'une adresse qui le
+    // désigne directement : on bascule, et l'on repassera par ici une fois la
+    // nouvelle carte mesurée.
+    if (pin.map_id !== activeMap?.id) {
+      setActiveMapId(pin.map_id);
+      return;
+    }
+    pendingFocusRef.current = null;
+    centerOnPoint({ x: pin.x, y: pin.y });
+    openPopover(pin, false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [baseSize.width, activeMap?.id, pins]);
+
+  // Le bouton Précédent ramène à la carte, et au lieu, qu'on regardait.
+  //
+  // L'écoute est posée une fois pour toutes, mais lit ses gestionnaires dans
+  // une ref : ceux-ci changent avec le monde, et une fermeture figée au montage
+  // rouvrirait les lieux du monde quitté.
+  const historyHandlersRef = React.useRef({ openPopover, closePopover });
+  historyHandlersRef.current = { openPopover, closePopover };
+  React.useEffect(() => {
+    function onPopState() {
+      const params = new URLSearchParams(window.location.search);
+      const mapId = params.get("map");
+      if (mapId) setActiveMapId(mapId);
+      const pinId = params.get("pin");
+      const pin = pinId ? pinsRef.current.find((p) => p.id === pinId) : null;
+      if (pin) historyHandlersRef.current.openPopover(pin, false);
+      else historyHandlersRef.current.closePopover();
+    }
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
+  // Passer d'un monde à l'autre est une navigation client : ce composant n'est
+  // pas remonté et ses états gardent la carte du monde quitté. Le chargement,
+  // lui, ne repart plus quand le serveur a déjà fourni les données — d'où ce
+  // resemis explicite.
+  useResetOnKeyChange(worldId, () => {
+    setMaps(initialMap?.maps ?? []);
+    setActiveMapId(initialMap?.maps?.[0]?.id ?? null);
+    setPins(initialMap?.pins ?? []);
+    setLoading(!initialMap);
+    setSelectedPin(null);
+    setPopoverPos(null);
+    setPendingPin(null);
+    setEditMode(false);
+    setWikiPages([]);
+    setPinRooms([]);
+    popoverDataAskedRef.current = false;
+    pendingFocusRef.current = null;
+  });
+
+  // ── Libellé de la carte ───────────────────────────────────────
+  // La colonne `label` existait depuis la première migration sans que rien ne
+  // l'écrive ni ne l'affiche : chaque monde avait donc « Carte » pour titre,
+  // là où le wiki, lui, se laisse renommer.
+  const mapLabel = activeMap?.label?.trim() || t("title");
+  const [labelDraft, setLabelDraft] = React.useState(activeMap?.label ?? "");
+  React.useEffect(() => { setLabelDraft(activeMap?.label ?? ""); }, [activeMap?.id, activeMap?.label]);
+
+  async function handleLabelCommit() {
+    const value = labelDraft.trim();
+    if (!activeMap || value === (activeMap.label ?? "")) return;
+    try {
+      const updated = await updateWorldMap(activeMap.id, { label: value || t("title") });
+      setMaps((prev) => mergeById(prev, updated));
+    } catch {
+      toast.error(t("saveError"));
+      setLabelDraft(activeMap.label ?? "");
+    }
+  }
+
+  // ── Ajouter, réordonner, supprimer une carte ──────────────────
+  async function handleAddMap() {
+    if (creatingMap) return;
+    setCreatingMap(true);
+    try {
+      const carte = await createWorldMap(worldId, {
+        label: t("newMapName"),
+        sort_index: maps.length,
+      });
+      setMaps((prev) => mergeById(prev, carte));
+      // On bascule dessus : la nouvelle carte s'ouvre sur son état vide, où
+      // l'on importe son image.
+      selectMap(carte.id);
+    } catch {
+      toast.error(t("createMapError"));
+    } finally {
+      setCreatingMap(false);
+    }
+  }
+
+  async function handleReorderMaps(orderedIds: string[]) {
+    const avant = maps;
+    // Optimiste : les onglets suivent le doigt, sans attendre le serveur.
+    const parId = new Map(avant.map((m) => [m.id, m]));
+    const apres = orderedIds
+      .map((id, index) => {
+        const carte = parId.get(id);
+        return carte ? { ...carte, sort_index: index } : null;
+      })
+      .filter((m): m is WorldMapData => m !== null);
+    setMaps(apres);
+    try {
+      await reorderWorldMaps(orderedIds);
+    } catch {
+      toast.error(t("saveError"));
+      setMaps(avant);
+    }
+  }
+
+  async function handleDeleteMap() {
+    if (!activeMap) return;
+    const id = activeMap.id;
+    try {
+      await deleteWorldMap(id);
+      const restantes = maps.filter((m) => m.id !== id);
+      setMaps(restantes);
+      // Les épingles de la carte partent avec elle en base (`ON DELETE
+      // CASCADE`) ; on les retire ici sans attendre l'écho du temps réel.
+      setPins((prev) => prev.filter((p) => p.map_id !== id));
+      // `replace` : on ne revient pas en arrière vers une carte supprimée.
+      selectMap(restantes[0]?.id ?? null, "replace");
+      toast.success(t("mapDeleted"));
+    } catch {
+      toast.error(t("deleteMapError"));
+    }
+  }
 
   // ── Upload de l'image de carte ────────────────────────────────
   async function handleMapImageUpload(file: File) {
@@ -158,7 +560,12 @@ export function WorldMap({
       if (!user) throw new Error(ERR_NON_AUTHENTIFIE);
 
       const converted = await toWebP(file, 4096);
-      const path = `user-${userId}/world-${worldId}/map-${Date.now()}.webp`;
+
+      // La carte d'abord, l'image ensuite : le fichier est rangé sous le
+      // préfixe de SA carte, ce qui en fait l'unité de ménage. Un monde qui
+      // n'avait aucune carte en reçoit une à l'occasion de sa première image.
+      const carte = activeMap ?? (await createWorldMap(worldId, { label: t("title") }));
+      const path = mapImagePath(worldId, carte.id, converted.type);
 
       const { error: upErr } = await supabase.storage
         .from("worlds")
@@ -166,8 +573,9 @@ export function WorldMap({
       if (upErr) throw upErr;
 
       const image_url = supabase.storage.from("worlds").getPublicUrl(path).data.publicUrl;
-      const updated = await upsertWorldMap(worldId, { image_url });
-      setMapData(updated);
+      const updated = await updateWorldMap(carte.id, { image_url });
+      setMaps((prev) => mergeById(prev, updated));
+      setActiveMapId(updated.id);
       toast.success(t("mapUpdated"));
     } catch {
       toast.error(t("uploadError"));
@@ -176,133 +584,42 @@ export function WorldMap({
     }
   }
 
-  // ── Helpers de clamp ─────────────────────────────────────────
-  function clampOffset(x: number, y: number, s: number): [number, number] {
-    const container = containerRef.current;
-    const img = imageRef.current;
-    if (!container || !img) return [x, y];
-    const minX = Math.min(0, container.clientWidth - img.offsetWidth * s);
-    const minY = Math.min(0, container.clientHeight - img.offsetHeight * s);
-    return [
-      Math.max(minX, Math.min(0, x)),
-      Math.max(minY, Math.min(0, y)),
-    ];
-  }
-
-  // ── Wheel zoom (non-passif, centré sur le curseur) ───────────
-  // Callback ref : s'exécute quand l'élément entre/sort du DOM,
-  // évitant tout problème de taille de tableau de dépendances.
-  const containerCallbackRef = React.useCallback((el: HTMLDivElement | null) => {
-    if (wheelCleanupRef.current) {
-      wheelCleanupRef.current();
-      wheelCleanupRef.current = null;
-    }
-    containerRef.current = el;
-    if (!el) return;
-    const node = el; // variable non-nullable pour la closure
-
-    function onWheel(e: WheelEvent) {
-      e.preventDefault();
-      const curS = scaleRef.current;
-      const curOX = offsetXRef.current;
-      const curOY = offsetYRef.current;
-
-      const newS = Math.max(1, Math.min(2, curS + (e.deltaY < 0 ? 0.1 : -0.1)));
-      if (newS === curS) return;
-
-      const rect = node.getBoundingClientRect();
-      const cx = e.clientX - rect.left;
-      const cy = e.clientY - rect.top;
-
-      const ix = (cx - curOX) / curS;
-      const iy = (cy - curOY) / curS;
-
-      let newOX = cx - ix * newS;
-      let newOY = cy - iy * newS;
-
-      const img = imageRef.current;
-      if (img) {
-        const minX = Math.min(0, node.clientWidth - img.offsetWidth * newS);
-        const minY = Math.min(0, node.clientHeight - img.offsetHeight * newS);
-        newOX = Math.max(minX, Math.min(0, newOX));
-        newOY = Math.max(minY, Math.min(0, newOY));
-      }
-
-      setScale(newS);
-      setOffsetX(newOX);
-      setOffsetY(newOY);
-    }
-
-    node.addEventListener("wheel", onWheel, { passive: false });
-    wheelCleanupRef.current = () => node.removeEventListener("wheel", onWheel);
-  }, []);
-
-  // ── Pan handlers ─────────────────────────────────────────────
-  function handlePointerDown(e: React.PointerEvent<HTMLDivElement>) {
-    if (e.button !== 0) return;
-    didPan.current = false;
-    panStart.current = {
-      clientX: e.clientX, clientY: e.clientY,
-      startOffsetX: offsetX, startOffsetY: offsetY,
-    };
-    setIsPanning(true);
-    e.currentTarget.setPointerCapture(e.pointerId);
-  }
-
-  function handlePointerMove(e: React.PointerEvent<HTMLDivElement>) {
-    if (!panStart.current) return;
-    const dx = e.clientX - panStart.current.clientX;
-    const dy = e.clientY - panStart.current.clientY;
-    if (!didPan.current && (Math.abs(dx) > 4 || Math.abs(dy) > 4)) didPan.current = true;
-    if (!didPan.current) return;
-    const [cx, cy] = clampOffset(
-      panStart.current.startOffsetX + dx,
-      panStart.current.startOffsetY + dy,
-      scale,
-    );
-    setOffsetX(cx);
-    setOffsetY(cy);
-  }
-
-  function handlePointerUp() {
-    setIsPanning(false);
-    panStart.current = null;
-    // didPan.current est relu dans handleContainerClick qui s'exécute juste après
-  }
+  // ── Les épingles ──────────────────────────────────────────────
+  //
+  // Ces trois gestionnaires reçoivent l'épingle en argument et gardent leur
+  // identité d'un rendu à l'autre. C'est ce qui rend `React.memo` utile sur
+  // `PinMarker` : avec une fermeture neuve par marqueur et par rendu, la
+  // mémoïsation ne servait à rien — chaque changement d'état de la carte
+  // re-rendait les N marqueurs, icône comprise.
 
   // ── Clic sur la carte (ajouter un pin si pas de drag) ────────
   function handleContainerClick(e: React.MouseEvent<HTMLDivElement>) {
-    if (didPan.current) { didPan.current = false; return; }
-    didPan.current = false;
+    if (viewport.consumeDidPan()) return;
 
     if (pendingPin) { setPendingPin(null); return; }
-    if (selectedPin) { setSelectedPin(null); setPopoverPos(null); return; }
+    if (selectedPin) { closePopover(); return; }
 
     if (!isEditMode) return;
 
-    const container = containerRef.current;
     const img = imageRef.current;
-    if (!container || !img) return;
-    const rect = container.getBoundingClientRect();
-    // Coordonnées dans l'espace image (avant scale)
-    const pxX = (e.clientX - rect.left - offsetX) / scale;
-    const pxY = (e.clientY - rect.top - offsetY) / scale;
-    const x = (pxX / img.offsetWidth) * 100;
-    const y = (pxY / img.offsetHeight) * 100;
+    if (!img) return;
+    // Le rectangle mesuré tient compte de la transformation : le pourcentage se
+    // lit directement, sans refaire le calcul du déplacement et de l'échelle.
+    const r = img.getBoundingClientRect();
+    const x = ((e.clientX - r.left) / r.width) * 100;
+    const y = ((e.clientY - r.top) / r.height) * 100;
     if (x < 0 || x > 100 || y < 0 || y > 100) return;
     setPendingPin({ x, y, title: "" });
   }
 
   async function handleCreatePin() {
-    if (!pendingPin || !pendingPin.title.trim() || creatingPin) return;
+    if (!pendingPin || !pendingPin.title.trim() || creatingPin || !activeMap) return;
     setCreatingPin(true);
     try {
-      const pin = await createMapPin(worldId, pendingPin.x, pendingPin.y, pendingPin.title.trim());
-      setPins((prev) => [...prev, pin]);
+      const pin = await createMapPin(worldId, activeMap.id, pendingPin.x, pendingPin.y, pendingPin.title.trim());
+      setPins((prev) => mergeById(prev, pin));
       setPendingPin(null);
-      // Ouvrir immédiatement la popover du nouveau pin au centre de l'écran
-      setSelectedPin(pin);
-      setPopoverPos(calcPopoverPos(window.innerWidth / 2, window.innerHeight / 2));
+      openPopover(pin);
     } catch {
       toast.error(t("createPinError"));
     } finally {
@@ -310,44 +627,43 @@ export function WorldMap({
     }
   }
 
-  function handlePinClick(clientX: number, clientY: number, pin: MapPinType) {
-    if (selectedPin?.id === pin.id) {
-      setSelectedPin(null);
-      setPopoverPos(null);
+  const handlePinClick = React.useCallback((pin: MapPinType) => {
+    if (selectedPinRef.current?.id === pin.id) {
+      closePopover();
       return;
     }
-    setSelectedPin(pin);
-    setPopoverPos(calcPopoverPos(clientX, clientY));
-    setPendingPin(null);
-  }
+    openPopover(pin);
+  }, [closePopover, openPopover]);
 
-  async function handlePinMoved(pin: MapPinType, x: number, y: number) {
+  const handlePinMoved = React.useCallback(async (pin: MapPinType, x: number, y: number) => {
     // Optimiste : mise à jour locale immédiate
     const updated = { ...pin, x, y };
     setPins((prev) => prev.map((p) => (p.id === pin.id ? updated : p)));
-    if (selectedPin?.id === pin.id) setSelectedPin(updated);
+    if (selectedPinRef.current?.id === pin.id) {
+      setSelectedPin(updated);
+      // Le panneau suit l'épingle qu'on vient de déplacer : le marqueur avale
+      // ses propres événements de pointeur, la carte n'a donc rien vu passer.
+      syncPopoverPos();
+    }
     try {
       await updateMapPin(pin.id, { x, y });
     } catch {
-      toast.error(t("movePinError"));
+      toast.error(tRef.current("movePinError"));
       // Rollback
       setPins((prev) => prev.map((p) => (p.id === pin.id ? pin : p)));
     }
-  }
+  }, [syncPopoverPos]);
 
-  async function handleDeletePin(pin: MapPinType) {
+  const handleDeletePin = React.useCallback(async (pin: MapPinType) => {
     try {
       await deleteMapPin(pin.id);
       setPins((prev) => prev.filter((p) => p.id !== pin.id));
-      if (selectedPin?.id === pin.id) {
-        setSelectedPin(null);
-        setPopoverPos(null);
-      }
-      toast.success(t("pinDeleted"));
+      if (selectedPinRef.current?.id === pin.id) closePopover();
+      toast.success(tRef.current("pinDeleted"));
     } catch {
-      toast.error(t("deletePinError"));
+      toast.error(tRef.current("deletePinError"));
     }
-  }
+  }, [closePopover]);
 
   // ── Render ────────────────────────────────────────────────────
   if (loading) {
@@ -358,38 +674,83 @@ export function WorldMap({
     );
   }
 
+  const { imageSrc } = viewport;
+
   return (
     <div
       className="flex h-full min-h-0 flex-1 flex-col"
       onClick={() => {
         if (pendingPin) setPendingPin(null);
-        if (selectedPin) { setSelectedPin(null); setPopoverPos(null); }
+        if (selectedPin) closePopover();
       }}
     >
       <WorldPanelHeader
-        icon={<Map className="h-4 w-4 shrink-0 text-muted-foreground" />}
-        title={t("title")}
+        icon={<MapIcon className="h-4 w-4 shrink-0 text-muted-foreground" />}
+        title={
+          isEditMode && activeMap ? (
+            <input
+              value={labelDraft}
+              aria-label={t("mapLabel")}
+              placeholder={t("title")}
+              onClick={(e) => e.stopPropagation()}
+              onChange={(e) => setLabelDraft(e.target.value)}
+              onBlur={() => void handleLabelCommit()}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") e.currentTarget.blur();
+                if (e.key === "Escape") {
+                  setLabelDraft(activeMap.label ?? "");
+                  e.currentTarget.blur();
+                }
+              }}
+              className="w-28 rounded-md border border-border-soft bg-background px-2 py-0.5 text-sm font-semibold outline-none focus:ring-2 focus:ring-primary sm:w-40"
+            />
+          ) : (
+            mapLabel
+          )
+        }
         right={
           canEdit && (
             <button
               type="button"
-              onClick={(e) => { e.stopPropagation(); setEditMode((v) => !v); setSelectedPin(null); setPopoverPos(null); setPendingPin(null); }}
+              aria-label={isEditMode ? t("editingActive") : tCommon("edit")}
+              aria-pressed={isEditMode}
+              onClick={(e) => { e.stopPropagation(); setEditMode((v) => !v); closePopover(); setPendingPin(null); }}
               className={cn(
-                "flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                "flex items-center gap-1.5 rounded-full border px-2 py-1 text-xs font-medium transition-colors sm:px-3",
                 isEditMode
                   ? "border-primary/40 bg-primary/10 text-primary"
                   : "border-border-soft bg-background text-muted-foreground hover:bg-secondary hover:text-foreground",
               )}
             >
               <Pencil className="h-3 w-3" />
-              {isEditMode ? t("editingActive") : tCommon("edit")}
+              <span className="hidden sm:inline">
+                {isEditMode ? t("editingActive") : tCommon("edit")}
+              </span>
             </button>
           )
         }
       >
-        {canEdit && isEditMode && mapData?.image_url && (
+        {activeMap?.image_url && (
           <button
             type="button"
+            aria-label={placesOpen ? t("hidePlaces") : t("showPlaces")}
+            aria-pressed={placesOpen}
+            onClick={(e) => { e.stopPropagation(); setPlacesOpen((v) => !v); }}
+            className={cn(
+              "flex items-center gap-1.5 rounded-md px-2 py-1 text-xs transition-colors",
+              placesOpen
+                ? "bg-secondary text-foreground"
+                : "text-muted-foreground hover:bg-secondary hover:text-foreground",
+            )}
+          >
+            <List className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">{t("places")}</span>
+          </button>
+        )}
+        {canEdit && isEditMode && activeMap?.image_url && (
+          <button
+            type="button"
+            aria-label={t("changeMap")}
             onClick={(e) => { e.stopPropagation(); mapFileInputRef.current?.click(); }}
             className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
           >
@@ -398,18 +759,66 @@ export function WorldMap({
             ) : (
               <Upload className="h-3.5 w-3.5" />
             )}
-            {t("changeMap")}
+            <span className="hidden sm:inline">{t("changeMap")}</span>
+          </button>
+        )}
+        {canEdit && isEditMode && activeMap && (
+          <button
+            type="button"
+            aria-label={t("deleteMap")}
+            onClick={(e) => { e.stopPropagation(); setConfirmDeleteMap(true); }}
+            className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">{t("deleteMap")}</span>
           </button>
         )}
       </WorldPanelHeader>
 
+      {/* Onglets : cachés tant qu'il n'y a qu'une carte à montrer, pour lui
+          laisser tout le cadre. En édition ils paraissent dès la première —
+          c'est là qu'on en ajoute une deuxième. */}
+      {(maps.length > 1 || (isEditMode && maps.length > 0)) && (
+        <MapTabs
+          maps={maps}
+          activeId={activeMap?.id ?? null}
+          isEditMode={isEditMode}
+          creating={creatingMap}
+          onSelect={(id) => selectMap(id)}
+          onAdd={() => void handleAddMap()}
+          onReorder={(ids) => void handleReorderMaps(ids)}
+        />
+      )}
+
       {/* ── Corps ──────────────────────────────────────────────── */}
       <div className="relative flex min-h-0 flex-1 overflow-hidden">
 
-        {!mapData?.image_url ? (
+        {placesOpen && imageSrc && grandEcran && (
+          <MapPlacesPanel
+            maps={maps}
+            pins={pins}
+            activeMapId={activeMap?.id ?? null}
+            selectedPinId={selectedPin?.id ?? null}
+            onSelect={focusPin}
+            onClose={() => setPlacesOpen(false)}
+          />
+        )}
+        {imageSrc && !grandEcran && (
+          <MapPlacesDrawer
+            open={placesOpen}
+            maps={maps}
+            pins={pins}
+            activeMapId={activeMap?.id ?? null}
+            selectedPinId={selectedPin?.id ?? null}
+            onSelect={focusPin}
+            onClose={() => setPlacesOpen(false)}
+          />
+        )}
+
+        {!imageSrc ? (
           /* ── État vide ───────────────────────────────────────── */
           <div className="flex flex-1 flex-col items-center justify-center gap-4 text-muted-foreground">
-            <Map className="h-12 w-12 opacity-20" />
+            <MapIcon className="h-12 w-12 opacity-20" />
             <p className="text-sm">{t("noMapConfigured")}</p>
             {isEditMode && (
               <button
@@ -429,48 +838,67 @@ export function WorldMap({
         ) : (
           /* ── Carte avec image ────────────────────────────────── */
           <div
-            ref={containerCallbackRef}
-            className="relative flex-1 overflow-hidden select-none"
-            style={{ cursor: isPanning ? "grabbing" : isEditMode ? "crosshair" : "grab" }}
-            onPointerDown={handlePointerDown}
-            onPointerMove={handlePointerMove}
-            onPointerUp={handlePointerUp}
-            onPointerCancel={handlePointerUp}
+            ref={viewport.containerCallbackRef}
+            id={MAP_PANEL_ID}
+            role={maps.length > 1 ? "tabpanel" : undefined}
+            aria-labelledby={maps.length > 1 && activeMap ? mapTabId(activeMap.id) : undefined}
+            // `touch-none` : sans lui, le navigateur s'attribue le geste pour
+            // faire défiler la page, et le déplacement de la carte s'interrompt
+            // au premier pixel. Le pincement à deux doigts en dépend aussi.
+            className="relative flex-1 touch-none overflow-hidden select-none"
+            {...viewport.pointerHandlers}
             onClick={handleContainerClick}
           >
-            {/* Wrapper pan+zoom — transform-origin top-left */}
+            {/* Enveloppe pan+zoom — transform-origin top-left ; la transformation
+                est écrite par le hook, pas par le rendu React. */}
             <div
-              className="absolute top-0 left-0 w-full"
+              ref={viewport.wrapperRef}
+              className="absolute top-0 left-0"
               style={{
-                transform: `translate(${offsetX}px, ${offsetY}px) scale(${scale})`,
+                // Dimensions explicites : c'est ce cadre-là que les épingles
+                // prennent pour repère (leur position est un pourcentage), et
+                // il doit donc épouser l'image au pixel près.
+                width: baseSize.width || undefined,
+                height: baseSize.height || undefined,
                 transformOrigin: "0 0",
-              }}
+                "--pin-inv-scale": "1",
+              } as React.CSSProperties}
             >
-              {/* Image : couvre toujours toute la largeur du container.
-                  imageRef.offsetWidth/offsetHeight pilotent le clamp du pan/zoom —
-                  next/image (fill) changerait ce comportement de dimensionnement intrinsèque. */}
+              {/* Image : remplit exactement l'enveloppe, dont la taille vient
+                  de `coverSize`. `next/image` n'a rien à faire ici — l'image
+                  est déjà servie à la bonne largeur par le stockage, et son
+                  mode `fill` changerait ce dimensionnement.
+
+                  Pas de vignette floutée en attendant, contrairement au reste de
+                  l'application : les proportions de la carte ne sont pas connues
+                  avant son chargement (rien en base), et un substitut aux
+                  proportions approchées déplacerait les épingles de quelques
+                  pourcents — elles sautilleraient à l'arrivée de l'image. */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                ref={imageRef}
-                src={mapData.image_url}
+                ref={viewport.imageCallbackRef}
+                src={imageSrc}
                 alt={t("mapAlt")}
                 draggable={false}
-                className="block w-full select-none"
+                onLoad={viewport.onImageLoad}
+                className={cn(
+                  "block h-full w-full select-none transition-opacity duration-300 motion-reduce:transition-none",
+                  viewport.imageLoaded ? "opacity-100" : "opacity-0",
+                )}
                 style={{ userSelect: "none" }}
               />
 
-              {/* Pins existants */}
-              {pins.map((pin) => (
+              {/* Pins existants — ceux de la carte affichée */}
+              {visiblePins.map((pin) => (
                 <PinMarker
                   key={pin.id}
                   pin={pin}
                   isSelected={selectedPin?.id === pin.id}
                   isEditMode={isEditMode}
                   imgRef={imageRef}
-                  scale={scale}
-                  onPinClick={(cx, cy) => handlePinClick(cx, cy, pin)}
-                  onDelete={() => void handleDeletePin(pin)}
-                  onMoved={(x, y) => void handlePinMoved(pin, x, y)}
+                  onPinClick={handlePinClick}
+                  onDelete={handleDeletePin}
+                  onMoved={handlePinMoved}
                 />
               ))}
 
@@ -481,7 +909,7 @@ export function WorldMap({
                   style={{
                     left: `${pendingPin.x}%`,
                     top: `${pendingPin.y}%`,
-                    transform: `translate(-50%, -50%) scale(${1 / scale})`,
+                    transform: "translate(-50%, -50%) scale(var(--pin-inv-scale, 1))",
                     transformOrigin: "center center",
                   }}
                   onPointerDown={(e) => e.stopPropagation()}
@@ -548,15 +976,31 @@ export function WorldMap({
           key={selectedPin.id}
           pin={selectedPin}
           pos={popoverPos}
+          panelRef={popoverPanelRef}
+          wikiPages={wikiPages}
+          rooms={pinRooms.filter((r) => r.map_pin_id === selectedPin.id)}
+          maps={maps}
           isEditMode={isEditMode}
-          userId={userId}
           worldId={worldId}
-          onClose={() => { setSelectedPin(null); setPopoverPos(null); }}
+          onClose={closePopover}
           onUpdated={(updated) => {
             setPins((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
             setSelectedPin(updated);
           }}
           onDelete={() => void handleDeletePin(selectedPin)}
+          onOpenMap={(mapId) => selectMap(mapId)}
+        />
+      )}
+
+      {activeMap && (
+        <DeleteConfirmDialog
+          open={confirmDeleteMap}
+          onOpenChange={setConfirmDeleteMap}
+          title={t("deleteMapTitle", { label: mapLabel })}
+          description={t("deleteMapDesc")}
+          cancelLabel={tCommon("cancel")}
+          confirmLabel={tCommon("delete")}
+          onConfirm={() => { setConfirmDeleteMap(false); void handleDeleteMap(); }}
         />
       )}
 
@@ -579,4 +1023,15 @@ export function WorldMap({
       />
     </div>
   );
+}
+
+/**
+ * Ajoute une ligne à la liste, ou remplace celle qui porte déjà son
+ * identifiant. Sert aux épingles comme aux cartes : le temps réel renvoie à
+ * l'auteur ce qu'il vient d'insérer, déjà présent à l'écran.
+ */
+function mergeById<T extends { id: string }>(list: T[], item: T): T[] {
+  return list.some((x) => x.id === item.id)
+    ? list.map((x) => (x.id === item.id ? item : x))
+    : [...list, item];
 }
