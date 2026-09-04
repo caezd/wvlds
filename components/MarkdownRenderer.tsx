@@ -9,6 +9,7 @@ import remarkBreaks from "remark-breaks";
 import rehypeExternalLinks from "rehype-external-links";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 
+import { MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { transformStyledSpans, createFenceTracker } from "@/lib/textStyledSpans";
 import { highlightLexiconTerms } from "@/lib/lexiconHighlight";
@@ -33,6 +34,9 @@ type Props = {
    *  absent, ces liens sont rendus visuellement cassés plutôt que cliquables
    *  (contexte hors wiki, ex: un `wiki:` tapé à la main dans un message). */
   onWikiLink?: (slug: string, anchor?: string) => void;
+  /** Ouvre la carte sur un lieu — `[texte](map:id)`, voir lib/wikiLinks.ts.
+   *  Absent, le lien est rendu cassé, comme un `wiki:` sans preneur. */
+  onMapLink?: (pinId: string) => void;
   /** Lexique du monde (voir lib/lexiconHighlight.ts) — absent = pas de
    *  surlignage. Réservé aux pages du wiki, jamais aux messages de chat. */
   lexiconTerms?: WorldLexiconTerm[];
@@ -116,6 +120,7 @@ function urlTransform(url: string): string {
   if (url.startsWith("color:") && COLOR_HEX_RE.test(url.slice("color:".length))) return url;
   if (url === "underline:") return url;
   if (url.startsWith("wiki:")) return url;
+  if (url.startsWith("map:")) return url;
   if (url.startsWith("lexicon:")) return url;
   return defaultUrlTransform(url);
 }
@@ -264,10 +269,11 @@ export function MarkdownContent({
   allowImages = false,
   isMine = false,
   onWikiLink,
+  onMapLink,
   lexiconTerms,
   wikiPreview,
   onImageOpen,
-}: Pick<Props, "content" | "allowImages" | "isMine" | "onWikiLink" | "lexiconTerms" | "wikiPreview" | "onImageOpen">) {
+}: Pick<Props, "content" | "allowImages" | "isMine" | "onWikiLink" | "onMapLink" | "lexiconTerms" | "wikiPreview" | "onImageOpen">) {
   const schema = useMemo(() => {
     return {
       ...defaultSchema,
@@ -286,7 +292,7 @@ export function MarkdownContent({
       // (voir lib/textStyledSpans.ts) à travers les deux filtres.
       protocols: {
         ...defaultSchema.protocols,
-        href: [...(defaultSchema.protocols?.href ?? []), "color", "underline", "wiki", "lexicon"],
+        href: [...(defaultSchema.protocols?.href ?? []), "color", "underline", "wiki", "map", "lexicon"],
       },
     } as Parameters<typeof rehypeSanitize>[0];
   }, []);
@@ -436,6 +442,28 @@ export function MarkdownContent({
           </Popover>
         );
       }
+      if (hrefStr.startsWith("map:")) {
+        // Un lieu de la carte. L'épingle devant le texte dit où mène le lien
+        // — une page se lit, un lieu se regarde.
+        const pinId = hrefStr.slice("map:".length);
+        if (!pinId || !onMapLink) {
+          return (
+            <span className="cursor-not-allowed text-destructive underline decoration-dashed decoration-destructive/60">
+              {children}
+            </span>
+          );
+        }
+        return (
+          <button
+            type="button"
+            onClick={() => onMapLink(pinId)}
+            className="inline-flex items-center gap-0.5 underline decoration-dotted underline-offset-2 hover:opacity-80"
+          >
+            <MapPin aria-hidden className="h-3 w-3 shrink-0" />
+            {children}
+          </button>
+        );
+      }
       if (hrefStr.startsWith("wiki:")) {
         // `wiki:slug#section` vise une section ; `wiki:#section` reste dans la
         // page courante, où il n'y a rien à charger avant de défiler.
@@ -562,6 +590,7 @@ export default function MarkdownRenderer({
   allowImages = false,
   isMine = false,
   onWikiLink,
+  onMapLink,
   lexiconTerms,
   wikiPreview,
   onImageOpen,
@@ -573,6 +602,7 @@ export default function MarkdownRenderer({
         allowImages={allowImages}
         isMine={isMine}
         onWikiLink={onWikiLink}
+        onMapLink={onMapLink}
         lexiconTerms={lexiconTerms}
         wikiPreview={wikiPreview}
         onImageOpen={onImageOpen}

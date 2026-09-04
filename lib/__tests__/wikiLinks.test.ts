@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { resolveWikiLinks } from "@/lib/wikiLinks";
+import { resolveWikiLinks, splitMapLinkPrefix } from "@/lib/wikiLinks";
 
 const PAGES = [
   { title: "Accueil", slug: "accueil" },
@@ -116,5 +116,61 @@ describe("resolveWikiLinks — homonymes", () => {
   it("compare sans la casse quand une seule page porte ce titre", () => {
     const pages = [{ title: "Arkham", slug: "arkham" }];
     expect(resolveWikiLinks("[[arkham]]", pages)).toBe("[arkham](wiki:arkham)");
+  });
+});
+
+describe("resolveWikiLinks — [[lieu:…]]", () => {
+  // Un lieu de la carte se cite comme une page : la carte cesse d'être un
+  // dessin à part pour devenir quelque chose que le texte désigne.
+  const PINS = [
+    { id: "pin1", title: "Le port", map_id: "m1" },
+    { id: "pin2", title: "La tour", map_id: "m2" },
+  ];
+
+  it("résout un lieu connu en lien map:, sans le préfixe dans le libellé", () => {
+    expect(resolveWikiLinks("[[lieu:Le port]]", PAGES, PINS)).toBe("[Le port](map:pin1)");
+  });
+
+  it("accepte le préfixe dans les trois langues, et sans égard à la casse", () => {
+    expect(resolveWikiLinks("[[place:Le port]]", PAGES, PINS)).toBe("[Le port](map:pin1)");
+    expect(resolveWikiLinks("[[lugar:Le port]]", PAGES, PINS)).toBe("[Le port](map:pin1)");
+    expect(resolveWikiLinks("[[LIEU:le port]]", PAGES, PINS)).toBe("[le port](map:pin1)");
+  });
+
+  it("produit un lien cassé pour un lieu inconnu", () => {
+    expect(resolveWikiLinks("[[lieu:Innsmouth]]", PAGES, PINS)).toBe("[Innsmouth](map:)");
+  });
+
+  it("produit un lien cassé pour un titre porté par deux lieux", () => {
+    // Deux « Le port » sur deux cartes : la même règle que les pages homonymes.
+    const doublons = [...PINS, { id: "pin3", title: "Le port", map_id: "m2" }];
+    expect(resolveWikiLinks("[[lieu:Le port]]", PAGES, doublons)).toBe("[Le port](map:)");
+  });
+
+  it("ne confond pas un lieu et une page du même nom", () => {
+    const pages = [...PAGES, { title: "Le port", slug: "le-port" }];
+    expect(resolveWikiLinks("[[Le port]] et [[lieu:Le port]]", pages, PINS)).toBe(
+      "[Le port](wiki:le-port) et [Le port](map:pin1)",
+    );
+  });
+
+  it("laisse un [[lieu:]] vide tel quel", () => {
+    expect(resolveWikiLinks("[[lieu:]]", PAGES, PINS)).toBe("[[lieu:]]");
+  });
+
+  it("n'a pas besoin de lieux pour résoudre les pages", () => {
+    expect(resolveWikiLinks("[[Accueil]]", PAGES)).toBe("[Accueil](wiki:accueil)");
+  });
+});
+
+describe("splitMapLinkPrefix", () => {
+  it("sépare le préfixe tel qu'écrit du titre", () => {
+    expect(splitMapLinkPrefix("lieu:Le port")).toEqual({ prefix: "lieu:", title: "Le port" });
+    expect(splitMapLinkPrefix("Place:")).toEqual({ prefix: "Place:", title: "" });
+  });
+
+  it("ne voit pas de lieu dans un titre ordinaire", () => {
+    expect(splitMapLinkPrefix("Arkham")).toBeNull();
+    expect(splitMapLinkPrefix("Le lieu: dit")).toBeNull();
   });
 });

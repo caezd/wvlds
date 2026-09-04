@@ -23,6 +23,7 @@ vi.mock("@/components/providers/CurrentUserProvider", () => ({
 }));
 
 const PAGES = [{ title: "Arkham", slug: "arkham", is_folder: false }];
+const PINS = [{ id: "pin1", title: "Le port", map_id: "m1" }];
 
 /** Le strict nécessaire à une bulle : son texte, et à qui elle est. */
 function message(content: string) {
@@ -31,7 +32,8 @@ function message(content: string) {
 
 beforeEach(() => {
   pushMock.mockReset();
-  const mock = createSupabaseMock({ results: [{ data: PAGES, error: null }] });
+  // Les pages, puis les lieux : l'ordre des deux lectures du fournisseur.
+  const mock = createSupabaseMock({ results: [{ data: PAGES, error: null }, { data: PINS, error: null }] });
   vi.mocked(createClient).mockReturnValue(mock.client as never);
 });
 
@@ -68,5 +70,32 @@ describe("WikiLinkProvider", () => {
     // Le markdown brut n'est pas résolu : les crochets restent tels quels.
     expect(screen.getByText(/\[\[Arkham\]\]/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Arkham" })).toBeNull();
+  });
+});
+
+describe("WikiLinkProvider — [[lieu:…]]", () => {
+  it("rend un lieu cité dans un message cliquable, et ouvre la carte dessus", async () => {
+    render(
+      <WikiLinkProvider worldId="w1">
+        <ChatroomMessageBubble message={message("Rendez-vous au [[lieu:Le port]].")} isMine={false} />
+      </WikiLinkProvider>,
+    );
+
+    await userEvent.click(await screen.findByRole("button", { name: "Le port" }));
+
+    // La carte ET l'épingle : l'adresse sait ouvrir un lieu précis.
+    expect(pushMock).toHaveBeenCalledWith("/w/w1?view=map&map=m1&pin=pin1");
+  });
+
+  it("laisse un lieu inconnu cassé", async () => {
+    render(
+      <WikiLinkProvider worldId="w1">
+        <ChatroomMessageBubble message={message("Vers [[lieu:Innsmouth]].")} isMine={false} />
+      </WikiLinkProvider>,
+    );
+
+    await screen.findByText("Innsmouth");
+    expect(screen.queryByRole("button", { name: "Innsmouth" })).toBeNull();
+    expect(screen.getByText("Innsmouth").className).toContain("text-destructive");
   });
 });

@@ -67,6 +67,15 @@ vi.mock("@/components/worlds/wiki/WikiNotesPanel", () => ({
 // L'article propose désormais « Voir sur la carte » quand une épingle le
 // désigne : ce lien a besoin du routeur, et du drapeau qui gouverne la carte.
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+// Les lieux de la carte, pour les `[[lieu:…]]` : lus par un crochet à part,
+// qui décalerait sinon la file de résultats du simulacre.
+vi.mock("@/hooks/useMapLinkTargets", async importOriginal => ({
+  ...(await importOriginal<typeof import("@/hooks/useMapLinkTargets")>()),
+  useMapLinkTargets: () => [
+    { id: "pin1", title: "Le port", map_id: "m1" },
+    { id: "pin2", title: "La tour", map_id: "m1" },
+  ],
+}));
 vi.mock("@/components/providers/FeatureFlagsProvider", () => ({
   useFeatureFlags: () => ({ world_map: false }),
 }));
@@ -1128,6 +1137,26 @@ describe("WikiPageContent — autocomplétion des liens internes", () => {
 
     expect(screen.queryByRole("option")).toBeNull();
     expect(champ).toHaveValue("On va à [[Ark");
+  });
+
+  it("propose les lieux de la carte dès `[[lieu:`", async () => {
+    // Un lieu se cite comme une page, et se choisit de même : sans connaître
+    // son titre exact.
+    renderEnEdition();
+    await taper("[[lieu:");
+
+    const proposees = await screen.findAllByRole("option");
+    expect(proposees.map(o => o.textContent)).toEqual(["La tour", "Le port"]);
+  });
+
+  it("écrit le lieu choisi, préfixe compris", async () => {
+    renderEnEdition();
+    const champ = await taper("[[lieu:po");
+    await screen.findAllByRole("option");
+
+    await userEvent.keyboard("{Enter}");
+
+    expect(champ).toHaveValue("On va à [[lieu:Le port]]");
   });
 
   it("se referme quand plus aucune page ne correspond", async () => {
