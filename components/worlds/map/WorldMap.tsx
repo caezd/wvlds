@@ -8,7 +8,7 @@ import { MEDIA, useMediaQuery } from "@/hooks/useMediaQuery";
 import { useResetOnKeyChange } from "@/hooks/useResetOnKeyChange";
 import { useMapViewport } from "@/hooks/useMapViewport";
 // `Map` est renommée : l'icône masquait le `Map` natif.
-import { Check, Clock, List, Loader2, Map as MapIcon, MapPin, Pencil, Plus, Ruler, Trash2, Upload, X } from "lucide-react";
+import { Check, Clock, Hexagon, List, Loader2, Map as MapIcon, MapPin, Pencil, Plus, Ruler, Trash2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { cn } from "@/lib/utils";
@@ -22,6 +22,9 @@ import {
   createWorldMap,
   deleteMapPin,
   deleteWorldMap,
+  createMapRegion,
+  updateMapRegion,
+  deleteMapRegion,
   getMapPersona,
   getMyMapPersonas,
   getWorldMaps,
@@ -30,6 +33,7 @@ import {
   updateMapPin,
   updateWorldMap,
   type MapPersona,
+  type MapRegion,
   type MapPin as MapPinType,
   type WorldMapData,
 } from "@/app/actions/worldMap";
@@ -45,6 +49,9 @@ import { MapPlacesDrawer, MapPlacesPanel } from "./MapPlacesPanel";
 import { PinMarker } from "./PinMarker";
 import { PinPopover } from "./PinPopover";
 import { MeasureOverlay } from "./MeasureOverlay";
+import { RegionLayer } from "./RegionLayer";
+import { RegionPanel } from "./RegionPanel";
+import { MIN_REGION_POINTS, dedupeConsecutive, polygonCentroid } from "./geometry";
 import { ScaleBar } from "./ScaleBar";
 import { distanceBetween, formatDistance, type MapScale } from "./scale";
 import type { Point } from "./zoom";
@@ -55,7 +62,15 @@ import type { PinPopoverPos, PendingPin, PinRoom, WikiPageOption } from "./types
 import { ERR_NON_AUTHENTIFIE } from "@/lib/actionErrors";
 
 /** Cartes et épingles résolues côté serveur, quand l'onglet est ouvert d'emblée. */
-export type InitialWorldMap = { maps: WorldMapData[]; pins: MapPinType[]; personas: MapPersona[] };
+export type InitialWorldMap = {
+  maps: WorldMapData[];
+  pins: MapPinType[];
+  personas: MapPersona[];
+  regions: MapRegion[];
+};
+
+/** Les couleurs des régions, dans l'ordre où on les dessine. */
+const REGION_COLORS = ["#22c55e", "#3b82f6", "#f59e0b", "#ef4444", "#a855f7", "#14b8a6", "#ec4899", "#84cc16"];
 
 /** Une même référence pour « personne » : les marqueurs sont mémoïsés par identité. */
 const NOBODY: MapPersona[] = [];
@@ -109,6 +124,14 @@ export function WorldMap({
   // Les personas placés quelque part dans le monde, cartes confondues — et les
   // miens, placés ou non, pour les poser depuis un panneau.
   const [personas, setPersonas] = React.useState<MapPersona[]>(initialMap?.personas ?? []);
+  // Les régions, cartes confondues ; celle qu'on regarde ; le tracé en cours
+  // (`null` quand on ne dessine pas) ; et le polygone fermé qui attend son nom.
+  const [regions, setRegions] = React.useState<MapRegion[]>(initialMap?.regions ?? []);
+  const [selectedRegion, setSelectedRegion] = React.useState<MapRegion | null>(null);
+  const [draft, setDraft] = React.useState<Point[] | null>(null);
+  const [pendingRegion, setPendingRegion] = React.useState<{ points: Point[]; label: string } | null>(null);
+  const [creatingRegion, setCreatingRegion] = React.useState(false);
+  const drawing = draft !== null;
   const [myPersonas, setMyPersonas] = React.useState<MapPersona[]>([]);
   const [loading, setLoading] = React.useState(!initialMap);
   const [editMode, setEditMode] = React.useState(false);
@@ -164,6 +187,10 @@ export function WorldMap({
   );
   // Par lieu, avec un tableau par lieu qui ne change que si ses occupants
   // changent : c'est ce que `React.memo` compare sur chaque marqueur.
+  const visibleRegions = React.useMemo(
+    () => regions.filter((r) => r.map_id === activeMap?.id),
+    [regions, activeMap?.id],
+  );
   const personasByPin = React.useMemo(() => {
     const parLieu = new Map<string, MapPersona[]>();
     for (const persona of personas) {
@@ -260,12 +287,13 @@ export function WorldMap({
     let cancelled = false;
     (async () => {
       try {
-        const { maps: m, pins: p, personas: who } = await getWorldMaps(worldId);
+        const { maps: m, pins: p, personas: who, regions: r } = await getWorldMaps(worldId);
         if (!cancelled) {
           setMaps(m);
           setActiveMapId((prev) => prev ?? initialMapId ?? m[0]?.id ?? null);
           setPins(p);
           setPersonas(who);
+          setRegions(r);
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -311,9 +339,25 @@ export function WorldMap({
               const id = (payload.old as { id: string }).id;
               setMaps((prev) => prev.filter((m) => m.id !== id));
               setPins((prev) => prev.filter((p) => p.map_id !== id));
+              setRegions((prev) => prev.filter((r) => r.map_id !== id));
               return;
             }
             setMaps((prev) => mergeById(prev, payload.new as WorldMapData));
+          },
+        )
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "world_map_regions", filter: `world_id=eq.${worldId}` },
+          (payload: RT) => {
+            if (payload.eventType === "DELETE") {
+              const id = (payload.old as { id: string }).id;
+              setRegions((prev) => prev.filter((r) => r.id !== id));
+              setSelectedRegion((prev) => (prev?.id === id ? null : prev));
+              return;
+            }
+            const region = payload.new as MapRegion;
+            setRegions((prev) => mergeById(prev, region));
+            setSelectedRegion((prev) => (prev?.id === region.id ? region : prev));
           },
         )
         .on(
@@ -431,6 +475,9 @@ export function WorldMap({
     closePopover();
     setPendingPin(null);
     setMeasure(null);
+    setSelectedRegion(null);
+    setDraft(null);
+    setPendingRegion(null);
     writeUrl(mapId, null, mode);
   }, [closePopover, writeUrl]);
 
@@ -438,13 +485,23 @@ export function WorldMap({
   // main aux boîtes de dialogue empilées par-dessus (apparence de l'épingle,
   // confirmation de suppression) : elles se ferment les premières.
   React.useEffect(() => {
-    if (!selectedPin && !placesOpen && !measuring) return;
+    if (!selectedPin && !placesOpen && !measuring && !drawing && !pendingRegion && !selectedRegion) return;
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key !== "Escape" || e.defaultPrevented) return;
-      // Un cran à la fois : le panneau d'un lieu d'abord, puis le segment de
-      // la règle, puis la règle elle-même, la colonne enfin. Le tiroir, lui,
-      // s'en charge tout seul.
+      if (e.defaultPrevented) return;
+      // Entrée ferme le tracé en cours — sauf dans un champ, où elle valide.
+      if (e.key === "Enter" && drawing && !(e.target instanceof HTMLInputElement)) {
+        e.preventDefault();
+        finishDraft();
+        return;
+      }
+      if (e.key !== "Escape") return;
+      // Un cran à la fois : le panneau d'un lieu d'abord, puis le tracé ou
+      // la région ouverte, puis le segment de la règle, puis la règle
+      // elle-même, la colonne enfin. Le tiroir, lui, s'en charge tout seul.
       if (selectedPin) closePopover(true);
+      else if (pendingRegion) setPendingRegion(null);
+      else if (drawing) setDraft(null);
+      else if (selectedRegion) setSelectedRegion(null);
       else if (measuring) {
         if (measure) setMeasure(null);
         else setMeasuring(false);
@@ -453,7 +510,7 @@ export function WorldMap({
     }
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [selectedPin, placesOpen, grandEcran, closePopover, measuring, measure]);
+  });
 
   // Le panneau vient d'apparaître : sa hauteur réelle n'était pas connue quand
   // on l'a placé. On le repositionne avant la peinture — un effet de mise en
@@ -551,6 +608,10 @@ export function WorldMap({
     setPinRooms([]);
     setPersonas(initialMap?.personas ?? []);
     setMyPersonas([]);
+    setRegions(initialMap?.regions ?? []);
+    setSelectedRegion(null);
+    setDraft(null);
+    setPendingRegion(null);
     setMeasuring(false);
     setMeasure(null);
     setPreviousPin(null);
@@ -707,7 +768,88 @@ export function WorldMap({
     setMeasuring((v) => !v);
     setMeasure(null);
     setPendingPin(null);
+    setDraft(null);
+    setPendingRegion(null);
     closePopover();
+  }
+
+  /** L'outil de tracé : on pose des sommets jusqu'à fermer, ou abandonner. */
+  function toggleDrawing() {
+    setDraft((prev) => (prev === null ? [] : null));
+    setPendingRegion(null);
+    setPendingPin(null);
+    setSelectedRegion(null);
+    setMeasuring(false);
+    setMeasure(null);
+    closePopover();
+  }
+
+  /**
+   * Ferme le tracé : un double-clic pose deux fois le même sommet, et une
+   * main qui tremble en pose deux à un demi-pourcent — on les fond. En
+   * dessous de trois sommets, ce n'est pas encore une région.
+   */
+  function finishDraft() {
+    const points = dedupeConsecutive(draft ?? []);
+    if (points.length < MIN_REGION_POINTS) {
+      toast.error(t("minRegionPoints"));
+      return;
+    }
+    setDraft(null);
+    setPendingRegion({ points, label: "" });
+  }
+
+  async function handleCreateRegion() {
+    if (!pendingRegion || !pendingRegion.label.trim() || creatingRegion || !activeMap) return;
+    setCreatingRegion(true);
+    try {
+      const region = await createMapRegion(worldId, activeMap.id, {
+        label: pendingRegion.label.trim(),
+        points: pendingRegion.points,
+        color: REGION_COLORS[visibleRegions.length % REGION_COLORS.length],
+      });
+      setRegions((prev) => mergeById(prev, region));
+      setPendingRegion(null);
+      setSelectedRegion(region);
+    } catch {
+      toast.error(t("createRegionError"));
+    } finally {
+      setCreatingRegion(false);
+    }
+  }
+
+  function handleRegionClick(region: MapRegion) {
+    if (viewport.consumeDidPan() || drawing || measuring) return;
+    closePopover();
+    setPendingPin(null);
+    loadPopoverData();
+    setSelectedRegion((prev) => (prev?.id === region.id ? null : region));
+  }
+
+  /** Un sommet déplacé : la région suit tout de suite, le serveur ensuite. */
+  async function handleVertexMoved(region: MapRegion, index: number, point: Point) {
+    const points = region.points.map((p, i) => (i === index ? point : p));
+    const updated = { ...region, points };
+    setRegions((prev) => mergeById(prev, updated));
+    setSelectedRegion((prev) => (prev?.id === region.id ? updated : prev));
+    try {
+      await updateMapRegion(region.id, { points });
+    } catch {
+      toast.error(t("saveError"));
+      setRegions((prev) => mergeById(prev, region));
+      setSelectedRegion((prev) => (prev?.id === region.id ? region : prev));
+    }
+  }
+
+  async function handleDeleteRegion(region: MapRegion) {
+    try {
+      await deleteMapRegion(region.id);
+      setRegions((prev) => prev.filter((r) => r.id !== region.id));
+      setSelectedRegion(null);
+      toast.success(t("regionDeleted"));
+    } catch {
+      toast.error(t("deleteRegionError"));
+    }
   }
 
   // ── Clic sur la carte (mesurer, ou ajouter un pin si pas de drag) ────────
@@ -715,7 +857,15 @@ export function WorldMap({
     if (viewport.consumeDidPan()) return;
 
     if (pendingPin) { setPendingPin(null); return; }
+    if (pendingRegion) { setPendingRegion(null); return; }
     if (selectedPin) { closePopover(); return; }
+    if (selectedRegion) { setSelectedRegion(null); return; }
+
+    if (drawing) {
+      const p = pointOnImage(e);
+      if (p) setDraft((prev) => [...(prev ?? []), p]);
+      return;
+    }
 
     if (measuring) {
       const p = pointOnImage(e);
@@ -854,7 +1004,9 @@ export function WorldMap({
       className="flex h-full min-h-0 flex-1 flex-col"
       onClick={() => {
         if (pendingPin) setPendingPin(null);
+        if (pendingRegion) setPendingRegion(null);
         if (selectedPin) closePopover();
+        if (selectedRegion) setSelectedRegion(null);
       }}
     >
       <WorldPanelHeader
@@ -974,6 +1126,23 @@ export function WorldMap({
         {canEdit && isEditMode && activeMap?.image_url && (
           <button
             type="button"
+            aria-label={t("drawRegion")}
+            aria-pressed={drawing}
+            onClick={(e) => { e.stopPropagation(); toggleDrawing(); }}
+            className={cn(
+              "flex items-center gap-1.5 rounded-md px-2 py-1 text-xs transition-colors",
+              drawing
+                ? "bg-secondary text-foreground"
+                : "text-muted-foreground hover:bg-secondary hover:text-foreground",
+            )}
+          >
+            <Hexagon className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">{t("drawRegion")}</span>
+          </button>
+        )}
+        {canEdit && isEditMode && activeMap?.image_url && (
+          <button
+            type="button"
             aria-label={t("changeMap")}
             onClick={(e) => { e.stopPropagation(); mapFileInputRef.current?.click(); }}
             className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
@@ -1072,6 +1241,7 @@ export function WorldMap({
             className="relative flex-1 touch-none overflow-hidden select-none"
             {...viewport.pointerHandlers}
             onClick={handleContainerClick}
+            onDoubleClick={() => { if (drawing) finishDraft(); }}
           >
             {/* Enveloppe pan+zoom — transform-origin top-left ; la transformation
                 est écrite par le hook, pas par le rendu React. */}
@@ -1111,6 +1281,69 @@ export function WorldMap({
                 )}
                 style={{ userSelect: "none" }}
               />
+
+              {/* Les régions, sous les épingles : une surface ne cache pas un point. */}
+              {(visibleRegions.length > 0 || draft) && (
+                <RegionLayer
+                  regions={visibleRegions}
+                  selectedId={selectedRegion?.id ?? null}
+                  draft={draft}
+                  isEditMode={isEditMode}
+                  imgRef={imageRef}
+                  onSelect={handleRegionClick}
+                  onVertexMoved={(region, index, point) => void handleVertexMoved(region, index, point)}
+                />
+              )}
+
+              {/* Le polygone fermé attend son nom, au centre. */}
+              {pendingRegion && (() => {
+                const c = polygonCentroid(pendingRegion.points);
+                return (
+                  <div
+                    className="absolute z-20"
+                    style={{
+                      left: `${c.x}%`,
+                      top: `${c.y}%`,
+                      transform: "translate(-50%, -50%) scale(var(--pin-inv-scale, 1))",
+                      transformOrigin: "center center",
+                    }}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="flex items-center gap-1 whitespace-nowrap rounded-lg border border-border bg-background px-2 py-1.5 shadow-xl">
+                      <input
+                        autoFocus
+                        value={pendingRegion.label}
+                        aria-label={t("regionName")}
+                        placeholder={t("regionName")}
+                        onChange={(e) => setPendingRegion({ ...pendingRegion, label: e.target.value })}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") void handleCreateRegion();
+                          if (e.key === "Escape") setPendingRegion(null);
+                        }}
+                        className="w-40 rounded-md border border-border-soft bg-background px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-primary"
+                      />
+                      <button
+                        type="button"
+                        aria-label={tCommon("save")}
+                        disabled={!pendingRegion.label.trim() || creatingRegion}
+                        onClick={() => void handleCreateRegion()}
+                        className="rounded p-1 text-primary hover:bg-primary/10 disabled:opacity-50"
+                      >
+                        {creatingRegion ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={tCommon("cancel")}
+                        onClick={() => setPendingRegion(null)}
+                        className="rounded p-1 text-muted-foreground hover:bg-secondary"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Pins existants — ceux de la carte affichée */}
               {visiblePins.map((pin) => (
@@ -1204,10 +1437,26 @@ export function WorldMap({
             )}
 
             {/* Indice d'aide en mode édition (sticky sur le container) */}
-            {isEditMode && !pendingPin && (
+            {isEditMode && !pendingPin && !pendingRegion && (
               <div className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-4 py-1.5 text-xs text-white opacity-70">
-                {t("clickToAddPin")}
+                {drawing ? t("drawingRegion") : t("clickToAddPin")}
               </div>
+            )}
+
+            {/* Le panneau d'une région, dans le coin du cadre */}
+            {selectedRegion && !drawing && (
+              <RegionPanel
+                region={selectedRegion}
+                wikiPages={wikiPages}
+                isEditMode={isEditMode}
+                worldId={worldId}
+                onClose={() => setSelectedRegion(null)}
+                onUpdated={(region) => {
+                  setRegions((prev) => mergeById(prev, region));
+                  setSelectedRegion(region);
+                }}
+                onDelete={(region) => void handleDeleteRegion(region)}
+              />
             )}
           </div>
         )}

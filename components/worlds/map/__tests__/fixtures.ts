@@ -1,5 +1,5 @@
 import type { MapPin } from "@/app/actions/worldMap";
-import type { MapPersona, WorldMapData } from "@/app/actions/worldMap";
+import type { MapPersona, MapRegion, WorldMapData } from "@/app/actions/worldMap";
 
 /** Épingle de test — les champs qui comptent se passent en surcharge. */
 export function makePin(overrides: Partial<MapPin> = {}): MapPin {
@@ -53,6 +53,22 @@ export function makeMapPersona(overrides: Partial<MapPersona> = {}): MapPersona 
     avatar_url: null,
     frame: null,
     map_pin_id: "pin1",
+    ...overrides,
+  };
+}
+
+/** Une région — un carré au milieu de la carte, voir migration 157. */
+export function makeRegion(overrides: Partial<MapRegion> = {}): MapRegion {
+  return {
+    id: "reg1",
+    world_id: "w1",
+    map_id: "map1",
+    label: "Le royaume",
+    description: null,
+    color: "#22c55e",
+    points: [{ x: 20, y: 20 }, { x: 60, y: 20 }, { x: 60, y: 60 }, { x: 20, y: 60 }],
+    wiki_page_id: null,
+    sort_index: 0,
     ...overrides,
   };
 }

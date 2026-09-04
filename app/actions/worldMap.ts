@@ -47,6 +47,22 @@ export type MapPin = {
   exists_until: WorldTimelineDate | null;
 };
 
+/** Un point de la carte, en pourcentages de ses dimensions. */
+export type MapPoint = { x: number; y: number };
+
+/** Une région : un polygone nommé sur une carte — voir migration 157. */
+export type MapRegion = {
+  id: string;
+  world_id: string;
+  map_id: string;
+  label: string;
+  description: string | null;
+  color: string;
+  points: MapPoint[];
+  wiki_page_id: string | null;
+  sort_index: number;
+};
+
 /** Ce que la carte montre d'un persona : sa tête, et où il se trouve. */
 export type MapPersona = {
   id: string;
@@ -70,9 +86,9 @@ const MAP_PERSONA_SELECT = "id, user_id, name, avatar_url, map_pin_id, frame:ava
  */
 export async function getWorldMaps(
   worldId: string,
-): Promise<{ maps: WorldMapData[]; pins: MapPin[]; personas: MapPersona[] }> {
+): Promise<{ maps: WorldMapData[]; pins: MapPin[]; personas: MapPersona[]; regions: MapRegion[] }> {
   const supabase = await createClient();
-  const [{ data: maps }, { data: pins }, { data: personas }] = await Promise.all([
+  const [{ data: maps }, { data: pins }, { data: personas }, { data: regions }] = await Promise.all([
     supabase.from("world_maps").select("*").eq("world_id", worldId).order("sort_index"),
     supabase
       .from("world_map_pins")
@@ -88,11 +104,13 @@ export async function getWorldMaps(
       .eq("is_template", false)
       .is("deleted_at", null)
       .not("map_pin_id", "is", null),
+    supabase.from("world_map_regions").select("*").eq("world_id", worldId).order("sort_index"),
   ]);
   return {
     maps: (maps as WorldMapData[]) ?? [],
     pins: (pins as MapPin[]) ?? [],
     personas: (personas as unknown as MapPersona[]) ?? [],
+    regions: (regions as MapRegion[]) ?? [],
   };
 }
 
@@ -353,4 +371,47 @@ export async function deleteMapPin(pinId: string): Promise<void> {
   await removeStoredFiles(supabase, [
     (avant as { banner_url: string | null } | null)?.banner_url ?? null,
   ]);
+}
+
+// ── Régions ──────────────────────────────────────────────────
+
+export async function createMapRegion(
+  worldId: string,
+  mapId: string,
+  region: { label: string; points: MapPoint[]; color: string },
+): Promise<MapRegion> {
+  const supabase = await createClient();
+  await requireUser(supabase);
+
+  const { data, error } = await supabase
+    .from("world_map_regions")
+    .insert({ world_id: worldId, map_id: mapId, ...region })
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data as MapRegion;
+}
+
+export async function updateMapRegion(
+  regionId: string,
+  patch: Partial<Pick<MapRegion, "label" | "description" | "color" | "points" | "wiki_page_id" | "sort_index">>,
+): Promise<void> {
+  const supabase = await createClient();
+  await requireUser(supabase);
+
+  const { error } = await supabase
+    .from("world_map_regions")
+    .update({ ...patch, updated_at: new Date().toISOString() })
+    .eq("id", regionId);
+
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteMapRegion(regionId: string): Promise<void> {
+  const supabase = await createClient();
+  await requireUser(supabase);
+
+  const { error } = await supabase.from("world_map_regions").delete().eq("id", regionId);
+  if (error) throw new Error(error.message);
 }
