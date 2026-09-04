@@ -637,6 +637,11 @@
     "duplicateAction": "Dupliquer",
     "moveSuccess": "« {name} » déplacé vers {world}.",
     "duplicateSuccess": "« {name} » dupliqué vers {world}.",
+    "location": {
+      "label": "Emplacement sur la carte",
+      "none": "Nulle part",
+      "placeholder": "Choisir un lieu"
+    },
     "maritalStatus": {
       "label": "Statut marital",
       "none": "Non renseigné",
@@ -1284,6 +1289,13 @@
     }
   },
   "map": {
+    "whoIsHere": "Qui est ici",
+    "placePersona": "Y placer un persona",
+    "leavePlace": "Partir d’ici",
+    "personaPlaced": "{name} est ici.",
+    "personaLeft": "{name} est parti.",
+    "locationError": "Impossible de déplacer ce persona.",
+    "morePersonas": "+{count}",
     "widgetPlaces": "{count, plural, =0 {Aucun lieu} one {# lieu} other {# lieux}}",
     "playHere": "Jouer ici",
     "seeOnMap": "Voir sur la carte",

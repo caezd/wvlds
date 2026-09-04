@@ -637,6 +637,11 @@
     "duplicateAction": "Duplicate",
     "moveSuccess": "“{name}” moved to {world}.",
     "duplicateSuccess": "“{name}” duplicated to {world}.",
+    "location": {
+      "label": "Location on the map",
+      "none": "Nowhere",
+      "placeholder": "Choose a place"
+    },
     "maritalStatus": {
       "label": "Marital status",
       "none": "Not set",
@@ -1284,6 +1289,13 @@
     }
   },
   "map": {
+    "whoIsHere": "Who is here",
+    "placePersona": "Place a persona here",
+    "leavePlace": "Leave this place",
+    "personaPlaced": "{name} is here.",
+    "personaLeft": "{name} has left.",
+    "locationError": "Could not move this persona.",
+    "morePersonas": "+{count}",
     "widgetPlaces": "{count, plural, =0 {No place} one {# place} other {# places}}",
     "playHere": "Play here",
     "seeOnMap": "See on the map",

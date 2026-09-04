@@ -1,5 +1,5 @@
 import type { MapPin } from "@/app/actions/worldMap";
-import type { WorldMapData } from "@/app/actions/worldMap";
+import type { MapPersona, WorldMapData } from "@/app/actions/worldMap";
 
 /** Épingle de test — les champs qui comptent se passent en surcharge. */
 export function makePin(overrides: Partial<MapPin> = {}): MapPin {
@@ -39,3 +39,16 @@ export const WIKI_PAGES = [
   { id: "p1", title: "Arkham", slug: "arkham" },
   { id: "p2", title: "Innsmouth", slug: "innsmouth" },
 ];
+
+/** Persona posé sur un lieu — voir migration 154. */
+export function makeMapPersona(overrides: Partial<MapPersona> = {}): MapPersona {
+  return {
+    id: "per1",
+    user_id: "u1",
+    name: "Kael",
+    avatar_url: null,
+    frame: null,
+    map_pin_id: "pin1",
+    ...overrides,
+  };
+}

@@ -6,7 +6,13 @@ import { Layers, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
-import { type MapPin as MapPinType } from "@/app/actions/worldMap";
+import { AvatarWithFrame } from "@/components/avatars/AvatarWithFrame";
+import { type MapPersona, type MapPin as MapPinType } from "@/app/actions/worldMap";
+
+/** Une même référence pour « personne » : la mémoïsation compare par identité. */
+const NOBODY: MapPersona[] = [];
+/** Au-delà, on compte au lieu d'empiler — trois têtes disent déjà « il y a du monde ». */
+const AVATARS_SHOWN = 3;
 
 /**
  * Une épingle posée sur la carte.
@@ -25,6 +31,7 @@ export const PinMarker = React.memo(function PinMarker({
   isSelected,
   isEditMode,
   imgRef,
+  presentPersonas = NOBODY,
   onPinClick,
   onDelete,
   onMoved,
@@ -33,6 +40,8 @@ export const PinMarker = React.memo(function PinMarker({
   isSelected: boolean;
   isEditMode: boolean;
   imgRef: React.RefObject<HTMLImageElement | null>;
+  /** Les personas qui se trouvent ici — voir migration 154. */
+  presentPersonas?: MapPersona[];
   onPinClick: (pin: MapPinType) => void;
   onDelete: (pin: MapPinType) => void;
   onMoved: (pin: MapPinType, x: number, y: number) => void;
@@ -167,6 +176,27 @@ export const PinMarker = React.memo(function PinMarker({
         >
           <Layers className="h-2.5 w-2.5" />
         </span>
+      )}
+
+      {/* Qui est là. À droite du marqueur, hors de portée du pointeur : c'est
+          le marqueur qu'on clique, les têtes ne font qu'annoncer. */}
+      {presentPersonas.length > 0 && !isDragging && (
+        <div
+          role="group"
+          aria-label={t("whoIsHere")}
+          className="pointer-events-none absolute left-full top-1/2 ml-1 flex -translate-y-1/2 items-center -space-x-1.5"
+        >
+          {presentPersonas.slice(0, AVATARS_SHOWN).map((p) => (
+            <span key={p.id} data-persona-id={p.id} title={p.name} className="rounded-full ring-1 ring-background">
+              <AvatarWithFrame src={p.avatar_url} alt={p.name} fallback={p.name} size={18} frameUrl={p.frame?.asset_url} />
+            </span>
+          ))}
+          {presentPersonas.length > AVATARS_SHOWN && (
+            <span className="rounded-full bg-background px-1 text-[10px] font-medium text-foreground shadow">
+              {t("morePersonas", { count: presentPersonas.length - AVATARS_SHOWN })}
+            </span>
+          )}
+        </div>
       )}
 
       {/* Label au survol ou au focus clavier */}

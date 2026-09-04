@@ -11,6 +11,8 @@ import {
   createMapPin,
   updateMapPin,
   deleteMapPin,
+  setPersonaLocation,
+  getMyMapPersonas,
 } from "@/app/actions/worldMap";
 import { createClient } from "@/lib/supabase/server";
 import { ERR_NON_AUTHENTIFIE } from "@/lib/actionErrors";
@@ -21,16 +23,18 @@ const use = (mock: ReturnType<typeof createSupabaseMock>) =>
 beforeEach(() => vi.clearAllMocks());
 
 describe("getWorldMaps", () => {
-  it("retourne les cartes et les pins, avec fallbacks vides", async () => {
+  it("retourne les cartes, les pins et les personas placés, avec fallbacks vides", async () => {
     const maps = [
       { id: "m1", world_id: "w1", image_url: null, label: "Continent", sort_index: 0 },
       { id: "m2", world_id: "w1", image_url: null, label: "Donjon", sort_index: 1 },
     ];
     const pins = [{ id: "p1", world_id: "w1", map_id: "m1", title: "Port" }];
-    use(createSupabaseMock({ results: [{ data: maps }, { data: pins }] }));
+    const personas = [{ id: "per1", name: "Kael", map_pin_id: "p1" }];
+    use(createSupabaseMock({ results: [{ data: maps }, { data: pins }, { data: personas }] }));
     const res = await getWorldMaps("w1");
     expect(res.maps).toEqual(maps);
     expect(res.pins).toEqual(pins);
+    expect(res.personas).toEqual(personas);
   });
 
   it("retourne des listes vides quand rien n'existe", async () => {
@@ -38,6 +42,7 @@ describe("getWorldMaps", () => {
     const res = await getWorldMaps("w1");
     expect(res.maps).toEqual([]);
     expect(res.pins).toEqual([]);
+    expect(res.personas).toEqual([]);
   });
 });
 
@@ -49,6 +54,7 @@ describe("mutations carte — garde d'authentification", () => {
     ["createMapPin", () => createMapPin("w1", "m1", 1, 2, "Pin")],
     ["updateMapPin", () => updateMapPin("p1", { title: "x" })],
     ["deleteMapPin", () => deleteMapPin("p1")],
+    ["setPersonaLocation", () => setPersonaLocation("per1", "p1")],
   ])("%s lève si non connecté", async (_name, fn) => {
     use(createSupabaseMock({ user: null }));
     // Un CODE, pas une phrase : le message d'une exception finit dans un
@@ -261,5 +267,47 @@ describe("ménage du stockage", () => {
     use(mock);
 
     await expect(deleteWorldMap("m1")).resolves.toBeUndefined();
+  });
+});
+
+describe("setPersonaLocation", () => {
+  it("pose le persona sur le lieu", async () => {
+    const mock = createSupabaseMock({ user: { id: "u1" }, results: [{ error: null }] });
+    use(mock);
+    await setPersonaLocation("per1", "p1");
+    const b = mock.buildersFor("personas")[0];
+    expect(b.update).toHaveBeenCalledWith({ map_pin_id: "p1" });
+    expect(b.eq).toHaveBeenCalledWith("id", "per1");
+  });
+
+  it("le retire de la carte avec null", async () => {
+    const mock = createSupabaseMock({ user: { id: "u1" }, results: [{ error: null }] });
+    use(mock);
+    await setPersonaLocation("per1", null);
+    expect(mock.buildersFor("personas")[0].update).toHaveBeenCalledWith({ map_pin_id: null });
+  });
+
+  it("propage le refus de la RLS — le persona d'un autre ne bouge pas", async () => {
+    use(createSupabaseMock({ user: { id: "u1" }, results: [{ error: { message: "rls" } }] }));
+    await expect(setPersonaLocation("per-autrui", "p1")).rejects.toThrow("rls");
+  });
+});
+
+describe("getMyMapPersonas", () => {
+  it("ne rend rien sans session, sans lever", async () => {
+    // Un lecteur non connecté n'a pas de personas à poser : une liste vide
+    // suffit, une exception ferait échouer l'ouverture du panneau.
+    use(createSupabaseMock({ user: null }));
+    await expect(getMyMapPersonas("w1")).resolves.toEqual([]);
+  });
+
+  it("lit les miens dans ce monde", async () => {
+    const mock = createSupabaseMock({ user: { id: "u1" }, results: [{ data: [{ id: "per1", name: "Kael" }] }] });
+    use(mock);
+    const res = await getMyMapPersonas("w1");
+    expect(res).toEqual([{ id: "per1", name: "Kael" }]);
+    const b = mock.buildersFor("personas")[0];
+    expect(b.eq).toHaveBeenCalledWith("user_id", "u1");
+    expect(b.eq).toHaveBeenCalledWith("world_id", "w1");
   });
 });

@@ -7,6 +7,7 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
+import { setPersonaLocation } from "@/app/actions/worldMap";
 import { toWebP } from "@/lib/imageUtils";
 import { initials } from "@/lib/persona-display";
 import { cn } from "@/lib/utils";
@@ -22,7 +23,9 @@ import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -301,6 +304,93 @@ function FramePicker({
         </button>
       ))}
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Emplacement sur la carte du monde (migration 154)
+// ---------------------------------------------------------------------------
+
+type LieuChoisissable = { id: string; title: string; map_id: string };
+
+/**
+ * « Où se trouve-t-il ? » — le persona se pose sur un lieu de la carte.
+ *
+ * Même dessin que le statut marital : un `Select`, enregistré à la volée,
+ * rendu à sa valeur d'avant si le serveur refuse. Les lieux sont groupés par
+ * carte quand le monde en a plusieurs — deux « Le port » sur deux cartes
+ * seraient sinon indiscernables.
+ *
+ * Rien n'est rendu tant que le monde n'a aucun lieu : un choix vide n'est pas
+ * un choix.
+ */
+export function LocationPicker({
+  personaId,
+  supabase,
+  worldId,
+}: {
+  personaId: string;
+  supabase: ReturnType<typeof createClient>;
+  worldId: string;
+}) {
+  const t = useTranslations("personas.location");
+  const tPersonas = useTranslations("personas");
+  const [pinId, setPinId] = useState<string | null>(null);
+  const [maps, setMaps] = useState<{ id: string; label: string }[]>([]);
+  const [pins, setPins] = useState<LieuChoisissable[]>([]);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    let annule = false;
+    void (async () => {
+      const [personaRes, mapsRes, pinsRes] = await Promise.all([
+        supabase.from("personas").select("map_pin_id").eq("id", personaId).maybeSingle(),
+        supabase.from("world_maps").select("id, label").eq("world_id", worldId).order("sort_index"),
+        supabase.from("world_map_pins").select("id, title, map_id").eq("world_id", worldId).order("title"),
+      ]);
+      if (annule) return;
+      setPinId((personaRes.data as { map_pin_id: string | null } | null)?.map_pin_id ?? null);
+      setMaps((mapsRes.data as { id: string; label: string }[] | null) ?? []);
+      setPins((pinsRes.data as LieuChoisissable[] | null) ?? []);
+      setLoaded(true);
+    })();
+    return () => { annule = true; };
+  }, [personaId, worldId, supabase]);
+
+  async function move(next: string | null) {
+    const previous = pinId;
+    setPinId(next);
+    try {
+      await setPersonaLocation(personaId, next);
+    } catch (e) {
+      toast.error(tPersonas("saveFailed"), { description: e instanceof Error ? e.message : undefined });
+      setPinId(previous);
+    }
+  }
+
+  if (!loaded || pins.length === 0) return null;
+
+  return (
+    <Select value={pinId ?? "none"} onValueChange={(v) => void move(v === "none" ? null : v)}>
+      <SelectTrigger size="sm" className="w-auto min-w-48" aria-label={t("label")}>
+        <SelectValue placeholder={t("placeholder")} />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="none">{t("none")}</SelectItem>
+        {maps.map((carte) => {
+          const lieux = pins.filter((p) => p.map_id === carte.id);
+          if (lieux.length === 0) return null;
+          return (
+            <SelectGroup key={carte.id}>
+              {maps.length > 1 && <SelectLabel>{carte.label}</SelectLabel>}
+              {lieux.map((p) => (
+                <SelectItem key={p.id} value={p.id}>{p.title}</SelectItem>
+              ))}
+            </SelectGroup>
+          );
+        })}
+      </SelectContent>
+    </Select>
   );
 }
 
@@ -749,6 +839,12 @@ export function PersonaEditorContent({
                     initialSpouseId={initialSpousePersonaId ?? null}
                   />
                 </div>
+
+                {worldId && (
+                  <div className="mb-3">
+                    <LocationPicker personaId={personaId} supabase={supabase} worldId={worldId} />
+                  </div>
+                )}
 
               </div>
             </div>

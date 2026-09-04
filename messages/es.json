@@ -636,6 +636,11 @@
     "duplicateAction": "Duplicar",
     "moveSuccess": "«{name}» movido a {world}.",
     "duplicateSuccess": "«{name}» duplicado a {world}.",
+    "location": {
+      "label": "Ubicación en el mapa",
+      "none": "En ningún sitio",
+      "placeholder": "Elegir un lugar"
+    },
     "maritalStatus": {
       "label": "Estado civil",
       "none": "Sin especificar",
@@ -1284,6 +1289,13 @@
     }
   },
   "map": {
+    "whoIsHere": "Quién está aquí",
+    "placePersona": "Colocar un persona aquí",
+    "leavePlace": "Irse de aquí",
+    "personaPlaced": "{name} está aquí.",
+    "personaLeft": "{name} se ha ido.",
+    "locationError": "No se ha podido mover este persona.",
+    "morePersonas": "+{count}",
     "widgetPlaces": "{count, plural, =0 {Ningún lugar} one {# lugar} other {# lugares}}",
     "playHere": "Jugar aquí",
     "seeOnMap": "Ver en el mapa",
