@@ -9,6 +9,21 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Carte",
+    text: "« Jouer ici » : depuis un lieu de la carte, le composeur s’ouvre situé sur ce lieu.",
+  },
+  {
+    date: "2026-09",
+    tag: "Salons",
+    text: "Le centre de recherche fouille aussi les lieux de la carte, et ouvre la carte dessus.",
+  },
+  {
+    date: "2026-09",
+    tag: "Accueil",
+    text: "Un bloc « Carte » à placer sur l’accueil d’un monde : la carte en vignette, ses onglets, et le nombre de lieux.",
+  },
+  {
+    date: "2026-09",
+    tag: "Carte",
     text: "La carte se tient mieux sur téléphone : la liste des lieux s’y ouvre en tiroir, qu’on referme d’un balayage, l’en-tête garde ses commandes, et les épingles sont plus faciles à viser du doigt.",
   },
   {

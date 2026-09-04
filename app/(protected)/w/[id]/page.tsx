@@ -19,7 +19,7 @@ export default async function WorldPage({
   searchParams,
 }: {
   params: { id: string };
-  searchParams?: { view?: string; category?: string; page?: string; map?: string; pin?: string };
+  searchParams?: { view?: string; category?: string; page?: string; map?: string; pin?: string; play?: string };
 }) {
   const { id } = await params;
   const supabase = await createClient();
@@ -51,6 +51,8 @@ export default async function WorldPage({
   const initialWikiSlug = resolvedSearchParams?.page ?? null;
   const initialMapId = resolvedSearchParams?.map ?? null;
   const initialPinId = resolvedSearchParams?.pin ?? null;
+  // « Jouer ici » depuis la carte : le composeur s'ouvre sur ce lieu.
+  const initialPlayPinId = resolvedSearchParams?.play ?? null;
 
   return (
     <Suspense fallback={<PageSpinner />}>
@@ -63,6 +65,7 @@ export default async function WorldPage({
         initialWikiSlug={initialWikiSlug}
         initialMapId={initialMapId}
         initialPinId={initialPinId}
+        initialPlayPinId={initialPlayPinId}
       />
     </Suspense>
   );

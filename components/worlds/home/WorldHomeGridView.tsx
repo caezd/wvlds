@@ -12,6 +12,7 @@ import type { WorldTimelineConfig, WorldHomeRoom as Room } from "@/types/worlds"
 import type { ChatroomCategory } from "@/lib/currentRequest";
 import type { RecentPersona } from "./widgets/WorldRecentPersonasWidget";
 import type { WikiPage } from "./widgets/WorldWikiShortcutsWidget";
+import { WorldMapWidget, type MapWidgetMap } from "./widgets/WorldMapWidget";
 import {
   DEFAULT_HOME_GRID_GAP,
   HOME_GRID_COLS,
@@ -68,6 +69,7 @@ export function WorldHomeGridView({
   initialRooms,
   categories,
   widgetData = {},
+  initialComposerPinId,
   selectedCategoryId,
   onSelectCategory,
   onWikiLink,
@@ -85,7 +87,9 @@ export function WorldHomeGridView({
    *  « non fourni » de « aucune catégorie ». */
   categories?: ChatroomCategory[];
   /** Données des widgets résolues côté serveur. */
-  widgetData?: { recentPersonas?: RecentPersona[]; wikiPages?: WikiPage[] };
+  widgetData?: { recentPersonas?: RecentPersona[]; wikiPages?: WikiPage[]; maps?: MapWidgetMap[] };
+  /** Lieu sur lequel ouvrir le composeur d'emblée (« Jouer ici » depuis la carte). */
+  initialComposerPinId?: string | null;
   selectedCategoryId: string | null;
   onSelectCategory: (categoryId: string | null) => void;
   onWikiLink?: (slug: string) => void;
@@ -116,6 +120,7 @@ export function WorldHomeGridView({
             initialRooms,
             categories,
             widgetData,
+            initialComposerPinId,
             selectedCategoryId,
             onSelectCategory,
             onWikiLink,
@@ -135,7 +140,8 @@ function renderBlock(
     timelineConfig?: WorldTimelineConfig;
     initialRooms: Room[];
     categories: ChatroomCategory[] | undefined;
-    widgetData: { recentPersonas?: RecentPersona[]; wikiPages?: WikiPage[] };
+    widgetData: { recentPersonas?: RecentPersona[]; wikiPages?: WikiPage[]; maps?: MapWidgetMap[] };
+    initialComposerPinId?: string | null;
     selectedCategoryId: string | null;
     onSelectCategory: (categoryId: string | null) => void;
     onWikiLink?: (slug: string) => void;
@@ -194,7 +200,11 @@ function renderBlock(
       );
     case "composer":
       return (
-        <WorldChatComposer worldId={ctx.worldId} timelineConfig={ctx.timelineConfig} />
+        <WorldChatComposer
+          worldId={ctx.worldId}
+          timelineConfig={ctx.timelineConfig}
+          initialMapPinId={ctx.initialComposerPinId}
+        />
       );
     case "chatrooms":
       return (
@@ -228,6 +238,8 @@ function renderBlock(
           initialPersonas={ctx.widgetData.recentPersonas}
         />
       );
+    case "map":
+      return <WorldMapWidget worldId={ctx.worldId} initialMaps={ctx.widgetData.maps} />;
     case "timeline_shortcuts":
       return (
         <WorldTimelineShortcutsWidget

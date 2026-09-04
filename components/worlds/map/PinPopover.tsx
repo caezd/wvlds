@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
-  BookOpenText, Check, ImagePlus, Loader2, Map as MapIcon, MessagesSquare, Pencil, Trash2, Upload, X } from "lucide-react";
+  BookOpenText, Check, ImagePlus, Loader2, Map as MapIcon, MessagesSquare, Pencil, Play, Trash2, Upload, X } from "lucide-react";
 
 import { toWebP } from "@/lib/imageUtils";
 import { supabaseThumb } from "@/lib/storage";
@@ -35,6 +35,7 @@ export function PinPopover({
   rooms,
   maps,
   isEditMode,
+  canPost = false,
   worldId,
   onClose,
   onOpenMap,
@@ -53,6 +54,8 @@ export function PinPopover({
   /** Cartes du monde, pour choisir celle que ce lieu ouvre. */
   maps: WorldMapData[];
   isEditMode: boolean;
+  /** Peut ouvrir un salon : montre « Jouer ici ». */
+  canPost?: boolean;
   worldId: string;
   onClose: () => void;
   onUpdated: (updated: MapPinType) => void;
@@ -406,6 +409,18 @@ export function PinPopover({
               <MapIcon className="h-3.5 w-3.5" /> {t("openTargetMap")} : {linkedMap.label?.trim() || t("title")}
             </button>
           ) : null}
+
+          {/* Lancer une scène ici. Le composeur d'accueil sait situer un salon
+              (`map_pin_id`) ; il ne manquait que le chemin depuis le lieu. */}
+          {!editing && canPost && (
+            <button
+              type="button"
+              onClick={() => router.push(`/w/${worldId}?play=${pin.id}`)}
+              className="flex w-fit items-center gap-1.5 rounded-md border border-primary/40 bg-primary/10 px-2 py-1 text-xs font-medium text-primary hover:bg-primary/20"
+            >
+              <Play className="h-3.5 w-3.5" /> {t("playHere")}
+            </button>
+          )}
 
           {/* Ce qui se joue ici. Le lien `chatrooms.map_pin_id` existait déjà :
               seul le sens carte → salons manquait. */}

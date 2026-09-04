@@ -42,6 +42,7 @@ function monter(
   isEditMode = false,
   pos: PinPopoverPos = { left: 100, top: 100, placement: "above", arrowLeft: 170 },
   rooms: PinRoom[] = [],
+  canPost = false,
 ) {
   const mock = createSupabaseMock();
   vi.mocked(createClient).mockReturnValue(mock.client as never);
@@ -55,6 +56,7 @@ function monter(
       rooms={rooms}
       maps={CARTES}
       isEditMode={isEditMode}
+      canPost={canPost}
       worldId="w1"
       onClose={vi.fn()}
       onUpdated={onUpdated}
@@ -185,5 +187,22 @@ describe("PinPopover — ce qui se joue ici", () => {
   it("ne montre rien quand aucun salon ne s'y joue", () => {
     monter(makePin());
     expect(screen.queryByText("Ce qui s’y joue")).toBeNull();
+  });
+});
+
+describe("PinPopover — jouer ici", () => {
+  it("ouvre le composeur d'accueil sur ce lieu", async () => {
+    // Le composeur sait situer un salon depuis longtemps ; il ne manquait que
+    // le chemin depuis le lieu lui-même.
+    monter(makePin(), false, undefined, [], true);
+
+    await userEvent.click(screen.getByRole("button", { name: "Jouer ici" }));
+
+    expect(pushMock).toHaveBeenCalledWith("/w/w1?play=pin1");
+  });
+
+  it("ne le propose pas à qui ne peut pas ouvrir de salon", () => {
+    monter(makePin());
+    expect(screen.queryByRole("button", { name: "Jouer ici" })).toBeNull();
   });
 });

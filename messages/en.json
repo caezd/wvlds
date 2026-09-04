@@ -387,7 +387,8 @@
         "announcement": "Announcement",
         "wiki_shortcuts": "Wiki shortcuts",
         "personas_recent": "Recent personas",
-        "timeline_shortcuts": "Timeline shortcuts"
+        "timeline_shortcuts": "Timeline shortcuts",
+        "map": "Map"
       },
       "onlineCount": "{count, plural, one {# member online} other {# members online}}",
       "noneOnline": "No one online right now",
@@ -1002,7 +1003,8 @@
       "filterNo": "No",
       "clearFilters": "Clear filters",
       "applyFilters": "Apply filters",
-      "wikiResults": "In the wiki"
+      "wikiResults": "In the wiki",
+      "mapResults": "On the map"
     },
     "callout": {
       "title": "Callout",
@@ -1282,6 +1284,8 @@
     }
   },
   "map": {
+    "widgetPlaces": "{count, plural, =0 {No place} one {# place} other {# places}}",
+    "playHere": "Play here",
     "seeOnMap": "See on the map",
     "roomsAtPlace": "What happens here",
     "places": "Places",

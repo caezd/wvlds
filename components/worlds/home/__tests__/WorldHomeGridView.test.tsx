@@ -44,6 +44,14 @@ vi.mock("@/components/worlds/home/widgets/WorldRecentPersonasWidget", () => ({
   WorldRecentPersonasWidget: () => <div data-testid="personas_recent" />,
 }));
 
+const mapWidgetProps = vi.fn();
+vi.mock("@/components/worlds/home/widgets/WorldMapWidget", () => ({
+  WorldMapWidget: (props: Record<string, unknown>) => {
+    mapWidgetProps(props);
+    return <div data-testid="map" />;
+  },
+}));
+
 const timelineShortcutsProps = vi.fn();
 vi.mock("@/components/worlds/home/widgets/WorldTimelineShortcutsWidget", () => ({
   WorldTimelineShortcutsWidget: (props: Record<string, unknown>) => {
@@ -432,5 +440,20 @@ describe("WorldHomeGridView — hauteur des blocs à contenu libre", () => {
       <WorldHomeGridView {...baseProps([{ id: "a", type: "markdown", x: 0, y: 0, w: 12, content: "x" }])} />,
     );
     expect(screen.getByTestId("markdown").parentElement!.className).not.toContain("overflow-y-auto");
+  });
+});
+
+describe("WorldHomeGridView — bloc Carte", () => {
+  it("rend le bloc avec les cartes résolues côté serveur", () => {
+    const cartes = [{ id: "m1", label: "Hadea", image_url: null, pin_count: 2 }];
+    render(
+      <WorldHomeGridView
+        {...baseProps([{ id: "a", type: "widget", x: 0, y: 0, w: 12, widgetId: "map" }])}
+        widgetData={{ maps: cartes }}
+      />,
+    );
+
+    expect(screen.getByTestId("map")).toBeInTheDocument();
+    expect(mapWidgetProps).toHaveBeenCalledWith(expect.objectContaining({ worldId: "w1", initialMaps: cartes }));
   });
 });

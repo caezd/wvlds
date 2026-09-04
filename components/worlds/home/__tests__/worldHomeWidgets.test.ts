@@ -66,4 +66,9 @@ describe("resolveWorldHomeLayout", () => {
     expect(ALL_WORLD_HOME_WIDGETS).toContain("timeline_shortcuts");
     expect(DEFAULT_WORLD_HOME_LAYOUT).not.toContain("timeline_shortcuts");
   });
+
+  it("le bloc Carte est connu mais pas activé par défaut (opt-in)", () => {
+    expect(ALL_WORLD_HOME_WIDGETS).toContain("map");
+    expect(DEFAULT_WORLD_HOME_LAYOUT).not.toContain("map");
+  });
 });
