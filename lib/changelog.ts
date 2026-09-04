@@ -9,6 +9,16 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Carte",
+    text: "Qui est où : un persona peut se poser sur un lieu de la carte, depuis sa fiche ou depuis le panneau du lieu. Les marqueurs montrent qui s’y trouve.",
+  },
+  {
+    date: "2026-09",
+    tag: "Carte",
+    text: "Les lieux posés ou déplacés par d’autres apparaissent désormais sans recharger la page.",
+  },
+  {
+    date: "2026-09",
+    tag: "Carte",
     text: "« Jouer ici » : depuis un lieu de la carte, le composeur s’ouvre situé sur ce lieu.",
   },
   {

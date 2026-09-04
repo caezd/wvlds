@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
-  BookOpenText, Check, ImagePlus, Loader2, Map as MapIcon, MessagesSquare, Pencil, Play, Trash2, Upload, X } from "lucide-react";
+  BookOpenText, Check, ImagePlus, Loader2, LogOut, Map as MapIcon, MessagesSquare, Pencil, Play, Trash2, Upload, X } from "lucide-react";
 
 import { toWebP } from "@/lib/imageUtils";
 import { supabaseThumb } from "@/lib/storage";
@@ -17,7 +17,8 @@ import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import { ParagraphBlockEditor } from "@/components/chatrooms/composer/ParagraphBlockEditor";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
-import { updateMapPin, type MapPin as MapPinType, type WorldMapData } from "@/app/actions/worldMap";
+import { updateMapPin, type MapPersona, type MapPin as MapPinType, type WorldMapData } from "@/app/actions/worldMap";
+import { AvatarWithFrame } from "@/components/avatars/AvatarWithFrame";
 
 import { cn } from "@/lib/utils";
 import { FLECHE } from "./popoverPosition";
@@ -34,11 +35,14 @@ export function PinPopover({
   wikiPages,
   rooms,
   maps,
+  personasHere,
+  myPersonas,
   isEditMode,
   canPost = false,
   worldId,
   onClose,
   onOpenMap,
+  onPlacePersona,
   onUpdated,
   onDelete,
 }: {
@@ -53,6 +57,10 @@ export function PinPopover({
   rooms: PinRoom[];
   /** Cartes du monde, pour choisir celle que ce lieu ouvre. */
   maps: WorldMapData[];
+  /** Les personas qui se trouvent ici — le filtrage est fait par `WorldMap`. */
+  personasHere: MapPersona[];
+  /** Mes personas de ce monde : ceux que je peux poser ici, ou faire partir. */
+  myPersonas: MapPersona[];
   isEditMode: boolean;
   /** Peut ouvrir un salon : montre « Jouer ici ». */
   canPost?: boolean;
@@ -62,6 +70,8 @@ export function PinPopover({
   onDelete: () => void;
   /** Bascule sur la carte que ce lieu ouvre. */
   onOpenMap: (mapId: string) => void;
+  /** Pose un persona ici, ou l'en fait partir avec `null`. */
+  onPlacePersona: (personaId: string, pinId: string | null) => void;
 }) {
   const t = useTranslations("map");
   const tCommon = useTranslations("common");
@@ -420,6 +430,49 @@ export function PinPopover({
             >
               <Play className="h-3.5 w-3.5" /> {t("playHere")}
             </button>
+          )}
+
+          {/* Qui est là — et de quoi y venir. Les miens ont un bouton pour
+              repartir ; les autres ne se déplacent que par leur propriétaire. */}
+          {!editing && (personasHere.length > 0 || myPersonas.some(p => p.map_pin_id !== pin.id)) && (
+            <div className="flex flex-col gap-1">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                {t("whoIsHere")}
+              </p>
+              {personasHere.map(persona => {
+                const mien = myPersonas.some(p => p.id === persona.id);
+                return (
+                  <div key={persona.id} className="flex items-center gap-2 px-1 text-xs">
+                    <AvatarWithFrame src={persona.avatar_url} alt={persona.name} fallback={persona.name} size={22} frameUrl={persona.frame?.asset_url} />
+                    <span className="min-w-0 flex-1 truncate">{persona.name}</span>
+                    {mien && (
+                      <button
+                        type="button"
+                        aria-label={t("leavePlace")}
+                        title={t("leavePlace")}
+                        onClick={() => onPlacePersona(persona.id, null)}
+                        className="rounded p-0.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
+                      >
+                        <LogOut className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+              {myPersonas.some(p => p.map_pin_id !== pin.id) && (
+                <select
+                  value=""
+                  aria-label={t("placePersona")}
+                  onChange={e => { if (e.target.value) onPlacePersona(e.target.value, pin.id); }}
+                  className="rounded-md border border-border bg-background px-2 py-1 text-xs text-muted-foreground outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <option value="">{t("placePersona")}</option>
+                  {myPersonas.filter(p => p.map_pin_id !== pin.id).map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              )}
+            </div>
           )}
 
           {/* Ce qui se joue ici. Le lien `chatrooms.map_pin_id` existait déjà :
