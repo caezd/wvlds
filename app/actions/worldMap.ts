@@ -5,6 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { ERR_NON_AUTHENTIFIE } from "@/lib/actionErrors";
 import { storagePathFromUrl } from "@/lib/storage";
+import type { WorldTimelineDate } from "@/types/worlds";
 
 /** Espace de stockage des images de carte et des bannières de lieu. */
 const WORLDS_BUCKET = "worlds";
@@ -41,6 +42,9 @@ export type MapPin = {
   wiki_page_id: string | null;
   /** La carte que ce lieu ouvre — voir migration 153. */
   target_map_id: string | null;
+  /** Depuis quand, et jusqu'à quand, ce lieu existe — voir migration 156. */
+  exists_from: WorldTimelineDate | null;
+  exists_until: WorldTimelineDate | null;
 };
 
 /** Ce que la carte montre d'un persona : sa tête, et où il se trouve. */
@@ -304,7 +308,7 @@ export async function createMapPin(
 
 export async function updateMapPin(
   pinId: string,
-  patch: Partial<Pick<MapPin, "x" | "y" | "title" | "description" | "banner_url" | "color" | "icon" | "icon_color" | "border_color" | "border_style" | "wiki_page_id" | "target_map_id">>,
+  patch: Partial<Pick<MapPin, "x" | "y" | "title" | "description" | "banner_url" | "color" | "icon" | "icon_color" | "border_color" | "border_style" | "wiki_page_id" | "target_map_id" | "exists_from" | "exists_until">>,
 ): Promise<void> {
   const supabase = await createClient();
   await requireUser(supabase);

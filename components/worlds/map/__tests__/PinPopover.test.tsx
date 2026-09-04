@@ -286,3 +286,63 @@ describe("PinPopover — c'est loin ?", () => {
     expect(screen.getByText("À 250 km de La tour")).toBeInTheDocument();
   });
 });
+
+describe("PinPopover — dans le temps", () => {
+  const CHRONO = {
+    year_label: "An",
+    era_name: null,
+    month_names: ["Janvier", "Février", "Mars"],
+    current_year: 1327,
+    current_month: null,
+  };
+
+  function monterDate(p: MapPin, isEditMode = false) {
+    const onUpdated = vi.fn();
+    render(
+      <PinPopover
+        pin={p}
+        pos={{ left: 100, top: 100, placement: "above", arrowLeft: 170 }}
+        wikiPages={WIKI_PAGES}
+        rooms={[]}
+        maps={CARTES}
+        personasHere={[]}
+        myPersonas={[]}
+        onPlacePersona={vi.fn()}
+        timelineConfig={CHRONO}
+        isEditMode={isEditMode}
+        worldId="w1"
+        onClose={vi.fn()}
+        onUpdated={onUpdated}
+        onDelete={vi.fn()}
+        onOpenMap={vi.fn()}
+      />,
+    );
+    return onUpdated;
+  }
+
+  it("dit depuis quand et jusqu'à quand", () => {
+    monterDate(makePin({
+      exists_from: { year: 1200, month: null, day: null },
+      exists_until: { year: 1300, month: 2, day: 3 },
+    }));
+    expect(screen.getByText("De An 1200 à 3 Mars, An 1300")).toBeInTheDocument();
+  });
+
+  it("se tait pour un lieu de toujours", () => {
+    monterDate(makePin());
+    expect(screen.queryByText(/^De |^Depuis |^Jusqu/)).toBeNull();
+  });
+
+  it("prend une date de fondation en modifiant l'épingle", async () => {
+    const onUpdated = monterDate(makePin(), true);
+    await userEvent.click(await screen.findByRole("button", { name: "Modifier" }));
+    await userEvent.type(screen.getByRole("spinbutton", { name: "Existe depuis" }), "1200");
+    await userEvent.click(screen.getByRole("button", { name: "Enregistrer" }));
+
+    expect(updateMapPin).toHaveBeenCalledWith("pin1", expect.objectContaining({
+      exists_from: { year: 1200, month: null, day: null },
+      exists_until: null,
+    }));
+    expect(onUpdated).toHaveBeenCalledWith(expect.objectContaining({ exists_from: { year: 1200, month: null, day: null } }));
+  });
+});

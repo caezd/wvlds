@@ -46,3 +46,34 @@ export const REAL_MONTH_NAMES = [
   "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre",
 ];
 export const REAL_DAYS_PER_MONTH = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
+/**
+ * Compare deux dates de chronologie, à la finesse que TOUTES deux ont.
+ *
+ * « L'an 1200 » et « le 3 mars 1200 » sont la même époque : une date sans
+ * mois parle de toute l'année, et se compare donc à l'année seule. C'est ce
+ * qui permet de dire qu'un lieu fondé « en 1200 » existe bien « le 3 mars
+ * 1200 » — sans exiger de l'auteur qu'il connaisse le jour de la fondation.
+ */
+export function compareTimelineDates(a: WorldTimelineDate, b: WorldTimelineDate): -1 | 0 | 1 {
+  if (a.year !== b.year) return a.year < b.year ? -1 : 1;
+  if (a.month === null || b.month === null) return 0;
+  if (a.month !== b.month) return a.month < b.month ? -1 : 1;
+  if (a.day === null || b.day === null) return 0;
+  if (a.day !== b.day) return a.day < b.day ? -1 : 1;
+  return 0;
+}
+
+/**
+ * La date tombe-t-elle entre les deux bornes ? Une borne absente ne borne
+ * rien : « de toujours à toujours » est le cas d'un lieu sans dates.
+ */
+export function isWithinTimeline(
+  date: WorldTimelineDate,
+  from: WorldTimelineDate | null | undefined,
+  until: WorldTimelineDate | null | undefined,
+): boolean {
+  if (from && compareTimelineDates(date, from) < 0) return false;
+  if (until && compareTimelineDates(date, until) > 0) return false;
+  return true;
+}

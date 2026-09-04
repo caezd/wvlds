@@ -1289,6 +1289,14 @@
     }
   },
   "map": {
+    "epoch": "Displayed era",
+    "allTimes": "All eras",
+    "outOfTime": "Does not exist at this time",
+    "existsFrom": "Exists since",
+    "existsUntil": "Exists until",
+    "existsBetween": "From {from} to {until}",
+    "existsSince": "Since {from}",
+    "existsTill": "Until {until}",
     "measure": "Measure a distance",
     "measureHint": "Click a second point",
     "noScale": "Scale not set",

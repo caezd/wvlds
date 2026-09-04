@@ -8,7 +8,7 @@ import { MEDIA, useMediaQuery } from "@/hooks/useMediaQuery";
 import { useResetOnKeyChange } from "@/hooks/useResetOnKeyChange";
 import { useMapViewport } from "@/hooks/useMapViewport";
 // `Map` est renommée : l'icône masquait le `Map` natif.
-import { Check, List, Loader2, Map as MapIcon, MapPin, Pencil, Plus, Ruler, Trash2, Upload, X } from "lucide-react";
+import { Check, Clock, List, Loader2, Map as MapIcon, MapPin, Pencil, Plus, Ruler, Trash2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { cn } from "@/lib/utils";
@@ -48,6 +48,8 @@ import { MeasureOverlay } from "./MeasureOverlay";
 import { ScaleBar } from "./ScaleBar";
 import { distanceBetween, formatDistance, type MapScale } from "./scale";
 import type { Point } from "./zoom";
+import { isWithinTimeline } from "@/lib/worldTimeline";
+import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
 import { FLECHE, calcPopoverPos, pinAnchor } from "./popoverPosition";
 import type { PinPopoverPos, PendingPin, PinRoom, WikiPageOption } from "./types";
 import { ERR_NON_AUTHENTIFIE } from "@/lib/actionErrors";
@@ -67,9 +69,12 @@ export function WorldMap({
   initialMap,
   initialMapId,
   initialPinId,
+  timelineConfig = null,
 }: {
   worldId: string;
   canEdit: boolean;
+  /** La chronologie du monde, s'il en a une : la carte affiche alors une époque. */
+  timelineConfig?: WorldTimelineConfig | null;
   /** Peut ouvrir un salon — condition du bouton « Jouer ici » d'un lieu. */
   canPost?: boolean;
   /**
@@ -127,6 +132,15 @@ export function WorldMap({
   // Le lieu ouvert juste avant celui-ci, pour dire à quelle distance il est.
   const [previousPin, setPreviousPin] = React.useState<MapPinType | null>(null);
   const locale = useLocale();
+  // L'époque affichée : l'année courante du monde d'emblée, `null` pour tout
+  // voir. Les lieux qui n'existent pas à cette date s'estompent.
+  const [epoch, setEpoch] = React.useState<WorldTimelineDate | null>(() =>
+    timelineConfig ? { year: timelineConfig.current_year, month: null, day: null } : null,
+  );
+  const outOfTime = React.useCallback(
+    (pin: MapPinType) => !!epoch && !isWithinTimeline(epoch, pin.exists_from, pin.exists_until),
+    [epoch],
+  );
   // La liste des lieux est une colonne quand la place le permet, un tiroir
   // sinon. C'est un MONTAGE différent et non un simple masquage : une classe
   // Tailwind laisserait les deux coques dans l'arbre, avec deux champs de
@@ -889,6 +903,40 @@ export function WorldMap({
           )
         }
       >
+        {timelineConfig && activeMap?.image_url && (
+          <div
+            className="flex items-center gap-1 rounded-md px-1 text-xs text-muted-foreground"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Clock className="h-3.5 w-3.5 shrink-0" />
+            <input
+              type="number"
+              aria-label={t("epoch")}
+              placeholder={timelineConfig.year_label}
+              value={epoch?.year ?? ""}
+              onChange={(e) => {
+                const brut = e.target.value.trim();
+                if (brut === "") { setEpoch(null); return; }
+                const year = parseInt(brut, 10);
+                if (!Number.isNaN(year)) setEpoch({ year, month: null, day: null });
+              }}
+              className="h-7 w-16 rounded-md border border-border-soft bg-background px-1.5 text-xs text-foreground outline-none focus:ring-2 focus:ring-primary"
+            />
+            <button
+              type="button"
+              aria-label={t("allTimes")}
+              aria-pressed={epoch === null}
+              onClick={() => setEpoch(epoch ? null : { year: timelineConfig.current_year, month: null, day: null })}
+              className={cn(
+                "rounded-md px-1.5 py-1 transition-colors",
+                epoch === null ? "bg-secondary text-foreground" : "hover:bg-secondary hover:text-foreground",
+              )}
+            >
+              <span className="hidden sm:inline">{t("allTimes")}</span>
+              <span className="sm:hidden">∞</span>
+            </button>
+          </div>
+        )}
         {activeMap?.image_url && (
           <button
             type="button"
@@ -1073,6 +1121,7 @@ export function WorldMap({
                   isEditMode={isEditMode}
                   imgRef={imageRef}
                   presentPersonas={personasByPin.get(pin.id) ?? NOBODY}
+                  outOfTime={outOfTime(pin)}
                   onPinClick={handlePinClick}
                   onDelete={handleDeletePin}
                   onMoved={handlePinMoved}
@@ -1177,6 +1226,7 @@ export function WorldMap({
           personasHere={personasByPin.get(selectedPin.id) ?? NOBODY}
           myPersonas={myPersonas}
           distanceFrom={distanceFrom}
+          timelineConfig={timelineConfig}
           isEditMode={isEditMode}
           canPost={canPost}
           worldId={worldId}

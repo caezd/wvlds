@@ -139,3 +139,20 @@ describe("PinMarker — qui est là", () => {
     expect(screen.queryByRole("group", { name: "Qui est ici" })).toBeNull();
   });
 });
+
+describe("PinMarker — hors de son époque", () => {
+  it("s'estompe sans disparaître", () => {
+    // On voit qu'un lieu a existé, ou existera — et il reste ouvrable.
+    const { onPinClick } = monter({ outOfTime: true });
+    const marqueur = document.querySelector("[data-out-of-time]")!;
+    expect(marqueur).toHaveClass("opacity-30");
+    expect(marqueur).toHaveAttribute("title", "N’existe pas à cette époque");
+    screen.getByRole("button", { name: "Le port" }).click();
+    expect(onPinClick).toHaveBeenCalled();
+  });
+
+  it("n'a rien de particulier à son époque", () => {
+    monter();
+    expect(document.querySelector("[data-out-of-time]")).toBeNull();
+  });
+});

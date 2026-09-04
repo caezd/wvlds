@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
   clampDaysPerMonth,
+  compareTimelineDates,
+  isWithinTimeline,
   DEFAULT_DAYS_PER_MONTH,
   daysInMonth,
   formatTimelineLabel,
@@ -91,5 +93,39 @@ describe("clampDaysPerMonth", () => {
   it("retombe sur la valeur par défaut pour une entrée non finie (NaN, saisie vidée)", () => {
     expect(clampDaysPerMonth(Number.NaN)).toBe(DEFAULT_DAYS_PER_MONTH);
     expect(clampDaysPerMonth(Number.POSITIVE_INFINITY)).toBe(DEFAULT_DAYS_PER_MONTH);
+  });
+});
+
+describe("compareTimelineDates", () => {
+  it("ordonne par année, puis mois, puis jour", () => {
+    expect(compareTimelineDates({ year: 1200, month: 5, day: 3 }, { year: 1201, month: 0, day: 1 })).toBe(-1);
+    expect(compareTimelineDates({ year: 1200, month: 5, day: 3 }, { year: 1200, month: 2, day: 9 })).toBe(1);
+    expect(compareTimelineDates({ year: 1200, month: 5, day: 3 }, { year: 1200, month: 5, day: 4 })).toBe(-1);
+    expect(compareTimelineDates({ year: 1200, month: 5, day: 3 }, { year: 1200, month: 5, day: 3 })).toBe(0);
+  });
+
+  it("s'arrête à la finesse que toutes deux ont", () => {
+    // « L'an 1200 » et « le 3 mars 1200 » sont la même époque.
+    expect(compareTimelineDates({ year: 1200, month: null, day: null }, { year: 1200, month: 2, day: 3 })).toBe(0);
+    expect(compareTimelineDates({ year: 1200, month: 2, day: null }, { year: 1200, month: 2, day: 30 })).toBe(0);
+  });
+});
+
+describe("isWithinTimeline", () => {
+  const AN = (year: number) => ({ year, month: null, day: null });
+
+  it("tient entre deux bornes, bornes comprises", () => {
+    expect(isWithinTimeline(AN(1250), AN(1200), AN(1300))).toBe(true);
+    expect(isWithinTimeline(AN(1200), AN(1200), AN(1300))).toBe(true);
+    expect(isWithinTimeline(AN(1300), AN(1200), AN(1300))).toBe(true);
+    expect(isWithinTimeline(AN(1199), AN(1200), AN(1300))).toBe(false);
+    expect(isWithinTimeline(AN(1301), AN(1200), AN(1300))).toBe(false);
+  });
+
+  it("une borne absente ne borne rien", () => {
+    // Un lieu sans dates est de toujours à toujours.
+    expect(isWithinTimeline(AN(1), null, null)).toBe(true);
+    expect(isWithinTimeline(AN(5000), AN(1200), null)).toBe(true);
+    expect(isWithinTimeline(AN(-3000), undefined, AN(1300))).toBe(true);
   });
 });
