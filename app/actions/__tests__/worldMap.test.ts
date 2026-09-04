@@ -13,6 +13,9 @@ import {
   deleteMapPin,
   setPersonaLocation,
   getMyMapPersonas,
+  createMapRegion,
+  updateMapRegion,
+  deleteMapRegion,
 } from "@/app/actions/worldMap";
 import { createClient } from "@/lib/supabase/server";
 import { ERR_NON_AUTHENTIFIE } from "@/lib/actionErrors";
@@ -23,18 +26,20 @@ const use = (mock: ReturnType<typeof createSupabaseMock>) =>
 beforeEach(() => vi.clearAllMocks());
 
 describe("getWorldMaps", () => {
-  it("retourne les cartes, les pins et les personas placés, avec fallbacks vides", async () => {
+  it("retourne les cartes, les pins, les personas placés et les régions, avec fallbacks vides", async () => {
     const maps = [
       { id: "m1", world_id: "w1", image_url: null, label: "Continent", sort_index: 0 },
       { id: "m2", world_id: "w1", image_url: null, label: "Donjon", sort_index: 1 },
     ];
     const pins = [{ id: "p1", world_id: "w1", map_id: "m1", title: "Port" }];
     const personas = [{ id: "per1", name: "Kael", map_pin_id: "p1" }];
-    use(createSupabaseMock({ results: [{ data: maps }, { data: pins }, { data: personas }] }));
+    const regions = [{ id: "r1", map_id: "m1", label: "Le royaume", points: [] }];
+    use(createSupabaseMock({ results: [{ data: maps }, { data: pins }, { data: personas }, { data: regions }] }));
     const res = await getWorldMaps("w1");
     expect(res.maps).toEqual(maps);
     expect(res.pins).toEqual(pins);
     expect(res.personas).toEqual(personas);
+    expect(res.regions).toEqual(regions);
   });
 
   it("retourne des listes vides quand rien n'existe", async () => {
@@ -43,6 +48,7 @@ describe("getWorldMaps", () => {
     expect(res.maps).toEqual([]);
     expect(res.pins).toEqual([]);
     expect(res.personas).toEqual([]);
+    expect(res.regions).toEqual([]);
   });
 });
 
@@ -55,6 +61,9 @@ describe("mutations carte — garde d'authentification", () => {
     ["updateMapPin", () => updateMapPin("p1", { title: "x" })],
     ["deleteMapPin", () => deleteMapPin("p1")],
     ["setPersonaLocation", () => setPersonaLocation("per1", "p1")],
+    ["createMapRegion", () => createMapRegion("w1", "m1", { label: "x", points: [], color: "#000" })],
+    ["updateMapRegion", () => updateMapRegion("r1", { label: "x" })],
+    ["deleteMapRegion", () => deleteMapRegion("r1")],
   ])("%s lève si non connecté", async (_name, fn) => {
     use(createSupabaseMock({ user: null }));
     // Un CODE, pas une phrase : le message d'une exception finit dans un
@@ -309,5 +318,47 @@ describe("getMyMapPersonas", () => {
     const b = mock.buildersFor("personas")[0];
     expect(b.eq).toHaveBeenCalledWith("user_id", "u1");
     expect(b.eq).toHaveBeenCalledWith("world_id", "w1");
+  });
+});
+
+describe("régions", () => {
+  const POINTS = [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 5, y: 10 }];
+
+  it("crée une région sur sa carte et la retourne", async () => {
+    const region = { id: "r1", world_id: "w1", map_id: "m1", label: "Le royaume", points: POINTS, color: "#22c55e" };
+    const mock = createSupabaseMock({ user: { id: "u1" }, results: [{ data: region }] });
+    use(mock);
+    const res = await createMapRegion("w1", "m1", { label: "Le royaume", points: POINTS, color: "#22c55e" });
+    expect(res).toEqual(region);
+    expect(mock.buildersFor("world_map_regions")[0].insert).toHaveBeenCalledWith({
+      world_id: "w1",
+      map_id: "m1",
+      label: "Le royaume",
+      points: POINTS,
+      color: "#22c55e",
+    });
+  });
+
+  it("met à jour la région visée, et elle seule", async () => {
+    const mock = createSupabaseMock({ user: { id: "u1" }, results: [{ error: null }] });
+    use(mock);
+    await updateMapRegion("r1", { points: POINTS });
+    const b = mock.buildersFor("world_map_regions")[0];
+    expect(b.update).toHaveBeenCalledWith(expect.objectContaining({ points: POINTS }));
+    expect(b.eq).toHaveBeenCalledWith("id", "r1");
+  });
+
+  it("supprime par id", async () => {
+    const mock = createSupabaseMock({ user: { id: "u1" }, results: [{ error: null }] });
+    use(mock);
+    await deleteMapRegion("r1");
+    const b = mock.buildersFor("world_map_regions")[0];
+    expect(b.delete).toHaveBeenCalled();
+    expect(b.eq).toHaveBeenCalledWith("id", "r1");
+  });
+
+  it("propage l'erreur Supabase", async () => {
+    use(createSupabaseMock({ user: { id: "u1" }, results: [{ error: { message: "rls" } }] }));
+    await expect(updateMapRegion("r1", { label: "x" })).rejects.toThrow("rls");
   });
 });

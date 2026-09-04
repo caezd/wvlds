@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import { WorldMap } from "@/components/worlds/map/WorldMap";
 import { updateWorldMap } from "@/app/actions/worldMap";
 import { MEDIA } from "@/hooks/useMediaQuery";
-import { makeMap, makeMapPersona, makePin } from "./fixtures";
+import { makeMap, makeMapPersona, makePin, makeRegion } from "./fixtures";
 
 // ──────────────────────────────────────────────────────────────────────────
 // Trois promesses de la carte, chacune tenue en défaut avant ce fichier :
@@ -25,11 +25,17 @@ vi.mock("@/lib/supabase/client", () => ({ createClient: vi.fn() }));
 
 const getWorldMaps = vi.hoisted(() => vi.fn());
 const getMapPersona = vi.hoisted(() => vi.fn());
+const createMapRegion = vi.hoisted(() => vi.fn());
+const updateMapRegion = vi.hoisted(() => vi.fn(async () => {}));
+const deleteMapRegion = vi.hoisted(() => vi.fn(async () => {}));
 const setPersonaLocation = vi.hoisted(() => vi.fn(async () => {}));
 vi.mock("@/app/actions/worldMap", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/app/actions/worldMap")>()),
   getWorldMaps,
   getMapPersona,
+  createMapRegion,
+  updateMapRegion,
+  deleteMapRegion,
   getMyMapPersonas: vi.fn(async () => []),
   setPersonaLocation,
   createMapPin: vi.fn(),
@@ -51,6 +57,15 @@ vi.mock("@/components/worlds/map/PinPopover", () => ({
   ),
 }));
 
+vi.mock("@/components/worlds/map/RegionPanel", () => ({
+  RegionPanel: ({ region, onDelete }: { region: { id: string; label: string }; onDelete: (r: unknown) => void }) => (
+    <div data-testid="region-panel">
+      {region.label}
+      <button type="button" onClick={() => onDelete(region)}>Supprimer cette région</button>
+    </div>
+  ),
+}));
+
 // L'icône est le seul enfant qu'un marqueur rende à chaque fois : compter ses
 // rendus, c'est compter ceux des marqueurs — et donc savoir si `React.memo`
 // sert à quelque chose ou n'est qu'une décoration.
@@ -65,6 +80,7 @@ type CarteInitiale = {
   maps: ReturnType<typeof makeMap>[];
   pins: ReturnType<typeof makePin>[];
   personas?: ReturnType<typeof makeMapPersona>[];
+  regions?: ReturnType<typeof makeRegion>[];
 } | null;
 
 function monter(
@@ -79,7 +95,7 @@ function monter(
     <WorldMap
       worldId={worldId}
       canEdit
-      initialMap={initialMap ? { personas: [], ...initialMap } : initialMap}
+      initialMap={initialMap ? { personas: [], regions: [], ...initialMap } : initialMap}
       {...adresse}
     />
   );
@@ -89,7 +105,7 @@ function monter(
     /** Rejoue le rendu avec un autre monde, comme une navigation client. */
     changerDeMonde: (id: string, carte: CarteInitiale) =>
       rerender(
-        <WorldMap worldId={id} canEdit initialMap={carte ? { personas: [], ...carte } : carte} />,
+        <WorldMap worldId={id} canEdit initialMap={carte ? { personas: [], regions: [], ...carte } : carte} />,
       ),
   };
 }
@@ -117,7 +133,7 @@ describe("WorldMap — données servies par le serveur", () => {
   });
 
   it("charge la carte elle-même quand l'onglet s'ouvre côté client", async () => {
-    getWorldMaps.mockResolvedValue({ maps: [makeMap()], pins: [makePin()], personas: [] });
+    getWorldMaps.mockResolvedValue({ maps: [makeMap()], pins: [makePin()], personas: [], regions: [] });
     monter(null);
 
     expect(getWorldMaps).toHaveBeenCalledWith("w1");
@@ -838,7 +854,7 @@ describe("WorldMap — l'époque affichée", () => {
         worldId="w1"
         canEdit
         timelineConfig={CHRONO}
-        initialMap={{ maps: [makeMap()], pins: [RUINE, VILLE, TOUJOURS], personas: [] }}
+        initialMap={{ maps: [makeMap()], pins: [RUINE, VILLE, TOUJOURS], personas: [], regions: [] }}
       />,
     );
   }
@@ -873,5 +889,155 @@ describe("WorldMap — l'époque affichée", () => {
     monter({ maps: [makeMap()], pins: [RUINE] });
     expect(screen.queryByRole("spinbutton", { name: "Époque affichée" })).toBeNull();
     expect(estompes()).toEqual([]);
+  });
+});
+
+describe("WorldMap — les régions", () => {
+  // L'image fait 1000×500 à l'écran : un clic à `clientX` = 100 tombe à 10 %.
+  beforeEach(() => {
+    vi.spyOn(HTMLImageElement.prototype, "getBoundingClientRect").mockReturnValue({
+      left: 0, top: 0, width: 1000, height: 500, right: 1000, bottom: 500, x: 0, y: 0, toJSON() {},
+    } as DOMRect);
+  });
+  afterEach(() => { vi.restoreAllMocks(); });
+
+  function cadre() {
+    return screen.getByAltText("Carte du monde").parentElement!.parentElement!;
+  }
+
+  async function passerEnEdition() {
+    await userEvent.click(screen.getByRole("button", { name: "Modifier" }));
+  }
+
+  it("dessine les régions de la carte affichée, et elles seules", () => {
+    monter({
+      maps: [makeMap(), makeMap({ id: "map2", label: "Donjon", sort_index: 1 })],
+      pins: [],
+      regions: [makeRegion(), makeRegion({ id: "reg2", label: "La crypte", map_id: "map2" })],
+    });
+    expect(screen.getByRole("button", { name: "Le royaume" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "La crypte" })).toBeNull();
+  });
+
+  it("ouvre le panneau d'une région au clic, et le referme d'un clic sur la carte", async () => {
+    monter({ maps: [makeMap()], pins: [], regions: [makeRegion()] });
+
+    await userEvent.click(screen.getByRole("button", { name: "Le royaume" }));
+    expect(screen.getByTestId("region-panel")).toHaveTextContent("Le royaume");
+
+    fireEvent.click(cadre(), { clientX: 900, clientY: 400 });
+    expect(screen.queryByTestId("region-panel")).toBeNull();
+  });
+
+  it("trace une région en trois clics et Entrée, puis la nomme", async () => {
+    // Une épingle marque un point ; un royaume est une surface.
+    createMapRegion.mockResolvedValue(makeRegion({ id: "reg9", label: "La marche" }));
+    monter({ maps: [makeMap()], pins: [] });
+    await passerEnEdition();
+    await userEvent.click(screen.getByRole("button", { name: "Dessiner une région" }));
+
+    fireEvent.click(cadre(), { clientX: 100, clientY: 50 });
+    fireEvent.click(cadre(), { clientX: 500, clientY: 50 });
+    fireEvent.click(cadre(), { clientX: 300, clientY: 400 });
+    expect(document.querySelectorAll("[data-draft-vertex]")).toHaveLength(3);
+
+    await userEvent.keyboard("{Enter}");
+    await userEvent.type(screen.getByRole("textbox", { name: "Nom de la région" }), "La marche{Enter}");
+
+    await waitFor(() =>
+      expect(createMapRegion).toHaveBeenCalledWith("w1", "map1", {
+        label: "La marche",
+        points: [{ x: 10, y: 10 }, { x: 50, y: 10 }, { x: 30, y: 80 }],
+        color: "#22c55e",
+      }),
+    );
+    // La région vient d'être créée : elle est dessinée, et son panneau ouvert.
+    expect(await screen.findByRole("button", { name: "La marche" })).toBeInTheDocument();
+    expect(screen.getByTestId("region-panel")).toHaveTextContent("La marche");
+  });
+
+  it("refuse de fermer un tracé de moins de trois sommets", async () => {
+    monter({ maps: [makeMap()], pins: [] });
+    await passerEnEdition();
+    await userEvent.click(screen.getByRole("button", { name: "Dessiner une région" }));
+    fireEvent.click(cadre(), { clientX: 100, clientY: 50 });
+    fireEvent.click(cadre(), { clientX: 500, clientY: 50 });
+
+    await userEvent.keyboard("{Enter}");
+
+    expect(screen.queryByRole("textbox", { name: "Nom de la région" })).toBeNull();
+    expect(document.querySelectorAll("[data-draft-vertex]")).toHaveLength(2);
+  });
+
+  it("le double-clic ferme le tracé sans compter deux fois le dernier sommet", async () => {
+    monter({ maps: [makeMap()], pins: [] });
+    await passerEnEdition();
+    await userEvent.click(screen.getByRole("button", { name: "Dessiner une région" }));
+    fireEvent.click(cadre(), { clientX: 100, clientY: 50 });
+    fireEvent.click(cadre(), { clientX: 500, clientY: 50 });
+    fireEvent.click(cadre(), { clientX: 300, clientY: 400 });
+    // Le second clic du double-clic pose un sommet de plus, au même endroit.
+    fireEvent.click(cadre(), { clientX: 300, clientY: 400 });
+    fireEvent.doubleClick(cadre(), { clientX: 300, clientY: 400 });
+
+    expect(screen.getByRole("textbox", { name: "Nom de la région" })).toBeInTheDocument();
+    expect(document.querySelector("[data-region-draft]")).toBeNull();
+  });
+
+  it("Échap abandonne le tracé, puis range l'outil", async () => {
+    monter({ maps: [makeMap()], pins: [] });
+    await passerEnEdition();
+    await userEvent.click(screen.getByRole("button", { name: "Dessiner une région" }));
+    fireEvent.click(cadre(), { clientX: 100, clientY: 50 });
+
+    await userEvent.keyboard("{Escape}");
+    expect(document.querySelectorAll("[data-draft-vertex]")).toHaveLength(0);
+    expect(screen.getByRole("button", { name: "Dessiner une région" })).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("déplace un sommet et l'enregistre", async () => {
+    monter({ maps: [makeMap()], pins: [], regions: [makeRegion()] });
+    await passerEnEdition();
+    await userEvent.click(screen.getByRole("button", { name: "Le royaume" }));
+
+    const poignee = screen.getByRole("button", { name: "Sommet 1" });
+    fireEvent.pointerDown(poignee, { clientX: 200, clientY: 100, pointerId: 1 });
+    fireEvent.pointerMove(poignee, { clientX: 300, clientY: 150, pointerId: 1 });
+    fireEvent.pointerUp(poignee, { pointerId: 1 });
+
+    await waitFor(() =>
+      expect(updateMapRegion).toHaveBeenCalledWith("reg1", {
+        points: [{ x: 30, y: 30 }, { x: 60, y: 20 }, { x: 60, y: 60 }, { x: 20, y: 60 }],
+      }),
+    );
+  });
+
+  it("supprime une région depuis son panneau", async () => {
+    monter({ maps: [makeMap()], pins: [], regions: [makeRegion()] });
+    await userEvent.click(screen.getByRole("button", { name: "Le royaume" }));
+    await userEvent.click(screen.getByRole("button", { name: "Supprimer cette région" }));
+
+    await waitFor(() => expect(deleteMapRegion).toHaveBeenCalledWith("reg1"));
+    expect(screen.queryByRole("button", { name: "Le royaume" })).toBeNull();
+  });
+
+  it("voit arriver, changer et partir une région par le canal", () => {
+    const { mock } = monter({ maps: [makeMap()], pins: [] });
+    const emettreRegion = (payload: unknown) =>
+      act(() => {
+        mock.channelNamed(CANAL)?.emit(
+          (h) => h.type === "postgres_changes" && (h.config as { table?: string }).table === "world_map_regions",
+          payload,
+        );
+      });
+
+    emettreRegion({ eventType: "INSERT", new: makeRegion() });
+    expect(screen.getByRole("button", { name: "Le royaume" })).toBeInTheDocument();
+
+    emettreRegion({ eventType: "UPDATE", new: makeRegion({ label: "L'empire" }) });
+    expect(screen.getByRole("button", { name: "L'empire" })).toBeInTheDocument();
+
+    emettreRegion({ eventType: "DELETE", old: { id: "reg1" } });
+    expect(screen.queryByRole("button", { name: "L'empire" })).toBeNull();
   });
 });
