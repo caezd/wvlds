@@ -1,11 +1,12 @@
 import { StrictMode } from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { createSupabaseMock, type SupabaseMock } from "@/test/supabaseMock";
 import { createClient } from "@/lib/supabase/client";
 import { WorldMap } from "@/components/worlds/map/WorldMap";
+import { updateWorldMap } from "@/app/actions/worldMap";
 import { MEDIA } from "@/hooks/useMediaQuery";
 import { makeMap, makeMapPersona, makePin } from "./fixtures";
 
@@ -42,8 +43,11 @@ vi.mock("@/app/actions/worldMap", async (importOriginal) => ({
 // Le panneau d'un lieu tire tout l'éditeur de paragraphe et le rendu Markdown :
 // ce qui se vérifie ici est ce que la CARTE fait, pas ce qu'il affiche.
 vi.mock("@/components/worlds/map/PinPopover", () => ({
-  PinPopover: ({ pin }: { pin: { title: string } }) => (
-    <div data-testid="pin-popover">{pin.title}</div>
+  PinPopover: ({ pin, distanceFrom }: { pin: { title: string }; distanceFrom?: { distance: string } | null }) => (
+    <div data-testid="pin-popover">
+      {pin.title}
+      {distanceFrom && <span data-testid="pin-distance">{distanceFrom.distance}</span>}
+    </div>
   ),
 }));
 
@@ -702,5 +706,120 @@ describe("WorldMap — qui est où", () => {
     const { mock } = monter(AVEC_KAEL);
     emettrePersona(mock, { eventType: "DELETE", old: { id: "per1" } });
     expect(document.querySelector('[data-persona-id="per1"]')).toBeNull();
+  });
+});
+
+describe("WorldMap — la règle", () => {
+  const AVEC_ECHELLE = makeMap({ scale_width_units: 1000, scale_unit: "km" });
+
+  // L'image fait 1000×500 à l'écran : un clic à `clientX` = 100 tombe à 10 %.
+  beforeEach(() => {
+    vi.spyOn(HTMLImageElement.prototype, "getBoundingClientRect").mockReturnValue({
+      left: 0, top: 0, width: 1000, height: 500, right: 1000, bottom: 500, x: 0, y: 0, toJSON() {},
+    } as DOMRect);
+  });
+  afterEach(() => { vi.restoreAllMocks(); });
+
+  function cadre() {
+    return screen.getByAltText("Carte du monde").parentElement!.parentElement!;
+  }
+
+  async function sortirLaRegle() {
+    await userEvent.click(screen.getByRole("button", { name: "Mesurer une distance" }));
+  }
+
+  it("mesure entre deux clics, en unités du monde", async () => {
+    // Une carte sans échelle est un dessin ; avec, elle répond à « c'est loin ? ».
+    monter({ maps: [AVEC_ECHELLE], pins: [] });
+    await sortirLaRegle();
+
+    fireEvent.click(cadre(), { clientX: 100, clientY: 0 });
+    expect(screen.getByText("Cliquez un second point")).toBeInTheDocument();
+
+    fireEvent.click(cadre(), { clientX: 350, clientY: 0 });
+    // 25 % de 1 000 km.
+    expect(screen.getByText("250 km")).toBeInTheDocument();
+  });
+
+  it("avoue qu'elle ne sait pas, sans échelle", async () => {
+    monter({ maps: [makeMap()], pins: [] });
+    await sortirLaRegle();
+    fireEvent.click(cadre(), { clientX: 100, clientY: 0 });
+    fireEvent.click(cadre(), { clientX: 350, clientY: 0 });
+    expect(screen.getByText("Échelle non définie")).toBeInTheDocument();
+  });
+
+  it("s'accroche aux lieux plutôt que d'ouvrir leur panneau", async () => {
+    monter({ maps: [AVEC_ECHELLE], pins: [makePin({ x: 60, y: 0 })] });
+    await sortirLaRegle();
+
+    await userEvent.click(screen.getByRole("button", { name: "Le port" }));
+    expect(screen.queryByTestId("pin-popover")).toBeNull();
+
+    fireEvent.click(cadre(), { clientX: 350, clientY: 0 });
+    expect(screen.getByText("250 km")).toBeInTheDocument();
+  });
+
+  it("règle l'échelle depuis une distance connue, en édition", async () => {
+    vi.mocked(updateWorldMap).mockResolvedValue(makeMap({ scale_width_units: 200, scale_unit: "lieues" }));
+    monter({ maps: [makeMap()], pins: [] });
+    await userEvent.click(screen.getByRole("button", { name: "Modifier" }));
+    await sortirLaRegle();
+    fireEvent.click(cadre(), { clientX: 100, clientY: 0 });
+    fireEvent.click(cadre(), { clientX: 350, clientY: 0 });
+
+    await userEvent.type(screen.getByRole("spinbutton", { name: "Cette distance fait" }), "50");
+    await userEvent.type(screen.getByRole("textbox", { name: "Unité" }), "lieues{Enter}");
+
+    // 25 % de la largeur font 50 lieues : la carte en fait 200.
+    await waitFor(() =>
+      expect(updateWorldMap).toHaveBeenCalledWith("map1", { scale_width_units: 200, scale_unit: "lieues" }),
+    );
+  });
+
+  it("Échap efface le segment, puis range la règle", async () => {
+    monter({ maps: [AVEC_ECHELLE], pins: [] });
+    await sortirLaRegle();
+    fireEvent.click(cadre(), { clientX: 100, clientY: 0 });
+    fireEvent.click(cadre(), { clientX: 350, clientY: 0 });
+    expect(document.querySelectorAll("[data-measure-point]")).toHaveLength(2);
+
+    await userEvent.keyboard("{Escape}");
+    expect(document.querySelectorAll("[data-measure-point]")).toHaveLength(0);
+    expect(screen.getByRole("button", { name: "Mesurer une distance" })).toHaveAttribute("aria-pressed", "true");
+
+    await userEvent.keyboard("{Escape}");
+    expect(screen.getByRole("button", { name: "Mesurer une distance" })).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("dit au panneau d'un lieu à quelle distance est le précédent", async () => {
+    monter({
+      maps: [AVEC_ECHELLE],
+      pins: [makePin({ id: "pin1", title: "Le port", x: 10, y: 0 }), makePin({ id: "pin2", title: "La tour", x: 35, y: 0 })],
+    });
+
+    await userEvent.click(screen.getByRole("button", { name: "Le port" }));
+    expect(screen.queryByTestId("pin-distance")).toBeNull();
+
+    await userEvent.click(screen.getByRole("button", { name: "La tour" }));
+    expect(screen.getByTestId("pin-distance")).toHaveTextContent("250 km");
+  });
+});
+
+describe("WorldMap — la barre d'échelle", () => {
+  beforeEach(simulerMiseEnPage);
+  afterEach(restaurerMiseEnPage);
+
+  it("montre un nombre rond d'unités, une fois la carte posée", async () => {
+    // 2000×1000 dans 800×600 : la carte fait 1 200 px de large, pour 1 000 km.
+    // 1,2 px par km : 100 km font 120 px.
+    monter({ maps: [makeMap({ scale_width_units: 1000, scale_unit: "km" })], pins: [] });
+    const barre = await screen.findByRole("img", { name: "Échelle : 100 km" });
+    expect(barre.querySelector("[data-scale-bar]")).toHaveStyle({ width: "120px" });
+  });
+
+  it("n'apparaît pas sans échelle", () => {
+    monter({ maps: [makeMap()], pins: [] });
+    expect(screen.queryByRole("img", { name: /Échelle/ })).toBeNull();
   });
 });

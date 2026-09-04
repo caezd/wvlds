@@ -31,6 +31,8 @@ export function makeMap(overrides: Partial<WorldMapData> = {}): WorldMapData {
     image_url: "https://x.supabase.co/storage/v1/object/public/worlds/w1/map.webp",
     label: "Carte",
     sort_index: 0,
+    scale_width_units: null,
+    scale_unit: null,
     ...overrides,
   };
 }
