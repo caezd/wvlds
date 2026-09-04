@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Carte",
+    text: "« [[lieu:Le port]] » dans un message ou une page du wiki devient un lien qui ouvre la carte sur ce lieu. L’éditeur du wiki propose les lieux dès qu’on tape [[lieu:.",
+  },
+  {
+    date: "2026-09",
+    tag: "Carte",
     text: "Les lieux dans le temps : dans un monde à chronologie, un lieu prend une date de fondation et de disparition, et la carte affiche une époque — ce qui n’existe pas alors s’estompe.",
   },
   {

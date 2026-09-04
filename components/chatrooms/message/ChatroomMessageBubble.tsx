@@ -92,7 +92,7 @@ export function ChatroomMessageBubble({
     <div className={cn(proseClass)}>
       {parseDialogue(message.content).map((part, i) => {
         if (part.kind === "prose") {
-          return part.text ? <MarkdownContent key={i} content={wiki(part.text)} onWikiLink={wikiLinks?.onWikiLink} /> : null;
+          return part.text ? <MarkdownContent key={i} content={wiki(part.text)} onWikiLink={wikiLinks?.onWikiLink} onMapLink={wikiLinks?.onMapLink} /> : null;
         }
         const color = part.color ?? message.metadata?.bubbleColor;
         const bubble = (
@@ -106,7 +106,7 @@ export function ChatroomMessageBubble({
             )}
             style={color ? { backgroundColor: color + "33" } : undefined}
           >
-            <MarkdownContent content={wiki(part.speech)} onWikiLink={wikiLinks?.onWikiLink} />
+            <MarkdownContent content={wiki(part.speech)} onWikiLink={wikiLinks?.onWikiLink} onMapLink={wikiLinks?.onMapLink} />
           </div>
         );
         return (
@@ -135,7 +135,7 @@ export function ChatroomMessageBubble({
     </div>
   ) : message.content ? (
     <div className={proseClass}>
-      <MarkdownContent content={wiki(message.content)} onWikiLink={wikiLinks?.onWikiLink} />
+      <MarkdownContent content={wiki(message.content)} onWikiLink={wikiLinks?.onWikiLink} onMapLink={wikiLinks?.onMapLink} />
     </div>
   ) : null;
 

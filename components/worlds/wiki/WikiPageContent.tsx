@@ -22,7 +22,9 @@ import { toast } from "sonner";
 import { DB_TEXT_LIMITS } from "@/lib/textLimits";
 import { cn } from "@/lib/utils";
 import type { createClient } from "@/lib/supabase/client";
-import { resolveWikiLinks } from "@/lib/wikiLinks";
+import { resolveWikiLinks, splitMapLinkPrefix } from "@/lib/wikiLinks";
+import { mapLinkHref, useMapLinkTargets } from "@/hooks/useMapLinkTargets";
+import { useRouter } from "next/navigation";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { cropToWebP, firstImage, toWebP, type ZoneDeDecoupe } from "@/lib/imageUtils";
 import { ImageCropPicker } from "@/components/ui/image-crop-picker";
@@ -48,6 +50,7 @@ import {
   openLinkAt,
   splitLinkQuery,
   suggestedPages,
+  suggestedPins,
   suggestedSections,
 } from "@/lib/wikiLinkSuggest";
 import { extractHeadings } from "@/lib/wikiToc";
@@ -528,6 +531,19 @@ export function WikiPageContent({
   function linkSuggestions(query: string): LinkSuggestion[] {
     const { title, section } = splitLinkQuery(query);
 
+    // `[[lieu:` change de registre avant même le `#` : on cherche un lieu de
+    // la carte, et le préfixe s'écrit tel qu'il a été tapé.
+    const lieu = splitMapLinkPrefix(query);
+    if (lieu) {
+      return suggestedPins(pins, lieu.title).map(p => ({
+        id: p.id,
+        label: p.title,
+        icon: "map-pin",
+        insert: `${lieu.prefix}${p.title}`,
+        isSection: false,
+      }));
+    }
+
     if (section === null) {
       return suggestedPages(pages, title).map(p => ({
         id: p.id,
@@ -815,9 +831,18 @@ export function WikiPageContent({
       )
       : null;
 
+  // Les lieux de la carte, pour les `[[lieu:…]]` de l'article — et pour les
+  // proposer pendant qu'on écrit.
+  const pins = useMapLinkTargets(worldId);
+  const router = useRouter();
+  const onMapLink = React.useCallback((pinId: string) => {
+    const lieu = pins.find(p => p.id === pinId);
+    if (lieu) router.push(mapLinkHref(worldId, lieu));
+  }, [pins, router, worldId]);
+
   const resolvedContent = React.useMemo(
-    () => resolveWikiLinks(page.content ?? "", pages),
-    [page.content, pages],
+    () => resolveWikiLinks(page.content ?? "", pages, pins),
+    [page.content, pages, pins],
   );
   // Identité du texte rendu : elle pilote le remontage de la couche
   // d'annotations (voir WikiAnnotationLayer). Toute écriture du contenu passe
@@ -1080,9 +1105,10 @@ export function WikiPageContent({
                     {draft.trim()
                       ? (
                         <MarkdownRenderer
-                          content={resolveWikiLinks(draft, pages)}
+                          content={resolveWikiLinks(draft, pages, pins)}
                           allowImages
                           onWikiLink={onNavigate}
+                          onMapLink={onMapLink}
                           wikiPreview={linkPreviewOf}
                           onImageOpen={url => {
                             const index = articleImages.findIndex(image => image.url === url);
@@ -1328,6 +1354,7 @@ export function WikiPageContent({
                       content={resolvedContent}
                       allowImages
                       onWikiLink={onNavigate}
+                      onMapLink={onMapLink}
                       wikiPreview={linkPreviewOf}
                       onImageOpen={url => {
                         const index = articleImages.findIndex(image => image.url === url);

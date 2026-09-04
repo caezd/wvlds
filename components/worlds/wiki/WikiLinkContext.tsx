@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/client";
 import { resolveWikiLinks, type WikiLinkTarget } from "@/lib/wikiLinks";
+import { mapLinkHref, useMapLinkTargets } from "@/hooks/useMapLinkTargets";
 
 /**
  * Ce qu'il faut pour qu'un `[[lien]]` vive hors du wiki.
@@ -20,6 +21,8 @@ type WikiLinks = {
   resolve: (markdown: string) => string;
   /** Ouvre la page visée, dans le wiki du monde. */
   onWikiLink: (slug: string, anchor?: string) => void;
+  /** Ouvre la carte sur le lieu visé — `[[lieu:…]]`. */
+  onMapLink: (pinId: string) => void;
 };
 
 const WikiLinkContext = React.createContext<WikiLinks | null>(null);
@@ -55,17 +58,24 @@ export function WikiLinkProvider({
     })();
     return () => { cancelled = true; };
   }, [worldId]);
+  // Après les pages : la file de résultats du simulacre de tests suit l'ordre
+  // des requêtes, et c'est l'ordre qu'on lit ici.
+  const pins = useMapLinkTargets(worldId);
 
   const value = React.useMemo<WikiLinks>(
     () => ({
-      resolve: markdown => resolveWikiLinks(markdown, targets),
+      resolve: markdown => resolveWikiLinks(markdown, targets, pins),
       onWikiLink: (slug, anchor) => {
         const page = slug ? `&page=${encodeURIComponent(slug)}` : "";
         const hash = anchor ? `#${anchor}` : "";
         router.push(`/w/${worldId}?view=wiki${page}${hash}`);
       },
+      onMapLink: pinId => {
+        const lieu = pins.find(p => p.id === pinId);
+        if (lieu) router.push(mapLinkHref(worldId, lieu));
+      },
     }),
-    [targets, router, worldId],
+    [targets, pins, router, worldId],
   );
 
   return <WikiLinkContext.Provider value={value}>{children}</WikiLinkContext.Provider>;

@@ -152,3 +152,22 @@ export function suggestedSections<T extends { text: string }>(
     .slice(0, max)
     .map(({ heading }) => heading);
 }
+
+/**
+ * Lieux de la carte à proposer pour ce début de titre — même classement que
+ * les pages : ce qui commence par la requête devant ce qui la contient.
+ *
+ * Appelée quand la requête porte le préfixe d'un lieu (`lieu:`, voir
+ * `splitMapLinkPrefix`) : taper `[[lieu:` propose donc tous les lieux, et
+ * chaque lettre de plus resserre la liste.
+ */
+export function suggestedPins<T extends { title: string }>(pins: T[], query: string, max = 8): T[] {
+  const q = normalizeForSearch(query.trim());
+
+  return pins
+    .map(p => ({ pin: p, at: normalizeForSearch(p.title).indexOf(q) }))
+    .filter(({ at }) => at !== -1)
+    .sort((a, b) => a.at - b.at || a.pin.title.localeCompare(b.pin.title))
+    .slice(0, max)
+    .map(({ pin }) => pin);
+}

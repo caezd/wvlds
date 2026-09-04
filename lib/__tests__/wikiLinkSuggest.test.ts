@@ -7,6 +7,7 @@ import {
   openLinkAt,
   normalizeForSearch,
   suggestedPages,
+  suggestedPins,
 } from "@/lib/wikiLinkSuggest";
 
 /** `|` marque le curseur : plus lisible qu'un indice à compter. */
@@ -191,5 +192,21 @@ describe("suggestedSections", () => {
 
   it("propose tout dès le `#`", () => {
     expect(suggestedSections(TITRES, "")).toHaveLength(3);
+  });
+});
+
+describe("suggestedPins", () => {
+  const PINS = [{ title: "Le port" }, { title: "La tour du port" }, { title: "Arkham" }];
+
+  it("propose tous les lieux sans rien de tapé", () => {
+    expect(suggestedPins(PINS, "").map(p => p.title)).toEqual(["Arkham", "La tour du port", "Le port"]);
+  });
+
+  it("met devant ce qui commence par la requête", () => {
+    expect(suggestedPins(PINS, "port").map(p => p.title)).toEqual(["Le port", "La tour du port"]);
+  });
+
+  it("ignore la casse et les accents", () => {
+    expect(suggestedPins([{ title: "Élévation" }], "ele").map(p => p.title)).toEqual(["Élévation"]);
   });
 });
