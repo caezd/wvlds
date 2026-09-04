@@ -1,14 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import { MEDIA, useMediaQuery } from "@/hooks/useMediaQuery";
 import { useResetOnKeyChange } from "@/hooks/useResetOnKeyChange";
 import { useMapViewport } from "@/hooks/useMapViewport";
 // `Map` est renommée : l'icône masquait le `Map` natif.
-import { Check, List, Loader2, Map as MapIcon, MapPin, Pencil, Plus, Trash2, Upload, X } from "lucide-react";
+import { Check, List, Loader2, Map as MapIcon, MapPin, Pencil, Plus, Ruler, Trash2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { cn } from "@/lib/utils";
@@ -44,6 +44,10 @@ import { MAP_PANEL_ID, MapTabs, mapTabId } from "./MapTabs";
 import { MapPlacesDrawer, MapPlacesPanel } from "./MapPlacesPanel";
 import { PinMarker } from "./PinMarker";
 import { PinPopover } from "./PinPopover";
+import { MeasureOverlay } from "./MeasureOverlay";
+import { ScaleBar } from "./ScaleBar";
+import { distanceBetween, formatDistance, type MapScale } from "./scale";
+import type { Point } from "./zoom";
 import { FLECHE, calcPopoverPos, pinAnchor } from "./popoverPosition";
 import type { PinPopoverPos, PendingPin, PinRoom, WikiPageOption } from "./types";
 import { ERR_NON_AUTHENTIFIE } from "@/lib/actionErrors";
@@ -110,6 +114,19 @@ export function WorldMap({
   const [uploadingMap, setUploadingMap] = React.useState(false);
 
   const [placesOpen, setPlacesOpen] = React.useState(false);
+  // La règle : active ou non, et le segment en cours — `b` manque tant que le
+  // second point n'est pas posé. Une ref pour le clic sur une épingle, qui
+  // garde son identité d'un rendu à l'autre.
+  const [measuring, setMeasuring] = React.useState(false);
+  const measuringRef = React.useRef(false);
+  measuringRef.current = measuring;
+  const [measure, setMeasure] = React.useState<{ a: Point; b: Point | null } | null>(null);
+  // L'échelle courante de la vue, relevée à la fin de chaque geste : la barre
+  // d'échelle en dépend, et elle n'a pas à suivre le geste image par image.
+  const [viewScale, setViewScale] = React.useState(1);
+  // Le lieu ouvert juste avant celui-ci, pour dire à quelle distance il est.
+  const [previousPin, setPreviousPin] = React.useState<MapPinType | null>(null);
+  const locale = useLocale();
   // La liste des lieux est une colonne quand la place le permet, un tiroir
   // sinon. C'est un MONTAGE différent et non un simple masquage : une classe
   // Tailwind laisserait les deux coques dans l'arbre, avec deux champs de
@@ -161,7 +178,7 @@ export function WorldMap({
     viewKey: `${activeMap?.id ?? ""}:${activeMap?.image_url ?? ""}`,
     idleCursor: isEditMode ? "crosshair" : "grab",
     onPaint: () => repositionPopoverPanel(),
-    onSettle: () => syncPopoverPos(),
+    onSettle: (tr) => { syncPopoverPos(); setViewScale(tr.scale); },
   });
   const { imageRef, baseSize, centerOnPoint } = viewport;
 
@@ -373,6 +390,7 @@ export function WorldMap({
   // ── Ouvrir et fermer le panneau d'un lieu ─────────────────────
   const closePopover = React.useCallback((refocusPin = false) => {
     const id = selectedPinRef.current?.id;
+    if (selectedPinRef.current) setPreviousPin(selectedPinRef.current);
     setSelectedPin(null);
     setPopoverPos(null);
     if (id) writeUrl(activeMapRef.current?.id ?? null, null, "replace");
@@ -387,6 +405,7 @@ export function WorldMap({
 
   const openPopover = React.useCallback((pin: MapPinType, writeHistory = true) => {
     loadPopoverData();
+    if (selectedPinRef.current && selectedPinRef.current.id !== pin.id) setPreviousPin(selectedPinRef.current);
     setSelectedPin(pin);
     setPopoverPos(popoverPosFor(pin));
     setPendingPin(null);
@@ -397,6 +416,7 @@ export function WorldMap({
     setActiveMapId(mapId);
     closePopover();
     setPendingPin(null);
+    setMeasure(null);
     writeUrl(mapId, null, mode);
   }, [closePopover, writeUrl]);
 
@@ -404,17 +424,22 @@ export function WorldMap({
   // main aux boîtes de dialogue empilées par-dessus (apparence de l'épingle,
   // confirmation de suppression) : elles se ferment les premières.
   React.useEffect(() => {
-    if (!selectedPin && !placesOpen) return;
+    if (!selectedPin && !placesOpen && !measuring) return;
     function onKeyDown(e: KeyboardEvent) {
       if (e.key !== "Escape" || e.defaultPrevented) return;
-      // Un cran à la fois : le panneau d'un lieu d'abord, la colonne ensuite.
-      // Le tiroir, lui, s'en charge tout seul.
+      // Un cran à la fois : le panneau d'un lieu d'abord, puis le segment de
+      // la règle, puis la règle elle-même, la colonne enfin. Le tiroir, lui,
+      // s'en charge tout seul.
       if (selectedPin) closePopover(true);
+      else if (measuring) {
+        if (measure) setMeasure(null);
+        else setMeasuring(false);
+      }
       else if (grandEcran) setPlacesOpen(false);
     }
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [selectedPin, placesOpen, grandEcran, closePopover]);
+  }, [selectedPin, placesOpen, grandEcran, closePopover, measuring, measure]);
 
   // Le panneau vient d'apparaître : sa hauteur réelle n'était pas connue quand
   // on l'a placé. On le repositionne avant la peinture — un effet de mise en
@@ -512,6 +537,9 @@ export function WorldMap({
     setPinRooms([]);
     setPersonas(initialMap?.personas ?? []);
     setMyPersonas([]);
+    setMeasuring(false);
+    setMeasure(null);
+    setPreviousPin(null);
     popoverDataAskedRef.current = false;
     pendingFocusRef.current = null;
   });
@@ -643,24 +671,47 @@ export function WorldMap({
   // mémoïsation ne servait à rien — chaque changement d'état de la carte
   // re-rendait les N marqueurs, icône comprise.
 
-  // ── Clic sur la carte (ajouter un pin si pas de drag) ────────
+  /** Le point cliqué, en pourcentages de la carte — `null` hors de l'image. */
+  function pointOnImage(e: React.MouseEvent): Point | null {
+    const img = imageRef.current;
+    if (!img) return null;
+    // Le rectangle mesuré tient compte de la transformation : le pourcentage se
+    // lit directement, sans refaire le calcul du déplacement et de l'échelle.
+    const r = img.getBoundingClientRect();
+    const x = ((e.clientX - r.left) / r.width) * 100;
+    const y = ((e.clientY - r.top) / r.height) * 100;
+    if (!(x >= 0 && x <= 100 && y >= 0 && y <= 100)) return null;
+    return { x, y };
+  }
+
+  /** Premier point, second point — puis un troisième recommence un segment. */
+  const addMeasurePoint = React.useCallback((p: Point) => {
+    setMeasure((prev) => (prev && !prev.b ? { a: prev.a, b: p } : { a: p, b: null }));
+  }, []);
+
+  function toggleMeasuring() {
+    setMeasuring((v) => !v);
+    setMeasure(null);
+    setPendingPin(null);
+    closePopover();
+  }
+
+  // ── Clic sur la carte (mesurer, ou ajouter un pin si pas de drag) ────────
   function handleContainerClick(e: React.MouseEvent<HTMLDivElement>) {
     if (viewport.consumeDidPan()) return;
 
     if (pendingPin) { setPendingPin(null); return; }
     if (selectedPin) { closePopover(); return; }
 
-    if (!isEditMode) return;
+    if (measuring) {
+      const p = pointOnImage(e);
+      if (p) addMeasurePoint(p);
+      return;
+    }
 
-    const img = imageRef.current;
-    if (!img) return;
-    // Le rectangle mesuré tient compte de la transformation : le pourcentage se
-    // lit directement, sans refaire le calcul du déplacement et de l'échelle.
-    const r = img.getBoundingClientRect();
-    const x = ((e.clientX - r.left) / r.width) * 100;
-    const y = ((e.clientY - r.top) / r.height) * 100;
-    if (x < 0 || x > 100 || y < 0 || y > 100) return;
-    setPendingPin({ x, y, title: "" });
+    if (!isEditMode) return;
+    const p = pointOnImage(e);
+    if (p) setPendingPin({ ...p, title: "" });
   }
 
   async function handleCreatePin() {
@@ -679,12 +730,18 @@ export function WorldMap({
   }
 
   const handlePinClick = React.useCallback((pin: MapPinType) => {
+    // La règle en main, un clic sur un lieu s'y accroche : mesurer entre deux
+    // lieux est ce qu'on lui demande le plus souvent.
+    if (measuringRef.current) {
+      addMeasurePoint({ x: pin.x, y: pin.y });
+      return;
+    }
     if (selectedPinRef.current?.id === pin.id) {
       closePopover();
       return;
     }
     openPopover(pin);
-  }, [closePopover, openPopover]);
+  }, [closePopover, openPopover, addMeasurePoint]);
 
   const handlePinMoved = React.useCallback(async (pin: MapPinType, x: number, y: number) => {
     // Optimiste : mise à jour locale immédiate
@@ -727,6 +784,21 @@ export function WorldMap({
     }
   }
 
+  /** Règle l'échelle depuis une distance déclarée — `null` la retire. */
+  async function handleCalibrate(widthUnits: number | null, unit: string) {
+    if (!activeMap) return;
+    try {
+      const updated = await updateWorldMap(activeMap.id, {
+        scale_width_units: widthUnits,
+        scale_unit: widthUnits == null ? null : unit,
+      });
+      setMaps((prev) => mergeById(prev, updated));
+      toast.success(t("scaleSaved"));
+    } catch {
+      toast.error(t("saveError"));
+    }
+  }
+
   const handleDeletePin = React.useCallback(async (pin: MapPinType) => {
     try {
       await deleteMapPin(pin.id);
@@ -748,6 +820,20 @@ export function WorldMap({
   }
 
   const { imageSrc } = viewport;
+
+  const mapScale: MapScale | null =
+    activeMap?.scale_width_units != null && activeMap.scale_width_units > 0
+      ? { widthUnits: activeMap.scale_width_units, unit: activeMap.scale_unit ?? "" }
+      : null;
+  // Hauteur sur largeur ; 1 tant que la carte n'est pas mesurée.
+  const aspect = baseSize.width > 0 ? baseSize.height / baseSize.width : 1;
+  const distanceFrom =
+    mapScale && selectedPin && previousPin && previousPin.id !== selectedPin.id && previousPin.map_id === selectedPin.map_id
+      ? {
+          title: previousPin.title,
+          distance: formatDistance(distanceBetween(previousPin, selectedPin, aspect, mapScale), mapScale.unit, locale),
+        }
+      : null;
 
   return (
     <div
@@ -803,6 +889,23 @@ export function WorldMap({
           )
         }
       >
+        {activeMap?.image_url && (
+          <button
+            type="button"
+            aria-label={t("measure")}
+            aria-pressed={measuring}
+            onClick={(e) => { e.stopPropagation(); toggleMeasuring(); }}
+            className={cn(
+              "flex items-center gap-1.5 rounded-md px-2 py-1 text-xs transition-colors",
+              measuring
+                ? "bg-secondary text-foreground"
+                : "text-muted-foreground hover:bg-secondary hover:text-foreground",
+            )}
+          >
+            <Ruler className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">{t("measure")}</span>
+          </button>
+        )}
         {activeMap?.image_url && (
           <button
             type="button"
@@ -976,6 +1079,19 @@ export function WorldMap({
                 />
               ))}
 
+              {/* La règle : dans l'enveloppe, elle suit la carte. */}
+              {measure && (
+                <MeasureOverlay
+                  a={measure.a}
+                  b={measure.b}
+                  aspect={aspect}
+                  scale={mapScale}
+                  isEditMode={isEditMode}
+                  onCalibrate={(w, u) => void handleCalibrate(w, u)}
+                  onClear={() => setMeasure(null)}
+                />
+              )}
+
               {/* Pin en cours de création — même pivot que PinMarker (-50%,-50%) */}
               {pendingPin && (
                 <div
@@ -1034,6 +1150,10 @@ export function WorldMap({
               )}
             </div>
 
+            {mapScale && baseSize.width > 0 && (
+              <ScaleBar pxPerUnit={(baseSize.width * viewScale) / mapScale.widthUnits} unit={mapScale.unit} />
+            )}
+
             {/* Indice d'aide en mode édition (sticky sur le container) */}
             {isEditMode && !pendingPin && (
               <div className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-4 py-1.5 text-xs text-white opacity-70">
@@ -1056,6 +1176,7 @@ export function WorldMap({
           maps={maps}
           personasHere={personasByPin.get(selectedPin.id) ?? NOBODY}
           myPersonas={myPersonas}
+          distanceFrom={distanceFrom}
           isEditMode={isEditMode}
           canPost={canPost}
           worldId={worldId}

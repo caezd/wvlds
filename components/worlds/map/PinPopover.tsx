@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
-  BookOpenText, Check, ImagePlus, Loader2, LogOut, Map as MapIcon, MessagesSquare, Pencil, Play, Trash2, Upload, X } from "lucide-react";
+  BookOpenText, Check, ImagePlus, Loader2, LogOut, Map as MapIcon, MessagesSquare, Pencil, Play, Ruler, Trash2, Upload, X } from "lucide-react";
 
 import { toWebP } from "@/lib/imageUtils";
 import { supabaseThumb } from "@/lib/storage";
@@ -37,6 +37,7 @@ export function PinPopover({
   maps,
   personasHere,
   myPersonas,
+  distanceFrom = null,
   isEditMode,
   canPost = false,
   worldId,
@@ -61,6 +62,8 @@ export function PinPopover({
   personasHere: MapPersona[];
   /** Mes personas de ce monde : ceux que je peux poser ici, ou faire partir. */
   myPersonas: MapPersona[];
+  /** La distance au lieu ouvert juste avant, quand la carte a une échelle. */
+  distanceFrom?: { title: string; distance: string } | null;
   isEditMode: boolean;
   /** Peut ouvrir un salon : montre « Jouer ici ». */
   canPost?: boolean;
@@ -419,6 +422,14 @@ export function PinPopover({
               <MapIcon className="h-3.5 w-3.5" /> {t("openTargetMap")} : {linkedMap.label?.trim() || t("title")}
             </button>
           ) : null}
+
+          {/* « C'est loin ? » — d'un lieu à l'autre, dès que la carte a une échelle. */}
+          {!editing && distanceFrom && (
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Ruler className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">{t("distanceFrom", { distance: distanceFrom.distance, title: distanceFrom.title })}</span>
+            </p>
+          )}
 
           {/* Lancer une scène ici. Le composeur d'accueil sait situer un salon
               (`map_pin_id`) ; il ne manquait que le chemin depuis le lieu. */}

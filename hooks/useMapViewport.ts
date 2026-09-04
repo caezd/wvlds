@@ -59,7 +59,7 @@ export type MapViewportOptions = {
    * Appelé quand un geste ou une mesure vient de se terminer : le moment de
    * recopier dans l'état React ce que `onPaint` a écrit sur le DOM.
    */
-  onSettle?: () => void;
+  onSettle?: (transform: MapTransform) => void;
 };
 
 /**
@@ -171,7 +171,7 @@ export function useMapViewport({ imageUrl, viewKey, idleCursor, onPaint, onSettl
     }
   }, []);
 
-  const settle = React.useCallback(() => { onSettleRef.current?.(); }, []);
+  const settle = React.useCallback(() => { onSettleRef.current?.(transformRef.current); }, []);
 
   /**
    * Bornes du geste : le cadre tel qu'il est à l'écran, et la carte à la taille

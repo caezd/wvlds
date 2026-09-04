@@ -1289,6 +1289,15 @@
     }
   },
   "map": {
+    "measure": "Measure a distance",
+    "measureHint": "Click a second point",
+    "noScale": "Scale not set",
+    "scaleDeclare": "This distance is",
+    "scaleUnit": "Unit",
+    "scaleSaved": "Scale saved.",
+    "clearMeasure": "Clear the measurement",
+    "distanceFrom": "{distance} from {title}",
+    "scaleBar": "Scale: {distance}",
     "whoIsHere": "Who is here",
     "placePersona": "Place a persona here",
     "leavePlace": "Leave this place",

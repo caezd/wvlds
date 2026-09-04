@@ -16,6 +16,9 @@ export type WorldMapData = {
   label: string;
   /** Ordre des onglets — voir migration 151. */
   sort_index: number;
+  /** Ce que la largeur de la carte représente, et en quoi — voir migration 155. */
+  scale_width_units: number | null;
+  scale_unit: string | null;
 };
 
 export type MapPin = {
@@ -180,7 +183,7 @@ export async function createWorldMap(
 
 export async function updateWorldMap(
   mapId: string,
-  patch: Partial<Pick<WorldMapData, "image_url" | "label" | "sort_index">>,
+  patch: Partial<Pick<WorldMapData, "image_url" | "label" | "sort_index" | "scale_width_units" | "scale_unit">>,
 ): Promise<WorldMapData> {
   const supabase = await createClient();
   await requireUser(supabase);
