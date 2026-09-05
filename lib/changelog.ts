@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Carte",
+    text: "Le panneau d’un lieu porte son titre sur sa bannière, sa description juste en dessous, et l’écrit plus petit.",
+  },
+  {
+    date: "2026-09",
+    tag: "Carte",
     text: "Des régions sur la carte : en édition, un outil de tracé pose les sommets d’un royaume, d’une forêt, d’une mer. Chaque région a un nom, une couleur, une description et une page du wiki, et ses sommets se déplacent après coup.",
   },
   {

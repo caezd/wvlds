@@ -63,7 +63,6 @@ function monter(
       isEditMode={isEditMode}
       canPost={canPost}
       worldId="w1"
-      onClose={vi.fn()}
       onUpdated={onUpdated}
       onDelete={vi.fn()}
       onOpenMap={onOpenMap}
@@ -277,7 +276,6 @@ describe("PinPopover — c'est loin ?", () => {
         distanceFrom={{ title: "La tour", distance: "250 km" }}
         isEditMode={false}
         worldId="w1"
-        onClose={vi.fn()}
         onUpdated={vi.fn()}
         onDelete={vi.fn()}
         onOpenMap={vi.fn()}
@@ -311,7 +309,6 @@ describe("PinPopover — dans le temps", () => {
         timelineConfig={CHRONO}
         isEditMode={isEditMode}
         worldId="w1"
-        onClose={vi.fn()}
         onUpdated={onUpdated}
         onDelete={vi.fn()}
         onOpenMap={vi.fn()}
@@ -344,5 +341,57 @@ describe("PinPopover — dans le temps", () => {
       exists_until: null,
     }));
     expect(onUpdated).toHaveBeenCalledWith(expect.objectContaining({ exists_from: { year: 1200, month: null, day: null } }));
+  });
+});
+
+describe("PinPopover — la carte du lieu", () => {
+  it("porte son titre sur la bannière, sans croix pour le refermer", () => {
+    // La croix mangeait un coin de l'image pour ce qu'Échap et un clic sur la
+    // carte font déjà.
+    monter(makePin());
+
+    expect(screen.getByRole("heading", { name: "Le port" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Fermer" })).toBeNull();
+  });
+
+  it("dit ce que le lieu est avant ce vers quoi il mène", () => {
+    monter(makePin({ description: "Des quais brumeux.", wiki_page_id: "p1" }));
+
+    const description = screen.getByText("Des quais brumeux.");
+    const lien = screen.getByRole("button", { name: /Ouvrir la page du wiki/ });
+    expect(description.compareDocumentPosition(lien) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("écrit la description en petit, sans la couche prose de trop", () => {
+    // `MarkdownRenderer` posait son propre `sm:prose-base` : le texte d'un lieu
+    // passait à 16 px sur écran large, dans une carte de 340 px.
+    monter(makePin({ description: "Des quais brumeux." }));
+
+    const prose = screen.getByText("Des quais brumeux.").closest(".prose")!;
+    expect(prose.className).toContain("prose-p:text-xs");
+    expect(prose.querySelectorAll(".prose")).toHaveLength(0);
+  });
+
+  it("ouvre l'apparence de l'épingle depuis la barre d'actions", async () => {
+    // La pastille a quitté la bannière, où le titre a pris sa place.
+    monter(makePin(), true);
+
+    await userEvent.click(screen.getByRole("button", { name: "Modifier le visuel du pin" }));
+
+    expect(await screen.findByText("Visuel du pin")).toBeInTheDocument();
+  });
+
+  it("ne propose l'apparence qu'à ceux qui peuvent modifier la carte", () => {
+    monter(makePin());
+    expect(screen.queryByRole("button", { name: "Modifier le visuel du pin" })).toBeNull();
+  });
+
+  it("rend le titre au formulaire pendant qu'on le corrige", async () => {
+    // Un champ de saisie par-dessus une photo se lirait mal.
+    monter(makePin(), true);
+    await userEvent.click(screen.getByRole("button", { name: "Modifier" }));
+
+    expect(screen.queryByRole("heading", { name: "Le port" })).toBeNull();
+    expect(screen.getByPlaceholderText("Nom du lieu")).toHaveValue("Le port");
   });
 });

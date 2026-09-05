@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
-  BookOpenText, Check, Clock, ImagePlus, Loader2, LogOut, Map as MapIcon, MessagesSquare, Pencil, Play, Ruler, Trash2, Upload, X } from "lucide-react";
+  BookOpenText, Check, Clock, ImagePlus, Loader2, LogOut, Map as MapIcon, MessagesSquare, Pencil, Play, Ruler, Trash2, Upload } from "lucide-react";
 
 import { toWebP } from "@/lib/imageUtils";
 import { supabaseThumb } from "@/lib/storage";
@@ -14,7 +14,7 @@ import { pinBannerPath } from "@/lib/storagePaths";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
-import MarkdownRenderer from "@/components/MarkdownRenderer";
+import { MarkdownContent } from "@/components/MarkdownRenderer";
 import { ParagraphBlockEditor } from "@/components/chatrooms/composer/ParagraphBlockEditor";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { updateMapPin, type MapPersona, type MapPin as MapPinType, type WorldMapData } from "@/app/actions/worldMap";
@@ -45,7 +45,6 @@ export function PinPopover({
   isEditMode,
   canPost = false,
   worldId,
-  onClose,
   onOpenMap,
   onPlacePersona,
   onUpdated,
@@ -74,7 +73,6 @@ export function PinPopover({
   /** Peut ouvrir un salon : montre « Jouer ici ». */
   canPost?: boolean;
   worldId: string;
-  onClose: () => void;
   onUpdated: (updated: MapPinType) => void;
   onDelete: () => void;
   /** Bascule sur la carte que ce lieu ouvre. */
@@ -293,57 +291,20 @@ export function PinPopover({
             </button>
           )}
 
-          {/* Point coloré du pin — cliquable en mode édition */}
-          {isEditMode ? (
-            <button
-              type="button"
-              title={t("editPinVisual")}
-              onClick={() => setVisualDialogOpen(true)}
-              className="absolute bottom-2 left-3 flex h-6 w-6 items-center justify-center rounded-full shadow transition-transform hover:scale-110"
-              style={{
-                backgroundColor: pin.color || "transparent",
-                border: pin.border_color
-                  ? `2px ${pin.border_style || "solid"} ${pin.border_color}`
-                  : "2px solid rgba(255,255,255,0.6)",
-              }}
-            >
-              {pin.icon && (
-                <LazyLucideIcon
-                  name={pin.icon}
-                  className="h-3 w-3"
-                  style={{ color: pin.icon_color || "#ffffff" }}
-                />
-              )}
-            </button>
-          ) : (
-            <div
-              className="absolute bottom-2 left-3 flex h-6 w-6 items-center justify-center rounded-full shadow"
-              style={{
-                backgroundColor: pin.color || "transparent",
-                border: pin.border_color
-                  ? `2px ${pin.border_style || "solid"} ${pin.border_color}`
-                  : "none",
-              }}
-            >
-              {pin.icon && (
-                <LazyLucideIcon
-                  name={pin.icon}
-                  className="h-3 w-3"
-                  style={{ color: pin.icon_color || "#ffffff" }}
-                />
-              )}
+          {/* Le titre, posé sur la bannière — c'est la même chose qu'on
+              regarde. Le dégradé le décolle de l'image : un nom clair sur un
+              ciel clair ne se lirait pas. `pointer-events-none` pour que le
+              clic traverse jusqu'au bouton d'import, dessous.
+
+              En écriture il repasse dans le formulaire : un champ de saisie
+              par-dessus une photo se lit mal, et c'est là qu'on le corrige. */}
+          {!editing && (
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent px-3 pb-2 pt-8">
+              <h3 className="line-clamp-2 text-base font-semibold leading-snug text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.8)]">
+                {pin.title}
+              </h3>
             </div>
           )}
-
-          {/* Bouton fermer */}
-          <button
-            type="button"
-            aria-label={tCommon("close")}
-            onClick={onClose}
-            className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
-          >
-            <X className="h-4 w-4" />
-          </button>
 
           <input
             ref={bannerInputRef}
@@ -365,8 +326,8 @@ export function PinPopover({
 
         {/* ── Contenu ──────────────────────────────────── */}
         <div className="p-4 flex flex-col gap-3">
-          {/* Titre */}
-          {editing ? (
+          {/* Le titre n'est ici qu'en écriture — ailleurs il vit sur la bannière. */}
+          {editing && (
             <input
               autoFocus
               value={title}
@@ -374,9 +335,39 @@ export function PinPopover({
               className="w-full rounded-md border border-border bg-background px-3 py-1.5 text-base font-semibold outline-none focus:ring-2 focus:ring-primary"
               placeholder={t("locationName")}
             />
-          ) : (
-            <h3 className="text-base font-semibold leading-snug">{pin.title}</h3>
           )}
+
+          {/* La description vient d'abord : ce que le lieu EST se lit avant ce
+              vers quoi il mène. */}
+          <div className="max-h-48 overflow-y-auto">
+            {editing ? (
+              <ParagraphBlockEditor
+                value={description}
+                onChange={setDescription}
+                placeholder={t("descPlaceholder")}
+                submitOnEnter={false}
+                wrapperClassName="max-h-32"
+              />
+            ) : pin.description ? (
+              // `MarkdownContent` plutôt que `MarkdownRenderer` : celui-ci pose
+              // son propre `prose-sm sm:prose-base`, qui remontait le texte à
+              // 16 px dès l'écran large — trop gros pour une carte de 340 px, et
+              // hors d'atteinte d'une classe posée par-dessus.
+              <div
+                className={cn(
+                  "prose prose-sm dark:prose-invert max-w-none text-muted-foreground",
+                  "prose-p:text-xs prose-li:text-xs prose-headings:text-sm",
+                  "[&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
+                )}
+              >
+                <MarkdownContent content={pin.description} />
+              </div>
+            ) : (
+              <p className="text-xs italic text-muted-foreground">
+                {isEditMode ? t("addDescriptionHint") : t("noDescription")}
+              </p>
+            )}
+          </div>
 
           {/* Page du wiki : à choisir en écriture, à ouvrir en lecture. */}
           {editing ? (
@@ -535,27 +526,6 @@ export function PinPopover({
             </div>
           )}
 
-          {/* Description */}
-          <div className="max-h-48 overflow-y-auto">
-            {editing ? (
-              <ParagraphBlockEditor
-                value={description}
-                onChange={setDescription}
-                placeholder={t("descPlaceholder")}
-                submitOnEnter={false}
-                wrapperClassName="max-h-32"
-              />
-            ) : pin.description ? (
-              <div className="prose prose-sm dark:prose-invert max-w-none text-sm text-muted-foreground">
-                <MarkdownRenderer content={pin.description} />
-              </div>
-            ) : (
-              <p className="text-xs italic text-muted-foreground">
-                {isEditMode ? t("addDescriptionHint") : t("noDescription")}
-              </p>
-            )}
-          </div>
-
           {/* Actions */}
           {isEditMode && (
             <div className="flex items-center gap-2 pt-1 border-t border-border-soft">
@@ -587,6 +557,29 @@ export function PinPopover({
                     <Pencil className="h-3.5 w-3.5" />
                     {tCommon("edit")}
                   </Button>
+                  {/* L'apparence de l'épingle, chassée de la bannière par le
+                      titre : la pastille montre ce qu'elle vaut, et l'ouvre. */}
+                  <button
+                    type="button"
+                    aria-label={t("editPinVisual")}
+                    title={t("editPinVisual")}
+                    onClick={() => setVisualDialogOpen(true)}
+                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full shadow-sm transition-transform hover:scale-110"
+                    style={{
+                      backgroundColor: pin.color || "transparent",
+                      border: pin.border_color
+                        ? `2px ${pin.border_style || "solid"} ${pin.border_color}`
+                        : "2px solid rgba(255,255,255,0.6)",
+                    }}
+                  >
+                    {pin.icon && (
+                      <LazyLucideIcon
+                        name={pin.icon}
+                        className="h-3 w-3"
+                        style={{ color: pin.icon_color || "#ffffff" }}
+                      />
+                    )}
+                  </button>
                   <Button
                     size="sm"
                     variant="ghost"

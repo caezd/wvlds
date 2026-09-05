@@ -1479,7 +1479,6 @@ export function WorldMap({
           isEditMode={isEditMode}
           canPost={canPost}
           worldId={worldId}
-          onClose={closePopover}
           onUpdated={(updated) => {
             setPins((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
             setSelectedPin(updated);
