@@ -1244,9 +1244,9 @@ describe("WorldMap — le poids d'une image de carte", () => {
   }
 
   /** Un fichier dont on ne fabrique que le poids — 60 Mo en mémoire, non. */
-  function choisir(megaoctets: number) {
+  function choisir(megaoctets: number, type = "image/webp") {
     // Un WebP : `toWebP` le rend tel quel, sans canvas à faire tourner ici.
-    const fichier = new File(["x"], "carte.webp", { type: "image/webp" });
+    const fichier = new File(["x"], "carte", { type });
     Object.defineProperty(fichier, "size", { value: megaoctets * 1024 * 1024 });
     const input = document.querySelector('input[type="file"]') as HTMLInputElement;
     fireEvent.change(input, { target: { files: [fichier] } });
@@ -1259,6 +1259,26 @@ describe("WorldMap — le poids d'une image de carte", () => {
     choisir(61);
 
     expect(envoiDe(mock)).not.toHaveBeenCalled();
+  });
+
+  it("refuse un SVG, que le stockage n'accepte pas", async () => {
+    // Ces espaces sont publics et un SVG est un document exécutable : il est
+    // refusé ici, avec les formats nommés, plutôt que par le stockage avec un
+    // « Téléversement impossible ».
+    const { mock } = monter({ maps: [makeMap()], pins: [] });
+    await userEvent.click(screen.getByRole("button", { name: "Modifier" }));
+
+    choisir(1, "image/svg+xml");
+
+    expect(envoiDe(mock)).not.toHaveBeenCalled();
+  });
+
+  it("ne propose que les formats stockables dans la fenêtre de choix", () => {
+    monter({ maps: [makeMap()], pins: [] });
+    expect(document.querySelector('input[type="file"]')).toHaveAttribute(
+      "accept",
+      "image/jpeg,image/png,image/gif,image/webp",
+    );
   });
 
   it("accepte une carte en pleine résolution", async () => {

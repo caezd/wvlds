@@ -1372,7 +1372,6 @@
     "pinUpdated": "Pin actualizado.",
     "bannerUpdated": "Portada actualizada.",
     "uploadError": "Subida imposible.",
-    "imagesOnly": "Solo se aceptan imágenes.",
     "mapUpdated": "Mapa actualizado.",
     "createPinError": "No se pudo crear el pin.",
     "movePinError": "No se pudo mover el pin.",
@@ -1399,7 +1398,8 @@
     "scaleHint": "Haga clic en un segundo punto, sobre una distancia conocida",
     "clearSegment": "Borrar el segmento",
     "mapActions": "Acciones del mapa {label}",
-    "fileTooLarge": "Archivo demasiado grande (máx. {max} MB)."
+    "fileTooLarge": "Archivo demasiado grande (máx. {max} MB).",
+    "imageFormats": "Formatos aceptados: JPEG, PNG, GIF o WebP."
   },
   "iconPicker": {
     "chooseIcon": "Elegir un icono",

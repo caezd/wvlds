@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { channel, MAX_MAP_IMAGE_MB } from "@/lib/constants";
 import { openRealtimeChannel } from "@/lib/realtimeChannel";
-import { toWebP } from "@/lib/imageUtils";
+import { STORED_IMAGE_ACCEPT, isStorableImage, toWebP } from "@/lib/imageUtils";
 import { mapImagePath } from "@/lib/storagePaths";
 import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 import {
@@ -735,8 +735,8 @@ export function WorldMap({
 
   // ── Upload de l'image de carte ────────────────────────────────
   async function handleMapImageUpload(file: File) {
-    if (!file.type.startsWith("image/")) {
-      toast.error(t("imagesOnly"));
+    if (!isStorableImage(file)) {
+      toast.error(t("imageFormats"));
       return;
     }
     if (file.size > MAX_MAP_IMAGE_MB * 1024 * 1024) {
@@ -1551,7 +1551,7 @@ export function WorldMap({
       <input
         ref={mapFileInputRef}
         type="file"
-        accept="image/*"
+        accept={STORED_IMAGE_ACCEPT}
         // Déclenché par le bouton visible, jamais atteint au clavier :
         // le laisser dans l'arbre d'accessibilité imposerait un libellé
         // pour un champ que personne ne rencontre.

@@ -3,6 +3,28 @@ import imageCompression from "browser-image-compression";
 const SKIP_TYPES = new Set(["image/gif", "image/svg+xml", "image/webp"]);
 
 /**
+ * Les types que les espaces de stockage acceptent — la même liste que leurs
+ * `allowed_mime_types` en base.
+ *
+ * Le SVG en est absent, et volontairement : ces espaces sont en lecture
+ * publique, et un SVG est un document exécutable — il peut porter un script,
+ * qui s'exécuterait sur le domaine qui le sert. Le refuser ICI plutôt que de
+ * laisser le stockage le faire change tout pour qui téléverse : un message
+ * qui nomme les formats, au lieu d'un « Téléversement impossible ».
+ *
+ * `image/*` sur un champ de fichier ne suffit pas : l'attribut ne filtre que
+ * la fenêtre de choix, jamais un glisser-déposer.
+ */
+export const STORED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"] as const;
+
+/** Pour l'attribut `accept` d'un champ de fichier. */
+export const STORED_IMAGE_ACCEPT = STORED_IMAGE_TYPES.join(",");
+
+export function isStorableImage(file: File): boolean {
+  return (STORED_IMAGE_TYPES as readonly string[]).includes(file.type);
+}
+
+/**
  * Converts an image file to WebP using a Web Worker (non-blocking).
  * GIF, SVG, and already-WebP files are returned unchanged.
  */

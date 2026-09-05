@@ -9,7 +9,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Carte",
-    text: "Une image de carte peut peser jusqu’à 60 Mo : de quoi importer un export en pleine résolution.",
+    text: "Une image de carte peut peser jusqu’à 60 Mo : de quoi importer un export en pleine résolution. Les formats acceptés sont nommés d’emblée : JPEG, PNG, GIF ou WebP.",
   },
   {
     date: "2026-09",
