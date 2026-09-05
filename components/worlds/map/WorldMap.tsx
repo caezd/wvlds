@@ -723,7 +723,7 @@ export function WorldMap({
 
       const { error: upErr } = await supabase.storage
         .from("worlds")
-        .upload(path, converted, { upsert: true, contentType: converted.type });
+        .upload(path, converted, { contentType: converted.type });
       if (upErr) throw upErr;
 
       const image_url = supabase.storage.from("worlds").getPublicUrl(path).data.publicUrl;

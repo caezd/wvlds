@@ -174,3 +174,24 @@ describe("chemins des cartes et des lieux", () => {
     for (const nom of noms) expect(nom).not.toMatch(/\d{13}/);
   });
 });
+
+describe("les chemins que la policy de stockage accepte", () => {
+  // Le motif de la migration 159, à la lettre. Le bucket `worlds` n'accepte
+  // l'écriture sous `world-…` que pour des dossiers `map-<uuid>` ou
+  // `pin-<uuid>` : un chemin qui ne lui répond pas est refusé par la base, et
+  // l'interface n'affiche qu'un « Téléversement impossible ». Ce test fige le
+  // contrat des deux côtés — le changer ici oblige à écrire une migration.
+  const ACCEPTE_PAR_LA_POLICY =
+    /^world-[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\/(map|pin)-[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\//;
+
+  const MONDE = "f1e4d2c9-e56f-454a-bde2-8f9eade06e65";
+  const CARTE = "11111111-1111-1111-1111-111111111111";
+
+  it("l'image d'une carte", () => {
+    expect(mapImagePath(MONDE, CARTE, "image/webp")).toMatch(ACCEPTE_PAR_LA_POLICY);
+  });
+
+  it("la bannière d'un lieu", () => {
+    expect(pinBannerPath(MONDE, CARTE, "image/webp")).toMatch(ACCEPTE_PAR_LA_POLICY);
+  });
+});

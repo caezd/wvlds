@@ -179,7 +179,7 @@ export function PinPopover({
 
       const { error: upErr } = await supabase.storage
         .from("worlds")
-        .upload(path, converted, { upsert: true, contentType: converted.type });
+        .upload(path, converted, { contentType: converted.type });
       if (upErr) throw upErr;
 
       const banner_url = supabase.storage.from("worlds").getPublicUrl(path).data.publicUrl;
