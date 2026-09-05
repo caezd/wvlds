@@ -1040,4 +1040,68 @@ describe("WorldMap — les régions", () => {
     emettreRegion({ eventType: "DELETE", old: { id: "reg1" } });
     expect(screen.queryByRole("button", { name: "L'empire" })).toBeNull();
   });
+
+  it("range le tracé en cours quand on quitte l'écriture", async () => {
+    // Il survivait à la sortie : ses boutons disparaissaient de l'en-tête,
+    // mais chaque clic posait encore un sommet, sans plus rien pour fermer le
+    // polygone ni l'abandonner.
+    monter({ maps: [makeMap()], pins: [] });
+    await passerEnEdition();
+    await userEvent.click(screen.getByRole("button", { name: "Dessiner une région" }));
+    fireEvent.click(cadre(), { clientX: 100, clientY: 50 });
+    expect(document.querySelectorAll("[data-draft-vertex]")).toHaveLength(1);
+
+    await userEvent.click(screen.getByRole("button", { name: "Modification active" }));
+
+    expect(document.querySelectorAll("[data-draft-vertex]")).toHaveLength(0);
+    fireEvent.click(cadre(), { clientX: 500, clientY: 200 });
+    expect(document.querySelectorAll("[data-draft-vertex]")).toHaveLength(0);
+  });
+
+  it("accroche le tracé aux lieux, comme la règle", async () => {
+    monter({ maps: [makeMap()], pins: [makePin({ x: 60, y: 40 })] });
+    await passerEnEdition();
+    await userEvent.click(screen.getByRole("button", { name: "Dessiner une région" }));
+
+    await userEvent.click(screen.getByRole("button", { name: "Le port" }));
+
+    // Un sommet posé sur le lieu, et pas son panneau ouvert par-dessus le tracé.
+    expect(document.querySelectorAll("[data-draft-vertex]")).toHaveLength(1);
+    expect(screen.queryByTestId("pin-popover")).toBeNull();
+  });
+});
+
+describe("WorldMap — le clic n'est pas avalé par le déplacement", () => {
+  // Le cadre doit avoir des mesures pour que le geste soit suivi.
+  beforeEach(simulerMiseEnPage);
+  afterEach(restaurerMiseEnPage);
+
+  let capture: ReturnType<typeof vi.fn>;
+  beforeEach(() => {
+    capture = vi.fn();
+    (Element.prototype as unknown as { setPointerCapture: unknown }).setPointerCapture = capture;
+  });
+  afterEach(() => {
+    delete (Element.prototype as unknown as { setPointerCapture?: unknown }).setPointerCapture;
+  });
+
+  it("ne s'approprie le pointeur qu'une fois la carte déplacée", () => {
+    // Le navigateur envoie le `click` à l'élément qui CAPTURE le pointeur, et
+    // non à celui qu'on a touché. Capturer dès le `pointerdown` volait donc
+    // leur clic aux polygones des régions — seuls éléments cliquables de
+    // l'enveloppe à laisser passer le geste de déplacement, pour qu'on puisse
+    // déplacer la carte en les saisissant.
+    monter({ maps: [makeMap()], pins: [] });
+    const cadre = screen.getByAltText("Carte du monde").parentElement!.parentElement!;
+
+    fireEvent.pointerDown(cadre, { pointerId: 1, clientX: 100, clientY: 100 });
+    expect(capture).not.toHaveBeenCalled();
+
+    // Sous le seuil : c'est encore un clic, pas un déplacement.
+    fireEvent.pointerMove(cadre, { pointerId: 1, clientX: 102, clientY: 101 });
+    expect(capture).not.toHaveBeenCalled();
+
+    fireEvent.pointerMove(cadre, { pointerId: 1, clientX: 140, clientY: 100 });
+    expect(capture).toHaveBeenCalledWith(1);
+  });
 });

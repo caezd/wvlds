@@ -401,16 +401,28 @@ export function useMapViewport({ imageUrl, viewKey, idleCursor, onPaint, onSettl
     if (node) node.style.cursor = cursor;
   }
 
+  /**
+   * Le cadre s'approprie le pointeur, pour continuer de le suivre s'il sort.
+   *
+   * Facultatif : le navigateur refuse la capture d'un pointeur qui n'est plus
+   * actif, et jsdom ne l'implémente pas du tout.
+   */
+  function capturer(e: React.PointerEvent<HTMLDivElement>) {
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+  }
+
   const onPointerDown = React.useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     if (e.pointerType === "mouse" && e.button !== 0) return;
     const pos = pointerPos(e);
     if (!pos) return;
     pointers.current.set(e.pointerId, pos);
-    // Appel facultatif : le navigateur refuse la capture d'un pointeur qui
-    // n'est plus actif, et jsdom ne l'implémente pas du tout.
-    e.currentTarget.setPointerCapture?.(e.pointerId);
 
+    // La capture du pointeur attend le premier vrai déplacement — voir
+    // `capturer` ci-dessous. Le pincement, lui, la prend tout de suite : il
+    // n'a pas de clic à préserver, et perdre un doigt sorti du cadre le
+    // couperait net.
     if (pointers.current.size >= 2) {
+      capturer(e);
       // Deux doigts : on pince. Le déplacement en cours s'arrête là, et le
       // geste ne pourra plus être pris pour un clic.
       const [a, b] = [...pointers.current.values()];
@@ -458,6 +470,16 @@ export function useMapViewport({ imageUrl, viewKey, idleCursor, onPaint, onSettl
     const dy = e.clientY - panStart.current.clientY;
     if (!didPan.current && (Math.abs(dx) > DRAG_THRESHOLD_PX || Math.abs(dy) > DRAG_THRESHOLD_PX)) {
       didPan.current = true;
+      // C'est ici, et pas au `pointerdown`, que le cadre s'approprie le
+      // pointeur : il en a besoin pour suivre un doigt sorti de lui, mais le
+      // prendre plus tôt lui aurait fait AVALER LE CLIC. Le navigateur envoie
+      // en effet le `click` à l'élément qui capture, et non à celui qu'on a
+      // touché : les polygones des régions — les seuls éléments cliquables de
+      // l'enveloppe qui laissent passer le geste de déplacement, justement
+      // pour qu'on puisse déplacer la carte en les saisissant — ne recevaient
+      // donc jamais leur clic. En mode édition, il posait une épingle à leur
+      // place.
+      capturer(e);
     }
     if (!didPan.current) return;
     const { scale } = transformRef.current;

@@ -132,6 +132,10 @@ export function WorldMap({
   const [pendingRegion, setPendingRegion] = React.useState<{ points: Point[]; label: string } | null>(null);
   const [creatingRegion, setCreatingRegion] = React.useState(false);
   const drawing = draft !== null;
+  // Lue par les gestionnaires mémoïsés des marqueurs, qui gardent leur
+  // identité d'un rendu à l'autre.
+  const drawingRef = React.useRef(false);
+  drawingRef.current = drawing;
   const [myPersonas, setMyPersonas] = React.useState<MapPersona[]>([]);
   const [loading, setLoading] = React.useState(!initialMap);
   const [editMode, setEditMode] = React.useState(false);
@@ -759,6 +763,11 @@ export function WorldMap({
     return { x, y };
   }
 
+  /** Un sommet de plus au tracé en cours. */
+  const addDraftPoint = React.useCallback((p: Point) => {
+    setDraft((prev) => [...(prev ?? []), p]);
+  }, []);
+
   /** Premier point, second point — puis un troisième recommence un segment. */
   const addMeasurePoint = React.useCallback((p: Point) => {
     setMeasure((prev) => (prev && !prev.b ? { a: prev.a, b: p } : { a: p, b: null }));
@@ -771,6 +780,22 @@ export function WorldMap({
     setDraft(null);
     setPendingRegion(null);
     closePopover();
+  }
+
+  /**
+   * Entre en écriture, ou en sort — en rangeant les outils au passage.
+   *
+   * Le tracé d'une région survivait à la sortie : ses boutons disparaissaient
+   * de l'en-tête, mais chaque clic sur la carte posait encore un sommet, sans
+   * plus rien pour fermer le polygone ni l'abandonner.
+   */
+  function toggleEditMode() {
+    setEditMode((v) => !v);
+    closePopover();
+    setPendingPin(null);
+    setSelectedRegion(null);
+    setDraft(null);
+    setPendingRegion(null);
   }
 
   /** L'outil de tracé : on pose des sommets jusqu'à fermer, ou abandonner. */
@@ -863,7 +888,7 @@ export function WorldMap({
 
     if (drawing) {
       const p = pointOnImage(e);
-      if (p) setDraft((prev) => [...(prev ?? []), p]);
+      if (p) addDraftPoint(p);
       return;
     }
 
@@ -895,9 +920,14 @@ export function WorldMap({
 
   const handlePinClick = React.useCallback((pin: MapPinType) => {
     // La règle en main, un clic sur un lieu s'y accroche : mesurer entre deux
-    // lieux est ce qu'on lui demande le plus souvent.
+    // lieux est ce qu'on lui demande le plus souvent. Un tracé de région en
+    // cours fait de même, plutôt que d'ouvrir un panneau par-dessus lui.
     if (measuringRef.current) {
       addMeasurePoint({ x: pin.x, y: pin.y });
+      return;
+    }
+    if (drawingRef.current) {
+      addDraftPoint({ x: pin.x, y: pin.y });
       return;
     }
     if (selectedPinRef.current?.id === pin.id) {
@@ -905,7 +935,7 @@ export function WorldMap({
       return;
     }
     openPopover(pin);
-  }, [closePopover, openPopover, addMeasurePoint]);
+  }, [closePopover, openPopover, addMeasurePoint, addDraftPoint]);
 
   const handlePinMoved = React.useCallback(async (pin: MapPinType, x: number, y: number) => {
     // Optimiste : mise à jour locale immédiate
@@ -1039,7 +1069,7 @@ export function WorldMap({
               type="button"
               aria-label={isEditMode ? t("editingActive") : tCommon("edit")}
               aria-pressed={isEditMode}
-              onClick={(e) => { e.stopPropagation(); setEditMode((v) => !v); closePopover(); setPendingPin(null); }}
+              onClick={(e) => { e.stopPropagation(); toggleEditMode(); }}
               className={cn(
                 "flex items-center gap-1.5 rounded-full border px-2 py-1 text-xs font-medium transition-colors sm:px-3",
                 isEditMode
