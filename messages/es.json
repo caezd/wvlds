@@ -1289,9 +1289,11 @@
     }
   },
   "map": {
+    "closeRegion": "Cerrar la región aquí",
+    "drawingRegionMore": "Vértices: {count} de {min} mínimo. Retroceso para deshacer, Esc para abandonar.",
+    "drawingRegionClose": "Haga clic en el primer vértice para cerrar. Retroceso para deshacer, Esc para abandonar.",
     "region": "Región",
     "drawRegion": "Dibujar una región",
-    "drawingRegion": "Haga clic para colocar los vértices — Intro o doble clic para cerrar, Esc para abandonar",
     "regionName": "Nombre de la región",
     "regionVertex": "Vértice {index}",
     "minRegionPoints": "Al menos tres vértices.",

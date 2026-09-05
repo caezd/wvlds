@@ -1289,9 +1289,11 @@
     }
   },
   "map": {
+    "closeRegion": "Close the region here",
+    "drawingRegionMore": "Corners: {count} of {min} minimum. Backspace to undo, Escape to give up.",
+    "drawingRegionClose": "Click the first corner to close. Backspace to undo, Escape to give up.",
     "region": "Region",
     "drawRegion": "Draw a region",
-    "drawingRegion": "Click to place the corners — Enter or double-click to close, Escape to give up",
     "regionName": "Region name",
     "regionVertex": "Corner {index}",
     "minRegionPoints": "At least three corners.",

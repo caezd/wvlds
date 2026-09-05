@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import type { MapRegion } from "@/app/actions/worldMap";
 import type { Point } from "./zoom";
-import { polygonCentroid, toSvgPoints } from "./geometry";
+import { MIN_REGION_POINTS, polygonCentroid, toSvgPoints } from "./geometry";
 
 /**
  * Les régions d'une carte : des polygones dans l'enveloppe transformée.
@@ -28,6 +28,7 @@ export function RegionLayer({
   imgRef,
   onSelect,
   onVertexMoved,
+  onCloseDraft,
 }: {
   regions: MapRegion[];
   selectedId: string | null;
@@ -38,6 +39,8 @@ export function RegionLayer({
   onSelect: (region: MapRegion) => void;
   /** Un sommet de la région choisie vient d'être déplacé. */
   onVertexMoved: (region: MapRegion, index: number, point: Point) => void;
+  /** Le tracé se referme sur son premier sommet. */
+  onCloseDraft: () => void;
 }) {
   const t = useTranslations("map");
   const [hoverId, setHoverId] = React.useState<string | null>(null);
@@ -45,6 +48,24 @@ export function RegionLayer({
   // attendre le serveur.
   const [dragging, setDragging] = React.useState<{ index: number; point: Point } | null>(null);
   const dragStart = React.useRef<{ clientX: number; clientY: number; start: Point } | null>(null);
+  // Où le curseur se trouve pendant un tracé : c'est lui qui donne au
+  // polygone son dernier sommet, provisoire, et montre la forme qu'aurait la
+  // région si l'on cliquait là.
+  const [cursor, setCursor] = React.useState<Point | null>(null);
+
+  /** Le point survolé, en pourcentages de la carte. */
+  function pointFromEvent(e: React.MouseEvent): Point | null {
+    const img = imgRef.current;
+    if (!img) return null;
+    const r = img.getBoundingClientRect();
+    return { x: ((e.clientX - r.left) / r.width) * 100, y: ((e.clientY - r.top) / r.height) * 100 };
+  }
+
+  // Le tracé tel qu'on le voit : les sommets posés, plus celui que la souris
+  // promène. Un `<polygon>` et non une ligne ouverte — la région se ferme de
+  // toute façon, autant la montrer fermée.
+  const apercu = draft ? (cursor ? [...draft, cursor] : draft) : null;
+  const peutFermer = (draft?.length ?? 0) >= MIN_REGION_POINTS;
 
   function pointsOf(region: MapRegion): Point[] {
     if (!dragging || region.id !== selectedId) return region.points;
@@ -112,10 +133,10 @@ export function RegionLayer({
             />
           );
         })}
-        {draft && draft.length > 1 && (
+        {apercu && apercu.length > 1 && (
           <polygon
             data-region-draft
-            points={toSvgPoints(draft)}
+            points={toSvgPoints(apercu)}
             className="fill-primary/15 stroke-primary"
             strokeWidth={2}
             strokeDasharray="6 4"
@@ -123,22 +144,65 @@ export function RegionLayer({
             vectorEffect="non-scaling-stroke"
           />
         )}
+
+        {/* Pendant le tracé, une vitre au-dessus de tout suit la souris. Elle
+            ne retient pas les clics : ils vont au cadre, qui pose le sommet.
+            Au-dessus des régions existantes, sans quoi la ligne se figerait
+            dès que le curseur en survole une. */}
+        {draft && (
+          <rect
+            data-draft-surface
+            x="0"
+            y="0"
+            width="100"
+            height="100"
+            fill="transparent"
+            style={{ pointerEvents: "auto" }}
+            onMouseMove={(e) => setCursor(pointFromEvent(e))}
+            onMouseLeave={() => setCursor(null)}
+          />
+        )}
       </svg>
 
-      {/* Les sommets du tracé en cours */}
-      {draft?.map((p, i) => (
-        <div
-          key={i}
-          data-draft-vertex
-          className="pointer-events-none absolute z-20 h-2.5 w-2.5 rounded-full border-2 border-white bg-primary shadow"
-          style={{
-            left: `${p.x}%`,
-            top: `${p.y}%`,
-            transform: "translate(-50%, -50%) scale(var(--pin-inv-scale, 1))",
-            transformOrigin: "center center",
-          }}
-        />
-      ))}
+      {/* Les sommets du tracé en cours. Le premier devient la poignée de
+          fermeture dès qu'il y a de quoi faire une région : revenir à son
+          point de départ est le geste qu'on essaie d'abord. */}
+      {draft?.map((p, i) => {
+        const estLaFermeture = i === 0 && peutFermer;
+        const style = {
+          left: `${p.x}%`,
+          top: `${p.y}%`,
+          transform: "translate(-50%, -50%) scale(var(--pin-inv-scale, 1))",
+          transformOrigin: "center center",
+        } as const;
+
+        if (!estLaFermeture) {
+          return (
+            <div
+              key={i}
+              data-draft-vertex
+              className="pointer-events-none absolute z-20 h-2.5 w-2.5 rounded-full border-2 border-white bg-primary shadow"
+              style={style}
+            />
+          );
+        }
+        return (
+          <button
+            key={i}
+            type="button"
+            data-draft-vertex
+            data-draft-close
+            aria-label={t("closeRegion")}
+            title={t("closeRegion")}
+            // Le clic ne doit pas poser un sommet de plus, ni le geste
+            // entamer un déplacement de la carte.
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => { e.stopPropagation(); onCloseDraft(); }}
+            className="absolute z-30 h-4 w-4 rounded-full border-2 border-white bg-primary shadow ring-2 ring-primary/40 transition-transform hover:scale-125 focus-visible:outline-none focus-visible:ring-4"
+            style={style}
+          />
+        );
+      })}
 
       {/* Les noms, au centre de chaque région */}
       {regions.map((region) => {

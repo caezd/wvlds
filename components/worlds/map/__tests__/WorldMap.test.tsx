@@ -1058,6 +1058,48 @@ describe("WorldMap — les régions", () => {
     expect(document.querySelectorAll("[data-draft-vertex]")).toHaveLength(0);
   });
 
+  it("défait le dernier sommet au retour arrière", async () => {
+    // Une erreur de main ne doit pas coûter le tracé entier.
+    monter({ maps: [makeMap()], pins: [] });
+    await passerEnEdition();
+    await userEvent.click(screen.getByRole("button", { name: "Dessiner une région" }));
+    fireEvent.click(cadre(), { clientX: 100, clientY: 50 });
+    fireEvent.click(cadre(), { clientX: 500, clientY: 50 });
+    expect(document.querySelectorAll("[data-draft-vertex]")).toHaveLength(2);
+
+    await userEvent.keyboard("{Backspace}");
+
+    expect(document.querySelectorAll("[data-draft-vertex]")).toHaveLength(1);
+  });
+
+  it("dit ce qui manque, puis comment fermer", async () => {
+    monter({ maps: [makeMap()], pins: [] });
+    await passerEnEdition();
+    await userEvent.click(screen.getByRole("button", { name: "Dessiner une région" }));
+    expect(screen.getByText(/Sommets : 0 sur 3/)).toBeInTheDocument();
+
+    fireEvent.click(cadre(), { clientX: 100, clientY: 50 });
+    fireEvent.click(cadre(), { clientX: 500, clientY: 50 });
+    expect(screen.getByText(/Sommets : 2 sur 3/)).toBeInTheDocument();
+
+    fireEvent.click(cadre(), { clientX: 300, clientY: 400 });
+    expect(screen.getByText(/Cliquez le premier sommet pour fermer/)).toBeInTheDocument();
+  });
+
+  it("ferme le tracé quand on revient sur son premier sommet", async () => {
+    createMapRegion.mockResolvedValue(makeRegion({ id: "reg9", label: "La marche" }));
+    monter({ maps: [makeMap()], pins: [] });
+    await passerEnEdition();
+    await userEvent.click(screen.getByRole("button", { name: "Dessiner une région" }));
+    fireEvent.click(cadre(), { clientX: 100, clientY: 50 });
+    fireEvent.click(cadre(), { clientX: 500, clientY: 50 });
+    fireEvent.click(cadre(), { clientX: 300, clientY: 400 });
+
+    await userEvent.click(screen.getByRole("button", { name: "Fermer la région ici" }));
+
+    expect(screen.getByRole("textbox", { name: "Nom de la région" })).toBeInTheDocument();
+  });
+
   it("accroche le tracé aux lieux, comme la règle", async () => {
     monter({ maps: [makeMap()], pins: [makePin({ x: 60, y: 40 })] });
     await passerEnEdition();

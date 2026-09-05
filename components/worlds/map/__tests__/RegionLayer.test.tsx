@@ -4,9 +4,15 @@ import userEvent from "@testing-library/user-event";
 import { RegionLayer } from "@/components/worlds/map/RegionLayer";
 import { makeRegion } from "./fixtures";
 
+/** L'image mesure 1000×1000 à l'écran : 100 px valent 10 %. */
+const IMAGE = {
+  getBoundingClientRect: () => ({ left: 0, top: 0, width: 1000, height: 1000 }),
+} as HTMLImageElement;
+
 function monter(props: Partial<React.ComponentProps<typeof RegionLayer>> = {}) {
   const onSelect = vi.fn();
   const onVertexMoved = vi.fn();
+  const onCloseDraft = vi.fn();
   const imgRef = { current: null } as React.RefObject<HTMLImageElement | null>;
   render(
     <RegionLayer
@@ -17,10 +23,11 @@ function monter(props: Partial<React.ComponentProps<typeof RegionLayer>> = {}) {
       imgRef={imgRef}
       onSelect={onSelect}
       onVertexMoved={onVertexMoved}
+      onCloseDraft={onCloseDraft}
       {...props}
     />,
   );
-  return { onSelect, onVertexMoved };
+  return { onSelect, onVertexMoved, onCloseDraft };
 }
 
 describe("RegionLayer", () => {
@@ -51,6 +58,7 @@ describe("RegionLayer", () => {
             imgRef={{ current: null }}
             onSelect={onSelect}
             onVertexMoved={vi.fn()}
+            onCloseDraft={vi.fn()}
           />
         </div>,
       );
@@ -103,5 +111,45 @@ describe("RegionLayer", () => {
     fireEvent.pointerUp(poignee, { pointerId: 1 });
 
     expect(onVertexMoved).toHaveBeenCalledWith(expect.objectContaining({ id: "reg1" }), 0, { x: 30, y: 25 });
+  });
+});
+
+describe("RegionLayer — le tracé guidé", () => {
+  it("suit la souris : le sommet qu'on n'a pas encore posé", () => {
+    // Sans cela on dessinait à l'aveugle jusqu'au clic suivant.
+    monter({ regions: [], draft: [{ x: 10, y: 10 }, { x: 30, y: 10 }], imgRef: { current: IMAGE } });
+
+    fireEvent.mouseMove(document.querySelector("[data-draft-surface]")!, { clientX: 400, clientY: 500 });
+
+    expect(document.querySelector("[data-region-draft]")).toHaveAttribute("points", "10,10 30,10 40,50");
+  });
+
+  it("oublie ce sommet provisoire dès que la souris sort", () => {
+    monter({ regions: [], draft: [{ x: 10, y: 10 }, { x: 30, y: 10 }], imgRef: { current: IMAGE } });
+    const vitre = document.querySelector("[data-draft-surface]")!;
+
+    fireEvent.mouseMove(vitre, { clientX: 400, clientY: 500 });
+    fireEvent.mouseLeave(vitre);
+
+    expect(document.querySelector("[data-region-draft]")).toHaveAttribute("points", "10,10 30,10");
+  });
+
+  it("fait du premier sommet la poignée de fermeture, une fois la région possible", async () => {
+    // Revenir à son point de départ est le geste qu'on essaie d'abord.
+    const { onCloseDraft } = monter({
+      regions: [],
+      draft: [{ x: 10, y: 10 }, { x: 30, y: 10 }, { x: 20, y: 40 }],
+    });
+
+    await userEvent.click(screen.getByRole("button", { name: "Fermer la région ici" }));
+
+    expect(onCloseDraft).toHaveBeenCalled();
+  });
+
+  it("ne la propose pas tant qu'il n'y a pas de quoi faire une région", () => {
+    monter({ regions: [], draft: [{ x: 10, y: 10 }, { x: 30, y: 10 }] });
+
+    expect(screen.queryByRole("button", { name: "Fermer la région ici" })).toBeNull();
+    expect(document.querySelectorAll("[data-draft-vertex]")).toHaveLength(2);
   });
 });

@@ -498,6 +498,13 @@ export function WorldMap({
         finishDraft();
         return;
       }
+      // Défaire le dernier sommet plutôt que de tout reprendre : une erreur de
+      // main ne doit pas coûter le tracé entier.
+      if (e.key === "Backspace" && drawing && !(e.target instanceof HTMLInputElement)) {
+        e.preventDefault();
+        setDraft((prev) => (prev && prev.length > 0 ? prev.slice(0, -1) : prev));
+        return;
+      }
       if (e.key !== "Escape") return;
       // Un cran à la fois : le panneau d'un lieu d'abord, puis le tracé ou
       // la région ouverte, puis le segment de la règle, puis la règle
@@ -1321,6 +1328,7 @@ export function WorldMap({
                   isEditMode={isEditMode}
                   imgRef={imageRef}
                   onSelect={handleRegionClick}
+                  onCloseDraft={finishDraft}
                   onVertexMoved={(region, index, point) => void handleVertexMoved(region, index, point)}
                 />
               )}
@@ -1469,7 +1477,11 @@ export function WorldMap({
             {/* Indice d'aide en mode édition (sticky sur le container) */}
             {isEditMode && !pendingPin && !pendingRegion && (
               <div className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-4 py-1.5 text-xs text-white opacity-70">
-                {drawing ? t("drawingRegion") : t("clickToAddPin")}
+                {!drawing
+                  ? t("clickToAddPin")
+                  : (draft?.length ?? 0) >= MIN_REGION_POINTS
+                    ? t("drawingRegionClose")
+                    : t("drawingRegionMore", { count: draft?.length ?? 0, min: MIN_REGION_POINTS })}
               </div>
             )}
 

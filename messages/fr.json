@@ -1289,9 +1289,11 @@
     }
   },
   "map": {
+    "closeRegion": "Fermer la région ici",
+    "drawingRegionMore": "Sommets : {count} sur {min} minimum. Retour arrière pour défaire, Échap pour abandonner.",
+    "drawingRegionClose": "Cliquez le premier sommet pour fermer. Retour arrière pour défaire, Échap pour abandonner.",
     "region": "Région",
     "drawRegion": "Dessiner une région",
-    "drawingRegion": "Cliquez pour poser les sommets — Entrée ou double-clic pour fermer, Échap pour abandonner",
     "regionName": "Nom de la région",
     "regionVertex": "Sommet {index}",
     "minRegionPoints": "Trois sommets au moins.",

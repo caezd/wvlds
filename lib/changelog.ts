@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Carte",
+    text: "Le tracé d’une région se suit à l’œil : le contour accompagne la souris, le premier sommet la referme d’un clic, et le retour arrière défait le dernier point.",
+  },
+  {
+    date: "2026-09",
+    tag: "Carte",
     text: "Le panneau d’un lieu porte son titre sur sa bannière, sa description juste en dessous, et l’écrit plus petit.",
   },
   {
