@@ -1,39 +1,34 @@
 "use client";
 
 import * as React from "react";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import { Check, X } from "lucide-react";
 import type { Point } from "./zoom";
 import { midpoint } from "./zoom";
-import {
-  calibrateWidthUnits,
-  distanceBetween,
-  formatDistance,
-  roundDistance,
-  type MapScale,
-} from "./scale";
+import { calibrateWidthUnits, distanceBetween, roundDistance, type MapScale } from "./scale";
 
 /**
- * La règle : un segment tracé sur la carte, et ce qu'il mesure.
+ * Régler l'échelle d'une carte : on trace un segment sur une distance connue,
+ * on dit ce qu'elle vaut, et la carte en déduit ce que vaut sa largeur.
+ *
+ * C'est le seul emploi de ce segment — il n'y a pas d'outil de mesure. Une
+ * échelle sert à donner l'ordre de grandeur d'un monde, pas à faire des
+ * relevés entre deux points ; ce qu'elle produit se lit dans la barre
+ * d'échelle, en bas du cadre.
  *
  * Se rend DANS l'enveloppe transformée, comme les épingles : le trait suit
  * donc le déplacement et l'agrandissement sans un calcul. Le SVG est étiré
  * sur toute l'enveloppe (`preserveAspectRatio="none"`) pour que ses
  * coordonnées soient les pourcentages des épingles ; `non-scaling-stroke`
- * garde le trait à la même épaisseur quelle que soit l'échelle, et quel que
- * soit l'étirement. Les extrémités et le libellé sont du HTML à contre-échelle,
- * comme les marqueurs.
- *
- * En édition, le libellé est un formulaire : on mesure une distance connue,
- * on dit combien elle fait, et la carte en déduit son échelle. C'est le seul
- * réglage — nul besoin de connaître des pixels.
+ * garde le trait à la même épaisseur quel que soit l'étirement. Les
+ * extrémités et le formulaire sont du HTML à contre-échelle, comme les
+ * marqueurs.
  */
-export function MeasureOverlay({
+export function ScaleCalibrator({
   a,
   b,
   aspect,
   scale,
-  isEditMode,
   onCalibrate,
   onClear,
 }: {
@@ -42,45 +37,44 @@ export function MeasureOverlay({
   b: Point | null;
   /** Hauteur / largeur de la carte. */
   aspect: number;
+  /** L'échelle actuelle, s'il y en a une : c'est elle qu'on corrige. */
   scale: MapScale | null;
-  isEditMode: boolean;
   /** `null` retire l'échelle. */
   onCalibrate: (widthUnits: number | null, unit: string) => void;
   onClear: () => void;
 }) {
   const t = useTranslations("map");
   const tCommon = useTranslations("common");
-  const locale = useLocale();
 
-  const distance = b && scale ? distanceBetween(a, b, aspect, scale) : null;
   const centre = b ? midpoint(a, b) : a;
 
-  // Le brouillon repart de la mesure courante à chaque nouveau segment : ce
-  // qu'on corrige, c'est ce que la carte croit.
+  // Le brouillon repart de ce que la carte croit, à chaque nouveau segment :
+  // on corrige une échelle plus souvent qu'on n'en pose une.
   const [valueDraft, setValueDraft] = React.useState("");
   const [unitDraft, setUnitDraft] = React.useState("");
   const segmentKey = b ? `${a.x},${a.y},${b.x},${b.y}` : "";
   const [draftKey, setDraftKey] = React.useState("");
   if (draftKey !== segmentKey) {
     setDraftKey(segmentKey);
-    setValueDraft(distance != null ? String(roundDistance(distance)) : "");
+    const connue = b && scale ? distanceBetween(a, b, aspect, scale) : null;
+    setValueDraft(connue != null ? String(roundDistance(connue)) : "");
     setUnitDraft(scale?.unit ?? "");
   }
 
   function submit() {
     if (!b) return;
-    const valeur = Number(valueDraft.replace(",", "."));
     if (valueDraft.trim() === "") {
       onCalibrate(null, "");
       return;
     }
+    const valeur = Number(valueDraft.replace(",", "."));
     const largeur = calibrateWidthUnits(a, b, aspect, valeur);
     if (largeur == null) return;
     onCalibrate(largeur, unitDraft.trim());
   }
 
-  // Le formulaire et le bouton vivent sur la carte : leurs clics ne doivent
-  // ni poser un point ni entamer un déplacement.
+  // Le formulaire vit sur la carte : ses clics ne doivent ni poser un point
+  // ni entamer un déplacement.
   const stop = {
     onPointerDown: (e: React.PointerEvent) => e.stopPropagation(),
     onClick: (e: React.MouseEvent) => e.stopPropagation(),
@@ -104,7 +98,7 @@ export function MeasureOverlay({
         p ? (
           <div
             key={i}
-            data-measure-point
+            data-scale-point
             className="pointer-events-none absolute z-20 h-3 w-3 rounded-full border-2 border-white bg-primary shadow"
             style={{
               left: `${p.x}%`,
@@ -117,7 +111,7 @@ export function MeasureOverlay({
       )}
 
       <div
-        data-measure-label
+        data-scale-form
         className="absolute z-30"
         style={{
           left: `${centre.x}%`,
@@ -129,8 +123,8 @@ export function MeasureOverlay({
       >
         <div className="flex items-center gap-1 whitespace-nowrap rounded-lg border border-border bg-background px-2 py-1 text-xs shadow-xl">
           {!b ? (
-            <span className="text-muted-foreground">{t("measureHint")}</span>
-          ) : isEditMode ? (
+            <span className="text-muted-foreground">{t("scaleHint")}</span>
+          ) : (
             <>
               <span className="text-muted-foreground">{t("scaleDeclare")}</span>
               <input
@@ -162,21 +156,15 @@ export function MeasureOverlay({
                 <Check className="h-3.5 w-3.5" />
               </button>
             </>
-          ) : (
-            <span className={distance == null ? "text-muted-foreground" : "font-medium"}>
-              {distance != null && scale ? formatDistance(distance, scale.unit, locale) : t("noScale")}
-            </span>
           )}
-          {b && (
-            <button
-              type="button"
-              aria-label={t("clearMeasure")}
-              onClick={onClear}
-              className="rounded p-0.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          )}
+          <button
+            type="button"
+            aria-label={t("clearSegment")}
+            onClick={onClear}
+            className="rounded p-0.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
         </div>
       </div>
     </>

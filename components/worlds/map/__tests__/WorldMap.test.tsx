@@ -49,11 +49,8 @@ vi.mock("@/app/actions/worldMap", async (importOriginal) => ({
 // Le panneau d'un lieu tire tout l'éditeur de paragraphe et le rendu Markdown :
 // ce qui se vérifie ici est ce que la CARTE fait, pas ce qu'il affiche.
 vi.mock("@/components/worlds/map/PinPopover", () => ({
-  PinPopover: ({ pin, distanceFrom }: { pin: { title: string }; distanceFrom?: { distance: string } | null }) => (
-    <div data-testid="pin-popover">
-      {pin.title}
-      {distanceFrom && <span data-testid="pin-distance">{distanceFrom.distance}</span>}
-    </div>
+  PinPopover: ({ pin }: { pin: { title: string } }) => (
+    <div data-testid="pin-popover">{pin.title}</div>
   ),
 }));
 
@@ -725,7 +722,7 @@ describe("WorldMap — qui est où", () => {
   });
 });
 
-describe("WorldMap — la règle", () => {
+describe("WorldMap — régler l'échelle", () => {
   const AVEC_ECHELLE = makeMap({ scale_width_units: 1000, scale_unit: "km" });
 
   // L'image fait 1000×500 à l'écran : un clic à `clientX` = 100 tombe à 10 %.
@@ -740,48 +737,27 @@ describe("WorldMap — la règle", () => {
     return screen.getByAltText("Carte du monde").parentElement!.parentElement!;
   }
 
-  async function sortirLaRegle() {
-    await userEvent.click(screen.getByRole("button", { name: "Mesurer une distance" }));
+  async function sortirLOutil() {
+    await userEvent.click(screen.getByRole("button", { name: "Modifier" }));
+    await userEvent.click(screen.getByRole("button", { name: "Régler l'échelle" }));
   }
 
-  it("mesure entre deux clics, en unités du monde", async () => {
-    // Une carte sans échelle est un dessin ; avec, elle répond à « c'est loin ? ».
+  it("ne s'offre qu'à qui modifie la carte", async () => {
+    // Une échelle se pose une fois ; la lire se fait à la barre d'échelle.
     monter({ maps: [AVEC_ECHELLE], pins: [] });
-    await sortirLaRegle();
+    expect(screen.queryByRole("button", { name: "Régler l'échelle" })).toBeNull();
 
-    fireEvent.click(cadre(), { clientX: 100, clientY: 0 });
-    expect(screen.getByText("Cliquez un second point")).toBeInTheDocument();
-
-    fireEvent.click(cadre(), { clientX: 350, clientY: 0 });
-    // 25 % de 1 000 km.
-    expect(screen.getByText("250 km")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Modifier" }));
+    expect(screen.getByRole("button", { name: "Régler l'échelle" })).toBeInTheDocument();
   });
 
-  it("avoue qu'elle ne sait pas, sans échelle", async () => {
-    monter({ maps: [makeMap()], pins: [] });
-    await sortirLaRegle();
-    fireEvent.click(cadre(), { clientX: 100, clientY: 0 });
-    fireEvent.click(cadre(), { clientX: 350, clientY: 0 });
-    expect(screen.getByText("Échelle non définie")).toBeInTheDocument();
-  });
-
-  it("s'accroche aux lieux plutôt que d'ouvrir leur panneau", async () => {
-    monter({ maps: [AVEC_ECHELLE], pins: [makePin({ x: 60, y: 0 })] });
-    await sortirLaRegle();
-
-    await userEvent.click(screen.getByRole("button", { name: "Le port" }));
-    expect(screen.queryByTestId("pin-popover")).toBeNull();
-
-    fireEvent.click(cadre(), { clientX: 350, clientY: 0 });
-    expect(screen.getByText("250 km")).toBeInTheDocument();
-  });
-
-  it("règle l'échelle depuis une distance connue, en édition", async () => {
+  it("déduit l'échelle d'une distance connue", async () => {
     vi.mocked(updateWorldMap).mockResolvedValue(makeMap({ scale_width_units: 200, scale_unit: "lieues" }));
     monter({ maps: [makeMap()], pins: [] });
-    await userEvent.click(screen.getByRole("button", { name: "Modifier" }));
-    await sortirLaRegle();
+    await sortirLOutil();
+
     fireEvent.click(cadre(), { clientX: 100, clientY: 0 });
+    expect(screen.getByText("Cliquez un second point, sur une distance connue")).toBeInTheDocument();
     fireEvent.click(cadre(), { clientX: 350, clientY: 0 });
 
     await userEvent.type(screen.getByRole("spinbutton", { name: "Cette distance fait" }), "50");
@@ -793,32 +769,41 @@ describe("WorldMap — la règle", () => {
     );
   });
 
-  it("Échap efface le segment, puis range la règle", async () => {
-    monter({ maps: [AVEC_ECHELLE], pins: [] });
-    await sortirLaRegle();
-    fireEvent.click(cadre(), { clientX: 100, clientY: 0 });
-    fireEvent.click(cadre(), { clientX: 350, clientY: 0 });
-    expect(document.querySelectorAll("[data-measure-point]")).toHaveLength(2);
-
-    await userEvent.keyboard("{Escape}");
-    expect(document.querySelectorAll("[data-measure-point]")).toHaveLength(0);
-    expect(screen.getByRole("button", { name: "Mesurer une distance" })).toHaveAttribute("aria-pressed", "true");
-
-    await userEvent.keyboard("{Escape}");
-    expect(screen.getByRole("button", { name: "Mesurer une distance" })).toHaveAttribute("aria-pressed", "false");
-  });
-
-  it("dit au panneau d'un lieu à quelle distance est le précédent", async () => {
-    monter({
-      maps: [AVEC_ECHELLE],
-      pins: [makePin({ id: "pin1", title: "Le port", x: 10, y: 0 }), makePin({ id: "pin2", title: "La tour", x: 35, y: 0 })],
-    });
+  it("accroche le segment aux lieux, plutôt que d'ouvrir leur panneau", async () => {
+    monter({ maps: [AVEC_ECHELLE], pins: [makePin({ x: 60, y: 0 })] });
+    await sortirLOutil();
 
     await userEvent.click(screen.getByRole("button", { name: "Le port" }));
-    expect(screen.queryByTestId("pin-distance")).toBeNull();
 
-    await userEvent.click(screen.getByRole("button", { name: "La tour" }));
-    expect(screen.getByTestId("pin-distance")).toHaveTextContent("250 km");
+    expect(screen.queryByTestId("pin-popover")).toBeNull();
+    expect(document.querySelectorAll("[data-scale-point]")).toHaveLength(1);
+  });
+
+  it("Échap efface le segment, puis range l'outil", async () => {
+    monter({ maps: [AVEC_ECHELLE], pins: [] });
+    await sortirLOutil();
+    fireEvent.click(cadre(), { clientX: 100, clientY: 0 });
+    fireEvent.click(cadre(), { clientX: 350, clientY: 0 });
+    expect(document.querySelectorAll("[data-scale-point]")).toHaveLength(2);
+
+    await userEvent.keyboard("{Escape}");
+    expect(document.querySelectorAll("[data-scale-point]")).toHaveLength(0);
+    expect(screen.getByRole("button", { name: "Régler l'échelle" })).toHaveAttribute("aria-pressed", "true");
+
+    await userEvent.keyboard("{Escape}");
+    expect(screen.getByRole("button", { name: "Régler l'échelle" })).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("range l'outil quand on quitte l'écriture", async () => {
+    monter({ maps: [AVEC_ECHELLE], pins: [] });
+    await sortirLOutil();
+    fireEvent.click(cadre(), { clientX: 100, clientY: 0 });
+
+    await userEvent.click(screen.getByRole("button", { name: "Modification active" }));
+
+    expect(document.querySelectorAll("[data-scale-point]")).toHaveLength(0);
+    fireEvent.click(cadre(), { clientX: 500, clientY: 200 });
+    expect(document.querySelectorAll("[data-scale-point]")).toHaveLength(0);
   });
 });
 

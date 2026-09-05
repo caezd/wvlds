@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import { MEDIA, useMediaQuery } from "@/hooks/useMediaQuery";
@@ -48,12 +48,12 @@ import { MAP_PANEL_ID, MapTabs, mapTabId } from "./MapTabs";
 import { MapPlacesDrawer, MapPlacesPanel } from "./MapPlacesPanel";
 import { PinMarker } from "./PinMarker";
 import { PinPopover } from "./PinPopover";
-import { MeasureOverlay } from "./MeasureOverlay";
+import { ScaleCalibrator } from "./ScaleCalibrator";
 import { RegionLayer } from "./RegionLayer";
 import { RegionPanel } from "./RegionPanel";
 import { MIN_REGION_POINTS, dedupeConsecutive, polygonCentroid } from "./geometry";
 import { ScaleBar } from "./ScaleBar";
-import { distanceBetween, formatDistance, type MapScale } from "./scale";
+import { type MapScale } from "./scale";
 import type { Point } from "./zoom";
 import { isWithinTimeline } from "@/lib/worldTimeline";
 import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
@@ -146,19 +146,17 @@ export function WorldMap({
   const [uploadingMap, setUploadingMap] = React.useState(false);
 
   const [placesOpen, setPlacesOpen] = React.useState(false);
-  // La règle : active ou non, et le segment en cours — `b` manque tant que le
-  // second point n'est pas posé. Une ref pour le clic sur une épingle, qui
-  // garde son identité d'un rendu à l'autre.
-  const [measuring, setMeasuring] = React.useState(false);
-  const measuringRef = React.useRef(false);
-  measuringRef.current = measuring;
-  const [measure, setMeasure] = React.useState<{ a: Point; b: Point | null } | null>(null);
+  // Le réglage de l'échelle : actif ou non, et le segment en cours — `b`
+  // manque tant que le second point n'est pas posé. Une ref pour le clic sur
+  // une épingle, qui garde son identité d'un rendu à l'autre.
+  const [calibrating, setCalibrating] = React.useState(false);
+  const calibratingRef = React.useRef(false);
+  calibratingRef.current = calibrating;
+  const [segment, setSegment] = React.useState<{ a: Point; b: Point | null } | null>(null);
   // L'échelle courante de la vue, relevée à la fin de chaque geste : la barre
   // d'échelle en dépend, et elle n'a pas à suivre le geste image par image.
   const [viewScale, setViewScale] = React.useState(1);
-  // Le lieu ouvert juste avant celui-ci, pour dire à quelle distance il est.
-  const [previousPin, setPreviousPin] = React.useState<MapPinType | null>(null);
-  const locale = useLocale();
+
   // L'époque affichée : l'année courante du monde d'emblée, `null` pour tout
   // voir. Les lieux qui n'existent pas à cette date s'estompent.
   const [epoch, setEpoch] = React.useState<WorldTimelineDate | null>(() =>
@@ -452,7 +450,6 @@ export function WorldMap({
   // ── Ouvrir et fermer le panneau d'un lieu ─────────────────────
   const closePopover = React.useCallback((refocusPin = false) => {
     const id = selectedPinRef.current?.id;
-    if (selectedPinRef.current) setPreviousPin(selectedPinRef.current);
     setSelectedPin(null);
     setPopoverPos(null);
     if (id) writeUrl(activeMapRef.current?.id ?? null, null, "replace");
@@ -467,7 +464,6 @@ export function WorldMap({
 
   const openPopover = React.useCallback((pin: MapPinType, writeHistory = true) => {
     loadPopoverData();
-    if (selectedPinRef.current && selectedPinRef.current.id !== pin.id) setPreviousPin(selectedPinRef.current);
     setSelectedPin(pin);
     setPopoverPos(popoverPosFor(pin));
     setPendingPin(null);
@@ -478,7 +474,7 @@ export function WorldMap({
     setActiveMapId(mapId);
     closePopover();
     setPendingPin(null);
-    setMeasure(null);
+    setSegment(null);
     setSelectedRegion(null);
     setDraft(null);
     setPendingRegion(null);
@@ -489,7 +485,7 @@ export function WorldMap({
   // main aux boîtes de dialogue empilées par-dessus (apparence de l'épingle,
   // confirmation de suppression) : elles se ferment les premières.
   React.useEffect(() => {
-    if (!selectedPin && !placesOpen && !measuring && !drawing && !pendingRegion && !selectedRegion) return;
+    if (!selectedPin && !placesOpen && !calibrating && !drawing && !pendingRegion && !selectedRegion) return;
     function onKeyDown(e: KeyboardEvent) {
       if (e.defaultPrevented) return;
       // Entrée ferme le tracé en cours — sauf dans un champ, où elle valide.
@@ -507,15 +503,15 @@ export function WorldMap({
       }
       if (e.key !== "Escape") return;
       // Un cran à la fois : le panneau d'un lieu d'abord, puis le tracé ou
-      // la région ouverte, puis le segment de la règle, puis la règle
-      // elle-même, la colonne enfin. Le tiroir, lui, s'en charge tout seul.
+      // la région ouverte, puis le segment d'échelle, puis l'outil lui-même,
+      // la colonne enfin. Le tiroir, lui, s'en charge tout seul.
       if (selectedPin) closePopover(true);
       else if (pendingRegion) setPendingRegion(null);
       else if (drawing) setDraft(null);
       else if (selectedRegion) setSelectedRegion(null);
-      else if (measuring) {
-        if (measure) setMeasure(null);
-        else setMeasuring(false);
+      else if (calibrating) {
+        if (segment) setSegment(null);
+        else setCalibrating(false);
       }
       else if (grandEcran) setPlacesOpen(false);
     }
@@ -623,9 +619,8 @@ export function WorldMap({
     setSelectedRegion(null);
     setDraft(null);
     setPendingRegion(null);
-    setMeasuring(false);
-    setMeasure(null);
-    setPreviousPin(null);
+    setCalibrating(false);
+    setSegment(null);
     popoverDataAskedRef.current = false;
     pendingFocusRef.current = null;
   });
@@ -776,13 +771,13 @@ export function WorldMap({
   }, []);
 
   /** Premier point, second point — puis un troisième recommence un segment. */
-  const addMeasurePoint = React.useCallback((p: Point) => {
-    setMeasure((prev) => (prev && !prev.b ? { a: prev.a, b: p } : { a: p, b: null }));
+  const addScalePoint = React.useCallback((p: Point) => {
+    setSegment((prev) => (prev && !prev.b ? { a: prev.a, b: p } : { a: p, b: null }));
   }, []);
 
-  function toggleMeasuring() {
-    setMeasuring((v) => !v);
-    setMeasure(null);
+  function toggleCalibrating() {
+    setCalibrating((v) => !v);
+    setSegment(null);
     setPendingPin(null);
     setDraft(null);
     setPendingRegion(null);
@@ -803,6 +798,8 @@ export function WorldMap({
     setSelectedRegion(null);
     setDraft(null);
     setPendingRegion(null);
+    setCalibrating(false);
+    setSegment(null);
   }
 
   /** L'outil de tracé : on pose des sommets jusqu'à fermer, ou abandonner. */
@@ -811,8 +808,8 @@ export function WorldMap({
     setPendingRegion(null);
     setPendingPin(null);
     setSelectedRegion(null);
-    setMeasuring(false);
-    setMeasure(null);
+    setCalibrating(false);
+    setSegment(null);
     closePopover();
   }
 
@@ -851,7 +848,7 @@ export function WorldMap({
   }
 
   function handleRegionClick(region: MapRegion) {
-    if (viewport.consumeDidPan() || drawing || measuring) return;
+    if (viewport.consumeDidPan() || drawing || calibrating) return;
     closePopover();
     setPendingPin(null);
     loadPopoverData();
@@ -899,9 +896,9 @@ export function WorldMap({
       return;
     }
 
-    if (measuring) {
+    if (calibrating) {
       const p = pointOnImage(e);
-      if (p) addMeasurePoint(p);
+      if (p) addScalePoint(p);
       return;
     }
 
@@ -926,11 +923,11 @@ export function WorldMap({
   }
 
   const handlePinClick = React.useCallback((pin: MapPinType) => {
-    // La règle en main, un clic sur un lieu s'y accroche : mesurer entre deux
-    // lieux est ce qu'on lui demande le plus souvent. Un tracé de région en
+    // L'outil d'échelle en main, un clic sur un lieu s'y accroche : la
+    // distance connue va souvent d'un lieu à un autre. Un tracé de région en
     // cours fait de même, plutôt que d'ouvrir un panneau par-dessus lui.
-    if (measuringRef.current) {
-      addMeasurePoint({ x: pin.x, y: pin.y });
+    if (calibratingRef.current) {
+      addScalePoint({ x: pin.x, y: pin.y });
       return;
     }
     if (drawingRef.current) {
@@ -942,7 +939,7 @@ export function WorldMap({
       return;
     }
     openPopover(pin);
-  }, [closePopover, openPopover, addMeasurePoint, addDraftPoint]);
+  }, [closePopover, openPopover, addScalePoint, addDraftPoint]);
 
   const handlePinMoved = React.useCallback(async (pin: MapPinType, x: number, y: number) => {
     // Optimiste : mise à jour locale immédiate
@@ -1028,13 +1025,6 @@ export function WorldMap({
       : null;
   // Hauteur sur largeur ; 1 tant que la carte n'est pas mesurée.
   const aspect = baseSize.width > 0 ? baseSize.height / baseSize.width : 1;
-  const distanceFrom =
-    mapScale && selectedPin && previousPin && previousPin.id !== selectedPin.id && previousPin.map_id === selectedPin.map_id
-      ? {
-          title: previousPin.title,
-          distance: formatDistance(distanceBetween(previousPin, selectedPin, aspect, mapScale), mapScale.unit, locale),
-        }
-      : null;
 
   return (
     <div
@@ -1126,21 +1116,21 @@ export function WorldMap({
             </button>
           </div>
         )}
-        {activeMap?.image_url && (
+        {canEdit && isEditMode && activeMap?.image_url && (
           <button
             type="button"
-            aria-label={t("measure")}
-            aria-pressed={measuring}
-            onClick={(e) => { e.stopPropagation(); toggleMeasuring(); }}
+            aria-label={t("setScale")}
+            aria-pressed={calibrating}
+            onClick={(e) => { e.stopPropagation(); toggleCalibrating(); }}
             className={cn(
               "flex items-center gap-1.5 rounded-md px-2 py-1 text-xs transition-colors",
-              measuring
+              calibrating
                 ? "bg-secondary text-foreground"
                 : "text-muted-foreground hover:bg-secondary hover:text-foreground",
             )}
           >
             <Ruler className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">{t("measure")}</span>
+            <span className="hidden sm:inline">{t("setScale")}</span>
           </button>
         )}
         {activeMap?.image_url && (
@@ -1399,16 +1389,15 @@ export function WorldMap({
                 />
               ))}
 
-              {/* La règle : dans l'enveloppe, elle suit la carte. */}
-              {measure && (
-                <MeasureOverlay
-                  a={measure.a}
-                  b={measure.b}
+              {/* Le segment d'échelle : dans l'enveloppe, il suit la carte. */}
+              {segment && (
+                <ScaleCalibrator
+                  a={segment.a}
+                  b={segment.b}
                   aspect={aspect}
                   scale={mapScale}
-                  isEditMode={isEditMode}
                   onCalibrate={(w, u) => void handleCalibrate(w, u)}
-                  onClear={() => setMeasure(null)}
+                  onClear={() => setSegment(null)}
                 />
               )}
 
@@ -1516,7 +1505,6 @@ export function WorldMap({
           maps={maps}
           personasHere={personasByPin.get(selectedPin.id) ?? NOBODY}
           myPersonas={myPersonas}
-          distanceFrom={distanceFrom}
           timelineConfig={timelineConfig}
           isEditMode={isEditMode}
           canPost={canPost}

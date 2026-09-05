@@ -34,7 +34,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Carte",
-    text: "Une règle pour mesurer les distances sur la carte : deux clics, ou deux lieux. En édition, déclarer ce que fait une distance connue règle l’échelle ; une barre d’échelle apparaît alors dans le coin, et le panneau d’un lieu dit à quelle distance il est du précédent.",
+    text: "L’échelle d’une carte se règle en traçant un segment sur une distance connue et en disant ce qu’elle vaut. Une barre d’échelle paraît alors dans le coin.",
   },
   {
     date: "2026-09",

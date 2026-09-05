@@ -261,29 +261,6 @@ describe("PinPopover — qui est ici", () => {
   });
 });
 
-describe("PinPopover — c'est loin ?", () => {
-  it("dit la distance au lieu ouvert juste avant", () => {
-    render(
-      <PinPopover
-        pin={makePin()}
-        pos={{ left: 100, top: 100, placement: "above", arrowLeft: 170 }}
-        wikiPages={WIKI_PAGES}
-        rooms={[]}
-        maps={CARTES}
-        personasHere={[]}
-        myPersonas={[]}
-        onPlacePersona={vi.fn()}
-        distanceFrom={{ title: "La tour", distance: "250 km" }}
-        isEditMode={false}
-        worldId="w1"
-        onUpdated={vi.fn()}
-        onDelete={vi.fn()}
-        onOpenMap={vi.fn()}
-      />,
-    );
-    expect(screen.getByText("À 250 km de La tour")).toBeInTheDocument();
-  });
-});
 
 describe("PinPopover — dans le temps", () => {
   const CHRONO = {

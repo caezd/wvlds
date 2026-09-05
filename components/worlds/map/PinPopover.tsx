@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
-  BookOpenText, Check, Clock, ImagePlus, Loader2, LogOut, Map as MapIcon, MessagesSquare, Pencil, Play, Ruler, Trash2, Upload } from "lucide-react";
+  BookOpenText, Check, Clock, ImagePlus, Loader2, LogOut, Map as MapIcon, MessagesSquare, Pencil, Play, Trash2, Upload } from "lucide-react";
 
 import { toWebP } from "@/lib/imageUtils";
 import { supabaseThumb } from "@/lib/storage";
@@ -40,7 +40,6 @@ export function PinPopover({
   maps,
   personasHere,
   myPersonas,
-  distanceFrom = null,
   timelineConfig = null,
   isEditMode,
   canPost = false,
@@ -65,8 +64,6 @@ export function PinPopover({
   personasHere: MapPersona[];
   /** Mes personas de ce monde : ceux que je peux poser ici, ou faire partir. */
   myPersonas: MapPersona[];
-  /** La distance au lieu ouvert juste avant, quand la carte a une échelle. */
-  distanceFrom?: { title: string; distance: string } | null;
   /** La chronologie du monde, quand il en a une : les lieux prennent des dates. */
   timelineConfig?: WorldTimelineConfig | null;
   isEditMode: boolean;
@@ -439,14 +436,6 @@ export function PinPopover({
                     ? t("existsSince", { from: formatTimelineLabel(timelineConfig, pin.exists_from) })
                     : t("existsTill", { until: formatTimelineLabel(timelineConfig, pin.exists_until!) })}
               </span>
-            </p>
-          )}
-
-          {/* « C'est loin ? » — d'un lieu à l'autre, dès que la carte a une échelle. */}
-          {!editing && distanceFrom && (
-            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Ruler className="h-3.5 w-3.5 shrink-0" />
-              <span className="truncate">{t("distanceFrom", { distance: distanceFrom.distance, title: distanceFrom.title })}</span>
             </p>
           )}
 

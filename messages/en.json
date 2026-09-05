@@ -1312,14 +1312,9 @@
     "existsBetween": "From {from} to {until}",
     "existsSince": "Since {from}",
     "existsTill": "Until {until}",
-    "measure": "Measure a distance",
-    "measureHint": "Click a second point",
-    "noScale": "Scale not set",
     "scaleDeclare": "This distance is",
     "scaleUnit": "Unit",
     "scaleSaved": "Scale saved.",
-    "clearMeasure": "Clear the measurement",
-    "distanceFrom": "{distance} from {title}",
     "scaleBar": "Scale: {distance}",
     "whoIsHere": "Who is here",
     "placePersona": "Place a persona here",
@@ -1400,7 +1395,10 @@
       "dotted": "Dotted"
     },
     "toggleTransparent": "Transparent background",
-    "toggleBorder": "Border"
+    "toggleBorder": "Border",
+    "setScale": "Set the scale",
+    "scaleHint": "Click a second point, on a known distance",
+    "clearSegment": "Clear the segment"
   },
   "iconPicker": {
     "chooseIcon": "Choose an icon",
