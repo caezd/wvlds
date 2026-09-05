@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
-import { GripVertical, Loader2, Plus } from "lucide-react";
+import { GripVertical, Loader2, MoreVertical, Plus } from "lucide-react";
 import {
   DndContext,
   KeyboardSensor,
@@ -21,6 +21,12 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { MAX_MAPS_PER_WORLD } from "@/lib/constants";
 import type { WorldMapData } from "@/app/actions/worldMap";
@@ -33,38 +39,134 @@ type TabProps = {
   carte: WorldMapData;
   actif: boolean;
   onSelect: (mapId: string) => void;
+  /** Les commandes de la carte : elles ne concernent que l'onglet actif. */
+  actions?: MapTabActions;
 };
 
-/** L'onglet lui-même, sans rien savoir du glisser-déposer. */
+/**
+ * Ce qu'on peut faire à la carte qu'on regarde, depuis son onglet.
+ *
+ * Ces commandes vivaient dans l'en-tête du panneau, à distance de ce sur quoi
+ * elles portent : l'en-tête ne dit pas QUELLE carte on renomme ou on
+ * supprime, l'onglet si.
+ */
+export type MapTabActions = {
+  onRename: (mapId: string, label: string) => void;
+  onChangeImage: () => void;
+  onDelete: () => void;
+  /** Une image est en train de partir : le menu patiente. */
+  uploading: boolean;
+};
+
+/**
+ * L'onglet lui-même, sans rien savoir du glisser-déposer.
+ *
+ * Le fond est porté par l'enveloppe et non par le bouton : le menu « ⋮ » de
+ * l'onglet actif partage ainsi sa pastille, au lieu de flotter à côté.
+ *
+ * Le nom se corrige sur place — double-clic sur l'onglet ouvert, ou
+ * « Renommer » dans le menu. Le bouton redevient un `role="tab"` sitôt la
+ * saisie finie : un champ de texte ne tient pas ce rôle, et la barre d'onglets
+ * ne doit pas en perdre un.
+ */
 function TabButton({
   carte,
   actif,
   onSelect,
+  actions,
   style,
 }: TabProps & { style?: React.CSSProperties }) {
   const t = useTranslations("map");
+  const tCommon = useTranslations("common");
+  const nom = carte.label?.trim() || t("title");
+
+  const [renaming, setRenaming] = React.useState(false);
+  const [draft, setDraft] = React.useState(carte.label ?? "");
+
+  function commencerARenommer() {
+    setDraft(carte.label ?? "");
+    setRenaming(true);
+  }
+
+  function valider() {
+    setRenaming(false);
+    const valeur = draft.trim();
+    if (valeur !== (carte.label ?? "")) actions?.onRename(carte.id, valeur);
+  }
+
   return (
-    <button
-      id={mapTabId(carte.id)}
-      type="button"
-      role="tab"
-      aria-selected={actif}
-      aria-controls={MAP_PANEL_ID}
-      // Roving tabindex : la tabulation entre dans la barre et en sort, les
-      // flèches circulent dedans.
-      tabIndex={actif ? 0 : -1}
+    <span
       style={style}
-      onClick={(e) => { e.stopPropagation(); onSelect(carte.id); }}
       className={cn(
-        "shrink-0 rounded-md px-3 py-1 text-xs font-medium transition-colors",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        actif
-          ? "bg-secondary text-foreground"
-          : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground",
+        "flex shrink-0 items-center rounded-md transition-colors",
+        actif ? "bg-secondary text-foreground" : "text-muted-foreground hover:bg-secondary/60",
       )}
     >
-      {carte.label?.trim() || t("title")}
-    </button>
+      {renaming ? (
+        <input
+          autoFocus
+          value={draft}
+          aria-label={t("mapLabel")}
+          placeholder={t("title")}
+          onClick={(e) => e.stopPropagation()}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={valider}
+          onKeyDown={(e) => {
+            e.stopPropagation(); // les flèches appartiennent au texte, pas à la barre
+            if (e.key === "Enter") e.currentTarget.blur();
+            if (e.key === "Escape") { setRenaming(false); }
+          }}
+          className="w-28 rounded-md border border-border-soft bg-background px-2 py-0.5 text-xs font-medium outline-none focus:ring-2 focus:ring-primary"
+        />
+      ) : (
+        <button
+          id={mapTabId(carte.id)}
+          type="button"
+          role="tab"
+          aria-selected={actif}
+          aria-controls={MAP_PANEL_ID}
+          // Roving tabindex : la tabulation entre dans la barre et en sort, les
+          // flèches circulent dedans.
+          tabIndex={actif ? 0 : -1}
+          onClick={(e) => { e.stopPropagation(); onSelect(carte.id); }}
+          onDoubleClick={() => { if (actif && actions) commencerARenommer(); }}
+          className={cn(
+            "rounded-md px-3 py-1 text-xs font-medium transition-colors",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            !actif && "hover:text-foreground",
+          )}
+        >
+          {nom}
+        </button>
+      )}
+
+      {actif && actions && !renaming && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              aria-label={t("mapActions", { label: nom })}
+              onClick={(e) => e.stopPropagation()}
+              className="mr-1 rounded p-0.5 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {actions.uploading
+                ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                : <MoreVertical className="h-3.5 w-3.5" />}
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="min-w-44">
+            <DropdownMenuItem onSelect={commencerARenommer}>{tCommon("rename")}</DropdownMenuItem>
+            <DropdownMenuItem onSelect={actions.onChangeImage}>{t("changeMap")}</DropdownMenuItem>
+            <DropdownMenuItem
+              onSelect={actions.onDelete}
+              className="text-destructive focus:text-destructive"
+            >
+              {t("deleteMap")}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
+    </span>
   );
 }
 
@@ -77,7 +179,7 @@ function TabButton({
  * déplacer. Séparer les deux rend chacun sans ambiguïté — et le glisser reste
  * accessible au clavier, ce qu'un déplacement à la souris seule ne serait pas.
  */
-function SortableTab({ carte, actif, onSelect }: TabProps) {
+function SortableTab({ carte, actif, onSelect, actions }: TabProps) {
   const t = useTranslations("map");
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
     useSortable({ id: carte.id });
@@ -102,7 +204,7 @@ function SortableTab({ carte, actif, onSelect }: TabProps) {
       >
         <GripVertical className="h-3.5 w-3.5" />
       </button>
-      <TabButton carte={carte} actif={actif} onSelect={onSelect} />
+      <TabButton carte={carte} actif={actif} onSelect={onSelect} actions={actions} />
     </div>
   );
 }
@@ -125,6 +227,7 @@ export function MapTabs({
   activeId,
   isEditMode,
   creating,
+  actions,
   onSelect,
   onAdd,
   onReorder,
@@ -133,6 +236,8 @@ export function MapTabs({
   activeId: string | null;
   isEditMode: boolean;
   creating: boolean;
+  /** Les commandes de la carte active — absentes hors édition. */
+  actions: MapTabActions;
   onSelect: (mapId: string) => void;
   onAdd: () => void;
   /** Nouvel ordre des cartes, du premier onglet au dernier. */
@@ -220,7 +325,13 @@ export function MapTabs({
       <div role="tablist" aria-label={t("mapsTablist")} onKeyDown={handleKeyDown} className={classeBarre}>
         <SortableContext items={maps.map((m) => m.id)} strategy={horizontalListSortingStrategy}>
           {maps.map((carte) => (
-            <SortableTab key={carte.id} carte={carte} actif={carte.id === activeId} onSelect={onSelect} />
+            <SortableTab
+              key={carte.id}
+              carte={carte}
+              actif={carte.id === activeId}
+              onSelect={onSelect}
+              actions={actions}
+            />
           ))}
         </SortableContext>
         {boutonAjouter}

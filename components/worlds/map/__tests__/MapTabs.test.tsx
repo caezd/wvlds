@@ -27,22 +27,32 @@ function monter({
   activeId = "m1",
   isEditMode = false,
   creating = false,
+  uploading = false,
 } = {}) {
   const onSelect = vi.fn();
   const onAdd = vi.fn();
   const onReorder = vi.fn();
+  const onRename = vi.fn();
+  const onChangeImage = vi.fn();
+  const onDelete = vi.fn();
   render(
     <MapTabs
       maps={maps}
       activeId={activeId}
       isEditMode={isEditMode}
       creating={creating}
+      actions={{ onRename, onChangeImage, onDelete, uploading }}
       onSelect={onSelect}
       onAdd={onAdd}
       onReorder={onReorder}
     />,
   );
-  return { onSelect, onAdd, onReorder };
+  return { onSelect, onAdd, onReorder, onRename, onChangeImage, onDelete };
+}
+
+/** Ouvre le menu « ⋮ » de l'onglet actif. */
+async function ouvrirLeMenu(nom = "Continent") {
+  await userEvent.click(screen.getByRole("button", { name: `Commandes de la carte ${nom}` }));
 }
 
 beforeEach(() => vi.clearAllMocks());
@@ -162,5 +172,84 @@ describe("MapTabs — réordonnancement", () => {
     await userEvent.keyboard("{ArrowRight}");
 
     expect(onSelect).not.toHaveBeenCalled();
+  });
+});
+
+describe("MapTabs — les commandes de la carte", () => {
+  it("ne les offre qu'à l'onglet ouvert, et en écriture", () => {
+    // Elles portent sur la carte qu'on regarde : c'est son onglet qui les
+    // tient, et non l'en-tête, qui ne disait pas de quelle carte il parlait.
+    monter({ isEditMode: true });
+
+    expect(screen.getByRole("button", { name: "Commandes de la carte Continent" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Commandes de la carte Capitale" })).toBeNull();
+  });
+
+  it("n'en offre aucune hors écriture", () => {
+    monter();
+    expect(screen.queryByRole("button", { name: /Commandes de la carte/ })).toBeNull();
+  });
+
+  it("mène à l'image et à la suppression", async () => {
+    const { onChangeImage, onDelete } = monter({ isEditMode: true });
+
+    await ouvrirLeMenu();
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Changer la carte" }));
+    expect(onChangeImage).toHaveBeenCalled();
+
+    await ouvrirLeMenu();
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Supprimer cette carte" }));
+    expect(onDelete).toHaveBeenCalled();
+  });
+
+  it("patiente pendant qu'une image part", () => {
+    monter({ isEditMode: true, uploading: true });
+    expect(
+      screen.getByRole("button", { name: "Commandes de la carte Continent" }).querySelector(".animate-spin"),
+    ).not.toBeNull();
+  });
+});
+
+describe("MapTabs — renommer une carte", () => {
+  it("se renomme depuis le menu, et rend son onglet à la barre", async () => {
+    const { onRename } = monter({ isEditMode: true });
+
+    await ouvrirLeMenu();
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Renommer" }));
+
+    const champ = screen.getByRole("textbox", { name: "Nom de la carte" });
+    await userEvent.clear(champ);
+    await userEvent.type(champ, "Hadea{Enter}");
+
+    expect(onRename).toHaveBeenCalledWith("m1", "Hadea");
+    // Le champ n'est pas un onglet : la barre le récupère sitôt la saisie
+    // finie. Le nom affiché, lui, reste celui de la liste des cartes — c'est
+    // le parent qui la tient, et qui le remplacera.
+    expect(screen.queryByRole("textbox", { name: "Nom de la carte" })).toBeNull();
+    expect(screen.getByRole("tab", { name: "Continent" })).toBeInTheDocument();
+  });
+
+  it("se renomme au double-clic sur l'onglet ouvert", async () => {
+    monter({ isEditMode: true });
+
+    await userEvent.dblClick(screen.getByRole("tab", { name: "Continent" }));
+
+    expect(screen.getByRole("textbox", { name: "Nom de la carte" })).toHaveValue("Continent");
+  });
+
+  it("Échap laisse le nom tranquille", async () => {
+    const { onRename } = monter({ isEditMode: true });
+    await userEvent.dblClick(screen.getByRole("tab", { name: "Continent" }));
+
+    await userEvent.type(screen.getByRole("textbox", { name: "Nom de la carte" }), "xyz{Escape}");
+
+    expect(onRename).not.toHaveBeenCalled();
+    expect(screen.getByRole("tab", { name: "Continent" })).toBeInTheDocument();
+  });
+
+  it("ne renomme pas un onglet qu'on ne regarde pas", async () => {
+    monter({ isEditMode: true });
+    await userEvent.dblClick(screen.getByRole("tab", { name: "Capitale" }));
+    expect(screen.queryByRole("textbox", { name: "Nom de la carte" })).toBeNull();
   });
 });

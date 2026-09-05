@@ -8,7 +8,7 @@ import { MEDIA, useMediaQuery } from "@/hooks/useMediaQuery";
 import { useResetOnKeyChange } from "@/hooks/useResetOnKeyChange";
 import { useMapViewport } from "@/hooks/useMapViewport";
 // `Map` est renommée : l'icône masquait le `Map` natif.
-import { Check, Clock, Hexagon, List, Loader2, Map as MapIcon, MapPin, Pencil, Plus, Ruler, Trash2, Upload, X } from "lucide-react";
+import { Check, Clock, Hexagon, List, Loader2, Map as MapIcon, MapPin, Pencil, Plus, Ruler, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { cn } from "@/lib/utils";
@@ -143,6 +143,8 @@ export function WorldMap({
 
   const [creatingMap, setCreatingMap] = React.useState(false);
   const [confirmDeleteMap, setConfirmDeleteMap] = React.useState(false);
+  // L'épingle dont on demande la suppression, en attente de confirmation.
+  const [pinToDelete, setPinToDelete] = React.useState<MapPinType | null>(null);
   const [uploadingMap, setUploadingMap] = React.useState(false);
 
   const [placesOpen, setPlacesOpen] = React.useState(false);
@@ -663,18 +665,14 @@ export function WorldMap({
   // l'écrive ni ne l'affiche : chaque monde avait donc « Carte » pour titre,
   // là où le wiki, lui, se laisse renommer.
   const mapLabel = activeMap?.label?.trim() || t("title");
-  const [labelDraft, setLabelDraft] = React.useState(activeMap?.label ?? "");
-  React.useEffect(() => { setLabelDraft(activeMap?.label ?? ""); }, [activeMap?.id, activeMap?.label]);
 
-  async function handleLabelCommit() {
-    const value = labelDraft.trim();
-    if (!activeMap || value === (activeMap.label ?? "")) return;
+  /** Renomme une carte depuis son onglet. Un nom vide retombe sur « Carte ». */
+  async function handleRenameMap(mapId: string, label: string) {
     try {
-      const updated = await updateWorldMap(activeMap.id, { label: value || t("title") });
+      const updated = await updateWorldMap(mapId, { label: label || t("title") });
       setMaps((prev) => mergeById(prev, updated));
     } catch {
       toast.error(t("saveError"));
-      setLabelDraft(activeMap.label ?? "");
     }
   }
 
@@ -1030,7 +1028,23 @@ export function WorldMap({
     }
   }
 
-  const handleDeletePin = React.useCallback(async (pin: MapPinType) => {
+  /**
+   * Demande la suppression d'un lieu — la confirmation vit ici, et non dans
+   * les deux endroits d'où l'on peut la déclencher.
+   *
+   * La croix du marqueur supprimait sans rien demander : un lieu et sa
+   * description disparaissaient sur un clic de trop, et rien ne les ramène.
+   * Le panneau, lui, confirmait de son côté ; les deux chemins passent
+   * désormais par le même dialogue.
+   */
+  const handleDeletePin = React.useCallback((pin: MapPinType) => {
+    setPinToDelete(pin);
+  }, []);
+
+  async function confirmDeletePin() {
+    const pin = pinToDelete;
+    setPinToDelete(null);
+    if (!pin) return;
     try {
       await deleteMapPin(pin.id);
       setPins((prev) => prev.filter((p) => p.id !== pin.id));
@@ -1039,7 +1053,7 @@ export function WorldMap({
     } catch {
       toast.error(tRef.current("deletePinError"));
     }
-  }, [closePopover]);
+  }
 
   // ── Render ────────────────────────────────────────────────────
   if (loading) {
@@ -1071,28 +1085,7 @@ export function WorldMap({
     >
       <WorldPanelHeader
         icon={<MapIcon className="h-4 w-4 shrink-0 text-muted-foreground" />}
-        title={
-          isEditMode && activeMap ? (
-            <input
-              value={labelDraft}
-              aria-label={t("mapLabel")}
-              placeholder={t("title")}
-              onClick={(e) => e.stopPropagation()}
-              onChange={(e) => setLabelDraft(e.target.value)}
-              onBlur={() => void handleLabelCommit()}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") e.currentTarget.blur();
-                if (e.key === "Escape") {
-                  setLabelDraft(activeMap.label ?? "");
-                  e.currentTarget.blur();
-                }
-              }}
-              className="w-28 rounded-md border border-border-soft bg-background px-2 py-0.5 text-sm font-semibold outline-none focus:ring-2 focus:ring-primary sm:w-40"
-            />
-          ) : (
-            mapLabel
-          )
-        }
+        title={mapLabel}
         right={
           canEdit && (
             <button
@@ -1200,32 +1193,6 @@ export function WorldMap({
             <span className="hidden sm:inline">{t("drawRegion")}</span>
           </button>
         )}
-        {canEdit && isEditMode && activeMap?.image_url && (
-          <button
-            type="button"
-            aria-label={t("changeMap")}
-            onClick={(e) => { e.stopPropagation(); mapFileInputRef.current?.click(); }}
-            className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
-          >
-            {uploadingMap ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Upload className="h-3.5 w-3.5" />
-            )}
-            <span className="hidden sm:inline">{t("changeMap")}</span>
-          </button>
-        )}
-        {canEdit && isEditMode && activeMap && (
-          <button
-            type="button"
-            aria-label={t("deleteMap")}
-            onClick={(e) => { e.stopPropagation(); setConfirmDeleteMap(true); }}
-            className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">{t("deleteMap")}</span>
-          </button>
-        )}
       </WorldPanelHeader>
 
       {/* Onglets : cachés tant qu'il n'y a qu'une carte à montrer, pour lui
@@ -1237,6 +1204,12 @@ export function WorldMap({
           activeId={activeMap?.id ?? null}
           isEditMode={isEditMode}
           creating={creatingMap}
+          actions={{
+            onRename: (mapId, label) => void handleRenameMap(mapId, label),
+            onChangeImage: () => mapFileInputRef.current?.click(),
+            onDelete: () => setConfirmDeleteMap(true),
+            uploading: uploadingMap,
+          }}
           onSelect={(id) => selectMap(id)}
           onAdd={() => void handleAddMap()}
           onReorder={(ids) => void handleReorderMaps(ids)}
@@ -1525,6 +1498,16 @@ export function WorldMap({
           </div>
         )}
       </div>
+
+      <DeleteConfirmDialog
+        open={pinToDelete !== null}
+        onOpenChange={(ouvert) => { if (!ouvert) setPinToDelete(null); }}
+        title={t("deleteTitle", { title: pinToDelete?.title ?? "" })}
+        description={t("deleteDesc")}
+        cancelLabel={tCommon("cancel")}
+        confirmLabel={tCommon("delete")}
+        onConfirm={() => void confirmDeletePin()}
+      />
 
       {/* ── Popover pin sélectionné ─────────────────────────────── */}
       {selectedPin && popoverPos && (

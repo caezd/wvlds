@@ -16,7 +16,6 @@ import { Button } from "@/components/ui/button";
 import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
 import { MarkdownContent } from "@/components/MarkdownRenderer";
 import { ParagraphBlockEditor } from "@/components/chatrooms/composer/ParagraphBlockEditor";
-import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { updateMapPin, type MapPersona, type MapPin as MapPinType, type WorldMapData } from "@/app/actions/worldMap";
 import { AvatarWithFrame } from "@/components/avatars/AvatarWithFrame";
 import { TimelineDateFields } from "@/components/worlds/timeline/TimelineDateFields";
@@ -111,7 +110,6 @@ export function PinPopover({
   const [description, setDescription] = React.useState(pin.description ?? "");
   const [uploadingBanner, setUploadingBanner] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
-  const [confirmDelete, setConfirmDelete] = React.useState(false);
   const [visualDialogOpen, setVisualDialogOpen] = React.useState(false);
   const bannerInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -193,19 +191,6 @@ export function PinPopover({
 
   return (
     <>
-      <DeleteConfirmDialog
-        open={confirmDelete}
-        onOpenChange={setConfirmDelete}
-        title={t("deleteTitle", { title: pin.title })}
-        description={t("deleteDesc")}
-        cancelLabel={tCommon("cancel")}
-        confirmLabel={tCommon("delete")}
-        onConfirm={() => {
-          setConfirmDelete(false);
-          onDelete();
-        }}
-      />
-
       {isEditMode && (
         // Le div arrête la propagation vers le onClick extérieur de WorldMap
         // (les events des portals Radix remontent quand même via l'arbre React)
@@ -574,7 +559,7 @@ export function PinPopover({
                     size="sm"
                     variant="ghost"
                     className="ml-auto text-destructive hover:bg-destructive/10 hover:text-destructive"
-                    onClick={() => setConfirmDelete(true)}
+                    onClick={onDelete}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                     {tCommon("delete")}

@@ -80,7 +80,8 @@
     "formatOrderedList": "Lista numerada",
     "formatQuote": "Cita",
     "formatLinkText": "texto",
-    "formatToolbar": "Formato"
+    "formatToolbar": "Formato",
+    "rename": "Renombrar"
   },
   "nav": {
     "profile": "Mi perfil",
@@ -1398,7 +1399,8 @@
     "toggleBorder": "Borde",
     "setScale": "Ajustar la escala",
     "scaleHint": "Haga clic en un segundo punto, sobre una distancia conocida",
-    "clearSegment": "Borrar el segmento"
+    "clearSegment": "Borrar el segmento",
+    "mapActions": "Acciones del mapa {label}"
   },
   "iconPicker": {
     "chooseIcon": "Elegir un icono",

@@ -9,6 +9,16 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Carte",
+    text: "Le nom d’une carte se corrige dans son onglet, d’un double-clic, et ses commandes — changer l’image, supprimer — tiennent dans un menu au bout de celui-ci.",
+  },
+  {
+    date: "2026-09",
+    tag: "Carte",
+    text: "Supprimer un lieu demande confirmation.",
+  },
+  {
+    date: "2026-09",
+    tag: "Carte",
     text: "Le tracé d’une région se suit à l’œil : le contour accompagne la souris, le premier sommet la referme d’un clic, et le retour arrière défait le dernier point.",
   },
   {

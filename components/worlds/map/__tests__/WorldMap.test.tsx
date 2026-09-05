@@ -6,7 +6,7 @@ import userEvent from "@testing-library/user-event";
 import { createSupabaseMock, type SupabaseMock } from "@/test/supabaseMock";
 import { createClient } from "@/lib/supabase/client";
 import { WorldMap } from "@/components/worlds/map/WorldMap";
-import { updateWorldMap } from "@/app/actions/worldMap";
+import { deleteMapPin, updateWorldMap } from "@/app/actions/worldMap";
 import { MEDIA } from "@/hooks/useMediaQuery";
 import { makeMap, makeMapPersona, makePin, makeRegion } from "./fixtures";
 
@@ -51,11 +51,15 @@ vi.mock("@/app/actions/worldMap", async (importOriginal) => ({
 vi.mock("@/components/worlds/map/PinPopover", () => ({
   // `panelRef` est attaché : c'est par lui que la carte mesure le panneau et
   // le replace quand sa hauteur change.
-  PinPopover: ({ pin, panelRef }: {
+  PinPopover: ({ pin, panelRef, onDelete }: {
     pin: { title: string };
     panelRef?: React.RefObject<HTMLDivElement | null>;
+    onDelete: () => void;
   }) => (
-    <div ref={panelRef} data-testid="pin-popover">{pin.title}</div>
+    <div ref={panelRef} data-testid="pin-popover">
+      {pin.title}
+      <button type="button" onClick={onDelete}>Supprimer depuis le panneau</button>
+    </div>
   ),
 }));
 
@@ -1181,5 +1185,52 @@ describe("WorldMap — le panneau d'un lieu suit sa propre taille", () => {
     poserLaHauteur(panneau, 400);
 
     expect(panneau.style.top).not.toBe(court);
+  });
+});
+
+describe("WorldMap — supprimer un lieu", () => {
+  it("demande confirmation avant d'effacer, depuis la croix du marqueur", async () => {
+    // La croix supprimait sur un seul clic : un lieu et sa description
+    // disparaissaient sans retour possible.
+    monter({ maps: [makeMap()], pins: [makePin()] });
+    await userEvent.click(screen.getByRole("button", { name: "Modifier" }));
+
+    await userEvent.click(screen.getByRole("button", { name: "Supprimer ce pin" }));
+
+    expect(deleteMapPin).not.toHaveBeenCalled();
+    expect(await screen.findByText("Supprimer « Le port » ?")).toBeInTheDocument();
+  });
+
+  it("efface une fois confirmé", async () => {
+    monter({ maps: [makeMap()], pins: [makePin()] });
+    await userEvent.click(screen.getByRole("button", { name: "Modifier" }));
+    await userEvent.click(screen.getByRole("button", { name: "Supprimer ce pin" }));
+
+    await userEvent.click(await screen.findByRole("button", { name: "Supprimer" }));
+
+    await waitFor(() => expect(deleteMapPin).toHaveBeenCalledWith("pin1"));
+    expect(screen.queryByRole("button", { name: "Le port" })).toBeNull();
+  });
+
+  it("renonce sans rien effacer", async () => {
+    monter({ maps: [makeMap()], pins: [makePin()] });
+    await userEvent.click(screen.getByRole("button", { name: "Modifier" }));
+    await userEvent.click(screen.getByRole("button", { name: "Supprimer ce pin" }));
+
+    await userEvent.click(await screen.findByRole("button", { name: "Annuler" }));
+
+    expect(deleteMapPin).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Le port" })).toBeInTheDocument();
+  });
+
+  it("passe par la même confirmation depuis le panneau du lieu", async () => {
+    // Deux chemins, un seul dialogue : le panneau confirmait de son côté.
+    monter({ maps: [makeMap()], pins: [makePin()] });
+    await userEvent.click(screen.getByRole("button", { name: "Le port" }));
+
+    await userEvent.click(screen.getByRole("button", { name: "Supprimer depuis le panneau" }));
+
+    expect(deleteMapPin).not.toHaveBeenCalled();
+    expect(await screen.findByText("Supprimer « Le port » ?")).toBeInTheDocument();
   });
 });
