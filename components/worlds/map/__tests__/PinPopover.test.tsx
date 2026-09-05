@@ -322,6 +322,16 @@ describe("PinPopover — dans le temps", () => {
 });
 
 describe("PinPopover — la carte du lieu", () => {
+  it("pose « Jouer ici » à côté du nom, sur la bannière", () => {
+    // C'est l'action qu'on vient chercher : elle n'a pas à se trouver plus bas
+    // que ce qui la nomme.
+    monter(makePin(), false, undefined, [], true);
+
+    const titre = screen.getByRole("heading", { name: "Le port" });
+    const jouer = screen.getByRole("button", { name: "Jouer ici" });
+    expect(jouer.parentElement).toBe(titre.parentElement);
+  });
+
   it("porte son titre sur la bannière, sans croix pour le refermer", () => {
     // La croix mangeait un coin de l'image pour ce qu'Échap et un clic sur la
     // carte font déjà.

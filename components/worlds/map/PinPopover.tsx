@@ -296,10 +296,23 @@ export function PinPopover({
               En écriture il repasse dans le formulaire : un champ de saisie
               par-dessus une photo se lit mal, et c'est là qu'on le corrige. */}
           {!editing && (
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent px-3 pb-2 pt-8">
-              <h3 className="line-clamp-2 text-base font-semibold leading-snug text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.8)]">
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end gap-2 bg-gradient-to-t from-black/80 via-black/40 to-transparent px-3 pb-2 pt-8">
+              <h3 className="line-clamp-2 min-w-0 flex-1 text-base font-semibold leading-snug text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.8)]">
                 {pin.title}
               </h3>
+              {/* Lancer une scène ici, à côté du nom du lieu : c'est l'action
+                  qu'on vient chercher, elle n'a pas à se trouver plus bas que
+                  ce qui la nomme. Le bandeau ne prend pas le pointeur — le
+                  bouton d'import de bannière est dessous —, ce bouton-ci si. */}
+              {canPost && (
+                <button
+                  type="button"
+                  onClick={() => router.push(`/w/${worldId}?play=${pin.id}`)}
+                  className="pointer-events-auto flex shrink-0 items-center gap-1.5 rounded-md border border-white/30 bg-white/15 px-2 py-1 text-xs font-medium text-white shadow-sm backdrop-blur-sm transition-colors hover:bg-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                >
+                  <Play className="h-3.5 w-3.5" /> {t("playHere")}
+                </button>
+              )}
             </div>
           )}
 
@@ -437,18 +450,6 @@ export function PinPopover({
                     : t("existsTill", { until: formatTimelineLabel(timelineConfig, pin.exists_until!) })}
               </span>
             </p>
-          )}
-
-          {/* Lancer une scène ici. Le composeur d'accueil sait situer un salon
-              (`map_pin_id`) ; il ne manquait que le chemin depuis le lieu. */}
-          {!editing && canPost && (
-            <button
-              type="button"
-              onClick={() => router.push(`/w/${worldId}?play=${pin.id}`)}
-              className="flex w-fit items-center gap-1.5 rounded-md border border-primary/40 bg-primary/10 px-2 py-1 text-xs font-medium text-primary hover:bg-primary/20"
-            >
-              <Play className="h-3.5 w-3.5" /> {t("playHere")}
-            </button>
           )}
 
           {/* Qui est là — et de quoi y venir. Les miens ont un bouton pour
