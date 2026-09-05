@@ -283,6 +283,30 @@ export function WorldMap({
     }
   }, []);
 
+  /**
+   * Le panneau se replace dès que sa hauteur change.
+   *
+   * Sa position DÉPEND de sa hauteur — il se pose au-dessus de son épingle
+   * quand la place manque en dessous. Or son contenu peut grandir après
+   * l'ouverture : une arrivée en temps réel, une image, un persona qu'on
+   * vient de poser. Le préchargement plus haut règle le cas courant ; ceci
+   * rattrape tous les autres, y compris la toute première mesure — un
+   * `ResizeObserver` rend une entrée dès qu'il observe.
+   */
+  React.useEffect(() => {
+    const panel = popoverPanelRef.current;
+    if (!selectedPin || !panel || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => {
+      repositionPopoverPanel();
+      syncPopoverPos();
+    });
+    observer.observe(panel);
+    return () => observer.disconnect();
+    // `repositionPopoverPanel` est recréée à chaque rendu : la mettre en
+    // dépendance rebrancherait l'observation aussi souvent, pour rien.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedPin, syncPopoverPos]);
+
   // ── Chargement initial ────────────────────────────────────────
   React.useEffect(() => {
     if (initialMap) return;
@@ -416,6 +440,15 @@ export function WorldMap({
     void getMyMapPersonas(worldId).then(setMyPersonas);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [worldId]);
+
+  // De quoi remplir un panneau, préchargé dès que la carte est à l'écran
+  // plutôt qu'au premier clic sur un lieu : ces listes arrivaient sinon APRÈS
+  // l'ouverture, faisant grandir le panneau sous les yeux — et sauter sa
+  // position, qui se calcule à partir de sa hauteur. Trois requêtes légères,
+  // une seule fois par visite (voir le garde dans `loadPopoverData`).
+  React.useEffect(() => {
+    if (activeMap?.image_url) loadPopoverData();
+  }, [activeMap?.image_url, loadPopoverData]);
 
   // ── L'adresse suit ce qu'on regarde ───────────────────────────
   /**

@@ -49,8 +49,13 @@ vi.mock("@/app/actions/worldMap", async (importOriginal) => ({
 // Le panneau d'un lieu tire tout l'éditeur de paragraphe et le rendu Markdown :
 // ce qui se vérifie ici est ce que la CARTE fait, pas ce qu'il affiche.
 vi.mock("@/components/worlds/map/PinPopover", () => ({
-  PinPopover: ({ pin }: { pin: { title: string } }) => (
-    <div data-testid="pin-popover">{pin.title}</div>
+  // `panelRef` est attaché : c'est par lui que la carte mesure le panneau et
+  // le replace quand sa hauteur change.
+  PinPopover: ({ pin, panelRef }: {
+    pin: { title: string };
+    panelRef?: React.RefObject<HTMLDivElement | null>;
+  }) => (
+    <div ref={panelRef} data-testid="pin-popover">{pin.title}</div>
   ),
 }));
 
@@ -180,8 +185,18 @@ describe("WorldMap — pages du wiki", () => {
     expect(mock.builders.filter((b) => b.table === "world_wiki_pages")).toHaveLength(1);
   });
 
-  it("ne les lit pas tant qu'aucun lieu n'est ouvert", () => {
+  it("les lit dès que la carte est à l'écran, sans attendre un clic", () => {
+    // Elles étaient lues à la première ouverture d'un panneau, et arrivaient
+    // donc APRÈS lui : le panneau grandissait sous les yeux, et sa position —
+    // qui se calcule à partir de sa hauteur — sautait. Le prix est de trois
+    // requêtes légères par visite, même sans clic.
     const { mock } = monter({ maps: [makeMap()], pins: [makePin()] });
+
+    expect(mock.builders.filter((b) => b.table === "world_wiki_pages")).toHaveLength(1);
+  });
+
+  it("ne les lit pas pour une carte sans image : il n'y a pas de lieu à ouvrir", () => {
+    const { mock } = monter({ maps: [makeMap({ image_url: null })], pins: [] });
 
     expect(mock.builders.filter((b) => b.table === "world_wiki_pages")).toHaveLength(0);
   });
@@ -1130,5 +1145,41 @@ describe("WorldMap — le clic n'est pas avalé par le déplacement", () => {
 
     fireEvent.pointerMove(cadre, { pointerId: 1, clientX: 140, clientY: 100 });
     expect(capture).toHaveBeenCalledWith(1);
+  });
+});
+
+describe("WorldMap — le panneau d'un lieu suit sa propre taille", () => {
+  beforeEach(simulerMiseEnPage);
+  afterEach(restaurerMiseEnPage);
+
+  // L'épingle tombe bas dans la fenêtre : le panneau se pose alors AU-DESSUS
+  // d'elle, et sa position dépend donc de sa hauteur.
+  beforeEach(() => {
+    vi.spyOn(HTMLImageElement.prototype, "getBoundingClientRect").mockReturnValue({
+      left: 0, top: 400, width: 1000, height: 600, right: 1000, bottom: 1000, x: 0, y: 400, toJSON() {},
+    } as DOMRect);
+  });
+  afterEach(() => { vi.restoreAllMocks(); });
+
+  function poserLaHauteur(el: HTMLElement, hauteur: number) {
+    Object.defineProperty(el, "offsetHeight", { configurable: true, value: hauteur });
+    act(() => { redimensionnements.forEach((r) => r()); });
+  }
+
+  it("se replace quand son contenu le fait grandir", async () => {
+    // Les pages du wiki et les personas arrivent du serveur : le panneau
+    // grandissait sous les yeux, en gardant la position calculée pour sa
+    // hauteur d'avant.
+    monter({ maps: [makeMap()], pins: [makePin()] });
+    await userEvent.click(screen.getByRole("button", { name: "Le port" }));
+    const panneau = screen.getByTestId("pin-popover");
+
+    poserLaHauteur(panneau, 120);
+    const court = panneau.style.top;
+    expect(court).not.toBe("");
+
+    poserLaHauteur(panneau, 400);
+
+    expect(panneau.style.top).not.toBe(court);
   });
 });
