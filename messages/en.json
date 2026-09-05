@@ -1373,8 +1373,6 @@
     "bannerUpdated": "Banner updated.",
     "uploadError": "Upload failed.",
     "imagesOnly": "Only images are accepted.",
-    "fileTooLarge5": "File too large (max 5 MB).",
-    "fileTooLarge20": "File too large (max 20 MB).",
     "mapUpdated": "Map updated.",
     "createPinError": "Could not create the pin.",
     "movePinError": "Could not move the pin.",
@@ -1400,7 +1398,8 @@
     "setScale": "Set the scale",
     "scaleHint": "Click a second point, on a known distance",
     "clearSegment": "Clear the segment",
-    "mapActions": "Actions for map {label}"
+    "mapActions": "Actions for map {label}",
+    "fileTooLarge": "File too large (max {max} MB)."
   },
   "iconPicker": {
     "chooseIcon": "Choose an icon",

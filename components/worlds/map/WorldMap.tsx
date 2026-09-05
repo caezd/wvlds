@@ -12,7 +12,7 @@ import { Check, Clock, Hexagon, List, Loader2, Map as MapIcon, MapPin, Pencil, P
 import { toast } from "sonner";
 
 import { cn } from "@/lib/utils";
-import { channel } from "@/lib/constants";
+import { channel, MAX_MAP_IMAGE_MB } from "@/lib/constants";
 import { openRealtimeChannel } from "@/lib/realtimeChannel";
 import { toWebP } from "@/lib/imageUtils";
 import { mapImagePath } from "@/lib/storagePaths";
@@ -739,8 +739,8 @@ export function WorldMap({
       toast.error(t("imagesOnly"));
       return;
     }
-    if (file.size > 20 * 1024 * 1024) {
-      toast.error(t("fileTooLarge20"));
+    if (file.size > MAX_MAP_IMAGE_MB * 1024 * 1024) {
+      toast.error(t("fileTooLarge", { max: MAX_MAP_IMAGE_MB }));
       return;
     }
     setUploadingMap(true);

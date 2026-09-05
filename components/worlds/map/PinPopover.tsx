@@ -30,6 +30,10 @@ import { ERR_NON_AUTHENTIFIE } from "@/lib/actionErrors";
 
 // Panneau flottant (position: fixed), ancré sur l'épingle et non sur le clic :
 // `WorldMap` le suit pendant les déplacements de la carte.
+/** Poids maximal d'une bannière de lieu, en mégaoctets — une illustration,
+ *  pas une carte : `toWebP` la ramène à 1200 px. */
+const MAX_PIN_BANNER_MB = 5;
+
 export function PinPopover({
   pin,
   pos,
@@ -153,8 +157,8 @@ export function PinPopover({
       toast.error(t("imagesOnly"));
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error(t("fileTooLarge5"));
+    if (file.size > MAX_PIN_BANNER_MB * 1024 * 1024) {
+      toast.error(t("fileTooLarge", { max: MAX_PIN_BANNER_MB }));
       return;
     }
     setUploadingBanner(true);

@@ -1373,8 +1373,6 @@
     "bannerUpdated": "Bannière mise à jour.",
     "uploadError": "Téléversement impossible.",
     "imagesOnly": "Seules les images sont acceptées.",
-    "fileTooLarge5": "Fichier trop volumineux (max 5 Mo).",
-    "fileTooLarge20": "Fichier trop volumineux (max 20 Mo).",
     "mapUpdated": "Carte mise à jour.",
     "createPinError": "Impossible de créer le pin.",
     "movePinError": "Impossible de déplacer le pin.",
@@ -1400,7 +1398,8 @@
     "setScale": "Régler l'échelle",
     "scaleHint": "Cliquez un second point, sur une distance connue",
     "clearSegment": "Effacer le segment",
-    "mapActions": "Commandes de la carte {label}"
+    "mapActions": "Commandes de la carte {label}",
+    "fileTooLarge": "Fichier trop volumineux (max {max} Mo)."
   },
   "iconPicker": {
     "chooseIcon": "Choisir une icône",

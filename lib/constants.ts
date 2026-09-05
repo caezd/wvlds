@@ -94,9 +94,25 @@ export const PRESENCE = {
  *
  * Rien ne le fait respecter en base — la contrainte serait une politique RLS de
  * plus à maintenir pour un abus qui ne s'est jamais produit. Dix cartes
- * couvrent largement un monde, et chacune porte une image de 20 Mo au maximum.
+ * couvrent largement un monde, et chacune porte une image bornée par
+ * `MAX_MAP_IMAGE_MB`.
  */
 export const MAX_MAPS_PER_WORLD = 10;
+
+/**
+ * Poids maximal d'une image de carte, en mégaoctets — celui du fichier CHOISI,
+ * avant conversion.
+ *
+ * Une carte de monde est le seul dessin qu'on regarde à la loupe : elle vient
+ * souvent d'un export en pleine résolution. Ce qui part au stockage est en
+ * général bien plus léger, `toWebP` la ramenant à 4096 px ; mais GIF, SVG et
+ * WebP en sont exemptés et partent tels quels.
+ *
+ * D'où la règle : cette valeur et la limite du bucket `worlds` doivent rester
+ * ÉGALES (migration 160). Un client plus permissif que le stockage produit un
+ * « Téléversement impossible » que rien n'explique à l'écran.
+ */
+export const MAX_MAP_IMAGE_MB = 60;
 
 // --- UI thresholds ------------------------------------------------------------
 export const SCROLL_THRESHOLD_PX = 96;

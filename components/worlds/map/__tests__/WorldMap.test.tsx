@@ -1234,3 +1234,41 @@ describe("WorldMap — supprimer un lieu", () => {
     expect(await screen.findByText("Supprimer « Le port » ?")).toBeInTheDocument();
   });
 });
+
+describe("WorldMap — le poids d'une image de carte", () => {
+  /** L'espion d'envoi : `from()` rend un objet neuf, mais la même fonction. */
+  function envoiDe(mock: SupabaseMock) {
+    return (mock.client as unknown as {
+      storage: { from: (b: string) => { upload: ReturnType<typeof vi.fn> } };
+    }).storage.from("worlds").upload;
+  }
+
+  /** Un fichier dont on ne fabrique que le poids — 60 Mo en mémoire, non. */
+  function choisir(megaoctets: number) {
+    // Un WebP : `toWebP` le rend tel quel, sans canvas à faire tourner ici.
+    const fichier = new File(["x"], "carte.webp", { type: "image/webp" });
+    Object.defineProperty(fichier, "size", { value: megaoctets * 1024 * 1024 });
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(input, { target: { files: [fichier] } });
+  }
+
+  it("refuse au-delà de soixante mégaoctets", async () => {
+    const { mock } = monter({ maps: [makeMap()], pins: [] });
+    await userEvent.click(screen.getByRole("button", { name: "Modifier" }));
+
+    choisir(61);
+
+    expect(envoiDe(mock)).not.toHaveBeenCalled();
+  });
+
+  it("accepte une carte en pleine résolution", async () => {
+    // 20 Mo était le plafond : un export de carte le dépasse sans peine.
+    vi.mocked(updateWorldMap).mockResolvedValue(makeMap({ image_url: "https://x/img.webp" }));
+    const { mock } = monter({ maps: [makeMap()], pins: [] });
+    await userEvent.click(screen.getByRole("button", { name: "Modifier" }));
+
+    choisir(59);
+
+    await waitFor(() => expect(envoiDe(mock)).toHaveBeenCalled());
+  });
+});
