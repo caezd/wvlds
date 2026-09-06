@@ -376,7 +376,7 @@ describe("PinDetail — ce que le lieu rejoint", () => {
   const DONJON = makePin({ id: "pin2", title: "Le donjon", x: 60, y: 50 });
   const RUINE = makePin({ id: "pin3", title: "La ruine", x: 20, y: 80 });
 
-  function monterRelie(links: MapPinLink[], scale: { widthUnits: number; unit: string } | null = null) {
+  function monterRelie(links: MapPinLink[]) {
     const onOpenPin = vi.fn();
     render(
       <PinDetail
@@ -387,7 +387,6 @@ describe("PinDetail — ce que le lieu rejoint", () => {
         links={links}
         pinsById={new Map([PORT, DONJON, RUINE].map((p) => [p.id, p]))}
         aspect={0.5}
-        scale={scale}
         onOpenPin={onOpenPin}
         isEditMode={false}
         worldId="w1"
@@ -420,14 +419,14 @@ describe("PinDetail — ce que le lieu rejoint", () => {
     expect(onOpenPin).toHaveBeenCalledWith(DONJON);
   });
 
-  it("dit la distance quand la carte est à l'échelle", () => {
-    // 40 % de la largeur d'une carte de 1 000 km : 400 km.
-    monterRelie(
-      [makePinLink({ id: "l1", from_pin_id: "pin1", to_pin_id: "pin2" })],
-      { widthUnits: 1000, unit: "km" },
-    );
+  it("ne porte que le nom du voisin", () => {
+    // La longueur et le nom du chemin se lisent sur le trait, sur la carte.
+    // Sous chaque voisin, ils faisaient d'un schéma une seconde liste.
+    monterRelie([
+      makePinLink({ id: "l1", from_pin_id: "pin1", to_pin_id: "pin2", label: "Route du sel" }),
+    ]);
 
-    expect(screen.getByRole("button", { name: /Le donjon/ })).toHaveTextContent("400 km");
+    expect(screen.getByRole("button", { name: "Le donjon" })).toHaveTextContent(/^Le donjon$/);
   });
 
   it("se tait pour un lieu que rien ne rejoint", () => {
@@ -460,7 +459,6 @@ describe("PinDetail — ce que le lieu rejoint", () => {
         links={[makePinLink({ id: "l1", from_pin_id: "pin1", to_pin_id: "pin4" })]}
         pinsById={new Map([[ "pin1", makePin({ id: "pin1", title: "Le port", x: 60, y: 50 }) ], ["pin4", OUEST]])}
         aspect={1}
-        scale={null}
         onOpenPin={vi.fn()}
         isEditMode={false}
         worldId="w1"

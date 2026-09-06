@@ -28,7 +28,6 @@ import type { MapRegion } from "@/app/actions/worldMap";
 import { cn } from "@/lib/utils";
 import { PinVisualDialog } from "./PinVisualDialog";
 import { PinLinkGraph } from "./PinLinkGraph";
-import type { MapScale } from "./scale";
 import type { PinRoom, WikiPageOption } from "./types";
 import { ERR_NON_AUTHENTIFIE } from "@/lib/actionErrors";
 
@@ -86,7 +85,6 @@ export function PinDetail({
   links = [],
   pinsById,
   aspect = 1,
-  scale = null,
   onOpenPin,
   onPlacePersona,
   onRemovePersona,
@@ -119,9 +117,8 @@ export function PinDetail({
   links?: MapPinLink[];
   /** Les épingles de la carte, par identifiant : de quoi nommer les voisins. */
   pinsById?: Map<string, MapPinType>;
-  /** Hauteur / largeur de la carte, pour que les distances soient justes. */
+  /** Hauteur / largeur de la carte : le graphique s'en sert pour orienter. */
   aspect?: number;
-  scale?: MapScale | null;
   /** Ouvre un lieu voisin depuis le graphique. */
   onOpenPin?: (pin: MapPinType) => void;
   /** Pose un de mes personas ici. Absent : la fiche n'offre pas ce geste. */
@@ -522,7 +519,6 @@ export function PinDetail({
                 links={links}
                 pins={pinsById}
                 aspect={aspect}
-                scale={scale}
                 onOpenPin={onOpenPin}
               />
             </Bloc>

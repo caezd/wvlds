@@ -21,6 +21,13 @@ import { distanceBetween, formatDistance, type MapScale } from "./scale";
  * La distance ne se stocke pas : elle se déduit des positions et de
  * l'échelle, et suit donc les épingles quand on les déplace — un chemin qu'on
  * rallonge se rallonge tout seul.
+ *
+ * Elle ne s'affiche qu'à la demande. Portée en permanence par chaque trait,
+ * elle chiffrait la carte de part en part : dix routes faisaient dix nombres
+ * posés dessus, et le nom des chemins se perdait au milieu.
+ *
+ * Au survol, donc — et au clic, qui l'épingle jusqu'au suivant : un doigt ne
+ * survole rien, et la moitié des cartes se lisent au doigt.
  */
 export function LinkLayer({
   links,
@@ -42,6 +49,28 @@ export function LinkLayer({
   isEditMode: boolean;
   onSelect?: (link: MapPinLink) => void;
 }) {
+  // Le trait qui dit sa longueur : celui qu'on survole, ou celui qu'on a
+  // touché. Deux états et non un seul — une souris qui quitte un trait
+  // épinglé ne doit pas le désépingler.
+  const [survole, setSurvole] = React.useState<string | null>(null);
+  const [epingle, setEpingle] = React.useState<string | null>(null);
+  const montre = (id: string) => survole === id || epingle === id;
+  /** Le formulaire d'un lien ne s'ouvre qu'en écriture. */
+  const modifiable = isEditMode && !!onSelect;
+
+  // Un trait épinglé se relâche au geste suivant, où qu'il tombe : sinon la
+  // longueur resterait posée sur la carte sans qu'on sache comment l'ôter.
+  React.useEffect(() => {
+    if (!epingle) return;
+    function relacher(e: PointerEvent) {
+      const cible = e.target as Element | null;
+      if (cible?.closest?.("[data-link-hit]")) return;
+      setEpingle(null);
+    }
+    document.addEventListener("pointerdown", relacher);
+    return () => document.removeEventListener("pointerdown", relacher);
+  }, [epingle]);
+
   const traces = links
     .map((link) => {
       const a = pins.get(link.from_pin_id);
@@ -59,7 +88,10 @@ export function LinkLayer({
         preserveAspectRatio="none"
       >
         {traces.map(({ link, a, b }) => {
-          const touche = selectedPinId === link.from_pin_id || selectedPinId === link.to_pin_id;
+          const touche =
+            montre(link.id) ||
+            selectedPinId === link.from_pin_id ||
+            selectedPinId === link.to_pin_id;
           return (
             <g key={link.id}>
               {/* Un trait clair dessous : sur une carte sombre, un trait seul
@@ -79,27 +111,37 @@ export function LinkLayer({
                 strokeLinecap="round"
                 strokeDasharray="5 3"
               />
-              {/* La prise du clic, invisible et large : un trait de 1,5 px ne
-                  se vise ni à la souris ni au doigt. */}
-              {isEditMode && onSelect && (
-                <line
-                  data-link-hit={link.id}
-                  x1={a.x} y1={a.y} x2={b.x} y2={b.y}
-                  vectorEffect="non-scaling-stroke"
-                  stroke="transparent"
-                  strokeWidth={14}
-                  className="pointer-events-auto cursor-pointer"
-                  onClick={(e) => { e.stopPropagation(); onSelect(link); }}
-                  onPointerDown={(e) => e.stopPropagation()}
-                />
-              )}
+              {/* La prise, invisible et large : un trait de 1,5 px ne se vise
+                  ni à la souris ni au doigt. Elle existe pour tout le monde —
+                  c'est elle qui fait paraître la distance au survol — mais
+                  n'ouvre le formulaire qu'en écriture. */}
+              <line
+                data-link-hit={link.id}
+                x1={a.x} y1={a.y} x2={b.x} y2={b.y}
+                vectorEffect="non-scaling-stroke"
+                stroke="transparent"
+                strokeWidth={14}
+                className={cn("pointer-events-auto", modifiable && "cursor-pointer")}
+                onPointerEnter={() => setSurvole(link.id)}
+                onPointerLeave={() => setSurvole((prev) => (prev === link.id ? null : prev))}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setEpingle((prev) => (prev === link.id ? null : link.id));
+                  if (modifiable) onSelect(link);
+                }}
+                onPointerDown={(e) => e.stopPropagation()}
+              />
             </g>
           );
         })}
       </svg>
 
       {traces.map(({ link, a, b }) => {
-        const distance = scale ? formatDistance(distanceBetween(a, b, aspect, scale), scale.unit) : null;
+        // La longueur ne paraît qu'au survol ; le nom, lui, reste.
+        const distance =
+          montre(link.id) && scale
+            ? formatDistance(distanceBetween(a, b, aspect, scale), scale.unit)
+            : null;
         const texte = [link.label.trim(), distance].filter(Boolean).join(" · ");
         if (!texte) return null;
         return (

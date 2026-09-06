@@ -1115,7 +1115,6 @@ export function WorldMap({
       links={visibleLinks.filter((l) => l.from_pin_id === selectedPin.id || l.to_pin_id === selectedPin.id)}
       pinsById={pinsById}
       aspect={aspect}
-      scale={mapScale}
       onOpenPin={focusPin}
       onPlacePersona={canPost ? (personaId) => void handlePlacePersona(personaId, selectedPin.id) : undefined}
       onRemovePersona={canPost ? (personaId) => void handlePlacePersona(personaId, null) : undefined}

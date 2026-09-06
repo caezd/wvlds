@@ -4,7 +4,6 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 import type { MapPin, MapPinLink } from "@/app/actions/worldMap";
-import { distanceBetween, formatDistance, type MapScale } from "./scale";
 import { LARGEUR_CENTRE, largeurEtiquette, layoutLinkGraph, otherEnd } from "./linkGraph";
 
 /**
@@ -29,7 +28,6 @@ export function PinLinkGraph({
   links,
   pins,
   aspect,
-  scale,
   onOpenPin,
 }: {
   pin: MapPin;
@@ -37,9 +35,9 @@ export function PinLinkGraph({
   links: MapPinLink[];
   /** Les épingles de la carte, par identifiant : de quoi nommer les voisins. */
   pins: Map<string, MapPin>;
-  /** Hauteur / largeur de la carte, pour que les distances soient justes. */
+  /** Hauteur / largeur de la carte : sans elle, une carte oblongue ferait
+   *  paraître nord-sud ce qui est est-ouest. */
   aspect: number;
-  scale: MapScale | null;
   onOpenPin: (pin: MapPin) => void;
 }) {
   // Le trait survolé s'allume : c'est ce qui dit lequel des voisins on vise
@@ -55,7 +53,7 @@ export function PinLinkGraph({
         const cible = autre ? pins.get(autre) : undefined;
         if (!cible || vus.has(cible.id)) return null;
         vus.add(cible.id);
-        return { id: cible.id, title: cible.title, pin: cible, label: lien.label.trim() };
+        return { id: cible.id, title: cible.title, pin: cible };
       })
       .filter((v): v is NonNullable<typeof v> => v !== null);
   }, [links, pins, pin.id]);
@@ -139,12 +137,11 @@ export function PinLinkGraph({
         {pin.title}
       </span>
 
+      {/* Rien que le nom : la longueur et le nom du chemin se lisent sur le
+          trait, sur la carte. Sous chaque voisin, ils faisaient d'un schéma
+          une seconde liste. */}
       {nodes.map((n) => {
         const voisin = parId.get(n.id)!;
-        const distance = scale
-          ? formatDistance(distanceBetween(pin, voisin.pin, aspect, scale), scale.unit)
-          : null;
-        const detail = [voisin.label, distance].filter(Boolean).join(" · ");
         return (
           <button
             key={n.id}
@@ -156,7 +153,7 @@ export function PinLinkGraph({
             onFocus={() => setSurvole(n.id)}
             onBlur={() => setSurvole((prev) => (prev === n.id ? null : prev))}
             className={cn(
-              "absolute z-10 flex flex-col rounded-sm border bg-background px-1.5 py-0.5 text-left",
+              "absolute z-10 flex rounded-sm border bg-background px-1.5 py-0.5 text-left",
               "text-[10px] leading-tight transition-colors",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               survole === n.id ? "border-foreground bg-secondary" : "border-border-soft",
@@ -174,7 +171,6 @@ export function PinLinkGraph({
             }}
           >
             <span className="truncate font-medium">{voisin.title}</span>
-            {detail && <span className="truncate text-muted-foreground">{detail}</span>}
           </button>
         );
       })}

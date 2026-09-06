@@ -1509,15 +1509,70 @@ describe("WorldMap — joindre deux lieux", () => {
     expect(createPinLink).not.toHaveBeenCalled();
   });
 
-  it("dit la distance d'un trait quand la carte est à l'échelle", () => {
-    // 40 % de la largeur d'une carte de 1 000 km : 400 km.
+  it("ne dit la distance d'un trait qu'au survol", () => {
+    // Portée en permanence par chaque trait, elle chiffrait la carte de part
+    // en part. 40 % de la largeur d'une carte de 1 000 km : 400 km.
+    monter({
+      maps: [makeMap({ scale_width_units: 1000, scale_unit: "km" })],
+      pins: [PORT, DONJON],
+      links: [makePinLink({ id: "l1", from_pin_id: "pin1", to_pin_id: "pin2", label: "Route du sel" })],
+    });
+
+    expect(document.querySelector('[data-link-label="l1"]')).toHaveTextContent(/^Route du sel$/);
+
+    fireEvent.pointerEnter(document.querySelector('[data-link-hit="l1"]')!);
+    expect(document.querySelector('[data-link-label="l1"]')).toHaveTextContent("Route du sel · 400 km");
+
+    fireEvent.pointerLeave(document.querySelector('[data-link-hit="l1"]')!);
+    expect(document.querySelector('[data-link-label="l1"]')).toHaveTextContent(/^Route du sel$/);
+  });
+
+  it("ne montre rien d'un trait sans nom, tant qu'on ne le survole pas", () => {
     monter({
       maps: [makeMap({ scale_width_units: 1000, scale_unit: "km" })],
       pins: [PORT, DONJON],
       links: [makePinLink({ id: "l1", from_pin_id: "pin1", to_pin_id: "pin2" })],
     });
 
+    expect(document.querySelector('[data-link-label="l1"]')).toBeNull();
+
+    fireEvent.pointerEnter(document.querySelector('[data-link-hit="l1"]')!);
     expect(document.querySelector('[data-link-label="l1"]')).toHaveTextContent("400 km");
+  });
+
+  it("épingle la distance au clic — un doigt ne survole rien", async () => {
+    monter({
+      maps: [makeMap({ scale_width_units: 1000, scale_unit: "km" })],
+      pins: [PORT, DONJON],
+      links: [makePinLink({ id: "l1", from_pin_id: "pin1", to_pin_id: "pin2" })],
+    });
+    const trait = () => document.querySelector('[data-link-hit="l1"]')!;
+
+    fireEvent.click(trait());
+    // La souris s'en va : ce qu'on a touché reste affiché.
+    fireEvent.pointerLeave(trait());
+    expect(document.querySelector('[data-link-label="l1"]')).toHaveTextContent("400 km");
+
+    fireEvent.click(trait());
+    expect(document.querySelector('[data-link-label="l1"]')).toBeNull();
+  });
+
+  it("relâche la distance épinglée au geste suivant", async () => {
+    // Sans cela, la longueur resterait posée sur la carte sans qu'on sache
+    // comment l'ôter, au doigt où rien ne se « quitte ».
+    monter({
+      maps: [makeMap({ scale_width_units: 1000, scale_unit: "km" })],
+      pins: [PORT, DONJON],
+      links: [makePinLink({ id: "l1", from_pin_id: "pin1", to_pin_id: "pin2" })],
+    });
+
+    fireEvent.click(document.querySelector('[data-link-hit="l1"]')!);
+    fireEvent.pointerLeave(document.querySelector('[data-link-hit="l1"]')!);
+    expect(document.querySelector('[data-link-label="l1"]')).toHaveTextContent("400 km");
+
+    fireEvent.pointerDown(cadre());
+
+    expect(document.querySelector('[data-link-label="l1"]')).toBeNull();
   });
 
   it("nomme un trait, et le supprime", async () => {
@@ -1541,13 +1596,17 @@ describe("WorldMap — joindre deux lieux", () => {
     await waitFor(() => expect(document.querySelector('[data-link-hit="l1"]')).toBeNull());
   });
 
-  it("ne donne la prise du clic qu'à qui modifie la carte", () => {
+  it("n'ouvre le formulaire d'un trait qu'à qui modifie la carte", () => {
+    // La prise existe pour tout le monde — c'est elle qui fait paraître la
+    // distance au survol — mais elle n'ouvre rien en lecture.
     monter({
       maps: [makeMap()],
       pins: [PORT, DONJON],
       links: [makePinLink({ id: "l1", from_pin_id: "pin1", to_pin_id: "pin2" })],
     });
 
-    expect(document.querySelector('[data-link-hit="l1"]')).toBeNull();
+    fireEvent.click(document.querySelector('[data-link-hit="l1"]')!);
+
+    expect(screen.queryByRole("textbox", { name: "Nom du lien" })).toBeNull();
   });
 });
