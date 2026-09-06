@@ -38,7 +38,6 @@ import {
   deleteWorldCatalogCategory,
   reorderWorldCatalogCategories,
   reorderWorldCatalogItems,
-  getWorldCatalogUsage,
   importWorldCatalogItems,
   type CatalogItemInput,
 } from "@/app/actions/worldCatalog";
@@ -74,10 +73,13 @@ export function CatalogueList({
   type,
   worldId,
   canEdit,
+  usage,
 }: {
   type: CatalogType;
   worldId: string;
   canEdit: boolean;
+  /** Personas portant chaque objet — chargé par le parent, `null` si inconnu. */
+  usage: Record<string, number> | null;
 }) {
   const t = useTranslations("catalogue");
   const tCommon = useTranslations("common");
@@ -86,8 +88,6 @@ export function CatalogueList({
   const [items, setItems] = useState<CatalogItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  /** Nombre de personas portant chaque objet ; `null` tant qu'on ne sait pas. */
-  const [usage, setUsage] = useState<Record<string, number> | null>(null);
   const [editingItem, setEditingItem] = useState<CatalogItem | null>(null);
   const [detailItem, setDetailItem] = useState<CatalogItem | null>(null);
   const [importing, setImporting] = useState(false);
@@ -132,20 +132,6 @@ export function CatalogueList({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [worldId, type]);
 
-  /**
-   * Le décompte d'usage, à part du chargement principal.
-   *
-   * Il balaie le JSONB de toutes les fiches du monde ; le catalogue, lui, se
-   * lit sur un index. Les attendre ensemble ferait patienter la liste pour un
-   * chiffre qui ne s'affiche qu'à côté du nom.
-   */
-  useEffect(() => {
-    let cancelled = false;
-    void getWorldCatalogUsage(worldId).then(res => {
-      if (!cancelled && res.ok) setUsage(res.usage);
-    });
-    return () => { cancelled = true; };
-  }, [worldId, type]);
 
   // ── Item CRUD ──
 

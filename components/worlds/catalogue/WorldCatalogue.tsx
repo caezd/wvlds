@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Library, Pencil } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { getWorldCatalogUsage } from "@/app/actions/worldCatalog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 
@@ -32,6 +33,24 @@ export function WorldCatalogue({ worldId, canEdit, inventoryEnabled, inventoryRe
   const tCommon = useTranslations("common");
   const [editMode, setEditMode] = useState(false);
   const defaultTab = inventoryEnabled ? "inventory" : "skills";
+
+  /**
+   * Le décompte d'usage, chargé ici et non dans chaque onglet.
+   *
+   * Les deux listes sont montées ensemble (les onglets gardent leur contenu) :
+   * une par onglet aurait appelé deux fois la même RPC, qui ne distingue pas
+   * les objets des compétences et balaie le JSONB de toutes les fiches du
+   * monde. `null` tant qu'on ne sait pas — aucun nombre ne s'affiche alors.
+   */
+  const [usage, setUsage] = useState<Record<string, number> | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void getWorldCatalogUsage(worldId).then(res => {
+      if (!cancelled && res.ok) setUsage(res.usage);
+    });
+    return () => { cancelled = true; };
+  }, [worldId]);
 
   const inactiveLines: string[] = [];
   if (!inventoryEnabled) inactiveLines.push(t("itemsDisabled"));
@@ -77,7 +96,7 @@ export function WorldCatalogue({ worldId, canEdit, inventoryEnabled, inventoryRe
         </div>
         <div className="flex-1 overflow-y-auto p-4">
           <TabsContent value="inventory" className="mt-0">
-            <CatalogueList type="inventory" worldId={worldId} canEdit={canEdit && editMode} />
+            <CatalogueList type="inventory" worldId={worldId} canEdit={canEdit && editMode} usage={usage} />
           </TabsContent>
           {faceclaimsEnabled && (
             <TabsContent value="faceclaims" className="mt-0">
@@ -85,7 +104,7 @@ export function WorldCatalogue({ worldId, canEdit, inventoryEnabled, inventoryRe
             </TabsContent>
           )}
           <TabsContent value="skills" className="mt-0">
-            <CatalogueList type="skills" worldId={worldId} canEdit={canEdit && editMode} />
+            <CatalogueList type="skills" worldId={worldId} canEdit={canEdit && editMode} usage={usage} />
           </TabsContent>
         </div>
       </Tabs>
