@@ -165,8 +165,12 @@ export function PinLinkGraph({
               left: `${n.x}%`,
               top: `${n.y}%`,
               maxWidth: `${largeurEtiquette(n)}%`,
-              // Chaque boîte pousse vers l'intérieur du cadre depuis son bord.
-              transform: n.side === "left" ? "translate(0, -50%)" : "translate(-100%, -50%)",
+              // La boîte pousse VERS LE BORD depuis son point d'accroche, qui
+              // reste ainsi du côté du centre — là d'où arrive le trait, et
+              // où se trouve son repère. Poussée vers l'intérieur, elle
+              // mettait son repère sur le bord opposé au trait, et venait
+              // mordre le couloir réservé au centre.
+              transform: n.side === "left" ? "translate(-100%, -50%)" : "translate(0, -50%)",
             }}
           >
             <span className="truncate font-medium">{voisin.title}</span>

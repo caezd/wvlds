@@ -472,6 +472,21 @@ describe("PinDetail — ce que le lieu rejoint", () => {
 
     const cap = screen.getByRole("button", { name: "Le cap" });
     expect(Number.parseFloat(cap.style.left)).toBeLessThan(50);
+    // Le point d'accroche reste du côté du centre : la boîte pousse vers le
+    // bord. Poussée vers l'intérieur, elle mettait son repère sur le bord
+    // opposé au trait et mordait le couloir du centre.
+    expect(cap.style.transform).toContain("translate(-100%");
+  });
+
+  it("pousse chaque étiquette vers son bord, jamais vers le centre", () => {
+    monterRelie([
+      makePinLink({ id: "l1", from_pin_id: "pin1", to_pin_id: "pin2" }),
+      makePinLink({ id: "l2", from_pin_id: "pin1", to_pin_id: "pin3" }),
+    ]);
+
+    // `DONJON` est à l'est du port : sa boîte s'étend vers la droite.
+    expect(screen.getByRole("button", { name: "Le donjon" }).style.transform)
+      .toContain("translate(0");
   });
 });
 
