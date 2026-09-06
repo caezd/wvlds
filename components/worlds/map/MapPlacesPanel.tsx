@@ -65,7 +65,9 @@ function BoutonRetour({ onClick }: { onClick?: () => void }) {
       // Petit : c'est un chemin de retour, pas une action. La zone sensible,
       // elle, reste à la taille d'un doigt — sans que le bouton grossisse.
       className={cn(
-        "relative flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs text-muted-foreground",
+        // `w-fit self-start` : l'en-tête du tiroir est une colonne flex, et
+        // ses enfants s'y étirent sur toute la largeur sans cela.
+        "relative flex w-fit self-start items-center gap-1 rounded-md px-1.5 py-0.5 text-xs text-muted-foreground",
         "hover:bg-secondary hover:text-foreground",
         "touch:after:absolute touch:after:-inset-2 touch:after:content-['']",
       )}
