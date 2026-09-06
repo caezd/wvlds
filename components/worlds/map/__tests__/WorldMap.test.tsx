@@ -765,6 +765,22 @@ describe("WorldMap — régler l'échelle", () => {
     expect(document.querySelectorAll("[data-scale-point]")).toHaveLength(1);
   });
 
+  it("laisse le clic traverser une région", async () => {
+    // Un polygone prend le pointeur et arrête la propagation : la règle en
+    // main, le clic était mangé par la région et le point ne se posait pas —
+    // impossible de mesurer quoi que ce soit à l'intérieur d'un royaume.
+    monter({ maps: [AVEC_ECHELLE], pins: [], regions: [makeRegion()] });
+    const region = () => document.querySelector("polygon")!;
+    expect(region()).toHaveStyle({ pointerEvents: "auto" });
+
+    await sortirLOutil();
+
+    expect(region()).toHaveStyle({ pointerEvents: "none" });
+    // Ni cliquable, ni atteignable au clavier : un bouton qui ne fait rien
+    // n'a pas à retenir la tabulation.
+    expect(region()).toHaveAttribute("tabindex", "-1");
+  });
+
   it("Échap efface le segment, puis range l'outil", async () => {
     monter({ maps: [AVEC_ECHELLE], pins: [] });
     await sortirLOutil();

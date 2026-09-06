@@ -27,6 +27,7 @@ export function RegionLayer({
   isEditMode,
   imgRef,
   labelled,
+  clickThrough = false,
   onSelect,
   onVertexMoved,
   onCloseDraft,
@@ -39,6 +40,16 @@ export function RegionLayer({
   imgRef: React.RefObject<HTMLImageElement | null>;
   /** Les régions dont le nom tient sans en recouvrir un autre — `labels.ts`. */
   labelled?: Set<string>;
+  /**
+   * Un outil est en main : les régions laissent passer le clic.
+   *
+   * Un polygone prend le pointeur et arrête la propagation. La règle en main,
+   * le clic était donc mangé par la région et le point d'échelle ne se posait
+   * pas — impossible de mesurer quoi que ce soit à l'intérieur d'un royaume.
+   * Le tracé, lui, s'en sortait par sa vitre ; c'était la même faille, réparée
+   * d'un seul côté.
+   */
+  clickThrough?: boolean;
   onSelect: (region: MapRegion) => void;
   /** Un sommet de la région choisie vient d'être déplacé. */
   onVertexMoved: (region: MapRegion, index: number, point: Point) => void;
@@ -117,7 +128,7 @@ export function RegionLayer({
               key={region.id}
               data-region-id={region.id}
               role="button"
-              tabIndex={0}
+              tabIndex={clickThrough ? -1 : 0}
               aria-label={region.label}
               points={toSvgPoints(pointsOf(region))}
               fill={region.color}
@@ -126,7 +137,7 @@ export function RegionLayer({
               strokeWidth={actif ? 3 : 2}
               strokeLinejoin="round"
               vectorEffect="non-scaling-stroke"
-              style={{ pointerEvents: "auto", cursor: "pointer" }}
+              style={{ pointerEvents: clickThrough ? "none" : "auto", cursor: "pointer" }}
               onMouseEnter={() => setHoverId(region.id)}
               onMouseLeave={() => setHoverId((prev) => (prev === region.id ? null : prev))}
               onClick={(e) => { e.stopPropagation(); onSelect(region); }}

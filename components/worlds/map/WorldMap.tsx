@@ -1396,6 +1396,7 @@ export function WorldMap({
                   isEditMode={isEditMode}
                   imgRef={imageRef}
                   labelled={nomsAffiches}
+                  clickThrough={calibrating || drawing}
                   onSelect={handleRegionClick}
                   onCloseDraft={finishDraft}
                   onVertexMoved={(region, index, point) => void handleVertexMoved(region, index, point)}
