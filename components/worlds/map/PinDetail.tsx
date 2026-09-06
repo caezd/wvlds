@@ -254,380 +254,390 @@ export function PinDetail({
       )}
 
       {/* La fiche remplit la colonne qui l'accueille : elle n'a plus ni
-          position à calculer, ni hauteur à tenir, ni flèche à faire pointer. */}
-      <div data-pin-detail className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-        {/* ── Bannière ─────────────────────────────────── */}
-        <div className="relative h-32 w-full overflow-hidden bg-gradient-to-br from-primary/20 to-primary/5">
-          {bannerSrc ? (
-            <Image
-              src={bannerSrc}
-              alt=""
-              fill
-              sizes="320px"
-              className="object-cover"
-            />
-          ) : isEditMode ? (
-            <button
-              type="button"
-              onClick={() => bannerInputRef.current?.click()}
-              className="flex h-full w-full flex-col items-center justify-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
-            >
-              {uploadingBanner ? (
-                <Loader2 className="h-5 w-5 animate-spin" />
-              ) : (
-                <>
-                  <ImagePlus className="h-6 w-6" />
-                  <span className="text-xs">{t("addBanner")}</span>
-                </>
-              )}
-            </button>
-          ) : null}
+          position à calculer, ni hauteur à tenir, ni flèche à faire pointer.
 
-          {/* Overlay bannière en mode edit si image déjà présente */}
-          {bannerSrc && isEditMode && (
-            <button
-              type="button"
-              onClick={() => bannerInputRef.current?.click()}
-              className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 hover:bg-black/40 hover:opacity-100 focus-within:opacity-100 transition-all"
-            >
-              {uploadingBanner ? (
-                <Loader2 className="h-5 w-5 text-white animate-spin" />
-              ) : (
-                <Upload className="h-5 w-5 text-white" />
-              )}
-            </button>
-          )}
-
-          {/* Le titre, posé sur la bannière — c'est la même chose qu'on
-              regarde. Le dégradé le décolle de l'image : un nom clair sur un
-              ciel clair ne se lirait pas. `pointer-events-none` pour que le
-              clic traverse jusqu'au bouton d'import, dessous.
-
-              En écriture il repasse dans le formulaire : un champ de saisie
-              par-dessus une photo se lit mal, et c'est là qu'on le corrige. */}
-          {!editing && (
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end gap-2 bg-gradient-to-t from-black/80 via-black/40 to-transparent px-3 pb-2 pt-8">
-              <h3 className="line-clamp-2 min-w-0 flex-1 text-base font-semibold leading-snug text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.8)]">
-                {pin.title}
-              </h3>
-              {/* Lancer une scène ici, à côté du nom du lieu : c'est l'action
-                  qu'on vient chercher, elle n'a pas à se trouver plus bas que
-                  ce qui la nomme. Le bandeau ne prend pas le pointeur — le
-                  bouton d'import de bannière est dessous —, ce bouton-ci si. */}
-              {canPost && (
-                <button
-                  type="button"
-                  onClick={() => router.push(`/w/${worldId}?play=${pin.id}`)}
-                  className="pointer-events-auto flex shrink-0 items-center gap-1.5 rounded-md border border-white/30 bg-white/15 px-2 py-1 text-xs font-medium text-white shadow-sm backdrop-blur-sm transition-colors hover:bg-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-                >
-                  <Play className="h-3.5 w-3.5" /> {t("playHere")}
-                </button>
-              )}
-            </div>
-          )}
-
-          <input
-            ref={bannerInputRef}
-            type="file"
-            accept={STORED_IMAGE_ACCEPT}
-            // Déclenché par le bouton visible, jamais atteint au clavier :
-            // le laisser dans l'arbre d'accessibilité imposerait un libellé
-            // pour un champ que personne ne rencontre.
-            aria-hidden="true"
-            tabIndex={-1}
-            className="sr-only"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) void handleBannerUpload(f);
-              e.target.value = "";
-            }}
-          />
-        </div>
-
-        {/* ── Contenu ──────────────────────────────────── */}
-        <div className="p-4 flex flex-col gap-3">
-          {/* Où se trouve ce lieu : sa carte, et la région qui l'entoure.
-              La carte le savait déjà — un polygone se referme autour de
-              l'épingle — mais ne le disait nulle part. */}
-          {!editing && (ownMap || region) && (
-            <div className="flex flex-wrap items-center gap-1">
-              {ownMap && (
-                <Repere>
-                  <MapIcon aria-hidden className="h-3 w-3 shrink-0" />
-                  <span className="truncate">{ownMap.label?.trim() || t("title")}</span>
-                </Repere>
-              )}
-              {region && (
-                <Repere>
-                  <span aria-hidden className="h-2 w-2 shrink-0 rounded-sm" style={{ backgroundColor: region.color }} />
-                  <span className="truncate">{region.label}</span>
-                </Repere>
-              )}
-            </div>
-          )}
-
-          {/* Le titre n'est ici qu'en écriture — ailleurs il vit sur la bannière. */}
-          {editing && (
-            <input
-              autoFocus
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full rounded-md border border-border bg-background px-3 py-1.5 text-base font-semibold outline-none focus:ring-2 focus:ring-primary"
-              placeholder={t("locationName")}
-            />
-          )}
-
-          {/* La description vient d'abord : ce que le lieu EST se lit avant ce
-              vers quoi il mène. */}
-          <div className="max-h-48 overflow-y-auto">
-            {editing ? (
-              <ParagraphBlockEditor
-                value={description}
-                onChange={setDescription}
-                placeholder={t("descPlaceholder")}
-                submitOnEnter={false}
-                wrapperClassName="max-h-32"
+          Seul le corps défile : les commandes d'auteur tiennent au pied de la
+          colonne, où elles restent atteignables quel que soit ce qu'on lit. */}
+      <div data-pin-detail className="flex min-h-0 flex-1 flex-col">
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          {/* ── Bannière ─────────────────────────────────── */}
+          <div className="relative h-32 w-full overflow-hidden bg-gradient-to-br from-primary/20 to-primary/5">
+            {bannerSrc ? (
+              <Image
+                src={bannerSrc}
+                alt=""
+                fill
+                sizes="320px"
+                className="object-cover"
               />
-            ) : pin.description ? (
-              // `MarkdownContent` plutôt que `MarkdownRenderer` : celui-ci pose
-              // son propre `prose-sm sm:prose-base`, qui remontait le texte à
-              // 16 px dès l'écran large — trop gros pour une carte de 340 px, et
-              // hors d'atteinte d'une classe posée par-dessus.
-              <div
-                className={cn(
-                  "prose prose-sm dark:prose-invert max-w-none text-muted-foreground",
-                  "prose-p:text-xs prose-li:text-xs prose-headings:text-sm",
-                  "[&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
-                )}
+            ) : isEditMode ? (
+              <button
+                type="button"
+                onClick={() => bannerInputRef.current?.click()}
+                className="flex h-full w-full flex-col items-center justify-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
               >
-                <MarkdownContent content={pin.description} />
-              </div>
-            ) : (
-              <p className="text-xs italic text-muted-foreground">
-                {isEditMode ? t("addDescriptionHint") : t("noDescription")}
-              </p>
+                {uploadingBanner ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <>
+                    <ImagePlus className="h-6 w-6" />
+                    <span className="text-xs">{t("addBanner")}</span>
+                  </>
+                )}
+              </button>
+            ) : null}
+
+            {/* Overlay bannière en mode edit si image déjà présente */}
+            {bannerSrc && isEditMode && (
+              <button
+                type="button"
+                onClick={() => bannerInputRef.current?.click()}
+                className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 hover:bg-black/40 hover:opacity-100 focus-within:opacity-100 transition-all"
+              >
+                {uploadingBanner ? (
+                  <Loader2 className="h-5 w-5 text-white animate-spin" />
+                ) : (
+                  <Upload className="h-5 w-5 text-white" />
+                )}
+              </button>
             )}
+
+            {/* Le titre, posé sur la bannière — c'est la même chose qu'on
+                regarde. Le dégradé le décolle de l'image : un nom clair sur un
+                ciel clair ne se lirait pas. `pointer-events-none` pour que le
+                clic traverse jusqu'au bouton d'import, dessous.
+
+                En écriture il repasse dans le formulaire : un champ de saisie
+                par-dessus une photo se lit mal, et c'est là qu'on le corrige. */}
+            {!editing && (
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end gap-2 bg-gradient-to-t from-black/80 via-black/40 to-transparent px-3 pb-2 pt-8">
+                <h3 className="line-clamp-2 min-w-0 flex-1 text-base font-semibold leading-snug text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.8)]">
+                  {pin.title}
+                </h3>
+                {/* Lancer une scène ici, à côté du nom du lieu : c'est l'action
+                    qu'on vient chercher, elle n'a pas à se trouver plus bas que
+                    ce qui la nomme. Le bandeau ne prend pas le pointeur — le
+                    bouton d'import de bannière est dessous —, ce bouton-ci si. */}
+                {canPost && (
+                  <button
+                    type="button"
+                    onClick={() => router.push(`/w/${worldId}?play=${pin.id}`)}
+                    className="pointer-events-auto flex shrink-0 items-center gap-1.5 rounded-md border border-white/30 bg-white/15 px-2 py-1 text-xs font-medium text-white shadow-sm backdrop-blur-sm transition-colors hover:bg-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                  >
+                    <Play className="h-3.5 w-3.5" /> {t("playHere")}
+                  </button>
+                )}
+              </div>
+            )}
+
+            <input
+              ref={bannerInputRef}
+              type="file"
+              accept={STORED_IMAGE_ACCEPT}
+              // Déclenché par le bouton visible, jamais atteint au clavier :
+              // le laisser dans l'arbre d'accessibilité imposerait un libellé
+              // pour un champ que personne ne rencontre.
+              aria-hidden="true"
+              tabIndex={-1}
+              className="sr-only"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) void handleBannerUpload(f);
+                e.target.value = "";
+              }}
+            />
           </div>
 
-          {/* Page du wiki : à choisir en écriture, à ouvrir en lecture. */}
-          {editing ? (
-            <label className="flex flex-col gap-1 text-xs text-muted-foreground">
-              {t("wikiPage")}
-              <select
-                value={wikiPageId ?? ""}
-                onChange={e => setWikiPageId(e.target.value || null)}
-                className="rounded-md border border-border bg-background px-2 py-1.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary"
-              >
-                <option value="">{t("noWikiPage")}</option>
-                {wikiPages.map(p => (
-                  <option key={p.id} value={p.id}>{p.title}</option>
-                ))}
-              </select>
-            </label>
-          ) : linkedPage ? (
-            <button
-              type="button"
-              onClick={() => router.push(`/w/${worldId}?view=wiki&page=${encodeURIComponent(linkedPage.slug)}`)}
-              className="flex w-fit items-center gap-1.5 rounded-md border border-border-soft px-2 py-1 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
-            >
-              <BookOpenText className="h-3.5 w-3.5" /> {t("openWikiPage")} : {linkedPage.title}
-            </button>
-          ) : null}
+          {/* ── Contenu ──────────────────────────────────── */}
+          <div className="p-4 flex flex-col gap-3">
+            {/* Où se trouve ce lieu : sa carte, et la région qui l'entoure.
+                La carte le savait déjà — un polygone se referme autour de
+                l'épingle — mais ne le disait nulle part. */}
+            {!editing && (ownMap || region) && (
+              <div className="flex flex-wrap items-center gap-1">
+                {ownMap && (
+                  <Repere>
+                    <MapIcon aria-hidden className="h-3 w-3 shrink-0" />
+                    <span className="truncate">{ownMap.label?.trim() || t("title")}</span>
+                  </Repere>
+                )}
+                {region && (
+                  <Repere>
+                    <span aria-hidden className="h-2 w-2 shrink-0 rounded-sm" style={{ backgroundColor: region.color }} />
+                    <span className="truncate">{region.label}</span>
+                  </Repere>
+                )}
+              </div>
+            )}
 
-          {/* Carte liée : à choisir en écriture, à ouvrir en lecture. */}
-          {editing ? (
-            cartesChoisissables.length > 0 && (
+            {/* Le titre n'est ici qu'en écriture — ailleurs il vit sur la bannière. */}
+            {editing && (
+              <input
+                autoFocus
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="w-full rounded-md border border-border bg-background px-3 py-1.5 text-base font-semibold outline-none focus:ring-2 focus:ring-primary"
+                placeholder={t("locationName")}
+              />
+            )}
+
+            {/* La description vient d'abord : ce que le lieu EST se lit avant ce
+                vers quoi il mène. */}
+            <div className="max-h-48 overflow-y-auto">
+              {editing ? (
+                <ParagraphBlockEditor
+                  value={description}
+                  onChange={setDescription}
+                  placeholder={t("descPlaceholder")}
+                  submitOnEnter={false}
+                  wrapperClassName="max-h-32"
+                />
+              ) : pin.description ? (
+                // `MarkdownContent` plutôt que `MarkdownRenderer` : celui-ci pose
+                // son propre `prose-sm sm:prose-base`, qui remontait le texte à
+                // 16 px dès l'écran large — trop gros pour une carte de 340 px, et
+                // hors d'atteinte d'une classe posée par-dessus.
+                <div
+                  className={cn(
+                    "prose prose-sm dark:prose-invert max-w-none text-muted-foreground",
+                    "prose-p:text-xs prose-li:text-xs prose-headings:text-sm",
+                    "[&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
+                  )}
+                >
+                  <MarkdownContent content={pin.description} />
+                </div>
+              ) : (
+                <p className="text-xs italic text-muted-foreground">
+                  {isEditMode ? t("addDescriptionHint") : t("noDescription")}
+                </p>
+              )}
+            </div>
+
+            {/* Page du wiki : à choisir en écriture, à ouvrir en lecture. */}
+            {editing ? (
               <label className="flex flex-col gap-1 text-xs text-muted-foreground">
-                {t("targetMap")}
+                {t("wikiPage")}
                 <select
-                  value={targetMapId ?? ""}
-                  onChange={e => setTargetMapId(e.target.value || null)}
+                  value={wikiPageId ?? ""}
+                  onChange={e => setWikiPageId(e.target.value || null)}
                   className="rounded-md border border-border bg-background px-2 py-1.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary"
                 >
-                  <option value="">{t("noTargetMap")}</option>
-                  {cartesChoisissables.map(m => (
-                    <option key={m.id} value={m.id}>{m.label?.trim() || t("title")}</option>
+                  <option value="">{t("noWikiPage")}</option>
+                  {wikiPages.map(p => (
+                    <option key={p.id} value={p.id}>{p.title}</option>
                   ))}
                 </select>
               </label>
-            )
-          ) : linkedMap ? (
-            <button
-              type="button"
-              onClick={() => onOpenMap(linkedMap.id)}
-              className="flex w-fit items-center gap-1.5 rounded-md border border-border-soft px-2 py-1 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
-            >
-              <MapIcon className="h-3.5 w-3.5" /> {t("openTargetMap")} : {linkedMap.label?.trim() || t("title")}
-            </button>
-          ) : null}
+            ) : linkedPage ? (
+              <button
+                type="button"
+                onClick={() => router.push(`/w/${worldId}?view=wiki&page=${encodeURIComponent(linkedPage.slug)}`)}
+                className="flex w-fit items-center gap-1.5 rounded-md border border-border-soft px-2 py-1 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
+              >
+                <BookOpenText className="h-3.5 w-3.5" /> {t("openWikiPage")} : {linkedPage.title}
+              </button>
+            ) : null}
 
-          {/* Depuis quand, jusqu'à quand. En édition, deux dates ; en lecture,
-              une ligne — ou rien, pour un lieu de toujours. */}
-          {timelineConfig && editing && (
-            <div className="flex flex-col gap-1.5">
-              <TimelineDateFields label={t("existsFrom")} value={existsFrom} onChange={setExistsFrom} config={timelineConfig} />
-              <TimelineDateFields label={t("existsUntil")} value={existsUntil} onChange={setExistsUntil} config={timelineConfig} />
-            </div>
-          )}
-          {timelineConfig && !editing && (pin.exists_from || pin.exists_until) && (
-            <Bloc titre={t("placeEra")}>
-            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Clock className="h-3.5 w-3.5 shrink-0" />
-              <span className="truncate">
-                {pin.exists_from && pin.exists_until
-                  ? t("existsBetween", { from: formatTimelineLabel(timelineConfig, pin.exists_from), until: formatTimelineLabel(timelineConfig, pin.exists_until) })
-                  : pin.exists_from
-                    ? t("existsSince", { from: formatTimelineLabel(timelineConfig, pin.exists_from) })
-                    : t("existsTill", { until: formatTimelineLabel(timelineConfig, pin.exists_until!) })}
-              </span>
-            </p>
-            </Bloc>
-          )}
-
-          {/* Qui se trouve ici. La carte n'en donne que le nombre : c'est
-              ici qu'on lit les noms.
-
-              Le bloc reste debout pour un lieu désert dès lors qu'on peut s'y
-              installer : sinon le geste n'existerait qu'aux endroits déjà
-              occupés, et un lieu vide le resterait. */}
-          {!editing && (personasHere.length > 0 || onPlacePersona) && (
-            <Bloc
-              titre={t("whoIsHere")}
-              action={onPlacePersona && (
-                <PersonaPickerDialog
-                  selected={null}
-                  worldId={worldId}
-                  variant={pickerVariant}
-                  onSelect={(persona) => { if (persona) onPlacePersona(persona.id); }}
-                  trigger={
-                    // Taillé comme « Jouer ici » : deux gestes de même nature,
-                    // qui n'ont pas à peser différemment.
-                    <button
-                      type="button"
-                      className="flex shrink-0 items-center gap-1.5 rounded-md border border-border-soft px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-                    >
-                      <UserPlus className="h-3.5 w-3.5" />
-                      {t("settleHere")}
-                    </button>
-                  }
-                />
-              )}
-            >
-              {personasHere.map(persona => (
-                <div key={persona.id} className="flex items-center gap-2 text-xs">
-                  {/* `relative` : `StoredImage` se pose en `absolute inset-0`,
-                      et sans ancêtre positionné ici, elle allait chercher le
-                      cadre de la carte — cinq avatars étalés en plein écran. */}
-                  <span
-                    data-persona-avatar
-                    className="relative flex h-6 w-6 shrink-0 overflow-hidden rounded-full bg-secondary"
+            {/* Carte liée : à choisir en écriture, à ouvrir en lecture. */}
+            {editing ? (
+              cartesChoisissables.length > 0 && (
+                <label className="flex flex-col gap-1 text-xs text-muted-foreground">
+                  {t("targetMap")}
+                  <select
+                    value={targetMapId ?? ""}
+                    onChange={e => setTargetMapId(e.target.value || null)}
+                    className="rounded-md border border-border bg-background px-2 py-1.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary"
                   >
-                    {persona.avatar_url && (
-                      <StoredImage url={persona.avatar_url} width={48} height={48} resize="cover" className="object-cover" />
+                    <option value="">{t("noTargetMap")}</option>
+                    {cartesChoisissables.map(m => (
+                      <option key={m.id} value={m.id}>{m.label?.trim() || t("title")}</option>
+                    ))}
+                  </select>
+                </label>
+              )
+            ) : linkedMap ? (
+              <button
+                type="button"
+                onClick={() => onOpenMap(linkedMap.id)}
+                className="flex w-fit items-center gap-1.5 rounded-md border border-border-soft px-2 py-1 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
+              >
+                <MapIcon className="h-3.5 w-3.5" /> {t("openTargetMap")} : {linkedMap.label?.trim() || t("title")}
+              </button>
+            ) : null}
+
+            {/* Depuis quand, jusqu'à quand. En édition, deux dates ; en lecture,
+                une ligne — ou rien, pour un lieu de toujours. */}
+            {timelineConfig && editing && (
+              <div className="flex flex-col gap-1.5">
+                <TimelineDateFields label={t("existsFrom")} value={existsFrom} onChange={setExistsFrom} config={timelineConfig} />
+                <TimelineDateFields label={t("existsUntil")} value={existsUntil} onChange={setExistsUntil} config={timelineConfig} />
+              </div>
+            )}
+            {timelineConfig && !editing && (pin.exists_from || pin.exists_until) && (
+              <Bloc titre={t("placeEra")}>
+              <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Clock className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">
+                  {pin.exists_from && pin.exists_until
+                    ? t("existsBetween", { from: formatTimelineLabel(timelineConfig, pin.exists_from), until: formatTimelineLabel(timelineConfig, pin.exists_until) })
+                    : pin.exists_from
+                      ? t("existsSince", { from: formatTimelineLabel(timelineConfig, pin.exists_from) })
+                      : t("existsTill", { until: formatTimelineLabel(timelineConfig, pin.exists_until!) })}
+                </span>
+              </p>
+              </Bloc>
+            )}
+
+            {/* Qui se trouve ici. La carte n'en donne que le nombre : c'est
+                ici qu'on lit les noms.
+
+                Le bloc reste debout pour un lieu désert dès lors qu'on peut s'y
+                installer : sinon le geste n'existerait qu'aux endroits déjà
+                occupés, et un lieu vide le resterait. */}
+            {!editing && (personasHere.length > 0 || onPlacePersona) && (
+              <Bloc
+                titre={t("whoIsHere")}
+                action={onPlacePersona && (
+                  <PersonaPickerDialog
+                    selected={null}
+                    worldId={worldId}
+                    variant={pickerVariant}
+                    onSelect={(persona) => { if (persona) onPlacePersona(persona.id); }}
+                    trigger={
+                      // Taillé comme « Jouer ici » : deux gestes de même nature,
+                      // qui n'ont pas à peser différemment.
+                      <button
+                        type="button"
+                        className="flex shrink-0 items-center gap-1.5 rounded-md border border-border-soft px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                      >
+                        <UserPlus className="h-3.5 w-3.5" />
+                        {t("settleHere")}
+                      </button>
+                    }
+                  />
+                )}
+              >
+                {personasHere.map(persona => (
+                  <div key={persona.id} className="flex items-center gap-2 text-xs">
+                    {/* `relative` : `StoredImage` se pose en `absolute inset-0`,
+                        et sans ancêtre positionné ici, elle allait chercher le
+                        cadre de la carte — cinq avatars étalés en plein écran. */}
+                    <span
+                      data-persona-avatar
+                      className="relative flex h-6 w-6 shrink-0 overflow-hidden rounded-full bg-secondary"
+                    >
+                      {persona.avatar_url && (
+                        <StoredImage url={persona.avatar_url} width={48} height={48} resize="cover" className="object-cover" />
+                      )}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate">{persona.name}</span>
+                    {onRemovePersona && persona.user_id === userId && (
+                      <button
+                        type="button"
+                        aria-label={t("removeFromPlace", { name: persona.name })}
+                        onClick={() => onRemovePersona(persona.id)}
+                        className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
                     )}
-                  </span>
-                  <span className="min-w-0 flex-1 truncate">{persona.name}</span>
-                  {onRemovePersona && persona.user_id === userId && (
-                    <button
-                      type="button"
-                      aria-label={t("removeFromPlace", { name: persona.name })}
-                      onClick={() => onRemovePersona(persona.id)}
-                      className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  )}
-                </div>
-              ))}
-            </Bloc>
-          )}
+                  </div>
+                ))}
+              </Bloc>
+            )}
 
-          {/* Ce qui se joue ici. Le lien `chatrooms.map_pin_id` existait déjà :
-              seul le sens carte → salons manquait. */}
-          {!editing && rooms.length > 0 && (
-            <Bloc titre={t("roomsAtPlace")}>
-              {rooms.map(salon => (
-                <button
-                  key={salon.id}
-                  type="button"
-                  onClick={() => router.push(`/c/${salon.id}`)}
-                  className="flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-left text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
-                >
-                  <MessagesSquare className="h-3.5 w-3.5 shrink-0" />
-                  <span className="truncate">{salon.title || salon.name}</span>
-                </button>
-              ))}
-            </Bloc>
-          )}
-
-          {/* Actions */}
-          {isEditMode && (
-            <div className="flex items-center gap-2 pt-1 border-t border-border-soft">
-              {editing ? (
-                <>
-                  <Button size="sm" onClick={handleSave} disabled={saving || !title.trim()}>
-                    {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
-                    {tCommon("save")}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => {
-                      setTitle(pin.title);
-                      setDescription(pin.description ?? "");
-                      setWikiPageId(pin.wiki_page_id ?? null);
-                      setTargetMapId(pin.target_map_id ?? null);
-                      setExistsFrom(pin.exists_from ?? null);
-                      setExistsUntil(pin.exists_until ?? null);
-                      setEditing(false);
-                    }}
-                  >
-                    {tCommon("cancel")}
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
-                    <Pencil className="h-3.5 w-3.5" />
-                    {tCommon("edit")}
-                  </Button>
-                  {/* L'apparence de l'épingle, chassée de la bannière par le
-                      titre : la pastille montre ce qu'elle vaut, et l'ouvre. */}
+            {/* Ce qui se joue ici. Le lien `chatrooms.map_pin_id` existait déjà :
+                seul le sens carte → salons manquait. */}
+            {!editing && rooms.length > 0 && (
+              <Bloc titre={t("roomsAtPlace")}>
+                {rooms.map(salon => (
                   <button
+                    key={salon.id}
                     type="button"
-                    aria-label={t("editPinVisual")}
-                    title={t("editPinVisual")}
-                    onClick={() => setVisualDialogOpen(true)}
-                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full shadow-sm transition-transform hover:scale-110"
-                    style={{
-                      backgroundColor: pin.color || "transparent",
-                      border: pin.border_color
-                        ? `2px ${pin.border_style || "solid"} ${pin.border_color}`
-                        : "2px solid rgba(255,255,255,0.6)",
-                    }}
+                    onClick={() => router.push(`/c/${salon.id}`)}
+                    className="flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-left text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
                   >
-                    {pin.icon && (
-                      <LazyLucideIcon
-                        name={pin.icon}
-                        className="h-3 w-3"
-                        style={{ color: pin.icon_color || "#ffffff" }}
-                      />
-                    )}
+                    <MessagesSquare className="h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate">{salon.title || salon.name}</span>
                   </button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="ml-auto text-destructive hover:bg-destructive/10 hover:text-destructive"
-                    onClick={onDelete}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    {tCommon("delete")}
-                  </Button>
-                </>
-              )}
-            </div>
-          )}
+                ))}
+              </Bloc>
+            )}
+          </div>
         </div>
+
+        {/* Les commandes d'auteur, au pied de la colonne. Au fil du contenu,
+            elles s'éloignaient à mesure qu'un lieu se remplissait — et il
+            fallait dérouler toute une fiche pour corriger son titre. */}
+        {isEditMode && (
+          <div
+            data-pin-actions
+            className="flex shrink-0 items-center gap-2 border-t border-border-soft px-4 py-3"
+          >
+            {editing ? (
+              <>
+                <Button size="sm" onClick={handleSave} disabled={saving || !title.trim()}>
+                  {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                  {tCommon("save")}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    setTitle(pin.title);
+                    setDescription(pin.description ?? "");
+                    setWikiPageId(pin.wiki_page_id ?? null);
+                    setTargetMapId(pin.target_map_id ?? null);
+                    setExistsFrom(pin.exists_from ?? null);
+                    setExistsUntil(pin.exists_until ?? null);
+                    setEditing(false);
+                  }}
+                >
+                  {tCommon("cancel")}
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
+                  <Pencil className="h-3.5 w-3.5" />
+                  {tCommon("edit")}
+                </Button>
+                {/* L'apparence de l'épingle, chassée de la bannière par le
+                    titre : la pastille montre ce qu'elle vaut, et l'ouvre. */}
+                <button
+                  type="button"
+                  aria-label={t("editPinVisual")}
+                  title={t("editPinVisual")}
+                  onClick={() => setVisualDialogOpen(true)}
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full shadow-sm transition-transform hover:scale-110"
+                  style={{
+                    backgroundColor: pin.color || "transparent",
+                    border: pin.border_color
+                      ? `2px ${pin.border_style || "solid"} ${pin.border_color}`
+                      : "2px solid rgba(255,255,255,0.6)",
+                  }}
+                >
+                  {pin.icon && (
+                    <LazyLucideIcon
+                      name={pin.icon}
+                      className="h-3 w-3"
+                      style={{ color: pin.icon_color || "#ffffff" }}
+                    />
+                  )}
+                </button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="ml-auto text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  onClick={onDelete}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  {tCommon("delete")}
+                </Button>
+              </>
+            )}
+          </div>
+        )}
       </div>
     </>
   );

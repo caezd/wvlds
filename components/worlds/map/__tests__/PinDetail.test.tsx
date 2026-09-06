@@ -360,6 +360,38 @@ describe("PinDetail — où se trouve ce lieu", () => {
   });
 });
 
+describe("PinDetail — les commandes d'auteur", () => {
+  function monterEnEdition() {
+    const mock = createSupabaseMock();
+    vi.mocked(createClient).mockReturnValue(mock.client as never);
+    render(
+      <PinDetail
+        pin={makePin()}
+        wikiPages={WIKI_PAGES}
+        rooms={[]}
+        maps={CARTES}
+        isEditMode
+        worldId="w1"
+        onUpdated={vi.fn()}
+        onDelete={vi.fn()}
+        onOpenMap={vi.fn()}
+      />,
+    );
+  }
+
+  it("les tient au pied de la fiche, hors de ce qui défile", () => {
+    // Au fil du contenu, elles s'éloignaient à mesure qu'un lieu se
+    // remplissait : il fallait dérouler toute une fiche pour corriger un
+    // titre. Enfant direct de la fiche, le pied ne défile pas avec elle.
+    monterEnEdition();
+
+    const pied = document.querySelector("[data-pin-detail] > [data-pin-actions]");
+    expect(pied).not.toBeNull();
+    expect(pied).toContainElement(screen.getByRole("button", { name: "Modifier" }));
+    expect(pied).toContainElement(screen.getByRole("button", { name: "Supprimer" }));
+  });
+});
+
 describe("PinDetail — qui se trouve ici", () => {
   function monterAvecDuMonde(
     personasHere = [makePlacedPersona()],
