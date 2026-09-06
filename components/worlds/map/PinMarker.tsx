@@ -206,7 +206,10 @@ export const PinMarker = React.memo(function PinMarker({
               key={p.id}
               data-persona-id={p.id}
               title={p.name}
-              className="overflow-hidden rounded-full ring-2 ring-background"
+              // `flex` et une taille explicite : un `span` est en ligne, et
+              // la place que sa ligne réserve sous l'image laissait paraître
+              // du fond sous chaque tête.
+              className="flex h-5 w-5 overflow-hidden rounded-full ring-2 ring-background"
             >
               <AvatarWithFrame src={p.avatar_url} alt={p.name} fallback={p.name} size={20} />
             </span>
