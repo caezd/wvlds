@@ -43,21 +43,13 @@ const MAX_PIN_BANNER_MB = 5;
  * suite de paragraphes, pas des choses distinctes. Le cadre dit où l'une
  * s'arrête et où la suivante commence.
  */
-function Bloc({ titre, action, children }: {
-  titre: string;
-  /** Ce que la section permet de faire — posé à droite de son nom. */
-  action?: React.ReactNode;
-  children: React.ReactNode;
-}) {
+function Bloc({ titre, children }: { titre: string; children: React.ReactNode }) {
   return (
     <section className="flex flex-col gap-1.5 rounded-lg border border-border-soft bg-secondary/30 p-2.5">
-      <div className="flex items-center justify-between gap-2">
-        <h4 className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-          <span aria-hidden className="h-1 w-1 rounded-full bg-muted-foreground/60" />
-          {titre}
-        </h4>
-        {action}
-      </div>
+      <h4 className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+        <span aria-hidden className="h-1 w-1 rounded-full bg-muted-foreground/60" />
+        {titre}
+      </h4>
       {children}
     </section>
   );
@@ -491,28 +483,7 @@ export function PinDetail({
               installer : sinon le geste n'existerait qu'aux endroits déjà
               occupés, et un lieu vide le resterait. */}
           {!editing && (personasHere.length > 0 || onPlacePersona) && (
-            <Bloc
-              titre={t("whoIsHere")}
-              action={onPlacePersona && (
-                <PersonaPickerDialog
-                  selected={null}
-                  worldId={worldId}
-                  variant={pickerVariant}
-                  onSelect={(persona) => { if (persona) onPlacePersona(persona.id); }}
-                  trigger={
-                    // Taillé comme « Jouer ici » : deux gestes de même nature,
-                    // qui n'ont pas à peser différemment.
-                    <button
-                      type="button"
-                      className="flex shrink-0 items-center gap-1.5 rounded-md border border-border-soft px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-                    >
-                      <UserPlus className="h-3.5 w-3.5" />
-                      {t("settleHere")}
-                    </button>
-                  }
-                />
-              )}
-            >
+            <Bloc titre={t("whoIsHere")}>
               {personasHere.map(persona => (
                 <div key={persona.id} className="flex items-center gap-2 text-xs">
                   {/* `relative` : `StoredImage` se pose en `absolute inset-0`,
@@ -560,8 +531,10 @@ export function PinDetail({
             </Bloc>
           )}
 
-          {/* Actions */}
-          {isEditMode && (
+          {/* Actions. Le pied existe dès qu'il y a quelque chose à y faire :
+              s'installer ici n'est pas un geste d'auteur, et n'attend pas
+              que les modifications soient ouvertes. */}
+          {(isEditMode || onPlacePersona) && (
             <div className="flex items-center gap-2 pt-1 border-t border-border-soft">
               {editing ? (
                 <>
@@ -587,42 +560,65 @@ export function PinDetail({
                 </>
               ) : (
                 <>
-                  <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
-                    <Pencil className="h-3.5 w-3.5" />
-                    {tCommon("edit")}
-                  </Button>
-                  {/* L'apparence de l'épingle, chassée de la bannière par le
-                      titre : la pastille montre ce qu'elle vaut, et l'ouvre. */}
-                  <button
-                    type="button"
-                    aria-label={t("editPinVisual")}
-                    title={t("editPinVisual")}
-                    onClick={() => setVisualDialogOpen(true)}
-                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full shadow-sm transition-transform hover:scale-110"
-                    style={{
-                      backgroundColor: pin.color || "transparent",
-                      border: pin.border_color
-                        ? `2px ${pin.border_style || "solid"} ${pin.border_color}`
-                        : "2px solid rgba(255,255,255,0.6)",
-                    }}
-                  >
-                    {pin.icon && (
-                      <LazyLucideIcon
-                        name={pin.icon}
-                        className="h-3 w-3"
-                        style={{ color: pin.icon_color || "#ffffff" }}
-                      />
-                    )}
-                  </button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="ml-auto text-destructive hover:bg-destructive/10 hover:text-destructive"
-                    onClick={onDelete}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    {tCommon("delete")}
-                  </Button>
+                  {onPlacePersona && (
+                    <PersonaPickerDialog
+                      selected={null}
+                      worldId={worldId}
+                      variant={pickerVariant}
+                      onSelect={(persona) => { if (persona) onPlacePersona(persona.id); }}
+                      trigger={
+                        // Taillé comme « Jouer ici » : deux gestes de même
+                        // nature, qui n'ont pas à peser différemment.
+                        <button
+                          type="button"
+                          className="flex shrink-0 items-center gap-1.5 rounded-md border border-border-soft px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                        >
+                          <UserPlus className="h-3.5 w-3.5" />
+                          {t("settleHere")}
+                        </button>
+                      }
+                    />
+                  )}
+                  {isEditMode && (
+                    <>
+                    <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
+                      <Pencil className="h-3.5 w-3.5" />
+                      {tCommon("edit")}
+                    </Button>
+                    {/* L'apparence de l'épingle, chassée de la bannière par le
+                        titre : la pastille montre ce qu'elle vaut, et l'ouvre. */}
+                    <button
+                      type="button"
+                      aria-label={t("editPinVisual")}
+                      title={t("editPinVisual")}
+                      onClick={() => setVisualDialogOpen(true)}
+                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full shadow-sm transition-transform hover:scale-110"
+                      style={{
+                        backgroundColor: pin.color || "transparent",
+                        border: pin.border_color
+                          ? `2px ${pin.border_style || "solid"} ${pin.border_color}`
+                          : "2px solid rgba(255,255,255,0.6)",
+                      }}
+                    >
+                      {pin.icon && (
+                        <LazyLucideIcon
+                          name={pin.icon}
+                          className="h-3 w-3"
+                          style={{ color: pin.icon_color || "#ffffff" }}
+                        />
+                      )}
+                    </button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="ml-auto text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      onClick={onDelete}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      {tCommon("delete")}
+                    </Button>
+                    </>
+                  )}
                 </>
               )}
             </div>
