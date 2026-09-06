@@ -6,13 +6,7 @@ import { Layers, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
-import { AvatarWithFrame } from "@/components/avatars/AvatarWithFrame";
-import { type MapPersona, type MapPin as MapPinType } from "@/app/actions/worldMap";
-
-/** Une même référence pour « personne » : la mémoïsation compare par identité. */
-const NOBODY: MapPersona[] = [];
-/** Au-delà, on compte au lieu d'empiler — trois têtes disent déjà « il y a du monde ». */
-const AVATARS_SHOWN = 3;
+import { type MapPin as MapPinType } from "@/app/actions/worldMap";
 
 /**
  * Une épingle posée sur la carte.
@@ -31,7 +25,6 @@ export const PinMarker = React.memo(function PinMarker({
   isSelected,
   isEditMode,
   imgRef,
-  presentPersonas = NOBODY,
   outOfTime = false,
   showLabel = true,
   onPinClick,
@@ -42,8 +35,6 @@ export const PinMarker = React.memo(function PinMarker({
   isSelected: boolean;
   isEditMode: boolean;
   imgRef: React.RefObject<HTMLImageElement | null>;
-  /** Les personas qui se trouvent ici — voir migration 154. */
-  presentPersonas?: MapPersona[];
   /** Le lieu n'existe pas à l'époque affichée — voir migration 156. */
   outOfTime?: boolean;
   /** Son nom recouvrirait celui d'un voisin : on le tait — voir `labels.ts`. */
@@ -186,40 +177,6 @@ export const PinMarker = React.memo(function PinMarker({
         >
           <Layers className="h-2.5 w-2.5" />
         </span>
-      )}
-
-      {/* Qui est là. À droite du marqueur, hors de portée du pointeur : c'est
-          le marqueur qu'on clique, les têtes ne font qu'annoncer. */}
-      {presentPersonas.length > 0 && !isDragging && (
-        <div
-          role="group"
-          aria-label={t("whoIsHere")}
-          className="pointer-events-none absolute left-full top-1/2 ml-1 flex -translate-y-1/2 items-center -space-x-1.5"
-        >
-          {/* Ronds, et non `rounded-md` comme ailleurs : des carrés arrondis
-              qui se recouvrent laissent voir leurs coins l'un sur l'autre, et
-              la pile devient un empilement de bouts. Le cadre d'avatar est
-              écarté ici — à 20 px il ne se lirait pas, et l'arrondi le
-              rognerait. L'anneau de fond détache chaque tête de la suivante. */}
-          {presentPersonas.slice(0, AVATARS_SHOWN).map((p) => (
-            <span
-              key={p.id}
-              data-persona-id={p.id}
-              title={p.name}
-              // `flex` et une taille explicite : un `span` est en ligne, et
-              // la place que sa ligne réserve sous l'image laissait paraître
-              // du fond sous chaque tête.
-              className="flex h-5 w-5 overflow-hidden rounded-full ring-2 ring-background"
-            >
-              <AvatarWithFrame src={p.avatar_url} alt={p.name} fallback={p.name} size={20} />
-            </span>
-          ))}
-          {presentPersonas.length > AVATARS_SHOWN && (
-            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-foreground px-1 text-[10px] font-semibold leading-none text-background ring-2 ring-background">
-              {t("morePersonas", { count: presentPersonas.length - AVATARS_SHOWN })}
-            </span>
-          )}
-        </div>
       )}
 
       {/* Le nom du lieu, en permanence.

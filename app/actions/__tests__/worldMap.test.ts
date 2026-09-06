@@ -12,7 +12,6 @@ import {
   updateMapPin,
   deleteMapPin,
   setPersonaLocation,
-  getMyMapPersonas,
   createMapRegion,
   updateMapRegion,
   deleteMapRegion,
@@ -26,19 +25,17 @@ const use = (mock: ReturnType<typeof createSupabaseMock>) =>
 beforeEach(() => vi.clearAllMocks());
 
 describe("getWorldMaps", () => {
-  it("retourne les cartes, les pins, les personas placés et les régions, avec fallbacks vides", async () => {
+  it("retourne les cartes, les pins et les régions, avec fallbacks vides", async () => {
     const maps = [
       { id: "m1", world_id: "w1", image_url: null, label: "Continent", sort_index: 0 },
       { id: "m2", world_id: "w1", image_url: null, label: "Donjon", sort_index: 1 },
     ];
     const pins = [{ id: "p1", world_id: "w1", map_id: "m1", title: "Port" }];
-    const personas = [{ id: "per1", name: "Kael", map_pin_id: "p1" }];
     const regions = [{ id: "r1", map_id: "m1", label: "Le royaume", points: [] }];
-    use(createSupabaseMock({ results: [{ data: maps }, { data: pins }, { data: personas }, { data: regions }] }));
+    use(createSupabaseMock({ results: [{ data: maps }, { data: pins }, { data: regions }] }));
     const res = await getWorldMaps("w1");
     expect(res.maps).toEqual(maps);
     expect(res.pins).toEqual(pins);
-    expect(res.personas).toEqual(personas);
     expect(res.regions).toEqual(regions);
   });
 
@@ -47,7 +44,6 @@ describe("getWorldMaps", () => {
     const res = await getWorldMaps("w1");
     expect(res.maps).toEqual([]);
     expect(res.pins).toEqual([]);
-    expect(res.personas).toEqual([]);
     expect(res.regions).toEqual([]);
   });
 });
@@ -302,24 +298,6 @@ describe("setPersonaLocation", () => {
   });
 });
 
-describe("getMyMapPersonas", () => {
-  it("ne rend rien sans session, sans lever", async () => {
-    // Un lecteur non connecté n'a pas de personas à poser : une liste vide
-    // suffit, une exception ferait échouer l'ouverture du panneau.
-    use(createSupabaseMock({ user: null }));
-    await expect(getMyMapPersonas("w1")).resolves.toEqual([]);
-  });
-
-  it("lit les miens dans ce monde", async () => {
-    const mock = createSupabaseMock({ user: { id: "u1" }, results: [{ data: [{ id: "per1", name: "Kael" }] }] });
-    use(mock);
-    const res = await getMyMapPersonas("w1");
-    expect(res).toEqual([{ id: "per1", name: "Kael" }]);
-    const b = mock.buildersFor("personas")[0];
-    expect(b.eq).toHaveBeenCalledWith("user_id", "u1");
-    expect(b.eq).toHaveBeenCalledWith("world_id", "w1");
-  });
-});
 
 describe("régions", () => {
   const POINTS = [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 5, y: 10 }];

@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import { WorldMap } from "@/components/worlds/map/WorldMap";
 import { deleteMapPin, updateWorldMap } from "@/app/actions/worldMap";
 import { MEDIA } from "@/hooks/useMediaQuery";
-import { makeMap, makeMapPersona, makePin, makeRegion } from "./fixtures";
+import { makeMap, makePin, makeRegion } from "./fixtures";
 
 // ──────────────────────────────────────────────────────────────────────────
 // Trois promesses de la carte, chacune tenue en défaut avant ce fichier :
@@ -24,20 +24,15 @@ import { makeMap, makeMapPersona, makePin, makeRegion } from "./fixtures";
 vi.mock("@/lib/supabase/client", () => ({ createClient: vi.fn() }));
 
 const getWorldMaps = vi.hoisted(() => vi.fn());
-const getMapPersona = vi.hoisted(() => vi.fn());
 const createMapRegion = vi.hoisted(() => vi.fn());
 const updateMapRegion = vi.hoisted(() => vi.fn(async () => {}));
 const deleteMapRegion = vi.hoisted(() => vi.fn(async () => {}));
-const setPersonaLocation = vi.hoisted(() => vi.fn(async () => {}));
 vi.mock("@/app/actions/worldMap", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/app/actions/worldMap")>()),
   getWorldMaps,
-  getMapPersona,
   createMapRegion,
   updateMapRegion,
   deleteMapRegion,
-  getMyMapPersonas: vi.fn(async () => []),
-  setPersonaLocation,
   createMapPin: vi.fn(),
   updateMapPin: vi.fn(async () => {}),
   deleteMapPin: vi.fn(async () => {}),
@@ -84,7 +79,6 @@ const CANAL = "w:w1:map";
 type CarteInitiale = {
   maps: ReturnType<typeof makeMap>[];
   pins: ReturnType<typeof makePin>[];
-  personas?: ReturnType<typeof makeMapPersona>[];
   regions?: ReturnType<typeof makeRegion>[];
 } | null;
 
@@ -100,7 +94,7 @@ function monter(
     <WorldMap
       worldId={worldId}
       canEdit
-      initialMap={initialMap ? { personas: [], regions: [], ...initialMap } : initialMap}
+      initialMap={initialMap ? { regions: [], ...initialMap } : initialMap}
       {...adresse}
     />
   );
@@ -110,7 +104,7 @@ function monter(
     /** Rejoue le rendu avec un autre monde, comme une navigation client. */
     changerDeMonde: (id: string, carte: CarteInitiale) =>
       rerender(
-        <WorldMap worldId={id} canEdit initialMap={carte ? { personas: [], regions: [], ...carte } : carte} />,
+        <WorldMap worldId={id} canEdit initialMap={carte ? { regions: [], ...carte } : carte} />,
       ),
   };
 }
@@ -138,7 +132,7 @@ describe("WorldMap — données servies par le serveur", () => {
   });
 
   it("charge la carte elle-même quand l'onglet s'ouvre côté client", async () => {
-    getWorldMaps.mockResolvedValue({ maps: [makeMap()], pins: [makePin()], personas: [], regions: [] });
+    getWorldMaps.mockResolvedValue({ maps: [makeMap()], pins: [makePin()], regions: [] });
     monter(null);
 
     expect(getWorldMaps).toHaveBeenCalledWith("w1");
@@ -693,60 +687,6 @@ describe("WorldMap — les marqueurs ne se re-rendent pas pour rien", () => {
   });
 });
 
-describe("WorldMap — qui est où", () => {
-  const AVEC_KAEL = {
-    maps: [makeMap()],
-    pins: [makePin()],
-    personas: [makeMapPersona({ id: "per1", name: "Kael", map_pin_id: "pin1" })],
-  };
-
-  /** Un événement Postgres sur `personas`. */
-  function emettrePersona(mock: SupabaseMock, payload: unknown) {
-    act(() => {
-      mock.channelNamed(CANAL)?.emit(
-        (h) => h.type === "postgres_changes" && (h.config as { table?: string }).table === "personas",
-        payload,
-      );
-    });
-  }
-
-  it("montre sur le marqueur qui se trouve là", () => {
-    monter(AVEC_KAEL);
-    expect(document.querySelector('[data-persona-id="per1"]')).not.toBeNull();
-  });
-
-  it("voit arriver un persona, relu avec son cadre", async () => {
-    // L'écho temps réel ne porte pas la jointure sur le cadre : la carte relit
-    // le persona qui vient de bouger.
-    getMapPersona.mockResolvedValue(makeMapPersona({ id: "per2", name: "Ifyr", map_pin_id: "pin1" }));
-    const { mock } = monter({ maps: [makeMap()], pins: [makePin()] });
-
-    emettrePersona(mock, {
-      eventType: "UPDATE",
-      new: { id: "per2", map_pin_id: "pin1", deleted_at: null, is_template: false },
-    });
-
-    await waitFor(() => expect(document.querySelector('[data-persona-id="per2"]')).not.toBeNull());
-    expect(getMapPersona).toHaveBeenCalledWith("per2");
-  });
-
-  it("voit partir un persona qui n'est plus nulle part", () => {
-    const { mock } = monter(AVEC_KAEL);
-
-    emettrePersona(mock, {
-      eventType: "UPDATE",
-      new: { id: "per1", map_pin_id: null, deleted_at: null, is_template: false },
-    });
-
-    expect(document.querySelector('[data-persona-id="per1"]')).toBeNull();
-  });
-
-  it("efface un persona supprimé", () => {
-    const { mock } = monter(AVEC_KAEL);
-    emettrePersona(mock, { eventType: "DELETE", old: { id: "per1" } });
-    expect(document.querySelector('[data-persona-id="per1"]')).toBeNull();
-  });
-});
 
 describe("WorldMap — régler l'échelle", () => {
   const AVEC_ECHELLE = makeMap({ scale_width_units: 1000, scale_unit: "km" });
@@ -865,7 +805,7 @@ describe("WorldMap — l'époque affichée", () => {
         worldId="w1"
         canEdit
         timelineConfig={CHRONO}
-        initialMap={{ maps: [makeMap()], pins: [RUINE, VILLE, TOUJOURS], personas: [], regions: [] }}
+        initialMap={{ maps: [makeMap()], pins: [RUINE, VILLE, TOUJOURS], regions: [] }}
       />,
     );
   }

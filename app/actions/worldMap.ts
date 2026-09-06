@@ -63,18 +63,6 @@ export type MapRegion = {
   sort_index: number;
 };
 
-/** Ce que la carte montre d'un persona : sa tête, et où il se trouve. */
-export type MapPersona = {
-  id: string;
-  user_id: string;
-  name: string;
-  avatar_url: string | null;
-  frame: { asset_url: string | null } | null;
-  /** Le lieu où il se trouve — `null` quand il n'est nulle part (migration 154). */
-  map_pin_id: string | null;
-};
-
-const MAP_PERSONA_SELECT = "id, user_id, name, avatar_url, map_pin_id, frame:avatar_frame_id(asset_url)";
 
 /**
  * Toutes les cartes d'un monde et toutes leurs épingles, en deux requêtes.
@@ -86,71 +74,22 @@ const MAP_PERSONA_SELECT = "id, user_id, name, avatar_url, map_pin_id, frame:ava
  */
 export async function getWorldMaps(
   worldId: string,
-): Promise<{ maps: WorldMapData[]; pins: MapPin[]; personas: MapPersona[]; regions: MapRegion[] }> {
+): Promise<{ maps: WorldMapData[]; pins: MapPin[]; regions: MapRegion[] }> {
   const supabase = await createClient();
-  const [{ data: maps }, { data: pins }, { data: personas }, { data: regions }] = await Promise.all([
+  const [{ data: maps }, { data: pins }, { data: regions }] = await Promise.all([
     supabase.from("world_maps").select("*").eq("world_id", worldId).order("sort_index"),
     supabase
       .from("world_map_pins")
       .select("*")
       .eq("world_id", worldId)
       .order("sort_index"),
-    // Ceux qui se trouvent quelque part, cartes confondues : la RLS n'en rend
-    // que ce que le lecteur a le droit de voir.
-    supabase
-      .from("personas")
-      .select(MAP_PERSONA_SELECT)
-      .eq("world_id", worldId)
-      .eq("is_template", false)
-      .is("deleted_at", null)
-      .not("map_pin_id", "is", null),
     supabase.from("world_map_regions").select("*").eq("world_id", worldId).order("sort_index"),
   ]);
   return {
     maps: (maps as WorldMapData[]) ?? [],
     pins: (pins as MapPin[]) ?? [],
-    personas: (personas as unknown as MapPersona[]) ?? [],
     regions: (regions as MapRegion[]) ?? [],
   };
-}
-
-/**
- * Mes personas de ce monde, placés ou non — ceux que je peux poser sur un
- * lieu. La RLS ne me laissera de toute façon écrire que les miens ; la liste
- * s'y tient d'emblée plutôt que d'offrir un choix qui échouerait.
- */
-export async function getMyMapPersonas(worldId: string): Promise<MapPersona[]> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return [];
-
-  const { data } = await supabase
-    .from("personas")
-    .select(MAP_PERSONA_SELECT)
-    .eq("world_id", worldId)
-    .eq("user_id", user.id)
-    .eq("is_template", false)
-    .is("deleted_at", null)
-    .order("name");
-  return (data as unknown as MapPersona[]) ?? [];
-}
-
-/**
- * Le persona placé, relu avec son cadre.
- *
- * L'écho temps réel d'une ligne `personas` ne porte pas la jointure sur le
- * cadre de l'avatar : la carte relit le persona qui vient de bouger.
- */
-export async function getMapPersona(personaId: string): Promise<MapPersona | null> {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("personas")
-    .select(MAP_PERSONA_SELECT)
-    .eq("id", personaId)
-    .maybeSingle();
-  return (data as unknown as MapPersona | null) ?? null;
 }
 
 /**

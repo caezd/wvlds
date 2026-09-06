@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
-  BookOpenText, Check, Clock, ImagePlus, Loader2, LogOut, Map as MapIcon, MessagesSquare, Pencil, Play, Trash2, Upload } from "lucide-react";
+  BookOpenText, Check, Clock, ImagePlus, Loader2, Map as MapIcon, MessagesSquare, Pencil, Play, Trash2, Upload } from "lucide-react";
 
 import { STORED_IMAGE_ACCEPT, isStorableImage, toWebP } from "@/lib/imageUtils";
 import { supabaseThumb } from "@/lib/storage";
@@ -16,8 +16,7 @@ import { Button } from "@/components/ui/button";
 import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
 import { MarkdownContent } from "@/components/MarkdownRenderer";
 import { ParagraphBlockEditor } from "@/components/chatrooms/composer/ParagraphBlockEditor";
-import { updateMapPin, type MapPersona, type MapPin as MapPinType, type WorldMapData } from "@/app/actions/worldMap";
-import { AvatarWithFrame } from "@/components/avatars/AvatarWithFrame";
+import { updateMapPin, type MapPin as MapPinType, type WorldMapData } from "@/app/actions/worldMap";
 import { TimelineDateFields } from "@/components/worlds/timeline/TimelineDateFields";
 import { formatTimelineLabel } from "@/lib/worldTimeline";
 import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
@@ -67,8 +66,6 @@ export function PinDetail({
   wikiPages,
   rooms,
   maps,
-  personasHere,
-  myPersonas,
   timelineConfig = null,
   ownMap = null,
   region = null,
@@ -76,7 +73,6 @@ export function PinDetail({
   canPost = false,
   worldId,
   onOpenMap,
-  onPlacePersona,
   onUpdated,
   onDelete,
 }: {
@@ -89,10 +85,6 @@ export function PinDetail({
   rooms: PinRoom[];
   /** Cartes du monde, pour choisir celle que ce lieu ouvre. */
   maps: WorldMapData[];
-  /** Les personas qui se trouvent ici — le filtrage est fait par `WorldMap`. */
-  personasHere: MapPersona[];
-  /** Mes personas de ce monde : ceux que je peux poser ici, ou faire partir. */
-  myPersonas: MapPersona[];
   /** La chronologie du monde, quand il en a une : les lieux prennent des dates. */
   timelineConfig?: WorldTimelineConfig | null;
   /** La carte à laquelle ce lieu appartient. */
@@ -107,8 +99,6 @@ export function PinDetail({
   onDelete: () => void;
   /** Bascule sur la carte que ce lieu ouvre. */
   onOpenMap: (mapId: string) => void;
-  /** Pose un persona ici, ou l'en fait partir avec `null`. */
-  onPlacePersona: (personaId: string, pinId: string | null) => void;
 }) {
   const t = useTranslations("map");
   const tCommon = useTranslations("common");
@@ -466,46 +456,6 @@ export function PinDetail({
                     : t("existsTill", { until: formatTimelineLabel(timelineConfig, pin.exists_until!) })}
               </span>
             </p>
-            </Bloc>
-          )}
-
-          {/* Qui est là — et de quoi y venir. Les miens ont un bouton pour
-              repartir ; les autres ne se déplacent que par leur propriétaire. */}
-          {!editing && (personasHere.length > 0 || myPersonas.some(p => p.map_pin_id !== pin.id)) && (
-            <Bloc titre={t("whoIsHere")}>
-              {personasHere.map(persona => {
-                const mien = myPersonas.some(p => p.id === persona.id);
-                return (
-                  <div key={persona.id} className="flex items-center gap-2 px-1 text-xs">
-                    <AvatarWithFrame src={persona.avatar_url} alt={persona.name} fallback={persona.name} size={22} frameUrl={persona.frame?.asset_url} />
-                    <span className="min-w-0 flex-1 truncate">{persona.name}</span>
-                    {mien && (
-                      <button
-                        type="button"
-                        aria-label={t("leavePlace")}
-                        title={t("leavePlace")}
-                        onClick={() => onPlacePersona(persona.id, null)}
-                        className="rounded p-0.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
-                      >
-                        <LogOut className="h-3.5 w-3.5" />
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
-              {myPersonas.some(p => p.map_pin_id !== pin.id) && (
-                <select
-                  value=""
-                  aria-label={t("placePersona")}
-                  onChange={e => { if (e.target.value) onPlacePersona(e.target.value, pin.id); }}
-                  className="rounded-md border border-border bg-background px-2 py-1 text-xs text-muted-foreground outline-none focus:ring-2 focus:ring-primary"
-                >
-                  <option value="">{t("placePersona")}</option>
-                  {myPersonas.filter(p => p.map_pin_id !== pin.id).map(p => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
-              )}
             </Bloc>
           )}
 

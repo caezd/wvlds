@@ -69,7 +69,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Carte",
-    text: "Qui est où : un persona peut se poser sur un lieu de la carte, depuis sa fiche ou depuis le panneau du lieu. Les marqueurs montrent qui s’y trouve.",
+    text: "Un persona peut se situer sur un lieu depuis sa fiche.",
   },
   {
     date: "2026-09",

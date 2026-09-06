@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { PinMarker } from "@/components/worlds/map/PinMarker";
-import { makeMapPersona, makePin } from "./fixtures";
+import { makePin } from "./fixtures";
 
 // ──────────────────────────────────────────────────────────────────────────
 // Un lieu de la carte n'était atteignable qu'à la souris : le marqueur était
@@ -109,36 +109,6 @@ describe("PinMarker — lieu qui mène ailleurs", () => {
   });
 });
 
-describe("PinMarker — qui est là", () => {
-  it("montre les personas présents", () => {
-    // « Qui est à la taverne ? » — la carte ne savait pas répondre.
-    monter({
-      presentPersonas: [
-        makeMapPersona({ id: "a", name: "Kael" }),
-        makeMapPersona({ id: "b", name: "Ifyr" }),
-      ],
-    });
-
-    const groupe = screen.getByRole("group", { name: "Qui est ici" });
-    expect(groupe.querySelectorAll("[data-persona-id]")).toHaveLength(2);
-    expect(groupe.querySelector('[data-persona-id="a"]')).toHaveAttribute("title", "Kael");
-  });
-
-  it("compte au-delà de trois têtes", () => {
-    monter({
-      presentPersonas: ["a", "b", "c", "d", "e"].map((id) => makeMapPersona({ id, name: id })),
-    });
-
-    const groupe = screen.getByRole("group", { name: "Qui est ici" });
-    expect(groupe.querySelectorAll("[data-persona-id]")).toHaveLength(3);
-    expect(groupe).toHaveTextContent("+2");
-  });
-
-  it("ne montre rien quand le lieu est vide", () => {
-    monter();
-    expect(screen.queryByRole("group", { name: "Qui est ici" })).toBeNull();
-  });
-});
 
 describe("PinMarker — hors de son époque", () => {
   it("s'estompe sans disparaître", () => {

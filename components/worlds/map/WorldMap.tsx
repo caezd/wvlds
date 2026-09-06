@@ -25,14 +25,10 @@ import {
   createMapRegion,
   updateMapRegion,
   deleteMapRegion,
-  getMapPersona,
-  getMyMapPersonas,
   getWorldMaps,
-  setPersonaLocation,
   reorderWorldMaps,
   updateMapPin,
   updateWorldMap,
-  type MapPersona,
   type MapRegion,
   type MapPin as MapPinType,
   type WorldMapData,
@@ -65,15 +61,12 @@ import { ERR_NON_AUTHENTIFIE } from "@/lib/actionErrors";
 export type InitialWorldMap = {
   maps: WorldMapData[];
   pins: MapPinType[];
-  personas: MapPersona[];
   regions: MapRegion[];
 };
 
 /** Les couleurs des régions, dans l'ordre où on les dessine. */
 const REGION_COLORS = ["#22c55e", "#3b82f6", "#f59e0b", "#ef4444", "#a855f7", "#14b8a6", "#ec4899", "#84cc16"];
 
-/** Une même référence pour « personne » : les marqueurs sont mémoïsés par identité. */
-const NOBODY: MapPersona[] = [];
 
 // ── Main component ─────────────────────────────────────────────────
 
@@ -121,9 +114,6 @@ export function WorldMap({
     initialMapId ?? initialMap?.maps?.[0]?.id ?? null,
   );
   const [pins, setPins] = React.useState<MapPinType[]>(initialMap?.pins ?? []);
-  // Les personas placés quelque part dans le monde, cartes confondues — et les
-  // miens, placés ou non, pour les poser depuis un panneau.
-  const [personas, setPersonas] = React.useState<MapPersona[]>(initialMap?.personas ?? []);
   // Les régions, cartes confondues ; celle qu'on regarde ; le tracé en cours
   // (`null` quand on ne dessine pas) ; et le polygone fermé qui attend son nom.
   const [regions, setRegions] = React.useState<MapRegion[]>(initialMap?.regions ?? []);
@@ -136,7 +126,6 @@ export function WorldMap({
   // identité d'un rendu à l'autre.
   const drawingRef = React.useRef(false);
   drawingRef.current = drawing;
-  const [myPersonas, setMyPersonas] = React.useState<MapPersona[]>([]);
   const [loading, setLoading] = React.useState(!initialMap);
   const [editMode, setEditMode] = React.useState(false);
   const isEditMode = canEdit && editMode;
@@ -193,16 +182,6 @@ export function WorldMap({
     () => regions.filter((r) => r.map_id === activeMap?.id),
     [regions, activeMap?.id],
   );
-  const personasByPin = React.useMemo(() => {
-    const parLieu = new Map<string, MapPersona[]>();
-    for (const persona of personas) {
-      if (!persona.map_pin_id) continue;
-      const liste = parLieu.get(persona.map_pin_id) ?? [];
-      liste.push(persona);
-      parLieu.set(persona.map_pin_id, liste);
-    }
-    return parLieu;
-  }, [personas]);
 
   // Miroirs en ref de ce que les rappels stables doivent lire à jour : ils
   // gardent ainsi leur identité, et `React.memo` sur les marqueurs a un sens.
@@ -241,12 +220,11 @@ export function WorldMap({
     let cancelled = false;
     (async () => {
       try {
-        const { maps: m, pins: p, personas: who, regions: r } = await getWorldMaps(worldId);
+        const { maps: m, pins: p, regions: r } = await getWorldMaps(worldId);
         if (!cancelled) {
           setMaps(m);
           setActiveMapId((prev) => prev ?? initialMapId ?? m[0]?.id ?? null);
           setPins(p);
-          setPersonas(who);
           setRegions(r);
         }
       } finally {
@@ -314,27 +292,6 @@ export function WorldMap({
             setSelectedRegion((prev) => (prev?.id === region.id ? region : prev));
           },
         )
-        .on(
-          "postgres_changes",
-          { event: "*", schema: "public", table: "personas", filter: `world_id=eq.${worldId}` },
-          (payload: RT) => {
-            if (payload.eventType === "DELETE") {
-              const id = (payload.old as { id: string }).id;
-              setPersonas((prev) => prev.filter((p) => p.id !== id));
-              return;
-            }
-            const row = payload.new as { id: string; map_pin_id: string | null; deleted_at: string | null; is_template: boolean };
-            if (!row.map_pin_id || row.deleted_at || row.is_template) {
-              setPersonas((prev) => prev.filter((p) => p.id !== row.id));
-              return;
-            }
-            // L'écho ne porte pas le cadre de l'avatar : on relit le persona
-            // plutôt que de le dessiner nu jusqu'au prochain rechargement.
-            void getMapPersona(row.id).then((persona) => {
-              if (persona) setPersonas((prev) => mergeById(prev, persona));
-            });
-          },
-        )
         .subscribe(),
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -365,7 +322,6 @@ export function WorldMap({
       .eq("world_id", worldId)
       .not("map_pin_id", "is", null)
       .then(({ data }: { data: PinRoom[] | null }) => setPinRooms(data ?? []));
-    void getMyMapPersonas(worldId).then(setMyPersonas);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [worldId]);
 
@@ -557,8 +513,6 @@ export function WorldMap({
     setEditMode(false);
     setWikiPages([]);
     setPinRooms([]);
-    setPersonas(initialMap?.personas ?? []);
-    setMyPersonas([]);
     setRegions(initialMap?.regions ?? []);
     setSelectedRegion(null);
     setDraft(null);
@@ -897,28 +851,6 @@ export function WorldMap({
     }
   }, []);
 
-  /**
-   * Pose un de mes personas ici — ou l'en fait partir. Optimiste : la tête
-   * apparaît sur le marqueur sans attendre le serveur, et l'écho temps réel
-   * la confirmera avec son cadre.
-   */
-  async function handlePlacePersona(personaId: string, pinId: string | null) {
-    const persona = myPersonas.find((p) => p.id === personaId);
-    if (!persona) return;
-    const avant = personas;
-    const deplace = { ...persona, map_pin_id: pinId };
-    setPersonas((prev) => (pinId ? mergeById(prev, deplace) : prev.filter((p) => p.id !== personaId)));
-    setMyPersonas((prev) => prev.map((p) => (p.id === personaId ? deplace : p)));
-    try {
-      await setPersonaLocation(personaId, pinId);
-      toast.success(t(pinId ? "personaPlaced" : "personaLeft", { name: persona.name }));
-    } catch {
-      toast.error(t("locationError"));
-      setPersonas(avant);
-      setMyPersonas((prev) => prev.map((p) => (p.id === personaId ? persona : p)));
-    }
-  }
-
   /** Règle l'échelle depuis une distance déclarée — `null` la retire. */
   async function handleCalibrate(widthUnits: number | null, unit: string) {
     if (!activeMap) return;
@@ -992,8 +924,6 @@ export function WorldMap({
       wikiPages={wikiPages}
       rooms={pinRooms.filter((r) => r.map_pin_id === selectedPin.id)}
       maps={maps}
-      personasHere={personasByPin.get(selectedPin.id) ?? NOBODY}
-      myPersonas={myPersonas}
       timelineConfig={timelineConfig}
       ownMap={maps.find((m) => m.id === selectedPin.map_id) ?? null}
       // La première région qui se referme autour du lieu. Il peut y en avoir
@@ -1008,7 +938,6 @@ export function WorldMap({
       }}
       onDelete={() => void handleDeletePin(selectedPin)}
       onOpenMap={(mapId) => selectMap(mapId)}
-      onPlacePersona={(personaId, pinId) => void handlePlacePersona(personaId, pinId)}
     />
   ) : null;
 
@@ -1341,7 +1270,6 @@ export function WorldMap({
                   isSelected={selectedPin?.id === pin.id}
                   isEditMode={isEditMode}
                   imgRef={imageRef}
-                  presentPersonas={personasByPin.get(pin.id) ?? NOBODY}
                   showLabel={nomsAffiches.has(pin.id)}
                   outOfTime={outOfTime(pin)}
                   onPinClick={handlePinClick}

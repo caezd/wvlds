@@ -5,9 +5,9 @@ import userEvent from "@testing-library/user-event";
 import { createSupabaseMock } from "@/test/supabaseMock";
 import { createClient } from "@/lib/supabase/client";
 import { PinDetail } from "@/components/worlds/map/PinDetail";
-import type { MapPersona, MapPin } from "@/app/actions/worldMap";
+import type { MapPin } from "@/app/actions/worldMap";
 import type { PinRoom } from "@/components/worlds/map/types";
-import { makeMap, makeMapPersona, makePin, makeRegion, WIKI_PAGES } from "./fixtures";
+import { makeMap, makePin, makeRegion, WIKI_PAGES } from "./fixtures";
 
 /** Deux cartes : celle du lieu, et celle qu'il peut ouvrir. */
 const CARTES = [makeMap(), makeMap({ id: "map2", label: "Le donjon", sort_index: 1 })];
@@ -42,7 +42,6 @@ function monter(
   isEditMode = false,
   rooms: PinRoom[] = [],
   canPost = false,
-  presence: { personasHere?: MapPersona[]; myPersonas?: MapPersona[] } = {},
 ) {
   const mock = createSupabaseMock();
   vi.mocked(createClient).mockReturnValue(mock.client as never);
@@ -55,9 +54,6 @@ function monter(
       wikiPages={WIKI_PAGES}
       rooms={rooms}
       maps={CARTES}
-      personasHere={presence.personasHere ?? []}
-      myPersonas={presence.myPersonas ?? []}
-      onPlacePersona={onPlacePersona}
       isEditMode={isEditMode}
       canPost={canPost}
       worldId="w1"
@@ -189,55 +185,6 @@ describe("PinDetail — jouer ici", () => {
   });
 });
 
-describe("PinDetail — qui est ici", () => {
-  const KAEL = makeMapPersona({ id: "per1", name: "Kael", map_pin_id: "pin1" });
-  const IFYR = makeMapPersona({ id: "per2", name: "Ifyr", user_id: "u2", map_pin_id: "pin1" });
-  const ADRIEL = makeMapPersona({ id: "per3", name: "Adriel", map_pin_id: null });
-
-  it("nomme ceux qui sont là", () => {
-    monter(makePin(), false, [], false, { personasHere: [KAEL, IFYR] });
-
-    expect(screen.getByText("Qui est ici")).toBeInTheDocument();
-    expect(screen.getByText("Kael")).toBeInTheDocument();
-    expect(screen.getByText("Ifyr")).toBeInTheDocument();
-  });
-
-  it("ne laisse partir que les miens", async () => {
-    // Le persona d'un autre ne se déplace que par son propriétaire — la RLS le
-    // refuserait de toute façon, autant ne pas proposer le bouton.
-    const { onPlacePersona } = monter(makePin(), false, [], false, {
-      personasHere: [KAEL, IFYR],
-      myPersonas: [KAEL],
-    });
-
-    expect(screen.getAllByRole("button", { name: "Partir d’ici" })).toHaveLength(1);
-    await userEvent.click(screen.getByRole("button", { name: "Partir d’ici" }));
-
-    expect(onPlacePersona).toHaveBeenCalledWith("per1", null);
-  });
-
-  it("propose d'y poser un de mes personas qui n'y est pas", async () => {
-    const { onPlacePersona } = monter(makePin(), false, [], false, {
-      personasHere: [KAEL],
-      myPersonas: [KAEL, ADRIEL],
-    });
-
-    const choix = screen.getByRole("combobox", { name: "Y placer un persona" });
-    // Kael est déjà là : seul Adriel est proposé.
-    expect([...choix.querySelectorAll("option")].map((o) => o.textContent)).toEqual([
-      "Y placer un persona",
-      "Adriel",
-    ]);
-
-    await userEvent.selectOptions(choix, "per3");
-    expect(onPlacePersona).toHaveBeenCalledWith("per3", "pin1");
-  });
-
-  it("se tait quand personne n'est là et que je n'ai rien à y poser", () => {
-    monter(makePin());
-    expect(screen.queryByText("Qui est ici")).toBeNull();
-  });
-});
 
 
 describe("PinDetail — dans le temps", () => {
@@ -257,9 +204,6 @@ describe("PinDetail — dans le temps", () => {
         wikiPages={WIKI_PAGES}
         rooms={[]}
         maps={CARTES}
-        personasHere={[]}
-        myPersonas={[]}
-        onPlacePersona={vi.fn()}
         timelineConfig={CHRONO}
         isEditMode={isEditMode}
         worldId="w1"
@@ -368,9 +312,6 @@ describe("PinDetail — où se trouve ce lieu", () => {
         wikiPages={WIKI_PAGES}
         rooms={[]}
         maps={CARTES}
-        personasHere={[]}
-        myPersonas={[]}
-        onPlacePersona={vi.fn()}
         isEditMode={false}
         worldId="w1"
         onUpdated={vi.fn()}
