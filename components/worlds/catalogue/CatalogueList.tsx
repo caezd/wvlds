@@ -515,19 +515,22 @@ export function CatalogueList({
           )}
         </div>
 
-        <button
-          type="button"
-          onClick={handleExport}
-          disabled={items.length === 0}
-          title={t("exportCatalog")}
-          aria-label={t("exportCatalog")}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border-soft text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-40"
-        >
-          <Download className="h-3.5 w-3.5" />
-        </button>
-
+        {/* Export et import ne s'offrent qu'en mode édition : ce sont deux
+            gestes d'auteur, et la recherche est la seule chose qu'un membre
+            vient faire ici. */}
         {canEdit && (
           <>
+            <button
+              type="button"
+              onClick={handleExport}
+              disabled={items.length === 0}
+              title={t("exportCatalog")}
+              aria-label={t("exportCatalog")}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border-soft text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-40"
+            >
+              <Download className="h-3.5 w-3.5" />
+            </button>
+
             <input
               ref={importInputRef}
               type="file"
