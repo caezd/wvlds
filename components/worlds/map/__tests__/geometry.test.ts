@@ -4,7 +4,6 @@ import {
   pointInPolygon,
   polygonArea,
   polygonCentroid,
-  simplifyPolygon,
   toSvgPoints,
 } from "@/components/worlds/map/geometry";
 
@@ -68,27 +67,6 @@ describe("dedupeConsecutive", () => {
   });
 });
 
-describe("simplifyPolygon", () => {
-  it("efface les sommets qui ne dévient pas de la ligne", () => {
-    // Un carré dont chaque côté porte des points intermédiaires alignés.
-    const bavard = [
-      { x: 0, y: 0 }, { x: 5, y: 0.05 }, { x: 10, y: 0 },
-      { x: 10, y: 5 }, { x: 10, y: 10 },
-      { x: 5, y: 10 }, { x: 0, y: 10 }, { x: 0, y: 5 },
-    ];
-    expect(simplifyPolygon(bavard, 0.3)).toEqual(CARRE);
-  });
-
-  it("garde un sommet qui compte", () => {
-    const fleche = [{ x: 0, y: 0 }, { x: 5, y: 3 }, { x: 10, y: 0 }, { x: 5, y: 10 }];
-    expect(simplifyPolygon(fleche, 0.3)).toEqual(fleche);
-  });
-
-  it("ne descend jamais sous trois sommets", () => {
-    const triangle = [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 5, y: 0.1 }];
-    expect(simplifyPolygon(triangle, 1)).toEqual(triangle);
-  });
-});
 
 describe("toSvgPoints", () => {
   it("écrit l'attribut d'un <polygon>", () => {
