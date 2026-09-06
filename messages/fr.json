@@ -1396,6 +1396,7 @@
     "place": "Lieu",
     "placeEra": "Époque",
     "whoIsHere": "Qui est ici",
+    "settleHere": "M'installer ici",
     "peopleHere": "{count} sur place"
   },
   "iconPicker": {

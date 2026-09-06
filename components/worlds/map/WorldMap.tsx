@@ -28,6 +28,7 @@ import {
   getPlacedPersonas,
   getWorldMaps,
   reorderWorldMaps,
+  setPersonaLocation,
   updateMapPin,
   updateWorldMap,
   type MapRegion,
@@ -373,6 +374,24 @@ export function WorldMap({
   React.useEffect(() => () => {
     if (rechargerRef.current) clearTimeout(rechargerRef.current);
   }, []);
+
+  /**
+   * Pose un de mes personas sur un lieu.
+   *
+   * La liste est relue tout de suite plutôt qu'attendue de l'écho : celui-ci
+   * arrivera, mais après un aller-retour, et le geste doit se voir.
+   */
+  const handlePlacePersona = React.useCallback(
+    async (personaId: string, pinId: string) => {
+      try {
+        await setPersonaLocation(personaId, pinId);
+        setPersonas(await getPlacedPersonas(worldId));
+      } catch (e) {
+        toast.error(t("saveError"), { description: e instanceof Error ? e.message : undefined });
+      }
+    },
+    [worldId, t],
+  );
 
   // Par lieu : c'est ce que le marqueur compte et ce que la fiche liste.
   const personasByPin = React.useMemo(() => {
@@ -982,6 +1001,8 @@ export function WorldMap({
       // plusieurs empilées : celle du dessus est celle qu'on voit.
       region={visibleRegions.find((r) => pointInPolygon(selectedPin, r.points)) ?? null}
       personasHere={personasByPin.get(selectedPin.id) ?? []}
+      onPlacePersona={canPost ? (personaId) => void handlePlacePersona(personaId, selectedPin.id) : undefined}
+      pickerVariant={grandEcran ? "dialog" : "drawer"}
       isEditMode={isEditMode}
       canPost={canPost}
       worldId={worldId}

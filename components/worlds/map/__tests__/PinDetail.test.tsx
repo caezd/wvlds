@@ -30,6 +30,20 @@ vi.mock("@/app/actions/worldMap", async (importOriginal) => ({
   deleteMapPin: vi.fn(),
 }));
 
+// Le sélecteur de personas lit la session et la liste des personas du monde :
+// ce qui se vérifie ici est que la fiche l'ouvre et pose ce qu'il en rend.
+vi.mock("@/components/personas/PersonaPickerDialog", () => ({
+  PersonaPickerDialog: ({ trigger, onSelect }: {
+    trigger?: React.ReactElement;
+    onSelect: (p: { id: string } | null) => void;
+  }) => (
+    <>
+      {trigger}
+      <button type="button" onClick={() => onSelect({ id: "per9" })}>Choisir Nyx</button>
+    </>
+  ),
+}));
+
 // L'éditeur de paragraphe charge tout le composeur : un champ suffit ici.
 vi.mock("@/components/chatrooms/composer/ParagraphBlockEditor", () => ({
   ParagraphBlockEditor: ({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder?: string }) => (
@@ -340,7 +354,10 @@ describe("PinDetail — où se trouve ce lieu", () => {
 });
 
 describe("PinDetail — qui se trouve ici", () => {
-  function monterAvecDuMonde(personasHere = [makePlacedPersona()]) {
+  function monterAvecDuMonde(
+    personasHere = [makePlacedPersona()],
+    onPlacePersona?: (personaId: string) => void,
+  ) {
     render(
       <PinDetail
         pin={makePin()}
@@ -348,6 +365,7 @@ describe("PinDetail — qui se trouve ici", () => {
         rooms={[]}
         maps={CARTES}
         personasHere={personasHere}
+        onPlacePersona={onPlacePersona}
         isEditMode={false}
         worldId="w1"
         onUpdated={vi.fn()}
@@ -380,5 +398,29 @@ describe("PinDetail — qui se trouve ici", () => {
     monterAvecDuMonde([makePlacedPersona({ avatar_url: "https://x/a.webp" })]);
 
     expect(document.querySelector("[data-persona-avatar]")).toHaveClass("relative");
+  });
+
+  it("offre de s'installer là où il n'y a personne", () => {
+    // Le bloc se taisait pour un lieu désert : le geste n'aurait alors existé
+    // qu'aux endroits déjà occupés, et un lieu vide le serait resté.
+    monterAvecDuMonde([], vi.fn());
+
+    expect(screen.getByText("Qui est ici")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "M'installer ici" })).toBeInTheDocument();
+  });
+
+  it("pose le persona choisi sur ce lieu", async () => {
+    const onPlacePersona = vi.fn();
+    monterAvecDuMonde([], onPlacePersona);
+
+    await userEvent.click(screen.getByRole("button", { name: "Choisir Nyx" }));
+
+    expect(onPlacePersona).toHaveBeenCalledWith("per9");
+  });
+
+  it("ne propose rien à qui ne joue pas dans ce monde", () => {
+    monterAvecDuMonde([makePlacedPersona()]);
+
+    expect(screen.queryByRole("button", { name: "M'installer ici" })).toBeNull();
   });
 });

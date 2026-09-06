@@ -28,10 +28,12 @@ const getPlacedPersonas = vi.hoisted(() => vi.fn(async () => []));
 const createMapRegion = vi.hoisted(() => vi.fn());
 const updateMapRegion = vi.hoisted(() => vi.fn(async () => {}));
 const deleteMapRegion = vi.hoisted(() => vi.fn(async () => {}));
+const setPersonaLocation = vi.hoisted(() => vi.fn(async () => {}));
 vi.mock("@/app/actions/worldMap", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/app/actions/worldMap")>()),
   getWorldMaps,
   getPlacedPersonas,
+  setPersonaLocation,
   createMapRegion,
   updateMapRegion,
   deleteMapRegion,
@@ -46,15 +48,19 @@ vi.mock("@/app/actions/worldMap", async (importOriginal) => ({
 // Le panneau d'un lieu tire tout l'éditeur de paragraphe et le rendu Markdown :
 // ce qui se vérifie ici est ce que la CARTE fait, pas ce qu'il affiche.
 vi.mock("@/components/worlds/map/PinDetail", () => ({
-  PinDetail: ({ pin, region, onDelete }: {
+  PinDetail: ({ pin, region, onDelete, onPlacePersona }: {
     pin: { title: string };
     region?: { label: string } | null;
     onDelete: () => void;
+    onPlacePersona?: (personaId: string) => void;
   }) => (
     <div data-testid="pin-popover">
       {pin.title}
       {region && <span data-testid="pin-region">{region.label}</span>}
       <button type="button" onClick={onDelete}>Supprimer depuis le panneau</button>
+      {onPlacePersona && (
+        <button type="button" onClick={() => onPlacePersona("per9")}>M&apos;installer ici</button>
+      )}
     </div>
   ),
 }));
@@ -1380,5 +1386,46 @@ describe("WorldMap — les noms des régions et des lieux se partagent la place"
     // carte qu'on regarde ici.
     await waitFor(() => expect(document.querySelector("[data-pin-label]")).toHaveTextContent("Le port"));
     expect(document.querySelector("[data-region-label]")).toBeNull();
+  });
+});
+
+describe("WorldMap — s'installer quelque part", () => {
+  beforeEach(() => { simulerMiseEnPage(); simulerGrandEcran(); });
+  afterEach(() => { restaurerMiseEnPage(); restaurerEcran(); });
+
+  /** `monter` ne connaît pas `canPost` : seul ce qui suit en dépend. */
+  function monterQuiPeutJouer(canPost: boolean) {
+    const mock = createSupabaseMock({ user: { id: "u1" } });
+    vi.mocked(createClient).mockReturnValue(mock.client as never);
+    render(
+      <WorldMap
+        worldId="w1"
+        canEdit
+        canPost={canPost}
+        initialMap={{ maps: [makeMap()], pins: [makePin()], regions: [], personas: [] }}
+      />,
+    );
+    return { mock };
+  }
+
+  it("pose le persona sur le lieu ouvert, et relit qui s'y trouve", async () => {
+    getPlacedPersonas.mockResolvedValue([makePlacedPersona({ id: "per9" })] as never);
+    monterQuiPeutJouer(true);
+
+    await userEvent.click(screen.getByRole("button", { name: "Le port" }));
+    await userEvent.click(screen.getByRole("button", { name: "M'installer ici" }));
+
+    expect(setPersonaLocation).toHaveBeenCalledWith("per9", "pin1");
+    // Relue tout de suite : l'écho realtime arrivera, mais après un
+    // aller-retour, et le geste doit se voir.
+    await waitFor(() => expect(screen.getByLabelText("1 sur place")).toBeInTheDocument());
+  });
+
+  it("n'offre pas le geste à qui ne joue pas dans ce monde", async () => {
+    monterQuiPeutJouer(false);
+
+    await userEvent.click(screen.getByRole("button", { name: "Le port" }));
+
+    expect(screen.queryByRole("button", { name: "M'installer ici" })).toBeNull();
   });
 });

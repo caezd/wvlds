@@ -6,13 +6,14 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
-  BookOpenText, Check, Clock, ImagePlus, Loader2, Map as MapIcon, MessagesSquare, Pencil, Play, Trash2, Upload } from "lucide-react";
+  BookOpenText, Check, Clock, ImagePlus, Loader2, Map as MapIcon, MessagesSquare, Pencil, Play, Trash2, Upload, UserPlus } from "lucide-react";
 
 import { STORED_IMAGE_ACCEPT, isStorableImage, toWebP } from "@/lib/imageUtils";
 import { supabaseThumb } from "@/lib/storage";
 import { pinBannerPath } from "@/lib/storagePaths";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
+import { PersonaPickerDialog } from "@/components/personas/PersonaPickerDialog";
 import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
 import { MarkdownContent } from "@/components/MarkdownRenderer";
 import { ParagraphBlockEditor } from "@/components/chatrooms/composer/ParagraphBlockEditor";
@@ -71,6 +72,8 @@ export function PinDetail({
   ownMap = null,
   region = null,
   personasHere = [],
+  onPlacePersona,
+  pickerVariant = "dialog",
   isEditMode,
   canPost = false,
   worldId,
@@ -95,6 +98,10 @@ export function PinDetail({
   region?: MapRegion | null;
   /** Les personas posés ici — voir migration 154. */
   personasHere?: PlacedPersona[];
+  /** Pose un de mes personas ici. Absent : la fiche n'offre pas ce geste. */
+  onPlacePersona?: (personaId: string) => void;
+  /** Un dialogue s'imbrique mal dans le tiroir mobile, qui en accueille un. */
+  pickerVariant?: "dialog" | "drawer";
   isEditMode: boolean;
   /** Peut ouvrir un salon : montre « Jouer ici ». */
   canPost?: boolean;
@@ -464,8 +471,12 @@ export function PinDetail({
           )}
 
           {/* Qui se trouve ici. La carte n'en donne que le nombre : c'est
-              ici qu'on lit les noms. */}
-          {!editing && personasHere.length > 0 && (
+              ici qu'on lit les noms.
+
+              Le bloc reste debout pour un lieu désert dès lors qu'on peut s'y
+              installer : sinon le geste n'existerait qu'aux endroits déjà
+              occupés, et un lieu vide le resterait. */}
+          {!editing && (personasHere.length > 0 || onPlacePersona) && (
             <Bloc titre={t("whoIsHere")}>
               {personasHere.map(persona => (
                 <div key={persona.id} className="flex items-center gap-2 text-xs">
@@ -483,6 +494,20 @@ export function PinDetail({
                   <span className="min-w-0 flex-1 truncate">{persona.name}</span>
                 </div>
               ))}
+              {onPlacePersona && (
+                <PersonaPickerDialog
+                  selected={null}
+                  worldId={worldId}
+                  variant={pickerVariant}
+                  onSelect={(persona) => { if (persona) onPlacePersona(persona.id); }}
+                  trigger={
+                    <Button size="sm" variant="outline" className="w-fit self-start gap-1.5">
+                      <UserPlus className="h-3.5 w-3.5" />
+                      {t("settleHere")}
+                    </Button>
+                  }
+                />
+              )}
             </Bloc>
           )}
 
