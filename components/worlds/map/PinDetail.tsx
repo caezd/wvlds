@@ -469,7 +469,13 @@ export function PinDetail({
             <Bloc titre={t("whoIsHere")}>
               {personasHere.map(persona => (
                 <div key={persona.id} className="flex items-center gap-2 text-xs">
-                  <span className="flex h-6 w-6 shrink-0 overflow-hidden rounded-full bg-secondary">
+                  {/* `relative` : `StoredImage` se pose en `absolute inset-0`,
+                      et sans ancêtre positionné ici, elle allait chercher le
+                      cadre de la carte — cinq avatars étalés en plein écran. */}
+                  <span
+                    data-persona-avatar
+                    className="relative flex h-6 w-6 shrink-0 overflow-hidden rounded-full bg-secondary"
+                  >
                     {persona.avatar_url && (
                       <StoredImage url={persona.avatar_url} width={48} height={48} resize="cover" className="object-cover" />
                     )}

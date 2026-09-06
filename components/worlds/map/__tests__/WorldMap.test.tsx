@@ -1333,3 +1333,52 @@ describe("WorldMap — qui se trouve où", () => {
     await waitFor(() => expect(getPlacedPersonas).toHaveBeenCalledTimes(1));
   });
 });
+
+describe("WorldMap — les noms des régions et des lieux se partagent la place", () => {
+  beforeEach(() => { simulerMiseEnPage(); simulerGrandEcran(); });
+  afterEach(() => { restaurerMiseEnPage(); restaurerEcran(); });
+
+  /** Le carré de `makeRegion` a son centre à 40/40 ; le lieu par défaut, à 50/50. */
+  it("tait le nom du lieu que celui de sa région recouvrirait", () => {
+    // Chacun de son côté, les deux familles s'ignoraient : le nom d'une région
+    // et celui d'un lieu proche de son centre se superposaient.
+    monter({
+      maps: [makeMap()],
+      pins: [makePin({ x: 41, y: 40 })],
+      regions: [makeRegion({ label: "Le royaume" })],
+    });
+
+    expect(document.querySelector("[data-region-label]")).toHaveTextContent("Le royaume");
+    expect(document.querySelector("[data-pin-label]")).toBeNull();
+  });
+
+  it("laisse les deux quand ils sont loin l'un de l'autre", () => {
+    monter({
+      maps: [makeMap()],
+      pins: [makePin({ x: 85, y: 85 })],
+      regions: [makeRegion({ label: "Le royaume" })],
+    });
+
+    expect(document.querySelector("[data-region-label]")).toHaveTextContent("Le royaume");
+    expect(document.querySelector("[data-pin-label]")).toHaveTextContent("Le port");
+  });
+
+  it("garde le nom du lieu ouvert, et tait celui de la région", async () => {
+    // C'est celui qu'on regarde.
+    monter(
+      {
+        maps: [makeMap()],
+        pins: [makePin({ x: 41, y: 40 })],
+        regions: [makeRegion({ label: "Le royaume" })],
+      },
+      "w1",
+      false,
+      { initialPinId: "pin1" },
+    );
+
+    // Le nom apparaît aussi dans la fiche ouverte : c'est l'étiquette de la
+    // carte qu'on regarde ici.
+    await waitFor(() => expect(document.querySelector("[data-pin-label]")).toHaveTextContent("Le port"));
+    expect(document.querySelector("[data-region-label]")).toBeNull();
+  });
+});

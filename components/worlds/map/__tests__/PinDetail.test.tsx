@@ -372,4 +372,13 @@ describe("PinDetail — qui se trouve ici", () => {
     monterAvecDuMonde([]);
     expect(screen.queryByText("Qui est ici")).toBeNull();
   });
+
+  it("ancre chaque avatar chez lui", () => {
+    // `StoredImage` se pose en `absolute inset-0` : sans ancêtre positionné,
+    // elle va chercher le cadre de la carte, et les avatars s'étalent en
+    // plein écran, l'un sur l'autre.
+    monterAvecDuMonde([makePlacedPersona({ avatar_url: "https://x/a.webp" })]);
+
+    expect(document.querySelector("[data-persona-avatar]")).toHaveClass("relative");
+  });
 });

@@ -206,6 +206,7 @@ export const PinMarker = React.memo(function PinMarker({
       {!isDragging && showLabel && (
         <div
           aria-hidden
+          data-pin-label
           className={cn(
             "pointer-events-none absolute top-full left-1/2 mt-1 max-w-40 -translate-x-1/2 truncate",
             "rounded px-1.5 py-0.5 text-[11px] font-medium text-white shadow-sm transition-colors",

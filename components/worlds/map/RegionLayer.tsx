@@ -26,6 +26,7 @@ export function RegionLayer({
   draft,
   isEditMode,
   imgRef,
+  labelled,
   onSelect,
   onVertexMoved,
   onCloseDraft,
@@ -36,6 +37,8 @@ export function RegionLayer({
   draft: Point[] | null;
   isEditMode: boolean;
   imgRef: React.RefObject<HTMLImageElement | null>;
+  /** Les régions dont le nom tient sans en recouvrir un autre — `labels.ts`. */
+  labelled?: Set<string>;
   onSelect: (region: MapRegion) => void;
   /** Un sommet de la région choisie vient d'être déplacé. */
   onVertexMoved: (region: MapRegion, index: number, point: Point) => void;
@@ -204,9 +207,12 @@ export function RegionLayer({
         );
       })}
 
-      {/* Les noms, au centre de chaque région */}
+      {/* Les noms, au centre de chaque région. Ils passent par le même tri
+          que ceux des lieux : sans quoi le nom d'une région et celui d'un lieu
+          proche de son centre se recouvraient, chacun ignorant l'autre. */}
       {regions.map((region) => {
         if (!region.label.trim()) return null;
+        if (labelled && !labelled.has(region.id)) return null;
         const c = polygonCentroid(pointsOf(region));
         return (
           <div

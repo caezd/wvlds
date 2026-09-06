@@ -208,12 +208,21 @@ export function WorldMap({
   });
   const { imageRef, baseSize, centerOnPoint } = viewport;
 
-  // Les noms qui tiennent sans se recouvrir. Recalculé quand l'échelle change
-  // — en zoomant, les lieux s'écartent et d'autres noms trouvent leur place.
-  const nomsAffiches = React.useMemo(
-    () => visibleLabels(visiblePins, baseSize, viewScale, selectedPin?.id),
-    [visiblePins, baseSize, viewScale, selectedPin?.id],
-  );
+  // Les noms qui tiennent sans se recouvrir — ceux des régions ET ceux des
+  // lieux, triés ENSEMBLE : chacun de son côté, le nom d'une région et celui
+  // d'un lieu posé près de son centre s'ignoraient et se superposaient.
+  //
+  // L'ordre dit qui cède : le lieu ouvert d'abord, puis les régions — elles
+  // nomment une étendue entière, et sont peu nombreuses —, les lieux ensuite.
+  const nomsAffiches = React.useMemo(() => {
+    const candidats = [
+      ...visibleRegions
+        .filter((r) => r.label.trim())
+        .map((r) => ({ id: r.id, title: r.label, ...polygonCentroid(r.points) })),
+      ...visiblePins,
+    ];
+    return visibleLabels(candidats, baseSize, viewScale, selectedPin?.id);
+  }, [visibleRegions, visiblePins, baseSize, viewScale, selectedPin?.id]);
 
 
 
@@ -1250,6 +1259,7 @@ export function WorldMap({
                   draft={draft}
                   isEditMode={isEditMode}
                   imgRef={imageRef}
+                  labelled={nomsAffiches}
                   onSelect={handleRegionClick}
                   onCloseDraft={finishDraft}
                   onVertexMoved={(region, index, point) => void handleVertexMoved(region, index, point)}
