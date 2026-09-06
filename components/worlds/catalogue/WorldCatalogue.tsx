@@ -6,7 +6,8 @@ import { Library, Pencil } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { getWorldCatalogUsage } from "@/app/actions/worldCatalog";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { TabBar, TabBarTrigger } from "@/components/ui/tab-bar";
 import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 
 // Le catalogue se lit en couches : `catalogueTypes` porte les types et le
@@ -85,14 +86,20 @@ export function WorldCatalogue({ worldId, canEdit, inventoryEnabled, inventoryRe
 
       {/* Body — always show both tabs for editors */}
       <Tabs defaultValue={defaultTab} className="flex min-h-0 flex-1 flex-col">
-        <div className="shrink-0 border-b border-border-soft px-4 pt-3">
-          <TabsList className="h-8 rounded-lg p-0.5">
-            <TabsTrigger value="inventory" className="h-7 px-3 text-xs">{t("items")}</TabsTrigger>
-            <TabsTrigger value="skills" className="h-7 px-3 text-xs">{t("skills")}</TabsTrigger>
+        {/* Onglets en soulignement, comme les fiches de persona et les
+            paramètres d'un monde — la pastille pleine était le seul reste du
+            style par défaut dans un panneau de monde. `TabBar` porte déjà sa
+            ligne de base : le conteneur n'a plus de bordure à ajouter, et la
+            liste s'aligne sur le retrait du corps (p-4) plutôt que sur son
+            px-6 par défaut. */}
+        <div className="shrink-0">
+          <TabBar listClassName="px-4">
+            <TabBarTrigger value="inventory">{t("items")}</TabBarTrigger>
+            <TabBarTrigger value="skills">{t("skills")}</TabBarTrigger>
             {faceclaimsEnabled && (
-              <TabsTrigger value="faceclaims" className="h-7 px-3 text-xs">{t("faceclaims")}</TabsTrigger>
+              <TabBarTrigger value="faceclaims">{t("faceclaims")}</TabBarTrigger>
             )}
-          </TabsList>
+          </TabBar>
         </div>
         <div className="flex-1 overflow-y-auto p-4">
           <TabsContent value="inventory" className="mt-0">
