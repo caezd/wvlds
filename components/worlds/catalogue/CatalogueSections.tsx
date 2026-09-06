@@ -30,12 +30,14 @@ export function SortableCategoryContainer({
   items,
   type,
   canEdit,
-  editingId,
+  canReorder,
+  usage,
   addingHere,
   renamingId,
-  onSetEditing,
+  onEditItem,
+  onDuplicateItem,
   onDeleteItem,
-  onSaveItem,
+  onOpenItem,
   onSetAdding,
   onAddItem,
   onSetRenaming,
@@ -47,12 +49,14 @@ export function SortableCategoryContainer({
   items: CatalogItem[];
   type: CatalogType;
   canEdit: boolean;
-  editingId: string | null;
+  canReorder: boolean;
+  usage: Record<string, number> | null;
   addingHere: boolean;
   renamingId: string | null;
-  onSetEditing: (id: string | null) => void;
+  onEditItem: (item: CatalogItem) => void;
+  onDuplicateItem: (id: string) => void;
   onDeleteItem: (id: string) => void;
-  onSaveItem: (id: string, data: { name: string; description: string | null; icon: string | null }) => Promise<void>;
+  onOpenItem: (item: CatalogItem) => void;
   onSetAdding: (catId: string | null | false) => void;
   onAddItem: (categoryId: string | null, data: { name: string; description: string; icon: string | undefined; category_id: string | null }) => Promise<void>;
   onSetRenaming: (id: string | null) => void;
@@ -81,7 +85,7 @@ export function SortableCategoryContainer({
     <div ref={setNodeRef} style={style} className="space-y-0.5">
       {/* Category header */}
       <div className="group/cat flex items-center gap-1 rounded-xl px-2 py-1.5">
-        {canEdit && <DragHandle {...attributes} {...listeners} />}
+        {canReorder && <DragHandle {...attributes} {...listeners} />}
         {isRenaming ? (
           <form
             onSubmit={async e => {
@@ -151,11 +155,12 @@ export function SortableCategoryContainer({
               key={item.id}
               item={item}
               canEdit={canEdit}
-              isEditing={editingId === item.id}
-              onEdit={() => onSetEditing(item.id)}
+              canReorder={canReorder}
+              usageCount={usage?.[item.id]}
+              onEdit={() => onEditItem(item)}
+              onDuplicate={() => onDuplicateItem(item.id)}
               onDelete={() => onDeleteItem(item.id)}
-              onSave={data => onSaveItem(item.id, data)}
-              onCancelEdit={() => onSetEditing(null)}
+              onOpenDetail={() => onOpenItem(item)}
             />
           ))}
 
@@ -202,12 +207,14 @@ export function UncategorizedSection({
   items,
   type,
   canEdit,
-  editingId,
+  canReorder,
+  usage,
   addingHere,
   showHeader,
-  onSetEditing,
+  onEditItem,
+  onDuplicateItem,
   onDeleteItem,
-  onSaveItem,
+  onOpenItem,
   onSetAdding,
   onAddItem,
   onSortAlpha,
@@ -215,12 +222,14 @@ export function UncategorizedSection({
   items: CatalogItem[];
   type: CatalogType;
   canEdit: boolean;
-  editingId: string | null;
+  canReorder: boolean;
+  usage: Record<string, number> | null;
   addingHere: boolean;
   showHeader: boolean;
-  onSetEditing: (id: string | null) => void;
+  onEditItem: (item: CatalogItem) => void;
+  onDuplicateItem: (id: string) => void;
   onDeleteItem: (id: string) => void;
-  onSaveItem: (id: string, data: { name: string; description: string | null; icon: string | null }) => Promise<void>;
+  onOpenItem: (item: CatalogItem) => void;
   onSetAdding: (catId: string | null | false) => void;
   onAddItem: (categoryId: string | null, data: { name: string; description: string; icon: string | undefined; category_id: string | null }) => Promise<void>;
   onSortAlpha: (categoryId: string | null) => void;
@@ -250,11 +259,12 @@ export function UncategorizedSection({
               key={item.id}
               item={item}
               canEdit={canEdit}
-              isEditing={editingId === item.id}
-              onEdit={() => onSetEditing(item.id)}
+              canReorder={canReorder}
+              usageCount={usage?.[item.id]}
+              onEdit={() => onEditItem(item)}
+              onDuplicate={() => onDuplicateItem(item.id)}
               onDelete={() => onDeleteItem(item.id)}
-              onSave={data => onSaveItem(item.id, data)}
-              onCancelEdit={() => onSetEditing(null)}
+              onOpenDetail={() => onOpenItem(item)}
             />
           ))}
         </SortableContext>

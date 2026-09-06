@@ -23,7 +23,7 @@ import type {
   PersonaSectionField, PersonaFieldType, PersonaStat, PersonaGridImage, InventoryItem,
   SkillItem, GaugeItem, TraitItem, TimelineItem, DlItem,
 } from "@/types/personas";
-import type { WorldInventoryItem, WorldSkill } from "@/types/worlds";
+import type { WorldCatalogCategory, WorldCatalogItem } from "@/types/worlds";
 
 // Les dix éditeurs de champ vivent dans `./fields`. Ce fichier faisait
 // 1 569 lignes, dont 890 de composants sans lien entre eux : chacun gère un
@@ -74,30 +74,42 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
   const persona_field_dl = fieldsEnabled && flags.persona_field_dl;
   const [fields, setFields] = useState<PersonaSectionField[]>(initialFields);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [inventoryCatalog, setInventoryCatalog] = useState<WorldInventoryItem[] | undefined>(undefined);
-  const [skillsCatalog, setSkillsCatalog] = useState<WorldSkill[] | undefined>(undefined);
+  const [inventoryCatalog, setInventoryCatalog] = useState<WorldCatalogItem[] | undefined>(undefined);
+  const [skillsCatalog, setSkillsCatalog] = useState<WorldCatalogItem[] | undefined>(undefined);
+  const [catalogCategories, setCatalogCategories] = useState<WorldCatalogCategory[]>([]);
 
   useEffect(() => {
     if (!worldId) return;
+    // Une seule requête pour les deux catalogues : ils partagent une table
+    // depuis la migration 161, et les demander séparément coûterait deux
+    // allers-retours pour la même page. Les catégories les accompagnent — le
+    // sélecteur les affiche, une fiche fournie s'y perdrait sans elles.
     async function fetchCatalog() {
-      if (restrictInventory) {
-        const { data } = await (supabase as ReturnType<typeof createClient>)
-          .from("world_inventory_items")
-          .select("id, world_id, name, description, icon, sort_index")
+      const wanted: ("inventory" | "skills")[] = [];
+      if (restrictInventory) wanted.push("inventory");
+      if (restrictSkills) wanted.push("skills");
+      if (wanted.length === 0) return;
+
+      const [itemRes, catRes] = await Promise.all([
+        (supabase as ReturnType<typeof createClient>)
+          .from("world_catalog_items")
+          .select("id, world_id, type, name, description, icon, image_url, rarity, stackable, max_quantity, properties, sort_index, category_id")
           .eq("world_id", worldId!)
+          .in("type", wanted)
           .order("sort_index", { ascending: true })
-          .order("created_at", { ascending: true });
-        setInventoryCatalog((data as WorldInventoryItem[] | null) ?? []);
-      }
-      if (restrictSkills) {
-        const { data } = await (supabase as ReturnType<typeof createClient>)
-          .from("world_skills")
-          .select("id, world_id, name, description, icon, sort_index")
+          .order("created_at", { ascending: true }),
+        (supabase as ReturnType<typeof createClient>)
+          .from("world_catalog_categories")
+          .select("id, world_id, type, name, sort_index, column_index")
           .eq("world_id", worldId!)
-          .order("sort_index", { ascending: true })
-          .order("created_at", { ascending: true });
-        setSkillsCatalog((data as WorldSkill[] | null) ?? []);
-      }
+          .in("type", wanted)
+          .order("sort_index", { ascending: true }),
+      ]);
+
+      const all = ((itemRes as { data: WorldCatalogItem[] | null }).data) ?? [];
+      if (restrictInventory) setInventoryCatalog(all.filter((i) => i.type === "inventory"));
+      if (restrictSkills) setSkillsCatalog(all.filter((i) => i.type === "skills"));
+      setCatalogCategories(((catRes as { data: WorldCatalogCategory[] | null }).data) ?? []);
     }
     void fetchCatalog();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -638,6 +650,7 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
                       initialItems={field.data?.inventoryItems ?? []}
                       onSave={(items) => saveInventoryItems(field.id, items)}
                       catalogItems={inventoryCatalog}
+                      catalogCategories={catalogCategories.filter((c) => c.type === "inventory")}
                     />
                   )}
 
@@ -646,6 +659,7 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
                       initialItems={field.data?.skillItems ?? []}
                       onSave={(items) => saveSkillItems(field.id, items)}
                       catalogItems={skillsCatalog}
+                      catalogCategories={catalogCategories.filter((c) => c.type === "skills")}
                     />
                   )}
 

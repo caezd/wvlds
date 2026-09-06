@@ -3,8 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import {
-  Loader2, FolderPlus, } from "lucide-react";
+import { Loader2, FolderPlus, Search, Download, Upload, X } from "lucide-react";
 import {
   DndContext,
   DragOverlay,
@@ -30,21 +29,29 @@ import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import type { WorldCatalogCategory } from "@/types/worlds";
 import {
-  addWorldInventoryItem,
-  updateWorldInventoryItem,
-  deleteWorldInventoryItem,
-  addWorldSkill,
-  updateWorldSkill,
-  deleteWorldSkill,
+  addWorldCatalogItem,
+  updateWorldCatalogItem,
+  deleteWorldCatalogItem,
+  duplicateWorldCatalogItem,
   addWorldCatalogCategory,
   updateWorldCatalogCategory,
   deleteWorldCatalogCategory,
-  batchUpdateCatalogCategoryOrder,
-  batchUpdateCatalogItemOrder,
+  reorderWorldCatalogCategories,
+  reorderWorldCatalogItems,
+  getWorldCatalogUsage,
+  importWorldCatalogItems,
+  type CatalogItemInput,
 } from "@/app/actions/worldCatalog";
+import {
+  buildCatalogExport,
+  catalogItemMatches,
+  normalizeForSearch,
+  parseCatalogImport,
+} from "@/lib/worldCatalog";
 import { UNCAT, COL_PREFIX, groupByColumn, type CatalogType, type CatalogItem } from "./catalogueTypes";
 
 import { CategoryRowOverlay, ItemRowOverlay } from "./CataloguePieces";
+import { CatalogItemDetail, CatalogItemDialog } from "./CatalogItemDialog";
 import { AddCategoryForm, DroppableColumn, SortableCategoryContainer, UncategorizedSection } from "./CatalogueSections";
 import { messageErreurAction } from "@/lib/actionErrors";
 
@@ -78,7 +85,12 @@ export function CatalogueList({
   const [categories, setCategories] = useState<WorldCatalogCategory[]>([]);
   const [items, setItems] = useState<CatalogItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  /** Nombre de personas portant chaque objet ; `null` tant qu'on ne sait pas. */
+  const [usage, setUsage] = useState<Record<string, number> | null>(null);
+  const [editingItem, setEditingItem] = useState<CatalogItem | null>(null);
+  const [detailItem, setDetailItem] = useState<CatalogItem | null>(null);
+  const [importing, setImporting] = useState(false);
   // false = not adding; null = adding in uncategorized; string = adding in that category
   const [addingInCat, setAddingInCat] = useState<string | null | false>(false);
   const [renamingCatId, setRenamingCatId] = useState<string | null>(null);
@@ -93,7 +105,6 @@ export function CatalogueList({
   useEffect(() => {
     async function load() {
       setLoading(true);
-      const itemTable = type === "inventory" ? "world_inventory_items" : "world_skills";
       const [catRes, itemRes] = await Promise.all([
         (supabase as ReturnType<typeof createClient>)
           .from("world_catalog_categories")
@@ -103,21 +114,37 @@ export function CatalogueList({
           .order("sort_index", { ascending: true })
           .order("created_at", { ascending: true }),
         (supabase as ReturnType<typeof createClient>)
-          .from(itemTable)
-          .select("id, world_id, name, description, icon, sort_index, category_id")
+          .from("world_catalog_items")
+          .select("id, world_id, type, name, description, icon, image_url, rarity, stackable, max_quantity, properties, sort_index, category_id")
           .eq("world_id", worldId)
+          .eq("type", type)
           .order("sort_index", { ascending: true })
           .order("created_at", { ascending: true }),
       ]);
       setCategories((catRes as { data: WorldCatalogCategory[] | null }).data ?? []);
       setItems(((itemRes as { data: CatalogItem[] | null }).data ?? []).map(i => ({
         ...i,
-        category_id: (i as unknown as Record<string, unknown>).category_id as string | null ?? null,
+        category_id: i.category_id ?? null,
       })));
       setLoading(false);
     }
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [worldId, type]);
+
+  /**
+   * Le décompte d'usage, à part du chargement principal.
+   *
+   * Il balaie le JSONB de toutes les fiches du monde ; le catalogue, lui, se
+   * lit sur un index. Les attendre ensemble ferait patienter la liste pour un
+   * chiffre qui ne s'affiche qu'à côté du nom.
+   */
+  useEffect(() => {
+    let cancelled = false;
+    void getWorldCatalogUsage(worldId).then(res => {
+      if (!cancelled && res.ok) setUsage(res.usage);
+    });
+    return () => { cancelled = true; };
   }, [worldId, type]);
 
   // ── Item CRUD ──
@@ -126,40 +153,82 @@ export function CatalogueList({
     categoryId: string | null,
     data: { name: string; description: string; icon: string | undefined; category_id: string | null },
   ) {
-    const payload = { name: data.name, description: data.description || undefined, icon: data.icon, category_id: categoryId };
-    if (type === "inventory") {
-      const res = await addWorldInventoryItem(worldId, payload);
-      if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
-      setItems(prev => [...prev, { ...res.item, category_id: categoryId } as CatalogItem]);
-    } else {
-      const res = await addWorldSkill(worldId, payload);
-      if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
-      setItems(prev => [...prev, { ...res.skill, category_id: categoryId } as CatalogItem]);
-    }
-    setAddingInCat(false);
+    const res = await addWorldCatalogItem(worldId, type, {
+      name: data.name,
+      description: data.description || null,
+      icon: data.icon ?? null,
+      category_id: categoryId,
+    });
+    if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
+    setItems(prev => [...prev, { ...res.item, category_id: categoryId } as CatalogItem]);
   }
 
-  async function handleSaveItem(id: string, data: { name: string; description: string | null; icon: string | null }) {
-    if (type === "inventory") {
-      const res = await updateWorldInventoryItem(id, data);
-      if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
-    } else {
-      const res = await updateWorldSkill(id, data);
-      if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
-    }
-    setItems(prev => prev.map(i => i.id === id ? { ...i, ...data } : i));
-    setEditingId(null);
+  async function handleSaveItem(id: string, data: CatalogItemInput) {
+    const res = await updateWorldCatalogItem(id, data);
+    if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
+    setItems(prev => prev.map(i => (i.id === id ? { ...i, ...data } : i)));
+    setEditingItem(null);
+  }
+
+  async function handleDuplicateItem(id: string) {
+    const res = await duplicateWorldCatalogItem(id);
+    if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
+    // Juste après l'original : `sort_index` le place déjà, le tri d'affichage
+    // s'en charge au prochain rendu.
+    setItems(prev => [...prev, { ...res.item, category_id: res.item.category_id ?? null } as CatalogItem]);
   }
 
   async function handleDeleteItem(id: string) {
-    if (type === "inventory") {
-      const res = await deleteWorldInventoryItem(id);
-      if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
-    } else {
-      const res = await deleteWorldSkill(id);
-      if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
-    }
+    const res = await deleteWorldCatalogItem(id);
+    if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
     setItems(prev => prev.filter(i => i.id !== id));
+  }
+
+  // ── Export et import ──
+
+  /**
+   * Le catalogue dans un fichier, et retour.
+   *
+   * L'export sert autant à repartir d'un monde existant qu'à garder une copie
+   * hors de l'application. L'import AJOUTE : il ne remplace rien, et recrée au
+   * besoin les catégories que le fichier nomme.
+   */
+  function handleExport() {
+    const names = new Map(categories.map(c => [c.id, c.name]));
+    const payload = buildCatalogExport(type, items, names);
+    const url = URL.createObjectURL(
+      new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }),
+    );
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${type === "inventory" ? "objets" : "competences"}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function handleImport(file: File) {
+    setImporting(true);
+    try {
+      const parsed = parseCatalogImport(await file.text(), type);
+      if (!parsed.ok) { toast.error(t(`importError_${parsed.reason}`)); return; }
+
+      const res = await importWorldCatalogItems(worldId, type, parsed.items);
+      if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
+
+      // Les catégories ont pu naître de l'import : on les relit plutôt que de
+      // les deviner, l'action ne rend que les objets.
+      const { data } = await (supabase as ReturnType<typeof createClient>)
+        .from("world_catalog_categories")
+        .select("id, world_id, type, name, sort_index, column_index")
+        .eq("world_id", worldId)
+        .eq("type", type)
+        .order("sort_index", { ascending: true });
+      setCategories((data as WorldCatalogCategory[] | null) ?? []);
+      setItems(prev => [...prev, ...res.items.map(i => ({ ...i, category_id: i.category_id ?? null }) as CatalogItem)]);
+      toast.success(t("importDone", { count: res.items.length }));
+    } finally {
+      setImporting(false);
+    }
   }
 
   // ── Category CRUD ──
@@ -197,14 +266,14 @@ export function CatalogueList({
     );
     const reindexed = sorted.map((item, idx) => ({ ...item, sort_index: idx }));
     setItems(prev => [...prev.filter(i => i.category_id !== categoryId), ...reindexed]);
-    reportSaveFailure(batchUpdateCatalogItemOrder(
+    reportSaveFailure(reorderWorldCatalogItems(
       reindexed.map(item => ({ id: item.id, sort_index: item.sort_index, category_id: categoryId })),
-      type,
     ), tCommon("saveError"));
   }
 
   // ── DnD ──
 
+  const importInputRef = useRef<HTMLInputElement>(null);
   const dragStartCategoryRef = useRef<string | null>(null);
   const [splitAfterCol, setSplitAfterCol] = useState<number | null>(null);
   const colRefs = useRef<Map<number, HTMLDivElement | null>>(new Map());
@@ -290,7 +359,7 @@ export function CatalogueList({
         const colMap = new Map(distinctCols.map((col, i) => [col, i]));
         const next = raw.map(c => ({ ...c, column_index: colMap.get(c.column_index)! }));
         setCategories(next);
-        reportSaveFailure(batchUpdateCatalogCategoryOrder(next.map(c => ({ id: c.id, sort_index: c.sort_index, column_index: c.column_index }))), tCommon("saveError"));
+        reportSaveFailure(reorderWorldCatalogCategories(next.map(c => ({ id: c.id, sort_index: c.sort_index, column_index: c.column_index }))), tCommon("saveError"));
         return;
       }
 
@@ -310,7 +379,7 @@ export function CatalogueList({
         const colMap = new Map(distinctCols.map((col, i) => [col, i]));
         const next = raw.map(c => ({ ...c, column_index: colMap.get(c.column_index)! }));
         setCategories(next);
-        reportSaveFailure(batchUpdateCatalogCategoryOrder(next.map(c => ({ id: c.id, sort_index: c.sort_index, column_index: c.column_index }))), tCommon("saveError"));
+        reportSaveFailure(reorderWorldCatalogCategories(next.map(c => ({ id: c.id, sort_index: c.sort_index, column_index: c.column_index }))), tCommon("saveError"));
         return;
       }
 
@@ -330,7 +399,7 @@ export function CatalogueList({
         const reordered = arrayMove(colCats, fromIdx, toIdx).map((c, i) => ({ ...c, sort_index: i }));
         const next = [...categories.filter(c => c.column_index !== targetColIdx), ...reordered];
         setCategories(next);
-        reportSaveFailure(batchUpdateCatalogCategoryOrder(next.map(c => ({ id: c.id, sort_index: c.sort_index, column_index: c.column_index }))), tCommon("saveError"));
+        reportSaveFailure(reorderWorldCatalogCategories(next.map(c => ({ id: c.id, sort_index: c.sort_index, column_index: c.column_index }))), tCommon("saveError"));
       } else {
         // Cross-column move: insert before overCat in target column
         const updatedActive = { ...activeCat, column_index: targetColIdx };
@@ -354,7 +423,7 @@ export function CatalogueList({
         const colMap = new Map(distinctCols.map((col, i) => [col, i]));
         const next = raw.map(c => ({ ...c, column_index: colMap.get(c.column_index)! }));
         setCategories(next);
-        reportSaveFailure(batchUpdateCatalogCategoryOrder(next.map(c => ({ id: c.id, sort_index: c.sort_index, column_index: c.column_index }))), tCommon("saveError"));
+        reportSaveFailure(reorderWorldCatalogCategories(next.map(c => ({ id: c.id, sort_index: c.sort_index, column_index: c.column_index }))), tCommon("saveError"));
       }
       return;
     }
@@ -381,9 +450,8 @@ export function CatalogueList({
 
         const reordered = arrayMove(catItems, fromIdx, toIdx);
         setItems([...items.filter(i => i.category_id !== targetCategoryId), ...reordered]);
-        reportSaveFailure(batchUpdateCatalogItemOrder(
+        reportSaveFailure(reorderWorldCatalogItems(
           reordered.map((item, idx) => ({ id: item.id, sort_index: idx, category_id: targetCategoryId })),
-          type,
         ), tCommon("saveError"));
       } else {
         // Cross-category: onDragOver may have already moved the item in state.
@@ -399,14 +467,12 @@ export function CatalogueList({
         const rest = items.filter(i => i.category_id !== targetCategoryId && i.id !== active.id);
         setItems([...rest, ...newTargetItems]);
 
-        reportSaveFailure(batchUpdateCatalogItemOrder(
+        reportSaveFailure(reorderWorldCatalogItems(
           newTargetItems.map((item, idx) => ({ id: item.id, sort_index: idx, category_id: targetCategoryId })),
-          type,
         ), tCommon("saveError"));
         const sourceItems = rest.filter(i => i.category_id === origCategoryId);
-        reportSaveFailure(batchUpdateCatalogItemOrder(
+        reportSaveFailure(reorderWorldCatalogItems(
           sourceItems.map((item, idx) => ({ id: item.id, sort_index: idx, category_id: origCategoryId })),
-          type,
         ), tCommon("saveError"));
       }
     }
@@ -414,8 +480,17 @@ export function CatalogueList({
 
   // ── Derived ──
 
+  // La recherche filtre l'affichage, jamais l'état : `items` reste la liste
+  // complète, sur laquelle portent les écritures. Déplacer un objet dans une
+  // liste filtrée réécrirait en revanche des rangs qu'on ne voit pas — le
+  // glisser-déposer est donc suspendu tant qu'une recherche est active.
+  const normalizedQuery = normalizeForSearch(search.trim());
+  const searching = normalizedQuery.length > 0;
+  const visibleItems = searching ? items.filter(i => catalogItemMatches(i, normalizedQuery)) : items;
+  const canReorder = canEdit && !searching;
+
   const hasCategories = categories.length > 0;
-  const uncatItems = items.filter(i => i.category_id === null || !categories.some(c => c.id === i.category_id));
+  const uncatItems = visibleItems.filter(i => i.category_id === null || !categories.some(c => c.id === i.category_id));
   const activeItem = activeDragId ? (items.find(i => i.id === activeDragId) ?? null) : null;
   const activeCategory = activeDragId ? (categories.find(c => c.id === activeDragId) ?? null) : null;
   const columnGroups = groupByColumn(categories);
@@ -431,6 +506,71 @@ export function CatalogueList({
 
   return (
     <div className="space-y-1">
+      {/* Barre d'outils : chercher, exporter, importer */}
+      <div className="mb-2 flex items-center gap-2">
+        <div className="relative min-w-0 flex-1">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/50" />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder={tCommon("search")}
+            aria-label={tCommon("search")}
+            className="h-8 w-full rounded-lg border border-border-soft bg-background pl-8 pr-8 text-xs outline-none transition-colors focus:border-primary/40"
+          />
+          {search && (
+            <button
+              type="button"
+              aria-label={tCommon("close")}
+              onClick={() => setSearch("")}
+              className="absolute right-2 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          )}
+        </div>
+
+        <button
+          type="button"
+          onClick={handleExport}
+          disabled={items.length === 0}
+          title={t("exportCatalog")}
+          aria-label={t("exportCatalog")}
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border-soft text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-40"
+        >
+          <Download className="h-3.5 w-3.5" />
+        </button>
+
+        {canEdit && (
+          <>
+            <input
+              ref={importInputRef}
+              type="file"
+              accept="application/json,.json"
+              hidden
+              onChange={e => {
+                const file = e.target.files?.[0];
+                e.target.value = "";
+                if (file) void handleImport(file);
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => importInputRef.current?.click()}
+              disabled={importing}
+              title={t("importCatalog")}
+              aria-label={t("importCatalog")}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border-soft text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-40"
+            >
+              {importing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+            </button>
+          </>
+        )}
+      </div>
+
+      {searching && visibleItems.length === 0 && (
+        <p className="py-10 text-center text-sm text-muted-foreground">{t("noResults")}</p>
+      )}
+
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
@@ -456,19 +596,23 @@ export function CatalogueList({
                 colRefCallback={el => colRefs.current.set(colIdx, el)}
               >
                 <SortableContext items={colCats.map(c => c.id)} strategy={verticalListSortingStrategy}>
-                  {colCats.map(cat => (
+                  {colCats
+                    .filter(cat => !searching || visibleItems.some(i => i.category_id === cat.id))
+                    .map(cat => (
                     <SortableCategoryContainer
                       key={cat.id}
                       category={cat}
-                      items={items.filter(i => i.category_id === cat.id)}
+                      items={visibleItems.filter(i => i.category_id === cat.id)}
                       type={type}
                       canEdit={canEdit}
-                      editingId={editingId}
+                      canReorder={canReorder}
+                      usage={usage}
                       addingHere={addingInCat === cat.id}
                       renamingId={renamingCatId}
-                      onSetEditing={setEditingId}
+                      onEditItem={setEditingItem}
+                      onDuplicateItem={id => void handleDuplicateItem(id)}
                       onDeleteItem={id => void handleDeleteItem(id)}
-                      onSaveItem={handleSaveItem}
+                      onOpenItem={setDetailItem}
                       onSetAdding={setAddingInCat}
                       onAddItem={handleAddItem}
                       onSetRenaming={setRenamingCatId}
@@ -511,12 +655,14 @@ export function CatalogueList({
             items={uncatItems}
             type={type}
             canEdit={canEdit}
-            editingId={editingId}
+            canReorder={canReorder}
+            usage={usage}
             addingHere={addingInCat === null}
             showHeader={hasCategories}
-            onSetEditing={setEditingId}
+            onEditItem={setEditingItem}
+            onDuplicateItem={id => void handleDuplicateItem(id)}
             onDeleteItem={id => void handleDeleteItem(id)}
-            onSaveItem={handleSaveItem}
+            onOpenItem={setDetailItem}
             onSetAdding={setAddingInCat}
             onAddItem={handleAddItem}
             onSortAlpha={handleSortAlpha}
@@ -538,7 +684,7 @@ export function CatalogueList({
                 className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
               >
                 <FolderPlus className="h-3.5 w-3.5" />
-                Créer une catégorie
+                {t("createCategory")}
               </button>
             )}
           </div>
@@ -550,6 +696,28 @@ export function CatalogueList({
           {activeCategory && <CategoryRowOverlay name={activeCategory.name} />}
         </DragOverlay>
       </DndContext>
+
+      {/* Modification : tout ce qui ne tient pas sur une ligne. */}
+      {editingItem && (
+        <CatalogItemDialog
+          item={editingItem}
+          type={type}
+          worldId={worldId}
+          open
+          onOpenChange={open => { if (!open) setEditingItem(null); }}
+          onSave={handleSaveItem}
+        />
+      )}
+
+      {/* Consultation : ce que porte un objet, pour qui n'édite pas. */}
+      {detailItem && (
+        <CatalogItemDetail
+          item={detailItem}
+          usageCount={usage?.[detailItem.id]}
+          open
+          onOpenChange={open => { if (!open) setDetailItem(null); }}
+        />
+      )}
     </div>
   );
 }

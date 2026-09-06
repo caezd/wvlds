@@ -49,17 +49,23 @@ CREATE TABLE IF NOT EXISTS public.world_catalog_items (
   sort_index   INTEGER     NOT NULL DEFAULT 0,
   created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
-  -- Bornes de longueur : la RLS dit qui écrit, jamais quoi (migration 126).
-  CONSTRAINT world_catalog_items_name_len   CHECK (char_length(name)        <= 200),
-  CONSTRAINT world_catalog_items_desc_len   CHECK (char_length(description) <= 5000),
-  CONSTRAINT world_catalog_items_icon_len   CHECK (char_length(icon)        <= 200),
-  CONSTRAINT world_catalog_items_image_len  CHECK (char_length(image_url)   <= 2000),
   -- Un tableau, et pas cinquante entrées : `properties` sert à décrire un
   -- objet, pas à stocker des données arbitraires dans une colonne JSONB.
   CONSTRAINT world_catalog_items_props_shape CHECK (
     jsonb_typeof(properties) = 'array' AND jsonb_array_length(properties) <= 20
   )
 );
+
+-- ── Bornes de longueur ───────────────────────────────────────
+-- La RLS dit qui écrit, jamais quoi : sans elles, un appel direct à PostgREST
+-- accepte n'importe quelle taille (migration 126). Elles sont posées par
+-- `ALTER TABLE`, et non dans le `CREATE TABLE`, parce que c'est cette forme
+-- que relit `lib/__tests__/textLimits.test.ts` pour refuser toute divergence
+-- entre la base et le miroir de `lib/textLimits.ts`.
+ALTER TABLE public.world_catalog_items ADD CONSTRAINT world_catalog_items_name_len  CHECK (char_length(name)        <= 200);
+ALTER TABLE public.world_catalog_items ADD CONSTRAINT world_catalog_items_desc_len  CHECK (char_length(description) <= 5000);
+ALTER TABLE public.world_catalog_items ADD CONSTRAINT world_catalog_items_icon_len  CHECK (char_length(icon)        <= 200);
+ALTER TABLE public.world_catalog_items ADD CONSTRAINT world_catalog_items_image_len CHECK (char_length(image_url)   <= 2000);
 
 -- La lecture se fait toujours par monde et par type, dans l'ordre d'affichage.
 CREATE INDEX IF NOT EXISTS world_catalog_items_world_type_idx

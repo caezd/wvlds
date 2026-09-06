@@ -8,7 +8,7 @@ import { SkillsField } from "../SkillsField";
 import { GaugesField } from "../GaugesField";
 import { TraitsField } from "../TraitsField";
 import { DlField } from "../DlField";
-import type { WorldInventoryItem, WorldSkill } from "@/types/worlds";
+import type { WorldCatalogItem } from "@/types/worlds";
 
 // ──────────────────────────────────────────────────────────────────────────
 // Les éditeurs de champ de fiche vivaient dans un fichier de 1 569 lignes, sans
@@ -92,10 +92,10 @@ describe("InventoryField", () => {
   });
 
   it("en mode catalogue, n'offre que les objets non encore pris", async () => {
-    const catalogue: WorldInventoryItem[] = [
+    const catalogue: WorldCatalogItem[] = [
       { id: "c1", name: "Épée", description: null, icon: null },
       { id: "c2", name: "Bouclier", description: null, icon: null },
-    ] as WorldInventoryItem[];
+    ] as WorldCatalogItem[];
     const onSave = vi.fn();
 
     render(
@@ -130,7 +130,7 @@ describe("InventoryField", () => {
   it("en mode catalogue, désactive l'ajout quand tout est déjà pris", () => {
     const catalogue = [
       { id: "c1", name: "Épée", description: null, icon: null },
-    ] as WorldInventoryItem[];
+    ] as WorldCatalogItem[];
 
     render(
       <InventoryField
@@ -155,7 +155,7 @@ describe("SkillsField", () => {
     const catalogue = [
       { id: "s1", name: "Escrime", description: null, icon: null },
       { id: "s2", name: "Alchimie", description: null, icon: null },
-    ] as WorldSkill[];
+    ] as WorldCatalogItem[];
     const onSave = vi.fn();
 
     render(
@@ -175,6 +175,87 @@ describe("SkillsField", () => {
     expect(onSave).toHaveBeenLastCalledWith([
       expect.objectContaining({ catalog_id: "s1" }),
       expect.objectContaining({ catalog_id: "s2", level: "" }),
+    ]);
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────
+// Le catalogue fait foi.
+//
+// La fiche gardait une COPIE du nom prise à l'ajout : renommer un objet dans
+// le catalogue ne changeait rien nulle part, et le supprimer laissait dans
+// chaque fiche un fantôme que rien ne distinguait d'une entrée valide.
+// ──────────────────────────────────────────────────────────────────────────
+
+describe("InventoryField, résolution contre le catalogue", () => {
+  it("affiche le nom du catalogue, pas la copie rangée dans la fiche", () => {
+    const catalogue = [
+      { id: "c1", name: "Épée longue", description: null, icon: null },
+    ] as WorldCatalogItem[];
+
+    render(
+      <InventoryField
+        initialItems={[{ id: "i1", catalog_id: "c1", name: "Épée", quantity: 1 }]}
+        onSave={vi.fn()}
+        catalogItems={catalogue}
+      />,
+    );
+
+    expect(screen.getByText("Épée longue")).toBeInTheDocument();
+    expect(screen.queryByText("Épée")).toBeNull();
+  });
+
+  it("signale une entrée dont l'objet a quitté le catalogue", () => {
+    render(
+      <InventoryField
+        initialItems={[{ id: "i1", catalog_id: "disparu", name: "Relique", quantity: 1 }]}
+        onSave={vi.fn()}
+        catalogItems={[]}
+      />,
+    );
+
+    // Le nom copié reste affiché — il vaut mieux que rien — mais il porte
+    // désormais sa mise en garde.
+    expect(screen.getByText("Relique")).toBeInTheDocument();
+    expect(screen.getAllByText(/retiré du catalogue/i).length).toBeGreaterThan(0);
+  });
+
+  it("interdit d'empiler un objet unique", () => {
+    const catalogue = [
+      { id: "c1", name: "Couronne", description: null, icon: null, stackable: false },
+    ] as WorldCatalogItem[];
+
+    render(
+      <InventoryField
+        initialItems={[{ id: "i1", catalog_id: "c1", name: "Couronne", quantity: 1 }]}
+        onSave={vi.fn()}
+        catalogItems={catalogue}
+      />,
+    );
+
+    expect(screen.getByRole("spinbutton")).toBeDisabled();
+  });
+
+  it("ramène la quantité au plafond de l'objet", async () => {
+    const catalogue = [
+      { id: "c1", name: "Fiole", description: null, icon: null, max_quantity: 3 },
+    ] as WorldCatalogItem[];
+    const onSave = vi.fn();
+
+    render(
+      <InventoryField
+        initialItems={[{ id: "i1", catalog_id: "c1", name: "Fiole", quantity: 1 }]}
+        onSave={onSave}
+        catalogItems={catalogue}
+      />,
+    );
+
+    const champ = screen.getByRole("spinbutton");
+    await userEvent.clear(champ);
+    await userEvent.type(champ, "9");
+
+    expect(onSave).toHaveBeenLastCalledWith([
+      expect.objectContaining({ catalog_id: "c1", quantity: 3 }),
     ]);
   });
 });

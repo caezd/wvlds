@@ -1,10 +1,17 @@
-import type { WorldInventoryItem, WorldSkill, WorldCatalogCategory } from "@/types/worlds";
+import type { WorldCatalogItem, WorldCatalogCategory } from "@/types/worlds";
 
 /** Les deux catalogues d'un monde partagent toute leur mécanique. */
 export type CatalogType = "inventory" | "skills";
 
-/** Objet ou compétence, tel qu'affiché dans une colonne du catalogue. */
-export type CatalogItem = (WorldInventoryItem | WorldSkill) & { category_id: string | null };
+/**
+ * Objet ou compétence, tel qu'affiché dans une colonne du catalogue.
+ *
+ * `category_id` y est OBLIGATOIRE, là où il est facultatif sur la ligne de
+ * base : la mécanique de glisser-déposer range chaque objet dans une colonne,
+ * et « sans catégorie » est une colonne comme une autre — un `undefined` s'y
+ * comporterait autrement qu'un `null`.
+ */
+export type CatalogItem = WorldCatalogItem & { category_id: string | null };
 
 /** Catégorie fictive des éléments non classés. */
 export const UNCAT = "__uncat__";

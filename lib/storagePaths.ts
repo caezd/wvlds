@@ -127,3 +127,13 @@ export function pinBannerPrefix(worldId: string, pinId: string): string {
 export function pinBannerPath(worldId: string, pinId: string, type?: string): string {
   return `${pinBannerPrefix(worldId, pinId)}/${nomDeFichierPourType(type)}`;
 }
+
+/** Dossier de l'image d'un objet du catalogue. Voir la migration 163. */
+export function catalogItemImagePrefix(worldId: string, itemId: string): string {
+  return `world-${worldId}/item-${itemId}`;
+}
+
+/** Chemin complet de l'image d'un objet du catalogue. */
+export function catalogItemImagePath(worldId: string, itemId: string, type?: string): string {
+  return `${catalogItemImagePrefix(worldId, itemId)}/${nomDeFichierPourType(type)}`;
+}

@@ -2,7 +2,6 @@
 
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { PersonaTimelineView } from "@/components/personas/PersonaTimelineView";
-import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import {
   Drawer,
@@ -16,7 +15,7 @@ import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { TabBar, TabBarTrigger } from "@/components/ui/tab-bar";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import type { Persona } from "@/types/db";
-import type { PersonaSection, PersonaSectionField, PersonaSectionWithFields, PersonaFieldData, InventoryItem, SkillItem, GaugeItem, TraitItem, TimelineItem, DlItem } from "@/types/personas";
+import type { PersonaSection, PersonaSectionField, PersonaSectionWithFields, PersonaFieldData, GaugeItem, TraitItem, TimelineItem, DlItem } from "@/types/personas";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useGlobalPresence } from "@/components/providers/PresenceProvider";
 import { formatLastSeen } from "@/lib/utils";
@@ -25,6 +24,9 @@ import { StoredImage } from "@/components/ui/stored-image";
 import { getInitials } from "@/lib/textFormatting";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { getUsablePersonaIds } from "@/lib/personaEligibility";
+import { indexCatalog } from "@/lib/worldCatalog";
+import { InventoryFieldView, SkillsFieldView } from "@/components/personas/fields/CatalogFieldViews";
+import type { WorldCatalogItem } from "@/types/worlds";
 import { useTranslations } from "next-intl";
 import { Lock } from "lucide-react";
 
@@ -32,7 +34,15 @@ import { Lock } from "lucide-react";
 // -- Read-only field renderer ---------------------------------
 type FieldData = PersonaFieldData | null | undefined;
 
-function FieldView({ type, data }: { type: string; data: FieldData }) {
+function FieldView({
+  type,
+  data,
+  catalog,
+}: {
+  type: string;
+  data: FieldData;
+  catalog?: Map<string, WorldCatalogItem>;
+}) {
   if (type === "title") {
     return (
       <h3 className="text-xl font-semibold text-foreground">
@@ -84,33 +94,7 @@ function FieldView({ type, data }: { type: string; data: FieldData }) {
     return <ImageGridView images={data?.images ?? []} />;
   }
   if (type === "inventory") {
-    const items: InventoryItem[] = data?.inventoryItems ?? [];
-    const visible = items.filter((it) => it.name);
-    if (!visible.length) return null;
-    return (
-      <div className="rounded-lg border border-border-soft bg-muted/30 p-3">
-        <div className="flex flex-wrap gap-2">
-          {visible.map((item) => (
-            <Tooltip key={item.id}>
-              <TooltipTrigger asChild>
-                <div className="flex items-center gap-1.5 rounded-md border border-border-soft bg-background px-2 py-1.5 cursor-default select-none">
-                  {item.icon && (
-                    <Image src={`/rpg_icons/${item.icon}`} alt="" unoptimized width={28} height={28} className="h-7 w-7 object-contain dark:invert shrink-0" />
-                  )}
-                  <span className="text-sm font-medium leading-none">{item.name}</span>
-                  <span className="text-xs text-muted-foreground tabular-nums">x {item.quantity ?? 1}</span>
-                </div>
-              </TooltipTrigger>
-              {item.description && (
-                <TooltipContent side="top" className="max-w-[200px] text-center">
-                  {item.description}
-                </TooltipContent>
-              )}
-            </Tooltip>
-          ))}
-        </div>
-      </div>
-    );
+    return <InventoryFieldView items={data?.inventoryItems ?? []} catalog={catalog} />;
   }
   if (type === "gauges") {
     const items: GaugeItem[] = data?.gaugeItems ?? [];
@@ -196,33 +180,7 @@ function FieldView({ type, data }: { type: string; data: FieldData }) {
     );
   }
   if (type === "skills") {
-    const items: SkillItem[] = data?.skillItems ?? [];
-    const visible = items.filter((it) => it.name);
-    if (!visible.length) return null;
-    return (
-      <div className="space-y-2">
-        {visible.map((item) => (
-          <div key={item.id} className="flex items-start gap-2.5 rounded-lg border border-border-soft bg-muted/30 px-3 py-2">
-            {item.icon && (
-              <Image src={`/rpg_icons/${item.icon}`} alt="" unoptimized width={20} height={20} className="h-5 w-5 object-contain dark:invert shrink-0 mt-0.5" />
-            )}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium leading-tight">{item.name}</span>
-                {item.level && (
-                  <span className="shrink-0 rounded-full border border-border-soft bg-muted/50 px-2 py-0.5 text-[0.65rem] font-medium text-muted-foreground tabular-nums">
-                    {item.level}
-                  </span>
-                )}
-              </div>
-              {item.description && (
-                <p className="text-xs text-muted-foreground mt-0.5 leading-snug">{item.description}</p>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-    );
+    return <SkillsFieldView items={data?.skillItems ?? []} catalog={catalog} />;
   }
   return null;
 }
@@ -250,6 +208,15 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
   const [loading, setLoading] = useState(false);
   const [bannerUrl, setBannerUrl] = useState<string | null>(null);
   const [_frameUrl, setFrameUrl] = useState<string | null>(null);
+  /**
+   * Le catalogue du monde, pour rendre l'inventaire à jour.
+   *
+   * La fiche garde une copie du nom et de l'icône prise à l'ajout ; c'est le
+   * catalogue qui fait foi (voir `resolveCatalogEntry`). Il reste `undefined`
+   * tant qu'il n'est pas chargé, et rien n'est alors marqué comme retiré :
+   * l'ignorance ne s'affiche pas comme une certitude.
+   */
+  const [catalog, setCatalog] = useState<Map<string, WorldCatalogItem> | undefined>(undefined);
 
   const [ownerPresence, setOwnerPresence] = useState<{
     last_seen_at: string | null;
@@ -264,6 +231,7 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
       setBannerUrl(null);
       setFrameUrl(null);
       setUsableForSelf(true);
+      setCatalog(undefined);
       return;
     }
 
@@ -283,7 +251,7 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
       // frères/sœurs non-templates du même monde suffisent à reproduire
       // exactement le calcul de getUsablePersonaIds (voir PersonaPickerDialog).
       let usableForSelfResult = true;
-      const worldId = (personaRow as unknown as { world_id?: string | null } | null)?.world_id;
+      const worldId = (personaRow as unknown as { world_id?: string | null } | null)?.world_id ?? null;
       if (persona!.user_id === selfId && worldId) {
         const { data: siblings } = await supabase
           .from("personas")
@@ -322,7 +290,19 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
         }));
       }
 
+      // Le catalogue du monde — une requête de plus, mais sans elle un objet
+      // renommé ou retiré s'afficherait encore sous son ancien nom.
+      let catalogById: Map<string, WorldCatalogItem> | undefined;
+      if (worldId) {
+        const { data: catalogRows } = await supabase
+          .from("world_catalog_items")
+          .select("id, world_id, type, name, description, icon, image_url, rarity, stackable, max_quantity, properties, sort_index, category_id")
+          .eq("world_id", worldId);
+        if (catalogRows) catalogById = indexCatalog(catalogRows as unknown as WorldCatalogItem[]);
+      }
+
       if (cancelled) return;
+      setCatalog(catalogById);
       const row = personaRow as unknown as { banner_url?: string | null; frame?: { asset_url?: string | null } | null } | null;
       setBannerUrl(row?.banner_url ?? null);
       setFrameUrl(row?.frame?.asset_url ?? null);
@@ -474,7 +454,7 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
                         </p>
                       ) : (
                         s.fields.map((f) => (
-                          <FieldView key={f.id} type={f.type} data={f.data} />
+                          <FieldView key={f.id} type={f.type} data={f.data} catalog={catalog} />
                         ))
                       )}
                     </TabsContent>

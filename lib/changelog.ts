@@ -8,6 +8,31 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-09 ──────────────────────────────────────────────────────────────
   {
     date: "2026-09",
+    tag: "Catalogue",
+    text: "Un objet du catalogue porte désormais une image, une rareté, un plafond par fiche et des propriétés libres — poids, portée, prérequis.",
+  },
+  {
+    date: "2026-09",
+    tag: "Catalogue",
+    text: "Renommer un objet du catalogue le renomme partout où il est porté. Un objet supprimé est signalé dans les fiches, au lieu d’y rester sous son ancien nom.",
+  },
+  {
+    date: "2026-09",
+    tag: "Catalogue",
+    text: "Le catalogue se cherche par nom ou par description, et le choix d’un objet depuis une fiche montre les catégories du monde.",
+  },
+  {
+    date: "2026-09",
+    tag: "Catalogue",
+    text: "Un objet se duplique d’un clic, et le nombre de personnages qui le portent s’affiche à côté de son nom.",
+  },
+  {
+    date: "2026-09",
+    tag: "Catalogue",
+    text: "Le catalogue d’un monde s’exporte dans un fichier et s’importe dans un autre, ses catégories avec lui.",
+  },
+  {
+    date: "2026-09",
     tag: "Carte",
     text: "Une image de carte peut peser jusqu’à 60 Mo : de quoi importer un export en pleine résolution. Les formats acceptés sont nommés d’emblée : JPEG, PNG, GIF ou WebP.",
   },

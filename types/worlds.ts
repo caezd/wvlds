@@ -25,22 +25,36 @@ export interface WorldCatalogCategory {
   column_index: number;
 }
 
-export interface WorldInventoryItem {
-  id: string;
-  world_id: string;
-  name: string;
-  description?: string | null;
-  icon?: string | null;
-  sort_index: number;
-  category_id?: string | null;
+/** Les cinq degrés de rareté d'un objet — voir CATALOG_RARITIES. */
+export type WorldCatalogRarity = "common" | "uncommon" | "rare" | "epic" | "legendary";
+
+/** Une propriété libre d'un objet : « Poids », « 2 kg ». */
+export interface WorldCatalogProperty {
+  label: string;
+  value: string;
 }
 
-export interface WorldSkill {
+/**
+ * Un objet ou une compétence du catalogue d'un monde.
+ *
+ * Une seule forme pour les deux, distinguée par `type` — voir la migration 161.
+ * `stackable` et `max_quantity` ne concernent que les objets : une compétence
+ * ne se compte pas, l'interface ne les propose pas pour elle.
+ */
+export interface WorldCatalogItem {
   id: string;
   world_id: string;
+  type: "inventory" | "skills";
   name: string;
   description?: string | null;
+  /** Icône du jeu `rpg_icons`, ex. « sword.svg ». */
   icon?: string | null;
+  /** Image propre au monde ; prend le pas sur `icon` quand elle est définie. */
+  image_url?: string | null;
+  rarity?: WorldCatalogRarity | null;
+  stackable?: boolean;
+  max_quantity?: number | null;
+  properties?: WorldCatalogProperty[];
   sort_index: number;
   category_id?: string | null;
 }

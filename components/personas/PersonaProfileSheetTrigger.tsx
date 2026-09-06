@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { copyToClipboard } from "@/lib/clipboard";
@@ -22,12 +21,15 @@ import {
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import { AvatarWithFrame } from "@/components/avatars/AvatarWithFrame";
 import { PresenceDot } from "@/components/avatars/PresenceDot";
-import type { PersonaSection, PersonaSectionField, PersonaSectionWithFields, PersonaFieldData, InventoryItem, SkillItem, GaugeItem, TraitItem, TimelineItem, DlItem } from "@/types/personas";
+import type { PersonaSection, PersonaSectionField, PersonaSectionWithFields, PersonaFieldData, GaugeItem, TraitItem, TimelineItem, DlItem } from "@/types/personas";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useGlobalPresence } from "@/components/providers/PresenceProvider";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { formatLastSeen, cn } from "@/lib/utils";
 import { ImageGridView } from "@/components/personas/ImageGridView";
+import { InventoryFieldView, SkillsFieldView } from "@/components/personas/fields/CatalogFieldViews";
+import { indexCatalog } from "@/lib/worldCatalog";
+import type { WorldCatalogItem } from "@/types/worlds";
 import { TABLE } from "@/lib/constants";
 import { getInitials } from "@/lib/textFormatting";
 import { useTranslations } from "next-intl";
@@ -38,7 +40,15 @@ export type FieldData = PersonaFieldData | null | undefined;
 /** Rendu lecture seule d'un champ de section — partagé avec l'aperçu affiché
  *  dans la sheet d'édition (voir PersonaEditSheet.tsx, bouton « Aperçu »),
  *  pour ne pas maintenir deux moteurs de rendu de champs en parallèle. */
-export function FieldView({ type, data }: { type: string; data: FieldData }) {
+export function FieldView({
+  type,
+  data,
+  catalog,
+}: {
+  type: string;
+  data: FieldData;
+  catalog?: Map<string, WorldCatalogItem>;
+}) {
   if (type === "title") {
     const text = data?.text as string | undefined;
     return text ? <h3 className="text-xl font-semibold text-foreground">{text}</h3> : null;
@@ -86,62 +96,10 @@ export function FieldView({ type, data }: { type: string; data: FieldData }) {
     return <ImageGridView images={data?.images ?? []} />;
   }
   if (type === "inventory") {
-    const items: InventoryItem[] = data?.inventoryItems ?? [];
-    const visible = items.filter((it) => it.name);
-    if (!visible.length) return null;
-    return (
-      <div className="rounded-lg border border-border-soft bg-muted/30 p-3">
-        <div className="flex flex-wrap gap-2">
-          {visible.map((item) => (
-            <Tooltip key={item.id}>
-              <TooltipTrigger asChild>
-                <div className="flex items-center gap-1.5 rounded-md border border-border-soft bg-background px-2 py-1.5 cursor-default select-none">
-                  {item.icon && (
-                    <Image src={`/rpg_icons/${item.icon}`} alt="" unoptimized width={28} height={28} className="h-7 w-7 object-contain dark:invert shrink-0" />
-                  )}
-                  <span className="text-sm font-medium leading-none">{item.name}</span>
-                  <span className="text-xs text-muted-foreground tabular-nums">x {item.quantity ?? 1}</span>
-                </div>
-              </TooltipTrigger>
-              {item.description && (
-                <TooltipContent side="top" className="max-w-[200px] text-center">
-                  {item.description}
-                </TooltipContent>
-              )}
-            </Tooltip>
-          ))}
-        </div>
-      </div>
-    );
+    return <InventoryFieldView items={data?.inventoryItems ?? []} catalog={catalog} />;
   }
   if (type === "skills") {
-    const items: SkillItem[] = data?.skillItems ?? [];
-    const visible = items.filter((it) => it.name);
-    if (!visible.length) return null;
-    return (
-      <div className="space-y-2">
-        {visible.map((item) => (
-          <div key={item.id} className="flex items-start gap-2.5 rounded-lg border border-border-soft bg-muted/30 px-3 py-2">
-            {item.icon && (
-              <Image src={`/rpg_icons/${item.icon}`} alt="" unoptimized width={20} height={20} className="h-5 w-5 object-contain dark:invert shrink-0 mt-0.5" />
-            )}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium leading-tight">{item.name}</span>
-                {item.level && (
-                  <span className="shrink-0 rounded-full border border-border-soft bg-muted/50 px-2 py-0.5 text-[0.65rem] font-medium text-muted-foreground">
-                    {item.level}
-                  </span>
-                )}
-              </div>
-              {item.description && (
-                <p className="text-xs text-muted-foreground mt-0.5 leading-snug">{item.description}</p>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-    );
+    return <SkillsFieldView items={data?.skillItems ?? []} catalog={catalog} />;
   }
   if (type === "gauges") {
     const items: GaugeItem[] = data?.gaugeItems ?? [];
@@ -257,6 +215,9 @@ export type PersonaProfileBodyProps = {
   followBusy: boolean;
   onToggleFollow: () => void;
   sections: PersonaSectionWithFields[];
+  /** Catalogue du monde, indexé — l'inventaire s'y résout. Absent : la copie
+   *  rangée dans la fiche fait foi, voir `resolveCatalogEntry`. */
+  catalog?: Map<string, WorldCatalogItem>;
   activeTab: string | null;
   onActiveTabChange: (id: string) => void;
   loading: boolean;
@@ -285,6 +246,7 @@ export function PersonaProfileBody({
   followBusy,
   onToggleFollow,
   sections,
+  catalog,
   activeTab,
   onActiveTabChange,
   loading,
@@ -417,7 +379,7 @@ export function PersonaProfileBody({
                   <p className="text-sm text-muted-foreground italic">{tCommon("noContent")}</p>
                 ) : (
                   s.fields.map((f) => (
-                    <FieldView key={f.id} type={f.type} data={f.data} />
+                    <FieldView key={f.id} type={f.type} data={f.data} catalog={catalog} />
                   ))
                 )}
               </TabsContent>
@@ -465,6 +427,7 @@ export function PersonaProfileSheetTrigger({
     appear_offline: boolean;
   } | null>(null);
   const [sections, setSections] = React.useState<PersonaSectionWithFields[]>([]);
+  const [catalog, setCatalog] = React.useState<Map<string, WorldCatalogItem> | undefined>(undefined);
   const [activeTab, setActiveTab] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [isFollowing, setIsFollowing] = React.useState<boolean | null>(null);
@@ -485,18 +448,30 @@ export function PersonaProfileSheetTrigger({
     async function load() {
       const { data: persona, error } = await supabase
         .from("personas")
-        .select("id,user_id,name,avatar_url,banner_url,dialogue_color,frame:avatar_frame_id(asset_url)")
+        .select("id,user_id,name,avatar_url,banner_url,dialogue_color,world_id,frame:avatar_frame_id(asset_url)")
         .eq("id", personaId!)
         .maybeSingle();
 
       if (error) { toast.error(error.message ?? "Impossible de charger le profil."); fetchedKeyRef.current = null; return; }
       if (!cancelled && persona) {
-        const row = persona as unknown as { name?: string | null; avatar_url?: string | null; banner_url?: string | null; dialogue_color?: string | null; frame?: { asset_url?: string | null } | null };
+        const row = persona as unknown as { name?: string | null; avatar_url?: string | null; banner_url?: string | null; dialogue_color?: string | null; world_id?: string | null; frame?: { asset_url?: string | null } | null };
         setName(row.name ?? label ?? null);
         setAvatarUrl(row.avatar_url ?? null);
         setBannerUrl(row.banner_url ?? null);
         setDialogueColor(row.dialogue_color ?? null);
         setFrameUrl(row.frame?.asset_url ?? null);
+
+        // Le catalogue du monde : sans lui, l'inventaire s'afficherait sous
+        // les noms copiés dans la fiche au moment de l'ajout.
+        if (row.world_id) {
+          const { data: catalogRows } = await supabase
+            .from("world_catalog_items")
+            .select("id, world_id, type, name, description, icon, image_url, rarity, stackable, max_quantity, properties, sort_index, category_id")
+            .eq("world_id", row.world_id);
+          if (!cancelled && catalogRows) {
+            setCatalog(indexCatalog(catalogRows as unknown as WorldCatalogItem[]));
+          }
+        }
       }
 
       if (viewerId && userId && viewerId !== userId) {
@@ -631,6 +606,7 @@ export function PersonaProfileSheetTrigger({
             followBusy={followBusy}
             onToggleFollow={toggleFollow}
             sections={sections}
+            catalog={catalog}
             activeTab={activeTab}
             onActiveTabChange={setActiveTab}
             loading={loading}
