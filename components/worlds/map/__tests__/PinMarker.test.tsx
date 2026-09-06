@@ -156,3 +156,33 @@ describe("PinMarker — hors de son époque", () => {
     expect(document.querySelector("[data-out-of-time]")).toBeNull();
   });
 });
+
+describe("PinMarker — le nom du lieu", () => {
+  it("se lit sans qu'on ait à survoler", () => {
+    // Une carte de cinquante lieux ne se lisait qu'à la souris, un par un —
+    // et pas du tout au doigt.
+    monter();
+
+    const etiquette = screen.getByText("Le port");
+    expect(etiquette).toBeVisible();
+    expect(etiquette.className).not.toContain("opacity-0");
+  });
+
+  it("ne se fait pas annoncer deux fois", () => {
+    // Le bouton porte déjà ce nom en `aria-label`.
+    monter();
+    expect(screen.getByText("Le port")).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("se distingue quand le lieu est ouvert", () => {
+    monter({ isSelected: true });
+    expect(screen.getByText("Le port").className).toContain("bg-primary");
+  });
+
+  it("borne les noms longs plutôt que de barrer la carte", () => {
+    monter({ pin: makePin({ title: "La citadelle des vents du nord" }) });
+    const etiquette = screen.getByText("La citadelle des vents du nord");
+    expect(etiquette.className).toContain("truncate");
+    expect(etiquette.className).toContain("max-w-40");
+  });
+});

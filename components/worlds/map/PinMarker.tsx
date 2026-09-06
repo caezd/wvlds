@@ -206,9 +206,23 @@ export const PinMarker = React.memo(function PinMarker({
         </div>
       )}
 
-      {/* Label au survol ou au focus clavier */}
+      {/* Le nom du lieu, en permanence.
+          Il n'apparaissait qu'au survol : une carte de cinquante lieux ne se
+          lisait qu'à la souris, un par un, et pas du tout au doigt.
+
+          `aria-hidden` : le bouton porte déjà ce nom en `aria-label`, et le
+          laisser ici le ferait annoncer deux fois. Et une largeur bornée, car
+          rien n'oblige un lieu à porter un nom court — sans elle, « La
+          citadelle des vents du nord » barrait la carte. */}
       {!isDragging && (
-        <div className="pointer-events-none absolute top-full left-1/2 mt-1 -translate-x-1/2 whitespace-nowrap rounded bg-black/75 px-2 py-0.5 text-xs font-medium text-white opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+        <div
+          aria-hidden
+          className={cn(
+            "pointer-events-none absolute top-full left-1/2 mt-1 max-w-40 -translate-x-1/2 truncate",
+            "rounded px-1.5 py-0.5 text-[11px] font-medium text-white shadow-sm transition-colors",
+            isSelected ? "bg-primary" : "bg-black/70 group-hover:bg-black/90 group-focus-within:bg-black/90",
+          )}
+        >
           {pin.title}
         </div>
       )}

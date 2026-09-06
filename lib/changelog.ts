@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Carte",
+    text: "Les lieux portent leur nom en permanence sur la carte, au lieu de ne le livrer qu’au survol.",
+  },
+  {
+    date: "2026-09",
+    tag: "Carte",
     text: "Un lieu s’ouvre désormais dans la colonne, à côté de la carte, au lieu d’une fenêtre posée dessus : la carte reste entière sous les yeux, et la fiche a la place de tout montrer.",
   },
   {
