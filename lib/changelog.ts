@@ -14,7 +14,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Carte",
-    text: "Les lieux portent leur nom en permanence sur la carte, au lieu de ne le livrer qu’au survol.",
+    text: "Les lieux portent leur nom en permanence sur la carte. Deux noms qui se recouvriraient : seul l’un des deux s’affiche, et l’autre reparaît en agrandissant.",
   },
   {
     date: "2026-09",

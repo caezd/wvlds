@@ -186,3 +186,17 @@ describe("PinMarker — le nom du lieu", () => {
     expect(etiquette.className).toContain("max-w-40");
   });
 });
+
+describe("PinMarker — un nom qui en gênerait un autre", () => {
+  it("se tait quand la carte le lui demande", () => {
+    monter({ showLabel: false });
+    expect(screen.queryByText("Le port")).toBeNull();
+  });
+
+  it("laisse le lieu atteignable pour autant", () => {
+    // Le nom disparaît, pas le lieu : le bouton le porte toujours.
+    const { onPinClick } = monter({ showLabel: false });
+    screen.getByRole("button", { name: "Le port" }).click();
+    expect(onPinClick).toHaveBeenCalled();
+  });
+});

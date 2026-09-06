@@ -52,6 +52,7 @@ import { ScaleCalibrator } from "./ScaleCalibrator";
 import { RegionLayer } from "./RegionLayer";
 import { RegionPanel } from "./RegionPanel";
 import { MIN_REGION_POINTS, dedupeConsecutive, pointInPolygon, polygonCentroid } from "./geometry";
+import { visibleLabels } from "./labels";
 import { ScaleBar } from "./ScaleBar";
 import { type MapScale } from "./scale";
 import type { Point } from "./zoom";
@@ -222,6 +223,14 @@ export function WorldMap({
     onSettle: (tr) => setViewScale(tr.scale),
   });
   const { imageRef, baseSize, centerOnPoint } = viewport;
+
+  // Les noms qui tiennent sans se recouvrir. Recalculé quand l'échelle change
+  // — en zoomant, les lieux s'écartent et d'autres noms trouvent leur place.
+  const nomsAffiches = React.useMemo(
+    () => visibleLabels(visiblePins, baseSize, viewScale, selectedPin?.id),
+    [visiblePins, baseSize, viewScale, selectedPin?.id],
+  );
+
 
 
 
@@ -1333,6 +1342,7 @@ export function WorldMap({
                   isEditMode={isEditMode}
                   imgRef={imageRef}
                   presentPersonas={personasByPin.get(pin.id) ?? NOBODY}
+                  showLabel={nomsAffiches.has(pin.id)}
                   outOfTime={outOfTime(pin)}
                   onPinClick={handlePinClick}
                   onDelete={handleDeletePin}

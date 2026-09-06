@@ -33,6 +33,7 @@ export const PinMarker = React.memo(function PinMarker({
   imgRef,
   presentPersonas = NOBODY,
   outOfTime = false,
+  showLabel = true,
   onPinClick,
   onDelete,
   onMoved,
@@ -45,6 +46,8 @@ export const PinMarker = React.memo(function PinMarker({
   presentPersonas?: MapPersona[];
   /** Le lieu n'existe pas à l'époque affichée — voir migration 156. */
   outOfTime?: boolean;
+  /** Son nom recouvrirait celui d'un voisin : on le tait — voir `labels.ts`. */
+  showLabel?: boolean;
   onPinClick: (pin: MapPinType) => void;
   onDelete: (pin: MapPinType) => void;
   onMoved: (pin: MapPinType, x: number, y: number) => void;
@@ -193,13 +196,23 @@ export const PinMarker = React.memo(function PinMarker({
           aria-label={t("whoIsHere")}
           className="pointer-events-none absolute left-full top-1/2 ml-1 flex -translate-y-1/2 items-center -space-x-1.5"
         >
+          {/* Ronds, et non `rounded-md` comme ailleurs : des carrés arrondis
+              qui se recouvrent laissent voir leurs coins l'un sur l'autre, et
+              la pile devient un empilement de bouts. Le cadre d'avatar est
+              écarté ici — à 20 px il ne se lirait pas, et l'arrondi le
+              rognerait. L'anneau de fond détache chaque tête de la suivante. */}
           {presentPersonas.slice(0, AVATARS_SHOWN).map((p) => (
-            <span key={p.id} data-persona-id={p.id} title={p.name} className="rounded-full ring-1 ring-background">
-              <AvatarWithFrame src={p.avatar_url} alt={p.name} fallback={p.name} size={18} frameUrl={p.frame?.asset_url} />
+            <span
+              key={p.id}
+              data-persona-id={p.id}
+              title={p.name}
+              className="overflow-hidden rounded-full ring-2 ring-background"
+            >
+              <AvatarWithFrame src={p.avatar_url} alt={p.name} fallback={p.name} size={20} />
             </span>
           ))}
           {presentPersonas.length > AVATARS_SHOWN && (
-            <span className="rounded-full bg-background px-1 text-[10px] font-medium text-foreground shadow">
+            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-foreground px-1 text-[10px] font-semibold leading-none text-background ring-2 ring-background">
               {t("morePersonas", { count: presentPersonas.length - AVATARS_SHOWN })}
             </span>
           )}
@@ -214,7 +227,7 @@ export const PinMarker = React.memo(function PinMarker({
           laisser ici le ferait annoncer deux fois. Et une largeur bornée, car
           rien n'oblige un lieu à porter un nom court — sans elle, « La
           citadelle des vents du nord » barrait la carte. */}
-      {!isDragging && (
+      {!isDragging && showLabel && (
         <div
           aria-hidden
           className={cn(
