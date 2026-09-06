@@ -62,9 +62,15 @@ function BoutonRetour({ onClick }: { onClick?: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="flex items-center gap-1.5 rounded-md px-2 py-1 text-sm text-muted-foreground hover:bg-secondary hover:text-foreground"
+      // Petit : c'est un chemin de retour, pas une action. La zone sensible,
+      // elle, reste à la taille d'un doigt — sans que le bouton grossisse.
+      className={cn(
+        "relative flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs text-muted-foreground",
+        "hover:bg-secondary hover:text-foreground",
+        "touch:after:absolute touch:after:-inset-2 touch:after:content-['']",
+      )}
     >
-      <ArrowLeft className="h-4 w-4" />
+      <ArrowLeft className="h-3.5 w-3.5" />
       {t("places")}
     </button>
   );
