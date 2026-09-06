@@ -14,7 +14,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Carte",
-    text: "Depuis la fiche d’un lieu, « M’installer ici » pose un de vos personas à cet endroit, et une croix l’en fait repartir.",
+    text: "Depuis la fiche d’un lieu, « M’installer ici » pose un de vos personas à cet endroit, et une croix l’en fait repartir. C’est là que se règle désormais l’emplacement d’un persona, et non plus dans sa propre fiche.",
   },
   {
     date: "2026-09",

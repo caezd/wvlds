@@ -637,11 +637,6 @@
     "duplicateAction": "Duplicar",
     "moveSuccess": "«{name}» movido a {world}.",
     "duplicateSuccess": "«{name}» duplicado a {world}.",
-    "location": {
-      "label": "Ubicación en el mapa",
-      "none": "En ningún sitio",
-      "placeholder": "Elegir un lugar"
-    },
     "maritalStatus": {
       "label": "Estado civil",
       "none": "Sin especificar",

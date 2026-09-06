@@ -638,11 +638,6 @@
     "duplicateAction": "Duplicate",
     "moveSuccess": "“{name}” moved to {world}.",
     "duplicateSuccess": "“{name}” duplicated to {world}.",
-    "location": {
-      "label": "Location on the map",
-      "none": "Nowhere",
-      "placeholder": "Choose a place"
-    },
     "maritalStatus": {
       "label": "Marital status",
       "none": "Not set",

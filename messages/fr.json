@@ -638,11 +638,6 @@
     "duplicateAction": "Dupliquer",
     "moveSuccess": "« {name} » déplacé vers {world}.",
     "duplicateSuccess": "« {name} » dupliqué vers {world}.",
-    "location": {
-      "label": "Emplacement sur la carte",
-      "none": "Nulle part",
-      "placeholder": "Choisir un lieu"
-    },
     "maritalStatus": {
       "label": "Statut marital",
       "none": "Non renseigné",
