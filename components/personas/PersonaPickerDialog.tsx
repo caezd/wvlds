@@ -312,9 +312,11 @@ export function PersonaPickerDialog({
     return (
       <Drawer open={open} onOpenChange={setOpen} showSwipeHandle>
         {trigger ? (
-          // Un trigger fourni par l'appelant n'est pas forcément un bouton
-          // natif — d'où `nativeButton={false}`.
-          <DrawerTrigger nativeButton={false} render={trigger} />
+          // `nativeButton` reste à sa valeur par défaut : les déclencheurs
+          // fournis sont des boutons natifs. Le forcer à `false` faisait
+          // poser à Base UI un `role` et un `aria-disabled` sur un `<button>`
+          // qui les portait déjà — et la console le disait à chaque rendu.
+          <DrawerTrigger render={trigger} />
         ) : (
           avecAnneau(<DrawerTrigger render={boutonParDefaut()}>{contenuDuBouton}</DrawerTrigger>)
         )}

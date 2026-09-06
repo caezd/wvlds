@@ -131,7 +131,12 @@ describe("PersonaPickerDialog — en tiroir", () => {
   // La fiche d'un lieu s'ouvre en tiroir sur téléphone : un dialogue s'y
   // imbriquerait mal. C'est le premier appelant à donner son propre
   // déclencheur à la variante tiroir — la combinaison n'existait pas.
-  it("ouvre la liste depuis un déclencheur fourni", async () => {
+  it("ouvre la liste depuis un déclencheur fourni, sans reproche de Base UI", async () => {
+    // Base UI se plaint dans la console quand `nativeButton` ment sur ce qu'on
+    // lui donne — un avertissement ne fait échouer aucun test tant qu'on ne le
+    // regarde pas, et celui-ci se répétait à chaque rendu.
+    const plaintes: unknown[][] = [];
+    const espion = vi.spyOn(console, "error").mockImplementation((...args) => { plaintes.push(args); });
     const user = userEvent.setup();
     render(
       <PersonaPickerDialog
@@ -146,6 +151,8 @@ describe("PersonaPickerDialog — en tiroir", () => {
     await user.click(screen.getByRole("button", { name: "M'installer ici" }));
 
     expect(await screen.findByText("Caelan Voss")).toBeInTheDocument();
+    expect(plaintes.flat().join(" ")).not.toContain("nativeButton");
+    espion.mockRestore();
   });
 
   it("rend le persona choisi", async () => {
