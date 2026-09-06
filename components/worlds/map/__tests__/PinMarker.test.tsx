@@ -149,6 +149,15 @@ describe("PinMarker — le nom du lieu", () => {
     expect(screen.getByText("Le port").className).toContain("bg-primary");
   });
 
+  it("garde le nom lisible sur le fond d'accent", () => {
+    // `text-white` était posé sur les deux fonds : sur celui d'accent d'un
+    // thème clair, le nom du lieu ouvert s'effaçait.
+    monter({ isSelected: true });
+    const etiquette = screen.getByText("Le port");
+    expect(etiquette.className).toContain("text-primary-foreground");
+    expect(etiquette.className).not.toContain("text-white");
+  });
+
   it("borne les noms longs plutôt que de barrer la carte", () => {
     monter({ pin: makePin({ title: "La citadelle des vents du nord" }) });
     const etiquette = screen.getByText("La citadelle des vents du nord");

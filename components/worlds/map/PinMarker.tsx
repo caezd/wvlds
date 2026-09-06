@@ -146,7 +146,10 @@ export const PinMarker = React.memo(function PinMarker({
           isEditMode && !isDragging && "cursor-grab",
           isDragging && "cursor-grabbing",
           !isDragging && "hover:scale-110",
-          isSelected && !isDragging && "scale-110 ring-2 ring-white ring-offset-1",
+          // Pas de liseré : l'étiquette passe déjà à la couleur d'accent, et
+          // un anneau blanc posé sur une carte claire ne se voyait pas plus
+          // qu'il ne s'effaçait sur une carte sombre.
+          isSelected && !isDragging && "scale-110",
           isDragging && "scale-125 opacity-90 shadow-xl",
         )}
         style={{
@@ -209,8 +212,13 @@ export const PinMarker = React.memo(function PinMarker({
           data-pin-label
           className={cn(
             "pointer-events-none absolute top-full left-1/2 mt-1 max-w-40 -translate-x-1/2 truncate",
-            "rounded px-1.5 py-0.5 text-[11px] font-medium text-white shadow-sm transition-colors",
-            isSelected ? "bg-primary" : "bg-black/70 group-hover:bg-black/90 group-focus-within:bg-black/90",
+            "rounded px-1.5 py-0.5 text-[11px] font-medium shadow-sm transition-colors",
+            // `text-white` valait pour le fond noir et pour lui seul : sur le
+            // fond d'accent d'un thème clair, le nom du lieu ouvert
+            // disparaissait. Chaque fond porte donc sa couleur de texte.
+            isSelected
+              ? "bg-primary text-primary-foreground"
+              : "bg-black/70 text-white group-hover:bg-black/90 group-focus-within:bg-black/90",
           )}
         >
           {pin.title}
