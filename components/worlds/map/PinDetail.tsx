@@ -517,10 +517,15 @@ export function PinDetail({
                   variant={pickerVariant}
                   onSelect={(persona) => { if (persona) onPlacePersona(persona.id); }}
                   trigger={
-                    <Button size="sm" variant="outline" className="w-fit self-start gap-1.5">
+                    // Taillé comme « Jouer ici » : deux gestes de même nature,
+                    // qui n'ont pas à peser différemment.
+                    <button
+                      type="button"
+                      className="flex w-fit shrink-0 items-center gap-1.5 self-start rounded-md border border-border-soft px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                    >
                       <UserPlus className="h-3.5 w-3.5" />
                       {t("settleHere")}
-                    </Button>
+                    </button>
                   }
                 />
               )}
