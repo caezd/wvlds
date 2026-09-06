@@ -43,13 +43,21 @@ const MAX_PIN_BANNER_MB = 5;
  * suite de paragraphes, pas des choses distinctes. Le cadre dit où l'une
  * s'arrête et où la suivante commence.
  */
-function Bloc({ titre, children }: { titre: string; children: React.ReactNode }) {
+function Bloc({ titre, action, children }: {
+  titre: string;
+  /** Ce que la section permet de faire — posé à droite de son nom. */
+  action?: React.ReactNode;
+  children: React.ReactNode;
+}) {
   return (
     <section className="flex flex-col gap-1.5 rounded-lg border border-border-soft bg-secondary/30 p-2.5">
-      <h4 className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-        <span aria-hidden className="h-1 w-1 rounded-full bg-muted-foreground/60" />
-        {titre}
-      </h4>
+      <div className="flex items-center justify-between gap-2">
+        <h4 className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+          <span aria-hidden className="h-1 w-1 rounded-full bg-muted-foreground/60" />
+          {titre}
+        </h4>
+        {action}
+      </div>
       {children}
     </section>
   );
@@ -483,7 +491,28 @@ export function PinDetail({
               installer : sinon le geste n'existerait qu'aux endroits déjà
               occupés, et un lieu vide le resterait. */}
           {!editing && (personasHere.length > 0 || onPlacePersona) && (
-            <Bloc titre={t("whoIsHere")}>
+            <Bloc
+              titre={t("whoIsHere")}
+              action={onPlacePersona && (
+                <PersonaPickerDialog
+                  selected={null}
+                  worldId={worldId}
+                  variant={pickerVariant}
+                  onSelect={(persona) => { if (persona) onPlacePersona(persona.id); }}
+                  trigger={
+                    // Taillé comme « Jouer ici » : deux gestes de même nature,
+                    // qui n'ont pas à peser différemment.
+                    <button
+                      type="button"
+                      className="flex shrink-0 items-center gap-1.5 rounded-md border border-border-soft px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                    >
+                      <UserPlus className="h-3.5 w-3.5" />
+                      {t("settleHere")}
+                    </button>
+                  }
+                />
+              )}
+            >
               {personasHere.map(persona => (
                 <div key={persona.id} className="flex items-center gap-2 text-xs">
                   {/* `relative` : `StoredImage` se pose en `absolute inset-0`,
@@ -510,25 +539,6 @@ export function PinDetail({
                   )}
                 </div>
               ))}
-              {onPlacePersona && (
-                <PersonaPickerDialog
-                  selected={null}
-                  worldId={worldId}
-                  variant={pickerVariant}
-                  onSelect={(persona) => { if (persona) onPlacePersona(persona.id); }}
-                  trigger={
-                    // Taillé comme « Jouer ici » : deux gestes de même nature,
-                    // qui n'ont pas à peser différemment.
-                    <button
-                      type="button"
-                      className="flex w-fit shrink-0 items-center gap-1.5 self-start rounded-md border border-border-soft px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-                    >
-                      <UserPlus className="h-3.5 w-3.5" />
-                      {t("settleHere")}
-                    </button>
-                  }
-                />
-              )}
             </Bloc>
           )}
 
