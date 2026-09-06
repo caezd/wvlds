@@ -405,7 +405,7 @@ describe("PinDetail — ce que le lieu rejoint", () => {
       makePinLink({ id: "l2", from_pin_id: "pin3", to_pin_id: "pin1" }),
     ]);
 
-    expect(screen.getByText("Ce qu'il rejoint")).toBeInTheDocument();
+    expect(document.querySelector("[data-link-graph]")).not.toBeNull();
     expect(screen.getByRole("button", { name: /Le donjon/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /La ruine/ })).toBeInTheDocument();
     expect(document.querySelector("[data-link-graph-center]")).toHaveTextContent("Le port");
@@ -451,13 +451,18 @@ describe("PinDetail — ce que le lieu rejoint", () => {
       />,
     );
 
+    // Le schéma n'a ni cadre ni titre : c'est sa position qui se vérifie.
     const titres = [...document.querySelectorAll("h4")].map((h) => h.textContent);
-    expect(titres).toEqual(["Qui est ici", "Ce qui s’y joue", "Ce qu'il rejoint"]);
+    expect(titres).toEqual(["Qui est ici", "Ce qui s’y joue"]);
+
+    const salons = document.querySelectorAll("section")[1];
+    const schema = document.querySelector("[data-link-graph]")!;
+    expect(salons.compareDocumentPosition(schema) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it("se tait pour un lieu que rien ne rejoint", () => {
     monterRelie([]);
-    expect(screen.queryByText("Ce qu'il rejoint")).toBeNull();
+    expect(document.querySelector("[data-link-graph]")).toBeNull();
   });
 
   it("montre à gauche le voisin qui est à l'ouest", () => {

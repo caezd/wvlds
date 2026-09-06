@@ -1396,7 +1396,6 @@
     "place": "Lieu",
     "placeEra": "Époque",
     "whoIsHere": "Qui est ici",
-    "linkedPlaces": "Ce qu'il rejoint",
     "linkName": "Nom du lien",
     "linkHint": "Cliquez un second lieu pour les relier, ou un point pour régler l'échelle",
     "deleteLink": "Supprimer ce lien",

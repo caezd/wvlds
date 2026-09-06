@@ -587,17 +587,19 @@ export function PinDetail({
             )}
 
             {/* Ce que ce lieu rejoint, en dernier : c'est un schéma, et il se
-                lit une fois qu'on sait ce qu'est le lieu et qui s'y trouve. */}
+                lit une fois qu'on sait ce qu'est le lieu et qui s'y trouve.
+
+                Sans cadre ni titre, contrairement aux blocs au-dessus : un
+                schéma se nomme tout seul, et il portait deux bordures l'une
+                dans l'autre. */}
             {!editing && pinsById && onOpenPin && links.length > 0 && (
-              <Bloc titre={t("linkedPlaces")}>
-                <PinLinkGraph
-                  pin={pin}
-                  links={links}
-                  pins={pinsById}
-                  aspect={aspect}
-                  onOpenPin={onOpenPin}
-                />
-              </Bloc>
+              <PinLinkGraph
+                pin={pin}
+                links={links}
+                pins={pinsById}
+                aspect={aspect}
+                onOpenPin={onOpenPin}
+              />
             )}
           </div>
         </div>
