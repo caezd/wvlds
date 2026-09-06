@@ -101,6 +101,15 @@ describe("PinDetail — page du wiki", () => {
     expect(pushMock).toHaveBeenCalledWith("/w/w1?view=wiki&page=arkham");
   });
 
+  it("ne montre que le titre de la page — le livre dit le reste", () => {
+    // La phrase reste en nom accessible : « Arkham » seul ne dirait rien à
+    // qui écoute la page.
+    monter(makePin({ wiki_page_id: "p1" }));
+
+    expect(screen.getByRole("button", { name: /Ouvrir la page du wiki : Arkham/ }))
+      .toHaveTextContent(/^Arkham$/);
+  });
+
   it("associe une page en modifiant l'épingle", async () => {
     const { onUpdated } = monter(makePin(), true);
 
@@ -125,7 +134,9 @@ describe("PinDetail — carte liée", () => {
   it("ouvre la carte que le lieu désigne", async () => {
     const { onOpenMap } = monter(makePin({ target_map_id: "map2" }));
 
-    await userEvent.click(screen.getByRole("button", { name: /Ouvrir la carte : Le donjon/ }));
+    const versLaCarte = screen.getByRole("button", { name: /Ouvrir la carte : Le donjon/ });
+    expect(versLaCarte).toHaveTextContent(/^Le donjon$/);
+    await userEvent.click(versLaCarte);
 
     expect(onOpenMap).toHaveBeenCalledWith("map2");
   });

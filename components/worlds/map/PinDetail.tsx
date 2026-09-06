@@ -429,12 +429,18 @@ export function PinDetail({
                 </select>
               </label>
             ) : linkedPage ? (
+              // L'icône dit déjà ce qu'on ouvre : la phrase ne restait que
+              // pour ce que le livre montre. Elle demeure en nom accessible —
+              // « Arkham » seul ne dit rien à qui écoute la page.
               <button
                 type="button"
+                aria-label={`${t("openWikiPage")} : ${linkedPage.title}`}
+                title={t("openWikiPage")}
                 onClick={() => router.push(`/w/${worldId}?view=wiki&page=${encodeURIComponent(linkedPage.slug)}`)}
                 className="flex w-fit items-center gap-1.5 rounded-md border border-border-soft px-2 py-1 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
               >
-                <BookOpenText className="h-3.5 w-3.5" /> {t("openWikiPage")} : {linkedPage.title}
+                <BookOpenText aria-hidden className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">{linkedPage.title}</span>
               </button>
             ) : null}
 
@@ -458,10 +464,13 @@ export function PinDetail({
             ) : linkedMap ? (
               <button
                 type="button"
+                aria-label={`${t("openTargetMap")} : ${linkedMap.label?.trim() || t("title")}`}
+                title={t("openTargetMap")}
                 onClick={() => onOpenMap(linkedMap.id)}
                 className="flex w-fit items-center gap-1.5 rounded-md border border-border-soft px-2 py-1 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
               >
-                <MapIcon className="h-3.5 w-3.5" /> {t("openTargetMap")} : {linkedMap.label?.trim() || t("title")}
+                <MapIcon aria-hidden className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">{linkedMap.label?.trim() || t("title")}</span>
               </button>
             ) : null}
 
