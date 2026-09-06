@@ -429,6 +429,32 @@ describe("PinDetail — ce que le lieu rejoint", () => {
     expect(screen.getByRole("button", { name: "Le donjon" })).toHaveTextContent(/^Le donjon$/);
   });
 
+  it("vient après les personas et les salons", () => {
+    // Un schéma se lit une fois qu'on sait ce qu'est le lieu et qui s'y
+    // trouve : il ne s'intercale pas entre la description et les habitants.
+    render(
+      <PinDetail
+        pin={PORT}
+        wikiPages={WIKI_PAGES}
+        rooms={[{ id: "c1", title: "La taverne", name: "taverne", map_pin_id: "pin1" }]}
+        maps={CARTES}
+        personasHere={[makePlacedPersona({ id: "a", name: "Kael" })]}
+        links={[makePinLink({ id: "l1", from_pin_id: "pin1", to_pin_id: "pin2" })]}
+        pinsById={new Map([PORT, DONJON].map((p) => [p.id, p]))}
+        aspect={1}
+        onOpenPin={vi.fn()}
+        isEditMode={false}
+        worldId="w1"
+        onUpdated={vi.fn()}
+        onDelete={vi.fn()}
+        onOpenMap={vi.fn()}
+      />,
+    );
+
+    const titres = [...document.querySelectorAll("h4")].map((h) => h.textContent);
+    expect(titres).toEqual(["Qui est ici", "Ce qui s’y joue", "Ce qu'il rejoint"]);
+  });
+
   it("se tait pour un lieu que rien ne rejoint", () => {
     monterRelie([]);
     expect(screen.queryByText("Ce qu'il rejoint")).toBeNull();

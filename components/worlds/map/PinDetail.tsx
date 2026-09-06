@@ -510,21 +510,7 @@ export function PinDetail({
               </Bloc>
             )}
 
-            {/* Ce que ce lieu rejoint. La carte montre le réseau entier ; ici
-              on ne voit que ce qui part d'ici, et l'on y saute d'un clic. */}
-          {!editing && pinsById && onOpenPin && links.length > 0 && (
-            <Bloc titre={t("linkedPlaces")}>
-              <PinLinkGraph
-                pin={pin}
-                links={links}
-                pins={pinsById}
-                aspect={aspect}
-                onOpenPin={onOpenPin}
-              />
-            </Bloc>
-          )}
-
-          {/* Qui se trouve ici. La carte n'en donne que le nombre : c'est
+            {/* Qui se trouve ici. La carte n'en donne que le nombre : c'est
                 ici qu'on lit les noms.
 
                 Le bloc reste debout pour un lieu désert dès lors qu'on peut s'y
@@ -597,6 +583,20 @@ export function PinDetail({
                     <span className="truncate">{salon.title || salon.name}</span>
                   </button>
                 ))}
+              </Bloc>
+            )}
+
+            {/* Ce que ce lieu rejoint, en dernier : c'est un schéma, et il se
+                lit une fois qu'on sait ce qu'est le lieu et qui s'y trouve. */}
+            {!editing && pinsById && onOpenPin && links.length > 0 && (
+              <Bloc titre={t("linkedPlaces")}>
+                <PinLinkGraph
+                  pin={pin}
+                  links={links}
+                  pins={pinsById}
+                  aspect={aspect}
+                  onOpenPin={onOpenPin}
+                />
               </Bloc>
             )}
           </div>
