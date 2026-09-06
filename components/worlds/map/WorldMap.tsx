@@ -25,11 +25,13 @@ import {
   createMapRegion,
   updateMapRegion,
   deleteMapRegion,
+  getPlacedPersonas,
   getWorldMaps,
   reorderWorldMaps,
   updateMapPin,
   updateWorldMap,
   type MapRegion,
+  type PlacedPersona,
   type MapPin as MapPinType,
   type WorldMapData,
 } from "@/app/actions/worldMap";
@@ -62,6 +64,7 @@ export type InitialWorldMap = {
   maps: WorldMapData[];
   pins: MapPinType[];
   regions: MapRegion[];
+  personas: PlacedPersona[];
 };
 
 /** Les couleurs des régions, dans l'ordre où on les dessine. */
@@ -117,6 +120,8 @@ export function WorldMap({
   // Les régions, cartes confondues ; celle qu'on regarde ; le tracé en cours
   // (`null` quand on ne dessine pas) ; et le polygone fermé qui attend son nom.
   const [regions, setRegions] = React.useState<MapRegion[]>(initialMap?.regions ?? []);
+  // Les personas posés sur cette carte, relus en bloc — voir `getPlacedPersonas`.
+  const [personas, setPersonas] = React.useState<PlacedPersona[]>(initialMap?.personas ?? []);
   const [selectedRegion, setSelectedRegion] = React.useState<MapRegion | null>(null);
   const [draft, setDraft] = React.useState<Point[] | null>(null);
   const [pendingRegion, setPendingRegion] = React.useState<{ points: Point[]; label: string } | null>(null);
@@ -220,12 +225,13 @@ export function WorldMap({
     let cancelled = false;
     (async () => {
       try {
-        const { maps: m, pins: p, regions: r } = await getWorldMaps(worldId);
+        const { maps: m, pins: p, regions: r, personas: who } = await getWorldMaps(worldId);
         if (!cancelled) {
           setMaps(m);
           setActiveMapId((prev) => prev ?? initialMapId ?? m[0]?.id ?? null);
           setPins(p);
           setRegions(r);
+          setPersonas(who);
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -292,6 +298,13 @@ export function WorldMap({
             setSelectedRegion((prev) => (prev?.id === region.id ? region : prev));
           },
         )
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "personas", filter: `world_id=eq.${worldId}` },
+          // On ne regarde même pas ce que l'écho porte : la liste se relit
+          // entière, et c'est ce qui la garde juste.
+          () => rechargerLesPersonas(),
+        )
         .subscribe(),
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -333,6 +346,35 @@ export function WorldMap({
   React.useEffect(() => {
     if (activeMap?.image_url) loadPopoverData();
   }, [activeMap?.image_url, loadPopoverData]);
+
+  /**
+   * Relit qui se trouve où, en bloc.
+   *
+   * Groupé : déplacer un persona d'un lieu à l'autre produit plusieurs échos
+   * coup sur coup, et rien ne sert de relire trois fois de suite.
+   */
+  const rechargerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const rechargerLesPersonas = React.useCallback(() => {
+    if (rechargerRef.current) clearTimeout(rechargerRef.current);
+    rechargerRef.current = setTimeout(() => {
+      void getPlacedPersonas(worldId).then(setPersonas);
+    }, 250);
+  }, [worldId]);
+
+  React.useEffect(() => () => {
+    if (rechargerRef.current) clearTimeout(rechargerRef.current);
+  }, []);
+
+  // Par lieu : c'est ce que le marqueur compte et ce que la fiche liste.
+  const personasByPin = React.useMemo(() => {
+    const parLieu = new Map<string, PlacedPersona[]>();
+    for (const persona of personas) {
+      const liste = parLieu.get(persona.map_pin_id) ?? [];
+      liste.push(persona);
+      parLieu.set(persona.map_pin_id, liste);
+    }
+    return parLieu;
+  }, [personas]);
 
   // ── L'adresse suit ce qu'on regarde ───────────────────────────
   /**
@@ -514,6 +556,7 @@ export function WorldMap({
     setWikiPages([]);
     setPinRooms([]);
     setRegions(initialMap?.regions ?? []);
+    setPersonas(initialMap?.personas ?? []);
     setSelectedRegion(null);
     setDraft(null);
     setPendingRegion(null);
@@ -929,6 +972,7 @@ export function WorldMap({
       // La première région qui se referme autour du lieu. Il peut y en avoir
       // plusieurs empilées : celle du dessus est celle qu'on voit.
       region={visibleRegions.find((r) => pointInPolygon(selectedPin, r.points)) ?? null}
+      personasHere={personasByPin.get(selectedPin.id) ?? []}
       isEditMode={isEditMode}
       canPost={canPost}
       worldId={worldId}
@@ -1271,6 +1315,7 @@ export function WorldMap({
                   isEditMode={isEditMode}
                   imgRef={imageRef}
                   showLabel={nomsAffiches.has(pin.id)}
+                  presentCount={personasByPin.get(pin.id)?.length ?? 0}
                   outOfTime={outOfTime(pin)}
                   onPinClick={handlePinClick}
                   onDelete={handleDeletePin}

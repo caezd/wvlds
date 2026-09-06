@@ -16,7 +16,8 @@ import { Button } from "@/components/ui/button";
 import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
 import { MarkdownContent } from "@/components/MarkdownRenderer";
 import { ParagraphBlockEditor } from "@/components/chatrooms/composer/ParagraphBlockEditor";
-import { updateMapPin, type MapPin as MapPinType, type WorldMapData } from "@/app/actions/worldMap";
+import { updateMapPin, type MapPin as MapPinType, type PlacedPersona, type WorldMapData } from "@/app/actions/worldMap";
+import { StoredImage } from "@/components/ui/stored-image";
 import { TimelineDateFields } from "@/components/worlds/timeline/TimelineDateFields";
 import { formatTimelineLabel } from "@/lib/worldTimeline";
 import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
@@ -69,6 +70,7 @@ export function PinDetail({
   timelineConfig = null,
   ownMap = null,
   region = null,
+  personasHere = [],
   isEditMode,
   canPost = false,
   worldId,
@@ -91,6 +93,8 @@ export function PinDetail({
   ownMap?: WorldMapData | null;
   /** La région qui le contient, si un polygone se referme autour de lui. */
   region?: MapRegion | null;
+  /** Les personas posés ici — voir migration 154. */
+  personasHere?: PlacedPersona[];
   isEditMode: boolean;
   /** Peut ouvrir un salon : montre « Jouer ici ». */
   canPost?: boolean;
@@ -456,6 +460,23 @@ export function PinDetail({
                     : t("existsTill", { until: formatTimelineLabel(timelineConfig, pin.exists_until!) })}
               </span>
             </p>
+            </Bloc>
+          )}
+
+          {/* Qui se trouve ici. La carte n'en donne que le nombre : c'est
+              ici qu'on lit les noms. */}
+          {!editing && personasHere.length > 0 && (
+            <Bloc titre={t("whoIsHere")}>
+              {personasHere.map(persona => (
+                <div key={persona.id} className="flex items-center gap-2 text-xs">
+                  <span className="flex h-6 w-6 shrink-0 overflow-hidden rounded-full bg-secondary">
+                    {persona.avatar_url && (
+                      <StoredImage url={persona.avatar_url} width={48} height={48} resize="cover" className="object-cover" />
+                    )}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate">{persona.name}</span>
+                </div>
+              ))}
             </Bloc>
           )}
 

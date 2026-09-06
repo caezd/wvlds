@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { PinDetail } from "@/components/worlds/map/PinDetail";
 import type { MapPin } from "@/app/actions/worldMap";
 import type { PinRoom } from "@/components/worlds/map/types";
-import { makeMap, makePin, makeRegion, WIKI_PAGES } from "./fixtures";
+import { makeMap, makePin, makePlacedPersona, makeRegion, WIKI_PAGES } from "./fixtures";
 
 /** Deux cartes : celle du lieu, et celle qu'il peut ouvrir. */
 const CARTES = [makeMap(), makeMap({ id: "map2", label: "Le donjon", sort_index: 1 })];
@@ -336,5 +336,40 @@ describe("PinDetail — où se trouve ce lieu", () => {
 
     expect(screen.getByText("Le continent")).toBeInTheDocument();
     expect(screen.queryByText("Le royaume")).toBeNull();
+  });
+});
+
+describe("PinDetail — qui se trouve ici", () => {
+  function monterAvecDuMonde(personasHere = [makePlacedPersona()]) {
+    render(
+      <PinDetail
+        pin={makePin()}
+        wikiPages={WIKI_PAGES}
+        rooms={[]}
+        maps={CARTES}
+        personasHere={personasHere}
+        isEditMode={false}
+        worldId="w1"
+        onUpdated={vi.fn()}
+        onDelete={vi.fn()}
+        onOpenMap={vi.fn()}
+      />,
+    );
+  }
+
+  it("nomme ceux qui sont là — la carte n'en donne que le nombre", () => {
+    monterAvecDuMonde([
+      makePlacedPersona({ id: "a", name: "Kael" }),
+      makePlacedPersona({ id: "b", name: "Ifyr" }),
+    ]);
+
+    expect(screen.getByText("Qui est ici")).toBeInTheDocument();
+    expect(screen.getByText("Kael")).toBeInTheDocument();
+    expect(screen.getByText("Ifyr")).toBeInTheDocument();
+  });
+
+  it("se tait pour un lieu désert", () => {
+    monterAvecDuMonde([]);
+    expect(screen.queryByText("Qui est ici")).toBeNull();
   });
 });

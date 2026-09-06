@@ -74,9 +74,9 @@ export type MapRegion = {
  */
 export async function getWorldMaps(
   worldId: string,
-): Promise<{ maps: WorldMapData[]; pins: MapPin[]; regions: MapRegion[] }> {
+): Promise<{ maps: WorldMapData[]; pins: MapPin[]; regions: MapRegion[]; personas: PlacedPersona[] }> {
   const supabase = await createClient();
-  const [{ data: maps }, { data: pins }, { data: regions }] = await Promise.all([
+  const [{ data: maps }, { data: pins }, { data: regions }, personas] = await Promise.all([
     supabase.from("world_maps").select("*").eq("world_id", worldId).order("sort_index"),
     supabase
       .from("world_map_pins")
@@ -84,12 +84,48 @@ export async function getWorldMaps(
       .eq("world_id", worldId)
       .order("sort_index"),
     supabase.from("world_map_regions").select("*").eq("world_id", worldId).order("sort_index"),
+    getPlacedPersonas(worldId),
   ]);
   return {
     maps: (maps as WorldMapData[]) ?? [],
     pins: (pins as MapPin[]) ?? [],
     regions: (regions as MapRegion[]) ?? [],
+    personas,
   };
+}
+
+/** Un persona posé sur un lieu — juste de quoi le nommer et le montrer. */
+export type PlacedPersona = {
+  id: string;
+  name: string;
+  avatar_url: string | null;
+  map_pin_id: string;
+};
+
+/**
+ * Les personas posés quelque part dans ce monde, toutes cartes confondues.
+ *
+ * Relue EN ENTIER à chaque mouvement plutôt que corrigée ligne à ligne. La
+ * version d'avant suivait chaque écho, relisait le persona déplacé pour en
+ * obtenir le cadre d'avatar, et ne faisait rien quand cette relecture ne
+ * rendait rien — un persona restait alors à sa place d'avant, sans que rien
+ * ne le signale. Une liste entière ne peut pas se désaccorder d'elle-même,
+ * et celle-ci est courte.
+ *
+ * Le cadre d'avatar n'en est pas : il ne se lit pas à la taille où ces
+ * têtes s'affichent, et c'est lui qui imposait la relecture.
+ */
+export async function getPlacedPersonas(worldId: string): Promise<PlacedPersona[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("personas")
+    .select("id, name, avatar_url, map_pin_id")
+    .eq("world_id", worldId)
+    .eq("is_template", false)
+    .is("deleted_at", null)
+    .not("map_pin_id", "is", null)
+    .order("name");
+  return (data as PlacedPersona[]) ?? [];
 }
 
 /**

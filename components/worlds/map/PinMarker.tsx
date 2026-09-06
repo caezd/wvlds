@@ -27,6 +27,7 @@ export const PinMarker = React.memo(function PinMarker({
   imgRef,
   outOfTime = false,
   showLabel = true,
+  presentCount = 0,
   onPinClick,
   onDelete,
   onMoved,
@@ -39,6 +40,8 @@ export const PinMarker = React.memo(function PinMarker({
   outOfTime?: boolean;
   /** Son nom recouvrirait celui d'un voisin : on le tait — voir `labels.ts`. */
   showLabel?: boolean;
+  /** Combien de personas s'y trouvent — voir migration 154. */
+  presentCount?: number;
   onPinClick: (pin: MapPinType) => void;
   onDelete: (pin: MapPinType) => void;
   onMoved: (pin: MapPinType, x: number, y: number) => void;
@@ -176,6 +179,19 @@ export const PinMarker = React.memo(function PinMarker({
           className="pointer-events-none absolute -bottom-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-background text-foreground shadow"
         >
           <Layers className="h-2.5 w-2.5" />
+        </span>
+      )}
+
+      {/* Combien de monde il y a ici.
+          Un compte, et non les têtes : la carte porte déjà le nom de chaque
+          lieu, et une pile d'avatars par-dessus la rendait illisible. Qui est
+          là précisément se lit dans la fiche, où la place ne manque pas. */}
+      {presentCount > 0 && !isDragging && (
+        <span
+          aria-label={t("peopleHere", { count: presentCount })}
+          className="pointer-events-none absolute left-full top-1/2 ml-1 flex h-4 min-w-4 -translate-y-1/2 items-center justify-center rounded-full bg-foreground px-1 text-[10px] font-semibold leading-none text-background ring-2 ring-background"
+        >
+          {presentCount}
         </span>
       )}
 

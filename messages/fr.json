@@ -1394,7 +1394,9 @@
     "fileTooLarge": "Fichier trop volumineux (max {max} Mo).",
     "imageFormats": "Formats acceptés : JPEG, PNG, GIF ou WebP.",
     "place": "Lieu",
-    "placeEra": "Époque"
+    "placeEra": "Époque",
+    "whoIsHere": "Qui est ici",
+    "peopleHere": "{count} sur place"
   },
   "iconPicker": {
     "chooseIcon": "Choisir une icône",

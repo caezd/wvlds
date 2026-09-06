@@ -170,3 +170,18 @@ describe("PinMarker — un nom qui en gênerait un autre", () => {
     expect(onPinClick).toHaveBeenCalled();
   });
 });
+
+describe("PinMarker — combien de monde il y a ici", () => {
+  it("compte les présents plutôt que d'empiler leurs têtes", () => {
+    // La carte porte déjà le nom de chaque lieu : des avatars par-dessus la
+    // rendaient illisible.
+    monter({ presentCount: 3 });
+
+    expect(screen.getByLabelText("3 sur place")).toHaveTextContent("3");
+  });
+
+  it("ne montre rien pour un lieu désert", () => {
+    monter();
+    expect(screen.queryByText("0")).toBeNull();
+  });
+});

@@ -1394,7 +1394,9 @@
     "fileTooLarge": "File too large (max {max} MB).",
     "imageFormats": "Accepted formats: JPEG, PNG, GIF or WebP.",
     "place": "Place",
-    "placeEra": "Era"
+    "placeEra": "Era",
+    "whoIsHere": "Who is here",
+    "peopleHere": "{count} here"
   },
   "iconPicker": {
     "chooseIcon": "Choose an icon",

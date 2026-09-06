@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import { WorldMap } from "@/components/worlds/map/WorldMap";
 import { deleteMapPin, updateWorldMap } from "@/app/actions/worldMap";
 import { MEDIA } from "@/hooks/useMediaQuery";
-import { makeMap, makePin, makeRegion } from "./fixtures";
+import { makeMap, makePin, makePlacedPersona, makeRegion } from "./fixtures";
 
 // ──────────────────────────────────────────────────────────────────────────
 // Trois promesses de la carte, chacune tenue en défaut avant ce fichier :
@@ -24,12 +24,14 @@ import { makeMap, makePin, makeRegion } from "./fixtures";
 vi.mock("@/lib/supabase/client", () => ({ createClient: vi.fn() }));
 
 const getWorldMaps = vi.hoisted(() => vi.fn());
+const getPlacedPersonas = vi.hoisted(() => vi.fn(async () => []));
 const createMapRegion = vi.hoisted(() => vi.fn());
 const updateMapRegion = vi.hoisted(() => vi.fn(async () => {}));
 const deleteMapRegion = vi.hoisted(() => vi.fn(async () => {}));
 vi.mock("@/app/actions/worldMap", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/app/actions/worldMap")>()),
   getWorldMaps,
+  getPlacedPersonas,
   createMapRegion,
   updateMapRegion,
   deleteMapRegion,
@@ -80,6 +82,7 @@ type CarteInitiale = {
   maps: ReturnType<typeof makeMap>[];
   pins: ReturnType<typeof makePin>[];
   regions?: ReturnType<typeof makeRegion>[];
+  personas?: ReturnType<typeof makePlacedPersona>[];
 } | null;
 
 function monter(
@@ -94,7 +97,7 @@ function monter(
     <WorldMap
       worldId={worldId}
       canEdit
-      initialMap={initialMap ? { regions: [], ...initialMap } : initialMap}
+      initialMap={initialMap ? { regions: [], personas: [], ...initialMap } : initialMap}
       {...adresse}
     />
   );
@@ -104,7 +107,7 @@ function monter(
     /** Rejoue le rendu avec un autre monde, comme une navigation client. */
     changerDeMonde: (id: string, carte: CarteInitiale) =>
       rerender(
-        <WorldMap worldId={id} canEdit initialMap={carte ? { regions: [], ...carte } : carte} />,
+        <WorldMap worldId={id} canEdit initialMap={carte ? { regions: [], personas: [], ...carte } : carte} />,
       ),
   };
 }
@@ -132,7 +135,7 @@ describe("WorldMap — données servies par le serveur", () => {
   });
 
   it("charge la carte elle-même quand l'onglet s'ouvre côté client", async () => {
-    getWorldMaps.mockResolvedValue({ maps: [makeMap()], pins: [makePin()], regions: [] });
+    getWorldMaps.mockResolvedValue({ maps: [makeMap()], pins: [makePin()], regions: [], personas: [] });
     monter(null);
 
     expect(getWorldMaps).toHaveBeenCalledWith("w1");
@@ -805,7 +808,7 @@ describe("WorldMap — l'époque affichée", () => {
         worldId="w1"
         canEdit
         timelineConfig={CHRONO}
-        initialMap={{ maps: [makeMap()], pins: [RUINE, VILLE, TOUJOURS], regions: [] }}
+        initialMap={{ maps: [makeMap()], pins: [RUINE, VILLE, TOUJOURS], regions: [], personas: [] }}
       />,
     );
   }
@@ -1275,5 +1278,58 @@ describe("WorldMap — la région qui entoure un lieu", () => {
     await userEvent.click(screen.getByRole("button", { name: "Le port" }));
 
     expect(screen.queryByTestId("pin-region")).toBeNull();
+  });
+});
+
+describe("WorldMap — qui se trouve où", () => {
+  beforeEach(() => { simulerMiseEnPage(); simulerGrandEcran(); });
+  afterEach(() => { restaurerMiseEnPage(); restaurerEcran(); });
+
+  it("compte les présents sur le marqueur du lieu", () => {
+    monter({
+      maps: [makeMap()],
+      pins: [makePin()],
+      personas: [makePlacedPersona({ id: "a" }), makePlacedPersona({ id: "b", name: "Ifyr" })],
+    });
+
+    expect(screen.getByLabelText("2 sur place")).toBeInTheDocument();
+  });
+
+  it("relit la liste entière au moindre mouvement", async () => {
+    // La version d'avant corrigeait ligne à ligne et relisait le persona
+    // déplacé ; quand cette relecture ne rendait rien, il restait à sa place
+    // d'avant sans que rien ne le signale.
+    getPlacedPersonas.mockResolvedValue([
+      makePlacedPersona({ id: "a" }),
+      makePlacedPersona({ id: "b", name: "Ifyr" }),
+    ] as never);
+    const { mock } = monter({ maps: [makeMap()], pins: [makePin()] });
+
+    act(() => {
+      mock.channelNamed(CANAL)?.emit(
+        (h) => h.type === "postgres_changes" && (h.config as { table?: string }).table === "personas",
+        { eventType: "UPDATE", new: { id: "a" } },
+      );
+    });
+
+    await waitFor(() => expect(screen.getByLabelText("2 sur place")).toBeInTheDocument());
+    expect(getPlacedPersonas).toHaveBeenCalledWith("w1");
+  });
+
+  it("ne relit qu'une fois pour une rafale d'échos", async () => {
+    // Déplacer un persona d'un lieu à l'autre en produit plusieurs.
+    const { mock } = monter({ maps: [makeMap()], pins: [makePin()] });
+    getPlacedPersonas.mockClear();
+
+    act(() => {
+      for (let i = 0; i < 3; i++) {
+        mock.channelNamed(CANAL)?.emit(
+          (h) => h.type === "postgres_changes" && (h.config as { table?: string }).table === "personas",
+          { eventType: "UPDATE", new: { id: "a" } },
+        );
+      }
+    });
+
+    await waitFor(() => expect(getPlacedPersonas).toHaveBeenCalledTimes(1));
   });
 });
