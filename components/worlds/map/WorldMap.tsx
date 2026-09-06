@@ -47,7 +47,7 @@ import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { MAP_PANEL_ID, MapTabs, mapTabId } from "./MapTabs";
 import { MapPlacesDrawer, MapPlacesPanel } from "./MapPlacesPanel";
 import { PinMarker } from "./PinMarker";
-import { PinPopover } from "./PinPopover";
+import { PinDetail } from "./PinDetail";
 import { ScaleCalibrator } from "./ScaleCalibrator";
 import { RegionLayer } from "./RegionLayer";
 import { RegionPanel } from "./RegionPanel";
@@ -57,8 +57,7 @@ import { type MapScale } from "./scale";
 import type { Point } from "./zoom";
 import { isWithinTimeline } from "@/lib/worldTimeline";
 import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
-import { FLECHE, calcPopoverPos, pinAnchor } from "./popoverPosition";
-import type { PinPopoverPos, PendingPin, PinRoom, WikiPageOption } from "./types";
+import type { PendingPin, PinRoom, WikiPageOption } from "./types";
 import { ERR_NON_AUTHENTIFIE } from "@/lib/actionErrors";
 
 /** Cartes et épingles résolues côté serveur, quand l'onglet est ouvert d'emblée. */
@@ -175,12 +174,10 @@ export function WorldMap({
   const grandEcran = useMediaQuery(MEDIA.lg);
 
   const [selectedPin, setSelectedPin] = React.useState<MapPinType | null>(null);
-  const [popoverPos, setPopoverPos] = React.useState<PinPopoverPos | null>(null);
   const [pendingPin, setPendingPin] = React.useState<PendingPin | null>(null);
   const [creatingPin, setCreatingPin] = React.useState(false);
 
   const mapFileInputRef = React.useRef<HTMLInputElement>(null);
-  const popoverPanelRef = React.useRef<HTMLDivElement | null>(null);
 
   // Une carte disparue (supprimée ailleurs) laisserait l'onglet actif dans le
   // vide : on retombe alors sur la première.
@@ -222,92 +219,12 @@ export function WorldMap({
     // plat, et remplacer l'image d'une carte aussi.
     viewKey: `${activeMap?.id ?? ""}:${activeMap?.image_url ?? ""}`,
     idleCursor: isEditMode ? "crosshair" : "grab",
-    onPaint: () => repositionPopoverPanel(),
-    onSettle: (tr) => { syncPopoverPos(); setViewScale(tr.scale); },
+    onSettle: (tr) => setViewScale(tr.scale),
   });
   const { imageRef, baseSize, centerOnPoint } = viewport;
 
-  /** Position à l'écran du panneau d'une épingle, ancrée sur l'épingle elle-même. */
-  const popoverPosFor = React.useCallback((pin: MapPinType): PinPopoverPos | null => {
-    const img = imageRef.current;
-    if (!img) return null;
-    // Le rectangle mesuré tient déjà compte de la transformation du parent.
-    const ancre = pinAnchor(img.getBoundingClientRect(), pin);
-    // Hauteur réelle du panneau dès qu'il est monté : un panneau sans bannière
-    // ni description fait la moitié de la hauteur supposée, et se poserait
-    // loin au-dessus de son épingle.
-    const hauteur = popoverPanelRef.current?.offsetHeight || undefined;
-    return calcPopoverPos(ancre.x, ancre.y, undefined, hauteur);
-  }, [imageRef]);
 
-  /**
-   * Replace le panneau ouvert sur le DOM, dans la même image que la carte.
-   *
-   * Il était posé une fois pour toutes à l'endroit du clic, et le moindre
-   * déplacement de la carte le laissait en plan, désigner un lieu qui n'était
-   * plus là.
-   */
-  function repositionPopoverPanel() {
-    const panel = popoverPanelRef.current;
-    const pin = selectedPinRef.current;
-    if (!panel || !pin) return;
-    const pos = popoverPosFor(pin);
-    if (!pos) return;
-    panel.style.left = `${pos.left}px`;
-    panel.style.top = `${pos.top}px`;
-    const caret = panel.querySelector<HTMLElement>("[data-pin-caret]");
-    if (caret) {
-      caret.style.left = `${pos.arrowLeft - FLECHE / 2}px`;
-      caret.dataset.placement = pos.placement;
-    }
-  }
 
-  /**
-   * Recopie dans l'état React la position que le geste vient d'écrire sur le
-   * DOM. Sans ce rattrapage, le premier rendu venu — un survol, une mise à jour
-   * temps réel — replacerait le panneau là où il était au début du geste.
-   */
-  const popoverSyncRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-  const syncPopoverPos = React.useCallback(() => {
-    if (popoverSyncRef.current) clearTimeout(popoverSyncRef.current);
-    popoverSyncRef.current = setTimeout(() => {
-      const pin = selectedPinRef.current;
-      if (!pin) return;
-      const pos = popoverPosFor(pin);
-      if (pos) setPopoverPos(pos);
-    }, 120);
-  }, [popoverPosFor]);
-
-  React.useEffect(() => () => {
-    if (popoverSyncRef.current) {
-      clearTimeout(popoverSyncRef.current);
-      popoverSyncRef.current = null;
-    }
-  }, []);
-
-  /**
-   * Le panneau se replace dès que sa hauteur change.
-   *
-   * Sa position DÉPEND de sa hauteur — il se pose au-dessus de son épingle
-   * quand la place manque en dessous. Or son contenu peut grandir après
-   * l'ouverture : une arrivée en temps réel, une image, un persona qu'on
-   * vient de poser. Le préchargement plus haut règle le cas courant ; ceci
-   * rattrape tous les autres, y compris la toute première mesure — un
-   * `ResizeObserver` rend une entrée dès qu'il observe.
-   */
-  React.useEffect(() => {
-    const panel = popoverPanelRef.current;
-    if (!selectedPin || !panel || typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver(() => {
-      repositionPopoverPanel();
-      syncPopoverPos();
-    });
-    observer.observe(panel);
-    return () => observer.disconnect();
-    // `repositionPopoverPanel` est recréée à chaque rendu : la mettre en
-    // dépendance rebrancherait l'observation aussi souvent, pour rien.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedPin, syncPopoverPos]);
 
   // ── Chargement initial ────────────────────────────────────────
   React.useEffect(() => {
@@ -486,7 +403,6 @@ export function WorldMap({
   const closePopover = React.useCallback((refocusPin = false) => {
     const id = selectedPinRef.current?.id;
     setSelectedPin(null);
-    setPopoverPos(null);
     if (id) writeUrl(activeMapRef.current?.id ?? null, null, "replace");
     // Fermé au clavier, le panneau renverrait sinon le focus au début du
     // document, et le lieu que l'on venait de lire serait à retrouver.
@@ -500,10 +416,11 @@ export function WorldMap({
   const openPopover = React.useCallback((pin: MapPinType, writeHistory = true) => {
     loadPopoverData();
     setSelectedPin(pin);
-    setPopoverPos(popoverPosFor(pin));
+    // La fiche vit dans la colonne : l'ouvrir, c'est ouvrir la colonne.
+    setPlacesOpen(true);
     setPendingPin(null);
     if (writeHistory) writeUrl(pin.map_id, pin.id, "replace");
-  }, [loadPopoverData, popoverPosFor, writeUrl]);
+  }, [loadPopoverData, writeUrl]);
 
   const selectMap = React.useCallback((mapId: string | null, mode: "push" | "replace" = "push") => {
     setActiveMapId(mapId);
@@ -554,22 +471,6 @@ export function WorldMap({
     return () => document.removeEventListener("keydown", onKeyDown);
   });
 
-  // Le panneau vient d'apparaître : sa hauteur réelle n'était pas connue quand
-  // on l'a placé. On le repositionne avant la peinture — un effet de mise en
-  // page, donc sans le voir sauter.
-  React.useLayoutEffect(() => {
-    const pin = selectedPinRef.current;
-    if (!pin || !popoverPanelRef.current) return;
-    const pos = popoverPosFor(pin);
-    if (!pos) return;
-    setPopoverPos((prev) =>
-      prev && prev.top === pos.top && prev.left === pos.left && prev.placement === pos.placement
-        ? prev
-        : pos,
-    );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedPin?.id]);
-
   // ── Aller à un lieu ───────────────────────────────────────────
   /**
    * Va au lieu demandé — depuis la liste, ou depuis l'adresse.
@@ -588,11 +489,11 @@ export function WorldMap({
       return;
     }
     centerOnPoint({ x: pin.x, y: pin.y });
+    // La colonne — le tiroir, sur un écran étroit — passe de la liste à la
+    // fiche du lieu. La refermer reviendrait à cacher ce qu'on vient de
+    // demander à voir.
     openPopover(pin);
-    // Le tiroir recouvre la carte : le refermer est le seul moyen de voir le
-    // lieu qu'on vient de choisir.
-    if (!grandEcran) setPlacesOpen(false);
-  }, [centerOnPoint, closePopover, grandEcran, openPopover, writeUrl]);
+  }, [centerOnPoint, closePopover, openPopover, writeUrl]);
 
   React.useEffect(() => {
     const attendu = pendingFocusRef.current;
@@ -643,7 +544,6 @@ export function WorldMap({
     setPins(initialMap?.pins ?? []);
     setLoading(!initialMap);
     setSelectedPin(null);
-    setPopoverPos(null);
     setPendingPin(null);
     setEditMode(false);
     setWikiPages([]);
@@ -976,12 +876,9 @@ export function WorldMap({
     // Optimiste : mise à jour locale immédiate
     const updated = { ...pin, x, y };
     setPins((prev) => prev.map((p) => (p.id === pin.id ? updated : p)));
-    if (selectedPinRef.current?.id === pin.id) {
-      setSelectedPin(updated);
-      // Le panneau suit l'épingle qu'on vient de déplacer : le marqueur avale
-      // ses propres événements de pointeur, la carte n'a donc rien vu passer.
-      syncPopoverPos();
-    }
+    // La fiche montre le lieu déplacé : elle vit dans la colonne, à sa
+    // place, et n'a plus à suivre l'épingle.
+    if (selectedPinRef.current?.id === pin.id) setSelectedPin(updated);
     try {
       await updateMapPin(pin.id, { x, y });
     } catch {
@@ -989,7 +886,7 @@ export function WorldMap({
       // Rollback
       setPins((prev) => prev.map((p) => (p.id === pin.id ? pin : p)));
     }
-  }, [syncPopoverPos]);
+  }, []);
 
   /**
    * Pose un de mes personas ici — ou l'en fait partir. Optimiste : la tête
@@ -1063,6 +960,44 @@ export function WorldMap({
       </div>
     );
   }
+
+  /**
+   * Refermer la colonne referme aussi la fiche qu'elle montrait.
+   *
+   * Sans cela, la rouvrir aurait rendu le lieu d'avant plutôt que la liste,
+   * et l'adresse aurait gardé un lieu que plus personne ne voyait.
+   */
+  function fermerLaColonne() {
+    setPlacesOpen(false);
+    closePopover();
+  }
+
+  /**
+   * La fiche du lieu ouvert — elle vit dans la colonne, avec la liste des
+   * lieux, plutôt que posée sur la carte.
+   */
+  const ficheDuLieu = selectedPin ? (
+    <PinDetail
+      key={selectedPin.id}
+      pin={selectedPin}
+      wikiPages={wikiPages}
+      rooms={pinRooms.filter((r) => r.map_pin_id === selectedPin.id)}
+      maps={maps}
+      personasHere={personasByPin.get(selectedPin.id) ?? NOBODY}
+      myPersonas={myPersonas}
+      timelineConfig={timelineConfig}
+      isEditMode={isEditMode}
+      canPost={canPost}
+      worldId={worldId}
+      onUpdated={(updated) => {
+        setPins((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+        setSelectedPin(updated);
+      }}
+      onDelete={() => void handleDeletePin(selectedPin)}
+      onOpenMap={(mapId) => selectMap(mapId)}
+      onPlacePersona={(personaId, pinId) => void handlePlacePersona(personaId, pinId)}
+    />
+  ) : null;
 
   const { imageSrc } = viewport;
 
@@ -1164,7 +1099,9 @@ export function WorldMap({
             type="button"
             aria-label={placesOpen ? t("hidePlaces") : t("showPlaces")}
             aria-pressed={placesOpen}
-            onClick={(e) => { e.stopPropagation(); setPlacesOpen((v) => !v); }}
+            // Fermer par ce bouton ou par la croix de la colonne doit faire
+            // la même chose : refermer la fiche avec elle.
+            onClick={(e) => { e.stopPropagation(); if (placesOpen) fermerLaColonne(); else setPlacesOpen(true); }}
             className={cn(
               "flex items-center gap-1.5 rounded-md px-2 py-1 text-xs transition-colors",
               placesOpen
@@ -1226,7 +1163,9 @@ export function WorldMap({
             activeMapId={activeMap?.id ?? null}
             selectedPinId={selectedPin?.id ?? null}
             onSelect={focusPin}
-            onClose={() => setPlacesOpen(false)}
+            onClose={fermerLaColonne}
+            detail={ficheDuLieu}
+            onCloseDetail={() => closePopover(true)}
           />
         )}
         {imageSrc && !grandEcran && (
@@ -1237,7 +1176,9 @@ export function WorldMap({
             activeMapId={activeMap?.id ?? null}
             selectedPinId={selectedPin?.id ?? null}
             onSelect={focusPin}
-            onClose={() => setPlacesOpen(false)}
+            onClose={fermerLaColonne}
+            detail={ficheDuLieu}
+            onCloseDetail={() => closePopover(true)}
           />
         )}
 
@@ -1509,31 +1450,6 @@ export function WorldMap({
         onConfirm={() => void confirmDeletePin()}
       />
 
-      {/* ── Popover pin sélectionné ─────────────────────────────── */}
-      {selectedPin && popoverPos && (
-        <PinPopover
-          key={selectedPin.id}
-          pin={selectedPin}
-          pos={popoverPos}
-          panelRef={popoverPanelRef}
-          wikiPages={wikiPages}
-          rooms={pinRooms.filter((r) => r.map_pin_id === selectedPin.id)}
-          maps={maps}
-          personasHere={personasByPin.get(selectedPin.id) ?? NOBODY}
-          myPersonas={myPersonas}
-          timelineConfig={timelineConfig}
-          isEditMode={isEditMode}
-          canPost={canPost}
-          worldId={worldId}
-          onUpdated={(updated) => {
-            setPins((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
-            setSelectedPin(updated);
-          }}
-          onDelete={() => void handleDeletePin(selectedPin)}
-          onOpenMap={(mapId) => selectMap(mapId)}
-          onPlacePersona={(personaId, pinId) => void handlePlacePersona(personaId, pinId)}
-        />
-      )}
 
       {activeMap && (
         <DeleteConfirmDialog

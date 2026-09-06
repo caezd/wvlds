@@ -48,15 +48,9 @@ vi.mock("@/app/actions/worldMap", async (importOriginal) => ({
 
 // Le panneau d'un lieu tire tout l'éditeur de paragraphe et le rendu Markdown :
 // ce qui se vérifie ici est ce que la CARTE fait, pas ce qu'il affiche.
-vi.mock("@/components/worlds/map/PinPopover", () => ({
-  // `panelRef` est attaché : c'est par lui que la carte mesure le panneau et
-  // le replace quand sa hauteur change.
-  PinPopover: ({ pin, panelRef, onDelete }: {
-    pin: { title: string };
-    panelRef?: React.RefObject<HTMLDivElement | null>;
-    onDelete: () => void;
-  }) => (
-    <div ref={panelRef} data-testid="pin-popover">
+vi.mock("@/components/worlds/map/PinDetail", () => ({
+  PinDetail: ({ pin, onDelete }: { pin: { title: string }; onDelete: () => void }) => (
+    <div data-testid="pin-popover">
       {pin.title}
       <button type="button" onClick={onDelete}>Supprimer depuis le panneau</button>
     </div>
@@ -176,6 +170,11 @@ describe("WorldMap — temps réel", () => {
 });
 
 describe("WorldMap — pages du wiki", () => {
+  // Deux lieux ouverts l'un après l'autre : il faut la colonne, car le tiroir
+  // est modal et met la carte hors de portée tant qu'il est ouvert.
+  beforeEach(simulerGrandEcran);
+  afterEach(restaurerEcran);
+
   it("ne les lit qu'une fois, quel que soit le nombre de lieux ouverts", async () => {
     const { mock } = monter({
       maps: [makeMap()],
@@ -644,9 +643,9 @@ describe("WorldMap — la liste des lieux, en tiroir", () => {
     expect(screen.queryByRole("complementary", { name: "Lieux" })).toBeNull();
   });
 
-  it("se referme dès qu'on choisit un lieu", async () => {
-    // Il recouvre la carte : le garder ouvert cacherait le lieu qu'on vient de
-    // demander à voir.
+  it("passe de la liste à la fiche du lieu choisi", async () => {
+    // Le tiroir EST la colonne, sur un écran étroit : la fiche y prend la
+    // place de la liste, au lieu de le faire disparaître.
     monter(DEUX_CARTES);
     await userEvent.click(screen.getByRole("button", { name: "Afficher les lieux" }));
 
@@ -654,7 +653,7 @@ describe("WorldMap — la liste des lieux, en tiroir", () => {
     await userEvent.click(within(tiroir).getByRole("button", { name: /Le port/ }));
 
     expect(await screen.findByTestId("pin-popover")).toHaveTextContent("Le port");
-    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Lieux" })).toBeNull());
+    expect(screen.getByRole("dialog", { name: "Lieu" })).toBeInTheDocument();
   });
 });
 
@@ -1152,41 +1151,6 @@ describe("WorldMap — le clic n'est pas avalé par le déplacement", () => {
   });
 });
 
-describe("WorldMap — le panneau d'un lieu suit sa propre taille", () => {
-  beforeEach(simulerMiseEnPage);
-  afterEach(restaurerMiseEnPage);
-
-  // L'épingle tombe bas dans la fenêtre : le panneau se pose alors AU-DESSUS
-  // d'elle, et sa position dépend donc de sa hauteur.
-  beforeEach(() => {
-    vi.spyOn(HTMLImageElement.prototype, "getBoundingClientRect").mockReturnValue({
-      left: 0, top: 400, width: 1000, height: 600, right: 1000, bottom: 1000, x: 0, y: 400, toJSON() {},
-    } as DOMRect);
-  });
-  afterEach(() => { vi.restoreAllMocks(); });
-
-  function poserLaHauteur(el: HTMLElement, hauteur: number) {
-    Object.defineProperty(el, "offsetHeight", { configurable: true, value: hauteur });
-    act(() => { redimensionnements.forEach((r) => r()); });
-  }
-
-  it("se replace quand son contenu le fait grandir", async () => {
-    // Les pages du wiki et les personas arrivent du serveur : le panneau
-    // grandissait sous les yeux, en gardant la position calculée pour sa
-    // hauteur d'avant.
-    monter({ maps: [makeMap()], pins: [makePin()] });
-    await userEvent.click(screen.getByRole("button", { name: "Le port" }));
-    const panneau = screen.getByTestId("pin-popover");
-
-    poserLaHauteur(panneau, 120);
-    const court = panneau.style.top;
-    expect(court).not.toBe("");
-
-    poserLaHauteur(panneau, 400);
-
-    expect(panneau.style.top).not.toBe(court);
-  });
-});
 
 describe("WorldMap — supprimer un lieu", () => {
   it("demande confirmation avant d'effacer, depuis la croix du marqueur", async () => {
@@ -1290,5 +1254,55 @@ describe("WorldMap — le poids d'une image de carte", () => {
     choisir(59);
 
     await waitFor(() => expect(envoiDe(mock)).toHaveBeenCalled());
+  });
+});
+
+describe("WorldMap — un lieu s'ouvre dans la colonne", () => {
+  const parametres = () => new URLSearchParams(window.location.search);
+
+  beforeEach(() => {
+    simulerMiseEnPage();
+    simulerGrandEcran();
+    window.history.replaceState(null, "", "/w/w1?view=map");
+  });
+  afterEach(() => { restaurerMiseEnPage(); restaurerEcran(); });
+
+  it("ouvre la colonne sur la fiche, sans rien poser sur la carte", async () => {
+    // La fiche flottait sur la carte : elle en masquait une partie, et sa
+    // position se calculait à partir de sa propre hauteur.
+    monter({ maps: [makeMap()], pins: [makePin()] });
+    expect(screen.queryByTestId("pin-popover")).toBeNull();
+
+    await userEvent.click(screen.getByRole("button", { name: "Le port" }));
+
+    const colonne = screen.getByRole("complementary", { name: "Lieux" });
+    expect(within(colonne).getByTestId("pin-popover")).toHaveTextContent("Le port");
+  });
+
+  it("revient à la liste sans refermer la colonne", async () => {
+    // Fermer la fiche et fermer la colonne sont deux gestes : les confondre
+    // obligeait à la rouvrir pour choisir un autre lieu.
+    monter({ maps: [makeMap()], pins: [makePin(), makePin({ id: "pin2", title: "La tour" })] });
+    await userEvent.click(screen.getByRole("button", { name: "Le port" }));
+
+    const colonne = screen.getByRole("complementary", { name: "Lieux" });
+    await userEvent.click(within(colonne).getByRole("button", { name: "Lieux" }));
+
+    expect(screen.queryByTestId("pin-popover")).toBeNull();
+    expect(within(colonne).getByRole("button", { name: /La tour/ })).toBeInTheDocument();
+    expect(parametres().get("pin")).toBeNull();
+  });
+
+  it("refermer la colonne referme la fiche", async () => {
+    // Sinon la rouvrir rendrait le lieu d'avant, et l'adresse garderait un
+    // lieu que personne ne voit.
+    monter({ maps: [makeMap()], pins: [makePin()] });
+    await userEvent.click(screen.getByRole("button", { name: "Le port" }));
+
+    await userEvent.click(screen.getByRole("button", { name: "Masquer les lieux" }));
+    await userEvent.click(screen.getByRole("button", { name: "Afficher les lieux" }));
+
+    expect(screen.queryByTestId("pin-popover")).toBeNull();
+    expect(parametres().get("pin")).toBeNull();
   });
 });

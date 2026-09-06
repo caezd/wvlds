@@ -23,9 +23,8 @@ import { formatTimelineLabel } from "@/lib/worldTimeline";
 import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
 
 import { cn } from "@/lib/utils";
-import { FLECHE } from "./popoverPosition";
 import { PinVisualDialog } from "./PinVisualDialog";
-import type { PinPopoverPos, PinRoom, WikiPageOption } from "./types";
+import type { PinRoom, WikiPageOption } from "./types";
 import { ERR_NON_AUTHENTIFIE } from "@/lib/actionErrors";
 
 // Panneau flottant (position: fixed), ancré sur l'épingle et non sur le clic :
@@ -34,10 +33,8 @@ import { ERR_NON_AUTHENTIFIE } from "@/lib/actionErrors";
  *  pas une carte : `toWebP` la ramène à 1200 px. */
 const MAX_PIN_BANNER_MB = 5;
 
-export function PinPopover({
+export function PinDetail({
   pin,
-  pos,
-  panelRef,
   wikiPages,
   rooms,
   maps,
@@ -53,10 +50,8 @@ export function PinPopover({
   onDelete,
 }: {
   pin: MapPinType;
-  pos: PinPopoverPos;
   /** Le panneau suit son épingle : `WorldMap` écrit sa position pendant les
    *  gestes, sans repasser par un rendu React. */
-  panelRef?: React.RefObject<HTMLDivElement | null>;
   /** Pages du wiki du monde, chargées une seule fois par `WorldMap`. */
   wikiPages: WikiPageOption[];
   /** Salons rattachés à CE lieu — le filtrage est fait par `WorldMap`. */
@@ -208,33 +203,9 @@ export function PinPopover({
         </div>
       )}
 
-      <div
-        ref={panelRef}
-        // Même calcul que `largeurPanneau` : 340 px déborderaient d'un
-        // téléphone étroit, et le placement compte sur cette largeur-là.
-        className="fixed z-50 w-[min(340px,calc(100vw-24px))]"
-        style={{ left: pos.left, top: pos.top }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Flèche vers l'épingle.
-            Posée DERRIÈRE la carte (`-z-10`) : seule sa moitié saillante se
-            voit, l'autre disparaît sous le fond opaque du panneau, et les deux
-            bordures visibles prolongent celle de la carte sans la barrer.
-            `data-placement` plutôt qu'une classe calculée : `paint()` la fait
-            basculer pendant les gestes, sans repasser par un rendu React. */}
-        <span
-          aria-hidden
-          data-pin-caret
-          data-placement={pos.placement}
-          style={{ left: pos.arrowLeft - FLECHE / 2 }}
-          className={cn(
-            "absolute -z-10 h-3 w-3 rotate-45 border-border bg-background",
-            "data-[placement=above]:-bottom-1.5 data-[placement=above]:border-r data-[placement=above]:border-b",
-            "data-[placement=below]:-top-1.5 data-[placement=below]:border-l data-[placement=below]:border-t",
-          )}
-        />
-
-        <div className="overflow-hidden rounded-xl border border-border bg-background shadow-2xl">
+      {/* La fiche remplit la colonne qui l'accueille : elle n'a plus ni
+          position à calculer, ni hauteur à tenir, ni flèche à faire pointer. */}
+      <div data-pin-detail className="flex min-h-0 flex-1 flex-col overflow-y-auto">
         {/* ── Bannière ─────────────────────────────────── */}
         <div className="relative h-32 w-full overflow-hidden bg-gradient-to-br from-primary/20 to-primary/5">
           {bannerSrc ? (
@@ -242,7 +213,7 @@ export function PinPopover({
               src={bannerSrc}
               alt=""
               fill
-              sizes="340px"
+              sizes="320px"
               className="object-cover"
             />
           ) : isEditMode ? (
@@ -572,7 +543,6 @@ export function PinPopover({
               )}
             </div>
           )}
-        </div>
         </div>
       </div>
     </>

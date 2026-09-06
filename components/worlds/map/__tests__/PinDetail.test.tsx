@@ -4,9 +4,9 @@ import userEvent from "@testing-library/user-event";
 
 import { createSupabaseMock } from "@/test/supabaseMock";
 import { createClient } from "@/lib/supabase/client";
-import { PinPopover } from "@/components/worlds/map/PinPopover";
+import { PinDetail } from "@/components/worlds/map/PinDetail";
 import type { MapPersona, MapPin } from "@/app/actions/worldMap";
-import type { PinPopoverPos, PinRoom } from "@/components/worlds/map/types";
+import type { PinRoom } from "@/components/worlds/map/types";
 import { makeMap, makeMapPersona, makePin, WIKI_PAGES } from "./fixtures";
 
 /** Deux cartes : celle du lieu, et celle qu'il peut ouvrir. */
@@ -40,7 +40,6 @@ vi.mock("@/components/chatrooms/composer/ParagraphBlockEditor", () => ({
 function monter(
   p: MapPin,
   isEditMode = false,
-  pos: PinPopoverPos = { left: 100, top: 100, placement: "above", arrowLeft: 170 },
   rooms: PinRoom[] = [],
   canPost = false,
   presence: { personasHere?: MapPersona[]; myPersonas?: MapPersona[] } = {},
@@ -51,9 +50,8 @@ function monter(
   const onOpenMap = vi.fn();
   const onPlacePersona = vi.fn();
   render(
-    <PinPopover
+    <PinDetail
       pin={p}
-      pos={pos}
       wikiPages={WIKI_PAGES}
       rooms={rooms}
       maps={CARTES}
@@ -76,7 +74,7 @@ beforeEach(() => {
   updateMapPin.mockClear();
 });
 
-describe("PinPopover — page du wiki", () => {
+describe("PinDetail — page du wiki", () => {
   it("ouvre la page liée depuis l'épingle", async () => {
     monter(makePin({ wiki_page_id: "p1" }));
 
@@ -106,27 +104,7 @@ describe("PinPopover — page du wiki", () => {
   });
 });
 
-describe("PinPopover — flèche vers l'épingle", () => {
-  it("pointe vers le bas quand le panneau est au-dessus", () => {
-    monter(makePin());
-
-    const fleche = document.querySelector("[data-pin-caret]") as HTMLElement;
-    expect(fleche).not.toBeNull();
-    expect(fleche.dataset.placement).toBe("above");
-    // Centrée sur l'abscisse rendue par `calcPopoverPos`, à un demi-côté près.
-    expect(fleche.style.left).toBe("164px");
-  });
-
-  it("pointe vers le haut quand le panneau est en dessous", () => {
-    monter(makePin(), false, { left: 100, top: 400, placement: "below", arrowLeft: 40 });
-
-    const fleche = document.querySelector("[data-pin-caret]") as HTMLElement;
-    expect(fleche.dataset.placement).toBe("below");
-    expect(fleche.style.left).toBe("34px");
-  });
-});
-
-describe("PinPopover — carte liée", () => {
+describe("PinDetail — carte liée", () => {
   it("ouvre la carte que le lieu désigne", async () => {
     const { onOpenMap } = monter(makePin({ target_map_id: "map2" }));
 
@@ -165,7 +143,7 @@ describe("PinPopover — carte liée", () => {
   });
 });
 
-describe("PinPopover — ce qui se joue ici", () => {
+describe("PinDetail — ce qui se joue ici", () => {
   const SALONS: PinRoom[] = [
     { id: "c1", title: "La taverne du port", name: null, map_pin_id: "pin1" },
     { id: "c2", title: null, name: "Les quais", map_pin_id: "pin1" },
@@ -174,14 +152,14 @@ describe("PinPopover — ce qui se joue ici", () => {
   it("liste les salons rattachés au lieu", () => {
     // Le lien existait en base depuis qu'un salon peut se situer sur la carte ;
     // seul le sens carte → salons manquait.
-    monter(makePin(), false, undefined, SALONS);
+    monter(makePin(), false, SALONS);
 
     expect(screen.getByRole("button", { name: /La taverne du port/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Les quais/ })).toBeInTheDocument();
   });
 
   it("ouvre le salon choisi", async () => {
-    monter(makePin(), false, undefined, SALONS);
+    monter(makePin(), false, SALONS);
 
     await userEvent.click(screen.getByRole("button", { name: /La taverne du port/ }));
 
@@ -194,11 +172,11 @@ describe("PinPopover — ce qui se joue ici", () => {
   });
 });
 
-describe("PinPopover — jouer ici", () => {
+describe("PinDetail — jouer ici", () => {
   it("ouvre le composeur d'accueil sur ce lieu", async () => {
     // Le composeur sait situer un salon depuis longtemps ; il ne manquait que
     // le chemin depuis le lieu lui-même.
-    monter(makePin(), false, undefined, [], true);
+    monter(makePin(), false, [], true);
 
     await userEvent.click(screen.getByRole("button", { name: "Jouer ici" }));
 
@@ -211,13 +189,13 @@ describe("PinPopover — jouer ici", () => {
   });
 });
 
-describe("PinPopover — qui est ici", () => {
+describe("PinDetail — qui est ici", () => {
   const KAEL = makeMapPersona({ id: "per1", name: "Kael", map_pin_id: "pin1" });
   const IFYR = makeMapPersona({ id: "per2", name: "Ifyr", user_id: "u2", map_pin_id: "pin1" });
   const ADRIEL = makeMapPersona({ id: "per3", name: "Adriel", map_pin_id: null });
 
   it("nomme ceux qui sont là", () => {
-    monter(makePin(), false, undefined, [], false, { personasHere: [KAEL, IFYR] });
+    monter(makePin(), false, [], false, { personasHere: [KAEL, IFYR] });
 
     expect(screen.getByText("Qui est ici")).toBeInTheDocument();
     expect(screen.getByText("Kael")).toBeInTheDocument();
@@ -227,7 +205,7 @@ describe("PinPopover — qui est ici", () => {
   it("ne laisse partir que les miens", async () => {
     // Le persona d'un autre ne se déplace que par son propriétaire — la RLS le
     // refuserait de toute façon, autant ne pas proposer le bouton.
-    const { onPlacePersona } = monter(makePin(), false, undefined, [], false, {
+    const { onPlacePersona } = monter(makePin(), false, [], false, {
       personasHere: [KAEL, IFYR],
       myPersonas: [KAEL],
     });
@@ -239,7 +217,7 @@ describe("PinPopover — qui est ici", () => {
   });
 
   it("propose d'y poser un de mes personas qui n'y est pas", async () => {
-    const { onPlacePersona } = monter(makePin(), false, undefined, [], false, {
+    const { onPlacePersona } = monter(makePin(), false, [], false, {
       personasHere: [KAEL],
       myPersonas: [KAEL, ADRIEL],
     });
@@ -262,7 +240,7 @@ describe("PinPopover — qui est ici", () => {
 });
 
 
-describe("PinPopover — dans le temps", () => {
+describe("PinDetail — dans le temps", () => {
   const CHRONO = {
     year_label: "An",
     era_name: null,
@@ -274,9 +252,8 @@ describe("PinPopover — dans le temps", () => {
   function monterDate(p: MapPin, isEditMode = false) {
     const onUpdated = vi.fn();
     render(
-      <PinPopover
+      <PinDetail
         pin={p}
-        pos={{ left: 100, top: 100, placement: "above", arrowLeft: 170 }}
         wikiPages={WIKI_PAGES}
         rooms={[]}
         maps={CARTES}
@@ -321,11 +298,11 @@ describe("PinPopover — dans le temps", () => {
   });
 });
 
-describe("PinPopover — la carte du lieu", () => {
+describe("PinDetail — la carte du lieu", () => {
   it("pose « Jouer ici » à côté du nom, sur la bannière", () => {
     // C'est l'action qu'on vient chercher : elle n'a pas à se trouver plus bas
     // que ce qui la nomme.
-    monter(makePin(), false, undefined, [], true);
+    monter(makePin(), false, [], true);
 
     const titre = screen.getByRole("heading", { name: "Le port" });
     const jouer = screen.getByRole("button", { name: "Jouer ici" });

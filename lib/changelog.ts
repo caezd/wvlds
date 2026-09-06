@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Carte",
+    text: "Un lieu s’ouvre désormais dans la colonne, à côté de la carte, au lieu d’une fenêtre posée dessus : la carte reste entière sous les yeux, et la fiche a la place de tout montrer.",
+  },
+  {
+    date: "2026-09",
+    tag: "Carte",
     text: "Une image de carte peut peser jusqu’à 60 Mo : de quoi importer un export en pleine résolution. Les formats acceptés sont nommés d’emblée : JPEG, PNG, GIF ou WebP.",
   },
   {
