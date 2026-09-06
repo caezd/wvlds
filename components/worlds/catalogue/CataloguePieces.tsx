@@ -107,8 +107,8 @@ export function AddForm({
     setSaving(true);
     await onAdd({ name: name.trim(), description, icon, category_id: categoryId });
     setSaving(false);
-    // Le formulaire reste ouvert pour l'objet suivant : c'est la saisie en
-    // série qu'il sert. Le parent le referme quand l'ajout a abouti.
+    // Le formulaire reste ouvert, vidé, pour l'objet suivant : c'est la saisie
+    // en série qu'il sert. On le referme par la croix, ou par Échap.
     setName("");
     setDescription("");
   }

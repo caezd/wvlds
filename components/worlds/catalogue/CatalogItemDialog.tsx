@@ -468,19 +468,3 @@ export function CatalogItemDetail({
     </Dialog>
   );
 }
-
-// ── Suppression d'un objet porté ──────────────────────────────────────────────
-
-/** Icône de corbeille avec le décompte d'usage, pour la ligne du catalogue. */
-export function UsageBadge({ count }: { count: number }) {
-  const t = useTranslations("catalogue");
-  if (count <= 0) return null;
-  return (
-    <span
-      title={t("usageCount", { count })}
-      className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-muted-foreground"
-    >
-      {count}
-    </span>
-  );
-}
