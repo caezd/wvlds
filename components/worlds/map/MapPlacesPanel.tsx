@@ -35,24 +35,38 @@ type PlacesProps = {
  * on remonte à la liste — ce sont deux gestes différents, et les confondre
  * obligeait à rouvrir la colonne pour choisir un autre lieu.
  */
-function ContenuColonne({ detail, onCloseDetail, ...props }: PlacesProps) {
-  const t = useTranslations("map");
+function ContenuColonne({
+  detail,
+  onCloseDetail,
+  avecRetour = true,
+  ...props
+}: PlacesProps & { avecRetour?: boolean }) {
   if (!detail) return <PlacesBody {...props} withClose />;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex shrink-0 items-center gap-1 border-b border-border-soft px-2 py-1.5">
-        <button
-          type="button"
-          onClick={onCloseDetail}
-          className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" />
-          {t("places")}
-        </button>
-      </div>
+      {avecRetour && (
+        <div className="flex shrink-0 items-center gap-1 border-b border-border-soft px-2 py-1.5">
+          <BoutonRetour onClick={onCloseDetail} />
+        </div>
+      )}
       {detail}
     </div>
+  );
+}
+
+/** Le chemin vers la liste, d'où qu'on le pose. */
+function BoutonRetour({ onClick }: { onClick?: () => void }) {
+  const t = useTranslations("map");
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex items-center gap-1.5 rounded-md px-2 py-1 text-sm text-muted-foreground hover:bg-secondary hover:text-foreground"
+    >
+      <ArrowLeft className="h-4 w-4" />
+      {t("places")}
+    </button>
   );
 }
 
@@ -103,12 +117,22 @@ export function MapPlacesDrawer({ open, ...props }: PlacesProps & { open: boolea
     >
       <SideSheetContent width="compact">
         <DrawerHeader className="border-b border-border-soft px-4 py-3">
-          <DrawerTitle>{props.detail ? t("place") : t("places")}</DrawerTitle>
+          {props.detail ? (
+            <>
+              {/* Le retour tient lieu de titre : « Lieu » au-dessus d'un
+                  « ← Lieux » disait deux fois la même chose, sur deux
+                  bandeaux. Le titre reste, pour qui écoute la page. */}
+              <BoutonRetour onClick={props.onCloseDetail} />
+              <DrawerTitle className="sr-only">{t("place")}</DrawerTitle>
+            </>
+          ) : (
+            <DrawerTitle>{t("places")}</DrawerTitle>
+          )}
         </DrawerHeader>
         {/* Le clic ne doit pas remonter jusqu'à la carte, qui referme le
             panneau d'un lieu sur tout clic hors de lui. */}
         <div onClick={(e) => e.stopPropagation()} className="flex min-h-0 flex-1 flex-col">
-          <ContenuColonne {...props} />
+          <ContenuColonne {...props} avecRetour={false} />
         </div>
       </SideSheetContent>
     </Drawer>

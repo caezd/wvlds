@@ -653,7 +653,10 @@ describe("WorldMap — la liste des lieux, en tiroir", () => {
     await userEvent.click(within(tiroir).getByRole("button", { name: /Le port/ }));
 
     expect(await screen.findByTestId("pin-popover")).toHaveTextContent("Le port");
-    expect(screen.getByRole("dialog", { name: "Lieu" })).toBeInTheDocument();
+    const fiche = screen.getByRole("dialog", { name: "Lieu" });
+    // Un seul bandeau : le retour tient lieu de titre, il n'y a pas de
+    // « Lieu » écrit au-dessus d'un « ← Lieux ».
+    expect(within(fiche).getAllByText("Lieux")).toHaveLength(1);
   });
 });
 
