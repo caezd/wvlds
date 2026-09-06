@@ -1400,7 +1400,8 @@
     "mapActions": "Actions for map {label}",
     "fileTooLarge": "File too large (max {max} MB).",
     "imageFormats": "Accepted formats: JPEG, PNG, GIF or WebP.",
-    "place": "Place"
+    "place": "Place",
+    "placeEra": "Era"
   },
   "iconPicker": {
     "chooseIcon": "Choose an icon",

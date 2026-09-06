@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Carte",
+    text: "La fiche d’un lieu dit sur quelle carte et dans quelle région il se trouve, et range ses informations en blocs distincts.",
+  },
+  {
+    date: "2026-09",
+    tag: "Carte",
     text: "Les lieux portent leur nom en permanence sur la carte, au lieu de ne le livrer qu’au survol.",
   },
   {

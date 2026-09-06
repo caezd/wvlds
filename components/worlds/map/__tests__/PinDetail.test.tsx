@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { PinDetail } from "@/components/worlds/map/PinDetail";
 import type { MapPersona, MapPin } from "@/app/actions/worldMap";
 import type { PinRoom } from "@/components/worlds/map/types";
-import { makeMap, makeMapPersona, makePin, WIKI_PAGES } from "./fixtures";
+import { makeMap, makeMapPersona, makePin, makeRegion, WIKI_PAGES } from "./fixtures";
 
 /** Deux cartes : celle du lieu, et celle qu'il peut ouvrir. */
 const CARTES = [makeMap(), makeMap({ id: "map2", label: "Le donjon", sort_index: 1 })];
@@ -357,5 +357,43 @@ describe("PinDetail — la carte du lieu", () => {
 
     expect(screen.queryByRole("heading", { name: "Le port" })).toBeNull();
     expect(screen.getByPlaceholderText("Nom du lieu")).toHaveValue("Le port");
+  });
+});
+
+describe("PinDetail — où se trouve ce lieu", () => {
+  function monterSitue(props: Partial<React.ComponentProps<typeof PinDetail>> = {}) {
+    render(
+      <PinDetail
+        pin={makePin()}
+        wikiPages={WIKI_PAGES}
+        rooms={[]}
+        maps={CARTES}
+        personasHere={[]}
+        myPersonas={[]}
+        onPlacePersona={vi.fn()}
+        isEditMode={false}
+        worldId="w1"
+        onUpdated={vi.fn()}
+        onDelete={vi.fn()}
+        onOpenMap={vi.fn()}
+        {...props}
+      />,
+    );
+  }
+
+  it("nomme la carte et la région qui l'entoure", () => {
+    // La carte le savait — un polygone se referme autour de l'épingle — mais
+    // ne le disait nulle part.
+    monterSitue({ ownMap: makeMap({ label: "Le continent" }), region: makeRegion({ label: "Le royaume" }) });
+
+    expect(screen.getByText("Le continent")).toBeInTheDocument();
+    expect(screen.getByText("Le royaume")).toBeInTheDocument();
+  });
+
+  it("ne montre rien quand le lieu n'est dans aucune région", () => {
+    monterSitue({ ownMap: makeMap({ label: "Le continent" }) });
+
+    expect(screen.getByText("Le continent")).toBeInTheDocument();
+    expect(screen.queryByText("Le royaume")).toBeNull();
   });
 });

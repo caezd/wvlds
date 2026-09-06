@@ -21,6 +21,7 @@ import { AvatarWithFrame } from "@/components/avatars/AvatarWithFrame";
 import { TimelineDateFields } from "@/components/worlds/timeline/TimelineDateFields";
 import { formatTimelineLabel } from "@/lib/worldTimeline";
 import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
+import type { MapRegion } from "@/app/actions/worldMap";
 
 import { cn } from "@/lib/utils";
 import { PinVisualDialog } from "./PinVisualDialog";
@@ -33,6 +34,34 @@ import { ERR_NON_AUTHENTIFIE } from "@/lib/actionErrors";
  *  pas une carte : `toWebP` la ramène à 1200 px. */
 const MAX_PIN_BANNER_MB = 5;
 
+/**
+ * Une carte d'information : un titre discret, et ce qu'il annonce.
+ *
+ * Les sections d'un lieu s'enchaînaient sans limite visible — on lisait une
+ * suite de paragraphes, pas des choses distinctes. Le cadre dit où l'une
+ * s'arrête et où la suivante commence.
+ */
+function Bloc({ titre, children }: { titre: string; children: React.ReactNode }) {
+  return (
+    <section className="flex flex-col gap-1.5 rounded-lg border border-border-soft bg-secondary/30 p-2.5">
+      <h4 className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+        <span aria-hidden className="h-1 w-1 rounded-full bg-muted-foreground/60" />
+        {titre}
+      </h4>
+      {children}
+    </section>
+  );
+}
+
+/** Une étiquette de repère : la carte du lieu, la région qui l'entoure. */
+function Repere({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="flex min-w-0 items-center gap-1 rounded border border-border-soft px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+      {children}
+    </span>
+  );
+}
+
 export function PinDetail({
   pin,
   wikiPages,
@@ -41,6 +70,8 @@ export function PinDetail({
   personasHere,
   myPersonas,
   timelineConfig = null,
+  ownMap = null,
+  region = null,
   isEditMode,
   canPost = false,
   worldId,
@@ -64,6 +95,10 @@ export function PinDetail({
   myPersonas: MapPersona[];
   /** La chronologie du monde, quand il en a une : les lieux prennent des dates. */
   timelineConfig?: WorldTimelineConfig | null;
+  /** La carte à laquelle ce lieu appartient. */
+  ownMap?: WorldMapData | null;
+  /** La région qui le contient, si un polygone se referme autour de lui. */
+  region?: MapRegion | null;
   isEditMode: boolean;
   /** Peut ouvrir un salon : montre « Jouer ici ». */
   canPost?: boolean;
@@ -296,6 +331,26 @@ export function PinDetail({
 
         {/* ── Contenu ──────────────────────────────────── */}
         <div className="p-4 flex flex-col gap-3">
+          {/* Où se trouve ce lieu : sa carte, et la région qui l'entoure.
+              La carte le savait déjà — un polygone se referme autour de
+              l'épingle — mais ne le disait nulle part. */}
+          {!editing && (ownMap || region) && (
+            <div className="flex flex-wrap items-center gap-1">
+              {ownMap && (
+                <Repere>
+                  <MapIcon aria-hidden className="h-3 w-3 shrink-0" />
+                  <span className="truncate">{ownMap.label?.trim() || t("title")}</span>
+                </Repere>
+              )}
+              {region && (
+                <Repere>
+                  <span aria-hidden className="h-2 w-2 shrink-0 rounded-sm" style={{ backgroundColor: region.color }} />
+                  <span className="truncate">{region.label}</span>
+                </Repere>
+              )}
+            </div>
+          )}
+
           {/* Le titre n'est ici qu'en écriture — ailleurs il vit sur la bannière. */}
           {editing && (
             <input
@@ -400,6 +455,7 @@ export function PinDetail({
             </div>
           )}
           {timelineConfig && !editing && (pin.exists_from || pin.exists_until) && (
+            <Bloc titre={t("placeEra")}>
             <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <Clock className="h-3.5 w-3.5 shrink-0" />
               <span className="truncate">
@@ -410,15 +466,13 @@ export function PinDetail({
                     : t("existsTill", { until: formatTimelineLabel(timelineConfig, pin.exists_until!) })}
               </span>
             </p>
+            </Bloc>
           )}
 
           {/* Qui est là — et de quoi y venir. Les miens ont un bouton pour
               repartir ; les autres ne se déplacent que par leur propriétaire. */}
           {!editing && (personasHere.length > 0 || myPersonas.some(p => p.map_pin_id !== pin.id)) && (
-            <div className="flex flex-col gap-1">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                {t("whoIsHere")}
-              </p>
+            <Bloc titre={t("whoIsHere")}>
               {personasHere.map(persona => {
                 const mien = myPersonas.some(p => p.id === persona.id);
                 return (
@@ -452,16 +506,13 @@ export function PinDetail({
                   ))}
                 </select>
               )}
-            </div>
+            </Bloc>
           )}
 
           {/* Ce qui se joue ici. Le lien `chatrooms.map_pin_id` existait déjà :
               seul le sens carte → salons manquait. */}
           {!editing && rooms.length > 0 && (
-            <div className="flex flex-col gap-1">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                {t("roomsAtPlace")}
-              </p>
+            <Bloc titre={t("roomsAtPlace")}>
               {rooms.map(salon => (
                 <button
                   key={salon.id}
@@ -473,7 +524,7 @@ export function PinDetail({
                   <span className="truncate">{salon.title || salon.name}</span>
                 </button>
               ))}
-            </div>
+            </Bloc>
           )}
 
           {/* Actions */}

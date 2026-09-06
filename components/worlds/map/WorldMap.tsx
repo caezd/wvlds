@@ -51,7 +51,7 @@ import { PinDetail } from "./PinDetail";
 import { ScaleCalibrator } from "./ScaleCalibrator";
 import { RegionLayer } from "./RegionLayer";
 import { RegionPanel } from "./RegionPanel";
-import { MIN_REGION_POINTS, dedupeConsecutive, polygonCentroid } from "./geometry";
+import { MIN_REGION_POINTS, dedupeConsecutive, pointInPolygon, polygonCentroid } from "./geometry";
 import { ScaleBar } from "./ScaleBar";
 import { type MapScale } from "./scale";
 import type { Point } from "./zoom";
@@ -986,6 +986,10 @@ export function WorldMap({
       personasHere={personasByPin.get(selectedPin.id) ?? NOBODY}
       myPersonas={myPersonas}
       timelineConfig={timelineConfig}
+      ownMap={maps.find((m) => m.id === selectedPin.map_id) ?? null}
+      // La première région qui se referme autour du lieu. Il peut y en avoir
+      // plusieurs empilées : celle du dessus est celle qu'on voit.
+      region={visibleRegions.find((r) => pointInPolygon(selectedPin, r.points)) ?? null}
       isEditMode={isEditMode}
       canPost={canPost}
       worldId={worldId}

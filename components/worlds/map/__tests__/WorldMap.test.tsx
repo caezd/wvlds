@@ -49,9 +49,14 @@ vi.mock("@/app/actions/worldMap", async (importOriginal) => ({
 // Le panneau d'un lieu tire tout l'éditeur de paragraphe et le rendu Markdown :
 // ce qui se vérifie ici est ce que la CARTE fait, pas ce qu'il affiche.
 vi.mock("@/components/worlds/map/PinDetail", () => ({
-  PinDetail: ({ pin, onDelete }: { pin: { title: string }; onDelete: () => void }) => (
+  PinDetail: ({ pin, region, onDelete }: {
+    pin: { title: string };
+    region?: { label: string } | null;
+    onDelete: () => void;
+  }) => (
     <div data-testid="pin-popover">
       {pin.title}
+      {region && <span data-testid="pin-region">{region.label}</span>}
       <button type="button" onClick={onDelete}>Supprimer depuis le panneau</button>
     </div>
   ),
@@ -1307,5 +1312,28 @@ describe("WorldMap — un lieu s'ouvre dans la colonne", () => {
 
     expect(screen.queryByTestId("pin-popover")).toBeNull();
     expect(parametres().get("pin")).toBeNull();
+  });
+});
+
+describe("WorldMap — la région qui entoure un lieu", () => {
+  beforeEach(() => { simulerMiseEnPage(); simulerGrandEcran(); });
+  afterEach(() => { restaurerMiseEnPage(); restaurerEcran(); });
+
+  // Le carré de `makeRegion` couvre de 20 à 60 % : le lieu par défaut est en
+  // son milieu, à 50/50.
+  it("dit dans quoi le lieu se trouve", async () => {
+    monter({ maps: [makeMap()], pins: [makePin()], regions: [makeRegion()] });
+
+    await userEvent.click(screen.getByRole("button", { name: "Le port" }));
+
+    expect(screen.getByTestId("pin-region")).toHaveTextContent("Le royaume");
+  });
+
+  it("ne dit rien d'un lieu posé hors des régions", async () => {
+    monter({ maps: [makeMap()], pins: [makePin({ x: 90, y: 90 })], regions: [makeRegion()] });
+
+    await userEvent.click(screen.getByRole("button", { name: "Le port" }));
+
+    expect(screen.queryByTestId("pin-region")).toBeNull();
   });
 });
