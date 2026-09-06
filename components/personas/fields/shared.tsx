@@ -13,6 +13,7 @@ import { catalogItemMatches, normalizeForSearch, RARITY_COLORS } from "@/lib/wor
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { WorldCatalogCategory, WorldCatalogItem, WorldCatalogRarity } from "@/types/worlds";
 import { RpgIconPicker } from "../RpgIconPicker";
+import { CatalogVisual } from "@/components/worlds/catalogue/CatalogVisual";
 
 /**
  * Identifiant local d'un item de champ.
@@ -53,41 +54,19 @@ export function IconButton({
   );
 }
 
-/**
- * Le visuel d'une entrée : son image si elle en a une, son icône sinon.
- *
- * Même règle que dans le catalogue (voir `CataloguePieces`), mais aux
- * dimensions des fiches. Le composant est dupliqué plutôt que partagé : les
- * champs de fiche ne connaissent pas les types du catalogue, et les faire
- * dépendre de `components/worlds/catalogue` les lierait à l'écran d'édition
- * du monde pour une bordure et deux tailles.
- */
+/** Le visuel d'une entrée de fiche — même règle que dans le catalogue. */
 export function EntryVisual({
   icon,
+  lucideIcon,
   imageUrl,
   size = 40,
 }: {
   icon?: string | null;
+  lucideIcon?: string | null;
   imageUrl?: string | null;
   size?: 36 | 40;
 }) {
-  const box = size === 36 ? "h-9 w-9" : "h-10 w-10";
-  if (imageUrl) {
-    return (
-      <div className={cn(box, "relative shrink-0 overflow-hidden rounded-lg border border-border-soft")}>
-        <Image src={imageUrl} alt="" fill unoptimized className="object-cover" />
-      </div>
-    );
-  }
-  return (
-    <div className={cn(box, "shrink-0 flex items-center justify-center rounded-lg border border-border-soft bg-muted/40")}>
-      {icon ? (
-        <Image src={`/rpg_icons/${icon}`} alt="" unoptimized width={24} height={24} className="h-6 w-6 object-contain dark:invert" />
-      ) : (
-        <ImageIcon className="h-4 w-4 text-muted-foreground/30" />
-      )}
-    </div>
-  );
+  return <CatalogVisual icon={icon} lucideIcon={lucideIcon} imageUrl={imageUrl} size={size} />;
 }
 
 /** Pastille de rareté, à côté du nom d'une entrée. */
@@ -212,7 +191,7 @@ export function CatalogPicker({
                     onClick={() => { onSelect(item); setOpen(false); }}
                     className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left hover:bg-muted transition-colors"
                   >
-                    <EntryVisual icon={item.icon} imageUrl={item.image_url} size={36} />
+                    <EntryVisual icon={item.icon} lucideIcon={item.lucide_icon} imageUrl={item.image_url} size={36} />
                     <div className="flex-1 min-w-0">
                       <p className="flex items-center gap-1.5 text-sm font-medium">
                         <RarityMark rarity={item.rarity ?? null} />

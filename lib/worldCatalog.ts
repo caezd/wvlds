@@ -90,6 +90,7 @@ export type ResolvedCatalogEntry = {
   name: string;
   description: string | null;
   icon: string | null;
+  lucide_icon: string | null;
   image_url: string | null;
   rarity: WorldCatalogRarity | null;
   properties: WorldCatalogProperty[];
@@ -123,6 +124,7 @@ export function resolveCatalogEntry(
     name: entry.name ?? "",
     description: entry.description ?? null,
     icon: entry.icon ?? null,
+    lucide_icon: null,
     image_url: null,
     rarity: null,
     properties: [],
@@ -138,6 +140,7 @@ export function resolveCatalogEntry(
     name: item.name,
     description: item.description ?? null,
     icon: item.icon ?? null,
+    lucide_icon: item.lucide_icon ?? null,
     image_url: item.image_url ?? null,
     rarity: item.rarity ?? null,
     properties: item.properties ?? [],
@@ -191,6 +194,7 @@ export type CatalogExportItem = {
   name: string;
   description?: string | null;
   icon?: string | null;
+  lucide_icon?: string | null;
   rarity?: WorldCatalogRarity | null;
   stackable?: boolean;
   max_quantity?: number | null;
@@ -216,8 +220,8 @@ export const MAX_CATALOG_IMPORT_ITEMS = 500;
  * `image_url` est volontairement ABSENTE : elle pointe un fichier du stockage
  * de CE monde, que l'import ne saurait pas recopier. Une URL reprise telle
  * quelle dans un autre monde donnerait une image qui disparaît le jour où le
- * monde d'origine fait le ménage. Les icônes `rpg_icons`, elles, sont communes
- * à toute l'application et voyagent sans peine.
+ * monde d'origine fait le ménage. Les icônes — `rpg_icons` comme
+ * Lucide — sont communes à toute l'application et voyagent sans peine.
  */
 export function buildCatalogExport(
   type: "inventory" | "skills",
@@ -231,6 +235,7 @@ export function buildCatalogExport(
       name: item.name,
       description: item.description ?? null,
       icon: item.icon ?? null,
+      lucide_icon: item.lucide_icon ?? null,
       rarity: item.rarity ?? null,
       stackable: item.stackable !== false,
       max_quantity: item.max_quantity ?? null,
@@ -287,6 +292,7 @@ export function parseCatalogImport(
       name,
       description: typeof row.description === "string" ? row.description.slice(0, 5000) : null,
       icon: typeof row.icon === "string" ? row.icon.slice(0, 200) : null,
+      lucide_icon: typeof row.lucide_icon === "string" ? row.lucide_icon.slice(0, 100) : null,
       rarity: isCatalogRarity(row.rarity) ? row.rarity : null,
       stackable: row.stackable !== false,
       max_quantity: maxQuantity,

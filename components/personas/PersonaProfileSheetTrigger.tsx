@@ -461,13 +461,16 @@ export function PersonaProfileSheetTrigger({
         setDialogueColor(row.dialogue_color ?? null);
         setFrameUrl(row.frame?.asset_url ?? null);
 
-        // Le catalogue du monde : sans lui, l'inventaire s'afficherait sous
-        // les noms copiés dans la fiche au moment de l'ajout.
+        // Le catalogue VIVANT du monde : sans lui, l'inventaire s'afficherait
+        // sous les noms copiés dans la fiche au moment de l'ajout. Les lignes
+        // en corbeille sont écartées en clair — un éditeur les lit
+        // (migration 165), et sa fiche doit dire la même chose que les autres.
         if (row.world_id) {
           const { data: catalogRows } = await supabase
             .from("world_catalog_items")
-            .select("id, world_id, type, name, description, icon, image_url, rarity, stackable, max_quantity, properties, sort_index, category_id")
-            .eq("world_id", row.world_id);
+            .select("id, world_id, type, name, description, icon, lucide_icon, image_url, rarity, stackable, max_quantity, properties, sort_index, category_id")
+            .eq("world_id", row.world_id)
+            .is("deleted_at", null);
           if (!cancelled && catalogRows) {
             setCatalog(indexCatalog(catalogRows as unknown as WorldCatalogItem[]));
           }

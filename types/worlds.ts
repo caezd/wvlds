@@ -47,9 +47,17 @@ export interface WorldCatalogItem {
   type: "inventory" | "skills";
   name: string;
   description?: string | null;
+  /**
+   * Le visuel de l'objet, en trois sources exclusives à l'usage.
+   *
+   * Une seule s'affiche, de la plus précise à la plus générique :
+   * `image_url` > `lucide_icon` > `icon`. Voir `resolveCatalogEntry`.
+   */
   /** Icône du jeu `rpg_icons`, ex. « sword.svg ». */
   icon?: string | null;
-  /** Image propre au monde ; prend le pas sur `icon` quand elle est définie. */
+  /** Icône Lucide en kebab-case, ex. « swords » — voir la migration 164. */
+  lucide_icon?: string | null;
+  /** Image propre au monde, téléversée dans le bucket `worlds`. */
   image_url?: string | null;
   rarity?: WorldCatalogRarity | null;
   stackable?: boolean;
@@ -57,6 +65,8 @@ export interface WorldCatalogItem {
   properties?: WorldCatalogProperty[];
   sort_index: number;
   category_id?: string | null;
+  /** Marqué supprimé, en corbeille — voir la migration 165. */
+  deleted_at?: string | null;
 }
 
 export interface WorldMap {

@@ -9,6 +9,21 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Catalogue",
+    text: "Une corbeille : un objet supprimé y reste trente jours. Le restaurer le rend d’un coup à toutes les fiches qui le portaient.",
+  },
+  {
+    date: "2026-09",
+    tag: "Catalogue",
+    text: "Une compétence peut porter une icône choisie parmi celles de l’application, ou une image — les icônes de jeu de rôle allaient mal à « Diplomatie » ou « Survie ».",
+  },
+  {
+    date: "2026-09",
+    tag: "Catalogue",
+    text: "Un cadenas sur chaque onglet dit si le catalogue est restreint ou en saisie libre, et l’explique au survol.",
+  },
+  {
+    date: "2026-09",
+    tag: "Catalogue",
     text: "Un objet du catalogue porte désormais une image, une rareté, un plafond par fiche et des propriétés libres — poids, portée, prérequis.",
   },
   {

@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Library, Pencil } from "lucide-react";
+import { Ban, Library, Lock, LockOpen, Pencil } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { getWorldCatalogUsage } from "@/app/actions/worldCatalog";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { TabBar, TabBarTrigger } from "@/components/ui/tab-bar";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 
 // Le catalogue se lit en couches : `catalogueTypes` porte les types et le
@@ -16,6 +17,59 @@ import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 // glisser-déposer. Ce fichier n'est plus que la coque à onglets.
 import { CatalogueList } from "./CatalogueList";
 import { FaceclaimList } from "./FaceclaimList";
+
+/**
+ * L'état d'un des deux catalogues, en un cadenas.
+ *
+ * Une ligne de texte le disait en pied de panneau — « Objets : saisie libre
+ * (catalogue non restreint) · Compétences : … » — et elle disait le contraire
+ * de ce qu'elle valait : elle prenait toute la largeur pour un réglage qu'on
+ * consulte rarement, et ne paraissait justement PAS quand le catalogue était
+ * restreint, l'état qui compte le plus.
+ *
+ * Le cadenas tient dans l'onglet, à côté du mot qu'il qualifie — c'est cette
+ * proximité qui le rend lisible sans légende. Fermé : seules les entrées du
+ * catalogue. Ouvert : chacun saisit ce qu'il veut dans sa fiche. Barré : la
+ * fonctionnalité est éteinte pour ce monde. La phrase complète reste, au
+ * survol.
+ */
+function CatalogLock({
+  enabled,
+  restricted,
+  disabledLabel,
+  freeLabel,
+  restrictedLabel,
+}: {
+  enabled: boolean;
+  restricted: boolean;
+  disabledLabel: string;
+  freeLabel: string;
+  restrictedLabel: string;
+}) {
+  const label = !enabled ? disabledLabel : restricted ? restrictedLabel : freeLabel;
+  const Icon = !enabled ? Ban : restricted ? Lock : LockOpen;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        {/* `span` et non `button` : l'onglet est déjà le bouton, et un bouton
+            dans un bouton n'est pas un HTML valide. `tabIndex` le rend tout de
+            même atteignable au clavier, où le survol n'existe pas. */}
+        <span
+          tabIndex={0}
+          role="img"
+          aria-label={label}
+          className="inline-flex shrink-0 items-center rounded outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+        >
+          <Icon className={cn("h-3 w-3", !enabled && "opacity-50")} />
+        </span>
+      </TooltipTrigger>
+      <TooltipContent side="bottom" className="max-w-[220px] text-center">
+        {label}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
 
 // ── WorldCatalogue ────────────────────────────────────────────────────────────
 
@@ -53,13 +107,6 @@ export function WorldCatalogue({ worldId, canEdit, inventoryEnabled, inventoryRe
     return () => { cancelled = true; };
   }, [worldId]);
 
-  const inactiveLines: string[] = [];
-  if (!inventoryEnabled) inactiveLines.push(t("itemsDisabled"));
-  else if (!inventoryRestricted) inactiveLines.push(t("itemsUnrestricted"));
-  if (!skillsEnabled) inactiveLines.push(t("skillsDisabled"));
-  else if (!skillsRestricted) inactiveLines.push(t("skillsUnrestricted"));
-  const inactiveNote = inactiveLines.length > 0 ? inactiveLines.join(" · ") : null;
-
   return (
     <div className="flex h-full w-full flex-col">
       <WorldPanelHeader
@@ -94,8 +141,26 @@ export function WorldCatalogue({ worldId, canEdit, inventoryEnabled, inventoryRe
             px-6 par défaut. */}
         <div className="shrink-0">
           <TabBar listClassName="px-4">
-            <TabBarTrigger value="inventory">{t("items")}</TabBarTrigger>
-            <TabBarTrigger value="skills">{t("skills")}</TabBarTrigger>
+            <TabBarTrigger value="inventory" className="flex items-center gap-1.5">
+              {t("items")}
+              <CatalogLock
+                enabled={inventoryEnabled}
+                restricted={inventoryRestricted}
+                disabledLabel={t("itemsDisabled")}
+                freeLabel={t("itemsUnrestricted")}
+                restrictedLabel={t("itemsRestricted")}
+              />
+            </TabBarTrigger>
+            <TabBarTrigger value="skills" className="flex items-center gap-1.5">
+              {t("skills")}
+              <CatalogLock
+                enabled={skillsEnabled}
+                restricted={skillsRestricted}
+                disabledLabel={t("skillsDisabled")}
+                freeLabel={t("skillsUnrestricted")}
+                restrictedLabel={t("skillsRestricted")}
+              />
+            </TabBarTrigger>
             {faceclaimsEnabled && (
               <TabBarTrigger value="faceclaims">{t("faceclaims")}</TabBarTrigger>
             )}
@@ -116,12 +181,6 @@ export function WorldCatalogue({ worldId, canEdit, inventoryEnabled, inventoryRe
         </div>
       </Tabs>
 
-      {/* Footer: note when catalogue is not fully active */}
-      {inactiveNote && (
-        <div className="shrink-0 flex justify-end border-t border-border-soft px-4 py-2">
-          <span className="text-xs text-muted-foreground">{inactiveNote}</span>
-        </div>
-      )}
     </div>
   );
 }

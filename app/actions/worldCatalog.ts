@@ -24,12 +24,18 @@ import type { WorldCatalogItem, WorldCatalogCategory, WorldCatalogProperty, Worl
 import { clampDaysPerMonth } from "@/lib/worldTimeline";
 import { ERR_NON_AUTHENTIFIE, ERR_VALEUR_NON_SUPPORTEE, ERR_TAG_INVALIDE, ERR_INTROUVABLE, ERR_NON_AUTORISE, echecEnregistrement } from "@/lib/actionErrors";
 import { DB_TEXT_LIMITS } from "@/lib/textLimits";
+import { LUCIDE_ALL_ICONS } from "@/lib/lucideCategories";
+import { storagePathFromUrl } from "@/lib/storage";
+import { catalogItemImagePrefix } from "@/lib/storagePaths";
 import {
   isCatalogRarity,
   sanitizeCatalogProperties,
   MAX_CATALOG_IMPORT_ITEMS,
   type CatalogExportItem,
 } from "@/lib/worldCatalog";
+
+/** Les noms d'icônes Lucide, en Set : la liste en compte près de 1 800. */
+const LUCIDE_ICON_NAMES = new Set(LUCIDE_ALL_ICONS);
 
 const MAX_WORLD_TAGS = 10;
 const MAX_TAG_LENGTH = 24;
@@ -169,7 +175,7 @@ export async function setWorldRestriction(
 
 /** Colonnes rendues par une écriture — la forme attendue par le client. */
 const CATALOG_ITEM_COLUMNS =
-  "id, world_id, type, category_id, name, description, icon, image_url, rarity, stackable, max_quantity, properties, sort_index";
+  "id, world_id, type, category_id, name, description, icon, lucide_icon, image_url, rarity, stackable, max_quantity, properties, sort_index";
 
 /**
  * Ce qu'une écriture accepte de recevoir.
@@ -182,6 +188,7 @@ export type CatalogItemInput = {
   name?: string;
   description?: string | null;
   icon?: string | null;
+  lucide_icon?: string | null;
   image_url?: string | null;
   rarity?: WorldCatalogRarity | null;
   stackable?: boolean;
@@ -223,6 +230,17 @@ function cleanCatalogItemInput(
 
   if (data.icon !== undefined) value.icon = data.icon || null;
   if (data.image_url !== undefined) value.image_url = data.image_url || null;
+
+  // Le nom d'icône est vérifié contre la bibliothèque, et pas seulement borné
+  // en longueur : il finit dans un `import()` de `lucide-react` côté client
+  // (LazyLucideIcon). Un nom inventé n'y rendrait rien, et rien n'est plus
+  // difficile à diagnostiquer qu'une icône muette.
+  if (data.lucide_icon !== undefined) {
+    if (data.lucide_icon && !LUCIDE_ICON_NAMES.has(data.lucide_icon)) {
+      return { ok: false as const, error: ERR_VALEUR_NON_SUPPORTEE };
+    }
+    value.lucide_icon = data.lucide_icon || null;
+  }
 
   if (data.rarity !== undefined) {
     if (data.rarity !== null && !isCatalogRarity(data.rarity)) {
@@ -337,10 +355,87 @@ export async function updateWorldCatalogItem(id: string, data: CatalogItemInput)
   return { ok: true as const };
 }
 
-export async function deleteWorldCatalogItem(id: string) {
+// ── Corbeille ─────────────────────────────────────────────────────────────────
+// Supprimer un objet emportait avec lui le sens de toutes les entrées de fiche
+// qui le désignaient. Il est désormais marqué, pas retiré (migration 165) : le
+// restaurer rend son objet à toutes les fiches d'un coup, sans qu'aucune ait à
+// être retouchée — elles n'ont jamais cessé de le désigner.
+
+export async function trashWorldCatalogItem(id: string) {
   const supabase = await createClient();
+  const { error } = await supabase
+    .from("world_catalog_items")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) return { ok: false as const, error: echecEnregistrement("trashWorldCatalogItem", error) };
+  return { ok: true as const };
+}
+
+export async function restoreWorldCatalogItem(id: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("world_catalog_items")
+    .update({ deleted_at: null })
+    .eq("id", id)
+    .select(CATALOG_ITEM_COLUMNS)
+    .maybeSingle();
+  if (error) return { ok: false as const, error: echecEnregistrement("restoreWorldCatalogItem", error) };
+  if (!data) return { ok: false as const, error: ERR_INTROUVABLE };
+  return { ok: true as const, item: data as unknown as WorldCatalogItem };
+}
+
+/** Les objets en corbeille, du plus récemment supprimé au plus ancien. */
+export async function listTrashedWorldCatalogItems(worldId: string, type: "inventory" | "skills") {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("world_catalog_items")
+    .select(`${CATALOG_ITEM_COLUMNS}, deleted_at`)
+    .eq("world_id", worldId)
+    .eq("type", type)
+    .not("deleted_at", "is", null)
+    .order("deleted_at", { ascending: false });
+  if (error) return { ok: false as const, error: echecEnregistrement("listTrashedWorldCatalogItems", error) };
+  return { ok: true as const, items: (data ?? []) as unknown as WorldCatalogItem[] };
+}
+
+/**
+ * Supprime un objet pour de bon, son image avec lui.
+ *
+ * Le ménage du stockage passe par une LISTE du dossier, et non par l'URL
+ * rangée dans la ligne. Une image téléversée puis abandonnée — le dialogue de
+ * modification fermé sans enregistrer — n'est référencée nulle part et
+ * resterait sinon à demeure. Elle bloquerait au passage la purge automatique
+ * de la migration 165, qui refuse d'effacer une ligne dont le dossier n'est
+ * pas vide.
+ *
+ * L'échec du ménage n'annule pas la suppression : un fichier orphelin ne casse
+ * rien, une ligne à moitié supprimée si.
+ */
+export async function purgeWorldCatalogItem(id: string) {
+  const supabase = await createClient();
+
+  const { data: existing } = await supabase
+    .from("world_catalog_items")
+    .select("id, world_id, image_url")
+    .eq("id", id)
+    .maybeSingle();
+  if (!existing) return { ok: false as const, error: ERR_INTROUVABLE };
+  const row = existing as { id: string; world_id: string; image_url: string | null };
+
+  const prefix = catalogItemImagePrefix(row.world_id, row.id);
+  const { data: files } = await supabase.storage.from("worlds").list(prefix);
+  const paths = (files ?? []).map((f) => `${prefix}/${f.name}`);
+  // Ceinture et bretelles : si la liste échoue, l'URL de la ligne donne au
+  // moins le fichier courant.
+  const fromUrl = storagePathFromUrl(row.image_url, "worlds");
+  if (fromUrl && !paths.includes(fromUrl)) paths.push(fromUrl);
+  if (paths.length > 0) {
+    const { error: removeError } = await supabase.storage.from("worlds").remove(paths);
+    if (removeError) console.error("[purgeWorldCatalogItem] image non effacée", removeError.message);
+  }
+
   const { error } = await supabase.from("world_catalog_items").delete().eq("id", id);
-  if (error) return { ok: false as const, error: echecEnregistrement("deleteWorldCatalogItem", error) };
+  if (error) return { ok: false as const, error: echecEnregistrement("purgeWorldCatalogItem", error) };
   return { ok: true as const };
 }
 
@@ -374,6 +469,7 @@ export async function duplicateWorldCatalogItem(id: string) {
       name: item.name.slice(0, DB_TEXT_LIMITS["world_catalog_items.name"] - 2) + " 2",
       description: item.description ?? null,
       icon: item.icon ?? null,
+      lucide_icon: item.lucide_icon ?? null,
       rarity: item.rarity ?? null,
       stackable: item.stackable !== false,
       max_quantity: item.max_quantity ?? null,
@@ -571,6 +667,7 @@ export async function importWorldCatalogItems(
       name: item.name,
       description: item.description ?? null,
       icon: item.icon ?? null,
+      lucide_icon: item.lucide_icon ?? null,
       rarity: item.rarity ?? null,
       stackable: item.stackable !== false,
       max_quantity: item.max_quantity ?? null,

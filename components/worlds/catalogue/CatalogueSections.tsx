@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils";
 import type { WorldCatalogCategory } from "@/types/worlds";
 import { UNCAT, type CatalogType, type CatalogItem } from "./catalogueTypes";
 
-import { AddForm, DragHandle, SortableItemRow } from "./CataloguePieces";
+import { AddForm, DragHandle, SortableItemRow, type AddItemData } from "./CataloguePieces";
 
 // Conteneurs : une catégorie, la zone des non classés, une colonne.
 
@@ -58,7 +58,7 @@ export function SortableCategoryContainer({
   onDeleteItem: (id: string) => void;
   onOpenItem: (item: CatalogItem) => void;
   onSetAdding: (catId: string | null | false) => void;
-  onAddItem: (categoryId: string | null, data: { name: string; description: string; icon: string | undefined; category_id: string | null }) => Promise<void>;
+  onAddItem: (categoryId: string | null, data: AddItemData) => Promise<void>;
   onSetRenaming: (id: string | null) => void;
   onDeleteCategory: (id: string) => void;
   onSaveCategory: (id: string, name: string) => Promise<void>;
@@ -231,7 +231,7 @@ export function UncategorizedSection({
   onDeleteItem: (id: string) => void;
   onOpenItem: (item: CatalogItem) => void;
   onSetAdding: (catId: string | null | false) => void;
-  onAddItem: (categoryId: string | null, data: { name: string; description: string; icon: string | undefined; category_id: string | null }) => Promise<void>;
+  onAddItem: (categoryId: string | null, data: AddItemData) => Promise<void>;
   onSortAlpha: (categoryId: string | null) => void;
 }) {
   const t = useTranslations("catalogue");

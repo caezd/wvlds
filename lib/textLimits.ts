@@ -42,6 +42,7 @@ export const DB_TEXT_LIMITS = {
   "world_catalog_items.description": 5_000,
   "world_catalog_items.icon": 200,
   "world_catalog_items.image_url": 2_000,
+  "world_catalog_items.lucide_icon": 100,
   "world_catalog_items.name": 200,
   "world_inventory_items.description": 5_000,
   "world_inventory_items.name": 200,

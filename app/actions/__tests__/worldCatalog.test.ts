@@ -16,7 +16,10 @@ import {
     getWorldPersonaTemplate,
     addWorldCatalogItem,
     updateWorldCatalogItem,
-    deleteWorldCatalogItem,
+    trashWorldCatalogItem,
+    restoreWorldCatalogItem,
+    purgeWorldCatalogItem,
+    listTrashedWorldCatalogItems,
     duplicateWorldCatalogItem,
     addWorldCatalogCategory,
     updateWorldCatalogCategory,
@@ -536,14 +539,30 @@ describe("CRUD world_catalog_items", () => {
             .toEqual({ ok: false, error: "saveFailed" });
     });
 
-    it("deleteWorldCatalogItem — succès", async () => {
-        use(createSupabaseMock({ results: [{ error: null }] }));
-        expect(await deleteWorldCatalogItem("i1")).toEqual({ ok: true });
+    it("addWorldCatalogItem refuse une icône Lucide inconnue", async () => {
+        const mock = createSupabaseMock();
+        use(mock);
+        expect(await addWorldCatalogItem("w1", "skills", { name: "x", lucide_icon: "epee-longue" }))
+            .toEqual({ ok: false, error: "unsupportedValue" });
+        expect(mock.buildersFor("world_catalog_items")).toHaveLength(0);
     });
 
-    it("deleteWorldCatalogItem — erreur", async () => {
-        use(createSupabaseMock({ results: [{ error: { message: "rls" } }] }));
-        expect(await deleteWorldCatalogItem("i1")).toEqual({ ok: false, error: "saveFailed" });
+    it("addWorldCatalogItem accepte une icône Lucide de la bibliothèque", async () => {
+        const mock = createSupabaseMock({ results: [{ data: { id: "s1" } }] });
+        use(mock);
+        const res = await addWorldCatalogItem("w1", "skills", { name: "Escrime", lucide_icon: "swords" });
+        expect(res.ok).toBe(true);
+        expect(mock.buildersFor("world_catalog_items")[0].insert).toHaveBeenCalledWith(
+            expect.objectContaining({ lucide_icon: "swords" }),
+        );
+    });
+
+    it("updateWorldCatalogItem accepte de retirer l'icône Lucide", async () => {
+        const mock = createSupabaseMock({ results: [{ error: null }] });
+        use(mock);
+        expect(await updateWorldCatalogItem("i1", { lucide_icon: null })).toEqual({ ok: true });
+        expect(mock.buildersFor("world_catalog_items")[0].update)
+            .toHaveBeenCalledWith({ lucide_icon: null });
     });
 
     // Deux lignes qui pointent le même fichier : supprimer l'une emporterait
@@ -569,6 +588,93 @@ describe("CRUD world_catalog_items", () => {
     it("duplicateWorldCatalogItem sur un objet introuvable", async () => {
         use(createSupabaseMock({ results: [{ data: null }] }));
         expect(await duplicateWorldCatalogItem("i1")).toEqual({ ok: false, error: "notFound" });
+    });
+});
+
+// ── Corbeille ────────────────────────────────────────────────────────────────
+// Supprimer un objet ne l'efface plus : il est marqué (migration 165). Ce qui
+// se vérifie ici, c'est que la suppression écrit bien `deleted_at` au lieu de
+// `delete()`, et que la purge fait le ménage du stockage AVANT la ligne — une
+// ligne effacée d'abord laisserait son image sans plus rien pour la retrouver.
+
+describe("corbeille du catalogue", () => {
+    it("trashWorldCatalogItem marque au lieu d'effacer", async () => {
+        const mock = createSupabaseMock({ results: [{ error: null }] });
+        use(mock);
+        expect(await trashWorldCatalogItem("i1")).toEqual({ ok: true });
+        const builder = mock.buildersFor("world_catalog_items")[0];
+        expect(builder.delete).not.toHaveBeenCalled();
+        expect(builder.update).toHaveBeenCalledWith({ deleted_at: expect.any(String) });
+    });
+
+    it("trashWorldCatalogItem remonte l'erreur", async () => {
+        use(createSupabaseMock({ results: [{ error: { message: "rls" } }] }));
+        expect(await trashWorldCatalogItem("i1")).toEqual({ ok: false, error: "saveFailed" });
+    });
+
+    it("restoreWorldCatalogItem efface la marque et rend l'objet", async () => {
+        const item = { id: "i1", name: "Épée", category_id: null };
+        const mock = createSupabaseMock({ results: [{ data: item }] });
+        use(mock);
+        expect(await restoreWorldCatalogItem("i1")).toEqual({ ok: true, item });
+        expect(mock.buildersFor("world_catalog_items")[0].update)
+            .toHaveBeenCalledWith({ deleted_at: null });
+    });
+
+    it("restoreWorldCatalogItem sur un objet introuvable", async () => {
+        use(createSupabaseMock({ results: [{ data: null }] }));
+        expect(await restoreWorldCatalogItem("i1")).toEqual({ ok: false, error: "notFound" });
+    });
+
+    it("listTrashedWorldCatalogItems ne demande que les lignes marquées", async () => {
+        const mock = createSupabaseMock({ results: [{ data: [{ id: "i1" }] }] });
+        use(mock);
+        const res = await listTrashedWorldCatalogItems("w1", "inventory");
+        expect(res).toEqual({ ok: true, items: [{ id: "i1" }] });
+        const builder = mock.buildersFor("world_catalog_items")[0];
+        expect(builder.not).toHaveBeenCalledWith("deleted_at", "is", null);
+        expect(builder.eq).toHaveBeenCalledWith("type", "inventory");
+    });
+
+    // Le ménage passe par la LISTE du dossier, et non par l'URL de la ligne :
+    // une image téléversée puis abandonnée n'est référencée nulle part et
+    // bloquerait à jamais la purge automatique.
+    it("purgeWorldCatalogItem vide le dossier avant d'effacer la ligne", async () => {
+        const mock = createSupabaseMock({
+            results: [{ data: { id: "i1", world_id: "w1", image_url: null } }, { error: null }],
+            storageListResult: [{ name: "a.webp" }, { name: "orpheline.webp" }],
+        });
+        use(mock);
+        expect(await purgeWorldCatalogItem("i1")).toEqual({ ok: true });
+        expect(mock.storageRemove).toHaveBeenCalledWith([
+            "world-w1/item-i1/a.webp",
+            "world-w1/item-i1/orpheline.webp",
+        ]);
+        expect(mock.buildersFor("world_catalog_items")[1].delete).toHaveBeenCalled();
+    });
+
+    it("purgeWorldCatalogItem rattrape l'image de la ligne si la liste ne la rend pas", async () => {
+        const mock = createSupabaseMock({
+            results: [
+                {
+                    data: {
+                        id: "i1",
+                        world_id: "w1",
+                        image_url: "https://x.supabase.co/storage/v1/object/public/worlds/world-w1/item-i1/z.webp",
+                    },
+                },
+                { error: null },
+            ],
+            storageListResult: [],
+        });
+        use(mock);
+        await purgeWorldCatalogItem("i1");
+        expect(mock.storageRemove).toHaveBeenCalledWith(["world-w1/item-i1/z.webp"]);
+    });
+
+    it("purgeWorldCatalogItem sur un objet introuvable", async () => {
+        use(createSupabaseMock({ results: [{ data: null }] }));
+        expect(await purgeWorldCatalogItem("i1")).toEqual({ ok: false, error: "notFound" });
     });
 });
 

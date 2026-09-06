@@ -7,6 +7,7 @@ import { RARITY_COLORS, resolveCatalogEntry } from "@/lib/worldCatalog";
 import type { InventoryItem, SkillItem } from "@/types/personas";
 import type { WorldCatalogItem } from "@/types/worlds";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { CatalogVisual } from "@/components/worlds/catalogue/CatalogVisual";
 
 /**
  * L'inventaire et les compétences d'une fiche, en lecture.
@@ -22,35 +23,19 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
  * secours, et rien n'est signalé comme retiré : voir `resolveCatalogEntry`.
  */
 
-/** Le visuel d'une entrée : image, à défaut icône, à défaut rien. */
+/** Le visuel d'une entrée, nu : dans une fiche, pas de cadre autour. */
 function EntryImage({
   icon,
+  lucideIcon,
   imageUrl,
   size,
 }: {
   icon: string | null;
+  lucideIcon: string | null;
   imageUrl: string | null;
   size: 20 | 28;
 }) {
-  const box = size === 20 ? "h-5 w-5" : "h-7 w-7";
-  if (imageUrl) {
-    return (
-      <span className={cn(box, "relative shrink-0 overflow-hidden rounded")}>
-        <Image src={imageUrl} alt="" fill unoptimized className="object-cover" />
-      </span>
-    );
-  }
-  if (!icon) return null;
-  return (
-    <Image
-      src={`/rpg_icons/${icon}`}
-      alt=""
-      unoptimized
-      width={size}
-      height={size}
-      className={cn(box, "shrink-0 object-contain dark:invert")}
-    />
-  );
+  return <CatalogVisual icon={icon} lucideIcon={lucideIcon} imageUrl={imageUrl} size={size} framed={false} />;
 }
 
 export function InventoryFieldView({
@@ -84,7 +69,7 @@ export function InventoryFieldView({
                     : undefined
                 }
               >
-                <EntryImage icon={resolved.icon} imageUrl={resolved.image_url} size={28} />
+                <EntryImage icon={resolved.icon} lucideIcon={resolved.lucide_icon} imageUrl={resolved.image_url} size={28} />
                 <span className="text-sm font-medium leading-none">{resolved.name}</span>
                 <span className="text-xs tabular-nums text-muted-foreground">x {item.quantity ?? 1}</span>
               </div>
@@ -124,7 +109,7 @@ export function SkillsFieldView({
           )}
         >
           <span className="mt-0.5">
-            <EntryImage icon={resolved.icon} imageUrl={resolved.image_url} size={20} />
+            <EntryImage icon={resolved.icon} lucideIcon={resolved.lucide_icon} imageUrl={resolved.image_url} size={20} />
           </span>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">

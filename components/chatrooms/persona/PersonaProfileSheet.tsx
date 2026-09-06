@@ -257,7 +257,8 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
           .from("personas")
           .select("id, created_at, is_template")
           .eq("user_id", selfId!)
-          .eq("world_id", worldId);
+          .eq("world_id", worldId)
+          .is("deleted_at", null);
         usableForSelfResult = getUsablePersonaIds(siblings ?? [], plan).has(persona!.id);
       }
 
@@ -290,14 +291,17 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
         }));
       }
 
-      // Le catalogue du monde — une requête de plus, mais sans elle un objet
-      // renommé ou retiré s'afficherait encore sous son ancien nom.
+      // Le catalogue VIVANT du monde — une requête de plus, mais sans elle un
+      // objet renommé ou retiré s'afficherait encore sous son ancien nom. Les
+      // lignes en corbeille sont écartées en clair : un éditeur les lit
+      // (migration 165), et sa fiche doit dire la même chose que les autres.
       let catalogById: Map<string, WorldCatalogItem> | undefined;
       if (worldId) {
         const { data: catalogRows } = await supabase
           .from("world_catalog_items")
-          .select("id, world_id, type, name, description, icon, image_url, rarity, stackable, max_quantity, properties, sort_index, category_id")
-          .eq("world_id", worldId);
+          .select("id, world_id, type, name, description, icon, lucide_icon, image_url, rarity, stackable, max_quantity, properties, sort_index, category_id")
+          .eq("world_id", worldId)
+          .is("deleted_at", null);
         if (catalogRows) catalogById = indexCatalog(catalogRows as unknown as WorldCatalogItem[]);
       }
 

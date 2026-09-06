@@ -1,62 +1,44 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import { useTranslations } from "next-intl";
 import {
-  X, Pencil, Trash2, ImageIcon, Loader2, Check, GripVertical, Copy,
+  X, Pencil, Trash2, Loader2, Check, GripVertical, Copy,
 } from "lucide-react";
 import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
-import { cn } from "@/lib/utils";
 import { RARITY_COLORS } from "@/lib/worldCatalog";
+import { CatalogVisual } from "./CatalogVisual";
 import { RpgIconPicker } from "@/components/personas/RpgIconPicker";
+import { LucideIconPicker } from "@/components/ui/LucideIconPicker";
 import { type CatalogType, type CatalogItem } from "./catalogueTypes";
 
 // Briques élémentaires d'une ligne de catalogue.
 
 // ── Icon display ──────────────────────────────────────────────────────────────
 
-/**
- * Le visuel d'un objet : son image si elle existe, son icône sinon.
- *
- * L'image l'emporte sur l'icône — c'est le choix le plus précis des deux, et
- * l'éditeur ne propose l'un qu'à défaut de l'autre. Une icône `rpg_icons` est
- * un trait noir sur fond transparent, d'où le `dark:invert` ; une image
- * téléversée est une vraie image, qu'on ne retourne surtout pas.
- */
+/** Le visuel d'un objet dans une ligne du catalogue. */
 export function CatalogIcon({
   icon,
+  lucideIcon,
   imageUrl,
   size = "md",
 }: {
   icon?: string | null;
+  lucideIcon?: string | null;
   imageUrl?: string | null;
   size?: "sm" | "md";
 }) {
-  const dim = size === "sm" ? "h-8 w-8" : "h-10 w-10";
-  const img = size === "sm" ? "h-5 w-5" : "h-6 w-6";
-  const px = size === "sm" ? 20 : 24;
-
-  if (imageUrl) {
-    return (
-      <div className={cn(dim, "relative shrink-0 overflow-hidden rounded-lg border border-border-soft")}>
-        <Image src={imageUrl} alt="" fill unoptimized className="object-cover" />
-      </div>
-    );
-  }
-
   return (
-    <div className={cn(dim, "shrink-0 flex items-center justify-center rounded-lg border border-border-soft bg-muted/40")}>
-      {icon ? (
-        <Image src={`/rpg_icons/${icon}`} alt="" unoptimized width={px} height={px} className={cn(img, "object-contain dark:invert")} />
-      ) : (
-        <ImageIcon className={cn(size === "sm" ? "h-3.5 w-3.5" : "h-4 w-4", "text-muted-foreground/30")} />
-      )}
-    </div>
+    <CatalogVisual
+      icon={icon}
+      lucideIcon={lucideIcon}
+      imageUrl={imageUrl}
+      size={size === "sm" ? 32 : 40}
+    />
   );
 }
 
@@ -75,6 +57,15 @@ export function DragHandle(props: React.HTMLAttributes<HTMLSpanElement>) {
 
 // ── Add form ──────────────────────────────────────────────────────────────────
 
+/** Ce que la saisie rapide transmet — le reste se règle dans le dialogue. */
+export type AddItemData = {
+  name: string;
+  description: string;
+  icon: string | null;
+  lucide_icon: string | null;
+  category_id: string | null;
+};
+
 /**
  * La saisie rapide, en ligne.
  *
@@ -91,21 +82,33 @@ export function AddForm({
 }: {
   type: CatalogType;
   categoryId: string | null;
-  onAdd: (data: { name: string; description: string; icon: string | undefined; category_id: string | null }) => Promise<void>;
+  onAdd: (data: AddItemData) => Promise<void>;
   onCancel: () => void;
 }) {
   const t = useTranslations("catalogue");
   const tCommon = useTranslations("common");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [icon, setIcon] = useState<string | undefined>(undefined);
+  const [icon, setIcon] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  // `rpg_icons` est un jeu d'épées, de potions et de boucliers : il va aux
+  // objets, et ne dit rien de « Diplomatie » ou de « Survie ». Les compétences
+  // reçoivent donc le sélecteur Lucide. Le dialogue de modification, lui,
+  // offre les trois sources dans les deux cas.
+  const useLucide = type === "skills";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) return;
     setSaving(true);
-    await onAdd({ name: name.trim(), description, icon, category_id: categoryId });
+    await onAdd({
+      name: name.trim(),
+      description,
+      icon: useLucide ? null : icon,
+      lucide_icon: useLucide ? icon : null,
+      category_id: categoryId,
+    });
     setSaving(false);
     // Le formulaire reste ouvert, vidé, pour l'objet suivant : c'est la saisie
     // en série qu'il sert. On le referme par la croix, ou par Échap.
@@ -113,21 +116,29 @@ export function AddForm({
     setDescription("");
   }
 
+  const trigger = (
+    <button
+      type="button"
+      title={useLucide ? t("chooseLucideIcon") : t("chooseIcon")}
+      aria-label={useLucide ? t("chooseLucideIcon") : t("chooseIcon")}
+      className="h-10 w-10 shrink-0 flex items-center justify-center rounded-lg border border-border-soft bg-muted/40 hover:bg-muted transition-colors"
+    >
+      <CatalogVisual
+        icon={useLucide ? null : icon}
+        lucideIcon={useLucide ? icon : null}
+        size={24}
+        framed={false}
+      />
+    </button>
+  );
+
   return (
     <form onSubmit={handleSubmit} className="flex items-start gap-2 rounded-xl border border-dashed border-border bg-muted/20 p-3 mt-1">
-      <RpgIconPicker
-        value={icon}
-        onChange={setIcon}
-        trigger={
-          <button type="button" title={t("chooseIcon")} className="h-10 w-10 shrink-0 flex items-center justify-center rounded-lg border border-border-soft bg-muted/40 hover:bg-muted transition-colors">
-            {icon ? (
-              <Image src={`/rpg_icons/${icon}`} alt="" unoptimized width={24} height={24} className="h-6 w-6 object-contain dark:invert" />
-            ) : (
-              <ImageIcon className="h-4 w-4 text-muted-foreground/50" />
-            )}
-          </button>
-        }
-      />
+      {useLucide ? (
+        <LucideIconPicker value={icon ?? ""} onChange={(name) => setIcon(name)} trigger={trigger} />
+      ) : (
+        <RpgIconPicker value={icon ?? undefined} onChange={(v) => setIcon(v ?? null)} trigger={trigger} />
+      )}
       <div className="flex-1 space-y-1.5 min-w-0">
         <input
           autoFocus
@@ -217,7 +228,7 @@ export function SortableItemRow({
       className="group/item flex items-center gap-2 px-2 py-1"
     >
       {canReorder && <DragHandle {...attributes} {...listeners} />}
-      <CatalogIcon icon={item.icon} imageUrl={item.image_url} size="sm" />
+      <CatalogIcon icon={item.icon} lucideIcon={item.lucide_icon} imageUrl={item.image_url} size="sm" />
       <button
         type="button"
         onClick={onOpenDetail}
@@ -283,7 +294,7 @@ export function ItemRowOverlay({ item }: { item: CatalogItem }) {
   return (
     <div className="flex items-center gap-1.5 rounded-xl border border-border bg-background/95 px-2 py-2 shadow-xl backdrop-blur-sm">
       <GripVertical className="h-4 w-5 shrink-0 text-muted-foreground/30" />
-      <CatalogIcon icon={item.icon} imageUrl={item.image_url} />
+      <CatalogIcon icon={item.icon} lucideIcon={item.lucide_icon} imageUrl={item.image_url} />
       <div className="flex-1 min-w-0 px-1">
         <p className="text-sm font-medium leading-snug">{item.name}</p>
         {item.description && (

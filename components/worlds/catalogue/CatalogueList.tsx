@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Loader2, FolderPlus, Search, Download, Upload, X } from "lucide-react";
+import { Loader2, FolderPlus, Search, Download, Upload, X, Trash2 } from "lucide-react";
 import {
   DndContext,
   DragOverlay,
@@ -31,7 +31,10 @@ import type { WorldCatalogCategory } from "@/types/worlds";
 import {
   addWorldCatalogItem,
   updateWorldCatalogItem,
-  deleteWorldCatalogItem,
+  trashWorldCatalogItem,
+  restoreWorldCatalogItem,
+  purgeWorldCatalogItem,
+  listTrashedWorldCatalogItems,
   duplicateWorldCatalogItem,
   addWorldCatalogCategory,
   updateWorldCatalogCategory,
@@ -48,9 +51,11 @@ import {
   parseCatalogImport,
 } from "@/lib/worldCatalog";
 import { UNCAT, COL_PREFIX, groupByColumn, type CatalogType, type CatalogItem } from "./catalogueTypes";
+import type { WorldCatalogItem } from "@/types/worlds";
 
-import { CategoryRowOverlay, ItemRowOverlay } from "./CataloguePieces";
+import { CategoryRowOverlay, ItemRowOverlay, type AddItemData } from "./CataloguePieces";
 import { CatalogItemDetail, CatalogItemDialog } from "./CatalogItemDialog";
+import { CatalogTrashDialog } from "./CatalogTrashDialog";
 import { AddCategoryForm, DroppableColumn, SortableCategoryContainer, UncategorizedSection } from "./CatalogueSections";
 import { messageErreurAction } from "@/lib/actionErrors";
 
@@ -91,6 +96,9 @@ export function CatalogueList({
   const [editingItem, setEditingItem] = useState<CatalogItem | null>(null);
   const [detailItem, setDetailItem] = useState<CatalogItem | null>(null);
   const [importing, setImporting] = useState(false);
+  const [trashOpen, setTrashOpen] = useState(false);
+  const [trashed, setTrashed] = useState<WorldCatalogItem[]>([]);
+  const [trashLoading, setTrashLoading] = useState(false);
   // false = not adding; null = adding in uncategorized; string = adding in that category
   const [addingInCat, setAddingInCat] = useState<string | null | false>(false);
   const [renamingCatId, setRenamingCatId] = useState<string | null>(null);
@@ -111,13 +119,17 @@ export function CatalogueList({
           .select("id, world_id, type, name, sort_index, column_index")
           .eq("world_id", worldId)
           .eq("type", type)
+          // La corbeille a sa propre vue : la liste ne montre que le vivant.
+          .is("deleted_at", null)
           .order("sort_index", { ascending: true })
           .order("created_at", { ascending: true }),
         (supabase as ReturnType<typeof createClient>)
           .from("world_catalog_items")
-          .select("id, world_id, type, name, description, icon, image_url, rarity, stackable, max_quantity, properties, sort_index, category_id")
+          .select("id, world_id, type, name, description, icon, lucide_icon, image_url, rarity, stackable, max_quantity, properties, sort_index, category_id")
           .eq("world_id", worldId)
           .eq("type", type)
+          // La corbeille a sa propre vue : la liste ne montre que le vivant.
+          .is("deleted_at", null)
           .order("sort_index", { ascending: true })
           .order("created_at", { ascending: true }),
       ]);
@@ -135,14 +147,12 @@ export function CatalogueList({
 
   // ── Item CRUD ──
 
-  async function handleAddItem(
-    categoryId: string | null,
-    data: { name: string; description: string; icon: string | undefined; category_id: string | null },
-  ) {
+  async function handleAddItem(categoryId: string | null, data: AddItemData) {
     const res = await addWorldCatalogItem(worldId, type, {
       name: data.name,
       description: data.description || null,
-      icon: data.icon ?? null,
+      icon: data.icon,
+      lucide_icon: data.lucide_icon,
       category_id: categoryId,
     });
     if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
@@ -165,9 +175,38 @@ export function CatalogueList({
   }
 
   async function handleDeleteItem(id: string) {
-    const res = await deleteWorldCatalogItem(id);
+    const res = await trashWorldCatalogItem(id);
     if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
     setItems(prev => prev.filter(i => i.id !== id));
+    toast.success(t("movedToTrash"));
+  }
+
+  // ── Corbeille ──
+  // Les objets supprimés ne sont chargés qu'à l'ouverture : on n'en a besoin
+  // que là, et la liste vivante n'a pas à attendre après eux.
+
+  async function openTrash() {
+    setTrashOpen(true);
+    setTrashLoading(true);
+    const res = await listTrashedWorldCatalogItems(worldId, type);
+    if (!res.ok) toast.error(messageErreurAction(res.error, tCommon));
+    else setTrashed(res.items);
+    setTrashLoading(false);
+  }
+
+  async function handleRestore(item: WorldCatalogItem) {
+    const res = await restoreWorldCatalogItem(item.id);
+    if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
+    setTrashed(prev => prev.filter(i => i.id !== item.id));
+    // La catégorie de l'objet a pu être supprimée entre-temps : `ON DELETE SET
+    // NULL` l'a alors mis à `null`, et il revient parmi les non classés.
+    setItems(prev => [...prev, { ...res.item, category_id: res.item.category_id ?? null } as CatalogItem]);
+  }
+
+  async function handleDeleteForever(item: WorldCatalogItem) {
+    const res = await purgeWorldCatalogItem(item.id);
+    if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
+    setTrashed(prev => prev.filter(i => i.id !== item.id));
   }
 
   // ── Export et import ──
@@ -544,6 +583,16 @@ export function CatalogueList({
             />
             <button
               type="button"
+              onClick={() => void openTrash()}
+              title={t("trash")}
+              aria-label={t("trash")}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border-soft text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+
+            <button
+              type="button"
               onClick={() => importInputRef.current?.click()}
               disabled={importing}
               title={t("importCatalog")}
@@ -697,6 +746,16 @@ export function CatalogueList({
           onSave={handleSaveItem}
         />
       )}
+
+      <CatalogTrashDialog
+        open={trashOpen}
+        onOpenChange={setTrashOpen}
+        items={trashed}
+        loading={trashLoading}
+        usage={usage}
+        onRestore={item => void handleRestore(item)}
+        onDeleteForever={item => void handleDeleteForever(item)}
+      />
 
       {/* Consultation : ce que porte un objet, pour qui n'édite pas. */}
       {detailItem && (

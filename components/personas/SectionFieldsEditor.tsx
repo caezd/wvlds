@@ -92,10 +92,14 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
 
       const [itemRes, catRes] = await Promise.all([
         (supabase as ReturnType<typeof createClient>)
+          // Le catalogue VIVANT : un éditeur lit aussi les lignes en corbeille
+          // (migration 165), et un objet supprimé doit s'afficher « retiré du
+          // catalogue » pour lui comme pour tout le monde.
           .from("world_catalog_items")
-          .select("id, world_id, type, name, description, icon, image_url, rarity, stackable, max_quantity, properties, sort_index, category_id")
+          .select("id, world_id, type, name, description, icon, lucide_icon, image_url, rarity, stackable, max_quantity, properties, sort_index, category_id")
           .eq("world_id", worldId!)
           .in("type", wanted)
+          .is("deleted_at", null)
           .order("sort_index", { ascending: true })
           .order("created_at", { ascending: true }),
         (supabase as ReturnType<typeof createClient>)

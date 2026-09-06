@@ -70,6 +70,23 @@ describe("resolveCatalogEntry", () => {
     expect(res.image_url).toBe("https://x/i.webp");
   });
 
+  it("l'icône Lucide voyage avec les autres sources de visuel", () => {
+    const res = resolveCatalogEntry(
+      { catalog_id: "c1" },
+      indexCatalog([item({ lucide_icon: "swords", icon: null })]),
+    );
+    expect(res.lucide_icon).toBe("swords");
+    expect(res.icon).toBeNull();
+  });
+
+  // La fiche ne range que le nom, la description et l'icône `rpg_icons` : une
+  // entrée orpheline ne peut pas inventer une icône Lucide de secours.
+  it("une entrée orpheline n'a pas d'icône Lucide", () => {
+    const res = resolveCatalogEntry({ catalog_id: "parti", icon: "old.svg" }, indexCatalog([]));
+    expect(res.lucide_icon).toBeNull();
+    expect(res.orphaned).toBe(true);
+  });
+
   it("un objet absent du catalogue est marqué, et garde sa copie", () => {
     const res = resolveCatalogEntry({ catalog_id: "parti", name: "Relique" }, indexCatalog([item()]));
     expect(res).toMatchObject({ name: "Relique", orphaned: true });
@@ -189,6 +206,13 @@ describe("buildCatalogExport", () => {
     expect(out.items[0]).not.toHaveProperty("image_url");
   });
 
+  // Lucide est commune à toute l'application : le nom vaut dans n'importe quel
+  // monde, contrairement à l'URL d'une image.
+  it("emporte l'icône Lucide, elle", () => {
+    const out = buildCatalogExport("skills", [item({ lucide_icon: "swords" })], new Map());
+    expect(out.items[0].lucide_icon).toBe("swords");
+  });
+
   it("une catégorie inconnue de la table de noms ne casse rien", () => {
     const out = buildCatalogExport("skills", [item({ category_id: "absente" })], new Map());
     expect(out.items[0].category).toBeNull();
@@ -225,6 +249,16 @@ describe("parseCatalogImport", () => {
   it("refuse un fichier de l'autre onglet", () => {
     expect(parseCatalogImport(fichier({ type: "skills", items: [{ name: "x" }] }), "inventory"))
       .toEqual({ ok: false, reason: "type" });
+  });
+
+  it("reprend l'icône Lucide d'un fichier", () => {
+    const res = parseCatalogImport(
+      JSON.stringify({ items: [{ name: "Escrime", lucide_icon: "swords" }] }),
+      "skills",
+    );
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.items[0].lucide_icon).toBe("swords");
   });
 
   it("accepte un fichier qui ne déclare pas son type", () => {

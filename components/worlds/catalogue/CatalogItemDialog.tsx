@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { ImageIcon, Loader2, Plus, Upload, X } from "lucide-react";
+import { ImageIcon, Loader2, Plus, Shapes, Swords, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
@@ -32,6 +31,8 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { RpgIconPicker } from "@/components/personas/RpgIconPicker";
+import { LucideIconPicker } from "@/components/ui/LucideIconPicker";
+import { CatalogVisual } from "./CatalogVisual";
 import { CatalogIcon } from "./CataloguePieces";
 import type { CatalogItem, CatalogType } from "./catalogueTypes";
 
@@ -45,6 +46,16 @@ import type { CatalogItem, CatalogType } from "./catalogueTypes";
 // ouvertures de dialogue.
 
 const MAX_ITEM_IMAGE_MB = 2;
+
+/** Bouton de choix d'une source de visuel — souligné quand c'est elle qui sert. */
+function pickerButtonClass(active: boolean) {
+  return cn(
+    "flex h-7 w-7 items-center justify-center rounded-lg border transition-colors disabled:opacity-40",
+    active
+      ? "border-primary/40 bg-primary/10 text-primary"
+      : "border-border-soft text-muted-foreground hover:bg-secondary hover:text-foreground",
+  );
+}
 
 /** Nom traduit d'une rareté — les clés suivent l'identifiant, en capitale. */
 function rarityKey(rarity: WorldCatalogRarity): string {
@@ -101,6 +112,7 @@ export function CatalogItemDialog({
   const [name, setName] = useState(item.name);
   const [description, setDescription] = useState(item.description ?? "");
   const [icon, setIcon] = useState<string | null>(item.icon ?? null);
+  const [lucideIcon, setLucideIcon] = useState<string | null>(item.lucide_icon ?? null);
   const [imageUrl, setImageUrl] = useState<string | null>(item.image_url ?? null);
   const [rarity, setRarity] = useState<WorldCatalogRarity | null>(item.rarity ?? null);
   const [stackable, setStackable] = useState(item.stackable !== false);
@@ -118,6 +130,7 @@ export function CatalogItemDialog({
     setName(item.name);
     setDescription(item.description ?? "");
     setIcon(item.icon ?? null);
+    setLucideIcon(item.lucide_icon ?? null);
     setImageUrl(item.image_url ?? null);
     setRarity(item.rarity ?? null);
     setStackable(item.stackable !== false);
@@ -140,6 +153,10 @@ export function CatalogItemDialog({
       // vignette, et un fichier de deux mégaoctets pour une case de 40 px
       // pèserait sur chaque chargement du catalogue.
       const converted = await toWebP(file, 256);
+      // L'image l'emporte : les deux icônes sont abandonnées, sans quoi elles
+      // resteraient en base sans jamais s'afficher.
+      setIcon(null);
+      setLucideIcon(null);
       const path = catalogItemImagePath(worldId, item.id, converted.type);
       const { error } = await supabase.storage
         .from("worlds")
@@ -161,7 +178,8 @@ export function CatalogItemDialog({
    * l'état local l'oublie. Son échec est muet — la ligne, elle, sera bien
    * enregistrée sans image, et un fichier orphelin ne casse rien.
    */
-  async function handleImageRemove() {
+  async function clearImage() {
+    if (!imageUrl) return;
     const path = storagePathFromUrl(imageUrl, "worlds");
     setImageUrl(null);
     if (path) await supabase.storage.from("worlds").remove([path]);
@@ -176,6 +194,7 @@ export function CatalogItemDialog({
       name: name.trim(),
       description: description.trim() || null,
       icon,
+      lucide_icon: lucideIcon,
       image_url: imageUrl,
       rarity,
       stackable,
@@ -200,30 +219,53 @@ export function CatalogItemDialog({
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Visuel + nom */}
           <div className="flex items-start gap-3">
+            {/* Trois sources pour un seul visuel — choisir l'une efface les
+                autres, si bien que l'ordre de priorité du rendu
+                (image > Lucide > RPG) ne tranche jamais ici. */}
             <div className="flex flex-col items-center gap-1.5">
-              {imageUrl ? (
-                <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-border-soft">
-                  <Image src={imageUrl} alt="" fill unoptimized className="object-cover" />
-                </div>
-              ) : (
+              <CatalogVisual icon={icon} lucideIcon={lucideIcon} imageUrl={imageUrl} size={56} />
+
+              <div className="flex items-center gap-0.5">
                 <RpgIconPicker
                   value={icon ?? undefined}
-                  onChange={(v) => setIcon(v ?? null)}
+                  onChange={(v) => { setIcon(v ?? null); setLucideIcon(null); void clearImage(); }}
                   trigger={
                     <button
                       type="button"
                       title={t("chooseIcon")}
-                      className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-border-soft bg-muted/40 transition-colors hover:bg-muted"
+                      aria-label={t("chooseIcon")}
+                      className={pickerButtonClass(!!icon)}
                     >
-                      {icon ? (
-                        <Image src={`/rpg_icons/${icon}`} alt="" unoptimized width={32} height={32} className="h-8 w-8 object-contain dark:invert" />
-                      ) : (
-                        <ImageIcon className="h-5 w-5 text-muted-foreground/50" />
-                      )}
+                      <Swords className="h-3.5 w-3.5" />
                     </button>
                   }
                 />
-              )}
+                <LucideIconPicker
+                  value={lucideIcon ?? ""}
+                  onChange={(name) => { setLucideIcon(name); setIcon(null); void clearImage(); }}
+                  trigger={
+                    <button
+                      type="button"
+                      title={t("chooseLucideIcon")}
+                      aria-label={t("chooseLucideIcon")}
+                      className={pickerButtonClass(!!lucideIcon)}
+                    >
+                      <Shapes className="h-3.5 w-3.5" />
+                    </button>
+                  }
+                />
+                <button
+                  type="button"
+                  disabled={uploading}
+                  onClick={() => fileInputRef.current?.click()}
+                  title={t("useImage")}
+                  aria-label={t("useImage")}
+                  className={pickerButtonClass(!!imageUrl)}
+                >
+                  {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImageIcon className="h-3.5 w-3.5" />}
+                </button>
+              </div>
+
               <input
                 ref={fileInputRef}
                 type="file"
@@ -235,23 +277,14 @@ export function CatalogItemDialog({
                   if (file) void handleImagePick(file);
                 }}
               />
-              {imageUrl ? (
+
+              {(icon || lucideIcon || imageUrl) && (
                 <button
                   type="button"
-                  onClick={() => void handleImageRemove()}
+                  onClick={() => { setIcon(null); setLucideIcon(null); void clearImage(); }}
                   className="text-[11px] text-muted-foreground transition-colors hover:text-destructive"
                 >
-                  {t("removeImage")}
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  disabled={uploading}
-                  onClick={() => fileInputRef.current?.click()}
-                  className="flex items-center gap-1 text-[11px] text-muted-foreground transition-colors hover:text-foreground disabled:opacity-40"
-                >
-                  {uploading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
-                  {t("useImage")}
+                  {tCommon("remove")}
                 </button>
               )}
             </div>
@@ -428,7 +461,7 @@ export function CatalogItemDetail({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <div className="flex items-start gap-3">
-            <CatalogIcon icon={item.icon} imageUrl={item.image_url} />
+            <CatalogIcon icon={item.icon} lucideIcon={item.lucide_icon} imageUrl={item.image_url} />
             <div className="min-w-0 flex-1 space-y-1 text-left">
               <DialogTitle className="text-base">{item.name}</DialogTitle>
               {item.rarity && <RarityBadge rarity={item.rarity} />}
