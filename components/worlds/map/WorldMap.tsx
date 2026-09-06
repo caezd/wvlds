@@ -376,13 +376,13 @@ export function WorldMap({
   }, []);
 
   /**
-   * Pose un de mes personas sur un lieu.
+   * Pose un de mes personas sur un lieu — ou l'en fait partir avec `null`.
    *
    * La liste est relue tout de suite plutôt qu'attendue de l'écho : celui-ci
    * arrivera, mais après un aller-retour, et le geste doit se voir.
    */
   const handlePlacePersona = React.useCallback(
-    async (personaId: string, pinId: string) => {
+    async (personaId: string, pinId: string | null) => {
       try {
         await setPersonaLocation(personaId, pinId);
         setPersonas(await getPlacedPersonas(worldId));
@@ -1002,6 +1002,7 @@ export function WorldMap({
       region={visibleRegions.find((r) => pointInPolygon(selectedPin, r.points)) ?? null}
       personasHere={personasByPin.get(selectedPin.id) ?? []}
       onPlacePersona={canPost ? (personaId) => void handlePlacePersona(personaId, selectedPin.id) : undefined}
+      onRemovePersona={canPost ? (personaId) => void handlePlacePersona(personaId, null) : undefined}
       pickerVariant={grandEcran ? "dialog" : "drawer"}
       isEditMode={isEditMode}
       canPost={canPost}

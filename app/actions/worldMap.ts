@@ -97,6 +97,8 @@ export async function getWorldMaps(
 /** Un persona posé sur un lieu — juste de quoi le nommer et le montrer. */
 export type PlacedPersona = {
   id: string;
+  /** À qui il est : seul son auteur peut le faire partir d'ici. */
+  user_id: string;
   name: string;
   avatar_url: string | null;
   map_pin_id: string;
@@ -119,7 +121,7 @@ export async function getPlacedPersonas(worldId: string): Promise<PlacedPersona[
   const supabase = await createClient();
   const { data } = await supabase
     .from("personas")
-    .select("id, name, avatar_url, map_pin_id")
+    .select("id, user_id, name, avatar_url, map_pin_id")
     .eq("world_id", worldId)
     .eq("is_template", false)
     .is("deleted_at", null)

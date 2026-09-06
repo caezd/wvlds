@@ -6,12 +6,13 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
-  BookOpenText, Check, Clock, ImagePlus, Loader2, Map as MapIcon, MessagesSquare, Pencil, Play, Trash2, Upload, UserPlus } from "lucide-react";
+  BookOpenText, Check, Clock, ImagePlus, Loader2, Map as MapIcon, MessagesSquare, Pencil, Play, Trash2, Upload, UserPlus, X } from "lucide-react";
 
 import { STORED_IMAGE_ACCEPT, isStorableImage, toWebP } from "@/lib/imageUtils";
 import { supabaseThumb } from "@/lib/storage";
 import { pinBannerPath } from "@/lib/storagePaths";
 import { createClient } from "@/lib/supabase/client";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Button } from "@/components/ui/button";
 import { PersonaPickerDialog } from "@/components/personas/PersonaPickerDialog";
 import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
@@ -73,6 +74,7 @@ export function PinDetail({
   region = null,
   personasHere = [],
   onPlacePersona,
+  onRemovePersona,
   pickerVariant = "dialog",
   isEditMode,
   canPost = false,
@@ -100,6 +102,8 @@ export function PinDetail({
   personasHere?: PlacedPersona[];
   /** Pose un de mes personas ici. Absent : la fiche n'offre pas ce geste. */
   onPlacePersona?: (personaId: string) => void;
+  /** Fait partir d'ici un de mes personas. */
+  onRemovePersona?: (personaId: string) => void;
   /** Un dialogue s'imbrique mal dans le tiroir mobile, qui en accueille un. */
   pickerVariant?: "dialog" | "drawer";
   isEditMode: boolean;
@@ -113,6 +117,8 @@ export function PinDetail({
 }) {
   const t = useTranslations("map");
   const tCommon = useTranslations("common");
+  // On ne fait partir que les siens : la RLS le dit aussi, mais après coup.
+  const { userId } = useCurrentUser();
   const supabase = createClient();
 
   const [editing, setEditing] = React.useState(false);
@@ -492,6 +498,16 @@ export function PinDetail({
                     )}
                   </span>
                   <span className="min-w-0 flex-1 truncate">{persona.name}</span>
+                  {onRemovePersona && persona.user_id === userId && (
+                    <button
+                      type="button"
+                      aria-label={t("removeFromPlace", { name: persona.name })}
+                      onClick={() => onRemovePersona(persona.id)}
+                      className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
                 </div>
               ))}
               {onPlacePersona && (

@@ -30,6 +30,13 @@ vi.mock("@/app/actions/worldMap", async (importOriginal) => ({
   deleteMapPin: vi.fn(),
 }));
 
+// Qui regarde : hors provider le hook rend des valeurs neutres, et aucun
+// persona ne serait alors reconnu comme sien.
+const moi = vi.hoisted(() => ({ userId: "u1" as string | null }));
+vi.mock("@/hooks/useCurrentUser", () => ({
+  useCurrentUser: () => ({ userId: moi.userId }),
+}));
+
 // Le sélecteur de personas lit la session et la liste des personas du monde :
 // ce qui se vérifie ici est que la fiche l'ouvre et pose ce qu'il en rend.
 vi.mock("@/components/personas/PersonaPickerDialog", () => ({
@@ -357,6 +364,7 @@ describe("PinDetail — qui se trouve ici", () => {
   function monterAvecDuMonde(
     personasHere = [makePlacedPersona()],
     onPlacePersona?: (personaId: string) => void,
+    onRemovePersona?: (personaId: string) => void,
   ) {
     render(
       <PinDetail
@@ -366,6 +374,7 @@ describe("PinDetail — qui se trouve ici", () => {
         maps={CARTES}
         personasHere={personasHere}
         onPlacePersona={onPlacePersona}
+        onRemovePersona={onRemovePersona}
         isEditMode={false}
         worldId="w1"
         onUpdated={vi.fn()}
@@ -422,5 +431,30 @@ describe("PinDetail — qui se trouve ici", () => {
     monterAvecDuMonde([makePlacedPersona()]);
 
     expect(screen.queryByRole("button", { name: "M'installer ici" })).toBeNull();
+  });
+
+  it("fait partir le persona qu'on lui désigne", async () => {
+    const onRemovePersona = vi.fn();
+    monterAvecDuMonde([makePlacedPersona({ id: "per1", name: "Kael" })], undefined, onRemovePersona);
+
+    await userEvent.click(screen.getByRole("button", { name: "Retirer Kael de ce lieu" }));
+
+    expect(onRemovePersona).toHaveBeenCalledWith("per1");
+  });
+
+  it("ne fait partir que les siens", () => {
+    // La RLS refuserait de toute façon, mais après coup : un bouton qui ne
+    // peut pas aboutir n'a rien à faire là.
+    monterAvecDuMonde(
+      [
+        makePlacedPersona({ id: "a", name: "Kael" }),
+        makePlacedPersona({ id: "b", name: "Ifyr", user_id: "u2" }),
+      ],
+      undefined,
+      vi.fn(),
+    );
+
+    expect(screen.getByRole("button", { name: "Retirer Kael de ce lieu" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Retirer Ifyr de ce lieu" })).toBeNull();
   });
 });

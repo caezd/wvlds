@@ -1397,6 +1397,7 @@
     "placeEra": "Era",
     "whoIsHere": "Who is here",
     "settleHere": "Settle here",
+    "removeFromPlace": "Remove {name} from this place",
     "peopleHere": "{count} here"
   },
   "iconPicker": {

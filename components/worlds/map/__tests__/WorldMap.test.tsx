@@ -48,11 +48,12 @@ vi.mock("@/app/actions/worldMap", async (importOriginal) => ({
 // Le panneau d'un lieu tire tout l'éditeur de paragraphe et le rendu Markdown :
 // ce qui se vérifie ici est ce que la CARTE fait, pas ce qu'il affiche.
 vi.mock("@/components/worlds/map/PinDetail", () => ({
-  PinDetail: ({ pin, region, onDelete, onPlacePersona }: {
+  PinDetail: ({ pin, region, onDelete, onPlacePersona, onRemovePersona }: {
     pin: { title: string };
     region?: { label: string } | null;
     onDelete: () => void;
     onPlacePersona?: (personaId: string) => void;
+    onRemovePersona?: (personaId: string) => void;
   }) => (
     <div data-testid="pin-popover">
       {pin.title}
@@ -60,6 +61,9 @@ vi.mock("@/components/worlds/map/PinDetail", () => ({
       <button type="button" onClick={onDelete}>Supprimer depuis le panneau</button>
       {onPlacePersona && (
         <button type="button" onClick={() => onPlacePersona("per9")}>M&apos;installer ici</button>
+      )}
+      {onRemovePersona && (
+        <button type="button" onClick={() => onRemovePersona("per9")}>Retirer Nyx de ce lieu</button>
       )}
     </div>
   ),
@@ -1421,11 +1425,22 @@ describe("WorldMap — s'installer quelque part", () => {
     await waitFor(() => expect(screen.getByLabelText("1 sur place")).toBeInTheDocument());
   });
 
+  it("fait partir le persona du lieu, et relit qui reste", async () => {
+    getPlacedPersonas.mockResolvedValue([] as never);
+    monterQuiPeutJouer(true);
+
+    await userEvent.click(screen.getByRole("button", { name: "Le port" }));
+    await userEvent.click(screen.getByRole("button", { name: "Retirer Nyx de ce lieu" }));
+
+    expect(setPersonaLocation).toHaveBeenCalledWith("per9", null);
+  });
+
   it("n'offre pas le geste à qui ne joue pas dans ce monde", async () => {
     monterQuiPeutJouer(false);
 
     await userEvent.click(screen.getByRole("button", { name: "Le port" }));
 
     expect(screen.queryByRole("button", { name: "M'installer ici" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Retirer Nyx de ce lieu" })).toBeNull();
   });
 });

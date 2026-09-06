@@ -1397,6 +1397,7 @@
     "placeEra": "Época",
     "whoIsHere": "Quién está aquí",
     "settleHere": "Instalarme aquí",
+    "removeFromPlace": "Quitar a {name} de este lugar",
     "peopleHere": "{count} presentes"
   },
   "iconPicker": {
