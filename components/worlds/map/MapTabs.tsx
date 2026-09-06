@@ -27,6 +27,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { afterMenuClose } from "@/components/ui/after-menu-close";
 import { cn } from "@/lib/utils";
 import { MAX_MAPS_PER_WORLD } from "@/lib/constants";
 import type { WorldMapData } from "@/app/actions/worldMap";
@@ -157,8 +158,14 @@ function TabButton({
           <DropdownMenuContent align="start" className="min-w-44">
             <DropdownMenuItem onSelect={commencerARenommer}>{tCommon("rename")}</DropdownMenuItem>
             <DropdownMenuItem onSelect={actions.onChangeImage}>{t("changeMap")}</DropdownMenuItem>
+            {/* `afterMenuClose` : cet élément ouvre une confirmation, donc une
+                seconde couche modale. Radix rend `document.body` inerte tant
+                qu'une couche est ouverte et ne le restaure qu'au retrait de la
+                DERNIÈRE ; le menu qui se ferme et le dialogue qui s'ouvre
+                désynchronisaient le décompte, et plus rien n'était cliquable
+                nulle part jusqu'au rechargement de la page. */}
             <DropdownMenuItem
-              onSelect={actions.onDelete}
+              onSelect={afterMenuClose(actions.onDelete)}
               className="text-destructive focus:text-destructive"
             >
               {t("deleteMap")}

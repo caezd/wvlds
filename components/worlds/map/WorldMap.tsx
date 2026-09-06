@@ -499,16 +499,32 @@ export function WorldMap({
     if (writeHistory) writeUrl(pin.map_id, pin.id, "replace");
   }, [loadPopoverData, writeUrl]);
 
-  const selectMap = React.useCallback((mapId: string | null, mode: "push" | "replace" = "push") => {
-    setActiveMapId(mapId);
+  /**
+   * Range tout ce qui est en cours : outils, brouillons, panneaux ouverts.
+   *
+   * Chaque commande tenait sa propre liste, et chaque état ajouté depuis en a
+   * manqué au moins une. Le formulaire d'un lien survivait ainsi à la sortie
+   * d'écriture — on pouvait renommer ou supprimer un trait sans plus être en
+   * train de modifier la carte —, et le panneau d'une région survivait à la
+   * prise de la règle. Une seule liste, appelée par tout le monde : le
+   * prochain état n'aura qu'un endroit où s'inscrire.
+   */
+  const rangerLesOutils = React.useCallback(() => {
     closePopover();
     setPendingPin(null);
-    setSegment(null);
-    setSelectedRegion(null);
     setDraft(null);
     setPendingRegion(null);
+    setSelectedRegion(null);
+    setSelectedLink(null);
+    setSegment(null);
+    setCalibrating(false);
+  }, [closePopover]);
+
+  const selectMap = React.useCallback((mapId: string | null, mode: "push" | "replace" = "push") => {
+    setActiveMapId(mapId);
+    rangerLesOutils();
     writeUrl(mapId, null, mode);
-  }, [closePopover, writeUrl]);
+  }, [rangerLesOutils, writeUrl]);
 
   // Échap ferme le panneau ouvert. Le garde sur `defaultPrevented` laisse la
   // main aux boîtes de dialogue empilées par-dessus (apparence de l'épingle,
@@ -562,7 +578,7 @@ export function WorldMap({
     if (pin.map_id !== activeMapRef.current?.id) {
       pendingFocusRef.current = pin.id;
       setActiveMapId(pin.map_id);
-      closePopover();
+      rangerLesOutils();
       writeUrl(pin.map_id, pin.id, "push");
       return;
     }
@@ -571,7 +587,7 @@ export function WorldMap({
     // fiche du lieu. La refermer reviendrait à cacher ce qu'on vient de
     // demander à voir.
     openPopover(pin);
-  }, [centerOnPoint, closePopover, openPopover, writeUrl]);
+  }, [centerOnPoint, rangerLesOutils, openPopover, writeUrl]);
 
   React.useEffect(() => {
     const attendu = pendingFocusRef.current;
@@ -701,9 +717,13 @@ export function WorldMap({
       await deleteWorldMap(id);
       const restantes = maps.filter((m) => m.id !== id);
       setMaps(restantes);
-      // Les épingles de la carte partent avec elle en base (`ON DELETE
+      // Épingles, régions et traits partent avec elle en base (`ON DELETE
       // CASCADE`) ; on les retire ici sans attendre l'écho du temps réel.
+      // Seules les épingles l'étaient : régions et traits restaient en
+      // mémoire jusqu'à ce que le serveur veuille bien le dire.
       setPins((prev) => prev.filter((p) => p.map_id !== id));
+      setRegions((prev) => prev.filter((r) => r.map_id !== id));
+      setLinks((prev) => prev.filter((l) => l.map_id !== id));
       // `replace` : on ne revient pas en arrière vers une carte supprimée.
       selectMap(restantes[0]?.id ?? null, "replace");
       toast.success(t("mapDeleted"));
@@ -813,13 +833,9 @@ export function WorldMap({
   }, [worldId]);
 
   function toggleCalibrating() {
-    setCalibrating((v) => !v);
-    setSegment(null);
-    setSelectedLink(null);
-    setPendingPin(null);
-    setDraft(null);
-    setPendingRegion(null);
-    closePopover();
+    const enMain = calibrating;
+    rangerLesOutils();
+    if (!enMain) setCalibrating(true);
   }
 
   /**
@@ -831,24 +847,14 @@ export function WorldMap({
    */
   function toggleEditMode() {
     setEditMode((v) => !v);
-    closePopover();
-    setPendingPin(null);
-    setSelectedRegion(null);
-    setDraft(null);
-    setPendingRegion(null);
-    setCalibrating(false);
-    setSegment(null);
+    rangerLesOutils();
   }
 
   /** L'outil de tracé : on pose des sommets jusqu'à fermer, ou abandonner. */
   function toggleDrawing() {
-    setDraft((prev) => (prev === null ? [] : null));
-    setPendingRegion(null);
-    setPendingPin(null);
-    setSelectedRegion(null);
-    setCalibrating(false);
-    setSegment(null);
-    closePopover();
+    const enCours = draft !== null;
+    rangerLesOutils();
+    if (!enCours) setDraft([]);
   }
 
   /**

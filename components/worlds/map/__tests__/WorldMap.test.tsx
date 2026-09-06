@@ -6,7 +6,7 @@ import userEvent from "@testing-library/user-event";
 import { createSupabaseMock, type SupabaseMock } from "@/test/supabaseMock";
 import { createClient } from "@/lib/supabase/client";
 import { WorldMap } from "@/components/worlds/map/WorldMap";
-import { deleteMapPin, updateWorldMap } from "@/app/actions/worldMap";
+import { deleteMapPin, deleteWorldMap, updateWorldMap } from "@/app/actions/worldMap";
 import { MEDIA } from "@/hooks/useMediaQuery";
 import { makeMap, makePin, makePinLink, makePlacedPersona, makeRegion } from "./fixtures";
 
@@ -1608,5 +1608,80 @@ describe("WorldMap — joindre deux lieux", () => {
     fireEvent.click(document.querySelector('[data-link-hit="l1"]')!);
 
     expect(screen.queryByRole("textbox", { name: "Nom du lien" })).toBeNull();
+  });
+});
+
+describe("WorldMap — rien ne survit au rangement des outils", () => {
+  // Chaque commande tenait sa propre liste d'états à remettre à zéro, et
+  // chaque état ajouté depuis en manquait au moins une : le formulaire d'un
+  // lien restait ouvert après la sortie d'écriture — on pouvait renommer ou
+  // supprimer un trait sans plus modifier la carte — et le panneau d'une
+  // région survivait à la prise de la règle.
+  const PORT = makePin({ id: "pin1", title: "Le port", x: 20, y: 50 });
+  const DONJON = makePin({ id: "pin2", title: "Le donjon", x: 60, y: 50 });
+  const LIEN = makePinLink({ id: "l1", from_pin_id: "pin1", to_pin_id: "pin2" });
+
+  beforeEach(() => { simulerMiseEnPage(); simulerGrandEcran(); });
+  afterEach(() => { restaurerMiseEnPage(); restaurerEcran(); });
+
+  async function ouvrirLeFormulaireDuLien() {
+    monter({ maps: [makeMap()], pins: [PORT, DONJON], links: [LIEN] });
+    await userEvent.click(screen.getByRole("button", { name: "Modifier" }));
+    fireEvent.click(document.querySelector('[data-link-hit="l1"]')!);
+    expect(screen.getByRole("textbox", { name: "Nom du lien" })).toBeInTheDocument();
+  }
+
+  it("le formulaire d'un lien ne survit pas à la sortie d'écriture", async () => {
+    await ouvrirLeFormulaireDuLien();
+
+    await userEvent.click(screen.getByRole("button", { name: "Modification active" }));
+
+    expect(screen.queryByRole("textbox", { name: "Nom du lien" })).toBeNull();
+  });
+
+  it("ni à la prise de la règle", async () => {
+    await ouvrirLeFormulaireDuLien();
+
+    await userEvent.click(screen.getByRole("button", { name: "Régler l'échelle" }));
+
+    expect(screen.queryByRole("textbox", { name: "Nom du lien" })).toBeNull();
+  });
+
+  it("ni au tracé d'une région", async () => {
+    await ouvrirLeFormulaireDuLien();
+
+    await userEvent.click(screen.getByRole("button", { name: "Dessiner une région" }));
+
+    expect(screen.queryByRole("textbox", { name: "Nom du lien" })).toBeNull();
+  });
+
+  it("le panneau d'une région ne survit pas à la prise de la règle", async () => {
+    monter({ maps: [makeMap()], pins: [], regions: [makeRegion()] });
+    await userEvent.click(screen.getByRole("button", { name: "Modifier" }));
+    fireEvent.click(document.querySelector("polygon")!);
+    expect(screen.getByTestId("region-panel")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Régler l'échelle" }));
+
+    expect(screen.queryByTestId("region-panel")).toBeNull();
+  });
+
+  it("supprimer une carte emporte ses régions et ses traits", async () => {
+    // Ils partent en base par `ON DELETE CASCADE` ; seules les épingles
+    // étaient retirées ici, les autres attendaient l'écho du serveur.
+    monter({
+      maps: [makeMap(), makeMap({ id: "map2", label: "Le donjon", sort_index: 1 })],
+      pins: [PORT, DONJON],
+      links: [LIEN],
+      regions: [makeRegion()],
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Modifier" }));
+    await userEvent.click(screen.getByRole("button", { name: "Commandes de la carte Carte" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Supprimer cette carte" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Supprimer" }));
+
+    await waitFor(() => expect(vi.mocked(deleteWorldMap)).toHaveBeenCalledWith("map1"));
+    await waitFor(() => expect(document.querySelector('[data-link-hit="l1"]')).toBeNull());
+    expect(document.querySelector("polygon")).toBeNull();
   });
 });
