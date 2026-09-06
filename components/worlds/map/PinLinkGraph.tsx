@@ -5,7 +5,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import type { MapPin, MapPinLink } from "@/app/actions/worldMap";
 import { distanceBetween, formatDistance, type MapScale } from "./scale";
-import { layoutLinkGraph, otherEnd } from "./linkGraph";
+import { LARGEUR_CENTRE, largeurEtiquette, layoutLinkGraph, otherEnd } from "./linkGraph";
 
 /**
  * Ce que ce lieu touche, en petit.
@@ -15,10 +15,15 @@ import { layoutLinkGraph, otherEnd } from "./linkGraph";
  * et d'autre, et un trait pointillé va de l'un à l'autre — la même écriture
  * que sur la carte, en réduction.
  *
+ * Chaque voisin est posé DANS SA DIRECTION : un lieu à l'ouest se montre à
+ * gauche. Le placement vit dans `linkGraph.ts`, avec les largeurs — c'est
+ * ensemble qu'elles décident si le trait se voit.
+ *
  * Les traits sont en SVG étiré (`preserveAspectRatio="none"`), donc en
  * pourcentages du cadre ; les boîtes sont du HTML, qui seul sait tronquer un
  * nom trop long.
  */
+
 export function PinLinkGraph({
   pin,
   links,
@@ -37,6 +42,11 @@ export function PinLinkGraph({
   scale: MapScale | null;
   onOpenPin: (pin: MapPin) => void;
 }) {
+  // Le trait survolé s'allume : c'est ce qui dit lequel des voisins on vise
+  // quand ils sont plusieurs. Les traits vivent dans un autre élément que les
+  // boîtes — aucun sélecteur CSS ne les relie, d'où cet état.
+  const [survole, setSurvole] = React.useState<string | null>(null);
+
   const voisins = React.useMemo(() => {
     const vus = new Set<string>();
     return links
@@ -51,8 +61,12 @@ export function PinLinkGraph({
   }, [links, pins, pin.id]);
 
   const { center, nodes, hidden } = React.useMemo(
-    () => layoutLinkGraph(voisins.map((v) => ({ id: v.id, title: v.title }))),
-    [voisins],
+    () => layoutLinkGraph(
+      pin,
+      voisins.map((v) => ({ id: v.id, title: v.title, x: v.pin.x, y: v.pin.y })),
+      aspect,
+    ),
+    [pin, voisins, aspect],
   );
 
   if (voisins.length === 0) return null;
@@ -60,7 +74,10 @@ export function PinLinkGraph({
   const parId = new Map(voisins.map((v) => [v.id, v]));
 
   return (
-    <div data-link-graph className="relative h-36 w-full overflow-hidden rounded-md bg-background/60">
+    <div
+      data-link-graph
+      className="relative h-40 w-full overflow-hidden rounded-md border border-border-soft bg-background/50"
+    >
       <svg
         aria-hidden
         className="absolute inset-0 h-full w-full"
@@ -75,9 +92,35 @@ export function PinLinkGraph({
             x2={n.x}
             y2={n.y}
             vectorEffect="non-scaling-stroke"
-            className="stroke-muted-foreground/50"
-            strokeWidth={1}
+            className={cn(
+              "transition-colors",
+              survole === n.id ? "stroke-foreground" : "stroke-muted-foreground/50",
+            )}
+            strokeWidth={survole === n.id ? 1.5 : 1}
             strokeDasharray="2 3"
+          />
+        ))}
+      </svg>
+
+      {/* Les bouts de chaque trait : un carré au départ, un à l'arrivée. Sans
+          eux, le pointillé s'arrêtait dans le vide sous les boîtes. */}
+      <svg
+        aria-hidden
+        className="absolute inset-0 h-full w-full overflow-visible"
+        viewBox="0 0 100 100"
+        preserveAspectRatio="none"
+      >
+        {nodes.map((n) => (
+          <rect
+            key={n.id}
+            x={n.x - 0.8}
+            y={n.y - 1.6}
+            width={1.6}
+            height={3.2}
+            className={cn(
+              "transition-colors",
+              survole === n.id ? "fill-foreground" : "fill-muted-foreground/60",
+            )}
           />
         ))}
       </svg>
@@ -85,8 +128,13 @@ export function PinLinkGraph({
       {/* Le lieu ouvert, au centre. Il ne mène nulle part : on y est déjà. */}
       <span
         data-link-graph-center
-        className="absolute z-10 max-w-[36%] truncate rounded border border-foreground bg-foreground px-1.5 py-0.5 text-[10px] font-semibold text-background"
-        style={{ left: `${center.x}%`, top: `${center.y}%`, transform: "translate(-50%, -50%)" }}
+        className="absolute z-10 truncate rounded-sm bg-foreground px-1.5 py-0.5 text-[10px] font-semibold text-background"
+        style={{
+          left: `${center.x}%`,
+          top: `${center.y}%`,
+          maxWidth: `${LARGEUR_CENTRE}%`,
+          transform: "translate(-50%, -50%)",
+        }}
       >
         {pin.title}
       </span>
@@ -101,14 +149,23 @@ export function PinLinkGraph({
           <button
             key={n.id}
             type="button"
+            aria-label={voisin.title}
             onClick={() => onOpenPin(voisin.pin)}
+            onPointerEnter={() => setSurvole(n.id)}
+            onPointerLeave={() => setSurvole((prev) => (prev === n.id ? null : prev))}
+            onFocus={() => setSurvole(n.id)}
+            onBlur={() => setSurvole((prev) => (prev === n.id ? null : prev))}
             className={cn(
-              "absolute z-10 flex max-w-[42%] flex-col rounded border border-border-soft bg-background px-1.5 py-0.5 text-left",
-              "text-[10px] leading-tight transition-colors hover:border-foreground hover:bg-secondary",
+              "absolute z-10 flex flex-col rounded-sm border bg-background px-1.5 py-0.5 text-left",
+              "text-[10px] leading-tight transition-colors",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              survole === n.id ? "border-foreground bg-secondary" : "border-border-soft",
             )}
             style={{
               left: `${n.x}%`,
               top: `${n.y}%`,
+              maxWidth: `${largeurEtiquette(n)}%`,
+              // Chaque boîte pousse vers l'intérieur du cadre depuis son bord.
               transform: n.side === "left" ? "translate(0, -50%)" : "translate(-100%, -50%)",
             }}
           >

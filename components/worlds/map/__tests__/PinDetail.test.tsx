@@ -434,6 +434,45 @@ describe("PinDetail — ce que le lieu rejoint", () => {
     monterRelie([]);
     expect(screen.queryByText("Ce qu'il rejoint")).toBeNull();
   });
+
+  it("montre à gauche le voisin qui est à l'ouest", () => {
+    // Les voisins alternaient droite puis gauche, dans l'ordre des liens : un
+    // lieu à l'ouest se retrouvait à droite une fois sur deux.
+    // `LE PORT` est à 20 %, `DONJON` à 60 % : le donjon est à l'est, la
+    // ruine — à 20 %, comme le port — juste au sud.
+    monterRelie([
+      makePinLink({ id: "l1", from_pin_id: "pin1", to_pin_id: "pin2" }),
+      makePinLink({ id: "l2", from_pin_id: "pin1", to_pin_id: "pin3" }),
+    ]);
+
+    const donjon = screen.getByRole("button", { name: "Le donjon" });
+    expect(Number.parseFloat(donjon.style.left)).toBeGreaterThan(50);
+  });
+
+  it("place l'ouest à gauche du centre", () => {
+    const OUEST = makePin({ id: "pin4", title: "Le cap", x: 5, y: 50 });
+    render(
+      <PinDetail
+        pin={makePin({ id: "pin1", title: "Le port", x: 60, y: 50 })}
+        wikiPages={WIKI_PAGES}
+        rooms={[]}
+        maps={CARTES}
+        links={[makePinLink({ id: "l1", from_pin_id: "pin1", to_pin_id: "pin4" })]}
+        pinsById={new Map([[ "pin1", makePin({ id: "pin1", title: "Le port", x: 60, y: 50 }) ], ["pin4", OUEST]])}
+        aspect={1}
+        scale={null}
+        onOpenPin={vi.fn()}
+        isEditMode={false}
+        worldId="w1"
+        onUpdated={vi.fn()}
+        onDelete={vi.fn()}
+        onOpenMap={vi.fn()}
+      />,
+    );
+
+    const cap = screen.getByRole("button", { name: "Le cap" });
+    expect(Number.parseFloat(cap.style.left)).toBeLessThan(50);
+  });
 });
 
 describe("PinDetail — les commandes d'auteur", () => {
