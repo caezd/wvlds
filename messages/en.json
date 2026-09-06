@@ -1396,6 +1396,13 @@
     "place": "Place",
     "placeEra": "Era",
     "whoIsHere": "Who is here",
+    "linkedPlaces": "What it connects to",
+    "linkName": "Link name",
+    "linkHint": "Click a second place to connect them, or a point to set the scale",
+    "deleteLink": "Delete this link",
+    "createLinkError": "Could not connect these two places.",
+    "deleteLinkError": "Could not delete the link.",
+    "linkExists": "These two places are already connected.",
     "settleHere": "Settle here",
     "removeFromPlace": "Remove {name} from this place",
     "peopleHere": "{count} here"

@@ -5,9 +5,9 @@ import userEvent from "@testing-library/user-event";
 import { createSupabaseMock } from "@/test/supabaseMock";
 import { createClient } from "@/lib/supabase/client";
 import { PinDetail } from "@/components/worlds/map/PinDetail";
-import type { MapPin } from "@/app/actions/worldMap";
+import type { MapPin, MapPinLink } from "@/app/actions/worldMap";
 import type { PinRoom } from "@/components/worlds/map/types";
-import { makeMap, makePin, makePlacedPersona, makeRegion, WIKI_PAGES } from "./fixtures";
+import { makeMap, makePin, makePinLink, makePlacedPersona, makeRegion, WIKI_PAGES } from "./fixtures";
 
 /** Deux cartes : celle du lieu, et celle qu'il peut ouvrir. */
 const CARTES = [makeMap(), makeMap({ id: "map2", label: "Le donjon", sort_index: 1 })];
@@ -368,6 +368,71 @@ describe("PinDetail — où se trouve ce lieu", () => {
 
     expect(screen.getByText("Le continent")).toBeInTheDocument();
     expect(screen.queryByText("Le royaume")).toBeNull();
+  });
+});
+
+describe("PinDetail — ce que le lieu rejoint", () => {
+  const PORT = makePin({ id: "pin1", title: "Le port", x: 20, y: 50 });
+  const DONJON = makePin({ id: "pin2", title: "Le donjon", x: 60, y: 50 });
+  const RUINE = makePin({ id: "pin3", title: "La ruine", x: 20, y: 80 });
+
+  function monterRelie(links: MapPinLink[], scale: { widthUnits: number; unit: string } | null = null) {
+    const onOpenPin = vi.fn();
+    render(
+      <PinDetail
+        pin={PORT}
+        wikiPages={WIKI_PAGES}
+        rooms={[]}
+        maps={CARTES}
+        links={links}
+        pinsById={new Map([PORT, DONJON, RUINE].map((p) => [p.id, p]))}
+        aspect={0.5}
+        scale={scale}
+        onOpenPin={onOpenPin}
+        isEditMode={false}
+        worldId="w1"
+        onUpdated={vi.fn()}
+        onDelete={vi.fn()}
+        onOpenMap={vi.fn()}
+      />,
+    );
+    return { onOpenPin };
+  }
+
+  it("nomme les lieux voisins autour de celui-ci", () => {
+    monterRelie([
+      makePinLink({ id: "l1", from_pin_id: "pin1", to_pin_id: "pin2" }),
+      // L'ordre des deux bouts ne veut rien dire : le voisin est l'autre.
+      makePinLink({ id: "l2", from_pin_id: "pin3", to_pin_id: "pin1" }),
+    ]);
+
+    expect(screen.getByText("Ce qu'il rejoint")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Le donjon/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /La ruine/ })).toBeInTheDocument();
+    expect(document.querySelector("[data-link-graph-center]")).toHaveTextContent("Le port");
+  });
+
+  it("ouvre le voisin qu'on clique", async () => {
+    const { onOpenPin } = monterRelie([makePinLink({ id: "l1", from_pin_id: "pin1", to_pin_id: "pin2" })]);
+
+    await userEvent.click(screen.getByRole("button", { name: /Le donjon/ }));
+
+    expect(onOpenPin).toHaveBeenCalledWith(DONJON);
+  });
+
+  it("dit la distance quand la carte est à l'échelle", () => {
+    // 40 % de la largeur d'une carte de 1 000 km : 400 km.
+    monterRelie(
+      [makePinLink({ id: "l1", from_pin_id: "pin1", to_pin_id: "pin2" })],
+      { widthUnits: 1000, unit: "km" },
+    );
+
+    expect(screen.getByRole("button", { name: /Le donjon/ })).toHaveTextContent("400 km");
+  });
+
+  it("se tait pour un lieu que rien ne rejoint", () => {
+    monterRelie([]);
+    expect(screen.queryByText("Ce qu'il rejoint")).toBeNull();
   });
 });
 

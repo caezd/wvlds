@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import { WorldMap } from "@/components/worlds/map/WorldMap";
 import { deleteMapPin, updateWorldMap } from "@/app/actions/worldMap";
 import { MEDIA } from "@/hooks/useMediaQuery";
-import { makeMap, makePin, makePlacedPersona, makeRegion } from "./fixtures";
+import { makeMap, makePin, makePinLink, makePlacedPersona, makeRegion } from "./fixtures";
 
 // ──────────────────────────────────────────────────────────────────────────
 // Trois promesses de la carte, chacune tenue en défaut avant ce fichier :
@@ -29,11 +29,17 @@ const createMapRegion = vi.hoisted(() => vi.fn());
 const updateMapRegion = vi.hoisted(() => vi.fn(async () => {}));
 const deleteMapRegion = vi.hoisted(() => vi.fn(async () => {}));
 const setPersonaLocation = vi.hoisted(() => vi.fn(async () => {}));
+const createPinLink = vi.hoisted(() => vi.fn());
+const deletePinLink = vi.hoisted(() => vi.fn(async () => {}));
+const updatePinLink = vi.hoisted(() => vi.fn(async () => {}));
 vi.mock("@/app/actions/worldMap", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/app/actions/worldMap")>()),
   getWorldMaps,
   getPlacedPersonas,
   setPersonaLocation,
+  createPinLink,
+  deletePinLink,
+  updatePinLink,
   createMapRegion,
   updateMapRegion,
   deleteMapRegion,
@@ -92,6 +98,7 @@ type CarteInitiale = {
   maps: ReturnType<typeof makeMap>[];
   pins: ReturnType<typeof makePin>[];
   regions?: ReturnType<typeof makeRegion>[];
+  links?: ReturnType<typeof makePinLink>[];
   personas?: ReturnType<typeof makePlacedPersona>[];
 } | null;
 
@@ -107,7 +114,7 @@ function monter(
     <WorldMap
       worldId={worldId}
       canEdit
-      initialMap={initialMap ? { regions: [], personas: [], ...initialMap } : initialMap}
+      initialMap={initialMap ? { regions: [], links: [], personas: [], ...initialMap } : initialMap}
       {...adresse}
     />
   );
@@ -117,7 +124,7 @@ function monter(
     /** Rejoue le rendu avec un autre monde, comme une navigation client. */
     changerDeMonde: (id: string, carte: CarteInitiale) =>
       rerender(
-        <WorldMap worldId={id} canEdit initialMap={carte ? { regions: [], personas: [], ...carte } : carte} />,
+        <WorldMap worldId={id} canEdit initialMap={carte ? { regions: [], links: [], personas: [], ...carte } : carte} />,
       ),
   };
 }
@@ -145,7 +152,7 @@ describe("WorldMap — données servies par le serveur", () => {
   });
 
   it("charge la carte elle-même quand l'onglet s'ouvre côté client", async () => {
-    getWorldMaps.mockResolvedValue({ maps: [makeMap()], pins: [makePin()], regions: [], personas: [] });
+    getWorldMaps.mockResolvedValue({ maps: [makeMap()], pins: [makePin()], regions: [], links: [], personas: [] });
     monter(null);
 
     expect(getWorldMaps).toHaveBeenCalledWith("w1");
@@ -818,7 +825,7 @@ describe("WorldMap — l'époque affichée", () => {
         worldId="w1"
         canEdit
         timelineConfig={CHRONO}
-        initialMap={{ maps: [makeMap()], pins: [RUINE, VILLE, TOUJOURS], regions: [], personas: [] }}
+        initialMap={{ maps: [makeMap()], pins: [RUINE, VILLE, TOUJOURS], regions: [], links: [], personas: [] }}
       />,
     );
   }
@@ -1406,7 +1413,7 @@ describe("WorldMap — s'installer quelque part", () => {
         worldId="w1"
         canEdit
         canPost={canPost}
-        initialMap={{ maps: [makeMap()], pins: [makePin()], regions: [], personas: [] }}
+        initialMap={{ maps: [makeMap()], pins: [makePin()], regions: [], links: [], personas: [] }}
       />,
     );
     return { mock };
@@ -1442,5 +1449,105 @@ describe("WorldMap — s'installer quelque part", () => {
 
     expect(screen.queryByRole("button", { name: "M'installer ici" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Retirer Nyx de ce lieu" })).toBeNull();
+  });
+});
+
+describe("WorldMap — joindre deux lieux", () => {
+  const PORT = makePin({ id: "pin1", title: "Le port", x: 20, y: 50 });
+  const DONJON = makePin({ id: "pin2", title: "Le donjon", x: 60, y: 50 });
+
+  beforeEach(() => {
+    simulerMiseEnPage();
+    vi.spyOn(HTMLImageElement.prototype, "getBoundingClientRect").mockReturnValue({
+      left: 0, top: 0, width: 1000, height: 500, right: 1000, bottom: 500, x: 0, y: 0, toJSON() {},
+    } as DOMRect);
+  });
+  afterEach(() => { restaurerMiseEnPage(); vi.restoreAllMocks(); });
+
+  function cadre() {
+    return screen.getByAltText("Carte du monde").parentElement!.parentElement!;
+  }
+
+  async function sortirLOutil() {
+    await userEvent.click(screen.getByRole("button", { name: "Modifier" }));
+    await userEvent.click(screen.getByRole("button", { name: "Régler l'échelle" }));
+  }
+
+  it("relie deux lieux cliqués coup sur coup", async () => {
+    createPinLink.mockResolvedValue(makePinLink({ id: "l1", from_pin_id: "pin1", to_pin_id: "pin2" }));
+    monter({ maps: [makeMap()], pins: [PORT, DONJON] });
+    await sortirLOutil();
+
+    await userEvent.click(screen.getByRole("button", { name: "Le port" }));
+    await userEvent.click(screen.getByRole("button", { name: "Le donjon" }));
+
+    expect(createPinLink).toHaveBeenCalledWith("w1", "map1", "pin1", "pin2");
+    await waitFor(() => expect(document.querySelector('[data-link-hit="l1"]')).not.toBeNull());
+  });
+
+  it("laisse un lieu puis un point déclarer une distance", async () => {
+    // Le même outil sert aux deux : ce sont les cibles qui tranchent.
+    monter({ maps: [makeMap()], pins: [PORT] });
+    await sortirLOutil();
+
+    await userEvent.click(screen.getByRole("button", { name: "Le port" }));
+    expect(screen.getByText(/Cliquez un second lieu pour les relier/)).toBeInTheDocument();
+
+    fireEvent.click(cadre(), { clientX: 600, clientY: 0 });
+
+    expect(createPinLink).not.toHaveBeenCalled();
+    expect(screen.getByRole("spinbutton", { name: "Cette distance fait" })).toBeInTheDocument();
+  });
+
+  it("ne relie pas un lieu à lui-même", async () => {
+    monter({ maps: [makeMap()], pins: [PORT] });
+    await sortirLOutil();
+
+    await userEvent.click(screen.getByRole("button", { name: "Le port" }));
+    await userEvent.click(screen.getByRole("button", { name: "Le port" }));
+
+    expect(createPinLink).not.toHaveBeenCalled();
+  });
+
+  it("dit la distance d'un trait quand la carte est à l'échelle", () => {
+    // 40 % de la largeur d'une carte de 1 000 km : 400 km.
+    monter({
+      maps: [makeMap({ scale_width_units: 1000, scale_unit: "km" })],
+      pins: [PORT, DONJON],
+      links: [makePinLink({ id: "l1", from_pin_id: "pin1", to_pin_id: "pin2" })],
+    });
+
+    expect(document.querySelector('[data-link-label="l1"]')).toHaveTextContent("400 km");
+  });
+
+  it("nomme un trait, et le supprime", async () => {
+    monter({
+      maps: [makeMap()],
+      pins: [PORT, DONJON],
+      links: [makePinLink({ id: "l1", from_pin_id: "pin1", to_pin_id: "pin2" })],
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Modifier" }));
+
+    fireEvent.click(document.querySelector('[data-link-hit="l1"]')!);
+    await userEvent.type(screen.getByRole("textbox", { name: "Nom du lien" }), "Route du sel{Enter}");
+
+    expect(updatePinLink).toHaveBeenCalledWith("l1", { label: "Route du sel" });
+    await waitFor(() => expect(document.querySelector('[data-link-label="l1"]')).toHaveTextContent("Route du sel"));
+
+    fireEvent.click(document.querySelector('[data-link-hit="l1"]')!);
+    await userEvent.click(screen.getByRole("button", { name: "Supprimer ce lien" }));
+
+    expect(deletePinLink).toHaveBeenCalledWith("l1");
+    await waitFor(() => expect(document.querySelector('[data-link-hit="l1"]')).toBeNull());
+  });
+
+  it("ne donne la prise du clic qu'à qui modifie la carte", () => {
+    monter({
+      maps: [makeMap()],
+      pins: [PORT, DONJON],
+      links: [makePinLink({ id: "l1", from_pin_id: "pin1", to_pin_id: "pin2" })],
+    });
+
+    expect(document.querySelector('[data-link-hit="l1"]')).toBeNull();
   });
 });

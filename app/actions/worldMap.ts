@@ -74,9 +74,15 @@ export type MapRegion = {
  */
 export async function getWorldMaps(
   worldId: string,
-): Promise<{ maps: WorldMapData[]; pins: MapPin[]; regions: MapRegion[]; personas: PlacedPersona[] }> {
+): Promise<{
+  maps: WorldMapData[];
+  pins: MapPin[];
+  regions: MapRegion[];
+  links: MapPinLink[];
+  personas: PlacedPersona[];
+}> {
   const supabase = await createClient();
-  const [{ data: maps }, { data: pins }, { data: regions }, personas] = await Promise.all([
+  const [{ data: maps }, { data: pins }, { data: regions }, { data: links }, personas] = await Promise.all([
     supabase.from("world_maps").select("*").eq("world_id", worldId).order("sort_index"),
     supabase
       .from("world_map_pins")
@@ -84,15 +90,36 @@ export async function getWorldMaps(
       .eq("world_id", worldId)
       .order("sort_index"),
     supabase.from("world_map_regions").select("*").eq("world_id", worldId).order("sort_index"),
+    supabase
+      .from("world_map_pin_links")
+      .select("id, map_id, from_pin_id, to_pin_id, label")
+      .eq("world_id", worldId),
     getPlacedPersonas(worldId),
   ]);
   return {
     maps: (maps as WorldMapData[]) ?? [],
     pins: (pins as MapPin[]) ?? [],
     regions: (regions as MapRegion[]) ?? [],
+    links: (links as MapPinLink[]) ?? [],
     personas,
   };
 }
+
+/**
+ * Un trait entre deux lieux : une route, une passe, un fleuve.
+ *
+ * Sans sens : « A rejoint B » et « B rejoint A » sont le même lien, et la
+ * base l'interdit en double (index unique sur la paire ordonnée). Sa longueur
+ * ne se stocke pas — elle se déduit des positions et de l'échelle, et suit
+ * donc les épingles quand on les déplace.
+ */
+export type MapPinLink = {
+  id: string;
+  map_id: string;
+  from_pin_id: string;
+  to_pin_id: string;
+  label: string;
+};
 
 /** Un persona posé sur un lieu — juste de quoi le nommer et le montrer. */
 export type PlacedPersona = {
@@ -390,5 +417,56 @@ export async function deleteMapRegion(regionId: string): Promise<void> {
   await requireUser(supabase);
 
   const { error } = await supabase.from("world_map_regions").delete().eq("id", regionId);
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * Joint deux lieux.
+ *
+ * La paire est RANGÉE avant d'être écrite : un lien n'a pas de sens, et c'est
+ * ce rangement qui permet à une simple clé unique d'interdire le doublon
+ * inverse (voir migration 166). La base refuse alors la paire déjà posée quel
+ * que soit l'ordre des clics — erreur qu'on rend telle quelle, à charge pour
+ * l'appelant de la dire.
+ */
+export async function createPinLink(
+  worldId: string,
+  mapId: string,
+  fromPinId: string,
+  toPinId: string,
+): Promise<MapPinLink> {
+  const supabase = await createClient();
+  await requireUser(supabase);
+
+  const [a, b] = fromPinId < toPinId ? [fromPinId, toPinId] : [toPinId, fromPinId];
+
+  const { data, error } = await supabase
+    .from("world_map_pin_links")
+    .insert({
+      world_id: worldId,
+      map_id: mapId,
+      from_pin_id: a,
+      to_pin_id: b,
+    })
+    .select("id, map_id, from_pin_id, to_pin_id, label")
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data as MapPinLink;
+}
+
+export async function updatePinLink(linkId: string, patch: { label: string }): Promise<void> {
+  const supabase = await createClient();
+  await requireUser(supabase);
+
+  const { error } = await supabase.from("world_map_pin_links").update(patch).eq("id", linkId);
+  if (error) throw new Error(error.message);
+}
+
+export async function deletePinLink(linkId: string): Promise<void> {
+  const supabase = await createClient();
+  await requireUser(supabase);
+
+  const { error } = await supabase.from("world_map_pin_links").delete().eq("id", linkId);
   if (error) throw new Error(error.message);
 }

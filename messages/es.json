@@ -1396,6 +1396,13 @@
     "place": "Lugar",
     "placeEra": "Época",
     "whoIsHere": "Quién está aquí",
+    "linkedPlaces": "Con qué conecta",
+    "linkName": "Nombre del enlace",
+    "linkHint": "Haga clic en un segundo lugar para conectarlos, o en un punto para ajustar la escala",
+    "deleteLink": "Eliminar este enlace",
+    "createLinkError": "No se pudieron conectar estos dos lugares.",
+    "deleteLinkError": "No se pudo eliminar el enlace.",
+    "linkExists": "Estos dos lugares ya están conectados.",
     "settleHere": "Instalarme aquí",
     "removeFromPlace": "Quitar a {name} de este lugar",
     "peopleHere": "{count} presentes"

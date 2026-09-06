@@ -1,5 +1,5 @@
 import type { MapPin } from "@/app/actions/worldMap";
-import type { MapRegion, PlacedPersona, WorldMapData } from "@/app/actions/worldMap";
+import type { MapPinLink, MapRegion, PlacedPersona, WorldMapData } from "@/app/actions/worldMap";
 
 /** Épingle de test — les champs qui comptent se passent en surcharge. */
 export function makePin(overrides: Partial<MapPin> = {}): MapPin {
@@ -62,6 +62,10 @@ export function makeRegion(overrides: Partial<MapRegion> = {}): MapRegion {
 }
 
 /** Un persona posé sur un lieu — voir migration 154. */
+export function makePinLink(overrides: Partial<MapPinLink> = {}): MapPinLink {
+  return { id: "link1", map_id: "map1", from_pin_id: "pin1", to_pin_id: "pin2", label: "", ...overrides };
+}
+
 export function makePlacedPersona(overrides: Partial<PlacedPersona> = {}): PlacedPersona {
   return { id: "per1", user_id: "u1", name: "Kael", avatar_url: null, map_pin_id: "pin1", ...overrides };
 }

@@ -15,6 +15,9 @@ import {
   createMapRegion,
   updateMapRegion,
   deleteMapRegion,
+  createPinLink,
+  updatePinLink,
+  deletePinLink,
 } from "@/app/actions/worldMap";
 import { createClient } from "@/lib/supabase/server";
 import { ERR_NON_AUTHENTIFIE } from "@/lib/actionErrors";
@@ -32,11 +35,13 @@ describe("getWorldMaps", () => {
     ];
     const pins = [{ id: "p1", world_id: "w1", map_id: "m1", title: "Port" }];
     const regions = [{ id: "r1", map_id: "m1", label: "Le royaume", points: [] }];
-    use(createSupabaseMock({ results: [{ data: maps }, { data: pins }, { data: regions }] }));
+    const links = [{ id: "l1", map_id: "m1", from_pin_id: "p1", to_pin_id: "p2", label: "" }];
+    use(createSupabaseMock({ results: [{ data: maps }, { data: pins }, { data: regions }, { data: links }] }));
     const res = await getWorldMaps("w1");
     expect(res.maps).toEqual(maps);
     expect(res.pins).toEqual(pins);
     expect(res.regions).toEqual(regions);
+    expect(res.links).toEqual(links);
   });
 
   it("retourne des listes vides quand rien n'existe", async () => {
@@ -45,6 +50,34 @@ describe("getWorldMaps", () => {
     expect(res.maps).toEqual([]);
     expect(res.pins).toEqual([]);
     expect(res.regions).toEqual([]);
+    expect(res.links).toEqual([]);
+  });
+});
+
+describe("createPinLink", () => {
+  it("range la paire avant de l'écrire", async () => {
+    // Un lien n'a pas de sens, et c'est ce rangement qui permet à une simple
+    // clé unique d'interdire le doublon inverse (migration 166) : cliquer B
+    // puis A ne doit pas poser un second trait.
+    const mock = createSupabaseMock({ user: { id: "u1" }, results: [{ data: { id: "l1" } }] });
+    use(mock);
+
+    await createPinLink("w1", "m1", "bbb", "aaa");
+
+    expect(mock.buildersFor("world_map_pin_links")[0].insert).toHaveBeenCalledWith({
+      world_id: "w1",
+      map_id: "m1",
+      from_pin_id: "aaa",
+      to_pin_id: "bbb",
+    });
+  });
+
+  it("propage l'erreur Supabase — le doublon en est une", async () => {
+    use(createSupabaseMock({
+      user: { id: "u1" },
+      results: [{ error: { message: 'duplicate key value violates unique constraint "world_map_pin_links_pair_key"' } }],
+    }));
+    await expect(createPinLink("w1", "m1", "a", "b")).rejects.toThrow("world_map_pin_links_pair_key");
   });
 });
 
@@ -60,6 +93,9 @@ describe("mutations carte — garde d'authentification", () => {
     ["createMapRegion", () => createMapRegion("w1", "m1", { label: "x", points: [], color: "#000" })],
     ["updateMapRegion", () => updateMapRegion("r1", { label: "x" })],
     ["deleteMapRegion", () => deleteMapRegion("r1")],
+    ["createPinLink", () => createPinLink("w1", "m1", "a", "b")],
+    ["updatePinLink", () => updatePinLink("l1", { label: "x" })],
+    ["deletePinLink", () => deletePinLink("l1")],
   ])("%s lève si non connecté", async (_name, fn) => {
     use(createSupabaseMock({ user: null }));
     // Un CODE, pas une phrase : le message d'une exception finit dans un

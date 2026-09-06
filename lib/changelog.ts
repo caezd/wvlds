@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Carte",
+    text: "L’outil règle joint deux lieux : cliquez l’un puis l’autre, et un trait les relie. Il porte un nom, si vous lui en donnez un, et la distance dès que la carte est à l’échelle. La fiche d’un lieu montre en petit ce qu’il rejoint.",
+  },
+  {
+    date: "2026-09",
+    tag: "Carte",
     text: "Depuis la fiche d’un lieu, « M’installer ici » pose un de vos personas à cet endroit, et une croix l’en fait repartir.",
   },
   {

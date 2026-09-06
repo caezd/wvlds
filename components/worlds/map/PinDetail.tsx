@@ -18,7 +18,7 @@ import { PersonaPickerDialog } from "@/components/personas/PersonaPickerDialog";
 import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
 import { MarkdownContent } from "@/components/MarkdownRenderer";
 import { ParagraphBlockEditor } from "@/components/chatrooms/composer/ParagraphBlockEditor";
-import { updateMapPin, type MapPin as MapPinType, type PlacedPersona, type WorldMapData } from "@/app/actions/worldMap";
+import { updateMapPin, type MapPin as MapPinType, type MapPinLink, type PlacedPersona, type WorldMapData } from "@/app/actions/worldMap";
 import { StoredImage } from "@/components/ui/stored-image";
 import { TimelineDateFields } from "@/components/worlds/timeline/TimelineDateFields";
 import { formatTimelineLabel } from "@/lib/worldTimeline";
@@ -27,6 +27,8 @@ import type { MapRegion } from "@/app/actions/worldMap";
 
 import { cn } from "@/lib/utils";
 import { PinVisualDialog } from "./PinVisualDialog";
+import { PinLinkGraph } from "./PinLinkGraph";
+import type { MapScale } from "./scale";
 import type { PinRoom, WikiPageOption } from "./types";
 import { ERR_NON_AUTHENTIFIE } from "@/lib/actionErrors";
 
@@ -81,6 +83,11 @@ export function PinDetail({
   ownMap = null,
   region = null,
   personasHere = [],
+  links = [],
+  pinsById,
+  aspect = 1,
+  scale = null,
+  onOpenPin,
   onPlacePersona,
   onRemovePersona,
   pickerVariant = "dialog",
@@ -108,6 +115,15 @@ export function PinDetail({
   region?: MapRegion | null;
   /** Les personas posés ici — voir migration 154. */
   personasHere?: PlacedPersona[];
+  /** Les liens qui touchent ce lieu — voir migration 166. */
+  links?: MapPinLink[];
+  /** Les épingles de la carte, par identifiant : de quoi nommer les voisins. */
+  pinsById?: Map<string, MapPinType>;
+  /** Hauteur / largeur de la carte, pour que les distances soient justes. */
+  aspect?: number;
+  scale?: MapScale | null;
+  /** Ouvre un lieu voisin depuis le graphique. */
+  onOpenPin?: (pin: MapPinType) => void;
   /** Pose un de mes personas ici. Absent : la fiche n'offre pas ce geste. */
   onPlacePersona?: (personaId: string) => void;
   /** Fait partir d'ici un de mes personas. */
@@ -497,7 +513,22 @@ export function PinDetail({
               </Bloc>
             )}
 
-            {/* Qui se trouve ici. La carte n'en donne que le nombre : c'est
+            {/* Ce que ce lieu rejoint. La carte montre le réseau entier ; ici
+              on ne voit que ce qui part d'ici, et l'on y saute d'un clic. */}
+          {!editing && pinsById && onOpenPin && links.length > 0 && (
+            <Bloc titre={t("linkedPlaces")}>
+              <PinLinkGraph
+                pin={pin}
+                links={links}
+                pins={pinsById}
+                aspect={aspect}
+                scale={scale}
+                onOpenPin={onOpenPin}
+              />
+            </Bloc>
+          )}
+
+          {/* Qui se trouve ici. La carte n'en donne que le nombre : c'est
                 ici qu'on lit les noms.
 
                 Le bloc reste debout pour un lieu désert dès lors qu'on peut s'y

@@ -11,10 +11,14 @@ import { calibrateWidthUnits, distanceBetween, roundDistance, type MapScale } fr
  * Régler l'échelle d'une carte : on trace un segment sur une distance connue,
  * on dit ce qu'elle vaut, et la carte en déduit ce que vaut sa largeur.
  *
- * C'est le seul emploi de ce segment — il n'y a pas d'outil de mesure. Une
- * échelle sert à donner l'ordre de grandeur d'un monde, pas à faire des
- * relevés entre deux points ; ce qu'elle produit se lit dans la barre
- * d'échelle, en bas du cadre.
+ * Le segment ne mesure pas : une échelle sert à donner l'ordre de grandeur
+ * d'un monde, pas à faire des relevés entre deux points, et ce qu'elle produit
+ * se lit dans la barre d'échelle, en bas du cadre.
+ *
+ * Le même outil sert à joindre deux lieux (voir migration 166) : c'est
+ * `WorldMap` qui tranche, selon que les points cliqués se sont accrochés à des
+ * épingles ou non. Ce composant n'en voit que `anchoredToPin`, qui change
+ * l'indice donné avant le second clic.
  *
  * Se rend DANS l'enveloppe transformée, comme les épingles : le trait suit
  * donc le déplacement et l'agrandissement sans un calcul. Le SVG est étiré
@@ -27,6 +31,7 @@ import { calibrateWidthUnits, distanceBetween, roundDistance, type MapScale } fr
 export function ScaleCalibrator({
   a,
   b,
+  anchoredToPin = false,
   aspect,
   scale,
   onCalibrate,
@@ -35,6 +40,8 @@ export function ScaleCalibrator({
   a: Point;
   /** Absent tant que le second point n'est pas posé. */
   b: Point | null;
+  /** Le premier point s'est accroché à un lieu : en cliquer un second les relie. */
+  anchoredToPin?: boolean;
   /** Hauteur / largeur de la carte. */
   aspect: number;
   /** L'échelle actuelle, s'il y en a une : c'est elle qu'on corrige. */
@@ -123,7 +130,7 @@ export function ScaleCalibrator({
       >
         <div className="flex items-center gap-1 whitespace-nowrap rounded-lg border border-border bg-background px-2 py-1 text-xs shadow-xl">
           {!b ? (
-            <span className="text-muted-foreground">{t("scaleHint")}</span>
+            <span className="text-muted-foreground">{anchoredToPin ? t("linkHint") : t("scaleHint")}</span>
           ) : (
             <>
               <span className="text-muted-foreground">{t("scaleDeclare")}</span>

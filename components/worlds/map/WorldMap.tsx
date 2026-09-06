@@ -25,6 +25,9 @@ import {
   createMapRegion,
   updateMapRegion,
   deleteMapRegion,
+  createPinLink,
+  updatePinLink,
+  deletePinLink,
   getPlacedPersonas,
   getWorldMaps,
   reorderWorldMaps,
@@ -32,6 +35,7 @@ import {
   updateMapPin,
   updateWorldMap,
   type MapRegion,
+  type MapPinLink,
   type PlacedPersona,
   type MapPin as MapPinType,
   type WorldMapData,
@@ -49,6 +53,8 @@ import { PinMarker } from "./PinMarker";
 import { PinDetail } from "./PinDetail";
 import { ScaleCalibrator } from "./ScaleCalibrator";
 import { RegionLayer } from "./RegionLayer";
+import { LinkLayer } from "./LinkLayer";
+import { LinkEditor } from "./LinkEditor";
 import { RegionPanel } from "./RegionPanel";
 import { MIN_REGION_POINTS, dedupeConsecutive, pointInPolygon, polygonCentroid } from "./geometry";
 import { visibleLabels } from "./labels";
@@ -65,8 +71,12 @@ export type InitialWorldMap = {
   maps: WorldMapData[];
   pins: MapPinType[];
   regions: MapRegion[];
+  links: MapPinLink[];
   personas: PlacedPersona[];
 };
+
+/** Le segment de l'outil règle, et les lieux auxquels il s'est accroché. */
+type ScaleSegment = { a: Point; aPin: string | null; b: Point | null; bPin: string | null };
 
 /** Les couleurs des régions, dans l'ordre où on les dessine. */
 const REGION_COLORS = ["#22c55e", "#3b82f6", "#f59e0b", "#ef4444", "#a855f7", "#14b8a6", "#ec4899", "#84cc16"];
@@ -121,6 +131,9 @@ export function WorldMap({
   // Les régions, cartes confondues ; celle qu'on regarde ; le tracé en cours
   // (`null` quand on ne dessine pas) ; et le polygone fermé qui attend son nom.
   const [regions, setRegions] = React.useState<MapRegion[]>(initialMap?.regions ?? []);
+  // Les traits entre lieux, cartes confondues ; et celui qu'on corrige.
+  const [links, setLinks] = React.useState<MapPinLink[]>(initialMap?.links ?? []);
+  const [selectedLink, setSelectedLink] = React.useState<MapPinLink | null>(null);
   // Les personas posés sur cette carte, relus en bloc — voir `getPlacedPersonas`.
   const [personas, setPersonas] = React.useState<PlacedPersona[]>(initialMap?.personas ?? []);
   const [selectedRegion, setSelectedRegion] = React.useState<MapRegion | null>(null);
@@ -149,7 +162,11 @@ export function WorldMap({
   const [calibrating, setCalibrating] = React.useState(false);
   const calibratingRef = React.useRef(false);
   calibratingRef.current = calibrating;
-  const [segment, setSegment] = React.useState<{ a: Point; b: Point | null } | null>(null);
+  // Le segment retient les LIEUX cliqués, et pas seulement les points : c'est
+  // ce qui distingue « je déclare une distance » de « je joins ces deux lieux ».
+  const [segment, setSegment] = React.useState<ScaleSegment | null>(null);
+  const segmentRef = React.useRef<ScaleSegment | null>(null);
+  segmentRef.current = segment;
   // L'échelle courante de la vue, relevée à la fin de chaque geste : la barre
   // d'échelle en dépend, et elle n'a pas à suivre le geste image par image.
   const [viewScale, setViewScale] = React.useState(1);
@@ -187,6 +204,15 @@ export function WorldMap({
   const visibleRegions = React.useMemo(
     () => regions.filter((r) => r.map_id === activeMap?.id),
     [regions, activeMap?.id],
+  );
+  const visibleLinks = React.useMemo(
+    () => links.filter((l) => l.map_id === activeMap?.id),
+    [links, activeMap?.id],
+  );
+  /** Les épingles de la carte par identifiant : les liens n'en gardent que l'id. */
+  const pinsById = React.useMemo(
+    () => new Map(visiblePins.map((p) => [p.id, p])),
+    [visiblePins],
   );
 
   // Miroirs en ref de ce que les rappels stables doivent lire à jour : ils
@@ -235,12 +261,13 @@ export function WorldMap({
     let cancelled = false;
     (async () => {
       try {
-        const { maps: m, pins: p, regions: r, personas: who } = await getWorldMaps(worldId);
+        const { maps: m, pins: p, regions: r, links: l, personas: who } = await getWorldMaps(worldId);
         if (!cancelled) {
           setMaps(m);
           setActiveMapId((prev) => prev ?? initialMapId ?? m[0]?.id ?? null);
           setPins(p);
           setRegions(r);
+          setLinks(l);
           setPersonas(who);
         }
       } finally {
@@ -291,6 +318,21 @@ export function WorldMap({
               return;
             }
             setMaps((prev) => mergeById(prev, payload.new as WorldMapData));
+          },
+        )
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "world_map_pin_links", filter: `world_id=eq.${worldId}` },
+          (payload: RT) => {
+            if (payload.eventType === "DELETE") {
+              const id = (payload.old as { id: string }).id;
+              setLinks((prev) => prev.filter((l) => l.id !== id));
+              setSelectedLink((prev) => (prev?.id === id ? null : prev));
+              return;
+            }
+            const lien = payload.new as MapPinLink;
+            setLinks((prev) => mergeById(prev, lien));
+            setSelectedLink((prev) => (prev?.id === lien.id ? lien : prev));
           },
         )
         .on(
@@ -472,7 +514,7 @@ export function WorldMap({
   // main aux boîtes de dialogue empilées par-dessus (apparence de l'épingle,
   // confirmation de suppression) : elles se ferment les premières.
   React.useEffect(() => {
-    if (!selectedPin && !placesOpen && !calibrating && !drawing && !pendingRegion && !selectedRegion) return;
+    if (!selectedPin && !placesOpen && !calibrating && !drawing && !pendingRegion && !selectedRegion && !selectedLink) return;
     function onKeyDown(e: KeyboardEvent) {
       if (e.defaultPrevented) return;
       // Entrée ferme le tracé en cours — sauf dans un champ, où elle valide.
@@ -495,6 +537,7 @@ export function WorldMap({
       if (selectedPin) closePopover(true);
       else if (pendingRegion) setPendingRegion(null);
       else if (drawing) setDraft(null);
+      else if (selectedLink) setSelectedLink(null);
       else if (selectedRegion) setSelectedRegion(null);
       else if (calibrating) {
         if (segment) setSegment(null);
@@ -584,6 +627,8 @@ export function WorldMap({
     setWikiPages([]);
     setPinRooms([]);
     setRegions(initialMap?.regions ?? []);
+    setLinks(initialMap?.links ?? []);
+    setSelectedLink(null);
     setPersonas(initialMap?.personas ?? []);
     setSelectedRegion(null);
     setDraft(null);
@@ -736,13 +781,41 @@ export function WorldMap({
   }, []);
 
   /** Premier point, second point — puis un troisième recommence un segment. */
-  const addScalePoint = React.useCallback((p: Point) => {
-    setSegment((prev) => (prev && !prev.b ? { a: prev.a, b: p } : { a: p, b: null }));
+  const addScalePoint = React.useCallback((p: Point, pinId: string | null = null) => {
+    setSegment((prev) =>
+      prev && !prev.b
+        ? { ...prev, b: p, bPin: pinId }
+        : { a: p, aPin: pinId, b: null, bPin: null },
+    );
   }, []);
+
+  /**
+   * Joint deux lieux.
+   *
+   * La base refuse la paire déjà posée, quel que soit le sens : c'est elle qui
+   * fait foi, et non un test côté client qui laisserait passer deux clics
+   * simultanés.
+   */
+  const handleCreateLink = React.useCallback(async (fromPinId: string, toPinId: string) => {
+    const carte = activeMapRef.current;
+    if (!carte) return;
+    try {
+      const lien = await createPinLink(worldId, carte.id, fromPinId, toPinId);
+      setLinks((prev) => mergeById(prev, lien));
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "";
+      toast.error(
+        message.includes("world_map_pin_links_pair_key")
+          ? tRef.current("linkExists")
+          : tRef.current("createLinkError"),
+      );
+    }
+  }, [worldId]);
 
   function toggleCalibrating() {
     setCalibrating((v) => !v);
     setSegment(null);
+    setSelectedLink(null);
     setPendingPin(null);
     setDraft(null);
     setPendingRegion(null);
@@ -892,7 +965,15 @@ export function WorldMap({
     // distance connue va souvent d'un lieu à un autre. Un tracé de région en
     // cours fait de même, plutôt que d'ouvrir un panneau par-dessus lui.
     if (calibratingRef.current) {
-      addScalePoint({ x: pin.x, y: pin.y });
+      // Deux lieux cliqués coup sur coup : c'est un trait qu'on trace, et non
+      // une distance qu'on s'apprête à déclarer.
+      const encours = segmentRef.current;
+      if (encours && !encours.b && encours.aPin && encours.aPin !== pin.id) {
+        setSegment(null);
+        void handleCreateLink(encours.aPin, pin.id);
+        return;
+      }
+      addScalePoint({ x: pin.x, y: pin.y }, pin.id);
       return;
     }
     if (drawingRef.current) {
@@ -904,7 +985,7 @@ export function WorldMap({
       return;
     }
     openPopover(pin);
-  }, [closePopover, openPopover, addScalePoint, addDraftPoint]);
+  }, [closePopover, openPopover, addScalePoint, addDraftPoint, handleCreateLink]);
 
   const handlePinMoved = React.useCallback(async (pin: MapPinType, x: number, y: number) => {
     // Optimiste : mise à jour locale immédiate
@@ -921,6 +1002,29 @@ export function WorldMap({
       setPins((prev) => prev.map((p) => (p.id === pin.id ? pin : p)));
     }
   }, []);
+
+  async function handleRenameLink(link: MapPinLink, label: string) {
+    const avant = link.label;
+    setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, label } : l)));
+    setSelectedLink(null);
+    try {
+      await updatePinLink(link.id, { label });
+    } catch {
+      toast.error(t("saveError"));
+      setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, label: avant } : l)));
+    }
+  }
+
+  async function handleDeleteLink(link: MapPinLink) {
+    setLinks((prev) => prev.filter((l) => l.id !== link.id));
+    setSelectedLink(null);
+    try {
+      await deletePinLink(link.id);
+    } catch {
+      toast.error(t("deleteLinkError"));
+      setLinks((prev) => mergeById(prev, link));
+    }
+  }
 
   /** Règle l'échelle depuis une distance déclarée — `null` la retire. */
   async function handleCalibrate(widthUnits: number | null, unit: string) {
@@ -988,6 +1092,13 @@ export function WorldMap({
    * La fiche du lieu ouvert — elle vit dans la colonne, avec la liste des
    * lieux, plutôt que posée sur la carte.
    */
+  const mapScale: MapScale | null =
+    activeMap?.scale_width_units != null && activeMap.scale_width_units > 0
+      ? { widthUnits: activeMap.scale_width_units, unit: activeMap.scale_unit ?? "" }
+      : null;
+  // Hauteur sur largeur ; 1 tant que la carte n'est pas mesurée.
+  const aspect = baseSize.width > 0 ? baseSize.height / baseSize.width : 1;
+
   const ficheDuLieu = selectedPin ? (
     <PinDetail
       key={selectedPin.id}
@@ -1001,6 +1112,11 @@ export function WorldMap({
       // plusieurs empilées : celle du dessus est celle qu'on voit.
       region={visibleRegions.find((r) => pointInPolygon(selectedPin, r.points)) ?? null}
       personasHere={personasByPin.get(selectedPin.id) ?? []}
+      links={visibleLinks.filter((l) => l.from_pin_id === selectedPin.id || l.to_pin_id === selectedPin.id)}
+      pinsById={pinsById}
+      aspect={aspect}
+      scale={mapScale}
+      onOpenPin={focusPin}
       onPlacePersona={canPost ? (personaId) => void handlePlacePersona(personaId, selectedPin.id) : undefined}
       onRemovePersona={canPost ? (personaId) => void handlePlacePersona(personaId, null) : undefined}
       pickerVariant={grandEcran ? "dialog" : "drawer"}
@@ -1017,13 +1133,6 @@ export function WorldMap({
   ) : null;
 
   const { imageSrc } = viewport;
-
-  const mapScale: MapScale | null =
-    activeMap?.scale_width_units != null && activeMap.scale_width_units > 0
-      ? { widthUnits: activeMap.scale_width_units, unit: activeMap.scale_unit ?? "" }
-      : null;
-  // Hauteur sur largeur ; 1 tant que la carte n'est pas mesurée.
-  const aspect = baseSize.width > 0 ? baseSize.height / baseSize.width : 1;
 
   return (
     <div
@@ -1288,6 +1397,36 @@ export function WorldMap({
                 />
               )}
 
+              {/* Les traits entre lieux, au-dessus des régions et sous les
+                  épingles : une route passe sur une surface, pas sur un lieu. */}
+              {visibleLinks.length > 0 && (
+                <LinkLayer
+                  links={visibleLinks}
+                  pins={pinsById}
+                  selectedPinId={selectedPin?.id ?? null}
+                  aspect={aspect}
+                  scale={mapScale}
+                  isEditMode={isEditMode}
+                  onSelect={setSelectedLink}
+                />
+              )}
+
+              {/* Le nom d'un trait, ou sa suppression. */}
+              {selectedLink && (() => {
+                const a = pinsById.get(selectedLink.from_pin_id);
+                const b = pinsById.get(selectedLink.to_pin_id);
+                return a && b ? (
+                  <LinkEditor
+                    link={selectedLink}
+                    a={a}
+                    b={b}
+                    onRename={(label) => void handleRenameLink(selectedLink, label)}
+                    onDelete={() => void handleDeleteLink(selectedLink)}
+                    onClose={() => setSelectedLink(null)}
+                  />
+                ) : null;
+              })()}
+
               {/* Le polygone fermé attend son nom, au centre. */}
               {pendingRegion && (() => {
                 const c = polygonCentroid(pendingRegion.points);
@@ -1360,6 +1499,7 @@ export function WorldMap({
                 <ScaleCalibrator
                   a={segment.a}
                   b={segment.b}
+                  anchoredToPin={!!segment.aPin}
                   aspect={aspect}
                   scale={mapScale}
                   onCalibrate={(w, u) => void handleCalibrate(w, u)}
