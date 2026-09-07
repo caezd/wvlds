@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join, sep } from "node:path";
+import { trackedSources } from "@/test/sourceFiles";
 
 // ──────────────────────────────────────────────────────────────────────────
 // Deux invariants d'internationalisation.
@@ -61,27 +61,23 @@ function estVisible(t: string): boolean {
 }
 
 function chainesEnDur(): string[] {
-  const fichiers = execFileSync("git", ["ls-files", "*.tsx", "*.ts"], {
-    encoding: "utf-8",
-    cwd: process.cwd(),
-  })
-    .split("\n")
-    .map((f) => f.trim())
-    .filter(
-      (f) =>
-        f &&
-        !f.includes("__tests__") &&
-        !f.startsWith("e2e/") &&
-        !f.startsWith("migrations/") &&
-        f !== "lib/changelog.ts",
-    );
+  // `trackedSources` écarte les fichiers que l'index connaît encore mais
+  // que le disque n'a plus : le contrôle tombait sinon sur `ENOENT` dès
+  // qu'une suppression n'était pas encore indexée.
+  const fichiers = trackedSources(["*.tsx", "*.ts"]).filter(
+    ({ file: f }) =>
+      !f.includes("__tests__") &&
+      !f.startsWith("e2e/") &&
+      !f.startsWith("migrations/") &&
+      f !== "lib/changelog.ts",
+  );
 
   const trouvees: string[] = [];
-  for (const fichier of fichiers) {
+  for (const { file: fichier, source } of fichiers) {
     const chemin = fichier.split("/").join(sep);
     if (EXCEPTIONS.some((e) => chemin.startsWith(e))) continue;
 
-    const lignes = readFileSync(join(process.cwd(), fichier), "utf-8").split("\n");
+    const lignes = source.split("\n");
     lignes.forEach((ligne, i) => {
       const nu = ligne.trim();
       if (nu.startsWith("*") || nu.startsWith("//")) return;

@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
 import { join, sep } from "node:path";
+import { trackedSources } from "@/test/sourceFiles";
 
 // ──────────────────────────────────────────────────────────────────────────
 // Une écriture Supabase dont on ne lit jamais l'erreur échoue en silence.
@@ -41,22 +40,12 @@ function readsItsError(lines: string[], start: number): boolean {
 }
 
 function scan(): { file: string; line: number }[] {
-  const files = execFileSync("git", ["ls-files", "*.ts", "*.tsx"], {
-    encoding: "utf-8",
-    cwd: process.cwd(),
-  })
-    .split("\n")
-    .map((f) => f.trim())
-    .filter((f) => f && !f.includes("__tests__") && !f.endsWith(".d.ts"));
+  const files = trackedSources(["*.ts", "*.tsx"]).filter(
+    ({ file: f }) => !f.includes("__tests__") && !f.endsWith(".d.ts"),
+  );
 
   const hits: { file: string; line: number }[] = [];
-  for (const file of files) {
-    let source: string;
-    try {
-      source = readFileSync(join(process.cwd(), file), "utf-8");
-    } catch {
-      continue;
-    }
+  for (const { file, source } of files) {
     if (!source.includes(".from(")) continue;
     const lines = source.split("\n");
 
