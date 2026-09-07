@@ -5,7 +5,9 @@ import { WorldHome } from "@/components/worlds/home/WorldHome";
 import type { AsidePersona } from "@/components/personas/WorldPersonaAsideClient";
 import { fetchSectionsByPersona } from "@/lib/personaSections";
 import { getChatroomCategories, getChatroomsNav, getIsWorldAdmin, type WorldWithMembership } from "@/lib/currentRequest";
+import ReactDOM from "react-dom";
 import { getWorldMaps } from "@/app/actions/worldMap";
+import { MAP_WIDTH_FIRST_TIER, mapImageSrc } from "@/components/worlds/map/mapImage";
 import type { InitialWorldMap } from "@/components/worlds/map/WorldMap";
 import { resolveWorldHomeGrid, widgetOptionValue } from "@/components/worlds/home/worldHomeGrid";
 import type { RecentPersona } from "@/components/worlds/home/widgets/WorldRecentPersonasWidget";
@@ -177,6 +179,25 @@ export default async function WorldHomeContent({
       return getWorldMaps(worldId);
     })(),
   ]);
+
+  // ── L'image de la carte, demandée avant d'être rendue ─────────
+  //
+  // La carte est chargée en morceau dynamique : le navigateur ne découvrait
+  // son image qu'après avoir téléchargé le morceau, l'avoir exécuté, et React
+  // avoir rendu le `<img>`. Un `preload` la met en route pendant la lecture
+  // du HTML, en parallèle du morceau — c'est l'élément qui fait la page, et
+  // il partait dernier.
+  //
+  // La même adresse que le client demandera, au caractère près : les deux
+  // côtés passent par `mapImageSrc` (voir `mapImage.ts`), sans quoi l'image
+  // serait téléchargée deux fois.
+  const carteAPrecharger = initialMap
+    ? (initialMap.maps.find((m) => m.id === initialMapId) ?? initialMap.maps[0])
+    : null;
+  const imageAPrecharger = mapImageSrc(carteAPrecharger?.image_url, MAP_WIDTH_FIRST_TIER);
+  if (imageAPrecharger) {
+    ReactDOM.preload(imageAPrecharger, { as: "image", fetchPriority: "high" });
+  }
 
   return (
     <WorldHome

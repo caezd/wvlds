@@ -2,7 +2,8 @@
 
 import * as React from "react";
 
-import { supabaseThumb, widthTierFor } from "@/lib/storage";
+import { widthTierFor } from "@/lib/storage";
+import { MAP_WIDTH_FIRST_TIER, MAP_WIDTH_TIERS, mapImageSrc } from "@/components/worlds/map/mapImage";
 import {
   applyZoom,
   centerOn,
@@ -31,7 +32,7 @@ import {
  * peut faire 4096 px pour trois fois le poids — dès qu'on entre un peu dans la
  * carte. L'original ne vient qu'au-delà, quand ses pixels servent enfin.
  */
-export const MAP_WIDTH_TIERS = [1600, 2560];
+
 
 const IDENTITY: MapTransform = { scale: 1, x: 0, y: 0 };
 
@@ -101,8 +102,8 @@ export function useMapViewport({ imageUrl, viewKey, idleCursor, onPaint, onSettl
 
   const [imageLoaded, setImageLoaded] = React.useState(false);
   /** Palier de largeur affiché ; `null` désigne l'original. */
-  const [widthTier, setWidthTier] = React.useState<number | null>(MAP_WIDTH_TIERS[0]);
-  const widthTierRef = React.useRef<number | null>(MAP_WIDTH_TIERS[0]);
+  const [widthTier, setWidthTier] = React.useState<number | null>(MAP_WIDTH_FIRST_TIER);
+  const widthTierRef = React.useRef<number | null>(MAP_WIDTH_FIRST_TIER);
   widthTierRef.current = widthTier;
 
   // Le curseur suit le geste sans rendu : le mettre dans l'état re-rendait la
@@ -214,7 +215,7 @@ export function useMapViewport({ imageUrl, viewKey, idleCursor, onPaint, onSettl
     // Retenu tout de suite : sans quoi chaque cran de molette relancerait le
     // même préchargement.
     widthTierRef.current = besoin;
-    const cible = besoin === null ? url : (supabaseThumb(url, besoin) ?? url);
+    const cible = mapImageSrc(url, besoin) ?? url;
 
     // Préchargée hors écran : l'échange de `src` se fait alors sur une image
     // déjà en cache, sans le blanc d'un rechargement.
@@ -248,8 +249,8 @@ export function useMapViewport({ imageUrl, viewKey, idleCursor, onPaint, onSettl
     initialViewDoneRef.current = false;
     naturalRef.current = null;
     setBaseSize({ width: 0, height: 0 });
-    widthTierRef.current = MAP_WIDTH_TIERS[0];
-    setWidthTier(MAP_WIDTH_TIERS[0]);
+    widthTierRef.current = MAP_WIDTH_FIRST_TIER;
+    setWidthTier(MAP_WIDTH_FIRST_TIER);
     setImageLoaded(false);
     schedulePaint();
   }, [viewKey, schedulePaint]);
@@ -520,9 +521,8 @@ export function useMapViewport({ imageUrl, viewKey, idleCursor, onPaint, onSettl
     schedulePaint();
   }, [bounds, schedulePaint]);
 
-  const imageSrc = imageUrl
-    ? (widthTier === null ? imageUrl : supabaseThumb(imageUrl, widthTier) ?? imageUrl)
-    : null;
+  // La même formule que le préchargement côté serveur : voir `mapImage.ts`.
+  const imageSrc = mapImageSrc(imageUrl, widthTier);
 
   return {
     /** À poser sur le cadre : molette, observation de sa taille, curseur. */

@@ -194,6 +194,19 @@ describe("WorldMap — temps réel", () => {
   });
 });
 
+describe("WorldMap — l'image de la carte", () => {
+  it("passe devant le reste, et se décode à côté", () => {
+    // C'est l'élément qui fait la page : il partait au même rang que les
+    // avatars et les vignettes. Et décodé hors du fil principal, faute de
+    // quoi une image de 2 560 px fige l'interface le temps de son décodage.
+    monter({ maps: [makeMap()], pins: [] });
+
+    const image = screen.getByAltText("Carte du monde");
+    expect(image).toHaveAttribute("fetchpriority", "high");
+    expect(image).toHaveAttribute("decoding", "async");
+  });
+});
+
 describe("WorldMap — ce que la fiche d'un lieu affiche", () => {
   // Deux lieux ouverts l'un après l'autre : il faut la colonne, car le tiroir
   // est modal et met la carte hors de portée tant qu'il est ouvert.

@@ -1282,6 +1282,12 @@ export function WorldMap({
                 src={imageSrc}
                 alt={t("mapAlt")}
                 draggable={false}
+                // La carte EST la page : elle passe devant les avatars et les
+                // vignettes que le navigateur télécharge au même moment. Et
+                // décodée hors du fil principal, faute de quoi une image de
+                // 2 560 px fige l'interface le temps de son décodage.
+                fetchPriority="high"
+                decoding="async"
                 onLoad={viewport.onImageLoad}
                 className={cn(
                   "block h-full w-full select-none transition-opacity duration-300 motion-reduce:transition-none",
