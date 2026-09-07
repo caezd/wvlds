@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
-import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
+import { mergeById, useMapRealtime } from "@/hooks/useMapRealtime";
 import { MEDIA, useMediaQuery } from "@/hooks/useMediaQuery";
 import { useResetOnKeyChange } from "@/hooks/useResetOnKeyChange";
 import { useMapViewport } from "@/hooks/useMapViewport";
@@ -12,8 +12,7 @@ import { Check, Clock, Hexagon, List, Loader2, Map as MapIcon, MapPin, Pencil, P
 import { toast } from "sonner";
 
 import { cn } from "@/lib/utils";
-import { channel, MAX_MAP_IMAGE_MB } from "@/lib/constants";
-import { openRealtimeChannel } from "@/lib/realtimeChannel";
+import { MAX_MAP_IMAGE_MB } from "@/lib/constants";
 import { STORED_IMAGE_ACCEPT, isStorableImage, toWebP } from "@/lib/imageUtils";
 import { mapImagePath } from "@/lib/storagePaths";
 import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
@@ -121,7 +120,6 @@ export function WorldMap({
   const tRef = React.useRef(t);
   tRef.current = t;
   const supabase = createClient();
-  const reconnectEpoch = useReconnectEpoch();
 
   // Toutes les cartes du monde, et toutes leurs épingles. Les épingles sont
   // gardées d'un bloc plutôt que rechargées à chaque onglet : passer de l'une à
@@ -283,100 +281,6 @@ export function WorldMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [worldId]);
 
-  // ── Temps réel ────────────────────────────────────────────────
-  React.useEffect(() => {
-    type RT = { eventType: string; new: Record<string, unknown>; old: Record<string, unknown> };
-
-    return openRealtimeChannel(supabase, channel.worldMap(worldId), (ch) =>
-      ch
-        .on(
-          "postgres_changes",
-          { event: "*", schema: "public", table: "world_map_pins", filter: `world_id=eq.${worldId}` },
-          (payload: RT) => {
-            if (payload.eventType === "INSERT") {
-              // Fusion plutôt qu'ajout : Postgres nous renvoie AUSSI les
-              // épingles que l'on vient de créer soi-même, déjà posées à
-              // l'écran sans attendre le serveur. Les ajouter en aveugle
-              // faisait apparaître le lieu en double, avec deux fois la même
-              // clé React.
-              setPins((prev) => mergeById(prev, payload.new as MapPinType));
-            } else if (payload.eventType === "UPDATE") {
-              const updated = payload.new as MapPinType;
-              setPins((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
-              setSelectedPin((prev) => (prev?.id === updated.id ? updated : prev));
-            } else if (payload.eventType === "DELETE") {
-              const id = (payload.old as { id: string }).id;
-              setPins((prev) => prev.filter((p) => p.id !== id));
-              setSelectedPin((prev) => (prev?.id === id ? null : prev));
-            }
-          },
-        )
-        .on(
-          "postgres_changes",
-          { event: "*", schema: "public", table: "world_maps", filter: `world_id=eq.${worldId}` },
-          (payload: RT) => {
-            if (payload.eventType === "DELETE") {
-              const id = (payload.old as { id: string }).id;
-              setMaps((prev) => prev.filter((m) => m.id !== id));
-              setPins((prev) => prev.filter((p) => p.map_id !== id));
-              setRegions((prev) => prev.filter((r) => r.map_id !== id));
-              return;
-            }
-            setMaps((prev) => mergeById(prev, payload.new as WorldMapData));
-          },
-        )
-        .on(
-          "postgres_changes",
-          { event: "*", schema: "public", table: "world_map_pin_links", filter: `world_id=eq.${worldId}` },
-          (payload: RT) => {
-            if (payload.eventType === "DELETE") {
-              const id = (payload.old as { id: string }).id;
-              setLinks((prev) => prev.filter((l) => l.id !== id));
-              setSelectedLink((prev) => (prev?.id === id ? null : prev));
-              return;
-            }
-            const lien = payload.new as MapPinLink;
-            setLinks((prev) => mergeById(prev, lien));
-            setSelectedLink((prev) => (prev?.id === lien.id ? lien : prev));
-          },
-        )
-        .on(
-          "postgres_changes",
-          { event: "*", schema: "public", table: "world_map_regions", filter: `world_id=eq.${worldId}` },
-          (payload: RT) => {
-            if (payload.eventType === "DELETE") {
-              const id = (payload.old as { id: string }).id;
-              setRegions((prev) => prev.filter((r) => r.id !== id));
-              setSelectedRegion((prev) => (prev?.id === id ? null : prev));
-              return;
-            }
-            const region = payload.new as MapRegion;
-            setRegions((prev) => mergeById(prev, region));
-            setSelectedRegion((prev) => (prev?.id === region.id ? region : prev));
-          },
-        )
-        .on(
-          "postgres_changes",
-          { event: "*", schema: "public", table: "personas", filter: `world_id=eq.${worldId}` },
-          // On ne regarde même pas ce que l'écho porte : la liste se relit
-          // entière, et c'est ce qui la garde juste.
-          () => rechargerLesPersonas(),
-        )
-        .subscribe(),
-    );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [worldId, reconnectEpoch]);
-
-  // ── Ce dont la fiche d'un lieu a besoin ───────────────────────
-  //
-  // Pages du wiki et salons situés : deux listes du monde entier, servies
-  // avec le reste par `getWorldMaps`. Le client les demandait pour lui-même
-  // après l'hydratation, soit deux allers-retours de plus sur un onglet que
-  // le serveur avait déjà rendu — et des listes qui arrivaient APRÈS
-  // l'ouverture d'un lieu, faisant grandir la fiche sous les yeux.
-  const [wikiPages, setWikiPages] = React.useState<WikiPageOption[]>(initialMap?.wikiPages ?? []);
-  const [pinRooms, setPinRooms] = React.useState<PinRoom[]>(initialMap?.rooms ?? []);
-
   /**
    * Relit qui se trouve où, en bloc.
    *
@@ -394,6 +298,30 @@ export function WorldMap({
   React.useEffect(() => () => {
     if (rechargerRef.current) clearTimeout(rechargerRef.current);
   }, []);
+
+  // ── Temps réel ────────────────────────────────────────────────
+  // Cinq tables, un canal, et une seule façon d'appliquer un écho :
+  // voir `useMapRealtime`.
+  useMapRealtime(supabase, worldId, {
+    setMaps,
+    setPins,
+    setRegions,
+    setLinks,
+    setSelectedPin,
+    setSelectedRegion,
+    setSelectedLink,
+    reloadPersonas: rechargerLesPersonas,
+  });
+
+  // ── Ce dont la fiche d'un lieu a besoin ───────────────────────
+  //
+  // Pages du wiki et salons situés : deux listes du monde entier, servies
+  // avec le reste par `getWorldMaps`. Le client les demandait pour lui-même
+  // après l'hydratation, soit deux allers-retours de plus sur un onglet que
+  // le serveur avait déjà rendu — et des listes qui arrivaient APRÈS
+  // l'ouverture d'un lieu, faisant grandir la fiche sous les yeux.
+  const [wikiPages, setWikiPages] = React.useState<WikiPageOption[]>(initialMap?.wikiPages ?? []);
+  const [pinRooms, setPinRooms] = React.useState<PinRoom[]>(initialMap?.rooms ?? []);
 
   /**
    * Pose un de mes personas sur un lieu — ou l'en fait partir avec `null`.
@@ -1629,8 +1557,3 @@ export function WorldMap({
  * identifiant. Sert aux épingles comme aux cartes : le temps réel renvoie à
  * l'auteur ce qu'il vient d'insérer, déjà présent à l'écran.
  */
-function mergeById<T extends { id: string }>(list: T[], item: T): T[] {
-  return list.some((x) => x.id === item.id)
-    ? list.map((x) => (x.id === item.id ? item : x))
-    : [...list, item];
-}
