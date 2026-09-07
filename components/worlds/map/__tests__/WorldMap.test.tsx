@@ -194,6 +194,47 @@ describe("WorldMap — temps réel", () => {
   });
 });
 
+describe("WorldMap — un geste refusé se défait", () => {
+  beforeEach(() => { simulerMiseEnPage(); simulerGrandEcran(); });
+  afterEach(() => { restaurerMiseEnPage(); restaurerEcran(); });
+
+  it("rend au trait son nom d'avant", async () => {
+    // Le retour en arrière est le seul des trois temps qu'on ne voit jamais
+    // en développant : celui qu'on oublie.
+    vi.mocked(updatePinLink).mockRejectedValueOnce(new Error("rls"));
+    monter({
+      maps: [makeMap()],
+      pins: [makePin({ id: "pin1", x: 20, y: 50 }), makePin({ id: "pin2", title: "La tour", x: 60, y: 50 })],
+      links: [makePinLink({ id: "l1", from_pin_id: "pin1", to_pin_id: "pin2", label: "Route du sel" })],
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Modifier" }));
+
+    fireEvent.click(document.querySelector('[data-link-hit="l1"]')!);
+    const champ = screen.getByRole("textbox", { name: "Nom du lien" });
+    await userEvent.clear(champ);
+    await userEvent.type(champ, "Passe du nord{Enter}");
+
+    await waitFor(() =>
+      expect(document.querySelector('[data-link-label="l1"]')).toHaveTextContent("Route du sel"),
+    );
+  });
+
+  it("remet le trait qu'il n'a pas pu supprimer", async () => {
+    vi.mocked(deletePinLink).mockRejectedValueOnce(new Error("rls"));
+    monter({
+      maps: [makeMap()],
+      pins: [makePin({ id: "pin1", x: 20, y: 50 }), makePin({ id: "pin2", title: "La tour", x: 60, y: 50 })],
+      links: [makePinLink({ id: "l1", from_pin_id: "pin1", to_pin_id: "pin2", label: "Route du sel" })],
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Modifier" }));
+
+    fireEvent.click(document.querySelector('[data-link-hit="l1"]')!);
+    await userEvent.click(screen.getByRole("button", { name: "Supprimer ce lien" }));
+
+    await waitFor(() => expect(document.querySelector('[data-link-hit="l1"]')).not.toBeNull());
+  });
+});
+
 describe("WorldMap — l'image de la carte", () => {
   it("passe devant le reste, et se décode à côté", () => {
     // C'est l'élément qui fait la page : il partait au même rang que les

@@ -80,6 +80,30 @@ export type InitialWorldMap = {
 /** Le segment de l'outil règle, et les lieux auxquels il s'est accroché. */
 type ScaleSegment = { a: Point; aPin: string | null; b: Point | null; bPin: string | null };
 
+/**
+ * Un geste qui prend effet tout de suite, et se défait si le serveur refuse.
+ *
+ * Cinq gestes de la carte suivaient ce dessin, écrit cinq fois : poser le
+ * résultat à l'écran, appeler le serveur, remettre les choses en place s'il
+ * refuse. Le retour en arrière est le seul des trois temps qu'on ne voit
+ * jamais en développant — celui qu'on oublie. Écrit une fois, il ne peut plus
+ * manquer.
+ */
+async function optimiste(
+  poser: () => void,
+  envoyer: () => Promise<unknown>,
+  defaire: () => void,
+  erreur: () => string,
+) {
+  poser();
+  try {
+    await envoyer();
+  } catch {
+    defaire();
+    toast.error(erreur());
+  }
+}
+
 /** Les couleurs des régions, dans l'ordre où on les dessine. */
 const REGION_COLORS = ["#22c55e", "#3b82f6", "#f59e0b", "#ef4444", "#a855f7", "#14b8a6", "#ec4899", "#84cc16"];
 
@@ -605,13 +629,12 @@ export function WorldMap({
         return carte ? { ...carte, sort_index: index } : null;
       })
       .filter((m): m is WorldMapData => m !== null);
-    setMaps(apres);
-    try {
-      await reorderWorldMaps(orderedIds);
-    } catch {
-      toast.error(t("saveError"));
-      setMaps(avant);
-    }
+    await optimiste(
+      () => setMaps(apres),
+      () => reorderWorldMaps(orderedIds),
+      () => setMaps(avant),
+      () => t("saveError"),
+    );
   }
 
   async function handleDeleteMap() {
@@ -806,15 +829,16 @@ export function WorldMap({
   async function handleVertexMoved(region: MapRegion, index: number, point: Point) {
     const points = region.points.map((p, i) => (i === index ? point : p));
     const updated = { ...region, points };
-    setRegions((prev) => mergeById(prev, updated));
-    setSelectedRegion((prev) => (prev?.id === region.id ? updated : prev));
-    try {
-      await updateMapRegion(region.id, { points });
-    } catch {
-      toast.error(t("saveError"));
-      setRegions((prev) => mergeById(prev, region));
-      setSelectedRegion((prev) => (prev?.id === region.id ? region : prev));
-    }
+    const montrer = (r: MapRegion) => {
+      setRegions((prev) => mergeById(prev, r));
+      setSelectedRegion((prev) => (prev?.id === region.id ? r : prev));
+    };
+    await optimiste(
+      () => montrer(updated),
+      () => updateMapRegion(region.id, { points }),
+      () => montrer(region),
+      () => t("saveError"),
+    );
   }
 
   async function handleDeleteRegion(region: MapRegion) {
@@ -899,40 +923,41 @@ export function WorldMap({
   const handlePinMoved = React.useCallback(async (pin: MapPinType, x: number, y: number) => {
     // Optimiste : mise à jour locale immédiate
     const updated = { ...pin, x, y };
-    setPins((prev) => prev.map((p) => (p.id === pin.id ? updated : p)));
     // La fiche montre le lieu déplacé : elle vit dans la colonne, à sa
-    // place, et n'a plus à suivre l'épingle.
-    if (selectedPinRef.current?.id === pin.id) setSelectedPin(updated);
-    try {
-      await updateMapPin(pin.id, { x, y });
-    } catch {
-      toast.error(tRef.current("movePinError"));
-      // Rollback
-      setPins((prev) => prev.map((p) => (p.id === pin.id ? pin : p)));
-    }
+    // place, et n'a plus à suivre l'épingle. Elle suit AUSSI le retour en
+    // arrière — elle restait sinon sur la position refusée.
+    const poser = (v: MapPinType) => {
+      setPins((prev) => prev.map((p) => (p.id === pin.id ? v : p)));
+      if (selectedPinRef.current?.id === pin.id) setSelectedPin(v);
+    };
+    await optimiste(
+      () => poser(updated),
+      () => updateMapPin(pin.id, { x, y }),
+      () => poser(pin),
+      () => tRef.current("movePinError"),
+    );
   }, []);
 
   async function handleRenameLink(link: MapPinLink, label: string) {
-    const avant = link.label;
-    setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, label } : l)));
+    const nommer = (v: string) =>
+      setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, label: v } : l)));
     setSelectedLink(null);
-    try {
-      await updatePinLink(link.id, { label });
-    } catch {
-      toast.error(t("saveError"));
-      setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, label: avant } : l)));
-    }
+    await optimiste(
+      () => nommer(label),
+      () => updatePinLink(link.id, { label }),
+      () => nommer(link.label),
+      () => t("saveError"),
+    );
   }
 
   async function handleDeleteLink(link: MapPinLink) {
-    setLinks((prev) => prev.filter((l) => l.id !== link.id));
     setSelectedLink(null);
-    try {
-      await deletePinLink(link.id);
-    } catch {
-      toast.error(t("deleteLinkError"));
-      setLinks((prev) => mergeById(prev, link));
-    }
+    await optimiste(
+      () => setLinks((prev) => prev.filter((l) => l.id !== link.id)),
+      () => deletePinLink(link.id),
+      () => setLinks((prev) => mergeById(prev, link)),
+      () => t("deleteLinkError"),
+    );
   }
 
   /** Règle l'échelle depuis une distance déclarée — `null` la retire. */
