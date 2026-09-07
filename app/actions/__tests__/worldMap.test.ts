@@ -36,12 +36,37 @@ describe("getWorldMaps", () => {
     const pins = [{ id: "p1", world_id: "w1", map_id: "m1", title: "Port" }];
     const regions = [{ id: "r1", map_id: "m1", label: "Le royaume", points: [] }];
     const links = [{ id: "l1", map_id: "m1", from_pin_id: "p1", to_pin_id: "p2", label: "" }];
-    use(createSupabaseMock({ results: [{ data: maps }, { data: pins }, { data: regions }, { data: links }] }));
+    // Pages du wiki et salons situés voyagent avec le reste : le client les
+    // demandait pour lui-même après l'hydratation, soit deux allers-retours
+    // de plus sur un onglet que le serveur avait déjà rendu.
+    const wikiPages = [{ id: "w1", title: "Arkham", slug: "arkham" }];
+    const rooms = [{ id: "c1", title: "La taverne", name: "taverne", map_pin_id: "p1" }];
+    const mock = createSupabaseMock({
+      results: [{ data: maps }, { data: pins }, { data: regions }, { data: links }, { data: wikiPages }, { data: rooms }],
+    });
+    use(mock);
     const res = await getWorldMaps("w1");
     expect(res.maps).toEqual(maps);
     expect(res.pins).toEqual(pins);
     expect(res.regions).toEqual(regions);
     expect(res.links).toEqual(links);
+    expect(res.wikiPages).toEqual(wikiPages);
+    expect(res.rooms).toEqual(rooms);
+  });
+
+  it("nomme les colonnes plutôt que de tout demander", () => {
+    // Un `*` fait voyager ce que le client n'utilise pas, et fait surtout
+    // arriver sans prévenir ce qu'une migration ajoutera demain, dans une
+    // réponse dont les types ne bougeront pas.
+    const mock = createSupabaseMock({ results: [] });
+    use(mock);
+    return getWorldMaps("w1").then(() => {
+      const selects = mock.builders
+        .filter((b) => b.table.startsWith("world_map"))
+        .flatMap((b) => b.builder.select.mock.calls.map((c) => c[0] as string));
+      expect(selects.length).toBeGreaterThan(0);
+      for (const colonnes of selects) expect(colonnes).not.toBe("*");
+    });
   });
 
   it("retourne des listes vides quand rien n'existe", async () => {
@@ -51,6 +76,8 @@ describe("getWorldMaps", () => {
     expect(res.pins).toEqual([]);
     expect(res.regions).toEqual([]);
     expect(res.links).toEqual([]);
+    expect(res.wikiPages).toEqual([]);
+    expect(res.rooms).toEqual([]);
   });
 });
 

@@ -54,9 +54,11 @@ vi.mock("@/app/actions/worldMap", async (importOriginal) => ({
 // Le panneau d'un lieu tire tout l'éditeur de paragraphe et le rendu Markdown :
 // ce qui se vérifie ici est ce que la CARTE fait, pas ce qu'il affiche.
 vi.mock("@/components/worlds/map/PinDetail", () => ({
-  PinDetail: ({ pin, region, onDelete, onPlacePersona, onRemovePersona }: {
+  PinDetail: ({ pin, region, wikiPages = [], rooms = [], onDelete, onPlacePersona, onRemovePersona }: {
     pin: { title: string };
     region?: { label: string } | null;
+    wikiPages?: { title: string }[];
+    rooms?: { title: string | null; name: string | null }[];
     onDelete: () => void;
     onPlacePersona?: (personaId: string) => void;
     onRemovePersona?: (personaId: string) => void;
@@ -64,6 +66,8 @@ vi.mock("@/components/worlds/map/PinDetail", () => ({
     <div data-testid="pin-popover">
       {pin.title}
       {region && <span data-testid="pin-region">{region.label}</span>}
+      <span data-testid="pin-wiki-pages">{wikiPages.map((p) => p.title).join(", ")}</span>
+      <span data-testid="pin-rooms">{rooms.map((r) => r.title ?? r.name).join(", ")}</span>
       <button type="button" onClick={onDelete}>Supprimer depuis le panneau</button>
       {onPlacePersona && (
         <button type="button" onClick={() => onPlacePersona("per9")}>M&apos;installer ici</button>
@@ -100,6 +104,8 @@ type CarteInitiale = {
   regions?: ReturnType<typeof makeRegion>[];
   links?: ReturnType<typeof makePinLink>[];
   personas?: ReturnType<typeof makePlacedPersona>[];
+  wikiPages?: { id: string; title: string; slug: string }[];
+  rooms?: { id: string; title: string | null; name: string | null; map_pin_id: string | null }[];
 } | null;
 
 function monter(
@@ -114,7 +120,7 @@ function monter(
     <WorldMap
       worldId={worldId}
       canEdit
-      initialMap={initialMap ? { regions: [], links: [], personas: [], ...initialMap } : initialMap}
+      initialMap={initialMap ? { regions: [], links: [], personas: [], wikiPages: [], rooms: [], ...initialMap } : initialMap}
       {...adresse}
     />
   );
@@ -124,7 +130,7 @@ function monter(
     /** Rejoue le rendu avec un autre monde, comme une navigation client. */
     changerDeMonde: (id: string, carte: CarteInitiale) =>
       rerender(
-        <WorldMap worldId={id} canEdit initialMap={carte ? { regions: [], links: [], personas: [], ...carte } : carte} />,
+        <WorldMap worldId={id} canEdit initialMap={carte ? { regions: [], links: [], personas: [], wikiPages: [], rooms: [], ...carte } : carte} />,
       ),
   };
 }
@@ -152,7 +158,7 @@ describe("WorldMap — données servies par le serveur", () => {
   });
 
   it("charge la carte elle-même quand l'onglet s'ouvre côté client", async () => {
-    getWorldMaps.mockResolvedValue({ maps: [makeMap()], pins: [makePin()], regions: [], links: [], personas: [] });
+    getWorldMaps.mockResolvedValue({ maps: [makeMap()], pins: [makePin()], regions: [], links: [], personas: [], wikiPages: [], rooms: [] });
     monter(null);
 
     expect(getWorldMaps).toHaveBeenCalledWith("w1");
@@ -188,13 +194,21 @@ describe("WorldMap — temps réel", () => {
   });
 });
 
-describe("WorldMap — pages du wiki", () => {
+describe("WorldMap — ce que la fiche d'un lieu affiche", () => {
   // Deux lieux ouverts l'un après l'autre : il faut la colonne, car le tiroir
   // est modal et met la carte hors de portée tant qu'il est ouvert.
   beforeEach(simulerGrandEcran);
   afterEach(restaurerEcran);
 
-  it("ne les lit qu'une fois, quel que soit le nombre de lieux ouverts", async () => {
+  /** Les tables que le CLIENT est allé lire de lui-même. */
+  const luesParLeClient = (mock: SupabaseMock) =>
+    mock.builders.map((b) => b.table).filter((t) => t === "world_wiki_pages" || t === "chatrooms");
+
+  it("ne redemande rien : le serveur a déjà tout donné", async () => {
+    // Le client lisait ces deux listes après l'hydratation, soit deux
+    // allers-retours de plus sur un onglet que le serveur avait déjà rendu —
+    // et des listes qui arrivaient APRÈS l'ouverture d'un lieu, faisant
+    // grandir la fiche sous les yeux.
     const { mock } = monter({
       maps: [makeMap()],
       pins: [makePin(), makePin({ id: "pin2", title: "La tour" })],
@@ -204,23 +218,39 @@ describe("WorldMap — pages du wiki", () => {
     await userEvent.click(screen.getByRole("button", { name: "La tour" }));
 
     expect(screen.getByTestId("pin-popover")).toHaveTextContent("La tour");
-    expect(mock.builders.filter((b) => b.table === "world_wiki_pages")).toHaveLength(1);
+    expect(luesParLeClient(mock)).toEqual([]);
   });
 
-  it("les lit dès que la carte est à l'écran, sans attendre un clic", () => {
-    // Elles étaient lues à la première ouverture d'un panneau, et arrivaient
-    // donc APRÈS lui : le panneau grandissait sous les yeux, et sa position —
-    // qui se calcule à partir de sa hauteur — sautait. Le prix est de trois
-    // requêtes légères par visite, même sans clic.
-    const { mock } = monter({ maps: [makeMap()], pins: [makePin()] });
+  it("les prend de ce que le serveur a servi", async () => {
+    monter({
+      maps: [makeMap()],
+      pins: [makePin()],
+      wikiPages: [{ id: "p1", title: "Arkham", slug: "arkham" }],
+      rooms: [{ id: "c1", title: "La taverne", name: "taverne", map_pin_id: "pin1" }],
+    });
 
-    expect(mock.builders.filter((b) => b.table === "world_wiki_pages")).toHaveLength(1);
+    await userEvent.click(screen.getByRole("button", { name: "Le port" }));
+
+    expect(screen.getByTestId("pin-wiki-pages")).toHaveTextContent("Arkham");
+    expect(screen.getByTestId("pin-rooms")).toHaveTextContent("La taverne");
   });
 
-  it("ne les lit pas pour une carte sans image : il n'y a pas de lieu à ouvrir", () => {
-    const { mock } = monter({ maps: [makeMap({ image_url: null })], pins: [] });
+  it("les lit une fois quand c'est le client qui ouvre l'onglet", async () => {
+    // Sans rendu serveur, `getWorldMaps` les rapporte avec le reste : un seul
+    // aller, pas trois.
+    getWorldMaps.mockResolvedValue({
+      maps: [makeMap()],
+      pins: [makePin()],
+      regions: [],
+      links: [],
+      personas: [],
+      wikiPages: [{ id: "p1", title: "Arkham", slug: "arkham" }],
+      rooms: [],
+    });
+    const { mock } = monter(null);
 
-    expect(mock.builders.filter((b) => b.table === "world_wiki_pages")).toHaveLength(0);
+    await waitFor(() => expect(getWorldMaps).toHaveBeenCalledWith("w1"));
+    expect(luesParLeClient(mock)).toEqual([]);
   });
 });
 
@@ -841,7 +871,7 @@ describe("WorldMap — l'époque affichée", () => {
         worldId="w1"
         canEdit
         timelineConfig={CHRONO}
-        initialMap={{ maps: [makeMap()], pins: [RUINE, VILLE, TOUJOURS], regions: [], links: [], personas: [] }}
+        initialMap={{ maps: [makeMap()], pins: [RUINE, VILLE, TOUJOURS], regions: [], links: [], personas: [], wikiPages: [], rooms: [] }}
       />,
     );
   }
@@ -1429,7 +1459,7 @@ describe("WorldMap — s'installer quelque part", () => {
         worldId="w1"
         canEdit
         canPost={canPost}
-        initialMap={{ maps: [makeMap()], pins: [makePin()], regions: [], links: [], personas: [] }}
+        initialMap={{ maps: [makeMap()], pins: [makePin()], regions: [], links: [], personas: [], wikiPages: [], rooms: [] }}
       />,
     );
     return { mock };

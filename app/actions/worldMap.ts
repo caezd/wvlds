@@ -6,9 +6,25 @@ import { createClient } from "@/lib/supabase/server";
 import { ERR_NON_AUTHENTIFIE } from "@/lib/actionErrors";
 import { storagePathFromUrl } from "@/lib/storage";
 import type { WorldTimelineDate } from "@/types/worlds";
+import type { PinRoom, WikiPageOption } from "@/components/worlds/map/types";
 
 /** Espace de stockage des images de carte et des bannières de lieu. */
 const WORLDS_BUCKET = "worlds";
+
+// Les colonnes demandées, nommées plutôt qu'un `*`.
+//
+// Un `*` fait voyager ce que le client n'utilise pas, et fait surtout arriver
+// sans prévenir ce qu'une migration ajoutera demain — dans une réponse dont
+// les types, eux, ne bougeront pas. Nommer les colonnes, c'est dire ce que
+// l'écran sait afficher.
+const COLONNES_CARTE = "id, world_id, image_url, label, sort_index, scale_width_units, scale_unit";
+// D'un seul tenant, sans concaténation : Supabase déduit le type de la
+// réponse de la CHAÎNE LITTÉRALE passée à `select`. Coupée en deux, elle perd
+// son type littéral, et la réponse revient en `GenericStringError`.
+const COLONNES_EPINGLE = "id, world_id, map_id, x, y, title, description, banner_url, color, icon, icon_color, border_color, border_style, sort_index, wiki_page_id, target_map_id, exists_from, exists_until";
+const COLONNES_REGION =
+  "id, world_id, map_id, label, description, color, points, wiki_page_id, sort_index";
+const COLONNES_LIEN = "id, map_id, from_pin_id, to_pin_id, label";
 
 export type WorldMapData = {
   id: string;
@@ -65,12 +81,18 @@ export type MapRegion = {
 
 
 /**
- * Toutes les cartes d'un monde et toutes leurs épingles, en deux requêtes.
+ * Tout ce que la carte d'un monde a besoin de savoir, en un seul aller.
  *
  * Les épingles sont lues d'un bloc plutôt qu'une carte à la fois : passer d'un
  * onglet à l'autre est alors instantané, là où une requête par changement
- * d'onglet ferait clignoter la carte à chaque aller-retour. Elles se répartissent
- * ensuite par `map_id`.
+ * d'onglet ferait clignoter la carte à chaque aller-retour. Elles se
+ * répartissent ensuite par `map_id`.
+ *
+ * Les pages du wiki et les salons situés sont du voyage, alors qu'ils ne
+ * servent qu'à la fiche d'un lieu : le client les demandait lui-même APRÈS
+ * l'hydratation, soit deux allers-retours de plus pour un onglet que le
+ * serveur avait déjà rendu. Deux listes courtes — les titres, rien d'autre —
+ * qui arrivent maintenant avec le reste.
  */
 export async function getWorldMaps(
   worldId: string,
@@ -80,20 +102,35 @@ export async function getWorldMaps(
   regions: MapRegion[];
   links: MapPinLink[];
   personas: PlacedPersona[];
+  wikiPages: WikiPageOption[];
+  rooms: PinRoom[];
 }> {
   const supabase = await createClient();
-  const [{ data: maps }, { data: pins }, { data: regions }, { data: links }, personas] = await Promise.all([
-    supabase.from("world_maps").select("*").eq("world_id", worldId).order("sort_index"),
+  const [
+    { data: maps },
+    { data: pins },
+    { data: regions },
+    { data: links },
+    { data: wikiPages },
+    { data: rooms },
+    personas,
+  ] = await Promise.all([
+    supabase.from("world_maps").select(COLONNES_CARTE).eq("world_id", worldId).order("sort_index"),
+    supabase.from("world_map_pins").select(COLONNES_EPINGLE).eq("world_id", worldId).order("sort_index"),
+    supabase.from("world_map_regions").select(COLONNES_REGION).eq("world_id", worldId).order("sort_index"),
+    supabase.from("world_map_pin_links").select(COLONNES_LIEN).eq("world_id", worldId),
     supabase
-      .from("world_map_pins")
-      .select("*")
+      .from("world_wiki_pages")
+      .select("id, title, slug")
       .eq("world_id", worldId)
-      .order("sort_index"),
-    supabase.from("world_map_regions").select("*").eq("world_id", worldId).order("sort_index"),
+      .eq("is_folder", false)
+      .is("deleted_at", null)
+      .order("title"),
     supabase
-      .from("world_map_pin_links")
-      .select("id, map_id, from_pin_id, to_pin_id, label")
-      .eq("world_id", worldId),
+      .from("chatrooms")
+      .select("id, title, name, map_pin_id")
+      .eq("world_id", worldId)
+      .not("map_pin_id", "is", null),
     getPlacedPersonas(worldId),
   ]);
   return {
@@ -102,6 +139,8 @@ export async function getWorldMaps(
     regions: (regions as MapRegion[]) ?? [],
     links: (links as MapPinLink[]) ?? [],
     personas,
+    wikiPages: (wikiPages as WikiPageOption[]) ?? [],
+    rooms: (rooms as PinRoom[]) ?? [],
   };
 }
 

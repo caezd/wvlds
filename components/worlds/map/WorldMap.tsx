@@ -73,6 +73,9 @@ export type InitialWorldMap = {
   regions: MapRegion[];
   links: MapPinLink[];
   personas: PlacedPersona[];
+  /** Pages du wiki et salons situés : ce que la fiche d'un lieu affiche. */
+  wikiPages: WikiPageOption[];
+  rooms: PinRoom[];
 };
 
 /** Le segment de l'outil règle, et les lieux auxquels il s'est accroché. */
@@ -261,14 +264,16 @@ export function WorldMap({
     let cancelled = false;
     (async () => {
       try {
-        const { maps: m, pins: p, regions: r, links: l, personas: who } = await getWorldMaps(worldId);
+        const carte = await getWorldMaps(worldId);
         if (!cancelled) {
-          setMaps(m);
-          setActiveMapId((prev) => prev ?? initialMapId ?? m[0]?.id ?? null);
-          setPins(p);
-          setRegions(r);
-          setLinks(l);
-          setPersonas(who);
+          setMaps(carte.maps);
+          setActiveMapId((prev) => prev ?? initialMapId ?? carte.maps[0]?.id ?? null);
+          setPins(carte.pins);
+          setRegions(carte.regions);
+          setLinks(carte.links);
+          setPersonas(carte.personas);
+          setWikiPages(carte.wikiPages);
+          setPinRooms(carte.rooms);
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -362,42 +367,15 @@ export function WorldMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [worldId, reconnectEpoch]);
 
-  // ── Ce dont les panneaux ont besoin, chargé une fois pour tous ──
+  // ── Ce dont la fiche d'un lieu a besoin ───────────────────────
   //
-  // Pages du wiki et salons situés : deux listes du monde entier, lues à la
-  // première ouverture d'un lieu et partagées ensuite. Chaque panneau les
-  // rechargeait pour lui-même, soit deux requêtes par clic sur une épingle.
-  const [wikiPages, setWikiPages] = React.useState<WikiPageOption[]>([]);
-  const [pinRooms, setPinRooms] = React.useState<PinRoom[]>([]);
-  const popoverDataAskedRef = React.useRef(false);
-  const loadPopoverData = React.useCallback(() => {
-    if (popoverDataAskedRef.current) return;
-    popoverDataAskedRef.current = true;
-    void supabase
-      .from("world_wiki_pages")
-      .select("id, title, slug")
-      .eq("world_id", worldId)
-      .eq("is_folder", false)
-      .is("deleted_at", null)
-      .order("title")
-      .then(({ data }: { data: WikiPageOption[] | null }) => setWikiPages(data ?? []));
-    void supabase
-      .from("chatrooms")
-      .select("id, title, name, map_pin_id")
-      .eq("world_id", worldId)
-      .not("map_pin_id", "is", null)
-      .then(({ data }: { data: PinRoom[] | null }) => setPinRooms(data ?? []));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [worldId]);
-
-  // De quoi remplir un panneau, préchargé dès que la carte est à l'écran
-  // plutôt qu'au premier clic sur un lieu : ces listes arrivaient sinon APRÈS
-  // l'ouverture, faisant grandir le panneau sous les yeux — et sauter sa
-  // position, qui se calcule à partir de sa hauteur. Trois requêtes légères,
-  // une seule fois par visite (voir le garde dans `loadPopoverData`).
-  React.useEffect(() => {
-    if (activeMap?.image_url) loadPopoverData();
-  }, [activeMap?.image_url, loadPopoverData]);
+  // Pages du wiki et salons situés : deux listes du monde entier, servies
+  // avec le reste par `getWorldMaps`. Le client les demandait pour lui-même
+  // après l'hydratation, soit deux allers-retours de plus sur un onglet que
+  // le serveur avait déjà rendu — et des listes qui arrivaient APRÈS
+  // l'ouverture d'un lieu, faisant grandir la fiche sous les yeux.
+  const [wikiPages, setWikiPages] = React.useState<WikiPageOption[]>(initialMap?.wikiPages ?? []);
+  const [pinRooms, setPinRooms] = React.useState<PinRoom[]>(initialMap?.rooms ?? []);
 
   /**
    * Relit qui se trouve où, en bloc.
@@ -491,13 +469,12 @@ export function WorldMap({
   }, [writeUrl]);
 
   const openPopover = React.useCallback((pin: MapPinType, writeHistory = true) => {
-    loadPopoverData();
     setSelectedPin(pin);
     // La fiche vit dans la colonne : l'ouvrir, c'est ouvrir la colonne.
     setPlacesOpen(true);
     setPendingPin(null);
     if (writeHistory) writeUrl(pin.map_id, pin.id, "replace");
-  }, [loadPopoverData, writeUrl]);
+  }, [writeUrl]);
 
   /**
    * Range tout ce qui est en cours : outils, brouillons, panneaux ouverts.
@@ -640,8 +617,8 @@ export function WorldMap({
     setSelectedPin(null);
     setPendingPin(null);
     setEditMode(false);
-    setWikiPages([]);
-    setPinRooms([]);
+    setWikiPages(initialMap?.wikiPages ?? []);
+    setPinRooms(initialMap?.rooms ?? []);
     setRegions(initialMap?.regions ?? []);
     setLinks(initialMap?.links ?? []);
     setSelectedLink(null);
@@ -651,7 +628,6 @@ export function WorldMap({
     setPendingRegion(null);
     setCalibrating(false);
     setSegment(null);
-    popoverDataAskedRef.current = false;
     pendingFocusRef.current = null;
   });
 
@@ -895,7 +871,6 @@ export function WorldMap({
     if (viewport.consumeDidPan() || drawing || calibrating) return;
     closePopover();
     setPendingPin(null);
-    loadPopoverData();
     setSelectedRegion((prev) => (prev?.id === region.id ? null : region));
   }
 
