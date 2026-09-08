@@ -1292,6 +1292,7 @@
     "drawRegion": "Draw a region",
     "regionName": "Region name",
     "regionVertex": "Corner {index}",
+    "addRegionVertex": "Add a vertex here",
     "minRegionPoints": "At least three corners.",
     "createRegionError": "Could not create the region.",
     "regionUpdated": "Region updated.",

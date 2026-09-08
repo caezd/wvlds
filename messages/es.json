@@ -1292,6 +1292,7 @@
     "drawRegion": "Dibujar una región",
     "regionName": "Nombre de la región",
     "regionVertex": "Vértice {index}",
+    "addRegionVertex": "Añadir un vértice aquí",
     "minRegionPoints": "Al menos tres vértices.",
     "createRegionError": "No se ha podido crear la región.",
     "regionUpdated": "Región actualizada.",
