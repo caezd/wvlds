@@ -1292,6 +1292,7 @@
     "drawRegion": "Dessiner une région",
     "regionName": "Nom de la région",
     "regionVertex": "Sommet {index}",
+    "addRegionVertex": "Ajouter un sommet ici",
     "minRegionPoints": "Trois sommets au moins.",
     "createRegionError": "Impossible de créer la région.",
     "regionUpdated": "Région mise à jour.",

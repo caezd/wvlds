@@ -826,15 +826,18 @@ export function WorldMap({
   }
 
   /** Un sommet déplacé : la région suit tout de suite, le serveur ensuite. */
-  async function handleVertexMoved(region: MapRegion, index: number, point: Point) {
-    const points = region.points.map((p, i) => (i === index ? point : p));
-    const updated = { ...region, points };
+  /**
+   * Les sommets d'une région ont changé — tirés, promenés, ou l'un ajouté.
+   *
+   * Les trois gestes disaient la même chose au serveur ; ils passent par ici.
+   */
+  async function handleRegionPoints(region: MapRegion, points: Point[]) {
     const montrer = (r: MapRegion) => {
       setRegions((prev) => mergeById(prev, r));
       setSelectedRegion((prev) => (prev?.id === region.id ? r : prev));
     };
     await optimiste(
-      () => montrer(updated),
+      () => montrer({ ...region, points }),
       () => updateMapRegion(region.id, { points }),
       () => montrer(region),
       () => t("saveError"),
@@ -1333,7 +1336,7 @@ export function WorldMap({
                   clickThrough={calibrating || drawing}
                   onSelect={handleRegionClick}
                   onCloseDraft={finishDraft}
-                  onVertexMoved={(region, index, point) => void handleVertexMoved(region, index, point)}
+                  onPointsChanged={(region, points) => void handleRegionPoints(region, points)}
                 />
               )}
 
