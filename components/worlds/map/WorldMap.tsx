@@ -832,6 +832,12 @@ export function WorldMap({
    * Les trois gestes disaient la même chose au serveur ; ils passent par ici.
    */
   async function handleRegionPoints(region: MapRegion, points: Point[]) {
+    // En dessous de trois sommets, ce n'est plus une surface. La règle vit
+    // ici plutôt que dans le geste : elle vaut pour tous.
+    if (points.length < MIN_REGION_POINTS) {
+      toast.error(t("minRegionPoints"));
+      return;
+    }
     const montrer = (r: MapRegion) => {
       setRegions((prev) => mergeById(prev, r));
       setSelectedRegion((prev) => (prev?.id === region.id ? r : prev));

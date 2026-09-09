@@ -1293,6 +1293,7 @@
     "regionName": "Nombre de la región",
     "regionVertex": "Vértice {index}",
     "addRegionVertex": "Añadir un vértice aquí",
+    "removeRegionVertex": "Haga doble clic para eliminar este vértice",
     "minRegionPoints": "Al menos tres vértices.",
     "createRegionError": "No se ha podido crear la región.",
     "regionUpdated": "Región actualizada.",

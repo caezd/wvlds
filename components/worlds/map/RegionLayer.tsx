@@ -371,6 +371,7 @@ export function RegionLayer({
           type="button"
           data-region-vertex={i}
           aria-label={t("regionVertex", { index: i + 1 })}
+          title={t("removeRegionVertex")}
           className="absolute z-30 h-3 w-3 cursor-move rounded-full border-2 border-white bg-foreground shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           style={{
             left: `${p.x}%`,
@@ -379,6 +380,13 @@ export function RegionLayer({
             transformOrigin: "center center",
           }}
           onClick={(e) => e.stopPropagation()}
+          // Le double-clic retire le sommet. C'est `WorldMap` qui refuse de
+          // descendre sous trois — la règle vaut pour tous les gestes, pas
+          // pour celui-ci seulement.
+          onDoubleClick={(e) => {
+            e.stopPropagation();
+            onPointsChanged(selected, selected.points.filter((_, k) => k !== i));
+          }}
           onPointerDown={(e) => startDrag(e, selected, i)}
           onPointerMove={(e) => moveDrag(e, i)}
           onPointerUp={() => endDrag(selected, i)}
