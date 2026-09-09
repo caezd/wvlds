@@ -980,6 +980,38 @@ describe("WorldMap — les régions", () => {
     await userEvent.click(screen.getByRole("button", { name: "Modifier" }));
   }
 
+  it("refuse de descendre sous trois sommets", async () => {
+    // Un double-clic retire un sommet ; sur un triangle, le suivant en ferait
+    // un segment. La règle vit dans `WorldMap` et vaut pour tous les gestes,
+    // pas pour le double-clic seulement.
+    const triangle = makeRegion({ points: [{ x: 20, y: 20 }, { x: 60, y: 20 }, { x: 40, y: 60 }] });
+    monter({ maps: [makeMap()], pins: [], regions: [triangle] });
+    await passerEnEdition();
+    await userEvent.click(screen.getByRole("button", { name: "Le royaume" }));
+
+    const sommets = document.querySelectorAll("[data-region-vertex]");
+    expect(sommets).toHaveLength(3);
+    await userEvent.dblClick(sommets[0] as HTMLElement);
+
+    expect(updateMapRegion).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Le royaume" }))
+      .toHaveAttribute("points", "20,20 60,20 40,60");
+  });
+
+  it("retire un sommet d'un quadrilatère", async () => {
+    monter({ maps: [makeMap()], pins: [], regions: [makeRegion()] });
+    await passerEnEdition();
+    await userEvent.click(screen.getByRole("button", { name: "Le royaume" }));
+
+    await userEvent.dblClick(document.querySelectorAll("[data-region-vertex]")[1] as HTMLElement);
+
+    await waitFor(() =>
+      expect(updateMapRegion).toHaveBeenCalledWith("reg1", {
+        points: [{ x: 20, y: 20 }, { x: 60, y: 60 }, { x: 20, y: 60 }],
+      }),
+    );
+  });
+
   it("dessine les régions de la carte affichée, et elles seules", () => {
     monter({
       maps: [makeMap(), makeMap({ id: "map2", label: "Donjon", sort_index: 1 })],

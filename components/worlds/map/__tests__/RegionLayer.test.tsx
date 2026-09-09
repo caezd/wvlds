@@ -325,3 +325,47 @@ describe("RegionLayer — ajouter un sommet sur un côté", () => {
     expect(auDessus).not.toHaveBeenCalled();
   });
 });
+
+describe("RegionLayer — retirer un sommet", () => {
+  function sommets() {
+    return [...document.querySelectorAll("[data-region-vertex]")] as HTMLElement[];
+  }
+
+  it("le retire au double-clic", async () => {
+    const { onPointsChanged } = monter({ selectedId: "reg1", isEditMode: true });
+
+    await userEvent.dblClick(sommets()[1]);
+
+    expect(onPointsChanged).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "reg1" }),
+      [{ x: 20, y: 20 }, { x: 60, y: 60 }, { x: 20, y: 60 }],
+    );
+  });
+
+  it("le dit dans son infobulle", () => {
+    monter({ selectedId: "reg1", isEditMode: true });
+    expect(sommets()[0]).toHaveAttribute("title", "Double-cliquer pour supprimer ce sommet");
+  });
+
+  it("ne laisse pas le double-clic atteindre la carte", async () => {
+    const auDessus = vi.fn();
+    render(
+      <div onDoubleClick={auDessus}>
+        <RegionLayer
+          regions={[makeRegion()]}
+          selectedId="reg1"
+          draft={null}
+          isEditMode
+          imgRef={{ current: null }}
+          onSelect={vi.fn()}
+          onPointsChanged={vi.fn()}
+          onCloseDraft={vi.fn()}
+        />
+      </div>,
+    );
+
+    await userEvent.dblClick(sommets()[0]);
+
+    expect(auDessus).not.toHaveBeenCalled();
+  });
+});
