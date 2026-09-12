@@ -39,4 +39,24 @@ describe("WorldHeroCard", () => {
     expect(root.className).toMatch(/\[mask-image:linear-gradient/);
     expect(root.getAttribute("style") ?? "").not.toContain("background-color");
   });
+
+  it("en variante floutée (header collant) : même image, floutée, sans fondu ni priorité de chargement", () => {
+    const { container } = render(<WorldHeroCard world={{ banner_url: "https://x/banner.png", color: null }} blurred />);
+
+    const root = container.firstElementChild as HTMLElement;
+    expect(root.className).not.toMatch(/mask-image/);
+    // Le flou est posé sur un conteneur : il couvre aussi la vignette de
+    // substitution de StoredImage, pas seulement l'image finale.
+    const img = container.querySelector("img")!;
+    expect(img.parentElement!.className).toMatch(/\bblur-xl\b/);
+    expect(img).toHaveAttribute("loading", "lazy");
+  });
+
+  it("garde le fondu et la priorité de chargement pour la bannière elle-même", () => {
+    const { container } = render(<WorldHeroCard world={{ banner_url: "https://x/banner.png", color: null }} />);
+
+    const img = container.querySelector("img")!;
+    expect(img.parentElement!.className).not.toMatch(/blur/);
+    expect(img).not.toHaveAttribute("loading", "lazy");
+  });
 });

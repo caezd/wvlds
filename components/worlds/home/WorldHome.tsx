@@ -1,28 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useResetOnKeyChange } from "@/hooks/useResetOnKeyChange";
+import { useScrolledPast } from "@/hooks/useScrolledPast";
 import dynamic from "next/dynamic";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
-import { Globe, GlobeLock, Search, Star } from "lucide-react";
 
 import { WorldHeroCard } from "./WorldHeroCard";
+import { WORLD_HOME_HEADER_HEIGHT, WorldHomeHeader, WorldHomeIcon } from "./WorldHomeHeader";
 import { WorldHomeGridView } from "./WorldHomeGridView";
 import type { ChatroomCategory } from "@/lib/currentRequest";
 import type { RecentPersona } from "./widgets/WorldRecentPersonasWidget";
 import type { WikiPage } from "./widgets/WorldWikiShortcutsWidget";
 import type { MapWidgetMap } from "./widgets/WorldMapWidget";
-import { MobileDrawerOpenButton } from "@/components/sidebar/MobileDrawerOpenButton";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { World, WorldTimelineConfig, WorldHomeRoom as Room } from "@/types/worlds";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import type { AsidePersona } from "@/components/personas/WorldPersonaAsideClient";
 import type { InitialWorldMap } from "../map/WorldMap";
 import { toggleWorldFavorite } from "@/app/(protected)/w/actions";
-import { cn } from "@/lib/utils";
-import { supabaseThumb } from "@/lib/storage";
 import { compactHomeGridRows, resolveHomeGridGap, resolveWorldHomeGrid } from "./worldHomeGrid";
 // Modale rarement ouverte : même traitement que les onglets ci-dessous.
 const SearchCenter = dynamic(() =>
@@ -99,8 +94,6 @@ export function WorldHome({
 }) {
   const { create_chatroom, world_map, world_catalogue, world_timeline } = useFeatureFlags();
   const router = useRouter();
-  const t = useTranslations("worlds");
-  const tChat = useTranslations("chatrooms");
 
   const hasTimeline = world_timeline && !!world.timeline_enabled && !!world.timeline_config;
   const _hasCatalogue = world_catalogue && (!!(world.restrict_inventory || world.restrict_skills) || canEditTabs);
@@ -108,6 +101,13 @@ export function WorldHome({
   const [isFavorite, setIsFavorite] = useState(initialPrefs?.is_favorite ?? false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(initialCategoryId ?? null);
+
+  // La barre du haut devient un « header » (fond flouté, nom du monde) une
+  // fois la bannière défilée : le repère couvre la hauteur réservée à la
+  // bannière (pt-40), et compte comme passé dès qu'il disparaît sous la barre.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const bannerSentinelRef = useRef<HTMLDivElement>(null);
+  const headerCondensed = useScrolledPast(bannerSentinelRef, scrollRef, WORLD_HOME_HEADER_HEIGHT);
 
   // Passer d'un monde à l'autre depuis le rail est une navigation client :
   // ce composant n'est pas remonté et ses états gardent la valeur du monde
@@ -239,7 +239,7 @@ export function WorldHome({
             onClose={closeView}
           />
         ) : (
-          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+          <div ref={scrollRef} className="flex min-h-0 flex-1 flex-col overflow-y-auto">
             {/* Pas de couleur de fond forcée ici (ni sur le panel plus bas) :
                 ce conteneur reste transparent et laisse voir le fond ambiant
                 réel de la page — celui-ci diffère entre desktop (`<main>`
@@ -249,11 +249,13 @@ export function WorldHome({
                 justement ce second cas.
 
                 Bannière en fond, collée au bord du content (pas de padding) —
-                boutons incrustés au-dessus (menu mobile, favoris). Plus de
-                header séparé ni d'option plein écran : la page d'accueil
-                occupe désormais toujours toute la largeur. Le fond (image +
-                fondu) remplit tout ce conteneur, dont la hauteur suit celle
-                du bloc titre.
+                boutons incrustés au-dessus (menu mobile, recherche, favoris),
+                dans une barre collante qui se révèle en header une fois la
+                bannière défilée (voir WorldHomeHeader.tsx). Plus de header
+                séparé ni d'option plein écran : la page d'accueil occupe
+                désormais toujours toute la largeur. Le fond (image + fondu)
+                remplit tout ce conteneur, dont la hauteur suit celle du bloc
+                titre.
 
                 Le dégradé (fondu d'opacité, voir WorldHeroCard.tsx) démarre à
                 --hero-fade-start et devient transparent à 100% de ce
@@ -272,52 +274,20 @@ export function WorldHome({
                 fixe + titre + description) débordait alors de la boîte, et le
                 panel — qui démarre au bord inférieur de la boîte *réduite* —
                 venait se superposer à la description. */}
+            <WorldHomeHeader
+              world={world}
+              condensed={headerCondensed}
+              isFavorite={isFavorite}
+              onToggleFavorite={handleToggleFavorite}
+              onOpenSearch={() => setSearchOpen(true)}
+            />
+            <SearchCenter worldId={worldId} open={searchOpen} onOpenChange={setSearchOpen} />
+
             <div className="relative min-h-60 shrink-0 [--hero-fade-start:6rem]">
               <WorldHeroCard world={world} />
-              {/* z-10 obligatoire : le bloc titre qui suit est `relative`, donc
-                  positionné comme cette barre — à z-index égal, c'est le
-                  dernier du DOM qui se peint au-dessus. Son `pt` (la hauteur
-                  réservée à la bannière) recouvre alors exactement ces boutons
-                  et, une zone de padding captant les événements pointeur, les
-                  rendait inertes. */}
-              <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between p-3">
-                <MobileDrawerOpenButton className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-black/30 text-white backdrop-blur-sm transition-colors hover:bg-black/45" />
-                <div className="ml-auto flex items-center gap-2">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        type="button"
-                        onClick={() => setSearchOpen(true)}
-                        aria-label={tChat("search.title")}
-                        className="flex h-8 w-8 items-center justify-center rounded-lg bg-black/30 text-white backdrop-blur-sm transition-colors hover:bg-black/45"
-                      >
-                        <Search size={16} />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" sideOffset={6}>{tChat("search.title")}</TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        type="button"
-                        onClick={handleToggleFavorite}
-                        aria-label={isFavorite ? t("hero.removeFavorite") : t("hero.addFavorite")}
-                        className={cn(
-                          "flex h-8 w-8 items-center justify-center rounded-lg bg-black/30 backdrop-blur-sm transition-colors hover:bg-black/45",
-                          isFavorite ? "text-yellow-400" : "text-white",
-                        )}
-                      >
-                        <Star size={16} className={isFavorite ? "fill-current" : ""} />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" sideOffset={6}>
-                      {isFavorite ? t("hero.removeFavorite") : t("hero.addFavorite")}
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-              </div>
-
-              <SearchCenter worldId={worldId} open={searchOpen} onOpenChange={setSearchOpen} />
+              {/* Repère de défilement : la hauteur réservée à la bannière
+                  (h-40, en phase avec le pt-40 du bloc titre). */}
+              <div ref={bannerSentinelRef} aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-40" />
 
               {/* Titre + description, désormais du contenu de page normal
                   (plus superposés sur la bannière). `pt-40` réserve la hauteur
@@ -330,26 +300,7 @@ export function WorldHome({
                   la grille) — seul leur affichage se règle, depuis Réglages
                   > Page d'accueil (voir WorldHomeGridSettings.tsx). */}
               <div className="relative w-full space-y-2 px-3 pb-4 pt-40 sm:px-6 md:px-8 lg:px-12">
-                <span className="relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-md bg-muted">
-                  {world.icon_url ? (
-                    // `unoptimized` : `sizes` en px fixe (pas `vw`) fait
-                    // demander à Next.js sa plus grande largeur configurée
-                    // (jusqu'à 3840px) au lieu d'une taille adaptée — voir le
-                    // commentaire détaillé dans WorldAvatar.tsx. On
-                    // pré-dimensionne donc nous-mêmes via imgproxy.
-                    <Image
-                      src={supabaseThumb(world.icon_url, 44 * 3, 90) ?? world.icon_url}
-                      alt=""
-                      fill
-                      unoptimized
-                      className="object-cover"
-                    />
-                  ) : world.visibility === "public" ? (
-                    <Globe size={20} className="text-muted-foreground" />
-                  ) : (
-                    <GlobeLock size={20} className="text-muted-foreground" />
-                  )}
-                </span>
+                <WorldHomeIcon world={world} size={44} />
                 <div>
                   <h1 className="text-2xl font-semibold text-foreground md:text-3xl">
                     {world.name}
