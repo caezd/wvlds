@@ -26,6 +26,7 @@ import {
     batchUpdateCatalogCategoryOrder,
     batchUpdateCatalogItemOrder,
     setWorldHomeGrid,
+    addWorldTag,
 } from "@/app/actions/worldCatalog";
 import {
     HOME_GRID_COLS,
@@ -1007,5 +1008,41 @@ describe("setWorldHomeGrid", () => {
             { id: "b", type: "widget", x: 6, y: 1, w: 6, widgetId: "categories" },
         ]);
         expect(res.ok).toBe(true);
+    });
+});
+
+// ──────────────────────────────────────────────────────────────────────────
+// Les objets `data` du catalogue étaient étalés tels quels dans les écritures.
+// Une clé inconnue, un nom vide ou trop long, une catégorie qui n'est pas un
+// identifiant : refusés avant d'appeler Supabase, par un code traduisible.
+// ──────────────────────────────────────────────────────────────────────────
+describe("catalogue — entrées forgées", () => {
+    it.each([
+        ["une clé de trop sur une pièce", () => addWorldInventoryItem("w1", { name: "x", sort_index: 0 } as never)],
+        ["un world_id glissé dans une compétence", () => addWorldSkill("w1", { name: "x", world_id: "autre" } as never)],
+        ["une catégorie à la mise à jour d'une pièce", () => updateWorldInventoryItem("i1", { category_id: "c9" } as never)],
+        ["un nom vide", () => addWorldSkill("w1", { name: "   " })],
+        ["un nom trop long", () => updateWorldSkill("s1", { name: "x".repeat(201) })],
+        ["une description trop longue", () => addWorldInventoryItem("w1", { name: "x", description: "x".repeat(5001) })],
+        ["un type de catégorie inconnu", () => addWorldCatalogCategory("w1", "spells" as never, "x")],
+        ["un nom de catégorie trop long", () => updateWorldCatalogCategory("c1", { name: "x".repeat(201) })],
+        ["un ordre de catégories mal formé", () => batchUpdateCatalogCategoryOrder([{ id: "c1", sort_index: -1, column_index: 0 }])],
+        ["un ordre de pièces vers une table inconnue", () => batchUpdateCatalogItemOrder([], "spells" as never)],
+        ["un tag qui n'est pas une chaîne", () => addWorldTag("w1", null as never)],
+    ])("refuse %s sans appeler Supabase", async (_name, fn) => {
+        const mock = createSupabaseMock();
+        use(mock);
+        const res = await fn();
+        expect(res.ok).toBe(false);
+        expect(mock.from).not.toHaveBeenCalled();
+    });
+
+    it("garde l'emoji d'une pièce : l'icône du catalogue n'est pas un nom Lucide", async () => {
+        const mock = createSupabaseMock({ results: [{ data: { id: "i1" } }] });
+        use(mock);
+        await addWorldInventoryItem("w1", { name: "Potion", icon: "🧪" });
+        expect(mock.buildersFor("world_inventory_items")[0].insert).toHaveBeenCalledWith(
+            expect.objectContaining({ icon: "🧪" }),
+        );
     });
 });

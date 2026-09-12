@@ -1,5 +1,7 @@
 "use server";
 
+import { z } from "zod";
+
 import { createClient } from "@/lib/supabase/server";
 import { deletePersona } from "@/app/(protected)/p/actions";
 import { translatePersonaError } from "@/lib/personaErrors";
@@ -23,6 +25,7 @@ import {
 import type { WorldInventoryItem, WorldSkill, WorldCatalogCategory, WorldTimelineConfig, WorldTag } from "@/types/worlds";
 import { clampDaysPerMonth } from "@/lib/worldTimeline";
 import { ERR_NON_AUTHENTIFIE, ERR_VALEUR_NON_SUPPORTEE , ERR_TAG_INVALIDE, echecEnregistrement } from "@/lib/actionErrors";
+import { idSchema, INPUT_LIMITS, longTextSchema, parseInput, shortTextSchema } from "@/lib/inputSchemas";
 
 const MAX_WORLD_TAGS = 10;
 const MAX_TAG_LENGTH = 24;
@@ -157,14 +160,38 @@ export async function setWorldRestriction(
 
 // ── world_inventory_items ─────────────────────────────────────────────────────
 
+// Une pièce d'inventaire ou une compétence, telle que le client peut l'envoyer.
+// Strict : `world_id` et `sort_index` ne se reçoivent pas, ils se posent ici.
+const catalogEntrySchema = z.strictObject({
+  name: shortTextSchema,
+  description: longTextSchema.nullable(),
+  icon: z.string().trim().max(INPUT_LIMITS.icon).nullable(),
+  category_id: idSchema.nullable(),
+});
+
+type CatalogEntryInput = z.input<typeof catalogEntrySchema>;
+
+const newCatalogEntrySchema = z.strictObject({
+  worldId: idSchema,
+  data: catalogEntrySchema.partial().required({ name: true }),
+});
+
+const catalogEntryPatchSchema = z.strictObject({
+  id: idSchema,
+  data: catalogEntrySchema.omit({ category_id: true }).partial(),
+});
+
 export async function addWorldInventoryItem(
   worldId: string,
-  data: { name: string; description?: string | null; icon?: string | null; category_id?: string | null },
+  data: Pick<CatalogEntryInput, "name"> & Partial<CatalogEntryInput>,
 ) {
+  const input = parseInput(newCatalogEntrySchema, { worldId, data });
+  if (!input.ok) return { ok: false as const, error: input.error };
+
   const supabase = await createClient();
   const { data: item, error } = await supabase
     .from("world_inventory_items")
-    .insert({ world_id: worldId, ...data })
+    .insert({ world_id: worldId, ...input.data.data })
     .select()
     .single();
   if (error) return { ok: false as const, error: echecEnregistrement("addWorldInventoryItem", error) };
@@ -173,12 +200,15 @@ export async function addWorldInventoryItem(
 
 export async function updateWorldInventoryItem(
   id: string,
-  data: Partial<{ name: string; description: string | null; icon: string | null }>,
+  data: Partial<Omit<CatalogEntryInput, "category_id">>,
 ) {
+  const input = parseInput(catalogEntryPatchSchema, { id, data });
+  if (!input.ok) return { ok: false as const, error: input.error };
+
   const supabase = await createClient();
   const { error } = await supabase
     .from("world_inventory_items")
-    .update(data)
+    .update(input.data.data)
     .eq("id", id);
   if (error) return { ok: false as const, error: echecEnregistrement("updateWorldInventoryItem", error) };
   return { ok: true as const };
@@ -198,12 +228,15 @@ export async function deleteWorldInventoryItem(id: string) {
 
 export async function addWorldSkill(
   worldId: string,
-  data: { name: string; description?: string | null; icon?: string | null; category_id?: string | null },
+  data: Pick<CatalogEntryInput, "name"> & Partial<CatalogEntryInput>,
 ) {
+  const input = parseInput(newCatalogEntrySchema, { worldId, data });
+  if (!input.ok) return { ok: false as const, error: input.error };
+
   const supabase = await createClient();
   const { data: skill, error } = await supabase
     .from("world_skills")
-    .insert({ world_id: worldId, ...data })
+    .insert({ world_id: worldId, ...input.data.data })
     .select()
     .single();
   if (error) return { ok: false as const, error: echecEnregistrement("addWorldSkill", error) };
@@ -212,12 +245,15 @@ export async function addWorldSkill(
 
 export async function updateWorldSkill(
   id: string,
-  data: Partial<{ name: string; description: string | null; icon: string | null }>,
+  data: Partial<Omit<CatalogEntryInput, "category_id">>,
 ) {
+  const input = parseInput(catalogEntryPatchSchema, { id, data });
+  if (!input.ok) return { ok: false as const, error: input.error };
+
   const supabase = await createClient();
   const { error } = await supabase
     .from("world_skills")
-    .update(data)
+    .update(input.data.data)
     .eq("id", id);
   if (error) return { ok: false as const, error: echecEnregistrement("updateWorldSkill", error) };
   return { ok: true as const };
@@ -235,19 +271,32 @@ export async function deleteWorldSkill(id: string) {
 
 // ── world_catalog_categories ──────────────────────────────────────────────────
 
+const catalogCategorySchema = z.strictObject({
+  worldId: idSchema,
+  type: z.enum(["inventory", "skills"]),
+  name: shortTextSchema,
+  options: z
+    .strictObject({ column_index: z.number().int().min(0), sort_index: z.number().int().min(0) })
+    .partial()
+    .optional(),
+});
+
 export async function addWorldCatalogCategory(
   worldId: string,
   type: "inventory" | "skills",
   name: string,
   options?: { column_index?: number; sort_index?: number },
 ) {
+  const input = parseInput(catalogCategorySchema, { worldId, type, name, options });
+  if (!input.ok) return { ok: false as const, error: input.error };
+
   const supabase = await createClient();
   const { data: category, error } = await supabase
     .from("world_catalog_categories")
     .insert({
       world_id: worldId,
       type,
-      name,
+      name: input.data.name,
       column_index: options?.column_index ?? 0,
       sort_index: options?.sort_index ?? 0,
     })
@@ -261,10 +310,19 @@ export async function updateWorldCatalogCategory(
   id: string,
   data: Partial<{ name: string; sort_index: number }>,
 ) {
+  const input = parseInput(
+    z.strictObject({
+      id: idSchema,
+      data: z.strictObject({ name: shortTextSchema, sort_index: z.number().int().min(0) }).partial(),
+    }),
+    { id, data },
+  );
+  if (!input.ok) return { ok: false as const, error: input.error };
+
   const supabase = await createClient();
   const { error } = await supabase
     .from("world_catalog_categories")
-    .update(data)
+    .update(input.data.data)
     .eq("id", id);
   if (error) return { ok: false as const, error: echecEnregistrement("updateWorldCatalogCategory", error) };
   return { ok: true as const };
@@ -285,9 +343,19 @@ export async function deleteWorldCatalogCategory(id: string) {
 // panne réseau laissait donc l'utilisateur devant un ordre qui semblait
 // enregistré et disparaissait au rechargement suivant. Les autres actions du
 // fichier, elles, remontent bien leur erreur.
+const MAX_BATCH_ORDER = 500;
+
 export async function batchUpdateCatalogCategoryOrder(
   categories: { id: string; sort_index: number; column_index: number }[],
 ) {
+  const input = parseInput(
+    z
+      .array(z.strictObject({ id: idSchema, sort_index: z.number().int().min(0), column_index: z.number().int().min(0) }))
+      .max(MAX_BATCH_ORDER),
+    categories,
+  );
+  if (!input.ok) return { ok: false as const, error: input.error };
+
   const supabase = await createClient();
   const results = await Promise.all(
     categories.map(({ id, sort_index, column_index }) =>
@@ -303,6 +371,17 @@ export async function batchUpdateCatalogItemOrder(
   items: { id: string; sort_index: number; category_id: string | null }[],
   tableType: "inventory" | "skills",
 ) {
+  const input = parseInput(
+    z.strictObject({
+      items: z
+        .array(z.strictObject({ id: idSchema, sort_index: z.number().int().min(0), category_id: idSchema.nullable() }))
+        .max(MAX_BATCH_ORDER),
+      tableType: z.enum(["inventory", "skills"]),
+    }),
+    { items, tableType },
+  );
+  if (!input.ok) return { ok: false as const, error: input.error };
+
   const supabase = await createClient();
   const table = tableType === "inventory" ? "world_inventory_items" : "world_skills";
   const results = await Promise.all(
@@ -403,6 +482,10 @@ export async function getWorldTags(worldId: string) {
 const TAG_FORMAT = /^[\p{L}\p{N}]+$/u;
 
 export async function addWorldTag(worldId: string, rawTag: string) {
+  // Un `null` à la place de la chaîne faisait tomber `.trim()` en TypeError,
+  // soit une erreur 500 opaque là où un refus propre suffit.
+  const input = parseInput(z.strictObject({ worldId: idSchema, rawTag: z.string().max(1000) }), { worldId, rawTag });
+  if (!input.ok) return { ok: false as const, error: ERR_TAG_INVALIDE };
   const tag = rawTag.trim().toLowerCase().slice(0, MAX_TAG_LENGTH);
   if (!tag) return { ok: false as const, error: ERR_TAG_INVALIDE };
   if (!TAG_FORMAT.test(tag)) {

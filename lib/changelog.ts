@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-09 ──────────────────────────────────────────────────────────────
   {
     date: "2026-09",
+    tag: "Technique",
+    text: "Ce que vous saisissez est vérifié une fois de plus, côté serveur : les adresses d’images ne peuvent être qu’en http(s), les couleurs qu’au format hexadécimal, et chaque champ a une longueur maximale. Un envoi qui ne respecte pas ces règles est refusé avec un message clair au lieu d’une erreur technique.",
+  },
+  {
+    date: "2026-09",
     tag: "Emoji",
     text: "Le sélecteur d’emoji prend les couleurs de l’application : onglets de catégories en icônes maison, celui en cours à l’accent, et un cadre identique aux autres menus.",
   },

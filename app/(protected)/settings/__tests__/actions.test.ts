@@ -22,7 +22,7 @@ vi.mock("next/headers", () => ({ cookies: async () => ({ set: cookieSet }) }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
 
-import { updateLocale, syncLocale } from "@/app/(protected)/settings/actions";
+import { updateLocale, syncLocale, updateProfileBioAndPronouns } from "@/app/(protected)/settings/actions";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
@@ -92,5 +92,32 @@ describe("syncLocale", () => {
   it("ignore une valeur non supportée", async () => {
     await syncLocale("kl");
     expect(cookieSet).not.toHaveBeenCalled();
+  });
+});
+
+describe("updateProfileBioAndPronouns", () => {
+  // `bio.trim()` sur autre chose qu'une chaîne levait un TypeError : une erreur
+  // 500 opaque, là où un refus traduisible suffit.
+  it("refuse une biographie qui n'est pas une chaîne, sans appeler Supabase", async () => {
+    const mock = createSupabaseMock({ user: { id: "u1" } });
+    use(mock);
+    expect(await updateProfileBioAndPronouns(null as never, [])).toEqual({ error: "unsupportedValue" });
+    expect(mock.from).not.toHaveBeenCalled();
+  });
+
+  it("refuse des pronoms qui ne sont pas une liste de chaînes", async () => {
+    const mock = createSupabaseMock({ user: { id: "u1" } });
+    use(mock);
+    expect(await updateProfileBioAndPronouns("", [{ x: 1 }] as never)).toEqual({ error: "unsupportedValue" });
+    expect(mock.from).not.toHaveBeenCalled();
+  });
+
+  it("coupe la biographie à 500 plutôt que de la refuser — la borne de la base", async () => {
+    const mock = createSupabaseMock({ user: { id: "u1" }, results: [{ error: null }] });
+    use(mock);
+    expect(await updateProfileBioAndPronouns("x".repeat(600), [])).toEqual({ success: true });
+    expect(mock.buildersFor("profiles")[0].update).toHaveBeenCalledWith(
+      expect.objectContaining({ bio: "x".repeat(500) }),
+    );
   });
 });

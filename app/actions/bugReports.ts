@@ -126,7 +126,9 @@ export async function setBugReportStatus(reportId: string, status: BugReportStat
  */
 export async function setBugReportNote(reportId: string, note: string) {
   if (!(await isAdmin())) return { ok: false as const, error: ERR_NON_AUTHENTIFIE };
-  if (note.length > BUG_REPORT_NOTE_MAX_LENGTH) {
+  // `typeof` et non seulement `.length` : un `null` faisait tomber l'action en
+  // TypeError avant même le refus.
+  if (typeof note !== "string" || note.length > BUG_REPORT_NOTE_MAX_LENGTH) {
     return { ok: false as const, error: ERR_VALEUR_NON_SUPPORTEE };
   }
 
