@@ -21,6 +21,7 @@ const world = { name: "Avalonia", icon_url: null, visibility: "public", banner_u
 function renderHeader(overrides: Partial<React.ComponentProps<typeof WorldHomeHeader>> = {}) {
   const props = {
     world,
+    scrolled: false,
     condensed: false,
     isFavorite: false,
     onToggleFavorite: vi.fn(),
@@ -47,20 +48,30 @@ describe("WorldHomeHeader", () => {
     expect(background.className).toMatch(/\bopacity-0\b/);
   });
 
-  it("une fois la bannière défilée, révèle le nom du monde sur la même bannière floutée, sans dégradé", () => {
-    renderHeader({ condensed: true });
+  it("une fois la bannière défilée, prend la même bannière floutée en fond, sans dégradé — le nom attend encore", () => {
+    renderHeader({ scrolled: true });
+
+    const bar = screen.getByLabelText("Ouvrir le menu").closest("[data-world-home-header]")!;
+    expect(bar).toHaveAttribute("data-scrolled", "true");
+    expect(bar).not.toHaveAttribute("data-condensed");
+    const background = screen.getByTestId("hero").parentElement!;
+    expect(background.className).toMatch(/\bopacity-100\b/);
+    const title = screen.getByText("Avalonia").parentElement!;
+    expect(title.className).toMatch(/\bopacity-0\b/);
+    // Même image que la bannière (cache navigateur), en variante floutée.
+    expect(heroCard).toHaveBeenCalledWith(expect.objectContaining({ world, blurred: true }));
+    // Voile uni, pas de dégradé.
+    expect(background.querySelector("[class*='gradient']")).toBeNull();
+  });
+
+  it("une fois le titre de la page défilé à son tour, révèle le nom du monde", () => {
+    renderHeader({ scrolled: true, condensed: true });
 
     const bar = screen.getByLabelText("Ouvrir le menu").closest("[data-world-home-header]")!;
     expect(bar).toHaveAttribute("data-condensed", "true");
     const title = screen.getByText("Avalonia").parentElement!;
     expect(title.className).toMatch(/\bopacity-100\b/);
     expect(title).not.toHaveAttribute("aria-hidden", "true");
-    const background = screen.getByTestId("hero").parentElement!;
-    expect(background.className).toMatch(/\bopacity-100\b/);
-    // Même image que la bannière (cache navigateur), en variante floutée.
-    expect(heroCard).toHaveBeenCalledWith(expect.objectContaining({ world, blurred: true }));
-    // Voile uni, pas de dégradé.
-    expect(background.querySelector("[class*='gradient']")).toBeNull();
   });
 
   it("relaie recherche et favori", async () => {

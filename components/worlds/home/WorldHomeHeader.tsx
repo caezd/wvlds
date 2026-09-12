@@ -62,20 +62,25 @@ export function WorldHomeIcon({
  * (`-mb-14`) : au repos, ses boutons sont simplement incrustés en haut de la
  * bannière, comme avant.
  *
- * Une fois le bloc hero entièrement défilé (`condensed`), elle se révèle en
- * « header » : la même image, floutée et sans dégradé, en fond, avec l'icône
- * et le nom du monde. Le fond et le titre ne sont que masqués (opacité), pas
- * démontés — la transition reste fluide et l'image n'est pas rechargée à
- * chaque passage.
+ * Elle se révèle en « header » en deux temps : dès que la bannière est passée
+ * sous elle (`scrolled`), la même image, floutée et sans dégradé, lui sert de
+ * fond — rien ne défile sous une barre transparente ; puis, une fois le titre
+ * de la page passé à son tour (`condensed`), l'icône et le nom du monde y
+ * apparaissent. Fond et titre ne sont que masqués (opacité), pas démontés —
+ * la transition reste fluide et l'image n'est pas rechargée à chaque passage.
  */
 export function WorldHomeHeader({
   world,
+  scrolled,
   condensed,
   isFavorite,
   onToggleFavorite,
   onOpenSearch,
 }: {
   world: Pick<World, "name" | "icon_url" | "visibility" | "banner_url" | "color">;
+  /** La bannière est passée sous la barre : fond flouté visible. */
+  scrolled: boolean;
+  /** Le titre de la page est passé sous la barre : nom du monde visible. */
   condensed: boolean;
   isFavorite: boolean;
   onToggleFavorite: () => void;
@@ -92,6 +97,7 @@ export function WorldHomeHeader({
     // événements pointeur) rendait les boutons inertes.
     <div
       data-world-home-header
+      data-scrolled={scrolled || undefined}
       data-condensed={condensed || undefined}
       className="sticky top-0 z-10 -mb-14 h-14 shrink-0"
     >
@@ -99,7 +105,7 @@ export function WorldHomeHeader({
         aria-hidden
         className={cn(
           "absolute inset-0 overflow-hidden transition-opacity duration-200 motion-reduce:transition-none",
-          condensed ? "opacity-100" : "opacity-0",
+          scrolled ? "opacity-100" : "opacity-0",
         )}
       >
         <WorldHeroCard world={world} blurred />
