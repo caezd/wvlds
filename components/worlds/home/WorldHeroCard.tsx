@@ -46,9 +46,14 @@ export function WorldHeroCard({
     >
       {world.banner_url ? (
         // Le flou s'applique à un conteneur, pas à l'image : il couvre ainsi
-        // aussi la vignette de substitution de StoredImage. Agrandi pour que
-        // ses bords, rendus translucides par le filtre, restent hors cadre.
-        <div className={cn("absolute inset-0", blurred && "scale-125 blur-xl")}>
+        // aussi la vignette de substitution de StoredImage. Le filtre rend
+        // translucides les bords sur une largeur de l'ordre de son rayon
+        // (24px) : le conteneur déborde du cadre bien au-delà (64px de chaque
+        // côté) pour que seule la partie pleinement opaque reste visible. Un
+        // simple `scale` ne suffisait pas sur une barre de 56px de haut — il
+        // n'y ajoutait que quelques pixels, et le header paraissait
+        // transparent.
+        <div className={cn(blurred ? "absolute -inset-16 blur-xl" : "absolute inset-0")}>
           <StoredImage
             url={world.banner_url}
             width={1920}

@@ -49,6 +49,9 @@ describe("WorldHeroCard", () => {
     // substitution de StoredImage, pas seulement l'image finale.
     const img = container.querySelector("img")!;
     expect(img.parentElement!.className).toMatch(/\bblur-xl\b/);
+    // Le conteneur déborde largement du cadre : les bords translucides du
+    // filtre restent hors de vue, sinon le header paraissait transparent.
+    expect(img.parentElement!.className).toMatch(/(^|\s)-inset-16\b/);
     expect(img).toHaveAttribute("loading", "lazy");
   });
 
