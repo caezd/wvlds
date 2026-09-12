@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useResetOnKeyChange } from "@/hooks/useResetOnKeyChange";
 import { useScrolledPast } from "@/hooks/useScrolledPast";
 import dynamic from "next/dynamic";
@@ -104,9 +104,11 @@ export function WorldHome({
 
   // La barre du haut se révèle en header (fond flouté, nom du monde) au
   // moment même où le titre de la page disparaît sous elle.
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const titleRef = useRef<HTMLHeadingElement>(null);
-  const headerCondensed = useScrolledPast(titleRef, scrollRef, WORLD_HOME_HEADER_HEIGHT);
+  // En état (refs de rappel), pas en ref : ces éléments sont remontés à
+  // chaque retour d'une autre vue — voir useScrolledPast.
+  const [scrollEl, setScrollEl] = useState<HTMLDivElement | null>(null);
+  const [titleEl, setTitleEl] = useState<HTMLHeadingElement | null>(null);
+  const headerCondensed = useScrolledPast(titleEl, scrollEl, WORLD_HOME_HEADER_HEIGHT);
 
   // Passer d'un monde à l'autre depuis le rail est une navigation client :
   // ce composant n'est pas remonté et ses états gardent la valeur du monde
@@ -238,7 +240,7 @@ export function WorldHome({
             onClose={closeView}
           />
         ) : (
-          <div ref={scrollRef} className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+          <div ref={setScrollEl} className="flex min-h-0 flex-1 flex-col overflow-y-auto">
             {/* Pas de couleur de fond forcée ici (ni sur le panel plus bas) :
                 ce conteneur reste transparent et laisse voir le fond ambiant
                 réel de la page — celui-ci diffère entre desktop (`<main>`
@@ -297,7 +299,7 @@ export function WorldHome({
               <div className="relative w-full space-y-2 px-3 pb-4 pt-40 sm:px-6 md:px-8 lg:px-12">
                 <WorldHomeIcon world={world} size={44} />
                 <div>
-                  <h1 ref={titleRef} className="text-2xl font-semibold text-foreground md:text-3xl">
+                  <h1 ref={setTitleEl} className="text-2xl font-semibold text-foreground md:text-3xl">
                     {world.name}
                   </h1>
                   {world.description && (

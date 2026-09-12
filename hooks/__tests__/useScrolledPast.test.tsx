@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { act, renderHook } from "@testing-library/react";
-import { useRef } from "react";
 
 import { useScrolledPast } from "@/hooks/useScrolledPast";
 
@@ -34,11 +33,11 @@ afterEach(() => {
 function setup(topInset?: number) {
   const sentinel = document.createElement("div");
   const root = document.createElement("div");
-  return renderHook(() => {
-    const sentinelRef = useRef<Element | null>(sentinel);
-    const rootRef = useRef<Element | null>(root);
-    return useScrolledPast(sentinelRef, rootRef, topInset);
-  });
+  const hook = renderHook(
+    ({ sentinel, root }: { sentinel: Element | null; root: Element | null }) => useScrolledPast(sentinel, root, topInset),
+    { initialProps: { sentinel, root } },
+  );
+  return { ...hook, sentinel, root };
 }
 
 function fire(entry: { isIntersecting: boolean; bottom: number; rootTop?: number }) {
@@ -55,11 +54,11 @@ function fire(entry: { isIntersecting: boolean; bottom: number; rootTop?: number
 
 describe("useScrolledPast", () => {
   it("observe le repère dans la zone de défilement, rétrécie par le haut de la hauteur de la barre", () => {
-    setup(56);
+    const { root, sentinel } = setup(56);
 
-    expect(observe).toHaveBeenCalledTimes(1);
+    expect(observe).toHaveBeenCalledWith(sentinel);
     expect(options?.rootMargin).toBe("-56px 0px 0px 0px");
-    expect(options?.root).toBeInstanceOf(HTMLElement);
+    expect(options?.root).toBe(root);
   });
 
   it("est faux tant que le repère est visible", () => {
@@ -93,6 +92,28 @@ describe("useScrolledPast", () => {
 
     fire({ isIntersecting: false, bottom: 10 });
     expect(result.current).toBe(true);
+  });
+
+  it("repart de zéro et observe le nouvel élément quand le repère est remplacé", () => {
+    // Régression : changer de vue démonte le repère et en remonte un autre au
+    // retour. Une ref gardait l'ancien élément, détaché — signalé « hors de
+    // vue, rectangle nul », donc passé pour toujours : la barre restait
+    // affichée tout en haut de la page.
+    const { result, rerender, root } = setup(56);
+    fire({ isIntersecting: false, bottom: 40, rootTop: 56 });
+    expect(result.current).toBe(true);
+
+    const next = document.createElement("div");
+    rerender({ sentinel: next, root });
+
+    expect(result.current).toBe(false);
+    expect(disconnect).toHaveBeenCalledTimes(1);
+    expect(observe).toHaveBeenLastCalledWith(next);
+  });
+
+  it("n'observe rien tant que le repère n'est pas monté", () => {
+    renderHook(() => useScrolledPast(null, null, 56));
+    expect(observe).not.toHaveBeenCalled();
   });
 
   it("libère l'observateur au démontage", () => {
