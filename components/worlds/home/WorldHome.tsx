@@ -102,8 +102,8 @@ export function WorldHome({
   const [searchOpen, setSearchOpen] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(initialCategoryId ?? null);
 
-  // Le nom du monde apparaît dans la barre du haut au moment même où le titre
-  // de la page disparaît sous elle.
+  // La barre du haut se révèle en header (fond flouté, nom du monde) au
+  // moment même où le titre de la page disparaît sous elle.
   const scrollRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
   const headerCondensed = useScrolledPast(titleRef, scrollRef, WORLD_HOME_HEADER_HEIGHT);
@@ -248,12 +248,12 @@ export function WorldHome({
                 justement ce second cas.
 
                 Bannière en fond, collée au bord du content (pas de padding) —
-                barre collante au-dessus (menu mobile, recherche, favoris)
-                sur la même image floutée, qui reste en haut au défilement
-                (voir WorldHomeHeader.tsx). Plus de header séparé ni d'option
-                plein écran : la page d'accueil occupe désormais toujours toute
-                la largeur. Le fond (image + fondu) remplit tout ce conteneur,
-                dont la hauteur suit celle du bloc titre.
+                boutons incrustés au-dessus (menu mobile, recherche, favoris),
+                dans une barre collante qui se révèle en header une fois le
+                titre défilé (voir WorldHomeHeader.tsx). Plus de header séparé
+                ni d'option plein écran : la page d'accueil occupe désormais
+                toujours toute la largeur. Le fond (image + fondu) remplit tout
+                ce conteneur, dont la hauteur suit celle du bloc titre.
 
                 Le dégradé (fondu d'opacité, voir WorldHeroCard.tsx) démarre à
                 --hero-fade-start et devient transparent à 100% de ce

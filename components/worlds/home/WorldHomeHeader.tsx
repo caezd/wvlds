@@ -59,13 +59,14 @@ export function WorldHomeIcon({
 /**
  * Barre collante en haut de la page d'accueil : menu mobile, recherche,
  * favori. Posée en tête du conteneur qui défile, elle ne prend aucune place
- * (`-mb-14`) : au repos, elle se superpose au haut de la bannière.
+ * (`-mb-14`) : au repos, on ne voit qu'elle n'est pas là — ses boutons sont
+ * simplement incrustés en haut de la bannière.
  *
- * Son fond est toujours là — la même image que la bannière, floutée et sans
- * dégradé, sous un voile uni : jamais de barre transparente, au repos comme
- * au défilement. Une fois le titre de la page passé sous elle (`condensed`),
- * l'icône et le nom du monde y apparaissent. Le titre n'est que masqué
- * (opacité), pas démonté — la transition reste fluide.
+ * Une fois le titre de la page passé sous elle (`condensed`), elle se révèle
+ * d'un bloc en « header » opaque : la même image que la bannière, floutée et
+ * sans dégradé, sous un voile uni, avec l'icône et le nom du monde. Fond et
+ * titre ne sont que masqués (opacité), pas démontés — la transition reste
+ * fluide et l'image n'est pas rechargée à chaque passage.
  */
 export function WorldHomeHeader({
   world,
@@ -95,7 +96,13 @@ export function WorldHomeHeader({
       data-condensed={condensed || undefined}
       className="sticky top-0 z-10 -mb-14 h-14 shrink-0"
     >
-      <div aria-hidden className="absolute inset-0 overflow-hidden">
+      <div
+        aria-hidden
+        className={cn(
+          "absolute inset-0 overflow-hidden transition-opacity duration-200 motion-reduce:transition-none",
+          condensed ? "opacity-100" : "opacity-0",
+        )}
+      >
         <WorldHeroCard world={world} blurred />
         {/* Voile uni (pas de dégradé) : le nom reste lisible sur une image claire. */}
         <div className="absolute inset-0 bg-black/35" />
