@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { QUOTA_ERROR_MESSAGE, translatePersonaError } from "@/lib/personaErrors";
-import { ERR_INTROUVABLE, ERR_NOM_PERSONA, ERR_NON_AUTHENTIFIE, echecEnregistrement } from "@/lib/actionErrors";
+import { ERR_INTROUVABLE, ERR_NOM_PERSONA, ERR_NON_AUTHENTIFIE, ERR_VALEUR_NON_SUPPORTEE, echecEnregistrement } from "@/lib/actionErrors";
+import { httpUrlSchema, INPUT_LIMITS } from "@/lib/inputSchemas";
 
 function extractStoragePath(url: string | null | undefined) {
     if (!url) return null;
@@ -28,6 +29,14 @@ export async function createPersona(_prevState: unknown, formData: FormData) {
             ok: false,
             error: ERR_NOM_PERSONA,
         };
+    }
+    // Refusé ici plutôt que par la contrainte de la base (migration 171) : le
+    // refus arrive alors traduit, et non en message Postgres dans le formulaire.
+    if (bio && bio.length > INPUT_LIMITS.longText) {
+        return { ok: false, error: ERR_VALEUR_NON_SUPPORTEE };
+    }
+    if (avatar_url && !httpUrlSchema.safeParse(avatar_url).success) {
+        return { ok: false, error: ERR_VALEUR_NON_SUPPORTEE };
     }
 
     const { data, error } = await supabase

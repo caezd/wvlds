@@ -1,9 +1,19 @@
 "use server";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { z } from "zod";
 
 import { createClient } from "@/lib/supabase/server";
 import { ERR_NON_AUTHENTIFIE } from "@/lib/actionErrors";
+import {
+  hexColorSchema,
+  httpUrlSchema,
+  idSchema,
+  longTextSchema,
+  lucideIconSchema,
+  parseInputOrThrow,
+  shortTextSchema,
+} from "@/lib/inputSchemas";
 import { storagePathFromUrl } from "@/lib/storage";
 import type { WorldTimelineDate } from "@/types/worlds";
 import type { PinRoom, WikiPageOption } from "@/components/worlds/map/types";
@@ -79,6 +89,66 @@ export type MapRegion = {
   sort_index: number;
 };
 
+// ── Ce que le client peut envoyer ────────────────────────────
+//
+// Chaque mutation ci-dessous recevait un `patch` typé, et l'écrivait tel quel.
+// Un type ne tient qu'à la compilation : un appel forgé peut y glisser un
+// `world_id` ou un `map_id`, ou dix mégaoctets dans un libellé. Ces schémas
+// sont stricts — une clé de trop refuse tout l'appel — et bornés comme les
+// contraintes de la base (migration 171).
+
+/** Un pourcentage de la carte, avec la marge que le glisser autorise. */
+const percentSchema = z.number().finite().min(-10).max(110);
+
+const timelineDateSchema = z.strictObject({
+  year: z.number().int(),
+  month: z.number().int().min(1).max(64).nullable(),
+  day: z.number().int().min(1).max(64).nullable(),
+});
+
+/** Une couleur d'épingle : hexadécimale, ou `transparent` (fond retiré). */
+const pinColorSchema = z.union([hexColorSchema, z.literal("transparent")]);
+
+const mapPatchSchema = z.strictObject({
+  image_url: httpUrlSchema.nullable(),
+  label: shortTextSchema,
+  sort_index: z.number().int().min(0),
+  scale_width_units: z.number().finite().positive().nullable(),
+  scale_unit: z.string().trim().max(16).nullable(),
+});
+
+const pinPatchSchema = z.strictObject({
+  x: percentSchema,
+  y: percentSchema,
+  title: shortTextSchema,
+  description: longTextSchema.nullable(),
+  banner_url: httpUrlSchema.nullable(),
+  color: pinColorSchema,
+  icon: lucideIconSchema,
+  icon_color: hexColorSchema,
+  border_color: hexColorSchema.nullable(),
+  border_style: z.enum(["solid", "dashed", "dotted"]),
+  wiki_page_id: idSchema.nullable(),
+  target_map_id: idSchema.nullable(),
+  exists_from: timelineDateSchema.nullable(),
+  exists_until: timelineDateSchema.nullable(),
+});
+
+/** Assez pour un littoral tracé à la main, trop peu pour un abus. */
+const MAX_REGION_POINTS = 500;
+
+const regionPointsSchema = z.array(z.strictObject({ x: percentSchema, y: percentSchema })).max(MAX_REGION_POINTS);
+
+const regionPatchSchema = z.strictObject({
+  label: shortTextSchema,
+  description: longTextSchema.nullable(),
+  color: hexColorSchema,
+  points: regionPointsSchema,
+  wiki_page_id: idSchema.nullable(),
+  sort_index: z.number().int().min(0),
+});
+
+const linkPatchSchema = z.strictObject({ label: z.string().trim().max(80) });
 
 /**
  * Tout ce que la carte d'un monde a besoin de savoir, en un seul aller.
@@ -206,10 +276,15 @@ export async function setPersonaLocation(personaId: string, pinId: string | null
   const supabase = await createClient();
   await requireUser(supabase);
 
+  const input = parseInputOrThrow(
+    z.strictObject({ personaId: idSchema, pinId: idSchema.nullable() }),
+    { personaId, pinId },
+  );
+
   const { error } = await supabase
     .from("personas")
-    .update({ map_pin_id: pinId })
-    .eq("id", personaId);
+    .update({ map_pin_id: input.pinId })
+    .eq("id", input.personaId);
   if (error) throw new Error(error.message);
 }
 
@@ -236,9 +311,17 @@ export async function createWorldMap(
   const supabase = await createClient();
   await requireUser(supabase);
 
+  const input = parseInputOrThrow(
+    z.strictObject({
+      worldId: idSchema,
+      patch: mapPatchSchema.pick({ image_url: true, label: true, sort_index: true }).partial(),
+    }),
+    { worldId, patch },
+  );
+
   const { data, error } = await supabase
     .from("world_maps")
-    .insert({ world_id: worldId, ...patch })
+    .insert({ world_id: worldId, ...input.patch })
     .select()
     .single();
 
@@ -248,10 +331,15 @@ export async function createWorldMap(
 
 export async function updateWorldMap(
   mapId: string,
-  patch: Partial<Pick<WorldMapData, "image_url" | "label" | "sort_index" | "scale_width_units" | "scale_unit">>,
+  rawPatch: Partial<Pick<WorldMapData, "image_url" | "label" | "sort_index" | "scale_width_units" | "scale_unit">>,
 ): Promise<WorldMapData> {
   const supabase = await createClient();
   await requireUser(supabase);
+
+  const { patch } = parseInputOrThrow(
+    z.strictObject({ mapId: idSchema, patch: mapPatchSchema.partial() }),
+    { mapId, patch: rawPatch },
+  );
 
   // L'image d'avant, à effacer si celle-ci la remplace : rien ne la lisait
   // plus, et elle occupait le stockage pour toujours.
@@ -285,9 +373,11 @@ export async function updateWorldMap(
  * `components/worlds/wiki/pasDUpsert.test.ts`. À dix cartes au plus, la boucle
  * ne coûte rien.
  */
-export async function reorderWorldMaps(orderedIds: string[]): Promise<void> {
+export async function reorderWorldMaps(rawOrderedIds: string[]): Promise<void> {
   const supabase = await createClient();
   await requireUser(supabase);
+
+  const orderedIds = parseInputOrThrow(z.array(idSchema).max(100), rawOrderedIds);
 
   const horodatage = new Date().toISOString();
   for (const [index, id] of orderedIds.entries()) {
@@ -357,9 +447,14 @@ export async function createMapPin(
   const supabase = await createClient();
   await requireUser(supabase);
 
+  const input = parseInputOrThrow(
+    z.strictObject({ worldId: idSchema, mapId: idSchema, x: percentSchema, y: percentSchema, title: shortTextSchema }),
+    { worldId, mapId, x, y, title },
+  );
+
   const { data, error } = await supabase
     .from("world_map_pins")
-    .insert({ world_id: worldId, map_id: mapId, x, y, title })
+    .insert({ world_id: worldId, map_id: mapId, x, y, title: input.title })
     .select()
     .single();
 
@@ -369,10 +464,15 @@ export async function createMapPin(
 
 export async function updateMapPin(
   pinId: string,
-  patch: Partial<Pick<MapPin, "x" | "y" | "title" | "description" | "banner_url" | "color" | "icon" | "icon_color" | "border_color" | "border_style" | "wiki_page_id" | "target_map_id" | "exists_from" | "exists_until">>,
+  rawPatch: Partial<Pick<MapPin, "x" | "y" | "title" | "description" | "banner_url" | "color" | "icon" | "icon_color" | "border_color" | "border_style" | "wiki_page_id" | "target_map_id" | "exists_from" | "exists_until">>,
 ): Promise<void> {
   const supabase = await createClient();
   await requireUser(supabase);
+
+  const { patch } = parseInputOrThrow(
+    z.strictObject({ pinId: idSchema, patch: pinPatchSchema.partial() }),
+    { pinId, patch: rawPatch },
+  );
 
   // Même ménage que pour l'image d'une carte : une bannière remplacée n'est
   // plus lue par personne.
@@ -426,9 +526,18 @@ export async function createMapRegion(
   const supabase = await createClient();
   await requireUser(supabase);
 
+  const input = parseInputOrThrow(
+    z.strictObject({
+      worldId: idSchema,
+      mapId: idSchema,
+      region: regionPatchSchema.pick({ label: true, points: true, color: true }),
+    }),
+    { worldId, mapId, region },
+  );
+
   const { data, error } = await supabase
     .from("world_map_regions")
-    .insert({ world_id: worldId, map_id: mapId, ...region })
+    .insert({ world_id: worldId, map_id: mapId, ...input.region })
     .select()
     .single();
 
@@ -438,10 +547,15 @@ export async function createMapRegion(
 
 export async function updateMapRegion(
   regionId: string,
-  patch: Partial<Pick<MapRegion, "label" | "description" | "color" | "points" | "wiki_page_id" | "sort_index">>,
+  rawPatch: Partial<Pick<MapRegion, "label" | "description" | "color" | "points" | "wiki_page_id" | "sort_index">>,
 ): Promise<void> {
   const supabase = await createClient();
   await requireUser(supabase);
+
+  const { patch } = parseInputOrThrow(
+    z.strictObject({ regionId: idSchema, patch: regionPatchSchema.partial() }),
+    { regionId, patch: rawPatch },
+  );
 
   const { error } = await supabase
     .from("world_map_regions")
@@ -494,9 +608,14 @@ export async function createPinLink(
   return data as MapPinLink;
 }
 
-export async function updatePinLink(linkId: string, patch: { label: string }): Promise<void> {
+export async function updatePinLink(linkId: string, rawPatch: { label: string }): Promise<void> {
   const supabase = await createClient();
   await requireUser(supabase);
+
+  const { patch } = parseInputOrThrow(
+    z.strictObject({ linkId: idSchema, patch: linkPatchSchema }),
+    { linkId, patch: rawPatch },
+  );
 
   const { error } = await supabase.from("world_map_pin_links").update(patch).eq("id", linkId);
   if (error) throw new Error(error.message);

@@ -246,6 +246,16 @@ describe("setBugReportNote", () => {
     expect(mock.from).not.toHaveBeenCalled();
   });
 
+  // `note.length` sur un `null` levait un TypeError avant le refus.
+  it("refuse une note qui n'est pas une chaîne, sans appeler Supabase", async () => {
+    vi.mocked(isAdmin).mockResolvedValue(true);
+    const mock = createSupabaseMock();
+    brancher(mock);
+
+    expect((await setBugReportNote("r1", null as never)).ok).toBe(false);
+    expect(mock.from).not.toHaveBeenCalled();
+  });
+
   it("enregistre la note débarrassée de ses espaces", async () => {
     vi.mocked(isAdmin).mockResolvedValue(true);
     const mock = createSupabaseMock({ results: [{ error: null }] });
