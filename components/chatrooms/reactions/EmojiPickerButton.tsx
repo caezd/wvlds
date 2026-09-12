@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { EMOJI_PICKER_THEME_VARS } from "./emojiPickerTheme";
 import dynamic from "next/dynamic";
 import { Smile } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { EmojiPickerFrame } from "./EmojiPickerFrame";
 import { ReactionEmoji } from "./ReactionEmoji";
 import { cn } from "@/lib/utils";
 
@@ -56,19 +56,16 @@ export function EmojiPickerButton({
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0 border-0 bg-transparent shadow-none z-[200]" align="start">
-        <div
-          style={EMOJI_PICKER_THEME_VARS}
-          onWheel={(e) => e.stopPropagation()}
-          onTouchMove={(e) => e.stopPropagation()}
-        >
+        <EmojiPickerFrame>
           <EmojiNativePickerInner
             emojiStyle={emojiStyle}
+            searchPlaceholder={tCommon("search")}
             onSelect={(emoji) => {
               onChange(emoji);
               setOpen(false);
             }}
           />
-        </div>
+        </EmojiPickerFrame>
       </PopoverContent>
     </Popover>
   );
