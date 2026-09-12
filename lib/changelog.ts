@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-09 ──────────────────────────────────────────────────────────────
   {
     date: "2026-09",
+    tag: "Emoji",
+    text: "Le sélecteur d’emoji prend les couleurs de l’application : onglets de catégories en icônes maison, celui en cours à l’accent, et un cadre identique aux autres menus.",
+  },
+  {
+    date: "2026-09",
     tag: "Carte",
     text: "L’outil règle joint deux lieux : cliquez l’un puis l’autre, et un trait les relie. Il porte un nom, si vous lui en donnez un, et la distance dès que la carte est à l’échelle. La fiche d’un lieu montre en petit ce qu’il rejoint.",
   },
