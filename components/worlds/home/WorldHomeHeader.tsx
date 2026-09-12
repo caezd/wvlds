@@ -62,10 +62,11 @@ export function WorldHomeIcon({
  * (`-mb-14`) : au repos, ses boutons sont simplement incrustés en haut de la
  * bannière, comme avant.
  *
- * Une fois la bannière défilée (`condensed`), elle se révèle en « header » :
- * la même image, floutée et sans dégradé, en fond, avec l'icône et le nom du
- * monde. Le fond et le titre ne sont que masqués (opacité), pas démontés — la
- * transition reste fluide et l'image n'est pas rechargée à chaque passage.
+ * Une fois le bloc hero entièrement défilé (`condensed`), elle se révèle en
+ * « header » : la même image, floutée et sans dégradé, en fond, avec l'icône
+ * et le nom du monde. Le fond et le titre ne sont que masqués (opacité), pas
+ * démontés — la transition reste fluide et l'image n'est pas rechargée à
+ * chaque passage.
  */
 export function WorldHomeHeader({
   world,

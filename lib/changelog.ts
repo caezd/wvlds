@@ -9,7 +9,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Accueil",
-    text: "Une fois la bannière d’un monde défilée, une barre reste en haut de la page : son nom sur sa bannière floutée, avec le menu, la recherche et le bouton favori toujours à portée.",
+    text: "Une fois l’en-tête d’un monde défilé, une barre reste en haut de la page : son nom sur sa bannière floutée, avec le menu, la recherche et le bouton favori toujours à portée.",
   },
   {
     date: "2026-09",

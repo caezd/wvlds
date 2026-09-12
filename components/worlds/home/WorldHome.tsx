@@ -103,11 +103,12 @@ export function WorldHome({
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(initialCategoryId ?? null);
 
   // La barre du haut devient un « header » (fond flouté, nom du monde) une
-  // fois la bannière défilée : le repère couvre la hauteur réservée à la
-  // bannière (pt-40), et compte comme passé dès qu'il disparaît sous la barre.
+  // fois le bloc hero (bannière, titre, description, statistiques) entièrement
+  // défilé : le repère le couvre en entier, et compte comme passé dès qu'il
+  // disparaît sous la barre.
   const scrollRef = useRef<HTMLDivElement>(null);
-  const bannerSentinelRef = useRef<HTMLDivElement>(null);
-  const headerCondensed = useScrolledPast(bannerSentinelRef, scrollRef, WORLD_HOME_HEADER_HEIGHT);
+  const heroSentinelRef = useRef<HTMLDivElement>(null);
+  const headerCondensed = useScrolledPast(heroSentinelRef, scrollRef, WORLD_HOME_HEADER_HEIGHT);
 
   // Passer d'un monde à l'autre depuis le rail est une navigation client :
   // ce composant n'est pas remonté et ses états gardent la valeur du monde
@@ -285,9 +286,8 @@ export function WorldHome({
 
             <div className="relative min-h-60 shrink-0 [--hero-fade-start:6rem]">
               <WorldHeroCard world={world} />
-              {/* Repère de défilement : la hauteur réservée à la bannière
-                  (h-40, en phase avec le pt-40 du bloc titre). */}
-              <div ref={bannerSentinelRef} aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-40" />
+              {/* Repère de défilement : tout le bloc hero. */}
+              <div ref={heroSentinelRef} aria-hidden className="pointer-events-none absolute inset-0" />
 
               {/* Titre + description, désormais du contenu de page normal
                   (plus superposés sur la bannière). `pt-40` réserve la hauteur
