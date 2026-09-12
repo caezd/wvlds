@@ -21,7 +21,6 @@ const world = { name: "Avalonia", icon_url: null, visibility: "public", banner_u
 function renderHeader(overrides: Partial<React.ComponentProps<typeof WorldHomeHeader>> = {}) {
   const props = {
     world,
-    scrolled: false,
     condensed: false,
     isFavorite: false,
     onToggleFavorite: vi.fn(),
@@ -33,7 +32,7 @@ function renderHeader(overrides: Partial<React.ComponentProps<typeof WorldHomeHe
 }
 
 describe("WorldHomeHeader", () => {
-  it("au repos, ne montre que les boutons : fond et titre restent invisibles", () => {
+  it("au repos, ne montre que les boutons sur la bannière floutée : le nom reste invisible", () => {
     renderHeader();
 
     const bar = screen.getByLabelText("Ouvrir le menu").closest("[data-world-home-header]")!;
@@ -44,28 +43,21 @@ describe("WorldHomeHeader", () => {
     expect(title.className).toMatch(/\bopacity-0\b/);
     expect(title.className).toMatch(/\bpointer-events-none\b/);
     expect(title).toHaveAttribute("aria-hidden", "true");
-    const background = screen.getByTestId("hero").parentElement!;
-    expect(background.className).toMatch(/\bopacity-0\b/);
   });
 
-  it("une fois la bannière défilée, prend la même bannière floutée en fond, sans dégradé — le nom attend encore", () => {
-    renderHeader({ scrolled: true });
+  it("a toujours pour fond la même bannière floutée, sans dégradé — jamais transparente", () => {
+    renderHeader();
 
-    const bar = screen.getByLabelText("Ouvrir le menu").closest("[data-world-home-header]")!;
-    expect(bar).toHaveAttribute("data-scrolled", "true");
-    expect(bar).not.toHaveAttribute("data-condensed");
     const background = screen.getByTestId("hero").parentElement!;
-    expect(background.className).toMatch(/\bopacity-100\b/);
-    const title = screen.getByText("Avalonia").parentElement!;
-    expect(title.className).toMatch(/\bopacity-0\b/);
+    expect(background.className).not.toMatch(/opacity-0/);
     // Même image que la bannière (cache navigateur), en variante floutée.
     expect(heroCard).toHaveBeenCalledWith(expect.objectContaining({ world, blurred: true }));
     // Voile uni, pas de dégradé.
     expect(background.querySelector("[class*='gradient']")).toBeNull();
   });
 
-  it("une fois le titre de la page défilé à son tour, révèle le nom du monde", () => {
-    renderHeader({ scrolled: true, condensed: true });
+  it("une fois le titre de la page défilé, révèle le nom du monde", () => {
+    renderHeader({ condensed: true });
 
     const bar = screen.getByLabelText("Ouvrir le menu").closest("[data-world-home-header]")!;
     expect(bar).toHaveAttribute("data-condensed", "true");

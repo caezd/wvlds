@@ -186,11 +186,6 @@ describe("WorldHome — titre/description hors bannière + panel de contenu", ()
     expect(bar.className).toMatch(/\bh-14\b/);
     expect(bar.className).toMatch(/(^|\s)-mb-14\b/);
     expect(bar.parentElement!.className).toMatch(/\boverflow-y-auto\b/);
-    // Le repère qui déclenche le fond du header couvre la hauteur réservée
-    // à la bannière ; le titre lui-même déclenche ensuite le nom dans la barre.
-    const titleBlock = screen.getByRole("heading", { name: "Avalonia" }).closest("div.relative")!;
-    const sentinel = titleBlock.parentElement!.querySelector("div.absolute.top-0.h-40");
-    expect(sentinel).not.toBeNull();
   });
 
   it("le bloc titre est positionné (relative) pour se peindre au-dessus du fond absolu de la bannière", () => {

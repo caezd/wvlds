@@ -59,27 +59,22 @@ export function WorldHomeIcon({
 /**
  * Barre collante en haut de la page d'accueil : menu mobile, recherche,
  * favori. Posée en tête du conteneur qui défile, elle ne prend aucune place
- * (`-mb-14`) : au repos, ses boutons sont simplement incrustés en haut de la
- * bannière, comme avant.
+ * (`-mb-14`) : au repos, elle se superpose au haut de la bannière.
  *
- * Elle se révèle en « header » en deux temps : dès que la bannière est passée
- * sous elle (`scrolled`), la même image, floutée et sans dégradé, lui sert de
- * fond — rien ne défile sous une barre transparente ; puis, une fois le titre
- * de la page passé à son tour (`condensed`), l'icône et le nom du monde y
- * apparaissent. Fond et titre ne sont que masqués (opacité), pas démontés —
- * la transition reste fluide et l'image n'est pas rechargée à chaque passage.
+ * Son fond est toujours là — la même image que la bannière, floutée et sans
+ * dégradé, sous un voile uni : jamais de barre transparente, au repos comme
+ * au défilement. Une fois le titre de la page passé sous elle (`condensed`),
+ * l'icône et le nom du monde y apparaissent. Le titre n'est que masqué
+ * (opacité), pas démonté — la transition reste fluide.
  */
 export function WorldHomeHeader({
   world,
-  scrolled,
   condensed,
   isFavorite,
   onToggleFavorite,
   onOpenSearch,
 }: {
   world: Pick<World, "name" | "icon_url" | "visibility" | "banner_url" | "color">;
-  /** La bannière est passée sous la barre : fond flouté visible. */
-  scrolled: boolean;
   /** Le titre de la page est passé sous la barre : nom du monde visible. */
   condensed: boolean;
   isFavorite: boolean;
@@ -97,17 +92,10 @@ export function WorldHomeHeader({
     // événements pointeur) rendait les boutons inertes.
     <div
       data-world-home-header
-      data-scrolled={scrolled || undefined}
       data-condensed={condensed || undefined}
       className="sticky top-0 z-10 -mb-14 h-14 shrink-0"
     >
-      <div
-        aria-hidden
-        className={cn(
-          "absolute inset-0 overflow-hidden transition-opacity duration-200 motion-reduce:transition-none",
-          scrolled ? "opacity-100" : "opacity-0",
-        )}
-      >
+      <div aria-hidden className="absolute inset-0 overflow-hidden">
         <WorldHeroCard world={world} blurred />
         {/* Voile uni (pas de dégradé) : le nom reste lisible sur une image claire. */}
         <div className="absolute inset-0 bg-black/35" />
