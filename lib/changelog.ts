@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-09 ──────────────────────────────────────────────────────────────
   {
     date: "2026-09",
+    tag: "Accueil",
+    text: "Une fois le titre d’un monde défilé, une barre reste en haut de la page : son nom sur sa bannière floutée, avec le menu, la recherche et le bouton favori toujours à portée.",
+  },
+  {
+    date: "2026-09",
     tag: "Technique",
     text: "Ce que vous saisissez est vérifié une fois de plus, côté serveur : les adresses d’images ne peuvent être qu’en http(s), les couleurs qu’au format hexadécimal, et chaque champ a une longueur maximale. Un envoi qui ne respecte pas ces règles est refusé avec un message clair au lieu d’une erreur technique.",
   },
