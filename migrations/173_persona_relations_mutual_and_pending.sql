@@ -87,8 +87,8 @@ AS $$
   SELECT COALESCE((SELECT t.mutual FROM public.world_relation_types t WHERE t.id::text = type_id), FALSE);
 $$;
 
-REVOKE ALL ON FUNCTION public.owns_persona(UUID, UUID) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.relation_type_is_mutual(TEXT) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.owns_persona(UUID, UUID) FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION public.relation_type_is_mutual(TEXT) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.owns_persona(UUID, UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.relation_type_is_mutual(TEXT) TO authenticated;
 
@@ -247,7 +247,7 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.accept_persona_relation(UUID) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.accept_persona_relation(UUID) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.accept_persona_relation(UUID) TO authenticated;
 
 -- ── 6. Rompre ────────────────────────────────────────────────
