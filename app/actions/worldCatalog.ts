@@ -22,10 +22,23 @@ import {
   type WorldHomeGridGap,
   type WorldHomeGridItem,
 } from "@/components/worlds/home/worldHomeGrid";
-import type { WorldInventoryItem, WorldSkill, WorldCatalogCategory, WorldTimelineConfig, WorldTag } from "@/types/worlds";
+import type { WorldCatalogItem, WorldCatalogCategory, WorldCatalogProperty, WorldCatalogRarity, WorldTimelineConfig, WorldTag } from "@/types/worlds";
 import { clampDaysPerMonth } from "@/lib/worldTimeline";
-import { ERR_NON_AUTHENTIFIE, ERR_VALEUR_NON_SUPPORTEE , ERR_TAG_INVALIDE, echecEnregistrement } from "@/lib/actionErrors";
-import { idSchema, INPUT_LIMITS, longTextSchema, parseInput, shortTextSchema } from "@/lib/inputSchemas";
+import { ERR_NON_AUTHENTIFIE, ERR_VALEUR_NON_SUPPORTEE, ERR_TAG_INVALIDE, ERR_INTROUVABLE, ERR_NON_AUTORISE, echecEnregistrement } from "@/lib/actionErrors";
+import { DB_TEXT_LIMITS } from "@/lib/textLimits";
+import { httpUrlSchema, idSchema, longTextSchema, parseInput, shortTextSchema } from "@/lib/inputSchemas";
+import { LUCIDE_ALL_ICONS } from "@/lib/lucideCategories";
+import { storagePathFromUrl } from "@/lib/storage";
+import { catalogItemImagePrefix } from "@/lib/storagePaths";
+import {
+  isCatalogRarity,
+  sanitizeCatalogProperties,
+  MAX_CATALOG_IMPORT_ITEMS,
+  type CatalogExportItem,
+} from "@/lib/worldCatalog";
+
+/** Les noms d'icônes Lucide, en Set : la liste en compte près de 1 800. */
+const LUCIDE_ICON_NAMES = new Set(LUCIDE_ALL_ICONS);
 
 const MAX_WORLD_TAGS = 10;
 const MAX_TAG_LENGTH = 24;
@@ -158,122 +171,320 @@ export async function setWorldRestriction(
   return { ok: true as const };
 }
 
-// ── world_inventory_items ─────────────────────────────────────────────────────
+// ── world_catalog_items ───────────────────────────────────────────────────────
+// Objets et compétences partagent une table depuis la migration 161 ; ils
+// partagent donc aussi leurs actions. Ce fichier en portait deux jeux
+// identiques, à `world_inventory_items` / `world_skills` près.
 
-// Une pièce d'inventaire ou une compétence, telle que le client peut l'envoyer.
-// Strict : `world_id` et `sort_index` ne se reçoivent pas, ils se posent ici.
-const catalogEntrySchema = z.strictObject({
-  name: shortTextSchema,
-  description: longTextSchema.nullable(),
-  icon: z.string().trim().max(INPUT_LIMITS.icon).nullable(),
-  category_id: idSchema.nullable(),
-});
+/** Colonnes rendues par une écriture — la forme attendue par le client. */
+const CATALOG_ITEM_COLUMNS =
+  "id, world_id, type, category_id, name, description, icon, lucide_icon, image_url, rarity, stackable, max_quantity, properties, sort_index";
 
-type CatalogEntryInput = z.input<typeof catalogEntrySchema>;
+const catalogTypeSchema = z.enum(["inventory", "skills"]);
 
-const newCatalogEntrySchema = z.strictObject({
-  worldId: idSchema,
-  data: catalogEntrySchema.partial().required({ name: true }),
-});
+/**
+ * Ce qu'une écriture accepte de recevoir — et rien d'autre.
+ *
+ * Les types TypeScript ne PROTÈGENT de rien : une action serveur reçoit ce
+ * qu'on lui envoie, et TypeScript s'arrête à la frontière. Le schéma est
+ * strict (lib/inputSchemas.ts) : une clé inconnue — `world_id`, `sort_index`,
+ * `deleted_at` — refuse l'appel au lieu d'être écrite. Toutes les clés sont
+ * facultatives : une mise à jour partielle n'a pas à fournir le reste, et
+ * l'ajout exige le nom à part.
+ *
+ * Le nom d'icône Lucide est vérifié contre la bibliothèque, et pas seulement
+ * borné : il finit dans un `import()` de `lucide-react` côté client
+ * (LazyLucideIcon), et rien n'est plus difficile à diagnostiquer qu'une icône
+ * muette. Les propriétés libres passent par `sanitizeCatalogProperties`, qui
+ * en tronque le nombre et la longueur comme le fait la contrainte de la base.
+ * L'URL d'image n'a pas encore sa contrainte `is_http_url` en base (la
+ * migration 171 ne connaissait pas la table) : le schéma tient ce rôle.
+ */
+const catalogItemSchema = z
+  .strictObject({
+    name: shortTextSchema,
+    description: longTextSchema.nullable().transform((v) => v || null),
+    icon: z.string().max(DB_TEXT_LIMITS["world_catalog_items.icon"]).nullable().transform((v) => v || null),
+    lucide_icon: z
+      .string()
+      .max(DB_TEXT_LIMITS["world_catalog_items.lucide_icon"])
+      .nullable()
+      .transform((v) => v || null)
+      .refine((v) => v === null || LUCIDE_ICON_NAMES.has(v)),
+    image_url: z.union([httpUrlSchema, z.literal(""), z.null()]).transform((v) => v || null),
+    rarity: z.custom<WorldCatalogRarity>(isCatalogRarity).nullable(),
+    stackable: z.boolean(),
+    max_quantity: z.number().int().min(1).nullable(),
+    properties: z.custom<WorldCatalogProperty[]>(Array.isArray).transform((v) => sanitizeCatalogProperties(v)),
+    category_id: idSchema.nullable(),
+  })
+  .partial();
 
-const catalogEntryPatchSchema = z.strictObject({
-  id: idSchema,
-  data: catalogEntrySchema.omit({ category_id: true }).partial(),
-});
+export type CatalogItemInput = z.input<typeof catalogItemSchema>;
 
-export async function addWorldInventoryItem(
+/**
+ * Ramène une saisie à ce que la base accepte, ou dit pourquoi elle refuse.
+ *
+ * La RLS dit qui peut écrire, jamais quoi ; les contraintes de longueur de la
+ * migration 161 se contentent de faire échouer l'écriture avec un message
+ * illisible. La vérification est faite ici, une fois, pour l'ajout comme pour
+ * la mise à jour. `category_id` en est retiré : sa validité dépend du monde
+ * et du type, que seule l'action connaît.
+ */
+function cleanCatalogItemInput(
+  data: unknown,
+): { ok: true; value: Record<string, unknown> } | { ok: false; error: string } {
+  const input = parseInput(catalogItemSchema, data);
+  if (!input.ok) return input;
+  const { category_id: _category, ...value } = input.data;
+  return { ok: true, value };
+}
+
+/**
+ * La catégorie visée appartient-elle bien à ce monde ET à ce type ?
+ *
+ * La RLS laisse un éditeur écrire dans les objets de SON monde, et une
+ * catégorie n'est qu'un UUID dans le corps de la requête : rien n'empêchait
+ * d'y ranger un objet sous une catégorie d'un autre monde, ou sous une
+ * catégorie de compétences. L'objet disparaissait alors de l'affichage —
+ * `groupByColumn` ne le rattache à aucune colonne — sans que rien ne signale
+ * l'erreur.
+ */
+async function catalogCategoryFits(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  categoryId: string,
   worldId: string,
-  data: Pick<CatalogEntryInput, "name"> & Partial<CatalogEntryInput>,
+  type: "inventory" | "skills",
+): Promise<boolean> {
+  const { data } = await supabase
+    .from("world_catalog_categories")
+    .select("id")
+    .eq("id", categoryId)
+    .eq("world_id", worldId)
+    .eq("type", type)
+    .maybeSingle();
+  return !!data;
+}
+
+/**
+ * Crée un objet ou une compétence.
+ *
+ * `options.id` : l'identifiant peut venir du client. Le dialogue de création
+ * téléverse l'image AVANT d'enregistrer la ligne, et le dossier de stockage
+ * porte l'identifiant de l'objet (migration 163) — il faut donc le connaître
+ * d'avance. La base refuse un doublon ; un identifiant forgé ne peut donc
+ * qu'échouer, jamais écraser.
+ */
+export async function addWorldCatalogItem(
+  worldId: string,
+  type: "inventory" | "skills",
+  data: CatalogItemInput,
+  options?: { id?: string },
 ) {
-  const input = parseInput(newCatalogEntrySchema, { worldId, data });
-  if (!input.ok) return { ok: false as const, error: input.error };
+  const head = parseInput(
+    z.strictObject({
+      worldId: idSchema,
+      type: catalogTypeSchema,
+      options: z.strictObject({ id: z.uuid() }).partial().optional(),
+    }),
+    { worldId, type, options },
+  );
+  if (!head.ok) return { ok: false as const, error: head.error };
+  const cleaned = cleanCatalogItemInput(data);
+  if (!cleaned.ok) return { ok: false as const, error: cleaned.error };
+  if (cleaned.value.name === undefined) return { ok: false as const, error: ERR_VALEUR_NON_SUPPORTEE };
 
   const supabase = await createClient();
+
+  const categoryId = data.category_id ?? null;
+  if (categoryId && !(await catalogCategoryFits(supabase, categoryId, worldId, type))) {
+    return { ok: false as const, error: ERR_VALEUR_NON_SUPPORTEE };
+  }
+
   const { data: item, error } = await supabase
-    .from("world_inventory_items")
-    .insert({ world_id: worldId, ...input.data.data })
-    .select()
+    .from("world_catalog_items")
+    .insert({
+      ...(head.data.options?.id ? { id: head.data.options.id } : {}),
+      world_id: worldId,
+      type,
+      category_id: categoryId,
+      ...cleaned.value,
+    })
+    .select(CATALOG_ITEM_COLUMNS)
     .single();
-  if (error) return { ok: false as const, error: echecEnregistrement("addWorldInventoryItem", error) };
-  return { ok: true as const, item: item as WorldInventoryItem };
+  if (error) return { ok: false as const, error: echecEnregistrement("addWorldCatalogItem", error) };
+  return { ok: true as const, item: item as unknown as WorldCatalogItem };
 }
 
-export async function updateWorldInventoryItem(
-  id: string,
-  data: Partial<Omit<CatalogEntryInput, "category_id">>,
-) {
-  const input = parseInput(catalogEntryPatchSchema, { id, data });
-  if (!input.ok) return { ok: false as const, error: input.error };
+export async function updateWorldCatalogItem(id: string, data: CatalogItemInput) {
+  const head = parseInput(idSchema, id);
+  if (!head.ok) return { ok: false as const, error: head.error };
+  const cleaned = cleanCatalogItemInput(data);
+  if (!cleaned.ok) return { ok: false as const, error: cleaned.error };
 
   const supabase = await createClient();
-  const { error } = await supabase
-    .from("world_inventory_items")
-    .update(input.data.data)
-    .eq("id", id);
-  if (error) return { ok: false as const, error: echecEnregistrement("updateWorldInventoryItem", error) };
+
+  const patch: Record<string, unknown> = { ...cleaned.value };
+
+  // Changer de catégorie demande de savoir à quel monde et à quel type
+  // appartient l'objet — la requête n'en dit rien, seule la ligne le sait.
+  if (data.category_id !== undefined) {
+    if (data.category_id === null) {
+      patch.category_id = null;
+    } else {
+      const { data: existing } = await supabase
+        .from("world_catalog_items")
+        .select("world_id, type")
+        .eq("id", id)
+        .maybeSingle();
+      if (!existing) return { ok: false as const, error: ERR_INTROUVABLE };
+      const row = existing as { world_id: string; type: "inventory" | "skills" };
+      if (!(await catalogCategoryFits(supabase, data.category_id, row.world_id, row.type))) {
+        return { ok: false as const, error: ERR_VALEUR_NON_SUPPORTEE };
+      }
+      patch.category_id = data.category_id;
+    }
+  }
+
+  if (Object.keys(patch).length === 0) return { ok: true as const };
+
+  const { error } = await supabase.from("world_catalog_items").update(patch).eq("id", id);
+  if (error) return { ok: false as const, error: echecEnregistrement("updateWorldCatalogItem", error) };
   return { ok: true as const };
 }
 
-export async function deleteWorldInventoryItem(id: string) {
+// ── Corbeille ─────────────────────────────────────────────────────────────────
+// Supprimer un objet emportait avec lui le sens de toutes les entrées de fiche
+// qui le désignaient. Il est désormais marqué, pas retiré (migration 165) : le
+// restaurer rend son objet à toutes les fiches d'un coup, sans qu'aucune ait à
+// être retouchée — elles n'ont jamais cessé de le désigner.
+
+export async function trashWorldCatalogItem(id: string) {
   const supabase = await createClient();
   const { error } = await supabase
-    .from("world_inventory_items")
-    .delete()
+    .from("world_catalog_items")
+    .update({ deleted_at: new Date().toISOString() })
     .eq("id", id);
-  if (error) return { ok: false as const, error: echecEnregistrement("deleteWorldInventoryItem", error) };
+  if (error) return { ok: false as const, error: echecEnregistrement("trashWorldCatalogItem", error) };
   return { ok: true as const };
 }
 
-// ── world_skills ──────────────────────────────────────────────────────────────
-
-export async function addWorldSkill(
-  worldId: string,
-  data: Pick<CatalogEntryInput, "name"> & Partial<CatalogEntryInput>,
-) {
-  const input = parseInput(newCatalogEntrySchema, { worldId, data });
-  if (!input.ok) return { ok: false as const, error: input.error };
-
+export async function restoreWorldCatalogItem(id: string) {
   const supabase = await createClient();
-  const { data: skill, error } = await supabase
-    .from("world_skills")
-    .insert({ world_id: worldId, ...input.data.data })
-    .select()
+  const { data, error } = await supabase
+    .from("world_catalog_items")
+    .update({ deleted_at: null })
+    .eq("id", id)
+    .select(CATALOG_ITEM_COLUMNS)
+    .maybeSingle();
+  if (error) return { ok: false as const, error: echecEnregistrement("restoreWorldCatalogItem", error) };
+  if (!data) return { ok: false as const, error: ERR_INTROUVABLE };
+  return { ok: true as const, item: data as unknown as WorldCatalogItem };
+}
+
+/** Les objets en corbeille, du plus récemment supprimé au plus ancien. */
+export async function listTrashedWorldCatalogItems(worldId: string, type: "inventory" | "skills") {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("world_catalog_items")
+    .select(`${CATALOG_ITEM_COLUMNS}, deleted_at`)
+    .eq("world_id", worldId)
+    .eq("type", type)
+    .not("deleted_at", "is", null)
+    .order("deleted_at", { ascending: false });
+  if (error) return { ok: false as const, error: echecEnregistrement("listTrashedWorldCatalogItems", error) };
+  return { ok: true as const, items: (data ?? []) as unknown as WorldCatalogItem[] };
+}
+
+/**
+ * Supprime un objet pour de bon, son image avec lui.
+ *
+ * Le ménage du stockage passe par une LISTE du dossier, et non par l'URL
+ * rangée dans la ligne. Une image téléversée puis abandonnée — le dialogue de
+ * modification fermé sans enregistrer — n'est référencée nulle part et
+ * resterait sinon à demeure. Elle bloquerait au passage la purge automatique
+ * de la migration 165, qui refuse d'effacer une ligne dont le dossier n'est
+ * pas vide.
+ *
+ * L'échec du ménage n'annule pas la suppression : un fichier orphelin ne casse
+ * rien, une ligne à moitié supprimée si.
+ */
+export async function purgeWorldCatalogItem(id: string) {
+  const supabase = await createClient();
+
+  const { data: existing } = await supabase
+    .from("world_catalog_items")
+    .select("id, world_id, image_url")
+    .eq("id", id)
+    .maybeSingle();
+  if (!existing) return { ok: false as const, error: ERR_INTROUVABLE };
+  const row = existing as { id: string; world_id: string; image_url: string | null };
+
+  const prefix = catalogItemImagePrefix(row.world_id, row.id);
+  const { data: files } = await supabase.storage.from("worlds").list(prefix);
+  const paths = (files ?? []).map((f) => `${prefix}/${f.name}`);
+  // Ceinture et bretelles : si la liste échoue, l'URL de la ligne donne au
+  // moins le fichier courant.
+  const fromUrl = storagePathFromUrl(row.image_url, "worlds");
+  if (fromUrl && !paths.includes(fromUrl)) paths.push(fromUrl);
+  if (paths.length > 0) {
+    const { error: removeError } = await supabase.storage.from("worlds").remove(paths);
+    if (removeError) console.error("[purgeWorldCatalogItem] image non effacée", removeError.message);
+  }
+
+  const { error } = await supabase.from("world_catalog_items").delete().eq("id", id);
+  if (error) return { ok: false as const, error: echecEnregistrement("purgeWorldCatalogItem", error) };
+  return { ok: true as const };
+}
+
+/**
+ * Recopie un objet, dans sa catégorie, juste après lui.
+ *
+ * Deux objets d'un même monde se ressemblent souvent à un détail près — une
+ * épée courte et une épée longue, un sort et sa version majeure. Les saisir
+ * l'un après l'autre revenait à retaper description, rareté et propriétés.
+ *
+ * L'image, elle, n'est PAS recopiée : les deux lignes pointeraient le même
+ * fichier, et supprimer l'une emporterait l'image de l'autre au ménage.
+ */
+export async function duplicateWorldCatalogItem(id: string) {
+  const supabase = await createClient();
+  const { data: source, error: readError } = await supabase
+    .from("world_catalog_items")
+    .select(CATALOG_ITEM_COLUMNS)
+    .eq("id", id)
+    .maybeSingle();
+  if (readError) return { ok: false as const, error: echecEnregistrement("duplicateWorldCatalogItem", readError) };
+  if (!source) return { ok: false as const, error: ERR_INTROUVABLE };
+
+  const item = source as unknown as WorldCatalogItem;
+  const { data: copy, error } = await supabase
+    .from("world_catalog_items")
+    .insert({
+      world_id: item.world_id,
+      type: item.type,
+      category_id: item.category_id ?? null,
+      name: item.name.slice(0, DB_TEXT_LIMITS["world_catalog_items.name"] - 2) + " 2",
+      description: item.description ?? null,
+      icon: item.icon ?? null,
+      lucide_icon: item.lucide_icon ?? null,
+      rarity: item.rarity ?? null,
+      stackable: item.stackable !== false,
+      max_quantity: item.max_quantity ?? null,
+      properties: item.properties ?? [],
+      sort_index: item.sort_index + 1,
+    })
+    .select(CATALOG_ITEM_COLUMNS)
     .single();
-  if (error) return { ok: false as const, error: echecEnregistrement("addWorldSkill", error) };
-  return { ok: true as const, skill: skill as WorldSkill };
-}
-
-export async function updateWorldSkill(
-  id: string,
-  data: Partial<Omit<CatalogEntryInput, "category_id">>,
-) {
-  const input = parseInput(catalogEntryPatchSchema, { id, data });
-  if (!input.ok) return { ok: false as const, error: input.error };
-
-  const supabase = await createClient();
-  const { error } = await supabase
-    .from("world_skills")
-    .update(input.data.data)
-    .eq("id", id);
-  if (error) return { ok: false as const, error: echecEnregistrement("updateWorldSkill", error) };
-  return { ok: true as const };
-}
-
-export async function deleteWorldSkill(id: string) {
-  const supabase = await createClient();
-  const { error } = await supabase
-    .from("world_skills")
-    .delete()
-    .eq("id", id);
-  if (error) return { ok: false as const, error: echecEnregistrement("deleteWorldSkill", error) };
-  return { ok: true as const };
+  if (error) return { ok: false as const, error: echecEnregistrement("duplicateWorldCatalogItem", error) };
+  return { ok: true as const, item: copy as unknown as WorldCatalogItem };
 }
 
 // ── world_catalog_categories ──────────────────────────────────────────────────
 
 const catalogCategorySchema = z.strictObject({
   worldId: idSchema,
-  type: z.enum(["inventory", "skills"]),
+  type: catalogTypeSchema,
   name: shortTextSchema,
   options: z
     .strictObject({ column_index: z.number().int().min(0), sort_index: z.number().int().min(0) })
@@ -338,60 +549,173 @@ export async function deleteWorldCatalogCategory(id: string) {
   return { ok: true as const };
 }
 
-// Ces deux actions renvoyaient `{ ok: true }` sans jamais regarder le résultat
-// des écritures. L'appelant réordonne de façon optimiste : un refus RLS ou une
-// panne réseau laissait donc l'utilisateur devant un ordre qui semblait
-// enregistré et disparaissait au rechargement suivant. Les autres actions du
-// fichier, elles, remontent bien leur erreur.
-const MAX_BATCH_ORDER = 500;
+// ── Réordonnancement ──────────────────────────────────────────────────────────
+// Ces deux actions envoyaient un `UPDATE` par ligne, en parallèle, et
+// renvoyaient `{ ok: true }` sans regarder le résultat : un refus RLS ou une
+// coupure réseau laissait l'utilisateur devant un ordre qui semblait
+// enregistré et disparaissait au rechargement suivant.
+//
+// Les RPC de la migration 162 font le tout en une requête et rendent le nombre
+// de lignes touchées. Une RLS qui refuse ne lève pas d'erreur — elle ne met
+// rien à jour, en silence : c'est cet écart de compte qui la trahit.
 
-export async function batchUpdateCatalogCategoryOrder(
+const MAX_REORDER_ROWS = 500;
+
+export async function reorderWorldCatalogItems(
+  items: { id: string; sort_index: number; category_id: string | null }[],
+) {
+  const input = parseInput(
+    z
+      .array(z.strictObject({ id: idSchema, sort_index: z.number().int().min(0), category_id: idSchema.nullable() }))
+      .max(MAX_REORDER_ROWS),
+    items,
+  );
+  if (!input.ok) return { ok: false as const, error: input.error };
+  if (items.length === 0) return { ok: true as const };
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("reorder_world_catalog_items", { p_items: items });
+  if (error) return { ok: false as const, error: echecEnregistrement("reorderWorldCatalogItems", error) };
+  if ((data as number | null) !== items.length) {
+    return { ok: false as const, error: ERR_NON_AUTORISE };
+  }
+  return { ok: true as const };
+}
+
+export async function reorderWorldCatalogCategories(
   categories: { id: string; sort_index: number; column_index: number }[],
 ) {
   const input = parseInput(
     z
       .array(z.strictObject({ id: idSchema, sort_index: z.number().int().min(0), column_index: z.number().int().min(0) }))
-      .max(MAX_BATCH_ORDER),
+      .max(MAX_REORDER_ROWS),
     categories,
   );
   if (!input.ok) return { ok: false as const, error: input.error };
-
+  if (categories.length === 0) return { ok: true as const };
   const supabase = await createClient();
-  const results = await Promise.all(
-    categories.map(({ id, sort_index, column_index }) =>
-      supabase.from("world_catalog_categories").update({ sort_index, column_index }).eq("id", id),
-    ),
-  );
-  const failed = results.find((r) => r.error);
-  if (failed?.error) return { ok: false as const, error: echecEnregistrement("batchUpdateCatalogCategoryOrder", failed.error) };
+  const { data, error } = await supabase.rpc("reorder_world_catalog_categories", {
+    p_categories: categories,
+  });
+  if (error) return { ok: false as const, error: echecEnregistrement("reorderWorldCatalogCategories", error) };
+  if ((data as number | null) !== categories.length) {
+    return { ok: false as const, error: ERR_NON_AUTORISE };
+  }
   return { ok: true as const };
 }
 
-export async function batchUpdateCatalogItemOrder(
-  items: { id: string; sort_index: number; category_id: string | null }[],
-  tableType: "inventory" | "skills",
+// ── Décompte d'usage ──────────────────────────────────────────────────────────
+
+/**
+ * Combien de personas portent chaque objet du catalogue.
+ *
+ * Sert à répondre avant une suppression : « celui-là, quelqu'un l'a ». Le
+ * détail — qui, dans quelle fiche — ne franchit pas la RPC, qui n'agrège que
+ * des nombres (voir la migration 162).
+ */
+export async function getWorldCatalogUsage(worldId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("world_catalog_usage", { p_world_id: worldId });
+  if (error) return { ok: false as const, error: echecEnregistrement("getWorldCatalogUsage", error) };
+  const rows = (data ?? []) as { catalog_id: string; persona_count: number }[];
+  return { ok: true as const, usage: Object.fromEntries(rows.map((r) => [r.catalog_id, r.persona_count])) };
+}
+
+// ── Import ────────────────────────────────────────────────────────────────────
+
+/**
+ * Verse un catalogue exporté dans un monde.
+ *
+ * L'export désigne les catégories par leur NOM : un identifiant de catégorie
+ * ne veut rien dire dans un autre monde. À l'import, un nom déjà présent est
+ * réutilisé, un nom inconnu crée sa catégorie — sans quoi tout arriverait en
+ * vrac dans « Sans catégorie ».
+ *
+ * Rien n'est remplacé : l'import AJOUTE. Écraser le catalogue existant serait
+ * irrattrapable, et fusionner sur le nom confondrait deux objets homonymes que
+ * le monde distingue peut-être.
+ */
+export async function importWorldCatalogItems(
+  worldId: string,
+  type: "inventory" | "skills",
+  items: CatalogExportItem[],
 ) {
-  const input = parseInput(
-    z.strictObject({
-      items: z
-        .array(z.strictObject({ id: idSchema, sort_index: z.number().int().min(0), category_id: idSchema.nullable() }))
-        .max(MAX_BATCH_ORDER),
-      tableType: z.enum(["inventory", "skills"]),
-    }),
-    { items, tableType },
+  const head = parseInput(
+    z.strictObject({ worldId: idSchema, type: catalogTypeSchema, items: z.array(z.unknown()) }),
+    { worldId, type, items },
   );
-  if (!input.ok) return { ok: false as const, error: input.error };
+  if (!head.ok) return { ok: false as const, error: head.error };
+  const accepted = items.slice(0, MAX_CATALOG_IMPORT_ITEMS);
+  if (accepted.length === 0) return { ok: false as const, error: ERR_VALEUR_NON_SUPPORTEE };
 
   const supabase = await createClient();
-  const table = tableType === "inventory" ? "world_inventory_items" : "world_skills";
-  const results = await Promise.all(
-    items.map(({ id, sort_index, category_id }) =>
-      supabase.from(table).update({ sort_index, category_id }).eq("id", id),
-    ),
-  );
-  const failed = results.find((r) => r.error);
-  if (failed?.error) return { ok: false as const, error: echecEnregistrement("batchUpdateCatalogItemOrder", failed.error) };
-  return { ok: true as const };
+
+  const { data: existing, error: catError } = await supabase
+    .from("world_catalog_categories")
+    .select("id, name")
+    .eq("world_id", worldId)
+    .eq("type", type);
+  if (catError) return { ok: false as const, error: echecEnregistrement("importWorldCatalogItems", catError) };
+
+  // Comparaison sur le nom réduit — « Armes » et « armes » sont la même
+  // catégorie pour qui lit la page, et en créer deux serait déroutant.
+  const idByName = new Map<string, string>();
+  for (const row of (existing ?? []) as { id: string; name: string }[]) {
+    idByName.set(row.name.trim().toLowerCase(), row.id);
+  }
+
+  const missing = [...new Set(
+    accepted
+      .map((item) => item.category?.trim())
+      .filter((name): name is string => !!name && !idByName.has(name.toLowerCase())),
+  )];
+
+  if (missing.length > 0) {
+    const { data: created, error: createError } = await supabase
+      .from("world_catalog_categories")
+      .insert(missing.map((name, index) => ({
+        world_id: worldId,
+        type,
+        name,
+        column_index: 0,
+        sort_index: (existing?.length ?? 0) + index,
+      })))
+      .select("id, name");
+    if (createError) return { ok: false as const, error: echecEnregistrement("importWorldCatalogItems", createError) };
+    for (const row of (created ?? []) as { id: string; name: string }[]) {
+      idByName.set(row.name.trim().toLowerCase(), row.id);
+    }
+  }
+
+  const rows = accepted.map((item, index) => {
+    const cleaned = cleanCatalogItemInput({
+      name: item.name,
+      description: item.description ?? null,
+      icon: item.icon ?? null,
+      lucide_icon: item.lucide_icon ?? null,
+      rarity: item.rarity ?? null,
+      stackable: item.stackable !== false,
+      max_quantity: item.max_quantity ?? null,
+      properties: item.properties ?? [],
+    });
+    if (!cleaned.ok) return null;
+    const categoryName = item.category?.trim().toLowerCase();
+    return {
+      world_id: worldId,
+      type,
+      category_id: (categoryName && idByName.get(categoryName)) || null,
+      sort_index: index,
+      ...cleaned.value,
+    };
+  }).filter((row): row is NonNullable<typeof row> => row !== null);
+
+  if (rows.length === 0) return { ok: false as const, error: ERR_VALEUR_NON_SUPPORTEE };
+
+  const { data: inserted, error } = await supabase
+    .from("world_catalog_items")
+    .insert(rows)
+    .select(CATALOG_ITEM_COLUMNS);
+  if (error) return { ok: false as const, error: echecEnregistrement("importWorldCatalogItems", error) };
+  return { ok: true as const, items: (inserted ?? []) as unknown as WorldCatalogItem[] };
 }
 
 // ── Fiche de persona par défaut ───────────────────────────────────────────────

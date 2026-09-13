@@ -25,24 +25,48 @@ export interface WorldCatalogCategory {
   column_index: number;
 }
 
-export interface WorldInventoryItem {
-  id: string;
-  world_id: string;
-  name: string;
-  description?: string | null;
-  icon?: string | null;
-  sort_index: number;
-  category_id?: string | null;
+/** Les cinq degrés de rareté d'un objet — voir CATALOG_RARITIES. */
+export type WorldCatalogRarity = "common" | "uncommon" | "rare" | "epic" | "legendary";
+
+/** Une propriété libre d'un objet : « Poids », « 2 kg ». */
+export interface WorldCatalogProperty {
+  label: string;
+  value: string;
 }
 
-export interface WorldSkill {
+/**
+ * Un objet ou une compétence du catalogue d'un monde.
+ *
+ * Une seule forme pour les deux, distinguée par `type` — voir la migration 161.
+ * `stackable` et `max_quantity` ne concernent que les objets : une compétence
+ * ne se compte pas, l'interface ne les propose pas pour elle.
+ */
+export interface WorldCatalogItem {
   id: string;
   world_id: string;
+  type: "inventory" | "skills";
   name: string;
   description?: string | null;
+  /**
+   * Le visuel de l'objet, en trois sources exclusives à l'usage.
+   *
+   * Une seule s'affiche, de la plus précise à la plus générique :
+   * `image_url` > `lucide_icon` > `icon`. Voir `resolveCatalogEntry`.
+   */
+  /** Icône du jeu `rpg_icons`, ex. « sword.svg ». */
   icon?: string | null;
+  /** Icône Lucide en kebab-case, ex. « swords » — voir la migration 164. */
+  lucide_icon?: string | null;
+  /** Image propre au monde, téléversée dans le bucket `worlds`. */
+  image_url?: string | null;
+  rarity?: WorldCatalogRarity | null;
+  stackable?: boolean;
+  max_quantity?: number | null;
+  properties?: WorldCatalogProperty[];
   sort_index: number;
   category_id?: string | null;
+  /** Marqué supprimé, en corbeille — voir la migration 165. */
+  deleted_at?: string | null;
 }
 
 export interface WorldMap {

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import {
-  X, Plus, Pencil, Trash2, Loader2, Check, FolderPlus, ArrowUpAZ,
+  X, Plus, Pencil, Trash2, Loader2, Check, FolderPlus, ArrowUpAZ, ChevronRight,
 } from "lucide-react";
 import {
   useDroppable,
@@ -19,25 +19,35 @@ import { cn } from "@/lib/utils";
 import type { WorldCatalogCategory } from "@/types/worlds";
 import { UNCAT, type CatalogType, type CatalogItem } from "./catalogueTypes";
 
-import { AddForm, DragHandle, SortableItemRow } from "./CataloguePieces";
+import { DragHandle, SortableItemRow } from "./CataloguePieces";
 
 // Conteneurs : une catégorie, la zone des non classés, une colonne.
 
 // ── Sortable category container ───────────────────────────────────────────────
 
+/**
+ * Une catégorie et ses objets.
+ *
+ * Elle se replie d'un clic sur le chevron, pour tout le monde : c'est une
+ * préférence de lecture, pas un geste d'auteur. Repliée, elle garde son
+ * en-tête et son compte d'objets — et reste une cible de dépôt : l'objet
+ * lâché sur l'en-tête va au bout de la catégorie, comme un dépôt sur son nom.
+ */
 export function SortableCategoryContainer({
   category,
   items,
   type,
   canEdit,
-  editingId,
-  addingHere,
+  canReorder,
+  usage,
   renamingId,
-  onSetEditing,
+  collapsed,
+  onToggleCollapsed,
+  onEditItem,
+  onDuplicateItem,
   onDeleteItem,
-  onSaveItem,
-  onSetAdding,
-  onAddItem,
+  onOpenItem,
+  onAddIn,
   onSetRenaming,
   onDeleteCategory,
   onSaveCategory,
@@ -47,14 +57,17 @@ export function SortableCategoryContainer({
   items: CatalogItem[];
   type: CatalogType;
   canEdit: boolean;
-  editingId: string | null;
-  addingHere: boolean;
+  canReorder: boolean;
+  usage: Record<string, number> | null;
   renamingId: string | null;
-  onSetEditing: (id: string | null) => void;
+  collapsed: boolean;
+  onToggleCollapsed: (id: string) => void;
+  onEditItem: (item: CatalogItem) => void;
+  onDuplicateItem: (id: string) => void;
   onDeleteItem: (id: string) => void;
-  onSaveItem: (id: string, data: { name: string; description: string | null; icon: string | null }) => Promise<void>;
-  onSetAdding: (catId: string | null | false) => void;
-  onAddItem: (categoryId: string | null, data: { name: string; description: string; icon: string | undefined; category_id: string | null }) => Promise<void>;
+  onOpenItem: (item: CatalogItem) => void;
+  /** Ouvre le dialogue de création, dans cette catégorie (`null` : sans). */
+  onAddIn: (categoryId: string | null) => void;
   onSetRenaming: (id: string | null) => void;
   onDeleteCategory: (id: string) => void;
   onSaveCategory: (id: string, name: string) => Promise<void>;
@@ -81,7 +94,16 @@ export function SortableCategoryContainer({
     <div ref={setNodeRef} style={style} className="space-y-0.5">
       {/* Category header */}
       <div className="group/cat flex items-center gap-1 rounded-xl px-2 py-1.5">
-        {canEdit && <DragHandle {...attributes} {...listeners} />}
+        {canReorder && <DragHandle {...attributes} {...listeners} />}
+        <button
+          type="button"
+          aria-expanded={!collapsed}
+          aria-label={collapsed ? t("expandCategory", { name: category.name }) : t("collapseCategory", { name: category.name })}
+          onClick={() => onToggleCollapsed(category.id)}
+          className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ChevronRight className={cn("h-3.5 w-3.5 transition-transform", !collapsed && "rotate-90")} />
+        </button>
         {isRenaming ? (
           <form
             onSubmit={async e => {
@@ -119,6 +141,12 @@ export function SortableCategoryContainer({
         ) : (
           <>
             <span className="flex-1 text-sm font-semibold text-foreground/70 truncate">{category.name}</span>
+            <span
+              title={t("itemCount", { count: items.length })}
+              className="shrink-0 rounded-full bg-muted px-1.5 text-[10px] font-medium tabular-nums text-muted-foreground"
+            >
+              {items.length}
+            </span>
             {canEdit && (
               <div className="flex items-center gap-1 opacity-0 group-hover/cat:opacity-100 focus-within:opacity-100 transition-opacity shrink-0">
                 <button
@@ -144,35 +172,27 @@ export function SortableCategoryContainer({
       </div>
 
       {/* Items in this category */}
-      <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>
+      {!collapsed && <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>
         <div className="space-y-0.5 min-h-[2px]">
           {items.map(item => (
             <SortableItemRow
               key={item.id}
               item={item}
               canEdit={canEdit}
-              isEditing={editingId === item.id}
-              onEdit={() => onSetEditing(item.id)}
+              canReorder={canReorder}
+              usageCount={usage?.[item.id]}
+              onEdit={() => onEditItem(item)}
+              onDuplicate={() => onDuplicateItem(item.id)}
               onDelete={() => onDeleteItem(item.id)}
-              onSave={data => onSaveItem(item.id, data)}
-              onCancelEdit={() => onSetEditing(null)}
+              onOpenDetail={() => onOpenItem(item)}
             />
           ))}
 
-          {addingHere && (
-            <AddForm
-              type={type}
-              categoryId={category.id}
-              onAdd={async data => { await onAddItem(category.id, data); }}
-              onCancel={() => onSetAdding(false)}
-            />
-          )}
-
-          {canEdit && !addingHere && (
+          {canEdit && (
             <div className="flex items-center gap-1">
               <button
                 type="button"
-                onClick={() => onSetAdding(category.id)}
+                onClick={() => onAddIn(category.id)}
                 className="flex flex-1 items-center gap-2 rounded-lg px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
               >
                 <Plus className="h-3.5 w-3.5" />
@@ -191,7 +211,7 @@ export function SortableCategoryContainer({
             </div>
           )}
         </div>
-      </SortableContext>
+      </SortableContext>}
     </div>
   );
 }
@@ -202,27 +222,27 @@ export function UncategorizedSection({
   items,
   type,
   canEdit,
-  editingId,
-  addingHere,
+  canReorder,
+  usage,
   showHeader,
-  onSetEditing,
+  onEditItem,
+  onDuplicateItem,
   onDeleteItem,
-  onSaveItem,
-  onSetAdding,
-  onAddItem,
+  onOpenItem,
+  onAddIn,
   onSortAlpha,
 }: {
   items: CatalogItem[];
   type: CatalogType;
   canEdit: boolean;
-  editingId: string | null;
-  addingHere: boolean;
+  canReorder: boolean;
+  usage: Record<string, number> | null;
   showHeader: boolean;
-  onSetEditing: (id: string | null) => void;
+  onEditItem: (item: CatalogItem) => void;
+  onDuplicateItem: (id: string) => void;
   onDeleteItem: (id: string) => void;
-  onSaveItem: (id: string, data: { name: string; description: string | null; icon: string | null }) => Promise<void>;
-  onSetAdding: (catId: string | null | false) => void;
-  onAddItem: (categoryId: string | null, data: { name: string; description: string; icon: string | undefined; category_id: string | null }) => Promise<void>;
+  onOpenItem: (item: CatalogItem) => void;
+  onAddIn: (categoryId: string | null) => void;
   onSortAlpha: (categoryId: string | null) => void;
 }) {
   const t = useTranslations("catalogue");
@@ -250,35 +270,27 @@ export function UncategorizedSection({
               key={item.id}
               item={item}
               canEdit={canEdit}
-              isEditing={editingId === item.id}
-              onEdit={() => onSetEditing(item.id)}
+              canReorder={canReorder}
+              usageCount={usage?.[item.id]}
+              onEdit={() => onEditItem(item)}
+              onDuplicate={() => onDuplicateItem(item.id)}
               onDelete={() => onDeleteItem(item.id)}
-              onSave={data => onSaveItem(item.id, data)}
-              onCancelEdit={() => onSetEditing(null)}
+              onOpenDetail={() => onOpenItem(item)}
             />
           ))}
         </SortableContext>
 
-        {!showHeader && items.length === 0 && !addingHere && !canEdit && (
+        {!showHeader && items.length === 0 && !canEdit && (
           <div className="py-10 text-center text-sm text-muted-foreground">
             {type === "inventory" ? t("emptyInventory") : t("emptySkills")}
           </div>
         )}
 
-        {addingHere && (
-          <AddForm
-            type={type}
-            categoryId={null}
-            onAdd={async data => { await onAddItem(null, data); }}
-            onCancel={() => onSetAdding(false)}
-          />
-        )}
-
-        {canEdit && !addingHere && (
+        {canEdit && (
           <div className="flex items-center gap-1">
             <button
               type="button"
-              onClick={() => onSetAdding(null)}
+              onClick={() => onAddIn(null)}
               className="flex flex-1 items-center gap-2 rounded-xl px-3 py-2.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
             >
               <Plus className="h-4 w-4" />

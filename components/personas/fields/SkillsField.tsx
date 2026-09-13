@@ -1,27 +1,33 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import Image from "next/image";
-import { ImageIcon, Lock, Plus, X } from "lucide-react";
+import { Lock, Plus, TriangleAlert, X } from "lucide-react";
 
+import { indexCatalog, resolveCatalogEntry } from "@/lib/worldCatalog";
 import type { SkillItem } from "@/types/personas";
-import type { WorldSkill } from "@/types/worlds";
-import { CatalogPicker, IconButton, makeItemId } from "./shared";
+import type { WorldCatalogCategory, WorldCatalogItem } from "@/types/worlds";
+import { CatalogPicker, EntryVisual, IconButton, RarityMark, makeItemId } from "./shared";
 
 export function SkillsField({
   initialItems,
   onSave,
   catalogItems,
+  catalogCategories,
 }: {
   initialItems: SkillItem[];
   onSave: (items: SkillItem[]) => void;
-  catalogItems?: WorldSkill[];
+  catalogItems?: WorldCatalogItem[];
+  catalogCategories?: WorldCatalogCategory[];
 }) {
-  const tPersonas = useTranslations("personas");
   const tCommon = useTranslations("common");
   const tCatalogue = useTranslations("catalogue");
   const [items, setItems] = useState<SkillItem[]>(initialItems);
+
+  const catalog = useMemo(
+    () => (catalogItems ? indexCatalog(catalogItems) : undefined),
+    [catalogItems],
+  );
 
   function update(next: SkillItem[]) {
     setItems(next);
@@ -45,13 +51,15 @@ export function SkillsField({
     const usedIds = new Set(items.map((i) => i.catalog_id).filter(Boolean));
     const available = catalogItems.filter((c) => !usedIds.has(c.id));
 
-    function addFromCatalog(cat: WorldSkill) {
+    function addFromCatalog(entry: WorldCatalogItem) {
       update([...items, {
         id: makeItemId(),
-        catalog_id: cat.id,
-        name: cat.name,
-        description: cat.description ?? undefined,
-        icon: cat.icon ?? undefined,
+        catalog_id: entry.id,
+        // Copie de secours seulement : c'est le catalogue qui fait foi à
+        // l'affichage (voir `resolveCatalogEntry`).
+        name: entry.name,
+        description: entry.description ?? undefined,
+        icon: entry.icon ?? undefined,
         level: "",
       }]);
     }
@@ -59,35 +67,49 @@ export function SkillsField({
     return (
       <div className="space-y-2 pr-24">
         <div className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground mb-1">
-          <Lock className="h-3 w-3" /> Compétences du catalogue
+          <Lock className="h-3 w-3" /> {tCatalogue("skillsFromCatalog")}
         </div>
-        {items.map((item) => (
-          <div key={item.id} className="flex items-center gap-2 group/skill">
-            <div className="h-10 w-10 shrink-0 flex items-center justify-center rounded-lg border border-border-soft bg-muted/40">
-              {item.icon ? (
-                <Image src={`/rpg_icons/${item.icon}`} alt="" unoptimized width={24} height={24} className="h-6 w-6 object-contain dark:invert" />
-              ) : (
-                <ImageIcon className="h-4 w-4 text-muted-foreground/30" />
-              )}
+        {items.map((item) => {
+          const resolved = resolveCatalogEntry(item, catalog);
+          return (
+            <div key={item.id} className="flex items-center gap-2 group/skill">
+              <EntryVisual icon={resolved.icon} imageUrl={resolved.image_url} />
+              <span className="flex-1 min-w-0 flex items-center gap-1.5">
+                <RarityMark rarity={resolved.rarity} />
+                <span className="truncate text-sm font-medium">{resolved.name}</span>
+                {resolved.orphaned && (
+                  <span
+                    title={tCatalogue("orphanedItem")}
+                    className="inline-flex shrink-0 items-center gap-1 rounded-full bg-destructive/10 px-1.5 py-0.5 text-[10px] font-medium text-destructive"
+                  >
+                    <TriangleAlert className="h-3 w-3" />
+                    {tCatalogue("orphanedItem")}
+                  </span>
+                )}
+              </span>
+              <input
+                value={item.level}
+                onChange={(e) => patch(item.id, "level", e.target.value)}
+                placeholder={tCatalogue("skillLevel")}
+                className="w-20 shrink-0 bg-transparent text-xs text-right text-muted-foreground outline-none placeholder:text-muted-foreground/40"
+              />
+              <button
+                aria-label={tCommon("remove")}
+                type="button"
+                onClick={() => removeItem(item.id)}
+                className="shrink-0 h-5 w-5 flex items-center justify-center rounded-full text-muted-foreground opacity-100 sm:opacity-0 sm:group-hover/skill:opacity-100 sm:focus-within:opacity-100 hover:text-destructive transition-opacity"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
             </div>
-            <span className="flex-1 min-w-0 text-sm font-medium truncate">{item.name}</span>
-            <input
-              value={item.level}
-              onChange={(e) => patch(item.id, "level", e.target.value)}
-              placeholder="Niveau"
-              className="w-20 shrink-0 bg-transparent text-xs text-right text-muted-foreground outline-none placeholder:text-muted-foreground/40"
-            />
-            <button
-              aria-label={tCommon("remove")}
-              type="button"
-              onClick={() => removeItem(item.id)}
-              className="shrink-0 h-5 w-5 flex items-center justify-center rounded-full text-muted-foreground opacity-100 sm:opacity-0 sm:group-hover/skill:opacity-100 sm:focus-within:opacity-100 hover:text-destructive transition-opacity"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          </div>
-        ))}
-        <CatalogPicker available={available} label={tPersonas("skillLabel")} onSelect={addFromCatalog} />
+          );
+        })}
+        <CatalogPicker
+          available={available}
+          categories={catalogCategories}
+          type="skills"
+          onSelect={addFromCatalog}
+        />
       </div>
     );
   }
@@ -109,14 +131,14 @@ export function SkillsField({
               <input
                 value={item.level}
                 onChange={(e) => patch(item.id, "level", e.target.value)}
-                placeholder="Niveau"
+                placeholder={tCatalogue("skillLevel")}
                 className="w-20 shrink-0 bg-transparent text-xs text-right text-muted-foreground outline-none placeholder:text-muted-foreground/40"
               />
             </div>
             <input
               value={item.description ?? ""}
               onChange={(e) => patch(item.id, "description", e.target.value)}
-              placeholder="Description (optionnel)"
+              placeholder={tCatalogue("descPlaceholder")}
               className="w-full bg-transparent text-xs text-muted-foreground outline-none placeholder:text-muted-foreground/40"
             />
           </div>
@@ -135,7 +157,7 @@ export function SkillsField({
         onClick={addItem}
         className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mt-1"
       >
-        <Plus className="h-3.5 w-3.5" /> Ajouter une compétence
+        <Plus className="h-3.5 w-3.5" /> {tCatalogue("addSkillBtn")}
       </button>
     </div>
   );

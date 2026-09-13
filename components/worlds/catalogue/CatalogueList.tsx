@@ -3,8 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import {
-  Loader2, FolderPlus, } from "lucide-react";
+import { Loader2, FolderPlus, Search, Download, Upload, X, Trash2, FolderInput, CheckSquare } from "lucide-react";
 import {
   DndContext,
   DragOverlay,
@@ -28,23 +27,45 @@ import {
 
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
-import type { WorldCatalogCategory } from "@/types/worlds";
+import { loadCollapsedCategories, saveCollapsedCategories } from "@/lib/catalogueCollapse";
 import {
-  addWorldInventoryItem,
-  updateWorldInventoryItem,
-  deleteWorldInventoryItem,
-  addWorldSkill,
-  updateWorldSkill,
-  deleteWorldSkill,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import type { WorldCatalogCategory, WorldCatalogRarity } from "@/types/worlds";
+import {
+  addWorldCatalogItem,
+  updateWorldCatalogItem,
+  trashWorldCatalogItem,
+  restoreWorldCatalogItem,
+  purgeWorldCatalogItem,
+  listTrashedWorldCatalogItems,
+  duplicateWorldCatalogItem,
   addWorldCatalogCategory,
   updateWorldCatalogCategory,
   deleteWorldCatalogCategory,
-  batchUpdateCatalogCategoryOrder,
-  batchUpdateCatalogItemOrder,
+  reorderWorldCatalogCategories,
+  reorderWorldCatalogItems,
+  importWorldCatalogItems,
+  type CatalogItemInput,
 } from "@/app/actions/worldCatalog";
+import {
+  CATALOG_RARITIES,
+  buildCatalogExport,
+  catalogItemMatches,
+  normalizeForSearch,
+  parseCatalogImport,
+} from "@/lib/worldCatalog";
 import { UNCAT, COL_PREFIX, groupByColumn, type CatalogType, type CatalogItem } from "./catalogueTypes";
+import type { WorldCatalogItem } from "@/types/worlds";
 
 import { CategoryRowOverlay, ItemRowOverlay } from "./CataloguePieces";
+import { CatalogItemDetail, CatalogItemDialog, RarityDot } from "./CatalogItemDialog";
+import { CatalogueRowProvider, type CatalogueRowContextValue } from "./CatalogueRowContext";
+import { CatalogTrashDialog } from "./CatalogTrashDialog";
 import { AddCategoryForm, DroppableColumn, SortableCategoryContainer, UncategorizedSection } from "./CatalogueSections";
 import { messageErreurAction } from "@/lib/actionErrors";
 
@@ -67,10 +88,13 @@ export function CatalogueList({
   type,
   worldId,
   canEdit,
+  usage,
 }: {
   type: CatalogType;
   worldId: string;
   canEdit: boolean;
+  /** Personas portant chaque objet — chargé par le parent, `null` si inconnu. */
+  usage: Record<string, number> | null;
 }) {
   const t = useTranslations("catalogue");
   const tCommon = useTranslations("common");
@@ -78,12 +102,48 @@ export function CatalogueList({
   const [categories, setCategories] = useState<WorldCatalogCategory[]>([]);
   const [items, setItems] = useState<CatalogItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  // false = not adding; null = adding in uncategorized; string = adding in that category
-  const [addingInCat, setAddingInCat] = useState<string | null | false>(false);
+  const [search, setSearch] = useState("");
+  const [editingItem, setEditingItem] = useState<CatalogItem | null>(null);
+  const [detailItem, setDetailItem] = useState<CatalogItem | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [trashOpen, setTrashOpen] = useState(false);
+  const [trashed, setTrashed] = useState<WorldCatalogItem[]>([]);
+  const [trashLoading, setTrashLoading] = useState(false);
+  // Le brouillon en cours de création — un objet vide qui porte déjà son
+  // identifiant et sa catégorie, pour que le dialogue puisse téléverser son
+  // image dans le bon dossier avant que la ligne n'existe.
+  const [draft, setDraft] = useState<CatalogItem | null>(null);
   const [renamingCatId, setRenamingCatId] = useState<string | null>(null);
   const [addingCategoryInCol, setAddingCategoryInCol] = useState<number | false>(false);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
+
+  // Les objets cochés. La sélection ne survit pas à la sortie du mode
+  // édition : c'est là que ses commandes vivent.
+  const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(() => new Set());
+  useEffect(() => { if (!canEdit) setSelectedIds(new Set()); }, [canEdit]);
+
+  // Les catégories repliées — lues après le montage, `localStorage` n'existe
+  // pas au rendu serveur.
+  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(() => new Set());
+  useEffect(() => { setCollapsed(loadCollapsedCategories(worldId, type)); }, [worldId, type]);
+
+  function setCollapsedAndSave(next: Set<string>) {
+    setCollapsed(next);
+    saveCollapsedCategories(worldId, type, next);
+  }
+
+  function toggleCollapsed(id: string) {
+    const next = new Set(collapsed);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    setCollapsedAndSave(next);
+  }
+
+  function expandCategory(id: string | null) {
+    if (id === null || !collapsed.has(id)) return;
+    const next = new Set(collapsed);
+    next.delete(id);
+    setCollapsedAndSave(next);
+  }
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -93,26 +153,30 @@ export function CatalogueList({
   useEffect(() => {
     async function load() {
       setLoading(true);
-      const itemTable = type === "inventory" ? "world_inventory_items" : "world_skills";
       const [catRes, itemRes] = await Promise.all([
         (supabase as ReturnType<typeof createClient>)
           .from("world_catalog_categories")
           .select("id, world_id, type, name, sort_index, column_index")
           .eq("world_id", worldId)
           .eq("type", type)
+          // La corbeille a sa propre vue : la liste ne montre que le vivant.
+          .is("deleted_at", null)
           .order("sort_index", { ascending: true })
           .order("created_at", { ascending: true }),
         (supabase as ReturnType<typeof createClient>)
-          .from(itemTable)
-          .select("id, world_id, name, description, icon, sort_index, category_id")
+          .from("world_catalog_items")
+          .select("id, world_id, type, name, description, icon, lucide_icon, image_url, rarity, stackable, max_quantity, properties, sort_index, category_id")
           .eq("world_id", worldId)
+          .eq("type", type)
+          // La corbeille a sa propre vue : la liste ne montre que le vivant.
+          .is("deleted_at", null)
           .order("sort_index", { ascending: true })
           .order("created_at", { ascending: true }),
       ]);
       setCategories((catRes as { data: WorldCatalogCategory[] | null }).data ?? []);
       setItems(((itemRes as { data: CatalogItem[] | null }).data ?? []).map(i => ({
         ...i,
-        category_id: (i as unknown as Record<string, unknown>).category_id as string | null ?? null,
+        category_id: i.category_id ?? null,
       })));
       setLoading(false);
     }
@@ -120,46 +184,223 @@ export function CatalogueList({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [worldId, type]);
 
+
   // ── Item CRUD ──
 
-  async function handleAddItem(
-    categoryId: string | null,
-    data: { name: string; description: string; icon: string | undefined; category_id: string | null },
-  ) {
-    const payload = { name: data.name, description: data.description || undefined, icon: data.icon, category_id: categoryId };
-    if (type === "inventory") {
-      const res = await addWorldInventoryItem(worldId, payload);
-      if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
-      setItems(prev => [...prev, { ...res.item, category_id: categoryId } as CatalogItem]);
-    } else {
-      const res = await addWorldSkill(worldId, payload);
-      if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
-      setItems(prev => [...prev, { ...res.skill, category_id: categoryId } as CatalogItem]);
-    }
-    setAddingInCat(false);
+  function newDraft(categoryId: string | null): CatalogItem {
+    return {
+      id: crypto.randomUUID(),
+      world_id: worldId,
+      type,
+      category_id: categoryId,
+      name: "",
+      description: null,
+      icon: null,
+      lucide_icon: null,
+      image_url: null,
+      rarity: null,
+      stackable: true,
+      max_quantity: null,
+      properties: [],
+      sort_index: items.filter(i => shownCategoryOf(i) === categoryId).length,
+    };
   }
 
-  async function handleSaveItem(id: string, data: { name: string; description: string | null; icon: string | null }) {
-    if (type === "inventory") {
-      const res = await updateWorldInventoryItem(id, data);
-      if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
-    } else {
-      const res = await updateWorldSkill(id, data);
-      if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
-    }
-    setItems(prev => prev.map(i => i.id === id ? { ...i, ...data } : i));
-    setEditingId(null);
+  /** Enregistre le brouillon ; rend vrai si la ligne existe désormais. */
+  async function handleCreateItem(id: string, data: CatalogItemInput): Promise<boolean> {
+    if (!draft || draft.id !== id) return false;
+    const categoryId = draft.category_id;
+    const res = await addWorldCatalogItem(worldId, type, { ...data, category_id: categoryId }, { id });
+    if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return false; }
+    setItems(prev => [...prev, { ...res.item, category_id: categoryId } as CatalogItem]);
+    return true;
+  }
+
+  async function handleCreateAndClose(id: string, data: CatalogItemInput) {
+    if (await handleCreateItem(id, data)) setDraft(null);
+  }
+
+  async function handleCreateAndContinue(id: string, data: CatalogItemInput) {
+    if (await handleCreateItem(id, data)) setDraft(newDraft(draft?.category_id ?? null));
+  }
+
+  async function handleSaveItem(id: string, data: CatalogItemInput) {
+    const res = await updateWorldCatalogItem(id, data);
+    if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
+    setItems(prev => prev.map(i => (i.id === id ? { ...i, ...data } : i)));
+    setEditingItem(null);
+  }
+
+  async function handleDuplicateItem(id: string) {
+    const res = await duplicateWorldCatalogItem(id);
+    if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
+    // Juste après l'original : `sort_index` le place déjà, le tri d'affichage
+    // s'en charge au prochain rendu.
+    setItems(prev => [...prev, { ...res.item, category_id: res.item.category_id ?? null } as CatalogItem]);
   }
 
   async function handleDeleteItem(id: string) {
-    if (type === "inventory") {
-      const res = await deleteWorldInventoryItem(id);
-      if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
-    } else {
-      const res = await deleteWorldSkill(id);
-      if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
-    }
+    const res = await trashWorldCatalogItem(id);
+    if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
     setItems(prev => prev.filter(i => i.id !== id));
+    setSelectedIds(prev => prev.has(id) ? new Set([...prev].filter(x => x !== id)) : prev);
+    toast.success(t("movedToTrash"));
+  }
+
+  // ── Déplacement sans glisser, et sélection multiple ──
+
+  /**
+   * La catégorie d'un objet telle qu'elle s'affiche.
+   *
+   * Un objet peut porter l'identifiant d'une catégorie qui n'existe plus —
+   * la ligne n'est pas encore relue après un `ON DELETE SET NULL` : il est
+   * alors parmi les non classés, et c'est de là qu'on le déplace.
+   */
+  function shownCategoryOf(item: CatalogItem): string | null {
+    return item.category_id !== null && categories.some(c => c.id === item.category_id)
+      ? item.category_id
+      : null;
+  }
+
+  /**
+   * Range des objets au bout d'une catégorie, dans leur ordre actuel.
+   *
+   * Le même geste que le glisser-déposer entre catégories, sans la souris :
+   * il sert au menu d'une ligne et à la sélection multiple, et reste
+   * possible quand une recherche a suspendu le glisser. Chaque liste touchée
+   * — la cible, chaque source — est renumérotée et enregistrée à part.
+   */
+  function moveItemsToCategory(ids: readonly string[], targetCategoryId: string | null) {
+    const wanted = new Set(ids);
+    const movingItems = items.filter(i => wanted.has(i.id) && shownCategoryOf(i) !== targetCategoryId);
+    if (movingItems.length === 0) return;
+    const movingIds = new Set(movingItems.map(i => i.id));
+    const sourceIds = [...new Set(movingItems.map(shownCategoryOf))];
+    const others = items.filter(i => !movingIds.has(i.id));
+
+    const target = [...others.filter(i => shownCategoryOf(i) === targetCategoryId), ...movingItems]
+      .map((i, idx) => ({ ...i, category_id: targetCategoryId, sort_index: idx }));
+    const sources = sourceIds.map(src =>
+      others.filter(i => shownCategoryOf(i) === src).map((i, idx) => ({ ...i, category_id: src, sort_index: idx })),
+    );
+    const untouched = others.filter(i => {
+      const cat = shownCategoryOf(i);
+      return cat !== targetCategoryId && !sourceIds.includes(cat);
+    });
+
+    setItems([...untouched, ...target, ...sources.flat()]);
+    for (const list of [target, ...sources]) {
+      if (list.length === 0) continue;
+      reportSaveFailure(reorderWorldCatalogItems(
+        list.map(i => ({ id: i.id, sort_index: i.sort_index, category_id: i.category_id })),
+      ), tCommon("saveError"));
+    }
+    // L'objet arrive dans une catégorie repliée : on l'ouvre, sinon il
+    // semble avoir disparu.
+    expandCategory(targetCategoryId);
+  }
+
+  function toggleSelected(id: string) {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  async function handleTrashSelected() {
+    const ids = [...selectedIds];
+    const results = await Promise.all(ids.map(id => trashWorldCatalogItem(id).then(r => ({ id, ...r }))));
+    const done = new Set(results.filter(r => r.ok).map(r => r.id));
+    if (done.size > 0) setItems(prev => prev.filter(i => !done.has(i.id)));
+    setSelectedIds(new Set(ids.filter(id => !done.has(id))));
+    const failed = results.find(r => !r.ok);
+    if (failed) toast.error(messageErreurAction(failed.error, tCommon));
+    else toast.success(t("movedToTrashCount", { count: done.size }));
+  }
+
+  async function handleRaritySelected(rarity: WorldCatalogRarity | null) {
+    const ids = [...selectedIds];
+    const results = await Promise.all(ids.map(id => updateWorldCatalogItem(id, { rarity }).then(r => ({ id, ...r }))));
+    const done = new Set(results.filter(r => r.ok).map(r => r.id));
+    if (done.size > 0) setItems(prev => prev.map(i => (done.has(i.id) ? { ...i, rarity } : i)));
+    const failed = results.find(r => !r.ok);
+    if (failed) toast.error(messageErreurAction(failed.error, tCommon));
+  }
+
+  // ── Corbeille ──
+  // Les objets supprimés ne sont chargés qu'à l'ouverture : on n'en a besoin
+  // que là, et la liste vivante n'a pas à attendre après eux.
+
+  async function openTrash() {
+    setTrashOpen(true);
+    setTrashLoading(true);
+    const res = await listTrashedWorldCatalogItems(worldId, type);
+    if (!res.ok) toast.error(messageErreurAction(res.error, tCommon));
+    else setTrashed(res.items);
+    setTrashLoading(false);
+  }
+
+  async function handleRestore(item: WorldCatalogItem) {
+    const res = await restoreWorldCatalogItem(item.id);
+    if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
+    setTrashed(prev => prev.filter(i => i.id !== item.id));
+    // La catégorie de l'objet a pu être supprimée entre-temps : `ON DELETE SET
+    // NULL` l'a alors mis à `null`, et il revient parmi les non classés.
+    setItems(prev => [...prev, { ...res.item, category_id: res.item.category_id ?? null } as CatalogItem]);
+  }
+
+  async function handleDeleteForever(item: WorldCatalogItem) {
+    const res = await purgeWorldCatalogItem(item.id);
+    if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
+    setTrashed(prev => prev.filter(i => i.id !== item.id));
+  }
+
+  // ── Export et import ──
+
+  /**
+   * Le catalogue dans un fichier, et retour.
+   *
+   * L'export sert autant à repartir d'un monde existant qu'à garder une copie
+   * hors de l'application. L'import AJOUTE : il ne remplace rien, et recrée au
+   * besoin les catégories que le fichier nomme.
+   */
+  function handleExport() {
+    const names = new Map(categories.map(c => [c.id, c.name]));
+    const payload = buildCatalogExport(type, items, names);
+    const url = URL.createObjectURL(
+      new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }),
+    );
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${type === "inventory" ? "objets" : "competences"}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function handleImport(file: File) {
+    setImporting(true);
+    try {
+      const parsed = parseCatalogImport(await file.text(), type);
+      if (!parsed.ok) { toast.error(t(`importError_${parsed.reason}`)); return; }
+
+      const res = await importWorldCatalogItems(worldId, type, parsed.items);
+      if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
+
+      // Les catégories ont pu naître de l'import : on les relit plutôt que de
+      // les deviner, l'action ne rend que les objets.
+      const { data } = await (supabase as ReturnType<typeof createClient>)
+        .from("world_catalog_categories")
+        .select("id, world_id, type, name, sort_index, column_index")
+        .eq("world_id", worldId)
+        .eq("type", type)
+        .order("sort_index", { ascending: true });
+      setCategories((data as WorldCatalogCategory[] | null) ?? []);
+      setItems(prev => [...prev, ...res.items.map(i => ({ ...i, category_id: i.category_id ?? null }) as CatalogItem)]);
+      toast.success(t("importDone", { count: res.items.length }));
+    } finally {
+      setImporting(false);
+    }
   }
 
   // ── Category CRUD ──
@@ -197,14 +438,14 @@ export function CatalogueList({
     );
     const reindexed = sorted.map((item, idx) => ({ ...item, sort_index: idx }));
     setItems(prev => [...prev.filter(i => i.category_id !== categoryId), ...reindexed]);
-    reportSaveFailure(batchUpdateCatalogItemOrder(
+    reportSaveFailure(reorderWorldCatalogItems(
       reindexed.map(item => ({ id: item.id, sort_index: item.sort_index, category_id: categoryId })),
-      type,
     ), tCommon("saveError"));
   }
 
   // ── DnD ──
 
+  const importInputRef = useRef<HTMLInputElement>(null);
   const dragStartCategoryRef = useRef<string | null>(null);
   const [splitAfterCol, setSplitAfterCol] = useState<number | null>(null);
   const colRefs = useRef<Map<number, HTMLDivElement | null>>(new Map());
@@ -290,7 +531,7 @@ export function CatalogueList({
         const colMap = new Map(distinctCols.map((col, i) => [col, i]));
         const next = raw.map(c => ({ ...c, column_index: colMap.get(c.column_index)! }));
         setCategories(next);
-        reportSaveFailure(batchUpdateCatalogCategoryOrder(next.map(c => ({ id: c.id, sort_index: c.sort_index, column_index: c.column_index }))), tCommon("saveError"));
+        reportSaveFailure(reorderWorldCatalogCategories(next.map(c => ({ id: c.id, sort_index: c.sort_index, column_index: c.column_index }))), tCommon("saveError"));
         return;
       }
 
@@ -310,7 +551,7 @@ export function CatalogueList({
         const colMap = new Map(distinctCols.map((col, i) => [col, i]));
         const next = raw.map(c => ({ ...c, column_index: colMap.get(c.column_index)! }));
         setCategories(next);
-        reportSaveFailure(batchUpdateCatalogCategoryOrder(next.map(c => ({ id: c.id, sort_index: c.sort_index, column_index: c.column_index }))), tCommon("saveError"));
+        reportSaveFailure(reorderWorldCatalogCategories(next.map(c => ({ id: c.id, sort_index: c.sort_index, column_index: c.column_index }))), tCommon("saveError"));
         return;
       }
 
@@ -330,7 +571,7 @@ export function CatalogueList({
         const reordered = arrayMove(colCats, fromIdx, toIdx).map((c, i) => ({ ...c, sort_index: i }));
         const next = [...categories.filter(c => c.column_index !== targetColIdx), ...reordered];
         setCategories(next);
-        reportSaveFailure(batchUpdateCatalogCategoryOrder(next.map(c => ({ id: c.id, sort_index: c.sort_index, column_index: c.column_index }))), tCommon("saveError"));
+        reportSaveFailure(reorderWorldCatalogCategories(next.map(c => ({ id: c.id, sort_index: c.sort_index, column_index: c.column_index }))), tCommon("saveError"));
       } else {
         // Cross-column move: insert before overCat in target column
         const updatedActive = { ...activeCat, column_index: targetColIdx };
@@ -354,7 +595,7 @@ export function CatalogueList({
         const colMap = new Map(distinctCols.map((col, i) => [col, i]));
         const next = raw.map(c => ({ ...c, column_index: colMap.get(c.column_index)! }));
         setCategories(next);
-        reportSaveFailure(batchUpdateCatalogCategoryOrder(next.map(c => ({ id: c.id, sort_index: c.sort_index, column_index: c.column_index }))), tCommon("saveError"));
+        reportSaveFailure(reorderWorldCatalogCategories(next.map(c => ({ id: c.id, sort_index: c.sort_index, column_index: c.column_index }))), tCommon("saveError"));
       }
       return;
     }
@@ -381,9 +622,8 @@ export function CatalogueList({
 
         const reordered = arrayMove(catItems, fromIdx, toIdx);
         setItems([...items.filter(i => i.category_id !== targetCategoryId), ...reordered]);
-        reportSaveFailure(batchUpdateCatalogItemOrder(
+        reportSaveFailure(reorderWorldCatalogItems(
           reordered.map((item, idx) => ({ id: item.id, sort_index: idx, category_id: targetCategoryId })),
-          type,
         ), tCommon("saveError"));
       } else {
         // Cross-category: onDragOver may have already moved the item in state.
@@ -399,14 +639,12 @@ export function CatalogueList({
         const rest = items.filter(i => i.category_id !== targetCategoryId && i.id !== active.id);
         setItems([...rest, ...newTargetItems]);
 
-        reportSaveFailure(batchUpdateCatalogItemOrder(
+        reportSaveFailure(reorderWorldCatalogItems(
           newTargetItems.map((item, idx) => ({ id: item.id, sort_index: idx, category_id: targetCategoryId })),
-          type,
         ), tCommon("saveError"));
         const sourceItems = rest.filter(i => i.category_id === origCategoryId);
-        reportSaveFailure(batchUpdateCatalogItemOrder(
+        reportSaveFailure(reorderWorldCatalogItems(
           sourceItems.map((item, idx) => ({ id: item.id, sort_index: idx, category_id: origCategoryId })),
-          type,
         ), tCommon("saveError"));
       }
     }
@@ -414,8 +652,28 @@ export function CatalogueList({
 
   // ── Derived ──
 
+  // La recherche filtre l'affichage, jamais l'état : `items` reste la liste
+  // complète, sur laquelle portent les écritures. Déplacer un objet dans une
+  // liste filtrée réécrirait en revanche des rangs qu'on ne voit pas — le
+  // glisser-déposer est donc suspendu tant qu'une recherche est active.
+  const normalizedQuery = normalizeForSearch(search.trim());
+  const searching = normalizedQuery.length > 0;
+  const visibleItems = searching ? items.filter(i => catalogItemMatches(i, normalizedQuery)) : items;
+  const canReorder = canEdit && !searching;
+
   const hasCategories = categories.length > 0;
-  const uncatItems = items.filter(i => i.category_id === null || !categories.some(c => c.id === i.category_id));
+  const uncatItems = visibleItems.filter(i => shownCategoryOf(i) === null);
+  const selectedCount = selectedIds.size;
+  const allVisibleSelected = visibleItems.length > 0 && visibleItems.every(i => selectedIds.has(i.id));
+
+  // Pas de `useMemo` : les rappels lisent `items` et `collapsed` du rendu en
+  // cours, et la liste se rend de toute façon en entier à chaque changement.
+  const rowContext: CatalogueRowContextValue = {
+    categories,
+    selectedIds,
+    onMoveItem: (id, categoryId) => moveItemsToCategory([id], categoryId),
+    onToggleSelected: toggleSelected,
+  };
   const activeItem = activeDragId ? (items.find(i => i.id === activeDragId) ?? null) : null;
   const activeCategory = activeDragId ? (categories.find(c => c.id === activeDragId) ?? null) : null;
   const columnGroups = groupByColumn(categories);
@@ -431,6 +689,166 @@ export function CatalogueList({
 
   return (
     <div className="space-y-1">
+      {/* Barre d'outils : chercher, exporter, importer */}
+      <div className="mb-2 flex items-center gap-2">
+        <div className="relative min-w-0 flex-1">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/50" />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder={tCommon("search")}
+            aria-label={tCommon("search")}
+            className="h-8 w-full rounded-lg border border-border-soft bg-background pl-8 pr-8 text-xs outline-none transition-colors focus:border-primary/40"
+          />
+          {search && (
+            <button
+              type="button"
+              aria-label={tCommon("close")}
+              onClick={() => setSearch("")}
+              className="absolute right-2 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          )}
+        </div>
+
+        {/* Export et import ne s'offrent qu'en mode édition : ce sont deux
+            gestes d'auteur, et la recherche est la seule chose qu'un membre
+            vient faire ici. */}
+        {canEdit && (
+          <>
+            <button
+              type="button"
+              onClick={handleExport}
+              disabled={items.length === 0}
+              title={t("exportCatalog")}
+              aria-label={t("exportCatalog")}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border-soft text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-40"
+            >
+              <Download className="h-3.5 w-3.5" />
+            </button>
+
+            <input
+              ref={importInputRef}
+              type="file"
+              accept="application/json,.json"
+              hidden
+              onChange={e => {
+                const file = e.target.files?.[0];
+                e.target.value = "";
+                if (file) void handleImport(file);
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => void openTrash()}
+              title={t("trash")}
+              aria-label={t("trash")}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border-soft text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => importInputRef.current?.click()}
+              disabled={importing}
+              title={t("importCatalog")}
+              aria-label={t("importCatalog")}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border-soft text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-40"
+            >
+              {importing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+            </button>
+          </>
+        )}
+      </div>
+
+      {/* Barre de sélection : ce qu'on fait de plusieurs objets à la fois. */}
+      {canEdit && selectedCount > 0 && (
+        <div
+          role="toolbar"
+          aria-label={t("selectionToolbar")}
+          className="mb-2 flex flex-wrap items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/5 px-2 py-1.5 text-xs"
+        >
+          <span className="px-1 font-medium tabular-nums">{t("selectedCount", { count: selectedCount })}</span>
+          {!allVisibleSelected && (
+            <button
+              type="button"
+              onClick={() => setSelectedIds(new Set(visibleItems.map(i => i.id)))}
+              className="flex h-7 items-center gap-1 rounded-md px-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            >
+              <CheckSquare className="h-3.5 w-3.5" />
+              {t("selectAllVisible")}
+            </button>
+          )}
+          <span className="flex-1" />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="flex h-7 items-center gap-1 rounded-md px-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+              >
+                <FolderInput className="h-3.5 w-3.5" />
+                {t("moveTo")}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-40">
+              {categories.map(cat => (
+                <DropdownMenuItem key={cat.id} onSelect={() => moveItemsToCategory([...selectedIds], cat.id)}>
+                  {cat.name}
+                </DropdownMenuItem>
+              ))}
+              {categories.length > 0 && <DropdownMenuSeparator />}
+              <DropdownMenuItem onSelect={() => moveItemsToCategory([...selectedIds], null)}>
+                {t("uncategorized")}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="flex h-7 items-center gap-1 rounded-md px-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+              >
+                {t("rarity")}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-40">
+              {CATALOG_RARITIES.map(r => (
+                <DropdownMenuItem key={r} onSelect={() => void handleRaritySelected(r)}>
+                  <RarityDot rarity={r} className="mr-2" />
+                  {t(`rarity${r.charAt(0).toUpperCase()}${r.slice(1)}`)}
+                </DropdownMenuItem>
+              ))}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={() => void handleRaritySelected(null)}>{t("rarityNone")}</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <button
+            type="button"
+            onClick={() => void handleTrashSelected()}
+            className="flex h-7 items-center gap-1 rounded-md px-2 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            {tCommon("delete")}
+          </button>
+          <button
+            type="button"
+            aria-label={t("clearSelection")}
+            title={t("clearSelection")}
+            onClick={() => setSelectedIds(new Set())}
+            className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
+
+      {searching && visibleItems.length === 0 && (
+        <p className="py-10 text-center text-sm text-muted-foreground">{t("noResults")}</p>
+      )}
+
+      <CatalogueRowProvider value={rowContext}>
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
@@ -456,21 +874,26 @@ export function CatalogueList({
                 colRefCallback={el => colRefs.current.set(colIdx, el)}
               >
                 <SortableContext items={colCats.map(c => c.id)} strategy={verticalListSortingStrategy}>
-                  {colCats.map(cat => (
+                  {colCats
+                    .filter(cat => !searching || visibleItems.some(i => i.category_id === cat.id))
+                    .map(cat => (
                     <SortableCategoryContainer
                       key={cat.id}
                       category={cat}
-                      items={items.filter(i => i.category_id === cat.id)}
+                      items={visibleItems.filter(i => i.category_id === cat.id)}
                       type={type}
                       canEdit={canEdit}
-                      editingId={editingId}
-                      addingHere={addingInCat === cat.id}
+                      canReorder={canReorder}
+                      usage={usage}
                       renamingId={renamingCatId}
-                      onSetEditing={setEditingId}
+                      // Une recherche déplie tout : ses résultats doivent se voir.
+                      collapsed={collapsed.has(cat.id) && !searching}
+                      onToggleCollapsed={toggleCollapsed}
+                      onEditItem={setEditingItem}
+                      onDuplicateItem={id => void handleDuplicateItem(id)}
                       onDeleteItem={id => void handleDeleteItem(id)}
-                      onSaveItem={handleSaveItem}
-                      onSetAdding={setAddingInCat}
-                      onAddItem={handleAddItem}
+                      onOpenItem={setDetailItem}
+                      onAddIn={categoryId => setDraft(newDraft(categoryId))}
                       onSetRenaming={setRenamingCatId}
                       onDeleteCategory={id => void handleDeleteCategory(id)}
                       onSaveCategory={handleSaveCategory}
@@ -506,19 +929,19 @@ export function CatalogueList({
         )}
 
         {/* Uncategorized / flat list when no categories */}
-        {(!hasCategories || uncatItems.length > 0 || addingInCat === null || canEdit) && (
+        {(!hasCategories || uncatItems.length > 0 || canEdit) && (
           <UncategorizedSection
             items={uncatItems}
             type={type}
             canEdit={canEdit}
-            editingId={editingId}
-            addingHere={addingInCat === null}
+            canReorder={canReorder}
+            usage={usage}
             showHeader={hasCategories}
-            onSetEditing={setEditingId}
+            onEditItem={setEditingItem}
+            onDuplicateItem={id => void handleDuplicateItem(id)}
             onDeleteItem={id => void handleDeleteItem(id)}
-            onSaveItem={handleSaveItem}
-            onSetAdding={setAddingInCat}
-            onAddItem={handleAddItem}
+            onOpenItem={setDetailItem}
+            onAddIn={categoryId => setDraft(newDraft(categoryId))}
             onSortAlpha={handleSortAlpha}
           />
         )}
@@ -538,7 +961,7 @@ export function CatalogueList({
                 className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
               >
                 <FolderPlus className="h-3.5 w-3.5" />
-                Créer une catégorie
+                {t("createCategory")}
               </button>
             )}
           </div>
@@ -550,6 +973,53 @@ export function CatalogueList({
           {activeCategory && <CategoryRowOverlay name={activeCategory.name} />}
         </DragOverlay>
       </DndContext>
+      </CatalogueRowProvider>
+
+      {/* Création : le même dialogue que la modification, sur un brouillon. */}
+      {draft && (
+        <CatalogItemDialog
+          item={draft}
+          type={type}
+          worldId={worldId}
+          open
+          creating
+          onOpenChange={open => { if (!open) setDraft(null); }}
+          onSave={handleCreateAndClose}
+          onSaveAndContinue={handleCreateAndContinue}
+        />
+      )}
+
+      {/* Modification : tout ce qui ne tient pas sur une ligne. */}
+      {editingItem && (
+        <CatalogItemDialog
+          item={editingItem}
+          type={type}
+          worldId={worldId}
+          open
+          onOpenChange={open => { if (!open) setEditingItem(null); }}
+          onSave={handleSaveItem}
+        />
+      )}
+
+      <CatalogTrashDialog
+        open={trashOpen}
+        onOpenChange={setTrashOpen}
+        items={trashed}
+        loading={trashLoading}
+        usage={usage}
+        onRestore={item => void handleRestore(item)}
+        onDeleteForever={item => void handleDeleteForever(item)}
+      />
+
+      {/* Consultation : ce que porte un objet, pour qui n'édite pas. */}
+      {detailItem && (
+        <CatalogItemDetail
+          item={detailItem}
+          usageCount={usage?.[detailItem.id]}
+          open
+          onOpenChange={open => { if (!open) setDetailItem(null); }}
+        />
+      )}
     </div>
   );
 }

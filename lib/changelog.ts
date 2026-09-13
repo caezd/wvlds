@@ -8,6 +8,31 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-09 ──────────────────────────────────────────────────────────────
   {
     date: "2026-09",
+    tag: "Catalogue",
+    text: "Un objet ou une compétence se crée dans le même dialogue que sa modification : image, icônes, rareté et propriétés dès la création. « Créer et continuer » enchaîne les saisies sans le refermer.",
+  },
+  {
+    date: "2026-09",
+    tag: "Catalogue",
+    text: "Chaque ligne du catalogue a son menu : modifier, dupliquer, déplacer vers une catégorie, supprimer. Plus besoin de glisser un objet pour le classer.",
+  },
+  {
+    date: "2026-09",
+    tag: "Catalogue",
+    text: "Cochez plusieurs objets pour les déplacer, changer leur rareté ou les envoyer à la corbeille d’un coup.",
+  },
+  {
+    date: "2026-09",
+    tag: "Catalogue",
+    text: "Les catégories se replient d’un clic et affichent leur nombre d’entrées ; le repli est retenu d’une visite à l’autre.",
+  },
+  {
+    date: "2026-09",
+    tag: "Accueil",
+    text: "Une fois le titre d’un monde défilé, une barre reste en haut de la page : son nom sur sa bannière floutée, avec le menu, la recherche et le bouton favori toujours à portée.",
+  },
+  {
+    date: "2026-09",
     tag: "Technique",
     text: "Ce que vous saisissez est vérifié une fois de plus, côté serveur : les adresses d’images ne peuvent être qu’en http(s), les couleurs qu’au format hexadécimal, et chaque champ a une longueur maximale. Un envoi qui ne respecte pas ces règles est refusé avec un message clair au lieu d’une erreur technique.",
   },
@@ -40,6 +65,46 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-09",
     tag: "Carte",
     text: "Un lieu s’ouvre désormais dans la colonne, à côté de la carte, au lieu d’une fenêtre posée dessus : la carte reste entière sous les yeux, et la fiche a la place de tout montrer.",
+  },
+  {
+    date: "2026-09",
+    tag: "Catalogue",
+    text: "Une corbeille : un objet supprimé y reste trente jours. Le restaurer le rend d’un coup à toutes les fiches qui le portaient.",
+  },
+  {
+    date: "2026-09",
+    tag: "Catalogue",
+    text: "Une compétence peut porter une icône choisie parmi celles de l’application, ou une image — les icônes de jeu de rôle allaient mal à « Diplomatie » ou « Survie ».",
+  },
+  {
+    date: "2026-09",
+    tag: "Catalogue",
+    text: "Un cadenas sur chaque onglet dit si le catalogue est restreint ou en saisie libre, et l’explique au survol.",
+  },
+  {
+    date: "2026-09",
+    tag: "Catalogue",
+    text: "Un objet du catalogue porte désormais une image, une rareté, un plafond par fiche et des propriétés libres — poids, portée, prérequis.",
+  },
+  {
+    date: "2026-09",
+    tag: "Catalogue",
+    text: "Renommer un objet du catalogue le renomme partout où il est porté. Un objet supprimé est signalé dans les fiches, au lieu d’y rester sous son ancien nom.",
+  },
+  {
+    date: "2026-09",
+    tag: "Catalogue",
+    text: "Le catalogue se cherche par nom ou par description, et le choix d’un objet depuis une fiche montre les catégories du monde.",
+  },
+  {
+    date: "2026-09",
+    tag: "Catalogue",
+    text: "Un objet se duplique d’un clic, et le nombre de personnages qui le portent s’affiche à côté de son nom.",
+  },
+  {
+    date: "2026-09",
+    tag: "Catalogue",
+    text: "Le catalogue d’un monde s’exporte dans un fichier et s’importe dans un autre, ses catégories avec lui.",
   },
   {
     date: "2026-09",

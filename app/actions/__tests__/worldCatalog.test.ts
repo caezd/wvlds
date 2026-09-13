@@ -14,17 +14,20 @@ import {
     setWorldTimeline,
     setWorldPersonaTemplate,
     getWorldPersonaTemplate,
-    addWorldInventoryItem,
-    updateWorldInventoryItem,
-    deleteWorldInventoryItem,
-    addWorldSkill,
-    updateWorldSkill,
-    deleteWorldSkill,
+    addWorldCatalogItem,
+    updateWorldCatalogItem,
+    trashWorldCatalogItem,
+    restoreWorldCatalogItem,
+    purgeWorldCatalogItem,
+    listTrashedWorldCatalogItems,
+    duplicateWorldCatalogItem,
     addWorldCatalogCategory,
     updateWorldCatalogCategory,
     deleteWorldCatalogCategory,
-    batchUpdateCatalogCategoryOrder,
-    batchUpdateCatalogItemOrder,
+    reorderWorldCatalogCategories,
+    reorderWorldCatalogItems,
+    getWorldCatalogUsage,
+    importWorldCatalogItems,
     setWorldHomeGrid,
     addWorldTag,
 } from "@/app/actions/worldCatalog";
@@ -394,77 +397,304 @@ describe("setWorldRestriction", () => {
     });
 });
 
-// ── CRUD world_inventory_items ────────────────────────────────────────────────
+// ── CRUD world_catalog_items ──────────────────────────────────────────────────
 
-describe("CRUD world_inventory_items", () => {
-    it("addWorldInventoryItem retourne l'item créé", async () => {
+describe("CRUD world_catalog_items", () => {
+    it("addWorldCatalogItem écrit le type et les valeurs nettoyées", async () => {
         const item = { id: "i1", name: "Épée" };
-        use(createSupabaseMock({ results: [{ data: item, error: null }] }));
-        expect(await addWorldInventoryItem("w1", { name: "Épée" })).toEqual({ ok: true, item });
-    });
-
-    it("addWorldInventoryItem avec options complètes", async () => {
-        const item = { id: "i2", name: "Potion", description: "Soin", icon: "🧪", category_id: "cat1" };
-        const mock = createSupabaseMock({ results: [{ data: item }] });
+        const mock = createSupabaseMock({ results: [{ data: item, error: null }] });
         use(mock);
-        await addWorldInventoryItem("w1", { name: "Potion", description: "Soin", icon: "🧪", category_id: "cat1" });
-        expect(mock.buildersFor("world_inventory_items")[0].insert).toHaveBeenCalledWith({
+        expect(await addWorldCatalogItem("w1", "inventory", { name: "  Épée  " }))
+            .toEqual({ ok: true, item });
+        expect(mock.buildersFor("world_catalog_items")[0].insert).toHaveBeenCalledWith({
             world_id: "w1",
-            name: "Potion",
-            description: "Soin",
-            icon: "🧪",
-            category_id: "cat1",
+            type: "inventory",
+            category_id: null,
+            name: "Épée",
         });
     });
 
-    it("addWorldInventoryItem remonte l'erreur Supabase", async () => {
+    it("addWorldCatalogItem porte la rareté, l'empilement et les propriétés", async () => {
+        const mock = createSupabaseMock({ results: [{ data: { id: "i2" } }] });
+        use(mock);
+        await addWorldCatalogItem("w1", "inventory", {
+            name: "Potion",
+            rarity: "rare",
+            stackable: false,
+            max_quantity: 3,
+            properties: [{ label: "Poids", value: "1 kg" }],
+        });
+        expect(mock.buildersFor("world_catalog_items")[0].insert).toHaveBeenCalledWith({
+            world_id: "w1",
+            type: "inventory",
+            category_id: null,
+            name: "Potion",
+            rarity: "rare",
+            stackable: false,
+            max_quantity: 3,
+            properties: [{ label: "Poids", value: "1 kg" }],
+        });
+    });
+
+    it("addWorldCatalogItem écrit l'identifiant fourni par le client", async () => {
+        const id = "3f2b1c5e-8d4a-4a6b-9c1d-2e5f7a8b9c0d";
+        const mock = createSupabaseMock({ results: [{ data: { id }, error: null }] });
+        use(mock);
+        const res = await addWorldCatalogItem("w1", "skills", { name: "Forge" }, { id });
+        expect(res.ok).toBe(true);
+        expect(mock.buildersFor("world_catalog_items")[0].insert).toHaveBeenCalledWith(
+            expect.objectContaining({ id, name: "Forge" }),
+        );
+    });
+
+    it("addWorldCatalogItem refuse un identifiant qui n'est pas un UUID, sans appeler Supabase", async () => {
+        const mock = createSupabaseMock();
+        use(mock);
+        expect(await addWorldCatalogItem("w1", "skills", { name: "Forge" }, { id: "../autre" }))
+            .toEqual({ ok: false, error: "unsupportedValue" });
+        expect(mock.from).not.toHaveBeenCalled();
+    });
+
+    it("addWorldCatalogItem refuse un nom vide", async () => {
+        const mock = createSupabaseMock();
+        use(mock);
+        expect(await addWorldCatalogItem("w1", "inventory", { name: "   " }))
+            .toEqual({ ok: false, error: "unsupportedValue" });
+        expect(mock.buildersFor("world_catalog_items")).toHaveLength(0);
+    });
+
+    it("addWorldCatalogItem refuse un type inconnu", async () => {
+        use(createSupabaseMock());
+        expect(await addWorldCatalogItem("w1", "spells" as "inventory", { name: "x" }))
+            .toEqual({ ok: false, error: "unsupportedValue" });
+    });
+
+    it("addWorldCatalogItem refuse une rareté hors liste", async () => {
+        use(createSupabaseMock());
+        expect(await addWorldCatalogItem("w1", "inventory", {
+            name: "x",
+            rarity: "mythique" as "rare",
+        })).toEqual({ ok: false, error: "unsupportedValue" });
+    });
+
+    it("addWorldCatalogItem refuse un plafond nul ou négatif", async () => {
+        use(createSupabaseMock());
+        expect(await addWorldCatalogItem("w1", "inventory", { name: "x", max_quantity: 0 }))
+            .toEqual({ ok: false, error: "unsupportedValue" });
+    });
+
+    // La RLS laisse écrire dans SON monde ; elle ne dit rien du monde auquel
+    // appartient la catégorie visée. Sans ce contrôle, l'objet se rangeait
+    // sous une catégorie d'ailleurs et disparaissait de l'affichage.
+    it("addWorldCatalogItem refuse une catégorie étrangère au monde", async () => {
+        const mock = createSupabaseMock({ results: [{ data: null }] });
+        use(mock);
+        expect(await addWorldCatalogItem("w1", "inventory", { name: "x", category_id: "cat-ailleurs" }))
+            .toEqual({ ok: false, error: "unsupportedValue" });
+        expect(mock.buildersFor("world_catalog_items")).toHaveLength(0);
+    });
+
+    it("addWorldCatalogItem accepte une catégorie du même monde et du même type", async () => {
+        const mock = createSupabaseMock({
+            results: [{ data: { id: "cat1" } }, { data: { id: "i3" } }],
+        });
+        use(mock);
+        const res = await addWorldCatalogItem("w1", "inventory", { name: "x", category_id: "cat1" });
+        expect(res.ok).toBe(true);
+        expect(mock.buildersFor("world_catalog_items")[0].insert).toHaveBeenCalledWith(
+            expect.objectContaining({ category_id: "cat1" }),
+        );
+    });
+
+    it("addWorldCatalogItem remonte l'erreur Supabase", async () => {
         use(createSupabaseMock({ results: [{ error: { message: "fk" } }] }));
-        expect(await addWorldInventoryItem("w1", { name: "x" })).toEqual({ ok: false, error: "saveFailed" });
+        expect(await addWorldCatalogItem("w1", "inventory", { name: "x" }))
+            .toEqual({ ok: false, error: "saveFailed" });
     });
 
-    it("updateWorldInventoryItem — succès", async () => {
+    it("updateWorldCatalogItem — succès", async () => {
         use(createSupabaseMock({ results: [{ error: null }] }));
-        expect(await updateWorldInventoryItem("i1", { name: "Épée +1" })).toEqual({ ok: true });
+        expect(await updateWorldCatalogItem("i1", { name: "Épée +1" })).toEqual({ ok: true });
     });
 
-    it("updateWorldInventoryItem — erreur", async () => {
-        use(createSupabaseMock({ results: [{ error: { message: "not found" } }] }));
-        expect(await updateWorldInventoryItem("i1", { name: "x" })).toEqual({ ok: false, error: "saveFailed" });
+    it("updateWorldCatalogItem assainit les propriétés reçues", async () => {
+        const mock = createSupabaseMock({ results: [{ error: null }] });
+        use(mock);
+        await updateWorldCatalogItem("i1", {
+            properties: [
+                { label: " Poids ", value: " 1 kg " },
+                { label: "", value: "orpheline" },
+            ] as { label: string; value: string }[],
+        });
+        expect(mock.buildersFor("world_catalog_items")[0].update).toHaveBeenCalledWith({
+            properties: [{ label: "Poids", value: "1 kg" }],
+        });
     });
 
-    it("deleteWorldInventoryItem — succès", async () => {
-        use(createSupabaseMock({ results: [{ error: null }] }));
-        expect(await deleteWorldInventoryItem("i1")).toEqual({ ok: true });
+    it("updateWorldCatalogItem sans champ connu n'écrit rien", async () => {
+        const mock = createSupabaseMock();
+        use(mock);
+        expect(await updateWorldCatalogItem("i1", {})).toEqual({ ok: true });
+        expect(mock.buildersFor("world_catalog_items")).toHaveLength(0);
     });
 
-    it("deleteWorldInventoryItem — erreur", async () => {
+    it("updateWorldCatalogItem refuse une catégorie d'un autre type", async () => {
+        const mock = createSupabaseMock({
+            results: [{ data: { world_id: "w1", type: "inventory" } }, { data: null }],
+        });
+        use(mock);
+        expect(await updateWorldCatalogItem("i1", { category_id: "cat-skills" }))
+            .toEqual({ ok: false, error: "unsupportedValue" });
+    });
+
+    it("updateWorldCatalogItem sur un objet introuvable", async () => {
+        use(createSupabaseMock({ results: [{ data: null }] }));
+        expect(await updateWorldCatalogItem("i1", { category_id: "cat1" }))
+            .toEqual({ ok: false, error: "notFound" });
+    });
+
+    it("updateWorldCatalogItem — erreur", async () => {
         use(createSupabaseMock({ results: [{ error: { message: "rls" } }] }));
-        expect(await deleteWorldInventoryItem("i1")).toEqual({ ok: false, error: "saveFailed" });
+        expect(await updateWorldCatalogItem("i1", { name: "x" }))
+            .toEqual({ ok: false, error: "saveFailed" });
+    });
+
+    it("addWorldCatalogItem refuse une icône Lucide inconnue", async () => {
+        const mock = createSupabaseMock();
+        use(mock);
+        expect(await addWorldCatalogItem("w1", "skills", { name: "x", lucide_icon: "epee-longue" }))
+            .toEqual({ ok: false, error: "unsupportedValue" });
+        expect(mock.buildersFor("world_catalog_items")).toHaveLength(0);
+    });
+
+    it("addWorldCatalogItem accepte une icône Lucide de la bibliothèque", async () => {
+        const mock = createSupabaseMock({ results: [{ data: { id: "s1" } }] });
+        use(mock);
+        const res = await addWorldCatalogItem("w1", "skills", { name: "Escrime", lucide_icon: "swords" });
+        expect(res.ok).toBe(true);
+        expect(mock.buildersFor("world_catalog_items")[0].insert).toHaveBeenCalledWith(
+            expect.objectContaining({ lucide_icon: "swords" }),
+        );
+    });
+
+    it("updateWorldCatalogItem accepte de retirer l'icône Lucide", async () => {
+        const mock = createSupabaseMock({ results: [{ error: null }] });
+        use(mock);
+        expect(await updateWorldCatalogItem("i1", { lucide_icon: null })).toEqual({ ok: true });
+        expect(mock.buildersFor("world_catalog_items")[0].update)
+            .toHaveBeenCalledWith({ lucide_icon: null });
+    });
+
+    // Deux lignes qui pointent le même fichier : supprimer l'une emporterait
+    // l'image de l'autre au ménage.
+    it("duplicateWorldCatalogItem ne recopie pas l'image", async () => {
+        const source = {
+            id: "i1", world_id: "w1", type: "inventory", category_id: "cat1",
+            name: "Épée", description: "Tranchante", icon: "sword.svg",
+            image_url: "https://x/img.webp", rarity: "rare", stackable: false,
+            max_quantity: 2, properties: [{ label: "Poids", value: "1 kg" }], sort_index: 4,
+        };
+        const mock = createSupabaseMock({ results: [{ data: source }, { data: { id: "i2" } }] });
+        use(mock);
+        const res = await duplicateWorldCatalogItem("i1");
+        expect(res.ok).toBe(true);
+        const inserted = mock.buildersFor("world_catalog_items")[1].insert.mock.calls[0][0];
+        expect(inserted).not.toHaveProperty("image_url");
+        expect(inserted.name).toBe("Épée 2");
+        expect(inserted.sort_index).toBe(5);
+        expect(inserted.rarity).toBe("rare");
+    });
+
+    it("duplicateWorldCatalogItem sur un objet introuvable", async () => {
+        use(createSupabaseMock({ results: [{ data: null }] }));
+        expect(await duplicateWorldCatalogItem("i1")).toEqual({ ok: false, error: "notFound" });
     });
 });
 
-// ── CRUD world_skills ─────────────────────────────────────────────────────────
+// ── Corbeille ────────────────────────────────────────────────────────────────
+// Supprimer un objet ne l'efface plus : il est marqué (migration 165). Ce qui
+// se vérifie ici, c'est que la suppression écrit bien `deleted_at` au lieu de
+// `delete()`, et que la purge fait le ménage du stockage AVANT la ligne — une
+// ligne effacée d'abord laisserait son image sans plus rien pour la retrouver.
 
-describe("CRUD world_skills", () => {
-    it("addWorldSkill retourne le skill créé", async () => {
-        const skill = { id: "sk1", name: "Force" };
-        use(createSupabaseMock({ results: [{ data: skill }] }));
-        expect(await addWorldSkill("w1", { name: "Force" })).toEqual({ ok: true, skill });
+describe("corbeille du catalogue", () => {
+    it("trashWorldCatalogItem marque au lieu d'effacer", async () => {
+        const mock = createSupabaseMock({ results: [{ error: null }] });
+        use(mock);
+        expect(await trashWorldCatalogItem("i1")).toEqual({ ok: true });
+        const builder = mock.buildersFor("world_catalog_items")[0];
+        expect(builder.delete).not.toHaveBeenCalled();
+        expect(builder.update).toHaveBeenCalledWith({ deleted_at: expect.any(String) });
     });
 
-    it("addWorldSkill remonte l'erreur", async () => {
+    it("trashWorldCatalogItem remonte l'erreur", async () => {
         use(createSupabaseMock({ results: [{ error: { message: "rls" } }] }));
-        expect(await addWorldSkill("w1", { name: "x" })).toEqual({ ok: false, error: "saveFailed" });
+        expect(await trashWorldCatalogItem("i1")).toEqual({ ok: false, error: "saveFailed" });
     });
 
-    it("updateWorldSkill — succès", async () => {
-        use(createSupabaseMock({ results: [{ error: null }] }));
-        expect(await updateWorldSkill("sk1", { description: "Puissance physique" })).toEqual({ ok: true });
+    it("restoreWorldCatalogItem efface la marque et rend l'objet", async () => {
+        const item = { id: "i1", name: "Épée", category_id: null };
+        const mock = createSupabaseMock({ results: [{ data: item }] });
+        use(mock);
+        expect(await restoreWorldCatalogItem("i1")).toEqual({ ok: true, item });
+        expect(mock.buildersFor("world_catalog_items")[0].update)
+            .toHaveBeenCalledWith({ deleted_at: null });
     });
 
-    it("deleteWorldSkill — erreur Supabase", async () => {
-        use(createSupabaseMock({ results: [{ error: { message: "fk" } }] }));
-        expect(await deleteWorldSkill("s1")).toEqual({ ok: false, error: "saveFailed" });
+    it("restoreWorldCatalogItem sur un objet introuvable", async () => {
+        use(createSupabaseMock({ results: [{ data: null }] }));
+        expect(await restoreWorldCatalogItem("i1")).toEqual({ ok: false, error: "notFound" });
+    });
+
+    it("listTrashedWorldCatalogItems ne demande que les lignes marquées", async () => {
+        const mock = createSupabaseMock({ results: [{ data: [{ id: "i1" }] }] });
+        use(mock);
+        const res = await listTrashedWorldCatalogItems("w1", "inventory");
+        expect(res).toEqual({ ok: true, items: [{ id: "i1" }] });
+        const builder = mock.buildersFor("world_catalog_items")[0];
+        expect(builder.not).toHaveBeenCalledWith("deleted_at", "is", null);
+        expect(builder.eq).toHaveBeenCalledWith("type", "inventory");
+    });
+
+    // Le ménage passe par la LISTE du dossier, et non par l'URL de la ligne :
+    // une image téléversée puis abandonnée n'est référencée nulle part et
+    // bloquerait à jamais la purge automatique.
+    it("purgeWorldCatalogItem vide le dossier avant d'effacer la ligne", async () => {
+        const mock = createSupabaseMock({
+            results: [{ data: { id: "i1", world_id: "w1", image_url: null } }, { error: null }],
+            storageListResult: [{ name: "a.webp" }, { name: "orpheline.webp" }],
+        });
+        use(mock);
+        expect(await purgeWorldCatalogItem("i1")).toEqual({ ok: true });
+        expect(mock.storageRemove).toHaveBeenCalledWith([
+            "world-w1/item-i1/a.webp",
+            "world-w1/item-i1/orpheline.webp",
+        ]);
+        expect(mock.buildersFor("world_catalog_items")[1].delete).toHaveBeenCalled();
+    });
+
+    it("purgeWorldCatalogItem rattrape l'image de la ligne si la liste ne la rend pas", async () => {
+        const mock = createSupabaseMock({
+            results: [
+                {
+                    data: {
+                        id: "i1",
+                        world_id: "w1",
+                        image_url: "https://x.supabase.co/storage/v1/object/public/worlds/world-w1/item-i1/z.webp",
+                    },
+                },
+                { error: null },
+            ],
+            storageListResult: [],
+        });
+        use(mock);
+        await purgeWorldCatalogItem("i1");
+        expect(mock.storageRemove).toHaveBeenCalledWith(["world-w1/item-i1/z.webp"]);
+    });
+
+    it("purgeWorldCatalogItem sur un objet introuvable", async () => {
+        use(createSupabaseMock({ results: [{ data: null }] }));
+        expect(await purgeWorldCatalogItem("i1")).toEqual({ ok: false, error: "notFound" });
     });
 });
 
@@ -500,6 +730,14 @@ describe("CRUD world_catalog_categories", () => {
         });
     });
 
+    it("addWorldCatalogCategory refuse un nom vide", async () => {
+        const mock = createSupabaseMock();
+        use(mock);
+        expect(await addWorldCatalogCategory("w1", "inventory", "  "))
+            .toEqual({ ok: false, error: "unsupportedValue" });
+        expect(mock.buildersFor("world_catalog_categories")).toHaveLength(0);
+    });
+
     it("addWorldCatalogCategory remonte l'erreur", async () => {
         use(createSupabaseMock({ results: [{ error: { message: "dup" } }] }));
         expect(await addWorldCatalogCategory("w1", "inventory", "x")).toEqual({ ok: false, error: "saveFailed" });
@@ -510,70 +748,189 @@ describe("CRUD world_catalog_categories", () => {
         expect(await updateWorldCatalogCategory("c1", { name: "Armures" })).toEqual({ ok: true });
     });
 
+    it("updateWorldCatalogCategory refuse un nom vide", async () => {
+        const mock = createSupabaseMock();
+        use(mock);
+        expect(await updateWorldCatalogCategory("c1", { name: " " }))
+            .toEqual({ ok: false, error: "unsupportedValue" });
+        expect(mock.buildersFor("world_catalog_categories")).toHaveLength(0);
+    });
+
     it("deleteWorldCatalogCategory — succès", async () => {
         use(createSupabaseMock({ results: [{ error: null }] }));
         expect(await deleteWorldCatalogCategory("c1")).toEqual({ ok: true });
     });
 });
 
-// ── batchUpdateCatalogCategoryOrder ──────────────────────────────────────────
+// ── Réordonnancement ─────────────────────────────────────────────────────────
+// Le point délicat n'est pas la RPC, c'est son compte : une RLS qui refuse ne
+// lève pas d'erreur, elle ne met à jour aucune ligne. Sans comparaison des
+// nombres, l'action confirmerait un ordre que la base n'a pas enregistré.
 
-describe("batchUpdateCatalogCategoryOrder", () => {
-    it("appelle update pour chaque catégorie avec les bons champs", async () => {
-        const categories = [
-            { id: "c1", sort_index: 0, column_index: 0 },
-            { id: "c2", sort_index: 1, column_index: 1 },
-            { id: "c3", sort_index: 2, column_index: 1 },
-        ];
-        const mock = createSupabaseMock({
-            results: [{ error: null }, { error: null }, { error: null }],
-        });
+describe("reorderWorldCatalogItems", () => {
+    it("passe la liste entière à la RPC", async () => {
+        const mock = createSupabaseMock();
+        mock.rpc.mockResolvedValue({ data: 2, error: null });
         use(mock);
-        const res = await batchUpdateCatalogCategoryOrder(categories);
-        expect(res).toEqual({ ok: true });
-        const builders = mock.buildersFor("world_catalog_categories");
-        expect(builders).toHaveLength(3);
-        expect(builders[0].update).toHaveBeenCalledWith({ sort_index: 0, column_index: 0 });
-        expect(builders[1].update).toHaveBeenCalledWith({ sort_index: 1, column_index: 1 });
-        expect(builders[2].update).toHaveBeenCalledWith({ sort_index: 2, column_index: 1 });
+        const items = [
+            { id: "i1", sort_index: 0, category_id: null },
+            { id: "i2", sort_index: 1, category_id: "c1" },
+        ];
+        expect(await reorderWorldCatalogItems(items)).toEqual({ ok: true });
+        expect(mock.rpc).toHaveBeenCalledWith("reorder_world_catalog_items", { p_items: items });
     });
 
-    it("retourne ok:true même avec 0 catégories", async () => {
-        use(createSupabaseMock());
-        expect(await batchUpdateCatalogCategoryOrder([])).toEqual({ ok: true });
+    it("signale le refus silencieux d'une RLS", async () => {
+        const mock = createSupabaseMock();
+        mock.rpc.mockResolvedValue({ data: 1, error: null });
+        use(mock);
+        expect(await reorderWorldCatalogItems([
+            { id: "i1", sort_index: 0, category_id: null },
+            { id: "i2", sort_index: 1, category_id: null },
+        ])).toEqual({ ok: false, error: "forbidden" });
+    });
+
+    it("remonte l'erreur de la RPC", async () => {
+        const mock = createSupabaseMock();
+        mock.rpc.mockResolvedValue({ data: null, error: { message: "boom" } });
+        use(mock);
+        expect(await reorderWorldCatalogItems([{ id: "i1", sort_index: 0, category_id: null }]))
+            .toEqual({ ok: false, error: "saveFailed" });
+    });
+
+    it("n'appelle rien pour une liste vide", async () => {
+        const mock = createSupabaseMock();
+        use(mock);
+        expect(await reorderWorldCatalogItems([])).toEqual({ ok: true });
+        expect(mock.rpc).not.toHaveBeenCalled();
     });
 });
 
-// ── batchUpdateCatalogItemOrder ───────────────────────────────────────────────
-
-describe("batchUpdateCatalogItemOrder", () => {
-    it("utilise world_inventory_items pour le type inventory", async () => {
-        const items = [
-            { id: "i1", sort_index: 0, category_id: "cat1" },
-            { id: "i2", sort_index: 1, category_id: null },
-        ];
-        const mock = createSupabaseMock({ results: [{ error: null }, { error: null }] });
+describe("reorderWorldCatalogCategories", () => {
+    it("passe la liste entière à la RPC", async () => {
+        const mock = createSupabaseMock();
+        mock.rpc.mockResolvedValue({ data: 1, error: null });
         use(mock);
-        await batchUpdateCatalogItemOrder(items, "inventory");
-        expect(mock.buildersFor("world_inventory_items")).toHaveLength(2);
-        expect(mock.buildersFor("world_skills")).toHaveLength(0);
+        const categories = [{ id: "c1", sort_index: 0, column_index: 1 }];
+        expect(await reorderWorldCatalogCategories(categories)).toEqual({ ok: true });
+        expect(mock.rpc).toHaveBeenCalledWith("reorder_world_catalog_categories", {
+            p_categories: categories,
+        });
     });
 
-    it("utilise world_skills pour le type skills", async () => {
-        const items = [{ id: "sk1", sort_index: 0, category_id: null }];
-        const mock = createSupabaseMock({ results: [{ error: null }] });
+    it("signale le refus silencieux d'une RLS", async () => {
+        const mock = createSupabaseMock();
+        mock.rpc.mockResolvedValue({ data: 0, error: null });
         use(mock);
-        await batchUpdateCatalogItemOrder(items, "skills");
-        expect(mock.buildersFor("world_skills")).toHaveLength(1);
-        expect(mock.buildersFor("world_inventory_items")).toHaveLength(0);
+        expect(await reorderWorldCatalogCategories([{ id: "c1", sort_index: 0, column_index: 0 }]))
+            .toEqual({ ok: false, error: "forbidden" });
     });
 
-    it("passe sort_index et category_id à update", async () => {
-        const mock = createSupabaseMock({ results: [{ error: null }] });
+    it("retourne ok:true pour 0 catégorie", async () => {
+        const mock = createSupabaseMock();
         use(mock);
-        await batchUpdateCatalogItemOrder([{ id: "i1", sort_index: 5, category_id: "cat2" }], "inventory");
-        expect(mock.buildersFor("world_inventory_items")[0].update)
-            .toHaveBeenCalledWith({ sort_index: 5, category_id: "cat2" });
+        expect(await reorderWorldCatalogCategories([])).toEqual({ ok: true });
+        expect(mock.rpc).not.toHaveBeenCalled();
+    });
+});
+
+// ── Décompte d'usage ─────────────────────────────────────────────────────────
+
+describe("getWorldCatalogUsage", () => {
+    it("indexe le décompte par objet", async () => {
+        const mock = createSupabaseMock();
+        mock.rpc.mockResolvedValue({
+            data: [
+                { catalog_id: "i1", persona_count: 3 },
+                { catalog_id: "i2", persona_count: 1 },
+            ],
+            error: null,
+        });
+        use(mock);
+        expect(await getWorldCatalogUsage("w1")).toEqual({ ok: true, usage: { i1: 3, i2: 1 } });
+        expect(mock.rpc).toHaveBeenCalledWith("world_catalog_usage", { p_world_id: "w1" });
+    });
+
+    it("rend un décompte vide quand la RPC ne renvoie rien", async () => {
+        const mock = createSupabaseMock();
+        mock.rpc.mockResolvedValue({ data: null, error: null });
+        use(mock);
+        expect(await getWorldCatalogUsage("w1")).toEqual({ ok: true, usage: {} });
+    });
+
+    it("remonte l'erreur", async () => {
+        const mock = createSupabaseMock();
+        mock.rpc.mockResolvedValue({ data: null, error: { message: "nope" } });
+        use(mock);
+        expect(await getWorldCatalogUsage("w1")).toEqual({ ok: false, error: "saveFailed" });
+    });
+});
+
+// ── Import ───────────────────────────────────────────────────────────────────
+
+describe("importWorldCatalogItems", () => {
+    it("réutilise une catégorie existante, sans tenir compte de la casse", async () => {
+        const mock = createSupabaseMock({
+            results: [
+                { data: [{ id: "c1", name: "Armes" }] },
+                { data: [{ id: "x1" }] },
+            ],
+        });
+        use(mock);
+        const res = await importWorldCatalogItems("w1", "inventory", [
+            { name: "Épée", category: "armes" },
+        ]);
+        expect(res.ok).toBe(true);
+        // Une seule écriture sur les catégories : aucune n'a été créée.
+        expect(mock.buildersFor("world_catalog_categories")).toHaveLength(1);
+        expect(mock.buildersFor("world_catalog_items")[0].insert).toHaveBeenCalledWith([
+            expect.objectContaining({ category_id: "c1", name: "Épée", sort_index: 0 }),
+        ]);
+    });
+
+    it("crée les catégories que le fichier nomme et qui manquent", async () => {
+        const mock = createSupabaseMock({
+            results: [
+                { data: [] },
+                { data: [{ id: "c9", name: "Armures" }] },
+                { data: [{ id: "x1" }] },
+            ],
+        });
+        use(mock);
+        await importWorldCatalogItems("w1", "inventory", [{ name: "Cotte", category: "Armures" }]);
+        expect(mock.buildersFor("world_catalog_categories")[1].insert).toHaveBeenCalledWith([
+            { world_id: "w1", type: "inventory", name: "Armures", column_index: 0, sort_index: 0 },
+        ]);
+        expect(mock.buildersFor("world_catalog_items")[0].insert).toHaveBeenCalledWith([
+            expect.objectContaining({ category_id: "c9" }),
+        ]);
+    });
+
+    it("écarte les entrées sans nom plutôt que de tout refuser", async () => {
+        const mock = createSupabaseMock({
+            results: [{ data: [] }, { data: [{ id: "x1" }] }],
+        });
+        use(mock);
+        const res = await importWorldCatalogItems("w1", "skills", [
+            { name: "  " },
+            { name: "Force" },
+        ]);
+        expect(res.ok).toBe(true);
+        const rows = mock.buildersFor("world_catalog_items")[0].insert.mock.calls[0][0];
+        expect(rows).toHaveLength(1);
+        expect(rows[0].name).toBe("Force");
+    });
+
+    it("refuse un import vide", async () => {
+        use(createSupabaseMock());
+        expect(await importWorldCatalogItems("w1", "inventory", []))
+            .toEqual({ ok: false, error: "unsupportedValue" });
+    });
+
+    it("refuse un type inconnu", async () => {
+        use(createSupabaseMock());
+        expect(await importWorldCatalogItems("w1", "spells" as "inventory", [{ name: "x" }]))
+            .toEqual({ ok: false, error: "unsupportedValue" });
     });
 });
 
@@ -1018,16 +1375,22 @@ describe("setWorldHomeGrid", () => {
 // ──────────────────────────────────────────────────────────────────────────
 describe("catalogue — entrées forgées", () => {
     it.each([
-        ["une clé de trop sur une pièce", () => addWorldInventoryItem("w1", { name: "x", sort_index: 0 } as never)],
-        ["un world_id glissé dans une compétence", () => addWorldSkill("w1", { name: "x", world_id: "autre" } as never)],
-        ["une catégorie à la mise à jour d'une pièce", () => updateWorldInventoryItem("i1", { category_id: "c9" } as never)],
-        ["un nom vide", () => addWorldSkill("w1", { name: "   " })],
-        ["un nom trop long", () => updateWorldSkill("s1", { name: "x".repeat(201) })],
-        ["une description trop longue", () => addWorldInventoryItem("w1", { name: "x", description: "x".repeat(5001) })],
+        ["une clé de trop sur un objet", () => addWorldCatalogItem("w1", "inventory", { name: "x", sort_index: 0 } as never)],
+        ["un world_id glissé dans une compétence", () => addWorldCatalogItem("w1", "skills", { name: "x", world_id: "autre" } as never)],
+        ["un deleted_at à la mise à jour", () => updateWorldCatalogItem("i1", { deleted_at: null } as never)],
+        ["un type d'objet inconnu", () => addWorldCatalogItem("w1", "spells" as never, { name: "x" })],
+        ["un nom vide", () => addWorldCatalogItem("w1", "skills", { name: "   " })],
+        ["un nom trop long", () => updateWorldCatalogItem("s1", { name: "x".repeat(201) })],
+        ["une description trop longue", () => addWorldCatalogItem("w1", "inventory", { name: "x", description: "x".repeat(5001) })],
+        ["une image en javascript:", () => updateWorldCatalogItem("i1", { image_url: "javascript:alert(1)" })],
+        ["une rareté inconnue", () => updateWorldCatalogItem("i1", { rarity: "mythic" as never })],
+        ["un plafond nul ou fractionnaire", () => updateWorldCatalogItem("i1", { max_quantity: 0.5 })],
         ["un type de catégorie inconnu", () => addWorldCatalogCategory("w1", "spells" as never, "x")],
         ["un nom de catégorie trop long", () => updateWorldCatalogCategory("c1", { name: "x".repeat(201) })],
-        ["un ordre de catégories mal formé", () => batchUpdateCatalogCategoryOrder([{ id: "c1", sort_index: -1, column_index: 0 }])],
-        ["un ordre de pièces vers une table inconnue", () => batchUpdateCatalogItemOrder([], "spells" as never)],
+        ["une colonne glissée dans la catégorie", () => updateWorldCatalogCategory("c1", { column_index: 1 } as never)],
+        ["un ordre de catégories mal formé", () => reorderWorldCatalogCategories([{ id: "c1", sort_index: -1, column_index: 0 }])],
+        ["un ordre d'objets avec une clé de trop", () => reorderWorldCatalogItems([{ id: "i1", sort_index: 0, category_id: null, world_id: "w2" } as never])],
+        ["un import vers un type inconnu", () => importWorldCatalogItems("w1", "spells" as never, [{ name: "x" }])],
         ["un tag qui n'est pas une chaîne", () => addWorldTag("w1", null as never)],
     ])("refuse %s sans appeler Supabase", async (_name, fn) => {
         const mock = createSupabaseMock();
@@ -1035,14 +1398,25 @@ describe("catalogue — entrées forgées", () => {
         const res = await fn();
         expect(res.ok).toBe(false);
         expect(mock.from).not.toHaveBeenCalled();
+        expect(mock.rpc).not.toHaveBeenCalled();
     });
 
-    it("garde l'emoji d'une pièce : l'icône du catalogue n'est pas un nom Lucide", async () => {
+    it("garde l'emoji d'un objet : l'icône du catalogue n'est pas un nom Lucide", async () => {
         const mock = createSupabaseMock({ results: [{ data: { id: "i1" } }] });
         use(mock);
-        await addWorldInventoryItem("w1", { name: "Potion", icon: "🧪" });
-        expect(mock.buildersFor("world_inventory_items")[0].insert).toHaveBeenCalledWith(
+        await addWorldCatalogItem("w1", "inventory", { name: "Potion", icon: "🧪" });
+        expect(mock.buildersFor("world_catalog_items")[0].insert).toHaveBeenCalledWith(
             expect.objectContaining({ icon: "🧪" }),
         );
+    });
+
+    it("ne retient des propriétés libres que leur forme attendue", async () => {
+        const mock = createSupabaseMock({ results: [{ error: null }] });
+        use(mock);
+        await updateWorldCatalogItem("i1", {
+            properties: [{ label: "Poids", value: "1 kg" }, { label: "", value: "vide" }, "chaîne" as never],
+        });
+        expect(mock.buildersFor("world_catalog_items")[0].update)
+            .toHaveBeenCalledWith({ properties: [{ label: "Poids", value: "1 kg" }] });
     });
 });
