@@ -19,7 +19,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Mobile",
-    text: "Sur petit écran, la liste des relations affiche le nombre de relations de chaque persona et ses demandes en attente ; le détail d’un persona est le même qu’en grand écran, ajout compris.",
+    text: "Sur petit écran, les personas se présentent en cartes, une rangée par joueur à faire défiler de droite à gauche, avec le nombre de relations et les demandes en attente ; le détail d’un persona est le même qu’en grand écran, ajout compris.",
   },
   {
     date: "2026-09",

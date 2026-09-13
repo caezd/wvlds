@@ -86,6 +86,10 @@ describe("RelationsCanvas — vue mobile (liste + détail)", () => {
     expect(mobile().getByText("Astérion")).toBeInTheDocument();
     expect(mobile().getByText("@alice")).toBeInTheDocument();
     expect(mobile().getByText("@bob")).toBeInTheDocument();
+    // Les cartes, groupées par joueur, dans une rangée horizontale chacune.
+    expect(mobile().getByRole("region", { name: "@alice" })).toBeInTheDocument();
+    expect(mobile().getByRole("region", { name: "@bob" })).toBeInTheDocument();
+    expect(mobile().getByRole("button", { name: "Adhi" })).toHaveClass("snap-start");
     // Le mock next-intl ne lit pas les pluriels ICU : seul le nombre est sûr.
     expect(mobile().getAllByTitle(/^1 /)).toHaveLength(2);
   });
@@ -214,7 +218,7 @@ describe("RelationsCanvas — légende filtrante", () => {
 
     await user.click(screen.getByRole("button", { name: "Masquer le groupe « Garde »" }));
     expect(arrows()).toHaveLength(0); // Astérion, du groupe Garde, est masqué : la relation aussi.
-    expect(mobile().getByText("Astérion").closest("button")).toHaveClass("opacity-40");
+    expect(mobile().getByRole("button", { name: "Astérion" })).toHaveClass("opacity-20");
   });
 });
 

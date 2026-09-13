@@ -4,10 +4,9 @@ import * as React from "react";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { ChevronRight, Network, Pencil, Search, Trash2, X } from "lucide-react";
+import { Network, Pencil, Search, Trash2, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { getInitials } from "@/lib/textFormatting";
 import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 
 // Le canevas ne fait plus que deux choses : dessiner (blocs, cartes, flèches)
@@ -17,10 +16,11 @@ import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 // `RelationsLegend`, la géométrie dans `geometry`, le déplacement et le zoom
 // dans `useCanvasPanZoom`.
 import type { CPersona, CRelType, CRelation } from "./types";
-import { REL_W, CW, CH, BP, NC, BLOCK_W, mid, blockH, cardCtr, bezierD, bezierMidPt, splitBezierHalves } from "./geometry";
+import { REL_W, CW, BP, NC, BLOCK_W, mid, blockH, cardCtr, bezierD, bezierMidPt, splitBezierHalves } from "./geometry";
 import { useCanvasPanZoom } from "./useCanvasPanZoom";
 import { useRelationsData } from "./useRelationsData";
 import { PersonaRelationsPanel, FALLBACK_TYPE } from "./PersonaRelationsPanel";
+import { PersonaCard } from "./PersonaCard";
 import { RelationDialog } from "./RelationDialog";
 import { RelationsLegend } from "./RelationsLegend";
 
@@ -359,64 +359,34 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
                       <div className="grid gap-[6px]" style={{ gridTemplateColumns: `repeat(${NC}, ${CW}px)`, padding: `${BP}px`, paddingTop: 0, paddingBottom: BP }}>
                         {ps.map((p) => {
                           const gc = groupColor.get(p.id);
-                          const isSel = selectedPersonaId === p.id;
-                          const dimmed = (search.trim() !== "" && !matchesSearch(p)) || personaHidden(p.id);
                           const counts = countsByPersona.get(p.id);
                           return (
-                            <div
+                            <PersonaCard
                               key={p.id}
-                              role="button"
-                              tabIndex={0}
-                              aria-label={p.name}
-                              aria-pressed={isSel}
-                              style={{ width: CW, height: CH, borderColor: isSel ? "hsl(var(--primary))" : (gc ?? "transparent") }}
-                              className={cn(
-                                "relative cursor-pointer rounded-lg border-2 transition-all",
-                                isSel ? "ring-1 ring-primary/30" : "hover:opacity-90",
-                                dimmed && "opacity-20 grayscale",
-                              )}
-                              onClick={() => setSelectedPersonaId((v) => (v === p.id ? null : p.id))}
-                              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelectedPersonaId((v) => (v === p.id ? null : p.id)); } }}
-                            >
-                              <div className="absolute inset-0 overflow-hidden rounded-[6px]">
-                                {p.avatar_url ? (
-                                  <Image src={p.avatar_url} alt="" fill sizes={`${CW}px`} className="object-cover" />
-                                ) : (
-                                  <div className="absolute inset-0 flex items-center justify-center text-xl font-bold"
-                                    style={{ background: gc ? `${gc}33` : "var(--muted)", color: gc ?? "var(--muted-foreground)" }}>
-                                    {getInitials(p.name)}
-                                  </div>
-                                )}
-                                <div className="absolute inset-x-0 bottom-0 px-1.5 pb-1.5 pt-5"
-                                  style={{ background: "linear-gradient(to top, rgba(0,0,0,0.72) 0%, transparent 100%)" }}>
-                                  <span className="line-clamp-2 text-[9px] font-semibold leading-tight text-white drop-shadow-sm">{p.name}</span>
-                                </div>
-                              </div>
-                              {counts && counts.pending > 0 && p.user_id === userId && (
-                                <span className="absolute left-1 top-1 z-20 rounded-full bg-primary px-1 text-[9px] font-bold text-primary-foreground" title={t("pendingCount", { count: counts.pending })}>
-                                  {counts.pending}
-                                </span>
-                              )}
-                              {(canAdmin || p.user_id === userId) && groups.length > 0 && (
-                                <div className="absolute right-1 top-0 z-20">
-                                  <button
-                                    type="button"
-                                    aria-label={t("changeGroup")}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      if (openGroupPicker?.personaId === p.id) { setOpenGroupPicker(null); return; }
-                                      const dotRect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                                      const outerEl = outerRef.current;
-                                      if (!outerEl) return;
-                                      const cr = outerEl.getBoundingClientRect();
-                                      setOpenGroupPicker({ personaId: p.id, x: dotRect.left - cr.left + dotRect.width + 4, y: dotRect.top - cr.top });
-                                    }}
-                                    className="h-2.5 w-2.5 rounded-full border border-background/60 shadow-sm"
-                                    style={{ background: gc ?? "#94a3b8" }}
-                                  />
-                                </div>
-                              )}
-                            </div>
+                              persona={p}
+                              groupColor={gc}
+                              selected={selectedPersonaId === p.id}
+                              dimmed={(search.trim() !== "" && !matchesSearch(p)) || personaHidden(p.id)}
+                              pendingCount={p.user_id === userId ? (counts?.pending ?? 0) : 0}
+                              onSelect={() => setSelectedPersonaId((v) => (v === p.id ? null : p.id))}
+                              corner={(canAdmin || p.user_id === userId) && groups.length > 0 ? (
+                                <button
+                                  type="button"
+                                  aria-label={t("changeGroup")}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (openGroupPicker?.personaId === p.id) { setOpenGroupPicker(null); return; }
+                                    const dotRect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                                    const outerEl = outerRef.current;
+                                    if (!outerEl) return;
+                                    const cr = outerEl.getBoundingClientRect();
+                                    setOpenGroupPicker({ personaId: p.id, x: dotRect.left - cr.left + dotRect.width + 4, y: dotRect.top - cr.top });
+                                  }}
+                                  className="h-2.5 w-2.5 rounded-full border border-background/60 shadow-sm"
+                                  style={{ background: gc ?? "#94a3b8" }}
+                                />
+                              ) : undefined}
+                            />
                           );
                         })}
                       </div>
@@ -521,17 +491,19 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
         </div>
       </div>
 
-      {/* ── Petit écran : liste des personas, puis le détail ──
+      {/* ── Petit écran : les cartes des personas, puis le détail ──
           Le canevas (position libre, courbes, pan/zoom) est illisible en
-          petit écran : une liste groupée par joueur, comme les blocs, où taper
-          un persona ouvre le même panneau que la colonne desktop. ── */}
+          petit écran. À la place, une rangée de cartes par joueur — les mêmes
+          cartes que les blocs du canevas — qu'on fait défiler de droite à
+          gauche ; taper une carte ouvre le même panneau que la colonne
+          desktop. ── */}
       <div data-testid="relations-mobile" className="flex min-h-0 flex-1 flex-col lg:hidden">
         {loading ? (
           <div className="flex h-full items-center justify-center text-sm text-muted-foreground">{tCommon("loading")}</div>
         ) : panelProps ? (
           <PersonaRelationsPanel {...panelProps} onClose={() => setSelectedPersonaId(null)} closeLabel={tCommon("back")} closeIcon="back" />
         ) : (
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto py-2">
             {filteredUserList.length === 0 ? (
               <p className="px-3 py-8 text-center text-xs text-muted-foreground/60">
                 {search.trim() ? t("noSearchResults") : t("noPersonas")}
@@ -540,41 +512,33 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
               const dName = member.username ? `@${member.username}` : member.user_id.slice(0, 8);
               const letter = dName.replace(/^@/, "")[0]?.toUpperCase() ?? "?";
               return (
-                <div key={member.user_id}>
-                  <div className="sticky top-0 z-10 flex items-center gap-2 border-b border-border-soft bg-background px-3 py-2">
+                <section key={member.user_id} aria-label={dName} className="space-y-1.5 py-1.5">
+                  <div className="flex items-center gap-2 px-3">
                     <span className="relative flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted text-[9px] font-bold">
                       {member.avatar_url ? <Image src={member.avatar_url} alt={dName} fill sizes="20px" className="object-cover" /> : letter}
                     </span>
                     <span className="truncate text-xs font-medium text-muted-foreground">{dName}</span>
+                    <span className="text-[11px] tabular-nums text-muted-foreground/60">{ps.length}</span>
                   </div>
-                  {ps.map((p) => {
-                    const counts = countsByPersona.get(p.id);
-                    const gc = groupColor.get(p.id);
-                    return (
-                      <button key={p.id} type="button" onClick={() => setSelectedPersonaId(p.id)}
-                        className={cn("flex w-full items-center gap-3 border-b border-border-soft px-3 py-2.5 text-left transition-colors hover:bg-muted/40", personaHidden(p.id) && "opacity-40")}>
-                        <span className="relative shrink-0">
-                          {p.avatar_url
-                            ? <Image src={p.avatar_url} alt="" width={32} height={32} className="h-8 w-8 rounded-full object-cover" />
-                            : <span className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-[11px] font-bold">{getInitials(p.name)}</span>}
-                          {gc && <span aria-hidden className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-background" style={{ background: gc }} />}
-                        </span>
-                        <span className="flex-1 truncate text-sm font-medium">{p.name}</span>
-                        {counts && counts.pending > 0 && p.user_id === userId && (
-                          <span className="rounded-full bg-primary px-1.5 text-[10px] font-semibold text-primary-foreground" title={t("pendingCount", { count: counts.pending })}>
-                            {counts.pending}
-                          </span>
-                        )}
-                        {counts && counts.total > 0 && (
-                          <span className="text-[11px] tabular-nums text-muted-foreground" title={t("relationCount", { count: counts.total })}>
-                            {counts.total}
-                          </span>
-                        )}
-                        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/40" />
-                      </button>
-                    );
-                  })}
-                </div>
+                  {/* `snap-x` : le défilement s'arrête carte par carte, jamais entre deux. */}
+                  <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto px-3 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    {ps.map((p) => {
+                      const counts = countsByPersona.get(p.id);
+                      return (
+                        <PersonaCard
+                          key={p.id}
+                          persona={p}
+                          groupColor={groupColor.get(p.id)}
+                          dimmed={personaHidden(p.id)}
+                          pendingCount={p.user_id === userId ? (counts?.pending ?? 0) : 0}
+                          relationCount={counts?.total ?? 0}
+                          onSelect={() => setSelectedPersonaId(p.id)}
+                          className="shrink-0 snap-start"
+                        />
+                      );
+                    })}
+                  </div>
+                </section>
               );
             })}
           </div>
