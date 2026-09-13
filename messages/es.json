@@ -698,7 +698,21 @@
     "sectionDeleteDescription": "Esta sección y todos sus campos se eliminarán definitivamente.",
     "fieldDeleteDescription": "Este campo y todas sus imágenes alojadas se eliminarán definitivamente.",
     "sectionOptions": "Opciones de la sección",
-    "deleteField": "Eliminar el campo"
+    "deleteField": "Eliminar el campo",
+    "relations": {
+      "tab": "Relaciones",
+      "out": "Lo que piensa de los demás",
+      "in": "Lo que piensan de él",
+      "openCanvas": "Ver en el lienzo",
+      "breakRelation": "Romper",
+      "pending": "Pendiente",
+      "accept": "Aceptar",
+      "decline": "Rechazar",
+      "cancelRequest": "Cancelar la solicitud",
+      "accepted": "Relación aceptada",
+      "unknownType": "Tipo desconocido",
+      "empty": "Sin relaciones"
+    }
   },
   "quests": {
     "title": "Misiones del día",

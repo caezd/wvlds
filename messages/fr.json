@@ -698,7 +698,21 @@
     "sectionDeleteDescription": "Cette section et tous ses champs seront supprimés définitivement.",
     "fieldDeleteDescription": "Ce champ et toutes ses images hébergées seront supprimés définitivement.",
     "sectionOptions": "Options de la section",
-    "deleteField": "Supprimer le champ"
+    "deleteField": "Supprimer le champ",
+    "relations": {
+      "tab": "Relations",
+      "out": "Ce qu’il pense des autres",
+      "in": "Ce qu’on pense de lui",
+      "openCanvas": "Voir sur le canevas",
+      "breakRelation": "Rompre",
+      "pending": "En attente",
+      "accept": "Accepter",
+      "decline": "Refuser",
+      "cancelRequest": "Annuler la demande",
+      "accepted": "Relation acceptée",
+      "unknownType": "Type inconnu",
+      "empty": "Aucune relation"
+    }
   },
   "quests": {
     "title": "Quêtes du jour",

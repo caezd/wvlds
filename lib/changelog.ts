@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-09 ──────────────────────────────────────────────────────────────
   {
     date: "2026-09",
+    tag: "Personas",
+    text: "La fiche d’un persona a un onglet « Relations » : ce qu’il pense des autres, ce qu’on pense de lui. Une demande en attente s’y accepte ou s’y refuse, un couple s’y rompt.",
+  },
+  {
+    date: "2026-09",
     tag: "Relations",
     text: "Un type de relation peut être réciproque : la relation attend l’accord du joueur d’en face, qui reçoit une notification, puis existe dans les deux sens. Les autres types restent l’opinion d’un seul persona.",
   },

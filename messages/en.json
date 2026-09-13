@@ -698,7 +698,21 @@
     "sectionDeleteDescription": "This section and all its fields will be permanently deleted.",
     "fieldDeleteDescription": "This field and all its hosted images will be permanently deleted.",
     "sectionOptions": "Section options",
-    "deleteField": "Delete the field"
+    "deleteField": "Delete the field",
+    "relations": {
+      "tab": "Relations",
+      "out": "How they see others",
+      "in": "How others see them",
+      "openCanvas": "See on the canvas",
+      "breakRelation": "End the relation",
+      "pending": "Pending",
+      "accept": "Accept",
+      "decline": "Decline",
+      "cancelRequest": "Cancel the request",
+      "accepted": "Relation accepted",
+      "unknownType": "Unknown type",
+      "empty": "No relation"
+    }
   },
   "quests": {
     "title": "Daily quests",
