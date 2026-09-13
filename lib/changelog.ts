@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-09 ──────────────────────────────────────────────────────────────
   {
     date: "2026-09",
+    tag: "Personas",
+    text: "Les propriétés d’un objet ou d’une compétence du catalogue — poids, portée, prérequis… — se lisent aussi sur la fiche du persona qui le porte.",
+  },
+  {
+    date: "2026-09",
     tag: "Technique",
     text: "L’image d’un objet du catalogue ne peut être qu’une adresse en http(s), vérifiée en base comme les autres images.",
   },

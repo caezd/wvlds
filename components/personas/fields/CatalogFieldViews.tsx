@@ -3,7 +3,7 @@
 import { cn } from "@/lib/utils";
 import { RARITY_COLORS, resolveCatalogEntry } from "@/lib/worldCatalog";
 import type { InventoryItem, SkillItem } from "@/types/personas";
-import type { WorldCatalogItem } from "@/types/worlds";
+import type { WorldCatalogItem, WorldCatalogProperty } from "@/types/worlds";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { CatalogVisual } from "@/components/worlds/catalogue/CatalogVisual";
 
@@ -14,7 +14,7 @@ import { CatalogVisual } from "@/components/worlds/catalogue/CatalogVisual";
  * `PersonaProfileSheet` et `PersonaProfileSheetTrigger` — deux fichiers de
  * six cents lignes qui affichent la même fiche par deux chemins. Les faire
  * diverger n'était pas une hypothèse : c'est ce qui serait arrivé au premier
- * ajout, et l'ajout est justement là (image, rareté, objet retiré).
+ * ajout, et l'ajout est justement là (image, rareté, propriétés, objet retiré).
  *
  * `catalog` est le catalogue du monde, indexé. Quand il vaut `undefined` —
  * appelant qui ne l'a pas chargé — la copie rangée dans la fiche sert de
@@ -34,6 +34,28 @@ function EntryImage({
   size: 20 | 28;
 }) {
   return <CatalogVisual icon={icon} lucideIcon={lucideIcon} imageUrl={imageUrl} size={size} framed={false} />;
+}
+
+/**
+ * Les propriétés d'une entrée — poids, portée, prérequis… — en ligne.
+ *
+ * Elles ne se lisaient que dans la fiche de l'objet, côté catalogue ; sur la
+ * fiche d'un persona, où l'on regarde justement ce qu'il porte, elles
+ * manquaient. Une liste courte et serrée : ce sont des textes de quelques
+ * mots, pas des paragraphes (voir `sanitizeCatalogProperties`).
+ */
+export function EntryProperties({ properties, className }: { properties: WorldCatalogProperty[]; className?: string }) {
+  if (properties.length === 0) return null;
+  return (
+    <dl className={cn("flex flex-wrap gap-x-3 gap-y-0.5 text-xs", className)}>
+      {properties.map((property, index) => (
+        <div key={index} className="flex items-baseline gap-1">
+          <dt className="text-muted-foreground">{property.label}</dt>
+          <dd className="font-medium text-foreground/80">{property.value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
 }
 
 export function InventoryFieldView({
@@ -72,9 +94,10 @@ export function InventoryFieldView({
                 <span className="text-xs tabular-nums text-muted-foreground">x {item.quantity ?? 1}</span>
               </div>
             </TooltipTrigger>
-            {resolved.description && (
-              <TooltipContent side="top" className="max-w-[200px] text-center">
-                {resolved.description}
+            {(resolved.description || resolved.properties.length > 0) && (
+              <TooltipContent side="top" className="max-w-[240px] space-y-1.5 text-center">
+                {resolved.description && <p>{resolved.description}</p>}
+                <EntryProperties properties={resolved.properties} className="justify-center" />
               </TooltipContent>
             )}
           </Tooltip>
@@ -121,6 +144,7 @@ export function SkillsFieldView({
             {resolved.description && (
               <p className="mt-0.5 text-xs leading-snug text-muted-foreground">{resolved.description}</p>
             )}
+            <EntryProperties properties={resolved.properties} className="mt-1" />
           </div>
         </div>
       ))}
