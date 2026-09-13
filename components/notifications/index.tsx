@@ -22,6 +22,8 @@ import { AgeConfirmDialog } from "@/components/worlds/AgeConfirmDialog";
 import { TABLE, RPC } from "@/lib/constants";
 import type { AppNotification, NotificationType } from "@/types/db";
 import { notifText, notifHref, compactTime } from "@/lib/notifHelpers";
+import { messageErreurAction } from "@/lib/actionErrors";
+import { acceptPersonaRelation, deletePersonaRelation } from "@/app/actions/personaRelations";
 import { useTranslations } from "next-intl";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -36,12 +38,15 @@ const NOTIF_ICONS: Record<NotificationType, React.ReactNode> = {
     persona_new_chatroom: <Hash size={13} />,
     persona_reply: <MessageSquare size={13} />,
     marital_request: <Heart size={13} />,
+    relation_request: <Heart size={13} />,
 };
 
-const ALL_TYPES: NotificationType[] = ["mention", "reaction", "new_member", "new_chatroom", "chatroom_reply", "persona_new_chatroom", "persona_reply", "marital_request"];
-const WORLD_HEADER_TYPES: NotificationType[] = ["mention", "reaction", "new_chatroom", "persona_new_chatroom", "persona_reply", "marital_request"];
-const PERSONA_NOTIF_TYPES: NotificationType[] = ["persona_new_chatroom", "persona_reply", "marital_request"];
-const ACTIONABLE_TYPES: NotificationType[] = ["world_invite", "marital_request"];
+// `marital_request` ne se produit plus (migration 173, remplacé par
+// `relation_request`) mais des notifications de ce type existent encore.
+const ALL_TYPES: NotificationType[] = ["mention", "reaction", "new_member", "new_chatroom", "chatroom_reply", "persona_new_chatroom", "persona_reply", "relation_request"];
+const WORLD_HEADER_TYPES: NotificationType[] = ["mention", "reaction", "new_chatroom", "persona_new_chatroom", "persona_reply", "marital_request", "relation_request"];
+const PERSONA_NOTIF_TYPES: NotificationType[] = ["persona_new_chatroom", "persona_reply", "marital_request", "relation_request"];
+const ACTIONABLE_TYPES: NotificationType[] = ["world_invite", "marital_request", "relation_request"];
 
 // ── WorldInviteCard ───────────────────────────────────────────────────────────
 
@@ -172,45 +177,56 @@ function WorldInviteCard({ notif, onMarkRead }: { notif: AppNotification; onMark
     );
 }
 
-// ── MaritalRequestCard ────────────────────────────────────────────────────────
+// ── RelationRequestCard ───────────────────────────────────────────────────────
 
-function MaritalRequestCard({ notif, onMarkRead }: { notif: AppNotification; onMarkRead: (id: string) => void }) {
+/**
+ * Accepter ou refuser une demande de relation, depuis la notification.
+ *
+ * L'état se relit dans `persona_relations` : la demande a pu être acceptée
+ * depuis le canevas, retirée par son auteur, ou la relation rompue depuis.
+ * Les anciennes notifications `marital_request` désignent une table qui n'est
+ * plus alimentée : elles se présentent comme expirées.
+ */
+function RelationRequestCard({ notif, onMarkRead }: { notif: AppNotification; onMarkRead: (id: string) => void }) {
     const t = useTranslations("notifications");
-    const requestId = notif.metadata?.request_id ?? null;
+    const tCommon = useTranslations("common");
+    const relationId = notif.type === "relation_request" ? (notif.metadata?.relation_id ?? null) : null;
     const supabase = createClient();
     const [status, setStatus] = useState<"pending" | "accepted" | "declined" | "expired" | null>(null);
     const [acting, setActing] = useState(false);
 
     useEffect(() => {
-        if (!requestId) { setStatus("expired"); return; }
-        supabase.from(TABLE.PERSONA_MARITAL_REQUESTS)
+        if (!relationId) { setStatus("expired"); return; }
+        supabase.from("persona_relations")
             .select("status")
-            .eq("id", requestId)
+            .eq("id", relationId)
             .maybeSingle()
             .then(({ data }: { data: { status: string } | null }) => {
-                setStatus(data ? (data.status as "pending" | "accepted" | "declined") : "expired");
+                setStatus(data ? (data.status as "pending" | "accepted") : "expired");
             });
-    }, [requestId, supabase]);
+    }, [relationId, supabase]);
 
     async function accept() {
-        if (!requestId || acting) return;
+        if (!relationId || acting) return;
         setActing(true);
-        const { error } = await supabase.rpc(RPC.ACCEPT_MARITAL_REQUEST, { p_request_id: requestId });
-        if (!error) {
+        const res = await acceptPersonaRelation(relationId);
+        if (res.ok) {
             setStatus("accepted");
             onMarkRead(notif.id);
+        } else {
+            toast.error(messageErreurAction(res.error, tCommon));
         }
         setActing(false);
     }
 
     async function decline() {
-        if (!requestId || acting) return;
+        if (!relationId || acting) return;
         setActing(true);
         // Même défaut que le refus d'invitation de monde : annoncer
         // « refusée » sans vérifier la fait réapparaître au rechargement.
-        const { error } = await supabase.from(TABLE.PERSONA_MARITAL_REQUESTS).delete().eq("id", requestId);
-        if (error) {
-            toast.error(error.message);
+        const res = await deletePersonaRelation(relationId);
+        if (!res.ok) {
+            toast.error(messageErreurAction(res.error, tCommon));
             setActing(false);
             return;
         }
@@ -286,7 +302,7 @@ function NotificationItem({ notif, actorAvatarUrl, worldInfo, onRead, onClose, o
 }) {
     const t = useTranslations("notifications");
     const isInvite = notif.type === "world_invite";
-    const isMaritalRequest = notif.type === "marital_request";
+    const isRelationRequest = notif.type === "marital_request" || notif.type === "relation_request";
     const isActionable = ACTIONABLE_TYPES.includes(notif.type);
     const href = isActionable ? null : notifHref(notif);
     const isUnread = !notif.read_at;
@@ -322,7 +338,7 @@ function NotificationItem({ notif, actorAvatarUrl, worldInfo, onRead, onClose, o
                 </div>
             </div>
             {isInvite && <WorldInviteCard notif={notif} onMarkRead={onRead} />}
-            {isMaritalRequest && <MaritalRequestCard notif={notif} onMarkRead={onRead} />}
+            {isRelationRequest && <RelationRequestCard notif={notif} onMarkRead={onRead} />}
         </div>
     );
 
@@ -391,7 +407,9 @@ export function NotificationInlinePanelContent() {
         chatroom_reply: t("prefs.chatroom_reply"),
         persona_new_chatroom: t("prefs.persona_new_chatroom"),
         persona_reply: t("prefs.persona_reply"),
-        marital_request: t("prefs.marital_request"),
+        // Plus émise (migration 173) : l'ancienne préférence garde le libellé de la nouvelle.
+        marital_request: t("prefs.relation_request"),
+        relation_request: t("prefs.relation_request"),
     };
 
     const sentinelRef = useRef<HTMLDivElement>(null);

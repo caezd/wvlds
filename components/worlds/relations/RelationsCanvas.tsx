@@ -8,6 +8,13 @@ import { toast } from "sonner";
 import { ArrowLeft, ChevronRight, Link2, Network, Plus, Search, Trash2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getInitials } from "@/lib/textFormatting";
+import { messageErreurAction } from "@/lib/actionErrors";
+import {
+  acceptPersonaRelation,
+  createPersonaRelation,
+  deletePersonaRelation,
+  updatePersonaRelation,
+} from "@/app/actions/personaRelations";
 import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 
 // La géométrie du canevas — disposition des cartes et tracé des flèches — est
@@ -23,7 +30,10 @@ import { RelationRow } from "./RelationRow";
 import { useCanvasPanZoom } from "./useCanvasPanZoom";
 
 /** Type de relation de repli, quand une relation pointe un type disparu. */
-const FALLBACK_BASE = { id: "__fallback__", color: "#94a3b8", dash: "3 4", sort_index: 999 };
+const FALLBACK_BASE = { id: "__fallback__", color: "#94a3b8", dash: "3 4", sort_index: 999, mutual: false, marital_status: null };
+
+/** Une relation en attente se dessine en pointillé clair : elle n'existe pas encore vraiment. */
+const PENDING_DASH = "2 6";
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -112,9 +122,9 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
         supabase.from("worlds").select("owner_id").eq("id", worldId).single(),
         supabase.from("world_persona_groups").select("id, name, color, sort_index").eq("world_id", worldId).order("sort_index"),
         supabase.from("persona_group_assignments").select("persona_id, group_id").eq("world_id", worldId),
-        supabase.from("persona_relations").select("id, from_persona_id, to_persona_id, type, label, description").eq("world_id", worldId),
+        supabase.from("persona_relations").select("id, from_persona_id, to_persona_id, type, label, description, status").eq("world_id", worldId),
         supabase.from("user_canvas_positions").select("user_id, x, y").eq("world_id", worldId),
-        supabase.from("world_relation_types").select("id, name, color, dash, sort_index").eq("world_id", worldId).order("sort_index"),
+        supabase.from("world_relation_types").select("id, name, color, dash, sort_index, mutual, marital_status").eq("world_id", worldId).order("sort_index"),
       ]);
 
       const allPersonas = (pRows ?? []) as CPersona[];
@@ -132,7 +142,7 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
         const { data: seeded } = await supabase
           .from("world_relation_types")
           .insert(defaults)
-          .select("id, name, color, dash, sort_index");
+          .select("id, name, color, dash, sort_index, mutual, marital_status");
         loadedTypes = (seeded ?? []) as CRelType[];
       }
       setRelTypes(loadedTypes);
@@ -339,44 +349,57 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
     );
     const typeName = relTypeMap.get(typeId)?.name ?? typeId;
     if (existing) {
-      const { error } = await supabase
-        .from("persona_relations")
-        .update({ type: typeId })
-        .eq("id", existing.id);
-      if (error) toast.error(error.message);
+      const res = await updatePersonaRelation(existing.id, { typeId });
+      if (!res.ok) toast.error(messageErreurAction(res.error, tCommon));
       else {
         setRelations((p) => p.map((r) => r.id === existing.id ? { ...r, type: typeId } : r));
         toast.success(t("typeChanged", { name: typeName }));
       }
     } else {
-      const { data, error } = await supabase
-        .from("persona_relations")
-        .insert({
-          world_id: worldId,
-          from_persona_id: connecting,
-          to_persona_id: connectTarget.personaId,
-          type: typeId,
-          description: pendingDesc.trim() || null,
-          created_by: userId,
-        })
-        .select("id, from_persona_id, to_persona_id, type, label, description")
-        .single();
-      if (error) toast.error(error.message);
-      else { setRelations((p) => [...p, data as CRelation]); toast.success(t("relCreated", { name: typeName })); }
+      const res = await createPersonaRelation({
+        worldId,
+        fromPersonaId: connecting,
+        toPersonaId: connectTarget.personaId,
+        typeId,
+        description: pendingDesc.trim() || null,
+      });
+      if (!res.ok) toast.error(messageErreurAction(res.error, tCommon));
+      else {
+        setRelations((p) => [...p, res.relation]);
+        toast.success(res.relation.status === "pending" ? t("relRequested", { name: typeName }) : t("relCreated", { name: typeName }));
+      }
     }
     cancelConnect();
   }
 
   async function deleteRel(id: string) {
-    const { error } = await supabase.from("persona_relations").delete().eq("id", id);
-    if (error) toast.error(error.message);
-    else setRelations((p) => p.filter((r) => r.id !== id));
+    const res = await deletePersonaRelation(id);
+    if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
+    // Le miroir d'une relation réciproque part avec elle (déclencheur) : on
+    // relit plutôt que de deviner ce que la base a retiré.
+    void reloadRelations();
+  }
+
+  async function acceptRel(id: string) {
+    const res = await acceptPersonaRelation(id);
+    if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
+    toast.success(t("relAccepted"));
+    void reloadRelations();
   }
 
   async function updateRelDesc(id: string, description: string) {
-    const { error } = await supabase.from("persona_relations").update({ description: description || null }).eq("id", id);
-    if (error) toast.error(error.message);
+    const res = await updatePersonaRelation(id, { description: description || null });
+    if (!res.ok) toast.error(messageErreurAction(res.error, tCommon));
     else setRelations((p) => p.map((r) => r.id === id ? { ...r, description: description || null } : r));
+  }
+
+  /** Relit les relations seules — après un geste dont la base a pu faire plus que demandé. */
+  async function reloadRelations() {
+    const { data } = await supabase
+      .from("persona_relations")
+      .select("id, from_persona_id, to_persona_id, type, label, description, status")
+      .eq("world_id", worldId);
+    setRelations((data ?? []) as CRelation[]);
   }
 
   // ── Groups ────────────────────────────────────────────────────────────────
@@ -420,7 +443,7 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
       if (rendered.has(key)) continue;
 
       const reverse = pairMap.get(revKey);
-      if (!reverse) {
+      if (!reverse || rel.status === "pending" || reverse.status === "pending") {
         items.push({ kind: "single", rel });
       } else if (reverse.type === rel.type) {
         items.push({ kind: "bidir", rel });
@@ -489,7 +512,9 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
               {grouped.get(tid)!.map(({ rel, direction, other, canEdit }) => (
                 <RelationRow key={rel.id} rel={rel} other={other} direction={direction}
                   canEdit={canEdit}
-                  onDelete={deleteRel} onUpdateDesc={updateRelDesc}
+                  // Répondre revient au joueur du persona visé — ou à un admin.
+                  canRespond={rel.status === "pending" && direction === "←" && (canAdmin || persona.user_id === userId)}
+                  onDelete={deleteRel} onAccept={acceptRel} onUpdateDesc={updateRelDesc}
                   onHoverChange={setHovRelId} />
               ))}
             </section>
@@ -803,14 +828,17 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
                           onMouseEnter={() => setHovRelId(rel.id)} onMouseLeave={() => setHovRelId(null)} />
                         <path d={d} fill="none"
                           stroke={meta.color} strokeWidth={hov ? REL_W + 1 : REL_W}
-                          strokeDasharray={meta.dash || undefined} opacity={hov ? 1 : 0.75}
+                          strokeDasharray={rel.status === "pending" ? PENDING_DASH : (meta.dash || undefined)}
+                          opacity={rel.status === "pending" ? (hov ? 0.7 : 0.4) : (hov ? 1 : 0.75)}
                           markerEnd={`url(#${mid(meta.id)})`} />
                         {hov && (
                           <foreignObject x={mp.x - 44} y={mp.y - 14} width="88" height="28"
                             className="pointer-events-auto overflow-visible"
                             onMouseEnter={() => setHovRelId(rel.id)} onMouseLeave={() => setHovRelId(null)}>
                             <div className="flex items-center justify-center gap-1 rounded-full border border-border bg-background px-2 py-1 shadow-md">
-                              <span className="text-[10px] font-semibold" style={{ color: meta.color }}>{meta.name}</span>
+                              <span className="text-[10px] font-semibold" style={{ color: meta.color }}>
+                                {meta.name}{rel.status === "pending" ? ` · ${t("pending")}` : ""}
+                              </span>
                               {(canAdmin || myPersonaIds.has(rel.from_persona_id)) && (
                                 <button onClick={() => void deleteRel(rel.id)} className="text-muted-foreground hover:text-destructive" aria-label={tCommon("delete")}>
                                   <Trash2 style={{ width: 10, height: 10 }} />

@@ -243,7 +243,8 @@
       "chatroom_reply": "Réponses dans mes chatrooms",
       "persona_new_chatroom": "Nouveaux salons de mes personas suivis",
       "persona_reply": "Réponses de mes personas suivis",
-      "marital_request": "Demandes de relation entre personas"
+      "marital_request": "Demandes de relation entre personas",
+      "relation_request": "Demandes de relation entre personas"
     },
     "text": {
       "someone": "Quelqu'un",
@@ -264,7 +265,9 @@
       "personaReplyMany": "<b>{actor}</b> a répondu <b>{count}</b> fois dans <b>{chatroom}</b>",
       "personaReplyManyNoContent": "<b>{actor}</b> a répondu <b>{count}</b> fois",
       "maritalRequestMarried": "<b>{actor}</b> souhaite marier son personnage à <b>{target}</b>",
-      "maritalRequestRelationship": "<b>{actor}</b> souhaite mettre son personnage en couple avec <b>{target}</b>"
+      "maritalRequestRelationship": "<b>{actor}</b> souhaite mettre son personnage en couple avec <b>{target}</b>",
+      "relationRequest": "<b>{actor}</b> propose une relation « {type} » à <b>{target}</b>",
+      "relationFallback": "relation"
     }
   },
   "dms": {
@@ -650,7 +653,8 @@
       "spousePlaceholder": "Choisir un persona du monde",
       "spouseNone": "Aucun",
       "pendingRequest": "En attente de confirmation de {name}",
-      "cancelRequest": "Annuler"
+      "cancelRequest": "Annuler",
+      "noMaritalType": "Ce monde n’a pas de type de relation pour ce statut : demandez à un administrateur d’en définir un dans les paramètres."
     },
     "editAvatar": "Modifier l’avatar",
     "editBanner": "Modifier la bannière",
@@ -1134,7 +1138,20 @@
     },
     "changeGroup": "Changer le groupe",
     "addGroup": "Ajouter ce groupe",
-    "addRelType": "Ajouter ce type de relation"
+    "addRelType": "Ajouter ce type de relation",
+    "pending": "En attente",
+    "accept": "Accepter",
+    "decline": "Refuser",
+    "cancelRequest": "Annuler la demande",
+    "relRequested": "Demande « {name} » envoyée, en attente de l’autre joueur",
+    "relAccepted": "Relation acceptée",
+    "mutual": "Réciproque",
+    "mutualHint": "La relation attend l’accord du joueur d’en face, puis existe dans les deux sens.",
+    "maritalLink": "Statut marital lié",
+    "maritalNone": "Sans effet sur le statut marital",
+    "maritalInRelationship": "En couple",
+    "maritalMarried": "Marié·e",
+    "maritalUndeletable": "Ce type sert au statut marital des fiches : il ne se supprime pas."
   },
   "wiki": {
     "changeIcon": "Changer l'icône",

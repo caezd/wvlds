@@ -5,6 +5,8 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import Image from "next/image";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
+import { createPersonaRelation, deletePersonaRelation } from "@/app/actions/personaRelations";
+import { messageErreurAction } from "@/lib/actionErrors";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { toWebP } from "@/lib/imageUtils";
@@ -29,7 +31,6 @@ import {
 import { Check, Eye, Loader2, Pencil, Trash2, X } from "lucide-react";
 import { ImagePickerCropField } from "@/components/ui/image-crop-picker";
 import type { MaritalStatus } from "@/types/db";
-import { TABLE } from "@/lib/constants";
 
 import { PersonaSectionsTabs } from "./PersonaSectionsTabs";
 import { PersonaProfileBody, formatPersonaPresenceLine } from "./PersonaProfileSheetTrigger";
@@ -309,6 +310,20 @@ function FramePicker({
 
 const MARITAL_STATUS_VALUES: MaritalStatus[] = ["single", "in_relationship", "married", "divorced", "widowed"];
 
+/**
+ * Le statut marital, et le/la conjoint·e.
+ *
+ * Désigner un·e conjoint·e est une relation comme une autre depuis la
+ * migration 173 : le monde a un type « en couple » et un type « marié·e »,
+ * réciproques et liés au statut. En créer une vers le persona d'un autre
+ * joueur envoie une demande (notification) ; l'accepter écrit le statut et le
+ * conjoint sur les DEUX fiches. La rompre — retirer le conjoint, ou passer à
+ * un autre statut — supprime la relation, et la base rend leur liberté aux
+ * deux personas.
+ *
+ * Le statut seul (célibataire, veuf·ve…) reste une colonne de la fiche,
+ * écrite directement : il n'engage personne d'autre.
+ */
 export function MaritalStatusPicker({
   personaId,
   supabase,
@@ -324,10 +339,13 @@ export function MaritalStatusPicker({
 }) {
   const t = useTranslations("personas.maritalStatus");
   const tPersonas = useTranslations("personas");
+  const tCommon = useTranslations("common");
   const router = useRouter();
   const [status, setStatus] = useState<MaritalStatus | null>(initialStatus);
   const [spouseId, setSpouseId] = useState<string | null>(initialSpouseId);
   const [worldPersonas, setWorldPersonas] = useState<{ id: string; name: string }[]>([]);
+  // Les types maritaux du monde, par statut — `null` tant qu'ils ne sont pas lus.
+  const [maritalTypes, setMaritalTypes] = useState<Map<string, string> | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [pendingRequest, setPendingRequest] = useState<{ id: string; targetName: string } | null>(null);
   const showSpouse = status === "in_relationship" || status === "married";
@@ -335,7 +353,7 @@ export function MaritalStatusPicker({
   useEffect(() => {
     if (!worldId || !showSpouse || loaded) return;
     (async () => {
-      const [personasRes, pendingRes] = await Promise.all([
+      const [personasRes, typesRes] = await Promise.all([
         supabase
           .from("personas")
           .select("id, name")
@@ -345,29 +363,76 @@ export function MaritalStatusPicker({
           .neq("id", personaId)
           .order("name", { ascending: true }),
         supabase
-          .from(TABLE.PERSONA_MARITAL_REQUESTS)
-          .select("id, target_persona_id")
-          .eq("requester_persona_id", personaId)
-          .eq("status", "pending")
-          .maybeSingle(),
+          .from("world_relation_types")
+          .select("id, marital_status")
+          .eq("world_id", worldId)
+          .not("marital_status", "is", null),
       ]) as [
         { data: { id: string; name: string }[] | null },
-        { data: { id: string; target_persona_id: string } | null },
+        { data: { id: string; marital_status: string }[] | null },
       ];
       const personas = personasRes.data ?? [];
       setWorldPersonas(personas);
-      if (pendingRes.data) {
-        const target = personas.find((p) => p.id === pendingRes.data!.target_persona_id);
-        setPendingRequest({ id: pendingRes.data.id, targetName: target?.name ?? "" });
+      const types = new Map((typesRes.data ?? []).map((row) => [row.marital_status, row.id]));
+      setMaritalTypes(types);
+
+      // Une demande déjà partie de ce persona, d'un type marital.
+      const typeIds = [...types.values()];
+      if (typeIds.length > 0) {
+        const { data: pending } = (await supabase
+          .from("persona_relations")
+          .select("id, to_persona_id")
+          .eq("from_persona_id", personaId)
+          .eq("status", "pending")
+          .in("type", typeIds)
+          .maybeSingle()) as { data: { id: string; to_persona_id: string } | null };
+        if (pending) {
+          const target = personas.find((p) => p.id === pending.to_persona_id);
+          setPendingRequest({ id: pending.id, targetName: target?.name ?? "" });
+        }
       }
       setLoaded(true);
     })();
   }, [worldId, showSpouse, loaded, supabase, personaId]);
 
+  /** La relation maritale acceptée qui part de ce persona, s'il y en a une. */
+  async function findSpouseRelation(): Promise<string | null> {
+    if (!spouseId) return null;
+    const { data } = (await supabase
+      .from("persona_relations")
+      .select("id")
+      .eq("from_persona_id", personaId)
+      .eq("to_persona_id", spouseId)
+      .eq("status", "accepted")
+      .maybeSingle()) as { data: { id: string } | null };
+    return data?.id ?? null;
+  }
+
+  /**
+   * Rompt : supprime la relation, dont la base fait suivre le miroir et les
+   * deux fiches. Rend faux si la rupture a échoué — on n'écrit alors pas le
+   * nouveau statut par-dessus un couple toujours debout.
+   */
+  async function breakUp(): Promise<boolean> {
+    const relationId = await findSpouseRelation();
+    if (relationId) {
+      const res = await deletePersonaRelation(relationId);
+      if (!res.ok) {
+        toast.error(messageErreurAction(res.error, tCommon));
+        return false;
+      }
+    }
+    setSpouseId(null);
+    return true;
+  }
+
   async function updateStatus(next: MaritalStatus | null) {
     const previous = status;
-    setStatus(next);
     const clearSpouse = next !== "in_relationship" && next !== "married";
+    if (clearSpouse && !(await breakUp())) return;
+    setStatus(next);
+    // Le déclencheur de rupture a pu poser « célibataire » ou « divorcé·e » :
+    // c'est le statut choisi qui compte, on l'écrit après.
     const { error } = await supabase
       .from("personas")
       .update({ marital_status: next, ...(clearSpouse ? { spouse_persona_id: null } : {}) })
@@ -377,56 +442,55 @@ export function MaritalStatusPicker({
       setStatus(previous);
       return;
     }
-    if (clearSpouse) {
-      setSpouseId(null);
-      if (pendingRequest) {
-        const { error } = await supabase.from(TABLE.PERSONA_MARITAL_REQUESTS).delete().eq("id", pendingRequest.id);
-        // Sans ce contrôle, la demande disparaissait de l'écran tout en
-        // restant en attente côté serveur.
-        if (error) {
-          toast.error(error.message);
-          return;
-        }
-        setPendingRequest(null);
+    if (clearSpouse && pendingRequest) {
+      const res = await deletePersonaRelation(pendingRequest.id);
+      // Sans ce contrôle, la demande disparaissait de l'écran tout en
+      // restant en attente côté serveur.
+      if (!res.ok) {
+        toast.error(messageErreurAction(res.error, tCommon));
+        return;
       }
+      setPendingRequest(null);
     }
     router.refresh();
   }
 
-  // Retirer son/sa conjoint·e reste une action unilatérale immédiate.
-  // En désigner un·e nouveau n'écrit plus directement spouse_persona_id :
-  // ça envoie une demande que l'autre joueur doit confirmer (notification).
   async function requestSpouse(next: string | null) {
     if (next === null) {
-      const previous = spouseId;
-      setSpouseId(null);
-      const { error } = await supabase.from("personas").update({ spouse_persona_id: null }).eq("id", personaId);
-      if (error) {
-        toast.error(tPersonas("saveFailed"), { description: error.message });
-        setSpouseId(previous);
-      }
+      if (!(await breakUp())) return;
+      // La rupture a rendu le persona célibataire ou divorcé : le statut
+      // affiché, lui, n'a pas été changé par le joueur — on le rétablit.
+      const { error } = await supabase.from("personas").update({ marital_status: status }).eq("id", personaId);
+      if (error) toast.error(tPersonas("saveFailed"), { description: error.message });
       router.refresh();
       return;
     }
-    if (!status) return;
-    const { data, error } = await supabase
-      .from(TABLE.PERSONA_MARITAL_REQUESTS)
-      .insert({ requester_persona_id: personaId, target_persona_id: next, requested_status: status })
-      .select("id")
-      .single();
-    if (error) {
-      toast.error(tPersonas("requestFailed"), { description: error.message });
+    if (!status || !worldId) return;
+    const typeId = maritalTypes?.get(status);
+    if (!typeId) {
+      toast.error(t("noMaritalType"));
+      return;
+    }
+    const res = await createPersonaRelation({ worldId, fromPersonaId: personaId, toPersonaId: next, typeId });
+    if (!res.ok) {
+      toast.error(tPersonas("requestFailed"), { description: messageErreurAction(res.error, tCommon) });
       return;
     }
     const targetName = worldPersonas.find((p) => p.id === next)?.name ?? "";
-    setPendingRequest({ id: data.id, targetName });
+    if (res.relation.status === "pending") {
+      setPendingRequest({ id: res.relation.id, targetName });
+    } else {
+      // Acceptée d'emblée (persona à soi, ou admin) : les fiches sont déjà écrites.
+      setSpouseId(next);
+      router.refresh();
+    }
   }
 
   async function cancelRequest() {
     if (!pendingRequest) return;
-    const { error } = await supabase.from(TABLE.PERSONA_MARITAL_REQUESTS).delete().eq("id", pendingRequest.id);
-    if (error) {
-      toast.error(tPersonas("cancelFailed"), { description: error.message });
+    const res = await deletePersonaRelation(pendingRequest.id);
+    if (!res.ok) {
+      toast.error(tPersonas("cancelFailed"), { description: messageErreurAction(res.error, tCommon) });
       return;
     }
     setPendingRequest(null);

@@ -242,7 +242,8 @@
       "chatroom_reply": "Replies in my chatrooms",
       "persona_new_chatroom": "New chatrooms from followed personas",
       "persona_reply": "Replies from followed personas",
-      "marital_request": "Relationship requests between personas"
+      "marital_request": "Relationship requests between personas",
+      "relation_request": "Relation requests between personas"
     },
     "text": {
       "someone": "Someone",
@@ -263,7 +264,9 @@
       "personaReplyMany": "<b>{actor}</b> replied <b>{count}</b> times in <b>{chatroom}</b>",
       "personaReplyManyNoContent": "<b>{actor}</b> replied <b>{count}</b> times",
       "maritalRequestMarried": "<b>{actor}</b> wants to marry their character to <b>{target}</b>",
-      "maritalRequestRelationship": "<b>{actor}</b> wants to put their character in a relationship with <b>{target}</b>"
+      "maritalRequestRelationship": "<b>{actor}</b> wants to put their character in a relationship with <b>{target}</b>",
+      "relationRequest": "<b>{actor}</b> proposes a “{type}” relation to <b>{target}</b>",
+      "relationFallback": "relation"
     },
     "back": "Back"
   },
@@ -650,7 +653,8 @@
       "spousePlaceholder": "Choose a persona from this world",
       "spouseNone": "None",
       "pendingRequest": "Awaiting confirmation from {name}",
-      "cancelRequest": "Cancel"
+      "cancelRequest": "Cancel",
+      "noMaritalType": "This world has no relation type for this status: ask an administrator to define one in the settings."
     },
     "editAvatar": "Edit avatar",
     "editBanner": "Edit banner",
@@ -1134,7 +1138,20 @@
     },
     "changeGroup": "Change the group",
     "addGroup": "Add this group",
-    "addRelType": "Add this relation type"
+    "addRelType": "Add this relation type",
+    "pending": "Pending",
+    "accept": "Accept",
+    "decline": "Decline",
+    "cancelRequest": "Cancel the request",
+    "relRequested": "“{name}” requested — waiting for the other player",
+    "relAccepted": "Relation accepted",
+    "mutual": "Mutual",
+    "mutualHint": "The relation waits for the other player’s approval, then exists both ways.",
+    "maritalLink": "Linked marital status",
+    "maritalNone": "No effect on marital status",
+    "maritalInRelationship": "In a relationship",
+    "maritalMarried": "Married",
+    "maritalUndeletable": "This type backs the marital status on persona sheets: it cannot be deleted."
   },
   "wiki": {
     "changeIcon": "Change icon",

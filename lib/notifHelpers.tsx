@@ -64,6 +64,14 @@ export function notifText(n: AppNotification, t: NotifT): ReactNode {
                 ? t.rich("text.maritalRequestMarried", { actor, target, ...r })
                 : t.rich("text.maritalRequestRelationship", { actor, target, ...r });
         }
+        // Une demande de relation réciproque (migration 173). Un type marital
+        // garde la phrase du mariage ; les autres nomment le type.
+        case "relation_request": {
+            const target = n.content ?? t("text.someone");
+            if (n.metadata?.marital_status === "married") return t.rich("text.maritalRequestMarried", { actor, target, ...r });
+            if (n.metadata?.marital_status === "in_relationship") return t.rich("text.maritalRequestRelationship", { actor, target, ...r });
+            return t.rich("text.relationRequest", { actor, target, type: n.metadata?.type_name ?? t("text.relationFallback"), ...r });
+        }
     }
 }
 

@@ -8,6 +8,21 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-09 ──────────────────────────────────────────────────────────────
   {
     date: "2026-09",
+    tag: "Relations",
+    text: "Un type de relation peut être réciproque : la relation attend l’accord du joueur d’en face, qui reçoit une notification, puis existe dans les deux sens. Les autres types restent l’opinion d’un seul persona.",
+  },
+  {
+    date: "2026-09",
+    tag: "Relations",
+    text: "Le couple et le mariage sont désormais des relations réciproques comme les autres : désigner un·e conjoint·e depuis la fiche envoie la demande, l’accepter écrit les deux fiches, rompre les libère toutes les deux.",
+  },
+  {
+    date: "2026-09",
+    tag: "Correctif",
+    text: "Changer le type ou la description d’une relation depuis le canevas ne s’enregistrait jamais, sans qu’aucune erreur ne le dise. C’est corrigé.",
+  },
+  {
+    date: "2026-09",
     tag: "Personas",
     text: "Les propriétés d’un objet ou d’une compétence du catalogue — poids, portée, prérequis… — se lisent aussi sur la fiche du persona qui le porte.",
   },
