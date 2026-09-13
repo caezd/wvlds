@@ -62,7 +62,7 @@ import {
 import { UNCAT, COL_PREFIX, groupByColumn, type CatalogType, type CatalogItem } from "./catalogueTypes";
 import type { WorldCatalogItem } from "@/types/worlds";
 
-import { CategoryRowOverlay, ItemRowOverlay, type AddItemData } from "./CataloguePieces";
+import { CategoryRowOverlay, ItemRowOverlay } from "./CataloguePieces";
 import { CatalogItemDetail, CatalogItemDialog, RarityDot } from "./CatalogItemDialog";
 import { CatalogueRowProvider, type CatalogueRowContextValue } from "./CatalogueRowContext";
 import { CatalogTrashDialog } from "./CatalogTrashDialog";
@@ -109,8 +109,10 @@ export function CatalogueList({
   const [trashOpen, setTrashOpen] = useState(false);
   const [trashed, setTrashed] = useState<WorldCatalogItem[]>([]);
   const [trashLoading, setTrashLoading] = useState(false);
-  // false = not adding; null = adding in uncategorized; string = adding in that category
-  const [addingInCat, setAddingInCat] = useState<string | null | false>(false);
+  // Le brouillon en cours de création — un objet vide qui porte déjà son
+  // identifiant et sa catégorie, pour que le dialogue puisse téléverser son
+  // image dans le bon dossier avant que la ligne n'existe.
+  const [draft, setDraft] = useState<CatalogItem | null>(null);
   const [renamingCatId, setRenamingCatId] = useState<string | null>(null);
   const [addingCategoryInCol, setAddingCategoryInCol] = useState<number | false>(false);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
@@ -185,16 +187,41 @@ export function CatalogueList({
 
   // ── Item CRUD ──
 
-  async function handleAddItem(categoryId: string | null, data: AddItemData) {
-    const res = await addWorldCatalogItem(worldId, type, {
-      name: data.name,
-      description: data.description || null,
-      icon: data.icon,
-      lucide_icon: data.lucide_icon,
+  function newDraft(categoryId: string | null): CatalogItem {
+    return {
+      id: crypto.randomUUID(),
+      world_id: worldId,
+      type,
       category_id: categoryId,
-    });
-    if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
+      name: "",
+      description: null,
+      icon: null,
+      lucide_icon: null,
+      image_url: null,
+      rarity: null,
+      stackable: true,
+      max_quantity: null,
+      properties: [],
+      sort_index: items.filter(i => shownCategoryOf(i) === categoryId).length,
+    };
+  }
+
+  /** Enregistre le brouillon ; rend vrai si la ligne existe désormais. */
+  async function handleCreateItem(id: string, data: CatalogItemInput): Promise<boolean> {
+    if (!draft || draft.id !== id) return false;
+    const categoryId = draft.category_id;
+    const res = await addWorldCatalogItem(worldId, type, { ...data, category_id: categoryId }, { id });
+    if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return false; }
     setItems(prev => [...prev, { ...res.item, category_id: categoryId } as CatalogItem]);
+    return true;
+  }
+
+  async function handleCreateAndClose(id: string, data: CatalogItemInput) {
+    if (await handleCreateItem(id, data)) setDraft(null);
+  }
+
+  async function handleCreateAndContinue(id: string, data: CatalogItemInput) {
+    if (await handleCreateItem(id, data)) setDraft(newDraft(draft?.category_id ?? null));
   }
 
   async function handleSaveItem(id: string, data: CatalogItemInput) {
@@ -858,18 +885,15 @@ export function CatalogueList({
                       canEdit={canEdit}
                       canReorder={canReorder}
                       usage={usage}
-                      addingHere={addingInCat === cat.id}
                       renamingId={renamingCatId}
                       // Une recherche déplie tout : ses résultats doivent se voir.
-                      // Ajouter dans une catégorie repliée l'ouvre aussi.
-                      collapsed={collapsed.has(cat.id) && !searching && addingInCat !== cat.id}
+                      collapsed={collapsed.has(cat.id) && !searching}
                       onToggleCollapsed={toggleCollapsed}
                       onEditItem={setEditingItem}
                       onDuplicateItem={id => void handleDuplicateItem(id)}
                       onDeleteItem={id => void handleDeleteItem(id)}
                       onOpenItem={setDetailItem}
-                      onSetAdding={setAddingInCat}
-                      onAddItem={handleAddItem}
+                      onAddIn={categoryId => setDraft(newDraft(categoryId))}
                       onSetRenaming={setRenamingCatId}
                       onDeleteCategory={id => void handleDeleteCategory(id)}
                       onSaveCategory={handleSaveCategory}
@@ -905,21 +929,19 @@ export function CatalogueList({
         )}
 
         {/* Uncategorized / flat list when no categories */}
-        {(!hasCategories || uncatItems.length > 0 || addingInCat === null || canEdit) && (
+        {(!hasCategories || uncatItems.length > 0 || canEdit) && (
           <UncategorizedSection
             items={uncatItems}
             type={type}
             canEdit={canEdit}
             canReorder={canReorder}
             usage={usage}
-            addingHere={addingInCat === null}
             showHeader={hasCategories}
             onEditItem={setEditingItem}
             onDuplicateItem={id => void handleDuplicateItem(id)}
             onDeleteItem={id => void handleDeleteItem(id)}
             onOpenItem={setDetailItem}
-            onSetAdding={setAddingInCat}
-            onAddItem={handleAddItem}
+            onAddIn={categoryId => setDraft(newDraft(categoryId))}
             onSortAlpha={handleSortAlpha}
           />
         )}
@@ -952,6 +974,20 @@ export function CatalogueList({
         </DragOverlay>
       </DndContext>
       </CatalogueRowProvider>
+
+      {/* Création : le même dialogue que la modification, sur un brouillon. */}
+      {draft && (
+        <CatalogItemDialog
+          item={draft}
+          type={type}
+          worldId={worldId}
+          open
+          creating
+          onOpenChange={open => { if (!open) setDraft(null); }}
+          onSave={handleCreateAndClose}
+          onSaveAndContinue={handleCreateAndContinue}
+        />
+      )}
 
       {/* Modification : tout ce qui ne tient pas sur une ligne. */}
       {editingItem && (

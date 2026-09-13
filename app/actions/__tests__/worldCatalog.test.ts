@@ -436,6 +436,25 @@ describe("CRUD world_catalog_items", () => {
         });
     });
 
+    it("addWorldCatalogItem écrit l'identifiant fourni par le client", async () => {
+        const id = "3f2b1c5e-8d4a-4a6b-9c1d-2e5f7a8b9c0d";
+        const mock = createSupabaseMock({ results: [{ data: { id }, error: null }] });
+        use(mock);
+        const res = await addWorldCatalogItem("w1", "skills", { name: "Forge" }, { id });
+        expect(res.ok).toBe(true);
+        expect(mock.buildersFor("world_catalog_items")[0].insert).toHaveBeenCalledWith(
+            expect.objectContaining({ id, name: "Forge" }),
+        );
+    });
+
+    it("addWorldCatalogItem refuse un identifiant qui n'est pas un UUID, sans appeler Supabase", async () => {
+        const mock = createSupabaseMock();
+        use(mock);
+        expect(await addWorldCatalogItem("w1", "skills", { name: "Forge" }, { id: "../autre" }))
+            .toEqual({ ok: false, error: "unsupportedValue" });
+        expect(mock.from).not.toHaveBeenCalled();
+    });
+
     it("addWorldCatalogItem refuse un nom vide", async () => {
         const mock = createSupabaseMock();
         use(mock);

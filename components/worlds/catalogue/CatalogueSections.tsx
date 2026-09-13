@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils";
 import type { WorldCatalogCategory } from "@/types/worlds";
 import { UNCAT, type CatalogType, type CatalogItem } from "./catalogueTypes";
 
-import { AddForm, DragHandle, SortableItemRow, type AddItemData } from "./CataloguePieces";
+import { DragHandle, SortableItemRow } from "./CataloguePieces";
 
 // Conteneurs : une catégorie, la zone des non classés, une colonne.
 
@@ -40,7 +40,6 @@ export function SortableCategoryContainer({
   canEdit,
   canReorder,
   usage,
-  addingHere,
   renamingId,
   collapsed,
   onToggleCollapsed,
@@ -48,8 +47,7 @@ export function SortableCategoryContainer({
   onDuplicateItem,
   onDeleteItem,
   onOpenItem,
-  onSetAdding,
-  onAddItem,
+  onAddIn,
   onSetRenaming,
   onDeleteCategory,
   onSaveCategory,
@@ -61,7 +59,6 @@ export function SortableCategoryContainer({
   canEdit: boolean;
   canReorder: boolean;
   usage: Record<string, number> | null;
-  addingHere: boolean;
   renamingId: string | null;
   collapsed: boolean;
   onToggleCollapsed: (id: string) => void;
@@ -69,8 +66,8 @@ export function SortableCategoryContainer({
   onDuplicateItem: (id: string) => void;
   onDeleteItem: (id: string) => void;
   onOpenItem: (item: CatalogItem) => void;
-  onSetAdding: (catId: string | null | false) => void;
-  onAddItem: (categoryId: string | null, data: AddItemData) => Promise<void>;
+  /** Ouvre le dialogue de création, dans cette catégorie (`null` : sans). */
+  onAddIn: (categoryId: string | null) => void;
   onSetRenaming: (id: string | null) => void;
   onDeleteCategory: (id: string) => void;
   onSaveCategory: (id: string, name: string) => Promise<void>;
@@ -191,20 +188,11 @@ export function SortableCategoryContainer({
             />
           ))}
 
-          {addingHere && (
-            <AddForm
-              type={type}
-              categoryId={category.id}
-              onAdd={async data => { await onAddItem(category.id, data); }}
-              onCancel={() => onSetAdding(false)}
-            />
-          )}
-
-          {canEdit && !addingHere && (
+          {canEdit && (
             <div className="flex items-center gap-1">
               <button
                 type="button"
-                onClick={() => onSetAdding(category.id)}
+                onClick={() => onAddIn(category.id)}
                 className="flex flex-1 items-center gap-2 rounded-lg px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
               >
                 <Plus className="h-3.5 w-3.5" />
@@ -236,14 +224,12 @@ export function UncategorizedSection({
   canEdit,
   canReorder,
   usage,
-  addingHere,
   showHeader,
   onEditItem,
   onDuplicateItem,
   onDeleteItem,
   onOpenItem,
-  onSetAdding,
-  onAddItem,
+  onAddIn,
   onSortAlpha,
 }: {
   items: CatalogItem[];
@@ -251,14 +237,12 @@ export function UncategorizedSection({
   canEdit: boolean;
   canReorder: boolean;
   usage: Record<string, number> | null;
-  addingHere: boolean;
   showHeader: boolean;
   onEditItem: (item: CatalogItem) => void;
   onDuplicateItem: (id: string) => void;
   onDeleteItem: (id: string) => void;
   onOpenItem: (item: CatalogItem) => void;
-  onSetAdding: (catId: string | null | false) => void;
-  onAddItem: (categoryId: string | null, data: AddItemData) => Promise<void>;
+  onAddIn: (categoryId: string | null) => void;
   onSortAlpha: (categoryId: string | null) => void;
 }) {
   const t = useTranslations("catalogue");
@@ -296,26 +280,17 @@ export function UncategorizedSection({
           ))}
         </SortableContext>
 
-        {!showHeader && items.length === 0 && !addingHere && !canEdit && (
+        {!showHeader && items.length === 0 && !canEdit && (
           <div className="py-10 text-center text-sm text-muted-foreground">
             {type === "inventory" ? t("emptyInventory") : t("emptySkills")}
           </div>
         )}
 
-        {addingHere && (
-          <AddForm
-            type={type}
-            categoryId={null}
-            onAdd={async data => { await onAddItem(null, data); }}
-            onCancel={() => onSetAdding(false)}
-          />
-        )}
-
-        {canEdit && !addingHere && (
+        {canEdit && (
           <div className="flex items-center gap-1">
             <button
               type="button"
-              onClick={() => onSetAdding(null)}
+              onClick={() => onAddIn(null)}
               className="flex flex-1 items-center gap-2 rounded-xl px-3 py-2.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
             >
               <Plus className="h-4 w-4" />

@@ -1505,7 +1505,10 @@
     "selectedCount": "{count, plural, one {# seleccionado} other {# seleccionados}}",
     "selectAllVisible": "Seleccionar todo",
     "clearSelection": "Cancelar la selección",
-    "movedToTrashCount": "{count, plural, one {# entrada enviada a la papelera} other {# entradas enviadas a la papelera}}"
+    "movedToTrashCount": "{count, plural, one {# entrada enviada a la papelera} other {# entradas enviadas a la papelera}}",
+    "newItem": "Nuevo objeto",
+    "newSkill": "Nueva competencia",
+    "createAndContinue": "Crear y continuar"
   },
   "offline": {
     "title": "Está sin conexión",

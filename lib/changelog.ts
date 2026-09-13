@@ -9,7 +9,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Catalogue",
-    text: "La saisie rapide d’un objet ou d’une compétence propose les deux jeux d’icônes — celles du jeu et celles de l’application — comme le dialogue de modification.",
+    text: "Un objet ou une compétence se crée dans le même dialogue que sa modification : image, icônes, rareté et propriétés dès la création. « Créer et continuer » enchaîne les saisies sans le refermer.",
   },
   {
     date: "2026-09",

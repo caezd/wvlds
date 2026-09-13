@@ -144,8 +144,12 @@ export function createSupabaseMock(opts: {
     .fn()
     .mockResolvedValue({ data: opts.storageListResult ?? [], error: null });
   const storageCopy = vi.fn().mockResolvedValue({ data: {}, error: null });
-  const getPublicUrl = vi.fn((path: string) => ({
-    data: { publicUrl: `https://x.supabase.co/storage/v1/object/public/${path}` },
+  // L'URL publique porte le nom du bucket, comme celle du vrai client : c'est
+  // ce segment que `storagePathFromUrl` cherche pour retrouver le chemin d'un
+  // fichier à effacer. Sans lui, un composant qui téléverse puis fait le
+  // ménage passait ses tests sans jamais rien effacer.
+  const getPublicUrl = vi.fn((bucket: string, path: string) => ({
+    data: { publicUrl: `https://x.supabase.co/storage/v1/object/public/${bucket}/${path}` },
   }));
 
   const channels: MockChannel[] = [];
@@ -191,12 +195,12 @@ export function createSupabaseMock(opts: {
     channel,
     removeChannel,
     storage: {
-      from: vi.fn(() => ({
+      from: vi.fn((bucket: string) => ({
         remove: storageRemove,
         upload: storageUpload,
         list: storageList,
         copy: storageCopy,
-        getPublicUrl,
+        getPublicUrl: (path: string) => getPublicUrl(bucket, path),
       })),
     },
   };
@@ -210,6 +214,7 @@ export function createSupabaseMock(opts: {
     removeChannel,
     onAuthStateChange,
     storageRemove,
+    storageUpload,
     storageCopy,
     storageList,
     /** Canaux Realtime créés, dans l'ordre. */

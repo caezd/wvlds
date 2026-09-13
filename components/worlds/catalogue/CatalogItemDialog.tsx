@@ -41,9 +41,13 @@ import type { CatalogItem, CatalogType } from "./catalogueTypes";
 // Il tenait sur une ligne : une icône, un nom, une description. La ligne ne
 // pouvait plus porter la rareté, l'image, l'empilement et les propriétés
 // libres sans devenir illisible — la modification passe donc par un dialogue,
-// et la ligne garde ce qui se lit d'un coup d'œil. La saisie rapide, elle,
-// reste en ligne : entrer vingt objets à la suite ne doit pas coûter vingt
-// ouvertures de dialogue.
+// et la ligne garde ce qui se lit d'un coup d'œil.
+//
+// La création passe par le même dialogue. Une saisie en ligne l'a précédé,
+// pour entrer vingt objets à la suite ; elle ne pouvait pas offrir l'image,
+// et deux formulaires pour un même objet se lisaient différemment. « Créer et
+// ajouter un autre » garde la saisie en série : le dialogue se vide sans se
+// fermer.
 
 const MAX_ITEM_IMAGE_MB = 2;
 
@@ -84,15 +88,22 @@ export function CatalogItemDialog({
   type,
   worldId,
   open,
+  creating = false,
   onOpenChange,
   onSave,
+  onSaveAndContinue,
 }: {
+  /** L'objet à modifier — ou, en création, un brouillon vide qui porte déjà son identifiant. */
   item: CatalogItem;
   type: CatalogType;
   worldId: string;
   open: boolean;
+  /** Le brouillon n'existe pas encore en base : titres, boutons et ménage diffèrent. */
+  creating?: boolean;
   onOpenChange: (v: boolean) => void;
   onSave: (id: string, data: CatalogItemInput) => Promise<void>;
+  /** Création en série : enregistre, puis le parent fournit un brouillon neuf. */
+  onSaveAndContinue?: (id: string, data: CatalogItemInput) => Promise<void>;
 }) {
   const t = useTranslations("catalogue");
   const tCommon = useTranslations("common");
@@ -175,12 +186,9 @@ export function CatalogItemDialog({
     if (path) await supabase.storage.from("worlds").remove([path]);
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!name.trim()) return;
-    setSaving(true);
+  function collect(): CatalogItemInput {
     const parsedMax = maxQuantity.trim() ? Number(maxQuantity) : null;
-    await onSave(item.id, {
+    return {
       name: name.trim(),
       description: description.trim() || null,
       icon,
@@ -190,20 +198,44 @@ export function CatalogItemDialog({
       stackable,
       max_quantity: parsedMax && parsedMax > 0 ? Math.floor(parsedMax) : null,
       properties,
-    });
+    };
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!name.trim()) return;
+    setSaving(true);
+    await onSave(item.id, collect());
     setSaving(false);
   }
 
+  async function handleSaveAndContinue() {
+    if (!name.trim() || !onSaveAndContinue) return;
+    setSaving(true);
+    await onSaveAndContinue(item.id, collect());
+    setSaving(false);
+  }
+
+  /**
+   * En création, fermer sans enregistrer abandonne le brouillon : l'image
+   * déjà téléversée n'aurait plus de ligne pour la retrouver, on l'efface.
+   */
+  function handleOpenChange(v: boolean) {
+    if (!v && creating) void clearImage();
+    onOpenChange(v);
+  }
+
   const canAddProperty = properties.length < MAX_CATALOG_PROPERTIES;
+  const title = creating
+    ? (type === "inventory" ? t("newItem") : t("newSkill"))
+    : (type === "inventory" ? t("editItem") : t("editSkill"));
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{type === "inventory" ? t("editItem") : t("editSkill")}</DialogTitle>
-          <DialogDescription className="sr-only">
-            {type === "inventory" ? t("editItem") : t("editSkill")}
-          </DialogDescription>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription className="sr-only">{title}</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -405,18 +437,28 @@ export function CatalogItemDialog({
           <DialogFooter>
             <button
               type="button"
-              onClick={() => onOpenChange(false)}
+              onClick={() => handleOpenChange(false)}
               className="rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
               {tCommon("cancel")}
             </button>
+            {creating && onSaveAndContinue && (
+              <button
+                type="button"
+                disabled={!name.trim() || saving}
+                onClick={() => void handleSaveAndContinue()}
+                className="rounded-lg border border-border-soft px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-40"
+              >
+                {t("createAndContinue")}
+              </button>
+            )}
             <button
               type="submit"
               disabled={!name.trim() || saving}
               className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-opacity disabled:opacity-40"
             >
               {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-              {tCommon("save")}
+              {creating ? tCommon("create") : tCommon("save")}
             </button>
           </DialogFooter>
         </form>

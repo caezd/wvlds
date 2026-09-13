@@ -74,7 +74,7 @@ describe("ChatroomSettingsSheet — icône via le sélecteur avec recadrage", ()
     await user.click(screen.getByText("Choisir une image"));
 
     await waitFor(() => {
-      expect(mock.client.storage.from().upload).toHaveBeenCalledWith(
+      expect(mock.storageUpload).toHaveBeenCalledWith(
         "chatroom-c1/icon.webp",
         expect.anything(),
         expect.objectContaining({ upsert: true }),

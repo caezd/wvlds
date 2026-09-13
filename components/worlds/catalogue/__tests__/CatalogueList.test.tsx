@@ -20,12 +20,13 @@ vi.mock("@/lib/supabase/client", () => ({ createClient: vi.fn() }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 const actions = vi.hoisted(() => ({
+  addWorldCatalogItem: vi.fn(),
   reorderWorldCatalogItems: vi.fn(),
   trashWorldCatalogItem: vi.fn(),
   updateWorldCatalogItem: vi.fn(),
 }));
 vi.mock("@/app/actions/worldCatalog", () => ({
-  addWorldCatalogItem: vi.fn(),
+  addWorldCatalogItem: actions.addWorldCatalogItem,
   updateWorldCatalogItem: actions.updateWorldCatalogItem,
   trashWorldCatalogItem: actions.trashWorldCatalogItem,
   restoreWorldCatalogItem: vi.fn(),
@@ -91,6 +92,11 @@ describe("CatalogueList — gestion", () => {
   beforeEach(() => {
     localStorage.clear();
     actions.reorderWorldCatalogItems.mockReset().mockResolvedValue({ ok: true });
+    // L'action rend la ligne telle qu'elle est écrite, identifiant compris.
+    actions.addWorldCatalogItem.mockReset().mockImplementation(
+      (worldId: string, type: string, data: Record<string, unknown>, options?: { id?: string }) =>
+        Promise.resolve({ ok: true, item: { id: options?.id, world_id: worldId, type, ...data } }),
+    );
     actions.trashWorldCatalogItem.mockReset().mockResolvedValue({ ok: true });
     actions.updateWorldCatalogItem.mockReset().mockResolvedValue({ ok: true });
   });
@@ -236,5 +242,44 @@ describe("CatalogueList — gestion", () => {
 
     await waitFor(() => expect(screen.getByRole("button", { name: "Replier Outils" })).toBeInTheDocument());
     expect(loadCollapsedCategories("w1", "inventory").size).toBe(0);
+  });
+
+  it("crée un objet dans le dialogue, avec un identifiant tiré d'avance et sa catégorie", async () => {
+    const user = userEvent.setup();
+    mount();
+    await screen.findByText("Potion");
+
+    // Le premier « Ajouter un objet » est celui de la première catégorie.
+    await user.click(screen.getAllByRole("button", { name: "Ajouter un objet" })[0]);
+    const dialogue = await screen.findByRole("dialog", { name: "Nouvel objet" });
+    await user.type(within(dialogue).getByPlaceholderText("Nom de l'objet"), "Dague");
+    await user.click(within(dialogue).getByRole("button", { name: "Créer" }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(actions.addWorldCatalogItem).toHaveBeenCalledWith(
+      "w1",
+      "inventory",
+      expect.objectContaining({ name: "Dague", category_id: "cat-armes" }),
+      { id: expect.stringMatching(/^[0-9a-f-]{36}$/) },
+    );
+    expect(screen.getByText("Dague")).toBeInTheDocument();
+  });
+
+  it("« Créer et continuer » enregistre puis rouvre un brouillon vide", async () => {
+    const user = userEvent.setup();
+    mount();
+    await screen.findByText("Potion");
+
+    await user.click(screen.getByRole("button", { name: "Ajouter un objet sans catégorie" }));
+    const dialogue = await screen.findByRole("dialog", { name: "Nouvel objet" });
+    const nom = within(dialogue).getByPlaceholderText("Nom de l'objet");
+    await user.type(nom, "Torche");
+    await user.click(within(dialogue).getByRole("button", { name: "Créer et continuer" }));
+
+    await waitFor(() => expect(screen.getByText("Torche")).toBeInTheDocument());
+    expect(screen.getByRole("dialog", { name: "Nouvel objet" })).toBeInTheDocument();
+    await waitFor(() => expect(within(dialogue).getByPlaceholderText("Nom de l'objet")).toHaveValue(""));
+    const [premier] = actions.addWorldCatalogItem.mock.calls;
+    expect(premier[2]).toEqual(expect.objectContaining({ category_id: null }));
   });
 });

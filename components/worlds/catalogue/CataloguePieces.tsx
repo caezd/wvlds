@@ -1,9 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { useTranslations } from "next-intl";
 import {
-  X, Pencil, Trash2, Loader2, Check, GripVertical, Copy, MoreHorizontal, FolderInput, Swords, Shapes,
+  Pencil, Trash2, GripVertical, Copy, MoreHorizontal, FolderInput,
 } from "lucide-react";
 import {
   useSortable,
@@ -24,11 +23,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { afterMenuClose } from "@/components/ui/after-menu-close";
-import { CatalogVisual, visualSourceButtonClass } from "./CatalogVisual";
+import { CatalogVisual } from "./CatalogVisual";
 import { useCatalogueRow } from "./CatalogueRowContext";
-import { RpgIconPicker } from "@/components/personas/RpgIconPicker";
-import { LucideIconPicker } from "@/components/ui/LucideIconPicker";
-import { type CatalogType, type CatalogItem } from "./catalogueTypes";
+import { type CatalogItem } from "./catalogueTypes";
 
 // Briques élémentaires d'une ligne de catalogue.
 
@@ -66,143 +63,6 @@ export function DragHandle(props: React.HTMLAttributes<HTMLSpanElement>) {
     >
       <GripVertical className="h-4 w-4" />
     </span>
-  );
-}
-
-// ── Add form ──────────────────────────────────────────────────────────────────
-
-/** Ce que la saisie rapide transmet — le reste se règle dans le dialogue. */
-export type AddItemData = {
-  name: string;
-  description: string;
-  icon: string | null;
-  lucide_icon: string | null;
-  category_id: string | null;
-};
-
-/**
- * La saisie rapide, en ligne.
- *
- * Un nom, une icône, une description — de quoi entrer vingt objets à la suite
- * sans quitter le clavier. Tout le reste (rareté, image, propriétés) se règle
- * ensuite dans le dialogue de modification : le demander à la création
- * ralentirait le seul moment où l'on saisit en série.
- */
-export function AddForm({
-  type,
-  categoryId,
-  onAdd,
-  onCancel,
-}: {
-  type: CatalogType;
-  categoryId: string | null;
-  onAdd: (data: AddItemData) => Promise<void>;
-  onCancel: () => void;
-}) {
-  const t = useTranslations("catalogue");
-  const tCommon = useTranslations("common");
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [icon, setIcon] = useState<string | null>(null);
-  const [lucideIcon, setLucideIcon] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!name.trim()) return;
-    setSaving(true);
-    await onAdd({
-      name: name.trim(),
-      description,
-      icon,
-      lucide_icon: lucideIcon,
-      category_id: categoryId,
-    });
-    setSaving(false);
-    // Le formulaire reste ouvert, vidé, pour l'objet suivant : c'est la saisie
-    // en série qu'il sert. On le referme par la croix, ou par Échap.
-    setName("");
-    setDescription("");
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="flex items-start gap-2 rounded-xl border border-dashed border-border bg-muted/20 p-3 mt-1">
-      {/* Les deux sources d'icône, comme dans le dialogue — l'image, elle,
-          attend que l'objet existe pour avoir un dossier. Un jeu d'épées et de
-          potions va aux objets, les icônes de l'application aux compétences,
-          mais aucun des deux n'est réservé : « Forge » se dessine mieux avec
-          une enclume de jeu, « Potion de soin » avec un cœur. Choisir l'une
-          efface l'autre, pour que le visuel affiché soit toujours celui qu'on
-          vient de choisir. */}
-      <div className="flex shrink-0 flex-col items-center gap-1">
-        <CatalogVisual icon={icon} lucideIcon={lucideIcon} size={40} />
-        <div className="flex items-center gap-0.5">
-          <RpgIconPicker
-            value={icon ?? undefined}
-            onChange={(v) => { setIcon(v ?? null); setLucideIcon(null); }}
-            trigger={
-              <button
-                type="button"
-                title={t("chooseIcon")}
-                aria-label={t("chooseIcon")}
-                className={visualSourceButtonClass(!!icon)}
-              >
-                <Swords className="h-3.5 w-3.5" />
-              </button>
-            }
-          />
-          <LucideIconPicker
-            value={lucideIcon ?? ""}
-            onChange={(name) => { setLucideIcon(name); setIcon(null); }}
-            trigger={
-              <button
-                type="button"
-                title={t("chooseLucideIcon")}
-                aria-label={t("chooseLucideIcon")}
-                className={visualSourceButtonClass(!!lucideIcon)}
-              >
-                <Shapes className="h-3.5 w-3.5" />
-              </button>
-            }
-          />
-        </div>
-      </div>
-      <div className="flex-1 space-y-1.5 min-w-0">
-        <input
-          autoFocus
-          value={name}
-          onChange={e => setName(e.target.value)}
-          placeholder={type === "inventory" ? t("itemNamePlaceholder") : t("skillNamePlaceholder")}
-          className="w-full bg-transparent text-sm font-medium outline-none placeholder:text-muted-foreground/40"
-          maxLength={200}
-        />
-        <input
-          value={description}
-          onChange={e => setDescription(e.target.value)}
-          placeholder={t("descPlaceholder")}
-          className="w-full bg-transparent text-xs text-muted-foreground outline-none placeholder:text-muted-foreground/40"
-          maxLength={200}
-        />
-      </div>
-      <div className="flex items-center gap-1 shrink-0">
-        <button
-          type="submit"
-          disabled={!name.trim() || saving}
-          className="flex h-7 items-center gap-1 rounded-lg bg-primary px-2.5 text-xs font-medium text-primary-foreground disabled:opacity-40 transition-opacity"
-        >
-          {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
-          {t("add")}
-        </button>
-        <button
-          aria-label={tCommon("cancel")}
-          type="button"
-          onClick={onCancel}
-          className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <X className="h-3.5 w-3.5" />
-        </button>
-      </div>
-    </form>
   );
 }
 

@@ -266,12 +266,29 @@ async function catalogCategoryFits(
   return !!data;
 }
 
+/**
+ * Crée un objet ou une compétence.
+ *
+ * `options.id` : l'identifiant peut venir du client. Le dialogue de création
+ * téléverse l'image AVANT d'enregistrer la ligne, et le dossier de stockage
+ * porte l'identifiant de l'objet (migration 163) — il faut donc le connaître
+ * d'avance. La base refuse un doublon ; un identifiant forgé ne peut donc
+ * qu'échouer, jamais écraser.
+ */
 export async function addWorldCatalogItem(
   worldId: string,
   type: "inventory" | "skills",
   data: CatalogItemInput,
+  options?: { id?: string },
 ) {
-  const head = parseInput(z.strictObject({ worldId: idSchema, type: catalogTypeSchema }), { worldId, type });
+  const head = parseInput(
+    z.strictObject({
+      worldId: idSchema,
+      type: catalogTypeSchema,
+      options: z.strictObject({ id: z.uuid() }).partial().optional(),
+    }),
+    { worldId, type, options },
+  );
   if (!head.ok) return { ok: false as const, error: head.error };
   const cleaned = cleanCatalogItemInput(data);
   if (!cleaned.ok) return { ok: false as const, error: cleaned.error };
@@ -286,7 +303,13 @@ export async function addWorldCatalogItem(
 
   const { data: item, error } = await supabase
     .from("world_catalog_items")
-    .insert({ world_id: worldId, type, category_id: categoryId, ...cleaned.value })
+    .insert({
+      ...(head.data.options?.id ? { id: head.data.options.id } : {}),
+      world_id: worldId,
+      type,
+      category_id: categoryId,
+      ...cleaned.value,
+    })
     .select(CATALOG_ITEM_COLUMNS)
     .single();
   if (error) return { ok: false as const, error: echecEnregistrement("addWorldCatalogItem", error) };

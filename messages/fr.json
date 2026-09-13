@@ -1505,7 +1505,10 @@
     "selectedCount": "{count, plural, one {# sélectionné} other {# sélectionnés}}",
     "selectAllVisible": "Tout sélectionner",
     "clearSelection": "Annuler la sélection",
-    "movedToTrashCount": "{count, plural, one {# entrée envoyée à la corbeille} other {# entrées envoyées à la corbeille}}"
+    "movedToTrashCount": "{count, plural, one {# entrée envoyée à la corbeille} other {# entrées envoyées à la corbeille}}",
+    "newItem": "Nouvel objet",
+    "newSkill": "Nouvelle compétence",
+    "createAndContinue": "Créer et continuer"
   },
   "offline": {
     "title": "Vous êtes hors ligne",
