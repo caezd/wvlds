@@ -8,6 +8,7 @@ import { Network, Pencil, Search, Trash2, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
 // Le canevas ne fait plus que deux choses : dessiner (blocs, cartes, flèches)
 // et orchestrer. Les données et leurs écritures sont dans `useRelationsData`,
@@ -503,7 +504,7 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
         ) : panelProps ? (
           <PersonaRelationsPanel {...panelProps} onClose={() => setSelectedPersonaId(null)} closeLabel={tCommon("back")} closeIcon="back" />
         ) : (
-          <div className="flex-1 overflow-y-auto py-2">
+          <div className="flex-1 overflow-y-auto py-1">
             {filteredUserList.length === 0 ? (
               <p className="px-3 py-8 text-center text-xs text-muted-foreground/60">
                 {search.trim() ? t("noSearchResults") : t("noPersonas")}
@@ -512,32 +513,37 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
               const dName = member.username ? `@${member.username}` : member.user_id.slice(0, 8);
               const letter = dName.replace(/^@/, "")[0]?.toUpperCase() ?? "?";
               return (
-                <section key={member.user_id} aria-label={dName} className="space-y-1.5 py-1.5">
-                  <div className="flex items-center gap-2 px-3">
+                <section key={member.user_id} aria-label={dName} className="space-y-2 px-4 py-3">
+                  <div className="flex items-center gap-2">
                     <span className="relative flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted text-[9px] font-bold">
                       {member.avatar_url ? <Image src={member.avatar_url} alt={dName} fill sizes="20px" className="object-cover" /> : letter}
                     </span>
                     <span className="truncate text-xs font-medium text-muted-foreground">{dName}</span>
                     <span className="text-[11px] tabular-nums text-muted-foreground/60">{ps.length}</span>
                   </div>
-                  {/* `snap-x` : le défilement s'arrête carte par carte, jamais entre deux. */}
-                  <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto px-3 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                    {ps.map((p) => {
-                      const counts = countsByPersona.get(p.id);
-                      return (
-                        <PersonaCard
-                          key={p.id}
-                          persona={p}
-                          groupColor={groupColor.get(p.id)}
-                          dimmed={personaHidden(p.id)}
-                          pendingCount={p.user_id === userId ? (counts?.pending ?? 0) : 0}
-                          relationCount={counts?.total ?? 0}
-                          onSelect={() => setSelectedPersonaId(p.id)}
-                          className="shrink-0 snap-start"
-                        />
-                      );
-                    })}
-                  </div>
+                  {/* ScrollArea plutôt qu'un simple overflow : à la souris, sans
+                      barre, une rangée qui déborde ne se parcourt pas. `snap-x` :
+                      au doigt, le défilement s'arrête carte par carte. */}
+                  <ScrollArea className="-mx-1">
+                    <div className="flex snap-x gap-3 px-1 pb-3 pt-1">
+                      {ps.map((p) => {
+                        const counts = countsByPersona.get(p.id);
+                        return (
+                          <PersonaCard
+                            key={p.id}
+                            persona={p}
+                            groupColor={groupColor.get(p.id)}
+                            dimmed={personaHidden(p.id)}
+                            pendingCount={p.user_id === userId ? (counts?.pending ?? 0) : 0}
+                            relationCount={counts?.total ?? 0}
+                            onSelect={() => setSelectedPersonaId(p.id)}
+                            className="shrink-0 snap-start"
+                          />
+                        );
+                      })}
+                    </div>
+                    <ScrollBar orientation="horizontal" />
+                  </ScrollArea>
                 </section>
               );
             })}
