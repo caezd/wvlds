@@ -8,7 +8,6 @@ import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { ImageIcon, Plus, Search } from "lucide-react";
 
-import { cn } from "@/lib/utils";
 import { catalogItemMatches, normalizeForSearch, RARITY_COLORS } from "@/lib/worldCatalog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { WorldCatalogCategory, WorldCatalogItem, WorldCatalogRarity } from "@/types/worlds";

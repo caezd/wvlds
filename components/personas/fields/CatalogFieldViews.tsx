@@ -1,7 +1,5 @@
 "use client";
 
-import Image from "next/image";
-
 import { cn } from "@/lib/utils";
 import { RARITY_COLORS, resolveCatalogEntry } from "@/lib/worldCatalog";
 import type { InventoryItem, SkillItem } from "@/types/personas";
