@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Loader2, FolderPlus, Search, Download, Upload, X, Trash2 } from "lucide-react";
+import { Loader2, FolderPlus, Search, Download, Upload, X, Trash2, FolderInput, CheckSquare } from "lucide-react";
 import {
   DndContext,
   DragOverlay,
@@ -27,7 +27,15 @@ import {
 
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
-import type { WorldCatalogCategory } from "@/types/worlds";
+import { loadCollapsedCategories, saveCollapsedCategories } from "@/lib/catalogueCollapse";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import type { WorldCatalogCategory, WorldCatalogRarity } from "@/types/worlds";
 import {
   addWorldCatalogItem,
   updateWorldCatalogItem,
@@ -45,6 +53,7 @@ import {
   type CatalogItemInput,
 } from "@/app/actions/worldCatalog";
 import {
+  CATALOG_RARITIES,
   buildCatalogExport,
   catalogItemMatches,
   normalizeForSearch,
@@ -54,7 +63,8 @@ import { UNCAT, COL_PREFIX, groupByColumn, type CatalogType, type CatalogItem } 
 import type { WorldCatalogItem } from "@/types/worlds";
 
 import { CategoryRowOverlay, ItemRowOverlay, type AddItemData } from "./CataloguePieces";
-import { CatalogItemDetail, CatalogItemDialog } from "./CatalogItemDialog";
+import { CatalogItemDetail, CatalogItemDialog, RarityDot } from "./CatalogItemDialog";
+import { CatalogueRowProvider, type CatalogueRowContextValue } from "./CatalogueRowContext";
 import { CatalogTrashDialog } from "./CatalogTrashDialog";
 import { AddCategoryForm, DroppableColumn, SortableCategoryContainer, UncategorizedSection } from "./CatalogueSections";
 import { messageErreurAction } from "@/lib/actionErrors";
@@ -104,6 +114,34 @@ export function CatalogueList({
   const [renamingCatId, setRenamingCatId] = useState<string | null>(null);
   const [addingCategoryInCol, setAddingCategoryInCol] = useState<number | false>(false);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
+
+  // Les objets cochés. La sélection ne survit pas à la sortie du mode
+  // édition : c'est là que ses commandes vivent.
+  const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(() => new Set());
+  useEffect(() => { if (!canEdit) setSelectedIds(new Set()); }, [canEdit]);
+
+  // Les catégories repliées — lues après le montage, `localStorage` n'existe
+  // pas au rendu serveur.
+  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(() => new Set());
+  useEffect(() => { setCollapsed(loadCollapsedCategories(worldId, type)); }, [worldId, type]);
+
+  function setCollapsedAndSave(next: Set<string>) {
+    setCollapsed(next);
+    saveCollapsedCategories(worldId, type, next);
+  }
+
+  function toggleCollapsed(id: string) {
+    const next = new Set(collapsed);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    setCollapsedAndSave(next);
+  }
+
+  function expandCategory(id: string | null) {
+    if (id === null || !collapsed.has(id)) return;
+    const next = new Set(collapsed);
+    next.delete(id);
+    setCollapsedAndSave(next);
+  }
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -178,7 +216,89 @@ export function CatalogueList({
     const res = await trashWorldCatalogItem(id);
     if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
     setItems(prev => prev.filter(i => i.id !== id));
+    setSelectedIds(prev => prev.has(id) ? new Set([...prev].filter(x => x !== id)) : prev);
     toast.success(t("movedToTrash"));
+  }
+
+  // ── Déplacement sans glisser, et sélection multiple ──
+
+  /**
+   * La catégorie d'un objet telle qu'elle s'affiche.
+   *
+   * Un objet peut porter l'identifiant d'une catégorie qui n'existe plus —
+   * la ligne n'est pas encore relue après un `ON DELETE SET NULL` : il est
+   * alors parmi les non classés, et c'est de là qu'on le déplace.
+   */
+  function shownCategoryOf(item: CatalogItem): string | null {
+    return item.category_id !== null && categories.some(c => c.id === item.category_id)
+      ? item.category_id
+      : null;
+  }
+
+  /**
+   * Range des objets au bout d'une catégorie, dans leur ordre actuel.
+   *
+   * Le même geste que le glisser-déposer entre catégories, sans la souris :
+   * il sert au menu d'une ligne et à la sélection multiple, et reste
+   * possible quand une recherche a suspendu le glisser. Chaque liste touchée
+   * — la cible, chaque source — est renumérotée et enregistrée à part.
+   */
+  function moveItemsToCategory(ids: readonly string[], targetCategoryId: string | null) {
+    const wanted = new Set(ids);
+    const movingItems = items.filter(i => wanted.has(i.id) && shownCategoryOf(i) !== targetCategoryId);
+    if (movingItems.length === 0) return;
+    const movingIds = new Set(movingItems.map(i => i.id));
+    const sourceIds = [...new Set(movingItems.map(shownCategoryOf))];
+    const others = items.filter(i => !movingIds.has(i.id));
+
+    const target = [...others.filter(i => shownCategoryOf(i) === targetCategoryId), ...movingItems]
+      .map((i, idx) => ({ ...i, category_id: targetCategoryId, sort_index: idx }));
+    const sources = sourceIds.map(src =>
+      others.filter(i => shownCategoryOf(i) === src).map((i, idx) => ({ ...i, category_id: src, sort_index: idx })),
+    );
+    const untouched = others.filter(i => {
+      const cat = shownCategoryOf(i);
+      return cat !== targetCategoryId && !sourceIds.includes(cat);
+    });
+
+    setItems([...untouched, ...target, ...sources.flat()]);
+    for (const list of [target, ...sources]) {
+      if (list.length === 0) continue;
+      reportSaveFailure(reorderWorldCatalogItems(
+        list.map(i => ({ id: i.id, sort_index: i.sort_index, category_id: i.category_id })),
+      ), tCommon("saveError"));
+    }
+    // L'objet arrive dans une catégorie repliée : on l'ouvre, sinon il
+    // semble avoir disparu.
+    expandCategory(targetCategoryId);
+  }
+
+  function toggleSelected(id: string) {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  async function handleTrashSelected() {
+    const ids = [...selectedIds];
+    const results = await Promise.all(ids.map(id => trashWorldCatalogItem(id).then(r => ({ id, ...r }))));
+    const done = new Set(results.filter(r => r.ok).map(r => r.id));
+    if (done.size > 0) setItems(prev => prev.filter(i => !done.has(i.id)));
+    setSelectedIds(new Set(ids.filter(id => !done.has(id))));
+    const failed = results.find(r => !r.ok);
+    if (failed) toast.error(messageErreurAction(failed.error, tCommon));
+    else toast.success(t("movedToTrashCount", { count: done.size }));
+  }
+
+  async function handleRaritySelected(rarity: WorldCatalogRarity | null) {
+    const ids = [...selectedIds];
+    const results = await Promise.all(ids.map(id => updateWorldCatalogItem(id, { rarity }).then(r => ({ id, ...r }))));
+    const done = new Set(results.filter(r => r.ok).map(r => r.id));
+    if (done.size > 0) setItems(prev => prev.map(i => (done.has(i.id) ? { ...i, rarity } : i)));
+    const failed = results.find(r => !r.ok);
+    if (failed) toast.error(messageErreurAction(failed.error, tCommon));
   }
 
   // ── Corbeille ──
@@ -515,7 +635,18 @@ export function CatalogueList({
   const canReorder = canEdit && !searching;
 
   const hasCategories = categories.length > 0;
-  const uncatItems = visibleItems.filter(i => i.category_id === null || !categories.some(c => c.id === i.category_id));
+  const uncatItems = visibleItems.filter(i => shownCategoryOf(i) === null);
+  const selectedCount = selectedIds.size;
+  const allVisibleSelected = visibleItems.length > 0 && visibleItems.every(i => selectedIds.has(i.id));
+
+  // Pas de `useMemo` : les rappels lisent `items` et `collapsed` du rendu en
+  // cours, et la liste se rend de toute façon en entier à chaque changement.
+  const rowContext: CatalogueRowContextValue = {
+    categories,
+    selectedIds,
+    onMoveItem: (id, categoryId) => moveItemsToCategory([id], categoryId),
+    onToggleSelected: toggleSelected,
+  };
   const activeItem = activeDragId ? (items.find(i => i.id === activeDragId) ?? null) : null;
   const activeCategory = activeDragId ? (categories.find(c => c.id === activeDragId) ?? null) : null;
   const columnGroups = groupByColumn(categories);
@@ -605,10 +736,92 @@ export function CatalogueList({
         )}
       </div>
 
+      {/* Barre de sélection : ce qu'on fait de plusieurs objets à la fois. */}
+      {canEdit && selectedCount > 0 && (
+        <div
+          role="toolbar"
+          aria-label={t("selectionToolbar")}
+          className="mb-2 flex flex-wrap items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/5 px-2 py-1.5 text-xs"
+        >
+          <span className="px-1 font-medium tabular-nums">{t("selectedCount", { count: selectedCount })}</span>
+          {!allVisibleSelected && (
+            <button
+              type="button"
+              onClick={() => setSelectedIds(new Set(visibleItems.map(i => i.id)))}
+              className="flex h-7 items-center gap-1 rounded-md px-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            >
+              <CheckSquare className="h-3.5 w-3.5" />
+              {t("selectAllVisible")}
+            </button>
+          )}
+          <span className="flex-1" />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="flex h-7 items-center gap-1 rounded-md px-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+              >
+                <FolderInput className="h-3.5 w-3.5" />
+                {t("moveTo")}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-40">
+              {categories.map(cat => (
+                <DropdownMenuItem key={cat.id} onSelect={() => moveItemsToCategory([...selectedIds], cat.id)}>
+                  {cat.name}
+                </DropdownMenuItem>
+              ))}
+              {categories.length > 0 && <DropdownMenuSeparator />}
+              <DropdownMenuItem onSelect={() => moveItemsToCategory([...selectedIds], null)}>
+                {t("uncategorized")}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="flex h-7 items-center gap-1 rounded-md px-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+              >
+                {t("rarity")}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-40">
+              {CATALOG_RARITIES.map(r => (
+                <DropdownMenuItem key={r} onSelect={() => void handleRaritySelected(r)}>
+                  <RarityDot rarity={r} className="mr-2" />
+                  {t(`rarity${r.charAt(0).toUpperCase()}${r.slice(1)}`)}
+                </DropdownMenuItem>
+              ))}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={() => void handleRaritySelected(null)}>{t("rarityNone")}</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <button
+            type="button"
+            onClick={() => void handleTrashSelected()}
+            className="flex h-7 items-center gap-1 rounded-md px-2 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            {tCommon("delete")}
+          </button>
+          <button
+            type="button"
+            aria-label={t("clearSelection")}
+            title={t("clearSelection")}
+            onClick={() => setSelectedIds(new Set())}
+            className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
+
       {searching && visibleItems.length === 0 && (
         <p className="py-10 text-center text-sm text-muted-foreground">{t("noResults")}</p>
       )}
 
+      <CatalogueRowProvider value={rowContext}>
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
@@ -647,6 +860,10 @@ export function CatalogueList({
                       usage={usage}
                       addingHere={addingInCat === cat.id}
                       renamingId={renamingCatId}
+                      // Une recherche déplie tout : ses résultats doivent se voir.
+                      // Ajouter dans une catégorie repliée l'ouvre aussi.
+                      collapsed={collapsed.has(cat.id) && !searching && addingInCat !== cat.id}
+                      onToggleCollapsed={toggleCollapsed}
                       onEditItem={setEditingItem}
                       onDuplicateItem={id => void handleDuplicateItem(id)}
                       onDeleteItem={id => void handleDeleteItem(id)}
@@ -734,6 +951,7 @@ export function CatalogueList({
           {activeCategory && <CategoryRowOverlay name={activeCategory.name} />}
         </DragOverlay>
       </DndContext>
+      </CatalogueRowProvider>
 
       {/* Modification : tout ce qui ne tient pas sur une ligne. */}
       {editingItem && (

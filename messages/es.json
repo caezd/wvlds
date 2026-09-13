@@ -1494,7 +1494,18 @@
     "importError_json": "Este archivo no es un JSON válido.",
     "importError_shape": "Este archivo no tiene la forma de un catálogo exportado.",
     "importError_type": "Este archivo viene de la otra pestaña del catálogo.",
-    "importError_empty": "Este archivo no contiene ninguna entrada utilizable."
+    "importError_empty": "Este archivo no contiene ninguna entrada utilizable.",
+    "selectItem": "Seleccionar {name}",
+    "itemActions": "Acciones para {name}",
+    "moveTo": "Mover a",
+    "collapseCategory": "Plegar {name}",
+    "expandCategory": "Desplegar {name}",
+    "itemCount": "{count, plural, =0 {Sin entradas} one {# entrada} other {# entradas}}",
+    "selectionToolbar": "Selección",
+    "selectedCount": "{count, plural, one {# seleccionado} other {# seleccionados}}",
+    "selectAllVisible": "Seleccionar todo",
+    "clearSelection": "Cancelar la selección",
+    "movedToTrashCount": "{count, plural, one {# entrada enviada a la papelera} other {# entradas enviadas a la papelera}}"
   },
   "offline": {
     "title": "Está sin conexión",

@@ -8,6 +8,21 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-09 ──────────────────────────────────────────────────────────────
   {
     date: "2026-09",
+    tag: "Catalogue",
+    text: "Chaque ligne du catalogue a son menu : modifier, dupliquer, déplacer vers une catégorie, supprimer. Plus besoin de glisser un objet pour le classer.",
+  },
+  {
+    date: "2026-09",
+    tag: "Catalogue",
+    text: "Cochez plusieurs objets pour les déplacer, changer leur rareté ou les envoyer à la corbeille d’un coup.",
+  },
+  {
+    date: "2026-09",
+    tag: "Catalogue",
+    text: "Les catégories se replient d’un clic et affichent leur nombre d’entrées ; le repli est retenu d’une visite à l’autre.",
+  },
+  {
+    date: "2026-09",
     tag: "Accueil",
     text: "Une fois le titre d’un monde défilé, une barre reste en haut de la page : son nom sur sa bannière floutée, avec le menu, la recherche et le bouton favori toujours à portée.",
   },

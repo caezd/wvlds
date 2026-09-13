@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import {
-  X, Pencil, Trash2, Loader2, Check, GripVertical, Copy,
+  X, Pencil, Trash2, Loader2, Check, GripVertical, Copy, MoreHorizontal, FolderInput,
 } from "lucide-react";
 import {
   useSortable,
@@ -11,7 +11,21 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 
 import { RARITY_COLORS } from "@/lib/worldCatalog";
+import { cn } from "@/lib/utils";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { afterMenuClose } from "@/components/ui/after-menu-close";
 import { CatalogVisual } from "./CatalogVisual";
+import { useCatalogueRow } from "./CatalogueRowContext";
 import { RpgIconPicker } from "@/components/personas/RpgIconPicker";
 import { LucideIconPicker } from "@/components/ui/LucideIconPicker";
 import { type CatalogType, type CatalogItem } from "./catalogueTypes";
@@ -187,6 +201,12 @@ export function AddForm({
  * deux sont distincts depuis la recherche : une liste filtrée ne montre plus
  * les voisins d'un objet, et l'y faire glisser reviendrait à réécrire des rangs
  * qu'on ne voit pas.
+ *
+ * Les commandes tiennent dans un menu « ⋯ », et non en trois icônes révélées
+ * au survol : le survol n'existe pas au doigt, et « Supprimer » y était collé
+ * à « Modifier ». Le menu porte aussi « Déplacer vers… » — classer un objet
+ * sans le glisser, ce qui reste possible quand une recherche a suspendu le
+ * glisser-déposer. La case à cocher, elle, ouvre la sélection multiple.
  */
 export function SortableItemRow({
   item,
@@ -209,6 +229,8 @@ export function SortableItemRow({
 }) {
   const t = useTranslations("catalogue");
   const tCommon = useTranslations("common");
+  const { categories, onMoveItem, selectedIds, onToggleSelected } = useCatalogueRow();
+  const selected = selectedIds.has(item.id);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.id,
     data: { type: "item", categoryId: item.category_id },
@@ -225,9 +247,24 @@ export function SortableItemRow({
     <div
       ref={setNodeRef}
       style={style}
-      className="group/item flex items-center gap-2 px-2 py-1"
+      data-selected={selected || undefined}
+      className={cn(
+        "group/item flex items-center gap-2 rounded-lg px-2 py-1 transition-colors",
+        selected && "bg-primary/5",
+      )}
     >
       {canReorder && <DragHandle {...attributes} {...listeners} />}
+      {canEdit && (
+        <Checkbox
+          checked={selected}
+          onCheckedChange={() => onToggleSelected(item.id)}
+          aria-label={t("selectItem", { name: item.name })}
+          className={cn(
+            "shrink-0 transition-opacity",
+            !selected && "opacity-40 group-hover/item:opacity-100 focus-visible:opacity-100",
+          )}
+        />
+      )}
       <CatalogIcon icon={item.icon} lucideIcon={item.lucide_icon} imageUrl={item.image_url} size="sm" />
       <button
         type="button"
@@ -257,32 +294,54 @@ export function SortableItemRow({
         )}
       </button>
       {canEdit && (
-        <div className="flex items-center gap-1 opacity-0 group-hover/item:opacity-100 focus-within:opacity-100 transition-opacity shrink-0">
-          <button
-            aria-label={tCommon("edit")}
-            type="button"
-            onClick={onEdit}
-            className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
-          >
-            <Pencil className="h-3.5 w-3.5" />
-          </button>
-          <button
-            aria-label={t("duplicate")}
-            type="button"
-            onClick={onDuplicate}
-            className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
-          >
-            <Copy className="h-3.5 w-3.5" />
-          </button>
-          <button
-            aria-label={tCommon("delete")}
-            type="button"
-            onClick={onDelete}
-            className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </button>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              aria-label={t("itemActions", { name: item.name })}
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground opacity-60 transition-opacity hover:bg-secondary hover:text-foreground hover:opacity-100 focus-visible:opacity-100 group-hover/item:opacity-100 data-[state=open]:opacity-100"
+            >
+              <MoreHorizontal className="h-3.5 w-3.5" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="min-w-44">
+            {/* `afterMenuClose` : la modification ouvre un dialogue, une seconde
+                couche modale par-dessus le menu qui se ferme. */}
+            <DropdownMenuItem onSelect={afterMenuClose(onEdit)}>
+              <Pencil className="mr-2 h-3.5 w-3.5" /> {tCommon("edit")}
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={onDuplicate}>
+              <Copy className="mr-2 h-3.5 w-3.5" /> {t("duplicate")}
+            </DropdownMenuItem>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                <FolderInput className="mr-2 h-3.5 w-3.5" /> {t("moveTo")}
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="min-w-40">
+                {categories.map((cat) => (
+                  <DropdownMenuItem
+                    key={cat.id}
+                    disabled={cat.id === item.category_id}
+                    onSelect={() => onMoveItem(item.id, cat.id)}
+                  >
+                    {cat.name}
+                  </DropdownMenuItem>
+                ))}
+                {categories.length > 0 && <DropdownMenuSeparator />}
+                <DropdownMenuItem
+                  disabled={item.category_id === null}
+                  onSelect={() => onMoveItem(item.id, null)}
+                >
+                  {t("uncategorized")}
+                </DropdownMenuItem>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={onDelete} className="text-destructive focus:text-destructive">
+              <Trash2 className="mr-2 h-3.5 w-3.5" /> {tCommon("delete")}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       )}
     </div>
   );
