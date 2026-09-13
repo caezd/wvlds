@@ -1,5 +1,7 @@
 "use server";
 
+import { z } from "zod";
+
 import { createClient } from "@/lib/supabase/server";
 import { deletePersona } from "@/app/(protected)/p/actions";
 import { translatePersonaError } from "@/lib/personaErrors";
@@ -24,6 +26,7 @@ import type { WorldCatalogItem, WorldCatalogCategory, WorldCatalogProperty, Worl
 import { clampDaysPerMonth } from "@/lib/worldTimeline";
 import { ERR_NON_AUTHENTIFIE, ERR_VALEUR_NON_SUPPORTEE, ERR_TAG_INVALIDE, ERR_INTROUVABLE, ERR_NON_AUTORISE, echecEnregistrement } from "@/lib/actionErrors";
 import { DB_TEXT_LIMITS } from "@/lib/textLimits";
+import { httpUrlSchema, idSchema, longTextSchema, parseInput, shortTextSchema } from "@/lib/inputSchemas";
 import { LUCIDE_ALL_ICONS } from "@/lib/lucideCategories";
 import { storagePathFromUrl } from "@/lib/storage";
 import { catalogItemImagePrefix } from "@/lib/storagePaths";
@@ -177,92 +180,63 @@ export async function setWorldRestriction(
 const CATALOG_ITEM_COLUMNS =
   "id, world_id, type, category_id, name, description, icon, lucide_icon, image_url, rarity, stackable, max_quantity, properties, sort_index";
 
+const catalogTypeSchema = z.enum(["inventory", "skills"]);
+
 /**
- * Ce qu'une écriture accepte de recevoir.
+ * Ce qu'une écriture accepte de recevoir — et rien d'autre.
  *
- * Les types y sont précis pour l'appelant, mais ils ne PROTÈGENT de rien : une
- * action serveur reçoit ce qu'on lui envoie, et TypeScript s'arrête à la
- * frontière. C'est `cleanCatalogItemInput` qui vérifie, à l'exécution.
+ * Les types TypeScript ne PROTÈGENT de rien : une action serveur reçoit ce
+ * qu'on lui envoie, et TypeScript s'arrête à la frontière. Le schéma est
+ * strict (lib/inputSchemas.ts) : une clé inconnue — `world_id`, `sort_index`,
+ * `deleted_at` — refuse l'appel au lieu d'être écrite. Toutes les clés sont
+ * facultatives : une mise à jour partielle n'a pas à fournir le reste, et
+ * l'ajout exige le nom à part.
+ *
+ * Le nom d'icône Lucide est vérifié contre la bibliothèque, et pas seulement
+ * borné : il finit dans un `import()` de `lucide-react` côté client
+ * (LazyLucideIcon), et rien n'est plus difficile à diagnostiquer qu'une icône
+ * muette. Les propriétés libres passent par `sanitizeCatalogProperties`, qui
+ * en tronque le nombre et la longueur comme le fait la contrainte de la base.
+ * L'URL d'image n'a pas encore sa contrainte `is_http_url` en base (la
+ * migration 171 ne connaissait pas la table) : le schéma tient ce rôle.
  */
-export type CatalogItemInput = {
-  name?: string;
-  description?: string | null;
-  icon?: string | null;
-  lucide_icon?: string | null;
-  image_url?: string | null;
-  rarity?: WorldCatalogRarity | null;
-  stackable?: boolean;
-  max_quantity?: number | null;
-  properties?: WorldCatalogProperty[];
-  category_id?: string | null;
-};
+const catalogItemSchema = z
+  .strictObject({
+    name: shortTextSchema,
+    description: longTextSchema.nullable().transform((v) => v || null),
+    icon: z.string().max(DB_TEXT_LIMITS["world_catalog_items.icon"]).nullable().transform((v) => v || null),
+    lucide_icon: z
+      .string()
+      .max(DB_TEXT_LIMITS["world_catalog_items.lucide_icon"])
+      .nullable()
+      .transform((v) => v || null)
+      .refine((v) => v === null || LUCIDE_ICON_NAMES.has(v)),
+    image_url: z.union([httpUrlSchema, z.literal(""), z.null()]).transform((v) => v || null),
+    rarity: z.custom<WorldCatalogRarity>(isCatalogRarity).nullable(),
+    stackable: z.boolean(),
+    max_quantity: z.number().int().min(1).nullable(),
+    properties: z.custom<WorldCatalogProperty[]>(Array.isArray).transform((v) => sanitizeCatalogProperties(v)),
+    category_id: idSchema.nullable(),
+  })
+  .partial();
+
+export type CatalogItemInput = z.input<typeof catalogItemSchema>;
 
 /**
  * Ramène une saisie à ce que la base accepte, ou dit pourquoi elle refuse.
  *
- * Les actions écrivaient le corps reçu tel quel : la RLS dit qui peut écrire,
- * jamais quoi, et les contraintes de longueur posées par la migration 161 se
- * contentent de faire échouer l'écriture avec un message illisible. La
- * validation est donc faite ici, une fois, pour l'ajout comme pour la mise à
- * jour — seules les clés présentes sont examinées, une mise à jour partielle
- * n'a pas à fournir le reste.
+ * La RLS dit qui peut écrire, jamais quoi ; les contraintes de longueur de la
+ * migration 161 se contentent de faire échouer l'écriture avec un message
+ * illisible. La vérification est faite ici, une fois, pour l'ajout comme pour
+ * la mise à jour. `category_id` en est retiré : sa validité dépend du monde
+ * et du type, que seule l'action connaît.
  */
 function cleanCatalogItemInput(
-  data: CatalogItemInput,
+  data: unknown,
 ): { ok: true; value: Record<string, unknown> } | { ok: false; error: string } {
-  const value: Record<string, unknown> = {};
-
-  if (data.name !== undefined) {
-    const name = data.name.trim();
-    if (!name || name.length > DB_TEXT_LIMITS["world_catalog_items.name"]) {
-      return { ok: false, error: ERR_VALEUR_NON_SUPPORTEE };
-    }
-    value.name = name;
-  }
-
-  if (data.description !== undefined) {
-    const description = data.description?.trim() || null;
-    if (description && description.length > DB_TEXT_LIMITS["world_catalog_items.description"]) {
-      return { ok: false, error: ERR_VALEUR_NON_SUPPORTEE };
-    }
-    value.description = description;
-  }
-
-  if (data.icon !== undefined) value.icon = data.icon || null;
-  if (data.image_url !== undefined) value.image_url = data.image_url || null;
-
-  // Le nom d'icône est vérifié contre la bibliothèque, et pas seulement borné
-  // en longueur : il finit dans un `import()` de `lucide-react` côté client
-  // (LazyLucideIcon). Un nom inventé n'y rendrait rien, et rien n'est plus
-  // difficile à diagnostiquer qu'une icône muette.
-  if (data.lucide_icon !== undefined) {
-    if (data.lucide_icon && !LUCIDE_ICON_NAMES.has(data.lucide_icon)) {
-      return { ok: false as const, error: ERR_VALEUR_NON_SUPPORTEE };
-    }
-    value.lucide_icon = data.lucide_icon || null;
-  }
-
-  if (data.rarity !== undefined) {
-    if (data.rarity !== null && !isCatalogRarity(data.rarity)) {
-      return { ok: false, error: ERR_VALEUR_NON_SUPPORTEE };
-    }
-    value.rarity = data.rarity;
-  }
-
-  if (data.stackable !== undefined) value.stackable = !!data.stackable;
-
-  if (data.max_quantity !== undefined) {
-    if (data.max_quantity === null) {
-      value.max_quantity = null;
-    } else if (!Number.isFinite(data.max_quantity) || data.max_quantity < 1) {
-      return { ok: false, error: ERR_VALEUR_NON_SUPPORTEE };
-    } else {
-      value.max_quantity = Math.floor(data.max_quantity);
-    }
-  }
-
-  if (data.properties !== undefined) value.properties = sanitizeCatalogProperties(data.properties);
-
+  const input = parseInput(catalogItemSchema, data);
+  if (!input.ok) return input;
+  const { category_id: _category, ...value } = input.data;
   return { ok: true, value };
 }
 
@@ -297,9 +271,8 @@ export async function addWorldCatalogItem(
   type: "inventory" | "skills",
   data: CatalogItemInput,
 ) {
-  if (type !== "inventory" && type !== "skills") {
-    return { ok: false as const, error: ERR_VALEUR_NON_SUPPORTEE };
-  }
+  const head = parseInput(z.strictObject({ worldId: idSchema, type: catalogTypeSchema }), { worldId, type });
+  if (!head.ok) return { ok: false as const, error: head.error };
   const cleaned = cleanCatalogItemInput(data);
   if (!cleaned.ok) return { ok: false as const, error: cleaned.error };
   if (cleaned.value.name === undefined) return { ok: false as const, error: ERR_VALEUR_NON_SUPPORTEE };
@@ -321,6 +294,8 @@ export async function addWorldCatalogItem(
 }
 
 export async function updateWorldCatalogItem(id: string, data: CatalogItemInput) {
+  const head = parseInput(idSchema, id);
+  if (!head.ok) return { ok: false as const, error: head.error };
   const cleaned = cleanCatalogItemInput(data);
   if (!cleaned.ok) return { ok: false as const, error: cleaned.error };
 
@@ -484,26 +459,32 @@ export async function duplicateWorldCatalogItem(id: string) {
 
 // ── world_catalog_categories ──────────────────────────────────────────────────
 
+const catalogCategorySchema = z.strictObject({
+  worldId: idSchema,
+  type: catalogTypeSchema,
+  name: shortTextSchema,
+  options: z
+    .strictObject({ column_index: z.number().int().min(0), sort_index: z.number().int().min(0) })
+    .partial()
+    .optional(),
+});
+
 export async function addWorldCatalogCategory(
   worldId: string,
   type: "inventory" | "skills",
   name: string,
   options?: { column_index?: number; sort_index?: number },
 ) {
-  const clean = name.trim();
-  if (!clean || clean.length > DB_TEXT_LIMITS["world_catalog_categories.name"]) {
-    return { ok: false as const, error: ERR_VALEUR_NON_SUPPORTEE };
-  }
-  if (type !== "inventory" && type !== "skills") {
-    return { ok: false as const, error: ERR_VALEUR_NON_SUPPORTEE };
-  }
+  const input = parseInput(catalogCategorySchema, { worldId, type, name, options });
+  if (!input.ok) return { ok: false as const, error: input.error };
+
   const supabase = await createClient();
   const { data: category, error } = await supabase
     .from("world_catalog_categories")
     .insert({
       world_id: worldId,
       type,
-      name: clean,
+      name: input.data.name,
       column_index: options?.column_index ?? 0,
       sort_index: options?.sort_index ?? 0,
     })
@@ -517,17 +498,19 @@ export async function updateWorldCatalogCategory(
   id: string,
   data: Partial<{ name: string; sort_index: number }>,
 ) {
-  if (data.name !== undefined) {
-    const clean = data.name.trim();
-    if (!clean || clean.length > DB_TEXT_LIMITS["world_catalog_categories.name"]) {
-      return { ok: false as const, error: ERR_VALEUR_NON_SUPPORTEE };
-    }
-    data = { ...data, name: clean };
-  }
+  const input = parseInput(
+    z.strictObject({
+      id: idSchema,
+      data: z.strictObject({ name: shortTextSchema, sort_index: z.number().int().min(0) }).partial(),
+    }),
+    { id, data },
+  );
+  if (!input.ok) return { ok: false as const, error: input.error };
+
   const supabase = await createClient();
   const { error } = await supabase
     .from("world_catalog_categories")
-    .update(data)
+    .update(input.data.data)
     .eq("id", id);
   if (error) return { ok: false as const, error: echecEnregistrement("updateWorldCatalogCategory", error) };
   return { ok: true as const };
@@ -553,9 +536,18 @@ export async function deleteWorldCatalogCategory(id: string) {
 // de lignes touchées. Une RLS qui refuse ne lève pas d'erreur — elle ne met
 // rien à jour, en silence : c'est cet écart de compte qui la trahit.
 
+const MAX_REORDER_ROWS = 500;
+
 export async function reorderWorldCatalogItems(
   items: { id: string; sort_index: number; category_id: string | null }[],
 ) {
+  const input = parseInput(
+    z
+      .array(z.strictObject({ id: idSchema, sort_index: z.number().int().min(0), category_id: idSchema.nullable() }))
+      .max(MAX_REORDER_ROWS),
+    items,
+  );
+  if (!input.ok) return { ok: false as const, error: input.error };
   if (items.length === 0) return { ok: true as const };
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("reorder_world_catalog_items", { p_items: items });
@@ -569,6 +561,13 @@ export async function reorderWorldCatalogItems(
 export async function reorderWorldCatalogCategories(
   categories: { id: string; sort_index: number; column_index: number }[],
 ) {
+  const input = parseInput(
+    z
+      .array(z.strictObject({ id: idSchema, sort_index: z.number().int().min(0), column_index: z.number().int().min(0) }))
+      .max(MAX_REORDER_ROWS),
+    categories,
+  );
+  if (!input.ok) return { ok: false as const, error: input.error };
   if (categories.length === 0) return { ok: true as const };
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("reorder_world_catalog_categories", {
@@ -617,9 +616,11 @@ export async function importWorldCatalogItems(
   type: "inventory" | "skills",
   items: CatalogExportItem[],
 ) {
-  if (type !== "inventory" && type !== "skills") {
-    return { ok: false as const, error: ERR_VALEUR_NON_SUPPORTEE };
-  }
+  const head = parseInput(
+    z.strictObject({ worldId: idSchema, type: catalogTypeSchema, items: z.array(z.unknown()) }),
+    { worldId, type, items },
+  );
+  if (!head.ok) return { ok: false as const, error: head.error };
   const accepted = items.slice(0, MAX_CATALOG_IMPORT_ITEMS);
   if (accepted.length === 0) return { ok: false as const, error: ERR_VALEUR_NON_SUPPORTEE };
 
@@ -782,6 +783,10 @@ export async function getWorldTags(worldId: string) {
 const TAG_FORMAT = /^[\p{L}\p{N}]+$/u;
 
 export async function addWorldTag(worldId: string, rawTag: string) {
+  // Un `null` à la place de la chaîne faisait tomber `.trim()` en TypeError,
+  // soit une erreur 500 opaque là où un refus propre suffit.
+  const input = parseInput(z.strictObject({ worldId: idSchema, rawTag: z.string().max(1000) }), { worldId, rawTag });
+  if (!input.ok) return { ok: false as const, error: ERR_TAG_INVALIDE };
   const tag = rawTag.trim().toLowerCase().slice(0, MAX_TAG_LENGTH);
   if (!tag) return { ok: false as const, error: ERR_TAG_INVALIDE };
   if (!TAG_FORMAT.test(tag)) {

@@ -6,9 +6,9 @@ import userEvent from "@testing-library/user-event";
 import { createSupabaseMock, type SupabaseMock } from "@/test/supabaseMock";
 import { createClient } from "@/lib/supabase/client";
 import { WorldMap } from "@/components/worlds/map/WorldMap";
-import { deleteMapPin, updateWorldMap } from "@/app/actions/worldMap";
+import { deleteMapPin, deleteWorldMap, updateWorldMap } from "@/app/actions/worldMap";
 import { MEDIA } from "@/hooks/useMediaQuery";
-import { makeMap, makeMapPersona, makePin, makeRegion } from "./fixtures";
+import { makeMap, makePin, makePinLink, makePlacedPersona, makeRegion } from "./fixtures";
 
 // ──────────────────────────────────────────────────────────────────────────
 // Trois promesses de la carte, chacune tenue en défaut avant ce fichier :
@@ -24,20 +24,25 @@ import { makeMap, makeMapPersona, makePin, makeRegion } from "./fixtures";
 vi.mock("@/lib/supabase/client", () => ({ createClient: vi.fn() }));
 
 const getWorldMaps = vi.hoisted(() => vi.fn());
-const getMapPersona = vi.hoisted(() => vi.fn());
+const getPlacedPersonas = vi.hoisted(() => vi.fn(async () => []));
 const createMapRegion = vi.hoisted(() => vi.fn());
 const updateMapRegion = vi.hoisted(() => vi.fn(async () => {}));
 const deleteMapRegion = vi.hoisted(() => vi.fn(async () => {}));
 const setPersonaLocation = vi.hoisted(() => vi.fn(async () => {}));
+const createPinLink = vi.hoisted(() => vi.fn());
+const deletePinLink = vi.hoisted(() => vi.fn(async () => {}));
+const updatePinLink = vi.hoisted(() => vi.fn(async () => {}));
 vi.mock("@/app/actions/worldMap", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/app/actions/worldMap")>()),
   getWorldMaps,
-  getMapPersona,
+  getPlacedPersonas,
+  setPersonaLocation,
+  createPinLink,
+  deletePinLink,
+  updatePinLink,
   createMapRegion,
   updateMapRegion,
   deleteMapRegion,
-  getMyMapPersonas: vi.fn(async () => []),
-  setPersonaLocation,
   createMapPin: vi.fn(),
   updateMapPin: vi.fn(async () => {}),
   deleteMapPin: vi.fn(async () => {}),
@@ -48,17 +53,28 @@ vi.mock("@/app/actions/worldMap", async (importOriginal) => ({
 
 // Le panneau d'un lieu tire tout l'éditeur de paragraphe et le rendu Markdown :
 // ce qui se vérifie ici est ce que la CARTE fait, pas ce qu'il affiche.
-vi.mock("@/components/worlds/map/PinPopover", () => ({
-  // `panelRef` est attaché : c'est par lui que la carte mesure le panneau et
-  // le replace quand sa hauteur change.
-  PinPopover: ({ pin, panelRef, onDelete }: {
+vi.mock("@/components/worlds/map/PinDetail", () => ({
+  PinDetail: ({ pin, region, wikiPages = [], rooms = [], onDelete, onPlacePersona, onRemovePersona }: {
     pin: { title: string };
-    panelRef?: React.RefObject<HTMLDivElement | null>;
+    region?: { label: string } | null;
+    wikiPages?: { title: string }[];
+    rooms?: { title: string | null; name: string | null }[];
     onDelete: () => void;
+    onPlacePersona?: (personaId: string) => void;
+    onRemovePersona?: (personaId: string) => void;
   }) => (
-    <div ref={panelRef} data-testid="pin-popover">
+    <div data-testid="pin-popover">
       {pin.title}
+      {region && <span data-testid="pin-region">{region.label}</span>}
+      <span data-testid="pin-wiki-pages">{wikiPages.map((p) => p.title).join(", ")}</span>
+      <span data-testid="pin-rooms">{rooms.map((r) => r.title ?? r.name).join(", ")}</span>
       <button type="button" onClick={onDelete}>Supprimer depuis le panneau</button>
+      {onPlacePersona && (
+        <button type="button" onClick={() => onPlacePersona("per9")}>M&apos;installer ici</button>
+      )}
+      {onRemovePersona && (
+        <button type="button" onClick={() => onRemovePersona("per9")}>Retirer Nyx de ce lieu</button>
+      )}
     </div>
   ),
 }));
@@ -85,8 +101,11 @@ const CANAL = "w:w1:map";
 type CarteInitiale = {
   maps: ReturnType<typeof makeMap>[];
   pins: ReturnType<typeof makePin>[];
-  personas?: ReturnType<typeof makeMapPersona>[];
   regions?: ReturnType<typeof makeRegion>[];
+  links?: ReturnType<typeof makePinLink>[];
+  personas?: ReturnType<typeof makePlacedPersona>[];
+  wikiPages?: { id: string; title: string; slug: string }[];
+  rooms?: { id: string; title: string | null; name: string | null; map_pin_id: string | null }[];
 } | null;
 
 function monter(
@@ -101,7 +120,7 @@ function monter(
     <WorldMap
       worldId={worldId}
       canEdit
-      initialMap={initialMap ? { personas: [], regions: [], ...initialMap } : initialMap}
+      initialMap={initialMap ? { regions: [], links: [], personas: [], wikiPages: [], rooms: [], ...initialMap } : initialMap}
       {...adresse}
     />
   );
@@ -111,7 +130,7 @@ function monter(
     /** Rejoue le rendu avec un autre monde, comme une navigation client. */
     changerDeMonde: (id: string, carte: CarteInitiale) =>
       rerender(
-        <WorldMap worldId={id} canEdit initialMap={carte ? { personas: [], regions: [], ...carte } : carte} />,
+        <WorldMap worldId={id} canEdit initialMap={carte ? { regions: [], links: [], personas: [], wikiPages: [], rooms: [], ...carte } : carte} />,
       ),
   };
 }
@@ -139,7 +158,7 @@ describe("WorldMap — données servies par le serveur", () => {
   });
 
   it("charge la carte elle-même quand l'onglet s'ouvre côté client", async () => {
-    getWorldMaps.mockResolvedValue({ maps: [makeMap()], pins: [makePin()], personas: [], regions: [] });
+    getWorldMaps.mockResolvedValue({ maps: [makeMap()], pins: [makePin()], regions: [], links: [], personas: [], wikiPages: [], rooms: [] });
     monter(null);
 
     expect(getWorldMaps).toHaveBeenCalledWith("w1");
@@ -175,8 +194,75 @@ describe("WorldMap — temps réel", () => {
   });
 });
 
-describe("WorldMap — pages du wiki", () => {
-  it("ne les lit qu'une fois, quel que soit le nombre de lieux ouverts", async () => {
+describe("WorldMap — un geste refusé se défait", () => {
+  beforeEach(() => { simulerMiseEnPage(); simulerGrandEcran(); });
+  afterEach(() => { restaurerMiseEnPage(); restaurerEcran(); });
+
+  it("rend au trait son nom d'avant", async () => {
+    // Le retour en arrière est le seul des trois temps qu'on ne voit jamais
+    // en développant : celui qu'on oublie.
+    vi.mocked(updatePinLink).mockRejectedValueOnce(new Error("rls"));
+    monter({
+      maps: [makeMap()],
+      pins: [makePin({ id: "pin1", x: 20, y: 50 }), makePin({ id: "pin2", title: "La tour", x: 60, y: 50 })],
+      links: [makePinLink({ id: "l1", from_pin_id: "pin1", to_pin_id: "pin2", label: "Route du sel" })],
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Modifier" }));
+
+    fireEvent.click(document.querySelector('[data-link-hit="l1"]')!);
+    const champ = screen.getByRole("textbox", { name: "Nom du lien" });
+    await userEvent.clear(champ);
+    await userEvent.type(champ, "Passe du nord{Enter}");
+
+    await waitFor(() =>
+      expect(document.querySelector('[data-link-label="l1"]')).toHaveTextContent("Route du sel"),
+    );
+  });
+
+  it("remet le trait qu'il n'a pas pu supprimer", async () => {
+    vi.mocked(deletePinLink).mockRejectedValueOnce(new Error("rls"));
+    monter({
+      maps: [makeMap()],
+      pins: [makePin({ id: "pin1", x: 20, y: 50 }), makePin({ id: "pin2", title: "La tour", x: 60, y: 50 })],
+      links: [makePinLink({ id: "l1", from_pin_id: "pin1", to_pin_id: "pin2", label: "Route du sel" })],
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Modifier" }));
+
+    fireEvent.click(document.querySelector('[data-link-hit="l1"]')!);
+    await userEvent.click(screen.getByRole("button", { name: "Supprimer ce lien" }));
+
+    await waitFor(() => expect(document.querySelector('[data-link-hit="l1"]')).not.toBeNull());
+  });
+});
+
+describe("WorldMap — l'image de la carte", () => {
+  it("passe devant le reste, et se décode à côté", () => {
+    // C'est l'élément qui fait la page : il partait au même rang que les
+    // avatars et les vignettes. Et décodé hors du fil principal, faute de
+    // quoi une image de 2 560 px fige l'interface le temps de son décodage.
+    monter({ maps: [makeMap()], pins: [] });
+
+    const image = screen.getByAltText("Carte du monde");
+    expect(image).toHaveAttribute("fetchpriority", "high");
+    expect(image).toHaveAttribute("decoding", "async");
+  });
+});
+
+describe("WorldMap — ce que la fiche d'un lieu affiche", () => {
+  // Deux lieux ouverts l'un après l'autre : il faut la colonne, car le tiroir
+  // est modal et met la carte hors de portée tant qu'il est ouvert.
+  beforeEach(simulerGrandEcran);
+  afterEach(restaurerEcran);
+
+  /** Les tables que le CLIENT est allé lire de lui-même. */
+  const luesParLeClient = (mock: SupabaseMock) =>
+    mock.builders.map((b) => b.table).filter((t) => t === "world_wiki_pages" || t === "chatrooms");
+
+  it("ne redemande rien : le serveur a déjà tout donné", async () => {
+    // Le client lisait ces deux listes après l'hydratation, soit deux
+    // allers-retours de plus sur un onglet que le serveur avait déjà rendu —
+    // et des listes qui arrivaient APRÈS l'ouverture d'un lieu, faisant
+    // grandir la fiche sous les yeux.
     const { mock } = monter({
       maps: [makeMap()],
       pins: [makePin(), makePin({ id: "pin2", title: "La tour" })],
@@ -186,23 +272,39 @@ describe("WorldMap — pages du wiki", () => {
     await userEvent.click(screen.getByRole("button", { name: "La tour" }));
 
     expect(screen.getByTestId("pin-popover")).toHaveTextContent("La tour");
-    expect(mock.builders.filter((b) => b.table === "world_wiki_pages")).toHaveLength(1);
+    expect(luesParLeClient(mock)).toEqual([]);
   });
 
-  it("les lit dès que la carte est à l'écran, sans attendre un clic", () => {
-    // Elles étaient lues à la première ouverture d'un panneau, et arrivaient
-    // donc APRÈS lui : le panneau grandissait sous les yeux, et sa position —
-    // qui se calcule à partir de sa hauteur — sautait. Le prix est de trois
-    // requêtes légères par visite, même sans clic.
-    const { mock } = monter({ maps: [makeMap()], pins: [makePin()] });
+  it("les prend de ce que le serveur a servi", async () => {
+    monter({
+      maps: [makeMap()],
+      pins: [makePin()],
+      wikiPages: [{ id: "p1", title: "Arkham", slug: "arkham" }],
+      rooms: [{ id: "c1", title: "La taverne", name: "taverne", map_pin_id: "pin1" }],
+    });
 
-    expect(mock.builders.filter((b) => b.table === "world_wiki_pages")).toHaveLength(1);
+    await userEvent.click(screen.getByRole("button", { name: "Le port" }));
+
+    expect(screen.getByTestId("pin-wiki-pages")).toHaveTextContent("Arkham");
+    expect(screen.getByTestId("pin-rooms")).toHaveTextContent("La taverne");
   });
 
-  it("ne les lit pas pour une carte sans image : il n'y a pas de lieu à ouvrir", () => {
-    const { mock } = monter({ maps: [makeMap({ image_url: null })], pins: [] });
+  it("les lit une fois quand c'est le client qui ouvre l'onglet", async () => {
+    // Sans rendu serveur, `getWorldMaps` les rapporte avec le reste : un seul
+    // aller, pas trois.
+    getWorldMaps.mockResolvedValue({
+      maps: [makeMap()],
+      pins: [makePin()],
+      regions: [],
+      links: [],
+      personas: [],
+      wikiPages: [{ id: "p1", title: "Arkham", slug: "arkham" }],
+      rooms: [],
+    });
+    const { mock } = monter(null);
 
-    expect(mock.builders.filter((b) => b.table === "world_wiki_pages")).toHaveLength(0);
+    await waitFor(() => expect(getWorldMaps).toHaveBeenCalledWith("w1"));
+    expect(luesParLeClient(mock)).toEqual([]);
   });
 });
 
@@ -644,9 +746,9 @@ describe("WorldMap — la liste des lieux, en tiroir", () => {
     expect(screen.queryByRole("complementary", { name: "Lieux" })).toBeNull();
   });
 
-  it("se referme dès qu'on choisit un lieu", async () => {
-    // Il recouvre la carte : le garder ouvert cacherait le lieu qu'on vient de
-    // demander à voir.
+  it("passe de la liste à la fiche du lieu choisi", async () => {
+    // Le tiroir EST la colonne, sur un écran étroit : la fiche y prend la
+    // place de la liste, au lieu de le faire disparaître.
     monter(DEUX_CARTES);
     await userEvent.click(screen.getByRole("button", { name: "Afficher les lieux" }));
 
@@ -654,7 +756,10 @@ describe("WorldMap — la liste des lieux, en tiroir", () => {
     await userEvent.click(within(tiroir).getByRole("button", { name: /Le port/ }));
 
     expect(await screen.findByTestId("pin-popover")).toHaveTextContent("Le port");
-    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Lieux" })).toBeNull());
+    const fiche = screen.getByRole("dialog", { name: "Lieu" });
+    // Un seul bandeau : le retour tient lieu de titre, il n'y a pas de
+    // « Lieu » écrit au-dessus d'un « ← Lieux ».
+    expect(within(fiche).getAllByText("Lieux")).toHaveLength(1);
   });
 });
 
@@ -686,60 +791,6 @@ describe("WorldMap — les marqueurs ne se re-rendent pas pour rien", () => {
   });
 });
 
-describe("WorldMap — qui est où", () => {
-  const AVEC_KAEL = {
-    maps: [makeMap()],
-    pins: [makePin()],
-    personas: [makeMapPersona({ id: "per1", name: "Kael", map_pin_id: "pin1" })],
-  };
-
-  /** Un événement Postgres sur `personas`. */
-  function emettrePersona(mock: SupabaseMock, payload: unknown) {
-    act(() => {
-      mock.channelNamed(CANAL)?.emit(
-        (h) => h.type === "postgres_changes" && (h.config as { table?: string }).table === "personas",
-        payload,
-      );
-    });
-  }
-
-  it("montre sur le marqueur qui se trouve là", () => {
-    monter(AVEC_KAEL);
-    expect(document.querySelector('[data-persona-id="per1"]')).not.toBeNull();
-  });
-
-  it("voit arriver un persona, relu avec son cadre", async () => {
-    // L'écho temps réel ne porte pas la jointure sur le cadre : la carte relit
-    // le persona qui vient de bouger.
-    getMapPersona.mockResolvedValue(makeMapPersona({ id: "per2", name: "Ifyr", map_pin_id: "pin1" }));
-    const { mock } = monter({ maps: [makeMap()], pins: [makePin()] });
-
-    emettrePersona(mock, {
-      eventType: "UPDATE",
-      new: { id: "per2", map_pin_id: "pin1", deleted_at: null, is_template: false },
-    });
-
-    await waitFor(() => expect(document.querySelector('[data-persona-id="per2"]')).not.toBeNull());
-    expect(getMapPersona).toHaveBeenCalledWith("per2");
-  });
-
-  it("voit partir un persona qui n'est plus nulle part", () => {
-    const { mock } = monter(AVEC_KAEL);
-
-    emettrePersona(mock, {
-      eventType: "UPDATE",
-      new: { id: "per1", map_pin_id: null, deleted_at: null, is_template: false },
-    });
-
-    expect(document.querySelector('[data-persona-id="per1"]')).toBeNull();
-  });
-
-  it("efface un persona supprimé", () => {
-    const { mock } = monter(AVEC_KAEL);
-    emettrePersona(mock, { eventType: "DELETE", old: { id: "per1" } });
-    expect(document.querySelector('[data-persona-id="per1"]')).toBeNull();
-  });
-});
 
 describe("WorldMap — régler l'échelle", () => {
   const AVEC_ECHELLE = makeMap({ scale_width_units: 1000, scale_unit: "km" });
@@ -796,6 +847,22 @@ describe("WorldMap — régler l'échelle", () => {
 
     expect(screen.queryByTestId("pin-popover")).toBeNull();
     expect(document.querySelectorAll("[data-scale-point]")).toHaveLength(1);
+  });
+
+  it("laisse le clic traverser une région", async () => {
+    // Un polygone prend le pointeur et arrête la propagation : la règle en
+    // main, le clic était mangé par la région et le point ne se posait pas —
+    // impossible de mesurer quoi que ce soit à l'intérieur d'un royaume.
+    monter({ maps: [AVEC_ECHELLE], pins: [], regions: [makeRegion()] });
+    const region = () => document.querySelector("polygon")!;
+    expect(region()).toHaveStyle({ pointerEvents: "auto" });
+
+    await sortirLOutil();
+
+    expect(region()).toHaveStyle({ pointerEvents: "none" });
+    // Ni cliquable, ni atteignable au clavier : un bouton qui ne fait rien
+    // n'a pas à retenir la tabulation.
+    expect(region()).toHaveAttribute("tabindex", "-1");
   });
 
   it("Échap efface le segment, puis range l'outil", async () => {
@@ -858,7 +925,7 @@ describe("WorldMap — l'époque affichée", () => {
         worldId="w1"
         canEdit
         timelineConfig={CHRONO}
-        initialMap={{ maps: [makeMap()], pins: [RUINE, VILLE, TOUJOURS], personas: [], regions: [] }}
+        initialMap={{ maps: [makeMap()], pins: [RUINE, VILLE, TOUJOURS], regions: [], links: [], personas: [], wikiPages: [], rooms: [] }}
       />,
     );
   }
@@ -912,6 +979,38 @@ describe("WorldMap — les régions", () => {
   async function passerEnEdition() {
     await userEvent.click(screen.getByRole("button", { name: "Modifier" }));
   }
+
+  it("refuse de descendre sous trois sommets", async () => {
+    // Un double-clic retire un sommet ; sur un triangle, le suivant en ferait
+    // un segment. La règle vit dans `WorldMap` et vaut pour tous les gestes,
+    // pas pour le double-clic seulement.
+    const triangle = makeRegion({ points: [{ x: 20, y: 20 }, { x: 60, y: 20 }, { x: 40, y: 60 }] });
+    monter({ maps: [makeMap()], pins: [], regions: [triangle] });
+    await passerEnEdition();
+    await userEvent.click(screen.getByRole("button", { name: "Le royaume" }));
+
+    const sommets = document.querySelectorAll("[data-region-vertex]");
+    expect(sommets).toHaveLength(3);
+    await userEvent.dblClick(sommets[0] as HTMLElement);
+
+    expect(updateMapRegion).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Le royaume" }))
+      .toHaveAttribute("points", "20,20 60,20 40,60");
+  });
+
+  it("retire un sommet d'un quadrilatère", async () => {
+    monter({ maps: [makeMap()], pins: [], regions: [makeRegion()] });
+    await passerEnEdition();
+    await userEvent.click(screen.getByRole("button", { name: "Le royaume" }));
+
+    await userEvent.dblClick(document.querySelectorAll("[data-region-vertex]")[1] as HTMLElement);
+
+    await waitFor(() =>
+      expect(updateMapRegion).toHaveBeenCalledWith("reg1", {
+        points: [{ x: 20, y: 20 }, { x: 60, y: 60 }, { x: 20, y: 60 }],
+      }),
+    );
+  });
 
   it("dessine les régions de la carte affichée, et elles seules", () => {
     monter({
@@ -1152,41 +1251,6 @@ describe("WorldMap — le clic n'est pas avalé par le déplacement", () => {
   });
 });
 
-describe("WorldMap — le panneau d'un lieu suit sa propre taille", () => {
-  beforeEach(simulerMiseEnPage);
-  afterEach(restaurerMiseEnPage);
-
-  // L'épingle tombe bas dans la fenêtre : le panneau se pose alors AU-DESSUS
-  // d'elle, et sa position dépend donc de sa hauteur.
-  beforeEach(() => {
-    vi.spyOn(HTMLImageElement.prototype, "getBoundingClientRect").mockReturnValue({
-      left: 0, top: 400, width: 1000, height: 600, right: 1000, bottom: 1000, x: 0, y: 400, toJSON() {},
-    } as DOMRect);
-  });
-  afterEach(() => { vi.restoreAllMocks(); });
-
-  function poserLaHauteur(el: HTMLElement, hauteur: number) {
-    Object.defineProperty(el, "offsetHeight", { configurable: true, value: hauteur });
-    act(() => { redimensionnements.forEach((r) => r()); });
-  }
-
-  it("se replace quand son contenu le fait grandir", async () => {
-    // Les pages du wiki et les personas arrivent du serveur : le panneau
-    // grandissait sous les yeux, en gardant la position calculée pour sa
-    // hauteur d'avant.
-    monter({ maps: [makeMap()], pins: [makePin()] });
-    await userEvent.click(screen.getByRole("button", { name: "Le port" }));
-    const panneau = screen.getByTestId("pin-popover");
-
-    poserLaHauteur(panneau, 120);
-    const court = panneau.style.top;
-    expect(court).not.toBe("");
-
-    poserLaHauteur(panneau, 400);
-
-    expect(panneau.style.top).not.toBe(court);
-  });
-});
 
 describe("WorldMap — supprimer un lieu", () => {
   it("demande confirmation avant d'effacer, depuis la croix du marqueur", async () => {
@@ -1290,5 +1354,466 @@ describe("WorldMap — le poids d'une image de carte", () => {
     choisir(59);
 
     await waitFor(() => expect(envoiDe(mock)).toHaveBeenCalled());
+  });
+});
+
+describe("WorldMap — un lieu s'ouvre dans la colonne", () => {
+  const parametres = () => new URLSearchParams(window.location.search);
+
+  beforeEach(() => {
+    simulerMiseEnPage();
+    simulerGrandEcran();
+    window.history.replaceState(null, "", "/w/w1?view=map");
+  });
+  afterEach(() => { restaurerMiseEnPage(); restaurerEcran(); });
+
+  it("ouvre la colonne sur la fiche, sans rien poser sur la carte", async () => {
+    // La fiche flottait sur la carte : elle en masquait une partie, et sa
+    // position se calculait à partir de sa propre hauteur.
+    monter({ maps: [makeMap()], pins: [makePin()] });
+    expect(screen.queryByTestId("pin-popover")).toBeNull();
+
+    await userEvent.click(screen.getByRole("button", { name: "Le port" }));
+
+    const colonne = screen.getByRole("complementary", { name: "Lieux" });
+    expect(within(colonne).getByTestId("pin-popover")).toHaveTextContent("Le port");
+  });
+
+  it("revient à la liste sans refermer la colonne", async () => {
+    // Fermer la fiche et fermer la colonne sont deux gestes : les confondre
+    // obligeait à la rouvrir pour choisir un autre lieu.
+    monter({ maps: [makeMap()], pins: [makePin(), makePin({ id: "pin2", title: "La tour" })] });
+    await userEvent.click(screen.getByRole("button", { name: "Le port" }));
+
+    const colonne = screen.getByRole("complementary", { name: "Lieux" });
+    await userEvent.click(within(colonne).getByRole("button", { name: "Lieux" }));
+
+    expect(screen.queryByTestId("pin-popover")).toBeNull();
+    expect(within(colonne).getByRole("button", { name: /La tour/ })).toBeInTheDocument();
+    expect(parametres().get("pin")).toBeNull();
+  });
+
+  it("refermer la colonne referme la fiche", async () => {
+    // Sinon la rouvrir rendrait le lieu d'avant, et l'adresse garderait un
+    // lieu que personne ne voit.
+    monter({ maps: [makeMap()], pins: [makePin()] });
+    await userEvent.click(screen.getByRole("button", { name: "Le port" }));
+
+    await userEvent.click(screen.getByRole("button", { name: "Masquer les lieux" }));
+    await userEvent.click(screen.getByRole("button", { name: "Afficher les lieux" }));
+
+    expect(screen.queryByTestId("pin-popover")).toBeNull();
+    expect(parametres().get("pin")).toBeNull();
+  });
+});
+
+describe("WorldMap — la région qui entoure un lieu", () => {
+  beforeEach(() => { simulerMiseEnPage(); simulerGrandEcran(); });
+  afterEach(() => { restaurerMiseEnPage(); restaurerEcran(); });
+
+  // Le carré de `makeRegion` couvre de 20 à 60 % : le lieu par défaut est en
+  // son milieu, à 50/50.
+  it("dit dans quoi le lieu se trouve", async () => {
+    monter({ maps: [makeMap()], pins: [makePin()], regions: [makeRegion()] });
+
+    await userEvent.click(screen.getByRole("button", { name: "Le port" }));
+
+    expect(screen.getByTestId("pin-region")).toHaveTextContent("Le royaume");
+  });
+
+  it("ne dit rien d'un lieu posé hors des régions", async () => {
+    monter({ maps: [makeMap()], pins: [makePin({ x: 90, y: 90 })], regions: [makeRegion()] });
+
+    await userEvent.click(screen.getByRole("button", { name: "Le port" }));
+
+    expect(screen.queryByTestId("pin-region")).toBeNull();
+  });
+});
+
+describe("WorldMap — qui se trouve où", () => {
+  beforeEach(() => { simulerMiseEnPage(); simulerGrandEcran(); });
+  afterEach(() => { restaurerMiseEnPage(); restaurerEcran(); });
+
+  it("compte les présents sur le marqueur du lieu", () => {
+    monter({
+      maps: [makeMap()],
+      pins: [makePin()],
+      personas: [makePlacedPersona({ id: "a" }), makePlacedPersona({ id: "b", name: "Ifyr" })],
+    });
+
+    expect(screen.getByLabelText("2 sur place")).toBeInTheDocument();
+  });
+
+  it("relit la liste entière au moindre mouvement", async () => {
+    // La version d'avant corrigeait ligne à ligne et relisait le persona
+    // déplacé ; quand cette relecture ne rendait rien, il restait à sa place
+    // d'avant sans que rien ne le signale.
+    getPlacedPersonas.mockResolvedValue([
+      makePlacedPersona({ id: "a" }),
+      makePlacedPersona({ id: "b", name: "Ifyr" }),
+    ] as never);
+    const { mock } = monter({ maps: [makeMap()], pins: [makePin()] });
+
+    act(() => {
+      mock.channelNamed(CANAL)?.emit(
+        (h) => h.type === "postgres_changes" && (h.config as { table?: string }).table === "personas",
+        { eventType: "UPDATE", new: { id: "a" } },
+      );
+    });
+
+    await waitFor(() => expect(screen.getByLabelText("2 sur place")).toBeInTheDocument());
+    expect(getPlacedPersonas).toHaveBeenCalledWith("w1");
+  });
+
+  it("ne relit qu'une fois pour une rafale d'échos", async () => {
+    // Déplacer un persona d'un lieu à l'autre en produit plusieurs.
+    const { mock } = monter({ maps: [makeMap()], pins: [makePin()] });
+    getPlacedPersonas.mockClear();
+
+    act(() => {
+      for (let i = 0; i < 3; i++) {
+        mock.channelNamed(CANAL)?.emit(
+          (h) => h.type === "postgres_changes" && (h.config as { table?: string }).table === "personas",
+          { eventType: "UPDATE", new: { id: "a" } },
+        );
+      }
+    });
+
+    await waitFor(() => expect(getPlacedPersonas).toHaveBeenCalledTimes(1));
+  });
+});
+
+describe("WorldMap — les noms des régions et des lieux se partagent la place", () => {
+  beforeEach(() => { simulerMiseEnPage(); simulerGrandEcran(); });
+  afterEach(() => { restaurerMiseEnPage(); restaurerEcran(); });
+
+  /** Le carré de `makeRegion` a son centre à 40/40 ; le lieu par défaut, à 50/50. */
+  it("tait le nom du lieu que celui de sa région recouvrirait", () => {
+    // Chacun de son côté, les deux familles s'ignoraient : le nom d'une région
+    // et celui d'un lieu proche de son centre se superposaient.
+    monter({
+      maps: [makeMap()],
+      pins: [makePin({ x: 41, y: 40 })],
+      regions: [makeRegion({ label: "Le royaume" })],
+    });
+
+    expect(document.querySelector("[data-region-label]")).toHaveTextContent("Le royaume");
+    expect(document.querySelector("[data-pin-label]")).toBeNull();
+  });
+
+  it("laisse les deux quand ils sont loin l'un de l'autre", () => {
+    monter({
+      maps: [makeMap()],
+      pins: [makePin({ x: 85, y: 85 })],
+      regions: [makeRegion({ label: "Le royaume" })],
+    });
+
+    expect(document.querySelector("[data-region-label]")).toHaveTextContent("Le royaume");
+    expect(document.querySelector("[data-pin-label]")).toHaveTextContent("Le port");
+  });
+
+  it("garde le nom du lieu ouvert, et tait celui de la région", async () => {
+    // C'est celui qu'on regarde.
+    monter(
+      {
+        maps: [makeMap()],
+        pins: [makePin({ x: 41, y: 40 })],
+        regions: [makeRegion({ label: "Le royaume" })],
+      },
+      "w1",
+      false,
+      { initialPinId: "pin1" },
+    );
+
+    // Le nom apparaît aussi dans la fiche ouverte : c'est l'étiquette de la
+    // carte qu'on regarde ici.
+    await waitFor(() => expect(document.querySelector("[data-pin-label]")).toHaveTextContent("Le port"));
+    expect(document.querySelector("[data-region-label]")).toBeNull();
+  });
+});
+
+describe("WorldMap — s'installer quelque part", () => {
+  beforeEach(() => { simulerMiseEnPage(); simulerGrandEcran(); });
+  afterEach(() => { restaurerMiseEnPage(); restaurerEcran(); });
+
+  /** `monter` ne connaît pas `canPost` : seul ce qui suit en dépend. */
+  function monterQuiPeutJouer(canPost: boolean) {
+    const mock = createSupabaseMock({ user: { id: "u1" } });
+    vi.mocked(createClient).mockReturnValue(mock.client as never);
+    render(
+      <WorldMap
+        worldId="w1"
+        canEdit
+        canPost={canPost}
+        initialMap={{ maps: [makeMap()], pins: [makePin()], regions: [], links: [], personas: [], wikiPages: [], rooms: [] }}
+      />,
+    );
+    return { mock };
+  }
+
+  it("pose le persona sur le lieu ouvert, et relit qui s'y trouve", async () => {
+    getPlacedPersonas.mockResolvedValue([makePlacedPersona({ id: "per9" })] as never);
+    monterQuiPeutJouer(true);
+
+    await userEvent.click(screen.getByRole("button", { name: "Le port" }));
+    await userEvent.click(screen.getByRole("button", { name: "M'installer ici" }));
+
+    expect(setPersonaLocation).toHaveBeenCalledWith("per9", "pin1");
+    // Relue tout de suite : l'écho realtime arrivera, mais après un
+    // aller-retour, et le geste doit se voir.
+    await waitFor(() => expect(screen.getByLabelText("1 sur place")).toBeInTheDocument());
+  });
+
+  it("fait partir le persona du lieu, et relit qui reste", async () => {
+    getPlacedPersonas.mockResolvedValue([] as never);
+    monterQuiPeutJouer(true);
+
+    await userEvent.click(screen.getByRole("button", { name: "Le port" }));
+    await userEvent.click(screen.getByRole("button", { name: "Retirer Nyx de ce lieu" }));
+
+    expect(setPersonaLocation).toHaveBeenCalledWith("per9", null);
+  });
+
+  it("n'offre pas le geste à qui ne joue pas dans ce monde", async () => {
+    monterQuiPeutJouer(false);
+
+    await userEvent.click(screen.getByRole("button", { name: "Le port" }));
+
+    expect(screen.queryByRole("button", { name: "M'installer ici" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Retirer Nyx de ce lieu" })).toBeNull();
+  });
+});
+
+describe("WorldMap — joindre deux lieux", () => {
+  const PORT = makePin({ id: "pin1", title: "Le port", x: 20, y: 50 });
+  const DONJON = makePin({ id: "pin2", title: "Le donjon", x: 60, y: 50 });
+
+  beforeEach(() => {
+    simulerMiseEnPage();
+    vi.spyOn(HTMLImageElement.prototype, "getBoundingClientRect").mockReturnValue({
+      left: 0, top: 0, width: 1000, height: 500, right: 1000, bottom: 500, x: 0, y: 0, toJSON() {},
+    } as DOMRect);
+  });
+  afterEach(() => { restaurerMiseEnPage(); vi.restoreAllMocks(); });
+
+  function cadre() {
+    return screen.getByAltText("Carte du monde").parentElement!.parentElement!;
+  }
+
+  async function sortirLOutil() {
+    await userEvent.click(screen.getByRole("button", { name: "Modifier" }));
+    await userEvent.click(screen.getByRole("button", { name: "Régler l'échelle" }));
+  }
+
+  it("relie deux lieux cliqués coup sur coup", async () => {
+    createPinLink.mockResolvedValue(makePinLink({ id: "l1", from_pin_id: "pin1", to_pin_id: "pin2" }));
+    monter({ maps: [makeMap()], pins: [PORT, DONJON] });
+    await sortirLOutil();
+
+    await userEvent.click(screen.getByRole("button", { name: "Le port" }));
+    await userEvent.click(screen.getByRole("button", { name: "Le donjon" }));
+
+    expect(createPinLink).toHaveBeenCalledWith("w1", "map1", "pin1", "pin2");
+    await waitFor(() => expect(document.querySelector('[data-link-hit="l1"]')).not.toBeNull());
+  });
+
+  it("laisse un lieu puis un point déclarer une distance", async () => {
+    // Le même outil sert aux deux : ce sont les cibles qui tranchent.
+    monter({ maps: [makeMap()], pins: [PORT] });
+    await sortirLOutil();
+
+    await userEvent.click(screen.getByRole("button", { name: "Le port" }));
+    expect(screen.getByText(/Cliquez un second lieu pour les relier/)).toBeInTheDocument();
+
+    fireEvent.click(cadre(), { clientX: 600, clientY: 0 });
+
+    expect(createPinLink).not.toHaveBeenCalled();
+    expect(screen.getByRole("spinbutton", { name: "Cette distance fait" })).toBeInTheDocument();
+  });
+
+  it("ne relie pas un lieu à lui-même", async () => {
+    monter({ maps: [makeMap()], pins: [PORT] });
+    await sortirLOutil();
+
+    await userEvent.click(screen.getByRole("button", { name: "Le port" }));
+    await userEvent.click(screen.getByRole("button", { name: "Le port" }));
+
+    expect(createPinLink).not.toHaveBeenCalled();
+  });
+
+  it("ne dit la distance d'un trait qu'au survol", () => {
+    // Portée en permanence par chaque trait, elle chiffrait la carte de part
+    // en part. 40 % de la largeur d'une carte de 1 000 km : 400 km.
+    monter({
+      maps: [makeMap({ scale_width_units: 1000, scale_unit: "km" })],
+      pins: [PORT, DONJON],
+      links: [makePinLink({ id: "l1", from_pin_id: "pin1", to_pin_id: "pin2", label: "Route du sel" })],
+    });
+
+    expect(document.querySelector('[data-link-label="l1"]')).toHaveTextContent(/^Route du sel$/);
+
+    fireEvent.pointerEnter(document.querySelector('[data-link-hit="l1"]')!);
+    expect(document.querySelector('[data-link-label="l1"]')).toHaveTextContent("Route du sel · 400 km");
+
+    fireEvent.pointerLeave(document.querySelector('[data-link-hit="l1"]')!);
+    expect(document.querySelector('[data-link-label="l1"]')).toHaveTextContent(/^Route du sel$/);
+  });
+
+  it("ne montre rien d'un trait sans nom, tant qu'on ne le survole pas", () => {
+    monter({
+      maps: [makeMap({ scale_width_units: 1000, scale_unit: "km" })],
+      pins: [PORT, DONJON],
+      links: [makePinLink({ id: "l1", from_pin_id: "pin1", to_pin_id: "pin2" })],
+    });
+
+    expect(document.querySelector('[data-link-label="l1"]')).toBeNull();
+
+    fireEvent.pointerEnter(document.querySelector('[data-link-hit="l1"]')!);
+    expect(document.querySelector('[data-link-label="l1"]')).toHaveTextContent("400 km");
+  });
+
+  it("épingle la distance au clic — un doigt ne survole rien", async () => {
+    monter({
+      maps: [makeMap({ scale_width_units: 1000, scale_unit: "km" })],
+      pins: [PORT, DONJON],
+      links: [makePinLink({ id: "l1", from_pin_id: "pin1", to_pin_id: "pin2" })],
+    });
+    const trait = () => document.querySelector('[data-link-hit="l1"]')!;
+
+    fireEvent.click(trait());
+    // La souris s'en va : ce qu'on a touché reste affiché.
+    fireEvent.pointerLeave(trait());
+    expect(document.querySelector('[data-link-label="l1"]')).toHaveTextContent("400 km");
+
+    fireEvent.click(trait());
+    expect(document.querySelector('[data-link-label="l1"]')).toBeNull();
+  });
+
+  it("relâche la distance épinglée au geste suivant", async () => {
+    // Sans cela, la longueur resterait posée sur la carte sans qu'on sache
+    // comment l'ôter, au doigt où rien ne se « quitte ».
+    monter({
+      maps: [makeMap({ scale_width_units: 1000, scale_unit: "km" })],
+      pins: [PORT, DONJON],
+      links: [makePinLink({ id: "l1", from_pin_id: "pin1", to_pin_id: "pin2" })],
+    });
+
+    fireEvent.click(document.querySelector('[data-link-hit="l1"]')!);
+    fireEvent.pointerLeave(document.querySelector('[data-link-hit="l1"]')!);
+    expect(document.querySelector('[data-link-label="l1"]')).toHaveTextContent("400 km");
+
+    fireEvent.pointerDown(cadre());
+
+    expect(document.querySelector('[data-link-label="l1"]')).toBeNull();
+  });
+
+  it("nomme un trait, et le supprime", async () => {
+    monter({
+      maps: [makeMap()],
+      pins: [PORT, DONJON],
+      links: [makePinLink({ id: "l1", from_pin_id: "pin1", to_pin_id: "pin2" })],
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Modifier" }));
+
+    fireEvent.click(document.querySelector('[data-link-hit="l1"]')!);
+    await userEvent.type(screen.getByRole("textbox", { name: "Nom du lien" }), "Route du sel{Enter}");
+
+    expect(updatePinLink).toHaveBeenCalledWith("l1", { label: "Route du sel" });
+    await waitFor(() => expect(document.querySelector('[data-link-label="l1"]')).toHaveTextContent("Route du sel"));
+
+    fireEvent.click(document.querySelector('[data-link-hit="l1"]')!);
+    await userEvent.click(screen.getByRole("button", { name: "Supprimer ce lien" }));
+
+    expect(deletePinLink).toHaveBeenCalledWith("l1");
+    await waitFor(() => expect(document.querySelector('[data-link-hit="l1"]')).toBeNull());
+  });
+
+  it("n'ouvre le formulaire d'un trait qu'à qui modifie la carte", () => {
+    // La prise existe pour tout le monde — c'est elle qui fait paraître la
+    // distance au survol — mais elle n'ouvre rien en lecture.
+    monter({
+      maps: [makeMap()],
+      pins: [PORT, DONJON],
+      links: [makePinLink({ id: "l1", from_pin_id: "pin1", to_pin_id: "pin2" })],
+    });
+
+    fireEvent.click(document.querySelector('[data-link-hit="l1"]')!);
+
+    expect(screen.queryByRole("textbox", { name: "Nom du lien" })).toBeNull();
+  });
+});
+
+describe("WorldMap — rien ne survit au rangement des outils", () => {
+  // Chaque commande tenait sa propre liste d'états à remettre à zéro, et
+  // chaque état ajouté depuis en manquait au moins une : le formulaire d'un
+  // lien restait ouvert après la sortie d'écriture — on pouvait renommer ou
+  // supprimer un trait sans plus modifier la carte — et le panneau d'une
+  // région survivait à la prise de la règle.
+  const PORT = makePin({ id: "pin1", title: "Le port", x: 20, y: 50 });
+  const DONJON = makePin({ id: "pin2", title: "Le donjon", x: 60, y: 50 });
+  const LIEN = makePinLink({ id: "l1", from_pin_id: "pin1", to_pin_id: "pin2" });
+
+  beforeEach(() => { simulerMiseEnPage(); simulerGrandEcran(); });
+  afterEach(() => { restaurerMiseEnPage(); restaurerEcran(); });
+
+  async function ouvrirLeFormulaireDuLien() {
+    monter({ maps: [makeMap()], pins: [PORT, DONJON], links: [LIEN] });
+    await userEvent.click(screen.getByRole("button", { name: "Modifier" }));
+    fireEvent.click(document.querySelector('[data-link-hit="l1"]')!);
+    expect(screen.getByRole("textbox", { name: "Nom du lien" })).toBeInTheDocument();
+  }
+
+  it("le formulaire d'un lien ne survit pas à la sortie d'écriture", async () => {
+    await ouvrirLeFormulaireDuLien();
+
+    await userEvent.click(screen.getByRole("button", { name: "Modification active" }));
+
+    expect(screen.queryByRole("textbox", { name: "Nom du lien" })).toBeNull();
+  });
+
+  it("ni à la prise de la règle", async () => {
+    await ouvrirLeFormulaireDuLien();
+
+    await userEvent.click(screen.getByRole("button", { name: "Régler l'échelle" }));
+
+    expect(screen.queryByRole("textbox", { name: "Nom du lien" })).toBeNull();
+  });
+
+  it("ni au tracé d'une région", async () => {
+    await ouvrirLeFormulaireDuLien();
+
+    await userEvent.click(screen.getByRole("button", { name: "Dessiner une région" }));
+
+    expect(screen.queryByRole("textbox", { name: "Nom du lien" })).toBeNull();
+  });
+
+  it("le panneau d'une région ne survit pas à la prise de la règle", async () => {
+    monter({ maps: [makeMap()], pins: [], regions: [makeRegion()] });
+    await userEvent.click(screen.getByRole("button", { name: "Modifier" }));
+    fireEvent.click(document.querySelector("polygon")!);
+    expect(screen.getByTestId("region-panel")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Régler l'échelle" }));
+
+    expect(screen.queryByTestId("region-panel")).toBeNull();
+  });
+
+  it("supprimer une carte emporte ses régions et ses traits", async () => {
+    // Ils partent en base par `ON DELETE CASCADE` ; seules les épingles
+    // étaient retirées ici, les autres attendaient l'écho du serveur.
+    monter({
+      maps: [makeMap(), makeMap({ id: "map2", label: "Le donjon", sort_index: 1 })],
+      pins: [PORT, DONJON],
+      links: [LIEN],
+      regions: [makeRegion()],
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Modifier" }));
+    await userEvent.click(screen.getByRole("button", { name: "Commandes de la carte Carte" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Supprimer cette carte" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Supprimer" }));
+
+    await waitFor(() => expect(vi.mocked(deleteWorldMap)).toHaveBeenCalledWith("map1"));
+    await waitFor(() => expect(document.querySelector('[data-link-hit="l1"]')).toBeNull());
+    expect(document.querySelector("polygon")).toBeNull();
   });
 });

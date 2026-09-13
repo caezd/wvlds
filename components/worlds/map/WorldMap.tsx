@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
-import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
+import { mergeById, useMapRealtime } from "@/hooks/useMapRealtime";
 import { MEDIA, useMediaQuery } from "@/hooks/useMediaQuery";
 import { useResetOnKeyChange } from "@/hooks/useResetOnKeyChange";
 import { useMapViewport } from "@/hooks/useMapViewport";
@@ -12,8 +12,7 @@ import { Check, Clock, Hexagon, List, Loader2, Map as MapIcon, MapPin, Pencil, P
 import { toast } from "sonner";
 
 import { cn } from "@/lib/utils";
-import { channel, MAX_MAP_IMAGE_MB } from "@/lib/constants";
-import { openRealtimeChannel } from "@/lib/realtimeChannel";
+import { MAX_MAP_IMAGE_MB } from "@/lib/constants";
 import { STORED_IMAGE_ACCEPT, isStorableImage, toWebP } from "@/lib/imageUtils";
 import { mapImagePath } from "@/lib/storagePaths";
 import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
@@ -25,15 +24,18 @@ import {
   createMapRegion,
   updateMapRegion,
   deleteMapRegion,
-  getMapPersona,
-  getMyMapPersonas,
+  createPinLink,
+  updatePinLink,
+  deletePinLink,
+  getPlacedPersonas,
   getWorldMaps,
-  setPersonaLocation,
   reorderWorldMaps,
+  setPersonaLocation,
   updateMapPin,
   updateWorldMap,
-  type MapPersona,
   type MapRegion,
+  type MapPinLink,
+  type PlacedPersona,
   type MapPin as MapPinType,
   type WorldMapData,
 } from "@/app/actions/worldMap";
@@ -47,33 +49,64 @@ import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { MAP_PANEL_ID, MapTabs, mapTabId } from "./MapTabs";
 import { MapPlacesDrawer, MapPlacesPanel } from "./MapPlacesPanel";
 import { PinMarker } from "./PinMarker";
-import { PinPopover } from "./PinPopover";
+import { PinDetail } from "./PinDetail";
 import { ScaleCalibrator } from "./ScaleCalibrator";
 import { RegionLayer } from "./RegionLayer";
+import { LinkLayer } from "./LinkLayer";
+import { LinkEditor } from "./LinkEditor";
 import { RegionPanel } from "./RegionPanel";
-import { MIN_REGION_POINTS, dedupeConsecutive, polygonCentroid } from "./geometry";
+import { MIN_REGION_POINTS, dedupeConsecutive, pointInPolygon, polygonCentroid } from "./geometry";
+import { visibleLabels } from "./labels";
 import { ScaleBar } from "./ScaleBar";
 import { type MapScale } from "./scale";
 import type { Point } from "./zoom";
 import { isWithinTimeline } from "@/lib/worldTimeline";
 import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
-import { FLECHE, calcPopoverPos, pinAnchor } from "./popoverPosition";
-import type { PinPopoverPos, PendingPin, PinRoom, WikiPageOption } from "./types";
+import type { PendingPin, PinRoom, WikiPageOption } from "./types";
 import { ERR_NON_AUTHENTIFIE } from "@/lib/actionErrors";
 
 /** Cartes et épingles résolues côté serveur, quand l'onglet est ouvert d'emblée. */
 export type InitialWorldMap = {
   maps: WorldMapData[];
   pins: MapPinType[];
-  personas: MapPersona[];
   regions: MapRegion[];
+  links: MapPinLink[];
+  personas: PlacedPersona[];
+  /** Pages du wiki et salons situés : ce que la fiche d'un lieu affiche. */
+  wikiPages: WikiPageOption[];
+  rooms: PinRoom[];
 };
+
+/** Le segment de l'outil règle, et les lieux auxquels il s'est accroché. */
+type ScaleSegment = { a: Point; aPin: string | null; b: Point | null; bPin: string | null };
+
+/**
+ * Un geste qui prend effet tout de suite, et se défait si le serveur refuse.
+ *
+ * Cinq gestes de la carte suivaient ce dessin, écrit cinq fois : poser le
+ * résultat à l'écran, appeler le serveur, remettre les choses en place s'il
+ * refuse. Le retour en arrière est le seul des trois temps qu'on ne voit
+ * jamais en développant — celui qu'on oublie. Écrit une fois, il ne peut plus
+ * manquer.
+ */
+async function optimiste(
+  poser: () => void,
+  envoyer: () => Promise<unknown>,
+  defaire: () => void,
+  erreur: () => string,
+) {
+  poser();
+  try {
+    await envoyer();
+  } catch {
+    defaire();
+    toast.error(erreur());
+  }
+}
 
 /** Les couleurs des régions, dans l'ordre où on les dessine. */
 const REGION_COLORS = ["#22c55e", "#3b82f6", "#f59e0b", "#ef4444", "#a855f7", "#14b8a6", "#ec4899", "#84cc16"];
 
-/** Une même référence pour « personne » : les marqueurs sont mémoïsés par identité. */
-const NOBODY: MapPersona[] = [];
 
 // ── Main component ─────────────────────────────────────────────────
 
@@ -111,7 +144,6 @@ export function WorldMap({
   const tRef = React.useRef(t);
   tRef.current = t;
   const supabase = createClient();
-  const reconnectEpoch = useReconnectEpoch();
 
   // Toutes les cartes du monde, et toutes leurs épingles. Les épingles sont
   // gardées d'un bloc plutôt que rechargées à chaque onglet : passer de l'une à
@@ -121,12 +153,14 @@ export function WorldMap({
     initialMapId ?? initialMap?.maps?.[0]?.id ?? null,
   );
   const [pins, setPins] = React.useState<MapPinType[]>(initialMap?.pins ?? []);
-  // Les personas placés quelque part dans le monde, cartes confondues — et les
-  // miens, placés ou non, pour les poser depuis un panneau.
-  const [personas, setPersonas] = React.useState<MapPersona[]>(initialMap?.personas ?? []);
   // Les régions, cartes confondues ; celle qu'on regarde ; le tracé en cours
   // (`null` quand on ne dessine pas) ; et le polygone fermé qui attend son nom.
   const [regions, setRegions] = React.useState<MapRegion[]>(initialMap?.regions ?? []);
+  // Les traits entre lieux, cartes confondues ; et celui qu'on corrige.
+  const [links, setLinks] = React.useState<MapPinLink[]>(initialMap?.links ?? []);
+  const [selectedLink, setSelectedLink] = React.useState<MapPinLink | null>(null);
+  // Les personas posés sur cette carte, relus en bloc — voir `getPlacedPersonas`.
+  const [personas, setPersonas] = React.useState<PlacedPersona[]>(initialMap?.personas ?? []);
   const [selectedRegion, setSelectedRegion] = React.useState<MapRegion | null>(null);
   const [draft, setDraft] = React.useState<Point[] | null>(null);
   const [pendingRegion, setPendingRegion] = React.useState<{ points: Point[]; label: string } | null>(null);
@@ -136,7 +170,6 @@ export function WorldMap({
   // identité d'un rendu à l'autre.
   const drawingRef = React.useRef(false);
   drawingRef.current = drawing;
-  const [myPersonas, setMyPersonas] = React.useState<MapPersona[]>([]);
   const [loading, setLoading] = React.useState(!initialMap);
   const [editMode, setEditMode] = React.useState(false);
   const isEditMode = canEdit && editMode;
@@ -154,7 +187,11 @@ export function WorldMap({
   const [calibrating, setCalibrating] = React.useState(false);
   const calibratingRef = React.useRef(false);
   calibratingRef.current = calibrating;
-  const [segment, setSegment] = React.useState<{ a: Point; b: Point | null } | null>(null);
+  // Le segment retient les LIEUX cliqués, et pas seulement les points : c'est
+  // ce qui distingue « je déclare une distance » de « je joins ces deux lieux ».
+  const [segment, setSegment] = React.useState<ScaleSegment | null>(null);
+  const segmentRef = React.useRef<ScaleSegment | null>(null);
+  segmentRef.current = segment;
   // L'échelle courante de la vue, relevée à la fin de chaque geste : la barre
   // d'échelle en dépend, et elle n'a pas à suivre le geste image par image.
   const [viewScale, setViewScale] = React.useState(1);
@@ -175,12 +212,10 @@ export function WorldMap({
   const grandEcran = useMediaQuery(MEDIA.lg);
 
   const [selectedPin, setSelectedPin] = React.useState<MapPinType | null>(null);
-  const [popoverPos, setPopoverPos] = React.useState<PinPopoverPos | null>(null);
   const [pendingPin, setPendingPin] = React.useState<PendingPin | null>(null);
   const [creatingPin, setCreatingPin] = React.useState(false);
 
   const mapFileInputRef = React.useRef<HTMLInputElement>(null);
-  const popoverPanelRef = React.useRef<HTMLDivElement | null>(null);
 
   // Une carte disparue (supprimée ailleurs) laisserait l'onglet actif dans le
   // vide : on retombe alors sur la première.
@@ -195,16 +230,15 @@ export function WorldMap({
     () => regions.filter((r) => r.map_id === activeMap?.id),
     [regions, activeMap?.id],
   );
-  const personasByPin = React.useMemo(() => {
-    const parLieu = new Map<string, MapPersona[]>();
-    for (const persona of personas) {
-      if (!persona.map_pin_id) continue;
-      const liste = parLieu.get(persona.map_pin_id) ?? [];
-      liste.push(persona);
-      parLieu.set(persona.map_pin_id, liste);
-    }
-    return parLieu;
-  }, [personas]);
+  const visibleLinks = React.useMemo(
+    () => links.filter((l) => l.map_id === activeMap?.id),
+    [links, activeMap?.id],
+  );
+  /** Les épingles de la carte par identifiant : les liens n'en gardent que l'id. */
+  const pinsById = React.useMemo(
+    () => new Map(visiblePins.map((p) => [p.id, p])),
+    [visiblePins],
+  );
 
   // Miroirs en ref de ce que les rappels stables doivent lire à jour : ils
   // gardent ainsi leur identité, et `React.memo` sur les marqueurs a un sens.
@@ -222,92 +256,29 @@ export function WorldMap({
     // plat, et remplacer l'image d'une carte aussi.
     viewKey: `${activeMap?.id ?? ""}:${activeMap?.image_url ?? ""}`,
     idleCursor: isEditMode ? "crosshair" : "grab",
-    onPaint: () => repositionPopoverPanel(),
-    onSettle: (tr) => { syncPopoverPos(); setViewScale(tr.scale); },
+    onSettle: (tr) => setViewScale(tr.scale),
   });
   const { imageRef, baseSize, centerOnPoint } = viewport;
 
-  /** Position à l'écran du panneau d'une épingle, ancrée sur l'épingle elle-même. */
-  const popoverPosFor = React.useCallback((pin: MapPinType): PinPopoverPos | null => {
-    const img = imageRef.current;
-    if (!img) return null;
-    // Le rectangle mesuré tient déjà compte de la transformation du parent.
-    const ancre = pinAnchor(img.getBoundingClientRect(), pin);
-    // Hauteur réelle du panneau dès qu'il est monté : un panneau sans bannière
-    // ni description fait la moitié de la hauteur supposée, et se poserait
-    // loin au-dessus de son épingle.
-    const hauteur = popoverPanelRef.current?.offsetHeight || undefined;
-    return calcPopoverPos(ancre.x, ancre.y, undefined, hauteur);
-  }, [imageRef]);
+  // Les noms qui tiennent sans se recouvrir — ceux des régions ET ceux des
+  // lieux, triés ENSEMBLE : chacun de son côté, le nom d'une région et celui
+  // d'un lieu posé près de son centre s'ignoraient et se superposaient.
+  //
+  // L'ordre dit qui cède : le lieu ouvert d'abord, puis les régions — elles
+  // nomment une étendue entière, et sont peu nombreuses —, les lieux ensuite.
+  const nomsAffiches = React.useMemo(() => {
+    const candidats = [
+      ...visibleRegions
+        .filter((r) => r.label.trim())
+        .map((r) => ({ id: r.id, title: r.label, ...polygonCentroid(r.points) })),
+      ...visiblePins,
+    ];
+    return visibleLabels(candidats, baseSize, viewScale, selectedPin?.id);
+  }, [visibleRegions, visiblePins, baseSize, viewScale, selectedPin?.id]);
 
-  /**
-   * Replace le panneau ouvert sur le DOM, dans la même image que la carte.
-   *
-   * Il était posé une fois pour toutes à l'endroit du clic, et le moindre
-   * déplacement de la carte le laissait en plan, désigner un lieu qui n'était
-   * plus là.
-   */
-  function repositionPopoverPanel() {
-    const panel = popoverPanelRef.current;
-    const pin = selectedPinRef.current;
-    if (!panel || !pin) return;
-    const pos = popoverPosFor(pin);
-    if (!pos) return;
-    panel.style.left = `${pos.left}px`;
-    panel.style.top = `${pos.top}px`;
-    const caret = panel.querySelector<HTMLElement>("[data-pin-caret]");
-    if (caret) {
-      caret.style.left = `${pos.arrowLeft - FLECHE / 2}px`;
-      caret.dataset.placement = pos.placement;
-    }
-  }
 
-  /**
-   * Recopie dans l'état React la position que le geste vient d'écrire sur le
-   * DOM. Sans ce rattrapage, le premier rendu venu — un survol, une mise à jour
-   * temps réel — replacerait le panneau là où il était au début du geste.
-   */
-  const popoverSyncRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-  const syncPopoverPos = React.useCallback(() => {
-    if (popoverSyncRef.current) clearTimeout(popoverSyncRef.current);
-    popoverSyncRef.current = setTimeout(() => {
-      const pin = selectedPinRef.current;
-      if (!pin) return;
-      const pos = popoverPosFor(pin);
-      if (pos) setPopoverPos(pos);
-    }, 120);
-  }, [popoverPosFor]);
 
-  React.useEffect(() => () => {
-    if (popoverSyncRef.current) {
-      clearTimeout(popoverSyncRef.current);
-      popoverSyncRef.current = null;
-    }
-  }, []);
 
-  /**
-   * Le panneau se replace dès que sa hauteur change.
-   *
-   * Sa position DÉPEND de sa hauteur — il se pose au-dessus de son épingle
-   * quand la place manque en dessous. Or son contenu peut grandir après
-   * l'ouverture : une arrivée en temps réel, une image, un persona qu'on
-   * vient de poser. Le préchargement plus haut règle le cas courant ; ceci
-   * rattrape tous les autres, y compris la toute première mesure — un
-   * `ResizeObserver` rend une entrée dès qu'il observe.
-   */
-  React.useEffect(() => {
-    const panel = popoverPanelRef.current;
-    if (!selectedPin || !panel || typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver(() => {
-      repositionPopoverPanel();
-      syncPopoverPos();
-    });
-    observer.observe(panel);
-    return () => observer.disconnect();
-    // `repositionPopoverPanel` est recréée à chaque rendu : la mettre en
-    // dépendance rebrancherait l'observation aussi souvent, pour rien.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedPin, syncPopoverPos]);
 
   // ── Chargement initial ────────────────────────────────────────
   React.useEffect(() => {
@@ -315,13 +286,16 @@ export function WorldMap({
     let cancelled = false;
     (async () => {
       try {
-        const { maps: m, pins: p, personas: who, regions: r } = await getWorldMaps(worldId);
+        const carte = await getWorldMaps(worldId);
         if (!cancelled) {
-          setMaps(m);
-          setActiveMapId((prev) => prev ?? initialMapId ?? m[0]?.id ?? null);
-          setPins(p);
-          setPersonas(who);
-          setRegions(r);
+          setMaps(carte.maps);
+          setActiveMapId((prev) => prev ?? initialMapId ?? carte.maps[0]?.id ?? null);
+          setPins(carte.pins);
+          setRegions(carte.regions);
+          setLinks(carte.links);
+          setPersonas(carte.personas);
+          setWikiPages(carte.wikiPages);
+          setPinRooms(carte.rooms);
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -331,126 +305,76 @@ export function WorldMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [worldId]);
 
-  // ── Temps réel ────────────────────────────────────────────────
-  React.useEffect(() => {
-    type RT = { eventType: string; new: Record<string, unknown>; old: Record<string, unknown> };
-
-    return openRealtimeChannel(supabase, channel.worldMap(worldId), (ch) =>
-      ch
-        .on(
-          "postgres_changes",
-          { event: "*", schema: "public", table: "world_map_pins", filter: `world_id=eq.${worldId}` },
-          (payload: RT) => {
-            if (payload.eventType === "INSERT") {
-              // Fusion plutôt qu'ajout : Postgres nous renvoie AUSSI les
-              // épingles que l'on vient de créer soi-même, déjà posées à
-              // l'écran sans attendre le serveur. Les ajouter en aveugle
-              // faisait apparaître le lieu en double, avec deux fois la même
-              // clé React.
-              setPins((prev) => mergeById(prev, payload.new as MapPinType));
-            } else if (payload.eventType === "UPDATE") {
-              const updated = payload.new as MapPinType;
-              setPins((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
-              setSelectedPin((prev) => (prev?.id === updated.id ? updated : prev));
-            } else if (payload.eventType === "DELETE") {
-              const id = (payload.old as { id: string }).id;
-              setPins((prev) => prev.filter((p) => p.id !== id));
-              setSelectedPin((prev) => (prev?.id === id ? null : prev));
-            }
-          },
-        )
-        .on(
-          "postgres_changes",
-          { event: "*", schema: "public", table: "world_maps", filter: `world_id=eq.${worldId}` },
-          (payload: RT) => {
-            if (payload.eventType === "DELETE") {
-              const id = (payload.old as { id: string }).id;
-              setMaps((prev) => prev.filter((m) => m.id !== id));
-              setPins((prev) => prev.filter((p) => p.map_id !== id));
-              setRegions((prev) => prev.filter((r) => r.map_id !== id));
-              return;
-            }
-            setMaps((prev) => mergeById(prev, payload.new as WorldMapData));
-          },
-        )
-        .on(
-          "postgres_changes",
-          { event: "*", schema: "public", table: "world_map_regions", filter: `world_id=eq.${worldId}` },
-          (payload: RT) => {
-            if (payload.eventType === "DELETE") {
-              const id = (payload.old as { id: string }).id;
-              setRegions((prev) => prev.filter((r) => r.id !== id));
-              setSelectedRegion((prev) => (prev?.id === id ? null : prev));
-              return;
-            }
-            const region = payload.new as MapRegion;
-            setRegions((prev) => mergeById(prev, region));
-            setSelectedRegion((prev) => (prev?.id === region.id ? region : prev));
-          },
-        )
-        .on(
-          "postgres_changes",
-          { event: "*", schema: "public", table: "personas", filter: `world_id=eq.${worldId}` },
-          (payload: RT) => {
-            if (payload.eventType === "DELETE") {
-              const id = (payload.old as { id: string }).id;
-              setPersonas((prev) => prev.filter((p) => p.id !== id));
-              return;
-            }
-            const row = payload.new as { id: string; map_pin_id: string | null; deleted_at: string | null; is_template: boolean };
-            if (!row.map_pin_id || row.deleted_at || row.is_template) {
-              setPersonas((prev) => prev.filter((p) => p.id !== row.id));
-              return;
-            }
-            // L'écho ne porte pas le cadre de l'avatar : on relit le persona
-            // plutôt que de le dessiner nu jusqu'au prochain rechargement.
-            void getMapPersona(row.id).then((persona) => {
-              if (persona) setPersonas((prev) => mergeById(prev, persona));
-            });
-          },
-        )
-        .subscribe(),
-    );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [worldId, reconnectEpoch]);
-
-  // ── Ce dont les panneaux ont besoin, chargé une fois pour tous ──
-  //
-  // Pages du wiki et salons situés : deux listes du monde entier, lues à la
-  // première ouverture d'un lieu et partagées ensuite. Chaque panneau les
-  // rechargeait pour lui-même, soit deux requêtes par clic sur une épingle.
-  const [wikiPages, setWikiPages] = React.useState<WikiPageOption[]>([]);
-  const [pinRooms, setPinRooms] = React.useState<PinRoom[]>([]);
-  const popoverDataAskedRef = React.useRef(false);
-  const loadPopoverData = React.useCallback(() => {
-    if (popoverDataAskedRef.current) return;
-    popoverDataAskedRef.current = true;
-    void supabase
-      .from("world_wiki_pages")
-      .select("id, title, slug")
-      .eq("world_id", worldId)
-      .eq("is_folder", false)
-      .is("deleted_at", null)
-      .order("title")
-      .then(({ data }: { data: WikiPageOption[] | null }) => setWikiPages(data ?? []));
-    void supabase
-      .from("chatrooms")
-      .select("id, title, name, map_pin_id")
-      .eq("world_id", worldId)
-      .not("map_pin_id", "is", null)
-      .then(({ data }: { data: PinRoom[] | null }) => setPinRooms(data ?? []));
-    void getMyMapPersonas(worldId).then(setMyPersonas);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  /**
+   * Relit qui se trouve où, en bloc.
+   *
+   * Groupé : déplacer un persona d'un lieu à l'autre produit plusieurs échos
+   * coup sur coup, et rien ne sert de relire trois fois de suite.
+   */
+  const rechargerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const rechargerLesPersonas = React.useCallback(() => {
+    if (rechargerRef.current) clearTimeout(rechargerRef.current);
+    rechargerRef.current = setTimeout(() => {
+      void getPlacedPersonas(worldId).then(setPersonas);
+    }, 250);
   }, [worldId]);
 
-  // De quoi remplir un panneau, préchargé dès que la carte est à l'écran
-  // plutôt qu'au premier clic sur un lieu : ces listes arrivaient sinon APRÈS
-  // l'ouverture, faisant grandir le panneau sous les yeux — et sauter sa
-  // position, qui se calcule à partir de sa hauteur. Trois requêtes légères,
-  // une seule fois par visite (voir le garde dans `loadPopoverData`).
-  React.useEffect(() => {
-    if (activeMap?.image_url) loadPopoverData();
-  }, [activeMap?.image_url, loadPopoverData]);
+  React.useEffect(() => () => {
+    if (rechargerRef.current) clearTimeout(rechargerRef.current);
+  }, []);
+
+  // ── Temps réel ────────────────────────────────────────────────
+  // Cinq tables, un canal, et une seule façon d'appliquer un écho :
+  // voir `useMapRealtime`.
+  useMapRealtime(supabase, worldId, {
+    setMaps,
+    setPins,
+    setRegions,
+    setLinks,
+    setSelectedPin,
+    setSelectedRegion,
+    setSelectedLink,
+    reloadPersonas: rechargerLesPersonas,
+  });
+
+  // ── Ce dont la fiche d'un lieu a besoin ───────────────────────
+  //
+  // Pages du wiki et salons situés : deux listes du monde entier, servies
+  // avec le reste par `getWorldMaps`. Le client les demandait pour lui-même
+  // après l'hydratation, soit deux allers-retours de plus sur un onglet que
+  // le serveur avait déjà rendu — et des listes qui arrivaient APRÈS
+  // l'ouverture d'un lieu, faisant grandir la fiche sous les yeux.
+  const [wikiPages, setWikiPages] = React.useState<WikiPageOption[]>(initialMap?.wikiPages ?? []);
+  const [pinRooms, setPinRooms] = React.useState<PinRoom[]>(initialMap?.rooms ?? []);
+
+  /**
+   * Pose un de mes personas sur un lieu — ou l'en fait partir avec `null`.
+   *
+   * La liste est relue tout de suite plutôt qu'attendue de l'écho : celui-ci
+   * arrivera, mais après un aller-retour, et le geste doit se voir.
+   */
+  const handlePlacePersona = React.useCallback(
+    async (personaId: string, pinId: string | null) => {
+      try {
+        await setPersonaLocation(personaId, pinId);
+        setPersonas(await getPlacedPersonas(worldId));
+      } catch (e) {
+        toast.error(t("saveError"), { description: e instanceof Error ? e.message : undefined });
+      }
+    },
+    [worldId, t],
+  );
+
+  // Par lieu : c'est ce que le marqueur compte et ce que la fiche liste.
+  const personasByPin = React.useMemo(() => {
+    const parLieu = new Map<string, PlacedPersona[]>();
+    for (const persona of personas) {
+      const liste = parLieu.get(persona.map_pin_id) ?? [];
+      liste.push(persona);
+      parLieu.set(persona.map_pin_id, liste);
+    }
+    return parLieu;
+  }, [personas]);
 
   // ── L'adresse suit ce qu'on regarde ───────────────────────────
   /**
@@ -486,7 +410,6 @@ export function WorldMap({
   const closePopover = React.useCallback((refocusPin = false) => {
     const id = selectedPinRef.current?.id;
     setSelectedPin(null);
-    setPopoverPos(null);
     if (id) writeUrl(activeMapRef.current?.id ?? null, null, "replace");
     // Fermé au clavier, le panneau renverrait sinon le focus au début du
     // document, et le lieu que l'on venait de lire serait à retrouver.
@@ -498,29 +421,45 @@ export function WorldMap({
   }, [writeUrl]);
 
   const openPopover = React.useCallback((pin: MapPinType, writeHistory = true) => {
-    loadPopoverData();
     setSelectedPin(pin);
-    setPopoverPos(popoverPosFor(pin));
+    // La fiche vit dans la colonne : l'ouvrir, c'est ouvrir la colonne.
+    setPlacesOpen(true);
     setPendingPin(null);
     if (writeHistory) writeUrl(pin.map_id, pin.id, "replace");
-  }, [loadPopoverData, popoverPosFor, writeUrl]);
+  }, [writeUrl]);
+
+  /**
+   * Range tout ce qui est en cours : outils, brouillons, panneaux ouverts.
+   *
+   * Chaque commande tenait sa propre liste, et chaque état ajouté depuis en a
+   * manqué au moins une. Le formulaire d'un lien survivait ainsi à la sortie
+   * d'écriture — on pouvait renommer ou supprimer un trait sans plus être en
+   * train de modifier la carte —, et le panneau d'une région survivait à la
+   * prise de la règle. Une seule liste, appelée par tout le monde : le
+   * prochain état n'aura qu'un endroit où s'inscrire.
+   */
+  const rangerLesOutils = React.useCallback(() => {
+    closePopover();
+    setPendingPin(null);
+    setDraft(null);
+    setPendingRegion(null);
+    setSelectedRegion(null);
+    setSelectedLink(null);
+    setSegment(null);
+    setCalibrating(false);
+  }, [closePopover]);
 
   const selectMap = React.useCallback((mapId: string | null, mode: "push" | "replace" = "push") => {
     setActiveMapId(mapId);
-    closePopover();
-    setPendingPin(null);
-    setSegment(null);
-    setSelectedRegion(null);
-    setDraft(null);
-    setPendingRegion(null);
+    rangerLesOutils();
     writeUrl(mapId, null, mode);
-  }, [closePopover, writeUrl]);
+  }, [rangerLesOutils, writeUrl]);
 
   // Échap ferme le panneau ouvert. Le garde sur `defaultPrevented` laisse la
   // main aux boîtes de dialogue empilées par-dessus (apparence de l'épingle,
   // confirmation de suppression) : elles se ferment les premières.
   React.useEffect(() => {
-    if (!selectedPin && !placesOpen && !calibrating && !drawing && !pendingRegion && !selectedRegion) return;
+    if (!selectedPin && !placesOpen && !calibrating && !drawing && !pendingRegion && !selectedRegion && !selectedLink) return;
     function onKeyDown(e: KeyboardEvent) {
       if (e.defaultPrevented) return;
       // Entrée ferme le tracé en cours — sauf dans un champ, où elle valide.
@@ -543,6 +482,7 @@ export function WorldMap({
       if (selectedPin) closePopover(true);
       else if (pendingRegion) setPendingRegion(null);
       else if (drawing) setDraft(null);
+      else if (selectedLink) setSelectedLink(null);
       else if (selectedRegion) setSelectedRegion(null);
       else if (calibrating) {
         if (segment) setSegment(null);
@@ -553,22 +493,6 @@ export function WorldMap({
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
   });
-
-  // Le panneau vient d'apparaître : sa hauteur réelle n'était pas connue quand
-  // on l'a placé. On le repositionne avant la peinture — un effet de mise en
-  // page, donc sans le voir sauter.
-  React.useLayoutEffect(() => {
-    const pin = selectedPinRef.current;
-    if (!pin || !popoverPanelRef.current) return;
-    const pos = popoverPosFor(pin);
-    if (!pos) return;
-    setPopoverPos((prev) =>
-      prev && prev.top === pos.top && prev.left === pos.left && prev.placement === pos.placement
-        ? prev
-        : pos,
-    );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedPin?.id]);
 
   // ── Aller à un lieu ───────────────────────────────────────────
   /**
@@ -583,16 +507,16 @@ export function WorldMap({
     if (pin.map_id !== activeMapRef.current?.id) {
       pendingFocusRef.current = pin.id;
       setActiveMapId(pin.map_id);
-      closePopover();
+      rangerLesOutils();
       writeUrl(pin.map_id, pin.id, "push");
       return;
     }
     centerOnPoint({ x: pin.x, y: pin.y });
+    // La colonne — le tiroir, sur un écran étroit — passe de la liste à la
+    // fiche du lieu. La refermer reviendrait à cacher ce qu'on vient de
+    // demander à voir.
     openPopover(pin);
-    // Le tiroir recouvre la carte : le refermer est le seul moyen de voir le
-    // lieu qu'on vient de choisir.
-    if (!grandEcran) setPlacesOpen(false);
-  }, [centerOnPoint, closePopover, grandEcran, openPopover, writeUrl]);
+  }, [centerOnPoint, rangerLesOutils, openPopover, writeUrl]);
 
   React.useEffect(() => {
     const attendu = pendingFocusRef.current;
@@ -643,20 +567,19 @@ export function WorldMap({
     setPins(initialMap?.pins ?? []);
     setLoading(!initialMap);
     setSelectedPin(null);
-    setPopoverPos(null);
     setPendingPin(null);
     setEditMode(false);
-    setWikiPages([]);
-    setPinRooms([]);
-    setPersonas(initialMap?.personas ?? []);
-    setMyPersonas([]);
+    setWikiPages(initialMap?.wikiPages ?? []);
+    setPinRooms(initialMap?.rooms ?? []);
     setRegions(initialMap?.regions ?? []);
+    setLinks(initialMap?.links ?? []);
+    setSelectedLink(null);
+    setPersonas(initialMap?.personas ?? []);
     setSelectedRegion(null);
     setDraft(null);
     setPendingRegion(null);
     setCalibrating(false);
     setSegment(null);
-    popoverDataAskedRef.current = false;
     pendingFocusRef.current = null;
   });
 
@@ -706,13 +629,12 @@ export function WorldMap({
         return carte ? { ...carte, sort_index: index } : null;
       })
       .filter((m): m is WorldMapData => m !== null);
-    setMaps(apres);
-    try {
-      await reorderWorldMaps(orderedIds);
-    } catch {
-      toast.error(t("saveError"));
-      setMaps(avant);
-    }
+    await optimiste(
+      () => setMaps(apres),
+      () => reorderWorldMaps(orderedIds),
+      () => setMaps(avant),
+      () => t("saveError"),
+    );
   }
 
   async function handleDeleteMap() {
@@ -722,9 +644,13 @@ export function WorldMap({
       await deleteWorldMap(id);
       const restantes = maps.filter((m) => m.id !== id);
       setMaps(restantes);
-      // Les épingles de la carte partent avec elle en base (`ON DELETE
+      // Épingles, régions et traits partent avec elle en base (`ON DELETE
       // CASCADE`) ; on les retire ici sans attendre l'écho du temps réel.
+      // Seules les épingles l'étaient : régions et traits restaient en
+      // mémoire jusqu'à ce que le serveur veuille bien le dire.
       setPins((prev) => prev.filter((p) => p.map_id !== id));
+      setRegions((prev) => prev.filter((r) => r.map_id !== id));
+      setLinks((prev) => prev.filter((l) => l.map_id !== id));
       // `replace` : on ne revient pas en arrière vers une carte supprimée.
       selectMap(restantes[0]?.id ?? null, "replace");
       toast.success(t("mapDeleted"));
@@ -802,17 +728,41 @@ export function WorldMap({
   }, []);
 
   /** Premier point, second point — puis un troisième recommence un segment. */
-  const addScalePoint = React.useCallback((p: Point) => {
-    setSegment((prev) => (prev && !prev.b ? { a: prev.a, b: p } : { a: p, b: null }));
+  const addScalePoint = React.useCallback((p: Point, pinId: string | null = null) => {
+    setSegment((prev) =>
+      prev && !prev.b
+        ? { ...prev, b: p, bPin: pinId }
+        : { a: p, aPin: pinId, b: null, bPin: null },
+    );
   }, []);
 
+  /**
+   * Joint deux lieux.
+   *
+   * La base refuse la paire déjà posée, quel que soit le sens : c'est elle qui
+   * fait foi, et non un test côté client qui laisserait passer deux clics
+   * simultanés.
+   */
+  const handleCreateLink = React.useCallback(async (fromPinId: string, toPinId: string) => {
+    const carte = activeMapRef.current;
+    if (!carte) return;
+    try {
+      const lien = await createPinLink(worldId, carte.id, fromPinId, toPinId);
+      setLinks((prev) => mergeById(prev, lien));
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "";
+      toast.error(
+        message.includes("world_map_pin_links_pair_key")
+          ? tRef.current("linkExists")
+          : tRef.current("createLinkError"),
+      );
+    }
+  }, [worldId]);
+
   function toggleCalibrating() {
-    setCalibrating((v) => !v);
-    setSegment(null);
-    setPendingPin(null);
-    setDraft(null);
-    setPendingRegion(null);
-    closePopover();
+    const enMain = calibrating;
+    rangerLesOutils();
+    if (!enMain) setCalibrating(true);
   }
 
   /**
@@ -824,24 +774,14 @@ export function WorldMap({
    */
   function toggleEditMode() {
     setEditMode((v) => !v);
-    closePopover();
-    setPendingPin(null);
-    setSelectedRegion(null);
-    setDraft(null);
-    setPendingRegion(null);
-    setCalibrating(false);
-    setSegment(null);
+    rangerLesOutils();
   }
 
   /** L'outil de tracé : on pose des sommets jusqu'à fermer, ou abandonner. */
   function toggleDrawing() {
-    setDraft((prev) => (prev === null ? [] : null));
-    setPendingRegion(null);
-    setPendingPin(null);
-    setSelectedRegion(null);
-    setCalibrating(false);
-    setSegment(null);
-    closePopover();
+    const enCours = draft !== null;
+    rangerLesOutils();
+    if (!enCours) setDraft([]);
   }
 
   /**
@@ -882,23 +822,32 @@ export function WorldMap({
     if (viewport.consumeDidPan() || drawing || calibrating) return;
     closePopover();
     setPendingPin(null);
-    loadPopoverData();
     setSelectedRegion((prev) => (prev?.id === region.id ? null : region));
   }
 
   /** Un sommet déplacé : la région suit tout de suite, le serveur ensuite. */
-  async function handleVertexMoved(region: MapRegion, index: number, point: Point) {
-    const points = region.points.map((p, i) => (i === index ? point : p));
-    const updated = { ...region, points };
-    setRegions((prev) => mergeById(prev, updated));
-    setSelectedRegion((prev) => (prev?.id === region.id ? updated : prev));
-    try {
-      await updateMapRegion(region.id, { points });
-    } catch {
-      toast.error(t("saveError"));
-      setRegions((prev) => mergeById(prev, region));
-      setSelectedRegion((prev) => (prev?.id === region.id ? region : prev));
+  /**
+   * Les sommets d'une région ont changé — tirés, promenés, ou l'un ajouté.
+   *
+   * Les trois gestes disaient la même chose au serveur ; ils passent par ici.
+   */
+  async function handleRegionPoints(region: MapRegion, points: Point[]) {
+    // En dessous de trois sommets, ce n'est plus une surface. La règle vit
+    // ici plutôt que dans le geste : elle vaut pour tous.
+    if (points.length < MIN_REGION_POINTS) {
+      toast.error(t("minRegionPoints"));
+      return;
     }
+    const montrer = (r: MapRegion) => {
+      setRegions((prev) => mergeById(prev, r));
+      setSelectedRegion((prev) => (prev?.id === region.id ? r : prev));
+    };
+    await optimiste(
+      () => montrer({ ...region, points }),
+      () => updateMapRegion(region.id, { points }),
+      () => montrer(region),
+      () => t("saveError"),
+    );
   }
 
   async function handleDeleteRegion(region: MapRegion) {
@@ -958,7 +907,15 @@ export function WorldMap({
     // distance connue va souvent d'un lieu à un autre. Un tracé de région en
     // cours fait de même, plutôt que d'ouvrir un panneau par-dessus lui.
     if (calibratingRef.current) {
-      addScalePoint({ x: pin.x, y: pin.y });
+      // Deux lieux cliqués coup sur coup : c'est un trait qu'on trace, et non
+      // une distance qu'on s'apprête à déclarer.
+      const encours = segmentRef.current;
+      if (encours && !encours.b && encours.aPin && encours.aPin !== pin.id) {
+        setSegment(null);
+        void handleCreateLink(encours.aPin, pin.id);
+        return;
+      }
+      addScalePoint({ x: pin.x, y: pin.y }, pin.id);
       return;
     }
     if (drawingRef.current) {
@@ -970,47 +927,46 @@ export function WorldMap({
       return;
     }
     openPopover(pin);
-  }, [closePopover, openPopover, addScalePoint, addDraftPoint]);
+  }, [closePopover, openPopover, addScalePoint, addDraftPoint, handleCreateLink]);
 
   const handlePinMoved = React.useCallback(async (pin: MapPinType, x: number, y: number) => {
     // Optimiste : mise à jour locale immédiate
     const updated = { ...pin, x, y };
-    setPins((prev) => prev.map((p) => (p.id === pin.id ? updated : p)));
-    if (selectedPinRef.current?.id === pin.id) {
-      setSelectedPin(updated);
-      // Le panneau suit l'épingle qu'on vient de déplacer : le marqueur avale
-      // ses propres événements de pointeur, la carte n'a donc rien vu passer.
-      syncPopoverPos();
-    }
-    try {
-      await updateMapPin(pin.id, { x, y });
-    } catch {
-      toast.error(tRef.current("movePinError"));
-      // Rollback
-      setPins((prev) => prev.map((p) => (p.id === pin.id ? pin : p)));
-    }
-  }, [syncPopoverPos]);
+    // La fiche montre le lieu déplacé : elle vit dans la colonne, à sa
+    // place, et n'a plus à suivre l'épingle. Elle suit AUSSI le retour en
+    // arrière — elle restait sinon sur la position refusée.
+    const poser = (v: MapPinType) => {
+      setPins((prev) => prev.map((p) => (p.id === pin.id ? v : p)));
+      if (selectedPinRef.current?.id === pin.id) setSelectedPin(v);
+    };
+    await optimiste(
+      () => poser(updated),
+      () => updateMapPin(pin.id, { x, y }),
+      () => poser(pin),
+      () => tRef.current("movePinError"),
+    );
+  }, []);
 
-  /**
-   * Pose un de mes personas ici — ou l'en fait partir. Optimiste : la tête
-   * apparaît sur le marqueur sans attendre le serveur, et l'écho temps réel
-   * la confirmera avec son cadre.
-   */
-  async function handlePlacePersona(personaId: string, pinId: string | null) {
-    const persona = myPersonas.find((p) => p.id === personaId);
-    if (!persona) return;
-    const avant = personas;
-    const deplace = { ...persona, map_pin_id: pinId };
-    setPersonas((prev) => (pinId ? mergeById(prev, deplace) : prev.filter((p) => p.id !== personaId)));
-    setMyPersonas((prev) => prev.map((p) => (p.id === personaId ? deplace : p)));
-    try {
-      await setPersonaLocation(personaId, pinId);
-      toast.success(t(pinId ? "personaPlaced" : "personaLeft", { name: persona.name }));
-    } catch {
-      toast.error(t("locationError"));
-      setPersonas(avant);
-      setMyPersonas((prev) => prev.map((p) => (p.id === personaId ? persona : p)));
-    }
+  async function handleRenameLink(link: MapPinLink, label: string) {
+    const nommer = (v: string) =>
+      setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, label: v } : l)));
+    setSelectedLink(null);
+    await optimiste(
+      () => nommer(label),
+      () => updatePinLink(link.id, { label }),
+      () => nommer(link.label),
+      () => t("saveError"),
+    );
+  }
+
+  async function handleDeleteLink(link: MapPinLink) {
+    setSelectedLink(null);
+    await optimiste(
+      () => setLinks((prev) => prev.filter((l) => l.id !== link.id)),
+      () => deletePinLink(link.id),
+      () => setLinks((prev) => mergeById(prev, link)),
+      () => t("deleteLinkError"),
+    );
   }
 
   /** Règle l'échelle depuis une distance déclarée — `null` la retire. */
@@ -1064,14 +1020,61 @@ export function WorldMap({
     );
   }
 
-  const { imageSrc } = viewport;
+  /**
+   * Refermer la colonne referme aussi la fiche qu'elle montrait.
+   *
+   * Sans cela, la rouvrir aurait rendu le lieu d'avant plutôt que la liste,
+   * et l'adresse aurait gardé un lieu que plus personne ne voyait.
+   */
+  function fermerLaColonne() {
+    setPlacesOpen(false);
+    closePopover();
+  }
 
+  /**
+   * La fiche du lieu ouvert — elle vit dans la colonne, avec la liste des
+   * lieux, plutôt que posée sur la carte.
+   */
   const mapScale: MapScale | null =
     activeMap?.scale_width_units != null && activeMap.scale_width_units > 0
       ? { widthUnits: activeMap.scale_width_units, unit: activeMap.scale_unit ?? "" }
       : null;
   // Hauteur sur largeur ; 1 tant que la carte n'est pas mesurée.
   const aspect = baseSize.width > 0 ? baseSize.height / baseSize.width : 1;
+
+  const ficheDuLieu = selectedPin ? (
+    <PinDetail
+      key={selectedPin.id}
+      pin={selectedPin}
+      wikiPages={wikiPages}
+      rooms={pinRooms.filter((r) => r.map_pin_id === selectedPin.id)}
+      maps={maps}
+      timelineConfig={timelineConfig}
+      ownMap={maps.find((m) => m.id === selectedPin.map_id) ?? null}
+      // La première région qui se referme autour du lieu. Il peut y en avoir
+      // plusieurs empilées : celle du dessus est celle qu'on voit.
+      region={visibleRegions.find((r) => pointInPolygon(selectedPin, r.points)) ?? null}
+      personasHere={personasByPin.get(selectedPin.id) ?? []}
+      links={visibleLinks.filter((l) => l.from_pin_id === selectedPin.id || l.to_pin_id === selectedPin.id)}
+      pinsById={pinsById}
+      aspect={aspect}
+      onOpenPin={focusPin}
+      onPlacePersona={canPost ? (personaId) => void handlePlacePersona(personaId, selectedPin.id) : undefined}
+      onRemovePersona={canPost ? (personaId) => void handlePlacePersona(personaId, null) : undefined}
+      pickerVariant={grandEcran ? "dialog" : "drawer"}
+      isEditMode={isEditMode}
+      canPost={canPost}
+      worldId={worldId}
+      onUpdated={(updated) => {
+        setPins((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+        setSelectedPin(updated);
+      }}
+      onDelete={() => void handleDeletePin(selectedPin)}
+      onOpenMap={(mapId) => selectMap(mapId)}
+    />
+  ) : null;
+
+  const { imageSrc } = viewport;
 
   return (
     <div
@@ -1164,7 +1167,9 @@ export function WorldMap({
             type="button"
             aria-label={placesOpen ? t("hidePlaces") : t("showPlaces")}
             aria-pressed={placesOpen}
-            onClick={(e) => { e.stopPropagation(); setPlacesOpen((v) => !v); }}
+            // Fermer par ce bouton ou par la croix de la colonne doit faire
+            // la même chose : refermer la fiche avec elle.
+            onClick={(e) => { e.stopPropagation(); if (placesOpen) fermerLaColonne(); else setPlacesOpen(true); }}
             className={cn(
               "flex items-center gap-1.5 rounded-md px-2 py-1 text-xs transition-colors",
               placesOpen
@@ -1226,7 +1231,9 @@ export function WorldMap({
             activeMapId={activeMap?.id ?? null}
             selectedPinId={selectedPin?.id ?? null}
             onSelect={focusPin}
-            onClose={() => setPlacesOpen(false)}
+            onClose={fermerLaColonne}
+            detail={ficheDuLieu}
+            onCloseDetail={() => closePopover(true)}
           />
         )}
         {imageSrc && !grandEcran && (
@@ -1237,7 +1244,9 @@ export function WorldMap({
             activeMapId={activeMap?.id ?? null}
             selectedPinId={selectedPin?.id ?? null}
             onSelect={focusPin}
-            onClose={() => setPlacesOpen(false)}
+            onClose={fermerLaColonne}
+            detail={ficheDuLieu}
+            onCloseDetail={() => closePopover(true)}
           />
         )}
 
@@ -1307,6 +1316,12 @@ export function WorldMap({
                 src={imageSrc}
                 alt={t("mapAlt")}
                 draggable={false}
+                // La carte EST la page : elle passe devant les avatars et les
+                // vignettes que le navigateur télécharge au même moment. Et
+                // décodée hors du fil principal, faute de quoi une image de
+                // 2 560 px fige l'interface le temps de son décodage.
+                fetchPriority="high"
+                decoding="async"
                 onLoad={viewport.onImageLoad}
                 className={cn(
                   "block h-full w-full select-none transition-opacity duration-300 motion-reduce:transition-none",
@@ -1323,11 +1338,43 @@ export function WorldMap({
                   draft={draft}
                   isEditMode={isEditMode}
                   imgRef={imageRef}
+                  labelled={nomsAffiches}
+                  clickThrough={calibrating || drawing}
                   onSelect={handleRegionClick}
                   onCloseDraft={finishDraft}
-                  onVertexMoved={(region, index, point) => void handleVertexMoved(region, index, point)}
+                  onPointsChanged={(region, points) => void handleRegionPoints(region, points)}
                 />
               )}
+
+              {/* Les traits entre lieux, au-dessus des régions et sous les
+                  épingles : une route passe sur une surface, pas sur un lieu. */}
+              {visibleLinks.length > 0 && (
+                <LinkLayer
+                  links={visibleLinks}
+                  pins={pinsById}
+                  selectedPinId={selectedPin?.id ?? null}
+                  aspect={aspect}
+                  scale={mapScale}
+                  isEditMode={isEditMode}
+                  onSelect={setSelectedLink}
+                />
+              )}
+
+              {/* Le nom d'un trait, ou sa suppression. */}
+              {selectedLink && (() => {
+                const a = pinsById.get(selectedLink.from_pin_id);
+                const b = pinsById.get(selectedLink.to_pin_id);
+                return a && b ? (
+                  <LinkEditor
+                    link={selectedLink}
+                    a={a}
+                    b={b}
+                    onRename={(label) => void handleRenameLink(selectedLink, label)}
+                    onDelete={() => void handleDeleteLink(selectedLink)}
+                    onClose={() => setSelectedLink(null)}
+                  />
+                ) : null;
+              })()}
 
               {/* Le polygone fermé attend son nom, au centre. */}
               {pendingRegion && (() => {
@@ -1387,7 +1434,8 @@ export function WorldMap({
                   isSelected={selectedPin?.id === pin.id}
                   isEditMode={isEditMode}
                   imgRef={imageRef}
-                  presentPersonas={personasByPin.get(pin.id) ?? NOBODY}
+                  showLabel={nomsAffiches.has(pin.id)}
+                  presentCount={personasByPin.get(pin.id)?.length ?? 0}
                   outOfTime={outOfTime(pin)}
                   onPinClick={handlePinClick}
                   onDelete={handleDeletePin}
@@ -1400,6 +1448,7 @@ export function WorldMap({
                 <ScaleCalibrator
                   a={segment.a}
                   b={segment.b}
+                  anchoredToPin={!!segment.aPin}
                   aspect={aspect}
                   scale={mapScale}
                   onCalibrate={(w, u) => void handleCalibrate(w, u)}
@@ -1509,31 +1558,6 @@ export function WorldMap({
         onConfirm={() => void confirmDeletePin()}
       />
 
-      {/* ── Popover pin sélectionné ─────────────────────────────── */}
-      {selectedPin && popoverPos && (
-        <PinPopover
-          key={selectedPin.id}
-          pin={selectedPin}
-          pos={popoverPos}
-          panelRef={popoverPanelRef}
-          wikiPages={wikiPages}
-          rooms={pinRooms.filter((r) => r.map_pin_id === selectedPin.id)}
-          maps={maps}
-          personasHere={personasByPin.get(selectedPin.id) ?? NOBODY}
-          myPersonas={myPersonas}
-          timelineConfig={timelineConfig}
-          isEditMode={isEditMode}
-          canPost={canPost}
-          worldId={worldId}
-          onUpdated={(updated) => {
-            setPins((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
-            setSelectedPin(updated);
-          }}
-          onDelete={() => void handleDeletePin(selectedPin)}
-          onOpenMap={(mapId) => selectMap(mapId)}
-          onPlacePersona={(personaId, pinId) => void handlePlacePersona(personaId, pinId)}
-        />
-      )}
 
       {activeMap && (
         <DeleteConfirmDialog
@@ -1573,8 +1597,3 @@ export function WorldMap({
  * identifiant. Sert aux épingles comme aux cartes : le temps réel renvoie à
  * l'auteur ce qu'il vient d'insérer, déjà présent à l'écran.
  */
-function mergeById<T extends { id: string }>(list: T[], item: T): T[] {
-  return list.some((x) => x.id === item.id)
-    ? list.map((x) => (x.id === item.id ? item : x))
-    : [...list, item];
-}

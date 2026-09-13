@@ -8,6 +8,46 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-09 ──────────────────────────────────────────────────────────────
   {
     date: "2026-09",
+    tag: "Accueil",
+    text: "Une fois le titre d’un monde défilé, une barre reste en haut de la page : son nom sur sa bannière floutée, avec le menu, la recherche et le bouton favori toujours à portée.",
+  },
+  {
+    date: "2026-09",
+    tag: "Technique",
+    text: "Ce que vous saisissez est vérifié une fois de plus, côté serveur : les adresses d’images ne peuvent être qu’en http(s), les couleurs qu’au format hexadécimal, et chaque champ a une longueur maximale. Un envoi qui ne respecte pas ces règles est refusé avec un message clair au lieu d’une erreur technique.",
+  },
+  {
+    date: "2026-09",
+    tag: "Emoji",
+    text: "Le sélecteur d’emoji prend les couleurs de l’application : onglets de catégories en icônes maison, celui en cours à l’accent, et un cadre identique aux autres menus.",
+  },
+  {
+    date: "2026-09",
+    tag: "Carte",
+    text: "L’outil règle joint deux lieux : cliquez l’un puis l’autre, et un trait les relie. Il porte un nom, si vous lui en donnez un, et la distance dès que la carte est à l’échelle. La fiche d’un lieu montre en petit ce qu’il rejoint.",
+  },
+  {
+    date: "2026-09",
+    tag: "Carte",
+    text: "Depuis la fiche d’un lieu, « M’installer ici » pose un de vos personas à cet endroit, et une croix l’en fait repartir. C’est là que se règle désormais l’emplacement d’un persona, et non plus dans sa propre fiche.",
+  },
+  {
+    date: "2026-09",
+    tag: "Carte",
+    text: "La fiche d’un lieu dit sur quelle carte et dans quelle région il se trouve, et range ses informations en blocs distincts.",
+  },
+  {
+    date: "2026-09",
+    tag: "Carte",
+    text: "Les lieux portent leur nom en permanence sur la carte. Deux noms qui se recouvriraient : seul l’un des deux s’affiche, et l’autre reparaît en agrandissant.",
+  },
+  {
+    date: "2026-09",
+    tag: "Carte",
+    text: "Un lieu s’ouvre désormais dans la colonne, à côté de la carte, au lieu d’une fenêtre posée dessus : la carte reste entière sous les yeux, et la fiche a la place de tout montrer.",
+  },
+  {
+    date: "2026-09",
     tag: "Catalogue",
     text: "Une corbeille : un objet supprimé y reste trente jours. Le restaurer le rend d’un coup à toutes les fiches qui le portaient.",
   },
@@ -94,7 +134,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Carte",
-    text: "Qui est où : un persona peut se poser sur un lieu de la carte, depuis sa fiche ou depuis le panneau du lieu. Les marqueurs montrent qui s’y trouve.",
+    text: "Un persona peut se situer sur un lieu depuis sa fiche. La carte compte alors qui s’y trouve, et le panneau du lieu les nomme.",
   },
   {
     date: "2026-09",

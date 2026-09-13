@@ -80,55 +80,6 @@ export function dedupeConsecutive(points: Point[], epsilon = 0.5): Point[] {
   return out;
 }
 
-/** Distance d'un point au segment [a, b]. */
-function distanceToSegment(p: Point, a: Point, b: Point): number {
-  const dx = b.x - a.x;
-  const dy = b.y - a.y;
-  const longueur2 = dx * dx + dy * dy;
-  if (longueur2 === 0) return Math.hypot(p.x - a.x, p.y - a.y);
-  const t = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / longueur2));
-  return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
-}
-
-function rdp(points: Point[], tolerance: number): Point[] {
-  if (points.length < 3) return points;
-  const premier = points[0];
-  const dernier = points[points.length - 1];
-  let indexMax = 0;
-  let distMax = 0;
-  for (let i = 1; i < points.length - 1; i++) {
-    const d = distanceToSegment(points[i], premier, dernier);
-    if (d > distMax) { distMax = d; indexMax = i; }
-  }
-  if (distMax <= tolerance) return [premier, dernier];
-  const gauche = rdp(points.slice(0, indexMax + 1), tolerance);
-  const droite = rdp(points.slice(indexMax), tolerance);
-  return [...gauche.slice(0, -1), ...droite];
-}
-
-/**
- * Simplifie un tracé (Ramer–Douglas–Peucker) : les sommets qui ne dévient
- * pas de la ligne de plus de `tolerance` disparaissent. Un contour suivi à
- * la main compte vite cent points là où dix suffisent.
- *
- * Le polygone est fermé : on le coupe au sommet le plus éloigné du premier,
- * pour que la simplification ne rabote pas ce qui touche à la jointure. Ne
- * descend jamais sous `MIN_REGION_POINTS`.
- */
-export function simplifyPolygon(points: Point[], tolerance = 0.3): Point[] {
-  if (points.length <= MIN_REGION_POINTS) return points;
-  let loin = 0;
-  let distMax = -1;
-  for (let i = 1; i < points.length; i++) {
-    const d = Math.hypot(points[i].x - points[0].x, points[i].y - points[0].y);
-    if (d > distMax) { distMax = d; loin = i; }
-  }
-  const premiereMoitie = rdp(points.slice(0, loin + 1), tolerance);
-  const secondeMoitie = rdp([...points.slice(loin), points[0]], tolerance);
-  const resultat = [...premiereMoitie.slice(0, -1), ...secondeMoitie.slice(0, -1)];
-  return resultat.length >= MIN_REGION_POINTS ? resultat : points;
-}
-
 /** Le format de l'attribut `points` d'un `<polygon>`. */
 export function toSvgPoints(points: Point[]): string {
   return points.map((p) => `${p.x},${p.y}`).join(" ");

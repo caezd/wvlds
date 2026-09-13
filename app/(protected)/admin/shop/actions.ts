@@ -5,14 +5,15 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { echecEnregistrement } from "@/lib/actionErrors";
+import { httpUrl } from "@/lib/inputSchemas";
 
 const ItemSchema = z.object({
   key:         z.string().trim().min(1).max(64).regex(/^[a-z0-9_-]+$/, "Clé : minuscules, chiffres, - ou _"),
   name:        z.string().trim().min(1).max(80),
   slot:        z.enum(["avatar_frame"]),
   price_coins: z.coerce.number().int().min(0),
-  asset_url:   z.string().trim().url("URL d'asset invalide"),
-  preview_url: z.string().trim().url("URL de preview invalide").optional().or(z.literal("")).transform(v => v || null),
+  asset_url:   httpUrl("URL d'asset invalide"),
+  preview_url: httpUrl("URL de preview invalide").optional().or(z.literal("")).transform(v => v || null),
   active:      z.coerce.boolean().default(true),
 });
 

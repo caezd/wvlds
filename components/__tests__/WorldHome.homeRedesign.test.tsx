@@ -169,8 +169,23 @@ describe("WorldHome — titre/description hors bannière + panel de contenu", ()
     // les boutons, les rendant inertes.
     render(<WorldHome {...baseProps()} />);
 
-    const bar = screen.getByLabelText("Ouvrir le menu").closest("div.absolute")!;
+    const bar = screen.getByLabelText("Ouvrir le menu").closest("[data-world-home-header]")!;
     expect(bar.className).toMatch(/\bz-10\b/);
+  });
+
+  it("colle la barre de boutons en haut du conteneur qui défile, sans lui prendre de place", () => {
+    // La barre précède le bloc bannière dans le conteneur `overflow-y-auto`
+    // (sticky ne colle qu'au conteneur qui défile), et sa marge négative
+    // compense sa hauteur : au repos, les boutons restent incrustés en haut
+    // de la bannière, exactement comme avant.
+    render(<WorldHome {...baseProps()} />);
+
+    const bar = screen.getByLabelText("Ouvrir le menu").closest("[data-world-home-header]")!;
+    expect(bar.className).toMatch(/\bsticky\b/);
+    expect(bar.className).toMatch(/\btop-0\b/);
+    expect(bar.className).toMatch(/\bh-14\b/);
+    expect(bar.className).toMatch(/(^|\s)-mb-14\b/);
+    expect(bar.parentElement!.className).toMatch(/\boverflow-y-auto\b/);
   });
 
   it("le bloc titre est positionné (relative) pour se peindre au-dessus du fond absolu de la bannière", () => {

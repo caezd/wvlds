@@ -136,3 +136,20 @@ describe("inviteUserToWorld", () => {
     expect(adminInsert).not.toHaveBeenCalled();
   });
 });
+
+describe("inviteUserToWorld — entrées forgées", () => {
+  // Seule action du dépôt à écrire avec le `service_role`, hors RLS : le rôle
+  // n'est retenu par rien d'autre que ce contrôle et `accept_world_invitation`.
+  it.each([
+    ["le rôle owner", ["a@b.com", "w1", "owner"]],
+    ["un rôle inconnu", ["a@b.com", "w1", "superadmin"]],
+    ["une adresse qui n'en est pas une", ["pas-un-courriel", "w1", "player"]],
+    ["un monde sans identifiant", ["a@b.com", "", "player"]],
+  ])("refuse %s avant même de lire l'appelant", async (_name, [email, worldId, role]) => {
+    mockCaller("u1", "owner");
+    const res = await inviteUserToWorld(email, worldId, role as never);
+    expect(res.error).toBe("unsupportedValue");
+    expect(inviteUserByEmail).not.toHaveBeenCalled();
+    expect(adminInsert).not.toHaveBeenCalled();
+  });
+});

@@ -10,6 +10,7 @@ import EmojiPicker, {
 // de node_modules (non transpilé) → "Unknown module type". Le .js est le module
 // compilé (ESM, `export default data`) et la .d.ts voisine fournit le typage.
 import frData from "emoji-picker-react/dist/data/emojis-fr.js";
+import { EMOJI_CATEGORY_ICONS } from "./emojiPickerCategoryIcons";
 
 /**
  * Contenu réel du picker. Importé dynamiquement par ChatReactionPicker
@@ -30,6 +31,7 @@ export default function ChatReactionPickerInner({
       emojiData={frData}
       theme={"dark" as unknown as Theme}
       emojiStyle={"twitter" as unknown as EmojiStyle}
+      categoryIcons={EMOJI_CATEGORY_ICONS}
       lazyLoadEmojis
       width={320}
       height={400}

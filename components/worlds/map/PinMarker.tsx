@@ -6,13 +6,7 @@ import { Layers, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
-import { AvatarWithFrame } from "@/components/avatars/AvatarWithFrame";
-import { type MapPersona, type MapPin as MapPinType } from "@/app/actions/worldMap";
-
-/** Une même référence pour « personne » : la mémoïsation compare par identité. */
-const NOBODY: MapPersona[] = [];
-/** Au-delà, on compte au lieu d'empiler — trois têtes disent déjà « il y a du monde ». */
-const AVATARS_SHOWN = 3;
+import { type MapPin as MapPinType } from "@/app/actions/worldMap";
 
 /**
  * Une épingle posée sur la carte.
@@ -31,8 +25,9 @@ export const PinMarker = React.memo(function PinMarker({
   isSelected,
   isEditMode,
   imgRef,
-  presentPersonas = NOBODY,
   outOfTime = false,
+  showLabel = true,
+  presentCount = 0,
   onPinClick,
   onDelete,
   onMoved,
@@ -41,10 +36,12 @@ export const PinMarker = React.memo(function PinMarker({
   isSelected: boolean;
   isEditMode: boolean;
   imgRef: React.RefObject<HTMLImageElement | null>;
-  /** Les personas qui se trouvent ici — voir migration 154. */
-  presentPersonas?: MapPersona[];
   /** Le lieu n'existe pas à l'époque affichée — voir migration 156. */
   outOfTime?: boolean;
+  /** Son nom recouvrirait celui d'un voisin : on le tait — voir `labels.ts`. */
+  showLabel?: boolean;
+  /** Combien de personas s'y trouvent — voir migration 154. */
+  presentCount?: number;
   onPinClick: (pin: MapPinType) => void;
   onDelete: (pin: MapPinType) => void;
   onMoved: (pin: MapPinType, x: number, y: number) => void;
@@ -149,7 +146,10 @@ export const PinMarker = React.memo(function PinMarker({
           isEditMode && !isDragging && "cursor-grab",
           isDragging && "cursor-grabbing",
           !isDragging && "hover:scale-110",
-          isSelected && !isDragging && "scale-110 ring-2 ring-white ring-offset-1",
+          // Pas de liseré : l'étiquette passe déjà à la couleur d'accent, et
+          // un anneau blanc posé sur une carte claire ne se voyait pas plus
+          // qu'il ne s'effaçait sur une carte sombre.
+          isSelected && !isDragging && "scale-110",
           isDragging && "scale-125 opacity-90 shadow-xl",
         )}
         style={{
@@ -185,30 +185,42 @@ export const PinMarker = React.memo(function PinMarker({
         </span>
       )}
 
-      {/* Qui est là. À droite du marqueur, hors de portée du pointeur : c'est
-          le marqueur qu'on clique, les têtes ne font qu'annoncer. */}
-      {presentPersonas.length > 0 && !isDragging && (
-        <div
-          role="group"
-          aria-label={t("whoIsHere")}
-          className="pointer-events-none absolute left-full top-1/2 ml-1 flex -translate-y-1/2 items-center -space-x-1.5"
+      {/* Combien de monde il y a ici.
+          Un compte, et non les têtes : la carte porte déjà le nom de chaque
+          lieu, et une pile d'avatars par-dessus la rendait illisible. Qui est
+          là précisément se lit dans la fiche, où la place ne manque pas. */}
+      {presentCount > 0 && !isDragging && (
+        <span
+          aria-label={t("peopleHere", { count: presentCount })}
+          className="pointer-events-none absolute left-full top-1/2 ml-1 flex h-4 min-w-4 -translate-y-1/2 items-center justify-center rounded-full bg-foreground px-1 text-[10px] font-semibold leading-none text-background ring-2 ring-background"
         >
-          {presentPersonas.slice(0, AVATARS_SHOWN).map((p) => (
-            <span key={p.id} data-persona-id={p.id} title={p.name} className="rounded-full ring-1 ring-background">
-              <AvatarWithFrame src={p.avatar_url} alt={p.name} fallback={p.name} size={18} frameUrl={p.frame?.asset_url} />
-            </span>
-          ))}
-          {presentPersonas.length > AVATARS_SHOWN && (
-            <span className="rounded-full bg-background px-1 text-[10px] font-medium text-foreground shadow">
-              {t("morePersonas", { count: presentPersonas.length - AVATARS_SHOWN })}
-            </span>
-          )}
-        </div>
+          {presentCount}
+        </span>
       )}
 
-      {/* Label au survol ou au focus clavier */}
-      {!isDragging && (
-        <div className="pointer-events-none absolute top-full left-1/2 mt-1 -translate-x-1/2 whitespace-nowrap rounded bg-black/75 px-2 py-0.5 text-xs font-medium text-white opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+      {/* Le nom du lieu, en permanence.
+          Il n'apparaissait qu'au survol : une carte de cinquante lieux ne se
+          lisait qu'à la souris, un par un, et pas du tout au doigt.
+
+          `aria-hidden` : le bouton porte déjà ce nom en `aria-label`, et le
+          laisser ici le ferait annoncer deux fois. Et une largeur bornée, car
+          rien n'oblige un lieu à porter un nom court — sans elle, « La
+          citadelle des vents du nord » barrait la carte. */}
+      {!isDragging && showLabel && (
+        <div
+          aria-hidden
+          data-pin-label
+          className={cn(
+            "pointer-events-none absolute top-full left-1/2 mt-1 max-w-40 -translate-x-1/2 truncate",
+            "rounded px-1.5 py-0.5 text-[11px] font-medium shadow-sm transition-colors",
+            // `text-white` valait pour le fond noir et pour lui seul : sur le
+            // fond d'accent d'un thème clair, le nom du lieu ouvert
+            // disparaissait. Chaque fond porte donc sa couleur de texte.
+            isSelected
+              ? "bg-primary text-primary-foreground"
+              : "bg-black/70 text-white group-hover:bg-black/90 group-focus-within:bg-black/90",
+          )}
+        >
           {pin.title}
         </div>
       )}

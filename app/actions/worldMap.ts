@@ -1,14 +1,40 @@
 "use server";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { z } from "zod";
 
 import { createClient } from "@/lib/supabase/server";
 import { ERR_NON_AUTHENTIFIE } from "@/lib/actionErrors";
+import {
+  hexColorSchema,
+  httpUrlSchema,
+  idSchema,
+  longTextSchema,
+  lucideIconSchema,
+  parseInputOrThrow,
+  shortTextSchema,
+} from "@/lib/inputSchemas";
 import { storagePathFromUrl } from "@/lib/storage";
 import type { WorldTimelineDate } from "@/types/worlds";
+import type { PinRoom, WikiPageOption } from "@/components/worlds/map/types";
 
 /** Espace de stockage des images de carte et des bannières de lieu. */
 const WORLDS_BUCKET = "worlds";
+
+// Les colonnes demandées, nommées plutôt qu'un `*`.
+//
+// Un `*` fait voyager ce que le client n'utilise pas, et fait surtout arriver
+// sans prévenir ce qu'une migration ajoutera demain — dans une réponse dont
+// les types, eux, ne bougeront pas. Nommer les colonnes, c'est dire ce que
+// l'écran sait afficher.
+const COLONNES_CARTE = "id, world_id, image_url, label, sort_index, scale_width_units, scale_unit";
+// D'un seul tenant, sans concaténation : Supabase déduit le type de la
+// réponse de la CHAÎNE LITTÉRALE passée à `select`. Coupée en deux, elle perd
+// son type littéral, et la réponse revient en `GenericStringError`.
+const COLONNES_EPINGLE = "id, world_id, map_id, x, y, title, description, banner_url, color, icon, icon_color, border_color, border_style, sort_index, wiki_page_id, target_map_id, exists_from, exists_until";
+const COLONNES_REGION =
+  "id, world_id, map_id, label, description, color, points, wiki_page_id, sort_index";
+const COLONNES_LIEN = "id, map_id, from_pin_id, to_pin_id, label";
 
 export type WorldMapData = {
   id: string;
@@ -63,94 +89,181 @@ export type MapRegion = {
   sort_index: number;
 };
 
-/** Ce que la carte montre d'un persona : sa tête, et où il se trouve. */
-export type MapPersona = {
-  id: string;
-  user_id: string;
-  name: string;
-  avatar_url: string | null;
-  frame: { asset_url: string | null } | null;
-  /** Le lieu où il se trouve — `null` quand il n'est nulle part (migration 154). */
-  map_pin_id: string | null;
-};
+// ── Ce que le client peut envoyer ────────────────────────────
+//
+// Chaque mutation ci-dessous recevait un `patch` typé, et l'écrivait tel quel.
+// Un type ne tient qu'à la compilation : un appel forgé peut y glisser un
+// `world_id` ou un `map_id`, ou dix mégaoctets dans un libellé. Ces schémas
+// sont stricts — une clé de trop refuse tout l'appel — et bornés comme les
+// contraintes de la base (migration 171).
 
-const MAP_PERSONA_SELECT = "id, user_id, name, avatar_url, map_pin_id, frame:avatar_frame_id(asset_url)";
+/** Un pourcentage de la carte, avec la marge que le glisser autorise. */
+const percentSchema = z.number().finite().min(-10).max(110);
+
+const timelineDateSchema = z.strictObject({
+  year: z.number().int(),
+  month: z.number().int().min(1).max(64).nullable(),
+  day: z.number().int().min(1).max(64).nullable(),
+});
+
+/** Une couleur d'épingle : hexadécimale, ou `transparent` (fond retiré). */
+const pinColorSchema = z.union([hexColorSchema, z.literal("transparent")]);
+
+const mapPatchSchema = z.strictObject({
+  image_url: httpUrlSchema.nullable(),
+  label: shortTextSchema,
+  sort_index: z.number().int().min(0),
+  scale_width_units: z.number().finite().positive().nullable(),
+  scale_unit: z.string().trim().max(16).nullable(),
+});
+
+const pinPatchSchema = z.strictObject({
+  x: percentSchema,
+  y: percentSchema,
+  title: shortTextSchema,
+  description: longTextSchema.nullable(),
+  banner_url: httpUrlSchema.nullable(),
+  color: pinColorSchema,
+  icon: lucideIconSchema,
+  icon_color: hexColorSchema,
+  border_color: hexColorSchema.nullable(),
+  border_style: z.enum(["solid", "dashed", "dotted"]),
+  wiki_page_id: idSchema.nullable(),
+  target_map_id: idSchema.nullable(),
+  exists_from: timelineDateSchema.nullable(),
+  exists_until: timelineDateSchema.nullable(),
+});
+
+/** Assez pour un littoral tracé à la main, trop peu pour un abus. */
+const MAX_REGION_POINTS = 500;
+
+const regionPointsSchema = z.array(z.strictObject({ x: percentSchema, y: percentSchema })).max(MAX_REGION_POINTS);
+
+const regionPatchSchema = z.strictObject({
+  label: shortTextSchema,
+  description: longTextSchema.nullable(),
+  color: hexColorSchema,
+  points: regionPointsSchema,
+  wiki_page_id: idSchema.nullable(),
+  sort_index: z.number().int().min(0),
+});
+
+const linkPatchSchema = z.strictObject({ label: z.string().trim().max(80) });
 
 /**
- * Toutes les cartes d'un monde et toutes leurs épingles, en deux requêtes.
+ * Tout ce que la carte d'un monde a besoin de savoir, en un seul aller.
  *
  * Les épingles sont lues d'un bloc plutôt qu'une carte à la fois : passer d'un
  * onglet à l'autre est alors instantané, là où une requête par changement
- * d'onglet ferait clignoter la carte à chaque aller-retour. Elles se répartissent
- * ensuite par `map_id`.
+ * d'onglet ferait clignoter la carte à chaque aller-retour. Elles se
+ * répartissent ensuite par `map_id`.
+ *
+ * Les pages du wiki et les salons situés sont du voyage, alors qu'ils ne
+ * servent qu'à la fiche d'un lieu : le client les demandait lui-même APRÈS
+ * l'hydratation, soit deux allers-retours de plus pour un onglet que le
+ * serveur avait déjà rendu. Deux listes courtes — les titres, rien d'autre —
+ * qui arrivent maintenant avec le reste.
  */
 export async function getWorldMaps(
   worldId: string,
-): Promise<{ maps: WorldMapData[]; pins: MapPin[]; personas: MapPersona[]; regions: MapRegion[] }> {
+): Promise<{
+  maps: WorldMapData[];
+  pins: MapPin[];
+  regions: MapRegion[];
+  links: MapPinLink[];
+  personas: PlacedPersona[];
+  wikiPages: WikiPageOption[];
+  rooms: PinRoom[];
+}> {
   const supabase = await createClient();
-  const [{ data: maps }, { data: pins }, { data: personas }, { data: regions }] = await Promise.all([
-    supabase.from("world_maps").select("*").eq("world_id", worldId).order("sort_index"),
+  const [
+    { data: maps },
+    { data: pins },
+    { data: regions },
+    { data: links },
+    { data: wikiPages },
+    { data: rooms },
+    personas,
+  ] = await Promise.all([
+    supabase.from("world_maps").select(COLONNES_CARTE).eq("world_id", worldId).order("sort_index"),
+    supabase.from("world_map_pins").select(COLONNES_EPINGLE).eq("world_id", worldId).order("sort_index"),
+    supabase.from("world_map_regions").select(COLONNES_REGION).eq("world_id", worldId).order("sort_index"),
+    supabase.from("world_map_pin_links").select(COLONNES_LIEN).eq("world_id", worldId),
     supabase
-      .from("world_map_pins")
-      .select("*")
+      .from("world_wiki_pages")
+      .select("id, title, slug")
       .eq("world_id", worldId)
-      .order("sort_index"),
-    // Ceux qui se trouvent quelque part, cartes confondues : la RLS n'en rend
-    // que ce que le lecteur a le droit de voir.
-    supabase
-      .from("personas")
-      .select(MAP_PERSONA_SELECT)
-      .eq("world_id", worldId)
-      .eq("is_template", false)
+      .eq("is_folder", false)
       .is("deleted_at", null)
+      .order("title"),
+    supabase
+      .from("chatrooms")
+      .select("id, title, name, map_pin_id")
+      .eq("world_id", worldId)
       .not("map_pin_id", "is", null),
-    supabase.from("world_map_regions").select("*").eq("world_id", worldId).order("sort_index"),
+    getPlacedPersonas(worldId),
   ]);
   return {
     maps: (maps as WorldMapData[]) ?? [],
     pins: (pins as MapPin[]) ?? [],
-    personas: (personas as unknown as MapPersona[]) ?? [],
     regions: (regions as MapRegion[]) ?? [],
+    links: (links as MapPinLink[]) ?? [],
+    personas,
+    wikiPages: (wikiPages as WikiPageOption[]) ?? [],
+    rooms: (rooms as PinRoom[]) ?? [],
   };
 }
 
 /**
- * Mes personas de ce monde, placés ou non — ceux que je peux poser sur un
- * lieu. La RLS ne me laissera de toute façon écrire que les miens ; la liste
- * s'y tient d'emblée plutôt que d'offrir un choix qui échouerait.
+ * Un trait entre deux lieux : une route, une passe, un fleuve.
+ *
+ * Sans sens : « A rejoint B » et « B rejoint A » sont le même lien, et la
+ * base l'interdit en double (index unique sur la paire ordonnée). Sa longueur
+ * ne se stocke pas — elle se déduit des positions et de l'échelle, et suit
+ * donc les épingles quand on les déplace.
  */
-export async function getMyMapPersonas(worldId: string): Promise<MapPersona[]> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return [];
+export type MapPinLink = {
+  id: string;
+  map_id: string;
+  from_pin_id: string;
+  to_pin_id: string;
+  label: string;
+};
 
-  const { data } = await supabase
-    .from("personas")
-    .select(MAP_PERSONA_SELECT)
-    .eq("world_id", worldId)
-    .eq("user_id", user.id)
-    .eq("is_template", false)
-    .is("deleted_at", null)
-    .order("name");
-  return (data as unknown as MapPersona[]) ?? [];
-}
+/** Un persona posé sur un lieu — juste de quoi le nommer et le montrer. */
+export type PlacedPersona = {
+  id: string;
+  /** À qui il est : seul son auteur peut le faire partir d'ici. */
+  user_id: string;
+  name: string;
+  avatar_url: string | null;
+  map_pin_id: string;
+};
 
 /**
- * Le persona placé, relu avec son cadre.
+ * Les personas posés quelque part dans ce monde, toutes cartes confondues.
  *
- * L'écho temps réel d'une ligne `personas` ne porte pas la jointure sur le
- * cadre de l'avatar : la carte relit le persona qui vient de bouger.
+ * Relue EN ENTIER à chaque mouvement plutôt que corrigée ligne à ligne. La
+ * version d'avant suivait chaque écho, relisait le persona déplacé pour en
+ * obtenir le cadre d'avatar, et ne faisait rien quand cette relecture ne
+ * rendait rien — un persona restait alors à sa place d'avant, sans que rien
+ * ne le signale. Une liste entière ne peut pas se désaccorder d'elle-même,
+ * et celle-ci est courte.
+ *
+ * Le cadre d'avatar n'en est pas : il ne se lit pas à la taille où ces
+ * têtes s'affichent, et c'est lui qui imposait la relecture.
  */
-export async function getMapPersona(personaId: string): Promise<MapPersona | null> {
+export async function getPlacedPersonas(worldId: string): Promise<PlacedPersona[]> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("personas")
-    .select(MAP_PERSONA_SELECT)
-    .eq("id", personaId)
-    .maybeSingle();
-  return (data as unknown as MapPersona | null) ?? null;
+    .select("id, user_id, name, avatar_url, map_pin_id")
+    .eq("world_id", worldId)
+    .eq("is_template", false)
+    .is("deleted_at", null)
+    .not("map_pin_id", "is", null)
+    .order("name");
+  return (data as PlacedPersona[]) ?? [];
 }
 
 /**
@@ -163,10 +276,15 @@ export async function setPersonaLocation(personaId: string, pinId: string | null
   const supabase = await createClient();
   await requireUser(supabase);
 
+  const input = parseInputOrThrow(
+    z.strictObject({ personaId: idSchema, pinId: idSchema.nullable() }),
+    { personaId, pinId },
+  );
+
   const { error } = await supabase
     .from("personas")
-    .update({ map_pin_id: pinId })
-    .eq("id", personaId);
+    .update({ map_pin_id: input.pinId })
+    .eq("id", input.personaId);
   if (error) throw new Error(error.message);
 }
 
@@ -193,9 +311,17 @@ export async function createWorldMap(
   const supabase = await createClient();
   await requireUser(supabase);
 
+  const input = parseInputOrThrow(
+    z.strictObject({
+      worldId: idSchema,
+      patch: mapPatchSchema.pick({ image_url: true, label: true, sort_index: true }).partial(),
+    }),
+    { worldId, patch },
+  );
+
   const { data, error } = await supabase
     .from("world_maps")
-    .insert({ world_id: worldId, ...patch })
+    .insert({ world_id: worldId, ...input.patch })
     .select()
     .single();
 
@@ -205,10 +331,15 @@ export async function createWorldMap(
 
 export async function updateWorldMap(
   mapId: string,
-  patch: Partial<Pick<WorldMapData, "image_url" | "label" | "sort_index" | "scale_width_units" | "scale_unit">>,
+  rawPatch: Partial<Pick<WorldMapData, "image_url" | "label" | "sort_index" | "scale_width_units" | "scale_unit">>,
 ): Promise<WorldMapData> {
   const supabase = await createClient();
   await requireUser(supabase);
+
+  const { patch } = parseInputOrThrow(
+    z.strictObject({ mapId: idSchema, patch: mapPatchSchema.partial() }),
+    { mapId, patch: rawPatch },
+  );
 
   // L'image d'avant, à effacer si celle-ci la remplace : rien ne la lisait
   // plus, et elle occupait le stockage pour toujours.
@@ -242,9 +373,11 @@ export async function updateWorldMap(
  * `components/worlds/wiki/pasDUpsert.test.ts`. À dix cartes au plus, la boucle
  * ne coûte rien.
  */
-export async function reorderWorldMaps(orderedIds: string[]): Promise<void> {
+export async function reorderWorldMaps(rawOrderedIds: string[]): Promise<void> {
   const supabase = await createClient();
   await requireUser(supabase);
+
+  const orderedIds = parseInputOrThrow(z.array(idSchema).max(100), rawOrderedIds);
 
   const horodatage = new Date().toISOString();
   for (const [index, id] of orderedIds.entries()) {
@@ -314,9 +447,14 @@ export async function createMapPin(
   const supabase = await createClient();
   await requireUser(supabase);
 
+  const input = parseInputOrThrow(
+    z.strictObject({ worldId: idSchema, mapId: idSchema, x: percentSchema, y: percentSchema, title: shortTextSchema }),
+    { worldId, mapId, x, y, title },
+  );
+
   const { data, error } = await supabase
     .from("world_map_pins")
-    .insert({ world_id: worldId, map_id: mapId, x, y, title })
+    .insert({ world_id: worldId, map_id: mapId, x, y, title: input.title })
     .select()
     .single();
 
@@ -326,10 +464,15 @@ export async function createMapPin(
 
 export async function updateMapPin(
   pinId: string,
-  patch: Partial<Pick<MapPin, "x" | "y" | "title" | "description" | "banner_url" | "color" | "icon" | "icon_color" | "border_color" | "border_style" | "wiki_page_id" | "target_map_id" | "exists_from" | "exists_until">>,
+  rawPatch: Partial<Pick<MapPin, "x" | "y" | "title" | "description" | "banner_url" | "color" | "icon" | "icon_color" | "border_color" | "border_style" | "wiki_page_id" | "target_map_id" | "exists_from" | "exists_until">>,
 ): Promise<void> {
   const supabase = await createClient();
   await requireUser(supabase);
+
+  const { patch } = parseInputOrThrow(
+    z.strictObject({ pinId: idSchema, patch: pinPatchSchema.partial() }),
+    { pinId, patch: rawPatch },
+  );
 
   // Même ménage que pour l'image d'une carte : une bannière remplacée n'est
   // plus lue par personne.
@@ -383,9 +526,18 @@ export async function createMapRegion(
   const supabase = await createClient();
   await requireUser(supabase);
 
+  const input = parseInputOrThrow(
+    z.strictObject({
+      worldId: idSchema,
+      mapId: idSchema,
+      region: regionPatchSchema.pick({ label: true, points: true, color: true }),
+    }),
+    { worldId, mapId, region },
+  );
+
   const { data, error } = await supabase
     .from("world_map_regions")
-    .insert({ world_id: worldId, map_id: mapId, ...region })
+    .insert({ world_id: worldId, map_id: mapId, ...input.region })
     .select()
     .single();
 
@@ -395,10 +547,15 @@ export async function createMapRegion(
 
 export async function updateMapRegion(
   regionId: string,
-  patch: Partial<Pick<MapRegion, "label" | "description" | "color" | "points" | "wiki_page_id" | "sort_index">>,
+  rawPatch: Partial<Pick<MapRegion, "label" | "description" | "color" | "points" | "wiki_page_id" | "sort_index">>,
 ): Promise<void> {
   const supabase = await createClient();
   await requireUser(supabase);
+
+  const { patch } = parseInputOrThrow(
+    z.strictObject({ regionId: idSchema, patch: regionPatchSchema.partial() }),
+    { regionId, patch: rawPatch },
+  );
 
   const { error } = await supabase
     .from("world_map_regions")
@@ -413,5 +570,61 @@ export async function deleteMapRegion(regionId: string): Promise<void> {
   await requireUser(supabase);
 
   const { error } = await supabase.from("world_map_regions").delete().eq("id", regionId);
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * Joint deux lieux.
+ *
+ * La paire est RANGÉE avant d'être écrite : un lien n'a pas de sens, et c'est
+ * ce rangement qui permet à une simple clé unique d'interdire le doublon
+ * inverse (voir migration 166). La base refuse alors la paire déjà posée quel
+ * que soit l'ordre des clics — erreur qu'on rend telle quelle, à charge pour
+ * l'appelant de la dire.
+ */
+export async function createPinLink(
+  worldId: string,
+  mapId: string,
+  fromPinId: string,
+  toPinId: string,
+): Promise<MapPinLink> {
+  const supabase = await createClient();
+  await requireUser(supabase);
+
+  const [a, b] = fromPinId < toPinId ? [fromPinId, toPinId] : [toPinId, fromPinId];
+
+  const { data, error } = await supabase
+    .from("world_map_pin_links")
+    .insert({
+      world_id: worldId,
+      map_id: mapId,
+      from_pin_id: a,
+      to_pin_id: b,
+    })
+    .select("id, map_id, from_pin_id, to_pin_id, label")
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data as MapPinLink;
+}
+
+export async function updatePinLink(linkId: string, rawPatch: { label: string }): Promise<void> {
+  const supabase = await createClient();
+  await requireUser(supabase);
+
+  const { patch } = parseInputOrThrow(
+    z.strictObject({ linkId: idSchema, patch: linkPatchSchema }),
+    { linkId, patch: rawPatch },
+  );
+
+  const { error } = await supabase.from("world_map_pin_links").update(patch).eq("id", linkId);
+  if (error) throw new Error(error.message);
+}
+
+export async function deletePinLink(linkId: string): Promise<void> {
+  const supabase = await createClient();
+  await requireUser(supabase);
+
+  const { error } = await supabase.from("world_map_pin_links").delete().eq("id", linkId);
   if (error) throw new Error(error.message);
 }

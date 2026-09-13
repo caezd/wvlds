@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
-import { Search, X } from "lucide-react";
+import { ArrowLeft, Search, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Drawer, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
@@ -18,7 +18,64 @@ type PlacesProps = {
   selectedPinId: string | null;
   onSelect: (pin: MapPin) => void;
   onClose: () => void;
+  /**
+   * La fiche du lieu ouvert. Présente, elle prend toute la colonne : on ne
+   * cherche plus un lieu et on le lit en même temps, et la carte n'est jamais
+   * recouverte par ce qu'on lit.
+   */
+  detail?: React.ReactNode;
+  /** Referme la fiche et rend la liste. */
+  onCloseDetail?: () => void;
 };
+
+/**
+ * Ce que la colonne montre : la liste, ou la fiche du lieu ouvert.
+ *
+ * Le retour est un vrai bouton et non une croix : on ne ferme pas la colonne,
+ * on remonte à la liste — ce sont deux gestes différents, et les confondre
+ * obligeait à rouvrir la colonne pour choisir un autre lieu.
+ */
+function ContenuColonne({
+  detail,
+  onCloseDetail,
+  avecRetour = true,
+  ...props
+}: PlacesProps & { avecRetour?: boolean }) {
+  if (!detail) return <PlacesBody {...props} withClose />;
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      {avecRetour && (
+        <div className="flex shrink-0 items-center gap-1 border-b border-border-soft px-2 py-1.5">
+          <BoutonRetour onClick={onCloseDetail} />
+        </div>
+      )}
+      {detail}
+    </div>
+  );
+}
+
+/** Le chemin vers la liste, d'où qu'on le pose. */
+function BoutonRetour({ onClick }: { onClick?: () => void }) {
+  const t = useTranslations("map");
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        // `w-fit self-start` : l'en-tête du tiroir est une colonne flex, et
+        // ses enfants s'y étirent sur toute la largeur sans cela.
+        "relative flex w-fit self-start items-center gap-1.5 rounded-md px-2 py-1 text-sm text-muted-foreground",
+        "hover:bg-secondary hover:text-foreground",
+        // La zone sensible reste à la taille d'un doigt, sans agrandir le bouton.
+        "touch:after:absolute touch:after:-inset-2 touch:after:content-['']",
+      )}
+    >
+      <ArrowLeft className="h-4 w-4" />
+      {t("places")}
+    </button>
+  );
+}
 
 /**
  * La liste des lieux d'un monde, avec recherche.
@@ -47,9 +104,11 @@ export function MapPlacesPanel(props: PlacesProps) {
     <aside
       aria-label={t("places")}
       onClick={(e) => e.stopPropagation()}
-      className="flex w-60 shrink-0 flex-col border-r border-border-soft bg-background"
+      // Plus large qu'une simple liste : c'est ici que se lit un lieu entier,
+      // là où le panneau flottant tenait dans 340 px pris sur la carte.
+      className="flex w-80 shrink-0 flex-col border-r border-border-soft bg-background"
     >
-      <PlacesBody {...props} withClose />
+      <ContenuColonne {...props} />
     </aside>
   );
 }
@@ -65,12 +124,22 @@ export function MapPlacesDrawer({ open, ...props }: PlacesProps & { open: boolea
     >
       <SideSheetContent width="compact">
         <DrawerHeader className="border-b border-border-soft px-4 py-3">
-          <DrawerTitle>{t("places")}</DrawerTitle>
+          {props.detail ? (
+            <>
+              {/* Le retour tient lieu de titre : « Lieu » au-dessus d'un
+                  « ← Lieux » disait deux fois la même chose, sur deux
+                  bandeaux. Le titre reste, pour qui écoute la page. */}
+              <BoutonRetour onClick={props.onCloseDetail} />
+              <DrawerTitle className="sr-only">{t("place")}</DrawerTitle>
+            </>
+          ) : (
+            <DrawerTitle>{t("places")}</DrawerTitle>
+          )}
         </DrawerHeader>
         {/* Le clic ne doit pas remonter jusqu'à la carte, qui referme le
             panneau d'un lieu sur tout clic hors de lui. */}
         <div onClick={(e) => e.stopPropagation()} className="flex min-h-0 flex-1 flex-col">
-          <PlacesBody {...props} />
+          <ContenuColonne {...props} avecRetour={false} />
         </div>
       </SideSheetContent>
     </Drawer>

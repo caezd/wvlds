@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { SUPPORTED_LOCALES, type Locale } from "@/i18n/locales";
 import { sanitizePronouns } from "@/lib/pronouns";
+import { z } from "zod";
 // Codes stables plutôt que phrases françaises : le client traduit.
 import {
   ERR_NON_AUTHENTIFIE,
@@ -133,14 +134,29 @@ export async function updateMessageTextAlign(align: string) {
   return { success: true };
 }
 
+const PROFILE_BIO_MAX_LENGTH = 500;
+
+// La biographie est COUPÉE à 500, pas refusée : c'est la borne de la base
+// (`profiles_bio_length`), et un texte un peu long vaut mieux qu'un refus.
+// Ce qui est refusé, c'est ce qui n'est pas une chaîne — un `null` faisait
+// tomber `.trim()` en TypeError, soit une erreur 500 sans explication.
+const bioAndPronounsSchema = z.strictObject({
+  bio: z.string().max(100_000),
+  pronouns: z.array(z.string().max(100)).max(20),
+});
+
 export async function updateProfileBioAndPronouns(bio: string, pronouns: string[]) {
+  if (!bioAndPronounsSchema.safeParse({ bio, pronouns }).success) {
+    return { error: ERR_VALEUR_NON_SUPPORTEE };
+  }
+
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: ERR_NON_AUTHENTIFIE };
 
-  const trimmedBio = bio.trim().slice(0, 500);
+  const trimmedBio = bio.trim().slice(0, PROFILE_BIO_MAX_LENGTH);
   const cleanPronouns = sanitizePronouns(pronouns);
 
   const { error } = await supabase

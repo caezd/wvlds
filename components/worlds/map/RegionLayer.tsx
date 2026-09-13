@@ -26,8 +26,10 @@ export function RegionLayer({
   draft,
   isEditMode,
   imgRef,
+  labelled,
+  clickThrough = false,
   onSelect,
-  onVertexMoved,
+  onPointsChanged,
   onCloseDraft,
 }: {
   regions: MapRegion[];
@@ -36,9 +38,27 @@ export function RegionLayer({
   draft: Point[] | null;
   isEditMode: boolean;
   imgRef: React.RefObject<HTMLImageElement | null>;
+  /** Les régions dont le nom tient sans en recouvrir un autre — `labels.ts`. */
+  labelled?: Set<string>;
+  /**
+   * Un outil est en main : les régions laissent passer le clic.
+   *
+   * Un polygone prend le pointeur et arrête la propagation. La règle en main,
+   * le clic était donc mangé par la région et le point d'échelle ne se posait
+   * pas — impossible de mesurer quoi que ce soit à l'intérieur d'un royaume.
+   * Le tracé, lui, s'en sortait par sa vitre ; c'était la même faille, réparée
+   * d'un seul côté.
+   */
+  clickThrough?: boolean;
   onSelect: (region: MapRegion) => void;
-  /** Un sommet de la région choisie vient d'être déplacé. */
-  onVertexMoved: (region: MapRegion, index: number, point: Point) => void;
+  /**
+   * Les sommets de la région choisie ont changé.
+   *
+   * Un seul rappel pour les trois gestes — tirer un sommet, promener la
+   * région entière, en ajouter un sur un côté : tous disent la même chose au
+   * serveur, et n'ont pas à le dire de trois façons.
+   */
+  onPointsChanged: (region: MapRegion, points: Point[]) => void;
   /** Le tracé se referme sur son premier sommet. */
   onCloseDraft: () => void;
 }) {
@@ -48,6 +68,13 @@ export function RegionLayer({
   // attendre le serveur.
   const [dragging, setDragging] = React.useState<{ index: number; point: Point } | null>(null);
   const dragStart = React.useRef<{ clientX: number; clientY: number; start: Point } | null>(null);
+  // Le déplacement de la région ENTIÈRE : l'écart en pourcentages, et le
+  // point de départ du geste. Les sommets se déplaçaient un par un ; rien ne
+  // bougeait la forme d'un bloc, alors qu'un lieu, lui, se déplace.
+  const [shift, setShift] = React.useState<Point | null>(null);
+  const shiftStart = React.useRef<{ clientX: number; clientY: number; points: Point[] } | null>(null);
+  /** Un déplacement se termine par un `click` : il ne doit pas désélectionner. */
+  const shifted = React.useRef(false);
   // Où le curseur se trouve pendant un tracé : c'est lui qui donne au
   // polygone son dernier sommet, provisoire, et montre la forme qu'aurait la
   // région si l'on cliquait là.
@@ -68,8 +95,52 @@ export function RegionLayer({
   const peutFermer = (draft?.length ?? 0) >= MIN_REGION_POINTS;
 
   function pointsOf(region: MapRegion): Point[] {
-    if (!dragging || region.id !== selectedId) return region.points;
-    return region.points.map((p, i) => (i === dragging.index ? dragging.point : p));
+    if (region.id !== selectedId) return region.points;
+    if (shift) return region.points.map((p) => ({ x: p.x + shift.x, y: p.y + shift.y }));
+    if (dragging) return region.points.map((p, i) => (i === dragging.index ? dragging.point : p));
+    return region.points;
+  }
+
+  /**
+   * Prend la région entière et la promène.
+   *
+   * L'écart est BORNÉ par la boîte du polygone : la forme reste entière dans
+   * la carte, là où un simple bornage point par point l'aurait déformée en
+   * écrasant contre le bord les seuls sommets qui débordent.
+   */
+  function startShift(e: React.PointerEvent<SVGPolygonElement>, region: MapRegion) {
+    e.stopPropagation(); // ne pas déplacer la carte sous la région
+    shiftStart.current = { clientX: e.clientX, clientY: e.clientY, points: region.points };
+    shifted.current = false;
+  }
+
+  function moveShift(e: React.PointerEvent<SVGPolygonElement>) {
+    const depart = shiftStart.current;
+    const img = imgRef.current;
+    if (!depart || !img) return;
+    const r = img.getBoundingClientRect();
+    const dx = ((e.clientX - depart.clientX) / r.width) * 100;
+    const dy = ((e.clientY - depart.clientY) / r.height) * 100;
+    // Quelques pixels de jeu avant de saisir : un clic qui tremble ne doit
+    // pas déplacer une région.
+    if (!shifted.current && Math.abs(e.clientX - depart.clientX) < 4 && Math.abs(e.clientY - depart.clientY) < 4) return;
+    if (!shifted.current) {
+      shifted.current = true;
+      e.currentTarget.setPointerCapture?.(e.pointerId);
+    }
+    const xs = depart.points.map((q) => q.x);
+    const ys = depart.points.map((q) => q.y);
+    setShift({
+      x: Math.max(-Math.min(...xs), Math.min(dx, 100 - Math.max(...xs))),
+      y: Math.max(-Math.min(...ys), Math.min(dy, 100 - Math.max(...ys))),
+    });
+  }
+
+  function endShift(region: MapRegion) {
+    const bougee = shifted.current && shift;
+    shiftStart.current = null;
+    if (bougee) onPointsChanged(region, region.points.map((q) => ({ x: q.x + shift.x, y: q.y + shift.y })));
+    setShift(null);
   }
 
   function startDrag(e: React.PointerEvent<HTMLButtonElement>, region: MapRegion, index: number) {
@@ -92,8 +163,27 @@ export function RegionLayer({
 
   function endDrag(region: MapRegion, index: number) {
     dragStart.current = null;
-    if (dragging && dragging.index === index) onVertexMoved(region, index, dragging.point);
+    if (dragging && dragging.index === index) {
+      onPointsChanged(region, region.points.map((q, i) => (i === index ? dragging.point : q)));
+    }
     setDragging(null);
+  }
+
+  /**
+   * Ajoute un sommet au milieu d'un côté.
+   *
+   * Une région se dessine d'un trait, et se corrige ensuite : sans cela, un
+   * contour qu'on voulait affiner d'un cran obligeait à tout reprendre.
+   */
+  function addVertex(region: MapRegion, apres: number) {
+    const a = region.points[apres];
+    const b = region.points[(apres + 1) % region.points.length];
+    const milieu = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    onPointsChanged(region, [
+      ...region.points.slice(0, apres + 1),
+      milieu,
+      ...region.points.slice(apres + 1),
+    ]);
   }
 
   const selected = regions.find((r) => r.id === selectedId) ?? null;
@@ -109,12 +199,13 @@ export function RegionLayer({
       >
         {regions.map((region) => {
           const actif = region.id === selectedId || region.id === hoverId;
+          const deplacable = isEditMode && !clickThrough && region.id === selectedId;
           return (
             <polygon
               key={region.id}
               data-region-id={region.id}
               role="button"
-              tabIndex={0}
+              tabIndex={clickThrough ? -1 : 0}
               aria-label={region.label}
               points={toSvgPoints(pointsOf(region))}
               fill={region.color}
@@ -123,10 +214,27 @@ export function RegionLayer({
               strokeWidth={actif ? 3 : 2}
               strokeLinejoin="round"
               vectorEffect="non-scaling-stroke"
-              style={{ pointerEvents: "auto", cursor: "pointer" }}
+              style={{
+                pointerEvents: clickThrough ? "none" : "auto",
+                // La région choisie se prend et se promène ; les autres se
+                // cliquent. Seule la choisie, pour que la carte reste
+                // saisissable partout ailleurs — une région couvre parfois
+                // la moitié de l'image.
+                cursor: deplacable ? "move" : "pointer",
+              }}
               onMouseEnter={() => setHoverId(region.id)}
               onMouseLeave={() => setHoverId((prev) => (prev === region.id ? null : prev))}
-              onClick={(e) => { e.stopPropagation(); onSelect(region); }}
+              onPointerDown={deplacable ? (e) => startShift(e, region) : undefined}
+              onPointerMove={deplacable ? moveShift : undefined}
+              onPointerUp={deplacable ? () => endShift(region) : undefined}
+              onPointerCancel={deplacable ? () => endShift(region) : undefined}
+              onClick={(e) => {
+                e.stopPropagation();
+                // Le `click` qui clôt un déplacement ne doit pas refermer le
+                // panneau de la région qu'on vient de bouger.
+                if (shifted.current) { shifted.current = false; return; }
+                onSelect(region);
+              }}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(region); }
               }}
@@ -204,9 +312,12 @@ export function RegionLayer({
         );
       })}
 
-      {/* Les noms, au centre de chaque région */}
+      {/* Les noms, au centre de chaque région. Ils passent par le même tri
+          que ceux des lieux : sans quoi le nom d'une région et celui d'un lieu
+          proche de son centre se recouvraient, chacun ignorant l'autre. */}
       {regions.map((region) => {
         if (!region.label.trim()) return null;
+        if (labelled && !labelled.has(region.id)) return null;
         const c = polygonCentroid(pointsOf(region));
         return (
           <div
@@ -228,6 +339,31 @@ export function RegionLayer({
         );
       })}
 
+      {/* Les milieux de côté : un clic y ajoute un sommet. Plus discrets que
+          les poignées de sommet — ils ne sont pas encore des sommets. */}
+      {isEditMode && selected && !shift && pointsOf(selected).map((p, i, tous) => {
+        const suivant = tous[(i + 1) % tous.length];
+        const milieu = { x: (p.x + suivant.x) / 2, y: (p.y + suivant.y) / 2 };
+        return (
+          <button
+            key={`m${i}`}
+            type="button"
+            data-region-midpoint={i}
+            aria-label={t("addRegionVertex")}
+            title={t("addRegionVertex")}
+            className="absolute z-30 h-2.5 w-2.5 rounded-full border border-white/80 bg-foreground/40 opacity-60 transition-opacity hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            style={{
+              left: `${milieu.x}%`,
+              top: `${milieu.y}%`,
+              transform: "translate(-50%, -50%) scale(var(--pin-inv-scale, 1))",
+              transformOrigin: "center center",
+            }}
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => { e.stopPropagation(); addVertex(selected, i); }}
+          />
+        );
+      })}
+
       {/* Les poignées de la région choisie, en édition */}
       {isEditMode && selected && pointsOf(selected).map((p, i) => (
         <button
@@ -235,6 +371,7 @@ export function RegionLayer({
           type="button"
           data-region-vertex={i}
           aria-label={t("regionVertex", { index: i + 1 })}
+          title={t("removeRegionVertex")}
           className="absolute z-30 h-3 w-3 cursor-move rounded-full border-2 border-white bg-foreground shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           style={{
             left: `${p.x}%`,
@@ -243,6 +380,13 @@ export function RegionLayer({
             transformOrigin: "center center",
           }}
           onClick={(e) => e.stopPropagation()}
+          // Le double-clic retire le sommet. C'est `WorldMap` qui refuse de
+          // descendre sous trois — la règle vaut pour tous les gestes, pas
+          // pour celui-ci seulement.
+          onDoubleClick={(e) => {
+            e.stopPropagation();
+            onPointsChanged(selected, selected.points.filter((_, k) => k !== i));
+          }}
           onPointerDown={(e) => startDrag(e, selected, i)}
           onPointerMove={(e) => moveDrag(e, i)}
           onPointerUp={() => endDrag(selected, i)}

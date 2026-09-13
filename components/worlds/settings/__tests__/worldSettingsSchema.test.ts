@@ -30,6 +30,9 @@ describe("worldSettingsSchema", () => {
   it("exige au moins deux caractères pour le nom", () => {
     expect(worldSettingsSchema.safeParse({ ...valide, name: "A" }).success).toBe(false);
     expect(worldSettingsSchema.safeParse({ ...valide, name: "Ab" }).success).toBe(true);
+    // La borne de la base, pour que le refus soit une erreur de formulaire et
+    // non un message Postgres.
+    expect(worldSettingsSchema.safeParse({ ...valide, name: "x".repeat(201) }).success).toBe(false);
   });
 
   it("plafonne la description à 1000 caractères", () => {
@@ -61,6 +64,9 @@ describe("worldSettingsSchema", () => {
   it("refuse une adresse d'image qui n'en est pas une", () => {
     expect(worldSettingsSchema.safeParse({ ...valide, icon_url: "pas-une-url" }).success).toBe(false);
     expect(worldSettingsSchema.safeParse({ ...valide, icon_url: "https://x.test/a.png" }).success).toBe(true);
+    // `new URL("javascript:…")` est valide : un `z.url()` nu laissait passer.
+    expect(worldSettingsSchema.safeParse({ ...valide, icon_url: "javascript:alert(1)" }).success).toBe(false);
+    expect(worldSettingsSchema.safeParse({ ...valide, banner_url: "data:text/html,x" }).success).toBe(false);
   });
 
   it("n'admet que deux visibilités", () => {

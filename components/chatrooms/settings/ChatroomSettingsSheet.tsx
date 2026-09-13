@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useTranslations } from "next-intl";
 import { z } from "zod";
+import { httpUrlSchema } from "@/lib/inputSchemas";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
@@ -49,8 +50,8 @@ type CategoryOption = { id: string; title: string; banner_url: string | null; ic
 
 const schema = z.object({
   title: z.string().trim().min(1, "Nom requis").max(80),
-  icon_url: z.string().url().optional().or(z.literal("")),
-  banner_url: z.string().url().optional().or(z.literal("")),
+  icon_url: httpUrlSchema.optional().or(z.literal("")),
+  banner_url: httpUrlSchema.optional().or(z.literal("")),
 });
 
 type FormValues = z.infer<typeof schema>;

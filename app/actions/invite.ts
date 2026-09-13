@@ -1,11 +1,24 @@
 "use server";
 
+import { z } from "zod";
+
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { getUserId } from "@/lib/auth";
-import { ERR_ENREGISTREMENT, ERR_NON_AUTHENTIFIE , ERR_NON_AUTORISE, echecEnregistrement } from "@/lib/actionErrors";
+import { ERR_ENREGISTREMENT, ERR_NON_AUTHENTIFIE , ERR_NON_AUTORISE, ERR_VALEUR_NON_SUPPORTEE, echecEnregistrement } from "@/lib/actionErrors";
+import { idSchema } from "@/lib/inputSchemas";
 
-type Role = "admin" | "editor" | "player" | "viewer";
+// Les rôles qu'une invitation peut conférer — `owner` n'en fait pas partie.
+// Le type ne suffit pas : cette action écrit avec le `service_role`, hors RLS,
+// et `accept_world_invitation` est le seul autre rempart. Deux valent mieux.
+const INVITABLE_ROLES = ["admin", "editor", "player", "viewer"] as const;
+type Role = (typeof INVITABLE_ROLES)[number];
+
+const inviteSchema = z.strictObject({
+  email: z.email().max(254),
+  worldId: idSchema,
+  role: z.enum(INVITABLE_ROLES),
+});
 
 /**
  * Invite par courriel quelqu'un qui n'a pas encore de compte.
@@ -36,6 +49,10 @@ export async function inviteUserToWorld(
   worldId: string,
   role: Role
 ): Promise<{ error?: string }> {
+  if (!inviteSchema.safeParse({ email, worldId, role }).success) {
+    return { error: ERR_VALEUR_NON_SUPPORTEE };
+  }
+
   const supabase = await createClient();
   const userId = await getUserId(supabase);
   if (!userId) return { error: ERR_NON_AUTHENTIFIE };

@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
-import { join, sep } from "node:path";
+import { sep } from "node:path";
+import { trackedSources } from "@/test/sourceFiles";
 
 // ──────────────────────────────────────────────────────────────────────────
 // Un bouton dont le seul contenu est une icône n'a aucun nom accessible : un
@@ -36,17 +35,11 @@ function finDeBalise(s: string, i: number): number {
   return -1;
 }
 
-function fichiers(): string[] {
-  return execFileSync("git", ["ls-files", "*.tsx"], { encoding: "utf-8", cwd: process.cwd() })
-    .split("\n")
-    .map((f) => f.trim())
-    .filter((f) => f && !f.includes("__tests__"));
-}
-
-const sources = fichiers().map((f) => ({
-  chemin: f.split("/").join(sep),
-  source: readFileSync(join(process.cwd(), f), "utf-8"),
-}));
+// Les fichiers que l'index connaît mais que le disque n'a plus sont
+// écartés par `trackedSources` : les lire lèverait `ENOENT`.
+const sources = trackedSources(["*.tsx"])
+  .filter(({ file }) => !file.includes("__tests__"))
+  .map(({ file, source }) => ({ chemin: file.split("/").join(sep), source }));
 
 describe("boutons à icône seule", () => {
   it("portent tous un nom accessible", () => {

@@ -45,3 +45,22 @@ describe("toggleWorldFavorite", () => {
     expect(revalidatePath).not.toHaveBeenCalled();
   });
 });
+
+describe("saveWorldPrefs — entrées forgées", () => {
+  // `prefs` est étalé APRÈS `user_id` : une clé `user_id` glissée dans l'objet
+  // aurait remplacé celle de l'appelant. La RLS l'aurait refusé ; on ne lui
+  // pose plus la question.
+  it("refuse un user_id glissé dans les préférences, sans appeler Supabase", async () => {
+    const mock = createSupabaseMock({ user: { id: "u1" } });
+    use(mock);
+    await saveWorldPrefs("w1", { main_expanded: true, user_id: "victime" } as never);
+    expect(mock.from).not.toHaveBeenCalled();
+  });
+
+  it("refuse une largeur qui n'est pas un entier borné", async () => {
+    const mock = createSupabaseMock({ user: { id: "u1" } });
+    use(mock);
+    await saveWorldPrefs("w1", { wiki_sidebar_width: 1e9 });
+    expect(mock.from).not.toHaveBeenCalled();
+  });
+});

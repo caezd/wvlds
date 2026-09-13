@@ -1,13 +1,34 @@
 "use server";
 
+import { z } from "zod";
+
 import { createClient } from "@/lib/supabase/server";
 import type { ChatroomCategory } from "@/types/worlds";
 import { echecEnregistrement } from "@/lib/actionErrors";
+import { httpUrlSchema, idSchema, longTextSchema, parseInput, shortTextSchema } from "@/lib/inputSchemas";
+
+// Les champs d'une catégorie tels que le client peut les envoyer — et rien
+// d'autre : `world_id` et `position` sont posés par l'action, jamais reçus.
+const categoryFieldsSchema = z.strictObject({
+  title: shortTextSchema,
+  description: longTextSchema.nullable(),
+  banner_url: httpUrlSchema.nullable(),
+  icon_url: httpUrlSchema.nullable(),
+});
+
+export type ChatroomCategoryInput = z.input<typeof categoryFieldsSchema>;
 
 export async function addChatroomCategory(
   worldId: string,
-  data: { title: string; description?: string | null; banner_url?: string | null; icon_url?: string | null },
+  data: Pick<ChatroomCategoryInput, "title"> & Partial<ChatroomCategoryInput>,
 ) {
+  const input = parseInput(
+    z.strictObject({ worldId: idSchema, data: categoryFieldsSchema.partial().required({ title: true }) }),
+    { worldId, data },
+  );
+  if (!input.ok) return { ok: false as const, error: input.error };
+  const fields = input.data.data;
+
   const supabase = await createClient();
 
   const { data: maxRow, error: maxErr } = await supabase
@@ -23,21 +44,21 @@ export async function addChatroomCategory(
 
   const { data: category, error } = await supabase
     .from("chatroom_categories")
-    .insert({ world_id: worldId, position, ...data })
+    .insert({ world_id: worldId, position, ...fields })
     .select()
     .single();
   if (error) return { ok: false as const, error: echecEnregistrement("addChatroomCategory", error) };
   return { ok: true as const, category: category as ChatroomCategory };
 }
 
-export async function updateChatroomCategory(
-  id: string,
-  data: Partial<{ title: string; description: string | null; banner_url: string | null; icon_url: string | null }>,
-) {
+export async function updateChatroomCategory(id: string, data: Partial<ChatroomCategoryInput>) {
+  const input = parseInput(z.strictObject({ id: idSchema, data: categoryFieldsSchema.partial() }), { id, data });
+  if (!input.ok) return { ok: false as const, error: input.error };
+
   const supabase = await createClient();
   const { error } = await supabase
     .from("chatroom_categories")
-    .update(data)
+    .update(input.data.data)
     .eq("id", id);
   if (error) return { ok: false as const, error: echecEnregistrement("updateChatroomCategory", error) };
   return { ok: true as const };
@@ -87,9 +108,14 @@ export async function deleteChatroomCategory(
   return { ok: true as const };
 }
 
+const reorderSchema = z.array(z.strictObject({ id: idSchema, position: z.number().int().min(0) })).max(200);
+
 export async function reorderChatroomCategories(
   categories: { id: string; position: number }[],
 ) {
+  const input = parseInput(reorderSchema, categories);
+  if (!input.ok) return { ok: false as const, error: input.error };
+
   const supabase = await createClient();
 
   const results = await Promise.all(

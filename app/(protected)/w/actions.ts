@@ -1,20 +1,32 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { ERR_NON_AUTHENTIFIE, echecEnregistrement } from "@/lib/actionErrors";
+import { idSchema, parseInput } from "@/lib/inputSchemas";
 
-type WorldPrefsInput = {
-  main_expanded?: boolean;
-  is_favorite?: boolean;
-  wiki_sidebar_width?: number;
-  wiki_panel_width?: number;
-};
+// Strict : `prefs` est étalé dans l'upsert APRÈS `user_id`, donc une clé
+// `user_id` glissée dans l'objet l'aurait remplacé. La RLS l'aurait refusé —
+// mais autant ne jamais lui poser la question.
+const worldPrefsSchema = z
+  .strictObject({
+    main_expanded: z.boolean(),
+    is_favorite: z.boolean(),
+    wiki_sidebar_width: z.number().int().min(0).max(4000),
+    wiki_panel_width: z.number().int().min(0).max(4000),
+  })
+  .partial();
+
+type WorldPrefsInput = z.input<typeof worldPrefsSchema>;
 
 export async function saveWorldPrefs(
   worldId: string,
   prefs: WorldPrefsInput,
 ): Promise<void> {
+  const input = parseInput(z.strictObject({ worldId: idSchema, prefs: worldPrefsSchema }), { worldId, prefs });
+  if (!input.ok) return;
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -25,7 +37,7 @@ export async function saveWorldPrefs(
     {
       world_id: worldId,
       user_id: user.id,
-      ...prefs,
+      ...input.data.prefs,
       updated_at: new Date().toISOString(),
     },
     { onConflict: "world_id,user_id" },

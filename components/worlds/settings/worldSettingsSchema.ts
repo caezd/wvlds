@@ -1,17 +1,24 @@
 import { z } from "zod";
 
+import { httpUrlSchema, INPUT_LIMITS } from "@/lib/inputSchemas";
+
 // Schéma du formulaire des réglages d'un monde. Séparé du composant pour être
 // vérifiable sans monter d'interface — voir `__tests__/worldSettingsSchema.test.ts`.
+//
+// Les URL passent par `httpUrlSchema` et non `z.url()` : ce dernier accepte
+// tout ce que `new URL()` sait lire, `javascript:` compris. La borne de `name`
+// est celle de la base — sans elle, un nom trop long échouait en message
+// Postgres brut plutôt qu'en erreur de formulaire.
 
 export const worldSettingsSchema = z.object({
-    name: z.string().min(2, "Au moins 2 caractères"),
+    name: z.string().min(2, "Au moins 2 caractères").max(INPUT_LIMITS.shortText, "200 caractères max"),
     description: z
         .string()
         .max(1000, "1000 caractères max")
         .optional()
         .or(z.literal("")),
-    icon_url: z.string().url("URL invalide").optional().or(z.literal("")),
-    banner_url: z.string().url("URL invalide").optional().or(z.literal("")),
+    icon_url: httpUrlSchema.optional().or(z.literal("")),
+    banner_url: httpUrlSchema.optional().or(z.literal("")),
     color: z
         .string()
         .regex(

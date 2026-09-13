@@ -29,6 +29,7 @@ import {
     getWorldCatalogUsage,
     importWorldCatalogItems,
     setWorldHomeGrid,
+    addWorldTag,
 } from "@/app/actions/worldCatalog";
 import {
     HOME_GRID_COLS,
@@ -1345,5 +1346,58 @@ describe("setWorldHomeGrid", () => {
             { id: "b", type: "widget", x: 6, y: 1, w: 6, widgetId: "categories" },
         ]);
         expect(res.ok).toBe(true);
+    });
+});
+
+// ──────────────────────────────────────────────────────────────────────────
+// Les objets `data` du catalogue étaient étalés tels quels dans les écritures.
+// Une clé inconnue, un nom vide ou trop long, une catégorie qui n'est pas un
+// identifiant : refusés avant d'appeler Supabase, par un code traduisible.
+// ──────────────────────────────────────────────────────────────────────────
+describe("catalogue — entrées forgées", () => {
+    it.each([
+        ["une clé de trop sur un objet", () => addWorldCatalogItem("w1", "inventory", { name: "x", sort_index: 0 } as never)],
+        ["un world_id glissé dans une compétence", () => addWorldCatalogItem("w1", "skills", { name: "x", world_id: "autre" } as never)],
+        ["un deleted_at à la mise à jour", () => updateWorldCatalogItem("i1", { deleted_at: null } as never)],
+        ["un type d'objet inconnu", () => addWorldCatalogItem("w1", "spells" as never, { name: "x" })],
+        ["un nom vide", () => addWorldCatalogItem("w1", "skills", { name: "   " })],
+        ["un nom trop long", () => updateWorldCatalogItem("s1", { name: "x".repeat(201) })],
+        ["une description trop longue", () => addWorldCatalogItem("w1", "inventory", { name: "x", description: "x".repeat(5001) })],
+        ["une image en javascript:", () => updateWorldCatalogItem("i1", { image_url: "javascript:alert(1)" })],
+        ["une rareté inconnue", () => updateWorldCatalogItem("i1", { rarity: "mythic" as never })],
+        ["un plafond nul ou fractionnaire", () => updateWorldCatalogItem("i1", { max_quantity: 0.5 })],
+        ["un type de catégorie inconnu", () => addWorldCatalogCategory("w1", "spells" as never, "x")],
+        ["un nom de catégorie trop long", () => updateWorldCatalogCategory("c1", { name: "x".repeat(201) })],
+        ["une colonne glissée dans la catégorie", () => updateWorldCatalogCategory("c1", { column_index: 1 } as never)],
+        ["un ordre de catégories mal formé", () => reorderWorldCatalogCategories([{ id: "c1", sort_index: -1, column_index: 0 }])],
+        ["un ordre d'objets avec une clé de trop", () => reorderWorldCatalogItems([{ id: "i1", sort_index: 0, category_id: null, world_id: "w2" } as never])],
+        ["un import vers un type inconnu", () => importWorldCatalogItems("w1", "spells" as never, [{ name: "x" }])],
+        ["un tag qui n'est pas une chaîne", () => addWorldTag("w1", null as never)],
+    ])("refuse %s sans appeler Supabase", async (_name, fn) => {
+        const mock = createSupabaseMock();
+        use(mock);
+        const res = await fn();
+        expect(res.ok).toBe(false);
+        expect(mock.from).not.toHaveBeenCalled();
+        expect(mock.rpc).not.toHaveBeenCalled();
+    });
+
+    it("garde l'emoji d'un objet : l'icône du catalogue n'est pas un nom Lucide", async () => {
+        const mock = createSupabaseMock({ results: [{ data: { id: "i1" } }] });
+        use(mock);
+        await addWorldCatalogItem("w1", "inventory", { name: "Potion", icon: "🧪" });
+        expect(mock.buildersFor("world_catalog_items")[0].insert).toHaveBeenCalledWith(
+            expect.objectContaining({ icon: "🧪" }),
+        );
+    });
+
+    it("ne retient des propriétés libres que leur forme attendue", async () => {
+        const mock = createSupabaseMock({ results: [{ error: null }] });
+        use(mock);
+        await updateWorldCatalogItem("i1", {
+            properties: [{ label: "Poids", value: "1 kg" }, { label: "", value: "vide" }, "chaîne" as never],
+        });
+        expect(mock.buildersFor("world_catalog_items")[0].update)
+            .toHaveBeenCalledWith({ properties: [{ label: "Poids", value: "1 kg" }] });
     });
 });

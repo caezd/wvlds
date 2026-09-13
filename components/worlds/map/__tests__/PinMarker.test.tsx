@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { PinMarker } from "@/components/worlds/map/PinMarker";
-import { makeMapPersona, makePin } from "./fixtures";
+import { makePin } from "./fixtures";
 
 // ──────────────────────────────────────────────────────────────────────────
 // Un lieu de la carte n'était atteignable qu'à la souris : le marqueur était
@@ -109,36 +109,6 @@ describe("PinMarker — lieu qui mène ailleurs", () => {
   });
 });
 
-describe("PinMarker — qui est là", () => {
-  it("montre les personas présents", () => {
-    // « Qui est à la taverne ? » — la carte ne savait pas répondre.
-    monter({
-      presentPersonas: [
-        makeMapPersona({ id: "a", name: "Kael" }),
-        makeMapPersona({ id: "b", name: "Ifyr" }),
-      ],
-    });
-
-    const groupe = screen.getByRole("group", { name: "Qui est ici" });
-    expect(groupe.querySelectorAll("[data-persona-id]")).toHaveLength(2);
-    expect(groupe.querySelector('[data-persona-id="a"]')).toHaveAttribute("title", "Kael");
-  });
-
-  it("compte au-delà de trois têtes", () => {
-    monter({
-      presentPersonas: ["a", "b", "c", "d", "e"].map((id) => makeMapPersona({ id, name: id })),
-    });
-
-    const groupe = screen.getByRole("group", { name: "Qui est ici" });
-    expect(groupe.querySelectorAll("[data-persona-id]")).toHaveLength(3);
-    expect(groupe).toHaveTextContent("+2");
-  });
-
-  it("ne montre rien quand le lieu est vide", () => {
-    monter();
-    expect(screen.queryByRole("group", { name: "Qui est ici" })).toBeNull();
-  });
-});
 
 describe("PinMarker — hors de son époque", () => {
   it("s'estompe sans disparaître", () => {
@@ -154,5 +124,73 @@ describe("PinMarker — hors de son époque", () => {
   it("n'a rien de particulier à son époque", () => {
     monter();
     expect(document.querySelector("[data-out-of-time]")).toBeNull();
+  });
+});
+
+describe("PinMarker — le nom du lieu", () => {
+  it("se lit sans qu'on ait à survoler", () => {
+    // Une carte de cinquante lieux ne se lisait qu'à la souris, un par un —
+    // et pas du tout au doigt.
+    monter();
+
+    const etiquette = screen.getByText("Le port");
+    expect(etiquette).toBeVisible();
+    expect(etiquette.className).not.toContain("opacity-0");
+  });
+
+  it("ne se fait pas annoncer deux fois", () => {
+    // Le bouton porte déjà ce nom en `aria-label`.
+    monter();
+    expect(screen.getByText("Le port")).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("se distingue quand le lieu est ouvert", () => {
+    monter({ isSelected: true });
+    expect(screen.getByText("Le port").className).toContain("bg-primary");
+  });
+
+  it("garde le nom lisible sur le fond d'accent", () => {
+    // `text-white` était posé sur les deux fonds : sur celui d'accent d'un
+    // thème clair, le nom du lieu ouvert s'effaçait.
+    monter({ isSelected: true });
+    const etiquette = screen.getByText("Le port");
+    expect(etiquette.className).toContain("text-primary-foreground");
+    expect(etiquette.className).not.toContain("text-white");
+  });
+
+  it("borne les noms longs plutôt que de barrer la carte", () => {
+    monter({ pin: makePin({ title: "La citadelle des vents du nord" }) });
+    const etiquette = screen.getByText("La citadelle des vents du nord");
+    expect(etiquette.className).toContain("truncate");
+    expect(etiquette.className).toContain("max-w-40");
+  });
+});
+
+describe("PinMarker — un nom qui en gênerait un autre", () => {
+  it("se tait quand la carte le lui demande", () => {
+    monter({ showLabel: false });
+    expect(screen.queryByText("Le port")).toBeNull();
+  });
+
+  it("laisse le lieu atteignable pour autant", () => {
+    // Le nom disparaît, pas le lieu : le bouton le porte toujours.
+    const { onPinClick } = monter({ showLabel: false });
+    screen.getByRole("button", { name: "Le port" }).click();
+    expect(onPinClick).toHaveBeenCalled();
+  });
+});
+
+describe("PinMarker — combien de monde il y a ici", () => {
+  it("compte les présents plutôt que d'empiler leurs têtes", () => {
+    // La carte porte déjà le nom de chaque lieu : des avatars par-dessus la
+    // rendaient illisible.
+    monter({ presentCount: 3 });
+
+    expect(screen.getByLabelText("3 sur place")).toHaveTextContent("3");
+  });
+
+  it("ne montre rien pour un lieu désert", () => {
+    monter();
+    expect(screen.queryByText("0")).toBeNull();
   });
 });

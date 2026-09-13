@@ -12,13 +12,15 @@ import {
   updateMapPin,
   deleteMapPin,
   setPersonaLocation,
-  getMyMapPersonas,
   createMapRegion,
   updateMapRegion,
   deleteMapRegion,
+  createPinLink,
+  updatePinLink,
+  deletePinLink,
 } from "@/app/actions/worldMap";
 import { createClient } from "@/lib/supabase/server";
-import { ERR_NON_AUTHENTIFIE } from "@/lib/actionErrors";
+import { ERR_NON_AUTHENTIFIE, ERR_VALEUR_NON_SUPPORTEE } from "@/lib/actionErrors";
 
 const use = (mock: ReturnType<typeof createSupabaseMock>) =>
   vi.mocked(createClient).mockResolvedValue(mock.client as never);
@@ -26,20 +28,45 @@ const use = (mock: ReturnType<typeof createSupabaseMock>) =>
 beforeEach(() => vi.clearAllMocks());
 
 describe("getWorldMaps", () => {
-  it("retourne les cartes, les pins, les personas placés et les régions, avec fallbacks vides", async () => {
+  it("retourne les cartes, les pins et les régions, avec fallbacks vides", async () => {
     const maps = [
       { id: "m1", world_id: "w1", image_url: null, label: "Continent", sort_index: 0 },
       { id: "m2", world_id: "w1", image_url: null, label: "Donjon", sort_index: 1 },
     ];
     const pins = [{ id: "p1", world_id: "w1", map_id: "m1", title: "Port" }];
-    const personas = [{ id: "per1", name: "Kael", map_pin_id: "p1" }];
     const regions = [{ id: "r1", map_id: "m1", label: "Le royaume", points: [] }];
-    use(createSupabaseMock({ results: [{ data: maps }, { data: pins }, { data: personas }, { data: regions }] }));
+    const links = [{ id: "l1", map_id: "m1", from_pin_id: "p1", to_pin_id: "p2", label: "" }];
+    // Pages du wiki et salons situés voyagent avec le reste : le client les
+    // demandait pour lui-même après l'hydratation, soit deux allers-retours
+    // de plus sur un onglet que le serveur avait déjà rendu.
+    const wikiPages = [{ id: "w1", title: "Arkham", slug: "arkham" }];
+    const rooms = [{ id: "c1", title: "La taverne", name: "taverne", map_pin_id: "p1" }];
+    const mock = createSupabaseMock({
+      results: [{ data: maps }, { data: pins }, { data: regions }, { data: links }, { data: wikiPages }, { data: rooms }],
+    });
+    use(mock);
     const res = await getWorldMaps("w1");
     expect(res.maps).toEqual(maps);
     expect(res.pins).toEqual(pins);
-    expect(res.personas).toEqual(personas);
     expect(res.regions).toEqual(regions);
+    expect(res.links).toEqual(links);
+    expect(res.wikiPages).toEqual(wikiPages);
+    expect(res.rooms).toEqual(rooms);
+  });
+
+  it("nomme les colonnes plutôt que de tout demander", () => {
+    // Un `*` fait voyager ce que le client n'utilise pas, et fait surtout
+    // arriver sans prévenir ce qu'une migration ajoutera demain, dans une
+    // réponse dont les types ne bougeront pas.
+    const mock = createSupabaseMock({ results: [] });
+    use(mock);
+    return getWorldMaps("w1").then(() => {
+      const selects = mock.builders
+        .filter((b) => b.table.startsWith("world_map"))
+        .flatMap((b) => b.builder.select.mock.calls.map((c) => c[0] as string));
+      expect(selects.length).toBeGreaterThan(0);
+      for (const colonnes of selects) expect(colonnes).not.toBe("*");
+    });
   });
 
   it("retourne des listes vides quand rien n'existe", async () => {
@@ -47,8 +74,37 @@ describe("getWorldMaps", () => {
     const res = await getWorldMaps("w1");
     expect(res.maps).toEqual([]);
     expect(res.pins).toEqual([]);
-    expect(res.personas).toEqual([]);
     expect(res.regions).toEqual([]);
+    expect(res.links).toEqual([]);
+    expect(res.wikiPages).toEqual([]);
+    expect(res.rooms).toEqual([]);
+  });
+});
+
+describe("createPinLink", () => {
+  it("range la paire avant de l'écrire", async () => {
+    // Un lien n'a pas de sens, et c'est ce rangement qui permet à une simple
+    // clé unique d'interdire le doublon inverse (migration 166) : cliquer B
+    // puis A ne doit pas poser un second trait.
+    const mock = createSupabaseMock({ user: { id: "u1" }, results: [{ data: { id: "l1" } }] });
+    use(mock);
+
+    await createPinLink("w1", "m1", "bbb", "aaa");
+
+    expect(mock.buildersFor("world_map_pin_links")[0].insert).toHaveBeenCalledWith({
+      world_id: "w1",
+      map_id: "m1",
+      from_pin_id: "aaa",
+      to_pin_id: "bbb",
+    });
+  });
+
+  it("propage l'erreur Supabase — le doublon en est une", async () => {
+    use(createSupabaseMock({
+      user: { id: "u1" },
+      results: [{ error: { message: 'duplicate key value violates unique constraint "world_map_pin_links_pair_key"' } }],
+    }));
+    await expect(createPinLink("w1", "m1", "a", "b")).rejects.toThrow("world_map_pin_links_pair_key");
   });
 });
 
@@ -64,6 +120,9 @@ describe("mutations carte — garde d'authentification", () => {
     ["createMapRegion", () => createMapRegion("w1", "m1", { label: "x", points: [], color: "#000" })],
     ["updateMapRegion", () => updateMapRegion("r1", { label: "x" })],
     ["deleteMapRegion", () => deleteMapRegion("r1")],
+    ["createPinLink", () => createPinLink("w1", "m1", "a", "b")],
+    ["updatePinLink", () => updatePinLink("l1", { label: "x" })],
+    ["deletePinLink", () => deletePinLink("l1")],
   ])("%s lève si non connecté", async (_name, fn) => {
     use(createSupabaseMock({ user: null }));
     // Un CODE, pas une phrase : le message d'une exception finit dans un
@@ -302,24 +361,6 @@ describe("setPersonaLocation", () => {
   });
 });
 
-describe("getMyMapPersonas", () => {
-  it("ne rend rien sans session, sans lever", async () => {
-    // Un lecteur non connecté n'a pas de personas à poser : une liste vide
-    // suffit, une exception ferait échouer l'ouverture du panneau.
-    use(createSupabaseMock({ user: null }));
-    await expect(getMyMapPersonas("w1")).resolves.toEqual([]);
-  });
-
-  it("lit les miens dans ce monde", async () => {
-    const mock = createSupabaseMock({ user: { id: "u1" }, results: [{ data: [{ id: "per1", name: "Kael" }] }] });
-    use(mock);
-    const res = await getMyMapPersonas("w1");
-    expect(res).toEqual([{ id: "per1", name: "Kael" }]);
-    const b = mock.buildersFor("personas")[0];
-    expect(b.eq).toHaveBeenCalledWith("user_id", "u1");
-    expect(b.eq).toHaveBeenCalledWith("world_id", "w1");
-  });
-});
 
 describe("régions", () => {
   const POINTS = [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 5, y: 10 }];
@@ -360,5 +401,67 @@ describe("régions", () => {
   it("propage l'erreur Supabase", async () => {
     use(createSupabaseMock({ user: { id: "u1" }, results: [{ error: { message: "rls" } }] }));
     await expect(updateMapRegion("r1", { label: "x" })).rejects.toThrow("rls");
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────
+// Ce que le client peut envoyer — et ce qu'un appel forgé ne peut plus.
+//
+// Chaque mutation recevait un `patch` typé et l'écrivait tel quel. Un type ne
+// tient qu'à la compilation : un `fetch` forgé peut y glisser un `world_id`,
+// une URL `javascript:` dans une bannière, ou dix mégaoctets dans un libellé.
+// La RLS et les contraintes de la base (migration 171) refuseraient — par un
+// message Postgres brut. Ici, le refus est un code, et il arrive AVANT que la
+// requête parte : Supabase n'est jamais appelé.
+// ──────────────────────────────────────────────────────────────────────────
+describe("mutations carte — entrées forgées", () => {
+  // Le mock d'un appelant connecté, branché : sans `use` dans le nom — la
+  // règle des hooks y verrait un appel hors composant.
+  const connected = () => {
+    const mock = createSupabaseMock({ user: { id: "u1" }, results: [{ data: {}, error: null }] });
+    vi.mocked(createClient).mockResolvedValue(mock.client as never);
+    return mock;
+  };
+
+  it.each([
+    ["une clé de trop dans le patch d'épingle", () => updateMapPin("p1", { title: "x", world_id: "autre" } as never)],
+    ["une clé de trop dans le patch de région", () => updateMapRegion("r1", { label: "x", map_id: "autre" } as never)],
+    ["une clé de trop à la création d'une carte", () => createWorldMap("w1", { label: "x", world_id: "autre" } as never)],
+    ["une bannière en javascript:", () => updateMapPin("p1", { banner_url: "javascript:alert(1)" })],
+    ["une image de carte en data:", () => updateWorldMap("m1", { image_url: "data:text/html,x" })],
+    ["une couleur de région qui n'est pas un hex", () => updateMapRegion("r1", { color: "red; background:url(x)" })],
+    ["un style de bordure inconnu", () => updateMapPin("p1", { border_style: "double" as never })],
+    ["un nom d'icône qui n'en est pas un", () => updateMapPin("p1", { icon: "<svg onload=alert(1)>" })],
+    ["un titre vide", () => createMapPin("w1", "m1", 1, 2, "   ")],
+    ["un libellé trop long", () => createMapRegion("w1", "m1", { label: "x".repeat(201), points: [], color: "#000" })],
+    ["une description trop longue", () => updateMapRegion("r1", { description: "x".repeat(5001) })],
+    ["un libellé de lien trop long", () => updatePinLink("l1", { label: "x".repeat(81) })],
+    ["une coordonnée hors de la carte", () => createMapPin("w1", "m1", 500, 2, "Pin")],
+    ["un patch qui n'est pas un objet", () => updateMapPin("p1", null as never)],
+  ])("refuse %s sans appeler Supabase", async (_name, fn) => {
+    const mock = connected();
+    await expect(fn()).rejects.toThrow(ERR_VALEUR_NON_SUPPORTEE);
+    expect(mock.from).not.toHaveBeenCalled();
+  });
+
+  it("laisse passer une épingle sans fond (`transparent`) et une couleur hex à 3 chiffres", async () => {
+    const mock = connected();
+    await updateMapPin("p1", { color: "transparent", icon_color: "#fff" });
+    expect(mock.buildersFor("world_map_pins")[0].update).toHaveBeenCalledWith(
+      expect.objectContaining({ color: "transparent", icon_color: "#fff" }),
+    );
+  });
+
+  it("élague le libellé avant de l'écrire", async () => {
+    const mock = connected();
+    await updateMapRegion("r1", { label: "  Royaume  " });
+    expect(mock.buildersFor("world_map_regions")[0].update).toHaveBeenCalledWith(
+      expect.objectContaining({ label: "Royaume" }),
+    );
+  });
+
+  it("vérifie l'authentification AVANT l'entrée : un anonyme n'apprend rien du schéma", async () => {
+    use(createSupabaseMock({ user: null }));
+    await expect(updateMapPin("p1", { world_id: "autre" } as never)).rejects.toThrow(ERR_NON_AUTHENTIFIE);
   });
 });

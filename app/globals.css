@@ -504,3 +504,184 @@
     background-color: color-mix(in oklab, var(--color-accent) 8%, transparent);
     border-radius: 4px;
 }
+
+
+/* ── Sélecteur d'emoji ────────────────────────────────────────────────────
+   Habillage d'`emoji-picker-react` aux jetons de wvlds : la librairie arrive
+   avec sa propre palette (fonds gris, accent bleu) que ses variables `--epr-`
+   ne suffisent pas à corriger — sous `theme="dark"` elle les redéclare sur sa
+   propre racine, ce qui l'emporte sur toute valeur héritée d'un parent.
+
+   D'où ces règles, préfixées par la classe d'enveloppe (cf. EmojiPickerFrame)
+   pour passer devant les siennes, et posées hors de tout `@layer` : la
+   librairie injecte sa feuille dans le <head> au montage, donc après celle de
+   l'application, et une règle en couche s'incline devant une règle sans
+   couche quelle que soit sa spécificité.
+
+   La référence de forme est LucideIconPicker, l'autre sélecteur en grille de
+   l'application. */
+
+.wvlds-emoji-picker .EmojiPickerReact {
+    /* Couleurs */
+    --epr-bg-color: var(--color-popover);
+    --epr-text-color: var(--color-popover-foreground);
+    --epr-hover-bg-color: var(--color-muted);
+    --epr-focus-bg-color: var(--color-muted);
+    --epr-highlight-color: var(--color-accent);
+    --epr-picker-border-color: var(--color-border);
+    --epr-category-label-bg-color: var(--color-popover);
+    --epr-category-label-text-color: var(--color-muted-foreground);
+    --epr-search-input-bg-color: transparent;
+    --epr-search-input-bg-color-active: transparent;
+    --epr-search-border-color: transparent;
+    --epr-search-border-color-active: transparent;
+    --epr-search-input-text-color: var(--color-popover-foreground);
+    --epr-search-input-placeholder-color: var(--color-muted-foreground);
+    --epr-preview-border-color: var(--color-border);
+    --epr-preview-text-color: var(--color-muted-foreground);
+    --epr-emoji-variation-picker-bg-color: var(--color-popover);
+    --epr-emoji-variation-indicator-color: var(--color-muted-foreground);
+    --epr-skin-tone-picker-menu-color: var(--color-popover);
+    /* Pastilles de teinte : la couleur seule. La librairie les cerne d'un
+       filet et d'un liseré intérieur qui, sur 15 px, se lisent comme un halo
+       flou plutôt que comme un contour. Les rendre transparents plutôt que
+       supprimer les règles garde la place du filet : celle où vient se poser
+       l'accent qui désigne la teinte en cours, sans décaler la pastille. */
+    --epr-skin-tone-outer-border-color: transparent;
+    --epr-skin-tone-inner-border-color: transparent;
+    --epr-active-skin-tone-indicator-border-color: var(--color-accent);
+
+    /* Métriques — celles des popovers et des menus */
+    --epr-picker-border-radius: 0.375rem;
+    --epr-horizontal-padding: 0.5rem;
+    --epr-header-padding: 0.5rem;
+    --epr-category-padding: 0 0.375rem;
+    --epr-category-label-padding: 0 0.5rem;
+    --epr-category-label-height: 1.625rem;
+    --epr-category-navigation-button-size: 1.75rem;
+    --epr-preview-height: 3.25rem;
+    --epr-preview-text-size: 0.75rem;
+    --epr-search-input-height: 2.25rem;
+    --epr-search-input-padding: 0 2rem;
+    --epr-search-bar-inner-padding: 0.375rem;
+    --epr-emoji-size: 26px;
+    --epr-emoji-padding: 4px;
+
+    box-shadow:
+        0 4px 6px -1px rgb(0 0 0 / 0.3),
+        0 2px 4px -2px rgb(0 0 0 / 0.3);
+}
+
+.wvlds-emoji-picker .EmojiPickerReact * {
+    font-family: inherit;
+}
+
+/* Un seul filet sous l'en-tête entier plutôt qu'un par rangée : la recherche
+   est masquée selon les points d'entrée, et un filet par rangée en aurait
+   dessiné un ou deux selon les cas. */
+.wvlds-emoji-picker .epr-header {
+    border-bottom: 1px solid var(--color-border);
+}
+
+/* Onglets de catégories. Ils reprennent les codes des boutons d'icône de
+   l'application : sobres au repos, accent tramé une fois actifs (cf. la barre
+   d'outils des DM ou le bouton des notifications). */
+.wvlds-emoji-picker .epr-category-nav {
+    padding: 0.375rem;
+}
+
+.wvlds-emoji-picker .epr-cat-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-image: none;
+    border-radius: 0.375rem;
+    color: var(--color-muted-foreground);
+    transition:
+        color 150ms ease,
+        background-color 150ms ease;
+}
+
+.wvlds-emoji-picker .epr-cat-btn > svg {
+    height: 1rem;
+    width: 1rem;
+}
+
+.wvlds-emoji-picker .epr-cat-btn:hover {
+    background-color: var(--color-muted);
+    color: var(--color-popover-foreground);
+}
+
+.wvlds-emoji-picker .epr-cat-btn.epr-active {
+    color: var(--color-accent);
+    background-color: color-mix(in oklab, var(--color-accent) 12%, transparent);
+}
+
+/* La librairie cercle l'onglet d'un anneau à elle dès le focus, souris
+   comprise. On lui substitue l'anneau de focus clavier de l'application. */
+.wvlds-emoji-picker .epr-cat-btn:focus::before {
+    content: none;
+}
+
+.wvlds-emoji-picker .epr-cat-btn:focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 1px;
+}
+
+/* Champ de recherche : nu, comme celui de LucideIconPicker — le cadre et le
+   fond que la librairie lui donne le détachaient de son en-tête. */
+.wvlds-emoji-picker .epr-search-container input {
+    font-size: 0.875rem;
+}
+
+/* Loupe et croix : les pictogrammes de la librairie sont des images d'un gris
+   fixe. Les passer en masque les fait porter `currentColor`, donc la couleur
+   des textes secondaires — et le trait de Lucide. */
+.wvlds-emoji-picker .epr-icn-search,
+.wvlds-emoji-picker .epr-icn-clear-search {
+    background-image: none;
+    background-color: var(--color-muted-foreground);
+    width: 1rem;
+    height: 1rem;
+    mask-repeat: no-repeat;
+    mask-position: center;
+    mask-size: contain;
+}
+
+.wvlds-emoji-picker .epr-icn-search {
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E");
+}
+
+.wvlds-emoji-picker .epr-icn-clear-search {
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 6 6 18'/%3E%3Cpath d='m6 6 12 12'/%3E%3C/svg%3E");
+}
+
+.wvlds-emoji-picker .epr-btn-clear-search {
+    height: 1.5rem;
+    width: 1.5rem;
+    border-radius: 0.375rem;
+}
+
+/* Intitulés de catégories : la petite capitale espacée des en-têtes de
+   sections de l'application, et non le gros titre capitalisé d'origine. */
+.wvlds-emoji-picker .epr-emoji-category-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: color-mix(in oklab, var(--color-muted-foreground) 70%, transparent);
+    backdrop-filter: none;
+    border-bottom: 1px solid color-mix(in oklab, var(--color-border) 50%, transparent);
+}
+
+.wvlds-emoji-picker .epr-emoji {
+    border-radius: 0.375rem;
+}
+
+/* Aperçu du bas : une légende discrète, sans la capitalisation de chaque mot
+   que la librairie applique aux noms d'emoji. Ni l'aperçu ni son intitulé ne
+   portent de classe stable — leurs noms sont hachés à la construction de la
+   feuille — d'où le repérage par la position : l'aperçu suit la liste. */
+.wvlds-emoji-picker .epr-body + div > div:nth-child(2) {
+    text-transform: none;
+}

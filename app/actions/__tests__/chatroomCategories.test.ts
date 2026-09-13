@@ -173,3 +173,43 @@ describe("reorderChatroomCategories", () => {
     expect(await reorderChatroomCategories([])).toEqual({ ok: true });
   });
 });
+
+// ──────────────────────────────────────────────────────────────────────────
+// `data` était étalé tel quel dans l'insert et l'update. La RLS aurait refusé
+// un `world_id` vers un monde étranger ; mais une bannière en `javascript:` ou
+// un titre de dix mégaoctets, elle les aurait laissés à la contrainte de la
+// base — et à son message brut. Le refus arrive maintenant avant l'appel.
+// ──────────────────────────────────────────────────────────────────────────
+describe("catégories — entrées forgées", () => {
+  it.each([
+    ["une clé de trop à la création", () => addChatroomCategory("w1", { title: "x", world_id: "autre" } as never)],
+    ["une clé de trop à la mise à jour", () => updateChatroomCategory("cat1", { position: 99 } as never)],
+    ["une bannière en javascript:", () => updateChatroomCategory("cat1", { banner_url: "javascript:alert(1)" })],
+    ["une icône qui n'est pas une URL", () => addChatroomCategory("w1", { title: "x", icon_url: "pas-une-url" })],
+    ["un titre vide", () => addChatroomCategory("w1", { title: "  " })],
+    ["un titre trop long", () => updateChatroomCategory("cat1", { title: "x".repeat(201) })],
+    ["une description trop longue", () => updateChatroomCategory("cat1", { description: "x".repeat(5001) })],
+    ["un ordre qui n'est pas une liste", () => reorderChatroomCategories({ id: "c1", position: 0 } as never)],
+  ])("refuse %s sans appeler Supabase", async (_name, fn) => {
+    const mock = createSupabaseMock();
+    use(mock);
+    const res = await fn();
+    expect(res).toEqual({ ok: false, error: "unsupportedValue" });
+    expect(mock.from).not.toHaveBeenCalled();
+  });
+
+  it("accepte une catégorie complète, bannière en https", async () => {
+    const mock = createSupabaseMock({ results: [{ data: { position: 2 } }, { data: { id: "c9" } }] });
+    use(mock);
+    const res = await addChatroomCategory("w1", { title: "  Tavernes ", description: null, banner_url: BANNIERE, icon_url: null });
+    expect(res.ok).toBe(true);
+    expect(mock.buildersFor("chatroom_categories")[1].insert).toHaveBeenCalledWith({
+      world_id: "w1",
+      position: 3,
+      title: "Tavernes",
+      description: null,
+      banner_url: BANNIERE,
+      icon_url: null,
+    });
+  });
+});
