@@ -10,8 +10,8 @@ import { DB_TEXT_LIMITS } from "@/lib/textLimits";
 // dans le code, ou l'inverse.
 //
 // Il lit les `CHECK (char_length(col) <= N)` de toutes les migrations, en
-// tenant compte des suppressions (`DROP CONSTRAINT`) : une borne retirée plus
-// tard ne doit plus figurer dans le miroir.
+// tenant compte des suppressions (`DROP CONSTRAINT`, `DROP TABLE`) : une borne
+// retirée plus tard ne doit plus figurer dans le miroir.
 // ──────────────────────────────────────────────────────────────────────────
 
 const MIGRATIONS = join(process.cwd(), "migrations");
@@ -44,6 +44,15 @@ function limitsFromMigrations(): Map<string, number> {
     for (const m of sql.matchAll(retrait)) {
       const cle = parNom.get(m[2]);
       if (cle) limites.delete(cle);
+    }
+
+    // Une table supprimée emporte toutes ses bornes (migration 172 : les
+    // tables d'origine du catalogue).
+    const suppression = /DROP\s+TABLE\s+(?:IF\s+EXISTS\s+)?(?:public\.)?(\w+)/gi;
+    for (const m of sql.matchAll(suppression)) {
+      for (const cle of [...limites.keys()]) {
+        if (cle.startsWith(`${m[1]}.`)) limites.delete(cle);
+      }
     }
   }
   return limites;

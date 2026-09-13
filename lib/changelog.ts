@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-09 ──────────────────────────────────────────────────────────────
   {
     date: "2026-09",
+    tag: "Technique",
+    text: "L’image d’un objet du catalogue ne peut être qu’une adresse en http(s), vérifiée en base comme les autres images.",
+  },
+  {
+    date: "2026-09",
     tag: "Catalogue",
     text: "Un objet ou une compétence se crée dans le même dialogue que sa modification : image, icônes, rareté et propriétés dès la création. « Créer et continuer » enchaîne les saisies sans le refermer.",
   },
