@@ -3,7 +3,7 @@
 import * as React from "react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
-import { Check, Trash2, X } from "lucide-react";
+import { Check, Pencil, Trash2, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { getInitials } from "@/lib/textFormatting";
@@ -19,16 +19,19 @@ import type { CPersona, CRelation } from "./types";
  * l'autre accepte.
  */
 export function RelationRow({
-  rel, other, direction, canEdit, canRespond = false, onDelete, onAccept, onUpdateDesc, onHoverChange,
+  rel, other, direction, canEdit, canRespond = false, onDelete, onAccept, onEdit, onUpdateDesc, onHoverChange,
 }: {
   rel: CRelation;
   other: CPersona;
-  direction: "→" | "←";
+  /** ⇄ : réciproque acceptée, les deux sens existent. */
+  direction: "→" | "←" | "⇄";
   canEdit: boolean;
   /** Le joueur peut répondre à cette demande (il possède le persona visé). */
   canRespond?: boolean;
   onDelete: (id: string) => void;
   onAccept?: (id: string) => void;
+  /** Ouvre la modification complète (type, description) dans un dialogue. */
+  onEdit?: () => void;
   onUpdateDesc: (id: string, desc: string) => void;
   onHoverChange?: (id: string | null) => void;
 }) {
@@ -61,6 +64,11 @@ export function RelationRow({
           <span className="shrink-0 rounded-full border border-dashed border-border px-1.5 text-[9px] font-medium uppercase tracking-wider text-muted-foreground">
             {t("pending")}
           </span>
+        )}
+        {onEdit && (
+          <button onClick={onEdit} className="shrink-0 opacity-0 group-hover/row:opacity-100 focus-within:opacity-100 text-muted-foreground hover:text-foreground transition-opacity" aria-label={t("editRelation")}>
+            <Pencil className="h-3 w-3" />
+          </button>
         )}
         {canEdit && !canRespond && (
           <button onClick={() => onDelete(rel.id)} className="shrink-0 opacity-0 group-hover/row:opacity-100 focus-within:opacity-100 text-muted-foreground hover:text-destructive transition-opacity" aria-label={pending ? t("cancelRequest") : tCommon("delete")}>

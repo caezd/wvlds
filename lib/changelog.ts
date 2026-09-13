@@ -8,6 +8,21 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-09 ──────────────────────────────────────────────────────────────
   {
     date: "2026-09",
+    tag: "Relations",
+    text: "Une relation se crée dans un dialogue — de qui, vers qui, quel type, une description — plus besoin du mode « lien » à deux clics. Le type et la description se modifient sur place, et une demande en attente se voit en pointillé.",
+  },
+  {
+    date: "2026-09",
+    tag: "Relations",
+    text: "La légende du canevas filtre : cliquez un type ou un groupe pour ne garder que lui à l’écran. Le nombre de demandes qui vous attendent s’affiche en haut.",
+  },
+  {
+    date: "2026-09",
+    tag: "Mobile",
+    text: "Sur petit écran, la liste des relations affiche le nombre de relations de chaque persona et ses demandes en attente ; le détail d’un persona est le même qu’en grand écran, ajout compris.",
+  },
+  {
+    date: "2026-09",
     tag: "Personas",
     text: "La fiche d’un persona a un onglet « Relations » : ce qu’il pense des autres, ce qu’on pense de lui. Une demande en attente s’y accepte ou s’y refuse, un couple s’y rompt.",
   },
