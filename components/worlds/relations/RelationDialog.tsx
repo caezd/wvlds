@@ -39,7 +39,6 @@ export type RelationDialogProps = {
   personas: CPersona[];
   relTypes: CRelType[];
   myPersonaIds: ReadonlySet<string>;
-  canAdmin: boolean;
   /** Relation existante : modification. Absente : création. */
   existing?: { rel: CRelation; to: CPersona } | null;
   onCreate: (input: { toPersonaId: string; typeId: string; description: string | null }) => Promise<boolean>;
@@ -47,7 +46,7 @@ export type RelationDialogProps = {
 };
 
 export function RelationDialog({
-  open, onOpenChange, from, personas, relTypes, myPersonaIds, canAdmin, existing, onCreate, onUpdate,
+  open, onOpenChange, from, personas, relTypes, myPersonaIds, existing, onCreate, onUpdate,
 }: RelationDialogProps) {
   const t = useTranslations("relations");
   const tCommon = useTranslations("common");
@@ -81,7 +80,7 @@ export function RelationDialog({
   // Réciproque d'un côté ou de l'autre : le type est figé (voir en tête).
   const typeLocked = editing && (!!existingType?.mutual || existing?.rel.status === "pending");
   const selectedType = typeId ? relTypes.find((tp) => tp.id === typeId) ?? null : null;
-  const willBeRequest = !editing && !!selectedType?.mutual && !!target && !myPersonaIds.has(target.id) && !canAdmin;
+  const willBeRequest = !editing && !!selectedType?.mutual && !!target && !myPersonaIds.has(target.id);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();

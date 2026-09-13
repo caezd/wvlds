@@ -109,8 +109,8 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
 
   // ── Demandes qui m'attendent : un badge dans l'en-tête ──
   const pendingForMe = React.useMemo(
-    () => relations.filter((r) => r.status === "pending" && (canAdmin || myPersonaIds.has(r.to_persona_id))).length,
-    [relations, myPersonaIds, canAdmin],
+    () => relations.filter((r) => r.status === "pending" && myPersonaIds.has(r.to_persona_id)).length,
+    [relations, myPersonaIds],
   );
   /** Relations par persona, pour la liste mobile (un miroir accepté ne compte qu'une fois). */
   const countsByPersona = React.useMemo(() => {
@@ -392,7 +392,7 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
                                   <span className="line-clamp-2 text-[9px] font-semibold leading-tight text-white drop-shadow-sm">{p.name}</span>
                                 </div>
                               </div>
-                              {counts && counts.pending > 0 && (canAdmin || p.user_id === userId) && (
+                              {counts && counts.pending > 0 && p.user_id === userId && (
                                 <span className="absolute left-1 top-1 z-20 rounded-full bg-primary px-1 text-[9px] font-bold text-primary-foreground" title={t("pendingCount", { count: counts.pending })}>
                                   {counts.pending}
                                 </span>
@@ -560,7 +560,7 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
                           {gc && <span aria-hidden className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-background" style={{ background: gc }} />}
                         </span>
                         <span className="flex-1 truncate text-sm font-medium">{p.name}</span>
-                        {counts && counts.pending > 0 && (canAdmin || p.user_id === userId) && (
+                        {counts && counts.pending > 0 && p.user_id === userId && (
                           <span className="rounded-full bg-primary px-1.5 text-[10px] font-semibold text-primary-foreground" title={t("pendingCount", { count: counts.pending })}>
                             {counts.pending}
                           </span>
@@ -603,7 +603,6 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
           personas={personas}
           relTypes={relTypes}
           myPersonaIds={myPersonaIds}
-          canAdmin={canAdmin}
           existing={dialog.existing ?? null}
           onCreate={(input) => data.createRelation({ fromPersonaId: dialog.from.id, ...input })}
           onUpdate={(id, patch) => data.updateRelation(id, patch)}

@@ -103,10 +103,11 @@ describe("PersonaRelationsSection", () => {
     expect(actions.deletePersonaRelation).toHaveBeenCalledWith("r1");
   });
 
-  it("un admin a les mêmes commandes que le joueur", async () => {
+  it("un admin retire et rompt, mais ne répond pas à la place du joueur", async () => {
     mount("u9", true);
     await screen.findByText("Soren");
-    expect(screen.getByRole("button", { name: "Accepter" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Accepter" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Annuler la demande" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Rompre" })).toBeInTheDocument();
   });
 

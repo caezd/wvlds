@@ -57,7 +57,10 @@ export function PersonaRelationsSection({
   const [relations, setRelations] = useState<PersonaRelation[] | null>(null);
   const [others, setOthers] = useState<Map<string, OtherPersona>>(new Map());
   const [types, setTypes] = useState<Map<string, WorldRelationType>>(new Map());
-  const canAct = canAdmin || selfId === ownerId;
+  const isOwner = selfId === ownerId;
+  // Un admin retire ou rompt ; répondre à une demande revient au seul joueur
+  // du persona visé (migration 174).
+  const canAct = canAdmin || isOwner;
 
   async function fetchAll() {
     const supabase = createClient();
@@ -170,7 +173,7 @@ export function PersonaRelationsSection({
         <RelationGroup title={t("in")}>
           {incoming.map((e) => (
             <RelationCard key={e.rel.id} entry={e} direction="in"
-              canRespond={canAct && e.rel.status === "pending"}
+              canRespond={isOwner && e.rel.status === "pending"}
               canCancel={false}
               canBreak={false}
               onAccept={accept} onRemove={remove} />

@@ -169,7 +169,8 @@ export function PersonaRelationsPanel({
                     other={other}
                     direction={mutual ? "⇄" : direction}
                     canEdit={rowEditable}
-                    canRespond={rel.status === "pending" && direction === "←" && canEdit}
+                    // Répondre revient au joueur du persona visé, à lui seul (migration 174).
+                    canRespond={rel.status === "pending" && direction === "←" && isMine}
                     onDelete={onDelete}
                     onAccept={onAccept}
                     onEdit={rowEditable && rel.status !== "pending" ? () => onEdit(rel) : undefined}

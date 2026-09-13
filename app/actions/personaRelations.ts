@@ -29,9 +29,10 @@ const relationDescriptionSchema = longTextSchema.nullable().transform((v) => v |
 /**
  * Une relation naît acceptée, sauf si son type engage l'autre joueur.
  *
- * Un type réciproque vers le persona d'un AUTRE joueur attend son accord ;
- * vers un persona à soi, ou depuis un compte propriétaire ou admin du monde,
- * il n'y a personne à consulter. Un type à sens unique est toujours immédiat.
+ * Un type réciproque vers le persona d'un AUTRE joueur attend son accord,
+ * quel que soit le rôle de qui la crée — un admin n'accepte pas à la place
+ * d'un joueur (migration 174). Vers un persona à soi, il n'y a personne à
+ * consulter. Un type à sens unique est toujours immédiat.
  */
 async function decideStatus(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -56,14 +57,7 @@ async function decideStatus(
     .eq("world_id", worldId)
     .maybeSingle();
   if (!target) return { ok: false, error: ERR_VALEUR_NON_SUPPORTEE };
-  if ((target as { user_id: string }).user_id === userId) return { ok: true, status: "accepted" };
-
-  const { data: admin } = await supabase.rpc("is_world_admin", { wid: worldId, uid: userId });
-  if (admin) return { ok: true, status: "accepted" };
-  const { data: world } = await supabase.from("worlds").select("owner_id").eq("id", worldId).maybeSingle();
-  if ((world as { owner_id: string | null } | null)?.owner_id === userId) return { ok: true, status: "accepted" };
-
-  return { ok: true, status: "pending" };
+  return { ok: true, status: (target as { user_id: string }).user_id === userId ? "accepted" : "pending" };
 }
 
 export async function createPersonaRelation(input: {

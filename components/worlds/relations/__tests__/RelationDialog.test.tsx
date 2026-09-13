@@ -18,7 +18,7 @@ const rel = (type: string, status: CRelation["status"] = "accepted"): CRelation 
 function mount(existing: { rel: CRelation; to: CPersona } | null, onUpdate = vi.fn().mockResolvedValue(true)) {
   render(
     <RelationDialog open onOpenChange={vi.fn()} from={ADHI} personas={[ADHI, NYX]} relTypes={TYPES}
-      myPersonaIds={new Set(["p1"])} canAdmin={false} existing={existing}
+      myPersonaIds={new Set(["p1"])} existing={existing}
       onCreate={vi.fn().mockResolvedValue(true)} onUpdate={onUpdate} />,
   );
   return onUpdate;

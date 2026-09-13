@@ -44,10 +44,8 @@ describe("createPersonaRelation — acceptée ou en attente", () => {
     const mock = createSupabaseMock({ results: [
       { data: { mutual: true } },
       { data: { user_id: "u2" } },                  // personas (cible)
-      { data: null },                               // worlds (owner)
       { data: { id: "r1", status: "pending" } },
     ] });
-    mock.rpc.mockResolvedValue({ data: false, error: null }); // is_world_admin
     use(mock);
     const res = await createPersonaRelation(BASE);
     expect(res.ok).toBe(true);
@@ -69,18 +67,18 @@ describe("createPersonaRelation — acceptée ou en attente", () => {
     );
   });
 
-  it("un admin du monde n'a l'accord de personne à attendre", async () => {
+  it("un admin n'accepte pas à la place du joueur : même pour lui, c'est une demande", async () => {
     const mock = createSupabaseMock({ results: [
       { data: { mutual: true } },
       { data: { user_id: "u2" } },
       { data: { id: "r1" } },
     ] });
-    mock.rpc.mockResolvedValue({ data: true, error: null });
     use(mock);
     await createPersonaRelation(BASE);
-    expect(mock.rpc).toHaveBeenCalledWith("is_world_admin", { wid: "w1", uid: "u1" });
+    // Le rôle n'est même pas consulté.
+    expect(mock.rpc).not.toHaveBeenCalled();
     expect(mock.buildersFor("persona_relations")[0].insert).toHaveBeenCalledWith(
-      expect.objectContaining({ status: "accepted" }),
+      expect.objectContaining({ status: "pending" }),
     );
   });
 
