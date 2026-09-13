@@ -32,7 +32,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { RpgIconPicker } from "@/components/personas/RpgIconPicker";
 import { LucideIconPicker } from "@/components/ui/LucideIconPicker";
-import { CatalogVisual } from "./CatalogVisual";
+import { CatalogVisual, visualSourceButtonClass } from "./CatalogVisual";
 import { CatalogIcon } from "./CataloguePieces";
 import type { CatalogItem, CatalogType } from "./catalogueTypes";
 
@@ -46,16 +46,6 @@ import type { CatalogItem, CatalogType } from "./catalogueTypes";
 // ouvertures de dialogue.
 
 const MAX_ITEM_IMAGE_MB = 2;
-
-/** Bouton de choix d'une source de visuel — souligné quand c'est elle qui sert. */
-function pickerButtonClass(active: boolean) {
-  return cn(
-    "flex h-7 w-7 items-center justify-center rounded-lg border transition-colors disabled:opacity-40",
-    active
-      ? "border-primary/40 bg-primary/10 text-primary"
-      : "border-border-soft text-muted-foreground hover:bg-secondary hover:text-foreground",
-  );
-}
 
 /** Nom traduit d'une rareté — les clés suivent l'identifiant, en capitale. */
 function rarityKey(rarity: WorldCatalogRarity): string {
@@ -234,7 +224,7 @@ export function CatalogItemDialog({
                       type="button"
                       title={t("chooseIcon")}
                       aria-label={t("chooseIcon")}
-                      className={pickerButtonClass(!!icon)}
+                      className={visualSourceButtonClass(!!icon)}
                     >
                       <Swords className="h-3.5 w-3.5" />
                     </button>
@@ -248,7 +238,7 @@ export function CatalogItemDialog({
                       type="button"
                       title={t("chooseLucideIcon")}
                       aria-label={t("chooseLucideIcon")}
-                      className={pickerButtonClass(!!lucideIcon)}
+                      className={visualSourceButtonClass(!!lucideIcon)}
                     >
                       <Shapes className="h-3.5 w-3.5" />
                     </button>
@@ -260,7 +250,7 @@ export function CatalogItemDialog({
                   onClick={() => fileInputRef.current?.click()}
                   title={t("useImage")}
                   aria-label={t("useImage")}
-                  className={pickerButtonClass(!!imageUrl)}
+                  className={visualSourceButtonClass(!!imageUrl)}
                 >
                   {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImageIcon className="h-3.5 w-3.5" />}
                 </button>

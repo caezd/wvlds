@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Catalogue",
+    text: "La saisie rapide d’un objet ou d’une compétence propose les deux jeux d’icônes — celles du jeu et celles de l’application — comme le dialogue de modification.",
+  },
+  {
+    date: "2026-09",
+    tag: "Catalogue",
     text: "Chaque ligne du catalogue a son menu : modifier, dupliquer, déplacer vers une catégorie, supprimer. Plus besoin de glisser un objet pour le classer.",
   },
   {

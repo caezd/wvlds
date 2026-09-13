@@ -7,6 +7,20 @@ import { cn } from "@/lib/utils";
 import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
 
 /**
+ * Bouton de choix d'une source de visuel — souligné quand c'est elle qui sert.
+ * Partagé par le dialogue et la saisie rapide, pour que les deux se lisent
+ * pareil.
+ */
+export function visualSourceButtonClass(active: boolean) {
+  return cn(
+    "flex h-7 w-7 items-center justify-center rounded-lg border transition-colors disabled:opacity-40",
+    active
+      ? "border-primary/40 bg-primary/10 text-primary"
+      : "border-border-soft text-muted-foreground hover:bg-secondary hover:text-foreground",
+  );
+}
+
+/**
  * Le visuel d'un objet ou d'une compétence, où qu'il s'affiche.
  *
  * Trois sources, une seule rendue, de la plus précise à la plus générique :

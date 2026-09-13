@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import {
-  X, Pencil, Trash2, Loader2, Check, GripVertical, Copy, MoreHorizontal, FolderInput,
+  X, Pencil, Trash2, Loader2, Check, GripVertical, Copy, MoreHorizontal, FolderInput, Swords, Shapes,
 } from "lucide-react";
 import {
   useSortable,
@@ -24,7 +24,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { afterMenuClose } from "@/components/ui/after-menu-close";
-import { CatalogVisual } from "./CatalogVisual";
+import { CatalogVisual, visualSourceButtonClass } from "./CatalogVisual";
 import { useCatalogueRow } from "./CatalogueRowContext";
 import { RpgIconPicker } from "@/components/personas/RpgIconPicker";
 import { LucideIconPicker } from "@/components/ui/LucideIconPicker";
@@ -104,13 +104,8 @@ export function AddForm({
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [icon, setIcon] = useState<string | null>(null);
+  const [lucideIcon, setLucideIcon] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-
-  // `rpg_icons` est un jeu d'épées, de potions et de boucliers : il va aux
-  // objets, et ne dit rien de « Diplomatie » ou de « Survie ». Les compétences
-  // reçoivent donc le sélecteur Lucide. Le dialogue de modification, lui,
-  // offre les trois sources dans les deux cas.
-  const useLucide = type === "skills";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -119,8 +114,8 @@ export function AddForm({
     await onAdd({
       name: name.trim(),
       description,
-      icon: useLucide ? null : icon,
-      lucide_icon: useLucide ? icon : null,
+      icon,
+      lucide_icon: lucideIcon,
       category_id: categoryId,
     });
     setSaving(false);
@@ -130,29 +125,48 @@ export function AddForm({
     setDescription("");
   }
 
-  const trigger = (
-    <button
-      type="button"
-      title={useLucide ? t("chooseLucideIcon") : t("chooseIcon")}
-      aria-label={useLucide ? t("chooseLucideIcon") : t("chooseIcon")}
-      className="h-10 w-10 shrink-0 flex items-center justify-center rounded-lg border border-border-soft bg-muted/40 hover:bg-muted transition-colors"
-    >
-      <CatalogVisual
-        icon={useLucide ? null : icon}
-        lucideIcon={useLucide ? icon : null}
-        size={24}
-        framed={false}
-      />
-    </button>
-  );
-
   return (
     <form onSubmit={handleSubmit} className="flex items-start gap-2 rounded-xl border border-dashed border-border bg-muted/20 p-3 mt-1">
-      {useLucide ? (
-        <LucideIconPicker value={icon ?? ""} onChange={(name) => setIcon(name)} trigger={trigger} />
-      ) : (
-        <RpgIconPicker value={icon ?? undefined} onChange={(v) => setIcon(v ?? null)} trigger={trigger} />
-      )}
+      {/* Les deux sources d'icône, comme dans le dialogue — l'image, elle,
+          attend que l'objet existe pour avoir un dossier. Un jeu d'épées et de
+          potions va aux objets, les icônes de l'application aux compétences,
+          mais aucun des deux n'est réservé : « Forge » se dessine mieux avec
+          une enclume de jeu, « Potion de soin » avec un cœur. Choisir l'une
+          efface l'autre, pour que le visuel affiché soit toujours celui qu'on
+          vient de choisir. */}
+      <div className="flex shrink-0 flex-col items-center gap-1">
+        <CatalogVisual icon={icon} lucideIcon={lucideIcon} size={40} />
+        <div className="flex items-center gap-0.5">
+          <RpgIconPicker
+            value={icon ?? undefined}
+            onChange={(v) => { setIcon(v ?? null); setLucideIcon(null); }}
+            trigger={
+              <button
+                type="button"
+                title={t("chooseIcon")}
+                aria-label={t("chooseIcon")}
+                className={visualSourceButtonClass(!!icon)}
+              >
+                <Swords className="h-3.5 w-3.5" />
+              </button>
+            }
+          />
+          <LucideIconPicker
+            value={lucideIcon ?? ""}
+            onChange={(name) => { setLucideIcon(name); setIcon(null); }}
+            trigger={
+              <button
+                type="button"
+                title={t("chooseLucideIcon")}
+                aria-label={t("chooseLucideIcon")}
+                className={visualSourceButtonClass(!!lucideIcon)}
+              >
+                <Shapes className="h-3.5 w-3.5" />
+              </button>
+            }
+          />
+        </div>
+      </div>
       <div className="flex-1 space-y-1.5 min-w-0">
         <input
           autoFocus
