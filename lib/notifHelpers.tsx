@@ -58,12 +58,6 @@ export function notifText(n: AppNotification, t: NotifT): ReactNode {
                     ? t.rich("text.chatroomReplySingle", { actor, chatroom: n.content, ...r })
                     : t.rich("text.chatroomReplySingleNoContent", { actor, ...r });
         }
-        case "marital_request": {
-            const target = n.content ?? t("text.someone");
-            return n.metadata?.requested_status === "married"
-                ? t.rich("text.maritalRequestMarried", { actor, target, ...r })
-                : t.rich("text.maritalRequestRelationship", { actor, target, ...r });
-        }
         // Une demande de relation réciproque (migration 173). Un type marital
         // garde la phrase du mariage ; les autres nomment le type.
         case "relation_request": {

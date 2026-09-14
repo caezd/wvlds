@@ -177,18 +177,6 @@ describe("notifText", () => {
             .toBe("bob a répondu dans annonces");
     });
 
-    it("marital_request (married) → texte mariage", () => {
-        expect(textOf(notifText(makeNotif({
-            type: "marital_request", actor_name: "alice", content: "Yuki", metadata: { requested_status: "married" },
-        }), mockNotifT))).toBe("alice souhaite marier son personnage à Yuki");
-    });
-
-    it("marital_request (in_relationship) → texte mise en couple", () => {
-        expect(textOf(notifText(makeNotif({
-            type: "marital_request", actor_name: "alice", content: "Yuki", metadata: { requested_status: "in_relationship" },
-        }), mockNotifT))).toBe("alice souhaite mettre son personnage en couple avec Yuki");
-    });
-
     // Depuis la migration 173, une demande de relation nomme son type ; un
     // type marital garde la phrase du mariage.
     it("relation_request → nomme le type", () => {

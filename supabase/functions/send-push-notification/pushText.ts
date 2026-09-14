@@ -10,7 +10,7 @@ export type PushLocale = "fr" | "en" | "es";
 export type PushNotifPayload = {
   type:
     | "mention" | "reaction" | "new_member" | "new_chatroom" | "world_invite"
-    | "chatroom_reply" | "persona_new_chatroom" | "persona_reply" | "marital_request";
+    | "chatroom_reply" | "persona_new_chatroom" | "persona_reply" | "relation_request";
   world_id: string | null;
   chat_id: string | null;
   actor_id: string | null;
@@ -69,12 +69,19 @@ export function buildPushText(n: PushNotifPayload, locale: PushLocale): { title:
       return { title, body: n.content
         ? T(locale, `${actor} a répondu dans ${n.content}`, `${actor} replied in ${n.content}`, `${actor} respondió en ${n.content}`)
         : T(locale, `${actor} a répondu`, `${actor} replied`, `${actor} respondió`) };
-    case "marital_request": {
+    // Une demande de relation réciproque (migration 173). Un type marital
+    // garde la phrase du mariage ; les autres nomment le type.
+    case "relation_request": {
       const target = n.content ?? SOMEONE[locale];
-      const married = n.metadata?.requested_status === "married";
-      return { title, body: married
-        ? T(locale, `${actor} souhaite marier son personnage à ${target}`, `${actor} wants to marry their character to ${target}`, `${actor} desea casar a su personaje con ${target}`)
-        : T(locale, `${actor} souhaite mettre son personnage en couple avec ${target}`, `${actor} wants their character in a relationship with ${target}`, `${actor} desea poner en pareja a su personaje con ${target}`) };
+      const marital = n.metadata?.marital_status;
+      if (marital === "married") {
+        return { title, body: T(locale, `${actor} souhaite marier son personnage à ${target}`, `${actor} wants to marry their character to ${target}`, `${actor} desea casar a su personaje con ${target}`) };
+      }
+      if (marital === "in_relationship") {
+        return { title, body: T(locale, `${actor} souhaite mettre son personnage en couple avec ${target}`, `${actor} wants their character in a relationship with ${target}`, `${actor} desea poner en pareja a su personaje con ${target}`) };
+      }
+      const typeName = typeof n.metadata?.type_name === "string" ? n.metadata.type_name : T(locale, "relation", "relation", "relación");
+      return { title, body: T(locale, `${actor} propose une relation « ${typeName} » à ${target}`, `${actor} proposes a “${typeName}” relation to ${target}`, `${actor} propone una relación «${typeName}» a ${target}`) };
     }
   }
 }
@@ -85,7 +92,7 @@ export function pushHref(n: Pick<PushNotifPayload, "chat_id" | "world_id">): str
   return null;
 }
 
-const PERSONA_TYPES = new Set<PushNotifPayload["type"]>(["persona_new_chatroom", "persona_reply", "marital_request"]);
+const PERSONA_TYPES = new Set<PushNotifPayload["type"]>(["persona_new_chatroom", "persona_reply", "relation_request"]);
 
 // Miroir de la logique de NotifAvatar/isPersonaNotif dans
 // components/notifications/index.tsx : pour les notifications "persona",

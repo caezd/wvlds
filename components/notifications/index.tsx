@@ -37,16 +37,13 @@ const NOTIF_ICONS: Record<NotificationType, React.ReactNode> = {
     chatroom_reply: <MessageSquare size={13} />,
     persona_new_chatroom: <Hash size={13} />,
     persona_reply: <MessageSquare size={13} />,
-    marital_request: <Heart size={13} />,
     relation_request: <Heart size={13} />,
 };
 
-// `marital_request` ne se produit plus (migration 173, remplacé par
-// `relation_request`) mais des notifications de ce type existent encore.
 const ALL_TYPES: NotificationType[] = ["mention", "reaction", "new_member", "new_chatroom", "chatroom_reply", "persona_new_chatroom", "persona_reply", "relation_request"];
-const WORLD_HEADER_TYPES: NotificationType[] = ["mention", "reaction", "new_chatroom", "persona_new_chatroom", "persona_reply", "marital_request", "relation_request"];
-const PERSONA_NOTIF_TYPES: NotificationType[] = ["persona_new_chatroom", "persona_reply", "marital_request", "relation_request"];
-const ACTIONABLE_TYPES: NotificationType[] = ["world_invite", "marital_request", "relation_request"];
+const WORLD_HEADER_TYPES: NotificationType[] = ["mention", "reaction", "new_chatroom", "persona_new_chatroom", "persona_reply", "relation_request"];
+const PERSONA_NOTIF_TYPES: NotificationType[] = ["persona_new_chatroom", "persona_reply", "relation_request"];
+const ACTIONABLE_TYPES: NotificationType[] = ["world_invite", "relation_request"];
 
 // ── WorldInviteCard ───────────────────────────────────────────────────────────
 
@@ -184,13 +181,13 @@ function WorldInviteCard({ notif, onMarkRead }: { notif: AppNotification; onMark
  *
  * L'état se relit dans `persona_relations` : la demande a pu être acceptée
  * depuis le canevas, retirée par son auteur, ou la relation rompue depuis.
- * Les anciennes notifications `marital_request` désignent une table qui n'est
- * plus alimentée : elles se présentent comme expirées.
+ * Les notifications d'avant la migration 175 n'ont pas de `relation_id` :
+ * elles se présentent comme expirées.
  */
 function RelationRequestCard({ notif, onMarkRead }: { notif: AppNotification; onMarkRead: (id: string) => void }) {
     const t = useTranslations("notifications");
     const tCommon = useTranslations("common");
-    const relationId = notif.type === "relation_request" ? (notif.metadata?.relation_id ?? null) : null;
+    const relationId = notif.metadata?.relation_id ?? null;
     const supabase = createClient();
     const [status, setStatus] = useState<"pending" | "accepted" | "declined" | "expired" | null>(null);
     const [acting, setActing] = useState(false);
@@ -302,7 +299,7 @@ function NotificationItem({ notif, actorAvatarUrl, worldInfo, onRead, onClose, o
 }) {
     const t = useTranslations("notifications");
     const isInvite = notif.type === "world_invite";
-    const isRelationRequest = notif.type === "marital_request" || notif.type === "relation_request";
+    const isRelationRequest = notif.type === "relation_request";
     const isActionable = ACTIONABLE_TYPES.includes(notif.type);
     const href = isActionable ? null : notifHref(notif);
     const isUnread = !notif.read_at;
@@ -407,8 +404,6 @@ export function NotificationInlinePanelContent() {
         chatroom_reply: t("prefs.chatroom_reply"),
         persona_new_chatroom: t("prefs.persona_new_chatroom"),
         persona_reply: t("prefs.persona_reply"),
-        // Plus émise (migration 173) : l'ancienne préférence garde le libellé de la nouvelle.
-        marital_request: t("prefs.relation_request"),
         relation_request: t("prefs.relation_request"),
     };
 

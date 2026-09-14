@@ -3,7 +3,7 @@ import { buildPushText, pushHref, resolvePushImage, type PushNotifPayload } from
 
 const ALL_TYPES: PushNotifPayload["type"][] = [
   "mention", "reaction", "new_member", "new_chatroom", "world_invite",
-  "chatroom_reply", "persona_new_chatroom", "persona_reply", "marital_request",
+  "chatroom_reply", "persona_new_chatroom", "persona_reply", "relation_request",
 ];
 
 const base: PushNotifPayload = {
@@ -52,10 +52,13 @@ describe("buildPushText", () => {
     expect(body).toContain("Alguien");
   });
 
-  it("distingue married vs relationship pour marital_request", () => {
-    const married = buildPushText({ ...base, type: "marital_request", content: "Bob", metadata: { requested_status: "married" } }, "fr");
-    const relationship = buildPushText({ ...base, type: "marital_request", content: "Bob", metadata: { requested_status: "relationship" } }, "fr");
-    expect(married.body).not.toBe(relationship.body);
+  it("relation_request : mariage, couple, ou le nom du type", () => {
+    const married = buildPushText({ ...base, type: "relation_request", content: "Bob", metadata: { marital_status: "married" } }, "fr");
+    const couple = buildPushText({ ...base, type: "relation_request", content: "Bob", metadata: { marital_status: "in_relationship" } }, "fr");
+    const ally = buildPushText({ ...base, type: "relation_request", content: "Bob", metadata: { marital_status: null, type_name: "Allié" } }, "fr");
+    expect(married.body).toContain("marier");
+    expect(couple.body).toContain("en couple");
+    expect(ally.body).toBe("Alice propose une relation « Allié » à Bob");
   });
 });
 
@@ -89,7 +92,7 @@ describe("resolvePushImage", () => {
   });
 
   it("renvoie null pour un type persona sans icon_url en metadata", () => {
-    expect(resolvePushImage({ ...base, type: "marital_request", metadata: null }, "https://ex.test/human.png")).toBeNull();
+    expect(resolvePushImage({ ...base, type: "relation_request", metadata: null }, "https://ex.test/human.png")).toBeNull();
   });
 
   it("détecte un chatroom_reply enrichi d'un persona via metadata.persona_name", () => {
