@@ -22,7 +22,7 @@ const AUTRE: CPersona = {
   user_id: "u2",
 };
 
-function relation(description: string | null): CRelation {
+function relation(description: string | null, status: CRelation["status"] = "accepted"): CRelation {
   return {
     id: "r1",
     from_persona_id: "p1",
@@ -30,6 +30,7 @@ function relation(description: string | null): CRelation {
     type: "ally",
     label: null,
     description,
+    status,
   };
 }
 
@@ -113,5 +114,35 @@ describe("RelationRow — description", () => {
 
     expect(onUpdateDesc).not.toHaveBeenCalled();
     expect(screen.getByRole("button", { name: /Amis/ })).toBeInTheDocument();
+  });
+
+  // ── En attente ──
+  // Une demande ne se modifie pas : sa description fait partie de ce que
+  // l'autre accepte. Le joueur visé répond ; le demandeur peut la retirer.
+
+  it("en attente, la description n'est plus une commande, même avec le droit d'édition", () => {
+    render(
+      <RelationRow rel={relation("Frères d'armes", "pending")} other={AUTRE} direction="→"
+        canEdit onDelete={vi.fn()} onUpdateDesc={vi.fn()} />,
+    );
+    expect(screen.getByText("En attente")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Frères d'armes" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Annuler la demande" })).toBeInTheDocument();
+  });
+
+  it("le joueur visé accepte ou refuse", async () => {
+    const user = userEvent.setup();
+    const onAccept = vi.fn();
+    const onDelete = vi.fn();
+    render(
+      <RelationRow rel={relation(null, "pending")} other={AUTRE} direction="←"
+        canEdit canRespond onDelete={onDelete} onAccept={onAccept} onUpdateDesc={vi.fn()} />,
+    );
+    await user.click(screen.getByRole("button", { name: "Accepter" }));
+    expect(onAccept).toHaveBeenCalledWith("r1");
+    await user.click(screen.getByRole("button", { name: "Refuser" }));
+    expect(onDelete).toHaveBeenCalledWith("r1");
+    // Pas de corbeille en double à côté des deux réponses.
+    expect(screen.queryByRole("button", { name: "Supprimer" })).toBeNull();
   });
 });

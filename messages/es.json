@@ -242,7 +242,8 @@
       "chatroom_reply": "Respuestas en mis salas",
       "persona_new_chatroom": "Nuevas salas de personas seguidas",
       "persona_reply": "Respuestas de personas seguidas",
-      "marital_request": "Solicitudes de relación entre personas"
+      "marital_request": "Solicitudes de relación entre personas",
+      "relation_request": "Solicitudes de relación entre personas"
     },
     "text": {
       "someone": "Alguien",
@@ -263,7 +264,9 @@
       "personaReplyMany": "<b>{actor}</b> respondió <b>{count}</b> veces en <b>{chatroom}</b>",
       "personaReplyManyNoContent": "<b>{actor}</b> respondió <b>{count}</b> veces",
       "maritalRequestMarried": "<b>{actor}</b> quiere casar a su personaje con <b>{target}</b>",
-      "maritalRequestRelationship": "<b>{actor}</b> quiere poner a su personaje en pareja con <b>{target}</b>"
+      "maritalRequestRelationship": "<b>{actor}</b> quiere poner a su personaje en pareja con <b>{target}</b>",
+      "relationRequest": "<b>{actor}</b> propone una relación «{type}» a <b>{target}</b>",
+      "relationFallback": "relación"
     },
     "back": "Volver"
   },
@@ -649,7 +652,8 @@
       "spousePlaceholder": "Elegir un personaje de este mundo",
       "spouseNone": "Ninguno",
       "pendingRequest": "Esperando confirmación de {name}",
-      "cancelRequest": "Cancelar"
+      "cancelRequest": "Cancelar",
+      "noMaritalType": "Este mundo no tiene un tipo de relación para este estado: pida a un administrador que defina uno en los ajustes."
     },
     "editAvatar": "Editar el avatar",
     "editBanner": "Editar el banner",
@@ -694,7 +698,21 @@
     "sectionDeleteDescription": "Esta sección y todos sus campos se eliminarán definitivamente.",
     "fieldDeleteDescription": "Este campo y todas sus imágenes alojadas se eliminarán definitivamente.",
     "sectionOptions": "Opciones de la sección",
-    "deleteField": "Eliminar el campo"
+    "deleteField": "Eliminar el campo",
+    "relations": {
+      "tab": "Relaciones",
+      "out": "Lo que piensa de los demás",
+      "in": "Lo que piensan de él",
+      "openCanvas": "Ver en el lienzo",
+      "breakRelation": "Romper",
+      "pending": "Pendiente",
+      "accept": "Aceptar",
+      "decline": "Rechazar",
+      "cancelRequest": "Cancelar la solicitud",
+      "accepted": "Relación aceptada",
+      "unknownType": "Tipo desconocido",
+      "empty": "Sin relaciones"
+    }
   },
   "quests": {
     "title": "Misiones del día",
@@ -1099,16 +1117,11 @@
     "noTypesDefined": "Ningún tipo definido",
     "groupNamePlaceholder": "Nombre del grupo…",
     "typeNamePlaceholder": "Nombre del tipo…",
-    "linkModeActive": "Modo enlace activo",
-    "createLink": "Crear un enlace",
-    "clickAnotherCard": "Haga clic en otra carta para crear un enlace",
     "relTypeLabel": "Tipo de relación",
     "noTypesHint": "Ningún tipo definido. Abre los ajustes para crear uno.",
     "descPlaceholder": "Descripción (opcional, markdown)…",
     "noGroup": "Sin grupo",
     "resetView": "Restablecer vista",
-    "footerHintConnect": "Haga clic en una carta → haga clic en otra para crear un enlace",
-    "footerHintView": "Haga clic en una carta para ver sus relaciones",
     "noRelations": "Sin relaciones",
     "noPersonas": "No hay personas que mostrar.",
     "searchPlaceholder": "Buscar…",
@@ -1134,7 +1147,33 @@
     },
     "changeGroup": "Cambiar el grupo",
     "addGroup": "Añadir este grupo",
-    "addRelType": "Añadir este tipo de relación"
+    "addRelType": "Añadir este tipo de relación",
+    "pending": "Pendiente",
+    "accept": "Aceptar",
+    "decline": "Rechazar",
+    "cancelRequest": "Cancelar la solicitud",
+    "relRequested": "Solicitud «{name}» enviada, a la espera del otro jugador",
+    "relAccepted": "Relación aceptada",
+    "mutual": "Recíproca",
+    "mutualHint": "La relación espera la aprobación del otro jugador y luego existe en ambos sentidos.",
+    "maritalLink": "Estado civil vinculado",
+    "maritalNone": "Sin efecto sobre el estado civil",
+    "maritalInRelationship": "En pareja",
+    "maritalMarried": "Casado/a",
+    "maritalUndeletable": "Este tipo sostiene el estado civil de las fichas: no se puede eliminar.",
+    "pendingCount": "{count, plural, one {# solicitud pendiente} other {# solicitudes pendientes}}",
+    "relationCount": "{count, plural, one {# relación} other {# relaciones}}",
+    "editRelation": "Modificar la relación",
+    "newRelation": "Nueva relación desde {name}",
+    "changeTarget": "Cambiar",
+    "typeLockedHint": "El tipo de una relación recíproca no se cambia: el otro jugador aceptó este. Rómpala y proponga otra.",
+    "willBeRequest": "Este tipo es recíproco: {name} tendrá que aceptar antes de que la relación exista.",
+    "sendRequest": "Enviar la solicitud",
+    "showType": "Mostrar las relaciones «{name}»",
+    "hideType": "Ocultar las relaciones «{name}»",
+    "showGroup": "Mostrar el grupo «{name}»",
+    "hideGroup": "Ocultar el grupo «{name}»",
+    "showAll": "Mostrar todo"
   },
   "wiki": {
     "changeIcon": "Cambiar icono",

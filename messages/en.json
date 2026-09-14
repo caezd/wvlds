@@ -242,7 +242,8 @@
       "chatroom_reply": "Replies in my chatrooms",
       "persona_new_chatroom": "New chatrooms from followed personas",
       "persona_reply": "Replies from followed personas",
-      "marital_request": "Relationship requests between personas"
+      "marital_request": "Relationship requests between personas",
+      "relation_request": "Relation requests between personas"
     },
     "text": {
       "someone": "Someone",
@@ -263,7 +264,9 @@
       "personaReplyMany": "<b>{actor}</b> replied <b>{count}</b> times in <b>{chatroom}</b>",
       "personaReplyManyNoContent": "<b>{actor}</b> replied <b>{count}</b> times",
       "maritalRequestMarried": "<b>{actor}</b> wants to marry their character to <b>{target}</b>",
-      "maritalRequestRelationship": "<b>{actor}</b> wants to put their character in a relationship with <b>{target}</b>"
+      "maritalRequestRelationship": "<b>{actor}</b> wants to put their character in a relationship with <b>{target}</b>",
+      "relationRequest": "<b>{actor}</b> proposes a “{type}” relation to <b>{target}</b>",
+      "relationFallback": "relation"
     },
     "back": "Back"
   },
@@ -650,7 +653,8 @@
       "spousePlaceholder": "Choose a persona from this world",
       "spouseNone": "None",
       "pendingRequest": "Awaiting confirmation from {name}",
-      "cancelRequest": "Cancel"
+      "cancelRequest": "Cancel",
+      "noMaritalType": "This world has no relation type for this status: ask an administrator to define one in the settings."
     },
     "editAvatar": "Edit avatar",
     "editBanner": "Edit banner",
@@ -694,7 +698,21 @@
     "sectionDeleteDescription": "This section and all its fields will be permanently deleted.",
     "fieldDeleteDescription": "This field and all its hosted images will be permanently deleted.",
     "sectionOptions": "Section options",
-    "deleteField": "Delete the field"
+    "deleteField": "Delete the field",
+    "relations": {
+      "tab": "Relations",
+      "out": "How they see others",
+      "in": "How others see them",
+      "openCanvas": "See on the canvas",
+      "breakRelation": "End the relation",
+      "pending": "Pending",
+      "accept": "Accept",
+      "decline": "Decline",
+      "cancelRequest": "Cancel the request",
+      "accepted": "Relation accepted",
+      "unknownType": "Unknown type",
+      "empty": "No relation"
+    }
   },
   "quests": {
     "title": "Daily quests",
@@ -1099,16 +1117,11 @@
     "noTypesDefined": "No types defined",
     "groupNamePlaceholder": "Group name…",
     "typeNamePlaceholder": "Type name…",
-    "linkModeActive": "Link mode active",
-    "createLink": "Create a link",
-    "clickAnotherCard": "Click another card to create a link",
     "relTypeLabel": "Relation type",
     "noTypesHint": "No types defined. Open settings to create one.",
     "descPlaceholder": "Description (optional, markdown)…",
     "noGroup": "No group",
     "resetView": "Reset view",
-    "footerHintConnect": "Click a card → click another to create a link",
-    "footerHintView": "Click a card to see its relations",
     "noRelations": "No relations",
     "noPersonas": "No personas to show.",
     "searchPlaceholder": "Search…",
@@ -1134,7 +1147,33 @@
     },
     "changeGroup": "Change the group",
     "addGroup": "Add this group",
-    "addRelType": "Add this relation type"
+    "addRelType": "Add this relation type",
+    "pending": "Pending",
+    "accept": "Accept",
+    "decline": "Decline",
+    "cancelRequest": "Cancel the request",
+    "relRequested": "“{name}” requested — waiting for the other player",
+    "relAccepted": "Relation accepted",
+    "mutual": "Mutual",
+    "mutualHint": "The relation waits for the other player’s approval, then exists both ways.",
+    "maritalLink": "Linked marital status",
+    "maritalNone": "No effect on marital status",
+    "maritalInRelationship": "In a relationship",
+    "maritalMarried": "Married",
+    "maritalUndeletable": "This type backs the marital status on persona sheets: it cannot be deleted.",
+    "pendingCount": "{count, plural, one {# pending request} other {# pending requests}}",
+    "relationCount": "{count, plural, one {# relation} other {# relations}}",
+    "editRelation": "Edit the relation",
+    "newRelation": "New relation from {name}",
+    "changeTarget": "Change",
+    "typeLockedHint": "The type of a mutual relation cannot change: the other player agreed to this one. End it and propose another.",
+    "willBeRequest": "This type is mutual: {name} will have to accept before the relation exists.",
+    "sendRequest": "Send the request",
+    "showType": "Show “{name}” relations",
+    "hideType": "Hide “{name}” relations",
+    "showGroup": "Show the “{name}” group",
+    "hideGroup": "Hide the “{name}” group",
+    "showAll": "Show all"
   },
   "wiki": {
     "changeIcon": "Change icon",

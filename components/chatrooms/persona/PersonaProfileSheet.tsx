@@ -26,6 +26,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { getUsablePersonaIds } from "@/lib/personaEligibility";
 import { indexCatalog } from "@/lib/worldCatalog";
 import { InventoryFieldView, SkillsFieldView } from "@/components/personas/fields/CatalogFieldViews";
+import { PersonaRelationsSection } from "@/components/personas/PersonaRelationsSection";
 import type { WorldCatalogItem } from "@/types/worlds";
 import { useTranslations } from "next-intl";
 import { Lock } from "lucide-react";
@@ -217,6 +218,7 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
    * l'ignorance ne s'affiche pas comme une certitude.
    */
   const [catalog, setCatalog] = useState<Map<string, WorldCatalogItem> | undefined>(undefined);
+  const [worldId, setWorldId] = useState<string | null>(null);
 
   const [ownerPresence, setOwnerPresence] = useState<{
     last_seen_at: string | null;
@@ -232,6 +234,7 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
       setFrameUrl(null);
       setUsableForSelf(true);
       setCatalog(undefined);
+      setWorldId(null);
       return;
     }
 
@@ -307,6 +310,7 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
 
       if (cancelled) return;
       setCatalog(catalogById);
+      setWorldId(worldId);
       const row = personaRow as unknown as { banner_url?: string | null; frame?: { asset_url?: string | null } | null } | null;
       setBannerUrl(row?.banner_url ?? null);
       setFrameUrl(row?.frame?.asset_url ?? null);
@@ -430,11 +434,11 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
               )}
             </div>
 
-            {/* -- Sections -- */}
-            {sections.length > 0 && (
+            {/* -- Sections, puis les relations -- */}
+            {(sections.length > 0 || worldId) && (
               <div className="flex-1">
                 <Tabs
-                  value={activeTab ?? sections[0].id}
+                  value={activeTab ?? sections[0]?.id ?? "__relations__"}
                   onValueChange={setActiveTab}
                 >
                   <TabBar listClassName="px-5">
@@ -443,6 +447,9 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
                           {s.name}
                         </TabBarTrigger>
                       ))}
+                      {worldId && (
+                        <TabBarTrigger value="__relations__">{t("relations.tab")}</TabBarTrigger>
+                      )}
                   </TabBar>
 
                   {sections.map((s) => (
@@ -463,6 +470,11 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
                       )}
                     </TabsContent>
                   ))}
+                  {worldId && (
+                    <TabsContent value="__relations__" className="px-5 py-4">
+                      <PersonaRelationsSection personaId={persona.id} worldId={worldId} ownerId={persona.user_id} selfId={selfId} />
+                    </TabsContent>
+                  )}
                 </Tabs>
               </div>
             )}

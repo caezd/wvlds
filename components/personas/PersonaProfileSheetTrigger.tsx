@@ -28,6 +28,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { formatLastSeen, cn } from "@/lib/utils";
 import { ImageGridView } from "@/components/personas/ImageGridView";
 import { InventoryFieldView, SkillsFieldView } from "@/components/personas/fields/CatalogFieldViews";
+import { PersonaRelationsSection } from "@/components/personas/PersonaRelationsSection";
 import { indexCatalog } from "@/lib/worldCatalog";
 import type { WorldCatalogItem } from "@/types/worlds";
 import { TABLE } from "@/lib/constants";
@@ -221,6 +222,8 @@ export type PersonaProfileBodyProps = {
   activeTab: string | null;
   onActiveTabChange: (id: string) => void;
   loading: boolean;
+  /** Un onglet de plus, après les sections de la fiche — les relations. */
+  extraTab?: { id: string; label: string; content: React.ReactNode };
   /** Contenu additionnel superposé au coin de la bannière (ex. le bouton
    *  Aperçu/Éditer de PersonaEditSheet.tsx) — rendu après le contenu de la
    *  bannière pour rester visible par-dessus. */
@@ -250,9 +253,14 @@ export function PersonaProfileBody({
   activeTab,
   onActiveTabChange,
   loading,
+  extraTab,
   headerAction,
 }: PersonaProfileBodyProps) {
   const tCommon = useTranslations("common");
+  const tabs: { id: string; name: string }[] = [
+    ...sections.map((s) => ({ id: s.id, name: s.name })),
+    ...(extraTab ? [{ id: extraTab.id, name: extraTab.label }] : []),
+  ];
 
   return (
     <div>
@@ -354,14 +362,14 @@ export function PersonaProfileBody({
 
       {/* -- Sections (read-only) -- */}
       <div className="space-y-4">
-        {sections.length > 0 ? (
+        {tabs.length > 0 ? (
           <Tabs
-            value={activeTab ?? sections[0].id}
+            value={activeTab ?? tabs[0].id}
             onValueChange={onActiveTabChange}
             className="space-y-4"
           >
             <TabBar>
-              {sections.map((s) => (
+              {tabs.map((s) => (
                 <TabBarTrigger key={s.id} value={s.id}>
                   {s.name}
                 </TabBarTrigger>
@@ -384,6 +392,11 @@ export function PersonaProfileBody({
                 )}
               </TabsContent>
             ))}
+            {extraTab && (
+              <TabsContent value={extraTab.id} className="px-6 space-y-4">
+                {extraTab.content}
+              </TabsContent>
+            )}
           </Tabs>
         ) : !loading ? null : (
           <div className="px-6 space-y-2">
@@ -415,6 +428,7 @@ export function PersonaProfileSheetTrigger({
   const supabase = React.useMemo(() => createClient(), []);
   const { getUserPresence } = useGlobalPresence();
   const { userId: viewerId } = useCurrentUser();
+  const tRelations = useTranslations("personas.relations");
   const [open, setOpen] = React.useState(false);
 
   const [name, setName] = React.useState<string | null>(label ?? null);
@@ -428,6 +442,7 @@ export function PersonaProfileSheetTrigger({
   } | null>(null);
   const [sections, setSections] = React.useState<PersonaSectionWithFields[]>([]);
   const [catalog, setCatalog] = React.useState<Map<string, WorldCatalogItem> | undefined>(undefined);
+  const [worldId, setWorldId] = React.useState<string | null>(null);
   const [activeTab, setActiveTab] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [isFollowing, setIsFollowing] = React.useState<boolean | null>(null);
@@ -460,6 +475,7 @@ export function PersonaProfileSheetTrigger({
         setBannerUrl(row.banner_url ?? null);
         setDialogueColor(row.dialogue_color ?? null);
         setFrameUrl(row.frame?.asset_url ?? null);
+        setWorldId(row.world_id ?? null);
 
         // Le catalogue VIVANT du monde : sans lui, l'inventaire s'afficherait
         // sous les noms copiés dans la fiche au moment de l'ajout. Les lignes
@@ -613,6 +629,11 @@ export function PersonaProfileSheetTrigger({
             activeTab={activeTab}
             onActiveTabChange={setActiveTab}
             loading={loading}
+            extraTab={personaId && worldId && userId ? {
+              id: "__relations__",
+              label: tRelations("tab"),
+              content: <PersonaRelationsSection personaId={personaId} worldId={worldId} ownerId={userId} selfId={viewerId ?? null} />,
+            } : undefined}
           />
         </div>
       </SideSheetContent>

@@ -86,6 +86,8 @@ const FR_NOTIF: Record<string, string> = {
     "text.chatroomReplySingleNoContent": "{actor} a répondu dans une chatroom",
     "text.maritalRequestMarried": "{actor} souhaite marier son personnage à {target}",
     "text.maritalRequestRelationship": "{actor} souhaite mettre son personnage en couple avec {target}",
+    "text.relationRequest": "{actor} propose une relation « {type} » à {target}",
+    "text.relationFallback": "relation",
 };
 
 function interpolate(tmpl: string, params: Record<string, unknown>): string {
@@ -185,6 +187,26 @@ describe("notifText", () => {
         expect(textOf(notifText(makeNotif({
             type: "marital_request", actor_name: "alice", content: "Yuki", metadata: { requested_status: "in_relationship" },
         }), mockNotifT))).toBe("alice souhaite mettre son personnage en couple avec Yuki");
+    });
+
+    // Depuis la migration 173, une demande de relation nomme son type ; un
+    // type marital garde la phrase du mariage.
+    it("relation_request → nomme le type", () => {
+        expect(textOf(notifText(makeNotif({
+            type: "relation_request", actor_name: "alice", content: "Yuki", metadata: { type_name: "Allié", marital_status: null },
+        }), mockNotifT))).toBe("alice propose une relation « Allié » à Yuki");
+    });
+
+    it("relation_request d'un type marital → texte mariage", () => {
+        expect(textOf(notifText(makeNotif({
+            type: "relation_request", actor_name: "alice", content: "Yuki", metadata: { type_name: "Marié·e", marital_status: "married" },
+        }), mockNotifT))).toBe("alice souhaite marier son personnage à Yuki");
+    });
+
+    it("relation_request sans nom de type → repli", () => {
+        expect(textOf(notifText(makeNotif({
+            type: "relation_request", actor_name: "alice", content: "Yuki", metadata: {},
+        }), mockNotifT))).toBe("alice propose une relation « relation » à Yuki");
     });
 });
 

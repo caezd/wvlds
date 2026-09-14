@@ -11,7 +11,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { HsvColorPicker } from "@/components/ui/hsv-color-picker";
 
 type RelationGroup = { id: string; name: string; color: string; sort_index: number };
-type RelationType = { id: string; name: string; color: string; dash: string; sort_index: number };
+import type { RelationMaritalStatus, WorldRelationType as RelationType } from "@/types/relations";
+
+const RT_COLUMNS = "id, world_id, name, color, dash, sort_index, mutual, marital_status";
 
 type DashOption = { label: string; value: string };
 function getDashOptions(t: ReturnType<typeof useTranslations<"relations">>): DashOption[] {
@@ -71,7 +73,7 @@ export function WorldRelationsSettings({ worldId }: { worldId: string }) {
     void (async () => {
       const [{ data: gRows }, { data: rtRows }] = await Promise.all([
         supabase.from("world_persona_groups").select("id, name, color, sort_index").eq("world_id", worldId).order("sort_index"),
-        supabase.from("world_relation_types").select("id, name, color, dash, sort_index").eq("world_id", worldId).order("sort_index"),
+        supabase.from("world_relation_types").select(RT_COLUMNS).eq("world_id", worldId).order("sort_index"),
       ]);
       setGroups((gRows ?? []) as RelationGroup[]);
       setRelTypes((rtRows ?? []) as RelationType[]);
@@ -92,12 +94,15 @@ export function WorldRelationsSettings({ worldId }: { worldId: string }) {
   const [rtName, setRtName] = React.useState("");
   const [rtColor, setRtColor] = React.useState("#22c55e");
   const [rtDash, setRtDash] = React.useState("");
+  const [rtMutual, setRtMutual] = React.useState(false);
 
   // Editing relation type
   const [editRtId, setEditRtId] = React.useState<string | null>(null);
   const [editRtName, setEditRtName] = React.useState("");
   const [editRtColor, setEditRtColor] = React.useState("");
   const [editRtDash, setEditRtDash] = React.useState("");
+  const [editRtMutual, setEditRtMutual] = React.useState(false);
+  const [editRtMarital, setEditRtMarital] = React.useState<RelationMaritalStatus | null>(null);
 
   // ── Groups ──────────────────────────────────────────────────────────────────
 
@@ -144,14 +149,15 @@ export function WorldRelationsSettings({ worldId }: { worldId: string }) {
     if (!rtName.trim()) return;
     const { data, error } = await supabase
       .from("world_relation_types")
-      .insert({ world_id: worldId, name: rtName.trim(), color: rtColor, dash: rtDash, sort_index: relTypes.length })
-      .select("id, name, color, dash, sort_index")
+      .insert({ world_id: worldId, name: rtName.trim(), color: rtColor, dash: rtDash, sort_index: relTypes.length, mutual: rtMutual })
+      .select(RT_COLUMNS)
       .single();
     if (error) { toast.error(error.message); return; }
     setRelTypes([...relTypes, data as RelationType]);
     setRtName("");
     setRtColor("#22c55e");
     setRtDash("");
+    setRtMutual(false);
   }
 
   async function deleteRelType(id: string) {
@@ -165,18 +171,21 @@ export function WorldRelationsSettings({ worldId }: { worldId: string }) {
     setEditRtName(t.name);
     setEditRtColor(t.color);
     setEditRtDash(t.dash);
+    setEditRtMutual(t.mutual);
+    setEditRtMarital(t.marital_status);
   }
 
   async function saveEditRt() {
     if (!editRtId) return;
+    // Un type marital est forcément réciproque (contrainte de la migration 173).
+    const mutual = editRtMutual || editRtMarital !== null;
+    const patch = { name: editRtName.trim(), color: editRtColor, dash: editRtDash, mutual, marital_status: editRtMarital };
     const { error } = await supabase
       .from("world_relation_types")
-      .update({ name: editRtName.trim(), color: editRtColor, dash: editRtDash })
+      .update(patch)
       .eq("id", editRtId);
     if (error) { toast.error(error.message); return; }
-    setRelTypes((prev) => prev.map((t) =>
-      t.id === editRtId ? { ...t, name: editRtName.trim(), color: editRtColor, dash: editRtDash } : t
-    ));
+    setRelTypes((prev) => prev.map((t) => (t.id === editRtId ? { ...t, ...patch } : t)));
     setEditRtId(null);
   }
 
@@ -253,6 +262,20 @@ export function WorldRelationsSettings({ worldId }: { worldId: string }) {
                     <option key={o.value} value={o.value}>{o.label}</option>
                   ))}
                 </select>
+                {/* Réciproque : la relation attend l'accord de l'autre joueur et
+                    existe dans les deux sens. Un type marital l'est d'office. */}
+                <label className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                  <input type="checkbox" checked={editRtMutual || editRtMarital !== null} disabled={editRtMarital !== null}
+                    onChange={(e) => setEditRtMutual(e.target.checked)} className="accent-primary" />
+                  {t("mutual")}
+                </label>
+                <select value={editRtMarital ?? ""} aria-label={t("maritalLink")}
+                  onChange={(e) => setEditRtMarital((e.target.value || null) as RelationMaritalStatus | null)}
+                  className="h-7 rounded-md border border-border bg-background px-2 text-[11px] outline-none focus:ring-1 focus:ring-ring">
+                  <option value="">{t("maritalNone")}</option>
+                  <option value="in_relationship">{t("maritalInRelationship")}</option>
+                  <option value="married">{t("maritalMarried")}</option>
+                </select>
                 <button onClick={() => void saveEditRt()} className="text-xs font-medium text-primary hover:underline">OK</button>
                 <button onClick={() => setEditRtId(null)} className="text-muted-foreground hover:text-foreground" aria-label={tCommon("cancel")}><X className="h-3 w-3" /></button>
               </div>
@@ -262,8 +285,17 @@ export function WorldRelationsSettings({ worldId }: { worldId: string }) {
                   <line x1="0" y1="4" x2="24" y2="4" stroke={rt.color} strokeWidth={1.5} strokeDasharray={rt.dash || undefined} />
                 </svg>
                 <span className="flex-1 text-[13px] font-medium">{rt.name}</span>
+                {rt.mutual && (
+                  <span className="rounded-full border border-border-soft px-1.5 text-[9px] font-medium uppercase tracking-wider text-muted-foreground" title={t("mutualHint")}>
+                    {rt.marital_status === "married" ? t("maritalMarried") : rt.marital_status === "in_relationship" ? t("maritalInRelationship") : t("mutual")}
+                  </span>
+                )}
                 <button onClick={() => startEditRt(rt)} className="text-[11px] text-muted-foreground hover:text-foreground">{tCommon("edit")}</button>
-                <button onClick={() => void deleteRelType(rt.id)} className="text-muted-foreground hover:text-destructive" aria-label={tCommon("delete")}>
+                {/* Le type marital d'un monde ne se supprime pas : c'est lui
+                    que la fiche choisit quand on désigne un·e conjoint·e. */}
+                <button onClick={() => void deleteRelType(rt.id)} disabled={rt.marital_status !== null}
+                  title={rt.marital_status !== null ? t("maritalUndeletable") : undefined}
+                  className="text-muted-foreground hover:text-destructive disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:text-muted-foreground" aria-label={tCommon("delete")}>
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
               </div>
@@ -281,6 +313,10 @@ export function WorldRelationsSettings({ worldId }: { worldId: string }) {
               <option key={o.value} value={o.value}>{o.label}</option>
             ))}
           </select>
+          <label className="flex items-center gap-1 text-[11px] text-muted-foreground" title={t("mutualHint")}>
+            <input type="checkbox" checked={rtMutual} onChange={(e) => setRtMutual(e.target.checked)} className="accent-primary" />
+            {t("mutual")}
+          </label>
           <Button size="icon" className="h-8 w-8 shrink-0" onClick={() => void addRelType()} aria-label={t("addRelType")}>
             <Plus className="h-3.5 w-3.5" />
           </Button>

@@ -175,7 +175,7 @@ export type AllChatroomUnreadRow = {
 
 // --- Notifications -----------------------------------------------------------
 
-export type NotificationType = 'mention' | 'reaction' | 'new_member' | 'new_chatroom' | 'world_invite' | 'chatroom_reply' | 'persona_new_chatroom' | 'persona_reply' | 'marital_request';
+export type NotificationType = 'mention' | 'reaction' | 'new_member' | 'new_chatroom' | 'world_invite' | 'chatroom_reply' | 'persona_new_chatroom' | 'persona_reply' | 'marital_request' | 'relation_request';
 
 export type WorldInvitation = {
   id: string;
@@ -205,6 +205,10 @@ export type NotificationMeta = {
   requested_status?: 'in_relationship' | 'married';
   request_id?: string;
   target_persona_id?: string;
+  /** Demande de relation (migration 173) : la relation en attente, et son type. */
+  relation_id?: string;
+  type_name?: string | null;
+  marital_status?: 'in_relationship' | 'married' | null;
 };
 
 export type AppNotification = {
