@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-09 ──────────────────────────────────────────────────────────────
   {
     date: "2026-09",
+    tag: "Correctif",
+    text: "Au retour sur l’application après un moment en arrière-plan, la connexion temps réel est rouverte à neuf : le statut en ligne des membres, les messages et les notifications repartent aussitôt.",
+  },
+  {
+    date: "2026-09",
     tag: "Relations",
     text: "Une relation se crée dans un dialogue — de qui, vers qui, quel type, une description — plus besoin du mode « lien » à deux clics. Le type et la description se modifient sur place, et une demande en attente se voit en pointillé.",
   },

@@ -182,6 +182,13 @@ export function createSupabaseMock(opts: {
     data: { subscription: { unsubscribe: vi.fn() } },
   }));
 
+  // Socket Realtime : `useReconnectEpoch` la referme avant de recréer les
+  // canaux. Fermée d'emblée, comme après un `disconnect()` abouti.
+  const realtime = {
+    disconnect: vi.fn(() => Promise.resolve("ok")),
+    connectionState: vi.fn(() => "closed"),
+  };
+
   const client = {
     auth: {
       getUser: vi
@@ -194,6 +201,7 @@ export function createSupabaseMock(opts: {
     rpc,
     channel,
     removeChannel,
+    realtime,
     storage: {
       from: vi.fn((bucket: string) => ({
         remove: storageRemove,
@@ -212,6 +220,7 @@ export function createSupabaseMock(opts: {
     rpc,
     channel,
     removeChannel,
+    realtime,
     onAuthStateChange,
     storageRemove,
     storageUpload,
