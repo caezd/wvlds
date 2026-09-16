@@ -639,15 +639,18 @@ export function WikiPageContent({
 
     setImageEnEnvoi(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { toast.error(tCommon("uploadImageError")); return; }
-
+      // Pas de `auth.getUser()` préalable : l'envoi est déjà authentifié par
+      // le jeton du client, et le bucket refuse de lui-même un appelant sans
+      // droit. Cet appel passait par le verrou de session de supabase-js
+      // (navigator.locks), qu'un autre onglet peut retenir sous Firefox —
+      // l'envoi n'en partait alors jamais.
       const converti = await toWebP(fichier);
       const chemin = wikiImagePath(worldId, page.id, "image/webp");
       const { error } = await supabase.storage
         .from(WIKI_BUCKET)
         .upload(chemin, converti, { contentType: "image/webp" });
-      if (error) { toast.error(error.message); return; }
+      // Pas `error.message` : le stockage renvoie le texte brut de la policy.
+      if (error) { console.error("[WikiPageContent]", error); toast.error(tCommon("uploadImageError")); return; }
 
       const { data } = supabase.storage.from(WIKI_BUCKET).getPublicUrl(chemin);
       const balise = `![](${data.publicUrl})`;
@@ -776,15 +779,13 @@ export function WikiPageContent({
     if (!banniereACadrer) return;
     setBannerUploading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { toast.error(tCommon("uploadImageError")); return; }
-
+      // Même règle que `insererImage` : pas de `auth.getUser()` avant l'envoi.
       const converti = await cropToWebP(banniereACadrer, zone, "wiki-banner");
       const chemin = wikiImagePath(worldId, page.id, "image/webp");
       const { error } = await supabase.storage
         .from(WIKI_BUCKET)
         .upload(chemin, converti, { contentType: "image/webp" });
-      if (error) { toast.error(error.message); return; }
+      if (error) { console.error("[WikiPageContent]", error); toast.error(tCommon("uploadImageError")); return; }
 
       const { data } = supabase.storage.from(WIKI_BUCKET).getPublicUrl(chemin);
       await enregistrerChamp({ banner_url: data.publicUrl });

@@ -85,6 +85,22 @@ describe("ChatroomSettingsSheet — icône via le sélecteur avec recadrage", ()
       expect(builders.at(-1)?.update).toHaveBeenCalledWith({ icon_url: expect.stringContaining("chatroom-c1/icon.webp") });
     });
   });
+
+  it("téléverse sans consulter la session au préalable", async () => {
+    // Sous Firefox, `auth.getUser()` attend le verrou de session de
+    // supabase-js (navigator.locks) qu'un autre onglet peut retenir : l'envoi
+    // qui le précédait ne partait alors jamais. Le jeton du client suffit —
+    // le bucket refuse de lui-même un appelant sans droit.
+    const mock = setup([{ data: null, error: null }]);
+    mock.client.auth.getUser.mockReturnValue(new Promise(() => {}));
+    const user = userEvent.setup();
+    render(<ChatroomSettingsSheet canEdit chatroom={CHATROOM} open hideTrigger />);
+
+    await user.click(screen.getByText("Choisir une image"));
+
+    await waitFor(() => expect(mock.storageUpload).toHaveBeenCalledTimes(1));
+    expect(mock.client.auth.getUser).not.toHaveBeenCalled();
+  });
 });
 
 describe("ChatroomSettingsSheet — confirmation par toast des modifications", () => {

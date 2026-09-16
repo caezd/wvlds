@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Correctif",
+    text: "Sous Firefox, avec l’application ouverte dans plusieurs onglets, l’envoi d’une image (icône ou bannière d’un monde, d’une salle ou d’un persona, image de carte ou de lieu, bannière de page d’accueil, image du wiki, capture d’un signalement) pouvait ne jamais partir. Il ne dépend plus de la vérification de session qu’un autre onglet pouvait bloquer ; la création d’un monde non plus.",
+  },
+  {
+    date: "2026-09",
+    tag: "Correctif",
     text: "Au retour sur l’application après un moment en arrière-plan, la connexion temps réel est rouverte à neuf : le statut en ligne des membres, les messages et les notifications repartent aussitôt.",
   },
   {

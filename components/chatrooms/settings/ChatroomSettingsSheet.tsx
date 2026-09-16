@@ -159,8 +159,11 @@ export default function ChatroomSettingsSheet({
   // ---------- upload ----------
 
   async function uploadToChatrooms(file: File, kind: "icon" | "banner") {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error(t("settingsErrorNotConnected"));
+    // Pas de `auth.getUser()` préalable : l'envoi est déjà authentifié par le
+    // jeton du client, et le bucket refuse de lui-même un appelant sans droit.
+    // Cet appel passait par le verrou de session de supabase-js
+    // (navigator.locks), qu'un autre onglet peut retenir sous Firefox —
+    // l'envoi n'en partait alors jamais.
     if (file.size > 5 * 1024 * 1024) throw new Error(t("settingsErrorTooLarge"));
 
     const converted = await toWebP(file);

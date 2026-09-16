@@ -63,7 +63,6 @@ import type { Point } from "./zoom";
 import { isWithinTimeline } from "@/lib/worldTimeline";
 import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
 import type { PendingPin, PinRoom, WikiPageOption } from "./types";
-import { ERR_NON_AUTHENTIFIE } from "@/lib/actionErrors";
 
 /** Cartes et épingles résolues côté serveur, quand l'onglet est ouvert d'emblée. */
 export type InitialWorldMap = {
@@ -671,11 +670,11 @@ export function WorldMap({
     }
     setUploadingMap(true);
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) throw new Error(ERR_NON_AUTHENTIFIE);
-
+      // Pas de `auth.getUser()` préalable : l'envoi est déjà authentifié par
+      // le jeton du client, et le bucket refuse de lui-même un appelant sans
+      // droit. Cet appel passait par le verrou de session de supabase-js
+      // (navigator.locks), qu'un autre onglet peut retenir sous Firefox —
+      // l'envoi n'en partait alors jamais.
       const converted = await toWebP(file, 4096);
 
       // La carte d'abord, l'image ensuite : le fichier est rangé sous le

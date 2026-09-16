@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/lib/supabase/client";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useTranslations } from "next-intl";
 
 export function CreateWorldDialog({
@@ -34,20 +35,23 @@ export function CreateWorldDialog({
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
+  // Pas un envoi de fichier, mais même verrou : `auth.getUser()` passait par
+  // le verrou de session de supabase-js (navigator.locks), qu'un autre onglet
+  // peut retenir sous Firefox — la création ne partait alors jamais. L'id
+  // vient du contexte ; la policy d'insertion vérifie de toute façon que
+  // `owner_id` est bien l'appelant.
+  const { userId } = useCurrentUser();
 
   function handleCreate(formData: FormData) {
     const name = String(formData.get("name") || "").trim();
     const description = String(formData.get("description") || "").trim();
-    if (!name) return;
+    if (!name || !userId) return;
 
     startTransition(async () => {
       const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
       const { data, error } = await supabase
         .from("worlds")
-        .insert({ owner_id: user.id, name, description })
+        .insert({ owner_id: userId, name, description })
         .select("id")
         .single();
 

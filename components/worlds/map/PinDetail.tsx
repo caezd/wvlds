@@ -29,7 +29,6 @@ import { cn } from "@/lib/utils";
 import { PinVisualDialog } from "./PinVisualDialog";
 import { PinLinkGraph } from "./PinLinkGraph";
 import type { PinRoom, WikiPageOption } from "./types";
-import { ERR_NON_AUTHENTIFIE } from "@/lib/actionErrors";
 
 // Panneau flottant (position: fixed), ancré sur l'épingle et non sur le clic :
 // `WorldMap` le suit pendant les déplacements de la carte.
@@ -221,11 +220,11 @@ export function PinDetail({
     }
     setUploadingBanner(true);
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) throw new Error(ERR_NON_AUTHENTIFIE);
-
+      // Pas de `auth.getUser()` préalable : l'envoi est déjà authentifié par
+      // le jeton du client, et le bucket refuse de lui-même un appelant sans
+      // droit. Cet appel passait par le verrou de session de supabase-js
+      // (navigator.locks), qu'un autre onglet peut retenir sous Firefox —
+      // l'envoi n'en partait alors jamais.
       const converted = await toWebP(file, 1200);
       // Rangée sous le préfixe du lieu : supprimer le lieu, c'est vider ce
       // dossier. Le nom du fichier est tiré au sort — ces espaces sont en
