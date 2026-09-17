@@ -117,7 +117,14 @@ export default async function RootLayout({
           swUrl="/sw.js"
           disable={process.env.NODE_ENV === "development"}
           cacheOnNavigation
-          reloadOnOnline
+          // Explicitement à false : la valeur par défaut de Serwist est true,
+          // et elle recharge la page à CHAQUE événement « online » du
+          // navigateur, sans condition — Firefox l'émet au moindre changement
+          // d'interface réseau (wifi, VPN, station d'accueil), même sans
+          // coupure perçue. Un formulaire en cours (image de catégorie envoyée
+          // mais pas encore enregistrée, brouillon…) était perdu sans prévenir.
+          // La reconnexion temps réel est déjà gérée par useReconnectEpoch.
+          reloadOnOnline={false}
         >
           {/* Les providers de la racine (présence, veille réseau et session)
               affichent des messages traduits, et vivent AU-DESSUS du provider

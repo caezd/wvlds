@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Correctif",
+    text: "L’application ne se recharge plus toute seule quand le navigateur signale un retour en ligne : un formulaire en cours, comme une image de catégorie envoyée mais pas encore enregistrée, n’est plus perdu.",
+  },
+  {
+    date: "2026-09",
+    tag: "Correctif",
     text: "Dans l’éditeur de la page d’accueil, un clic dans les réglages d’un bloc ne démarre plus un déplacement de ce bloc.",
   },
   {
