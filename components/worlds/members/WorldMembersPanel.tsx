@@ -2,176 +2,162 @@
 
 import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
-import Image from "next/image";
+import { useTranslations } from "next-intl";
+import { Search, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { Users } from "lucide-react";
-import { supabaseThumb } from "@/lib/storage";
 import { cn } from "@/lib/utils";
-import { getLeadingLetter } from "@/lib/textFormatting";
+import { getLeadingLetter, getInitials } from "@/lib/textFormatting";
 import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 import { useGlobalPresence } from "@/components/providers/PresenceProvider";
-import { fetchPersonasByMember } from "@/lib/worldMemberPersonas";
+import { fetchPersonasByMember, type WorldMemberPersona } from "@/lib/worldMemberPersonas";
+import { ChatroomAvatarWithPresence } from "@/components/chatrooms/persona/ChatroomAvatarWithPresence";
+import { PresenceDot } from "@/components/avatars/PresenceDot";
+import { UserProfileSheetTrigger } from "@/components/profile/UserProfileSheetTrigger";
+import { PersonaProfileSheetTrigger } from "@/components/personas/PersonaProfileSheetTrigger";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Input } from "@/components/ui/input";
 
 const WorldInviteDialog = dynamic(() => import("./WorldInviteDialog").then((m) => m.WorldInviteDialog));
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
-const ROLE_LABEL: Record<string, string> = {
-  owner: "Propriétaire",
-  admin: "Admin",
-  editor: "Éditeur",
-  player: "Joueur",
-  observer: "Observateur",
+type Role = "owner" | "admin" | "editor" | "player" | "viewer";
+type PresenceState = "online" | "away" | "offline";
+
+const ROLE_ORDER: Record<Role, number> = {
+  owner: 0, admin: 1, editor: 2, player: 3, viewer: 4,
 };
 
-const ROLE_ORDER: Record<string, number> = {
-  owner: 0, admin: 1, editor: 2, player: 3, observer: 4,
-};
-
-type PersonaInfo = { id: string; name: string; avatar_url: string | null };
+const PRESENCE_ORDER: Record<PresenceState, number> = { online: 0, away: 1, offline: 2 };
 
 type Member = {
   user_id: string;
   role: string;
   username: string | null;
   avatar_url: string | null;
-  personas: PersonaInfo[];
+  personas: WorldMemberPersona[];
 };
 
-// ── Avatar helper ─────────────────────────────────────────────────────────────
+const MAX_PERSONA_CHIPS = 4;
 
-function Av({
-  src,
-  alt,
-  fallback,
-  size = 32,
-  className,
-}: {
-  src?: string | null;
-  alt: string;
-  fallback: string;
-  size?: number;
-  className?: string;
-}) {
-  const [thumbFailed, setThumbFailed] = useState(false);
-  useEffect(() => setThumbFailed(false), [src]);
-  const thumb = src ? (thumbFailed ? src : (supabaseThumb(src, size * 2) ?? src)) : null;
+function isRole(role: string): role is Role {
+  return role in ROLE_ORDER;
+}
+
+function displayNameOf(member: Pick<Member, "username" | "user_id">) {
+  return member.username ? `@${member.username}` : member.user_id.slice(0, 8);
+}
+
+/** Comparaison sans casse ni accents, pour le filtre de recherche. */
+const DIACRITICS_RE = new RegExp("[\\u0300-\\u036f]", "g");
+function normalize(text: string) {
+  return text.normalize("NFD").replace(DIACRITICS_RE, "").toLowerCase();
+}
+
+// ── PersonaChip ──────────────────────────────────────────────────────────────
+
+function PersonaChip({ persona, userId }: { persona: WorldMemberPersona; userId: string }) {
+  const name = persona.name || "?";
   return (
-    <span
-      className={cn(
-        "relative flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted font-semibold text-muted-foreground",
-        className,
-      )}
-      style={{ width: size, height: size, fontSize: Math.round(size * 0.38) }}
+    <PersonaProfileSheetTrigger
+      personaId={persona.id}
+      userId={userId}
+      label={name}
+      triggerClassName="flex max-w-full items-center gap-1.5 rounded-full border border-border-soft bg-muted/40 py-0.5 pl-0.5 pr-2.5 text-xs font-medium transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
-      {thumb ? (
-        <Image
-          src={thumb}
-          alt={alt}
-          fill
-          sizes={`${size}px`}
-          className="object-cover"
-          onError={() => setThumbFailed(true)}
-        />
-      ) : (
-        fallback
-      )}
-    </span>
+      <ChatroomAvatarWithPresence
+        url={persona.avatar_url}
+        alt=""
+        fallback={getInitials(name, "P")}
+        presenceState="invisible"
+        size={20}
+        className="rounded-full"
+      />
+      <span className="truncate">{name}</span>
+    </PersonaProfileSheetTrigger>
   );
 }
 
-// ── Pastille de présence ─────────────────────────────────────────────────────
-// Mêmes couleurs que ChatroomAvatarWithPresence (état online/away/offline),
-// mais superposable à un avatar rond (celui-ci n'a que la variante rounded-md).
+// ── MemberCard ───────────────────────────────────────────────────────────────
 
-const PRESENCE_DOT_COLOR: Record<"online" | "away" | "offline", string> = {
-  online: "bg-[#58F4A8]",
-  away: "bg-orange-400",
-  offline: "bg-red-500",
-};
-
-function PresenceDot({ state }: { state: "online" | "away" | "offline" }) {
-  return (
-    <span
-      className={cn(
-        "absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full ring-2 ring-background",
-        PRESENCE_DOT_COLOR[state],
-      )}
-    />
-  );
-}
-
-// ── MemberRow ─────────────────────────────────────────────────────────────────
-
-function MemberRow({ member }: { member: Member }) {
-  const { getUserPresence } = useGlobalPresence();
-  const displayName = member.username ? `@${member.username}` : member.user_id.slice(0, 8);
-  const letter = getLeadingLetter(displayName);
-  const shown = member.personas.slice(0, 5);
+function MemberCard({ member, presence }: { member: Member; presence: PresenceState }) {
+  const t = useTranslations("worlds.members");
+  const tPresence = useTranslations("presence");
+  const displayName = displayNameOf(member);
+  const shown = member.personas.slice(0, MAX_PERSONA_CHIPS);
   const rest = member.personas.length - shown.length;
 
   return (
-    <div className="flex items-center gap-3 rounded-xl px-3 py-2 transition-colors hover:bg-muted/40">
-      <span className="relative shrink-0">
-        <Av src={member.avatar_url} alt={displayName} fallback={letter} size={34} />
-        <PresenceDot state={getUserPresence(member.user_id)} />
-      </span>
-      <span className="min-w-0 flex-1 truncate text-sm font-medium">{displayName}</span>
-      {shown.length > 0 && (
-        <div className="flex -space-x-1.5 shrink-0">
+    <article
+      data-presence={presence}
+      className="flex flex-col gap-3 rounded-lg border border-border-soft p-3"
+    >
+      <div className="flex items-start gap-3">
+        <UserProfileSheetTrigger userId={member.user_id} label={t("openProfile", { name: displayName })}>
+          <ChatroomAvatarWithPresence
+            url={member.avatar_url}
+            alt=""
+            fallback={getLeadingLetter(displayName)}
+            presenceState="invisible"
+            size={48}
+            className="rounded-full text-base"
+          />
+        </UserProfileSheetTrigger>
+
+        <div className="min-w-0 flex-1 pt-0.5">
+          <p className="truncate text-sm font-semibold">{displayName}</p>
+          {/* Le rôle est le titre de la section : pas de badge ici. La pastille
+              accompagne le statut, comme sur la fiche de profil. */}
+          <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+            <PresenceDot state={presence} />
+            {tPresence(presence)}
+          </p>
+        </div>
+      </div>
+
+      {shown.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-1.5">
           {shown.map((p) => (
-            <Tooltip key={p.id}>
-              <TooltipTrigger asChild>
-                <span>
-                  <Av
-                    src={p.avatar_url}
-                    alt={p.name}
-                    fallback={(p.name[0] ?? "?").toUpperCase()}
-                    size={22}
-                    className="border-2 border-background cursor-default"
-                  />
-                </span>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" sideOffset={4}>{p.name}</TooltipContent>
-            </Tooltip>
+            <PersonaChip key={p.id} persona={p} userId={member.user_id} />
           ))}
           {rest > 0 && (
-            <span className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border-2 border-background bg-muted text-[8px] font-medium text-muted-foreground">
-              +{rest}
+            <span className="rounded-full px-2 py-0.5 text-xs text-muted-foreground">
+              {t("morePersonas", { count: rest })}
             </span>
           )}
         </div>
+      ) : (
+        <p className="text-xs italic text-muted-foreground">{t("noPersona")}</p>
       )}
-    </div>
+    </article>
   );
 }
 
-// ── RoleGroup ─────────────────────────────────────────────────────────────────
+// ── RoleSection ──────────────────────────────────────────────────────────────
 
-function RoleGroup({ role, members }: { role: string; members: Member[] }) {
+function RoleSection({
+  role,
+  members,
+  presenceOf,
+}: {
+  role: string;
+  members: Member[];
+  presenceOf: (userId: string) => PresenceState;
+}) {
+  const t = useTranslations("worlds.members");
+  const heading = isRole(role) ? t(`rolesPlural.${role}`, { count: members.length }) : role;
   return (
-    <details open className="group/role">
-      <summary className="flex cursor-pointer list-none select-none items-center gap-1.5 px-3 py-2">
-        <svg
-          className="h-2.5 w-2.5 shrink-0 text-muted-foreground/60 transition-transform duration-150 group-open/role:rotate-90"
-          viewBox="0 0 6 10"
-          fill="none"
-        >
-          <path d="M1 1l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-          {ROLE_LABEL[role] ?? role}
-        </span>
-        <span className="text-[11px] text-muted-foreground">— {members.length}</span>
-      </summary>
-      <div className="pb-1">
+    <section>
+      <h3 className="mb-3 text-sm font-semibold text-foreground">
+        {heading}
+        <span className="ml-1.5 text-xs font-normal text-muted-foreground">{members.length}</span>
+      </h3>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {members.map((m) => (
-          <MemberRow key={m.user_id} member={m} />
+          <MemberCard key={m.user_id} member={m} presence={presenceOf(m.user_id)} />
         ))}
       </div>
-    </details>
+    </section>
   );
 }
 
@@ -188,20 +174,51 @@ export function WorldMembersPanel({
   canManage: boolean;
   isShared: boolean;
 }) {
+  const t = useTranslations("worlds.members");
   const supabase = useMemo(() => createClient(), []);
+  const { getUserPresence } = useGlobalPresence();
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(isShared);
+  const [query, setQuery] = useState("");
+  const [onlineOnly, setOnlineOnly] = useState(false);
 
+  const onlineCount = members.filter((m) => getUserPresence(m.user_id) === "online").length;
+
+  const filtered = useMemo(() => {
+    const q = normalize(query.trim());
+    return members.filter((m) => {
+      if (onlineOnly && getUserPresence(m.user_id) !== "online") return false;
+      if (!q) return true;
+      return (
+        normalize(displayNameOf(m)).includes(q) ||
+        m.personas.some((p) => normalize(p.name).includes(q))
+      );
+    });
+  }, [members, query, onlineOnly, getUserPresence]);
+
+  // Par rôle, puis les membres en ligne d'abord, puis par nom.
   const grouped = useMemo(() => {
     const map = new Map<string, Member[]>();
-    for (const m of members) {
+    for (const m of filtered) {
       if (!map.has(m.role)) map.set(m.role, []);
       map.get(m.role)!.push(m);
     }
-    return Object.keys(ROLE_ORDER)
-      .filter((role) => map.has(role))
-      .map((role) => ({ role, members: map.get(role)! }));
-  }, [members]);
+    const roles = Array.from(map.keys()).sort(
+      (a, b) => (isRole(a) ? ROLE_ORDER[a] : 99) - (isRole(b) ? ROLE_ORDER[b] : 99),
+    );
+    return roles.map((role) => ({
+      role,
+      members: map
+        .get(role)!
+        .slice()
+        .sort((a, b) => {
+          const byPresence =
+            PRESENCE_ORDER[getUserPresence(a.user_id)] - PRESENCE_ORDER[getUserPresence(b.user_id)];
+          if (byPresence !== 0) return byPresence;
+          return displayNameOf(a).localeCompare(displayNameOf(b), undefined, { sensitivity: "base" });
+        }),
+    }));
+  }, [filtered, getUserPresence]);
 
   useEffect(() => {
     if (!isShared) return;
@@ -242,8 +259,8 @@ export function WorldMembersPanel({
       ((profileRows ?? []) as ProfileRow[]).map((p) => [p.id, p]),
     );
 
-    const result: Member[] = allRows
-      .map((row) => {
+    setMembers(
+      allRows.map((row) => {
         const profile = profileByUser.get(row.user_id) ?? null;
         return {
           user_id: row.user_id,
@@ -252,45 +269,80 @@ export function WorldMembersPanel({
           avatar_url: profile?.avatar_url ?? null,
           personas: personasByUser.get(row.user_id) ?? [],
         };
-      })
-      .sort((a, b) => (ROLE_ORDER[a.role] ?? 99) - (ROLE_ORDER[b.role] ?? 99));
-
-    setMembers(result);
+      }),
+    );
     setLoading(false);
   }
+
+  const empty = !isShared || (!loading && members.length === 0);
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
       <WorldPanelHeader
         icon={<Users className="h-4 w-4 shrink-0 text-muted-foreground" />}
-        title="Membres"
+        title={
+          <>
+            {t("title")}
+            {members.length > 0 && (
+              <span className="ml-1.5 text-xs font-normal text-muted-foreground">{members.length}</span>
+            )}
+          </>
+        }
         right={isShared && canManage && <WorldInviteDialog worldId={worldId} ownerId={ownerId} canManage={canManage} />}
       />
 
       <ScrollArea className="flex-1 min-h-0">
-        <div className="px-6 py-6">
-          {!isShared ? (
-            <p className="rounded-xl border border-dashed border-border-soft py-8 text-center text-sm text-muted-foreground">
-              Aucun membre.
+        <div className="space-y-6 px-6 py-6">
+          {!empty && (
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="relative min-w-0 flex-1 basis-56">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  type="search"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder={t("searchPlaceholder")}
+                  aria-label={t("searchPlaceholder")}
+                  className="pl-9"
+                />
+              </div>
+              {/* Le compteur est aussi un filtre : un clic ne garde que les
+                  membres en ligne, un second clic rétablit tout le monde. */}
+              <button
+                type="button"
+                aria-pressed={onlineOnly}
+                onClick={() => setOnlineOnly((v) => !v)}
+                className={cn(
+                  "flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition-colors",
+                  onlineOnly
+                    ? "border-transparent bg-muted text-foreground"
+                    : "border-border-soft text-muted-foreground hover:bg-muted/40 hover:text-foreground",
+                )}
+              >
+                <PresenceDot state={onlineCount > 0 ? "online" : "offline"} />
+                {t("onlineCount", { count: onlineCount })}
+              </button>
+            </div>
+          )}
+
+          {empty ? (
+            <p className="rounded-2xl border border-dashed border-border-soft py-10 text-center text-sm text-muted-foreground">
+              {t("empty")}
             </p>
           ) : loading ? (
-            <div className="space-y-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="h-12 animate-pulse rounded-xl bg-muted" />
+                <div key={i} className="h-28 animate-pulse rounded-lg bg-muted" />
               ))}
             </div>
-          ) : members.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-border-soft py-8 text-center text-sm text-muted-foreground">
-              Aucun membre.
+          ) : grouped.length === 0 ? (
+            <p className="rounded-2xl border border-dashed border-border-soft py-10 text-center text-sm text-muted-foreground">
+              {t("noResults")}
             </p>
           ) : (
-            <div className="rounded-xl border border-border-soft">
-              {grouped.map((g, i) => (
-                <div key={g.role} className={cn(i > 0 && "border-t border-border-soft")}>
-                  <RoleGroup role={g.role} members={g.members} />
-                </div>
-              ))}
-            </div>
+            grouped.map((g) => (
+              <RoleSection key={g.role} role={g.role} members={g.members} presenceOf={getUserPresence} />
+            ))
           )}
         </div>
       </ScrollArea>

@@ -106,6 +106,7 @@
   "presence": {
     "online": "En ligne",
     "offline": "Hors ligne",
+    "away": "Absent",
     "invisible": "Invisible",
     "changeStatus": "Changer de statut",
     "statusSaveFailed": "Enregistrement du statut impossible."
@@ -338,6 +339,23 @@
       "map": "Carte",
       "timeline": "Chronologie",
       "catalogue": "Catalogue"
+    },
+    "members": {
+      "title": "Membres",
+      "searchPlaceholder": "Rechercher un membre ou un persona…",
+      "onlineCount": "{count, plural, =0 {Personne en ligne} one {# en ligne} other {# en ligne}}",
+      "empty": "Aucun membre.",
+      "noResults": "Aucun membre ne correspond.",
+      "noPersona": "Aucun persona dans ce monde",
+      "morePersonas": "{count, plural, one {# autre persona} other {# autres personas}}",
+      "openProfile": "Voir le profil de {name}",
+      "rolesPlural": {
+        "owner": "{count, plural, one {Propriétaire} other {Propriétaires}}",
+        "admin": "{count, plural, one {Admin} other {Admins}}",
+        "editor": "{count, plural, one {Éditeur} other {Éditeurs}}",
+        "player": "{count, plural, one {Joueur} other {Joueurs}}",
+        "viewer": "{count, plural, one {Lecteur} other {Lecteurs}}"
+      }
     },
     "sidebar": {
       "active": "Récents",

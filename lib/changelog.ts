@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-09 ──────────────────────────────────────────────────────────────
   {
     date: "2026-09",
+    tag: "Membres",
+    text: "L’onglet Membres d’un monde se présente en cartes, regroupées par rôle : avatar, statut en ligne et les personas joués, chacun cliquable pour ouvrir sa fiche. Un champ de recherche filtre par nom de membre ou de persona ; le compteur « en ligne », à côté, ne garde que les membres connectés d’un clic.",
+  },
+  {
+    date: "2026-09",
     tag: "Correctif",
     text: "Sous Firefox, avec l’application ouverte dans plusieurs onglets, l’envoi d’une image (icône ou bannière d’un monde, d’une salle ou d’un persona, image de carte ou de lieu, bannière de page d’accueil, image du wiki, capture d’un signalement) pouvait ne jamais partir. Il ne dépend plus de la vérification de session qu’un autre onglet pouvait bloquer ; la création d’un monde non plus.",
   },
