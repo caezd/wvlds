@@ -14,10 +14,19 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 // La conversion est éprouvée ailleurs ; ici elle brouillerait la lecture.
 vi.mock("@/lib/imageUtils", () => ({ toWebP: vi.fn(async (f: File) => f) }));
 
+// L'auteur vient du contexte, pas de `auth.getUser()` : cet appel attend le
+// verrou de session de supabase-js, qu'un autre onglet peut retenir sous
+// Firefox. Ici il ne rend jamais la main, comme dans ce cas-là.
+const moi = vi.hoisted(() => ({ userId: "u1" as string | null }));
+vi.mock("@/hooks/useCurrentUser", () => ({
+  useCurrentUser: () => ({ userId: moi.userId }),
+}));
+const lireSession = vi.hoisted(() => vi.fn(() => new Promise(() => {})));
+
 const déposer = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/supabase/client", () => ({
   createClient: () => ({
-    auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: "u1" } } }) },
+    auth: { getUser: lireSession },
     storage: { from: () => ({ upload: déposer }) },
   }),
 }));
@@ -31,6 +40,7 @@ const CHAMP = { name: "Description" };
 beforeEach(() => {
   oublierErreursClient();
   vi.clearAllMocks();
+  moi.userId = "u1";
   envoyer.mockResolvedValue({ ok: true });
   déposer.mockResolvedValue({ error: null });
 });
@@ -91,10 +101,42 @@ describe("BugReportForm", () => {
 
     await waitFor(() => expect(déposer).toHaveBeenCalledTimes(1));
     expect(déposer.mock.calls[0][0]).toMatch(/^user-u1\//);
+    expect(lireSession).not.toHaveBeenCalled();
 
     const envoyé = envoyer.mock.calls[0][0];
     expect(envoyé.attachments).toHaveLength(1);
     expect(envoyé.attachments[0]).toMatch(/^user-u1\//);
+  });
+
+  it("n'envoie rien sans session, et le dit", async () => {
+    moi.userId = null;
+    const user = userEvent.setup();
+    render(<BugReportForm />);
+
+    await user.type(screen.getByRole("textbox", CHAMP), "x");
+    await user.click(screen.getByRole("button", { name: "Envoyer" }));
+
+    await waitFor(() => expect(toastErreur).toHaveBeenCalledWith("Session expirée"));
+    expect(envoyer).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Envoyer" })).toBeEnabled();
+  });
+
+  it("n'affiche pas le message brut du stockage quand un dépôt échoue", async () => {
+    // Ce texte nomme la table et la policy refusée : un libellé traduit à la
+    // place, et le détail dans la console.
+    déposer.mockResolvedValueOnce({ error: { message: "new row violates row-level security policy" } });
+    const erreurConsole = vi.spyOn(console, "error").mockImplementation(() => {});
+    const user = userEvent.setup();
+    render(<BugReportForm />);
+
+    await user.upload(screen.getByLabelText("Captures d’écran", { selector: "input" }), image());
+    await user.type(screen.getByRole("textbox", CHAMP), "x");
+    await user.click(screen.getByRole("button", { name: "Envoyer" }));
+
+    await waitFor(() => expect(toastErreur).toHaveBeenCalledWith("Envoi impossible. Réessayez dans un instant."));
+    expect(toastErreur).not.toHaveBeenCalledWith(expect.stringContaining("row-level security"));
+    expect(envoyer).not.toHaveBeenCalled();
+    erreurConsole.mockRestore();
   });
 
   // Trois dépôts enchaînés, c'était trois allers-retours l'un après l'autre

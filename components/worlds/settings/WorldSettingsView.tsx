@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 import { ImagePickerCropField } from "@/components/ui/image-crop-picker";
 import { WorldCategoryManager } from "@/components/worlds/settings/WorldCategoryManager";
@@ -105,6 +106,11 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
     const supabase = createClient();
     const router = useRouter();
     const { public_worlds } = useFeatureFlags();
+    // L'id sert au préfixe `user-{id}/…` exigé par la policy du bucket. Pris
+    // dans le contexte plutôt que par `auth.getUser()` : cet appel passait par
+    // le verrou de session de supabase-js (navigator.locks), qu'un autre onglet
+    // peut retenir sous Firefox — l'envoi n'en partait alors jamais.
+    const { userId } = useCurrentUser();
     const [uploading, setUploading] = React.useState<null | "icon" | "banner">(null);
     const [confirmDelete, setConfirmDelete] = React.useState(false);
     const [deleting, setDeleting] = React.useState(false);
@@ -147,15 +153,12 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
 
 
     async function uploadToWorlds(file: File, kind: "icon" | "banner") {
-        const {
-            data: { user },
-        } = await supabase.auth.getUser();
-        if (!user) throw new Error(ERR_NON_AUTHENTIFIE);
+        if (!userId) throw new Error(ERR_NON_AUTHENTIFIE);
         if (file.size > 5 * 1024 * 1024)
             throw new Error("Fichier trop volumineux (max 5 Mo).");
 
         const converted = await toWebP(file);
-        const path = `user-${user.id}/world-${world.id}/${kind}-${Date.now()}.webp`;
+        const path = `user-${userId}/world-${world.id}/${kind}-${Date.now()}.webp`;
 
         const { error } = await supabase.storage
             .from("worlds")

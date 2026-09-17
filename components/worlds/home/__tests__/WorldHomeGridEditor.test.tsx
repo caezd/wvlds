@@ -18,14 +18,20 @@ vi.mock("@/lib/imageUtils", () => ({
   toWebP: vi.fn(async (file: File) => file),
 }));
 
+// L'id de l'auteur vient du contexte, pas de `auth.getUser()` : cet appel
+// attend le verrou de session de supabase-js, qu'un autre onglet peut retenir
+// sous Firefox. Ici il ne rend jamais la main, comme dans ce cas-là.
+vi.mock("@/hooks/useCurrentUser", () => ({
+  useCurrentUser: () => ({ userId: "u1" }),
+}));
+const getUserMock = vi.fn(() => new Promise(() => {}));
+
 // Uploadée par le bloc bannière (voir uploadBannerImage) — non exercée par la
 // plupart des tests, un stub suffit à éviter un vrai appel réseau/Supabase.
 const bannerUploadMock = vi.fn().mockResolvedValue({ error: null });
 vi.mock("@/lib/supabase/client", () => ({
   createClient: () => ({
-    auth: {
-      getUser: vi.fn().mockResolvedValue({ data: { user: { id: "u1" } } }),
-    },
+    auth: { getUser: getUserMock },
     storage: {
       from: () => ({
         upload: (...args: unknown[]) => bannerUploadMock(...args),
@@ -544,6 +550,28 @@ describe("WorldHomeGridEditor", () => {
     await waitFor(() => expect(bannerUploadMock).toHaveBeenCalled());
     const path = bannerUploadMock.mock.calls[0][0] as string;
     expect(path).toMatch(/^user-u1\/world-w1\//);
+    expect(getUserMock).not.toHaveBeenCalled();
+  });
+
+  it("n'affiche pas le message brut du stockage quand l'envoi de la bannière échoue", async () => {
+    // Ce texte nomme la table et la policy refusée : un libellé traduit à la
+    // place, et le détail dans la console.
+    bannerUploadMock.mockResolvedValueOnce({ error: { message: "new row violates row-level security policy" } });
+    const erreurConsole = vi.spyOn(console, "error").mockImplementation(() => {});
+    const user = userEvent.setup();
+    render(<Harness initial={[]} />);
+
+    await user.click(screen.getByText("Ajouter un bloc"));
+    await user.click(screen.getByRole("menuitem", { name: "Bloc bannière" }));
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    await act(async () => {
+      fireEvent.change(input, { target: { files: [new File(["x"], "banner.png", { type: "image/png" })] } });
+    });
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalled());
+    expect(toast.error).not.toHaveBeenCalledWith(expect.stringContaining("row-level security"));
+    expect(toast.error).toHaveBeenCalledWith("Envoi impossible. Réessayez dans un instant.");
+    erreurConsole.mockRestore();
   });
 
   it("modifie un bloc bannière existant via le crayon", async () => {

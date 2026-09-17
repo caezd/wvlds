@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { AutoResizeTextarea } from "@/components/ui/auto-resizable-textarea";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toWebP } from "@/lib/imageUtils";
 import { nomDeFichierPourType } from "@/lib/storagePaths";
 import { submitBugReport } from "@/app/actions/bugReports";
@@ -74,6 +75,7 @@ export function BugReportForm({
   const tCommon = useTranslations("common");
   const router = useRouter();
   const supabase = React.useMemo(() => createClient(), []);
+  const { userId } = useCurrentUser();
 
   const [description, setDescription] = React.useState("");
   const [jointes, setJointes] = React.useState<Jointe[]>([]);
@@ -152,7 +154,9 @@ export function BugReportForm({
 
     const raté = dépôts.find((d) => d.error);
     if (raté) {
-      toast.error(raté.error!.message);
+      // Pas `error.message` : le stockage renvoie le texte brut de la policy.
+      console.error("[BugReportForm] envoi d'image", raté.error);
+      toast.error(tCommon("uploadError"));
       return null;
     }
     return dépôts.map((d) => d.chemin);
@@ -163,8 +167,10 @@ export function BugReportForm({
     if (!envoyable) return;
     setEnvoi(true);
 
-    const { data } = await supabase.auth.getUser();
-    const userId = data.user?.id;
+    // L'id sert au préfixe `user-{id}/…` des pièces jointes. Pris dans le
+    // contexte plutôt que par `auth.getUser()` : cet appel passait par le
+    // verrou de session de supabase-js (navigator.locks), qu'un autre onglet
+    // peut retenir sous Firefox — l'envoi n'en partait alors jamais.
     if (!userId) {
       setEnvoi(false);
       toast.error(tCommon("sessionExpired"));

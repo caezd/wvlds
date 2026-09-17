@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { createSupabaseMock } from "@/test/supabaseMock";
@@ -65,6 +65,10 @@ function monter(
   canPost = false,
 ) {
   const mock = createSupabaseMock();
+  // La session est tenue par un autre onglet : sous Firefox, `getUser()`
+  // attend le verrou de supabase-js et ne rend jamais la main. Aucun envoi
+  // ne doit en dépendre — le jeton du client l'authentifie déjà.
+  mock.client.auth.getUser.mockReturnValue(new Promise(() => {}));
   vi.mocked(createClient).mockReturnValue(mock.client as never);
   const onUpdated = vi.fn();
   const onOpenMap = vi.fn();
@@ -83,7 +87,7 @@ function monter(
       onOpenMap={onOpenMap}
     />,
   );
-  return { onUpdated, onOpenMap, onPlacePersona };
+  return { mock, onUpdated, onOpenMap, onPlacePersona };
 }
 
 beforeEach(() => {
@@ -647,5 +651,22 @@ describe("PinDetail — qui se trouve ici", () => {
 
     expect(screen.getByRole("button", { name: "Retirer Kael de ce lieu" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Retirer Ifyr de ce lieu" })).toBeNull();
+  });
+});
+
+describe("PinDetail — bannière du lieu", () => {
+  it("envoie la bannière sans consulter la session au préalable", async () => {
+    const { mock, onUpdated } = monter(makePin(), true);
+    // Un WebP : `toWebP` le rend tel quel, sans canvas à faire tourner ici.
+    const fichier = new File(["x"], "banniere.webp", { type: "image/webp" });
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+
+    fireEvent.change(input, { target: { files: [fichier] } });
+
+    await waitFor(() => expect(mock.storageUpload).toHaveBeenCalledTimes(1));
+    expect(mock.storageUpload.mock.calls[0][0]).toMatch(/^world-w1\/pin-pin1\//);
+    await waitFor(() => expect(updateMapPin).toHaveBeenCalledWith("pin1", { banner_url: expect.any(String) }));
+    expect(onUpdated).toHaveBeenCalledWith(expect.objectContaining({ id: "pin1", banner_url: expect.any(String) }));
+    expect(mock.client.auth.getUser).not.toHaveBeenCalled();
   });
 });

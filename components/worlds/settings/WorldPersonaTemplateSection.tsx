@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
 import { Loader2, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -57,7 +58,11 @@ export function WorldPersonaTemplateSection({
   const [confirmDisable, setConfirmDisable] = React.useState(false);
 
   const [editorOpen, setEditorOpen] = React.useState(false);
-  const [userId, setUserId] = React.useState<string | null>(null);
+  // L'id sert aux envois d'images de la fiche (préfixe `user-{id}/…`). Pris
+  // dans le contexte plutôt que par `auth.getUser()` : cet appel passait par
+  // le verrou de session de supabase-js (navigator.locks), qu'un autre onglet
+  // peut retenir sous Firefox.
+  const { userId } = useCurrentUser();
   const [sections, setSections] = React.useState<PersonaSectionWithFields[] | null>(null);
 
   React.useEffect(() => {
@@ -107,12 +112,7 @@ export function WorldPersonaTemplateSection({
     setEditorOpen(true);
     if (sections !== null) return; // déjà chargées
 
-    const [{ data: auth }, loadedSections] = await Promise.all([
-      supabase.auth.getUser(),
-      fetchPersonaSections(supabase, templateId),
-    ]);
-    setUserId(auth.user?.id ?? null);
-    setSections(loadedSections);
+    setSections(await fetchPersonaSections(supabase, templateId));
   }
 
   return (

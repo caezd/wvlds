@@ -1355,6 +1355,22 @@ describe("WorldMap — le poids d'une image de carte", () => {
 
     await waitFor(() => expect(envoiDe(mock)).toHaveBeenCalled());
   });
+
+  it("envoie sans consulter la session au préalable", async () => {
+    // Sous Firefox, `auth.getUser()` attend le verrou de session de
+    // supabase-js (navigator.locks) qu'un autre onglet peut retenir : l'envoi
+    // qui le précédait ne partait alors jamais. Le jeton du client suffit —
+    // le bucket refuse de lui-même un appelant sans droit.
+    vi.mocked(updateWorldMap).mockResolvedValue(makeMap({ image_url: "https://x/img.webp" }));
+    const { mock } = monter({ maps: [makeMap()], pins: [] });
+    mock.client.auth.getUser.mockReturnValue(new Promise(() => {}));
+    await userEvent.click(screen.getByRole("button", { name: "Modifier" }));
+
+    choisir(1);
+
+    await waitFor(() => expect(envoiDe(mock)).toHaveBeenCalled());
+    expect(mock.client.auth.getUser).not.toHaveBeenCalled();
+  });
 });
 
 describe("WorldMap — un lieu s'ouvre dans la colonne", () => {

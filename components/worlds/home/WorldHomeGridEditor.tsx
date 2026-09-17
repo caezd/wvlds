@@ -6,6 +6,7 @@ import { Code2, FileText, GripVertical, Image as ImageIcon, Pencil, Plus, Settin
 import { toast } from "sonner";
 import { setWorldHomeGrid } from "@/app/actions/worldCatalog";
 import { createClient } from "@/lib/supabase/client";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toWebP } from "@/lib/imageUtils";
 import { nomDeFichierUnique } from "@/lib/storagePaths";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
@@ -246,6 +247,11 @@ export function WorldHomeGridEditor({
   >(null);
   const [confirmDelete, setConfirmDelete] = React.useState<WorldHomeGridItem | null>(null);
   const supabase = React.useMemo(() => createClient(), []);
+  // L'id sert au préfixe `user-{id}/…` exigé par la policy du bucket. Pris
+  // dans le contexte plutôt que par `auth.getUser()` : cet appel passait par
+  // le verrou de session de supabase-js (navigator.locks), qu'un autre onglet
+  // peut retenir sous Firefox — l'envoi n'en partait alors jamais.
+  const { userId } = useCurrentUser();
 
   // Le coloriseur des champs de code pèse quelques dizaines de kilooctets et
   // n'était demandé qu'à l'ouverture d'un tiroir d'édition — soit à l'instant
@@ -262,20 +268,20 @@ export function WorldHomeGridEditor({
    */
   async function uploadBannerImage(file: File): Promise<string | null> {
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
+      if (!userId) {
         toast.error(t("home.grid.bannerImageDisabled"));
         return null;
       }
       const converted = await toWebP(file);
-      const path = `user-${user.id}/world-${worldId}/home-banner-${nomDeFichierUnique("webp")}`;
+      const path = `user-${userId}/world-${worldId}/home-banner-${nomDeFichierUnique("webp")}`;
       const { error } = await supabase.storage
         .from("worlds")
         .upload(path, converted, { contentType: "image/webp" });
       if (error) {
-        toast.error(error.message);
+        // Pas `error.message` : le stockage renvoie le texte brut de la
+        // policy refusée.
+        console.error("[WorldHomeGridEditor] envoi d'image", error);
+        toast.error(tCommon("uploadError"));
         return null;
       }
       const { data } = supabase.storage.from("worlds").getPublicUrl(path);

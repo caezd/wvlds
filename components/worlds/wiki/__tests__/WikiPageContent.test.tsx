@@ -946,11 +946,12 @@ describe("WikiPageContent — colonne latérale en mode modification", () => {
 describe("WikiPageContent — images collées dans l'article", () => {
   function renderEnEdition() {
     const mock = createSupabaseMock({
-      // Sans utilisateur, le chemin de stockage n'a pas de dossier où écrire
-      // et l'envoi s'arrête avant d'avoir commencé.
-      user: { id: "u1" },
       results: [SANS_ANNOTATION, { data: { draft_content: "Voici " }, error: null }],
     });
+    // La session est tenue par un autre onglet : sous Firefox, `getUser()`
+    // attend le verrou de supabase-js et ne rend jamais la main. L'envoi ne
+    // doit pas en dépendre — le jeton du client l'authentifie déjà.
+    mock.client.auth.getUser.mockReturnValue(new Promise(() => {}));
     render(
       <WikiPageContent
         worldId="w1"
@@ -978,6 +979,7 @@ describe("WikiPageContent — images collées dans l'article", () => {
         onNotesLoaded={vi.fn()}
       />,
     );
+    return mock;
   }
 
   /** Un presse-papiers qui porte une image, comme après une capture d'écran. */
@@ -998,12 +1000,14 @@ describe("WikiPageContent — images collées dans l'article", () => {
   }
 
   it("envoie l'image et l'écrit à l'endroit du curseur", async () => {
-    renderEnEdition();
+    const mock = renderEnEdition();
     const champ = await champPret();
 
     fireEvent.paste(champ, { clipboardData: pressePapiersAvecImage() });
 
     await waitFor(() => expect(champ.value).toMatch(MARKDOWN_IMAGE));
+    expect(mock.storageUpload).toHaveBeenCalledTimes(1);
+    expect(mock.client.auth.getUser).not.toHaveBeenCalled();
   });
 
   it("laisse passer un collage qui n'est pas une image", async () => {

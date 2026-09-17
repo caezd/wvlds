@@ -45,6 +45,7 @@ import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { deletePersona } from "@/app/(protected)/p/actions";
 import { toast } from "sonner";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { StoredImage } from "@/components/ui/stored-image";
 import { avatarThumbWidth } from "@/lib/storage";
 
@@ -612,7 +613,11 @@ export function PersonaEditorContent({
   const { avatar_builder } = useFeatureFlags();
   const [appearanceTab, setAppearanceTab] = useState<"avatar" | "cosmetics">("avatar");
   const [avatarSubTab, setAvatarSubTab] = useState<"builder" | "upload">(avatar_builder ? "builder" : "upload");
-  const [userId, setUserId] = useState<string | null>(null);
+  // L'id sert aux envois d'images (préfixe `user-{id}/…` du bucket personas).
+  // Pris dans le contexte plutôt que par `auth.getUser()` : cet appel passait
+  // par le verrou de session de supabase-js (navigator.locks), qu'un autre
+  // onglet peut retenir sous Firefox — l'envoi n'en partait alors jamais.
+  const { userId } = useCurrentUser();
   const [previewMode, setPreviewMode] = useState(false);
   const [previewTab, setPreviewTab] = useState<string | null>(null);
   const [dialogueColor, setDialogueColor] = useState<string | null>(null);
@@ -622,14 +627,6 @@ export function PersonaEditorContent({
   } | null>(null);
   const { getUserPresence } = useGlobalPresence();
   const avatarFallback = useMemo(() => initials(personaName), [personaName]);
-
-  // Récupère l'userId, nécessaire pour l'upload de fichier (avatar/bannière).
-  useMemo(() => {
-    supabase.auth.getUser().then((res: { data: { user: { id: string } | null } }) => {
-      setUserId(res.data.user?.id ?? null);
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   // Charge à la demande (au premier passage en aperçu) ce que l'éditeur ne
   // tient pas déjà localement — couleur de dialogue et présence du

@@ -11,6 +11,12 @@ vi.mock("@/components/providers/FeatureFlagsProvider", () => ({
   useFeatureFlags: () => ({ avatar_builder: false }),
 }));
 vi.mock("@/lib/imageUtils", () => ({ toWebP: vi.fn(async (file: File) => file) }));
+// L'id de l'auteur vient du contexte, pas de `auth.getUser()` : cet appel
+// attend le verrou de session de supabase-js, qu'un autre onglet peut retenir
+// sous Firefox — l'envoi n'en partait alors jamais.
+vi.mock("@/hooks/useCurrentUser", () => ({
+  useCurrentUser: () => ({ userId: "u1" }),
+}));
 // Contourne le recadrage réel (canvas non disponible sous jsdom) : confirme
 // immédiatement avec un blob factice au clic, comme si l'utilisateur avait
 // choisi une image et validé le recadrage.
@@ -36,7 +42,10 @@ describe("PersonaEditorContent — rafraîchissement après changement de banni�
   // serveur) — la bannière fraîchement changée disparaît. L'avatar fait déjà
   // ce refresh ; la bannière ne le faisait pas.
   it("appelle router.refresh() après l'enregistrement d'une bannière, comme pour l'avatar", async () => {
-    const mock = createSupabaseMock({ user: { id: "u1" } });
+    const mock = createSupabaseMock();
+    // La session est tenue par un autre onglet : `getUser()` ne rend jamais
+    // la main, et l'envoi doit partir quand même.
+    mock.client.auth.getUser.mockReturnValue(new Promise(() => {}));
     vi.mocked(createClient).mockReturnValue(mock.client as never);
     const user = userEvent.setup();
 
@@ -52,6 +61,9 @@ describe("PersonaEditorContent — rafraîchissement après changement de banni�
     // ...et le refresh serveur a bien été demandé (sinon un remount ultérieur
     // afficherait l'ancien initialBannerUrl).
     expect(refresh).toHaveBeenCalled();
+    // Rangée sous le préfixe de son auteur, exigé par la policy du bucket.
+    expect(mock.storageUpload.mock.calls[0][0]).toMatch(/^user-u1\//);
+    expect(mock.client.auth.getUser).not.toHaveBeenCalled();
   });
 
   it("appelle router.refresh() après la suppression d'une bannière", async () => {
