@@ -321,7 +321,9 @@ export function ImagePickerCropField({
 }: {
   aspect?: number;
   uploading?: boolean;
-  /** Reçoit le Blob PNG déjà recadré ; au parent de convertir/uploader. */
+  /** Reçoit le Blob PNG déjà recadré ; au parent de convertir/uploader.
+   *  Lever (ou rejeter) garde le recadrage ouvert avec un message d'échec ;
+   *  résoudre le referme et passe à l'aperçu. */
   onConfirm: (blob: Blob) => void | Promise<void>;
   /** Image actuellement enregistrée, affichée en aperçu cliquable pour la remplacer. */
   previewSrc?: string | null;
@@ -329,6 +331,7 @@ export function ImagePickerCropField({
   previewClassName?: string;
   changeLabel?: string;
 }) {
+  const tCommon = useTranslations("common");
   const [picking, setPicking] = useState(!previewSrc);
   const [src, setSrc] = useState<string | null>(null);
   const [cropError, setCropError] = useState<string | null>(null);
@@ -352,16 +355,27 @@ export function ImagePickerCropField({
 
   async function handleCropConfirm(pixels: Area) {
     if (!src) return;
+    let blob: Blob;
     try {
-      const blob = await getCroppedImg(src, pixels);
-      await onConfirm(blob);
-      const wasBlob = src.startsWith("blob:");
-      setSrc(null);
-      setPicking(false);
-      if (wasBlob) URL.revokeObjectURL(src);
+      blob = await getCroppedImg(src, pixels);
     } catch {
       setCropError("Impossible de recadrer cette image (le serveur distant bloque probablement l'accès). Essayez de la télécharger puis de l'importer comme fichier.");
+      return;
     }
+    // Un parent qui LÈVE depuis onConfirm (envoi échoué) garde le recadrage
+    // ouvert, prêt à être revalidé. Refermer quand même laissait une case
+    // vide à la place de l'aperçu — rien n'était envoyé, rien ne le disait
+    // ici, et le formulaire s'enregistrait ensuite sans image.
+    try {
+      await onConfirm(blob);
+    } catch {
+      setCropError(tCommon("uploadError"));
+      return;
+    }
+    const wasBlob = src.startsWith("blob:");
+    setSrc(null);
+    setPicking(false);
+    if (wasBlob) URL.revokeObjectURL(src);
   }
 
   if (picking) {

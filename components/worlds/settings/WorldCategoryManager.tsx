@@ -34,17 +34,17 @@ import {
   reorderChatroomCategories,
 } from "@/app/actions/chatroomCategories";
 import type { ChatroomCategory } from "@/types/worlds";
-import { ERR_NON_AUTHENTIFIE, messageErreurAction } from "@/lib/actionErrors";
+import { messageErreurAction } from "@/lib/actionErrors";
 
 async function uploadCategoryImage(
   supabase: ReturnType<typeof createClient>,
   worldId: string,
   file: File,
 ) {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error(ERR_NON_AUTHENTIFIE);
+  // Pas de `auth.getUser()` préalable : l'envoi est déjà authentifié par le
+  // jeton du client, et le bucket refuse de lui-même un appelant sans droit.
+  // Cet appel passait par le verrou de session de supabase-js (navigator.locks),
+  // qu'un autre onglet peut retenir — l'envoi n'en partait alors jamais.
   if (file.size > 5 * 1024 * 1024) throw new Error("Fichier trop volumineux (max 5 Mo).");
 
   const converted = await toWebP(file);
@@ -94,11 +94,10 @@ function CategoryForm({
       // Ne JAMAIS afficher `e.message` : un `throw error` Postgrest y met le
       // message brut de PostgreSQL, qui cite la table et la policy.
       console.error("[WorldCategoryManager] envoi d'image", e);
-      toast.error(
-          e instanceof Error && e.message === ERR_NON_AUTHENTIFIE
-              ? tCommon("sessionExpired")
-              : tCommon("uploadError"),
-      );
+      toast.error(tCommon("uploadError"));
+      // Relevé pour le sélecteur : il garde le recadrage ouvert au lieu de
+      // refermer sur une case vide (voir ImagePickerCropField).
+      throw e;
     } finally {
       setUploadingImage(false);
     }

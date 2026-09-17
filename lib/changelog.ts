@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Correctif",
+    text: "Quand l’envoi de l’image d’une catégorie échoue, le recadrage reste affiché avec un message au lieu de se refermer sur une case vide, et l’envoi ne dépend plus de la vérification de session qu’un autre onglet pouvait bloquer.",
+  },
+  {
+    date: "2026-09",
+    tag: "Correctif",
     text: "L’application ne se recharge plus toute seule quand le navigateur signale un retour en ligne : un formulaire en cours, comme une image de catégorie envoyée mais pas encore enregistrée, n’est plus perdu.",
   },
   {
