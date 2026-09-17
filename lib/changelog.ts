@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-09 ──────────────────────────────────────────────────────────────
   {
     date: "2026-09",
+    tag: "Correctif",
+    text: "Dans l’éditeur de la page d’accueil, un clic dans les réglages d’un bloc ne démarre plus un déplacement de ce bloc.",
+  },
+  {
+    date: "2026-09",
     tag: "Page d’accueil",
     text: "Le bloc « Membres en ligne » a un réglage d’affichage : la rangée d’avatars, ou une liste avec le nom de chaque membre. Sa hauteur est alignée sur celle du bloc « Créer une partie ».",
   },

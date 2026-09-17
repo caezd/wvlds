@@ -231,6 +231,29 @@ describe("WorldHomeGridEditor", () => {
     });
   });
 
+  it("un pointerdown dans le popover de réglages (portail) ne déclenche pas de déplacement", async () => {
+    // Régression : le popover est un portail — hors de la poignée dans le
+    // DOM, mais dans son arbre React, donc ses événements remontent jusqu'au
+    // gestionnaire de glisser. Cliquer un champ du popover démarrait un
+    // déplacement et le champ ne réagissait jamais.
+    const user = userEvent.setup();
+    const { container } = render(<Harness initial={[CHATROOMS_ITEM]} />);
+
+    await user.click(screen.getByLabelText("Réglages du bloc"));
+    const field = await screen.findByLabelText("Lignes visibles");
+    const block = container.querySelector<HTMLElement>(`[data-block-id="${CHATROOMS_ITEM.id}"]`)!;
+
+    await act(async () => {
+      fireEvent.pointerDown(field, { button: 0 });
+    });
+
+    expect(block.className).not.toContain("opacity-50");
+
+    await act(async () => {
+      fireEvent.pointerUp(window);
+    });
+  });
+
   it("un pointerdown sur l'icône SVG à l'intérieur d'un bouton d'action ne déclenche pas non plus de déplacement", async () => {
     // Régression : au centre d'une icône (Pencil/Trash2/Settings2…),
     // `elementFromPoint` renvoie le `<svg>` lui-même, pas le `<button>` qui le

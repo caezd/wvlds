@@ -493,6 +493,11 @@ export function WorldHomeGridEditor({
     // garde-fou ne se déclenchait quasiment jamais en pratique. `Element` est
     // l'ancêtre commun aux deux, et `.closest()` y est défini pareil.
     if (event.target instanceof Element && event.target.closest("button")) return;
+    // Le popover de réglages est rendu dans un portail : hors de la poignée
+    // dans le DOM, mais toujours DANS son arbre React — ses événements
+    // remontent donc jusqu'ici. Un pointerdown sur un champ du popover
+    // démarrait un déplacement au lieu de laisser le champ réagir.
+    if (event.target instanceof Node && !event.currentTarget.contains(event.target)) return;
     event.preventDefault();
     event.stopPropagation();
     event.currentTarget.setPointerCapture(event.pointerId);
