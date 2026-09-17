@@ -664,6 +664,29 @@ describe("WorldHomeGridEditor", () => {
     });
   });
 
+  it("un réglage à choix se règle par des boutons et se persiste à la fermeture", async () => {
+    const membersItem = { id: "m", type: "widget", x: 0, y: 0, w: 12, widgetId: "members_online" } as const;
+    setWorldHomeGridMock.mockResolvedValue({ ok: true, items: [membersItem] });
+    const user = userEvent.setup();
+    render(<Harness initial={[membersItem]} />);
+
+    await user.click(screen.getByLabelText("Réglages du bloc"));
+    const group = await screen.findByRole("radiogroup", { name: "Affichage" });
+    expect(within(group).getByRole("radio", { name: "Avatars" })).toBeChecked();
+    await user.click(within(group).getByRole("radio", { name: "Liste" }));
+    expect(within(group).getByRole("radio", { name: "Liste" })).toBeChecked();
+    expect(setWorldHomeGridMock).not.toHaveBeenCalled();
+
+    await user.keyboard("{Escape}");
+
+    await waitFor(() => {
+      expect(setWorldHomeGridMock).toHaveBeenCalledWith(
+        "w1",
+        [expect.objectContaining({ options: { style: "list", limit: 8 } })],
+      );
+    });
+  });
+
   it("supprime un bloc après confirmation", async () => {
     setWorldHomeGridMock.mockResolvedValue({ ok: true, items: [] });
     const user = userEvent.setup();

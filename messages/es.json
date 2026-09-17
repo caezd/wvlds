@@ -452,7 +452,14 @@
         "options": {
           "range": "Entre {min} y {max}",
           "visibleRows": "Filas visibles",
-          "limit": "Número de entradas"
+          "limit": "Número de entradas",
+          "style": "Presentación"
+        },
+        "optionChoices": {
+          "style": {
+            "avatars": "Avatares",
+            "list": "Lista"
+          }
         },
         "deleteTitle": "¿Eliminar este bloque?",
         "deleteDesc": "Este bloque se eliminará de la página de inicio. Esta acción es irreversible.",

@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-09 ──────────────────────────────────────────────────────────────
   {
     date: "2026-09",
+    tag: "Page d’accueil",
+    text: "Le bloc « Membres en ligne » a un réglage d’affichage : la rangée d’avatars, ou une liste avec le nom de chaque membre. Sa hauteur est alignée sur celle du bloc « Créer une partie ».",
+  },
+  {
+    date: "2026-09",
     tag: "Membres",
     text: "L’onglet Membres d’un monde se présente en cartes, regroupées par rôle : avatar, statut en ligne et les personas joués, chacun cliquable pour ouvrir sa fiche. Un champ de recherche filtre par nom de membre ou de persona ; le compteur « en ligne », à côté, ne garde que les membres connectés d’un clic.",
   },

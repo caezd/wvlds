@@ -17,7 +17,9 @@ import {
   DEFAULT_HOME_GRID_GAP,
   HOME_GRID_COLS,
   HOME_GRID_GAP_PRESETS,
+  widgetOptionChoice,
   widgetOptionValue,
+  type MembersOnlineStyle,
   type WorldHomeGridGap,
   type WorldHomeGridItem,
 } from "./worldHomeGrid";
@@ -220,6 +222,7 @@ function renderBlock(
         <WorldMembersOnlineWidget
           worldId={ctx.worldId}
           limit={widgetOptionValue("members_online", "limit", item.options)}
+          style={widgetOptionChoice("members_online", "style", item.options) as MembersOnlineStyle}
         />
       );
     case "wiki_shortcuts":

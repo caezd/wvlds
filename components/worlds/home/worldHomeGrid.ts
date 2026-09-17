@@ -87,8 +87,9 @@ export type WorldHomeGridItem = {
    *  (à défaut : « Bloc HTML »/« Bloc Markdown »). Purement descriptif, non
    *  affiché sur la page d'accueil. */
   title?: string;
-  /** Réglages propres au widget (voir WORLD_HOME_WIDGET_OPTIONS). */
-  options?: Record<string, number>;
+  /** Réglages propres au widget (voir WORLD_HOME_WIDGET_OPTIONS) — un nombre
+   *  pour un réglage numérique, une chaîne pour un réglage à choix. */
+  options?: WorldHomeWidgetOptions;
 };
 
 /** Longueur maximale du titre d'un bloc html/markdown, et du titre/libellé de
@@ -148,15 +149,35 @@ export function sanitizeBannerContent(raw: unknown): WorldHomeBannerContent | nu
   };
 }
 
-/** Définition d'un réglage numérique de widget — pilote à la fois le champ
- *  affiché dans l'éditeur et la validation (client et serveur), pour qu'un
- *  nouveau réglage n'ait à être déclaré qu'à un seul endroit. */
-export type WorldHomeWidgetOption = {
+export type WorldHomeWidgetOptions = Record<string, number | string>;
+
+/** Réglage numérique de widget (champ nombre borné dans l'éditeur). */
+export type WorldHomeWidgetNumberOption = {
+  kind: "number";
   key: string;
   min: number;
   max: number;
   default: number;
 };
+
+/** Réglage à choix fermé (liste déroulante dans l'éditeur) — les libellés
+ *  vivent sous `worlds.home.grid.optionChoices.<key>.<choix>`. */
+export type WorldHomeWidgetChoiceOption = {
+  kind: "choice";
+  key: string;
+  choices: readonly string[];
+  default: string;
+};
+
+/** Définition d'un réglage de widget — pilote à la fois le champ affiché
+ *  dans l'éditeur et la validation (client et serveur), pour qu'un nouveau
+ *  réglage n'ait à être déclaré qu'à un seul endroit. */
+export type WorldHomeWidgetOption = WorldHomeWidgetNumberOption | WorldHomeWidgetChoiceOption;
+
+/** Styles d'affichage du widget « membres en ligne » : la rangée d'avatars
+ *  empilés (d'origine) ou une liste, un membre par ligne avec son nom. */
+export const MEMBERS_ONLINE_STYLES = ["avatars", "list"] as const;
+export type MembersOnlineStyle = (typeof MEMBERS_ONLINE_STYLES)[number];
 
 /**
  * Réglages disponibles par widget. Un widget absent de ce registre n'a
@@ -168,24 +189,53 @@ export type WorldHomeWidgetOption = {
  * membres en ligne) borne au contraire le nombre d'entrées récupérées.
  */
 export const WORLD_HOME_WIDGET_OPTIONS: Partial<Record<WorldHomeWidgetId, WorldHomeWidgetOption[]>> = {
-  chatrooms: [{ key: "visibleRows", min: 1, max: 50, default: 8 }],
-  wiki_shortcuts: [{ key: "limit", min: 1, max: 20, default: 6 }],
-  personas_recent: [{ key: "limit", min: 1, max: 30, default: 10 }],
-  members_online: [{ key: "limit", min: 1, max: 20, default: 8 }],
-  timeline_shortcuts: [{ key: "limit", min: 1, max: 20, default: 6 }],
+  chatrooms: [{ kind: "number", key: "visibleRows", min: 1, max: 50, default: 8 }],
+  wiki_shortcuts: [{ kind: "number", key: "limit", min: 1, max: 20, default: 6 }],
+  personas_recent: [{ kind: "number", key: "limit", min: 1, max: 30, default: 10 }],
+  members_online: [
+    { kind: "choice", key: "style", choices: MEMBERS_ONLINE_STYLES, default: "avatars" },
+    // 0 est permis : le bloc se réduit alors à son titre (le compteur).
+    { kind: "number", key: "limit", min: 0, max: 20, default: 8 },
+  ],
+  timeline_shortcuts: [{ kind: "number", key: "limit", min: 1, max: 20, default: 6 }],
 };
 
-/** Valeur d'un réglage, bornée au registre, avec repli sur la valeur par défaut. */
+function findOptionDef(widgetId: WorldHomeWidgetId | undefined, key: string): WorldHomeWidgetOption | undefined {
+  return (widgetId && WORLD_HOME_WIDGET_OPTIONS[widgetId])?.find((o) => o.key === key);
+}
+
+function clampNumberOption(def: WorldHomeWidgetNumberOption, raw: unknown): number | undefined {
+  if (typeof raw !== "number" || !Number.isFinite(raw)) return undefined;
+  return Math.min(def.max, Math.max(def.min, Math.round(raw)));
+}
+
+function resolveChoiceOption(def: WorldHomeWidgetChoiceOption, raw: unknown): string | undefined {
+  return typeof raw === "string" && def.choices.includes(raw) ? raw : undefined;
+}
+
+/** Valeur d'un réglage numérique, bornée au registre, avec repli sur la
+ *  valeur par défaut. 0 pour un réglage non déclaré (ou non numérique). */
 export function widgetOptionValue(
   widgetId: WorldHomeWidgetId | undefined,
   key: string,
-  options: Record<string, number> | undefined,
+  options: WorldHomeWidgetOptions | undefined,
 ): number {
-  const def = (widgetId && WORLD_HOME_WIDGET_OPTIONS[widgetId])?.find((o) => o.key === key);
-  if (!def) return 0;
-  const raw = options?.[key];
-  if (typeof raw !== "number" || !Number.isFinite(raw)) return def.default;
-  return Math.min(def.max, Math.max(def.min, Math.round(raw)));
+  const def = findOptionDef(widgetId, key);
+  if (!def || def.kind !== "number") return 0;
+  return clampNumberOption(def, options?.[key]) ?? def.default;
+}
+
+/** Valeur d'un réglage à choix, avec repli sur le choix par défaut — une
+ *  valeur inconnue (choix retiré depuis) retombe dessus plutôt que de casser
+ *  le rendu. Chaîne vide pour un réglage non déclaré. */
+export function widgetOptionChoice(
+  widgetId: WorldHomeWidgetId | undefined,
+  key: string,
+  options: WorldHomeWidgetOptions | undefined,
+): string {
+  const def = findOptionDef(widgetId, key);
+  if (!def || def.kind !== "choice") return "";
+  return resolveChoiceOption(def, options?.[key]) ?? def.default;
 }
 
 /**
@@ -197,15 +247,15 @@ export function widgetOptionValue(
 export function sanitizeWidgetOptions(
   widgetId: WorldHomeWidgetId | undefined,
   raw: unknown,
-): Record<string, number> | undefined {
+): WorldHomeWidgetOptions | undefined {
   const defs = widgetId ? WORLD_HOME_WIDGET_OPTIONS[widgetId] : undefined;
   if (!defs || typeof raw !== "object" || raw === null) return undefined;
   const source = raw as Record<string, unknown>;
-  const out: Record<string, number> = {};
+  const out: WorldHomeWidgetOptions = {};
   for (const def of defs) {
-    const value = source[def.key];
-    if (typeof value !== "number" || !Number.isFinite(value)) continue;
-    out[def.key] = Math.min(def.max, Math.max(def.min, Math.round(value)));
+    const value =
+      def.kind === "number" ? clampNumberOption(def, source[def.key]) : resolveChoiceOption(def, source[def.key]);
+    if (value !== undefined) out[def.key] = value;
   }
   return Object.keys(out).length > 0 ? out : undefined;
 }

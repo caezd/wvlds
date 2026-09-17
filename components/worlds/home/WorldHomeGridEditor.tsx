@@ -32,12 +32,14 @@ import {
   moveBlock,
   resizeBlock,
   rowBoundaries,
+  widgetOptionChoice,
   widgetOptionValue,
   WORLD_HOME_WIDGET_OPTIONS,
   type WorldHomeBannerContent,
   type WorldHomeGridGap,
   type WorldHomeGridItem,
   type WorldHomeWidgetOption,
+  type WorldHomeWidgetOptions,
 } from "./worldHomeGrid";
 import { WorldHomeHtmlBlockEditor } from "./blocks/WorldHomeHtmlBlockEditor";
 import { WorldHomeMarkdownBlockEditor } from "./blocks/WorldHomeMarkdownBlockEditor";
@@ -120,11 +122,12 @@ function useMeasuredWidth(): { containerRef: React.RefObject<HTMLDivElement | nu
 }
 
 /**
- * Réglages d'un widget — un champ numérique par option déclarée au registre
- * (voir WORLD_HOME_WIDGET_OPTIONS). Comme le sélecteur de couleur de
- * l'onglet Apparence, on ne persiste qu'à la fermeture du popover : taper
- * dans un champ nombre émet un `change` par frappe, ce qui enverrait sinon
- * une requête par caractère.
+ * Réglages d'un widget — un champ par option déclarée au registre (voir
+ * WORLD_HOME_WIDGET_OPTIONS) : un nombre borné, ou une liste déroulante pour
+ * un réglage à choix. Comme le sélecteur de couleur de l'onglet Apparence,
+ * on ne persiste qu'à la fermeture du popover : taper dans un champ nombre
+ * émet un `change` par frappe, ce qui enverrait sinon une requête par
+ * caractère.
  */
 function WidgetOptionsPopover({
   item,
@@ -133,14 +136,22 @@ function WidgetOptionsPopover({
 }: {
   item: WorldHomeGridItem;
   defs: WorldHomeWidgetOption[];
-  onChange: (options: Record<string, number>) => void;
+  onChange: (options: WorldHomeWidgetOptions) => void;
 }) {
   const t = useTranslations("worlds");
   const [open, setOpen] = React.useState(false);
-  const [draft, setDraft] = React.useState<Record<string, number>>({});
+  const [draft, setDraft] = React.useState<WorldHomeWidgetOptions>({});
 
   const current = React.useMemo(
-    () => Object.fromEntries(defs.map((d) => [d.key, widgetOptionValue(item.widgetId, d.key, item.options)])),
+    () =>
+      Object.fromEntries(
+        defs.map((d) => [
+          d.key,
+          d.kind === "number"
+            ? widgetOptionValue(item.widgetId, d.key, item.options)
+            : widgetOptionChoice(item.widgetId, d.key, item.options),
+        ]),
+      ),
     [defs, item.widgetId, item.options],
   );
 
@@ -148,11 +159,9 @@ function WidgetOptionsPopover({
     if (next) {
       setDraft(current);
     } else if (defs.some((d) => draft[d.key] !== current[d.key])) {
-      onChange(
-        Object.fromEntries(
-          defs.map((d) => [d.key, Math.min(d.max, Math.max(d.min, draft[d.key] ?? d.default))]),
-        ),
-      );
+      // Le brouillon est renvoyé tel quel — c'est `sanitizeWidgetOptions`,
+      // à la persistance, qui borne les nombres et écarte un choix inconnu.
+      onChange({ ...current, ...draft });
     }
     setOpen(next);
   }
@@ -171,21 +180,57 @@ function WidgetOptionsPopover({
       <PopoverContent align="end" className="w-56 space-y-3 p-3">
         {defs.map((def) => (
           <div key={def.key} className="space-y-1.5">
-            <label htmlFor={`opt-${item.id}-${def.key}`} className="text-xs font-medium text-foreground">
+            <label
+              htmlFor={def.kind === "number" ? `opt-${item.id}-${def.key}` : undefined}
+              id={`opt-${item.id}-${def.key}-label`}
+              className="text-xs font-medium text-foreground"
+            >
               {t(`home.grid.options.${def.key}`)}
             </label>
-            <Input
-              id={`opt-${item.id}-${def.key}`}
-              type="number"
-              min={def.min}
-              max={def.max}
-              value={draft[def.key] ?? def.default}
-              onChange={(e) => setDraft((prev) => ({ ...prev, [def.key]: e.target.valueAsNumber }))}
-              className="h-8 text-sm"
-            />
-            <p className="text-[11px] text-muted-foreground">
-              {t("home.grid.options.range", { min: def.min, max: def.max })}
-            </p>
+            {def.kind === "choice" ? (
+              /* Boutons côte à côte plutôt qu'un <select> natif : le menu
+                 déroulant natif est refermé par le popover Radix dès qu'on
+                 clique dedans (interaction traitée comme extérieure). */
+              <div
+                role="radiogroup"
+                aria-labelledby={`opt-${item.id}-${def.key}-label`}
+                className="grid grid-flow-col auto-cols-fr gap-1 rounded-lg border p-0.5"
+              >
+                {def.choices.map((choice) => {
+                  const selected = (draft[def.key] ?? def.default) === choice;
+                  return (
+                    <button
+                      key={choice}
+                      type="button"
+                      role="radio"
+                      aria-checked={selected}
+                      onClick={() => setDraft((prev) => ({ ...prev, [def.key]: choice }))}
+                      className={cn(
+                        "h-7 rounded-md px-2 text-xs transition-colors",
+                        selected ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      {t(`home.grid.optionChoices.${def.key}.${choice}`)}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <>
+                <Input
+                  id={`opt-${item.id}-${def.key}`}
+                  type="number"
+                  min={def.min}
+                  max={def.max}
+                  value={draft[def.key] ?? def.default}
+                  onChange={(e) => setDraft((prev) => ({ ...prev, [def.key]: e.target.valueAsNumber }))}
+                  className="h-8 text-sm"
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  {t("home.grid.options.range", { min: def.min, max: def.max })}
+                </p>
+              </>
+            )}
           </div>
         ))}
       </PopoverContent>

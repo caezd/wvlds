@@ -452,7 +452,14 @@
         "options": {
           "range": "Between {min} and {max}",
           "visibleRows": "Visible rows",
-          "limit": "Number of entries"
+          "limit": "Number of entries",
+          "style": "Display"
+        },
+        "optionChoices": {
+          "style": {
+            "avatars": "Avatars",
+            "list": "List"
+          }
         },
         "deleteTitle": "Delete this block?",
         "deleteDesc": "This block will be removed from the home page. This action is irreversible.",

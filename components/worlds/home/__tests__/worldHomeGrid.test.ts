@@ -18,6 +18,7 @@ import {
   sanitizeBannerContent,
   sanitizeBlockHeight,
   sanitizeWidgetOptions,
+  widgetOptionChoice,
   widgetOptionValue,
   type WorldHomeGridItem,
 } from "@/components/worlds/home/worldHomeGrid";
@@ -235,6 +236,29 @@ describe("réglages de widget (options)", () => {
   it("sanitizeWidgetOptions retourne undefined plutôt qu'un objet vide", () => {
     expect(sanitizeWidgetOptions("chatrooms", { inconnu: 3 })).toBeUndefined();
     expect(sanitizeWidgetOptions("categories", { visibleRows: 4 })).toBeUndefined();
+  });
+
+  it("widgetOptionChoice retombe sur le choix par défaut pour une valeur absente ou inconnue", () => {
+    expect(widgetOptionChoice("members_online", "style", undefined)).toBe("avatars");
+    expect(widgetOptionChoice("members_online", "style", { style: "list" })).toBe("list");
+    expect(widgetOptionChoice("members_online", "style", { style: "retiré" })).toBe("avatars");
+    expect(widgetOptionChoice("members_online", "style", { style: 3 })).toBe("avatars");
+  });
+
+  it("membres en ligne accepte une limite à 0 (titre seul)", () => {
+    expect(widgetOptionValue("members_online", "limit", { limit: 0 })).toBe(0);
+    expect(sanitizeWidgetOptions("members_online", { limit: 0 })).toEqual({ limit: 0 });
+  });
+
+  it("un réglage à choix n'est pas un réglage numérique, et inversement", () => {
+    expect(widgetOptionValue("members_online", "style", { style: "list" })).toBe(0);
+    expect(widgetOptionChoice("members_online", "limit", { limit: 4 })).toBe("");
+  });
+
+  it("sanitizeWidgetOptions garde un choix connu et écarte un choix inconnu", () => {
+    expect(sanitizeWidgetOptions("members_online", { style: "list", limit: 4 })).toEqual({ style: "list", limit: 4 });
+    expect(sanitizeWidgetOptions("members_online", { style: "retiré" })).toBeUndefined();
+    expect(sanitizeWidgetOptions("members_online", { style: 3, limit: 4 })).toEqual({ limit: 4 });
   });
 
   it("les réglages valides survivent à la résolution de la grille", () => {

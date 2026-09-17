@@ -3,13 +3,14 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Users } from "lucide-react";
+import { ArrowUpRight, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import { useGlobalPresence } from "@/components/providers/PresenceProvider";
 import { getLeadingLetter } from "@/lib/textFormatting";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import type { MembersOnlineStyle } from "../worldHomeGrid";
 
 type Member = {
   user_id: string;
@@ -19,14 +20,32 @@ type Member = {
 
 const DEFAULT_MAX_SHOWN = 8;
 
+function displayNameOf(m: Member) {
+  return m.username ? `@${m.username}` : m.user_id.slice(0, 8);
+}
+
+function MemberAvatar({ member, className }: { member: Member; className?: string }) {
+  return (
+    <Avatar className={className}>
+      <AvatarImage src={member.avatar_url ?? undefined} alt="" className="rounded-full" />
+      <AvatarFallback className="rounded-full text-[10px]">{getLeadingLetter(displayNameOf(member))}</AvatarFallback>
+    </Avatar>
+  );
+}
+
 export function WorldMembersOnlineWidget({
   worldId,
   limit = DEFAULT_MAX_SHOWN,
+  style = "avatars",
 }: {
   worldId: string;
   /** Nombre d'avatars affichés avant le compteur « +N » — réglage du widget
    *  (voir WORLD_HOME_WIDGET_OPTIONS). */
   limit?: number;
+  /** Rangée d'avatars empilés, ou liste des noms — à la suite, séparés par
+   *  des virgules, dans un bloc large ; un par ligne dans un bloc étroit.
+   *  Réglage du widget (voir WORLD_HOME_WIDGET_OPTIONS). */
+  style?: MembersOnlineStyle;
 }) {
   const t = useTranslations("worlds");
   const [memberIds, setMemberIds] = useState<string[]>([]);
@@ -108,38 +127,79 @@ export function WorldMembersOnlineWidget({
 
   const shown = online.slice(0, limit);
   const overflow = online.length - shown.length;
+  const href = `/w/${worldId}?view=members`;
+  const countLabel = online.length > 0 ? t("home.onlineCount", { count: online.length }) : t("home.noneOnline");
+
+  // Même hauteur que le faux composeur « Nouveau jeu… » (WorldChatComposer :
+  // px-4 py-3 + une ligne de text-sm = 44 px) pour que les deux blocs
+  // s'alignent sur une même ligne : ici l'avatar de 24 px impose py-2.5, et
+  // min-h-11 garde la hauteur quand il n'y a que du texte.
+  const headerClass = "flex min-h-11 items-center gap-3 px-4 py-2.5 text-sm font-medium text-foreground";
+
+  if (style === "list") {
+    return (
+      <div className="rounded-lg border">
+        <div className={headerClass}>
+          <Users className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <span className="min-w-0 flex-1 truncate">{countLabel}</span>
+          <Link
+            href={href}
+            aria-label={t("nav.members")}
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <ArrowUpRight className="h-3.5 w-3.5" />
+          </Link>
+        </div>
+        {shown.length > 0 && (
+          <div className="border-t border-border-soft">
+            {/* Deux rendus du même contenu, un seul visible à la fois, selon la
+                largeur de la CELLULE (container query, voir WorldHomeGridView) :
+                les noms à la suite, séparés par des virgules, quand le bloc est
+                large ; un membre par ligne quand il est étroit. */}
+            <p className="hidden px-4 py-2.5 text-sm leading-6 text-muted-foreground @md:block">
+              {shown.map((m, i) => (
+                <span key={m.user_id}>
+                  {i > 0 && ", "}
+                  <span className="text-foreground">{displayNameOf(m)}</span>
+                </span>
+              ))}
+              {overflow > 0 && <span> +{overflow}</span>}
+            </p>
+            <ul className="py-1 @md:hidden">
+              {shown.map((m) => (
+                <li key={m.user_id} className="flex items-center gap-2.5 px-4 py-1.5 text-sm">
+                  <MemberAvatar member={m} className="size-6 rounded-full" />
+                  <span className="min-w-0 flex-1 truncate">{displayNameOf(m)}</span>
+                </li>
+              ))}
+              {overflow > 0 && (
+                <li className="px-4 py-1.5 text-xs text-muted-foreground">+{overflow}</li>
+              )}
+            </ul>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
-    <Link
-      href={`/w/${worldId}?view=members`}
-      className="flex items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-hoverCard"
-    >
+    <Link href={href} className={`${headerClass} rounded-lg border transition-colors hover:bg-hoverCard`}>
       <Users className="h-4 w-4 shrink-0 text-muted-foreground" />
-      <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
-        {online.length > 0 ? t("home.onlineCount", { count: online.length }) : t("home.noneOnline")}
-      </span>
+      <span className="min-w-0 flex-1 truncate">{countLabel}</span>
       {shown.length > 0 && (
         <div className="flex -space-x-1.5 shrink-0">
-          {shown.map((m) => {
-            const displayName = m.username ? `@${m.username}` : m.user_id.slice(0, 8);
-            return (
-              <Tooltip key={m.user_id}>
-                <TooltipTrigger asChild>
-                  <span>
-                    <Avatar className="size-6 rounded-full ring-2 ring-background">
-                      <AvatarImage src={m.avatar_url ?? undefined} alt="" className="rounded-full" />
-                      <AvatarFallback className="rounded-full text-[10px]">
-                        {getLeadingLetter(displayName)}
-                      </AvatarFallback>
-                    </Avatar>
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" sideOffset={4}>
-                  {displayName}
-                </TooltipContent>
-              </Tooltip>
-            );
-          })}
+          {shown.map((m) => (
+            <Tooltip key={m.user_id}>
+              <TooltipTrigger asChild>
+                <span>
+                  <MemberAvatar member={m} className="size-6 rounded-full ring-2 ring-background" />
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" sideOffset={4}>
+                {displayNameOf(m)}
+              </TooltipContent>
+            </Tooltip>
+          ))}
           {overflow > 0 && (
             <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-[9px] font-medium text-muted-foreground ring-2 ring-background">
               +{overflow}

@@ -98,6 +98,59 @@ describe("WorldMembersOnlineWidget", () => {
     expect(profilesBuilder.in).toHaveBeenCalledWith("id", ["u1"]);
   });
 
+  it("en style « liste », affiche un membre par ligne avec son nom", async () => {
+    mockOnlineUsers.mockReturnValue({ u1: { user_id: "u1" }, u2: { user_id: "u2" } });
+    setup();
+    render(<WorldMembersOnlineWidget worldId="w1" style="list" />);
+
+    await waitFor(() => {
+      expect(screen.getByText("2 membres en ligne")).toBeInTheDocument();
+    });
+    // Version étroite : un membre par ligne, avec son avatar.
+    const rows = screen.getAllByRole("listitem");
+    expect(rows.map((r) => r.textContent)).toEqual(["A@alice", "B@bob"]);
+    // Version large : les noms à la suite, séparés par des virgules.
+    expect(screen.getByText((_, el) => el?.tagName === "P" && el.textContent === "@alice, @bob")).toBeInTheDocument();
+    // Le lien vers l'onglet Membres est un petit bouton en bout de ligne,
+    // pas le compteur lui-même.
+    const link = screen.getByRole("link");
+    expect(link).toHaveAttribute("href", "/w/w1?view=members");
+    expect(link).not.toHaveTextContent("2 membres en ligne");
+  });
+
+  it("en style « liste », le surplus au-delà de la limite est compté", async () => {
+    mockOnlineUsers.mockReturnValue({ u1: { user_id: "u1" }, u2: { user_id: "u2" } });
+    setup();
+    render(<WorldMembersOnlineWidget worldId="w1" style="list" limit={1} />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText("@alice").length).toBeGreaterThan(0);
+    });
+    expect(screen.queryByText("@bob")).not.toBeInTheDocument();
+    expect(screen.getAllByRole("listitem").map((r) => r.textContent)).toEqual(["A@alice", "+1"]);
+    expect(screen.getByText((_, el) => el?.tagName === "P" && el.textContent === "@alice +1")).toBeInTheDocument();
+  });
+
+  it("avec une limite à 0, n'affiche que le compteur, dans les deux styles", async () => {
+    mockOnlineUsers.mockReturnValue({ u1: { user_id: "u1" }, u2: { user_id: "u2" } });
+    setup();
+    const { unmount } = render(<WorldMembersOnlineWidget worldId="w1" limit={0} />);
+    await waitFor(() => {
+      expect(screen.getByText("2 membres en ligne")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("A")).not.toBeInTheDocument();
+    expect(screen.queryByText("+2")).not.toBeInTheDocument();
+    unmount();
+
+    setup();
+    render(<WorldMembersOnlineWidget worldId="w1" limit={0} style="list" />);
+    await waitFor(() => {
+      expect(screen.getByText("2 membres en ligne")).toBeInTheDocument();
+    });
+    expect(screen.queryByRole("listitem")).not.toBeInTheDocument();
+    expect(screen.queryByText("@alice")).not.toBeInTheDocument();
+  });
+
   it("ne requête pas les profils quand personne n'est en ligne", async () => {
     const mock = setup();
     render(<WorldMembersOnlineWidget worldId="w1" />);

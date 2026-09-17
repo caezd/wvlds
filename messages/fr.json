@@ -452,7 +452,14 @@
         "options": {
           "range": "Entre {min} et {max}",
           "visibleRows": "Lignes visibles",
-          "limit": "Nombre d'entrées"
+          "limit": "Nombre d'entrées",
+          "style": "Affichage"
+        },
+        "optionChoices": {
+          "style": {
+            "avatars": "Avatars",
+            "list": "Liste"
+          }
         },
         "deleteTitle": "Supprimer ce bloc ?",
         "deleteDesc": "Ce bloc sera retiré de la page d'accueil. Cette action est irréversible.",
