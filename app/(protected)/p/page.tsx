@@ -1,4 +1,5 @@
 // app/(protected)/personas/page.tsx
+import { narrativeStatusOf } from "@/lib/personaStatus";
 import { Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getUserId } from "@/lib/auth";
@@ -24,6 +25,7 @@ type PersonaRow = {
   world_id?: string | null;
   faceclaim?: string | null;
   marital_status?: string | null;
+  narrative_status?: string | null;
   spouse_persona_id?: string | null;
 };
 
@@ -53,7 +55,7 @@ export default async function PersonasPage() {
       const { data, error } = await supabase
         .from("personas")
         .select(
-          "id, name, avatar_url, avatar_config, banner_url, avatar_frame_id, world_id, faceclaim, marital_status, spouse_persona_id, frame:avatar_frame_id(asset_url)",
+          "id, name, avatar_url, avatar_config, banner_url, avatar_frame_id, world_id, faceclaim, marital_status, spouse_persona_id, narrative_status, frame:avatar_frame_id(asset_url)",
         )
         .eq("user_id", userId)
         .eq("is_template", false)
@@ -170,6 +172,7 @@ export default async function PersonasPage() {
       faceclaim: p.faceclaim ?? null,
       marital_status: (p.marital_status as MaritalStatus | null) ?? null,
       spouse_persona_id: p.spouse_persona_id ?? null,
+      narrative_status: narrativeStatusOf(p.narrative_status),
       sections: sectionsByPersona.get(p.id) ?? [],
     });
   }

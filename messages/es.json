@@ -931,6 +931,36 @@
       "accepted": "Relación aceptada",
       "unknownType": "Tipo desconocido",
       "empty": "Sin relaciones"
+    },
+    "narrativeStatus": {
+      "label": "Estado narrativo",
+      "alive": "Vivo",
+      "missing": "Desaparecido",
+      "dead": "Fallecido",
+      "retired": "Retirado"
+    },
+    "list": {
+      "title": "Personas",
+      "mine": "Mis personas",
+      "others": "Otras personas",
+      "newPersona": "Nuevo persona",
+      "unnamed": "Sin nombre",
+      "noneMine": "Todavía no tiene ningún persona en este mundo.",
+      "noOthers": "Ningún otro persona por el momento.",
+      "noMatch": "Ningún persona coincide.",
+      "searchPlaceholder": "Buscar un persona o un jugador…",
+      "filterPlayer": "Jugador",
+      "allPlayers": "Todos los jugadores",
+      "filterGroup": "Grupo",
+      "allGroups": "Todos los grupos",
+      "noGroup": "Sin grupo",
+      "filterStatus": "Estado",
+      "allStatuses": "Todos los estados",
+      "sort": "Orden",
+      "sortName": "Nombre A → Z",
+      "sortNewest": "Más recientes",
+      "sortOldest": "Más antiguos",
+      "createFirst": "Crear un persona"
     }
   },
   "quests": {
@@ -1403,7 +1433,9 @@
     "hideType": "Ocultar las relaciones «{name}»",
     "showGroup": "Mostrar el grupo «{name}»",
     "hideGroup": "Ocultar el grupo «{name}»",
-    "showAll": "Mostrar todo"
+    "showAll": "Mostrar todo",
+    "hideRetired": "Ocultar retirados y fallecidos",
+    "showRetired": "Mostrar retirados y fallecidos"
   },
   "wiki": {
     "changeIcon": "Cambiar icono",

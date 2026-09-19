@@ -5,8 +5,8 @@ import userEvent from "@testing-library/user-event";
 import { RelationDialog } from "../RelationDialog";
 import type { CPersona, CRelType, CRelation } from "../types";
 
-const ADHI: CPersona = { id: "p1", name: "Adhi", avatar_url: null, user_id: "u1" };
-const NYX: CPersona = { id: "p2", name: "Nyx", avatar_url: null, user_id: "u2" };
+const ADHI: CPersona = { id: "p1", name: "Adhi", avatar_url: null, user_id: "u1", narrative_status: "alive" };
+const NYX: CPersona = { id: "p2", name: "Nyx", avatar_url: null, user_id: "u2", narrative_status: "alive" };
 const TYPES: CRelType[] = [
   { id: "t-ally", name: "Allié", color: "#22c55e", dash: "", sort_index: 0, mutual: false, marital_status: null },
   { id: "t-enemy", name: "Ennemi", color: "#ef4444", dash: "", sort_index: 1, mutual: false, marital_status: null },

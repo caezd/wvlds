@@ -124,6 +124,9 @@ export type ChatMessageReaction = {
 
 export type MaritalStatus = "single" | "in_relationship" | "married" | "divorced" | "widowed";
 
+/** Statut narratif d'un persona — voir la migration 180 et lib/personaStatus.ts. */
+export type PersonaNarrativeStatus = "alive" | "missing" | "dead" | "retired";
+
 export type Persona = {
   id: string;
   user_id: string;
@@ -135,6 +138,7 @@ export type Persona = {
   faceclaim?: string | null;
   marital_status?: MaritalStatus | null;
   spouse_persona_id?: string | null;
+  narrative_status?: PersonaNarrativeStatus | null;
   /** Requis pour calculer l'éligibilité chronologique (voir lib/personaEligibility.ts). */
   created_at?: string;
 };

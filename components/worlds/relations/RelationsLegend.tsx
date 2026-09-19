@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 
 import { cn } from "@/lib/utils";
+import { Ghost } from "lucide-react";
 import { REL_W } from "./geometry";
 import type { CGroup, CRelType } from "./types";
 
@@ -22,6 +23,8 @@ export function RelationsLegend({
   hiddenGroups,
   onToggleType,
   onToggleGroup,
+  hideRetired,
+  onToggleRetired,
   onReset,
   className,
 }: {
@@ -31,11 +34,14 @@ export function RelationsLegend({
   hiddenGroups: ReadonlySet<string>;
   onToggleType: (id: string) => void;
   onToggleGroup: (id: string) => void;
+  /** `undefined` : aucun persona décédé ou retiré dans le monde, pas de bouton. */
+  hideRetired?: boolean;
+  onToggleRetired?: () => void;
   onReset: () => void;
   className?: string;
 }) {
   const t = useTranslations("relations");
-  const filtering = hiddenTypes.size > 0 || hiddenGroups.size > 0;
+  const filtering = hiddenTypes.size > 0 || hiddenGroups.size > 0 || hideRetired === true;
 
   return (
     <div className={cn("flex flex-wrap items-center gap-x-3 gap-y-1.5", className)}>
@@ -83,6 +89,23 @@ export function RelationsLegend({
           </button>
         );
       })}
+      {hideRetired !== undefined && onToggleRetired && (
+        <>
+          {(groups.length > 0 || relTypes.length > 0) && <span aria-hidden className="h-3 w-px bg-border" />}
+          <button
+            type="button"
+            aria-pressed={hideRetired}
+            onClick={onToggleRetired}
+            className={cn(
+              "flex items-center gap-1.5 rounded-full px-1.5 py-0.5 text-[11px] transition-opacity hover:bg-muted/60",
+              hideRetired ? "text-foreground" : "text-muted-foreground",
+            )}
+          >
+            <Ghost className="h-3 w-3 shrink-0" aria-hidden />
+            {hideRetired ? t("showRetired") : t("hideRetired")}
+          </button>
+        </>
+      )}
       {filtering && (
         <button type="button" onClick={onReset} className="ml-auto text-[11px] text-muted-foreground underline underline-offset-2 hover:text-foreground">
           {t("showAll")}

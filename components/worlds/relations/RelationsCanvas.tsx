@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { Network, Pencil, Search, Trash2, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { isRetiredStatus } from "@/lib/personaStatus";
 import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
@@ -64,6 +65,8 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
   // ── Filtres (légende) ──
   const [hiddenTypes, setHiddenTypes] = React.useState<ReadonlySet<string>>(() => new Set());
   const [hiddenGroups, setHiddenGroups] = React.useState<ReadonlySet<string>>(() => new Set());
+  // Masquer les personas décédés ou retirés, et leurs relations avec eux.
+  const [hideRetired, setHideRetired] = React.useState(false);
   const toggle = (set: ReadonlySet<string>, id: string) => {
     const next = new Set(set);
     if (next.has(id)) next.delete(id); else next.add(id);
@@ -71,8 +74,10 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
   };
   const personaHidden = React.useCallback((pid: string) => {
     const gid = groupByPersona.get(pid);
-    return !!gid && hiddenGroups.has(gid);
-  }, [groupByPersona, hiddenGroups]);
+    if (!!gid && hiddenGroups.has(gid)) return true;
+    return hideRetired && isRetiredStatus(personaMap.get(pid)?.narrative_status);
+  }, [groupByPersona, hiddenGroups, hideRetired, personaMap]);
+  const hasRetired = React.useMemo(() => personas.some((p) => isRetiredStatus(p.narrative_status)), [personas]);
   const relationVisible = React.useCallback(
     (r: CRelation) => !hiddenTypes.has(r.type) && !personaHidden(r.from_persona_id) && !personaHidden(r.to_persona_id),
     [hiddenTypes, personaHidden],
@@ -552,7 +557,7 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
       </div>
 
       {/* ── Légende, qui filtre ── */}
-      {(relTypes.length > 0 || groups.length > 0) && (
+      {(relTypes.length > 0 || groups.length > 0 || hasRetired) && (
         <RelationsLegend
           relTypes={relTypes}
           groups={groups}
@@ -560,7 +565,9 @@ export function RelationsCanvas({ worldId, userId, canAdmin }: RelationsCanvasPr
           hiddenGroups={hiddenGroups}
           onToggleType={(id) => setHiddenTypes((s) => toggle(s, id))}
           onToggleGroup={(id) => setHiddenGroups((s) => toggle(s, id))}
-          onReset={() => { setHiddenTypes(new Set()); setHiddenGroups(new Set()); }}
+          hideRetired={hasRetired ? hideRetired : undefined}
+          onToggleRetired={() => setHideRetired((v) => !v)}
+          onReset={() => { setHiddenTypes(new Set()); setHiddenGroups(new Set()); setHideRetired(false); }}
           className="shrink-0 border-t border-border-soft px-4 py-2"
         />
       )}

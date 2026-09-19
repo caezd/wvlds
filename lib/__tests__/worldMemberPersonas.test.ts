@@ -29,10 +29,10 @@ describe("fetchPersonasByMember", () => {
 
         expect([...byUser.keys()].sort()).toEqual(["u1", "u2"]);
         expect(byUser.get("u1")).toEqual([
-            { id: "p1", name: "Alia", avatar_url: "a1.png" },
-            { id: "p2", name: "Borin", avatar_url: null },
+            { id: "p1", name: "Alia", avatar_url: "a1.png", narrative_status: "alive" },
+            { id: "p2", name: "Borin", avatar_url: null, narrative_status: "alive" },
         ]);
-        expect(byUser.get("u2")).toEqual([{ id: "p3", name: "Cyl", avatar_url: null }]);
+        expect(byUser.get("u2")).toEqual([{ id: "p3", name: "Cyl", avatar_url: null, narrative_status: "alive" }]);
     });
 
     it("ignore les lignes sans membre ou sans persona", async () => {
@@ -47,7 +47,7 @@ describe("fetchPersonasByMember", () => {
         const byUser = await fetchPersonasByMember(client, "w1");
 
         expect(byUser.size).toBe(1);
-        expect(byUser.get("u1")).toEqual([{ id: "p2", name: "Valide", avatar_url: null }]);
+        expect(byUser.get("u1")).toEqual([{ id: "p2", name: "Valide", avatar_url: null, narrative_status: "alive" }]);
     });
 
     it("normalise un nom absent en chaîne vide", async () => {
@@ -56,7 +56,7 @@ describe("fetchPersonasByMember", () => {
         });
 
         const byUser = await fetchPersonasByMember(client, "w1");
-        expect(byUser.get("u1")).toEqual([{ id: "p1", name: "", avatar_url: null }]);
+        expect(byUser.get("u1")).toEqual([{ id: "p1", name: "", avatar_url: null, narrative_status: "alive" }]);
     });
 
     it("renvoie une map vide en cas d'erreur RPC, sans lever", async () => {

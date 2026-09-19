@@ -3,7 +3,10 @@
 import { PersonaEditSheet } from "./PersonaEditSheet";
 import type { PersonaSectionWithFields } from "@/types/personas";
 import type { AvatarConfigV1 } from "./avatar/PersonaAvatarPicker";
-import type { MaritalStatus } from "@/types/db";
+import type { PersonaNarrativeStatus, MaritalStatus } from "@/types/db";
+import { cn } from "@/lib/utils";
+import { isRetiredStatus } from "@/lib/personaStatus";
+import { PersonaStatusBadge } from "./PersonaStatusBadge";
 import { Pencil } from "lucide-react";
 import { getInitials } from "@/lib/textFormatting";
 import { StoredImage } from "@/components/ui/stored-image";
@@ -20,6 +23,7 @@ type PersonaCardProps = {
   initialFaceclaim?: string | null;
   initialMaritalStatus?: MaritalStatus | null;
   initialSpousePersonaId?: string | null;
+  narrativeStatus?: PersonaNarrativeStatus | null;
   initialSections: PersonaSectionWithFields[];
   worldId?: string;
   restrictInventory?: boolean;
@@ -38,6 +42,7 @@ export function PersonaCard({
   initialFaceclaim,
   initialMaritalStatus,
   initialSpousePersonaId,
+  narrativeStatus,
   initialSections,
   worldId,
   restrictInventory,
@@ -57,19 +62,23 @@ export function PersonaCard({
       initialFaceclaim={initialFaceclaim ?? null}
       initialMaritalStatus={initialMaritalStatus ?? null}
       initialSpousePersonaId={initialSpousePersonaId ?? null}
+      initialNarrativeStatus={narrativeStatus ?? null}
       worldId={worldId}
       restrictInventory={restrictInventory}
       restrictSkills={restrictSkills}
       faceclaimsEnabled={faceclaimsEnabled}
       trigger={
-        <button className="group relative w-full aspect-square rounded-2xl overflow-hidden bg-muted shadow-sm hover:shadow-lg transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-          {/* Image / fallback */}
+        <button
+          data-narrative-status={narrativeStatus ?? "alive"}
+          className="group relative w-full aspect-square rounded-2xl overflow-hidden bg-muted shadow-sm hover:shadow-lg transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          {/* Image / fallback — grisée quand le persona a quitté la scène. */}
           {avatarUrl ? (
             <StoredImage
               url={avatarUrl}
               width={avatarThumbWidth(200)}
               alt={personaName}
-              className="object-cover"
+              className={cn("object-cover", isRetiredStatus(narrativeStatus) && "grayscale opacity-80")}
               draggable={false}
             />
           ) : (
@@ -80,6 +89,8 @@ export function PersonaCard({
 
           {/* Gradient overlay + infos */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+
+          <PersonaStatusBadge status={narrativeStatus} className="absolute left-3 top-3" />
 
           {/* Bouton éditer — coin supérieur droit au survol */}
           <span className="absolute top-3 right-3 flex items-center gap-1 rounded-full bg-white/20 backdrop-blur-sm px-2.5 py-1 text-xs font-medium text-white opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">

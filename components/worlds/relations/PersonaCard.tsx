@@ -4,6 +4,8 @@ import Image from "next/image";
 import { useTranslations } from "next-intl";
 
 import { cn } from "@/lib/utils";
+import { isRetiredStatus } from "@/lib/personaStatus";
+import { PersonaStatusBadge } from "@/components/personas/PersonaStatusBadge";
 import { getInitials } from "@/lib/textFormatting";
 import { CW, CH } from "./geometry";
 import type { CPersona } from "./types";
@@ -50,6 +52,8 @@ export function PersonaCard({
         "relative cursor-pointer rounded-lg border-2 transition-all",
         selected ? "ring-1 ring-primary/30" : "hover:opacity-90",
         dimmed && "opacity-20 grayscale",
+        // Décédé ou retiré : présent, mais en retrait.
+        !dimmed && isRetiredStatus(persona.narrative_status) && "opacity-60 grayscale",
         className,
       )}
       onClick={onSelect}
@@ -78,6 +82,9 @@ export function PersonaCard({
         <span className="absolute left-1 top-1 z-20 rounded-full bg-primary px-1 text-[9px] font-bold text-primary-foreground" title={t("pendingCount", { count: pendingCount })}>
           {pendingCount}
         </span>
+      )}
+      {pendingCount === 0 && (
+        <PersonaStatusBadge status={persona.narrative_status} compact className="absolute left-1 top-1 z-20 bg-black/60 text-white dark:text-white" />
       )}
       {corner && <div className="absolute right-1 top-0 z-20">{corner}</div>}
     </div>

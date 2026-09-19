@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { createPersonaRelation, deletePersonaRelation } from "@/app/actions/personaRelations";
 import { messageErreurAction } from "@/lib/actionErrors";
 import { useTranslations } from "next-intl";
+import { NARRATIVE_STATUSES } from "@/lib/personaStatus";
 import { createClient } from "@/lib/supabase/client";
 import { toWebP } from "@/lib/imageUtils";
 import { initials } from "@/lib/persona-display";
@@ -30,7 +31,7 @@ import {
 } from "@/components/ui/select";
 import { Check, Eye, Loader2, Pencil, Trash2, X } from "lucide-react";
 import { ImagePickerCropField } from "@/components/ui/image-crop-picker";
-import type { MaritalStatus } from "@/types/db";
+import type { PersonaNarrativeStatus, MaritalStatus } from "@/types/db";
 
 import { PersonaSectionsTabs } from "./PersonaSectionsTabs";
 import { PersonaProfileBody, formatPersonaPresenceLine } from "./PersonaProfileSheetTrigger";
@@ -538,6 +539,53 @@ export function MaritalStatusPicker({
 }
 
 // ---------------------------------------------------------------------------
+// Statut narratif : vivant, disparu, décédé, retiré (migration 180). Même
+// motif que le statut marital — une écriture directe, optimiste, puis
+// `router.refresh()` pour que les cartes et la fiche suivent.
+// ---------------------------------------------------------------------------
+
+export function NarrativeStatusPicker({
+  personaId,
+  supabase,
+  initialStatus,
+}: {
+  personaId: string;
+  supabase: ReturnType<typeof createClient>;
+  initialStatus: PersonaNarrativeStatus;
+}) {
+  const t = useTranslations("personas.narrativeStatus");
+  const tPersonas = useTranslations("personas");
+  const router = useRouter();
+  const [status, setStatus] = useState<PersonaNarrativeStatus>(initialStatus);
+
+  async function update(next: PersonaNarrativeStatus) {
+    if (next === status) return;
+    const previous = status;
+    setStatus(next);
+    const { error } = await supabase.from("personas").update({ narrative_status: next }).eq("id", personaId);
+    if (error) {
+      setStatus(previous);
+      toast.error(tPersonas("saveFailed"), { description: error.message });
+      return;
+    }
+    router.refresh();
+  }
+
+  return (
+    <Select value={status} onValueChange={(v) => void update(v as PersonaNarrativeStatus)}>
+      <SelectTrigger size="sm" className="w-auto min-w-36" aria-label={t("label")}>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {NARRATIVE_STATUSES.map((value) => (
+          <SelectItem key={value} value={value}>{t(value)}</SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
+// ---------------------------------------------------------------------------
 
 type PersonaEditSheetProps = {
   personaId: string;
@@ -551,6 +599,7 @@ type PersonaEditSheetProps = {
   initialFaceclaim?: string | null;
   initialMaritalStatus?: MaritalStatus | null;
   initialSpousePersonaId?: string | null;
+  initialNarrativeStatus?: PersonaNarrativeStatus | null;
   trigger?: ReactNode;
   worldId?: string;
   restrictInventory?: boolean;
@@ -571,6 +620,7 @@ type PersonaEditorContentProps = {
   initialFaceclaim?: string | null;
   initialMaritalStatus?: MaritalStatus | null;
   initialSpousePersonaId?: string | null;
+  initialNarrativeStatus?: PersonaNarrativeStatus | null;
   worldId?: string;
   restrictInventory?: boolean;
   restrictSkills?: boolean;
@@ -594,6 +644,7 @@ export function PersonaEditorContent({
   initialFaceclaim,
   initialMaritalStatus,
   initialSpousePersonaId,
+  initialNarrativeStatus,
   worldId,
   restrictInventory,
   restrictSkills,
@@ -800,7 +851,12 @@ export function PersonaEditorContent({
                   )}
                 </div>
 
-                <div className="mb-3">
+                <div className="mb-3 flex flex-wrap items-center gap-2">
+                  <NarrativeStatusPicker
+                    personaId={personaId}
+                    supabase={supabase}
+                    initialStatus={initialNarrativeStatus ?? "alive"}
+                  />
                   <MaritalStatusPicker
                     personaId={personaId}
                     supabase={supabase}
@@ -1014,6 +1070,7 @@ export function PersonaEditSheet({
   initialFaceclaim,
   initialMaritalStatus,
   initialSpousePersonaId,
+  initialNarrativeStatus,
   trigger,
   worldId,
   restrictInventory,
@@ -1076,6 +1133,7 @@ export function PersonaEditSheet({
               initialFaceclaim={initialFaceclaim}
               initialMaritalStatus={initialMaritalStatus}
               initialSpousePersonaId={initialSpousePersonaId}
+              initialNarrativeStatus={initialNarrativeStatus}
               faceclaimsEnabled={faceclaimsEnabled}
             />
           </div>

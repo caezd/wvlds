@@ -22,6 +22,9 @@ import MarkdownRenderer from "@/components/MarkdownRenderer";
 import { AvatarWithFrame } from "@/components/avatars/AvatarWithFrame";
 import { PresenceDot } from "@/components/avatars/PresenceDot";
 import { MemberStatusBadge } from "@/components/worlds/members/WorldMemberCard";
+import { PersonaStatusBadge } from "@/components/personas/PersonaStatusBadge";
+import { narrativeStatusOf } from "@/lib/personaStatus";
+import type { PersonaNarrativeStatus } from "@/types/db";
 import { effectiveStatus, type WorldMemberCardFields } from "@/lib/worldMembers";
 import type { PersonaSection, PersonaSectionField, PersonaSectionWithFields, PersonaFieldData, GaugeItem, TraitItem, TimelineItem, DlItem } from "@/types/personas";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -446,6 +449,7 @@ export function PersonaProfileSheetTrigger({
     last_seen_at: string | null;
     appear_offline: boolean;
   } | null>(null);
+  const [narrativeStatus, setNarrativeStatus] = React.useState<PersonaNarrativeStatus>("alive");
   const [ownerStatus, setOwnerStatus] = React.useState<Pick<WorldMemberCardFields, "status" | "status_until" | "status_note"> | null>(null);
   const [sections, setSections] = React.useState<PersonaSectionWithFields[]>([]);
   const [catalog, setCatalog] = React.useState<Map<string, WorldCatalogItem> | undefined>(undefined);
@@ -471,7 +475,7 @@ export function PersonaProfileSheetTrigger({
     async function load() {
       const { data: persona, error } = await supabase
         .from("personas")
-        .select("id,user_id,name,avatar_url,banner_url,dialogue_color,world_id,frame:avatar_frame_id(asset_url)")
+        .select("id,user_id,name,avatar_url,banner_url,dialogue_color,world_id,narrative_status,frame:avatar_frame_id(asset_url)")
         .eq("id", personaId!)
         .maybeSingle();
 
@@ -482,6 +486,7 @@ export function PersonaProfileSheetTrigger({
         setAvatarUrl(row.avatar_url ?? null);
         setBannerUrl(row.banner_url ?? null);
         setDialogueColor(row.dialogue_color ?? null);
+        setNarrativeStatus(narrativeStatusOf((row as { narrative_status?: unknown }).narrative_status));
         setFrameUrl(row.frame?.asset_url ?? null);
         setWorldId(row.world_id ?? null);
         worldIdOfPersona = row.world_id ?? null;
@@ -643,8 +648,13 @@ export function PersonaProfileSheetTrigger({
             presenceLine={presenceLine}
             userPresence={userPresence}
             statusBadge={
-              ownerStatus && ownerEffectiveStatus !== "active" ? (
-                <MemberStatusBadge status={ownerEffectiveStatus} until={ownerStatus.status_until} note={ownerStatus.status_note} />
+              narrativeStatus !== "alive" || (ownerStatus && ownerEffectiveStatus !== "active") ? (
+                <>
+                  <PersonaStatusBadge status={narrativeStatus} />
+                  {ownerStatus && ownerEffectiveStatus !== "active" && (
+                    <MemberStatusBadge status={ownerEffectiveStatus} until={ownerStatus.status_until} note={ownerStatus.status_note} />
+                  )}
+                </>
               ) : undefined
             }
             isFollowing={isFollowing}

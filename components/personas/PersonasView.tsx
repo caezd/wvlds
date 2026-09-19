@@ -24,7 +24,7 @@ import { PersonaCard } from "./PersonaCard";
 import { movePersona, duplicatePersona } from "@/app/(protected)/p/actions";
 import type { PersonaSectionWithFields } from "@/types/personas";
 import type { AvatarConfigV1 } from "./avatar/PersonaAvatarPicker";
-import type { MaritalStatus } from "@/types/db";
+import type { PersonaNarrativeStatus, MaritalStatus } from "@/types/db";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import {
@@ -49,6 +49,7 @@ export type PersonaItem = {
   faceclaim?: string | null;
   marital_status?: MaritalStatus | null;
   spouse_persona_id?: string | null;
+  narrative_status?: PersonaNarrativeStatus | null;
   sections: PersonaSectionWithFields[];
 };
 
@@ -95,6 +96,7 @@ function PersonaCardFor({
       initialFrameUrl={persona.frame_asset_url ?? null}
       initialFaceclaim={persona.faceclaim ?? null}
       initialMaritalStatus={persona.marital_status ?? null}
+      narrativeStatus={persona.narrative_status ?? null}
       initialSpousePersonaId={persona.spouse_persona_id ?? null}
       initialSections={persona.sections}
       worldId={persona.world_id ?? undefined}

@@ -1,10 +1,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { RPC } from "@/lib/constants";
+import { narrativeStatusOf } from "@/lib/personaStatus";
+import type { PersonaNarrativeStatus } from "@/types/db";
 
 export type WorldMemberPersona = {
     id: string;
     name: string;
     avatar_url: string | null;
+    narrative_status: PersonaNarrativeStatus;
 };
 
 type Row = {
@@ -12,6 +15,7 @@ type Row = {
     persona_id: string | null;
     name: string | null;
     avatar_url: string | null;
+    narrative_status?: string | null;
 };
 
 /**
@@ -46,6 +50,7 @@ export async function fetchPersonasByMember(
             id: row.persona_id,
             name: row.name ?? "",
             avatar_url: row.avatar_url ?? null,
+            narrative_status: narrativeStatusOf(row.narrative_status),
         };
         if (list) list.push(persona);
         else byUser.set(row.user_id, [persona]);
