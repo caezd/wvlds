@@ -360,7 +360,48 @@
       "removeConfirm": "Retirer",
       "memberRemoved": "{name} a été retiré du monde.",
       "roleChangeFailed": "Modification des rôles impossible.",
-      "memberRemoveFailed": "Retrait du membre impossible."
+      "memberRemoveFailed": "Retrait du membre impossible.",
+      "card": {
+        "mine": "Ma carte",
+        "title": "Ma carte dans ce monde",
+        "statusTitle": "Statut du joueur",
+        "saveFailed": "Enregistrement de la carte impossible.",
+        "bio": "Présentation",
+        "bioPlaceholder": "Quelques mots sur vous, pour ce monde…",
+        "availability": "Disponibilités",
+        "availabilityPlaceholder": "Ex. le soir en semaine, le dimanche",
+        "timezone": "Fuseau horaire",
+        "timezoneNone": "Non précisé",
+        "timezoneUseMine": "Le mien",
+        "timezoneHelp": "Les autres membres verront l'heure qu'il est chez vous.",
+        "birthday": "Anniversaire",
+        "birthdayDay": "Jour",
+        "birthdayMonth": "Mois",
+        "birthdayHelp": "Jour et mois seulement, jamais l'année. Annoncé aux membres du monde le moment venu.",
+        "birthdayIncomplete": "Indiquez le jour et le mois, ou ni l'un ni l'autre.",
+        "activity": "Activité",
+        "messages": "{count, plural, =0 {Aucun message} one {# message} other {# messages}}",
+        "lastActive": "actif {when}",
+        "justNow": "à l'instant",
+        "localTime": "{time} heure locale",
+        "birthdayToday": "Anniversaire aujourd'hui !",
+        "birthdayOn": "Anniversaire le {date}"
+      },
+      "status": {
+        "label": "Statut",
+        "change": "Changer le statut…",
+        "active": "Actif",
+        "paused": "En pause",
+        "away": "Absent",
+        "activeHelp": "Vous jouez normalement.",
+        "pausedHelp": "Vous ralentissez : réponses plus lentes.",
+        "awayHelp": "Vous ne jouez pas pour le moment.",
+        "pausedUntil": "En pause jusqu'au {date}",
+        "awayUntil": "Absent jusqu'au {date}",
+        "until": "Retour prévu",
+        "note": "Un mot",
+        "notePlaceholder": "Ex. examens, vacances…"
+      }
     },
     "sidebar": {
       "active": "Récents",
@@ -414,7 +455,8 @@
         "wiki_shortcuts": "Raccourcis wiki",
         "personas_recent": "Personas récents",
         "timeline_shortcuts": "Raccourcis chronologie",
-        "map": "Carte"
+        "map": "Carte",
+        "birthdays": "Anniversaires"
       },
       "onlineCount": "{count, plural, one {# membre en ligne} other {# membres en ligne}}",
       "noneOnline": "Personne en ligne pour le moment",
@@ -458,7 +500,8 @@
           "range": "Entre {min} et {max}",
           "visibleRows": "Lignes visibles",
           "limit": "Nombre d'entrées",
-          "style": "Affichage"
+          "style": "Affichage",
+          "days": "Fenêtre (jours)"
         },
         "optionChoices": {
           "style": {
@@ -497,6 +540,11 @@
         "bannerButtonLabelPlaceholder": "Libellé du bouton",
         "bannerButtonUrlPlaceholder": "https://…",
         "bannerButtonClear": "Retirer"
+      },
+      "birthdays": {
+        "title": "Anniversaires",
+        "none": "Aucun anniversaire dans les {days} prochains jours.",
+        "today": "Aujourd'hui !"
       }
     },
     "namePlaceholder": "Ex. Monde de Veldis",

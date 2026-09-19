@@ -13,6 +13,9 @@ import type { AsidePersona } from "./WorldPersonaAsideClient";
 import { useTranslations } from "next-intl";
 import { StoredImage } from "@/components/ui/stored-image";
 import { avatarThumbWidth } from "@/lib/storage";
+import { effectiveStatus } from "@/lib/worldMembers";
+import { MemberStatusBadge } from "@/components/worlds/members/WorldMemberCard";
+import type { WorldMemberStatus } from "@/types/db";
 
 type OtherPersona = {
   id: string;
@@ -20,6 +23,9 @@ type OtherPersona = {
   avatar_url: string | null;
   user_id: string;
   username: string | null;
+  /** Statut du joueur dans ce monde ; « active » quand il n'a rien déclaré. */
+  playerStatus: WorldMemberStatus;
+  playerStatusUntil: string | null;
 };
 
 function memberLabel(userId: string, username: string | null) {
@@ -60,6 +66,15 @@ function OtherPersonaCard({ persona }: { persona: OtherPersona }) {
         </div>
       )}
       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+      {/* Le joueur est en pause ou absent : autant le savoir avant de lui écrire. */}
+      {persona.playerStatus !== "active" && (
+        <MemberStatusBadge
+          status={persona.playerStatus}
+          until={persona.playerStatusUntil}
+          note={null}
+          className="absolute left-2 top-2 bg-black/60 text-white backdrop-blur-sm dark:text-white"
+        />
+      )}
       <div className="absolute bottom-0 left-0 right-0 p-2.5">
         <span className="block text-sm font-semibold text-white leading-tight line-clamp-2">
           {name}
@@ -108,18 +123,29 @@ export function WorldPersonasPanel({
       const userIds = Array.from(new Set(otherRows.map((r) => r.user_id)));
 
       let usernameByUser = new Map<string, string | null>();
+      type StatusRow = { user_id: string; status: WorldMemberStatus; status_until: string | null };
+      let statusByUser = new Map<string, StatusRow>();
       if (userIds.length > 0) {
-        const { data: profileRows } = await supabase
-          .from("profiles")
-          .select("id, username")
-          .in("id", userIds);
+        const [{ data: profileRows }, { data: memberRows }] = await Promise.all([
+          supabase.from("profiles").select("id, username").in("id", userIds),
+          supabase.from("world_members").select("user_id, status, status_until").eq("world_id", worldId).in("user_id", userIds),
+        ]);
         type ProfileRow = { id: string; username: string | null };
         usernameByUser = new Map(((profileRows ?? []) as ProfileRow[]).map((p) => [p.id, p.username]));
+        statusByUser = new Map(((memberRows ?? []) as StatusRow[]).map((m) => [m.user_id, m]));
       }
 
       if (!cancelled) {
         setOthers(
-          otherRows.map((r) => ({ ...r, username: usernameByUser.get(r.user_id) ?? null })),
+          otherRows.map((r) => {
+            const member = statusByUser.get(r.user_id);
+            return {
+              ...r,
+              username: usernameByUser.get(r.user_id) ?? null,
+              playerStatus: member ? effectiveStatus(member) : "active",
+              playerStatusUntil: member?.status_until ?? null,
+            };
+          }),
         );
       }
     }

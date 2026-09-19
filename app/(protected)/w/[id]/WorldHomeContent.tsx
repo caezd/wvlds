@@ -11,6 +11,7 @@ import { resolveWorldHomeGrid, widgetOptionValue } from "@/components/worlds/hom
 import type { RecentPersona } from "@/components/worlds/home/widgets/WorldRecentPersonasWidget";
 import type { WikiPage } from "@/components/worlds/home/widgets/WorldWikiShortcutsWidget";
 import { loadMapWidgetData, type MapWidgetMap } from "@/components/worlds/home/widgets/WorldMapWidget";
+import { loadBirthdayMembers, type BirthdayMember } from "@/components/worlds/home/widgets/WorldBirthdaysWidget";
 
 type NavRoom = {
   id: string;
@@ -127,16 +128,17 @@ export default async function WorldHomeContent({
     // d'un état vide et chargeaient au montage, donc s'affichaient vides le
     // temps d'un aller-retour. On ne charge QUE les blocs réellement placés
     // dans la grille de ce monde, avec la limite configurée sur le bloc.
-    (async (): Promise<{ recentPersonas?: RecentPersona[]; wikiPages?: WikiPage[]; maps?: MapWidgetMap[] }> => {
+    (async (): Promise<{ recentPersonas?: RecentPersona[]; wikiPages?: WikiPage[]; maps?: MapWidgetMap[]; birthdays?: BirthdayMember[] }> => {
       const items = resolveWorldHomeGrid(world.home_grid, world.home_layout, world.announcement_html);
       const personasItem = items.find((i) => i.widgetId === "personas_recent");
       const wikiItem = items.find((i) => i.widgetId === "wiki_shortcuts");
+      const birthdaysItem = items.find((i) => i.widgetId === "birthdays");
       // Le bloc « Carte » ne se charge pas pour un monde qui a coupé sa carte :
       // `WorldHome` ne le rendrait pas.
       const mapItem = world.enable_map !== false ? items.find((i) => i.widgetId === "map") : undefined;
-      if (!personasItem && !wikiItem && !mapItem) return {};
+      if (!personasItem && !wikiItem && !mapItem && !birthdaysItem) return {};
 
-      const [personas, pages, maps] = await Promise.all([
+      const [personas, pages, maps, birthdays] = await Promise.all([
         personasItem
           ? supabase
             .from("personas")
@@ -156,12 +158,14 @@ export default async function WorldHomeContent({
             .limit(widgetOptionValue("wiki_shortcuts", "limit", wikiItem.options))
           : Promise.resolve({ data: null }),
         mapItem ? loadMapWidgetData(supabase, worldId) : Promise.resolve(undefined),
+        birthdaysItem ? loadBirthdayMembers(supabase, worldId) : Promise.resolve(undefined),
       ]);
 
       return {
         ...(personasItem ? { recentPersonas: (personas.data ?? []) as unknown as RecentPersona[] } : {}),
         ...(wikiItem ? { wikiPages: (pages.data ?? []) as unknown as WikiPage[] } : {}),
         ...(maps ? { maps } : {}),
+        ...(birthdays ? { birthdays } : {}),
       };
     })(),
     // Cartes et épingles — comme les personas ci-dessus, uniquement quand c'est

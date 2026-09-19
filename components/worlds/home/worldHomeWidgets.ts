@@ -24,7 +24,8 @@ export type WorldHomeWidgetId =
   | "wiki_shortcuts"
   | "personas_recent"
   | "timeline_shortcuts"
-  | "map";
+  | "map"
+  | "birthdays";
 
 export const ALL_WORLD_HOME_WIDGETS: WorldHomeWidgetId[] = [
   "categories",
@@ -36,6 +37,7 @@ export const ALL_WORLD_HOME_WIDGETS: WorldHomeWidgetId[] = [
   "personas_recent",
   "timeline_shortcuts",
   "map",
+  "birthdays",
 ];
 
 /** Ordre affiché avant que l'admin n'ait jamais personnalisé la page. */

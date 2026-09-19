@@ -13,6 +13,7 @@ import type { ChatroomCategory } from "@/lib/currentRequest";
 import type { RecentPersona } from "./widgets/WorldRecentPersonasWidget";
 import type { WikiPage } from "./widgets/WorldWikiShortcutsWidget";
 import { WorldMapWidget, type MapWidgetMap } from "./widgets/WorldMapWidget";
+import { WorldBirthdaysWidget, type BirthdayMember } from "./widgets/WorldBirthdaysWidget";
 import {
   DEFAULT_HOME_GRID_GAP,
   HOME_GRID_COLS,
@@ -89,7 +90,7 @@ export function WorldHomeGridView({
    *  « non fourni » de « aucune catégorie ». */
   categories?: ChatroomCategory[];
   /** Données des widgets résolues côté serveur. */
-  widgetData?: { recentPersonas?: RecentPersona[]; wikiPages?: WikiPage[]; maps?: MapWidgetMap[] };
+  widgetData?: { recentPersonas?: RecentPersona[]; wikiPages?: WikiPage[]; maps?: MapWidgetMap[]; birthdays?: BirthdayMember[] };
   /** Lieu sur lequel ouvrir le composeur d'emblée (« Jouer ici » depuis la carte). */
   initialComposerPinId?: string | null;
   selectedCategoryId: string | null;
@@ -142,7 +143,7 @@ function renderBlock(
     timelineConfig?: WorldTimelineConfig;
     initialRooms: Room[];
     categories: ChatroomCategory[] | undefined;
-    widgetData: { recentPersonas?: RecentPersona[]; wikiPages?: WikiPage[]; maps?: MapWidgetMap[] };
+    widgetData: { recentPersonas?: RecentPersona[]; wikiPages?: WikiPage[]; maps?: MapWidgetMap[]; birthdays?: BirthdayMember[] };
     initialComposerPinId?: string | null;
     selectedCategoryId: string | null;
     onSelectCategory: (categoryId: string | null) => void;
@@ -243,6 +244,14 @@ function renderBlock(
       );
     case "map":
       return <WorldMapWidget worldId={ctx.worldId} initialMaps={ctx.widgetData.maps} />;
+    case "birthdays":
+      return (
+        <WorldBirthdaysWidget
+          worldId={ctx.worldId}
+          days={widgetOptionValue("birthdays", "days", item.options)}
+          initialMembers={ctx.widgetData.birthdays}
+        />
+      );
     case "timeline_shortcuts":
       return (
         <WorldTimelineShortcutsWidget

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { MoreHorizontal, UserMinus } from "lucide-react";
+import { Clock, MoreHorizontal, UserMinus } from "lucide-react";
 import { toast } from "sonner";
 
 import { createClient } from "@/lib/supabase/client";
@@ -35,6 +35,7 @@ export function MemberManageMenu({
   allRoles,
   onRolesChanged,
   onRemoved,
+  onChangeStatus,
 }: {
   worldId: string;
   member: { user_id: string; username: string | null };
@@ -45,6 +46,8 @@ export function MemberManageMenu({
   allRoles: WorldRoleRow[];
   onRolesChanged: (userId: string, roleIds: string[]) => void;
   onRemoved: (userId: string) => void;
+  /** Ouvre le dialogue de statut (en pause / absent) pour ce membre. */
+  onChangeStatus?: () => void;
 }) {
   const t = useTranslations("worlds.members");
   const supabase = useMemo(() => createClient(), []);
@@ -124,6 +127,12 @@ export function MemberManageMenu({
             </DropdownMenuCheckboxItem>
           ))}
           <DropdownMenuSeparator />
+          {onChangeStatus && (
+            <DropdownMenuItem onSelect={afterMenuClose(onChangeStatus)}>
+              <Clock className="mr-2 h-4 w-4" />
+              {t("status.change")}
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem
             className="text-destructive focus:text-destructive"
             onSelect={afterMenuClose(() => setConfirmRemove(true))}
