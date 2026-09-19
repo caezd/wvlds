@@ -1059,6 +1059,19 @@
       "kindPlayers": "Player personas",
       "kindNpcs": "NPCs",
       "lockedNoPlay": "You do not have permission to play this world's NPCs."
+    },
+    "journal": {
+      "tab": "Journal",
+      "newEntry": "New entry",
+      "placeholder": "What the persona takes away from the day…",
+      "dateLabel": "Date in the world",
+      "save": "Save",
+      "cancel": "Cancel",
+      "edit": "Edit this entry",
+      "delete": "Delete this entry",
+      "deleteDescription": "This journal entry will be permanently deleted.",
+      "empty": "This journal is still blank.",
+      "emptyMine": "Your journal is still blank: tell the first day."
     }
   },
   "quests": {

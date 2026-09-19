@@ -35,6 +35,7 @@ export const DB_TEXT_LIMITS = {
   "persona_relations.description": 5_000,
   "persona_relations.label": 200,
   "persona_relations.type": 64,
+  "persona_journal_entries.body": 5_000,
   "persona_review_comments.body": 2_000,
   "persona_section_fields.label": 200,
   "persona_sections.name": 200,

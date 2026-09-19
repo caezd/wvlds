@@ -1,3 +1,5 @@
+import type { WorldTimelineDate } from "@/types/worlds";
+
 // Auto-inferred from codebase — update when schema changes
 // Once Docker is available: npx supabase gen types typescript --local > types/db.ts
 
@@ -149,6 +151,20 @@ export type Persona = {
   is_npc?: boolean | null;
   /** Requis pour calculer l'éligibilité chronologique (voir lib/personaEligibility.ts). */
   created_at?: string;
+};
+
+/** Une entrée du journal de bord d'un persona (migration 183). */
+export type PersonaJournalEntry = {
+  id: string;
+  persona_id: string;
+  world_id: string;
+  author_id: string | null;
+  body: string;
+  /** Date dans la chronologie du monde ; `null` : la date d'écriture fait foi. */
+  timeline_date: WorldTimelineDate | null;
+  created_at: string;
+  updated_at: string;
+  author?: { username: string | null } | null;
 };
 
 export type UserEquippedCosmetic = {

@@ -1059,6 +1059,19 @@
       "kindPlayers": "Personas des joueurs",
       "kindNpcs": "PNJ",
       "lockedNoPlay": "Vous n'avez pas la permission de jouer les PNJ de ce monde."
+    },
+    "journal": {
+      "tab": "Journal",
+      "newEntry": "Nouvelle entrée",
+      "placeholder": "Ce que le persona retient de la journée…",
+      "dateLabel": "Date dans le monde",
+      "save": "Enregistrer",
+      "cancel": "Annuler",
+      "edit": "Modifier cette entrée",
+      "delete": "Supprimer cette entrée",
+      "deleteDescription": "Cette entrée du journal sera supprimée définitivement.",
+      "empty": "Ce journal est encore vierge.",
+      "emptyMine": "Votre journal est encore vierge : racontez la première journée."
     }
   },
   "quests": {

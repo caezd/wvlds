@@ -26,6 +26,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { LOCK_REASON_KEYS, getUsablePersonaIds, personaLockReason, type EligibilityPersona } from "@/lib/personaEligibility";
 import { useWorldMembership } from "@/components/providers/WorldMembershipProvider";
 import { PersonaNpcBadge } from "@/components/personas/PersonaNpcBadge";
+import { PersonaJournalSection } from "@/components/personas/PersonaJournalSection";
 import { indexCatalog } from "@/lib/worldCatalog";
 import { InventoryFieldView, SkillsFieldView } from "@/components/personas/fields/CatalogFieldViews";
 import { PersonaRelationsSection } from "@/components/personas/PersonaRelationsSection";
@@ -467,6 +468,9 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
                       {worldId && (
                         <TabBarTrigger value="__relations__">{t("relations.tab")}</TabBarTrigger>
                       )}
+                      {worldId && (
+                        <TabBarTrigger value="__journal__">{t("journal.tab")}</TabBarTrigger>
+                      )}
                   </TabBar>
 
                   {sections.map((s) => (
@@ -490,6 +494,11 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
                   {worldId && (
                     <TabsContent value="__relations__" className="px-5 py-4">
                       <PersonaRelationsSection personaId={persona.id} worldId={worldId} ownerId={persona.user_id} selfId={selfId} />
+                    </TabsContent>
+                  )}
+                  {worldId && (
+                    <TabsContent value="__journal__" className="px-5 py-4">
+                      <PersonaJournalSection personaId={persona.id} worldId={worldId} ownerId={persona.user_id} isNpc={!!persona.is_npc} />
                     </TabsContent>
                   )}
                 </Tabs>
