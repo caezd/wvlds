@@ -18,8 +18,12 @@ vi.mock("@/components/personas/PersonaProfileSheetTrigger", () => ({
 vi.mock("@/hooks/useCurrentUser", () => ({ useCurrentUser: () => ({ userId: "me", username: "moi", plan: "free" }) }));
 // Relecteur ou non : chaque test le décide.
 const canReview = { value: false };
+const canManageNpc = { value: false };
 vi.mock("@/components/providers/WorldMembershipProvider", () => ({
-  useWorldMembership: () => ({ worldId: "w1", can: (perm: string) => perm === "personas.review" && canReview.value }),
+  useWorldMembership: () => ({
+    worldId: "w1",
+    can: (perm: string) => (perm === "personas.review" && canReview.value) || (perm === "npc.manage" && canManageNpc.value),
+  }),
 }));
 vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams(), useRouter: () => ({ refresh: vi.fn() }) }));
 
@@ -36,14 +40,20 @@ const OTHERS = [
   { id: "p2", name: "Zorg", avatar_url: null, user_id: "u2", created_at: "2026-03-01", narrative_status: "dead" as const, review_status: "approved", sheet_complete: true },
   { id: "p3", name: "Élise", avatar_url: null, user_id: "u1", created_at: "2026-02-01", narrative_status: "alive" as const, review_status: "submitted", sheet_complete: true },
 ];
+const NPC = { id: "n1", name: "Aubergiste", avatar_url: null, user_id: "u2", created_at: "2026-01-15", narrative_status: "alive" as const, review_status: "approved", sheet_complete: true, is_npc: true };
 
-/** Ordre des `.from()` : personas, world_persona_groups, persona_group_assignments, profiles, world_members. */
-function setup() {
+/**
+ * Ordre des `.from()` : personas, world_persona_groups, persona_group_assignments,
+ * [persona_sections, persona_section_fields si gestionnaire de PNJ et PNJ présents], profiles, world_members.
+ */
+function setup(withNpc = false) {
+  const npcSections = withNpc && canManageNpc.value ? [{ data: [] }] : [];
   const mock = createSupabaseMock({
     results: [
-      { data: OTHERS },
+      { data: withNpc ? [...OTHERS, NPC] : OTHERS },
       { data: [{ id: "g1", name: "Garde", color: "#ff0000" }] },
       { data: [{ persona_id: "p2", group_id: "g1" }] },
+      ...npcSections,
       { data: [{ id: "u1", username: "alice" }, { id: "u2", username: "bob" }] },
       { data: [] },
     ],
@@ -52,10 +62,10 @@ function setup() {
   return mock;
 }
 
-beforeEach(() => { vi.clearAllMocks(); canReview.value = false; });
+beforeEach(() => { vi.clearAllMocks(); canReview.value = false; canManageNpc.value = false; });
 
 describe("applyPersonaFilters / sortPersonas", () => {
-  const base = { query: "", player: ALL, group: ALL, status: ALL, sheet: ALL };
+  const base = { query: "", player: ALL, group: ALL, status: ALL, sheet: ALL, kind: ALL };
   const groups = new Map([["p2", "g1"]]);
 
   it("filtre par joueur, groupe (dont « sans groupe ») et statut", () => {
@@ -70,6 +80,12 @@ describe("applyPersonaFilters / sortPersonas", () => {
     expect(applyPersonaFilters(withHoles, { ...base, sheet: "submitted" }, groups).map((p) => p.id)).toEqual(["p3"]);
     expect(applyPersonaFilters(withHoles, { ...base, sheet: "approved" }, groups).map((p) => p.id)).toEqual(["p1", "p2"]);
     expect(applyPersonaFilters(withHoles, { ...base, sheet: "incomplete" }, groups).map((p) => p.id)).toEqual(["p4"]);
+  });
+
+  it("filtre par type : personas des joueurs ou PNJ", () => {
+    const withNpc = [...OTHERS, NPC];
+    expect(applyPersonaFilters(withNpc, { ...base, kind: "npc" }, groups).map((p) => p.id)).toEqual(["n1"]);
+    expect(applyPersonaFilters(withNpc, { ...base, kind: "player" }, groups).map((p) => p.id)).toEqual(["p1", "p2", "p3"]);
   });
 
   it("recherche sans casse ni accents, sur le nom ou le joueur", () => {
@@ -150,6 +166,37 @@ describe("WorldPersonasPanel — filtres et statut", () => {
     render(<WorldPersonasPanel worldId="w1" myPersonas={[]} />);
     await screen.findByRole("button", { name: "Zorg" });
     expect(screen.queryByRole("button", { name: /à relire/ })).toBeNull();
+  });
+
+  it("les PNJ ont leur section, avec le badge et sans pseudo de joueur ; « Nouveau PNJ » pour qui les gère", async () => {
+    setup(true);
+    render(<WorldPersonasPanel worldId="w1" myPersonas={[]} />);
+    const npc = await screen.findByRole("button", { name: "Aubergiste" });
+    expect(npc.querySelector("[data-npc]")).not.toBeNull();
+    expect(within(npc).queryByText("@bob")).toBeNull();
+    expect(screen.getByRole("heading", { name: /^PNJ/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Nouveau PNJ" })).toBeNull();
+    // Le PNJ ne figure pas parmi les « autres personas » (Zorg, Aeris, Élise seulement).
+    expect(screen.getByRole("button", { name: "Zorg" }).querySelector("[data-npc]")).toBeNull();
+  });
+
+  it("sans PNJ ni permission, ni section ni filtre de type", async () => {
+    setup();
+    render(<WorldPersonasPanel worldId="w1" myPersonas={[]} />);
+    await screen.findByRole("button", { name: "Zorg" });
+    expect(screen.queryByRole("heading", { name: /^PNJ/ })).toBeNull();
+    expect(screen.queryByRole("combobox", { name: "Type" })).toBeNull();
+  });
+
+  it("un gestionnaire ouvre l'éditeur du PNJ et peut en créer", async () => {
+    canManageNpc.value = true;
+    setup(true);
+    render(<WorldPersonasPanel worldId="w1" myPersonas={[]} />);
+    await screen.findByRole("button", { name: "Zorg" });
+    // La tuile éditable porte « Éditer » (PersonaCard), pas le déclencheur de fiche mocké.
+    const tile = screen.getByText("Aubergiste").closest("button")!;
+    expect(within(tile).getByText("Éditer")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Nouveau PNJ" })).toBeInTheDocument();
   });
 
   it("le tri par date met les plus récents d'abord, sans lettres", async () => {

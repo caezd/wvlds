@@ -19,6 +19,11 @@ const currentUserMock = vi.hoisted(() => ({ plan: "free" as string | null }));
 vi.mock("@/hooks/useCurrentUser", () => ({
   useCurrentUser: () => ({ plan: currentUserMock.plan }),
 }));
+// « Jouer les PNJ » (migration 182) : chaque test le décide.
+const membership = vi.hoisted(() => ({ canPlayNpc: false }));
+vi.mock("@/components/providers/WorldMembershipProvider", () => ({
+  useWorldMembership: () => ({ worldId: "w1", can: (perm: string) => perm === "npc.play" && membership.canPlayNpc }),
+}));
 
 import { PersonaPickerDialog } from "@/components/personas/PersonaPickerDialog";
 
@@ -41,6 +46,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   for (const k of Object.keys(_store)) delete _store[k];
   currentUserMock.plan = "free";
+  membership.canPlayNpc = false;
   setup();
 });
 
@@ -48,19 +54,53 @@ afterEach(() => {
   for (const k of Object.keys(_store)) delete _store[k];
 });
 
-async function openDialog() {
+async function openDialog(worldId?: string) {
   const user = userEvent.setup();
   render(
     <PersonaPickerDialog
       selected={null}
       onSelect={() => {}}
       userId="u1"
+      worldId={worldId}
       trigger={<button>open</button>}
     />,
   );
   await user.click(screen.getByText("open"));
   return user;
 }
+
+describe("PersonaPickerDialog — PNJ du monde (migration 182)", () => {
+  const withNpc: Persona[] = [
+    ...personas,
+    { id: "npc-1", user_id: "u9", name: "Aubergiste", avatar_url: null, created_at: "2025-01-01T00:00:00Z", is_npc: true, review_status: "approved", sheet_complete: true },
+  ];
+
+  it("avec « Jouer les PNJ », demande les siens et les PNJ, rangés sous leur titre, hors quota", async () => {
+    membership.canPlayNpc = true;
+    const mock = setup(withNpc);
+    await openDialog("w1");
+    await screen.findByText("Aubergiste");
+
+    const builder = mock.buildersFor("personas")[0];
+    expect(builder.or).toHaveBeenCalledWith("user_id.eq.u1,is_npc.eq.true");
+    expect(screen.getByText("PNJ du monde")).toBeInTheDocument();
+    const names = screen.getAllByText(/Caelan Voss|Corry|Jett|Aubergiste/).map((el) => el.textContent);
+    expect(names).toEqual(["Caelan Voss", "Corry", "Jett", "Aubergiste"]);
+    const npcRow = screen.getByText("Aubergiste").closest("div")!;
+    expect(npcRow.querySelector("button")).not.toBeDisabled();
+    expect(npcRow.querySelector("[data-npc]")).not.toBeNull();
+  });
+
+  it("sans la permission, ne demande que les siens", async () => {
+    const mock = setup(personas);
+    await openDialog("w1");
+    await screen.findByText("Jett");
+    const builder = mock.buildersFor("personas")[0];
+    expect(builder.or).not.toHaveBeenCalled();
+    expect(builder.eq).toHaveBeenCalledWith("is_npc", false);
+    expect(screen.queryByText("PNJ du monde")).toBeNull();
+  });
+});
 
 describe("PersonaPickerDialog — liste et favoris", () => {
   it("affiche les personas triés par ordre alphabétique", async () => {

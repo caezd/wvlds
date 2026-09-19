@@ -142,6 +142,20 @@ describe("ChatroomMessage — pseudo joueur cliquable", () => {
     expect(screen.getByText("(@capou)")).toBeInTheDocument();
   });
 
+  it("un PNJ porte son badge et « joué par @pseudo » à la place des parenthèses (migration 182)", () => {
+    render(
+      <ChatroomMessage
+        message={makeMessage({ persona: { id: "npc", user_id: "user-other", name: "Aubergiste", avatar_url: null, is_npc: true } })}
+        online={{}}
+        selfId="viewer-1"
+      />,
+    );
+    // next-intl est remplacé par l'identité : la clé tient lieu de libellé.
+    expect(screen.getByText("playedBy")).toBeInTheDocument();
+    expect(screen.queryByText("(@capou)")).toBeNull();
+    expect(document.querySelector("[data-npc]")).not.toBeNull();
+  });
+
   it("le pseudo est cliquable et déclenche le chargement du profil joueur", async () => {
     render(<ChatroomMessage message={makeMessage()} online={{}} selfId="viewer-1" />);
 

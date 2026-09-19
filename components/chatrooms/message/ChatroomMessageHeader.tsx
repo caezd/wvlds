@@ -12,6 +12,7 @@ import DateDisplay from "@/components/date-display";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import { PersonaProfileSheetTrigger } from "@/components/personas/PersonaProfileSheetTrigger";
 import { PersonaStatusBadge } from "@/components/personas/PersonaStatusBadge";
+import { PersonaNpcBadge } from "@/components/personas/PersonaNpcBadge";
 import { UserProfileSheetTrigger } from "@/components/profile/UserProfileSheetTrigger";
 import { ChatReactionPicker } from "../reactions/ChatReactionPicker";
 import { ReactionEmoji } from "../reactions/ReactionEmoji";
@@ -78,6 +79,7 @@ export function ChatroomMessageHeader({
   setPickerOpen: (open: boolean) => void;
 }) {
   const t = useTranslations("chatrooms");
+  const tPersonaNpc = useTranslations("personas.npc");
 
   return (
     <div className="flex flex-1 gap-4">
@@ -126,9 +128,12 @@ export function ChatroomMessageHeader({
               {message.persona?.name}
             </strong>
             <PersonaStatusBadge status={message.persona?.narrative_status} compact />
+            <PersonaNpcBadge isNpc={message.persona?.is_npc} compact />
             <UserProfileSheetTrigger userId={userId} label={playerUsername}>
               <span className="text-mist-200 text-xs hover:text-mist-50 hover:underline transition-colors">
-                (@{(message.author?.username ?? playerUsername ?? "?").toLowerCase()})
+                {message.persona?.is_npc
+                  ? tPersonaNpc("playedBy", { player: `@${(message.author?.username ?? playerUsername ?? "?").toLowerCase()}` })
+                  : `(@${(message.author?.username ?? playerUsername ?? "?").toLowerCase()})`}
               </span>
             </UserProfileSheetTrigger>
           </div>

@@ -10,6 +10,9 @@ import { PersonaCreateSheet } from "./PersonaCreateSheet";
 import { PersonaProfileSheetTrigger } from "./PersonaProfileSheetTrigger";
 import { PersonaStatusBadge } from "./PersonaStatusBadge";
 import { PersonaSheetBadge } from "./PersonaSheetBadge";
+import { PersonaNpcBadge } from "./PersonaNpcBadge";
+import { fetchSectionsByPersona } from "@/lib/personaSections";
+import type { PersonaSectionWithFields } from "@/types/personas";
 import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
@@ -37,10 +40,15 @@ type OtherPersona = {
   narrative_status: PersonaNarrativeStatus;
   review_status: PersonaReviewStatus;
   sheet_complete: boolean;
+  /** PNJ partagé du monde (migration 182) : dans sa propre section. */
+  is_npc: boolean;
   /** Statut du joueur dans ce monde ; « active » quand il n'a rien déclaré. */
   playerStatus: WorldMemberStatus;
   playerStatusUntil: string | null;
 };
+
+/** Un PNJ avec tout ce que l'éditeur demande — pour qui le gère. */
+type NpcPersona = OtherPersona & Omit<AsidePersona, "sections" | "id" | "name" | "avatar_url" | "narrative_status" | "review_status" | "sheet_complete" | "created_at">;
 
 type Group = { id: string; name: string; color: string };
 
@@ -73,6 +81,8 @@ export type PersonaFilters = {
   status: string; // ALL | PersonaNarrativeStatus
   /** ALL | PersonaSheetBadgeKind — l'état de la fiche (migration 181). */
   sheet: string;
+  /** ALL | "player" | "npc" — personas des joueurs ou PNJ (migration 182). */
+  kind: string;
 };
 
 export const SHEET_FILTERS: readonly PersonaSheetBadgeKind[] = ["submitted", "draft", "incomplete", "approved"];
@@ -80,11 +90,13 @@ export const SHEET_FILTERS: readonly PersonaSheetBadgeKind[] = ["submitted", "dr
 export function applyPersonaFilters<
   T extends {
     id: string; name: string | null; user_id: string; username?: string | null;
-    narrative_status: PersonaNarrativeStatus; review_status?: unknown; sheet_complete?: boolean | null;
+    narrative_status: PersonaNarrativeStatus; review_status?: unknown; sheet_complete?: boolean | null; is_npc?: boolean | null;
   },
 >(list: T[], filters: PersonaFilters, groupByPersona: Map<string, string>): T[] {
   const q = normalize(filters.query.trim());
   return list.filter((p) => {
+    if (filters.kind === "npc" && !p.is_npc) return false;
+    if (filters.kind === "player" && p.is_npc) return false;
     if (filters.player !== ALL && p.user_id !== filters.player) return false;
     if (filters.group === NO_GROUP && groupByPersona.has(p.id)) return false;
     if (filters.group !== ALL && filters.group !== NO_GROUP && groupByPersona.get(p.id) !== filters.group) return false;
@@ -139,10 +151,11 @@ function OtherPersonaCard({ persona, groupColor, unnamed, openOnMount }: { perso
       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
       {groupColor && <span aria-hidden className="absolute inset-x-0 top-0 h-1" style={{ backgroundColor: groupColor }} />}
       <div className="absolute left-2 top-2 flex flex-col items-start gap-1">
+        <PersonaNpcBadge isNpc={persona.is_npc} className="bg-black/60 text-white dark:text-white" />
         <PersonaStatusBadge status={persona.narrative_status} className="bg-black/60 text-white dark:text-white" />
         <PersonaSheetBadge persona={persona} className="bg-black/60 text-white dark:text-white" />
         {/* Le joueur est en pause ou absent : autant le savoir avant de lui écrire. */}
-        {persona.playerStatus !== "active" && (
+        {!persona.is_npc && persona.playerStatus !== "active" && (
           <MemberStatusBadge
             status={persona.playerStatus}
             until={persona.playerStatusUntil}
@@ -153,7 +166,9 @@ function OtherPersonaCard({ persona, groupColor, unnamed, openOnMount }: { perso
       </div>
       <div className="absolute bottom-0 left-0 right-0 p-2.5">
         <span className="block text-sm font-semibold text-white leading-tight line-clamp-2">{name}</span>
-        <span className="block text-xs text-white/70 leading-tight truncate">{memberLabel(persona.user_id, persona.username)}</span>
+        {!persona.is_npc && (
+          <span className="block text-xs text-white/70 leading-tight truncate">{memberLabel(persona.user_id, persona.username)}</span>
+        )}
       </div>
     </PersonaProfileSheetTrigger>
   );
@@ -177,18 +192,22 @@ export function WorldPersonasPanel({
   const t = useTranslations("personas.list");
   const tStatus = useTranslations("personas.narrativeStatus");
   const tSheet = useTranslations("personas.sheet");
+  const tNpc = useTranslations("personas.npc");
   const supabase = useMemo(() => createClient(), []);
   const { userId: meId, username: myUsername } = useCurrentUser();
   const { can } = useWorldMembership();
   const canReview = can("personas.review");
+  const canManageNpc = can("npc.manage");
   // `?persona=<id>` (lien d'une notification de relecture) : la fiche s'ouvre d'elle-même.
   const focusPersonaId = useSearchParams()?.get("persona") ?? null;
   const [others, setOthers] = useState<OtherPersona[] | null>(null);
+  const [npcs, setNpcs] = useState<NpcPersona[]>([]);
+  const [npcSections, setNpcSections] = useState<Map<string, PersonaSectionWithFields[]>>(new Map());
   const [groups, setGroups] = useState<Group[]>([]);
   const [groupByPersona, setGroupByPersona] = useState<Map<string, string>>(new Map());
   const myIds = useMemo(() => new Set(myPersonas.map((p) => p.id)), [myPersonas]);
 
-  const [filters, setFilters] = useState<PersonaFilters>({ query: "", player: ALL, group: ALL, status: ALL, sheet: ALL });
+  const [filters, setFilters] = useState<PersonaFilters>({ query: "", player: ALL, group: ALL, status: ALL, sheet: ALL, kind: ALL });
   const [sort, setSort] = useState<SortKey>("name");
 
   useEffect(() => {
@@ -198,7 +217,7 @@ export function WorldPersonasPanel({
       const [{ data: personaRows }, { data: groupRows }, { data: assignRows }] = await Promise.all([
         supabase
           .from("personas")
-          .select("id, name, avatar_url, user_id, created_at, narrative_status, review_status, sheet_complete")
+          .select("id, name, avatar_url, user_id, created_at, narrative_status, review_status, sheet_complete, is_npc, avatar_config, banner_url, avatar_frame_id, faceclaim, marital_status, spouse_persona_id, frame:avatar_frame_id(asset_url)")
           .eq("world_id", worldId)
           .eq("is_template", false)
           .is("deleted_at", null),
@@ -208,10 +227,19 @@ export function WorldPersonasPanel({
 
       type RawPersona = {
         id: string; name: string | null; avatar_url: string | null; user_id: string; created_at: string | null;
-        narrative_status: string | null; review_status?: string | null; sheet_complete?: boolean | null;
+        narrative_status: string | null; review_status?: string | null; sheet_complete?: boolean | null; is_npc?: boolean | null;
+        avatar_config?: unknown; banner_url?: string | null; avatar_frame_id?: string | null; faceclaim?: string | null;
+        marital_status?: AsidePersona["marital_status"]; spouse_persona_id?: string | null; frame?: { asset_url?: string | null } | null;
       };
-      const otherRows = ((personaRows ?? []) as RawPersona[]).filter((r) => !myIds.has(r.id));
+      // Les PNJ (dont les miens : ils ont leur section) et les personas des autres.
+      const allRows = ((personaRows ?? []) as RawPersona[]).filter((r) => !myIds.has(r.id));
+      const otherRows = allRows.filter((r) => !r.is_npc);
+      const npcRows = allRows.filter((r) => !!r.is_npc);
       const userIds = Array.from(new Set(otherRows.map((r) => r.user_id)));
+      // L'éditeur d'un PNJ (gestionnaires) veut ses sections.
+      const sectionsByNpc = canManageNpc && npcRows.length > 0
+        ? await fetchSectionsByPersona(supabase, npcRows.map((r) => r.id))
+        : new Map<string, PersonaSectionWithFields[]>();
 
       let usernameByUser = new Map<string, string | null>();
       type StatusRow = { user_id: string; status: WorldMemberStatus; status_until: string | null };
@@ -231,30 +259,41 @@ export function WorldPersonasPanel({
       setGroupByPersona(
         new Map(((assignRows ?? []) as { persona_id: string; group_id: string }[]).map((a) => [a.persona_id, a.group_id])),
       );
-      setOthers(
-        otherRows.map((r) => {
-          const member = statusByUser.get(r.user_id);
-          return {
-            id: r.id,
-            name: r.name,
-            avatar_url: r.avatar_url,
-            user_id: r.user_id,
-            created_at: r.created_at,
-            narrative_status: narrativeStatusOf(r.narrative_status),
-            review_status: reviewStatusOf(r.review_status),
-            sheet_complete: r.sheet_complete ?? true,
-            username: usernameByUser.get(r.user_id) ?? null,
-            playerStatus: member ? effectiveStatus(member) : "active",
-            playerStatusUntil: member?.status_until ?? null,
-          };
-        }),
-      );
+      const toOther = (r: RawPersona): OtherPersona => {
+        const member = statusByUser.get(r.user_id);
+        return {
+          id: r.id,
+          name: r.name,
+          avatar_url: r.avatar_url,
+          user_id: r.user_id,
+          created_at: r.created_at,
+          narrative_status: narrativeStatusOf(r.narrative_status),
+          review_status: reviewStatusOf(r.review_status),
+          sheet_complete: r.sheet_complete ?? true,
+          is_npc: !!r.is_npc,
+          username: usernameByUser.get(r.user_id) ?? null,
+          playerStatus: member ? effectiveStatus(member) : "active",
+          playerStatusUntil: member?.status_until ?? null,
+        };
+      };
+      setOthers(otherRows.map(toOther));
+      setNpcs(npcRows.map((r) => ({
+        ...toOther(r),
+        avatar_config: r.avatar_config,
+        banner_url: r.banner_url,
+        avatar_frame_id: r.avatar_frame_id,
+        frame: r.frame,
+        faceclaim: r.faceclaim,
+        marital_status: r.marital_status,
+        spouse_persona_id: r.spouse_persona_id,
+      })));
+      setNpcSections(sectionsByNpc);
     }
 
     void loadOthers();
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [worldId]);
+  }, [worldId, canManageNpc]);
 
   const groupColorById = useMemo(() => new Map(groups.map((g) => [g.id, g.color])), [groups]);
 
@@ -274,6 +313,7 @@ export function WorldPersonasPanel({
       user_id: meId ?? "",
       username: myUsername ?? null,
       narrative_status: narrativeStatusOf(p.narrative_status),
+      is_npc: false,
     }));
     return sortPersonas(applyPersonaFilters(withOwner, filters, groupByPersona), sort);
   }, [myPersonas, meId, myUsername, filters, groupByPersona, sort]);
@@ -281,6 +321,11 @@ export function WorldPersonasPanel({
   const filteredOthers = useMemo(
     () => sortPersonas(applyPersonaFilters(others ?? [], filters, groupByPersona), sort),
     [others, filters, groupByPersona, sort],
+  );
+
+  const filteredNpcs = useMemo(
+    () => sortPersonas(applyPersonaFilters(npcs, filters, groupByPersona), sort),
+    [npcs, filters, groupByPersona, sort],
   );
 
   // Les fiches des autres qui attendent un relecteur — un raccourci vers le filtre.
@@ -299,15 +344,18 @@ export function WorldPersonasPanel({
   }, [filteredOthers, sort]);
 
   const loadingOthers = others === null;
-  const total = myPersonas.length + (others?.length ?? 0);
-  const filtering = filters.query.trim() !== "" || filters.player !== ALL || filters.group !== ALL || filters.status !== ALL || filters.sheet !== ALL;
+  const total = myPersonas.length + (others?.length ?? 0) + npcs.length;
+  const filtering = filters.query.trim() !== "" || filters.player !== ALL || filters.group !== ALL || filters.status !== ALL || filters.sheet !== ALL || filters.kind !== ALL;
+  const showPlayers = filters.kind !== "npc";
+  const showNpcs = filters.kind !== "player" && (npcs.length > 0 || canManageNpc);
   const unnamed = t("unnamed");
 
-  const createTrigger = (className: string, label: string) => (
+  const createTrigger = (className: string, label: string, npc = false) => (
     <PersonaCreateSheet
       worldId={worldId}
       restrictInventory={restrictInventory}
       restrictSkills={restrictSkills}
+      defaultNpc={npc}
       trigger={
         <button type="button" className={className}>
           <Plus className="h-3.5 w-3.5" />
@@ -392,6 +440,18 @@ export function WorldPersonasPanel({
                   ))}
                 </SelectContent>
               </Select>
+              {(npcs.length > 0 || canManageNpc) && (
+                <Select value={filters.kind} onValueChange={(v) => setFilters((f) => ({ ...f, kind: v }))}>
+                  <SelectTrigger size="sm" className="w-auto min-w-32" aria-label={tNpc("filterKind")}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL}>{tNpc("allKinds")}</SelectItem>
+                    <SelectItem value="player">{tNpc("kindPlayers")}</SelectItem>
+                    <SelectItem value="npc">{tNpc("kindNpcs")}</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
               <Select value={filters.sheet} onValueChange={(v) => setFilters((f) => ({ ...f, sheet: v }))}>
                 <SelectTrigger size="sm" className="w-auto min-w-32" aria-label={t("filterSheet")}>
                   <SelectValue />
@@ -429,7 +489,7 @@ export function WorldPersonasPanel({
           )}
 
           {/* ── Mes personas ── */}
-          {(mine.length > 0 || !filtering) && (
+          {showPlayers && (mine.length > 0 || !filtering) && (
             <section>
               <h3 className="mb-4 text-sm font-semibold text-foreground">
                 {t("mine")}
@@ -475,7 +535,68 @@ export function WorldPersonasPanel({
             </section>
           )}
 
+          {/* ── PNJ partagés ── */}
+          {showNpcs && (
+            <section>
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <h3 className="text-sm font-semibold text-foreground">
+                  {tNpc("section")}
+                  {filteredNpcs.length > 0 && (
+                    <span className="ml-1.5 text-xs font-normal text-muted-foreground">{filteredNpcs.length}</span>
+                  )}
+                </h3>
+                {canManageNpc && createTrigger(
+                  "flex items-center gap-1 rounded-full border border-border-soft px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+                  tNpc("newNpc"),
+                  true,
+                )}
+              </div>
+              {filteredNpcs.length === 0 ? (
+                <p className="rounded-xl border border-dashed border-border-soft py-6 text-center text-sm text-muted-foreground">
+                  {filtering ? t("noMatch") : tNpc("none")}
+                </p>
+              ) : (
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
+                  {filteredNpcs.map((p) => canManageNpc ? (
+                    <PersonaCard
+                      key={p.id}
+                      personaId={p.id}
+                      personaName={p.name ?? unnamed}
+                      avatarUrl={p.avatar_url}
+                      avatarConfig={p.avatar_config as never}
+                      bannerUrl={p.banner_url}
+                      initialFrameId={p.avatar_frame_id}
+                      initialFrameUrl={p.frame?.asset_url}
+                      initialFaceclaim={p.faceclaim ?? null}
+                      initialMaritalStatus={p.marital_status ?? null}
+                      initialSpousePersonaId={p.spouse_persona_id ?? null}
+                      narrativeStatus={p.narrative_status}
+                      reviewStatus={p.review_status}
+                      sheetComplete={p.sheet_complete}
+                      isNpc
+                      openOnMount={p.id === focusPersonaId}
+                      initialSections={npcSections.get(p.id) ?? []}
+                      worldId={worldId}
+                      restrictInventory={restrictInventory}
+                      restrictSkills={restrictSkills}
+                      faceclaimsEnabled={faceclaimsEnabled}
+                    />
+                  ) : (
+                    <OtherPersonaCard
+                      key={p.id}
+                      persona={p}
+                      groupColor={groupColorById.get(groupByPersona.get(p.id) ?? "")}
+                      unnamed={unnamed}
+                      openOnMount={p.id === focusPersonaId}
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+
           {/* ── Autres personas ── */}
+          {showPlayers && (
           <section>
             <h3 className="mb-3 text-sm font-semibold text-foreground">
               {t("others")}
@@ -519,6 +640,7 @@ export function WorldPersonasPanel({
               </div>
             )}
           </section>
+          )}
         </div>
       </ScrollArea>
     </div>

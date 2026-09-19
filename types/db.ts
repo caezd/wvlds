@@ -145,6 +145,8 @@ export type Persona = {
   /** Validation et complétude de la fiche (migration 181) : jouable seulement validée et complète. */
   review_status?: PersonaReviewStatus | null;
   sheet_complete?: boolean | null;
+  /** PNJ partagé du monde (migration 182) : joué par qui a `npc.play`, géré par `npc.manage`, hors quota. */
+  is_npc?: boolean | null;
   /** Requis pour calculer l'éligibilité chronologique (voir lib/personaEligibility.ts). */
   created_at?: string;
 };

@@ -719,6 +719,14 @@
         "personas_review": {
           "label": "Review sheets",
           "help": "Read submitted persona sheets, approve them or send them back with a comment."
+        },
+        "npc_manage": {
+          "label": "Manage NPCs",
+          "help": "Create, edit and delete the world's shared non-player characters (30 at most)."
+        },
+        "npc_play": {
+          "label": "Play NPCs",
+          "help": "Pick a world NPC to write in chatrooms — outside the persona quota."
         }
       }
     },
@@ -1035,6 +1043,22 @@
       "timeline": "Timeline",
       "separator": "Separator",
       "imageGrid": "Image grid"
+    },
+    "npc": {
+      "badge": "NPC",
+      "badgeHint": "Shared non-player character of the world",
+      "playedBy": "played by {player}",
+      "createLabel": "Shared NPC",
+      "createHelp": "A character of the world that authorized members can voice; it does not count toward your quota.",
+      "section": "NPCs",
+      "none": "No NPC yet.",
+      "newNpc": "New NPC",
+      "pickerGroup": "World NPCs",
+      "filterKind": "Type",
+      "allKinds": "Players and NPCs",
+      "kindPlayers": "Player personas",
+      "kindNpcs": "NPCs",
+      "lockedNoPlay": "You do not have permission to play this world's NPCs."
     }
   },
   "quests": {

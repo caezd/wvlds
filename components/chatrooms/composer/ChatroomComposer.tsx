@@ -298,8 +298,8 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
         let cancelled = false;
         supabase
             .from(TABLE.PERSONAS)
-            .select("id, created_at, is_template, review_status, sheet_complete")
-            .eq("user_id", userId)
+            .select("id, created_at, is_template, review_status, sheet_complete, is_npc")
+            .or(`user_id.eq.${userId},is_npc.eq.true`)
             .eq("world_id", worldId)
             .then(({ data }: { data: EligibilityPersona[] | null }) => {
                 if (cancelled) return;
@@ -336,7 +336,9 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
     async function handleBubbleColorChange(v: string | null) {
         const previousColor = bubbleColor;
         setBubbleColor(v);
-        if (selectedPersona) {
+        // La couleur d'un PNJ appartient à ses gestionnaires : un joueur la
+        // change pour lui seul, le temps de la session.
+        if (selectedPersona && (!selectedPersona.is_npc || can("npc.manage"))) {
             const previousPersona = selectedPersona;
             setSelectedPersona((prev) => (prev ? { ...prev, dialogue_color: v } : prev));
             // Sans lire l'erreur, la couleur restait appliquée à l'écran et

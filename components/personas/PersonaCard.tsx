@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { isRetiredStatus } from "@/lib/personaStatus";
 import { PersonaStatusBadge } from "./PersonaStatusBadge";
 import { PersonaSheetBadge } from "./PersonaSheetBadge";
+import { PersonaNpcBadge } from "./PersonaNpcBadge";
 import { Pencil } from "lucide-react";
 import { getInitials } from "@/lib/textFormatting";
 import { StoredImage } from "@/components/ui/stored-image";
@@ -30,6 +31,8 @@ type PersonaCardProps = {
   sheetComplete?: boolean | null;
   /** Ouvre l'éditeur dès le montage (lien `?persona=<id>` d'une notification). */
   openOnMount?: boolean;
+  /** PNJ partagé (migration 182) : badge sur la tuile. */
+  isNpc?: boolean;
   initialSections: PersonaSectionWithFields[];
   worldId?: string;
   restrictInventory?: boolean;
@@ -52,6 +55,7 @@ export function PersonaCard({
   reviewStatus,
   sheetComplete,
   openOnMount,
+  isNpc,
   initialSections,
   worldId,
   restrictInventory,
@@ -102,6 +106,7 @@ export function PersonaCard({
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
 
           <div className="absolute left-3 top-3 flex flex-col items-start gap-1">
+            <PersonaNpcBadge isNpc={isNpc} className="bg-black/60 text-white dark:text-white" />
             <PersonaStatusBadge status={narrativeStatus} />
             <PersonaSheetBadge persona={{ review_status: reviewStatus, sheet_complete: sheetComplete }} className="bg-black/60 text-white dark:text-white" />
           </div>

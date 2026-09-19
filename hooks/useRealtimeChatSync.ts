@@ -108,7 +108,7 @@ export function useRealtimeChatSync({
         const { data, error } = await supabase
           .from(TABLE.CHAT_MESSAGES)
           .select(
-            "id, chat_id, content, author_id, created_at, metadata, visible_to, persona:personas(id, user_id, name, avatar_url, narrative_status)",
+            "id, chat_id, content, author_id, created_at, metadata, visible_to, persona:personas(id, user_id, name, avatar_url, narrative_status, is_npc)",
           )
           .eq("id", id)
           .single();
