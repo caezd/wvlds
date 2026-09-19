@@ -97,6 +97,14 @@ describe("WorldMemberCard", () => {
     expect(screen.getByText("Anniversaire aujourd'hui !")).toBeInTheDocument();
   });
 
+  it("au-delà de quatre personas, une pastille « +N » dans la rangée, le libellé au survol", () => {
+    const personas = Array.from({ length: 7 }, (_, i) => ({ id: `p${i}`, name: `Perso ${i}`, avatar_url: null }));
+    render(<WorldMemberCard member={member({ personas })} presence="offline" now={NOW} />);
+    const chip = screen.getByText("+3");
+    expect(chip).toHaveAttribute("title", expect.stringContaining("3"));
+    expect(screen.queryByText("Perso 4")).toBeNull();
+  });
+
   it("la présentation est tronquée à deux lignes", () => {
     render(<WorldMemberCard member={member({ bio: "Rôliste depuis 2004." })} presence="offline" now={NOW} />);
     expect(screen.getByText("Rôliste depuis 2004.").className).toContain("line-clamp-2");
