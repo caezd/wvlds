@@ -349,13 +349,18 @@
       "noPersona": "No persona in this world",
       "morePersonas": "{count, plural, one {# more persona} other {# more personas}}",
       "openProfile": "View {name}’s profile",
-      "rolesPlural": {
-        "owner": "{count, plural, one {Owner} other {Owners}}",
-        "admin": "{count, plural, one {Admin} other {Admins}}",
-        "editor": "{count, plural, one {Editor} other {Editors}}",
-        "player": "{count, plural, one {Player} other {Players}}",
-        "viewer": "{count, plural, one {Viewer} other {Viewers}}"
-      }
+      "ownerSection": "Owner",
+      "othersSection": "Members",
+      "rolesLabel": "Roles",
+      "noRoles": "No roles defined",
+      "manageMember": "Manage {name}",
+      "removeFromWorld": "Remove from world",
+      "removeConfirmTitle": "Remove {name} from the world?",
+      "removeConfirmDescription": "This member will immediately lose access to the world, its chatrooms and its messages. You can invite them again later.",
+      "removeConfirm": "Remove",
+      "memberRemoved": "{name} was removed from the world.",
+      "roleChangeFailed": "Could not change roles.",
+      "memberRemoveFailed": "Could not remove the member."
     },
     "sidebar": {
       "active": "Latest",
@@ -508,13 +513,6 @@
     "addTagPlaceholder": "Add a tag…",
     "acceptedAvatarTypes": "Accepted avatar type",
     "enableRestrictionTitle": "Enable the restriction?",
-    "roleChangeFailed": "Couldn't change the role.",
-    "memberRemoveFailed": "Couldn't remove the member.",
-    "inviteCancelFailed": "Couldn't cancel the invitation.",
-    "inviteSent": "Invitation sent",
-    "roleChanged": "Role changed",
-    "addMember": "Add a member",
-    "pickRole": "Pick a role",
     "newWorld": "New world",
     "categoryUploadWait": "Wait for the image upload to finish before saving.",
     "removedFromWorld": "You have been removed from this world.",
@@ -524,8 +522,6 @@
     "noOtherWorld": "No other world",
     "noPersonaInWorld": "No persona in this world",
     "timelineEmpty": "No conversation has been placed on the timeline yet.",
-    "role": "Role",
-    "roleEditor": "Editor",
     "tabSettings": "Settings",
     "tabCategories": "Categories",
     "tabCommunity": "Community",
@@ -547,7 +543,149 @@
     "restrictionPurgeConfirm": "Enable and purge",
     "deleteFailed": "Could not delete the world.",
     "addTag": "Add this tag",
-    "addMonthName": "Add this month name"
+    "addMonthName": "Add this month name",
+    "tabAppearance": "Appearance",
+    "tabHome": "Home page",
+    "tabFeatures": "Features",
+    "tabRelations": "Relations",
+    "tabRoles": "Roles",
+    "deleteConfirmShort": "Confirm deletion?",
+    "roles": {
+      "title": "Roles",
+      "newRole": "New role",
+      "newRoleName": "New role",
+      "hierarchyHelp": "Highest first: a member only manages the roles and members below their own.",
+      "locked": "Locked",
+      "lockedHelp": "This role is at or above your own: you can view it, not edit it.",
+      "name": "Name",
+      "color": "Color",
+      "icon": "Icon",
+      "pickIcon": "Pick an icon",
+      "clearIcon": "Remove icon",
+      "hoist": "Display separately",
+      "hoistHelp": "Its members form their own section in the member list.",
+      "mentionable": "Mentionable by anyone",
+      "mentionableHelp": "Any member can ping this role in chatrooms.",
+      "isDefault": "Default role",
+      "isDefaultHelp": "Given to anyone who joins the world without a specified role.",
+      "permissionsTitle": "Permissions",
+      "notGrantable": "You do not hold this permission, so you cannot grant it.",
+      "delete": "Delete role",
+      "deleteConfirmTitle": "Delete the role “{name}”?",
+      "deleteConfirmDescription": "{count, plural, =0 {No member holds it.} one {# member will lose it.} other {# members will lose it.}} This cannot be undone.",
+      "saveFailed": "Could not save the role.",
+      "createFailed": "Could not create the role.",
+      "deleteFailed": "Could not delete the role.",
+      "empty": "No roles yet.",
+      "groups": {
+        "general": "General",
+        "chatrooms": "Chatrooms",
+        "content": "Content",
+        "personas": "Personas",
+        "mentions": "Mentions"
+      },
+      "permissions": {
+        "administrator": {
+          "label": "Administrator",
+          "help": "Every permission, except deleting the world and its system tabs, which stay with the owner."
+        },
+        "world_settings": {
+          "label": "Manage world settings",
+          "help": "Appearance, home page, features and community."
+        },
+        "roles_manage": {
+          "label": "Manage roles",
+          "help": "Create, edit and order the roles below your own."
+        },
+        "members_manage": {
+          "label": "Manage members",
+          "help": "Invite, assign roles and remove members below your rank."
+        },
+        "messages_post": {
+          "label": "Post in chatrooms",
+          "help": "Send messages and react."
+        },
+        "chatrooms_create": {
+          "label": "Create chatrooms",
+          "help": "Open new conversations in the world."
+        },
+        "chatrooms_manage": {
+          "label": "Manage other members' chatrooms",
+          "help": "Edit or delete chatrooms created by other members."
+        },
+        "categories_manage": {
+          "label": "Manage categories",
+          "help": "Create, rename and order chatroom categories."
+        },
+        "tabs_edit": {
+          "label": "Edit tabs",
+          "help": "Edit the world's descriptive tabs."
+        },
+        "wiki_edit": {
+          "label": "Edit the wiki",
+          "help": "Create and edit pages, their notes and comments."
+        },
+        "lexicon_edit": {
+          "label": "Edit the lexicon",
+          "help": "Add and fix the world's terms."
+        },
+        "tags_manage": {
+          "label": "Manage tags",
+          "help": "Add and remove the world's tags."
+        },
+        "map_edit": {
+          "label": "Edit the map",
+          "help": "Maps, places, regions and links between places."
+        },
+        "catalog_edit": {
+          "label": "Edit the catalogue",
+          "help": "Items, skills and their categories."
+        },
+        "relations_manage": {
+          "label": "Manage relations",
+          "help": "Relation types and groups, and moderation of relations between personas."
+        },
+        "mentions_roles": {
+          "label": "Mention any role",
+          "help": "Ping a role even when it is not marked as mentionable."
+        },
+        "mentions_everyone": {
+          "label": "Mention everyone",
+          "help": "Use @everyone and @here in chatrooms."
+        }
+      }
+    },
+    "invite": {
+      "open": "Invite",
+      "title": "Add a member",
+      "intro": "Search by email or username, then pick a role.",
+      "searchPlaceholder": "Search (email or username)…",
+      "searching": "Searching…",
+      "noUserFound": "No user found (already a member, or unknown).",
+      "usersHeading": "Users",
+      "orExactEmail": "Or type the exact email of an existing account:",
+      "emailLabel": "Email",
+      "emailPlaceholder": "name@example.com",
+      "roleLabel": "Role",
+      "pickRole": "Pick a role",
+      "defaultRoles": "Default roles",
+      "noDefaultRole": "No default role: the member will arrive without one.",
+      "invalidEmail": "Invalid email.",
+      "emailInviteFailed": "Could not send the email invitation.",
+      "sent": "Invitation sent",
+      "sentByEmail": "An invitation email was sent to {email}.",
+      "sentTo": "An invitation was sent to {name}.",
+      "sendFailed": "Could not send the invitation.",
+      "pendingHeading": "Pending invitations",
+      "pendingBadge": "Pending",
+      "cancelAria": "Cancel the invitation for {name}",
+      "cancelConfirmTitle": "Cancel the invitation for {name}?",
+      "cancelConfirmDescription": "They will no longer be able to accept this invitation. You can invite them again later.",
+      "cancelConfirm": "Revoke",
+      "cancelFailed": "Could not cancel the invitation.",
+      "cancelled": "Invitation cancelled for {name}.",
+      "submit": "Invite"
+    }
   },
   "auth": {
     "signin": "Sign in",

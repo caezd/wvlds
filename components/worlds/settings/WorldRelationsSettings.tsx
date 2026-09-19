@@ -8,7 +8,7 @@ import { Plus, Trash2, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { HsvColorPicker } from "@/components/ui/hsv-color-picker";
+import { ColorPickerButton } from "./ColorPickerButton";
 
 type RelationGroup = { id: string; name: string; color: string; sort_index: number };
 import type { RelationMaritalStatus, WorldRelationType as RelationType } from "@/types/relations";
@@ -24,40 +24,6 @@ function getDashOptions(t: ReturnType<typeof useTranslations<"relations">>): Das
     { label: t("dash.long"), value: "8 4" },
     { label: t("dash.mixed"), value: "8 3 2 3" },
   ];
-}
-
-// Rendu inline (pas de portail) pour éviter que Radix Dialog interprète le
-// pointerdown sur le canvas HSV comme un clic hors du dialog.
-function ColorPickerButton({ color, onChange }: { color: string; onChange: (c: string) => void }) {
-  const tCommon = useTranslations("common");
-  const [open, setOpen] = React.useState(false);
-  const ref = React.useRef<HTMLDivElement>(null);
-
-  React.useEffect(() => {
-    if (!open) return;
-    function onDown(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
-  }, [open]);
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="h-8 w-8 shrink-0 rounded-md border border-border shadow-sm transition-shadow hover:ring-2 hover:ring-ring"
-        style={{ backgroundColor: color }}
-        aria-label={tCommon("chooseColor")}
-      />
-      {open && (
-        <div className="absolute left-0 top-full z-50 mt-1 w-[220px] rounded-lg border border-border bg-popover p-3 shadow-md">
-          <HsvColorPicker color={color} onChange={onChange} presets={[]} />
-        </div>
-      )}
-    </div>
-  );
 }
 
 export function WorldRelationsSettings({ worldId }: { worldId: string }) {

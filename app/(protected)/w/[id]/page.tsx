@@ -2,7 +2,7 @@
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { getUserId } from "@/lib/auth";
-import { getWorldById } from "@/lib/currentRequest";
+import { getWorldById, getWorldMembership } from "@/lib/currentRequest";
 import { notFound } from "next/navigation";
 import { PageSpinner } from "@/components/ui/page-spinner";
 import WorldHomeContent from "./WorldHomeContent";
@@ -27,21 +27,13 @@ export default async function WorldPage({
   // `getWorldById`/l'accès sont déjà validés par `layout.tsx` (mémoïsés via
   // React cache(), donc pas de requête supplémentaire) — on les revérifie
   // simplement ici pour que ce fichier reste sûr indépendamment du layout.
-  const [world, userId] = await Promise.all([
+  const [world, userId, { membership }] = await Promise.all([
     getWorldById(id),
     getUserId(supabase),
+    getWorldMembership(id),
   ]);
 
-  if (!world) {
-    notFound();
-  }
-
-  const members = world.world_members ?? [];
-  const myRole =
-    members.find((m) => m.user_id === userId)?.role ??
-    (world.owner_id === userId ? "owner" : null);
-
-  if (!myRole) {
+  if (!world || !userId || !membership) {
     notFound();
   }
 
@@ -59,7 +51,7 @@ export default async function WorldPage({
       <WorldHomeContent
         world={world}
         worldId={id}
-        myRole={myRole}
+        membership={membership}
         view={view}
         initialCategoryId={initialCategoryId}
         initialWikiSlug={initialWikiSlug}

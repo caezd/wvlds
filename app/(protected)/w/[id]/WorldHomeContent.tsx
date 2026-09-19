@@ -1,10 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { getUserId } from "@/lib/auth";
-import { canEditContent, canMemberPost } from "@/lib/worldPermissions";
+import type { WorldMembership } from "@/lib/worldPermissions";
 import { WorldHome } from "@/components/worlds/home/WorldHome";
 import type { AsidePersona } from "@/components/personas/WorldPersonaAsideClient";
 import { fetchSectionsByPersona } from "@/lib/personaSections";
-import { getChatroomCategories, getChatroomsNav, getIsWorldAdmin, type WorldWithMembership } from "@/lib/currentRequest";
+import { getChatroomCategories, getChatroomsNav, type WorldWithMembership } from "@/lib/currentRequest";
 import { getWorldMaps } from "@/app/actions/worldMap";
 import type { InitialWorldMap } from "@/components/worlds/map/WorldMap";
 import { resolveWorldHomeGrid, widgetOptionValue } from "@/components/worlds/home/worldHomeGrid";
@@ -27,7 +27,7 @@ type NavRoom = {
 export default async function WorldHomeContent({
   world,
   worldId,
-  myRole,
+  membership,
   view,
   initialCategoryId,
   initialWikiSlug,
@@ -37,7 +37,7 @@ export default async function WorldHomeContent({
 }: {
   world: WorldWithMembership;
   worldId: string;
-  myRole: string;
+  membership: WorldMembership;
   view?: string;
   initialCategoryId: string | null;
   initialWikiSlug?: string | null;
@@ -48,17 +48,16 @@ export default async function WorldHomeContent({
   const supabase = await createClient();
   const userId = await getUserId(supabase);
 
-  const isShared = true; // guaranteed by the myRole guard in page.tsx
-  const canEditTabs = canEditContent(myRole, world.owner_id === userId);
-  const canPost = canMemberPost(myRole, world.owner_id === userId);
+  const isShared = true; // garanti par la garde d'appartenance de page.tsx
+  const permissions = [...membership.permissions];
 
-  // Ces quatre chargements (nav, droits admin, préférences UI, personas) sont
-  // indépendants les uns des autres → on les exécute en parallèle plutôt que
-  // d'enchaîner quatre allers-retours réseau séquentiels.
-  // `getChatroomsNav` et `getIsWorldAdmin` sont mémoïsés pour la requête et
-  // partagés avec `WorldSidebar`, monté par le layout : chacun ne part qu'une
-  // fois, quel que soit le nombre de composants qui le réclame.
-  const [initialRooms, canAdmin, worldPrefs, initialPersonas, initialCategories, widgetData, initialMap] = await Promise.all([
+  // Ces chargements (nav, préférences UI, personas…) sont indépendants les uns
+  // des autres → on les exécute en parallèle plutôt que d'enchaîner les
+  // allers-retours réseau séquentiels.
+  // `getChatroomsNav` est mémoïsé pour la requête et partagé avec
+  // `WorldSidebar`, monté par le layout : il ne part qu'une fois, quel que soit
+  // le nombre de composants qui le réclame.
+  const [initialRooms, worldPrefs, initialPersonas, initialCategories, widgetData, initialMap] = await Promise.all([
     (async (): Promise<NavRoom[]> => {
       const rooms = (await getChatroomsNav(worldId)) as NavRoom[];
       if (!world?.timeline_enabled || rooms.length === 0) return rooms;
@@ -71,7 +70,6 @@ export default async function WorldHomeContent({
       const dateMap = new Map(timelineDates.map((r) => [r.id, r.timeline_date as NavRoom["timeline_date"]]));
       return rooms.map((r) => ({ ...r, timeline_date: dateMap.get(r.id) ?? null }));
     })(),
-    getIsWorldAdmin(world.id, userId ?? null),
     (async (): Promise<{
       main_expanded: boolean;
       is_favorite: boolean;
@@ -183,10 +181,8 @@ export default async function WorldHomeContent({
       world={world}
       worldId={worldId}
       userId={userId ?? null}
-      canAdmin={!!canAdmin}
+      permissions={permissions}
       isShared={isShared}
-      canEditTabs={canEditTabs}
-      canPost={canPost}
       initialRooms={initialRooms}
       initialCategories={initialCategories}
       initialWidgetData={widgetData}

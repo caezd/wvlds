@@ -68,11 +68,11 @@ function WorldInviteCard({ notif, onMarkRead }: { notif: AppNotification; onMark
     useEffect(() => {
         if (!notif.world_id) return;
         supabase.from(TABLE.WORLD_INVITATIONS)
-            .select("status, role")
+            .select("status")
             .eq("world_id", notif.world_id)
             .eq("invitee_id", notif.recipient_id)
             .maybeSingle()
-            .then(({ data: inv }: { data: { status: string; role: string } | null }) => {
+            .then(({ data: inv }: { data: { status: string } | null }) => {
                 setStatus(inv ? (inv.status as "pending" | "accepted" | "declined") : "cancelled");
             });
         supabase.from("worlds")

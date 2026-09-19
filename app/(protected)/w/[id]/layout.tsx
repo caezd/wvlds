@@ -2,7 +2,7 @@
 import type { ReactNode } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { getUserId } from "@/lib/auth";
-import { getWorldById } from "@/lib/currentRequest";
+import { getWorldById, getWorldMembership } from "@/lib/currentRequest";
 import { notFound } from "next/navigation";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
@@ -10,6 +10,7 @@ import { WORLD_ROUTE_NAMESPACES, withRouteMessages } from "@/lib/clientMessages"
 
 import { AgeGate } from "@/components/worlds/AgeGate";
 import { WorldMembershipGuard } from "@/components/worlds/members/WorldMembershipGuard";
+import { WorldMembershipProvider } from "@/components/providers/WorldMembershipProvider";
 import WorldSidebar from "@/components/worlds/sidebar/WorldSidebar";
 
 export default async function WorldLayout({
@@ -26,11 +27,12 @@ export default async function WorldLayout({
   // sont indépendants → on les résout en parallèle. `getWorldById` est
   // mémoïsé (React cache()) : `page.tsx` et `WorldSidebar` la réutilisent
   // sans requête supplémentaire.
-  const [world, userId, locale, messages] = await Promise.all([
+  const [world, userId, locale, messages, { roles, membership }] = await Promise.all([
     getWorldById(id),
     getUserId(supabase),
     getLocale(),
     getMessages(),
+    getWorldMembership(id),
   ]);
 
   if (!world) {
@@ -40,11 +42,8 @@ export default async function WorldLayout({
   // Only members (or the owner) can access the world page.
   // Invitees can read the world record (via RLS policy) but cannot enter.
   const members = world.world_members ?? [];
-  const myRole =
-    members.find((m) => m.user_id === userId)?.role ??
-    (world.owner_id === userId ? "owner" : null);
 
-  if (!myRole) {
+  if (!membership) {
     // Dire lequel des deux manque : l'identité (jeton expiré, session perdue)
     // ou l'appartenance. Les deux rendaient le même 404 muet, impossible à
     // distinguer depuis les journaux.
@@ -71,13 +70,22 @@ export default async function WorldLayout({
   // (cf. lib/clientMessages.ts).
   return (
     <NextIntlClientProvider locale={locale} messages={withRouteMessages(messages, WORLD_ROUTE_NAMESPACES)}>
-      <main className="composer-parent flex h-full flex-col focus-visible:outline-0">
-        <WorldMembershipGuard worldId={world.id} selfId={userId ?? null} />
-        <div className="flex min-h-0 w-full flex-1 flex-row">
-          <WorldSidebar worldId={id} />
-          {children}
-        </div>
-      </main>
+      <WorldMembershipProvider
+        worldId={world.id}
+        ownerId={world.owner_id}
+        userId={userId ?? null}
+        isMember={members.some((m) => m.user_id === userId)}
+        roles={roles}
+        myRoleIds={membership.roles.map((r) => r.id)}
+      >
+        <main className="composer-parent flex h-full flex-col focus-visible:outline-0">
+          <WorldMembershipGuard worldId={world.id} selfId={userId ?? null} />
+          <div className="flex min-h-0 w-full flex-1 flex-row">
+            <WorldSidebar worldId={id} />
+            {children}
+          </div>
+        </main>
+      </WorldMembershipProvider>
     </NextIntlClientProvider>
   );
 }

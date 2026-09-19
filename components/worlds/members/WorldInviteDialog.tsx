@@ -6,6 +6,8 @@ import { createClient } from "@/lib/supabase/client";
 import { inviteUserToWorld } from "@/app/actions/invite";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { TABLE } from "@/lib/constants";
+import { useWorldMembership } from "@/components/providers/WorldMembershipProvider";
+import { canManageRole, WORLD_PERMISSION_GROUPS, permissionI18nKey, permissionListHas, type WorldRoleRow } from "@/lib/worldPermissions";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -34,31 +36,17 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { cn } from "@/lib/utils";
-import { Check, ChevronDown, Loader2, Mail, UserPlus, X } from "lucide-react";
+import { Check, Loader2, Mail, UserPlus, X } from "lucide-react";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { RoleChip } from "./RoleChip";
 
-type Role = "owner" | "admin" | "editor" | "player" | "viewer";
+/** Valeur du sélecteur pour « les rôles par défaut du monde ». */
+const DEFAULT_ROLES = "__default__";
 
-const emailSchema = z.string().email("Courriel invalide");
+const emailSchema = z.string().email();
 
 type FoundUser = {
     user_id: string;
@@ -66,277 +54,116 @@ type FoundUser = {
     username: string | null;
 };
 
-type Member = {
-    user_id: string;
-    role: Role;
-    username: string | null;
-    avatar_url: string | null;
-};
-
 type PendingInvitation = {
     id: string;
     invitee_id: string;
-    role: Role;
+    role_id: string | null;
     created_at: string;
     username: string | null;
     avatar_url: string | null;
 };
 
-const ROLE_LABELS: Record<Role, string> = {
-    owner: "Propriétaire",
-    admin: "Admin",
-    editor: "Éditeur",
-    player: "Joueur",
-    viewer: "Lecteur",
-};
-
-const ROLE_ORDER: Record<Role, number> = {
-    owner: 0,
-    admin: 1,
-    editor: 2,
-    player: 3,
-    viewer: 4,
-};
-
-/** Capacités affichées dans le récap, alignées sur les policies RLS */
-const PERMISSIONS: { label: string; roles: Role[] }[] = [
-    {
-        label: "Lire les conversations et les onglets",
-        roles: ["owner", "admin", "editor", "player", "viewer"],
-    },
-    {
-        label: "Poster des messages et réagir",
-        roles: ["owner", "admin", "editor", "player"],
-    },
-    {
-        label: "Créer des parties",
-        roles: ["owner", "admin", "editor", "player"],
-    },
-    {
-        label: "Modifier les parties des autres",
-        roles: ["owner", "admin", "editor"],
-    },
-    {
-        label: "Gérer les onglets descriptifs",
-        roles: ["owner", "admin", "editor"],
-    },
-    {
-        label: "Modifier le monde et gérer les membres",
-        roles: ["owner", "admin"],
-    },
-];
-
-export function WorldInviteDialog({
-    worldId,
-    ownerId,
-    canManage, // true si owner/admin (UI), RLS fait foi côté DB
-    defaultRole = "player",
-}: {
-    worldId: string;
-    ownerId: string;
-    canManage?: boolean;
-    defaultRole?: Role;
-}) {
-  const t = useTranslations("worlds");
+/**
+ * Inviter quelqu'un dans le monde, avec un rôle ou les rôles par défaut.
+ *
+ * La gestion des membres déjà présents (rôles, retrait) vit sur leurs cartes,
+ * dans `WorldMembersPanel` — ici il n'y a que l'invitation, et les invitations
+ * en attente.
+ */
+export function WorldInviteDialog({ worldId }: { worldId: string }) {
+    const t = useTranslations("worlds.invite");
+    const tRoles = useTranslations("worlds.roles");
+    const tCommon = useTranslations("common");
+    const { roles, membership } = useWorldMembership();
     const [open, setOpen] = useState(false);
     const [query, setQuery] = useState("");
     const [results, setResults] = useState<FoundUser[]>([]);
     const [loading, setLoading] = useState(false);
     const [selected, setSelected] = useState<FoundUser | null>(null);
     const [email, setEmail] = useState("");
-    const [role, setRole] = useState<Role>(defaultRole);
+    const [roleId, setRoleId] = useState<string>(DEFAULT_ROLES);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [members, setMembers] = useState<Member[]>([]);
-    const [membersLoading, setMembersLoading] = useState(false);
-    const [pendingRemoval, setPendingRemoval] = useState<Member | null>(null);
     const [pendingInvites, setPendingInvites] = useState<PendingInvitation[]>([]);
     const [pendingCancelInvite, setPendingCancelInvite] = useState<PendingInvitation | null>(null);
     const supabase = useMemo(() => createClient(), []);
-    const router = useRouter();
     const { userId: currentUserId, username: currentUsername } = useCurrentUser();
 
-    async function loadMembers() {
-        setMembersLoading(true);
+    // Seuls les rôles sous son rang sont proposés : la policy refuse les autres.
+    const grantable = useMemo(
+        () => roles.filter((r) => canManageRole(membership, r, "members.manage")),
+        [roles, membership],
+    );
+    const defaultRoles = useMemo(() => roles.filter((r) => r.is_default), [roles]);
+    const chosenRole: WorldRoleRow | null = roleId === DEFAULT_ROLES ? null : (roles.find((r) => r.id === roleId) ?? null);
+    const previewRoles = useMemo(() => (chosenRole ? [chosenRole] : defaultRoles), [chosenRole, defaultRoles]);
+    const previewPermissions = useMemo(() => {
+        const set = new Set<string>();
+        for (const r of previewRoles) for (const p of r.permissions) set.add(p);
+        return [...set];
+    }, [previewRoles]);
 
-        type MemberRow = { user_id: string; role: string };
-        type InvRow = { id: string; invitee_id: string; role: string; created_at: string };
+    async function loadPendingInvitations() {
+        type InvRow = { id: string; invitee_id: string; role_id: string | null; created_at: string };
         type ProfileRow = { id: string; username: string | null; avatar_url: string | null };
 
-        const { data: memberData } = await supabase
-            .from("world_members")
-            .select("user_id, role")
-            .eq("world_id", worldId);
-        const memberRows = (memberData ?? []) as MemberRow[];
-
-        let invRows: InvRow[] = [];
-        if (canManage) {
-            const { data: invData } = await supabase
-                .from(TABLE.WORLD_INVITATIONS)
-                .select("id, invitee_id, role, created_at")
-                .eq("world_id", worldId)
-                .eq("status", "pending");
-            invRows = (invData ?? []) as InvRow[];
+        const { data: invData, error: invError } = await supabase
+            .from(TABLE.WORLD_INVITATIONS)
+            .select("id, invitee_id, role_id, created_at")
+            .eq("world_id", worldId)
+            .eq("status", "pending");
+        if (invError) console.error("[WorldInviteDialog] invitations illisibles :", invError.message);
+        const invRows = (invData ?? []) as InvRow[];
+        if (invRows.length === 0) {
+            setPendingInvites([]);
+            return;
         }
 
-        const allIds = [...new Set([
-            ...memberRows.map((r) => r.user_id),
-            ...invRows.map((r) => r.invitee_id),
-        ])];
-
-        const { data: profileData } = allIds.length > 0
-            ? await supabase.from("profiles").select("id, username, avatar_url").in("id", allIds)
-            : { data: [] as ProfileRow[] };
-        const profiles = (profileData ?? []) as ProfileRow[];
-
-        const byId = new Map<string, { username: string | null; avatar_url: string | null }>(
-            profiles.map((p) => [p.id, { username: p.username, avatar_url: p.avatar_url }])
-        );
-
-        setMembers(
-            memberRows
-                .map((r) => ({
-                    user_id: r.user_id,
-                    role: r.role as Role,
-                    username: byId.get(r.user_id)?.username ?? null,
-                    avatar_url: byId.get(r.user_id)?.avatar_url ?? null,
-                }))
-                .sort(
-                    (a, b) =>
-                        ROLE_ORDER[a.role] - ROLE_ORDER[b.role] ||
-                        (a.username ?? "").localeCompare(b.username ?? "")
-                )
-        );
+        const { data: profileData } = await supabase
+            .from(TABLE.PROFILES)
+            .select("id, username, avatar_url")
+            .in("id", invRows.map((r) => r.invitee_id));
+        const byId = new Map(((profileData ?? []) as ProfileRow[]).map((p) => [p.id, p]));
 
         setPendingInvites(
             invRows.map((r) => ({
                 id: r.id,
                 invitee_id: r.invitee_id,
-                role: r.role as Role,
+                role_id: r.role_id,
                 created_at: r.created_at,
                 username: byId.get(r.invitee_id)?.username ?? null,
                 avatar_url: byId.get(r.invitee_id)?.avatar_url ?? null,
-            }))
+            })),
         );
-
-        setMembersLoading(false);
-    }
-
-    /**
-     * Prévient l'utilisateur concerné via Broadcast (canal personnel).
-     * Plus fiable que postgres_changes : pas de RLS, pas de publication.
-     */
-    async function broadcastMembership(
-        userId: string,
-        action: "added" | "removed"
-    ) {
-        try {
-            const ch = supabase.channel(`user-events:${userId}`);
-            await new Promise<void>((resolve) => {
-                const t = setTimeout(resolve, 2000); // garde-fou
-                ch.subscribe((status: string) => {
-                    if (status === "SUBSCRIBED") {
-                        clearTimeout(t);
-                        resolve();
-                    }
-                });
-            });
-            await ch.send({
-                type: "broadcast",
-                event: "world_membership",
-                payload: { action, world_id: worldId },
-            });
-            void supabase.removeChannel(ch);
-        } catch {
-            // best-effort : le refresh serveur rattrapera au prochain chargement
-        }
-    }
-
-    async function updateMemberRole(m: Member, newRole: Role) {
-        if (newRole === m.role) return;
-
-        const { error } = await supabase
-            .from("world_members")
-            .update({ role: newRole })
-            .eq("world_id", worldId)
-            .eq("user_id", m.user_id);
-
-        if (error) {
-            toast.error(t("roleChangeFailed"), {
-                description: error.message,
-            });
-            return;
-        }
-
-        setMembers((prev) =>
-            prev
-                .map((x) =>
-                    x.user_id === m.user_id ? { ...x, role: newRole } : x
-                )
-                .sort(
-                    (a, b) =>
-                        ROLE_ORDER[a.role] - ROLE_ORDER[b.role] ||
-                        (a.username ?? "").localeCompare(b.username ?? "")
-                )
-        );
-        toast.success(
-            `${m.username ? `@${m.username}` : "Membre"} : ${ROLE_LABELS[newRole]}`
-        );
-        router.refresh();
-    }
-
-    async function removeMember(m: Member) {
-        const { error } = await supabase
-            .from("world_members")
-            .delete()
-            .eq("world_id", worldId)
-            .eq("user_id", m.user_id);
-
-        if (error) {
-            toast.error(t("memberRemoveFailed"), {
-                description: error.message,
-            });
-            return;
-        }
-
-        setMembers((prev) => prev.filter((x) => x.user_id !== m.user_id));
-        toast.success(
-            `${m.username ? `@${m.username}` : "Le membre"} a été retiré du monde.`
-        );
-        void broadcastMembership(m.user_id, "removed");
-        router.refresh();
     }
 
     async function cancelInvitation(inv: PendingInvitation) {
-        const { error } = await supabase
-            .from(TABLE.WORLD_INVITATIONS)
-            .delete()
-            .eq("id", inv.id);
-
+        const { error } = await supabase.from(TABLE.WORLD_INVITATIONS).delete().eq("id", inv.id);
         if (error) {
-            toast.error(t("inviteCancelFailed"), { description: error.message });
+            toast.error(t("cancelFailed"), { description: error.message });
             return;
         }
-
         setPendingInvites((prev) => prev.filter((x) => x.id !== inv.id));
-        toast.success(
-            `Invitation annulée pour ${inv.username ? `@${inv.username}` : "l’utilisateur"}.`
-        );
+        toast.success(t("cancelled", { name: nameOf(inv) }));
     }
 
-    // reset à l’ouverture + chargement des membres actuels
+    function nameOf(x: { username: string | null; invitee_id?: string; user_id?: string }) {
+        return x.username ? `@${x.username}` : (x.invitee_id ?? x.user_id ?? "").slice(0, 8);
+    }
+
+    // reset à l'ouverture + chargement des invitations en attente
     useEffect(() => {
         if (open) {
             setQuery("");
             setResults([]);
             setSelected(null);
             setEmail("");
-            setRole(defaultRole);
+            setRoleId(DEFAULT_ROLES);
             setError(null);
-            void loadMembers();
+            void loadPendingInvitations();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [open, defaultRole]);
+    }, [open]);
 
     // recherche (debounce)
     useEffect(() => {
@@ -348,16 +175,13 @@ export function WorldInviteDialog({
         }
         let canceled = false;
         setLoading(true);
-        const t = setTimeout(async () => {
+        const timer = setTimeout(async () => {
             try {
-                const { data, error } = await supabase.rpc(
-                    "search_users_for_world",
-                    {
-                        p_world: worldId,
-                        p_q: q,
-                        p_limit: 10,
-                    }
-                );
+                const { data, error } = await supabase.rpc("search_users_for_world", {
+                    p_world: worldId,
+                    p_q: q,
+                    p_limit: 10,
+                });
                 if (!canceled) setResults(error ? [] : data ?? []);
             } finally {
                 if (!canceled) setLoading(false);
@@ -365,7 +189,7 @@ export function WorldInviteDialog({
         }, 250);
         return () => {
             canceled = true;
-            clearTimeout(t);
+            clearTimeout(timer);
         };
     }, [query, supabase, worldId, open]);
 
@@ -377,9 +201,8 @@ export function WorldInviteDialog({
         const target = email.trim();
         if (!target) return null;
 
-        const parsed = emailSchema.safeParse(target);
-        if (!parsed.success) {
-            setError(parsed.error.issues[0].message);
+        if (!emailSchema.safeParse(target).success) {
+            setError(t("invalidEmail"));
             return null;
         }
 
@@ -390,13 +213,11 @@ export function WorldInviteDialog({
         });
         if (error || !data || data.length === 0) {
             // Utilisateur inexistant — envoyer une invitation par courriel
-            const result = await inviteUserToWorld(target, worldId, role as "admin" | "editor" | "player" | "viewer");
+            const result = await inviteUserToWorld(target, worldId, chosenRole?.id ?? null);
             if (result.error) {
-                setError(result.error);
+                setError(t("emailInviteFailed"));
             } else {
-                toast.success(t("inviteSent"), {
-                    description: `Un courriel d'invitation a été envoyé à ${target}.`,
-                });
+                toast.success(t("sent"), { description: t("sentByEmail", { email: target }) });
                 setOpen(false);
             }
             return null;
@@ -412,38 +233,6 @@ export function WorldInviteDialog({
             const userId = await resolveUserId();
             if (!userId) return;
 
-            if (userId === ownerId && role !== "owner") {
-                setError("Impossible de modifier le rôle du propriétaire.");
-                return;
-            }
-
-            // Membres existants → changement de rôle direct
-            const isExistingMember = members.some((m) => m.user_id === userId);
-
-            if (isExistingMember) {
-                const { error } = await supabase
-                    .from(TABLE.WORLD_MEMBERS)
-                    .upsert(
-                        { world_id: worldId, user_id: userId, role },
-                        { onConflict: "world_id,user_id" }
-                    );
-                if (error) {
-                    setError("Échec de la modification du rôle.");
-                    console.error(error);
-                    return;
-                }
-                toast.success(t("roleChanged"), {
-                    description: selected?.username
-                        ? `@${selected.username} est maintenant ${role}.`
-                        : "Le rôle a été mis à jour.",
-                });
-                void broadcastMembership(userId, "added");
-                setOpen(false);
-                router.refresh();
-                return;
-            }
-
-            // Nouveau membre → invitation à accepter
             const { data: worldData } = await supabase
                 .from(TABLE.WORLDS)
                 .select("name, icon_url, banner_url, description")
@@ -454,19 +243,20 @@ export function WorldInviteDialog({
             const worldName = wd?.name ?? null;
             const worldMeta = wd ? { icon_url: wd.icon_url, banner_url: wd.banner_url, description: wd.description } : null;
 
-            // Supprime toute invitation existante (declined ou pending) avant d’en créer une nouvelle.
+            // Supprime toute invitation existante (declined ou pending) avant d'en créer une nouvelle.
             // Évite le problème de UPSERT → UPDATE bloqué par la policy RLS invitee-only.
-            await supabase
+            const { error: cleanupError } = await supabase
                 .from(TABLE.WORLD_INVITATIONS)
                 .delete()
                 .eq("world_id", worldId)
                 .eq("invitee_id", userId);
+            if (cleanupError) console.error("[WorldInviteDialog] ancienne invitation non retirée", cleanupError.message);
 
             const { error: invErr } = await supabase
                 .from(TABLE.WORLD_INVITATIONS)
-                .insert({ world_id: worldId, invitee_id: userId, inviter_id: currentUserId, role });
+                .insert({ world_id: worldId, invitee_id: userId, inviter_id: currentUserId, role_id: chosenRole?.id ?? null });
             if (invErr) {
-                setError("Échec de l’envoi de l’invitation.");
+                setError(t("sendFailed"));
                 console.error(invErr);
                 return;
             }
@@ -485,10 +275,8 @@ export function WorldInviteDialog({
             });
             if (notifError) console.error("[WorldInviteDialog] notification non créée", notifError.message);
 
-            toast.success(t("inviteSent"), {
-                description: selected?.username
-                    ? `Une invitation a été envoyée à @${selected.username}.`
-                    : "L’invitation a été envoyée.",
+            toast.success(t("sent"), {
+                description: selected?.username ? t("sentTo", { name: `@${selected.username}` }) : undefined,
             });
             setOpen(false);
         } finally {
@@ -496,60 +284,39 @@ export function WorldInviteDialog({
         }
     }
 
-    const canSubmit = (!!selected || email.length > 0) && !!role;
+    const canSubmit = !!selected || email.length > 0;
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button
-                    size="sm"
-                    variant="secondary"
-                    disabled={!canManage}
-                    title={
-                        canManage
-                            ? "Ajouter un membre"
-                            : "Accès requis (owner/admin)"
-                    }
-                >
+                <Button size="sm" variant="secondary" title={t("open")}>
                     <UserPlus className="mr-2 h-4 w-4" />
-                    Inviter
+                    {t("open")}
                 </Button>
             </DialogTrigger>
 
             <DialogContent className="sm:max-w-lg">
                 <DialogHeader>
-                    <DialogTitle>{t("addMember")}</DialogTitle>
+                    <DialogTitle>{t("title")}</DialogTitle>
                 </DialogHeader>
 
                 <div className="space-y-3">
-                    <div className="text-sm text-muted-foreground">
-                        Recherche par <b>email</b> ou <b>username</b>, puis
-                        assigne un rôle.
-                    </div>
+                    <div className="text-sm text-muted-foreground">{t("intro")}</div>
 
                     {/* Recherche (Command = combobox) */}
                     <div className="overflow-hidden rounded-xl border">
                         <Command shouldFilter={false}>
-                            <CommandInput
-                                placeholder="Rechercher (email ou username)…"
-                                value={query}
-                                onValueChange={setQuery}
-                            />
+                            <CommandInput placeholder={t("searchPlaceholder")} value={query} onValueChange={setQuery} />
                             <CommandList className="max-h-56">
                                 {loading && (
                                     <div className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground">
                                         <Loader2 className="h-4 w-4 animate-spin" />
-                                        Recherche…
+                                        {t("searching")}
                                     </div>
                                 )}
-                                {!loading && query.trim().length >= 2 && (
-                                    <CommandEmpty>
-                                        Aucun utilisateur trouvé (déjà membre,
-                                        ou inexistant).
-                                    </CommandEmpty>
-                                )}
+                                {!loading && query.trim().length >= 2 && <CommandEmpty>{t("noUserFound")}</CommandEmpty>}
                                 {!loading && results.length > 0 && (
-                                    <CommandGroup heading="Utilisateurs">
+                                    <CommandGroup heading={t("usersHeading")}>
                                         {results.map((u) => (
                                             <CommandItem
                                                 key={u.user_id}
@@ -562,21 +329,14 @@ export function WorldInviteDialog({
                                             >
                                                 <div className="min-w-0 flex-1">
                                                     <div className="truncate text-sm font-medium">
-                                                        {u.username
-                                                            ? `@${u.username}`
-                                                            : u.email}
+                                                        {u.username ? `@${u.username}` : u.email}
                                                     </div>
-                                                    <div className="text-xs text-muted-foreground truncate">
-                                                        {u.email}
-                                                    </div>
+                                                    <div className="truncate text-xs text-muted-foreground">{u.email}</div>
                                                 </div>
                                                 <Check
                                                     className={cn(
                                                         "h-4 w-4 shrink-0",
-                                                        selected?.user_id ===
-                                                            u.user_id
-                                                            ? "opacity-100"
-                                                            : "opacity-0"
+                                                        selected?.user_id === u.user_id ? "opacity-100" : "opacity-0",
                                                     )}
                                                 />
                                             </CommandItem>
@@ -587,18 +347,16 @@ export function WorldInviteDialog({
                         </Command>
                     </div>
 
-                    <div className="text-xs text-muted-foreground">
-                        Ou saisis le courriel exact d’un compte existant :
-                    </div>
+                    <div className="text-xs text-muted-foreground">{t("orExactEmail")}</div>
 
                     <div className="grid gap-1.5">
-                        <Label htmlFor="invite-email">Courriel</Label>
+                        <Label htmlFor="invite-email">{t("emailLabel")}</Label>
                         <div className="relative">
                             <Mail className="absolute left-2 top-2.5 h-4 w-4 opacity-70" />
                             <Input
                                 id="invite-email"
                                 className="pl-8"
-                                placeholder="exemple@domaine.com"
+                                placeholder={t("emailPlaceholder")}
                                 value={email}
                                 onChange={(e) => {
                                     setEmail(e.target.value);
@@ -610,306 +368,138 @@ export function WorldInviteDialog({
                     </div>
 
                     <div className="grid gap-1.5">
-                        <Label>{t("role")}</Label>
-                        <Select
-                            value={role}
-                            onValueChange={(v) => setRole(v as Role)}
-                        >
-                            <SelectTrigger>
+                        <Label>{t("roleLabel")}</Label>
+                        <Select value={roleId} onValueChange={setRoleId}>
+                            <SelectTrigger aria-label={t("roleLabel")}>
                                 <SelectValue placeholder={t("pickRole")} />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="admin">Admin</SelectItem>
-                                <SelectItem value="editor">{t("roleEditor")}</SelectItem>
-                                <SelectItem value="player">Joueur</SelectItem>
-                                <SelectItem value="viewer">Lecteur</SelectItem>
+                                <SelectItem value={DEFAULT_ROLES}>{t("defaultRoles")}</SelectItem>
+                                {grantable.map((r) => (
+                                    <SelectItem key={r.id} value={r.id}>
+                                        <span className="flex items-center gap-2">
+                                            <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: r.color }} />
+                                            {r.name}
+                                        </span>
+                                    </SelectItem>
+                                ))}
                             </SelectContent>
                         </Select>
 
-                        {/* Récap des permissions du rôle sélectionné */}
-                        <div className="mt-1 rounded-xl border border-border-soft px-3 py-2.5">
-                            <div className="mb-1.5 text-xs font-medium text-muted-foreground">
-                                Permissions « {ROLE_LABELS[role]} »
+                        {/* Récap : les rôles conférés et ce qu'ils permettent */}
+                        <div className="mt-1 space-y-2 rounded-xl border border-border-soft px-3 py-2.5">
+                            <div className="flex flex-wrap items-center gap-1">
+                                {previewRoles.length === 0 ? (
+                                    <span className="text-xs italic text-muted-foreground">{t("noDefaultRole")}</span>
+                                ) : (
+                                    previewRoles.map((r) => <RoleChip key={r.id} role={r} />)
+                                )}
                             </div>
-                            <ul className="space-y-1">
-                                {PERMISSIONS.map((p) => {
-                                    const allowed = p.roles.includes(role);
-                                    return (
-                                        <li
-                                            key={p.label}
-                                            className={cn(
-                                                "flex items-center gap-2 text-xs",
-                                                allowed
-                                                    ? "text-foreground"
-                                                    : "text-muted-foreground/60 line-through decoration-muted-foreground/30"
-                                            )}
-                                        >
-                                            {allowed ? (
-                                                <Check className="h-3.5 w-3.5 shrink-0 text-green-500" />
-                                            ) : (
-                                                <X className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50" />
-                                            )}
-                                            {p.label}
+                            {previewRoles.length > 0 && (
+                                <ul className="space-y-1">
+                                    {permissionListHas(previewPermissions, "administrator") ? (
+                                        <li className="flex items-center gap-2 text-xs text-foreground">
+                                            <Check className="h-3.5 w-3.5 shrink-0 text-green-500" />
+                                            {tRoles("permissions.administrator.label")}
                                         </li>
-                                    );
-                                })}
-                            </ul>
+                                    ) : (
+                                        Object.values(WORLD_PERMISSION_GROUPS)
+                                            .flat()
+                                            .filter((p) => p !== "administrator")
+                                            .map((p) => {
+                                                const allowed = previewPermissions.includes(p);
+                                                return (
+                                                    <li
+                                                        key={p}
+                                                        className={cn(
+                                                            "flex items-center gap-2 text-xs",
+                                                            allowed
+                                                                ? "text-foreground"
+                                                                : "text-muted-foreground/60 line-through decoration-muted-foreground/30",
+                                                        )}
+                                                    >
+                                                        {allowed ? (
+                                                            <Check className="h-3.5 w-3.5 shrink-0 text-green-500" />
+                                                        ) : (
+                                                            <X className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50" />
+                                                        )}
+                                                        {tRoles(`permissions.${permissionI18nKey(p)}.label`)}
+                                                    </li>
+                                                );
+                                            })
+                                    )}
+                                </ul>
+                            )}
                         </div>
                     </div>
 
                     {error && (
-                        <div className="rounded-md bg-destructive/10 text-destructive text-sm px-3 py-2">
-                            {error}
-                        </div>
+                        <div className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</div>
                     )}
-
-                    <Separator />
-
-                    {/* Membres actuels */}
-                    <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                            <Label>Membres actuels</Label>
-                            <span className="text-xs text-muted-foreground">
-                                {members.length} membre
-                                {members.length > 1 ? "s" : ""}
-                            </span>
-                        </div>
-                        <div className="max-h-44 space-y-0.5 overflow-y-auto [scrollbar-width:thin]">
-                            {membersLoading && (
-                                <div className="flex items-center gap-2 px-1 py-2 text-sm text-muted-foreground">
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                    Chargement…
-                                </div>
-                            )}
-                            {!membersLoading &&
-                                members.map((m) => (
-                                    <div
-                                        key={m.user_id}
-                                        className="flex items-center gap-2.5 rounded-xl px-2 py-1.5"
-                                    >
-                                        <Avatar className="h-7 w-7 shrink-0">
-                                            <AvatarImage
-                                                src={m.avatar_url ?? undefined}
-                                                alt={m.username ?? ""}
-                                            />
-                                            <AvatarFallback className="text-[10px] uppercase">
-                                                {(m.username ?? "?").slice(0, 2)}
-                                            </AvatarFallback>
-                                        </Avatar>
-                                        <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                                            {m.username
-                                                ? `@${m.username}`
-                                                : m.user_id.slice(0, 8)}
-                                        </span>
-                                        {canManage && m.role !== "owner" ? (
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <button
-                                                        type="button"
-                                                        className="flex shrink-0 items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-[11px] font-medium text-muted-foreground transition-colors hover:text-foreground"
-                                                        aria-label={`Modifier le rôle de ${m.username ?? "ce membre"}`}
-                                                    >
-                                                        {ROLE_LABELS[m.role]}
-                                                        <ChevronDown className="h-3 w-3" />
-                                                    </button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent
-                                                    align="end"
-                                                    className="w-36"
-                                                >
-                                                    {(
-                                                        [
-                                                            "admin",
-                                                            "editor",
-                                                            "player",
-                                                            "viewer",
-                                                        ] as Role[]
-                                                    ).map((r) => (
-                                                        <DropdownMenuItem
-                                                            key={r}
-                                                            onClick={() =>
-                                                                void updateMemberRole(
-                                                                    m,
-                                                                    r
-                                                                )
-                                                            }
-                                                        >
-                                                            <Check
-                                                                className={cn(
-                                                                    "mr-2 h-3.5 w-3.5",
-                                                                    m.role === r
-                                                                        ? "opacity-100"
-                                                                        : "opacity-0"
-                                                                )}
-                                                            />
-                                                            {ROLE_LABELS[r]}
-                                                        </DropdownMenuItem>
-                                                    ))}
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        ) : (
-                                            <span
-                                                className={cn(
-                                                    "shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium",
-                                                    m.role === "owner"
-                                                        ? "bg-primary/10 text-foreground"
-                                                        : "bg-secondary text-muted-foreground"
-                                                )}
-                                            >
-                                                {ROLE_LABELS[m.role]}
-                                            </span>
-                                        )}
-                                        {canManage && m.role !== "owner" && (
-                                            <button
-                                                type="button"
-                                                onClick={() =>
-                                                    setPendingRemoval(m)
-                                                }
-                                                aria-label={`Retirer ${m.username ?? "ce membre"} du monde`}
-                                                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-muted-foreground/60 transition-colors hover:bg-destructive/10 hover:text-destructive"
-                                            >
-                                                <X className="h-3.5 w-3.5" />
-                                            </button>
-                                        )}
-                                    </div>
-                                ))}
-                        </div>
-                    </div>
 
                     {/* Invitations en attente */}
-                    {canManage && pendingInvites.length > 0 && (
-                        <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                                <Label>Invitations en attente</Label>
-                                <span className="text-xs text-muted-foreground">
-                                    {pendingInvites.length}
-                                </span>
+                    {pendingInvites.length > 0 && (
+                        <>
+                            <Separator />
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <Label>{t("pendingHeading")}</Label>
+                                    <span className="text-xs text-muted-foreground">{pendingInvites.length}</span>
+                                </div>
+                                <div className="max-h-32 space-y-0.5 overflow-y-auto [scrollbar-width:thin]">
+                                    {pendingInvites.map((inv) => {
+                                        const role = inv.role_id ? roles.find((r) => r.id === inv.role_id) : null;
+                                        return (
+                                            <div key={inv.id} className="flex items-center gap-2.5 rounded-xl px-2 py-1.5">
+                                                <Avatar className="h-7 w-7 shrink-0">
+                                                    <AvatarImage src={inv.avatar_url ?? undefined} alt="" />
+                                                    <AvatarFallback className="text-[10px] uppercase">
+                                                        {(inv.username ?? "?").slice(0, 2)}
+                                                    </AvatarFallback>
+                                                </Avatar>
+                                                <span className="min-w-0 flex-1 truncate text-sm font-medium">{nameOf(inv)}</span>
+                                                <span className="shrink-0 rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-600 dark:text-amber-400">
+                                                    {role ? role.name : t("defaultRoles")} · {t("pendingBadge")}
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setPendingCancelInvite(inv)}
+                                                    aria-label={t("cancelAria", { name: nameOf(inv) })}
+                                                    className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-muted-foreground/60 transition-colors hover:bg-destructive/10 hover:text-destructive"
+                                                >
+                                                    <X className="h-3.5 w-3.5" />
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
                             </div>
-                            <div className="max-h-32 space-y-0.5 overflow-y-auto [scrollbar-width:thin]">
-                                {pendingInvites.map((inv) => (
-                                    <div
-                                        key={inv.id}
-                                        className="flex items-center gap-2.5 rounded-xl px-2 py-1.5"
-                                    >
-                                        <Avatar className="h-7 w-7 shrink-0">
-                                            <AvatarImage
-                                                src={inv.avatar_url ?? undefined}
-                                                alt={inv.username ?? ""}
-                                            />
-                                            <AvatarFallback className="text-[10px] uppercase">
-                                                {(inv.username ?? "?").slice(0, 2)}
-                                            </AvatarFallback>
-                                        </Avatar>
-                                        <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                                            {inv.username ? `@${inv.username}` : inv.invitee_id.slice(0, 8)}
-                                        </span>
-                                        <span className="shrink-0 rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-600 dark:text-amber-400">
-                                            {ROLE_LABELS[inv.role]} · En attente
-                                        </span>
-                                        <button
-                                            type="button"
-                                            onClick={() => setPendingCancelInvite(inv)}
-                                            aria-label={`Annuler l'invitation de ${inv.username ?? "cet utilisateur"}`}
-                                            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-muted-foreground/60 transition-colors hover:bg-destructive/10 hover:text-destructive"
-                                        >
-                                            <X className="h-3.5 w-3.5" />
-                                        </button>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
+                        </>
                     )}
 
-                    {/* Confirmation d'annulation d'invitation */}
-                    <AlertDialog
+                    <DeleteConfirmDialog
                         open={!!pendingCancelInvite}
-                        onOpenChange={(o) => { if (!o) setPendingCancelInvite(null); }}
-                    >
-                        <AlertDialogContent>
-                            <AlertDialogHeader>
-                                <AlertDialogTitle>
-                                    Annuler l&apos;invitation de{" "}
-                                    {pendingCancelInvite?.username
-                                        ? `@${pendingCancelInvite.username}`
-                                        : "cet utilisateur"}{" "}
-                                    ?
-                                </AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    L&apos;utilisateur ne pourra plus accepter cette invitation.
-                                    Tu pourras le ré-inviter plus tard.
-                                </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                                <AlertDialogCancel>Annuler</AlertDialogCancel>
-                                <AlertDialogAction
-                                    className="bg-destructive text-white hover:bg-destructive/90"
-                                    onClick={() => {
-                                        if (pendingCancelInvite)
-                                            void cancelInvitation(pendingCancelInvite);
-                                        setPendingCancelInvite(null);
-                                    }}
-                                >
-                                    Révoquer
-                                </AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                    </AlertDialog>
-
-                    {/* Confirmation de retrait */}
-                    <AlertDialog
-                        open={!!pendingRemoval}
                         onOpenChange={(o) => {
-                            if (!o) setPendingRemoval(null);
+                            if (!o) setPendingCancelInvite(null);
                         }}
-                    >
-                        <AlertDialogContent>
-                            <AlertDialogHeader>
-                                <AlertDialogTitle>
-                                    Retirer{" "}
-                                    {pendingRemoval?.username
-                                        ? `@${pendingRemoval.username}`
-                                        : "ce membre"}{" "}
-                                    du monde ?
-                                </AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    Ce membre perdra immédiatement tout accès au
-                                    monde, à ses parties et à ses messages. Tu
-                                    pourras le réinviter plus tard.
-                                </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                                <AlertDialogCancel>Annuler</AlertDialogCancel>
-                                <AlertDialogAction
-                                    className="bg-destructive text-white hover:bg-destructive/90"
-                                    onClick={() => {
-                                        if (pendingRemoval)
-                                            void removeMember(pendingRemoval);
-                                        setPendingRemoval(null);
-                                    }}
-                                >
-                                    Retirer
-                                </AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                    </AlertDialog>
+                        title={t("cancelConfirmTitle", { name: pendingCancelInvite ? nameOf(pendingCancelInvite) : "" })}
+                        description={t("cancelConfirmDescription")}
+                        confirmLabel={t("cancelConfirm")}
+                        onConfirm={() => {
+                            if (pendingCancelInvite) void cancelInvitation(pendingCancelInvite);
+                            setPendingCancelInvite(null);
+                        }}
+                    />
 
                     <Separator />
 
                     <DialogFooter>
-                        <Button
-                            variant="outline"
-                            onClick={() => setOpen(false)}
-                        >
-                            Annuler
+                        <Button variant="outline" onClick={() => setOpen(false)}>
+                            {tCommon("cancel")}
                         </Button>
-                        <Button
-                            onClick={onSubmit}
-                            disabled={!canSubmit || submitting}
-                        >
-                            {submitting && (
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            )}
-                            Ajouter
+                        <Button onClick={onSubmit} disabled={!canSubmit || submitting}>
+                            {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            {t("submit")}
                         </Button>
                     </DialogFooter>
                 </div>

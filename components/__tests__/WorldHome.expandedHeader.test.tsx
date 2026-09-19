@@ -42,10 +42,8 @@ function baseProps() {
     world: { id: "world-1", name: "Avalonia", owner_id: "user-1" },
     worldId: "world-1",
     userId: "user-1",
-    canAdmin: false,
+    permissions: [] as string[],
     isShared: true,
-    canEditTabs: false,
-    canPost: false,
     initialRooms: [],
     initialPersonas: [],
   };

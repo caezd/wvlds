@@ -349,13 +349,18 @@
       "noPersona": "Ningún persona en este mundo",
       "morePersonas": "{count, plural, one {# persona más} other {# personas más}}",
       "openProfile": "Ver el perfil de {name}",
-      "rolesPlural": {
-        "owner": "{count, plural, one {Propietario} other {Propietarios}}",
-        "admin": "{count, plural, one {Admin} other {Admins}}",
-        "editor": "{count, plural, one {Editor} other {Editores}}",
-        "player": "{count, plural, one {Jugador} other {Jugadores}}",
-        "viewer": "{count, plural, one {Lector} other {Lectores}}"
-      }
+      "ownerSection": "Propietario",
+      "othersSection": "Miembros",
+      "rolesLabel": "Roles",
+      "noRoles": "Ningún rol definido",
+      "manageMember": "Gestionar a {name}",
+      "removeFromWorld": "Retirar del mundo",
+      "removeConfirmTitle": "¿Retirar a {name} del mundo?",
+      "removeConfirmDescription": "Este miembro perderá de inmediato todo acceso al mundo, a sus salas y a sus mensajes. Podrá invitarlo de nuevo más tarde.",
+      "removeConfirm": "Retirar",
+      "memberRemoved": "{name} ha sido retirado del mundo.",
+      "roleChangeFailed": "No se pudieron modificar los roles.",
+      "memberRemoveFailed": "No se pudo retirar al miembro."
     },
     "sidebar": {
       "active": "Últimos",
@@ -508,13 +513,6 @@
     "addTagPlaceholder": "Añadir una etiqueta…",
     "acceptedAvatarTypes": "Tipo de avatar admitido",
     "enableRestrictionTitle": "¿Activar la restricción?",
-    "roleChangeFailed": "No se pudo cambiar el rol.",
-    "memberRemoveFailed": "No se pudo quitar al miembro.",
-    "inviteCancelFailed": "No se pudo cancelar la invitación.",
-    "inviteSent": "Invitación enviada",
-    "roleChanged": "Rol modificado",
-    "addMember": "Añadir un miembro",
-    "pickRole": "Elegir un rol",
     "newWorld": "Nuevo mundo",
     "categoryUploadWait": "Espere a que termine la subida de la imagen antes de guardar.",
     "removedFromWorld": "Se le ha retirado de este mundo.",
@@ -524,8 +522,6 @@
     "noOtherWorld": "Ningún otro mundo",
     "noPersonaInWorld": "Ningún personaje en este mundo",
     "timelineEmpty": "Ninguna conversación se ha situado aún en la cronología.",
-    "role": "Rol",
-    "roleEditor": "Editor",
     "tabSettings": "Ajustes",
     "tabCategories": "Categorías",
     "tabCommunity": "Comunidad",
@@ -547,7 +543,149 @@
     "restrictionPurgeConfirm": "Activar y purgar",
     "deleteFailed": "No se pudo eliminar el mundo.",
     "addTag": "Añadir esta etiqueta",
-    "addMonthName": "Añadir este nombre de mes"
+    "addMonthName": "Añadir este nombre de mes",
+    "tabAppearance": "Apariencia",
+    "tabHome": "Página de inicio",
+    "tabFeatures": "Funciones",
+    "tabRelations": "Relaciones",
+    "tabRoles": "Roles",
+    "deleteConfirmShort": "¿Confirmar la eliminación?",
+    "roles": {
+      "title": "Roles",
+      "newRole": "Nuevo rol",
+      "newRoleName": "Nuevo rol",
+      "hierarchyHelp": "Del más alto al más bajo: un miembro solo gestiona los roles y miembros situados por debajo del suyo.",
+      "locked": "Bloqueado",
+      "lockedHelp": "Este rol está al nivel del suyo o por encima: puede consultarlo, no modificarlo.",
+      "name": "Nombre",
+      "color": "Color",
+      "icon": "Icono",
+      "pickIcon": "Elegir un icono",
+      "clearIcon": "Quitar el icono",
+      "hoist": "Mostrar por separado",
+      "hoistHelp": "Sus miembros forman una sección aparte en la lista de miembros.",
+      "mentionable": "Mencionable por todos",
+      "mentionableHelp": "Cualquier miembro puede hacer ping a este rol en las salas.",
+      "isDefault": "Rol por defecto",
+      "isDefaultHelp": "Asignado a quien se une al mundo sin un rol indicado.",
+      "permissionsTitle": "Permisos",
+      "notGrantable": "Usted no posee este permiso: no puede concederlo.",
+      "delete": "Eliminar el rol",
+      "deleteConfirmTitle": "¿Eliminar el rol «{name}»?",
+      "deleteConfirmDescription": "{count, plural, =0 {Ningún miembro lo tiene.} one {# miembro lo perderá.} other {# miembros lo perderán.}} Esta acción es irreversible.",
+      "saveFailed": "No se pudo guardar el rol.",
+      "createFailed": "No se pudo crear el rol.",
+      "deleteFailed": "No se pudo eliminar el rol.",
+      "empty": "Todavía no hay roles.",
+      "groups": {
+        "general": "General",
+        "chatrooms": "Salas",
+        "content": "Contenido",
+        "personas": "Personas",
+        "mentions": "Menciones"
+      },
+      "permissions": {
+        "administrator": {
+          "label": "Administrador",
+          "help": "Todos los permisos, salvo eliminar el mundo y sus pestañas de sistema, reservados al propietario."
+        },
+        "world_settings": {
+          "label": "Configurar el mundo",
+          "help": "Apariencia, página de inicio, funciones y comunidad."
+        },
+        "roles_manage": {
+          "label": "Gestionar los roles",
+          "help": "Crear, modificar y ordenar los roles situados por debajo del suyo."
+        },
+        "members_manage": {
+          "label": "Gestionar los miembros",
+          "help": "Invitar, asignar roles y retirar a los miembros por debajo de su rango."
+        },
+        "messages_post": {
+          "label": "Escribir en las salas",
+          "help": "Publicar mensajes y reaccionar."
+        },
+        "chatrooms_create": {
+          "label": "Crear salas",
+          "help": "Abrir nuevas conversaciones en el mundo."
+        },
+        "chatrooms_manage": {
+          "label": "Gestionar las salas de otros",
+          "help": "Modificar o eliminar las salas creadas por otros miembros."
+        },
+        "categories_manage": {
+          "label": "Gestionar las categorías",
+          "help": "Crear, renombrar y ordenar las categorías de salas."
+        },
+        "tabs_edit": {
+          "label": "Modificar las pestañas",
+          "help": "Editar las pestañas descriptivas del mundo."
+        },
+        "wiki_edit": {
+          "label": "Modificar el wiki",
+          "help": "Crear y editar las páginas, sus notas y sus comentarios."
+        },
+        "lexicon_edit": {
+          "label": "Modificar el léxico",
+          "help": "Añadir y corregir los términos del mundo."
+        },
+        "tags_manage": {
+          "label": "Gestionar las etiquetas",
+          "help": "Añadir y retirar las etiquetas del mundo."
+        },
+        "map_edit": {
+          "label": "Modificar el mapa",
+          "help": "Mapas, lugares, regiones y enlaces entre lugares."
+        },
+        "catalog_edit": {
+          "label": "Modificar el catálogo",
+          "help": "Objetos, habilidades y sus categorías."
+        },
+        "relations_manage": {
+          "label": "Gestionar las relaciones",
+          "help": "Tipos y grupos de relaciones, y moderación de las relaciones entre personas."
+        },
+        "mentions_roles": {
+          "label": "Mencionar cualquier rol",
+          "help": "Hacer ping a un rol aunque no esté marcado como mencionable."
+        },
+        "mentions_everyone": {
+          "label": "Mencionar a todos",
+          "help": "Usar @todos y @aquí en las salas."
+        }
+      }
+    },
+    "invite": {
+      "open": "Invitar",
+      "title": "Añadir un miembro",
+      "intro": "Busque por correo o nombre de usuario y elija un rol.",
+      "searchPlaceholder": "Buscar (correo o nombre de usuario)…",
+      "searching": "Buscando…",
+      "noUserFound": "Ningún usuario encontrado (ya es miembro, o no existe).",
+      "usersHeading": "Usuarios",
+      "orExactEmail": "O escriba el correo exacto de una cuenta existente:",
+      "emailLabel": "Correo",
+      "emailPlaceholder": "ejemplo@dominio.com",
+      "roleLabel": "Rol",
+      "pickRole": "Elegir un rol",
+      "defaultRoles": "Roles por defecto",
+      "noDefaultRole": "Ningún rol por defecto: el miembro llegará sin rol.",
+      "invalidEmail": "Correo no válido.",
+      "emailInviteFailed": "No se pudo enviar la invitación por correo.",
+      "sent": "Invitación enviada",
+      "sentByEmail": "Se ha enviado un correo de invitación a {email}.",
+      "sentTo": "Se ha enviado una invitación a {name}.",
+      "sendFailed": "No se pudo enviar la invitación.",
+      "pendingHeading": "Invitaciones pendientes",
+      "pendingBadge": "Pendiente",
+      "cancelAria": "Cancelar la invitación de {name}",
+      "cancelConfirmTitle": "¿Cancelar la invitación de {name}?",
+      "cancelConfirmDescription": "El usuario ya no podrá aceptar esta invitación. Podrá invitarlo de nuevo más tarde.",
+      "cancelConfirm": "Revocar",
+      "cancelFailed": "No se pudo cancelar la invitación.",
+      "cancelled": "Invitación cancelada para {name}.",
+      "submit": "Invitar"
+    }
   },
   "auth": {
     "signin": "Iniciar sesión",
