@@ -8,6 +8,16 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-09 ──────────────────────────────────────────────────────────────
   {
     date: "2026-09",
+    tag: "Rôles",
+    text: "Les images d’un monde suivent la permission de ce qu’elles illustrent : image de catégorie avec « Gérer les catégories », icône ou bannière de salon pour son créateur ou « Gérer les salons des autres », image du wiki avec « Modifier le wiki », carte et lieux avec « Modifier la carte », objets du catalogue avec « Modifier le catalogue ».",
+  },
+  {
+    date: "2026-09",
+    tag: "Membres",
+    text: "Sur la carte d’un membre, le nombre de messages et la dernière prise de parole s’affichent en icônes à droite du nom, et les personas au-delà des quatre premiers se résument en pastille « +N » au bout de la rangée — le détail au survol.",
+  },
+  {
+    date: "2026-09",
     tag: "Salons",
     text: "Tapez @ dans un salon pour mentionner un membre, un rôle (« @Maître du jeu »), @tous ou @ici (les membres présents), avec une liste de propositions sous le curseur. Les mentions s’affichent en puces colorées, chaque personne visée reçoit une notification — une seule par message, même mentionnée plusieurs fois — et deux réglages de notification distincts couvrent les rôles et les @tous. Un rôle se rend « mentionnable par tous » dans les réglages ; sinon il faut la permission.",
   },
