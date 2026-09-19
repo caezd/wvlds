@@ -101,7 +101,7 @@ export default async function WorldHomeContent({
       const { data: personaRows } = await supabase
         .from("personas")
         .select(
-          "id, name, avatar_url, avatar_config, banner_url, avatar_frame_id, faceclaim, marital_status, spouse_persona_id, frame:avatar_frame_id(asset_url)",
+          "id, name, avatar_url, avatar_config, banner_url, avatar_frame_id, faceclaim, marital_status, spouse_persona_id, narrative_status, created_at, frame:avatar_frame_id(asset_url)",
         )
         .eq("user_id", userId)
         .eq("world_id", worldId)

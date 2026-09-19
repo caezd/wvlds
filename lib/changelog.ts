@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-09 ──────────────────────────────────────────────────────────────
   {
     date: "2026-09",
+    tag: "Personas",
+    text: "Un persona a un statut narratif — vivant, disparu, décédé, retiré — réglé depuis sa fiche et visible partout : tuiles grisées avec badge, fiche, en-tête des messages, canevas des relations (où un bouton de la légende masque les retirés et décédés). La liste des personas d’un monde se cherche et se filtre par joueur, groupe de relations et statut, et se trie par nom ou par date.",
+  },
+  {
+    date: "2026-09",
     tag: "Rôles",
     text: "Les images d’un monde suivent la permission de ce qu’elles illustrent : image de catégorie avec « Gérer les catégories », icône ou bannière de salon pour son créateur ou « Gérer les salons des autres », image du wiki avec « Modifier le wiki », carte et lieux avec « Modifier la carte », objets du catalogue avec « Modifier le catalogue ».",
   },

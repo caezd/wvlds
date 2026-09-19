@@ -16,6 +16,8 @@ import { PresenceDot } from "@/components/avatars/PresenceDot";
 import { UserProfileSheetTrigger } from "@/components/profile/UserProfileSheetTrigger";
 import { PersonaProfileSheetTrigger } from "@/components/personas/PersonaProfileSheetTrigger";
 import { RoleChip } from "./RoleChip";
+import { PersonaStatusBadge } from "@/components/personas/PersonaStatusBadge";
+import { isRetiredStatus } from "@/lib/personaStatus";
 
 export type PresenceState = "online" | "away" | "offline";
 
@@ -80,12 +82,17 @@ export function MemberStatusBadge({
 
 function PersonaChip({ persona, userId }: { persona: WorldMemberPersona; userId: string }) {
   const name = persona.name || "?";
+  const retired = isRetiredStatus(persona.narrative_status);
   return (
     <PersonaProfileSheetTrigger
       personaId={persona.id}
       userId={userId}
       label={name}
-      triggerClassName="flex max-w-full items-center gap-1.5 rounded-full border border-border-soft bg-muted/40 py-0.5 pl-0.5 pr-2.5 text-xs font-medium transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      triggerClassName={cn(
+        "flex max-w-full items-center gap-1.5 rounded-full border border-border-soft bg-muted/40 py-0.5 pl-0.5 pr-2.5 text-xs font-medium transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        // Un persona décédé ou retiré reste dans la liste, mais en retrait.
+        retired && "opacity-60 grayscale",
+      )}
     >
       <ChatroomAvatarWithPresence
         url={persona.avatar_url}
@@ -96,6 +103,7 @@ function PersonaChip({ persona, userId }: { persona: WorldMemberPersona; userId:
         className="rounded-full"
       />
       <span className="truncate">{name}</span>
+      <PersonaStatusBadge status={persona.narrative_status} compact className="-mr-1" />
     </PersonaProfileSheetTrigger>
   );
 }

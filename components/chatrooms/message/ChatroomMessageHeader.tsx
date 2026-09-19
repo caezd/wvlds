@@ -11,6 +11,7 @@ import { Check, X, Loader2, SmilePlus, Dices } from "lucide-react";
 import DateDisplay from "@/components/date-display";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import { PersonaProfileSheetTrigger } from "@/components/personas/PersonaProfileSheetTrigger";
+import { PersonaStatusBadge } from "@/components/personas/PersonaStatusBadge";
 import { UserProfileSheetTrigger } from "@/components/profile/UserProfileSheetTrigger";
 import { ChatReactionPicker } from "../reactions/ChatReactionPicker";
 import { ReactionEmoji } from "../reactions/ReactionEmoji";
@@ -124,6 +125,7 @@ export function ChatroomMessageHeader({
             >
               {message.persona?.name}
             </strong>
+            <PersonaStatusBadge status={message.persona?.narrative_status} compact />
             <UserProfileSheetTrigger userId={userId} label={playerUsername}>
               <span className="text-mist-200 text-xs hover:text-mist-50 hover:underline transition-colors">
                 (@{(message.author?.username ?? playerUsername ?? "?").toLowerCase()})

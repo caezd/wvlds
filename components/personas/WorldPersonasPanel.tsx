@@ -1,21 +1,27 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Drama, Plus } from "lucide-react";
+import { Drama, Plus, Search } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { getInitials } from "@/lib/textFormatting";
 import { PersonaCard } from "./PersonaCard";
 import { PersonaCreateSheet } from "./PersonaCreateSheet";
 import { PersonaProfileSheetTrigger } from "./PersonaProfileSheetTrigger";
+import { PersonaStatusBadge } from "./PersonaStatusBadge";
 import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { AsidePersona } from "./WorldPersonaAsideClient";
 import { useTranslations } from "next-intl";
 import { StoredImage } from "@/components/ui/stored-image";
 import { avatarThumbWidth } from "@/lib/storage";
+import { cn } from "@/lib/utils";
 import { effectiveStatus } from "@/lib/worldMembers";
+import { NARRATIVE_STATUSES, isRetiredStatus, narrativeStatusOf } from "@/lib/personaStatus";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { MemberStatusBadge } from "@/components/worlds/members/WorldMemberCard";
-import type { WorldMemberStatus } from "@/types/db";
+import type { PersonaNarrativeStatus, WorldMemberStatus } from "@/types/db";
 
 type OtherPersona = {
   id: string;
@@ -23,10 +29,18 @@ type OtherPersona = {
   avatar_url: string | null;
   user_id: string;
   username: string | null;
+  created_at: string | null;
+  narrative_status: PersonaNarrativeStatus;
   /** Statut du joueur dans ce monde ; « active » quand il n'a rien déclaré. */
   playerStatus: WorldMemberStatus;
   playerStatusUntil: string | null;
 };
+
+type Group = { id: string; name: string; color: string };
+
+const ALL = "__all__";
+const NO_GROUP = "__none__";
+type SortKey = "name" | "newest" | "oldest";
 
 function memberLabel(userId: string, username: string | null) {
   return username ? `@${username}` : userId.slice(0, 8);
@@ -41,47 +55,89 @@ function letterKey(name: string | null): string {
   return /[A-Z]/.test(c) ? c : "#";
 }
 
+function normalize(text: string) {
+  return text.normalize("NFD").replace(DIACRITICS_RE, "").toLowerCase();
+}
+
+/** Les critères de la barre de filtres, appliqués à une liste (pure, testée). */
+export type PersonaFilters = {
+  query: string;
+  player: string; // ALL | user_id
+  group: string; // ALL | NO_GROUP | group_id
+  status: string; // ALL | PersonaNarrativeStatus
+};
+
+export function applyPersonaFilters<
+  T extends { id: string; name: string | null; user_id: string; username?: string | null; narrative_status: PersonaNarrativeStatus },
+>(list: T[], filters: PersonaFilters, groupByPersona: Map<string, string>): T[] {
+  const q = normalize(filters.query.trim());
+  return list.filter((p) => {
+    if (filters.player !== ALL && p.user_id !== filters.player) return false;
+    if (filters.group === NO_GROUP && groupByPersona.has(p.id)) return false;
+    if (filters.group !== ALL && filters.group !== NO_GROUP && groupByPersona.get(p.id) !== filters.group) return false;
+    if (filters.status !== ALL && p.narrative_status !== filters.status) return false;
+    if (q && !normalize(p.name ?? "").includes(q) && !normalize(p.username ?? "").includes(q)) return false;
+    return true;
+  });
+}
+
+export function sortPersonas<T extends { name: string | null; created_at?: string | null }>(list: T[], sort: SortKey): T[] {
+  const byName = (a: T, b: T) => (a.name ?? "").localeCompare(b.name ?? "", undefined, { sensitivity: "base" });
+  const byDate = (a: T, b: T) => (a.created_at ?? "").localeCompare(b.created_at ?? "");
+  return [...list].sort((a, b) => {
+    if (sort === "name") return byName(a, b);
+    const d = byDate(a, b);
+    if (d !== 0) return sort === "newest" ? -d : d;
+    return byName(a, b);
+  });
+}
+
+export { ALL as PERSONA_FILTER_ALL, NO_GROUP as PERSONA_FILTER_NO_GROUP };
+
 // ── Carte lecture seule : persona d'un autre membre ────────────────────────
 
-function OtherPersonaCard({ persona }: { persona: OtherPersona }) {
-  const name = persona.name ?? "Sans nom";
+function OtherPersonaCard({ persona, groupColor, unnamed }: { persona: OtherPersona; groupColor?: string; unnamed: string }) {
+  const name = persona.name ?? unnamed;
+  const retired = isRetiredStatus(persona.narrative_status);
   return (
     <PersonaProfileSheetTrigger
       personaId={persona.id}
       userId={persona.user_id}
       label={name}
-      triggerClassName="group relative block w-full aspect-square rounded-2xl overflow-hidden bg-muted shadow-sm hover:shadow-lg transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      triggerClassName="group relative block w-full aspect-square rounded-lg overflow-hidden bg-muted shadow-sm hover:shadow-lg transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
-      {persona.avatar_url ? (
-        <StoredImage
-          url={persona.avatar_url}
-          width={avatarThumbWidth(160)}
-          alt={name}
-          className="object-cover"
-          draggable={false}
-        />
-      ) : (
-        <div className="absolute inset-0 grid place-items-center text-2xl font-bold text-muted-foreground select-none">
-          {getInitials(name, "P")}
-        </div>
-      )}
+      <span data-narrative-status={persona.narrative_status} className="contents">
+        {persona.avatar_url ? (
+          <StoredImage
+            url={persona.avatar_url}
+            width={avatarThumbWidth(160)}
+            alt={name}
+            className={cn("object-cover", retired && "grayscale opacity-80")}
+            draggable={false}
+          />
+        ) : (
+          <div className="absolute inset-0 grid place-items-center text-2xl font-bold text-muted-foreground select-none">
+            {getInitials(name, "P")}
+          </div>
+        )}
+      </span>
       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
-      {/* Le joueur est en pause ou absent : autant le savoir avant de lui écrire. */}
-      {persona.playerStatus !== "active" && (
-        <MemberStatusBadge
-          status={persona.playerStatus}
-          until={persona.playerStatusUntil}
-          note={null}
-          className="absolute left-2 top-2 bg-black/60 text-white backdrop-blur-sm dark:text-white"
-        />
-      )}
+      {groupColor && <span aria-hidden className="absolute inset-x-0 top-0 h-1" style={{ backgroundColor: groupColor }} />}
+      <div className="absolute left-2 top-2 flex flex-col items-start gap-1">
+        <PersonaStatusBadge status={persona.narrative_status} className="bg-black/60 text-white dark:text-white" />
+        {/* Le joueur est en pause ou absent : autant le savoir avant de lui écrire. */}
+        {persona.playerStatus !== "active" && (
+          <MemberStatusBadge
+            status={persona.playerStatus}
+            until={persona.playerStatusUntil}
+            note={null}
+            className="bg-black/60 text-white backdrop-blur-sm dark:text-white"
+          />
+        )}
+      </div>
       <div className="absolute bottom-0 left-0 right-0 p-2.5">
-        <span className="block text-sm font-semibold text-white leading-tight line-clamp-2">
-          {name}
-        </span>
-        <span className="block text-xs text-white/70 leading-tight truncate">
-          {memberLabel(persona.user_id, persona.username)}
-        </span>
+        <span className="block text-sm font-semibold text-white leading-tight line-clamp-2">{name}</span>
+        <span className="block text-xs text-white/70 leading-tight truncate">{memberLabel(persona.user_id, persona.username)}</span>
       </div>
     </PersonaProfileSheetTrigger>
   );
@@ -102,23 +158,34 @@ export function WorldPersonasPanel({
   restrictSkills?: boolean;
   faceclaimsEnabled?: boolean;
 }) {
-  const t = useTranslations("worlds");
+  const t = useTranslations("personas.list");
+  const tStatus = useTranslations("personas.narrativeStatus");
   const supabase = useMemo(() => createClient(), []);
+  const { userId: meId, username: myUsername } = useCurrentUser();
   const [others, setOthers] = useState<OtherPersona[] | null>(null);
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [groupByPersona, setGroupByPersona] = useState<Map<string, string>>(new Map());
   const myIds = useMemo(() => new Set(myPersonas.map((p) => p.id)), [myPersonas]);
+
+  const [filters, setFilters] = useState<PersonaFilters>({ query: "", player: ALL, group: ALL, status: ALL });
+  const [sort, setSort] = useState<SortKey>("name");
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadOthers() {
-      const { data: personaRows } = await supabase
-        .from("personas")
-        .select("id, name, avatar_url, user_id")
-        .eq("world_id", worldId)
-        .eq("is_template", false)
-        .is("deleted_at", null);
+      const [{ data: personaRows }, { data: groupRows }, { data: assignRows }] = await Promise.all([
+        supabase
+          .from("personas")
+          .select("id, name, avatar_url, user_id, created_at, narrative_status")
+          .eq("world_id", worldId)
+          .eq("is_template", false)
+          .is("deleted_at", null),
+        supabase.from("world_persona_groups").select("id, name, color").eq("world_id", worldId).order("sort_index"),
+        supabase.from("persona_group_assignments").select("persona_id, group_id").eq("world_id", worldId),
+      ]);
 
-      type RawPersona = { id: string; name: string | null; avatar_url: string | null; user_id: string };
+      type RawPersona = { id: string; name: string | null; avatar_url: string | null; user_id: string; created_at: string | null; narrative_status: string | null };
       const otherRows = ((personaRows ?? []) as RawPersona[]).filter((r) => !myIds.has(r.id));
       const userIds = Array.from(new Set(otherRows.map((r) => r.user_id)));
 
@@ -135,19 +202,27 @@ export function WorldPersonasPanel({
         statusByUser = new Map(((memberRows ?? []) as StatusRow[]).map((m) => [m.user_id, m]));
       }
 
-      if (!cancelled) {
-        setOthers(
-          otherRows.map((r) => {
-            const member = statusByUser.get(r.user_id);
-            return {
-              ...r,
-              username: usernameByUser.get(r.user_id) ?? null,
-              playerStatus: member ? effectiveStatus(member) : "active",
-              playerStatusUntil: member?.status_until ?? null,
-            };
-          }),
-        );
-      }
+      if (cancelled) return;
+      setGroups(((groupRows ?? []) as Group[]));
+      setGroupByPersona(
+        new Map(((assignRows ?? []) as { persona_id: string; group_id: string }[]).map((a) => [a.persona_id, a.group_id])),
+      );
+      setOthers(
+        otherRows.map((r) => {
+          const member = statusByUser.get(r.user_id);
+          return {
+            id: r.id,
+            name: r.name,
+            avatar_url: r.avatar_url,
+            user_id: r.user_id,
+            created_at: r.created_at,
+            narrative_status: narrativeStatusOf(r.narrative_status),
+            username: usernameByUser.get(r.user_id) ?? null,
+            playerStatus: member ? effectiveStatus(member) : "active",
+            playerStatusUntil: member?.status_until ?? null,
+          };
+        }),
+      );
     }
 
     void loadOthers();
@@ -155,25 +230,63 @@ export function WorldPersonasPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [worldId]);
 
-  const mine = [...myPersonas].sort((a, b) =>
-    (a.name ?? "").localeCompare(b.name ?? "", "fr", { sensitivity: "base" }),
+  const groupColorById = useMemo(() => new Map(groups.map((g) => [g.id, g.color])), [groups]);
+
+  // Les joueurs proposés par le filtre : ceux qui ont au moins un persona ici.
+  const players = useMemo(() => {
+    const map = new Map<string, string | null>();
+    if (meId && myPersonas.length > 0) map.set(meId, myUsername ?? null);
+    for (const p of others ?? []) if (!map.has(p.user_id)) map.set(p.user_id, p.username);
+    return [...map.entries()]
+      .map(([id, username]) => ({ id, label: memberLabel(id, username) }))
+      .sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: "base" }));
+  }, [others, meId, myUsername, myPersonas.length]);
+
+  const mine = useMemo(() => {
+    const withOwner = myPersonas.map((p) => ({
+      ...p,
+      user_id: meId ?? "",
+      username: myUsername ?? null,
+      narrative_status: narrativeStatusOf(p.narrative_status),
+    }));
+    return sortPersonas(applyPersonaFilters(withOwner, filters, groupByPersona), sort);
+  }, [myPersonas, meId, myUsername, filters, groupByPersona, sort]);
+
+  const filteredOthers = useMemo(
+    () => sortPersonas(applyPersonaFilters(others ?? [], filters, groupByPersona), sort),
+    [others, filters, groupByPersona, sort],
   );
 
+  // Par lettre quand on trie par nom ; à plat sinon, l'ordre parle de lui-même.
   const otherGroups = useMemo(() => {
-    const sorted = [...(others ?? [])].sort((a, b) =>
-      (a.name ?? "").localeCompare(b.name ?? "", "fr", { sensitivity: "base" }),
-    );
+    if (sort !== "name") return [["", filteredOthers] as [string, OtherPersona[]]];
     const map = new Map<string, OtherPersona[]>();
-    for (const p of sorted) {
+    for (const p of filteredOthers) {
       const key = letterKey(p.name);
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(p);
     }
     return Array.from(map.entries());
-  }, [others]);
+  }, [filteredOthers, sort]);
 
   const loadingOthers = others === null;
-  const otherTotal = others?.length ?? 0;
+  const total = myPersonas.length + (others?.length ?? 0);
+  const filtering = filters.query.trim() !== "" || filters.player !== ALL || filters.group !== ALL || filters.status !== ALL;
+  const unnamed = t("unnamed");
+
+  const createTrigger = (className: string, label: string) => (
+    <PersonaCreateSheet
+      worldId={worldId}
+      restrictInventory={restrictInventory}
+      restrictSkills={restrictSkills}
+      trigger={
+        <button type="button" className={className}>
+          <Plus className="h-3.5 w-3.5" />
+          {label}
+        </button>
+      }
+    />
+  );
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
@@ -181,114 +294,168 @@ export function WorldPersonasPanel({
         icon={<Drama className="h-4 w-4 shrink-0 text-muted-foreground" />}
         title={
           <>
-            Personas
-            {mine.length + otherTotal > 0 && (
-              <span className="ml-1.5 text-xs font-normal text-muted-foreground">{mine.length + otherTotal}</span>
-            )}
+            {t("title")}
+            {total > 0 && <span className="ml-1.5 text-xs font-normal text-muted-foreground">{total}</span>}
           </>
         }
-        right={
-          <PersonaCreateSheet
-            worldId={worldId}
-            restrictInventory={restrictInventory}
-            restrictSkills={restrictSkills}
-            trigger={
-              <button
-                type="button"
-                className="flex items-center gap-1.5 rounded-full bg-primary px-3 py-1 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-              >
-                <Plus className="h-3.5 w-3.5" />
-                Nouveau persona
-              </button>
-            }
-          />
-        }
+        right={createTrigger(
+          "flex items-center gap-1.5 rounded-full bg-primary px-3 py-1 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90",
+          t("newPersona"),
+        )}
       />
 
       <ScrollArea className="flex-1 min-h-0">
         <div className="space-y-8 px-6 py-6">
-          {/* ── Mes personas ── */}
-          <section>
-            <h3 className="mb-4 text-sm font-semibold text-foreground">
-              Mes personas
-              {mine.length > 0 && (
-                <span className="ml-1.5 text-xs font-normal text-muted-foreground">{mine.length}</span>
-              )}
-            </h3>
-
-            {mine.length === 0 ? (
-              <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border-soft py-10 text-center">
-                <p className="text-sm text-muted-foreground">{t("noPersonaInWorld")}</p>
-                <PersonaCreateSheet
-                  worldId={worldId}
-                  restrictInventory={restrictInventory}
-                  restrictSkills={restrictSkills}
-                  trigger={
-                    <button
-                      type="button"
-                      className="flex items-center gap-1.5 rounded-lg bg-muted px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground"
-                    >
-                      <Plus size={14} />
-                      Créer un persona
-                    </button>
-                  }
+          {/* ── Recherche, filtres, tri ── */}
+          {total > 0 && (
+            <div className="flex flex-wrap items-center gap-2" role="search">
+              <div className="relative min-w-0 flex-1 basis-56">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  type="search"
+                  value={filters.query}
+                  onChange={(e) => setFilters((f) => ({ ...f, query: e.target.value }))}
+                  placeholder={t("searchPlaceholder")}
+                  aria-label={t("searchPlaceholder")}
+                  className="pl-9"
                 />
               </div>
-            ) : (
-              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
-                {mine.map((p) => (
-                  <PersonaCard
-                    key={p.id}
-                    personaId={p.id}
-                    personaName={p.name ?? "Sans nom"}
-                    avatarUrl={p.avatar_url}
-                    avatarConfig={p.avatar_config as never}
-                    bannerUrl={p.banner_url}
-                    initialFrameId={p.avatar_frame_id}
-                    initialFrameUrl={p.frame?.asset_url}
-                    initialFaceclaim={p.faceclaim ?? null}
-                    initialMaritalStatus={p.marital_status ?? null}
-                    initialSpousePersonaId={p.spouse_persona_id ?? null}
-                    initialSections={p.sections}
-                    worldId={worldId}
-                    restrictInventory={restrictInventory}
-                    restrictSkills={restrictSkills}
-                    faceclaimsEnabled={faceclaimsEnabled}
-                  />
-                ))}
-              </div>
-            )}
-          </section>
+              {players.length > 1 && (
+                <Select value={filters.player} onValueChange={(v) => setFilters((f) => ({ ...f, player: v }))}>
+                  <SelectTrigger size="sm" className="w-auto min-w-36" aria-label={t("filterPlayer")}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL}>{t("allPlayers")}</SelectItem>
+                    {players.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>{p.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              {groups.length > 0 && (
+                <Select value={filters.group} onValueChange={(v) => setFilters((f) => ({ ...f, group: v }))}>
+                  <SelectTrigger size="sm" className="w-auto min-w-36" aria-label={t("filterGroup")}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL}>{t("allGroups")}</SelectItem>
+                    {groups.map((g) => (
+                      <SelectItem key={g.id} value={g.id}>
+                        <span className="flex items-center gap-2">
+                          <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: g.color }} />
+                          {g.name}
+                        </span>
+                      </SelectItem>
+                    ))}
+                    <SelectItem value={NO_GROUP}>{t("noGroup")}</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+              <Select value={filters.status} onValueChange={(v) => setFilters((f) => ({ ...f, status: v }))}>
+                <SelectTrigger size="sm" className="w-auto min-w-32" aria-label={t("filterStatus")}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL}>{t("allStatuses")}</SelectItem>
+                  {NARRATIVE_STATUSES.map((s) => (
+                    <SelectItem key={s} value={s}>{tStatus(s)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
+                <SelectTrigger size="sm" className="w-auto min-w-36" aria-label={t("sort")}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="name">{t("sortName")}</SelectItem>
+                  <SelectItem value="newest">{t("sortNewest")}</SelectItem>
+                  <SelectItem value="oldest">{t("sortOldest")}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
-          {/* ── Autres personas, indexés par lettre ── */}
+          {/* ── Mes personas ── */}
+          {(mine.length > 0 || !filtering) && (
+            <section>
+              <h3 className="mb-4 text-sm font-semibold text-foreground">
+                {t("mine")}
+                {mine.length > 0 && <span className="ml-1.5 text-xs font-normal text-muted-foreground">{mine.length}</span>}
+              </h3>
+
+              {myPersonas.length === 0 ? (
+                <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border-soft py-10 text-center">
+                  <p className="text-sm text-muted-foreground">{t("noneMine")}</p>
+                  {createTrigger(
+                    "flex items-center gap-1.5 rounded-lg bg-muted px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground",
+                    t("createFirst"),
+                  )}
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
+                  {mine.map((p) => (
+                    <PersonaCard
+                      key={p.id}
+                      personaId={p.id}
+                      personaName={p.name ?? unnamed}
+                      avatarUrl={p.avatar_url}
+                      avatarConfig={p.avatar_config as never}
+                      bannerUrl={p.banner_url}
+                      initialFrameId={p.avatar_frame_id}
+                      initialFrameUrl={p.frame?.asset_url}
+                      initialFaceclaim={p.faceclaim ?? null}
+                      initialMaritalStatus={p.marital_status ?? null}
+                      initialSpousePersonaId={p.spouse_persona_id ?? null}
+                      narrativeStatus={p.narrative_status}
+                      initialSections={p.sections}
+                      worldId={worldId}
+                      restrictInventory={restrictInventory}
+                      restrictSkills={restrictSkills}
+                      faceclaimsEnabled={faceclaimsEnabled}
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+
+          {/* ── Autres personas ── */}
           <section>
             <h3 className="mb-3 text-sm font-semibold text-foreground">
-              Autres personas
-              {otherTotal > 0 && (
-                <span className="ml-1.5 text-xs font-normal text-muted-foreground">{otherTotal}</span>
+              {t("others")}
+              {filteredOthers.length > 0 && (
+                <span className="ml-1.5 text-xs font-normal text-muted-foreground">{filteredOthers.length}</span>
               )}
             </h3>
 
             {loadingOthers ? (
               <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="aspect-square animate-pulse rounded-2xl bg-muted" />
+                  <div key={i} className="aspect-square animate-pulse rounded-lg bg-muted" />
                 ))}
               </div>
-            ) : otherGroups.length === 0 ? (
+            ) : filteredOthers.length === 0 ? (
               <p className="rounded-xl border border-dashed border-border-soft py-8 text-center text-sm text-muted-foreground">
-                Aucun autre persona pour le moment.
+                {filtering ? t("noMatch") : t("noOthers")}
               </p>
             ) : (
               <div className="space-y-5">
                 {otherGroups.map(([letter, list]) => (
-                  <div key={letter}>
-                    <div className="px-0.5 pb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      {letter}
-                    </div>
+                  <div key={letter || "flat"}>
+                    {letter && (
+                      <div className="px-0.5 pb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        {letter}
+                      </div>
+                    )}
                     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
                       {list.map((p) => (
-                        <OtherPersonaCard key={p.id} persona={p} />
+                        <OtherPersonaCard
+                          key={p.id}
+                          persona={p}
+                          groupColor={groupColorById.get(groupByPersona.get(p.id) ?? "")}
+                          unnamed={unnamed}
+                        />
                       ))}
                     </div>
                   </div>

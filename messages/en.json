@@ -931,6 +931,36 @@
       "accepted": "Relation accepted",
       "unknownType": "Unknown type",
       "empty": "No relation"
+    },
+    "narrativeStatus": {
+      "label": "Narrative status",
+      "alive": "Alive",
+      "missing": "Missing",
+      "dead": "Deceased",
+      "retired": "Retired"
+    },
+    "list": {
+      "title": "Personas",
+      "mine": "My personas",
+      "others": "Other personas",
+      "newPersona": "New persona",
+      "unnamed": "Unnamed",
+      "noneMine": "You have no persona in this world yet.",
+      "noOthers": "No other persona yet.",
+      "noMatch": "No persona matches.",
+      "searchPlaceholder": "Search a persona or a player…",
+      "filterPlayer": "Player",
+      "allPlayers": "All players",
+      "filterGroup": "Group",
+      "allGroups": "All groups",
+      "noGroup": "No group",
+      "filterStatus": "Status",
+      "allStatuses": "All statuses",
+      "sort": "Sort",
+      "sortName": "Name A → Z",
+      "sortNewest": "Newest",
+      "sortOldest": "Oldest",
+      "createFirst": "Create a persona"
     }
   },
   "quests": {
@@ -1403,7 +1433,9 @@
     "hideType": "Hide “{name}” relations",
     "showGroup": "Show the “{name}” group",
     "hideGroup": "Hide the “{name}” group",
-    "showAll": "Show all"
+    "showAll": "Show all",
+    "hideRetired": "Hide retired and deceased",
+    "showRetired": "Show retired and deceased"
   },
   "wiki": {
     "changeIcon": "Change icon",

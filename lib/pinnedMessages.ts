@@ -25,7 +25,7 @@ import type { ChatMessageWithPersona, ChatPin } from "@/types/db";
 /** Colonnes nécessaires à l'affichage d'un message dans la barre d'épingles. */
 const COLONNES =
   "id, chat_id, content, author_id, created_at, metadata, visible_to, " +
-  "persona:personas(id, user_id, name, avatar_url, frame:avatar_frame_id(asset_url)), " +
+  "persona:personas(id, user_id, name, avatar_url, narrative_status, frame:avatar_frame_id(asset_url)), " +
   "author:profiles(avatar_url, username)";
 
 /**

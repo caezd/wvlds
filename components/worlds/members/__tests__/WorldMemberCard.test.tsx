@@ -98,7 +98,7 @@ describe("WorldMemberCard", () => {
   });
 
   it("au-delà de quatre personas, une pastille « +N » dans la rangée, le libellé au survol", () => {
-    const personas = Array.from({ length: 7 }, (_, i) => ({ id: `p${i}`, name: `Perso ${i}`, avatar_url: null }));
+    const personas = Array.from({ length: 7 }, (_, i) => ({ id: `p${i}`, name: `Perso ${i}`, avatar_url: null, narrative_status: "alive" as const }));
     render(<WorldMemberCard member={member({ personas })} presence="offline" now={NOW} />);
     const chip = screen.getByText("+3");
     expect(chip).toHaveAttribute("title", expect.stringContaining("3"));

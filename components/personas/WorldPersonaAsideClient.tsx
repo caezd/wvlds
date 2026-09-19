@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/tooltip";
 import type { PersonaSectionWithFields } from "@/types/personas";
 import type { AvatarConfigV1 } from "./avatar/PersonaAvatarPicker";
-import type { MaritalStatus } from "@/types/db";
+import type { PersonaNarrativeStatus, MaritalStatus } from "@/types/db";
 import { useTranslations } from "next-intl";
 
 export type AsidePersona = {
@@ -24,6 +24,8 @@ export type AsidePersona = {
   faceclaim?: string | null;
   marital_status?: MaritalStatus | null;
   spouse_persona_id?: string | null;
+  narrative_status?: PersonaNarrativeStatus | null;
+  created_at?: string | null;
   sections: PersonaSectionWithFields[];
 };
 
@@ -115,6 +117,7 @@ export function WorldPersonaAsideClient({
                 }
                 initialFaceclaim={p.faceclaim ?? null}
                 initialMaritalStatus={p.marital_status ?? null}
+                narrativeStatus={p.narrative_status ?? null}
                 initialSpousePersonaId={p.spouse_persona_id ?? null}
                 initialSections={p.sections}
                 worldId={worldId}

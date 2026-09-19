@@ -20,6 +20,7 @@ const AUTRE: CPersona = {
   name: "Nyx",
   avatar_url: null,
   user_id: "u2",
+  narrative_status: "alive",
 };
 
 function relation(description: string | null, status: CRelation["status"] = "accepted"): CRelation {
