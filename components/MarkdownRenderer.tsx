@@ -13,6 +13,8 @@ import { MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { transformStyledSpans, createFenceTracker } from "@/lib/textStyledSpans";
 import { highlightLexiconTerms } from "@/lib/lexiconHighlight";
+import { linkMentions } from "@/lib/mentions";
+import type { WorldRoleRow } from "@/lib/worldPermissions";
 import { extractHeadings } from "@/lib/wikiToc";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
@@ -45,6 +47,10 @@ type Props = {
   wikiPreview?: (slug: string) => LinkPreview | null;
   /** Ouvre l'image en grand. Absent, elle reste une simple illustration. */
   onImageOpen?: (url: string) => void;
+  /** Les rôles du monde : `@pseudo`, `@Nom du rôle`, `@tous` et `@ici` se
+   *  rendent alors en puces (voir lib/mentions.ts). Absent = pas de mention,
+   *  comme dans le wiki, où un `@` n'appelle personne. */
+  mentionRoles?: readonly WorldRoleRow[];
 };
 
 function extractText(node: React.ReactNode): string {
@@ -122,6 +128,7 @@ function urlTransform(url: string): string {
   if (url.startsWith("wiki:")) return url;
   if (url.startsWith("map:")) return url;
   if (url.startsWith("lexicon:")) return url;
+  if (url.startsWith("mention:")) return url;
   return defaultUrlTransform(url);
 }
 
@@ -273,7 +280,8 @@ export function MarkdownContent({
   lexiconTerms,
   wikiPreview,
   onImageOpen,
-}: Pick<Props, "content" | "allowImages" | "isMine" | "onWikiLink" | "onMapLink" | "lexiconTerms" | "wikiPreview" | "onImageOpen">) {
+  mentionRoles,
+}: Pick<Props, "content" | "allowImages" | "isMine" | "onWikiLink" | "onMapLink" | "lexiconTerms" | "wikiPreview" | "onImageOpen" | "mentionRoles">) {
   const schema = useMemo(() => {
     return {
       ...defaultSchema,
@@ -292,7 +300,7 @@ export function MarkdownContent({
       // (voir lib/textStyledSpans.ts) à travers les deux filtres.
       protocols: {
         ...defaultSchema.protocols,
-        href: [...(defaultSchema.protocols?.href ?? []), "color", "underline", "wiki", "map", "lexicon"],
+        href: [...(defaultSchema.protocols?.href ?? []), "color", "underline", "wiki", "map", "lexicon", "mention"],
       },
     } as Parameters<typeof rehypeSanitize>[0];
   }, []);
@@ -301,8 +309,17 @@ export function MarkdownContent({
     const withLexicon = lexiconTerms?.length
       ? highlightLexiconTerms(content, lexiconTerms)
       : content;
-    return transformAngleCallouts(transformStyledSpans(withLexicon));
-  }, [content, lexiconTerms]);
+    // Les mentions avant les spans stylés : `[@x](mention:…)` est un lien
+    // markdown, que les transformations suivantes laissent intact.
+    const withMentions = mentionRoles ? linkMentions(withLexicon, mentionRoles) : withLexicon;
+    return transformAngleCallouts(transformStyledSpans(withMentions));
+  }, [content, lexiconTerms, mentionRoles]);
+
+  const mentionRoleById = useMemo(() => {
+    const map = new Map<string, WorldRoleRow>();
+    for (const r of mentionRoles ?? []) map.set(r.id, r);
+    return map;
+  }, [mentionRoles]);
 
   // Ids d'ancre posés sur les titres (h1-h6), pour le sommaire du wiki
   // (lib/wikiToc.ts::extractHeadings, appelé côté appelant sur ce même
@@ -419,6 +436,34 @@ export function MarkdownContent({
       if (hrefStr.startsWith("underline:")) {
         if (hrefStr === "underline:") return <span className="underline">{children}</span>;
         return <>{children}</>;
+      }
+      if (hrefStr.startsWith("mention:")) {
+        // Une mention (lib/mentions.ts) : une puce dans la couleur du rôle,
+        // ambre pour @tous / @ici, la couleur d'accent pour un pseudo.
+        const target = hrefStr.slice("mention:".length);
+        const base = "inline-flex max-w-full items-baseline rounded px-1 font-medium no-underline";
+        if (target.startsWith("role:")) {
+          const role = mentionRoleById.get(target.slice("role:".length));
+          // Rôle supprimé depuis : le texte reste du texte.
+          if (!role) return <>{children}</>;
+          return (
+            <span data-mention="role" className={base} style={{ color: role.color, backgroundColor: `${role.color}26` }}>
+              {children}
+            </span>
+          );
+        }
+        if (target === "all" || target === "here") {
+          return (
+            <span data-mention={target} className={cn(base, "bg-amber-500/15 text-amber-700 dark:text-amber-300")}>
+              {children}
+            </span>
+          );
+        }
+        return (
+          <span data-mention="user" className={cn(base, "bg-accent/15 text-accent")}>
+            {children}
+          </span>
+        );
       }
       if (hrefStr.startsWith("lexicon:")) {
         const termId = hrefStr.slice("lexicon:".length);

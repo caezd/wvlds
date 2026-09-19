@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-09 ──────────────────────────────────────────────────────────────
   {
     date: "2026-09",
+    tag: "Salons",
+    text: "Tapez @ dans un salon pour mentionner un membre, un rôle (« @Maître du jeu »), @tous ou @ici (les membres présents), avec une liste de propositions sous le curseur. Les mentions s’affichent en puces colorées, chaque personne visée reçoit une notification — une seule par message, même mentionnée plusieurs fois — et deux réglages de notification distincts couvrent les rôles et les @tous. Un rôle se rend « mentionnable par tous » dans les réglages ; sinon il faut la permission.",
+  },
+  {
+    date: "2026-09",
     tag: "Membres",
     text: "Chaque membre a une carte propre au monde — présentation, disponibilités, fuseau horaire (les autres voient l’heure qu’il est chez lui), anniversaire — et un statut : actif, en pause ou absent jusqu’à une date. Le statut se voit sur sa carte et sur ses personas ; un gestionnaire peut le régler pour un membre. La carte montre aussi le nombre de messages et la dernière prise de parole dans le monde. Un bloc d’accueil « Anniversaires » liste ceux qui approchent.",
   },

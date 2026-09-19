@@ -4,7 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { TABLE } from "@/lib/constants";
 import { encryptMessage } from "@/lib/crypto";
-import { extractMentions } from "@/lib/composerMessage";
+import { notifyMentions } from "@/lib/notifyMentions";
+import { useWorldMembership } from "@/components/providers/WorldMembershipProvider";
 import { parseChatBlock } from "@/lib/chat-blocks";
 import { useTagChips } from "@/hooks/useTagChips";
 import type { ChatMessageMeta, ChatMessageWithPersona } from "@/types/db";
@@ -34,6 +35,7 @@ export function useChatroomMessageEdit({
   onForceEditConsumed?: () => void;
 }) {
   const supabase = useMemo(() => createClient(), []);
+  const { roles: worldRoles } = useWorldMembership();
 
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<string>(message.content ?? "");
@@ -134,50 +136,26 @@ export function useChatroomMessageEdit({
       return;
     }
 
-    // Mentions ajoutées lors de l'édition — doublons ignorés silencieusement par le trigger DB
-    const mentioned = extractMentions(next);
-    if (mentioned.length > 0 && message.world_id && selfId) {
-      const [{ data: mentionedProfiles }, { data: chatroomData }] = await Promise.all([
-        supabase.from("profiles").select("id").in("username", mentioned),
-        supabase.from("chatrooms").select("title, name").eq("id", message.chat_id).single(),
-      ]);
-      const chatroomTitle =
-        (chatroomData as { title?: string | null; name?: string | null } | null)?.title ??
-        (chatroomData as { title?: string | null; name?: string | null } | null)?.name ??
-        null;
-      const recipientIds = (mentionedProfiles ?? [])
-        .map((p: { id: string }) => p.id)
-        .filter((id: string) => id !== selfId);
-      if (recipientIds.length > 0) {
-        const { data: members } = await supabase
-          .from(TABLE.WORLD_MEMBERS).select("user_id")
-          .eq("world_id", message.world_id).in("user_id", recipientIds);
-        const validIds = (members ?? []).map((m: { user_id: string }) => m.user_id);
-        if (validIds.length > 0) {
-          // Idem qu'à la publication : la modification du message est déjà
-          // enregistrée, seules les alertes des nouvelles mentions peuvent
-          // manquer.
-          const { error: mentionError } = await supabase.from(TABLE.NOTIFICATIONS).insert(
-            validIds.map((rid: string) => ({
-              recipient_id: rid,
-              type: "mention",
-              world_id: message.world_id,
-              chat_id: message.chat_id,
-              message_id: message.id,
-              actor_id: selfId,
-              actor_name: online[selfId]?.username ?? null,
-              content: chatroomTitle,
-            })),
-          );
-          if (mentionError) console.error("[mentions] notifications non créées", mentionError.message);
-        }
-      }
+    // Mentions ajoutées lors de l'édition — les doublons sont ignorés par le
+    // déclencheur de la base (une alerte par membre et par message).
+    if (message.world_id && selfId) {
+      await notifyMentions(supabase, {
+        text: next,
+        messageId: message.id,
+        chatId: message.chat_id,
+        worldId: message.world_id,
+        selfId,
+        selfUsername: online[selfId]?.username ?? null,
+        roles: worldRoles,
+        // Les présents du canal du salon : ce que le hook connaît de la présence.
+        onlineMemberIds: Object.keys(online).filter((id) => id !== selfId),
+      });
     }
 
     // Mise à jour optimiste avec le texte en clair (déjà déchiffré dans l'état)
     onUpdated?.(message.id, next, updatedMetadata);
     setEditing(false);
-  }, [draft, mine, message?.content, message?.id, message?.metadata, editBubbles, editBubbleColor, editSms, contentWarningsChips.tags, onUpdated, supabase, chatroomKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [draft, mine, message?.content, message?.id, message?.metadata, editBubbles, editBubbleColor, editSms, contentWarningsChips.tags, onUpdated, supabase, chatroomKey, worldRoles]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function onKeyDownEdit(e: React.KeyboardEvent<HTMLElement>) {
     if (e.key === "Escape") {

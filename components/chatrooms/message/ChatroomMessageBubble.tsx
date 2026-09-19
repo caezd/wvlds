@@ -16,6 +16,7 @@ import type { ChatMessageMeta, ChatMediaItem } from "@/types/db";
 import { cn, isSafeUrl } from "@/lib/utils";
 import { useCurrentUser } from "@/components/providers/CurrentUserProvider";
 import { useWikiLinks } from "@/components/worlds/wiki/WikiLinkContext";
+import { useWorldMembership } from "@/components/providers/WorldMembershipProvider";
 
 export function ChatroomMessageBubble({
   persona: _persona,
@@ -38,6 +39,10 @@ export function ChatroomMessageBubble({
   // Hors du wiki, un `[[lien]]` vaut ce que le monde en sait — voir
   // WikiLinkContext. Sans fournisseur, il reste visiblement cassé.
   const wikiLinks = useWikiLinks();
+  // Les rôles du monde, pour rendre `@Nom du rôle` en puce ; hors monde (DM),
+  // `worldId` est vide et les mentions restent du texte.
+  const { worldId: mentionWorldId, roles: mentionRoles } = useWorldMembership();
+  const mentionProps = mentionWorldId ? { mentionRoles } : {};
   const wiki = (markdown: string) => (wikiLinks ? wikiLinks.resolve(markdown) : markdown);
 
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
@@ -92,7 +97,7 @@ export function ChatroomMessageBubble({
     <div className={cn(proseClass)}>
       {parseDialogue(message.content).map((part, i) => {
         if (part.kind === "prose") {
-          return part.text ? <MarkdownContent key={i} content={wiki(part.text)} onWikiLink={wikiLinks?.onWikiLink} onMapLink={wikiLinks?.onMapLink} /> : null;
+          return part.text ? <MarkdownContent key={i} content={wiki(part.text)} onWikiLink={wikiLinks?.onWikiLink} onMapLink={wikiLinks?.onMapLink} {...mentionProps} /> : null;
         }
         const color = part.color ?? message.metadata?.bubbleColor;
         const bubble = (
@@ -106,7 +111,7 @@ export function ChatroomMessageBubble({
             )}
             style={color ? { backgroundColor: color + "33" } : undefined}
           >
-            <MarkdownContent content={wiki(part.speech)} onWikiLink={wikiLinks?.onWikiLink} onMapLink={wikiLinks?.onMapLink} />
+            <MarkdownContent content={wiki(part.speech)} onWikiLink={wikiLinks?.onWikiLink} onMapLink={wikiLinks?.onMapLink} {...mentionProps} />
           </div>
         );
         return (
@@ -135,7 +140,7 @@ export function ChatroomMessageBubble({
     </div>
   ) : message.content ? (
     <div className={proseClass}>
-      <MarkdownContent content={wiki(message.content)} onWikiLink={wikiLinks?.onWikiLink} onMapLink={wikiLinks?.onMapLink} />
+      <MarkdownContent content={wiki(message.content)} onWikiLink={wikiLinks?.onWikiLink} onMapLink={wikiLinks?.onMapLink} {...mentionProps} />
     </div>
   ) : null;
 

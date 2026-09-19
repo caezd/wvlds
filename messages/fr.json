@@ -244,7 +244,9 @@
       "chatroom_reply": "Réponses dans mes chatrooms",
       "persona_new_chatroom": "Nouveaux salons de mes personas suivis",
       "persona_reply": "Réponses de mes personas suivis",
-      "relation_request": "Demandes de relation entre personas"
+      "relation_request": "Demandes de relation entre personas",
+      "role_mention": "Mentions de mes rôles",
+      "everyone_mention": "@tous et @ici"
     },
     "text": {
       "someone": "Quelqu'un",
@@ -267,7 +269,14 @@
       "maritalRequestMarried": "<b>{actor}</b> souhaite marier son personnage à <b>{target}</b>",
       "maritalRequestRelationship": "<b>{actor}</b> souhaite mettre son personnage en couple avec <b>{target}</b>",
       "relationRequest": "<b>{actor}</b> propose une relation « {type} » à <b>{target}</b>",
-      "relationFallback": "relation"
+      "relationFallback": "relation",
+      "roleFallback": "votre rôle",
+      "roleMention": "<b>{actor}</b> a mentionné <b>{role}</b> dans <b>{chatroom}</b>",
+      "roleMentionSimple": "<b>{actor}</b> a mentionné <b>{role}</b>",
+      "everyoneMention": "<b>{actor}</b> a appelé tout le monde dans <b>{chatroom}</b>",
+      "everyoneMentionSimple": "<b>{actor}</b> a appelé tout le monde",
+      "hereMention": "<b>{actor}</b> a appelé les membres présents dans <b>{chatroom}</b>",
+      "hereMentionSimple": "<b>{actor}</b> a appelé les membres présents"
     }
   },
   "dms": {
@@ -1312,7 +1321,19 @@
     "bannerDelete": "Supprimer la bannière",
     "blockEdit": "Modifier le bloc",
     "blockDelete": "Supprimer le bloc",
-    "blockDeleteDescription": "Cet élément sera supprimé définitivement."
+    "blockDeleteDescription": "Cet élément sera supprimé définitivement.",
+    "mentions": {
+      "everyoneToken": "tous",
+      "hereToken": "ici",
+      "listLabel": "Mentionner",
+      "roleHint": "Rôle",
+      "everyoneHint": "Tout le monde",
+      "hereHint": "Les présents",
+      "everyoneWarning": "Vous allez notifier {count, plural, =0 {personne} one {# membre} other {# membres}} avec @tous.",
+      "hereWarning": "Vous allez notifier {count, plural, =0 {personne} one {# membre présent} other {# membres présents}} avec @ici.",
+      "everyoneWarningUnknown": "Vous allez notifier tous les membres du monde.",
+      "hereWarningUnknown": "Vous allez notifier les membres présents."
+    }
   },
   "changelog": {
     "title": "Changelog",
