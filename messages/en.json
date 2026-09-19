@@ -360,7 +360,48 @@
       "removeConfirm": "Remove",
       "memberRemoved": "{name} was removed from the world.",
       "roleChangeFailed": "Could not change roles.",
-      "memberRemoveFailed": "Could not remove the member."
+      "memberRemoveFailed": "Could not remove the member.",
+      "card": {
+        "mine": "My card",
+        "title": "My card in this world",
+        "statusTitle": "Player status",
+        "saveFailed": "Could not save the card.",
+        "bio": "About you",
+        "bioPlaceholder": "A few words about you, for this world…",
+        "availability": "Availability",
+        "availabilityPlaceholder": "E.g. weekday evenings, Sundays",
+        "timezone": "Time zone",
+        "timezoneNone": "Not set",
+        "timezoneUseMine": "Mine",
+        "timezoneHelp": "Other members will see what time it is where you are.",
+        "birthday": "Birthday",
+        "birthdayDay": "Day",
+        "birthdayMonth": "Month",
+        "birthdayHelp": "Day and month only, never the year. Announced to the world's members when it comes.",
+        "birthdayIncomplete": "Set both the day and the month, or neither.",
+        "activity": "Activity",
+        "messages": "{count, plural, =0 {No messages} one {# message} other {# messages}}",
+        "lastActive": "active {when}",
+        "justNow": "just now",
+        "localTime": "{time} local time",
+        "birthdayToday": "Birthday today!",
+        "birthdayOn": "Birthday on {date}"
+      },
+      "status": {
+        "label": "Status",
+        "change": "Change status…",
+        "active": "Active",
+        "paused": "Paused",
+        "away": "Away",
+        "activeHelp": "You are playing as usual.",
+        "pausedHelp": "You are slowing down: slower replies.",
+        "awayHelp": "You are not playing for now.",
+        "pausedUntil": "Paused until {date}",
+        "awayUntil": "Away until {date}",
+        "until": "Expected back",
+        "note": "A word",
+        "notePlaceholder": "E.g. exams, holidays…"
+      }
     },
     "sidebar": {
       "active": "Latest",
@@ -414,7 +455,8 @@
         "wiki_shortcuts": "Wiki shortcuts",
         "personas_recent": "Recent personas",
         "timeline_shortcuts": "Timeline shortcuts",
-        "map": "Map"
+        "map": "Map",
+        "birthdays": "Birthdays"
       },
       "onlineCount": "{count, plural, one {# member online} other {# members online}}",
       "noneOnline": "No one online right now",
@@ -458,7 +500,8 @@
           "range": "Between {min} and {max}",
           "visibleRows": "Visible rows",
           "limit": "Number of entries",
-          "style": "Display"
+          "style": "Display",
+          "days": "Window (days)"
         },
         "optionChoices": {
           "style": {
@@ -497,6 +540,11 @@
         "bannerButtonLabelPlaceholder": "Button label",
         "bannerButtonUrlPlaceholder": "https://…",
         "bannerButtonClear": "Remove"
+      },
+      "birthdays": {
+        "title": "Birthdays",
+        "none": "No birthdays in the next {days} days.",
+        "today": "Today!"
       }
     },
     "namePlaceholder": "E.g. World of Veldis",

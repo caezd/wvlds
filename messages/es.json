@@ -360,7 +360,48 @@
       "removeConfirm": "Retirar",
       "memberRemoved": "{name} ha sido retirado del mundo.",
       "roleChangeFailed": "No se pudieron modificar los roles.",
-      "memberRemoveFailed": "No se pudo retirar al miembro."
+      "memberRemoveFailed": "No se pudo retirar al miembro.",
+      "card": {
+        "mine": "Mi tarjeta",
+        "title": "Mi tarjeta en este mundo",
+        "statusTitle": "Estado del jugador",
+        "saveFailed": "No se pudo guardar la tarjeta.",
+        "bio": "Presentación",
+        "bioPlaceholder": "Unas palabras sobre usted, para este mundo…",
+        "availability": "Disponibilidad",
+        "availabilityPlaceholder": "P. ej. por la noche entre semana, los domingos",
+        "timezone": "Zona horaria",
+        "timezoneNone": "Sin indicar",
+        "timezoneUseMine": "La mía",
+        "timezoneHelp": "Los demás miembros verán qué hora es donde usted está.",
+        "birthday": "Cumpleaños",
+        "birthdayDay": "Día",
+        "birthdayMonth": "Mes",
+        "birthdayHelp": "Solo día y mes, nunca el año. Se anuncia a los miembros del mundo cuando llega.",
+        "birthdayIncomplete": "Indique el día y el mes, o ninguno de los dos.",
+        "activity": "Actividad",
+        "messages": "{count, plural, =0 {Ningún mensaje} one {# mensaje} other {# mensajes}}",
+        "lastActive": "activo {when}",
+        "justNow": "ahora mismo",
+        "localTime": "{time} hora local",
+        "birthdayToday": "¡Cumpleaños hoy!",
+        "birthdayOn": "Cumpleaños el {date}"
+      },
+      "status": {
+        "label": "Estado",
+        "change": "Cambiar el estado…",
+        "active": "Activo",
+        "paused": "En pausa",
+        "away": "Ausente",
+        "activeHelp": "Usted juega con normalidad.",
+        "pausedHelp": "Va más despacio: respuestas más lentas.",
+        "awayHelp": "No juega por el momento.",
+        "pausedUntil": "En pausa hasta el {date}",
+        "awayUntil": "Ausente hasta el {date}",
+        "until": "Vuelta prevista",
+        "note": "Una palabra",
+        "notePlaceholder": "P. ej. exámenes, vacaciones…"
+      }
     },
     "sidebar": {
       "active": "Últimos",
@@ -414,7 +455,8 @@
         "wiki_shortcuts": "Accesos directos del wiki",
         "personas_recent": "Personajes recientes",
         "timeline_shortcuts": "Accesos directos de la línea de tiempo",
-        "map": "Mapa"
+        "map": "Mapa",
+        "birthdays": "Cumpleaños"
       },
       "onlineCount": "{count, plural, one {# miembro en línea} other {# miembros en línea}}",
       "noneOnline": "Nadie en línea por ahora",
@@ -458,7 +500,8 @@
           "range": "Entre {min} y {max}",
           "visibleRows": "Filas visibles",
           "limit": "Número de entradas",
-          "style": "Presentación"
+          "style": "Presentación",
+          "days": "Ventana (días)"
         },
         "optionChoices": {
           "style": {
@@ -497,6 +540,11 @@
         "bannerButtonLabelPlaceholder": "Texto del botón",
         "bannerButtonUrlPlaceholder": "https://…",
         "bannerButtonClear": "Quitar"
+      },
+      "birthdays": {
+        "title": "Cumpleaños",
+        "none": "Ningún cumpleaños en los próximos {days} días.",
+        "today": "¡Hoy!"
       }
     },
     "namePlaceholder": "Ej. Mundo de Veldis",

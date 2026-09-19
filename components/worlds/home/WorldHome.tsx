@@ -13,6 +13,7 @@ import type { ChatroomCategory } from "@/lib/currentRequest";
 import type { RecentPersona } from "./widgets/WorldRecentPersonasWidget";
 import type { WikiPage } from "./widgets/WorldWikiShortcutsWidget";
 import type { MapWidgetMap } from "./widgets/WorldMapWidget";
+import type { BirthdayMember } from "./widgets/WorldBirthdaysWidget";
 import type { World, WorldTimelineConfig, WorldHomeRoom as Room } from "@/types/worlds";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import type { AsidePersona } from "@/components/personas/WorldPersonaAsideClient";
@@ -76,7 +77,7 @@ export function WorldHome({
   initialCategories?: ChatroomCategory[];
   /** Données des widgets d'accueil résolues côté serveur, quand le bloc est
    *  présent dans la grille (cf. WorldHomeContent). */
-  initialWidgetData?: { recentPersonas?: RecentPersona[]; wikiPages?: WikiPage[]; maps?: MapWidgetMap[] };
+  initialWidgetData?: { recentPersonas?: RecentPersona[]; wikiPages?: WikiPage[]; maps?: MapWidgetMap[]; birthdays?: BirthdayMember[] };
   /** Cartes et épingles résolues côté serveur quand `view === "map"`. */
   initialMap?: InitialWorldMap | null;
   initialPersonas: AsidePersona[];

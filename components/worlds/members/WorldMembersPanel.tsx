@@ -3,34 +3,36 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
-import { Search, Users } from "lucide-react";
+import { IdCard, Search, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
-import { getLeadingLetter, getInitials } from "@/lib/textFormatting";
 import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 import { useGlobalPresence } from "@/components/providers/PresenceProvider";
 import { useWorldMembership } from "@/components/providers/WorldMembershipProvider";
 import { fetchPersonasByMember, type WorldMemberPersona } from "@/lib/worldMemberPersonas";
-import { fetchWorldMembers } from "@/lib/worldMembers";
+import {
+  effectiveStatus,
+  fetchWorldMemberActivity,
+  fetchWorldMembers,
+  type WorldMemberActivity,
+  type WorldMemberCardFields,
+} from "@/lib/worldMembers";
 import { highestHoistedRole, sortRolesByPosition, type WorldRoleRow } from "@/lib/worldPermissions";
-import { ChatroomAvatarWithPresence } from "@/components/chatrooms/persona/ChatroomAvatarWithPresence";
 import { PresenceDot } from "@/components/avatars/PresenceDot";
-import { UserProfileSheetTrigger } from "@/components/profile/UserProfileSheetTrigger";
-import { PersonaProfileSheetTrigger } from "@/components/personas/PersonaProfileSheetTrigger";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
-import { RoleChip } from "./RoleChip";
+import { Button } from "@/components/ui/button";
 import { MemberManageMenu } from "./MemberManageMenu";
+import { WorldMemberCard, displayNameOf, type PresenceState, type WorldMemberCardData } from "./WorldMemberCard";
+import { WorldMemberCardDialog } from "./WorldMemberCardDialog";
 
 const WorldInviteDialog = dynamic(() => import("./WorldInviteDialog").then((m) => m.WorldInviteDialog));
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
-type PresenceState = "online" | "away" | "offline";
-
 const PRESENCE_ORDER: Record<PresenceState, number> = { online: 0, away: 1, offline: 2 };
 
-type MemberRow = {
+type MemberRow = WorldMemberCardFields & {
   user_id: string;
   isOwner: boolean;
   role_ids: string[];
@@ -39,121 +41,14 @@ type MemberRow = {
   personas: WorldMemberPersona[];
 };
 
-/** Un membre avec ses rôles résolus, du plus haut au plus bas. */
-type Member = MemberRow & { roles: WorldRoleRow[] };
-
 /** Clés de la section « Propriétaire » et de celle des membres sans rôle « hoist ». */
 const OWNER_GROUP = "__owner__";
 const OTHERS_GROUP = "__others__";
-
-const MAX_PERSONA_CHIPS = 4;
-
-function displayNameOf(member: Pick<Member, "username" | "user_id">) {
-  return member.username ? `@${member.username}` : member.user_id.slice(0, 8);
-}
 
 /** Comparaison sans casse ni accents, pour le filtre de recherche. */
 const DIACRITICS_RE = new RegExp("[\\u0300-\\u036f]", "g");
 function normalize(text: string) {
   return text.normalize("NFD").replace(DIACRITICS_RE, "").toLowerCase();
-}
-
-// ── PersonaChip ──────────────────────────────────────────────────────────────
-
-function PersonaChip({ persona, userId }: { persona: WorldMemberPersona; userId: string }) {
-  const name = persona.name || "?";
-  return (
-    <PersonaProfileSheetTrigger
-      personaId={persona.id}
-      userId={userId}
-      label={name}
-      triggerClassName="flex max-w-full items-center gap-1.5 rounded-full border border-border-soft bg-muted/40 py-0.5 pl-0.5 pr-2.5 text-xs font-medium transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-    >
-      <ChatroomAvatarWithPresence
-        url={persona.avatar_url}
-        alt=""
-        fallback={getInitials(name, "P")}
-        presenceState="invisible"
-        size={20}
-        className="rounded-full"
-      />
-      <span className="truncate">{name}</span>
-    </PersonaProfileSheetTrigger>
-  );
-}
-
-// ── MemberCard ───────────────────────────────────────────────────────────────
-
-function MemberCard({
-  member,
-  presence,
-  manage,
-}: {
-  member: Member;
-  presence: PresenceState;
-  /** Le menu « ⋯ », quand le lecteur peut gérer ce membre. */
-  manage?: ReactNode;
-}) {
-  const t = useTranslations("worlds.members");
-  const tPresence = useTranslations("presence");
-  const displayName = displayNameOf(member);
-  const shown = member.personas.slice(0, MAX_PERSONA_CHIPS);
-  const rest = member.personas.length - shown.length;
-
-  return (
-    <article
-      data-presence={presence}
-      className="flex flex-col gap-3 rounded-lg border border-border-soft p-3"
-    >
-      <div className="flex items-start gap-3">
-        <UserProfileSheetTrigger userId={member.user_id} label={t("openProfile", { name: displayName })}>
-          <ChatroomAvatarWithPresence
-            url={member.avatar_url}
-            alt=""
-            fallback={getLeadingLetter(displayName)}
-            presenceState="invisible"
-            size={48}
-            className="rounded-full text-base"
-          />
-        </UserProfileSheetTrigger>
-
-        <div className="min-w-0 flex-1 pt-0.5">
-          <p className="truncate text-sm font-semibold">{displayName}</p>
-          {/* La pastille accompagne le statut, comme sur la fiche de profil. */}
-          <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
-            <PresenceDot state={presence} />
-            {tPresence(presence)}
-          </p>
-        </div>
-        {manage}
-      </div>
-
-      {/* Un membre peut cumuler plusieurs rôles : la section ne dit que le plus
-          haut, les puces disent tous les autres. */}
-      {member.roles.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1" data-testid="member-roles">
-          {member.roles.map((r) => (
-            <RoleChip key={r.id} role={r} />
-          ))}
-        </div>
-      )}
-
-      {shown.length > 0 ? (
-        <div className="flex flex-wrap items-center gap-1.5">
-          {shown.map((p) => (
-            <PersonaChip key={p.id} persona={p} userId={member.user_id} />
-          ))}
-          {rest > 0 && (
-            <span className="rounded-full px-2 py-0.5 text-xs text-muted-foreground">
-              {t("morePersonas", { count: rest })}
-            </span>
-          )}
-        </div>
-      ) : (
-        <p className="text-xs italic text-muted-foreground">{t("noPersona")}</p>
-      )}
-    </article>
-  );
 }
 
 // ── RoleSection ──────────────────────────────────────────────────────────────
@@ -163,13 +58,15 @@ function RoleSection({
   color,
   members,
   presenceOf,
+  activityOf,
   manageFor,
 }: {
   heading: string;
   color?: string;
-  members: Member[];
+  members: WorldMemberCardData[];
   presenceOf: (userId: string) => PresenceState;
-  manageFor: (m: Member) => ReactNode;
+  activityOf: (userId: string) => WorldMemberActivity | undefined;
+  manageFor: (m: WorldMemberCardData) => ReactNode;
 }) {
   return (
     <section>
@@ -180,7 +77,13 @@ function RoleSection({
       </h3>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {members.map((m) => (
-          <MemberCard key={m.user_id} member={m} presence={presenceOf(m.user_id)} manage={manageFor(m)} />
+          <WorldMemberCard
+            key={m.user_id}
+            member={m}
+            presence={presenceOf(m.user_id)}
+            activity={activityOf(m.user_id)}
+            manage={manageFor(m)}
+          />
         ))}
       </div>
     </section>
@@ -197,7 +100,7 @@ export function WorldMembersPanel({
 }: {
   worldId: string;
   ownerId: string;
-  /** `members.manage` : inviter, attribuer des rôles, retirer. */
+  /** `members.manage` : inviter, attribuer des rôles, retirer, changer un statut. */
   canManage: boolean;
   isShared: boolean;
 }) {
@@ -207,22 +110,27 @@ export function WorldMembersPanel({
   const { roles: worldRoles, membership } = useWorldMembership();
   const roleById = useMemo(() => new Map(worldRoles.map((r) => [r.id, r])), [worldRoles]);
   const [rows, setRows] = useState<MemberRow[]>([]);
+  const [activity, setActivity] = useState<Map<string, WorldMemberActivity>>(new Map());
   const [loading, setLoading] = useState(isShared);
+  const [query, setQuery] = useState("");
+  const [onlineOnly, setOnlineOnly] = useState(false);
+  /** Membre dont un gestionnaire change le statut. */
+  const [statusTarget, setStatusTarget] = useState<MemberRow | null>(null);
 
   // Les rôles sont résolus au rendu, pas au chargement : un rôle renommé ou
   // recoloré dans les réglages se reflète ici sans recharger la liste.
-  const members = useMemo<Member[]>(
+  const members = useMemo<WorldMemberCardData[]>(
     () =>
       rows.map((row) => ({
         ...row,
         roles: sortRolesByPosition(row.role_ids.map((id) => roleById.get(id)).filter((r): r is WorldRoleRow => !!r)),
+        effectiveStatus: effectiveStatus(row),
       })),
     [rows, roleById],
   );
-  const [query, setQuery] = useState("");
-  const [onlineOnly, setOnlineOnly] = useState(false);
 
   const onlineCount = members.filter((m) => getUserPresence(m.user_id) === "online").length;
+  const me = membership ? rows.find((r) => r.user_id === membership.userId) ?? null : null;
 
   const filtered = useMemo(() => {
     const q = normalize(query.trim());
@@ -239,9 +147,9 @@ export function WorldMembersPanel({
 
   // Le propriétaire d'abord, puis une section par rôle « hoist » (du plus haut
   // au plus bas), puis les autres membres ; dans chaque section les membres en
-  // ligne d'abord, puis par nom.
+  // ligne d'abord, les membres en pause ou absents en dernier, puis par nom.
   const grouped = useMemo(() => {
-    const map = new Map<string, Member[]>();
+    const map = new Map<string, WorldMemberCardData[]>();
     for (const m of filtered) {
       const key = m.isOwner ? OWNER_GROUP : (highestHoistedRole(m.roles)?.id ?? OTHERS_GROUP);
       if (!map.has(key)) map.set(key, []);
@@ -261,6 +169,8 @@ export function WorldMembersPanel({
           .get(key)!
           .slice()
           .sort((a, b) => {
+            const byStatus = Number(a.effectiveStatus !== "active") - Number(b.effectiveStatus !== "active");
+            if (byStatus !== 0) return byStatus;
             const byPresence =
               PRESENCE_ORDER[getUserPresence(a.user_id)] - PRESENCE_ORDER[getUserPresence(b.user_id)];
             if (byPresence !== 0) return byPresence;
@@ -281,6 +191,8 @@ export function WorldMembersPanel({
     // La déduplication (membre, persona) est faite par Postgres — la requête
     // `chatrooms` puis les 2000 `chat_messages` qu'elle servait à filtrer ne
     // sont plus nécessaires (cf. lib/worldMemberPersonas.ts, migration 118).
+    // L'activité arrive à part : elle n'empêche pas d'afficher les cartes.
+    const activityPromise = fetchWorldMemberActivity(supabase, worldId);
     const [fetched, personasByUser] = await Promise.all([
       fetchWorldMembers(supabase, worldId, ownerId),
       fetchPersonasByMember(supabase, worldId),
@@ -288,19 +200,21 @@ export function WorldMembersPanel({
 
     setRows(
       fetched.map((row) => ({
-        user_id: row.user_id,
+        ...row,
         isOwner: row.user_id === ownerId,
-        role_ids: row.role_ids,
-        username: row.username,
-        avatar_url: row.avatar_url,
         personas: personasByUser.get(row.user_id) ?? [],
       })),
     );
     setLoading(false);
+    setActivity(await activityPromise);
   }
 
-  function manageFor(m: Member): ReactNode {
-    if (!canManage || m.isOwner || !membership) return null;
+  function patchRow(userId: string, fields: Partial<MemberRow>) {
+    setRows((prev) => prev.map((x) => (x.user_id === userId ? { ...x, ...fields } : x)));
+  }
+
+  function manageFor(m: WorldMemberCardData): ReactNode {
+    if (!canManage || m.isOwner || !membership || m.user_id === membership.userId) return null;
     return (
       <MemberManageMenu
         worldId={worldId}
@@ -308,10 +222,9 @@ export function WorldMembersPanel({
         memberRoles={m.roles}
         membership={membership}
         allRoles={worldRoles}
-        onRolesChanged={(userId, roleIds) =>
-          setRows((prev) => prev.map((x) => (x.user_id === userId ? { ...x, role_ids: roleIds } : x)))
-        }
+        onRolesChanged={(userId, roleIds) => patchRow(userId, { role_ids: roleIds })}
         onRemoved={(userId) => setRows((prev) => prev.filter((x) => x.user_id !== userId))}
+        onChangeStatus={() => setStatusTarget(rows.find((r) => r.user_id === m.user_id) ?? null)}
       />
     );
   }
@@ -336,8 +249,43 @@ export function WorldMembersPanel({
             )}
           </>
         }
-        right={isShared && canManage && <WorldInviteDialog worldId={worldId} />}
+        right={
+          isShared && (
+            <div className="flex items-center gap-2">
+              {me && (
+                <WorldMemberCardDialog
+                  worldId={worldId}
+                  userId={me.user_id}
+                  mode="self"
+                  initial={me}
+                  onSaved={(fields) => patchRow(me.user_id, fields)}
+                  trigger={
+                    <Button size="sm" variant="ghost">
+                      <IdCard className="mr-2 h-4 w-4" />
+                      {t("card.mine")}
+                    </Button>
+                  }
+                />
+              )}
+              {canManage && <WorldInviteDialog worldId={worldId} />}
+            </div>
+          )
+        }
       />
+
+      {statusTarget && (
+        <WorldMemberCardDialog
+          worldId={worldId}
+          userId={statusTarget.user_id}
+          mode="status"
+          initial={statusTarget}
+          open
+          onOpenChange={(o) => {
+            if (!o) setStatusTarget(null);
+          }}
+          onSaved={(fields) => patchRow(statusTarget.user_id, fields)}
+        />
+      )}
 
       <ScrollArea className="flex-1 min-h-0">
         <div className="space-y-6 px-6 py-6">
@@ -395,6 +343,7 @@ export function WorldMembersPanel({
                 color={g.role?.color}
                 members={g.members}
                 presenceOf={getUserPresence}
+                activityOf={(id) => activity.get(id)}
                 manageFor={manageFor}
               />
             ))

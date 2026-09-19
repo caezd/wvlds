@@ -21,6 +21,8 @@ import {
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import { AvatarWithFrame } from "@/components/avatars/AvatarWithFrame";
 import { PresenceDot } from "@/components/avatars/PresenceDot";
+import { MemberStatusBadge } from "@/components/worlds/members/WorldMemberCard";
+import { effectiveStatus, type WorldMemberCardFields } from "@/lib/worldMembers";
 import type { PersonaSection, PersonaSectionField, PersonaSectionWithFields, PersonaFieldData, GaugeItem, TraitItem, TimelineItem, DlItem } from "@/types/personas";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useGlobalPresence } from "@/components/providers/PresenceProvider";
@@ -212,6 +214,8 @@ export type PersonaProfileBodyProps = {
   dialogueColor: string | null;
   presenceLine: string | null;
   userPresence: "online" | "away" | "offline";
+  /** Le joueur est en pause ou absent dans ce monde (cf. WorldMemberCard). */
+  statusBadge?: React.ReactNode;
   isFollowing: boolean | null;
   followBusy: boolean;
   onToggleFollow: () => void;
@@ -245,6 +249,7 @@ export function PersonaProfileBody({
   dialogueColor,
   presenceLine,
   userPresence,
+  statusBadge,
   isFollowing,
   followBusy,
   onToggleFollow,
@@ -330,6 +335,7 @@ export function PersonaProfileBody({
                     {presenceLine}
                   </p>
                 )}
+                {statusBadge}
                 {dialogueColor && (
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -440,6 +446,7 @@ export function PersonaProfileSheetTrigger({
     last_seen_at: string | null;
     appear_offline: boolean;
   } | null>(null);
+  const [ownerStatus, setOwnerStatus] = React.useState<Pick<WorldMemberCardFields, "status" | "status_until" | "status_note"> | null>(null);
   const [sections, setSections] = React.useState<PersonaSectionWithFields[]>([]);
   const [catalog, setCatalog] = React.useState<Map<string, WorldCatalogItem> | undefined>(undefined);
   const [worldId, setWorldId] = React.useState<string | null>(null);
@@ -458,6 +465,7 @@ export function PersonaProfileSheetTrigger({
     fetchedKeyRef.current = key;
 
     let cancelled = false;
+    let worldIdOfPersona: string | null = null;
     setLoading(true);
 
     async function load() {
@@ -476,6 +484,7 @@ export function PersonaProfileSheetTrigger({
         setDialogueColor(row.dialogue_color ?? null);
         setFrameUrl(row.frame?.asset_url ?? null);
         setWorldId(row.world_id ?? null);
+        worldIdOfPersona = row.world_id ?? null;
 
         // Le catalogue VIVANT du monde : sans lui, l'inventaire s'afficherait
         // sous les noms copiés dans la fiche au moment de l'ajout. Les lignes
@@ -520,6 +529,17 @@ export function PersonaProfileSheetTrigger({
             last_seen_at: row.last_seen_at ?? null,
             appear_offline: !!row.appear_offline,
           });
+        }
+        // Son statut de joueur dans CE monde : un persona dont le joueur est
+        // en pause le dit d'emblée, avant qu'on lui écrive.
+        if (worldIdOfPersona) {
+          const { data: memberRow } = await supabase
+            .from(TABLE.WORLD_MEMBERS)
+            .select("status, status_until, status_note")
+            .eq("world_id", worldIdOfPersona)
+            .eq("user_id", userId)
+            .maybeSingle();
+          if (!cancelled) setOwnerStatus((memberRow as Pick<WorldMemberCardFields, "status" | "status_until" | "status_note"> | null) ?? null);
         }
       }
 
@@ -579,6 +599,7 @@ export function PersonaProfileSheetTrigger({
 
   const userPresence = userId ? getUserPresence(userId) : "offline";
   const presenceLine = formatPersonaPresenceLine(userPresence, ownerPresence);
+  const ownerEffectiveStatus = ownerStatus ? effectiveStatus(ownerStatus) : "active";
 
   const TriggerButton = (
     <button
@@ -621,6 +642,11 @@ export function PersonaProfileSheetTrigger({
             dialogueColor={dialogueColor}
             presenceLine={presenceLine}
             userPresence={userPresence}
+            statusBadge={
+              ownerStatus && ownerEffectiveStatus !== "active" ? (
+                <MemberStatusBadge status={ownerEffectiveStatus} until={ownerStatus.status_until} note={ownerStatus.status_note} />
+              ) : undefined
+            }
             isFollowing={isFollowing}
             followBusy={followBusy}
             onToggleFollow={toggleFollow}

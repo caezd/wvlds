@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useReconnectEpoch } from "@/hooks/useReconnectEpoch";
 import { LazyLucideIcon } from "@/components/ui/LazyLucideIcon";
 import { VALID_LUCIDE_ICONS } from "@/components/ui/LucideIconPicker";
+import { relativeTime } from "@/lib/relativeTime";
 
 const DEFAULT_PAGE_LIMIT = 6;
 
@@ -18,19 +19,6 @@ export type WikiPage = {
   icon: string | null;
   updated_at: string;
 };
-
-function relativeTime(iso: string, locale: string, justNow: string) {
-  const diff = Date.now() - new Date(iso).getTime();
-  const min = Math.floor(diff / 60_000);
-  if (min < 1) return justNow;
-  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
-  if (min < 60) return rtf.format(-min, "minute");
-  const h = Math.floor(min / 60);
-  if (h < 24) return rtf.format(-h, "hour");
-  const d = Math.floor(h / 24);
-  if (d < 30) return rtf.format(-d, "day");
-  return new Date(iso).toLocaleDateString(locale);
-}
 
 /** Dernières pages de wiki modifiées — liens directs (voir WorldWiki `initialSlug`). */
 export function WorldWikiShortcutsWidget({

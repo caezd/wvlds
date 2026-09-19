@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-09 ──────────────────────────────────────────────────────────────
   {
     date: "2026-09",
+    tag: "Membres",
+    text: "Chaque membre a une carte propre au monde — présentation, disponibilités, fuseau horaire (les autres voient l’heure qu’il est chez lui), anniversaire — et un statut : actif, en pause ou absent jusqu’à une date. Le statut se voit sur sa carte et sur ses personas ; un gestionnaire peut le régler pour un membre. La carte montre aussi le nombre de messages et la dernière prise de parole dans le monde. Un bloc d’accueil « Anniversaires » liste ceux qui approchent.",
+  },
+  {
+    date: "2026-09",
     tag: "Rôles",
     text: "Les rôles d’un monde se créent dans ses réglages : nom, couleur, icône, et une liste de permissions à cocher (écrire, créer des salons, modifier le wiki, la carte, le catalogue, gérer les membres…). Un membre peut en cumuler plusieurs. Les rôles se classent en hiérarchie : on ne gère que ceux situés sous le sien, et l’on ne confère que ce que l’on possède. Chaque monde part avec Administrateur, Éditeur, Joueur et Spectateur.",
   },

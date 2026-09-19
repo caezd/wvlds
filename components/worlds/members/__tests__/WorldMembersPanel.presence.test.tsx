@@ -37,13 +37,17 @@ const PERSONAS_ALICE = [
   { user_id: "u1", persona_id: "p2", name: "Zorg", avatar_url: null },
 ];
 
-function setup(personaRows: unknown[] = [], memberRoles: { user_id: string; role_id: string }[] = [{ user_id: "u2", role_id: "r-player" }]) {
+function setup(
+  personaRows: unknown[] = [],
+  memberRoles: { user_id: string; role_id: string }[] = [{ user_id: "u2", role_id: "r-player" }],
+  memberRows: Record<string, unknown>[] = [{ user_id: "u1" }, { user_id: "u2" }],
+) {
   // Ordre des `.from()` : world_members, world_member_roles, profiles (cf. lib/worldMembers.ts).
   const mock = createSupabaseMock({
     results: [
-      { data: [{ user_id: "u1" }, { user_id: "u2" }] },
+      { data: memberRows },
       { data: memberRoles },
-      { data: [{ id: "u1", username: "alice", avatar_url: null }, { id: "u2", username: "bob", avatar_url: null }] },
+      { data: [{ id: "u1", username: "alice", avatar_url: null }, { id: "u2", username: "bob", avatar_url: null }, { id: "u3", username: "carl", avatar_url: null }] },
     ],
   });
   mock.client.rpc.mockResolvedValue({ data: personaRows, error: null });
@@ -211,5 +215,30 @@ describe("WorldMembersPanel — recherche", () => {
     await user.type(screen.getByRole("searchbox"), "xyz");
 
     expect(screen.getByText("Aucun membre ne correspond.")).toBeInTheDocument();
+  });
+});
+
+describe("WorldMembersPanel — statut et carte", () => {
+  it("un membre en pause passe en fin de section, badge à l'appui", async () => {
+    mockGetUserPresence.mockReturnValue("offline");
+    setup(
+      [],
+      [{ user_id: "u2", role_id: "r-player" }, { user_id: "u3", role_id: "r-player" }],
+      [{ user_id: "u1" }, { user_id: "u2", status: "paused", status_until: "2026-12-31" }, { user_id: "u3" }],
+    );
+    render(<WorldMembersPanel worldId="w1" ownerId="u1" canManage={false} isShared />);
+
+    await screen.findByText("@bob");
+    const names = screen.getAllByRole("article").map((a) => a.querySelector("p.font-semibold")?.textContent);
+    // Alice (propriétaire) dans sa section ; Carl avant Bob, en pause.
+    expect(names).toEqual(["@alice", "@carl", "@bob"]);
+    expect(cardOf("@bob")).toHaveTextContent(/En pause jusqu'au 31 déc/);
+  });
+
+  it("sans appartenance connue, pas de bouton « Ma carte »", async () => {
+    setup();
+    render(<WorldMembersPanel worldId="w1" ownerId="u1" canManage={false} isShared />);
+    await screen.findByText("@bob");
+    expect(screen.queryByRole("button", { name: /Ma carte/ })).toBeNull();
   });
 });

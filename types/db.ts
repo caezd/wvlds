@@ -28,11 +28,25 @@ export type World = {
   visibility?: "private" | "public" | null;
 };
 
+/** Statut de joueur dans un monde — voir la migration 177. */
+export type WorldMemberStatus = "active" | "paused" | "away";
+
 export type WorldMember = {
   world_id: string;
   user_id: string;
   joined_at?: string;
   age_confirmed_at?: string | null;
+  status?: WorldMemberStatus;
+  /** Date de retour annoncée, pour `paused`/`away`. */
+  status_until?: string | null;
+  status_note?: string | null;
+  /** La carte du membre, propre à ce monde. */
+  bio?: string | null;
+  availability?: string | null;
+  /** Fuseau IANA, ex. « Europe/Paris ». */
+  timezone?: string | null;
+  birthday_month?: number | null;
+  birthday_day?: number | null;
 };
 
 /** Un rôle porté par un membre — voir `world_member_roles` (migration 176). */
