@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Cake, Clock, MessageSquare } from "lucide-react";
+import { Cake, CalendarClock, Clock, MessageSquare } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { getLeadingLetter, getInitials } from "@/lib/textFormatting";
@@ -162,6 +162,27 @@ export function WorldMemberCard({
             {tPresence(presence)}
           </p>
         </div>
+        {/* L'activité, en chiffres seulement, à droite du nom : le nombre de
+            messages et la dernière prise de parole ; le détail au survol. */}
+        {activity && (
+          <dl className="shrink-0 space-y-1 pt-0.5 text-right text-xs text-muted-foreground" data-testid="member-activity">
+            <div className="flex items-center justify-end gap-1" title={t("card.messages", { count: activity.message_count })}>
+              <dt className="sr-only">{t("card.messages", { count: activity.message_count })}</dt>
+              <MessageSquare className="h-3 w-3 shrink-0" aria-hidden />
+              <dd className="tabular-nums">{activity.message_count}</dd>
+            </div>
+            {activity.last_message_at && (
+              <div
+                className="flex items-center justify-end gap-1"
+                title={t("card.lastActive", { when: relativeTime(activity.last_message_at, locale, t("card.justNow"), now.getTime()) })}
+              >
+                <dt className="sr-only">{t("card.activity")}</dt>
+                <Clock className="h-3 w-3 shrink-0" aria-hidden />
+                <dd className="truncate">{relativeTime(activity.last_message_at, locale, t("card.justNow"), now.getTime())}</dd>
+              </div>
+            )}
+          </dl>
+        )}
         {manage}
       </div>
 
@@ -177,26 +198,11 @@ export function WorldMemberCard({
 
       {member.bio && <p className="line-clamp-2 text-xs text-muted-foreground">{member.bio}</p>}
 
-      {(activity || member.availability || localTime || birthdaySoon) && (
+      {(member.availability || localTime || birthdaySoon) && (
         <dl className="space-y-1 text-xs text-muted-foreground">
-          {activity && (
-            <div className="flex items-center gap-1.5">
-              <MessageSquare className="h-3 w-3 shrink-0" aria-hidden />
-              <dt className="sr-only">{t("card.activity")}</dt>
-              <dd className="truncate">
-                {t("card.messages", { count: activity.message_count })}
-                {activity.last_message_at && (
-                  <>
-                    {" · "}
-                    {t("card.lastActive", { when: relativeTime(activity.last_message_at, locale, t("card.justNow"), now.getTime()) })}
-                  </>
-                )}
-              </dd>
-            </div>
-          )}
           {(member.availability || localTime) && (
             <div className="flex items-center gap-1.5">
-              <Clock className="h-3 w-3 shrink-0" aria-hidden />
+              <CalendarClock className="h-3 w-3 shrink-0" aria-hidden />
               <dt className="sr-only">{t("card.availability")}</dt>
               <dd className="truncate">
                 {member.availability}

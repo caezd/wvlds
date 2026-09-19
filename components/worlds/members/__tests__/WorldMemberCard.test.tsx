@@ -39,6 +39,7 @@ describe("WorldMemberCard", () => {
     expect(card.dataset.status).toBe("active");
     expect(card.querySelector("[data-status='paused'], [data-status='away']")).toBeNull();
     expect(card.querySelector("dl")).toBeNull();
+    expect(screen.queryByTestId("member-activity")).toBeNull();
   });
 
   it("en pause jusqu'à une date : le badge le dit, la carte se grise, le mot est au survol", () => {
@@ -54,7 +55,7 @@ describe("WorldMemberCard", () => {
     expect(screen.getByRole("article").className).toContain("bg-muted/20");
   });
 
-  it("l'activité : nombre de messages et dernière prise de parole", () => {
+  it("l'activité, à droite du nom : le nombre de messages et la dernière prise de parole, en icônes", () => {
     render(
       <WorldMemberCard
         member={member()}
@@ -63,11 +64,12 @@ describe("WorldMemberCard", () => {
         activity={{ message_count: 412, last_message_at: new Date(NOW.getTime() - 3 * 86_400_000).toISOString() }}
       />,
     );
-    // Le mock next-intl des tests ne résout pas les pluriels ICU : on lit le
-    // nombre et la date relative, pas la forme du mot « messages ».
-    const line = screen.getByRole("article").querySelector("dd")!;
-    expect(line).toHaveTextContent(/^412 /);
-    expect(line).toHaveTextContent("actif il y a 3 jours");
+    const activity = screen.getByTestId("member-activity");
+    const values = Array.from(activity.querySelectorAll("dd")).map((dd) => dd.textContent);
+    // Le chiffre seul, puis la date relative — sans les mots « messages » ni « actif ».
+    expect(values).toEqual(["412", "il y a 3 jours"]);
+    // Le détail reste au survol.
+    expect(activity.querySelector("[title*='actif il y a 3 jours']")).not.toBeNull();
   });
 
   it("disponibilités et heure locale sur la même ligne", () => {
