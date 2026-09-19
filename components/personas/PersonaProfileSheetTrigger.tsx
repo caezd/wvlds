@@ -26,6 +26,7 @@ import { PersonaStatusBadge } from "@/components/personas/PersonaStatusBadge";
 import { narrativeStatusOf } from "@/lib/personaStatus";
 import { reviewStatusOf } from "@/lib/personaReview";
 import { PersonaSheetBadge } from "./PersonaSheetBadge";
+import { PersonaNpcBadge } from "./PersonaNpcBadge";
 import { PersonaReviewSection } from "./PersonaReviewPanel";
 import { useWorldMembership } from "@/components/providers/WorldMembershipProvider";
 import type { PersonaNarrativeStatus, PersonaReviewStatus } from "@/types/db";
@@ -463,6 +464,7 @@ export function PersonaProfileSheetTrigger({
   const [narrativeStatus, setNarrativeStatus] = React.useState<PersonaNarrativeStatus>("alive");
   const [reviewStatus, setReviewStatus] = React.useState<PersonaReviewStatus>("approved");
   const [sheetComplete, setSheetComplete] = React.useState(true);
+  const [isNpc, setIsNpc] = React.useState(false);
   const [ownerStatus, setOwnerStatus] = React.useState<Pick<WorldMemberCardFields, "status" | "status_until" | "status_note"> | null>(null);
   const [sections, setSections] = React.useState<PersonaSectionWithFields[]>([]);
   const [catalog, setCatalog] = React.useState<Map<string, WorldCatalogItem> | undefined>(undefined);
@@ -488,7 +490,7 @@ export function PersonaProfileSheetTrigger({
     async function load() {
       const { data: persona, error } = await supabase
         .from("personas")
-        .select("id,user_id,name,avatar_url,banner_url,dialogue_color,world_id,narrative_status,review_status,sheet_complete,frame:avatar_frame_id(asset_url)")
+        .select("id,user_id,name,avatar_url,banner_url,dialogue_color,world_id,narrative_status,review_status,sheet_complete,is_npc,frame:avatar_frame_id(asset_url)")
         .eq("id", personaId!)
         .maybeSingle();
 
@@ -502,6 +504,7 @@ export function PersonaProfileSheetTrigger({
         setNarrativeStatus(narrativeStatusOf((row as { narrative_status?: unknown }).narrative_status));
         setReviewStatus(reviewStatusOf((row as { review_status?: unknown }).review_status));
         setSheetComplete((row as { sheet_complete?: boolean | null }).sheet_complete ?? true);
+        setIsNpc(!!(row as { is_npc?: boolean | null }).is_npc);
         setFrameUrl(row.frame?.asset_url ?? null);
         setWorldId(row.world_id ?? null);
         worldIdOfPersona = row.world_id ?? null;
@@ -618,7 +621,8 @@ export function PersonaProfileSheetTrigger({
   }, [open, prefetch]);
 
   const userPresence = userId ? getUserPresence(userId) : "offline";
-  const presenceLine = formatPersonaPresenceLine(userPresence, ownerPresence);
+  // Un PNJ n'a pas de joueur attitré : la présence de son créateur ne dit rien.
+  const presenceLine = isNpc ? null : formatPersonaPresenceLine(userPresence, ownerPresence);
   const ownerEffectiveStatus = ownerStatus ? effectiveStatus(ownerStatus) : "active";
 
   const TriggerButton = (
@@ -663,11 +667,12 @@ export function PersonaProfileSheetTrigger({
             presenceLine={presenceLine}
             userPresence={userPresence}
             statusBadge={
-              narrativeStatus !== "alive" || reviewStatus !== "approved" || !sheetComplete || (ownerStatus && ownerEffectiveStatus !== "active") ? (
+              isNpc || narrativeStatus !== "alive" || reviewStatus !== "approved" || !sheetComplete || (ownerStatus && ownerEffectiveStatus !== "active") ? (
                 <>
+                  <PersonaNpcBadge isNpc={isNpc} />
                   <PersonaStatusBadge status={narrativeStatus} />
                   <PersonaSheetBadge persona={{ review_status: reviewStatus, sheet_complete: sheetComplete }} />
-                  {ownerStatus && ownerEffectiveStatus !== "active" && (
+                  {!isNpc && ownerStatus && ownerEffectiveStatus !== "active" && (
                     <MemberStatusBadge status={ownerEffectiveStatus} until={ownerStatus.status_until} note={ownerStatus.status_note} />
                   )}
                 </>

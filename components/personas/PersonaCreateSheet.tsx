@@ -11,6 +11,8 @@ import { SideSheetContent } from "@/components/ui/side-sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useWorldMembership } from "@/components/providers/WorldMembershipProvider";
 import { PersonaEditorContent } from "./PersonaEditSheet";
 import { createPersona } from "@/app/(protected)/p/actions";
 import { createClient } from "@/lib/supabase/client";
@@ -23,11 +25,14 @@ export function PersonaCreateSheet({
   trigger,
   restrictInventory,
   restrictSkills,
+  defaultNpc = false,
 }: {
   worldId?: string | null;
   trigger?: ReactNode;
   restrictInventory?: boolean;
   restrictSkills?: boolean;
+  /** Précoche « PNJ partagé » (bouton « Nouveau PNJ » de la section PNJ). */
+  defaultNpc?: boolean;
 }) {
   const t = useTranslations("personas");
   const [open, setOpen] = useState(false);
@@ -38,6 +43,12 @@ export function PersonaCreateSheet({
   const [pending, setPending] = useState(false);
   const [sections, setSections] = useState<PersonaSectionWithFields[]>([]);
   const nameRef = useRef<HTMLInputElement>(null);
+  // PNJ partagé (migration 182) : proposé à qui gère les PNJ du monde ;
+  // `defaultNpc` précoche la case (bouton « Nouveau PNJ »).
+  const tNpc = useTranslations("personas.npc");
+  const { can } = useWorldMembership();
+  const canManageNpc = can("npc.manage");
+  const [asNpc, setAsNpc] = useState(!!defaultNpc);
   const router = useRouter();
 
   function handleOpen(v: boolean) {
@@ -49,6 +60,7 @@ export function PersonaCreateSheet({
       setCreatedName("");
       setError(null);
       setSections([]);
+      setAsNpc(!!defaultNpc);
       if (createdId) router.refresh();
     }
   }
@@ -62,6 +74,7 @@ export function PersonaCreateSheet({
     const fd = new FormData();
     fd.set("name", name);
     if (worldId) fd.set("world_id", worldId);
+    if (worldId && asNpc) fd.set("is_npc", "1");
     const result = await createPersona(undefined, fd);
     setPending(false);
     if (!result.ok) { setError(result.error ?? "Erreur."); return; }
@@ -114,6 +127,16 @@ export function PersonaCreateSheet({
                   required
                 />
               </div>
+
+              {worldId && canManageNpc && (
+                <label className="flex items-start gap-3 rounded-lg border border-border-soft px-3 py-2.5 text-sm">
+                  <Checkbox checked={asNpc} onCheckedChange={(v) => setAsNpc(v === true)} className="mt-0.5" aria-label={tNpc("createLabel")} />
+                  <span className="space-y-0.5">
+                    <span className="block font-medium">{tNpc("createLabel")}</span>
+                    <span className="block text-xs text-muted-foreground">{tNpc("createHelp")}</span>
+                  </span>
+                </label>
+              )}
 
               {error && <p className="text-sm text-destructive">{error}</p>}
 

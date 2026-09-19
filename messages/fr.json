@@ -719,6 +719,14 @@
         "personas_review": {
           "label": "Valider les fiches",
           "help": "Relire les fiches de persona soumises, les valider ou les renvoyer avec un commentaire."
+        },
+        "npc_manage": {
+          "label": "Gérer les PNJ",
+          "help": "Créer, modifier et supprimer les personnages non-joueurs partagés du monde (30 au plus)."
+        },
+        "npc_play": {
+          "label": "Jouer les PNJ",
+          "help": "Choisir un PNJ du monde pour écrire dans les salons — hors quota de personas."
         }
       }
     },
@@ -1035,6 +1043,22 @@
       "timeline": "Timeline",
       "separator": "Séparateur",
       "imageGrid": "Grille d'images"
+    },
+    "npc": {
+      "badge": "PNJ",
+      "badgeHint": "Personnage non-joueur partagé du monde",
+      "playedBy": "joué par {player}",
+      "createLabel": "PNJ partagé",
+      "createHelp": "Un personnage du monde que les membres autorisés peuvent faire parler ; il ne compte pas dans votre quota.",
+      "section": "PNJ",
+      "none": "Aucun PNJ pour le moment.",
+      "newNpc": "Nouveau PNJ",
+      "pickerGroup": "PNJ du monde",
+      "filterKind": "Type",
+      "allKinds": "Joueurs et PNJ",
+      "kindPlayers": "Personas des joueurs",
+      "kindNpcs": "PNJ",
+      "lockedNoPlay": "Vous n'avez pas la permission de jouer les PNJ de ce monde."
     }
   },
   "quests": {

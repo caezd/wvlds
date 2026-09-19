@@ -108,6 +108,18 @@ describe("validation de la fiche (migration 181)", () => {
     expect(getUsablePersonaIds(list, "free")).toEqual(new Set(["p1", "p2", "p3", "p4"]));
   });
 
+  it("un PNJ (migration 182) joue hors quota, mais reste soumis à sa fiche", () => {
+    const list = [
+      ...sevenPersonas.slice(0, 5).map((p) => ({ ...p, review_status: "approved", sheet_complete: true })),
+      { ...persona("npc", "2026-02-01T00:00:00Z"), is_npc: true, review_status: "approved", sheet_complete: true },
+      { ...persona("npc-holes", "2026-02-02T00:00:00Z"), is_npc: true, review_status: "approved", sheet_complete: false },
+    ];
+    const usable = getUsablePersonaIds(list, "free");
+    // Les cinq personnels tiennent dans le quota malgré les deux PNJ plus anciens que p3…p5.
+    expect(usable).toEqual(new Set(["p1", "p2", "p3", "p4", "p5", "npc"]));
+    expect(personaLockReason(list[6], usable)).toBe("incomplete");
+  });
+
   it("personaLockReason nomme la fiche avant le quota", () => {
     const usable = new Set(["p1"]);
     expect(personaLockReason({ ...persona("p1", ""), review_status: "approved" }, usable)).toBeNull();

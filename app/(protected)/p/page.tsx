@@ -62,6 +62,7 @@ export default async function PersonasPage() {
         )
         .eq("user_id", userId)
         .eq("is_template", false)
+        .eq("is_npc", false)
         .order("name", { ascending: true });
 
       if (!error) return (data ?? []) as PersonaRow[];
@@ -71,6 +72,7 @@ export default async function PersonasPage() {
         .select("id, name, world_id")
         .eq("user_id", userId)
         .eq("is_template", false)
+        .eq("is_npc", false)
         .order("name", { ascending: true });
       return (basic ?? []) as PersonaRow[];
     })(),

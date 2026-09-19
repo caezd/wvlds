@@ -106,6 +106,7 @@ export default async function WorldHomeContent({
         .eq("user_id", userId)
         .eq("world_id", worldId)
         .eq("is_template", false)
+        .eq("is_npc", false)
         .order("name", { ascending: true });
 
       const rows = (personaRows ?? []) as Omit<AsidePersona, "sections">[];

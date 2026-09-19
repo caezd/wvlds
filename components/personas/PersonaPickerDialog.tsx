@@ -33,6 +33,8 @@ import { getInitials } from "@/lib/textFormatting";
 import { cn } from "@/lib/utils";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { LOCK_REASON_KEYS, getUsablePersonaIds, personaLockReason } from "@/lib/personaEligibility";
+import { useWorldMembership } from "@/components/providers/WorldMembershipProvider";
+import { PersonaNpcBadge } from "./PersonaNpcBadge";
 import { avatarThumbWidth } from "@/lib/storage";
 
 function PersonaAvatarThumb({ url, name, size }: { url: string; name: string; size: number }) {
@@ -53,6 +55,7 @@ function PersonaRow({
   onSelect,
   onToggleFavorite,
   favoriteLabel,
+  groupLabel,
 }: {
   persona: Persona;
   selected: boolean;
@@ -62,8 +65,14 @@ function PersonaRow({
   onSelect: () => void;
   onToggleFavorite: () => void;
   favoriteLabel: string;
+  /** Un titre au-dessus de la ligne — le premier PNJ ouvre le groupe. */
+  groupLabel?: string;
 }) {
   return (
+    <>
+    {groupLabel && (
+      <p className="mt-2 px-2.5 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{groupLabel}</p>
+    )}
     <div
       className={cn(
         "group flex w-full items-center gap-3 rounded-xl px-2.5 py-2 transition-colors",
@@ -87,6 +96,7 @@ function PersonaRow({
           )}
         </span>
         <span className="min-w-0 flex-1 truncate text-sm font-medium">{persona.name}</span>
+        <PersonaNpcBadge isNpc={persona.is_npc} compact />
         {selected && !locked && (
           <span className="grid size-5 shrink-0 place-items-center bg-primary text-primary-foreground rounded-full">
             <svg viewBox="0 0 12 12" className="h-3 w-3 fill-current">
@@ -114,6 +124,7 @@ function PersonaRow({
         <Star size={18} className={favorite ? "fill-yellow-400 text-yellow-500" : ""} />
       </button>
     </div>
+    </>
   );
 }
 
@@ -142,6 +153,11 @@ export function PersonaPickerDialog({
   const t = useTranslations("personas");
   const tCommon = useTranslations("common");
   const { plan } = useCurrentUser();
+  // Les PNJ du monde (migration 182) : proposés à qui a « Jouer les PNJ »,
+  // sous leur propre titre. Le contexte n'est celui du monde que sous
+  // `/w/[id]` ou dans un de ses salons.
+  const { worldId: membershipWorldId, can } = useWorldMembership();
+  const canPlayNpc = !!worldId && membershipWorldId === worldId && can("npc.play");
   const supabase = useMemo(() => createClient(), []);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -191,10 +207,11 @@ export function PersonaPickerDialog({
       if (!uid) { setLoading(false); return; }
       let query = supabase
         .from("personas")
-        .select("id, user_id, name, avatar_url, dialogue_color, created_at, review_status, sheet_complete")
-        .eq("user_id", uid)
+        .select("id, user_id, name, avatar_url, dialogue_color, created_at, review_status, sheet_complete, is_npc")
         .eq("is_template", false)
         .order("name", { ascending: true });
+      // Les siens ; et, dans un monde où l'on joue les PNJ, ceux du monde.
+      query = canPlayNpc ? query.or(`user_id.eq.${uid},is_npc.eq.true`) : query.eq("user_id", uid).eq("is_npc", false);
       if (worldId) query = query.eq("world_id", worldId);
       const { data } = await query;
       setPersonas(data ?? []);
@@ -202,21 +219,24 @@ export function PersonaPickerDialog({
     }
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, worldId, open]);
+  }, [userId, worldId, open, canPlayNpc]);
 
+  // Les siens d'abord (favoris en tête), puis les PNJ du monde.
   const sortedPersonas = useMemo(() => {
     return [...personas].sort((a, b) => {
+      if (!!a.is_npc !== !!b.is_npc) return a.is_npc ? 1 : -1;
       const favA = favorites.has(a.id);
       const favB = favorites.has(b.id);
       if (favA !== favB) return favA ? -1 : 1;
       return a.name.localeCompare(b.name);
     });
   }, [personas, favorites]);
+  const firstNpcId = useMemo(() => sortedPersonas.find((p) => p.is_npc)?.id ?? null, [sortedPersonas]);
 
   // Plan gratuit : seuls les 5 personas les plus anciens (par monde) restent
   // sélectionnables — les autres s'affichent verrouillés (voir migration 090).
   const eligibility = useMemo(
-    () => personas.map((p) => ({ id: p.id, created_at: p.created_at ?? "", review_status: p.review_status, sheet_complete: p.sheet_complete })),
+    () => personas.map((p) => ({ id: p.id, created_at: p.created_at ?? "", review_status: p.review_status, sheet_complete: p.sheet_complete, is_npc: p.is_npc })),
     [personas],
   );
   const usableIds = useMemo(() => getUsablePersonaIds(eligibility, plan), [eligibility, plan]);
@@ -291,6 +311,7 @@ export function PersonaPickerDialog({
   const rows = sortedPersonas.map((p) => (
     <PersonaRow
       key={p.id}
+      groupLabel={p.id === firstNpcId ? t("npc.pickerGroup") : undefined}
       persona={p}
       selected={value === p.id}
       favorite={favorites.has(p.id)}

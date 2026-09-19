@@ -23,6 +23,10 @@ export async function createPersona(_prevState: unknown, formData: FormData) {
     const bio = (String(formData.get("bio") || "").trim() || null) as string | null;
     const avatar_url = (String(formData.get("avatar_url") || "").trim() || null) as string | null;
     const world_id = (String(formData.get("world_id") || "").trim() || null) as string | null;
+    // PNJ partagé (migration 182) : la politique d'insertion exige `npc.manage`
+    // sur le monde ; le créateur reste `user_id`.
+    const is_npc = formData.get("is_npc") === "1";
+    if (is_npc && !world_id) return { ok: false, error: ERR_VALEUR_NON_SUPPORTEE };
 
     if (name.length < 1 || name.length > 40) {
         return {
@@ -41,7 +45,7 @@ export async function createPersona(_prevState: unknown, formData: FormData) {
 
     const { data, error } = await supabase
         .from("personas")
-        .insert({ user_id: user.id, name, bio, avatar_url, world_id })
+        .insert({ user_id: user.id, name, bio, avatar_url, world_id, is_npc })
         .select("id")
         .single();
 
@@ -119,11 +123,12 @@ export async function deletePersona(id: string) {
         await supabase.storage.from("personas").remove(storagePaths);
     }
 
+    // Le sien, ou un PNJ du monde avec `npc.manage` : la politique de
+    // suppression tranche (migration 182).
     const { data, error } = await supabase
         .from("personas")
         .delete()
         .eq("id", id)
-        .eq("user_id", user.id)
         .select("id")
         .maybeSingle();
 

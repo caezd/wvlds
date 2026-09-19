@@ -18,6 +18,8 @@ export type EligibilityPersona = {
   /** Migration 181 : une fiche non validée ou incomplète ne joue pas, quel que soit le plan. */
   review_status?: string | null;
   sheet_complete?: boolean | null;
+  /** Migration 182 : un PNJ ne compte pas dans le quota et ne s'y soumet pas. */
+  is_npc?: boolean | null;
 };
 
 const UNLIMITED_PLANS = new Set(["subscribed", "lifetime"]);
@@ -31,13 +33,15 @@ export function getUsablePersonaIds(
   personas: EligibilityPersona[],
   plan: string | null | undefined,
 ): Set<string> {
-  const candidates = personas.filter((p) => !p.is_template);
+  const candidates = personas.filter((p) => !p.is_template && !p.is_npc);
   // Le quota se compte sur tous les personas du monde (validés ou non) ; le
-  // filtre de validation s'applique ensuite, comme `is_persona_usable`.
+  // filtre de validation s'applique ensuite, comme `is_persona_usable`. Les
+  // PNJ passent à côté du quota : validés et complets, ils jouent.
   const reviewed = (list: EligibilityPersona[]) => list.filter((p) => personaReviewLock(p) === null);
+  const npcs = reviewed(personas.filter((p) => !p.is_template && !!p.is_npc)).map((p) => p.id);
 
   if (plan && UNLIMITED_PLANS.has(plan)) {
-    return new Set(reviewed(candidates).map((p) => p.id));
+    return new Set([...reviewed(candidates).map((p) => p.id), ...npcs]);
   }
 
   const eligible = [...candidates]
@@ -54,7 +58,7 @@ export function getUsablePersonaIds(
     })
     .slice(0, FREE_PERSONAS_PER_WORLD);
 
-  return new Set(reviewed(eligible).map((p) => p.id));
+  return new Set([...reviewed(eligible).map((p) => p.id), ...npcs]);
 }
 
 /** La clé i18n (namespace `personas`) qui explique un verrou. */
@@ -62,6 +66,8 @@ export const LOCK_REASON_KEYS = {
   quota: "lockedHint",
   incomplete: "sheet.lockedIncomplete",
   unreviewed: "sheet.lockedUnreviewed",
+  /** Un PNJ sans « Jouer les PNJ » — posé par l'appelant, jamais par `personaLockReason`. */
+  npc: "npc.lockedNoPlay",
 } as const;
 
 /**

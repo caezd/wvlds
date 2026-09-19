@@ -11,6 +11,11 @@ vi.mock("@/hooks/useCurrentUser", () => ({
   useCurrentUser: () => ({ plan: currentUserMock.plan }),
 }));
 
+const membership = vi.hoisted(() => ({ canPlayNpc: false }));
+vi.mock("@/components/providers/WorldMembershipProvider", () => ({
+  useWorldMembership: () => ({ worldId: "w1", can: (perm: string) => perm === "npc.play" && membership.canPlayNpc }),
+}));
+
 import { PersonaProfileSheet } from "@/components/chatrooms/persona/PersonaProfileSheet";
 
 const persona: Persona = {
@@ -50,6 +55,36 @@ function setup(plan: string | null = "free", ownsPersona = true) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  membership.canPlayNpc = false;
+});
+
+describe("PersonaProfileSheet — PNJ partagé (migration 182)", () => {
+  const npc: Persona = { id: "npc-1", user_id: "u9", name: "Aubergiste", avatar_url: null, is_npc: true, review_status: "approved", sheet_complete: true };
+
+  it("sans « Jouer les PNJ », le bouton est verrouillé et la raison le dit", async () => {
+    setup("free", /* ownsPersona */ false);
+    render(<PersonaProfileSheet persona={npc} selfId="u1" onClose={() => {}} onUsePersona={() => {}} />);
+    await screen.findByRole("button", { name: /utiliser ce persona/i });
+    await waitFor(() => expect(screen.getByRole("button", { name: /utiliser ce persona/i })).toBeDisabled());
+    expect(screen.getByText("PNJ")).toBeInTheDocument();
+  });
+
+  it("avec la permission, un PNJ validé se joue, quel que soit le quota", async () => {
+    membership.canPlayNpc = true;
+    currentUserMock.plan = "free";
+    const mock = createSupabaseMock({
+      results: [
+        { data: { banner_url: null, frame: null, world_id: "w1" } },
+        { data: [...siblings, npc] }, // les siens (6, quota dépassé) + le PNJ
+        { data: null },
+        { data: [] },
+      ],
+    });
+    vi.mocked(createClient).mockReturnValue(mock.client as never);
+    render(<PersonaProfileSheet persona={npc} selfId="u1" onClose={() => {}} onUsePersona={() => {}} />);
+    await screen.findByRole("button", { name: /utiliser ce persona/i });
+    await waitFor(() => expect(screen.getByRole("button", { name: /utiliser ce persona/i })).not.toBeDisabled());
+  });
 });
 
 describe("PersonaProfileSheet — verrouillage du bouton « Utiliser ce persona »", () => {

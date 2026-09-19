@@ -24,6 +24,8 @@ import { StoredImage } from "@/components/ui/stored-image";
 import { getInitials } from "@/lib/textFormatting";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { LOCK_REASON_KEYS, getUsablePersonaIds, personaLockReason, type EligibilityPersona } from "@/lib/personaEligibility";
+import { useWorldMembership } from "@/components/providers/WorldMembershipProvider";
+import { PersonaNpcBadge } from "@/components/personas/PersonaNpcBadge";
 import { indexCatalog } from "@/lib/worldCatalog";
 import { InventoryFieldView, SkillsFieldView } from "@/components/personas/fields/CatalogFieldViews";
 import { PersonaRelationsSection } from "@/components/personas/PersonaRelationsSection";
@@ -204,6 +206,8 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
   // Éligibilité (plan gratuit : 5 personas les plus anciens par monde) — ne
   // concerne que le persona du viewer lui-même (cf. migration 090).
   const [usableForSelf, setUsableForSelf] = useState(true);
+  const { can } = useWorldMembership();
+  const canPlayNpc = can("npc.play");
   const [lockReason, setLockReason] = useState<keyof typeof LOCK_REASON_KEYS>("quota");
   const [sections, setSections] = useState<PersonaSectionWithFields[]>([]);
   const [activeTab, setActiveTab] = useState<string | null>(null);
@@ -257,11 +261,15 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
       let usableForSelfResult = true;
       let lockReasonResult: keyof typeof LOCK_REASON_KEYS = "quota";
       const worldId = (personaRow as unknown as { world_id?: string | null } | null)?.world_id ?? null;
-      if (persona!.user_id === selfId && worldId) {
+      // Un PNJ (migration 182) se joue avec « Jouer les PNJ » ; sans, verrou.
+      if (persona!.is_npc && !canPlayNpc) {
+        usableForSelfResult = false;
+        lockReasonResult = "npc";
+      } else if ((persona!.user_id === selfId || persona!.is_npc) && worldId && selfId) {
         const { data: siblings } = await supabase
           .from("personas")
-          .select("id, created_at, is_template, review_status, sheet_complete")
-          .eq("user_id", selfId!)
+          .select("id, created_at, is_template, review_status, sheet_complete, is_npc")
+          .or(`user_id.eq.${selfId},is_npc.eq.true`)
           .eq("world_id", worldId)
           .is("deleted_at", null);
         const rows = (siblings ?? []) as EligibilityPersona[];
@@ -340,7 +348,7 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
 
     load();
     return () => { cancelled = true; };
-  }, [persona?.id, selfId, plan, supabase]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [persona?.id, selfId, plan, supabase, canPlayNpc]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const userPresence = persona ? getUserPresence(persona.user_id) : "offline";
   const _isOnline = userPresence === "online";
@@ -396,8 +404,11 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
                 className="outline-4 outline-background rounded-2xl"
               />
               <div className="text-center">
-                <div className="text-lg font-semibold">{persona.name}</div>
-                {presenceLine && (
+                <div className="flex items-center justify-center gap-1.5 text-lg font-semibold">
+                  {persona.name}
+                  <PersonaNpcBadge isNpc={persona.is_npc} />
+                </div>
+                {presenceLine && !persona.is_npc && (
                   <div className="mt-0.5 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
                     <span
                       className={`h-2 w-2 rounded-full ${
@@ -409,12 +420,12 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
                     {presenceLine}
                   </div>
                 )}
-                {persona.user_id === selfId && (
+                {persona.user_id === selfId && !persona.is_npc && (
                   <div className="text-xs text-muted-foreground">{t("yourPersona")}</div>
                 )}
               </div>
               {onUsePersona && (
-                persona.user_id === selfId && !usableForSelf ? (
+                (persona.user_id === selfId || persona.is_npc) && !usableForSelf ? (
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <button
