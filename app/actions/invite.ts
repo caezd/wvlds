@@ -7,17 +7,17 @@ import { createClient } from "@/lib/supabase/server";
 import { getUserId } from "@/lib/auth";
 import { ERR_ENREGISTREMENT, ERR_NON_AUTHENTIFIE , ERR_NON_AUTORISE, ERR_VALEUR_NON_SUPPORTEE, echecEnregistrement } from "@/lib/actionErrors";
 import { idSchema } from "@/lib/inputSchemas";
+import { RPC } from "@/lib/constants";
 
-// Les rôles qu'une invitation peut conférer — `owner` n'en fait pas partie.
-// Le type ne suffit pas : cette action écrit avec le `service_role`, hors RLS,
-// et `accept_world_invitation` est le seul autre rempart. Deux valent mieux.
-const INVITABLE_ROLES = ["admin", "editor", "player", "viewer"] as const;
-type Role = (typeof INVITABLE_ROLES)[number];
-
+// Le rôle conféré par l'invitation, ou `null` pour les rôles par défaut du
+// monde. Le type ne suffit pas : cette action écrit avec le `service_role`,
+// hors RLS, et `accept_world_invitation` est le seul autre rempart. Deux
+// valent mieux : le rôle doit appartenir au monde et rester sous le rang de
+// l'inviteur, comme l'exige la policy `world_invitations_insert`.
 const inviteSchema = z.strictObject({
   email: z.email().max(254),
   worldId: idSchema,
-  role: z.enum(INVITABLE_ROLES),
+  roleId: idSchema.nullable(),
 });
 
 /**
@@ -47,9 +47,9 @@ const inviteSchema = z.strictObject({
 export async function inviteUserToWorld(
   email: string,
   worldId: string,
-  role: Role
+  roleId: string | null,
 ): Promise<{ error?: string }> {
-  if (!inviteSchema.safeParse({ email, worldId, role }).success) {
+  if (!inviteSchema.safeParse({ email, worldId, roleId }).success) {
     return { error: ERR_VALEUR_NON_SUPPORTEE };
   }
 
@@ -57,18 +57,24 @@ export async function inviteUserToWorld(
   const userId = await getUserId(supabase);
   if (!userId) return { error: ERR_NON_AUTHENTIFIE };
 
-  // Lecture sous l'identité de l'appelant (donc sous RLS) : on ne peut pas
-  // se déclarer administrateur d'un monde où l'on ne l'est pas.
-  const { data: membership } = await supabase
-    .from("world_members")
-    .select("role")
-    .eq("world_id", worldId)
-    .eq("user_id", userId)
-    .maybeSingle();
+  // Sous l'identité de l'appelant : les prédicats sont ceux des policies, on ne
+  // peut pas se déclarer gestionnaire d'un monde où l'on ne l'est pas.
+  const { data: allowed } = await supabase.rpc(RPC.HAS_WORLD_PERMISSION, {
+    wid: worldId,
+    uid: userId,
+    perm: "members.manage",
+  });
+  if (allowed !== true) return { error: ERR_NON_AUTORISE };
 
-  const callerRole = (membership as { role?: string } | null)?.role;
-  if (callerRole !== "owner" && callerRole !== "admin") {
-    return { error: ERR_NON_AUTORISE };
+  if (roleId) {
+    const [{ data: role }, { data: rank }] = await Promise.all([
+      supabase.from("world_roles").select("id, position").eq("id", roleId).eq("world_id", worldId).maybeSingle(),
+      supabase.rpc(RPC.WORLD_RANK, { wid: worldId, uid: userId }),
+    ]);
+    const position = (role as { position?: number } | null)?.position;
+    if (position === undefined || typeof rank !== "number" || position >= rank) {
+      return { error: ERR_NON_AUTORISE };
+    }
   }
 
   const admin = createAdminClient();
@@ -89,7 +95,7 @@ export async function inviteUserToWorld(
 
   const { error: invErr } = await admin
     .from("world_invitations")
-    .insert({ world_id: worldId, invitee_id: inviteeId, inviter_id: userId, role });
+    .insert({ world_id: worldId, invitee_id: inviteeId, inviter_id: userId, role_id: roleId });
   if (invErr) return { error: echecEnregistrement("inviteUserToWorld", invErr) };
 
   // Sans notification, l'invité arrive dans l'application sans rien voir :

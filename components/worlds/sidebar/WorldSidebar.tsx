@@ -5,12 +5,13 @@ import {
   getChatroomsNav,
   getCurrentUserId,
   getFollowedChatroomIds,
-  getIsWorldAdmin,
+  getWorldMembership,
   getUserWorlds,
   getWorldById,
   getWorldsQuota,
 } from "@/lib/currentRequest";
 import { getTranslations } from "next-intl/server";
+import { canOpenWorldSettings } from "@/lib/worldPermissions";
 import {
   BookOpenText,
   Clock,
@@ -45,11 +46,11 @@ export default async function WorldSidebar({ worldId }: { worldId: string }) {
     getTranslations("nav"),
   ]);
 
-  // `getChatroomsNav`, `getIsWorldAdmin` et `getWorldsQuota` sont mémoïsés pour
+  // `getChatroomsNav`, `getWorldMembership` et `getWorldsQuota` sont mémoïsés pour
   // la requête : la page (`WorldHomeContent` / `ChatRoomContent`) réclame les
   // mêmes données, elles ne sont donc plus chargées qu'une seule fois pour tout
   // l'arbre au lieu d'une fois par composant.
-  const [world, allRooms, participatedResult, canAdmin, userWorlds, quota, categories, followedIds] =
+  const [world, allRooms, participatedResult, { membership }, userWorlds, quota, categories, followedIds] =
     await Promise.all([
       getWorldById(worldId),
       getChatroomsNav(worldId),
@@ -59,7 +60,7 @@ export default async function WorldSidebar({ worldId }: { worldId: string }) {
           p_limit: 20,
         })
         : Promise.resolve({ data: [] }),
-      getIsWorldAdmin(worldId, userId),
+      getWorldMembership(worldId),
       getUserWorlds(),
       getWorldsQuota(),
       getChatroomCategories(worldId),
@@ -67,6 +68,7 @@ export default async function WorldSidebar({ worldId }: { worldId: string }) {
     ]);
 
   if (!world) return null;
+  const canAdmin = canOpenWorldSettings(membership);
 
   const participated = (participatedResult.data ?? []) as ParticipatedRoom[];
 

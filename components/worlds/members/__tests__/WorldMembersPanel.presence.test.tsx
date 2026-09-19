@@ -13,6 +13,23 @@ vi.mock("@/components/providers/PresenceProvider", () => ({
   useGlobalPresence: () => ({ getUserPresence: mockGetUserPresence, onlineUsers: {} }),
 }));
 
+// Les rôles du monde viennent du provider d'appartenance (migration 176).
+const PLAYER_ROLE = {
+  id: "r-player", world_id: "w1", name: "Joueur", color: "#22c55e", lucide_icon: null,
+  position: 10, permissions: ["messages.post"], is_default: true, mentionable: false, hoist: true,
+};
+const SCRIBE_ROLE = { ...PLAYER_ROLE, id: "r-scribe", name: "Scribe", color: "#3b82f6", position: 5, hoist: false };
+vi.mock("@/components/providers/WorldMembershipProvider", () => ({
+  useWorldMembership: () => ({
+    worldId: "w1",
+    ownerId: "u1",
+    roles: [PLAYER_ROLE, SCRIBE_ROLE],
+    membership: null,
+    can: () => false,
+    refresh: () => {},
+  }),
+}));
+
 import { WorldMembersPanel } from "@/components/worlds/members/WorldMembersPanel";
 
 const PERSONAS_ALICE = [
@@ -20,11 +37,12 @@ const PERSONAS_ALICE = [
   { user_id: "u1", persona_id: "p2", name: "Zorg", avatar_url: null },
 ];
 
-function setup(personaRows: unknown[] = []) {
+function setup(personaRows: unknown[] = [], memberRoles: { user_id: string; role_id: string }[] = [{ user_id: "u2", role_id: "r-player" }]) {
+  // Ordre des `.from()` : world_members, world_member_roles, profiles (cf. lib/worldMembers.ts).
   const mock = createSupabaseMock({
     results: [
-      { data: { owner_id: "u1" } },
-      { data: [{ user_id: "u1", role: "owner" }, { user_id: "u2", role: "player" }] },
+      { data: [{ user_id: "u1" }, { user_id: "u2" }] },
+      { data: memberRoles },
       { data: [{ id: "u1", username: "alice", avatar_url: null }, { id: "u2", username: "bob", avatar_url: null }] },
     ],
   });
@@ -84,7 +102,7 @@ describe("WorldMembersPanel — cartes et présence", () => {
 });
 
 describe("WorldMembersPanel — rôles et personas", () => {
-  it("regroupe par rôle : le rôle est le titre de la section, pas répété sur la carte", async () => {
+  it("le propriétaire a sa section ; un rôle « hoist » donne la sienne, et ses puces sur la carte", async () => {
     setup();
     render(<WorldMembersPanel worldId="w1" ownerId="u1" canManage={false} isShared />);
 
@@ -92,7 +110,25 @@ describe("WorldMembersPanel — rôles et personas", () => {
     expect(screen.getByRole("heading", { name: /Propriétaire/ })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /Joueur/ })).toBeInTheDocument();
     expect(cardOf("@alice")).not.toHaveTextContent("Propriétaire");
-    expect(cardOf("@bob")).not.toHaveTextContent("Joueur");
+    // Le rôle figure sur la carte en puce : un membre peut en cumuler plusieurs.
+    expect(cardOf("@bob")).toHaveTextContent("Joueur");
+  });
+
+  it("un membre dont aucun rôle n'est « hoist » va dans la section « Membres », ses rôles en puces", async () => {
+    setup([], [{ user_id: "u2", role_id: "r-scribe" }]);
+    render(<WorldMembersPanel worldId="w1" ownerId="u1" canManage={false} isShared />);
+
+    await screen.findByText("@bob");
+    expect(screen.getByRole("heading", { name: /Membres/ })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /Scribe/ })).toBeNull();
+    expect(cardOf("@bob")).toHaveTextContent("Scribe");
+  });
+
+  it("sans droit de gestion, aucune carte ne porte de menu « ⋯ »", async () => {
+    setup();
+    render(<WorldMembersPanel worldId="w1" ownerId="u1" canManage={false} isShared />);
+    await screen.findByText("@bob");
+    expect(screen.queryByRole("button", { name: /Gérer/ })).toBeNull();
   });
 
   it("liste les personas joués en puces, et un texte quand il n'y en a pas", async () => {

@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getFeatureFlags, type FeatureFlags } from "@/lib/featureFlags";
 import { getUserQuotaWithClient, type Plan, type Quota } from "@/lib/userQuota";
 import type { World } from "@/types/worlds";
+import { buildMembership, sortRolesByPosition, type WorldMembership, type WorldRoleRow } from "@/lib/worldPermissions";
 import type { WorldItem } from "@/components/sidebar/WorldPickerHeader";
 
 /**
@@ -74,7 +75,7 @@ export const getCachedFeatureFlags = cache(async (): Promise<FeatureFlags> => {
 
 export type WorldWithMembership = World & {
   owner_id: string;
-  world_members: { user_id: string; role: string; age_confirmed_at: string | null }[];
+  world_members: { user_id: string; age_confirmed_at: string | null }[];
 };
 
 /**
@@ -96,7 +97,7 @@ export const getWorldById = cache(async (worldId: string): Promise<WorldWithMemb
   const { data, error } = await supabase
     .from("worlds")
     .select(
-      "id, name, description, owner_id, banner_url, icon_url, color, visibility, restrict_inventory, restrict_skills, enable_inventory, enable_skills, enable_faceclaims, enable_map, enable_wiki, allows_real_avatars, allows_illustrated_avatars, timeline_enabled, timeline_config, is_age_restricted, wiki_label, home_layout, announcement_html, announcement_size, home_grid, home_body_color, home_panel_color, home_show_stats, home_grid_gap, world_members(user_id, role, age_confirmed_at)",
+      "id, name, description, owner_id, banner_url, icon_url, color, visibility, restrict_inventory, restrict_skills, enable_inventory, enable_skills, enable_faceclaims, enable_map, enable_wiki, allows_real_avatars, allows_illustrated_avatars, timeline_enabled, timeline_config, is_age_restricted, wiki_label, home_layout, announcement_html, announcement_size, home_grid, home_body_color, home_panel_color, home_show_stats, home_grid_gap, world_members(user_id, age_confirmed_at)",
     )
     .eq("id", worldId)
     .maybeSingle();
@@ -191,16 +192,43 @@ export const getChatroomsNav = cache(async (worldId: string): Promise<NavRoom[]>
   }));
 });
 
+export type WorldMembershipData = {
+  roles: WorldRoleRow[];
+  membership: WorldMembership | null;
+};
+
 /**
- * Droits d'admin sur un monde (`is_world_admin`), mémoïsée par (worldId, userId).
- * Même motif que ci-dessus : `WorldSidebar` et `WorldHomeContent` la demandaient
- * séparément avec des arguments identiques.
+ * Rôles du monde et appartenance de l'utilisateur courant, mémoïsés par
+ * `worldId`. Remplace l'ancien RPC `is_world_admin` : `WorldSidebar`,
+ * `WorldHomeContent` et `ChatRoomContent` en tirent chacun les permissions
+ * précises dont ils ont besoin, sur une seule paire de requêtes.
  */
-export const getIsWorldAdmin = cache(async (worldId: string, userId: string | null): Promise<boolean> => {
-  if (!userId) return false;
+export const getWorldMembership = cache(async (worldId: string): Promise<WorldMembershipData> => {
+  const [world, userId] = await Promise.all([getWorldById(worldId), getCurrentUserId()]);
+  if (!world) return { roles: [], membership: null };
   const supabase = await createClient();
-  const { data } = await supabase.rpc("is_world_admin", { wid: worldId, uid: userId });
-  return !!data;
+  const [{ data: roles, error: rolesError }, { data: mine, error: mineError }] = await Promise.all([
+    supabase
+      .from("world_roles")
+      .select("id, world_id, name, color, lucide_icon, position, permissions, is_default, mentionable, hoist")
+      .eq("world_id", worldId),
+    userId
+      ? supabase.from("world_member_roles").select("role_id").eq("world_id", worldId).eq("user_id", userId)
+      : Promise.resolve({ data: [] as { role_id: string }[], error: null }),
+  ]);
+  if (rolesError) console.error("[getWorldMembership] rôles du monde %s illisibles : %s", worldId, rolesError.message);
+  if (mineError) console.error("[getWorldMembership] rôles de %s dans %s illisibles : %s", userId, worldId, mineError.message);
+  const allRoles = sortRolesByPosition((roles ?? []) as WorldRoleRow[]);
+  return {
+    roles: allRoles,
+    membership: buildMembership({
+      userId,
+      ownerId: world.owner_id,
+      isMember: (world.world_members ?? []).some((m) => m.user_id === userId),
+      roles: allRoles,
+      myRoleIds: ((mine ?? []) as { role_id: string }[]).map((r) => r.role_id),
+    }),
+  };
 });
 
 /**

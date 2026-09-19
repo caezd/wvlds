@@ -12,7 +12,7 @@ vi.mock("@/app/(protected)/w/actions", () => ({
 }));
 
 // create_chatroom fixé à true ici : ce fichier teste uniquement l'effet de
-// `canPost` (prop par rendu), pas celui du feature flag lui-même.
+// `messages.post` (permission par rendu), pas celui du feature flag lui-même.
 vi.mock("@/components/providers/FeatureFlagsProvider", () => ({
   useFeatureFlags: () => ({
     create_chatroom: true,
@@ -43,10 +43,8 @@ function baseProps(canPost: boolean) {
     world: { id: "world-1", name: "Monde", owner_id: "user-1", home_layout: ["categories", "composer", "chatrooms"] },
     worldId: "world-1",
     userId: "user-1",
-    canAdmin: false,
+    permissions: (canPost ? ["messages.post"] : []) as string[],
     isShared: true,
-    canEditTabs: false,
-    canPost,
     initialRooms: [],
     initialPersonas: [],
     initialPrefs: null,

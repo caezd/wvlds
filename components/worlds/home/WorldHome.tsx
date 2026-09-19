@@ -19,6 +19,7 @@ import type { AsidePersona } from "@/components/personas/WorldPersonaAsideClient
 import type { InitialWorldMap } from "../map/WorldMap";
 import { toggleWorldFavorite } from "@/app/(protected)/w/actions";
 import { compactHomeGridRows, resolveHomeGridGap, resolveWorldHomeGrid } from "./worldHomeGrid";
+import { permissionListHas, type WorldPermission } from "@/lib/worldPermissions";
 // Modale rarement ouverte : même traitement que les onglets ci-dessous.
 const SearchCenter = dynamic(() =>
   import("@/components/chatrooms/search/SearchCenter").then((m) => m.SearchCenter),
@@ -49,10 +50,8 @@ export function WorldHome({
   world,
   worldId,
   userId,
-  canAdmin,
+  permissions,
   isShared,
-  canEditTabs,
-  canPost,
   initialRooms,
   initialCategories,
   initialWidgetData = {},
@@ -69,10 +68,9 @@ export function WorldHome({
   world: HeroWorld;
   worldId: string;
   userId: string | null;
-  canAdmin: boolean;
+  /** Permissions effectives du membre dans ce monde (cf. lib/worldPermissions). */
+  permissions: readonly string[];
   isShared: boolean;
-  canEditTabs: boolean;
-  canPost: boolean;
   initialRooms: Room[];
   /** Catégories chargées côté serveur, partagées avec WorldSidebar. */
   initialCategories?: ChatroomCategory[];
@@ -95,8 +93,13 @@ export function WorldHome({
   const { create_chatroom, world_map, world_catalogue, world_timeline } = useFeatureFlags();
   const router = useRouter();
 
+  const can = (perm: WorldPermission) => permissionListHas(permissions, perm);
+  const canPost = can("messages.post");
+  const canOpenSettings =
+    can("world.settings") || can("roles.manage") || can("categories.manage") || can("relations.manage");
+
   const hasTimeline = world_timeline && !!world.timeline_enabled && !!world.timeline_config;
-  const _hasCatalogue = world_catalogue && (!!(world.restrict_inventory || world.restrict_skills) || canEditTabs);
+  const _hasCatalogue = world_catalogue && (!!(world.restrict_inventory || world.restrict_skills) || can("catalog.edit"));
 
   const [isFavorite, setIsFavorite] = useState(initialPrefs?.is_favorite ?? false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -168,7 +171,7 @@ export function WorldHome({
   const showTimeline = view === "timeline";
   const showMembers = view === "members";
   const showPersonas = view === "personas";
-  const showSettings = view === "settings" && canAdmin;
+  const showSettings = view === "settings" && canOpenSettings;
 
   return (
     <>
@@ -186,7 +189,7 @@ export function WorldHome({
           <WorldMembersPanel
             worldId={worldId}
             ownerId={world.owner_id}
-            canManage={canAdmin}
+            canManage={can("members.manage")}
             isShared={isShared}
           />
         ) : showPersonas ? (
@@ -201,12 +204,12 @@ export function WorldHome({
           <RelationsCanvas
             worldId={worldId}
             userId={userId ?? ""}
-            canAdmin={canAdmin}
+            canAdmin={can("relations.manage")}
           />
         ) : showCatalogue ? (
           <WorldCatalogue
             worldId={worldId}
-            canEdit={canEditTabs}
+            canEdit={can("catalog.edit")}
             inventoryEnabled={world.enable_inventory !== false}
             inventoryRestricted={!!world.restrict_inventory}
             skillsEnabled={world.enable_skills !== false}
@@ -216,7 +219,7 @@ export function WorldHome({
         ) : showWiki ? (
           <WorldWiki
             worldId={worldId}
-            canEdit={canEditTabs}
+            canEdit={can("wiki.edit")}
             initialSidebarWidth={initialPrefs?.wiki_sidebar_width}
             initialPanelWidth={initialPrefs?.wiki_panel_width}
             label={world.wiki_label}
@@ -225,7 +228,7 @@ export function WorldHome({
         ) : showMap && world_map ? (
           <WorldMap
             worldId={worldId}
-            canEdit={canEditTabs}
+            canEdit={can("map.edit")}
             canPost={canPost && create_chatroom}
             initialMap={initialMap}
             initialMapId={initialMapId}

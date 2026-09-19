@@ -4,10 +4,11 @@ import { TABLE, CHAT_MESSAGES_PAGE_SIZE } from "@/lib/constants";
 import { decryptMessage } from "@/lib/crypto";
 import { aggregateChoiceVotes } from "@/lib/choiceVotes";
 import type { ChatMessageWithPersona, Persona, ChoiceVoteSummary } from "@/types/db";
-import { canMemberPost, canEditChatroom, canManageWorld } from "@/lib/worldPermissions";
-import { getChatroomsNav, getFollowedChatroomIds, type NavRoom } from "@/lib/currentRequest";
+import { canEditChatroom, hasWorldPermission } from "@/lib/worldPermissions";
+import { getChatroomsNav, getFollowedChatroomIds, getWorldMembership, type NavRoom, type WorldMembershipData } from "@/lib/currentRequest";
 import type { ChatroomWithWorld } from "./getChatroom";
 import { WikiLinkProvider } from "@/components/worlds/wiki/WikiLinkContext";
+import { WorldMembershipProvider } from "@/components/providers/WorldMembershipProvider";
 
 export default async function ChatRoomContent({
   id,
@@ -64,18 +65,13 @@ export default async function ChatRoomContent({
   const rawWorld = chatroom.worlds as unknown;
   const worldData = (Array.isArray(rawWorld) ? rawWorld[0] : rawWorld) as { id: string; name: string; owner_id?: string; restrict_inventory?: boolean | null; restrict_skills?: boolean | null; timeline_enabled?: boolean | null; timeline_config?: unknown; world_members?: { user_id: string }[] } | null | undefined;
 
-  // Est-on déjà certain d'être owner du monde ? Si oui, inutile d'interroger
-  // `world_members` pour connaître son rôle.
-  const isWorldOwner = !!worldData?.owner_id && userId === worldData.owner_id;
-  const needMembership = !!chatroom.world_id && !isWorldOwner;
-
   // Requêtes dépendant de ce qui précède (messageIds, world_id) mais
   // indépendantes entre elles → en parallèle : réactions, nav des salons du
-  // monde, et rôle de l'utilisateur dans le monde (si nécessaire).
+  // monde, et rôles de l'utilisateur dans le monde.
   type ReactionRow = { message_id: number; emoji: string; user_id: string };
   type VoteRow = { message_id: number; option_id: string; user_id: string };
 
-  const [reactionRows, voteRows, navRooms, membership, followedIds, personaGroupColors, challengeBadges] = await Promise.all([
+  const [reactionRows, voteRows, navRooms, worldMembership, followedIds, personaGroupColors, challengeBadges] = await Promise.all([
     (async (): Promise<ReactionRow[]> => {
       if (!messageIds.length) return [];
       const { data: rows } = await supabase
@@ -98,16 +94,10 @@ export default async function ChatRoomContent({
     // layout) : c'est la requête la plus lourde du chemin chaud, elle était
     // payée deux fois par rendu. Le repli défensif vit désormais dans le getter.
     chatroom.world_id ? getChatroomsNav(chatroom.world_id) : Promise.resolve([] as NavRoom[]),
-    (async (): Promise<{ role: string } | null> => {
-      if (!needMembership) return null;
-      const { data } = await supabase
-        .from("world_members")
-        .select("role")
-        .eq("world_id", chatroom.world_id!)
-        .eq("user_id", userId)
-        .maybeSingle();
-      return data as { role: string } | null;
-    })(),
+    // Mémoïsé et partagé avec `WorldSidebar`.
+    chatroom.world_id
+      ? getWorldMembership(chatroom.world_id)
+      : Promise.resolve({ roles: [], membership: null } as WorldMembershipData),
     // Mémoïsé et partagé avec `WorldSidebar`, qui charge de toute façon la liste
     // complète des salons suivis pour sa section « Suivi ».
     getFollowedChatroomIds(),
@@ -190,14 +180,14 @@ export default async function ChatRoomContent({
 
   // Droits d'édition / d'admin monde, dérivés des données déjà chargées.
   // Règles partagées avec le reste de l'app (lib/worldPermissions.ts), elles-
-  // mêmes alignées sur les policies RLS (`chatrooms_update_authenticated_merged`,
-  // `is_world_editor`) — sinon le client cache des actions pourtant permises en base.
+  // mêmes alignées sur les policies RLS (`chatrooms_update`, `chat_messages_insert`)
+  // — sinon le client cache des actions pourtant permises en base.
   const isCreator = chatroom.created_by === userId;
-  const role = membership?.role ?? null;
-  const canEdit = canEditChatroom(isCreator, role, isWorldOwner);
-  const canWorldAdmin = canManageWorld(role, isWorldOwner);
+  const { membership, roles: worldRoles } = worldMembership;
+  const canEdit = canEditChatroom(isCreator, membership);
+  const canWorldAdmin = hasWorldPermission(membership, "world.settings");
 
-  const canPost = canMemberPost(role, isWorldOwner);
+  const canPost = hasWorldPermission(membership, "messages.post");
 
   // Chatrooms du même world (pour l'aside), déjà chargés ci-dessus.
   const initialRoomsSafe = navRooms;
@@ -205,6 +195,14 @@ export default async function ChatRoomContent({
   return (
     // Les `[[liens]]` d'un message mènent au wiki du monde — sans monde,
     // ils restent visiblement cassés, comme avant.
+    <WorldMembershipProvider
+      worldId={chatroom.world_id ?? ""}
+      ownerId={worldData?.owner_id ?? ""}
+      userId={userId}
+      isMember={!!membership}
+      roles={worldRoles}
+      myRoleIds={membership?.roles.map((r) => r.id) ?? []}
+    >
     <WikiLinkProvider worldId={chatroom.world_id ?? ""}>
     <ChatRoomView
       chatId={id}
@@ -243,5 +241,6 @@ export default async function ChatRoomContent({
       initialChallengeBadges={challengeBadges}
     />
     </WikiLinkProvider>
+    </WorldMembershipProvider>
   );
 }

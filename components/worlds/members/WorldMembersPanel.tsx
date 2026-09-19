@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import { Search, Users } from "lucide-react";
@@ -9,40 +9,44 @@ import { cn } from "@/lib/utils";
 import { getLeadingLetter, getInitials } from "@/lib/textFormatting";
 import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 import { useGlobalPresence } from "@/components/providers/PresenceProvider";
+import { useWorldMembership } from "@/components/providers/WorldMembershipProvider";
 import { fetchPersonasByMember, type WorldMemberPersona } from "@/lib/worldMemberPersonas";
+import { fetchWorldMembers } from "@/lib/worldMembers";
+import { highestHoistedRole, sortRolesByPosition, type WorldRoleRow } from "@/lib/worldPermissions";
 import { ChatroomAvatarWithPresence } from "@/components/chatrooms/persona/ChatroomAvatarWithPresence";
 import { PresenceDot } from "@/components/avatars/PresenceDot";
 import { UserProfileSheetTrigger } from "@/components/profile/UserProfileSheetTrigger";
 import { PersonaProfileSheetTrigger } from "@/components/personas/PersonaProfileSheetTrigger";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
+import { RoleChip } from "./RoleChip";
+import { MemberManageMenu } from "./MemberManageMenu";
 
 const WorldInviteDialog = dynamic(() => import("./WorldInviteDialog").then((m) => m.WorldInviteDialog));
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
-type Role = "owner" | "admin" | "editor" | "player" | "viewer";
 type PresenceState = "online" | "away" | "offline";
-
-const ROLE_ORDER: Record<Role, number> = {
-  owner: 0, admin: 1, editor: 2, player: 3, viewer: 4,
-};
 
 const PRESENCE_ORDER: Record<PresenceState, number> = { online: 0, away: 1, offline: 2 };
 
-type Member = {
+type MemberRow = {
   user_id: string;
-  role: string;
+  isOwner: boolean;
+  role_ids: string[];
   username: string | null;
   avatar_url: string | null;
   personas: WorldMemberPersona[];
 };
 
-const MAX_PERSONA_CHIPS = 4;
+/** Un membre avec ses rôles résolus, du plus haut au plus bas. */
+type Member = MemberRow & { roles: WorldRoleRow[] };
 
-function isRole(role: string): role is Role {
-  return role in ROLE_ORDER;
-}
+/** Clés de la section « Propriétaire » et de celle des membres sans rôle « hoist ». */
+const OWNER_GROUP = "__owner__";
+const OTHERS_GROUP = "__others__";
+
+const MAX_PERSONA_CHIPS = 4;
 
 function displayNameOf(member: Pick<Member, "username" | "user_id">) {
   return member.username ? `@${member.username}` : member.user_id.slice(0, 8);
@@ -80,7 +84,16 @@ function PersonaChip({ persona, userId }: { persona: WorldMemberPersona; userId:
 
 // ── MemberCard ───────────────────────────────────────────────────────────────
 
-function MemberCard({ member, presence }: { member: Member; presence: PresenceState }) {
+function MemberCard({
+  member,
+  presence,
+  manage,
+}: {
+  member: Member;
+  presence: PresenceState;
+  /** Le menu « ⋯ », quand le lecteur peut gérer ce membre. */
+  manage?: ReactNode;
+}) {
   const t = useTranslations("worlds.members");
   const tPresence = useTranslations("presence");
   const displayName = displayNameOf(member);
@@ -106,14 +119,24 @@ function MemberCard({ member, presence }: { member: Member; presence: PresenceSt
 
         <div className="min-w-0 flex-1 pt-0.5">
           <p className="truncate text-sm font-semibold">{displayName}</p>
-          {/* Le rôle est le titre de la section : pas de badge ici. La pastille
-              accompagne le statut, comme sur la fiche de profil. */}
+          {/* La pastille accompagne le statut, comme sur la fiche de profil. */}
           <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
             <PresenceDot state={presence} />
             {tPresence(presence)}
           </p>
         </div>
+        {manage}
       </div>
+
+      {/* Un membre peut cumuler plusieurs rôles : la section ne dit que le plus
+          haut, les puces disent tous les autres. */}
+      {member.roles.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1" data-testid="member-roles">
+          {member.roles.map((r) => (
+            <RoleChip key={r.id} role={r} />
+          ))}
+        </div>
+      )}
 
       {shown.length > 0 ? (
         <div className="flex flex-wrap items-center gap-1.5">
@@ -136,25 +159,28 @@ function MemberCard({ member, presence }: { member: Member; presence: PresenceSt
 // ── RoleSection ──────────────────────────────────────────────────────────────
 
 function RoleSection({
-  role,
+  heading,
+  color,
   members,
   presenceOf,
+  manageFor,
 }: {
-  role: string;
+  heading: string;
+  color?: string;
   members: Member[];
   presenceOf: (userId: string) => PresenceState;
+  manageFor: (m: Member) => ReactNode;
 }) {
-  const t = useTranslations("worlds.members");
-  const heading = isRole(role) ? t(`rolesPlural.${role}`, { count: members.length }) : role;
   return (
     <section>
-      <h3 className="mb-3 text-sm font-semibold text-foreground">
+      <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
+        {color && <span aria-hidden className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />}
         {heading}
-        <span className="ml-1.5 text-xs font-normal text-muted-foreground">{members.length}</span>
+        <span className="text-xs font-normal text-muted-foreground">{members.length}</span>
       </h3>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {members.map((m) => (
-          <MemberCard key={m.user_id} member={m} presence={presenceOf(m.user_id)} />
+          <MemberCard key={m.user_id} member={m} presence={presenceOf(m.user_id)} manage={manageFor(m)} />
         ))}
       </div>
     </section>
@@ -171,14 +197,28 @@ export function WorldMembersPanel({
 }: {
   worldId: string;
   ownerId: string;
+  /** `members.manage` : inviter, attribuer des rôles, retirer. */
   canManage: boolean;
   isShared: boolean;
 }) {
   const t = useTranslations("worlds.members");
   const supabase = useMemo(() => createClient(), []);
   const { getUserPresence } = useGlobalPresence();
-  const [members, setMembers] = useState<Member[]>([]);
+  const { roles: worldRoles, membership } = useWorldMembership();
+  const roleById = useMemo(() => new Map(worldRoles.map((r) => [r.id, r])), [worldRoles]);
+  const [rows, setRows] = useState<MemberRow[]>([]);
   const [loading, setLoading] = useState(isShared);
+
+  // Les rôles sont résolus au rendu, pas au chargement : un rôle renommé ou
+  // recoloré dans les réglages se reflète ici sans recharger la liste.
+  const members = useMemo<Member[]>(
+    () =>
+      rows.map((row) => ({
+        ...row,
+        roles: sortRolesByPosition(row.role_ids.map((id) => roleById.get(id)).filter((r): r is WorldRoleRow => !!r)),
+      })),
+    [rows, roleById],
+  );
   const [query, setQuery] = useState("");
   const [onlineOnly, setOnlineOnly] = useState(false);
 
@@ -191,34 +231,43 @@ export function WorldMembersPanel({
       if (!q) return true;
       return (
         normalize(displayNameOf(m)).includes(q) ||
-        m.personas.some((p) => normalize(p.name).includes(q))
+        m.personas.some((p) => normalize(p.name).includes(q)) ||
+        m.roles.some((r) => normalize(r.name).includes(q))
       );
     });
   }, [members, query, onlineOnly, getUserPresence]);
 
-  // Par rôle, puis les membres en ligne d'abord, puis par nom.
+  // Le propriétaire d'abord, puis une section par rôle « hoist » (du plus haut
+  // au plus bas), puis les autres membres ; dans chaque section les membres en
+  // ligne d'abord, puis par nom.
   const grouped = useMemo(() => {
     const map = new Map<string, Member[]>();
     for (const m of filtered) {
-      if (!map.has(m.role)) map.set(m.role, []);
-      map.get(m.role)!.push(m);
+      const key = m.isOwner ? OWNER_GROUP : (highestHoistedRole(m.roles)?.id ?? OTHERS_GROUP);
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(m);
     }
-    const roles = Array.from(map.keys()).sort(
-      (a, b) => (isRole(a) ? ROLE_ORDER[a] : 99) - (isRole(b) ? ROLE_ORDER[b] : 99),
-    );
-    return roles.map((role) => ({
-      role,
-      members: map
-        .get(role)!
-        .slice()
-        .sort((a, b) => {
-          const byPresence =
-            PRESENCE_ORDER[getUserPresence(a.user_id)] - PRESENCE_ORDER[getUserPresence(b.user_id)];
-          if (byPresence !== 0) return byPresence;
-          return displayNameOf(a).localeCompare(displayNameOf(b), undefined, { sensitivity: "base" });
-        }),
-    }));
-  }, [filtered, getUserPresence]);
+    const order = [
+      OWNER_GROUP,
+      ...sortRolesByPosition(worldRoles.filter((r) => r.hoist)).map((r) => r.id),
+      OTHERS_GROUP,
+    ];
+    return order
+      .filter((key) => map.has(key))
+      .map((key) => ({
+        key,
+        role: roleById.get(key) ?? null,
+        members: map
+          .get(key)!
+          .slice()
+          .sort((a, b) => {
+            const byPresence =
+              PRESENCE_ORDER[getUserPresence(a.user_id)] - PRESENCE_ORDER[getUserPresence(b.user_id)];
+            if (byPresence !== 0) return byPresence;
+            return displayNameOf(a).localeCompare(displayNameOf(b), undefined, { sensitivity: "base" });
+          }),
+      }));
+  }, [filtered, getUserPresence, worldRoles, roleById]);
 
   useEffect(() => {
     if (!isShared) return;
@@ -229,49 +278,48 @@ export function WorldMembersPanel({
   async function fetchMembers() {
     setLoading(true);
 
-    const [{ data: worldRow }, { data: memberRows }] = await Promise.all([
-      supabase.from("worlds").select("owner_id").eq("id", worldId).maybeSingle(),
-      supabase.from("world_members").select("user_id, role").eq("world_id", worldId),
-    ]);
-
-    const fetchedOwner = (worldRow as unknown as { owner_id?: string | null } | null)?.owner_id ?? null;
-
-    type RawMember = { user_id: string; role: string };
-    const memberMap = new Map<string, RawMember>(
-      ((memberRows ?? []) as RawMember[]).map((m) => [m.user_id, m]),
-    );
-    if (fetchedOwner && !memberMap.has(fetchedOwner)) {
-      memberMap.set(fetchedOwner, { user_id: fetchedOwner, role: "owner" });
-    }
-    const allRows = Array.from(memberMap.values());
-    const allUserIds = allRows.map((r) => r.user_id);
-
     // La déduplication (membre, persona) est faite par Postgres — la requête
     // `chatrooms` puis les 2000 `chat_messages` qu'elle servait à filtrer ne
     // sont plus nécessaires (cf. lib/worldMemberPersonas.ts, migration 118).
-    const [{ data: profileRows }, personasByUser] = await Promise.all([
-      supabase.from("profiles").select("id, username, avatar_url").in("id", allUserIds),
+    const [fetched, personasByUser] = await Promise.all([
+      fetchWorldMembers(supabase, worldId, ownerId),
       fetchPersonasByMember(supabase, worldId),
     ]);
 
-    type ProfileRow = { id: string; username: string | null; avatar_url: string | null };
-    const profileByUser = new Map<string, ProfileRow>(
-      ((profileRows ?? []) as ProfileRow[]).map((p) => [p.id, p]),
-    );
-
-    setMembers(
-      allRows.map((row) => {
-        const profile = profileByUser.get(row.user_id) ?? null;
-        return {
-          user_id: row.user_id,
-          role: row.role,
-          username: profile?.username ?? null,
-          avatar_url: profile?.avatar_url ?? null,
-          personas: personasByUser.get(row.user_id) ?? [],
-        };
-      }),
+    setRows(
+      fetched.map((row) => ({
+        user_id: row.user_id,
+        isOwner: row.user_id === ownerId,
+        role_ids: row.role_ids,
+        username: row.username,
+        avatar_url: row.avatar_url,
+        personas: personasByUser.get(row.user_id) ?? [],
+      })),
     );
     setLoading(false);
+  }
+
+  function manageFor(m: Member): ReactNode {
+    if (!canManage || m.isOwner || !membership) return null;
+    return (
+      <MemberManageMenu
+        worldId={worldId}
+        member={m}
+        memberRoles={m.roles}
+        membership={membership}
+        allRoles={worldRoles}
+        onRolesChanged={(userId, roleIds) =>
+          setRows((prev) => prev.map((x) => (x.user_id === userId ? { ...x, role_ids: roleIds } : x)))
+        }
+        onRemoved={(userId) => setRows((prev) => prev.filter((x) => x.user_id !== userId))}
+      />
+    );
+  }
+
+  function headingOf(g: { key: string; role: WorldRoleRow | null }) {
+    if (g.key === OWNER_GROUP) return t("ownerSection");
+    if (g.key === OTHERS_GROUP) return t("othersSection");
+    return g.role?.name ?? "";
   }
 
   const empty = !isShared || (!loading && members.length === 0);
@@ -288,7 +336,7 @@ export function WorldMembersPanel({
             )}
           </>
         }
-        right={isShared && canManage && <WorldInviteDialog worldId={worldId} ownerId={ownerId} canManage={canManage} />}
+        right={isShared && canManage && <WorldInviteDialog worldId={worldId} />}
       />
 
       <ScrollArea className="flex-1 min-h-0">
@@ -341,7 +389,14 @@ export function WorldMembersPanel({
             </p>
           ) : (
             grouped.map((g) => (
-              <RoleSection key={g.role} role={g.role} members={g.members} presenceOf={getUserPresence} />
+              <RoleSection
+                key={g.key}
+                heading={headingOf(g)}
+                color={g.role?.color}
+                members={g.members}
+                presenceOf={getUserPresence}
+                manageFor={manageFor}
+              />
             ))
           )}
         </div>

@@ -7,6 +7,20 @@ import { toast } from "sonner";
 import type { World } from "@/types/worlds";
 
 vi.mock("@/lib/supabase/client", () => ({ createClient: vi.fn() }));
+// Le lecteur est le propriétaire : tous les onglets ont quelque chose à montrer.
+vi.mock("@/components/providers/WorldMembershipProvider", () => ({
+  useWorldMembership: () => ({
+    worldId: "w1",
+    ownerId: "owner",
+    roles: [],
+    membership: { userId: "owner", isOwner: true, roles: [], permissions: new Set(["administrator"]), rank: 2147483647 },
+    can: () => true,
+    refresh: vi.fn(),
+  }),
+}));
+vi.mock("@/components/worlds/settings/WorldRolesTab", () => ({
+  WorldRolesTab: () => <div data-testid="roles-tab" />,
+}));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),

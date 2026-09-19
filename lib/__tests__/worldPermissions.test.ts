@@ -1,225 +1,213 @@
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import {
-  isWorldMember,
-  canEditContent,
-  canManageWorld,
-  isWorldOwnerRole,
-  canMemberPost,
-  canLeaveWorld,
+  OWNER_RANK,
+  WORLD_PERMISSIONS,
+  WORLD_PERMISSION_GROUPS,
+  buildMembership,
   canEditChatroom,
   canEditSystemTabs,
+  canLeaveWorld,
+  canManageMember,
+  canManageRole,
+  canOpenWorldSettings,
+  grantablePermissions,
+  hasWorldPermission,
+  highestHoistedRole,
+  permissionListHas,
+  rankOf,
+  sortRolesByPosition,
+  type WorldRoleRow,
 } from "@/lib/worldPermissions";
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── Fixtures ──────────────────────────────────────────────────────────────────
 
-const ROLES_ALL = ["owner", "admin", "editor", "player", "viewer"] as const;
-const ROLES_EDITOR_PLUS = ["owner", "admin", "editor"] as const;
-const ROLES_ADMIN_PLUS = ["owner", "admin"] as const;
-const ROLES_BELOW_EDITOR = ["player", "viewer"] as const;
-const ROLES_BELOW_ADMIN = ["editor", "player", "viewer"] as const;
-
-// ── isWorldMember ─────────────────────────────────────────────────────────────
-
-describe("isWorldMember", () => {
-  it.each(ROLES_ALL)("rôle %s → membre", (role) => {
-    expect(isWorldMember(role, false)).toBe(true);
-  });
-
-  it("owner direct (isWorldOwner=true) sans entrée world_members → membre", () => {
-    expect(isWorldMember(null, true)).toBe(true);
-  });
-
-  it("null sans isWorldOwner → non membre", () => {
-    expect(isWorldMember(null, false)).toBe(false);
-  });
-});
-
-// ── canEditContent (is_world_editor) ─────────────────────────────────────────
-
-describe("canEditContent — is_world_editor", () => {
-  it.each(ROLES_EDITOR_PLUS)("rôle %s → peut éditer le contenu", (role) => {
-    expect(canEditContent(role, false)).toBe(true);
-  });
-
-  it.each(ROLES_BELOW_EDITOR)("rôle %s → ne peut pas éditer le contenu", (role) => {
-    expect(canEditContent(role, false)).toBe(false);
-  });
-
-  it("owner direct sans rôle → peut éditer le contenu", () => {
-    expect(canEditContent(null, true)).toBe(true);
-  });
-
-  it("viewer avec isWorldOwner=true → peut éditer (owner prime sur le rôle)", () => {
-    expect(canEditContent("viewer", true)).toBe(true);
-  });
-});
-
-// ── canManageWorld (is_world_admin) ───────────────────────────────────────────
-
-describe("canManageWorld — is_world_admin", () => {
-  it.each(ROLES_ADMIN_PLUS)("rôle %s → peut gérer le monde", (role) => {
-    expect(canManageWorld(role, false)).toBe(true);
-  });
-
-  it.each(ROLES_BELOW_ADMIN)("rôle %s → ne peut pas gérer le monde", (role) => {
-    expect(canManageWorld(role, false)).toBe(false);
-  });
-
-  it("owner direct sans rôle → peut gérer le monde", () => {
-    expect(canManageWorld(null, true)).toBe(true);
-  });
-
-  it("editor avec isWorldOwner=true → peut gérer (owner prime)", () => {
-    expect(canManageWorld("editor", true)).toBe(true);
-  });
-});
-
-// ── isWorldOwnerRole ──────────────────────────────────────────────────────────
-
-describe("isWorldOwnerRole", () => {
-  it("rôle owner → true", () => {
-    expect(isWorldOwnerRole("owner")).toBe(true);
-  });
-
-  it.each(["admin", "editor", "player", "viewer"] as const)(
-    "rôle %s → false",
-    (role) => {
-      expect(isWorldOwnerRole(role)).toBe(false);
-    },
-  );
-
-  it("null → false", () => {
-    expect(isWorldOwnerRole(null)).toBe(false);
-  });
-});
-
-// ── canMemberPost ─────────────────────────────────────────────────────────────
-
-describe("canMemberPost", () => {
-  const CAN_POST = ["owner", "admin", "editor", "player"] as const;
-
-  it.each(CAN_POST)("rôle %s → peut poster", (role) => {
-    expect(canMemberPost(role, false)).toBe(true);
-  });
-
-  it("rôle viewer → ne peut pas poster", () => {
-    expect(canMemberPost("viewer", false)).toBe(false);
-  });
-
-  it("viewer avec isWorldOwner=true → peut poster (owner prime)", () => {
-    expect(canMemberPost("viewer", true)).toBe(true);
-  });
-
-  it("owner direct sans rôle → peut poster", () => {
-    expect(canMemberPost(null, true)).toBe(true);
-  });
-
-  it("null sans isWorldOwner → ne peut pas poster", () => {
-    expect(canMemberPost(null, false)).toBe(false);
-  });
-});
-
-// ── canLeaveWorld ─────────────────────────────────────────────────────────────
-
-describe("canLeaveWorld", () => {
-  const CAN_LEAVE = ["admin", "editor", "player", "viewer"] as const;
-
-  it.each(CAN_LEAVE)("rôle %s → peut quitter", (role) => {
-    expect(canLeaveWorld(role, false)).toBe(true);
-  });
-
-  it("rôle owner (world_members) → ne peut pas quitter", () => {
-    expect(canLeaveWorld("owner", false)).toBe(false);
-  });
-
-  it("owner direct (isWorldOwner=true) → ne peut pas quitter", () => {
-    expect(canLeaveWorld("admin", true)).toBe(false);
-  });
-
-  it("owner direct sans rôle → ne peut pas quitter", () => {
-    expect(canLeaveWorld(null, true)).toBe(false);
-  });
-});
-
-// ── canEditChatroom ───────────────────────────────────────────────────────────
-
-describe("canEditChatroom", () => {
-  describe("créateur de la chatroom", () => {
-    it.each(ROLES_ALL)("créateur avec rôle %s → peut éditer", (role) => {
-      expect(canEditChatroom(true, role, false)).toBe(true);
-    });
-
-    it("créateur sans rôle (owner direct) → peut éditer", () => {
-      expect(canEditChatroom(true, null, true)).toBe(true);
-    });
-  });
-
-  describe("non-créateur", () => {
-    it.each(ROLES_EDITOR_PLUS)(
-      "non-créateur avec rôle %s → peut éditer (editor+)",
-      (role) => {
-        expect(canEditChatroom(false, role, false)).toBe(true);
-      },
-    );
-
-    it.each(ROLES_BELOW_EDITOR)(
-      "non-créateur avec rôle %s → ne peut pas éditer",
-      (role) => {
-        expect(canEditChatroom(false, role, false)).toBe(false);
-      },
-    );
-
-    it("non-créateur owner direct → peut éditer", () => {
-      expect(canEditChatroom(false, null, true)).toBe(true);
-    });
-  });
-});
-
-// ── canEditSystemTabs ─────────────────────────────────────────────────────────
-
-describe("canEditSystemTabs", () => {
-  it("owner direct → peut modifier les tabs système", () => {
-    expect(canEditSystemTabs(true)).toBe(true);
-  });
-
-  it("non owner direct → ne peut pas modifier les tabs système", () => {
-    expect(canEditSystemTabs(false)).toBe(false);
-  });
-});
-
-// ── Matrice complète par rôle ─────────────────────────────────────────────────
-// Vérifie que chaque rôle a exactement les permissions attendues.
-
-describe("matrice complète des permissions par rôle", () => {
-  type Matrix = {
-    role: string;
-    isOwner: boolean;
-    member: boolean;
-    post: boolean;
-    editContent: boolean;
-    manageWorld: boolean;
-    leave: boolean;
+function role(over: Partial<WorldRoleRow> & { id: string }): WorldRoleRow {
+  return {
+    world_id: "w1",
+    name: over.id,
+    color: "#000000",
+    lucide_icon: null,
+    position: 0,
+    permissions: [],
+    is_default: false,
+    mentionable: false,
+    hoist: false,
+    ...over,
   };
+}
 
-  const matrix: Matrix[] = [
-    { role: "owner",  isOwner: false, member: true,  post: true,  editContent: true,  manageWorld: true,  leave: false },
-    { role: "admin",  isOwner: false, member: true,  post: true,  editContent: true,  manageWorld: true,  leave: true  },
-    { role: "editor", isOwner: false, member: true,  post: true,  editContent: true,  manageWorld: false, leave: true  },
-    { role: "player", isOwner: false, member: true,  post: true,  editContent: false, manageWorld: false, leave: true  },
-    { role: "viewer", isOwner: false, member: true,  post: false, editContent: false, manageWorld: false, leave: true  },
-    // owner direct sans entrée world_members
-    { role: "null",   isOwner: true,  member: true,  post: true,  editContent: true,  manageWorld: true,  leave: false },
-  ];
+const ADMIN = role({ id: "admin", position: 30, permissions: ["administrator"], hoist: true });
+const EDITOR = role({ id: "editor", position: 20, permissions: ["wiki.edit", "map.edit", "messages.post"], hoist: true });
+const PLAYER = role({ id: "player", position: 10, permissions: ["messages.post", "chatrooms.create"], is_default: true });
+const VIEWER = role({ id: "viewer", position: 0 });
+const ROLES = [VIEWER, PLAYER, ADMIN, EDITOR];
 
-  it.each(matrix)(
-    "rôle=$role isOwner=$isOwner",
-    ({ role, isOwner, member, post, editContent, manageWorld, leave }) => {
-      const r = role === "null" ? null : role;
-      expect(isWorldMember(r, isOwner)).toBe(member);
-      expect(canMemberPost(r, isOwner)).toBe(post);
-      expect(canEditContent(r, isOwner)).toBe(editContent);
-      expect(canManageWorld(r, isOwner)).toBe(manageWorld);
-      expect(canLeaveWorld(r, isOwner)).toBe(leave);
-    },
-  );
+function member(myRoleIds: string[], userId = "u1") {
+  return buildMembership({ userId, ownerId: "owner", isMember: true, roles: ROLES, myRoleIds });
+}
+
+// ── Miroir de la migration ────────────────────────────────────────────────────
+
+describe("WORLD_PERMISSIONS — miroir de `world_permission_keys()`", () => {
+  it("égale, à l'ordre près, la liste de la migration 176", () => {
+    const sql = readFileSync(join(process.cwd(), "migrations", "176_world_roles.sql"), "utf-8");
+    const fn = sql.slice(sql.indexOf("FUNCTION public.world_permission_keys()"));
+    const body = fn.slice(fn.indexOf("ARRAY["), fn.indexOf("]::text[]"));
+    const inSql = [...body.matchAll(/'([a-z.]+)'/g)].map((m) => m[1]);
+    expect([...WORLD_PERMISSIONS].sort()).toEqual([...inSql].sort());
+  });
+
+  it("chaque groupe ne cite une permission qu'une fois", () => {
+    const all = Object.values(WORLD_PERMISSION_GROUPS).flat();
+    expect(new Set(all).size).toBe(all.length);
+  });
+});
+
+// ── buildMembership ───────────────────────────────────────────────────────────
+
+describe("buildMembership", () => {
+  it("rend null sans utilisateur, ou pour un non-membre qui n'est pas propriétaire", () => {
+    expect(buildMembership({ userId: null, ownerId: "o", isMember: true, roles: ROLES, myRoleIds: [] })).toBeNull();
+    expect(buildMembership({ userId: "u1", ownerId: "o", isMember: false, roles: ROLES, myRoleIds: [] })).toBeNull();
+  });
+
+  it("le propriétaire est administrateur, au rang maximal, même sans ligne de membre", () => {
+    const m = buildMembership({ userId: "owner", ownerId: "owner", isMember: false, roles: ROLES, myRoleIds: [] });
+    expect(m?.isOwner).toBe(true);
+    expect(m?.rank).toBe(OWNER_RANK);
+    expect(hasWorldPermission(m, "wiki.edit")).toBe(true);
+  });
+
+  it("un membre sans rôle a le rang -1 et aucune permission", () => {
+    const m = member([]);
+    expect(m?.rank).toBe(-1);
+    expect(m?.permissions.size).toBe(0);
+    expect(hasWorldPermission(m, "messages.post")).toBe(false);
+  });
+
+  it("cumule les permissions de plusieurs rôles et prend le rang du plus haut", () => {
+    const m = member(["player", "editor"]);
+    expect(m?.rank).toBe(20);
+    expect(m?.roles.map((r) => r.id)).toEqual(["editor", "player"]);
+    expect(hasWorldPermission(m, "chatrooms.create")).toBe(true);
+    expect(hasWorldPermission(m, "wiki.edit")).toBe(true);
+    expect(hasWorldPermission(m, "catalog.edit")).toBe(false);
+  });
+
+  it("ignore un identifiant de rôle inconnu et une permission inconnue", () => {
+    const weird = role({ id: "weird", position: 5, permissions: ["not.a.permission", "tags.manage"] });
+    const m = buildMembership({ userId: "u1", ownerId: "o", isMember: true, roles: [weird], myRoleIds: ["weird", "ghost"] });
+    expect([...(m?.permissions ?? [])]).toEqual(["tags.manage"]);
+  });
+});
+
+// ── hasWorldPermission / permissionListHas ────────────────────────────────────
+
+describe("hasWorldPermission", () => {
+  it("`administrator` vaut pour toute permission", () => {
+    const m = member(["admin"]);
+    for (const p of WORLD_PERMISSIONS) expect(hasWorldPermission(m, p)).toBe(true);
+  });
+
+  it("rend false pour null", () => {
+    expect(hasWorldPermission(null, "messages.post")).toBe(false);
+  });
+
+  it("permissionListHas applique la même règle à une liste sérialisée", () => {
+    expect(permissionListHas(["administrator"], "map.edit")).toBe(true);
+    expect(permissionListHas(["map.edit"], "map.edit")).toBe(true);
+    expect(permissionListHas(["map.edit"], "wiki.edit")).toBe(false);
+  });
+});
+
+// ── Hiérarchie ────────────────────────────────────────────────────────────────
+
+describe("canManageRole / canManageMember — la hiérarchie", () => {
+  const admin = member(["admin"]);
+  const editor = member(["editor"]);
+
+  it("il faut la permission ET un rôle strictement sous son rang", () => {
+    expect(canManageRole(admin, EDITOR)).toBe(true);
+    expect(canManageRole(admin, ADMIN)).toBe(false); // au niveau : non
+    expect(canManageRole(editor, PLAYER)).toBe(false); // pas de roles.manage
+  });
+
+  it("le propriétaire gère tout", () => {
+    const owner = buildMembership({ userId: "owner", ownerId: "owner", isMember: true, roles: ROLES, myRoleIds: [] });
+    expect(canManageRole(owner, ADMIN)).toBe(true);
+    expect(canManageMember(owner, 30)).toBe(true);
+  });
+
+  it("on ne touche qu'aux membres sous son rang", () => {
+    expect(canManageMember(admin, 20)).toBe(true);
+    expect(canManageMember(admin, 30)).toBe(false);
+    expect(canManageMember(admin, -1)).toBe(true);
+    expect(canManageMember(null, -1)).toBe(false);
+  });
+
+  it("rankOf : propriétaire au sommet, -1 sans rôle, sinon la plus haute position", () => {
+    expect(rankOf([], true)).toBe(OWNER_RANK);
+    expect(rankOf([], false)).toBe(-1);
+    expect(rankOf([PLAYER, EDITOR], false)).toBe(20);
+  });
+});
+
+describe("grantablePermissions — on ne confère que ce qu'on a", () => {
+  it("un administrateur (ou le propriétaire) peut tout conférer", () => {
+    expect(grantablePermissions(member(["admin"])).size).toBe(WORLD_PERMISSIONS.length);
+  });
+
+  it("un éditeur ne confère que ses propres permissions", () => {
+    expect([...grantablePermissions(member(["editor"]))].sort()).toEqual(["map.edit", "messages.post", "wiki.edit"]);
+  });
+
+  it("rien pour null", () => {
+    expect(grantablePermissions(null).size).toBe(0);
+  });
+});
+
+// ── Règles dérivées ───────────────────────────────────────────────────────────
+
+describe("règles dérivées", () => {
+  it("canLeaveWorld : tout membre sauf le propriétaire", () => {
+    expect(canLeaveWorld(member([]))).toBe(true);
+    expect(canLeaveWorld(buildMembership({ userId: "owner", ownerId: "owner", isMember: true, roles: ROLES, myRoleIds: [] }))).toBe(false);
+    expect(canLeaveWorld(null)).toBe(false);
+  });
+
+  it("canEditSystemTabs : le propriétaire direct seulement, même face à un administrateur", () => {
+    expect(canEditSystemTabs(member(["admin"]))).toBe(false);
+    expect(canEditSystemTabs(buildMembership({ userId: "owner", ownerId: "owner", isMember: true, roles: ROLES, myRoleIds: [] }))).toBe(true);
+  });
+
+  it("canEditChatroom : le créateur, ou `chatrooms.manage`", () => {
+    expect(canEditChatroom(true, null)).toBe(true);
+    expect(canEditChatroom(false, member(["editor"]))).toBe(false);
+    expect(canEditChatroom(false, member(["admin"]))).toBe(true);
+  });
+
+  it("canOpenWorldSettings : dès qu'un onglet a quelque chose à montrer", () => {
+    expect(canOpenWorldSettings(member(["player"]))).toBe(false);
+    const rolesOnly = role({ id: "r", position: 5, permissions: ["roles.manage"] });
+    const m = buildMembership({ userId: "u1", ownerId: "o", isMember: true, roles: [rolesOnly], myRoleIds: ["r"] });
+    expect(canOpenWorldSettings(m)).toBe(true);
+  });
+});
+
+// ── Tri et sections ───────────────────────────────────────────────────────────
+
+describe("sortRolesByPosition / highestHoistedRole", () => {
+  it("trie du plus haut au plus bas, puis par nom", () => {
+    const a = role({ id: "a", name: "Zeta", position: 10 });
+    const b = role({ id: "b", name: "Alpha", position: 10 });
+    expect(sortRolesByPosition([VIEWER, a, ADMIN, b]).map((r) => r.id)).toEqual(["admin", "b", "a", "viewer"]);
+  });
+
+  it("le plus haut rôle « hoist » donne la section ; aucun → null", () => {
+    expect(highestHoistedRole([PLAYER, EDITOR, ADMIN])?.id).toBe("admin");
+    expect(highestHoistedRole([PLAYER, VIEWER])).toBeNull();
+  });
 });

@@ -58,6 +58,8 @@ export const DB_TEXT_LIMITS = {
   "world_maps.label": 200,
   "world_persona_groups.name": 200,
   "world_relation_types.name": 200,
+  "world_roles.lucide_icon": 100,
+  "world_roles.name": 40,
   "world_wiki_page_annotations.anchor_prefix": 200,
   "world_wiki_page_annotations.anchor_quote": 1_000,
   "world_wiki_page_annotations.anchor_suffix": 200,

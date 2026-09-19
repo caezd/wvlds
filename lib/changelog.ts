@@ -8,6 +8,16 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-09 ──────────────────────────────────────────────────────────────
   {
     date: "2026-09",
+    tag: "Rôles",
+    text: "Les rôles d’un monde se créent dans ses réglages : nom, couleur, icône, et une liste de permissions à cocher (écrire, créer des salons, modifier le wiki, la carte, le catalogue, gérer les membres…). Un membre peut en cumuler plusieurs. Les rôles se classent en hiérarchie : on ne gère que ceux situés sous le sien, et l’on ne confère que ce que l’on possède. Chaque monde part avec Administrateur, Éditeur, Joueur et Spectateur.",
+  },
+  {
+    date: "2026-09",
+    tag: "Membres",
+    text: "Sur l’onglet Membres, les rôles s’attribuent depuis le menu de chaque carte, qui sert aussi à retirer un membre ; la liste se groupe par plus haut rôle. Le dialogue d’invitation propose un rôle ou les rôles par défaut du monde.",
+  },
+  {
+    date: "2026-09",
     tag: "Correctif",
     text: "Quand l’envoi de l’image d’une catégorie échoue, le recadrage reste affiché avec un message au lieu de se refermer sur une case vide, et l’envoi ne dépend plus de la vérification de session qu’un autre onglet pouvait bloquer.",
   },

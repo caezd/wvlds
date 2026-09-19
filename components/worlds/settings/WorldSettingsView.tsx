@@ -83,6 +83,8 @@ const SETTINGS_TAB_TRIGGER_CLASS =
     "relative shrink-0 px-0.5 py-3 text-sm font-medium text-muted-foreground whitespace-nowrap transition-colors hover:text-foreground data-[state=active]:text-foreground data-[state=active]:shadow-[inset_0_-2px_0_0_var(--color-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50";
 
 import { LabelWithHelp } from "./LabelWithHelp";
+import { WorldRolesTab } from "./WorldRolesTab";
+import { useWorldMembership } from "@/components/providers/WorldMembershipProvider";
 import { ERR_NON_AUTHENTIFIE } from "@/lib/actionErrors";
 import {
   worldSettingsSchema,
@@ -106,6 +108,19 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
     const supabase = createClient();
     const router = useRouter();
     const { public_worlds } = useFeatureFlags();
+    // Chaque onglet répond à une permission : un membre qui n'a que
+    // `roles.manage` voit l'onglet Rôles et rien d'autre.
+    const { can, membership } = useWorldMembership();
+    const tabs = {
+        appearance: can("world.settings"),
+        categories: can("world.settings") || can("categories.manage"),
+        home: can("world.settings"),
+        features: can("world.settings"),
+        relations: can("world.settings") || can("relations.manage"),
+        roles: can("world.settings") || can("roles.manage"),
+        community: public_worlds && can("world.settings"),
+    };
+    const firstTab = (Object.keys(tabs) as (keyof typeof tabs)[]).find((k) => tabs[k]) ?? "appearance";
     // L'id sert au préfixe `user-{id}/…` exigé par la policy du bucket. Pris
     // dans le contexte plutôt que par `auth.getUser()` : cet appel passait par
     // le verrou de session de supabase-js (navigator.locks), qu'un autre onglet
@@ -269,7 +284,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
             />
 
             <Form {...form}>
-                <Tabs defaultValue="appearance" className="flex min-h-0 flex-1 flex-col">
+                <Tabs defaultValue={firstTab} className="flex min-h-0 flex-1 flex-col">
                     <div className="shrink-0 shadow-[inset_0_-1px_0_0_var(--color-border-soft)]">
                         {/* ScrollArea plutôt qu'un simple `overflow-x-auto` : la
                             barre de défilement native (toujours visible sur
@@ -279,12 +294,25 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                             sur un écran étroit avec les 6 onglets. */}
                         <ScrollArea className="w-full">
                             <TabsPrimitive.List className="flex w-max items-center gap-6 px-4">
-                                <TabsPrimitive.Trigger value="appearance" className={SETTINGS_TAB_TRIGGER_CLASS}>Apparence</TabsPrimitive.Trigger>
-                                <TabsPrimitive.Trigger value="categories" className={SETTINGS_TAB_TRIGGER_CLASS}>{t("tabCategories")}</TabsPrimitive.Trigger>
-                                <TabsPrimitive.Trigger value="home" className={SETTINGS_TAB_TRIGGER_CLASS}>Page d&apos;accueil</TabsPrimitive.Trigger>
-                                <TabsPrimitive.Trigger value="features" className={SETTINGS_TAB_TRIGGER_CLASS}>Fonctions</TabsPrimitive.Trigger>
-                                <TabsPrimitive.Trigger value="relations" className={SETTINGS_TAB_TRIGGER_CLASS}>Relations</TabsPrimitive.Trigger>
-                                {public_worlds && (
+                                {tabs.appearance && (
+                                    <TabsPrimitive.Trigger value="appearance" className={SETTINGS_TAB_TRIGGER_CLASS}>{t("tabAppearance")}</TabsPrimitive.Trigger>
+                                )}
+                                {tabs.categories && (
+                                    <TabsPrimitive.Trigger value="categories" className={SETTINGS_TAB_TRIGGER_CLASS}>{t("tabCategories")}</TabsPrimitive.Trigger>
+                                )}
+                                {tabs.home && (
+                                    <TabsPrimitive.Trigger value="home" className={SETTINGS_TAB_TRIGGER_CLASS}>{t("tabHome")}</TabsPrimitive.Trigger>
+                                )}
+                                {tabs.features && (
+                                    <TabsPrimitive.Trigger value="features" className={SETTINGS_TAB_TRIGGER_CLASS}>{t("tabFeatures")}</TabsPrimitive.Trigger>
+                                )}
+                                {tabs.relations && (
+                                    <TabsPrimitive.Trigger value="relations" className={SETTINGS_TAB_TRIGGER_CLASS}>{t("tabRelations")}</TabsPrimitive.Trigger>
+                                )}
+                                {tabs.roles && (
+                                    <TabsPrimitive.Trigger value="roles" className={SETTINGS_TAB_TRIGGER_CLASS}>{t("tabRoles")}</TabsPrimitive.Trigger>
+                                )}
+                                {tabs.community && (
                                     <TabsPrimitive.Trigger value="community" className={SETTINGS_TAB_TRIGGER_CLASS}>{t("tabCommunity")}</TabsPrimitive.Trigger>
                                 )}
                             </TabsPrimitive.List>
@@ -537,8 +565,15 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                             </div>
                         </TabsContent>
 
+                        {/* ── Rôles ────────────────────────────────────── */}
+                        {tabs.roles && (
+                            <TabsContent value="roles" className="mt-0">
+                                <WorldRolesTab key={`roles-${world.id}`} worldId={world.id} />
+                            </TabsContent>
+                        )}
+
                         {/* ── Communauté ───────────────────────────────── */}
-                        {public_worlds && (
+                        {tabs.community && (
                             <WorldCommunityTab
                                 key={`community-${world.id}`}
                                 world={world}
@@ -552,6 +587,9 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
             </Form>
 
 
+            {/* Supprimer le monde reste au propriétaire : `world.settings`
+                permet de régler le monde, pas d'en disposer. */}
+            {membership?.isOwner && (
             <div className="flex shrink-0 justify-start border-t border-border-soft px-4 py-3">
                 <Button
                     type="button"
@@ -564,11 +602,10 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                     {deleting ? (
                         <Loader2 className="mr-1 h-4 w-4 animate-spin" />
                     ) : null}
-                    {confirmDelete
-                        ? "Confirmer la suppression ?"
-                        : "Supprimer le monde"}
+                    {confirmDelete ? t("deleteConfirmShort") : t("delete")}
                 </Button>
             </div>
+            )}
         </div>
     );
 }

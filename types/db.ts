@@ -31,6 +31,15 @@ export type World = {
 export type WorldMember = {
   world_id: string;
   user_id: string;
+  joined_at?: string;
+  age_confirmed_at?: string | null;
+};
+
+/** Un rôle porté par un membre — voir `world_member_roles` (migration 176). */
+export type WorldMemberRole = {
+  world_id: string;
+  user_id: string;
+  role_id: string;
 };
 
 export type WorldMemberRead = {
@@ -182,7 +191,8 @@ export type WorldInvitation = {
   world_id: string;
   invitee_id: string;
   inviter_id: string | null;
-  role: string;
+  /** Rôle conféré à l'acceptation ; `null` : les rôles par défaut du monde. */
+  role_id: string | null;
   status: 'pending' | 'accepted' | 'declined';
   created_at: string;
 };
