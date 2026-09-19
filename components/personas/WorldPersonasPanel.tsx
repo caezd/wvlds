@@ -104,7 +104,7 @@ function OtherPersonaCard({ persona, groupColor, unnamed }: { persona: OtherPers
       personaId={persona.id}
       userId={persona.user_id}
       label={name}
-      triggerClassName="group relative block w-full aspect-square rounded-2xl overflow-hidden bg-muted shadow-sm hover:shadow-lg transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      triggerClassName="group relative block w-full aspect-square rounded-lg overflow-hidden bg-muted shadow-sm hover:shadow-lg transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       <span data-narrative-status={persona.narrative_status} className="contents">
         {persona.avatar_url ? (
@@ -432,7 +432,7 @@ export function WorldPersonasPanel({
             {loadingOthers ? (
               <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="aspect-square animate-pulse rounded-2xl bg-muted" />
+                  <div key={i} className="aspect-square animate-pulse rounded-lg bg-muted" />
                 ))}
               </div>
             ) : filteredOthers.length === 0 ? (
