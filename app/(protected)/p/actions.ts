@@ -334,7 +334,9 @@ export async function duplicatePersona(id: string, targetWorldId: string | null)
 // restent la propriété de son auteur, seule la structure est reprise).
 // `keepLocked` : true seulement pour l'application d'une fiche modèle — les
 // verrous n'ont de sens que vis-à-vis du modèle du monde, une duplication
-// produit des champs libres.
+// produit des champs libres. Dans ce cas, chaque champ copié garde le lien
+// vers le champ du modèle (`template_field_id`) : c'est par lui que la base
+// juge la fiche complète (migration 181) ; `required` suit `locked`.
 async function copyPersonaSections(
     supabase: Awaited<ReturnType<typeof createClient>>,
     fromPersonaId: string,
@@ -375,7 +377,7 @@ async function copyPersonaSections(
 
     const { data: fields } = await supabase
         .from("persona_section_fields")
-        .select("id, section_id, type, label, position, data, locked")
+        .select("id, section_id, type, label, position, data, locked, required")
         .in("section_id", sectionsList.map((s) => s.id))
         .order("position", { ascending: true });
     const fieldsList = (fields ?? []) as {
@@ -386,6 +388,7 @@ async function copyPersonaSections(
         position: number;
         data: Record<string, unknown>;
         locked?: boolean;
+        required?: boolean;
     }[];
     const copyableFields = fieldsList.filter((f) => sectionIdMap.has(f.section_id));
     if (copyableFields.length === 0) return;
@@ -399,6 +402,8 @@ async function copyPersonaSections(
                 label: f.label,
                 position: f.position,
                 locked: keepLocked && (f.locked ?? false),
+                required: keepLocked && (f.required ?? false),
+                template_field_id: keepLocked ? f.id : null,
                 data:
                     !copyImages && f.type === "image-grid"
                         ? { ...f.data, images: [] }

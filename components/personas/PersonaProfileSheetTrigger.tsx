@@ -24,7 +24,11 @@ import { PresenceDot } from "@/components/avatars/PresenceDot";
 import { MemberStatusBadge } from "@/components/worlds/members/WorldMemberCard";
 import { PersonaStatusBadge } from "@/components/personas/PersonaStatusBadge";
 import { narrativeStatusOf } from "@/lib/personaStatus";
-import type { PersonaNarrativeStatus } from "@/types/db";
+import { reviewStatusOf } from "@/lib/personaReview";
+import { PersonaSheetBadge } from "./PersonaSheetBadge";
+import { PersonaReviewSection } from "./PersonaReviewPanel";
+import { useWorldMembership } from "@/components/providers/WorldMembershipProvider";
+import type { PersonaNarrativeStatus, PersonaReviewStatus } from "@/types/db";
 import { effectiveStatus, type WorldMemberCardFields } from "@/lib/worldMembers";
 import type { PersonaSection, PersonaSectionField, PersonaSectionWithFields, PersonaFieldData, GaugeItem, TraitItem, TimelineItem, DlItem } from "@/types/personas";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -229,8 +233,8 @@ export type PersonaProfileBodyProps = {
   activeTab: string | null;
   onActiveTabChange: (id: string) => void;
   loading: boolean;
-  /** Un onglet de plus, après les sections de la fiche — les relations. */
-  extraTab?: { id: string; label: string; content: React.ReactNode };
+  /** Des onglets de plus, après les sections de la fiche — les relations, la relecture. */
+  extraTabs?: { id: string; label: string; content: React.ReactNode }[];
   /** Contenu additionnel superposé au coin de la bannière (ex. le bouton
    *  Aperçu/Éditer de PersonaEditSheet.tsx) — rendu après le contenu de la
    *  bannière pour rester visible par-dessus. */
@@ -261,13 +265,13 @@ export function PersonaProfileBody({
   activeTab,
   onActiveTabChange,
   loading,
-  extraTab,
+  extraTabs = [],
   headerAction,
 }: PersonaProfileBodyProps) {
   const tCommon = useTranslations("common");
   const tabs: { id: string; name: string }[] = [
     ...sections.map((s) => ({ id: s.id, name: s.name })),
-    ...(extraTab ? [{ id: extraTab.id, name: extraTab.label }] : []),
+    ...extraTabs.map((t) => ({ id: t.id, name: t.label })),
   ];
 
   return (
@@ -401,11 +405,11 @@ export function PersonaProfileBody({
                 )}
               </TabsContent>
             ))}
-            {extraTab && (
-              <TabsContent value={extraTab.id} className="px-6 space-y-4">
-                {extraTab.content}
+            {extraTabs.map((tab) => (
+              <TabsContent key={tab.id} value={tab.id} className="px-6 space-y-4">
+                {tab.content}
               </TabsContent>
-            )}
+            ))}
           </Tabs>
         ) : !loading ? null : (
           <div className="px-6 space-y-2">
@@ -426,6 +430,7 @@ export function PersonaProfileSheetTrigger({
   label,
   hoverPreview = false,
   triggerClassName = "size-12",
+  openOnMount = false,
 }: {
   children: React.ReactNode;
   personaId?: string | null;
@@ -433,12 +438,18 @@ export function PersonaProfileSheetTrigger({
   label?: string | null;
   hoverPreview?: boolean;
   triggerClassName?: string;
+  /** Ouvre la fiche dès le montage (lien `?persona=<id>` d'une notification). */
+  openOnMount?: boolean;
 }) {
   const supabase = React.useMemo(() => createClient(), []);
   const { getUserPresence } = useGlobalPresence();
   const { userId: viewerId } = useCurrentUser();
   const tRelations = useTranslations("personas.relations");
-  const [open, setOpen] = React.useState(false);
+  const tReview = useTranslations("personas.review");
+  // Relire exige `personas.review` dans le monde du persona — le contexte
+  // n'est celui de ce monde que sous `/w/[id]` ou dans un de ses salons.
+  const { worldId: membershipWorldId, can } = useWorldMembership();
+  const [open, setOpen] = React.useState(openOnMount);
 
   const [name, setName] = React.useState<string | null>(label ?? null);
   const [avatarUrl, setAvatarUrl] = React.useState<string | null>(null);
@@ -450,6 +461,8 @@ export function PersonaProfileSheetTrigger({
     appear_offline: boolean;
   } | null>(null);
   const [narrativeStatus, setNarrativeStatus] = React.useState<PersonaNarrativeStatus>("alive");
+  const [reviewStatus, setReviewStatus] = React.useState<PersonaReviewStatus>("approved");
+  const [sheetComplete, setSheetComplete] = React.useState(true);
   const [ownerStatus, setOwnerStatus] = React.useState<Pick<WorldMemberCardFields, "status" | "status_until" | "status_note"> | null>(null);
   const [sections, setSections] = React.useState<PersonaSectionWithFields[]>([]);
   const [catalog, setCatalog] = React.useState<Map<string, WorldCatalogItem> | undefined>(undefined);
@@ -475,7 +488,7 @@ export function PersonaProfileSheetTrigger({
     async function load() {
       const { data: persona, error } = await supabase
         .from("personas")
-        .select("id,user_id,name,avatar_url,banner_url,dialogue_color,world_id,narrative_status,frame:avatar_frame_id(asset_url)")
+        .select("id,user_id,name,avatar_url,banner_url,dialogue_color,world_id,narrative_status,review_status,sheet_complete,frame:avatar_frame_id(asset_url)")
         .eq("id", personaId!)
         .maybeSingle();
 
@@ -487,6 +500,8 @@ export function PersonaProfileSheetTrigger({
         setBannerUrl(row.banner_url ?? null);
         setDialogueColor(row.dialogue_color ?? null);
         setNarrativeStatus(narrativeStatusOf((row as { narrative_status?: unknown }).narrative_status));
+        setReviewStatus(reviewStatusOf((row as { review_status?: unknown }).review_status));
+        setSheetComplete((row as { sheet_complete?: boolean | null }).sheet_complete ?? true);
         setFrameUrl(row.frame?.asset_url ?? null);
         setWorldId(row.world_id ?? null);
         worldIdOfPersona = row.world_id ?? null;
@@ -648,9 +663,10 @@ export function PersonaProfileSheetTrigger({
             presenceLine={presenceLine}
             userPresence={userPresence}
             statusBadge={
-              narrativeStatus !== "alive" || (ownerStatus && ownerEffectiveStatus !== "active") ? (
+              narrativeStatus !== "alive" || reviewStatus !== "approved" || !sheetComplete || (ownerStatus && ownerEffectiveStatus !== "active") ? (
                 <>
                   <PersonaStatusBadge status={narrativeStatus} />
+                  <PersonaSheetBadge persona={{ review_status: reviewStatus, sheet_complete: sheetComplete }} />
                   {ownerStatus && ownerEffectiveStatus !== "active" && (
                     <MemberStatusBadge status={ownerEffectiveStatus} until={ownerStatus.status_until} note={ownerStatus.status_note} />
                   )}
@@ -665,11 +681,30 @@ export function PersonaProfileSheetTrigger({
             activeTab={activeTab}
             onActiveTabChange={setActiveTab}
             loading={loading}
-            extraTab={personaId && worldId && userId ? {
-              id: "__relations__",
-              label: tRelations("tab"),
-              content: <PersonaRelationsSection personaId={personaId} worldId={worldId} ownerId={userId} selfId={viewerId ?? null} />,
-            } : undefined}
+            extraTabs={personaId && worldId && userId ? [
+              {
+                id: "__relations__",
+                label: tRelations("tab"),
+                content: <PersonaRelationsSection personaId={personaId} worldId={worldId} ownerId={userId} selfId={viewerId ?? null} />,
+              },
+              // La relecture : le propriétaire y lit les commentaires, un
+              // relecteur du monde y valide ou renvoie la fiche.
+              ...((viewerId === userId || (membershipWorldId === worldId && can("personas.review"))) ? [{
+                id: "__review__",
+                label: tReview("tab"),
+                content: (
+                  <PersonaReviewSection
+                    personaId={personaId}
+                    worldId={worldId}
+                    ownerId={userId}
+                    reviewStatus={reviewStatus}
+                    sheetComplete={sheetComplete}
+                    canReview={membershipWorldId === worldId && can("personas.review")}
+                    onStatusChange={setReviewStatus}
+                  />
+                ),
+              }] : []),
+            ] : []}
           />
         </div>
       </SideSheetContent>

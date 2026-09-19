@@ -53,7 +53,7 @@ import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
 // Le menu des blocs et ses sept dialogues vivent dans `./BlocksDropdown` :
 // 692 lignes qui n'utilisaient rien du composeur.
 import { BlocksDropdown, type MapPinOption } from "./BlocksDropdown";
-import { getUsablePersonaIds } from "@/lib/personaEligibility";
+import { LOCK_REASON_KEYS, getUsablePersonaIds, personaLockReason, type EligibilityPersona } from "@/lib/personaEligibility";
 
 type ChatroomComposerProps = {
     /** Chatroom existante. Laisser vide pour le mode « création » (voir onResolveChat). */
@@ -290,16 +290,20 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
     // tant que non résolu — on ne bloque alors pas l'envoi par prudence (la
     // vraie barrière est de toute façon la RLS/le trigger côté base).
     const [usableIds, setUsableIds] = useState<Set<string> | null>(null);
+    // Les personas du monde tels que chargés — pour nommer la raison d'un
+    // verrou (fiche incomplète, non validée, quota).
+    const [eligibilityRows, setEligibilityRows] = useState<EligibilityPersona[]>([]);
     useEffect(() => {
-        if (!userId || !worldId) { setUsableIds(null); return; }
+        if (!userId || !worldId) { setUsableIds(null); setEligibilityRows([]); return; }
         let cancelled = false;
         supabase
             .from(TABLE.PERSONAS)
-            .select("id, created_at, is_template")
+            .select("id, created_at, is_template, review_status, sheet_complete")
             .eq("user_id", userId)
             .eq("world_id", worldId)
-            .then(({ data }: { data: { id: string; created_at: string; is_template: boolean }[] | null }) => {
+            .then(({ data }: { data: EligibilityPersona[] | null }) => {
                 if (cancelled) return;
+                setEligibilityRows(data ?? []);
                 setUsableIds(getUsablePersonaIds(data ?? [], plan));
             });
         return () => { cancelled = true; };
@@ -611,6 +615,9 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
     }
 
     const selectedPersonaLocked = !!selectedPersona && !!usableIds && !usableIds.has(selectedPersona.id);
+    const selectedLockReason = selectedPersonaLocked && usableIds
+        ? personaLockReason(eligibilityRows.find((p) => p.id === selectedPersona!.id) ?? { id: selectedPersona!.id, created_at: "" }, usableIds)
+        : null;
     const canSend =
         (value.trim().length > 0 || pendingMedia.length > 0) && !!selectedPersona && !selectedPersonaLocked;
 
@@ -861,7 +868,7 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
                         disabled={!canSend}
                         aria-disabled={!canSend}
                         title={
-                            selectedPersonaLocked ? tPersonas("lockedHint")
+                            selectedLockReason ? tPersonas(LOCK_REASON_KEYS[selectedLockReason])
                                 : selectedPersona ? tDms("send")
                                     : tPersonas("pick")
                         }

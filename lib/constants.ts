@@ -21,6 +21,7 @@ export const TABLE = {
   WORLD_ROLES: "world_roles",
   WORLD_MEMBER_ROLES: "world_member_roles",
   PERSONA_RELATIONS: "persona_relations",
+  PERSONA_REVIEW_COMMENTS: "persona_review_comments",
   CHAT_PINS: "chat_pins",
   DM_CONVERSATIONS: "dm_conversations",
   DM_MESSAGES: "dm_messages",
@@ -55,6 +56,10 @@ export const RPC = {
   WORLD_RANK: "world_rank",
   GET_WORLD_MEMBER_ACTIVITY: "get_world_member_activity",
   NOTIFY_GROUP_MENTIONS: "notify_group_mentions",
+  SUBMIT_PERSONA_FOR_REVIEW: "submit_persona_for_review",
+  REVIEW_PERSONA: "review_persona",
+  SYNC_PERSONA_TEMPLATE_FIELDS: "sync_persona_template_fields",
+  PERSONA_REQUIRED_FIELDS: "persona_required_fields",
 } as const;
 
 // --- Realtime channel name factories -----------------------------------------

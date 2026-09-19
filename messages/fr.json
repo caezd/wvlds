@@ -246,7 +246,9 @@
       "persona_reply": "Réponses de mes personas suivis",
       "relation_request": "Demandes de relation entre personas",
       "role_mention": "Mentions de mes rôles",
-      "everyone_mention": "@tous et @ici"
+      "everyone_mention": "@tous et @ici",
+      "persona_submitted": "Fiches soumises à validation",
+      "persona_reviewed": "Relecture de mes fiches"
     },
     "text": {
       "someone": "Quelqu'un",
@@ -276,7 +278,11 @@
       "everyoneMention": "<b>{actor}</b> a appelé tout le monde dans <b>{chatroom}</b>",
       "everyoneMentionSimple": "<b>{actor}</b> a appelé tout le monde",
       "hereMention": "<b>{actor}</b> a appelé les membres présents dans <b>{chatroom}</b>",
-      "hereMentionSimple": "<b>{actor}</b> a appelé les membres présents"
+      "hereMentionSimple": "<b>{actor}</b> a appelé les membres présents",
+      "personaSubmitted": "<b>{actor}</b> a soumis la fiche de <b>{persona}</b> à validation",
+      "personaApproved": "<b>{actor}</b> a validé la fiche de <b>{persona}</b>",
+      "personaSentBack": "<b>{actor}</b> a renvoyé la fiche de <b>{persona}</b> en brouillon",
+      "personaFallback": "un persona"
     }
   },
   "dms": {
@@ -709,6 +715,10 @@
         "mentions_everyone": {
           "label": "Mentionner tout le monde",
           "help": "Utiliser @tous et @ici dans les salons."
+        },
+        "personas_review": {
+          "label": "Valider les fiches",
+          "help": "Relire les fiches de persona soumises, les valider ou les renvoyer avec un commentaire."
         }
       }
     },
@@ -960,7 +970,71 @@
       "sortName": "Nom A → Z",
       "sortNewest": "Plus récents",
       "sortOldest": "Plus anciens",
-      "createFirst": "Créer un persona"
+      "createFirst": "Créer un persona",
+      "filterSheet": "Fiche",
+      "allSheets": "Toutes les fiches",
+      "toReview": "{count} fiche(s) à relire",
+      "toReviewOne": "1 fiche à relire"
+    },
+    "sheet": {
+      "incomplete": "Fiche incomplète",
+      "draft": "Brouillon",
+      "submitted": "En relecture",
+      "approved": "Validée",
+      "incompleteHint": "Des champs obligatoires du modèle du monde restent vides.",
+      "draftHint": "Cette fiche n'a pas encore été soumise à validation.",
+      "submittedHint": "Cette fiche attend la relecture d'un administrateur.",
+      "approvedHint": "Cette fiche a été validée.",
+      "lockedIncomplete": "Ce persona ne peut pas jouer : sa fiche est incomplète.",
+      "lockedUnreviewed": "Ce persona ne peut pas jouer : sa fiche n'est pas encore validée."
+    },
+    "review": {
+      "tab": "Relecture",
+      "submit": "Soumettre à validation",
+      "submitting": "Envoi…",
+      "submitted": "Fiche soumise à validation.",
+      "resubmit": "Soumettre à nouveau",
+      "missingTitle": "À compléter avant de soumettre",
+      "missingField": "{section} · {field}",
+      "missingAbsent": "champ à ajouter",
+      "missingEmpty": "à remplir",
+      "syncFields": "Ajouter les champs manquants",
+      "syncDone": "{count} champ(s) ajouté(s) à la fiche.",
+      "fieldTypeFallback": "champ",
+      "waiting": "Votre fiche est en relecture. Vous pouvez continuer à la modifier.",
+      "sentBack": "Votre fiche a été renvoyée en brouillon.",
+      "approvedBy": "Fiche validée",
+      "comments": "Commentaires de relecture",
+      "noComments": "Aucun commentaire pour le moment.",
+      "commentPlaceholder": "Écrire un commentaire…",
+      "send": "Envoyer",
+      "deleteComment": "Supprimer ce commentaire",
+      "decisionApproved": "a validé la fiche",
+      "decisionDraft": "a renvoyé la fiche en brouillon",
+      "approve": "Valider",
+      "sendBack": "Renvoyer avec un commentaire",
+      "sendBackShort": "Renvoyer",
+      "reviewCommentPlaceholder": "Un mot pour le joueur (facultatif)…",
+      "decided": "Décision enregistrée.",
+      "requiredToggleOn": "Champ obligatoire — les joueurs doivent le remplir avant de soumettre leur fiche. Cliquer pour le rendre facultatif.",
+      "requiredToggleOff": "Rendre ce champ obligatoire : les joueurs devront le remplir avant de soumettre leur fiche.",
+      "requiredBadge": "Obligatoire"
+    },
+    "fieldTypes": {
+      "title": "Titre",
+      "text": "Bloc de texte",
+      "input": "Champ",
+      "textarea": "Texte",
+      "dl": "Liste descriptive",
+      "quote": "Citation",
+      "stats": "Stats",
+      "gauges": "Jauges",
+      "inventory": "Inventaire",
+      "skills": "Compétences",
+      "traits": "Traits",
+      "timeline": "Timeline",
+      "separator": "Séparateur",
+      "imageGrid": "Grille d'images"
     }
   },
   "quests": {

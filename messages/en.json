@@ -245,7 +245,9 @@
       "persona_reply": "Replies from followed personas",
       "relation_request": "Relation requests between personas",
       "role_mention": "Mentions of my roles",
-      "everyone_mention": "@everyone and @here"
+      "everyone_mention": "@everyone and @here",
+      "persona_submitted": "Sheets submitted for review",
+      "persona_reviewed": "Reviews of my sheets"
     },
     "text": {
       "someone": "Someone",
@@ -275,7 +277,11 @@
       "everyoneMention": "<b>{actor}</b> called everyone in <b>{chatroom}</b>",
       "everyoneMentionSimple": "<b>{actor}</b> called everyone",
       "hereMention": "<b>{actor}</b> called everyone here in <b>{chatroom}</b>",
-      "hereMentionSimple": "<b>{actor}</b> called everyone here"
+      "hereMentionSimple": "<b>{actor}</b> called everyone here",
+      "personaSubmitted": "<b>{actor}</b> submitted <b>{persona}</b>'s sheet for review",
+      "personaApproved": "<b>{actor}</b> approved <b>{persona}</b>'s sheet",
+      "personaSentBack": "<b>{actor}</b> sent <b>{persona}</b>'s sheet back to draft",
+      "personaFallback": "a persona"
     },
     "back": "Back"
   },
@@ -709,6 +715,10 @@
         "mentions_everyone": {
           "label": "Mention everyone",
           "help": "Use @everyone and @here in chatrooms."
+        },
+        "personas_review": {
+          "label": "Review sheets",
+          "help": "Read submitted persona sheets, approve them or send them back with a comment."
         }
       }
     },
@@ -960,7 +970,71 @@
       "sortName": "Name A → Z",
       "sortNewest": "Newest",
       "sortOldest": "Oldest",
-      "createFirst": "Create a persona"
+      "createFirst": "Create a persona",
+      "filterSheet": "Sheet",
+      "allSheets": "All sheets",
+      "toReview": "{count} sheet(s) to review",
+      "toReviewOne": "1 sheet to review"
+    },
+    "sheet": {
+      "incomplete": "Incomplete sheet",
+      "draft": "Draft",
+      "submitted": "Under review",
+      "approved": "Approved",
+      "incompleteHint": "Some required fields of the world template are still empty.",
+      "draftHint": "This sheet has not been submitted for review yet.",
+      "submittedHint": "This sheet is waiting for an administrator's review.",
+      "approvedHint": "This sheet has been approved.",
+      "lockedIncomplete": "This persona cannot play: its sheet is incomplete.",
+      "lockedUnreviewed": "This persona cannot play: its sheet has not been approved yet."
+    },
+    "review": {
+      "tab": "Review",
+      "submit": "Submit for review",
+      "submitting": "Sending…",
+      "submitted": "Sheet submitted for review.",
+      "resubmit": "Submit again",
+      "missingTitle": "To complete before submitting",
+      "missingField": "{section} · {field}",
+      "missingAbsent": "field to add",
+      "missingEmpty": "to fill in",
+      "syncFields": "Add missing fields",
+      "syncDone": "{count} field(s) added to the sheet.",
+      "fieldTypeFallback": "field",
+      "waiting": "Your sheet is under review. You can keep editing it.",
+      "sentBack": "Your sheet was sent back to draft.",
+      "approvedBy": "Sheet approved",
+      "comments": "Review comments",
+      "noComments": "No comment yet.",
+      "commentPlaceholder": "Write a comment…",
+      "send": "Send",
+      "deleteComment": "Delete this comment",
+      "decisionApproved": "approved the sheet",
+      "decisionDraft": "sent the sheet back to draft",
+      "approve": "Approve",
+      "sendBack": "Send back with a comment",
+      "sendBackShort": "Send back",
+      "reviewCommentPlaceholder": "A word for the player (optional)…",
+      "decided": "Decision saved.",
+      "requiredToggleOn": "Required field — players must fill it in before submitting their sheet. Click to make it optional.",
+      "requiredToggleOff": "Make this field required: players will have to fill it in before submitting their sheet.",
+      "requiredBadge": "Required"
+    },
+    "fieldTypes": {
+      "title": "Title",
+      "text": "Text block",
+      "input": "Field",
+      "textarea": "Text",
+      "dl": "Description list",
+      "quote": "Quote",
+      "stats": "Stats",
+      "gauges": "Gauges",
+      "inventory": "Inventory",
+      "skills": "Skills",
+      "traits": "Traits",
+      "timeline": "Timeline",
+      "separator": "Separator",
+      "imageGrid": "Image grid"
     }
   },
   "quests": {

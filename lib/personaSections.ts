@@ -32,7 +32,7 @@ export async function fetchSectionsByPersona(
     if (sectionIds.length > 0) {
         const { data: fields } = await supabase
             .from("persona_section_fields")
-            .select("id, section_id, type, position, data, locked")
+            .select("id, section_id, type, position, data, locked, required, template_field_id")
             .in("section_id", sectionIds)
             .order("position", { ascending: true });
         fieldsList = (fields ?? []) as PersonaSectionField[];

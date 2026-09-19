@@ -7,7 +7,7 @@ import { AVATAR_THUMB_SMALL } from "@/lib/storage";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-    ArrowLeft, AtSign, Bell, CheckCheck, Globe, Hash, Heart, Loader2,
+    ArrowLeft, AtSign, Bell, CheckCheck, ClipboardCheck, Globe, Hash, Heart, Loader2,
     Megaphone, MessageSquare, Settings, Smile, UserPlus, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -40,11 +40,13 @@ const NOTIF_ICONS: Record<NotificationType, React.ReactNode> = {
     relation_request: <Heart size={13} />,
     role_mention: <AtSign size={13} />,
     everyone_mention: <Megaphone size={13} />,
+    persona_submitted: <ClipboardCheck size={13} />,
+    persona_reviewed: <ClipboardCheck size={13} />,
 };
 
-const ALL_TYPES: NotificationType[] = ["mention", "role_mention", "everyone_mention", "reaction", "new_member", "new_chatroom", "chatroom_reply", "persona_new_chatroom", "persona_reply", "relation_request"];
-const WORLD_HEADER_TYPES: NotificationType[] = ["mention", "role_mention", "everyone_mention", "reaction", "new_chatroom", "persona_new_chatroom", "persona_reply", "relation_request"];
-const PERSONA_NOTIF_TYPES: NotificationType[] = ["persona_new_chatroom", "persona_reply", "relation_request"];
+const ALL_TYPES: NotificationType[] = ["mention", "role_mention", "everyone_mention", "reaction", "new_member", "new_chatroom", "chatroom_reply", "persona_new_chatroom", "persona_reply", "relation_request", "persona_submitted", "persona_reviewed"];
+const WORLD_HEADER_TYPES: NotificationType[] = ["mention", "role_mention", "everyone_mention", "reaction", "new_chatroom", "persona_new_chatroom", "persona_reply", "relation_request", "persona_submitted", "persona_reviewed"];
+const PERSONA_NOTIF_TYPES: NotificationType[] = ["persona_new_chatroom", "persona_reply", "relation_request", "persona_submitted", "persona_reviewed"];
 const ACTIONABLE_TYPES: NotificationType[] = ["world_invite", "relation_request"];
 
 // ── WorldInviteCard ───────────────────────────────────────────────────────────
@@ -409,6 +411,8 @@ export function NotificationInlinePanelContent() {
         relation_request: t("prefs.relation_request"),
         role_mention: t("prefs.role_mention"),
         everyone_mention: t("prefs.everyone_mention"),
+        persona_submitted: t("prefs.persona_submitted"),
+        persona_reviewed: t("prefs.persona_reviewed"),
     };
 
     const sentinelRef = useRef<HTMLDivElement>(null);

@@ -1,5 +1,6 @@
 // app/(protected)/personas/page.tsx
 import { narrativeStatusOf } from "@/lib/personaStatus";
+import { reviewStatusOf } from "@/lib/personaReview";
 import { Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getUserId } from "@/lib/auth";
@@ -26,6 +27,8 @@ type PersonaRow = {
   faceclaim?: string | null;
   marital_status?: string | null;
   narrative_status?: string | null;
+  review_status?: string | null;
+  sheet_complete?: boolean | null;
   spouse_persona_id?: string | null;
 };
 
@@ -55,7 +58,7 @@ export default async function PersonasPage() {
       const { data, error } = await supabase
         .from("personas")
         .select(
-          "id, name, avatar_url, avatar_config, banner_url, avatar_frame_id, world_id, faceclaim, marital_status, spouse_persona_id, narrative_status, frame:avatar_frame_id(asset_url)",
+          "id, name, avatar_url, avatar_config, banner_url, avatar_frame_id, world_id, faceclaim, marital_status, spouse_persona_id, narrative_status, review_status, sheet_complete, frame:avatar_frame_id(asset_url)",
         )
         .eq("user_id", userId)
         .eq("is_template", false)
@@ -173,6 +176,8 @@ export default async function PersonasPage() {
       marital_status: (p.marital_status as MaritalStatus | null) ?? null,
       spouse_persona_id: p.spouse_persona_id ?? null,
       narrative_status: narrativeStatusOf(p.narrative_status),
+      review_status: reviewStatusOf(p.review_status),
+      sheet_complete: p.sheet_complete ?? true,
       sections: sectionsByPersona.get(p.id) ?? [],
     });
   }

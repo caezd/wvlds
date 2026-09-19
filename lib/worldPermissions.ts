@@ -13,7 +13,7 @@ export const WORLD_PERMISSION_GROUPS = {
   general: ["administrator", "world.settings", "roles.manage", "members.manage"],
   chatrooms: ["messages.post", "chatrooms.create", "chatrooms.manage", "categories.manage"],
   content: ["tabs.edit", "wiki.edit", "lexicon.edit", "tags.manage", "map.edit", "catalog.edit"],
-  personas: ["relations.manage"],
+  personas: ["relations.manage", "personas.review"],
   mentions: ["mentions.roles", "mentions.everyone"],
 } as const;
 
@@ -159,6 +159,7 @@ export function canOpenWorldSettings(m: WorldMembership | null): boolean {
     hasWorldPermission(m, "world.settings") ||
     hasWorldPermission(m, "roles.manage") ||
     hasWorldPermission(m, "categories.manage") ||
-    hasWorldPermission(m, "relations.manage")
+    hasWorldPermission(m, "relations.manage") ||
+    hasWorldPermission(m, "personas.review")
   );
 }

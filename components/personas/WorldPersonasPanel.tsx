@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Drama, Plus, Search } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { ClipboardCheck, Drama, Plus, Search } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { getInitials } from "@/lib/textFormatting";
 import { PersonaCard } from "./PersonaCard";
 import { PersonaCreateSheet } from "./PersonaCreateSheet";
 import { PersonaProfileSheetTrigger } from "./PersonaProfileSheetTrigger";
 import { PersonaStatusBadge } from "./PersonaStatusBadge";
+import { PersonaSheetBadge } from "./PersonaSheetBadge";
 import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
@@ -19,9 +21,11 @@ import { avatarThumbWidth } from "@/lib/storage";
 import { cn } from "@/lib/utils";
 import { effectiveStatus } from "@/lib/worldMembers";
 import { NARRATIVE_STATUSES, isRetiredStatus, narrativeStatusOf } from "@/lib/personaStatus";
+import { reviewStatusOf, sheetBadgeOf, type PersonaSheetBadgeKind } from "@/lib/personaReview";
+import { useWorldMembership } from "@/components/providers/WorldMembershipProvider";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { MemberStatusBadge } from "@/components/worlds/members/WorldMemberCard";
-import type { PersonaNarrativeStatus, WorldMemberStatus } from "@/types/db";
+import type { PersonaNarrativeStatus, PersonaReviewStatus, WorldMemberStatus } from "@/types/db";
 
 type OtherPersona = {
   id: string;
@@ -31,6 +35,8 @@ type OtherPersona = {
   username: string | null;
   created_at: string | null;
   narrative_status: PersonaNarrativeStatus;
+  review_status: PersonaReviewStatus;
+  sheet_complete: boolean;
   /** Statut du joueur dans ce monde ; « active » quand il n'a rien déclaré. */
   playerStatus: WorldMemberStatus;
   playerStatusUntil: string | null;
@@ -65,10 +71,17 @@ export type PersonaFilters = {
   player: string; // ALL | user_id
   group: string; // ALL | NO_GROUP | group_id
   status: string; // ALL | PersonaNarrativeStatus
+  /** ALL | PersonaSheetBadgeKind — l'état de la fiche (migration 181). */
+  sheet: string;
 };
 
+export const SHEET_FILTERS: readonly PersonaSheetBadgeKind[] = ["submitted", "draft", "incomplete", "approved"];
+
 export function applyPersonaFilters<
-  T extends { id: string; name: string | null; user_id: string; username?: string | null; narrative_status: PersonaNarrativeStatus },
+  T extends {
+    id: string; name: string | null; user_id: string; username?: string | null;
+    narrative_status: PersonaNarrativeStatus; review_status?: unknown; sheet_complete?: boolean | null;
+  },
 >(list: T[], filters: PersonaFilters, groupByPersona: Map<string, string>): T[] {
   const q = normalize(filters.query.trim());
   return list.filter((p) => {
@@ -76,6 +89,7 @@ export function applyPersonaFilters<
     if (filters.group === NO_GROUP && groupByPersona.has(p.id)) return false;
     if (filters.group !== ALL && filters.group !== NO_GROUP && groupByPersona.get(p.id) !== filters.group) return false;
     if (filters.status !== ALL && p.narrative_status !== filters.status) return false;
+    if (filters.sheet !== ALL && (sheetBadgeOf(p) ?? "approved") !== filters.sheet) return false;
     if (q && !normalize(p.name ?? "").includes(q) && !normalize(p.username ?? "").includes(q)) return false;
     return true;
   });
@@ -96,7 +110,7 @@ export { ALL as PERSONA_FILTER_ALL, NO_GROUP as PERSONA_FILTER_NO_GROUP };
 
 // ── Carte lecture seule : persona d'un autre membre ────────────────────────
 
-function OtherPersonaCard({ persona, groupColor, unnamed }: { persona: OtherPersona; groupColor?: string; unnamed: string }) {
+function OtherPersonaCard({ persona, groupColor, unnamed, openOnMount }: { persona: OtherPersona; groupColor?: string; unnamed: string; openOnMount?: boolean }) {
   const name = persona.name ?? unnamed;
   const retired = isRetiredStatus(persona.narrative_status);
   return (
@@ -104,6 +118,7 @@ function OtherPersonaCard({ persona, groupColor, unnamed }: { persona: OtherPers
       personaId={persona.id}
       userId={persona.user_id}
       label={name}
+      openOnMount={openOnMount}
       triggerClassName="group relative block w-full aspect-square rounded-lg overflow-hidden bg-muted shadow-sm hover:shadow-lg transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       <span data-narrative-status={persona.narrative_status} className="contents">
@@ -125,6 +140,7 @@ function OtherPersonaCard({ persona, groupColor, unnamed }: { persona: OtherPers
       {groupColor && <span aria-hidden className="absolute inset-x-0 top-0 h-1" style={{ backgroundColor: groupColor }} />}
       <div className="absolute left-2 top-2 flex flex-col items-start gap-1">
         <PersonaStatusBadge status={persona.narrative_status} className="bg-black/60 text-white dark:text-white" />
+        <PersonaSheetBadge persona={persona} className="bg-black/60 text-white dark:text-white" />
         {/* Le joueur est en pause ou absent : autant le savoir avant de lui écrire. */}
         {persona.playerStatus !== "active" && (
           <MemberStatusBadge
@@ -160,14 +176,19 @@ export function WorldPersonasPanel({
 }) {
   const t = useTranslations("personas.list");
   const tStatus = useTranslations("personas.narrativeStatus");
+  const tSheet = useTranslations("personas.sheet");
   const supabase = useMemo(() => createClient(), []);
   const { userId: meId, username: myUsername } = useCurrentUser();
+  const { can } = useWorldMembership();
+  const canReview = can("personas.review");
+  // `?persona=<id>` (lien d'une notification de relecture) : la fiche s'ouvre d'elle-même.
+  const focusPersonaId = useSearchParams()?.get("persona") ?? null;
   const [others, setOthers] = useState<OtherPersona[] | null>(null);
   const [groups, setGroups] = useState<Group[]>([]);
   const [groupByPersona, setGroupByPersona] = useState<Map<string, string>>(new Map());
   const myIds = useMemo(() => new Set(myPersonas.map((p) => p.id)), [myPersonas]);
 
-  const [filters, setFilters] = useState<PersonaFilters>({ query: "", player: ALL, group: ALL, status: ALL });
+  const [filters, setFilters] = useState<PersonaFilters>({ query: "", player: ALL, group: ALL, status: ALL, sheet: ALL });
   const [sort, setSort] = useState<SortKey>("name");
 
   useEffect(() => {
@@ -177,7 +198,7 @@ export function WorldPersonasPanel({
       const [{ data: personaRows }, { data: groupRows }, { data: assignRows }] = await Promise.all([
         supabase
           .from("personas")
-          .select("id, name, avatar_url, user_id, created_at, narrative_status")
+          .select("id, name, avatar_url, user_id, created_at, narrative_status, review_status, sheet_complete")
           .eq("world_id", worldId)
           .eq("is_template", false)
           .is("deleted_at", null),
@@ -185,7 +206,10 @@ export function WorldPersonasPanel({
         supabase.from("persona_group_assignments").select("persona_id, group_id").eq("world_id", worldId),
       ]);
 
-      type RawPersona = { id: string; name: string | null; avatar_url: string | null; user_id: string; created_at: string | null; narrative_status: string | null };
+      type RawPersona = {
+        id: string; name: string | null; avatar_url: string | null; user_id: string; created_at: string | null;
+        narrative_status: string | null; review_status?: string | null; sheet_complete?: boolean | null;
+      };
       const otherRows = ((personaRows ?? []) as RawPersona[]).filter((r) => !myIds.has(r.id));
       const userIds = Array.from(new Set(otherRows.map((r) => r.user_id)));
 
@@ -217,6 +241,8 @@ export function WorldPersonasPanel({
             user_id: r.user_id,
             created_at: r.created_at,
             narrative_status: narrativeStatusOf(r.narrative_status),
+            review_status: reviewStatusOf(r.review_status),
+            sheet_complete: r.sheet_complete ?? true,
             username: usernameByUser.get(r.user_id) ?? null,
             playerStatus: member ? effectiveStatus(member) : "active",
             playerStatusUntil: member?.status_until ?? null,
@@ -257,6 +283,9 @@ export function WorldPersonasPanel({
     [others, filters, groupByPersona, sort],
   );
 
+  // Les fiches des autres qui attendent un relecteur — un raccourci vers le filtre.
+  const toReview = useMemo(() => (others ?? []).filter((p) => p.review_status === "submitted").length, [others]);
+
   // Par lettre quand on trie par nom ; à plat sinon, l'ordre parle de lui-même.
   const otherGroups = useMemo(() => {
     if (sort !== "name") return [["", filteredOthers] as [string, OtherPersona[]]];
@@ -271,7 +300,7 @@ export function WorldPersonasPanel({
 
   const loadingOthers = others === null;
   const total = myPersonas.length + (others?.length ?? 0);
-  const filtering = filters.query.trim() !== "" || filters.player !== ALL || filters.group !== ALL || filters.status !== ALL;
+  const filtering = filters.query.trim() !== "" || filters.player !== ALL || filters.group !== ALL || filters.status !== ALL || filters.sheet !== ALL;
   const unnamed = t("unnamed");
 
   const createTrigger = (className: string, label: string) => (
@@ -363,6 +392,17 @@ export function WorldPersonasPanel({
                   ))}
                 </SelectContent>
               </Select>
+              <Select value={filters.sheet} onValueChange={(v) => setFilters((f) => ({ ...f, sheet: v }))}>
+                <SelectTrigger size="sm" className="w-auto min-w-32" aria-label={t("filterSheet")}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL}>{t("allSheets")}</SelectItem>
+                  {SHEET_FILTERS.map((k) => (
+                    <SelectItem key={k} value={k}>{tSheet(k)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
                 <SelectTrigger size="sm" className="w-auto min-w-36" aria-label={t("sort")}>
                   <SelectValue />
@@ -374,6 +414,18 @@ export function WorldPersonasPanel({
                 </SelectContent>
               </Select>
             </div>
+          )}
+
+          {/* ── Fiches à relire (relecteurs) ── */}
+          {canReview && toReview > 0 && filters.sheet !== "submitted" && (
+            <button
+              type="button"
+              onClick={() => setFilters((f) => ({ ...f, sheet: "submitted" }))}
+              className="flex w-full items-center gap-2 rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-left text-sm text-sky-800 transition-colors hover:bg-sky-500/15 dark:text-sky-200"
+            >
+              <ClipboardCheck className="h-4 w-4 shrink-0" aria-hidden />
+              {toReview === 1 ? t("toReviewOne") : t("toReview", { count: toReview })}
+            </button>
           )}
 
           {/* ── Mes personas ── */}
@@ -408,6 +460,9 @@ export function WorldPersonasPanel({
                       initialMaritalStatus={p.marital_status ?? null}
                       initialSpousePersonaId={p.spouse_persona_id ?? null}
                       narrativeStatus={p.narrative_status}
+                      reviewStatus={p.review_status ?? null}
+                      sheetComplete={p.sheet_complete ?? null}
+                      openOnMount={p.id === focusPersonaId}
                       initialSections={p.sections}
                       worldId={worldId}
                       restrictInventory={restrictInventory}
@@ -455,6 +510,7 @@ export function WorldPersonasPanel({
                           persona={p}
                           groupColor={groupColorById.get(groupByPersona.get(p.id) ?? "")}
                           unnamed={unnamed}
+                          openOnMount={p.id === focusPersonaId}
                         />
                       ))}
                     </div>

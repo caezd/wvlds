@@ -23,7 +23,7 @@ import { ImageGridView } from "@/components/personas/ImageGridView";
 import { StoredImage } from "@/components/ui/stored-image";
 import { getInitials } from "@/lib/textFormatting";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { getUsablePersonaIds } from "@/lib/personaEligibility";
+import { LOCK_REASON_KEYS, getUsablePersonaIds, personaLockReason, type EligibilityPersona } from "@/lib/personaEligibility";
 import { indexCatalog } from "@/lib/worldCatalog";
 import { InventoryFieldView, SkillsFieldView } from "@/components/personas/fields/CatalogFieldViews";
 import { PersonaRelationsSection } from "@/components/personas/PersonaRelationsSection";
@@ -204,6 +204,7 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
   // Éligibilité (plan gratuit : 5 personas les plus anciens par monde) — ne
   // concerne que le persona du viewer lui-même (cf. migration 090).
   const [usableForSelf, setUsableForSelf] = useState(true);
+  const [lockReason, setLockReason] = useState<keyof typeof LOCK_REASON_KEYS>("quota");
   const [sections, setSections] = useState<PersonaSectionWithFields[]>([]);
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -254,15 +255,19 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
       // frères/sœurs non-templates du même monde suffisent à reproduire
       // exactement le calcul de getUsablePersonaIds (voir PersonaPickerDialog).
       let usableForSelfResult = true;
+      let lockReasonResult: keyof typeof LOCK_REASON_KEYS = "quota";
       const worldId = (personaRow as unknown as { world_id?: string | null } | null)?.world_id ?? null;
       if (persona!.user_id === selfId && worldId) {
         const { data: siblings } = await supabase
           .from("personas")
-          .select("id, created_at, is_template")
+          .select("id, created_at, is_template, review_status, sheet_complete")
           .eq("user_id", selfId!)
           .eq("world_id", worldId)
           .is("deleted_at", null);
-        usableForSelfResult = getUsablePersonaIds(siblings ?? [], plan).has(persona!.id);
+        const rows = (siblings ?? []) as EligibilityPersona[];
+        const usable = getUsablePersonaIds(rows, plan);
+        usableForSelfResult = usable.has(persona!.id);
+        lockReasonResult = personaLockReason(rows.find((p) => p.id === persona!.id) ?? { id: persona!.id, created_at: "" }, usable) ?? "quota";
       }
 
       // présence persistée du propriétaire (pour "vu il y a X")
@@ -315,6 +320,7 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
       setBannerUrl(row?.banner_url ?? null);
       setFrameUrl(row?.frame?.asset_url ?? null);
       setUsableForSelf(usableForSelfResult);
+      setLockReason(lockReasonResult);
       setOwnerPresence(
         ownerProfile
           ? {
@@ -420,7 +426,7 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
                       </button>
                     </TooltipTrigger>
                     <TooltipContent side="bottom" className="max-w-56 text-center">
-                      {t("lockedHint")}
+                      {t(LOCK_REASON_KEYS[lockReason])}
                     </TooltipContent>
                   </Tooltip>
                 ) : (

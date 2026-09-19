@@ -74,6 +74,16 @@ export function notifText(n: AppNotification, t: NotifT): ReactNode {
                     ? t.rich("text.chatroomReplySingle", { actor, chatroom: n.content, ...r })
                     : t.rich("text.chatroomReplySingleNoContent", { actor, ...r });
         }
+        // Validation d'une fiche (migration 181) : soumise aux relecteurs,
+        // puis validée ou renvoyée à son propriétaire.
+        case "persona_submitted":
+            return t.rich("text.personaSubmitted", { actor, persona: n.metadata?.persona_name ?? n.content ?? t("text.personaFallback"), ...r });
+        case "persona_reviewed": {
+            const persona = n.metadata?.persona_name ?? n.content ?? t("text.personaFallback");
+            return n.metadata?.decision === "draft"
+                ? t.rich("text.personaSentBack", { actor, persona, ...r })
+                : t.rich("text.personaApproved", { actor, persona, ...r });
+        }
         // Une demande de relation réciproque (migration 173). Un type marital
         // garde la phrase du mariage ; les autres nomment le type.
         case "relation_request": {
@@ -87,6 +97,11 @@ export function notifText(n: AppNotification, t: NotifT): ReactNode {
 
 export function notifHref(n: AppNotification): string | null {
     if (n.chat_id) return `/c/${n.chat_id}`;
+    // Une fiche à relire ou relue : la liste des personas du monde, ouverte
+    // sur ce persona (voir WorldPersonasPanel, paramètre `persona`).
+    if (n.world_id && (n.type === "persona_submitted" || n.type === "persona_reviewed") && n.metadata?.persona_id) {
+        return `/w/${n.world_id}?view=personas&persona=${encodeURIComponent(n.metadata.persona_id)}`;
+    }
     if (n.world_id) return `/w/${n.world_id}`;
     return null;
 }

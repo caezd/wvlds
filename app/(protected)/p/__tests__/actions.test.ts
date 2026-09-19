@@ -74,7 +74,7 @@ describe("createPersona", () => {
         { data: [{ id: "ns1", position: 0 }] },              // insert sections
         {
           data: [
-            { id: "tf1", section_id: "ts1", type: "text", label: null, position: 0, data: { text: "" }, locked: true },
+            { id: "tf1", section_id: "ts1", type: "text", label: null, position: 0, data: { text: "" }, locked: true, required: true },
             { id: "tf2", section_id: "ts1", type: "image-grid", label: null, position: 10, data: { images: [{ id: "img", url: "u" }] } },
           ],
         },                                                    // champs du modèle
@@ -87,10 +87,11 @@ describe("createPersona", () => {
     expect(mock.buildersFor("persona_sections")[1].insert).toHaveBeenCalledWith([
       { persona_id: "persona-1", name: "Identité", position: 0 },
     ]);
-    // Le verrou du modèle est propagé, les grilles d'images sont vidées
+    // Le verrou et l'obligation du modèle sont propagés avec le lien vers le
+    // champ d'origine (la complétude s'y lit) ; les grilles d'images sont vidées.
     expect(mock.buildersFor("persona_section_fields")[1].insert).toHaveBeenCalledWith([
-      { section_id: "ns1", type: "text", label: null, position: 0, data: { text: "" }, locked: true },
-      { section_id: "ns1", type: "image-grid", label: null, position: 10, data: { images: [] }, locked: false },
+      { section_id: "ns1", type: "text", label: null, position: 0, data: { text: "" }, locked: true, required: true, template_field_id: "tf1" },
+      { section_id: "ns1", type: "image-grid", label: null, position: 10, data: { images: [] }, locked: false, required: false, template_field_id: "tf2" },
     ]);
   });
 
@@ -274,7 +275,7 @@ describe("movePersona", () => {
     // persona_section_fields : [0] select image-grid existants (reset), [1] select du modèle, [2] insert.
     // Le verrou du modèle est préservé (keepLocked: true, comme à la création).
     expect(mock.buildersFor("persona_section_fields")[2].insert).toHaveBeenCalledWith([
-      { section_id: "ns1", type: "text", label: null, position: 0, data: { text: "" }, locked: true },
+      { section_id: "ns1", type: "text", label: null, position: 0, data: { text: "" }, locked: true, required: false, template_field_id: "tf1" },
     ]);
   });
 
@@ -420,7 +421,7 @@ describe("duplicatePersona", () => {
     ]);
     // La duplication ne propage pas les verrous (liés au modèle du monde d'origine)
     expect(mock.buildersFor("persona_section_fields")[1].insert).toHaveBeenCalledWith([
-      { section_id: "s1n", type: "text", label: null, position: 0, data: { text: "x" }, locked: false },
+      { section_id: "s1n", type: "text", label: null, position: 0, data: { text: "x" }, locked: false, required: false, template_field_id: null },
     ]);
   });
 
@@ -451,7 +452,7 @@ describe("duplicatePersona", () => {
     ]);
     // persona_section_fields : [0] select du modèle, [1] insert — le verrou du modèle est préservé.
     expect(mock.buildersFor("persona_section_fields")[1].insert).toHaveBeenCalledWith([
-      { section_id: "ns1", type: "text", label: null, position: 0, data: { text: "" }, locked: true },
+      { section_id: "ns1", type: "text", label: null, position: 0, data: { text: "" }, locked: true, required: false, template_field_id: "tf1" },
     ]);
   });
 });

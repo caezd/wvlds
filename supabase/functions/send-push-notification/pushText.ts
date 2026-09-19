@@ -4,7 +4,7 @@
 // l'équivalent riche côté client. Toute évolution des libellés doit être
 // répercutée ICI aussi (un test de non-régression liste les 9 types, voir
 // __tests__/pushText.test.ts, pour limiter le risque de dérive silencieuse).
-// 11 types depuis la migration 178 (mentions de rôle, @tous / @ici).
+// 13 types depuis la migration 181 (validation des fiches de persona).
 
 export type PushLocale = "fr" | "en" | "es";
 
@@ -12,7 +12,7 @@ export type PushNotifPayload = {
   type:
     | "mention" | "reaction" | "new_member" | "new_chatroom" | "world_invite"
     | "chatroom_reply" | "persona_new_chatroom" | "persona_reply" | "relation_request"
-    | "role_mention" | "everyone_mention";
+    | "role_mention" | "everyone_mention" | "persona_submitted" | "persona_reviewed";
   world_id: string | null;
   chat_id: string | null;
   actor_id: string | null;
@@ -84,6 +84,18 @@ export function buildPushText(n: PushNotifPayload, locale: PushLocale): { title:
       return { title, body: n.content
         ? T(locale, `${actor} a répondu dans ${n.content}`, `${actor} replied in ${n.content}`, `${actor} respondió en ${n.content}`)
         : T(locale, `${actor} a répondu`, `${actor} replied`, `${actor} respondió`) };
+    // Validation d'une fiche de persona (migration 181).
+    case "persona_submitted": {
+      const who = persona ?? n.content ?? T(locale, "un persona", "a persona", "un persona");
+      return { title, body: T(locale, `${actor} a soumis la fiche de ${who} à validation`, `${actor} submitted ${who}'s sheet for review`, `${actor} envió la ficha de ${who} a validación`) };
+    }
+    case "persona_reviewed": {
+      const who = persona ?? n.content ?? T(locale, "un persona", "a persona", "un persona");
+      if (n.metadata?.decision === "draft") {
+        return { title, body: T(locale, `${actor} a renvoyé la fiche de ${who} en brouillon`, `${actor} sent ${who}'s sheet back to draft`, `${actor} devolvió la ficha de ${who} a borrador`) };
+      }
+      return { title, body: T(locale, `${actor} a validé la fiche de ${who}`, `${actor} approved ${who}'s sheet`, `${actor} validó la ficha de ${who}`) };
+    }
     // Une demande de relation réciproque (migration 173). Un type marital
     // garde la phrase du mariage ; les autres nomment le type.
     case "relation_request": {
@@ -101,13 +113,18 @@ export function buildPushText(n: PushNotifPayload, locale: PushLocale): { title:
   }
 }
 
-export function pushHref(n: Pick<PushNotifPayload, "chat_id" | "world_id">): string | null {
+export function pushHref(n: Pick<PushNotifPayload, "chat_id" | "world_id"> & Partial<Pick<PushNotifPayload, "type" | "metadata">>): string | null {
   if (n.chat_id) return `/c/${n.chat_id}`;
+  // Miroir de lib/notifHelpers.tsx::notifHref : une fiche relue s'ouvre
+  // directement dans la liste des personas du monde.
+  if (n.world_id && (n.type === "persona_submitted" || n.type === "persona_reviewed") && typeof n.metadata?.persona_id === "string") {
+    return `/w/${n.world_id}?view=personas&persona=${encodeURIComponent(n.metadata.persona_id)}`;
+  }
   if (n.world_id) return `/w/${n.world_id}`;
   return null;
 }
 
-const PERSONA_TYPES = new Set<PushNotifPayload["type"]>(["persona_new_chatroom", "persona_reply", "relation_request"]);
+const PERSONA_TYPES = new Set<PushNotifPayload["type"]>(["persona_new_chatroom", "persona_reply", "relation_request", "persona_submitted", "persona_reviewed"]);
 
 // Miroir de la logique de NotifAvatar/isPersonaNotif dans
 // components/notifications/index.tsx : pour les notifications "persona",
