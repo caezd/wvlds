@@ -88,7 +88,8 @@ UPDATE public.persona_section_fields f
    AND f.template_field_id IS NULL;
 
 -- `locked` et `required` ne changent que sur un modèle (remplace la garde de
--- la 055, qui ne connaissait que `locked`).
+-- la 055/057, qui ne connaissait que `locked` ; la dérogation
+-- `app.bypass_locked_guard` des RPC de déplacement reste honorée).
 CREATE OR REPLACE FUNCTION public.guard_locked_field_update()
 RETURNS trigger
 LANGUAGE plpgsql SECURITY DEFINER
@@ -99,6 +100,7 @@ BEGIN
   IF NEW.locked IS NOT DISTINCT FROM OLD.locked AND NEW.required IS NOT DISTINCT FROM OLD.required THEN
     RETURN NEW;
   END IF;
+  IF current_setting('app.bypass_locked_guard', true) = 'on' THEN RETURN NEW; END IF;
   SELECT p.is_template INTO tmpl
     FROM public.persona_sections s
     JOIN public.personas p ON p.id = s.persona_id
@@ -108,6 +110,31 @@ BEGIN
       USING ERRCODE = 'P0010';
   END IF;
   RETURN NEW;
+END;
+$$;
+
+-- Libérer les verrous d'une fiche qui change de monde (057) : un champ
+-- obligatoire est verrouillé par contrainte, l'obligation tombe avec lui.
+CREATE OR REPLACE FUNCTION public.release_persona_field_locks(p_persona_id uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM public.personas
+    WHERE id = p_persona_id AND user_id = auth.uid() AND NOT is_template
+  ) THEN
+    RAISE EXCEPTION 'Not authorized' USING ERRCODE = '42501';
+  END IF;
+
+  PERFORM set_config('app.bypass_locked_guard', 'on', true);
+  UPDATE public.persona_section_fields f
+  SET locked = false, required = false, template_field_id = NULL
+  FROM public.persona_sections s
+  WHERE f.section_id = s.id AND s.persona_id = p_persona_id AND (f.locked OR f.template_field_id IS NOT NULL);
+  PERFORM set_config('app.bypass_locked_guard', 'off', true);
 END;
 $$;
 
