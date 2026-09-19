@@ -231,8 +231,14 @@ export function WorldMemberCard({
             <PersonaChip key={p.id} persona={p} userId={member.user_id} />
           ))}
           {rest > 0 && (
-            <span className="rounded-full px-2 py-0.5 text-xs text-muted-foreground">
-              {t("morePersonas", { count: rest })}
+            // Une pastille « +N » dans la rangée, le libellé complet au survol :
+            // une phrase à part passait sur sa propre ligne.
+            <span
+              title={t("morePersonas", { count: rest })}
+              aria-label={t("morePersonas", { count: rest })}
+              className="inline-flex h-6 min-w-6 items-center justify-center rounded-full border border-border-soft bg-muted/40 px-1.5 text-[11px] font-medium tabular-nums text-muted-foreground"
+            >
+              +{rest}
             </span>
           )}
         </div>
