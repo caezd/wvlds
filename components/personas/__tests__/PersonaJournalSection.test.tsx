@@ -26,7 +26,7 @@ vi.mock("@/components/ui/delete-confirm-dialog", () => ({
 
 import { PersonaJournalSection, sortJournalEntries } from "@/components/personas/PersonaJournalSection";
 
-const CONFIG: WorldTimelineConfig = { year_label: "An", era_name: null, month_names: ["Germinal", "Floréal"], days_per_month: [30, 30] };
+const CONFIG: WorldTimelineConfig = { year_label: "An", era_name: null, month_names: ["Germinal", "Floréal"], days_per_month: [30, 30], current_year: 1327, current_month: 0 };
 const ENTRIES = [
   { id: "e1", persona_id: "p1", world_id: "w1", author_id: "me", body: "Arrivée au port.", timeline_date: { year: 1327, month: 1, day: 3 }, created_at: "2026-09-01T10:00:00Z", updated_at: "2026-09-01T10:00:00Z", author: { username: "moi" } },
   { id: "e2", persona_id: "p1", world_id: "w1", author_id: "me", body: "Sans date.", timeline_date: null, created_at: "2026-09-03T10:00:00Z", updated_at: "2026-09-03T10:00:00Z", author: { username: "moi" } },
