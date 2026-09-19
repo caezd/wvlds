@@ -356,6 +356,8 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                                     worldId={world.id}
                                     restrictInventory={restrictInventory}
                                     restrictSkills={restrictSkills}
+                                    reviewEnabled={!!world.persona_review_enabled}
+                                    onReviewEnabledChange={(enabled) => onUpdated?.({ ...world, persona_review_enabled: enabled } as World)}
                                 />
 
                                 {/* -- Timeline -------------------------------- */}

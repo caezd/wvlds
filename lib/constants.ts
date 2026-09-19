@@ -61,6 +61,7 @@ export const RPC = {
   REVIEW_PERSONA: "review_persona",
   SYNC_PERSONA_TEMPLATE_FIELDS: "sync_persona_template_fields",
   PERSONA_REQUIRED_FIELDS: "persona_required_fields",
+  WORLD_PERSONA_REVIEW_ACTIVE: "world_persona_review_active",
 } as const;
 
 // --- Realtime channel name factories -----------------------------------------

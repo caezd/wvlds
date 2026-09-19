@@ -760,6 +760,10 @@
       "cancelFailed": "No se pudo cancelar la invitación.",
       "cancelled": "Invitación cancelada para {name}.",
       "submit": "Invitar"
+    },
+    "personaReview": {
+      "label": "Validación de las fichas",
+      "help": "Una ficha nueva nace como borrador; una vez completa, su jugador la envía y un miembro con «Validar las fichas» la valida o la devuelve. Solo las fichas validadas juegan."
     }
   },
   "auth": {

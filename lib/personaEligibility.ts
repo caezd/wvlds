@@ -32,12 +32,14 @@ const UNLIMITED_PLANS = new Set(["subscribed", "lifetime"]);
 export function getUsablePersonaIds(
   personas: EligibilityPersona[],
   plan: string | null | undefined,
+  /** Le monde relit-il ses fiches (migration 184) ? Sinon seule la complétude compte. */
+  reviewActive = true,
 ): Set<string> {
   const candidates = personas.filter((p) => !p.is_template && !p.is_npc);
   // Le quota se compte sur tous les personas du monde (validés ou non) ; le
   // filtre de validation s'applique ensuite, comme `is_persona_usable`. Les
   // PNJ passent à côté du quota : validés et complets, ils jouent.
-  const reviewed = (list: EligibilityPersona[]) => list.filter((p) => personaReviewLock(p) === null);
+  const reviewed = (list: EligibilityPersona[]) => list.filter((p) => personaReviewLock(p, reviewActive) === null);
   const npcs = reviewed(personas.filter((p) => !p.is_template && !!p.is_npc)).map((p) => p.id);
 
   if (plan && UNLIMITED_PLANS.has(plan)) {
@@ -77,9 +79,10 @@ export const LOCK_REASON_KEYS = {
 export function personaLockReason(
   persona: EligibilityPersona,
   usableIds: Set<string>,
+  reviewActive = true,
 ): "incomplete" | "unreviewed" | "quota" | null {
   if (usableIds.has(persona.id)) return null;
-  return personaReviewLock(persona) ?? "quota";
+  return personaReviewLock(persona, reviewActive) ?? "quota";
 }
 
 /** Raccourci booléen pour un persona précis. */

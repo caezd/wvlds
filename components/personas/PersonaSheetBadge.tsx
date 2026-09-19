@@ -29,15 +29,18 @@ export function PersonaSheetBadge({
   persona,
   compact = false,
   showApproved = false,
+  reviewActive = true,
   className,
 }: {
   persona: { review_status?: unknown; sheet_complete?: boolean | null };
   compact?: boolean;
   showApproved?: boolean;
+  /** Le monde relit-il ses fiches (migration 184) ? Sinon, seule « incomplète » s'affiche. */
+  reviewActive?: boolean;
   className?: string;
 }) {
   const t = useTranslations("personas.sheet");
-  const kind = sheetBadgeOf(persona) ?? (showApproved ? "approved" : null);
+  const kind = sheetBadgeOf(persona, reviewActive) ?? (showApproved && reviewActive ? "approved" : null);
   if (!kind) return null;
   const Icon = ICONS[kind];
   const label = t(kind);

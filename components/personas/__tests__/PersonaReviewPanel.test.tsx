@@ -10,6 +10,9 @@ vi.mock("@/lib/supabase/client", () => ({ createClient: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 vi.mock("@/hooks/useCurrentUser", () => ({ useCurrentUser: () => ({ userId: "me", username: "moi", plan: "free" }) }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+// Le monde relit ses fiches (migration 184) — sauf quand un test le coupe.
+const review = vi.hoisted(() => ({ active: true as boolean | null }));
+vi.mock("@/hooks/useWorldReviewActive", () => ({ useWorldReviewActive: () => review.active }));
 
 import { PersonaSubmitBar, PersonaReviewSection } from "@/components/personas/PersonaReviewPanel";
 import { PersonaSheetBadge } from "@/components/personas/PersonaSheetBadge";
@@ -46,7 +49,7 @@ function setupSubmit(lastComment: unknown = null, extra: { data: unknown }[] = [
   return mock;
 }
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => { vi.clearAllMocks(); review.active = true; });
 
 describe("PersonaSheetBadge", () => {
   it("ne rend rien pour une fiche validée et complète, sauf demande explicite", () => {
@@ -59,6 +62,13 @@ describe("PersonaSheetBadge", () => {
   it("« incomplète » l'emporte sur l'état de relecture", () => {
     render(<PersonaSheetBadge persona={{ review_status: "submitted", sheet_complete: false }} />);
     expect(screen.getByText("Fiche incomplète").closest("[data-sheet-status]")).toHaveAttribute("data-sheet-status", "incomplete");
+  });
+
+  it("sans relecture dans le monde, l'état de relecture ne s'affiche pas", () => {
+    const { container, rerender } = render(<PersonaSheetBadge persona={{ review_status: "draft", sheet_complete: true }} reviewActive={false} showApproved />);
+    expect(container).toBeEmptyDOMElement();
+    rerender(<PersonaSheetBadge persona={{ review_status: "draft", sheet_complete: false }} reviewActive={false} />);
+    expect(screen.getByText("Fiche incomplète")).toBeInTheDocument();
   });
 });
 
@@ -108,6 +118,21 @@ describe("PersonaSubmitBar", () => {
     await screen.findByText("Votre fiche a été renvoyée en brouillon.");
     expect(screen.getByText("@mj — Trop court.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Soumettre à nouveau" })).toBeEnabled();
+  });
+
+  it("sans relecture dans le monde : la liste de ce qui manque, mais ni statut ni bouton", async () => {
+    review.active = false;
+    // Sans relecture, le dernier renvoi n'est pas demandé : la file n'a pas ce cran.
+    const mock = createSupabaseMock({ results: [{ data: { id: "t" } }, { data: TEMPLATE_SECTIONS }, { data: TEMPLATE_FIELDS }] });
+    vi.mocked(createClient).mockReturnValue(mock.client as never);
+    const { rerender } = render(<PersonaSubmitBar personaId="p1" worldId="w1" sections={sheet("")} initialReviewStatus="draft" />);
+    await screen.findByTestId("missing-fields");
+    expect(screen.queryByRole("button", { name: "Soumettre à validation" })).toBeNull();
+    expect(screen.queryByText("Brouillon")).toBeNull();
+    // Fiche complète : plus rien à dire du tout.
+    rerender(<PersonaSubmitBar personaId="p1" worldId="w1" sections={sheet("Née à Lyon")} initialReviewStatus="draft" />);
+    expect(screen.queryByTestId("missing-fields")).toBeNull();
+    expect(screen.queryByText("Fiche incomplète")).toBeNull();
   });
 
   it("hors monde, rien à soumettre", () => {

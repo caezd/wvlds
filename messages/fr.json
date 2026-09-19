@@ -760,6 +760,10 @@
       "cancelFailed": "Annulation de l'invitation impossible.",
       "cancelled": "Invitation annulée pour {name}.",
       "submit": "Inviter"
+    },
+    "personaReview": {
+      "label": "Validation des fiches",
+      "help": "Une nouvelle fiche naît en brouillon ; une fois complète, son joueur la soumet et un membre ayant « Valider les fiches » la valide ou la renvoie. Seules les fiches validées jouent."
     }
   },
   "auth": {

@@ -31,7 +31,11 @@ vi.mock("@/hooks/useCurrentUser", () => ({
   useCurrentUser: () => ({ userId: "u1" }),
 }));
 
+const setWorldReviewActiveCache = vi.hoisted(() => vi.fn());
+vi.mock("@/hooks/useWorldReviewActive", () => ({ setWorldReviewActiveCache }));
+
 import { WorldPersonaTemplateSection } from "@/components/worlds/settings/WorldPersonaTemplateSection";
+import { getWorldPersonaTemplate } from "@/app/actions/worldCatalog";
 
 function setup() {
   const mock = createSupabaseMock();
@@ -60,5 +64,37 @@ describe("WorldPersonaTemplateSection — ouverture de l'éditeur", () => {
     expect(tabs).toHaveAttribute("data-user", "u1");
     expect(fetchPersonaSections).toHaveBeenCalledWith(mock.client, "tpl1");
     expect(mock.client.auth.getUser).not.toHaveBeenCalled();
+  });
+});
+
+describe("WorldPersonaTemplateSection — validation des fiches (migration 184)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(getWorldPersonaTemplate).mockResolvedValue({ ok: true, templateId: "tpl1" });
+  });
+
+  it("la bascule vit sous la fiche par défaut, écrit l'option et prévient le parent", async () => {
+    const mock = setup();
+    const user = userEvent.setup();
+    const onReviewEnabledChange = vi.fn();
+    render(<WorldPersonaTemplateSection worldId="w1" reviewEnabled={false} onReviewEnabledChange={onReviewEnabledChange} />);
+
+    const toggle = await screen.findByRole("switch", { name: "Validation des fiches" });
+    await user.click(toggle);
+
+    const builder = mock.buildersFor("worlds")[0];
+    expect(builder.update).toHaveBeenCalledWith({ persona_review_enabled: true });
+    expect(builder.eq).toHaveBeenCalledWith("id", "w1");
+    expect(onReviewEnabledChange).toHaveBeenCalledWith(true);
+    // La mémoire du client apprend la valeur effective : option ET modèle.
+    expect(setWorldReviewActiveCache).toHaveBeenCalledWith("w1", true);
+  });
+
+  it("sans fiche par défaut, pas de bascule : l'option n'aurait aucun effet", async () => {
+    vi.mocked(getWorldPersonaTemplate).mockResolvedValue({ ok: true, templateId: null });
+    setup();
+    render(<WorldPersonaTemplateSection worldId="w1" reviewEnabled />);
+    await screen.findByText("Fiche par défaut");
+    expect(screen.queryByRole("switch", { name: "Validation des fiches" })).toBeNull();
   });
 });

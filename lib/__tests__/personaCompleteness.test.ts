@@ -86,6 +86,13 @@ describe("lib/personaReview", () => {
     expect(sheetBadgeOf({})).toBeNull();
   });
 
+  it("sans relecture dans le monde (migration 184), seule la complétude compte", () => {
+    expect(sheetBadgeOf({ review_status: "draft", sheet_complete: true }, false)).toBeNull();
+    expect(sheetBadgeOf({ review_status: "draft", sheet_complete: false }, false)).toBe("incomplete");
+    expect(personaReviewLock({ review_status: "submitted", sheet_complete: true }, false)).toBeNull();
+    expect(personaReviewLock({ review_status: "approved", sheet_complete: false }, false)).toBe("incomplete");
+  });
+
   it("le verrou de jeu suit la même règle", () => {
     expect(personaReviewLock({ review_status: "approved", sheet_complete: false })).toBe("incomplete");
     expect(personaReviewLock({ review_status: "submitted", sheet_complete: true })).toBe("unreviewed");

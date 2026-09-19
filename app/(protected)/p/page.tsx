@@ -35,6 +35,7 @@ type PersonaRow = {
 type MemberWorld = {
   id: string;
   name: string | null;
+  persona_review_enabled?: boolean | null;
   restrict_inventory?: boolean | null;
   restrict_skills?: boolean | null;
   enable_faceclaims?: boolean | null;
@@ -83,7 +84,7 @@ export default async function PersonasPage() {
     (async (): Promise<MemberWorld[]> => {
       const { data } = await supabase
         .from("worlds")
-        .select("id, name, restrict_inventory, restrict_skills, enable_faceclaims, world_members!inner(user_id)")
+        .select("id, name, restrict_inventory, restrict_skills, enable_faceclaims, persona_review_enabled, world_members!inner(user_id)")
         .eq("world_members.user_id", userId)
         .is("deleted_at", null)
         .eq("is_archived", false)
@@ -151,6 +152,7 @@ export default async function PersonasPage() {
       restrictSkills: !!w.restrict_skills,
       faceclaimsEnabled: w.enable_faceclaims !== false,
       hasDefaultTemplate: worldsWithTemplate.has(w.id),
+      reviewActive: worldsWithTemplate.has(w.id) && !!w.persona_review_enabled,
       personas: [],
     });
   }

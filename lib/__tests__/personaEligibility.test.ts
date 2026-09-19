@@ -120,6 +120,13 @@ describe("validation de la fiche (migration 181)", () => {
     expect(personaLockReason(list[6], usable)).toBe("incomplete");
   });
 
+  it("sans relecture dans le monde (migration 184), un brouillon complet joue", () => {
+    const list = [{ ...persona("d", "2026-01-01T00:00:00Z"), review_status: "draft", sheet_complete: true }];
+    expect(getUsablePersonaIds(list, "free")).toEqual(new Set());
+    expect(getUsablePersonaIds(list, "free", false)).toEqual(new Set(["d"]));
+    expect(personaLockReason(list[0], new Set(), false)).toBe("quota");
+  });
+
   it("personaLockReason nomme la fiche avant le quota", () => {
     const usable = new Set(["p1"]);
     expect(personaLockReason({ ...persona("p1", ""), review_status: "approved" }, usable)).toBeNull();

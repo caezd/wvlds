@@ -65,6 +65,8 @@ export type PersonaWorldGroup = {
   faceclaimsEnabled?: boolean;
   /** Le monde impose une fiche par défaut — déplacer/dupliquer vers lui écrase la fiche du persona. */
   hasDefaultTemplate?: boolean;
+  /** Le monde relit ses fiches (migration 184 : option + fiche par défaut). */
+  reviewActive?: boolean;
   personas: PersonaItem[];
 };
 
@@ -101,6 +103,7 @@ function PersonaCardFor({
       narrativeStatus={persona.narrative_status ?? null}
       reviewStatus={persona.review_status ?? null}
       sheetComplete={persona.sheet_complete ?? null}
+      reviewActive={group?.reviewActive ?? false}
       initialSpousePersonaId={persona.spouse_persona_id ?? null}
       initialSections={persona.sections}
       worldId={persona.world_id ?? undefined}

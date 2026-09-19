@@ -26,6 +26,9 @@ vi.mock("@/components/providers/WorldMembershipProvider", () => ({
   }),
 }));
 vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams(), useRouter: () => ({ refresh: vi.fn() }) }));
+// Le monde relit ses fiches (migration 184) — sauf quand un test le coupe.
+const review = vi.hoisted(() => ({ active: true }));
+vi.mock("@/hooks/useWorldReviewActive", () => ({ useWorldReviewActive: () => review.active }));
 
 import {
   WorldPersonasPanel,
@@ -62,7 +65,7 @@ function setup(withNpc = false) {
   return mock;
 }
 
-beforeEach(() => { vi.clearAllMocks(); canReview.value = false; canManageNpc.value = false; });
+beforeEach(() => { vi.clearAllMocks(); canReview.value = false; canManageNpc.value = false; review.active = true; });
 
 describe("applyPersonaFilters / sortPersonas", () => {
   const base = { query: "", player: ALL, group: ALL, status: ALL, sheet: ALL, kind: ALL };
@@ -159,6 +162,20 @@ describe("WorldPersonasPanel — filtres et statut", () => {
     expect(screen.getByRole("button", { name: "Élise" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Aeris" })).toBeNull();
     expect(screen.queryByRole("button", { name: "1 fiche à relire" })).toBeNull();
+  });
+
+  it("sans relecture dans le monde : ni badge de brouillon, ni raccourci, et le filtre « Fiche » ne connaît qu'« incomplète »", async () => {
+    review.active = false;
+    canReview.value = true;
+    setup();
+    const user = userEvent.setup();
+    render(<WorldPersonasPanel worldId="w1" myPersonas={[]} />);
+    await screen.findByRole("button", { name: "Zorg" });
+    expect(screen.getByRole("button", { name: "Élise" }).querySelector("[data-sheet-status]")).toBeNull();
+    expect(screen.queryByRole("button", { name: /à relire/ })).toBeNull();
+    await user.click(screen.getByRole("combobox", { name: "Fiche" }));
+    expect(await screen.findByRole("option", { name: "Fiche incomplète" })).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: "En relecture" })).toBeNull();
   });
 
   it("sans la permission, pas de raccourci de relecture", async () => {
