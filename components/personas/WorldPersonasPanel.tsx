@@ -26,6 +26,7 @@ import { effectiveStatus } from "@/lib/worldMembers";
 import { NARRATIVE_STATUSES, isRetiredStatus, narrativeStatusOf } from "@/lib/personaStatus";
 import { reviewStatusOf, sheetBadgeOf, type PersonaSheetBadgeKind } from "@/lib/personaReview";
 import { useWorldMembership } from "@/components/providers/WorldMembershipProvider";
+import { useWorldReviewActive } from "@/hooks/useWorldReviewActive";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { MemberStatusBadge } from "@/components/worlds/members/WorldMemberCard";
 import type { PersonaNarrativeStatus, PersonaReviewStatus, WorldMemberStatus } from "@/types/db";
@@ -83,6 +84,8 @@ export type PersonaFilters = {
   sheet: string;
   /** ALL | "player" | "npc" — personas des joueurs ou PNJ (migration 182). */
   kind: string;
+  /** Le monde relit-il ses fiches (migration 184) ? Sinon le filtre « Fiche » ne connaît qu'« incomplète ». */
+  reviewActive?: boolean;
 };
 
 export const SHEET_FILTERS: readonly PersonaSheetBadgeKind[] = ["submitted", "draft", "incomplete", "approved"];
@@ -101,7 +104,7 @@ export function applyPersonaFilters<
     if (filters.group === NO_GROUP && groupByPersona.has(p.id)) return false;
     if (filters.group !== ALL && filters.group !== NO_GROUP && groupByPersona.get(p.id) !== filters.group) return false;
     if (filters.status !== ALL && p.narrative_status !== filters.status) return false;
-    if (filters.sheet !== ALL && (sheetBadgeOf(p) ?? "approved") !== filters.sheet) return false;
+    if (filters.sheet !== ALL && (sheetBadgeOf(p, filters.reviewActive ?? true) ?? "approved") !== filters.sheet) return false;
     if (q && !normalize(p.name ?? "").includes(q) && !normalize(p.username ?? "").includes(q)) return false;
     return true;
   });
@@ -122,7 +125,7 @@ export { ALL as PERSONA_FILTER_ALL, NO_GROUP as PERSONA_FILTER_NO_GROUP };
 
 // ── Carte lecture seule : persona d'un autre membre ────────────────────────
 
-function OtherPersonaCard({ persona, groupColor, unnamed, openOnMount }: { persona: OtherPersona; groupColor?: string; unnamed: string; openOnMount?: boolean }) {
+function OtherPersonaCard({ persona, groupColor, unnamed, openOnMount, reviewActive = true }: { persona: OtherPersona; groupColor?: string; unnamed: string; openOnMount?: boolean; reviewActive?: boolean }) {
   const name = persona.name ?? unnamed;
   const retired = isRetiredStatus(persona.narrative_status);
   return (
@@ -153,7 +156,7 @@ function OtherPersonaCard({ persona, groupColor, unnamed, openOnMount }: { perso
       <div className="absolute left-2 top-2 flex flex-col items-start gap-1">
         <PersonaNpcBadge isNpc={persona.is_npc} className="bg-black/60 text-white dark:text-white" />
         <PersonaStatusBadge status={persona.narrative_status} className="bg-black/60 text-white dark:text-white" />
-        <PersonaSheetBadge persona={persona} className="bg-black/60 text-white dark:text-white" />
+        <PersonaSheetBadge persona={persona} reviewActive={reviewActive} className="bg-black/60 text-white dark:text-white" />
         {/* Le joueur est en pause ou absent : autant le savoir avant de lui écrire. */}
         {!persona.is_npc && persona.playerStatus !== "active" && (
           <MemberStatusBadge
@@ -198,6 +201,9 @@ export function WorldPersonasPanel({
   const { can } = useWorldMembership();
   const canReview = can("personas.review");
   const canManageNpc = can("npc.manage");
+  // La relecture est une option du monde (migration 184) : sans elle, ni
+  // raccourci « à relire », ni états de relecture dans le filtre et les badges.
+  const reviewActive = useWorldReviewActive(worldId) === true;
   // `?persona=<id>` (lien d'une notification de relecture) : la fiche s'ouvre d'elle-même.
   const focusPersonaId = useSearchParams()?.get("persona") ?? null;
   const [others, setOthers] = useState<OtherPersona[] | null>(null);
@@ -208,6 +214,7 @@ export function WorldPersonasPanel({
   const myIds = useMemo(() => new Set(myPersonas.map((p) => p.id)), [myPersonas]);
 
   const [filters, setFilters] = useState<PersonaFilters>({ query: "", player: ALL, group: ALL, status: ALL, sheet: ALL, kind: ALL });
+  const effectiveFilters = useMemo(() => ({ ...filters, reviewActive }), [filters, reviewActive]);
   const [sort, setSort] = useState<SortKey>("name");
 
   useEffect(() => {
@@ -315,21 +322,24 @@ export function WorldPersonasPanel({
       narrative_status: narrativeStatusOf(p.narrative_status),
       is_npc: false,
     }));
-    return sortPersonas(applyPersonaFilters(withOwner, filters, groupByPersona), sort);
-  }, [myPersonas, meId, myUsername, filters, groupByPersona, sort]);
+    return sortPersonas(applyPersonaFilters(withOwner, effectiveFilters, groupByPersona), sort);
+  }, [myPersonas, meId, myUsername, effectiveFilters, groupByPersona, sort]);
 
   const filteredOthers = useMemo(
-    () => sortPersonas(applyPersonaFilters(others ?? [], filters, groupByPersona), sort),
-    [others, filters, groupByPersona, sort],
+    () => sortPersonas(applyPersonaFilters(others ?? [], effectiveFilters, groupByPersona), sort),
+    [others, effectiveFilters, groupByPersona, sort],
   );
 
   const filteredNpcs = useMemo(
-    () => sortPersonas(applyPersonaFilters(npcs, filters, groupByPersona), sort),
-    [npcs, filters, groupByPersona, sort],
+    () => sortPersonas(applyPersonaFilters(npcs, effectiveFilters, groupByPersona), sort),
+    [npcs, effectiveFilters, groupByPersona, sort],
   );
 
   // Les fiches des autres qui attendent un relecteur — un raccourci vers le filtre.
-  const toReview = useMemo(() => (others ?? []).filter((p) => p.review_status === "submitted").length, [others]);
+  const toReview = useMemo(
+    () => (reviewActive ? (others ?? []).filter((p) => p.review_status === "submitted").length : 0),
+    [others, reviewActive],
+  );
 
   // Par lettre quand on trie par nom ; à plat sinon, l'ordre parle de lui-même.
   const otherGroups = useMemo(() => {
@@ -458,7 +468,7 @@ export function WorldPersonasPanel({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={ALL}>{t("allSheets")}</SelectItem>
-                  {SHEET_FILTERS.map((k) => (
+                  {(reviewActive ? SHEET_FILTERS : SHEET_FILTERS.filter((k) => k === "incomplete")).map((k) => (
                     <SelectItem key={k} value={k}>{tSheet(k)}</SelectItem>
                   ))}
                 </SelectContent>
@@ -522,6 +532,7 @@ export function WorldPersonasPanel({
                       narrativeStatus={p.narrative_status}
                       reviewStatus={p.review_status ?? null}
                       sheetComplete={p.sheet_complete ?? null}
+                      reviewActive={reviewActive}
                       openOnMount={p.id === focusPersonaId}
                       initialSections={p.sections}
                       worldId={worldId}
@@ -573,6 +584,7 @@ export function WorldPersonasPanel({
                       narrativeStatus={p.narrative_status}
                       reviewStatus={p.review_status}
                       sheetComplete={p.sheet_complete}
+                      reviewActive={reviewActive}
                       isNpc
                       openOnMount={p.id === focusPersonaId}
                       initialSections={npcSections.get(p.id) ?? []}
@@ -588,6 +600,7 @@ export function WorldPersonasPanel({
                       groupColor={groupColorById.get(groupByPersona.get(p.id) ?? "")}
                       unnamed={unnamed}
                       openOnMount={p.id === focusPersonaId}
+                      reviewActive={reviewActive}
                     />
                   ))}
                 </div>
@@ -632,6 +645,7 @@ export function WorldPersonasPanel({
                           groupColor={groupColorById.get(groupByPersona.get(p.id) ?? "")}
                           unnamed={unnamed}
                           openOnMount={p.id === focusPersonaId}
+                          reviewActive={reviewActive}
                         />
                       ))}
                     </div>

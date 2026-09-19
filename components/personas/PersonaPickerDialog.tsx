@@ -34,6 +34,7 @@ import { cn } from "@/lib/utils";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { LOCK_REASON_KEYS, getUsablePersonaIds, personaLockReason } from "@/lib/personaEligibility";
 import { useWorldMembership } from "@/components/providers/WorldMembershipProvider";
+import { useWorldReviewActive } from "@/hooks/useWorldReviewActive";
 import { PersonaNpcBadge } from "./PersonaNpcBadge";
 import { avatarThumbWidth } from "@/lib/storage";
 
@@ -158,6 +159,8 @@ export function PersonaPickerDialog({
   // `/w/[id]` ou dans un de ses salons.
   const { worldId: membershipWorldId, can } = useWorldMembership();
   const canPlayNpc = !!worldId && membershipWorldId === worldId && can("npc.play");
+  // Le monde relit-il ses fiches (migration 184) ? Sinon l'état de relecture ne verrouille rien.
+  const reviewActive = useWorldReviewActive(worldId) !== false;
   const supabase = useMemo(() => createClient(), []);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -239,11 +242,11 @@ export function PersonaPickerDialog({
     () => personas.map((p) => ({ id: p.id, created_at: p.created_at ?? "", review_status: p.review_status, sheet_complete: p.sheet_complete, is_npc: p.is_npc })),
     [personas],
   );
-  const usableIds = useMemo(() => getUsablePersonaIds(eligibility, plan), [eligibility, plan]);
+  const usableIds = useMemo(() => getUsablePersonaIds(eligibility, plan, reviewActive), [eligibility, plan, reviewActive]);
   // La raison du verrou, par persona : la fiche avant le quota.
   const lockReasonById = useMemo(
-    () => new Map(eligibility.map((p) => [p.id, personaLockReason(p, usableIds)] as const)),
-    [eligibility, usableIds],
+    () => new Map(eligibility.map((p) => [p.id, personaLockReason(p, usableIds, reviewActive)] as const)),
+    [eligibility, usableIds, reviewActive],
   );
 
   const canConfirm = !!value && (!required || !!value);

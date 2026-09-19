@@ -30,6 +30,7 @@ import { PersonaNpcBadge } from "./PersonaNpcBadge";
 import { PersonaReviewSection } from "./PersonaReviewPanel";
 import { PersonaJournalSection } from "./PersonaJournalSection";
 import { useWorldMembership } from "@/components/providers/WorldMembershipProvider";
+import { useWorldReviewActive } from "@/hooks/useWorldReviewActive";
 import type { PersonaNarrativeStatus, PersonaReviewStatus } from "@/types/db";
 import { effectiveStatus, type WorldMemberCardFields } from "@/lib/worldMembers";
 import type { PersonaSection, PersonaSectionField, PersonaSectionWithFields, PersonaFieldData, GaugeItem, TraitItem, TimelineItem, DlItem } from "@/types/personas";
@@ -471,6 +472,8 @@ export function PersonaProfileSheetTrigger({
   const [sections, setSections] = React.useState<PersonaSectionWithFields[]>([]);
   const [catalog, setCatalog] = React.useState<Map<string, WorldCatalogItem> | undefined>(undefined);
   const [worldId, setWorldId] = React.useState<string | null>(null);
+  // Le monde relit-il ses fiches (migration 184) ? Sinon ni badge de relecture ni onglet.
+  const reviewActive = useWorldReviewActive(worldId) === true;
   const [activeTab, setActiveTab] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [isFollowing, setIsFollowing] = React.useState<boolean | null>(null);
@@ -669,11 +672,11 @@ export function PersonaProfileSheetTrigger({
             presenceLine={presenceLine}
             userPresence={userPresence}
             statusBadge={
-              isNpc || narrativeStatus !== "alive" || reviewStatus !== "approved" || !sheetComplete || (ownerStatus && ownerEffectiveStatus !== "active") ? (
+              isNpc || narrativeStatus !== "alive" || (reviewActive && reviewStatus !== "approved") || !sheetComplete || (ownerStatus && ownerEffectiveStatus !== "active") ? (
                 <>
                   <PersonaNpcBadge isNpc={isNpc} />
                   <PersonaStatusBadge status={narrativeStatus} />
-                  <PersonaSheetBadge persona={{ review_status: reviewStatus, sheet_complete: sheetComplete }} />
+                  <PersonaSheetBadge persona={{ review_status: reviewStatus, sheet_complete: sheetComplete }} reviewActive={reviewActive} />
                   {!isNpc && ownerStatus && ownerEffectiveStatus !== "active" && (
                     <MemberStatusBadge status={ownerEffectiveStatus} until={ownerStatus.status_until} note={ownerStatus.status_note} />
                   )}
@@ -701,7 +704,7 @@ export function PersonaProfileSheetTrigger({
               },
               // La relecture : le propriétaire y lit les commentaires, un
               // relecteur du monde y valide ou renvoie la fiche.
-              ...((viewerId === userId || (membershipWorldId === worldId && can("personas.review"))) ? [{
+              ...((reviewActive && (viewerId === userId || (membershipWorldId === worldId && can("personas.review")))) ? [{
                 id: "__review__",
                 label: tReview("tab"),
                 content: (

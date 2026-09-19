@@ -19,7 +19,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Personas",
-    text: "Le modèle de fiche d’un monde peut rendre des champs obligatoires (l’astérisque, dans les réglages du modèle). Une fiche naît en brouillon : son éditeur liste ce qui manque, propose d’ajouter les champs du modèle absents, et le bouton « Soumettre à validation » s’active une fois la fiche complète. Un administrateur — permission « Valider les fiches » — la valide ou la renvoie avec un commentaire depuis l’onglet Relecture de la fiche ; chacun est prévenu par notification. Seules les fiches validées et complètes jouent dans les salons ; un badge (incomplète, brouillon, en relecture) le dit sur les tuiles, et la liste des personas se filtre par état de fiche. Les fiches des personas d’un monde sont désormais lisibles par ses membres.",
+    text: "Le modèle de fiche d’un monde peut rendre des champs obligatoires (l’astérisque, dans les réglages du modèle). La validation des fiches est une option de la fiche par défaut, à activer dans les réglages du monde ; avec elle, une fiche naît en brouillon : son éditeur liste ce qui manque, propose d’ajouter les champs du modèle absents, et le bouton « Soumettre à validation » s’active une fois la fiche complète. Un administrateur — permission « Valider les fiches » — la valide ou la renvoie avec un commentaire depuis l’onglet Relecture de la fiche ; chacun est prévenu par notification. Seules les fiches validées et complètes jouent dans les salons ; un badge (incomplète, brouillon, en relecture) le dit sur les tuiles, et la liste des personas se filtre par état de fiche. Les fiches des personas d’un monde sont désormais lisibles par ses membres.",
   },
   {
     date: "2026-09",

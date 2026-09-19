@@ -25,6 +25,7 @@ import { getInitials } from "@/lib/textFormatting";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { LOCK_REASON_KEYS, getUsablePersonaIds, personaLockReason, type EligibilityPersona } from "@/lib/personaEligibility";
 import { useWorldMembership } from "@/components/providers/WorldMembershipProvider";
+import { useWorldReviewActive } from "@/hooks/useWorldReviewActive";
 import { PersonaNpcBadge } from "@/components/personas/PersonaNpcBadge";
 import { PersonaJournalSection } from "@/components/personas/PersonaJournalSection";
 import { indexCatalog } from "@/lib/worldCatalog";
@@ -207,8 +208,11 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
   // Éligibilité (plan gratuit : 5 personas les plus anciens par monde) — ne
   // concerne que le persona du viewer lui-même (cf. migration 090).
   const [usableForSelf, setUsableForSelf] = useState(true);
-  const { can } = useWorldMembership();
+  const { can, worldId: membershipWorldId } = useWorldMembership();
   const canPlayNpc = can("npc.play");
+  // Le monde relit-il ses fiches (migration 184) ? Ouverte depuis un salon, la
+  // fiche est celle d'un persona du monde du salon.
+  const reviewActive = useWorldReviewActive(membershipWorldId || null) !== false;
   const [lockReason, setLockReason] = useState<keyof typeof LOCK_REASON_KEYS>("quota");
   const [sections, setSections] = useState<PersonaSectionWithFields[]>([]);
   const [activeTab, setActiveTab] = useState<string | null>(null);
@@ -274,9 +278,9 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
           .eq("world_id", worldId)
           .is("deleted_at", null);
         const rows = (siblings ?? []) as EligibilityPersona[];
-        const usable = getUsablePersonaIds(rows, plan);
+        const usable = getUsablePersonaIds(rows, plan, reviewActive);
         usableForSelfResult = usable.has(persona!.id);
-        lockReasonResult = personaLockReason(rows.find((p) => p.id === persona!.id) ?? { id: persona!.id, created_at: "" }, usable) ?? "quota";
+        lockReasonResult = personaLockReason(rows.find((p) => p.id === persona!.id) ?? { id: persona!.id, created_at: "" }, usable, reviewActive) ?? "quota";
       }
 
       // présence persistée du propriétaire (pour "vu il y a X")
@@ -349,7 +353,7 @@ export function PersonaProfileSheet({ persona, selfId, onClose, onUsePersona }: 
 
     load();
     return () => { cancelled = true; };
-  }, [persona?.id, selfId, plan, supabase, canPlayNpc]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [persona?.id, selfId, plan, supabase, canPlayNpc, reviewActive]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const userPresence = persona ? getUserPresence(persona.user_id) : "offline";
   const _isOnline = userPresence === "online";

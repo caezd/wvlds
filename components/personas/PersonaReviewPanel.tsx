@@ -14,6 +14,7 @@ import { fetchPersonaSections } from "@/lib/personaSections";
 import { missingRequiredFields, templateRequiredFields, type MissingRequiredField, type TemplateRequiredField } from "@/lib/personaCompleteness";
 import { reviewStatusOf } from "@/lib/personaReview";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useWorldReviewActive } from "@/hooks/useWorldReviewActive";
 import { Button } from "@/components/ui/button";
 import { AutoResizeTextarea } from "@/components/ui/auto-resizable-textarea";
 import { PersonaSheetBadge } from "./PersonaSheetBadge";
@@ -117,13 +118,15 @@ export function PersonaSubmitBar({
   const [busy, setBusy] = useState<null | "submit" | "sync">(null);
   const [lastSentBack, setLastSentBack] = useState<{ body: string; author: string | null } | null>(null);
   const required = useTemplateRequiredFields(worldId);
+  // Le monde relit-il (migration 184) ? Sinon : la liste de ce qui manque, rien d'autre.
+  const reviewActive = useWorldReviewActive(worldId) === true;
 
   const missing = useMemo(() => (required ? missingRequiredFields(sections, required) : []), [sections, required]);
   const complete = required !== null && missing.length === 0;
 
   // Renvoyée en brouillon : le dernier mot du relecteur, en bandeau.
   useEffect(() => {
-    if (status !== "draft" || !worldId) { setLastSentBack(null); return; }
+    if (status !== "draft" || !worldId || !reviewActive) { setLastSentBack(null); return; }
     let cancelled = false;
     (async () => {
       const { data } = await supabase
@@ -139,7 +142,7 @@ export function PersonaSubmitBar({
       setLastSentBack({ body: row.body, author: row.author?.username ?? null });
     })();
     return () => { cancelled = true; };
-  }, [supabase, personaId, status, worldId]);
+  }, [supabase, personaId, status, worldId, reviewActive]);
 
   async function submit() {
     setBusy("submit");
@@ -162,11 +165,12 @@ export function PersonaSubmitBar({
     router.refresh();
   }
 
-  // Hors monde : rien à valider.
+  // Hors monde : rien à valider. Sans relecture et sans manque : rien à dire.
   if (!worldId) return null;
+  if (!reviewActive && missing.length === 0) return null;
 
   return (
-    <div className={cn("space-y-2", className)} data-review-status={status}>
+    <div className={cn("space-y-2", className)} data-review-status={reviewActive ? status : "inactive"}>
       {lastSentBack && status === "draft" && (
         <div className="rounded-lg border border-border-soft bg-muted/40 px-3 py-2 text-xs">
           <p className="font-medium">{t("sentBack")}</p>
@@ -178,6 +182,7 @@ export function PersonaSubmitBar({
         </div>
       )}
       <MissingFieldsList missing={missing} onSync={sync} syncing={busy === "sync"} />
+      {reviewActive && (
       <div className="flex flex-wrap items-center justify-between gap-2">
         <PersonaSheetBadge persona={{ review_status: status, sheet_complete: required === null ? true : complete }} showApproved />
         {status === "submitted" ? (
@@ -189,6 +194,7 @@ export function PersonaSubmitBar({
           </Button>
         ) : null}
       </div>
+      )}
     </div>
   );
 }

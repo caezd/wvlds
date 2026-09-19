@@ -33,6 +33,8 @@ type PersonaCardProps = {
   openOnMount?: boolean;
   /** PNJ partagé (migration 182) : badge sur la tuile. */
   isNpc?: boolean;
+  /** Le monde relit-il ses fiches (migration 184) ? Sinon le badge ne dit qu'« incomplète ». */
+  reviewActive?: boolean;
   initialSections: PersonaSectionWithFields[];
   worldId?: string;
   restrictInventory?: boolean;
@@ -56,6 +58,7 @@ export function PersonaCard({
   sheetComplete,
   openOnMount,
   isNpc,
+  reviewActive = true,
   initialSections,
   worldId,
   restrictInventory,
@@ -108,7 +111,7 @@ export function PersonaCard({
           <div className="absolute left-3 top-3 flex flex-col items-start gap-1">
             <PersonaNpcBadge isNpc={isNpc} className="bg-black/60 text-white dark:text-white" />
             <PersonaStatusBadge status={narrativeStatus} />
-            <PersonaSheetBadge persona={{ review_status: reviewStatus, sheet_complete: sheetComplete }} className="bg-black/60 text-white dark:text-white" />
+            <PersonaSheetBadge persona={{ review_status: reviewStatus, sheet_complete: sheetComplete }} reviewActive={reviewActive} className="bg-black/60 text-white dark:text-white" />
           </div>
 
           {/* Bouton éditer — coin supérieur droit au survol */}

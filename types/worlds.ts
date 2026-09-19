@@ -134,6 +134,8 @@ export type World = {
   restrict_inventory?: boolean | null;
   restrict_skills?: boolean | null;
   timeline_enabled?: boolean | null;
+  /** Validation des fiches (migration 184) — active seulement avec une fiche par défaut. */
+  persona_review_enabled?: boolean | null;
   timeline_config?: WorldTimelineConfig | null;
   allows_real_avatars?: boolean | null;
   allows_illustrated_avatars?: boolean | null;

@@ -760,6 +760,10 @@
       "cancelFailed": "Could not cancel the invitation.",
       "cancelled": "Invitation cancelled for {name}.",
       "submit": "Invite"
+    },
+    "personaReview": {
+      "label": "Sheet review",
+      "help": "A new sheet starts as a draft; once complete, its player submits it and a member with “Review sheets” approves it or sends it back. Only approved sheets play."
     }
   },
   "auth": {

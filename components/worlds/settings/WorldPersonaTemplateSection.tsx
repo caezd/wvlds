@@ -31,6 +31,7 @@ import {
 import { fetchPersonaSections } from "@/lib/personaSections";
 import type { PersonaSectionWithFields } from "@/types/personas";
 import { useTranslations } from "next-intl";
+import { setWorldReviewActiveCache } from "@/hooks/useWorldReviewActive";
 import { messageErreurAction } from "@/lib/actionErrors";
 
 /**
@@ -44,12 +45,18 @@ export function WorldPersonaTemplateSection({
   worldId,
   restrictInventory,
   restrictSkills,
+  reviewEnabled = false,
+  onReviewEnabledChange,
 }: {
   worldId: string;
   restrictInventory?: boolean;
   restrictSkills?: boolean;
+  /** Validation des fiches (migration 184) : option complémentaire de la fiche par défaut. */
+  reviewEnabled?: boolean;
+  onReviewEnabledChange?: (enabled: boolean) => void;
 }) {
   const t = useTranslations("worlds");
+  const [togglingReview, setTogglingReview] = React.useState(false);
   const tCommun = useTranslations("common");
   const supabase = React.useMemo(() => createClient(), []);
   const [templateId, setTemplateId] = React.useState<string | null>(null);
@@ -107,6 +114,18 @@ export function WorldPersonaTemplateSection({
     setSections(null);
   }
 
+  // L'option n'a d'effet qu'avec un modèle (`world_persona_review_active`) ;
+  // la bascule reste donc sous la fiche par défaut, et la mémoire du client
+  // (useWorldReviewActive) apprend la nouvelle valeur sans repasser par la base.
+  async function handleReviewToggle(enabled: boolean) {
+    setTogglingReview(true);
+    const { error } = await supabase.from("worlds").update({ persona_review_enabled: enabled }).eq("id", worldId);
+    setTogglingReview(false);
+    if (error) { toast.error(error.message); return; }
+    setWorldReviewActiveCache(worldId, enabled && !!templateId);
+    onReviewEnabledChange?.(enabled);
+  }
+
   async function openEditor() {
     if (!templateId) return;
     setEditorOpen(true);
@@ -154,6 +173,22 @@ export function WorldPersonaTemplateSection({
               <Pencil className="mr-1 h-3.5 w-3.5" />
               Éditer la fiche
             </Button>
+          </div>
+        )}
+
+        {templateId && (
+          <div className="ml-4 flex items-start justify-between gap-4 rounded-xl border border-border-soft bg-muted/20 p-3">
+            <div className="space-y-0.5">
+              <p className="text-sm font-medium">{t("personaReview.label")}</p>
+              <p className="text-xs text-muted-foreground leading-snug">{t("personaReview.help")}</p>
+            </div>
+            <Switch
+              checked={reviewEnabled}
+              disabled={togglingReview}
+              onCheckedChange={(v) => void handleReviewToggle(v)}
+              aria-label={t("personaReview.label")}
+              className="shrink-0 mt-0.5"
+            />
           </div>
         )}
       </div>

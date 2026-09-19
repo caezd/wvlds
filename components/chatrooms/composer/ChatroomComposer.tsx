@@ -54,6 +54,7 @@ import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
 // 692 lignes qui n'utilisaient rien du composeur.
 import { BlocksDropdown, type MapPinOption } from "./BlocksDropdown";
 import { LOCK_REASON_KEYS, getUsablePersonaIds, personaLockReason, type EligibilityPersona } from "@/lib/personaEligibility";
+import { useWorldReviewActive } from "@/hooks/useWorldReviewActive";
 
 type ChatroomComposerProps = {
     /** Chatroom existante. Laisser vide pour le mode « création » (voir onResolveChat). */
@@ -293,6 +294,8 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
     // Les personas du monde tels que chargés — pour nommer la raison d'un
     // verrou (fiche incomplète, non validée, quota).
     const [eligibilityRows, setEligibilityRows] = useState<EligibilityPersona[]>([]);
+    // Le monde relit-il ses fiches (migration 184) ? `null` tant qu'on ne sait pas : on ne verrouille pas.
+    const reviewActive = useWorldReviewActive(worldId);
     useEffect(() => {
         if (!userId || !worldId) { setUsableIds(null); setEligibilityRows([]); return; }
         let cancelled = false;
@@ -304,10 +307,10 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
             .then(({ data }: { data: EligibilityPersona[] | null }) => {
                 if (cancelled) return;
                 setEligibilityRows(data ?? []);
-                setUsableIds(getUsablePersonaIds(data ?? [], plan));
+                setUsableIds(getUsablePersonaIds(data ?? [], plan, reviewActive !== false));
             });
         return () => { cancelled = true; };
-    }, [supabase, userId, worldId, plan]);
+    }, [supabase, userId, worldId, plan, reviewActive]);
     const BUBBLE_KEY = `bubbleMode:${chatId ?? "new"}`;
     const BUBBLE_COLOR_KEY = `bubbleColor:${chatId ?? "new"}`;
     const [bubbleMode, setBubbleModeRaw] = useState(false);
@@ -618,7 +621,7 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
 
     const selectedPersonaLocked = !!selectedPersona && !!usableIds && !usableIds.has(selectedPersona.id);
     const selectedLockReason = selectedPersonaLocked && usableIds
-        ? personaLockReason(eligibilityRows.find((p) => p.id === selectedPersona!.id) ?? { id: selectedPersona!.id, created_at: "" }, usableIds)
+        ? personaLockReason(eligibilityRows.find((p) => p.id === selectedPersona!.id) ?? { id: selectedPersona!.id, created_at: "" }, usableIds, reviewActive !== false)
         : null;
     const canSend =
         (value.trim().length > 0 || pendingMedia.length > 0) && !!selectedPersona && !selectedPersonaLocked;
