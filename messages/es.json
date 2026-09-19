@@ -1059,6 +1059,19 @@
       "kindPlayers": "Personas de los jugadores",
       "kindNpcs": "PNJ",
       "lockedNoPlay": "No tiene permiso para jugar los PNJ de este mundo."
+    },
+    "journal": {
+      "tab": "Diario",
+      "newEntry": "Nueva entrada",
+      "placeholder": "Lo que el persona recuerda del día…",
+      "dateLabel": "Fecha en el mundo",
+      "save": "Guardar",
+      "cancel": "Cancelar",
+      "edit": "Modificar esta entrada",
+      "delete": "Eliminar esta entrada",
+      "deleteDescription": "Esta entrada del diario se eliminará definitivamente.",
+      "empty": "Este diario aún está en blanco.",
+      "emptyMine": "Su diario aún está en blanco: cuente el primer día."
     }
   },
   "quests": {

@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Personas",
+    text: "Chaque persona tient un journal de bord, onglet Journal de sa fiche : des entrées en Markdown que son joueur écrit (ou, pour un PNJ, qui le joue) et que tous les membres du monde lisent. Quand le monde a une chronologie, une entrée se date dans celle-ci et le journal se range dans l’ordre du monde.",
+  },
+  {
+    date: "2026-09",
+    tag: "Personas",
     text: "PNJ partagés : un persona du monde que plusieurs membres font parler. Deux permissions le régissent — « Gérer les PNJ » (créer, modifier, supprimer ; case « PNJ partagé » à la création, section PNJ de la liste avec son bouton) et « Jouer les PNJ » (le choisir dans le sélecteur du salon, sous « PNJ du monde »). Les messages disent « PNJ · joué par @pseudo ». Un PNJ ne compte pas dans le quota de personas, naît validé, et un monde en compte trente au plus.",
   },
   {

@@ -28,6 +28,7 @@ import { reviewStatusOf } from "@/lib/personaReview";
 import { PersonaSheetBadge } from "./PersonaSheetBadge";
 import { PersonaNpcBadge } from "./PersonaNpcBadge";
 import { PersonaReviewSection } from "./PersonaReviewPanel";
+import { PersonaJournalSection } from "./PersonaJournalSection";
 import { useWorldMembership } from "@/components/providers/WorldMembershipProvider";
 import type { PersonaNarrativeStatus, PersonaReviewStatus } from "@/types/db";
 import { effectiveStatus, type WorldMemberCardFields } from "@/lib/worldMembers";
@@ -447,6 +448,7 @@ export function PersonaProfileSheetTrigger({
   const { userId: viewerId } = useCurrentUser();
   const tRelations = useTranslations("personas.relations");
   const tReview = useTranslations("personas.review");
+  const tJournal = useTranslations("personas.journal");
   // Relire exige `personas.review` dans le monde du persona — le contexte
   // n'est celui de ce monde que sous `/w/[id]` ou dans un de ses salons.
   const { worldId: membershipWorldId, can } = useWorldMembership();
@@ -691,6 +693,11 @@ export function PersonaProfileSheetTrigger({
                 id: "__relations__",
                 label: tRelations("tab"),
                 content: <PersonaRelationsSection personaId={personaId} worldId={worldId} ownerId={userId} selfId={viewerId ?? null} />,
+              },
+              {
+                id: "__journal__",
+                label: tJournal("tab"),
+                content: <PersonaJournalSection personaId={personaId} worldId={worldId} ownerId={userId} isNpc={isNpc} />,
               },
               // La relecture : le propriétaire y lit les commentaires, un
               // relecteur du monde y valide ou renvoie la fiche.
