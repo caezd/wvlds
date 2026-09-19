@@ -198,7 +198,7 @@ export type AllChatroomUnreadRow = {
 
 // --- Notifications -----------------------------------------------------------
 
-export type NotificationType = 'mention' | 'reaction' | 'new_member' | 'new_chatroom' | 'world_invite' | 'chatroom_reply' | 'persona_new_chatroom' | 'persona_reply' | 'relation_request';
+export type NotificationType = 'mention' | 'reaction' | 'new_member' | 'new_chatroom' | 'world_invite' | 'chatroom_reply' | 'persona_new_chatroom' | 'persona_reply' | 'relation_request' | 'role_mention' | 'everyone_mention';
 
 export type WorldInvitation = {
   id: string;
@@ -222,6 +222,12 @@ export type NotificationMeta = {
   relation_id?: string;
   type_name?: string | null;
   marital_status?: 'in_relationship' | 'married' | null;
+  /** Mention d'un rôle (migration 178). */
+  role_id?: string;
+  role_name?: string | null;
+  role_color?: string | null;
+  /** `everyone_mention` : @tous, ou @ici (les présents). */
+  scope?: 'everyone' | 'here';
 };
 
 export type AppNotification = {

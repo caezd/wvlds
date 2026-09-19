@@ -8,7 +8,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
     ArrowLeft, AtSign, Bell, CheckCheck, Globe, Hash, Heart, Loader2,
-    MessageSquare, Settings, Smile, UserPlus, X,
+    Megaphone, MessageSquare, Settings, Smile, UserPlus, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -38,10 +38,12 @@ const NOTIF_ICONS: Record<NotificationType, React.ReactNode> = {
     persona_new_chatroom: <Hash size={13} />,
     persona_reply: <MessageSquare size={13} />,
     relation_request: <Heart size={13} />,
+    role_mention: <AtSign size={13} />,
+    everyone_mention: <Megaphone size={13} />,
 };
 
-const ALL_TYPES: NotificationType[] = ["mention", "reaction", "new_member", "new_chatroom", "chatroom_reply", "persona_new_chatroom", "persona_reply", "relation_request"];
-const WORLD_HEADER_TYPES: NotificationType[] = ["mention", "reaction", "new_chatroom", "persona_new_chatroom", "persona_reply", "relation_request"];
+const ALL_TYPES: NotificationType[] = ["mention", "role_mention", "everyone_mention", "reaction", "new_member", "new_chatroom", "chatroom_reply", "persona_new_chatroom", "persona_reply", "relation_request"];
+const WORLD_HEADER_TYPES: NotificationType[] = ["mention", "role_mention", "everyone_mention", "reaction", "new_chatroom", "persona_new_chatroom", "persona_reply", "relation_request"];
 const PERSONA_NOTIF_TYPES: NotificationType[] = ["persona_new_chatroom", "persona_reply", "relation_request"];
 const ACTIONABLE_TYPES: NotificationType[] = ["world_invite", "relation_request"];
 
@@ -405,6 +407,8 @@ export function NotificationInlinePanelContent() {
         persona_new_chatroom: t("prefs.persona_new_chatroom"),
         persona_reply: t("prefs.persona_reply"),
         relation_request: t("prefs.relation_request"),
+        role_mention: t("prefs.role_mention"),
+        everyone_mention: t("prefs.everyone_mention"),
     };
 
     const sentinelRef = useRef<HTMLDivElement>(null);

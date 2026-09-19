@@ -4,6 +4,7 @@ import { buildPushText, pushHref, resolvePushImage, type PushNotifPayload } from
 const ALL_TYPES: PushNotifPayload["type"][] = [
   "mention", "reaction", "new_member", "new_chatroom", "world_invite",
   "chatroom_reply", "persona_new_chatroom", "persona_reply", "relation_request",
+  "role_mention", "everyone_mention",
 ];
 
 const base: PushNotifPayload = {
@@ -17,6 +18,15 @@ describe("buildPushText", () => {
     expect(title).toBeTruthy();
     expect(body).toBeTruthy();
     expect(body).not.toMatch(/<b>|<\/b>/);
+  });
+
+  it("nomme le rôle mentionné, et distingue @ici de @tous", () => {
+    expect(buildPushText({ ...base, type: "role_mention", metadata: { role_name: "Maître du jeu" } }, "fr").body)
+      .toBe("Alice a mentionné Maître du jeu dans Salon Test");
+    expect(buildPushText({ ...base, type: "everyone_mention", metadata: { scope: "here" } }, "en").body)
+      .toBe("Alice called everyone here in Salon Test");
+    expect(buildPushText({ ...base, type: "everyone_mention", metadata: { scope: "everyone" } }, "es").body)
+      .toBe("Alice llamó a todos en Salon Test");
   });
 
   it("utilise le compteur agrégé pour chatroom_reply", () => {

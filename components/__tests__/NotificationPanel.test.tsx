@@ -235,7 +235,10 @@ describe("NotificationInlinePanelContent — préférences", () => {
         const user = userEvent.setup();
         render(<NotificationInlinePanelContent />);
         await user.click(screen.getByLabelText(/préférences/i));
-        expect(screen.getByText(/mentions/i)).toBeInTheDocument();
+        // « Mentions » exact : « Mentions de mes rôles » a son propre switch.
+        expect(screen.getByText("Mentions")).toBeInTheDocument();
+        expect(screen.getByText("Mentions de mes rôles")).toBeInTheDocument();
+        expect(screen.getByText("@tous et @ici")).toBeInTheDocument();
         expect(screen.getByText(/réactions/i)).toBeInTheDocument();
         expect(screen.getByText(/nouveaux membres/i)).toBeInTheDocument();
         expect(screen.getByText(/nouvelles chatrooms/i)).toBeInTheDocument();
@@ -248,7 +251,7 @@ describe("NotificationInlinePanelContent — préférences", () => {
         await user.click(screen.getByLabelText(/préférences/i));
         // Ciblé par nom accessible (aria-label) plutôt que par index — insensible
         // à l'ajout/retrait d'autres switches dans la liste (ex. push en tête).
-        await user.click(screen.getByRole("switch", { name: /mentions/i }));
+        await user.click(screen.getByRole("switch", { name: "Mentions" }));
         expect(mockSetNotifPref).toHaveBeenCalledOnce();
     });
 });

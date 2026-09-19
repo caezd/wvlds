@@ -4,13 +4,15 @@
 // l'équivalent riche côté client. Toute évolution des libellés doit être
 // répercutée ICI aussi (un test de non-régression liste les 9 types, voir
 // __tests__/pushText.test.ts, pour limiter le risque de dérive silencieuse).
+// 11 types depuis la migration 178 (mentions de rôle, @tous / @ici).
 
 export type PushLocale = "fr" | "en" | "es";
 
 export type PushNotifPayload = {
   type:
     | "mention" | "reaction" | "new_member" | "new_chatroom" | "world_invite"
-    | "chatroom_reply" | "persona_new_chatroom" | "persona_reply" | "relation_request";
+    | "chatroom_reply" | "persona_new_chatroom" | "persona_reply" | "relation_request"
+    | "role_mention" | "everyone_mention";
   world_id: string | null;
   chat_id: string | null;
   actor_id: string | null;
@@ -36,6 +38,19 @@ export function buildPushText(n: PushNotifPayload, locale: PushLocale): { title:
       return { title, body: n.content
         ? T(locale, `${actor} vous a mentionné dans ${n.content}`, `${actor} mentioned you in ${n.content}`, `${actor} le mencionó en ${n.content}`)
         : T(locale, `${actor} vous a mentionné`, `${actor} mentioned you`, `${actor} le mencionó`) };
+    case "role_mention": {
+      const role = typeof n.metadata?.role_name === "string" ? n.metadata.role_name : T(locale, "votre rôle", "your role", "su rol");
+      return { title, body: n.content
+        ? T(locale, `${actor} a mentionné ${role} dans ${n.content}`, `${actor} mentioned ${role} in ${n.content}`, `${actor} mencionó a ${role} en ${n.content}`)
+        : T(locale, `${actor} a mentionné ${role}`, `${actor} mentioned ${role}`, `${actor} mencionó a ${role}`) };
+    }
+    case "everyone_mention": {
+      const here = n.metadata?.scope === "here";
+      const who = here ? T(locale, "les membres présents", "everyone here", "a los presentes") : T(locale, "tout le monde", "everyone", "a todos");
+      return { title, body: n.content
+        ? T(locale, `${actor} a appelé ${who} dans ${n.content}`, `${actor} called ${who} in ${n.content}`, `${actor} llamó ${who} en ${n.content}`)
+        : T(locale, `${actor} a appelé ${who}`, `${actor} called ${who}`, `${actor} llamó ${who}`) };
+    }
     case "reaction":
       return { title, body: T(locale, `${actor} a réagi à votre message`, `${actor} reacted to your message`, `${actor} reaccionó a su mensaje`) };
     case "new_member":

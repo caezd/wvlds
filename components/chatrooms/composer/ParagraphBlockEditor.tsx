@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useLayoutEffect, useState } from "react";
+import { useRef, useEffect, useImperativeHandle, useLayoutEffect, useState, type Ref } from "react";
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 import { Bold, Italic, Strikethrough, Underline, List, Palette, Heading, Heading1, Heading2, Heading3 } from "lucide-react";
@@ -87,6 +87,39 @@ function extractValue(el: HTMLDivElement): string {
     .join("\n\n");
 }
 
+/** La saisie `@…` en cours au curseur : le texte après le `@`, et où l'ancrer. */
+export type MentionQuery = { query: string; rect: DOMRect | null };
+
+/** Ce qu'un parent peut demander à l'éditeur, au-delà des props. */
+export type ParagraphBlockEditorHandle = {
+  /** Remplace le `@query` au curseur par `text` (typiquement `@Nom `). */
+  replaceMentionQuery: (text: string) => void;
+};
+
+/** Longueur maximale d'une recherche `@…` — un nom de rôle tient largement. */
+const MENTION_QUERY_MAX = 40;
+
+/**
+ * Le `@query` juste avant le curseur, s'il y en a un : `@` en début de mot,
+ * suivi de texte sans saut de ligne. Le même nœud texte seulement — une
+ * mention ne traverse pas une mise en forme.
+ */
+function readMentionQuery(el: HTMLDivElement): { node: Text; atIndex: number; caret: number; query: string } | null {
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0 || !sel.isCollapsed) return null;
+  const range = sel.getRangeAt(0);
+  const node = range.startContainer;
+  if (!(node instanceof Text) || !el.contains(node)) return null;
+  const caret = range.startOffset;
+  const before = node.data.slice(0, caret).replace(NBSP_RE, " ");
+  const atIndex = before.lastIndexOf("@");
+  if (atIndex === -1) return null;
+  if (atIndex > 0 && /[\p{L}\p{N}_@]/u.test(before[atIndex - 1])) return null;
+  const query = before.slice(atIndex + 1);
+  if (query.length > MENTION_QUERY_MAX || /[\r\n]/.test(query)) return null;
+  return { node, atIndex, caret, query };
+}
+
 export function ParagraphBlockEditor({
   value,
   onChange,
@@ -99,6 +132,8 @@ export function ParagraphBlockEditor({
   formatting = false,
   autoFocus = false,
   disabled = false,
+  mentions,
+  ref,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -122,6 +157,14 @@ export function ParagraphBlockEditor({
   autoFocus?: boolean;
   /** Désactive la saisie (ex: pendant une sauvegarde en cours). */
   disabled?: boolean;
+  /** Autocomplétion des mentions : l'éditeur signale la saisie `@…` au
+   *  curseur, et laisse le parent prendre les touches de navigation tant que
+   *  sa liste est ouverte (`onKeyDown` rend true quand il a consommé la touche). */
+  mentions?: {
+    onQuery: (q: MentionQuery | null) => void;
+    onKeyDown?: (e: React.KeyboardEvent<HTMLDivElement>) => boolean;
+  };
+  ref?: Ref<ParagraphBlockEditorHandle>;
 }) {
   const t = useTranslations("chatrooms");
   // Les libellés de mise en forme sont partagés avec l'éditeur du wiki.
@@ -373,7 +416,84 @@ export function ParagraphBlockEditor({
     }
 
     onChange(extractValue(el));
+    reportMentionQuery();
   }
+
+  // ── Mentions ──────────────────────────────────────────────────────────────
+
+  const lastMentionQueryRef = useRef<string | null>(null);
+  // Après une insertion, `@alice ` est encore un `@…` au curseur : la liste
+  // se rouvrirait aussitôt. On se tait jusqu'à la prochaine frappe.
+  const mentionSuppressedRef = useRef(false);
+
+  /** Signale au parent la saisie `@…` courante, seulement quand elle change. */
+  function reportMentionQuery() {
+    if (!mentions) return;
+    const el = editorRef.current;
+    const found = el && !mentionSuppressedRef.current ? readMentionQuery(el) : null;
+    if (!found) {
+      if (lastMentionQueryRef.current !== null) {
+        lastMentionQueryRef.current = null;
+        mentions.onQuery(null);
+      }
+      return;
+    }
+    let rect: DOMRect | null = null;
+    try {
+      const r = document.createRange();
+      r.setStart(found.node, found.atIndex);
+      r.setEnd(found.node, found.caret);
+      rect = typeof r.getBoundingClientRect === "function" ? r.getBoundingClientRect() : null;
+    } catch {
+      rect = null;
+    }
+    // Le rect bouge avec la frappe : on le renvoie à chaque fois, mais la
+    // requête n'est pas répétée à l'identique.
+    lastMentionQueryRef.current = found.query;
+    mentions.onQuery({ query: found.query, rect });
+  }
+
+  useImperativeHandle(ref, () => ({
+    replaceMentionQuery(text: string) {
+      const el = editorRef.current;
+      if (!el) return;
+      const found = readMentionQuery(el);
+      if (!found) return;
+      const sel = window.getSelection();
+      const range = document.createRange();
+      range.setStart(found.node, found.atIndex);
+      range.setEnd(found.node, found.caret);
+      sel?.removeAllRanges();
+      sel?.addRange(range);
+      el.focus();
+      // `insertText` garde l'historique d'annulation ; jsdom ne l'implémente
+      // pas, on écrit alors le nœud texte directement.
+      let inserted = false;
+      try {
+        inserted = document.execCommand("insertText", false, text);
+      } catch {
+        inserted = false;
+      }
+      if (!inserted) {
+        found.node.data = found.node.data.slice(0, found.atIndex) + text + found.node.data.slice(found.caret);
+        const after = document.createRange();
+        after.setStart(found.node, found.atIndex + text.length);
+        after.collapse(true);
+        sel?.removeAllRanges();
+        sel?.addRange(after);
+      }
+      mentionSuppressedRef.current = true;
+      handleInput();
+    },
+  }));
+
+  useEffect(() => {
+    if (!mentions) return;
+    const onSelectionChange = () => reportMentionQuery();
+    document.addEventListener("selectionchange", onSelectionChange);
+    return () => document.removeEventListener("selectionchange", onSelectionChange);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [!!mentions]);
 
   // Coupe `block` au curseur : le contenu après le curseur va dans un nouveau bloc en dessous.
   function splitBlockAtCursor(block: HTMLElement, range: Range, sel: Selection) {
@@ -399,6 +519,8 @@ export function ParagraphBlockEditor({
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    // La liste des mentions, quand elle est ouverte, prend ↑ ↓ Entrée Tab Échap.
+    if (mentions?.onKeyDown?.(e)) return;
     if (e.key !== "Enter") { onKeyDown?.(e); return; }
 
     const shift = e.shiftKey;
@@ -730,7 +852,10 @@ export function ParagraphBlockEditor({
         ref={editorRef}
         contentEditable={!disabled}
         suppressContentEditableWarning
-        onInput={handleInput}
+        onInput={() => {
+          mentionSuppressedRef.current = false;
+          handleInput();
+        }}
         onPaste={handlePaste}
         onKeyDown={handleKeyDown}
         onKeyUp={updateSelectionRect}

@@ -22,6 +22,22 @@ export function notifText(n: AppNotification, t: NotifT): ReactNode {
             return n.content
                 ? t.rich("text.mention", { actor, chatroom: n.content, ...r })
                 : t.rich("text.mentionSimple", { actor, ...r });
+        // Un rôle appelé dans un salon (migration 178) : la puce porte le nom
+        // du rôle, dans sa couleur.
+        case "role_mention": {
+            const role = n.metadata?.role_name ?? t("text.roleFallback");
+            return n.content
+                ? t.rich("text.roleMention", { actor, role, chatroom: n.content, ...r })
+                : t.rich("text.roleMentionSimple", { actor, role, ...r });
+        }
+        case "everyone_mention":
+            return n.metadata?.scope === "here"
+                ? n.content
+                    ? t.rich("text.hereMention", { actor, chatroom: n.content, ...r })
+                    : t.rich("text.hereMentionSimple", { actor, ...r })
+                : n.content
+                    ? t.rich("text.everyoneMention", { actor, chatroom: n.content, ...r })
+                    : t.rich("text.everyoneMentionSimple", { actor, ...r });
         case "reaction":
             return t.rich("text.reaction", { actor, emoji: emojiFromContent(n.content), ...r });
         case "new_member":

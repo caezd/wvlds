@@ -21,10 +21,15 @@ import { toast } from "sonner";
 import { toWebP } from "@/lib/imageUtils";
 import { nomDeFichierPourType, nomDeFichierUnique } from "@/lib/storagePaths";
 import { ImagePickerCropField } from "@/components/ui/image-crop-picker";
-import { ParagraphBlockEditor } from "./ParagraphBlockEditor";
+import { ParagraphBlockEditor, type MentionQuery, type ParagraphBlockEditorHandle } from "./ParagraphBlockEditor";
+import { MentionAutocomplete, buildMentionCandidates, useWorldMentionMembers, type MentionCandidate } from "./MentionAutocomplete";
+import { notifyMentions } from "@/lib/notifyMentions";
+import { extractMentionTargets } from "@/lib/mentions";
+import { useWorldMembership } from "@/components/providers/WorldMembershipProvider";
+import { useGlobalPresence } from "@/components/providers/PresenceProvider";
+import { Megaphone } from "lucide-react";
 import {
     computeWordCount,
-    extractMentions,
     buildVisibleToLabels,
     buildMessageMetadata,
     shouldApplyContentWarnings,
@@ -123,6 +128,7 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
     const supabase = useMemo(() => createClient(), []);
     const { userId, username, plan } = useCurrentUser();
     const inFlightRef = useRef(false);
+
     const pendingBlockMediaRef = useRef<{ url: string; name: string }[]>([]);
 
     // Sur mobile (clavier virtuel), Maj+Entrée n'est pas accessible : on inverse
@@ -155,6 +161,64 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
     // Initialiser à "" pour que le rendu SSR corresponde au premier rendu client
     // (localStorage n'est pas disponible côté serveur → hydration mismatch sinon).
     const [value, setValue] = useState("");
+    // ── Mentions ──────────────────────────────────────────────────────────
+    // Les rôles et permissions viennent du monde englobant ; hors d'un monde
+    // (messages privés), il n'y a rien à proposer.
+    const { worldId: membershipWorldId, ownerId: membershipOwnerId, roles: worldRoles, can } = useWorldMembership();
+    const { onlineUsers } = useGlobalPresence();
+    const editorRef = useRef<ParagraphBlockEditorHandle>(null);
+    const [mentionQuery, setMentionQuery] = useState<MentionQuery | null>(null);
+    const [mentionIndex, setMentionIndex] = useState(0);
+    const mentionMembers = useWorldMentionMembers(membershipWorldId, membershipOwnerId, mentionQuery !== null || /(^|\s)@/.test(value));
+    const mentionTokens = useMemo(
+        () => ({ everyone: tChatrooms("mentions.everyoneToken"), here: tChatrooms("mentions.hereToken") }),
+        [tChatrooms],
+    );
+    const mentionCandidates = useMemo<MentionCandidate[]>(() => {
+        if (mentionQuery === null || !membershipWorldId) return [];
+        return buildMentionCandidates({
+            query: mentionQuery.query,
+            members: mentionMembers ?? [],
+            roles: worldRoles,
+            canMentionRoles: can("mentions.roles"),
+            canMentionEveryone: can("mentions.everyone"),
+            tokens: mentionTokens,
+            selfId: userId,
+        });
+    }, [mentionQuery, membershipWorldId, mentionMembers, worldRoles, can, mentionTokens, userId]);
+    // Une saisie qui ne correspond plus à rien (« @bonjour à tous ») referme la liste.
+    const mentionListOpen = mentionQuery !== null && mentionCandidates.length > 0;
+    const mentionQueryText = mentionQuery?.query;
+    useEffect(() => { setMentionIndex(0); }, [mentionQueryText]);
+
+    function pickMention(item: MentionCandidate) {
+        editorRef.current?.replaceMentionQuery(item.insert);
+        setMentionQuery(null);
+    }
+
+    /** ↑ ↓ Entrée Tab Échap tant que la liste est ouverte ; rend true si consommé. */
+    function onMentionKeyDown(e: React.KeyboardEvent<HTMLDivElement>): boolean {
+        if (!mentionListOpen) return false;
+        if (e.key === "ArrowDown") { e.preventDefault(); setMentionIndex((i) => (i + 1) % mentionCandidates.length); return true; }
+        if (e.key === "ArrowUp") { e.preventDefault(); setMentionIndex((i) => (i - 1 + mentionCandidates.length) % mentionCandidates.length); return true; }
+        if (e.key === "Enter" || e.key === "Tab") { e.preventDefault(); pickMention(mentionCandidates[mentionIndex] ?? mentionCandidates[0]); return true; }
+        if (e.key === "Escape") { e.preventDefault(); setMentionQuery(null); return true; }
+        return false;
+    }
+
+    // Membres du monde présents, pour `@ici`.
+    const onlineMemberIds = useMemo(
+        () => (mentionMembers ?? []).map((m) => m.user_id).filter((id) => !!onlineUsers[id] && id !== userId),
+        [mentionMembers, onlineUsers, userId],
+    );
+    // « Vous allez notifier N membres » : un @tous ou @ici s'annonce avant l'envoi.
+    const groupMention = useMemo(() => {
+        if (!membershipWorldId || !value.includes("@")) return null;
+        const t = extractMentionTargets(value, worldRoles);
+        if (t.everyone) return { kind: "everyone" as const, count: Math.max((mentionMembers?.length ?? 1) - 1, 0), known: mentionMembers !== null };
+        if (t.here) return { kind: "here" as const, count: onlineMemberIds.length, known: mentionMembers !== null };
+        return null;
+    }, [value, membershipWorldId, worldRoles, mentionMembers, onlineMemberIds]);
     useEffect(() => {
         // Charge le brouillon uniquement après hydration, côté client.
         try {
@@ -479,44 +543,16 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
 
             // Mentions : côté client car le contenu peut être chiffré côté serveur
             if (newMessage.world_id && text) {
-                const mentioned = extractMentions(text);
-                if (mentioned.length > 0) {
-                    const [{ data: mentionedProfiles }, { data: chatroomData }] = await Promise.all([
-                        supabase.from("profiles").select("id").in("username", mentioned),
-                        supabase.from("chatrooms").select("title, name").eq("id", targetChatId).single(),
-                    ]);
-                    const chatroomTitle = (chatroomData as { title?: string | null; name?: string | null } | null)?.title
-                        ?? (chatroomData as { title?: string | null; name?: string | null } | null)?.name
-                        ?? null;
-                    const recipientIds = (mentionedProfiles ?? [])
-                        .map((p: { id: string }) => p.id)
-                        .filter((id: string) => id !== userId);
-                    if (recipientIds.length > 0) {
-                        const { data: members } = await supabase
-                            .from(TABLE.WORLD_MEMBERS).select("user_id")
-                            .eq("world_id", newMessage.world_id).in("user_id", recipientIds);
-                        const validIds = (members ?? []).map((m: { user_id: string }) => m.user_id);
-                        if (validIds.length > 0) {
-                            // Le message est publié : c'est l'essentiel, et
-                            // échouer ici ne doit pas le remettre en cause.
-                            // Mais une mention qui n'alerte personne passe
-                            // pour une mention reçue — on la trace.
-                            const { error: mentionError } = await supabase.from(TABLE.NOTIFICATIONS).insert(
-                                validIds.map((rid: string) => ({
-                                    recipient_id: rid,
-                                    type: "mention",
-                                    world_id: newMessage.world_id,
-                                    chat_id: targetChatId,
-                                    message_id: newMessage.id,
-                                    actor_id: userId,
-                                    actor_name: username,
-                                    content: chatroomTitle,
-                                })),
-                            );
-                            if (mentionError) console.error("[mentions] notifications non créées", mentionError.message);
-                        }
-                    }
-                }
+                await notifyMentions(supabase, {
+                    text,
+                    messageId: newMessage.id,
+                    chatId: targetChatId,
+                    worldId: newMessage.world_id,
+                    selfId: userId,
+                    selfUsername: username,
+                    roles: worldRoles,
+                    onlineMemberIds,
+                });
             }
 
             // Si c'est un bloc anchor, notifier le parent pour qu'il insère un chat_pin
@@ -723,9 +759,11 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
                 )}>
                     <div className={cn("flex-1", stretchCard && "flex flex-col min-h-0")}>
                         <ParagraphBlockEditor
+                            ref={editorRef}
                             value={value}
                             onChange={(v) => { setValue(v); onTyping?.(); }}
                             onKeyDown={onKeyDown}
+                            mentions={membershipWorldId ? { onQuery: setMentionQuery, onKeyDown: onMentionKeyDown } : undefined}
                             placeholder={placeholder}
                             className="text-sm w-full"
                             // Desktop : grandit avec le contenu jusqu'à 50vh puis scrolle
@@ -735,8 +773,25 @@ export const ChatroomComposer = forwardRef<ChatroomComposerHandle, ChatroomCompo
                             autoFocus={stretchCard}
                             formatting
                         />
+                        {mentionListOpen && (
+                            <MentionAutocomplete
+                                items={mentionCandidates}
+                                activeIndex={mentionIndex}
+                                rect={mentionQuery?.rect ?? null}
+                                onPick={pickMention}
+                                onHover={setMentionIndex}
+                            />
+                        )}
                     </div>
                 </div>
+                {groupMention && (
+                    <p className="flex items-center gap-1.5 px-2 pb-1 text-xs text-amber-600 dark:text-amber-400" role="status">
+                        <Megaphone className="h-3 w-3 shrink-0" aria-hidden />
+                        {groupMention.known
+                            ? tChatrooms(groupMention.kind === "everyone" ? "mentions.everyoneWarning" : "mentions.hereWarning", { count: groupMention.count })
+                            : tChatrooms(groupMention.kind === "everyone" ? "mentions.everyoneWarningUnknown" : "mentions.hereWarningUnknown")}
+                    </p>
+                )}
             </div>
 
             {/* Footer : sélecteur de persona, actions et bouton d'envoi — taille

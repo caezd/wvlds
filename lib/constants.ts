@@ -54,6 +54,7 @@ export const RPC = {
   HAS_WORLD_PERMISSION: "has_world_permission",
   WORLD_RANK: "world_rank",
   GET_WORLD_MEMBER_ACTIVITY: "get_world_member_activity",
+  NOTIFY_GROUP_MENTIONS: "notify_group_mentions",
 } as const;
 
 // --- Realtime channel name factories -----------------------------------------

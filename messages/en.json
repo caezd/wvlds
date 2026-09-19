@@ -243,7 +243,9 @@
       "chatroom_reply": "Replies in my chatrooms",
       "persona_new_chatroom": "New chatrooms from followed personas",
       "persona_reply": "Replies from followed personas",
-      "relation_request": "Relation requests between personas"
+      "relation_request": "Relation requests between personas",
+      "role_mention": "Mentions of my roles",
+      "everyone_mention": "@everyone and @here"
     },
     "text": {
       "someone": "Someone",
@@ -266,7 +268,14 @@
       "maritalRequestMarried": "<b>{actor}</b> wants to marry their character to <b>{target}</b>",
       "maritalRequestRelationship": "<b>{actor}</b> wants to put their character in a relationship with <b>{target}</b>",
       "relationRequest": "<b>{actor}</b> proposes a “{type}” relation to <b>{target}</b>",
-      "relationFallback": "relation"
+      "relationFallback": "relation",
+      "roleFallback": "your role",
+      "roleMention": "<b>{actor}</b> mentioned <b>{role}</b> in <b>{chatroom}</b>",
+      "roleMentionSimple": "<b>{actor}</b> mentioned <b>{role}</b>",
+      "everyoneMention": "<b>{actor}</b> called everyone in <b>{chatroom}</b>",
+      "everyoneMentionSimple": "<b>{actor}</b> called everyone",
+      "hereMention": "<b>{actor}</b> called everyone here in <b>{chatroom}</b>",
+      "hereMentionSimple": "<b>{actor}</b> called everyone here"
     },
     "back": "Back"
   },
@@ -1312,7 +1321,19 @@
     "bannerDelete": "Delete the banner",
     "blockEdit": "Edit the block",
     "blockDelete": "Delete the block",
-    "blockDeleteDescription": "This element will be permanently deleted."
+    "blockDeleteDescription": "This element will be permanently deleted.",
+    "mentions": {
+      "everyoneToken": "everyone",
+      "hereToken": "here",
+      "listLabel": "Mention",
+      "roleHint": "Role",
+      "everyoneHint": "Everyone",
+      "hereHint": "Members here",
+      "everyoneWarning": "You are about to notify {count, plural, =0 {nobody} one {# member} other {# members}} with @everyone.",
+      "hereWarning": "You are about to notify {count, plural, =0 {nobody} one {# member here} other {# members here}} with @here.",
+      "everyoneWarningUnknown": "You are about to notify every member of the world.",
+      "hereWarningUnknown": "You are about to notify the members who are here."
+    }
   },
   "changelog": {
     "title": "Changelog",

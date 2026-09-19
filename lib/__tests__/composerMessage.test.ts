@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
   computeWordCount,
-  extractMentions,
   buildVisibleToLabels,
   buildMessageMetadata,
   shouldApplyContentWarnings,
@@ -40,20 +39,7 @@ describe("shouldApplyContentWarnings", () => {
   });
 });
 
-describe("extractMentions", () => {
-  it("extrait les pseudos mentionnés", () => {
-    expect(extractMentions("salut @alice et @bob_42 !")).toEqual(["alice", "bob_42"]);
-  });
-
-  it("retourne un tableau vide sans mention", () => {
-    expect(extractMentions("aucune mention ici")).toEqual([]);
-  });
-
-  it("s'arrête au premier caractère non autorisé (tiret, accent)", () => {
-    expect(extractMentions("coucou @marie-claire")).toEqual(["marie"]);
-    expect(extractMentions("@—pas une mention")).toEqual([]);
-  });
-});
+// Les mentions (`@pseudo`, `@rôle`, `@tous`, `@ici`) vivent dans lib/mentions.ts.
 
 describe("buildVisibleToLabels", () => {
   const participants = [

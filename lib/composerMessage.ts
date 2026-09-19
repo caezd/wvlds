@@ -17,11 +17,6 @@ export function computeWordCount(text: string): number {
   return wordCount(text);
 }
 
-/** Extrait les `@pseudos` mentionnés (alphanumérique + underscore). */
-export function extractMentions(text: string): string[] {
-  return [...text.matchAll(/@([A-Za-z0-9_]+)/g)].map((m) => m[1]);
-}
-
 /**
  * Les avertissements de contenu ne s'appliquent qu'aux messages texte
  * « normaux » : les blocs structurés (dé, bannière, PNJ…) ont leur propre
