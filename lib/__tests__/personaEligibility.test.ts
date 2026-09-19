@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { getUsablePersonaIds, isPersonaUsable } from "@/lib/personaEligibility";
+import { getUsablePersonaIds, isPersonaUsable, personaLockReason } from "@/lib/personaEligibility";
 
 function persona(id: string, createdAt: string, isTemplate = false) {
   return { id, created_at: createdAt, is_template: isTemplate };
@@ -84,5 +84,37 @@ describe("isPersonaUsable", () => {
 
   it("toujours true pour un compte abonné", () => {
     expect(isPersonaUsable("p7", sevenPersonas, "subscribed")).toBe(true);
+  });
+});
+
+describe("validation de la fiche (migration 181)", () => {
+  it("une fiche non validée ou incomplète ne joue pas, même abonné", () => {
+    const list = [
+      { ...persona("ok", "2026-01-01T00:00:00Z"), review_status: "approved", sheet_complete: true },
+      { ...persona("draft", "2026-01-02T00:00:00Z"), review_status: "draft", sheet_complete: true },
+      { ...persona("holes", "2026-01-03T00:00:00Z"), review_status: "approved", sheet_complete: false },
+    ];
+    expect(getUsablePersonaIds(list, "subscribed")).toEqual(new Set(["ok"]));
+    expect(getUsablePersonaIds(list, "free")).toEqual(new Set(["ok"]));
+  });
+
+  it("un brouillon compte dans le quota des 5 plus anciens", () => {
+    const list = [
+      ...sevenPersonas.slice(0, 4).map((p) => ({ ...p, review_status: "approved", sheet_complete: true })),
+      { ...persona("p5", "2026-01-05T00:00:00Z"), review_status: "draft", sheet_complete: true },
+      { ...persona("p6", "2026-01-06T00:00:00Z"), review_status: "approved", sheet_complete: true },
+    ];
+    // p5 tient la cinquième place sans jouer ; p6 reste au-delà du quota.
+    expect(getUsablePersonaIds(list, "free")).toEqual(new Set(["p1", "p2", "p3", "p4"]));
+  });
+
+  it("personaLockReason nomme la fiche avant le quota", () => {
+    const usable = new Set(["p1"]);
+    expect(personaLockReason({ ...persona("p1", ""), review_status: "approved" }, usable)).toBeNull();
+    expect(personaLockReason({ ...persona("x", ""), review_status: "draft" }, usable)).toBe("unreviewed");
+    expect(personaLockReason({ ...persona("x", ""), review_status: "approved", sheet_complete: false }, usable)).toBe("incomplete");
+    expect(personaLockReason({ ...persona("x", ""), review_status: "approved", sheet_complete: true }, usable)).toBe("quota");
+    // Sans colonnes (anciens appelants) : seule la place dans le quota compte.
+    expect(personaLockReason(persona("x", ""), usable)).toBe("quota");
   });
 });

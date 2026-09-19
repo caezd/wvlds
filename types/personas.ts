@@ -102,6 +102,10 @@ export interface PersonaSectionField {
   data: PersonaFieldData;
   /** Champ requis par la fiche modèle du monde : insupprimable hors modèle. */
   locked?: boolean;
+  /** À remplir avant de soumettre la fiche (migration 181) ; implique `locked`. */
+  required?: boolean;
+  /** Le champ du modèle dont celui-ci est la copie — la complétude s'y lit. */
+  template_field_id?: string | null;
 }
 
 export interface PersonaSection {

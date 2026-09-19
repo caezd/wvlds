@@ -31,7 +31,8 @@ import {
 } from "@/components/ui/select";
 import { Check, Eye, Loader2, Pencil, Trash2, X } from "lucide-react";
 import { ImagePickerCropField } from "@/components/ui/image-crop-picker";
-import type { PersonaNarrativeStatus, MaritalStatus } from "@/types/db";
+import { PersonaSubmitBar } from "./PersonaReviewPanel";
+import type { PersonaNarrativeStatus, PersonaReviewStatus, MaritalStatus } from "@/types/db";
 
 import { PersonaSectionsTabs } from "./PersonaSectionsTabs";
 import { PersonaProfileBody, formatPersonaPresenceLine } from "./PersonaProfileSheetTrigger";
@@ -600,6 +601,9 @@ type PersonaEditSheetProps = {
   initialMaritalStatus?: MaritalStatus | null;
   initialSpousePersonaId?: string | null;
   initialNarrativeStatus?: PersonaNarrativeStatus | null;
+  /** Validation de la fiche (migration 181) — la barre « Soumettre » s'en sert. */
+  initialReviewStatus?: PersonaReviewStatus | null;
+  openOnMount?: boolean;
   trigger?: ReactNode;
   worldId?: string;
   restrictInventory?: boolean;
@@ -1071,6 +1075,8 @@ export function PersonaEditSheet({
   initialMaritalStatus,
   initialSpousePersonaId,
   initialNarrativeStatus,
+  initialReviewStatus,
+  openOnMount = false,
   trigger,
   worldId,
   restrictInventory,
@@ -1079,7 +1085,7 @@ export function PersonaEditSheet({
 }: PersonaEditSheetProps) {
   const tPersonas = useTranslations("personas");
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(openOnMount);
   const [deleting, setDeleting] = useState(false);
   const [sections, setSections] = useState(initialSections);
 
@@ -1137,6 +1143,16 @@ export function PersonaEditSheet({
               faceclaimsEnabled={faceclaimsEnabled}
             />
           </div>
+
+          {/* Validation de la fiche : ce qui manque, et le bouton « Soumettre ». */}
+          <PersonaSubmitBar
+            personaId={personaId}
+            worldId={worldId}
+            sections={sections}
+            initialReviewStatus={initialReviewStatus}
+            onSectionsReload={setSections}
+            className="border-t border-border-soft bg-background px-6 py-3"
+          />
 
           {/* Footer fixe en bas */}
           <DrawerFooter className="border-t border-border-soft px-6 py-3 flex-row justify-start bg-background">

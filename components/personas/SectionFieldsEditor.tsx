@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { useTranslations } from "next-intl";
 import {
   ArrowUp, ArrowDown, Plus, Trash2, Type, AlignLeft, BarChart3, Minus, ImageIcon,
-  Backpack, Swords, Gauge, Quote, Tag, CalendarDays, Lock, LockOpen, List,
+  Backpack, Swords, Gauge, Quote, Tag, CalendarDays, Lock, LockOpen, List, Asterisk,
 } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/client";
@@ -178,7 +178,7 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
     const { data, error } = await supabase
       .from("persona_section_fields")
       .insert({ section_id: sectionId, type, data: defaultData })
-      .select("id, section_id, type, position, data, locked")
+      .select("id, section_id, type, position, data, locked, required, template_field_id")
       .single();
 
     if (error) {
@@ -401,12 +401,28 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
   // n'autorise ce changement que sur un persona modèle).
   async function toggleFieldLock(field: PersonaSectionField) {
     const next = !field.locked;
+    // Un champ obligatoire est forcément verrouillé (contrainte en base) :
+    // déverrouiller le rend aussi facultatif.
+    const patch = next ? { locked: true } : { locked: false, required: false };
     const { error } = await supabase
       .from("persona_section_fields")
-      .update({ locked: next })
+      .update(patch)
       .eq("id", field.id);
     if (error) { setErrorMessage(error.message ?? "Erreur de verrouillage."); return; }
-    setFields((prev) => prev.map((f) => (f.id === field.id ? { ...f, locked: next } : f)));
+    setFields((prev) => prev.map((f) => (f.id === field.id ? { ...f, ...patch } : f)));
+  }
+
+  // Obligatoire (modèle seulement, migration 181) : le joueur doit le remplir
+  // avant de soumettre sa fiche. Rendre obligatoire verrouille au passage.
+  async function toggleFieldRequired(field: PersonaSectionField) {
+    const next = !field.required;
+    const patch = next ? { required: true, locked: true } : { required: false };
+    const { error } = await supabase
+      .from("persona_section_fields")
+      .update(patch)
+      .eq("id", field.id);
+    if (error) { setErrorMessage(error.message ?? "Erreur."); return; }
+    setFields((prev) => prev.map((f) => (f.id === field.id ? { ...f, ...patch } : f)));
   }
 
   async function handleDeleteField(fieldId: string) {
@@ -547,12 +563,18 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
             return (
               <div key={field.id} className="group/field">
                 <div className="group relative rounded-md border py-1.5 px-2 transition-colors sm:border-transparent sm:hover:border-border">
-                  {/* Badge permanent : champ requis par la fiche du monde */}
+                  {/* Badge permanent : champ requis par la fiche du monde ;
+                      obligatoire (à remplir) ou seulement verrouillé. */}
                   {!isTemplate && field.locked && (
                     <span
-                      className="absolute right-2.5 top-2 text-muted-foreground/50 opacity-0 transition-opacity z-10 sm:opacity-100 sm:group-hover:opacity-0"
-                      title={tPersonas("fieldRequiredByWorld")}
+                      className="absolute right-2.5 top-2 flex items-center gap-1 text-muted-foreground/50 opacity-0 transition-opacity z-10 sm:opacity-100 sm:group-hover:opacity-0"
+                      title={field.required ? tPersonas("review.requiredBadge") : tPersonas("fieldRequiredByWorld")}
                     >
+                      {field.required && (
+                        <span className="rounded-full bg-orange-500/15 px-1.5 text-[10px] font-medium text-orange-700 dark:text-orange-300">
+                          {tPersonas("review.requiredBadge")}
+                        </span>
+                      )}
                       <Lock className="h-3.5 w-3.5" />
                     </span>
                   )}
@@ -577,6 +599,20 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
                         onClick={() => void toggleFieldLock(field)}
                       >
                         {field.locked ? <Lock className="h-3.5 w-3.5" /> : <LockOpen className="h-3.5 w-3.5" />}
+                      </Button>
+                    )}
+                    {isTemplate && field.type !== "title" && field.type !== "separator" && (
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        type="button"
+                        aria-pressed={!!field.required}
+                        className={cn("h-7 w-7", field.required ? "text-orange-600 dark:text-orange-300" : "text-muted-foreground")}
+                        title={field.required ? tPersonas("review.requiredToggleOn") : tPersonas("review.requiredToggleOff")}
+                        aria-label={field.required ? tPersonas("review.requiredToggleOn") : tPersonas("review.requiredToggleOff")}
+                        onClick={() => void toggleFieldRequired(field)}
+                      >
+                        <Asterisk className="h-3.5 w-3.5" />
                       </Button>
                     )}
                     {!isTemplate && field.locked ? (

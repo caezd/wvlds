@@ -127,6 +127,9 @@ export type MaritalStatus = "single" | "in_relationship" | "married" | "divorced
 /** Statut narratif d'un persona — voir la migration 180 et lib/personaStatus.ts. */
 export type PersonaNarrativeStatus = "alive" | "missing" | "dead" | "retired";
 
+/** Validation d'une fiche — voir la migration 181 et lib/personaReview.ts. */
+export type PersonaReviewStatus = "draft" | "submitted" | "approved";
+
 export type Persona = {
   id: string;
   user_id: string;
@@ -139,6 +142,9 @@ export type Persona = {
   marital_status?: MaritalStatus | null;
   spouse_persona_id?: string | null;
   narrative_status?: PersonaNarrativeStatus | null;
+  /** Validation et complétude de la fiche (migration 181) : jouable seulement validée et complète. */
+  review_status?: PersonaReviewStatus | null;
+  sheet_complete?: boolean | null;
   /** Requis pour calculer l'éligibilité chronologique (voir lib/personaEligibility.ts). */
   created_at?: string;
 };
@@ -202,7 +208,7 @@ export type AllChatroomUnreadRow = {
 
 // --- Notifications -----------------------------------------------------------
 
-export type NotificationType = 'mention' | 'reaction' | 'new_member' | 'new_chatroom' | 'world_invite' | 'chatroom_reply' | 'persona_new_chatroom' | 'persona_reply' | 'relation_request' | 'role_mention' | 'everyone_mention';
+export type NotificationType = 'mention' | 'reaction' | 'new_member' | 'new_chatroom' | 'world_invite' | 'chatroom_reply' | 'persona_new_chatroom' | 'persona_reply' | 'relation_request' | 'role_mention' | 'everyone_mention' | 'persona_submitted' | 'persona_reviewed';
 
 export type WorldInvitation = {
   id: string;
@@ -232,6 +238,10 @@ export type NotificationMeta = {
   role_color?: string | null;
   /** `everyone_mention` : @tous, ou @ici (les présents). */
   scope?: 'everyone' | 'here';
+  /** Validation d'une fiche (migration 181) : le persona, la décision et le commentaire (tronqué). */
+  persona_id?: string;
+  decision?: PersonaReviewStatus;
+  comment?: string | null;
 };
 
 export type AppNotification = {

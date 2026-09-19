@@ -32,7 +32,7 @@ import { useTranslations } from "next-intl";
 import { getInitials } from "@/lib/textFormatting";
 import { cn } from "@/lib/utils";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { getUsablePersonaIds } from "@/lib/personaEligibility";
+import { LOCK_REASON_KEYS, getUsablePersonaIds, personaLockReason } from "@/lib/personaEligibility";
 import { avatarThumbWidth } from "@/lib/storage";
 
 function PersonaAvatarThumb({ url, name, size }: { url: string; name: string; size: number }) {
@@ -191,7 +191,7 @@ export function PersonaPickerDialog({
       if (!uid) { setLoading(false); return; }
       let query = supabase
         .from("personas")
-        .select("id, user_id, name, avatar_url, dialogue_color, created_at")
+        .select("id, user_id, name, avatar_url, dialogue_color, created_at, review_status, sheet_complete")
         .eq("user_id", uid)
         .eq("is_template", false)
         .order("name", { ascending: true });
@@ -215,9 +215,15 @@ export function PersonaPickerDialog({
 
   // Plan gratuit : seuls les 5 personas les plus anciens (par monde) restent
   // sélectionnables — les autres s'affichent verrouillés (voir migration 090).
-  const usableIds = useMemo(
-    () => getUsablePersonaIds(personas.map((p) => ({ id: p.id, created_at: p.created_at ?? "" })), plan),
-    [personas, plan],
+  const eligibility = useMemo(
+    () => personas.map((p) => ({ id: p.id, created_at: p.created_at ?? "", review_status: p.review_status, sheet_complete: p.sheet_complete })),
+    [personas],
+  );
+  const usableIds = useMemo(() => getUsablePersonaIds(eligibility, plan), [eligibility, plan]);
+  // La raison du verrou, par persona : la fiche avant le quota.
+  const lockReasonById = useMemo(
+    () => new Map(eligibility.map((p) => [p.id, personaLockReason(p, usableIds)] as const)),
+    [eligibility, usableIds],
   );
 
   const canConfirm = !!value && (!required || !!value);
@@ -289,7 +295,7 @@ export function PersonaPickerDialog({
       selected={value === p.id}
       favorite={favorites.has(p.id)}
       locked={!usableIds.has(p.id)}
-      lockedHint={t("lockedHint")}
+      lockedHint={t(LOCK_REASON_KEYS[lockReasonById.get(p.id) ?? "quota"])}
       onSelect={() => setValue(p.id)}
       onToggleFavorite={() => toggleFavorite(p.id)}
       favoriteLabel={t("toggleFavorite")}

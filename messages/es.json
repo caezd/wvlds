@@ -245,7 +245,9 @@
       "persona_reply": "Respuestas de personas seguidas",
       "relation_request": "Solicitudes de relación entre personas",
       "role_mention": "Menciones de mis roles",
-      "everyone_mention": "@todos y @aquí"
+      "everyone_mention": "@todos y @aquí",
+      "persona_submitted": "Fichas enviadas a validación",
+      "persona_reviewed": "Revisión de mis fichas"
     },
     "text": {
       "someone": "Alguien",
@@ -275,7 +277,11 @@
       "everyoneMention": "<b>{actor}</b> llamó a todos en <b>{chatroom}</b>",
       "everyoneMentionSimple": "<b>{actor}</b> llamó a todos",
       "hereMention": "<b>{actor}</b> llamó a los presentes en <b>{chatroom}</b>",
-      "hereMentionSimple": "<b>{actor}</b> llamó a los presentes"
+      "hereMentionSimple": "<b>{actor}</b> llamó a los presentes",
+      "personaSubmitted": "<b>{actor}</b> envió la ficha de <b>{persona}</b> a validación",
+      "personaApproved": "<b>{actor}</b> validó la ficha de <b>{persona}</b>",
+      "personaSentBack": "<b>{actor}</b> devolvió la ficha de <b>{persona}</b> a borrador",
+      "personaFallback": "un persona"
     },
     "back": "Volver"
   },
@@ -709,6 +715,10 @@
         "mentions_everyone": {
           "label": "Mencionar a todos",
           "help": "Usar @todos y @aquí en las salas."
+        },
+        "personas_review": {
+          "label": "Validar las fichas",
+          "help": "Revisar las fichas de persona enviadas, validarlas o devolverlas con un comentario."
         }
       }
     },
@@ -960,7 +970,71 @@
       "sortName": "Nombre A → Z",
       "sortNewest": "Más recientes",
       "sortOldest": "Más antiguos",
-      "createFirst": "Crear un persona"
+      "createFirst": "Crear un persona",
+      "filterSheet": "Ficha",
+      "allSheets": "Todas las fichas",
+      "toReview": "{count} ficha(s) por revisar",
+      "toReviewOne": "1 ficha por revisar"
+    },
+    "sheet": {
+      "incomplete": "Ficha incompleta",
+      "draft": "Borrador",
+      "submitted": "En revisión",
+      "approved": "Validada",
+      "incompleteHint": "Algunos campos obligatorios del modelo del mundo siguen vacíos.",
+      "draftHint": "Esta ficha aún no se ha enviado a validación.",
+      "submittedHint": "Esta ficha espera la revisión de un administrador.",
+      "approvedHint": "Esta ficha ha sido validada.",
+      "lockedIncomplete": "Este persona no puede jugar: su ficha está incompleta.",
+      "lockedUnreviewed": "Este persona no puede jugar: su ficha aún no ha sido validada."
+    },
+    "review": {
+      "tab": "Revisión",
+      "submit": "Enviar a validación",
+      "submitting": "Enviando…",
+      "submitted": "Ficha enviada a validación.",
+      "resubmit": "Enviar de nuevo",
+      "missingTitle": "Por completar antes de enviar",
+      "missingField": "{section} · {field}",
+      "missingAbsent": "campo por añadir",
+      "missingEmpty": "por rellenar",
+      "syncFields": "Añadir los campos que faltan",
+      "syncDone": "{count} campo(s) añadido(s) a la ficha.",
+      "fieldTypeFallback": "campo",
+      "waiting": "Su ficha está en revisión. Puede seguir modificándola.",
+      "sentBack": "Su ficha ha vuelto a borrador.",
+      "approvedBy": "Ficha validada",
+      "comments": "Comentarios de revisión",
+      "noComments": "Ningún comentario por el momento.",
+      "commentPlaceholder": "Escribir un comentario…",
+      "send": "Enviar",
+      "deleteComment": "Eliminar este comentario",
+      "decisionApproved": "validó la ficha",
+      "decisionDraft": "devolvió la ficha a borrador",
+      "approve": "Validar",
+      "sendBack": "Devolver con un comentario",
+      "sendBackShort": "Devolver",
+      "reviewCommentPlaceholder": "Unas palabras para el jugador (opcional)…",
+      "decided": "Decisión guardada.",
+      "requiredToggleOn": "Campo obligatorio: los jugadores deben rellenarlo antes de enviar su ficha. Pulse para hacerlo opcional.",
+      "requiredToggleOff": "Hacer este campo obligatorio: los jugadores deberán rellenarlo antes de enviar su ficha.",
+      "requiredBadge": "Obligatorio"
+    },
+    "fieldTypes": {
+      "title": "Título",
+      "text": "Bloque de texto",
+      "input": "Campo",
+      "textarea": "Texto",
+      "dl": "Lista descriptiva",
+      "quote": "Cita",
+      "stats": "Estadísticas",
+      "gauges": "Indicadores",
+      "inventory": "Inventario",
+      "skills": "Habilidades",
+      "traits": "Rasgos",
+      "timeline": "Cronología",
+      "separator": "Separador",
+      "imageGrid": "Cuadrícula de imágenes"
     }
   },
   "quests": {

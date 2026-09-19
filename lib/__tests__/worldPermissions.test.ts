@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
 import {
@@ -52,8 +52,17 @@ function member(myRoleIds: string[], userId = "u1") {
 // ── Miroir de la migration ────────────────────────────────────────────────────
 
 describe("WORLD_PERMISSIONS — miroir de `world_permission_keys()`", () => {
-  it("égale, à l'ordre près, la liste de la migration 176", () => {
-    const sql = readFileSync(join(process.cwd(), "migrations", "176_world_roles.sql"), "utf-8");
+  it("égale, à l'ordre près, la dernière définition de `world_permission_keys()`", () => {
+    // La fonction est recréée à chaque permission ajoutée (176, 181…) : la
+    // dernière migration qui la définit fait foi.
+    const dir = join(process.cwd(), "migrations");
+    const file = readdirSync(dir)
+      .filter((f) => f.endsWith(".sql"))
+      .sort()
+      .reverse()
+      .find((f) => readFileSync(join(dir, f), "utf-8").includes("FUNCTION public.world_permission_keys()"));
+    expect(file).toBeDefined();
+    const sql = readFileSync(join(dir, file!), "utf-8");
     const fn = sql.slice(sql.indexOf("FUNCTION public.world_permission_keys()"));
     const body = fn.slice(fn.indexOf("ARRAY["), fn.indexOf("]::text[]"));
     const inSql = [...body.matchAll(/'([a-z.]+)'/g)].map((m) => m[1]);

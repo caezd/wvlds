@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Personas",
+    text: "Le modèle de fiche d’un monde peut rendre des champs obligatoires (l’astérisque, dans les réglages du modèle). Une fiche naît en brouillon : son éditeur liste ce qui manque, propose d’ajouter les champs du modèle absents, et le bouton « Soumettre à validation » s’active une fois la fiche complète. Un administrateur — permission « Valider les fiches » — la valide ou la renvoie avec un commentaire depuis l’onglet Relecture de la fiche ; chacun est prévenu par notification. Seules les fiches validées et complètes jouent dans les salons ; un badge (incomplète, brouillon, en relecture) le dit sur les tuiles, et la liste des personas se filtre par état de fiche. Les fiches des personas d’un monde sont désormais lisibles par ses membres.",
+  },
+  {
+    date: "2026-09",
+    tag: "Personas",
     text: "Un persona a un statut narratif — vivant, disparu, décédé, retiré — réglé depuis sa fiche et visible partout : tuiles grisées avec badge, fiche, en-tête des messages, canevas des relations (où un bouton de la légende masque les retirés et décédés). La liste des personas d’un monde se cherche et se filtre par joueur, groupe de relations et statut, et se trie par nom ou par date.",
   },
   {

@@ -3,10 +3,11 @@
 import { PersonaEditSheet } from "./PersonaEditSheet";
 import type { PersonaSectionWithFields } from "@/types/personas";
 import type { AvatarConfigV1 } from "./avatar/PersonaAvatarPicker";
-import type { PersonaNarrativeStatus, MaritalStatus } from "@/types/db";
+import type { PersonaNarrativeStatus, PersonaReviewStatus, MaritalStatus } from "@/types/db";
 import { cn } from "@/lib/utils";
 import { isRetiredStatus } from "@/lib/personaStatus";
 import { PersonaStatusBadge } from "./PersonaStatusBadge";
+import { PersonaSheetBadge } from "./PersonaSheetBadge";
 import { Pencil } from "lucide-react";
 import { getInitials } from "@/lib/textFormatting";
 import { StoredImage } from "@/components/ui/stored-image";
@@ -24,6 +25,11 @@ type PersonaCardProps = {
   initialMaritalStatus?: MaritalStatus | null;
   initialSpousePersonaId?: string | null;
   narrativeStatus?: PersonaNarrativeStatus | null;
+  /** Validation de la fiche (migration 181) : badge sur la tuile, barre « Soumettre » dans l'éditeur. */
+  reviewStatus?: PersonaReviewStatus | null;
+  sheetComplete?: boolean | null;
+  /** Ouvre l'éditeur dès le montage (lien `?persona=<id>` d'une notification). */
+  openOnMount?: boolean;
   initialSections: PersonaSectionWithFields[];
   worldId?: string;
   restrictInventory?: boolean;
@@ -43,6 +49,9 @@ export function PersonaCard({
   initialMaritalStatus,
   initialSpousePersonaId,
   narrativeStatus,
+  reviewStatus,
+  sheetComplete,
+  openOnMount,
   initialSections,
   worldId,
   restrictInventory,
@@ -63,6 +72,8 @@ export function PersonaCard({
       initialMaritalStatus={initialMaritalStatus ?? null}
       initialSpousePersonaId={initialSpousePersonaId ?? null}
       initialNarrativeStatus={narrativeStatus ?? null}
+      initialReviewStatus={reviewStatus ?? null}
+      openOnMount={openOnMount}
       worldId={worldId}
       restrictInventory={restrictInventory}
       restrictSkills={restrictSkills}
@@ -90,7 +101,10 @@ export function PersonaCard({
           {/* Gradient overlay + infos */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
 
-          <PersonaStatusBadge status={narrativeStatus} className="absolute left-3 top-3" />
+          <div className="absolute left-3 top-3 flex flex-col items-start gap-1">
+            <PersonaStatusBadge status={narrativeStatus} />
+            <PersonaSheetBadge persona={{ review_status: reviewStatus, sheet_complete: sheetComplete }} className="bg-black/60 text-white dark:text-white" />
+          </div>
 
           {/* Bouton éditer — coin supérieur droit au survol */}
           <span className="absolute top-3 right-3 flex items-center gap-1 rounded-full bg-white/20 backdrop-blur-sm px-2.5 py-1 text-xs font-medium text-white opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">

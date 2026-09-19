@@ -4,7 +4,7 @@ import { buildPushText, pushHref, resolvePushImage, type PushNotifPayload } from
 const ALL_TYPES: PushNotifPayload["type"][] = [
   "mention", "reaction", "new_member", "new_chatroom", "world_invite",
   "chatroom_reply", "persona_new_chatroom", "persona_reply", "relation_request",
-  "role_mention", "everyone_mention",
+  "role_mention", "everyone_mention", "persona_submitted", "persona_reviewed",
 ];
 
 const base: PushNotifPayload = {
@@ -27,6 +27,18 @@ describe("buildPushText", () => {
       .toBe("Alice called everyone here in Salon Test");
     expect(buildPushText({ ...base, type: "everyone_mention", metadata: { scope: "everyone" } }, "es").body)
       .toBe("Alice llamó a todos en Salon Test");
+  });
+
+  it("nomme le persona relu, et distingue la validation du renvoi", () => {
+    const meta = { persona_name: "Nyx", persona_id: "p1" };
+    expect(buildPushText({ ...base, type: "persona_submitted", metadata: meta }, "fr").body)
+      .toBe("Alice a soumis la fiche de Nyx à validation");
+    expect(buildPushText({ ...base, type: "persona_reviewed", metadata: { ...meta, decision: "approved" } }, "en").body)
+      .toBe("Alice approved Nyx's sheet");
+    expect(buildPushText({ ...base, type: "persona_reviewed", metadata: { ...meta, decision: "draft" } }, "es").body)
+      .toBe("Alice devolvió la ficha de Nyx a borrador");
+    expect(pushHref({ chat_id: null, world_id: "w1", type: "persona_reviewed", metadata: meta }))
+      .toBe("/w/w1?view=personas&persona=p1");
   });
 
   it("utilise le compteur agrégé pour chatroom_reply", () => {
