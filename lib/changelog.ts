@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-09 ──────────────────────────────────────────────────────────────
   {
     date: "2026-09",
+    tag: "Rôles",
+    text: "Réglages du monde : la liste des rôles affiche leur nom sans pastille ; l’aide de la permission Administrateur ne parle plus d’« onglets système » (seule la suppression du monde reste au propriétaire).",
+  },
+  {
+    date: "2026-09",
     tag: "Membres",
     text: "« Ma carte dans ce monde » (présentation, disponibilités, fuseau, anniversaire, statut) se règle dans « Mon profil », sous la présentation et les pronoms du compte (qui quittent les Réglages), dès que l’on se trouve dans un monde ou dans l’un de ses salons — plus depuis l’en-tête de la liste des membres. Le profil d’un membre, ouvert depuis ce monde, montre sa carte après sa présentation, ses pronoms et son niveau.",
   },

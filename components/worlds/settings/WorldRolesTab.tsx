@@ -201,7 +201,7 @@ export function WorldRolesTab({ worldId }: { worldId: string }) {
                     active ? "border-accent bg-accent/10" : "border-border bg-card hover:bg-muted/40",
                   )}
                 >
-                  <RoleChip role={role} className="max-w-full border-transparent bg-transparent px-0" />
+                  <RoleChip role={role} plain className="text-sm" />
                   <span className="ml-auto shrink-0 text-xs text-muted-foreground">{counts.get(role.id) ?? 0}</span>
                   {!editable && <Lock className="h-3 w-3 shrink-0 text-muted-foreground" aria-label={t("locked")} />}
                 </button>

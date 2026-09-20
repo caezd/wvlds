@@ -648,7 +648,7 @@
       "permissions": {
         "administrator": {
           "label": "Administrator",
-          "help": "Every permission, except deleting the world and its system tabs, which stay with the owner."
+          "help": "Every permission; only deleting the world stays with the owner."
         },
         "world_settings": {
           "label": "Manage world settings",

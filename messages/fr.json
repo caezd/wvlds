@@ -648,7 +648,7 @@
       "permissions": {
         "administrator": {
           "label": "Administrateur",
-          "help": "Toutes les permissions, sauf supprimer le monde et ses onglets système, réservés au propriétaire."
+          "help": "Toutes les permissions ; seule la suppression du monde reste au propriétaire."
         },
         "world_settings": {
           "label": "Régler le monde",

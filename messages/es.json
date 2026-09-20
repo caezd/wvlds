@@ -648,7 +648,7 @@
       "permissions": {
         "administrator": {
           "label": "Administrador",
-          "help": "Todos los permisos, salvo eliminar el mundo y sus pestañas de sistema, reservados al propietario."
+          "help": "Todos los permisos; solo eliminar el mundo queda reservado al propietario."
         },
         "world_settings": {
           "label": "Configurar el mundo",

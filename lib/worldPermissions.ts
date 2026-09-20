@@ -138,11 +138,6 @@ export function canLeaveWorld(m: WorldMembership | null): boolean {
   return !!m && !m.isOwner;
 }
 
-/** Les onglets système (`is_system = true`) restent au propriétaire direct. */
-export function canEditSystemTabs(m: WorldMembership | null): boolean {
-  return !!m?.isOwner;
-}
-
 /** Modifier ou supprimer un salon : son créateur, ou `chatrooms.manage`. */
 export function canEditChatroom(isCreator: boolean, m: WorldMembership | null): boolean {
   return isCreator || hasWorldPermission(m, "chatrooms.manage");
