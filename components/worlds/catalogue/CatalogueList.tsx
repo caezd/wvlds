@@ -62,7 +62,8 @@ import { UNCAT, COL_PREFIX, groupByColumn, type CatalogType, type CatalogItem } 
 import type { WorldCatalogItem } from "@/types/worlds";
 
 import { CategoryRowOverlay, ItemRowOverlay } from "./CataloguePieces";
-import { CatalogItemDetail, CatalogItemDialog, RarityDot } from "./CatalogItemDialog";
+import { CatalogItemDialog, RarityDot } from "./CatalogItemDialog";
+import { CatalogItemDetail } from "./CatalogItemDetail";
 import { CatalogCategoryDialog } from "./CatalogCategoryDialog";
 import { CatalogueRowProvider, type CatalogueRowContextValue } from "./CatalogueRowContext";
 import { CatalogTrashDialog } from "./CatalogTrashDialog";

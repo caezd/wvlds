@@ -16,6 +16,7 @@ import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 // `CatalogueSections` les conteneurs, `CatalogueList` la mécanique de
 // glisser-déposer. Ce fichier n'est plus que la coque à onglets.
 import { CatalogueList } from "./CatalogueList";
+import { WikiLinkProvider } from "@/components/worlds/wiki/WikiLinkContext";
 import { FaceclaimList } from "./FaceclaimList";
 
 /**
@@ -108,6 +109,7 @@ export function WorldCatalogue({ worldId, canEdit, inventoryEnabled, inventoryRe
   }, [worldId]);
 
   return (
+    <WikiLinkProvider worldId={worldId}>
     <div className="flex h-full w-full flex-col">
       <WorldPanelHeader
         icon={<Library className="h-4 w-4 shrink-0 text-muted-foreground" />}
@@ -182,5 +184,6 @@ export function WorldCatalogue({ worldId, canEdit, inventoryEnabled, inventoryRe
       </Tabs>
 
     </div>
+    </WikiLinkProvider>
   );
 }

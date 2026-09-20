@@ -15,6 +15,12 @@ vi.mock("@/components/worlds/catalogue/FaceclaimList", () => ({
 }));
 const getWorldCatalogUsage = vi.hoisted(() => vi.fn());
 vi.mock("@/app/actions/worldCatalog", () => ({ getWorldCatalogUsage }));
+// Le catalogue résout les [[liens]] du wiki (migration 186) : le fournisseur
+// lit les pages du monde et le routeur — hors sujet ici.
+vi.mock("@/components/worlds/wiki/WikiLinkContext", () => ({
+  WikiLinkProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useWikiLinks: () => null,
+}));
 
 import { WorldCatalogue } from "@/components/worlds/catalogue/WorldCatalogue";
 

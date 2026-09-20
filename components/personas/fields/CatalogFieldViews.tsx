@@ -1,11 +1,28 @@
 "use client";
 
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { RARITY_COLORS, resolveCatalogEntry } from "@/lib/worldCatalog";
 import type { InventoryItem, SkillItem } from "@/types/personas";
 import type { WorldCatalogItem, WorldCatalogProperty } from "@/types/worlds";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { CatalogVisual } from "@/components/worlds/catalogue/CatalogVisual";
+import { CatalogItemDetail } from "@/components/worlds/catalogue/CatalogItemDetail";
+
+/**
+ * La fiche d'un objet du catalogue, ouverte d'un clic sur une entrée de la
+ * fiche de persona (migration 186). Seule une entrée retrouvée dans le
+ * catalogue en a une : une saisie libre ou un objet retiré n'ouvrent rien.
+ */
+function useCatalogDetail(catalog: Map<string, WorldCatalogItem> | undefined) {
+  const [detail, setDetail] = useState<WorldCatalogItem | null>(null);
+  const open = (catalogId: string | undefined) => {
+    const item = catalogId ? catalog?.get(catalogId) : undefined;
+    if (item) setDetail(item);
+  };
+  const sheet = detail ? <CatalogItemDetail item={detail} open onOpenChange={(v) => { if (!v) setDetail(null); }} /> : null;
+  return { open, sheet };
+}
 
 /**
  * L'inventaire et les compétences d'une fiche, en lecture.
@@ -65,6 +82,7 @@ export function InventoryFieldView({
   items: InventoryItem[];
   catalog?: Map<string, WorldCatalogItem>;
 }) {
+  const detail = useCatalogDetail(catalog);
   const visible = items
     .map((item) => ({ item, resolved: resolveCatalogEntry(item, catalog) }))
     .filter(({ resolved }) => resolved.name);
@@ -77,8 +95,13 @@ export function InventoryFieldView({
           <Tooltip key={item.id}>
             <TooltipTrigger asChild>
               <div
+                role={item.catalog_id && !resolved.orphaned ? "button" : undefined}
+                tabIndex={item.catalog_id && !resolved.orphaned ? 0 : undefined}
+                onClick={() => detail.open(item.catalog_id)}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); detail.open(item.catalog_id); } }}
                 className={cn(
-                  "flex cursor-default select-none items-center gap-1.5 rounded-md border bg-background px-2 py-1.5",
+                  "flex select-none items-center gap-1.5 rounded-md border bg-background px-2 py-1.5",
+                  item.catalog_id && !resolved.orphaned ? "cursor-pointer hover:bg-muted/40" : "cursor-default",
                   resolved.orphaned ? "border-destructive/40" : "border-border-soft",
                 )}
                 // La rareté colore la bordure ; un objet retiré garde la
@@ -103,6 +126,7 @@ export function InventoryFieldView({
           </Tooltip>
         ))}
       </div>
+      {detail.sheet}
     </div>
   );
 }
@@ -114,6 +138,7 @@ export function SkillsFieldView({
   items: SkillItem[];
   catalog?: Map<string, WorldCatalogItem>;
 }) {
+  const detail = useCatalogDetail(catalog);
   const visible = items
     .map((item) => ({ item, resolved: resolveCatalogEntry(item, catalog) }))
     .filter(({ resolved }) => resolved.name);
@@ -124,8 +149,13 @@ export function SkillsFieldView({
       {visible.map(({ item, resolved }) => (
         <div
           key={item.id}
+          role={item.catalog_id && !resolved.orphaned ? "button" : undefined}
+          tabIndex={item.catalog_id && !resolved.orphaned ? 0 : undefined}
+          onClick={() => detail.open(item.catalog_id)}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); detail.open(item.catalog_id); } }}
           className={cn(
             "flex items-start gap-2.5 rounded-lg border bg-muted/30 px-3 py-2",
+            item.catalog_id && !resolved.orphaned && "cursor-pointer hover:bg-muted/50",
             resolved.orphaned ? "border-destructive/40" : "border-border-soft",
           )}
         >
@@ -148,6 +178,7 @@ export function SkillsFieldView({
           </div>
         </div>
       ))}
+      {detail.sheet}
     </div>
   );
 }

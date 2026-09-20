@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { createSupabaseMock } from "@/test/supabaseMock";
@@ -13,6 +13,9 @@ vi.mock("@/lib/imageUtils", async (original) => ({
   ...(await original<typeof import("@/lib/imageUtils")>()),
   toWebP: vi.fn(async (file: File) => new File([file], "img.webp", { type: "image/webp" })),
 }));
+
+const setWorldCatalogItemPages = vi.hoisted(() => vi.fn().mockResolvedValue({ ok: true }));
+vi.mock("@/app/actions/worldCatalog", () => ({ setWorldCatalogItemPages }));
 
 import { CatalogItemDialog } from "@/components/worlds/catalogue/CatalogItemDialog";
 
@@ -91,5 +94,61 @@ describe("CatalogItemDialog — création", () => {
       lucide_icon: null,
     })));
     expect(mock.storageRemove).not.toHaveBeenCalled();
+  });
+});
+
+describe("CatalogItemDialog — pages du wiki liées (migration 186)", () => {
+  const PAGES = [
+    { id: "pg1", title: "La Forge", slug: "la-forge", icon: null },
+    { id: "pg2", title: "Karsk", slug: "karsk", icon: "castle" },
+  ];
+
+  beforeEach(() => setWorldCatalogItemPages.mockClear());
+
+  it("en modification : les pages liées s'affichent, on en ajoute une, l'enregistrement remplace la liste", async () => {
+    // Ordre des `.from()` : world_catalog_item_pages (les liées, effet du
+    // dialogue) puis world_wiki_pages (le sélecteur, monté dans le portail).
+    const mock = createSupabaseMock({
+      results: [
+        { data: [{ sort_index: 0, page: { ...PAGES[0], deleted_at: null } }] },
+        { data: PAGES },
+      ],
+    });
+    vi.mocked(createClient).mockReturnValue(mock.client as never);
+    const user = userEvent.setup();
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    render(
+      <CatalogItemDialog item={{ ...DRAFT, name: "Épée" }} type="inventory" worldId="w1" open
+        onOpenChange={vi.fn()} onSave={onSave} />,
+    );
+
+    expect(await screen.findByText("La Forge")).toBeInTheDocument();
+    // Le sélecteur (Popover) s'ouvre par-dessus le dialogue modal : Radix
+    // rend la couche du dessus cliquable, mais jsdom ne calcule pas les
+    // styles hérités et user-event voit `pointer-events: none` — d'où
+    // `fireEvent` pour ouvrir et un utilisateur sans cette vérification.
+    fireEvent.click(screen.getByRole("button", { name: "Lier une page" }));
+    const picker = userEvent.setup({ pointerEventsCheck: 0 });
+    await picker.click(await screen.findByRole("option", { name: /Karsk/ }));
+    expect(screen.getByRole("button", { name: "Retirer la page Karsk" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Enregistrer" }));
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    await waitFor(() => expect(setWorldCatalogItemPages).toHaveBeenCalledWith(DRAFT.id, ["pg1", "pg2"]));
+  });
+
+  it("sans changement des pages, l'enregistrement ne les réécrit pas", async () => {
+    const mock = createSupabaseMock({ results: [{ data: [] }, { data: PAGES }] });
+    vi.mocked(createClient).mockReturnValue(mock.client as never);
+    const user = userEvent.setup();
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    render(
+      <CatalogItemDialog item={{ ...DRAFT, name: "Épée" }} type="inventory" worldId="w1" open
+        onOpenChange={vi.fn()} onSave={onSave} />,
+    );
+    await screen.findByRole("button", { name: "Lier une page" });
+    await user.click(screen.getByRole("button", { name: "Enregistrer" }));
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    expect(setWorldCatalogItemPages).not.toHaveBeenCalled();
   });
 });
