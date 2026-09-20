@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-09 ──────────────────────────────────────────────────────────────
   {
     date: "2026-09",
+    tag: "Correctif",
+    text: "Un administrateur d’un monde (permission « Régler le monde ») peut activer, modifier et désactiver la fiche de persona par défaut, comme le propriétaire — la bascule répondait « L’enregistrement a échoué ».",
+  },
+  {
+    date: "2026-09",
     tag: "Catalogue",
     text: "Une compétence peut exiger des prérequis, d’autres compétences du catalogue choisies dans son éditeur. Sa fiche les liste et dit ce qu’elle débloque ; dans un monde qui restreint les compétences au catalogue, une compétence ne s’ajoute à une fiche de persona qu’une fois ses prérequis présents — le sélecteur grise les autres et nomme ce qui manque, et une compétence dont un prérequis a disparu le signale.",
   },
