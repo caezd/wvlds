@@ -1937,7 +1937,21 @@
     "searchPage": "Rechercher une page…",
     "noPageFound": "Aucune page ne correspond.",
     "unlinkPage": "Retirer la page {title}",
-    "descMarkdownPlaceholder": "Description — Markdown, [[Page du wiki]] pour un lien…"
+    "descMarkdownPlaceholder": "Description — Markdown, [[Page du wiki]] pour un lien…",
+    "prerequisites": "Prérequis",
+    "unlocks": "Débloque",
+    "addPrerequisite": "Ajouter un prérequis",
+    "recipe": "Composition",
+    "usedIn": "Entre dans la fabrication de",
+    "addIngredient": "Ajouter un ingrédient",
+    "removeRelation": "Retirer {name}",
+    "quantityLess": "Moins",
+    "quantityMore": "Plus",
+    "expandRecipe": "Déplier {name}",
+    "collapseRecipe": "Replier {name}",
+    "recipeTruncated": "(suite non dépliée)",
+    "missingPrerequisites": "Prérequis manquants : {names}",
+    "prerequisiteMissingBadge": "Prérequis manquant"
   },
   "offline": {
     "title": "Vous êtes hors ligne",

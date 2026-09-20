@@ -8,6 +8,8 @@ import { indexCatalog, resolveCatalogEntry } from "@/lib/worldCatalog";
 import type { SkillItem } from "@/types/personas";
 import type { WorldCatalogCategory, WorldCatalogItem } from "@/types/worlds";
 import { CatalogPicker, EntryVisual, IconButton, RarityMark, makeItemId } from "./shared";
+import { missingPrerequisites } from "@/lib/catalogRelations";
+import { useCatalogRelations } from "@/components/worlds/catalogue/CatalogRelations";
 
 export function SkillsField({
   initialItems,
@@ -28,6 +30,13 @@ export function SkillsField({
     () => (catalogItems ? indexCatalog(catalogItems) : undefined),
     [catalogItems],
   );
+  // Les prérequis du monde (migration 187) : une compétence ne s'ajoute
+  // qu'une fois ses prérequis sur cette fiche — et signale ceux qu'elle a perdus.
+  const worldId = catalogItems?.[0]?.world_id ?? null;
+  const { relations } = useCatalogRelations(worldId, "prerequisite", catalogItems !== undefined);
+  const ownedIds = useMemo(() => new Set(items.map((i) => i.catalog_id).filter((id): id is string => !!id)), [items]);
+  const missingFor = (catalogId: string) => (relations ? missingPrerequisites(catalogId, ownedIds, relations) : []);
+  const nameOf = (id: string) => catalog?.get(id)?.name ?? tCatalogue("orphanedItem");
 
   function update(next: SkillItem[]) {
     setItems(next);
@@ -71,12 +80,22 @@ export function SkillsField({
         </div>
         {items.map((item) => {
           const resolved = resolveCatalogEntry(item, catalog);
+          const missing = item.catalog_id ? missingFor(item.catalog_id) : [];
           return (
             <div key={item.id} className="flex items-center gap-2 group/skill">
               <EntryVisual icon={resolved.icon} imageUrl={resolved.image_url} />
               <span className="flex-1 min-w-0 flex items-center gap-1.5">
                 <RarityMark rarity={resolved.rarity} />
                 <span className="truncate text-sm font-medium">{resolved.name}</span>
+                {missing.length > 0 && (
+                  <span
+                    title={tCatalogue("missingPrerequisites", { names: missing.map(nameOf).join(", ") })}
+                    className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-300"
+                  >
+                    <TriangleAlert className="h-3 w-3" />
+                    {tCatalogue("prerequisiteMissingBadge")}
+                  </span>
+                )}
                 {resolved.orphaned && (
                   <span
                     title={tCatalogue("orphanedItem")}
@@ -109,6 +128,10 @@ export function SkillsField({
           categories={catalogCategories}
           type="skills"
           onSelect={addFromCatalog}
+          disabledReason={(entry) => {
+            const missing = missingFor(entry.id);
+            return missing.length > 0 ? tCatalogue("missingPrerequisites", { names: missing.map(nameOf).join(", ") }) : null;
+          }}
         />
       </div>
     );
