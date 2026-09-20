@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-09 ──────────────────────────────────────────────────────────────
   {
     date: "2026-09",
+    tag: "Membres",
+    text: "« Ma carte dans ce monde » (présentation, disponibilités, fuseau, anniversaire, statut) se règle depuis le menu du compte, en bas de la barre latérale, dès que l’on se trouve dans un monde ou dans l’un de ses salons — plus depuis l’en-tête de la liste des membres.",
+  },
+  {
+    date: "2026-09",
     tag: "Personas",
     text: "La barre de la liste des personas se resserre : la recherche, un seul menu « Filtres » (joueur, groupe, statut, type, fiche — la valeur en regard de chaque entrée, un compteur sur le bouton) et le tri. Les filtres actifs s’affichent en pastilles que l’on retire d’un clic.",
   },

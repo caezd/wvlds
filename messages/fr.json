@@ -377,7 +377,6 @@
       "roleChangeFailed": "Modification des rôles impossible.",
       "memberRemoveFailed": "Retrait du membre impossible.",
       "card": {
-        "mine": "Ma carte",
         "title": "Ma carte dans ce monde",
         "statusTitle": "Statut du joueur",
         "saveFailed": "Enregistrement de la carte impossible.",

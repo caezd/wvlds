@@ -377,7 +377,6 @@
       "roleChangeFailed": "Could not change roles.",
       "memberRemoveFailed": "Could not remove the member.",
       "card": {
-        "mine": "My card",
         "title": "My card in this world",
         "statusTitle": "Player status",
         "saveFailed": "Could not save the card.",

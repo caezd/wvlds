@@ -23,6 +23,7 @@ import { Bug, ChevronsUpDown, Download, KeyRound, LogOut, Scale, ScrollText, Set
 import { useGlobalPresence, type PresenceStatus } from "@/components/providers/PresenceProvider";
 import { cn } from "@/lib/utils";
 import { UserProfileSheet } from "./UserProfileSheet";
+import { MyWorldCardDialog, MyWorldCardMenuItem, useMyWorldCard } from "./MyWorldCardMenuItem";
 import { useTranslations } from "next-intl";
 import { useInstallPrompt } from "@/hooks/useInstallPrompt";
 
@@ -58,6 +59,10 @@ export function UserMenuButton({
   const supabase = createClient();
   const { status, setStatus } = useGlobalPresence();
   const [profileOpen, setProfileOpen] = useState(false);
+  // Ma carte dans le monde où l'on se trouve (migration 177) : l'entrée
+  // n'apparaît que dans un monde dont on est membre.
+  const myCard = useMyWorldCard(userId);
+  const [cardOpen, setCardOpen] = useState(false);
   const tPresence = useTranslations("presence");
   const tNav = useTranslations("nav");
   const { canInstall, installed, promptInstall } = useInstallPrompt();
@@ -96,6 +101,7 @@ export function UserMenuButton({
         initialAvatarUrl={avatarUrl ?? null}
         email={email}
       />
+      {myCard && <MyWorldCardDialog userId={userId} card={myCard} open={cardOpen} onOpenChange={setCardOpen} />}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           {variant === "compact" ? (
@@ -175,6 +181,7 @@ export function UserMenuButton({
             <UserRound className="mr-2 size-4" />
             {tNav("profile")}
           </DropdownMenuItem>
+          {myCard && <MyWorldCardMenuItem onSelect={() => setCardOpen(true)} />}
           <DropdownMenuItem onClick={() => router.push("/settings")}>
             <Settings className="mr-2 size-4" />
             {tNav("settings")}

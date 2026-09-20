@@ -377,7 +377,6 @@
       "roleChangeFailed": "No se pudieron modificar los roles.",
       "memberRemoveFailed": "No se pudo retirar al miembro.",
       "card": {
-        "mine": "Mi tarjeta",
         "title": "Mi tarjeta en este mundo",
         "statusTitle": "Estado del jugador",
         "saveFailed": "No se pudo guardar la tarjeta.",
