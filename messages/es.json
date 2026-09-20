@@ -986,7 +986,10 @@
       "filterSheet": "Ficha",
       "allSheets": "Todas las fichas",
       "toReview": "{count} ficha(s) por revisar",
-      "toReviewOne": "1 ficha por revisar"
+      "toReviewOne": "1 ficha por revisar",
+      "filters": "Filtros",
+      "resetFilters": "Restablecer los filtros",
+      "removeFilter": "Quitar el filtro {filter}: {value}"
     },
     "sheet": {
       "incomplete": "Ficha incompleta",

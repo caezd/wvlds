@@ -986,7 +986,10 @@
       "filterSheet": "Sheet",
       "allSheets": "All sheets",
       "toReview": "{count} sheet(s) to review",
-      "toReviewOne": "1 sheet to review"
+      "toReviewOne": "1 sheet to review",
+      "filters": "Filters",
+      "resetFilters": "Reset filters",
+      "removeFilter": "Remove filter {filter}: {value}"
     },
     "sheet": {
       "incomplete": "Incomplete sheet",

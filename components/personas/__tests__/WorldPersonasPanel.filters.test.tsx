@@ -67,6 +67,18 @@ function setup(withNpc = false) {
 
 beforeEach(() => { vi.clearAllMocks(); canReview.value = false; canManageNpc.value = false; review.active = true; });
 
+/**
+ * Choisit une valeur dans le menu « Filtres » : ouvre le menu, entre dans le
+ * sous-menu de la dimension au clavier (sous jsdom, les rectangles sont nuls
+ * et le survol ne tient pas), puis choisit l'option.
+ */
+async function pickFilter(user: ReturnType<typeof userEvent.setup>, dimension: string, option: string) {
+  await user.click(screen.getByRole("button", { name: "Filtres" }));
+  (await screen.findByRole("menuitem", { name: new RegExp(`^${dimension}`) })).focus();
+  await user.keyboard("{ArrowRight}");
+  await user.click(await screen.findByRole("menuitemradio", { name: option }));
+}
+
 describe("applyPersonaFilters / sortPersonas", () => {
   const base = { query: "", player: ALL, group: ALL, status: ALL, sheet: ALL, kind: ALL };
   const groups = new Map([["p2", "g1"]]);
@@ -140,11 +152,15 @@ describe("WorldPersonasPanel — filtres et statut", () => {
     render(<WorldPersonasPanel worldId="w1" myPersonas={[]} />);
     await screen.findByRole("button", { name: "Zorg" });
 
-    await user.click(screen.getByRole("combobox", { name: "Statut" }));
-    await user.click(await screen.findByRole("option", { name: "Décédé" }));
+    await pickFilter(user, "Statut", "Décédé");
 
     expect(screen.getByRole("button", { name: "Zorg" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Aeris" })).toBeNull();
+    // Le filtre actif se lit sur le bouton et en pastille ; la retirer rend tout le monde.
+    expect(screen.getByTestId("active-filter-count")).toHaveTextContent("1");
+    await user.click(screen.getByRole("button", { name: "Retirer le filtre Statut : Décédé" }));
+    expect(screen.getByRole("button", { name: "Aeris" })).toBeInTheDocument();
+    expect(screen.queryByTestId("active-filter-count")).toBeNull();
   });
 
   it("pose le badge de fiche et, pour un relecteur, le raccourci vers les fiches à relire", async () => {
@@ -173,9 +189,11 @@ describe("WorldPersonasPanel — filtres et statut", () => {
     await screen.findByRole("button", { name: "Zorg" });
     expect(screen.getByRole("button", { name: "Élise" }).querySelector("[data-sheet-status]")).toBeNull();
     expect(screen.queryByRole("button", { name: /à relire/ })).toBeNull();
-    await user.click(screen.getByRole("combobox", { name: "Fiche" }));
-    expect(await screen.findByRole("option", { name: "Fiche incomplète" })).toBeInTheDocument();
-    expect(screen.queryByRole("option", { name: "En relecture" })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Filtres" }));
+    (await screen.findByRole("menuitem", { name: /^Fiche/ })).focus();
+    await user.keyboard("{ArrowRight}");
+    expect(await screen.findByRole("menuitemradio", { name: "Fiche incomplète" })).toBeInTheDocument();
+    expect(screen.queryByRole("menuitemradio", { name: "En relecture" })).toBeNull();
   });
 
   it("sans la permission, pas de raccourci de relecture", async () => {
@@ -222,8 +240,8 @@ describe("WorldPersonasPanel — filtres et statut", () => {
     render(<WorldPersonasPanel worldId="w1" myPersonas={[]} />);
     await screen.findByRole("button", { name: "Zorg" });
 
-    await user.click(screen.getByRole("combobox", { name: "Tri" }));
-    await user.click(await screen.findByRole("option", { name: "Plus récents" }));
+    await user.click(screen.getByRole("button", { name: "Tri" }));
+    await user.click(await screen.findByRole("menuitemradio", { name: "Plus récents" }));
 
     const names = ["Zorg", "Élise", "Aeris"].map((n) => screen.getByRole("button", { name: n }));
     const positions = names.map((el) => Array.from(document.querySelectorAll("button")).indexOf(el as HTMLButtonElement));

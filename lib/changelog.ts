@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-09 ──────────────────────────────────────────────────────────────
   {
     date: "2026-09",
+    tag: "Personas",
+    text: "La barre de la liste des personas se resserre : la recherche, un seul menu « Filtres » (joueur, groupe, statut, type, fiche — la valeur en regard de chaque entrée, un compteur sur le bouton) et le tri. Les filtres actifs s’affichent en pastilles que l’on retire d’un clic.",
+  },
+  {
+    date: "2026-09",
     tag: "Correctif",
     text: "Un administrateur d’un monde (permission « Régler le monde ») peut activer, modifier et désactiver la fiche de persona par défaut, comme le propriétaire — la bascule répondait « L’enregistrement a échoué ».",
   },

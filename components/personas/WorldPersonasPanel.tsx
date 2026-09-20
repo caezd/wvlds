@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { ClipboardCheck, Drama, Plus, Search } from "lucide-react";
+import { ClipboardCheck, Drama, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { getInitials } from "@/lib/textFormatting";
 import { PersonaCard } from "./PersonaCard";
@@ -15,16 +15,25 @@ import { fetchSectionsByPersona } from "@/lib/personaSections";
 import type { PersonaSectionWithFields } from "@/types/personas";
 import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { AsidePersona } from "./WorldPersonaAsideClient";
 import { useTranslations } from "next-intl";
 import { StoredImage } from "@/components/ui/stored-image";
 import { avatarThumbWidth } from "@/lib/storage";
 import { cn } from "@/lib/utils";
 import { effectiveStatus } from "@/lib/worldMembers";
-import { NARRATIVE_STATUSES, isRetiredStatus, narrativeStatusOf } from "@/lib/personaStatus";
-import { reviewStatusOf, sheetBadgeOf, type PersonaSheetBadgeKind } from "@/lib/personaReview";
+import { isRetiredStatus, narrativeStatusOf } from "@/lib/personaStatus";
+import { reviewStatusOf } from "@/lib/personaReview";
+import {
+  EMPTY_PERSONA_FILTERS,
+  PERSONA_FILTER_ALL as ALL,
+  applyPersonaFilters,
+  letterKey,
+  memberLabel,
+  sortPersonas,
+  type PersonaFilters,
+  type PersonaSortKey,
+} from "./personaFilters";
+import { PersonaFilterBar } from "./PersonaFilterBar";
 import { useWorldMembership } from "@/components/providers/WorldMembershipProvider";
 import { useWorldReviewActive } from "@/hooks/useWorldReviewActive";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -53,75 +62,10 @@ type NpcPersona = OtherPersona & Omit<AsidePersona, "sections" | "id" | "name" |
 
 type Group = { id: string; name: string; color: string };
 
-const ALL = "__all__";
-const NO_GROUP = "__none__";
-type SortKey = "name" | "newest" | "oldest";
-
-function memberLabel(userId: string, username: string | null) {
-  return username ? `@${username}` : userId.slice(0, 8);
-}
-
-/** Lettre d'index (accents ignorés) ; "#" pour les noms vides ou non alphabétiques. */
-const DIACRITICS_RE = new RegExp("[\\u0300-\\u036f]", "g");
-
-function letterKey(name: string | null): string {
-  const normalized = (name ?? "").trim().normalize("NFD").replace(DIACRITICS_RE, "");
-  const c = normalized[0]?.toUpperCase() ?? "";
-  return /[A-Z]/.test(c) ? c : "#";
-}
-
-function normalize(text: string) {
-  return text.normalize("NFD").replace(DIACRITICS_RE, "").toLowerCase();
-}
-
-/** Les critères de la barre de filtres, appliqués à une liste (pure, testée). */
-export type PersonaFilters = {
-  query: string;
-  player: string; // ALL | user_id
-  group: string; // ALL | NO_GROUP | group_id
-  status: string; // ALL | PersonaNarrativeStatus
-  /** ALL | PersonaSheetBadgeKind — l'état de la fiche (migration 181). */
-  sheet: string;
-  /** ALL | "player" | "npc" — personas des joueurs ou PNJ (migration 182). */
-  kind: string;
-  /** Le monde relit-il ses fiches (migration 184) ? Sinon le filtre « Fiche » ne connaît qu'« incomplète ». */
-  reviewActive?: boolean;
-};
-
-export const SHEET_FILTERS: readonly PersonaSheetBadgeKind[] = ["submitted", "draft", "incomplete", "approved"];
-
-export function applyPersonaFilters<
-  T extends {
-    id: string; name: string | null; user_id: string; username?: string | null;
-    narrative_status: PersonaNarrativeStatus; review_status?: unknown; sheet_complete?: boolean | null; is_npc?: boolean | null;
-  },
->(list: T[], filters: PersonaFilters, groupByPersona: Map<string, string>): T[] {
-  const q = normalize(filters.query.trim());
-  return list.filter((p) => {
-    if (filters.kind === "npc" && !p.is_npc) return false;
-    if (filters.kind === "player" && p.is_npc) return false;
-    if (filters.player !== ALL && p.user_id !== filters.player) return false;
-    if (filters.group === NO_GROUP && groupByPersona.has(p.id)) return false;
-    if (filters.group !== ALL && filters.group !== NO_GROUP && groupByPersona.get(p.id) !== filters.group) return false;
-    if (filters.status !== ALL && p.narrative_status !== filters.status) return false;
-    if (filters.sheet !== ALL && (sheetBadgeOf(p, filters.reviewActive ?? true) ?? "approved") !== filters.sheet) return false;
-    if (q && !normalize(p.name ?? "").includes(q) && !normalize(p.username ?? "").includes(q)) return false;
-    return true;
-  });
-}
-
-export function sortPersonas<T extends { name: string | null; created_at?: string | null }>(list: T[], sort: SortKey): T[] {
-  const byName = (a: T, b: T) => (a.name ?? "").localeCompare(b.name ?? "", undefined, { sensitivity: "base" });
-  const byDate = (a: T, b: T) => (a.created_at ?? "").localeCompare(b.created_at ?? "");
-  return [...list].sort((a, b) => {
-    if (sort === "name") return byName(a, b);
-    const d = byDate(a, b);
-    if (d !== 0) return sort === "newest" ? -d : d;
-    return byName(a, b);
-  });
-}
-
-export { ALL as PERSONA_FILTER_ALL, NO_GROUP as PERSONA_FILTER_NO_GROUP };
+// Les filtres et le tri vivent dans `personaFilters.ts` ; ré-exportés pour les tests.
+export { applyPersonaFilters, sortPersonas, PERSONA_FILTER_ALL, PERSONA_FILTER_NO_GROUP, SHEET_FILTERS } from "./personaFilters";
+export type { PersonaFilters } from "./personaFilters";
+type SortKey = PersonaSortKey;
 
 // ── Carte lecture seule : persona d'un autre membre ────────────────────────
 
@@ -193,8 +137,6 @@ export function WorldPersonasPanel({
   faceclaimsEnabled?: boolean;
 }) {
   const t = useTranslations("personas.list");
-  const tStatus = useTranslations("personas.narrativeStatus");
-  const tSheet = useTranslations("personas.sheet");
   const tNpc = useTranslations("personas.npc");
   const supabase = useMemo(() => createClient(), []);
   const { userId: meId, username: myUsername } = useCurrentUser();
@@ -213,7 +155,7 @@ export function WorldPersonasPanel({
   const [groupByPersona, setGroupByPersona] = useState<Map<string, string>>(new Map());
   const myIds = useMemo(() => new Set(myPersonas.map((p) => p.id)), [myPersonas]);
 
-  const [filters, setFilters] = useState<PersonaFilters>({ query: "", player: ALL, group: ALL, status: ALL, sheet: ALL, kind: ALL });
+  const [filters, setFilters] = useState<PersonaFilters>(EMPTY_PERSONA_FILTERS);
   const effectiveFilters = useMemo(() => ({ ...filters, reviewActive }), [filters, reviewActive]);
   const [sort, setSort] = useState<SortKey>("name");
 
@@ -395,95 +337,16 @@ export function WorldPersonasPanel({
         <div className="space-y-8 px-6 py-6">
           {/* ── Recherche, filtres, tri ── */}
           {total > 0 && (
-            <div className="flex flex-wrap items-center gap-2" role="search">
-              <div className="relative min-w-0 flex-1 basis-56">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  type="search"
-                  value={filters.query}
-                  onChange={(e) => setFilters((f) => ({ ...f, query: e.target.value }))}
-                  placeholder={t("searchPlaceholder")}
-                  aria-label={t("searchPlaceholder")}
-                  className="pl-9"
-                />
-              </div>
-              {players.length > 1 && (
-                <Select value={filters.player} onValueChange={(v) => setFilters((f) => ({ ...f, player: v }))}>
-                  <SelectTrigger size="sm" className="w-auto min-w-36" aria-label={t("filterPlayer")}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={ALL}>{t("allPlayers")}</SelectItem>
-                    {players.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>{p.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-              {groups.length > 0 && (
-                <Select value={filters.group} onValueChange={(v) => setFilters((f) => ({ ...f, group: v }))}>
-                  <SelectTrigger size="sm" className="w-auto min-w-36" aria-label={t("filterGroup")}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={ALL}>{t("allGroups")}</SelectItem>
-                    {groups.map((g) => (
-                      <SelectItem key={g.id} value={g.id}>
-                        <span className="flex items-center gap-2">
-                          <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: g.color }} />
-                          {g.name}
-                        </span>
-                      </SelectItem>
-                    ))}
-                    <SelectItem value={NO_GROUP}>{t("noGroup")}</SelectItem>
-                  </SelectContent>
-                </Select>
-              )}
-              <Select value={filters.status} onValueChange={(v) => setFilters((f) => ({ ...f, status: v }))}>
-                <SelectTrigger size="sm" className="w-auto min-w-32" aria-label={t("filterStatus")}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={ALL}>{t("allStatuses")}</SelectItem>
-                  {NARRATIVE_STATUSES.map((s) => (
-                    <SelectItem key={s} value={s}>{tStatus(s)}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {(npcs.length > 0 || canManageNpc) && (
-                <Select value={filters.kind} onValueChange={(v) => setFilters((f) => ({ ...f, kind: v }))}>
-                  <SelectTrigger size="sm" className="w-auto min-w-32" aria-label={tNpc("filterKind")}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={ALL}>{tNpc("allKinds")}</SelectItem>
-                    <SelectItem value="player">{tNpc("kindPlayers")}</SelectItem>
-                    <SelectItem value="npc">{tNpc("kindNpcs")}</SelectItem>
-                  </SelectContent>
-                </Select>
-              )}
-              <Select value={filters.sheet} onValueChange={(v) => setFilters((f) => ({ ...f, sheet: v }))}>
-                <SelectTrigger size="sm" className="w-auto min-w-32" aria-label={t("filterSheet")}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={ALL}>{t("allSheets")}</SelectItem>
-                  {(reviewActive ? SHEET_FILTERS : SHEET_FILTERS.filter((k) => k === "incomplete")).map((k) => (
-                    <SelectItem key={k} value={k}>{tSheet(k)}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
-                <SelectTrigger size="sm" className="w-auto min-w-36" aria-label={t("sort")}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="name">{t("sortName")}</SelectItem>
-                  <SelectItem value="newest">{t("sortNewest")}</SelectItem>
-                  <SelectItem value="oldest">{t("sortOldest")}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <PersonaFilterBar
+              filters={filters}
+              onFiltersChange={setFilters}
+              sort={sort}
+              onSortChange={setSort}
+              players={players}
+              groups={groups}
+              showKind={npcs.length > 0 || canManageNpc}
+              reviewActive={reviewActive}
+            />
           )}
 
           {/* ── Fiches à relire (relecteurs) ── */}

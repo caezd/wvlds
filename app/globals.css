@@ -60,8 +60,8 @@
     --card: oklch(0.225 0 0);
     /* ~#212121 : cartes sur le panneau */
     --card-foreground: oklch(0.93 0 0);
-    --popover: oklch(0.235 0 0);
-    /* menus, modales */
+    --popover: var(--background);
+    /* menus, sélecteurs, popovers : le fond de la page, pas une teinte à part */
     --popover-foreground: oklch(0.93 0 0);
     --primary: oklch(0.985 0 0);
     /* bouton primaire blanc */
@@ -137,7 +137,8 @@
     --color-hoverCard: #232327;
     --color-card: oklch(0.21 0.006 285.885);
     --color-card-foreground: oklch(0.985 0 0);
-    --color-popover: oklch(0.21 0.006 285.885);
+    /* `bg-popover` lit ce jeton-ci, pas `--popover` : le fond de la page, comme `--color-background`. */
+    --color-popover: var(--background);
     --color-popover-foreground: oklch(0.985 0 0);
     --color-primary: oklch(0.92 0.004 286.32);
     --color-primary-foreground: oklch(0.21 0.006 285.885);
