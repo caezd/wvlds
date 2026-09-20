@@ -183,8 +183,11 @@ describe("découpage des messages envoyés au client", () => {
         // alors plus rien dire.
         expect(reachable.size).toBeGreaterThan(50);
 
+        // `catalogue` fait exception : la fiche d'un objet (CatalogItemDetail)
+        // s'ouvre depuis l'inventaire d'un persona consulté dans le salon, et
+        // `app/(protected)/c/[id]/layout.tsx` remonte ce namespace-là.
         const offenders: string[] = [];
-        for (const ns of WORLD_ROUTE_NAMESPACES) {
+        for (const ns of WORLD_ROUTE_NAMESPACES.filter((n) => n !== "catalogue")) {
             const re = new RegExp(`useTranslations\\(\\s*["']${ns}["']`);
             for (const path of reachable) {
                 if (re.test(byPath.get(path) ?? "")) {
@@ -193,6 +196,8 @@ describe("découpage des messages envoyés au client", () => {
             }
         }
         expect(offenders).toEqual([]);
+        const chatLayout = byPath.get(join(ROOT, "app/(protected)/c/[id]/layout.tsx").replace(/\\/g, "/")) ?? "";
+        expect(chatLayout).toContain('withRouteMessages(messages, ["catalogue"])');
     });
 
     it("les namespaces d'onglets de monde restent atteignables depuis une page de monde", () => {

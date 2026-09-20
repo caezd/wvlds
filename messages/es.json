@@ -1931,7 +1931,13 @@
     "categoryName": "Nombre",
     "categoryDescription": "Descripción",
     "categoryDescriptionPlaceholder": "Unas líneas sobre esta categoría (Markdown)…",
-    "editCategory": "Modificar la categoría {name}"
+    "editCategory": "Modificar la categoría {name}",
+    "linkedPages": "Páginas del wiki",
+    "linkPage": "Vincular una página",
+    "searchPage": "Buscar una página…",
+    "noPageFound": "Ninguna página coincide.",
+    "unlinkPage": "Quitar la página {title}",
+    "descMarkdownPlaceholder": "Descripción — Markdown, [[Página del wiki]] para un enlace…"
   },
   "offline": {
     "title": "Está sin conexión",

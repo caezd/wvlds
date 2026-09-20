@@ -23,6 +23,7 @@ export const TABLE = {
   PERSONA_RELATIONS: "persona_relations",
   PERSONA_REVIEW_COMMENTS: "persona_review_comments",
   PERSONA_JOURNAL_ENTRIES: "persona_journal_entries",
+  WORLD_CATALOG_ITEM_PAGES: "world_catalog_item_pages",
   CHAT_PINS: "chat_pins",
   DM_CONVERSATIONS: "dm_conversations",
   DM_MESSAGES: "dm_messages",

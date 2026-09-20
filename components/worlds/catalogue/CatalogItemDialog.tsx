@@ -33,8 +33,10 @@ import { Label } from "@/components/ui/label";
 import { RpgIconPicker } from "@/components/personas/RpgIconPicker";
 import { LucideIconPicker } from "@/components/ui/LucideIconPicker";
 import { CatalogVisual, visualSourceButtonClass } from "./CatalogVisual";
-import { CatalogIcon } from "./CataloguePieces";
 import type { CatalogItem, CatalogType } from "./catalogueTypes";
+import { WikiPagePicker } from "./WikiPagePicker";
+import { useCatalogItemPages } from "./CatalogItemDetail";
+import { setWorldCatalogItemPages } from "@/app/actions/worldCatalog";
 
 // L'objet du catalogue, en grand.
 //
@@ -123,6 +125,16 @@ export function CatalogItemDialog({
   const [properties, setProperties] = useState<WorldCatalogProperty[]>(item.properties ?? []);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  // Les pages du wiki liées (migration 186) : lues à l'ouverture pour un
+  // objet existant, puis remplacées en bloc à l'enregistrement si elles ont bougé.
+  const linkedPages = useCatalogItemPages(creating ? null : item.id, open);
+  const [pageIds, setPageIds] = useState<string[]>([]);
+  const [pagesDirty, setPagesDirty] = useState(false);
+  useEffect(() => {
+    if (!open) return;
+    setPageIds(linkedPages?.map((p) => p.id) ?? []);
+    setPagesDirty(false);
+  }, [open, linkedPages]);
 
   // Le dialogue reste monté d'une ouverture à l'autre : sans cela, modifier un
   // objet puis un autre montrerait les valeurs du premier.
@@ -201,11 +213,18 @@ export function CatalogItemDialog({
     };
   }
 
+  async function savePages() {
+    if (!pagesDirty) return;
+    const res = await setWorldCatalogItemPages(item.id, pageIds);
+    if (!res.ok) toast.error(tCommon("saveError"));
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) return;
     setSaving(true);
     await onSave(item.id, collect());
+    await savePages();
     setSaving(false);
   }
 
@@ -213,6 +232,7 @@ export function CatalogItemDialog({
     if (!name.trim() || !onSaveAndContinue) return;
     setSaving(true);
     await onSaveAndContinue(item.id, collect());
+    await savePages();
     setSaving(false);
   }
 
@@ -323,12 +343,18 @@ export function CatalogItemDialog({
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder={t("descPlaceholder")}
+                placeholder={t("descMarkdownPlaceholder")}
                 rows={3}
                 className="w-full resize-y rounded-lg border border-border-soft bg-background px-3 py-2 text-xs outline-none focus:border-primary/40"
                 maxLength={5000}
               />
             </div>
+          </div>
+
+          {/* Pages du wiki liées */}
+          <div className="space-y-1.5">
+            <Label className="text-xs">{t("linkedPages")}</Label>
+            <WikiPagePicker worldId={worldId} value={pageIds} onChange={(next) => { setPageIds(next); setPagesDirty(true); }} />
           </div>
 
           {/* Rareté, empilement, plafond */}
@@ -462,73 +488,6 @@ export function CatalogItemDialog({
             </button>
           </DialogFooter>
         </form>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-// ── Fiche en lecture ──────────────────────────────────────────────────────────
-
-/**
- * Ce qu'un objet dit de lui, sans droit de modification.
- *
- * La ligne du catalogue tronque la description et tait les propriétés ; un
- * membre qui veut savoir ce que porte un objet n'avait nulle part où regarder.
- */
-export function CatalogItemDetail({
-  item,
-  usageCount,
-  open,
-  onOpenChange,
-}: {
-  item: CatalogItem;
-  usageCount?: number;
-  open: boolean;
-  onOpenChange: (v: boolean) => void;
-}) {
-  const t = useTranslations("catalogue");
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <div className="flex items-start gap-3">
-            <CatalogIcon icon={item.icon} lucideIcon={item.lucide_icon} imageUrl={item.image_url} />
-            <div className="min-w-0 flex-1 space-y-1 text-left">
-              <DialogTitle className="text-base">{item.name}</DialogTitle>
-              {item.rarity && <RarityBadge rarity={item.rarity} />}
-            </div>
-          </div>
-        </DialogHeader>
-
-        <DialogDescription asChild>
-          <div className="space-y-3">
-            {item.description ? (
-              <p className="whitespace-pre-line text-sm text-foreground/80">{item.description}</p>
-            ) : (
-              <p className="text-sm text-muted-foreground">{t("noDescription")}</p>
-            )}
-
-            {item.properties && item.properties.length > 0 && (
-              <dl className="divide-y divide-border-soft rounded-lg border border-border-soft">
-                {item.properties.map((property, index) => (
-                  <div key={index} className="flex items-baseline justify-between gap-3 px-3 py-1.5">
-                    <dt className="text-xs text-muted-foreground">{property.label}</dt>
-                    <dd className="text-xs font-medium">{property.value}</dd>
-                  </div>
-                ))}
-              </dl>
-            )}
-
-            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-              {item.type === "inventory" && item.stackable === false && <span>{t("uniqueItem")}</span>}
-              {item.type === "inventory" && item.max_quantity ? (
-                <span>{t("maxQuantityValue", { count: item.max_quantity })}</span>
-              ) : null}
-              {usageCount !== undefined && <span>{t("usageCount", { count: usageCount })}</span>}
-            </div>
-          </div>
-        </DialogDescription>
       </DialogContent>
     </Dialog>
   );

@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Catalogue",
+    text: "Chaque objet et chaque compétence a une vraie fiche, ouverte d’un clic depuis le catalogue comme depuis l’inventaire ou les compétences d’un persona : description en Markdown (avec les [[liens]] du wiki), rareté, propriétés, et des pages du wiki liées — choisies dans l’éditeur de l’objet, dix au plus — qui mènent au wiki du monde.",
+  },
+  {
+    date: "2026-09",
+    tag: "Catalogue",
     text: "Une catégorie du catalogue a une présentation : une description (Markdown) et une bannière, affichées en tête quand on la déplie. Elles se règlent depuis le crayon de la catégorie, avec son nom.",
   },
   {

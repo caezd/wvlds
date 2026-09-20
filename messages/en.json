@@ -1931,7 +1931,13 @@
     "categoryName": "Name",
     "categoryDescription": "Description",
     "categoryDescriptionPlaceholder": "A few lines about this category (Markdown)…",
-    "editCategory": "Edit category {name}"
+    "editCategory": "Edit category {name}",
+    "linkedPages": "Wiki pages",
+    "linkPage": "Link a page",
+    "searchPage": "Search a page…",
+    "noPageFound": "No page matches.",
+    "unlinkPage": "Remove page {title}",
+    "descMarkdownPlaceholder": "Description — Markdown, [[Wiki page]] for a link…"
   },
   "offline": {
     "title": "You're offline",

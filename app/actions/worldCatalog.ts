@@ -359,6 +359,34 @@ export async function updateWorldCatalogItem(id: string, data: CatalogItemInput)
 // restaurer rend son objet à toutes les fiches d'un coup, sans qu'aucune ait à
 // être retouchée — elles n'ont jamais cessé de le désigner.
 
+/**
+ * Les pages du wiki liées à un objet (migration 186) : la liste entière,
+ * remplacée. Le déclencheur vérifie le monde de chaque page et le plafond ;
+ * la RLS, `catalog.edit`.
+ */
+export async function setWorldCatalogItemPages(itemId: string, pageIds: string[]) {
+  const input = parseInput(
+    z.strictObject({ itemId: idSchema, pageIds: z.array(idSchema).max(10) }),
+    { itemId, pageIds },
+  );
+  if (!input.ok) return { ok: false as const, error: input.error };
+
+  const supabase = await createClient();
+  const { data: item } = await supabase.from("world_catalog_items").select("world_id").eq("id", itemId).maybeSingle();
+  if (!item) return { ok: false as const, error: ERR_INTROUVABLE };
+
+  const { error: delError } = await supabase.from("world_catalog_item_pages").delete().eq("item_id", itemId);
+  if (delError) return { ok: false as const, error: echecEnregistrement("setWorldCatalogItemPages", delError) };
+  const unique = Array.from(new Set(input.data.pageIds));
+  if (unique.length > 0) {
+    const { error } = await supabase
+      .from("world_catalog_item_pages")
+      .insert(unique.map((page_id, sort_index) => ({ item_id: itemId, page_id, world_id: item.world_id, sort_index })));
+    if (error) return { ok: false as const, error: echecEnregistrement("setWorldCatalogItemPages", error) };
+  }
+  return { ok: true as const };
+}
+
 export async function trashWorldCatalogItem(id: string) {
   const supabase = await createClient();
   const { error } = await supabase
