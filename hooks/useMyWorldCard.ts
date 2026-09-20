@@ -2,15 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
-import { useTranslations } from "next-intl";
-import { IdCard } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/client";
 import { TABLE } from "@/lib/constants";
 import { MEMBER_CARD_COLUMNS, type WorldMemberCardFields } from "@/lib/worldMembers";
-import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
-import { afterMenuClose } from "@/components/ui/after-menu-close";
-import { WorldMemberCardDialog } from "@/components/worlds/members/WorldMemberCardDialog";
 
 const UUID = "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
 const WORLD_ROUTE = new RegExp(`^/w/(${UUID})(?:/|$)`);
@@ -18,8 +13,8 @@ const CHAT_ROUTE = new RegExp(`^/c/(${UUID})(?:/|$)`);
 
 /**
  * Le monde où l'on se trouve, lu dans l'adresse : `/w/<id>` directement,
- * `/c/<id>` par le salon. Le menu du compte vit hors du fournisseur
- * d'appartenance (monté sous `/w/[id]`), l'adresse est ce qu'il a.
+ * `/c/<id>` par le salon. La fiche « Mon profil » vit hors du fournisseur
+ * d'appartenance (monté sous `/w/[id]`), l'adresse est ce qu'elle a.
  */
 export function useCurrentWorldId(): string | null {
   const pathname = usePathname() ?? "";
@@ -72,45 +67,4 @@ export function useMyWorldCard(userId: string): { worldId: string; card: WorldMe
   if (!worldId || member?.worldId !== worldId || !member.card) return null;
   const card = member.card;
   return { worldId, card, patch: (fields) => setMember({ worldId, card: { ...card, ...fields } }) };
-}
-
-/**
- * L'entrée « Ma carte dans ce monde » du menu du compte. Le dialogue, lui,
- * se rend hors du menu (`MyWorldCardDialog`) : le contenu d'un menu Radix
- * disparaît à sa fermeture, et emporterait le dialogue avec lui.
- */
-export function MyWorldCardMenuItem({ onSelect }: { onSelect: () => void }) {
-  const t = useTranslations("worlds.members.card");
-  return (
-    <DropdownMenuItem onClick={afterMenuClose(onSelect)}>
-      <IdCard className="mr-2 size-4" />
-      {t("title")}
-    </DropdownMenuItem>
-  );
-}
-
-export function MyWorldCardDialog({
-  userId,
-  card,
-  open,
-  onOpenChange,
-}: {
-  userId: string;
-  card: NonNullable<ReturnType<typeof useMyWorldCard>>;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}) {
-  if (!open) return null;
-  return (
-    <WorldMemberCardDialog
-      key={card.worldId}
-      worldId={card.worldId}
-      userId={userId}
-      mode="self"
-      initial={card.card}
-      open
-      onOpenChange={onOpenChange}
-      onSaved={card.patch}
-    />
-  );
 }

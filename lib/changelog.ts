@@ -9,7 +9,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Membres",
-    text: "« Ma carte dans ce monde » (présentation, disponibilités, fuseau, anniversaire, statut) se règle depuis le menu du compte, en bas de la barre latérale, dès que l’on se trouve dans un monde ou dans l’un de ses salons — plus depuis l’en-tête de la liste des membres.",
+    text: "« Ma carte dans ce monde » (présentation, disponibilités, fuseau, anniversaire, statut) se règle dans « Mon profil », sous le pseudo, dès que l’on se trouve dans un monde ou dans l’un de ses salons — plus depuis l’en-tête de la liste des membres.",
   },
   {
     date: "2026-09",

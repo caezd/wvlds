@@ -399,7 +399,8 @@
         "justNow": "à l'instant",
         "localTime": "{time} heure locale",
         "birthdayToday": "Anniversaire aujourd'hui !",
-        "birthdayOn": "Anniversaire le {date}"
+        "birthdayOn": "Anniversaire le {date}",
+        "profileHelp": "Ce que les membres de ce monde voient de vous sur la liste des membres et sur vos personas. Chaque monde a sa carte."
       },
       "status": {
         "label": "Statut",
