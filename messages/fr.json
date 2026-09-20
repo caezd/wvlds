@@ -400,7 +400,9 @@
         "localTime": "{time} heure locale",
         "birthdayToday": "Anniversaire aujourd'hui !",
         "birthdayOn": "Anniversaire le {date}",
-        "profileHelp": "Ce que les membres de ce monde voient de vous sur la liste des membres et sur vos personas. Chaque monde a sa carte."
+        "profileHelp": "Ce que les membres de ce monde voient de vous sur la liste des membres et sur vos personas. Chaque monde a sa carte.",
+        "inWorld": "Dans {world}",
+        "inThisWorld": "Dans ce monde"
       },
       "status": {
         "label": "Statut",
