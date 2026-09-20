@@ -137,3 +137,13 @@ export function catalogItemImagePrefix(worldId: string, itemId: string): string 
 export function catalogItemImagePath(worldId: string, itemId: string, type?: string): string {
   return `${catalogItemImagePrefix(worldId, itemId)}/${nomDeFichierPourType(type)}`;
 }
+
+/** Dossier de la bannière d'une catégorie du catalogue. Voir la migration 185. */
+export function catalogCategoryBannerPrefix(worldId: string, categoryId: string): string {
+  return `world-${worldId}/category-${categoryId}`;
+}
+
+/** Chemin complet de la bannière d'une catégorie du catalogue. */
+export function catalogCategoryBannerPath(worldId: string, categoryId: string, type?: string): string {
+  return `${catalogCategoryBannerPrefix(worldId, categoryId)}/${nomDeFichierPourType(type)}`;
+}

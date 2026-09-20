@@ -23,6 +23,9 @@ export interface WorldCatalogCategory {
   name: string;
   sort_index: number;
   column_index: number;
+  /** Présentation affichée en tête quand la catégorie est dépliée (migration 185). */
+  description?: string | null;
+  banner_url?: string | null;
 }
 
 /** Les cinq degrés de rareté d'un objet — voir CATALOG_RARITIES. */

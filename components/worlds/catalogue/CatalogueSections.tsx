@@ -16,6 +16,8 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 
 import { cn } from "@/lib/utils";
+import { StoredImage } from "@/components/ui/stored-image";
+import MarkdownRenderer from "@/components/MarkdownRenderer";
 import type { WorldCatalogCategory } from "@/types/worlds";
 import { UNCAT, type CatalogType, type CatalogItem } from "./catalogueTypes";
 
@@ -40,7 +42,6 @@ export function SortableCategoryContainer({
   canEdit,
   canReorder,
   usage,
-  renamingId,
   collapsed,
   onToggleCollapsed,
   onEditItem,
@@ -48,9 +49,8 @@ export function SortableCategoryContainer({
   onDeleteItem,
   onOpenItem,
   onAddIn,
-  onSetRenaming,
+  onEditCategory,
   onDeleteCategory,
-  onSaveCategory,
   onSortAlpha,
 }: {
   category: WorldCatalogCategory;
@@ -59,7 +59,6 @@ export function SortableCategoryContainer({
   canEdit: boolean;
   canReorder: boolean;
   usage: Record<string, number> | null;
-  renamingId: string | null;
   collapsed: boolean;
   onToggleCollapsed: (id: string) => void;
   onEditItem: (item: CatalogItem) => void;
@@ -68,9 +67,9 @@ export function SortableCategoryContainer({
   onOpenItem: (item: CatalogItem) => void;
   /** Ouvre le dialogue de création, dans cette catégorie (`null` : sans). */
   onAddIn: (categoryId: string | null) => void;
-  onSetRenaming: (id: string | null) => void;
+  /** Ouvre la présentation de la catégorie : nom, description, bannière. */
+  onEditCategory: (category: WorldCatalogCategory) => void;
   onDeleteCategory: (id: string) => void;
-  onSaveCategory: (id: string, name: string) => Promise<void>;
   onSortAlpha: (categoryId: string | null) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -86,9 +85,7 @@ export function SortableCategoryContainer({
 
   const t = useTranslations("catalogue");
   const tCommon = useTranslations("common");
-  const [renameValue, setRenameValue] = useState(category.name);
-  const [renameSaving, setRenameSaving] = useState(false);
-  const isRenaming = renamingId === category.id;
+  const hasPresentation = !!category.banner_url || !!category.description;
 
   return (
     <div ref={setNodeRef} style={style} className="space-y-0.5">
@@ -104,42 +101,7 @@ export function SortableCategoryContainer({
         >
           <ChevronRight className={cn("h-3.5 w-3.5 transition-transform", !collapsed && "rotate-90")} />
         </button>
-        {isRenaming ? (
-          <form
-            onSubmit={async e => {
-              e.preventDefault();
-              if (!renameValue.trim()) return;
-              setRenameSaving(true);
-              await onSaveCategory(category.id, renameValue.trim());
-              setRenameSaving(false);
-            }}
-            className="flex flex-1 items-center gap-2 min-w-0"
-          >
-            <input
-              autoFocus
-              value={renameValue}
-              onChange={e => setRenameValue(e.target.value)}
-              className="flex-1 bg-transparent text-sm font-semibold text-foreground/80 outline-none"
-              maxLength={60}
-            />
-            <button
-              type="submit"
-              disabled={!renameValue.trim() || renameSaving}
-              className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:text-foreground disabled:opacity-40"
-            >
-              {renameSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
-            </button>
-            <button
-              aria-label={tCommon("cancel")}
-              type="button"
-              onClick={() => { setRenameValue(category.name); onSetRenaming(null); }}
-              className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:text-foreground"
-            >
-              <X className="h-3 w-3" />
-            </button>
-          </form>
-        ) : (
-          <>
+        <>
             <span className="flex-1 text-sm font-semibold text-foreground/70 truncate">{category.name}</span>
             <span
               title={t("itemCount", { count: items.length })}
@@ -150,9 +112,9 @@ export function SortableCategoryContainer({
             {canEdit && (
               <div className="flex items-center gap-1 opacity-0 group-hover/cat:opacity-100 focus-within:opacity-100 transition-opacity shrink-0">
                 <button
-                  aria-label={tCommon("edit")}
+                  aria-label={t("editCategory", { name: category.name })}
                   type="button"
-                  onClick={() => { setRenameValue(category.name); onSetRenaming(category.id); }}
+                  onClick={() => onEditCategory(category)}
                   className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <Pencil className="h-3 w-3" />
@@ -167,9 +129,22 @@ export function SortableCategoryContainer({
                 </button>
               </div>
             )}
-          </>
-        )}
+        </>
       </div>
+
+      {/* Dépliée : la présentation de la catégorie, bannière puis description. */}
+      {!collapsed && hasPresentation && (
+        <div className="mx-2 mb-2 space-y-2" data-testid="category-presentation">
+          {category.banner_url && (
+            <div className="relative h-24 w-full overflow-hidden rounded-lg [mask-image:linear-gradient(to_bottom,black_60%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,black_60%,transparent_100%)]">
+              <StoredImage url={category.banner_url} width={720} height={240} alt="" className="object-cover" draggable={false} />
+            </div>
+          )}
+          {category.description && (
+            <MarkdownRenderer content={category.description} className="px-1 text-xs text-muted-foreground prose-sm" />
+          )}
+        </div>
+      )}
 
       {/* Items in this category */}
       {!collapsed && <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>

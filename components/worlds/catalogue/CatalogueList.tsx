@@ -45,7 +45,6 @@ import {
   listTrashedWorldCatalogItems,
   duplicateWorldCatalogItem,
   addWorldCatalogCategory,
-  updateWorldCatalogCategory,
   deleteWorldCatalogCategory,
   reorderWorldCatalogCategories,
   reorderWorldCatalogItems,
@@ -64,6 +63,7 @@ import type { WorldCatalogItem } from "@/types/worlds";
 
 import { CategoryRowOverlay, ItemRowOverlay } from "./CataloguePieces";
 import { CatalogItemDetail, CatalogItemDialog, RarityDot } from "./CatalogItemDialog";
+import { CatalogCategoryDialog } from "./CatalogCategoryDialog";
 import { CatalogueRowProvider, type CatalogueRowContextValue } from "./CatalogueRowContext";
 import { CatalogTrashDialog } from "./CatalogTrashDialog";
 import { AddCategoryForm, DroppableColumn, SortableCategoryContainer, UncategorizedSection } from "./CatalogueSections";
@@ -113,7 +113,8 @@ export function CatalogueList({
   // identifiant et sa catégorie, pour que le dialogue puisse téléverser son
   // image dans le bon dossier avant que la ligne n'existe.
   const [draft, setDraft] = useState<CatalogItem | null>(null);
-  const [renamingCatId, setRenamingCatId] = useState<string | null>(null);
+  // La catégorie dont on édite la présentation (nom, description, bannière).
+  const [editingCategory, setEditingCategory] = useState<WorldCatalogCategory | null>(null);
   const [addingCategoryInCol, setAddingCategoryInCol] = useState<number | false>(false);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
 
@@ -156,7 +157,7 @@ export function CatalogueList({
       const [catRes, itemRes] = await Promise.all([
         (supabase as ReturnType<typeof createClient>)
           .from("world_catalog_categories")
-          .select("id, world_id, type, name, sort_index, column_index")
+          .select("id, world_id, type, name, sort_index, column_index, description, banner_url")
           .eq("world_id", worldId)
           .eq("type", type)
           // La corbeille a sa propre vue : la liste ne montre que le vivant.
@@ -391,7 +392,7 @@ export function CatalogueList({
       // les deviner, l'action ne rend que les objets.
       const { data } = await (supabase as ReturnType<typeof createClient>)
         .from("world_catalog_categories")
-        .select("id, world_id, type, name, sort_index, column_index")
+        .select("id, world_id, type, name, sort_index, column_index, description, banner_url")
         .eq("world_id", worldId)
         .eq("type", type)
         .order("sort_index", { ascending: true });
@@ -413,12 +414,6 @@ export function CatalogueList({
     setAddingCategoryInCol(false);
   }
 
-  async function handleSaveCategory(id: string, name: string) {
-    const res = await updateWorldCatalogCategory(id, { name });
-    if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
-    setCategories(prev => prev.map(c => c.id === id ? { ...c, name } : c));
-    setRenamingCatId(null);
-  }
 
   async function handleDeleteCategory(id: string) {
     const res = await deleteWorldCatalogCategory(id);
@@ -885,7 +880,6 @@ export function CatalogueList({
                       canEdit={canEdit}
                       canReorder={canReorder}
                       usage={usage}
-                      renamingId={renamingCatId}
                       // Une recherche déplie tout : ses résultats doivent se voir.
                       collapsed={collapsed.has(cat.id) && !searching}
                       onToggleCollapsed={toggleCollapsed}
@@ -894,9 +888,8 @@ export function CatalogueList({
                       onDeleteItem={id => void handleDeleteItem(id)}
                       onOpenItem={setDetailItem}
                       onAddIn={categoryId => setDraft(newDraft(categoryId))}
-                      onSetRenaming={setRenamingCatId}
+                      onEditCategory={setEditingCategory}
                       onDeleteCategory={id => void handleDeleteCategory(id)}
-                      onSaveCategory={handleSaveCategory}
                       onSortAlpha={handleSortAlpha}
                     />
                   ))}
@@ -1012,6 +1005,16 @@ export function CatalogueList({
       />
 
       {/* Consultation : ce que porte un objet, pour qui n'édite pas. */}
+      {editingCategory && (
+        <CatalogCategoryDialog
+          key={editingCategory.id}
+          category={editingCategory}
+          open
+          onOpenChange={(open) => { if (!open) setEditingCategory(null); }}
+          onSaved={(next) => setCategories(prev => prev.map(c => (c.id === next.id ? next : c)))}
+        />
+      )}
+
       {detailItem && (
         <CatalogItemDetail
           item={detailItem}

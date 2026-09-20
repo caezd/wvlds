@@ -24,6 +24,7 @@ const actions = vi.hoisted(() => ({
   reorderWorldCatalogItems: vi.fn(),
   trashWorldCatalogItem: vi.fn(),
   updateWorldCatalogItem: vi.fn(),
+  updateWorldCatalogCategory: vi.fn(),
 }));
 vi.mock("@/app/actions/worldCatalog", () => ({
   addWorldCatalogItem: actions.addWorldCatalogItem,
@@ -34,7 +35,7 @@ vi.mock("@/app/actions/worldCatalog", () => ({
   listTrashedWorldCatalogItems: vi.fn(),
   duplicateWorldCatalogItem: vi.fn(),
   addWorldCatalogCategory: vi.fn(),
-  updateWorldCatalogCategory: vi.fn(),
+  updateWorldCatalogCategory: actions.updateWorldCatalogCategory,
   deleteWorldCatalogCategory: vi.fn(),
   reorderWorldCatalogCategories: vi.fn(),
   reorderWorldCatalogItems: actions.reorderWorldCatalogItems,
@@ -58,9 +59,9 @@ const ARC = item("i-arc", "Arc", ARMES.id, 1);
 const POTION = item("i-potion", "Potion", null, 0);
 const CORDE = item("i-corde", "Corde", null, 1);
 
-function mount(props: { canEdit?: boolean } = {}) {
+function mount(props: { canEdit?: boolean; categories?: unknown[] } = {}) {
   vi.mocked(createClient).mockReturnValue(
-    createSupabaseMock({ results: [{ data: [ARMES, OUTILS] }, { data: [EPEE, ARC, POTION, CORDE] }] }) as never,
+    createSupabaseMock({ results: [{ data: props.categories ?? [ARMES, OUTILS] }, { data: [EPEE, ARC, POTION, CORDE] }] }) as never,
   );
   return render(<CatalogueList type="inventory" worldId="w1" canEdit={props.canEdit ?? true} usage={null} />);
 }
@@ -281,5 +282,49 @@ describe("CatalogueList — gestion", () => {
     await waitFor(() => expect(within(dialogue).getByPlaceholderText("Nom de l'objet")).toHaveValue(""));
     const [premier] = actions.addWorldCatalogItem.mock.calls;
     expect(premier[2]).toEqual(expect.objectContaining({ category_id: null }));
+  });
+});
+
+describe("CatalogueList — présentation d'une catégorie (migration 185)", () => {
+  const RELIQUES = { ...ARMES, description: "Les **reliques** du Nord.", banner_url: "https://cdn.test/worlds/world-w1/category-cat-armes/banner.webp" };
+
+  beforeEach(() => {
+    localStorage.clear();
+    actions.updateWorldCatalogCategory.mockReset().mockResolvedValue({ ok: true });
+  });
+
+  it("dépliée, la catégorie montre sa bannière et sa description ; repliée, plus rien", async () => {
+    const user = userEvent.setup();
+    mount({ categories: [RELIQUES, OUTILS] });
+    await screen.findByText("Épée");
+
+    const presentation = screen.getByTestId("category-presentation");
+    expect(within(presentation).getByText("reliques")).toBeInTheDocument();
+    expect(presentation.querySelector("img")).not.toBeNull();
+    // Outils n'a rien à présenter : pas de bloc.
+    expect(screen.getAllByTestId("category-presentation")).toHaveLength(1);
+
+    await user.click(screen.getByRole("button", { name: "Replier Armes" }));
+    expect(screen.queryByTestId("category-presentation")).toBeNull();
+  });
+
+  it("le crayon ouvre la présentation ; l'enregistrement met à jour l'en-tête", async () => {
+    const user = userEvent.setup();
+    mount();
+    await screen.findByText("Épée");
+
+    await user.click(screen.getByRole("button", { name: "Modifier la catégorie Armes" }));
+    const dialog = await screen.findByRole("dialog", { name: "Présentation de la catégorie" });
+    const name = within(dialog).getByLabelText("Nom");
+    await user.clear(name);
+    await user.type(name, "Armurerie");
+    await user.type(within(dialog).getByLabelText("Description"), "Tout ce qui tranche.");
+    await user.click(within(dialog).getByRole("button", { name: "Enregistrer" }));
+
+    await waitFor(() => expect(actions.updateWorldCatalogCategory).toHaveBeenCalledWith("cat-armes", {
+      name: "Armurerie", description: "Tout ce qui tranche.", banner_url: null,
+    }));
+    expect(await screen.findByText("Armurerie")).toBeInTheDocument();
+    expect(within(screen.getByTestId("category-presentation")).getByText("Tout ce qui tranche.")).toBeInTheDocument();
   });
 });
