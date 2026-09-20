@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Loader2, FolderPlus, Search, Download, Upload, X, Trash2, FolderInput, CheckSquare } from "lucide-react";
@@ -63,6 +63,7 @@ import type { WorldCatalogItem } from "@/types/worlds";
 
 import { CategoryRowOverlay, ItemRowOverlay } from "./CataloguePieces";
 import { CatalogItemDialog, RarityDot } from "./CatalogItemDialog";
+import { indexCatalog } from "@/lib/worldCatalog";
 import { CatalogItemDetail } from "./CatalogItemDetail";
 import { CatalogCategoryDialog } from "./CatalogCategoryDialog";
 import { CatalogueRowProvider, type CatalogueRowContextValue } from "./CatalogueRowContext";
@@ -114,6 +115,8 @@ export function CatalogueList({
   // identifiant et sa catégorie, pour que le dialogue puisse téléverser son
   // image dans le bon dossier avant que la ligne n'existe.
   const [draft, setDraft] = useState<CatalogItem | null>(null);
+  // Le catalogue indexé : la fiche y nomme prérequis et ingrédients.
+  const catalogIndex = useMemo(() => indexCatalog(items), [items]);
   // La catégorie dont on édite la présentation (nom, description, bannière).
   const [editingCategory, setEditingCategory] = useState<WorldCatalogCategory | null>(null);
   const [addingCategoryInCol, setAddingCategoryInCol] = useState<number | false>(false);
@@ -980,6 +983,7 @@ export function CatalogueList({
           onOpenChange={open => { if (!open) setDraft(null); }}
           onSave={handleCreateAndClose}
           onSaveAndContinue={handleCreateAndContinue}
+          siblings={items}
         />
       )}
 
@@ -992,6 +996,7 @@ export function CatalogueList({
           open
           onOpenChange={open => { if (!open) setEditingItem(null); }}
           onSave={handleSaveItem}
+          siblings={items}
         />
       )}
 
@@ -1022,6 +1027,8 @@ export function CatalogueList({
           usageCount={usage?.[detailItem.id]}
           open
           onOpenChange={open => { if (!open) setDetailItem(null); }}
+                  catalog={catalogIndex}
+          onNavigate={(next) => setDetailItem({ ...next, category_id: next.category_id ?? null })}
         />
       )}
     </div>

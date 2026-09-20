@@ -387,6 +387,55 @@ export async function setWorldCatalogItemPages(itemId: string, pageIds: string[]
   return { ok: true as const };
 }
 
+/**
+ * Les relations d'un objet, d'un genre (migration 187) — prérequis d'une
+ * compétence, ingrédients d'un objet — remplacées en bloc. Le déclencheur
+ * tient les règles (même catalogue, pas de boucle, vingt au plus).
+ */
+export async function setWorldCatalogItemRelations(
+  itemId: string,
+  kind: "prerequisite" | "ingredient",
+  rows: { to_id: string; quantity: number }[],
+) {
+  const input = parseInput(
+    z.strictObject({
+      itemId: idSchema,
+      kind: z.enum(["prerequisite", "ingredient"]),
+      rows: z.array(z.strictObject({ to_id: idSchema, quantity: z.number().int().min(1).max(9999) })).max(20),
+    }),
+    { itemId, kind, rows },
+  );
+  if (!input.ok) return { ok: false as const, error: input.error };
+
+  const supabase = await createClient();
+  const { data: item } = await supabase.from("world_catalog_items").select("world_id").eq("id", itemId).maybeSingle();
+  if (!item) return { ok: false as const, error: ERR_INTROUVABLE };
+
+  const { error: delError } = await supabase
+    .from("world_catalog_item_relations")
+    .delete()
+    .eq("from_id", itemId)
+    .eq("kind", input.data.kind);
+  if (delError) return { ok: false as const, error: echecEnregistrement("setWorldCatalogItemRelations", delError) };
+
+  const seen = new Set<string>();
+  const unique = input.data.rows.filter((r) => r.to_id !== itemId && !seen.has(r.to_id) && seen.add(r.to_id));
+  if (unique.length > 0) {
+    const { error } = await supabase.from("world_catalog_item_relations").insert(
+      unique.map((r, sort_index) => ({
+        from_id: itemId,
+        to_id: r.to_id,
+        world_id: item.world_id,
+        kind: input.data.kind,
+        quantity: input.data.kind === "prerequisite" ? 1 : r.quantity,
+        sort_index,
+      })),
+    );
+    if (error) return { ok: false as const, error: echecEnregistrement("setWorldCatalogItemRelations", error) };
+  }
+  return { ok: true as const };
+}
+
 export async function trashWorldCatalogItem(id: string) {
   const supabase = await createClient();
   const { error } = await supabase

@@ -9,6 +9,16 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Catalogue",
+    text: "Une compétence peut exiger des prérequis, d’autres compétences du catalogue choisies dans son éditeur. Sa fiche les liste et dit ce qu’elle débloque ; dans un monde qui restreint les compétences au catalogue, une compétence ne s’ajoute à une fiche de persona qu’une fois ses prérequis présents — le sélecteur grise les autres et nomme ce qui manque, et une compétence dont un prérequis a disparu le signale.",
+  },
+  {
+    date: "2026-09",
+    tag: "Catalogue",
+    text: "Un objet peut se composer d’autres objets : sa recette se règle dans son éditeur (ingrédients et quantités) et sa fiche la montre en arbre dépliable — composition des composants comprise — ainsi que les objets dans la fabrication desquels il entre. Aucune mécanique d’inventaire : c’est une fiche, pas un atelier.",
+  },
+  {
+    date: "2026-09",
+    tag: "Catalogue",
     text: "Chaque objet et chaque compétence a une vraie fiche, ouverte d’un clic depuis le catalogue comme depuis l’inventaire ou les compétences d’un persona : description en Markdown (avec les [[liens]] du wiki), rareté, propriétés, et des pages du wiki liées — choisies dans l’éditeur de l’objet, dix au plus — qui mènent au wiki du monde.",
   },
   {

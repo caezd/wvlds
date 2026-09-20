@@ -96,11 +96,14 @@ export function CatalogPicker({
   categories,
   type,
   onSelect,
+  disabledReason,
 }: {
   available: WorldCatalogItem[];
   categories?: WorldCatalogCategory[];
   type: "inventory" | "skills";
   onSelect: (item: WorldCatalogItem) => void;
+  /** Pourquoi une entrée ne se choisit pas (prérequis manquant, migration 187) ; `null` si elle se choisit. */
+  disabledReason?: (item: WorldCatalogItem) => string | null;
 }) {
   const t = useTranslations("catalogue");
   const [open, setOpen] = useState(false);
@@ -183,12 +186,17 @@ export function CatalogPicker({
                     {group.name}
                   </p>
                 )}
-                {group.items.map((item) => (
+                {group.items.map((item) => {
+                  const reason = disabledReason?.(item) ?? null;
+                  return (
                   <button
                     key={item.id}
                     type="button"
+                    disabled={reason !== null}
+                    title={reason ?? undefined}
+                    aria-disabled={reason !== null || undefined}
                     onClick={() => { onSelect(item); setOpen(false); }}
-                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left hover:bg-muted transition-colors"
+                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left hover:bg-muted transition-colors disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent"
                   >
                     <EntryVisual icon={item.icon} lucideIcon={item.lucide_icon} imageUrl={item.image_url} size={36} />
                     <div className="flex-1 min-w-0">
@@ -201,7 +209,8 @@ export function CatalogPicker({
                       )}
                     </div>
                   </button>
-                ))}
+                  );
+                })}
               </div>
             ))}
           </div>

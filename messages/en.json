@@ -1937,7 +1937,21 @@
     "searchPage": "Search a page…",
     "noPageFound": "No page matches.",
     "unlinkPage": "Remove page {title}",
-    "descMarkdownPlaceholder": "Description — Markdown, [[Wiki page]] for a link…"
+    "descMarkdownPlaceholder": "Description — Markdown, [[Wiki page]] for a link…",
+    "prerequisites": "Prerequisites",
+    "unlocks": "Unlocks",
+    "addPrerequisite": "Add a prerequisite",
+    "recipe": "Recipe",
+    "usedIn": "Used to craft",
+    "addIngredient": "Add an ingredient",
+    "removeRelation": "Remove {name}",
+    "quantityLess": "Less",
+    "quantityMore": "More",
+    "expandRecipe": "Expand {name}",
+    "collapseRecipe": "Collapse {name}",
+    "recipeTruncated": "(not expanded further)",
+    "missingPrerequisites": "Missing prerequisites: {names}",
+    "prerequisiteMissingBadge": "Missing prerequisite"
   },
   "offline": {
     "title": "You're offline",

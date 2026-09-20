@@ -36,7 +36,10 @@ import { CatalogVisual, visualSourceButtonClass } from "./CatalogVisual";
 import type { CatalogItem, CatalogType } from "./catalogueTypes";
 import { WikiPagePicker } from "./WikiPagePicker";
 import { useCatalogItemPages } from "./CatalogItemDetail";
-import { setWorldCatalogItemPages } from "@/app/actions/worldCatalog";
+import { setWorldCatalogItemPages, setWorldCatalogItemRelations } from "@/app/actions/worldCatalog";
+import { relationsFrom } from "@/lib/catalogRelations";
+import { RelationsEditor, useCatalogRelations, type RelationDraft } from "./CatalogRelations";
+import type { WorldCatalogItem } from "@/types/worlds";
 
 // L'objet du catalogue, en grand.
 //
@@ -94,6 +97,7 @@ export function CatalogItemDialog({
   onOpenChange,
   onSave,
   onSaveAndContinue,
+  siblings,
 }: {
   /** L'objet à modifier — ou, en création, un brouillon vide qui porte déjà son identifiant. */
   item: CatalogItem;
@@ -106,6 +110,8 @@ export function CatalogItemDialog({
   onSave: (id: string, data: CatalogItemInput) => Promise<void>;
   /** Création en série : enregistre, puis le parent fournit un brouillon neuf. */
   onSaveAndContinue?: (id: string, data: CatalogItemInput) => Promise<void>;
+  /** Les autres objets du catalogue : candidats aux prérequis ou à la recette (migration 187). */
+  siblings?: WorldCatalogItem[];
 }) {
   const t = useTranslations("catalogue");
   const tCommon = useTranslations("common");
@@ -135,6 +141,17 @@ export function CatalogItemDialog({
     setPageIds(linkedPages?.map((p) => p.id) ?? []);
     setPagesDirty(false);
   }, [open, linkedPages]);
+  // Prérequis (compétence) ou composition (objet), migration 187 : lus avec
+  // les relations du monde, remplacés en bloc à l'enregistrement s'ils ont bougé.
+  const relationKind = type === "skills" ? "prerequisite" : "ingredient";
+  const { relations } = useCatalogRelations(worldId, relationKind, open && !creating && !!siblings);
+  const [relationRows, setRelationRows] = useState<RelationDraft[]>([]);
+  const [relationsDirty, setRelationsDirty] = useState(false);
+  useEffect(() => {
+    if (!open) return;
+    setRelationRows(relations ? relationsFrom(item.id, relations, relationKind).map((r) => ({ to_id: r.to_id, quantity: r.quantity })) : []);
+    setRelationsDirty(false);
+  }, [open, relations, item.id, relationKind]);
 
   // Le dialogue reste monté d'une ouverture à l'autre : sans cela, modifier un
   // objet puis un autre montrerait les valeurs du premier.
@@ -214,9 +231,14 @@ export function CatalogItemDialog({
   }
 
   async function savePages() {
-    if (!pagesDirty) return;
-    const res = await setWorldCatalogItemPages(item.id, pageIds);
-    if (!res.ok) toast.error(tCommon("saveError"));
+    if (pagesDirty) {
+      const res = await setWorldCatalogItemPages(item.id, pageIds);
+      if (!res.ok) toast.error(tCommon("saveError"));
+    }
+    if (relationsDirty) {
+      const res = await setWorldCatalogItemRelations(item.id, relationKind, relationRows);
+      if (!res.ok) toast.error(tCommon("saveError"));
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -350,6 +372,20 @@ export function CatalogItemDialog({
               />
             </div>
           </div>
+
+          {/* Prérequis d'une compétence, composition d'un objet */}
+          {siblings && (
+            <div className="space-y-1.5">
+              <Label className="text-xs">{type === "skills" ? t("prerequisites") : t("recipe")}</Label>
+              <RelationsEditor
+                kind={relationKind}
+                value={relationRows}
+                onChange={(next) => { setRelationRows(next); setRelationsDirty(true); }}
+                item={item}
+                siblings={siblings}
+              />
+            </div>
+          )}
 
           {/* Pages du wiki liées */}
           <div className="space-y-1.5">

@@ -20,7 +20,9 @@ function useCatalogDetail(catalog: Map<string, WorldCatalogItem> | undefined) {
     const item = catalogId ? catalog?.get(catalogId) : undefined;
     if (item) setDetail(item);
   };
-  const sheet = detail ? <CatalogItemDetail item={detail} open onOpenChange={(v) => { if (!v) setDetail(null); }} /> : null;
+  const sheet = detail ? (
+    <CatalogItemDetail item={detail} catalog={catalog} onNavigate={setDetail} open onOpenChange={(v) => { if (!v) setDetail(null); }} />
+  ) : null;
   return { open, sheet };
 }
 
