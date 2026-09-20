@@ -519,12 +519,21 @@ export async function addWorldCatalogCategory(
 
 export async function updateWorldCatalogCategory(
   id: string,
-  data: Partial<{ name: string; sort_index: number }>,
+  data: Partial<{ name: string; sort_index: number; description: string | null; banner_url: string | null }>,
 ) {
   const input = parseInput(
     z.strictObject({
       id: idSchema,
-      data: z.strictObject({ name: shortTextSchema, sort_index: z.number().int().min(0) }).partial(),
+      data: z
+        .strictObject({
+          name: shortTextSchema,
+          sort_index: z.number().int().min(0),
+          // La présentation de la catégorie (migration 185) : Markdown, et une
+          // bannière du bucket `worlds` — l'URL est bornée à http(s) en base aussi.
+          description: longTextSchema.nullable().transform((v) => v || null),
+          banner_url: z.union([httpUrlSchema, z.literal(""), z.null()]).transform((v) => v || null),
+        })
+        .partial(),
     }),
     { id, data },
   );

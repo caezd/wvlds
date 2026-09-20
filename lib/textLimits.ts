@@ -44,6 +44,8 @@ export const DB_TEXT_LIMITS = {
   "personas.name": 40,
   "profiles.bio": 500,
   "profiles.username": 40,
+  "world_catalog_categories.banner_url": 2_000,
+  "world_catalog_categories.description": 5_000,
   "world_catalog_categories.name": 200,
   "world_catalog_items.description": 5_000,
   "world_catalog_items.icon": 200,

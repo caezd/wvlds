@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-09 ──────────────────────────────────────────────────────────────
   {
     date: "2026-09",
+    tag: "Catalogue",
+    text: "Une catégorie du catalogue a une présentation : une description (Markdown) et une bannière, affichées en tête quand on la déplie. Elles se règlent depuis le crayon de la catégorie, avec son nom.",
+  },
+  {
+    date: "2026-09",
     tag: "Notifications",
     text: "Deux notifications pour les fiches de persona, chacune avec son réglage : « Fiches soumises à validation » prévient les relecteurs d’un monde, « Relecture de mes fiches » prévient le joueur quand sa fiche est validée ou renvoyée (le commentaire du relecteur en aperçu). Elles ouvrent directement la fiche concernée, et arrivent aussi en notification push.",
   },

@@ -1924,7 +1924,14 @@
     "movedToTrashCount": "{count, plural, one {# entry moved to trash} other {# entries moved to trash}}",
     "newItem": "New item",
     "newSkill": "New skill",
-    "createAndContinue": "Create and continue"
+    "createAndContinue": "Create and continue",
+    "categoryDialogTitle": "Category presentation",
+    "categoryDialogHelp": "Name, description and banner, shown at the top when the category is expanded.",
+    "categoryBanner": "Banner",
+    "categoryName": "Name",
+    "categoryDescription": "Description",
+    "categoryDescriptionPlaceholder": "A few lines about this category (Markdown)…",
+    "editCategory": "Edit category {name}"
   },
   "offline": {
     "title": "You're offline",

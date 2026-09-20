@@ -1924,7 +1924,14 @@
     "movedToTrashCount": "{count, plural, one {# entrée envoyée à la corbeille} other {# entrées envoyées à la corbeille}}",
     "newItem": "Nouvel objet",
     "newSkill": "Nouvelle compétence",
-    "createAndContinue": "Créer et continuer"
+    "createAndContinue": "Créer et continuer",
+    "categoryDialogTitle": "Présentation de la catégorie",
+    "categoryDialogHelp": "Nom, description et bannière, affichés en tête quand la catégorie est dépliée.",
+    "categoryBanner": "Bannière",
+    "categoryName": "Nom",
+    "categoryDescription": "Description",
+    "categoryDescriptionPlaceholder": "Quelques lignes sur cette catégorie (Markdown)…",
+    "editCategory": "Modifier la catégorie {name}"
   },
   "offline": {
     "title": "Vous êtes hors ligne",
