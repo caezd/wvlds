@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, within, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { createSupabaseMock } from "@/test/supabaseMock";
@@ -133,16 +133,15 @@ describe("CatalogItemDialog — composition d'un objet", () => {
   it("ajoute un ingrédient, règle sa quantité et enregistre les relations", async () => {
     // pages liées, relations (le sélecteur de pages, dans le portail, vient ensuite)
     mockResults([{ data: [] }, { data: CUIR_ONLY }, { data: [] }]);
-    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    const user = userEvent.setup();
     const onSave = vi.fn().mockResolvedValue(undefined);
     render(
       <CatalogItemDialog item={{ ...EPEE, category_id: null }} type="inventory" worldId="w1" open
         onOpenChange={vi.fn()} onSave={onSave} siblings={ITEMS} />,
     );
     expect(await screen.findByText("Cuir")).toBeInTheDocument();
-    // Le sélecteur (Popover) par-dessus le dialogue modal : `fireEvent` pour
-    // l'ouvrir, jsdom ne calculant pas les styles hérités (voir CatalogItemDialog.create.test).
-    fireEvent.click(screen.getByRole("button", { name: "Ajouter un ingrédient" }));
+    // Un Popover par-dessus le dialogue modal, cliquable (voir CatalogItemDialog.create.test).
+    await user.click(screen.getByRole("button", { name: "Ajouter un ingrédient" }));
     await user.click(await screen.findByRole("option", { name: /Lingot/ }));
     expect(await screen.findByText("Lingot")).toBeInTheDocument();
 
@@ -161,7 +160,7 @@ describe("CatalogItemDialog — composition d'un objet", () => {
         onOpenChange={vi.fn()} onSave={vi.fn()} siblings={ITEMS} />,
     );
     expect(await screen.findByText("Lingot")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Ajouter un ingrédient" }));
+    await userEvent.setup().click(screen.getByRole("button", { name: "Ajouter un ingrédient" }));
     await screen.findByRole("option", { name: /Minerai/ });
     expect(screen.queryByRole("option", { name: /Épée/ })).toBeNull();
     expect(screen.queryByRole("option", { name: /Cuir/ })).toBeNull();
