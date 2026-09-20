@@ -986,7 +986,10 @@
       "filterSheet": "Fiche",
       "allSheets": "Toutes les fiches",
       "toReview": "{count} fiche(s) à relire",
-      "toReviewOne": "1 fiche à relire"
+      "toReviewOne": "1 fiche à relire",
+      "filters": "Filtres",
+      "resetFilters": "Réinitialiser les filtres",
+      "removeFilter": "Retirer le filtre {filter} : {value}"
     },
     "sheet": {
       "incomplete": "Fiche incomplète",
