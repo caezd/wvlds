@@ -26,8 +26,8 @@ import { PERSONA_FILTER_ALL as ALL, PERSONA_FILTER_NO_GROUP as NO_GROUP, SHEET_F
 
 type Option = { value: string; label: string; color?: string };
 
-/** Les deux boutons prennent la forme du champ de recherche : même hauteur, mêmes coins, fond de la page. */
-const TRIGGER_CLASS = "h-9 shrink-0 gap-1.5 rounded-lg border bg-background px-3 text-sm text-muted-foreground transition-colors hover:border-border hover:bg-secondary/30 hover:text-foreground";
+/** Les deux boutons (variante `outline`, la forme des champs) sur la hauteur du champ de recherche. */
+const TRIGGER_CLASS = "h-9 shrink-0 gap-1.5 px-3";
 
 /** Une dimension du filtre : son nom, ses valeurs, celle qui est active. */
 type Dimension = { key: keyof Omit<PersonaFilters, "query" | "reviewActive">; label: string; allLabel: string; options: Option[] };
@@ -107,7 +107,7 @@ export function PersonaFilterBar({
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button type="button" variant="ghost" className={cn(TRIGGER_CLASS, active.length > 0 && "border-primary/50 text-foreground")} aria-label={t("filters")}>
+            <Button type="button" variant="outline" className={cn(TRIGGER_CLASS, active.length > 0 && "border-primary/50 text-foreground")} aria-label={t("filters")}>
               <SlidersHorizontal className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">{t("filters")}</span>
               {active.length > 0 && (
@@ -155,7 +155,7 @@ export function PersonaFilterBar({
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button type="button" variant="ghost" className={TRIGGER_CLASS} aria-label={t("sort")} title={sortLabel[sort]}>
+            <Button type="button" variant="outline" className={TRIGGER_CLASS} aria-label={t("sort")} title={sortLabel[sort]}>
               <ArrowUpDown className="h-3.5 w-3.5" />
               <span className="hidden md:inline">{sortLabel[sort]}</span>
             </Button>
