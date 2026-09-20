@@ -8,6 +8,26 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-09 ──────────────────────────────────────────────────────────────
   {
     date: "2026-09",
+    tag: "Notifications",
+    text: "Deux notifications pour les fiches de persona, chacune avec son réglage : « Fiches soumises à validation » prévient les relecteurs d’un monde, « Relecture de mes fiches » prévient le joueur quand sa fiche est validée ou renvoyée (le commentaire du relecteur en aperçu). Elles ouvrent directement la fiche concernée, et arrivent aussi en notification push.",
+  },
+  {
+    date: "2026-09",
+    tag: "Rôles",
+    text: "Trois permissions de plus dans le groupe Personas des rôles : « Valider les fiches », « Gérer les PNJ » et « Jouer les PNJ ». Le rôle Administrateur les a d’office.",
+  },
+  {
+    date: "2026-09",
+    tag: "Personas",
+    text: "Les membres d’un monde lisent la fiche complète — sections et champs — des personas du monde, depuis la liste des personas comme depuis un salon.",
+  },
+  {
+    date: "2026-09",
+    tag: "Salons",
+    text: "Quand un persona ne peut pas être choisi pour écrire, le sélecteur et le bouton d’envoi disent pourquoi : fiche incomplète, fiche non validée, quota du plan gratuit, ou PNJ sans la permission de le jouer.",
+  },
+  {
+    date: "2026-09",
     tag: "Personas",
     text: "Chaque persona tient un journal de bord, onglet Journal de sa fiche : des entrées en Markdown que son joueur écrit (ou, pour un PNJ, qui le joue) et que tous les membres du monde lisent. Quand le monde a une chronologie, une entrée se date dans celle-ci et le journal se range dans l’ordre du monde.",
   },
