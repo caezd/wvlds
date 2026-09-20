@@ -14,16 +14,23 @@ import {
   PRONOUN_CUSTOM_MAX_LENGTH,
   isPronounOption,
 } from "@/lib/pronouns";
-import { updateProfileBioAndPronouns } from "./actions";
+import { updateProfileBioAndPronouns } from "@/app/(protected)/settings/actions";
 
-export function ProfileSettingsForm({
+/**
+ * Présentation et pronoms du compte — la partie du profil que tout le monde
+ * voit, sous l'avatar et le pseudo de « Mon profil ». `onSaved` remonte les
+ * valeurs enregistrées à qui garde l'état (la fiche, pour l'ouverture suivante).
+ */
+export function ProfileBioPronounsForm({
   initialBio,
   initialPronouns,
+  onSaved,
 }: {
   initialBio: string;
   initialPronouns: string[];
+  onSaved?: (bio: string, pronouns: string[]) => void;
 }) {
-  const t = useTranslations("settings.profile");
+  const t = useTranslations("userProfile");
   const tPronouns = useTranslations("pronouns");
   const tCommun = useTranslations("common");
   const [isPending, startTransition] = useTransition();
@@ -50,7 +57,7 @@ export function ProfileSettingsForm({
     const pronouns = [...selected, ...(customPronoun.trim() ? [customPronoun.trim()] : [])];
     startTransition(async () => {
       const result = await updateProfileBioAndPronouns(bio, pronouns);
-      if (result?.success) toast.success(t("saved"));
+      if (result?.success) { toast.success(t("saved")); onSaved?.(bio, pronouns); }
       else if (result?.error) toast.error(messageErreurAction(result.error, tCommun));
     });
   }

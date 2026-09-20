@@ -151,19 +151,6 @@
       "left": "Ferré à gauche",
       "justify": "Justifié"
     },
-    "profile": {
-      "title": "Profil",
-      "description": "Personnalisez la façon dont les autres joueurs vous voient",
-      "bioLabel": "Bio",
-      "bioPlaceholder": "Dites-en un peu plus sur vous…",
-      "bioHint": "{count}/500 caractères",
-      "pronounsLabel": "Pronoms",
-      "pronounsHint": "3 maximum",
-      "pronounsCustomLabel": "Autre",
-      "pronounsCustomPlaceholder": "Vos propres pronoms…",
-      "save": "Enregistrer le profil",
-      "saved": "Profil mis à jour"
-    },
     "subscription": {
       "title": "Abonnement",
       "description": "Connectez votre compte Patreon pour activer automatiquement vos avantages d'abonné",
@@ -206,7 +193,16 @@
     "memberSince": "Membre depuis {date}",
     "avatarUpdated": "Avatar mis à jour.",
     "usernameUpdated": "Pseudo mis à jour.",
-    "clickToEditAvatar": "Cliquez pour modifier l'avatar"
+    "clickToEditAvatar": "Cliquez pour modifier l'avatar",
+    "bioLabel": "Bio",
+    "bioPlaceholder": "Dites-en un peu plus sur vous…",
+    "bioHint": "{count}/500 caractères",
+    "pronounsLabel": "Pronoms",
+    "pronounsHint": "3 maximum",
+    "pronounsCustomLabel": "Autre",
+    "pronounsCustomPlaceholder": "Vos propres pronoms…",
+    "save": "Enregistrer le profil",
+    "saved": "Profil mis à jour"
   },
   "notifications": {
     "title": "Notifications",

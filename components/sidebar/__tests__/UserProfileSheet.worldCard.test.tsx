@@ -7,6 +7,8 @@ import { createClient } from "@/lib/supabase/client";
 
 vi.mock("@/lib/supabase/client", () => ({ createClient: vi.fn() }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+const updateProfileBioAndPronouns = vi.hoisted(() => vi.fn().mockResolvedValue({ success: true }));
+vi.mock("@/app/(protected)/settings/actions", () => ({ updateProfileBioAndPronouns }));
 const route = vi.hoisted(() => ({ pathname: "/explore" }));
 vi.mock("next/navigation", () => ({
   usePathname: () => route.pathname,
@@ -41,7 +43,8 @@ describe("Mon profil — ma carte dans ce monde", () => {
 
   it("sur la page d'un monde dont on est membre, la carte se règle dans le profil", async () => {
     route.pathname = `/w/${W1}`;
-    const mock = setup([{ data: CARD }, { data: null, error: null }]);
+    // world_members (ma carte), profiles (bio et pronoms), puis l'enregistrement
+    const mock = setup([{ data: CARD }, { data: { bio: "", pronouns: [] } }, { data: null, error: null }]);
     const user = userEvent.setup();
     mount();
     const section = await screen.findByTestId("my-world-card");
@@ -63,7 +66,9 @@ describe("Mon profil — ma carte dans ce monde", () => {
 
   it("dans un salon, le monde vient du salon", async () => {
     route.pathname = `/c/${C1}`;
-    const mock = setup([{ data: { world_id: W1 } }, { data: CARD }]);
+    // chatrooms (le monde du salon), profiles (bio et pronoms, l'attente du
+    // salon passe la carte après), puis world_members (ma carte)
+    const mock = setup([{ data: { world_id: W1 } }, { data: { bio: "", pronouns: [] } }, { data: CARD }]);
     mount();
     await screen.findByTestId("my-world-card");
     await waitFor(() => expect(mock.client.from).toHaveBeenCalledWith("chatrooms"));
@@ -75,5 +80,20 @@ describe("Mon profil — ma carte dans ce monde", () => {
     mount();
     await screen.findByRole("heading", { name: "Mon profil" });
     await waitFor(() => expect(screen.queryByTestId("my-world-card")).toBeNull());
+  });
+});
+
+describe("Mon profil — présentation et pronoms", () => {
+  it("charge la bio et les pronoms du compte, et les enregistre depuis la fiche", async () => {
+    setup([{ data: { bio: "Salut !", pronouns: ["he_him"] } }]);
+    const user = userEvent.setup();
+    mount();
+    const bio = await screen.findByLabelText("Bio");
+    expect(bio).toHaveValue("Salut !");
+    expect(screen.getByRole("button", { name: "Il/Lui" })).toHaveClass("text-primary");
+
+    await user.type(bio, " Ravi d'être là.");
+    await user.click(screen.getByRole("button", { name: "Enregistrer le profil" }));
+    await waitFor(() => expect(updateProfileBioAndPronouns).toHaveBeenCalledWith("Salut ! Ravi d'être là.", ["he_him"]));
   });
 });

@@ -10,13 +10,13 @@ vi.mock("next-intl", () => ({
 }));
 
 const updateProfileBioAndPronouns = vi.fn();
-vi.mock("../actions", () => ({
+vi.mock("@/app/(protected)/settings/actions", () => ({
   updateProfileBioAndPronouns: (...args: unknown[]) => updateProfileBioAndPronouns(...args),
 }));
 
-import { ProfileSettingsForm } from "../ProfileSettingsForm";
+import { ProfileBioPronounsForm as ProfileSettingsForm } from "@/components/profile/ProfileBioPronounsForm";
 
-describe("ProfileSettingsForm", () => {
+describe("ProfileBioPronounsForm", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     updateProfileBioAndPronouns.mockResolvedValue({ success: true });

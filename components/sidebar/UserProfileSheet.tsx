@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { useMyWorldCard } from "@/hooks/useMyWorldCard";
 import { WorldMemberCardForm } from "@/components/worlds/members/WorldMemberCardDialog";
+import { ProfileBioPronounsForm } from "@/components/profile/ProfileBioPronounsForm";
 
 export function UserProfileSheet({
   open,
@@ -49,6 +50,8 @@ export function UserProfileSheet({
   const [avatarUrl, setAvatarUrl] = useState(initialAvatarUrl);
   const [savingUsername, setSavingUsername] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  // Présentation et pronoms : lus à l'ouverture, gardés une fois enregistrés.
+  const [profileText, setProfileText] = useState<{ bio: string; pronouns: string[] } | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -56,6 +59,19 @@ export function UserProfileSheet({
       setAvatarUrl(initialAvatarUrl);
     }
   }, [open, initialUsername, initialAvatarUrl]);
+
+  useEffect(() => {
+    if (!open || profileText) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase.from("profiles").select("bio, pronouns").eq("id", userId).maybeSingle();
+      if (cancelled) return;
+      const row = data as { bio: string | null; pronouns: string[] | null } | null;
+      setProfileText({ bio: row?.bio ?? "", pronouns: row?.pronouns ?? [] });
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, userId]);
 
   async function handleUsernameSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -170,6 +186,21 @@ export function UserProfileSheet({
                   </Button>
                 </div>
               </form>
+
+              {/* Présentation et pronoms, ce que tout le monde voit. */}
+              {profileText ? (
+                <ProfileBioPronounsForm
+                  key={`${profileText.bio}|${profileText.pronouns.join(",")}`}
+                  initialBio={profileText.bio}
+                  initialPronouns={profileText.pronouns}
+                  onSaved={(bio, pronouns) => setProfileText({ bio, pronouns })}
+                />
+              ) : (
+                <div className="space-y-2" aria-hidden>
+                  <div className="h-4 w-24 animate-pulse rounded bg-muted" />
+                  <div className="h-24 w-full animate-pulse rounded-lg bg-muted" />
+                </div>
+              )}
 
               {/* Ma carte dans ce monde : présentation, disponibilités, fuseau, anniversaire, statut. */}
               {myCard && (
