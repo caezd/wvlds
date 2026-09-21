@@ -255,10 +255,12 @@ export function WorldRolesTab({ worldId }: { worldId: string }) {
             </div>
             <div className="grid gap-1.5">
               <Label>{t("color")}</Label>
+              {/* Même hauteur et même arrondi que le champ Nom, pour une ligne alignée. */}
               <ColorPickerButton
                 color={selected.color}
                 disabled={!selectedEditable}
                 onChange={(color) => void persist(selected, { color })}
+                className="h-9 w-9 rounded-lg"
               />
             </div>
             <div className="grid gap-1.5">
@@ -273,7 +275,7 @@ export function WorldRolesTab({ worldId }: { worldId: string }) {
                       type="button"
                       disabled={!selectedEditable}
                       aria-label={t("pickIcon")}
-                      className="flex h-8 w-8 items-center justify-center rounded-md border border-border shadow-sm hover:ring-2 hover:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                      className="flex h-9 w-9 items-center justify-center rounded-lg border border-border shadow-sm hover:ring-2 hover:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {selected.lucide_icon ? (
                         <LazyLucideIcon name={selected.lucide_icon} width={16} height={16} style={{ color: selected.color }} />
