@@ -619,8 +619,6 @@
       "locked": "Locked",
       "lockedHelp": "This role is at or above your own: you can view it, not edit it.",
       "name": "Name",
-      "color": "Color",
-      "icon": "Icon",
       "pickIcon": "Pick an icon",
       "clearIcon": "Remove icon",
       "hoist": "Display separately",

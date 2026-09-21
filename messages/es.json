@@ -619,8 +619,6 @@
       "locked": "Bloqueado",
       "lockedHelp": "Este rol está al nivel del suyo o por encima: puede consultarlo, no modificarlo.",
       "name": "Nombre",
-      "color": "Color",
-      "icon": "Icono",
       "pickIcon": "Elegir un icono",
       "clearIcon": "Quitar el icono",
       "hoist": "Mostrar por separado",

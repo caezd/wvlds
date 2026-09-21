@@ -619,8 +619,6 @@
       "locked": "Verrouillé",
       "lockedHelp": "Ce rôle est au niveau du vôtre ou au-dessus : vous pouvez le consulter, pas le modifier.",
       "name": "Nom",
-      "color": "Couleur",
-      "icon": "Icône",
       "pickIcon": "Choisir une icône",
       "clearIcon": "Retirer l'icône",
       "hoist": "Afficher séparément",

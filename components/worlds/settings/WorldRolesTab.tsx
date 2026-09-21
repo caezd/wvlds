@@ -253,49 +253,44 @@ export function WorldRolesTab({ worldId }: { worldId: string }) {
                 onCommit={(name) => void persist(selected, { name })}
               />
             </div>
-            <div className="grid gap-1.5">
-              <Label>{t("color")}</Label>
-              {/* Même hauteur et même arrondi que le champ Nom, pour une ligne alignée. */}
-              <ColorPickerButton
-                color={selected.color}
-                disabled={!selectedEditable}
-                onChange={(color) => void persist(selected, { color })}
-                className="h-9 w-9 rounded-lg"
-              />
-            </div>
-            <div className="grid gap-1.5">
-              <Label>{t("icon")}</Label>
-              <div className="flex items-center gap-1">
-                <LucideIconPicker
-                  value={selected.lucide_icon ?? ""}
-                  accent={selected.color}
-                  onChange={(name) => void persist(selected, { lucide_icon: name || null })}
-                  trigger={
-                    <button
-                      type="button"
-                      disabled={!selectedEditable}
-                      aria-label={t("pickIcon")}
-                      className="flex h-9 w-9 items-center justify-center rounded-lg border border-border shadow-sm hover:ring-2 hover:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      {selected.lucide_icon ? (
-                        <LazyLucideIcon name={selected.lucide_icon} width={16} height={16} style={{ color: selected.color }} />
-                      ) : (
-                        <Shapes className="h-4 w-4 text-muted-foreground" />
-                      )}
-                    </button>
-                  }
-                />
-                {selected.lucide_icon && selectedEditable && (
+            {/* Couleur et icône : deux boutons sans libellé (leur aria-label suffit),
+                à la hauteur et à l'arrondi du champ Nom. */}
+            <ColorPickerButton
+              color={selected.color}
+              disabled={!selectedEditable}
+              onChange={(color) => void persist(selected, { color })}
+              className="h-9 w-9 rounded-lg"
+            />
+            <div className="flex items-center gap-1">
+              <LucideIconPicker
+                value={selected.lucide_icon ?? ""}
+                accent={selected.color}
+                onChange={(name) => void persist(selected, { lucide_icon: name || null })}
+                trigger={
                   <button
                     type="button"
-                    aria-label={t("clearIcon")}
-                    onClick={() => void persist(selected, { lucide_icon: null })}
-                    className="rounded p-1 text-muted-foreground hover:text-foreground"
+                    disabled={!selectedEditable}
+                    aria-label={t("pickIcon")}
+                    className="flex h-9 w-9 items-center justify-center rounded-lg border border-border shadow-sm hover:ring-2 hover:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    <X className="h-3.5 w-3.5" />
+                    {selected.lucide_icon ? (
+                      <LazyLucideIcon name={selected.lucide_icon} width={16} height={16} style={{ color: selected.color }} />
+                    ) : (
+                      <Shapes className="h-4 w-4 text-muted-foreground" />
+                    )}
                   </button>
-                )}
-              </div>
+                }
+              />
+              {selected.lucide_icon && selectedEditable && (
+                <button
+                  type="button"
+                  aria-label={t("clearIcon")}
+                  onClick={() => void persist(selected, { lucide_icon: null })}
+                  className="rounded p-1 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
             </div>
           </div>
 
