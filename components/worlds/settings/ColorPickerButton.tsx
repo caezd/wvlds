@@ -38,7 +38,7 @@ export function ColorPickerButton({
   }, [open]);
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className="relative flex">
       <button
         type="button"
         disabled={disabled}
