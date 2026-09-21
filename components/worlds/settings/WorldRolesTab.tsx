@@ -180,8 +180,8 @@ export function WorldRolesTab({ worldId }: { worldId: string }) {
       <aside className="w-full shrink-0 space-y-2 md:w-64">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold">{t("title")}</h3>
-          <Button size="sm" variant="secondary" onClick={() => void createRole()}>
-            <Plus className="mr-1 h-4 w-4" />
+          <Button size="sm" variant="outline" onClick={() => void createRole()} className="text-xs">
+            <Plus className="h-3.5 w-3.5" />
             {t("newRole")}
           </Button>
         </div>
