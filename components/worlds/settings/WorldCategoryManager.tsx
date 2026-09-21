@@ -160,7 +160,7 @@ function CategoryForm({
             disabled={uploadingImage}
             className="text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
           >
-            Retirer l&apos;image
+            {t("settings.removeImage")}
           </button>
         )}
       </div>
@@ -174,17 +174,16 @@ function CategoryForm({
       <Textarea
         value={description ?? ""}
         onChange={(e) => setDescription(e.target.value)}
-        placeholder="Description (optionnel)"
+        placeholder={t("settings.categoryDescriptionPlaceholder")}
         rows={2}
-        className="rounded-lg"
       />
       <div className="flex justify-end gap-2">
         <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
-          Annuler
+          {tCommon("cancel")}
         </Button>
         <Button type="submit" size="sm" disabled={!title.trim() || saving || uploadingImage}>
           {saving ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : null}
-          {initial ? "Enregistrer" : "Créer"}
+          {initial ? tCommon("save") : tCommon("create")}
         </Button>
       </div>
     </form>
@@ -208,6 +207,7 @@ function CategoryRow({
   onSaved: (category: ChatroomCategory) => void;
   onDelete: () => void;
 }) {
+  const t = useTranslations("worlds");
   const tCommon = useTranslations("common");
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: category.id,
@@ -274,7 +274,7 @@ function CategoryRow({
             <Pencil className="h-3.5 w-3.5" />
           </button>
           <DeleteConfirmDialog
-            description={`Supprimer « ${category.title} » ? Les chatrooms de cette catégorie repasseront dans « Général ».`}
+            description={t("settings.deleteCategoryConfirm", { title: category.title })}
             onConfirm={onDelete}
             trigger={
               <button
@@ -301,6 +301,7 @@ export function WorldCategoryManager({
 }) {
   const supabase = React.useMemo(() => createClient(), []);
   const router = useRouter();
+  const t = useTranslations("worlds");
   const tCommon = useTranslations("common");
   const [categories, setCategories] = React.useState<ChatroomCategory[] | null>(null);
   const [creating, setCreating] = React.useState(false);
@@ -400,7 +401,7 @@ export function WorldCategoryManager({
 
         {categories.length === 0 && !creating && (
           <p className="px-2 py-4 text-center text-xs text-muted-foreground/60">
-            Aucune catégorie pour l&apos;instant.
+            {t("settings.noCategories")}
           </p>
         )}
       </div>
@@ -415,7 +416,7 @@ export function WorldCategoryManager({
             className="flex items-center gap-1.5 rounded-md border border-border-soft px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
           >
             <Plus className="h-3.5 w-3.5" />
-            Nouvelle catégorie
+            {t("settings.newCategory")}
           </button>
         ))}
     </div>

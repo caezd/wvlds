@@ -43,6 +43,7 @@ export function WorldCommunityTab({ world, form, persistField, onUpdated }: Prop
   onUpdated?: (world: World) => void;
 }) {
   const t = useTranslations("worlds");
+  const tSettings = useTranslations("worlds.settings");
   const tCommun = useTranslations("common");
   const supabase = React.useMemo(() => createClient(), []);
 
@@ -152,7 +153,7 @@ export function WorldCommunityTab({ world, form, persistField, onUpdated }: Prop
                                             <FormItem>
                                                 <FormLabel>
                                                     <LabelWithHelp help={t("publicWorldHelp")}>
-                                                        Visibilité
+                                                        {tSettings("visibility")}
                                                     </LabelWithHelp>
                                                 </FormLabel>
                                                 <FormControl>
@@ -171,7 +172,7 @@ export function WorldCommunityTab({ world, form, persistField, onUpdated }: Prop
                                                             )}
                                                         >
                                                             <GlobeLock className="h-4 w-4 shrink-0" />
-                                                            Privé
+                                                            {tSettings("private")}
                                                         </button>
                                                         <button
                                                             type="button"
@@ -187,7 +188,7 @@ export function WorldCommunityTab({ world, form, persistField, onUpdated }: Prop
                                                             )}
                                                         >
                                                             <Globe className="h-4 w-4 shrink-0" />
-                                                            Public
+                                                            {tSettings("public")}
                                                         </button>
                                                     </div>
                                                 </FormControl>
@@ -199,9 +200,9 @@ export function WorldCommunityTab({ world, form, persistField, onUpdated }: Prop
                                     {/* -- Tags -------------------------------- */}
                                     <div className="space-y-3">
                                         <div className="space-y-0.5">
-                                            <p className="text-sm font-medium">Tags</p>
+                                            <p className="text-sm font-medium">{tSettings("tags")}</p>
                                             <p className="text-xs text-muted-foreground leading-snug">
-                                                Aident les autres joueurs à trouver ce monde dans l&apos;Explorateur.
+                                                {tSettings("tagsHelp")}
                                             </p>
                                         </div>
                                         {tags.length > 0 && (
@@ -216,7 +217,7 @@ export function WorldCommunityTab({ world, form, persistField, onUpdated }: Prop
                                                             type="button"
                                                             onClick={() => void handleRemoveTag(tag)}
                                                             className="text-muted-foreground hover:text-destructive transition-colors"
-                                                            aria-label={`Retirer le tag ${tag}`}
+                                                            aria-label={tSettings("removeTag", { tag })}
                                                         >
                                                             <X className="h-3 w-3" />
                                                         </button>
@@ -226,7 +227,7 @@ export function WorldCommunityTab({ world, form, persistField, onUpdated }: Prop
                                         )}
                                         {tags.length < 10 && !newTag.trim() && popularTags.length > 0 && (
                                             <div className="space-y-1">
-                                                <p className="text-[11px] font-medium text-muted-foreground">Tags populaires</p>
+                                                <p className="text-[11px] font-medium text-muted-foreground">{tSettings("popularTags")}</p>
                                                 <div className="flex flex-wrap gap-1.5">
                                                     {popularTags.map((tag) => (
                                                         <button
@@ -290,7 +291,7 @@ export function WorldCommunityTab({ world, form, persistField, onUpdated }: Prop
                                             </div>
                                         )}
                                         {tags.length >= 10 && (
-                                            <p className="text-[11px] text-muted-foreground">Maximum 10 tags.</p>
+                                            <p className="text-[11px] text-muted-foreground">{tSettings("maxTags", { count: 10 })}</p>
                                         )}
                                     </div>
 
@@ -299,7 +300,7 @@ export function WorldCommunityTab({ world, form, persistField, onUpdated }: Prop
                                         <div className="space-y-0.5">
                                             <p className="text-sm font-medium">{t("acceptedAvatarTypes")}</p>
                                             <p className="text-xs text-muted-foreground leading-snug">
-                                                Indique aux visiteurs le style d&apos;avatars utilisé dans ce monde.
+                                                {tSettings("avatarTypesHelp")}
                                             </p>
                                         </div>
                                         <div className="flex gap-2">
@@ -316,7 +317,7 @@ export function WorldCommunityTab({ world, form, persistField, onUpdated }: Prop
                                                 )}
                                             >
                                                 <Camera className="h-4 w-4 shrink-0" />
-                                                Avatars réels
+                                                {tSettings("avatarReal")}
                                             </button>
                                             <button
                                                 type="button"
@@ -331,7 +332,7 @@ export function WorldCommunityTab({ world, form, persistField, onUpdated }: Prop
                                                 )}
                                             >
                                                 <Palette className="h-4 w-4 shrink-0" />
-                                                Avatars illustrés
+                                                {tSettings("avatarIllustrated")}
                                             </button>
                                         </div>
                                     </div>
@@ -344,10 +345,10 @@ export function WorldCommunityTab({ world, form, persistField, onUpdated }: Prop
                                         <div className="space-y-0.5">
                                             <p className="flex items-center gap-1.5 text-sm font-medium">
                                                 <ShieldAlert className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                                                Monde réservé aux 18 ans et plus
+                                                {tSettings("ageRestricted")}
                                             </p>
                                             <p className="text-xs text-muted-foreground leading-snug">
-                                                Les nouveaux membres devront confirmer avoir 18 ans ou plus avant de pouvoir rejoindre ce monde.
+                                                {tSettings("ageRestrictedHelp")}
                                             </p>
                                         </div>
                                         <Switch

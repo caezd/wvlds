@@ -9,7 +9,17 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Rôles",
-    text: "Réglages du monde : la liste des rôles affiche leur nom sans pastille ; l’aide de la permission Administrateur ne parle plus d’« onglets système » (seule la suppression du monde reste au propriétaire).",
+    text: "La liste des rôles affiche leur nom sans pastille ; l’aide de la permission Administrateur ne parle plus d’« onglets système » (seule la suppression du monde reste au propriétaire).",
+  },
+  {
+    date: "2026-09",
+    tag: "Interface",
+    text: "Les zones de texte (description du monde, catégories, lexique, blocs…) reprennent l’habillage des champs : même arrondi, même fond, même bordure. Les onglets (Groupes / Types de relation, etc.) reposent sur un rail transparent à bordure ; l’onglet actif prend le fond de la page.",
+  },
+  {
+    date: "2026-09",
+    tag: "Langues",
+    text: "Les réglages d’un monde (apparence, communauté, fonctions, catégories, fiche par défaut) et leurs messages de validation sont traduits en anglais et en espagnol.",
   },
   {
     date: "2026-09",

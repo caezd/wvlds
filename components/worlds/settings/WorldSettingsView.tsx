@@ -87,7 +87,7 @@ import { WorldRolesTab } from "./WorldRolesTab";
 import { useWorldMembership } from "@/components/providers/WorldMembershipProvider";
 import { ERR_NON_AUTHENTIFIE } from "@/lib/actionErrors";
 import {
-  worldSettingsSchema,
+  buildWorldSettingsSchema,
   truthyOrNull,
   type WorldFormValues,
 } from "./worldSettingsSchema";
@@ -105,6 +105,8 @@ export interface WorldSettingsViewProps {
 export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) {
   const tCommon = useTranslations("common");
   const t = useTranslations("worlds");
+  const tSettings = useTranslations("worlds.settings");
+  const schema = React.useMemo(() => buildWorldSettingsSchema(tSettings), [tSettings]);
     const supabase = createClient();
     const router = useRouter();
     const { public_worlds } = useFeatureFlags();
@@ -137,7 +139,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
 
 
     const form = useForm<WorldFormValues>({
-        resolver: zodResolver(worldSettingsSchema),
+        resolver: zodResolver(schema),
         defaultValues: {
             name: world.name ?? "",
             description: world.description ?? "",
@@ -335,7 +337,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                         <FormItem>
                                             <FormLabel>
                                                 <LabelWithHelp help={t("nameHelp")}>
-                                                    Nom du monde
+                                                    {t("name")}
                                                 </LabelWithHelp>
                                             </FormLabel>
                                             <FormControl>
@@ -362,14 +364,13 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                         <FormItem>
                                             <FormLabel>
                                                 <LabelWithHelp help={t("tagHelp")}>
-                                                    Description
+                                                    {t("description")}
                                                 </LabelWithHelp>
                                             </FormLabel>
                                             <FormControl>
                                                 <Textarea
                                                     rows={5}
                                                     placeholder={t("descriptionPlaceholder")}
-                                                    className="rounded-2xl"
                                                     {...field}
                                                     onBlur={(e) => {
                                                         field.onBlur();
@@ -390,7 +391,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                         <FormItem>
                                             <FormLabel>
                                                 <LabelWithHelp help={t("iconHelp")}>
-                                                    Icône du monde
+                                                    {tSettings("worldIcon")}
                                                 </LabelWithHelp>
                                             </FormLabel>
                                             <div className="flex items-start gap-3">
@@ -414,7 +415,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                                                 void persistField("icon_url", "");
                                                             }}
                                                         >
-                                                            Retirer
+                                                            {tCommon("remove")}
                                                         </Button>
                                                     </div>
                                                 ) : (
@@ -475,7 +476,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                                             }}
                                                         >
                                                             <span className="mr-2 h-2.5 w-2.5 rounded-full border border-border" />
-                                                            Aucune
+                                                            {tSettings("noColor")}
                                                         </DropdownMenuItem>
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
@@ -494,7 +495,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                         <FormItem>
                                             <FormLabel>
                                                 <LabelWithHelp help={t("bannerHelp")}>
-                                                    Bannière
+                                                    {tSettings("banner")}
                                                 </LabelWithHelp>
                                             </FormLabel>
                                             <ImagePickerCropField
@@ -514,7 +515,7 @@ export function WorldSettingsView({ world, onUpdated }: WorldSettingsViewProps) 
                                                     }}
                                                     className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                                                 >
-                                                    Retirer la bannière
+                                                    {tSettings("removeBanner")}
                                                 </button>
                                             )}
                                             <FormMessage />

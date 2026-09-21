@@ -71,7 +71,6 @@ function TermForm({
         onChange={e => setDescription(e.target.value)}
         placeholder={t("descriptionPlaceholder")}
         rows={3}
-        className="rounded-lg"
       />
       <div className="flex justify-end gap-2">
         <Button type="button" variant="ghost" size="sm" onClick={onCancel}>

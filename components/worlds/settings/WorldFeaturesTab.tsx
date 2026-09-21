@@ -65,6 +65,8 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
   onUpdated?: (world: World) => void;
 }) {
   const t = useTranslations("worlds");
+  const tSettings = useTranslations("worlds.settings");
+  const tCatalogue = useTranslations("catalogue");
   const tCommon = useTranslations("common");
   const { world_timeline } = useFeatureFlags();
 
@@ -200,15 +202,15 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                             <div className="mx-auto max-w-xl space-y-6">
                                 {/* -- Catalogue -------------------------------- */}
                                 <div className="space-y-5">
-                                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Catalogue</p>
+                                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("nav.catalogue")}</p>
 
                                     {/* Objets */}
                                     <div className="space-y-2">
                                         <div className="flex items-start justify-between gap-4">
                                             <div className="space-y-0.5">
-                                                <p className="text-sm font-medium">Objets d&apos;inventaire</p>
+                                                <p className="text-sm font-medium">{tSettings("inventoryItems")}</p>
                                                 <p className="text-xs text-muted-foreground leading-snug">
-                                                    Les personas peuvent gérer un inventaire d&apos;objets.
+                                                    {tSettings("inventoryItemsHelp")}
                                                 </p>
                                             </div>
                                             <Switch
@@ -223,7 +225,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                                                 <div className="space-y-0.5">
                                                     <p className="text-sm font-medium">{t("restrictToCatalogue")}</p>
                                                     <p className="text-xs text-muted-foreground leading-snug">
-                                                        Les personas ne peuvent posséder que des objets définis dans le catalogue — la saisie libre est désactivée.
+                                                        {tSettings("restrictInventoryHelp")}
                                                     </p>
                                                 </div>
                                                 <Switch
@@ -242,7 +244,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                                             <div className="space-y-0.5">
                                                 <p className="text-sm font-medium">{t("tabSkills")}</p>
                                                 <p className="text-xs text-muted-foreground leading-snug">
-                                                    Les personas peuvent lister leurs compétences.
+                                                    {tSettings("skillsHelp")}
                                                 </p>
                                             </div>
                                             <Switch
@@ -257,7 +259,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                                                 <div className="space-y-0.5">
                                                     <p className="text-sm font-medium">{t("restrictToCatalogue")}</p>
                                                     <p className="text-xs text-muted-foreground leading-snug">
-                                                        Les personas ne peuvent avoir que des compétences définies dans le catalogue — la saisie libre est désactivée.
+                                                        {tSettings("restrictSkillsHelp")}
                                                     </p>
                                                 </div>
                                                 <Switch
@@ -274,9 +276,9 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                                     <div className="space-y-2">
                                         <div className="flex items-start justify-between gap-4">
                                             <div className="space-y-0.5">
-                                                <p className="text-sm font-medium">Faceclaims</p>
+                                                <p className="text-sm font-medium">{tCatalogue("faceclaims")}</p>
                                                 <p className="text-xs text-muted-foreground leading-snug">
-                                                    Permet aux personas d&apos;indiquer l&apos;acteur ou le personnage sur lequel leur avatar est basé, et affiche un annuaire dans le Catalogue.
+                                                    {tSettings("faceclaimsHelp")}
                                                 </p>
                                             </div>
                                             <Switch
@@ -310,7 +312,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
 
                                 {/* -- Wiki ---------------------------------- */}
                                 <div className="space-y-3 pt-2">
-                                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Wiki</p>
+                                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{tSettings("wiki")}</p>
                                     <div className="flex items-start justify-between gap-4">
                                         <div className="space-y-0.5">
                                             <p className="text-sm font-medium">{t("enableWiki")}</p>
@@ -332,12 +334,12 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                                             <FormItem>
                                                 <FormLabel>
                                                     <LabelWithHelp help={t("wikiLabelHelp")}>
-                                                        Nom du lien
+                                                        {tSettings("wikiLinkName")}
                                                     </LabelWithHelp>
                                                 </FormLabel>
                                                 <FormControl>
                                                     <Input
-                                                        placeholder="Annexes"
+                                                        placeholder={t("nav.wiki")}
                                                         {...field}
                                                         onBlur={(e) => {
                                                             field.onBlur();
@@ -363,13 +365,13 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                                 {/* -- Timeline -------------------------------- */}
                                 {world_timeline && (
                                     <div className="space-y-5 pt-2">
-                                        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Chronologie</p>
+                                        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("nav.timeline")}</p>
 
                                         <div className="flex items-start justify-between gap-4">
                                             <div className="space-y-0.5">
                                                 <p className="text-sm font-medium">{t("enableTimeline")}</p>
                                                 <p className="text-xs text-muted-foreground leading-snug">
-                                                    Permet de situer chaque conversation dans un calendrier fictif.
+                                                    {tSettings("timelineHelp")}
                                                 </p>
                                             </div>
                                             <Switch
@@ -388,7 +390,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                                                         <p className="text-xs font-medium text-muted-foreground">{t("yearLabel")}</p>
                                                         <Input
                                                             value={timelineConfig.year_label}
-                                                            placeholder="an"
+                                                            placeholder={tSettings("yearPlaceholder")}
                                                             className="h-8 text-sm"
                                                             onChange={e => setTimelineConfig(c => ({ ...c, year_label: e.target.value }))}
                                                             onBlur={e => void persistTimelineConfig({ year_label: e.target.value || "an" })}
@@ -422,7 +424,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                                                     </div>
                                                     {timelineConfig.month_names.length > 0 && (
                                                         <div className="space-y-1.5">
-                                                            <p className="text-xs font-medium text-muted-foreground">Mois actuel</p>
+                                                            <p className="text-xs font-medium text-muted-foreground">{tSettings("currentMonth")}</p>
                                                             <select
                                                                 value={timelineConfig.current_month ?? ""}
                                                                 className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm"
@@ -454,7 +456,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                                                                 onClick={() => void persistTimelineConfig({ month_names: REAL_MONTH_NAMES, days_per_month: REAL_DAYS_PER_MONTH })}
                                                                 className="text-[11px] text-primary hover:underline"
                                                             >
-                                                                Utiliser les mois réels
+                                                                {tSettings("useRealMonths")}
                                                             </button>
                                                         )}
                                                     </div>
