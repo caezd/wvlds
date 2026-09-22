@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Rôles",
+    text: "La permission « Modifier les onglets » disparaît : les onglets descriptifs n’existent plus dans les mondes, elle ne protégeait plus rien.",
+  },
+  {
+    date: "2026-09",
+    tag: "Rôles",
     text: "La liste des rôles affiche leur nom sans pastille ; l’aide de la permission Administrateur ne parle plus d’« onglets système » (seule la suppression du monde reste au propriétaire).",
   },
   {

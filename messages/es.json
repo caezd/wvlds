@@ -676,10 +676,6 @@
           "label": "Gestionar las categorías",
           "help": "Crear, renombrar y ordenar las categorías de salas."
         },
-        "tabs_edit": {
-          "label": "Modificar las pestañas",
-          "help": "Editar las pestañas descriptivas del mundo."
-        },
         "wiki_edit": {
           "label": "Modificar el wiki",
           "help": "Crear y editar las páginas, sus notas y sus comentarios."

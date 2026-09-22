@@ -676,10 +676,6 @@
           "label": "Gérer les catégories",
           "help": "Créer, renommer et ordonner les catégories de salons."
         },
-        "tabs_edit": {
-          "label": "Modifier les onglets",
-          "help": "Éditer les onglets descriptifs du monde."
-        },
         "wiki_edit": {
           "label": "Modifier le wiki",
           "help": "Créer et éditer les pages, leurs notes et leurs commentaires."

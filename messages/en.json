@@ -676,10 +676,6 @@
           "label": "Manage categories",
           "help": "Create, rename and order chatroom categories."
         },
-        "tabs_edit": {
-          "label": "Edit tabs",
-          "help": "Edit the world's descriptive tabs."
-        },
         "wiki_edit": {
           "label": "Edit the wiki",
           "help": "Create and edit pages, their notes and comments."

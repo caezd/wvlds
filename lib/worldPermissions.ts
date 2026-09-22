@@ -12,7 +12,7 @@
 export const WORLD_PERMISSION_GROUPS = {
   general: ["administrator", "world.settings", "roles.manage", "members.manage"],
   chatrooms: ["messages.post", "chatrooms.create", "chatrooms.manage", "categories.manage"],
-  content: ["tabs.edit", "wiki.edit", "lexicon.edit", "tags.manage", "map.edit", "catalog.edit"],
+  content: ["wiki.edit", "lexicon.edit", "tags.manage", "map.edit", "catalog.edit"],
   personas: ["relations.manage", "personas.review", "npc.manage", "npc.play"],
   mentions: ["mentions.roles", "mentions.everyone"],
 } as const;
