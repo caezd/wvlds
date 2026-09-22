@@ -110,6 +110,7 @@ export function WikiPageContent({
   onRename,
   pages,
   canEdit,
+  canComment,
   isEditMode,
   onExitEditMode,
   supabase,
@@ -152,6 +153,8 @@ export function WikiPageContent({
   pages: WikiPage[];
   /** Permission de l'utilisateur (owner/admin/editor) — indépendante du bascule de mode édition. */
   canEdit: boolean;
+  /** Écrire un commentaire ancré et y répondre (`wiki.comment`). */
+  canComment: boolean;
   /** Mode édition actif dans le panneau (bascule + permission). */
   isEditMode: boolean;
   /** Éteint cette bascule — publier ou annuler doit la relâcher aussi. */
@@ -851,8 +854,9 @@ export function WikiPageContent({
   // page entière à chaque rendu pour s'en apercevoir.
   const contentKey = `${page.id}|${page.published_at ?? ""}|${resolvedContent.length}`;
 
-  // Seul un membre identifié peut annoter : la RLS exige `author_id = auth.uid()`.
-  const canAnnotate = userId !== null;
+  // Écrire un commentaire demande `wiki.comment` ; la RLS exige en plus
+  // `author_id = auth.uid()`, d'où l'identité.
+  const canAnnotate = userId !== null && canComment;
   const openAnnotationCount = annotations.threads.filter(
     th => th.root.resolved_at === null,
   ).length;
@@ -1399,6 +1403,7 @@ export function WikiPageContent({
               draft={annotationDraft}
               currentUserId={userId}
               canModerate={canEdit}
+              canComment={canAnnotate}
               onActivate={id => openAnnotation(id, true)}
               onCreate={body => void createFromDraft(body)}
               onCancelDraft={() => setAnnotationDraft(null)}
@@ -1450,6 +1455,7 @@ export function WikiPageContent({
                 draft={annotationDraft}
                 currentUserId={userId}
                 canModerate={canEdit}
+                canComment={canAnnotate}
                 onActivate={id => openAnnotation(id, true)}
                 onCreate={body => void createFromDraft(body)}
                 onCancelDraft={() => setAnnotationDraft(null)}

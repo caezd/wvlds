@@ -9,6 +9,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Rôles",
+    text: "Nouvelle permission « Commenter le wiki » : ouvrez la relecture des pages à un rôle sans lui confier tout le wiki, ou fermez-la. Les rôles existants la reçoivent ; « Modifier le wiki » garde la modération des fils.",
+  },
+  {
+    date: "2026-09",
+    tag: "Rôles",
     text: "La permission « Modifier les onglets » disparaît : les onglets descriptifs n’existent plus dans les mondes, elle ne protégeait plus rien.",
   },
   {

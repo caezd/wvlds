@@ -26,6 +26,7 @@ export function WikiAnnotationsPanel({
   draft,
   currentUserId,
   canModerate,
+  canComment,
   onActivate,
   onCreate,
   onCancelDraft,
@@ -43,6 +44,8 @@ export function WikiAnnotationsPanel({
   draft: AnnotationDraft | null;
   currentUserId: string | null;
   canModerate: boolean;
+  /** Écrire un commentaire ancré et y répondre (`wiki.comment`). */
+  canComment: boolean;
   onActivate: (id: string) => void;
   onCreate: (body: string) => void;
   onCancelDraft: () => void;
@@ -90,7 +93,7 @@ export function WikiAnnotationsPanel({
 
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="min-h-0 flex-1 overflow-y-auto p-2">
-          {draft && (
+          {draft && canComment && (
             <div className="mb-2 rounded-xl border border-primary/40 bg-primary/5 p-3">
               <p className="mb-2 line-clamp-3 text-xs italic text-muted-foreground">
                 {anchorPreview(draft.anchor.quote)}
@@ -123,6 +126,7 @@ export function WikiAnnotationsPanel({
                   thread={th}
                   currentUserId={currentUserId}
                   canModerate={canModerate}
+                  canReply={canComment}
                   isActive={activeId === th.root.id}
                   isDetached={detachedIds.has(th.root.id)}
                   pending={pending}

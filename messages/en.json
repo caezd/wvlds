@@ -680,6 +680,10 @@
           "label": "Edit the wiki",
           "help": "Create and edit pages, their notes and comments."
         },
+        "wiki_comment": {
+          "label": "Comment on the wiki",
+          "help": "Write a comment on a page and reply to others."
+        },
         "lexicon_edit": {
           "label": "Edit the lexicon",
           "help": "Add and fix the world's terms."

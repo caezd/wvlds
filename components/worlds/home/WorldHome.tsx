@@ -221,6 +221,7 @@ export function WorldHome({
           <WorldWiki
             worldId={worldId}
             canEdit={can("wiki.edit")}
+            canComment={can("wiki.comment")}
             initialSidebarWidth={initialPrefs?.wiki_sidebar_width}
             initialPanelWidth={initialPrefs?.wiki_panel_width}
             label={world.wiki_label}

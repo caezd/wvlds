@@ -680,6 +680,10 @@
           "label": "Modifier le wiki",
           "help": "Créer et éditer les pages, leurs notes et leurs commentaires."
         },
+        "wiki_comment": {
+          "label": "Commenter le wiki",
+          "help": "Écrire un commentaire sur une page et répondre aux autres."
+        },
         "lexicon_edit": {
           "label": "Modifier le lexique",
           "help": "Ajouter et corriger les termes du monde."
