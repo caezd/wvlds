@@ -67,7 +67,7 @@ export function MemberStatusBadge({
       title={note ?? undefined}
       className={cn(
         "inline-flex max-w-full items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium",
-        status === "paused" ? "bg-amber-500/15 text-amber-700 dark:text-amber-300" : "bg-sky-500/15 text-sky-700 dark:text-sky-300",
+        status === "paused" ? "bg-amber-500/15 text-amber-700 dark:text-amber-300" : "bg-red-500/15 text-red-700 dark:text-red-300",
         className,
       )}
     >

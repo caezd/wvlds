@@ -9,7 +9,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Membres",
-    text: "Le titre d’une section de la liste des membres porte l’icône du rôle, ou sa pastille de couleur ; les cartes ne répètent plus les rôles. La carte d’un membre se lit de haut en bas : identité, présentation, puis activité, disponibilités et anniversaire ; le menu « ⋯ » se pose dans le coin sans rien décaler.",
+    text: "Le titre d’une section de la liste des membres porte l’icône du rôle, ou sa pastille de couleur ; les cartes ne répètent plus les rôles. La carte d’un membre se lit de haut en bas : identité, présentation, puis activité, disponibilités et anniversaire ; le menu « ⋯ » se pose dans le coin sans rien décaler ; le statut « Absent » passe au rouge.",
   },
   {
     date: "2026-09",
