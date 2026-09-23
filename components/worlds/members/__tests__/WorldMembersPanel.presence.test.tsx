@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, cleanup } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createSupabaseMock } from "@/test/supabaseMock";
 import { createClient } from "@/lib/supabase/client";
@@ -13,7 +13,14 @@ vi.mock("@/components/providers/PresenceProvider", () => ({
   useGlobalPresence: () => ({ getUserPresence: mockGetUserPresence, onlineUsers: {} }),
 }));
 
+// L'icône d'un rôle est chargée à la demande : ici, un marqueur suffit.
+vi.mock("@/components/ui/LazyLucideIcon", () => ({
+  LazyLucideIcon: ({ name }: { name: string }) => <span data-testid={`icone-${name}`} />,
+}));
+
 // Les rôles du monde viennent du provider d'appartenance (migration 176).
+/** Icône du rôle Joueur — variable, le provider est monté une fois pour tout le fichier. */
+let playerIcon: string | null = null;
 const PLAYER_ROLE = {
   id: "r-player", world_id: "w1", name: "Joueur", color: "#22c55e", lucide_icon: null,
   position: 10, permissions: ["messages.post"], is_default: true, mentionable: false, hoist: true,
@@ -23,7 +30,7 @@ vi.mock("@/components/providers/WorldMembershipProvider", () => ({
   useWorldMembership: () => ({
     worldId: "w1",
     ownerId: "u1",
-    roles: [PLAYER_ROLE, SCRIBE_ROLE],
+    roles: [{ ...PLAYER_ROLE, lucide_icon: playerIcon }, SCRIBE_ROLE],
     membership: null,
     can: () => false,
     refresh: () => {},
@@ -61,6 +68,7 @@ function cardOf(name: string) {
 }
 
 beforeEach(() => {
+  playerIcon = null;
   vi.clearAllMocks();
   mockGetUserPresence.mockReturnValue("offline");
 });
@@ -106,7 +114,7 @@ describe("WorldMembersPanel — cartes et présence", () => {
 });
 
 describe("WorldMembersPanel — rôles et personas", () => {
-  it("le propriétaire a sa section ; un rôle « hoist » donne la sienne, et ses puces sur la carte", async () => {
+  it("le propriétaire a sa section ; un rôle « hoist » donne la sienne, qui seule nomme le rôle", async () => {
     setup();
     render(<WorldMembersPanel worldId="w1" ownerId="u1" canManage={false} isShared />);
 
@@ -114,18 +122,33 @@ describe("WorldMembersPanel — rôles et personas", () => {
     expect(screen.getByRole("heading", { name: /Propriétaire/ })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /Joueur/ })).toBeInTheDocument();
     expect(cardOf("@alice")).not.toHaveTextContent("Propriétaire");
-    // Le rôle figure sur la carte en puce : un membre peut en cumuler plusieurs.
-    expect(cardOf("@bob")).toHaveTextContent("Joueur");
+    // Le titre de section dit le rôle : la carte ne le répète pas.
+    expect(cardOf("@bob")).not.toHaveTextContent("Joueur");
   });
 
-  it("un membre dont aucun rôle n'est « hoist » va dans la section « Membres », ses rôles en puces", async () => {
+  it("l'icône du rôle titre sa section, la pastille de couleur à défaut", async () => {
+    setup();
+    render(<WorldMembersPanel worldId="w1" ownerId="u1" canManage={false} isShared />);
+    const sansIcone = await screen.findByRole("heading", { name: /Joueur/ });
+    expect(sansIcone.querySelector("span[aria-hidden]")).not.toBeNull();
+
+    cleanup();
+    playerIcon = "crown";
+    setup();
+    render(<WorldMembersPanel worldId="w1" ownerId="u1" canManage={false} isShared />);
+    const titre = await screen.findByRole("heading", { name: /Joueur/ });
+    expect(titre.querySelector('[data-testid="icone-crown"]')).not.toBeNull();
+    expect(titre.querySelector("span[aria-hidden]")).toBeNull();
+  });
+
+  it("un membre dont aucun rôle n'est « hoist » va dans la section « Membres »", async () => {
     setup([], [{ user_id: "u2", role_id: "r-scribe" }]);
     render(<WorldMembersPanel worldId="w1" ownerId="u1" canManage={false} isShared />);
 
     await screen.findByText("@bob");
     expect(screen.getByRole("heading", { name: /Membres/ })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: /Scribe/ })).toBeNull();
-    expect(cardOf("@bob")).toHaveTextContent("Scribe");
+    expect(cardOf("@bob")).not.toHaveTextContent("Scribe");
   });
 
   it("sans droit de gestion, aucune carte ne porte de menu « ⋯ »", async () => {

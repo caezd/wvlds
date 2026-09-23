@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-09 ──────────────────────────────────────────────────────────────
   {
     date: "2026-09",
+    tag: "Membres",
+    text: "Le titre d’une section de la liste des membres porte l’icône du rôle, ou sa pastille de couleur ; les cartes ne répètent plus les rôles. La carte d’un membre se lit de haut en bas : identité, présentation, puis activité, disponibilités et anniversaire ; le menu « ⋯ » se pose dans le coin sans rien décaler.",
+  },
+  {
+    date: "2026-09",
     tag: "Rôles",
     text: "Nouvelle permission « Commenter le wiki » : ouvrez la relecture des pages à un rôle sans lui confier tout le wiki, ou fermez-la. Les rôles existants la reçoivent ; « Modifier le wiki » garde la modération des fils.",
   },
