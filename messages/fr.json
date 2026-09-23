@@ -374,6 +374,7 @@
       "memberRemoveFailed": "Retrait du membre impossible.",
       "card": {
         "title": "Ma carte dans ce monde",
+        "mine": "Ma carte",
         "statusTitle": "Statut du joueur",
         "saveFailed": "Enregistrement de la carte impossible.",
         "bio": "Présentation",
@@ -396,7 +397,6 @@
         "localTime": "{time} heure locale",
         "birthdayToday": "Anniversaire aujourd'hui !",
         "birthdayOn": "Anniversaire le {date}",
-        "profileHelp": "Ce que les membres de ce monde voient de vous sur la liste des membres et sur vos personas. Chaque monde a sa carte.",
         "inWorld": "Dans {world}",
         "inThisWorld": "Dans ce monde"
       },
@@ -799,6 +799,7 @@
       "removeImage": "Retirer l'image",
       "categoryDescriptionPlaceholder": "Description (optionnel)",
       "newCategory": "Nouvelle catégorie",
+      "reorderCategory": "Déplacer la catégorie {title}",
       "noCategories": "Aucune catégorie pour l'instant.",
       "deleteCategoryConfirm": "Supprimer « {title} » ? Les salons de cette catégorie repasseront dans « Général ».",
       "nameMin": "Au moins {min} caractères",

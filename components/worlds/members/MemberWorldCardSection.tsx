@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import { TABLE } from "@/lib/constants";
 import { MEMBER_CARD_COLUMNS, effectiveStatus, type WorldMemberCardFields } from "@/lib/worldMembers";
 import { formatBirthday, localTimeIn } from "@/lib/relativeTime";
-import { useCurrentWorldId } from "@/hooks/useMyWorldCard";
+import { useCurrentWorldId } from "@/hooks/useCurrentWorldId";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import { MemberStatusBadge } from "./WorldMemberCard";
 

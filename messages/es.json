@@ -374,6 +374,7 @@
       "memberRemoveFailed": "No se pudo retirar al miembro.",
       "card": {
         "title": "Mi tarjeta en este mundo",
+        "mine": "Mi tarjeta",
         "statusTitle": "Estado del jugador",
         "saveFailed": "No se pudo guardar la tarjeta.",
         "bio": "Presentación",
@@ -396,7 +397,6 @@
         "localTime": "{time} hora local",
         "birthdayToday": "¡Cumpleaños hoy!",
         "birthdayOn": "Cumpleaños el {date}",
-        "profileHelp": "Lo que los miembros de este mundo ven de usted en la lista de miembros y en sus personas. Cada mundo tiene su propia tarjeta.",
         "inWorld": "En {world}",
         "inThisWorld": "En este mundo"
       },
@@ -799,6 +799,7 @@
       "removeImage": "Quitar la imagen",
       "categoryDescriptionPlaceholder": "Descripción (opcional)",
       "newCategory": "Nueva categoría",
+      "reorderCategory": "Mover la categoría {title}",
       "noCategories": "Aún no hay categorías.",
       "deleteCategoryConfirm": "¿Eliminar «{title}»? Las salas de esta categoría volverán a «General».",
       "nameMin": "Al menos {min} caracteres",

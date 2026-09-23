@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-09 ──────────────────────────────────────────────────────────────
   {
     date: "2026-09",
+    tag: "Correctif",
+    text: "L’accueil d’un monde qui affiche le bloc des anniversaires ne tombe plus en erreur. La poignée de déplacement d’une catégorie de salons s’annonce enfin aux lecteurs d’écran.",
+  },
+  {
+    date: "2026-09",
     tag: "Membres",
     text: "Le titre d’une section de la liste des membres porte l’icône du rôle, ou sa pastille de couleur ; les cartes ne répètent plus les rôles. La carte d’un membre se lit de haut en bas : identité, présentation, puis activité, disponibilités et anniversaire ; le menu « ⋯ » se pose dans le coin sans rien décaler ; le statut « Absent » passe au rouge.",
   },
@@ -39,7 +44,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Membres",
-    text: "« Ma carte dans ce monde » (présentation, disponibilités, fuseau, anniversaire, statut) se règle dans « Mon profil », sous la présentation et les pronoms du compte (qui quittent les Réglages), dès que l’on se trouve dans un monde ou dans l’un de ses salons — plus depuis l’en-tête de la liste des membres. Le profil d’un membre, ouvert depuis ce monde, montre sa carte après sa présentation, ses pronoms et son niveau.",
+    text: "« Ma carte dans ce monde » (présentation, disponibilités, fuseau, anniversaire, statut) se règle depuis l’en-tête de la liste des membres. « Mon profil » réunit désormais l’avatar, le pseudo, la présentation et les pronoms du compte, qui quittent les Réglages. Le profil d’un membre, ouvert depuis un monde, montre sa carte après sa présentation, ses pronoms et son niveau.",
   },
   {
     date: "2026-09",

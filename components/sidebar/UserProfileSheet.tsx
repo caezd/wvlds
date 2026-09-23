@@ -18,8 +18,6 @@ import { KeyRound, Loader2 } from "lucide-react";
 import { ImagePickerCropField } from "@/components/ui/image-crop-picker";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
-import { useMyWorldCard } from "@/hooks/useMyWorldCard";
-import { WorldMemberCardForm } from "@/components/worlds/members/WorldMemberCardDialog";
 import { ProfileBioPronounsForm } from "@/components/profile/ProfileBioPronounsForm";
 
 export function UserProfileSheet({
@@ -38,13 +36,11 @@ export function UserProfileSheet({
   email: string;
 }) {
   const t = useTranslations("userProfile");
-  const tCard = useTranslations("worlds.members.card");
   const tCommon = useTranslations("common");
   const supabase = createClient();
   const router = useRouter();
   // Ma carte dans le monde où l'on se trouve (migration 177) : la section
   // n'apparaît que dans un monde dont on est membre.
-  const myCard = useMyWorldCard(userId);
 
   const [username, setUsername] = useState(initialUsername ?? "");
   const [avatarUrl, setAvatarUrl] = useState(initialAvatarUrl);
@@ -202,24 +198,6 @@ export function UserProfileSheet({
                 </div>
               )}
 
-              {/* Ma carte dans ce monde : présentation, disponibilités, fuseau, anniversaire, statut. */}
-              {myCard && (
-                <section className="space-y-4 border-t border-border-soft pt-6" data-testid="my-world-card">
-                  <div className="space-y-0.5">
-                    <h3 className="text-sm font-semibold">{tCard("title")}</h3>
-                    <p className="text-xs text-muted-foreground">{tCard("profileHelp")}</p>
-                  </div>
-                  <WorldMemberCardForm
-                    key={myCard.worldId}
-                    worldId={myCard.worldId}
-                    userId={userId}
-                    mode="self"
-                    initial={myCard.card}
-                    resetKey={open}
-                    onSaved={myCard.patch}
-                  />
-                </section>
-              )}
           </div>
         </div>
 

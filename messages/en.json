@@ -374,6 +374,7 @@
       "memberRemoveFailed": "Could not remove the member.",
       "card": {
         "title": "My card in this world",
+        "mine": "My card",
         "statusTitle": "Player status",
         "saveFailed": "Could not save the card.",
         "bio": "About you",
@@ -396,7 +397,6 @@
         "localTime": "{time} local time",
         "birthdayToday": "Birthday today!",
         "birthdayOn": "Birthday on {date}",
-        "profileHelp": "What this world's members see of you in the member list and on your personas. Each world has its own card.",
         "inWorld": "In {world}",
         "inThisWorld": "In this world"
       },
@@ -799,6 +799,7 @@
       "removeImage": "Remove image",
       "categoryDescriptionPlaceholder": "Description (optional)",
       "newCategory": "New category",
+      "reorderCategory": "Reorder the {title} category",
       "noCategories": "No categories yet.",
       "deleteCategoryConfirm": "Delete “{title}”? Chatrooms in this category will move back to “General”.",
       "nameMin": "At least {min} characters",

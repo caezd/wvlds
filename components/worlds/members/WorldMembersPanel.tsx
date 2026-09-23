@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
-import { Search, Users } from "lucide-react";
+import { IdCard, Search, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
@@ -21,6 +21,7 @@ import { highestHoistedRole, sortRolesByPosition, type WorldRoleRow } from "@/li
 import { PresenceDot } from "@/components/avatars/PresenceDot";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { MemberManageMenu } from "./MemberManageMenu";
 import { WorldMemberCard, displayNameOf, type PresenceState, type WorldMemberCardData } from "./WorldMemberCard";
 import { WorldMemberCardDialog } from "./WorldMemberCardDialog";
@@ -135,6 +136,8 @@ export function WorldMembersPanel({
   );
 
   const onlineCount = members.filter((m) => getUserPresence(m.user_id) === "online").length;
+  /** Ma propre ligne : le bouton « Ma carte » n'a de sens que pour un membre. */
+  const me = membership ? rows.find((r) => r.user_id === membership.userId) ?? null : null;
 
   const filtered = useMemo(() => {
     const q = normalize(query.trim());
@@ -254,8 +257,26 @@ export function WorldMembersPanel({
           </>
         }
         right={
-          // « Ma carte dans ce monde » vit dans le menu du compte (barre latérale).
-          isShared && canManage && <WorldInviteDialog worldId={worldId} />
+          isShared && (
+            <div className="flex items-center gap-2">
+              {me && (
+                <WorldMemberCardDialog
+                  worldId={worldId}
+                  userId={me.user_id}
+                  mode="self"
+                  initial={me}
+                  onSaved={(fields) => patchRow(me.user_id, fields)}
+                  trigger={
+                    <Button size="sm" variant="ghost">
+                      <IdCard className="mr-2 h-4 w-4" />
+                      {t("card.mine")}
+                    </Button>
+                  }
+                />
+              )}
+              {canManage && <WorldInviteDialog worldId={worldId} />}
+            </div>
+          )
         }
       />
 

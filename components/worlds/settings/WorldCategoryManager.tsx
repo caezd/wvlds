@@ -240,13 +240,15 @@ function CategoryRow({
       className="group flex items-center gap-2.5 rounded-lg bg-muted/60 px-2.5 py-1.5 transition-colors hover:bg-muted/70"
     >
       {canEdit && (
-        <span
+        <button
+          type="button"
+          aria-label={t("settings.reorderCategory", { title: category.title })}
           {...attributes}
           {...listeners}
-          className="shrink-0 touch-none cursor-grab text-muted-foreground/50"
+          className="shrink-0 touch-none cursor-grab rounded text-muted-foreground/50 hover:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing"
         >
           <GripVertical className="h-3.5 w-3.5" />
-        </span>
+        </button>
       )}
       <CategoryAvatar
         title={category.title}
