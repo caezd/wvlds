@@ -18,6 +18,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     date: "2026-09",
+    tag: "Monde",
+    text: "Réglages, onglet Communauté : sous la visibilité viennent le public visé — « Tout public » ou « 18 ans et plus », en deux cartes comme Privé / Public — puis les avatars acceptés ; les tags ferment la page.",
+  },
+  {
+    date: "2026-09",
     tag: "Rôles",
     text: "Sur un écran étroit, la fiche d’un rôle se déplie dans sa ligne plutôt que sous la liste ; la colonne de droite reste au large.",
   },

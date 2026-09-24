@@ -9,7 +9,6 @@ import { TabsContent } from "@/components/ui/tabs";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import type { World } from "@/types/worlds";
 import { LabelWithHelp } from "./LabelWithHelp";
@@ -21,7 +20,7 @@ type ProprietesOnglet = {
   persistField: PersistField;
 };
 
-import { Camera, Globe, GlobeLock, Palette, Plus, ShieldAlert, X } from "lucide-react";
+import { Camera, Globe, GlobeLock, Palette, Plus, ShieldAlert, Users, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import {
   setWorldAgeRestricted,
@@ -197,6 +196,92 @@ export function WorldCommunityTab({ world, form, persistField, onUpdated }: Prop
                                         )}
                                     />
 
+                                    {/* -- Sécurité ----------------------------- */}
+                                    {/* Deux cartes plutôt qu'un interrupteur : le choix se lit
+                                        d'un coup d'œil, comme Privé / Public juste au-dessus. */}
+                                    <div className="space-y-3">
+                                        <div className="space-y-0.5">
+                                            <p className="text-sm font-medium">{t("tabSecurity")}</p>
+                                            <p className="text-xs text-muted-foreground leading-snug">
+                                                {tSettings("ageRestrictedHelp")}
+                                            </p>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button
+                                                type="button"
+                                                disabled={togglingAgeRestricted}
+                                                aria-pressed={!ageRestricted}
+                                                onClick={() => void handleAgeRestrictedToggle(false)}
+                                                className={cn(
+                                                    "flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition-colors disabled:opacity-60",
+                                                    !ageRestricted
+                                                        ? "border-primary bg-primary/10 text-primary"
+                                                        : "border-border bg-transparent text-muted-foreground hover:border-muted-foreground/40 hover:text-foreground"
+                                                )}
+                                            >
+                                                <Users className="h-4 w-4 shrink-0" />
+                                                {tSettings("allAges")}
+                                            </button>
+                                            <button
+                                                type="button"
+                                                disabled={togglingAgeRestricted}
+                                                aria-pressed={ageRestricted}
+                                                onClick={() => void handleAgeRestrictedToggle(true)}
+                                                className={cn(
+                                                    "flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition-colors disabled:opacity-60",
+                                                    ageRestricted
+                                                        ? "border-primary bg-primary/10 text-primary"
+                                                        : "border-border bg-transparent text-muted-foreground hover:border-muted-foreground/40 hover:text-foreground"
+                                                )}
+                                            >
+                                                <ShieldAlert className="h-4 w-4 shrink-0" />
+                                                {tSettings("adultsOnly")}
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* -- Avatars acceptés --------------------- */}
+                                    <div className="space-y-3">
+                                        <div className="space-y-0.5">
+                                            <p className="text-sm font-medium">{t("acceptedAvatarTypes")}</p>
+                                            <p className="text-xs text-muted-foreground leading-snug">
+                                                {tSettings("avatarTypesHelp")}
+                                            </p>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button
+                                                type="button"
+                                                disabled={togglingAvatarType}
+                                                onClick={() => void handleAvatarTypeToggle("allows_real_avatars", !allowsRealAvatars)}
+                                                aria-pressed={allowsRealAvatars}
+                                                className={cn(
+                                                    "flex flex-1 flex-col items-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition-colors disabled:opacity-60",
+                                                    allowsRealAvatars
+                                                        ? "border-primary bg-primary/10 text-primary"
+                                                        : "border-border bg-transparent text-muted-foreground hover:border-muted-foreground/40 hover:text-foreground"
+                                                )}
+                                            >
+                                                <Camera className="h-4 w-4 shrink-0" />
+                                                {tSettings("avatarReal")}
+                                            </button>
+                                            <button
+                                                type="button"
+                                                disabled={togglingAvatarType}
+                                                onClick={() => void handleAvatarTypeToggle("allows_illustrated_avatars", !allowsIllustratedAvatars)}
+                                                aria-pressed={allowsIllustratedAvatars}
+                                                className={cn(
+                                                    "flex flex-1 flex-col items-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition-colors disabled:opacity-60",
+                                                    allowsIllustratedAvatars
+                                                        ? "border-primary bg-primary/10 text-primary"
+                                                        : "border-border bg-transparent text-muted-foreground hover:border-muted-foreground/40 hover:text-foreground"
+                                                )}
+                                            >
+                                                <Palette className="h-4 w-4 shrink-0" />
+                                                {tSettings("avatarIllustrated")}
+                                            </button>
+                                        </div>
+                                    </div>
+
                                     {/* -- Tags -------------------------------- */}
                                     <div className="space-y-3">
                                         <div className="space-y-0.5">
@@ -295,73 +380,6 @@ export function WorldCommunityTab({ world, form, persistField, onUpdated }: Prop
                                         )}
                                     </div>
 
-                                    {/* -- Type d'avatars ----------------------- */}
-                                    <div className="space-y-3">
-                                        <div className="space-y-0.5">
-                                            <p className="text-sm font-medium">{t("acceptedAvatarTypes")}</p>
-                                            <p className="text-xs text-muted-foreground leading-snug">
-                                                {tSettings("avatarTypesHelp")}
-                                            </p>
-                                        </div>
-                                        <div className="flex gap-2">
-                                            <button
-                                                type="button"
-                                                disabled={togglingAvatarType}
-                                                onClick={() => void handleAvatarTypeToggle("allows_real_avatars", !allowsRealAvatars)}
-                                                aria-pressed={allowsRealAvatars}
-                                                className={cn(
-                                                    "flex flex-1 flex-col items-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition-colors disabled:opacity-60",
-                                                    allowsRealAvatars
-                                                        ? "border-primary bg-primary/10 text-primary"
-                                                        : "border-border bg-transparent text-muted-foreground hover:border-muted-foreground/40 hover:text-foreground"
-                                                )}
-                                            >
-                                                <Camera className="h-4 w-4 shrink-0" />
-                                                {tSettings("avatarReal")}
-                                            </button>
-                                            <button
-                                                type="button"
-                                                disabled={togglingAvatarType}
-                                                onClick={() => void handleAvatarTypeToggle("allows_illustrated_avatars", !allowsIllustratedAvatars)}
-                                                aria-pressed={allowsIllustratedAvatars}
-                                                className={cn(
-                                                    "flex flex-1 flex-col items-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition-colors disabled:opacity-60",
-                                                    allowsIllustratedAvatars
-                                                        ? "border-primary bg-primary/10 text-primary"
-                                                        : "border-border bg-transparent text-muted-foreground hover:border-muted-foreground/40 hover:text-foreground"
-                                                )}
-                                            >
-                                                <Palette className="h-4 w-4 shrink-0" />
-                                                {tSettings("avatarIllustrated")}
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    {/* -- Sécurité ----------------------------- */}
-                                    {/* Même registre que Visibilité, Tags et Type d'avatars : un titre
-                                        en clair, l'aide dessous, la commande à droite. */}
-                                    <div className="space-y-3">
-                                        <div className="space-y-0.5">
-                                            <p className="text-sm font-medium">{t("tabSecurity")}</p>
-                                        </div>
-                                        <div className="flex items-start justify-between gap-4">
-                                            <div className="space-y-0.5">
-                                                <p className="flex items-center gap-1.5 text-sm">
-                                                    <ShieldAlert className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                                                    {tSettings("ageRestricted")}
-                                                </p>
-                                                <p className="text-xs text-muted-foreground leading-snug">
-                                                    {tSettings("ageRestrictedHelp")}
-                                                </p>
-                                            </div>
-                                            <Switch
-                                                checked={ageRestricted}
-                                                disabled={togglingAgeRestricted}
-                                                onCheckedChange={v => void handleAgeRestrictedToggle(v)}
-                                                className="shrink-0 mt-0.5"
-                                            />
-                                        </div>
-                                    </div>
                                 </div>
                             </TabsContent>
   );
