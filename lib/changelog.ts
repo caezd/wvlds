@@ -44,6 +44,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Interface",
+    text: "Le sélecteur de couleur montre le code hexadécimal à droite du dégradé : on peut le lire, le taper ou le coller — il se met en forme tout seul.",
+  },
+  {
+    date: "2026-09",
+    tag: "Interface",
     text: "Les zones de texte (description du monde, catégories, lexique, blocs…) reprennent l’habillage des champs : même arrondi, même fond, même bordure. Les onglets (Groupes / Types de relation, etc.) reposent sur un rail transparent à bordure ; l’onglet actif se remplit d’un gris qui ressort sur n’importe quel fond.",
   },
   {
