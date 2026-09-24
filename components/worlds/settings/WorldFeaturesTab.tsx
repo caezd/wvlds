@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { TabsContent } from "@/components/ui/tabs";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import type { World } from "@/types/worlds";
@@ -189,6 +190,17 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
         onUpdated?.({ ...world, enable_wiki: enabled } as World);
     }
 
+
+    /** Ajoute un mois à la fin, avec sa durée par défaut. */
+    function ajouterMois() {
+        const nom = newMonthName.trim();
+        if (!nom) return;
+        void persistTimelineConfig({
+            month_names: [...timelineConfig.month_names, nom],
+            days_per_month: [...(timelineConfig.days_per_month ?? []), DEFAULT_DAYS_PER_MONTH],
+        });
+        setNewMonthName("");
+    }
 
     async function handleTimelineToggle(enabled: boolean) {
         setTogglingTimeline(true);
@@ -411,63 +423,73 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                                         </div>
 
                                         {timelineEnabled && (
-                                            <div className="space-y-4 rounded-xl border border-border-soft bg-muted/20 p-4">
-                                                {/* Année courante */}
-                                                <div className="grid grid-cols-2 gap-3">
-                                                    <div className="space-y-1.5">
-                                                        <p className="text-xs font-medium text-muted-foreground">{t("yearLabel")}</p>
-                                                        <Input
-                                                            value={timelineConfig.year_label}
-                                                            placeholder={tSettings("yearPlaceholder")}
-                                                            className="h-8 text-sm"
-                                                            onChange={e => setTimelineConfig(c => ({ ...c, year_label: e.target.value }))}
-                                                            onBlur={e => void persistTimelineConfig({ year_label: e.target.value || "an" })}
-                                                        />
+                                            <>
+                                                {/* Sous-options, au même dessin que celles de la fiche par
+                                                    défaut plus haut : un encadré en retrait par sujet, son
+                                                    titre, son aide, puis ses champs. */}
+                                                <div className="ml-4 space-y-3 rounded-xl border border-border-soft bg-muted/20 p-3">
+                                                    <div className="space-y-0.5">
+                                                        <p className="text-sm font-medium">{tSettings("timelineDates")}</p>
+                                                        <p className="text-xs text-muted-foreground leading-snug">{tSettings("timelineDatesHelp")}</p>
                                                     </div>
-                                                    <div className="space-y-1.5">
-                                                        <p className="text-xs font-medium text-muted-foreground">{t("eraSuffix")}</p>
-                                                        <Input
-                                                            value={timelineConfig.era_name ?? ""}
-                                                            placeholder={t("eraPlaceholder")}
-                                                            className="h-8 text-sm"
-                                                            onChange={e => setTimelineConfig(c => ({ ...c, era_name: e.target.value || null }))}
-                                                            onBlur={e => void persistTimelineConfig({ era_name: e.target.value || null })}
-                                                        />
-                                                    </div>
-                                                </div>
 
-                                                {/* Année / mois courant */}
-                                                <div className="grid grid-cols-2 gap-3">
-                                                    <div className="space-y-1.5">
-                                                        <p className="text-xs font-medium text-muted-foreground">{t("currentYear")}</p>
-                                                        <Input
-                                                            type="number"
-                                                            value={timelineConfig.current_year}
-                                                            min={-99999}
-                                                            max={99999}
-                                                            className="h-8 text-sm"
-                                                            onChange={e => setTimelineConfig(c => ({ ...c, current_year: Number(e.target.value) || 1 }))}
-                                                            onBlur={e => void persistTimelineConfig({ current_year: Number(e.target.value) || 1 })}
-                                                        />
-                                                    </div>
-                                                    {timelineConfig.month_names.length > 0 && (
-                                                        <div className="space-y-1.5">
-                                                            <p className="text-xs font-medium text-muted-foreground">{tSettings("currentMonth")}</p>
+                                                    <div className="grid gap-3 sm:grid-cols-2">
+                                                        <div className="grid gap-1.5">
+                                                            <Label htmlFor="timeline-year-label" className="text-xs">{t("yearLabel")}</Label>
+                                                            <Input
+                                                                id="timeline-year-label"
+                                                                value={timelineConfig.year_label}
+                                                                placeholder={tSettings("yearPlaceholder")}
+                                                                className="h-9 text-sm"
+                                                                onChange={e => setTimelineConfig(c => ({ ...c, year_label: e.target.value }))}
+                                                                onBlur={e => void persistTimelineConfig({ year_label: e.target.value || "an" })}
+                                                            />
+                                                        </div>
+                                                        <div className="grid gap-1.5">
+                                                            <Label htmlFor="timeline-era" className="text-xs">{t("eraSuffix")}</Label>
+                                                            <Input
+                                                                id="timeline-era"
+                                                                value={timelineConfig.era_name ?? ""}
+                                                                placeholder={t("eraPlaceholder")}
+                                                                className="h-9 text-sm"
+                                                                onChange={e => setTimelineConfig(c => ({ ...c, era_name: e.target.value || null }))}
+                                                                onBlur={e => void persistTimelineConfig({ era_name: e.target.value || null })}
+                                                            />
+                                                        </div>
+                                                        <div className="grid gap-1.5">
+                                                            <Label htmlFor="timeline-current-year" className="text-xs">{t("currentYear")}</Label>
+                                                            <Input
+                                                                id="timeline-current-year"
+                                                                type="number"
+                                                                value={timelineConfig.current_year}
+                                                                min={-99999}
+                                                                max={99999}
+                                                                className="h-9 text-sm"
+                                                                onChange={e => setTimelineConfig(c => ({ ...c, current_year: Number(e.target.value) || 1 }))}
+                                                                onBlur={e => void persistTimelineConfig({ current_year: Number(e.target.value) || 1 })}
+                                                            />
+                                                        </div>
+                                                        <div className="grid gap-1.5">
+                                                            <Label htmlFor="timeline-current-month" className="text-xs">{tSettings("currentMonth")}</Label>
+                                                            {/* Sans mois défini, le champ reste là mais se tait : il
+                                                                disparaissait, et la rangée se retrouvait bancale. */}
                                                             <select
+                                                                id="timeline-current-month"
                                                                 value={timelineConfig.current_month ?? ""}
-                                                                className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm"
+                                                                disabled={timelineConfig.month_names.length === 0}
+                                                                className="h-9 w-full rounded-lg border border-input bg-transparent px-3 text-sm disabled:cursor-not-allowed disabled:opacity-50"
                                                                 onChange={e => {
                                                                     const v = e.target.value === "" ? null : Number(e.target.value);
                                                                     void persistTimelineConfig({ current_month: v });
                                                                 }}
                                                             >
-                                                                <option value="">—</option>
+                                                                <option value="">{timelineConfig.month_names.length === 0 ? tSettings("noMonths") : "—"}</option>
                                                                 {timelineConfig.month_names.map((m, i) => (
                                                                     <option key={i} value={i}>{m}</option>
                                                                 ))}
                                                             </select>
                                                         </div>
-                                                    )}
+                                                    </div>
                                                 </div>
 
                                                 {/* Liste des mois — chacun avec son propre nombre de jours (borne le
@@ -475,19 +497,21 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                                                     d'accueil, voir WorldTimelineShortcutsWidget.tsx). Les deux tableaux
                                                     (`month_names`/`days_per_month`) restent parallèles : tout ajout,
                                                     retrait ou préréglage touche les deux à la fois. */}
-                                                <div className="space-y-2">
-                                                    <div className="flex items-center justify-between">
-                                                        <p className="text-xs font-medium text-muted-foreground">{t("calendarMonths")}</p>
-                                                        {timelineConfig.month_names.length === 0 && (
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => void persistTimelineConfig({ month_names: REAL_MONTH_NAMES, days_per_month: REAL_DAYS_PER_MONTH })}
-                                                                className="text-[11px] text-primary hover:underline"
-                                                            >
-                                                                {tSettings("useRealMonths")}
-                                                            </button>
-                                                        )}
+                                                <div className="ml-4 space-y-3 rounded-xl border border-border-soft bg-muted/20 p-3">
+                                                    <div className="flex items-start justify-between gap-3">
+                                                        <div className="space-y-0.5">
+                                                            <p className="text-sm font-medium">{t("calendarMonths")}</p>
+                                                            <p className="text-xs text-muted-foreground leading-snug">{tSettings("timelineMonthsHelp")}</p>
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => void persistTimelineConfig({ month_names: REAL_MONTH_NAMES, days_per_month: REAL_DAYS_PER_MONTH })}
+                                                            className="shrink-0 whitespace-nowrap text-[11px] text-primary hover:underline"
+                                                        >
+                                                            {tSettings("useRealMonths")}
+                                                        </button>
                                                     </div>
+
                                                     {timelineConfig.month_names.length > 0 && (
                                                         <div className="space-y-1">
                                                             {timelineConfig.month_names.map((m, i) => (
@@ -495,7 +519,8 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                                                                     <span className="w-4 shrink-0 text-right text-xs text-muted-foreground">{i + 1}.</span>
                                                                     <Input
                                                                         value={m}
-                                                                        className="h-7 flex-1 text-sm"
+                                                                        aria-label={t("monthNamePlaceholder")}
+                                                                        className="h-8 flex-1 text-sm"
                                                                         onChange={e => {
                                                                             const next = [...timelineConfig.month_names];
                                                                             next[i] = e.target.value;
@@ -507,28 +532,31 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                                                                             void persistTimelineConfig({ month_names: next });
                                                                         }}
                                                                     />
-                                                                    <Input
-                                                                        type="number"
-                                                                        aria-label={`Jours en ${m || `mois ${i + 1}`}`}
-                                                                        value={timelineConfig.days_per_month?.[i] ?? DEFAULT_DAYS_PER_MONTH}
-                                                                        min={1}
-                                                                        max={999}
-                                                                        title={t("daysCount")}
-                                                                        className="h-7 w-16 shrink-0 text-sm"
-                                                                        onChange={e => {
-                                                                            const next = [...(timelineConfig.days_per_month ?? [])];
-                                                                            next[i] = clampDaysPerMonth(Number(e.target.value));
-                                                                            setTimelineConfig(c => ({ ...c, days_per_month: next }));
-                                                                        }}
-                                                                        onBlur={e => {
-                                                                            const next = [...(timelineConfig.days_per_month ?? [])];
-                                                                            next[i] = clampDaysPerMonth(Number(e.target.value));
-                                                                            void persistTimelineConfig({ days_per_month: next });
-                                                                        }}
-                                                                    />
+                                                                    <div className="flex shrink-0 items-center gap-1">
+                                                                        <Input
+                                                                            type="number"
+                                                                            aria-label={tSettings("daysInMonth", { month: m || `${i + 1}` })}
+                                                                            value={timelineConfig.days_per_month?.[i] ?? DEFAULT_DAYS_PER_MONTH}
+                                                                            min={1}
+                                                                            max={999}
+                                                                            title={t("daysCount")}
+                                                                            className="h-8 w-16 text-sm"
+                                                                            onChange={e => {
+                                                                                const next = [...(timelineConfig.days_per_month ?? [])];
+                                                                                next[i] = clampDaysPerMonth(Number(e.target.value));
+                                                                                setTimelineConfig(c => ({ ...c, days_per_month: next }));
+                                                                            }}
+                                                                            onBlur={e => {
+                                                                                const next = [...(timelineConfig.days_per_month ?? [])];
+                                                                                next[i] = clampDaysPerMonth(Number(e.target.value));
+                                                                                void persistTimelineConfig({ days_per_month: next });
+                                                                            }}
+                                                                        />
+                                                                        <span className="w-6 text-[11px] text-muted-foreground">{tSettings("daysUnit")}</span>
+                                                                    </div>
                                                                     <button
-                                                                      aria-label={tCommon("delete")}
                                                                         type="button"
+                                                                        aria-label={tSettings("deleteMonth", { month: m || `${i + 1}` })}
                                                                         onClick={() => {
                                                                             const next = timelineConfig.month_names.filter((_, j) => j !== i);
                                                                             const nextDays = (timelineConfig.days_per_month ?? []).filter((_, j) => j !== i);
@@ -539,7 +567,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                                                                                 current_month: currentMonth !== null && currentMonth >= next.length ? null : currentMonth,
                                                                             });
                                                                         }}
-                                                                        className="shrink-0 text-muted-foreground hover:text-destructive transition-colors"
+                                                                        className="shrink-0 rounded p-1 text-muted-foreground transition-colors hover:text-destructive"
                                                                     >
                                                                         <Trash2 className="h-3.5 w-3.5" />
                                                                     </button>
@@ -547,40 +575,35 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                                                             ))}
                                                         </div>
                                                     )}
-                                                    <div className="flex gap-2">
+
+                                                    {/* La saisie ferme la liste, comme celle des tags. */}
+                                                    <div className="flex items-center gap-1 rounded-lg border border-border-soft p-1">
                                                         <Input
                                                             value={newMonthName}
                                                             placeholder={t("monthNamePlaceholder")}
-                                                            className="h-8 text-sm"
+                                                            className="h-8 flex-1 border-0 bg-transparent px-1.5 text-sm shadow-none focus-visible:ring-0"
                                                             onChange={e => setNewMonthName(e.target.value)}
                                                             onKeyDown={e => {
                                                                 if (e.key === "Enter" && newMonthName.trim()) {
                                                                     e.preventDefault();
-                                                                    const next = [...timelineConfig.month_names, newMonthName.trim()];
-                                                                    const nextDays = [...(timelineConfig.days_per_month ?? []), DEFAULT_DAYS_PER_MONTH];
-                                                                    void persistTimelineConfig({ month_names: next, days_per_month: nextDays });
-                                                                    setNewMonthName("");
+                                                                    ajouterMois();
                                                                 }
                                                             }}
                                                         />
                                                         <Button
                                                             type="button"
-                                                            variant="secondary"
+                                                            variant="ghost"
                                                             size="sm"
+                                                            className="h-8 w-8 shrink-0 p-0"
                                                             disabled={!newMonthName.trim()}
                                                             aria-label={t("addMonthName")}
-                                                            onClick={() => {
-                                                                const next = [...timelineConfig.month_names, newMonthName.trim()];
-                                                                const nextDays = [...(timelineConfig.days_per_month ?? []), DEFAULT_DAYS_PER_MONTH];
-                                                                void persistTimelineConfig({ month_names: next, days_per_month: nextDays });
-                                                                setNewMonthName("");
-                                                            }}
+                                                            onClick={ajouterMois}
                                                         >
-                                                            <Plus className="h-3.5 w-3.5" />
+                                                            <Plus className="h-4 w-4" />
                                                         </Button>
                                                     </div>
                                                 </div>
-                                            </div>
+                                            </>
                                         )}
                                     </div>
                                 )}

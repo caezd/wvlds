@@ -18,6 +18,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     date: "2026-09",
+    tag: "Monde",
+    text: "Réglages, Fonctions : la chronologie s’organise en deux sous-options, l’écriture des dates et les mois du calendrier, du même dessin que celles de la fiche par défaut. « Utiliser les mois réels » reste offert même quand des mois existent, et le choix du mois courant ne disparaît plus quand aucun n’est défini.",
+  },
+  {
+    date: "2026-09",
     tag: "Personas",
     text: "La fiche d’un persona ne s’enregistre plus à chaque champ quitté : tout — nom, faceclaim, avatar, bannière, cadre, statut, onglets et champs — attend le bouton « Enregistrer », en bas de la fiche, qui s’allume dès la première lettre tapée. Fermer avec des modifications en attente demande quoi en faire.",
   },
