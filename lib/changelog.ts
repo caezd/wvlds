@@ -19,6 +19,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Rôles",
+    text: "Sur un écran étroit, la fiche d’un rôle se déplie dans sa ligne plutôt que sous la liste ; la colonne de droite reste au large.",
+  },
+  {
+    date: "2026-09",
+    tag: "Rôles",
     text: "Nouvelle permission « Commenter le wiki » : ouvrez la relecture des pages à un rôle sans lui confier tout le wiki, ou fermez-la. Les rôles existants la reçoivent ; « Modifier le wiki » garde la modération des fils.",
   },
   {

@@ -57,7 +57,22 @@ function setup(extra: { data?: unknown; error?: unknown }[] = []) {
   return mock;
 }
 
+/** Deux colonnes : `useMediaQuery(MEDIA.md)` vrai. jsdom rend « petit écran » par défaut. */
+function grandEcran() {
+  vi.spyOn(window, "matchMedia").mockImplementation((query: string) => ({
+    matches: query.includes("48rem"),
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  } as unknown as MediaQueryList));
+}
+
 beforeEach(() => {
+  vi.restoreAllMocks();
   vi.clearAllMocks();
   asOwner();
 });
@@ -82,6 +97,38 @@ describe("WorldRolesTab — liste", () => {
     render(<WorldRolesTab worldId="w1" />);
     const section = await screen.findByRole("region", { name: "Administrateur" });
     expect(within(section).getByLabelText("Nom")).toHaveValue("Administrateur");
+  });
+
+  it("sous md, la fiche se déplie dans la ligne du rôle et le clic la referme", async () => {
+    setup();
+    const user = userEvent.setup();
+    render(<WorldRolesTab worldId="w1" />);
+
+    // Le premier rôle est ouvert d'emblée, sa fiche est DANS sa ligne.
+    const ligne = (await screen.findByRole("button", { name: /^Administrateur/ })).closest("li")!;
+    const entete = within(ligne).getByRole("button", { name: /^Administrateur/ });
+    expect(entete).toHaveAttribute("aria-expanded", "true");
+    expect(within(ligne).getByRole("region", { name: "Administrateur" })).toBeInTheDocument();
+
+    // Un autre rôle prend sa place ; le premier se referme.
+    await user.click(screen.getByRole("button", { name: /^Joueur/ }));
+    expect(within(ligne).queryByRole("region", { name: "Administrateur" })).toBeNull();
+    expect(screen.getByRole("region", { name: "Joueur" })).toBeInTheDocument();
+
+    // Un second clic sur la même ligne la referme : rien n'est déplié.
+    await user.click(screen.getByRole("button", { name: /^Joueur/ }));
+    expect(screen.queryByRole("region", { name: "Joueur" })).toBeNull();
+  });
+
+  it("au-dessus de md, la fiche vit dans la colonne de droite, hors des lignes", async () => {
+    grandEcran();
+    setup();
+    render(<WorldRolesTab worldId="w1" />);
+
+    const section = await screen.findByRole("region", { name: "Administrateur" });
+    expect(section.closest("li")).toBeNull();
+    // Pas de dépli : l'en-tête n'annonce rien à ouvrir.
+    expect(screen.getByRole("button", { name: /^Administrateur/ })).not.toHaveAttribute("aria-expanded");
   });
 
   it("crée un rôle sous tous les autres et le sélectionne", async () => {
