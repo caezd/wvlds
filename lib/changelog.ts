@@ -19,7 +19,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Monde",
-    text: "Réglages, onglet Communauté : sous la visibilité viennent le public visé — « Tout public » ou « 18 ans et plus », en deux cartes comme Privé / Public — puis les avatars acceptés ; les tags ferment la page.",
+    text: "Réglages, onglet Communauté : visibilité, public visé et avatars acceptés se choisissent dans un rail à deux segments, le choix retenu en couleur. Sous la visibilité viennent le public visé — « Tout public » ou « 18 ans et plus », en deux cartes comme Privé / Public — puis les avatars acceptés ; les tags ferment la page.",
   },
   {
     date: "2026-09",

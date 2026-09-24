@@ -20,7 +20,7 @@ type ProprietesOnglet = {
   persistField: PersistField;
 };
 
-import { Camera, Globe, GlobeLock, Palette, Plus, ShieldAlert, Users, X } from "lucide-react";
+import { Camera, Globe, GlobeLock, Palette, Plus, ShieldAlert, Users, X, type LucideIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import {
   setWorldAgeRestricted,
@@ -38,6 +38,51 @@ import { messageErreurAction } from "@/lib/actionErrors";
  * Même principe que l'onglet Fonctions — l'état vit ici, pas chez le parent —
  * et même montage par `key={world.id}`.
  */
+/**
+ * Deux choix dans un rail bordé, comme les onglets : le segment retenu se
+ * remplit de la couleur d'accent, l'autre reste en retrait.
+ *
+ * `pressed` plutôt que `checked` : les avatars acceptés ne s'excluent pas —
+ * un monde peut prendre les deux styles, donc les deux segments allumés.
+ */
+function SegmentedRail({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="inline-flex w-full items-center gap-1 rounded-lg border border-border p-[3px]">{children}</div>
+  );
+}
+
+function Segment({
+  active,
+  disabled,
+  onClick,
+  icon: Icon,
+  label,
+}: {
+  active: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+  icon: LucideIcon;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      aria-pressed={active}
+      onClick={onClick}
+      className={cn(
+        "flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors disabled:opacity-60",
+        active
+          ? "bg-primary text-primary-foreground shadow-sm"
+          : "text-muted-foreground hover:bg-muted/40 hover:text-foreground",
+      )}
+    >
+      <Icon className="h-4 w-4 shrink-0" />
+      {label}
+    </button>
+  );
+}
+
 export function WorldCommunityTab({ world, form, persistField, onUpdated }: ProprietesOnglet & {
   onUpdated?: (world: World) => void;
 }) {
@@ -156,40 +201,26 @@ export function WorldCommunityTab({ world, form, persistField, onUpdated }: Prop
                                                     </LabelWithHelp>
                                                 </FormLabel>
                                                 <FormControl>
-                                                    <div className="flex gap-2">
-                                                        <button
-                                                            type="button"
+                                                    <SegmentedRail>
+                                                        <Segment
+                                                            active={field.value === "private"}
+                                                            icon={GlobeLock}
+                                                            label={tSettings("private")}
                                                             onClick={() => {
                                                                 field.onChange("private");
                                                                 void persistField("visibility", "private");
                                                             }}
-                                                            className={cn(
-                                                                "flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition-colors",
-                                                                field.value === "private"
-                                                                    ? "border-primary bg-primary/10 text-primary"
-                                                                    : "border-border bg-transparent text-muted-foreground hover:border-muted-foreground/40 hover:text-foreground"
-                                                            )}
-                                                        >
-                                                            <GlobeLock className="h-4 w-4 shrink-0" />
-                                                            {tSettings("private")}
-                                                        </button>
-                                                        <button
-                                                            type="button"
+                                                        />
+                                                        <Segment
+                                                            active={field.value === "public"}
+                                                            icon={Globe}
+                                                            label={tSettings("public")}
                                                             onClick={() => {
                                                                 field.onChange("public");
                                                                 void persistField("visibility", "public");
                                                             }}
-                                                            className={cn(
-                                                                "flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition-colors",
-                                                                field.value === "public"
-                                                                    ? "border-primary bg-primary/10 text-primary"
-                                                                    : "border-border bg-transparent text-muted-foreground hover:border-muted-foreground/40 hover:text-foreground"
-                                                            )}
-                                                        >
-                                                            <Globe className="h-4 w-4 shrink-0" />
-                                                            {tSettings("public")}
-                                                        </button>
-                                                    </div>
+                                                        />
+                                                    </SegmentedRail>
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
@@ -206,38 +237,22 @@ export function WorldCommunityTab({ world, form, persistField, onUpdated }: Prop
                                                 {tSettings("ageRestrictedHelp")}
                                             </p>
                                         </div>
-                                        <div className="flex gap-2">
-                                            <button
-                                                type="button"
+                                        <SegmentedRail>
+                                            <Segment
+                                                active={!ageRestricted}
                                                 disabled={togglingAgeRestricted}
-                                                aria-pressed={!ageRestricted}
+                                                icon={Users}
+                                                label={tSettings("allAges")}
                                                 onClick={() => void handleAgeRestrictedToggle(false)}
-                                                className={cn(
-                                                    "flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition-colors disabled:opacity-60",
-                                                    !ageRestricted
-                                                        ? "border-primary bg-primary/10 text-primary"
-                                                        : "border-border bg-transparent text-muted-foreground hover:border-muted-foreground/40 hover:text-foreground"
-                                                )}
-                                            >
-                                                <Users className="h-4 w-4 shrink-0" />
-                                                {tSettings("allAges")}
-                                            </button>
-                                            <button
-                                                type="button"
+                                            />
+                                            <Segment
+                                                active={ageRestricted}
                                                 disabled={togglingAgeRestricted}
-                                                aria-pressed={ageRestricted}
+                                                icon={ShieldAlert}
+                                                label={tSettings("adultsOnly")}
                                                 onClick={() => void handleAgeRestrictedToggle(true)}
-                                                className={cn(
-                                                    "flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition-colors disabled:opacity-60",
-                                                    ageRestricted
-                                                        ? "border-primary bg-primary/10 text-primary"
-                                                        : "border-border bg-transparent text-muted-foreground hover:border-muted-foreground/40 hover:text-foreground"
-                                                )}
-                                            >
-                                                <ShieldAlert className="h-4 w-4 shrink-0" />
-                                                {tSettings("adultsOnly")}
-                                            </button>
-                                        </div>
+                                            />
+                                        </SegmentedRail>
                                     </div>
 
                                     {/* -- Avatars acceptés --------------------- */}
@@ -248,38 +263,22 @@ export function WorldCommunityTab({ world, form, persistField, onUpdated }: Prop
                                                 {tSettings("avatarTypesHelp")}
                                             </p>
                                         </div>
-                                        <div className="flex gap-2">
-                                            <button
-                                                type="button"
+                                        <SegmentedRail>
+                                            <Segment
+                                                active={allowsRealAvatars}
                                                 disabled={togglingAvatarType}
+                                                icon={Camera}
+                                                label={tSettings("avatarReal")}
                                                 onClick={() => void handleAvatarTypeToggle("allows_real_avatars", !allowsRealAvatars)}
-                                                aria-pressed={allowsRealAvatars}
-                                                className={cn(
-                                                    "flex flex-1 flex-col items-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition-colors disabled:opacity-60",
-                                                    allowsRealAvatars
-                                                        ? "border-primary bg-primary/10 text-primary"
-                                                        : "border-border bg-transparent text-muted-foreground hover:border-muted-foreground/40 hover:text-foreground"
-                                                )}
-                                            >
-                                                <Camera className="h-4 w-4 shrink-0" />
-                                                {tSettings("avatarReal")}
-                                            </button>
-                                            <button
-                                                type="button"
+                                            />
+                                            <Segment
+                                                active={allowsIllustratedAvatars}
                                                 disabled={togglingAvatarType}
+                                                icon={Palette}
+                                                label={tSettings("avatarIllustrated")}
                                                 onClick={() => void handleAvatarTypeToggle("allows_illustrated_avatars", !allowsIllustratedAvatars)}
-                                                aria-pressed={allowsIllustratedAvatars}
-                                                className={cn(
-                                                    "flex flex-1 flex-col items-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition-colors disabled:opacity-60",
-                                                    allowsIllustratedAvatars
-                                                        ? "border-primary bg-primary/10 text-primary"
-                                                        : "border-border bg-transparent text-muted-foreground hover:border-muted-foreground/40 hover:text-foreground"
-                                                )}
-                                            >
-                                                <Palette className="h-4 w-4 shrink-0" />
-                                                {tSettings("avatarIllustrated")}
-                                            </button>
-                                        </div>
+                                            />
+                                        </SegmentedRail>
                                     </div>
 
                                     {/* -- Tags -------------------------------- */}
