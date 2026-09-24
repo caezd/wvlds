@@ -19,6 +19,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Personas",
+    text: "La fiche d’un persona ne s’enregistre plus à chaque champ quitté : le nom, le faceclaim, l’avatar, la bannière, le cadre et le statut narratif attendent le bouton « Enregistrer », en bas de la fiche, qui n’apparaît que s’il y a quelque chose à écrire. Fermer avec des modifications en attente demande quoi en faire.",
+  },
+  {
+    date: "2026-09",
+    tag: "Personas",
     text: "Réglages du monde, Fonctions : « Faceclaim obligatoire » sous les faceclaims — une fiche sans faceclaim n’est alors pas terminée, et son persona ne peut pas jouer. Quand un monde n’utilise pas les faceclaims, le champ disparaît des fiches.",
   },
   {

@@ -42,6 +42,7 @@ describe("PersonaEditorContent — bascule aperçu", () => {
         personaName="Kael"
         sections={sections}
         onSectionsChange={vi.fn()}
+        onPatch={vi.fn()}
       />,
     );
 

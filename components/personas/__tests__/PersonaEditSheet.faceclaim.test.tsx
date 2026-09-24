@@ -27,6 +27,7 @@ function monter(props: Partial<React.ComponentProps<typeof PersonaEditorContent>
       personaName="Kael"
       sections={sections}
       onSectionsChange={vi.fn()}
+      onPatch={vi.fn()}
       worldId="w1"
       initialFaceclaim="Emma Stone"
       {...props}

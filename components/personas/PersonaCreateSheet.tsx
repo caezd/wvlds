@@ -16,7 +16,10 @@ import { useWorldMembership } from "@/components/providers/WorldMembershipProvid
 import { PersonaEditorContent } from "./PersonaEditSheet";
 import { createPersona } from "@/app/(protected)/p/actions";
 import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
 import { fetchPersonaSections } from "@/lib/personaSections";
+import { TABLE } from "@/lib/constants";
+import type { PersonaPatch } from "@/lib/personaDraft";
 import type { PersonaSectionWithFields } from "@/types/personas";
 import { useTranslations } from "next-intl";
 
@@ -42,6 +45,9 @@ export function PersonaCreateSheet({
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [sections, setSections] = useState<PersonaSectionWithFields[]>([]);
+  // L'éditeur n'écrit plus de lui-même : ce qu'il modifie ici s'écrit à la
+  // fermeture, la création n'ayant pas de pied de page à elle.
+  const [draftPatch, setDraftPatch] = useState<PersonaPatch>({});
   const nameRef = useRef<HTMLInputElement>(null);
   // PNJ partagé (migration 182) : proposé à qui gère les PNJ du monde ;
   // `defaultNpc` précoche la case (bouton « Nouveau PNJ »).
@@ -54,7 +60,9 @@ export function PersonaCreateSheet({
   function handleOpen(v: boolean) {
     setOpen(v);
     if (!v) {
+      if (createdId) void flushDraft(createdId, draftPatch);
       // reset à la fermeture
+      setDraftPatch({});
       setPhase("name");
       setCreatedId(null);
       setCreatedName("");
@@ -63,6 +71,13 @@ export function PersonaCreateSheet({
       setAsNpc(!!defaultNpc);
       if (createdId) router.refresh();
     }
+  }
+
+  /** Ce que l'éditeur a modifié depuis la création, écrit à la fermeture. */
+  async function flushDraft(personaId: string, patch: PersonaPatch) {
+    if (Object.keys(patch).length === 0) return;
+    const { error } = await createClient().from(TABLE.PERSONAS).update(patch).eq("id", personaId);
+    if (error) toast.error(t("saveFailed"), { description: error.message });
   }
 
   async function handleCreate(e: React.FormEvent) {
@@ -151,6 +166,7 @@ export function PersonaCreateSheet({
             </form>
           ) : createdId ? (
             <PersonaEditorContent
+              onPatch={(patch) => setDraftPatch((prev) => ({ ...prev, ...patch }))}
               personaId={createdId}
               personaName={createdName}
               sections={sections}
