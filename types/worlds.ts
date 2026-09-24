@@ -130,6 +130,8 @@ export type World = {
   enable_inventory?: boolean | null;
   enable_skills?: boolean | null;
   enable_faceclaims?: boolean | null;
+  /** Une fiche sans faceclaim n'est pas « terminée » (migration 191). */
+  require_faceclaim?: boolean | null;
   /** Carte du monde. Absent = activée (défaut en base). */
   enable_map?: boolean | null;
   /** Wiki du monde. Absent = activé (défaut en base). */

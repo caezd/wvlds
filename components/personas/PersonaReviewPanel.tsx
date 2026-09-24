@@ -18,6 +18,7 @@ import { useWorldReviewActive } from "@/hooks/useWorldReviewActive";
 import { Button } from "@/components/ui/button";
 import { AutoResizeTextarea } from "@/components/ui/auto-resizable-textarea";
 import { PersonaSheetBadge } from "./PersonaSheetBadge";
+import { useWorldFaceclaimRule } from "@/hooks/useWorldFaceclaimRule";
 import type { PersonaReviewStatus } from "@/types/db";
 import type { PersonaSectionWithFields } from "@/types/personas";
 
@@ -54,16 +55,19 @@ function useTemplateRequiredFields(worldId: string | null | undefined) {
 /** La liste de ce qui manque, avec le bouton de synchronisation si des champs sont absents. */
 function MissingFieldsList({
   missing,
+  faceclaimMissing,
   onSync,
   syncing,
 }: {
   missing: MissingRequiredField[];
+  /** Le monde exige un faceclaim et la fiche n'en porte pas (migration 191). */
+  faceclaimMissing?: boolean;
   onSync?: () => void;
   syncing?: boolean;
 }) {
   const t = useTranslations("personas.review");
   const tTypes = useTranslations("personas.fieldTypes");
-  if (missing.length === 0) return null;
+  if (missing.length === 0 && !faceclaimMissing) return null;
   const absent = missing.some((m) => m.fieldId === null);
   return (
     <div className="rounded-lg border border-orange-500/30 bg-orange-500/5 px-3 py-2 text-xs" data-testid="missing-fields">
@@ -72,6 +76,12 @@ function MissingFieldsList({
         {t("missingTitle")}
       </p>
       <ul className="mt-1.5 max-h-32 space-y-0.5 overflow-y-auto text-muted-foreground">
+        {faceclaimMissing && (
+          <li className="flex items-baseline justify-between gap-2">
+            <span className="truncate">{t("missingFaceclaim")}</span>
+            <span className="shrink-0 italic">{t("missingEmpty")}</span>
+          </li>
+        )}
         {missing.map((m) => {
           const typeKey = fieldTypeKey(m.type);
           const field = m.label ?? (tTypes.has(typeKey) ? tTypes(typeKey) : t("fieldTypeFallback"));
@@ -99,6 +109,7 @@ export function PersonaSubmitBar({
   personaId,
   worldId,
   sections,
+  faceclaim,
   initialReviewStatus,
   onSectionsReload,
   className,
@@ -106,6 +117,8 @@ export function PersonaSubmitBar({
   personaId: string;
   worldId: string | null | undefined;
   sections: PersonaSectionWithFields[];
+  /** Le faceclaim tel qu'il est enregistré, quand le monde peut l'exiger. */
+  faceclaim?: string | null;
   initialReviewStatus?: PersonaReviewStatus | null;
   /** Après une synchronisation avec le modèle : la fiche a de nouveaux champs. */
   onSectionsReload?: (sections: PersonaSectionWithFields[]) => void;
@@ -118,11 +131,16 @@ export function PersonaSubmitBar({
   const [busy, setBusy] = useState<null | "submit" | "sync">(null);
   const [lastSentBack, setLastSentBack] = useState<{ body: string; author: string | null } | null>(null);
   const required = useTemplateRequiredFields(worldId);
+  // Le faceclaim compte comme un champ obligatoire de plus quand le monde
+  // l'exige (migration 191) — la base en dit autant pour `sheet_complete`.
+  const faceclaimRule = useWorldFaceclaimRule(worldId);
+  const faceclaimMissing =
+    !!faceclaimRule?.enabled && !!faceclaimRule?.required && (faceclaim ?? "").trim() === "";
   // Le monde relit-il (migration 184) ? Sinon : la liste de ce qui manque, rien d'autre.
   const reviewActive = useWorldReviewActive(worldId) === true;
 
   const missing = useMemo(() => (required ? missingRequiredFields(sections, required) : []), [sections, required]);
-  const complete = required !== null && missing.length === 0;
+  const complete = required !== null && missing.length === 0 && !faceclaimMissing;
 
   // Renvoyée en brouillon : le dernier mot du relecteur, en bandeau.
   useEffect(() => {
@@ -167,7 +185,7 @@ export function PersonaSubmitBar({
 
   // Hors monde : rien à valider. Sans relecture et sans manque : rien à dire.
   if (!worldId) return null;
-  if (!reviewActive && missing.length === 0) return null;
+  if (!reviewActive && missing.length === 0 && !faceclaimMissing) return null;
 
   return (
     <div className={cn("space-y-2", className)} data-review-status={reviewActive ? status : "inactive"}>
@@ -181,7 +199,7 @@ export function PersonaSubmitBar({
           )}
         </div>
       )}
-      <MissingFieldsList missing={missing} onSync={sync} syncing={busy === "sync"} />
+      <MissingFieldsList missing={missing} faceclaimMissing={faceclaimMissing} onSync={sync} syncing={busy === "sync"} />
       {reviewActive && (
       <div className="flex flex-wrap items-center justify-between gap-2">
         <PersonaSheetBadge persona={{ review_status: status, sheet_complete: required === null ? true : complete }} showApproved />

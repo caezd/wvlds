@@ -32,6 +32,7 @@ import {
 import { Check, Eye, Loader2, Pencil, Trash2, X } from "lucide-react";
 import { ImagePickerCropField } from "@/components/ui/image-crop-picker";
 import { PersonaSubmitBar } from "./PersonaReviewPanel";
+import { useWorldFaceclaimRule } from "@/hooks/useWorldFaceclaimRule";
 import type { PersonaNarrativeStatus, PersonaReviewStatus, MaritalStatus } from "@/types/db";
 
 import { PersonaSectionsTabs } from "./PersonaSectionsTabs";
@@ -616,6 +617,8 @@ type PersonaEditorContentProps = {
   personaName: string;
   sections: PersonaSectionWithFields[];
   onSectionsChange: (sections: PersonaSectionWithFields[]) => void;
+  /** Le faceclaim vient d'être enregistré — la barre de validation le suit. */
+  onFaceclaimSaved?: (faceclaim: string | null) => void;
   initialAvatarUrl?: string | null;
   initialAvatarConfig?: AvatarConfigV1 | null;
   initialBannerUrl?: string | null;
@@ -640,6 +643,7 @@ export function PersonaEditorContent({
   personaName,
   sections,
   onSectionsChange,
+  onFaceclaimSaved,
   initialAvatarUrl,
   initialAvatarConfig,
   initialBannerUrl,
@@ -657,6 +661,10 @@ export function PersonaEditorContent({
   const tPersonas = useTranslations("personas");
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
+  // Le monde a le dernier mot : la prop n'est qu'un premier avis, et tous les
+  // appelants ne la passent pas (la création d'un persona, par exemple).
+  const faceclaimRule = useWorldFaceclaimRule(worldId);
+  const faceclaimShown = faceclaimsEnabled !== false && faceclaimRule?.enabled !== false;
 
   const [avatarDialogOpen, setAvatarDialogOpen] = useState(false);
   const [bannerDialogOpen, setBannerDialogOpen] = useState(false);
@@ -832,7 +840,7 @@ export function PersonaEditorContent({
                     placeholder={tPersonas("namePlaceholder")}
                     className="min-w-0 flex-1 text-xl font-semibold leading-tight bg-transparent outline-none border-none rounded px-1 -mx-1 hover:bg-muted/60 focus:bg-muted/60 focus:underline decoration-dotted underline-offset-4 placeholder:text-muted-foreground/40 transition-colors"
                   />
-                  {faceclaimsEnabled !== false && (
+                  {faceclaimShown && (
                     <div className="flex items-baseline gap-1 shrink-0 max-w-[45%]">
                       <span className="text-sm text-muted-foreground/70 shrink-0">ft.</span>
                       <input
@@ -843,6 +851,7 @@ export function PersonaEditorContent({
                           if (clean === (initialFaceclaim ?? null)) return;
                           const { error } = await supabase.from("personas").update({ faceclaim: clean }).eq("id", personaId);
                           if (error) { e.target.value = initialFaceclaim ?? ""; return; }
+                          onFaceclaimSaved?.(clean);
                           router.refresh();
                         }}
                         onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
@@ -1088,6 +1097,9 @@ export function PersonaEditSheet({
   const [open, setOpen] = useState(openOnMount);
   const [deleting, setDeleting] = useState(false);
   const [sections, setSections] = useState(initialSections);
+  // Le faceclaim est saisi dans la fiche et pèse sur la validation quand le
+  // monde l'exige : la barre le lit ici plutôt que de le relire en base.
+  const [faceclaim, setFaceclaim] = useState<string | null>(initialFaceclaim ?? null);
 
   async function handleDelete() {
     setDeleting(true);
@@ -1137,6 +1149,7 @@ export function PersonaEditSheet({
               initialFrameId={initialFrameId}
               initialFrameUrl={initialFrameUrl}
               initialFaceclaim={initialFaceclaim}
+              onFaceclaimSaved={setFaceclaim}
               initialMaritalStatus={initialMaritalStatus}
               initialSpousePersonaId={initialSpousePersonaId}
               initialNarrativeStatus={initialNarrativeStatus}
@@ -1149,6 +1162,7 @@ export function PersonaEditSheet({
             personaId={personaId}
             worldId={worldId}
             sections={sections}
+            faceclaim={faceclaim}
             initialReviewStatus={initialReviewStatus}
             onSectionsReload={setSections}
             className="border-t border-border-soft bg-background px-6 py-3"

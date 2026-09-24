@@ -35,6 +35,7 @@ import {
   setWorldFeature,
   setWorldRestriction,
   setWorldFaceclaims,
+    setWorldRequireFaceclaim,
   setWorldTimeline,
 } from "@/app/actions/worldCatalog";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
@@ -80,6 +81,8 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
 
     const [enableFaceclaims, setEnableFaceclaims] = React.useState(world.enable_faceclaims !== false);
     const [togglingFaceclaims, setTogglingFaceclaims] = React.useState(false);
+    const [requireFaceclaim, setRequireFaceclaim] = React.useState(!!world.require_faceclaim);
+    const [togglingRequireFaceclaim, setTogglingRequireFaceclaim] = React.useState(false);
 
     // `!== false` et non `=== true` : le monde reçu peut être un objet partiel
     // où la colonne n'a pas été chargée. En base elle est NOT NULL DEFAULT true.
@@ -157,6 +160,15 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
         if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
         setEnableFaceclaims(enabled);
         onUpdated?.({ ...world, enable_faceclaims: enabled } as World);
+    }
+
+    async function handleRequireFaceclaimToggle(required: boolean) {
+        setTogglingRequireFaceclaim(true);
+        const res = await setWorldRequireFaceclaim(world.id, required);
+        setTogglingRequireFaceclaim(false);
+        if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
+        setRequireFaceclaim(required);
+        onUpdated?.({ ...world, require_faceclaim: required } as World);
     }
 
     async function handleMapToggle(enabled: boolean) {
@@ -288,6 +300,22 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                                                 className="shrink-0 mt-0.5"
                                             />
                                         </div>
+                                        {enableFaceclaims && (
+                                            <div className="ml-4 flex items-start justify-between gap-4 rounded-xl border border-border-soft bg-muted/20 p-3">
+                                                <div className="space-y-0.5">
+                                                    <p className="text-sm font-medium">{tSettings("requireFaceclaim")}</p>
+                                                    <p className="text-xs text-muted-foreground leading-snug">
+                                                        {tSettings("requireFaceclaimHelp")}
+                                                    </p>
+                                                </div>
+                                                <Switch
+                                                    checked={requireFaceclaim}
+                                                    disabled={togglingRequireFaceclaim}
+                                                    onCheckedChange={v => void handleRequireFaceclaimToggle(v)}
+                                                    className="shrink-0 mt-0.5"
+                                                />
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
 
