@@ -217,7 +217,7 @@ export function WorldRelationsSettings({ worldId }: { worldId: string }) {
           )}
           {relTypes.map((rt) =>
             editRtId === rt.id ? (
-              <div key={rt.id} className="flex items-center gap-2 rounded-lg border border-primary/30 bg-card px-3 py-2">
+              <div key={rt.id} className="flex items-center gap-2 rounded-lg border border-primary/30 px-3 py-2">
                 <ColorPickerButton color={editRtColor} onChange={setEditRtColor} />
                 <Input value={editRtName} onChange={(e) => setEditRtName(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter") void saveEditRt(); }}
@@ -246,7 +246,7 @@ export function WorldRelationsSettings({ worldId }: { worldId: string }) {
                 <button onClick={() => setEditRtId(null)} className="text-muted-foreground hover:text-foreground" aria-label={tCommon("cancel")}><X className="h-3 w-3" /></button>
               </div>
             ) : (
-              <div key={rt.id} className="flex items-center gap-2.5 rounded-lg border border-border bg-card px-3 py-2">
+              <div key={rt.id} className="flex items-center gap-2.5 rounded-lg border border-border px-3 py-2">
                 <svg width="24" height="8" className="shrink-0">
                   <line x1="0" y1="4" x2="24" y2="4" stroke={rt.color} strokeWidth={1.5} strokeDasharray={rt.dash || undefined} />
                 </svg>
