@@ -39,7 +39,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Interface",
-    text: "Les zones de texte (description du monde, catégories, lexique, blocs…) reprennent l’habillage des champs : même arrondi, même fond, même bordure. Les onglets (Groupes / Types de relation, etc.) reposent sur un rail transparent à bordure ; l’onglet actif prend le fond de la page.",
+    text: "Les zones de texte (description du monde, catégories, lexique, blocs…) reprennent l’habillage des champs : même arrondi, même fond, même bordure. Les onglets (Groupes / Types de relation, etc.) reposent sur un rail transparent à bordure ; l’onglet actif se remplit d’un gris qui ressort sur n’importe quel fond.",
   },
   {
     date: "2026-09",
