@@ -83,6 +83,9 @@ function Segment({
   );
 }
 
+/** Un monde ne porte pas plus de tags que cela. */
+const MAX_TAGS = 10;
+
 export function WorldCommunityTab({ world, form, persistField, onUpdated }: ProprietesOnglet & {
   onUpdated?: (world: World) => void;
 }) {
@@ -151,6 +154,9 @@ export function WorldCommunityTab({ world, form, persistField, onUpdated }: Prop
         () => existingTags.filter((t) => !tags.includes(t)).slice(0, 6),
         [existingTags, tags],
     );
+
+    /** Ce que l'on propose : affiné par la saisie, les plus portés sinon. */
+    const suggestions = tags.length >= MAX_TAGS ? [] : newTag.trim() ? tagSuggestions : popularTags;
 
     async function handleRemoveTag(tag: string) {
         setTags((prev) => prev.filter((t) => t !== tag));
@@ -282,59 +288,47 @@ export function WorldCommunityTab({ world, form, persistField, onUpdated }: Prop
                                     </div>
 
                                     {/* -- Tags -------------------------------- */}
+                                    {/* Un seul cadre pour ce qu'on a et ce qu'on tape, une ligne
+                                        discrète pour ce qu'on propose : trois rangées de pastilles
+                                        de formes différentes se lisaient comme un fourre-tout. */}
                                     <div className="space-y-3">
                                         <div className="space-y-0.5">
-                                            <p className="text-sm font-medium">{tSettings("tags")}</p>
+                                            <div className="flex items-baseline justify-between gap-2">
+                                                <p className="text-sm font-medium">{tSettings("tags")}</p>
+                                                <p className="text-[11px] tabular-nums text-muted-foreground">{tags.length}/{MAX_TAGS}</p>
+                                            </div>
                                             <p className="text-xs text-muted-foreground leading-snug">
                                                 {tSettings("tagsHelp")}
                                             </p>
                                         </div>
-                                        {tags.length > 0 && (
-                                            <div className="flex flex-wrap gap-1.5">
-                                                {tags.map((tag) => (
-                                                    <span
-                                                        key={tag}
-                                                        className="inline-flex items-center gap-1 rounded-full border border-border-soft bg-muted/40 px-2.5 py-1 text-xs"
-                                                    >
-                                                        {tag}
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => void handleRemoveTag(tag)}
-                                                            className="text-muted-foreground hover:text-destructive transition-colors"
-                                                            aria-label={tSettings("removeTag", { tag })}
-                                                        >
-                                                            <X className="h-3 w-3" />
-                                                        </button>
-                                                    </span>
-                                                ))}
-                                            </div>
-                                        )}
-                                        {tags.length < 10 && !newTag.trim() && popularTags.length > 0 && (
-                                            <div className="space-y-1">
-                                                <p className="text-[11px] font-medium text-muted-foreground">{tSettings("popularTags")}</p>
+
+                                        <div className="space-y-2 rounded-lg border border-border-soft p-2">
+                                            {tags.length > 0 && (
                                                 <div className="flex flex-wrap gap-1.5">
-                                                    {popularTags.map((tag) => (
-                                                        <button
+                                                    {tags.map((tag) => (
+                                                        <span
                                                             key={tag}
-                                                            type="button"
-                                                            disabled={savingTag}
-                                                            onClick={() => void handleAddTag(tag)}
-                                                            className="inline-flex items-center gap-1 rounded-full border border-dashed border-border-soft px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+                                                            className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs"
                                                         >
-                                                            <Plus className="h-3 w-3" />
                                                             {tag}
-                                                        </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => void handleRemoveTag(tag)}
+                                                                className="text-muted-foreground hover:text-destructive transition-colors"
+                                                                aria-label={tSettings("removeTag", { tag })}
+                                                            >
+                                                                <X className="h-3 w-3" />
+                                                            </button>
+                                                        </span>
                                                     ))}
                                                 </div>
-                                            </div>
-                                        )}
-                                        {tags.length < 10 && (
-                                            <div className="space-y-1.5">
-                                                <div className="flex gap-2">
+                                            )}
+                                            {tags.length < MAX_TAGS ? (
+                                                <div className="flex items-center gap-1">
                                                     <Input
                                                         value={newTag}
                                                         placeholder={t("addTagPlaceholder")}
-                                                        className="h-8 text-sm"
+                                                        className="h-8 flex-1 border-0 bg-transparent px-1.5 text-sm shadow-none focus-visible:ring-0"
                                                         maxLength={24}
                                                         disabled={savingTag}
                                                         onChange={(e) => setNewTag(e.target.value.replace(/[^\p{L}\p{N}]/gu, ""))}
@@ -347,38 +341,44 @@ export function WorldCommunityTab({ world, form, persistField, onUpdated }: Prop
                                                     />
                                                     <Button
                                                         type="button"
-                                                        variant="secondary"
+                                                        variant="ghost"
                                                         size="sm"
+                                                        className="h-8 w-8 shrink-0 p-0"
                                                         disabled={!newTag.trim() || savingTag}
                                                         aria-label={t("addTag")}
                                                         onClick={() => void handleAddTag()}
                                                     >
-                                                        <Plus className="h-3.5 w-3.5" />
+                                                        <Plus className="h-4 w-4" />
                                                     </Button>
                                                 </div>
-                                                {tagSuggestions.length > 0 && (
-                                                    <div className="flex flex-wrap gap-1.5">
-                                                        {tagSuggestions.map((tag) => (
-                                                            <button
-                                                                key={tag}
-                                                                type="button"
-                                                                disabled={savingTag}
-                                                                onClick={() => void handleAddTag(tag)}
-                                                                className="inline-flex items-center gap-1 rounded-full border border-dashed border-border-soft px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:border-primary hover:text-primary"
-                                                            >
-                                                                <Plus className="h-3 w-3" />
-                                                                {tag}
-                                                            </button>
-                                                        ))}
-                                                    </div>
-                                                )}
+                                            ) : (
+                                                <p className="px-1.5 py-1 text-[11px] text-muted-foreground">
+                                                    {tSettings("maxTags", { count: MAX_TAGS })}
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        {/* Ce que l'on tape affine la liste ; sans rien de tapé, les
+                                            tags les plus portés du site. Une seule rangée dans les
+                                            deux cas, sous le même libellé. */}
+                                        {suggestions.length > 0 && (
+                                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+                                                <span className="text-[11px] text-muted-foreground">{tSettings("popularTags")}</span>
+                                                {suggestions.map((tag) => (
+                                                    <button
+                                                        key={tag}
+                                                        type="button"
+                                                        disabled={savingTag}
+                                                        onClick={() => void handleAddTag(tag)}
+                                                        className="inline-flex items-center gap-1 rounded-full border border-dashed border-border-soft px-2.5 py-0.5 text-xs text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+                                                    >
+                                                        <Plus className="h-3 w-3" />
+                                                        {tag}
+                                                    </button>
+                                                ))}
                                             </div>
                                         )}
-                                        {tags.length >= 10 && (
-                                            <p className="text-[11px] text-muted-foreground">{tSettings("maxTags", { count: 10 })}</p>
-                                        )}
                                     </div>
-
                                 </div>
                             </TabsContent>
   );
