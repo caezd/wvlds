@@ -3,6 +3,7 @@
 
 import React, { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { deferredWriter } from "@/lib/deferredWriter";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { TabBar, TabBarTrigger } from "@/components/ui/tab-bar";
 import { Button } from "@/components/ui/button";
@@ -43,6 +44,8 @@ type PersonaSectionsTabsProps = {
   restrictSkills?: boolean;
   /** Édition de la fiche modèle d'un monde : permet de verrouiller des champs. */
   isTemplate?: boolean;
+  /** La fiche enregistre sur demande : ici, on ne touche pas à la base. */
+  deferred?: boolean;
 };
 
 export function PersonaSectionsTabs({
@@ -54,8 +57,11 @@ export function PersonaSectionsTabs({
   restrictInventory,
   restrictSkills,
   isTemplate,
+  deferred,
 }: PersonaSectionsTabsProps) {
-  const supabase = createClient();
+  // En différé, rien ne part en base : l'arbre en mémoire fait foi jusqu'au
+  // clic sur « Enregistrer » (voir lib/personaSectionsDiff).
+  const supabase = deferred ? (deferredWriter() as unknown as ReturnType<typeof createClient>) : createClient();
   const t = useTranslations("personas.tabs");
   const tCommon = useTranslations("common");
 
@@ -259,6 +265,7 @@ export function PersonaSectionsTabs({
               className="px-6 space-y-3 data-[state=inactive]:hidden"
             >
               <SectionFieldsEditor
+                deferred={deferred}
                 key={section.id}
                 sectionId={section.id}
                 personaId={personaId}

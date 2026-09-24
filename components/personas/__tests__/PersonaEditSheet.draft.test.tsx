@@ -14,15 +14,22 @@ vi.mock("@/hooks/useWorldFaceclaimRule", () => ({ useWorldFaceclaimRule: () => (
 vi.mock("@/hooks/useWorldReviewActive", () => ({ useWorldReviewActive: () => false }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
-import { PersonaEditSheet } from "@/components/personas/PersonaEditSheet";
+// Les sections rechargées après l'écriture : le contenu importe peu ici.
+vi.mock("@/lib/personaSections", async (orig) => ({
+  ...(await orig<Record<string, unknown>>()),
+  fetchPersonaSections: vi.fn(async () => []),
+}));
 
-function monter(mock: ReturnType<typeof createSupabaseMock>) {
+import { PersonaEditSheet } from "@/components/personas/PersonaEditSheet";
+import type { PersonaSectionWithFields } from "@/types/personas";
+
+function monter(mock: ReturnType<typeof createSupabaseMock>, sections: PersonaSectionWithFields[] = []) {
   vi.mocked(createClient).mockReturnValue(mock.client as never);
   return render(
     <PersonaEditSheet
       personaId="p1"
       personaName="Kael"
-      initialSections={[]}
+      initialSections={sections}
       initialFaceclaim="Emma Stone"
       openOnMount
     />,
@@ -97,5 +104,37 @@ describe("PersonaEditSheet — rien ne part avant « Enregistrer »", () => {
     await user.keyboard("{Escape}");
     await waitFor(() => expect(screen.queryByPlaceholderText("Nom du personnage")).toBeNull());
     expect(screen.queryByText("Modifications non enregistrées")).toBeNull();
+  });
+});
+
+describe("PersonaEditSheet — les sections aussi attendent", () => {
+  const SECTIONS: PersonaSectionWithFields[] = [
+    {
+      id: "s1", persona_id: "p1", name: "Identité", position: 0,
+      fields: [{ id: "f1", section_id: "s1", type: "title", position: 0, data: { text: "Origines" } }],
+    },
+  ];
+
+  it("modifier un champ n'écrit rien, et « Enregistrer » le porte en base", async () => {
+    const mock = createSupabaseMock();
+    const user = userEvent.setup();
+    monter(mock, SECTIONS);
+
+    const champ = await screen.findByPlaceholderText("Titre…");
+    await user.clear(champ);
+    await user.type(champ, "E");
+
+    // Dès la première lettre, la fiche se sait modifiée…
+    await screen.findByRole("button", { name: "Enregistrer" });
+    await user.type(champ, "nfance");
+    await user.tab();
+
+    // …mais rien n'est parti en base, ni à la frappe ni à la sortie du champ.
+    expect(mock.buildersFor("persona_section_fields")).toHaveLength(0);
+
+    await user.click(await screen.findByRole("button", { name: "Enregistrer" }));
+
+    await waitFor(() => expect(mock.buildersFor("persona_section_fields")).toHaveLength(1));
+    expect(mock.buildersFor("persona_section_fields")[0].update).toHaveBeenCalledWith({ data: { text: "Enfance" } });
   });
 });

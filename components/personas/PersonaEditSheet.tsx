@@ -51,6 +51,8 @@ import { PersonaProfileBody, formatPersonaPresenceLine } from "./PersonaProfileS
 import { useGlobalPresence } from "@/components/providers/PresenceProvider";
 import type { PersonaSectionWithFields } from "@/types/personas";
 import { EMPTY_DRAFT, applyPatch, isDirty, noteOrphan, noteUpload, storagePathOf, type PersonaPatch } from "@/lib/personaDraft";
+import { applySectionOps, diffSections, hasOps } from "@/lib/personaSectionsDiff";
+import { fetchPersonaSections } from "@/lib/personaSections";
 
 import {
   PersonaAvatarPicker,
@@ -589,6 +591,8 @@ type PersonaEditorContentProps = {
   onFaceclaimSaved?: (faceclaim: string | null) => void;
   /** Porte une modification au brouillon, avec les fichiers qu'elle déplace. */
   onPatch: (patch: PersonaPatch, files?: { uploaded?: string | null; orphan?: string | null }) => void;
+  /** Sections et champs attendent « Enregistrer » plutôt que d'écrire seuls. */
+  deferred?: boolean;
   initialAvatarUrl?: string | null;
   initialAvatarConfig?: AvatarConfigV1 | null;
   initialBannerUrl?: string | null;
@@ -615,6 +619,7 @@ export function PersonaEditorContent({
   onSectionsChange,
   onFaceclaimSaved,
   onPatch,
+  deferred,
   initialAvatarUrl,
   initialAvatarConfig,
   initialBannerUrl,
@@ -1014,6 +1019,7 @@ export function PersonaEditorContent({
           worldId={worldId}
           restrictInventory={restrictInventory}
           restrictSkills={restrictSkills}
+          deferred={deferred}
         />
       </div>
         </>
@@ -1052,6 +1058,8 @@ export function PersonaEditSheet({
   const [open, setOpen] = useState(openOnMount);
   const [deleting, setDeleting] = useState(false);
   const [sections, setSections] = useState(initialSections);
+  // L'arbre tel qu'il a été chargé : l'écart avec `sections` dira quoi écrire.
+  const [savedSections, setSavedSections] = useState(initialSections);
   // Le faceclaim est saisi dans la fiche et pèse sur la validation quand le
   // monde l'exige : la barre le lit ici plutôt que de le relire en base.
   const [faceclaim, setFaceclaim] = useState<string | null>(initialFaceclaim ?? null);
@@ -1071,7 +1079,8 @@ export function PersonaEditSheet({
     avatar_frame_id: initialFrameId ?? null,
     narrative_status: initialNarrativeStatus ?? "alive",
   }), [personaName, initialFaceclaim, initialAvatarUrl, initialAvatarConfig, initialBannerUrl, initialFrameId, initialNarrativeStatus]);
-  const dirty = isDirty(draft);
+  const sectionOps = useMemo(() => diffSections(savedSections, sections), [savedSections, sections]);
+  const dirty = isDirty(draft) || hasOps(sectionOps);
 
   function patchDraft(patch: PersonaPatch, files?: { uploaded?: string | null; orphan?: string | null }) {
     setDraft((prev) => {
@@ -1090,11 +1099,25 @@ export function PersonaEditSheet({
   async function save() {
     if (!dirty || saving) return true;
     setSaving(true);
-    const { error } = await supabase.from(TABLE.PERSONAS).update(draft.patch).eq("id", personaId);
-    if (error) {
-      setSaving(false);
-      toast.error(tPersonas("saveFailed"), { description: error.message });
-      return false;
+    if (isDirty(draft)) {
+      const { error } = await supabase.from(TABLE.PERSONAS).update(draft.patch).eq("id", personaId);
+      if (error) {
+        setSaving(false);
+        toast.error(tPersonas("saveFailed"), { description: error.message });
+        return false;
+      }
+    }
+    if (hasOps(sectionOps)) {
+      const { error } = await applySectionOps(supabase, personaId, sectionOps);
+      if (error) {
+        setSaving(false);
+        toast.error(tPersonas("saveFailed"), { description: error });
+        return false;
+      }
+      // Les identifiants provisoires n'ont plus cours : on repart de la base.
+      const frais = await fetchPersonaSections(supabase, personaId);
+      setSections(frais);
+      setSavedSections(frais);
     }
     if (draft.orphans.length > 0) await supabase.storage.from("personas").remove(draft.orphans);
     setDraft(EMPTY_DRAFT);
@@ -1108,6 +1131,7 @@ export function PersonaEditSheet({
   async function discard() {
     if (draft.uploaded.length > 0) await supabase.storage.from("personas").remove(draft.uploaded);
     setDraft(EMPTY_DRAFT);
+    setSections(savedSections);
   }
 
   function requestClose(next: boolean) {
@@ -1165,6 +1189,7 @@ export function PersonaEditSheet({
               initialFaceclaim={initialFaceclaim}
               onFaceclaimSaved={setFaceclaim}
               onPatch={patchDraft}
+              deferred
               initialMaritalStatus={initialMaritalStatus}
               initialSpousePersonaId={initialSpousePersonaId}
               initialNarrativeStatus={initialNarrativeStatus}

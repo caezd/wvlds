@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/client";
+import { deferredWriter } from "@/lib/deferredWriter";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
@@ -52,12 +53,17 @@ type SectionFieldsEditorProps = {
   restrictSkills?: boolean;
   /** Édition de la fiche modèle d'un monde : permet de verrouiller des champs. */
   isTemplate?: boolean;
+  /** La fiche enregistre sur demande : ici, on ne touche pas à la base. */
+  deferred?: boolean;
 };
 
-export function SectionFieldsEditor({ sectionId, personaId, userId, initialFields, onFieldsChange, worldId, restrictInventory, restrictSkills, isTemplate }: SectionFieldsEditorProps) {
+export function SectionFieldsEditor({ sectionId, personaId, userId, initialFields, onFieldsChange, worldId, restrictInventory, restrictSkills, isTemplate, deferred }: SectionFieldsEditorProps) {
   const tCommon = useTranslations("common");
   const tPersonas = useTranslations("personas");
-  const supabase = createClient();
+  const client = createClient();
+  // En différé, les écritures partent dans le vide : l'arbre en mémoire fait
+  // foi, et « Enregistrer » en tirera les vraies (voir lib/personaSectionsDiff).
+  const supabase = deferred ? (deferredWriter() as unknown as ReturnType<typeof createClient>) : client;
   const flags = useFeatureFlags();
   const fieldsEnabled = flags.persona_fields;
   const persona_field_title = fieldsEnabled && flags.persona_field_title;
@@ -437,7 +443,7 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
       const paths = ((dbField?.data?.images ?? []) as PersonaGridImage[])
         .map((img) => img.id)
         .filter(Boolean);
-      if (paths.length) await supabase.storage.from("personas").remove(paths);
+      if (paths.length) await client.storage.from("personas").remove(paths);
     }
     const { error } = await supabase.from("persona_section_fields").delete().eq("id", fieldId);
     if (error) { setErrorMessage(error.message ?? "Erreur suppression."); return; }
@@ -648,7 +654,9 @@ export function SectionFieldsEditor({ sectionId, personaId, userId, initialField
                     <input
                       defaultValue={field.data?.text ?? ""}
                       placeholder="Titre…"
-                      onBlur={(e) => saveFieldValue(field.id, "text", e.target.value)}
+                      // À la frappe, pas à la sortie : le bouton « Enregistrer »
+                      // doit s'allumer dès la première lettre.
+                      onChange={(e) => saveFieldValue(field.id, "text", e.target.value)}
                       className="w-full bg-transparent text-base font-semibold pr-24 outline-none placeholder:text-muted-foreground/40 focus:ring-0 border-none"
                     />
                   )}
