@@ -336,27 +336,31 @@ export function WorldCommunityTab({ world, form, persistField, onUpdated }: Prop
                                             </button>
                                         </div>
                                     </div>
-                                </div>
 
-                                {/* -- Sécurité ---------------------------------- */}
-                                <div className="space-y-5 pt-2">
-                                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("tabSecurity")}</p>
-                                    <div className="flex items-start justify-between gap-4">
+                                    {/* -- Sécurité ----------------------------- */}
+                                    {/* Même registre que Visibilité, Tags et Type d'avatars : un titre
+                                        en clair, l'aide dessous, la commande à droite. */}
+                                    <div className="space-y-3">
                                         <div className="space-y-0.5">
-                                            <p className="flex items-center gap-1.5 text-sm font-medium">
-                                                <ShieldAlert className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                                                {tSettings("ageRestricted")}
-                                            </p>
-                                            <p className="text-xs text-muted-foreground leading-snug">
-                                                {tSettings("ageRestrictedHelp")}
-                                            </p>
+                                            <p className="text-sm font-medium">{t("tabSecurity")}</p>
                                         </div>
-                                        <Switch
-                                            checked={ageRestricted}
-                                            disabled={togglingAgeRestricted}
-                                            onCheckedChange={v => void handleAgeRestrictedToggle(v)}
-                                            className="shrink-0 mt-0.5"
-                                        />
+                                        <div className="flex items-start justify-between gap-4">
+                                            <div className="space-y-0.5">
+                                                <p className="flex items-center gap-1.5 text-sm">
+                                                    <ShieldAlert className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                                                    {tSettings("ageRestricted")}
+                                                </p>
+                                                <p className="text-xs text-muted-foreground leading-snug">
+                                                    {tSettings("ageRestrictedHelp")}
+                                                </p>
+                                            </div>
+                                            <Switch
+                                                checked={ageRestricted}
+                                                disabled={togglingAgeRestricted}
+                                                onCheckedChange={v => void handleAgeRestrictedToggle(v)}
+                                                className="shrink-0 mt-0.5"
+                                            />
+                                        </div>
                                     </div>
                                 </div>
                             </TabsContent>
