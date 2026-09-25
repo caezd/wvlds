@@ -58,9 +58,12 @@ describe("TimelineSettings — comprendre ce que l'on règle", () => {
 
   it("le calendrier dit la longueur de l'année qu'il compose", () => {
     render(<Harnais />);
-    // Le mock de next-intl ne résout pas les pluriels ICU : on s'en tient aux
-    // deux nombres, que le vrai rendu accorde (« 2 mois · 58 jours par an »).
-    expect(screen.getByTestId("timeline-year-length")).toHaveTextContent(/2 .*58 /);
+    expect(screen.getByTestId("timeline-year-length")).toHaveTextContent("2 mois · 58 jours par an");
+  });
+
+  it("l'accord suit les nombres : un mois d'un jour s'écrit au singulier", () => {
+    render(<Harnais initial={{ ...CONFIG, month_names: ["Unique"], days_per_month: [1], current_month: 0 }} />);
+    expect(screen.getByTestId("timeline-year-length")).toHaveTextContent("1 mois · 1 jour par an");
   });
 
   it("sans mois, il le dit plutôt que de laisser une liste vide", () => {
