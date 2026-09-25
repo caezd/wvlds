@@ -70,7 +70,11 @@ describe("WorldChatComposer — date exigée à la création", () => {
     render(<WorldChatComposer worldId="w1" timelineConfig={{ ...CONFIG, require_date: true }} />);
     await user.click(screen.getByText(/Nouveau jeu/i));
 
+    // Le titre du dialogue parle de jeu, et la ligne de date se contente d'une
+    // icône : son nom reste lisible par les lecteurs d'écran.
+    expect(screen.getByRole("heading", { name: "Nouveau jeu" })).toBeInTheDocument();
     const section = await screen.findByRole("region", { name: "Date dans la chronologie" });
+    expect(section).not.toHaveTextContent("Date dans la chronologie");
     expect(within(section).getByLabelText("Mois")).toHaveDisplayValue("Dégel");
 
     await user.click(screen.getByRole("button", { name: "créer (double)" }));

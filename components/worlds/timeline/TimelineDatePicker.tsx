@@ -7,6 +7,7 @@ import { Lock } from "lucide-react";
 import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
 import { clampTimelineDate, currentPeriodLock, daysInMonth, formatTimelineLabel } from "@/lib/worldTimeline";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
 /**
  * Le choix de la date d'un salon, sur une seule ligne : jour, mois, année.
@@ -26,11 +27,15 @@ export function TimelineDatePicker({
   value,
   onCommit,
   disabled,
+  dense,
 }: {
   config: WorldTimelineConfig;
   value: WorldTimelineDate;
   onCommit: (date: WorldTimelineDate) => void;
   disabled?: boolean;
+  /** Dans un cadre déjà bordé (la ligne sous le titre d'un salon) : plus bas,
+   * et la période figée sans second cadre. */
+  dense?: boolean;
 }) {
   const t = useTranslations("worlds.timelinePicker");
   const lock = currentPeriodLock(config);
@@ -51,6 +56,7 @@ export function TimelineDatePicker({
   const joursMax = date.month === null ? null : daysInMonth(config, date.month);
   const periode = formatTimelineLabel(config, { year: config.current_year, month: lock.month, day: null });
   const annee = config.year_label || t("year");
+  const hauteur = dense ? "h-7" : "h-8";
 
   return (
     <div className="flex flex-wrap items-center gap-2" data-testid="timeline-date-picker">
@@ -62,7 +68,7 @@ export function TimelineDatePicker({
           max={joursMax}
           aria-label={t("day")}
           placeholder={t("dayPlaceholder", { max: joursMax })}
-          className="h-8 w-20 text-sm"
+          className={cn(hauteur, "w-20 text-sm")}
           value={jourSaisi}
           disabled={disabled}
           onChange={(e) => setJourSaisi(e.target.value)}
@@ -84,7 +90,7 @@ export function TimelineDatePicker({
           aria-label={t("month")}
           value={date.month ?? ""}
           disabled={disabled}
-          className="h-8 min-w-28 flex-1 rounded-lg border border-input bg-transparent px-2 text-sm"
+          className={cn(hauteur, "min-w-28 flex-1 rounded-lg border border-input bg-transparent px-2 text-sm")}
           onChange={(e) => commit({ month: e.target.value === "" ? null : Number(e.target.value), day: null })}
         >
           <option value="">{t("noMonth")}</option>
@@ -97,7 +103,11 @@ export function TimelineDatePicker({
       {lock.year !== null ? (
         // La période imposée par le monde : lue, pas choisie.
         <p
-          className="flex h-8 items-center gap-1.5 rounded-lg border border-dashed border-border px-2.5 text-sm"
+          className={cn(
+            hauteur,
+            "flex items-center gap-1.5 text-sm",
+            !dense && "rounded-lg border border-dashed border-border px-2.5",
+          )}
           title={t("lockedHint", { period: periode })}
           data-testid="timeline-period-lock"
         >
@@ -111,7 +121,7 @@ export function TimelineDatePicker({
           <Input
             type="number"
             aria-label={t("yearOf", { label: annee })}
-            className="h-8 w-24 text-sm"
+            className={cn(hauteur, "w-24 text-sm")}
             value={anneeSaisie}
             disabled={disabled}
             onChange={(e) => setAnneeSaisie(e.target.value)}

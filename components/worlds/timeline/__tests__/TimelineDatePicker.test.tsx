@@ -79,6 +79,19 @@ describe("TimelineDatePicker", () => {
     expect(screen.queryByLabelText(/Numéro de l'année/)).toBeNull();
   });
 
+  it("compact : contrôles plus bas et période figée sans second cadre", () => {
+    render(
+      <TimelineDatePicker
+        dense
+        config={{ ...CONFIG, restrict_to_current: true }}
+        value={{ year: 1, month: 1, day: 2 }}
+        onCommit={vi.fn()}
+      />,
+    );
+    expect(screen.getByLabelText("Jour").className).toContain("h-7");
+    expect(screen.getByTestId("timeline-period-lock").className).not.toContain("border-dashed");
+  });
+
   it("tout tient sur une ligne : jour, mois, année", () => {
     render(<Harnais initial={{ year: 3, month: 1, day: 5 }} />);
     const ligne = screen.getByTestId("timeline-date-picker");

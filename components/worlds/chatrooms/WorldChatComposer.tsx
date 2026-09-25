@@ -282,14 +282,12 @@ export function WorldChatComposer({
   const dateRow = dateRequired && timelineConfig && timelineDate ? (
     <section
       aria-label={t("composer.dateSection")}
-      className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-border-soft px-3 py-2"
+      title={t("composer.dateSection")}
+      className="flex items-center gap-2 rounded-lg border border-border-soft py-1 pl-2.5 pr-1"
     >
-      <span className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground">
-        <CalendarDays className="h-3.5 w-3.5" aria-hidden />
-        {t("composer.dateSection")}
-      </span>
+      <CalendarDays className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
       <div className="min-w-0 flex-1">
-        <TimelineDatePicker config={timelineConfig} value={timelineDate} onCommit={setTimelineDate} />
+        <TimelineDatePicker dense config={timelineConfig} value={timelineDate} onCommit={setTimelineDate} />
       </div>
     </section>
   ) : null;
