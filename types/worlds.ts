@@ -8,6 +8,11 @@ export interface WorldTimelineConfig {
    *  (tableau absent, ou plus court que `month_names`) retombe sur
    *  DEFAULT_DAYS_PER_MONTH, voir daysInMonth() dans lib/worldTimeline.ts. */
   days_per_month?: number[];
+  /** Les salons ne se situent que dans la période en cours : l'année
+   *  courante, et le mois courant s'il y en a un. Voir `currentPeriodLock`. */
+  restrict_to_current?: boolean;
+  /** Un salon ne se crée pas sans date : le choix paraît sous son titre. */
+  require_date?: boolean;
 }
 
 export interface WorldTimelineDate {

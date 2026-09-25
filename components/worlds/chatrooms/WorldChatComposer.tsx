@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { generate } from "boring-name-generator";
-import { ChevronDown, Plus, Shuffle, Tag, X } from "lucide-react";
+import { ChevronDown, Plus, Shuffle, Tag, X, CalendarDays } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
@@ -49,6 +49,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CategoryAvatar } from "@/components/worlds/catalogue/CategoryAvatar";
+import { TimelineDatePicker } from "@/components/worlds/timeline/TimelineDatePicker";
+import { clampTimelineDate } from "@/lib/worldTimeline";
 
 type MapPinOption = { id: string; title: string; color: string };
 type CategoryOption = { id: string; title: string; banner_url: string | null; icon_url: string | null };
@@ -125,9 +127,20 @@ export function WorldChatComposer({
     })();
   }, [worldId]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Le monde exige une date : elle s'ouvre sur la période en cours, sous le
+  // titre, plutôt que cachée dans les options du compositeur.
+  const dateRequired = !!timelineConfig?.require_date;
+
   function openDialog() {
     setTitle(randomTitle());
     setHasContent(false);
+    if (dateRequired && timelineConfig) {
+      setTimelineDate((d) => d ?? clampTimelineDate(timelineConfig, {
+        year: timelineConfig.current_year,
+        month: timelineConfig.current_month,
+        day: null,
+      }));
+    }
     setOpen(true);
   }
 
@@ -138,6 +151,9 @@ export function WorldChatComposer({
     const url = new URL(window.location.href);
     url.searchParams.delete("play");
     window.history.replaceState(null, "", url.toString());
+    // Une ouverture par lieu reçu dans l'adresse, pas une par rendu :
+    // `openDialog` change à chaque rendu et n'a pas à relancer l'effet.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialMapPinId]);
 
   function requestClose() {
@@ -165,6 +181,11 @@ export function WorldChatComposer({
   async function resolveChat(): Promise<{ chatId: string } | null> {
     if (!userId) {
       toast.error(t("composer.errorNotConnected"));
+      return null;
+    }
+
+    if (dateRequired && timelineDate === null) {
+      toast.error(t("composer.dateRequired"));
       return null;
     }
 
@@ -257,6 +278,22 @@ export function WorldChatComposer({
     </div>
   );
 
+  // La date, sous le titre, quand le monde n'en laisse pas créer sans.
+  const dateRow = dateRequired && timelineConfig && timelineDate ? (
+    <section
+      aria-label={t("composer.dateSection")}
+      className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-border-soft px-3 py-2"
+    >
+      <span className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground">
+        <CalendarDays className="h-3.5 w-3.5" aria-hidden />
+        {t("composer.dateSection")}
+      </span>
+      <div className="min-w-0 flex-1">
+        <TimelineDatePicker config={timelineConfig} value={timelineDate} onCommit={setTimelineDate} />
+      </div>
+    </section>
+  ) : null;
+
   // onInput remonte depuis le contenteditable du composer.
   const composerBlock = (
     <div onInput={() => setHasContent(true)} className={isMobile ? "h-full" : undefined}>
@@ -305,8 +342,9 @@ export function WorldChatComposer({
             <DrawerTitle className="sr-only">{t("composer.dialogTitle")}</DrawerTitle>
             <DrawerDescription className="sr-only">{t("composer.placeholder")}</DrawerDescription>
             <div className="flex h-full min-h-0 flex-col gap-2">
-              <div className="shrink-0 rounded-3xl border border-border-soft bg-background p-2.5">
+              <div className="shrink-0 space-y-2 rounded-3xl border border-border-soft bg-background p-2.5">
                 {titleRow}
+                {dateRow}
               </div>
               <div className="flex-1 min-h-0">
                 {composerBlock}
@@ -323,6 +361,7 @@ export function WorldChatComposer({
               <DialogDescription className="sr-only">{t("composer.placeholder")}</DialogDescription>
             </DialogHeader>
             {titleRow}
+            {dateRow}
             {composerBlock}
           </DialogContent>
         </Dialog>

@@ -77,3 +77,31 @@ export function isWithinTimeline(
   if (until && compareTimelineDates(date, until) > 0) return false;
   return true;
 }
+
+/**
+ * Ce que la « période en cours » fige d'une date de salon.
+ *
+ * Restreinte, la chronologie ne laisse situer un salon que dans l'année
+ * courante — et dans le mois courant, si le récit en a un. Sans restriction,
+ * rien n'est figé.
+ */
+export function currentPeriodLock(config: WorldTimelineConfig): { year: number | null; month: number | null } {
+  if (!config.restrict_to_current) return { year: null, month: null };
+  const month =
+    config.current_month !== null && config.current_month < config.month_names.length ? config.current_month : null;
+  return { year: config.current_year, month };
+}
+
+/**
+ * Ramène une date dans ce que permet le monde : la période en cours quand
+ * elle est imposée, un mois qui existe, un jour qui tient dans son mois.
+ */
+export function clampTimelineDate(config: WorldTimelineConfig, date: WorldTimelineDate): WorldTimelineDate {
+  const lock = currentPeriodLock(config);
+  const year = lock.year ?? date.year;
+  let month = lock.month ?? date.month;
+  if (month !== null && (month < 0 || month >= config.month_names.length)) month = null;
+  let day = month === null ? null : date.day;
+  if (day !== null) day = Math.min(Math.max(1, Math.trunc(day)), daysInMonth(config, month!));
+  return { year, month, day };
+}

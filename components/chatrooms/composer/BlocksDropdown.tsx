@@ -35,7 +35,8 @@ import {
     DrawerHeader,
 } from "@/components/ui/drawer";
 import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
-import { formatTimelineLabel } from "@/lib/worldTimeline";
+import { clampTimelineDate, formatTimelineLabel } from "@/lib/worldTimeline";
+import { TimelineDatePicker } from "@/components/worlds/timeline/TimelineDatePicker";
 
 // Les sept dialogues de blocs ne sont montés qu'à la demande (clic sur l'outil
 // correspondant), mais l'import statique les embarquait dans le bundle de tout
@@ -269,7 +270,7 @@ export function BlocksDropdown({
             checked: !!timelineDate,
             onActivate: () => {
                 setOpen(false);
-                setDraftDate(timelineDate ?? { year: worldTimelineConfig.current_year, month: worldTimelineConfig.current_month ?? null, day: null });
+                setDraftDate(clampTimelineDate(worldTimelineConfig, timelineDate ?? { year: worldTimelineConfig.current_year, month: worldTimelineConfig.current_month ?? null, day: null }));
                 setActiveTool("timeline");
             },
         }] : []),
@@ -621,48 +622,12 @@ export function BlocksDropdown({
                         <DialogHeader>
                             <DialogTitle>{t("timelineTitle")}</DialogTitle>
                         </DialogHeader>
-                        <div className="space-y-4 py-2">
-                            <div className="flex items-center gap-3">
-                                <label className="w-24 shrink-0 text-sm text-muted-foreground">
-                                    {worldTimelineConfig.year_label}
-                                    {worldTimelineConfig.era_name && <span className="ml-1 text-muted-foreground/60">{worldTimelineConfig.era_name}</span>}
-                                </label>
-                                <input
-                                    type="number"
-                                    className="h-8 w-28 rounded-md border border-input bg-background px-2 text-sm"
-                                    value={draftDate.year}
-                                    onChange={(e) => setDraftDate((d) => ({ ...d, year: parseInt(e.target.value, 10) || 1 }))}
-                                />
-                            </div>
-                            {worldTimelineConfig.month_names.length > 0 && (
-                                <div className="flex items-center gap-3">
-                                    <label className="w-24 shrink-0 text-sm text-muted-foreground">{t("month")}</label>
-                                    <select
-                                        className="h-8 flex-1 rounded-md border border-input bg-background px-2 text-sm"
-                                        value={draftDate.month ?? ""}
-                                        onChange={(e) => setDraftDate((d) => ({ ...d, month: e.target.value === "" ? null : Number(e.target.value), day: null }))}
-                                    >
-                                        <option value="">—</option>
-                                        {worldTimelineConfig.month_names.map((m, i) => (
-                                            <option key={i} value={i}>{m}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            )}
-                            {draftDate.month !== null && (
-                                <div className="flex items-center gap-3">
-                                    <label className="w-24 shrink-0 text-sm text-muted-foreground">{t("day")}</label>
-                                    <input
-                                        type="number"
-                                        min={1}
-                                        max={31}
-                                        placeholder="—"
-                                        className="h-8 w-28 rounded-md border border-input bg-background px-2 text-sm"
-                                        value={draftDate.day ?? ""}
-                                        onChange={(e) => setDraftDate((d) => ({ ...d, day: e.target.value ? Math.min(31, Math.max(1, parseInt(e.target.value, 10))) : null }))}
-                                    />
-                                </div>
-                            )}
+                        <div className="py-2">
+                            <TimelineDatePicker
+                                config={worldTimelineConfig}
+                                value={draftDate}
+                                onCommit={setDraftDate}
+                            />
                         </div>
                         <DialogFooter>
                             {timelineDate && (

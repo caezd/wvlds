@@ -85,4 +85,23 @@ describe("TimelineSettings — comprendre ce que l'on règle", () => {
     expect(onPersist).toHaveBeenCalledWith({ month_names: ["Dégel"], days_per_month: [28], current_month: 0 });
     expect(within(screen.getByTestId("timeline-preview")).getByText("Dégel, an 342 des Cendres")).toBeInTheDocument();
   });
+
+  it("la restriction nomme la période qu'elle imposerait, et s'enregistre", async () => {
+    const onPersist = vi.fn();
+    const user = userEvent.setup();
+    render(<Harnais onPersist={onPersist} />);
+
+    expect(screen.getByText(/ne pourra être situé qu'en Dégel, an 342 des Cendres/)).toBeInTheDocument();
+    await user.click(screen.getByRole("switch", { name: "Restreindre les salons à la période en cours" }));
+    expect(onPersist).toHaveBeenCalledWith({ restrict_to_current: true });
+  });
+
+  it("exiger une date à la création s'enregistre dans la chronologie", async () => {
+    const onPersist = vi.fn();
+    const user = userEvent.setup();
+    render(<Harnais onPersist={onPersist} />);
+
+    await user.click(screen.getByRole("switch", { name: "Exiger une date à la création d'un salon" }));
+    expect(onPersist).toHaveBeenCalledWith({ require_date: true });
+  });
 });

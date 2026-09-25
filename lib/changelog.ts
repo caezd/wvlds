@@ -19,6 +19,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Monde",
+    text: "Chronologie, deux nouvelles options sous « Où en est le récit » : restreindre les salons à la période en cours (l’année actuelle, et le mois s’il y en a un), et exiger une date à la création d’un salon — le choix paraît alors juste sous le titre, pré-rempli avec la date du récit. Le choix de la date d’un salon tient sur une ligne (jour, mois, année) et suit la longueur de chaque mois ; la période imposée s’y lit en clair, avec un cadenas.",
+  },
+  {
+    date: "2026-09",
+    tag: "Monde",
     text: "Réglages, Fonctions : la chronologie montre en tête la date actuelle du récit telle que les salons l’afficheront, et elle bouge avec la frappe. Trois sous-options disent ce qu’elles y apportent — le format des dates, où en est le récit, les mois du calendrier (avec la longueur de l’année qu’ils composent). « Utiliser les mois réels » reste offert même quand des mois existent.",
   },
   {

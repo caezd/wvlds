@@ -445,7 +445,9 @@
       "discardConfirm": "Cerrar de todos modos",
       "discardCancel": "Seguir escribiendo",
       "categoryPlaceholder": "Categoría",
-      "categoryNone": "Ninguna"
+      "categoryNone": "Ninguna",
+      "dateSection": "Fecha en la cronología",
+      "dateRequired": "Este mundo exige una fecha para cada sala nueva."
     },
     "home": {
       "addWidget": "Añadir un widget",
@@ -788,7 +790,7 @@
       "wiki": "Wiki",
       "wikiLinkName": "Nombre del enlace",
       "timelineHelp": "Permite situar cada conversación en un calendario ficticio.",
-      "timelinePreviewLabel": "Fecha actual del relato",
+      "timelinePreviewLabel": "Fecha actual del mundo",
       "timelinePreviewHelp": "Así mostrarán las salas su fecha. Se compone de los tres ajustes siguientes.",
       "timelineFormat": "Formato de las fechas",
       "timelineFormatHelp": "La palabra delante del número del año, y lo que le sigue.",
@@ -796,6 +798,10 @@
       "eraHint": "Opcional. Ej. de las Cenizas, tras la Caída",
       "timelineNow": "En qué punto está el relato",
       "timelineNowHelp": "La fecha propuesta por defecto al situar una sala; el calendario de la portada se abre en ella. Hágala avanzar con la historia.",
+      "restrictToCurrent": "Limitar las salas al periodo en curso",
+      "restrictToCurrentHelp": "Una sala solo podrá situarse en {period} — el año actual, y el mes actual si hay uno. Útil para mantener todas las escenas en el mismo momento del relato.",
+      "requireDate": "Exigir una fecha al crear una sala",
+      "requireDateHelp": "La elección de la fecha aparece justo debajo del título de la sala, rellenada con la fecha actual del relato, y no se puede crear una sala sin ella.",
       "timelineCalendarHelp": "El orden de los meses y su duración. El número de días limita las fechas que se pueden elegir.",
       "noMonthsHint": "Sin meses, una fecha solo lleva el año.",
       "yearLength": "{months, plural, one {# mes} other {# meses}} · {days, plural, one {# día} other {# días}} por año",
@@ -824,6 +830,15 @@
       "nameMin": "Al menos {min} caracteres",
       "maxChars": "{max} caracteres máx.",
       "colorInvalid": "Color hex válido, p. ej. #1f2937"
+    },
+    "timelinePicker": {
+      "year": "Año",
+      "month": "Mes",
+      "day": "Día",
+      "noMonth": "Ningún mes",
+      "lockedHint": "El mundo limita las salas al periodo en curso: {period}.",
+      "dayPlaceholder": "Día (1–{max})",
+      "yearOf": "Número del año ({label})"
     }
   },
   "auth": {
@@ -1390,6 +1405,7 @@
     "settingsName": "Nombre de la sala",
     "settingsNamePlaceholder": "Nombre de la sala…",
     "settingsTimeline": "Ubicar en la línea de tiempo",
+    "settingsTimelineHelp": "Asocia esta conversación a una fecha del calendario del mundo.",
     "settingsMonth": "Mes",
     "settingsDay": "Día",
     "settingsNoMonth": "Sin mes",

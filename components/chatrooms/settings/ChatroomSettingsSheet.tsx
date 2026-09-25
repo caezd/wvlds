@@ -8,6 +8,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { TimelineDatePicker } from "@/components/worlds/timeline/TimelineDatePicker";
+import { clampTimelineDate } from "@/lib/worldTimeline";
 import { toWebP } from "@/lib/imageUtils";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -21,12 +23,6 @@ import {
 } from "@/components/ui/drawer";
 import { SideSheetContent } from "@/components/ui/side-sheet";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
   Form,
   FormControl,
   FormField,
@@ -37,7 +33,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ImagePickerCropField } from "@/components/ui/image-crop-picker";
-import { Loader2, Settings, ChevronDown } from "lucide-react";
+import { Loader2, Settings } from "lucide-react";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Switch } from "@/components/ui/switch";
@@ -385,7 +381,7 @@ export default function ChatroomSettingsSheet({
                     <div>
                       <p className="text-sm font-medium">{t("settingsTimeline")}</p>
                       <p className="text-xs text-muted-foreground leading-snug">
-                        Associe cette conversation à une date fictive.
+                        {t("settingsTimelineHelp")}
                       </p>
                     </div>
                     <Switch
@@ -393,7 +389,7 @@ export default function ChatroomSettingsSheet({
                       disabled={savingTimeline}
                       onCheckedChange={(v) => {
                         if (v) {
-                          void persistTimeline({ year: worldTimelineConfig.current_year, month: worldTimelineConfig.current_month, day: null });
+                          void persistTimeline(clampTimelineDate(worldTimelineConfig, { year: worldTimelineConfig.current_year, month: worldTimelineConfig.current_month, day: null }));
                         } else {
                           void persistTimeline(null);
                         }
@@ -402,74 +398,13 @@ export default function ChatroomSettingsSheet({
                   </div>
 
                   {timelineDate !== null && (
-                    <div className="ml-1 space-y-3 rounded-xl border border-border-soft bg-muted/20 p-3">
-                      {/* Année */}
-                      <div className="flex items-center gap-3">
-                        <label className="w-20 shrink-0 text-xs text-muted-foreground">
-                          {worldTimelineConfig.year_label || "Année"}
-                          {worldTimelineConfig.era_name && (
-                            <span className="ml-1 text-muted-foreground/60">{worldTimelineConfig.era_name}</span>
-                          )}
-                        </label>
-                        <Input
-                          type="number"
-                          className="h-8 flex-1 min-w-0 text-sm"
-                          value={timelineDate.year}
-                          onChange={(e) => setTimelineDate({ ...timelineDate, year: Number(e.target.value) })}
-                          onBlur={(e) => {
-                            const y = parseInt(e.target.value, 10);
-                            if (!isNaN(y)) void persistTimeline({ ...timelineDate, year: y });
-                          }}
-                        />
-                      </div>
-
-                      {/* Mois */}
-                      {worldTimelineConfig.month_names.length > 0 && (
-                        <div className="flex items-center gap-3">
-                          <label className="w-20 shrink-0 text-xs text-muted-foreground">{t("settingsMonth")}</label>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button type="button" variant="outline" size="sm" className="h-8 flex-1 min-w-0 justify-between text-sm" disabled={savingTimeline}>
-                                {timelineDate.month !== null && worldTimelineConfig.month_names[timelineDate.month]
-                                  ? worldTimelineConfig.month_names[timelineDate.month]
-                                  : <span className="text-muted-foreground">—</span>}
-                                <ChevronDown className="ml-1 h-3.5 w-3.5 text-muted-foreground" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="start">
-                              <DropdownMenuItem onClick={() => void persistTimeline({ ...timelineDate, month: null, day: null })}>
-                                <span className="text-muted-foreground">{t("settingsNoMonth")}</span>
-                              </DropdownMenuItem>
-                              {worldTimelineConfig.month_names.map((name, idx) => (
-                                <DropdownMenuItem key={idx} onClick={() => void persistTimeline({ ...timelineDate, month: idx })}>
-                                  {name}
-                                </DropdownMenuItem>
-                              ))}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                      )}
-
-                      {/* Jour */}
-                      {timelineDate.month !== null && (
-                        <div className="flex items-center gap-3">
-                          <label className="w-20 shrink-0 text-xs text-muted-foreground">{t("settingsDay")}</label>
-                          <Input
-                            type="number"
-                            min={1}
-                            max={31}
-                            placeholder="—"
-                            className="h-8 flex-1 min-w-0 text-sm"
-                            value={timelineDate.day ?? ""}
-                            onChange={(e) => setTimelineDate({ ...timelineDate, day: e.target.value ? Number(e.target.value) : null })}
-                            onBlur={(e) => {
-                              const raw = parseInt(e.target.value, 10);
-                              const day = isNaN(raw) ? null : Math.min(31, Math.max(1, raw));
-                              void persistTimeline({ ...timelineDate, day });
-                            }}
-                          />
-                        </div>
-                      )}
+                    <div className="ml-1 rounded-xl border border-border-soft bg-muted/20 p-3">
+                      <TimelineDatePicker
+                        config={worldTimelineConfig}
+                        value={timelineDate}
+                        disabled={savingTimeline}
+                        onCommit={(date) => void persistTimeline(date)}
+                      />
                     </div>
                   )}
                 </div>

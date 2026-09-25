@@ -445,7 +445,9 @@
       "discardConfirm": "Close anyway",
       "discardCancel": "Continue writing",
       "categoryPlaceholder": "Category",
-      "categoryNone": "None"
+      "categoryNone": "None",
+      "dateSection": "Date on the timeline",
+      "dateRequired": "This world requires a date for every new chatroom."
     },
     "home": {
       "addWidget": "Add a widget",
@@ -788,7 +790,7 @@
       "wiki": "Wiki",
       "wikiLinkName": "Link name",
       "timelineHelp": "Places each conversation in a fictional calendar.",
-      "timelinePreviewLabel": "Current story date",
+      "timelinePreviewLabel": "Current world date",
       "timelinePreviewHelp": "This is how chatrooms will display their date. It's built from the three settings below.",
       "timelineFormat": "Date format",
       "timelineFormatHelp": "The word placed before the year number, and what follows it.",
@@ -796,6 +798,10 @@
       "eraHint": "Optional. E.g. of Ashes, after the Fall",
       "timelineNow": "Where the story stands",
       "timelineNowHelp": "The date suggested by default when placing a chatroom; the home calendar opens on it. Move it forward as the story goes.",
+      "restrictToCurrent": "Restrict chatrooms to the current period",
+      "restrictToCurrentHelp": "A chatroom can only be placed in {period} — the current year, and the current month if one is set. Handy to keep every scene at the same point of the story.",
+      "requireDate": "Require a date when creating a chatroom",
+      "requireDateHelp": "The date picker shows right under the chatroom title, pre-filled with the current story date, and a chatroom can't be created without one.",
       "timelineCalendarHelp": "The order of the months and their length. The number of days bounds the dates that can be picked.",
       "noMonthsHint": "Without months, a date only carries the year.",
       "yearLength": "{months, plural, one {# month} other {# months}} · {days, plural, one {# day} other {# days}} per year",
@@ -824,6 +830,15 @@
       "nameMin": "At least {min} characters",
       "maxChars": "{max} characters max",
       "colorInvalid": "Valid hex colour, e.g. #1f2937"
+    },
+    "timelinePicker": {
+      "year": "Year",
+      "month": "Month",
+      "day": "Day",
+      "noMonth": "No month",
+      "lockedHint": "This world restricts chatrooms to the current period: {period}.",
+      "dayPlaceholder": "Day (1–{max})",
+      "yearOf": "Year number ({label})"
     }
   },
   "auth": {
@@ -1390,6 +1405,7 @@
     "settingsName": "Room name",
     "settingsNamePlaceholder": "Room name…",
     "settingsTimeline": "Place on timeline",
+    "settingsTimelineHelp": "Ties this conversation to a date in the world's calendar.",
     "settingsMonth": "Month",
     "settingsDay": "Day",
     "settingsNoMonth": "No month",

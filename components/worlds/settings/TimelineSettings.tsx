@@ -16,6 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 
 /**
  * Les réglages d'une chronologie activée.
@@ -48,6 +49,12 @@ export function TimelineSettings({
     day: null,
   });
   const nbMois = config.month_names.length;
+  // La période que la restriction imposerait : l'année, et le mois s'il y en a un.
+  const periode = formatTimelineLabel(config, {
+    year: config.current_year,
+    month: config.current_month !== null && config.current_month < nbMois ? config.current_month : null,
+    day: null,
+  });
   const joursParAn = config.month_names.reduce((total, _, i) => total + daysInMonth(config, i), 0);
 
   function ajouterMois() {
@@ -145,6 +152,36 @@ export function TimelineSettings({
             </select>
           </div>
         </div>
+
+        {/* La période en cours : là où les salons peuvent se situer. */}
+        <label className="flex items-start justify-between gap-4 border-t border-border-soft pt-3">
+          <span className="space-y-0.5">
+            <span className="block text-sm">{tSettings("restrictToCurrent")}</span>
+            <span className="block text-xs text-muted-foreground leading-snug">
+              {tSettings("restrictToCurrentHelp", { period: periode })}
+            </span>
+          </span>
+          <Switch
+            checked={!!config.restrict_to_current}
+            onCheckedChange={(v) => onPersist({ restrict_to_current: v })}
+            aria-label={tSettings("restrictToCurrent")}
+            className="mt-0.5 shrink-0"
+          />
+        </label>
+
+        {/* Dater chaque salon dès sa création. */}
+        <label className="flex items-start justify-between gap-4 border-t border-border-soft pt-3">
+          <span className="space-y-0.5">
+            <span className="block text-sm">{tSettings("requireDate")}</span>
+            <span className="block text-xs text-muted-foreground leading-snug">{tSettings("requireDateHelp")}</span>
+          </span>
+          <Switch
+            checked={!!config.require_date}
+            onCheckedChange={(v) => onPersist({ require_date: v })}
+            aria-label={tSettings("requireDate")}
+            className="mt-0.5 shrink-0"
+          />
+        </label>
       </SubOption>
 
       {/* ── 3. Le calendrier ── */}

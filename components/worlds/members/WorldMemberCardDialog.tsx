@@ -17,8 +17,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { TimezoneSelect, TIMEZONE_NONE } from "./TimezoneSelect";
 
-const NONE = "__none__";
+// Une seule valeur « vide » pour tous les choix du formulaire, fuseau compris.
+const NONE = TIMEZONE_NONE;
 const STATUSES: WorldMemberStatus[] = ["active", "paused", "away"];
 
 /** Bornes de l'interface, sous celles de la base (migration 177). */
@@ -190,19 +192,13 @@ export function WorldMemberCardForm({
             <div className="grid gap-1.5">
               <Label>{t("timezone")}</Label>
               <div className="flex gap-2">
-                <Select value={timezone} onValueChange={setTimezone}>
-                  <SelectTrigger aria-label={t("timezone")} className="min-w-0 flex-1">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-72">
-                    <SelectItem value={NONE}>{t("timezoneNone")}</SelectItem>
-                    {timezones.map((tz) => (
-                      <SelectItem key={tz} value={tz}>
-                        {tz.replace(/_/g, " ")}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <TimezoneSelect
+                  value={timezone}
+                  onChange={setTimezone}
+                  timezones={timezones}
+                  label={t("timezone")}
+                  noneLabel={t("timezoneNone")}
+                />
                 {browserTimezone() && (
                   <Button type="button" variant="outline" size="sm" onClick={() => setTimezone(browserTimezone() ?? NONE)}>
                     {t("timezoneUseMine")}

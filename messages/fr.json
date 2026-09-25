@@ -445,7 +445,9 @@
       "discardConfirm": "Fermer quand même",
       "discardCancel": "Continuer à écrire",
       "categoryPlaceholder": "Catégorie",
-      "categoryNone": "Aucune"
+      "categoryNone": "Aucune",
+      "dateSection": "Date dans la chronologie",
+      "dateRequired": "Ce monde exige une date pour chaque nouveau salon."
     },
     "home": {
       "addWidget": "Ajouter un widget",
@@ -788,7 +790,7 @@
       "wiki": "Wiki",
       "wikiLinkName": "Nom du lien",
       "timelineHelp": "Permet de situer chaque conversation dans un calendrier fictif.",
-      "timelinePreviewLabel": "Date actuelle du récit",
+      "timelinePreviewLabel": "Date actuelle du monde",
       "timelinePreviewHelp": "C'est ainsi que les salons afficheront leur date. Elle se compose des trois réglages ci-dessous.",
       "timelineFormat": "Format des dates",
       "timelineFormatHelp": "Le mot placé devant le numéro de l'année, et ce qui le suit.",
@@ -796,6 +798,10 @@
       "eraHint": "Facultatif. Ex. des Cendres, après la Chute",
       "timelineNow": "Où en est le récit",
       "timelineNowHelp": "La date proposée par défaut quand on situe un salon ; le calendrier de l'accueil s'ouvre sur elle. Faites-la avancer au fil de l'histoire.",
+      "restrictToCurrent": "Restreindre les salons à la période en cours",
+      "restrictToCurrentHelp": "Un salon ne pourra être situé qu'en {period} — l'année actuelle, et le mois actuel s'il est choisi. Pratique pour garder toutes les scènes au même moment du récit.",
+      "requireDate": "Exiger une date à la création d'un salon",
+      "requireDateHelp": "Le choix de la date paraît juste sous le titre du salon, pré-rempli avec la date actuelle du récit, et un salon ne se crée pas sans.",
       "timelineCalendarHelp": "L'ordre des mois et leur durée. Le nombre de jours borne les dates que l'on peut choisir.",
       "noMonthsHint": "Sans mois, une date ne porte que l'année.",
       "yearLength": "{months, plural, one {# mois} other {# mois}} · {days, plural, one {# jour} other {# jours}} par an",
@@ -824,6 +830,15 @@
       "nameMin": "Au moins {min} caractères",
       "maxChars": "{max} caractères max",
       "colorInvalid": "Couleur hex valide, p. ex. #1f2937"
+    },
+    "timelinePicker": {
+      "year": "Année",
+      "month": "Mois",
+      "day": "Jour",
+      "noMonth": "Aucun mois",
+      "lockedHint": "Le monde restreint les salons à la période en cours : {period}.",
+      "dayPlaceholder": "Jour (1–{max})",
+      "yearOf": "Numéro de l'année ({label})"
     }
   },
   "auth": {
@@ -1390,6 +1405,7 @@
     "settingsName": "Nom de la salle",
     "settingsNamePlaceholder": "Nom de la salle…",
     "settingsTimeline": "Situer dans la chronologie",
+    "settingsTimelineHelp": "Associe cette conversation à une date du calendrier du monde.",
     "settingsMonth": "Mois",
     "settingsDay": "Jour",
     "settingsNoMonth": "Aucun mois",
