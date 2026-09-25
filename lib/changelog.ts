@@ -19,7 +19,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Monde",
-    text: "Réglages, Fonctions : la chronologie s’organise en deux sous-options, l’écriture des dates et les mois du calendrier, du même dessin que celles de la fiche par défaut. « Utiliser les mois réels » reste offert même quand des mois existent, et le choix du mois courant ne disparaît plus quand aucun n’est défini.",
+    text: "Réglages, Fonctions : la chronologie montre en tête la date actuelle du récit telle que les salons l’afficheront, et elle bouge avec la frappe. Trois sous-options disent ce qu’elles y apportent — le format des dates, où en est le récit, les mois du calendrier (avec la longueur de l’année qu’ils composent). « Utiliser les mois réels » reste offert même quand des mois existent.",
   },
   {
     date: "2026-09",
