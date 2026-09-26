@@ -347,7 +347,7 @@ export function WorldChatComposer({
             <DrawerTitle className="sr-only">{t("composer.dialogTitle")}</DrawerTitle>
             <DrawerDescription className="sr-only">{t("composer.placeholder")}</DrawerDescription>
             <div className="flex h-full min-h-0 flex-col gap-2">
-              <div className="shrink-0 space-y-2 rounded-3xl border border-border-soft bg-background p-2.5">
+              <div className="shrink-0 space-y-2 rounded-lg border border-border-soft bg-background p-2.5">
                 {titleRow}
                 {dateRow}
               </div>
