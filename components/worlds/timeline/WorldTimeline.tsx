@@ -26,8 +26,9 @@ const RANGE_SPAN = 5;
  * La chronologie d'un monde, en frise verticale : à gauche les années en très
  * grands chiffres, au centre un fil, et pour chaque salon un anneau sur le
  * fil, son titre puis sa date. Un filet sépare les
- * années ; la date actuelle du monde barre la frise d'un trait rouge, à son
- * mois, et la frise s'ouvre sur son année. Au-delà de RANGE_SPAN années, des pastilles en tête
+ * années, un filet chaque mois (son nom en petit, à gauche du fil) ; la date
+ * actuelle du monde barre la frise d'un trait rouge plein, à son mois, et la
+ * frise s'ouvre sur son année. Au-delà de RANGE_SPAN années, des pastilles en tête
  * mènent à chaque tranche et suivent le défilement.
  */
 export function WorldTimeline({
@@ -186,7 +187,6 @@ export function WorldTimeline({
 
 // Le rouge de repère : l'accent du thème sombre ; en clair, où l'accent est
 // presque blanc, un rouge franc.
-const RED_TEXT = "text-red-600 dark:text-accent";
 const RED_BG = "bg-red-600 dark:bg-accent";
 
 function YearBlock({
@@ -210,7 +210,7 @@ function YearBlock({
       : section.rooms.findIndex((r) => (r.timeline_date!.month ?? -1) > nowMonth);
     insertAt = after === -1 ? section.rooms.length : after;
   }
-  const nowMonthName = nowMonth !== null ? (config.month_names[nowMonth] ?? null) : null;
+  const nowText = `${nowLabel} : ${formatTimelineLabel(config, { year: config.current_year, month: nowMonth, day: null })}`;
 
   // Un filet ouvre chaque nouveau mois (sauf le premier de l'année).
   const entries: ReactNode[] = section.rooms.map((room, i) => (
@@ -224,14 +224,15 @@ function YearBlock({
   ));
   if (insertAt >= 0) {
     entries.splice(insertAt, 0, (
-      <li key="now" className="relative py-0.5" data-testid="timeline-now">
-        {/* Le trait court du fil jusqu'au bord ; un carré rouge sur le fil. */}
-        <span className={cn("absolute -left-7 right-0 top-1/2 h-px", RED_BG)} aria-hidden />
-        <span className={cn("absolute -left-[31.5px] top-1/2 size-2 -translate-y-1/2", RED_BG)} aria-hidden />
-        <p className={cn("relative inline-block bg-background pr-2 text-[11px] font-medium", RED_TEXT)}>
-          {nowLabel}
-          {nowMonthName && <span className="font-normal"> · {nowMonthName}</span>}
-        </p>
+      <li key="now" className="relative h-2" data-testid="timeline-now" title={nowText}>
+        {/* Un trait plein, sans texte, qui barre toute la largeur — colonne
+            des années comprise ; un carré rouge sur le fil. */}
+        <span
+          className={cn("absolute -left-[7.75rem] right-0 top-1/2 h-0.5 -translate-y-1/2 sm:-left-[10.75rem]", RED_BG)}
+          aria-hidden
+        />
+        <span className={cn("absolute -left-[32.5px] top-1/2 size-2.5 -translate-y-1/2", RED_BG)} aria-hidden />
+        <span className="sr-only">{nowText}</span>
       </li>
     ));
   }
@@ -276,8 +277,22 @@ function EntryRow({
   const monthName = date.month !== null ? (config.month_names[date.month] ?? null) : null;
   return (
     <li className={cn("group/entry relative", newMonth && "pt-4")} data-new-month={newMonth || undefined}>
-      {/* Le filet d'un nouveau mois, du fil jusqu'au bord, à mi-chemin du salon précédent. */}
-      {newMonth && <span className="absolute -left-7 right-0 top-0 h-px bg-border" aria-hidden />}
+      {/* Le filet d'un nouveau mois, du fil jusqu'au bord, à mi-chemin du
+          salon précédent ; le nom du mois, en petit, à gauche du fil. */}
+      {newMonth && (
+        <>
+          <span className="absolute -left-7 right-0 top-0 h-px bg-border" aria-hidden />
+          {monthName && (
+            <span
+              className="absolute right-[calc(100%+2.25rem)] top-0 -translate-y-1/2 whitespace-nowrap text-[10px] leading-none text-muted-foreground"
+              data-testid="timeline-month-label"
+              aria-hidden
+            >
+              {monthName}
+            </span>
+          )}
+        </>
+      )}
       {/* Un anneau creux sur le fil, qui fonce au survol. */}
       <span
         className={cn(

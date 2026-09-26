@@ -86,6 +86,8 @@ describe("WorldTimeline — frise verticale", () => {
     expect(ligne("Neuf janvier")).not.toHaveAttribute("data-new-month");
     expect(ligne("Trois mars")).toHaveAttribute("data-new-month", "true");
     expect(ligne("Trois mars").querySelector(".h-px.bg-border")).not.toBeNull();
+    // Le nom du nouveau mois, en petit, à gauche du fil — un seul ici.
+    expect(screen.getAllByTestId("timeline-month-label").map((l) => l.textContent)).toEqual(["Mars"]);
     expect(ligne("Autre année")).not.toHaveAttribute("data-new-month");
   });
 
@@ -105,9 +107,14 @@ describe("WorldTimeline — frise verticale", () => {
       expect.stringContaining("Mars"),
     ]);
     const trait = screen.getByTestId("timeline-now");
-    expect(trait).toHaveTextContent("Date actuelle du monde · Février");
-    // Un trait rouge en travers de la frise.
-    expect(trait.querySelector(".h-px")!.className).toContain("bg-red-600");
+    // Plus de texte visible sur la barre : seulement pour les lecteurs
+    // d'écran, et au survol.
+    expect(trait).toHaveAttribute("title", "Date actuelle du monde : Février, An 1");
+    expect(within(trait).getByText("Date actuelle du monde : Février, An 1")).toHaveClass("sr-only");
+    // Un trait rouge plein, qui déborde sur la colonne des années.
+    const barre = trait.querySelector(".h-0\\.5")!;
+    expect(barre.className).toContain("bg-red-600");
+    expect(barre.className).toContain("-left-[7.75rem]");
   });
 
   it("l'année actuelle a sa section même sans salon, pour porter son repère", () => {
