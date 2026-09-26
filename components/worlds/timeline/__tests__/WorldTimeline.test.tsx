@@ -6,16 +6,38 @@ import type { WorldTimelineConfig } from "@/types/worlds";
 const push = vi.hoisted(() => vi.fn());
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push, refresh: vi.fn() }) }));
 
-// Qui a ouvert chaque salon : la RPC get_chatroom_openers (migration 192).
+// Un faux client qui répond par table et par RPC : la frise lance ses
+// requêtes en parallèle, l'ordre des appels ne doit rien décider.
 type OpenerRow = { chat_id: string; author_name: string | null; persona_name: string | null; group_color: string | null };
+const db = vi.hoisted(() => ({
+  tables: {} as Record<string, unknown[]>,
+  rpcs: {} as Record<string, { data: unknown; error: unknown }>,
+  writes: [] as { table: string; op: string; payload?: unknown }[],
+}));
 const rpc = vi.hoisted(() => vi.fn());
-vi.mock("@/lib/supabase/client", () => ({ createClient: () => ({ rpc }) }));
+vi.mock("@/lib/supabase/client", () => {
+  function builder(table: string) {
+    const b: Record<string, unknown> = {};
+    for (const m of ["select", "eq", "not", "order", "in", "is", "single", "maybeSingle"]) b[m] = () => b;
+    for (const op of ["insert", "update", "delete"]) {
+      b[op] = (payload?: unknown) => { db.writes.push({ table, op, payload }); return b; };
+    }
+    b.then = (resolve: (v: unknown) => unknown) =>
+      Promise.resolve({ data: db.tables[table] ?? [], error: null }).then(resolve);
+    return b;
+  }
+  const client = { rpc, from: (table: string) => builder(table) };
+  return { createClient: () => client };
+});
 function ouvreurs(rows: OpenerRow[]) {
-  rpc.mockResolvedValue({ data: rows, error: null });
+  db.rpcs.get_chatroom_openers = { data: rows, error: null };
 }
 beforeEach(() => {
+  db.tables = {};
+  db.rpcs = {};
+  db.writes = [];
   rpc.mockReset();
-  ouvreurs([]);
+  rpc.mockImplementation((name: string) => Promise.resolve(db.rpcs[name] ?? { data: [], error: null }));
 });
 
 import { WorldTimeline } from "@/components/worlds/timeline/WorldTimeline";
@@ -267,7 +289,7 @@ describe("WorldTimeline — qui a ouvert le salon", () => {
 
   it("une erreur de chargement laisse la frise intacte, sans « par … »", async () => {
     const erreur = vi.spyOn(console, "error").mockImplementation(() => {});
-    rpc.mockResolvedValue({ data: null, error: { message: "boom" } });
+    db.rpcs.get_chatroom_openers = { data: null, error: { message: "boom" } };
     frise([room("a", "Prologue", 1, 0, 6)]);
 
     await vi.waitFor(() => expect(erreur).toHaveBeenCalled());
@@ -292,6 +314,139 @@ describe("WorldTimeline — fond ambiant", () => {
     for (const anneau of screen.getAllByTestId("timeline-ring")) ambiant(anneau);
     ambiant(screen.getByTestId("timeline-month-label"));
     const nav = screen.getByRole("navigation", { name: "Périodes de la chronologie" });
-    expect(nav.className.split(" ")).toEqual(expect.arrayContaining(["bg-body/90", "lg:bg-background/90"]));
+    // La tête collante (recherche, filtres, périodes) porte le fond.
+    expect(nav.parentElement!.className.split(" ")).toEqual(expect.arrayContaining(["sticky", "bg-body/90", "lg:bg-background/90"]));
+  });
+});
+
+describe("WorldTimeline — événements, journaux, arcs, suites", () => {
+  it("un événement : un losange sur le fil, son texte, sa page du wiki", async () => {
+    const user = userEvent.setup();
+    db.tables.world_timeline_events = [{
+      id: "e1", title: "Couronnement", description: "La reine est sacrée.", timeline_date: { year: 1, month: 0, day: 6 },
+      wiki_page_id: "p1", wiki_page: { slug: "reine", title: "La reine" },
+    }];
+    frise([room("a", "Prologue", 1, 0, 6)]);
+
+    const marque = await screen.findByTestId("timeline-event-mark");
+    const evenement = marque.closest("li")!;
+    expect(evenement).toHaveTextContent("Couronnement");
+    expect(evenement).toHaveTextContent("La reine est sacrée.");
+    // Même date que le salon : l'événement d'abord, le jour une seule fois.
+    const groupe = evenement.closest("[data-date-group]") as HTMLElement;
+    expect(within(groupe).getAllByTestId("timeline-day")).toHaveLength(1);
+    expect(within(evenement).getByTestId("timeline-day")).toBeInTheDocument();
+
+    await user.click(within(evenement).getByRole("button", { name: "La reine" }));
+    expect(push).toHaveBeenCalledWith("/w/w1?view=wiki&page=reine");
+    // Sans la permission, pas de bouton pour modifier.
+    expect(screen.queryByRole("button", { name: "Modifier l'événement Couronnement" })).toBeNull();
+  });
+
+  it("qui gère la chronologie ajoute un événement et en modifie un", async () => {
+    const user = userEvent.setup();
+    db.tables.world_timeline_events = [{
+      id: "e1", title: "Couronnement", description: null, timeline_date: { year: 1, month: 0, day: 6 }, wiki_page_id: null, wiki_page: null,
+    }];
+    render(<WorldTimeline worldId="w1" rooms={[room("a", "Prologue", 1, 0, 6)]} config={CONFIG} canManage />);
+
+    await user.click(screen.getByRole("button", { name: /^Événement$/ }));
+    expect(await screen.findByRole("dialog", { name: "Nouvel événement" })).toBeInTheDocument();
+    await user.type(screen.getByPlaceholderText("Couronnement de la reine"), "La grande crue");
+    await user.click(screen.getByRole("button", { name: "Enregistrer" }));
+    const ecrit = db.writes.find((w) => w.table === "world_timeline_events" && w.op === "insert");
+    expect(ecrit?.payload).toMatchObject({ title: "La grande crue", world_id: "w1", timeline_date: { year: 1, month: 1, day: null } });
+
+    // Modifier un événement existant.
+    await user.click(await screen.findByRole("button", { name: "Modifier l'événement Couronnement" }));
+    expect(await screen.findByRole("dialog", { name: "Modifier l'événement" })).toBeInTheDocument();
+  });
+
+  it("sans la permission, ni ajout d'événement ni arcs", () => {
+    frise([room("a", "Prologue", 1, 0, 6)]);
+    expect(screen.queryByRole("button", { name: /^Événement$/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Arcs$/ })).toBeNull();
+  });
+
+  it("les journaux : seulement si le monde les montre", async () => {
+    db.tables.persona_journal_entries = [{
+      id: "j1", persona_id: "p-tess", body: "Une nuit sans lune.", timeline_date: { year: 1, month: 0, day: 6 }, persona: { name: "Tess" },
+    }];
+    const { unmount } = frise([room("a", "Prologue", 1, 0, 6)]);
+    await screen.findByText("Prologue");
+    expect(screen.queryByText("Journal de Tess")).toBeNull();
+    unmount();
+
+    frise([room("a", "Prologue", 1, 0, 6)], { ...CONFIG, show_journals: true });
+    expect(await screen.findByText("Journal de Tess")).toBeInTheDocument();
+    expect(screen.getByText("Une nuit sans lune.")).toBeInTheDocument();
+  });
+
+  it("un arc teinte l'anneau et s'affiche après le titre", async () => {
+    db.tables.world_timeline_arcs = [{ id: "arc", name: "L'exil", color: "#22c55e", position: 0 }];
+    db.tables.chatrooms = [{ id: "a", arc_id: "arc", previous_chatroom_id: null, category_id: null }];
+    frise([room("a", "Exil à l'est", 1, 0, 6)]);
+
+    const etiquette = await screen.findByTestId("timeline-arc");
+    expect(etiquette).toHaveTextContent("L'exil");
+    const salon = etiquette.closest("li")!;
+    expect(within(salon).getByTestId("timeline-ring")).toHaveStyle({ borderColor: "#22c55e" });
+    expect(screen.getByRole("button", { name: /arc L'exil/ })).toBeInTheDocument();
+  });
+
+  it("une suite se relie d'une ligne quand les deux salons sont à l'écran", async () => {
+    db.tables.chatrooms = [
+      { id: "a", arc_id: null, previous_chatroom_id: null, category_id: null },
+      { id: "b", arc_id: null, previous_chatroom_id: "a", category_id: null },
+    ];
+    frise([room("a", "La grande crue", 1, 0, 6), room("b", "Les digues cèdent", 3, 0, 1)]);
+    const liens = await screen.findByTestId("timeline-suite-links");
+    expect(liens.querySelector("[data-suite='a>b']")).not.toBeNull();
+  });
+});
+
+describe("WorldTimeline — recherche et filtres", () => {
+  it("la recherche ne garde que ce qui correspond, sans tenir compte des accents", async () => {
+    const user = userEvent.setup();
+    frise([room("a", "Le siège de Vaudrel", 1, 0, 6), room("b", "La comète", 1, 2, 1)]);
+    await user.type(screen.getByRole("searchbox", { name: "Rechercher dans la chronologie" }), "siege");
+    expect(screen.getByText("Le siège de Vaudrel")).toBeInTheDocument();
+    expect(screen.queryByText("La comète")).toBeNull();
+
+    await user.clear(screen.getByRole("searchbox"));
+    await user.type(screen.getByRole("searchbox"), "introuvable");
+    expect(screen.getByTestId("timeline-no-match")).toHaveTextContent("Rien ne correspond");
+  });
+
+  it("filtrer par persona : les salons où il a écrit", async () => {
+    const user = userEvent.setup();
+    db.rpcs.get_chatroom_personas = {
+      data: [{ chat_id: "a", persona_id: "p-tess", persona_name: "Tess" }, { chat_id: "b", persona_id: "p-ivo", persona_name: "Ivo" }],
+      error: null,
+    };
+    frise([room("a", "Avec Tess", 1, 0, 6), room("b", "Avec Ivo", 1, 2, 1)]);
+
+    await user.click(screen.getByRole("button", { name: /Filtres/ }));
+    await user.selectOptions(await screen.findByRole("combobox", { name: "Persona présent" }), "Tess");
+    expect(screen.getByText("Avec Tess")).toBeInTheDocument();
+    expect(screen.queryByText("Avec Ivo")).toBeNull();
+    expect(screen.getByTestId("timeline-filters-count")).toHaveTextContent("1");
+  });
+});
+
+describe("WorldTimeline — saisons", () => {
+  it("les saisons remplacent les tranches de cinq ans et ouvrent leurs années d'un bandeau", () => {
+    frise(
+      [room("a", "Début", 1, 0, 1), room("b", "Milieu", 12, 0, 1), room("c", "Fin", 15, 0, 1)],
+      { ...CONFIG, current_year: 12, ages: [{ name: "Âge des Cendres", from_year: 10, to_year: 19 }] },
+    );
+    const nav = screen.getByRole("navigation", { name: "Périodes de la chronologie" });
+    expect(within(nav).getAllByRole("button").map((b) => b.textContent)).toEqual(["1 – 5", "Âge des Cendres"]);
+    expect(within(nav).getByRole("button", { name: "Âge des Cendres" })).toHaveAttribute("aria-current", "true");
+    // Un bandeau, une seule fois, avant la première année de la saison.
+    const bandeaux = screen.getAllByTestId("timeline-age");
+    expect(bandeaux).toHaveLength(1);
+    expect(bandeaux[0]).toHaveTextContent("Âge des Cendres");
+    expect(bandeaux[0]).toHaveTextContent("An 10 – 19");
   });
 });

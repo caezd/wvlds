@@ -45,6 +45,12 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-09 ──────────────────────────────────────────────────────────────
   {
     date: "2026-09-26",
+    category: "Fonctionnalité",
+    area: "Monde",
+    text: "La chronologie raconte le monde : des événements datés sans salon (un losange sur le fil, avec leur texte et une page du wiki), des arcs narratifs qui teintent leurs salons, des lignes qui relient un salon à sa suite, et, si le monde le veut, les journaux des personas. Une recherche et des filtres (type, persona présent, joueur, arc, catégorie) la parcourent ; les saisons du monde remplacent les tranches de cinq ans. Une nouvelle permission, « Gérer la chronologie », confie les événements et les arcs.",
+  },
+  {
+    date: "2026-09-26",
     category: "Correctif",
     area: "Monde",
     text: "Sur les écrans étroits, l’en-tête des onglets d’un monde et la chronologie reprennent le fond de la page, sans bandes ni pavés plus clairs.",

@@ -101,3 +101,11 @@ describe("TimelineDatePicker", () => {
     expect(screen.getByLabelText("Numéro de l'année (an)")).toHaveValue(3);
   });
 });
+
+describe("TimelineDatePicker — bordures", () => {
+  it("la liste des mois a la bordure du thème, comme les champs", () => {
+    render(<Harnais initial={{ year: 3, month: 1, day: 5 }} />);
+    expect(screen.getByLabelText("Mois").className.split(" ")).toContain("border-border");
+    expect(screen.getByLabelText("Mois").className).not.toContain("border-input");
+  });
+});

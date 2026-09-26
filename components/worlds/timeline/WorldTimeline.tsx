@@ -1,15 +1,40 @@
 "use client";
 
-import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { Clock } from "lucide-react";
+import { BookOpen, BookText, Clock, Pencil, Plus, Search, Spline } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { RPC } from "@/lib/constants";
-import { createClient } from "@/lib/supabase/client";
 import { formatTimelineLabel } from "@/lib/worldTimeline";
+import {
+  NO_TIMELINE_FILTERS,
+  ageOf,
+  buildTimelinePeriods,
+  buildTimelineSections,
+  matchesTimelineFilters,
+  normalizeAges,
+  type TimelineDateGroup,
+  type TimelineFilters,
+  type TimelineItem,
+  type TimelineJournalItem,
+  type TimelineRoomContext,
+  type TimelineRoomItem,
+  type TimelineYearSection,
+} from "@/lib/worldTimelineItems";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
-import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
+import { SuiteLinks, type SuiteLink } from "@/components/worlds/timeline/SuiteLinks";
+import { TimelineArcsDialog } from "@/components/worlds/timeline/TimelineArcsDialog";
+import { TimelineEventDialog } from "@/components/worlds/timeline/TimelineEventDialog";
+import { TimelineFiltersPopover } from "@/components/worlds/timeline/TimelineFiltersPopover";
+import {
+  useTimelineData,
+  type TimelineArc,
+  type TimelineEvent,
+  type TimelineOpener,
+} from "@/components/worlds/timeline/useTimelineData";
+import type { WorldTimelineAge, WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
 
 type TimelineRoom = {
   id: string;
@@ -19,16 +44,9 @@ type TimelineRoom = {
   timeline_date: WorldTimelineDate | null;
 };
 
-type YearSection = { year: number; rooms: TimelineRoom[] };
-
-/** Qui a ouvert un salon : le membre du premier message, et le persona sous
- *  lequel il l'a écrit, dans la couleur de son groupe (migration 192). */
-type Opener = { name: string; persona: string | null; personaColor: string | null };
-type OpenerRow = { chat_id: string; author_name: string | null; persona_name: string | null; group_color: string | null };
-
 /**
  * Le fond ambiant de la page, pour ce qui découpe le fil ou les filets (le
- * nom d'un mois, un anneau) et pour la barre des périodes : sous `lg`, c'est
+ * nom d'un mois, un anneau) et pour la barre de tête : sous `lg`, c'est
  * celui du `<body>` qu'on voit ; `<main>` ne pose `bg-background` qu'à partir
  * de `lg` (voir AppShell.tsx). Un `bg-background` seul faisait des pavés
  * visibles sur mobile.
@@ -36,94 +54,107 @@ type OpenerRow = { chat_id: string; author_name: string | null; persona_name: st
 const AMBIENT_BG = "bg-body lg:bg-background";
 const AMBIENT_BG_TRANSLUCENT = "bg-body/90 lg:bg-background/90";
 
-/** Années regroupées par tranches de RANGE_SPAN pour les pastilles de tête. */
-const RANGE_SPAN = 5;
+// Le rouge de repère : l'accent du thème sombre ; en clair, où l'accent est
+// presque blanc, un rouge franc.
+const RED_BG = "bg-red-600 dark:bg-accent";
 
 /**
  * La chronologie d'un monde, en frise verticale : à gauche les années en très
- * grands chiffres, au centre un fil, et pour chaque salon un anneau sur le
- * fil ; le jour d'une date s'écrit une fois, à gauche du fil. Un filet sépare les
- * années, un filet chaque mois (son nom posé dessus, en capitales) ; la date
- * actuelle du monde barre la frise d'un trait rouge plein, à son mois, et la
- * frise s'ouvre sur son année. Au-delà de RANGE_SPAN années, des pastilles en tête
- * mènent à chaque tranche et suivent le défilement.
+ * grands chiffres, au centre un fil. Y paraissent les salons (un anneau
+ * chacun, teinté par leur arc), les événements du monde (un losange) et, si
+ * le monde le veut, les journaux datés des personas ; le jour d'une date
+ * s'écrit une fois, à gauche du fil. Un filet sépare les années, un filet
+ * pointillé chaque mois ; la date actuelle du monde barre la frise d'un trait
+ * rouge, et la frise s'ouvre sur son année. Une fine courbe, à droite, relie
+ * un salon à sa suite.
+ *
+ * En tête : la recherche, les filtres, et — pour qui gère la chronologie —
+ * l'ajout d'un événement et les arcs ; puis les périodes : les saisons du
+ * monde, ou des tranches de cinq ans pour les années hors saison.
  */
 export function WorldTimeline({
   worldId,
   rooms,
   config,
+  canManage = false,
 }: {
   worldId: string;
   rooms: TimelineRoom[];
   config: WorldTimelineConfig;
+  /** `timeline.manage` : événements et arcs. */
+  canManage?: boolean;
 }) {
   const t = useTranslations("worlds");
+  const tv = useTranslations("worlds.timelineView");
   const router = useRouter();
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [openers, setOpeners] = useState<ReadonlyMap<string, Opener>>(new Map());
+  const headRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const data = useTimelineData(worldId, !!config.show_journals);
 
-  // Les auteurs se chargent avec la frise, sans la retenir : les titres
-  // paraissent d'abord, « par … » les rejoint.
-  useEffect(() => {
-    let cancelled = false;
-    void createClient()
-      .rpc(RPC.GET_CHATROOM_OPENERS, { p_world_id: worldId })
-      .then(({ data, error }: { data: OpenerRow[] | null; error: unknown }) => {
-        if (cancelled) return;
-        if (error) {
-          console.error("[WorldTimeline] auteurs des salons", error);
-          return;
-        }
-        const map = new Map<string, Opener>();
-        for (const row of data ?? []) {
-          if (row.author_name) {
-            map.set(row.chat_id, { name: row.author_name, persona: row.persona_name, personaColor: row.group_color });
-          }
-        }
-        setOpeners(map);
+  const [filters, setFilters] = useState<TimelineFilters>(NO_TIMELINE_FILTERS);
+  const [eventDialog, setEventDialog] = useState<{ open: boolean; event: TimelineEvent | null }>({ open: false, event: null });
+  const [arcsOpen, setArcsOpen] = useState(false);
+  const [lanes, setLanes] = useState(0);
+
+  const arcsById = useMemo(() => new Map(data.arcs.map((a) => [a.id, a])), [data.arcs]);
+  const eventsById = useMemo(() => new Map(data.events.map((e) => [e.id, e])), [data.events]);
+
+  const allItems: TimelineItem[] = useMemo(() => {
+    const roomItems: TimelineRoomItem[] = rooms
+      .filter((r) => r.timeline_date !== null)
+      .map((r) => {
+        const meta = data.roomMeta.get(r.id);
+        return {
+          kind: "room",
+          id: r.id,
+          date: r.timeline_date!,
+          title: r.title ?? r.name ?? t("timelineUntitled"),
+          arcId: meta?.arcId ?? null,
+          previousId: meta?.previousId ?? null,
+          categoryId: meta?.categoryId ?? null,
+        };
       });
-    return () => { cancelled = true; };
-  }, [worldId]);
-  const navRef = useRef<HTMLElement>(null);
+    return [...roomItems, ...data.events, ...data.journals];
+  }, [rooms, data.roomMeta, data.events, data.journals, t]);
 
-  // Une section par année, ses salons dans l'ordre du récit. L'année actuelle
-  // du monde a toujours la sienne, pour porter son repère.
-  const sections: YearSection[] = useMemo(() => {
-    const dated = rooms.filter((r) => r.timeline_date !== null);
-    if (dated.length === 0) return [];
-    const byYear = new Map<number, TimelineRoom[]>();
-    for (const room of dated) {
-      const y = room.timeline_date!.year;
-      if (!byYear.has(y)) byYear.set(y, []);
-      byYear.get(y)!.push(room);
-    }
-    if (!byYear.has(config.current_year)) byYear.set(config.current_year, []);
-    return [...byYear.entries()]
-      .sort(([a], [b]) => a - b)
-      .map(([year, list]) => ({
-        year,
-        rooms: [...list].sort((a, b) =>
-          (a.timeline_date!.month ?? -1) - (b.timeline_date!.month ?? -1) ||
-          (a.timeline_date!.day ?? 0) - (b.timeline_date!.day ?? 0),
-        ),
-      }));
-  }, [rooms, config.current_year]);
+  const ctx: TimelineRoomContext = useMemo(
+    () => ({ personas: data.roomPersonas, openers: data.openers }),
+    [data.roomPersonas, data.openers],
+  );
+  const visible = useMemo(
+    () => allItems.filter((i) => matchesTimelineFilters(i, filters, ctx)),
+    [allItems, filters, ctx],
+  );
 
-  const firstYear = sections[0]?.year ?? 0;
-  const rangeOf = (year: number) => Math.floor((year - firstYear) / RANGE_SPAN);
-  const ranges = useMemo(() => {
-    const seen = new Map<number, number>(); // tranche → première année présente
-    for (const s of sections) {
-      const r = Math.floor((s.year - firstYear) / RANGE_SPAN);
-      if (!seen.has(r)) seen.set(r, s.year);
-    }
-    return [...seen.entries()].map(([index, year]) => ({
-      index,
-      year,
-      label: `${firstYear + index * RANGE_SPAN} – ${firstYear + index * RANGE_SPAN + RANGE_SPAN - 1}`,
-    }));
-  }, [sections, firstYear]);
-  const [activeRange, setActiveRange] = useState(() => rangeOf(config.current_year));
+  // L'année actuelle du monde a toujours sa section — sauf si les filtres ne
+  // laissent rien : la frise dit alors qu'aucun résultat ne correspond.
+  const sections = useMemo(
+    () => buildTimelineSections(visible, config.current_year),
+    [visible, config.current_year],
+  );
+
+  const ages = useMemo(() => normalizeAges(config.ages), [config.ages]);
+  const { periods, periodOf } = useMemo(
+    () => buildTimelinePeriods(sections.map((s) => s.year), ages),
+    [sections, ages],
+  );
+  const [activePeriod, setActivePeriod] = useState(() => periodOf(config.current_year));
+
+  // Les suites dont les deux salons sont à l'écran.
+  const suiteLinks: SuiteLink[] = useMemo(() => {
+    const shown = new Set(visible.filter((i) => i.kind === "room").map((i) => i.id));
+    return visible
+      .filter((i): i is TimelineRoomItem => i.kind === "room" && !!i.previousId && shown.has(i.previousId))
+      .map((i) => ({ from: i.previousId!, to: i.id, color: i.arcId ? arcsById.get(i.arcId)?.color ?? null : null }));
+  }, [visible, arcsById]);
+  const layoutVersion = useMemo(() => visible.map((i) => i.id).join(","), [visible]);
+  const onLanes = useCallback((n: number) => setLanes(n), []);
+
+  const players = useMemo(
+    () => [...new Set([...data.openers.values()].map((o) => o.name))].sort().map((n) => ({ id: n, label: `@${n}` })),
+    [data.openers],
+  );
 
   function sectionEl(year: number): HTMLElement | null {
     return scrollRef.current?.querySelector<HTMLElement>(`[data-year="${year}"]`) ?? null;
@@ -133,7 +164,7 @@ export function WorldTimeline({
     const el = scrollRef.current;
     const section = sectionEl(year);
     if (!el || !section) return;
-    const top = section.offsetTop - (navRef.current?.offsetHeight ?? 0);
+    const top = section.offsetTop - (headRef.current?.offsetHeight ?? 0);
     if (typeof el.scrollTo === "function") el.scrollTo({ top, behavior: smooth ? "smooth" : "auto" });
     else el.scrollTop = top;
   }
@@ -144,21 +175,22 @@ export function WorldTimeline({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- à l'ouverture seulement
   }, []);
 
-  // Les pastilles suivent le défilement : la tranche de la dernière année
-  // passée sous elles.
+  // Les périodes suivent le défilement : celle de la dernière année passée
+  // sous la tête.
   function onScroll() {
     const el = scrollRef.current;
-    if (!el || ranges.length < 2) return;
-    const seuil = el.getBoundingClientRect().top + (navRef.current?.offsetHeight ?? 0) + 8;
+    if (!el || periods.length < 2) return;
+    const seuil = el.getBoundingClientRect().top + (headRef.current?.offsetHeight ?? 0) + 8;
     let current = sections[0]?.year ?? 0;
     for (const s of sections) {
       const node = sectionEl(s.year);
       if (node && node.getBoundingClientRect().top <= seuil) current = s.year;
     }
-    setActiveRange(rangeOf(current));
+    setActivePeriod(periodOf(current));
   }
 
   const nowLabel = t("settings.timelinePreviewLabel");
+  const empty = allItems.length === 0;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -167,69 +199,163 @@ export function WorldTimeline({
         title={t("nav.timeline")}
       />
 
-      {sections.length === 0 ? (
+      {empty && !canManage ? (
         <p className="px-5 py-4 text-sm text-muted-foreground">{t("timelineEmpty")}</p>
       ) : (
         <div ref={scrollRef} onScroll={onScroll} className="relative flex-1 overflow-y-auto" data-testid="timeline-scroll">
-          {ranges.length > 1 && (
-            <nav
-              ref={navRef}
-              aria-label={t("timelineRanges")}
-              className={cn("sticky top-0 z-10 flex gap-2 overflow-x-auto px-5 py-3 backdrop-blur", AMBIENT_BG_TRANSLUCENT)}
-            >
-              {ranges.map((r) => (
-                <button
-                  key={r.index}
-                  type="button"
-                  aria-current={r.index === activeRange ? "true" : undefined}
-                  onClick={() => { setActiveRange(r.index); scrollToYear(r.year, true); }}
-                  className={cn(
-                    "h-7 shrink-0 rounded-full px-4 text-xs font-medium tabular-nums transition-colors",
-                    r.index === activeRange
-                      ? "bg-foreground text-background"
-                      : "bg-muted text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  {r.label}
-                </button>
-              ))}
-            </nav>
-          )}
-
-          <ol className="px-5 pb-6">
-            {sections.map((section) => (
-              <YearBlock
-                key={section.year}
-                section={section}
-                config={config}
-                nowLabel={nowLabel}
-                openers={openers}
-                onOpen={(id) => router.push(`/c/${id}`)}
+          <div ref={headRef} className={cn("sticky top-0 z-10 space-y-3 px-5 py-3 backdrop-blur", AMBIENT_BG_TRANSLUCENT)}>
+            {/* Recherche, filtres, gestion */}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative min-w-40 flex-1 sm:max-w-xs">
+                <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" aria-hidden />
+                <Input
+                  type="search"
+                  value={filters.query}
+                  onChange={(e) => setFilters({ ...filters, query: e.target.value })}
+                  placeholder={tv("search")}
+                  aria-label={tv("search")}
+                  className="h-8 pl-8 text-sm"
+                />
+              </div>
+              <TimelineFiltersPopover
+                filters={filters}
+                onChange={setFilters}
+                showJournals={!!config.show_journals}
+                personas={data.personas.map((p) => ({ id: p.id, label: p.name }))}
+                players={players}
+                arcs={data.arcs.map((a) => ({ id: a.id, label: a.name }))}
+                categories={data.categories.map((c) => ({ id: c.id, label: c.title }))}
               />
-            ))}
-          </ol>
+              {canManage && (
+                <>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-8 gap-1.5"
+                    onClick={() => setEventDialog({ open: true, event: null })}
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    {tv("addEvent")}
+                  </Button>
+                  <Button type="button" size="sm" variant="ghost" className="h-8 gap-1.5" onClick={() => setArcsOpen(true)}>
+                    <Spline className="h-3.5 w-3.5" />
+                    {tv("arcs")}
+                  </Button>
+                </>
+              )}
+            </div>
+
+            {periods.length > 1 && (
+              <nav aria-label={t("timelineRanges")} className="flex gap-2 overflow-x-auto">
+                {periods.map((p) => (
+                  <button
+                    key={p.key}
+                    type="button"
+                    aria-current={p.key === activePeriod ? "true" : undefined}
+                    onClick={() => { setActivePeriod(p.key); scrollToYear(p.firstYear, true); }}
+                    className={cn(
+                      "h-7 shrink-0 rounded-full px-4 text-xs font-medium tabular-nums transition-colors",
+                      p.key === activePeriod
+                        ? "bg-foreground text-background"
+                        : "bg-muted text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </nav>
+            )}
+          </div>
+
+          {empty ? (
+            <p className="px-5 py-4 text-sm text-muted-foreground">{t("timelineEmpty")}</p>
+          ) : sections.length === 0 ? (
+            <p className="px-5 py-4 text-sm text-muted-foreground" data-testid="timeline-no-match">{tv("noMatch")}</p>
+          ) : (
+            <div ref={listRef} className="relative">
+              <ol
+                className="px-5 pb-6"
+                // La marge droite accueille les couloirs des lignes de suite.
+                style={lanes > 0 ? { paddingRight: 20 + 12 + lanes * 10 + 14 } : undefined}
+              >
+                {sections.map((section, i) => {
+                  const age = ageOf(ages, section.year);
+                  const prevAge = i > 0 ? ageOf(ages, sections[i - 1].year) : null;
+                  return (
+                    <SectionWithAge key={section.year} age={age && age !== prevAge ? age : null} config={config}>
+                      <YearBlock
+                        section={section}
+                        config={config}
+                        nowLabel={nowLabel}
+                        openers={data.openers}
+                        arcsById={arcsById}
+                        canManage={canManage}
+                        onOpenRoom={(id) => router.push(`/c/${id}`)}
+                        onOpenWiki={(slug) => router.push(`/w/${worldId}?view=wiki&page=${encodeURIComponent(slug)}`)}
+                        onEditEvent={(id) => {
+                          const event = eventsById.get(id);
+                          if (event) setEventDialog({ open: true, event });
+                        }}
+                      />
+                    </SectionWithAge>
+                  );
+                })}
+              </ol>
+              <SuiteLinks containerRef={listRef} links={suiteLinks} version={layoutVersion} onLanes={onLanes} />
+            </div>
+          )}
         </div>
+      )}
+
+      {canManage && (
+        <>
+          <TimelineEventDialog
+            open={eventDialog.open}
+            onOpenChange={(open) => setEventDialog((d) => ({ ...d, open }))}
+            supabase={data.supabase}
+            worldId={worldId}
+            config={config}
+            event={eventDialog.event}
+            onSaved={() => void data.reloadEvents()}
+          />
+          <TimelineArcsDialog
+            open={arcsOpen}
+            onOpenChange={setArcsOpen}
+            supabase={data.supabase}
+            worldId={worldId}
+            arcs={data.arcs}
+            onChanged={() => { void data.reloadArcs(); void data.reloadRooms(); }}
+          />
+        </>
       )}
     </div>
   );
 }
 
-// Le rouge de repère : l'accent du thème sombre ; en clair, où l'accent est
-// presque blanc, un rouge franc.
-const RED_BG = "bg-red-600 dark:bg-accent";
-
-/** Les salons d'une même date (mois et jour), réunis sous un seul anneau. */
-type DateGroup = { key: string; month: number | null; day: number | null; rooms: TimelineRoom[] };
-
-function groupByDate(rooms: TimelineRoom[]): DateGroup[] {
-  const groups: DateGroup[] = [];
-  for (const room of rooms) {
-    const { month, day } = room.timeline_date!;
-    const last = groups[groups.length - 1];
-    if (last && last.month === month && last.day === day) last.rooms.push(room);
-    else groups.push({ key: `${month ?? ""}:${day ?? ""}`, month, day, rooms: [room] });
-  }
-  return groups;
+/** Une saison ouvre ses années d'un bandeau : son nom, ses bornes. */
+function SectionWithAge({
+  age,
+  config,
+  children,
+}: {
+  age: WorldTimelineAge | null;
+  config: WorldTimelineConfig;
+  children: ReactNode;
+}) {
+  if (!age) return <>{children}</>;
+  const bounds = age.to_year === null
+    ? `${config.year_label} ${age.from_year} –`
+    : `${config.year_label} ${age.from_year} – ${age.to_year}`;
+  return (
+    <>
+      <li className="border-t border-border pb-1 pt-6 first:border-t-0 first:pt-2" data-testid="timeline-age">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-foreground">{age.name}</p>
+        <p className="mt-0.5 text-[11px] tabular-nums text-muted-foreground">{bounds}</p>
+      </li>
+      {children}
+    </>
+  );
 }
 
 function YearBlock({
@@ -237,18 +363,23 @@ function YearBlock({
   config,
   nowLabel,
   openers,
-  onOpen,
+  arcsById,
+  canManage,
+  onOpenRoom,
+  onOpenWiki,
+  onEditEvent,
 }: {
-  section: YearSection;
+  section: TimelineYearSection;
   config: WorldTimelineConfig;
   nowLabel: string;
-  openers: ReadonlyMap<string, Opener>;
-  onOpen: (id: string) => void;
+  openers: ReadonlyMap<string, TimelineOpener>;
+  arcsById: ReadonlyMap<string, TimelineArc>;
+  canManage: boolean;
+  onOpenRoom: (id: string) => void;
+  onOpenWiki: (slug: string) => void;
+  onEditEvent: (id: string) => void;
 }) {
-  // Les salons arrivent triés par mois puis jour : les dates identiques se
-  // suivent, un groupe par date.
-  const groups = groupByDate(section.rooms);
-
+  const { groups } = section;
   const isNow = section.year === config.current_year;
   // La date actuelle du monde barre l'année d'un trait rouge, à son mois.
   const nowMonth = config.current_month;
@@ -267,9 +398,13 @@ function YearBlock({
       group={group}
       config={config}
       openers={openers}
+      arcsById={arcsById}
+      canManage={canManage}
       newMonth={i > 0 && groups[i - 1].month !== group.month}
       showMonth={i === 0}
-      onOpen={onOpen}
+      onOpenRoom={onOpenRoom}
+      onOpenWiki={onOpenWiki}
+      onEditEvent={onEditEvent}
     />
   ));
   if (insertAt >= 0) {
@@ -312,32 +447,40 @@ function YearBlock({
 
 /** « par Tess (@Poumon) », ou « par @Poumon » sans persona — la phrase
  *  lue par les lecteurs d'écran, la même qu'à l'écran. */
-function openerText(opener: Opener, by: (name: string) => string): string {
+function openerText(opener: TimelineOpener, by: (name: string) => string): string {
   return opener.persona ? `${by(opener.persona)} (@${opener.name})` : by(`@${opener.name}`);
 }
 
 /**
- * Une date de la frise : ses salons, chacun avec son anneau sur le fil ; le
- * jour, une fois, à gauche du fil en face du premier.
+ * Une date de la frise : ce qu'elle réunit, chacun avec sa marque sur le
+ * fil ; le jour, une fois, à gauche du fil en face du premier.
  */
 function DateGroupBlock({
   year,
   group,
   config,
   openers,
+  arcsById,
+  canManage,
   newMonth,
   showMonth,
-  onOpen,
+  onOpenRoom,
+  onOpenWiki,
+  onEditEvent,
 }: {
   year: number;
-  group: DateGroup;
+  group: TimelineDateGroup;
   config: WorldTimelineConfig;
-  openers: ReadonlyMap<string, Opener>;
+  openers: ReadonlyMap<string, TimelineOpener>;
+  arcsById: ReadonlyMap<string, TimelineArc>;
+  canManage: boolean;
   newMonth: boolean;
   /** Le nom du mois au-dessus : seulement pour la première date de l'année,
    *  que n'ouvre aucun filet — ailleurs, le filet le porte déjà. */
   showMonth: boolean;
-  onOpen: (id: string) => void;
+  onOpenRoom: (id: string) => void;
+  onOpenWiki: (slug: string) => void;
+  onEditEvent: (id: string) => void;
 }) {
   const monthName = group.month !== null ? (config.month_names[group.month] ?? null) : null;
   const fullDate = formatTimelineLabel(config, { year, month: group.month, day: group.day });
@@ -373,88 +516,223 @@ function DateGroupBlock({
           {monthName}
         </p>
       )}
-      <ul className="space-y-1">
-        {group.rooms.map((room, i) => (
-          <li key={room.id} className="group/room relative">
-            {/* Le jour, à gauche du fil, en face du premier salon de la date
-                seulement : les suivants, sans jour, s'y rattachent. */}
-            {i === 0 && group.day !== null && (
-              <span
-                className="absolute right-[calc(100%+2.5rem)] top-0 text-base font-semibold leading-5 tabular-nums text-foreground"
-                data-testid="timeline-day"
-                aria-hidden
-              >
-                {group.day}
-              </span>
-            )}
-            {/* Un anneau creux par salon, sur le fil, centré sur son titre
-                (ligne de 20px), qui fonce au survol. */}
-            <span
-              className={cn(
-                "absolute -left-[33.5px] top-1 size-3 rounded-full border-[1.5px] border-foreground/35 transition-colors group-hover/room:border-foreground",
-                AMBIENT_BG,
-              )}
-              data-testid="timeline-ring"
-              aria-hidden
-            />
-            <RoomLink room={room} fullDate={fullDate} opener={openers.get(room.id) ?? null} onClick={() => onOpen(room.id)} />
-          </li>
-        ))}
+      <ul className="space-y-1.5">
+        {group.items.map((item, i) => {
+          const day = i === 0 ? group.day : null;
+          switch (item.kind) {
+            case "room":
+              return (
+                <RoomRow
+                  key={item.id}
+                  item={item}
+                  day={day}
+                  fullDate={fullDate}
+                  opener={openers.get(item.id) ?? null}
+                  arc={item.arcId ? arcsById.get(item.arcId) ?? null : null}
+                  onClick={() => onOpenRoom(item.id)}
+                />
+              );
+            case "event":
+              return (
+                <EventRow
+                  key={item.id}
+                  item={item as TimelineEvent}
+                  day={day}
+                  canManage={canManage}
+                  onOpenWiki={onOpenWiki}
+                  onEdit={() => onEditEvent(item.id)}
+                />
+              );
+            case "journal":
+              return <JournalRow key={item.id} item={item} day={day} />;
+          }
+        })}
       </ul>
     </li>
   );
 }
 
-function RoomLink({
-  room,
+/** Le jour, à gauche du fil, en face du premier élément de la date. */
+function DayGutter({ day }: { day: number | null }) {
+  if (day === null) return null;
+  return (
+    <span
+      className="absolute right-[calc(100%+2.5rem)] top-0 text-base font-semibold leading-5 tabular-nums text-foreground"
+      data-testid="timeline-day"
+      aria-hidden
+    >
+      {day}
+    </span>
+  );
+}
+
+function RoomRow({
+  item,
+  day,
   fullDate,
   opener,
+  arc,
   onClick,
 }: {
-  room: TimelineRoom;
+  item: TimelineRoomItem;
+  day: number | null;
   fullDate: string;
-  opener: Opener | null;
+  opener: TimelineOpener | null;
+  arc: TimelineArc | null;
   onClick: () => void;
 }) {
   const t = useTranslations("worlds");
-  const label = room.title ?? room.name ?? t("timelineUntitled");
+  const tv = useTranslations("worlds.timelineView");
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={[label, opener && openerText(opener, (name) => t("timelineByName", { name })), fullDate]
-        .filter(Boolean)
-        .join(", ")}
-      // Un bloc sur une ligne de 20px : en ligne (`inline-block`), le bouton
-      // héritait de la hauteur de ligne du parent et le titre glissait sous
-      // le coude de la branche.
-      className="group/room block max-w-full rounded-md text-left text-sm leading-5 outline-none focus-visible:ring-2 focus-visible:ring-ring"
-    >
-      {/* Au survol, le titre s’éclaircit seulement (atténué au repos) : pas de fond. */}
-      <span className="min-w-0 break-words">
-        <span className="text-sm font-medium text-foreground/75 transition-colors group-hover/room:text-foreground">
-          {label}
-        </span>
-        {/* « par Persona (@pseudo) » : le persona dans la couleur de son
-            groupe, le pseudo du joueur entre parenthèses ; « par @pseudo »
-            quand le salon n'a pas encore de message. */}
-        {opener && (
-          <span className="ml-1.5 text-xs text-muted-foreground" data-testid="timeline-opener" aria-hidden>
-            {t.rich("timelineBy", {
-              name: opener.persona ?? `@${opener.name}`,
-              author: (chunks) => (
-                <span
-                  className={cn("font-medium", !(opener.persona && opener.personaColor) && "text-foreground/75")}
-                  style={opener.persona && opener.personaColor ? { color: opener.personaColor } : undefined}
-                >
-                  {chunks}
-                </span>
-              ),
-            })}
-            {opener.persona && ` (@${opener.name})`}
-          </span>
+    <li className="group/room relative" data-room-id={item.id}>
+      <DayGutter day={day} />
+      {/* Un anneau creux par salon, sur le fil, centré sur son titre (ligne
+          de 20px), à la couleur de son arc ; il fonce au survol. */}
+      <span
+        className={cn(
+          "absolute -left-[33.5px] top-1 size-3 rounded-full border-[1.5px] transition-colors",
+          !arc && "border-foreground/35 group-hover/room:border-foreground",
+          AMBIENT_BG,
         )}
-      </span>
-    </button>
+        style={arc ? { borderColor: arc.color } : undefined}
+        data-testid="timeline-ring"
+        aria-hidden
+      />
+      <button
+        type="button"
+        onClick={onClick}
+        aria-label={[
+          item.title,
+          opener && openerText(opener, (name) => t("timelineByName", { name })),
+          arc && tv("arcOf", { name: arc.name }),
+          fullDate,
+        ]
+          .filter(Boolean)
+          .join(", ")}
+        // Un bloc sur une ligne de 20px : en ligne (`inline-block`), le bouton
+        // héritait de la hauteur de ligne du parent et le titre glissait.
+        className="group/title block max-w-full rounded-md text-left text-sm leading-5 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        {/* Au survol, le titre s’éclaircit seulement (atténué au repos) : pas de fond. */}
+        <span className="min-w-0 break-words">
+          <span className="text-sm font-medium text-foreground/75 transition-colors group-hover/room:text-foreground">
+            {item.title}
+          </span>
+          {/* « par Persona (@pseudo) » : le persona dans la couleur de son
+              groupe, le pseudo du joueur entre parenthèses ; « par @pseudo »
+              quand le salon n'a pas encore de message. */}
+          {opener && (
+            <span className="ml-1.5 text-xs text-muted-foreground" data-testid="timeline-opener" aria-hidden>
+              {t.rich("timelineBy", {
+                name: opener.persona ?? `@${opener.name}`,
+                author: (chunks) => (
+                  <span
+                    className={cn("font-medium", !(opener.persona && opener.personaColor) && "text-foreground/75")}
+                    style={opener.persona && opener.personaColor ? { color: opener.personaColor } : undefined}
+                  >
+                    {chunks}
+                  </span>
+                ),
+              })}
+              {opener.persona && ` (@${opener.name})`}
+            </span>
+          )}
+          {arc && (
+            <span
+              className="ml-2 text-[10px] font-semibold uppercase tracking-wider"
+              style={{ color: arc.color }}
+              data-testid="timeline-arc"
+              aria-hidden
+            >
+              {arc.name}
+            </span>
+          )}
+        </span>
+      </button>
+    </li>
+  );
+}
+
+function EventRow({
+  item,
+  day,
+  canManage,
+  onOpenWiki,
+  onEdit,
+}: {
+  item: TimelineEvent;
+  day: number | null;
+  canManage: boolean;
+  onOpenWiki: (slug: string) => void;
+  onEdit: () => void;
+}) {
+  const tv = useTranslations("worlds.timelineView");
+  return (
+    <li className="group/event relative" data-event-id={item.id}>
+      <DayGutter day={day} />
+      {/* Un losange plein sur le fil : un jalon du monde, pas un salon. */}
+      <span
+        className="absolute -left-[32px] top-[5px] size-2.5 rotate-45 bg-foreground"
+        data-testid="timeline-event-mark"
+        aria-hidden
+      />
+      <div className="flex items-start gap-2">
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold leading-5 text-foreground">
+            <span className="sr-only">{tv("eventLabel")} : </span>
+            {item.title}
+          </p>
+          {item.description && (
+            <p className="mt-0.5 line-clamp-2 whitespace-pre-line text-xs text-muted-foreground">{item.description}</p>
+          )}
+          {item.wikiPage && (
+            <button
+              type="button"
+              onClick={() => onOpenWiki(item.wikiPage!.slug)}
+              className="mt-1 inline-flex items-center gap-1 rounded text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <BookOpen className="h-3 w-3" aria-hidden />
+              {item.wikiPage.title}
+            </button>
+          )}
+        </div>
+        {canManage && (
+          <button
+            type="button"
+            onClick={onEdit}
+            aria-label={tv("editEventNamed", { title: item.title })}
+            className="shrink-0 rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:text-foreground focus-visible:opacity-100 group-hover/event:opacity-100"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+    </li>
+  );
+}
+
+function JournalRow({ item, day }: { item: TimelineJournalItem; day: number | null }) {
+  const tv = useTranslations("worlds.timelineView");
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <li className="relative" data-journal-id={item.id}>
+      <DayGutter day={day} />
+      {/* Un point discret : une trace de personnage, pas un salon. */}
+      <span className="absolute -left-[31px] top-[7px] size-1.5 rounded-full bg-muted-foreground/60" aria-hidden />
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        aria-expanded={expanded}
+        className="block max-w-full rounded-md text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <span className="flex items-center gap-1 text-xs leading-5 text-muted-foreground">
+          <BookText className="h-3 w-3" aria-hidden />
+          {tv("journalOf", { name: item.personaName })}
+        </span>
+        <span className={cn("block whitespace-pre-line text-xs italic text-foreground/70", !expanded && "line-clamp-2")}>
+          {item.body}
+        </span>
+      </button>
+    </li>
   );
 }

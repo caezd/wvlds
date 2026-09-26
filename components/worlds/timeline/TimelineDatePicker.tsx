@@ -90,7 +90,7 @@ export function TimelineDatePicker({
           aria-label={t("month")}
           value={date.month ?? ""}
           disabled={disabled}
-          className={cn(hauteur, "min-w-28 flex-1 rounded-lg border border-input bg-transparent px-2 text-sm")}
+          className={cn(hauteur, "min-w-28 flex-1 rounded-lg border border-border bg-transparent px-2 text-sm")}
           onChange={(e) => commit({ month: e.target.value === "" ? null : Number(e.target.value), day: null })}
         >
           <option value="">{t("noMonth")}</option>

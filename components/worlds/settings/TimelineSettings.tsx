@@ -142,7 +142,7 @@ export function TimelineSettings({
               id="timeline-current-month"
               value={config.current_month ?? ""}
               disabled={nbMois === 0}
-              className="h-9 w-full rounded-lg border border-input bg-transparent px-3 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+              className="h-9 w-full rounded-lg border border-border bg-transparent px-3 text-sm disabled:cursor-not-allowed disabled:opacity-50"
               onChange={(e) => onPersist({ current_month: e.target.value === "" ? null : Number(e.target.value) })}
             >
               <option value="">{nbMois === 0 ? tSettings("noMonths") : "—"}</option>

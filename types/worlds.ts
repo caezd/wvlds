@@ -13,7 +13,15 @@ export interface WorldTimelineConfig {
   restrict_to_current?: boolean;
   /** Un salon ne se crée pas sans date : le choix paraît sous son titre. */
   require_date?: boolean;
+  /** Les entrées datées des journaux de personas paraissent sur la frise. */
+  show_journals?: boolean;
+  /** Saisons : des âges nommés qui découpent les années de la frise. */
+  ages?: WorldTimelineAge[];
 }
+
+/** Un âge nommé de la chronologie (« L'Âge des Cendres », an 1 à 40) ; sans
+ *  année de fin, il court jusqu'à la suivante. */
+export type WorldTimelineAge = { name: string; from_year: number; to_year: number | null };
 
 export interface WorldTimelineDate {
   year: number;

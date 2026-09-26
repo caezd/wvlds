@@ -238,6 +238,7 @@ export function WorldHome({
             worldId={worldId}
             rooms={initialRooms.map(r => ({ ...r, timeline_date: r.timeline_date ?? null }))}
             config={world.timeline_config as WorldTimelineConfig}
+            canManage={can("timeline.manage")}
           />
         ) : (
           <div ref={setScrollEl} className="flex min-h-0 flex-1 flex-col overflow-y-auto">
