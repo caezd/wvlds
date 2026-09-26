@@ -330,7 +330,7 @@ function EntryRow({
           ou le titre quand il n'y en a pas — et qui fonce au survol. */}
       <span
         className={cn(
-          "absolute -left-[33.5px] size-3 rounded-full border-[1.5px] border-foreground/40 bg-background transition-colors group-hover/entry:border-foreground",
+          "absolute -left-[33.5px] size-3 rounded-full border-[1.5px] border-border bg-background transition-colors group-hover/entry:border-foreground",
           short ? (newMonth ? "top-[18px]" : "top-0.5") : (newMonth ? "top-5" : "top-1"),
         )}
         data-testid="timeline-ring"

@@ -71,7 +71,7 @@ describe("WorldTimeline — frise verticale", () => {
     expect(date.className).toContain("leading-4");
     // …sur laquelle l'anneau (12px) se centre : 2px au-dessus.
     const anneau = ligne.closest("li")!.querySelector("[data-testid='timeline-ring']")!;
-    expect(anneau.className.split(" ")).toEqual(expect.arrayContaining(["size-3", "top-0.5"]));
+    expect(anneau.className.split(" ")).toEqual(expect.arrayContaining(["size-3", "top-0.5", "border-border"]));
     // Plus de pastille de date.
     expect(screen.queryByTestId("timeline-date-pill")).toBeNull();
 
