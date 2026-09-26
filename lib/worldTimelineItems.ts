@@ -267,3 +267,32 @@ export function suiteChainOf(pairs: readonly SuitePair[], id: string): ReadonlyS
   const chain = buildSuiteChains(pairs).find((c) => c.ids.includes(id));
   return chain ? new Set(chain.ids) : null;
 }
+
+// ── Rang dans un arc ─────────────────────────────────────────
+
+/**
+ * Le rang de chaque salon dans son arc (1, 2, 3…), dans l'ordre du récit :
+ * par date ; à date égale, la suite après le salon qu'elle suit, puis par
+ * titre. À calculer sur tous les salons, pas sur ceux qu'un filtre laisse :
+ * le rang d'un salon ne change pas quand on filtre.
+ */
+export function arcRanks(items: readonly TimelineItem[]): Map<string, number> {
+  const byArc = new Map<string, TimelineRoomItem[]>();
+  for (const item of items) {
+    if (item.kind !== "room" || !item.arcId) continue;
+    if (!byArc.has(item.arcId)) byArc.set(item.arcId, []);
+    byArc.get(item.arcId)!.push(item);
+  }
+  const ranks = new Map<string, number>();
+  for (const rooms of byArc.values()) {
+    rooms.sort((a, b) =>
+      a.date.year - b.date.year ||
+      (a.date.month ?? -1) - (b.date.month ?? -1) ||
+      (a.date.day ?? 0) - (b.date.day ?? 0) ||
+      (a.previousId === b.id ? 1 : b.previousId === a.id ? -1 : 0) ||
+      a.title.localeCompare(b.title),
+    );
+    rooms.forEach((room, i) => ranks.set(room.id, i + 1));
+  }
+  return ranks;
+}

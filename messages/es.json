@@ -609,6 +609,7 @@
       "arcs": "Arcos",
       "noMatch": "Nada coincide con la búsqueda o los filtros.",
       "arcOf": "arco {name}",
+      "arcEpisode": "arco {name}, n.º {rank}",
       "eventLabel": "Evento",
       "editEventNamed": "Modificar el evento {title}",
       "journalOf": "Diario de {name}",

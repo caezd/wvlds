@@ -9,6 +9,7 @@ import { formatTimelineLabel } from "@/lib/worldTimeline";
 import {
   NO_TIMELINE_FILTERS,
   ageOf,
+  arcRanks,
   buildTimelinePeriods,
   buildTimelineSections,
   matchesTimelineFilters,
@@ -163,6 +164,10 @@ export function WorldTimeline({
       });
     return [...roomItems, ...data.events, ...data.journals];
   }, [rooms, data.roomMeta, data.events, data.journals, t]);
+
+  // Le rang de chaque salon dans son arc, sur tous les salons : il ne change
+  // pas quand on filtre.
+  const ranks = useMemo(() => arcRanks(allItems), [allItems]);
 
   const ctx: TimelineRoomContext = useMemo(
     () => ({ personas: data.roomPersonas, openers: data.openers }),
@@ -369,6 +374,7 @@ export function WorldTimeline({
                         nowLabel={nowLabel}
                         openers={data.openers}
                         arcsById={arcsById}
+                        ranks={ranks}
                         canManage={canManage}
                         highlight={highlight}
                         onOpenRoom={(id) => router.push(`/c/${id}`)}
@@ -444,6 +450,7 @@ function YearBlock({
   nowLabel,
   openers,
   arcsById,
+  ranks,
   canManage,
   highlight,
   onOpenRoom,
@@ -455,6 +462,7 @@ function YearBlock({
   nowLabel: string;
   openers: ReadonlyMap<string, TimelineOpener>;
   arcsById: ReadonlyMap<string, TimelineArc>;
+  ranks: ReadonlyMap<string, number>;
   canManage: boolean;
   highlight: ReadonlySet<string> | null;
   onOpenRoom: (id: string) => void;
@@ -481,6 +489,7 @@ function YearBlock({
       config={config}
       openers={openers}
       arcsById={arcsById}
+      ranks={ranks}
       canManage={canManage}
       highlight={highlight}
       newMonth={i > 0 && groups[i - 1].month !== group.month}
@@ -544,6 +553,7 @@ function DateGroupBlock({
   config,
   openers,
   arcsById,
+  ranks,
   canManage,
   highlight,
   newMonth,
@@ -557,6 +567,7 @@ function DateGroupBlock({
   config: WorldTimelineConfig;
   openers: ReadonlyMap<string, TimelineOpener>;
   arcsById: ReadonlyMap<string, TimelineArc>;
+  ranks: ReadonlyMap<string, number>;
   canManage: boolean;
   highlight: ReadonlySet<string> | null;
   newMonth: boolean;
@@ -615,6 +626,7 @@ function DateGroupBlock({
                   fullDate={fullDate}
                   opener={openers.get(item.id) ?? null}
                   arc={item.arcId ? arcsById.get(item.arcId) ?? null : null}
+                  rank={ranks.get(item.id) ?? null}
                   dimmed={dimmed}
                   onClick={() => onOpenRoom(item.id)}
                 />
@@ -660,6 +672,7 @@ function RoomRow({
   fullDate,
   opener,
   arc,
+  rank,
   dimmed,
   onClick,
 }: {
@@ -668,6 +681,8 @@ function RoomRow({
   fullDate: string;
   opener: TimelineOpener | null;
   arc: TimelineArc | null;
+  /** Son rang dans l'arc (1, 2, 3…). */
+  rank: number | null;
   dimmed: boolean;
   onClick: () => void;
 }) {
@@ -694,7 +709,7 @@ function RoomRow({
         aria-label={[
           item.title,
           opener && openerText(opener, (name) => t("timelineByName", { name })),
-          arc && tv("arcOf", { name: arc.name }),
+          arc && (rank ? tv("arcEpisode", { name: arc.name, rank }) : tv("arcOf", { name: arc.name })),
           fullDate,
         ]
           .filter(Boolean)
@@ -705,6 +720,17 @@ function RoomRow({
       >
         {/* Au survol, le titre s’éclaircit seulement (atténué au repos) : pas de fond. */}
         <span className="min-w-0 break-words">
+          {/* Le rang dans l'arc, à la couleur de l'arc, juste avant le titre. */}
+          {arc && rank && (
+            <span
+              className="mr-1 text-sm font-semibold tabular-nums"
+              style={{ color: arc.color }}
+              data-testid="timeline-arc-rank"
+              aria-hidden
+            >
+              {rank}.
+            </span>
+          )}
           <span className="text-sm font-medium text-foreground/75 transition-colors group-hover/room:text-foreground">
             {item.title}
           </span>

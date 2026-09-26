@@ -149,3 +149,18 @@ describe("chaînes de suites", () => {
     expect(suiteChainOf(paires, "seul")).toBeNull();
   });
 });
+
+describe("arcRanks", () => {
+  it("numérote les salons de chaque arc dans l'ordre du récit ; la suite passe après, à date égale", async () => {
+    const { arcRanks } = await import("@/lib/worldTimelineItems");
+    const ranks = arcRanks([
+      salon("c", 3, 0, 1, { arcId: "exil" } as Partial<TimelineItem>),
+      salon("b", 1, 2, 9, { arcId: "exil", previousId: "a" } as Partial<TimelineItem>),
+      salon("a", 1, 2, 9, { arcId: "exil" } as Partial<TimelineItem>),
+      salon("x", 1, 0, 1, { arcId: "crue" } as Partial<TimelineItem>),
+      salon("libre", 1, 0, 1),
+      evenement("e", 1, 0, 1),
+    ]);
+    expect(Object.fromEntries(ranks)).toEqual({ a: 1, b: 2, c: 3, x: 1 });
+  });
+});

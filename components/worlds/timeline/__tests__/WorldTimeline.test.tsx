@@ -394,6 +394,30 @@ describe("WorldTimeline — événements, journaux, arcs, suites", () => {
     expect(screen.getByRole("button", { name: /arc L'exil/ })).toBeInTheDocument();
   });
 
+  it("le rang du salon dans son arc, avant le titre, stable quand on filtre", async () => {
+    const user = userEvent.setup();
+    db.tables.world_timeline_arcs = [{ id: "arc", name: "L'exil", color: "#22c55e", position: 0 }];
+    db.tables.chatrooms = [
+      { id: "a", arc_id: "arc", previous_chatroom_id: null, category_id: null },
+      { id: "b", arc_id: "arc", previous_chatroom_id: "a", category_id: null },
+      { id: "c", arc_id: null, previous_chatroom_id: null, category_id: null },
+    ];
+    frise([room("a", "Le départ", 1, 0, 6), room("b", "La frontière", 2, 0, 1), room("c", "Hors arc", 2, 1, 1)]);
+
+    const depart = await screen.findByRole("button", { name: "Le départ, arc L'exil, n° 1, 6 Janvier, An 1" });
+    expect(within(depart).getByTestId("timeline-arc-rank")).toHaveTextContent("1.");
+    expect(within(depart).getByTestId("timeline-arc-rank")).toHaveStyle({ color: "#22c55e" });
+    // Avant le titre.
+    const rang = within(depart).getByTestId("timeline-arc-rank");
+    expect(rang.compareDocumentPosition(within(depart).getByText("Le départ")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(within(screen.getByRole("button", { name: /La frontière/ })).getByTestId("timeline-arc-rank")).toHaveTextContent("2.");
+    expect(within(screen.getByRole("button", { name: /Hors arc/ })).queryByTestId("timeline-arc-rank")).toBeNull();
+
+    // Filtré, le second salon garde son rang.
+    await user.type(screen.getByRole("searchbox"), "frontière");
+    expect(within(screen.getByRole("button", { name: /La frontière/ })).getByTestId("timeline-arc-rank")).toHaveTextContent("2.");
+  });
+
   it("une suite se relie d'une ligne quand les deux salons sont à l'écran", async () => {
     db.tables.chatrooms = [
       { id: "a", arc_id: null, previous_chatroom_id: null, category_id: null },

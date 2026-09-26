@@ -609,6 +609,7 @@
       "arcs": "Arcs",
       "noMatch": "Nothing matches the search or the filters.",
       "arcOf": "arc {name}",
+      "arcEpisode": "arc {name}, no. {rank}",
       "eventLabel": "Event",
       "editEventNamed": "Edit the event {title}",
       "journalOf": "{name}'s journal",
