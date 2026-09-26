@@ -127,21 +127,40 @@ describe("WorldTimeline — frise verticale", () => {
     expect(within(mars).getAllByTestId("timeline-day").map((d) => d.textContent)).toEqual(["27"]);
 
     // Le mois n'est jamais à côté du jour : sur le filet qui l'ouvre, ou,
-    // pour la première date de l'année, au-dessus d'elle.
+    // pour la première date de l'année, sur la bordure de l'année.
     expect(within(mars).getByTestId("timeline-month-label")).toHaveTextContent("Mars");
-    expect(within(neufJanvier).getByTestId("timeline-first-month")).toHaveTextContent("Janvier");
-    expect(within(mars).queryByTestId("timeline-first-month")).toBeNull();
+    expect(within(neufJanvier).queryByTestId("timeline-first-month")).toBeNull();
+    const an2 = neufJanvier.closest("[data-year]") as HTMLElement;
+    expect(within(an2).getByTestId("timeline-first-month")).toHaveTextContent("Janvier");
     // Plus de branche.
     expect(screen.queryByTestId("timeline-branch")).toBeNull();
   });
 
-  it("l'année en très grands chiffres, sa légende en exposant, sans rouge", () => {
+  it("l'année en très grands chiffres, sa légende en petites capitales sur la ligne de base, sans rouge", () => {
     frise([room("a", "Prologue", 1, 0, 1)], { ...CONFIG, era_name: "des Cendres" });
     const an1 = annees()[0];
     expect(within(an1).getByText("1").className).toMatch(/text-4xl.*sm:text-6xl/);
-    const legende = within(an1).getByText("An des Cendres").className;
-    expect(legende).toContain("text-muted-foreground");
-    expect(legende).not.toMatch(/accent|red/);
+    expect(an1.className.split(" ")).toContain("items-baseline");
+    const legende = within(an1).getByTestId("timeline-year-caption");
+    expect(legende).toHaveTextContent("An des Cendres");
+    expect(legende.className.split(" ")).toEqual(expect.arrayContaining(["uppercase", "text-muted-foreground"]));
+    expect(legende.className).not.toMatch(/accent|red/);
+  });
+
+  it("le premier mois de l'année, posé sur sa bordure, calé sur le jour, avec la séparation des autres mois", () => {
+    frise([room("a", "Prologue", 1, 0, 3), room("b", "Sans mois", 2, null, null)]);
+    const [an1, an2] = annees().map((h) => h.closest("[data-year]") as HTMLElement);
+    const mois = within(an1).getByTestId("timeline-first-month");
+    expect(mois).toHaveTextContent("Janvier");
+    // Sur la bordure : en haut de la colonne du fil, centré sur elle, fond qui
+    // la découpe ; le texte finit 0.75rem avant le fil, comme le jour.
+    expect(mois.className.split(" ")).toEqual(
+      expect.arrayContaining(["top-0", "-translate-y-1/2", "right-[calc(100%+0.25rem)]", "px-2", "bg-body", "uppercase"]),
+    );
+    // 32px de part et d'autre de la bordure, comme autour d'un filet de mois.
+    expect((mois.parentElement as HTMLElement).className.split(" ")).toContain("py-8");
+    // Une année sans mois n'en affiche pas.
+    expect(within(an2).queryByTestId("timeline-first-month")).toBeNull();
   });
 
   it("des filets de la couleur des bordures, sans le tout premier", () => {

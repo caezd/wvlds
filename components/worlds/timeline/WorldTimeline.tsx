@@ -582,7 +582,6 @@ function YearBlock({
       canManage={canManage}
       highlight={highlight}
       newMonth={i > 0 && groups[i - 1].month !== group.month}
-      showMonth={i === 0}
       onOpenRoom={onOpenRoom}
       onOpenWiki={onOpenWiki}
       onEditEvent={onEditEvent}
@@ -604,22 +603,44 @@ function YearBlock({
   }
 
   const caption = `${config.year_label}${config.era_name ? ` ${config.era_name}` : ""}`;
+  const firstMonth = groups[0]?.month ?? null;
+  const firstMonthName = firstMonth !== null ? (config.month_names[firstMonth] ?? null) : null;
 
   return (
     <li
       data-year={section.year}
       className="grid grid-cols-[6rem_1fr] border-t border-border first:border-t-0 sm:grid-cols-[9rem_1fr]"
     >
-      {/* L'année en très grands chiffres, sa légende en exposant. */}
-      <h3 className="flex items-start gap-1 overflow-hidden pt-4 pb-4 pr-3">
+      {/* L'année en très grands chiffres ; sa légende en petites capitales,
+          sur la ligne de base, comme les noms de mois. */}
+      <h3 className="flex min-w-0 items-baseline gap-1.5 overflow-hidden pt-8 pb-8 pr-3">
         <span className="text-4xl font-semibold leading-[0.85] tracking-tighter tabular-nums sm:text-6xl">
           {section.year}
         </span>
-        <span className="text-[11px] font-medium leading-none text-muted-foreground">{caption}</span>
+        <span
+          className="min-w-0 text-[10px] font-medium uppercase leading-tight tracking-wider text-muted-foreground"
+          data-testid="timeline-year-caption"
+        >
+          {caption}
+        </span>
       </h3>
-      <div className="relative py-5 pl-7">
+      {/* 32px sous la bordure de l'année et au-dessus de la suivante : la
+          même séparation qu'entre deux mois. */}
+      <div className="relative py-8 pl-7">
         {/* Le fil : d'une section à l'autre, il ne s'interrompt pas. */}
         <span className="absolute inset-y-0 left-0 w-px bg-border" aria-hidden />
+        {/* Le premier mois de l'année, posé sur sa bordure comme les autres
+            sur leur filet, calé sur le jour (le texte finit 0.75rem avant le
+            fil : 0.25rem + px-2). */}
+        {firstMonthName && (
+          <span
+            className={cn("absolute right-[calc(100%+0.25rem)] top-0 -translate-y-1/2 whitespace-nowrap px-2 text-right text-[10px] font-medium uppercase leading-none tracking-wider text-muted-foreground", AMBIENT_BG)}
+            data-testid="timeline-first-month"
+            aria-hidden
+          >
+            {firstMonthName}
+          </span>
+        )}
         <ul className="space-y-4">{entries}</ul>
       </div>
     </li>
@@ -646,7 +667,6 @@ function DateGroupBlock({
   canManage,
   highlight,
   newMonth,
-  showMonth,
   onOpenRoom,
   onOpenWiki,
   onEditEvent,
@@ -660,9 +680,6 @@ function DateGroupBlock({
   canManage: boolean;
   highlight: ReadonlySet<string> | null;
   newMonth: boolean;
-  /** Le nom du mois au-dessus : seulement pour la première date de l'année,
-   *  que n'ouvre aucun filet — ailleurs, le filet le porte déjà. */
-  showMonth: boolean;
   onOpenRoom: (id: string) => void;
   onOpenWiki: (slug: string) => void;
   onEditEvent: (id: string) => void;
@@ -702,15 +719,6 @@ function DateGroupBlock({
             </span>
           )}
         </>
-      )}
-      {showMonth && monthName && (
-        <p
-          className="mb-2 ml-[var(--tl-graph-pad,0px)] text-[10px] font-medium uppercase leading-none tracking-wider text-muted-foreground"
-          data-testid="timeline-first-month"
-          aria-hidden
-        >
-          {monthName}
-        </p>
       )}
       <ul className="space-y-1.5">
         {group.items.map((item, i) => {
