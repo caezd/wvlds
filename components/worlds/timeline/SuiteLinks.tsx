@@ -244,7 +244,7 @@ export function SuiteLinks({
 
   return (
     <svg
-      className="pointer-events-none absolute inset-0 h-full w-full overflow-visible"
+      className="pointer-events-none absolute inset-0 z-[2] h-full w-full overflow-visible"
       aria-hidden
       data-testid="timeline-suite-links"
       data-style={style}

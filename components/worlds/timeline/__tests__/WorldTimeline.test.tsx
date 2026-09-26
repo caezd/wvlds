@@ -136,79 +136,63 @@ describe("WorldTimeline — frise verticale", () => {
     expect(screen.queryByTestId("timeline-branch")).toBeNull();
   });
 
-  it("l'année, une borne sur le fil : un carré plein, « An 1 » posé sur la bordure, sans rouge", () => {
+  it("l'année, un bandeau sur toute la largeur : « An 1 » bien visible, sans rouge", () => {
     frise([room("a", "Prologue", 1, 0, 1)], { ...CONFIG, era_name: "des Cendres" });
     const an1 = annees()[0];
+    expect(an1).toHaveAttribute("data-testid", "timeline-year-band");
     expect(an1.textContent).toBe("An 1 des Cendres");
-    // Sur la bordure (centrée sur elle, fond qui la découpe), dans
-    // l'alignement des titres, graphe compris.
-    expect(an1.className.split(" ")).toEqual(expect.arrayContaining([
-      "top-0", "-translate-y-1/2", "bg-body", "left-[calc(1.75rem+var(--tl-graph-pad,0px))]",
-    ]));
-    // Bien visible : un chiffre plus grand, en gras ; sa légende appuyée.
+    // Un chiffre plus grand, en gras ; sa légende appuyée.
     expect(within(an1).getByText("1").className.split(" ")).toEqual(expect.arrayContaining(["text-lg", "font-bold", "text-foreground"]));
     expect(within(an1).getByText("An").className.split(" ")).toEqual(expect.arrayContaining(["font-semibold", "text-foreground/60"]));
     expect(within(an1).getByText("des Cendres").className).toBe(within(an1).getByText("An").className);
     expect(an1.innerHTML).not.toMatch(/accent|red/);
-    // Le carré, sur le fil, à la hauteur de la bordure.
-    const borne = within(an1.closest("[data-year]") as HTMLElement).getByTestId("timeline-year-marker");
-    expect(borne.className.split(" ")).toEqual(expect.arrayContaining(["size-3.5", "-left-[7px]", "top-0", "-translate-y-1/2", "bg-foreground"]));
-    // Plus de très grands chiffres.
-    expect(an1.innerHTML).not.toMatch(/text-4xl|text-6xl/);
-  });
-
-  it("l'année en filigrane géant, très pâle, derrière les jours et les mois", () => {
-    frise([room("a", "Prologue", 1, 0, 1), room("b", "Suite", 12, 0, 1)]);
-    const filigranes = screen.getAllByTestId("timeline-year-watermark");
-    expect(filigranes.map((f) => f.textContent)).toEqual(["1", "12"]);
-    const f = filigranes[0];
-    expect(f.className.split(" ")).toEqual(expect.arrayContaining(["text-[5.5rem]", "sm:text-[7rem]", "text-foreground/[0.06]"]));
-    // Décoratif : ni lu, ni cliquable, ni sélectionnable ; le titre reste la borne.
-    const calque = f.parentElement as HTMLElement;
-    expect(calque).toHaveAttribute("aria-hidden", "true");
-    expect(calque.className.split(" ")).toEqual(expect.arrayContaining(["pointer-events-none", "select-none", "overflow-hidden"]));
-    expect(annees().map((h) => h.textContent)).toEqual(["An 1", "An 12"]);
-    // Découpé par son propre calque : l'année elle-même ne coupe rien (la
-    // borne collée et les filets de mois en dépendent).
-    expect((calque.parentElement as HTMLElement).className).not.toMatch(/overflow-(hidden|clip)/);
-  });
-
-  it("la borne de l'année se colle sous la tête au défilement, sans rien décaler", () => {
-    frise([room("a", "Prologue", 1, 0, 1)]);
-    const an1 = annees()[0];
-    const colle = an1.parentElement as HTMLElement;
-    expect(colle).toHaveAttribute("data-testid", "timeline-year-sticky");
-    expect(within(colle).getByTestId("timeline-year-marker")).toBeInTheDocument();
-    // Sous la tête collée, dont la hauteur est mesurée dans `--tl-head`.
-    expect(colle.className.split(" ")).toEqual(expect.arrayContaining([
-      "sticky", "top-[calc(var(--tl-head,0px)+0.75rem)]", "h-0", "-mt-8", "mb-8", "-ml-7",
+    // D'un bord à l'autre du conteneur, marges de la liste comprises.
+    expect(an1.className.split(" ")).toEqual(expect.arrayContaining([
+      "-ml-5", "pl-5", "-mr-[var(--tl-right-pad,20px)]", "pr-[var(--tl-right-pad,20px)]",
     ]));
+    // Ni borne, ni filigrane.
+    expect(screen.queryByTestId("timeline-year-marker")).toBeNull();
+    expect(screen.queryByTestId("timeline-year-watermark")).toBeNull();
+  });
+
+  it("le bandeau de l'année se colle sous la tête au défilement, sous les lignes de suite et le fil", async () => {
+    db.tables.chatroom_sequels = [suite("a", "b")];
+    frise([room("a", "Prologue", 1, 0, 1), room("b", "Suite", 1, 0, 2)]);
+    const bandeau = annees()[0];
+    // Sous la tête collée, dont la hauteur est mesurée dans `--tl-head` ;
+    // translucide, comme elle.
+    expect(bandeau.className.split(" ")).toEqual(expect.arrayContaining([
+      "sticky", "top-[var(--tl-head,0px)]", "backdrop-blur",
+    ]));
+    // Au-dessus des salons (z-[1]), sous les lignes de suite (z-[2]).
+    expect(bandeau.className.split(" ")).toContain("z-[1]");
+    expect((await screen.findByTestId("timeline-suite-links")).getAttribute("class")!.split(" ")).toContain("z-[2]");
+    // Le fil le traverse, dans l'alignement du fil des années.
+    expect(within(bandeau).getByTestId("timeline-year-band-fil").className.split(" ")).toEqual(
+      expect.arrayContaining(["left-[7.25rem]", "inset-y-0", "bg-border"]),
+    );
     expect(screen.getByTestId("timeline-scroll").style.getPropertyValue("--tl-head")).toMatch(/^\d+px$/);
   });
 
-  it("le premier mois de l'année, posé sur sa bordure, calé sur le jour, avec la séparation des autres mois", () => {
+  it("le premier mois de l'année, sous le bandeau, calé sur le jour", () => {
     frise([room("a", "Prologue", 1, 0, 3), room("b", "Sans mois", 2, null, null)]);
     const [an1, an2] = annees().map((h) => h.closest("[data-year]") as HTMLElement);
     const mois = within(an1).getByTestId("timeline-first-month");
     expect(mois).toHaveTextContent("Janvier");
-    // Sur la bordure : en haut de la colonne du fil, centré sur elle, fond qui
-    // la découpe ; le texte finit 0.75rem avant le fil, comme le jour.
+    // Le texte finit 0.75rem avant le fil, comme le jour.
     expect(mois.className.split(" ")).toEqual(
-      expect.arrayContaining(["top-0", "-translate-y-1/2", "right-[calc(100%+0.25rem)]", "px-2", "bg-body", "uppercase"]),
+      expect.arrayContaining(["top-3", "right-[calc(100%+0.25rem)]", "px-2", "text-right", "uppercase"]),
     );
-    // 32px de part et d'autre de la bordure, comme autour d'un filet de mois.
+    // 32px sous le bandeau avant la première date.
     expect((mois.parentElement as HTMLElement).className.split(" ")).toContain("py-8");
     // Une année sans mois n'en affiche pas.
     expect(within(an2).queryByTestId("timeline-first-month")).toBeNull();
   });
 
-  it("des filets de la couleur des bordures, sans le tout premier", () => {
+  it("des bandeaux bordés de la couleur des bordures, sans trait au-dessus du tout premier", () => {
     frise([room("a", "Avant", 0, 0, 1), room("b", "Après", 1, 0, 1)]);
-    const sections = annees().map((h) => h.closest("li")!);
-    for (const s of sections) {
-      expect(s.className.split(" ")).toContain("border-t");
-      expect(s.className.split(" ")).toContain("border-border");
-      expect(s.className).toContain("first:border-t-0");
+    for (const bandeau of annees()) {
+      expect(bandeau.className.split(" ")).toEqual(expect.arrayContaining(["border-y", "border-border", "[li:first-child>&]:border-t-0"]));
     }
   });
 
@@ -544,8 +528,8 @@ describe("WorldTimeline — saisons", () => {
     expect(bandeaux).toHaveLength(1);
     expect(bandeaux[0]).toHaveTextContent("Âge des Cendres");
     expect(bandeaux[0]).toHaveTextContent("An 10 – 19");
-    // 32px jusqu'à la bordure de l'année, où se pose sa borne.
-    expect(bandeaux[0].className.split(" ")).toContain("pb-8");
+    // Juste au-dessus du bandeau de sa première année.
+    expect(bandeaux[0].nextElementSibling).toHaveAttribute("data-year", "12");
   });
 });
 

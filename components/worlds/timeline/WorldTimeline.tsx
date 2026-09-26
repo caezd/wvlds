@@ -542,9 +542,8 @@ function SectionWithAge({
   return (
     <>
       <li
-        // 32px jusqu'à la bordure de sa première année, où se pose la borne :
-        // la même séparation qu'entre deux mois.
-        className="border-t border-border pb-8 pt-6 first:border-t-0 first:pt-2"
+        // Au-dessus du bandeau de sa première année.
+        className="pb-4 pt-8 first:pt-2"
         data-testid="timeline-age"
       >
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-foreground">{age.name}</p>
@@ -555,8 +554,8 @@ function SectionWithAge({
   );
 }
 
-/** La légende d'une année (« Eon », le nom d'ère) : petites capitales,
- *  plus appuyées que celles des mois. */
+/** La légende d'une année (« Eon », le nom d'ère), dans son bandeau :
+ *  petites capitales, plus appuyées que celles des mois. */
 const YEAR_CAPTION = "text-[11px] font-semibold uppercase tracking-[0.15em] text-foreground/60";
 
 function YearBlock({
@@ -632,65 +631,44 @@ function YearBlock({
   const firstMonthName = firstMonth !== null ? (config.month_names[firstMonth] ?? null) : null;
 
   return (
-    <li
-      data-year={section.year}
-      // La colonne de gauche (6rem) ne porte plus que les jours et les mois.
-      className="relative border-t border-border pl-24 first:border-t-0"
-    >
-      {/* L'année en filigrane : un chiffre géant et très pâle au fond de la
-          colonne des jours, que les mois et les jours recouvrent. Découpé
-          par l'année (un calque à part : `overflow-hidden` sur l'année elle-
-          même casserait la borne collée et couperait les filets de mois). */}
-      <div className="pointer-events-none absolute inset-0 select-none overflow-hidden" aria-hidden>
-        <span
-          className="absolute left-0 top-6 text-[5.5rem] font-bold leading-none tracking-tighter tabular-nums text-foreground/[0.06] sm:text-[7rem]"
-          data-testid="timeline-year-watermark"
-        >
-          {section.year}
-        </span>
-      </div>
-      {/* 32px sous la bordure de l'année et au-dessus de la suivante : la
-          même séparation qu'entre deux mois. */}
-      <div className="relative py-8 pl-7">
+    <li data-year={section.year}>
+      {/* L'année, un bandeau sur toute la largeur du conteneur (marges de la
+          liste comprises), collé sous la tête le temps de son année : on sait
+          toujours où l'on est, et deux années se séparent franchement. Au-
+          dessus des salons qui défilent dessous (z-[1]), mais sous les lignes
+          de suite (z-[2], voir SuiteLinks) et sous la tête (z-10) ; le fil le
+          traverse. Pas de trait au-dessus de la toute première année. */}
+      <h3
+        className={cn(
+          "sticky top-[var(--tl-head,0px)] z-[1] -ml-5 -mr-[var(--tl-right-pad,20px)] flex items-baseline gap-1.5 border-y border-border py-2 [li:first-child>&]:border-t-0 pl-5 pr-[var(--tl-right-pad,20px)] leading-none backdrop-blur",
+          AMBIENT_BG_TRANSLUCENT,
+        )}
+        data-testid="timeline-year-band"
+      >
+        {/* Le fil, à travers le bandeau : marge de la liste (1.25rem) et
+            colonne des jours (6rem). */}
+        <span className="absolute inset-y-0 left-[7.25rem] w-px bg-border" data-testid="timeline-year-band-fil" aria-hidden />
+        {/* Les espaces entre les parties : invisibles en flex, mais lus
+            (« An 1 », pas « An1 »). */}
+        <span className={YEAR_CAPTION}>{config.year_label}</span>{" "}
+        <span className="text-lg font-bold leading-none tabular-nums text-foreground">{section.year}</span>
+        {config.era_name && (
+          <>
+            {" "}
+            <span className={YEAR_CAPTION}>{config.era_name}</span>
+          </>
+        )}
+      </h3>
+      {/* La colonne de gauche (6rem) porte les jours et les mois. */}
+      <div className="relative ml-24 py-8 pl-7">
         {/* Le fil : d'une section à l'autre, il ne s'interrompt pas. */}
         <span className="absolute inset-y-0 left-0 w-px bg-border" aria-hidden />
-        {/* L'année, une borne sur le fil : un carré plein sur la bordure, et
-            « Eon 4 » posé dessus, dans l'alignement des titres ; le premier
-            mois, de l'autre côté du fil, reste calé sur le jour.
-            La borne se colle sous la tête au défilement, le temps de son
-            année : un repère sans hauteur (-mt-8 mb-8 le ramènent sur la
-            bordure sans rien décaler), ramené au fil (-ml-7), au-dessus des
-            lignes de suite mais sous la tête (z-[5]). */}
-        <div
-          className="sticky top-[calc(var(--tl-head,0px)+0.75rem)] z-[5] -ml-7 -mt-8 mb-8 h-0"
-          data-testid="timeline-year-sticky"
-        >
-          <span
-            className="absolute -left-[7px] top-0 size-3.5 -translate-y-1/2 rounded-[3px] bg-foreground"
-            data-testid="timeline-year-marker"
-            aria-hidden
-          />
-          <h3
-            className={cn("absolute left-[calc(1.75rem+var(--tl-graph-pad,0px))] top-0 flex -translate-x-2 -translate-y-1/2 items-baseline gap-1.5 whitespace-nowrap px-2 leading-none", AMBIENT_BG)}
-          >
-            {/* Les espaces entre les parties : invisibles en flex, mais lus
-                (« An 1 », pas « An1 »). */}
-            <span className={YEAR_CAPTION}>{config.year_label}</span>{" "}
-            <span className="text-lg font-bold leading-none tabular-nums text-foreground">{section.year}</span>
-            {config.era_name && (
-              <>
-                {" "}
-                <span className={YEAR_CAPTION}>{config.era_name}</span>
-              </>
-            )}
-          </h3>
-        </div>
-        {/* Le premier mois de l'année, posé sur sa bordure comme les autres
-            sur leur filet, calé sur le jour (le texte finit 0.75rem avant le
-            fil : 0.25rem + px-2). */}
+        {/* Le premier mois de l'année, sous le bandeau, calé sur le jour (le
+            texte finit 0.75rem avant le fil : 0.25rem + px-2) ; les suivants
+            se posent sur leur filet. */}
         {firstMonthName && (
           <span
-            className={cn("absolute right-[calc(100%+0.25rem)] top-0 -translate-y-1/2 whitespace-nowrap px-2 text-right text-[10px] font-medium uppercase leading-none tracking-wider text-muted-foreground", AMBIENT_BG)}
+            className="absolute right-[calc(100%+0.25rem)] top-3 whitespace-nowrap px-2 text-right text-[10px] font-medium uppercase leading-none tracking-wider text-muted-foreground"
             data-testid="timeline-first-month"
             aria-hidden
           >
