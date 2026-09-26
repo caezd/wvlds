@@ -645,6 +645,39 @@ describe("WorldTimeline — suites proposées par les joueurs", () => {
     }
   });
 
+  it("une suite d'un arc à un autre : chaque arc garde sa chaîne et sa couleur, la passerelle passe de l'une à l'autre", async () => {
+    db.tables.world_timeline_arcs = [
+      { id: "comete", name: "La comète", color: "#22c55e", position: 0 },
+      { id: "sang", name: "Le prix du sang", color: "#ef4444", position: 1 },
+    ];
+    db.tables.chatrooms = [
+      { id: "a", arc_id: "comete", category_id: null },
+      { id: "b", arc_id: "comete", category_id: null },
+      { id: "c", arc_id: "sang", category_id: null },
+      { id: "d", arc_id: "sang", category_id: null },
+    ];
+    db.tables.chatroom_sequels = [suite("a", "b"), suite("b", "c"), suite("c", "d")];
+    frise([...SALONS(), room("d", "Un nom oublié", 4, 0, 1)]);
+
+    const calque = await vi.waitFor(() => {
+      const c = screen.getByTestId("timeline-suite-links");
+      expect(c.querySelector("[data-suite='b>c']")).not.toBeNull();
+      return c;
+    });
+    // Deux chaînes, une par arc, chacune dans sa couleur.
+    expect(calque.querySelector("[data-suite='a>b>c>d']")).toBeNull();
+    expect((calque.querySelector("[data-suite='a>b'] path") as SVGElement).style.stroke).toBe("rgb(34, 197, 94)");
+    expect((calque.querySelector("[data-suite='c>d'] path") as SVGElement).style.stroke).toBe("rgb(239, 68, 68)");
+    // La passerelle : chaque bout dans la couleur de son arc, le tronc en fondu.
+    const passerelle = calque.querySelector("[data-suite='b>c']")!;
+    expect(passerelle).toHaveAttribute("data-bridge");
+    const pastilles = passerelle.querySelectorAll("circle");
+    expect([...pastilles].map((c) => (c as SVGElement).style.fill)).toEqual(["rgb(34, 197, 94)", "rgb(239, 68, 68)"]);
+    const degrade = passerelle.querySelector("linearGradient")!;
+    expect([...degrade.querySelectorAll("stop")].map((s) => s.getAttribute("stop-color"))).toEqual(["#22c55e", "#ef4444"]);
+    expect((passerelle.querySelector("path") as SVGElement).style.stroke).toContain(`#${degrade.id}`);
+  });
+
   it("une suite proposée entre deux salons déjà dans la même chaîne reste visible", async () => {
     // a → b → c accepté, et c proposé comme suite de a : sans tracé à part,
     // le pointillé se perdait sous le rail plein.

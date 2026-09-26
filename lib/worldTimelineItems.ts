@@ -229,17 +229,35 @@ export function assignSuiteLanes(spans: readonly { top: number; bottom: number }
 
 // ── Chaînes de suites ────────────────────────────────────────
 
-/** Un lien de suite : `to` suit `from`. Proposé (`pending`), il se trace en pointillés. */
-export type SuitePair = { from: string; to: string; color: string | null; pending?: boolean };
+/**
+ * Un lien de suite : `to` suit `from`. Proposé (`pending`), il se trace en
+ * pointillés. Entre deux arcs différents, c'est une passerelle : `bridgeFrom`
+ * porte la couleur de l'arc quitté, `color` celle de l'arc rejoint.
+ */
+export type SuitePair = {
+  from: string;
+  to: string;
+  color: string | null;
+  pending?: boolean;
+  bridgeFrom?: string | null;
+};
 export type SuiteChain = { ids: string[]; color: string | null };
+
+/** Une passerelle relie deux arcs sans les fondre en une chaîne. */
+export function isSuiteBridge(pair: SuitePair): boolean {
+  return pair.bridgeFrom !== undefined;
+}
 
 /**
  * Les suites forment des chaînes (A → B → C) ; les styles « rail » et
  * « graphe » dessinent une chaîne d'un seul trait, pas une accolade par
  * paire. Deux paires qui partagent un salon sont de la même chaîne. La
  * couleur est celle de la première paire colorée (l'arc de la suite).
+ * Les passerelles entre arcs sont écartées : chaque arc garde sa chaîne et
+ * sa couleur (SuiteLinks les trace à part).
  */
-export function buildSuiteChains(pairs: readonly SuitePair[]): SuiteChain[] {
+export function buildSuiteChains(allPairs: readonly SuitePair[]): SuiteChain[] {
+  const pairs = allPairs.filter((p) => !isSuiteBridge(p));
   const parent = new Map<string, string>();
   const find = (x: string): string => {
     let root = x;

@@ -208,7 +208,8 @@ export function WorldTimeline({
 
   // Les suites dont les deux salons sont à l'écran. Proposées, elles se
   // tracent en pointillés ; reliées à la chaîne d'un arc, elles en prennent
-  // la couleur (voir SuiteLinks).
+  // la couleur (voir SuiteLinks). Une suite qui passe d'un arc à un autre
+  // est une passerelle : elle ne fond pas les deux arcs en une chaîne.
   const suiteLinks: SuiteLink[] = useMemo(() => {
     const shown = new Map(
       visible.filter((i): i is TimelineRoomItem => i.kind === "room").map((i) => [i.id, i]),
@@ -219,12 +220,17 @@ export function WorldTimeline({
     };
     return data.sequels
       .filter((s) => shown.has(s.chatroomId) && shown.has(s.previousId))
-      .map((s) => ({
-        from: s.previousId,
-        to: s.chatroomId,
-        color: colorOf(s.chatroomId) ?? colorOf(s.previousId),
-        pending: s.status === "pending",
-      }));
+      .map((s) => {
+        const fromArc = shown.get(s.previousId)?.arcId ?? null;
+        const toArc = shown.get(s.chatroomId)?.arcId ?? null;
+        return {
+          from: s.previousId,
+          to: s.chatroomId,
+          color: colorOf(s.chatroomId) ?? colorOf(s.previousId),
+          pending: s.status === "pending",
+          ...(fromArc && toArc && fromArc !== toArc ? { bridgeFrom: colorOf(s.previousId) } : {}),
+        };
+      });
   }, [visible, arcsById, data.sequels]);
 
   // Les suites proposées que l'on peut accepter : accrochées à un salon où

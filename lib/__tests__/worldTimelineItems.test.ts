@@ -148,6 +148,21 @@ describe("chaînes de suites", () => {
     expect([...suiteChainOf(paires, "c")!]).toEqual(["a", "b", "c", "d"]);
     expect(suiteChainOf(paires, "seul")).toBeNull();
   });
+
+  it("une passerelle entre deux arcs ne fond pas leurs chaînes", async () => {
+    const { buildSuiteChains, suiteChainOf, isSuiteBridge } = await import("@/lib/worldTimelineItems");
+    const paires = [
+      { from: "a", to: "b", color: "#22c55e" },
+      { from: "b", to: "c", color: "#0ea5e9", bridgeFrom: "#22c55e" },
+      { from: "c", to: "d", color: "#0ea5e9" },
+    ];
+    expect(paires.map(isSuiteBridge)).toEqual([false, true, false]);
+    expect(buildSuiteChains(paires)).toEqual([
+      { ids: ["a", "b"], color: "#22c55e" },
+      { ids: ["c", "d"], color: "#0ea5e9" },
+    ]);
+    expect([...suiteChainOf(paires, "b")!]).toEqual(["a", "b"]);
+  });
 });
 
 describe("arcRanks", () => {

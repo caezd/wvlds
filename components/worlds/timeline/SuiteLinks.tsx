@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { assignSuiteLanes, buildSuiteChains, type SuitePair } from "@/lib/worldTimelineItems";
+import { assignSuiteLanes, buildSuiteChains, isSuiteBridge, suiteChainOf, type SuitePair } from "@/lib/worldTimelineItems";
 
 export type SuiteLink = SuitePair;
 
@@ -29,6 +29,8 @@ type Drawn = {
   bottom: number;
   lane: number;
   color: string | null;
+  /** Passerelle entre deux arcs : le salon quitté et la couleur de son arc. */
+  bridge?: { fromId: string; fromColor: string | null };
   /** Le fil d'un persona, pas une chaîne de suites. */
   thread?: boolean;
 };
@@ -40,6 +42,16 @@ const LANE_GAP: Record<SuiteStyle, number> = { rail: 10, graph: 8 };
 /** Distance entre le fil et le premier couloir du graphe. */
 export const GRAPH_OFFSET = 14;
 
+/** Au survol : les tracés allumés, rangés dans les couloirs dès `offset`. */
+function litLanes(drawn: Drawn[], only: ReadonlySet<string>, offset: number): Drawn[] {
+  const lit = drawn.filter((d) => !d.thread && d.points.some((p) => only.has(p.id)));
+  const lanes = assignSuiteLanes(lit);
+  return [
+    ...drawn.filter((d) => d.thread),
+    ...lit.map((d, i) => ({ ...d, lane: lanes[i] + offset })),
+  ];
+}
+
 /**
  * Le calque des lignes de suite. Les positions se mesurent dans le DOM
  * (`[data-room-id]`, `[data-journal-id]`, et l'anneau d'un salon pour le
@@ -48,10 +60,13 @@ export const GRAPH_OFFSET = 14;
  * Le fil d'un persona se dessine comme une chaîne, dans le style choisi,
  * toujours dans le premier couloir : les suites viennent après lui.
  *
+ * Une suite entre deux arcs est une passerelle : elle ne fond pas les deux
+ * arcs en une chaîne, et se trace à part, en fondu d'une couleur à l'autre.
+ *
  * Au survol seulement (`only` non nul), une seule chaîne de suites est
- * tracée à la fois : un seul couloir lui est réservé (`onLanes`), et la
- * chaîne survolée s'y dessine. La place ne dépend donc pas du survol, et les
- * titres ne bougent pas quand une chaîne s'allume.
+ * tracée à la fois, avec ses passerelles : on réserve les couloirs du survol
+ * le plus chargé (`onLanes`), souvent un seul. La place ne dépend donc pas
+ * du survol, et les titres ne bougent pas quand une chaîne s'allume.
  */
 export function SuiteLinks({
   containerRef,
@@ -76,6 +91,7 @@ export function SuiteLinks({
   const [drawn, setDrawn] = React.useState<Drawn[]>([]);
   const [box, setBox] = React.useState({ width: 0, filX: 0 });
   const hoverMode = only !== null;
+  const uid = React.useId();
 
   const measure = React.useCallback(() => {
     const container = containerRef.current;
@@ -110,18 +126,22 @@ export function SuiteLinks({
     // pointillés : fondue dans une chaîne, elle disparaissait sous son trait
     // plein dès que ses deux salons y étaient déjà. Elle prend la couleur de
     // la chaîne qu'elle rejoint (la suite d'abord, puis le salon précédent).
+    // Une passerelle entre deux arcs se trace aussi à part, en fondu de la
+    // couleur de l'arc quitté à celle de l'arc rejoint.
     const accepted = buildSuiteChains(links.filter((l) => !l.pending));
     const chainColor = (id: string) => accepted.find((c) => c.ids.includes(id))?.color ?? null;
-    const chains = [
+    const chains: { color: string | null; bridge?: Drawn["bridge"]; points: Point[]; segments: Segment[] }[] = [
       ...accepted.map((c) => ({ color: c.color, ...solid(c.ids) })),
       ...links
-        .filter((l) => l.pending)
+        .filter((l) => l.pending || isSuiteBridge(l))
         .map((l) => {
-          const dashed = solid([l.from, l.to]).points.map((p) => ({ ...p, pending: true }));
+          const pending = !!l.pending;
+          const pair = solid([l.from, l.to]).points.map((p) => ({ ...p, pending }));
           return {
-            color: chainColor(l.to) ?? chainColor(l.from) ?? l.color,
-            points: dashed,
-            segments: dashed.length > 1 ? [{ top: dashed[0].y, bottom: dashed[1].y, pending: true }] : [],
+            color: isSuiteBridge(l) ? l.color : chainColor(l.to) ?? chainColor(l.from) ?? l.color,
+            bridge: isSuiteBridge(l) ? { fromId: l.from, fromColor: l.bridgeFrom ?? null } : undefined,
+            points: pair,
+            segments: pair.length > 1 ? [{ top: pair[0].y, bottom: pair[1].y, pending }] : [],
           };
         }),
     ].filter((c) => c.points.length > 1);
@@ -139,6 +159,7 @@ export function SuiteLinks({
       ...spans[i],
       lane: lanes[i],
       color: c.color,
+      bridge: c.bridge,
     }));
     if (hasThread) {
       next.unshift({
@@ -153,7 +174,16 @@ export function SuiteLinks({
     }
     setDrawn(next);
     setBox({ width: rect.width, filX });
-    const suiteLanes = chains.length === 0 ? 0 : hoverMode ? 1 : Math.max(...assignSuiteLanes(spans)) + 1;
+    // Au survol, la place réservée est celle du survol le plus chargé : la
+    // chaîne d'un arc et les passerelles qui en partent se chevauchent.
+    const laneCount = (items: { top: number; bottom: number }[]) =>
+      items.length === 0 ? 0 : Math.max(...assignSuiteLanes(items)) + 1;
+    const suiteLanes = !hoverMode
+      ? laneCount(spans)
+      : Math.max(0, ...[...new Set(chains.flatMap((c) => c.points.map((p) => p.id)))].map((id) => {
+          const lit = suiteChainOf(links, id) ?? new Set([id]);
+          return laneCount(chains.filter((c) => c.points.some((p) => lit.has(p.id))).map((c) => span(c.points)));
+        }));
     onLanes(suiteLanes + (hasThread ? 1 : 0));
   }, [containerRef, links, onLanes, hoverMode, thread]);
 
@@ -169,30 +199,47 @@ export function SuiteLinks({
     return () => observer.disconnect();
   }, [containerRef, measure]);
 
-  // Au survol, la chaîne allumée prend l'unique couloir réservé aux suites
-  // (après celui du fil de persona, toujours tracé).
+  // Au survol, la chaîne allumée (et ses passerelles) se range dans les
+  // couloirs réservés aux suites, après celui du fil de persona, toujours tracé.
   const hasThread = drawn.some((d) => d.thread);
-  const shown = only
-    ? drawn
-      .filter((d) => d.thread || d.points.some((p) => only.has(p.id)))
-      .map((d) => (d.thread ? d : { ...d, lane: hasThread ? 1 : 0 }))
-    : drawn;
+  const shown = only ? litLanes(drawn, only, hasThread ? 1 : 0) : drawn;
   if (shown.length === 0) return null;
   const gap = LANE_GAP[style];
-  const strokeProps = (d: Drawn, pending = false) => ({
-    className: d.color ? undefined : d.thread ? "stroke-foreground/70" : "stroke-foreground/30",
-    style: d.color ? { stroke: d.color, opacity: d.thread ? 1 : 0.85 } : undefined,
+  // Une passerelle entre arcs : chaque bout dans la couleur de son arc, et
+  // le tronc en fondu de l'un à l'autre (dégradé en coordonnées de la frise :
+  // un trait vertical n'a pas de largeur, un dégradé relatif à sa boîte ne
+  // s'afficherait pas).
+  const colorAt = (d: Drawn, id: string) => (d.bridge && id === d.bridge.fromId ? d.bridge.fromColor : d.color);
+  const gradientId = (d: Drawn) => `${uid}-bridge-${d.key}`.replace(/[^A-Za-z0-9_-]/g, "_");
+  const trunkPaint = (d: Drawn) => (d.bridge?.fromColor && d.color ? `url(#${gradientId(d)})` : d.color);
+  const bridgeGradient = (d: Drawn, x: number) => {
+    if (!d.bridge?.fromColor || !d.color) return null;
+    const fromY = d.points.find((p) => p.id === d.bridge!.fromId)?.y ?? d.top;
+    const toY = d.points.find((p) => p.id !== d.bridge!.fromId)?.y ?? d.bottom;
+    return (
+      <defs>
+        <linearGradient id={gradientId(d)} gradientUnits="userSpaceOnUse" x1={x} y1={fromY} x2={x} y2={toY}>
+          <stop offset="0" stopColor={d.bridge.fromColor} />
+          <stop offset="1" stopColor={d.color} />
+        </linearGradient>
+      </defs>
+    );
+  };
+  const strokeProps = (d: Drawn, pending = false, color = d.color) => ({
+    className: color ? undefined : d.thread ? "stroke-foreground/70" : "stroke-foreground/30",
+    style: color ? { stroke: color, opacity: d.thread ? 1 : 0.85 } : undefined,
     strokeDasharray: pending ? "3 3" : undefined,
     "data-pending": pending ? "" : undefined,
   });
-  const fillProps = (d: Drawn) => ({
-    className: d.color ? undefined : d.thread ? "fill-foreground" : "fill-foreground/40",
-    style: d.color ? { fill: d.color } : undefined,
+  const fillProps = (d: Drawn, color = d.color) => ({
+    className: color ? undefined : d.thread ? "fill-foreground" : "fill-foreground/40",
+    style: color ? { fill: color } : undefined,
   });
   const groupProps = (d: Drawn) => ({
     "data-suite": d.thread ? undefined : d.key,
     "data-testid": d.thread ? "timeline-persona-thread" : undefined,
     "data-pending-link": (!d.thread && d.points.every((p) => p.pending)) || undefined,
+    "data-bridge": d.bridge ? "" : undefined,
   });
 
   return (
@@ -210,13 +257,14 @@ export function SuiteLinks({
           const x = box.filX + GRAPH_OFFSET + d.lane * gap;
           return (
             <g key={d.key} {...groupProps(d)} data-lane={d.lane}>
+              {bridgeGradient(d, x)}
               {d.segments.map((s) => (
-                <path key={`${s.top}-${s.bottom}`} d={`M ${x} ${s.top} V ${s.bottom}`} fill="none" strokeWidth={1.5 + weight} {...strokeProps(d, s.pending)} />
+                <path key={`${s.top}-${s.bottom}`} d={`M ${x} ${s.top} V ${s.bottom}`} fill="none" strokeWidth={1.5 + weight} {...strokeProps(d, s.pending, trunkPaint(d))} />
               ))}
               {d.points.map((p) => (
                 <g key={p.id}>
-                  <path d={`M ${x} ${p.y} H ${box.filX + 7}`} fill="none" strokeWidth={1.5} {...strokeProps(d, p.pending)} />
-                  <circle cx={x} cy={p.y} r={2.5 + weight} data-thread-point={d.thread ? p.id : undefined} {...fillProps(d)} />
+                  <path d={`M ${x} ${p.y} H ${box.filX + 7}`} fill="none" strokeWidth={1.5} {...strokeProps(d, p.pending, colorAt(d, p.id))} />
+                  <circle cx={x} cy={p.y} r={2.5 + weight} data-thread-point={d.thread ? p.id : undefined} {...fillProps(d, colorAt(d, p.id))} />
                 </g>
               ))}
             </g>
@@ -226,13 +274,14 @@ export function SuiteLinks({
         const x = box.width - EDGE - d.lane * gap;
         return (
           <g key={d.key} {...groupProps(d)} data-lane={d.lane}>
+            {bridgeGradient(d, x)}
             {d.segments.map((s) => (
-              <path key={`${s.top}-${s.bottom}`} d={`M ${x} ${s.top} V ${s.bottom}`} fill="none" strokeWidth={2 + weight} strokeLinecap={s.pending ? "butt" : "round"} {...strokeProps(d, s.pending)} />
+              <path key={`${s.top}-${s.bottom}`} d={`M ${x} ${s.top} V ${s.bottom}`} fill="none" strokeWidth={2 + weight} strokeLinecap={s.pending ? "butt" : "round"} {...strokeProps(d, s.pending, trunkPaint(d))} />
             ))}
             {d.points.map((p) => (
               <g key={p.id}>
-                <path d={`M ${x} ${p.y} H ${x - STUB}`} fill="none" strokeWidth={1} {...strokeProps(d, p.pending)} />
-                <circle cx={x} cy={p.y} r={3.5 + weight} data-thread-point={d.thread ? p.id : undefined} {...fillProps(d)} />
+                <path d={`M ${x} ${p.y} H ${x - STUB}`} fill="none" strokeWidth={1} {...strokeProps(d, p.pending, colorAt(d, p.id))} />
+                <circle cx={x} cy={p.y} r={3.5 + weight} data-thread-point={d.thread ? p.id : undefined} {...fillProps(d, colorAt(d, p.id))} />
               </g>
             ))}
           </g>
