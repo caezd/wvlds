@@ -218,7 +218,7 @@ export function WorldChatComposer({
       aria-label={t("composer.dateSection")}
       title={t("composer.dateSection")}
       className={cn(
-        "flex h-9 items-center gap-2 rounded-lg border border-border-soft pl-2.5 pr-1",
+        "flex h-9 items-center gap-2 rounded-lg border border-border-soft px-2.5",
         !isMobile && "shrink-0",
       )}
     >
