@@ -668,10 +668,7 @@
       "sequelDecline": "Refuser la suite {chatroom}",
       "sequelAnswerFailed": "Impossible de répondre à cette suite proposée.",
       "personaThread": "Fil de {name}",
-      "personaThreadClear": "Effacer le fil de {name}",
-      "monthRuler": "Aller à un mois ({year})",
-      "monthBar": "{month} : {count, plural, one {# entrée} other {# entrées}}",
-      "monthBarNone": "{month} : aucune entrée"
+      "personaThreadClear": "Effacer le fil de {name}"
     },
     "tabSettings": "Paramètres",
     "tabCategories": "Catégories",

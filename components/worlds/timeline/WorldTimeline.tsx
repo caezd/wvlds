@@ -305,19 +305,6 @@ export function WorldTimeline({
     else el.scrollTop = top;
   }
 
-  // La réglette d'une année : son mois juste sous la tête et le bandeau
-  // collé, avec un peu d'air.
-  function scrollToMonth(year: number, month: number) {
-    const el = scrollRef.current;
-    const target = sectionEl(year)?.querySelector<HTMLElement>(`[data-month="${month}"]`);
-    if (!el || !target) return;
-    const band = sectionEl(year)?.querySelector<HTMLElement>("[data-testid='timeline-year-band']");
-    const top = el.scrollTop + target.getBoundingClientRect().top - el.getBoundingClientRect().top
-      - (headRef.current?.offsetHeight ?? 0) - (band?.offsetHeight ?? 0) - 16;
-    if (typeof el.scrollTo === "function") el.scrollTo({ top, behavior: "smooth" });
-    else el.scrollTop = top;
-  }
-
   // S'ouvrir sur l'année actuelle du monde.
   useEffect(() => {
     scrollToYear(config.current_year, false);
@@ -518,7 +505,6 @@ export function WorldTimeline({
                         canManage={canManage}
                         highlight={highlight}
                         stuck={stuckYear === section.year}
-                        onJumpToMonth={(month) => scrollToMonth(section.year, month)}
                         onOpenRoom={(id) => router.push(`/c/${id}`)}
                         onOpenWiki={(slug) => router.push(`/w/${worldId}?view=wiki&page=${encodeURIComponent(slug)}`)}
                         onEditEvent={(id) => {
@@ -604,7 +590,6 @@ function YearBlock({
   canManage,
   highlight,
   stuck,
-  onJumpToMonth,
   onOpenRoom,
   onOpenWiki,
   onEditEvent,
@@ -619,8 +604,6 @@ function YearBlock({
   highlight: ReadonlySet<string> | null;
   /** Le bandeau de l'année est collé sous la tête. */
   stuck: boolean;
-  /** La réglette : aller au premier jour d'un mois de l'année. */
-  onJumpToMonth: (month: number) => void;
   onOpenRoom: (id: string) => void;
   onOpenWiki: (slug: string) => void;
   onEditEvent: (id: string) => void;
@@ -683,10 +666,7 @@ function YearBlock({
           prend le fond de la page et les couvre ; toujours sous la tête
           (z-10). Le fil s'y interrompt ; un trait dessus et dessous (aucun
           au-dessus de la toute première année).
-          Le titre à gauche, le chiffre dans une pastille ; la réglette des
-          mois calée à droite du bandeau (px-5, comme la tête, sans réserver
-          la marge des suites), hors du titre (ses boutons n'entrent pas dans le nom
-          de la section). */}
+          Le titre à gauche, le chiffre dans une pastille. */}
       <div
         className={cn(
           "sticky top-[var(--tl-head,0px)] -ml-5 -mr-[var(--tl-right-pad,20px)] flex items-center gap-3 border-y border-border py-2 [li:first-child>&]:border-t-0 px-5",
@@ -712,7 +692,6 @@ function YearBlock({
             </>
           )}
         </h3>
-        <MonthRuler section={section} config={config} onJump={onJumpToMonth} />
       </div>
       {/* La colonne de gauche (6rem) porte les jours et les mois. */}
       <div className="relative ml-24 py-8 pl-7">
@@ -733,71 +712,6 @@ function YearBlock({
         <ul className="space-y-4">{entries}</ul>
       </div>
     </li>
-  );
-}
-
-/**
- * La réglette des mois d'une année : une barre par mois du calendrier du
- * monde, haute selon le nombre d'entrées (salons, événements, journaux) de ce
- * mois parmi celles affichées. Un mois qui a des entrées est un bouton qui y
- * mène ; un mois vide, une marque basse, inerte.
- */
-function MonthRuler({
-  section,
-  config,
-  onJump,
-}: {
-  section: TimelineYearSection;
-  config: WorldTimelineConfig;
-  onJump: (month: number) => void;
-}) {
-  const tv = useTranslations("worlds.timelineView");
-  const counts = config.month_names.map(() => 0);
-  for (const group of section.groups) {
-    if (group.month !== null && group.month < counts.length) counts[group.month] += group.items.length;
-  }
-  const max = Math.max(1, ...counts);
-  const yearName = `${config.year_label} ${section.year}`;
-  return (
-    <div
-      role="group"
-      aria-label={tv("monthRuler", { year: yearName })}
-      className="ml-auto flex h-5 shrink-0 items-end gap-[3px]"
-      data-testid="timeline-month-ruler"
-    >
-      {counts.map((count, month) => {
-        const name = config.month_names[month] ?? String(month + 1);
-        if (count === 0) {
-          return (
-            <span
-              key={month}
-              className="h-1 w-[7px] rounded-[1px] bg-border"
-              title={tv("monthBarNone", { month: name })}
-              data-month-bar={month}
-              aria-hidden
-            />
-          );
-        }
-        // De 6px à 20px, selon le mois le plus fourni de l'année.
-        const height = 6 + Math.round((14 * count) / max);
-        return (
-          <button
-            key={month}
-            type="button"
-            onClick={() => onJump(month)}
-            className="group/bar flex h-5 w-[7px] items-end rounded-[1px] outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            title={tv("monthBar", { month: name, count })}
-            aria-label={tv("monthBar", { month: name, count })}
-            data-month-bar={month}
-          >
-            <span
-              className="w-full rounded-[1px] bg-foreground/60 transition-colors group-hover/bar:bg-foreground"
-              style={{ height }}
-            />
-          </button>
-        );
-      })}
-    </div>
   );
 }
 
@@ -844,7 +758,6 @@ function DateGroupBlock({
     <li
       className={cn("relative", newMonth && "pt-12")}
       data-date-group={group.key}
-      data-month={group.month ?? undefined}
       data-new-month={newMonth || undefined}
     >
       {/* Le filet d'un nouveau mois, en pointillés, d'un bord à l'autre du

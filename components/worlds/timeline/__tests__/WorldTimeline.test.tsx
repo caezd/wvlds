@@ -64,7 +64,7 @@ function frise(rooms: Room[], config = CONFIG) {
 }
 
 const annees = () => screen.getAllByRole("heading", { level: 3 });
-/** Les bandeaux d'année : le titre, et la réglette des mois à côté. */
+/** Les bandeaux d'année, qui portent son titre. */
 const bandeaux = () => screen.getAllByTestId("timeline-year-band");
 
 describe("WorldTimeline — frise verticale", () => {
@@ -85,9 +85,7 @@ describe("WorldTimeline — frise verticale", () => {
 
     expect(annees().map((h) => h.textContent)).toEqual(["An 1", "An 3"]);
     const an1 = annees()[0].closest("li")!;
-    const titres = within(an1).getAllByRole("button")
-      .filter((b) => !b.hasAttribute("data-month-bar"))
-      .map((b) => b.getAttribute("aria-label"));
+    const titres = within(an1).getAllByRole("button").map((b) => b.getAttribute("aria-label"));
     expect(titres).toEqual(["Prologue, 9 Janvier, An 1", "Suite, 2 Mars, An 1"]);
   });
 
@@ -152,51 +150,11 @@ describe("WorldTimeline — frise verticale", () => {
     expect(pastille.className.split(" ")).toEqual(expect.arrayContaining(["rounded-md", "bg-foreground", "text-background", "font-bold"]));
     expect(within(titre).getByText("An").className.split(" ")).toEqual(expect.arrayContaining(["font-semibold", "text-foreground/60"]));
     expect(bandeau.innerHTML).not.toMatch(/accent|red/);
-    // D'un bord à l'autre du conteneur, marges de la liste comprises ; la
-    // réglette calée à droite, à 20px du bord comme la tête, sans réserver la
-    // marge des suites.
+    // D'un bord à l'autre du conteneur, marges de la liste comprises.
     expect(bandeau.className.split(" ")).toEqual(expect.arrayContaining(["-ml-5", "-mr-[var(--tl-right-pad,20px)]", "px-5"]));
-    expect(bandeau.className).not.toContain("pr-[var(");
-    expect(within(bandeau).getByTestId("timeline-month-ruler").className.split(" ")).toContain("ml-auto");
-    // La réglette est à côté du titre, pas dedans : ses boutons n'entrent
-    // pas dans le nom de la section.
-    const reglette = within(bandeau).getByTestId("timeline-month-ruler");
-    expect(titre).not.toContainElement(reglette);
-  });
-
-  it("la réglette des mois : une barre par mois, haute selon ses entrées ; un mois vide est inerte", () => {
-    // Janvier : deux salons ; Mars : un ; Février : rien.
-    frise([room("a", "Un", 1, 0, 1), room("b", "Deux", 1, 0, 9), room("c", "Trois", 1, 2, 3)]);
-    const reglette = within(bandeaux()[0]).getByRole("group", { name: "Aller à un mois (An 1)" });
-    const barres = reglette.querySelectorAll("[data-month-bar]");
-    // Autant de barres que de mois au calendrier du monde.
-    expect(barres).toHaveLength(CONFIG.month_names.length);
-    const janvier = within(reglette).getByRole("button", { name: "Janvier : 2 entrées" });
-    const mars = within(reglette).getByRole("button", { name: "Mars : 1 entrée" });
-    // La plus haute pour le mois le plus fourni (20px), plus basse ailleurs.
-    expect((janvier.firstElementChild as HTMLElement).style.height).toBe("20px");
-    expect((mars.firstElementChild as HTMLElement).style.height).toBe("13px");
-    // Février : une marque basse, ni bouton ni lue.
-    const fevrier = reglette.querySelector("[data-month-bar='1']") as HTMLElement;
-    expect(fevrier.tagName).toBe("SPAN");
-    expect(fevrier).toHaveAttribute("aria-hidden", "true");
-    expect(fevrier).toHaveAttribute("title", "Février : aucune entrée");
-    expect(within(reglette).getAllByRole("button")).toHaveLength(2);
-  });
-
-  it("un clic sur la barre d'un mois y fait défiler la frise, sous la tête et le bandeau", async () => {
-    const user = userEvent.setup();
-    frise([room("a", "Un", 1, 0, 1), room("c", "Trois", 1, 2, 3)]);
-    const scroll = screen.getByTestId("timeline-scroll");
-    const scrollTo = vi.fn();
-    scroll.scrollTo = scrollTo as unknown as typeof scroll.scrollTo;
-    const rect = (top: number) => ({ top, bottom: top + 20, left: 0, right: 0, width: 0, height: 20, x: 0, y: top, toJSON: () => ({}) });
-    scroll.getBoundingClientRect = () => rect(100);
-    const mars = document.querySelector("[data-year='1'] [data-month='2']") as HTMLElement;
-    mars.getBoundingClientRect = () => rect(700);
-    await user.click(within(bandeaux()[0]).getByRole("button", { name: "Mars : 1 entrée" }));
-    // 700 − 100, moins la tête et le bandeau (0 sous jsdom), moins 16px d'air.
-    expect(scrollTo).toHaveBeenCalledWith({ top: 584, behavior: "smooth" });
+    // Plus de réglette des mois.
+    expect(screen.queryByTestId("timeline-month-ruler")).toBeNull();
+    expect(bandeau.querySelector("button")).toBeNull();
   });
 
   it("le bandeau de l'année se colle sous la tête au défilement, sous les lignes de suite, sans le fil", async () => {
