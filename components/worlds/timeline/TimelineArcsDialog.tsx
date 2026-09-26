@@ -41,27 +41,37 @@ export function TimelineArcsDialog({
   const [color, setColor] = React.useState(DEFAULT_ARC_COLOR);
   const [pendingDelete, setPendingDelete] = React.useState<string | null>(null);
 
-  async function run(p: PromiseLike<{ error: unknown }>, failure: string) {
-    const { error } = await p;
-    if (error) {
-      toast.error(failure);
-      return false;
-    }
-    onChanged();
-    return true;
-  }
-
   async function add() {
     const clean = name.trim();
     if (!clean) return;
-    const ok = await run(
-      supabase.from(TABLE.WORLD_TIMELINE_ARCS).insert({ world_id: worldId, name: clean, color, position: arcs.length }),
-      t("arcSaveFailed"),
-    );
-    if (ok) {
-      setName("");
-      setColor(DEFAULT_ARC_COLOR);
+    const { error } = await supabase
+      .from(TABLE.WORLD_TIMELINE_ARCS)
+      .insert({ world_id: worldId, name: clean, color, position: arcs.length });
+    if (error) {
+      toast.error(t("arcSaveFailed"));
+      return;
     }
+    onChanged();
+    setName("");
+    setColor(DEFAULT_ARC_COLOR);
+  }
+
+  async function saveArc(id: string, patch: { name?: string; color?: string }) {
+    const { error } = await supabase.from(TABLE.WORLD_TIMELINE_ARCS).update(patch).eq("id", id);
+    if (error) {
+      toast.error(t("arcSaveFailed"));
+      return;
+    }
+    onChanged();
+  }
+
+  async function deleteArc(id: string) {
+    const { error } = await supabase.from(TABLE.WORLD_TIMELINE_ARCS).delete().eq("id", id);
+    if (error) {
+      toast.error(t("arcDeleteFailed"));
+      return;
+    }
+    onChanged();
   }
 
   return (
@@ -77,10 +87,7 @@ export function TimelineArcsDialog({
             <li key={arc.id} className="flex items-center gap-2">
               <ColorPickerButton
                 color={arc.color}
-                onChange={(c) => void run(
-                  supabase.from(TABLE.WORLD_TIMELINE_ARCS).update({ color: c }).eq("id", arc.id),
-                  t("arcSaveFailed"),
-                )}
+                onChange={(c) => void saveArc(arc.id, { color: c })}
                 className="h-9 w-9"
               />
               <Input
@@ -91,10 +98,7 @@ export function TimelineArcsDialog({
                 onBlur={(e) => {
                   const next = e.target.value.trim();
                   if (next && next !== arc.name) {
-                    void run(
-                      supabase.from(TABLE.WORLD_TIMELINE_ARCS).update({ name: next }).eq("id", arc.id),
-                      t("arcSaveFailed"),
-                    );
+                    void saveArc(arc.id, { name: next });
                   } else {
                     e.target.value = arc.name;
                   }
@@ -108,7 +112,7 @@ export function TimelineArcsDialog({
                   size="sm"
                   onClick={() => {
                     setPendingDelete(null);
-                    void run(supabase.from(TABLE.WORLD_TIMELINE_ARCS).delete().eq("id", arc.id), t("arcDeleteFailed"));
+                    void deleteArc(arc.id);
                   }}
                 >
                   {t("arcDeleteConfirm")}

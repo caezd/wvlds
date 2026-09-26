@@ -9,6 +9,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { TimelineDatePicker } from "@/components/worlds/timeline/TimelineDatePicker";
+import { ChatroomTimelineLinks } from "@/components/chatrooms/settings/ChatroomTimelineLinks";
 import { clampTimelineDate } from "@/lib/worldTimeline";
 import { toWebP } from "@/lib/imageUtils";
 import { toast } from "sonner";
@@ -405,6 +406,19 @@ export default function ChatroomSettingsSheet({
                         disabled={savingTimeline}
                         onCommit={(date) => void persistTimeline(date)}
                       />
+                      {/* L'arc du salon et le salon dont il est la suite. */}
+                      {worldId && (
+                        <div className="mt-3 border-t border-border-soft pt-3">
+                          <ChatroomTimelineLinks
+                            chatroomId={chatroom.id}
+                            worldId={worldId}
+                            config={worldTimelineConfig}
+                            supabase={supabase}
+                            disabled={savingTimeline}
+                            onSaved={() => { toast.success(tCommon("changesSaved")); router.refresh(); }}
+                          />
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

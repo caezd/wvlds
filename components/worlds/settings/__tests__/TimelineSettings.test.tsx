@@ -105,3 +105,48 @@ describe("TimelineSettings — comprendre ce que l'on règle", () => {
     expect(onPersist).toHaveBeenCalledWith({ require_date: true });
   });
 });
+
+describe("TimelineSettings — saisons et frise", () => {
+  it("ajoute une saison, triée par année de début, sans fin", async () => {
+    const onPersist = vi.fn();
+    const user = userEvent.setup();
+    render(<Harnais initial={{ ...CONFIG, ages: [{ name: "Âge du Sel", from_year: 400, to_year: null }] }} onPersist={onPersist} />);
+
+    await user.type(screen.getByRole("textbox", { name: "Nouvelle saison" }), "Âge des Cendres");
+    await user.type(screen.getByRole("spinbutton", { name: "Dès l'an" }), "300");
+    await user.click(screen.getByRole("button", { name: "Ajouter la saison" }));
+
+    expect(onPersist).toHaveBeenLastCalledWith({
+      ages: [
+        { name: "Âge des Cendres", from_year: 300, to_year: null },
+        { name: "Âge du Sel", from_year: 400, to_year: null },
+      ],
+    });
+    // Le champ d'ajout se vide.
+    expect(screen.getByRole("textbox", { name: "Nouvelle saison" })).toHaveValue("");
+  });
+
+  it("borne et supprime une saison", async () => {
+    const onPersist = vi.fn();
+    const user = userEvent.setup();
+    render(<Harnais initial={{ ...CONFIG, ages: [{ name: "Âge du Sel", from_year: 400, to_year: null }] }} onPersist={onPersist} />);
+
+    await user.type(screen.getByRole("spinbutton", { name: "Dernière année de Âge du Sel" }), "450");
+    await user.tab();
+    expect(onPersist).toHaveBeenLastCalledWith({ ages: [{ name: "Âge du Sel", from_year: 400, to_year: 450 }] });
+
+    await user.click(screen.getByRole("button", { name: "Supprimer la saison Âge du Sel" }));
+    expect(onPersist).toHaveBeenLastCalledWith({ ages: [] });
+    expect(screen.getByText(/Aucune saison/)).toBeInTheDocument();
+  });
+
+  it("les journaux sur la frise : désactivés par défaut, un interrupteur les montre", async () => {
+    const onPersist = vi.fn();
+    const user = userEvent.setup();
+    render(<Harnais onPersist={onPersist} />);
+    const interrupteur = screen.getByRole("switch", { name: "Afficher les journaux des personas" });
+    expect(interrupteur).not.toBeChecked();
+    await user.click(interrupteur);
+    expect(onPersist).toHaveBeenCalledWith({ show_journals: true });
+  });
+});

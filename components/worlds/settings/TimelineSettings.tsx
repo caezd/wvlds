@@ -4,7 +4,7 @@ import * as React from "react";
 import { useTranslations } from "next-intl";
 import { Plus, Trash2 } from "lucide-react";
 
-import type { WorldTimelineConfig } from "@/types/worlds";
+import type { WorldTimelineAge, WorldTimelineConfig } from "@/types/worlds";
 import {
   clampDaysPerMonth,
   daysInMonth,
@@ -42,6 +42,8 @@ export function TimelineSettings({
   const t = useTranslations("worlds");
   const tSettings = useTranslations("worlds.settings");
   const [newMonthName, setNewMonthName] = React.useState("");
+  const [newAge, setNewAge] = React.useState<{ name: string; from: string }>({ name: "", from: "" });
+  const ages = config.ages ?? [];
 
   const apercu = formatTimelineLabel(config, {
     year: config.current_year,
@@ -56,6 +58,20 @@ export function TimelineSettings({
     day: null,
   });
   const joursParAn = config.month_names.reduce((total, _, i) => total + daysInMonth(config, i), 0);
+
+  function majSaison(i: number, patch: Partial<WorldTimelineAge>, persist: boolean) {
+    const next = ages.map((a, j) => (j === i ? { ...a, ...patch } : a));
+    if (persist) onPersist({ ages: next });
+    else onDraft({ ages: next });
+  }
+
+  function ajouterSaison() {
+    const name = newAge.name.trim();
+    const from = parseInt(newAge.from, 10);
+    if (!name || Number.isNaN(from)) return;
+    onPersist({ ages: [...ages, { name, from_year: from, to_year: null }].sort((a, b) => a.from_year - b.from_year) });
+    setNewAge({ name: "", from: "" });
+  }
 
   function ajouterMois() {
     const nom = newMonthName.trim();
@@ -290,6 +306,107 @@ export function TimelineSettings({
             {tSettings("yearLength", { months: nbMois, days: joursParAn })}
           </p>
         )}
+      </SubOption>
+
+      {/* ── 4. Les saisons ── */}
+      {/* Des âges nommés : ils remplacent, sur la frise, les tranches de cinq
+          ans, et ouvrent leurs années d'un bandeau. Sans année de fin, une
+          saison court jusqu'à la suivante. */}
+      <SubOption title={tSettings("timelineAges")} help={tSettings("timelineAgesHelp")}>
+        {ages.length > 0 ? (
+          <ol className="space-y-1" aria-label={tSettings("timelineAges")}>
+            {ages.map((age, i) => (
+              <li key={i} className="flex items-center gap-2">
+                <Input
+                  value={age.name}
+                  aria-label={tSettings("ageName")}
+                  className="h-8 min-w-0 flex-1 text-sm"
+                  onChange={(e) => majSaison(i, { name: e.target.value }, false)}
+                  onBlur={(e) => majSaison(i, { name: e.target.value }, true)}
+                />
+                <Input
+                  type="number"
+                  value={age.from_year}
+                  aria-label={tSettings("ageFrom", { name: age.name })}
+                  className="h-8 w-20 text-sm"
+                  onChange={(e) => majSaison(i, { from_year: Number(e.target.value) || 0 }, false)}
+                  onBlur={(e) => majSaison(i, { from_year: Number(e.target.value) || 0 }, true)}
+                />
+                <span className="text-xs text-muted-foreground" aria-hidden>–</span>
+                <Input
+                  type="number"
+                  value={age.to_year ?? ""}
+                  placeholder="…"
+                  aria-label={tSettings("ageTo", { name: age.name })}
+                  className="h-8 w-20 text-sm"
+                  onChange={(e) => majSaison(i, { to_year: e.target.value === "" ? null : Number(e.target.value) }, false)}
+                  onBlur={(e) => majSaison(i, { to_year: e.target.value === "" ? null : Number(e.target.value) }, true)}
+                />
+                <button
+                  type="button"
+                  aria-label={tSettings("deleteAge", { name: age.name })}
+                  onClick={() => onPersist({ ages: ages.filter((_, j) => j !== i) })}
+                  className="shrink-0 rounded p-1 text-muted-foreground transition-colors hover:text-destructive"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <p className="text-xs italic text-muted-foreground">{tSettings("noAgesHint")}</p>
+        )}
+
+        <div className="flex items-center gap-1 rounded-lg border border-border-soft p-1">
+          <Input
+            value={newAge.name}
+            placeholder={tSettings("ageNamePlaceholder")}
+            aria-label={tSettings("ageNamePlaceholder")}
+            className="h-8 min-w-0 flex-1 border-0 bg-transparent px-1.5 text-sm shadow-none focus-visible:ring-0"
+            onChange={(e) => setNewAge((a) => ({ ...a, name: e.target.value }))}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") { e.preventDefault(); ajouterSaison(); }
+            }}
+          />
+          <Input
+            type="number"
+            value={newAge.from}
+            placeholder={tSettings("ageFromPlaceholder")}
+            aria-label={tSettings("ageFromPlaceholder")}
+            className="h-8 w-24 border-0 bg-transparent px-1.5 text-sm shadow-none focus-visible:ring-0"
+            onChange={(e) => setNewAge((a) => ({ ...a, from: e.target.value }))}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") { e.preventDefault(); ajouterSaison(); }
+            }}
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 shrink-0 p-0"
+            disabled={!newAge.name.trim() || Number.isNaN(parseInt(newAge.from, 10))}
+            aria-label={tSettings("addAge")}
+            onClick={ajouterSaison}
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
+        </div>
+      </SubOption>
+
+      {/* ── 5. Ce que montre la frise ── */}
+      <SubOption title={tSettings("timelineFrieze")} help={tSettings("timelineFriezeHelp")}>
+        <label className="flex items-start justify-between gap-4">
+          <span className="space-y-0.5">
+            <span className="block text-sm">{tSettings("showJournals")}</span>
+            <span className="block text-xs text-muted-foreground leading-snug">{tSettings("showJournalsHelp")}</span>
+          </span>
+          <Switch
+            checked={!!config.show_journals}
+            onCheckedChange={(v) => onPersist({ show_journals: v })}
+            aria-label={tSettings("showJournals")}
+            className="mt-0.5 shrink-0"
+          />
+        </label>
       </SubOption>
     </>
   );
