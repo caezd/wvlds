@@ -212,8 +212,15 @@ function YearBlock({
   }
   const nowMonthName = nowMonth !== null ? (config.month_names[nowMonth] ?? null) : null;
 
-  const entries: ReactNode[] = section.rooms.map((room) => (
-    <EntryRow key={room.id} room={room} config={config} onClick={() => onOpen(room.id)} />
+  // Un filet ouvre chaque nouveau mois (sauf le premier de l'année).
+  const entries: ReactNode[] = section.rooms.map((room, i) => (
+    <EntryRow
+      key={room.id}
+      room={room}
+      config={config}
+      newMonth={i > 0 && section.rooms[i - 1].timeline_date!.month !== room.timeline_date!.month}
+      onClick={() => onOpen(room.id)}
+    />
   ));
   if (insertAt >= 0) {
     entries.splice(insertAt, 0, (
@@ -252,16 +259,31 @@ function YearBlock({
   );
 }
 
-function EntryRow({ room, config, onClick }: { room: TimelineRoom; config: WorldTimelineConfig; onClick: () => void }) {
+function EntryRow({
+  room,
+  config,
+  newMonth,
+  onClick,
+}: {
+  room: TimelineRoom;
+  config: WorldTimelineConfig;
+  newMonth: boolean;
+  onClick: () => void;
+}) {
   const t = useTranslations("worlds");
   const label = room.title ?? room.name ?? t("timelineUntitled");
   const date = room.timeline_date!;
   const monthName = date.month !== null ? (config.month_names[date.month] ?? null) : null;
   return (
-    <li className="group/entry relative">
+    <li className={cn("group/entry relative", newMonth && "pt-4")} data-new-month={newMonth || undefined}>
+      {/* Le filet d'un nouveau mois, du fil jusqu'au bord, à mi-chemin du salon précédent. */}
+      {newMonth && <span className="absolute -left-7 right-0 top-0 h-px bg-border" aria-hidden />}
       {/* Un anneau creux sur le fil, qui fonce au survol. */}
       <span
-        className="absolute -left-[33.5px] top-1 size-3 rounded-full border-[1.5px] border-foreground/40 bg-background transition-colors group-hover/entry:border-foreground"
+        className={cn(
+          "absolute -left-[33.5px] size-3 rounded-full border-[1.5px] border-foreground/40 bg-background transition-colors group-hover/entry:border-foreground",
+          newMonth ? "top-5" : "top-1",
+        )}
         aria-hidden
       />
       <button

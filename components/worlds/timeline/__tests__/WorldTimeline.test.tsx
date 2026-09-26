@@ -73,6 +73,22 @@ describe("WorldTimeline — frise verticale", () => {
     }
   });
 
+  it("un filet sépare chaque mois d'une année, pas les salons d'un même mois", () => {
+    frise([
+      room("a", "Six janvier", 1, 0, 6),
+      room("b", "Neuf janvier", 1, 0, 9),
+      room("c", "Trois mars", 1, 2, 3),
+      room("d", "Autre année", 2, 0, 1),
+    ]);
+    const ligne = (nom: string) => screen.getByRole("button", { name: new RegExp(nom) }).closest("li")!;
+    // Le premier salon de l'année n'en a pas : le filet de l'année suffit.
+    expect(ligne("Six janvier")).not.toHaveAttribute("data-new-month");
+    expect(ligne("Neuf janvier")).not.toHaveAttribute("data-new-month");
+    expect(ligne("Trois mars")).toHaveAttribute("data-new-month", "true");
+    expect(ligne("Trois mars").querySelector(".h-px.bg-border")).not.toBeNull();
+    expect(ligne("Autre année")).not.toHaveAttribute("data-new-month");
+  });
+
   it("le jour et le mois de chaque salon, sans couleur d'accent", () => {
     frise([room("a", "Prologue", 1, 1, 19)]);
     const ligne = screen.getByRole("button", { name: /Prologue/ });

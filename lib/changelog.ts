@@ -52,7 +52,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-09-26",
     category: "Interface",
     area: "Monde",
-    text: "La chronologie d’un monde devient une frise verticale : les années en très grands chiffres, un fil, et pour chaque salon un anneau, son titre puis sa date. Un trait rouge marque la date actuelle du monde et la frise s’ouvre sur son année ; au-delà de cinq ans, des pastilles mènent à chaque période.",
+    text: "La chronologie d’un monde devient une frise verticale : les années en très grands chiffres, un fil, et pour chaque salon un anneau, son titre puis sa date, un filet entre chaque mois. Un trait rouge marque la date actuelle du monde et la frise s’ouvre sur son année ; au-delà de cinq ans, des pastilles mènent à chaque période.",
   },
   {
     date: "2026-09",
