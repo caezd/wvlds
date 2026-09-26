@@ -166,9 +166,12 @@ describe("WorldTimeline — frise verticale", () => {
     expect(ligne("Six janvier")).not.toHaveAttribute("data-new-month");
     expect(ligne("Neuf janvier")).not.toHaveAttribute("data-new-month");
     expect(ligne("Trois mars")).toHaveAttribute("data-new-month", "true");
-    // De l'air de part et d'autre du filet : 32px au-dessus (16 + mt-4), 32px
-    // dessous (pt-8).
-    expect(ligne("Trois mars").className.split(" ")).toEqual(expect.arrayContaining(["mt-4", "pt-8"]));
+    // Autant d'air de part et d'autre du filet : 32px au-dessus (16 de
+    // space-y + top-4), 32px dessous (pt-12 − top-4). En padding : une marge
+    // haute fusionnait avec la marge basse de la date précédente.
+    expect(ligne("Trois mars").className.split(" ")).toContain("pt-12");
+    expect(ligne("Trois mars").className).not.toMatch(/(^|\s)mt-/);
+    expect(within(ligne("Trois mars") as HTMLElement).getByTestId("timeline-month-rule").className.split(" ")).toContain("top-4");
     // Un filet en pointillés, d'un bord à l'autre du conteneur : colonne des
     // années et marge des suites comprises.
     const filet = within(ligne("Trois mars") as HTMLElement).getByTestId("timeline-month-rule");
@@ -180,7 +183,7 @@ describe("WorldTimeline — frise verticale", () => {
     expect(noms.map((l) => l.textContent)).toEqual(["Mars"]);
     // Posé sur le filet (centré sur lui, fond qui le découpe), en capitales.
     expect(noms[0].className.split(" ")).toEqual(
-      expect.arrayContaining(["top-0", "-translate-y-1/2", "bg-body", "uppercase"]),
+      expect.arrayContaining(["top-4", "-translate-y-1/2", "bg-body", "uppercase"]),
     );
     // À gauche du fil, calé à droite de la colonne des années.
     expect(noms[0].className.split(" ")).toEqual(expect.arrayContaining(["right-[calc(100%+1.75rem)]", "text-right"]));

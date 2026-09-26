@@ -671,13 +671,16 @@ function DateGroupBlock({
   const fullDate = formatTimelineLabel(config, { year, month: group.month, day: group.day });
   return (
     <li
-      className={cn("relative", newMonth && "mt-4 pt-8")}
+      className={cn("relative", newMonth && "pt-12")}
       data-date-group={group.key}
       data-new-month={newMonth || undefined}
     >
       {/* Le filet d'un nouveau mois, en pointillés, d'un bord à l'autre du
-          conteneur (colonne des années, marge des suites comprises), à
-          mi-chemin de la date précédente ; le nom du mois posé dessus, en
+          conteneur (colonne des années, marge des suites comprises), à égale
+          distance des deux dates : 32px de chaque côté. En padding, pas en
+          marge : la marge basse de `space-y-4` sur la date précédente
+          fusionnait avec une marge haute, et le haut restait plus serré
+          (16 + 16 au-dessus du filet, 48 − 16 dessous). Le nom du mois posé dessus, en
           petites capitales, à gauche, calé à droite de la colonne des années,
           contre le fil. Les décalages du filet remontent la colonne des
           années (6rem, 9rem dès sm), le retrait du fil (pl-7) et la marge de
@@ -685,13 +688,13 @@ function DateGroupBlock({
       {newMonth && (
         <>
           <span
-            className="absolute -left-[9rem] -right-[var(--tl-right-pad,20px)] top-0 border-t border-dashed border-border sm:-left-[12rem]"
+            className="absolute -left-[9rem] -right-[var(--tl-right-pad,20px)] top-4 border-t border-dashed border-border sm:-left-[12rem]"
             data-testid="timeline-month-rule"
             aria-hidden
           />
           {monthName && (
             <span
-              className={cn("absolute right-[calc(100%+1.75rem)] top-0 -translate-y-1/2 whitespace-nowrap px-2 text-right text-[10px] font-medium uppercase leading-none tracking-wider text-muted-foreground", AMBIENT_BG)}
+              className={cn("absolute right-[calc(100%+1.75rem)] top-4 -translate-y-1/2 whitespace-nowrap px-2 text-right text-[10px] font-medium uppercase leading-none tracking-wider text-muted-foreground", AMBIENT_BG)}
               data-testid="timeline-month-label"
               aria-hidden
             >
