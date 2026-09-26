@@ -19,7 +19,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09",
     tag: "Monde",
-    text: "Chronologie, deux nouvelles options sous « Où en est le récit » : restreindre les salons à la période en cours (l’année actuelle, et le mois s’il y en a un), et exiger une date à la création d’un salon — le choix paraît alors à droite du titre (dessous sur mobile), marqué d’un calendrier, pré-rempli avec la date du monde. La fenêtre de création s’intitule « Nouveau jeu », et le titre au hasard se tire depuis le champ du titre. Le choix de la date d’un salon tient sur une ligne (jour, mois, année) et suit la longueur de chaque mois ; la période imposée s’y lit en clair, avec un cadenas.",
+    text: "Chronologie, deux nouvelles options sous « Où en est le récit » : restreindre les salons à la période en cours (l’année actuelle, et le mois s’il y en a un), et exiger une date à la création d’un salon — le choix paraît alors à droite du titre (dessous sur mobile), marqué d’un calendrier, pré-rempli avec la date du monde. La fenêtre de création s’intitule « Nouveau jeu », et le titre au hasard se tire depuis le champ du titre ; sur mobile, l’entête et la carte du message ont les mêmes coins, en haut comme en bas. Le choix de la date d’un salon tient sur une ligne (jour, mois, année) et suit la longueur de chaque mois ; la période imposée s’y lit en clair, avec un cadenas.",
   },
   {
     date: "2026-09",

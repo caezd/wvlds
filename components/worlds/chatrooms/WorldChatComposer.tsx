@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import { generate } from "boring-name-generator";
 import { ChevronDown, Plus, Shuffle, Tag, X, CalendarDays } from "lucide-react";
@@ -340,14 +340,19 @@ export function WorldChatComposer({
       {isMobile ? (
         /* Drawer de création (mobile) — même visuel « plein écran, chrome
            minimal » que le composer lui-même : le DrawerContent ne porte ni
-           padding ni bordure, les cartes internes (en-tête titre/catégorie,
-           composer) fournissent leur propre habillage. */
+           padding, ni bordure, ni arrondi (il rognerait les coins des cartes),
+           les cartes internes (en-tête titre/catégorie, composer) fournissent
+           leur propre habillage. */
         <Drawer open={open} onOpenChange={(next) => { if (!next) requestClose(); }}>
-          <DrawerContent className="h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] [--drawer-inset:8px] p-0 border-0 bg-transparent">
+          <DrawerContent className="h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] [--drawer-inset:8px] p-0 border-0 bg-transparent rounded-none">
             <DrawerTitle className="sr-only">{t("composer.dialogTitle")}</DrawerTitle>
             <DrawerDescription className="sr-only">{t("composer.placeholder")}</DrawerDescription>
             <div className="flex h-full min-h-0 flex-col gap-2">
-              <div className="shrink-0 space-y-2 rounded-lg border border-border-soft bg-background p-2.5">
+              {/* Même coin que la carte du message dessous (rounded-lg en superellipse). */}
+              <div
+                className="shrink-0 space-y-2 rounded-lg border border-border-soft bg-background p-2.5"
+                style={{ cornerShape: "superellipse(1.1)" } as CSSProperties}
+              >
                 {titleRow}
                 {dateRow}
               </div>
