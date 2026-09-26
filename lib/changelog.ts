@@ -8,6 +8,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ── 2026-09 ──────────────────────────────────────────────────────────────
   {
     date: "2026-09",
+    tag: "Monde",
+    text: "Page d’accueil : la description d’un monde se lit sous la bannière, juste après le titre et sur toute la largeur ; une longue présentation ne recouvre plus l’image.",
+  },
+  {
+    date: "2026-09",
     tag: "Correctif",
     text: "L’accueil d’un monde qui affiche le bloc des anniversaires ne tombe plus en erreur. La poignée de déplacement d’une catégorie de salons s’annonce enfin aux lecteurs d’écran.",
   },
