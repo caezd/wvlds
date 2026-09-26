@@ -41,8 +41,8 @@ const RANGE_SPAN = 5;
 
 /**
  * La chronologie d'un monde, en frise verticale : à gauche les années en très
- * grands chiffres, au centre un fil, et pour chaque salon un anneau sur le
- * fil, sa date puis son titre. Un filet sépare les
+ * grands chiffres, au centre un fil, et pour chaque date un anneau sur le
+ * fil, la date une fois, puis les titres des salons qu'elle réunit. Un filet sépare les
  * années, un filet chaque mois (son nom posé dessus, en capitales) ; la date
  * actuelle du monde barre la frise d'un trait rouge plein, à son mois, et la
  * frise s'ouvre sur son année. Au-delà de RANGE_SPAN années, des pastilles en tête
@@ -218,6 +218,20 @@ export function WorldTimeline({
 // presque blanc, un rouge franc.
 const RED_BG = "bg-red-600 dark:bg-accent";
 
+/** Les salons d'une même date (mois et jour), réunis sous un seul anneau. */
+type DateGroup = { key: string; month: number | null; day: number | null; rooms: TimelineRoom[] };
+
+function groupByDate(rooms: TimelineRoom[]): DateGroup[] {
+  const groups: DateGroup[] = [];
+  for (const room of rooms) {
+    const { month, day } = room.timeline_date!;
+    const last = groups[groups.length - 1];
+    if (last && last.month === month && last.day === day) last.rooms.push(room);
+    else groups.push({ key: `${month ?? ""}:${day ?? ""}`, month, day, rooms: [room] });
+  }
+  return groups;
+}
+
 function YearBlock({
   section,
   config,
@@ -231,27 +245,30 @@ function YearBlock({
   openers: ReadonlyMap<string, Opener>;
   onOpen: (id: string) => void;
 }) {
+  // Les salons arrivent triés par mois puis jour : les dates identiques se
+  // suivent, un groupe par date.
+  const groups = groupByDate(section.rooms);
+
   const isNow = section.year === config.current_year;
   // La date actuelle du monde barre l'année d'un trait rouge, à son mois.
   const nowMonth = config.current_month;
   let insertAt = -1;
   if (isNow) {
-    const after = nowMonth === null
-      ? 0
-      : section.rooms.findIndex((r) => (r.timeline_date!.month ?? -1) > nowMonth);
-    insertAt = after === -1 ? section.rooms.length : after;
+    const after = nowMonth === null ? 0 : groups.findIndex((g) => (g.month ?? -1) > nowMonth);
+    insertAt = after === -1 ? groups.length : after;
   }
   const nowText = `${nowLabel} : ${formatTimelineLabel(config, { year: config.current_year, month: nowMonth, day: null })}`;
 
   // Un filet ouvre chaque nouveau mois (sauf le premier de l'année).
-  const entries: ReactNode[] = section.rooms.map((room, i) => (
-    <EntryRow
-      key={room.id}
-      room={room}
+  const entries: ReactNode[] = groups.map((group, i) => (
+    <DateGroupBlock
+      key={group.key}
+      year={section.year}
+      group={group}
       config={config}
-      opener={openers.get(room.id) ?? null}
-      newMonth={i > 0 && section.rooms[i - 1].timeline_date!.month !== room.timeline_date!.month}
-      onClick={() => onOpen(room.id)}
+      openers={openers}
+      newMonth={i > 0 && groups[i - 1].month !== group.month}
+      onOpen={onOpen}
     />
   ));
   if (insertAt >= 0) {
@@ -298,30 +315,38 @@ function openerText(opener: Opener, by: (name: string) => string): string {
   return opener.persona ? `${by(opener.persona)} (@${opener.name})` : by(`@${opener.name}`);
 }
 
-function EntryRow({
-  room,
+/**
+ * Une date de la frise : un anneau sur le fil, la date une seule fois, puis
+ * les salons qu'elle réunit.
+ */
+function DateGroupBlock({
+  year,
+  group,
   config,
-  opener,
+  openers,
   newMonth,
-  onClick,
+  onOpen,
 }: {
-  room: TimelineRoom;
+  year: number;
+  group: DateGroup;
   config: WorldTimelineConfig;
-  opener: Opener | null;
+  openers: ReadonlyMap<string, Opener>;
   newMonth: boolean;
-  onClick: () => void;
+  onOpen: (id: string) => void;
 }) {
-  const t = useTranslations("worlds");
-  const label = room.title ?? room.name ?? t("timelineUntitled");
-  const date = room.timeline_date!;
-  const monthName = date.month !== null ? (config.month_names[date.month] ?? null) : null;
+  const monthName = group.month !== null ? (config.month_names[group.month] ?? null) : null;
   // « 19 Février » ; rien quand la date s'arrête à l'année.
-  const short = [date.day, monthName].filter((v) => v !== null && v !== undefined).join(" ");
+  const short = [group.day, monthName].filter((v) => v !== null && v !== undefined).join(" ");
+  const fullDate = formatTimelineLabel(config, { year, month: group.month, day: group.day });
   return (
-    <li className={cn("group/entry relative", newMonth && "pt-4")} data-new-month={newMonth || undefined}>
+    <li
+      className={cn("group/entry relative", newMonth && "pt-4")}
+      data-date-group={group.key}
+      data-new-month={newMonth || undefined}
+    >
       {/* Le filet d'un nouveau mois, en pointillés, du fil jusqu'au bord, à
-          mi-chemin du salon précédent ; le nom du mois posé dessus, en petites
-          capitales, dans l'alignement des titres. */}
+          mi-chemin de la date précédente ; le nom du mois posé dessus, en
+          petites capitales, dans l'alignement des titres. */}
       {newMonth && (
         <>
           <span className="absolute -left-7 right-0 top-0 border-t border-dashed border-border" aria-hidden />
@@ -337,7 +362,7 @@ function EntryRow({
         </>
       )}
       {/* Un anneau creux sur le fil, centré sur la première ligne — la date,
-          ou le titre quand il n'y en a pas — et qui fonce au survol. */}
+          ou le premier titre quand il n'y en a pas — et qui fonce au survol. */}
       <span
         className={cn(
           "absolute -left-[33.5px] size-3 rounded-full border-[1.5px] border-border transition-colors group-hover/entry:border-foreground",
@@ -347,51 +372,71 @@ function EntryRow({
         data-testid="timeline-ring"
         aria-hidden
       />
-      <button
-        type="button"
-        onClick={onClick}
-        aria-label={[
-          label,
-          opener && openerText(opener, (name) => t("timelineByName", { name })),
-          formatTimelineLabel(config, date),
-        ]
-          .filter(Boolean)
-          .join(", ")}
-        className="flex max-w-full flex-col items-start rounded-md text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      >
-        {/* La date, au-dessus du titre, sur une ligne de 16px : l'anneau
-            se centre dessus. */}
-        {short && (
-          <span className="text-xs leading-4 tabular-nums text-muted-foreground" data-testid="timeline-date" aria-hidden>
-            {short}
+      {/* La date, une fois pour tous ses salons, sur une ligne de 16px :
+          l'anneau se centre dessus. */}
+      {short && (
+        <p className="text-xs leading-4 tabular-nums text-muted-foreground" data-testid="timeline-date" aria-hidden>
+          {short}
+        </p>
+      )}
+      <ul className="space-y-0.5">
+        {group.rooms.map((room) => (
+          <li key={room.id}>
+            <RoomLink room={room} fullDate={fullDate} opener={openers.get(room.id) ?? null} onClick={() => onOpen(room.id)} />
+          </li>
+        ))}
+      </ul>
+    </li>
+  );
+}
+
+function RoomLink({
+  room,
+  fullDate,
+  opener,
+  onClick,
+}: {
+  room: TimelineRoom;
+  fullDate: string;
+  opener: Opener | null;
+  onClick: () => void;
+}) {
+  const t = useTranslations("worlds");
+  const label = room.title ?? room.name ?? t("timelineUntitled");
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={[label, opener && openerText(opener, (name) => t("timelineByName", { name })), fullDate]
+        .filter(Boolean)
+        .join(", ")}
+      className="group/room max-w-full rounded-md text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      {/* Au survol, le titre s’éclaircit seulement (atténué au repos) : pas de fond. */}
+      <span className="min-w-0 break-words">
+        <span className="text-sm font-medium text-foreground/75 transition-colors group-hover/room:text-foreground">
+          {label}
+        </span>
+        {/* « par Persona (@pseudo) » : le persona dans la couleur de son
+            groupe, le pseudo du joueur entre parenthèses ; « par @pseudo »
+            quand le salon n'a pas encore de message. */}
+        {opener && (
+          <span className="ml-1.5 text-xs text-muted-foreground" data-testid="timeline-opener" aria-hidden>
+            {t.rich("timelineBy", {
+              name: opener.persona ?? `@${opener.name}`,
+              author: (chunks) => (
+                <span
+                  className={cn("font-medium", !(opener.persona && opener.personaColor) && "text-foreground/75")}
+                  style={opener.persona && opener.personaColor ? { color: opener.personaColor } : undefined}
+                >
+                  {chunks}
+                </span>
+              ),
+            })}
+            {opener.persona && ` (@${opener.name})`}
           </span>
         )}
-        {/* Au survol, la ligne s’éclaircit seulement (titre atténué au repos) : pas de fond. */}
-        <span className="min-w-0 break-words">
-          <span className="text-sm font-medium text-foreground/75 transition-colors group-hover/entry:text-foreground">
-            {label}
-          </span>
-          {/* « par Persona (@pseudo) » : le persona dans la couleur de son
-              groupe, le pseudo du joueur entre parenthèses ; « par @pseudo »
-              quand le salon n'a pas encore de message. */}
-          {opener && (
-            <span className="ml-1.5 text-xs text-muted-foreground" data-testid="timeline-opener" aria-hidden>
-              {t.rich("timelineBy", {
-                name: opener.persona ?? `@${opener.name}`,
-                author: (chunks) => (
-                  <span
-                    className={cn("font-medium", !(opener.persona && opener.personaColor) && "text-foreground/75")}
-                    style={opener.persona && opener.personaColor ? { color: opener.personaColor } : undefined}
-                  >
-                    {chunks}
-                  </span>
-                ),
-              })}
-              {opener.persona && ` (@${opener.name})`}
-            </span>
-          )}
-        </span>
-      </button>
-    </li>
+      </span>
+    </button>
   );
 }

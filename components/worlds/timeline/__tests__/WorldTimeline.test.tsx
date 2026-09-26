@@ -61,25 +61,44 @@ describe("WorldTimeline — frise verticale", () => {
     expect(titres).toEqual(["Prologue, 9 Janvier, An 1", "Suite, 2 Mars, An 1"]);
   });
 
-  it("la date au-dessus du titre, l'anneau centré sur elle", () => {
+  it("la date au-dessus des titres, l'anneau centré sur elle", () => {
     frise([room("a", "Prologue", 1, 1, 19), room("b", "Une année entière", 3, null, null)]);
-    const ligne = screen.getByRole("button", { name: /Prologue/ });
-    const date = within(ligne).getByTestId("timeline-date");
+    const groupe = screen.getByRole("button", { name: /Prologue/ }).closest("[data-date-group]")!;
+    const date = within(groupe as HTMLElement).getByTestId("timeline-date");
     expect(date).toHaveTextContent("19 Février");
     // Avant le titre, sur une ligne de 16px…
-    expect(date.compareDocumentPosition(within(ligne).getByText("Prologue")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(date.compareDocumentPosition(within(groupe as HTMLElement).getByText("Prologue")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(date.className).toContain("leading-4");
     // …sur laquelle l'anneau (12px) se centre : 2px au-dessus.
-    const anneau = ligne.closest("li")!.querySelector("[data-testid='timeline-ring']")!;
+    const anneau = groupe.querySelector("[data-testid='timeline-ring']")!;
     expect(anneau.className.split(" ")).toEqual(expect.arrayContaining(["size-3", "top-0.5", "border-border"]));
     // Plus de pastille de date.
     expect(screen.queryByTestId("timeline-date-pill")).toBeNull();
 
     // Une date qui s'arrête à l'année : pas de ligne de date, l'anneau se
     // centre sur le titre.
-    const annee = screen.getByRole("button", { name: /Une année entière/ });
-    expect(within(annee).queryByTestId("timeline-date")).toBeNull();
-    expect(annee.closest("li")!.querySelector("[data-testid='timeline-ring']")!.className.split(" ")).toContain("top-1");
+    const annee = screen.getByRole("button", { name: /Une année entière/ }).closest("[data-date-group]")!;
+    expect(within(annee as HTMLElement).queryByTestId("timeline-date")).toBeNull();
+    expect(annee.querySelector("[data-testid='timeline-ring']")!.className.split(" ")).toContain("top-1");
+  });
+
+  it("les salons d'une même date se réunissent : une date, un anneau, leurs titres dessous", () => {
+    frise([
+      room("a", "Le messager", 2, 2, 9),
+      room("b", "Deux lettres", 2, 2, 9),
+      room("c", "L'héritière", 2, 2, 9),
+      room("d", "Chasse", 2, 5, 27),
+    ]);
+    const groupes = document.querySelectorAll("[data-date-group]");
+    expect(groupes).toHaveLength(2);
+    const [neufMars, juin] = [...groupes] as HTMLElement[];
+    // Une seule date et un seul anneau pour les trois salons du 9 mars.
+    expect(within(neufMars).getAllByTestId("timeline-date").map((d) => d.textContent)).toEqual(["9 Mars"]);
+    expect(within(neufMars).getAllByTestId("timeline-ring")).toHaveLength(1);
+    expect(within(neufMars).getAllByRole("button")).toHaveLength(3);
+    // Chacun garde sa date complète pour les lecteurs d'écran.
+    expect(within(neufMars).getByRole("button", { name: "Deux lettres, 9 Mars, An 2" })).toBeInTheDocument();
+    expect(within(juin).getAllByRole("button")).toHaveLength(1);
   });
 
   it("l'année en très grands chiffres, sa légende en exposant, sans rouge", () => {
@@ -108,7 +127,7 @@ describe("WorldTimeline — frise verticale", () => {
       room("c", "Trois mars", 1, 2, 3),
       room("d", "Autre année", 2, 0, 1),
     ]);
-    const ligne = (nom: string) => screen.getByRole("button", { name: new RegExp(nom) }).closest("li")!;
+    const ligne = (nom: string) => screen.getByRole("button", { name: new RegExp(nom) }).closest("[data-date-group]")!;
     // Le premier salon de l'année n'en a pas : le filet de l'année suffit.
     expect(ligne("Six janvier")).not.toHaveAttribute("data-new-month");
     expect(ligne("Neuf janvier")).not.toHaveAttribute("data-new-month");
@@ -134,7 +153,8 @@ describe("WorldTimeline — frise verticale", () => {
   it("la date actuelle du monde se glisse parmi les salons, à son mois", () => {
     frise([room("a", "Janvier", 1, 0, 3), room("b", "Mars", 1, 2, 3)]);
     const an1 = annees()[0].closest("li")!;
-    const lignes = within(an1).getAllByRole("listitem");
+    // Les entrées du fil : les dates et le trait, dans l'ordre.
+    const lignes = [...an1.querySelector("ul")!.children] as HTMLElement[];
     expect(lignes.map((l) => l.dataset.testid ?? l.textContent)).toEqual([
       expect.stringContaining("Janvier"),
       "timeline-now",
@@ -198,12 +218,11 @@ describe("WorldTimeline — lignes de salon", () => {
     // en thème sombre, comme le texte, et le survol ne se voyait pas.
     const titre = within(ligne).getByText("Prologue").className;
     expect(titre).toContain("text-foreground/75");
-    expect(titre).toContain("group-hover/entry:text-foreground");
+    expect(titre).toContain("group-hover/room:text-foreground");
     expect(titre).not.toContain("text-primary");
 
     // Sans titre ni jour : un libellé par défaut, pas de jour inventé.
     const sansTitre = screen.getByRole("button", { name: "Conversation, Février, An 1" });
-    expect(sansTitre).toHaveTextContent("Février");
     expect(sansTitre).not.toHaveTextContent(/\d/);
   });
 });
