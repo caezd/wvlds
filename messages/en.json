@@ -636,7 +636,14 @@
       "arcNewPlaceholder": "New arc",
       "arcAdd": "Add",
       "arcSaveFailed": "Could not save the arc.",
-      "arcDeleteFailed": "Could not delete the arc."
+      "arcDeleteFailed": "Could not delete the arc.",
+      "suiteStyle": "Sequel style",
+      "suiteStyles": {
+        "rail": "Continuous rail",
+        "graph": "Graph beside the line",
+        "hover": "On hover only",
+        "dashed": "Dotted arrows"
+      }
     },
     "tabSettings": "Settings",
     "tabCategories": "Categories",

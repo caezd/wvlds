@@ -450,3 +450,91 @@ describe("WorldTimeline — saisons", () => {
     expect(bandeaux[0]).toHaveTextContent("An 10 – 19");
   });
 });
+
+describe("WorldTimeline — styles des suites", () => {
+  const CHAINE = [
+    { id: "a", arc_id: null, previous_chatroom_id: null, category_id: null },
+    { id: "b", arc_id: null, previous_chatroom_id: "a", category_id: null },
+    { id: "c", arc_id: null, previous_chatroom_id: "b", category_id: null },
+  ];
+  const SALONS = () => [room("a", "La grande crue", 1, 0, 6), room("b", "Les digues cèdent", 1, 2, 1), room("c", "Ce que charrie l'eau", 3, 0, 1), room("z", "Hors chaîne", 3, 1, 1)];
+
+  async function choisirStyle(nom: string) {
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: /Filtres/ }));
+    await user.selectOptions(await screen.findByRole("combobox", { name: "Style des suites" }), nom);
+    return user;
+  }
+
+  // Un stockage en mémoire : celui de l'environnement de test n'est pas
+  // fonctionnel, et le composant s'en passe sans erreur.
+  let memoire: Map<string, string>;
+  beforeEach(() => {
+    memoire = new Map();
+    Object.defineProperty(window, "localStorage", {
+      configurable: true,
+      value: {
+        getItem: (k: string) => memoire.get(k) ?? null,
+        setItem: (k: string, v: string) => { memoire.set(k, v); },
+        removeItem: (k: string) => { memoire.delete(k); },
+      },
+    });
+  });
+
+  it("relit le style gardé à l'ouverture", async () => {
+    memoire.set("wvlds:timeline-suite-style", "dashed");
+    db.tables.chatrooms = CHAINE;
+    frise(SALONS());
+    await vi.waitFor(() => expect(screen.getByTestId("timeline-suite-links")).toHaveAttribute("data-style", "dashed"));
+  });
+
+  it("par défaut, un rail par chaîne, une pastille par salon", async () => {
+    db.tables.chatrooms = CHAINE;
+    frise(SALONS());
+    const calque = await screen.findByTestId("timeline-suite-links");
+    expect(calque).toHaveAttribute("data-style", "rail");
+    // Une seule chaîne a → b → c, trois pastilles.
+    expect(calque.querySelectorAll("[data-suite]")).toHaveLength(1);
+    expect(calque.querySelector("[data-suite='a>b>c']")!.querySelectorAll("circle")).toHaveLength(3);
+  });
+
+  it("graphe : les titres se décalent pour laisser les couloirs entre le fil et eux", async () => {
+    db.tables.chatrooms = CHAINE;
+    frise(SALONS());
+    await screen.findByTestId("timeline-suite-links");
+    await choisirStyle("Graphe à côté du fil");
+    const calque = screen.getByTestId("timeline-suite-links");
+    expect(calque).toHaveAttribute("data-style", "graph");
+    const liste = document.querySelector("[data-suite-style='graph'] ol") as HTMLElement;
+    expect(parseFloat(liste.style.getPropertyValue("--tl-graph-pad"))).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: /La grande crue/ }).className).toContain("ml-[var(--tl-graph-pad,0px)]");
+    // Le choix est gardé pour la prochaine ouverture.
+    expect(window.localStorage.getItem("wvlds:timeline-suite-style")).toBe("graph");
+  });
+
+  it("au survol : rien au repos ; survoler un salon allume sa chaîne et estompe le reste", async () => {
+    db.tables.chatrooms = CHAINE;
+    frise(SALONS());
+    await screen.findByTestId("timeline-suite-links");
+    const user = await choisirStyle("Au survol seulement");
+    expect(screen.queryByTestId("timeline-suite-links")).toBeNull();
+
+    await user.hover(screen.getByRole("button", { name: /Les digues cèdent/ }));
+    const calque = await screen.findByTestId("timeline-suite-links");
+    expect(calque.querySelectorAll("[data-suite]")).toHaveLength(2);
+    expect(screen.getByRole("button", { name: /Hors chaîne/ }).closest("li")!.className).toContain("opacity-30");
+    expect(screen.getByRole("button", { name: /La grande crue/ }).closest("li")!.className).not.toContain("opacity-30");
+  });
+
+  it("pointillés : une accolade fléchée par paire", async () => {
+    db.tables.chatrooms = CHAINE;
+    frise(SALONS());
+    await screen.findByTestId("timeline-suite-links");
+    await choisirStyle("Pointillés fléchés");
+    const calque = screen.getByTestId("timeline-suite-links");
+    const traits = calque.querySelectorAll("path[data-suite]");
+    expect(traits).toHaveLength(2);
+    expect(traits[0].getAttribute("stroke-dasharray")).toBe("3 3");
+    expect(traits[0].getAttribute("marker-end")).toBe("url(#suite-arrow)");
+  });
+});

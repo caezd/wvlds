@@ -636,7 +636,14 @@
       "arcNewPlaceholder": "Nuevo arco",
       "arcAdd": "Añadir",
       "arcSaveFailed": "No se pudo guardar el arco.",
-      "arcDeleteFailed": "No se pudo eliminar el arco."
+      "arcDeleteFailed": "No se pudo eliminar el arco.",
+      "suiteStyle": "Estilo de las continuaciones",
+      "suiteStyles": {
+        "rail": "Raíl continuo",
+        "graph": "Gráfico junto al hilo",
+        "hover": "Solo al pasar el cursor",
+        "dashed": "Flechas punteadas"
+      }
     },
     "tabSettings": "Ajustes",
     "tabCategories": "Categorías",

@@ -131,3 +131,21 @@ describe("assignSuiteLanes", () => {
     ])).toEqual([0, 1, 0, 1]);
   });
 });
+
+describe("chaînes de suites", () => {
+  it("les paires qui partagent un salon forment une chaîne, colorée par la première paire colorée", async () => {
+    const { buildSuiteChains, suiteChainOf } = await import("@/lib/worldTimelineItems");
+    const paires = [
+      { from: "a", to: "b", color: null },
+      { from: "b", to: "c", color: "#a855f7" },
+      { from: "x", to: "y", color: "#0ea5e9" },
+      { from: "c", to: "d", color: "#f59e0b" },
+    ];
+    const chaines = buildSuiteChains(paires);
+    expect(chaines).toHaveLength(2);
+    expect(chaines[0]).toEqual({ ids: ["a", "b", "c", "d"], color: "#a855f7" });
+    expect(chaines[1]).toEqual({ ids: ["x", "y"], color: "#0ea5e9" });
+    expect([...suiteChainOf(paires, "c")!]).toEqual(["a", "b", "c", "d"]);
+    expect(suiteChainOf(paires, "seul")).toBeNull();
+  });
+});

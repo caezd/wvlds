@@ -225,3 +225,45 @@ export function assignSuiteLanes(spans: readonly { top: number; bottom: number }
   }
   return lanes;
 }
+
+// ── Chaînes de suites ────────────────────────────────────────
+
+export type SuitePair = { from: string; to: string; color: string | null };
+export type SuiteChain = { ids: string[]; color: string | null };
+
+/**
+ * Les suites forment des chaînes (A → B → C) ; les styles « rail » et
+ * « graphe » dessinent une chaîne d'un seul trait, pas une accolade par
+ * paire. Deux paires qui partagent un salon sont de la même chaîne. La
+ * couleur est celle de la première paire colorée (l'arc de la suite).
+ */
+export function buildSuiteChains(pairs: readonly SuitePair[]): SuiteChain[] {
+  const parent = new Map<string, string>();
+  const find = (x: string): string => {
+    let root = x;
+    while (parent.get(root) !== root) root = parent.get(root)!;
+    parent.set(x, root);
+    return root;
+  };
+  for (const p of pairs) {
+    for (const id of [p.from, p.to]) if (!parent.has(id)) parent.set(id, id);
+    const a = find(p.from);
+    const b = find(p.to);
+    if (a !== b) parent.set(b, a);
+  }
+  const chains = new Map<string, SuiteChain>();
+  for (const p of pairs) {
+    const root = find(p.from);
+    if (!chains.has(root)) chains.set(root, { ids: [], color: null });
+    const chain = chains.get(root)!;
+    for (const id of [p.from, p.to]) if (!chain.ids.includes(id)) chain.ids.push(id);
+    if (!chain.color && p.color) chain.color = p.color;
+  }
+  return [...chains.values()];
+}
+
+/** Les salons de la chaîne d'un salon, lui compris ; `null` s'il n'en a pas. */
+export function suiteChainOf(pairs: readonly SuitePair[], id: string): ReadonlySet<string> | null {
+  const chain = buildSuiteChains(pairs).find((c) => c.ids.includes(id));
+  return chain ? new Set(chain.ids) : null;
+}

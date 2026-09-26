@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { SUITE_STYLES, type SuiteStyle } from "@/components/worlds/timeline/SuiteLinks";
 
 type Option = { id: string; label: string };
 
@@ -32,6 +33,8 @@ export function TimelineFiltersPopover({
   players,
   arcs,
   categories,
+  suiteStyle,
+  onSuiteStyle,
 }: {
   filters: TimelineFilters;
   onChange: (next: TimelineFilters) => void;
@@ -40,6 +43,8 @@ export function TimelineFiltersPopover({
   players: Option[];
   arcs: Option[];
   categories: Option[];
+  suiteStyle: SuiteStyle;
+  onSuiteStyle: (style: SuiteStyle) => void;
 }) {
   const t = useTranslations("worlds.timelineView");
   const active = countActiveFilters(filters);
@@ -103,6 +108,21 @@ export function TimelineFiltersPopover({
             </select>
           </label>
         ))}
+
+        {/* Une préférence de lecture, gardée dans le navigateur. */}
+        <label className="block space-y-1 border-t border-border pt-3">
+          <span className="text-xs font-medium text-muted-foreground">{t("suiteStyle")}</span>
+          <select
+            value={suiteStyle}
+            onChange={(e) => onSuiteStyle(e.target.value as SuiteStyle)}
+            className="h-8 w-full rounded-lg border border-border bg-transparent px-2 text-sm"
+            aria-label={t("suiteStyle")}
+          >
+            {SUITE_STYLES.map((s) => (
+              <option key={s} value={s}>{t(`suiteStyles.${s}`)}</option>
+            ))}
+          </select>
+        </label>
 
         <Button
           type="button"

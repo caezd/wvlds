@@ -1,62 +1,111 @@
 "use client";
 
 import * as React from "react";
-import { assignSuiteLanes } from "@/lib/worldTimelineItems";
+import { assignSuiteLanes, buildSuiteChains, type SuitePair } from "@/lib/worldTimelineItems";
 
-export type SuiteLink = { from: string; to: string; color: string | null };
-type Drawn = { key: string; top: number; bottom: number; lane: number; color: string | null };
+export type SuiteLink = SuitePair;
 
-const LANE_GAP = 10;
+/**
+ * Comment la frise relie un salon à sa suite (choisi par chacun, voir
+ * WorldTimeline) :
+ * - `rail`   : un trait par chaîne dans la marge droite, une pastille par
+ *              salon — façon plan de métro ;
+ * - `graph`  : des couloirs entre le fil et les titres, où chaque anneau se
+ *              branche — façon historique git ;
+ * - `hover`  : rien au repos ; la chaîne du salon survolé s'allume ;
+ * - `dashed` : une fine accolade pointillée par paire, fléchée vers la suite.
+ */
+export type SuiteStyle = "rail" | "graph" | "hover" | "dashed";
+export const SUITE_STYLES: readonly SuiteStyle[] = ["rail", "graph", "hover", "dashed"];
+
+type Point = { id: string; y: number };
+type Drawn =
+  | { kind: "pair"; key: string; top: number; bottom: number; toY: number; lane: number; color: string | null }
+  | { kind: "chain"; key: string; points: Point[]; top: number; bottom: number; lane: number; color: string | null };
+
 const EDGE = 12;
 const STUB = 14;
 const RADIUS = 6;
+/** Écart entre couloirs, par style. */
+const LANE_GAP: Record<SuiteStyle, number> = { rail: 10, graph: 8, hover: 10, dashed: 6 };
+/** Distance entre le fil et le premier couloir du graphe. */
+export const GRAPH_OFFSET = 14;
 
 /**
- * Les lignes de suite de la frise : une fine courbe, dans la marge droite,
- * relie un salon à sa suite — d'une année à l'autre s'il le faut. Chaque
- * ligne a son couloir (voir `assignSuiteLanes`) ; `onLanes` en donne le
- * nombre, pour que la frise laisse la place à droite.
- *
- * Les positions se mesurent dans le DOM (`[data-room-id]`), à chaque
- * changement de la liste et de la taille du conteneur.
+ * Le calque des lignes de suite. Les positions se mesurent dans le DOM
+ * (`[data-room-id]`, et l'anneau d'un salon pour le graphe), à chaque
+ * changement de la frise et de la taille du conteneur. `onLanes` donne le
+ * nombre de couloirs, pour que la frise leur laisse la place.
  */
 export function SuiteLinks({
   containerRef,
   links,
+  style,
   version,
   onLanes,
 }: {
   containerRef: React.RefObject<HTMLElement | null>;
   links: SuiteLink[];
+  style: SuiteStyle;
   /** Change quand la frise change (filtres, données) : force une mesure. */
   version: string;
   onLanes: (count: number) => void;
 }) {
   const [drawn, setDrawn] = React.useState<Drawn[]>([]);
-  const [width, setWidth] = React.useState(0);
+  const [box, setBox] = React.useState({ width: 0, filX: 0 });
 
   const measure = React.useCallback(() => {
     const container = containerRef.current;
     if (!container) return;
-    const box = container.getBoundingClientRect();
-    const centerOf = (id: string) => {
+    const rect = container.getBoundingClientRect();
+    const yOf = (id: string) => {
       const el = container.querySelector<HTMLElement>(`[data-room-id="${id}"]`);
       if (!el) return null;
       const r = el.getBoundingClientRect();
-      return r.top - box.top + Math.min(r.height, 20) / 2;
+      return r.top - rect.top + Math.min(r.height, 20) / 2;
     };
-    const spans: { key: string; top: number; bottom: number; color: string | null }[] = [];
-    for (const link of links) {
-      const a = centerOf(link.from);
-      const b = centerOf(link.to);
-      if (a === null || b === null) continue;
-      spans.push({ key: `${link.from}>${link.to}`, top: Math.min(a, b), bottom: Math.max(a, b), color: link.color });
+    // Le fil : le centre d'un anneau de salon.
+    const ring = container.querySelector<HTMLElement>("[data-room-id] [data-testid='timeline-ring']");
+    const ringRect = ring?.getBoundingClientRect();
+    const filX = ringRect ? ringRect.left - rect.left + ringRect.width / 2 : 0;
+
+    let next: Drawn[] = [];
+    if (style === "rail" || style === "graph") {
+      const chains = buildSuiteChains(links)
+        .map((c) => ({
+          color: c.color,
+          points: c.ids.map((id) => ({ id, y: yOf(id) })).filter((p): p is Point => p.y !== null),
+        }))
+        .filter((c) => c.points.length > 1);
+      const spans = chains.map((c) => ({
+        top: Math.min(...c.points.map((p) => p.y)),
+        bottom: Math.max(...c.points.map((p) => p.y)),
+      }));
+      const lanes = assignSuiteLanes(spans);
+      next = chains.map((c, i) => ({
+        kind: "chain",
+        key: c.points.map((p) => p.id).join(">"),
+        points: c.points,
+        top: spans[i].top,
+        bottom: spans[i].bottom,
+        lane: lanes[i],
+        color: c.color,
+      }));
+    } else {
+      const pairs: { key: string; top: number; bottom: number; toY: number; color: string | null }[] = [];
+      for (const link of links) {
+        const a = yOf(link.from);
+        const b = yOf(link.to);
+        if (a === null || b === null) continue;
+        pairs.push({ key: `${link.from}>${link.to}`, top: Math.min(a, b), bottom: Math.max(a, b), toY: b, color: link.color });
+      }
+      const lanes = assignSuiteLanes(pairs);
+      next = pairs.map((p, i) => ({ kind: "pair", ...p, lane: lanes[i] }));
     }
-    const lanes = assignSuiteLanes(spans);
-    setDrawn(spans.map((s, i) => ({ ...s, lane: lanes[i] })));
-    setWidth(box.width);
-    onLanes(spans.length ? Math.max(...lanes) + 1 : 0);
-  }, [containerRef, links, onLanes]);
+    setDrawn(next);
+    setBox({ width: rect.width, filX });
+    onLanes(next.length ? Math.max(...next.map((d) => d.lane)) + 1 : 0);
+  }, [containerRef, links, style, onLanes]);
 
   React.useLayoutEffect(() => {
     measure();
@@ -71,14 +120,63 @@ export function SuiteLinks({
   }, [containerRef, measure]);
 
   if (drawn.length === 0) return null;
+  const gap = LANE_GAP[style];
+  const strokeProps = (color: string | null) => ({
+    className: color ? undefined : "stroke-foreground/30",
+    style: color ? { stroke: color, opacity: 0.85 } : undefined,
+  });
+  const fillProps = (color: string | null) => ({
+    className: color ? undefined : "fill-foreground/40",
+    style: color ? { fill: color } : undefined,
+  });
+
   return (
     <svg
       className="pointer-events-none absolute inset-0 h-full w-full overflow-visible"
       aria-hidden
       data-testid="timeline-suite-links"
+      data-style={style}
     >
+      {style === "dashed" && (
+        <defs>
+          <marker id="suite-arrow" viewBox="0 0 6 6" refX="1" refY="3" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M 6 0 L 0 3 L 6 6 z" className="fill-foreground/50" />
+          </marker>
+        </defs>
+      )}
       {drawn.map((d) => {
-        const x = width - EDGE - d.lane * LANE_GAP;
+        if (d.kind === "chain" && style === "graph") {
+          // Un couloir entre le fil et les titres ; chaque anneau s'y branche.
+          const x = box.filX + GRAPH_OFFSET + d.lane * gap;
+          return (
+            <g key={d.key} data-suite={d.key}>
+              <path d={`M ${x} ${d.top} V ${d.bottom}`} fill="none" strokeWidth={1.5} {...strokeProps(d.color)} />
+              {d.points.map((p) => (
+                <g key={p.id}>
+                  <path d={`M ${box.filX + 6} ${p.y} H ${x}`} fill="none" strokeWidth={1.5} {...strokeProps(d.color)} />
+                  <circle cx={x} cy={p.y} r={2.5} {...fillProps(d.color)} />
+                </g>
+              ))}
+            </g>
+          );
+        }
+        if (d.kind === "chain") {
+          // Un rail dans la marge droite, une pastille par salon.
+          const x = box.width - EDGE - d.lane * gap;
+          return (
+            <g key={d.key} data-suite={d.key}>
+              <path d={`M ${x} ${d.top} V ${d.bottom}`} fill="none" strokeWidth={2} strokeLinecap="round" {...strokeProps(d.color)} />
+              {d.points.map((p) => (
+                <g key={p.id}>
+                  <path d={`M ${x - STUB} ${p.y} H ${x}`} fill="none" strokeWidth={1} {...strokeProps(d.color)} />
+                  <circle cx={x} cy={p.y} r={3.5} {...fillProps(d.color)} />
+                </g>
+              ))}
+            </g>
+          );
+        }
+        // Une accolade par paire : pleine (survol), ou pointillée et fléchée.
+        const x = box.width - EDGE - d.lane * gap;
         const x0 = x - STUB;
         const r = Math.min(RADIUS, (d.bottom - d.top) / 2);
         const path = [
@@ -89,15 +187,27 @@ export function SuiteLinks({
           `Q ${x} ${d.bottom} ${x - r} ${d.bottom}`,
           `H ${x0}`,
         ].join(" ");
+        const dashed = style === "dashed";
+        // La flèche pointe vers la suite : le chemin doit finir sur elle.
+        const endsOnSuite = d.toY === d.bottom;
+        const reversed = [
+          `M ${x0} ${d.bottom}`,
+          `H ${x - r}`,
+          `Q ${x} ${d.bottom} ${x} ${d.bottom - r}`,
+          `V ${d.top + r}`,
+          `Q ${x} ${d.top} ${x - r} ${d.top}`,
+          `H ${x0}`,
+        ].join(" ");
         return (
           <path
             key={d.key}
-            d={path}
+            d={dashed && !endsOnSuite ? reversed : path}
             data-suite={d.key}
             fill="none"
-            strokeWidth={1.5}
-            className={d.color ? undefined : "stroke-foreground/30"}
-            style={d.color ? { stroke: d.color, opacity: 0.8 } : undefined}
+            strokeWidth={dashed ? 1 : 1.5}
+            strokeDasharray={dashed ? "3 3" : undefined}
+            markerEnd={dashed ? "url(#suite-arrow)" : undefined}
+            {...strokeProps(d.color)}
           />
         );
       })}

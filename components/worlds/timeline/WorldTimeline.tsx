@@ -13,6 +13,7 @@ import {
   buildTimelineSections,
   matchesTimelineFilters,
   normalizeAges,
+  suiteChainOf,
   type TimelineDateGroup,
   type TimelineFilters,
   type TimelineItem,
@@ -24,7 +25,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
-import { SuiteLinks, type SuiteLink } from "@/components/worlds/timeline/SuiteLinks";
+import {
+  GRAPH_OFFSET,
+  SUITE_STYLES,
+  SuiteLinks,
+  type SuiteLink,
+  type SuiteStyle,
+} from "@/components/worlds/timeline/SuiteLinks";
 import { TimelineArcsDialog } from "@/components/worlds/timeline/TimelineArcsDialog";
 import { TimelineEventDialog } from "@/components/worlds/timeline/TimelineEventDialog";
 import { TimelineFiltersPopover } from "@/components/worlds/timeline/TimelineFiltersPopover";
@@ -53,6 +60,19 @@ type TimelineRoom = {
  */
 const AMBIENT_BG = "bg-body lg:bg-background";
 const AMBIENT_BG_TRANSLUCENT = "bg-body/90 lg:bg-background/90";
+
+/** Le style des lignes de suite, choisi par chacun et gardé dans son
+ *  navigateur (une préférence de lecture, pas un réglage du monde). */
+const SUITE_STYLE_KEY = "wvlds:timeline-suite-style";
+
+function readSuiteStyle(): SuiteStyle {
+  try {
+    const v = window.localStorage.getItem(SUITE_STYLE_KEY);
+    return (SUITE_STYLES as readonly string[]).includes(v ?? "") ? (v as SuiteStyle) : "rail";
+  } catch {
+    return "rail";
+  }
+}
 
 // Le rouge de repère : l'accent du thème sombre ; en clair, où l'accent est
 // presque blanc, un rouge franc.
@@ -96,6 +116,14 @@ export function WorldTimeline({
   const [eventDialog, setEventDialog] = useState<{ open: boolean; event: TimelineEvent | null }>({ open: false, event: null });
   const [arcsOpen, setArcsOpen] = useState(false);
   const [lanes, setLanes] = useState(0);
+  const [suiteStyle, setSuiteStyleState] = useState<SuiteStyle>("rail");
+  const [hoveredRoom, setHoveredRoom] = useState<string | null>(null);
+  useEffect(() => { setSuiteStyleState(readSuiteStyle()); }, []);
+  function setSuiteStyle(next: SuiteStyle) {
+    setSuiteStyleState(next);
+    setHoveredRoom(null);
+    try { window.localStorage.setItem(SUITE_STYLE_KEY, next); } catch { /* navigation privée */ }
+  }
 
   const arcsById = useMemo(() => new Map(data.arcs.map((a) => [a.id, a])), [data.arcs]);
   const eventsById = useMemo(() => new Map(data.events.map((e) => [e.id, e])), [data.events]);
@@ -148,7 +176,20 @@ export function WorldTimeline({
       .filter((i): i is TimelineRoomItem => i.kind === "room" && !!i.previousId && shown.has(i.previousId))
       .map((i) => ({ from: i.previousId!, to: i.id, color: i.arcId ? arcsById.get(i.arcId)?.color ?? null : null }));
   }, [visible, arcsById]);
-  const layoutVersion = useMemo(() => visible.map((i) => i.id).join(","), [visible]);
+  // Au survol (style `hover`), seule la chaîne du salon survolé s'allume ; le
+  // reste de la frise s'estompe.
+  const highlight = useMemo(
+    () => (suiteStyle === "hover" && hoveredRoom ? suiteChainOf(suiteLinks, hoveredRoom) : null),
+    [suiteStyle, hoveredRoom, suiteLinks],
+  );
+  const drawnLinks = useMemo(
+    () => (suiteStyle !== "hover" ? suiteLinks : highlight ? suiteLinks.filter((l) => highlight.has(l.from)) : []),
+    [suiteStyle, suiteLinks, highlight],
+  );
+  const layoutVersion = useMemo(() => `${suiteStyle}:${visible.map((i) => i.id).join(",")}`, [visible, suiteStyle]);
+  // Le graphe prend place entre le fil et les titres ; les autres styles, à droite.
+  const graphPad = suiteStyle === "graph" && lanes > 0 ? GRAPH_OFFSET + (lanes - 1) * 8 + 10 : 0;
+  const rightPad = suiteStyle !== "graph" && lanes > 0 ? 20 + 12 + lanes * 10 + 14 : undefined;
   const onLanes = useCallback((n: number) => setLanes(n), []);
 
   const players = useMemo(
@@ -225,6 +266,8 @@ export function WorldTimeline({
                 players={players}
                 arcs={data.arcs.map((a) => ({ id: a.id, label: a.name }))}
                 categories={data.categories.map((c) => ({ id: c.id, label: c.title }))}
+                suiteStyle={suiteStyle}
+                onSuiteStyle={setSuiteStyle}
               />
               {canManage && (
                 <>
@@ -273,11 +316,30 @@ export function WorldTimeline({
           ) : sections.length === 0 ? (
             <p className="px-5 py-4 text-sm text-muted-foreground" data-testid="timeline-no-match">{tv("noMatch")}</p>
           ) : (
-            <div ref={listRef} className="relative">
+            <div
+              ref={listRef}
+              className="relative"
+              data-suite-style={suiteStyle}
+              onMouseOver={(e) => {
+                if (suiteStyle !== "hover") return;
+                const row = (e.target as HTMLElement).closest<HTMLElement>("[data-room-id]");
+                setHoveredRoom(row?.dataset.roomId ?? null);
+              }}
+              onMouseLeave={() => setHoveredRoom(null)}
+              onFocus={(e) => {
+                if (suiteStyle !== "hover") return;
+                const row = (e.target as HTMLElement).closest<HTMLElement>("[data-room-id]");
+                setHoveredRoom(row?.dataset.roomId ?? null);
+              }}
+            >
               <ol
                 className="px-5 pb-6"
-                // La marge droite accueille les couloirs des lignes de suite.
-                style={lanes > 0 ? { paddingRight: 20 + 12 + lanes * 10 + 14 } : undefined}
+                // Les couloirs des lignes de suite : à droite, ou, pour le
+                // graphe, entre le fil et les titres (`--tl-graph-pad`).
+                style={{
+                  paddingRight: rightPad,
+                  ["--tl-graph-pad" as string]: `${graphPad}px`,
+                }}
               >
                 {sections.map((section, i) => {
                   const age = ageOf(ages, section.year);
@@ -291,6 +353,7 @@ export function WorldTimeline({
                         openers={data.openers}
                         arcsById={arcsById}
                         canManage={canManage}
+                        highlight={highlight}
                         onOpenRoom={(id) => router.push(`/c/${id}`)}
                         onOpenWiki={(slug) => router.push(`/w/${worldId}?view=wiki&page=${encodeURIComponent(slug)}`)}
                         onEditEvent={(id) => {
@@ -302,7 +365,7 @@ export function WorldTimeline({
                   );
                 })}
               </ol>
-              <SuiteLinks containerRef={listRef} links={suiteLinks} version={layoutVersion} onLanes={onLanes} />
+              <SuiteLinks containerRef={listRef} links={drawnLinks} style={suiteStyle} version={layoutVersion} onLanes={onLanes} />
             </div>
           )}
         </div>
@@ -365,6 +428,7 @@ function YearBlock({
   openers,
   arcsById,
   canManage,
+  highlight,
   onOpenRoom,
   onOpenWiki,
   onEditEvent,
@@ -375,6 +439,7 @@ function YearBlock({
   openers: ReadonlyMap<string, TimelineOpener>;
   arcsById: ReadonlyMap<string, TimelineArc>;
   canManage: boolean;
+  highlight: ReadonlySet<string> | null;
   onOpenRoom: (id: string) => void;
   onOpenWiki: (slug: string) => void;
   onEditEvent: (id: string) => void;
@@ -400,6 +465,7 @@ function YearBlock({
       openers={openers}
       arcsById={arcsById}
       canManage={canManage}
+      highlight={highlight}
       newMonth={i > 0 && groups[i - 1].month !== group.month}
       showMonth={i === 0}
       onOpenRoom={onOpenRoom}
@@ -462,6 +528,7 @@ function DateGroupBlock({
   openers,
   arcsById,
   canManage,
+  highlight,
   newMonth,
   showMonth,
   onOpenRoom,
@@ -474,6 +541,7 @@ function DateGroupBlock({
   openers: ReadonlyMap<string, TimelineOpener>;
   arcsById: ReadonlyMap<string, TimelineArc>;
   canManage: boolean;
+  highlight: ReadonlySet<string> | null;
   newMonth: boolean;
   /** Le nom du mois au-dessus : seulement pour la première date de l'année,
    *  que n'ouvre aucun filet — ailleurs, le filet le porte déjà. */
@@ -498,7 +566,7 @@ function DateGroupBlock({
           <span className="absolute -left-7 right-0 top-0 border-t border-dashed border-border" aria-hidden />
           {monthName && (
             <span
-              className={cn("absolute left-0 top-0 -translate-x-2 -translate-y-1/2 whitespace-nowrap px-2 text-[10px] font-medium uppercase leading-none tracking-wider text-muted-foreground", AMBIENT_BG)}
+              className={cn("absolute left-[var(--tl-graph-pad,0px)] top-0 -translate-x-2 -translate-y-1/2 whitespace-nowrap px-2 text-[10px] font-medium uppercase leading-none tracking-wider text-muted-foreground", AMBIENT_BG)}
               data-testid="timeline-month-label"
               aria-hidden
             >
@@ -509,7 +577,7 @@ function DateGroupBlock({
       )}
       {showMonth && monthName && (
         <p
-          className="mb-2 text-[10px] font-medium uppercase leading-none tracking-wider text-muted-foreground"
+          className="mb-2 ml-[var(--tl-graph-pad,0px)] text-[10px] font-medium uppercase leading-none tracking-wider text-muted-foreground"
           data-testid="timeline-first-month"
           aria-hidden
         >
@@ -519,6 +587,7 @@ function DateGroupBlock({
       <ul className="space-y-1.5">
         {group.items.map((item, i) => {
           const day = i === 0 ? group.day : null;
+          const dimmed = highlight !== null && !highlight.has(item.id);
           switch (item.kind) {
             case "room":
               return (
@@ -529,6 +598,7 @@ function DateGroupBlock({
                   fullDate={fullDate}
                   opener={openers.get(item.id) ?? null}
                   arc={item.arcId ? arcsById.get(item.arcId) ?? null : null}
+                  dimmed={dimmed}
                   onClick={() => onOpenRoom(item.id)}
                 />
               );
@@ -539,12 +609,13 @@ function DateGroupBlock({
                   item={item as TimelineEvent}
                   day={day}
                   canManage={canManage}
+                  dimmed={dimmed}
                   onOpenWiki={onOpenWiki}
                   onEdit={() => onEditEvent(item.id)}
                 />
               );
             case "journal":
-              return <JournalRow key={item.id} item={item} day={day} />;
+              return <JournalRow key={item.id} item={item} day={day} dimmed={dimmed} />;
           }
         })}
       </ul>
@@ -572,6 +643,7 @@ function RoomRow({
   fullDate,
   opener,
   arc,
+  dimmed,
   onClick,
 }: {
   item: TimelineRoomItem;
@@ -579,12 +651,13 @@ function RoomRow({
   fullDate: string;
   opener: TimelineOpener | null;
   arc: TimelineArc | null;
+  dimmed: boolean;
   onClick: () => void;
 }) {
   const t = useTranslations("worlds");
   const tv = useTranslations("worlds.timelineView");
   return (
-    <li className="group/room relative" data-room-id={item.id}>
+    <li className={cn("group/room relative transition-opacity", dimmed && "opacity-30")} data-room-id={item.id}>
       <DayGutter day={day} />
       {/* Un anneau creux par salon, sur le fil, centré sur son titre (ligne
           de 20px), à la couleur de son arc ; il fonce au survol. */}
@@ -611,7 +684,7 @@ function RoomRow({
           .join(", ")}
         // Un bloc sur une ligne de 20px : en ligne (`inline-block`), le bouton
         // héritait de la hauteur de ligne du parent et le titre glissait.
-        className="group/title block max-w-full rounded-md text-left text-sm leading-5 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="group/title ml-[var(--tl-graph-pad,0px)] block max-w-full rounded-md text-left text-sm leading-5 outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         {/* Au survol, le titre s’éclaircit seulement (atténué au repos) : pas de fond. */}
         <span className="min-w-0 break-words">
@@ -657,18 +730,20 @@ function EventRow({
   item,
   day,
   canManage,
+  dimmed,
   onOpenWiki,
   onEdit,
 }: {
   item: TimelineEvent;
   day: number | null;
   canManage: boolean;
+  dimmed: boolean;
   onOpenWiki: (slug: string) => void;
   onEdit: () => void;
 }) {
   const tv = useTranslations("worlds.timelineView");
   return (
-    <li className="group/event relative" data-event-id={item.id}>
+    <li className={cn("group/event relative transition-opacity", dimmed && "opacity-30")} data-event-id={item.id}>
       <DayGutter day={day} />
       {/* Un losange plein sur le fil : un jalon du monde, pas un salon. */}
       <span
@@ -676,7 +751,7 @@ function EventRow({
         data-testid="timeline-event-mark"
         aria-hidden
       />
-      <div className="flex items-start gap-2">
+      <div className="ml-[var(--tl-graph-pad,0px)] flex items-start gap-2">
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold leading-5 text-foreground">
             <span className="sr-only">{tv("eventLabel")} : </span>
@@ -711,11 +786,11 @@ function EventRow({
   );
 }
 
-function JournalRow({ item, day }: { item: TimelineJournalItem; day: number | null }) {
+function JournalRow({ item, day, dimmed }: { item: TimelineJournalItem; day: number | null; dimmed: boolean }) {
   const tv = useTranslations("worlds.timelineView");
   const [expanded, setExpanded] = useState(false);
   return (
-    <li className="relative" data-journal-id={item.id}>
+    <li className={cn("relative transition-opacity", dimmed && "opacity-30")} data-journal-id={item.id}>
       <DayGutter day={day} />
       {/* Un point discret : une trace de personnage, pas un salon. */}
       <span className="absolute -left-[31px] top-[7px] size-1.5 rounded-full bg-muted-foreground/60" aria-hidden />
@@ -723,7 +798,7 @@ function JournalRow({ item, day }: { item: TimelineJournalItem; day: number | nu
         type="button"
         onClick={() => setExpanded((v) => !v)}
         aria-expanded={expanded}
-        className="block max-w-full rounded-md text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="ml-[var(--tl-graph-pad,0px)] block max-w-full rounded-md text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <span className="flex items-center gap-1 text-xs leading-5 text-muted-foreground">
           <BookText className="h-3 w-3" aria-hidden />

@@ -636,7 +636,14 @@
       "arcNewPlaceholder": "Nouvel arc",
       "arcAdd": "Ajouter",
       "arcSaveFailed": "Impossible d'enregistrer l'arc.",
-      "arcDeleteFailed": "Impossible de supprimer l'arc."
+      "arcDeleteFailed": "Impossible de supprimer l'arc.",
+      "suiteStyle": "Style des suites",
+      "suiteStyles": {
+        "rail": "Rail continu",
+        "graph": "Graphe à côté du fil",
+        "hover": "Au survol seulement",
+        "dashed": "Pointillés fléchés"
+      }
     },
     "tabSettings": "Paramètres",
     "tabCategories": "Catégories",
