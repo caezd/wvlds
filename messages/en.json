@@ -587,6 +587,7 @@
     "timelineEmpty": "No conversation has been placed on the timeline yet.",
     "timelineDay": "Day {day}",
     "timelineUntitled": "Conversation",
+    "timelineRanges": "Timeline periods",
     "tabSettings": "Settings",
     "tabCategories": "Categories",
     "tabCommunity": "Community",

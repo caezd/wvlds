@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo } from "react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Clock, X, MessageSquare } from "lucide-react";
+import { Clock, X } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { formatTimelineLabel } from "@/lib/worldTimeline";
 import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
 
@@ -16,8 +17,19 @@ type TimelineRoom = {
   timeline_date: WorldTimelineDate | null;
 };
 
-type Grouped = Map<number, Map<number | null, TimelineRoom[]>>;
+type YearSection = { year: number; rooms: TimelineRoom[] };
 
+/** Années regroupées par tranches de RANGE_SPAN pour les pastilles de tête. */
+const RANGE_SPAN = 5;
+
+/**
+ * La chronologie d'un monde, en frise verticale : à gauche les années en très
+ * grands chiffres, au centre un fil, et pour chaque salon un anneau sur le
+ * fil, son titre puis sa date. Un filet sépare les
+ * années ; la date actuelle du monde barre la frise d'un trait rouge, à son
+ * mois, et la frise s'ouvre sur son année. Au-delà de RANGE_SPAN années, des pastilles en tête
+ * mènent à chaque tranche et suivent le défilement.
+ */
 export function WorldTimeline({
   worldId: _worldId,
   rooms,
@@ -32,42 +44,82 @@ export function WorldTimeline({
   const t = useTranslations("worlds");
   const tCommon = useTranslations("common");
   const router = useRouter();
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const navRef = useRef<HTMLElement>(null);
 
-  const { dated } = useMemo(() => {
-    const d: TimelineRoom[] = [];
-    const u: TimelineRoom[] = [];
-    for (const r of rooms) {
-      if (r.timeline_date !== null) d.push(r);
-      else u.push(r);
+  // Une section par année, ses salons dans l'ordre du récit. L'année actuelle
+  // du monde a toujours la sienne, pour porter son repère.
+  const sections: YearSection[] = useMemo(() => {
+    const dated = rooms.filter((r) => r.timeline_date !== null);
+    if (dated.length === 0) return [];
+    const byYear = new Map<number, TimelineRoom[]>();
+    for (const room of dated) {
+      const y = room.timeline_date!.year;
+      if (!byYear.has(y)) byYear.set(y, []);
+      byYear.get(y)!.push(room);
     }
-    return { dated: d, undated: u };
-  }, [rooms]);
+    if (!byYear.has(config.current_year)) byYear.set(config.current_year, []);
+    return [...byYear.entries()]
+      .sort(([a], [b]) => a - b)
+      .map(([year, list]) => ({
+        year,
+        rooms: [...list].sort((a, b) =>
+          (a.timeline_date!.month ?? -1) - (b.timeline_date!.month ?? -1) ||
+          (a.timeline_date!.day ?? 0) - (b.timeline_date!.day ?? 0),
+        ),
+      }));
+  }, [rooms, config.current_year]);
 
-  // Groupe par année puis par mois (null = sans mois précisé)
-  const grouped: Grouped = useMemo(() => {
-    const map: Grouped = new Map();
-    const sorted = [...dated].sort((a, b) => {
-      const ya = a.timeline_date!.year;
-      const yb = b.timeline_date!.year;
-      if (ya !== yb) return ya - yb;
-      const ma = a.timeline_date!.month ?? -1;
-      const mb = b.timeline_date!.month ?? -1;
-      if (ma !== mb) return ma - mb;
-      const da = a.timeline_date!.day ?? 0;
-      const db = b.timeline_date!.day ?? 0;
-      return da - db;
-    });
-    for (const room of sorted) {
-      const { year, month } = room.timeline_date!;
-      if (!map.has(year)) map.set(year, new Map());
-      const monthMap = map.get(year)!;
-      if (!monthMap.has(month)) monthMap.set(month, []);
-      monthMap.get(month)!.push(room);
+  const firstYear = sections[0]?.year ?? 0;
+  const rangeOf = (year: number) => Math.floor((year - firstYear) / RANGE_SPAN);
+  const ranges = useMemo(() => {
+    const seen = new Map<number, number>(); // tranche → première année présente
+    for (const s of sections) {
+      const r = Math.floor((s.year - firstYear) / RANGE_SPAN);
+      if (!seen.has(r)) seen.set(r, s.year);
     }
-    return map;
-  }, [dated]);
+    return [...seen.entries()].map(([index, year]) => ({
+      index,
+      year,
+      label: `${firstYear + index * RANGE_SPAN} – ${firstYear + index * RANGE_SPAN + RANGE_SPAN - 1}`,
+    }));
+  }, [sections, firstYear]);
+  const [activeRange, setActiveRange] = useState(() => rangeOf(config.current_year));
 
-  const years = [...grouped.keys()].sort((a, b) => a - b);
+  function sectionEl(year: number): HTMLElement | null {
+    return scrollRef.current?.querySelector<HTMLElement>(`[data-year="${year}"]`) ?? null;
+  }
+
+  function scrollToYear(year: number, smooth: boolean) {
+    const el = scrollRef.current;
+    const section = sectionEl(year);
+    if (!el || !section) return;
+    const top = section.offsetTop - (navRef.current?.offsetHeight ?? 0);
+    if (typeof el.scrollTo === "function") el.scrollTo({ top, behavior: smooth ? "smooth" : "auto" });
+    else el.scrollTop = top;
+  }
+
+  // S'ouvrir sur l'année actuelle du monde.
+  useEffect(() => {
+    scrollToYear(config.current_year, false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- à l'ouverture seulement
+  }, []);
+
+  // Les pastilles suivent le défilement : la tranche de la dernière année
+  // passée sous elles.
+  function onScroll() {
+    const el = scrollRef.current;
+    if (!el || ranges.length < 2) return;
+    const seuil = el.getBoundingClientRect().top + (navRef.current?.offsetHeight ?? 0) + 8;
+    let current = sections[0]?.year ?? 0;
+    for (const s of sections) {
+      const node = sectionEl(s.year);
+      if (node && node.getBoundingClientRect().top <= seuil) current = s.year;
+    }
+    setActiveRange(rangeOf(current));
+  }
+
+  const nowLabel = t("settings.timelinePreviewLabel");
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -86,117 +138,150 @@ export function WorldTimeline({
         }
       />
 
-      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
-        {years.map(year => {
-          const monthMap = grouped.get(year)!;
-          const monthKeys = [...monthMap.keys()].sort((a, b) => (a ?? -1) - (b ?? -1));
-          return (
-            <div key={year} className="relative pl-5">
-              {/* Ligne verticale */}
-              <div className="absolute left-0 top-3 bottom-0 w-px bg-border-soft" />
+      {sections.length === 0 ? (
+        <p className="px-5 py-4 text-sm text-muted-foreground">{t("timelineEmpty")}</p>
+      ) : (
+        <div ref={scrollRef} onScroll={onScroll} className="relative flex-1 overflow-y-auto" data-testid="timeline-scroll">
+          {ranges.length > 1 && (
+            <nav
+              ref={navRef}
+              aria-label={t("timelineRanges")}
+              className="sticky top-0 z-10 flex gap-2 overflow-x-auto bg-background/90 px-5 py-3 backdrop-blur"
+            >
+              {ranges.map((r) => (
+                <button
+                  key={r.index}
+                  type="button"
+                  aria-current={r.index === activeRange ? "true" : undefined}
+                  onClick={() => { setActiveRange(r.index); scrollToYear(r.year, true); }}
+                  className={cn(
+                    "h-7 shrink-0 rounded-full px-4 text-xs font-medium tabular-nums transition-colors",
+                    r.index === activeRange
+                      ? "bg-foreground text-background"
+                      : "bg-muted text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {r.label}
+                </button>
+              ))}
+            </nav>
+          )}
 
-              {/* Titre année */}
-              <div className="mb-2 flex items-center gap-2">
-                <div className="absolute -left-1.5 top-1.5 h-3 w-3 rounded-full border-2 border-primary bg-background" />
-                <h3 className="text-sm font-semibold">
-                  {config.year_label} {year}{config.era_name ? ` ${config.era_name}` : ""}
-                </h3>
-              </div>
-
-              <div className="space-y-3">
-                {monthKeys.map(month => {
-                  const roomsInGroup = monthMap.get(month)!;
-                  const monthLabel = month !== null && config.month_names[month]
-                    ? config.month_names[month]
-                    : null;
-
-                  return (
-                    // Les salons ne sont plus décalés en plus du titre du
-                    // mois (retrait supplémentaire retiré) : ça permettait au
-                    // connecteur de ne couvrir QUE le pl-5 du wrapper année
-                    // (mesuré en repro isolée : ligne à x=0, puce posée pile
-                    // au bout, sans écart) au lieu d'un aller-retour plus
-                    // long — la ligne courbée est donc plus courte.
-                    <div key={month ?? "nomonth"} className="space-y-0.5">
-                      {monthLabel && (
-                        // `pl-3` réserve la place de la puce : posée en
-                        // `absolute`, elle ne pousse pas le texte comme le
-                        // ferait un enfant flex normal — sans ce padding, le
-                        // titre du mois démarrait par-dessus la puce/courbe.
-                        <div className="relative flex items-center pl-3">
-                          {/* Ligne courbée façon fil de réponses imbriquées :
-                              part du fil de l'année (`-left-5` = -20px, pile
-                              le pl-5 du wrapper année) puis rejoint la puce du
-                              mois — largeur = hauteur pour un quart de cercle.
-                              `top-1/2 -translate-y-full` ancre le BAS de la
-                              courbe (là où elle rejoint la puce) au centre
-                              vertical de la ligne, comme la puce elle-même
-                              (`top-1/2 -translate-y-1/2`) — un simple `top-0`
-                              calait la courbe sur le HAUT de la ligne, un cran
-                              plus haut que la puce, d'où le décalage. */}
-                          <div className="absolute -left-5 top-1/2 h-5 w-5 -translate-y-full rounded-bl-lg border-b border-l border-border-soft" />
-                          {/* `left-0`, pas de décalage négatif : la puce touche
-                              exactement la pointe de la courbe, sans chevaucher
-                              ni laisser d'écart. */}
-                          <div className="absolute left-0 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full border-2 border-accent bg-background" />
-                          <p className="text-sm font-medium text-foreground">{monthLabel}</p>
-                        </div>
-                      )}
-                      {/* Une ligne par salon : le jour en colonne, puis le titre. */}
-                      <ul className="pl-1">
-                        {roomsInGroup.map(room => (
-                          <li key={room.id}>
-                            <RoomRow room={room} onClick={() => router.push(`/c/${room.id}`)} />
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
-
-        {dated.length === 0 && (
-          <p className="text-sm text-muted-foreground">{t("timelineEmpty")}</p>
-        )}
-      </div>
+          <ol className="px-5 pb-6">
+            {sections.map((section) => (
+              <YearBlock
+                key={section.year}
+                section={section}
+                config={config}
+                nowLabel={nowLabel}
+                onOpen={(id) => router.push(`/c/${id}`)}
+              />
+            ))}
+          </ol>
+        </div>
+      )}
     </div>
   );
 }
 
-function RoomRow({ room, onClick }: { room: TimelineRoom; onClick: () => void }) {
+// Le rouge de repère : l'accent du thème sombre ; en clair, où l'accent est
+// presque blanc, un rouge franc.
+const RED_TEXT = "text-red-600 dark:text-accent";
+const RED_BG = "bg-red-600 dark:bg-accent";
+
+function YearBlock({
+  section,
+  config,
+  nowLabel,
+  onOpen,
+}: {
+  section: YearSection;
+  config: WorldTimelineConfig;
+  nowLabel: string;
+  onOpen: (id: string) => void;
+}) {
+  const isNow = section.year === config.current_year;
+  // La date actuelle du monde barre l'année d'un trait rouge, à son mois.
+  const nowMonth = config.current_month;
+  let insertAt = -1;
+  if (isNow) {
+    const after = nowMonth === null
+      ? 0
+      : section.rooms.findIndex((r) => (r.timeline_date!.month ?? -1) > nowMonth);
+    insertAt = after === -1 ? section.rooms.length : after;
+  }
+  const nowMonthName = nowMonth !== null ? (config.month_names[nowMonth] ?? null) : null;
+
+  const entries: ReactNode[] = section.rooms.map((room) => (
+    <EntryRow key={room.id} room={room} config={config} onClick={() => onOpen(room.id)} />
+  ));
+  if (insertAt >= 0) {
+    entries.splice(insertAt, 0, (
+      <li key="now" className="relative py-0.5" data-testid="timeline-now">
+        {/* Le trait court du fil jusqu'au bord ; un carré rouge sur le fil. */}
+        <span className={cn("absolute -left-7 right-0 top-1/2 h-px", RED_BG)} aria-hidden />
+        <span className={cn("absolute -left-[31.5px] top-1/2 size-2 -translate-y-1/2", RED_BG)} aria-hidden />
+        <p className={cn("relative inline-block bg-background pr-2 text-[11px] font-medium", RED_TEXT)}>
+          {nowLabel}
+          {nowMonthName && <span className="font-normal"> · {nowMonthName}</span>}
+        </p>
+      </li>
+    ));
+  }
+
+  const caption = `${config.year_label}${config.era_name ? ` ${config.era_name}` : ""}`;
+
+  return (
+    <li
+      data-year={section.year}
+      className="grid grid-cols-[6rem_1fr] border-t border-border first:border-t-0 sm:grid-cols-[9rem_1fr]"
+    >
+      {/* L'année en très grands chiffres, sa légende en exposant. */}
+      <h3 className="flex items-start gap-1 overflow-hidden pt-4 pb-4 pr-3">
+        <span className="text-4xl font-semibold leading-[0.85] tracking-tighter tabular-nums sm:text-6xl">
+          {section.year}
+        </span>
+        <span className="text-[11px] font-medium leading-none text-muted-foreground">{caption}</span>
+      </h3>
+      <div className="relative py-5 pl-7">
+        {/* Le fil : d'une section à l'autre, il ne s'interrompt pas. */}
+        <span className="absolute inset-y-0 left-0 w-px bg-border" aria-hidden />
+        <ul className="space-y-4">{entries}</ul>
+      </div>
+    </li>
+  );
+}
+
+function EntryRow({ room, config, onClick }: { room: TimelineRoom; config: WorldTimelineConfig; onClick: () => void }) {
   const t = useTranslations("worlds");
   const label = room.title ?? room.name ?? t("timelineUntitled");
-  const day = room.timeline_date?.day ?? null;
-  const dayText = day !== null ? t("timelineDay", { day }) : null;
+  const date = room.timeline_date!;
+  const monthName = date.month !== null ? (config.month_names[date.month] ?? null) : null;
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      // Le titre d'abord, puis le jour en toutes lettres (la colonne n'en
-      // montre que le numéro).
-      aria-label={dayText ? `${label}, ${dayText}` : undefined}
-      className="group flex max-w-full items-center gap-2 rounded-md px-2 py-1 text-left text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-    >
-      {/* Le jour, aligné en colonne ; vide quand la date s'arrête au mois. */}
+    <li className="group/entry relative">
+      {/* Un anneau creux sur le fil, qui fonce au survol. */}
       <span
-        className="w-5 shrink-0 text-right text-xs tabular-nums text-muted-foreground transition-colors group-hover:text-foreground"
-        title={dayText ?? undefined}
+        className="absolute -left-[33.5px] top-1 size-3 rounded-full border-[1.5px] border-foreground/40 bg-background transition-colors group-hover/entry:border-foreground"
         aria-hidden
+      />
+      <button
+        type="button"
+        onClick={onClick}
+        aria-label={`${label}, ${formatTimelineLabel(config, date)}`}
+        className="flex max-w-full flex-col items-start rounded-md text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
-        {day}
-      </span>
-      {room.icon_url ? (
-        <Image src={room.icon_url} alt="" width={20} height={20} className="h-5 w-5 shrink-0 rounded-full object-cover" />
-      ) : (
-        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted">
-          <MessageSquare className="h-3 w-3 text-muted-foreground transition-colors group-hover:text-foreground" />
+        {/* Au survol, la ligne s’éclaircit seulement (titre atténué au repos) : pas de fond. */}
+        <span className="min-w-0 break-words text-sm font-medium text-foreground/75 transition-colors group-hover/entry:text-foreground">
+          {label}
         </span>
-      )}
-      {/* Au survol, la ligne s’éclaircit seulement (titre atténué au repos) : pas de fond sur toute la largeur. */}
-      <span className="min-w-0 truncate font-medium text-foreground/75 transition-colors group-hover:text-foreground">{label}</span>
-    </button>
+        {(date.day !== null || monthName) && (
+          <span className="text-xs tabular-nums text-muted-foreground" aria-hidden>
+            {date.day}
+            {date.day !== null && monthName ? " " : ""}
+            {monthName}
+          </span>
+        )}
+      </button>
+    </li>
   );
 }
