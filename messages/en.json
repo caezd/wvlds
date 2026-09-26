@@ -640,10 +640,9 @@
       "suiteStyle": "Sequel style",
       "suiteStyles": {
         "rail": "Continuous rail",
-        "graph": "Graph beside the line",
-        "hover": "On hover only"
+        "graph": "Graph beside the line"
       },
-      "suiteDashed": "Dotted arrows"
+      "suiteHoverOnly": "On hover only"
     },
     "tabSettings": "Settings",
     "tabCategories": "Categories",

@@ -483,11 +483,9 @@ describe("WorldTimeline — styles des suites", () => {
 
   it("relit le style gardé à l'ouverture", async () => {
     memoire.set("wvlds:timeline-suite-style", "graph");
-    memoire.set("wvlds:timeline-suite-dashed", "1");
     db.tables.chatrooms = CHAINE;
     frise(SALONS());
     await vi.waitFor(() => expect(screen.getByTestId("timeline-suite-links")).toHaveAttribute("data-style", "graph"));
-    expect(screen.getByTestId("timeline-suite-links")).toHaveAttribute("data-dashed", "true");
   });
 
   it("par défaut, un rail par chaîne, une pastille par salon", async () => {
@@ -514,45 +512,52 @@ describe("WorldTimeline — styles des suites", () => {
     expect(window.localStorage.getItem("wvlds:timeline-suite-style")).toBe("graph");
   });
 
-  it("au survol : rien au repos ; survoler un salon allume sa chaîne et estompe le reste", async () => {
+  it("au survol seulement : une option du rail ; rien au repos, la chaîne survolée s'allume, le reste s'estompe", async () => {
     db.tables.chatrooms = CHAINE;
     frise(SALONS());
     await screen.findByTestId("timeline-suite-links");
-    const user = await choisirStyle("Au survol seulement");
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: /Filtres/ }));
+    await user.click(await screen.findByRole("checkbox", { name: "Au survol seulement" }));
     expect(screen.queryByTestId("timeline-suite-links")).toBeNull();
+    expect(memoire.get("wvlds:timeline-suite-hover")).toBe("1");
 
     await user.hover(screen.getByRole("button", { name: /Les digues cèdent/ }));
     const calque = await screen.findByTestId("timeline-suite-links");
-    expect(calque.querySelectorAll("[data-suite]")).toHaveLength(2);
+    expect(calque).toHaveAttribute("data-style", "rail");
+    expect(calque.querySelector("[data-suite='a>b>c']")).not.toBeNull();
     expect(screen.getByRole("button", { name: /Hors chaîne/ }).closest("li")!.className).toContain("opacity-30");
     expect(screen.getByRole("button", { name: /La grande crue/ }).closest("li")!.className).not.toContain("opacity-30");
   });
 
-  it("pointillés fléchés : une option à part, qui vaut pour chaque style", async () => {
+  it("au survol seulement avec le graphe : la place des couloirs reste réservée", async () => {
+    memoire.set("wvlds:timeline-suite-style", "graph");
+    memoire.set("wvlds:timeline-suite-hover", "1");
+    db.tables.chatrooms = CHAINE;
+    frise(SALONS());
+    const user = userEvent.setup();
+    const liste = await vi.waitFor(() => {
+      const l = document.querySelector("[data-suite-style='graph'] ol") as HTMLElement | null;
+      expect(l).not.toBeNull();
+      expect(parseFloat(l!.style.getPropertyValue("--tl-graph-pad"))).toBeGreaterThan(0);
+      return l!;
+    });
+    // Rien au repos, mais les titres ne bougeront pas au survol.
+    expect(screen.queryByTestId("timeline-suite-links")).toBeNull();
+    const avant = liste.style.getPropertyValue("--tl-graph-pad");
+    await user.hover(screen.getByRole("button", { name: /Ce que charrie l'eau/ }));
+    expect((await screen.findByTestId("timeline-suite-links"))).toHaveAttribute("data-style", "graph");
+    expect(liste.style.getPropertyValue("--tl-graph-pad")).toBe(avant);
+  });
+
+  it("deux styles seulement : rail continu et graphe", async () => {
     db.tables.chatrooms = CHAINE;
     frise(SALONS());
     await screen.findByTestId("timeline-suite-links");
-    // Plus un style de la liste.
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: /Filtres/ }));
     const styles = await screen.findByRole("combobox", { name: "Style des suites" });
-    expect([...(styles as HTMLSelectElement).options].map((o) => o.textContent)).toEqual([
-      "Rail continu", "Graphe à côté du fil", "Au survol seulement",
-    ]);
-
-    await user.click(screen.getByRole("checkbox", { name: "Pointillés fléchés" }));
-    const calque = screen.getByTestId("timeline-suite-links");
-    expect(calque).toHaveAttribute("data-style", "rail");
-    expect(calque).toHaveAttribute("data-dashed", "true");
-    expect(calque.querySelector("[data-suite] path")!.getAttribute("stroke-dasharray")).toBe("3 3");
-    // Une flèche vers chaque suite (b, c), pas vers le salon d'origine (a).
-    expect(calque.querySelectorAll("[data-arrow]")).toHaveLength(2);
-    expect(memoire.get("wvlds:timeline-suite-dashed")).toBe("1");
-
-    // Le graphe garde l'option.
-    await user.selectOptions(styles, "Graphe à côté du fil");
-    const graphe = screen.getByTestId("timeline-suite-links");
-    expect(graphe).toHaveAttribute("data-style", "graph");
-    expect(graphe.querySelectorAll("[data-arrow]")).toHaveLength(2);
+    expect([...(styles as HTMLSelectElement).options].map((o) => o.textContent)).toEqual(["Rail continu", "Graphe à côté du fil"]);
+    expect(screen.queryByRole("checkbox", { name: "Pointillés fléchés" })).toBeNull();
   });
 });

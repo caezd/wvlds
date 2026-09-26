@@ -64,11 +64,11 @@ const AMBIENT_BG_TRANSLUCENT = "bg-body/90 lg:bg-background/90";
 /** Le style des lignes de suite, choisi par chacun et gardé dans son
  *  navigateur (une préférence de lecture, pas un réglage du monde). */
 const SUITE_STYLE_KEY = "wvlds:timeline-suite-style";
-const SUITE_DASHED_KEY = "wvlds:timeline-suite-dashed";
+const SUITE_HOVER_KEY = "wvlds:timeline-suite-hover";
 
-function readSuiteDashed(): boolean {
+function readSuiteHoverOnly(): boolean {
   try {
-    return window.localStorage.getItem(SUITE_DASHED_KEY) === "1";
+    return window.localStorage.getItem(SUITE_HOVER_KEY) === "1";
   } catch {
     return false;
   }
@@ -126,15 +126,16 @@ export function WorldTimeline({
   const [arcsOpen, setArcsOpen] = useState(false);
   const [lanes, setLanes] = useState(0);
   const [suiteStyle, setSuiteStyleState] = useState<SuiteStyle>("rail");
-  const [suiteDashed, setSuiteDashedState] = useState(false);
+  const [hoverOnly, setHoverOnlyState] = useState(false);
   const [hoveredRoom, setHoveredRoom] = useState<string | null>(null);
   useEffect(() => {
     setSuiteStyleState(readSuiteStyle());
-    setSuiteDashedState(readSuiteDashed());
+    setHoverOnlyState(readSuiteHoverOnly());
   }, []);
-  function setSuiteDashed(next: boolean) {
-    setSuiteDashedState(next);
-    try { window.localStorage.setItem(SUITE_DASHED_KEY, next ? "1" : "0"); } catch { /* navigation privée */ }
+  function setHoverOnly(next: boolean) {
+    setHoverOnlyState(next);
+    setHoveredRoom(null);
+    try { window.localStorage.setItem(SUITE_HOVER_KEY, next ? "1" : "0"); } catch { /* navigation privée */ }
   }
   function setSuiteStyle(next: SuiteStyle) {
     setSuiteStyleState(next);
@@ -193,20 +194,17 @@ export function WorldTimeline({
       .filter((i): i is TimelineRoomItem => i.kind === "room" && !!i.previousId && shown.has(i.previousId))
       .map((i) => ({ from: i.previousId!, to: i.id, color: i.arcId ? arcsById.get(i.arcId)?.color ?? null : null }));
   }, [visible, arcsById]);
-  // Au survol (style `hover`), seule la chaîne du salon survolé s'allume ; le
-  // reste de la frise s'estompe.
+  // Au survol seulement : rien au repos ; la chaîne du salon survolé
+  // s'allume, dans le style choisi, et le reste de la frise s'estompe.
   const highlight = useMemo(
-    () => (suiteStyle === "hover" && hoveredRoom ? suiteChainOf(suiteLinks, hoveredRoom) : null),
-    [suiteStyle, hoveredRoom, suiteLinks],
+    () => (hoverOnly && hoveredRoom ? suiteChainOf(suiteLinks, hoveredRoom) : null),
+    [hoverOnly, hoveredRoom, suiteLinks],
   );
-  const drawnLinks = useMemo(
-    () => (suiteStyle !== "hover" ? suiteLinks : highlight ? suiteLinks.filter((l) => highlight.has(l.from)) : []),
-    [suiteStyle, suiteLinks, highlight],
-  );
+  const onlyChain = hoverOnly ? (highlight ?? new Set<string>()) : null;
   const layoutVersion = useMemo(() => `${suiteStyle}:${visible.map((i) => i.id).join(",")}`, [visible, suiteStyle]);
   // Le graphe prend place entre le fil et les titres ; les autres styles, à droite.
   const graphPad = suiteStyle === "graph" && lanes > 0 ? GRAPH_OFFSET + (lanes - 1) * 8 + 10 : 0;
-  const rightPad = suiteStyle !== "graph" && lanes > 0 ? 20 + 12 + lanes * 10 + 14 : undefined;
+  const rightPad = suiteStyle === "rail" && lanes > 0 ? 20 + 12 + lanes * 10 + 14 : undefined;
   const onLanes = useCallback((n: number) => setLanes(n), []);
 
   const players = useMemo(
@@ -285,8 +283,8 @@ export function WorldTimeline({
                 categories={data.categories.map((c) => ({ id: c.id, label: c.title }))}
                 suiteStyle={suiteStyle}
                 onSuiteStyle={setSuiteStyle}
-                suiteDashed={suiteDashed}
-                onSuiteDashed={setSuiteDashed}
+                hoverOnly={hoverOnly}
+                onHoverOnly={setHoverOnly}
               />
               {canManage && (
                 <>
@@ -340,13 +338,13 @@ export function WorldTimeline({
               className="relative"
               data-suite-style={suiteStyle}
               onMouseOver={(e) => {
-                if (suiteStyle !== "hover") return;
+                if (!hoverOnly) return;
                 const row = (e.target as HTMLElement).closest<HTMLElement>("[data-room-id]");
                 setHoveredRoom(row?.dataset.roomId ?? null);
               }}
               onMouseLeave={() => setHoveredRoom(null)}
               onFocus={(e) => {
-                if (suiteStyle !== "hover") return;
+                if (!hoverOnly) return;
                 const row = (e.target as HTMLElement).closest<HTMLElement>("[data-room-id]");
                 setHoveredRoom(row?.dataset.roomId ?? null);
               }}
@@ -384,7 +382,7 @@ export function WorldTimeline({
                   );
                 })}
               </ol>
-              <SuiteLinks containerRef={listRef} links={drawnLinks} style={suiteStyle} dashed={suiteDashed} version={layoutVersion} onLanes={onLanes} />
+              <SuiteLinks containerRef={listRef} links={suiteLinks} style={suiteStyle} only={onlyChain} version={layoutVersion} onLanes={onLanes} />
             </div>
           )}
         </div>

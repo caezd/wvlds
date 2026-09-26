@@ -640,10 +640,9 @@
       "suiteStyle": "Estilo de las continuaciones",
       "suiteStyles": {
         "rail": "Raíl continuo",
-        "graph": "Gráfico junto al hilo",
-        "hover": "Solo al pasar el cursor"
+        "graph": "Gráfico junto al hilo"
       },
-      "suiteDashed": "Flechas punteadas"
+      "suiteHoverOnly": "Solo al pasar el cursor"
     },
     "tabSettings": "Ajustes",
     "tabCategories": "Categorías",

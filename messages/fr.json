@@ -640,10 +640,9 @@
       "suiteStyle": "Style des suites",
       "suiteStyles": {
         "rail": "Rail continu",
-        "graph": "Graphe à côté du fil",
-        "hover": "Au survol seulement"
+        "graph": "Graphe à côté du fil"
       },
-      "suiteDashed": "Pointillés fléchés"
+      "suiteHoverOnly": "Au survol seulement"
     },
     "tabSettings": "Paramètres",
     "tabCategories": "Catégories",

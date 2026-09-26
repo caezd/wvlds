@@ -35,8 +35,8 @@ export function TimelineFiltersPopover({
   categories,
   suiteStyle,
   onSuiteStyle,
-  suiteDashed,
-  onSuiteDashed,
+  hoverOnly,
+  onHoverOnly,
 }: {
   filters: TimelineFilters;
   onChange: (next: TimelineFilters) => void;
@@ -47,8 +47,8 @@ export function TimelineFiltersPopover({
   categories: Option[];
   suiteStyle: SuiteStyle;
   onSuiteStyle: (style: SuiteStyle) => void;
-  suiteDashed: boolean;
-  onSuiteDashed: (dashed: boolean) => void;
+  hoverOnly: boolean;
+  onHoverOnly: (on: boolean) => void;
 }) {
   const t = useTranslations("worlds.timelineView");
   const active = countActiveFilters(filters);
@@ -129,11 +129,11 @@ export function TimelineFiltersPopover({
         </label>
         <label className="flex items-center gap-2 text-sm">
           <Checkbox
-            checked={suiteDashed}
-            onCheckedChange={(v) => onSuiteDashed(v === true)}
-            aria-label={t("suiteDashed")}
+            checked={hoverOnly}
+            onCheckedChange={(v) => onHoverOnly(v === true)}
+            aria-label={t("suiteHoverOnly")}
           />
-          {t("suiteDashed")}
+          {t("suiteHoverOnly")}
         </label>
 
         <Button
