@@ -636,18 +636,16 @@ function YearBlock({
           liste comprises), collé sous la tête le temps de son année : on sait
           toujours où l'on est, et deux années se séparent franchement. Au-
           dessus des salons qui défilent dessous (z-[1]), mais sous les lignes
-          de suite (z-[2], voir SuiteLinks) et sous la tête (z-10) ; le fil le
-          traverse. Un seul trait, dessous : il sépare l'année de ses dates. */}
+          de suite (z-[2], voir SuiteLinks) et sous la tête (z-10). Le fil
+          s'y interrompt ; un seul trait, dessus, qui sépare l'année de la
+          précédente (aucun au-dessus de la toute première). */}
       <h3
         className={cn(
-          "sticky top-[var(--tl-head,0px)] z-[1] -ml-5 -mr-[var(--tl-right-pad,20px)] flex items-baseline gap-1.5 border-b border-border py-2 pl-5 pr-[var(--tl-right-pad,20px)] leading-none backdrop-blur",
+          "sticky top-[var(--tl-head,0px)] z-[1] -ml-5 -mr-[var(--tl-right-pad,20px)] flex items-baseline gap-1.5 border-t border-border py-2 [li:first-child>&]:border-t-0 pl-5 pr-[var(--tl-right-pad,20px)] leading-none backdrop-blur",
           AMBIENT_BG_TRANSLUCENT,
         )}
         data-testid="timeline-year-band"
       >
-        {/* Le fil, à travers le bandeau : marge de la liste (1.25rem) et
-            colonne des jours (6rem). */}
-        <span className="absolute inset-y-0 left-[7.25rem] w-px bg-border" data-testid="timeline-year-band-fil" aria-hidden />
         {/* Les espaces entre les parties : invisibles en flex, mais lus
             (« An 1 », pas « An1 »). */}
         <span className={YEAR_CAPTION}>{config.year_label}</span>{" "}

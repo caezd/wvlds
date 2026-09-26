@@ -155,7 +155,7 @@ describe("WorldTimeline — frise verticale", () => {
     expect(screen.queryByTestId("timeline-year-watermark")).toBeNull();
   });
 
-  it("le bandeau de l'année se colle sous la tête au défilement, sous les lignes de suite et le fil", async () => {
+  it("le bandeau de l'année se colle sous la tête au défilement, sous les lignes de suite, sans le fil", async () => {
     db.tables.chatroom_sequels = [suite("a", "b")];
     frise([room("a", "Prologue", 1, 0, 1), room("b", "Suite", 1, 0, 2)]);
     const bandeau = annees()[0];
@@ -167,10 +167,9 @@ describe("WorldTimeline — frise verticale", () => {
     // Au-dessus des salons (z-[1]), sous les lignes de suite (z-[2]).
     expect(bandeau.className.split(" ")).toContain("z-[1]");
     expect((await screen.findByTestId("timeline-suite-links")).getAttribute("class")!.split(" ")).toContain("z-[2]");
-    // Le fil le traverse, dans l'alignement du fil des années.
-    expect(within(bandeau).getByTestId("timeline-year-band-fil").className.split(" ")).toEqual(
-      expect.arrayContaining(["left-[7.25rem]", "inset-y-0", "bg-border"]),
-    );
+    // Le fil ne le traverse pas.
+    expect(within(bandeau).queryByTestId("timeline-year-band-fil")).toBeNull();
+    expect(bandeau.querySelector(".w-px")).toBeNull();
     expect(screen.getByTestId("timeline-scroll").style.getPropertyValue("--tl-head")).toMatch(/^\d+px$/);
   });
 
@@ -189,12 +188,12 @@ describe("WorldTimeline — frise verticale", () => {
     expect(within(an2).queryByTestId("timeline-first-month")).toBeNull();
   });
 
-  it("des bandeaux soulignés de la couleur des bordures : un trait dessous, aucun dessus", () => {
+  it("des bandeaux coiffés d'un trait de la couleur des bordures, sauf le tout premier ; aucun dessous", () => {
     frise([room("a", "Avant", 0, 0, 1), room("b", "Après", 1, 0, 1)]);
     for (const bandeau of annees()) {
       const classes = bandeau.className.split(" ");
-      expect(classes).toEqual(expect.arrayContaining(["border-b", "border-border"]));
-      expect(classes.some((c) => /^border-(y|t)$/.test(c))).toBe(false);
+      expect(classes).toEqual(expect.arrayContaining(["border-t", "border-border", "[li:first-child>&]:border-t-0"]));
+      expect(classes.some((c) => /^border-(y|b)$/.test(c))).toBe(false);
     }
   });
 
