@@ -726,8 +726,9 @@ describe("WorldTimeline — fil de persona", () => {
     expect([...fil.querySelectorAll("[data-thread-point]")].map((c) => c.getAttribute("data-thread-point")).sort())
       .toEqual(["a", "c", "j1"]);
     expect((fil.querySelector("path") as SVGElement).style.stroke).toBe("rgb(168, 85, 247)");
-    // Un rail parallèle, à gauche du fil de la frise : il ne le recouvre pas.
-    expect(Number(fil.getAttribute("data-thread-x"))).toBeLessThan(0);
+    // Dans le style des suites (le rail par défaut), au premier couloir.
+    expect(fil.closest("svg")).toHaveAttribute("data-style", "rail");
+    expect(fil).toHaveAttribute("data-lane", "0");
 
     // Rappelé en tête ; la croix l'efface, et le filtre avec.
     const puce = screen.getByTestId("timeline-persona-thread-chip");
@@ -735,6 +736,31 @@ describe("WorldTimeline — fil de persona", () => {
     await user.click(within(puce).getByRole("button", { name: "Effacer le fil de Tess" }));
     expect(screen.queryByTestId("timeline-persona-thread")).toBeNull();
     expect(screen.getByText("Chez Ivo")).toBeInTheDocument();
+  });
+
+  it("le fil suit le style : en graphe, un couloir entre le fil et les titres, avant les suites", async () => {
+    const user = userEvent.setup();
+    Object.defineProperty(window, "localStorage", {
+      configurable: true,
+      value: { getItem: (k: string) => (k === "wvlds:timeline-suite-style" ? "graph" : null), setItem: () => {}, removeItem: () => {} },
+    });
+    db.rpcs.get_chatroom_personas = {
+      data: [
+        { chat_id: "a", persona_id: "p-tess", persona_name: "Tess", group_color: "#a855f7" },
+        { chat_id: "b", persona_id: "p-tess", persona_name: "Tess", group_color: "#a855f7" },
+      ],
+      error: null,
+    };
+    db.tables.chatroom_sequels = [suite("a", "b")];
+    frise([room("a", "Le départ", 1, 0, 6), room("b", "La suite", 2, 0, 1)]);
+    await user.click(screen.getByRole("button", { name: /Filtres/ }));
+    await user.selectOptions(await screen.findByRole("combobox", { name: "Persona présent" }), "Tess");
+
+    const fil = await screen.findByTestId("timeline-persona-thread");
+    expect(fil.closest("svg")).toHaveAttribute("data-style", "graph");
+    expect(fil).toHaveAttribute("data-lane", "0");
+    // La suite a → b passe au couloir suivant.
+    expect(fil.closest("svg")!.querySelector("[data-suite='a>b']")).toHaveAttribute("data-lane", "1");
   });
 
   it("un persona sans groupe : un fil de la couleur du texte", async () => {
