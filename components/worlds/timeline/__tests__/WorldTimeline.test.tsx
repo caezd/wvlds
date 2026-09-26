@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import type { WorldTimelineConfig } from "@/types/worlds";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }));
@@ -84,5 +84,37 @@ describe("WorldTimeline", () => {
   it("affiche un message quand aucune conversation n'est encore située", () => {
     render(<WorldTimeline worldId="w1" rooms={[]} config={CONFIG} onClose={vi.fn()} />);
     expect(screen.getByText(/Aucune conversation/)).toBeInTheDocument();
+  });
+});
+
+describe("WorldTimeline — liste compacte", () => {
+  it("une ligne par salon : le jour en colonne, lu en entier par les lecteurs d'écran", () => {
+    render(
+      <WorldTimeline
+        worldId="w1"
+        rooms={[
+          { id: "a", title: "Prologue", name: null, icon_url: null, timeline_date: { year: 1, month: 1, day: 19 } },
+          { id: "b", title: null, name: null, icon_url: null, timeline_date: { year: 1, month: 1, day: null } },
+        ]}
+        config={CONFIG}
+        onClose={vi.fn()}
+      />,
+    );
+    const items = screen.getAllByRole("listitem");
+    expect(items).toHaveLength(2);
+
+    const ligne = screen.getByRole("button", { name: /Prologue/ });
+    expect(ligne).toHaveTextContent("19");
+    expect(ligne).toHaveAccessibleName("Prologue, Jour 19");
+    // Plus de carte bordée : une ligne basse.
+    expect(ligne.className).not.toMatch(/\bborder\b/);
+    expect(ligne.className).toMatch(/\bpy-1\b/);
+    // Survol discret : ni fond ni pleine largeur, seul le titre change de couleur.
+    expect(ligne.className).not.toMatch(/hover:bg-|(^|\s)w-full\b/);
+    expect(within(ligne).getByText("Prologue").className).toContain("group-hover:text-primary");
+
+    // Sans titre ni jour : un libellé par défaut, pas de jour inventé.
+    const sansTitre = screen.getByRole("button", { name: "Conversation" });
+    expect(sansTitre).not.toHaveTextContent(/\d/);
   });
 });

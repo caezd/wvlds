@@ -11,8 +11,8 @@ import { CHANGELOG } from "@/lib/changelog";
  * retouche éditoriale du changelog les a cassés sans qu'aucun filtre n'ait
  * changé. Ils partent maintenant de ce qui existe, quoi qu'on y écrive.
  */
-const correctif = CHANGELOG.find(e => e.tag === "Correctif")!;
-const autre = CHANGELOG.find(e => e.tag !== "Correctif")!;
+const correctif = CHANGELOG.find(e => e.category === "Correctif")!;
+const autre = CHANGELOG.find(e => e.category !== "Correctif")!;
 /** Une phrase de l'entrée, assez pour la reconnaître, assez courte pour tenir sur un nœud. */
 const extrait = (texte: string) => texte.split(/[.;:—]/)[0].trim().slice(0, 40);
 const TEXTE_CORRECTIF = extrait(correctif.text);
@@ -56,5 +56,19 @@ describe("ChangelogFilters — filtre mobile (puces) et sidebar desktop", () => 
 
     await userEvent.click(screen.getByRole("button", { name: "Correctif" }));
     expect(checkbox).toBeChecked();
+  });
+
+  it("une sous-catégorie restreint sa catégorie, sur mobile comme dans la sidebar", async () => {
+    const wiki = CHANGELOG.find(e => e.category === "Fonctionnalité" && e.area === "Wiki")!;
+    const carte = CHANGELOG.find(e => e.category === "Fonctionnalité" && e.area === "Carte")!;
+    render(<ChangelogFilters />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Fonctionnalité" }));
+    expect(screen.getByText(extrait(carte.text), { exact: false })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Fonctionnalité › Wiki" }));
+    expect(screen.getByText(extrait(wiki.text), { exact: false })).toBeInTheDocument();
+    expect(screen.queryByText(extrait(carte.text), { exact: false })).not.toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: "Wiki" })).toBeChecked();
   });
 });

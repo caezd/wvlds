@@ -585,6 +585,8 @@
     "noOtherWorld": "No other world",
     "noPersonaInWorld": "No persona in this world",
     "timelineEmpty": "No conversation has been placed on the timeline yet.",
+    "timelineDay": "Day {day}",
+    "timelineUntitled": "Conversation",
     "tabSettings": "Settings",
     "tabCategories": "Categories",
     "tabCommunity": "Community",

@@ -5,7 +5,6 @@ import { useTranslations } from "next-intl";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Clock, X, MessageSquare } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
 
@@ -74,7 +73,7 @@ export function WorldTimeline({
     <div className="flex min-h-0 flex-1 flex-col">
       <WorldPanelHeader
         icon={<Clock className="h-4 w-4 shrink-0 text-muted-foreground" />}
-        title="Chronologie"
+        title={t("nav.timeline")}
         right={
           <button
             aria-label={tCommon("close")}
@@ -87,7 +86,7 @@ export function WorldTimeline({
         }
       />
 
-      <div className="flex-1 overflow-y-auto px-5 py-5 space-y-8">
+      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
         {years.map(year => {
           const monthMap = grouped.get(year)!;
           const monthKeys = [...monthMap.keys()].sort((a, b) => (a ?? -1) - (b ?? -1));
@@ -97,14 +96,14 @@ export function WorldTimeline({
               <div className="absolute left-0 top-3 bottom-0 w-px bg-border-soft" />
 
               {/* Titre année */}
-              <div className="mb-4 flex items-center gap-2">
+              <div className="mb-2 flex items-center gap-2">
                 <div className="absolute -left-1.5 top-1.5 h-3 w-3 rounded-full border-2 border-primary bg-background" />
                 <h3 className="text-sm font-semibold">
                   {config.year_label} {year}{config.era_name ? ` ${config.era_name}` : ""}
                 </h3>
               </div>
 
-              <div className="space-y-5">
+              <div className="space-y-3">
                 {monthKeys.map(month => {
                   const roomsInGroup = monthMap.get(month)!;
                   const monthLabel = month !== null && config.month_names[month]
@@ -118,7 +117,7 @@ export function WorldTimeline({
                     // (mesuré en repro isolée : ligne à x=0, puce posée pile
                     // au bout, sans écart) au lieu d'un aller-retour plus
                     // long — la ligne courbée est donc plus courte.
-                    <div key={month ?? "nomonth"} className="space-y-2">
+                    <div key={month ?? "nomonth"} className="space-y-0.5">
                       {monthLabel && (
                         // `pl-3` réserve la place de la puce : posée en
                         // `absolute`, elle ne pousse pas le texte comme le
@@ -143,15 +142,14 @@ export function WorldTimeline({
                           <p className="text-sm font-medium text-foreground">{monthLabel}</p>
                         </div>
                       )}
-                      <div className="grid gap-2">
+                      {/* Une ligne par salon : le jour en colonne, puis le titre. */}
+                      <ul className="pl-1">
                         {roomsInGroup.map(room => (
-                          <RoomCard
-                            key={room.id}
-                            room={room}
-                            onClick={() => router.push(`/c/${room.id}`)}
-                          />
+                          <li key={room.id}>
+                            <RoomRow room={room} onClick={() => router.push(`/c/${room.id}`)} />
+                          </li>
                         ))}
-                      </div>
+                      </ul>
                     </div>
                   );
                 })}
@@ -168,30 +166,37 @@ export function WorldTimeline({
   );
 }
 
-function RoomCard({ room, onClick }: { room: TimelineRoom; onClick: () => void }) {
-  const label = room.title ?? room.name ?? "Conversation";
+function RoomRow({ room, onClick }: { room: TimelineRoom; onClick: () => void }) {
+  const t = useTranslations("worlds");
+  const label = room.title ?? room.name ?? t("timelineUntitled");
+  const day = room.timeline_date?.day ?? null;
+  const dayText = day !== null ? t("timelineDay", { day }) : null;
   return (
     <button
       type="button"
       onClick={onClick}
-      className={cn(
-        "flex w-full items-center gap-3 rounded-xl border border-border-soft bg-background px-3 py-2.5",
-        "text-left text-sm transition-colors hover:bg-secondary",
-      )}
+      // Le titre d'abord, puis le jour en toutes lettres (la colonne n'en
+      // montre que le numéro).
+      aria-label={dayText ? `${label}, ${dayText}` : undefined}
+      className="group flex max-w-full items-center gap-2 rounded-md px-2 py-1 text-left text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
+      {/* Le jour, aligné en colonne ; vide quand la date s'arrête au mois. */}
+      <span
+        className="w-5 shrink-0 text-right text-xs tabular-nums text-muted-foreground"
+        title={dayText ?? undefined}
+        aria-hidden
+      >
+        {day}
+      </span>
       {room.icon_url ? (
-        <Image src={room.icon_url} alt="" width={28} height={28} className="h-7 w-7 shrink-0 rounded-full object-cover" />
+        <Image src={room.icon_url} alt="" width={20} height={20} className="h-5 w-5 shrink-0 rounded-full object-cover" />
       ) : (
-        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted">
-          <MessageSquare className="h-3.5 w-3.5 text-muted-foreground" />
+        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted">
+          <MessageSquare className="h-3 w-3 text-muted-foreground" />
         </span>
       )}
-      <span className="flex min-w-0 flex-1 flex-col gap-0.5 text-left">
-        <span className="truncate font-medium">{label}</span>
-        {room.timeline_date?.day !== null && room.timeline_date?.day !== undefined && (
-          <span className="text-[11px] text-muted-foreground">Jour {room.timeline_date.day}</span>
-        )}
-      </span>
+      {/* Au survol, le titre change seulement de couleur : pas de fond sur toute la largeur. */}
+      <span className="min-w-0 truncate font-medium transition-colors group-hover:text-primary">{label}</span>
     </button>
   );
 }
