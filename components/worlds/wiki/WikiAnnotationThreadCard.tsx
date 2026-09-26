@@ -80,6 +80,7 @@ export function WikiAnnotationThreadCard({
   thread,
   currentUserId,
   canModerate,
+  canReply,
   isActive,
   isDetached,
   pending,
@@ -92,6 +93,8 @@ export function WikiAnnotationThreadCard({
   currentUserId: string | null;
   /** Éditeur du monde : peut résoudre et supprimer les fils des autres. */
   canModerate: boolean;
+  /** Répondre dans ce fil (`wiki.comment`). */
+  canReply: boolean;
   isActive: boolean;
   /** L'extrait ancré ne se retrouve plus dans le texte de la page. */
   isDetached: boolean;
@@ -207,7 +210,7 @@ export function WikiAnnotationThreadCard({
         ))}
       </div>
 
-      {replying ? (
+      {!canReply ? null : replying ? (
         <WikiAnnotationComposer
           className="mt-3"
           placeholder={t("replyPlaceholder")}

@@ -2,7 +2,6 @@ import { getTranslations, getLocale } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserId, getCurrentProfile } from "@/lib/currentRequest";
 import { LocaleSelector } from "./LocaleSelector";
-import { ProfileSettingsForm } from "./ProfileSettingsForm";
 import { MessageFontSelector } from "./MessageFontSelector";
 import { MessageTextSizeSelector } from "./MessageTextSizeSelector";
 import { MessageTextAlignSelector } from "./MessageTextAlignSelector";
@@ -34,22 +33,12 @@ export default async function SettingsPage() {
   const messageTextAlign = profile?.message_text_align ?? "left";
   const patreonEnabled = isPatreonEnabled();
 
-  // Le complément de profil (bio, pronoms — colonnes absentes de
-  // `CurrentProfile`) et le statut Patreon ne dépendent que de `userId`, pas
-  // l'un de l'autre : ils étaient enchaînés en deux allers-retours successifs.
-  // RLS : l'utilisateur ne lit que sa propre ligne Patreon, hors tokens.
-  const [extraRes, patreonRes] = await Promise.all([
-    userId
-      ? supabase.from("profiles").select("bio,pronouns").eq("id", userId).maybeSingle()
-      : Promise.resolve({ data: null }),
-    patreonEnabled && userId
-      ? supabase.from("patreon_accounts").select("patron_status,entitled_cents").eq("user_id", userId).maybeSingle()
-      : Promise.resolve({ data: null }),
-  ]);
-
-  const extra = extraRes.data as { bio?: string | null; pronouns?: string[] | null } | null;
-  const bio = extra?.bio ?? "";
-  const pronouns = extra?.pronouns ?? [];
+  // Bio et pronoms se règlent dans « Mon profil » (barre latérale) ; la page
+  // ne lit plus que le statut Patreon. RLS : l'utilisateur ne lit que sa
+  // propre ligne Patreon, hors tokens.
+  const patreonRes = patreonEnabled && userId
+    ? await supabase.from("patreon_accounts").select("patron_status,entitled_cents").eq("user_id", userId).maybeSingle()
+    : { data: null };
 
   let patreonLinked = false;
   let patronStatus: string | null = null;
@@ -69,14 +58,6 @@ export default async function SettingsPage() {
       <header>
         <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
       </header>
-
-      <section className="rounded-lg border p-4 space-y-3">
-        <div>
-          <h2 className="font-medium">{t("profile.title")}</h2>
-          <p className="text-sm text-muted-foreground">{t("profile.description")}</p>
-        </div>
-        <ProfileSettingsForm initialBio={bio} initialPronouns={pronouns} />
-      </section>
 
       {patreonEnabled && (
         <section className="rounded-lg border p-4 space-y-3">

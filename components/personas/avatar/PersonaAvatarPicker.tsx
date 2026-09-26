@@ -851,7 +851,7 @@ export function PersonaAvatarPicker({
           }}
         >
           <div className="w-full overflow-x-auto">
-            <TabsList className="inline-flex h-10 w-max flex-nowrap justify-start gap-1  bg-transparent">
+            <TabsList className="inline-flex h-10 w-max flex-nowrap justify-start gap-1 border-0 bg-transparent">
               {visibleCategories.map((c) => {
                 const tabThumbUrl = c.tabThumbPath
                   ? assetUrl(c.key, c.tabThumbPath)

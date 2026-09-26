@@ -1,0 +1,152 @@
+import { describe, it, expect, vi } from "vitest";
+import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import * as React from "react";
+
+import { TimelineSettings } from "@/components/worlds/settings/TimelineSettings";
+import type { WorldTimelineConfig } from "@/types/worlds";
+
+const CONFIG: WorldTimelineConfig = {
+  year_label: "an",
+  era_name: "des Cendres",
+  month_names: ["Givre", "Dégel"],
+  days_per_month: [30, 28],
+  current_year: 342,
+  current_month: 1,
+};
+
+/** Le composant tel que l'onglet le monte : l'état vit au-dessus de lui. */
+function Harnais({ initial = CONFIG, onPersist = vi.fn() }: { initial?: WorldTimelineConfig; onPersist?: (p: Partial<WorldTimelineConfig>) => void }) {
+  const [config, setConfig] = React.useState(initial);
+  return (
+    <TimelineSettings
+      config={config}
+      onDraft={(patch) => setConfig((c) => ({ ...c, ...patch }))}
+      onPersist={(patch) => { setConfig((c) => ({ ...c, ...patch })); onPersist(patch); }}
+    />
+  );
+}
+
+describe("TimelineSettings — comprendre ce que l'on règle", () => {
+  it("l'aperçu montre la date actuelle du récit telle que les salons l'afficheront", () => {
+    render(<Harnais />);
+    expect(within(screen.getByTestId("timeline-preview")).getByText("Dégel, an 342 des Cendres")).toBeInTheDocument();
+  });
+
+  it("l'aperçu suit la frappe, avant même l'enregistrement", async () => {
+    const onPersist = vi.fn();
+    const user = userEvent.setup();
+    render(<Harnais onPersist={onPersist} />);
+
+    const ere = screen.getByLabelText("Ère / suffixe");
+    await user.clear(ere);
+    await user.type(ere, "après la Chute");
+
+    expect(within(screen.getByTestId("timeline-preview")).getByText("Dégel, an 342 après la Chute")).toBeInTheDocument();
+    // L'écriture n'a lieu qu'à la sortie du champ.
+    expect(onPersist).not.toHaveBeenCalled();
+    await user.tab();
+    expect(onPersist).toHaveBeenCalledWith({ era_name: "après la Chute" });
+  });
+
+  it("trois sous-options nommées, chacune avec ce qu'elle apporte", () => {
+    render(<Harnais />);
+    expect(screen.getByRole("region", { name: "Format des dates" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Où en est le récit" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Mois du calendrier" })).toBeInTheDocument();
+  });
+
+  it("le calendrier dit la longueur de l'année qu'il compose", () => {
+    render(<Harnais />);
+    expect(screen.getByTestId("timeline-year-length")).toHaveTextContent("2 mois · 58 jours par an");
+  });
+
+  it("l'accord suit les nombres : un mois d'un jour s'écrit au singulier", () => {
+    render(<Harnais initial={{ ...CONFIG, month_names: ["Unique"], days_per_month: [1], current_month: 0 }} />);
+    expect(screen.getByTestId("timeline-year-length")).toHaveTextContent("1 mois · 1 jour par an");
+  });
+
+  it("sans mois, il le dit plutôt que de laisser une liste vide", () => {
+    render(<Harnais initial={{ ...CONFIG, month_names: [], days_per_month: [], current_month: null }} />);
+    expect(screen.getByText("Sans mois, une date ne porte que l'année.")).toBeInTheDocument();
+    expect(screen.queryByTestId("timeline-year-length")).toBeNull();
+    // L'aperçu se réduit à l'année.
+    expect(within(screen.getByTestId("timeline-preview")).getByText("an 342 des Cendres")).toBeInTheDocument();
+  });
+
+  it("supprimer un mois avant le mois courant garde le même mois courant", async () => {
+    // Le courant pointe « Dégel » (indice 1) ; retirer « Givre » le décale en 0.
+    const onPersist = vi.fn();
+    const user = userEvent.setup();
+    render(<Harnais onPersist={onPersist} />);
+
+    await user.click(screen.getByRole("button", { name: "Supprimer le mois Givre" }));
+
+    expect(onPersist).toHaveBeenCalledWith({ month_names: ["Dégel"], days_per_month: [28], current_month: 0 });
+    expect(within(screen.getByTestId("timeline-preview")).getByText("Dégel, an 342 des Cendres")).toBeInTheDocument();
+  });
+
+  it("la restriction nomme la période qu'elle imposerait, et s'enregistre", async () => {
+    const onPersist = vi.fn();
+    const user = userEvent.setup();
+    render(<Harnais onPersist={onPersist} />);
+
+    expect(screen.getByText(/ne pourra être situé qu'en Dégel, an 342 des Cendres/)).toBeInTheDocument();
+    await user.click(screen.getByRole("switch", { name: "Restreindre les salons à la période en cours" }));
+    expect(onPersist).toHaveBeenCalledWith({ restrict_to_current: true });
+  });
+
+  it("exiger une date à la création s'enregistre dans la chronologie", async () => {
+    const onPersist = vi.fn();
+    const user = userEvent.setup();
+    render(<Harnais onPersist={onPersist} />);
+
+    await user.click(screen.getByRole("switch", { name: "Exiger une date à la création d'un salon" }));
+    expect(onPersist).toHaveBeenCalledWith({ require_date: true });
+  });
+});
+
+describe("TimelineSettings — saisons et frise", () => {
+  it("ajoute une saison, triée par année de début, sans fin", async () => {
+    const onPersist = vi.fn();
+    const user = userEvent.setup();
+    render(<Harnais initial={{ ...CONFIG, ages: [{ name: "Âge du Sel", from_year: 400, to_year: null }] }} onPersist={onPersist} />);
+
+    await user.type(screen.getByRole("textbox", { name: "Nouvelle saison" }), "Âge des Cendres");
+    await user.type(screen.getByRole("spinbutton", { name: "Dès l'an" }), "300");
+    await user.click(screen.getByRole("button", { name: "Ajouter la saison" }));
+
+    expect(onPersist).toHaveBeenLastCalledWith({
+      ages: [
+        { name: "Âge des Cendres", from_year: 300, to_year: null },
+        { name: "Âge du Sel", from_year: 400, to_year: null },
+      ],
+    });
+    // Le champ d'ajout se vide.
+    expect(screen.getByRole("textbox", { name: "Nouvelle saison" })).toHaveValue("");
+  });
+
+  it("borne et supprime une saison", async () => {
+    const onPersist = vi.fn();
+    const user = userEvent.setup();
+    render(<Harnais initial={{ ...CONFIG, ages: [{ name: "Âge du Sel", from_year: 400, to_year: null }] }} onPersist={onPersist} />);
+
+    await user.type(screen.getByRole("spinbutton", { name: "Dernière année de Âge du Sel" }), "450");
+    await user.tab();
+    expect(onPersist).toHaveBeenLastCalledWith({ ages: [{ name: "Âge du Sel", from_year: 400, to_year: 450 }] });
+
+    await user.click(screen.getByRole("button", { name: "Supprimer la saison Âge du Sel" }));
+    expect(onPersist).toHaveBeenLastCalledWith({ ages: [] });
+    expect(screen.getByText(/Aucune saison/)).toBeInTheDocument();
+  });
+
+  it("les journaux sur la frise : désactivés par défaut, un interrupteur les montre", async () => {
+    const onPersist = vi.fn();
+    const user = userEvent.setup();
+    render(<Harnais onPersist={onPersist} />);
+    const interrupteur = screen.getByRole("switch", { name: "Afficher les journaux des personas" });
+    expect(interrupteur).not.toBeChecked();
+    await user.click(interrupteur);
+    expect(onPersist).toHaveBeenCalledWith({ show_journals: true });
+  });
+});

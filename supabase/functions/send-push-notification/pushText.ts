@@ -4,7 +4,7 @@
 // l'équivalent riche côté client. Toute évolution des libellés doit être
 // répercutée ICI aussi (un test de non-régression liste les 9 types, voir
 // __tests__/pushText.test.ts, pour limiter le risque de dérive silencieuse).
-// 13 types depuis la migration 181 (validation des fiches de persona).
+// 14 types depuis la migration 194 (demandes de suite entre salons).
 
 export type PushLocale = "fr" | "en" | "es";
 
@@ -12,7 +12,7 @@ export type PushNotifPayload = {
   type:
     | "mention" | "reaction" | "new_member" | "new_chatroom" | "world_invite"
     | "chatroom_reply" | "persona_new_chatroom" | "persona_reply" | "relation_request"
-    | "role_mention" | "everyone_mention" | "persona_submitted" | "persona_reviewed";
+    | "role_mention" | "everyone_mention" | "persona_submitted" | "persona_reviewed" | "sequel_request";
   world_id: string | null;
   chat_id: string | null;
   actor_id: string | null;
@@ -96,6 +96,12 @@ export function buildPushText(n: PushNotifPayload, locale: PushLocale): { title:
       }
       return { title, body: T(locale, `${actor} a validé la fiche de ${who}`, `${actor} approved ${who}'s sheet`, `${actor} validó la ficha de ${who}`) };
     }
+    // Une demande de suite entre salons (migration 194).
+    case "sequel_request": {
+      const suite = typeof n.metadata?.chatroom_title === "string" ? n.metadata.chatroom_title : n.content ?? T(locale, "un salon", "a chatroom", "una sala");
+      const prec = typeof n.metadata?.previous_title === "string" ? n.metadata.previous_title : T(locale, "votre salon", "your chatroom", "su sala");
+      return { title, body: T(locale, `${actor} propose que « ${suite} » fasse suite à « ${prec} »`, `${actor} proposes “${suite}” as a sequel to “${prec}”`, `${actor} propone que «${suite}» continúe «${prec}»`) };
+    }
     // Une demande de relation réciproque (migration 173). Un type marital
     // garde la phrase du mariage ; les autres nomment le type.
     case "relation_request": {
@@ -120,6 +126,8 @@ export function pushHref(n: Pick<PushNotifPayload, "chat_id" | "world_id"> & Par
   if (n.world_id && (n.type === "persona_submitted" || n.type === "persona_reviewed") && typeof n.metadata?.persona_id === "string") {
     return `/w/${n.world_id}?view=personas&persona=${encodeURIComponent(n.metadata.persona_id)}`;
   }
+  // Miroir de notifHref : une demande de suite ouvre la chronologie du monde.
+  if (n.world_id && n.type === "sequel_request") return `/w/${n.world_id}?view=timeline`;
   if (n.world_id) return `/w/${n.world_id}`;
   return null;
 }

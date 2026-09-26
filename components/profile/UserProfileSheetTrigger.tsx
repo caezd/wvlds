@@ -18,6 +18,7 @@ import { useGlobalPresence } from "@/components/providers/PresenceProvider";
 import { formatLastSeen } from "@/lib/utils";
 import { isPronounOption } from "@/lib/pronouns";
 import { levelInfo } from "@/lib/xp";
+import { MemberWorldCardSection } from "@/components/worlds/members/MemberWorldCardSection";
 
 function formatMemberSince(value: string) {
   return new Intl.DateTimeFormat("fr-CA", {
@@ -206,6 +207,9 @@ export function UserProfileSheetTrigger({
               <MarkdownRenderer content={profile.bio} className="text-sm prose-sm" />
             </div>
           )}
+
+          {/* Sa carte dans le monde où l'on se trouve (migration 177), après le profil global. */}
+          {userId && <MemberWorldCardSection userId={userId} className="w-full" />}
 
           {profile?.created_at && (
             <p className="text-xs text-muted-foreground">

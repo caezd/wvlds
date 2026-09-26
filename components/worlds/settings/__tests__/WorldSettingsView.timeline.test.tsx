@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, waitFor, fireEvent, within } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createSupabaseMock } from "@/test/supabaseMock";
 import { createClient } from "@/lib/supabase/client";
@@ -109,21 +109,21 @@ describe("WorldSettingsView — Chronologie — jours par mois", () => {
   it("affiche un champ « jours » par mois, pré-rempli avec sa valeur enregistrée", async () => {
     setup();
     await openTimelineSection(WITH_MONTHS);
-    expect((screen.getByLabelText("Jours en Janvier") as HTMLInputElement).value).toBe("31");
-    expect((screen.getByLabelText("Jours en Février") as HTMLInputElement).value).toBe("28");
+    expect((screen.getByLabelText("Jours du mois Janvier") as HTMLInputElement).value).toBe("31");
+    expect((screen.getByLabelText("Jours du mois Février") as HTMLInputElement).value).toBe("28");
   });
 
   it("retombe sur la valeur par défaut (30) quand un mois n'a pas encore ce réglage", async () => {
     setup();
     const legacy: WorldTimelineConfig = { ...WITH_MONTHS, days_per_month: undefined };
     await openTimelineSection(legacy);
-    expect((screen.getByLabelText("Jours en Janvier") as HTMLInputElement).value).toBe("30");
+    expect((screen.getByLabelText("Jours du mois Janvier") as HTMLInputElement).value).toBe("30");
   });
 
   it("enregistre la nouvelle valeur d'un mois en quittant son champ, sans toucher les autres", async () => {
     setup();
     await openTimelineSection(WITH_MONTHS);
-    const input = screen.getByLabelText("Jours en Février");
+    const input = screen.getByLabelText("Jours du mois Février");
 
     // `userEvent.clear`/`.type` sur un `type="number"` ne remplace pas
     // fidèlement la valeur sous jsdom — on simule directement la saisie
@@ -146,7 +146,7 @@ describe("WorldSettingsView — Chronologie — jours par mois", () => {
     // construit un bouton par jour du mois (`Array.from({ length })`).
     setup();
     await openTimelineSection(WITH_MONTHS);
-    const input = screen.getByLabelText("Jours en Février");
+    const input = screen.getByLabelText("Jours du mois Février");
 
     fireEvent.change(input, { target: { value: "999999" } });
     fireEvent.blur(input);
@@ -172,17 +172,14 @@ describe("WorldSettingsView — Chronologie — jours par mois", () => {
         expect.objectContaining({ days_per_month: [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31] }),
       );
     });
-    expect((screen.getByLabelText("Jours en Janvier") as HTMLInputElement).value).toBe("31");
-    expect((screen.getByLabelText("Jours en Février") as HTMLInputElement).value).toBe("28");
+    expect((screen.getByLabelText("Jours du mois Janvier") as HTMLInputElement).value).toBe("31");
+    expect((screen.getByLabelText("Jours du mois Février") as HTMLInputElement).value).toBe("28");
   });
 
   it("supprimer un mois retire aussi son réglage de jours, en gardant les tableaux alignés", async () => {
     setup();
     const user = await openTimelineSection(WITH_MONTHS);
-    const janvierRow = screen.getByLabelText("Jours en Janvier").closest("div") as HTMLElement;
-    const removeJanvier = within(janvierRow).getByRole("button");
-
-    await user.click(removeJanvier);
+    await user.click(screen.getByRole("button", { name: "Supprimer le mois Janvier" }));
 
     await waitFor(() => {
       expect(setWorldTimelineMock).toHaveBeenCalledWith(
@@ -204,6 +201,34 @@ describe("WorldSettingsView — Chronologie — jours par mois", () => {
         "w1",
         true,
         expect.objectContaining({ month_names: ["Janvier", "Février", "Mars"], days_per_month: [31, 28, 30] }),
+      );
+    });
+  });
+
+  it("sans mois défini, le choix du mois courant reste en place, mais muet", async () => {
+    // Il disparaissait : la rangée se retrouvait bancale, et rien ne disait
+    // pourquoi le réglage manquait.
+    setup();
+    await openTimelineSection({ ...WITH_MONTHS, month_names: [], days_per_month: [] });
+
+    const choix = screen.getByLabelText("Mois actuel");
+    expect(choix).toBeDisabled();
+    expect(choix).toHaveTextContent("Aucun mois défini");
+  });
+
+  it("« Utiliser les mois réels » reste offert même quand des mois existent", async () => {
+    // L'action ne paraissait qu'avec une liste vide : impossible de repartir
+    // du calendrier grégorien sans supprimer ses mois un par un.
+    setup();
+    const user = await openTimelineSection(WITH_MONTHS);
+
+    await user.click(screen.getByRole("button", { name: "Utiliser les mois réels" }));
+
+    await waitFor(() => {
+      expect(setWorldTimelineMock).toHaveBeenCalledWith(
+        "w1",
+        true,
+        expect.objectContaining({ month_names: expect.arrayContaining(["Janvier", "Décembre"]) }),
       );
     });
   });

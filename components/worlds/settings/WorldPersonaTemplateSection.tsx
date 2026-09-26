@@ -56,6 +56,7 @@ export function WorldPersonaTemplateSection({
   onReviewEnabledChange?: (enabled: boolean) => void;
 }) {
   const t = useTranslations("worlds");
+  const tSettings = useTranslations("worlds.settings");
   const [togglingReview, setTogglingReview] = React.useState(false);
   const tCommun = useTranslations("common");
   const supabase = React.useMemo(() => createClient(), []);
@@ -137,7 +138,7 @@ export function WorldPersonaTemplateSection({
   return (
     <div className="space-y-5 pt-2">
       <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        Personas
+        {t("nav.personas")}
       </p>
 
       <div className="space-y-2">
@@ -145,8 +146,7 @@ export function WorldPersonaTemplateSection({
           <div className="space-y-0.5">
             <p className="text-sm font-medium">{t("defaultSheet")}</p>
             <p className="text-xs text-muted-foreground leading-snug">
-              Chaque persona créé dans ce monde démarre avec une copie de
-              cette fiche (sections et champs).
+              {tSettings("defaultSheetHelp")}
             </p>
           </div>
           <Switch
@@ -160,8 +160,7 @@ export function WorldPersonaTemplateSection({
         {templateId && (
           <div className="ml-4 flex items-center justify-between gap-4 rounded-xl border border-border-soft bg-muted/20 p-3">
             <p className="text-xs text-muted-foreground leading-snug">
-              Définis les sections et champs que tous les nouveaux personas
-              auront au départ.
+              {tSettings("editSheetHelp")}
             </p>
             <Button
               type="button"
@@ -171,7 +170,7 @@ export function WorldPersonaTemplateSection({
               onClick={() => void openEditor()}
             >
               <Pencil className="mr-1 h-3.5 w-3.5" />
-              Éditer la fiche
+              {tSettings("editSheet")}
             </Button>
           </div>
         )}
@@ -199,14 +198,13 @@ export function WorldPersonaTemplateSection({
           <AlertDialogHeader>
             <AlertDialogTitle>{t("disableDefaultSheetTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              La fiche modèle et tout son contenu seront supprimés
-              définitivement. Les personas déjà créés ne sont pas modifiés.
+              {tSettings("disableDefaultSheetHelp")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogCancel>{tCommun("cancel")}</AlertDialogCancel>
             <AlertDialogAction onClick={() => void confirmDisableTemplate()}>
-              Désactiver et supprimer
+              {tSettings("disableAndDelete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

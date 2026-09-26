@@ -13,6 +13,9 @@ vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 // Le monde relit ses fiches (migration 184) — sauf quand un test le coupe.
 const review = vi.hoisted(() => ({ active: true as boolean | null }));
 vi.mock("@/hooks/useWorldReviewActive", () => ({ useWorldReviewActive: () => review.active }));
+// Le monde se sert des faceclaims et ne les exige pas — sauf quand un test l'exige.
+const faceclaims = vi.hoisted(() => ({ rule: { enabled: true, required: false } as { enabled: boolean; required: boolean } | null }));
+vi.mock("@/hooks/useWorldFaceclaimRule", () => ({ useWorldFaceclaimRule: () => faceclaims.rule }));
 
 import { PersonaSubmitBar, PersonaReviewSection } from "@/components/personas/PersonaReviewPanel";
 import { PersonaSheetBadge } from "@/components/personas/PersonaSheetBadge";
@@ -49,7 +52,7 @@ function setupSubmit(lastComment: unknown = null, extra: { data: unknown }[] = [
   return mock;
 }
 
-beforeEach(() => { vi.clearAllMocks(); review.active = true; });
+beforeEach(() => { vi.clearAllMocks(); review.active = true; faceclaims.rule = { enabled: true, required: false }; });
 
 describe("PersonaSheetBadge", () => {
   it("ne rend rien pour une fiche validée et complète, sauf demande explicite", () => {
@@ -95,6 +98,39 @@ describe("PersonaSubmitBar", () => {
     expect(mock.client.rpc).toHaveBeenCalledWith("submit_persona_for_review", { p_persona_id: "p1" });
     await waitFor(() => expect(screen.getByText("Votre fiche est en relecture. Vous pouvez continuer à la modifier.")).toBeInTheDocument());
     expect(screen.queryByRole("button", { name: "Soumettre à validation" })).toBeNull();
+  });
+
+  it("faceclaim exigé : la fiche reste incomplète tant qu'il manque", async () => {
+    faceclaims.rule = { enabled: true, required: true };
+    setupSubmit();
+    const { rerender } = render(
+      <PersonaSubmitBar personaId="p1" worldId="w1" sections={sheet("Née à Lyon")} faceclaim={null} initialReviewStatus="draft" />,
+    );
+
+    await screen.findByTestId("missing-fields");
+    expect(screen.getByText("Faceclaim")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Soumettre à validation" })).toBeDisabled();
+
+    rerender(
+      <PersonaSubmitBar personaId="p1" worldId="w1" sections={sheet("Née à Lyon")} faceclaim="Emma Stone" initialReviewStatus="draft" />,
+    );
+    expect(screen.queryByTestId("missing-fields")).toBeNull();
+    expect(screen.getByRole("button", { name: "Soumettre à validation" })).toBeEnabled();
+  });
+
+  it("faceclaim non exigé, ou faceclaims coupés : rien à signaler", async () => {
+    setupSubmit();
+    const { rerender } = render(
+      <PersonaSubmitBar personaId="p1" worldId="w1" sections={sheet("ok")} faceclaim={null} initialReviewStatus="draft" />,
+    );
+    await waitFor(() => expect(screen.getByRole("button", { name: "Soumettre à validation" })).toBeEnabled());
+
+    // Exigé mais coupé dans le monde : l'exigence tombe avec la fonction.
+    faceclaims.rule = { enabled: false, required: true };
+    rerender(
+      <PersonaSubmitBar personaId="p1" worldId="w1" sections={sheet("ok")} faceclaim={null} initialReviewStatus="draft" />,
+    );
+    expect(screen.queryByTestId("missing-fields")).toBeNull();
   });
 
   it("un champ absent propose la synchronisation avec le modèle", async () => {

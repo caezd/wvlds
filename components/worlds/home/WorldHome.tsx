@@ -147,10 +147,6 @@ export function WorldHome({
   const gridGap = resolveHomeGridGap(world.home_grid_gap);
   const baseHref = `/w/${worldId}`;
 
-  function closeView() {
-    router.replace(baseHref, { scroll: false });
-  }
-
   function handleSelectCategory(categoryId: string | null) {
     setSelectedCategoryId(categoryId);
     const url = categoryId ? `${baseHref}?category=${encodeURIComponent(categoryId)}` : baseHref;
@@ -221,6 +217,7 @@ export function WorldHome({
           <WorldWiki
             worldId={worldId}
             canEdit={can("wiki.edit")}
+            canComment={can("wiki.comment")}
             initialSidebarWidth={initialPrefs?.wiki_sidebar_width}
             initialPanelWidth={initialPrefs?.wiki_panel_width}
             label={world.wiki_label}
@@ -241,7 +238,8 @@ export function WorldHome({
             worldId={worldId}
             rooms={initialRooms.map(r => ({ ...r, timeline_date: r.timeline_date ?? null }))}
             config={world.timeline_config as WorldTimelineConfig}
-            onClose={closeView}
+            canManage={can("timeline.manage")}
+            canManageLinks={can("chatrooms.manage") || can("timeline.manage")}
           />
         ) : (
           <div ref={setScrollEl} className="flex min-h-0 flex-1 flex-col overflow-y-auto">
@@ -259,14 +257,14 @@ export function WorldHome({
                 titre défilé (voir WorldHomeHeader.tsx). Plus de header séparé
                 ni d'option plein écran : la page d'accueil occupe désormais
                 toujours toute la largeur. Le fond (image + fondu) remplit tout
-                ce conteneur, dont la hauteur suit celle du bloc titre.
+                ce conteneur, dont la hauteur suit celle de l'icône et du
+                titre — la description vient dessous, hors de la bannière, pour
+                qu'une longue présentation n'étire pas l'image sous le texte.
 
                 Le dégradé (fondu d'opacité, voir WorldHeroCard.tsx) démarre à
                 --hero-fade-start et devient transparent à 100% de ce
-                conteneur, c'est-à-dire sous le bloc titre : il s'étire donc
-                avec la description au lieu de se couper net. `min-h` garantit
-                une présence minimale de la bannière pour un monde sans
-                description. Hauteur réservée (pt-40) et début du fondu sont
+                conteneur, c'est-à-dire au pied du titre. `min-h` garantit
+                une présence minimale de la bannière. Hauteur réservée (pt-40) et début du fondu sont
                 constants et déclarés ensemble — les avoir désaccordés
                 (padding responsive, fondu fixe) coupait le fondu pile à
                 767px, sans raison visible.
@@ -290,36 +288,43 @@ export function WorldHome({
             <div className="relative min-h-60 shrink-0 [--hero-fade-start:6rem]">
               <WorldHeroCard world={world} />
 
-              {/* Titre + description, désormais du contenu de page normal
+              {/* Icône + titre, désormais du contenu de page normal
                   (plus superposés sur la bannière). `pt-40` réserve la hauteur
                   visuelle de la bannière — à garder en phase avec
                   --hero-fade-* du conteneur parent. `relative` est nécessaire
                   ici : sans position, ce bloc statique se peindrait sous le
                   fond absolu de WorldHeroCard malgré son ordre plus tardif
-                  dans le DOM (règles d'empilement CSS), le rendant invisible.
-                  Les statistiques ont une position fixe ici (pas un bloc de
-                  la grille) — seul leur affichage se règle, depuis Réglages
-                  > Page d'accueil (voir WorldHomeGridSettings.tsx). */}
-              <div className="relative w-full space-y-2 px-3 pb-4 pt-40 sm:px-6 md:px-8 lg:px-12">
+                  dans le DOM (règles d'empilement CSS), le rendant invisible. */}
+              <div className="relative w-full space-y-2 px-3 pt-40 sm:px-6 md:px-8 lg:px-12">
                 <WorldHomeIcon world={world} size={44} />
-                <div>
-                  <h1 ref={setTitleEl} className="text-2xl font-semibold text-foreground md:text-3xl">
-                    {world.name}
-                  </h1>
-                  {world.description && (
-                    <p className="mt-1 max-w-xl text-sm text-muted-foreground">{world.description}</p>
-                  )}
-                </div>
-                {world.home_show_stats && <WorldStatsWidget worldId={worldId} />}
+                <h1 ref={setTitleEl} className="text-2xl font-semibold text-foreground md:text-3xl">
+                  {world.name}
+                </h1>
               </div>
             </div>
+
+            {/* Description et statistiques, sous la bannière mais collées au
+                titre. Les statistiques ont une position fixe ici (pas un bloc
+                de la grille) — seul leur affichage se règle, depuis Réglages
+                > Page d'accueil (voir WorldHomeGridSettings.tsx). */}
+            {(world.description || world.home_show_stats) && (
+              <div
+                className="w-full shrink-0 space-y-2 px-3 pt-1 sm:px-6 md:px-8 lg:px-12"
+                data-testid="world-home-intro"
+              >
+                {world.description && (
+                  <p className="text-sm text-muted-foreground">{world.description}</p>
+                )}
+                {world.home_show_stats && <WorldStatsWidget worldId={worldId} />}
+              </div>
+            )}
 
             {/* Panel de contenu : accueille la grille de blocs configurée par
                 l'admin (voir WorldHomeGridView / WorldHomeGridEditor).
                 `shrink-0` pour la même raison que le bloc bannière ci-dessus —
                 sans lui, la grille se ferait comprimer et son contenu
                 déborderait de la boîte au lieu de faire défiler la page. */}
-            <div className="shrink-0 px-3 pb-12 sm:px-6 md:px-8 lg:px-12">
+            <div className="shrink-0 px-3 pt-4 pb-12 sm:px-6 md:px-8 lg:px-12">
               <div data-home-panel className="w-full rounded-2xl">
                 <WorldHomeGridView
                   items={gridItems}

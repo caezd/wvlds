@@ -1,15 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import { generate } from "boring-name-generator";
-import { ChevronDown, Plus, Shuffle, Tag, X } from "lucide-react";
+import { ChevronDown, Plus, Shuffle, Tag, X, CalendarDays, Spline } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import type { Persona } from "@/types/db";
 import { toast } from "sonner";
-import { TABLE } from "@/lib/constants";
+import { RPC, TABLE } from "@/lib/constants";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import { ChatroomComposer, type ChatroomComposerHandle } from "@/components/chatrooms/composer/ChatroomComposer";
@@ -49,6 +49,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CategoryAvatar } from "@/components/worlds/catalogue/CategoryAvatar";
+import { TimelineDatePicker } from "@/components/worlds/timeline/TimelineDatePicker";
+import { clampTimelineDate, compareTimelineDates } from "@/lib/worldTimeline";
 
 type MapPinOption = { id: string; title: string; color: string };
 type CategoryOption = { id: string; title: string; banner_url: string | null; icon_url: string | null };
@@ -81,6 +83,24 @@ export function WorldChatComposer({
 
   const [persona, setPersona] = useState<Persona | null>(null);
   const [timelineDate, setTimelineDate] = useState<WorldTimelineDate | null>(null);
+  // Le salon que celui-ci suit (migration 194) : ceux où l'on joue d'abord.
+  const [previousId, setPreviousId] = useState<string | null>(null);
+  const [linkable, setLinkable] = useState<{
+    id: string;
+    title: string | null;
+    timeline_date: WorldTimelineDate | null;
+    mine: boolean;
+    last_at: string | null;
+  }[]>([]);
+  // Pas de suite à rebours : une fois le salon daté, seuls les salons situés
+  // au plus tard à sa date (la base le refuse aussi, migration 195).
+  const sequelChoices = useMemo(
+    () => linkable.filter((r) => !(timelineDate && r.timeline_date && compareTimelineDates(r.timeline_date, timelineDate) === 1)),
+    [linkable, timelineDate],
+  );
+  useEffect(() => {
+    if (previousId && !sequelChoices.some((r) => r.id === previousId)) setPreviousId(null);
+  }, [previousId, sequelChoices]);
   const [mapPins, setMapPins] = useState<MapPinOption[]>([]);
   const [mapPinId, setMapPinId] = useState<string | null>(null);
   const [categories, setCategories] = useState<CategoryOption[]>([]);
@@ -125,9 +145,33 @@ export function WorldChatComposer({
     })();
   }, [worldId]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Le monde exige une date : elle s'ouvre sur la période en cours, sous le
+  // titre, plutôt que cachée dans les options du compositeur.
+  const dateRequired = !!timelineConfig?.require_date;
+
   function openDialog() {
     setTitle(randomTitle());
     setHasContent(false);
+    setPreviousId(null);
+    if (timelineConfig) {
+      void supabase
+        .rpc(RPC.GET_LINKABLE_CHATROOMS, { p_world_id: worldId })
+        .then(({ data, error }: { data: typeof linkable | null; error: unknown }) => {
+          if (error) {
+            console.error("[WorldChatComposer] salons à relier", error);
+            return;
+          }
+          // Les plus récemment joués d'abord.
+          setLinkable([...(data ?? [])].sort((a, b) => (b.last_at ?? "").localeCompare(a.last_at ?? "")));
+        });
+    }
+    if (dateRequired && timelineConfig) {
+      setTimelineDate((d) => d ?? clampTimelineDate(timelineConfig, {
+        year: timelineConfig.current_year,
+        month: timelineConfig.current_month,
+        day: null,
+      }));
+    }
     setOpen(true);
   }
 
@@ -138,6 +182,9 @@ export function WorldChatComposer({
     const url = new URL(window.location.href);
     url.searchParams.delete("play");
     window.history.replaceState(null, "", url.toString());
+    // Une ouverture par lieu reçu dans l'adresse, pas une par rendu :
+    // `openDialog` change à chaque rendu et n'a pas à relancer l'effet.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialMapPinId]);
 
   function requestClose() {
@@ -168,6 +215,11 @@ export function WorldChatComposer({
       return null;
     }
 
+    if (dateRequired && timelineDate === null) {
+      toast.error(t("composer.dateRequired"));
+      return null;
+    }
+
     const insert: Record<string, unknown> = {
       world_id: worldId,
       title: title.trim() || randomTitle(),
@@ -187,8 +239,74 @@ export function WorldChatComposer({
       toast.error(error?.message ?? t("composer.errorCreateFailed"));
       return null;
     }
+
+    // La suite, une fois le salon créé. Un échec ne retient pas le salon :
+    // le lien se refait depuis ses réglages.
+    if (previousId) {
+      const { data: link, error: linkError } = await supabase
+        .from(TABLE.CHATROOM_SEQUELS)
+        .insert({ world_id: worldId, chatroom_id: room.id, previous_id: previousId })
+        .select("status")
+        .maybeSingle();
+      if (linkError) {
+        console.error("[WorldChatComposer] suite", linkError);
+        toast.error(t("composer.sequelFailed"));
+      } else if ((link as { status: string } | null)?.status === "pending") {
+        toast.success(t("composer.sequelProposed"));
+      }
+    }
     return { chatId: room.id };
   }
+
+  // « Suite de… » : sous le titre, dès qu'il y a un salon daté à suivre.
+  const sequelRow = timelineConfig && sequelChoices.length > 0 ? (
+    <label
+      className="flex h-9 items-center gap-2 rounded-lg border border-border-soft px-2.5"
+      title={t("composer.sequelOf")}
+    >
+      <Spline className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+      <select
+        value={previousId ?? ""}
+        onChange={(e) => setPreviousId(e.target.value || null)}
+        aria-label={t("composer.sequelOf")}
+        className="h-7 min-w-0 flex-1 bg-transparent text-sm outline-none"
+      >
+        <option value="">{t("composer.sequelNone")}</option>
+        {sequelChoices.some((r) => r.mine) && (
+          <optgroup label={t("composer.sequelMine")}>
+            {sequelChoices.filter((r) => r.mine).map((r) => (
+              <option key={r.id} value={r.id}>{r.title ?? ""}</option>
+            ))}
+          </optgroup>
+        )}
+        {sequelChoices.some((r) => !r.mine) && (
+          <optgroup label={t("composer.sequelOthers")}>
+            {sequelChoices.filter((r) => !r.mine).map((r) => (
+              <option key={r.id} value={r.id}>{r.title ?? ""}</option>
+            ))}
+          </optgroup>
+        )}
+      </select>
+    </label>
+  ) : null;
+
+  // La date, quand le monde n'en laisse pas créer sans : à droite du titre
+  // dans le dialogue, dessous sur mobile où la largeur manque.
+  const dateRow = dateRequired && timelineConfig && timelineDate ? (
+    <section
+      aria-label={t("composer.dateSection")}
+      title={t("composer.dateSection")}
+      className={cn(
+        "flex h-9 items-center gap-2 rounded-lg border border-border-soft px-2.5",
+        !isMobile && "shrink-0",
+      )}
+    >
+      <CalendarDays className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+      <div className="min-w-0 flex-1">
+        <TimelineDatePicker dense config={timelineConfig} value={timelineDate} onCommit={setTimelineDate} />
+      </div>
+    </section>
+  ) : null;
 
   const titleRow = (
     <div className="flex gap-2">
@@ -197,30 +315,33 @@ export function WorldChatComposer({
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder={t("composer.titlePlaceholder")}
-          className={cn("pr-7", isMobile && "text-sm")}
+          className={cn("pr-16", isMobile && "text-sm")}
           autoFocus={!isMobile}
         />
-        {title && (
+        {/* Effacer, puis tirer un titre au hasard : tous deux dans le champ. */}
+        <div className="absolute right-1 top-1/2 flex -translate-y-1/2 items-center">
+          {title && (
+            <button
+              type="button"
+              onClick={() => setTitle("")}
+              className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:text-foreground transition-colors"
+              aria-label={t("composer.titleClear")}
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
           <button
             type="button"
-            onClick={() => setTitle("")}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-            aria-label={t("composer.titleClear")}
+            onClick={() => setTitle(randomTitle())}
+            className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            aria-label={t("composer.titleRandomize")}
+            title={t("composer.titleRandomize")}
           >
-            <X className="h-3.5 w-3.5" />
+            <Shuffle className="h-3.5 w-3.5" />
           </button>
-        )}
+        </div>
       </div>
-      <Button
-        type="button"
-        variant="ghost"
-        className="rounded-md"
-        size="icon"
-        title={t("composer.titleRandomize")}
-        onClick={() => setTitle(randomTitle())}
-      >
-        <Shuffle className="h-4 w-4" />
-      </Button>
+      {!isMobile && dateRow}
       {categories.length > 0 && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -298,15 +419,22 @@ export function WorldChatComposer({
       {isMobile ? (
         /* Drawer de création (mobile) — même visuel « plein écran, chrome
            minimal » que le composer lui-même : le DrawerContent ne porte ni
-           padding ni bordure, les cartes internes (en-tête titre/catégorie,
-           composer) fournissent leur propre habillage. */
+           padding, ni bordure, ni arrondi (il rognerait les coins des cartes),
+           les cartes internes (en-tête titre/catégorie, composer) fournissent
+           leur propre habillage. */
         <Drawer open={open} onOpenChange={(next) => { if (!next) requestClose(); }}>
-          <DrawerContent className="h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] [--drawer-inset:8px] p-0 border-0 bg-transparent">
+          <DrawerContent className="h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] [--drawer-inset:8px] p-0 border-0 bg-transparent rounded-none">
             <DrawerTitle className="sr-only">{t("composer.dialogTitle")}</DrawerTitle>
             <DrawerDescription className="sr-only">{t("composer.placeholder")}</DrawerDescription>
             <div className="flex h-full min-h-0 flex-col gap-2">
-              <div className="shrink-0 rounded-3xl border border-border-soft bg-background p-2.5">
+              {/* Même coin que la carte du message dessous (rounded-lg en superellipse). */}
+              <div
+                className="shrink-0 space-y-2 rounded-lg border border-border-soft bg-background p-2.5"
+                style={{ cornerShape: "superellipse(1.1)" } as CSSProperties}
+              >
                 {titleRow}
+                {dateRow}
+                {sequelRow}
               </div>
               <div className="flex-1 min-h-0">
                 {composerBlock}
@@ -323,6 +451,7 @@ export function WorldChatComposer({
               <DialogDescription className="sr-only">{t("composer.placeholder")}</DialogDescription>
             </DialogHeader>
             {titleRow}
+            {sequelRow}
             {composerBlock}
           </DialogContent>
         </Dialog>

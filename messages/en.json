@@ -151,19 +151,6 @@
       "left": "Left-aligned",
       "justify": "Justified"
     },
-    "profile": {
-      "title": "Profile",
-      "description": "Customize how other players see you",
-      "bioLabel": "Bio",
-      "bioPlaceholder": "Tell others a bit about you…",
-      "bioHint": "{count}/500 characters",
-      "pronounsLabel": "Pronouns",
-      "pronounsHint": "Up to 3",
-      "pronounsCustomLabel": "Other",
-      "pronounsCustomPlaceholder": "Your own pronouns…",
-      "save": "Save profile",
-      "saved": "Profile updated"
-    },
     "subscription": {
       "title": "Subscription",
       "description": "Link your Patreon account to unlock your subscriber perks automatically",
@@ -206,7 +193,16 @@
     "memberSince": "Member since {date}",
     "avatarUpdated": "Avatar updated.",
     "usernameUpdated": "Username updated.",
-    "clickToEditAvatar": "Click to change the avatar"
+    "clickToEditAvatar": "Click to change the avatar",
+    "bioLabel": "Bio",
+    "bioPlaceholder": "Tell others a bit about you…",
+    "bioHint": "{count}/500 characters",
+    "pronounsLabel": "Pronouns",
+    "pronounsHint": "Up to 3",
+    "pronounsCustomLabel": "Other",
+    "pronounsCustomPlaceholder": "Your own pronouns…",
+    "save": "Save profile",
+    "saved": "Profile updated"
   },
   "notifications": {
     "title": "Notifications",
@@ -247,7 +243,8 @@
       "role_mention": "Mentions of my roles",
       "everyone_mention": "@everyone and @here",
       "persona_submitted": "Sheets submitted for review",
-      "persona_reviewed": "Reviews of my sheets"
+      "persona_reviewed": "Reviews of my sheets",
+      "sequel_request": "Sequel requests between chatrooms"
     },
     "text": {
       "someone": "Someone",
@@ -281,9 +278,18 @@
       "personaSubmitted": "<b>{actor}</b> submitted <b>{persona}</b>'s sheet for review",
       "personaApproved": "<b>{actor}</b> approved <b>{persona}</b>'s sheet",
       "personaSentBack": "<b>{actor}</b> sent <b>{persona}</b>'s sheet back to draft",
-      "personaFallback": "a persona"
+      "personaFallback": "a persona",
+      "sequelRequest": "<b>{actor}</b> proposes <b>{chatroom}</b> as a sequel to <b>{previous}</b>"
     },
-    "back": "Back"
+    "back": "Back",
+    "sequelRequest": {
+      "accept": "Accept",
+      "decline": "Decline",
+      "accepted": "Sequel accepted.",
+      "declined": "Sequel declined.",
+      "expired": "This request is no longer valid.",
+      "failed": "Could not answer this request."
+    }
   },
   "dms": {
     "title": "Direct messages",
@@ -377,8 +383,8 @@
       "roleChangeFailed": "Could not change roles.",
       "memberRemoveFailed": "Could not remove the member.",
       "card": {
-        "mine": "My card",
         "title": "My card in this world",
+        "mine": "My card",
         "statusTitle": "Player status",
         "saveFailed": "Could not save the card.",
         "bio": "About you",
@@ -400,7 +406,9 @@
         "justNow": "just now",
         "localTime": "{time} local time",
         "birthdayToday": "Birthday today!",
-        "birthdayOn": "Birthday on {date}"
+        "birthdayOn": "Birthday on {date}",
+        "inWorld": "In {world}",
+        "inThisWorld": "In this world"
       },
       "status": {
         "label": "Status",
@@ -438,7 +446,7 @@
       "errorCreateFailed": "Unable to create the chatroom.",
       "timelinePlaceholder": "Place on timeline",
       "monthPlaceholder": "Month —",
-      "dialogTitle": "New conversation",
+      "dialogTitle": "New game",
       "titlePlaceholder": "Conversation title",
       "titleClear": "Clear title",
       "titleRandomize": "Generate a random title",
@@ -447,7 +455,15 @@
       "discardConfirm": "Close anyway",
       "discardCancel": "Continue writing",
       "categoryPlaceholder": "Category",
-      "categoryNone": "None"
+      "categoryNone": "None",
+      "dateSection": "Date on the timeline",
+      "dateRequired": "This world requires a date for every new chatroom.",
+      "sequelOf": "Sequel to…",
+      "sequelNone": "Sequel to… (optional)",
+      "sequelMine": "Where you play",
+      "sequelOthers": "Other chatrooms",
+      "sequelProposed": "Chatroom created. The sequel is proposed: the other chatroom's participants must accept it.",
+      "sequelFailed": "The chatroom is created, but not the sequel link: add it again from its settings."
     },
     "home": {
       "addWidget": "Add a widget",
@@ -574,7 +590,7 @@
     "daysCount": "Number of days",
     "monthNamePlaceholder": "Month name…",
     "addTagPlaceholder": "Add a tag…",
-    "acceptedAvatarTypes": "Accepted avatar type",
+    "acceptedAvatarTypes": "Accepted avatars",
     "enableRestrictionTitle": "Enable the restriction?",
     "newWorld": "New world",
     "categoryUploadWait": "Wait for the image upload to finish before saving.",
@@ -585,6 +601,73 @@
     "noOtherWorld": "No other world",
     "noPersonaInWorld": "No persona in this world",
     "timelineEmpty": "No conversation has been placed on the timeline yet.",
+    "timelineDay": "Day {day}",
+    "timelineUntitled": "Conversation",
+    "timelineBy": "by <author>{name}</author>",
+    "timelineByName": "by {name}",
+    "timelineRanges": "Timeline periods",
+    "timelineView": {
+      "search": "Search the timeline",
+      "filters": "Filters",
+      "filterShow": "Show",
+      "kind": {
+        "room": "Chatrooms",
+        "event": "Events",
+        "journal": "Journals"
+      },
+      "filterPersona": "Persona present",
+      "filterPlayer": "Opened by",
+      "filterArc": "Arc",
+      "filterCategory": "Category",
+      "filterAll": "All",
+      "filterReset": "Reset filters",
+      "addEvent": "Event",
+      "arcs": "Arcs",
+      "noMatch": "Nothing matches the search or the filters.",
+      "arcOf": "arc {name}",
+      "arcEpisode": "arc {name}, no. {rank}",
+      "eventLabel": "Event",
+      "editEventNamed": "Edit the event {title}",
+      "journalOf": "{name}'s journal",
+      "newEvent": "New event",
+      "editEvent": "Edit event",
+      "eventHelp": "A milestone in the world's history, dated on the timeline, without a chatroom.",
+      "eventTitle": "Title",
+      "eventTitlePlaceholder": "Coronation of the queen",
+      "eventDate": "Date",
+      "eventDescription": "Description",
+      "eventWikiPage": "Wiki page",
+      "eventNoWikiPage": "None",
+      "eventSave": "Save",
+      "eventDelete": "Delete",
+      "eventDeleteConfirm": "Confirm deletion",
+      "eventTitleRequired": "Give the event a title.",
+      "eventSaveFailed": "Could not save the event.",
+      "eventDeleteFailed": "Could not delete the event.",
+      "arcsTitle": "Story arcs",
+      "arcsHelp": "An arc groups chatrooms under a name and a colour: it tints their ring on the timeline and their sequel lines. A chatroom's arc is chosen in its settings.",
+      "arcName": "Arc name",
+      "arcDelete": "Delete the arc {name}",
+      "arcDeleteConfirm": "Delete",
+      "arcsEmpty": "No arcs yet.",
+      "arcNewPlaceholder": "New arc",
+      "arcAdd": "Add",
+      "arcSaveFailed": "Could not save the arc.",
+      "arcDeleteFailed": "Could not delete the arc.",
+      "suiteStyle": "Sequel style",
+      "suiteStyles": {
+        "rail": "Continuous rail",
+        "graph": "Graph beside the line"
+      },
+      "suiteHoverOnly": "On hover only",
+      "sequelRequests": "Proposed sequels",
+      "sequelRequestsHelp": "These chatrooms would like to follow a chatroom you play in. Accept to link them on the timeline.",
+      "sequelRequestLine": "<b>{chatroom}</b> would follow <b>{previous}</b>",
+      "sequelRequestBy": "proposed by @{name}",
+      "sequelAccept": "Accept the sequel {chatroom}",
+      "sequelDecline": "Decline the sequel {chatroom}",
+      "sequelAnswerFailed": "Could not answer this proposed sequel."
+    },
     "tabSettings": "Settings",
     "tabCategories": "Categories",
     "tabCommunity": "Community",
@@ -621,8 +704,6 @@
       "locked": "Locked",
       "lockedHelp": "This role is at or above your own: you can view it, not edit it.",
       "name": "Name",
-      "color": "Color",
-      "icon": "Icon",
       "pickIcon": "Pick an icon",
       "clearIcon": "Remove icon",
       "hoist": "Display separately",
@@ -650,7 +731,7 @@
       "permissions": {
         "administrator": {
           "label": "Administrator",
-          "help": "Every permission, except deleting the world and its system tabs, which stay with the owner."
+          "help": "Every permission; only deleting the world stays with the owner."
         },
         "world_settings": {
           "label": "Manage world settings",
@@ -676,17 +757,21 @@
           "label": "Manage other members' chatrooms",
           "help": "Edit or delete chatrooms created by other members."
         },
+        "chatrooms_link": {
+          "label": "Link chatrooms",
+          "help": "Declare that a chatroom you play in follows another one. If you don't play in the other chatroom, its participants must accept."
+        },
         "categories_manage": {
           "label": "Manage categories",
           "help": "Create, rename and order chatroom categories."
         },
-        "tabs_edit": {
-          "label": "Edit tabs",
-          "help": "Edit the world's descriptive tabs."
-        },
         "wiki_edit": {
           "label": "Edit the wiki",
           "help": "Create and edit pages, their notes and comments."
+        },
+        "wiki_comment": {
+          "label": "Comment on the wiki",
+          "help": "Write a comment on a page and reply to others."
         },
         "lexicon_edit": {
           "label": "Edit the lexicon",
@@ -703,6 +788,10 @@
         "catalog_edit": {
           "label": "Edit the catalogue",
           "help": "Items, skills and their categories."
+        },
+        "timeline_manage": {
+          "label": "Manage the timeline",
+          "help": "Create, edit and delete the world's events and story arcs."
         },
         "relations_manage": {
           "label": "Manage relations",
@@ -764,6 +853,97 @@
     "personaReview": {
       "label": "Sheet review",
       "help": "A new sheet starts as a draft; once complete, its player submits it and a member with “Review sheets” approves it or sends it back. Only approved sheets play."
+    },
+    "settings": {
+      "visibility": "Visibility",
+      "private": "Private",
+      "public": "Public",
+      "tags": "Tags",
+      "tagsHelp": "Help other players find this world in the Explorer.",
+      "removeTag": "Remove tag {tag}",
+      "popularTags": "Popular tags",
+      "maxTags": "Maximum {count} tags.",
+      "avatarTypesHelp": "Tells visitors which avatar style this world uses.",
+      "avatarReal": "Real avatars",
+      "avatarIllustrated": "Illustrated avatars",
+      "ageRestricted": "World restricted to ages 18 and over",
+      "ageRestrictedHelp": "New members will have to confirm they are 18 or older before joining this world.",
+      "allAges": "All ages",
+      "adultsOnly": "18 and over",
+      "inventoryItems": "Inventory items",
+      "inventoryItemsHelp": "Personas can manage an inventory of items.",
+      "restrictInventoryHelp": "Personas can only own items defined in the catalogue — free entry is disabled.",
+      "skillsHelp": "Personas can list their skills.",
+      "restrictSkillsHelp": "Personas can only have skills defined in the catalogue — free entry is disabled.",
+      "faceclaimsHelp": "Lets personas name the actor or character their avatar is based on, and shows a directory in the Catalogue.",
+      "requireFaceclaim": "Faceclaim required",
+      "requireFaceclaimHelp": "A sheet without a faceclaim doesn't count as finished, and its persona can't play.",
+      "wiki": "Wiki",
+      "wikiLinkName": "Link name",
+      "timelineHelp": "Places each conversation in a fictional calendar.",
+      "timelinePreviewLabel": "Current world date",
+      "timelinePreviewHelp": "This is how chatrooms will display their date. It's built from the three settings below.",
+      "timelineFormat": "Date format",
+      "timelineFormatHelp": "The word placed before the year number, and what follows it.",
+      "yearLabelHint": "E.g. year, cycle, age",
+      "eraHint": "Optional. E.g. of Ashes, after the Fall",
+      "timelineNow": "Where the story stands",
+      "timelineNowHelp": "The date suggested by default when placing a chatroom; the home calendar opens on it. Move it forward as the story goes.",
+      "restrictToCurrent": "Restrict chatrooms to the current period",
+      "restrictToCurrentHelp": "A chatroom can only be placed in {period} — the current year, and the current month if one is set. Handy to keep every scene at the same point of the story.",
+      "requireDate": "Require a date when creating a chatroom",
+      "requireDateHelp": "The date picker shows right under the chatroom title, pre-filled with the current story date, and a chatroom can't be created without one.",
+      "timelineAges": "Seasons",
+      "timelineAgesHelp": "Named ages that divide the world's history (“The Age of Ashes”, year 1 to 40). On the timeline, they replace the five-year ranges and open their years with a banner. Without an end year, a season runs until the next one.",
+      "ageName": "Season name",
+      "ageFrom": "First year of {name}",
+      "ageTo": "Last year of {name}",
+      "deleteAge": "Delete the season {name}",
+      "noAgesHint": "No seasons: the timeline is divided into five-year ranges.",
+      "ageNamePlaceholder": "New season",
+      "ageFromPlaceholder": "From year",
+      "addAge": "Add the season",
+      "timelineFrieze": "On the timeline",
+      "timelineFriezeHelp": "What the timeline shows, besides the world's chatrooms and events.",
+      "showJournals": "Show persona journals",
+      "showJournalsHelp": "Dated journal entries appear at their date, discreetly, and expand with a click.",
+      "timelineCalendarHelp": "The order of the months and their length. The number of days bounds the dates that can be picked.",
+      "noMonthsHint": "Without months, a date only carries the year.",
+      "yearLength": "{months, plural, one {# month} other {# months}} · {days, plural, one {# day} other {# days}} per year",
+      "noMonths": "No months defined",
+      "daysUnit": "d",
+      "daysInMonth": "Days in month {month}",
+      "deleteMonth": "Delete month {month}",
+      "yearPlaceholder": "year",
+      "currentMonth": "Current month",
+      "useRealMonths": "Use real months",
+      "defaultSheetHelp": "Every persona created in this world starts with a copy of this sheet (sections and fields).",
+      "editSheetHelp": "Define the sections and fields every new persona will start with.",
+      "editSheet": "Edit the sheet",
+      "disableDefaultSheetHelp": "The template sheet and all its content will be permanently deleted. Existing personas are not changed.",
+      "disableAndDelete": "Disable and delete",
+      "worldIcon": "World icon",
+      "noColor": "None",
+      "banner": "Banner",
+      "removeBanner": "Remove banner",
+      "removeImage": "Remove image",
+      "categoryDescriptionPlaceholder": "Description (optional)",
+      "newCategory": "New category",
+      "reorderCategory": "Reorder the {title} category",
+      "noCategories": "No categories yet.",
+      "deleteCategoryConfirm": "Delete “{title}”? Chatrooms in this category will move back to “General”.",
+      "nameMin": "At least {min} characters",
+      "maxChars": "{max} characters max",
+      "colorInvalid": "Valid hex colour, e.g. #1f2937"
+    },
+    "timelinePicker": {
+      "year": "Year",
+      "month": "Month",
+      "day": "Day",
+      "noMonth": "No month",
+      "lockedHint": "This world restricts chatrooms to the current period: {period}.",
+      "dayPlaceholder": "Day (1–{max})",
+      "yearOf": "Year number ({label})"
     }
   },
   "auth": {
@@ -910,6 +1090,10 @@
     "noFrameOwned": "You don't own any frame. Buy one from the shop.",
     "noFrame": "No frame",
     "saveFailed": "Couldn't save.",
+    "saved": "Sheet saved.",
+    "unsavedTitle": "Unsaved changes",
+    "unsavedDescription": "Your changes to this sheet haven't been saved yet.",
+    "unsavedDiscard": "Discard",
     "requestFailed": "Couldn't send the request.",
     "cancelFailed": "Couldn't cancel.",
     "deleteFailed": "Couldn't delete.",
@@ -1011,6 +1195,7 @@
       "resubmit": "Submit again",
       "missingTitle": "To complete before submitting",
       "missingField": "{section} · {field}",
+      "missingFaceclaim": "Faceclaim",
       "missingAbsent": "field to add",
       "missingEmpty": "to fill in",
       "syncFields": "Add missing fields",
@@ -1325,6 +1510,18 @@
     "settingsName": "Room name",
     "settingsNamePlaceholder": "Room name…",
     "settingsTimeline": "Place on timeline",
+    "settingsTimelineHelp": "Ties this conversation to a date in the world's calendar.",
+    "settingsArc": "Arc",
+    "settingsArcNone": "No arc",
+    "settingsSuiteOf": "Sequel to",
+    "settingsSuiteAdd": "Add a previous chatroom…",
+    "settingsSuiteMine": "Where you play",
+    "settingsSuiteOthers": "Other chatrooms",
+    "settingsSuitePending": "proposed",
+    "settingsSuiteProposed": "Sequel proposed: the other chatroom's participants must accept it.",
+    "settingsSuiteRemove": "Remove the link with {title}",
+    "settingsSuiteUnknown": "Inaccessible chatroom",
+    "settingsTimelineLinksFailed": "Could not save this chatroom's arc or sequel.",
     "settingsMonth": "Month",
     "settingsDay": "Day",
     "settingsNoMonth": "No month",

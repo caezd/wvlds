@@ -464,6 +464,7 @@ function ZoneApresDossier({
 export function WorldWiki({
   worldId,
   canEdit,
+  canComment,
   initialSidebarWidth,
   initialPanelWidth,
   label,
@@ -471,6 +472,8 @@ export function WorldWiki({
 }: {
   worldId: string;
   canEdit: boolean;
+  /** Écrire un commentaire ancré et y répondre (`wiki.comment`). */
+  canComment: boolean;
   initialSidebarWidth?: number;
   /** Largeur retenue de la colonne latérale d'une page (migration 141). */
   initialPanelWidth?: number;
@@ -1645,6 +1648,7 @@ export function WorldWiki({
         pageCount={pageCount}
         pages={pages ?? []}
         canEdit={canEdit}
+        canComment={canComment}
         isEditMode={isEditMode}
         onExitEditMode={() => setEditMode(false)}
         supabase={supabase}

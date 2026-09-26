@@ -151,19 +151,6 @@
       "left": "Ferré à gauche",
       "justify": "Justifié"
     },
-    "profile": {
-      "title": "Profil",
-      "description": "Personnalisez la façon dont les autres joueurs vous voient",
-      "bioLabel": "Bio",
-      "bioPlaceholder": "Dites-en un peu plus sur vous…",
-      "bioHint": "{count}/500 caractères",
-      "pronounsLabel": "Pronoms",
-      "pronounsHint": "3 maximum",
-      "pronounsCustomLabel": "Autre",
-      "pronounsCustomPlaceholder": "Vos propres pronoms…",
-      "save": "Enregistrer le profil",
-      "saved": "Profil mis à jour"
-    },
     "subscription": {
       "title": "Abonnement",
       "description": "Connectez votre compte Patreon pour activer automatiquement vos avantages d'abonné",
@@ -206,7 +193,16 @@
     "memberSince": "Membre depuis {date}",
     "avatarUpdated": "Avatar mis à jour.",
     "usernameUpdated": "Pseudo mis à jour.",
-    "clickToEditAvatar": "Cliquez pour modifier l'avatar"
+    "clickToEditAvatar": "Cliquez pour modifier l'avatar",
+    "bioLabel": "Bio",
+    "bioPlaceholder": "Dites-en un peu plus sur vous…",
+    "bioHint": "{count}/500 caractères",
+    "pronounsLabel": "Pronoms",
+    "pronounsHint": "3 maximum",
+    "pronounsCustomLabel": "Autre",
+    "pronounsCustomPlaceholder": "Vos propres pronoms…",
+    "save": "Enregistrer le profil",
+    "saved": "Profil mis à jour"
   },
   "notifications": {
     "title": "Notifications",
@@ -248,7 +244,8 @@
       "role_mention": "Mentions de mes rôles",
       "everyone_mention": "@tous et @ici",
       "persona_submitted": "Fiches soumises à validation",
-      "persona_reviewed": "Relecture de mes fiches"
+      "persona_reviewed": "Relecture de mes fiches",
+      "sequel_request": "Demandes de suite entre salons"
     },
     "text": {
       "someone": "Quelqu'un",
@@ -282,7 +279,16 @@
       "personaSubmitted": "<b>{actor}</b> a soumis la fiche de <b>{persona}</b> à validation",
       "personaApproved": "<b>{actor}</b> a validé la fiche de <b>{persona}</b>",
       "personaSentBack": "<b>{actor}</b> a renvoyé la fiche de <b>{persona}</b> en brouillon",
-      "personaFallback": "un persona"
+      "personaFallback": "un persona",
+      "sequelRequest": "<b>{actor}</b> propose que <b>{chatroom}</b> fasse suite à <b>{previous}</b>"
+    },
+    "sequelRequest": {
+      "accept": "Accepter",
+      "decline": "Refuser",
+      "accepted": "Suite acceptée.",
+      "declined": "Suite refusée.",
+      "expired": "Cette demande n'est plus valide.",
+      "failed": "Impossible de répondre à cette demande."
     }
   },
   "dms": {
@@ -377,8 +383,8 @@
       "roleChangeFailed": "Modification des rôles impossible.",
       "memberRemoveFailed": "Retrait du membre impossible.",
       "card": {
-        "mine": "Ma carte",
         "title": "Ma carte dans ce monde",
+        "mine": "Ma carte",
         "statusTitle": "Statut du joueur",
         "saveFailed": "Enregistrement de la carte impossible.",
         "bio": "Présentation",
@@ -400,7 +406,9 @@
         "justNow": "à l'instant",
         "localTime": "{time} heure locale",
         "birthdayToday": "Anniversaire aujourd'hui !",
-        "birthdayOn": "Anniversaire le {date}"
+        "birthdayOn": "Anniversaire le {date}",
+        "inWorld": "Dans {world}",
+        "inThisWorld": "Dans ce monde"
       },
       "status": {
         "label": "Statut",
@@ -438,7 +446,7 @@
       "errorCreateFailed": "Impossible de créer la chatroom.",
       "timelinePlaceholder": "Situer dans la chronologie",
       "monthPlaceholder": "Mois —",
-      "dialogTitle": "Nouvelle conversation",
+      "dialogTitle": "Nouveau jeu",
       "titlePlaceholder": "Titre de la conversation",
       "titleClear": "Effacer le titre",
       "titleRandomize": "Générer un titre aléatoire",
@@ -447,7 +455,15 @@
       "discardConfirm": "Fermer quand même",
       "discardCancel": "Continuer à écrire",
       "categoryPlaceholder": "Catégorie",
-      "categoryNone": "Aucune"
+      "categoryNone": "Aucune",
+      "dateSection": "Date dans la chronologie",
+      "dateRequired": "Ce monde exige une date pour chaque nouveau salon.",
+      "sequelOf": "Suite de…",
+      "sequelNone": "Suite de… (facultatif)",
+      "sequelMine": "Où vous jouez",
+      "sequelOthers": "Autres salons",
+      "sequelProposed": "Salon créé. La suite est proposée : les participants de l'autre salon doivent l'accepter.",
+      "sequelFailed": "Le salon est créé, mais pas le lien de suite : refaites-le depuis ses réglages."
     },
     "home": {
       "addWidget": "Ajouter un widget",
@@ -574,7 +590,7 @@
     "daysCount": "Nombre de jours",
     "monthNamePlaceholder": "Nom du mois…",
     "addTagPlaceholder": "Ajouter un tag…",
-    "acceptedAvatarTypes": "Type d'avatars accepté",
+    "acceptedAvatarTypes": "Avatars acceptés",
     "enableRestrictionTitle": "Activer la restriction ?",
     "newWorld": "Nouveau monde",
     "categoryUploadWait": "Attendez la fin de l'envoi de l'image avant d'enregistrer.",
@@ -585,6 +601,73 @@
     "noOtherWorld": "Aucun autre monde",
     "noPersonaInWorld": "Aucun persona dans ce monde",
     "timelineEmpty": "Aucune conversation n'a encore été située dans la chronologie.",
+    "timelineDay": "Jour {day}",
+    "timelineUntitled": "Conversation",
+    "timelineBy": "par <author>{name}</author>",
+    "timelineByName": "par {name}",
+    "timelineRanges": "Périodes de la chronologie",
+    "timelineView": {
+      "search": "Rechercher dans la chronologie",
+      "filters": "Filtres",
+      "filterShow": "Afficher",
+      "kind": {
+        "room": "Salons",
+        "event": "Événements",
+        "journal": "Journaux"
+      },
+      "filterPersona": "Persona présent",
+      "filterPlayer": "Ouvert par",
+      "filterArc": "Arc",
+      "filterCategory": "Catégorie",
+      "filterAll": "Tous",
+      "filterReset": "Réinitialiser les filtres",
+      "addEvent": "Événement",
+      "arcs": "Arcs",
+      "noMatch": "Rien ne correspond à la recherche ou aux filtres.",
+      "arcOf": "arc {name}",
+      "arcEpisode": "arc {name}, n° {rank}",
+      "eventLabel": "Événement",
+      "editEventNamed": "Modifier l'événement {title}",
+      "journalOf": "Journal de {name}",
+      "newEvent": "Nouvel événement",
+      "editEvent": "Modifier l'événement",
+      "eventHelp": "Un jalon de l'histoire du monde, daté sur la chronologie, sans salon.",
+      "eventTitle": "Titre",
+      "eventTitlePlaceholder": "Couronnement de la reine",
+      "eventDate": "Date",
+      "eventDescription": "Description",
+      "eventWikiPage": "Page du wiki",
+      "eventNoWikiPage": "Aucune",
+      "eventSave": "Enregistrer",
+      "eventDelete": "Supprimer",
+      "eventDeleteConfirm": "Confirmer la suppression",
+      "eventTitleRequired": "Donnez un titre à l'événement.",
+      "eventSaveFailed": "Impossible d'enregistrer l'événement.",
+      "eventDeleteFailed": "Impossible de supprimer l'événement.",
+      "arcsTitle": "Arcs narratifs",
+      "arcsHelp": "Un arc réunit des salons sous un nom et une couleur : elle teinte leur anneau sur la frise et leurs lignes de suite. Le choix de l'arc d'un salon se fait dans ses réglages.",
+      "arcName": "Nom de l'arc",
+      "arcDelete": "Supprimer l'arc {name}",
+      "arcDeleteConfirm": "Supprimer",
+      "arcsEmpty": "Aucun arc pour l'instant.",
+      "arcNewPlaceholder": "Nouvel arc",
+      "arcAdd": "Ajouter",
+      "arcSaveFailed": "Impossible d'enregistrer l'arc.",
+      "arcDeleteFailed": "Impossible de supprimer l'arc.",
+      "suiteStyle": "Style des suites",
+      "suiteStyles": {
+        "rail": "Rail continu",
+        "graph": "Graphe à côté du fil"
+      },
+      "suiteHoverOnly": "Au survol seulement",
+      "sequelRequests": "Suites proposées",
+      "sequelRequestsHelp": "Ces salons voudraient faire suite à un salon où vous jouez. Acceptez pour les relier sur la chronologie.",
+      "sequelRequestLine": "<b>{chatroom}</b> ferait suite à <b>{previous}</b>",
+      "sequelRequestBy": "proposé par @{name}",
+      "sequelAccept": "Accepter la suite {chatroom}",
+      "sequelDecline": "Refuser la suite {chatroom}",
+      "sequelAnswerFailed": "Impossible de répondre à cette suite proposée."
+    },
     "tabSettings": "Paramètres",
     "tabCategories": "Catégories",
     "tabCommunity": "Communauté",
@@ -621,8 +704,6 @@
       "locked": "Verrouillé",
       "lockedHelp": "Ce rôle est au niveau du vôtre ou au-dessus : vous pouvez le consulter, pas le modifier.",
       "name": "Nom",
-      "color": "Couleur",
-      "icon": "Icône",
       "pickIcon": "Choisir une icône",
       "clearIcon": "Retirer l'icône",
       "hoist": "Afficher séparément",
@@ -650,7 +731,7 @@
       "permissions": {
         "administrator": {
           "label": "Administrateur",
-          "help": "Toutes les permissions, sauf supprimer le monde et ses onglets système, réservés au propriétaire."
+          "help": "Toutes les permissions ; seule la suppression du monde reste au propriétaire."
         },
         "world_settings": {
           "label": "Régler le monde",
@@ -676,17 +757,21 @@
           "label": "Gérer les salons des autres",
           "help": "Modifier ou supprimer les salons créés par d'autres membres."
         },
+        "chatrooms_link": {
+          "label": "Relier des salons",
+          "help": "Déclarer qu'un salon où l'on joue fait suite à un autre. Si l'on ne joue pas dans l'autre salon, ses participants doivent accepter."
+        },
         "categories_manage": {
           "label": "Gérer les catégories",
           "help": "Créer, renommer et ordonner les catégories de salons."
         },
-        "tabs_edit": {
-          "label": "Modifier les onglets",
-          "help": "Éditer les onglets descriptifs du monde."
-        },
         "wiki_edit": {
           "label": "Modifier le wiki",
           "help": "Créer et éditer les pages, leurs notes et leurs commentaires."
+        },
+        "wiki_comment": {
+          "label": "Commenter le wiki",
+          "help": "Écrire un commentaire sur une page et répondre aux autres."
         },
         "lexicon_edit": {
           "label": "Modifier le lexique",
@@ -703,6 +788,10 @@
         "catalog_edit": {
           "label": "Modifier le catalogue",
           "help": "Objets, compétences et leurs catégories."
+        },
+        "timeline_manage": {
+          "label": "Gérer la chronologie",
+          "help": "Créer, modifier et supprimer les événements du monde et ses arcs narratifs."
         },
         "relations_manage": {
           "label": "Gérer les relations",
@@ -764,6 +853,97 @@
     "personaReview": {
       "label": "Validation des fiches",
       "help": "Une nouvelle fiche naît en brouillon ; une fois complète, son joueur la soumet et un membre ayant « Valider les fiches » la valide ou la renvoie. Seules les fiches validées jouent."
+    },
+    "settings": {
+      "visibility": "Visibilité",
+      "private": "Privé",
+      "public": "Public",
+      "tags": "Tags",
+      "tagsHelp": "Aident les autres joueurs à trouver ce monde dans l'Explorateur.",
+      "removeTag": "Retirer le tag {tag}",
+      "popularTags": "Tags populaires",
+      "maxTags": "Maximum {count} tags.",
+      "avatarTypesHelp": "Indique aux visiteurs le style d'avatars utilisé dans ce monde.",
+      "avatarReal": "Avatars réels",
+      "avatarIllustrated": "Avatars illustrés",
+      "ageRestricted": "Monde réservé aux 18 ans et plus",
+      "ageRestrictedHelp": "Les nouveaux membres devront confirmer avoir 18 ans ou plus avant de pouvoir rejoindre ce monde.",
+      "allAges": "Tout public",
+      "adultsOnly": "18 ans et plus",
+      "inventoryItems": "Objets d'inventaire",
+      "inventoryItemsHelp": "Les personas peuvent gérer un inventaire d'objets.",
+      "restrictInventoryHelp": "Les personas ne peuvent posséder que des objets définis dans le catalogue — la saisie libre est désactivée.",
+      "skillsHelp": "Les personas peuvent lister leurs compétences.",
+      "restrictSkillsHelp": "Les personas ne peuvent avoir que des compétences définies dans le catalogue — la saisie libre est désactivée.",
+      "faceclaimsHelp": "Permet aux personas d'indiquer l'acteur ou le personnage sur lequel leur avatar est basé, et affiche un annuaire dans le Catalogue.",
+      "requireFaceclaim": "Faceclaim obligatoire",
+      "requireFaceclaimHelp": "Une fiche sans faceclaim n'est pas considérée comme terminée, et son persona ne peut pas jouer.",
+      "wiki": "Wiki",
+      "wikiLinkName": "Nom du lien",
+      "timelineHelp": "Permet de situer chaque conversation dans un calendrier fictif.",
+      "timelinePreviewLabel": "Date actuelle du monde",
+      "timelinePreviewHelp": "C'est ainsi que les salons afficheront leur date. Elle se compose des trois réglages ci-dessous.",
+      "timelineFormat": "Format des dates",
+      "timelineFormatHelp": "Le mot placé devant le numéro de l'année, et ce qui le suit.",
+      "yearLabelHint": "Ex. an, cycle, âge",
+      "eraHint": "Facultatif. Ex. des Cendres, après la Chute",
+      "timelineNow": "Où en est le récit",
+      "timelineNowHelp": "La date proposée par défaut quand on situe un salon ; le calendrier de l'accueil s'ouvre sur elle. Faites-la avancer au fil de l'histoire.",
+      "restrictToCurrent": "Restreindre les salons à la période en cours",
+      "restrictToCurrentHelp": "Un salon ne pourra être situé qu'en {period} — l'année actuelle, et le mois actuel s'il est choisi. Pratique pour garder toutes les scènes au même moment du récit.",
+      "requireDate": "Exiger une date à la création d'un salon",
+      "requireDateHelp": "Le choix de la date paraît juste sous le titre du salon, pré-rempli avec la date actuelle du récit, et un salon ne se crée pas sans.",
+      "timelineAges": "Saisons",
+      "timelineAgesHelp": "Des âges nommés qui découpent l'histoire du monde (« L'Âge des Cendres », an 1 à 40). Sur la frise, ils remplacent les tranches de cinq ans et ouvrent leurs années d'un bandeau. Sans année de fin, une saison court jusqu'à la suivante.",
+      "ageName": "Nom de la saison",
+      "ageFrom": "Première année de {name}",
+      "ageTo": "Dernière année de {name}",
+      "deleteAge": "Supprimer la saison {name}",
+      "noAgesHint": "Aucune saison : la frise se découpe en tranches de cinq ans.",
+      "ageNamePlaceholder": "Nouvelle saison",
+      "ageFromPlaceholder": "Dès l'an",
+      "addAge": "Ajouter la saison",
+      "timelineFrieze": "Sur la frise",
+      "timelineFriezeHelp": "Ce que la chronologie montre, en plus des salons et des événements du monde.",
+      "showJournals": "Afficher les journaux des personas",
+      "showJournalsHelp": "Les entrées datées des journaux paraissent à leur date, discrètes, et se déplient d'un clic.",
+      "timelineCalendarHelp": "L'ordre des mois et leur durée. Le nombre de jours borne les dates que l'on peut choisir.",
+      "noMonthsHint": "Sans mois, une date ne porte que l'année.",
+      "yearLength": "{months, plural, one {# mois} other {# mois}} · {days, plural, one {# jour} other {# jours}} par an",
+      "noMonths": "Aucun mois défini",
+      "daysUnit": "j",
+      "daysInMonth": "Jours du mois {month}",
+      "deleteMonth": "Supprimer le mois {month}",
+      "yearPlaceholder": "an",
+      "currentMonth": "Mois actuel",
+      "useRealMonths": "Utiliser les mois réels",
+      "defaultSheetHelp": "Chaque persona créé dans ce monde démarre avec une copie de cette fiche (sections et champs).",
+      "editSheetHelp": "Définissez les sections et champs que tous les nouveaux personas auront au départ.",
+      "editSheet": "Éditer la fiche",
+      "disableDefaultSheetHelp": "La fiche modèle et tout son contenu seront supprimés définitivement. Les personas déjà créés ne sont pas modifiés.",
+      "disableAndDelete": "Désactiver et supprimer",
+      "worldIcon": "Icône du monde",
+      "noColor": "Aucune",
+      "banner": "Bannière",
+      "removeBanner": "Retirer la bannière",
+      "removeImage": "Retirer l'image",
+      "categoryDescriptionPlaceholder": "Description (optionnel)",
+      "newCategory": "Nouvelle catégorie",
+      "reorderCategory": "Déplacer la catégorie {title}",
+      "noCategories": "Aucune catégorie pour l'instant.",
+      "deleteCategoryConfirm": "Supprimer « {title} » ? Les salons de cette catégorie repasseront dans « Général ».",
+      "nameMin": "Au moins {min} caractères",
+      "maxChars": "{max} caractères max",
+      "colorInvalid": "Couleur hex valide, p. ex. #1f2937"
+    },
+    "timelinePicker": {
+      "year": "Année",
+      "month": "Mois",
+      "day": "Jour",
+      "noMonth": "Aucun mois",
+      "lockedHint": "Le monde restreint les salons à la période en cours : {period}.",
+      "dayPlaceholder": "Jour (1–{max})",
+      "yearOf": "Numéro de l'année ({label})"
     }
   },
   "auth": {
@@ -910,6 +1090,10 @@
     "noFrameOwned": "Aucun cadre possédé. Achetez-en un dans la boutique.",
     "noFrame": "Aucun cadre",
     "saveFailed": "Enregistrement impossible.",
+    "saved": "Fiche enregistrée.",
+    "unsavedTitle": "Modifications non enregistrées",
+    "unsavedDescription": "Vos modifications de cette fiche ne sont pas encore enregistrées.",
+    "unsavedDiscard": "Abandonner",
     "requestFailed": "Impossible d'envoyer la demande.",
     "cancelFailed": "Annulation impossible.",
     "deleteFailed": "Suppression impossible.",
@@ -1011,6 +1195,7 @@
       "resubmit": "Soumettre à nouveau",
       "missingTitle": "À compléter avant de soumettre",
       "missingField": "{section} · {field}",
+      "missingFaceclaim": "Faceclaim",
       "missingAbsent": "champ à ajouter",
       "missingEmpty": "à remplir",
       "syncFields": "Ajouter les champs manquants",
@@ -1325,6 +1510,18 @@
     "settingsName": "Nom de la salle",
     "settingsNamePlaceholder": "Nom de la salle…",
     "settingsTimeline": "Situer dans la chronologie",
+    "settingsTimelineHelp": "Associe cette conversation à une date du calendrier du monde.",
+    "settingsArc": "Arc",
+    "settingsArcNone": "Aucun arc",
+    "settingsSuiteOf": "Suite de",
+    "settingsSuiteAdd": "Ajouter un salon précédent…",
+    "settingsSuiteMine": "Où vous jouez",
+    "settingsSuiteOthers": "Autres salons",
+    "settingsSuitePending": "proposée",
+    "settingsSuiteProposed": "Suite proposée : les participants de l'autre salon doivent l'accepter.",
+    "settingsSuiteRemove": "Retirer le lien avec {title}",
+    "settingsSuiteUnknown": "Salon inaccessible",
+    "settingsTimelineLinksFailed": "Impossible d'enregistrer l'arc ou la suite de ce salon.",
     "settingsMonth": "Mois",
     "settingsDay": "Jour",
     "settingsNoMonth": "Aucun mois",

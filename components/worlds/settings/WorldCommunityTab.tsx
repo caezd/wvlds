@@ -9,7 +9,6 @@ import { TabsContent } from "@/components/ui/tabs";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import type { World } from "@/types/worlds";
 import { LabelWithHelp } from "./LabelWithHelp";
@@ -21,7 +20,7 @@ type ProprietesOnglet = {
   persistField: PersistField;
 };
 
-import { Camera, Globe, GlobeLock, Palette, Plus, ShieldAlert, X } from "lucide-react";
+import { Camera, Globe, GlobeLock, Palette, Plus, ShieldAlert, Users, X, type LucideIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import {
   setWorldAgeRestricted,
@@ -39,10 +38,59 @@ import { messageErreurAction } from "@/lib/actionErrors";
  * Même principe que l'onglet Fonctions — l'état vit ici, pas chez le parent —
  * et même montage par `key={world.id}`.
  */
+/**
+ * Deux choix dans un rail bordé, comme les onglets : le segment retenu se
+ * remplit de la couleur d'accent, l'autre reste en retrait.
+ *
+ * `pressed` plutôt que `checked` : les avatars acceptés ne s'excluent pas —
+ * un monde peut prendre les deux styles, donc les deux segments allumés.
+ */
+function SegmentedRail({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="inline-flex w-full items-center gap-1 rounded-lg border border-border p-[3px]">{children}</div>
+  );
+}
+
+function Segment({
+  active,
+  disabled,
+  onClick,
+  icon: Icon,
+  label,
+}: {
+  active: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+  icon: LucideIcon;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      aria-pressed={active}
+      onClick={onClick}
+      className={cn(
+        "flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors disabled:opacity-60",
+        active
+          ? "bg-primary text-primary-foreground shadow-sm"
+          : "text-muted-foreground hover:bg-muted/40 hover:text-foreground",
+      )}
+    >
+      <Icon className="h-4 w-4 shrink-0" />
+      {label}
+    </button>
+  );
+}
+
+/** Un monde ne porte pas plus de tags que cela. */
+const MAX_TAGS = 10;
+
 export function WorldCommunityTab({ world, form, persistField, onUpdated }: ProprietesOnglet & {
   onUpdated?: (world: World) => void;
 }) {
   const t = useTranslations("worlds");
+  const tSettings = useTranslations("worlds.settings");
   const tCommun = useTranslations("common");
   const supabase = React.useMemo(() => createClient(), []);
 
@@ -107,6 +155,9 @@ export function WorldCommunityTab({ world, form, persistField, onUpdated }: Prop
         [existingTags, tags],
     );
 
+    /** Ce que l'on propose : affiné par la saisie, les plus portés sinon. */
+    const suggestions = tags.length >= MAX_TAGS ? [] : newTag.trim() ? tagSuggestions : popularTags;
+
     async function handleRemoveTag(tag: string) {
         setTags((prev) => prev.filter((t) => t !== tag));
         const res = await removeWorldTag(world.id, tag);
@@ -152,104 +203,132 @@ export function WorldCommunityTab({ world, form, persistField, onUpdated }: Prop
                                             <FormItem>
                                                 <FormLabel>
                                                     <LabelWithHelp help={t("publicWorldHelp")}>
-                                                        Visibilité
+                                                        {tSettings("visibility")}
                                                     </LabelWithHelp>
                                                 </FormLabel>
                                                 <FormControl>
-                                                    <div className="flex gap-2">
-                                                        <button
-                                                            type="button"
+                                                    <SegmentedRail>
+                                                        <Segment
+                                                            active={field.value === "private"}
+                                                            icon={GlobeLock}
+                                                            label={tSettings("private")}
                                                             onClick={() => {
                                                                 field.onChange("private");
                                                                 void persistField("visibility", "private");
                                                             }}
-                                                            className={cn(
-                                                                "flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition-colors",
-                                                                field.value === "private"
-                                                                    ? "border-primary bg-primary/10 text-primary"
-                                                                    : "border-border bg-transparent text-muted-foreground hover:border-muted-foreground/40 hover:text-foreground"
-                                                            )}
-                                                        >
-                                                            <GlobeLock className="h-4 w-4 shrink-0" />
-                                                            Privé
-                                                        </button>
-                                                        <button
-                                                            type="button"
+                                                        />
+                                                        <Segment
+                                                            active={field.value === "public"}
+                                                            icon={Globe}
+                                                            label={tSettings("public")}
                                                             onClick={() => {
                                                                 field.onChange("public");
                                                                 void persistField("visibility", "public");
                                                             }}
-                                                            className={cn(
-                                                                "flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition-colors",
-                                                                field.value === "public"
-                                                                    ? "border-primary bg-primary/10 text-primary"
-                                                                    : "border-border bg-transparent text-muted-foreground hover:border-muted-foreground/40 hover:text-foreground"
-                                                            )}
-                                                        >
-                                                            <Globe className="h-4 w-4 shrink-0" />
-                                                            Public
-                                                        </button>
-                                                    </div>
+                                                        />
+                                                    </SegmentedRail>
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
                                         )}
                                     />
 
-                                    {/* -- Tags -------------------------------- */}
+                                    {/* -- Sécurité ----------------------------- */}
+                                    {/* Deux cartes plutôt qu'un interrupteur : le choix se lit
+                                        d'un coup d'œil, comme Privé / Public juste au-dessus. */}
                                     <div className="space-y-3">
                                         <div className="space-y-0.5">
-                                            <p className="text-sm font-medium">Tags</p>
+                                            <p className="text-sm font-medium">{t("tabSecurity")}</p>
                                             <p className="text-xs text-muted-foreground leading-snug">
-                                                Aident les autres joueurs à trouver ce monde dans l&apos;Explorateur.
+                                                {tSettings("ageRestrictedHelp")}
                                             </p>
                                         </div>
-                                        {tags.length > 0 && (
-                                            <div className="flex flex-wrap gap-1.5">
-                                                {tags.map((tag) => (
-                                                    <span
-                                                        key={tag}
-                                                        className="inline-flex items-center gap-1 rounded-full border border-border-soft bg-muted/40 px-2.5 py-1 text-xs"
-                                                    >
-                                                        {tag}
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => void handleRemoveTag(tag)}
-                                                            className="text-muted-foreground hover:text-destructive transition-colors"
-                                                            aria-label={`Retirer le tag ${tag}`}
-                                                        >
-                                                            <X className="h-3 w-3" />
-                                                        </button>
-                                                    </span>
-                                                ))}
+                                        <SegmentedRail>
+                                            <Segment
+                                                active={!ageRestricted}
+                                                disabled={togglingAgeRestricted}
+                                                icon={Users}
+                                                label={tSettings("allAges")}
+                                                onClick={() => void handleAgeRestrictedToggle(false)}
+                                            />
+                                            <Segment
+                                                active={ageRestricted}
+                                                disabled={togglingAgeRestricted}
+                                                icon={ShieldAlert}
+                                                label={tSettings("adultsOnly")}
+                                                onClick={() => void handleAgeRestrictedToggle(true)}
+                                            />
+                                        </SegmentedRail>
+                                    </div>
+
+                                    {/* -- Avatars acceptés --------------------- */}
+                                    <div className="space-y-3">
+                                        <div className="space-y-0.5">
+                                            <p className="text-sm font-medium">{t("acceptedAvatarTypes")}</p>
+                                            <p className="text-xs text-muted-foreground leading-snug">
+                                                {tSettings("avatarTypesHelp")}
+                                            </p>
+                                        </div>
+                                        <SegmentedRail>
+                                            <Segment
+                                                active={allowsRealAvatars}
+                                                disabled={togglingAvatarType}
+                                                icon={Camera}
+                                                label={tSettings("avatarReal")}
+                                                onClick={() => void handleAvatarTypeToggle("allows_real_avatars", !allowsRealAvatars)}
+                                            />
+                                            <Segment
+                                                active={allowsIllustratedAvatars}
+                                                disabled={togglingAvatarType}
+                                                icon={Palette}
+                                                label={tSettings("avatarIllustrated")}
+                                                onClick={() => void handleAvatarTypeToggle("allows_illustrated_avatars", !allowsIllustratedAvatars)}
+                                            />
+                                        </SegmentedRail>
+                                    </div>
+
+                                    {/* -- Tags -------------------------------- */}
+                                    {/* Un seul cadre pour ce qu'on a et ce qu'on tape, une ligne
+                                        discrète pour ce qu'on propose : trois rangées de pastilles
+                                        de formes différentes se lisaient comme un fourre-tout. */}
+                                    <div className="space-y-3">
+                                        <div className="space-y-0.5">
+                                            <div className="flex items-baseline justify-between gap-2">
+                                                <p className="text-sm font-medium">{tSettings("tags")}</p>
+                                                <p className="text-[11px] tabular-nums text-muted-foreground">{tags.length}/{MAX_TAGS}</p>
                                             </div>
-                                        )}
-                                        {tags.length < 10 && !newTag.trim() && popularTags.length > 0 && (
-                                            <div className="space-y-1">
-                                                <p className="text-[11px] font-medium text-muted-foreground">Tags populaires</p>
+                                            <p className="text-xs text-muted-foreground leading-snug">
+                                                {tSettings("tagsHelp")}
+                                            </p>
+                                        </div>
+
+                                        <div className="space-y-2 rounded-lg border border-border-soft p-2">
+                                            {tags.length > 0 && (
                                                 <div className="flex flex-wrap gap-1.5">
-                                                    {popularTags.map((tag) => (
-                                                        <button
+                                                    {tags.map((tag) => (
+                                                        <span
                                                             key={tag}
-                                                            type="button"
-                                                            disabled={savingTag}
-                                                            onClick={() => void handleAddTag(tag)}
-                                                            className="inline-flex items-center gap-1 rounded-full border border-dashed border-border-soft px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+                                                            className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs"
                                                         >
-                                                            <Plus className="h-3 w-3" />
                                                             {tag}
-                                                        </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => void handleRemoveTag(tag)}
+                                                                className="text-muted-foreground hover:text-destructive transition-colors"
+                                                                aria-label={tSettings("removeTag", { tag })}
+                                                            >
+                                                                <X className="h-3 w-3" />
+                                                            </button>
+                                                        </span>
                                                     ))}
                                                 </div>
-                                            </div>
-                                        )}
-                                        {tags.length < 10 && (
-                                            <div className="space-y-1.5">
-                                                <div className="flex gap-2">
+                                            )}
+                                            {tags.length < MAX_TAGS ? (
+                                                <div className="flex items-center gap-1">
                                                     <Input
                                                         value={newTag}
                                                         placeholder={t("addTagPlaceholder")}
-                                                        className="h-8 text-sm"
+                                                        className="h-8 flex-1 border-0 bg-transparent px-1.5 text-sm shadow-none focus-visible:ring-0"
                                                         maxLength={24}
                                                         disabled={savingTag}
                                                         onChange={(e) => setNewTag(e.target.value.replace(/[^\p{L}\p{N}]/gu, ""))}
@@ -262,100 +341,43 @@ export function WorldCommunityTab({ world, form, persistField, onUpdated }: Prop
                                                     />
                                                     <Button
                                                         type="button"
-                                                        variant="secondary"
+                                                        variant="ghost"
                                                         size="sm"
+                                                        className="h-8 w-8 shrink-0 p-0"
                                                         disabled={!newTag.trim() || savingTag}
                                                         aria-label={t("addTag")}
                                                         onClick={() => void handleAddTag()}
                                                     >
-                                                        <Plus className="h-3.5 w-3.5" />
+                                                        <Plus className="h-4 w-4" />
                                                     </Button>
                                                 </div>
-                                                {tagSuggestions.length > 0 && (
-                                                    <div className="flex flex-wrap gap-1.5">
-                                                        {tagSuggestions.map((tag) => (
-                                                            <button
-                                                                key={tag}
-                                                                type="button"
-                                                                disabled={savingTag}
-                                                                onClick={() => void handleAddTag(tag)}
-                                                                className="inline-flex items-center gap-1 rounded-full border border-dashed border-border-soft px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:border-primary hover:text-primary"
-                                                            >
-                                                                <Plus className="h-3 w-3" />
-                                                                {tag}
-                                                            </button>
-                                                        ))}
-                                                    </div>
-                                                )}
+                                            ) : (
+                                                <p className="px-1.5 py-1 text-[11px] text-muted-foreground">
+                                                    {tSettings("maxTags", { count: MAX_TAGS })}
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        {/* Ce que l'on tape affine la liste ; sans rien de tapé, les
+                                            tags les plus portés du site. Une seule rangée dans les
+                                            deux cas, sous le même libellé. */}
+                                        {suggestions.length > 0 && (
+                                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+                                                <span className="text-[11px] text-muted-foreground">{tSettings("popularTags")}</span>
+                                                {suggestions.map((tag) => (
+                                                    <button
+                                                        key={tag}
+                                                        type="button"
+                                                        disabled={savingTag}
+                                                        onClick={() => void handleAddTag(tag)}
+                                                        className="inline-flex items-center gap-1 rounded-full border border-dashed border-border-soft px-2.5 py-0.5 text-xs text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+                                                    >
+                                                        <Plus className="h-3 w-3" />
+                                                        {tag}
+                                                    </button>
+                                                ))}
                                             </div>
                                         )}
-                                        {tags.length >= 10 && (
-                                            <p className="text-[11px] text-muted-foreground">Maximum 10 tags.</p>
-                                        )}
-                                    </div>
-
-                                    {/* -- Type d'avatars ----------------------- */}
-                                    <div className="space-y-3">
-                                        <div className="space-y-0.5">
-                                            <p className="text-sm font-medium">{t("acceptedAvatarTypes")}</p>
-                                            <p className="text-xs text-muted-foreground leading-snug">
-                                                Indique aux visiteurs le style d&apos;avatars utilisé dans ce monde.
-                                            </p>
-                                        </div>
-                                        <div className="flex gap-2">
-                                            <button
-                                                type="button"
-                                                disabled={togglingAvatarType}
-                                                onClick={() => void handleAvatarTypeToggle("allows_real_avatars", !allowsRealAvatars)}
-                                                aria-pressed={allowsRealAvatars}
-                                                className={cn(
-                                                    "flex flex-1 flex-col items-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition-colors disabled:opacity-60",
-                                                    allowsRealAvatars
-                                                        ? "border-primary bg-primary/10 text-primary"
-                                                        : "border-border bg-transparent text-muted-foreground hover:border-muted-foreground/40 hover:text-foreground"
-                                                )}
-                                            >
-                                                <Camera className="h-4 w-4 shrink-0" />
-                                                Avatars réels
-                                            </button>
-                                            <button
-                                                type="button"
-                                                disabled={togglingAvatarType}
-                                                onClick={() => void handleAvatarTypeToggle("allows_illustrated_avatars", !allowsIllustratedAvatars)}
-                                                aria-pressed={allowsIllustratedAvatars}
-                                                className={cn(
-                                                    "flex flex-1 flex-col items-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition-colors disabled:opacity-60",
-                                                    allowsIllustratedAvatars
-                                                        ? "border-primary bg-primary/10 text-primary"
-                                                        : "border-border bg-transparent text-muted-foreground hover:border-muted-foreground/40 hover:text-foreground"
-                                                )}
-                                            >
-                                                <Palette className="h-4 w-4 shrink-0" />
-                                                Avatars illustrés
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* -- Sécurité ---------------------------------- */}
-                                <div className="space-y-5 pt-2">
-                                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("tabSecurity")}</p>
-                                    <div className="flex items-start justify-between gap-4">
-                                        <div className="space-y-0.5">
-                                            <p className="flex items-center gap-1.5 text-sm font-medium">
-                                                <ShieldAlert className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                                                Monde réservé aux 18 ans et plus
-                                            </p>
-                                            <p className="text-xs text-muted-foreground leading-snug">
-                                                Les nouveaux membres devront confirmer avoir 18 ans ou plus avant de pouvoir rejoindre ce monde.
-                                            </p>
-                                        </div>
-                                        <Switch
-                                            checked={ageRestricted}
-                                            disabled={togglingAgeRestricted}
-                                            onCheckedChange={v => void handleAgeRestrictedToggle(v)}
-                                            className="shrink-0 mt-0.5"
-                                        />
                                     </div>
                                 </div>
                             </TabsContent>

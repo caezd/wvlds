@@ -19,6 +19,7 @@ import {
   type WorldRoleRow,
 } from "@/lib/worldPermissions";
 import { useWorldMembership } from "@/components/providers/WorldMembershipProvider";
+import { useMediaQuery, MEDIA } from "@/hooks/useMediaQuery";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -47,11 +48,13 @@ export function WorldRolesTab({ worldId }: { worldId: string }) {
   const tCommon = useTranslations("common");
   const supabase = React.useMemo(() => createClient(), []);
   const { membership, refresh } = useWorldMembership();
+  // Deux colonnes sur un écran large ; en dessous, chaque rôle se déplie sur
+  // place — une fiche aussi longue, poussée sous une liste, se perdait.
+  const deuxColonnes = useMediaQuery(MEDIA.md);
 
   const [roles, setRoles] = React.useState<WorldRoleRow[] | null>(null);
   const [counts, setCounts] = React.useState<Map<string, number>>(new Map());
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
-  const [confirmDelete, setConfirmDelete] = React.useState(false);
 
   const grantable = grantablePermissions(membership);
   const sorted = React.useMemo(() => sortRolesByPosition(roles ?? []), [roles]);
@@ -177,54 +180,80 @@ export function WorldRolesTab({ worldId }: { worldId: string }) {
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-4 md:flex-row">
       {/* ── Liste ──────────────────────────────────────────── */}
-      <aside className="w-full shrink-0 space-y-2 md:w-64">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold">{t("title")}</h3>
-          <Button size="sm" variant="secondary" onClick={() => void createRole()}>
-            <Plus className="mr-1 h-4 w-4" />
-            {t("newRole")}
-          </Button>
-        </div>
+      <aside className={cn("w-full shrink-0 space-y-2", deuxColonnes && "md:w-64")}>
+        <h3 className="text-sm font-semibold">{t("title")}</h3>
         <p className="text-xs text-muted-foreground">{t("hierarchyHelp")}</p>
+        {/* Le bouton précède la liste, comme « Nouvelle catégorie » : une ligne
+            pleine largeur juste au-dessus des rôles qu'il vient compléter. */}
+        <Button size="sm" variant="outline" onClick={() => void createRole()} className="w-full text-xs">
+          <Plus className="h-3.5 w-3.5" />
+          {t("newRole")}
+        </Button>
         <ul className="space-y-1" aria-label={t("title")}>
           {sorted.map((role) => {
             const editable = canManageRole(membership, role);
             const active = role.id === selectedId;
+            const deplie = active && !deuxColonnes;
             return (
-              <li key={role.id} className="group flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => setSelectedId(role.id)}
-                  aria-current={active ? "true" : undefined}
-                  className={cn(
-                    "flex min-w-0 flex-1 items-center gap-2 rounded-lg border px-2.5 py-1.5 text-left text-sm transition-colors",
-                    active ? "border-accent bg-accent/10" : "border-border bg-card hover:bg-muted/40",
-                  )}
-                >
-                  <RoleChip role={role} className="max-w-full border-transparent bg-transparent px-0" />
-                  <span className="ml-auto shrink-0 text-xs text-muted-foreground">{counts.get(role.id) ?? 0}</span>
-                  {!editable && <Lock className="h-3 w-3 shrink-0 text-muted-foreground" aria-label={t("locked")} />}
-                </button>
-                <div className="flex flex-col">
+              <li key={role.id} className="group">
+                <div className="flex items-center gap-1">
                   <button
                     type="button"
-                    aria-label={tCommon("moveUp")}
-                    disabled={!canMove(role, "up")}
-                    onClick={() => void move(role, "up")}
-                    className="rounded p-0.5 text-muted-foreground hover:text-foreground disabled:opacity-30"
+                    onClick={() => setSelectedId((cur) => (!deuxColonnes && cur === role.id ? null : role.id))}
+                    aria-current={active ? "true" : undefined}
+                    aria-expanded={deuxColonnes ? undefined : active}
+                    className={cn(
+                      "flex min-w-0 flex-1 items-center gap-2 rounded-lg border px-2.5 py-1.5 text-left text-sm transition-colors",
+                      active ? "border-accent bg-accent/10" : "border-border bg-card hover:bg-muted/40",
+                    )}
                   >
-                    <ChevronUp className="h-3.5 w-3.5" />
+                    <RoleChip role={role} plain className="text-sm" />
+                    <span className="ml-auto shrink-0 text-xs text-muted-foreground">{counts.get(role.id) ?? 0}</span>
+                    {!editable && <Lock className="h-3 w-3 shrink-0 text-muted-foreground" aria-label={t("locked")} />}
+                    {/* Le chevron ne paraît que là où la ligne se déplie. */}
+                    {!deuxColonnes && (
+                      <ChevronDown
+                        aria-hidden
+                        className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", active && "rotate-180")}
+                      />
+                    )}
                   </button>
-                  <button
-                    type="button"
-                    aria-label={tCommon("moveDown")}
-                    disabled={!canMove(role, "down")}
-                    onClick={() => void move(role, "down")}
-                    className="rounded p-0.5 text-muted-foreground hover:text-foreground disabled:opacity-30"
-                  >
-                    <ChevronDown className="h-3.5 w-3.5" />
-                  </button>
+                  <div className="flex flex-col">
+                    <button
+                      type="button"
+                      aria-label={tCommon("moveUp")}
+                      disabled={!canMove(role, "up")}
+                      onClick={() => void move(role, "up")}
+                      className="rounded p-0.5 text-muted-foreground hover:text-foreground disabled:opacity-30"
+                    >
+                      <ChevronUp className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={tCommon("moveDown")}
+                      disabled={!canMove(role, "down")}
+                      onClick={() => void move(role, "down")}
+                      className="rounded p-0.5 text-muted-foreground hover:text-foreground disabled:opacity-30"
+                    >
+                      <ChevronDown className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 </div>
+
+                {deplie && (
+                  <section aria-label={role.name} className="px-1 py-4">
+                    <RoleDetails
+                      key={role.id}
+                      role={role}
+                      editable={editable}
+                      grantable={grantable}
+                      memberCount={counts.get(role.id) ?? 0}
+                      onPersist={(patch) => void persist(role, patch)}
+                      onTogglePermission={(perm, checked) => void togglePermission(role, perm, checked)}
+                      onDelete={() => void deleteRole(role)}
+                    />
+                  </section>
+                )}
               </li>
             );
           })}
@@ -232,159 +261,200 @@ export function WorldRolesTab({ worldId }: { worldId: string }) {
         {sorted.length === 0 && <p className="text-xs italic text-muted-foreground">{t("empty")}</p>}
       </aside>
 
-      {/* ── Fiche du rôle ──────────────────────────────────── */}
-      {selected && (
-        <section className="min-w-0 flex-1 space-y-5" aria-label={selected.name}>
-          {!selectedEditable && (
-            <p className="flex items-center gap-2 rounded-lg border border-border-soft bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-              <Lock className="h-3.5 w-3.5 shrink-0" />
-              {t("lockedHelp")}
-            </p>
-          )}
-
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="grid min-w-48 flex-1 gap-1.5">
-              <Label htmlFor="role-name">{t("name")}</Label>
-              <RoleNameInput
-                key={selected.id}
-                id="role-name"
-                value={selected.name}
-                disabled={!selectedEditable}
-                onCommit={(name) => void persist(selected, { name })}
-              />
-            </div>
-            <div className="grid gap-1.5">
-              <Label>{t("color")}</Label>
-              <ColorPickerButton
-                color={selected.color}
-                disabled={!selectedEditable}
-                onChange={(color) => void persist(selected, { color })}
-              />
-            </div>
-            <div className="grid gap-1.5">
-              <Label>{t("icon")}</Label>
-              <div className="flex items-center gap-1">
-                <LucideIconPicker
-                  value={selected.lucide_icon ?? ""}
-                  accent={selected.color}
-                  onChange={(name) => void persist(selected, { lucide_icon: name || null })}
-                  trigger={
-                    <button
-                      type="button"
-                      disabled={!selectedEditable}
-                      aria-label={t("pickIcon")}
-                      className="flex h-8 w-8 items-center justify-center rounded-md border border-border shadow-sm hover:ring-2 hover:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      {selected.lucide_icon ? (
-                        <LazyLucideIcon name={selected.lucide_icon} width={16} height={16} style={{ color: selected.color }} />
-                      ) : (
-                        <Shapes className="h-4 w-4 text-muted-foreground" />
-                      )}
-                    </button>
-                  }
-                />
-                {selected.lucide_icon && selectedEditable && (
-                  <button
-                    type="button"
-                    aria-label={t("clearIcon")}
-                    onClick={() => void persist(selected, { lucide_icon: null })}
-                    className="rounded p-1 text-muted-foreground hover:text-foreground"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-3">
-            <ToggleRow
-              id="role-hoist"
-              label={t("hoist")}
-              help={t("hoistHelp")}
-              checked={selected.hoist}
-              disabled={!selectedEditable}
-              onChange={(hoist) => void persist(selected, { hoist })}
-            />
-            <ToggleRow
-              id="role-mentionable"
-              label={t("mentionable")}
-              help={t("mentionableHelp")}
-              checked={selected.mentionable}
-              disabled={!selectedEditable}
-              onChange={(mentionable) => void persist(selected, { mentionable })}
-            />
-            <ToggleRow
-              id="role-default"
-              label={t("isDefault")}
-              help={t("isDefaultHelp")}
-              checked={selected.is_default}
-              disabled={!selectedEditable}
-              onChange={(is_default) => void persist(selected, { is_default })}
-            />
-          </div>
-
-          <div className="space-y-4">
-            <h4 className="text-sm font-semibold">{t("permissionsTitle")}</h4>
-            {(Object.keys(WORLD_PERMISSION_GROUPS) as WorldPermissionGroup[]).map((group) => (
-              <fieldset key={group} className="space-y-2">
-                <legend className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  {t(`groups.${group}`)}
-                </legend>
-                {WORLD_PERMISSION_GROUPS[group].map((perm) => {
-                  const isAdmin = selected.permissions.includes("administrator");
-                  const checked = perm === "administrator" ? isAdmin : isAdmin || selected.permissions.includes(perm);
-                  // `administrator` couvre tout : les autres cases se cochent d'elles-mêmes.
-                  const implied = perm !== "administrator" && isAdmin;
-                  const disabled = !selectedEditable || implied || !grantable.has(perm);
-                  return (
-                    <label
-                      key={perm}
-                      className={cn(
-                        "flex items-start gap-3 rounded-lg border border-border-soft px-3 py-2",
-                        disabled ? "opacity-70" : "cursor-pointer hover:bg-muted/30",
-                      )}
-                    >
-                      <Checkbox
-                        checked={checked}
-                        disabled={disabled}
-                        aria-label={t(`permissions.${permissionI18nKey(perm)}.label`)}
-                        onCheckedChange={(v) => void togglePermission(selected, perm, v === true)}
-                        className="mt-0.5"
-                      />
-                      <span className="min-w-0">
-                        <span className="block text-sm">{t(`permissions.${permissionI18nKey(perm)}.label`)}</span>
-                        <span className="block text-xs text-muted-foreground">{t(`permissions.${permissionI18nKey(perm)}.help`)}</span>
-                        {!grantable.has(perm) && (
-                          <span className="block text-xs italic text-muted-foreground">{t("notGrantable")}</span>
-                        )}
-                      </span>
-                    </label>
-                  );
-                })}
-              </fieldset>
-            ))}
-          </div>
-
-          {selectedEditable && (
-            <div className="border-t border-border-soft pt-4">
-              <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => setConfirmDelete(true)}>
-                <Trash2 className="mr-2 h-4 w-4" />
-                {t("delete")}
-              </Button>
-              <DeleteConfirmDialog
-                open={confirmDelete}
-                onOpenChange={setConfirmDelete}
-                title={t("deleteConfirmTitle", { name: selected.name })}
-                description={t("deleteConfirmDescription", { count: counts.get(selected.id) ?? 0 })}
-                onConfirm={() => {
-                  setConfirmDelete(false);
-                  void deleteRole(selected);
-                }}
-              />
-            </div>
-          )}
+      {/* ── Fiche du rôle, colonne de droite ───────────────── */}
+      {deuxColonnes && selected && (
+        <section className="min-w-0 flex-1" aria-label={selected.name}>
+          <RoleDetails
+            key={selected.id}
+            role={selected}
+            editable={selectedEditable}
+            grantable={grantable}
+            memberCount={counts.get(selected.id) ?? 0}
+            onPersist={(patch) => void persist(selected, patch)}
+            onTogglePermission={(perm, checked) => void togglePermission(selected, perm, checked)}
+            onDelete={() => void deleteRole(selected)}
+          />
         </section>
+      )}
+    </div>
+  );
+}
+
+
+/**
+ * La fiche d'un rôle : son apparence, ses options, ses permissions.
+ *
+ * Elle se rend à deux places selon la largeur — la colonne de droite sur un
+ * grand écran, le dépli de la ligne sur un petit — d'où ce composant à part
+ * plutôt que deux copies du même formulaire.
+ */
+function RoleDetails({
+  role,
+  editable,
+  grantable,
+  memberCount,
+  onPersist,
+  onTogglePermission,
+  onDelete,
+}: {
+  role: WorldRoleRow;
+  editable: boolean;
+  grantable: ReadonlySet<WorldPermission>;
+  memberCount: number;
+  onPersist: (patch: Partial<WorldRoleRow>) => void;
+  onTogglePermission: (perm: WorldPermission, checked: boolean) => void;
+  onDelete: () => void;
+}) {
+  const t = useTranslations("worlds.roles");
+  const [confirmDelete, setConfirmDelete] = React.useState(false);
+
+  return (
+    <div className="space-y-5">
+      {!editable && (
+        <p className="flex items-center gap-2 rounded-lg border border-border-soft bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+          <Lock className="h-3.5 w-3.5 shrink-0" />
+          {t("lockedHelp")}
+        </p>
+      )}
+
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="grid min-w-48 flex-1 gap-1.5">
+          <Label htmlFor="role-name">{t("name")}</Label>
+          <RoleNameInput
+            key={role.id}
+            id="role-name"
+            value={role.name}
+            disabled={!editable}
+            onCommit={(name) => onPersist({ name })}
+          />
+        </div>
+        {/* Couleur et icône : deux boutons sans libellé (leur aria-label suffit),
+            à la hauteur et à l'arrondi du champ Nom. */}
+        <ColorPickerButton
+          color={role.color}
+          disabled={!editable}
+          onChange={(color) => onPersist({ color })}
+          className="h-9 w-9 rounded-lg"
+        />
+        <div className="flex items-center gap-1">
+          <LucideIconPicker
+            value={role.lucide_icon ?? ""}
+            accent={role.color}
+            onChange={(name) => onPersist({ lucide_icon: name || null })}
+            trigger={
+              <button
+                type="button"
+                disabled={!editable}
+                aria-label={t("pickIcon")}
+                className="flex h-9 w-9 items-center justify-center rounded-lg border border-border shadow-sm hover:ring-2 hover:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {role.lucide_icon ? (
+                  <LazyLucideIcon name={role.lucide_icon} width={16} height={16} style={{ color: role.color }} />
+                ) : (
+                  <Shapes className="h-4 w-4 text-muted-foreground" />
+                )}
+              </button>
+            }
+          />
+          {role.lucide_icon && editable && (
+            <button
+              type="button"
+              aria-label={t("clearIcon")}
+              onClick={() => onPersist({ lucide_icon: null })}
+              className="rounded p-1 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <ToggleRow
+          id="role-hoist"
+          label={t("hoist")}
+          help={t("hoistHelp")}
+          checked={role.hoist}
+          disabled={!editable}
+          onChange={(hoist) => onPersist({ hoist })}
+        />
+        <ToggleRow
+          id="role-mentionable"
+          label={t("mentionable")}
+          help={t("mentionableHelp")}
+          checked={role.mentionable}
+          disabled={!editable}
+          onChange={(mentionable) => onPersist({ mentionable })}
+        />
+        <ToggleRow
+          id="role-default"
+          label={t("isDefault")}
+          help={t("isDefaultHelp")}
+          checked={role.is_default}
+          disabled={!editable}
+          onChange={(is_default) => onPersist({ is_default })}
+        />
+      </div>
+
+      <div className="space-y-4">
+        <h4 className="text-sm font-semibold">{t("permissionsTitle")}</h4>
+        {(Object.keys(WORLD_PERMISSION_GROUPS) as WorldPermissionGroup[]).map((group) => (
+          <fieldset key={group} className="space-y-2">
+            <legend className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              {t(`groups.${group}`)}
+            </legend>
+            {WORLD_PERMISSION_GROUPS[group].map((perm) => {
+              const isAdmin = role.permissions.includes("administrator");
+              const checked = perm === "administrator" ? isAdmin : isAdmin || role.permissions.includes(perm);
+              // `administrator` couvre tout : les autres cases se cochent d'elles-mêmes.
+              const implied = perm !== "administrator" && isAdmin;
+              const disabled = !editable || implied || !grantable.has(perm);
+              return (
+                <label
+                  key={perm}
+                  className={cn(
+                    "flex items-start gap-3 rounded-lg border border-border-soft px-3 py-2",
+                    disabled ? "opacity-70" : "cursor-pointer hover:bg-muted/30",
+                  )}
+                >
+                  <Checkbox
+                    checked={checked}
+                    disabled={disabled}
+                    aria-label={t(`permissions.${permissionI18nKey(perm)}.label`)}
+                    onCheckedChange={(v) => onTogglePermission(perm, v === true)}
+                    className="mt-0.5"
+                  />
+                  <span className="min-w-0">
+                    <span className="block text-sm">{t(`permissions.${permissionI18nKey(perm)}.label`)}</span>
+                    <span className="block text-xs text-muted-foreground">{t(`permissions.${permissionI18nKey(perm)}.help`)}</span>
+                    {!grantable.has(perm) && (
+                      <span className="block text-xs italic text-muted-foreground">{t("notGrantable")}</span>
+                    )}
+                  </span>
+                </label>
+              );
+            })}
+          </fieldset>
+        ))}
+      </div>
+
+      {editable && (
+        <div className="border-t border-border-soft pt-4">
+          <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => setConfirmDelete(true)}>
+            <Trash2 className="mr-2 h-4 w-4" />
+            {t("delete")}
+          </Button>
+          <DeleteConfirmDialog
+            open={confirmDelete}
+            onOpenChange={setConfirmDelete}
+            title={t("deleteConfirmTitle", { name: role.name })}
+            description={t("deleteConfirmDescription", { count: memberCount })}
+            onConfirm={() => {
+              setConfirmDelete(false);
+              onDelete();
+            }}
+          />
+        </div>
       )}
     </div>
   );

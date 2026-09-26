@@ -86,6 +86,14 @@ export function notifText(n: AppNotification, t: NotifT): ReactNode {
         }
         // Une demande de relation réciproque (migration 173). Un type marital
         // garde la phrase du mariage ; les autres nomment le type.
+        // Une demande de suite entre salons (migration 194).
+        case "sequel_request":
+            return t.rich("text.sequelRequest", {
+                actor,
+                chatroom: n.metadata?.chatroom_title ?? n.content ?? t("text.someone"),
+                previous: n.metadata?.previous_title ?? t("text.someone"),
+                ...r,
+            });
         case "relation_request": {
             const target = n.content ?? t("text.someone");
             if (n.metadata?.marital_status === "married") return t.rich("text.maritalRequestMarried", { actor, target, ...r });
@@ -102,6 +110,8 @@ export function notifHref(n: AppNotification): string | null {
     if (n.world_id && (n.type === "persona_submitted" || n.type === "persona_reviewed") && n.metadata?.persona_id) {
         return `/w/${n.world_id}?view=personas&persona=${encodeURIComponent(n.metadata.persona_id)}`;
     }
+    // Une demande de suite : la chronologie du monde, où le lien se voit.
+    if (n.world_id && n.type === "sequel_request") return `/w/${n.world_id}?view=timeline`;
     if (n.world_id) return `/w/${n.world_id}`;
     return null;
 }

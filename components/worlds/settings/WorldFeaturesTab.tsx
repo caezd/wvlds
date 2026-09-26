@@ -9,7 +9,6 @@ import { TabsContent } from "@/components/ui/tabs";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { Button } from "@/components/ui/button";
 import type { World } from "@/types/worlds";
 import { LabelWithHelp } from "./LabelWithHelp";
 import type { PersistField, WorldFormValues } from "./worldSettingsSchema";
@@ -20,7 +19,6 @@ type ProprietesOnglet = {
   persistField: PersistField;
 };
 
-import { Plus, Trash2 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,17 +33,13 @@ import {
   setWorldFeature,
   setWorldRestriction,
   setWorldFaceclaims,
+    setWorldRequireFaceclaim,
   setWorldTimeline,
 } from "@/app/actions/worldCatalog";
 import { useFeatureFlags } from "@/components/providers/FeatureFlagsProvider";
 import { WorldPersonaTemplateSection } from "@/components/worlds/settings/WorldPersonaTemplateSection";
+import { TimelineSettings } from "./TimelineSettings";
 import type { WorldTimelineConfig } from "@/types/worlds";
-import {
-  clampDaysPerMonth,
-  DEFAULT_DAYS_PER_MONTH,
-  REAL_DAYS_PER_MONTH,
-  REAL_MONTH_NAMES,
-} from "@/lib/worldTimeline";
 import { messageErreurAction } from "@/lib/actionErrors";
 
 /**
@@ -65,6 +59,8 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
   onUpdated?: (world: World) => void;
 }) {
   const t = useTranslations("worlds");
+  const tSettings = useTranslations("worlds.settings");
+  const tCatalogue = useTranslations("catalogue");
   const tCommon = useTranslations("common");
   const { world_timeline } = useFeatureFlags();
 
@@ -78,6 +74,8 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
 
     const [enableFaceclaims, setEnableFaceclaims] = React.useState(world.enable_faceclaims !== false);
     const [togglingFaceclaims, setTogglingFaceclaims] = React.useState(false);
+    const [requireFaceclaim, setRequireFaceclaim] = React.useState(!!world.require_faceclaim);
+    const [togglingRequireFaceclaim, setTogglingRequireFaceclaim] = React.useState(false);
 
     // `!== false` et non `=== true` : le monde reçu peut être un objet partiel
     // où la colonne n'a pas été chargée. En base elle est NOT NULL DEFAULT true.
@@ -100,7 +98,6 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
         world.timeline_config ?? defaultConfig,
     );
     const [togglingTimeline, setTogglingTimeline] = React.useState(false);
-    const [newMonthName, setNewMonthName] = React.useState("");
 
     async function handleEnableToggle(field: "inventory" | "skills", enabled: boolean) {
         setTogglingEnable(true);
@@ -157,6 +154,15 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
         onUpdated?.({ ...world, enable_faceclaims: enabled } as World);
     }
 
+    async function handleRequireFaceclaimToggle(required: boolean) {
+        setTogglingRequireFaceclaim(true);
+        const res = await setWorldRequireFaceclaim(world.id, required);
+        setTogglingRequireFaceclaim(false);
+        if (!res.ok) { toast.error(messageErreurAction(res.error, tCommon)); return; }
+        setRequireFaceclaim(required);
+        onUpdated?.({ ...world, require_faceclaim: required } as World);
+    }
+
     async function handleMapToggle(enabled: boolean) {
         setTogglingMap(true);
         const res = await setWorldFeature(world.id, "enable_map", enabled);
@@ -200,15 +206,15 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                             <div className="mx-auto max-w-xl space-y-6">
                                 {/* -- Catalogue -------------------------------- */}
                                 <div className="space-y-5">
-                                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Catalogue</p>
+                                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("nav.catalogue")}</p>
 
                                     {/* Objets */}
                                     <div className="space-y-2">
                                         <div className="flex items-start justify-between gap-4">
                                             <div className="space-y-0.5">
-                                                <p className="text-sm font-medium">Objets d&apos;inventaire</p>
+                                                <p className="text-sm font-medium">{tSettings("inventoryItems")}</p>
                                                 <p className="text-xs text-muted-foreground leading-snug">
-                                                    Les personas peuvent gérer un inventaire d&apos;objets.
+                                                    {tSettings("inventoryItemsHelp")}
                                                 </p>
                                             </div>
                                             <Switch
@@ -223,7 +229,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                                                 <div className="space-y-0.5">
                                                     <p className="text-sm font-medium">{t("restrictToCatalogue")}</p>
                                                     <p className="text-xs text-muted-foreground leading-snug">
-                                                        Les personas ne peuvent posséder que des objets définis dans le catalogue — la saisie libre est désactivée.
+                                                        {tSettings("restrictInventoryHelp")}
                                                     </p>
                                                 </div>
                                                 <Switch
@@ -242,7 +248,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                                             <div className="space-y-0.5">
                                                 <p className="text-sm font-medium">{t("tabSkills")}</p>
                                                 <p className="text-xs text-muted-foreground leading-snug">
-                                                    Les personas peuvent lister leurs compétences.
+                                                    {tSettings("skillsHelp")}
                                                 </p>
                                             </div>
                                             <Switch
@@ -257,7 +263,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                                                 <div className="space-y-0.5">
                                                     <p className="text-sm font-medium">{t("restrictToCatalogue")}</p>
                                                     <p className="text-xs text-muted-foreground leading-snug">
-                                                        Les personas ne peuvent avoir que des compétences définies dans le catalogue — la saisie libre est désactivée.
+                                                        {tSettings("restrictSkillsHelp")}
                                                     </p>
                                                 </div>
                                                 <Switch
@@ -274,9 +280,9 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                                     <div className="space-y-2">
                                         <div className="flex items-start justify-between gap-4">
                                             <div className="space-y-0.5">
-                                                <p className="text-sm font-medium">Faceclaims</p>
+                                                <p className="text-sm font-medium">{tCatalogue("faceclaims")}</p>
                                                 <p className="text-xs text-muted-foreground leading-snug">
-                                                    Permet aux personas d&apos;indiquer l&apos;acteur ou le personnage sur lequel leur avatar est basé, et affiche un annuaire dans le Catalogue.
+                                                    {tSettings("faceclaimsHelp")}
                                                 </p>
                                             </div>
                                             <Switch
@@ -286,6 +292,22 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                                                 className="shrink-0 mt-0.5"
                                             />
                                         </div>
+                                        {enableFaceclaims && (
+                                            <div className="ml-4 flex items-start justify-between gap-4 rounded-xl border border-border-soft bg-muted/20 p-3">
+                                                <div className="space-y-0.5">
+                                                    <p className="text-sm font-medium">{tSettings("requireFaceclaim")}</p>
+                                                    <p className="text-xs text-muted-foreground leading-snug">
+                                                        {tSettings("requireFaceclaimHelp")}
+                                                    </p>
+                                                </div>
+                                                <Switch
+                                                    checked={requireFaceclaim}
+                                                    disabled={togglingRequireFaceclaim}
+                                                    onCheckedChange={v => void handleRequireFaceclaimToggle(v)}
+                                                    className="shrink-0 mt-0.5"
+                                                />
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
 
@@ -310,7 +332,7 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
 
                                 {/* -- Wiki ---------------------------------- */}
                                 <div className="space-y-3 pt-2">
-                                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Wiki</p>
+                                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{tSettings("wiki")}</p>
                                     <div className="flex items-start justify-between gap-4">
                                         <div className="space-y-0.5">
                                             <p className="text-sm font-medium">{t("enableWiki")}</p>
@@ -332,12 +354,12 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                                             <FormItem>
                                                 <FormLabel>
                                                     <LabelWithHelp help={t("wikiLabelHelp")}>
-                                                        Nom du lien
+                                                        {tSettings("wikiLinkName")}
                                                     </LabelWithHelp>
                                                 </FormLabel>
                                                 <FormControl>
                                                     <Input
-                                                        placeholder="Annexes"
+                                                        placeholder={t("nav.wiki")}
                                                         {...field}
                                                         onBlur={(e) => {
                                                             field.onBlur();
@@ -363,13 +385,13 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                                 {/* -- Timeline -------------------------------- */}
                                 {world_timeline && (
                                     <div className="space-y-5 pt-2">
-                                        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Chronologie</p>
+                                        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("nav.timeline")}</p>
 
                                         <div className="flex items-start justify-between gap-4">
                                             <div className="space-y-0.5">
                                                 <p className="text-sm font-medium">{t("enableTimeline")}</p>
                                                 <p className="text-xs text-muted-foreground leading-snug">
-                                                    Permet de situer chaque conversation dans un calendrier fictif.
+                                                    {tSettings("timelineHelp")}
                                                 </p>
                                             </div>
                                             <Switch
@@ -381,176 +403,11 @@ export function WorldFeaturesTab({ world, form, persistField, onUpdated }: Propr
                                         </div>
 
                                         {timelineEnabled && (
-                                            <div className="space-y-4 rounded-xl border border-border-soft bg-muted/20 p-4">
-                                                {/* Année courante */}
-                                                <div className="grid grid-cols-2 gap-3">
-                                                    <div className="space-y-1.5">
-                                                        <p className="text-xs font-medium text-muted-foreground">{t("yearLabel")}</p>
-                                                        <Input
-                                                            value={timelineConfig.year_label}
-                                                            placeholder="an"
-                                                            className="h-8 text-sm"
-                                                            onChange={e => setTimelineConfig(c => ({ ...c, year_label: e.target.value }))}
-                                                            onBlur={e => void persistTimelineConfig({ year_label: e.target.value || "an" })}
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-1.5">
-                                                        <p className="text-xs font-medium text-muted-foreground">{t("eraSuffix")}</p>
-                                                        <Input
-                                                            value={timelineConfig.era_name ?? ""}
-                                                            placeholder={t("eraPlaceholder")}
-                                                            className="h-8 text-sm"
-                                                            onChange={e => setTimelineConfig(c => ({ ...c, era_name: e.target.value || null }))}
-                                                            onBlur={e => void persistTimelineConfig({ era_name: e.target.value || null })}
-                                                        />
-                                                    </div>
-                                                </div>
-
-                                                {/* Année / mois courant */}
-                                                <div className="grid grid-cols-2 gap-3">
-                                                    <div className="space-y-1.5">
-                                                        <p className="text-xs font-medium text-muted-foreground">{t("currentYear")}</p>
-                                                        <Input
-                                                            type="number"
-                                                            value={timelineConfig.current_year}
-                                                            min={-99999}
-                                                            max={99999}
-                                                            className="h-8 text-sm"
-                                                            onChange={e => setTimelineConfig(c => ({ ...c, current_year: Number(e.target.value) || 1 }))}
-                                                            onBlur={e => void persistTimelineConfig({ current_year: Number(e.target.value) || 1 })}
-                                                        />
-                                                    </div>
-                                                    {timelineConfig.month_names.length > 0 && (
-                                                        <div className="space-y-1.5">
-                                                            <p className="text-xs font-medium text-muted-foreground">Mois actuel</p>
-                                                            <select
-                                                                value={timelineConfig.current_month ?? ""}
-                                                                className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm"
-                                                                onChange={e => {
-                                                                    const v = e.target.value === "" ? null : Number(e.target.value);
-                                                                    void persistTimelineConfig({ current_month: v });
-                                                                }}
-                                                            >
-                                                                <option value="">—</option>
-                                                                {timelineConfig.month_names.map((m, i) => (
-                                                                    <option key={i} value={i}>{m}</option>
-                                                                ))}
-                                                            </select>
-                                                        </div>
-                                                    )}
-                                                </div>
-
-                                                {/* Liste des mois — chacun avec son propre nombre de jours (borne le
-                                                    calendrier du widget « Raccourcis chronologie » de la page
-                                                    d'accueil, voir WorldTimelineShortcutsWidget.tsx). Les deux tableaux
-                                                    (`month_names`/`days_per_month`) restent parallèles : tout ajout,
-                                                    retrait ou préréglage touche les deux à la fois. */}
-                                                <div className="space-y-2">
-                                                    <div className="flex items-center justify-between">
-                                                        <p className="text-xs font-medium text-muted-foreground">{t("calendarMonths")}</p>
-                                                        {timelineConfig.month_names.length === 0 && (
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => void persistTimelineConfig({ month_names: REAL_MONTH_NAMES, days_per_month: REAL_DAYS_PER_MONTH })}
-                                                                className="text-[11px] text-primary hover:underline"
-                                                            >
-                                                                Utiliser les mois réels
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                    {timelineConfig.month_names.length > 0 && (
-                                                        <div className="space-y-1">
-                                                            {timelineConfig.month_names.map((m, i) => (
-                                                                <div key={i} className="flex items-center gap-2">
-                                                                    <span className="w-4 shrink-0 text-right text-xs text-muted-foreground">{i + 1}.</span>
-                                                                    <Input
-                                                                        value={m}
-                                                                        className="h-7 flex-1 text-sm"
-                                                                        onChange={e => {
-                                                                            const next = [...timelineConfig.month_names];
-                                                                            next[i] = e.target.value;
-                                                                            setTimelineConfig(c => ({ ...c, month_names: next }));
-                                                                        }}
-                                                                        onBlur={e => {
-                                                                            const next = [...timelineConfig.month_names];
-                                                                            next[i] = e.target.value;
-                                                                            void persistTimelineConfig({ month_names: next });
-                                                                        }}
-                                                                    />
-                                                                    <Input
-                                                                        type="number"
-                                                                        aria-label={`Jours en ${m || `mois ${i + 1}`}`}
-                                                                        value={timelineConfig.days_per_month?.[i] ?? DEFAULT_DAYS_PER_MONTH}
-                                                                        min={1}
-                                                                        max={999}
-                                                                        title={t("daysCount")}
-                                                                        className="h-7 w-16 shrink-0 text-sm"
-                                                                        onChange={e => {
-                                                                            const next = [...(timelineConfig.days_per_month ?? [])];
-                                                                            next[i] = clampDaysPerMonth(Number(e.target.value));
-                                                                            setTimelineConfig(c => ({ ...c, days_per_month: next }));
-                                                                        }}
-                                                                        onBlur={e => {
-                                                                            const next = [...(timelineConfig.days_per_month ?? [])];
-                                                                            next[i] = clampDaysPerMonth(Number(e.target.value));
-                                                                            void persistTimelineConfig({ days_per_month: next });
-                                                                        }}
-                                                                    />
-                                                                    <button
-                                                                      aria-label={tCommon("delete")}
-                                                                        type="button"
-                                                                        onClick={() => {
-                                                                            const next = timelineConfig.month_names.filter((_, j) => j !== i);
-                                                                            const nextDays = (timelineConfig.days_per_month ?? []).filter((_, j) => j !== i);
-                                                                            const currentMonth = timelineConfig.current_month;
-                                                                            void persistTimelineConfig({
-                                                                                month_names: next,
-                                                                                days_per_month: nextDays,
-                                                                                current_month: currentMonth !== null && currentMonth >= next.length ? null : currentMonth,
-                                                                            });
-                                                                        }}
-                                                                        className="shrink-0 text-muted-foreground hover:text-destructive transition-colors"
-                                                                    >
-                                                                        <Trash2 className="h-3.5 w-3.5" />
-                                                                    </button>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                    <div className="flex gap-2">
-                                                        <Input
-                                                            value={newMonthName}
-                                                            placeholder={t("monthNamePlaceholder")}
-                                                            className="h-8 text-sm"
-                                                            onChange={e => setNewMonthName(e.target.value)}
-                                                            onKeyDown={e => {
-                                                                if (e.key === "Enter" && newMonthName.trim()) {
-                                                                    e.preventDefault();
-                                                                    const next = [...timelineConfig.month_names, newMonthName.trim()];
-                                                                    const nextDays = [...(timelineConfig.days_per_month ?? []), DEFAULT_DAYS_PER_MONTH];
-                                                                    void persistTimelineConfig({ month_names: next, days_per_month: nextDays });
-                                                                    setNewMonthName("");
-                                                                }
-                                                            }}
-                                                        />
-                                                        <Button
-                                                            type="button"
-                                                            variant="secondary"
-                                                            size="sm"
-                                                            disabled={!newMonthName.trim()}
-                                                            aria-label={t("addMonthName")}
-                                                            onClick={() => {
-                                                                const next = [...timelineConfig.month_names, newMonthName.trim()];
-                                                                const nextDays = [...(timelineConfig.days_per_month ?? []), DEFAULT_DAYS_PER_MONTH];
-                                                                void persistTimelineConfig({ month_names: next, days_per_month: nextDays });
-                                                                setNewMonthName("");
-                                                            }}
-                                                        >
-                                                            <Plus className="h-3.5 w-3.5" />
-                                                        </Button>
-                                                    </div>
-                                                </div>
-                                            </div>
+                                            <TimelineSettings
+                                                config={timelineConfig}
+                                                onDraft={(patch) => setTimelineConfig((c) => ({ ...c, ...patch }))}
+                                                onPersist={(patch) => void persistTimelineConfig(patch)}
+                                            />
                                         )}
                                     </div>
                                 )}
