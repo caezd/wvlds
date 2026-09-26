@@ -203,6 +203,88 @@ export function buildTimelineSections(items: TimelineItem[], keepYear: number | 
   return sections;
 }
 
+// ── Pagination de l'affichage ────────────────────────────────
+
+/**
+ * La frise ne rend qu'une fenêtre de ses dates, étendue au défilement (vers
+ * le haut comme vers le bas : elle s'ouvre sur l'année actuelle). Les filtres,
+ * la recherche, les rangs d'arc et les suites portent toujours sur toute la
+ * frise ; seul l'affichage est paginé.
+ *
+ * Une « ligne » de la fenêtre est une date (un groupe) ; une année sans date
+ * (l'année actuelle, gardée vide pour son repère) compte pour une ligne, pour
+ * rester atteignable.
+ */
+export const TIMELINE_PAGE = 60;
+
+export type TimelineWindow = { start: number; end: number };
+
+/** Le nombre de lignes de la frise. */
+export function timelineRowCount(sections: readonly TimelineYearSection[]): number {
+  return sections.reduce((n, s) => n + Math.max(1, s.groups.length), 0);
+}
+
+/** La première ligne d'une année ; -1 si l'année n'est pas sur la frise. */
+export function timelineRowOfYear(sections: readonly TimelineYearSection[], year: number): number {
+  let row = 0;
+  for (const s of sections) {
+    if (s.year === year) return row;
+    row += Math.max(1, s.groups.length);
+  }
+  return -1;
+}
+
+/**
+ * La fenêtre d'ouverture : autour de l'année donnée (quelques lignes avant
+ * elle, pour pouvoir remonter un peu, puis une page), ou depuis le début si
+ * elle n'est pas sur la frise.
+ */
+export function initialTimelineWindow(
+  sections: readonly TimelineYearSection[],
+  year: number,
+  page = TIMELINE_PAGE,
+): TimelineWindow {
+  const total = timelineRowCount(sections);
+  const row = timelineRowOfYear(sections, year);
+  const start = row < 0 ? 0 : Math.max(0, row - Math.floor(page / 6));
+  return { start, end: Math.min(total, start + page) };
+}
+
+/**
+ * Les sections restreintes à la fenêtre : une année à cheval garde ses dates
+ * de la fenêtre seulement ; une année sans date y figure si sa ligne y est.
+ */
+export function sliceTimelineSections(
+  sections: readonly TimelineYearSection[],
+  window: TimelineWindow,
+): TimelineYearSection[] {
+  const out: TimelineYearSection[] = [];
+  let row = 0;
+  for (const s of sections) {
+    const rows = Math.max(1, s.groups.length);
+    const from = Math.max(window.start, row);
+    const to = Math.min(window.end, row + rows);
+    if (from < to) {
+      out.push(s.groups.length === 0 ? s : { year: s.year, groups: s.groups.slice(from - row, to - row) });
+    }
+    row += rows;
+  }
+  return out;
+}
+
+/** La ligne de chaque élément de la frise (pour savoir s'il est dans la fenêtre). */
+export function timelineRowsById(sections: readonly TimelineYearSection[]): Map<string, number> {
+  const rows = new Map<string, number>();
+  let row = 0;
+  for (const s of sections) {
+    s.groups.forEach((g, i) => {
+      for (const item of g.items) rows.set(item.id, row + i);
+    });
+    row += Math.max(1, s.groups.length);
+  }
+  return rows;
+}
+
 // ── Filtres et recherche ─────────────────────────────────────
 
 export type TimelineFilters = {

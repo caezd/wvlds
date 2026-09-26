@@ -688,7 +688,8 @@
       "holidayLabel": "Holiday",
       "eventLasts": "Lasts over time",
       "eventEndDate": "End",
-      "eventEndBeforeStart": "The end must come after the start."
+      "eventEndBeforeStart": "The end must come after the start.",
+      "loading": "Loading the timeline…"
     },
     "tabSettings": "Settings",
     "tabCategories": "Categories",

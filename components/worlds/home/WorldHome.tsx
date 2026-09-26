@@ -236,7 +236,6 @@ export function WorldHome({
         ) : showTimeline && hasTimeline ? (
           <WorldTimeline
             worldId={worldId}
-            rooms={initialRooms.map(r => ({ ...r, timeline_date: r.timeline_date ?? null }))}
             config={world.timeline_config as WorldTimelineConfig}
             canManage={can("timeline.manage")}
             canManageLinks={can("chatrooms.manage") || can("timeline.manage")}

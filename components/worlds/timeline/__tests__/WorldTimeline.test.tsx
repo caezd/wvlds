@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { WorldTimelineConfig } from "@/types/worlds";
 
@@ -13,6 +13,8 @@ const db = vi.hoisted(() => ({
   tables: {} as Record<string, unknown[]>,
   rpcs: {} as Record<string, { data: unknown; error: unknown }>,
   writes: [] as { table: string; op: string; payload?: unknown }[],
+  /** Les salons datés du monde (ceux que `frise` monte). */
+  rooms: [] as { id: string; title: string | null; name: string | null; timeline_date: unknown }[],
 }));
 const rpc = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/supabase/client", () => {
@@ -36,12 +38,60 @@ function suite(from: string, to: string, status: "accepted" | "pending" = "accep
 function ouvreurs(rows: OpenerRow[]) {
   db.rpcs.get_chatroom_openers = { data: rows, error: null };
 }
+/**
+ * La réponse de `get_world_timeline` (migration 198), composée des mêmes
+ * données de test que les anciennes requêtes séparées : les salons montés,
+ * leurs liens (table chatrooms), qui les a ouverts, leurs personas, les
+ * événements, arcs, catégories, suites, salons où l'on joue et journaux.
+ */
+type Row = Record<string, unknown>;
+function timelinePayload(args: { p_with_journals?: boolean }) {
+  const rows = (name: string) => ((db.rpcs[name]?.data ?? []) as Row[]);
+  const meta = new Map(((db.tables.chatrooms ?? []) as Row[]).map((r) => [r.id as string, r]));
+  const openers = new Map(rows("get_chatroom_openers").map((r) => [r.chat_id as string, r]));
+  const personaRows = rows("get_chatroom_personas");
+  const personas = new Map(personaRows.map((r) => [r.persona_id as string, { id: r.persona_id, name: r.persona_name, color: r.group_color }]));
+  return {
+    rooms: db.rooms.filter((r) => r.timeline_date).map((r) => {
+      const m = meta.get(r.id) ?? {};
+      const summary = m.summary as { last_message_at: string | null } | null | undefined;
+      const o = openers.get(r.id);
+      return {
+        id: r.id, title: r.title, name: r.name, timeline_date: r.timeline_date,
+        arc_id: m.arc_id ?? null, category_id: m.category_id ?? null, status: m.status ?? "active",
+        last_activity: summary?.last_message_at ?? m.created_at ?? null,
+        opener_name: o?.author_name ?? null, opener_persona: o?.persona_name ?? null, opener_color: o?.group_color ?? null,
+        persona_ids: personaRows.filter((p) => p.chat_id === r.id).map((p) => p.persona_id),
+      };
+    }),
+    personas: [...personas.values()],
+    events: ((db.tables.world_timeline_events ?? []) as Row[]).map((e) => ({ end_date: null, ...e })),
+    arcs: db.tables.world_timeline_arcs ?? [],
+    categories: db.tables.chatroom_categories ?? [],
+    sequels: ((db.tables.chatroom_sequels ?? []) as Row[]).map((q) => ({
+      id: q.id, chatroom_id: q.chatroom_id, previous_id: q.previous_id, status: q.status,
+      created_by_name: (q.creator as { username: string | null } | null)?.username ?? null,
+    })),
+    mine: rows("get_linkable_chatrooms").filter((r) => r.mine).map((r) => r.id),
+    journals: args.p_with_journals
+      ? ((db.tables.persona_journal_entries ?? []) as Row[]).map((j) => ({
+        id: j.id, persona_id: j.persona_id, persona_name: (j.persona as { name: string } | null)?.name ?? null,
+        body: j.body, timeline_date: j.timeline_date,
+      }))
+      : [],
+  };
+}
+
 beforeEach(() => {
   db.tables = {};
   db.rpcs = {};
   db.writes = [];
+  db.rooms = [];
   rpc.mockReset();
-  rpc.mockImplementation((name: string) => Promise.resolve(db.rpcs[name] ?? { data: [], error: null }));
+  rpc.mockImplementation((name: string, args: { p_with_journals?: boolean }) =>
+    name === "get_world_timeline"
+      ? Promise.resolve({ data: timelinePayload(args ?? {}), error: null })
+      : Promise.resolve(db.rpcs[name] ?? { data: [], error: null }));
 });
 
 import { WorldTimeline } from "@/components/worlds/timeline/WorldTimeline";
@@ -54,13 +104,18 @@ const CONFIG: WorldTimelineConfig = {
   current_month: 1,
 };
 
-type Room = React.ComponentProps<typeof WorldTimeline>["rooms"][number];
+type Room = (typeof db.rooms)[number];
 const room = (id: string, title: string | null, year: number, month: number | null, day: number | null): Room => ({
-  id, title, name: null, icon_url: null, timeline_date: { year, month, day },
+  id, title, name: null, timeline_date: { year, month, day },
 });
 
-function frise(rooms: Room[], config = CONFIG) {
-  return render(<WorldTimeline worldId="w1" rooms={rooms} config={config} />);
+/** Monte la frise sur ces salons, et attend sa première réponse (le squelette
+ *  tient la place d'ici là). */
+async function frise(rooms: Room[], config = CONFIG, props: Partial<React.ComponentProps<typeof WorldTimeline>> = {}) {
+  db.rooms = rooms;
+  const rendu = render(<WorldTimeline worldId="w1" config={config} {...props} />);
+  await vi.waitFor(() => expect(screen.queryByTestId("timeline-loading")).toBeNull());
+  return rendu;
 }
 
 const annees = () => screen.getAllByRole("heading", { level: 3 });
@@ -68,20 +123,20 @@ const annees = () => screen.getAllByRole("heading", { level: 3 });
 const bandeaux = () => screen.getAllByTestId("timeline-year-band");
 
 describe("WorldTimeline — frise verticale", () => {
-  it("affiche « Chronologie » dans l'en-tête, sans bouton « Fermer »", () => {
-    frise([]);
+  it("affiche « Chronologie » dans l'en-tête, sans bouton « Fermer »", async () => {
+    await frise([]);
     expect(screen.getByText("Chronologie")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Fermer" })).toBeNull();
   });
 
-  it("affiche un message quand aucune conversation n'est encore située", () => {
-    frise([]);
+  it("affiche un message quand aucune conversation n'est encore située", async () => {
+    await frise([]);
     expect(screen.getByText(/Aucune conversation/)).toBeInTheDocument();
     expect(screen.queryByTestId("timeline-now")).toBeNull();
   });
 
-  it("une section par année, dans l'ordre, les salons triés par mois puis jour", () => {
-    frise([room("c", "Retour", 3, 0, 4), room("b", "Suite", 1, 2, 2), room("a", "Prologue", 1, 0, 9)]);
+  it("une section par année, dans l'ordre, les salons triés par mois puis jour", async () => {
+    await frise([room("c", "Retour", 3, 0, 4), room("b", "Suite", 1, 2, 2), room("a", "Prologue", 1, 0, 9)]);
 
     expect(annees().map((h) => h.textContent)).toEqual(["An 1", "An 3"]);
     const an1 = annees()[0].closest("li")!;
@@ -89,8 +144,8 @@ describe("WorldTimeline — frise verticale", () => {
     expect(titres).toEqual(["Prologue, 9 Janvier, An 1", "Suite, 2 Mars, An 1"]);
   });
 
-  it("un anneau par salon sur le fil, le jour à gauche du fil, sans le mois", () => {
-    frise([room("a", "Prologue", 1, 1, 19), room("b", "Une année entière", 3, null, null)]);
+  it("un anneau par salon sur le fil, le jour à gauche du fil, sans le mois", async () => {
+    await frise([room("a", "Prologue", 1, 1, 19), room("b", "Une année entière", 3, null, null)]);
     const salon = screen.getByRole("button", { name: /Prologue/ }).closest("li")!;
     const jour = within(salon).getByTestId("timeline-day");
     expect(jour.textContent).toBe("19");
@@ -109,8 +164,8 @@ describe("WorldTimeline — frise verticale", () => {
     expect(within(annee).getByTestId("timeline-ring")).toBeInTheDocument();
   });
 
-  it("les salons d'une même date : chacun son anneau, le jour une seule fois", () => {
-    frise([
+  it("les salons d'une même date : chacun son anneau, le jour une seule fois", async () => {
+    await frise([
       room("a", "Le messager", 2, 0, 9),
       room("b", "Deux lettres", 2, 0, 9),
       room("c", "L'héritière", 2, 0, 9),
@@ -138,8 +193,8 @@ describe("WorldTimeline — frise verticale", () => {
     expect(screen.queryByTestId("timeline-branch")).toBeNull();
   });
 
-  it("l'année, un bandeau sur toute la largeur : le chiffre en gras, sans pastille ni rouge", () => {
-    frise([room("a", "Prologue", 1, 0, 1)], { ...CONFIG, era_name: "des Cendres" });
+  it("l'année, un bandeau sur toute la largeur : le chiffre en gras, sans pastille ni rouge", async () => {
+    await frise([room("a", "Prologue", 1, 0, 1)], { ...CONFIG, era_name: "des Cendres" });
     const titre = annees()[0];
     expect(titre.textContent).toBe("An 1 des Cendres");
     const bandeau = bandeaux()[0];
@@ -160,7 +215,7 @@ describe("WorldTimeline — frise verticale", () => {
 
   it("le bandeau de l'année se colle sous la tête au défilement, sous les lignes de suite, sans le fil", async () => {
     db.tables.chatroom_sequels = [suite("a", "b")];
-    frise([room("a", "Prologue", 1, 0, 1), room("b", "Suite", 1, 0, 2)]);
+    await frise([room("a", "Prologue", 1, 0, 1), room("b", "Suite", 1, 0, 2)]);
     const bandeau = bandeaux()[0];
     // Sous la tête collée, dont la hauteur est mesurée dans `--tl-head`.
     expect(bandeau.className.split(" ")).toEqual(expect.arrayContaining(["sticky", "top-[var(--tl-head,0px)]"]));
@@ -176,8 +231,8 @@ describe("WorldTimeline — frise verticale", () => {
     expect(screen.getByTestId("timeline-scroll").style.getPropertyValue("--tl-head")).toMatch(/^\d+px$/);
   });
 
-  it("collé, le bandeau prend le fond de la page et couvre les lignes ; revenu au repos, il redevient transparent", () => {
-    frise([room("a", "Prologue", 1, 0, 1), room("b", "Plus tard", 2, 0, 1)]);
+  it("collé, le bandeau prend le fond de la page et couvre les lignes ; revenu au repos, il redevient transparent", async () => {
+    await frise([room("a", "Prologue", 1, 0, 1), room("b", "Plus tard", 2, 0, 1)]);
     const scroll = screen.getByTestId("timeline-scroll");
     const [an1, an2] = bandeaux();
     const section1 = an1.closest("[data-year]") as HTMLElement;
@@ -202,8 +257,8 @@ describe("WorldTimeline — frise verticale", () => {
     expect(an1.className.split(" ")).toContain("z-[1]");
   });
 
-  it("le premier mois de l'année, sous le bandeau, calé sur le jour", () => {
-    frise([room("a", "Prologue", 1, 0, 3), room("b", "Sans mois", 2, null, null)]);
+  it("le premier mois de l'année, sous le bandeau, calé sur le jour", async () => {
+    await frise([room("a", "Prologue", 1, 0, 3), room("b", "Sans mois", 2, null, null)]);
     const [an1, an2] = annees().map((h) => h.closest("[data-year]") as HTMLElement);
     const mois = within(an1).getByTestId("timeline-first-month");
     expect(mois).toHaveTextContent("Janvier");
@@ -217,16 +272,16 @@ describe("WorldTimeline — frise verticale", () => {
     expect(within(an2).queryByTestId("timeline-first-month")).toBeNull();
   });
 
-  it("des bandeaux bordés dessus et dessous de la couleur des bordures, sans trait au-dessus du tout premier", () => {
-    frise([room("a", "Avant", 0, 0, 1), room("b", "Après", 1, 0, 1)]);
+  it("des bandeaux bordés dessus et dessous de la couleur des bordures, sans trait au-dessus du tout premier", async () => {
+    await frise([room("a", "Avant", 0, 0, 1), room("b", "Après", 1, 0, 1)]);
     for (const bandeau of bandeaux()) {
       const classes = bandeau.className.split(" ");
       expect(classes).toEqual(expect.arrayContaining(["border-y", "border-border", "[li:first-child>&]:border-t-0"]));
     }
   });
 
-  it("un filet sépare chaque mois d'une année, pas les salons d'un même mois", () => {
-    frise([
+  it("un filet sépare chaque mois d'une année, pas les salons d'un même mois", async () => {
+    await frise([
       room("a", "Six janvier", 1, 0, 6),
       room("b", "Neuf janvier", 1, 0, 9),
       room("c", "Trois mars", 1, 2, 3),
@@ -264,14 +319,14 @@ describe("WorldTimeline — frise verticale", () => {
     expect(ligne("Autre année")).not.toHaveAttribute("data-new-month");
   });
 
-  it("le jour et le mois de chaque salon, sans couleur d'accent", () => {
-    frise([room("a", "Prologue", 1, 1, 19)]);
+  it("le jour et le mois de chaque salon, sans couleur d'accent", async () => {
+    await frise([room("a", "Prologue", 1, 1, 19)]);
     const ligne = screen.getByRole("button", { name: /Prologue/ });
     expect(ligne.innerHTML).not.toMatch(/accent|red-600/);
   });
 
-  it("la date actuelle du monde se glisse parmi les salons, à son mois", () => {
-    frise([room("a", "Janvier", 1, 0, 3), room("b", "Mars", 1, 2, 3)]);
+  it("la date actuelle du monde se glisse parmi les salons, à son mois", async () => {
+    await frise([room("a", "Janvier", 1, 0, 3), room("b", "Mars", 1, 2, 3)]);
     const an1 = annees()[0].closest("li")!;
     // Les entrées du fil : les dates et le trait, dans l'ordre.
     const lignes = [...an1.querySelector("ul")!.children] as HTMLElement[];
@@ -292,15 +347,15 @@ describe("WorldTimeline — frise verticale", () => {
     expect(barre.className).not.toMatch(/rem\]/);
   });
 
-  it("l'année actuelle a sa section même sans salon, pour porter son repère", () => {
-    frise([room("a", "Jadis", 0, 0, 1)], { ...CONFIG, current_year: 4 });
+  it("l'année actuelle a sa section même sans salon, pour porter son repère", async () => {
+    await frise([room("a", "Jadis", 0, 0, 1)], { ...CONFIG, current_year: 4 });
     expect(annees().map((h) => h.textContent)).toEqual(["An 0", "An 4"]);
     expect(screen.getByTestId("timeline-now")).toBeInTheDocument();
   });
 
   it("au-delà de cinq ans, des pastilles mènent à chaque tranche", async () => {
     const user = userEvent.setup();
-    frise([room("a", "Début", 1, 0, 1), room("b", "Fin", 12, 0, 1)], { ...CONFIG, current_year: 12 });
+    await frise([room("a", "Début", 1, 0, 1), room("b", "Fin", 12, 0, 1)], { ...CONFIG, current_year: 12 });
 
     const nav = screen.getByRole("navigation", { name: "Périodes de la chronologie" });
     const pastilles = within(nav).getAllByRole("button");
@@ -313,22 +368,22 @@ describe("WorldTimeline — frise verticale", () => {
     expect(pastilles[1]).not.toHaveAttribute("aria-current");
   });
 
-  it("sur cinq ans ou moins, pas de pastilles", () => {
-    frise([room("a", "Début", 1, 0, 1), room("b", "Fin", 3, 0, 1)]);
+  it("sur cinq ans ou moins, pas de pastilles", async () => {
+    await frise([room("a", "Début", 1, 0, 1), room("b", "Fin", 3, 0, 1)]);
     expect(screen.queryByRole("navigation")).toBeNull();
   });
 
   it("ouvrir un salon depuis la frise", async () => {
     const user = userEvent.setup();
-    frise([room("a", "Prologue", 1, 0, 1)]);
+    await frise([room("a", "Prologue", 1, 0, 1)]);
     await user.click(screen.getByRole("button", { name: /Prologue/ }));
     expect(push).toHaveBeenCalledWith("/c/a");
   });
 });
 
 describe("WorldTimeline — lignes de salon", () => {
-  it("survol discret, et un libellé par défaut sans titre", () => {
-    frise([room("a", "Prologue", 1, 1, 19), room("b", null, 1, 1, null)]);
+  it("survol discret, et un libellé par défaut sans titre", async () => {
+    await frise([room("a", "Prologue", 1, 1, 19), room("b", null, 1, 1, null)]);
 
     const ligne = screen.getByRole("button", { name: /Prologue/ });
     // Une ligne basse, sans carte bordée ni fond au survol.
@@ -350,12 +405,14 @@ describe("WorldTimeline — lignes de salon", () => {
 describe("WorldTimeline — qui a ouvert le salon", () => {
   it("« par Persona (@pseudo) » : le persona dans la couleur de son groupe, le pseudo neutre", async () => {
     ouvreurs([{ chat_id: "a", author_name: "Poumon", persona_name: "Tess", group_color: "#ef4444" }]);
-    frise([room("a", "Prologue", 1, 0, 6)]);
+    await frise([room("a", "Prologue", 1, 0, 6)]);
 
     const par = await screen.findByTestId("timeline-opener");
     expect(par.textContent).toBe("par Tess (@Poumon)");
     expect(within(par).getByText("Tess")).toHaveStyle({ color: "#ef4444" });
-    expect(rpc).toHaveBeenCalledWith("get_chatroom_openers", { p_world_id: "w1" });
+    // Tout vient d'une seule requête, sans journaux quand le monde les cache.
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(rpc).toHaveBeenCalledWith("get_world_timeline", { p_world_id: "w1", p_with_journals: false });
     // Lu en entier par les lecteurs d'écran.
     expect(screen.getByRole("button", { name: "Prologue, par Tess (@Poumon), 6 Janvier, An 1" })).toBeInTheDocument();
   });
@@ -365,7 +422,7 @@ describe("WorldTimeline — qui a ouvert le salon", () => {
       { chat_id: "a", author_name: "Proprio", persona_name: null, group_color: null },
       { chat_id: "b", author_name: "Poumon", persona_name: "Isolé", group_color: null },
     ]);
-    frise([room("a", "Prologue", 1, 0, 6), room("b", "Suite", 1, 0, 7)]);
+    await frise([room("a", "Prologue", 1, 0, 6), room("b", "Suite", 1, 0, 7)]);
 
     const [vide, sansGroupe] = await screen.findAllByTestId("timeline-opener");
     expect(vide.textContent).toBe("par @Proprio");
@@ -377,7 +434,7 @@ describe("WorldTimeline — qui a ouvert le salon", () => {
   it("une erreur de chargement laisse la frise intacte, sans « par … »", async () => {
     const erreur = vi.spyOn(console, "error").mockImplementation(() => {});
     db.rpcs.get_chatroom_openers = { data: null, error: { message: "boom" } };
-    frise([room("a", "Prologue", 1, 0, 6)]);
+    await frise([room("a", "Prologue", 1, 0, 6)]);
 
     await vi.waitFor(() => expect(erreur).toHaveBeenCalled());
     expect(screen.getByRole("button", { name: /Prologue/ })).toBeInTheDocument();
@@ -396,8 +453,8 @@ describe("WorldTimeline — fond ambiant", () => {
     expect(classes).not.toContain("bg-background");
   };
 
-  it("anneaux, nom du mois et barre des périodes suivent le fond de la page", () => {
-    frise([room("a", "Début", 1, 0, 1), room("b", "Mars", 1, 2, 1), room("c", "Fin", 12, 0, 1)], { ...CONFIG, current_year: 12 });
+  it("anneaux, nom du mois et barre des périodes suivent le fond de la page", async () => {
+    await frise([room("a", "Début", 1, 0, 1), room("b", "Mars", 1, 2, 1), room("c", "Fin", 12, 0, 1)], { ...CONFIG, current_year: 12 });
     for (const anneau of screen.getAllByTestId("timeline-ring")) ambiant(anneau);
     ambiant(screen.getByTestId("timeline-month-label"));
     const nav = screen.getByRole("navigation", { name: "Périodes de la chronologie" });
@@ -413,7 +470,7 @@ describe("WorldTimeline — événements, journaux, arcs, suites", () => {
       id: "e1", title: "Couronnement", description: "La reine est sacrée.", timeline_date: { year: 1, month: 0, day: 6 },
       wiki_page_id: "p1", wiki_page: { slug: "reine", title: "La reine" },
     }];
-    frise([room("a", "Prologue", 1, 0, 6)]);
+    await frise([room("a", "Prologue", 1, 0, 6)]);
 
     const marque = await screen.findByTestId("timeline-event-mark");
     const evenement = marque.closest("li")!;
@@ -435,7 +492,7 @@ describe("WorldTimeline — événements, journaux, arcs, suites", () => {
     db.tables.world_timeline_events = [{
       id: "e1", title: "Couronnement", description: null, timeline_date: { year: 1, month: 0, day: 6 }, wiki_page_id: null, wiki_page: null,
     }];
-    render(<WorldTimeline worldId="w1" rooms={[room("a", "Prologue", 1, 0, 6)]} config={CONFIG} canManage />);
+    await frise([room("a", "Prologue", 1, 0, 6)], CONFIG, { canManage: true });
 
     await user.click(screen.getByRole("button", { name: /^Événement$/ }));
     expect(await screen.findByRole("dialog", { name: "Nouvel événement" })).toBeInTheDocument();
@@ -449,8 +506,8 @@ describe("WorldTimeline — événements, journaux, arcs, suites", () => {
     expect(await screen.findByRole("dialog", { name: "Modifier l'événement" })).toBeInTheDocument();
   });
 
-  it("sans la permission, ni ajout d'événement ni arcs", () => {
-    frise([room("a", "Prologue", 1, 0, 6)]);
+  it("sans la permission, ni ajout d'événement ni arcs", async () => {
+    await frise([room("a", "Prologue", 1, 0, 6)]);
     expect(screen.queryByRole("button", { name: /^Événement$/ })).toBeNull();
     expect(screen.queryByRole("button", { name: /^Arcs$/ })).toBeNull();
   });
@@ -459,12 +516,12 @@ describe("WorldTimeline — événements, journaux, arcs, suites", () => {
     db.tables.persona_journal_entries = [{
       id: "j1", persona_id: "p-tess", body: "Une nuit sans lune.", timeline_date: { year: 1, month: 0, day: 6 }, persona: { name: "Tess" },
     }];
-    const { unmount } = frise([room("a", "Prologue", 1, 0, 6)]);
+    const { unmount } = await frise([room("a", "Prologue", 1, 0, 6)]);
     await screen.findByText("Prologue");
     expect(screen.queryByText("Journal de Tess")).toBeNull();
     unmount();
 
-    frise([room("a", "Prologue", 1, 0, 6)], { ...CONFIG, show_journals: true });
+    await frise([room("a", "Prologue", 1, 0, 6)], { ...CONFIG, show_journals: true });
     expect(await screen.findByText("Journal de Tess")).toBeInTheDocument();
     expect(screen.getByText("Une nuit sans lune.")).toBeInTheDocument();
   });
@@ -472,7 +529,7 @@ describe("WorldTimeline — événements, journaux, arcs, suites", () => {
   it("un arc teinte l'anneau et s'affiche après le titre", async () => {
     db.tables.world_timeline_arcs = [{ id: "arc", name: "L'exil", color: "#22c55e", position: 0 }];
     db.tables.chatrooms = [{ id: "a", arc_id: "arc", category_id: null }];
-    frise([room("a", "Exil à l'est", 1, 0, 6)]);
+    await frise([room("a", "Exil à l'est", 1, 0, 6)]);
 
     const etiquette = await screen.findByTestId("timeline-arc");
     expect(etiquette).toHaveTextContent("L'exil");
@@ -490,7 +547,7 @@ describe("WorldTimeline — événements, journaux, arcs, suites", () => {
       { id: "c", arc_id: null, category_id: null },
     ];
     db.tables.chatroom_sequels = [suite("a", "b")];
-    frise([room("a", "Le départ", 1, 0, 6), room("b", "La frontière", 2, 0, 1), room("c", "Hors arc", 2, 1, 1)]);
+    await frise([room("a", "Le départ", 1, 0, 6), room("b", "La frontière", 2, 0, 1), room("c", "Hors arc", 2, 1, 1)]);
 
     const depart = await screen.findByRole("button", { name: "Le départ, arc L'exil, n° 1, 6 Janvier, An 1" });
     expect(within(depart).getByTestId("timeline-arc-rank")).toHaveTextContent("1.");
@@ -508,7 +565,7 @@ describe("WorldTimeline — événements, journaux, arcs, suites", () => {
 
   it("une suite se relie d'une ligne quand les deux salons sont à l'écran", async () => {
     db.tables.chatroom_sequels = [suite("a", "b")];
-    frise([room("a", "La grande crue", 1, 0, 6), room("b", "Les digues cèdent", 3, 0, 1)]);
+    await frise([room("a", "La grande crue", 1, 0, 6), room("b", "Les digues cèdent", 3, 0, 1)]);
     const liens = await screen.findByTestId("timeline-suite-links");
     expect(liens.querySelector("[data-suite='a>b']")).not.toBeNull();
   });
@@ -517,7 +574,7 @@ describe("WorldTimeline — événements, journaux, arcs, suites", () => {
 describe("WorldTimeline — recherche et filtres", () => {
   it("la recherche ne garde que ce qui correspond, sans tenir compte des accents", async () => {
     const user = userEvent.setup();
-    frise([room("a", "Le siège de Vaudrel", 1, 0, 6), room("b", "La comète", 1, 2, 1)]);
+    await frise([room("a", "Le siège de Vaudrel", 1, 0, 6), room("b", "La comète", 1, 2, 1)]);
     await user.type(screen.getByRole("searchbox", { name: "Rechercher dans la chronologie" }), "siege");
     expect(screen.getByText("Le siège de Vaudrel")).toBeInTheDocument();
     expect(screen.queryByText("La comète")).toBeNull();
@@ -533,7 +590,7 @@ describe("WorldTimeline — recherche et filtres", () => {
       data: [{ chat_id: "a", persona_id: "p-tess", persona_name: "Tess" }, { chat_id: "b", persona_id: "p-ivo", persona_name: "Ivo" }],
       error: null,
     };
-    frise([room("a", "Avec Tess", 1, 0, 6), room("b", "Avec Ivo", 1, 2, 1)]);
+    await frise([room("a", "Avec Tess", 1, 0, 6), room("b", "Avec Ivo", 1, 2, 1)]);
 
     await user.click(screen.getByRole("button", { name: /Filtres/ }));
     await user.selectOptions(await screen.findByRole("combobox", { name: "Persona présent" }), "Tess");
@@ -549,7 +606,7 @@ describe("WorldTimeline — événements qui durent, fêtes, statut des salons",
       id: "e1", title: "Le siège", description: null, timeline_date: { year: 1, month: 0, day: 6 },
       end_date: { year: 2, month: 2, day: 12 }, wiki_page_id: null, wiki_page: null,
     }];
-    frise([room("a", "Prologue", 1, 0, 6)]);
+    await frise([room("a", "Prologue", 1, 0, 6)]);
     const evenement = (await screen.findByText("Le siège")).closest("[data-event-id]") as HTMLElement;
     // Pas de « Jusqu'à … » sous l'événement : la barre et la fin le disent.
     expect(evenement).not.toHaveTextContent(/Jusqu/);
@@ -575,7 +632,7 @@ describe("WorldTimeline — événements qui durent, fêtes, statut des salons",
         end_date: null, wiki_page_id: null, wiki_page: null,
       },
     ];
-    frise([
+    await frise([
       room("avant", "Avant", 1, 0, 6),
       room("pendant", "Pendant", 1, 2, 1),
       room("flou", "Un jour de l'an 2", 2, null, null),
@@ -611,7 +668,7 @@ describe("WorldTimeline — événements qui durent, fêtes, statut des salons",
       end_date: { year: 1, month: to, day: 1 }, wiki_page_id: null, wiki_page: null,
     });
     db.tables.world_timeline_events = [duree("e1", 0, 2), duree("e2", 0, 2), duree("e3", 1, 2)];
-    frise([room("a", "Prologue", 1, 0, 6)]);
+    await frise([room("a", "Prologue", 1, 0, 6)]);
     const liste = () => document.querySelector("[data-suite-style] ol") as HTMLElement;
     // Trois barres côte à côte : 2 × 6 − 2 = 10px de plus avant les titres.
     await vi.waitFor(() => expect(liste().style.getPropertyValue("--tl-graph-pad")).toBe("10px"));
@@ -623,7 +680,7 @@ describe("WorldTimeline — événements qui durent, fêtes, statut des salons",
       id: "e1", title: "Le siège", description: null, timeline_date: { year: 1, month: 0, day: 6 },
       end_date: { year: 2, month: 2, day: 12 }, wiki_page_id: null, wiki_page: null,
     }];
-    frise([room("a", "Prologue", 1, 0, 6)]);
+    await frise([room("a", "Prologue", 1, 0, 6)]);
     await screen.findByText("Fin : Le siège");
     await user.click(screen.getByRole("button", { name: /Filtres/ }));
     await user.click(await screen.findByRole("checkbox", { name: "Événements" }));
@@ -633,7 +690,7 @@ describe("WorldTimeline — événements qui durent, fêtes, statut des salons",
 
   it("les fêtes du calendrier, seulement dans les mois qui ont une entrée ; cachées d'une case", async () => {
     const user = userEvent.setup();
-    frise(
+    await frise(
       [room("a", "Prologue", 1, 1, 6), room("b", "Épilogue", 3, 1, 20), room("c", "Ailleurs", 4, 2, 1), room("d", "Sans mois", 5, null, null)],
       { ...CONFIG, holidays: [{ name: "Fête des lanternes", month: 1, day: 9 }] },
     );
@@ -651,7 +708,7 @@ describe("WorldTimeline — événements qui durent, fêtes, statut des salons",
 
   it("sans fête au calendrier, pas de case « Fêtes » dans les filtres", async () => {
     const user = userEvent.setup();
-    frise([room("a", "Prologue", 1, 0, 6)]);
+    await frise([room("a", "Prologue", 1, 0, 6)]);
     await user.click(screen.getByRole("button", { name: /Filtres/ }));
     await screen.findByRole("checkbox", { name: "Salons" });
     expect(screen.queryByRole("checkbox", { name: "Fêtes" })).toBeNull();
@@ -666,7 +723,7 @@ describe("WorldTimeline — événements qui durent, fêtes, statut des salons",
       { id: "c", arc_id: null, category_id: null, status: "completed", created_at: vieux, summary: null },
       { id: "d", arc_id: null, category_id: null, status: "abandoned", created_at: vieux, summary: null },
     ];
-    frise([room("a", "Vivant", 1, 0, 1), room("b", "Endormi", 1, 0, 2), room("c", "Clos", 1, 0, 3), room("d", "Laissé", 1, 0, 4)]);
+    await frise([room("a", "Vivant", 1, 0, 1), room("b", "Endormi", 1, 0, 2), room("c", "Clos", 1, 0, 3), room("d", "Laissé", 1, 0, 4)]);
     const ligne = (id: string) => document.querySelector(`[data-room-id='${id}']`) as HTMLElement;
     await vi.waitFor(() => expect(ligne("b")).toHaveAttribute("data-status", "dormant"));
     expect(ligne("a")).toHaveAttribute("data-status", "active");
@@ -690,7 +747,7 @@ describe("WorldTimeline — événements qui durent, fêtes, statut des salons",
   it("le délai du monde règle la mise en sommeil ; 0 : jamais", async () => {
     const vieux = new Date(Date.now() - 90 * 86_400_000).toISOString();
     db.tables.chatrooms = [{ id: "b", arc_id: null, category_id: null, status: "active", created_at: vieux, summary: { last_message_at: vieux } }];
-    frise([room("b", "Endormi", 1, 0, 2)], { ...CONFIG, dormant_days: 0 });
+    await frise([room("b", "Endormi", 1, 0, 2)], { ...CONFIG, dormant_days: 0 });
     await screen.findByText("Endormi");
     await vi.waitFor(() => expect(document.querySelector("[data-room-id='b']")).toHaveAttribute("data-status", "active"));
   });
@@ -701,7 +758,7 @@ describe("WorldTimeline — événements qui durent, fêtes, statut des salons",
       { id: "a", arc_id: null, category_id: null, status: "completed", created_at: null, summary: null },
       { id: "b", arc_id: null, category_id: null, status: "active", created_at: null, summary: null },
     ];
-    frise([room("a", "Clos", 1, 0, 1), room("b", "Vivant", 1, 0, 2)]);
+    await frise([room("a", "Clos", 1, 0, 1), room("b", "Vivant", 1, 0, 2)]);
     await vi.waitFor(() => expect(document.querySelector("[data-room-id='a']")).toHaveAttribute("data-status", "completed"));
     await user.click(screen.getByRole("button", { name: /Filtres/ }));
     await user.selectOptions(await screen.findByRole("combobox", { name: "Statut" }), "Terminé");
@@ -710,9 +767,93 @@ describe("WorldTimeline — événements qui durent, fêtes, statut des salons",
   });
 });
 
+describe("WorldTimeline — chargement et pagination", () => {
+  // Un observateur d'intersection pilotable : jsdom n'en a pas de vrai.
+  let observed: Element[] = [];
+  let signal: ((entries: { target: Element; isIntersecting: boolean }[]) => void) | null = null;
+  beforeEach(() => {
+    observed = [];
+    signal = null;
+    vi.stubGlobal("IntersectionObserver", class {
+      constructor(cb: (entries: { target: Element; isIntersecting: boolean }[]) => void) { signal = cb; observed = []; }
+      observe(el: Element) { observed.push(el); }
+      disconnect() { observed = []; }
+      unobserve() {}
+    });
+    return () => vi.unstubAllGlobals();
+  });
+  const approcher = (testId: string) => {
+    const el = screen.getByTestId(testId);
+    expect(observed).toContain(el);
+    act(() => signal!([{ target: el, isIntersecting: true }]));
+  };
+
+  /** Un salon par jour, `n` jours d'affilée à partir de l'an 1, mois de 28 jours. */
+  const beaucoup = (n: number) => Array.from({ length: n }, (_, i) =>
+    room(`r${i}`, `Salon ${i}`, 1 + Math.floor(i / 84), Math.floor((i % 84) / 28), (i % 28) + 1));
+
+  it("un squelette tient la place jusqu'à la réponse, puis la frise paraît d'un bloc", async () => {
+    let repondre: (v: unknown) => void = () => {};
+    rpc.mockImplementationOnce(() => new Promise((r) => { repondre = r; }));
+    db.rooms = [room("a", "Prologue", 1, 0, 6)];
+    render(<WorldTimeline worldId="w1" config={CONFIG} />);
+    expect(screen.getByTestId("timeline-loading")).toHaveTextContent("Chargement de la chronologie…");
+    expect(screen.queryByText("Prologue")).toBeNull();
+    // Pas de « rien ici » pendant le chargement.
+    expect(screen.queryByText(/Aucune conversation/)).toBeNull();
+    await act(async () => repondre({ data: timelinePayload({}), error: null }));
+    expect(screen.queryByTestId("timeline-loading")).toBeNull();
+    expect(screen.getByText("Prologue")).toBeInTheDocument();
+  });
+
+  it("une page de dates autour de l'année actuelle ; la suite se charge en approchant du bas, puis du haut", async () => {
+    // 200 dates sur trois ans ; l'année actuelle, la deuxième.
+    await frise(beaucoup(200), { ...CONFIG, current_year: 2 });
+    const rendus = () => document.querySelectorAll("[data-room-id]").length;
+    // Une page (60), ouverte un peu avant l'an 2 (dixième ligne avant lui).
+    expect(rendus()).toBe(60);
+    expect(screen.getByText("Salon 74")).toBeInTheDocument();
+    expect(screen.queryByText("Salon 73")).toBeNull();
+    expect(screen.queryByText("Salon 134")).toBeNull();
+
+    approcher("timeline-more-after");
+    expect(rendus()).toBe(120);
+    expect(screen.getByText("Salon 193")).toBeInTheDocument();
+
+    // Vers le haut, page par page : de la ligne 74 à 14, puis au début.
+    approcher("timeline-more-before");
+    expect(screen.getByText("Salon 14")).toBeInTheDocument();
+    expect(screen.queryByText("Salon 13")).toBeNull();
+    approcher("timeline-more-before");
+    expect(screen.getByText("Salon 0")).toBeInTheDocument();
+    // Tout est là : plus de sentinelle en haut ; en bas, la dernière page.
+    expect(screen.queryByTestId("timeline-more-before")).toBeNull();
+    approcher("timeline-more-after");
+    expect(rendus()).toBe(200);
+    expect(screen.queryByTestId("timeline-more-after")).toBeNull();
+  });
+
+  it("les filtres et la recherche portent sur toute la frise, pas seulement sur ce qui est rendu", async () => {
+    const user = userEvent.setup();
+    await frise(beaucoup(200), { ...CONFIG, current_year: 1 });
+    expect(screen.queryByText("Salon 190")).toBeNull();
+    await user.type(screen.getByRole("searchbox"), "Salon 190");
+    expect(await screen.findByText("Salon 190")).toBeInTheDocument();
+  });
+
+  it("une pastille de période hors de ce qui est rendu y mène", async () => {
+    const user = userEvent.setup();
+    // Neuf ans de dates : plusieurs tranches de cinq ans.
+    await frise(beaucoup(84 * 9), { ...CONFIG, current_year: 1 });
+    expect(document.querySelector("[data-year='7']")).toBeNull();
+    await user.click(screen.getByRole("button", { name: "6 – 10" }));
+    expect(document.querySelector("[data-year='6']")).not.toBeNull();
+  });
+});
+
 describe("WorldTimeline — saisons", () => {
-  it("les saisons remplacent les tranches de cinq ans et ouvrent leurs années d'un bandeau", () => {
-    frise(
+  it("les saisons remplacent les tranches de cinq ans et ouvrent leurs années d'un bandeau", async () => {
+    await frise(
       [room("a", "Début", 1, 0, 1), room("b", "Milieu", 12, 0, 1), room("c", "Fin", 15, 0, 1)],
       { ...CONFIG, current_year: 12, ages: [{ name: "Âge des Cendres", from_year: 10, to_year: 19 }] },
     );
@@ -767,7 +908,7 @@ describe("WorldTimeline — styles des suites", () => {
       id: "e1", title: "Le siège", description: null, timeline_date: { year: 1, month: 0, day: 1 },
       end_date: { year: 1, month: 2, day: 5 }, wiki_page_id: null, wiki_page: null,
     }];
-    frise([room("a", "Prologue", 1, 0, 2), room("b", "Suite", 1, 1, 2), room("c", "Trois", 1, 1, 3), room("d", "Quatre", 1, 2, 2)]);
+    await frise([room("a", "Prologue", 1, 0, 2), room("b", "Suite", 1, 1, 2), room("c", "Trois", 1, 1, 3), room("d", "Quatre", 1, 2, 2)]);
     const cle = () => screen.queryByTestId("timeline-event-spans")?.getAttribute("data-layout") ?? "";
     // Graphe, deux couloirs (a → c et b → d se chevauchent) : 14 + 8 + 10 = 32px.
     await vi.waitFor(() => expect(cle()).toMatch(/:32:0$/));
@@ -784,13 +925,13 @@ describe("WorldTimeline — styles des suites", () => {
   it("relit le style gardé à l'ouverture", async () => {
     memoire.set("wvlds:timeline-suite-style", "graph");
     db.tables.chatroom_sequels = CHAINE;
-    frise(SALONS());
+    await frise(SALONS());
     await vi.waitFor(() => expect(screen.getByTestId("timeline-suite-links")).toHaveAttribute("data-style", "graph"));
   });
 
   it("par défaut, un rail par chaîne, une pastille par salon", async () => {
     db.tables.chatroom_sequels = CHAINE;
-    frise(SALONS());
+    await frise(SALONS());
     const calque = await screen.findByTestId("timeline-suite-links");
     expect(calque).toHaveAttribute("data-style", "rail");
     // Une seule chaîne a → b → c, trois pastilles.
@@ -800,7 +941,7 @@ describe("WorldTimeline — styles des suites", () => {
 
   it("graphe : les titres se décalent pour laisser les couloirs entre le fil et eux", async () => {
     db.tables.chatroom_sequels = CHAINE;
-    frise(SALONS());
+    await frise(SALONS());
     await screen.findByTestId("timeline-suite-links");
     await choisirStyle("Graphe à côté du fil");
     const calque = screen.getByTestId("timeline-suite-links");
@@ -814,7 +955,7 @@ describe("WorldTimeline — styles des suites", () => {
 
   it("au survol seulement : une option du rail ; rien au repos, la chaîne survolée s'allume, le reste s'estompe", async () => {
     db.tables.chatroom_sequels = CHAINE;
-    frise(SALONS());
+    await frise(SALONS());
     await screen.findByTestId("timeline-suite-links");
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: /Filtres/ }));
@@ -834,7 +975,7 @@ describe("WorldTimeline — styles des suites", () => {
     memoire.set("wvlds:timeline-suite-style", "graph");
     memoire.set("wvlds:timeline-suite-hover", "1");
     db.tables.chatroom_sequels = CHAINE;
-    frise(SALONS());
+    await frise(SALONS());
     const user = userEvent.setup();
     const liste = await vi.waitFor(() => {
       const l = document.querySelector("[data-suite-style='graph'] ol") as HTMLElement | null;
@@ -855,7 +996,7 @@ describe("WorldTimeline — styles des suites", () => {
     // Deux chaînes : a → b → c et z → y.
     db.tables.chatroom_sequels = [...CHAINE, suite("z", "y")];
     const salons = [...SALONS(), room("y", "Suite hors chaîne", 3, 2, 1)];
-    const { unmount } = frise(salons);
+    const { unmount } = await frise(salons);
     const padDe = async () => {
       const l = await vi.waitFor(() => {
         const el = document.querySelector("[data-suite-style='graph'] ol") as HTMLElement | null;
@@ -870,7 +1011,7 @@ describe("WorldTimeline — styles des suites", () => {
     unmount();
 
     memoire.set("wvlds:timeline-suite-hover", "1");
-    frise(salons);
+    await frise(salons);
     const survol = await padDe();
     // Un seul couloir : la place d'origine, sans les couloirs suivants.
     expect(survol).toBeLessThan(toujours);
@@ -879,7 +1020,7 @@ describe("WorldTimeline — styles des suites", () => {
 
   it("deux styles seulement : rail continu et graphe", async () => {
     db.tables.chatroom_sequels = CHAINE;
-    frise(SALONS());
+    await frise(SALONS());
     await screen.findByTestId("timeline-suite-links");
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: /Filtres/ }));
@@ -900,7 +1041,7 @@ describe("WorldTimeline — suites proposées par les joueurs", () => {
       { id: "c", arc_id: null, category_id: null },
     ];
     db.tables.chatroom_sequels = [suite("a", "b"), suite("b", "c", "pending", "Mojkkin")];
-    frise(SALONS());
+    await frise(SALONS());
 
     const calque = await vi.waitFor(() => {
       const c = screen.getByTestId("timeline-suite-links");
@@ -935,7 +1076,7 @@ describe("WorldTimeline — suites proposées par les joueurs", () => {
       { id: "d", arc_id: "sang", category_id: null },
     ];
     db.tables.chatroom_sequels = [suite("a", "b"), suite("b", "c"), suite("c", "d")];
-    frise([...SALONS(), room("d", "Un nom oublié", 4, 0, 1)]);
+    await frise([...SALONS(), room("d", "Un nom oublié", 4, 0, 1)]);
 
     const calque = await vi.waitFor(() => {
       const c = screen.getByTestId("timeline-suite-links");
@@ -960,7 +1101,7 @@ describe("WorldTimeline — suites proposées par les joueurs", () => {
     // a → b → c accepté, et c proposé comme suite de a : sans tracé à part,
     // le pointillé se perdait sous le rail plein.
     db.tables.chatroom_sequels = [suite("a", "b"), suite("b", "c"), suite("a", "c", "pending")];
-    frise(SALONS());
+    await frise(SALONS());
     const calque = await vi.waitFor(() => {
       const c = screen.getByTestId("timeline-suite-links");
       expect(c.querySelector("[data-suite='a>c'][data-pending-link]")).not.toBeNull();
@@ -973,7 +1114,7 @@ describe("WorldTimeline — suites proposées par les joueurs", () => {
     const user = userEvent.setup();
     db.tables.chatroom_sequels = [suite("a", "b", "pending", "Mojkkin")];
     db.rpcs.get_linkable_chatrooms = { data: [{ id: "a", mine: true }, { id: "b", mine: false }], error: null };
-    frise(SALONS());
+    await frise(SALONS());
 
     await user.click(await screen.findByRole("button", { name: /Suites proposées/ }));
     const liste = await screen.findByRole("list", { name: "Suites proposées" });
@@ -987,7 +1128,7 @@ describe("WorldTimeline — suites proposées par les joueurs", () => {
     const user = userEvent.setup();
     db.tables.chatroom_sequels = [suite("a", "b", "pending", "Mojkkin")];
     db.rpcs.get_linkable_chatrooms = { data: [{ id: "a", mine: true }], error: null };
-    frise(SALONS());
+    await frise(SALONS());
     await user.click(await screen.findByRole("button", { name: /Suites proposées/ }));
     await user.click(await screen.findByRole("button", { name: "Refuser la suite La frontière" }));
     expect(db.writes).toContainEqual(expect.objectContaining({ table: "chatroom_sequels", op: "delete" }));
@@ -996,13 +1137,13 @@ describe("WorldTimeline — suites proposées par les joueurs", () => {
   it("sans jouer dans le salon précédent, pas de demande à décider ; qui gère les salons les voit toutes", async () => {
     db.tables.chatroom_sequels = [suite("a", "b", "pending", "Mojkkin")];
     db.rpcs.get_linkable_chatrooms = { data: [{ id: "a", mine: false }], error: null };
-    const { unmount } = frise(SALONS());
+    const { unmount } = await frise(SALONS());
     await screen.findByText("Le départ");
-    await vi.waitFor(() => expect(rpc).toHaveBeenCalledWith("get_linkable_chatrooms", { p_world_id: "w1" }));
+    expect(rpc).toHaveBeenCalledWith("get_world_timeline", { p_world_id: "w1", p_with_journals: false });
     expect(screen.queryByRole("button", { name: /Suites proposées/ })).toBeNull();
     unmount();
 
-    render(<WorldTimeline worldId="w1" rooms={SALONS()} config={CONFIG} canManageLinks />);
+    await frise(SALONS(), CONFIG, { canManageLinks: true });
     expect(await screen.findByTestId("timeline-sequel-count")).toHaveTextContent("1");
   });
 });
@@ -1021,7 +1162,7 @@ describe("WorldTimeline — fil de persona", () => {
     db.tables.persona_journal_entries = [{
       id: "j1", persona_id: "p-tess", body: "Une nuit sans lune.", timeline_date: { year: 2, month: 0, day: 3 }, persona: { name: "Tess" },
     }];
-    frise(
+    await frise(
       [room("a", "Le départ", 1, 0, 6), room("b", "Chez Ivo", 1, 2, 1), room("c", "Le retour", 3, 0, 1)],
       { ...CONFIG, show_journals: true },
     );
@@ -1063,7 +1204,7 @@ describe("WorldTimeline — fil de persona", () => {
       error: null,
     };
     db.tables.chatroom_sequels = [suite("a", "b")];
-    frise([room("a", "Le départ", 1, 0, 6), room("b", "La suite", 2, 0, 1)]);
+    await frise([room("a", "Le départ", 1, 0, 6), room("b", "La suite", 2, 0, 1)]);
     await user.click(screen.getByRole("button", { name: /Filtres/ }));
     await user.selectOptions(await screen.findByRole("combobox", { name: "Persona présent" }), "Tess");
 
@@ -1080,7 +1221,7 @@ describe("WorldTimeline — fil de persona", () => {
       data: [{ chat_id: "a", persona_id: "p-ivo", persona_name: "Ivo", group_color: null }],
       error: null,
     };
-    frise([room("a", "Le départ", 1, 0, 6), room("b", "Ailleurs", 1, 2, 1)]);
+    await frise([room("a", "Le départ", 1, 0, 6), room("b", "Ailleurs", 1, 2, 1)]);
     await user.click(screen.getByRole("button", { name: /Filtres/ }));
     await user.selectOptions(await screen.findByRole("combobox", { name: "Persona présent" }), "Ivo");
     const fil = await screen.findByTestId("timeline-persona-thread");

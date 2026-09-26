@@ -22,11 +22,15 @@ export function eventSpanPad(lanes: number): number {
   return Math.max(0, (lanes - 1) * LANE_GAP - 2);
 }
 
+/** Un événement qui dure, à tracer ; un bout hors de ce qui est rendu (la
+ *  frise ne rend qu'une fenêtre de ses dates) prolonge la barre jusqu'au bord. */
+export type EventSpan = { id: string; clipTop: boolean; clipBottom: boolean };
+
 /**
  * La durée des événements qui durent (migration 197) : une barre fine le
  * long du fil, de la ligne de l'événement (`[data-event-id]`) à celle de sa
  * fin (`[data-event-end-id]`), juste avant les titres — graphe des suites
- * compris, puisqu'on se cale sur le début du texte de l'événement. Deux
+ * compris, puisqu'on se cale sur le début de leur texte (`[data-title-start]`). Deux
  * durées qui se chevauchent prennent chacune leur couloir, vers le fil.
  * Les positions se mesurent dans le DOM, comme les lignes de suite. Au
  * survol d'un événement (« pendant ce temps », voir WorldTimeline), sa barre
@@ -34,14 +38,14 @@ export function eventSpanPad(lanes: number): number {
  */
 export function EventSpans({
   containerRef,
-  ids,
+  spans: toDraw,
   active = null,
   version,
   onLanes,
 }: {
   containerRef: React.RefObject<HTMLElement | null>;
-  /** Les événements dont le début et la fin sont à l'écran. */
-  ids: readonly string[];
+  /** Les événements dont la durée croise ce qui est rendu. */
+  spans: readonly EventSpan[];
   /** L'événement survolé : sa barre ressort. */
   active?: string | null;
   /** Change quand la frise change : force une mesure. */
@@ -56,24 +60,25 @@ export function EventSpans({
     const container = containerRef.current;
     if (!container) return;
     const rect = container.getBoundingClientRect();
-    const measured = ids.flatMap((id) => {
-      const start = container.querySelector<HTMLElement>(`[data-event-id="${id}"]`);
-      const end = container.querySelector<HTMLElement>(`[data-event-end-id="${id}"]`);
-      if (!start || !end) return [];
-      const text = start.querySelector<HTMLElement>("[data-event-text]") ?? start;
-      const s = start.getBoundingClientRect();
-      const e = end.getBoundingClientRect();
+    const measured = toDraw.flatMap(({ id, clipTop, clipBottom }) => {
+      const start = clipTop ? null : container.querySelector<HTMLElement>(`[data-event-id="${id}"]`);
+      const end = clipBottom ? null : container.querySelector<HTMLElement>(`[data-event-end-id="${id}"]`);
+      if ((!clipTop && !start) || (!clipBottom && !end)) return [];
+      // Tous les titres commencent au même retrait : celui de la ligne, ou
+      // de n'importe quelle ligne quand les deux bouts sont hors champ.
+      const text = (start ?? end ?? container).querySelector<HTMLElement>("[data-title-start]");
+      if (!text) return [];
       return [{
         id,
-        top: s.top - rect.top + 10,
-        bottom: e.top - rect.top + 10,
+        top: start ? start.getBoundingClientRect().top - rect.top + 10 : 0,
+        bottom: end ? end.getBoundingClientRect().top - rect.top + 10 : rect.height,
         x: text.getBoundingClientRect().left - rect.left - TITLE_GAP,
       }];
     });
     const lanes = assignSuiteLanes(measured);
     setSpans(measured.map((m, i) => ({ ...m, x: m.x - lanes[i] * LANE_GAP })));
     onLanes?.(lanes.length === 0 ? 0 : Math.max(...lanes) + 1);
-  }, [containerRef, ids, onLanes]);
+  }, [containerRef, toDraw, onLanes]);
 
   React.useLayoutEffect(() => {
     measure();

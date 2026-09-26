@@ -8,6 +8,11 @@ import {
   effectiveRoomStatus,
   eventEndItems,
   holidayItems,
+  initialTimelineWindow,
+  sliceTimelineSections,
+  timelineRowCount,
+  timelineRowOfYear,
+  timelineRowsById,
   upcomingHolidays,
   isFiltering,
   matchesTimelineFilters,
@@ -53,6 +58,38 @@ describe("buildTimelineSections", () => {
 
   it("rien à placer : rien, même pas l'année actuelle", () => {
     expect(buildTimelineSections([], 1)).toEqual([]);
+  });
+});
+
+describe("pagination de l'affichage", () => {
+  // An 1 : trois dates ; an 2 : vide (l'année actuelle) ; an 3 : deux dates.
+  const SECTIONS = buildTimelineSections(
+    [salon("a", 1, 0, 1), salon("b", 1, 0, 2), salon("c", 1, 1, 1), salon("d", 3, 0, 1), salon("e", 3, 1, 1)],
+    2,
+  );
+
+  it("une ligne par date, une pour une année vide", () => {
+    expect(timelineRowCount(SECTIONS)).toBe(6);
+    expect(timelineRowOfYear(SECTIONS, 2)).toBe(3);
+    expect(timelineRowOfYear(SECTIONS, 3)).toBe(4);
+    expect(timelineRowOfYear(SECTIONS, 9)).toBe(-1);
+    expect(timelineRowsById(SECTIONS).get("e")).toBe(5);
+  });
+
+  it("une fenêtre garde les dates qui y tombent, année par année", () => {
+    const tranche = sliceTimelineSections(SECTIONS, { start: 2, end: 5 });
+    expect(tranche.map((s) => [s.year, s.groups.map((g) => g.items[0].id)])).toEqual([
+      [1, ["c"]],
+      [2, []],
+      [3, ["d"]],
+    ]);
+    expect(sliceTimelineSections(SECTIONS, { start: 0, end: 6 })).toEqual(SECTIONS);
+  });
+
+  it("s'ouvre un peu avant l'année donnée, sur une page ; sans elle, depuis le début", () => {
+    expect(initialTimelineWindow(SECTIONS, 3, 2)).toEqual({ start: 4, end: 6 });
+    expect(initialTimelineWindow(SECTIONS, 3, 12)).toEqual({ start: 2, end: 6 });
+    expect(initialTimelineWindow(SECTIONS, 9, 2)).toEqual({ start: 0, end: 2 });
   });
 });
 

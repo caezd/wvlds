@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { BookOpen, BookText, Clock, Pencil, Plus, Search, Sparkles, Spline, X } from "lucide-react";
@@ -9,6 +9,7 @@ import { compareTimelineDates, formatTimelineLabel } from "@/lib/worldTimeline";
 import {
   DEFAULT_DORMANT_DAYS,
   NO_TIMELINE_FILTERS,
+  TIMELINE_PAGE,
   ageOf,
   arcRanks,
   buildTimelinePeriods,
@@ -16,9 +17,15 @@ import {
   effectiveRoomStatus,
   eventEndItems,
   holidayItems,
+  initialTimelineWindow,
+  isFiltering,
   matchesTimelineFilters,
   normalizeAges,
+  sliceTimelineSections,
   suiteChainOf,
+  timelineRowCount,
+  timelineRowOfYear,
+  timelineRowsById,
   type TimelineDateGroup,
   type TimelineEventEndItem,
   type TimelineFilters,
@@ -27,6 +34,7 @@ import {
   type TimelineJournalItem,
   type TimelineRoomContext,
   type TimelineRoomItem,
+  type TimelineWindow,
   type TimelineYearSection,
 } from "@/lib/worldTimelineItems";
 import { Button } from "@/components/ui/button";
@@ -50,15 +58,7 @@ import {
   type TimelineEvent,
   type TimelineOpener,
 } from "@/components/worlds/timeline/useTimelineData";
-import type { WorldTimelineAge, WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
-
-type TimelineRoom = {
-  id: string;
-  title: string | null;
-  name: string | null;
-  icon_url: string | null;
-  timeline_date: WorldTimelineDate | null;
-};
+import type { WorldTimelineAge, WorldTimelineConfig } from "@/types/worlds";
 
 /**
  * Le fond ambiant de la page, pour ce qui découpe le fil ou les filets (le
@@ -109,16 +109,19 @@ const RED_BG = "bg-red-600 dark:bg-accent";
  * En tête : la recherche, les filtres, et — pour qui gère la chronologie —
  * l'ajout d'un événement et les arcs ; puis les périodes : les saisons du
  * monde, ou des tranches de cinq ans pour les années hors saison.
+ *
+ * Tout se charge en une requête (voir useTimelineData) : un squelette tient
+ * la place, puis la frise paraît d'un bloc. Seule une fenêtre de ses dates
+ * est rendue, autour de l'année actuelle, et s'étend au défilement dans les
+ * deux sens ; filtres, recherche, rangs et suites portent sur toute la frise.
  */
 export function WorldTimeline({
   worldId,
-  rooms,
   config,
   canManage = false,
   canManageLinks = false,
 }: {
   worldId: string;
-  rooms: TimelineRoom[];
   config: WorldTimelineConfig;
   /** `timeline.manage` : événements et arcs. */
   canManage?: boolean;
@@ -187,23 +190,18 @@ export function WorldTimeline({
   const dormantDays = config.dormant_days ?? DEFAULT_DORMANT_DAYS;
 
   const allItems: TimelineItem[] = useMemo(() => {
-    const roomItems: TimelineRoomItem[] = rooms
-      .filter((r) => r.timeline_date !== null)
-      .map((r) => {
-        const meta = data.roomMeta.get(r.id);
-        return {
-          kind: "room",
-          id: r.id,
-          date: r.timeline_date!,
-          title: r.title ?? r.name ?? t("timelineUntitled"),
-          arcId: meta?.arcId ?? null,
-          previousIds: previousOf.get(r.id) ?? [],
-          categoryId: meta?.categoryId ?? null,
-          status: meta ? effectiveRoomStatus(meta.status, meta.lastActivity, dormantDays, now) : "active",
-        };
-      });
+    const roomItems: TimelineRoomItem[] = data.rooms.map((r) => ({
+      kind: "room",
+      id: r.id,
+      date: r.date,
+      title: r.title ?? r.name ?? t("timelineUntitled"),
+      arcId: r.arcId,
+      previousIds: previousOf.get(r.id) ?? [],
+      categoryId: r.categoryId,
+      status: effectiveRoomStatus(r.status, r.lastActivity, dormantDays, now),
+    }));
     return [...roomItems, ...data.events, ...eventEndItems(data.events), ...data.journals];
-  }, [rooms, data.roomMeta, data.events, data.journals, previousOf, t, dormantDays, now]);
+  }, [data.rooms, data.events, data.journals, previousOf, t, dormantDays, now]);
 
   // Le rang de chaque salon dans son arc, sur tous les salons : il ne change
   // pas quand on filtre.
@@ -232,11 +230,32 @@ export function WorldTimeline({
     return holidays.length > 0 ? buildTimelineSections([...visible, ...holidays], config.current_year) : base;
   }, [visible, config.current_year, config.holidays, config.month_names.length, filters, ctx]);
 
-  // Les événements qui durent, dont le début et la fin sont à l'écran.
+  // La fenêtre rendue (voir sliceTimelineSections) : posée à la première
+  // réponse et à chaque changement de filtre, étendue au défilement.
+  const [win, setWin] = useState<TimelineWindow | null>(null);
+  const totalRows = timelineRowCount(sections);
+  const shown = useMemo(() => {
+    if (!win) return [];
+    return sliceTimelineSections(sections, { start: Math.min(win.start, totalRows), end: Math.min(win.end, totalRows) });
+  }, [sections, win, totalRows]);
+
+  // Les événements qui durent (début et fin passent les filtres) dont la
+  // durée croise la fenêtre ; un bout hors de la fenêtre prolonge la barre
+  // jusqu'au bord de ce qui est rendu.
   const spanIds = useMemo(() => {
     const ends = new Set(visible.filter((i) => i.kind === "eventEnd").map((i) => (i as TimelineEventEndItem).eventId));
     return visible.filter((i) => i.kind === "event" && ends.has(i.id)).map((i) => i.id);
   }, [visible]);
+  const rowsById = useMemo(() => timelineRowsById(sections), [sections]);
+  const eventSpans = useMemo(() => {
+    if (!win) return [];
+    return spanIds.flatMap((id) => {
+      const from = rowsById.get(id);
+      const to = rowsById.get(`${id}:end`);
+      if (from === undefined || to === undefined || to < win.start || from >= win.end) return [];
+      return [{ id, clipTop: from < win.start, clipBottom: to >= win.end }];
+    });
+  }, [spanIds, rowsById, win]);
 
   const ages = useMemo(() => normalizeAges(config.ages), [config.ages]);
   const { periods, periodOf } = useMemo(
@@ -274,7 +293,10 @@ export function WorldTimeline({
 
   // Les suites proposées que l'on peut accepter : accrochées à un salon où
   // l'on joue, ou toutes pour qui gère les salons ou la chronologie.
-  const titleOf = useMemo(() => new Map(rooms.map((r) => [r.id, r.title ?? r.name ?? t("timelineUntitled")])), [rooms, t]);
+  const titleOf = useMemo(
+    () => new Map(data.rooms.map((r) => [r.id, r.title ?? r.name ?? t("timelineUntitled")])),
+    [data.rooms, t],
+  );
   const requests: SequelRequest[] = useMemo(
     () => data.sequels
       .filter((s) => s.status === "pending" && (canManageLinks || data.mine.has(s.previousId)))
@@ -336,8 +358,8 @@ export function WorldTimeline({
     return { ids, color: threadPersona.color };
   }, [threadPersona, visible, data.roomPersonas]);
   const layoutVersion = useMemo(
-    () => `${suiteStyle}:${threadPersona?.id ?? ""}:${sections.flatMap((s) => s.groups.flatMap((g) => g.items.map((i) => i.id))).join(",")}`,
-    [sections, suiteStyle, threadPersona],
+    () => `${suiteStyle}:${threadPersona?.id ?? ""}:${shown.flatMap((s) => s.groups.flatMap((g) => g.items.map((i) => i.id))).join(",")}`,
+    [shown, suiteStyle, threadPersona],
   );
   // Le graphe prend place entre le fil et les titres ; les autres styles, à droite.
   const graphPad = suiteStyle === "graph" && lanes > 0 ? GRAPH_OFFSET + (lanes - 1) * 8 + 10 : 0;
@@ -357,20 +379,80 @@ export function WorldTimeline({
     return scrollRef.current?.querySelector<HTMLElement>(`[data-year="${year}"]`) ?? null;
   }
 
+  // Défiler jusqu'à une année, une fois qu'elle est rendue : une année hors
+  // de la fenêtre y entre d'abord (la fenêtre s'ouvre sur elle).
+  const [pendingYear, setPendingYear] = useState<{ year: number; smooth: boolean } | null>(null);
   function scrollToYear(year: number, smooth: boolean) {
+    const row = timelineRowOfYear(sections, year);
+    if (row < 0) return;
+    if (win && (row < win.start || row >= win.end)) {
+      setWin({ start: row, end: Math.min(totalRows, row + TIMELINE_PAGE) });
+    }
+    setPendingYear({ year, smooth });
+  }
+  useLayoutEffect(() => {
+    if (!pendingYear) return;
     const el = scrollRef.current;
-    const section = sectionEl(year);
+    const section = sectionEl(pendingYear.year);
     if (!el || !section) return;
     const top = section.offsetTop - (headRef.current?.offsetHeight ?? 0);
-    if (typeof el.scrollTo === "function") el.scrollTo({ top, behavior: smooth ? "smooth" : "auto" });
+    if (typeof el.scrollTo === "function") el.scrollTo({ top, behavior: pendingYear.smooth ? "smooth" : "auto" });
     else el.scrollTop = top;
-  }
+    setPendingYear(null);
+    // `shown` : l'année demandée n'est peut-être rendue qu'au rendu suivant.
+  }, [pendingYear, shown]);
 
-  // S'ouvrir sur l'année actuelle du monde.
+  // La fenêtre : à la première réponse, ouverte sur l'année actuelle ; à
+  // chaque changement de filtre ou de recherche, sur l'année actuelle si
+  // rien ne filtre, sinon depuis le premier résultat.
+  const filterKey = JSON.stringify([
+    filters.query, [...filters.kinds].sort(), filters.personaId, filters.player, filters.arcId, filters.categoryId, filters.status,
+  ]);
   useEffect(() => {
-    scrollToYear(config.current_year, false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- à l'ouverture seulement
-  }, []);
+    if (data.loading) return;
+    if (isFiltering(filters)) {
+      setWin({ start: 0, end: Math.min(totalRows, TIMELINE_PAGE) });
+      if (scrollRef.current) scrollRef.current.scrollTop = 0;
+    } else {
+      setWin(initialTimelineWindow(sections, config.current_year));
+      setPendingYear({ year: config.current_year, smooth: false });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- à la première réponse et quand les filtres changent
+  }, [data.loading, filterKey]);
+
+  // Le défilement infini : une sentinelle en haut et en bas de ce qui est
+  // rendu ; à l'approche de l'une, une page de plus de ce côté. Le haut
+  // s'étend sans faire sauter la lecture : la hauteur ajoutée au-dessus est
+  // rendue au défilement.
+  const topSentinel = useRef<HTMLDivElement>(null);
+  const bottomSentinel = useRef<HTMLDivElement>(null);
+  const keepScroll = useRef<{ height: number; top: number } | null>(null);
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+    if (!el || !keepScroll.current) return;
+    el.scrollTop = keepScroll.current.top + (el.scrollHeight - keepScroll.current.height);
+    keepScroll.current = null;
+  }, [shown]);
+  useEffect(() => {
+    const root = scrollRef.current;
+    if (!root || !win || typeof IntersectionObserver === "undefined") return;
+    // Un nouvel observateur à chaque fenêtre : il signale tout de suite une
+    // sentinelle encore visible, et la frise se remplit jusqu'à déborder.
+    const observer = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        if (entry.target === topSentinel.current && win.start > 0) {
+          keepScroll.current = { height: root.scrollHeight, top: root.scrollTop };
+          setWin({ start: Math.max(0, win.start - TIMELINE_PAGE), end: win.end });
+        } else if (entry.target === bottomSentinel.current && win.end < totalRows) {
+          setWin({ start: win.start, end: Math.min(totalRows, win.end + TIMELINE_PAGE) });
+        }
+      }
+    }, { root, rootMargin: "600px 0px" });
+    if (topSentinel.current) observer.observe(topSentinel.current);
+    if (bottomSentinel.current) observer.observe(bottomSentinel.current);
+    return () => observer.disconnect();
+  }, [win, totalRows]);
 
   // Les périodes suivent le défilement : celle de la dernière année passée
   // sous la tête.
@@ -383,7 +465,7 @@ export function WorldTimeline({
     if (!el) return;
     const headBottom = el.getBoundingClientRect().top + (headRef.current?.offsetHeight ?? 0);
     let stuck: number | null = null;
-    for (const s of sections) {
+    for (const s of shown) {
       const r = sectionEl(s.year)?.getBoundingClientRect();
       if (r && r.top < headBottom - 0.5 && r.bottom > headBottom) stuck = s.year;
     }
@@ -392,15 +474,15 @@ export function WorldTimeline({
   useEffect(() => {
     updateStuckYear();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- quand la frise ou la tête changent
-  }, [sections, headHeight]);
+  }, [shown, headHeight]);
 
   function onScroll() {
     updateStuckYear();
     const el = scrollRef.current;
     if (!el || periods.length < 2) return;
     const seuil = el.getBoundingClientRect().top + (headRef.current?.offsetHeight ?? 0) + 8;
-    let current = sections[0]?.year ?? 0;
-    for (const s of sections) {
+    let current = shown[0]?.year ?? 0;
+    for (const s of shown) {
       const node = sectionEl(s.year);
       if (node && node.getBoundingClientRect().top <= seuil) current = s.year;
     }
@@ -408,7 +490,7 @@ export function WorldTimeline({
   }
 
   const nowLabel = t("settings.timelinePreviewLabel");
-  const empty = allItems.length === 0;
+  const empty = !data.loading && allItems.length === 0;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -477,7 +559,7 @@ export function WorldTimeline({
                   </button>
                 </span>
               )}
-              <TimelineSequelRequests requests={requests} supabase={data.supabase} onChanged={() => void data.reloadSequels()} />
+              <TimelineSequelRequests requests={requests} supabase={data.supabase} onChanged={() => void data.reload()} />
               {canManage && (
                 <>
                   <Button
@@ -520,7 +602,9 @@ export function WorldTimeline({
             )}
           </div>
 
-          {empty ? (
+          {data.loading ? (
+            <TimelineSkeleton label={tv("loading")} />
+          ) : empty ? (
             <p className="px-5 py-4 text-sm text-muted-foreground">{t("timelineEmpty")}</p>
           ) : sections.length === 0 ? (
             <p className="px-5 py-4 text-sm text-muted-foreground" data-testid="timeline-no-match">{tv("noMatch")}</p>
@@ -536,6 +620,7 @@ export function WorldTimeline({
               }}
               onFocus={(e) => trackHover(e.target as HTMLElement)}
             >
+              {win && win.start > 0 && <div ref={topSentinel} className="h-px" data-testid="timeline-more-before" aria-hidden />}
               <ol
                 className="px-5 pb-6"
                 // Les couloirs des lignes de suite : à droite, ou, pour le
@@ -548,9 +633,12 @@ export function WorldTimeline({
                   ["--tl-right-pad" as string]: `${rightPad ?? 20}px`,
                 }}
               >
-                {sections.map((section, i) => {
+                {shown.map((section) => {
                   const age = ageOf(ages, section.year);
-                  const prevAge = i > 0 ? ageOf(ages, sections[i - 1].year) : null;
+                  // Le bandeau d'une saison, devant sa première année :
+                  // l'année d'avant sur toute la frise, pas seulement rendue.
+                  const full = sections.findIndex((s) => s.year === section.year);
+                  const prevAge = full > 0 ? ageOf(ages, sections[full - 1].year) : null;
                   return (
                     <SectionWithAge key={section.year} age={age && age !== prevAge ? age : null} config={config}>
                       <YearBlock
@@ -579,9 +667,10 @@ export function WorldTimeline({
                   (style, « au survol seulement ») : les titres, sur lesquels
                   se calent les barres, se décalent alors sans que la frise
                   ni la taille de la liste ne changent. */}
+              {win && win.end < totalRows && <div ref={bottomSentinel} className="h-px" data-testid="timeline-more-after" aria-hidden />}
               <EventSpans
                 containerRef={listRef}
-                ids={spanIds}
+                spans={eventSpans}
                 active={duringSpan ? hoveredSpan : null}
                 version={`${layoutVersion}:${titlePad}:${rightPad ?? 0}`}
                 onLanes={onSpanLanes}
@@ -600,7 +689,7 @@ export function WorldTimeline({
             worldId={worldId}
             config={config}
             event={eventDialog.event}
-            onSaved={() => void data.reloadEvents()}
+            onSaved={() => void data.reload()}
           />
           <TimelineArcsDialog
             open={arcsOpen}
@@ -608,10 +697,26 @@ export function WorldTimeline({
             supabase={data.supabase}
             worldId={worldId}
             arcs={data.arcs}
-            onChanged={() => { void data.reloadArcs(); void data.reloadRooms(); }}
+            onChanged={() => void data.reload()}
           />
         </>
       )}
+    </div>
+  );
+}
+
+/** La place de la frise pendant son chargement : quelques lignes muettes. */
+function TimelineSkeleton({ label }: { label: string }) {
+  return (
+    <div className="space-y-5 px-5 py-8" role="status" aria-busy="true" data-testid="timeline-loading">
+      <span className="sr-only">{label}</span>
+      {[40, 64, 52, 72, 48, 60].map((w, i) => (
+        <div key={i} className="flex items-center gap-4" aria-hidden>
+          <div className="h-4 w-16 shrink-0 animate-pulse rounded bg-muted" />
+          <div className="size-3 shrink-0 rounded-full bg-muted" />
+          <div className="h-4 animate-pulse rounded bg-muted" style={{ width: `${w}%` }} />
+        </div>
+      ))}
     </div>
   );
 }
@@ -979,6 +1084,7 @@ function RoomRow({
         // Un bloc sur une ligne de 20px : en ligne (`inline-block`), le bouton
         // héritait de la hauteur de ligne du parent et le titre glissait.
         className="group/title ml-[var(--tl-graph-pad,0px)] block max-w-full rounded-md text-left text-sm leading-5 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        data-title-start
       >
         {/* Au survol, le titre s’éclaircit seulement (atténué au repos) : pas de fond. */}
         <span className="min-w-0 break-words">
@@ -1061,7 +1167,7 @@ function EventRow({
         data-testid="timeline-event-mark"
         aria-hidden
       />
-      <div className="ml-[var(--tl-graph-pad,0px)] flex items-start gap-2" data-event-text>
+      <div className="ml-[var(--tl-graph-pad,0px)] flex items-start gap-2" data-title-start>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold leading-5 text-foreground">
             <span className="sr-only">{tv("eventLabel")} : </span>
@@ -1107,7 +1213,7 @@ function EventEndRow({ item, day, dimmed }: { item: TimelineEventEndItem; day: n
         data-testid="timeline-event-end-mark"
         aria-hidden
       />
-      <p className="ml-[var(--tl-graph-pad,0px)] text-xs leading-5 text-muted-foreground">
+      <p className="ml-[var(--tl-graph-pad,0px)] text-xs leading-5 text-muted-foreground" data-title-start>
         {tv("eventEnds", { title: item.title })}
       </p>
     </li>

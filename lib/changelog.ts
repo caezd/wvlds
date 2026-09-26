@@ -57,6 +57,12 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     date: "2026-09-26",
+    category: "Performance",
+    area: "Monde",
+    text: "Chronologie :\n- chargée en une seule requête, affichée d’un bloc\n- dates rendues au fil du défilement, vers le haut comme vers le bas",
+  },
+  {
+    date: "2026-09-26",
     category: "Correctif",
     area: "Monde",
     text: "Écrans étroits : en-tête des onglets d’un monde et chronologie sur le fond de la page.",

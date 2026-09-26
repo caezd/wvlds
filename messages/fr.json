@@ -688,7 +688,8 @@
       "holidayLabel": "Fête",
       "eventLasts": "Dure dans le temps",
       "eventEndDate": "Fin",
-      "eventEndBeforeStart": "La fin doit venir après le début."
+      "eventEndBeforeStart": "La fin doit venir après le début.",
+      "loading": "Chargement de la chronologie…"
     },
     "tabSettings": "Paramètres",
     "tabCategories": "Catégories",
