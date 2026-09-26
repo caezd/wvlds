@@ -52,7 +52,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-09-26",
     category: "Interface",
     area: "Monde",
-    text: "La chronologie d’un monde devient une frise verticale : les années en très grands chiffres, un fil, et pour chaque salon un anneau, son titre — « par Persona (@pseudo) », le persona dans la couleur de son groupe — puis sa date, un filet à chaque changement de mois, son nom posé dessus en capitales. Un trait rouge plein, du fil jusqu’au bord, marque la date actuelle du monde et la frise s’ouvre sur son année ; au-delà de cinq ans, des pastilles mènent à chaque période.",
+    text: "La chronologie d’un monde devient une frise verticale : les années en très grands chiffres, un fil, et pour chaque salon sa date dans une pastille à cheval sur le fil, puis son titre — « par Persona (@pseudo) », le persona dans la couleur de son groupe —, un filet pointillé à chaque changement de mois, son nom posé dessus en capitales. Un trait rouge plein, du fil jusqu’au bord, marque la date actuelle du monde et la frise s’ouvre sur son année ; au-delà de cinq ans, des pastilles mènent à chaque période.",
   },
   {
     date: "2026-09",

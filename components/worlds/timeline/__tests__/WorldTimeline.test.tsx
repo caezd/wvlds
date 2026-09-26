@@ -61,10 +61,18 @@ describe("WorldTimeline — frise verticale", () => {
     expect(titres).toEqual(["Prologue, 9 Janvier, An 1", "Suite, 2 Mars, An 1"]);
   });
 
-  it("la date s'écrit jour et mois devant le titre", () => {
-    frise([room("a", "Prologue", 1, 1, 19)]);
+  it("la date, dans une pastille avant le titre, à sa hauteur", () => {
+    frise([room("a", "Prologue", 1, 1, 19), room("b", "Une année entière", 3, null, null)]);
     const ligne = screen.getByRole("button", { name: /Prologue/ });
-    expect(ligne).toHaveTextContent("19 Février");
+    const pastille = within(ligne).getByTestId("timeline-date-pill");
+    expect(pastille).toHaveTextContent("19 Février");
+    // Avant le titre, sur sa première ligne, d'une largeur fixe pour que les
+    // titres s'alignent en colonne.
+    expect(pastille.compareDocumentPosition(within(ligne).getByText("Prologue")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(pastille.className.split(" ")).toEqual(expect.arrayContaining(["top-0", "h-5", "w-[5.5rem]", "rounded-full"]));
+    // Une date qui s'arrête à l'année : un tiret.
+    const annee = screen.getByRole("button", { name: /Une année entière/ });
+    expect(within(annee).getByTestId("timeline-date-pill")).toHaveTextContent("—");
   });
 
   it("l'année en très grands chiffres, sa légende en exposant, sans rouge", () => {
@@ -98,7 +106,8 @@ describe("WorldTimeline — frise verticale", () => {
     expect(ligne("Six janvier")).not.toHaveAttribute("data-new-month");
     expect(ligne("Neuf janvier")).not.toHaveAttribute("data-new-month");
     expect(ligne("Trois mars")).toHaveAttribute("data-new-month", "true");
-    expect(ligne("Trois mars").querySelector(".h-px.bg-border")).not.toBeNull();
+    // Un filet en pointillés.
+    expect(ligne("Trois mars").querySelector(".border-dashed.border-border")).not.toBeNull();
     // Le nom du nouveau mois — un seul ici.
     const noms = screen.getAllByTestId("timeline-month-label");
     expect(noms.map((l) => l.textContent)).toEqual(["Mars"]);
