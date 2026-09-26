@@ -182,7 +182,7 @@ function RoomRow({ room, onClick }: { room: TimelineRoom; onClick: () => void })
     >
       {/* Le jour, aligné en colonne ; vide quand la date s'arrête au mois. */}
       <span
-        className="w-5 shrink-0 text-right text-xs tabular-nums text-muted-foreground"
+        className="w-5 shrink-0 text-right text-xs tabular-nums text-muted-foreground transition-colors group-hover:text-foreground"
         title={dayText ?? undefined}
         aria-hidden
       >
@@ -192,11 +192,11 @@ function RoomRow({ room, onClick }: { room: TimelineRoom; onClick: () => void })
         <Image src={room.icon_url} alt="" width={20} height={20} className="h-5 w-5 shrink-0 rounded-full object-cover" />
       ) : (
         <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted">
-          <MessageSquare className="h-3 w-3 text-muted-foreground" />
+          <MessageSquare className="h-3 w-3 text-muted-foreground transition-colors group-hover:text-foreground" />
         </span>
       )}
-      {/* Au survol, le titre change seulement de couleur : pas de fond sur toute la largeur. */}
-      <span className="min-w-0 truncate font-medium transition-colors group-hover:text-primary">{label}</span>
+      {/* Au survol, la ligne s’éclaircit seulement (titre atténué au repos) : pas de fond sur toute la largeur. */}
+      <span className="min-w-0 truncate font-medium text-foreground/75 transition-colors group-hover:text-foreground">{label}</span>
     </button>
   );
 }

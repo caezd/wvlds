@@ -111,7 +111,12 @@ describe("WorldTimeline — liste compacte", () => {
     expect(ligne.className).toMatch(/\bpy-1\b/);
     // Survol discret : ni fond ni pleine largeur, seul le titre change de couleur.
     expect(ligne.className).not.toMatch(/hover:bg-|(^|\s)w-full\b/);
-    expect(within(ligne).getByText("Prologue").className).toContain("group-hover:text-primary");
+    // Atténué au repos, plein au survol : `text-primary` était presque blanc
+    // en thème sombre, comme le texte, et le survol ne se voyait pas.
+    const titre = within(ligne).getByText("Prologue").className;
+    expect(titre).toContain("text-foreground/75");
+    expect(titre).toContain("group-hover:text-foreground");
+    expect(titre).not.toContain("text-primary");
 
     // Sans titre ni jour : un libellé par défaut, pas de jour inventé.
     const sansTitre = screen.getByRole("button", { name: "Conversation" });

@@ -52,7 +52,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-09-26",
     category: "Interface",
     area: "Monde",
-    text: "La chronologie d’un monde liste ses salons en lignes compactes, le jour en colonne ; au survol, seul le titre change de couleur.",
+    text: "La chronologie d’un monde liste ses salons en lignes compactes, le jour en colonne ; au survol, la ligne s’éclaircit.",
   },
   {
     date: "2026-09",
