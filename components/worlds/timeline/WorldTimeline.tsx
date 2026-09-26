@@ -3,8 +3,10 @@
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { Clock, X } from "lucide-react";
+import { Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { RPC } from "@/lib/constants";
+import { createClient } from "@/lib/supabase/client";
 import { formatTimelineLabel } from "@/lib/worldTimeline";
 import { WorldPanelHeader } from "@/components/worlds/WorldPanelHeader";
 import type { WorldTimelineConfig, WorldTimelineDate } from "@/types/worlds";
@@ -19,6 +21,11 @@ type TimelineRoom = {
 
 type YearSection = { year: number; rooms: TimelineRoom[] };
 
+/** Qui a ouvert un salon : le membre du premier message, et le persona sous
+ *  lequel il l'a écrit, dans la couleur de son groupe (migration 192). */
+type Opener = { name: string; persona: string | null; personaColor: string | null };
+type OpenerRow = { chat_id: string; author_name: string | null; persona_name: string | null; group_color: string | null };
+
 /** Années regroupées par tranches de RANGE_SPAN pour les pastilles de tête. */
 const RANGE_SPAN = 5;
 
@@ -32,20 +39,41 @@ const RANGE_SPAN = 5;
  * mènent à chaque tranche et suivent le défilement.
  */
 export function WorldTimeline({
-  worldId: _worldId,
+  worldId,
   rooms,
   config,
-  onClose,
 }: {
   worldId: string;
   rooms: TimelineRoom[];
   config: WorldTimelineConfig;
-  onClose: () => void;
 }) {
   const t = useTranslations("worlds");
-  const tCommon = useTranslations("common");
   const router = useRouter();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [openers, setOpeners] = useState<ReadonlyMap<string, Opener>>(new Map());
+
+  // Les auteurs se chargent avec la frise, sans la retenir : les titres
+  // paraissent d'abord, « par … » les rejoint.
+  useEffect(() => {
+    let cancelled = false;
+    void createClient()
+      .rpc(RPC.GET_CHATROOM_OPENERS, { p_world_id: worldId })
+      .then(({ data, error }: { data: OpenerRow[] | null; error: unknown }) => {
+        if (cancelled) return;
+        if (error) {
+          console.error("[WorldTimeline] auteurs des salons", error);
+          return;
+        }
+        const map = new Map<string, Opener>();
+        for (const row of data ?? []) {
+          if (row.author_name) {
+            map.set(row.chat_id, { name: row.author_name, persona: row.persona_name, personaColor: row.group_color });
+          }
+        }
+        setOpeners(map);
+      });
+    return () => { cancelled = true; };
+  }, [worldId]);
   const navRef = useRef<HTMLElement>(null);
 
   // Une section par année, ses salons dans l'ordre du récit. L'année actuelle
@@ -127,16 +155,6 @@ export function WorldTimeline({
       <WorldPanelHeader
         icon={<Clock className="h-4 w-4 shrink-0 text-muted-foreground" />}
         title={t("nav.timeline")}
-        right={
-          <button
-            aria-label={tCommon("close")}
-            type="button"
-            onClick={onClose}
-            className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        }
       />
 
       {sections.length === 0 ? (
@@ -175,6 +193,7 @@ export function WorldTimeline({
                 section={section}
                 config={config}
                 nowLabel={nowLabel}
+                openers={openers}
                 onOpen={(id) => router.push(`/c/${id}`)}
               />
             ))}
@@ -193,11 +212,13 @@ function YearBlock({
   section,
   config,
   nowLabel,
+  openers,
   onOpen,
 }: {
   section: YearSection;
   config: WorldTimelineConfig;
   nowLabel: string;
+  openers: ReadonlyMap<string, Opener>;
   onOpen: (id: string) => void;
 }) {
   const isNow = section.year === config.current_year;
@@ -218,6 +239,7 @@ function YearBlock({
       key={room.id}
       room={room}
       config={config}
+      opener={openers.get(room.id) ?? null}
       newMonth={i > 0 && section.rooms[i - 1].timeline_date!.month !== room.timeline_date!.month}
       onClick={() => onOpen(room.id)}
     />
@@ -260,14 +282,22 @@ function YearBlock({
   );
 }
 
+/** « par Tess (@Poumon) », ou « par @Poumon » sans persona — la phrase
+ *  lue par les lecteurs d'écran, la même qu'à l'écran. */
+function openerText(opener: Opener, by: (name: string) => string): string {
+  return opener.persona ? `${by(opener.persona)} (@${opener.name})` : by(`@${opener.name}`);
+}
+
 function EntryRow({
   room,
   config,
+  opener,
   newMonth,
   onClick,
 }: {
   room: TimelineRoom;
   config: WorldTimelineConfig;
+  opener: Opener | null;
   newMonth: boolean;
   onClick: () => void;
 }) {
@@ -305,12 +335,39 @@ function EntryRow({
       <button
         type="button"
         onClick={onClick}
-        aria-label={`${label}, ${formatTimelineLabel(config, date)}`}
+        aria-label={[
+          label,
+          opener && openerText(opener, (name) => t("timelineByName", { name })),
+          formatTimelineLabel(config, date),
+        ]
+          .filter(Boolean)
+          .join(", ")}
         className="flex max-w-full flex-col items-start rounded-md text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         {/* Au survol, la ligne s’éclaircit seulement (titre atténué au repos) : pas de fond. */}
-        <span className="min-w-0 break-words text-sm font-medium text-foreground/75 transition-colors group-hover/entry:text-foreground">
-          {label}
+        <span className="min-w-0 break-words">
+          <span className="text-sm font-medium text-foreground/75 transition-colors group-hover/entry:text-foreground">
+            {label}
+          </span>
+          {/* « par Persona (@pseudo) » : le persona dans la couleur de son
+              groupe, le pseudo du joueur entre parenthèses ; « par @pseudo »
+              quand le salon n'a pas encore de message. */}
+          {opener && (
+            <span className="ml-1.5 text-xs text-muted-foreground" data-testid="timeline-opener" aria-hidden>
+              {t.rich("timelineBy", {
+                name: opener.persona ?? `@${opener.name}`,
+                author: (chunks) => (
+                  <span
+                    className={cn("font-medium", !(opener.persona && opener.personaColor) && "text-foreground/75")}
+                    style={opener.persona && opener.personaColor ? { color: opener.personaColor } : undefined}
+                  >
+                    {chunks}
+                  </span>
+                ),
+              })}
+              {opener.persona && ` (@${opener.name})`}
+            </span>
+          )}
         </span>
         {(date.day !== null || monthName) && (
           <span className="text-xs tabular-nums text-muted-foreground" aria-hidden>

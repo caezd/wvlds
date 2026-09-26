@@ -587,6 +587,8 @@
     "timelineEmpty": "Aucune conversation n'a encore été située dans la chronologie.",
     "timelineDay": "Jour {day}",
     "timelineUntitled": "Conversation",
+    "timelineBy": "par <author>{name}</author>",
+    "timelineByName": "par {name}",
     "timelineRanges": "Périodes de la chronologie",
     "tabSettings": "Paramètres",
     "tabCategories": "Catégories",

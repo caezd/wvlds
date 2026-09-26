@@ -587,6 +587,8 @@
     "timelineEmpty": "No conversation has been placed on the timeline yet.",
     "timelineDay": "Day {day}",
     "timelineUntitled": "Conversation",
+    "timelineBy": "by <author>{name}</author>",
+    "timelineByName": "by {name}",
     "timelineRanges": "Timeline periods",
     "tabSettings": "Settings",
     "tabCategories": "Categories",

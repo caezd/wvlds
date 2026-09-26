@@ -38,6 +38,7 @@ export const TABLE = {
 export const RPC = {
   GET_APP_SHELL: "get_app_shell",
   GET_CHATROOM_UNREADS: "get_chatroom_unreads",
+  GET_CHATROOM_OPENERS: "get_chatroom_openers",
   MARK_CHATROOM_READ: "mark_chatroom_read",
   AWARD_EVENT: "award_event",
   GET_BALANCE_SUMMARY: "get_balance_summary",

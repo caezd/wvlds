@@ -1,10 +1,22 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { WorldTimelineConfig } from "@/types/worlds";
 
 const push = vi.hoisted(() => vi.fn());
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push, refresh: vi.fn() }) }));
+
+// Qui a ouvert chaque salon : la RPC get_chatroom_openers (migration 192).
+type OpenerRow = { chat_id: string; author_name: string | null; persona_name: string | null; group_color: string | null };
+const rpc = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/supabase/client", () => ({ createClient: () => ({ rpc }) }));
+function ouvreurs(rows: OpenerRow[]) {
+  rpc.mockResolvedValue({ data: rows, error: null });
+}
+beforeEach(() => {
+  rpc.mockReset();
+  ouvreurs([]);
+});
 
 import { WorldTimeline } from "@/components/worlds/timeline/WorldTimeline";
 
@@ -22,15 +34,16 @@ const room = (id: string, title: string | null, year: number, month: number | nu
 });
 
 function frise(rooms: Room[], config = CONFIG) {
-  return render(<WorldTimeline worldId="w1" rooms={rooms} config={config} onClose={vi.fn()} />);
+  return render(<WorldTimeline worldId="w1" rooms={rooms} config={config} />);
 }
 
 const annees = () => screen.getAllByRole("heading", { level: 3 });
 
 describe("WorldTimeline — frise verticale", () => {
-  it("affiche « Chronologie » dans l'en-tête", () => {
+  it("affiche « Chronologie » dans l'en-tête, sans bouton « Fermer »", () => {
     frise([]);
     expect(screen.getByText("Chronologie")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Fermer" })).toBeNull();
   });
 
   it("affiche un message quand aucune conversation n'est encore située", () => {
@@ -176,5 +189,44 @@ describe("WorldTimeline — lignes de salon", () => {
     const sansTitre = screen.getByRole("button", { name: "Conversation, Février, An 1" });
     expect(sansTitre).toHaveTextContent("Février");
     expect(sansTitre).not.toHaveTextContent(/\d/);
+  });
+});
+
+describe("WorldTimeline — qui a ouvert le salon", () => {
+  it("« par Persona (@pseudo) » : le persona dans la couleur de son groupe, le pseudo neutre", async () => {
+    ouvreurs([{ chat_id: "a", author_name: "Poumon", persona_name: "Tess", group_color: "#ef4444" }]);
+    frise([room("a", "Prologue", 1, 0, 6)]);
+
+    const par = await screen.findByTestId("timeline-opener");
+    expect(par.textContent).toBe("par Tess (@Poumon)");
+    expect(within(par).getByText("Tess")).toHaveStyle({ color: "#ef4444" });
+    expect(rpc).toHaveBeenCalledWith("get_chatroom_openers", { p_world_id: "w1" });
+    // Lu en entier par les lecteurs d'écran.
+    expect(screen.getByRole("button", { name: "Prologue, par Tess (@Poumon), 6 Janvier, An 1" })).toBeInTheDocument();
+  });
+
+  it("sans persona (salon encore vide), « par @pseudo » ; persona sans groupe, sans couleur", async () => {
+    ouvreurs([
+      { chat_id: "a", author_name: "Proprio", persona_name: null, group_color: null },
+      { chat_id: "b", author_name: "Poumon", persona_name: "Isolé", group_color: null },
+    ]);
+    frise([room("a", "Prologue", 1, 0, 6), room("b", "Suite", 1, 0, 7)]);
+
+    const [vide, sansGroupe] = await screen.findAllByTestId("timeline-opener");
+    expect(vide.textContent).toBe("par @Proprio");
+    expect(within(vide).getByText("@Proprio").getAttribute("style")).toBeNull();
+    expect(sansGroupe.textContent).toBe("par Isolé (@Poumon)");
+    expect(within(sansGroupe).getByText("Isolé").getAttribute("style")).toBeNull();
+  });
+
+  it("une erreur de chargement laisse la frise intacte, sans « par … »", async () => {
+    const erreur = vi.spyOn(console, "error").mockImplementation(() => {});
+    rpc.mockResolvedValue({ data: null, error: { message: "boom" } });
+    frise([room("a", "Prologue", 1, 0, 6)]);
+
+    await vi.waitFor(() => expect(erreur).toHaveBeenCalled());
+    expect(screen.getByRole("button", { name: /Prologue/ })).toBeInTheDocument();
+    expect(screen.queryByTestId("timeline-opener")).toBeNull();
+    erreur.mockRestore();
   });
 });

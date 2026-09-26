@@ -147,10 +147,6 @@ export function WorldHome({
   const gridGap = resolveHomeGridGap(world.home_grid_gap);
   const baseHref = `/w/${worldId}`;
 
-  function closeView() {
-    router.replace(baseHref, { scroll: false });
-  }
-
   function handleSelectCategory(categoryId: string | null) {
     setSelectedCategoryId(categoryId);
     const url = categoryId ? `${baseHref}?category=${encodeURIComponent(categoryId)}` : baseHref;
@@ -242,7 +238,6 @@ export function WorldHome({
             worldId={worldId}
             rooms={initialRooms.map(r => ({ ...r, timeline_date: r.timeline_date ?? null }))}
             config={world.timeline_config as WorldTimelineConfig}
-            onClose={closeView}
           />
         ) : (
           <div ref={setScrollEl} className="flex min-h-0 flex-1 flex-col overflow-y-auto">
