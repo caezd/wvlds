@@ -39,7 +39,7 @@ import {
   type SuiteLink,
   type SuiteStyle,
 } from "@/components/worlds/timeline/SuiteLinks";
-import { EventSpans } from "@/components/worlds/timeline/EventSpans";
+import { EventSpans, eventSpanPad } from "@/components/worlds/timeline/EventSpans";
 import { TimelineArcsDialog } from "@/components/worlds/timeline/TimelineArcsDialog";
 import { TimelineEventDialog } from "@/components/worlds/timeline/TimelineEventDialog";
 import { TimelineFiltersPopover } from "@/components/worlds/timeline/TimelineFiltersPopover";
@@ -148,6 +148,7 @@ export function WorldTimeline({
   const [eventDialog, setEventDialog] = useState<{ open: boolean; event: TimelineEvent | null }>({ open: false, event: null });
   const [arcsOpen, setArcsOpen] = useState(false);
   const [lanes, setLanes] = useState(0);
+  const [spanLanes, setSpanLanes] = useState(0);
   const [suiteStyle, setSuiteStyleState] = useState<SuiteStyle>("rail");
   const [hoverOnly, setHoverOnlyState] = useState(false);
   const [hoveredRoom, setHoveredRoom] = useState<string | null>(null);
@@ -342,6 +343,10 @@ export function WorldTimeline({
   const graphPad = suiteStyle === "graph" && lanes > 0 ? GRAPH_OFFSET + (lanes - 1) * 8 + 10 : 0;
   const rightPad = suiteStyle === "rail" && lanes > 0 ? 20 + 12 + lanes * 10 + 14 : undefined;
   const onLanes = useCallback((n: number) => setLanes(n), []);
+  // Le décalage des titres : les couloirs du graphe, puis ceux des barres de
+  // durée, qui se logent juste avant le texte.
+  const titlePad = graphPad + eventSpanPad(spanLanes);
+  const onSpanLanes = useCallback((n: number) => setSpanLanes(n), []);
 
   const players = useMemo(
     () => [...new Set([...data.openers.values()].map((o) => o.name))].sort().map((n) => ({ id: n, label: `@${n}` })),
@@ -534,10 +539,11 @@ export function WorldTimeline({
               <ol
                 className="px-5 pb-6"
                 // Les couloirs des lignes de suite : à droite, ou, pour le
-                // graphe, entre le fil et les titres (`--tl-graph-pad`).
+                // graphe, entre le fil et les titres ; et ceux des barres de
+                // durée, avant les titres (`--tl-graph-pad`).
                 style={{
                   paddingRight: rightPad,
-                  ["--tl-graph-pad" as string]: `${graphPad}px`,
+                  ["--tl-graph-pad" as string]: `${titlePad}px`,
                   // Pour qu'un filet de mois aille d'un bord à l'autre.
                   ["--tl-right-pad" as string]: `${rightPad ?? 20}px`,
                 }}
@@ -577,7 +583,8 @@ export function WorldTimeline({
                 containerRef={listRef}
                 ids={spanIds}
                 active={duringSpan ? hoveredSpan : null}
-                version={`${layoutVersion}:${graphPad}:${rightPad ?? 0}`}
+                version={`${layoutVersion}:${titlePad}:${rightPad ?? 0}`}
+                onLanes={onSpanLanes}
               />
             </div>
           )}

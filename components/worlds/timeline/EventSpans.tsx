@@ -7,9 +7,20 @@ import { assignSuiteLanes } from "@/lib/worldTimelineItems";
 type Span = { id: string; top: number; bottom: number; x: number };
 
 /** Écart entre deux barres qui se chevauchent. */
-const LANE_GAP = 5;
+const LANE_GAP = 6;
 /** Distance entre une barre (la plus proche) et le début des titres. */
-const TITLE_GAP = 9;
+const TITLE_GAP = 10;
+
+/**
+ * Le décalage à donner aux titres pour loger `lanes` barres entre l'anneau
+ * d'une ligne et son texte : sans lui, trois barres s'entassaient dans les
+ * 22px qui les séparent. Une barre tient seule (12px d'air à gauche, 10 à
+ * droite) ; chacune de plus écarte les titres d'autant, moins 2px, pour
+ * garder environ 10px de part et d'autre.
+ */
+export function eventSpanPad(lanes: number): number {
+  return Math.max(0, (lanes - 1) * LANE_GAP - 2);
+}
 
 /**
  * La durée des événements qui durent (migration 197) : une barre fine le
@@ -26,6 +37,7 @@ export function EventSpans({
   ids,
   active = null,
   version,
+  onLanes,
 }: {
   containerRef: React.RefObject<HTMLElement | null>;
   /** Les événements dont le début et la fin sont à l'écran. */
@@ -34,6 +46,9 @@ export function EventSpans({
   active?: string | null;
   /** Change quand la frise change : force une mesure. */
   version: string;
+  /** Le nombre de couloirs pris par les barres, pour que la frise écarte
+   *  ses titres d'autant (voir `eventSpanPad`). */
+  onLanes?: (count: number) => void;
 }) {
   const [spans, setSpans] = React.useState<Span[]>([]);
 
@@ -57,7 +72,8 @@ export function EventSpans({
     });
     const lanes = assignSuiteLanes(measured);
     setSpans(measured.map((m, i) => ({ ...m, x: m.x - lanes[i] * LANE_GAP })));
-  }, [containerRef, ids]);
+    onLanes?.(lanes.length === 0 ? 0 : Math.max(...lanes) + 1);
+  }, [containerRef, ids, onLanes]);
 
   React.useLayoutEffect(() => {
     measure();

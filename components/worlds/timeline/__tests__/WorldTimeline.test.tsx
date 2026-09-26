@@ -605,6 +605,18 @@ describe("WorldTimeline — événements qui durent, fêtes, statut des salons",
     await user.unhover(screen.getByText("Le sacre"));
   });
 
+  it("des durées qui se chevauchent écartent les titres pour loger leurs barres, même en rail", async () => {
+    const duree = (id: string, from: number, to: number) => ({
+      id, title: id, description: null, timeline_date: { year: 1, month: from, day: 1 },
+      end_date: { year: 1, month: to, day: 1 }, wiki_page_id: null, wiki_page: null,
+    });
+    db.tables.world_timeline_events = [duree("e1", 0, 2), duree("e2", 0, 2), duree("e3", 1, 2)];
+    frise([room("a", "Prologue", 1, 0, 6)]);
+    const liste = () => document.querySelector("[data-suite-style] ol") as HTMLElement;
+    // Trois barres côte à côte : 2 × 6 − 2 = 10px de plus avant les titres.
+    await vi.waitFor(() => expect(liste().style.getPropertyValue("--tl-graph-pad")).toBe("10px"));
+  });
+
   it("filtrer les événements cache aussi leur fin et leur barre", async () => {
     const user = userEvent.setup();
     db.tables.world_timeline_events = [{
