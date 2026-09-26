@@ -3,7 +3,7 @@
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { BookOpen, BookText, Clock, Pencil, Plus, Search, Spline } from "lucide-react";
+import { BookOpen, BookText, Clock, Pencil, Plus, Search, Spline, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatTimelineLabel } from "@/lib/worldTimeline";
 import {
@@ -248,7 +248,23 @@ export function WorldTimeline({
     [hoverOnly, hoveredRoom, suiteLinks],
   );
   const onlyChain = hoverOnly ? (highlight ?? new Set<string>()) : null;
-  const layoutVersion = useMemo(() => `${suiteStyle}:${visible.map((i) => i.id).join(",")}`, [visible, suiteStyle]);
+
+  // Le fil du persona filtré : les salons où il a écrit et ses entrées de
+  // journal, reliés sur le fil de la frise, dans la couleur de son groupe.
+  const threadPersona = filters.personaId ? data.personas.find((p) => p.id === filters.personaId) ?? null : null;
+  const thread = useMemo(() => {
+    if (!threadPersona) return null;
+    const ids = visible
+      .filter((i) =>
+        (i.kind === "room" && data.roomPersonas.get(i.id)?.has(threadPersona.id)) ||
+        (i.kind === "journal" && i.personaId === threadPersona.id))
+      .map((i) => i.id);
+    return { ids, color: threadPersona.color };
+  }, [threadPersona, visible, data.roomPersonas]);
+  const layoutVersion = useMemo(
+    () => `${suiteStyle}:${threadPersona?.id ?? ""}:${visible.map((i) => i.id).join(",")}`,
+    [visible, suiteStyle, threadPersona],
+  );
   // Le graphe prend place entre le fil et les titres ; les autres styles, à droite.
   const graphPad = suiteStyle === "graph" && lanes > 0 ? GRAPH_OFFSET + (lanes - 1) * 8 + 10 : 0;
   const rightPad = suiteStyle === "rail" && lanes > 0 ? 20 + 12 + lanes * 10 + 14 : undefined;
@@ -333,6 +349,28 @@ export function WorldTimeline({
                 hoverOnly={hoverOnly}
                 onHoverOnly={setHoverOnly}
               />
+              {/* Le fil du persona filtré, rappelé en tête ; la croix l'efface. */}
+              {threadPersona && (
+                <span
+                  className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-border pl-2.5 pr-1 text-xs"
+                  data-testid="timeline-persona-thread-chip"
+                >
+                  <span
+                    className={cn("size-2.5 rounded-full", !threadPersona.color && "bg-foreground")}
+                    style={threadPersona.color ? { backgroundColor: threadPersona.color } : undefined}
+                    aria-hidden
+                  />
+                  {tv("personaThread", { name: threadPersona.name })}
+                  <button
+                    type="button"
+                    onClick={() => setFilters({ ...filters, personaId: null })}
+                    aria-label={tv("personaThreadClear", { name: threadPersona.name })}
+                    className="rounded-full p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              )}
               <TimelineSequelRequests requests={requests} supabase={data.supabase} onChanged={() => void data.reloadSequels()} />
               {canManage && (
                 <>
@@ -431,7 +469,7 @@ export function WorldTimeline({
                   );
                 })}
               </ol>
-              <SuiteLinks containerRef={listRef} links={suiteLinks} style={suiteStyle} only={onlyChain} version={layoutVersion} onLanes={onLanes} />
+              <SuiteLinks containerRef={listRef} links={suiteLinks} style={suiteStyle} only={onlyChain} thread={thread} version={layoutVersion} onLanes={onLanes} />
             </div>
           )}
         </div>

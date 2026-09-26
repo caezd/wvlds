@@ -666,7 +666,9 @@
       "sequelRequestBy": "propuesta por @{name}",
       "sequelAccept": "Aceptar la continuación {chatroom}",
       "sequelDecline": "Rechazar la continuación {chatroom}",
-      "sequelAnswerFailed": "No se pudo responder a esta continuación propuesta."
+      "sequelAnswerFailed": "No se pudo responder a esta continuación propuesta.",
+      "personaThread": "Hilo de {name}",
+      "personaThreadClear": "Quitar el hilo de {name}"
     },
     "tabSettings": "Ajustes",
     "tabCategories": "Categorías",

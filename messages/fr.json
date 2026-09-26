@@ -666,7 +666,9 @@
       "sequelRequestBy": "proposé par @{name}",
       "sequelAccept": "Accepter la suite {chatroom}",
       "sequelDecline": "Refuser la suite {chatroom}",
-      "sequelAnswerFailed": "Impossible de répondre à cette suite proposée."
+      "sequelAnswerFailed": "Impossible de répondre à cette suite proposée.",
+      "personaThread": "Fil de {name}",
+      "personaThreadClear": "Effacer le fil de {name}"
     },
     "tabSettings": "Paramètres",
     "tabCategories": "Catégories",

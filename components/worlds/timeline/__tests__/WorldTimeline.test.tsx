@@ -695,3 +695,56 @@ describe("WorldTimeline — suites proposées par les joueurs", () => {
     expect(await screen.findByTestId("timeline-sequel-count")).toHaveTextContent("1");
   });
 });
+
+describe("WorldTimeline — fil de persona", () => {
+  it("filtré par persona, le fil de la frise relie ses salons et son journal, dans la couleur de son groupe", async () => {
+    const user = userEvent.setup();
+    db.rpcs.get_chatroom_personas = {
+      data: [
+        { chat_id: "a", persona_id: "p-tess", persona_name: "Tess", group_color: "#a855f7" },
+        { chat_id: "c", persona_id: "p-tess", persona_name: "Tess", group_color: "#a855f7" },
+        { chat_id: "b", persona_id: "p-ivo", persona_name: "Ivo", group_color: null },
+      ],
+      error: null,
+    };
+    db.tables.persona_journal_entries = [{
+      id: "j1", persona_id: "p-tess", body: "Une nuit sans lune.", timeline_date: { year: 2, month: 0, day: 3 }, persona: { name: "Tess" },
+    }];
+    frise(
+      [room("a", "Le départ", 1, 0, 6), room("b", "Chez Ivo", 1, 2, 1), room("c", "Le retour", 3, 0, 1)],
+      { ...CONFIG, show_journals: true },
+    );
+    await screen.findByText("Journal de Tess");
+    // Sans filtre, pas de fil.
+    expect(screen.queryByTestId("timeline-persona-thread")).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: /Filtres/ }));
+    await user.selectOptions(await screen.findByRole("combobox", { name: "Persona présent" }), "Tess");
+
+    const fil = await screen.findByTestId("timeline-persona-thread");
+    // Ses deux salons et son entrée de journal, pas le salon d'Ivo.
+    expect([...fil.querySelectorAll("[data-thread-point]")].map((c) => c.getAttribute("data-thread-point")).sort())
+      .toEqual(["a", "c", "j1"]);
+    expect((fil.querySelector("path") as SVGElement).style.stroke).toBe("rgb(168, 85, 247)");
+
+    // Rappelé en tête ; la croix l'efface, et le filtre avec.
+    const puce = screen.getByTestId("timeline-persona-thread-chip");
+    expect(puce).toHaveTextContent("Fil de Tess");
+    await user.click(within(puce).getByRole("button", { name: "Effacer le fil de Tess" }));
+    expect(screen.queryByTestId("timeline-persona-thread")).toBeNull();
+    expect(screen.getByText("Chez Ivo")).toBeInTheDocument();
+  });
+
+  it("un persona sans groupe : un fil de la couleur du texte", async () => {
+    const user = userEvent.setup();
+    db.rpcs.get_chatroom_personas = {
+      data: [{ chat_id: "a", persona_id: "p-ivo", persona_name: "Ivo", group_color: null }],
+      error: null,
+    };
+    frise([room("a", "Le départ", 1, 0, 6), room("b", "Ailleurs", 1, 2, 1)]);
+    await user.click(screen.getByRole("button", { name: /Filtres/ }));
+    await user.selectOptions(await screen.findByRole("combobox", { name: "Persona présent" }), "Ivo");
+    const fil = await screen.findByTestId("timeline-persona-thread");
+    expect(fil.querySelector("circle")!.getAttribute("class")).toContain("fill-foreground");
+  });
+});

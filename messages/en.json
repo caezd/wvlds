@@ -666,7 +666,9 @@
       "sequelRequestBy": "proposed by @{name}",
       "sequelAccept": "Accept the sequel {chatroom}",
       "sequelDecline": "Decline the sequel {chatroom}",
-      "sequelAnswerFailed": "Could not answer this proposed sequel."
+      "sequelAnswerFailed": "Could not answer this proposed sequel.",
+      "personaThread": "{name}'s thread",
+      "personaThreadClear": "Clear {name}'s thread"
     },
     "tabSettings": "Settings",
     "tabCategories": "Categories",

@@ -23,7 +23,7 @@ export type TimelineSequel = {
 export type TimelineEvent = TimelineEventItem & { wikiPage: { slug: string; title: string } | null };
 
 type OpenerRow = { chat_id: string; author_name: string | null; persona_name: string | null; group_color: string | null };
-type PersonaRow = { chat_id: string; persona_id: string; persona_name: string };
+type PersonaRow = { chat_id: string; persona_id: string; persona_name: string; group_color: string | null };
 type EventRow = {
   id: string;
   title: string;
@@ -64,7 +64,7 @@ export function useTimelineData(worldId: string, showJournals: boolean) {
   const [journals, setJournals] = useState<TimelineJournalItem[]>([]);
   const [openers, setOpeners] = useState<ReadonlyMap<string, TimelineOpener>>(new Map());
   const [roomPersonas, setRoomPersonas] = useState<ReadonlyMap<string, ReadonlySet<string>>>(new Map());
-  const [personas, setPersonas] = useState<{ id: string; name: string }[]>([]);
+  const [personas, setPersonas] = useState<{ id: string; name: string; color: string | null }[]>([]);
   const [sequels, setSequels] = useState<TimelineSequel[]>([]);
   const [mine, setMine] = useState<ReadonlySet<string>>(new Set());
 
@@ -171,14 +171,14 @@ export function useTimelineData(worldId: string, showJournals: boolean) {
         if (cancelled) return;
         if (error) return logError("personas des salons", error);
         const byRoom = new Map<string, Set<string>>();
-        const names = new Map<string, string>();
+        const names = new Map<string, { name: string; color: string | null }>();
         for (const row of data ?? []) {
           if (!byRoom.has(row.chat_id)) byRoom.set(row.chat_id, new Set());
           byRoom.get(row.chat_id)!.add(row.persona_id);
-          names.set(row.persona_id, row.persona_name);
+          names.set(row.persona_id, { name: row.persona_name, color: row.group_color });
         }
         setRoomPersonas(byRoom);
-        setPersonas([...names].map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name)));
+        setPersonas([...names].map(([id, p]) => ({ id, ...p })).sort((a, b) => a.name.localeCompare(b.name)));
       });
 
     return () => { cancelled = true; };

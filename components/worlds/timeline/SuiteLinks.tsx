@@ -53,6 +53,7 @@ export function SuiteLinks({
   links,
   style,
   only,
+  thread = null,
   version,
   onLanes,
 }: {
@@ -61,12 +62,18 @@ export function SuiteLinks({
   style: SuiteStyle;
   /** Au survol seulement : les salons de la chaîne à tracer ; `null` pour toutes. */
   only: ReadonlySet<string> | null;
+  /**
+   * Le fil d'un persona : ses salons et ses entrées de journal, que le fil
+   * de la frise relie, de la première à la dernière, dans sa couleur.
+   */
+  thread?: { ids: readonly string[]; color: string | null } | null;
   /** Change quand la frise change (filtres, données) : force une mesure. */
   version: string;
   onLanes: (count: number) => void;
 }) {
   const [drawn, setDrawn] = React.useState<Drawn[]>([]);
   const [box, setBox] = React.useState({ width: 0, filX: 0 });
+  const [threadYs, setThreadYs] = React.useState<{ id: string; y: number }[]>([]);
   const hoverMode = only !== null;
 
   const measure = React.useCallback(() => {
@@ -74,7 +81,7 @@ export function SuiteLinks({
     if (!container) return;
     const rect = container.getBoundingClientRect();
     const yOf = (id: string) => {
-      const el = container.querySelector<HTMLElement>(`[data-room-id="${id}"]`);
+      const el = container.querySelector<HTMLElement>(`[data-room-id="${id}"], [data-journal-id="${id}"]`);
       if (!el) return null;
       const r = el.getBoundingClientRect();
       return r.top - rect.top + Math.min(r.height, 20) / 2;
@@ -128,8 +135,14 @@ export function SuiteLinks({
       color: c.color,
     })));
     setBox({ width: rect.width, filX });
+    setThreadYs(
+      (thread?.ids ?? [])
+        .map((id) => ({ id, y: yOf(id) }))
+        .filter((p): p is { id: string; y: number } => p.y !== null)
+        .sort((a, b) => a.y - b.y),
+    );
     onLanes(chains.length === 0 ? 0 : hoverMode ? 1 : Math.max(...lanes) + 1);
-  }, [containerRef, links, onLanes, hoverMode]);
+  }, [containerRef, links, onLanes, hoverMode, thread]);
 
   React.useLayoutEffect(() => {
     measure();
@@ -147,7 +160,7 @@ export function SuiteLinks({
   const shown = only
     ? drawn.filter((d) => d.points.some((p) => only.has(p.id))).map((d) => ({ ...d, lane: 0 }))
     : drawn;
-  if (shown.length === 0) return null;
+  if (shown.length === 0 && threadYs.length === 0) return null;
   const gap = LANE_GAP[style];
   const strokeProps = (color: string | null, pending = false) => ({
     className: color ? undefined : "stroke-foreground/30",
@@ -167,6 +180,33 @@ export function SuiteLinks({
       data-testid="timeline-suite-links"
       data-style={style}
     >
+      {/* Le fil du persona filtré : le fil de la frise se colore, de son
+          premier à son dernier passage, et chacun d'eux se marque d'un point. */}
+      {threadYs.length > 0 && (
+        <g data-testid="timeline-persona-thread">
+          {threadYs.length > 1 && (
+            <path
+              d={`M ${box.filX} ${threadYs[0].y} V ${threadYs[threadYs.length - 1].y}`}
+              fill="none"
+              strokeWidth={3}
+              strokeLinecap="round"
+              className={thread?.color ? undefined : "stroke-foreground/70"}
+              style={thread?.color ? { stroke: thread.color, opacity: 0.8 } : undefined}
+            />
+          )}
+          {threadYs.map((p) => (
+            <circle
+              key={p.id}
+              cx={box.filX}
+              cy={p.y}
+              r={4.5}
+              data-thread-point={p.id}
+              className={thread?.color ? undefined : "fill-foreground"}
+              style={thread?.color ? { fill: thread.color } : undefined}
+            />
+          ))}
+        </g>
+      )}
       {shown.map((d) => {
         if (style === "graph") {
           // Un couloir entre le fil et les titres ; chaque anneau s'y branche.
