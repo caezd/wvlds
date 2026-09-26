@@ -188,12 +188,11 @@ describe("WorldTimeline — frise verticale", () => {
     expect(within(an2).queryByTestId("timeline-first-month")).toBeNull();
   });
 
-  it("des bandeaux coiffés d'un trait de la couleur des bordures, sauf le tout premier ; aucun dessous", () => {
+  it("des bandeaux bordés dessus et dessous de la couleur des bordures, sans trait au-dessus du tout premier", () => {
     frise([room("a", "Avant", 0, 0, 1), room("b", "Après", 1, 0, 1)]);
     for (const bandeau of annees()) {
       const classes = bandeau.className.split(" ");
-      expect(classes).toEqual(expect.arrayContaining(["border-t", "border-border", "[li:first-child>&]:border-t-0"]));
-      expect(classes.some((c) => /^border-(y|b)$/.test(c))).toBe(false);
+      expect(classes).toEqual(expect.arrayContaining(["border-y", "border-border", "[li:first-child>&]:border-t-0"]));
     }
   });
 
