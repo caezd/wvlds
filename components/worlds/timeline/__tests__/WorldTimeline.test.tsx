@@ -550,6 +550,37 @@ describe("WorldTimeline — styles des suites", () => {
     expect(liste.style.getPropertyValue("--tl-graph-pad")).toBe(avant);
   });
 
+  it("au survol seulement, un seul couloir est réservé, quel que soit le nombre de chaînes", async () => {
+    memoire.set("wvlds:timeline-suite-style", "graph");
+    // Deux chaînes : a → b → c et z → y.
+    db.tables.chatrooms = [
+      ...CHAINE,
+      { id: "z", arc_id: null, previous_chatroom_id: null, category_id: null },
+      { id: "y", arc_id: null, previous_chatroom_id: "z", category_id: null },
+    ];
+    const salons = [...SALONS(), room("y", "Suite hors chaîne", 3, 2, 1)];
+    const { unmount } = frise(salons);
+    const padDe = async () => {
+      const l = await vi.waitFor(() => {
+        const el = document.querySelector("[data-suite-style='graph'] ol") as HTMLElement | null;
+        expect(el).not.toBeNull();
+        expect(parseFloat(el!.style.getPropertyValue("--tl-graph-pad"))).toBeGreaterThan(0);
+        return el!;
+      });
+      return parseFloat(l.style.getPropertyValue("--tl-graph-pad"));
+    };
+    // Toujours tracées : autant de couloirs que de chaînes qui se chevauchent.
+    const toujours = await padDe();
+    unmount();
+
+    memoire.set("wvlds:timeline-suite-hover", "1");
+    frise(salons);
+    const survol = await padDe();
+    // Un seul couloir : la place d'origine, sans les couloirs suivants.
+    expect(survol).toBeLessThan(toujours);
+    expect(survol).toBe(14 + 10);
+  });
+
   it("deux styles seulement : rail continu et graphe", async () => {
     db.tables.chatrooms = CHAINE;
     frise(SALONS());

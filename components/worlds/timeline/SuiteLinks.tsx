@@ -33,9 +33,10 @@ export const GRAPH_OFFSET = 14;
  * (`[data-room-id]`, et l'anneau d'un salon pour le graphe), à chaque
  * changement de la frise et de la taille du conteneur.
  *
- * Les couloirs se répartissent toujours sur toutes les chaînes, même quand
- * seule celle du salon survolé est tracée : la place réservée (`onLanes`)
- * ne bouge pas au survol, et les titres non plus.
+ * Au survol seulement (`only` non nul), une seule chaîne est tracée à la
+ * fois : un seul couloir est réservé (`onLanes`), et la chaîne survolée s'y
+ * dessine. La place ne dépend donc pas du survol, et les titres ne bougent
+ * pas quand une chaîne s'allume.
  */
 export function SuiteLinks({
   containerRef,
@@ -56,6 +57,7 @@ export function SuiteLinks({
 }) {
   const [drawn, setDrawn] = React.useState<Drawn[]>([]);
   const [box, setBox] = React.useState({ width: 0, filX: 0 });
+  const hoverMode = only !== null;
 
   const measure = React.useCallback(() => {
     const container = containerRef.current;
@@ -92,8 +94,8 @@ export function SuiteLinks({
       color: c.color,
     })));
     setBox({ width: rect.width, filX });
-    onLanes(chains.length ? Math.max(...lanes) + 1 : 0);
-  }, [containerRef, links, onLanes]);
+    onLanes(chains.length === 0 ? 0 : hoverMode ? 1 : Math.max(...lanes) + 1);
+  }, [containerRef, links, onLanes, hoverMode]);
 
   React.useLayoutEffect(() => {
     measure();
@@ -107,7 +109,10 @@ export function SuiteLinks({
     return () => observer.disconnect();
   }, [containerRef, measure]);
 
-  const shown = only ? drawn.filter((d) => d.points.some((p) => only.has(p.id))) : drawn;
+  // Au survol, la chaîne allumée prend l'unique couloir réservé.
+  const shown = only
+    ? drawn.filter((d) => d.points.some((p) => only.has(p.id))).map((d) => ({ ...d, lane: 0 }))
+    : drawn;
   if (shown.length === 0) return null;
   const gap = LANE_GAP[style];
   const strokeProps = (color: string | null) => ({
