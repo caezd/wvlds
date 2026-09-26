@@ -87,26 +87,36 @@ describe("WorldTimeline — frise verticale", () => {
 
   it("les salons d'une même date se réunissent : une date, un anneau, leurs titres dessous", () => {
     frise([
-      room("a", "Le messager", 2, 2, 9),
-      room("b", "Deux lettres", 2, 2, 9),
-      room("c", "L'héritière", 2, 2, 9),
-      room("d", "Chasse", 2, 5, 27),
+      room("a", "Le messager", 2, 0, 9),
+      room("b", "Deux lettres", 2, 0, 9),
+      room("c", "L'héritière", 2, 0, 9),
+      room("d", "Chasse", 2, 2, 27),
     ]);
     const groupes = document.querySelectorAll("[data-date-group]");
     expect(groupes).toHaveLength(2);
-    const [neufMars, juin] = [...groupes] as HTMLElement[];
-    // Une seule date et un seul anneau pour les trois salons du 9 mars.
-    expect(within(neufMars).getAllByTestId("timeline-date").map((d) => d.textContent)).toEqual(["9 Mars"]);
-    expect(within(neufMars).getAllByTestId("timeline-ring")).toHaveLength(1);
-    expect(within(neufMars).getAllByRole("button")).toHaveLength(3);
+    const [neufJanvier, mars] = [...groupes] as HTMLElement[];
+    // Une seule date et un seul anneau pour les trois salons du 9 janvier.
+    expect(within(neufJanvier).getAllByTestId("timeline-date")).toHaveLength(1);
+    expect(within(neufJanvier).getAllByTestId("timeline-ring")).toHaveLength(1);
+    expect(within(neufJanvier).getAllByRole("button")).toHaveLength(3);
     // Chacun garde sa date complète pour les lecteurs d'écran.
-    expect(within(neufMars).getByRole("button", { name: "Deux lettres, 9 Mars, An 2" })).toBeInTheDocument();
-    expect(within(juin).getAllByRole("button")).toHaveLength(1);
+    expect(within(neufJanvier).getByRole("button", { name: "Deux lettres, 9 Janvier, An 2" })).toBeInTheDocument();
+    expect(within(mars).getAllByRole("button")).toHaveLength(1);
+    // Le mois ne se répète pas : « Mars » est sur son filet, la date n'a que
+    // le jour ; la première date de l'année, sans filet, le garde.
+    expect(within(neufJanvier).getByTestId("timeline-date").textContent).toBe("9 Janvier");
+    expect(within(mars).getByTestId("timeline-date").textContent).toBe("27");
+    expect(within(mars).getByTestId("timeline-month-label")).toHaveTextContent("Mars");
 
     // En branche : un coude par salon, la branche s'arrête au dernier.
-    const coudes = [...within(neufMars).getByTestId("timeline-branch").querySelectorAll("[data-branch]")];
+    const coudes = [...within(neufJanvier).getByTestId("timeline-branch").querySelectorAll("[data-branch]")];
     expect(coudes.map((c) => c.getAttribute("data-branch"))).toEqual(["tee", "tee", "end"]);
-    expect(juin.querySelector("[data-branch]")!.getAttribute("data-branch")).toBe("end");
+    expect(mars.querySelector("[data-branch]")!.getAttribute("data-branch")).toBe("end");
+    // Le coude à mi-hauteur du titre : le bouton est un bloc sur une ligne
+    // de 20px (li de 24px avec py-0.5, coude à 12px).
+    const bouton = within(neufJanvier).getAllByRole("button")[0];
+    expect(bouton.className.split(" ")).toEqual(expect.arrayContaining(["block", "leading-5"]));
+    expect(bouton.closest("li")!.querySelector(".h-px")!.className.split(" ")).toContain("top-3");
   });
 
   it("l'année en très grands chiffres, sa légende en exposant, sans rouge", () => {

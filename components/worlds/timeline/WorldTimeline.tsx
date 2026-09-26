@@ -268,6 +268,7 @@ function YearBlock({
       config={config}
       openers={openers}
       newMonth={i > 0 && groups[i - 1].month !== group.month}
+      showMonth={i === 0}
       onOpen={onOpen}
     />
   ));
@@ -325,6 +326,7 @@ function DateGroupBlock({
   config,
   openers,
   newMonth,
+  showMonth,
   onOpen,
 }: {
   year: number;
@@ -332,10 +334,14 @@ function DateGroupBlock({
   config: WorldTimelineConfig;
   openers: ReadonlyMap<string, Opener>;
   newMonth: boolean;
+  /** Le mois à côté du jour : seulement pour la première date de l'année,
+   *  que n'ouvre aucun filet — ailleurs, le filet le porte déjà. */
+  showMonth: boolean;
   onOpen: (id: string) => void;
 }) {
   const monthName = group.month !== null ? (config.month_names[group.month] ?? null) : null;
-  const hasDate = group.day !== null || monthName !== null;
+  const dateMonth = showMonth ? monthName : null;
+  const hasDate = group.day !== null || dateMonth !== null;
   const fullDate = formatTimelineLabel(config, { year, month: group.month, day: group.day });
   return (
     <li
@@ -372,17 +378,18 @@ function DateGroupBlock({
         data-testid="timeline-ring"
         aria-hidden
       />
-      {/* La date, une fois pour tous ses salons : le jour en grand, le mois
-          en petites capitales à côté, sur une ligne de 24px. */}
+      {/* La date, une fois pour tous ses salons : le jour en grand (le mois en
+          petites capitales à côté, s'il n'est pas déjà sur un filet), sur une
+          ligne de 24px. */}
       {hasDate && (
         <p className="flex h-6 items-baseline gap-1.5 tabular-nums" data-testid="timeline-date" aria-hidden>
           {group.day !== null && (
             <span className="text-xl font-semibold leading-6 text-foreground">{group.day}</span>
           )}
-          {group.day !== null && monthName ? " " : null}
-          {monthName && (
+          {group.day !== null && dateMonth ? " " : null}
+          {dateMonth && (
             <span className="text-[10px] font-medium uppercase leading-6 tracking-wider text-muted-foreground">
-              {monthName}
+              {dateMonth}
             </span>
           )}
         </p>
@@ -429,7 +436,10 @@ function RoomLink({
       aria-label={[label, opener && openerText(opener, (name) => t("timelineByName", { name })), fullDate]
         .filter(Boolean)
         .join(", ")}
-      className="group/room max-w-full rounded-md text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      // Un bloc sur une ligne de 20px : en ligne (`inline-block`), le bouton
+      // héritait de la hauteur de ligne du parent et le titre glissait sous
+      // le coude de la branche.
+      className="group/room block max-w-full rounded-md text-left text-sm leading-5 outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       {/* Au survol, le titre s’éclaircit seulement (atténué au repos) : pas de fond. */}
       <span className="min-w-0 break-words">
