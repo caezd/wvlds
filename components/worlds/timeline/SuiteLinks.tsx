@@ -37,6 +37,8 @@ const STUB = 14;
 const LANE_GAP: Record<SuiteStyle, number> = { rail: 10, graph: 8 };
 /** Distance entre le fil et le premier couloir du graphe. */
 export const GRAPH_OFFSET = 14;
+/** Le fil d'un persona court à cette distance, à gauche du fil de la frise. */
+const THREAD_OFFSET = 12;
 
 /**
  * Le calque des lignes de suite. Les positions se mesurent dans le DOM
@@ -180,33 +182,46 @@ export function SuiteLinks({
       data-testid="timeline-suite-links"
       data-style={style}
     >
-      {/* Le fil du persona filtré : le fil de la frise se colore, de son
-          premier à son dernier passage, et chacun d'eux se marque d'un point. */}
-      {threadYs.length > 0 && (
-        <g data-testid="timeline-persona-thread">
-          {threadYs.length > 1 && (
-            <path
-              d={`M ${box.filX} ${threadYs[0].y} V ${threadYs[threadYs.length - 1].y}`}
-              fill="none"
-              strokeWidth={3}
-              strokeLinecap="round"
-              className={thread?.color ? undefined : "stroke-foreground/70"}
-              style={thread?.color ? { stroke: thread.color, opacity: 0.8 } : undefined}
-            />
-          )}
-          {threadYs.map((p) => (
-            <circle
-              key={p.id}
-              cx={box.filX}
-              cy={p.y}
-              r={4.5}
-              data-thread-point={p.id}
-              className={thread?.color ? undefined : "fill-foreground"}
-              style={thread?.color ? { fill: thread.color } : undefined}
-            />
-          ))}
-        </g>
-      )}
+      {/* Le fil du persona filtré : un rail parallèle au fil de la frise,
+          dans la gouttière des jours, sans rien recouvrir ; un point en face
+          de chaque passage, relié à son anneau d'un trait fin. */}
+      {threadYs.length > 0 && (() => {
+        const x = box.filX - THREAD_OFFSET;
+        const colored = thread?.color ? { stroke: thread.color } : undefined;
+        return (
+          <g data-testid="timeline-persona-thread" data-thread-x={x}>
+            {threadYs.length > 1 && (
+              <path
+                d={`M ${x} ${threadYs[0].y} V ${threadYs[threadYs.length - 1].y}`}
+                fill="none"
+                strokeWidth={2}
+                strokeLinecap="round"
+                className={thread?.color ? undefined : "stroke-foreground/70"}
+                style={colored}
+              />
+            )}
+            {threadYs.map((p) => (
+              <g key={p.id}>
+                <path
+                  d={`M ${x} ${p.y} H ${box.filX - 7}`}
+                  fill="none"
+                  strokeWidth={1}
+                  className={thread?.color ? undefined : "stroke-foreground/50"}
+                  style={thread?.color ? { stroke: thread.color, opacity: 0.6 } : undefined}
+                />
+                <circle
+                  cx={x}
+                  cy={p.y}
+                  r={3}
+                  data-thread-point={p.id}
+                  className={thread?.color ? undefined : "fill-foreground"}
+                  style={thread?.color ? { fill: thread.color } : undefined}
+                />
+              </g>
+            ))}
+          </g>
+        );
+      })()}
       {shown.map((d) => {
         if (style === "graph") {
           // Un couloir entre le fil et les titres ; chaque anneau s'y branche.

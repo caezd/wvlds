@@ -726,6 +726,8 @@ describe("WorldTimeline — fil de persona", () => {
     expect([...fil.querySelectorAll("[data-thread-point]")].map((c) => c.getAttribute("data-thread-point")).sort())
       .toEqual(["a", "c", "j1"]);
     expect((fil.querySelector("path") as SVGElement).style.stroke).toBe("rgb(168, 85, 247)");
+    // Un rail parallèle, à gauche du fil de la frise : il ne le recouvre pas.
+    expect(Number(fil.getAttribute("data-thread-x"))).toBeLessThan(0);
 
     // Rappelé en tête ; la croix l'efface, et le filtre avec.
     const puce = screen.getByTestId("timeline-persona-thread-chip");
