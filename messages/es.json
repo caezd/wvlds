@@ -668,7 +668,10 @@
       "sequelDecline": "Rechazar la continuación {chatroom}",
       "sequelAnswerFailed": "No se pudo responder a esta continuación propuesta.",
       "personaThread": "Hilo de {name}",
-      "personaThreadClear": "Quitar el hilo de {name}"
+      "personaThreadClear": "Quitar el hilo de {name}",
+      "monthRuler": "Ir a un mes ({year})",
+      "monthBar": "{month}: {count, plural, one {# entrada} other {# entradas}}",
+      "monthBarNone": "{month}: ninguna entrada"
     },
     "tabSettings": "Ajustes",
     "tabCategories": "Categorías",

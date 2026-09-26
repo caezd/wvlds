@@ -668,7 +668,10 @@
       "sequelDecline": "Decline the sequel {chatroom}",
       "sequelAnswerFailed": "Could not answer this proposed sequel.",
       "personaThread": "{name}'s thread",
-      "personaThreadClear": "Clear {name}'s thread"
+      "personaThreadClear": "Clear {name}'s thread",
+      "monthRuler": "Jump to a month ({year})",
+      "monthBar": "{month}: {count, plural, one {# entry} other {# entries}}",
+      "monthBarNone": "{month}: no entries"
     },
     "tabSettings": "Settings",
     "tabCategories": "Categories",

@@ -64,6 +64,8 @@ function frise(rooms: Room[], config = CONFIG) {
 }
 
 const annees = () => screen.getAllByRole("heading", { level: 3 });
+/** Les bandeaux d'année : le titre, et la réglette des mois à côté. */
+const bandeaux = () => screen.getAllByTestId("timeline-year-band");
 
 describe("WorldTimeline — frise verticale", () => {
   it("affiche « Chronologie » dans l'en-tête, sans bouton « Fermer »", () => {
@@ -83,7 +85,9 @@ describe("WorldTimeline — frise verticale", () => {
 
     expect(annees().map((h) => h.textContent)).toEqual(["An 1", "An 3"]);
     const an1 = annees()[0].closest("li")!;
-    const titres = within(an1).getAllByRole("button").map((b) => b.getAttribute("aria-label"));
+    const titres = within(an1).getAllByRole("button")
+      .filter((b) => !b.hasAttribute("data-month-bar"))
+      .map((b) => b.getAttribute("aria-label"));
     expect(titres).toEqual(["Prologue, 9 Janvier, An 1", "Suite, 2 Mars, An 1"]);
   });
 
@@ -136,29 +140,67 @@ describe("WorldTimeline — frise verticale", () => {
     expect(screen.queryByTestId("timeline-branch")).toBeNull();
   });
 
-  it("l'année, un bandeau sur toute la largeur : « An 1 » bien visible, sans rouge", () => {
+  it("l'année, un bandeau sur toute la largeur : le chiffre dans une pastille, sans rouge", () => {
     frise([room("a", "Prologue", 1, 0, 1)], { ...CONFIG, era_name: "des Cendres" });
-    const an1 = annees()[0];
-    expect(an1).toHaveAttribute("data-testid", "timeline-year-band");
-    expect(an1.textContent).toBe("An 1 des Cendres");
-    // Un chiffre plus grand, en gras ; sa légende appuyée.
-    expect(within(an1).getByText("1").className.split(" ")).toEqual(expect.arrayContaining(["text-lg", "font-bold", "text-foreground"]));
-    expect(within(an1).getByText("An").className.split(" ")).toEqual(expect.arrayContaining(["font-semibold", "text-foreground/60"]));
-    expect(within(an1).getByText("des Cendres").className).toBe(within(an1).getByText("An").className);
-    expect(an1.innerHTML).not.toMatch(/accent|red/);
+    const titre = annees()[0];
+    expect(titre.textContent).toBe("An 1 des Cendres");
+    const bandeau = bandeaux()[0];
+    expect(bandeau).toContainElement(titre);
+    // Le chiffre dans une pastille pleine, rounded-md ; sa légende appuyée.
+    const pastille = within(titre).getByTestId("timeline-year-number");
+    expect(pastille).toHaveTextContent("1");
+    expect(pastille.className.split(" ")).toEqual(expect.arrayContaining(["rounded-md", "bg-foreground", "text-background", "font-bold"]));
+    expect(within(titre).getByText("An").className.split(" ")).toEqual(expect.arrayContaining(["font-semibold", "text-foreground/60"]));
+    expect(bandeau.innerHTML).not.toMatch(/accent|red/);
     // D'un bord à l'autre du conteneur, marges de la liste comprises.
-    expect(an1.className.split(" ")).toEqual(expect.arrayContaining([
+    expect(bandeau.className.split(" ")).toEqual(expect.arrayContaining([
       "-ml-5", "pl-5", "-mr-[var(--tl-right-pad,20px)]", "pr-[var(--tl-right-pad,20px)]",
     ]));
-    // Ni borne, ni filigrane.
-    expect(screen.queryByTestId("timeline-year-marker")).toBeNull();
-    expect(screen.queryByTestId("timeline-year-watermark")).toBeNull();
+    // La réglette est à côté du titre, pas dedans : ses boutons n'entrent
+    // pas dans le nom de la section.
+    const reglette = within(bandeau).getByTestId("timeline-month-ruler");
+    expect(titre).not.toContainElement(reglette);
+  });
+
+  it("la réglette des mois : une barre par mois, haute selon ses entrées ; un mois vide est inerte", () => {
+    // Janvier : deux salons ; Mars : un ; Février : rien.
+    frise([room("a", "Un", 1, 0, 1), room("b", "Deux", 1, 0, 9), room("c", "Trois", 1, 2, 3)]);
+    const reglette = within(bandeaux()[0]).getByRole("group", { name: "Aller à un mois (An 1)" });
+    const barres = reglette.querySelectorAll("[data-month-bar]");
+    // Autant de barres que de mois au calendrier du monde.
+    expect(barres).toHaveLength(CONFIG.month_names.length);
+    const janvier = within(reglette).getByRole("button", { name: "Janvier : 2 entrées" });
+    const mars = within(reglette).getByRole("button", { name: "Mars : 1 entrée" });
+    // La plus haute pour le mois le plus fourni (20px), plus basse ailleurs.
+    expect((janvier.firstElementChild as HTMLElement).style.height).toBe("20px");
+    expect((mars.firstElementChild as HTMLElement).style.height).toBe("13px");
+    // Février : une marque basse, ni bouton ni lue.
+    const fevrier = reglette.querySelector("[data-month-bar='1']") as HTMLElement;
+    expect(fevrier.tagName).toBe("SPAN");
+    expect(fevrier).toHaveAttribute("aria-hidden", "true");
+    expect(fevrier).toHaveAttribute("title", "Février : aucune entrée");
+    expect(within(reglette).getAllByRole("button")).toHaveLength(2);
+  });
+
+  it("un clic sur la barre d'un mois y fait défiler la frise, sous la tête et le bandeau", async () => {
+    const user = userEvent.setup();
+    frise([room("a", "Un", 1, 0, 1), room("c", "Trois", 1, 2, 3)]);
+    const scroll = screen.getByTestId("timeline-scroll");
+    const scrollTo = vi.fn();
+    scroll.scrollTo = scrollTo as unknown as typeof scroll.scrollTo;
+    const rect = (top: number) => ({ top, bottom: top + 20, left: 0, right: 0, width: 0, height: 20, x: 0, y: top, toJSON: () => ({}) });
+    scroll.getBoundingClientRect = () => rect(100);
+    const mars = document.querySelector("[data-year='1'] [data-month='2']") as HTMLElement;
+    mars.getBoundingClientRect = () => rect(700);
+    await user.click(within(bandeaux()[0]).getByRole("button", { name: "Mars : 1 entrée" }));
+    // 700 − 100, moins la tête et le bandeau (0 sous jsdom), moins 16px d'air.
+    expect(scrollTo).toHaveBeenCalledWith({ top: 584, behavior: "smooth" });
   });
 
   it("le bandeau de l'année se colle sous la tête au défilement, sous les lignes de suite, sans le fil", async () => {
     db.tables.chatroom_sequels = [suite("a", "b")];
     frise([room("a", "Prologue", 1, 0, 1), room("b", "Suite", 1, 0, 2)]);
-    const bandeau = annees()[0];
+    const bandeau = bandeaux()[0];
     // Sous la tête collée, dont la hauteur est mesurée dans `--tl-head`.
     expect(bandeau.className.split(" ")).toEqual(expect.arrayContaining(["sticky", "top-[var(--tl-head,0px)]"]));
     // Au repos, transparent et sous les lignes de suite (z-[2]) : elles le
@@ -176,7 +218,7 @@ describe("WorldTimeline — frise verticale", () => {
   it("collé, le bandeau prend le fond de la page et couvre les lignes ; revenu au repos, il redevient transparent", () => {
     frise([room("a", "Prologue", 1, 0, 1), room("b", "Plus tard", 2, 0, 1)]);
     const scroll = screen.getByTestId("timeline-scroll");
-    const [an1, an2] = annees();
+    const [an1, an2] = bandeaux();
     const section1 = an1.closest("[data-year]") as HTMLElement;
     const section2 = an2.closest("[data-year]") as HTMLElement;
     // La tête mesure 0 sous jsdom : son bas est le haut du défilement (100).
@@ -216,7 +258,7 @@ describe("WorldTimeline — frise verticale", () => {
 
   it("des bandeaux bordés dessus et dessous de la couleur des bordures, sans trait au-dessus du tout premier", () => {
     frise([room("a", "Avant", 0, 0, 1), room("b", "Après", 1, 0, 1)]);
-    for (const bandeau of annees()) {
+    for (const bandeau of bandeaux()) {
       const classes = bandeau.className.split(" ");
       expect(classes).toEqual(expect.arrayContaining(["border-y", "border-border", "[li:first-child>&]:border-t-0"]));
     }

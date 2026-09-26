@@ -53,7 +53,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-09-26",
     category: "Fonctionnalité",
     area: "Monde",
-    text: "Chronologie d’un monde :\n- événements datés sans salon, liés à une page du wiki\n- arcs narratifs : salons teintés et numérotés dans l’ordre du récit\n- suites tracées en rail ou en graphe, en permanence ou au survol ; en pointillés tant qu’elles sont proposées ; d’un arc à l’autre sans fondre leurs chaînes\n- fil d’un persona quand on filtre par lui\n- journaux des personas, en option\n- recherche et filtres : type, persona, joueur, arc, catégorie\n- saisons du monde\n- années en bandeaux, collés en haut au défilement ; mois séparés d’un bord à l’autre, leur nom contre le fil\n- permission « Gérer la chronologie »",
+    text: "Chronologie d’un monde :\n- événements datés sans salon, liés à une page du wiki\n- arcs narratifs : salons teintés et numérotés dans l’ordre du récit\n- suites tracées en rail ou en graphe, en permanence ou au survol ; en pointillés tant qu’elles sont proposées ; d’un arc à l’autre sans fondre leurs chaînes\n- fil d’un persona quand on filtre par lui\n- journaux des personas, en option\n- recherche et filtres : type, persona, joueur, arc, catégorie\n- saisons du monde\n- années en bandeaux, collés en haut au défilement, avec une réglette des mois pour y sauter ; mois séparés d’un bord à l’autre, leur nom contre le fil\n- permission « Gérer la chronologie »",
   },
   {
     date: "2026-09-26",
