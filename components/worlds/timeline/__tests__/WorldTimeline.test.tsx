@@ -152,10 +152,12 @@ describe("WorldTimeline — frise verticale", () => {
     expect(pastille.className.split(" ")).toEqual(expect.arrayContaining(["rounded-md", "bg-foreground", "text-background", "font-bold"]));
     expect(within(titre).getByText("An").className.split(" ")).toEqual(expect.arrayContaining(["font-semibold", "text-foreground/60"]));
     expect(bandeau.innerHTML).not.toMatch(/accent|red/);
-    // D'un bord à l'autre du conteneur, marges de la liste comprises.
-    expect(bandeau.className.split(" ")).toEqual(expect.arrayContaining([
-      "-ml-5", "pl-5", "-mr-[var(--tl-right-pad,20px)]", "pr-[var(--tl-right-pad,20px)]",
-    ]));
+    // D'un bord à l'autre du conteneur, marges de la liste comprises ; la
+    // réglette calée à droite, à 20px du bord comme la tête, sans réserver la
+    // marge des suites.
+    expect(bandeau.className.split(" ")).toEqual(expect.arrayContaining(["-ml-5", "-mr-[var(--tl-right-pad,20px)]", "px-5"]));
+    expect(bandeau.className).not.toContain("pr-[var(");
+    expect(within(bandeau).getByTestId("timeline-month-ruler").className.split(" ")).toContain("ml-auto");
     // La réglette est à côté du titre, pas dedans : ses boutons n'entrent
     // pas dans le nom de la section.
     const reglette = within(bandeau).getByTestId("timeline-month-ruler");

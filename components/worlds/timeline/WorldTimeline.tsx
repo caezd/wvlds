@@ -684,11 +684,12 @@ function YearBlock({
           (z-10). Le fil s'y interrompt ; un trait dessus et dessous (aucun
           au-dessus de la toute première année).
           Le titre à gauche, le chiffre dans une pastille ; la réglette des
-          mois à droite, hors du titre (ses boutons n'entrent pas dans le nom
+          mois calée à droite du bandeau (px-5, comme la tête, sans réserver
+          la marge des suites), hors du titre (ses boutons n'entrent pas dans le nom
           de la section). */}
       <div
         className={cn(
-          "sticky top-[var(--tl-head,0px)] -ml-5 -mr-[var(--tl-right-pad,20px)] flex items-center gap-3 border-y border-border py-2 [li:first-child>&]:border-t-0 pl-5 pr-[var(--tl-right-pad,20px)]",
+          "sticky top-[var(--tl-head,0px)] -ml-5 -mr-[var(--tl-right-pad,20px)] flex items-center gap-3 border-y border-border py-2 [li:first-child>&]:border-t-0 px-5",
           stuck ? cn("z-[3]", AMBIENT_BG) : "z-[1]",
         )}
         data-testid="timeline-year-band"
